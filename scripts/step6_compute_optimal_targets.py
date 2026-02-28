@@ -385,6 +385,75 @@ def load_canonical_data():
         print(f"  WARNING: {fossil_path} not found — using fallback constants")
 
 
+# Runtime parquet-sourced cost data (per MWh of demand, existing at $0)
+# Populated by load_parquet_costs() in main(), used by compute_marginal_mac_curve()
+_PARQUET_COSTS = None  # {iso: {threshold: {'low': v, 'p25': v, 'medium': v, 'p75': v, 'high': v}}}
+
+
+def load_parquet_costs():
+    """Load clean cost (total_cost - gas_cost) per demand MWh from parquets.
+
+    Computes P10/P25/P50/P75/P90 across all cost scenarios at each threshold.
+    This gives the correct cost basis for MAC: per MWh of total demand, with
+    existing clean resources priced at $0 (as computed by Step 3), and gas
+    backup excluded (it's a system reliability cost, not an abatement cost).
+
+    Falls back to CLEAN_COST if parquets unavailable.
+    """
+    global _PARQUET_COSTS
+    import pandas as pd
+
+    base_dir = Path(__file__).parent.parent
+    data_dirs = [
+        base_dir / 'data' / 'step4-gas-ccs-parquets',
+        base_dir / 'data' / 'step3-cost-opt-parquets',
+    ]
+    prefixes = ['step4_', 'step3_co_']
+
+    result = {}
+    for iso in ISOS:
+        df = None
+        for data_dir in data_dirs:
+            for prefix in prefixes:
+                path = data_dir / f'{prefix}{iso}.parquet'
+                if path.exists():
+                    df = pd.read_parquet(path)
+                    break
+            if df is not None:
+                break
+
+        if df is None:
+            print(f"  WARNING: No parquet found for {iso} — using CLEAN_COST fallback")
+            continue
+
+        result[iso] = {}
+        for t in THRESHOLDS:
+            t_df = df[df['threshold'] == t]
+            if len(t_df) == 0:
+                continue
+
+            # Clean cost = total system cost minus gas backup, per MWh of demand
+            # Step 3 prices existing resources at $0 — only new-build LCOE contributes
+            clean = t_df['cost_total_cost'] - t_df['ra_gas_backup_cost_per_mwh']
+            pcts = clean.quantile([0.10, 0.25, 0.50, 0.75, 0.90])
+            result[iso][t] = {
+                'low': round(float(pcts[0.10]), 4),
+                'p25': round(float(pcts[0.25]), 4),
+                'medium': round(float(pcts[0.50]), 4),
+                'p75': round(float(pcts[0.75]), 4),
+                'high': round(float(pcts[0.90]), 4),
+            }
+
+        if result[iso]:
+            med_50 = result[iso].get(50, {}).get('medium', '?')
+            med_95 = result[iso].get(95, {}).get('medium', '?')
+            print(f"  {iso}: parquet clean cost loaded ({len(result[iso])} thresholds, "
+                  f"med@50%=${med_50}, med@95%=${med_95})")
+
+    _PARQUET_COSTS = result if result else None
+    return result
+
+
 # ============================================================================
 # CO₂ ABATEMENT MODEL — dispatch_utils canonical path with inline fallback
 # ============================================================================
@@ -541,24 +610,30 @@ def compute_marginal_mac_curve(iso, cost_tier='medium', growth_tier='medium'):
     Note: Marginal MAC ($/tCO₂) is scale-invariant w.r.t. demand growth because
     both d(cost) and d(CO₂) scale by the same growth factor.
 
-    Cost basis: Full clean procurement LCOE (no wholesale offset). The delta
-    between adjacent thresholds captures the incremental capital investment in
-    new-build resources. Subtracting wholesale would hide real LCOE costs when
-    clean energy is cheaper than fossil (e.g. ERCOT wind below $27/MWh wholesale),
-    producing a false $0 MAC. The consequential queue uses the same full-LCOE basis.
+    Cost basis: (cost_total_cost - gas_backup_cost) per MWh of DEMAND from
+    parquets (P10/P25/P50/P75/P90 across sensitivity scenarios). Step 3 prices
+    existing clean resources at $0 — only new-build LCOE contributes. Gas backup
+    is excluded (system reliability cost, not abatement cost). Falls back to
+    CLEAN_COST if parquet data unavailable.
     """
     try:
         from scipy.optimize import isotonic_regression as _iso_reg
     except ImportError:
         _iso_reg = None
 
-    costs = CLEAN_COST[cost_tier][iso]
-
     # Build arrays, skipping nulls
-    # Cost = clean procurement LCOE × demand (full capital cost, no wholesale offset)
+    # Cost = clean LCOE per demand MWh × demand TWh (existing at $0, no gas, no wholesale)
     valid_t, valid_clean_cost, valid_co2 = [], [], []
+    use_parquet = (_PARQUET_COSTS is not None and iso in _PARQUET_COSTS)
+
     for i, t in enumerate(THRESHOLDS):
-        sc = costs[i]
+        # Get cost per MWh of demand from parquets (preferred) or CLEAN_COST (fallback)
+        if use_parquet and t in _PARQUET_COSTS[iso]:
+            sc = _PARQUET_COSTS[iso][t].get(cost_tier)
+        else:
+            costs = CLEAN_COST.get(cost_tier, {}).get(iso, [])
+            sc = costs[i] if i < len(costs) else None
+
         if sc is None:
             continue
         gf = demand_growth_factor(iso, t, growth_tier)
@@ -804,7 +879,11 @@ def analyze_targets_in_range(iso, lower_bound, upper_bound, mac_curves):
                 # Demand-growth-adjusted totals
                 gf = demand_growth_factor(iso, t, growth_tier)
                 demand_twh = DEMAND_TWH[iso] * gf
-                clean_cost = CLEAN_COST[cost_tier][iso][THRESHOLDS.index(t)]
+                # Use parquet-sourced cost (per demand MWh, existing at $0) if available
+                if _PARQUET_COSTS and iso in _PARQUET_COSTS and t in _PARQUET_COSTS[iso]:
+                    clean_cost = _PARQUET_COSTS[iso][t].get(cost_tier)
+                else:
+                    clean_cost = CLEAN_COST[cost_tier][iso][THRESHOLDS.index(t)]
                 total_cost_M = (clean_cost * demand_twh) if clean_cost else None
                 total_co2 = compute_co2_abated(iso, t, growth_tier)['total_co2_mt']
 
@@ -983,6 +1062,15 @@ def main():
 
     # Load canonical data files (emission rates + fossil mix from dispatch_utils pipeline)
     load_canonical_data()
+
+    # Load cost data from parquets (per MWh of demand, existing at $0)
+    # This replaces the hardcoded CLEAN_COST arrays with actual optimizer output
+    print("\nLoading cost tiers from parquets (P10/P25/P50/P75/P90)...")
+    parquet_costs = load_parquet_costs()
+    if _PARQUET_COSTS:
+        print(f"  Parquet costs loaded for {len(_PARQUET_COSTS)} ISOs — using for MAC computation")
+    else:
+        print("  WARNING: No parquet costs loaded — falling back to hardcoded CLEAN_COST")
 
     all_results = {}
 
