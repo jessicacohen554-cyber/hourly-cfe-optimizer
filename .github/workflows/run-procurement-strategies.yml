@@ -163,6 +163,7 @@ jobs:
 
       - name: Create PR
         if: success()
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -182,4 +183,6 @@ jobs:
           - **Strategy 2**: Hourly matching same-ISO (3 existing-clean-credit variants)
           - **Strategy 3**: Annual matching (2×2: boundary × additionality)" \
               --base master
+          else
+            echo "No new commits to create PR for"
           fi
