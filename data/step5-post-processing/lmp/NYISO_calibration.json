@@ -1,0 +1,141 @@
+{
+  "iso": "NYISO",
+  "calibration_date": "2026-02-28 03:55:15",
+  "synthetic_stats": {
+    "avg_lmp": 51.65,
+    "peak_avg_lmp": 66.69,
+    "offpeak_avg_lmp": 37.94,
+    "zero_price_hours": 273,
+    "negative_price_hours": 273,
+    "scarcity_hours": 279,
+    "lmp_p10": 31.64,
+    "lmp_p25": 35.96,
+    "lmp_p50": 36.78,
+    "lmp_p75": 38.05,
+    "lmp_p90": 68.93,
+    "price_volatility": 71.01,
+    "duck_curve_depth_mw": 8508.0,
+    "net_peak_price": 613.16,
+    "fossil_revenue_mwh": 51.67
+  },
+  "targets": {
+    "avg_lmp": 42.0,
+    "peak_avg_lmp": 52.0,
+    "offpeak_avg_lmp": 32.0,
+    "lmp_p10": 18.0,
+    "lmp_p25": 26.0,
+    "lmp_p50": 36.0,
+    "lmp_p75": 50.0,
+    "lmp_p90": 68.0,
+    "price_volatility": 30.0,
+    "negative_price_hours": 150,
+    "scarcity_hours": 70
+  },
+  "source": "Potomac Economics NYISO 2024 SOM",
+  "comparison": [
+    {
+      "metric": "avg_lmp",
+      "synthetic": 51.65,
+      "target": 42.0,
+      "delta": 9.649999999999999,
+      "pct_delta": 22.97619047619047,
+      "status": "FAIR"
+    },
+    {
+      "metric": "peak_avg_lmp",
+      "synthetic": 66.69,
+      "target": 52.0,
+      "delta": 14.689999999999998,
+      "pct_delta": 28.249999999999996,
+      "status": "ADJUST"
+    },
+    {
+      "metric": "offpeak_avg_lmp",
+      "synthetic": 37.94,
+      "target": 32.0,
+      "delta": 5.939999999999998,
+      "pct_delta": 18.562499999999993,
+      "status": "FAIR"
+    },
+    {
+      "metric": "lmp_p10",
+      "synthetic": 31.64,
+      "target": 18.0,
+      "delta": 13.64,
+      "pct_delta": 75.77777777777777,
+      "status": "FAIL"
+    },
+    {
+      "metric": "lmp_p25",
+      "synthetic": 35.96,
+      "target": 26.0,
+      "delta": 9.96,
+      "pct_delta": 38.30769230769231,
+      "status": "ADJUST"
+    },
+    {
+      "metric": "lmp_p50",
+      "synthetic": 36.78,
+      "target": 36.0,
+      "delta": 0.7800000000000011,
+      "pct_delta": 2.16666666666667,
+      "status": "GOOD"
+    },
+    {
+      "metric": "lmp_p75",
+      "synthetic": 38.05,
+      "target": 50.0,
+      "delta": -11.950000000000003,
+      "pct_delta": -23.900000000000006,
+      "status": "FAIR"
+    },
+    {
+      "metric": "lmp_p90",
+      "synthetic": 68.93,
+      "target": 68.0,
+      "delta": 0.9300000000000068,
+      "pct_delta": 1.3676470588235394,
+      "status": "GOOD"
+    },
+    {
+      "metric": "price_volatility",
+      "synthetic": 71.01,
+      "target": 30.0,
+      "delta": 41.010000000000005,
+      "pct_delta": 136.70000000000002,
+      "status": "FAIL"
+    },
+    {
+      "metric": "negative_price_hours",
+      "synthetic": 273,
+      "target": 150,
+      "delta": 123,
+      "pct_delta": 82.0,
+      "status": "FAIL"
+    },
+    {
+      "metric": "scarcity_hours",
+      "synthetic": 279,
+      "target": 70,
+      "delta": 209,
+      "pct_delta": 298.57142857142856,
+      "status": "FAIL"
+    }
+  ],
+  "distribution": {
+    "percentiles": {
+      "p1": -13.19,
+      "p5": 10.81,
+      "p10": 31.64,
+      "p25": 35.96,
+      "p50": 36.78,
+      "p75": 38.05,
+      "p90": 68.93,
+      "p95": 89.06,
+      "p99": 487.12
+    },
+    "negative_hours": 273,
+    "zero_hours": 273,
+    "scarcity_hours": 279
+  }
+}
