@@ -61,6 +61,20 @@ MEDIUM_KEYS_SET = frozenset({
 # Wholesale prices (duplicated from optimizer for standalone use)
 WHOLESALE_PRICES = {'CAISO': 30, 'ERCOT': 27, 'PJM': 34, 'NYISO': 42, 'NEISO': 41, 'MISO': 30, 'SPP': 25}
 
+# ── EIA/eGRID baseline: CO₂ already avoided by existing clean generation ──
+# existing_clean_avoidance = (fossil_rate − actual_grid_rate) × demand / 2204.623
+# New investment only gets credit for CO₂ above this pre-existing avoidance.
+_LB_PER_TON = 2204.623
+_EGRID_PATH = os.path.join(BASE_DIR, 'data', 'egrid_emission_rates.json')
+with open(_EGRID_PATH) as _f:
+    _EGRID = json.load(_f)
+
+EXISTING_CLEAN_AVOIDANCE_TONS = {
+    iso: (_EGRID[iso]['fossil_co2_lb_per_mwh'] - _EGRID[iso]['total_co2_lb_per_mwh'])
+         * REGIONAL_DEMAND_MWH.get(iso, 0) / _LB_PER_TON
+    for iso in ISOS
+}
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # DATA LOADING — Direct DataFrame (no dict conversion)
@@ -104,24 +118,24 @@ def load_combined_df(input_dir, isos):
 
 
 def add_mac_column(df):
-    """Add MAC column: (cost_incremental × annual_demand_mwh) / co2_total_co2_abated_tons.
+    """Add MAC column: (cost_total_cost × annual_demand_mwh) / co2_abated_by_new_capital.
 
-    Uses incremental cost above wholesale (cost_incremental = effective_cost - wholesale)
-    so MAC reflects the premium paid for clean energy per ton of CO₂ abated —
-    the standard marginal abatement cost metric in climate policy literature.
+    Cost numerator: full system LCOE (cost_total_cost × annual_demand) — captures
+    the actual capital investment, not just the premium above wholesale.
+
+    CO₂ denominator: co2_total_co2_abated_tons minus the CO₂ already avoided by
+    existing clean generation (from EIA/eGRID actuals). New investment only gets
+    credit for CO₂ displacement above the pre-existing baseline.
     """
-    co2 = df['co2_total_co2_abated_tons']
-    # Use incremental cost (above wholesale) for proper MAC
-    if 'cost_incremental' in df.columns:
-        cost_col = df['cost_incremental']
-        valid = (co2 > 0) & cost_col.notna()
-    else:
-        # Fallback: use effective_cost if incremental not available
-        cost_col = df['cost_effective_cost']
-        valid = (co2 > 0) & cost_col.notna()
+    # Per-ISO existing clean avoidance (CO₂ not credited to new investment)
+    existing_avoidance = df['iso'].map(EXISTING_CLEAN_AVOIDANCE_TONS).fillna(0)
+    co2_net = (df['co2_total_co2_abated_tons'] - existing_avoidance).clip(lower=0)
+
+    cost_col = df['cost_total_cost'] if 'cost_total_cost' in df.columns else df['cost_effective_cost']
+    valid = (co2_net > 0) & cost_col.notna()
     df['mac'] = np.where(
         valid,
-        (cost_col * df['annual_demand_mwh']) / co2,
+        (cost_col * df['annual_demand_mwh']) / co2_net,
         np.nan,
     )
     return df
@@ -271,8 +285,10 @@ def compute_stepwise_fan(df):
         for i in range(1, len(THRESHOLDS)):
             t_prev, t_curr = THRESHOLDS[i - 1], THRESHOLDS[i]
 
-            # Use cost_incremental for proper MAC (cost above wholesale)
-            cost_field = 'cost_incremental' if 'cost_incremental' in iso_df.columns else 'cost_effective_cost'
+            # Use total_cost (full LCOE) for MAC — delta between adjacent thresholds
+            # gives incremental capital required for each step. Baseline offset cancels
+            # in the CO₂ delta so no adjustment needed on the denominator side.
+            cost_field = 'cost_total_cost' if 'cost_total_cost' in iso_df.columns else 'cost_effective_cost'
             prev = iso_df.loc[iso_df['threshold'] == t_prev,
                               ['scenario', cost_field, 'co2_total_co2_abated_tons',
                                'annual_demand_mwh']].set_index('scenario')
@@ -342,6 +358,9 @@ def compute_envelope_and_path(df):
         for _, row in iso_med.iterrows():
             results_by_t[row['threshold']] = row
 
+        # CO₂ already avoided by existing clean — not credited to new investment
+        existing_avoidance = EXISTING_CLEAN_AVOIDANCE_TONS.get(iso, 0)
+
         # ── Envelope + path state ──
         raw_macs = []
         costs_at_t = []
@@ -374,15 +393,18 @@ def compute_envelope_and_path(df):
 
             eff_cost = float(row['cost_effective_cost'])
             co2_tons = float(row['co2_total_co2_abated_tons'])
-            incremental = float(row['cost_incremental'])
+            total_cost = float(row['cost_total_cost']) if 'cost_total_cost' in row.index else float(row['cost_effective_cost'])
+
+            # CO₂ abated by new capital only (subtract existing clean baseline)
+            co2_net = max(0.0, (co2_tons if pd.notna(co2_tons) else 0.0) - existing_avoidance)
 
             # ── Envelope data collection ──
-            costs_at_t.append(incremental)
-            co2_at_t.append(co2_tons if pd.notna(co2_tons) else 0)
+            costs_at_t.append(total_cost)
+            co2_at_t.append(co2_net)
 
-            # Use incremental cost (above wholesale) for proper MAC
-            if pd.notna(co2_tons) and co2_tons > 0:
-                raw_macs.append(round((incremental * demand_mwh) / co2_tons, 1))
+            # Use total_cost (full LCOE) for proper new-capital MAC
+            if co2_net > 0:
+                raw_macs.append(round((total_cost * demand_mwh) / co2_net, 1))
             else:
                 raw_macs.append(None)
 
@@ -413,25 +435,25 @@ def compute_envelope_and_path(df):
                     constrained_mix = mix
 
                 # Cost is at least as high as previous constrained cost
-                constrained_incremental = max(incremental, prev_cost)
+                constrained_total = max(total_cost, prev_cost)
 
-                # Average MAC
-                if co2_tons > 0:
-                    avg_mac = round((constrained_incremental * demand_mwh) / co2_tons, 1)
+                # Average MAC (CO₂ net of existing baseline)
+                if co2_net > 0:
+                    avg_mac = round((constrained_total * demand_mwh) / co2_net, 1)
                 else:
                     avg_mac = None
 
                 path_macs.append(avg_mac)
                 path_mixes.append(constrained_mix)
-                path_costs.append(round(constrained_incremental, 2))
+                path_costs.append(round(constrained_total, 2))
 
                 # Update state for next threshold
                 prev_abs = constrained_abs
                 prev_batt = constrained_batt
                 prev_ldes = constrained_ldes
                 prev_h2 = constrained_h2
-                prev_cost = constrained_incremental
-                prev_co2 = co2_tons
+                prev_cost = constrained_total
+                prev_co2 = co2_net
             else:
                 path_macs.append(None)
                 path_mixes.append(None)
