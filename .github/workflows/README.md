@@ -42,7 +42,7 @@ Each workflow is organized by **which dashboard page it updates**. Every multi-s
 
 | Workflow | Display Name | What It Does |
 |----------|-------------|--------------|
-| `lmp-calibration.yml` | **LMP Calibration: Validate Model** | Validates synthetic LMP model against calibration targets. |
+| `lmp-calibration.yml` | **LMP Calibration: Validate Model** | Validates synthetic LMP model against calibration targets (weather-normalized or QA against actual data). |
 
 ## Common Inputs
 

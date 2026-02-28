@@ -3679,6 +3679,7 @@ const COLORS = {
     battery8:   { base: '#A78BFA', alpha: 'rgba(167,139,250,0.55)' },
     ldes:       { base: '#EC4899', alpha: 'rgba(236,72,153,0.55)' },
     storage:    { base: '#EF4444', alpha: 'rgba(239,68,68,0.55)' },
+    green_h2:   { base: '#00BCD4', alpha: 'rgba(0,188,212,0.55)' },
     gap:        { base: '#D1D5DB', alpha: 'rgba(209,213,219,0.55)' }
 };
 
@@ -3693,7 +3694,8 @@ const RESOURCE_LABELS = {
     battery: 'Battery (4hr)',
     battery8: 'Battery (8hr)',
     ldes: 'LDES (100hr)',
-    storage: 'Storage'
+    storage: 'Storage',
+    green_h2: 'Green H\u2082'
 };
 
 // ---- SBTi year ↔ threshold mapping ----
@@ -3865,8 +3867,8 @@ function priceMix(iso, mixArr, baseDemandTwh, targetYear, growthRate) {
     const levelMap = { 'Low': 'L', 'Medium': 'M', 'High': 'H', 'None': 'N' };
     const ren = levelMap[sensitivityState.renewable_gen] || 'M';
     const firm = levelMap[sensitivityState.firm_gen] || 'M';
-    const battLevel = levelMap[sensitivityState.battery_cost] || 'M';
-    const ldesLevel = levelMap[sensitivityState.ldes_cost] || 'M';
+    const battLevel = levelMap[sensitivityState.storage] || 'M';
+    const ldesLevel = levelMap[sensitivityState.storage] || 'M';
     const ccs = levelMap[sensitivityState.ccs_cost] || 'M';
     const tx = sensitivityState.transmission || 'Medium';
     const geo = levelMap[sensitivityState.geothermal_cost] || 'M';
@@ -4183,6 +4185,7 @@ function resolveEntry(region, thresholdKey) {
                 }
             }
 
+            normalized.threshold = thresholdKey;
             normalized.compressed_day = getCompressedDayProfile(iso, normalized);
             return normalized;
         }
@@ -4217,6 +4220,7 @@ function resolveEntry(region, thresholdKey) {
                 }
             };
             if (optimal.gas_backup) entry.gas_backup = optimal.gas_backup;
+            entry.threshold = thresholdKey;
             entry.compressed_day = getCompressedDayProfile(iso, entry);
             return entry;
         }
@@ -5399,7 +5403,7 @@ function updateCostPanel(entry) {
     const rc = costs.resource_costs;
     // Generation resources then storage types
     const genResources = ['clean_firm', 'ccs_ccgt', 'solar', 'wind', 'hydro'];
-    const storageResources = ['battery', 'ldes'];
+    const storageResources = ['battery', 'battery8', 'ldes'];
 
     let rows = '';
     genResources.forEach(r => {
