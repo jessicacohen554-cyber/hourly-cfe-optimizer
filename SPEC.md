@@ -883,10 +883,18 @@ Step 4 → dispatch cache → CO2/MAC/LMP/compressed day (read from cache, run i
 - Checkpoint: `data/track_checkpoint.json` (partial results)
 - Parquet export: `dashboard/track_scenarios.parquet` (CAISO only)
 
+**All-ISO Price Models (Added Feb 28):**
+- All 7 ISOs now have calibrated price model classes (PJMPriceModel through SPPPriceModel)
+- GAF (Gas Availability Factor) added for MISO (0.83) and SPP (0.84)
+- `calibrate_lmp_model.py` updated with ISO_CALIBRATION_TARGETS for all 7 ISOs
+- `--iso ALL` support in both `step6_compute_lmp_prices.py` and `calibrate_lmp_model.py`
+- 2024 SOM calibration targets (avg LMP, percentiles, negative hours, scarcity):
+  - SPP: $26/MWh (cheapest), ERCOT: $26, MISO: $31, PJM: $34.7, CAISO: $38, NEISO: $39.5, NYISO: $42
+
 **Next Steps:**
-- Finish track sweep (ERCOT + PJM + NYISO + NEISO)
-- Run LMP model on full PJM ECF scenarios (all thresholds × fuel sensitivities)
-- Optional: fetch PJM hourly LMP data from Data Miner 2 for distribution matching
+- Fetch actual 2024 EIA hourly data for all ISOs and run calibration validation
+- Tune demand-quantile parameters per ISO to match actual LMP distributions
+- Run LMP model on full all-ISO ECF scenarios (all thresholds × fuel sensitivities)
 
 ### LMP Price Calculation & Existing vs New-Build Analysis (Feb 20, 2026)
 
