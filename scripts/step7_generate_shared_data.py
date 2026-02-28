@@ -336,38 +336,89 @@ for iso in ISOS:
     print(f"  {iso} clean_med: {med_line}")
 
 # ============================================================================
-# EXTRACT RESOURCE_MIX_DATA
+# EXTRACT RESOURCE_MIX_DATA (from Step 3 demand-growth parquets, Medium growth)
 # ============================================================================
+# Each threshold maps to an SBTi target year via THRESHOLD_TARGET_YEARS.
+# Demand grows at Medium rate from 2025 to that year, changing the cost-optimal
+# mix. DG parquets (step3_dg_{ISO}_t{threshold}.parquet) contain the repriced
+# results under demand growth — we extract Medium growth + Medium sensitivity.
+# This replaces the old approach of reading static 2025-demand mixes from
+# overprocure_results.json, which showed identical mixes up to ~80%.
 
-print("\nExtracting RESOURCE_MIX_DATA...")
+print("\nExtracting RESOURCE_MIX_DATA from DG parquets (Medium growth × Medium sensitivity)...")
+DG_PARQUET_DIR = os.path.join(SCRIPT_DIR, '..', 'data', 'step3-cost-opt-parquets')
+
+try:
+    import pandas as _pd
+except ImportError:
+    print("  WARNING: pandas not available — falling back to base results (no demand growth)")
+    _pd = None
+
 resource_mix_data = {}
+demand_twh_by_threshold = {}  # {iso: [twh_at_threshold_0, twh_at_threshold_1, ...]}
+
 for iso in ISOS:
     iso_data = {r: [] for r in RESOURCES}
     iso_data['battery'] = []
     iso_data['battery8'] = []
     iso_data['ldes'] = []
     iso_data['h2'] = []
+    iso_demand_twh = []
 
-    for t in THRESHOLDS:
-        sc = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {}).get(medium_key(iso))
-        if sc:
-            rm = sc.get('resource_mix', {})
-            for res in RESOURCES:
-                iso_data[res].append(rm.get(res, 0))
-            iso_data['battery'].append(sc.get('battery_dispatch_pct', 0))
-            iso_data['battery8'].append(sc.get('battery8_dispatch_pct', 0))
-            iso_data['ldes'].append(sc.get('ldes_dispatch_pct', 0))
-            iso_data['h2'].append(sc.get('h2_dispatch_pct', 0))
+    geo = 'M' if iso == 'CAISO' else 'X'
+    med_scenario_key = f'MMMM_M_M_M1_{geo}'
+
+    for t_idx, t in enumerate(THRESHOLDS):
+        t_num = THRESHOLDS_NUM[t_idx]
+        dg_file = os.path.join(DG_PARQUET_DIR, f'step3_dg_{iso}_t{t_num}.parquet')
+
+        dg_row = None
+        if _pd is not None and os.path.exists(dg_file):
+            try:
+                df = _pd.read_parquet(dg_file)
+                med = df[(df['growth_level'] == 'Medium') & (df['scenario'] == med_scenario_key)]
+                if len(med) > 0:
+                    dg_row = med.iloc[0]
+            except Exception as e:
+                print(f"  WARNING: Error reading {dg_file}: {e}")
+
+        if dg_row is not None:
+            iso_data['clean_firm'].append(int(dg_row['mix_clean_firm']))
+            iso_data['solar'].append(int(dg_row['mix_solar']))
+            iso_data['wind'].append(int(dg_row['mix_wind']))
+            iso_data['ccs_ccgt'].append(int(dg_row['mix_ccs_ccgt']))
+            iso_data['hydro'].append(int(dg_row['mix_hydro']))
+            iso_data['battery'].append(int(dg_row.get('battery_dispatch_pct', 0)))
+            iso_data['battery8'].append(int(dg_row.get('battery8_dispatch_pct', 0)))
+            iso_data['ldes'].append(int(dg_row.get('ldes_dispatch_pct', 0)))
+            iso_data['h2'].append(int(dg_row.get('h2_dispatch_pct', 0)))
+            iso_demand_twh.append(round(dg_row['annual_demand_mwh'] / 1e6, 2))
         else:
-            for res in RESOURCES:
-                iso_data[res].append(0)
-            iso_data['battery'].append(0)
-            iso_data['battery8'].append(0)
-            iso_data['ldes'].append(0)
-            iso_data['h2'].append(0)
+            # Fallback to base results (no demand growth)
+            sc = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {}).get(medium_key(iso))
+            if sc:
+                rm = sc.get('resource_mix', {})
+                for res in RESOURCES:
+                    iso_data[res].append(rm.get(res, 0))
+                iso_data['battery'].append(sc.get('battery_dispatch_pct', 0))
+                iso_data['battery8'].append(sc.get('battery8_dispatch_pct', 0))
+                iso_data['ldes'].append(sc.get('ldes_dispatch_pct', 0))
+                iso_data['h2'].append(sc.get('h2_dispatch_pct', 0))
+            else:
+                for res in RESOURCES:
+                    iso_data[res].append(0)
+                iso_data['battery'].append(0)
+                iso_data['battery8'].append(0)
+                iso_data['ldes'].append(0)
+                iso_data['h2'].append(0)
+            # Use base demand
+            base_twh = _REGIONAL_DEMAND_TWH.get(iso, 100)
+            iso_demand_twh.append(round(base_twh, 2))
 
     resource_mix_data[iso] = iso_data
+    demand_twh_by_threshold[iso] = iso_demand_twh
     print(f"  {iso} clean_firm: {iso_data['clean_firm']}")
+    print(f"  {iso} demand_twh: {iso_demand_twh[:5]}...{iso_demand_twh[-3:]}")
 
 # ============================================================================
 # EXTRACT COMPRESSED_DAY_DATA (from compressed_day_profiles.json)
@@ -808,8 +859,9 @@ lines.append('')
 
 # RESOURCE_MIX_DATA
 lines.append('')
-lines.append('// --- Resource Mix (% of demand) — medium scenario ---')
-lines.append('// Source: overprocure_results.json (Step 2 repriced)')
+lines.append('// --- Resource Mix (% of demand) — Medium sensitivity × Medium demand growth ---')
+lines.append('// Source: Step 3 demand-growth parquets (step3_dg_{ISO}_t{threshold}.parquet)')
+lines.append('// Each threshold maps to an SBTi year; demand grows at Medium rate to that year.')
 lines.append(f'// Indices match THRESHOLDS array: [{thresh_str}]')
 lines.append('// battery/battery8/ldes/h2 = dispatch % of demand')
 lines.append('const RESOURCE_MIX_DATA = {')
@@ -822,6 +874,19 @@ for iso_idx, iso in enumerate(ISOS):
         lines.append(f'        {key}:{padding}{fmt_array(d[key])}{comma}')
     comma = ',' if iso_idx < len(ISOS) - 1 else ''
     lines.append(f'    }}{comma}')
+lines.append('};')
+
+# DEMAND_TWH_BY_THRESHOLD — demand TWh at each threshold's SBTi target year (Medium growth)
+lines.append('')
+lines.append('// --- Demand TWh at each threshold\'s SBTi year (Medium demand growth) ---')
+lines.append('// Source: Step 3 demand-growth parquets (annual_demand_mwh / 1e6)')
+lines.append('// Use in WYN panel: multiply resource % by this TWh instead of base 2025 demand.')
+lines.append(f'// Indices match THRESHOLDS array: [{thresh_str}]')
+lines.append('const DEMAND_TWH_BY_THRESHOLD = {')
+for iso_idx, iso in enumerate(ISOS):
+    dt = demand_twh_by_threshold[iso]
+    comma = ',' if iso_idx < len(ISOS) - 1 else ''
+    lines.append(f'    {iso}: {fmt_array(dt)}{comma}')
 lines.append('};')
 
 # COMPRESSED_DAY_DATA
