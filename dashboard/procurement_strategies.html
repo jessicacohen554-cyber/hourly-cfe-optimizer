@@ -1100,7 +1100,7 @@ body {
 // The animation code below expects 5 additional derived keys.
 // ====================================================================
 (function deriveMissingKeys() {
-    if (!window.CQ_DATA) return;
+    if (typeof CQ_DATA === 'undefined') return;
     var DERIVE_ISOS = ['SPP', 'ERCOT', 'MISO', 'PJM', 'CAISO', 'NYISO', 'NEISO'];
 
     // 1. growth_adjusted_cumulative → alias for cumulative_deployment
