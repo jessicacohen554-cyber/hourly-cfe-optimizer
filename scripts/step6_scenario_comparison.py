@@ -2139,12 +2139,18 @@ def build_consequential_queue(scenario_results, egrid, fossil_mix, cfr_fn=None,
                 avg_rate = (rate_start + rate_end) / 2
                 co2_displaced_mt = delta_clean_twh * avg_rate
 
-            # MAC = delta_cost / delta_co2 (direct, no intermediate LCOE/rate split)
-            delta_new_cost = end['new_build_cost_total'] - start['new_build_cost_total']
+            # MAC = newbuild LCOE / emission rate at zone endpoint
+            # Use blended new-build LCOE ($/MWh of new clean energy, excludes gas)
+            newbuild_lcoe = end.get('blended_new_lcoe', 0)
 
-            # co2_displaced_mt already computed above from dispatch or analytical model
-            if co2_displaced_mt > 0.001 and delta_new_cost > 0:
-                marginal_mac = delta_new_cost / (co2_displaced_mt * 1e6)
+            # Emission rate at endpoint from dispatch or analytical model
+            if use_dispatch and (iso, t_end) in _co2_cache:
+                endpoint_emission_rate = _co2_cache[(iso, t_end)]['weighted_emission_rate']
+            else:
+                endpoint_emission_rate = avg_rate
+
+            if endpoint_emission_rate > 0.0001 and newbuild_lcoe > 0:
+                marginal_mac = newbuild_lcoe / endpoint_emission_rate
             else:
                 marginal_mac = float('inf')
 
@@ -2167,6 +2173,8 @@ def build_consequential_queue(scenario_results, egrid, fossil_mix, cfr_fn=None,
                 'year_start': year_start,
                 'year_end': year_end,
                 'marginal_mac': round(marginal_mac, 1) if marginal_mac < 9999 else 9999,
+                'newbuild_lcoe': round(newbuild_lcoe, 1),
+                'endpoint_emission_rate': round(endpoint_emission_rate, 4),
                 'co2_displaced_mt': round(co2_displaced_mt, 2),
                 'delta_cost_per_mwh': round(delta_cost_per_mwh, 2),
                 'delta_resources': {k: round(v, 1) for k, v in delta_resources.items()},
