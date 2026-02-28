@@ -1,22 +1,22 @@
 {
   "iso": "PJM",
-  "calibration_date": "2026-02-28 03:55:11",
+  "calibration_date": "2026-02-28 04:11:14",
   "synthetic_stats": {
-    "avg_lmp": 36.19,
-    "peak_avg_lmp": 44.27,
-    "offpeak_avg_lmp": 28.82,
+    "avg_lmp": 35.96,
+    "peak_avg_lmp": 43.85,
+    "offpeak_avg_lmp": 28.77,
     "zero_price_hours": 196,
     "negative_price_hours": 196,
-    "scarcity_hours": 89,
+    "scarcity_hours": 71,
     "lmp_p10": 18.55,
     "lmp_p25": 23.29,
     "lmp_p50": 31.41,
     "lmp_p75": 39.01,
     "lmp_p90": 49.66,
-    "price_volatility": 30.02,
+    "price_volatility": 28.93,
     "duck_curve_depth_mw": 0.0,
-    "net_peak_price": 236.69,
-    "fossil_revenue_mwh": 36.19
+    "net_peak_price": 227.0,
+    "fossil_revenue_mwh": 35.96
   },
   "targets": {
     "avg_lmp": 34.7,
@@ -35,26 +35,26 @@
   "comparison": [
     {
       "metric": "avg_lmp",
-      "synthetic": 36.19,
+      "synthetic": 35.96,
       "target": 34.7,
-      "delta": 1.4899999999999949,
-      "pct_delta": 4.293948126801138,
+      "delta": 1.259999999999998,
+      "pct_delta": 3.6311239193083518,
       "status": "GOOD"
     },
     {
       "metric": "peak_avg_lmp",
-      "synthetic": 44.27,
+      "synthetic": 43.85,
       "target": 42.0,
-      "delta": 2.270000000000003,
-      "pct_delta": 5.404761904761912,
+      "delta": 1.8500000000000014,
+      "pct_delta": 4.404761904761908,
       "status": "GOOD"
     },
     {
       "metric": "offpeak_avg_lmp",
-      "synthetic": 28.82,
+      "synthetic": 28.77,
       "target": 28.0,
-      "delta": 0.8200000000000003,
-      "pct_delta": 2.9285714285714297,
+      "delta": 0.7699999999999996,
+      "pct_delta": 2.7499999999999987,
       "status": "GOOD"
     },
     {
@@ -99,10 +99,10 @@
     },
     {
       "metric": "price_volatility",
-      "synthetic": 30.02,
+      "synthetic": 28.93,
       "target": 25.0,
-      "delta": 5.02,
-      "pct_delta": 20.08,
+      "delta": 3.9299999999999997,
+      "pct_delta": 15.719999999999997,
       "status": "FAIR"
     },
     {
@@ -115,11 +115,11 @@
     },
     {
       "metric": "scarcity_hours",
-      "synthetic": 89,
+      "synthetic": 71,
       "target": 100,
-      "delta": -11,
-      "pct_delta": -11.0,
-      "status": "FAIR"
+      "delta": -29,
+      "pct_delta": -28.999999999999996,
+      "status": "ADJUST"
     }
   ],
   "distribution": {
@@ -132,10 +132,10 @@
       "p75": 39.01,
       "p90": 49.66,
       "p95": 64.14,
-      "p99": 200.62
+      "p99": 192.82
     },
     "negative_hours": 196,
     "zero_hours": 196,
-    "scarcity_hours": 89
+    "scarcity_hours": 71
   }
 }
