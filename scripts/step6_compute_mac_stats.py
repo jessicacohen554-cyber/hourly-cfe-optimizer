@@ -598,7 +598,7 @@ def compute_envelope_and_path(df):
                 prev_ldes = constrained_ldes
                 prev_h2 = constrained_h2
                 prev_cost = constrained_total
-                prev_co2 = co2_net
+                prev_co2 = co2_reduced_mt
             else:
                 path_macs.append(None)
                 path_mixes.append(None)
