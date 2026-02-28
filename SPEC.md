@@ -3,13 +3,13 @@
 > **Authoritative reference for all design decisions.** If a future session needs context, read this file first.
 > Last updated: 2026-02-27.
 
-## Current Status (Feb 27, 2026)
+## Current Status (Feb 28, 2026)
 
-### Corporate Procurement Strategy Simulation — Research & Design Phase
+### Corporate Procurement Strategy Simulation — Compute Architecture Phase
 
-**Branch:** `claude/procurement-strategy-research-AQVkc`
+**Branch:** `claude/procurement-strategy-page-lmOiJ`
 
-**Completed:**
+**Completed (Research & Design — Feb 27):**
 - [x] Research: C&I load share by ISO (EIA data — national ~62%, ranges 52-67% by ISO)
 - [x] Research: Corporate voluntary procurement market state (NREL 2024: ~315 TWh, ~13% C&I penetration)
 - [x] Research: RPS/compliance/nuclear programs — clean energy already committed per ISO
@@ -23,13 +23,24 @@
 - [x] Adverse effects of delayed hourly matching: 3 compounding effects documented — see §15.11
 - [x] Participation slider defaults: Hyperscaler 5-6%, Other 7-8% — see §15.13
 - [x] Cost-to-replace premium (Strategy 2C): Use existing Track 3 CTR values directly
-- [ ] Build interactive dashboard page
-- [ ] Create Step 8 scripts for strategy-level compute
+
+**Completed (Compute Architecture — Feb 28):**
+- [x] Step 6.5 compute architecture decisions — all 7 decision cards resolved (see §15.14)
+- [x] Card 1 (Script structure): 1A — one script per strategy family + shared utils
+- [x] Card 2 (Existing clean pricing): Dual toggle — 45U + CTR NOAK-based premiums
+- [x] Card 3 (SSS baseline): 2B gets grid 8760 shape free; 2C gets SSS 8760 + existing-minus-SSS at premium + new-build
+- [x] Card 4 (Participation model): 4B — independent annual + hourly translation + scarcity
+- [x] Card 5 (LMP feedback): 5C — full 8760-hour LMP for all 7 ISOs
+- [x] Card 6 (SBTi mapping): 6D — SBTi default + manual override
+- [x] Card 7 (Output format): 7B — standalone procurement-strategy-data.js
+
+- [x] PPA pricing model: Percentage premium (LCOE × (1 + pct)) — VRE 5/12/22%, Firm 12/22/38%, Uprate 10/20/35%
 
 **Next steps:**
-- Build hybrid scrollytell + interactive dashboard page
-- Create Step 8 scripts for procurement strategy compute
-- Model all three adverse effects (learning delay, stranded VRE, gas lock-in) explicitly
+- Build Step 6.5 scripts (strategy1/2/3 + procurement_utils)
+- Extend LMP model to all 7 ISOs (currently PJM-only)
+- Create GitHub Actions workflow for Step 6.5
+- Build interactive procurement comparison dashboard page
 
 ---
 
@@ -132,6 +143,130 @@ These effects should be modeled explicitly in the dashboard and presented as a k
 - **Other corporate participation:** Default 7-8% of C&I load (current mid-market). Range 0-40%.
 - **Data center electricity:** ~130-150 TWh (2024), growing ~15-20%/yr. Data center share of C&I: ~5-6% today, projected ~8-10% by 2028.
 - **Total current corporate procurement:** ~315 TWh (~13% of C&I), with 84% from tech/hyperscaler buyers.
+
+### §15.14 Step 6.5 Procurement Strategy Compute Architecture (Decided Feb 28)
+
+**Purpose:** Compute pipeline to model all 10 procurement strategy variants at varying participation levels, producing data for the procurement comparison dashboard page (§15.5).
+
+#### §15.14.1 Script Architecture (Card 1 — Selected: 1A)
+
+One script per strategy family + shared utility module:
+- `scripts/step6_5_strategy1_consequential.py` — Strategies 1A, 1B, 1C
+- `scripts/step6_5_strategy2_hourly.py` — Strategies 2A, 2B, 2C
+- `scripts/step6_5_strategy3_annual.py` — Strategies 3A, 3B, 3C, 3D
+- `scripts/step6_5_procurement_utils.py` — Shared utilities (SSS allocation, EAC pricing, LMP feedback, participation scaling)
+
+Each script is independently runnable. Shared utils handle cross-cutting logic.
+
+#### §15.14.2 Existing Clean Pricing — Dual Toggle (Card 2 — Decided)
+
+Two independent premium mechanisms, each with its own dashboard toggle:
+
+**Toggle (i): 45U-Based Clean Premium**
+- Applies to **existing nuclear** in ISOs with 45U PTC eligibility
+- Price = 45U credit value ($15/MWh, inflation-adjusted) + small margin (5%)
+- Rationale: 45U provides a known revenue floor for existing nuclear. The premium represents what a buyer pays to "claim" the clean attribute of existing nuclear generation beyond what 45U already covers.
+- L/M/H sensitivity on the margin above 45U
+
+**Toggle (ii): CTR (Cost-to-Replace) NOAK-Based Premium**
+- Uses existing Track 3 CTR values directly from `track_results.json`
+- Premium = delta between CTR effective cost and ECF effective cost at each threshold
+- Represents what it would cost to replace existing dispatchable clean if it retired
+- NOAK-adjusted: applies learning curve discount to replacement cost (reflects that under Strategy 2C with sufficient participation, replacement would be at NOAK, not FOAK)
+- L/M/H maps to FOAK/Mid-Learning/NOAK replacement cost
+
+Both toggles can be on simultaneously (additive). Default: Toggle (i) On, Toggle (ii) On at Medium.
+
+#### §15.14.3 Existing Clean Baseline Allocation (Card 3 — Decided Feb 28)
+
+**Strategy 2B — Grid Baseline (Simple):**
+- Buyer takes credit for **existing clean grid at 8760 hourly shape** as baseline
+- Like Track 1 baseline — existing clean generation follows its actual hourly profile (nuclear flat 24/7, solar daytime, wind stochastic, hydro seasonal)
+- Buyer procures **above** this baseline to reach target CFE threshold
+- No premium paid — free-rides on existing clean being online
+- Cheapest hourly variant but creates stranding risk (§15.5.2)
+
+**Strategy 2C — SSS Allocation + Premium Tranches:**
+- **Layer 1: SSS allocation** — Buyer receives pro-rata share of SSS (state-sponsored/contracted) clean within their ISO, following **8760 shape of SSS generation** (nuclear baseload, solar daytime, hydro seasonal — shaped by actual SSS resource mix per ISO)
+- **Layer 2: Existing clean beyond SSS** — Remaining existing clean (total existing minus SSS) follows its **8760 hourly shape**. Buyer can procure from this pool at premium prices (see §15.14.4 below)
+- **Layer 3: New-build** — Any remaining gap above existing is filled with new-build procurement at LCOE (or LCOE + PPA premium — see §15.14.4)
+- Buyer procures **above SSS** allocation to reach target, drawing from Layer 2 (existing non-SSS at premium) then Layer 3 (new-build)
+
+**Key distinction:** 2B gets existing clean for free (no payment signal). 2C pays for existing clean via explicit premiums, creating a revenue signal to prevent retirement.
+
+#### §15.14.4 Procurement Cost Tranches for Strategy 2C (Decided Feb 28)
+
+Tranche merit-order for 2C procurement above SSS:
+
+| Tranche | Source | Price | Status |
+|---------|--------|-------|--------|
+| 1 | Existing nuclear (non-SSS) | 45U + 5% margin, or CTR delta | **Decided** (§15.14.2) |
+| 2 | Nuclear uprates | Uprate LCOE × (1 + premium_pct) | **Decided** (see PPA pricing below) |
+| 3 | Existing hydro/solar/wind (non-SSS) | EAC market proxy ($3-5/MWh) | **Decided** (from §Decision 5e) |
+| 4 | New-build VRE (solar, wind) | LCOE × (1 + VRE_PPA_premium) | **Decided** (see PPA pricing below) |
+| 5 | New-build clean firm (nuclear, CCS, geothermal) | LCOE × (1 + Firm_PPA_premium) | **Decided** (see PPA pricing below) |
+
+**PPA Premium Model (Decided Feb 28):**
+
+PPA prices are set by developer financial models (capital recovery + equity return + risk). The PPA-to-LCOE gap reflects the difference between LCOE's assumed WACC (6-8% real) and actual project financing costs (10-12% nominal equity + 5-7% debt), plus transaction costs. Empirically (LBNL PPA tracking), wind/solar PPAs run 10-25% above NREL ATB LCOE. The percentage model is used because developer returns scale with capital deployed.
+
+`PPA_price = LCOE × (1 + premium_pct)`
+
+| Resource Category | L Premium | M Premium | H Premium | Rationale |
+|-------------------|----------|-----------|-----------|-----------|
+| **VRE (solar, wind)** | +5% | +12% | +22% | Commodity market, many competing developers, lower risk |
+| **Clean firm (nuclear, CCS, geothermal)** | +12% | +22% | +38% | Fewer projects, higher development risk, longer timelines |
+| **Nuclear uprates** | +10% | +20% | +35% | Limited supply (~4.4 GW nationally), bilateral negotiation |
+
+**L/M/H mapping**: Low = competitive market, ample supply, multiple bidders. Medium = balanced market, typical bilateral dynamics. High = constrained supply, limited developers, high demand for EACs.
+
+**Example at Medium costs, PJM:**
+- Solar LCOE $32 → PPA $36/MWh (+$4)
+- Wind LCOE $38 → PPA $43/MWh (+$5)
+- Uprate LCOE $25 → PPA $30/MWh (+$5)
+- Nuclear new-build LCOE $105 → PPA $128/MWh (+$23)
+- CCS LCOE $79 (45Q on) → PPA $96/MWh (+$17)
+
+#### §15.14.5 Participation-to-CFE Target Mapping (Card 4 — Selected: 4B)
+
+Independent annual demand-share model + hourly translation + scarcity feedback:
+
+1. **Annual demand share:** At X% participation, buyer's annual demand = X% × ISO C&I load (TWh)
+2. **Hourly translation:** Apply 8760-hour load shape to get hourly demand profile. Each hour, buyer needs (hourly_demand × CFE_target%) matched by clean generation.
+3. **EAC scarcity model:** As cumulative demand for EACs increases (more participation), available supply tightens → price escalation. Uses existing `step5_compute_eac_scarcity.py` supply curves.
+
+No "market clearing" between strategies — each strategy computed independently at each participation level.
+
+#### §15.14.6 LMP Wholesale Price Feedback (Card 5 — Selected: 5C)
+
+Full 8760-hour LMP model for **all 7 ISOs**. Extends existing `step6_compute_lmp_prices.py` (currently PJM-only) to all ISOs.
+
+Implementation phases:
+1. PJM — already calibrated (v9, §LMP Module)
+2. ERCOT — ORDC pricing (VOLL × LOLP, $5K cap), no capacity market
+3. CAISO — RA procurement, negative pricing floor (-$60)
+4. NYISO — ICAP capacity market
+5. NEISO — FCM + winter gas premium ($13.13/MWh)
+6. MISO — PRA capacity market
+7. SPP — limited capacity market
+
+Each ISO requires calibration against actual LMP data. ISO-specific price formation rules from §Decision 6 (LMP Module) apply.
+
+#### §15.14.7 SBTi Timeline Integration (Card 6 — Selected: 6D)
+
+Default to SBTi milestone mapping (2030→50%, 2035→70%, 2040→90%, 2050→≥99.99%) with manual override slider for custom targets.
+
+Uses existing constants from `step7_generate_shared_data.py` SBTI_MILESTONES.
+
+#### §15.14.8 Output Format (Card 7 — Selected: 7B)
+
+Standalone JS data file: `dashboard/js/procurement-strategy-data.js`
+- Loaded only by `procurement_comparison.html`
+- Contains all strategy comparison data (costs, resource mixes, CO₂, MAC, participation curves)
+- Generated by a new step in the pipeline (after Step 6, before Step 7)
+- Does NOT bloat shared-data.js
+
+---
 
 ### §15.3 Participation Model (Decided Feb 27)
 
