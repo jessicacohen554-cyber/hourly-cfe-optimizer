@@ -1139,35 +1139,37 @@ function renderMixCharts(iso) {
             return splitCleanFirm(iso, totalCf, existingNuclearTwh);
         });
 
-        // Pre-compute curtailment per trajectory point — pro-rata across ALL new-build resources
-        // (not just VRE). This ensures firm overprovisioning also shows as hatched/curtailed.
+        // Pre-compute curtailment per trajectory point.
+        // Curtailment = total clean generation that structurally exceeds total demand.
+        // Battery/LDES are storage (not generation) — excluded from curtailment math.
+        // Demand line = total annual demand (d.demand_twh), not threshold% × demand.
         const curtailData = traj.map((d, idx) => {
+            // Generation resources only — battery/ldes are storage, not curtailable gen
             const totalProcured = Object.values(d.resource_twh).reduce((s, v) => s + v, 0);
-            const matched = d.threshold / 100 * (d.demand_twh || baseDemandTwh);
-            const totalCurtailed = Math.max(0, totalProcured - matched);
+            const demandTwh = d.demand_twh || baseDemandTwh;
+            // Structural curtailment: clean gen procured beyond what total demand can absorb
+            const totalCurtailed = Math.max(0, totalProcured - demandTwh);
 
-            // Compute new-build TWh for each resource
+            // Compute new-build TWh for each generation resource (excl. battery/ldes)
             const cf = cfBreakdown[idx];
             const newBuildTwh = {
                 solar: Math.max(0, (d.resource_twh.solar || 0) - (existingTwh.solar || 0)),
                 wind: Math.max(0, (d.resource_twh.wind || 0) - (existingTwh.wind || 0)),
                 hydro: Math.max(0, (d.resource_twh.hydro || 0) - (existingTwh.hydro || 0)),
                 ccs_ccgt: Math.max(0, (d.resource_twh.ccs_ccgt || 0) - (existingTwh.ccs_ccgt || 0)),
-                battery: d.resource_twh.battery || d.battery_twh || 0,
-                ldes: d.resource_twh.ldes || d.ldes_twh || 0,
                 nuclear_uprate: cf.nuclear_uprate,
                 nuclear_new: cf.nuclear_new,
                 geothermal: cf.geothermal,
             };
             const totalNewBuild = Object.values(newBuildTwh).reduce((s, v) => s + v, 0);
 
-            // Pro-rata curtailment across ALL new-build resources
+            // Pro-rata curtailment across generation new-build resources
             const curtail = {};
             for (const [res, val] of Object.entries(newBuildTwh)) {
                 curtail[res] = totalNewBuild > 1 ? totalCurtailed * (val / totalNewBuild) : 0;
             }
             curtail.total = totalCurtailed;
-            curtail.matched = matched;
+            curtail.demandTwh = demandTwh;
             return curtail;
         });
 
@@ -1218,6 +1220,24 @@ function renderMixCharts(iso) {
             });
         }
 
+        // Battery storage (shown separately from generation — cap stale data at 20% of demand)
+        // battery_dispatch_pct in the source is 0–1%, so correct value ≈ 1% of demand max.
+        // The 20% cap guards against a data bug in older JSON where battery_twh = demand_twh.
+        const battData = traj.map(d => {
+            const dem = d.demand_twh || baseDemandTwh;
+            const bat = Math.min(d.battery_twh || 0, 0.20 * dem);
+            return Math.round(bat);
+        });
+        if (battData.some(v => v > 0)) {
+            datasets.push({
+                label: 'Battery Storage (new)',
+                data: battData,
+                backgroundColor: 'rgba(' + RES_RGB.battery + ',0.55)',
+                borderColor: 'rgba(' + RES_RGB.battery + ',1)',
+                borderWidth: 1.5, borderRadius: 6, borderSkipped: 'start', stack: 'mix',
+            });
+        }
+
         // Nuclear uprate + new build (combined as "Nuclear (new)") — subtract curtailment
         datasets.push({
             label: 'Nuclear (new)',
@@ -1245,13 +1265,12 @@ function renderMixCharts(iso) {
         }
 
         // === 3) CURTAILMENT (diagonal stripes, top of stack) ===
-        // Pro-rata curtailment across all new-build resource types.
+        // Structural curtailment: clean generation procured above total annual demand.
+        // Battery and LDES are storage, not generation — excluded from curtailment.
         const curtailResources = [
             { key: 'solar', label: 'Solar', rgb: RES_RGB.solar },
             { key: 'wind', label: 'Wind', rgb: RES_RGB.wind },
             { key: 'hydro', label: 'Hydro', rgb: RES_RGB.hydro },
-            { key: 'battery', label: 'Battery', rgb: RES_RGB.battery },
-            { key: 'ldes', label: 'LDES', rgb: RES_RGB.ldes },
             { key: 'nuclear_uprate', label: 'Nuclear', rgb: RES_RGB.nuclear, combineWith: 'nuclear_new' },
             { key: 'ccs_ccgt', label: 'CCS', rgb: RES_RGB.ccs_ccgt },
             { key: 'geothermal', label: 'Geothermal', rgb: RES_RGB.geothermal, onlyIso: 'CAISO' },
@@ -1271,10 +1290,11 @@ function renderMixCharts(iso) {
             });
         }
 
-        // === 4) CFE TARGET LINE (matched demand) ===
+        // === 4) TOTAL DEMAND LINE ===
+        // Shows total annual electricity demand — bars above this line = structural curtailment.
         datasets.push({
-            label: 'CFE Target',
-            data: curtailData.map(c => Math.round(c.matched)),
+            label: 'Total Demand',
+            data: curtailData.map(c => Math.round(c.demandTwh)),
             type: 'line',
             borderColor: 'rgba(0,0,0,0.7)', borderWidth: 2, borderDash: [6, 3],
             pointRadius: 0, pointHoverRadius: 4, pointBackgroundColor: 'rgba(0,0,0,0.7)',
@@ -1296,12 +1316,15 @@ function renderMixCharts(iso) {
     }
 
     // Compute shared y-axis max across BOTH trajectories for equal scaling
-    // Stack = totalProcured (utilized bars + curtailed bars, no double-count)
+    // Stack = generation TWh + capped battery storage (demand line needs headroom too)
     function computeMaxStack(traj) {
         let maxV = 0;
         traj.forEach(d => {
-            const totalProcured = Object.values(d.resource_twh).reduce((s, v) => s + v, 0);
-            maxV = Math.max(maxV, totalProcured);
+            const genTwh = Object.values(d.resource_twh).reduce((s, v) => s + v, 0);
+            const dem = d.demand_twh || baseDemandTwh;
+            // Cap battery at 20% of demand to guard against stale data
+            const bat = Math.min(d.battery_twh || 0, 0.20 * dem);
+            maxV = Math.max(maxV, genTwh + bat, dem);
         });
         return maxV;
     }
@@ -1327,8 +1350,8 @@ function renderMixCharts(iso) {
                     label: ctx => {
                         const v = ctx.parsed.y;
                         if (v === 0) return null;
-                        if (ctx.dataset.label === 'CFE Target')
-                            return 'CFE Target: ' + v.toLocaleString() + ' TWh';
+                        if (ctx.dataset.label === 'Total Demand')
+                            return 'Total Demand: ' + v.toLocaleString() + ' TWh';
                         return ctx.dataset.label + ': ' + v.toLocaleString() + ' TWh';
                     }
                 }
