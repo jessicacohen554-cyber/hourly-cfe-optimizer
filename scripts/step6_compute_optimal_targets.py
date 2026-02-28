@@ -625,7 +625,6 @@ def compute_marginal_mac_curve(iso, cost_tier='medium', growth_tier='medium'):
     # Cost = clean LCOE per demand MWh × demand TWh (existing at $0, no gas, no wholesale)
     valid_t, valid_clean_cost, valid_co2 = [], [], []
     use_parquet = (_PARQUET_COSTS is not None and iso in _PARQUET_COSTS)
-
     for i, t in enumerate(THRESHOLDS):
         # Get cost per MWh of demand from parquets (preferred) or CLEAN_COST (fallback)
         if use_parquet and t in _PARQUET_COSTS[iso]:
