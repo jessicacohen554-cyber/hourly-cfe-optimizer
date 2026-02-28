@@ -239,24 +239,45 @@ No "market clearing" between strategies — each strategy computed independently
 
 #### §15.14.6 LMP Wholesale Price Feedback (Card 5 — Selected: 5C)
 
-Full 8760-hour LMP model for **all 7 ISOs**. Extends existing `step6_compute_lmp_prices.py` (currently PJM-only) to all ISOs.
+Full 8760-hour LMP model for **all 7 ISOs**. All 7 ISOs now have calibrated price model classes.
 
-Implementation phases:
-1. PJM — already calibrated (v9, §LMP Module)
-2. ERCOT — ORDC pricing (VOLL × LOLP, $5K cap), no capacity market
-3. CAISO — RA procurement, negative pricing floor (-$60)
-4. NYISO — ICAP capacity market
-5. NEISO — FCM + winter gas premium ($13.13/MWh)
-6. MISO — PRA capacity market
-7. SPP — limited capacity market
+**Implementation status (Feb 28):**
+1. PJM — fully calibrated (v10, PJMPriceModel), target $34.7/MWh ✓
+2. ERCOT — ERCOTPriceModel, ORDC VOLL×LOLP $5K cap, target $26/MWh ✓
+3. CAISO — CAISOPriceModel, RA + duck curve -$60 floor, target $38/MWh ✓
+4. NYISO — NYISOPriceModel, ICAP + tight geography, target $42/MWh ✓
+5. NEISO — NEISOPriceModel, FCM + winter gas $13.13/MWh, target $39.5/MWh ✓
+6. MISO — MISOPriceModel, PRA, $3,500 VOLL, coal 35%, target $31/MWh ✓
+7. SPP — SPPPriceModel, limited capacity market, wind 37%, target $26/MWh ✓
+
+**Calibration data:** `calibrate_lmp_model.py` has `ISO_CALIBRATION_TARGETS` with 2024 SOM data for all ISOs. Sources: PJM IMM, Potomac Economics (MISO/NYISO), SPP MMU, ISO-NE EMM, CAISO DMM, ERCOT/Modo Energy.
+
+**Actual LMP fetching:** `step0_fetch_lmp_2025.py` extended to support `--year 2024` and all 7 ISOs (MISO + SPP added via gridstatus). GitHub Actions workflow: `fetch-actual-lmp.yml`.
+
+**Wholesale price degradation analysis (Decided Feb 28):**
+- Run LMP model for all 7 ISOs at all 15 thresholds to produce price degradation curves
+- Key output: avg LMP vs clean energy threshold (50%→99.99%) showing merit-order price depression
+- Correlation with clean penetration demonstrates cannibalization effect
+- Data feeds into both the wholesale price dashboard page AND the procurement strategy comparison
+- Price degradation directly affects procurement cost: as more buyers adopt hourly matching, wholesale prices fall, making EACs relatively more expensive (the "stranding" effect documented in §15.11)
 
 Each ISO requires calibration against actual LMP data. ISO-specific price formation rules from §Decision 6 (LMP Module) apply.
 
-#### §15.14.7 SBTi Timeline Integration (Card 6 — Selected: 6D)
+#### §15.14.7 SBTi Timeline + 25-Year Demand Growth (Card 6 — Selected: 6D, Extended Feb 28)
 
 Default to SBTi milestone mapping (2030→50%, 2035→70%, 2040→90%, 2050→≥99.99%) with manual override slider for custom targets.
 
 Uses existing constants from `step7_generate_shared_data.py` SBTI_MILESTONES.
+
+**25-Year Demand Growth Dimension (Decided Feb 28):**
+The procurement strategy page is built on the **25-year demand growth trajectory / SBTi timeline** already computed by the optimizer:
+- Existing demand growth sweep: 25 years × 3 growth rates (L/M/H) per ISO (from Step 3)
+- Each year maps to an SBTi milestone CFE target → determines how much clean procurement is needed
+- Procurement cost trajectory: for each strategy, compute annual cost over 25 years as the CFE target ratchets up along the SBTi curve
+- Strategy comparison becomes: "what is the total cost of getting from today's procurement to 99.99% by 2050, under each strategy?"
+- Demand growth interacts with EAC scarcity (higher demand = more competition for same EAC supply = higher prices)
+- Learning curve effects compound over the timeline (early adoption at FOAK → late adoption at NOAK)
+- Key visualization: cumulative cost envelope (25 years × 10 strategies × L/M/H demand growth) showing when each strategy becomes optimal
 
 #### §15.14.8 Output Format (Card 7 — Selected: 7B)
 
