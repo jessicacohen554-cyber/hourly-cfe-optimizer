@@ -30,6 +30,8 @@ on:
           - step6_compressed_day
           - step6_consequential
           - step6_scenario_comparison
+          - step6_scenario_a_only
+          - step6_scenario_b_only
           - step6_optimal_targets
       source_ref:
         description: 'Branch/tag to checkout scripts from (default: master)'
@@ -138,11 +140,11 @@ jobs:
           echo "=== Step 6: Compute CO₂ ==="
           python scripts/step6_recompute_co2.py ${{ steps.iso-args.outputs.iso_flags }}
 
-      # ── When running ALL: launch remaining 6 scripts in parallel ──
-      - name: "Step 6: Parallel Post-Processing (MAC, LMP, Compressed Day, Consequential, Scenarios, Optimal Targets)"
+      # ── When running ALL: launch non-scenario scripts + scenarios A/B in parallel ──
+      - name: "Step 6: Parallel Post-Processing (MAC, LMP, Compressed Day, Consequential, Scenario A/B, Optimal Targets)"
         if: ${{ github.event.inputs.scripts == 'ALL' }}
         run: |
-          echo "=== Launching 6 post-processors in parallel ==="
+          echo "=== Launching 7 post-processors in parallel ==="
 
           python scripts/step6_compute_mac_stats.py &
           PID_MAC=$!
@@ -160,28 +162,40 @@ jobs:
           PID_CQ=$!
           echo "  Consequential Queue started (PID: $PID_CQ)"
 
-          python scripts/step6_scenario_comparison.py &
-          PID_SC=$!
-          echo "  Scenario Comparison started (PID: $PID_SC)"
+          python scripts/step6_scenario_a.py ${{ steps.iso-args.outputs.iso_flags }} &
+          PID_SA=$!
+          echo "  Scenario A started (PID: $PID_SA)"
+
+          python scripts/step6_scenario_b.py ${{ steps.iso-args.outputs.iso_flags }} &
+          PID_SB=$!
+          echo "  Scenario B started (PID: $PID_SB)"
 
           python scripts/step6_compute_optimal_targets.py &
           PID_OT=$!
           echo "  Optimal Targets started (PID: $PID_OT)"
 
-          echo "=== Waiting for all 6 to complete ==="
+          echo "=== Waiting for all 7 to complete ==="
           FAILED=0
           wait $PID_MAC || { echo "FAILED: MAC Statistics"; FAILED=1; }
           wait $PID_LMP || { echo "FAILED: LMP Prices"; FAILED=1; }
           wait $PID_CD  || { echo "FAILED: Compressed Day"; FAILED=1; }
           wait $PID_CQ  || { echo "FAILED: Consequential Queue"; FAILED=1; }
-          wait $PID_SC  || { echo "FAILED: Scenario Comparison"; FAILED=1; }
+          wait $PID_SA  || { echo "FAILED: Scenario A"; FAILED=1; }
+          wait $PID_SB  || { echo "FAILED: Scenario B"; FAILED=1; }
           wait $PID_OT  || { echo "FAILED: Optimal Targets"; FAILED=1; }
 
           if [ "$FAILED" -ne 0 ]; then
             echo "ERROR: One or more parallel scripts failed"
             exit 1
           fi
-          echo "=== All 6 post-processors completed successfully ==="
+          echo "=== All 7 parallel post-processors completed ==="
+
+      # ── Scenario Comparison (runs after A+B complete) ──
+      - name: "Step 6: Scenario Comparison (merge A+B results)"
+        if: ${{ github.event.inputs.scripts == 'ALL' }}
+        run: |
+          echo "=== Step 6: Scenario Comparison ==="
+          python scripts/step6_scenario_compare.py ${{ steps.iso-args.outputs.iso_flags }}
 
       # ── Individual script runs (when not running ALL) ──
       - name: "Step 6: MAC Statistics"
@@ -208,11 +222,23 @@ jobs:
           echo "=== Step 6: Consequential Queue ==="
           python scripts/step6_consequential_queue.py
 
-      - name: "Step 6: Scenario Comparison"
+      - name: "Step 6: Scenario A"
+        if: ${{ github.event.inputs.scripts == 'step6_scenario_comparison' || github.event.inputs.scripts == 'step6_scenario_a_only' }}
+        run: |
+          echo "=== Step 6: Scenario A ==="
+          python scripts/step6_scenario_a.py ${{ steps.iso-args.outputs.iso_flags }}
+
+      - name: "Step 6: Scenario B"
+        if: ${{ github.event.inputs.scripts == 'step6_scenario_comparison' || github.event.inputs.scripts == 'step6_scenario_b_only' }}
+        run: |
+          echo "=== Step 6: Scenario B ==="
+          python scripts/step6_scenario_b.py ${{ steps.iso-args.outputs.iso_flags }}
+
+      - name: "Step 6: Scenario Comparison (merge A+B)"
         if: ${{ github.event.inputs.scripts == 'step6_scenario_comparison' }}
         run: |
           echo "=== Step 6: Scenario Comparison ==="
-          python scripts/step6_scenario_comparison.py
+          python scripts/step6_scenario_compare.py ${{ steps.iso-args.outputs.iso_flags }}
 
       - name: "Step 6: Optimal Targets"
         if: ${{ github.event.inputs.scripts == 'step6_optimal_targets' }}
