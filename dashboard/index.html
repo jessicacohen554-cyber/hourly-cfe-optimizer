@@ -1858,26 +1858,42 @@ function buildDataFromSharedData() {
 
 // Build DATA from shared-data.js (no fetch needed)
 DATA = buildDataFromSharedData();
-// Initialize immediately
-document.addEventListener('DOMContentLoaded', function() {
+
+// Initialize — supports both DOMContentLoaded and already-loaded states
+function startHomepage() {
     if (DATA) initHomepage();
-});
+}
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startHomepage);
+} else {
+    startHomepage();
+}
 
 function initHomepage() {
-    // Show all narrative content
-    populateNarrativeStats();
-    populateCurtailmentVisual();
-    populateReliabilityGauges();
-    
-    // Initialize charts if canvases exist
-    if (document.getElementById('narrativeCostChart')) initNarrativeCostChart();
-    if (document.getElementById('narrativeMixChart')) initNarrativeMixChart();
-    if (document.getElementById('incrementalMixChart')) initIncrementalMixChart();
-    if (document.getElementById('homepage90CostChart')) initHomepage90CostChart();
-    if (document.getElementById('noRegretsChart')) initNoRegretsChart('CAISO');
-    if (document.getElementById('costCurveChart')) initCostCurveChart('CAISO');
-    // Trigger scroll animations
+    // CRITICAL: Set up scroll observer FIRST so sections become visible
+    // even if chart initialization fails
     setupScrollObserver();
+
+    // Populate narrative text/stats (no Chart.js dependency)
+    try { populateNarrativeStats(); } catch(e) { console.warn('populateNarrativeStats error:', e); }
+    try { populateCurtailmentVisual(); } catch(e) { console.warn('populateCurtailmentVisual error:', e); }
+    try { populateReliabilityGauges(); } catch(e) { console.warn('populateReliabilityGauges error:', e); }
+
+    // Initialize charts — each wrapped in try/catch so one failure
+    // doesn't prevent the rest from loading
+    var chartInits = [
+        ['narrativeCostChart', function() { initNarrativeCostChart(); }],
+        ['narrativeMixChart', function() { initNarrativeMixChart(); }],
+        ['incrementalMixChart', function() { initIncrementalMixChart(); }],
+        ['homepage90CostChart', function() { initHomepage90CostChart(); }],
+        ['noRegretsChart', function() { initNoRegretsChart('CAISO'); }],
+        ['costCurveChart', function() { initCostCurveChart('CAISO'); }]
+    ];
+    chartInits.forEach(function(entry) {
+        if (document.getElementById(entry[0])) {
+            try { entry[1](); } catch(e) { console.warn('Chart init error (' + entry[0] + '):', e); }
+        }
+    });
 }
 
 // Helper: format number
@@ -4178,17 +4194,35 @@ function initNoRegretsChart(iso) {
 
 // Scroll observer for fade-in animations
 function setupScrollObserver() {
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
+    var targets = document.querySelectorAll('.story-section, .story-fade-in, .scrolly-step');
+    if (!targets.length) return;
+
+    // Fallback: if IntersectionObserver is unavailable, make everything visible immediately
+    if (typeof IntersectionObserver === 'undefined') {
+        targets.forEach(function(el) { el.classList.add('visible'); });
+        return;
+    }
+
+    var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
             if (entry.isIntersecting) {
                 entry.target.classList.add('visible');
             }
         });
-    }, { threshold: 0.15, rootMargin: '0px 0px -60px 0px' });
-    
-    document.querySelectorAll('.story-section, .story-fade-in, .scrolly-step').forEach(el => {
-        observer.observe(el);
-    });
+    }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+
+    targets.forEach(function(el) { observer.observe(el); });
+
+    // Safety net: if sections are still invisible after 2s, force them visible.
+    // This catches edge cases where the observer doesn't fire (e.g., all content
+    // above the fold, or observer timing issues).
+    setTimeout(function() {
+        targets.forEach(function(el) {
+            if (!el.classList.contains('visible')) {
+                el.classList.add('visible');
+            }
+        });
+    }, 2000);
 }
 </script>
 </body>
