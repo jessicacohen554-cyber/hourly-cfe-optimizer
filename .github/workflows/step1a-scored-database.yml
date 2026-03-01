@@ -123,6 +123,9 @@ jobs:
         SCRIPT_LABEL="${{ inputs.script }}"
         TARGET_BRANCH="auto/${TIMESTAMP}-step1a-scored-db-${SCRIPT_LABEL}-${ISO_LABEL}"
         git checkout -b "$TARGET_BRANCH"
+        # Align .github/workflows/ with default branch (GITHUB_TOKEN lacks workflows permission)
+        git checkout origin/master -- .github/workflows/ 2>/dev/null || true
+        git diff --staged --quiet || git commit -m "Align workflow files with default branch"
 
         if [ "$ISO_LABEL" = "ALL" ]; then
           ISOS="CAISO ERCOT PJM NYISO NEISO MISO SPP"
