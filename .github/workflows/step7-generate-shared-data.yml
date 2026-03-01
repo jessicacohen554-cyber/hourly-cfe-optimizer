@@ -29,7 +29,6 @@ jobs:
 
     permissions:
       contents: write
-      pull-requests: write
 
     steps:
       - name: Checkout repo
@@ -101,17 +100,3 @@ jobs:
             echo "Retrying in ${BACKOFF}s..."
             sleep "$BACKOFF"
           done
-
-      - name: Create pull request
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh pr create \
-            --title "Step 7: Update Home Page / Shared Data" \
-            --body "## Summary
-          - Consolidated all pipeline results into \`dashboard/js/shared-data.js\`
-          - This updates the Home Page (index.html) and Dashboard (dashboard.html)
-          - Also saves \`data/step5-post-processing/shared_data.json\`" \
-            --base ${{ inputs.branch || 'master' }} \
-            --head "$TARGET_BRANCH" || echo "PR creation skipped"
