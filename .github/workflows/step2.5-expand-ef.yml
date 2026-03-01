@@ -52,7 +52,6 @@ jobs:
 
     permissions:
       contents: write
-      pull-requests: write
 
     steps:
       - name: Checkout repo
@@ -130,18 +129,3 @@ jobs:
             echo "Retrying in ${BACKOFF}s..."
             sleep "$BACKOFF"
           done
-
-      - name: Create pull request
-        if: ${{ inputs.dry_run != 'true' }}
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh pr create \
-            --title "Step 2.5 EF Expansion: ${{ inputs.iso }}" \
-            --body "## Summary
-          - Augmented step3 feasible parquets with floor-compatible PFS mixes for **${{ inputs.iso }}**
-          - Target: ${{ inputs.target_mixes }} mixes per threshold
-          - After merging, re-run Step 6.1 to update dashboard JS" \
-            --base ${{ inputs.branch || 'master' }} \
-            --head "$TARGET_BRANCH" || echo "PR creation skipped"

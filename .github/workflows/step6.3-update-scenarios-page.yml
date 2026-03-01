@@ -51,7 +51,6 @@ jobs:
 
     permissions:
       contents: write
-      pull-requests: write
 
     steps:
       - name: Checkout repo
@@ -152,24 +151,3 @@ jobs:
             echo "Retrying in ${BACKOFF}s..."
             sleep "$BACKOFF"
           done
-
-      - name: Create pull request
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh pr create \
-            --title "Step 6.3 Scenarios: ${{ inputs.script }} ${{ inputs.iso }}" \
-            --body "## Summary
-          Updates the Scenarios comparison page for **${{ inputs.iso }}** (script: ${{ inputs.script }}).
-
-          ## Scripts (sequential when ALL)
-          1. \`step6_scenario_a.py\` — Consequential scenario
-          2. \`step6_scenario_b.py\` — Hourly matching scenario
-          3. \`step6_scenario_compare.py\` — Merges A+B into comparison data
-
-          ## Outputs
-          - \`data/step5-post-processing/scenario_*.json\`
-          - \`dashboard/js/scenario-comparison-data.js\`" \
-            --base ${{ inputs.branch || 'master' }} \
-            --head "$TARGET_BRANCH" || echo "PR creation skipped"

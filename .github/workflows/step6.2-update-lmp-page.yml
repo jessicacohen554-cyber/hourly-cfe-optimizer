@@ -58,7 +58,6 @@ jobs:
 
     permissions:
       contents: write
-      pull-requests: write
 
     steps:
       - name: Checkout repo
@@ -167,22 +166,3 @@ jobs:
             sleep "$BACKOFF"
           done
 
-      - name: Create pull request
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh pr create \
-            --title "Step 6.2 LMP: ${{ inputs.script }} ${{ inputs.iso }}" \
-            --body "## Summary
-          Updates the Wholesale Price (LMP) page for **${{ inputs.iso }}** (script: ${{ inputs.script }}, fuel=${{ inputs.fuel_level }}).
-
-          ## Scripts (sequential when ALL)
-          1. \`step6_compute_lmp_prices.py\` — synthetic 8760-hour LMP per ISO × threshold × fuel level
-          2. \`extract_lmp_dashboard_data.py\` — extracts parquets into dashboard JS
-
-          ## Outputs
-          - \`data/step5-post-processing/lmp/{ISO}_lmp.parquet\`
-          - \`dashboard/js/lmp-data.js\`" \
-            --base ${{ inputs.branch || 'master' }} \
-            --head "$TARGET_BRANCH" || echo "PR creation skipped"
