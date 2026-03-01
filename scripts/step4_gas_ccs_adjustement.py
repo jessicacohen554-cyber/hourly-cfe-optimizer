@@ -696,13 +696,14 @@ def compute_costs_for_scenario(iso, resource_mix, battery_pct,
         new_pct = max(0, resource_pct_of_demand - existing_share)
 
         if rtype == 'hydro':
-            cost_per_demand = resource_pct_of_demand / 100.0 * wholesale
+            # Hydro is always existing, sunk fleet — $0 cost
+            cost_per_demand = 0.0
         else:
             new_build_cost = lcoe_map.get(rtype, 0) + tx_map.get(rtype, 0)
             if neiso_gas_adder and iso == 'NEISO' and rtype == 'ccs_ccgt':
                 new_build_cost += NEISO_CCS_GAS_ADDER
-            cost_per_demand = (existing_pct / 100.0 * wholesale) + \
-                              (new_pct / 100.0 * new_build_cost)
+            # Existing resources = $0 (sunk fleet). Only new-build costs.
+            cost_per_demand = new_pct / 100.0 * new_build_cost
 
         total_cost_per_demand += cost_per_demand
 
