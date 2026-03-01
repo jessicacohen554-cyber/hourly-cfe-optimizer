@@ -424,7 +424,7 @@ def prepare_numpy_profiles(iso, demand_norm, supply_profiles):
 # SCORING FUNCTIONS — Numba JIT compiled
 # ══════════════════════════════════════════════════════════════════════════════
 
-@njit(cache=True)
+@njit(cache=True, fastmath=True)
 def _compute_storage_caps(demand, supply_row, procurement,
                           batt4_duration, batt8_duration, ldes_duration):
     """Compute max useful capacity and curtailment frequency for storage screening.
@@ -498,7 +498,7 @@ def _compute_storage_caps(demand, supply_row, procurement,
     return bat4_cap, bat8_cap, ldes_cap, has_curtailment, surplus_days
 
 
-@njit(cache=True, parallel=True)
+@njit(cache=True, parallel=True, fastmath=True)
 def _batch_compute_storage_caps(demand, supply_rows, procurement, N,
                                  batt4_duration, batt8_duration, ldes_duration):
     """Compute storage caps for N mixes in parallel using Numba prange.
@@ -528,7 +528,7 @@ def _batch_compute_storage_caps(demand, supply_rows, procurement, N,
     return bat4_caps, bat8_caps, ldes_caps, has_curtailment_arr, surplus_days_arr
 
 
-@njit(cache=True)
+@njit(cache=True, fastmath=True)
 def _score_with_all_storage(demand, supply_row, procurement,
                             batt_capacity, batt_power, batt_eff,
                             batt8_capacity, batt8_power, batt8_eff,
@@ -699,7 +699,7 @@ def _score_with_all_storage(demand, supply_row, procurement,
     return base_matched + batt_dispatched + batt8_dispatched + ldes_dispatched + h2_dispatched
 
 
-@njit(cache=True)
+@njit(cache=True, fastmath=True)
 def _batch_storage_scores(demand, supply_row, procurement,
                           bat4_levels, bat8_levels, ldes_levels_arr,
                           n_b4, n_b8, n_ldes,
@@ -717,19 +717,20 @@ def _batch_storage_scores(demand, supply_row, procurement,
     4. For each LDES level, dispatches LDES → gets residual (reused for all H2)
     5. For each H2 level, dispatches H2 → computes score
 
+    Pre-allocates scratch arrays once and copies into them to avoid ~2,400
+    heap allocations per mix from .copy() calls in the inner loops.
+
     Returns flat array of scores with shape (n_b4 * n_b8 * n_ldes * n_h2,).
     Index mapping: scores[b4_idx * n_b8 * n_ldes * n_h2 + b8_idx * n_ldes * n_h2 + l_idx * n_h2 + h2_idx]
     """
     scores = np.full(n_b4 * n_b8 * n_ldes * n_h2, -1.0)  # -1 = not evaluated
 
     # Base supply and matching
-    supply = np.empty(8760)
     base_surplus = np.empty(8760)
     base_gap = np.empty(8760)
     base_matched = 0.0
     for h in range(8760):
         s = procurement * supply_row[h]
-        supply[h] = s
         d = demand[h]
         base_matched += min(d, s)
         if s > d:
@@ -739,14 +740,23 @@ def _batch_storage_scores(demand, supply_row, procurement,
             base_surplus[h] = 0.0
             base_gap[h] = d - s
 
+    # Pre-allocate scratch arrays once — reuse via copy-into instead of .copy()
+    res_surplus4 = np.empty(8760)
+    res_gap4 = np.empty(8760)
+    res_surplus8 = np.empty(8760)
+    res_gap8 = np.empty(8760)
+    res_surplus_l = np.empty(8760)
+    res_gap_l = np.empty(8760)
+
     for b4_idx in range(n_b4):
         bp = bat4_levels[b4_idx]
         batt_cap = bp / 100.0
         batt_pow = batt_cap / batt4_dur if batt_cap > 0 else 0.0
 
-        # Dispatch bat4 and get residual
-        res_surplus4 = base_surplus.copy()
-        res_gap4 = base_gap.copy()
+        # Copy base into bat4 scratch
+        for h in range(8760):
+            res_surplus4[h] = base_surplus[h]
+            res_gap4[h] = base_gap[h]
         batt_dispatched = 0.0
 
         if batt_cap > 0:
@@ -773,9 +783,10 @@ def _batch_storage_scores(demand, supply_row, procurement,
             batt8_cap = b8p / 100.0
             batt8_pow = batt8_cap / batt8_dur if batt8_cap > 0 else 0.0
 
-            # Dispatch bat8 on post-bat4 residual (2-day window)
-            res_surplus8 = res_surplus4.copy()
-            res_gap8 = res_gap4.copy()
+            # Copy bat4 residual into bat8 scratch
+            for h in range(8760):
+                res_surplus8[h] = res_surplus4[h]
+                res_gap8[h] = res_gap4[h]
             batt8_dispatched = 0.0
 
             if batt8_cap > 0:
@@ -808,9 +819,10 @@ def _batch_storage_scores(demand, supply_row, procurement,
                 ldes_cap = lp / 100.0
                 ldes_pow = ldes_cap / ldes_dur if ldes_cap > 0 else 0.0
 
-                # Dispatch LDES on post-battery residual
-                res_surplus_l = res_surplus8.copy()
-                res_gap_l = res_gap8.copy()
+                # Copy bat8 residual into LDES scratch
+                for h in range(8760):
+                    res_surplus_l[h] = res_surplus8[h]
+                    res_gap_l[h] = res_gap8[h]
                 ldes_dispatched = 0.0
                 if ldes_cap > 0:
                     soc = 0.0
@@ -871,7 +883,7 @@ def _batch_storage_scores(demand, supply_row, procurement,
     return scores
 
 
-@njit(cache=True, parallel=True)
+@njit(cache=True, parallel=True, fastmath=True)
 def _batch_mixes_storage_screen(demand, supply_rows_batch, procurement, n_mixes,
                                  bat4_levels, bat8_levels, ldes_levels,
                                  n_b4, n_b8, n_ldes,
@@ -940,7 +952,7 @@ def batch_hourly_scores(demand_arr, supply_matrix, mix_batch, chunk_size=10000):
     return scores
 
 
-@njit(cache=True)
+@njit(cache=True, fastmath=True)
 def _batch_score_no_storage(demand, supply_rows, procurement, N):
     """Score N mixes without storage, using Numba parallel if available.
 
@@ -961,7 +973,7 @@ def _batch_score_no_storage(demand, supply_rows, procurement, N):
     return scores
 
 
-@njit(cache=True)
+@njit(cache=True, fastmath=True)
 def _batch_score_storage(demand, supply_rows, procurement, N,
                          batt_cap, batt_pow, batt_eff,
                          batt8_cap, batt8_pow, batt8_eff,
