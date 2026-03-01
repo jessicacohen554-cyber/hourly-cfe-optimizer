@@ -44,6 +44,7 @@ from scenario_common import (
     _mix_resource_twh, _get_excess_lcoe,
     _existing_match_pct, _build_existing_only_entry,
     _build_learning_overrides_b,
+    build_augmented_result,
     parse_iso_args, save_scenario_results,
 )
 
@@ -379,72 +380,19 @@ def find_scenario_b_mixes(feasible_mixes, isos=None):
             sel_cost_aug, sel_result, sel_mix, sel_excess, sel_deployed = pool[0]
 
             # Build augmented result with floor ratchet
-            augmented = {}
-            excess_twh = {}
-            for res in floor:
-                ef_val = sel_deployed.get(res, 0)
-                floor_val = floor.get(res, 0)
-                augmented[res] = max(ef_val, floor_val)
-                excess_twh[res] = max(0, floor_val - ef_val)
-
-            total_excess = sum(excess_twh.values())
-
-            aug = dict(sel_result)
-            aug['total_cost'] = round(sel_cost_aug, 2)
-            match_frac = sel_result['match_score'] / 100.0
-            aug['effective_cost'] = round(
-                aug['total_cost'] / match_frac if match_frac > 0 else 0, 2)
-            aug['incremental'] = round(
-                aug['effective_cost'] - sel_result['wholesale'], 2)
-
-            aug['resource_twh'] = {res: augmented.get(res, 0) for res in RESOURCES}
-            aug['battery_twh'] = augmented.get('battery', 0)
-            aug['battery8_twh'] = 0
-            aug['ldes_twh'] = augmented.get('ldes', 0)
-            aug['demand_twh'] = demand_twh
-            aug['mix_raw'] = list(sel_mix)
-
-            # Recompute gas backup from augmented clean capacity
-            clean_peak_mw = 0
-            for r, twh in aug['resource_twh'].items():
-                pcc = PEAK_CAPACITY_CREDITS.get(r, 0)
-                if pcc > 0 and twh > 0:
-                    clean_peak_mw += (twh * 1e6 / 8760) * pcc
-            clean_peak_mw += (augmented.get('battery', 0) * 1e6 / 8760) * \
-                PEAK_CAPACITY_CREDITS.get('battery', 0.95)
-            clean_peak_mw += (augmented.get('ldes', 0) * 1e6 / 8760) * \
-                PEAK_CAPACITY_CREDITS.get('ldes', 0.90)
-
-            ra_peak_mw = PEAK_DEMAND_MW[iso] * gf * (1 + RESOURCE_ADEQUACY_MARGIN)
-            gaf = GAS_AVAILABILITY_FACTOR[iso]
-            gas_needed_mw = max(0, ra_peak_mw - clean_peak_mw) / gaf
-            aug['gas_backup_mw'] = round(gas_needed_mw)
-            aug['new_gas_mw'] = round(max(0, gas_needed_mw - EXISTING_GAS_CAPACITY_MW[iso]))
-            aug['clean_peak_mw'] = round(clean_peak_mw)
-            aug['existing_gas_used_mw'] = round(min(gas_needed_mw, EXISTING_GAS_CAPACITY_MW[iso]))
-
-            # Dispatch parameters
-            aug['battery_dispatch_pct'] = float(sel_mix[6])
-            aug['battery8_dispatch_pct'] = float(sel_mix[7])
-            aug['ldes_dispatch_pct'] = float(sel_mix[8])
-            aug['h2_dispatch_pct'] = float(sel_mix[9]) if len(sel_mix) > 9 else 0.0
-            aug['demand_mwh'] = demand_mwh
-
-            # New-build cost tracking (for MAC)
-            aug['new_build_cost_total'] = (
-                sel_result['new_build_cost_total'] + sel_excess * demand_mwh)
-            aug['new_gen_twh'] = round(
-                sel_result['new_gen_twh'] +
-                sum(v for k, v in excess_twh.items() if k != 'hydro'), 3)
-
-            # Learning curve metadata
-            aug['learning_fraction'] = round(frac, 3)
-            aug['learning_nuclear_lcoe'] = round(overrides['nuclear_lcoe'], 1)
-            aug['learning_ccs_lcoe'] = round(overrides['ccs_lcoe'], 1)
-            aug['learning_ldes_lcoe'] = round(overrides['ldes_lcoe'], 1)
-            aug['paced_firm_target_twh'] = round(paced_firm_twh, 1)
-            aug['paced_ccs_target_twh'] = round(paced_ccs_twh, 1)
-            aug['deploy_fraction'] = round(deploy_frac, 3)
+            extra = {
+                'learning_fraction': round(frac, 3),
+                'learning_nuclear_lcoe': round(overrides['nuclear_lcoe'], 1),
+                'learning_ccs_lcoe': round(overrides['ccs_lcoe'], 1),
+                'learning_ldes_lcoe': round(overrides['ldes_lcoe'], 1),
+                'paced_firm_target_twh': round(paced_firm_twh, 1),
+                'paced_ccs_target_twh': round(paced_ccs_twh, 1),
+                'deploy_fraction': round(deploy_frac, 3),
+            }
+            aug, augmented, excess_twh, total_excess = build_augmented_result(
+                sel_result, sel_mix, floor, sel_deployed,
+                sel_cost_aug, sel_excess,
+                iso, demand_twh, gf, source='EF', extra_fields=extra)
 
             if total_excess > 1.0:
                 print(f"  ↗ {iso} {t}% [B]: {total_excess:.0f} TWh excess "
