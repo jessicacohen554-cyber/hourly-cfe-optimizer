@@ -91,8 +91,8 @@ SBTI_MILESTONES = [
     {'year': 2050, 'threshold': 99.99, 'label': 'Net-zero'},
 ]
 
-# 15 thresholds used by the optimizer (must match step3)
-THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.99]
+# 17 thresholds used by the optimizer (must match step3)
+THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
 
 BASE_YEAR = 2025
 TIMELINE_YEARS = list(range(2025, 2051))  # 26 years
