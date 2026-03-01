@@ -3709,3 +3709,114 @@ gas_needed_mw = max(0, ra_peak - clean_peak) / GAF
 
 **Rejected**:
 - ~~Item 6: Adaptive storage tiers~~ — **Deleted from consideration**. Would skip higher-tier storage configs for mixes already feasible with simpler configs, undermining scientific rigor by missing storage diversity needed for Step 3 cost optimization.
+
+### Clean Firm FOAK→NOAK Learning Curves in Step 3 Demand Growth (Mar 1, 2026)
+
+**Decision**: Integrate Wright's Law FOAK→NOAK learning curves directly into Step 3 cost optimization (Phase 2 — demand growth sweep). Each threshold's SBTi target year determines the learning-curve-adjusted cost for new-build clean firm technologies. This replaces the static-cost model where all demand growth years used the same 2025 LCOE snapshot.
+
+**Problem**: Step 3 currently uses identical LCOEs for all years (2025-2050). A buyer in 2030 faces FOAK pricing for nuclear/CCS/LDES, but the optimizer prices it at NOAK. This systematically underprices new-build clean firm in early years, making storage non-competitive at any threshold — inconsistent with real-world storage deployment.
+
+**Scope**: Phase 2 (demand growth sweep) only. Phase 1 (base year 2025) remains at static L/M/H costs.
+
+**Design choices**:
+1. **Step 3 integration** (not post-hoc repricing) — learning curves must be inside the optimization to change which mixes are selected, not just reprice fixed mixes.
+2. **Paired adoption speed + NOAK optimism** (3 combos, not 6) — each technology's L/M/H toggle controls both NOAK endpoint and adoption speed. Correlated in reality: fast deployment → more learning → lower NOAK. Avoids scenario count explosion.
+3. **Technologies with learning curves**: Nuclear new-build, CCS-CCGT, LDES (100hr iron-air), Green H2, Geothermal (CAISO only). Battery/solar/wind already mature — static costs.
+4. **Uprates unchanged** — $15/25/40 (L/M/H), no learning curve. Existing fleet, sunk cost.
+
+**FOAK Cost Tables** (first-of-a-kind, pre-learning, single value per ISO — same for all L/M/H):
+
+Nuclear new-build FOAK ($/MWh) — ~1.25× High (Vogtle-era pricing):
+| ISO | FOAK |
+|-----|------|
+| CAISO | 175 |
+| ERCOT | 169 |
+| PJM | 200 |
+| NYISO | 212 |
+| NEISO | 206 |
+| MISO | 194 |
+| SPP | 175 |
+
+CCS-CCGT FOAK 45Q ON ($/MWh) — ~1.20× High:
+| ISO | FOAK |
+|-----|------|
+| CAISO | 138 |
+| ERCOT | 110 |
+| PJM | 122 |
+| NYISO | 154 |
+| NEISO | 146 |
+| MISO | 115 |
+| SPP | 106 |
+
+CCS-CCGT FOAK 45Q OFF ($/MWh) — ~1.20× High:
+| ISO | FOAK |
+|-----|------|
+| CAISO | 173 |
+| ERCOT | 145 |
+| PJM | 157 |
+| NYISO | 188 |
+| NEISO | 181 |
+| MISO | 150 |
+| SPP | 140 |
+
+Geothermal FOAK (CAISO only): $150/MWh (~1.35× High)
+
+LDES FOAK ($/MWh) — ~1.40× High (pre-commercial iron-air):
+| ISO | FOAK |
+|-----|------|
+| CAISO | 328 |
+| ERCOT | 283 |
+| PJM | 309 |
+| NYISO | 364 |
+| NEISO | 346 |
+| MISO | 295 |
+| SPP | 287 |
+
+Green H2 FOAK ($/MWh) — ~1.30× High:
+| ISO | FOAK |
+|-----|------|
+| CAISO | 546 |
+| ERCOT | 481 |
+| PJM | 520 |
+| NYISO | 598 |
+| NEISO | 572 |
+| MISO | 494 |
+| SPP | 475 |
+
+**Learning Curve Parameters** (per toggle level):
+
+| Level | Adoption | FOAK Start | NOAK Year | Duration | NOAK Endpoint | Wright's Law Exponent |
+|-------|----------|------------|-----------|----------|---------------|----------------------|
+| L (Optimistic/Fast) | Fast | 2028 | 2038 | 10 years | Low cost table | 0.6 |
+| M (Central) | Central | 2030 | 2042 | 12 years | Medium cost table | 0.6 |
+| H (Pessimistic/Slow) | Slow | 2035 | 2047 | 12 years | High cost table | 0.6 |
+
+**Per-technology timeline overrides** (CCS/geothermal are more mature, slightly faster learning):
+
+| Technology | Toggle | L FOAK→NOAK | M FOAK→NOAK | H FOAK→NOAK |
+|------------|--------|-------------|-------------|-------------|
+| Nuclear new-build | Firm | 2028→2038 | 2030→2042 | 2035→2047 |
+| CCS-CCGT | CCS | 2028→2037 | 2030→2040 | 2033→2045 |
+| Geothermal | Geo | 2027→2036 | 2029→2039 | 2033→2043 |
+| LDES | LDES | 2029→2039 | 2031→2043 | 2035→2047 |
+| Green H2 | LDES | 2029→2039 | 2031→2043 | 2035→2047 |
+
+**Year-adjusted cost formula**: `cost(year) = FOAK × (1 - frac) + NOAK × frac` where `frac = learning_fraction(year, foak_start, noak_year)`.
+
+**`learning_fraction(year, foak_start, noak_year)`**:
+- Before `foak_start`: 0.0 (pure FOAK)
+- After `noak_year`: 1.0 (full NOAK)
+- During learning: `((year - foak_start) / (noak_year - foak_start)) ** 0.6`
+- Exponent 0.6 produces Wright's Law concave ramp: steep initial drop (first 40% of cost reduction in first 30% of timeline), then asymptotic approach to NOAK.
+
+**Example impact (PJM, 70% threshold = year 2035, Firm=M, CCS=M)**:
+- Nuclear FOAK=$200, NOAK_M=$105, frac=`((2035-2030)/(2042-2030))^0.6 = 0.42^0.6 ≈ 0.58` → year cost = $200×0.42 + $105×0.58 = **$145/MWh**
+- CCS FOAK 45Q ON=$122, NOAK_M=$79, frac=`((2035-2030)/(2040-2030))^0.6 = 0.50^0.6 ≈ 0.66` → year cost = $122×0.34 + $79×0.66 = **$93/MWh**
+- Battery 4hr (static): **$98/MWh**
+- **Battery now competitive with nuclear new-build at 70% threshold**
+
+**Implementation**: Modify `precompute_all_prices()` in `step3_cost_optimization.py` to accept optional `target_year` parameter. In Phase 2, compute a year-specific price matrix for each unique DG year (14 matrices × ~0.01s each = negligible overhead). No new scenario dimensions — learning curves are embedded in existing L/M/H toggles.
+
+**Supersedes**: Line 1483 of this file ("Scope: PP3 scenario comparison only. Step 3 cost optimization is NOT modified"). Step 3 DG sweep now uses learning curves. Step 6 scenario comparison curves remain unchanged (their own timeline parameters are for the A/B strategy comparison, not the core optimization).
+
+**No compute cost increase**: Same 5,832/17,496 sensitivity combos per threshold. Only the price lookup changes for DG years. Phase 1 (base year) unchanged. Step 1/2 not affected.
