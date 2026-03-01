@@ -219,7 +219,10 @@ def load_and_process_iso(iso, fnames):
     Two-level dedup strategy to bound peak memory:
       1) Per-file dedup: files with >3M gated rows get deduped before accumulation,
          reducing 22M rows → ~1-2M unique mixes in-place.
-      2) Accumulator dedup: when total accumulated exceeds 5M, dedup the accumulator.
+      2) Accumulator dedup: when NEW rows added since last dedup exceed 5M,
+         dedup the accumulator. This prevents redundant dedup passes when
+         small files (e.g., 1D storage-refined parquets) are appended to an
+         already-deduped accumulator.
 
     Both levels are correct because "keep max score per unique mix" is
     associative — deduplicating partial results then merging more rows and
@@ -239,6 +242,7 @@ def load_and_process_iso(iso, fnames):
     total_input = 0
     total_gated = 0
     n_incremental_dedups = 0
+    rows_since_last_dedup = 0  # Track new rows added since last dedup pass
 
     for fname in fnames:
         # Step 1D files are prefixed with '1d/' to indicate the directory
@@ -287,10 +291,15 @@ def load_and_process_iso(iso, fnames):
             accumulated = t
         else:
             accumulated = pa.concat_tables([accumulated, t], promote_options='permissive')
+        rows_since_last_dedup += t.num_rows
         del t
 
-        # Incremental dedup when accumulator gets large
-        if accumulated.num_rows > INCREMENTAL_DEDUP_THRESHOLD:
+        # Incremental dedup when enough NEW rows have been added since last pass.
+        # Using rows_since_last_dedup (not total accumulator size) prevents
+        # redundant dedup passes when small files (e.g., 1D storage-refined
+        # parquets at 200K-1.2M rows) are appended to an already-deduped
+        # accumulator of 36M+ rows.
+        if rows_since_last_dedup > INCREMENTAL_DEDUP_THRESHOLD:
             arrays = {}
             for col in resource_cols + STORAGE_COLS + ['hourly_match_score']:
                 arrays[col] = accumulated.column(col).to_numpy()
@@ -299,6 +308,7 @@ def load_and_process_iso(iso, fnames):
             del arrays
             gc.collect()
             n_incremental_dedups += 1
+            rows_since_last_dedup = 0
 
     if accumulated is None or accumulated.num_rows == 0:
         return None, total_input, total_gated, 0
