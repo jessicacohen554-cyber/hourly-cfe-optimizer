@@ -41,6 +41,7 @@ import pyarrow.compute as pc
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PFS_DIR = os.path.join(SCRIPT_DIR, 'data')
 STEP1_RAW_DIR = os.path.join(PFS_DIR, 'step1-pfs-parquets')
+STEP1D_DIR = os.path.join(PFS_DIR, 'step1d-storage-parquets')
 STEP2_EF_OUTPUT_DIR = os.path.join(PFS_DIR, 'step2-ef-parquets')
 
 # Target thresholds — 10-40 added for Track 2/3 greenfield, 50-100 for all tracks
@@ -176,6 +177,23 @@ def scan_iso_files(target_isos=None):
                 filtered.append(f)
             files_by_iso[iso] = filtered
 
+    # Also scan Step 1D storage refinement parquets
+    if os.path.isdir(STEP1D_DIR):
+        step1d_files = sorted(
+            f for f in os.listdir(STEP1D_DIR) if f.endswith('.parquet')
+        )
+        if step1d_files:
+            n_1d = 0
+            for fname in step1d_files:
+                iso_prefix = fname.split('_')[0] if '_' in fname else None
+                if iso_prefix and iso_prefix in iso_filter:
+                    # Tag with directory prefix so load_and_process_iso knows
+                    # to read from STEP1D_DIR instead of STEP1_RAW_DIR
+                    files_by_iso.setdefault(iso_prefix, []).append(f'1d/{fname}')
+                    n_1d += 1
+            if n_1d > 0:
+                print(f"  Found {n_1d} Step 1D storage-refined parquets")
+
     missing = [iso for iso in iso_filter if iso not in files_by_iso]
     if missing:
         print(f"  WARNING: Missing ISOs: {', '.join(missing)}")
@@ -221,7 +239,11 @@ def load_and_process_iso(iso, fnames):
     n_incremental_dedups = 0
 
     for fname in fnames:
-        path = os.path.join(STEP1_RAW_DIR, fname)
+        # Step 1D files are prefixed with '1d/' to indicate the directory
+        if fname.startswith('1d/'):
+            path = os.path.join(STEP1D_DIR, fname[3:])
+        else:
+            path = os.path.join(STEP1_RAW_DIR, fname)
         t = pq.read_table(path)
 
         if 'clean_firm' not in t.column_names or 'hourly_match_score' not in t.column_names:
@@ -404,7 +426,7 @@ def main():
     total_start = time.time()
 
     # Scan files (no data loaded yet)
-    print(f"\nScanning Step 1 raw parquets in {STEP1_RAW_DIR}")
+    print(f"\nScanning Step 1 raw parquets in {STEP1_RAW_DIR} + {STEP1D_DIR}")
     files_by_iso = scan_iso_files(target_isos)
 
     found = sorted(files_by_iso.keys())
