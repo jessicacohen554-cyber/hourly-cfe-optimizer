@@ -23,7 +23,12 @@ Pipeline position: Step 2 of 4
   Step 4 — Post-processing (step4_postprocess.py)
 
 Input:  data/step1-pfs-parquets/{ISO}_t{XX}_raw_pfs.parquet (from Step 1)
-Output: data/step2-ef-parquets/step2_ef_{ISO}.parquet (per-ISO, all thresholds combined)
+Output: data/step2-ef-parquets/step2_ef_{ISO}_t{XX}.parquet (per-ISO per-threshold band)
+
+After dedup, mixes are partitioned into non-overlapping threshold bands based
+on their score. Each mix appears in exactly one file — the band whose threshold
+is the highest T where T <= score. Step 3 loads bands >= its target threshold
+to reconstruct the full qualifying set for any target.
 
 The output preserves all mixes that could be optimal under ANY cost assumption
 at ANY threshold, ensuring no true optimum is lost during Step 3.
@@ -407,29 +412,79 @@ def deduplicate_mixes(arrays, resource_cols):
     return keep_idx.astype(np.int64)
 
 
+def format_threshold(thr):
+    """Format threshold for filenames (e.g., 87.5 → '87.5', 10.0 → '10')."""
+    return f'{thr:g}'
 
-def write_per_iso_outputs(results_by_iso, batch_label=None):
-    """Write per-ISO Step 2 EF outputs to data/step2-ef-parquets.
+
+def partition_by_threshold_band(table, thresholds):
+    """Partition a deduped table into non-overlapping threshold bands.
+
+    Each mix is assigned to the highest threshold T where T <= mix's score.
+    Mixes scoring below the lowest threshold go into the lowest band.
+
+    Returns dict: threshold (float) → pyarrow.Table of mixes in that band.
+    """
+    scores = table.column('hourly_match_score').to_numpy()
+    sorted_thrs = sorted(thresholds)
+
+    # searchsorted(side='right') gives first index where threshold > score.
+    # Subtract 1 → highest threshold <= score.
+    band_indices = np.searchsorted(sorted_thrs, scores, side='right') - 1
+    # Scores below lowest threshold go to band 0
+    band_indices = np.clip(band_indices, 0, len(sorted_thrs) - 1)
+
+    result = {}
+    for i, thr in enumerate(sorted_thrs):
+        mask = band_indices == i
+        n = int(mask.sum())
+        if n > 0:
+            indices = np.where(mask)[0]
+            result[thr] = table.take(indices)
+
+    return result
+
+
+def write_per_iso_threshold_outputs(results_by_iso, thresholds, batch_label=None):
+    """Write per-ISO/threshold Step 2 EF outputs to data/step2-ef-parquets.
+
+    Partitions each ISO's deduped mixes into non-overlapping threshold bands
+    and writes one parquet file per band.
 
     Args:
         results_by_iso: dict of {iso: pyarrow.Table}
-        batch_label: If set, write to step2_ef_{ISO}_batch_{label}.parquet
-                     instead of the final step2_ef_{ISO}.parquet.
+        thresholds: list of threshold values to partition into bands
+        batch_label: If set, write to step2_ef_{ISO}_t{T}_batch_{label}.parquet
+                     instead of the final step2_ef_{ISO}_t{T}.parquet.
     """
     os.makedirs(STEP2_EF_OUTPUT_DIR, exist_ok=True)
     written = []
+    total_files = 0
 
     for iso, table in results_by_iso.items():
-        if batch_label:
-            fname = f'step2_ef_{iso}_batch_{batch_label}.parquet'
-        else:
-            fname = f'step2_ef_{iso}.parquet'
-        path = os.path.join(STEP2_EF_OUTPUT_DIR, fname)
-        pq.write_table(table, path, compression='snappy')
-        size_mb = os.path.getsize(path) / (1024 * 1024)
-        print(f"  Output: {path} ({table.num_rows:,} rows, {size_mb:.1f} MB)")
-        written.append(path)
+        bands = partition_by_threshold_band(table, thresholds)
+        iso_files = 0
+        iso_rows = 0
 
+        for thr in sorted(bands.keys()):
+            band_table = bands[thr]
+            thr_str = format_threshold(thr)
+            if batch_label:
+                fname = f'step2_ef_{iso}_t{thr_str}_batch_{batch_label}.parquet'
+            else:
+                fname = f'step2_ef_{iso}_t{thr_str}.parquet'
+            path = os.path.join(STEP2_EF_OUTPUT_DIR, fname)
+            pq.write_table(band_table, path, compression='snappy')
+            size_mb = os.path.getsize(path) / (1024 * 1024)
+            print(f"    {fname} ({band_table.num_rows:,} rows, {size_mb:.1f} MB)")
+            written.append(path)
+            iso_files += 1
+            iso_rows += band_table.num_rows
+
+        print(f"  {iso}: {iso_files} threshold files, {iso_rows:,} total rows")
+        total_files += iso_files
+
+    print(f"  Total: {total_files} files written")
     return written
 
 
@@ -486,29 +541,32 @@ def _batch_labels_cover_all_thresholds(batch_files):
     labels = set()
     for bf in batch_files:
         base = os.path.basename(bf)
-        # step2_ef_{ISO}_batch_{label}.parquet
-        m = re.match(r'^step2_ef_[A-Z]+_batch_(.+)\.parquet$', base)
+        # step2_ef_{ISO}_t{T}_batch_{label}.parquet
+        m = re.match(r'^step2_ef_[A-Z]+_t[\d.]+_batch_(.+)\.parquet$', base)
         if m:
             labels.add(m.group(1))
     return labels >= {'low', 'mid', 'high'}
 
 
 def merge_batch_outputs(iso):
-    """Merge all batch parquet files for an ISO into a single final EF.
+    """Merge all per-threshold batch files for an ISO into final per-threshold EF files.
 
     Memory-efficient streaming merge: reads batch files one at a time,
     deduplicating incrementally so peak memory never exceeds ~2x the
     largest single batch (instead of the sum of all inputs).
 
+    After merging and dedup, partitions into per-threshold band files:
+    step2_ef_{ISO}_t{T}.parquet.
+
     When all 3 predefined batches (low/mid/high) are present, the
-    existing final EF is skipped entirely since the batches already
-    cover every threshold.
+    existing final EF files are skipped since batches already cover
+    every threshold.
 
     Returns (final_rows, n_batches) or (0, 0) if no batch files found.
     """
     import glob as globmod
 
-    pattern = os.path.join(STEP2_EF_OUTPUT_DIR, f'step2_ef_{iso}_batch_*.parquet')
+    pattern = os.path.join(STEP2_EF_OUTPUT_DIR, f'step2_ef_{iso}_t*_batch_*.parquet')
     batch_files = sorted(globmod.glob(pattern))
 
     if not batch_files:
@@ -517,12 +575,17 @@ def merge_batch_outputs(iso):
 
     print(f"\n  {iso}: Merging {len(batch_files)} batch files...")
 
-    # Determine whether to include the existing final EF.
-    # If all 3 batches (low/mid/high) are present, they cover every
-    # threshold — the existing final is fully superseded.
-    final_path = os.path.join(STEP2_EF_OUTPUT_DIR, f'step2_ef_{iso}.parquet')
+    # Determine whether to include the existing final EF files.
     all_batches_present = _batch_labels_cover_all_thresholds(batch_files)
-    include_existing = (not all_batches_present) and os.path.exists(final_path)
+
+    # Discover existing final per-threshold files
+    existing_thr_files = sorted(globmod.glob(
+        os.path.join(STEP2_EF_OUTPUT_DIR, f'step2_ef_{iso}_t*.parquet')
+    ))
+    # Exclude batch files from existing list
+    existing_thr_files = [f for f in existing_thr_files if '_batch_' not in os.path.basename(f)]
+
+    include_existing = (not all_batches_present) and len(existing_thr_files) > 0
 
     if all_batches_present:
         print(f"    All 3 batches present — skipping existing EF (fully superseded)")
@@ -530,12 +593,9 @@ def merge_batch_outputs(iso):
     # Build the list of files to stream through
     files_to_merge = list(batch_files)
     if include_existing:
-        files_to_merge.append(final_path)
+        files_to_merge.extend(existing_thr_files)
 
     # ── Streaming merge with incremental dedup ────────────────────────
-    # Instead of concat-then-dedup (peak memory = sum of all inputs),
-    # we stream one file at a time: load file, concat with accumulator,
-    # dedup, free the input. Peak memory ≈ accumulator + one file.
     accumulated = None
     total_rows_in = 0
     n_sources = 0
@@ -546,15 +606,13 @@ def merge_batch_outputs(iso):
         n_sources += 1
         basename = os.path.basename(fpath)
         size_mb = os.path.getsize(fpath) / (1024 * 1024)
-        is_existing = (fpath == final_path)
-        label = "Existing EF" if is_existing else basename
+        is_existing = fpath in existing_thr_files
+        label = f"Existing {basename}" if is_existing else basename
         print(f"    {label}: {t.num_rows:,} rows ({size_mb:.1f} MB)")
 
         if accumulated is None:
-            # First file — no dedup needed yet (already deduped within batch)
             accumulated = t
         else:
-            # Merge with accumulator, then dedup to bound memory
             merged = pa.concat_tables([accumulated, t], promote_options='permissive')
             del accumulated, t
             gc.collect()
@@ -570,18 +628,36 @@ def merge_batch_outputs(iso):
 
     print(f"  Combined: {total_rows_in:,} input rows -> {accumulated.num_rows:,} after streaming dedup")
 
-    # Write final output
-    pq.write_table(accumulated, final_path, compression='snappy')
-    size_mb = os.path.getsize(final_path) / (1024 * 1024)
-    print(f"  Final: {final_path} ({accumulated.num_rows:,} rows, {size_mb:.1f} MB)")
+    # Partition into per-threshold band files
+    print(f"  Writing per-threshold band files...")
+    bands = partition_by_threshold_band(accumulated, TARGET_THRESHOLDS)
     final_rows = accumulated.num_rows
     del accumulated
+    gc.collect()
+
+    for thr in sorted(bands.keys()):
+        band_table = bands[thr]
+        thr_str = format_threshold(thr)
+        fname = f'step2_ef_{iso}_t{thr_str}.parquet'
+        path = os.path.join(STEP2_EF_OUTPUT_DIR, fname)
+        pq.write_table(band_table, path, compression='snappy')
+        size_mb = os.path.getsize(path) / (1024 * 1024)
+        print(f"    {fname} ({band_table.num_rows:,} rows, {size_mb:.1f} MB)")
+
+    del bands
     gc.collect()
 
     # Clean up batch files after successful merge
     for bf in batch_files:
         os.remove(bf)
         print(f"    Removed: {os.path.basename(bf)}")
+
+    # Remove old existing per-threshold files that were superseded
+    if include_existing:
+        for ef in existing_thr_files:
+            if os.path.exists(ef):
+                os.remove(ef)
+                print(f"    Removed old: {os.path.basename(ef)}")
 
     return final_rows, len(batch_files)
 
@@ -732,8 +808,8 @@ def main():
     if not results_by_iso:
         raise RuntimeError('Step 2 produced no ISO outputs to write.')
 
-    # Write outputs (batch or final)
-    write_per_iso_outputs(results_by_iso, batch_label=batch_label)
+    # Write outputs — partition into per-threshold band files
+    write_per_iso_threshold_outputs(results_by_iso, active_thresholds, batch_label=batch_label)
 
     elapsed_total = time.time() - total_start
 
@@ -754,11 +830,11 @@ def main():
     print("\n" + "=" * 70)
     if batch_label:
         print(f"  STEP 2 BATCH '{batch_label}' COMPLETE")
-        print(f"  Batch outputs in data/step2-ef-parquets/step2_ef_*_batch_{batch_label}.parquet")
-        print(f"  Run with --merge to combine all batches into final EF.")
+        print(f"  Batch outputs in data/step2-ef-parquets/step2_ef_*_t*_batch_{batch_label}.parquet")
+        print(f"  Run with --merge to combine all batches into final per-threshold EF files.")
     else:
-        print("  STEP 2 COMPLETE — per-ISO EF parquets ready in data/step2-ef-parquets/")
-        print("  Step 3 reads from that directory; no merged output file is written.")
+        print("  STEP 2 COMPLETE — per-ISO/threshold EF parquets ready in data/step2-ef-parquets/")
+        print("  Output: step2_ef_{ISO}_t{T}.parquet (one file per threshold band)")
     print("=" * 70)
 
 
