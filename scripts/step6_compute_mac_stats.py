@@ -58,8 +58,8 @@ MEDIUM_KEYS_SET = frozenset({
     'MMM_M_M_M1_M', 'MMM_M_M_M1_X', 'MMM_M_M',
 })
 
-# Wholesale prices — fallback if parquet doesn't have cost_wholesale column
-WHOLESALE_PRICES_FALLBACK = {'CAISO': 30, 'ERCOT': 27, 'PJM': 34, 'NYISO': 42, 'NEISO': 41, 'MISO': 30, 'SPP': 25}
+# (Wholesale prices removed — no longer used in MAC calculation.
+#  MAC uses pure LCOE of new-build resources / CO₂ displaced.)
 
 # ── Dispatch-model-based CO₂ baseline ──
 # Import canonical grid mix shares and fossil caps from dispatch_utils
@@ -206,42 +206,26 @@ def load_combined_df(input_dir, isos):
 def add_mac_column(df):
     """Add MAC column: cost_of_new_resources / co2_reduced_by_new_resources.
 
-    Cost numerator: LCOE of NEW clean resources only. Computed as:
-        cost_total_cost - (existing_resource_pct / 100 × wholesale) - gas_backup
-    This removes the wholesale cost of pre-existing clean energy and the gas
-    backup cost (system reliability, not abatement investment).
+    Cost numerator: LCOE of NEW clean resources only. Step 3 already prices
+    existing resources at $0 (sunk fleet), so cost_total_cost contains only
+    new-build LCOE + transmission. Gas backup (resource adequacy) is subtracted
+    because it's system reliability, not abatement investment.
 
-    CO₂ denominator: Baseline emissions (existing clean only at 2025 TWh, demand
-    grows per SBTi year) minus scenario emissions (at threshold level). Uses
-    dispatch-stack merit-order retirement model (coal → oil → gas).
+    NO wholesale offset. Wholesale electricity prices, fuel costs, and system
+    costs play no role in MAC. MAC = pure deployment cost / CO₂ displaced.
+
+    CO₂ denominator: Baseline emissions (existing clean only at 2025 TWh) minus
+    scenario emissions (at threshold level). Uses dispatch-stack merit-order
+    retirement model (coal → oil → gas).
 
     MAC = new_resource_cost_$M / co2_reduced_Mt = $/tCO₂
     """
-    # ── 1. Compute existing clean resource percentage per row ──
-    # Each row's mix_X may include existing + new resources. Existing portion
-    # is capped at the 2025 grid mix share.
-    existing_pct = pd.Series(0.0, index=df.index)
-    for r in RESOURCE_TYPES:
-        mix_col = f'mix_{r}'
-        if mix_col in df.columns:
-            # Map each ISO to its grid mix share for this resource
-            grid_share = df['iso'].map(
-                {iso: GRID_MIX_SHARES.get(iso, {}).get(r, 0) for iso in ISOS}
-            ).fillna(0)
-            existing_pct += np.minimum(df[mix_col].fillna(0).astype(float), grid_share)
-
-    # ── 2. Cost of NEW resources only (per MWh of demand) ──
-    # wholesale from parquet (varies by fuel scenario) or fallback constant
-    if 'cost_wholesale' in df.columns:
-        wholesale = df['cost_wholesale'].fillna(
-            df['iso'].map(WHOLESALE_PRICES_FALLBACK))
-    else:
-        wholesale = df['iso'].map(WHOLESALE_PRICES_FALLBACK).astype(float)
-    existing_cost_per_mwh = (existing_pct / 100.0) * wholesale
-
+    # ── 1. Cost of NEW resources only (per MWh of demand) ──
+    # Step 3 already excludes existing resources (they're at $0 LCOE).
+    # cost_total_cost = LCOE of new-build clean + storage + transmission.
     cost_total = (df['cost_total_cost'] if 'cost_total_cost' in df.columns
                   else df['cost_effective_cost'])
-    new_cost = cost_total - existing_cost_per_mwh
+    new_cost = cost_total.copy()
 
     # Subtract gas backup cost (system reliability, not abatement)
     for gas_col in ['ra_gas_backup_cost_per_mwh', 'gas_gas_cost_per_mwh']:
@@ -759,7 +743,7 @@ def compute_dg_mac(input_dir, isos):
     """Compute demand growth MAC directly from parquet DataFrames.
 
     Uses new-resource-only cost and dispatch-model-based CO₂:
-    - Cost: cost_total_cost - existing_wholesale - gas_backup (per MWh of demand)
+    - Cost: cost_total_cost - gas_backup (per MWh of demand). No wholesale offset.
     - CO₂: baseline emissions (existing clean at 2025 TWh, diluted by demand
       growth) minus scenario emissions (at threshold level, grown demand).
     """
@@ -785,21 +769,11 @@ def compute_dg_mac(input_dir, isos):
             continue
 
         # ── Compute new-resource-only cost ──
-        existing_pct = 0.0
-        for r in RESOURCE_TYPES:
-            mix_col = f'mix_{r}'
-            if mix_col in dg_df.columns:
-                grid_share = GRID_MIX_SHARES.get(iso, {}).get(r, 0)
-                existing_pct += np.minimum(dg_df[mix_col].fillna(0).astype(float), grid_share)
-
-        wholesale = (dg_df['cost_wholesale'].fillna(WHOLESALE_PRICES_FALLBACK.get(iso, 30))
-                     if 'cost_wholesale' in dg_df.columns
-                     else pd.Series(WHOLESALE_PRICES_FALLBACK.get(iso, 30), index=dg_df.index))
-        existing_cost = (existing_pct / 100.0) * wholesale
-
+        # Step 3 already prices existing resources at $0 (sunk fleet).
+        # cost_total_cost = LCOE of new-build clean only. No wholesale offset.
         cost_total = (dg_df['cost_total_cost'] if 'cost_total_cost' in dg_df.columns
                       else dg_df['cost_effective_cost'])
-        new_cost = cost_total - existing_cost
+        new_cost = cost_total.copy()
         for gas_col in ['ra_gas_backup_cost_per_mwh', 'gas_gas_cost_per_mwh']:
             if gas_col in dg_df.columns:
                 new_cost = new_cost - dg_df[gas_col].fillna(0)
