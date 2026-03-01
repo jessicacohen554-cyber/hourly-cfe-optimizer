@@ -124,13 +124,18 @@ except ImportError:
 _dispatch_caches = {}       # iso → {archetype_key: dispatch_result}
 _co2_by_threshold = {}      # (iso, threshold) → co2_result dict
 
+# Pre-computed per-ISO data (populated in main() to avoid redundant recomputation)
+_iso_supply_profiles = {}   # iso → supply_profiles dict
+_iso_supply_matrices = {}   # iso → (5, H) numpy array
+_iso_demand_norms = {}      # iso → (H,) numpy array
+
 
 def get_dispatch_co2(iso, threshold, med_data, egrid, demand_data, gen_profiles):
     """Get CO₂ displacement for a medium-scenario mix using dispatch cache.
 
-    Looks up the mix's dispatch in the per-ISO cache. If not cached, computes
-    live dispatch and adds to cache. Returns the CO₂ result dict from
-    compute_co2_from_dispatch().
+    Uses pre-built supply matrices and demand profiles from _iso_supply_matrices
+    and _iso_demand_norms (populated in main()) to avoid redundant per-call
+    list→array conversions. Falls back to on-the-fly computation if not pre-built.
     """
     cache_key = (iso, threshold)
     if cache_key in _co2_by_threshold:
@@ -145,18 +150,24 @@ def get_dispatch_co2(iso, threshold, med_data, egrid, demand_data, gen_profiles)
     bat_pct = mix_info.get('battery_dispatch_pct', 0)
     bat8_pct = mix_info.get('battery8_dispatch_pct', 0)
     ldes_pct = mix_info.get('ldes_dispatch_pct', 0)
-    h2_pct = mix_info.get('h2_dispatch_pct', 0)
     demand_mwh = mix_info['demand_mwh']
 
-    # Try dispatch cache first
     dispatch_cache = _dispatch_caches.get(iso, {})
-    supply_profiles = get_supply_profiles(iso, gen_profiles)
-    demand_norm, _ = get_demand_profile(iso, demand_data)
+
+    # Use pre-built profiles/matrices if available (set up in main())
+    supply_profiles = _iso_supply_profiles.get(iso)
+    supply_matrix = _iso_supply_matrices.get(iso)
+    demand_norm = _iso_demand_norms.get(iso)
+
+    if supply_profiles is None:
+        supply_profiles = get_supply_profiles(iso, gen_profiles)
+    if demand_norm is None:
+        demand_norm, _ = get_demand_profile(iso, demand_data)
 
     dispatch_result, cache_hit = get_or_compute_dispatch(
         iso, demand_norm, supply_profiles, resource_pcts,
         100, bat_pct, bat8_pct, ldes_pct,
-        cache=dispatch_cache)
+        cache=dispatch_cache, supply_matrix=supply_matrix)
 
     if not cache_hit:
         _dispatch_caches[iso] = dispatch_cache
@@ -212,18 +223,28 @@ def compute_marginal_displaced_rate_dispatch(iso, threshold_start, threshold_end
 
 
 def load_data():
-    """Load all input data from Step 4 per-ISO parquets (Step 3 fallback)."""
+    """Load all input data from Step 4 per-ISO parquets (Step 3 fallback).
+
+    Uses pyarrow push-down filters to load only medium-scenario rows,
+    avoiding reading millions of non-medium rows into memory.
+    """
     print("Loading optimizer scenarios from per-ISO parquets...")
 
     input_dir = STEP4_PARQUET_DIR if os.path.isdir(STEP4_PARQUET_DIR) else STEP3_PARQUET_DIR
+    medium_scenarios = list(set(MEDIUM_KEYS.values()))
+    pq_filters = [('scenario', 'in', medium_scenarios)]
+
     tables = []
     for iso in ISOS:
         for prefix in ['step4_', 'step3_co_']:
             path = os.path.join(input_dir, f'{prefix}{iso}.parquet')
             if os.path.exists(path):
-                t = pq.read_table(path)
+                try:
+                    t = pq.read_table(path, filters=pq_filters)
+                except Exception:
+                    t = pq.read_table(path)  # fallback if filter fails
                 tables.append(t)
-                print(f"  Loaded {os.path.basename(path)}: {t.num_rows:,} rows")
+                print(f"  Loaded {os.path.basename(path)}: {t.num_rows:,} rows (filtered)")
                 break
         else:
             # Try alternate directory
@@ -231,9 +252,12 @@ def load_data():
             for prefix in ['step4_', 'step3_co_']:
                 path = os.path.join(alt_dir, f'{prefix}{iso}.parquet')
                 if os.path.exists(path):
-                    t = pq.read_table(path)
+                    try:
+                        t = pq.read_table(path, filters=pq_filters)
+                    except Exception:
+                        t = pq.read_table(path)
                     tables.append(t)
-                    print(f"  Loaded {os.path.basename(path)}: {t.num_rows:,} rows (fallback)")
+                    print(f"  Loaded {os.path.basename(path)}: {t.num_rows:,} rows (fallback, filtered)")
                     break
             else:
                 print(f"  WARNING: No parquet found for {iso} — skipping")
@@ -244,6 +268,7 @@ def load_data():
     else:
         df = pq.read_table(
             os.path.join(BASE_DIR, 'dashboard', 'overprocure_scenarios.parquet')).to_pandas()
+        df = df[df['scenario'].isin(medium_scenarios)]
     print(f"  {len(df):,} total scenario rows loaded")
 
     meta = {}
@@ -262,50 +287,78 @@ def load_data():
 def extract_medium_scenarios(df):
     """Extract medium-cost scenario data for all ISOs and thresholds.
 
+    Uses vectorized pandas operations instead of row-by-row itertuples/getattr.
     Also extracts battery/ldes dispatch percentages needed for dispatch cache lookup.
     """
     result = {}
+
+    # Pre-compute optional columns that may not exist
+    has_battery8 = 'battery8_dispatch_pct' in df.columns
+    has_h2 = 'h2_dispatch_pct' in df.columns
+
     for iso in ISOS:
         med_key = MEDIUM_KEYS[iso]
         iso_df = df[(df['iso'] == iso) & (df['scenario'] == med_key)].copy()
         iso_df = iso_df.sort_values('threshold')
 
-        result[iso] = {}
-        for row in iso_df.itertuples(index=False):
-            t = float(row.threshold)
-            demand_twh = row.annual_demand_mwh / 1e6
+        if iso_df.empty:
+            result[iso] = {}
+            continue
 
-            res_twh = {}
-            for res in RESOURCES:
-                pct = getattr(row, f'mix_{res}') / 100
-                res_twh[res] = pct * demand_twh
+        # Vectorized column computations
+        demand_twh = iso_df['annual_demand_mwh'].values / 1e6
+        mix_cols = {res: iso_df[f'mix_{res}'].values for res in RESOURCES}
+        bat_pct = iso_df['battery_dispatch_pct'].values
+        bat8_pct = iso_df['battery8_dispatch_pct'].values if has_battery8 else np.zeros(len(iso_df))
+        ldes_pct = iso_df['ldes_dispatch_pct'].values
+        h2_pct = iso_df['h2_dispatch_pct'].values if has_h2 else np.zeros(len(iso_df))
 
-            result[iso][t] = {
-                'demand_twh': demand_twh,
-                'demand_mwh': row.annual_demand_mwh,
-                'match_score': row.hourly_match_score,
-                'eff_cost': row.cost_effective_cost,
-                'total_cost': row.cost_total_cost,
-                'incremental_cost': row.cost_incremental,
-                'wholesale': row.cost_wholesale,
-                'resource_twh': res_twh,
-                'battery_twh': row.battery_dispatch_pct / 100 * demand_twh,
-                'ldes_twh': row.ldes_dispatch_pct / 100 * demand_twh,
-                'resource_pct': {res: float(getattr(row, f'mix_{res}')) for res in RESOURCES},
-                # Dispatch cache lookup parameters
-                'battery_dispatch_pct': float(row.battery_dispatch_pct),
-                'battery8_dispatch_pct': float(getattr(row, 'battery8_dispatch_pct', 0)),
-                'ldes_dispatch_pct': float(row.ldes_dispatch_pct),
-                'h2_dispatch_pct': float(getattr(row, 'h2_dispatch_pct', 0)),
-                'gas_backup_mw': float(row.ra_gas_backup_needed_mw),
-                'new_gas_mw': float(row.ra_new_gas_build_mw),
-                'gas_cost': float(row.ra_gas_backup_cost_per_mwh),
-                'tranche_existing_twh': float(row.tranche_cf_existing_twh),
-                'tranche_uprate_twh': float(row.tranche_uprate_twh),
-                'tranche_geo_twh': float(row.tranche_geo_twh),
-                'tranche_nuclear_twh': float(row.tranche_nuclear_newbuild_twh),
-                'tranche_ccs_twh': float(row.tranche_ccs_tranche_twh),
+        thresholds = iso_df['threshold'].values.astype(float)
+        demand_mwh = iso_df['annual_demand_mwh'].values
+        match_scores = iso_df['hourly_match_score'].values
+        eff_costs = iso_df['cost_effective_cost'].values
+        total_costs = iso_df['cost_total_cost'].values
+        incr_costs = iso_df['cost_incremental'].values
+        wholesale = iso_df['cost_wholesale'].values
+        gas_backup = iso_df['ra_gas_backup_needed_mw'].values
+        new_gas = iso_df['ra_new_gas_build_mw'].values
+        gas_cost = iso_df['ra_gas_backup_cost_per_mwh'].values
+        tr_existing = iso_df['tranche_cf_existing_twh'].values
+        tr_uprate = iso_df['tranche_uprate_twh'].values
+        tr_geo = iso_df['tranche_geo_twh'].values
+        tr_nuclear = iso_df['tranche_nuclear_newbuild_twh'].values
+        tr_ccs = iso_df['tranche_ccs_tranche_twh'].values
+
+        iso_result = {}
+        for i in range(len(iso_df)):
+            t = float(thresholds[i])
+            dt = demand_twh[i]
+            iso_result[t] = {
+                'demand_twh': dt,
+                'demand_mwh': float(demand_mwh[i]),
+                'match_score': float(match_scores[i]),
+                'eff_cost': float(eff_costs[i]),
+                'total_cost': float(total_costs[i]),
+                'incremental_cost': float(incr_costs[i]),
+                'wholesale': float(wholesale[i]),
+                'resource_twh': {res: float(mix_cols[res][i]) / 100 * dt for res in RESOURCES},
+                'battery_twh': float(bat_pct[i]) / 100 * dt,
+                'ldes_twh': float(ldes_pct[i]) / 100 * dt,
+                'resource_pct': {res: float(mix_cols[res][i]) for res in RESOURCES},
+                'battery_dispatch_pct': float(bat_pct[i]),
+                'battery8_dispatch_pct': float(bat8_pct[i]),
+                'ldes_dispatch_pct': float(ldes_pct[i]),
+                'h2_dispatch_pct': float(h2_pct[i]),
+                'gas_backup_mw': float(gas_backup[i]),
+                'new_gas_mw': float(new_gas[i]),
+                'gas_cost': float(gas_cost[i]),
+                'tranche_existing_twh': float(tr_existing[i]),
+                'tranche_uprate_twh': float(tr_uprate[i]),
+                'tranche_geo_twh': float(tr_geo[i]),
+                'tranche_nuclear_twh': float(tr_nuclear[i]),
+                'tranche_ccs_twh': float(tr_ccs[i]),
             }
+        result[iso] = iso_result
 
     return result
 
@@ -1050,6 +1103,15 @@ def main():
     # Load demand/gen profiles for dispatch cache lookups
     print("\n  Loading demand and generation profiles...")
     demand_data, gen_profiles, _, _ = load_common_data()
+
+    # Pre-build supply matrices and demand profiles per ISO (avoids redundant
+    # list→array conversion on every dispatch call)
+    print("  Pre-building supply matrices and demand profiles...")
+    for iso in ISOS:
+        profiles = get_supply_profiles(iso, gen_profiles)
+        _iso_supply_profiles[iso] = profiles
+        _iso_supply_matrices[iso] = build_supply_matrix(profiles)
+        _iso_demand_norms[iso], _ = get_demand_profile(iso, demand_data)
 
     # Pre-load dispatch caches for all ISOs
     print("  Loading dispatch caches...")

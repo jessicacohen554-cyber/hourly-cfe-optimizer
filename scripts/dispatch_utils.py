@@ -212,22 +212,24 @@ def get_supply_profiles(iso, gen_profiles):
     DST_START_DAY, DST_END_DAY = 69, 307
     local_start, local_end = 6, 19
     std_off = STD_UTC_OFFSETS.get(iso, 5)
-    for day in range(H // 24):
-        ds = day * 24
-        is_dst = DST_START_DAY <= day < DST_END_DAY
-        utc_off = std_off - (1 if is_dst else 0)
-        utc_start = (local_start + utc_off) % 24
-        utc_end = (local_end + utc_off) % 24
-        for h_utc in range(24):
-            idx = ds + h_utc
-            if idx < len(solar_raw):
-                if utc_start <= utc_end:
-                    is_daylight = utc_start <= h_utc <= utc_end
-                else:
-                    is_daylight = h_utc >= utc_start or h_utc <= utc_end
-                if not is_daylight:
-                    solar_raw[idx] = 0.0
-    profiles['solar'] = solar_raw
+
+    # Vectorized DST correction — replaces 8760-iteration double for-loop
+    solar_arr = np.array(solar_raw[:H], dtype=np.float64)
+    hour_indices = np.arange(H)
+    days = hour_indices // 24
+    hours = hour_indices % 24
+    is_dst = (days >= DST_START_DAY) & (days < DST_END_DAY)
+    utc_off = std_off - is_dst.astype(np.int64)
+    utc_start = (local_start + utc_off) % 24
+    utc_end = (local_end + utc_off) % 24
+    # When utc_start <= utc_end: daylight = utc_start <= hour <= utc_end
+    # When utc_start > utc_end (wraps midnight): daylight = hour >= utc_start OR hour <= utc_end
+    no_wrap = utc_start <= utc_end
+    is_daylight = np.where(no_wrap,
+                           (hours >= utc_start) & (hours <= utc_end),
+                           (hours >= utc_start) | (hours <= utc_end))
+    solar_arr[~is_daylight] = 0.0
+    profiles['solar'] = solar_arr.tolist()
 
     # Wind
     iso_data = gen_profiles.get(iso, {})
@@ -1069,13 +1071,15 @@ def save_dispatch_cache(iso, cache, version=None):
 def get_or_compute_dispatch(iso, demand_norm, supply_profiles, resource_pcts,
                              procurement_pct=100, battery_dispatch_pct=0,
                              battery8_dispatch_pct=0, ldes_dispatch_pct=0,
-                             cache=None):
+                             cache=None, supply_matrix=None):
     """Get dispatch from cache or compute and add to cache.
 
     Args:
         cache: mutable dict (load_dispatch_cache output). If provided, checks cache
                first and adds new results. Caller is responsible for calling
                save_dispatch_cache() when done with a batch.
+        supply_matrix: optional pre-built (5, H) numpy array from build_supply_matrix().
+            Avoids repeated list→array conversion on cache misses.
 
     Returns:
         dispatch result dict (same as reconstruct_hourly_dispatch)
@@ -1092,7 +1096,8 @@ def get_or_compute_dispatch(iso, demand_norm, supply_profiles, resource_pcts,
     result = reconstruct_hourly_dispatch(
         demand_norm, supply_profiles, resource_pcts,
         procurement_pct, battery_dispatch_pct,
-        battery8_dispatch_pct, ldes_dispatch_pct)
+        battery8_dispatch_pct, ldes_dispatch_pct,
+        supply_matrix=supply_matrix)
 
     if cache is not None:
         cache[key] = {k: v for k, v in result.items()}
