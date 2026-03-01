@@ -228,7 +228,7 @@ def learning_fraction(threshold, scenario='B'):
     if scenario == 'B':
         foak_start, noak_year = 2030, 2040
     else:
-        foak_start, noak_year = 2035, 2047
+        foak_start, noak_year = 2036, 2048
     if year < foak_start:
         return 0.0
     if year >= noak_year:
