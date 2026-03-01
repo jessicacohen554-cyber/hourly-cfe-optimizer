@@ -183,6 +183,8 @@ jobs:
 
       - name: Commit and push
         run: |
+          git config http.postBuffer 524288000
+
           git add -f data/step5-post-processing/lmp/ 2>/dev/null || true
           git add -f dashboard/js/lmp-data.js 2>/dev/null || true
 
