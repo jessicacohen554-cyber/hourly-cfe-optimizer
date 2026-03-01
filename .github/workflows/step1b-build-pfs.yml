@@ -43,7 +43,6 @@ jobs:
 
     permissions:
       contents: write
-      pull-requests: write
 
     steps:
     - name: Checkout repo
@@ -193,24 +192,3 @@ jobs:
           echo "PUSHED=false" >> "$GITHUB_ENV"
         fi
 
-    - name: Create pull request
-      continue-on-error: true
-      env:
-        GH_TOKEN: ${{ github.token }}
-      run: |
-        if [ "${PUSHED:-false}" != "true" ]; then
-          COMMITS_AHEAD=$(git log origin/${{ inputs.branch || 'master' }}..HEAD --oneline 2>/dev/null | wc -l || echo "0")
-          if [ "$COMMITS_AHEAD" -eq 0 ]; then
-            echo "No commits to create PR for"
-            exit 0
-          fi
-        fi
-        N_COMMITS=$(git log origin/${{ inputs.branch || 'master' }}..HEAD --oneline | wc -l)
-        gh pr create \
-          --title "Step 1b PFS: ${{ inputs.iso }} thresholds=${{ inputs.thresholds }}" \
-          --body "## Summary
-        - Built PFS from scored database for **${{ inputs.iso }}** at thresholds **${{ inputs.thresholds }}**
-        - $N_COMMITS commits (each threshold committed incrementally)
-        - Output: \`data/step1-pfs-parquets/{ISO}_t{threshold}_raw_pfs.parquet\`" \
-          --base ${{ inputs.branch || 'master' }} \
-          --head "$TARGET_BRANCH" || echo "PR creation skipped"

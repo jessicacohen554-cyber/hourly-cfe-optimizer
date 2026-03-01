@@ -135,7 +135,6 @@ jobs:
 
     permissions:
       contents: write
-      pull-requests: write
 
     steps:
       - name: Checkout repo
@@ -263,18 +262,3 @@ jobs:
             echo "Retrying in ${BACKOFF}s..."
             sleep "$BACKOFF"
           done
-
-      - name: Create pull request
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh pr create \
-            --title "Step 6.4 Procurement: ${{ inputs.strategy }} ${{ inputs.iso }}" \
-            --body "## Summary
-          - Procurement strategy comparison: **${{ inputs.strategy }}** for **${{ inputs.iso }}** (${{ inputs.mode }})
-          - 10 strategy variants: 1A-C (consequential), 2A-C (hourly), 3A-D (annual)
-          - 25-year trajectories (2025→2050) along SBTi milestones
-          - Output: \`dashboard/js/procurement-strategy-data.js\`" \
-            --base ${{ inputs.branch || 'master' }} \
-            --head "$TARGET_BRANCH" || echo "PR creation skipped"
