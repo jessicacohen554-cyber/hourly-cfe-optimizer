@@ -20,7 +20,6 @@ Pipeline position:
                                           step6_compute_lmp_prices.py  ← THIS
                                                       ↓
                               data/step5-post-processing/lmp/{ISO}_lmp.parquet   (per-ISO output)
-                              data/step5-post-processing/lmp/{ISO}_archetypes.parquet
                               data/step5-post-processing/lmp/lmp_summary.json
 
 Usage:
@@ -1155,7 +1154,6 @@ def run_lmp_for_iso(iso, scenarios, demand_data, gen_profiles,
 
     Returns:
         results: list of dicts with LMP stats per (threshold, scenario)
-        archetypes: dict of {archetype_key: {'hourly_lmp': array, ...}}
     """
     demand_norm, total_mwh = get_demand_profile(iso, demand_data)
     supply_profiles = get_supply_profiles(iso, gen_profiles)
@@ -1245,17 +1243,16 @@ def run_lmp_for_iso(iso, scenarios, demand_data, gen_profiles,
     if cache_misses > 0:
         print(f"    WARNING: {cache_misses} cache misses — consider running step5_build_dispatch_cache.py first "
               f"to pre-populate the cache.")
-    return results, archetypes
+    return results
 
 
-def save_iso_results(iso, results, archetypes):
-    """Save LMP results and archetype profiles for an ISO."""
+def save_iso_results(iso, results):
+    """Save LMP results for an ISO."""
     import pyarrow as pa
     import pyarrow.parquet as pq
 
     os.makedirs(LMP_DIR, exist_ok=True)
 
-    # Stats parquet
     if results:
         all_keys = list(dict.fromkeys(k for r in results for k in r))
         arrays = [pa.array([r.get(k) for r in results]) for k in all_keys]
@@ -1264,26 +1261,6 @@ def save_iso_results(iso, results, archetypes):
         pq.write_table(table, stats_path, compression='zstd')
         print(f"    {iso}_lmp.parquet: {table.num_rows} rows, "
               f"{os.path.getsize(stats_path) / 1024:.0f} KB")
-
-    # Archetype profiles parquet (8760 arrays as list columns)
-    if archetypes:
-        arch_rows = []
-        for akey, arch in archetypes.items():
-            arch_rows.append({
-                'archetype_key': akey,
-                'threshold': arch['threshold'],
-                'fuel_level': arch['fuel_level'],
-                'hourly_lmp': arch['hourly_lmp'].tolist(),
-                'hourly_residual_mw': arch['hourly_residual_mw'].tolist(),
-                'hourly_marginal_unit': arch['hourly_marginal_unit'].tolist(),
-            })
-        all_keys = list(dict.fromkeys(k for r in arch_rows for k in r))
-        arrays = [pa.array([r.get(k) for r in arch_rows]) for k in all_keys]
-        arch_table = pa.table(dict(zip(all_keys, arrays)))
-        arch_path = os.path.join(LMP_DIR, f'{iso}_archetypes.parquet')
-        pq.write_table(arch_table, arch_path, compression='zstd')
-        print(f"    {iso}_archetypes.parquet: {arch_table.num_rows} archetypes, "
-              f"{os.path.getsize(arch_path) / (1024*1024):.1f} MB")
 
 
 def run_test_cases(iso='PJM'):
@@ -1440,7 +1417,6 @@ def main():
         print(f"    Dispatch cache loaded: {len(dispatch_cache)} entries")
 
         iso_results = []
-        iso_archetypes = {}
 
         for fuel_level in fuel_levels:
             print(f"    Fuel level: {fuel_level}")
@@ -1457,24 +1433,22 @@ def main():
                 if filtered:
                     scenarios = filtered
 
-            results, archetypes = run_lmp_for_iso(
+            results = run_lmp_for_iso(
                 iso, scenarios, demand_data, gen_profiles,
                 fuel_level=fuel_level, dispatch_cache=dispatch_cache)
 
             iso_results.extend(results)
-            iso_archetypes.update(archetypes)
 
         # Save dispatch cache (with new entries appended)
         save_dispatch_cache(iso, dispatch_cache)
         print(f"    Dispatch cache saved: {len(dispatch_cache)} entries")
 
         # Save ISO results
-        save_iso_results(iso, iso_results, iso_archetypes)
+        save_iso_results(iso, iso_results)
         all_results.extend(iso_results)
 
         elapsed = time.time() - iso_start
-        print(f"    {iso} complete: {len(iso_results)} scenarios, "
-              f"{len(iso_archetypes)} archetypes — {elapsed:.0f}s")
+        print(f"    {iso} complete: {len(iso_results)} scenarios — {elapsed:.0f}s")
 
     # Save cross-ISO summary
     if all_results:
