@@ -139,12 +139,23 @@ GEO_CAP_PCT = 20
 
 # Resource caps: max % of demand for each resource in coarse grid search
 # Each resource varies independently — no sum-to-100 constraint.
+# Caps informed by step 3 cost-optimal analysis across all ISOs/scenarios:
+#   - CF: 120% hit by MISO/PJM at 99.99% threshold (keep)
+#   - Solar: max observed 81% (MISO 99.9%); cap at 100% (+23% buffer)
+#   - Wind: max observed 242% (MISO 99.9%); keep at 250% (+3% buffer)
+# Additionally, per-ISO caps applied in generate_resource_combos() for
+# ISOs where observed maxima are much lower.
 RESOURCE_CAPS = {
     'clean_firm': 120,   # Nuclear/CCS flat profile; >100% = surplus for storage
-    'solar':      250,   # High values capture solar+storage strategies
-    'wind':       250,   # High values capture wind+storage strategies
+    'solar':      100,   # Observed max 81% (MISO); buffer to 100%
+    'wind':       250,   # Observed max 242% (MISO); wind-heavy ISOs need this
     # hydro and geothermal caps are per-ISO (HYDRO_CAPS + HYDRO_ADDER_PCT, GEO_CAP_PCT)
 }
+
+# Total procurement cap: max sum of all resources + storage as % of demand.
+# Observed max across all step 3 winners: 281% (MISO at 99.9%).
+# Cap at 350% to provide generous buffer while filtering combinatorial blowup.
+TOTAL_PROCUREMENT_CAP = 350
 
 # 21 thresholds (10-40 added for Track 2/3 greenfield analysis)
 THRESHOLDS = [10, 20, 30, 40, 50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
@@ -1036,6 +1047,12 @@ def generate_resource_combos(iso, step=5):
     row_sums = combos.sum(axis=1)
     combos = combos[row_sums > 0]
 
+    # Filter: total procurement within observed cost-optimal range + buffer.
+    # Max observed across all step 3 winners: 281% (MISO 99.9%). Cap at 350%.
+    if len(combos) > 0:
+        total = combos.sum(axis=1)
+        combos = combos[total <= TOTAL_PROCUREMENT_CAP]
+
     return combos
 
 
@@ -1067,10 +1084,10 @@ def generate_resource_combos_around(base_combo, iso, step=1, radius=4):
 
     combos = np.array(list(itertools.product(*ranges)), dtype=np.float64)
 
-    # Filter: at least some generation
+    # Filter: at least some generation + total procurement cap
     if len(combos) > 0:
         row_sums = combos.sum(axis=1)
-        combos = combos[row_sums > 0]
+        combos = combos[(row_sums > 0) & (row_sums <= TOTAL_PROCUREMENT_CAP)]
         combos = np.unique(combos, axis=0)
 
     return combos
@@ -1078,14 +1095,15 @@ def generate_resource_combos_around(base_combo, iso, step=1, radius=4):
 
 # Edge case seed combos: direct % of demand (not mix fractions)
 # These guarantee extreme-but-potentially-optimal strategies are evaluated.
+# Updated to reflect tightened solar cap (100%) and total cap (350%).
 EDGE_CASE_SEEDS_BASE = [
     # (clean_firm, solar, wind, hydro) as % of demand
     # High solar + storage strategies
-    [0, 200, 0, 0],
-    [0, 200, 50, 0],
-    [0, 150, 0, 0],
-    [0, 150, 50, 0],
-    [10, 200, 0, 0],
+    [0, 100, 0, 0],
+    [0, 100, 50, 0],
+    [0, 80, 0, 0],
+    [0, 80, 50, 0],
+    [10, 100, 0, 0],
     # High wind + storage strategies
     [0, 0, 200, 0],
     [0, 50, 200, 0],
@@ -1093,9 +1111,9 @@ EDGE_CASE_SEEDS_BASE = [
     [0, 50, 150, 0],
     [10, 0, 200, 0],
     # Balanced high renewable
-    [0, 125, 125, 0],
-    [0, 100, 100, 0],
-    [10, 100, 100, 0],
+    [0, 80, 100, 0],
+    [0, 80, 80, 0],
+    [10, 80, 80, 0],
     # Clean firm dominant
     [100, 0, 0, 0],
     [100, 50, 0, 0],
@@ -1105,25 +1123,25 @@ EDGE_CASE_SEEDS_BASE = [
     # Firm + moderate renewables
     [60, 80, 20, 0],
     [60, 20, 80, 0],
-    [40, 100, 50, 0],
+    [40, 80, 50, 0],
     [40, 50, 100, 0],
     # Minimal firm, heavy renewables
-    [10, 120, 120, 0],
-    [0, 150, 100, 0],
-    [0, 100, 150, 0],
+    [10, 80, 100, 0],
+    [0, 80, 100, 0],
+    [0, 80, 150, 0],
     # Pure renewables
-    [0, 125, 125, 0],
+    [0, 80, 80, 0],
 ]
 
 # Extra CAISO seeds with geothermal (5th column = geothermal %)
 EDGE_CASE_SEEDS_CAISO_GEO = [
     # (clean_firm, solar, wind, hydro, geothermal) as % of demand
-    [0, 150, 0, 0, 20],
-    [0, 100, 50, 0, 20],
+    [0, 80, 0, 0, 20],
+    [0, 80, 50, 0, 20],
     [0, 0, 150, 0, 20],
-    [50, 100, 0, 0, 20],
+    [50, 80, 0, 0, 20],
     [80, 50, 0, 0, 20],
-    [0, 125, 125, 0, 10],
+    [0, 80, 80, 0, 10],
     [20, 100, 100, 0, 15],
 ]
 
