@@ -5,32 +5,29 @@
 
 ## Current Status (Feb 28, 2026)
 
-### MAC Formula: EIA Baseline CO₂ + Full LCOE Cost (Feb 28, 2026)
+### MAC Formula: Pure LCOE / CO₂ Displaced — No Wholesale Offset (Mar 1, 2026)
 
-**Decision confirmed:** Option Z — use optimizer's cost-optimal mix, fix both the cost numerator and CO₂ denominator.
+**Decision confirmed:** MAC = pure deployment LCOE of new clean resources / CO₂ displaced by those resources. No wholesale electricity price, fuel cost, or system cost plays any role in the MAC numerator.
 
-**MAC formula (new):**
+**MAC formula:**
 ```
-MAC = (cost_total_cost × annual_demand_mwh) / CO2_abated_by_new_capital
+MAC = (new_resource_lcoe_cost × annual_demand_mwh) / CO2_abated_by_new_capital
 ```
 
 Where:
-- **Cost numerator**: `cost_total_cost × annual_demand_mwh` — full system LCOE of all clean resources (not just the incremental premium above wholesale). Captures capital investment cost for new deployment.
-- **CO₂ denominator**: `co2_total_co2_abated_tons − existing_clean_avoidance[iso]` — CO₂ abated only by NEW capital investment, not including what existing clean is already avoiding on the grid.
+- **Cost numerator**: `cost_total_cost − gas_backup_cost` — the LCOE of NEW-BUILD clean resources only (solar, wind, clean firm, CCS, storage + transmission). Step 3 already prices existing resources at $0 (sunk fleet), so `cost_total_cost` contains only new-build costs. Gas backup (resource adequacy) is subtracted because it's system reliability, not abatement investment.
+- **CO₂ denominator**: Baseline fossil emissions (existing clean only, 2025 demand) minus scenario fossil emissions (at threshold level). Uses merit-order dispatch model (coal → oil → gas retirement). Only counts CO₂ displaced by NEW capital.
 
-**Baseline grounding:**
-- `existing_clean_avoidance[iso]` = `(fossil_co2_lb_per_mwh − total_co2_lb_per_mwh) × annual_demand_mwh / 2204.623`
-- Derived from `data/egrid_emission_rates.json` (eGRID actuals, all 7 ISOs)
-- `fossil_co2_lb_per_mwh` = rate of fossil fleet only; `total_co2_lb_per_mwh` = actual 2025 system average (including existing clean operating)
-- Difference = the CO₂ that existing clean is already avoiding — NOT credited to new investment
+**Critical: NO wholesale offset.** The prior code subtracted `existing_pct × wholesale_price` from `cost_total_cost` before computing MAC. This was a phantom double-subtraction — Step 3 already excludes existing resources from cost, so subtracting wholesale for them a second time drove MAC to $0 in wind-heavy ISOs (SPP, ERCOT).
 
-**Rationale:** Previous formula used `cost_incremental` (premium above wholesale) on the cost side, and credited new investment with ALL CO₂ abatement vs an all-fossil hypothetical. This inflated the MAC denominator for clean-grid ISOs (CAISO, NEISO) where existing clean already avoids most emissions. The new formula answers: "What does MY new capital investment cost per ton of CO₂ MY investment displaces?"
+**Sanity check (floor MAC, Medium sensitivity, no TX):**
+- SPP wind: $37/MWh ÷ 1.021 tCO₂/MWh (coal) = **$36/tCO₂** — absolute floor
+- SPP wind: $37/MWh ÷ 0.392 tCO₂/MWh (gas) = **$94/tCO₂** — once coal retired
+- ERCOT wind: $40/MWh ÷ 1.055 tCO₂/MWh (coal) = **$38/tCO₂** — absolute floor
+- ERCOT wind: $40/MWh ÷ 0.393 tCO₂/MWh (gas) = **$102/tCO₂** — once coal retired
+- Values below ~$27/tCO₂ at any threshold are physically impossible.
 
-**Stepwise MAC note:** `compute_stepwise_fan()` uses `delta_cost / delta_co2` between adjacent thresholds. The baseline offset cancels in the CO₂ delta — no adjustment needed there. Cost field updated from `cost_incremental` to `cost_total_cost`.
-
-**File changed:** `scripts/step6_compute_mac_stats.py`
-- Added `EXISTING_CLEAN_AVOIDANCE_TONS` dict computed from eGRID data
-- Updated `add_mac_column()`, `compute_stepwise_fan()`, `compute_envelope_and_path()`
+**Bug fixed (Mar 1, 2026):** Removed `existing_pct × wholesale` subtraction from `add_mac_column()` and `compute_dg_mac()` in `step6_compute_mac_stats.py`. Also removed wholesale-related imports/constants that are no longer needed by MAC calculation.
 
 ---
 

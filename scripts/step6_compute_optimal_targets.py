@@ -175,11 +175,10 @@ DAC_TRAJECTORY = {
 }
 
 # LEGACY FALLBACK: Clean procurement cost per threshold ($/MWh)
-# WARNING: These values still include wholesale pricing for existing resources.
-# They are ONLY used as a fallback when parquet data is unavailable. When
-# parquets are loaded, load_parquet_costs() computes new-resource-only costs
-# by subtracting existing_pct × wholesale from cost_total_cost.
-# TODO: Update these values if parquets become unavailable in the future.
+# WARNING: These are hardcoded fallback values only used when parquets are
+# unavailable. When parquets are loaded, load_parquet_costs() uses
+# cost_total_cost directly (no wholesale offset — Step 3 already prices
+# existing resources at $0).
 CLEAN_COST = {
     'medium': {
         'CAISO': [33.7, 38.5, 41.9, 44.4, 47.4, 52.1, 55.7, 61.4, 62.9, 66.8, 68.2, 72.2, 77.9, 84.3, 89.3, 89.3, 89.3],
@@ -432,23 +431,9 @@ def load_parquet_costs():
             print(f"  WARNING: No parquet found for {iso} — using CLEAN_COST fallback")
             continue
 
-        # Compute existing clean resource % per row
-        existing_pct = pd.Series(0.0, index=df.index)
-        for r in _RESOURCE_TYPES:
-            mix_col = f'mix_{r}'
-            if mix_col in df.columns:
-                grid_share = GRID_MIX_SHARES.get(iso, {}).get(r, 0)
-                existing_pct += np.minimum(df[mix_col].fillna(0).astype(float), grid_share)
-
-        # Wholesale from parquet (varies by fuel scenario) or fallback
-        if 'cost_wholesale' in df.columns:
-            wholesale = df['cost_wholesale'].fillna(WHOLESALE_PRICES.get(iso, 30))
-        else:
-            wholesale = pd.Series(WHOLESALE_PRICES.get(iso, 30), index=df.index)
-
-        # New resource cost = total - existing_wholesale - gas_backup
-        existing_cost = (existing_pct / 100.0) * wholesale
-        new_cost = df['cost_total_cost'] - existing_cost
+        # New resource cost: Step 3 already prices existing at $0 (sunk fleet).
+        # cost_total_cost = LCOE of new-build clean only. No wholesale offset.
+        new_cost = df['cost_total_cost'].copy()
         if 'ra_gas_backup_cost_per_mwh' in df.columns:
             new_cost = new_cost - df['ra_gas_backup_cost_per_mwh'].fillna(0)
         elif 'gas_gas_cost_per_mwh' in df.columns:
