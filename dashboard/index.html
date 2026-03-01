@@ -1166,7 +1166,7 @@ body {
 <!-- HEADER / BANNER -->
 <header class="header">
     <h1>The 8,760 Problem</h1>
-    <p class="subtitle">Optimizing clean energy procurement across 8,760 hours, five power markets<sup style="font-size:0.7em;color:rgba(255,255,255,0.6);">[1]</sup>, and hundreds of cost scenarios.<sup style="font-size:0.7em;color:rgba(255,255,255,0.6);">[2][3]</sup></p>
+    <p class="subtitle">Optimizing clean energy procurement across 8,760 hours, seven power markets<sup style="font-size:0.7em;color:rgba(255,255,255,0.6);">[1]</sup>, and thousands of cost scenarios.<sup style="font-size:0.7em;color:rgba(255,255,255,0.6);">[2][3]</sup></p>
     <div class="header-accent"></div>
 </header>
 
@@ -1175,7 +1175,7 @@ body {
     <h1>The Story of Hourly Clean Energy Matching</h1>
     <p class="subtitle">
         Annual clean energy targets hide a critical gap: the hours when the sun isn&rsquo;t shining and the wind
-        isn&rsquo;t blowing. This analysis models the cost of closing that gap &mdash; hour by hour, across five
+        isn&rsquo;t blowing. This analysis models the cost of closing that gap &mdash; hour by hour, across seven
         major US grid regions<sup style="font-size:0.7em;color:#6B7280;">[1]</sup>, under 5,832+ cost scenarios<sup style="font-size:0.7em;color:#6B7280;">[2][3]</sup> &mdash; to reveal where the real inflection points lie.
     </p>
 </div>
@@ -1274,10 +1274,11 @@ body {
                 <p>
                     <strong>Uncertainty is asymmetric and region-specific.</strong> Statistical analysis across 5,832+
                     cost scenarios reveals that MAC uncertainty is driven by different factors in each region: firm
-                    generation costs dominate in nuclear-heavy NYISO (58% of variance) and PJM (44%), while
-                    renewable costs drive ERCOT (48%) and fossil fuel prices matter most in coal-heavy PJM (28%).
-                    The P10&ndash;P90 spread widens from ~$60/ton at 75% matching to ~$90/ton at 99% &mdash; but the
-                    envelope MAC (monotonic reference line) stays below $150/ton in every region through 99%.
+                    generation costs dominate in nuclear-heavy regions (PJM, NYISO, NEISO), while
+                    renewable costs drive wind-rich ISOs (ERCOT, SPP) and fossil fuel prices matter most in coal-heavy
+                    grids (PJM, MISO). Average abatement costs stay below $90/tCO&#8322; through 99% in ERCOT and SPP,
+                    while CAISO and PJM face steeper curves above 95%. Stepwise marginal costs vary widely &mdash;
+                    some threshold steps are cheaper than carbon offsets, others exceed DAC.
                 </p>
 
                 <div class="conclusion-bottom-line">
@@ -1293,7 +1294,7 @@ body {
             <div style="text-align:center;margin-bottom:16px;">
                 <span class="story-badge" style="background:rgba(14,165,233,0.12);color:#0EA5E9;">At a Glance</span>
                 <h2 style="font-size:1.6rem;color:#1A2744;margin-bottom:8px;">Cost of 90% Hourly Clean Energy at Medium Assumptions</h2>
-                <p style="color:#6B7280;font-size:0.92rem;max-width:600px;margin:0 auto;">The effective cost per MWh to meet 90% of demand with clean energy, hour by hour, across all five ISO regions.</p>
+                <p style="color:#6B7280;font-size:0.92rem;max-width:600px;margin:0 auto;">The effective cost per MWh to meet 90% of demand with clean energy, hour by hour, across all seven ISO regions.</p>
             </div>
             <div class="chart-container" style="max-width:700px;margin:0 auto;">
                 <canvas id="homepage90CostChart"></canvas>
@@ -1565,7 +1566,7 @@ body {
                         </div>
                         <div class="preservation-card-cost">+$18/MWh (+31&ndash;39%)</div>
                         <div class="preservation-card-desc">
-                            Largest nuclear fleet. At 90% matching, costs jump from $59 to $77/MWh. The existing fleet
+                            Largest nuclear fleet. At 90% matching, system costs jump from $55 to ~$73/MWh without existing nuclear. The existing fleet
                             saves more per MWh than any other single intervention.
                         </div>
                         <div class="preservation-bar"><div class="preservation-bar-fill" style="width:100%;"></div></div>
@@ -1578,7 +1579,7 @@ body {
                         <div class="preservation-card-cost">+$12/MWh (+17&ndash;21%)</div>
                         <div class="preservation-card-desc">
                             Millstone and Seabrook<sup style="font-size:0.7em;color:#6B7280;">[4]</sup> anchor New England&rsquo;s nuclear supply.
-                            Losing them would push 90% matching costs above $80/MWh.
+                            Losing them would push 90% matching costs above $85/MWh.
                         </div>
                         <div class="preservation-bar"><div class="preservation-bar-fill" style="width:64%;"></div></div>
                     </div>
