@@ -216,7 +216,6 @@
 - **~612,360 total evaluations** (15 thresholds × 7 regions × 5,832 combos)
 - Resource mix optimization at Medium costs; sensitivity toggles recalculate costs on cached physics
 - Hydro is always existing-only, wholesale-priced, $0 transmission
-- H2 storage explicitly excluded
 - CCS-CCGT includes 45Q offset in LCOE
 - LDES = 100hr iron-air, 50% RT efficiency, new multi-day dispatch algorithm
 - Battery = 4hr Li-ion, 85% RT efficiency, existing daily-cycle dispatch preserved
