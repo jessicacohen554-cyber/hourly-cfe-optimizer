@@ -136,6 +136,7 @@
                 { label: 'Methodology', href: 'optimizer_methodology.html' },
                 { label: 'Policy Context', href: 'policy_context.html' },
                 { label: 'About the Model', href: 'pipeline.html' },
+                { label: 'Pipeline Map', href: 'pipeline_map.html' },
                 { label: 'About', href: 'about.html' }
             ]
         },
