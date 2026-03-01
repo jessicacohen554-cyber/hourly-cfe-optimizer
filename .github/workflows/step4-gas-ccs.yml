@@ -6,12 +6,15 @@ name: "Step 4: Gas CCS Post-Processing"
 #
 # Prerequisite: Step 3 (Cost Optimization) must have produced cost parquets.
 # Output: data/step4-gas-ccs-parquets/
+#
+# iso=ALL fans out 7 parallel matrix jobs, then merges into one branch + PR.
+# Single-ISO selection runs that one ISO only.
 
 on:
   workflow_dispatch:
     inputs:
       iso:
-        description: 'ISO region to process'
+        description: 'ISO region to process (ALL = 7 parallel jobs)'
         required: true
         default: 'ALL'
         type: choice
@@ -34,9 +37,75 @@ env:
   BRANCH_PREFIX: step4-gas-ccs
 
 jobs:
-  run-step4:
+  # ---------------------------------------------------------------------------
+  # Build the ISO matrix
+  # ---------------------------------------------------------------------------
+  prepare:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            echo 'matrix=["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix=["${{ inputs.iso }}"]' >> "$GITHUB_OUTPUT"
+          fi
+
+  # ---------------------------------------------------------------------------
+  # Per-ISO processing (parallel when ALL)
+  # ---------------------------------------------------------------------------
+  process:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      matrix:
+        iso: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+
+      - name: Verify step-3 parquets exist
+        run: |
+          if [ ! -d data/step3-cost-opt-parquets ] || [ -z "$(ls data/step3-cost-opt-parquets/*.parquet 2>/dev/null)" ]; then
+            echo "ERROR: Step-3 parquets not found. Run Step 3 first."
+            exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy numba pyarrow pandas
+
+      - name: Ensure output directory
+        run: mkdir -p data/step4-gas-ccs-parquets
+
+      - name: "Run Gas CCS — ${{ matrix.iso }}"
+        run: python scripts/step4_gas_ccs_adjustement.py --iso ${{ matrix.iso }}
+
+      - name: Upload parquet artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: step4-${{ matrix.iso }}
+          path: data/step4-gas-ccs-parquets/
+          retention-days: 1
+
+  # ---------------------------------------------------------------------------
+  # Merge all artifacts into one branch + PR
+  # ---------------------------------------------------------------------------
+  merge:
+    needs: [prepare, process]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     permissions:
       contents: write
@@ -58,35 +127,12 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$TARGET_BRANCH"
 
-      - name: Verify step-3 parquets exist
-        run: |
-          if [ ! -d data/step3-cost-opt-parquets ] || [ -z "$(ls data/step3-cost-opt-parquets/*.parquet 2>/dev/null)" ]; then
-            echo "ERROR: Step-3 parquets not found. Run Step 3 first."
-            exit 1
-          fi
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Download all ISO artifacts
+        uses: actions/download-artifact@v4
         with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: pip install numpy numba pyarrow pandas
-
-      - name: Ensure output directory
-        run: mkdir -p data/step4-gas-ccs-parquets
-
-      - name: Build ISO arguments
-        id: iso-args
-        run: |
-          if [ "${{ inputs.iso }}" = "ALL" ]; then
-            echo "iso_flags=--all" >> "$GITHUB_OUTPUT"
-          else
-            echo "iso_flags=--iso ${{ inputs.iso }}" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: "Run Gas CCS Post-Processing"
-        run: python scripts/step4_gas_ccs_adjustement.py ${{ steps.iso-args.outputs.iso_flags }}
+          pattern: step4-*
+          path: data/step4-gas-ccs-parquets/
+          merge-multiple: true
 
       - name: Commit and push
         run: |
