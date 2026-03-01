@@ -51,7 +51,6 @@ jobs:
 
     permissions:
       contents: write
-      pull-requests: write
 
     steps:
       - name: Checkout repo
@@ -150,24 +149,3 @@ jobs:
             sleep "$BACKOFF"
           done
 
-      - name: Create pull request
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh pr create \
-            --title "Step 6.1 Abatement: ${{ inputs.script }} ${{ inputs.iso }}" \
-            --body "## Summary
-          Updates the Abatement / MAC page for **${{ inputs.iso }}** (script: ${{ inputs.script }}).
-
-          ## Scripts (sequential when ALL)
-          1. \`step6_compute_mac_stats.py\` — 6 MAC metrics, ANOVA decomposition, DAC/SCC/ETS crossover
-          2. \`step6_compute_optimal_targets.py\` — optimal CFE target per ISO via smooth marginal MAC × DAC
-          3. \`step7_generate_shared_data.py\` — consolidates all results into shared-data.js
-
-          ## Outputs
-          - \`dashboard/js/mac-stats-data.js\`
-          - \`dashboard/js/optimal-target-data.js\`
-          - \`dashboard/js/shared-data.js\`" \
-            --base ${{ inputs.branch || 'master' }} \
-            --head "$TARGET_BRANCH" || echo "PR creation skipped"

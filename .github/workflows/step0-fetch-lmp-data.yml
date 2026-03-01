@@ -107,7 +107,6 @@ jobs:
 
     permissions:
       contents: write
-      pull-requests: write
 
     steps:
       - name: Checkout repo
@@ -157,17 +156,3 @@ jobs:
             echo "Retrying in ${BACKOFF}s..."
             sleep "$BACKOFF"
           done
-
-      - name: Create pull request
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh pr create \
-            --title "Step 0 Fetch LMP: ${{ inputs.iso }} ${{ inputs.year }}" \
-            --body "## Summary
-          - Fetched ${{ inputs.year }} actual DA hourly LMP for **${{ inputs.iso }}**
-          - Source: gridstatus library (ISO public APIs)
-          - Output: \`data/lmp/{ISO}_actual_lmp_${{ inputs.year }}.json\`" \
-            --base ${{ inputs.branch || 'master' }} \
-            --head "$TARGET_BRANCH" || echo "PR creation skipped"

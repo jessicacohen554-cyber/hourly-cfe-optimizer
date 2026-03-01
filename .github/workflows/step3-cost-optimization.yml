@@ -148,7 +148,6 @@ jobs:
 
     permissions:
       contents: write
-      pull-requests: write
 
     steps:
       - name: Checkout repo
@@ -206,16 +205,3 @@ jobs:
             sleep "$BACKOFF"
           done
 
-      - name: Create pull request
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh pr create \
-            --title "Step 3: ${{ inputs.track }} ${{ inputs.iso }}" \
-            --body "## Summary
-          - Cost optimization: **${{ inputs.track }}** for **${{ inputs.iso }}**
-          - Sensitivity: ${{ inputs.sensitivity_mode }}
-          - Output: \`data/step3-cost-opt-parquets/\`" \
-            --base ${{ inputs.branch || 'master' }} \
-            --head "$TARGET_BRANCH" || echo "PR creation skipped"

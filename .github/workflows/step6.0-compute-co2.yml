@@ -106,7 +106,6 @@ jobs:
 
     permissions:
       contents: write
-      pull-requests: write
 
     steps:
       - name: Checkout repo
@@ -156,18 +155,3 @@ jobs:
             echo "Retrying in ${BACKOFF}s..."
             sleep "$BACKOFF"
           done
-
-      - name: Create pull request
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh pr create \
-            --title "Step 6.0 CO2: ${{ inputs.iso }}" \
-            --body "## Summary
-          - Computed dispatch-stack CO2 emissions for **${{ inputs.iso }}**
-          - Merit-order retirement: coal → oil → gas
-          - Output: \`data/step5-post-processing/co2_*.json\`
-          - **Run this before Step 6.1 (MAC depends on CO2)**" \
-            --base ${{ inputs.branch || 'master' }} \
-            --head "$TARGET_BRANCH" || echo "PR creation skipped"

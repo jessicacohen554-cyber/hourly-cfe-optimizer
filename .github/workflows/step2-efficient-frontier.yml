@@ -107,7 +107,6 @@ jobs:
 
     permissions:
       contents: write
-      pull-requests: write
 
     steps:
       - name: Checkout repo
@@ -205,22 +204,6 @@ jobs:
             sleep "$BACKOFF"
           done
 
-      - name: Create pull request
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh pr create \
-            --title "Step 2 EF: ${{ inputs.script }} ${{ matrix.iso }}" \
-            --body "$(cat <<'EOF'
-          ## Summary
-          - Efficient Frontier operations (${{ inputs.script }}) for **${{ matrix.iso }}**
-          - Mode: **full** (single run, no batching)
-          - Output: `data/step2-ef-parquets/step2_ef_${{ matrix.iso }}.parquet`
-          EOF
-          )" \
-            --base ${{ inputs.branch || 'master' }} \
-            --head "$TARGET_BRANCH" || echo "PR creation skipped"
 
   # ════════════════════════════════════════════════════════════════════════
   # Per-ISO job: Batched EF (3 threshold batches + merge)
@@ -239,7 +222,6 @@ jobs:
 
     permissions:
       contents: write
-      pull-requests: write
 
     steps:
       - name: Checkout repo
@@ -384,23 +366,3 @@ jobs:
             sleep "$BACKOFF"
           done
 
-      - name: Create pull request
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh pr create \
-            --title "Step 2 EF: batched ${{ matrix.iso }}" \
-            --body "$(cat <<'EOF'
-          ## Summary
-          - Efficient Frontier extraction for **${{ matrix.iso }}** using **batched threshold solving**
-          - Thresholds split into 3 memory-safe batches:
-            - **LOW**: 10%, 20%, 30%, 40%, 50%, 55%, 60%, 65%, 70%, 75%
-            - **MID**: 80%, 85%, 87.5%, 90%, 92.5%, 95%
-            - **HIGH**: 97.5%, 99%, 99.5%, 99.9%, 99.99%
-          - Each batch deduplicates independently, then merge combines with partitioned dedup
-          - Output: `data/step2-ef-parquets/step2_ef_${{ matrix.iso }}.parquet`
-          EOF
-          )" \
-            --base ${{ inputs.branch || 'master' }} \
-            --head "$TARGET_BRANCH" || echo "PR creation skipped"

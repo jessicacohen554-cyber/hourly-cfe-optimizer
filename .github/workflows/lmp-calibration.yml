@@ -110,7 +110,6 @@ jobs:
 
     permissions:
       contents: write
-      pull-requests: write
 
     steps:
       - name: Checkout repo
@@ -160,18 +159,3 @@ jobs:
             echo "Retrying in ${BACKOFF}s..."
             sleep "$BACKOFF"
           done
-
-      - name: Create pull request
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh pr create \
-            --title "LMP Calibration: ${{ inputs.iso }} (${{ inputs.mode }})" \
-            --body "## Summary
-          - Calibrated synthetic LMP model for **${{ inputs.iso }}**
-          - Mode: ${{ inputs.mode }}
-          - Compares synthetic LMP (avg, P10/P50/P90, peak/offpeak, volatility) against calibration targets
-          - Output: \`data/step5-post-processing/lmp/{ISO}_calibration.json\`" \
-            --base ${{ inputs.branch || 'master' }} \
-            --head "$TARGET_BRANCH" || echo "PR creation skipped"
