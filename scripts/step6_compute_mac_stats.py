@@ -541,9 +541,9 @@ def compute_envelope_and_path(df):
             if has_any_row:
                 mix = {r: int(row[f'mix_{r}']) for r in RESOURCE_TYPES}
                 # v5.0: procurement_pct is always 100 (baked into resource percentages)
-                batt = int(row['battery_dispatch_pct'])
-                ldes = int(row['ldes_dispatch_pct'])
-                h2 = int(row.get('h2_dispatch_pct', 0)) if 'h2_dispatch_pct' in row.index else 0
+                batt = round(float(row['battery_dispatch_pct']), 4)
+                ldes = round(float(row['ldes_dispatch_pct']), 4)
+                h2 = round(float(row.get('h2_dispatch_pct', 0)), 4) if 'h2_dispatch_pct' in row.index else 0.0
 
                 # Compute absolute deployment for this threshold's optimal mix
                 # procurement is always 100% in v5.0
