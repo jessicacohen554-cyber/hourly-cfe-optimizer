@@ -180,6 +180,8 @@ jobs:
 
       - name: Commit and push
         run: |
+          git config http.postBuffer 524288000
+
           git add -f data/step3-cost-opt-parquets/ 2>/dev/null || true
           git add -f dashboard/track_scenarios.parquet 2>/dev/null || true
           git add -f dashboard/track_demand_growth.parquet 2>/dev/null || true

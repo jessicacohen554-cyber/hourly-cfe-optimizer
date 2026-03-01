@@ -79,6 +79,8 @@ jobs:
 
       - name: Commit and push
         run: |
+          git config http.postBuffer 524288000
+
           git add -f dashboard/js/shared-data.js 2>/dev/null || true
           git add -f data/step5-post-processing/shared_data.json 2>/dev/null || true
 

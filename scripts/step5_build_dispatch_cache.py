@@ -15,14 +15,14 @@ Pipeline position:
                                                       ↓
                                           step5_build_dispatch_cache.py  ← THIS
                                                       ↓
-                            data/step5-post-processing/dispatch_cache/{ISO}_dispatch_cache.npz
+                            data/step5-post-processing/dispatch_cache/{ISO}_dispatch_cache.parquet
                                                       ↓
                                   +--------+----------+----------+
                                   |        |          |          |
                               step6_cd  step6_sc  step6_co2  step6_lmp
 
 Input:  data/step4-gas-ccs-parquets/ (or step3 fallback)
-Output: data/step5-post-processing/dispatch_cache/{ISO}_dispatch_cache.npz
+Output: data/step5-post-processing/dispatch_cache/{ISO}_dispatch_cache.parquet
 
 Usage:
   python step5_build_dispatch_cache.py                    # All ISOs

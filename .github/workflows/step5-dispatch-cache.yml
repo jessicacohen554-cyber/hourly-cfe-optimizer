@@ -181,6 +181,8 @@ jobs:
 
       - name: Commit and push
         run: |
+          git config http.postBuffer 524288000
+
           git add -f data/step5-post-processing/ 2>/dev/null || true
           git add -f dashboard/track_results.json 2>/dev/null || true
 
