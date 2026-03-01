@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
 Consolidate MISO and SPP raw per-year JSON files into the aggregated
-EIA 930 Data profiles used by Step 1.
+eia-930 profiles used by Step 1.
 
 The raw per-year files (eia_hourly_{ISO}_{YEAR}.json, eia_demand_{ISO}_{YEAR}.json)
 were fetched by step0_fetch_all_data.py but never merged into the consolidated
 eia_generation_profiles.json, eia_demand_profiles.json, and eia_fossil_mix.json.
 
 This script reads those raw files and appends MISO/SPP entries to the consolidated
-JSONs, also copying the per-year files into the EIA 930 Data directory.
+JSONs, also copying the per-year files into the eia-930 directory.
 """
 
 import json
@@ -17,7 +17,7 @@ import shutil
 
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(SCRIPT_DIR, 'data')
-EIA_930_DIR = os.path.join(DATA_DIR, 'EIA 930 Data')
+EIA_930_DIR = os.path.join(DATA_DIR, 'eia-930')
 
 NEW_ISOS = ['MISO', 'SPP']
 YEARS = [2021, 2022, 2023, 2024, 2025]
@@ -47,7 +47,7 @@ def remove_leap_day(arr):
 
 def main():
     print("=" * 70)
-    print("Consolidating MISO & SPP into EIA 930 Data profiles")
+    print("Consolidating MISO & SPP into eia-930 profiles")
     print("=" * 70)
 
     # Load existing consolidated files
@@ -144,14 +144,14 @@ def main():
             print(f"  {iso}/{year}: demand profile built "
                   f"(total={total/1e6:.1f} TWh, peak={max(values):.0f} MW)")
 
-        # Copy raw files into EIA 930 Data directory for consistency
+        # Copy raw files into eia-930 directory for consistency
         for year in YEARS:
             for prefix in ['eia_hourly', 'eia_demand']:
                 src = os.path.join(DATA_DIR, f'{prefix}_{iso}_{year}.json')
                 dst = os.path.join(EIA_930_DIR, f'{prefix}_{iso}_{year}.json')
                 if os.path.exists(src) and not os.path.exists(dst):
                     shutil.copy2(src, dst)
-                    print(f"  Copied {os.path.basename(src)} → EIA 930 Data/")
+                    print(f"  Copied {os.path.basename(src)} → eia-930/")
 
     # Save updated consolidated files
     print("\n--- Saving consolidated files ---")
@@ -169,7 +169,7 @@ def main():
                 years = sorted(data[iso].keys())
                 print(f"    {iso}: years {', '.join(years)}")
 
-    print("\nDone! MISO and SPP consolidated into EIA 930 Data profiles.")
+    print("\nDone! MISO and SPP consolidated into eia-930 profiles.")
     print("Step 1 PFS Generator can now load all 7 ISOs.")
 
 
