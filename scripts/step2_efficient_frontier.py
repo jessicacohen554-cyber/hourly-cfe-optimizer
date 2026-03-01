@@ -120,7 +120,16 @@ def normalize_table(t, iso):
     return pa.table(cols)
 
 
-def scan_iso_files(target_isos=None):
+def _extract_threshold_from_filename(fname):
+    """Extract threshold value from a PFS filename. Returns float or None."""
+    # Handles: {ISO}_t{XX}_raw_pfs.parquet, {ISO}_t{XX}_raw_pfs_b{N}.parquet
+    # Also handles 1d/ prefixed files: 1d/{ISO}_t{XX}_storage_refined.parquet
+    base = fname[3:] if fname.startswith('1d/') else fname
+    m = re.match(r'^[A-Z]+_t([\d.]+)_', base)
+    return float(m.group(1)) if m else None
+
+
+def scan_iso_files(target_isos=None, threshold_filter=None):
     """Scan Step 1 parquet directory and return {iso: [filenames]} mapping.
 
     Groups files by ISO prefix, handles canonical vs batch file dedup.
@@ -128,6 +137,10 @@ def scan_iso_files(target_isos=None):
 
     Args:
         target_isos: List of ISO names to scan for. None = all ISOs.
+        threshold_filter: Optional set of threshold values. If provided, only
+            include PFS files whose filename threshold is in this set. This
+            pre-filters at the file level for batched threshold processing,
+            avoiding loading large files that won't pass the threshold gate.
 
     Returns dict keyed by ISO name with lists of filenames to process.
     """
@@ -160,6 +173,11 @@ def scan_iso_files(target_isos=None):
     for fname in parquet_files:
         iso_prefix = fname.split('_')[0] if '_' in fname else None
         if iso_prefix and iso_prefix in iso_filter:
+            # Apply threshold filter at file level if provided
+            if threshold_filter is not None:
+                file_thr = _extract_threshold_from_filename(fname)
+                if file_thr is not None and file_thr not in threshold_filter:
+                    continue
             files_by_iso.setdefault(iso_prefix, []).append(fname)
 
     # For each ISO, detect canonical vs batch file overlap and prefer batch
@@ -189,6 +207,11 @@ def scan_iso_files(target_isos=None):
             for fname in step1d_files:
                 iso_prefix = fname.split('_')[0] if '_' in fname else None
                 if iso_prefix and iso_prefix in iso_filter:
+                    # Apply threshold filter for 1D files too
+                    if threshold_filter is not None:
+                        file_thr = _extract_threshold_from_filename(fname)
+                        if file_thr is not None and file_thr not in threshold_filter:
+                            continue
                     # Tag with directory prefix so load_and_process_iso knows
                     # to read from STEP1D_DIR instead of STEP1_RAW_DIR
                     files_by_iso.setdefault(iso_prefix, []).append(f'1d/{fname}')
@@ -326,9 +349,9 @@ def load_and_process_iso(iso, fnames):
 
 
 def threshold_gate(table):
-    """Keep only rows matching target thresholds."""
+    """Keep only rows matching target thresholds (respects batch filtering)."""
     threshold_col = table.column('threshold')
-    target_set = pa.array(TARGET_THRESHOLDS, type=pa.float64())
+    target_set = pa.array(sorted(TARGET_THRESHOLD_SET), type=pa.float64())
     mask = pc.is_in(threshold_col, value_set=target_set)
     return table.filter(mask)
 
@@ -385,25 +408,167 @@ def deduplicate_mixes(arrays, resource_cols):
 
 
 
-def write_per_iso_outputs(results_by_iso):
-    """Write per-ISO Step 2 EF outputs to data/step2-ef-parquets."""
+def write_per_iso_outputs(results_by_iso, batch_label=None):
+    """Write per-ISO Step 2 EF outputs to data/step2-ef-parquets.
+
+    Args:
+        results_by_iso: dict of {iso: pyarrow.Table}
+        batch_label: If set, write to step2_ef_{ISO}_batch_{label}.parquet
+                     instead of the final step2_ef_{ISO}.parquet.
+    """
     os.makedirs(STEP2_EF_OUTPUT_DIR, exist_ok=True)
     written = []
 
     for iso, table in results_by_iso.items():
-        path = os.path.join(STEP2_EF_OUTPUT_DIR, f'step2_ef_{iso}.parquet')
+        if batch_label:
+            fname = f'step2_ef_{iso}_batch_{batch_label}.parquet'
+        else:
+            fname = f'step2_ef_{iso}.parquet'
+        path = os.path.join(STEP2_EF_OUTPUT_DIR, fname)
         pq.write_table(table, path, compression='snappy')
         size_mb = os.path.getsize(path) / (1024 * 1024)
-        print(f"  Per-ISO output: {path} ({table.num_rows:,} rows, {size_mb:.1f} MB)")
+        print(f"  Output: {path} ({table.num_rows:,} rows, {size_mb:.1f} MB)")
         written.append(path)
 
     return written
+
+
+def partitioned_dedup(table, iso):
+    """Deduplicate a large table by partitioning on clean_firm to bound peak memory.
+
+    Each partition (one clean_firm value at a time) is deduped independently.
+    Since the dedup key includes clean_firm, partitioning by it is lossless —
+    no cross-partition duplicates can exist.
+
+    This keeps peak memory proportional to the largest single clean_firm
+    partition (~1-3M rows) instead of the full table (60-70M rows), preventing
+    OOM on GitHub Actions runners (7 GB RAM).
+    """
+    resource_cols = get_resource_cols(iso)
+    cf_col = table.column('clean_firm').to_numpy()
+    unique_cf = np.unique(cf_col)
+
+    print(f"    Partitioned dedup: {table.num_rows:,} rows across {len(unique_cf)} clean_firm values", flush=True)
+
+    kept_indices = []
+    for cf_val in unique_cf:
+        mask = cf_col == cf_val
+        partition_indices = np.where(mask)[0]
+
+        if len(partition_indices) <= 1:
+            kept_indices.append(partition_indices)
+            continue
+
+        partition = table.take(partition_indices)
+        arrays = {}
+        for col in resource_cols + STORAGE_COLS + ['hourly_match_score']:
+            arrays[col] = partition.column(col).to_numpy()
+        local_keep = deduplicate_mixes(arrays, resource_cols)
+        kept_indices.append(partition_indices[local_keep])
+        del partition, arrays
+
+    all_keep = np.concatenate(kept_indices)
+    result = table.take(all_keep)
+    del cf_col, kept_indices
+    gc.collect()
+
+    print(f"    Partitioned dedup result: {result.num_rows:,} rows", flush=True)
+    return result
+
+
+def merge_batch_outputs(iso):
+    """Merge all batch parquet files for an ISO into a single final EF.
+
+    Reads step2_ef_{ISO}_batch_*.parquet files, concatenates them, runs
+    partitioned dedup (by clean_firm) to resolve cross-batch duplicates,
+    and writes the final step2_ef_{ISO}.parquet.
+
+    Returns (final_rows, n_batches) or (0, 0) if no batch files found.
+    """
+    import glob as globmod
+
+    pattern = os.path.join(STEP2_EF_OUTPUT_DIR, f'step2_ef_{iso}_batch_*.parquet')
+    batch_files = sorted(globmod.glob(pattern))
+
+    if not batch_files:
+        print(f"  {iso}: No batch files found to merge")
+        return 0, 0
+
+    print(f"\n  {iso}: Merging {len(batch_files)} batch files...")
+    tables = []
+    total_rows = 0
+    for bf in batch_files:
+        t = pq.read_table(bf)
+        total_rows += t.num_rows
+        tables.append(t)
+        size_mb = os.path.getsize(bf) / (1024 * 1024)
+        print(f"    {os.path.basename(bf)}: {t.num_rows:,} rows ({size_mb:.1f} MB)")
+
+    # Also include existing final EF if it exists (incremental merge)
+    final_path = os.path.join(STEP2_EF_OUTPUT_DIR, f'step2_ef_{iso}.parquet')
+    if os.path.exists(final_path):
+        existing = pq.read_table(final_path)
+        total_rows += existing.num_rows
+        tables.append(existing)
+        print(f"    Existing EF: {existing.num_rows:,} rows")
+
+    if not tables:
+        return 0, 0
+
+    combined = pa.concat_tables(tables, promote_options='permissive')
+    del tables
+    gc.collect()
+
+    print(f"  Combined: {combined.num_rows:,} rows (from {total_rows:,} input rows)")
+
+    # Partitioned dedup to stay under memory limits
+    result = partitioned_dedup(combined, iso)
+    del combined
+    gc.collect()
+
+    # Write final output
+    pq.write_table(result, final_path, compression='snappy')
+    size_mb = os.path.getsize(final_path) / (1024 * 1024)
+    print(f"  Final: {final_path} ({result.num_rows:,} rows, {size_mb:.1f} MB)")
+
+    # Clean up batch files after successful merge
+    for bf in batch_files:
+        os.remove(bf)
+        print(f"    Removed: {os.path.basename(bf)}")
+
+    return result.num_rows, len(batch_files)
+
+
+# Predefined threshold batches for large ISOs. Each batch processes a subset
+# of thresholds to keep peak memory under ~4 GB during dedup. The highest
+# thresholds (99+) produce the most unique mixes and go in their own batch.
+THRESHOLD_BATCHES = {
+    'low':  [10.0, 20.0, 30.0, 40.0, 50.0, 55.0, 60.0, 65.0, 70.0, 75.0],
+    'mid':  [80.0, 85.0, 87.5, 90.0, 92.5, 95.0],
+    'high': [97.5, 99.0, 99.5, 99.9, 99.99],
+}
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Step 2: Efficient Frontier extraction')
     parser.add_argument('--iso', type=str, default=None,
                         help='Single ISO to process (e.g. CAISO). Default: all ISOs.')
+    parser.add_argument('--thresholds', type=str, default=None,
+                        help='Comma-separated thresholds to process (e.g. "50,55,60,65,70"). '
+                             'Only PFS files matching these thresholds will be loaded. '
+                             'Default: all thresholds.')
+    parser.add_argument('--batch', type=str, default=None,
+                        choices=list(THRESHOLD_BATCHES.keys()),
+                        help='Use a predefined threshold batch (low/mid/high). '
+                             'Mutually exclusive with --thresholds.')
+    parser.add_argument('--batch-label', type=str, default=None,
+                        help='Label for batch output file (e.g. "low", "mid", "high"). '
+                             'Output: step2_ef_{ISO}_batch_{label}.parquet. '
+                             'Auto-set when --batch is used.')
+    parser.add_argument('--merge', action='store_true',
+                        help='Merge mode: combine batch parquet files into final EF. '
+                             'Reads step2_ef_{ISO}_batch_*.parquet, deduplicates, '
+                             'writes step2_ef_{ISO}.parquet.')
     return parser.parse_args()
 
 
@@ -419,24 +584,77 @@ def main():
     else:
         target_isos = ISOS
 
+    # ── Merge mode ─────────────────────────────────────────────────────
+    if args.merge:
+        print("=" * 70, flush=True)
+        print("  STEP 2: MERGE BATCH EF OUTPUTS")
+        print(f"  ISOs: {', '.join(target_isos)}")
+        print("=" * 70, flush=True)
+
+        total_start = time.time()
+        for iso in target_isos:
+            t0 = time.time()
+            n_rows, n_batches = merge_batch_outputs(iso)
+            elapsed = time.time() - t0
+            if n_batches > 0:
+                print(f"  {iso}: {n_rows:,} final rows from {n_batches} batches ({elapsed:.0f}s)")
+
+        print(f"\n  Total time: {time.time() - total_start:.0f}s")
+        print("=" * 70)
+        print("  MERGE COMPLETE")
+        print("=" * 70)
+        return
+
+    # ── Batch / threshold configuration ────────────────────────────────
+    threshold_filter = None
+    batch_label = args.batch_label
+    active_thresholds = TARGET_THRESHOLDS
+
+    if args.batch and args.thresholds:
+        raise ValueError("Cannot use both --batch and --thresholds. Pick one.")
+
+    if args.batch:
+        active_thresholds = THRESHOLD_BATCHES[args.batch]
+        threshold_filter = set(active_thresholds)
+        batch_label = batch_label or args.batch
+        print(f"  Batch '{args.batch}': thresholds {active_thresholds}")
+
+    elif args.thresholds:
+        active_thresholds = [float(t.strip()) for t in args.thresholds.split(',')]
+        threshold_filter = set(active_thresholds)
+        if not batch_label:
+            # Auto-generate label from threshold range
+            batch_label = f"t{active_thresholds[0]:.0f}-{active_thresholds[-1]:.0f}"
+        print(f"  Custom thresholds: {active_thresholds}")
+
+    mode_str = f"batch={batch_label}" if batch_label else "full"
+
     print("=" * 70, flush=True)
     print("  STEP 2: EFFICIENT FRONTIER (EF) EXTRACTION")
-    print(f"  ISOs: {', '.join(target_isos)}")
+    print(f"  ISOs: {', '.join(target_isos)} | Mode: {mode_str}")
+    if threshold_filter:
+        print(f"  Thresholds: {sorted(threshold_filter)}")
     print("  PFS -> PFS post-EF (threshold-free, deduplicated)")
     print("=" * 70, flush=True)
 
     total_start = time.time()
 
-    # Scan files (no data loaded yet)
+    # Override TARGET_THRESHOLDS for gate function if batch mode
+    global TARGET_THRESHOLD_SET
+    if threshold_filter:
+        TARGET_THRESHOLD_SET = threshold_filter
+
+    # Scan files (no data loaded yet) — with threshold pre-filter
     print(f"\nScanning Step 1 raw parquets in {STEP1_RAW_DIR} + {STEP1D_DIR}")
-    files_by_iso = scan_iso_files(target_isos)
+    files_by_iso = scan_iso_files(target_isos, threshold_filter=threshold_filter)
 
     found = sorted(files_by_iso.keys())
     print(f"Found {len(found)} ISOs: {', '.join(found)}")
+    for iso in found:
+        n_files = len(files_by_iso[iso])
+        print(f"  {iso}: {n_files} files to process")
 
     # Process each ISO incrementally: load → gate → dedup per file
-    # This streams data instead of loading all rows at once, keeping
-    # peak memory bounded even for large ISOs (PJM: 63M+ rows).
     print("\nStep 2: Threshold gate + deduplication (threshold-free)")
     print(f"  {'ISO':>6}  {'Input':>9}  {'Gated':>9}  {'Dedup':>9}  {'Time':>6}")
     print("  " + "-" * 50)
@@ -467,8 +685,8 @@ def main():
     if not results_by_iso:
         raise RuntimeError('Step 2 produced no ISO outputs to write.')
 
-    # Write per-ISO EF parquets
-    write_per_iso_outputs(results_by_iso)
+    # Write outputs (batch or final)
+    write_per_iso_outputs(results_by_iso, batch_label=batch_label)
 
     elapsed_total = time.time() - total_start
 
@@ -479,16 +697,21 @@ def main():
         iso_scores = results_by_iso[iso].column('hourly_match_score').to_numpy()
         if len(iso_scores) > 0:
             avail = []
-            for thr in TARGET_THRESHOLDS:
+            for thr in sorted(active_thresholds):
                 n_above = int((iso_scores >= thr).sum())
-                avail.append(f"{thr:.0f}%:{n_above:,}")
+                avail.append(f"{thr}%:{n_above:,}")
             print(f"  {iso} mixes per threshold: {', '.join(avail[:6])}...")
 
     print(f"\n  Total rows: {total_input:,} -> {total_dedup:,} (EF)")
     print(f"  Total time: {elapsed_total:.0f}s")
     print("\n" + "=" * 70)
-    print("  STEP 2 COMPLETE — per-ISO EF parquets ready in data/step2-ef-parquets/")
-    print("  Step 3 reads from that directory; no merged output file is written.")
+    if batch_label:
+        print(f"  STEP 2 BATCH '{batch_label}' COMPLETE")
+        print(f"  Batch outputs in data/step2-ef-parquets/step2_ef_*_batch_{batch_label}.parquet")
+        print(f"  Run with --merge to combine all batches into final EF.")
+    else:
+        print("  STEP 2 COMPLETE — per-ISO EF parquets ready in data/step2-ef-parquets/")
+        print("  Step 3 reads from that directory; no merged output file is written.")
     print("=" * 70)
 
 
