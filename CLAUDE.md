@@ -21,11 +21,15 @@
 - Run searches, builds, file edits, and validations concurrently whenever they don't depend on each other
 
 ### Compute Execution (Critical — Preserve Token Budget)
-- **NEVER run optimizer scripts, pipeline steps, or data-generation scripts locally in the session.** This includes Step 1–6 scripts, post-processing (PP1–PP9), and any script that processes parquets or generates dashboard data. Running these burns session tokens on compute that should happen outside the session.
-- **Instead, create or update GitHub Actions workflows** so the user can trigger execution independently. Write the workflow YAML, commit it, push it — then the user runs it from the GitHub Actions UI.
-- **Session compute should be limited to**: syntax checks (`python -c "import py_compile; ..."`), quick verification reads (checking a parquet schema, confirming a constant value), and lightweight validation that takes <5 seconds.
-- **If a script needs to be tested**: create a workflow for it. If a workflow already exists, tell the user to trigger it. Do not run the script locally "just to check."
-- **This rule exists because**: Previous sessions burned significant token budget running multi-minute optimizer scripts locally when the same compute could have been done for free via GitHub Actions. The user's token budget is finite and expensive — treat every CPU cycle in-session as a cost.
+- **NEVER run full pipeline scripts (Step 1–7) end-to-end locally in the session** unless explicitly directed by the user. Full pipeline runs burn significant token budget on compute that should happen via GitHub Actions.
+- **Iterative testing IS allowed**: Running scripts on a **subset of data** (e.g., 1–2 ISOs, single threshold, limited rows) for debugging, validation, and iterative development is permitted and encouraged. Quick targeted tests that complete in under 60 seconds are fine. This includes:
+  - Running a script on a single ISO to verify correctness after code changes
+  - Loading a subset of data to validate vectorization, filtering, or cost logic
+  - Benchmarking performance on a representative slice
+  - Syntax checks, import validation, unit tests
+- **Full dataset / all-ISO runs**: Create or update GitHub Actions workflows so the user can trigger full execution independently. Do not run all 7 ISOs × 15 thresholds locally unless the user explicitly asks.
+- **Session compute should be limited to**: syntax checks, quick verification reads (parquet schema, constants), targeted tests on subsets, and lightweight validation.
+- **This rule exists because**: Previous sessions burned significant token budget running multi-minute optimizer scripts locally when the same compute could have been done for free via GitHub Actions. The user's token budget is finite and expensive — but short iterative tests are essential for efficient debugging and should not require a full CI roundtrip.
 
 ### Git & Commits
 - **3-minute commit cadence** — commit work every 3 minutes during active development to avoid losing work. Don't wait for a feature to be "done" to commit — frequent incremental commits protect against session interruptions and token limits. Squash into a clean commit before pushing.
