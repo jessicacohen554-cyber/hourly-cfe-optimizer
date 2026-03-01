@@ -792,42 +792,86 @@ html, body {
 .nr-bar-container {
     flex: 1;
     position: relative;
-    height: 26px;
+    height: 28px;
     background: rgba(0,0,0,0.03);
     border-radius: 6px;
     overflow: visible;
+    min-width: 0;
 }
-.nr-bar-fill {
+/* Solid saturated bar for minimum floor — "build no matter what" */
+.nr-bar-floor-fill {
     position: absolute;
     top: 2px;
     left: 0;
-    height: 22px;
-    border-radius: 5px;
+    height: 24px;
+    border-radius: 5px 0 0 5px;
     transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-    opacity: 0.8;
-}
-.nr-bar-floor {
-    position: absolute;
-    top: 0;
-    height: 26px;
-    width: 2px;
-    background: rgba(15,23,42,0.6);
-    border-radius: 1px;
+    opacity: 1;
     z-index: 2;
 }
-.nr-bar-value {
+/* Transparent dashed bar for average beyond floor — "likely worthwhile" */
+.nr-bar-avg-fill {
     position: absolute;
-    right: -4px;
-    top: 50%;
-    transform: translateY(-50%) translateX(100%);
-    font-family: 'Barlow Semi Condensed', sans-serif;
-    font-size: 0.7rem;
-    font-weight: 700;
-    color: rgba(15,23,42,0.65);
-    z-index: 3;
-    white-space: nowrap;
-    padding-left: 6px;
+    top: 2px;
+    height: 24px;
+    border-radius: 0 5px 5px 0;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1), left 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0.18;
+    z-index: 1;
 }
+.nr-bar-avg-outline {
+    position: absolute;
+    top: 2px;
+    height: 24px;
+    border-radius: 0 5px 5px 0;
+    border: 2px dashed;
+    border-left: none;
+    box-sizing: border-box;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1), left 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0.55;
+    z-index: 2;
+}
+/* When floor = 0, give avg fill full border-radius */
+.nr-bar-avg-fill.full-radius { border-radius: 5px; }
+.nr-bar-avg-outline.full-radius { border-radius: 5px; border-left: 2px dashed; }
+/* TWh label inside or beside the floor bar */
+.nr-bar-floor-label {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #fff;
+    z-index: 4;
+    white-space: nowrap;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    padding: 0 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+/* Floor label when bar is too narrow — show outside */
+.nr-bar-floor-label.outside {
+    color: rgba(15,23,42,0.7);
+    text-shadow: none;
+    left: auto;
+}
+/* Avg TWh label — positioned at the right end of the avg bar, inside the container */
+.nr-bar-avg-label {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: rgba(15,23,42,0.5);
+    z-index: 4;
+    white-space: nowrap;
+    padding-left: 4px;
+}
+/* Zero-value resource styling */
+.nr-resource-row.nr-zero-resource { opacity: 0.45; }
+.nr-resource-row.nr-zero-resource .nr-bar-container { background: rgba(0,0,0,0.015); }
 .nr-badge {
     display: inline-block;
     padding: 2px 8px;
@@ -867,6 +911,45 @@ html, body {
     font-size: 0.78rem;
     font-weight: 600;
 }
+/* Interpretation legend */
+.nr-interpret-legend {
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: rgba(0,0,0,0.018);
+    border-radius: 10px;
+    border: 1px solid rgba(0,0,0,0.04);
+}
+.nr-interpret-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 8px;
+    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-size: 0.76rem;
+    line-height: 1.4;
+    color: rgba(15,23,42,0.6);
+}
+.nr-interpret-item:last-child { margin-bottom: 0; }
+.nr-interpret-swatch {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+.nr-interpret-swatch-solid {
+    width: 28px;
+    height: 14px;
+    border-radius: 3px;
+    background: #3B82F6;
+}
+.nr-interpret-swatch-dashed {
+    width: 28px;
+    height: 14px;
+    border-radius: 3px;
+    background: rgba(59,130,246,0.15);
+    border: 2px dashed rgba(59,130,246,0.5);
+    box-sizing: border-box;
+}
+.nr-interpret-label { font-weight: 700; color: rgba(15,23,42,0.75); }
+.nr-interpret-desc { color: rgba(15,23,42,0.5); }
 
 /* ========== METHODOLOGY SECTION ========== */
 .methodology-section {
@@ -944,6 +1027,10 @@ html, body {
     .deepdive-section { padding: 32px 12px; }
     .nr-panel { padding: 20px 16px; }
     .nr-resource-label { width: 80px; font-size: 0.75rem; }
+    .nr-bar-avg-label { font-size: 0.55rem; }
+    .nr-bar-floor-label { font-size: 0.58rem; }
+    .nr-badge { font-size: 0.56rem; padding: 2px 5px; }
+    .nr-bar-container { overflow: hidden; }
     .methodology-section { padding: 40px 16px; }
 }
 @media (max-width: 480px) {
@@ -953,6 +1040,10 @@ html, body {
     .tile-finding { font-size: 0.65rem; }
     .nr-panel { padding: 16px 12px; }
     .nr-resource-label { width: 70px; font-size: 0.7rem; }
+    .nr-bar-avg-label { display: none; }
+    .nr-bar-floor-label { font-size: 0.55rem; padding: 0 3px; }
+    .nr-badge { font-size: 0.52rem; padding: 1px 4px; }
+    .nr-bar-container { overflow: hidden; }
 }
 @media (max-width: 320px) {
     .iso-tiles-grid { grid-template-columns: 1fr; }
@@ -1088,8 +1179,8 @@ html, body {
         <div class="deepdive-resources-col">
             <div class="nr-panel">
                 <div class="nr-panel-header">
-                    <h3>No-Regrets Investments</h3>
-                    <p id="nrSubtitle">Resources that appear in the optimal portfolio across the full crossover range under all cost scenarios</p>
+                    <h3>No-Regrets Resource Investments</h3>
+                    <p id="nrSubtitle">New clean energy capacity needed across all cost scenarios within the optimal decarbonization range. Solid bars show the guaranteed minimum; dashed outlines show the average.</p>
                 </div>
                 <div id="nrResourceBars">
                     <!-- Populated by JS -->
@@ -1912,6 +2003,13 @@ function renderNoRegrets(iso) {
         return;
     }
 
+    // Also pull total_clean_by_growth from OPTIMAL_TARGETS for TWh conversion
+    var totalClean = null;
+    var otData = typeof OPTIMAL_TARGETS !== 'undefined' ? OPTIMAL_TARGETS : null;
+    if (otData && otData[iso] && otData[iso].total_clean_by_growth) {
+        totalClean = otData[iso].total_clean_by_growth;
+    }
+
     var html = '';
     var maxVal = 0;
     RESOURCE_DISPLAY.forEach(function(r) {
@@ -1923,52 +2021,130 @@ function renderNoRegrets(iso) {
     var nrCount = 0;
     RESOURCE_DISPLAY.forEach(function(r) {
         var a = nr.analysis[r.key];
-        if (!a || a.average < 0.5) return;
+        var floorVal = a ? (a.floor || 0) : 0;
+        var avgVal = a ? (a.average || 0) : 0;
+        var isZero = avgVal < 0.5;
+        var isNR = a && a.isNoRegrets;
+        if (isNR) nrCount++;
 
-        var barWidth = Math.max(2, (a.average / maxVal) * 100);
-        var floorPos = maxVal > 0 ? (a.floor / maxVal) * 100 : 0;
+        // Compute bar widths as % of container
+        var floorWidth = maxVal > 0 ? Math.max(0, (floorVal / maxVal) * 100) : 0;
+        var avgWidth = maxVal > 0 ? Math.max(0, (avgVal / maxVal) * 100) : 0;
+        var avgExtraWidth = Math.max(0, avgWidth - floorWidth);
 
-        var badgeClass = a.isConsensus ? 'nr-badge-yes' : (a.isNoRegrets ? 'nr-badge-yes' : (a.presenceRate >= 0.5 ? 'nr-badge-partial' : 'nr-badge-no'));
-        var badgeText = a.isConsensus ? 'No-Regrets' : (a.isNoRegrets ? 'No-Regrets' : (a.presenceRate >= 0.5 ? 'Likely' : 'Varies'));
-        if (a.isNoRegrets) nrCount++;
+        // Get TWh values
+        var floorTwh = null, avgTwh = null;
+        if (a && a.twh_by_growth && a.twh_by_growth.medium) {
+            floorTwh = a.twh_by_growth.medium.floor_twh;
+            avgTwh = a.twh_by_growth.medium.avg_twh;
+        } else if (totalClean && totalClean.medium && a) {
+            // Estimate TWh from percentage × total demand
+            var totalAvg = totalClean.medium.avg_twh || 300;
+            if (floorVal > 0) floorTwh = (floorVal / 100) * totalAvg;
+            if (avgVal > 0) avgTwh = (avgVal / 100) * totalAvg;
+        }
 
-        // Build value label: show TWh (medium growth, avg) + percentage
-        var valueLabel = Math.round(a.average) + '%';
-        if (a.twh_by_growth && a.twh_by_growth.medium) {
-            var avgTwh = a.twh_by_growth.medium.avg_twh;
-            if (avgTwh != null && avgTwh > 0.1) {
-                valueLabel = avgTwh.toFixed(1) + ' TWh (' + Math.round(a.average) + '%)';
+        // Floor label (TWh if available, else %)
+        var floorLabel = '';
+        if (floorVal > 0.5) {
+            if (floorTwh != null && floorTwh > 0.05) {
+                floorLabel = floorTwh.toFixed(1) + ' TWh';
+            } else {
+                floorLabel = Math.round(floorVal) + '%';
             }
         }
 
-        html += '<div class="nr-resource-row">' +
+        // Value label to the right (avg TWh or %)
+        var valueLabel = '';
+        if (!isZero && avgVal > floorVal + 0.5) {
+            if (avgTwh != null && avgTwh > 0.05) {
+                valueLabel = avgTwh.toFixed(1) + ' TWh';
+            } else {
+                valueLabel = Math.round(avgVal) + '%';
+            }
+        } else if (!isZero && floorVal < 0.5) {
+            // No floor, show avg as the only label
+            if (avgTwh != null && avgTwh > 0.05) {
+                valueLabel = avgTwh.toFixed(1) + ' TWh';
+            } else {
+                valueLabel = Math.round(avgVal) + '%';
+            }
+        }
+
+        // Badge
+        var badgeClass = 'nr-badge-no';
+        var badgeText = 'Varies';
+        if (a) {
+            if (a.isConsensus || a.isNoRegrets) { badgeClass = 'nr-badge-yes'; badgeText = 'No-Regrets'; }
+            else if (a.presenceRate >= 0.5) { badgeClass = 'nr-badge-partial'; badgeText = 'Likely'; }
+        }
+        if (isZero) { badgeClass = 'nr-badge-no'; badgeText = 'Not in mix'; }
+
+        // Determine if floor label fits inside bar (needs ~60px min)
+        var floorLabelInside = floorWidth > 25;
+
+        var rowClass = 'nr-resource-row' + (isZero ? ' nr-zero-resource' : '');
+        html += '<div class="' + rowClass + '">' +
             '<div class="nr-resource-label"><span class="nr-resource-swatch" style="background:' + r.color + ';"></span>' + r.label + '</div>' +
-            '<div class="nr-bar-container">' +
-                '<div class="nr-bar-fill" style="width:' + barWidth + '%;background:' + r.color + ';"></div>' +
-                (a.floor > 0.5 ? '<div class="nr-bar-floor" style="left:' + floorPos + '%;"></div>' : '') +
-                '<div class="nr-bar-value">' + valueLabel + '</div>' +
-            '</div>' +
+            '<div class="nr-bar-container">';
+
+        if (floorVal > 0.5) {
+            // Solid saturated floor bar
+            html += '<div class="nr-bar-floor-fill" style="width:' + floorWidth + '%;background:' + r.color + ';"></div>';
+            // Floor TWh label
+            if (floorLabel) {
+                if (floorLabelInside) {
+                    html += '<div class="nr-bar-floor-label" style="left:2px;max-width:' + floorWidth + '%;">' + floorLabel + '</div>';
+                } else {
+                    html += '<div class="nr-bar-floor-label outside" style="left:' + (floorWidth + 1) + '%;font-size:0.6rem;">' + floorLabel + '</div>';
+                }
+            }
+        }
+
+        if (avgExtraWidth > 0.5) {
+            // Transparent dashed bar for average beyond floor
+            var hasFloor = floorVal > 0.5;
+            var radiusClass = hasFloor ? '' : ' full-radius';
+            html += '<div class="nr-bar-avg-fill' + radiusClass + '" style="left:' + floorWidth + '%;width:' + avgExtraWidth + '%;background:' + r.color + ';"></div>';
+            html += '<div class="nr-bar-avg-outline' + radiusClass + '" style="left:' + floorWidth + '%;width:' + avgExtraWidth + '%;border-color:' + r.color + ';"></div>';
+            // Avg TWh label — positioned just after the dashed bar end, inside container
+            if (valueLabel) {
+                var labelLeft = Math.min(avgWidth + 1, 95);
+                html += '<div class="nr-bar-avg-label" style="left:' + labelLeft + '%;">' + valueLabel + '</div>';
+            }
+        } else if (isZero) {
+            // Show empty state
+            html += '<div style="position:absolute;top:50%;left:8px;transform:translateY(-50%);font-size:0.65rem;color:rgba(15,23,42,0.25);font-family:\'Barlow Semi Condensed\',sans-serif;">Not deployed in optimal mix</div>';
+        } else if (!isZero && floorVal > 0.5 && avgExtraWidth <= 0.5) {
+            // Floor-only resource (floor ≈ avg) — no dashed bar needed, but show avg TWh label
+            if (valueLabel && valueLabel !== floorLabel) {
+                html += '<div class="nr-bar-avg-label" style="left:' + (floorWidth + 1) + '%;">' + valueLabel + '</div>';
+            }
+        }
+
+        html += '</div>' +
             '<span class="nr-badge ' + badgeClass + '">' + badgeText + '</span>' +
         '</div>';
     });
 
     container.innerHTML = html;
 
+    // Summary + interpretation legend
     var rangeLabel = crossover ? (crossover.lower || '?') + '\u2013' + (crossover.upper || '?') + '%' : '\u2014';
     summaryDiv.innerHTML =
         '<span class="nr-summary-stat" style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);color:#16a34a;">' +
         nrCount + ' no-regrets resource' + (nrCount !== 1 ? 's' : '') + ' in the ' + rangeLabel + ' range</span>' +
-        '<div style="display:flex;align-items:center;gap:12px;margin-top:10px;font-size:0.72rem;color:rgba(15,23,42,0.55);">' +
-            '<span style="display:flex;align-items:center;gap:4px;">' +
-                '<span style="display:inline-block;width:2px;height:14px;background:rgba(15,23,42,0.6);border-radius:1px;"></span>' +
-                ' Minimum floor across all scenarios' +
-            '</span>' +
-            '<span style="display:flex;align-items:center;gap:4px;">' +
-                '<span style="display:inline-block;width:20px;height:10px;background:rgba(100,100,100,0.25);border-radius:3px;"></span>' +
-                ' Average allocation' +
-            '</span>' +
+        '<div class="nr-interpret-legend">' +
+            '<div class="nr-interpret-item">' +
+                '<div class="nr-interpret-swatch"><div class="nr-interpret-swatch-solid"></div></div>' +
+                '<div><span class="nr-interpret-label">Minimum floor</span> — <span class="nr-interpret-desc">Build no matter what. This capacity appears in the optimal portfolio under every cost scenario tested. A no-regrets investment.</span></div>' +
+            '</div>' +
+            '<div class="nr-interpret-item">' +
+                '<div class="nr-interpret-swatch"><div class="nr-interpret-swatch-dashed"></div></div>' +
+                '<div><span class="nr-interpret-label">Up to average</span> — <span class="nr-interpret-desc">Likely a worthwhile investment, but consider hedging. Appears in most scenarios but varies with cost assumptions.</span></div>' +
+            '</div>' +
         '</div>' +
-        '<span style="display:block;margin-top:6px;font-size:0.72rem;color:rgba(15,23,42,0.4);">Source: ' +
+        '<span style="display:block;margin-top:8px;font-size:0.68rem;color:rgba(15,23,42,0.35);">Source: ' +
         (nrSource === 'dg_parquets' ? 'Step 3 DG results (' + (crossover ? crossover.lower + '\u2013' + crossover.upper : '') + '% range, 5,832+ scenarios)'
             : nrSource === 'optimal_targets' ? 'Smooth MAC crossover analysis (P25/P75 range, medium-cost optimal)'
             : 'Medium-cost optimal mix (fallback)') +
