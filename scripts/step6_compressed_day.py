@@ -221,7 +221,7 @@ def main():
         sys.exit(1)
 
     # Dashboard thresholds (same as shared-data.js FEASIBLE_MIXES)
-    DASHBOARD_THRESHOLDS = ['50', '55', '60', '65', '70', '75', '80', '85', '87.5', '90', '92.5', '95', '97.5', '99', '99.99']
+    DASHBOARD_THRESHOLDS = ['50', '55', '60', '65', '70', '75', '80', '85', '87.5', '90', '92.5', '95', '97.5', '99', '99.5', '99.9', '99.99']
 
     output = {}
     total_mixes = 0
