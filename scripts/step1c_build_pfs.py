@@ -176,9 +176,10 @@ def git_commit_threshold(iso, threshold, phase_label):
                        check=True, capture_output=True, text=True)
 
         # Push with retry (up to 3 attempts with exponential backoff)
+        # Use 'git push -u origin HEAD' to auto-create remote branch and set tracking
         for attempt in range(1, 4):
             result = subprocess.run(
-                ['git', 'push'],
+                ['git', 'push', '-u', 'origin', 'HEAD'],
                 capture_output=True, text=True)
             if result.returncode == 0:
                 print(f"      [auto-commit] {iso} {threshold}% committed & pushed ({phase_label})")
