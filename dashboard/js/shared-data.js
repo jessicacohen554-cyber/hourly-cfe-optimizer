@@ -64,7 +64,8 @@ const MIX_LABELS_MAP = {
     hydro:      'Hydro',
     battery:    'Battery (4hr)',
     battery8:   'Battery (8hr)',
-    ldes:       'LDES (100hr)'
+    ldes:       'LDES (100hr)',
+    h2:         'Green H\u2082'
 };
 
 const MIX_COLORS = {
@@ -75,7 +76,8 @@ const MIX_COLORS = {
     hydro:      { fill: 'rgba(14,165,233,0.50)',  border: '#0EA5E9' },
     battery:    { fill: 'rgba(139,92,246,0.50)',  border: '#8B5CF6' },
     battery8:   { fill: 'rgba(167,139,250,0.50)', border: '#A78BFA' },
-    ldes:       { fill: 'rgba(236,72,153,0.50)',  border: '#EC4899' }
+    ldes:       { fill: 'rgba(236,72,153,0.50)',  border: '#EC4899' },
+    h2:         { fill: 'rgba(0,188,212,0.50)',   border: '#00BCD4' }
 };
 
 // --- Benchmark Data (static — researched L/M/H with sources) ---
