@@ -15,7 +15,7 @@ Pipeline position: Step 3 of 4
   Step 3 — Cost optimization (this file)
   Step 4 — Post-processing (step4_postprocess.py)
 
-Input:  data/step2-ef-parquets/step2_ef_<ISO>.parquet  (from Step 2, per-ISO)
+Input:  data/step2-ef-parquets/step2_ef_{ISO}_t{T}.parquet  (from Step 2, per-ISO/threshold)
 Output: data/step3-cost-opt-parquets/step3_co_<ISO>.parquet  (per-ISO cost optimization results)
 
 Key format: RFS_FF_TX_CCSq45_GEO (e.g., MMM_M_M_M1_M for CAISO all-Medium)
@@ -1783,11 +1783,42 @@ def _table_to_arrays(table):
     return result
 
 
-def load_pfs_post_ef(input_dir, selected_isos=None):
-    """Load PFS post-EF from per-ISO parquet files in input_dir.
+def _discover_iso_threshold_files(input_dir, iso):
+    """Discover per-threshold EF band files for an ISO.
 
-    Reads exclusively from data/step2-ef-parquets/step2_ef_<ISO>.parquet.
-    No fallback to legacy monolithic parquet.
+    Looks for step2_ef_{ISO}_t{T}.parquet files. Falls back to the legacy
+    monolithic step2_ef_{ISO}.parquet if no per-threshold files exist.
+
+    Returns list of Path objects, or empty list if nothing found.
+    """
+    import glob as globmod
+
+    # Try per-threshold files first (new format)
+    pattern = str(input_dir / f'step2_ef_{iso}_t*.parquet')
+    thr_files = sorted(globmod.glob(pattern))
+    # Exclude batch files
+    thr_files = [f for f in thr_files if '_batch_' not in os.path.basename(f)]
+
+    if thr_files:
+        return [Path(f) for f in thr_files]
+
+    # Fall back to legacy monolithic file
+    legacy = input_dir / f'step2_ef_{iso}.parquet'
+    if legacy.exists():
+        return [legacy]
+
+    return []
+
+
+def load_pfs_post_ef(input_dir, selected_isos=None):
+    """Load PFS post-EF from per-ISO/threshold parquet files in input_dir.
+
+    Reads from data/step2-ef-parquets/step2_ef_{ISO}_t{T}.parquet (per-threshold
+    band files). Falls back to legacy step2_ef_{ISO}.parquet if per-threshold
+    files don't exist.
+
+    Per-threshold band files contain non-overlapping score ranges. All band
+    files for an ISO are concatenated to reconstruct the full EF.
 
     Returns:
         pfs: dict keyed by ISO → numpy arrays of all mixes
@@ -1804,18 +1835,30 @@ def load_pfs_post_ef(input_dir, selected_isos=None):
     isos_to_load = selected_isos or ISOS
 
     for iso in isos_to_load:
-        iso_path = input_dir / f'step2_ef_{iso}.parquet'
-        if not iso_path.exists():
-            print(f"  WARNING: {iso_path} not found — skipping {iso}")
+        iso_files = _discover_iso_threshold_files(input_dir, iso)
+        if not iso_files:
+            print(f"  WARNING: No EF parquets found for {iso} in {input_dir} — skipping")
             continue
 
-        sub = pq.read_table(iso_path)
-        if sub.num_rows == 0:
-            print(f"  WARNING: {iso_path} is empty — skipping {iso}")
+        # Load and concatenate all files for this ISO
+        tables = []
+        for fpath in iso_files:
+            t = pq.read_table(fpath)
+            if t.num_rows > 0:
+                tables.append(t)
+
+        if not tables:
+            print(f"  WARNING: All EF parquets empty for {iso} — skipping")
             continue
 
-        arrays = _table_to_arrays(sub)
-        del sub  # Free Arrow table immediately (can be GBs for large ISOs)
+        if len(tables) == 1:
+            combined = tables[0]
+        else:
+            combined = pa.concat_tables(tables, promote_options='permissive')
+        del tables
+
+        arrays = _table_to_arrays(combined)
+        del combined
         pfs[iso] = arrays
 
         # Sort+searchsorted: O(N log N + T log N) instead of O(N×T)
@@ -1824,7 +1867,9 @@ def load_pfs_post_ef(input_dir, selected_isos=None):
         for thr, idx in iso_thr_idx.items():
             thr_indices[(iso, thr)] = idx
 
-        print(f"  {iso}: loaded {len(arrays['hourly_match_score']):,} mixes from {iso_path}")
+        n_files = len(iso_files)
+        fmt = "file" if n_files == 1 else "files"
+        print(f"  {iso}: loaded {len(scores):,} mixes from {n_files} {fmt}")
 
     if not pfs:
         raise FileNotFoundError(
