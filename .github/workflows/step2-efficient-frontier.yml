@@ -1,13 +1,17 @@
 name: "Step 2: Efficient Frontier"
 
-# Two modes:
+# Modes:
 #   1. ef-only — Extract Efficient Frontier from PFS (~21M → ~1.8M rows)
 #   2. expand-ef — Augment step3 feasible parquets with floor-compatible PFS mixes for Scenario A
 #   3. ef-then-expand — Run both sequentially
 #
+# Batch mode (for large ISOs that OOM on full runs):
+#   When batch_mode=batched, each ISO processes thresholds in 3 batches
+#   (low/mid/high), then merges. Keeps peak memory under ~4GB per batch.
+#   Small ISOs (CAISO, ERCOT) work fine with batch_mode=full.
+#
 # When ISO=ALL, uses a matrix strategy to run each ISO as a separate parallel
-# job. This prevents one slow/failed ISO from blocking the others and allows
-# ~7x faster total wall-clock time.
+# job. This prevents one slow/failed ISO from blocking the others.
 #
 # Prerequisite (EF): Step 1b PFS parquets
 # Prerequisite (Expand): Steps 1 + 3 must have run first
@@ -39,6 +43,14 @@ on:
           - ef-only
           - expand-ef
           - ef-then-expand
+      batch_mode:
+        description: 'Full (single run) or batched (3 threshold batches + merge, for large ISOs)'
+        required: true
+        default: 'batched'
+        type: choice
+        options:
+          - batched
+          - full
       target_mixes:
         description: 'Target floor mixes per threshold (expand-ef only)'
         required: false
@@ -81,16 +93,17 @@ jobs:
           fi
 
   # ════════════════════════════════════════════════════════════════════════
-  # Per-ISO job: EF filter and/or expand-ef
+  # Per-ISO job: EF filter (full mode — single run, no batching)
   # ════════════════════════════════════════════════════════════════════════
-  run-step2:
+  run-step2-full:
+    if: ${{ inputs.batch_mode == 'full' }}
     needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 120
 
     strategy:
       matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
-      fail-fast: false    # Don't cancel other ISOs if one fails
+      fail-fast: false
 
     permissions:
       contents: write
@@ -112,7 +125,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$TARGET_BRANCH"
-          # Align .github/workflows/ with default branch (GITHUB_TOKEN lacks workflows permission)
           git checkout origin/master -- .github/workflows/ 2>/dev/null || true
           git diff --staged --quiet || git commit -m "Align workflow files with default branch"
 
@@ -148,18 +160,10 @@ jobs:
           mkdir -p data/step2-ef-parquets
           mkdir -p data/step3-cost-opt-parquets
 
-      # ════════════════════════════════════════════════════════════════════
-      # Efficient Frontier filter (per-ISO)
-      # ════════════════════════════════════════════════════════════════════
-
       - name: "Run Efficient Frontier filter (${{ matrix.iso }})"
         if: ${{ inputs.script == 'ef-only' || inputs.script == 'ef-then-expand' }}
         timeout-minutes: 90
         run: python scripts/step2_efficient_frontier.py --iso ${{ matrix.iso }}
-
-      # ════════════════════════════════════════════════════════════════════
-      # Expand EF with floor-compatible PFS mixes (for Scenario A)
-      # ════════════════════════════════════════════════════════════════════
 
       - name: "Expand EF with floor-compatible PFS mixes (${{ matrix.iso }})"
         if: ${{ inputs.script == 'expand-ef' || inputs.script == 'ef-then-expand' }}
@@ -211,9 +215,188 @@ jobs:
             --body "$(cat <<'EOF'
           ## Summary
           - Efficient Frontier operations (${{ inputs.script }}) for **${{ matrix.iso }}**
-          - **ef-only**: Filters PFS down to EF (deduplicated unique mixes)
-          - **expand-ef**: Augments step3 feasible parquets with floor-compatible PFS mixes
-          - **ef-then-expand**: Runs both sequentially
+          - Mode: **full** (single run, no batching)
+          - Output: `data/step2-ef-parquets/step2_ef_${{ matrix.iso }}.parquet`
+          EOF
+          )" \
+            --base ${{ inputs.branch || 'master' }} \
+            --head "$TARGET_BRANCH" || echo "PR creation skipped"
+
+  # ════════════════════════════════════════════════════════════════════════
+  # Per-ISO job: Batched EF (3 threshold batches + merge)
+  # Processes thresholds in low/mid/high batches to stay under 4GB peak RAM.
+  # Each batch commits + pushes for real-time visibility, then merge combines.
+  # ════════════════════════════════════════════════════════════════════════
+  run-step2-batched:
+    if: ${{ inputs.batch_mode == 'batched' && (inputs.script == 'ef-only' || inputs.script == 'ef-then-expand') }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    strategy:
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Create output branch
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-batched-${{ matrix.iso }}"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$TARGET_BRANCH"
+          git checkout origin/master -- .github/workflows/ 2>/dev/null || true
+          git diff --staged --quiet || git commit -m "Align workflow files with default branch"
+
+      - name: Verify PFS parquets exist
+        run: |
+          if [ ! -d "data/step1-pfs-parquets" ] || ! ls data/step1-pfs-parquets/${{ matrix.iso }}_t*_raw_pfs.parquet >/dev/null 2>&1; then
+            echo "ERROR: PFS parquets not found for ${{ matrix.iso }}. Run Step 1b first."
+            exit 1
+          fi
+          echo "Found PFS parquets for ${{ matrix.iso }}:"
+          ls -lh data/step1-pfs-parquets/${{ matrix.iso }}_t* | wc -l
+          echo "files"
+          if [ -d "data/step1d-storage-parquets" ]; then
+            echo "Step 1D storage-refined parquets:"
+            ls data/step1d-storage-parquets/${{ matrix.iso }}_* 2>/dev/null | wc -l
+            echo "files"
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy numba pyarrow pandas scipy
+
+      - name: Ensure output directories
+        run: mkdir -p data/step2-ef-parquets
+
+      # ── Batch 1: low thresholds (10-75%) ──────────────────────────────
+      - name: "Batch LOW: thresholds 10-75% (${{ matrix.iso }})"
+        timeout-minutes: 30
+        run: python scripts/step2_efficient_frontier.py --iso ${{ matrix.iso }} --batch low
+
+      - name: "Commit batch LOW (${{ matrix.iso }})"
+        run: |
+          git add -f data/step2-ef-parquets/step2_ef_${{ matrix.iso }}_batch_low.parquet 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "Step 2 EF batch LOW: ${{ matrix.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git push -u origin "$TARGET_BRANCH" 2>&1 || true
+            echo "✓ Batch LOW committed and pushed"
+          else
+            echo "No output from batch LOW"
+          fi
+
+      # ── Batch 2: mid thresholds (80-95%) ──────────────────────────────
+      - name: "Batch MID: thresholds 80-95% (${{ matrix.iso }})"
+        timeout-minutes: 30
+        run: python scripts/step2_efficient_frontier.py --iso ${{ matrix.iso }} --batch mid
+
+      - name: "Commit batch MID (${{ matrix.iso }})"
+        run: |
+          git add -f data/step2-ef-parquets/step2_ef_${{ matrix.iso }}_batch_mid.parquet 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "Step 2 EF batch MID: ${{ matrix.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git push origin "$TARGET_BRANCH" 2>&1 || true
+            echo "✓ Batch MID committed and pushed"
+          else
+            echo "No output from batch MID"
+          fi
+
+      # ── Batch 3: high thresholds (97.5-99.99%) ────────────────────────
+      - name: "Batch HIGH: thresholds 97.5-99.99% (${{ matrix.iso }})"
+        timeout-minutes: 45
+        run: python scripts/step2_efficient_frontier.py --iso ${{ matrix.iso }} --batch high
+
+      - name: "Commit batch HIGH (${{ matrix.iso }})"
+        run: |
+          git add -f data/step2-ef-parquets/step2_ef_${{ matrix.iso }}_batch_high.parquet 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "Step 2 EF batch HIGH: ${{ matrix.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git push origin "$TARGET_BRANCH" 2>&1 || true
+            echo "✓ Batch HIGH committed and pushed"
+          else
+            echo "No output from batch HIGH"
+          fi
+
+      # ── Merge all batches into final EF ────────────────────────────────
+      - name: "Merge batches into final EF (${{ matrix.iso }})"
+        timeout-minutes: 30
+        run: python scripts/step2_efficient_frontier.py --iso ${{ matrix.iso }} --merge
+
+      # ── Expand EF (if ef-then-expand) ──────────────────────────────────
+      - name: "Expand EF with floor-compatible PFS mixes (${{ matrix.iso }})"
+        if: ${{ inputs.script == 'ef-then-expand' }}
+        timeout-minutes: 90
+        run: |
+          ARGS="--iso ${{ matrix.iso }}"
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            ARGS="$ARGS --dry-run"
+          fi
+          TARGET="${{ inputs.target_mixes }}"
+          if [ -n "$TARGET" ] && [ "$TARGET" != "200" ]; then
+            ARGS="$ARGS --target-mixes $TARGET"
+          fi
+          python scripts/step2_5_expand_ef_for_floors.py $ARGS
+
+      - name: "Commit final EF and push (${{ matrix.iso }})"
+        run: |
+          # Add final EF (merge removed batch files and wrote final)
+          git add -f data/step2-ef-parquets/step2_ef_${{ matrix.iso }}.parquet 2>/dev/null || true
+          # Remove batch files from git (merge_batch_outputs deletes them from disk)
+          git add -u data/step2-ef-parquets/step2_ef_${{ matrix.iso }}_batch_*.parquet 2>/dev/null || true
+          git add -f data/step3-cost-opt-parquets/step3_feasible_${{ matrix.iso }}.parquet 2>/dev/null || true
+          git add -f data/step5-post-processing/ef_expansion_log.json 2>/dev/null || true
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit for ${{ matrix.iso }}"
+            exit 0
+          fi
+
+          git commit -m "Step 2 EF: batched ${{ matrix.iso }} (merged low+mid+high) — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i/$MAX_RETRIES..."
+            git push origin "$TARGET_BRANCH" 2>&1 && break
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "ERROR: Push failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done
+
+      - name: Create pull request
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr create \
+            --title "Step 2 EF: batched ${{ matrix.iso }}" \
+            --body "$(cat <<'EOF'
+          ## Summary
+          - Efficient Frontier extraction for **${{ matrix.iso }}** using **batched threshold solving**
+          - Thresholds split into 3 memory-safe batches:
+            - **LOW**: 10%, 20%, 30%, 40%, 50%, 55%, 60%, 65%, 70%, 75%
+            - **MID**: 80%, 85%, 87.5%, 90%, 92.5%, 95%
+            - **HIGH**: 97.5%, 99%, 99.5%, 99.9%, 99.99%
+          - Each batch deduplicates independently, then merge combines with partitioned dedup
           - Output: `data/step2-ef-parquets/step2_ef_${{ matrix.iso }}.parquet`
           EOF
           )" \
