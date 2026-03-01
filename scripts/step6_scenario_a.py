@@ -37,6 +37,7 @@ from scenario_common import (
     _load_pfs_mixes, _rank_and_cap_pfs,
     _existing_match_pct, _build_existing_only_entry,
     _build_learning_overrides,
+    build_augmented_result,
     parse_iso_args, save_scenario_results,
 )
 
@@ -227,60 +228,10 @@ def _forward_step_optimization(feasible_mixes, sens, get_overrides_fn, label,
 
             # --- Step 4: Build result with augmented resources ---
             deployed = _mix_resource_twh(best_mix, demand_twh, iso)
-            augmented = {}
-            excess_twh_dict = {}
-            for res in floor_twh:
-                ef_val = deployed.get(res, 0)
-                floor_val = floor_twh.get(res, 0)
-                augmented[res] = max(ef_val, floor_val)
-                excess_twh_dict[res] = max(0, floor_val - ef_val)
-
-            total_excess = sum(excess_twh_dict.values())
-
-            # Build result dict
-            aug = dict(best_result)
-            aug['total_cost'] = round(best_total_cost, 2)
-            match_frac = best_result['match_score'] / 100.0
-            aug['effective_cost'] = round(
-                aug['total_cost'] / match_frac if match_frac > 0 else 0, 2)
-            aug['incremental'] = round(
-                aug['effective_cost'] - best_result['wholesale'], 2)
-
-            # Augmented resource TWh (locked-in floor + new EF deployment)
-            aug['resource_twh'] = {res: augmented.get(res, 0) for res in RESOURCES}
-            aug['battery_twh'] = augmented.get('battery', 0)
-            aug['battery8_twh'] = 0  # Not tracked separately post-augmentation
-            aug['ldes_twh'] = augmented.get('ldes', 0)
-            aug['demand_twh'] = demand_twh
-            aug['mix_raw'] = list(best_mix)
-            aug['mix_source'] = source
-
-            # Recompute gas backup from augmented clean capacity
-            clean_peak_mw = 0
-            for r, twh in aug['resource_twh'].items():
-                pcc = PEAK_CAPACITY_CREDITS.get(r, 0)
-                if pcc > 0 and twh > 0:
-                    clean_peak_mw += (twh * 1e6 / 8760) * pcc
-            clean_peak_mw += (augmented.get('battery', 0) * 1e6 / 8760) * \
-                PEAK_CAPACITY_CREDITS.get('battery', 0.95)
-            clean_peak_mw += (augmented.get('ldes', 0) * 1e6 / 8760) * \
-                PEAK_CAPACITY_CREDITS.get('ldes', 0.90)
-
-            ra_peak_mw = PEAK_DEMAND_MW[iso] * gf * (1 + RESOURCE_ADEQUACY_MARGIN)
-            gaf = GAS_AVAILABILITY_FACTOR[iso]
-            gas_needed_mw = max(0, ra_peak_mw - clean_peak_mw) / gaf
-            aug['gas_backup_mw'] = round(gas_needed_mw)
-            aug['new_gas_mw'] = round(max(0, gas_needed_mw - EXISTING_GAS_CAPACITY_MW[iso]))
-            aug['clean_peak_mw'] = round(clean_peak_mw)
-            aug['existing_gas_used_mw'] = round(min(gas_needed_mw, EXISTING_GAS_CAPACITY_MW[iso]))
-
-            # New-build cost tracking (for MAC calculation)
-            aug['new_build_cost_total'] = (
-                best_result['new_build_cost_total'] +
-                best_excess_per_mwh * demand_mwh)
-            aug['new_gen_twh'] = round(
-                best_result['new_gen_twh'] +
-                sum(v for k, v in excess_twh_dict.items() if k != 'hydro'), 3)
+            aug, augmented, excess_twh_dict, total_excess = build_augmented_result(
+                best_result, best_mix, floor_twh, deployed,
+                best_total_cost, best_excess_per_mwh,
+                iso, demand_twh, gf, source=source)
 
             if total_excess > 1.0:
                 print(f"  -> {iso} {t}% [{label}]: {total_excess:.0f} TWh floor excess "
