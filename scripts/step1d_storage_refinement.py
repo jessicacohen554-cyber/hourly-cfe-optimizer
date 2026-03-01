@@ -92,8 +92,11 @@ SATURATION_EPS = 1e-6  # in 0-1 score space (~0.0001 percentage points)
 
 # Batch sizes
 NM_CHUNK = 10000        # cap computation chunk
-MAX_MIX_BATCH = 100     # storage evaluation batch
-CHUNK_CANDIDATE_LIMIT = 500_000  # flush to disk above this
+MAX_MIX_BATCH = 100     # storage evaluation batch (non-CAISO)
+CAISO_MIX_BATCH = 500   # larger batches for CAISO (5x more mixes, amortize overhead)
+CHUNK_CANDIDATE_LIMIT = 500_000  # flush to disk above this (non-CAISO)
+CAISO_CHUNK_LIMIT = 100_000      # flush more often for CAISO (avoid OOM on 1.6M cache)
+PROGRESS_SAVE_INTERVAL = 25      # save progress file every N batches (for resume)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -270,6 +273,91 @@ def load_coarse_cache(iso):
 # CORE: Process a single ISO/threshold
 # ══════════════════════════════════════════════════════════════════════════════
 
+def _progress_path(iso, threshold):
+    """Path for batch progress file (enables resume after crash)."""
+    t_str = _normalize_threshold_str(threshold)
+    return os.path.join(STEP1D_OUTPUT_DIR, f'{iso}_t{t_str}_progress.json')
+
+
+def _partial_path(iso, threshold):
+    """Path for partial results file (streaming parquet, in-progress)."""
+    t_str = _normalize_threshold_str(threshold)
+    return os.path.join(STEP1D_OUTPUT_DIR, f'{iso}_t{t_str}_partial.parquet')
+
+
+def _save_progress(iso, threshold, batch_num, total_feasible, n_total_batches):
+    """Save batch progress for resume capability."""
+    import json
+    os.makedirs(STEP1D_OUTPUT_DIR, exist_ok=True)
+    progress = {
+        'iso': iso,
+        'threshold': threshold,
+        'batch_num': batch_num,
+        'total_feasible': total_feasible,
+        'n_total_batches': n_total_batches,
+        'timestamp': time.time(),
+    }
+    path = _progress_path(iso, threshold)
+    with open(path, 'w') as f:
+        json.dump(progress, f)
+
+
+def _load_progress(iso, threshold):
+    """Load batch progress for resume. Returns (batch_num, total_feasible) or None."""
+    import json
+    path = _progress_path(iso, threshold)
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path) as f:
+            progress = json.load(f)
+        return progress.get('batch_num', 0), progress.get('total_feasible', 0)
+    except Exception:
+        return None
+
+
+def _cleanup_progress(iso, threshold):
+    """Remove progress file after successful completion."""
+    path = _progress_path(iso, threshold)
+    if os.path.exists(path):
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+
+
+def _build_batch_table(iso, threshold, rtypes, coarse_combos,
+                       batch_orig_idx, f_mix_idx, f_b4, f_b8, f_ldes,
+                       f_h2, f_score, n_f):
+    """Build a PyArrow table directly from Numba kernel output arrays.
+
+    Avoids the slow Python dict intermediate — goes numpy → PyArrow columnar
+    directly. ~10x faster than _columnar_to_candidates + _candidate_to_row.
+    """
+    if n_f == 0:
+        return None
+
+    # Map batch-local mix indices to original coarse combo indices
+    orig_indices = batch_orig_idx[f_mix_idx[:n_f].astype(np.int64)]
+
+    # Build resource columns directly from coarse_combos array
+    arrays = {
+        'iso': pa.array([iso] * n_f, type=pa.string()),
+        'threshold': pa.array(np.full(n_f, float(threshold)), type=pa.float64()),
+    }
+    for j, rt in enumerate(rtypes):
+        arrays[rt] = pa.array(coarse_combos[orig_indices, j])
+
+    arrays['battery_dispatch_pct'] = pa.array(f_b4[:n_f])
+    arrays['battery8_dispatch_pct'] = pa.array(f_b8[:n_f])
+    arrays['ldes_dispatch_pct'] = pa.array(f_ldes[:n_f])
+    arrays['h2_dispatch_pct'] = pa.array(f_h2[:n_f])
+    arrays['hourly_match_score'] = pa.array(np.round(f_score[:n_f] * 100.0, 2))
+    arrays['pareto_type'] = pa.array(['storage_refined'] * n_f, type=pa.string())
+
+    return pa.table(arrays)
+
+
 def process_threshold(iso, threshold, demand_arr, supply_matrix,
                       coarse_combos, coarse_scores):
     """Evaluate intermediate storage levels for near-miss mixes at one threshold.
@@ -281,12 +369,24 @@ def process_threshold(iso, threshold, demand_arr, supply_matrix,
       4. Filter: keep combos where score >= target AND at least one storage > 0
       5. Return count of new feasible solutions
 
+    CAISO optimizations (1.6M coarse mixes vs 195K-390K for other ISOs):
+      - Larger batch size (500 vs 100) to amortize Python loop overhead
+      - Streaming ParquetWriter — writes each batch directly to disk (no accumulation)
+      - More frequent flush (100K vs 500K candidate limit)
+      - Batch-level resume from progress file after crash
+      - Direct numpy→PyArrow columnar conversion (no Python dict intermediate)
+      - No cross-batch dedup set (coarse cache has zero duplicates)
+
     Saves results to {STEP1D_OUTPUT_DIR}/{ISO}_t{XX}_storage_refined.parquet.
     """
     target = threshold / 100.0
     rtypes = get_resource_types(iso)
     n_res = len(rtypes)
     t_start = time.time()
+
+    # ── ISO-adaptive batch parameters ──
+    mix_batch = CAISO_MIX_BATCH if iso == 'CAISO' else MAX_MIX_BATCH
+    chunk_limit = CAISO_CHUNK_LIMIT if iso == 'CAISO' else CHUNK_CANDIDATE_LIMIT
 
     # ── Identify near-miss mixes ──
     near_miss_lower = max(target - NEAR_MISS_WIDTH, STORAGE_SWEEP_FLOOR)
@@ -312,7 +412,8 @@ def process_threshold(iso, threshold, demand_arr, supply_matrix,
     n_combos = n_b4 * n_b8 * n_l * n_h2
 
     print(f"    {iso} {threshold}%: {n_nm:,} near-miss mixes, "
-          f"{n_b4}×{n_b8}×{n_l}×{n_h2}={n_combos:,} storage combos")
+          f"{n_b4}×{n_b8}×{n_l}×{n_h2}={n_combos:,} storage combos "
+          f"(batch={mix_batch})")
 
     # ── Constants ──
     batt_eff = BATTERY_EFFICIENCY
@@ -355,61 +456,79 @@ def process_threshold(iso, threshold, demand_arr, supply_matrix,
     has_curtailment = hc_arr.astype(bool)
     valid_ci = np.where(has_curtailment)[0]
 
-    # Build valid mix list with cap info (caps converted to percentage with headroom)
-    nm_valid = [
-        (int(ci), int(near_miss_idx[ci]),
-         b4_caps[ci] * 100.0 * 1.1,
-         b8_caps[ci] * 100.0 * 1.1,
-         l_caps[ci] * 100.0 * 1.1,
-         int(sd_arr[ci]))
-        for ci in valid_ci
-    ]
-
-    if not nm_valid:
+    if len(valid_ci) == 0:
         print(f"      0 mixes with curtailment — skipping")
         return 0
 
-    print(f"      {len(nm_valid):,} mixes with curtailment")
+    # Build numpy arrays directly (no Python list of tuples)
+    valid_b4_caps_pct = b4_caps[valid_ci] * 100.0 * 1.1
+    valid_b8_caps_pct = b8_caps[valid_ci] * 100.0 * 1.1
+    valid_l_caps_pct = l_caps[valid_ci] * 100.0 * 1.1
+    valid_sd = sd_arr[valid_ci]
+    valid_orig_idx = near_miss_idx[valid_ci]
+
+    n_valid = len(valid_ci)
+    print(f"      {n_valid:,} mixes with curtailment")
 
     # ── Cap distribution summary (diagnostic) ──
-    valid_b4 = b4_caps[valid_ci] * 100.0
-    valid_l = l_caps[valid_ci] * 100.0
-    print(f"      Cap ranges: bat4=[{valid_b4.min():.3f}%, {np.median(valid_b4):.3f}%, {valid_b4.max():.3f}%]  "
-          f"LDES=[{valid_l.min():.3f}%, {np.median(valid_l):.3f}%, {valid_l.max():.3f}%]")
+    valid_b4_diag = b4_caps[valid_ci] * 100.0
+    valid_l_diag = l_caps[valid_ci] * 100.0
+    print(f"      Cap ranges: bat4=[{valid_b4_diag.min():.3f}%, {np.median(valid_b4_diag):.3f}%, {valid_b4_diag.max():.3f}%]  "
+          f"LDES=[{valid_l_diag.min():.3f}%, {np.median(valid_l_diag):.3f}%, {valid_l_diag.max():.3f}%]")
 
-    # ── Batch evaluate storage combos ──
-    # Uses Numba kernel for cap-check + saturation pruning + feasible extraction.
-    # Columnar arrays replace per-candidate dict construction.
-    n_valid = len(nm_valid)
-    n_total_batches = (n_valid + MAX_MIX_BATCH - 1) // MAX_MIX_BATCH
+    # ── Check for resume state ──
+    n_total_batches = (n_valid + mix_batch - 1) // mix_batch
+    resume_batch = 0
     total_feasible = 0
-    chunk_num = 0
+    partial_path = _partial_path(iso, threshold)
 
-    # Columnar accumulators for all feasible results
-    all_orig_idx = []       # original coarse_combos index per feasible result
-    all_b4 = []
-    all_b8 = []
-    all_ldes = []
-    all_h2 = []
-    all_score = []
+    progress = _load_progress(iso, threshold)
+    if progress is not None:
+        resume_batch, total_feasible = progress
+        if os.path.exists(partial_path):
+            try:
+                existing_rows = pq.read_metadata(partial_path).num_rows
+                print(f"      Resuming from batch {resume_batch}/{n_total_batches} "
+                      f"({existing_rows:,} rows in partial file)")
+            except Exception:
+                # Partial file corrupted — restart
+                resume_batch = 0
+                total_feasible = 0
+                if os.path.exists(partial_path):
+                    os.remove(partial_path)
+        else:
+            # Progress file but no partial — restart
+            resume_batch = 0
+            total_feasible = 0
 
-    # Pre-build numpy arrays of caps/surplus_days for valid mixes (for Numba kernel)
-    valid_b4_caps_pct = np.array([v[2] for v in nm_valid], dtype=np.float64)
-    valid_b8_caps_pct = np.array([v[3] for v in nm_valid], dtype=np.float64)
-    valid_l_caps_pct = np.array([v[4] for v in nm_valid], dtype=np.float64)
-    valid_sd = np.array([v[5] for v in nm_valid], dtype=np.int64)
-    valid_orig_idx = np.array([v[1] for v in nm_valid], dtype=np.int64)
+    # ── Batch evaluate with streaming ParquetWriter ──
+    os.makedirs(STEP1D_OUTPUT_DIR, exist_ok=True)
+    writer = None
+    schema = None
+    chunk_tables = []        # buffer small tables before writing
+    chunk_rows_buffered = 0
+    prev_partial_path = None  # tracks renamed partial from previous run (for resume merge)
 
-    # Dedup set (stays in Python — Numba can't do tuple-set dedup across batches)
-    seen = set()
+    # If resuming, rename existing partial so we don't overwrite it
+    # (ParquetWriter creates new files, can't append)
+    if resume_batch > 0 and os.path.exists(partial_path):
+        prev_partial_path = partial_path + '.prev'
+        try:
+            os.rename(partial_path, prev_partial_path)
+            schema = pq.read_schema(prev_partial_path)
+        except Exception:
+            prev_partial_path = None
 
-    for batch_start in range(0, n_valid, MAX_MIX_BATCH):
-        batch_end = min(batch_start + MAX_MIX_BATCH, n_valid)
+    start_mix = resume_batch * mix_batch
+
+    for batch_start in range(start_mix, n_valid, mix_batch):
+        batch_end = min(batch_start + mix_batch, n_valid)
         n_batch = batch_end - batch_start
-        batch_num = batch_start // MAX_MIX_BATCH + 1
+        batch_num = batch_start // mix_batch + 1
 
-        print(f"\r      Batch {batch_num}/{n_total_batches} "
-              f"({total_feasible:,} feasible so far)", end="", flush=True)
+        if batch_num % max(1, n_total_batches // 20) == 0 or batch_num == 1:
+            print(f"\r      Batch {batch_num}/{n_total_batches} "
+                  f"({total_feasible:,} feasible so far)", end="", flush=True)
 
         # Vectorized supply: single matmul
         batch_orig_idx = valid_orig_idx[batch_start:batch_end]
@@ -439,54 +558,88 @@ def process_threshold(iso, threshold, demand_arr, supply_matrix,
             batch_b4_caps, batch_b8_caps, batch_l_caps, batch_sd,
             target, MIN_SURPLUS_DAYS_FOR_BATTERY, SATURATION_EPS)
 
-        # Dedup in Python (cross-batch dedup requires set)
-        for fi in range(n_f):
-            mi = int(f_mix_idx[fi])
-            orig_idx = int(batch_orig_idx[mi])
-            mix = coarse_combos[orig_idx]
-            mix_key = tuple(int(mix[k]) for k in range(n_res))
-            bp = f_b4[fi]
-            b8p = f_b8[fi]
-            lp = f_ldes[fi]
-            h2p = f_h2[fi]
-            key = (mix_key, bp, b8p, lp, h2p)
-            if key in seen:
-                continue
-            seen.add(key)
-            all_orig_idx.append(orig_idx)
-            all_b4.append(bp)
-            all_b8.append(b8p)
-            all_ldes.append(lp)
-            all_h2.append(h2p)
-            all_score.append(round(f_score[fi] * 100.0, 2))
-            total_feasible += 1
+        # Build PyArrow table directly from numpy arrays (no Python dict overhead)
+        if n_f > 0:
+            batch_table = _build_batch_table(
+                iso, threshold, rtypes, coarse_combos,
+                batch_orig_idx, f_mix_idx, f_b4, f_b8, f_ldes,
+                f_h2, f_score, n_f)
+            if batch_table is not None:
+                chunk_tables.append(batch_table)
+                chunk_rows_buffered += batch_table.num_rows
+                total_feasible += batch_table.num_rows
 
-        # Flush to disk if too many candidates in memory
-        if total_feasible >= CHUNK_CANDIDATE_LIMIT:
-            candidates = _columnar_to_candidates(
-                iso, rtypes, coarse_combos, all_orig_idx,
-                all_b4, all_b8, all_ldes, all_h2, all_score)
-            chunk_num = _save_chunk(iso, threshold, candidates, chunk_num)
-            all_orig_idx.clear()
-            all_b4.clear()
-            all_b8.clear()
-            all_ldes.clear()
-            all_h2.clear()
-            all_score.clear()
+        # Flush buffered tables to streaming writer when above limit
+        if chunk_rows_buffered >= chunk_limit:
+            merged_chunk = pa.concat_tables(chunk_tables, promote_options='permissive')
+            if writer is None:
+                schema = merged_chunk.schema
+                writer = pq.ParquetWriter(partial_path, schema, compression='snappy')
+            writer.write_table(merged_chunk)
+            chunk_tables.clear()
+            chunk_rows_buffered = 0
+
+        # Save progress periodically (for resume after crash)
+        if batch_num % PROGRESS_SAVE_INTERVAL == 0:
+            # Flush any buffered tables before saving progress
+            if chunk_tables:
+                merged_chunk = pa.concat_tables(chunk_tables, promote_options='permissive')
+                if writer is None:
+                    schema = merged_chunk.schema
+                    writer = pq.ParquetWriter(partial_path, schema, compression='snappy')
+                writer.write_table(merged_chunk)
+                chunk_tables.clear()
+                chunk_rows_buffered = 0
+            _save_progress(iso, threshold, batch_num, total_feasible, n_total_batches)
 
     print(f"\r      {n_total_batches}/{n_total_batches} batches done — "
           f"{total_feasible:,} feasible solutions"
           f"                              ")
 
-    # ── Save results ──
-    if all_orig_idx or chunk_num > 0:
-        candidates = _columnar_to_candidates(
-            iso, rtypes, coarse_combos, all_orig_idx,
-            all_b4, all_b8, all_ldes, all_h2, all_score)
-        if chunk_num > 0:
-            _merge_chunks_and_finalize(iso, threshold, candidates, chunk_num)
-        else:
-            _save_final(iso, threshold, candidates)
+    # ── Finalize: flush remaining buffer + close writer ──
+    if chunk_tables:
+        merged_chunk = pa.concat_tables(chunk_tables, promote_options='permissive')
+        if writer is None:
+            schema = merged_chunk.schema
+            writer = pq.ParquetWriter(partial_path, schema, compression='snappy')
+        writer.write_table(merged_chunk)
+        chunk_tables.clear()
+
+    if writer is not None:
+        writer.close()
+
+    # ── Merge previous partial (if resuming) + current partial → final output ──
+    final_path = _output_path(iso, threshold)
+    tables_to_merge = []
+    if prev_partial_path and os.path.exists(prev_partial_path):
+        try:
+            tables_to_merge.append(pq.read_table(prev_partial_path))
+        except Exception:
+            pass
+    if os.path.exists(partial_path):
+        try:
+            tables_to_merge.append(pq.read_table(partial_path))
+        except Exception:
+            pass
+
+    if tables_to_merge:
+        merged = pa.concat_tables(tables_to_merge, promote_options='permissive')
+        pq.write_table(merged, final_path, compression='snappy')
+        total_feasible = merged.num_rows  # accurate count including resumed rows
+        # Clean up temp files
+        for tmp in [partial_path, prev_partial_path]:
+            if tmp and os.path.exists(tmp):
+                try:
+                    os.remove(tmp)
+                except OSError:
+                    pass
+        print(f"      Saved {total_feasible:,} solutions → {os.path.basename(final_path)}")
+    elif total_feasible == 0:
+        # Write an empty parquet for "done" signal so we don't re-attempt
+        _save_empty(iso, threshold)
+
+    # Cleanup progress file
+    _cleanup_progress(iso, threshold)
 
     elapsed = time.time() - t_start
     print(f"    {iso} {threshold}%: {total_feasible:,} new solutions in {elapsed:.1f}s")
@@ -497,125 +650,32 @@ def process_threshold(iso, threshold, demand_arr, supply_matrix,
 # PARQUET OUTPUT
 # ══════════════════════════════════════════════════════════════════════════════
 
-def _columnar_to_candidates(iso, rtypes, coarse_combos, orig_idx_list,
-                            b4_list, b8_list, ldes_list, h2_list, score_list):
-    """Convert columnar accumulator lists into candidate dicts for parquet output."""
-    n_res = len(rtypes)
-    candidates = []
-    for i in range(len(orig_idx_list)):
-        mix = coarse_combos[orig_idx_list[i]]
-        candidates.append({
-            'resource_mix': {rt: int(mix[j]) for j, rt in enumerate(rtypes)},
-            'battery_dispatch_pct': b4_list[i],
-            'battery8_dispatch_pct': b8_list[i],
-            'ldes_dispatch_pct': ldes_list[i],
-            'h2_dispatch_pct': h2_list[i],
-            'hourly_match_score': score_list[i],
-        })
-    return candidates
-
-
-def _candidate_to_row(iso, threshold, c):
-    """Convert a candidate dict to a flat row dict."""
-    rtypes = get_resource_types(iso)
-    row = {
-        'iso': iso,
-        'threshold': float(threshold),
-    }
-    for rt in rtypes:
-        row[rt] = c['resource_mix'].get(rt, 0)
-    row['battery_dispatch_pct'] = float(c['battery_dispatch_pct'])
-    row['battery8_dispatch_pct'] = float(c['battery8_dispatch_pct'])
-    row['ldes_dispatch_pct'] = float(c['ldes_dispatch_pct'])
-    row['h2_dispatch_pct'] = float(c.get('h2_dispatch_pct', 0))
-    row['hourly_match_score'] = c['hourly_match_score']
-    row['pareto_type'] = 'storage_refined'
-    return row
-
-
-def _rows_to_table(rows):
-    """Convert row dicts to a PyArrow table."""
-    if not rows:
-        return None
-    return pa.table({col: [r[col] for r in rows] for col in rows[0].keys()})
-
-
 def _output_path(iso, threshold):
     """Output parquet path for Step 1D results."""
     t_str = _normalize_threshold_str(threshold)
     return os.path.join(STEP1D_OUTPUT_DIR, f'{iso}_t{t_str}_storage_refined.parquet')
 
 
-def _chunk_path(iso, threshold, chunk_num):
-    """Temporary chunk path."""
-    t_str = _normalize_threshold_str(threshold)
-    return os.path.join(STEP1D_OUTPUT_DIR, f'{iso}_t{t_str}_chunk{chunk_num}.parquet')
-
-
-def _save_chunk(iso, threshold, candidates, chunk_num):
-    """Save candidates to a numbered chunk parquet. Returns chunk_num + 1."""
-    if not candidates:
-        return chunk_num
+def _save_empty(iso, threshold):
+    """Write an empty parquet so we don't re-attempt this threshold."""
     os.makedirs(STEP1D_OUTPUT_DIR, exist_ok=True)
-    rows = [_candidate_to_row(iso, threshold, c) for c in candidates]
-    table = _rows_to_table(rows)
-    if table is None:
-        return chunk_num
-    path = _chunk_path(iso, threshold, chunk_num)
-    pq.write_table(table, path, compression='snappy')
-    print(f"\n      Chunk {chunk_num}: {len(candidates):,} candidates → {os.path.basename(path)}")
-    return chunk_num + 1
-
-
-def _save_final(iso, threshold, candidates):
-    """Save all candidates to the final output parquet."""
-    if not candidates:
-        return
-    os.makedirs(STEP1D_OUTPUT_DIR, exist_ok=True)
-    rows = [_candidate_to_row(iso, threshold, c) for c in candidates]
-    table = _rows_to_table(rows)
-    if table is None:
-        return
+    rtypes = get_resource_types(iso)
+    arrays = {
+        'iso': pa.array([], type=pa.string()),
+        'threshold': pa.array([], type=pa.float64()),
+    }
+    for rt in rtypes:
+        arrays[rt] = pa.array([], type=pa.float64())
+    arrays['battery_dispatch_pct'] = pa.array([], type=pa.float64())
+    arrays['battery8_dispatch_pct'] = pa.array([], type=pa.float64())
+    arrays['ldes_dispatch_pct'] = pa.array([], type=pa.float64())
+    arrays['h2_dispatch_pct'] = pa.array([], type=pa.float64())
+    arrays['hourly_match_score'] = pa.array([], type=pa.float64())
+    arrays['pareto_type'] = pa.array([], type=pa.string())
+    table = pa.table(arrays)
     path = _output_path(iso, threshold)
     pq.write_table(table, path, compression='snappy')
-    print(f"      Saved {len(candidates):,} solutions → {os.path.basename(path)}")
-
-
-def _merge_chunks_and_finalize(iso, threshold, remaining_candidates, total_chunks):
-    """Merge chunk files + remaining into final parquet, clean up chunks."""
-    os.makedirs(STEP1D_OUTPUT_DIR, exist_ok=True)
-    chunk_tables = []
-    chunk_files = []
-
-    for cn in range(total_chunks):
-        cp = _chunk_path(iso, threshold, cn)
-        if os.path.exists(cp):
-            try:
-                chunk_tables.append(pq.read_table(cp))
-                chunk_files.append(cp)
-            except Exception as e:
-                print(f"      Warning: Failed to read chunk {cp}: {e}")
-
-    if remaining_candidates:
-        rows = [_candidate_to_row(iso, threshold, c) for c in remaining_candidates]
-        remaining_table = _rows_to_table(rows)
-        if remaining_table is not None:
-            chunk_tables.append(remaining_table)
-
-    if not chunk_tables:
-        return
-
-    merged = pa.concat_tables(chunk_tables, promote_options='permissive')
-    path = _output_path(iso, threshold)
-    pq.write_table(merged, path, compression='snappy')
-    print(f"      Merged {len(chunk_files)} chunks → "
-          f"{merged.num_rows:,} total → {os.path.basename(path)}")
-
-    for cp in chunk_files:
-        try:
-            os.remove(cp)
-        except OSError:
-            pass
+    print(f"      Saved empty parquet → {os.path.basename(path)}")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -626,6 +686,9 @@ def process_iso(iso, thresholds, demand_data, gen_profiles):
     """Process all thresholds for a single ISO."""
     print(f"\n{'='*60}")
     print(f"  Processing {iso}")
+    if iso == 'CAISO':
+        print(f"  (CAISO mode: batch={CAISO_MIX_BATCH}, "
+              f"flush={CAISO_CHUNK_LIMIT:,}, streaming writes)")
     print(f"{'='*60}")
 
     iso_start = time.time()
@@ -641,12 +704,18 @@ def process_iso(iso, thresholds, demand_data, gen_profiles):
 
     total_new = 0
     for threshold in thresholds:
-        # Skip if output already exists
+        # Skip if final output already exists (and no partial/resume state)
         out_path = _output_path(iso, threshold)
-        if os.path.exists(out_path):
+        progress_path = _progress_path(iso, threshold)
+        has_progress = os.path.exists(progress_path)
+
+        if os.path.exists(out_path) and not has_progress:
             existing = pq.read_metadata(out_path).num_rows
             print(f"    {iso} {threshold}%: Already done ({existing:,} solutions) — skipping")
             continue
+
+        if has_progress:
+            print(f"    {iso} {threshold}%: Resuming from crash...")
 
         n_new = process_threshold(
             iso, threshold, demand_arr, supply_matrix,
@@ -721,13 +790,14 @@ def main():
     print(f"  Force rerun: {force}")
 
     if force:
-        # Remove existing outputs for target ISOs/thresholds
+        # Remove existing outputs + progress/partial files for target ISOs/thresholds
         for iso in target_isos:
             for t in thresholds:
-                out_path = _output_path(iso, t)
-                if os.path.exists(out_path):
-                    os.remove(out_path)
-                    print(f"  Removed {os.path.basename(out_path)}")
+                for path_fn in [_output_path, _partial_path, _progress_path]:
+                    p = path_fn(iso, t)
+                    if os.path.exists(p):
+                        os.remove(p)
+                        print(f"  Removed {os.path.basename(p)}")
 
     # Load shared data (demand, generation profiles)
     demand_data, gen_profiles, _, _ = load_data()
