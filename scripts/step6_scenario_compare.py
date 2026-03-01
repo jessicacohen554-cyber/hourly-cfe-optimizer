@@ -426,7 +426,7 @@ def main():
     # ------------------------------------------------------------------
     # Parse --iso flag
     # ------------------------------------------------------------------
-    requested_isos = parse_iso_args()
+    requested_isos, _ = parse_iso_args()
 
     print("=" * 80)
     print("SCENARIO COMPARISON: PURE CONSEQUENTIAL vs HOURLY MATCHING")

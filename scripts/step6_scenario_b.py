@@ -487,7 +487,7 @@ def main():
     print("=" * 80)
 
     # Parse ISO arguments
-    isos_to_run = parse_iso_args()
+    isos_to_run, _max_pfs_eval = parse_iso_args()
     print(f"\nISOs to process: {', '.join(isos_to_run)}")
 
     # Load feasible mixes from shared-data.js (physics-validated EF mixes)
