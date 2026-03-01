@@ -511,7 +511,7 @@ const PIPELINE = [
         ],
         outputs: [
             {
-                file: 'data/EIA 930 Data/eia_generation_profiles.json',
+                file: 'data/eia-930/eia_generation_profiles.json',
                 type: 'json',
                 brief: 'Hourly generation profiles by fuel type per ISO (8760h)',
                 consumers: ['All steps'],
@@ -528,7 +528,7 @@ const PIPELINE = [
                 ]
             },
             {
-                file: 'data/EIA 930 Data/eia_demand_profiles.json',
+                file: 'data/eia-930/eia_demand_profiles.json',
                 type: 'json',
                 brief: 'Hourly demand profiles per ISO (8760h)',
                 consumers: ['All steps'],
@@ -540,7 +540,7 @@ const PIPELINE = [
                 ]
             },
             {
-                file: 'data/EIA 930 Data/eia_fossil_mix.json',
+                file: 'data/eia-930/eia_fossil_mix.json',
                 type: 'json',
                 brief: 'Regional fossil fuel mix shares and emission rates',
                 consumers: ['Step 3', 'Step 6'],
