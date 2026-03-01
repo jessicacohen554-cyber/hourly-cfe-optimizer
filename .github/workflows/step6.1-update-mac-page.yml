@@ -118,34 +118,75 @@ jobs:
           echo "=== Consolidate results into shared-data.js ==="
           python scripts/step7_generate_shared_data.py
 
-      - name: Commit and push
+      - name: Batched commit and push
         run: |
           git config http.postBuffer 524288000
 
+          push_with_retry() {
+            local label="$1"
+            local MAX_RETRIES=4
+            for i in $(seq 1 $MAX_RETRIES); do
+              echo "  Push attempt $i/$MAX_RETRIES for ${label}..."
+              git push -u origin "$TARGET_BRANCH" 2>&1 && return 0
+              if [ "$i" -eq "$MAX_RETRIES" ]; then
+                echo "  ERROR: Push failed for ${label} after $MAX_RETRIES attempts"
+                return 1
+              fi
+              BACKOFF=$((2 ** i))
+              echo "  Retrying in ${BACKOFF}s..."
+              sleep "$BACKOFF"
+            done
+          }
+
+          PUSHED=false
+
+          # Batch 1: Post-processing parquets/data (per-ISO)
+          ISOS="CAISO ERCOT PJM NYISO NEISO MISO SPP"
+          for iso in $ISOS; do
+            FILES=$(find data/step5-post-processing/ -name "*${iso}*" -type f 2>/dev/null || true)
+            if [ -z "$FILES" ]; then continue; fi
+            git add -f $FILES
+            if git diff --cached --quiet; then continue; fi
+            BATCH_MB=$(du -cm $FILES | tail -1 | cut -f1)
+            echo "--- Staging ~${BATCH_MB} MB for $iso ---"
+            git commit -m "Step 6.1 MAC data: ${iso} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            if push_with_retry "$iso"; then
+              PUSHED=true
+            else
+              echo "  Per-ISO push failed for $iso — falling back to per-file"
+              git reset HEAD~1
+              for f in $FILES; do
+                FNAME=$(basename "$f")
+                git add -f "$f"
+                if git diff --cached --quiet; then continue; fi
+                git commit -m "Step 6.1 MAC: ${iso} ${FNAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                if push_with_retry "$FNAME"; then PUSHED=true; else git reset HEAD~1; fi
+              done
+            fi
+          done
+
+          # Batch 2: Non-ISO post-processing files (JSON aggregates)
+          git add -f data/step5-post-processing/shared_data.json 2>/dev/null || true
+          git add -f data/step5-post-processing/optimal_targets.json 2>/dev/null || true
+          # Catch any remaining non-ISO files
           git add -f data/step5-post-processing/ 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            echo "--- Staging aggregate JSON files ---"
+            git commit -m "Step 6.1 MAC: aggregate data — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            if push_with_retry "aggregate-data"; then PUSHED=true; else git reset HEAD~1; fi
+          fi
+
+          # Batch 3: Dashboard JS files
           git add -f dashboard/js/mac-stats-data.js 2>/dev/null || true
           git add -f dashboard/js/optimal-target-data.js 2>/dev/null || true
           git add -f dashboard/js/shared-data.js 2>/dev/null || true
-          git add -f data/step5-post-processing/shared_data.json 2>/dev/null || true
-          git add -f data/step5-post-processing/optimal_targets.json 2>/dev/null || true
-
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-            exit 0
+          if ! git diff --cached --quiet; then
+            echo "--- Staging dashboard JS ---"
+            git commit -m "Step 6.1 MAC: dashboard JS — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            if push_with_retry "dashboard-js"; then PUSHED=true; else git reset HEAD~1; fi
           fi
 
-          git commit -m "Step 6.1 Abatement: ${{ inputs.script }} ${{ inputs.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-
-          MAX_RETRIES=4
-          for i in $(seq 1 $MAX_RETRIES); do
-            echo "Push attempt $i/$MAX_RETRIES..."
-            git push -u origin "$TARGET_BRANCH" 2>&1 && break
-            if [ "$i" -eq "$MAX_RETRIES" ]; then
-              echo "ERROR: Push failed after $MAX_RETRIES attempts"
-              exit 1
-            fi
-            BACKOFF=$((2 ** i))
-            echo "Retrying in ${BACKOFF}s..."
-            sleep "$BACKOFF"
-          done
+          if [ "$PUSHED" = "false" ]; then
+            echo "No changes were pushed"
+          fi
 
