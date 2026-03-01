@@ -18,6 +18,14 @@
 - **Deploy as many agents as possible in parallel** for non-dependent tasks to maximize efficiency
 - Run searches, builds, file edits, and validations concurrently whenever they don't depend on each other
 
+### Vectorization-First Code Design (Critical — No Sequential Inner Loops)
+- **NEVER write sequential Python `for` loops over large data arrays** (>1K rows). Always use numpy vectorized operations, Numba `@njit` kernels, or pandas vectorized methods instead. A Python for-loop over 7M mixes takes 20+ minutes; the same operation vectorized takes <1 second.
+- **Pattern**: Convert data to numpy arrays early, precompute scalar parameters into flat arrays, apply vectorized operations, then unpack only the winner(s) back to Python dicts.
+- **Numba preference**: For complex per-element arithmetic (cost functions, dispatch models), use `@njit(cache=True)` with a numpy fallback for environments without Numba. The kernel should take `(N, K)` array + flat params → `(N,)` result.
+- **Filter operations**: Use numpy boolean masking (`arr[mask]`) instead of Python list comprehension with conditionals.
+- **Argmin/argmax**: Use `np.argmin(costs)` to find the best element, then call the scalar version only on the winner for the full result dict.
+- **This rule exists because**: Multiple sessions have produced scripts with `for mix in mixes: compute_cost(mix)` patterns that work fine on test data but time out on production-scale data (7–75M mixes). The fix is always the same: vectorize. Do it right the first time.
+
 ### Compute Execution (Critical — Preserve Token Budget)
 - **NEVER run full pipeline scripts (Step 1–7) end-to-end locally in the session** unless explicitly directed by the user. Full pipeline runs burn significant token budget on compute that should happen via GitHub Actions.
 - **Iterative testing IS allowed**: Running scripts on a **subset of data** (e.g., 1–2 ISOs, single threshold, limited rows) for debugging, validation, and iterative development is permitted and encouraged. Quick targeted tests that complete in under 60 seconds are fine. This includes:
