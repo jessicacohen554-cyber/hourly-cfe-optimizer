@@ -84,6 +84,12 @@ NEAR_MISS_WIDTH = 0.40
 # Minimum surplus days for battery deployment (same as Step 1C)
 MIN_SURPLUS_DAYS_FOR_BATTERY = 150
 
+# Saturation dominance filter: once increasing a storage dimension doesn't
+# improve the score (within epsilon), skip all higher levels for that
+# dimension in the current outer context. Scores are monotonically
+# non-decreasing in each storage dimension (more capacity = same or better).
+SATURATION_EPS = 1e-6  # in 0-1 score space (~0.0001 percentage points)
+
 # Batch sizes
 NM_CHUNK = 10000        # cap computation chunk
 MAX_MIX_BATCH = 100     # storage evaluation batch
@@ -292,38 +298,58 @@ def process_threshold(iso, threshold, demand_arr, supply_matrix,
             ldes_window_hours, batt8_window,
             h2_arr, n_h2, h2_eff, h2_dur, h2_window_hours)
 
-        # Process results with cap filtering
+        # Process results with cap filtering + saturation dominance pruning.
+        # Scores are monotonically non-decreasing in each storage dimension
+        # (more capacity = same or better score). Once a dimension saturates
+        # (score stops improving), all higher levels produce identical scores
+        # and are dominated (same benefit, higher cost). We break early.
+        # Cap checks also use break (levels sorted ascending → once exceeded,
+        # all higher levels also exceed).
         for bi in range(n_batch):
             ci, orig_idx, bat4_max, bat8_max, ldes_max, n_sd = batch[bi]
             mix = coarse_combos[orig_idx]
             scores = batch_scores[bi]
+            mix_key = tuple(int(mix[i]) for i in range(n_res))
 
+            prev_b4_best = -1.0
             for b4_idx in range(n_b4):
                 bp = bat4_arr[b4_idx]
                 if bp > 0 and (n_sd < MIN_SURPLUS_DAYS_FOR_BATTERY or bp > bat4_max):
-                    continue
+                    break  # sorted ascending → all higher levels also exceed cap
+
+                cur_b4_best = -1.0
+                prev_b8_best = -1.0
                 for b8_idx in range(n_b8):
                     b8p = bat8_arr[b8_idx]
                     if b8p > 0 and (n_sd < MIN_SURPLUS_DAYS_FOR_BATTERY or b8p > bat8_max):
-                        continue
+                        break
+
+                    cur_b8_best = -1.0
+                    prev_l_best = -1.0
                     for l_idx in range(n_l):
                         lp = ldes_arr[l_idx]
                         if lp > 0 and lp > ldes_max:
-                            continue
+                            break
+
+                        cur_l_best = -1.0
                         for h2_idx in range(n_h2):
                             h2p = h2_arr[h2_idx]
-                            # Skip no-storage case (already in 1C)
-                            if bp == 0 and b8p == 0 and lp == 0 and h2p == 0:
-                                continue
                             idx = (b4_idx * n_b8 * n_l * n_h2 +
                                    b8_idx * n_l * n_h2 +
                                    l_idx * n_h2 + h2_idx)
                             score = scores[idx]
+
+                            # Track best score for saturation detection
+                            if score >= 0:
+                                cur_l_best = max(cur_l_best, score)
+
+                            # Skip no-storage case (already in 1C)
+                            if bp == 0 and b8p == 0 and lp == 0 and h2p == 0:
+                                continue
                             if score < 0 or score < target:
                                 continue
 
                             # Dedup
-                            mix_key = tuple(int(mix[i]) for i in range(n_res))
                             key = (mix_key, bp, b8p, lp, h2p)
                             if key in seen:
                                 continue
@@ -338,6 +364,31 @@ def process_threshold(iso, threshold, demand_arr, supply_matrix,
                                 'hourly_match_score': round(score * 100, 2),
                             })
                             total_feasible += 1
+
+                        # LDES saturation: if best score at this LDES level didn't
+                        # improve over previous level, all higher LDES levels are
+                        # dominated (same score, higher cost) → break
+                        if (l_idx > 0 and cur_l_best >= 0 and prev_l_best >= 0
+                                and cur_l_best <= prev_l_best + SATURATION_EPS):
+                            break
+                        if cur_l_best >= 0:
+                            prev_l_best = max(prev_l_best, cur_l_best)
+                        cur_b8_best = max(cur_b8_best, cur_l_best)
+
+                    # bat8 saturation check
+                    if (b8_idx > 0 and cur_b8_best >= 0 and prev_b8_best >= 0
+                            and cur_b8_best <= prev_b8_best + SATURATION_EPS):
+                        break
+                    if cur_b8_best >= 0:
+                        prev_b8_best = max(prev_b8_best, cur_b8_best)
+                    cur_b4_best = max(cur_b4_best, cur_b8_best)
+
+                # bat4 saturation check
+                if (b4_idx > 0 and cur_b4_best >= 0 and prev_b4_best >= 0
+                        and cur_b4_best <= prev_b4_best + SATURATION_EPS):
+                    break
+                if cur_b4_best >= 0:
+                    prev_b4_best = max(prev_b4_best, cur_b4_best)
 
         # Flush to disk if too many candidates in memory
         if len(candidates) >= CHUNK_CANDIDATE_LIMIT:
