@@ -356,6 +356,7 @@ except ImportError:
 
 resource_mix_data = {}
 demand_twh_by_threshold = {}  # {iso: [twh_at_threshold_0, twh_at_threshold_1, ...]}
+hourly_match_scores = {}  # {iso: [score_at_threshold_0, score_at_threshold_1, ...]}
 
 for iso in ISOS:
     iso_data = {r: [] for r in RESOURCES}
@@ -364,6 +365,7 @@ for iso in ISOS:
     iso_data['ldes'] = []
     iso_data['h2'] = []
     iso_demand_twh = []
+    iso_match_scores = []
 
     geo = 'M' if iso == 'CAISO' else 'X'
     med_scenario_key = f'MMMM_M_M_M1_{geo}'
@@ -393,6 +395,7 @@ for iso in ISOS:
             iso_data['ldes'].append(int(dg_row.get('ldes_dispatch_pct', 0)))
             iso_data['h2'].append(int(dg_row.get('h2_dispatch_pct', 0)))
             iso_demand_twh.append(round(dg_row['annual_demand_mwh'] / 1e6, 2))
+            iso_match_scores.append(round(float(dg_row.get('hourly_match_score', t_num)), 2))
         else:
             # Fallback to base results (no demand growth)
             sc = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {}).get(medium_key(iso))
@@ -414,11 +417,16 @@ for iso in ISOS:
             # Use base demand
             base_twh = _REGIONAL_DEMAND_TWH.get(iso, 100)
             iso_demand_twh.append(round(base_twh, 2))
+            # Fallback: use threshold as score (conservative estimate)
+            fallback_score = float(sc.get('hourly_match_score', t_num)) if sc else float(t_num)
+            iso_match_scores.append(round(fallback_score, 2))
 
     resource_mix_data[iso] = iso_data
     demand_twh_by_threshold[iso] = iso_demand_twh
+    hourly_match_scores[iso] = iso_match_scores
     print(f"  {iso} clean_firm: {iso_data['clean_firm']}")
     print(f"  {iso} demand_twh: {iso_demand_twh[:5]}...{iso_demand_twh[-3:]}")
+    print(f"  {iso} match_scores: {iso_match_scores[:5]}...{iso_match_scores[-3:]}")
 
 # ============================================================================
 # EXTRACT COMPRESSED_DAY_DATA (from compressed_day_profiles.json)
@@ -887,6 +895,19 @@ for iso_idx, iso in enumerate(ISOS):
     dt = demand_twh_by_threshold[iso]
     comma = ',' if iso_idx < len(ISOS) - 1 else ''
     lines.append(f'    {iso}: {fmt_array(dt)}{comma}')
+lines.append('};')
+
+# HOURLY_MATCH_SCORES — actual hourly match score of the cost-optimal mix per threshold
+lines.append('')
+lines.append('// --- Hourly Match Scores (%) for cost-optimal mix at each threshold ---')
+lines.append('// The cost-optimal mix may over-achieve the target threshold.')
+lines.append('// Use this for accurate utilized/curtailed splits in the WYN chart.')
+lines.append(f'// Indices match THRESHOLDS array: [{thresh_str}]')
+lines.append('const HOURLY_MATCH_SCORES = {')
+for iso_idx, iso in enumerate(ISOS):
+    ms = hourly_match_scores.get(iso, [0] * len(THRESHOLDS_NUM))
+    comma = ',' if iso_idx < len(ISOS) - 1 else ''
+    lines.append(f'    {iso}: {fmt_array(ms)}{comma}')
 lines.append('};')
 
 # COMPRESSED_DAY_DATA
