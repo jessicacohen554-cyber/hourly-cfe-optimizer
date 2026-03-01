@@ -22,9 +22,9 @@ For each result:
 
 Reads:  data/step4-gas-ccs-parquets/ (or step3 fallback)
         data/egrid_emission_rates.json
-        data/eia_fossil_mix.json
-        data/eia_generation_profiles.json
-        data/eia_demand_profiles.json
+        data/eia-930/eia_fossil_mix.json
+        data/eia-930/eia_generation_profiles.json
+        data/eia-930/eia_demand_profiles.json
 Writes: data/step4-gas-ccs-parquets/ (parquets enriched with CO₂ columns)
         data/step5-post-processing/co2_results/ (per-ISO/threshold parquets)
 
