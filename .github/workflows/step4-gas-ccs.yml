@@ -135,6 +135,8 @@ jobs:
 
       - name: Commit and push
         run: |
+          git config http.postBuffer 524288000
+
           git add -f data/step4-gas-ccs-parquets/
 
           if git diff --cached --quiet; then

@@ -153,6 +153,8 @@ jobs:
 
       - name: Commit and push
         run: |
+          git config http.postBuffer 524288000
+
           git add -f data/step3-cost-opt-parquets/step3_feasible_*.parquet 2>/dev/null || true
           git add -f data/step5-post-processing/ef_expansion_log.json 2>/dev/null || true
 
