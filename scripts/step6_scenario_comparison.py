@@ -923,14 +923,24 @@ def _batch_cost_kernel(mixes, params):
 
 
 def _mixes_to_array(mixes):
-    """Convert list-of-lists to (N, 10) float64 numpy array, padding to 10 cols."""
+    """Convert list-of-lists or numpy array to (N, 10) float64 numpy array."""
+    if isinstance(mixes, np.ndarray):
+        if mixes.shape[1] >= 10:
+            return mixes[:, :10].astype(np.float64, copy=False)
+        padded = np.zeros((mixes.shape[0], 10), dtype=np.float64)
+        padded[:, :mixes.shape[1]] = mixes
+        return padded
     N = len(mixes)
-    arr = np.zeros((N, 10), dtype=np.float64)
-    for i, m in enumerate(mixes):
-        ncols = min(len(m), 10)
-        for j in range(ncols):
-            arr[i, j] = m[j]
-    return arr
+    if N == 0:
+        return np.zeros((0, 10), dtype=np.float64)
+    raw = np.array(mixes, dtype=np.float64)
+    if raw.ndim == 1:
+        raw = raw.reshape(1, -1)
+    if raw.shape[1] >= 10:
+        return raw[:, :10]
+    padded = np.zeros((N, 10), dtype=np.float64)
+    padded[:, :raw.shape[1]] = raw
+    return padded
 
 
 def compute_mix_cost_batch(mixes_arr, sens, iso, demand_twh, overrides=None, growth_factor=1.0):
@@ -1521,124 +1531,147 @@ def _load_pfs_mixes(iso, threshold):
     CCS is NOT a separate resource in PFS — it's part of clean_firm tranche
     allocation computed during cost evaluation.
 
-    Returns list of v5.0-format mix vectors:
+    Returns (N, 10) numpy array of v5.0-format mix vectors:
         [cf%, sol%, wnd%, ccs%=0, hyd%, match%, bat4%, bat8%, ldes%, h2%]
+    Returns empty (0, 10) array if file not found.
     """
     t_str = str(int(threshold)) if threshold == int(threshold) else str(threshold)
     pfs_path = Path(f'data/step1-pfs-parquets/{iso}_t{t_str}_raw_pfs.parquet')
     if not pfs_path.exists():
-        return []
+        return np.empty((0, 10), dtype=np.float64)
 
     df = pd.read_parquet(pfs_path)
-    mixes = []
-    for _, row in df.iterrows():
-        mixes.append([
-            row.get('clean_firm', 0),
-            row.get('solar', 0),
-            row.get('wind', 0),
-            0,  # ccs_ccgt — not in PFS, allocated during cost eval
-            row.get('hydro', 0),
-            round(row.get('hourly_match_score', 0), 1),
-            row.get('battery_dispatch_pct', 0),
-            row.get('battery8_dispatch_pct', 0),
-            row.get('ldes_dispatch_pct', 0),
-            row.get('h2_dispatch_pct', 0),
-        ])
-    return mixes
+    N = len(df)
+    arr = np.zeros((N, 10), dtype=np.float64)
+    arr[:, 0] = df['clean_firm'].values if 'clean_firm' in df.columns else 0
+    arr[:, 1] = df['solar'].values if 'solar' in df.columns else 0
+    arr[:, 2] = df['wind'].values if 'wind' in df.columns else 0
+    # col 3 = ccs_ccgt = 0 (not in PFS)
+    arr[:, 4] = df['hydro'].values if 'hydro' in df.columns else 0
+    arr[:, 5] = np.round(df['hourly_match_score'].values, 1) if 'hourly_match_score' in df.columns else 0
+    arr[:, 6] = df['battery_dispatch_pct'].values if 'battery_dispatch_pct' in df.columns else 0
+    arr[:, 7] = df['battery8_dispatch_pct'].values if 'battery8_dispatch_pct' in df.columns else 0
+    arr[:, 8] = df['ldes_dispatch_pct'].values if 'ldes_dispatch_pct' in df.columns else 0
+    arr[:, 9] = df['h2_dispatch_pct'].values if 'h2_dispatch_pct' in df.columns else 0
+    return arr
 
 
 def _filter_mixes_by_floor(mixes, floor_twh, demand_twh, iso):
     """Filter mixes to those meeting per-resource TWh floors.
 
-    Converts floor_twh (absolute) to floor_pct using the given demand_twh,
-    then filters mixes where each resource >= floor_pct.
+    Accepts either list-of-lists or (N, 10) numpy array.
+    Returns same type as input (list or array).
 
     Hydro floor is always capped at HYDRO_CAP_TWH[iso].
-
-    Returns list of mixes that pass the floor filter.
     """
-    # Convert floor TWh to floor percentages at this demand level
-    floor_pct = {}
-    for res in ['clean_firm', 'solar', 'wind', 'ccs_ccgt']:
-        floor_pct[res] = floor_twh.get(res, 0) / demand_twh * 100.0 if demand_twh > 0 else 0
-    # Hydro: floor in TWh, but cap at physical limit
-    hydro_floor_twh = min(floor_twh.get('hydro', 0), HYDRO_CAP_TWH[iso])
-    floor_pct['hydro'] = hydro_floor_twh / demand_twh * 100.0 if demand_twh > 0 else 0
-    # Storage floors
-    floor_pct['battery'] = floor_twh.get('battery', 0) / demand_twh * 100.0 if demand_twh > 0 else 0
-    floor_pct['ldes'] = floor_twh.get('ldes', 0) / demand_twh * 100.0 if demand_twh > 0 else 0
+    if isinstance(mixes, np.ndarray):
+        return _filter_mixes_by_floor_arr(mixes, floor_twh, demand_twh, iso)
 
-    passed = []
-    for mix in mixes:
-        # mix = [cf%, sol%, wnd%, ccs%, hyd%, match%, bat4%, bat8%, ldes%, h2%]
-        cf, sol, wnd, ccs, hyd = mix[0], mix[1], mix[2], mix[3], mix[4]
-        bat4, bat8, ldes = mix[6], mix[7], mix[8]
+    # List path — convert to array, filter, convert back
+    if not mixes:
+        return []
+    arr = np.array(mixes, dtype=np.float64)
+    if arr.ndim == 1:
+        arr = arr.reshape(1, -1)
+    if arr.shape[1] < 10:
+        padded = np.zeros((arr.shape[0], 10), dtype=np.float64)
+        padded[:, :arr.shape[1]] = arr
+        arr = padded
+    mask = _floor_mask(arr, floor_twh, demand_twh, iso)
+    return [mixes[i] for i in range(len(mixes)) if mask[i]]
 
-        if cf < floor_pct['clean_firm'] - 0.01:
-            continue
-        if sol < floor_pct['solar'] - 0.01:
-            continue
-        if wnd < floor_pct['wind'] - 0.01:
-            continue
-        if ccs < floor_pct['ccs_ccgt'] - 0.01:
-            continue
-        # Hydro: cap the mix's hydro at physical limit before comparing
-        hyd_twh = min(hyd / 100.0 * demand_twh, HYDRO_CAP_TWH[iso])
-        if hyd_twh < hydro_floor_twh - 0.01:
-            continue
-        if (bat4 + bat8) < floor_pct['battery'] - 0.01:
-            continue
-        if ldes < floor_pct['ldes'] - 0.01:
-            continue
-        passed.append(mix)
 
-    return passed
+def _floor_mask(arr, floor_twh, demand_twh, iso):
+    """Vectorized floor filter returning boolean mask for (N, 10) array."""
+    TOL = 0.01
+    if demand_twh <= 0:
+        return np.ones(arr.shape[0], dtype=bool)
+
+    scale = 100.0 / demand_twh
+    hydro_cap = HYDRO_CAP_TWH[iso]
+    hydro_floor_twh = min(floor_twh.get('hydro', 0), hydro_cap)
+
+    mask = arr[:, 0] >= floor_twh.get('clean_firm', 0) * scale - TOL  # cf
+    mask &= arr[:, 1] >= floor_twh.get('solar', 0) * scale - TOL       # sol
+    mask &= arr[:, 2] >= floor_twh.get('wind', 0) * scale - TOL        # wnd
+    mask &= arr[:, 3] >= floor_twh.get('ccs_ccgt', 0) * scale - TOL    # ccs
+    # Hydro: cap mix hydro at physical limit before comparing
+    hyd_twh = np.minimum(arr[:, 4] / 100.0 * demand_twh, hydro_cap)
+    mask &= hyd_twh >= hydro_floor_twh - TOL
+    # Battery (4h + 8h combined)
+    mask &= (arr[:, 6] + arr[:, 7]) >= floor_twh.get('battery', 0) * scale - TOL
+    # LDES
+    mask &= arr[:, 8] >= floor_twh.get('ldes', 0) * scale - TOL
+    return mask
+
+
+def _filter_mixes_by_floor_arr(arr, floor_twh, demand_twh, iso):
+    """Vectorized floor filter for numpy array input. Returns filtered array."""
+    if arr.shape[0] == 0:
+        return arr
+    mask = _floor_mask(arr, floor_twh, demand_twh, iso)
+    return arr[mask]
 
 
 def _filter_pfs_by_floor_window(mixes, floor_twh, demand_twh, iso, max_pct_above=10.0):
     """Filter PFS mixes within a search window above the per-resource floor.
 
+    Vectorized: accepts list-of-lists or (N, 10) numpy array.
     For each resource: floor_pct <= mix_pct <= floor_pct + max_pct_above.
     No upper bound on hydro (existing-only, physically capped).
 
-    Returns list of mixes within the window.
+    Returns same type as input.
     """
-    floor_pct = {}
-    for res in ['clean_firm', 'solar', 'wind']:
-        floor_pct[res] = floor_twh.get(res, 0) / demand_twh * 100.0 if demand_twh > 0 else 0
-    # CCS is 0 in PFS
-    floor_pct['ccs_ccgt'] = 0
-    # Hydro
-    hydro_floor_twh = min(floor_twh.get('hydro', 0), HYDRO_CAP_TWH[iso])
-    floor_pct['hydro'] = hydro_floor_twh / demand_twh * 100.0 if demand_twh > 0 else 0
-    # Storage
-    floor_pct['battery'] = floor_twh.get('battery', 0) / demand_twh * 100.0 if demand_twh > 0 else 0
-    floor_pct['ldes'] = floor_twh.get('ldes', 0) / demand_twh * 100.0 if demand_twh > 0 else 0
+    is_array = isinstance(mixes, np.ndarray)
+    if is_array:
+        arr = mixes
+    else:
+        if not mixes:
+            return []
+        arr = np.array(mixes, dtype=np.float64)
+        if arr.ndim == 1:
+            arr = arr.reshape(1, -1)
+        if arr.shape[1] < 10:
+            padded = np.zeros((arr.shape[0], 10), dtype=np.float64)
+            padded[:, :arr.shape[1]] = arr
+            arr = padded
 
-    passed = []
-    for mix in mixes:
-        cf, sol, wnd, ccs, hyd = mix[0], mix[1], mix[2], mix[3], mix[4]
-        bat4, bat8, ldes = mix[6], mix[7], mix[8]
+    if arr.shape[0] == 0:
+        return arr if is_array else []
 
-        # Per-resource: must be >= floor and <= floor + max_pct_above
-        if cf < floor_pct['clean_firm'] - 0.01 or cf > floor_pct['clean_firm'] + max_pct_above + 0.01:
-            continue
-        if sol < floor_pct['solar'] - 0.01 or sol > floor_pct['solar'] + max_pct_above + 0.01:
-            continue
-        if wnd < floor_pct['wind'] - 0.01 or wnd > floor_pct['wind'] + max_pct_above + 0.01:
-            continue
-        # Hydro: no upper bound (existing-only, capped by physical limit)
-        hyd_twh = min(hyd / 100.0 * demand_twh, HYDRO_CAP_TWH[iso])
-        if hyd_twh < hydro_floor_twh - 0.01:
-            continue
-        # Storage: >= floor, no tight upper bound in PFS
-        if (bat4 + bat8) < floor_pct['battery'] - 0.01:
-            continue
-        if ldes < floor_pct['ldes'] - 0.01:
-            continue
-        passed.append(mix)
+    TOL = 0.01
+    if demand_twh <= 0:
+        return arr if is_array else list(mixes)
 
-    return passed
+    scale = 100.0 / demand_twh
+    hydro_cap = HYDRO_CAP_TWH[iso]
+    hydro_floor_twh = min(floor_twh.get('hydro', 0), hydro_cap)
+
+    # Floor percentages
+    cf_floor = floor_twh.get('clean_firm', 0) * scale
+    sol_floor = floor_twh.get('solar', 0) * scale
+    wnd_floor = floor_twh.get('wind', 0) * scale
+    bat_floor = floor_twh.get('battery', 0) * scale
+    ldes_floor = floor_twh.get('ldes', 0) * scale
+
+    # Lower + upper bounds for cf, sol, wnd
+    mask = arr[:, 0] >= cf_floor - TOL
+    mask &= arr[:, 0] <= cf_floor + max_pct_above + TOL
+    mask &= arr[:, 1] >= sol_floor - TOL
+    mask &= arr[:, 1] <= sol_floor + max_pct_above + TOL
+    mask &= arr[:, 2] >= wnd_floor - TOL
+    mask &= arr[:, 2] <= wnd_floor + max_pct_above + TOL
+    # Hydro: lower bound only (no upper)
+    hyd_twh = np.minimum(arr[:, 4] / 100.0 * demand_twh, hydro_cap)
+    mask &= hyd_twh >= hydro_floor_twh - TOL
+    # Storage: lower bound only
+    mask &= (arr[:, 6] + arr[:, 7]) >= bat_floor - TOL
+    mask &= arr[:, 8] >= ldes_floor - TOL
+
+    if is_array:
+        return arr[mask]
+    else:
+        return [mixes[i] for i in range(len(mixes)) if mask[i]]
 
 
 def _forward_step_optimization(feasible_mixes, sens, get_overrides_fn, label):
@@ -1719,34 +1752,34 @@ def _forward_step_optimization(feasible_mixes, sens, get_overrides_fn, label):
             source = 'EF'
 
             # --- Step 2: If no EF mixes survive, fall back to PFS ---
-            if not filtered:
+            if len(filtered) == 0:
                 pfs_mixes = _load_pfs_mixes(iso, t)
-                if pfs_mixes:
+                if len(pfs_mixes) > 0:
                     # First pass: floor to floor+10%
                     filtered = _filter_pfs_by_floor_window(
                         pfs_mixes, floor_twh, demand_twh, iso, max_pct_above=10.0)
                     source = 'PFS+10'
 
-                    if not filtered:
+                    if len(filtered) == 0:
                         # Second pass: floor to floor+250%
                         filtered = _filter_pfs_by_floor_window(
                             pfs_mixes, floor_twh, demand_twh, iso, max_pct_above=250.0)
                         source = 'PFS+250'
 
-                    if not filtered:
+                    if len(filtered) == 0:
                         # Final fallback: take ALL PFS mixes that meet the floor
                         # as a minimum (no upper bound)
                         filtered = _filter_mixes_by_floor(
                             pfs_mixes, floor_twh, demand_twh, iso)
                         source = 'PFS-all'
 
-                    if not filtered:
+                    if len(filtered) == 0:
                         # Absolute last resort: relax floor, take any PFS mix,
                         # but carry under-floor resource costs forward
                         filtered = pfs_mixes
                         source = 'PFS-relaxed'
 
-                if not filtered:
+                if len(filtered) == 0:
                     print(f"  ⚠ {iso} {t}% [{label}]: No mixes found (EF or PFS)")
                     continue
 
@@ -1772,9 +1805,9 @@ def _forward_step_optimization(feasible_mixes, sens, get_overrides_fn, label):
 
             best_total_cost = float(batch['total_cost'][best_idx]) + best_excess_per_mwh
             best_result = _extract_single_result(filt_arr, batch, best_idx, iso, demand_twh)
-            best_mix = filtered[best_idx]
+            best_mix = filt_arr[best_idx]  # Always use array row
 
-            if not best_result or not best_mix:
+            if not best_result:
                 continue
 
             # --- Step 4: Build result with augmented resources ---
