@@ -5,13 +5,14 @@ name: "LMP Calibration: Validate Model"
 #   - weather-normalized: Compare against SOM calibration targets
 #   - qa-actual: Compare against actual historical LMP (needs fetched data)
 #
+# iso=ALL fans out parallel matrix jobs, then merges into one branch + PR.
 # Output: data/step5-post-processing/lmp/{ISO}_calibration.json
 
 on:
   workflow_dispatch:
     inputs:
       iso:
-        description: 'ISO region to calibrate'
+        description: 'ISO region to calibrate (ALL = parallel)'
         required: true
         default: 'ALL'
         type: choice
@@ -47,9 +48,65 @@ env:
   BRANCH_PREFIX: lmp-calibration
 
 jobs:
-  calibrate:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            echo 'matrix=["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix=["${{ inputs.iso }}"]' >> "$GITHUB_OUTPUT"
+          fi
+
+  process:
+    needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    strategy:
+      matrix:
+        iso: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy pandas pyarrow numba
+
+      - name: "Run LMP calibration — ${{ matrix.iso }}"
+        run: |
+          if [ "${{ inputs.mode }}" = "qa-actual" ]; then
+            python scripts/calibrate_lmp_model.py \
+              --iso ${{ matrix.iso }} \
+              --qa-actual \
+              --year ${{ inputs.year }}
+          else
+            python scripts/calibrate_lmp_model.py \
+              --iso ${{ matrix.iso }}
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lmp-cal-${{ matrix.iso }}
+          path: data/step5-post-processing/lmp/
+          retention-days: 1
+
+  merge:
+    needs: [prepare, process]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     permissions:
       contents: write
@@ -71,25 +128,12 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$TARGET_BRANCH"
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
         with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: pip install numpy pandas pyarrow numba
-
-      - name: Run LMP calibration
-        run: |
-          if [ "${{ inputs.mode }}" = "qa-actual" ]; then
-            python scripts/calibrate_lmp_model.py \
-              --iso ${{ inputs.iso }} \
-              --qa-actual \
-              --year ${{ inputs.year }}
-          else
-            python scripts/calibrate_lmp_model.py \
-              --iso ${{ inputs.iso }}
-          fi
+          pattern: lmp-cal-*
+          path: data/step5-post-processing/lmp/
+          merge-multiple: true
 
       - name: Commit and push
         run: |
