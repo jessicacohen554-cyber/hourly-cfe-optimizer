@@ -73,17 +73,20 @@ MEDIUM_KEYS = {
     'SPP': 'MMMM_M_M_M1_X',
 }
 
-ZONES = [
-    {'label': '50→75%', 'start_thresh': 50, 'end_thresh': 75},
-    {'label': '75→90%', 'start_thresh': 75, 'end_thresh': 90},
-    {'label': '90→92.5%', 'start_thresh': 90, 'end_thresh': 92.5},
-    {'label': '92.5→95%', 'start_thresh': 92.5, 'end_thresh': 95},
-    {'label': '95→97.5%', 'start_thresh': 95, 'end_thresh': 97.5},
-    {'label': '97.5→99%', 'start_thresh': 97.5, 'end_thresh': 99},
-    {'label': '99→99.5%', 'start_thresh': 99, 'end_thresh': 99.5},
-    {'label': '99.5→99.9%', 'start_thresh': 99.5, 'end_thresh': 99.9},
-    {'label': '99.9→100%', 'start_thresh': 99.9, 'end_thresh': 100},
-]
+# Build consecutive threshold pair zones from THRESHOLDS (5% intervals)
+# e.g., 50→55, 55→60, 60→65, ..., 99.9→99.99
+ZONES = []
+_zone_thresholds = [t for t in THRESHOLDS if t >= 50]
+for _i in range(len(_zone_thresholds) - 1):
+    _ts = _zone_thresholds[_i]
+    _te = _zone_thresholds[_i + 1]
+    _ts_str = str(int(_ts)) if _ts == int(_ts) else str(_ts)
+    _te_str = str(int(_te)) if _te == int(_te) else str(_te)
+    ZONES.append({
+        'label': f'{_ts_str}→{_te_str}%',
+        'start_thresh': _ts,
+        'end_thresh': _te,
+    })
 
 GROWTH_RATES = {
     'CAISO': 1.8, 'ERCOT': 3.5, 'PJM': 2.4, 'NYISO': 1.2, 'NEISO': 1.0,
@@ -349,6 +352,7 @@ def extract_medium_scenarios(df):
                 'battery8_dispatch_pct': float(bat8_pct[i]),
                 'ldes_dispatch_pct': float(ldes_pct[i]),
                 'h2_dispatch_pct': float(h2_pct[i]),
+                'wholesale': float(wholesale[i]),
                 'gas_backup_mw': float(gas_backup[i]),
                 'new_gas_mw': float(new_gas[i]),
                 'gas_cost': float(gas_cost[i]),
@@ -363,110 +367,254 @@ def extract_medium_scenarios(df):
     return result
 
 
-def compute_zone_metrics(med_data, egrid, fossil_mix, demand_data, gen_profiles):
-    """Compute metrics for each (ISO, zone) pair using dispatch-cache-based emission accounting.
+def compute_baseline_co2_mt(iso, egrid):
+    """Compute total fossil CO₂ at existing clean floor (MT).
 
-    Uses hourly dispatch results from the dispatch cache to compute exact CO₂
-    displacement, capturing the shape-dependent differences between wind-heavy
-    and clean-firm-heavy portfolios.
+    Baseline = hourly demand - hourly existing clean = fossil gap.
+    Fossil gap dispatched in merit order: coal → oil → gas.
+    Returns MT CO₂ from the entire fossil fleet at existing clean levels.
+    """
+    shares = GRID_MIX_SHARES.get(iso, {})
+    existing_pct = sum(shares.values())
+    demand_twh = BASE_DEMAND_TWH[iso]
+    fossil_twh = demand_twh * (1 - existing_pct / 100)
+
+    coal_cap = COAL_CAP_TWH.get(iso, 0)
+    oil_cap = OIL_CAP_TWH.get(iso, 0)
+
+    regional = egrid.get(iso, {})
+    coal_rate = regional.get('coal_co2_lb_per_mwh', 0.0) / 2204.62
+    oil_rate = regional.get('oil_co2_lb_per_mwh', 0.0) / 2204.62
+    gas_rate = regional.get('gas_co2_lb_per_mwh', 0.0) / 2204.62
+
+    coal_twh = min(coal_cap, fossil_twh)
+    oil_twh = min(oil_cap, max(0, fossil_twh - coal_twh))
+    gas_twh = max(0, fossil_twh - coal_twh - oil_twh)
+
+    # TWh × tCO₂/MWh = MT CO₂ (since 1 TWh × 1 tCO₂/MWh = 1e6 MWh × 1 tCO₂/MWh = 1e6 t = 1 MT)
+    return coal_twh * coal_rate + oil_twh * oil_rate + gas_twh * gas_rate
+
+
+def compute_zone_metrics(med_data, egrid, fossil_mix, demand_data, gen_profiles):
+    """Compute metrics for each (ISO, zone) pair using 5% threshold intervals.
+
+    Implements the user's formula:
+      Baseline emissions = hourly demand - hourly existing clean = fossil gap
+      Reduced emissions  = hourly demand - (existing + new build) = target emissions
+      Emissions reduced  = baseline - target
+      MAC = cost of new resources / emissions reduced
+
+    Existing clean resources = $0 cost. Only new-build incurs cost.
+
+    Where the optimizer "overshoots" (identical results at consecutive thresholds),
+    the initial deployment is distributed proportionally across 5% zones so the
+    animation shows smooth progression.
     """
     zone_metrics = []
 
     for iso in ISOS:
         iso_data = med_data[iso]
+        if not iso_data:
+            continue
         demand_twh = list(iso_data.values())[0]['demand_twh']
         demand_mwh = demand_twh * 1e6
 
-        for zone_idx, zone in enumerate(ZONES):
-            t_start = float(zone['start_thresh'])
-            t_end = float(zone['end_thresh'])
+        # ---- Existing clean floor ----
+        shares = GRID_MIX_SHARES.get(iso, {})
+        existing_pct = sum(shares.values())
+        existing_twh = {}
+        for res in RESOURCES:
+            existing_twh[res] = demand_twh * shares.get(res, 0) / 100
+        existing_twh['battery'] = 0
+        existing_twh['ldes'] = 0
 
-            if t_start not in iso_data or t_end not in iso_data:
+        # Baseline CO₂ at existing clean floor (analytical: full fossil dispatch)
+        baseline_co2_mt = compute_baseline_co2_mt(iso, egrid)
+
+        # ---- Get dispatch-based CO₂ at each threshold ----
+        co2_at_threshold = {}
+        for t in _zone_thresholds:
+            t_float = float(t)
+            if t_float not in iso_data:
                 continue
-
-            start = iso_data[t_start]
-            end = iso_data[t_end]
-
-            # Compute marginal displaced emission rate using dispatch cache
-            marginal_rate, delta_co2_mt, displacement = compute_marginal_displaced_rate_dispatch(
-                iso, t_start, t_end, egrid, med_data, demand_data, gen_profiles
-            )
-
-            # Delta clean TWh (from optimizer match scores)
-            delta_match_pct = (end['match_score'] - start['match_score']) / 100
-            delta_clean_twh = delta_match_pct * demand_twh
-
-            # CO₂ displaced from dispatch model
-            co2_displaced_mt = delta_co2_mt
-
-            # Clean procurement cost only (no gas backup — gas is a system cost, not abatement cost)
-            cost_start = start['eff_cost']
-            cost_end = end['eff_cost']
-            delta_cost_per_mwh = cost_end - cost_start
-            delta_cost_total_bn = delta_cost_per_mwh * demand_mwh / 1e9
-            # Gas backup cost tracked separately for educational overlay
-            delta_gas_cost_per_mwh = end['gas_cost'] - start['gas_cost']
-
-            # Newbuild LCOE at zone endpoint ($/MWh of clean energy, excluding gas backup)
-            newbuild_lcoe = end['total_cost'] - end['gas_cost']  # $/MWh of demand from clean
-            match_frac_end = end['match_score'] / 100.0
-            # Convert to per MWh of clean energy (not per MWh of demand)
-            newbuild_lcoe_per_cfe = newbuild_lcoe / match_frac_end if match_frac_end > 0 else float('inf')
-
-            # Displaced emission rate at zone endpoint (tCO₂/MWh from dispatch model)
-            endpoint_emission_rate = displacement.get('avg_rate_at_end', marginal_rate)
-
-            # MAC = newbuild LCOE / emission rate ($/tCO₂)
-            # This is: cost per MWh of clean energy / tCO₂ per MWh of displaced fossil
-            if endpoint_emission_rate > 0.0001:
-                marginal_mac = newbuild_lcoe_per_cfe / endpoint_emission_rate
+            co2_result = get_dispatch_co2(iso, t_float, med_data, egrid, demand_data, gen_profiles)
+            if co2_result:
+                abated_mt = co2_result['total_co2_abated_tons'] / 1e6
+                co2_at_threshold[t_float] = max(0, baseline_co2_mt - abated_mt)
             else:
-                marginal_mac = float('inf')
+                co2_at_threshold[t_float] = baseline_co2_mt
 
-            # Resource changes
-            delta_resources = {}
-            for res in RESOURCES:
-                delta_resources[res] = end['resource_twh'][res] - start['resource_twh'][res]
-            delta_resources['battery'] = end['battery_twh'] - start['battery_twh']
-            delta_resources['ldes'] = end['ldes_twh'] - start['ldes_twh']
+        # ---- Build all zones for this ISO and classify them ----
+        threshold_list = [float(t) for t in _zone_thresholds if float(t) in iso_data]
+        if len(threshold_list) < 2:
+            continue
 
-            year_start = SBTI_YEAR_MAP.get(t_start, 2025)
-            year_end = SBTI_YEAR_MAP.get(t_end, 2050)
-            midpoint_year = (year_start + year_end) / 2
-            growth_factor = (1 + GROWTH_RATES[iso] / 100) ** (midpoint_year - 2025)
-
-            zone_metrics.append({
-                'iso': iso,
-                'zone_idx': zone_idx,
-                'zone_label': zone['label'],
-                'threshold_start': t_start,
-                'threshold_end': t_end,
-                'year_start': year_start,
-                'year_end': year_end,
-                'marginal_mac': round(marginal_mac, 1),
-                'marginal_mac_display': round(min(marginal_mac, 1500), 1),
-                'newbuild_lcoe_per_cfe': round(newbuild_lcoe_per_cfe, 1),
-                'endpoint_emission_rate': round(endpoint_emission_rate, 4),
-                'co2_displaced_mt': round(co2_displaced_mt, 2),
-                'displaced_emission_rate': round(marginal_rate, 4),
-                'displacement_detail': displacement,
-                'primary_fuel_displaced': displacement.get('primary_fuel', 'gas'),
-                'fossil_twh_start': round(demand_twh * (1 - start['match_score'] / 100), 1),
-                'fossil_twh_end': round(demand_twh * (1 - end['match_score'] / 100), 1),
-                'delta_clean_twh': round(delta_clean_twh, 1),
-                'delta_cost_per_mwh': round(delta_cost_per_mwh, 2),
-                'delta_cost_total_bn': round(delta_cost_total_bn, 2),
-                'delta_resources': {k: round(v, 1) for k, v in delta_resources.items()},
-                'end_resource_twh': {k: round(v, 1) for k, v in end['resource_twh'].items()},
-                'gas_backup_mw_end': end['gas_backup_mw'],
-                'gas_cost_per_mwh_end': round(end['gas_cost'], 2),
-                'delta_gas_cost_per_mwh': round(delta_gas_cost_per_mwh, 2),
-                'delta_gas_mw': round(end['new_gas_mw'] - start['new_gas_mw'], 0),
-                'demand_twh': demand_twh,
-                'growth_factor': round(growth_factor, 3),
-                'growth_adjusted_demand_twh': round(demand_twh * growth_factor, 1),
-                'growth_adjusted_co2_mt': round(co2_displaced_mt * growth_factor, 2),
+        # For each zone, check if the optimizer result changed between start and end
+        iso_zones = []
+        for zone_idx, zone in enumerate(ZONES):
+            zt_start = float(zone['start_thresh'])
+            zt_end = float(zone['end_thresh'])
+            if zt_start not in iso_data or zt_end not in iso_data:
+                continue
+            d_start = iso_data[zt_start]
+            d_end = iso_data[zt_end]
+            changed = abs(d_end['match_score'] - d_start['match_score']) > 0.01
+            iso_zones.append({
+                'zone_idx': zone_idx, 'zone': zone,
+                't_start': zt_start, 't_end': zt_end,
+                'data_start': d_start, 'data_end': d_end,
+                'changed': changed,
             })
+
+        if not iso_zones:
+            continue
+
+        # ---- Group consecutive UNCHANGED zones into "distribute" runs ----
+        # Changed zones are "actual" (use real optimizer deltas)
+        runs = []  # list of (type, [zone_info, ...])
+        current_run = []
+        for z in iso_zones:
+            if z['changed']:
+                if current_run:
+                    runs.append(('distribute', current_run))
+                    current_run = []
+                runs.append(('actual', [z]))
+            else:
+                current_run.append(z)
+        if current_run:
+            runs.append(('distribute', current_run))
+
+        # ---- Helper: get resource dict from optimizer data ----
+        def _res_dict(d):
+            r = {}
+            for res in RESOURCES:
+                r[res] = d['resource_twh'][res]
+            r['battery'] = d['battery_twh']
+            r['ldes'] = d['ldes_twh']
+            return r
+
+        # ---- Process each run ----
+        for run_idx, (run_type, run_zones) in enumerate(runs):
+            first_z = run_zones[0]
+            last_z = run_zones[-1]
+
+            # Determine the START state for this run
+            if run_idx == 0 and run_type == 'distribute':
+                # First run is distributed: start from EXISTING CLEAN FLOOR ($0 cost)
+                start_res = dict(existing_twh)
+                start_co2 = baseline_co2_mt
+                start_cost_per_mwh = 0  # existing = $0
+                start_gas_cost = iso_data[first_z['t_start']]['gas_cost']
+                start_gas_mw = iso_data[first_z['t_start']]['new_gas_mw']
+                start_match = existing_pct
+            else:
+                # Start from the optimizer at this zone's start threshold
+                d = first_z['data_start']
+                start_res = _res_dict(d)
+                start_co2 = co2_at_threshold.get(first_z['t_start'], baseline_co2_mt)
+                start_cost_per_mwh = d['incremental_cost'] - d['gas_cost']
+                start_gas_cost = d['gas_cost']
+                start_gas_mw = d['new_gas_mw']
+                start_match = d['match_score']
+
+            # Determine the END state for this run
+            d_end = last_z['data_end']
+            end_res = _res_dict(d_end)
+            end_co2 = co2_at_threshold.get(last_z['t_end'], baseline_co2_mt)
+            end_cost_per_mwh = d_end['incremental_cost'] - d_end['gas_cost']
+            end_gas_cost = d_end['gas_cost']
+            end_gas_mw = d_end['new_gas_mw']
+            end_match = d_end['match_score']
+
+            # Total deltas for the run
+            total_delta_res = {}
+            for res in list(RESOURCES) + ['battery', 'ldes']:
+                total_delta_res[res] = end_res.get(res, 0) - start_res.get(res, 0)
+
+            total_delta_co2 = max(0, start_co2 - end_co2)
+            total_delta_cost_per_mwh = end_cost_per_mwh - start_cost_per_mwh
+            total_delta_cost_bn = total_delta_cost_per_mwh * demand_mwh / 1e9
+            total_delta_clean_twh = sum(max(0, v) for v in total_delta_res.values())
+
+            # Get dispatch-based emission info
+            _, _, displacement = compute_marginal_displaced_rate_dispatch(
+                iso, first_z['t_start'], last_z['t_end'],
+                egrid, med_data, demand_data, gen_profiles
+            )
+            ep_rate = displacement.get('avg_rate_at_end', 0) if displacement else 0
+            if ep_rate < 0.001:
+                regional = egrid.get(iso, {})
+                ep_rate = regional.get('gas_co2_lb_per_mwh', 0.0) / 2204.62
+
+            # Newbuild LCOE at run endpoint
+            newbuild_lcoe = d_end['total_cost'] - d_end['gas_cost']
+            match_frac = end_match / 100.0
+            lcoe_per_cfe = newbuild_lcoe / match_frac if match_frac > 0.01 else float('inf')
+
+            # MAC for the run
+            if total_delta_co2 > 0.001:
+                run_mac = abs(total_delta_cost_bn * 1e3) / total_delta_co2  # $/tCO₂
+            elif ep_rate > 0.0001:
+                run_mac = lcoe_per_cfe / ep_rate
+            else:
+                run_mac = float('inf')
+
+            primary_fuel = displacement.get('primary_fuel', 'gas') if displacement else 'gas'
+
+            # ---- Distribute across zones in this run ----
+            n_zones = len(run_zones)
+            for zi, z in enumerate(run_zones):
+                frac = 1.0 / n_zones
+
+                zone_delta_res = {res: total_delta_res.get(res, 0) * frac
+                                  for res in list(RESOURCES) + ['battery', 'ldes']}
+                zone_co2 = total_delta_co2 * frac
+                zone_cost_bn = total_delta_cost_bn * frac
+                zone_clean_twh = total_delta_clean_twh * frac
+                zone_cost_per_mwh = total_delta_cost_per_mwh * frac
+                gas_delta_mw = (end_gas_mw - start_gas_mw) * frac
+                gas_cost_delta = (end_gas_cost - start_gas_cost) * frac
+
+                year_start = SBTI_YEAR_MAP.get(z['t_start'], 2025)
+                year_end = SBTI_YEAR_MAP.get(z['t_end'], 2050)
+                midpoint_year = (year_start + year_end) / 2
+                growth_factor = (1 + GROWTH_RATES[iso] / 100) ** (midpoint_year - 2025)
+
+                # Interpolated match at zone end
+                interp_match = start_match + (end_match - start_match) * (zi + 1) / n_zones
+
+                zone_metrics.append({
+                    'iso': iso,
+                    'zone_idx': z['zone_idx'],
+                    'zone_label': z['zone']['label'],
+                    'threshold_start': z['t_start'],
+                    'threshold_end': z['t_end'],
+                    'year_start': year_start,
+                    'year_end': year_end,
+                    'marginal_mac': round(min(run_mac, 9999), 1),
+                    'marginal_mac_display': round(min(run_mac, 1500), 1),
+                    'newbuild_lcoe_per_cfe': round(lcoe_per_cfe, 1),
+                    'endpoint_emission_rate': round(ep_rate, 4),
+                    'co2_displaced_mt': round(zone_co2, 2),
+                    'displaced_emission_rate': round(ep_rate, 4),
+                    'displacement_detail': displacement if displacement else {},
+                    'primary_fuel_displaced': primary_fuel,
+                    'fossil_twh_start': round(demand_twh * (1 - start_match / 100), 1),
+                    'fossil_twh_end': round(demand_twh * (1 - interp_match / 100), 1),
+                    'delta_clean_twh': round(zone_clean_twh, 1),
+                    'delta_cost_per_mwh': round(zone_cost_per_mwh, 2),
+                    'delta_cost_total_bn': round(zone_cost_bn, 2),
+                    'delta_resources': {k: round(v, 1) for k, v in zone_delta_res.items()},
+                    'end_resource_twh': {k: round(v, 1) for k, v in end_res.items()},
+                    'gas_backup_mw_end': d_end['gas_backup_mw'],
+                    'gas_cost_per_mwh_end': round(end_gas_cost, 2),
+                    'delta_gas_cost_per_mwh': round(gas_cost_delta, 2),
+                    'delta_gas_mw': round(gas_delta_mw, 0),
+                    'demand_twh': demand_twh,
+                    'growth_factor': round(growth_factor, 3),
+                    'growth_adjusted_demand_twh': round(demand_twh * growth_factor, 1),
+                    'growth_adjusted_co2_mt': round(zone_co2 * growth_factor, 2),
+                })
 
     # Sort by marginal MAC — the consequential deployment queue
     zone_metrics.sort(key=lambda x: (x['marginal_mac'], -x['co2_displaced_mt']))
@@ -758,7 +906,7 @@ def compute_sequencing_analysis(med_data, stranding, queue):
             'forgone_gas_reduction_gw': round(cf_gas_offset_gw - wind_gas_offset_gw, 1),
         }
 
-        cheap_step = next((s for s in queue if s['iso'] == iso and s['zone_label'] == '50→75%'), None)
+        cheap_step = next((s for s in queue if s['iso'] == iso and s['threshold_start'] == 50.0), None)
         mac_naive = cheap_step['marginal_mac'] if cheap_step else 0
 
         stranded_wind = stranding_from_cheap_zone.get('wind', {}).get('stranded_twh', 0)
