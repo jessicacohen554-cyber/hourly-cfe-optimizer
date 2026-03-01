@@ -220,6 +220,10 @@ def load_and_process_iso(iso, fnames):
     partial results then merging more rows and deduplicating again produces
     the same result as a single global dedup.
 
+    Incremental dedup triggers on NEW rows added since last pass (not total
+    accumulator size), preventing redundant dedup passes when small 1D
+    storage-refined parquets are appended to an already-deduped accumulator.
+
     Args:
         iso: ISO name (e.g., 'PJM')
         fnames: List of parquet filenames to process
@@ -234,6 +238,7 @@ def load_and_process_iso(iso, fnames):
     total_input = 0
     total_gated = 0
     n_incremental_dedups = 0
+    rows_since_last_dedup = 0  # Track new rows added since last dedup pass
 
     for fname in fnames:
         # Step 1D files are prefixed with '1d/' to indicate the directory
@@ -277,10 +282,15 @@ def load_and_process_iso(iso, fnames):
                 accumulated = rg
             else:
                 accumulated = pa.concat_tables([accumulated, rg], promote_options='permissive')
+            rows_since_last_dedup += rg.num_rows
             del rg
 
-            # Incremental dedup when accumulator gets large
-            if accumulated is not None and accumulated.num_rows > INCREMENTAL_DEDUP_THRESHOLD:
+            # Incremental dedup when enough NEW rows have been added since
+            # last pass. Using rows_since_last_dedup (not total accumulator
+            # size) prevents redundant dedup passes when small files (e.g.,
+            # 1D storage-refined parquets at 200K-1.2M rows) are appended
+            # to an already-deduped accumulator of 36M+ rows.
+            if rows_since_last_dedup > INCREMENTAL_DEDUP_THRESHOLD:
                 pre = accumulated.num_rows
                 arrays = {}
                 for col in resource_cols + STORAGE_COLS + ['hourly_match_score']:
@@ -290,6 +300,7 @@ def load_and_process_iso(iso, fnames):
                 del arrays
                 gc.collect()
                 n_incremental_dedups += 1
+                rows_since_last_dedup = 0
                 print(f"    Incremental dedup: {pre:,} -> {accumulated.num_rows:,}", flush=True)
 
         del pf
