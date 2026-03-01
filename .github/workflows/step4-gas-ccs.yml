@@ -57,9 +57,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$TARGET_BRANCH"
-          # Align .github/workflows/ with default branch (GITHUB_TOKEN lacks workflows permission)
-          git checkout origin/master -- .github/workflows/ 2>/dev/null || true
-          git diff --staged --quiet || git commit -m "Align workflow files with default branch"
 
       - name: Verify step-3 parquets exist
         run: |
