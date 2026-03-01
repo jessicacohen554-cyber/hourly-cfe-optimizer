@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Procurement Strategies | The 8,760 Problem</title>
 <link rel="stylesheet" href="styles/shared.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <style>
 /* ========== PAGE VARIABLES ========== */
 :root {
@@ -1083,6 +1081,8 @@ body {
 <!-- ================================================================== -->
 <!-- SCRIPTS                                                            -->
 <!-- ================================================================== -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <script src="js/procurement-strategy-data.js"></script>
 <script src="js/consequential-queue-data.js"></script>
 <script>
@@ -1541,6 +1541,7 @@ function updateResourceByISOChart() {
         return;
     }
 
+    if (typeof Chart === 'undefined') return;
     resourceByISOChart = new Chart(canvas, {
         type: 'bar',
         data: { labels: ISOS, datasets: datasets },
@@ -1629,7 +1630,7 @@ function runSimStep() {
 
     // Update visuals
     updateCounters(cd, qe);
-    updateResourceByISOChart();
+    try { updateResourceByISOChart(); } catch(e) { /* Chart.js may not be loaded */ }
     addLogEntry(qe, simStep);
 
     simStep++;
