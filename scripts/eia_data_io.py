@@ -16,7 +16,7 @@ import os
 import json
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data')
-EIA_DIR = os.path.join(DATA_DIR, 'EIA 930 Data')
+EIA_DIR = os.path.join(DATA_DIR, 'eia-930')
 
 
 def _try_parquet(name):
