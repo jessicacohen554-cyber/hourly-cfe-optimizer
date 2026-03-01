@@ -16,7 +16,7 @@ hourly shape of displacement (wind-heavy displaces different hours than
 clean-firm-heavy).
 
 Reads: data/step4-gas-ccs-parquets/step4_*.parquet (or step3 fallback),
-       data/egrid_emission_rates.json, data/eia_fossil_mix.json
+       data/egrid_emission_rates.json, data/eia-930/eia_fossil_mix.json
        data/step5-post-processing/dispatch_cache/{ISO}_dispatch_cache.parquet
 Writes: data/step5-post-processing/consequential_queue.json,
         dashboard/js/consequential-queue-data.js
@@ -55,7 +55,7 @@ STEP4_PARQUET_DIR = os.path.join(BASE_DIR, 'data', 'step4-gas-ccs-parquets')
 STEP3_PARQUET_DIR = os.path.join(BASE_DIR, 'data', 'step3-cost-opt-parquets')
 META_PATH = os.path.join(BASE_DIR, 'data', 'step4-gas-ccs-parquets', 'step4_meta.json')
 EGRID_PATH = os.path.join(BASE_DIR, 'data', 'egrid_emission_rates.json')
-FOSSIL_MIX_PATH = os.path.join(BASE_DIR, 'data', 'EIA 930 Data', 'eia_fossil_mix.json')  # legacy fallback
+FOSSIL_MIX_PATH = os.path.join(BASE_DIR, 'data', 'eia-930', 'eia_fossil_mix.json')  # legacy fallback
 OUTPUT_JSON = os.path.join(BASE_DIR, 'data', 'step5-post-processing', 'consequential_queue.json')
 OUTPUT_JS = os.path.join(BASE_DIR, 'dashboard', 'js', 'consequential-queue-data.js')
 
