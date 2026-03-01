@@ -265,11 +265,11 @@ FOAK_H2 = {
 #
 # Format: {toggle_level: (foak_start_year, noak_year)}
 LEARNING_PARAMS = {
-    'nuclear': {'L': (2028, 2038), 'M': (2030, 2042), 'H': (2035, 2047)},
-    'ccs':     {'L': (2028, 2037), 'M': (2030, 2040), 'H': (2033, 2045)},
-    'geo':     {'L': (2027, 2036), 'M': (2029, 2039), 'H': (2033, 2043)},
-    'ldes':    {'L': (2029, 2039), 'M': (2031, 2043), 'H': (2035, 2047)},
-    'h2':      {'L': (2029, 2039), 'M': (2031, 2043), 'H': (2035, 2047)},
+    'nuclear': {'L': (2028, 2036), 'M': (2030, 2040), 'H': (2036, 2048)},
+    'ccs':     {'L': (2028, 2036), 'M': (2030, 2040), 'H': (2036, 2048)},
+    'geo':     {'L': (2028, 2036), 'M': (2030, 2040), 'H': (2036, 2048)},
+    'ldes':    {'L': (2028, 2036), 'M': (2030, 2040), 'H': (2036, 2048)},
+    'h2':      {'L': (2028, 2036), 'M': (2030, 2040), 'H': (2036, 2048)},
     # Battery: mature tech, shallow curve. FOAK only 5% above High.
     # Fast timelines — all at NOAK by ~2035 even in pessimistic case.
     'bat4':    {'L': (2025, 2030), 'M': (2026, 2032), 'H': (2027, 2035)},
@@ -1428,9 +1428,9 @@ def preextract_winner_data(arrays, extras, unique_indices, iso, demand_twh):
              'wind': int(wnd_vals[pos]), 'ccs_ccgt': int(ccs_vals[pos]),
              'hydro': int(hyd_vals[pos])},
             round(float(match_vals[pos]), 4),
-            int(bat_vals[pos]),
-            int(bat8_vals[pos]),
-            int(ldes_vals[pos]),
+            round(float(bat_vals[pos]), 4),
+            round(float(bat8_vals[pos]), 4),
+            round(float(ldes_vals[pos]), 4),
             float(match_frac_vals[pos]),
             round(float(cf_existing_twh_vals[pos]), 3),
             round(float(uprate_twh_vals[pos]), 3),
@@ -1538,9 +1538,9 @@ def build_winner_scenario(arrays, extras, best_idx, sens, iso, demand_twh,
             'hydro': hyd,
         },
         'hourly_match_score': round(float(arrays['hourly_match_score'][best_idx]), 4),
-        'battery_dispatch_pct': int(arrays['battery_dispatch_pct'][best_idx]),
-        'battery8_dispatch_pct': int(bat8_arr[best_idx]) if bat8_arr is not None else 0,
-        'ldes_dispatch_pct': int(arrays['ldes_dispatch_pct'][best_idx]),
+        'battery_dispatch_pct': round(float(arrays['battery_dispatch_pct'][best_idx]), 4),
+        'battery8_dispatch_pct': round(float(bat8_arr[best_idx]), 4) if bat8_arr is not None else 0.0,
+        'ldes_dispatch_pct': round(float(arrays['ldes_dispatch_pct'][best_idx]), 4),
         'costs': {
             'total_cost': round(tc_val, 2),
             'effective_cost': round(ec_val, 2),
@@ -1895,10 +1895,10 @@ def arrays_to_mix_dict(arrays, idx):
             'hydro': int(arrays['hydro'][idx]),
         },
         'hourly_match_score': round(float(arrays['hourly_match_score'][idx]), 4),
-        'battery_dispatch_pct': int(arrays['battery_dispatch_pct'][idx]),
-        'battery8_dispatch_pct': int(bat8[idx]) if bat8 is not None else 0,
-        'ldes_dispatch_pct': int(arrays['ldes_dispatch_pct'][idx]),
-        'h2_dispatch_pct': int(h2[idx]) if h2 is not None else 0,
+        'battery_dispatch_pct': round(float(arrays['battery_dispatch_pct'][idx]), 4),
+        'battery8_dispatch_pct': round(float(bat8[idx]), 4) if bat8 is not None else 0.0,
+        'ldes_dispatch_pct': round(float(arrays['ldes_dispatch_pct'][idx]), 4),
+        'h2_dispatch_pct': round(float(h2[idx]), 4) if h2 is not None else 0.0,
     }
 
 
@@ -2176,10 +2176,10 @@ def main():
                 'ccs_ccgt': ccs_pct.tolist(),
                 'hydro': _hyd_i.tolist(),
                 'hourly_match_score': np.round(arrays['hourly_match_score'][idx_arr], 4).tolist(),
-                'battery_dispatch_pct': arrays['battery_dispatch_pct'][idx_arr].astype(np.int64).tolist(),
-                'battery8_dispatch_pct': bat8[idx_arr].astype(np.int64).tolist(),
-                'ldes_dispatch_pct': arrays['ldes_dispatch_pct'][idx_arr].astype(np.int64).tolist(),
-                'h2_dispatch_pct': h2[idx_arr].astype(np.int64).tolist(),
+                'battery_dispatch_pct': np.round(arrays['battery_dispatch_pct'][idx_arr], 4).tolist(),
+                'battery8_dispatch_pct': np.round(bat8[idx_arr], 4).tolist(),
+                'ldes_dispatch_pct': np.round(arrays['ldes_dispatch_pct'][idx_arr], 4).tolist(),
+                'h2_dispatch_pct': np.round(h2[idx_arr], 4).tolist(),
             }
 
             t_str = str(thr)
@@ -2875,15 +2875,15 @@ def main():
                                 row['hourly_match_score'] = float(
                                     arrs_['hourly_match_score'][mix_idx])
 
-                                # Storage (all 4 types)
-                                row['battery_dispatch_pct'] = int(
-                                    arrs_.get('battery_dispatch_pct', np.zeros(1))[mix_idx])
-                                row['battery8_dispatch_pct'] = int(
-                                    arrs_.get('battery8_dispatch_pct', np.zeros(1))[mix_idx])
-                                row['ldes_dispatch_pct'] = int(
-                                    arrs_.get('ldes_dispatch_pct', np.zeros(1))[mix_idx])
-                                row['h2_dispatch_pct'] = int(
-                                    arrs_.get('h2_dispatch_pct', np.zeros(1))[mix_idx])
+                                # Storage (all 4 types — float, not int: values are sub-1.0 fractions)
+                                row['battery_dispatch_pct'] = round(float(
+                                    arrs_.get('battery_dispatch_pct', np.zeros(1))[mix_idx]), 4)
+                                row['battery8_dispatch_pct'] = round(float(
+                                    arrs_.get('battery8_dispatch_pct', np.zeros(1))[mix_idx]), 4)
+                                row['ldes_dispatch_pct'] = round(float(
+                                    arrs_.get('ldes_dispatch_pct', np.zeros(1))[mix_idx]), 4)
+                                row['h2_dispatch_pct'] = round(float(
+                                    arrs_.get('h2_dispatch_pct', np.zeros(1))[mix_idx]), 4)
 
                                 # Existing clean TWh available (constant, independent of mix/growth)
                                 _ex = EXISTING_CLEAN_TWH[iso_]
@@ -2962,14 +2962,14 @@ def main():
                         row['mix_hydro'] = hyd
                         row['hourly_match_score'] = float(
                             tarrs_['hourly_match_score'][mix_idx])
-                        row['battery_dispatch_pct'] = int(
-                            tarrs_.get('battery_dispatch_pct', np.zeros(1))[mix_idx])
-                        row['battery8_dispatch_pct'] = int(
-                            tarrs_.get('battery8_dispatch_pct', np.zeros(1))[mix_idx])
-                        row['ldes_dispatch_pct'] = int(
-                            tarrs_.get('ldes_dispatch_pct', np.zeros(1))[mix_idx])
-                        row['h2_dispatch_pct'] = int(
-                            tarrs_.get('h2_dispatch_pct', np.zeros(1))[mix_idx])
+                        row['battery_dispatch_pct'] = round(float(
+                            tarrs_.get('battery_dispatch_pct', np.zeros(1))[mix_idx]), 4)
+                        row['battery8_dispatch_pct'] = round(float(
+                            tarrs_.get('battery8_dispatch_pct', np.zeros(1))[mix_idx]), 4)
+                        row['ldes_dispatch_pct'] = round(float(
+                            tarrs_.get('ldes_dispatch_pct', np.zeros(1))[mix_idx]), 4)
+                        row['h2_dispatch_pct'] = round(float(
+                            tarrs_.get('h2_dispatch_pct', np.zeros(1))[mix_idx]), 4)
 
                         # Existing clean TWh available (constant)
                         _ex = EXISTING_CLEAN_TWH[iso_]
