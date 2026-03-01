@@ -17,6 +17,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
+import numpy as np
+
 from scenario_common import (
     ISOS, RESOURCES, THRESHOLDS, SCENARIO_A, SCENARIO_B,
     HYDRO_CAP_TWH, WHOLESALE_PRICES, FUEL_ADJUSTMENTS,
@@ -39,6 +41,11 @@ from scenario_common import (
     _build_learning_overrides,
     build_augmented_result,
     parse_iso_args, save_scenario_results,
+    # Vectorized batch operations
+    _to_mix_array, _precompute_cost_params,
+    batch_compute_total_costs, batch_filter_floor,
+    batch_floor_excess, precompute_excess_lcoes,
+    find_cheapest_mix,
 )
 
 
@@ -128,103 +135,47 @@ def _forward_step_optimization(feasible_mixes, sens, get_overrides_fn, label,
 
             overrides = get_overrides_fn(iso, t)
 
-            # --- Step 1: Filter EF mixes by per-resource floor ---
+            # --- Step 1: Filter EF mixes by per-resource floor (vectorized) ---
             ef_mixes = feasible_mixes.get(iso, {}).get(t_str, [])
-            filtered = _filter_mixes_by_floor(ef_mixes, floor_twh, demand_twh, iso)
+
+            if ef_mixes:
+                ef_arr = _to_mix_array(ef_mixes)
+                floor_mask = batch_filter_floor(ef_arr, floor_twh, demand_twh, iso)
+                filtered_arr = ef_arr[floor_mask]
+            else:
+                filtered_arr = np.empty((0, 10), dtype=np.float64)
+
+            # --- Step 2: If no EF mixes survive, use all EF (relaxed floor) ---
             source = 'EF'
+            if filtered_arr.shape[0] == 0 and ef_mixes:
+                filtered_arr = _to_mix_array(ef_mixes)
+                source = 'EF-relaxed'
+                print(f"  -> {iso} {t}% [{label}]: Floor filter eliminated all "
+                      f"{len(ef_mixes)} EF mixes, using all (relaxed floor)")
 
-            # --- Step 2: If no EF mixes survive, fall back to PFS ---
-            if not filtered:
-                pfs_mixes = _load_pfs_mixes(iso, t)
-                if pfs_mixes:
-                    # First pass: floor to floor+10%
-                    filtered = _filter_pfs_by_floor_window(
-                        pfs_mixes, floor_twh, demand_twh, iso, max_pct_above=10.0)
-                    source = 'PFS+10'
-
-                    # Cap if too many mixes survived
-                    if len(filtered) > max_pfs_eval:
-                        filtered = _rank_and_cap_pfs(
-                            filtered, floor_twh, demand_twh, iso, max_pfs_eval)
-
-                    if not filtered:
-                        # Second pass: floor to floor+250%
-                        filtered = _filter_pfs_by_floor_window(
-                            pfs_mixes, floor_twh, demand_twh, iso, max_pct_above=250.0)
-                        source = 'PFS+250'
-
-                        # Cap if too many mixes survived
-                        if len(filtered) > max_pfs_eval:
-                            filtered = _rank_and_cap_pfs(
-                                filtered, floor_twh, demand_twh, iso, max_pfs_eval)
-
-                    if not filtered:
-                        # Final fallback: take ALL PFS mixes that meet the floor
-                        # as a minimum (no upper bound)
-                        filtered = _filter_mixes_by_floor(
-                            pfs_mixes, floor_twh, demand_twh, iso)
-                        source = 'PFS-all'
-
-                        # Cap if too many mixes survived
-                        if len(filtered) > max_pfs_eval:
-                            filtered = _rank_and_cap_pfs(
-                                filtered, floor_twh, demand_twh, iso, max_pfs_eval)
-
-                    if not filtered:
-                        # Absolute last resort: relax floor, take any PFS mix,
-                        # but carry under-floor resource costs forward
-                        filtered = pfs_mixes
-                        source = 'PFS-relaxed'
-
-                        # Cap if too many mixes survived
-                        if len(filtered) > max_pfs_eval:
-                            filtered = _rank_and_cap_pfs(
-                                filtered, floor_twh, demand_twh, iso, max_pfs_eval)
-
-                if not filtered:
-                    print(f"  WARNING {iso} {t}% [{label}]: No mixes found (EF or PFS)")
-                    continue
-
-            if source != 'EF':
-                print(f"  -> {iso} {t}% [{label}]: EF empty after floor filter, "
-                      f"using {source} ({len(filtered)} mixes)")
-
-            # --- Step 3: Price filtered mixes, pick cheapest ---
-            best_total_cost = float('inf')
-            best_result = None
-            best_mix = None
-            best_excess_per_mwh = 0.0
-
-            for mix in filtered:
-                result = compute_mix_cost(mix, iso_sens, iso, demand_twh,
-                                         overrides=overrides, growth_factor=gf)
-
-                deployed = _mix_resource_twh(mix, demand_twh, iso)
-
-                # If this mix goes UNDER on a resource vs floor (only possible
-                # in PFS-relaxed fallback), price the gap as carried cost
-                excess_per_mwh = 0.0
-                for res in floor_twh:
-                    shortfall = max(0, floor_twh.get(res, 0) - deployed.get(res, 0))
-                    if shortfall > 0.01:
-                        # Split into existing ($0) and committed-new (newbuild)
-                        existing_gap = max(0, min(shortfall,
-                                                  existing_twh.get(res, 0) - deployed.get(res, 0)))
-                        newbuild_gap = shortfall - max(0, existing_gap)
-                        if newbuild_gap > 0.01:
-                            lcoe = _get_excess_lcoe(res, iso_sens, iso, overrides)
-                            excess_per_mwh += newbuild_gap / demand_twh * lcoe
-
-                total_with_excess = result['total_cost'] + excess_per_mwh
-
-                if total_with_excess < best_total_cost:
-                    best_total_cost = total_with_excess
-                    best_result = result
-                    best_mix = mix
-                    best_excess_per_mwh = excess_per_mwh
-
-            if not best_result or not best_mix:
+            if filtered_arr.shape[0] == 0:
+                print(f"  WARNING {iso} {t}% [{label}]: No EF mixes at this threshold")
                 continue
+
+            # --- Step 3: Vectorized batch cost evaluation ---
+            params = _precompute_cost_params(iso_sens, iso, demand_twh,
+                                             overrides, gf)
+            costs = batch_compute_total_costs(filtered_arr, params)
+
+            # Add floor excess penalty (vectorized)
+            excess_lcoes = precompute_excess_lcoes(iso_sens, iso, overrides)
+            excess = batch_floor_excess(filtered_arr, floor_twh, existing_twh,
+                                        demand_twh, iso, excess_lcoes)
+            total_aug = costs + excess
+
+            best_idx = int(np.argmin(total_aug))
+            best_total_cost = float(total_aug[best_idx])
+            best_excess_per_mwh = float(excess[best_idx])
+
+            # Build full result dict only for the winner (scalar call)
+            best_mix = filtered_arr[best_idx].tolist()
+            best_result = compute_mix_cost(best_mix, iso_sens, iso, demand_twh,
+                                           overrides=overrides, growth_factor=gf)
 
             # --- Step 4: Build result with augmented resources ---
             deployed = _mix_resource_twh(best_mix, demand_twh, iso)
