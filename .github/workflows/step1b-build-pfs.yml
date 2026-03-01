@@ -95,9 +95,6 @@ jobs:
         TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
         TARGET_BRANCH="auto/${TIMESTAMP}-step1b-pfs-${{ inputs.iso }}"
         git checkout -b "$TARGET_BRANCH"
-        # Align .github/workflows/ with default branch (GITHUB_TOKEN lacks workflows permission)
-        git checkout origin/master -- .github/workflows/ 2>/dev/null || true
-        git diff --staged --quiet || git commit -m "Align workflow files with default branch"
         echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
 
     - name: "Build PFS from scored database (auto-commit per threshold)"
