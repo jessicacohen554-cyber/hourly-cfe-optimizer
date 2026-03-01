@@ -398,9 +398,9 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         portfolio to achieve specified levels of <strong>hourly matching</strong> &mdash; the fraction of
         electricity demand met by contemporaneous clean generation in each of 8,760 annual hours. Analyzing
         seven major U.S. Independent System Operator (ISO) regions (CAISO, ERCOT, PJM, NYISO, NEISO, MISO, SPP) using
-        2025 EIA-930 hourly data, we find that achieving 90% hourly matching costs $44&ndash;83/MWh
-        (effective) &mdash; a result that is robust across sensitivity analyses. At 99% matching,
-        costs rise to $54&ndash;96/MWh with 9&ndash;16% curtailment, driven by CCS-CCGT and
+        2025 EIA-930 hourly data, we find that achieving 90% hourly matching costs $28&ndash;66/MWh
+        (effective, medium sensitivity) across regions &mdash; a result that is robust across sensitivity analyses. At 99% matching,
+        costs rise to $33&ndash;76/MWh with 9&ndash;16% curtailment, driven by CCS-CCGT and
         clean firm additions. The model co-optimizes across seven resource types: clean firm (nuclear,
         geothermal), CCS-CCGT, solar, wind, hydro, battery (4hr Li-ion), and LDES (100hr iron-air). The
         optimal resource mix shifts from wind- and solar-heavy at lower targets to clean-firm-dominant
@@ -1433,7 +1433,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         Cost and mix outcomes vary substantially by region, driven by three factors: (1) existing clean
         grid mix, (2) renewable resource quality, and (3) wholesale market prices. ERCOT benefits from
         excellent wind resources ($40/MWh new-build) but lacks hydro, resulting in a wind-dominant strategy
-        that becomes unsustainable above 95%. NYISO's combination of significant hydro (40% cap) and nuclear
+        that becomes unsustainable above 95%. NYISO's combination of significant hydro (25% cap) and nuclear
         (18.4% grid share) enables the lowest curtailment across matching targets.
     </p>
     <p>
@@ -1820,11 +1820,11 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         energy matching across seven major U.S. ISO regions. Our key findings are:
     </p>
     <ol style="margin: 10px 0 24px 24px; font-size: 0.92rem; line-height: 2.2; color: var(--text-secondary);">
-        <li><strong>90% hourly matching is achievable at moderate cost</strong> ($47&ndash;70/MWh effective), representing a $17&ndash;28/MWh premium above wholesale grid electricity. This finding is robust across sensitivity analyses.</li>
+        <li><strong>90% hourly matching is achievable at moderate cost</strong> ($28&ndash;66/MWh effective at medium sensitivity), representing a modest premium above wholesale grid electricity. This finding is robust across sensitivity analyses. Wind-rich regions (SPP at $28/MWh, ERCOT at $31/MWh) are cheapest; constrained grids (NYISO at $66/MWh, NEISO at $65/MWh) are most expensive.</li>
         <li><strong>The cost curve inflects sharply above 95%,</strong> with the 99&ndash;100% increment costing $18&ndash;32/MWh alone &mdash; equivalent to the entire 75&ndash;90% range. This is the most replicated finding in the literature.</li>
         <li><strong>Clean firm power (nuclear, geothermal) is essential</strong> for cost-effective deep matching, growing from ~27% of the portfolio at 75% matching to ~60% at 100% under 4-hour storage constraints. Long-duration storage could moderate this requirement.</li>
         <li><strong>Curtailment reaches 30&ndash;33% at 100% matching</strong> in the 4-hour storage scenario, though LDES technologies could reduce this to 5&ndash;15%. This remains a critical cost driver at high matching targets.</li>
-        <li><strong>Regional resource endowments create 2&times; cost differences</strong> (ERCOT at $95/MWh vs. NEISO at $120/MWh for 100% matching), underscoring the importance of location-specific procurement strategies.</li>
+        <li><strong>Regional resource endowments create 2&ndash;3&times; cost differences</strong> (SPP at $34/MWh vs. PJM at $92/MWh for &ge;99.99% matching at medium sensitivity), underscoring the importance of location-specific procurement strategies.</li>
     </ol>
     <p>
         These results argue for a strategic, staged approach to 24/7 clean energy procurement
