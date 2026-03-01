@@ -51,7 +51,7 @@ CALL_DELAY = 0.5
 
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(SCRIPT_DIR, "data")
-EIA_930_DATA_DIR = os.path.join(DATA_DIR, "EIA 930 Data")
+EIA_930_DATA_DIR = os.path.join(DATA_DIR, "eia-930")
 
 
 def hours_in_year(year):
@@ -479,9 +479,9 @@ def main():
 
     # Aggregated profiles — merge with existing data (preserves ISOs not fetched)
     print()
-    gen_path = os.path.join(DATA_DIR, "EIA 930 Data", "eia_generation_profiles.json")
-    fossil_path = os.path.join(DATA_DIR, "EIA 930 Data", "eia_fossil_mix.json")
-    demand_path = os.path.join(DATA_DIR, "EIA 930 Data", "eia_demand_profiles.json")
+    gen_path = os.path.join(DATA_DIR, "eia-930", "eia_generation_profiles.json")
+    fossil_path = os.path.join(DATA_DIR, "eia-930", "eia_fossil_mix.json")
+    demand_path = os.path.join(DATA_DIR, "eia-930", "eia_demand_profiles.json")
 
     print("Building generation profiles...")
     new_profiles = build_generation_profiles(all_gen)
