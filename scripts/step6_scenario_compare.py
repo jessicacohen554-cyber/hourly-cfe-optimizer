@@ -39,6 +39,7 @@ from scenario_common import (
     NEW_CCGT_COST_KW_YR, PEAK_CAPACITY_CREDITS, GAS_AVAILABILITY_FACTOR,
     RESOURCE_ADEQUACY_MARGIN, ZONES, DEMAND_GROWTH_RATES,
     get_demand_twh, get_demand_growth_factor,
+    recompute_gas_backup,
     compute_fossil_retirement, compute_co2_from_dispatch,
     load_common_data, get_supply_profiles, get_demand_profile,
     _archetype_key, load_dispatch_cache, get_or_compute_dispatch,
@@ -198,20 +199,13 @@ def _build_trajectory(results, egrid, fossil_mix, demand_data, gen_profiles,
                     old_max = running_max.get(field, 0)
                     entry[field] = max(old_max, val)
                     running_max[field] = entry[field]
-                clean_peak_mw = 0
-                for r, twh in entry['resource_twh'].items():
-                    pcc = PEAK_CAPACITY_CREDITS.get(r, 0)
-                    if pcc > 0 and twh > 0:
-                        clean_peak_mw += (twh * 1e6 / 8760) * pcc
-                clean_peak_mw += (entry.get('battery_twh', 0) * 1e6 / 8760) * PEAK_CAPACITY_CREDITS.get('battery', 0.95)
-                clean_peak_mw += (entry.get('ldes_twh', 0) * 1e6 / 8760) * PEAK_CAPACITY_CREDITS.get('ldes', 0.90)
                 gf = get_demand_growth_factor(iso, entry['threshold'])
-                ra_peak_mw = PEAK_DEMAND_MW[iso] * gf * (1 + RESOURCE_ADEQUACY_MARGIN)
-                gaf = GAS_AVAILABILITY_FACTOR[iso]
-                gas_needed_mw = max(0, ra_peak_mw - clean_peak_mw) / gaf
-                entry['gas_backup_mw'] = round(gas_needed_mw)
-                entry['new_gas_mw'] = round(max(0, gas_needed_mw - EXISTING_GAS_CAPACITY_MW[iso]))
-                entry['clean_peak_mw'] = round(clean_peak_mw)
+                gas_mw, new_gas_mw, _, clean_peak_mw = recompute_gas_backup(
+                    iso, entry['resource_twh'],
+                    entry.get('battery_twh', 0), entry.get('ldes_twh', 0), gf)
+                entry['gas_backup_mw'] = gas_mw
+                entry['new_gas_mw'] = new_gas_mw
+                entry['clean_peak_mw'] = clean_peak_mw
                 cf_twh = entry['resource_twh'].get('clean_firm', 0)
                 ccs_twh = entry['resource_twh'].get('ccs_ccgt', 0)
                 existing_cf_twh = GRID_MIX_SHARES[iso].get('clean_firm', 0) / 100.0 * BASE_DEMAND_TWH[iso]
@@ -247,11 +241,14 @@ def print_comparison(results_a, results_b, queue_a, queue_b, stranding_a, strand
         for step in queue:
             deltas = step['delta_resources']
             sorted_d = sorted(deltas.items(), key=lambda x: abs(x[1]), reverse=True)
-            top = sorted_d[0]
-            top_str = f"{top[0]}: {'+' if top[1]>0 else ''}{top[1]:.0f} TWh"
-            if len(sorted_d) > 1 and abs(sorted_d[1][1]) > 1:
-                r2 = sorted_d[1]
-                top_str += f", {r2[0]}: {'+' if r2[1]>0 else ''}{r2[1]:.0f}"
+            if sorted_d:
+                top = sorted_d[0]
+                top_str = f"{top[0]}: {'+' if top[1]>0 else ''}{top[1]:.0f} TWh"
+                if len(sorted_d) > 1 and abs(sorted_d[1][1]) > 1:
+                    r2 = sorted_d[1]
+                    top_str += f", {r2[0]}: {'+' if r2[1]>0 else ''}{r2[1]:.0f}"
+            else:
+                top_str = "(no resource delta)"
 
             mac_str = f"${step['marginal_mac']:,.0f}" if step['marginal_mac'] < 9999 else "$inf"
             print(f"{step['queue_position']:>3} {step['iso']:<7} {step['zone_label']:<12} "
@@ -437,20 +434,24 @@ def main():
     # Load pre-computed scenario results from intermediate JSON files
     # ------------------------------------------------------------------
     print("\nLoading Scenario A results...")
-    results_a, _meta_a = load_scenario_results('A')
+    results_a, _meta_a = load_scenario_results('A', isos=requested_isos)
     if results_a is None:
         print("ERROR: Scenario A results not found.")
         print("  Run the Scenario A script first to produce intermediate results.")
-        print("  Expected file: data/step5-post-processing/scenario_a_results.json")
+        print("  Expected: data/step5-post-processing/scenario_a_{ISO}.json per ISO")
         sys.exit(1)
 
+    print(f"  Loaded A: {sorted(results_a.keys())}")
+
     print("Loading Scenario B results...")
-    results_b, _meta_b = load_scenario_results('B')
+    results_b, _meta_b = load_scenario_results('B', isos=requested_isos)
     if results_b is None:
         print("ERROR: Scenario B results not found.")
         print("  Run the Scenario B script first to produce intermediate results.")
-        print("  Expected file: data/step5-post-processing/scenario_b_results.json")
+        print("  Expected: data/step5-post-processing/scenario_b_{ISO}.json per ISO")
         sys.exit(1)
+
+    print(f"  Loaded B: {sorted(results_b.keys())}")
 
     # ------------------------------------------------------------------
     # Determine which ISOs to compare (intersection of A, B, and requested)
