@@ -125,7 +125,7 @@ jobs:
   merge:
     needs: [prepare, process]
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
 
     permissions:
       contents: write
@@ -159,30 +159,74 @@ jobs:
           cp -rf artifact-tmp/data/step5-post-processing/* data/step5-post-processing/ 2>/dev/null || true
           cp -f artifact-tmp/dashboard/js/scenario-comparison-data.js dashboard/js/ 2>/dev/null || true
 
-      - name: Commit and push
+      - name: Batched commit and push (per-ISO)
         run: |
           git config http.postBuffer 524288000
 
-          git add -f data/step5-post-processing/ 2>/dev/null || true
-          git add -f dashboard/js/scenario-comparison-data.js 2>/dev/null || true
+          push_with_retry() {
+            local label="$1"
+            local MAX_RETRIES=4
+            for i in $(seq 1 $MAX_RETRIES); do
+              echo "  Push attempt $i/$MAX_RETRIES for ${label}..."
+              git push -u origin "$TARGET_BRANCH" 2>&1 && return 0
+              if [ "$i" -eq "$MAX_RETRIES" ]; then
+                echo "  ERROR: Push failed for ${label} after $MAX_RETRIES attempts"
+                return 1
+              fi
+              BACKOFF=$((2 ** i))
+              echo "  Retrying in ${BACKOFF}s..."
+              sleep "$BACKOFF"
+            done
+          }
 
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-            exit 0
+          PUSHED=false
+
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            ISOS="CAISO ERCOT PJM NYISO NEISO MISO SPP"
+          else
+            ISOS="${{ inputs.iso }}"
           fi
 
-          git commit -m "Step 6.3 Scenarios: ${{ inputs.script }} ${{ inputs.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-
-          MAX_RETRIES=4
-          for i in $(seq 1 $MAX_RETRIES); do
-            echo "Push attempt $i/$MAX_RETRIES..."
-            git push -u origin "$TARGET_BRANCH" 2>&1 && break
-            if [ "$i" -eq "$MAX_RETRIES" ]; then
-              echo "ERROR: Push failed after $MAX_RETRIES attempts"
-              exit 1
+          for iso in $ISOS; do
+            echo "--- Batching commit for $iso ---"
+            FILES=$(find data/step5-post-processing/ -name "*${iso}*" -o -name "*${iso,,}*" -type f 2>/dev/null || true)
+            if [ -z "$FILES" ]; then
+              echo "  No files for $iso — skipping"
+              continue
             fi
-            BACKOFF=$((2 ** i))
-            echo "Retrying in ${BACKOFF}s..."
-            sleep "$BACKOFF"
+            git add -f $FILES
+            if git diff --cached --quiet; then
+              echo "  No changes for $iso — skipping"
+              continue
+            fi
+            BATCH_MB=$(du -cm $FILES | tail -1 | cut -f1)
+            echo "  Staging ~${BATCH_MB} MB for $iso"
+            git commit -m "Step 6.3 Scenarios: ${iso} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            if push_with_retry "$iso"; then
+              PUSHED=true
+            else
+              echo "  Per-ISO push failed for $iso — falling back to per-file"
+              git reset HEAD~1
+              for f in $FILES; do
+                FNAME=$(basename "$f")
+                git add -f "$f"
+                if git diff --cached --quiet; then continue; fi
+                git commit -m "Step 6.3 Scenarios: ${iso} ${FNAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                if push_with_retry "$FNAME"; then PUSHED=true; else git reset HEAD~1; fi
+              done
+            fi
           done
+
+          # Remaining post-processing + dashboard JS
+          git add -f data/step5-post-processing/ 2>/dev/null || true
+          git add -f dashboard/js/scenario-comparison-data.js 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            echo "--- Staging remaining files + dashboard JS ---"
+            git commit -m "Step 6.3 Scenarios: dashboard JS — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            if push_with_retry "dashboard-js"; then PUSHED=true; else git reset HEAD~1; fi
+          fi
+
+          if [ "$PUSHED" = "false" ]; then
+            echo "No changes were pushed"
+          fi
 
