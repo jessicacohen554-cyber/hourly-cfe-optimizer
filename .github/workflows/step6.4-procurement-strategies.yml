@@ -7,13 +7,15 @@ name: "Step 6.4: Update Procurement Page"
 #   - Strategy 3 (A-D): Annual matching (boundary × additionality)
 # 25-year trajectories (2025→2050) along SBTi milestones.
 #
+# iso=ALL fans out parallel matrix jobs for strategy computation, then merge
+# job combines results into dashboard JS and commits everything.
 # Output: data/step5-post-processing/strategy*.json, dashboard/js/procurement-strategy-data.js
 
 on:
   workflow_dispatch:
     inputs:
       iso:
-        description: 'ISO region to compute'
+        description: 'ISO region to compute (ALL = parallel)'
         required: true
         default: 'ALL'
         type: choice
@@ -59,9 +61,77 @@ env:
   BRANCH_PREFIX: step6-4-procurement
 
 jobs:
-  run-strategies:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            echo 'matrix=["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix=["${{ inputs.iso }}"]' >> "$GITHUB_OUTPUT"
+          fi
+
+  process:
+    needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      matrix:
+        iso: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy pandas pyarrow numba
+
+      - name: "Strategy 1: Consequential — ${{ matrix.iso }}"
+        if: inputs.strategy == 'ALL' || inputs.strategy == 'strategy1'
+        run: |
+          QUICK_FLAG=""
+          if [ "${{ inputs.mode }}" = "quick" ]; then QUICK_FLAG="--quick"; fi
+          python scripts/step6_5_strategy1_consequential.py \
+            --iso ${{ matrix.iso }} $QUICK_FLAG
+
+      - name: "Strategy 2: Hourly — ${{ matrix.iso }}"
+        if: inputs.strategy == 'ALL' || inputs.strategy == 'strategy2'
+        run: |
+          QUICK_FLAG=""
+          if [ "${{ inputs.mode }}" = "quick" ]; then QUICK_FLAG="--quick"; fi
+          python scripts/step6_5_strategy2_hourly.py \
+            --iso ${{ matrix.iso }} $QUICK_FLAG
+
+      - name: "Strategy 3: Annual — ${{ matrix.iso }}"
+        if: inputs.strategy == 'ALL' || inputs.strategy == 'strategy3'
+        run: |
+          QUICK_FLAG=""
+          if [ "${{ inputs.mode }}" = "quick" ]; then QUICK_FLAG="--quick"; fi
+          python scripts/step6_5_strategy3_annual.py \
+            --iso ${{ matrix.iso }} $QUICK_FLAG
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: procurement-${{ matrix.iso }}
+          path: data/step5-post-processing/
+          retention-days: 1
+
+  merge:
+    needs: [prepare, process]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     permissions:
       contents: write
@@ -83,45 +153,23 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$TARGET_BRANCH"
 
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: procurement-*
+          path: data/step5-post-processing/
+          merge-multiple: true
+
       - name: Set up Python
+        if: inputs.generate_js == true
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
-        run: pip install numpy pandas pyarrow numba
-
-      # ════════════════════════════════════════════════════════════════════
-      # Sequential: Strategy 1 → 2 → 3 → Combine JS
-      # ════════════════════════════════════════════════════════════════════
-
-      - name: "Strategy 1: Consequential"
-        if: inputs.strategy == 'ALL' || inputs.strategy == 'strategy1'
-        run: |
-          QUICK_FLAG=""
-          if [ "${{ inputs.mode }}" = "quick" ]; then QUICK_FLAG="--quick"; fi
-          python scripts/step6_5_strategy1_consequential.py \
-            --iso ${{ inputs.iso }} $QUICK_FLAG
-
-      - name: "Strategy 2: Hourly"
-        if: inputs.strategy == 'ALL' || inputs.strategy == 'strategy2'
-        run: |
-          QUICK_FLAG=""
-          if [ "${{ inputs.mode }}" = "quick" ]; then QUICK_FLAG="--quick"; fi
-          python scripts/step6_5_strategy2_hourly.py \
-            --iso ${{ inputs.iso }} $QUICK_FLAG
-
-      - name: "Strategy 3: Annual"
-        if: inputs.strategy == 'ALL' || inputs.strategy == 'strategy3'
-        run: |
-          QUICK_FLAG=""
-          if [ "${{ inputs.mode }}" = "quick" ]; then QUICK_FLAG="--quick"; fi
-          python scripts/step6_5_strategy3_annual.py \
-            --iso ${{ inputs.iso }} $QUICK_FLAG
-
       - name: "Combine results into dashboard JS"
         if: inputs.generate_js == true
         run: |
+          mkdir -p dashboard/js
           python -c "
           import json, os
 
