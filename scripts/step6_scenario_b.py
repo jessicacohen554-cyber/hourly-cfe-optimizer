@@ -4,16 +4,20 @@
 Extracted from step6_scenario_comparison.py for standalone execution.
 
 Strategy:
-  1. Find the NOAK-optimal mix at 95% with all costs Low (CCS at Medium+45Q
-     as NOAK endpoint — CCS learning curve is H→M, not H→L).
+  1. Load the MAC/DAC crossover target per ISO from optimal_targets.json.
+     The target threshold is the nearest analyzed threshold to the
+     medium_grid__central_dac crossover (where medium DAC cost crosses
+     the medium grid cost curve). Defaults to 95% if no crossover exists.
+  2. Find the NOAK-optimal mix at the target threshold with all costs Low
+     (CCS at Medium+45Q as NOAK endpoint — CCS learning curve is H→M, not H→L).
      This is the "north star" — what the grid looks like in 2045.
-  2. At each threshold, deploy resources toward this target using an S-curve
+  3. At each threshold, deploy resources toward this target using an S-curve
      ramp that frontloads firm/storage investment.
-  3. Nuclear/LDES: accelerated FOAK(H)→NOAK(L) learning curve.
+  4. Nuclear/LDES: accelerated FOAK(H)→NOAK(L) learning curve.
      CCS: FOAK(H)→NOAK(M) learning curve with 45Q.
-  4. Select from feasible mixes those best matching the deployment target
+  5. Select from feasible mixes those best matching the deployment target
      at learning-curve-adjusted prices. Strict pacing enforcement.
-  5. Floor ratchet prevents un-deploying committed resources.
+  6. Floor ratchet prevents un-deploying committed resources.
 
 Usage:
   python step6_scenario_b.py             # Run all ISOs
@@ -21,9 +25,12 @@ Usage:
   python step6_scenario_b.py --iso CAISO ERCOT  # Run multiple ISOs
 """
 
+import json
 import math
 import sys
 from pathlib import Path
+
+import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -46,6 +53,10 @@ from scenario_common import (
     _build_learning_overrides_b,
     build_augmented_result,
     parse_iso_args, save_scenario_results,
+    # Vectorized batch operations
+    _to_mix_array, _precompute_cost_params,
+    batch_compute_total_costs, batch_effective_costs,
+    batch_filter_floor, batch_floor_excess, precompute_excess_lcoes,
 )
 
 
@@ -140,6 +151,50 @@ def _adjust_costs_with_learning(results, scenario):
 
 
 # ============================================================================
+# PER-ISO OPTIMAL TARGET FROM MAC/DAC CROSSOVER
+# ============================================================================
+
+DEFAULT_TARGET_THRESHOLD = 95.0
+
+def _load_optimal_targets():
+    """Load per-ISO optimal target thresholds from MAC/DAC crossover analysis.
+
+    Reads optimal_targets.json and extracts the medium_grid__central_dac
+    crossover threshold for each ISO, then snaps to the nearest analyzed
+    threshold in THRESHOLDS.
+
+    Returns:
+        dict[str, float]: {iso: target_threshold}
+    """
+    targets_path = Path(__file__).parent.parent / 'data' / 'step5-post-processing' / 'optimal_targets.json'
+    if not targets_path.exists():
+        print(f"  WARNING: {targets_path} not found, using default {DEFAULT_TARGET_THRESHOLD}% for all ISOs")
+        return {iso: DEFAULT_TARGET_THRESHOLD for iso in ISOS}
+
+    with open(targets_path) as f:
+        data = json.load(f)
+
+    targets = {}
+    for iso in ISOS:
+        iso_data = data.get(iso, {})
+        crossovers = iso_data.get('crossovers', {})
+        central = crossovers.get('medium_grid__central_dac', {})
+        raw_threshold = central.get('threshold')
+
+        if raw_threshold is None:
+            # No crossover (grid always cheaper than DAC) — default to 95%
+            targets[iso] = DEFAULT_TARGET_THRESHOLD
+            print(f"  {iso}: No MAC/DAC crossover, using default {DEFAULT_TARGET_THRESHOLD}%")
+        else:
+            # Snap to nearest analyzed threshold
+            nearest = min(THRESHOLDS, key=lambda t: abs(t - raw_threshold))
+            targets[iso] = nearest
+            print(f"  {iso}: MAC/DAC crossover at {raw_threshold}% -> target {nearest}%")
+
+    return targets
+
+
+# ============================================================================
 # SCENARIO B: ENDPOINT-OPTIMAL DEPLOYMENT WITH S-CURVE PACING
 # ============================================================================
 
@@ -149,16 +204,19 @@ def find_scenario_b_mixes(feasible_mixes, isos=None):
     Fundamentally different from Scenario A's greedy sequential approach.
 
     Strategy:
-      1. Find the NOAK-optimal mix at 95% with all costs Low (CCS at Medium+45Q
-         as NOAK endpoint — CCS learning curve is H→M, not H→L).
-         This is the "north star" — what the grid looks like in 2045.
-      2. At each threshold, deploy resources toward this target using an S-curve
+      1. Load per-ISO optimal target threshold from MAC/DAC crossover analysis
+         (medium_grid__central_dac from optimal_targets.json, snapped to
+         nearest analyzed threshold). Defaults to 95% if no crossover.
+      2. Find the NOAK-optimal mix at the target threshold with all costs Low
+         (CCS at Medium+45Q as NOAK endpoint — CCS learning curve is H→M,
+         not H→L). This is the "north star" — what the grid looks like in 2045.
+      3. At each threshold, deploy resources toward this target using an S-curve
          ramp that frontloads firm/storage investment.
-      3. Nuclear/LDES: accelerated FOAK(H)→NOAK(L) learning curve.
+      4. Nuclear/LDES: accelerated FOAK(H)→NOAK(L) learning curve.
          CCS: FOAK(H)→NOAK(M) learning curve with 45Q.
-      4. Select from feasible mixes those best matching the deployment target
+      5. Select from feasible mixes those best matching the deployment target
          at learning-curve-adjusted prices. Strict pacing enforcement.
-      5. Floor ratchet prevents un-deploying committed resources.
+      6. Floor ratchet prevents un-deploying committed resources.
 
     This produces drastically different trajectories from Scenario A because:
       - A chases cheap carbon greedily → renewable-heavy early, FOAK cliff at 90%+
@@ -176,6 +234,10 @@ def find_scenario_b_mixes(feasible_mixes, isos=None):
         isos = ISOS
 
     results = {}
+
+    # Load per-ISO optimal target thresholds from MAC/DAC crossover
+    print("\n  Loading per-ISO optimal targets from MAC/DAC crossover analysis...")
+    iso_targets = _load_optimal_targets()
 
     # NOAK target sensitivities: all at Low except CCS at Medium+45Q
     # (CCS NOAK endpoint is Medium, not Low — structural cost floor)
@@ -196,42 +258,48 @@ def find_scenario_b_mixes(feasible_mixes, isos=None):
         base_demand = BASE_DEMAND_TWH[iso]
         existing = GRID_MIX_SHARES[iso]
 
+        # Per-ISO target threshold from MAC/DAC crossover
+        target_t = iso_targets.get(iso, DEFAULT_TARGET_THRESHOLD)
+        target_t_str = str(int(target_t)) if target_t == int(target_t) else str(target_t)
+
         # ==================================================================
-        # Step 1: Find NOAK-optimal mix at 95% — the "north star"
+        # Step 1: Find NOAK-optimal mix at target threshold — the "north star"
         # All costs Low, CCS at Medium+45Q (its NOAK endpoint).
         # This is what the grid looks like in 2045 when learning investments
         # have paid off — the endpoint we're building toward.
         # ==================================================================
-        gf_95 = get_demand_growth_factor(iso, 95)
-        demand_95 = base_demand * gf_95
-        mixes_95 = feasible_mixes.get(iso, {}).get('95', [])
+        gf_target = get_demand_growth_factor(iso, target_t)
+        demand_target = base_demand * gf_target
+        mixes_target = feasible_mixes.get(iso, {}).get(target_t_str, [])
 
         # Use full NOAK overrides for target finding
         noak_overrides = _build_learning_overrides_b(iso, 1.0)  # frac=1 = full NOAK
 
-        best_cost_95 = float('inf')
-        best_mix_95 = None
-        for mix in mixes_95:
-            result = compute_mix_cost(mix, noak_sens, iso, demand_95,
-                                     overrides=noak_overrides,
-                                     growth_factor=gf_95)
-            if result['effective_cost'] < best_cost_95:
-                best_cost_95 = result['effective_cost']
-                best_mix_95 = mix
+        # Vectorized: find cheapest effective_cost at target threshold
+        if mixes_target:
+            arr_target = _to_mix_array(mixes_target)
+            params_target = _precompute_cost_params(noak_sens, iso, demand_target,
+                                                     noak_overrides, gf_target)
+            eff_target = batch_effective_costs(arr_target, params_target)
+            best_idx_target = int(np.argmin(eff_target))
+            best_cost_target = float(eff_target[best_idx_target])
+            best_mix_target = arr_target[best_idx_target].tolist()
+        else:
+            best_mix_target = None
 
-        if not best_mix_95:
-            print(f"  ⚠ {iso}: No feasible mixes at 95%, skipping")
+        if not best_mix_target:
+            print(f"  WARNING {iso}: No feasible mixes at target {target_t}%, skipping")
             results[iso] = {}
             continue
 
-        target_deployed = _mix_resource_twh(best_mix_95, demand_95, iso)
+        target_deployed = _mix_resource_twh(best_mix_target, demand_target, iso)
 
-        # Target resource levels at 95% NOAK
+        # Target resource levels at NOAK target threshold
         target_cf_twh = target_deployed.get('clean_firm', 0)
         target_ccs_twh = target_deployed.get('ccs_ccgt', 0)
         target_firm_twh = target_cf_twh + target_ccs_twh
         target_ldes_twh = target_deployed.get('ldes', 0)
-        target_batt_twh = (best_mix_95[6] + best_mix_95[7]) / 100.0 * demand_95
+        target_batt_twh = (best_mix_target[6] + best_mix_target[7]) / 100.0 * demand_target
         target_sol_twh = target_deployed.get('solar', 0)
         target_wnd_twh = target_deployed.get('wind', 0)
 
@@ -242,7 +310,7 @@ def find_scenario_b_mixes(feasible_mixes, isos=None):
         existing_sol_twh = existing.get('solar', 0) / 100.0 * base_demand
         existing_wnd_twh = existing.get('wind', 0) / 100.0 * base_demand
 
-        print(f"\n  {iso} 95% NOAK target: firm={target_firm_twh:.0f} TWh "
+        print(f"\n  {iso} {target_t}% NOAK target: firm={target_firm_twh:.0f} TWh "
               f"(CF={target_cf_twh:.0f}, CCS={target_ccs_twh:.0f}), "
               f"LDES={target_ldes_twh:.0f} TWh, Batt={target_batt_twh:.0f} TWh, "
               f"Sol={target_sol_twh:.0f}, Wnd={target_wnd_twh:.0f}, "
@@ -284,22 +352,22 @@ def find_scenario_b_mixes(feasible_mixes, isos=None):
             frac = learning_fraction(t, scenario='B')
             overrides = _build_learning_overrides_b(iso, frac)
 
-            # S-curve deployment fraction toward 95% target.
+            # S-curve deployment fraction toward target threshold.
             # Sigmoid frontloads firm investment vs linear:
-            #   T=50%: ~5%, T=70%: ~30%, T=80%: ~55%, T=90%: ~85%, T=95%: 100%
+            #   T=50%: ~5%, T=target: 100%
             if t <= 50:
                 deploy_frac = 0.05
-            elif t >= 95:
+            elif t >= target_t:
                 deploy_frac = 1.0
             else:
-                x = (t - 50) / (95 - 50)  # 0→1
+                x = (t - 50) / (target_t - 50)  # 0→1
                 raw = 1.0 / (1.0 + math.exp(-6 * (x - 0.4)))
                 f0 = 1.0 / (1.0 + math.exp(-6 * (0 - 0.4)))
                 f1 = 1.0 / (1.0 + math.exp(-6 * (1 - 0.4)))
                 deploy_frac = 0.05 + 0.95 * (raw - f0) / (f1 - f0)
 
             # Paced targets for firm, CCS, LDES at this threshold
-            demand_ratio = demand_twh / demand_95 if demand_95 > 0 else 1.0
+            demand_ratio = demand_twh / demand_target if demand_target > 0 else 1.0
             paced_cf_twh = existing_cf_twh + deploy_frac * (
                 target_cf_twh * demand_ratio - existing_cf_twh)
             paced_ccs_twh = existing_ccs_twh + deploy_frac * (
@@ -309,75 +377,63 @@ def find_scenario_b_mixes(feasible_mixes, isos=None):
             paced_batt_twh = deploy_frac * target_batt_twh * demand_ratio
 
             # ==================================================================
-            # Step 3: Score feasible mixes by target alignment + cost
+            # Step 3: Vectorized cost + tier categorization
             # Three-tier selection:
             #   Tier 1: Strict — firm >= 85% of pace, CCS >= 85%, LDES >= 50%
             #   Tier 2: Relaxed — firm >= 50% of pace
             #   Tier 3: Any feasible mix (fallback)
             # Within each tier, pick cheapest at learning-curve prices.
             # ==================================================================
-            candidates_strict = []
-            candidates_relaxed = []
-            candidates_any = []
+            mixes_arr = _to_mix_array(mixes)
+            params = _precompute_cost_params(iso_sens, iso, demand_twh,
+                                             overrides, gf)
+            costs = batch_compute_total_costs(mixes_arr, params)
 
-            for mix in mixes:
-                result = compute_mix_cost(mix, iso_sens, iso, demand_twh,
-                                         overrides=overrides, growth_factor=gf)
-                deployed = _mix_resource_twh(mix, demand_twh, iso)
+            # Floor excess penalty (vectorized)
+            excess_lcoes = precompute_excess_lcoes(iso_sens, iso, overrides)
+            excess = batch_floor_excess(mixes_arr, floor, existing_twh_b,
+                                        demand_twh, iso, excess_lcoes)
+            total_aug = costs + excess
 
-                # Floor excess cost
-                excess_per_mwh = 0.0
-                for res in floor:
-                    shortfall = max(0, floor.get(res, 0) - deployed.get(res, 0))
-                    if shortfall > 0.01:
-                        existing_gap = max(0, min(shortfall,
-                                                  existing_twh_b.get(res, 0) - deployed.get(res, 0)))
-                        newbuild_gap = shortfall - max(0, existing_gap)
-                        if newbuild_gap > 0.01:
-                            lcoe = _get_excess_lcoe(res, iso_sens, iso, overrides)
-                            excess_per_mwh += newbuild_gap / demand_twh * lcoe
+            # Compute deployed TWh for tier classification (vectorized)
+            hydro_cap = HYDRO_CAP_TWH[iso]
+            cf_twh = mixes_arr[:, 0] / 100.0 * demand_twh
+            ccs_twh = mixes_arr[:, 3] / 100.0 * demand_twh
+            firm_twh = cf_twh + ccs_twh
+            ldes_twh = mixes_arr[:, 8] / 100.0 * demand_twh
 
-                total_cost_aug = result['total_cost'] + excess_per_mwh
+            # Tier masks (vectorized boolean)
+            firm_ok_strict = (firm_twh >= paced_firm_twh * 0.85) | (paced_firm_twh < 1)
+            ccs_ok = (ccs_twh >= paced_ccs_twh * 0.85) | (paced_ccs_twh < 1)
+            ldes_ok = (ldes_twh >= paced_ldes_twh * 0.50) | (paced_ldes_twh < 1)
+            tier1_mask = firm_ok_strict & ccs_ok & ldes_ok
 
-                mix_cf_twh = deployed.get('clean_firm', 0)
-                mix_ccs_twh = deployed.get('ccs_ccgt', 0)
-                mix_firm_twh = mix_cf_twh + mix_ccs_twh
-                mix_ldes_twh = deployed.get('ldes', 0)
-
-                entry = (total_cost_aug, result, mix, excess_per_mwh, deployed)
-
-                # Tier 1: Strict pacing
-                firm_ok = mix_firm_twh >= paced_firm_twh * 0.85 or paced_firm_twh < 1
-                ccs_ok = mix_ccs_twh >= paced_ccs_twh * 0.85 or paced_ccs_twh < 1
-                ldes_ok = mix_ldes_twh >= paced_ldes_twh * 0.50 or paced_ldes_twh < 1
-
-                if firm_ok and ccs_ok and ldes_ok:
-                    candidates_strict.append(entry)
-
-                # Tier 2: Relaxed firm pacing
-                if mix_firm_twh >= paced_firm_twh * 0.50 or paced_firm_twh < 1:
-                    candidates_relaxed.append(entry)
-
-                # Tier 3: Any
-                candidates_any.append(entry)
+            firm_ok_relaxed = (firm_twh >= paced_firm_twh * 0.50) | (paced_firm_twh < 1)
+            tier2_mask = firm_ok_relaxed
 
             # Select from best available tier
-            if candidates_strict:
-                pool = candidates_strict
+            if np.any(tier1_mask):
+                tier_costs = np.where(tier1_mask, total_aug, np.inf)
                 source_flag = ''
-            elif candidates_relaxed:
-                pool = candidates_relaxed
+            elif np.any(tier2_mask):
+                tier_costs = np.where(tier2_mask, total_aug, np.inf)
                 source_flag = ' (relaxed pace)'
             else:
-                pool = candidates_any
+                tier_costs = total_aug
                 source_flag = ' (no pace-compliant mix)'
 
-            if not pool:
+            best_idx = int(np.argmin(tier_costs))
+            if tier_costs[best_idx] == np.inf:
                 continue
 
-            # Pick cheapest within tier
-            pool.sort(key=lambda x: x[0])
-            sel_cost_aug, sel_result, sel_mix, sel_excess, sel_deployed = pool[0]
+            sel_cost_aug = float(total_aug[best_idx])
+            sel_excess = float(excess[best_idx])
+            sel_mix = mixes_arr[best_idx].tolist()
+
+            # Build full result dict only for the winner (scalar call)
+            sel_result = compute_mix_cost(sel_mix, iso_sens, iso, demand_twh,
+                                          overrides=overrides, growth_factor=gf)
+            sel_deployed = _mix_resource_twh(sel_mix, demand_twh, iso)
 
             # Build augmented result with floor ratchet
             extra = {
@@ -388,6 +444,7 @@ def find_scenario_b_mixes(feasible_mixes, isos=None):
                 'paced_firm_target_twh': round(paced_firm_twh, 1),
                 'paced_ccs_target_twh': round(paced_ccs_twh, 1),
                 'deploy_fraction': round(deploy_frac, 3),
+                'target_threshold': target_t,
             }
             aug, augmented, excess_twh, total_excess = build_augmented_result(
                 sel_result, sel_mix, floor, sel_deployed,
@@ -453,7 +510,7 @@ def main():
 
     # Run Scenario B
     print("\nRunning Scenario B (Hourly Matching): "
-          "Endpoint-optimal, backward from 95% NOAK...")
+          "Endpoint-optimal, backward from per-ISO MAC/DAC crossover target...")
     results_b = find_scenario_b_mixes(feasible_mixes, isos=isos_to_run)
 
     # Save results
