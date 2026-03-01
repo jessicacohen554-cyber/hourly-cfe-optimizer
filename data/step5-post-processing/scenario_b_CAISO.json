@@ -2,7 +2,7 @@
   "metadata": {
     "scenario": "B",
     "iso": "CAISO",
-    "timestamp": "2026-03-01T21:28:22.260462",
+    "timestamp": "2026-03-01T22:51:12.648688",
     "thresholds": [
       10,
       20,
@@ -155,11 +155,11 @@
         "hydro": 21.28
       },
       "resource_pct": {
-        "clean_firm": 9,
-        "solar": 73,
-        "wind": 9,
-        "ccs_ccgt": 0,
-        "hydro": 10
+        "clean_firm": 9.0,
+        "solar": 73.0,
+        "wind": 9.0,
+        "ccs_ccgt": 0.0,
+        "hydro": 10.0
       },
       "match_score": 60.1,
       "battery_twh": 0.0,
@@ -175,11 +175,11 @@
       "blended_new_lcoe": 49.25,
       "demand_twh": 241.5153588559039,
       "mix_raw": [
-        9,
-        73,
-        9,
-        0,
-        10,
+        9.0,
+        73.0,
+        9.0,
+        0.0,
+        10.0,
         60.1,
         0.0,
         0.0,
@@ -198,7 +198,8 @@
       "learning_ldes_lcoe": 1.0,
       "paced_firm_target_twh": 22.8,
       "paced_ccs_target_twh": 0.0,
-      "deploy_fraction": 0.05
+      "deploy_fraction": 0.05,
+      "target_threshold": 95
     },
     "50": {
       "total_cost": 36.42,
@@ -213,11 +214,11 @@
         "hydro": 21.28
       },
       "resource_pct": {
-        "clean_firm": 9,
-        "solar": 73,
-        "wind": 9,
-        "ccs_ccgt": 0,
-        "hydro": 10
+        "clean_firm": 9.0,
+        "solar": 73.0,
+        "wind": 9.0,
+        "ccs_ccgt": 0.0,
+        "hydro": 10.0
       },
       "match_score": 60.1,
       "battery_twh": 0.0,
@@ -233,11 +234,11 @@
       "blended_new_lcoe": 49.45,
       "demand_twh": 246.10415067416605,
       "mix_raw": [
-        9,
-        73,
-        9,
-        0,
-        10,
+        9.0,
+        73.0,
+        9.0,
+        0.0,
+        10.0,
         60.1,
         0.0,
         0.0,
@@ -256,7 +257,8 @@
       "learning_ldes_lcoe": 1.0,
       "paced_firm_target_twh": 23.0,
       "paced_ccs_target_twh": 0.0,
-      "deploy_fraction": 0.05
+      "deploy_fraction": 0.05,
+      "target_threshold": 95
     },
     "55": {
       "total_cost": 45.98,
@@ -271,11 +273,11 @@
         "hydro": 21.28
       },
       "resource_pct": {
-        "clean_firm": 10,
-        "solar": 61,
-        "wind": 13,
-        "ccs_ccgt": 6,
-        "hydro": 10
+        "clean_firm": 10.0,
+        "solar": 61.0,
+        "wind": 13.0,
+        "ccs_ccgt": 6.0,
+        "hydro": 10.0
       },
       "match_score": 55.0,
       "battery_twh": 0.0,
@@ -291,11 +293,11 @@
       "blended_new_lcoe": 58.15,
       "demand_twh": 250.78012953697518,
       "mix_raw": [
-        10,
-        61,
-        13,
-        6,
-        10,
+        10.0,
+        61.0,
+        13.0,
+        6.0,
+        10.0,
         55.0,
         0.0,
         0.0,
@@ -314,7 +316,8 @@
       "learning_ldes_lcoe": 0.8,
       "paced_firm_target_twh": 30.8,
       "paced_ccs_target_twh": 0.0,
-      "deploy_fraction": 0.121
+      "deploy_fraction": 0.121,
+      "target_threshold": 95
     },
     "60": {
       "total_cost": 52.33,
@@ -329,11 +332,11 @@
         "hydro": 21.28
       },
       "resource_pct": {
-        "clean_firm": 19,
-        "solar": 64,
-        "wind": 11,
-        "ccs_ccgt": 0,
-        "hydro": 10
+        "clean_firm": 19.0,
+        "solar": 64.0,
+        "wind": 11.0,
+        "ccs_ccgt": 0.0,
+        "hydro": 10.0
       },
       "match_score": 61.3,
       "battery_twh": 0.0,
@@ -349,11 +352,11 @@
       "blended_new_lcoe": 56.77,
       "demand_twh": 260.4003060861431,
       "mix_raw": [
-        19,
-        64,
-        11,
-        0,
-        10,
+        19.0,
+        64.0,
+        11.0,
+        0.0,
+        10.0,
         61.3,
         0.0,
         0.0,
@@ -372,12 +375,13 @@
       "learning_ldes_lcoe": 0.7,
       "paced_firm_target_twh": 44.1,
       "paced_ccs_target_twh": 0.0,
-      "deploy_fraction": 0.234
+      "deploy_fraction": 0.234,
+      "target_threshold": 95
     },
     "65": {
-      "total_cost": 57.44,
-      "effective_cost": 88.23,
-      "incremental": 58.23,
+      "total_cost": 57.45,
+      "effective_cost": 88.25,
+      "incremental": 58.25,
       "wholesale": 30,
       "resource_twh": {
         "clean_firm": 68.99045709446274,
@@ -387,11 +391,11 @@
         "hydro": 21.28
       },
       "resource_pct": {
-        "clean_firm": 26,
-        "solar": 55,
-        "wind": 9,
-        "ccs_ccgt": 0,
-        "hydro": 10
+        "clean_firm": 26.0,
+        "solar": 55.0,
+        "wind": 9.0,
+        "ccs_ccgt": 0.0,
+        "hydro": 10.0
       },
       "match_score": 65.1,
       "battery_twh": 0.0,
@@ -407,11 +411,11 @@
       "blended_new_lcoe": 61.69,
       "demand_twh": 265.34791190177975,
       "mix_raw": [
-        26,
-        55,
-        9,
-        0,
-        10,
+        26.0,
+        55.0,
+        9.0,
+        0.0,
+        10.0,
         65.1,
         0.0,
         0.0,
@@ -430,7 +434,8 @@
       "learning_ldes_lcoe": 0.6,
       "paced_firm_target_twh": 62.5,
       "paced_ccs_target_twh": 0.0,
-      "deploy_fraction": 0.389
+      "deploy_fraction": 0.389,
+      "target_threshold": 95
     },
     "70": {
       "total_cost": 61.49,
@@ -445,11 +450,11 @@
         "hydro": 21.28
       },
       "resource_pct": {
-        "clean_firm": 30,
-        "solar": 40,
-        "wind": 15,
-        "ccs_ccgt": 5,
-        "hydro": 10
+        "clean_firm": 30.0,
+        "solar": 40.0,
+        "wind": 15.0,
+        "ccs_ccgt": 5.0,
+        "hydro": 10.0
       },
       "match_score": 77.2,
       "battery_twh": 0.0,
@@ -465,11 +470,11 @@
       "blended_new_lcoe": 69.8,
       "demand_twh": 270.3895222279136,
       "mix_raw": [
-        30,
-        40,
-        15,
-        5,
-        10,
+        30.0,
+        40.0,
+        15.0,
+        5.0,
+        10.0,
         77.2,
         0.0,
         0.0,
@@ -488,7 +493,8 @@
       "learning_ldes_lcoe": 0.6,
       "paced_firm_target_twh": 84.1,
       "paced_ccs_target_twh": 0.0,
-      "deploy_fraction": 0.566
+      "deploy_fraction": 0.566,
+      "target_threshold": 95
     },
     "75": {
       "total_cost": 69.07,
@@ -503,11 +509,11 @@
         "hydro": 21.28
       },
       "resource_pct": {
-        "clean_firm": 36,
-        "solar": 60,
-        "wind": 22,
-        "ccs_ccgt": 0,
-        "hydro": 9
+        "clean_firm": 36.0,
+        "solar": 60.0,
+        "wind": 22.0,
+        "ccs_ccgt": 0.0,
+        "hydro": 9.0
       },
       "match_score": 77.3,
       "battery_twh": 0.0,
@@ -523,11 +529,11 @@
       "blended_new_lcoe": 62.93,
       "demand_twh": 275.5269231502439,
       "mix_raw": [
-        36,
-        60,
-        22,
-        0,
-        9,
+        36.0,
+        60.0,
+        22.0,
+        0.0,
+        9.0,
         77.3,
         0.0,
         0.0,
@@ -546,7 +552,8 @@
       "learning_ldes_lcoe": 0.5,
       "paced_firm_target_twh": 105.0,
       "paced_ccs_target_twh": 0.0,
-      "deploy_fraction": 0.727
+      "deploy_fraction": 0.727,
+      "target_threshold": 95
     },
     "80": {
       "total_cost": 73.95,
@@ -561,11 +568,11 @@
         "hydro": 21.28
       },
       "resource_pct": {
-        "clean_firm": 40,
-        "solar": 25,
-        "wind": 25,
-        "ccs_ccgt": 0,
-        "hydro": 10
+        "clean_firm": 40.0,
+        "solar": 25.0,
+        "wind": 25.0,
+        "ccs_ccgt": 0.0,
+        "hydro": 10.0
       },
       "match_score": 96.0,
       "battery_twh": 0.0,
@@ -581,11 +588,11 @@
       "blended_new_lcoe": 71.37,
       "demand_twh": 280.7619346900985,
       "mix_raw": [
-        40,
-        25,
-        25,
-        0,
-        10,
+        40.0,
+        25.0,
+        25.0,
+        0.0,
+        10.0,
         96.0,
         0.0,
         0.0,
@@ -604,7 +611,8 @@
       "learning_ldes_lcoe": 0.5,
       "paced_firm_target_twh": 121.9,
       "paced_ccs_target_twh": 0.0,
-      "deploy_fraction": 0.849
+      "deploy_fraction": 0.849,
+      "target_threshold": 95
     },
     "85": {
       "total_cost": 71.35,
@@ -619,11 +627,11 @@
         "hydro": 21.28
       },
       "resource_pct": {
-        "clean_firm": 40,
-        "solar": 45,
-        "wind": 20,
-        "ccs_ccgt": 0,
-        "hydro": 10
+        "clean_firm": 40.0,
+        "solar": 45.0,
+        "wind": 20.0,
+        "ccs_ccgt": 0.0,
+        "hydro": 10.0
       },
       "match_score": 86.0,
       "battery_twh": 0.0,
@@ -639,11 +647,11 @@
       "blended_new_lcoe": 63.78,
       "demand_twh": 286.09641144921034,
       "mix_raw": [
-        40,
-        45,
-        20,
-        0,
-        10,
+        40.0,
+        45.0,
+        20.0,
+        0.0,
+        10.0,
         86.0,
         0.0,
         0.0,
@@ -662,7 +670,8 @@
       "learning_ldes_lcoe": 0.5,
       "paced_firm_target_twh": 134.0,
       "paced_ccs_target_twh": 0.0,
-      "deploy_fraction": 0.928
+      "deploy_fraction": 0.928,
+      "target_threshold": 95
     },
     "87.5": {
       "total_cost": 72.61,
@@ -677,11 +686,11 @@
         "hydro": 21.28
       },
       "resource_pct": {
-        "clean_firm": 45,
-        "solar": 60,
-        "wind": 25,
-        "ccs_ccgt": 0,
-        "hydro": 10
+        "clean_firm": 45.0,
+        "solar": 60.0,
+        "wind": 25.0,
+        "ccs_ccgt": 0.0,
+        "hydro": 10.0
       },
       "match_score": 96.8,
       "battery_twh": 0.0,
@@ -697,11 +706,11 @@
       "blended_new_lcoe": 60.75,
       "demand_twh": 291.5322432667453,
       "mix_raw": [
-        45,
-        60,
-        25,
-        0,
-        10,
+        45.0,
+        60.0,
+        25.0,
+        0.0,
+        10.0,
         96.8,
         0.0,
         0.0,
@@ -720,7 +729,8 @@
       "learning_ldes_lcoe": 0.4,
       "paced_firm_target_twh": 140.0,
       "paced_ccs_target_twh": 0.0,
-      "deploy_fraction": 0.955
+      "deploy_fraction": 0.955,
+      "target_threshold": 95
     },
     "90": {
       "total_cost": 71.36,
@@ -735,11 +745,11 @@
         "hydro": 21.28
       },
       "resource_pct": {
-        "clean_firm": 44,
-        "solar": 55,
-        "wind": 26,
-        "ccs_ccgt": 0,
-        "hydro": 10
+        "clean_firm": 44.0,
+        "solar": 55.0,
+        "wind": 26.0,
+        "ccs_ccgt": 0.0,
+        "hydro": 10.0
       },
       "match_score": 92.4,
       "battery_twh": 0.0,
@@ -755,11 +765,11 @@
       "blended_new_lcoe": 59.78,
       "demand_twh": 297.0713558888134,
       "mix_raw": [
-        44,
-        55,
-        26,
-        0,
-        10,
+        44.0,
+        55.0,
+        26.0,
+        0.0,
+        10.0,
         92.4,
         0.0,
         0.0,
@@ -778,7 +788,8 @@
       "learning_ldes_lcoe": 0.4,
       "paced_firm_target_twh": 145.2,
       "paced_ccs_target_twh": 0.0,
-      "deploy_fraction": 0.974
+      "deploy_fraction": 0.974,
+      "target_threshold": 95
     },
     "92.5": {
       "total_cost": 71.38,
@@ -793,11 +804,11 @@
         "hydro": 21.28
       },
       "resource_pct": {
-        "clean_firm": 46,
-        "solar": 55,
-        "wind": 23,
-        "ccs_ccgt": 0,
-        "hydro": 10
+        "clean_firm": 46.0,
+        "solar": 55.0,
+        "wind": 23.0,
+        "ccs_ccgt": 0.0,
+        "hydro": 10.0
       },
       "match_score": 92.6,
       "battery_twh": 0.0,
@@ -813,11 +824,11 @@
       "blended_new_lcoe": 59.97,
       "demand_twh": 314.32818906533333,
       "mix_raw": [
-        46,
-        55,
-        23,
-        0,
-        10,
+        46.0,
+        55.0,
+        23.0,
+        0.0,
+        10.0,
         92.6,
         0.0,
         0.0,
@@ -836,12 +847,13 @@
       "learning_ldes_lcoe": 0.4,
       "paced_firm_target_twh": 155.7,
       "paced_ccs_target_twh": 0.0,
-      "deploy_fraction": 0.989
+      "deploy_fraction": 0.989,
+      "target_threshold": 95
     },
     "95": {
-      "total_cost": 74.32,
-      "effective_cost": 77.82,
-      "incremental": 47.82,
+      "total_cost": 74.31,
+      "effective_cost": 77.81,
+      "incremental": 47.81,
       "wholesale": 30,
       "resource_twh": {
         "clean_firm": 163.19306636303426,
@@ -851,11 +863,11 @@
         "hydro": 21.28
       },
       "resource_pct": {
-        "clean_firm": 50,
-        "solar": 30,
-        "wind": 10,
-        "ccs_ccgt": 0,
-        "hydro": 10
+        "clean_firm": 50.0,
+        "solar": 30.0,
+        "wind": 10.0,
+        "ccs_ccgt": 0.0,
+        "hydro": 10.0
       },
       "match_score": 95.5,
       "battery_twh": 0.0,
@@ -871,11 +883,11 @@
       "blended_new_lcoe": 64.9,
       "demand_twh": 326.3861327260685,
       "mix_raw": [
-        50,
-        30,
-        10,
-        0,
-        10,
+        50.0,
+        30.0,
+        10.0,
+        0.0,
+        10.0,
         95.5,
         0.0,
         0.0,
@@ -894,7 +906,8 @@
       "learning_ldes_lcoe": 0.4,
       "paced_firm_target_twh": 163.2,
       "paced_ccs_target_twh": 0.0,
-      "deploy_fraction": 1.0
+      "deploy_fraction": 1.0,
+      "target_threshold": 95
     },
     "97.5": {
       "total_cost": 76.26,
@@ -909,11 +922,11 @@
         "hydro": 21.28
       },
       "resource_pct": {
-        "clean_firm": 55,
-        "solar": 30,
-        "wind": 10,
-        "ccs_ccgt": 0,
-        "hydro": 10
+        "clean_firm": 55.0,
+        "solar": 30.0,
+        "wind": 10.0,
+        "ccs_ccgt": 0.0,
+        "hydro": 10.0
       },
       "match_score": 97.9,
       "battery_twh": 0.0,
@@ -929,11 +942,11 @@
       "blended_new_lcoe": 65.39,
       "demand_twh": 345.345857155681,
       "mix_raw": [
-        55,
-        30,
-        10,
-        0,
-        10,
+        55.0,
+        30.0,
+        10.0,
+        0.0,
+        10.0,
         97.9,
         0.0,
         0.0,
@@ -952,12 +965,13 @@
       "learning_ldes_lcoe": 0.4,
       "paced_firm_target_twh": 172.7,
       "paced_ccs_target_twh": 0.0,
-      "deploy_fraction": 1.0
+      "deploy_fraction": 1.0,
+      "target_threshold": 95
     },
     "99": {
-      "total_cost": 79.09,
-      "effective_cost": 79.65,
-      "incremental": 49.65,
+      "total_cost": 79.08,
+      "effective_cost": 79.64,
+      "incremental": 49.64,
       "wholesale": 30,
       "resource_twh": {
         "clean_firm": 211.14445706498333,
@@ -967,11 +981,11 @@
         "hydro": 21.28
       },
       "resource_pct": {
-        "clean_firm": 60,
-        "solar": 25,
-        "wind": 10,
-        "ccs_ccgt": 0,
-        "hydro": 10
+        "clean_firm": 60.0,
+        "solar": 25.0,
+        "wind": 10.0,
+        "ccs_ccgt": 0.0,
+        "hydro": 10.0
       },
       "match_score": 99.3,
       "battery_twh": 0.0,
@@ -987,11 +1001,11 @@
       "blended_new_lcoe": 67.14,
       "demand_twh": 351.9074284416389,
       "mix_raw": [
-        60,
-        25,
-        10,
-        0,
-        10,
+        60.0,
+        25.0,
+        10.0,
+        0.0,
+        10.0,
         99.3,
         0.0,
         0.0,
@@ -1010,12 +1024,13 @@
       "learning_ldes_lcoe": 0.4,
       "paced_firm_target_twh": 176.0,
       "paced_ccs_target_twh": 0.0,
-      "deploy_fraction": 1.0
+      "deploy_fraction": 1.0,
+      "target_threshold": 95
     },
     "99.5": {
-      "total_cost": 79.09,
-      "effective_cost": 79.17,
-      "incremental": 49.17,
+      "total_cost": 79.08,
+      "effective_cost": 79.16,
+      "incremental": 49.16,
       "wholesale": 30,
       "resource_twh": {
         "clean_firm": 211.14445706498333,
@@ -1025,11 +1040,11 @@
         "hydro": 21.28
       },
       "resource_pct": {
-        "clean_firm": 60,
-        "solar": 25,
-        "wind": 10,
-        "ccs_ccgt": 0,
-        "hydro": 10
+        "clean_firm": 60.0,
+        "solar": 25.0,
+        "wind": 10.0,
+        "ccs_ccgt": 0.0,
+        "hydro": 10.0
       },
       "match_score": 99.9,
       "battery_twh": 0.0,
@@ -1045,11 +1060,11 @@
       "blended_new_lcoe": 67.14,
       "demand_twh": 351.9074284416389,
       "mix_raw": [
-        60,
-        25,
-        10,
-        0,
-        10,
+        60.0,
+        25.0,
+        10.0,
+        0.0,
+        10.0,
         99.9,
         0.0,
         0.0,
@@ -1068,7 +1083,8 @@
       "learning_ldes_lcoe": 0.4,
       "paced_firm_target_twh": 176.0,
       "paced_ccs_target_twh": 0.0,
-      "deploy_fraction": 1.0
+      "deploy_fraction": 1.0,
+      "target_threshold": 95
     },
     "99.9": {
       "total_cost": 78.61,
@@ -1083,11 +1099,11 @@
         "hydro": 21.28
       },
       "resource_pct": {
-        "clean_firm": 55,
-        "solar": 25,
-        "wind": 15,
-        "ccs_ccgt": 0,
-        "hydro": 10
+        "clean_firm": 55.0,
+        "solar": 25.0,
+        "wind": 15.0,
+        "ccs_ccgt": 0.0,
+        "hydro": 10.0
       },
       "match_score": 99.9,
       "battery_twh": 0.0,
@@ -1103,11 +1119,11 @@
       "blended_new_lcoe": 66.38,
       "demand_twh": 358.59366958203003,
       "mix_raw": [
-        55,
-        25,
-        15,
-        0,
-        10,
+        55.0,
+        25.0,
+        15.0,
+        0.0,
+        10.0,
         99.9,
         0.0,
         0.0,
@@ -1126,12 +1142,13 @@
       "learning_ldes_lcoe": 0.4,
       "paced_firm_target_twh": 179.3,
       "paced_ccs_target_twh": 0.0,
-      "deploy_fraction": 1.0
+      "deploy_fraction": 1.0,
+      "target_threshold": 95
     },
     "99.99": {
-      "total_cost": 83.06,
-      "effective_cost": 83.06,
-      "incremental": 53.06,
+      "total_cost": 83.07,
+      "effective_cost": 83.07,
+      "incremental": 53.07,
       "wholesale": 30,
       "resource_twh": {
         "clean_firm": 211.14445706498333,
@@ -1141,11 +1158,11 @@
         "hydro": 21.28
       },
       "resource_pct": {
-        "clean_firm": 55,
-        "solar": 40,
-        "wind": 30,
-        "ccs_ccgt": 0,
-        "hydro": 10
+        "clean_firm": 55.0,
+        "solar": 40.0,
+        "wind": 30.0,
+        "ccs_ccgt": 0.0,
+        "hydro": 10.0
       },
       "match_score": 100.0,
       "battery_twh": 0.0,
@@ -1161,11 +1178,11 @@
       "blended_new_lcoe": 63.14,
       "demand_twh": 358.59366958203003,
       "mix_raw": [
-        55,
-        40,
-        30,
-        0,
-        10,
+        55.0,
+        40.0,
+        30.0,
+        0.0,
+        10.0,
         100.0,
         0.0,
         0.0,
@@ -1184,7 +1201,8 @@
       "learning_ldes_lcoe": 0.4,
       "paced_firm_target_twh": 179.3,
       "paced_ccs_target_twh": 0.0,
-      "deploy_fraction": 1.0
+      "deploy_fraction": 1.0,
+      "target_threshold": 95
     }
   }
 }
