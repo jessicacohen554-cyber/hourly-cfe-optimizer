@@ -3761,7 +3761,7 @@ gas_needed_mw = max(0, ra_peak - clean_peak) / GAF
 **Design choices**:
 1. **Step 3 integration** (not post-hoc repricing) — learning curves must be inside the optimization to change which mixes are selected, not just reprice fixed mixes.
 2. **Paired adoption speed + NOAK optimism** (3 combos, not 6) — each technology's L/M/H toggle controls both NOAK endpoint and adoption speed. Correlated in reality: fast deployment → more learning → lower NOAK. Avoids scenario count explosion.
-3. **Technologies with learning curves**: Nuclear new-build, CCS-CCGT, LDES (100hr iron-air), Green H2, Geothermal (CAISO only). Battery/solar/wind already mature — static costs.
+3. **Technologies with learning curves**: Nuclear new-build, CCS-CCGT, LDES (100hr iron-air), Green H2, Geothermal (CAISO only), Battery 4hr, Battery 8hr (shallow curves, see Storage Cost Fix section below). Solar/wind already mature — static costs.
 4. **Uprates unchanged** — $15/25/40 (L/M/H), no learning curve. Existing fleet, sunk cost.
 
 **FOAK Cost Tables** (first-of-a-kind, pre-learning, single value per ISO — same for all L/M/H):
@@ -3801,27 +3801,27 @@ CCS-CCGT FOAK 45Q OFF ($/MWh) — ~1.20× High:
 
 Geothermal FOAK (CAISO only): $150/MWh (~1.35× High)
 
-LDES FOAK ($/MWh) — ~1.40× High (pre-commercial iron-air):
+LDES FOAK ($/MWh-cap, annualized capacity cost) — ~1.40× High:
 | ISO | FOAK |
 |-----|------|
-| CAISO | 328 |
-| ERCOT | 283 |
-| PJM | 309 |
-| NYISO | 364 |
-| NEISO | 346 |
-| MISO | 295 |
-| SPP | 287 |
+| CAISO | 1.40 |
+| ERCOT | 1.20 |
+| PJM | 1.32 |
+| NYISO | 1.55 |
+| NEISO | 1.48 |
+| MISO | 1.26 |
+| SPP | 1.23 |
 
-Green H2 FOAK ($/MWh) — ~1.30× High:
+Green H2 FOAK ($/MWh-cap, annualized capacity cost) — ~1.30× High:
 | ISO | FOAK |
 |-----|------|
-| CAISO | 546 |
-| ERCOT | 481 |
-| PJM | 520 |
-| NYISO | 598 |
-| NEISO | 572 |
-| MISO | 494 |
-| SPP | 475 |
+| CAISO | 5.32 |
+| ERCOT | 4.69 |
+| PJM | 5.04 |
+| NYISO | 5.85 |
+| NEISO | 5.58 |
+| MISO | 4.82 |
+| SPP | 4.60 |
 
 **Learning Curve Parameters** (per toggle level):
 
@@ -3840,6 +3840,8 @@ Green H2 FOAK ($/MWh) — ~1.30× High:
 | Geothermal | Geo | 2027→2036 | 2029→2039 | 2033→2043 |
 | LDES | LDES | 2029→2039 | 2031→2043 | 2035→2047 |
 | Green H2 | LDES | 2029→2039 | 2031→2043 | 2035→2047 |
+| Battery 4hr | Batt | 2025→2030 | 2026→2032 | 2027→2035 |
+| Battery 8hr | Batt | 2025→2030 | 2026→2032 | 2027→2035 |
 
 **Year-adjusted cost formula**: `cost(year) = FOAK × (1 - frac) + NOAK × frac` where `frac = learning_fraction(year, foak_start, noak_year)`.
 
@@ -3860,3 +3862,50 @@ Green H2 FOAK ($/MWh) — ~1.30× High:
 **Supersedes**: Line 1483 of this file ("Scope: PP3 scenario comparison only. Step 3 cost optimization is NOT modified"). Step 3 DG sweep now uses learning curves. Step 6 scenario comparison curves remain unchanged (their own timeline parameters are for the A/B strategy comparison, not the core optimization).
 
 **No compute cost increase**: Same 5,832/17,496 sensitivity combos per threshold. Only the price lookup changes for DG years. Phase 1 (base year) unchanged. Step 1/2 not affected.
+
+### Storage Cost Fix: LCOS → Annualized Capacity Cost (Mar 1, 2026)
+
+**Bug**: Step 3 priced storage as `bat_pct / 100.0 × LCOS`, where `bat_pct/100` is a normalized energy capacity parameter (energy capacity as fraction of avg hourly demand MWh). LCOS is $/MWh of *discharged* energy. The product gives the wrong units — it treats the capacity sizing parameter as an annual dispatch fraction, overpricing storage by 10-50× depending on utilization assumptions. Example: bat_pct=3, LCOS=$102 → $3.06/MWh, but actual annual cost of a 900 MW/3.6 GWh battery for CAISO is ~$0.28/MWh of demand.
+
+**Fix**: Replace LCOS tables with annualized capacity cost per MWh-cap, matching the coefficient model:
+```
+price = 1000 × (CAPEX_kWh × CRF + FOM_kW / duration) / 8760 × regional_mult
+```
+Now `bat_pct / 100.0 × price` directly gives the annual fixed cost of that storage capacity as a fraction of total demand cost ($/MWh of demand). Eliminates cycling assumptions — prices pure capacity, not utilization.
+
+**Financial parameters**:
+- WACC: 8%
+- Battery lifetime: 20 years → CRF = 0.10185
+- LDES lifetime: 25 years → CRF = 0.09368
+- H2 lifetime: 20 years → CRF = 0.10185
+
+**CAPEX per kWh** (NREL ATB 2024):
+| Technology | Low | Medium | High | Duration | FOM ($/kW-yr) |
+|-----------|-----|--------|------|----------|---------------|
+| Battery 4hr | $115 | $140 | $165 | 4 hr | $25 |
+| Battery 8hr | $95 | $120 | $145 | 8 hr | $25 |
+| LDES (iron-air) | $30 | $50 | $80 | 100 hr | $5 |
+| Green H2 | $150 | $220 | $310 | 168 hr | $8 |
+
+**Regional multipliers**: Derived from existing LCOS ratio (normalize to ERCOT=1.0), baked into capacity prices. TX adders set to $0 for all storage types.
+
+**LCOS cross-check** (validates capacity prices against known LCOS benchmarks):
+- Battery 4hr Low @ 250 cycles/yr = $72/MWh (matches ~$70 benchmark)
+- Battery 4hr Med @ 250 cycles/yr = $82/MWh
+- Battery 8hr Med @ 180 cycles/yr = $85/MWh
+- LDES Med @ 50 cycles/yr = $95/MWh
+
+**Battery learning curves** (added with this fix): Batteries are mature but still declining 5-8%/yr. Shallow curves:
+- FOAK: 1.05× High (minimal pre-learning premium, already at manufacturing scale)
+- Timelines: L=(2025,2030), M=(2026,2032), H=(2027,2035) — all at NOAK by 2035
+- Net effect: small uplift at early thresholds (2030-2032), zero by 2035
+
+**Storage FOAK tables** (now in $/MWh-cap, not LCOS):
+- Battery 4hr: 1.05× High capacity cost per ISO
+- Battery 8hr: 1.05× High capacity cost per ISO
+- LDES: 1.40× High capacity cost per ISO
+- H2: 1.30× High capacity cost per ISO
+
+**Propagated to**: `step3_cost_optimization.py`, `scenario_common.py`, `step6_scenario_comparison.py`. All three files have independent LCOE_TABLES copies — all updated.
+
+**Supersedes**: Prior LCOS values in LCOE_TABLES for battery, battery8, ldes, h2. Line 3764 of this file updated — batteries now have learning curves too (previously listed as "already mature — static costs").

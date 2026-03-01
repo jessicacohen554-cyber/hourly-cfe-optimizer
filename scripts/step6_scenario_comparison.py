@@ -74,20 +74,22 @@ LCOE_TABLES = {
         'Medium': {'CAISO': 73, 'ERCOT': 40, 'PJM': 62, 'NYISO': 81, 'NEISO': 73, 'MISO': 43, 'SPP': 37},
         'High':   {'CAISO': 95, 'ERCOT': 52, 'PJM': 81, 'NYISO': 105, 'NEISO': 95, 'MISO': 56, 'SPP': 48},
     },
+    # Storage: annualized capacity cost ($/MWh-cap), NOT LCOS.
+    # Regional variation baked in; TX=0 for all storage.
     'battery': {
-        'Low':    {'CAISO': 77, 'ERCOT': 69, 'PJM': 74, 'NYISO': 81, 'NEISO': 79, 'MISO': 72, 'SPP': 70},
-        'Medium': {'CAISO': 102, 'ERCOT': 92, 'PJM': 98, 'NYISO': 108, 'NEISO': 105, 'MISO': 96, 'SPP': 93},
-        'High':   {'CAISO': 133, 'ERCOT': 120, 'PJM': 127, 'NYISO': 140, 'NEISO': 137, 'MISO': 125, 'SPP': 121},
+        'Low':    {'CAISO': 2.27, 'ERCOT': 2.05, 'PJM': 2.18, 'NYISO': 2.41, 'NEISO': 2.34, 'MISO': 2.14, 'SPP': 2.07},
+        'Medium': {'CAISO': 2.60, 'ERCOT': 2.34, 'PJM': 2.49, 'NYISO': 2.75, 'NEISO': 2.67, 'MISO': 2.44, 'SPP': 2.37},
+        'High':   {'CAISO': 2.92, 'ERCOT': 2.63, 'PJM': 2.80, 'NYISO': 3.09, 'NEISO': 3.00, 'MISO': 2.75, 'SPP': 2.66},
     },
     'battery8': {
-        'Low':    {'CAISO': 85, 'ERCOT': 77, 'PJM': 82, 'NYISO': 90, 'NEISO': 88, 'MISO': 80, 'SPP': 78},
-        'Medium': {'CAISO': 125, 'ERCOT': 113, 'PJM': 120, 'NYISO': 132, 'NEISO': 129, 'MISO': 117, 'SPP': 115},
-        'High':   {'CAISO': 165, 'ERCOT': 149, 'PJM': 159, 'NYISO': 175, 'NEISO': 170, 'MISO': 155, 'SPP': 152},
+        'Low':    {'CAISO': 1.62, 'ERCOT': 1.46, 'PJM': 1.55, 'NYISO': 1.71, 'NEISO': 1.67, 'MISO': 1.51, 'SPP': 1.49},
+        'Medium': {'CAISO': 1.94, 'ERCOT': 1.75, 'PJM': 1.86, 'NYISO': 2.05, 'NEISO': 2.00, 'MISO': 1.81, 'SPP': 1.78},
+        'High':   {'CAISO': 2.26, 'ERCOT': 2.04, 'PJM': 2.17, 'NYISO': 2.39, 'NEISO': 2.33, 'MISO': 2.11, 'SPP': 2.08},
     },
     'ldes': {
-        'Low':    {'CAISO': 135, 'ERCOT': 116, 'PJM': 128, 'NYISO': 150, 'NEISO': 143, 'MISO': 122, 'SPP': 118},
-        'Medium': {'CAISO': 180, 'ERCOT': 155, 'PJM': 170, 'NYISO': 200, 'NEISO': 190, 'MISO': 162, 'SPP': 158},
-        'High':   {'CAISO': 234, 'ERCOT': 202, 'PJM': 221, 'NYISO': 260, 'NEISO': 247, 'MISO': 211, 'SPP': 205},
+        'Low':    {'CAISO': 0.38, 'ERCOT': 0.33, 'PJM': 0.36, 'NYISO': 0.42, 'NEISO': 0.40, 'MISO': 0.34, 'SPP': 0.33},
+        'Medium': {'CAISO': 0.63, 'ERCOT': 0.54, 'PJM': 0.59, 'NYISO': 0.70, 'NEISO': 0.66, 'MISO': 0.56, 'SPP': 0.55},
+        'High':   {'CAISO': 1.00, 'ERCOT': 0.86, 'PJM': 0.94, 'NYISO': 1.11, 'NEISO': 1.06, 'MISO': 0.90, 'SPP': 0.88},
     },
 }
 
@@ -104,15 +106,10 @@ TX_TABLES = {
     'ccs_ccgt':   {'None': 0, 'Low': {'CAISO': 1, 'ERCOT': 1, 'PJM': 1, 'NYISO': 2, 'NEISO': 2, 'MISO': 1, 'SPP': 1},
                    'Medium': {'CAISO': 2, 'ERCOT': 2, 'PJM': 3, 'NYISO': 4, 'NEISO': 3, 'MISO': 2, 'SPP': 2},
                    'High': {'CAISO': 4, 'ERCOT': 3, 'PJM': 5, 'NYISO': 7, 'NEISO': 6, 'MISO': 4, 'SPP': 3}},
-    'battery':    {'None': 0, 'Low': {'CAISO': 0, 'ERCOT': 0, 'PJM': 0, 'NYISO': 1, 'NEISO': 1, 'MISO': 0, 'SPP': 0},
-                   'Medium': {'CAISO': 1, 'ERCOT': 1, 'PJM': 1, 'NYISO': 2, 'NEISO': 2, 'MISO': 1, 'SPP': 1},
-                   'High': {'CAISO': 2, 'ERCOT': 2, 'PJM': 3, 'NYISO': 4, 'NEISO': 3, 'MISO': 2, 'SPP': 2}},
-    'battery8':   {'None': 0, 'Low': {'CAISO': 0, 'ERCOT': 0, 'PJM': 0, 'NYISO': 1, 'NEISO': 1, 'MISO': 0, 'SPP': 0},
-                   'Medium': {'CAISO': 1, 'ERCOT': 1, 'PJM': 1, 'NYISO': 2, 'NEISO': 2, 'MISO': 1, 'SPP': 1},
-                   'High': {'CAISO': 2, 'ERCOT': 2, 'PJM': 3, 'NYISO': 4, 'NEISO': 3, 'MISO': 2, 'SPP': 2}},
-    'ldes':       {'None': 0, 'Low': {'CAISO': 1, 'ERCOT': 1, 'PJM': 1, 'NYISO': 2, 'NEISO': 2, 'MISO': 1, 'SPP': 1},
-                   'Medium': {'CAISO': 2, 'ERCOT': 2, 'PJM': 3, 'NYISO': 4, 'NEISO': 3, 'MISO': 2, 'SPP': 2},
-                   'High': {'CAISO': 4, 'ERCOT': 3, 'PJM': 5, 'NYISO': 7, 'NEISO': 6, 'MISO': 4, 'SPP': 3}},
+    # Storage TX = 0: regional variation baked into annualized capacity costs
+    'battery':    {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
+    'battery8':   {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
+    'ldes':       {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
     'hydro':      {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
 }
 
@@ -657,6 +654,488 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
 
 
 # ============================================================================
+# VECTORIZED BATCH COST — eliminates per-mix Python loops
+# ============================================================================
+
+def _precompute_cost_params(sens, iso, demand_twh, overrides=None, growth_factor=1.0):
+    """Pre-resolve all dict lookups into a flat numeric tuple for batch cost.
+
+    Returns a tuple of scalars that the vectorized kernel consumes.
+    Called once per (ISO, threshold, scenario) — O(1) not O(N_mixes).
+    """
+    ren_name = LEVEL_NAME[sens['ren']]
+    batt_name = LEVEL_NAME[sens['batt']]
+    ldes_name = LEVEL_NAME[sens['ldes_lvl']]
+    fuel_name = LEVEL_NAME[sens['fuel']]
+    tx_name = LEVEL_NAME[sens['tx']]
+    firm_lev = sens['firm']
+    ccs_lev = sens['ccs']
+    q45 = sens['q45']
+    geo_lev = sens.get('geo')
+
+    existing = {k: v / growth_factor for k, v in GRID_MIX_SHARES[iso].items()}
+    wholesale = max(5, WHOLESALE_PRICES[iso] + FUEL_ADJUSTMENTS[iso][fuel_name])
+
+    # CCS price
+    if overrides and 'ccs_lcoe' in overrides:
+        ccs_lcoe = overrides['ccs_lcoe']
+    else:
+        ccs_table = CCS_LCOE_45Q_ON if q45 == '1' else None
+        ccs_lcoe = ccs_table[ccs_lev][iso]
+    ccs_tx = get_tx('ccs_ccgt', tx_name, iso)
+    ccs_price = ccs_lcoe + ccs_tx
+
+    # Nuclear price
+    if overrides and 'nuclear_lcoe' in overrides:
+        nuclear_price = overrides['nuclear_lcoe'] + get_tx('clean_firm', tx_name, iso)
+    else:
+        nuclear_price = NUCLEAR_NEWBUILD_LCOE[firm_lev][iso] + get_tx('clean_firm', tx_name, iso)
+    remaining_price = min(nuclear_price, ccs_price)
+
+    # Geothermal price
+    geo_price = 0.0
+    if iso == 'CAISO' and geo_lev:
+        if overrides and 'geo_lcoe' in overrides:
+            geo_price = overrides['geo_lcoe'] + get_tx('clean_firm', tx_name, iso)
+        else:
+            geo_price = GEOTHERMAL_LCOE[geo_lev] + get_tx('clean_firm', tx_name, iso)
+
+    # Uprate / LDES prices
+    uprate_price = overrides.get('uprate_lcoe', UPRATE_LCOE[firm_lev]) if overrides else UPRATE_LCOE[firm_lev]
+    if overrides and 'ldes_lcoe' in overrides:
+        ldes_price = overrides['ldes_lcoe'] + get_tx('ldes', tx_name, iso)
+    else:
+        ldes_price = LCOE_TABLES['ldes'][ldes_name][iso] + get_tx('ldes', tx_name, iso)
+
+    sol_lcoe = LCOE_TABLES['solar'][ren_name][iso] + get_tx('solar', tx_name, iso)
+    wnd_lcoe = LCOE_TABLES['wind'][ren_name][iso] + get_tx('wind', tx_name, iso)
+    bat4_lcoe = LCOE_TABLES['battery'][batt_name][iso] + get_tx('battery', tx_name, iso)
+    bat8_lcoe = LCOE_TABLES['battery8'][batt_name][iso] + get_tx('battery8', tx_name, iso)
+
+    demand_mwh = demand_twh * 1e6
+    avg_demand_mw = demand_mwh / 8760
+    peak_mw = PEAK_DEMAND_MW[iso] * growth_factor
+    ra_peak_mw = peak_mw * (1 + RESOURCE_ADEQUACY_MARGIN)
+    gaf = GAS_AVAILABILITY_FACTOR[iso]
+    existing_gas_mw = float(EXISTING_GAS_CAPACITY_MW[iso])
+
+    ex_sol = existing.get('solar', 0.0)
+    ex_wnd = existing.get('wind', 0.0)
+    ex_ccs = existing.get('ccs_ccgt', 0.0)
+    ex_cf = existing.get('clean_firm', 0.0)
+
+    hydro_cap_twh = HYDRO_CAP_TWH[iso]
+    geo_cap_twh = GEO_CAP_TWH if iso == 'CAISO' else 0.0
+    uprate_cap_twh = UPRATE_CAP_TWH[iso]
+
+    # Peak capacity credits as array [cf, sol, wnd, ccs, hyd, bat4, bat8, ldes]
+    pcc_cf = PEAK_CAPACITY_CREDITS['clean_firm']
+    pcc_sol = PEAK_CAPACITY_CREDITS['solar']
+    pcc_wnd = PEAK_CAPACITY_CREDITS['wind']
+    pcc_ccs = PEAK_CAPACITY_CREDITS['ccs_ccgt']
+    pcc_hyd = PEAK_CAPACITY_CREDITS['hydro']
+    pcc_bat = PEAK_CAPACITY_CREDITS['battery']
+    pcc_bat8 = PEAK_CAPACITY_CREDITS.get('battery8', 0.95)
+    pcc_ldes = PEAK_CAPACITY_CREDITS['ldes']
+
+    ex_gas_fom = EXISTING_GAS_FOM_KW_YR[iso]
+    new_ccgt_cost = NEW_CCGT_COST_KW_YR[iso]
+
+    # Return flat tuple — no dicts, no strings, pure numerics
+    return (
+        demand_twh, demand_mwh, avg_demand_mw, wholesale,
+        ex_sol, ex_wnd, ex_ccs, ex_cf,
+        sol_lcoe, wnd_lcoe, ccs_price, nuclear_price, remaining_price,
+        uprate_price, geo_price, ldes_price, bat4_lcoe, bat8_lcoe,
+        hydro_cap_twh, geo_cap_twh, uprate_cap_twh,
+        ra_peak_mw, gaf, existing_gas_mw,
+        pcc_cf, pcc_sol, pcc_wnd, pcc_ccs, pcc_hyd, pcc_bat, pcc_bat8, pcc_ldes,
+        ex_gas_fom, new_ccgt_cost,
+        float(iso == 'CAISO'),  # is_caiso flag
+    )
+
+# Param index constants for readability
+_P_DEMAND_TWH, _P_DEMAND_MWH, _P_AVG_MW, _P_WHOLESALE = 0, 1, 2, 3
+_P_EX_SOL, _P_EX_WND, _P_EX_CCS, _P_EX_CF = 4, 5, 6, 7
+_P_SOL_LCOE, _P_WND_LCOE, _P_CCS_PRICE, _P_NUC_PRICE, _P_REM_PRICE = 8, 9, 10, 11, 12
+_P_UPR_PRICE, _P_GEO_PRICE, _P_LDES_PRICE, _P_BAT4_LCOE, _P_BAT8_LCOE = 13, 14, 15, 16, 17
+_P_HYDRO_CAP, _P_GEO_CAP, _P_UPR_CAP = 18, 19, 20
+_P_RA_PEAK, _P_GAF, _P_EX_GAS_MW = 21, 22, 23
+_P_PCC_CF, _P_PCC_SOL, _P_PCC_WND, _P_PCC_CCS, _P_PCC_HYD = 24, 25, 26, 27, 28
+_P_PCC_BAT, _P_PCC_BAT8, _P_PCC_LDES = 29, 30, 31
+_P_EX_GAS_FOM, _P_NEW_CCGT = 32, 33
+_P_IS_CAISO = 34
+
+
+try:
+    from numba import njit as _njit
+    _HAS_NUMBA = True
+except ImportError:
+    _HAS_NUMBA = False
+    def _njit(*args, **kwargs):
+        def decorator(f):
+            return f
+        if len(args) == 1 and callable(args[0]):
+            return args[0]
+        return decorator
+
+
+@_njit(cache=True)
+def _batch_cost_kernel(mixes, params):
+    """Numba-JIT vectorized cost kernel over N mixes.
+
+    mixes: (N, 10) float64 array — [cf%, sol%, wnd%, ccs%, hyd%, match%, bat4%, bat8%, ldes%, h2%]
+    params: (35,) float64 array — pre-resolved scalars from _precompute_cost_params
+
+    Returns: (N, 8) array —
+        [total_cost, effective_cost, incremental, gas_needed_mw, new_gas_mw,
+         existing_gas_used_mw, clean_peak_mw, new_build_cost_total]
+    """
+    N = mixes.shape[0]
+    out = np.empty((N, 8), dtype=np.float64)
+
+    demand_twh = params[_P_DEMAND_TWH]
+    demand_mwh = params[_P_DEMAND_MWH]
+    avg_mw = params[_P_AVG_MW]
+    wholesale = params[_P_WHOLESALE]
+    ex_sol = params[_P_EX_SOL]
+    ex_wnd = params[_P_EX_WND]
+    ex_ccs = params[_P_EX_CCS]
+    ex_cf = params[_P_EX_CF]
+    sol_lcoe = params[_P_SOL_LCOE]
+    wnd_lcoe = params[_P_WND_LCOE]
+    ccs_price = params[_P_CCS_PRICE]
+    nuc_price = params[_P_NUC_PRICE]
+    rem_price = params[_P_REM_PRICE]
+    upr_price = params[_P_UPR_PRICE]
+    geo_price = params[_P_GEO_PRICE]
+    ldes_price = params[_P_LDES_PRICE]
+    bat4_lcoe = params[_P_BAT4_LCOE]
+    bat8_lcoe = params[_P_BAT8_LCOE]
+    hydro_cap = params[_P_HYDRO_CAP]
+    geo_cap = params[_P_GEO_CAP]
+    upr_cap = params[_P_UPR_CAP]
+    ra_peak = params[_P_RA_PEAK]
+    gaf = params[_P_GAF]
+    ex_gas_mw = params[_P_EX_GAS_MW]
+    pcc_cf = params[_P_PCC_CF]
+    pcc_sol = params[_P_PCC_SOL]
+    pcc_wnd = params[_P_PCC_WND]
+    pcc_ccs = params[_P_PCC_CCS]
+    pcc_hyd = params[_P_PCC_HYD]
+    pcc_bat = params[_P_PCC_BAT]
+    pcc_bat8 = params[_P_PCC_BAT8]
+    pcc_ldes = params[_P_PCC_LDES]
+    ex_gas_fom = params[_P_EX_GAS_FOM]
+    new_ccgt = params[_P_NEW_CCGT]
+    is_caiso = params[_P_IS_CAISO]
+
+    for i in range(N):
+        cf_pct = mixes[i, 0]
+        sol_pct = mixes[i, 1]
+        wnd_pct = mixes[i, 2]
+        ccs_pct = mixes[i, 3]
+        hyd_pct = mixes[i, 4]
+        match_score = mixes[i, 5]
+        bat4_pct = mixes[i, 6]
+        bat8_pct = mixes[i, 7]
+        ldes_pct = mixes[i, 8]
+        h2_pct = mixes[i, 9]
+
+        match_frac = match_score / 100.0
+
+        # Hydro cap
+        hydro_twh_raw = hyd_pct / 100.0 * demand_twh
+        hydro_twh = min(hydro_twh_raw, hydro_cap)
+        hyd_demand = hydro_twh / demand_twh * 100.0
+
+        # Existing/new splits
+        sol_new = max(0.0, sol_pct - ex_sol)
+        wnd_new = max(0.0, wnd_pct - ex_wnd)
+        ccs_new = max(0.0, ccs_pct - ex_ccs)
+        cf_new = max(0.0, cf_pct - ex_cf)
+
+        # Clean firm tranche allocation
+        new_cf_twh = cf_new / 100.0 * demand_twh
+        uprate_twh = min(new_cf_twh, upr_cap)
+        remaining_after_uprate = max(0.0, new_cf_twh - uprate_twh)
+
+        geo_twh = 0.0
+        remaining_after_geo = remaining_after_uprate
+        if is_caiso > 0.5:
+            geo_twh = min(remaining_after_uprate, geo_cap)
+            remaining_after_geo = max(0.0, remaining_after_uprate - geo_twh)
+
+        # Gas backup
+        hydro_avg_mw = hydro_twh * 1e6 / 8760.0
+        clean_peak_mw = (
+            cf_pct / 100.0 * avg_mw * pcc_cf +
+            sol_pct / 100.0 * avg_mw * pcc_sol +
+            wnd_pct / 100.0 * avg_mw * pcc_wnd +
+            ccs_pct / 100.0 * avg_mw * pcc_ccs +
+            hydro_avg_mw * pcc_hyd +
+            bat4_pct / 100.0 * avg_mw * pcc_bat +
+            bat8_pct / 100.0 * avg_mw * pcc_bat8 +
+            ldes_pct / 100.0 * avg_mw * pcc_ldes
+        )
+
+        gas_needed_mw = max(0.0, ra_peak - clean_peak_mw) / gaf
+        existing_gas_used_mw = min(gas_needed_mw, ex_gas_mw)
+        new_gas_mw = max(0.0, gas_needed_mw - existing_gas_used_mw)
+
+        gas_cost = (
+            existing_gas_used_mw * ex_gas_fom * 1000.0 +
+            new_gas_mw * new_ccgt * 1000.0
+        ) / demand_mwh
+
+        # Total cost
+        total_cost = (
+            sol_new / 100.0 * sol_lcoe +
+            wnd_new / 100.0 * wnd_lcoe +
+            ccs_new / 100.0 * ccs_price +
+            uprate_twh / demand_twh * upr_price +
+            geo_twh / demand_twh * geo_price +
+            remaining_after_geo / demand_twh * rem_price +
+            bat4_pct / 100.0 * bat4_lcoe +
+            bat8_pct / 100.0 * bat8_lcoe +
+            ldes_pct / 100.0 * ldes_price +
+            gas_cost
+        )
+
+        # Effective cost and incremental
+        eff_cost = total_cost / match_frac if match_frac > 0.0 else 0.0
+        incremental = eff_cost - wholesale
+
+        # New-build cost tracking
+        new_build_per_mwh = total_cost - gas_cost
+        new_build_cost_total = new_build_per_mwh * demand_mwh
+
+        out[i, 0] = total_cost
+        out[i, 1] = eff_cost
+        out[i, 2] = incremental
+        out[i, 3] = gas_needed_mw
+        out[i, 4] = new_gas_mw
+        out[i, 5] = existing_gas_used_mw
+        out[i, 6] = clean_peak_mw
+        out[i, 7] = new_build_cost_total
+
+    return out
+
+
+def _mixes_to_array(mixes):
+    """Convert list-of-lists to (N, 10) float64 numpy array, padding to 10 cols."""
+    N = len(mixes)
+    arr = np.zeros((N, 10), dtype=np.float64)
+    for i, m in enumerate(mixes):
+        ncols = min(len(m), 10)
+        for j in range(ncols):
+            arr[i, j] = m[j]
+    return arr
+
+
+def compute_mix_cost_batch(mixes_arr, sens, iso, demand_twh, overrides=None, growth_factor=1.0):
+    """Vectorized cost computation for N mixes at once.
+
+    mixes_arr: (N, 10) numpy array
+    Returns: dict with arrays of length N for each output field,
+             plus 'best_idx' (index of cheapest effective_cost).
+    """
+    params_tuple = _precompute_cost_params(sens, iso, demand_twh, overrides, growth_factor)
+    params_arr = np.array(params_tuple, dtype=np.float64)
+
+    results = _batch_cost_kernel(mixes_arr, params_arr)
+
+    demand_mwh = demand_twh * 1e6
+    match_scores = mixes_arr[:, 5]
+    match_fracs = match_scores / 100.0
+
+    # New-gen TWh (vectorized)
+    existing = {k: v / growth_factor for k, v in GRID_MIX_SHARES[iso].items()}
+    cf_new = np.maximum(0, mixes_arr[:, 0] - existing.get('clean_firm', 0))
+    sol_new = np.maximum(0, mixes_arr[:, 1] - existing.get('solar', 0))
+    wnd_new = np.maximum(0, mixes_arr[:, 2] - existing.get('wind', 0))
+    ccs_new = np.maximum(0, mixes_arr[:, 3] - existing.get('ccs_ccgt', 0))
+    new_gen_twh = (cf_new + sol_new + wnd_new + ccs_new) / 100.0 * demand_twh
+
+    new_build_per_mwh = results[:, 0] - (
+        results[:, 5] * params_arr[_P_EX_GAS_FOM] * 1000.0 +
+        results[:, 4] * params_arr[_P_NEW_CCGT] * 1000.0
+    ) / demand_mwh
+    blended_new_lcoe = np.where(
+        new_gen_twh > 0.01,
+        new_build_per_mwh * demand_twh / new_gen_twh,
+        0.0
+    )
+
+    # Resource TWh (vectorized)
+    hydro_cap_twh = HYDRO_CAP_TWH[iso]
+    hydro_twh = np.minimum(mixes_arr[:, 4] / 100.0 * demand_twh, hydro_cap_twh)
+
+    best_idx = int(np.argmin(results[:, 1]))
+
+    return {
+        'total_cost': results[:, 0],
+        'effective_cost': results[:, 1],
+        'incremental': results[:, 2],
+        'gas_needed_mw': results[:, 3],
+        'new_gas_mw': results[:, 4],
+        'existing_gas_used_mw': results[:, 5],
+        'clean_peak_mw': results[:, 6],
+        'new_build_cost_total': results[:, 7],
+        'wholesale': params_arr[_P_WHOLESALE],
+        'match_scores': match_scores,
+        'new_gen_twh': new_gen_twh,
+        'blended_new_lcoe': blended_new_lcoe,
+        'hydro_twh': hydro_twh,
+        'best_idx': best_idx,
+    }
+
+
+def _batch_resource_twh(mixes_arr, demand_twh, iso):
+    """Vectorized resource TWh for N mixes. Returns (N, 7) array.
+
+    Columns: [cf, sol, wnd, ccs, hyd, battery, ldes]
+    """
+    N = mixes_arr.shape[0]
+    out = np.empty((N, 7), dtype=np.float64)
+    out[:, 0] = mixes_arr[:, 0] / 100.0 * demand_twh  # cf
+    out[:, 1] = mixes_arr[:, 1] / 100.0 * demand_twh  # sol
+    out[:, 2] = mixes_arr[:, 2] / 100.0 * demand_twh  # wnd
+    out[:, 3] = mixes_arr[:, 3] / 100.0 * demand_twh  # ccs
+    out[:, 4] = np.minimum(mixes_arr[:, 4] / 100.0 * demand_twh, HYDRO_CAP_TWH[iso])  # hyd
+    out[:, 5] = (mixes_arr[:, 6] + mixes_arr[:, 7]) / 100.0 * demand_twh  # battery
+    out[:, 6] = mixes_arr[:, 8] / 100.0 * demand_twh  # ldes
+    return out
+
+
+# Resource indices in the (N,7) resource_twh array
+_R_CF, _R_SOL, _R_WND, _R_CCS, _R_HYD, _R_BAT, _R_LDES = 0, 1, 2, 3, 4, 5, 6
+_FLOOR_KEYS = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'ldes']
+
+
+def _floor_to_array(floor_twh):
+    """Convert floor dict to (7,) array matching _batch_resource_twh columns."""
+    return np.array([
+        floor_twh.get('clean_firm', 0),
+        floor_twh.get('solar', 0),
+        floor_twh.get('wind', 0),
+        floor_twh.get('ccs_ccgt', 0),
+        floor_twh.get('hydro', 0),
+        floor_twh.get('battery', 0),
+        floor_twh.get('ldes', 0),
+    ], dtype=np.float64)
+
+
+def _batch_filter_by_floor(mixes_arr, floor_twh, demand_twh, iso):
+    """Vectorized floor filter. Returns boolean mask of shape (N,)."""
+    deployed = _batch_resource_twh(mixes_arr, demand_twh, iso)
+    floor_arr = _floor_to_array(floor_twh)
+    # Each resource must be >= floor - 0.01 tolerance
+    mask = np.all(deployed >= floor_arr[np.newaxis, :] - 0.01, axis=1)
+    return mask
+
+
+def _batch_floor_excess_cost(deployed_twh, floor_arr, existing_twh_arr,
+                              demand_twh, excess_lcoe_arr):
+    """Vectorized floor excess cost. Returns (N,) excess $/MWh array.
+
+    deployed_twh: (N, 7) — from _batch_resource_twh
+    floor_arr: (7,) — current floor TWh
+    existing_twh_arr: (7,) — 2025 existing TWh
+    excess_lcoe_arr: (7,) — LCOE per resource for pricing excess
+    """
+    # Shortfall = max(0, floor - deployed)
+    shortfall = np.maximum(0, floor_arr[np.newaxis, :] - deployed_twh)
+    # Existing gap portion (priced at $0)
+    existing_gap = np.maximum(0, np.minimum(shortfall,
+                                             existing_twh_arr[np.newaxis, :] - deployed_twh))
+    newbuild_gap = shortfall - np.maximum(0, existing_gap)
+    # Zero out tiny gaps
+    newbuild_gap = np.where(newbuild_gap > 0.01, newbuild_gap, 0.0)
+    # Excess cost = sum over resources of (gap_twh / demand_twh * lcoe)
+    excess_per_mwh = np.sum(newbuild_gap / demand_twh * excess_lcoe_arr[np.newaxis, :], axis=1)
+    return excess_per_mwh
+
+
+def _build_excess_lcoe_array(sens, iso, overrides=None):
+    """Build (7,) LCOE array for pricing floor excess, matching _FLOOR_KEYS order."""
+    return np.array([
+        _get_excess_lcoe('clean_firm', sens, iso, overrides),
+        _get_excess_lcoe('solar', sens, iso, overrides),
+        _get_excess_lcoe('wind', sens, iso, overrides),
+        _get_excess_lcoe('ccs_ccgt', sens, iso, overrides),
+        _get_excess_lcoe('hydro', sens, iso, overrides),
+        _get_excess_lcoe('battery', sens, iso, overrides),
+        _get_excess_lcoe('ldes', sens, iso, overrides),
+    ], dtype=np.float64)
+
+
+def _batch_pick_best(mixes_arr, batch_results, deployed_twh, floor_arr,
+                      existing_twh_arr, excess_lcoe_arr, demand_twh,
+                      use_augmented_cost=True):
+    """Find best mix by total cost (optionally augmented with floor excess).
+
+    Returns (best_idx, best_excess_per_mwh) or (None, 0) if no mixes.
+    """
+    N = mixes_arr.shape[0]
+    if N == 0:
+        return None, 0.0
+
+    if use_augmented_cost:
+        excess_per_mwh = _batch_floor_excess_cost(
+            deployed_twh, floor_arr, existing_twh_arr, demand_twh, excess_lcoe_arr)
+        total_with_excess = batch_results['total_cost'] + excess_per_mwh
+    else:
+        total_with_excess = batch_results['total_cost']
+        excess_per_mwh = np.zeros(N)
+
+    best_idx = int(np.argmin(total_with_excess))
+    return best_idx, float(excess_per_mwh[best_idx])
+
+
+def _extract_single_result(mixes_arr, batch_results, idx, iso, demand_twh):
+    """Extract a single result dict from batch arrays at given index."""
+    mix = mixes_arr[idx]
+    hydro_cap_twh = HYDRO_CAP_TWH[iso]
+
+    cf_pct, sol_pct, wnd_pct, ccs_pct, hyd_pct = mix[0], mix[1], mix[2], mix[3], mix[4]
+    match_score = mix[5]
+    bat4_pct, bat8_pct, ldes_pct = mix[6], mix[7], mix[8]
+    h2_pct = mix[9] if len(mix) > 9 else 0
+
+    hydro_twh = min(hyd_pct / 100.0 * demand_twh, hydro_cap_twh)
+    resource_twh = {
+        'clean_firm': cf_pct / 100.0 * demand_twh,
+        'solar': sol_pct / 100.0 * demand_twh,
+        'wind': wnd_pct / 100.0 * demand_twh,
+        'ccs_ccgt': ccs_pct / 100.0 * demand_twh,
+        'hydro': hydro_twh,
+    }
+
+    return {
+        'total_cost': round(float(batch_results['total_cost'][idx]), 2),
+        'effective_cost': round(float(batch_results['effective_cost'][idx]), 2),
+        'incremental': round(float(batch_results['incremental'][idx]), 2),
+        'wholesale': float(batch_results['wholesale']),
+        'resource_twh': resource_twh,
+        'resource_pct': {'clean_firm': cf_pct, 'solar': sol_pct, 'wind': wnd_pct,
+                         'ccs_ccgt': ccs_pct, 'hydro': hyd_pct},
+        'match_score': match_score,
+        'battery_twh': bat4_pct / 100.0 * demand_twh,
+        'battery8_twh': bat8_pct / 100.0 * demand_twh,
+        'ldes_twh': ldes_pct / 100.0 * demand_twh,
+        'h2_twh': h2_pct / 100.0 * demand_twh,
+        'gas_backup_mw': round(float(batch_results['gas_needed_mw'][idx])),
+        'new_gas_mw': round(float(batch_results['new_gas_mw'][idx])),
+        'existing_gas_used_mw': round(float(batch_results['existing_gas_used_mw'][idx])),
+        'clean_peak_mw': round(float(batch_results['clean_peak_mw'][idx])),
+        'new_build_cost_total': float(batch_results['new_build_cost_total'][idx]),
+        'new_gen_twh': round(float(batch_results['new_gen_twh'][idx]), 3),
+        'blended_new_lcoe': round(float(batch_results['blended_new_lcoe'][idx]), 2),
+    }
+
+
+# ============================================================================
 # FIND OPTIMAL MIX PER (ISO, THRESHOLD, SCENARIO)
 # ============================================================================
 
@@ -677,16 +1156,12 @@ def find_optimal_mixes(feasible_mixes, scenario, demand_twh_map):
             if not mixes:
                 continue
 
-            best_cost = float('inf')
-            best_result = None
-            best_mix = None
+            mixes_arr = _mixes_to_array(mixes)
+            batch = compute_mix_cost_batch(mixes_arr, iso_sens, iso, demand_twh_map[iso])
+            best_idx = batch['best_idx']
 
-            for mix in mixes:
-                result = compute_mix_cost(mix, iso_sens, iso, demand_twh_map[iso])
-                if result['effective_cost'] < best_cost:
-                    best_cost = result['effective_cost']
-                    best_result = result
-                    best_mix = mix
+            best_result = _extract_single_result(mixes_arr, batch, best_idx, iso, demand_twh_map[iso])
+            best_mix = mixes[best_idx]
 
             if best_result and best_mix:
                 # Preserve dispatch parameters for dispatch cache lookup
@@ -762,13 +1237,11 @@ def find_optimal_mixes_sequential(feasible_mixes, scenario, demand_twh_map):
         gf_95 = get_demand_growth_factor(iso, 95)
         demand_95 = base_demand_twh * gf_95
 
-        best_95_cost = float('inf')
         best_95_mix = None
-        for mix in t95_mixes:
-            result = compute_mix_cost(mix, iso_sens, iso, demand_95, growth_factor=gf_95)
-            if result['effective_cost'] < best_95_cost:
-                best_95_cost = result['effective_cost']
-                best_95_mix = mix
+        if t95_mixes:
+            t95_arr = _mixes_to_array(t95_mixes)
+            batch_95 = compute_mix_cost_batch(t95_arr, iso_sens, iso, demand_95, growth_factor=gf_95)
+            best_95_mix = t95_mixes[batch_95['best_idx']]
 
         # Resource caps from 95% target (with 20% slack for thresholds > 95%)
         target_95_deployed = _mix_resource_twh(best_95_mix, demand_95, iso) if best_95_mix else {}
@@ -808,51 +1281,60 @@ def find_optimal_mixes_sequential(feasible_mixes, scenario, demand_twh_map):
             demand_ratio = demand_twh / demand_95 if demand_95 > 0 else 1.0
             slack = 1.2 if t <= 95 else 1.5  # more slack above 95%
 
+            # 2a. Vectorized target filter using numpy
+            mixes_arr_seq = _mixes_to_array(mixes)
             if target_95_deployed:
-                def _within_target(mix):
-                    deployed = _mix_resource_twh(mix, demand_twh, iso)
-                    for res in ['clean_firm', 'solar', 'wind', 'ccs_ccgt']:
-                        cap = target_95_deployed.get(res, 0) * demand_ratio * slack
-                        if cap > 1.0 and deployed.get(res, 0) > cap:
-                            return False
-                    return True
-
-                target_passing = [m for m in mixes if _within_target(m)]
+                deployed_seq = _batch_resource_twh(mixes_arr_seq, demand_twh, iso)
+                caps = np.array([
+                    target_95_deployed.get('clean_firm', 0) * demand_ratio * slack,
+                    target_95_deployed.get('solar', 0) * demand_ratio * slack,
+                    target_95_deployed.get('wind', 0) * demand_ratio * slack,
+                    target_95_deployed.get('ccs_ccgt', 0) * demand_ratio * slack,
+                ], dtype=np.float64)
+                # Check cf, sol, wnd, ccs (columns 0-3) against caps
+                over_cap = (deployed_seq[:, :4] > caps[np.newaxis, :]) & (caps[np.newaxis, :] > 1.0)
+                target_mask = ~np.any(over_cap, axis=1)
+                if not np.any(target_mask):
+                    target_mask = np.ones(len(mixes), dtype=bool)
             else:
-                target_passing = list(mixes)
+                target_mask = np.ones(len(mixes), dtype=bool)
 
-            # Fall back to all mixes if target filter is too restrictive
-            if not target_passing:
-                target_passing = list(mixes)
+            # 2b. Batch-score ALL target-passing mixes
+            tp_indices = np.where(target_mask)[0]
+            tp_arr = mixes_arr_seq[tp_indices]
+            batch_seq = compute_mix_cost_batch(tp_arr, iso_sens, iso, demand_twh, growth_factor=gf)
+            deployed_tp = _batch_resource_twh(tp_arr, demand_twh, iso)
+            floor_arr_seq = _floor_to_array(floor)
+            # Use _resource_new_build_lcoe for the sequential case (no overrides)
+            excess_lcoe_seq = np.array([
+                _resource_new_build_lcoe(res, iso_sens, iso) for res in _FLOOR_KEYS
+            ], dtype=np.float64)
+            existing_twh_arr_seq = _floor_to_array({
+                'clean_firm': existing.get('clean_firm', 0) / 100.0 * base_demand_twh,
+                'solar': existing.get('solar', 0) / 100.0 * base_demand_twh,
+                'wind': existing.get('wind', 0) / 100.0 * base_demand_twh,
+                'ccs_ccgt': existing.get('ccs_ccgt', 0) / 100.0 * base_demand_twh,
+                'hydro': existing.get('hydro', 0) / 100.0 * base_demand_twh,
+                'battery': 0, 'ldes': 0,
+            })
 
-            # 2b. Score ALL mixes by augmented cost (EF cost + floor excess penalty).
-            #     This ensures we pick the mix that maximizes use of locked-in resources
-            #     from prior steps, not just the cheapest mix in isolation.
-            best_augmented_cost = float('inf')
-            best_result = None
-            best_mix = None
-            best_excess_twh = None
-            best_excess_per_mwh = 0
+            # Floor excess (simpler version — no existing gap split, uses newbuild LCOE)
+            shortfall = np.maximum(0, floor_arr_seq[np.newaxis, :] - deployed_tp)
+            shortfall = np.where(shortfall > 0.01, shortfall, 0.0)
+            mix_excess_arr = np.sum(shortfall / demand_twh * excess_lcoe_seq[np.newaxis, :], axis=1)
 
-            for mix in target_passing:
-                result = compute_mix_cost(mix, iso_sens, iso, demand_twh, growth_factor=gf)
+            match_fracs = batch_seq['match_scores'] / 100.0
+            augmented_eff_arr = np.where(
+                match_fracs > 0,
+                (batch_seq['total_cost'] + mix_excess_arr) / match_fracs,
+                np.inf
+            )
 
-                # Compute augmented cost: how expensive is this mix INCLUDING floor excess?
-                ef_deployed = _mix_resource_twh(mix, demand_twh, iso)
-                mix_excess_per_mwh = 0.0
-                for res in floor:
-                    excess = max(0, floor.get(res, 0) - ef_deployed.get(res, 0))
-                    if excess > 0.01:
-                        lcoe = _resource_new_build_lcoe(res, iso_sens, iso)
-                        mix_excess_per_mwh += excess / demand_twh * lcoe
-
-                augmented_eff = (result['total_cost'] + mix_excess_per_mwh) / (result['match_score'] / 100) if result['match_score'] > 0 else float('inf')
-
-                if augmented_eff < best_augmented_cost:
-                    best_augmented_cost = augmented_eff
-                    best_result = result
-                    best_mix = mix
-                    best_excess_per_mwh = mix_excess_per_mwh
+            best_tp_idx = int(np.argmin(augmented_eff_arr))
+            best_orig_idx = int(tp_indices[best_tp_idx])
+            best_result = _extract_single_result(tp_arr, batch_seq, best_tp_idx, iso, demand_twh)
+            best_mix = mixes[best_orig_idx]
+            best_excess_per_mwh = float(mix_excess_arr[best_tp_idx])
 
             if not best_result:
                 continue
@@ -1272,39 +1754,25 @@ def _forward_step_optimization(feasible_mixes, sens, get_overrides_fn, label):
                 print(f"  ↪ {iso} {t}% [{label}]: EF empty after floor filter, "
                       f"using {source} ({len(filtered)} mixes)")
 
-            # --- Step 3: Price filtered mixes, pick cheapest ---
-            best_total_cost = float('inf')
-            best_result = None
-            best_mix = None
-            best_excess_per_mwh = 0.0
+            # --- Step 3: Batch-price filtered mixes, pick cheapest ---
+            filt_arr = _mixes_to_array(filtered)
+            batch = compute_mix_cost_batch(filt_arr, iso_sens, iso, demand_twh,
+                                           overrides=overrides, growth_factor=gf)
+            deployed_twh = _batch_resource_twh(filt_arr, demand_twh, iso)
+            floor_arr = _floor_to_array(floor_twh)
+            existing_twh_arr = _floor_to_array(existing_twh)
+            excess_lcoe_arr = _build_excess_lcoe_array(iso_sens, iso, overrides)
 
-            for mix in filtered:
-                result = compute_mix_cost(mix, iso_sens, iso, demand_twh,
-                                         overrides=overrides, growth_factor=gf)
+            best_idx, best_excess_per_mwh = _batch_pick_best(
+                filt_arr, batch, deployed_twh, floor_arr,
+                existing_twh_arr, excess_lcoe_arr, demand_twh)
 
-                deployed = _mix_resource_twh(mix, demand_twh, iso)
+            if best_idx is None:
+                continue
 
-                # If this mix goes UNDER on a resource vs floor (only possible
-                # in PFS-relaxed fallback), price the gap as carried cost
-                excess_per_mwh = 0.0
-                for res in floor_twh:
-                    shortfall = max(0, floor_twh.get(res, 0) - deployed.get(res, 0))
-                    if shortfall > 0.01:
-                        # Split into existing ($0) and committed-new (newbuild)
-                        existing_gap = max(0, min(shortfall,
-                                                  existing_twh.get(res, 0) - deployed.get(res, 0)))
-                        newbuild_gap = shortfall - max(0, existing_gap)
-                        if newbuild_gap > 0.01:
-                            lcoe = _get_excess_lcoe(res, iso_sens, iso, overrides)
-                            excess_per_mwh += newbuild_gap / demand_twh * lcoe
-
-                total_with_excess = result['total_cost'] + excess_per_mwh
-
-                if total_with_excess < best_total_cost:
-                    best_total_cost = total_with_excess
-                    best_result = result
-                    best_mix = mix
-                    best_excess_per_mwh = excess_per_mwh
+            best_total_cost = float(batch['total_cost'][best_idx]) + best_excess_per_mwh
+            best_result = _extract_single_result(filt_arr, batch, best_idx, iso, demand_twh)
+            best_mix = filtered[best_idx]
 
             if not best_result or not best_mix:
                 continue
@@ -1929,15 +2397,14 @@ def find_scenario_b_mixes(feasible_mixes):
         # Use full NOAK overrides for target finding
         noak_overrides = _build_learning_overrides_b(iso, 1.0)  # frac=1 = full NOAK
 
-        best_cost_95 = float('inf')
-        best_mix_95 = None
-        for mix in mixes_95:
-            result = compute_mix_cost(mix, noak_sens, iso, demand_95,
-                                     overrides=noak_overrides,
-                                     growth_factor=gf_95)
-            if result['effective_cost'] < best_cost_95:
-                best_cost_95 = result['effective_cost']
-                best_mix_95 = mix
+        if mixes_95:
+            mixes_95_arr = _mixes_to_array(mixes_95)
+            batch_95 = compute_mix_cost_batch(mixes_95_arr, noak_sens, iso, demand_95,
+                                              overrides=noak_overrides, growth_factor=gf_95)
+            best_idx_95 = batch_95['best_idx']
+            best_mix_95 = mixes_95[best_idx_95]
+        else:
+            best_mix_95 = None
 
         if not best_mix_95:
             print(f"  ⚠ {iso}: No feasible mixes at 95%, skipping")
@@ -2029,84 +2496,67 @@ def find_scenario_b_mixes(feasible_mixes):
             paced_batt_twh = deploy_frac * target_batt_twh * demand_ratio
 
             # ==================================================================
-            # Step 3: Score feasible mixes by target alignment + cost
-            # Three-tier selection:
-            #   Tier 1: Strict — firm >= 85% of pace, CCS >= 85%, LDES >= 50%
-            #   Tier 2: Relaxed — firm >= 50% of pace
-            #   Tier 3: Any feasible mix (fallback)
-            # Within each tier, pick cheapest at learning-curve prices.
+            # Step 3: Batch-score feasible mixes by target alignment + cost
+            # Three-tier selection via vectorized numpy masks.
             # ==================================================================
-            candidates_strict = []
-            candidates_relaxed = []
-            candidates_any = []
+            mixes_arr = _mixes_to_array(mixes)
+            batch = compute_mix_cost_batch(mixes_arr, iso_sens, iso, demand_twh,
+                                           overrides=overrides, growth_factor=gf)
+            deployed_twh = _batch_resource_twh(mixes_arr, demand_twh, iso)
+            floor_arr = _floor_to_array(floor)
+            existing_twh_arr = _floor_to_array(existing_twh_b)
+            excess_lcoe_arr = _build_excess_lcoe_array(iso_sens, iso, overrides)
 
-            for mix in mixes:
-                result = compute_mix_cost(mix, iso_sens, iso, demand_twh,
-                                         overrides=overrides, growth_factor=gf)
-                deployed = _mix_resource_twh(mix, demand_twh, iso)
+            # Vectorized floor excess cost
+            excess_per_mwh_arr = _batch_floor_excess_cost(
+                deployed_twh, floor_arr, existing_twh_arr, demand_twh, excess_lcoe_arr)
+            total_cost_aug_arr = batch['total_cost'] + excess_per_mwh_arr
 
-                # Floor excess cost
-                excess_per_mwh = 0.0
-                for res in floor:
-                    shortfall = max(0, floor.get(res, 0) - deployed.get(res, 0))
-                    if shortfall > 0.01:
-                        existing_gap = max(0, min(shortfall,
-                                                  existing_twh_b.get(res, 0) - deployed.get(res, 0)))
-                        newbuild_gap = shortfall - max(0, existing_gap)
-                        if newbuild_gap > 0.01:
-                            lcoe = _get_excess_lcoe(res, iso_sens, iso, overrides)
-                            excess_per_mwh += newbuild_gap / demand_twh * lcoe
+            # Vectorized pacing tier classification
+            # deployed_twh columns: [cf, sol, wnd, ccs, hyd, battery, ldes]
+            mix_cf_twh = deployed_twh[:, _R_CF]
+            mix_ccs_twh = deployed_twh[:, _R_CCS]
+            mix_firm_twh = mix_cf_twh + mix_ccs_twh
+            mix_ldes_twh = deployed_twh[:, _R_LDES]
 
-                total_cost_aug = result['total_cost'] + excess_per_mwh
+            firm_ok = (mix_firm_twh >= paced_firm_twh * 0.85) | (paced_firm_twh < 1)
+            ccs_ok = (mix_ccs_twh >= paced_ccs_twh * 0.85) | (paced_ccs_twh < 1)
+            ldes_ok = (mix_ldes_twh >= paced_ldes_twh * 0.50) | (paced_ldes_twh < 1)
 
-                mix_cf_twh = deployed.get('clean_firm', 0)
-                mix_ccs_twh = deployed.get('ccs_ccgt', 0)
-                mix_firm_twh = mix_cf_twh + mix_ccs_twh
-                mix_ldes_twh = deployed.get('ldes', 0)
+            tier1_mask = firm_ok & ccs_ok & ldes_ok
+            tier2_mask = (mix_firm_twh >= paced_firm_twh * 0.50) | (paced_firm_twh < 1)
 
-                entry = (total_cost_aug, result, mix, excess_per_mwh, deployed)
-
-                # Tier 1: Strict pacing
-                firm_ok = mix_firm_twh >= paced_firm_twh * 0.85 or paced_firm_twh < 1
-                ccs_ok = mix_ccs_twh >= paced_ccs_twh * 0.85 or paced_ccs_twh < 1
-                ldes_ok = mix_ldes_twh >= paced_ldes_twh * 0.50 or paced_ldes_twh < 1
-
-                if firm_ok and ccs_ok and ldes_ok:
-                    candidates_strict.append(entry)
-
-                # Tier 2: Relaxed firm pacing
-                if mix_firm_twh >= paced_firm_twh * 0.50 or paced_firm_twh < 1:
-                    candidates_relaxed.append(entry)
-
-                # Tier 3: Any
-                candidates_any.append(entry)
-
-            # Select from best available tier
-            if candidates_strict:
-                pool = candidates_strict
+            # Select best from highest available tier
+            if np.any(tier1_mask):
+                pool_mask = tier1_mask
                 source_flag = ''
-            elif candidates_relaxed:
-                pool = candidates_relaxed
+            elif np.any(tier2_mask):
+                pool_mask = tier2_mask
                 source_flag = ' (relaxed pace)'
             else:
-                pool = candidates_any
+                pool_mask = np.ones(len(mixes), dtype=bool)
                 source_flag = ' (no pace-compliant mix)'
 
-            if not pool:
+            # Among pool, find cheapest augmented cost
+            pool_costs = np.where(pool_mask, total_cost_aug_arr, np.inf)
+            sel_idx = int(np.argmin(pool_costs))
+            if pool_costs[sel_idx] == np.inf:
                 continue
 
-            # Pick cheapest within tier
-            pool.sort(key=lambda x: x[0])
-            sel_cost_aug, sel_result, sel_mix, sel_excess, sel_deployed = pool[0]
+            sel_cost_aug = float(total_cost_aug_arr[sel_idx])
+            sel_excess = float(excess_per_mwh_arr[sel_idx])
+            sel_result = _extract_single_result(mixes_arr, batch, sel_idx, iso, demand_twh)
+            sel_mix = mixes[sel_idx]
+            sel_deployed_arr = deployed_twh[sel_idx]
 
             # Build augmented result with floor ratchet
             augmented = {}
             excess_twh = {}
-            for res in floor:
-                ef_val = sel_deployed.get(res, 0)
-                floor_val = floor.get(res, 0)
-                augmented[res] = max(ef_val, floor_val)
-                excess_twh[res] = max(0, floor_val - ef_val)
+            for ki, key in enumerate(_FLOOR_KEYS):
+                ef_val = float(sel_deployed_arr[ki])
+                floor_val = floor.get(key, 0)
+                augmented[key] = max(ef_val, floor_val)
+                excess_twh[key] = max(0, floor_val - ef_val)
 
             total_excess = sum(excess_twh.values())
 
