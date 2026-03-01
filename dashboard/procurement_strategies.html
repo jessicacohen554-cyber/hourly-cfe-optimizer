@@ -1087,14 +1087,15 @@ body {
 <script src="js/consequential-queue-data.js"></script>
 <script>
 // ====================================================================
-// DATA DERIVATION — compute derived keys from CQ_DATA + hardcoded EIA data
+// DATA VALIDATION — keys are now generated server-side by step6_consequential_queue.py.
+// This block validates they exist and falls back to client-side derivation if missing.
 // ====================================================================
-(function deriveMissingKeys() {
-    if (typeof CQ_DATA === 'undefined') return;
+(function ensureDerivedKeys() {
+    if (typeof CQ_DATA === 'undefined') {
+        console.error('CQ_DATA not loaded — consequential queue data file missing');
+        return;
+    }
     var DERIVE_ISOS = ['SPP', 'ERCOT', 'MISO', 'PJM', 'CAISO', 'NYISO', 'NEISO'];
-
-    // ---- 2025 EIA existing clean generation (TWh) from GRID_MIX_SHARES × BASE_DEMAND_TWH ----
-    // Source: dispatch_utils.py — EIA-930 hourly data, 2021-2025 profiles scaled to 2025 totals
     var GRID_MIX_SHARES = {
         CAISO: { clean_firm: 7.9, solar: 22.3, wind: 8.8, hydro: 9.5 },
         ERCOT: { clean_firm: 8.6, solar: 13.8, wind: 23.6, hydro: 0.1 },
@@ -1109,112 +1110,110 @@ body {
         NYISO: 151.6, NEISO: 115.3, MISO: 660.0, SPP: 296.0
     };
 
-    // Build existing_clean_floor from EIA data (NOT optimizer resource_trajectories)
-    CQ_DATA.existing_clean_floor = {};
-    DERIVE_ISOS.forEach(function(iso) {
-        var shares = GRID_MIX_SHARES[iso];
-        var demand = BASE_DEMAND_TWH[iso];
-        if (!shares || !demand) return;
-        var by_resource = {};
-        var total = 0;
-        for (var r in shares) {
-            var twh = Math.round(demand * shares[r] / 100 * 10) / 10;
-            by_resource[r] = twh;
-            total += twh;
+    // Helper: safe derive with fallback
+    function ensureKey(key, deriveFn) {
+        if (CQ_DATA[key] && typeof CQ_DATA[key] === 'object' && Object.keys(CQ_DATA[key]).length > 0) return;
+        try {
+            CQ_DATA[key] = deriveFn();
+        } catch (e) {
+            console.warn('CQ_DATA.' + key + ' derivation failed:', e.message);
+            CQ_DATA[key] = CQ_DATA[key] || {};
         }
-        by_resource.ccs_ccgt = 0;
-        by_resource.battery = 0;
-        by_resource.ldes = 0;
-        CQ_DATA.existing_clean_floor[iso] = {
-            by_resource: by_resource,
-            total_twh: Math.round(total * 10) / 10
-        };
+    }
+
+    // 1. existing_clean_floor
+    ensureKey('existing_clean_floor', function() {
+        var ecf = {};
+        DERIVE_ISOS.forEach(function(iso) {
+            var shares = GRID_MIX_SHARES[iso];
+            var demand = BASE_DEMAND_TWH[iso];
+            if (!shares || !demand) return;
+            var by_resource = {}, total = 0;
+            for (var r in shares) { var twh = Math.round(demand * shares[r] / 100 * 10) / 10; by_resource[r] = twh; total += twh; }
+            by_resource.ccs_ccgt = 0; by_resource.battery = 0; by_resource.ldes = 0;
+            ecf[iso] = { by_resource: by_resource, total_twh: Math.round(total * 10) / 10 };
+        });
+        return ecf;
     });
 
-    // 1. growth_adjusted_cumulative → alias for cumulative_deployment
+    // 2. growth_adjusted_cumulative (alias for cumulative_deployment)
     if (!CQ_DATA.growth_adjusted_cumulative && CQ_DATA.cumulative_deployment) {
         CQ_DATA.growth_adjusted_cumulative = CQ_DATA.cumulative_deployment;
     }
 
-    // 2. fossil_baselines_2045 — includes fossil_twh for correct 1B (fossil-avg) calculation
-    CQ_DATA.fossil_baselines_2045 = {};
-    DERIVE_ISOS.forEach(function(iso) {
-        var stack = CQ_DATA.dispatch_stacks && CQ_DATA.dispatch_stacks[iso];
-        var proj = CQ_DATA.demand_growth_projections && CQ_DATA.demand_growth_projections[iso];
-        if (!stack) return;
-
-        var demand_2045 = (proj && proj['2045']) ? proj['2045'].demand_twh : BASE_DEMAND_TWH[iso] * 1.43;
-        // Existing clean stays fixed at 2025 levels; fossil fills the rest at 2045 demand
-        var existing_clean_twh = CQ_DATA.existing_clean_floor[iso] ? CQ_DATA.existing_clean_floor[iso].total_twh : 0;
-        var fossil_twh_total = Math.max(0, demand_2045 - existing_clean_twh);
-
-        // Distribute fossil TWh across fuels proportionally to current stack
-        var total_fuel = 0;
-        stack.fuels.forEach(function(f) { total_fuel += Math.max(0, f.cap_twh); });
-
-        var coal_twh = 0, oil_twh = 0, gas_twh = 0;
-        var coal_rate = 0, oil_rate = 0, gas_rate = 0;
-        stack.fuels.forEach(function(f) {
-            var ratio = total_fuel > 0 ? Math.max(0, f.cap_twh) / total_fuel : 0;
-            var twh = fossil_twh_total * ratio;
-            if (f.type === 'coal') { coal_twh = twh; coal_rate = f.emission_rate; }
-            else if (f.type === 'oil') { oil_twh = twh; oil_rate = f.emission_rate; }
-            else if (f.type === 'gas') { gas_twh = twh; gas_rate = f.emission_rate; }
-        });
-
-        CQ_DATA.fossil_baselines_2045[iso] = {
-            demand_2045_twh: Math.round(demand_2045 * 10) / 10,
-            fossil_twh: Math.round(fossil_twh_total * 10) / 10,
-            coal_twh: Math.round(coal_twh * 10) / 10,
-            oil_twh: Math.round(oil_twh * 10) / 10,
-            gas_twh: Math.round(gas_twh * 10) / 10,
-            fossil_co2_mt: Math.round((coal_twh * coal_rate + oil_twh * oil_rate + gas_twh * gas_rate) * 100) / 100
-        };
-    });
-
-    // 3. first_deployments — scan deployment_queue for first occurrence of each tech
-    if (!CQ_DATA.first_deployments) {
-        var fd = { first_clean_firm: null, first_battery: null, first_ccs: null, first_ldes: null };
-        (CQ_DATA.deployment_queue || []).forEach(function(qe, idx) {
-            if (!qe.delta_resources) return;
-            if (!fd.first_clean_firm && (qe.delta_resources.clean_firm || 0) > 0.5) {
-                fd.first_clean_firm = { queue_position: idx, iso: qe.iso, zone_label: qe.zone_label,
-                                        year_end: qe.year_end, clean_firm_twh: qe.delta_resources.clean_firm };
-            }
-            if (!fd.first_battery && (qe.delta_resources.battery || 0) > 0.5) {
-                fd.first_battery = { queue_position: idx, iso: qe.iso, zone_label: qe.zone_label, year_end: qe.year_end };
-            }
-            if (!fd.first_ccs && (qe.delta_resources.ccs_ccgt || 0) > 0.5) {
-                fd.first_ccs = { queue_position: idx, iso: qe.iso, zone_label: qe.zone_label, year_end: qe.year_end };
-            }
-            if (!fd.first_ldes && (qe.delta_resources.ldes || 0) > 0.5) {
-                fd.first_ldes = { queue_position: idx, iso: qe.iso, zone_label: qe.zone_label, year_end: qe.year_end };
-            }
-        });
-        CQ_DATA.first_deployments = fd;
-    }
-
-    // 4. iso_cfe_progress — derive from resource_trajectories + dispatch_stacks
-    if (!CQ_DATA.iso_cfe_progress) {
-        CQ_DATA.iso_cfe_progress = {};
-        var rt2 = CQ_DATA.resource_trajectories;
+    // 3. fossil_baselines_2045
+    ensureKey('fossil_baselines_2045', function() {
+        var fb = {};
         DERIVE_ISOS.forEach(function(iso) {
             var stack = CQ_DATA.dispatch_stacks && CQ_DATA.dispatch_stacks[iso];
-            if (!rt2 || !rt2[iso] || !rt2[iso].length || !stack) return;
-            var first = rt2[iso][0];
-            var last = rt2[iso][rt2[iso].length - 1];
-            var start_cfe = stack.baseline_clean_pct || 50;
-            var end_cfe = last.match_score || start_cfe;
-
-            CQ_DATA.iso_cfe_progress[iso] = {
-                start_cfe_pct: start_cfe,
-                end_cfe_pct: end_cfe,
-                delta_cfe_pct: end_cfe - start_cfe,
-                new_gas_mw_at_start: first.new_gas_mw || 0,
-                new_gas_mw_at_end: last.new_gas_mw || 0
+            if (!stack || !stack.fuels) return;
+            var proj = CQ_DATA.demand_growth_projections && CQ_DATA.demand_growth_projections[iso];
+            var demand_2045 = (proj && proj['2045']) ? proj['2045'].demand_twh : BASE_DEMAND_TWH[iso] * 1.43;
+            var ecf = CQ_DATA.existing_clean_floor[iso];
+            var existing_clean_twh = ecf ? ecf.total_twh : 0;
+            var fossil_twh_total = Math.max(0, demand_2045 - existing_clean_twh);
+            var total_fuel = 0;
+            stack.fuels.forEach(function(f) { total_fuel += Math.max(0, f.cap_twh || 0); });
+            var coal_twh = 0, oil_twh = 0, gas_twh = 0, coal_rate = 0, oil_rate = 0, gas_rate = 0;
+            stack.fuels.forEach(function(f) {
+                var ratio = total_fuel > 0 ? Math.max(0, f.cap_twh || 0) / total_fuel : 0;
+                var twh = fossil_twh_total * ratio;
+                if (f.type === 'coal') { coal_twh = twh; coal_rate = f.emission_rate || 0; }
+                else if (f.type === 'oil') { oil_twh = twh; oil_rate = f.emission_rate || 0; }
+                else if (f.type === 'gas') { gas_twh = twh; gas_rate = f.emission_rate || 0; }
+            });
+            fb[iso] = {
+                demand_2045_twh: Math.round(demand_2045 * 10) / 10,
+                fossil_twh: Math.round(fossil_twh_total * 10) / 10,
+                coal_twh: Math.round(coal_twh * 10) / 10, oil_twh: Math.round(oil_twh * 10) / 10,
+                gas_twh: Math.round(gas_twh * 10) / 10,
+                fossil_co2_mt: Math.round((coal_twh * coal_rate + oil_twh * oil_rate + gas_twh * gas_rate) * 100) / 100
             };
         });
-    }
+        return fb;
+    });
+
+    // 4. first_deployments
+    ensureKey('first_deployments', function() {
+        var fd = { first_clean_firm: null, first_battery: null, first_ccs: null, first_ldes: null };
+        (CQ_DATA.deployment_queue || []).forEach(function(qe, idx) {
+            var dr = qe.delta_resources;
+            if (!dr) return;
+            if (!fd.first_clean_firm && (dr.clean_firm || 0) > 0.5)
+                fd.first_clean_firm = { queue_position: idx, iso: qe.iso, zone_label: qe.zone_label, year_end: qe.year_end, clean_firm_twh: dr.clean_firm };
+            if (!fd.first_battery && (dr.battery || 0) > 0.5)
+                fd.first_battery = { queue_position: idx, iso: qe.iso, zone_label: qe.zone_label, year_end: qe.year_end };
+            if (!fd.first_ccs && (dr.ccs_ccgt || 0) > 0.5)
+                fd.first_ccs = { queue_position: idx, iso: qe.iso, zone_label: qe.zone_label, year_end: qe.year_end };
+            if (!fd.first_ldes && (dr.ldes || 0) > 0.5)
+                fd.first_ldes = { queue_position: idx, iso: qe.iso, zone_label: qe.zone_label, year_end: qe.year_end };
+        });
+        return fd;
+    });
+
+    // 5. iso_cfe_progress
+    ensureKey('iso_cfe_progress', function() {
+        var progress = {};
+        var rt = CQ_DATA.resource_trajectories;
+        DERIVE_ISOS.forEach(function(iso) {
+            var stack = CQ_DATA.dispatch_stacks && CQ_DATA.dispatch_stacks[iso];
+            if (!rt || !rt[iso] || !rt[iso].length || !stack) return;
+            var first = rt[iso][0], last = rt[iso][rt[iso].length - 1];
+            var start_cfe = stack.baseline_clean_pct || 50;
+            progress[iso] = {
+                start_cfe_pct: start_cfe, end_cfe_pct: last.match_score || start_cfe,
+                delta_cfe_pct: (last.match_score || start_cfe) - start_cfe,
+                new_gas_mw_at_start: first.new_gas_mw || 0, new_gas_mw_at_end: last.new_gas_mw || 0
+            };
+        });
+        return progress;
+    });
+
+    // Validate critical keys exist
+    var required = ['deployment_queue', 'growth_adjusted_cumulative', 'existing_clean_floor', 'fossil_baselines_2045'];
+    required.forEach(function(k) {
+        if (!CQ_DATA[k]) console.error('CQ_DATA.' + k + ' is missing — animation will not work');
+    });
 })();
 
 // ====================================================================
@@ -1611,7 +1610,11 @@ function runSimStep() {
 
     var qe = getQueueEntry(simStep);
     var cd = getGrowthCumulativeAt(simStep);
-    if (!qe || !cd) { simStep++; return; }
+    if (!qe || !cd) {
+        simStep++;
+        if (simRunning) simTimer = setTimeout(runSimStep, 50);
+        return;
+    }
 
     // Track cumulative NEW resources per ISO (all deltas, show max(0, net) in chart)
     if (qe.delta_resources) {
@@ -2075,17 +2078,10 @@ function init() {
     setupFadeIn();
     wireControls();
 
-    // Set initial baselines (fossil-only at 2045 demand)
-    updateBaselineDisplay();
-
-    // Initialize stacked bar chart with zero new resources
-    updateResourceByISOChart();
-
-    // Build CFE tiles and first deployment callout
-    buildCFETiles();
-    buildFirstDeployCallout();
-
-    // Initialize static charts
+    try { updateBaselineDisplay(); } catch(e) { console.warn('Baseline display error:', e); }
+    try { updateResourceByISOChart(); } catch(e) { console.warn('Resource chart init error:', e); }
+    try { buildCFETiles(); } catch(e) { console.warn('CFE tiles error:', e); }
+    try { buildFirstDeployCallout(); } catch(e) { console.warn('First deploy callout error:', e); }
     try { initCO2CompareChart(); } catch(e) { console.warn('CO2 compare chart error:', e); }
     try { initFuelDisplaceChart(); } catch(e) { console.warn('Fuel displace chart error:', e); }
     try { initResourceByPartChart(); } catch(e) { console.warn('Resource by part chart error:', e); }
