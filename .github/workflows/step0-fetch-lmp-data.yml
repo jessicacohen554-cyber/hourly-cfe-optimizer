@@ -2,13 +2,15 @@ name: "Step 0: Fetch Actual LMP Data"
 
 # Fetches actual day-ahead hourly LMP from ISO APIs via gridstatus library.
 # Use this to get calibration data for synthetic LMP model validation.
+#
+# iso=ALL fans out parallel matrix jobs, then merges into one branch + PR.
 # Output: data/lmp/{ISO}_actual_lmp_{year}.json
 
 on:
   workflow_dispatch:
     inputs:
       iso:
-        description: 'ISO region to fetch'
+        description: 'ISO region to fetch (ALL = parallel)'
         required: true
         default: 'ALL'
         type: choice
@@ -44,9 +46,64 @@ env:
   BRANCH_PREFIX: step0-fetch-lmp
 
 jobs:
-  fetch-lmp:
+  prepare:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            echo 'matrix=["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix=["${{ inputs.iso }}"]' >> "$GITHUB_OUTPUT"
+          fi
+
+  process:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      matrix:
+        iso: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install gridstatus pandas numpy pyarrow
+
+      - name: "Fetch LMP — ${{ matrix.iso }}"
+        run: |
+          FORCE_FLAG=""
+          if [ "${{ inputs.force }}" = "true" ]; then
+            FORCE_FLAG="--force"
+          fi
+          python scripts/step0_fetch_lmp_2025.py \
+            --iso ${{ matrix.iso }} \
+            --year ${{ inputs.year }} \
+            $FORCE_FLAG
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lmp-fetch-${{ matrix.iso }}
+          path: data/lmp/
+          retention-days: 1
+
+  merge:
+    needs: [prepare, process]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     permissions:
       contents: write
@@ -68,24 +125,12 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$TARGET_BRANCH"
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
         with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: pip install gridstatus pandas numpy pyarrow
-
-      - name: Fetch actual LMP data
-        run: |
-          FORCE_FLAG=""
-          if [ "${{ inputs.force }}" = "true" ]; then
-            FORCE_FLAG="--force"
-          fi
-          python scripts/step0_fetch_lmp_2025.py \
-            --iso ${{ inputs.iso }} \
-            --year ${{ inputs.year }} \
-            $FORCE_FLAG
+          pattern: lmp-fetch-*
+          path: data/lmp/
+          merge-multiple: true
 
       - name: Commit and push
         run: |
