@@ -1648,7 +1648,8 @@ function runSimStep() {
     }
 
     if (simRunning) {
-        simTimer = setTimeout(runSimStep, 150);
+        // 112 steps — use 80ms for smooth ~9s animation
+        simTimer = setTimeout(runSimStep, 80);
     }
 }
 
