@@ -97,6 +97,115 @@ CHUNK_CANDIDATE_LIMIT = 500_000  # flush to disk above this
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# NUMBA KERNEL: Cap-check + saturation pruning + feasible extraction
+# ══════════════════════════════════════════════════════════════════════════════
+
+@njit(cache=True, fastmath=True)
+def _extract_feasible(scores, n_mixes, n_b4, n_b8, n_l, n_h2,
+                      bat4_arr, bat8_arr, ldes_arr, h2_arr,
+                      bat4_caps, bat8_caps, ldes_caps, surplus_days,
+                      target, min_surplus_days, saturation_eps):
+    """Extract feasible (score >= target, storage > 0) combos with cap-check
+    and saturation dominance pruning, entirely in Numba.
+
+    Returns:
+      out_mix_idx: which mix (within batch) each result belongs to
+      out_b4, out_b8, out_ldes, out_h2: storage levels for each result
+      out_score: hourly match score for each result
+      n_out: number of valid results written
+
+    All output arrays are pre-allocated to worst-case size; only [:n_out] is valid.
+    """
+    max_out = n_mixes * n_b4 * n_b8 * n_l * n_h2
+    out_mix_idx = np.empty(max_out, dtype=np.int64)
+    out_b4 = np.empty(max_out, dtype=np.float64)
+    out_b8 = np.empty(max_out, dtype=np.float64)
+    out_ldes = np.empty(max_out, dtype=np.float64)
+    out_h2 = np.empty(max_out, dtype=np.float64)
+    out_score = np.empty(max_out, dtype=np.float64)
+    n_out = 0
+
+    for mi in range(n_mixes):
+        b4_max = bat4_caps[mi]
+        b8_max = bat8_caps[mi]
+        l_max = ldes_caps[mi]
+        n_sd = surplus_days[mi]
+        s_base = mi * n_b4 * n_b8 * n_l * n_h2  # offset into flat scores
+
+        prev_b4_best = -1.0
+        for b4_idx in range(n_b4):
+            bp = bat4_arr[b4_idx]
+            if bp > 0 and (n_sd < min_surplus_days or bp > b4_max):
+                break  # sorted ascending
+
+            cur_b4_best = -1.0
+            prev_b8_best = -1.0
+            for b8_idx in range(n_b8):
+                b8p = bat8_arr[b8_idx]
+                if b8p > 0 and (n_sd < min_surplus_days or b8p > b8_max):
+                    break
+
+                cur_b8_best = -1.0
+                prev_l_best = -1.0
+                for l_idx in range(n_l):
+                    lp = ldes_arr[l_idx]
+                    if lp > 0 and lp > l_max:
+                        break
+
+                    cur_l_best = -1.0
+                    for h2_idx in range(n_h2):
+                        h2p = h2_arr[h2_idx]
+                        idx = (s_base + b4_idx * n_b8 * n_l * n_h2 +
+                               b8_idx * n_l * n_h2 + l_idx * n_h2 + h2_idx)
+                        score = scores[idx]
+
+                        if score >= 0:
+                            if score > cur_l_best:
+                                cur_l_best = score
+
+                        # Skip no-storage and below-target
+                        if bp == 0 and b8p == 0 and lp == 0 and h2p == 0:
+                            continue
+                        if score < 0 or score < target:
+                            continue
+
+                        out_mix_idx[n_out] = mi
+                        out_b4[n_out] = bp
+                        out_b8[n_out] = b8p
+                        out_ldes[n_out] = lp
+                        out_h2[n_out] = h2p
+                        out_score[n_out] = score
+                        n_out += 1
+
+                    # LDES saturation
+                    if (l_idx > 0 and cur_l_best >= 0 and prev_l_best >= 0
+                            and cur_l_best <= prev_l_best + saturation_eps):
+                        break
+                    if cur_l_best >= 0 and cur_l_best > prev_l_best:
+                        prev_l_best = cur_l_best
+                    if cur_l_best > cur_b8_best:
+                        cur_b8_best = cur_l_best
+
+                # bat8 saturation
+                if (b8_idx > 0 and cur_b8_best >= 0 and prev_b8_best >= 0
+                        and cur_b8_best <= prev_b8_best + saturation_eps):
+                    break
+                if cur_b8_best >= 0 and cur_b8_best > prev_b8_best:
+                    prev_b8_best = cur_b8_best
+                if cur_b8_best > cur_b4_best:
+                    cur_b4_best = cur_b8_best
+
+            # bat4 saturation
+            if (b4_idx > 0 and cur_b4_best >= 0 and prev_b4_best >= 0
+                    and cur_b4_best <= prev_b4_best + saturation_eps):
+                break
+            if cur_b4_best >= 0 and cur_b4_best > prev_b4_best:
+                prev_b4_best = cur_b4_best
+
+    return out_mix_idx[:n_out], out_b4[:n_out], out_b8[:n_out], out_ldes[:n_out], out_h2[:n_out], out_score[:n_out], n_out
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # STORAGE LEVEL DEFINITIONS
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -269,27 +378,44 @@ def process_threshold(iso, threshold, demand_arr, supply_matrix,
           f"LDES=[{valid_l.min():.3f}%, {np.median(valid_l):.3f}%, {valid_l.max():.3f}%]")
 
     # ── Batch evaluate storage combos ──
-    n_total_batches = (len(nm_valid) + MAX_MIX_BATCH - 1) // MAX_MIX_BATCH
-    candidates = []
-    seen = set()
+    # Uses Numba kernel for cap-check + saturation pruning + feasible extraction.
+    # Columnar arrays replace per-candidate dict construction.
+    n_valid = len(nm_valid)
+    n_total_batches = (n_valid + MAX_MIX_BATCH - 1) // MAX_MIX_BATCH
     total_feasible = 0
     chunk_num = 0
 
-    for batch_start in range(0, len(nm_valid), MAX_MIX_BATCH):
-        batch_end = min(batch_start + MAX_MIX_BATCH, len(nm_valid))
-        batch = nm_valid[batch_start:batch_end]
-        n_batch = len(batch)
+    # Columnar accumulators for all feasible results
+    all_orig_idx = []       # original coarse_combos index per feasible result
+    all_b4 = []
+    all_b8 = []
+    all_ldes = []
+    all_h2 = []
+    all_score = []
+
+    # Pre-build numpy arrays of caps/surplus_days for valid mixes (for Numba kernel)
+    valid_b4_caps_pct = np.array([v[2] for v in nm_valid], dtype=np.float64)
+    valid_b8_caps_pct = np.array([v[3] for v in nm_valid], dtype=np.float64)
+    valid_l_caps_pct = np.array([v[4] for v in nm_valid], dtype=np.float64)
+    valid_sd = np.array([v[5] for v in nm_valid], dtype=np.int64)
+    valid_orig_idx = np.array([v[1] for v in nm_valid], dtype=np.int64)
+
+    # Dedup set (stays in Python — Numba can't do tuple-set dedup across batches)
+    seen = set()
+
+    for batch_start in range(0, n_valid, MAX_MIX_BATCH):
+        batch_end = min(batch_start + MAX_MIX_BATCH, n_valid)
+        n_batch = batch_end - batch_start
         batch_num = batch_start // MAX_MIX_BATCH + 1
 
-        # Progress
         print(f"\r      Batch {batch_num}/{n_total_batches} "
               f"({total_feasible:,} feasible so far)", end="", flush=True)
 
         # Vectorized supply: single matmul
-        batch_orig_idx = np.array([b[1] for b in batch])
+        batch_orig_idx = valid_orig_idx[batch_start:batch_end]
         batch_supply = (coarse_combos[batch_orig_idx].astype(np.float64) / 100.0) @ supply_matrix
 
-        # Numba parallel batch evaluation
+        # Numba parallel batch evaluation — scores shape (n_batch, n_combos)
         batch_scores = _batch_mixes_storage_screen(
             demand_arr, batch_supply, 1.0, n_batch,
             bat4_arr, bat8_arr, ldes_arr, n_b4, n_b8, n_l,
@@ -298,111 +424,66 @@ def process_threshold(iso, threshold, demand_arr, supply_matrix,
             ldes_window_hours, batt8_window,
             h2_arr, n_h2, h2_eff, h2_dur, h2_window_hours)
 
-        # Process results with cap filtering + saturation dominance pruning.
-        # Scores are monotonically non-decreasing in each storage dimension
-        # (more capacity = same or better score). Once a dimension saturates
-        # (score stops improving), all higher levels produce identical scores
-        # and are dominated (same benefit, higher cost). We break early.
-        # Cap checks also use break (levels sorted ascending → once exceeded,
-        # all higher levels also exceed).
-        for bi in range(n_batch):
-            ci, orig_idx, bat4_max, bat8_max, ldes_max, n_sd = batch[bi]
+        # Flatten scores for Numba kernel (expects 1D with mix-major layout)
+        flat_scores = batch_scores.ravel()
+
+        # Numba kernel: cap-check + saturation pruning + feasible extraction
+        batch_b4_caps = valid_b4_caps_pct[batch_start:batch_end]
+        batch_b8_caps = valid_b8_caps_pct[batch_start:batch_end]
+        batch_l_caps = valid_l_caps_pct[batch_start:batch_end]
+        batch_sd = valid_sd[batch_start:batch_end]
+
+        f_mix_idx, f_b4, f_b8, f_ldes, f_h2, f_score, n_f = _extract_feasible(
+            flat_scores, n_batch, n_b4, n_b8, n_l, n_h2,
+            bat4_arr, bat8_arr, ldes_arr, h2_arr,
+            batch_b4_caps, batch_b8_caps, batch_l_caps, batch_sd,
+            target, MIN_SURPLUS_DAYS_FOR_BATTERY, SATURATION_EPS)
+
+        # Dedup in Python (cross-batch dedup requires set)
+        for fi in range(n_f):
+            mi = int(f_mix_idx[fi])
+            orig_idx = int(batch_orig_idx[mi])
             mix = coarse_combos[orig_idx]
-            scores = batch_scores[bi]
-            mix_key = tuple(int(mix[i]) for i in range(n_res))
-
-            prev_b4_best = -1.0
-            for b4_idx in range(n_b4):
-                bp = bat4_arr[b4_idx]
-                if bp > 0 and (n_sd < MIN_SURPLUS_DAYS_FOR_BATTERY or bp > bat4_max):
-                    break  # sorted ascending → all higher levels also exceed cap
-
-                cur_b4_best = -1.0
-                prev_b8_best = -1.0
-                for b8_idx in range(n_b8):
-                    b8p = bat8_arr[b8_idx]
-                    if b8p > 0 and (n_sd < MIN_SURPLUS_DAYS_FOR_BATTERY or b8p > bat8_max):
-                        break
-
-                    cur_b8_best = -1.0
-                    prev_l_best = -1.0
-                    for l_idx in range(n_l):
-                        lp = ldes_arr[l_idx]
-                        if lp > 0 and lp > ldes_max:
-                            break
-
-                        cur_l_best = -1.0
-                        for h2_idx in range(n_h2):
-                            h2p = h2_arr[h2_idx]
-                            idx = (b4_idx * n_b8 * n_l * n_h2 +
-                                   b8_idx * n_l * n_h2 +
-                                   l_idx * n_h2 + h2_idx)
-                            score = scores[idx]
-
-                            # Track best score for saturation detection
-                            if score >= 0:
-                                cur_l_best = max(cur_l_best, score)
-
-                            # Skip no-storage case (already in 1C)
-                            if bp == 0 and b8p == 0 and lp == 0 and h2p == 0:
-                                continue
-                            if score < 0 or score < target:
-                                continue
-
-                            # Dedup
-                            key = (mix_key, bp, b8p, lp, h2p)
-                            if key in seen:
-                                continue
-                            seen.add(key)
-
-                            candidates.append({
-                                'resource_mix': {rt: mix_key[j] for j, rt in enumerate(rtypes)},
-                                'battery_dispatch_pct': bp,
-                                'battery8_dispatch_pct': b8p,
-                                'ldes_dispatch_pct': lp,
-                                'h2_dispatch_pct': h2p,
-                                'hourly_match_score': round(score * 100, 2),
-                            })
-                            total_feasible += 1
-
-                        # LDES saturation: if best score at this LDES level didn't
-                        # improve over previous level, all higher LDES levels are
-                        # dominated (same score, higher cost) → break
-                        if (l_idx > 0 and cur_l_best >= 0 and prev_l_best >= 0
-                                and cur_l_best <= prev_l_best + SATURATION_EPS):
-                            break
-                        if cur_l_best >= 0:
-                            prev_l_best = max(prev_l_best, cur_l_best)
-                        cur_b8_best = max(cur_b8_best, cur_l_best)
-
-                    # bat8 saturation check
-                    if (b8_idx > 0 and cur_b8_best >= 0 and prev_b8_best >= 0
-                            and cur_b8_best <= prev_b8_best + SATURATION_EPS):
-                        break
-                    if cur_b8_best >= 0:
-                        prev_b8_best = max(prev_b8_best, cur_b8_best)
-                    cur_b4_best = max(cur_b4_best, cur_b8_best)
-
-                # bat4 saturation check
-                if (b4_idx > 0 and cur_b4_best >= 0 and prev_b4_best >= 0
-                        and cur_b4_best <= prev_b4_best + SATURATION_EPS):
-                    break
-                if cur_b4_best >= 0:
-                    prev_b4_best = max(prev_b4_best, cur_b4_best)
+            mix_key = tuple(int(mix[k]) for k in range(n_res))
+            bp = f_b4[fi]
+            b8p = f_b8[fi]
+            lp = f_ldes[fi]
+            h2p = f_h2[fi]
+            key = (mix_key, bp, b8p, lp, h2p)
+            if key in seen:
+                continue
+            seen.add(key)
+            all_orig_idx.append(orig_idx)
+            all_b4.append(bp)
+            all_b8.append(b8p)
+            all_ldes.append(lp)
+            all_h2.append(h2p)
+            all_score.append(round(f_score[fi] * 100.0, 2))
+            total_feasible += 1
 
         # Flush to disk if too many candidates in memory
-        if len(candidates) >= CHUNK_CANDIDATE_LIMIT:
+        if total_feasible >= CHUNK_CANDIDATE_LIMIT:
+            candidates = _columnar_to_candidates(
+                iso, rtypes, coarse_combos, all_orig_idx,
+                all_b4, all_b8, all_ldes, all_h2, all_score)
             chunk_num = _save_chunk(iso, threshold, candidates, chunk_num)
-            candidates.clear()
+            all_orig_idx.clear()
+            all_b4.clear()
+            all_b8.clear()
+            all_ldes.clear()
+            all_h2.clear()
+            all_score.clear()
 
     print(f"\r      {n_total_batches}/{n_total_batches} batches done — "
           f"{total_feasible:,} feasible solutions"
           f"                              ")
 
     # ── Save results ──
-    if candidates or chunk_num > 0:
+    if all_orig_idx or chunk_num > 0:
+        candidates = _columnar_to_candidates(
+            iso, rtypes, coarse_combos, all_orig_idx,
+            all_b4, all_b8, all_ldes, all_h2, all_score)
         if chunk_num > 0:
-            # Merge chunks + remaining
             _merge_chunks_and_finalize(iso, threshold, candidates, chunk_num)
         else:
             _save_final(iso, threshold, candidates)
@@ -415,6 +496,24 @@ def process_threshold(iso, threshold, demand_arr, supply_matrix,
 # ══════════════════════════════════════════════════════════════════════════════
 # PARQUET OUTPUT
 # ══════════════════════════════════════════════════════════════════════════════
+
+def _columnar_to_candidates(iso, rtypes, coarse_combos, orig_idx_list,
+                            b4_list, b8_list, ldes_list, h2_list, score_list):
+    """Convert columnar accumulator lists into candidate dicts for parquet output."""
+    n_res = len(rtypes)
+    candidates = []
+    for i in range(len(orig_idx_list)):
+        mix = coarse_combos[orig_idx_list[i]]
+        candidates.append({
+            'resource_mix': {rt: int(mix[j]) for j, rt in enumerate(rtypes)},
+            'battery_dispatch_pct': b4_list[i],
+            'battery8_dispatch_pct': b8_list[i],
+            'ldes_dispatch_pct': ldes_list[i],
+            'h2_dispatch_pct': h2_list[i],
+            'hourly_match_score': score_list[i],
+        })
+    return candidates
+
 
 def _candidate_to_row(iso, threshold, c):
     """Convert a candidate dict to a flat row dict."""
@@ -680,13 +779,22 @@ def _warmup_jit(demand_data, gen_profiles):
     b8 = np.array([0.0, 0.1], dtype=np.float64)
     ld = np.array([0.0, 0.5], dtype=np.float64)
     h2 = np.array([0.0], dtype=np.float64)
-    _batch_mixes_storage_screen(
+    scores_2d = _batch_mixes_storage_screen(
         demand_arr, dummy_supply, 1.0, 1,
         b4, b8, ld, 2, 2, 2,
         BATTERY_EFFICIENCY, BATTERY8_EFFICIENCY, LDES_EFFICIENCY,
         BATTERY_DURATION_HOURS, BATTERY8_DURATION_HOURS, LDES_DURATION_HOURS,
         LDES_WINDOW_DAYS * 24, 48,
         h2, 1, H2_EFFICIENCY, float(H2_DURATION_HOURS), H2_WINDOW_DAYS * 24)
+
+    # Warmup _extract_feasible
+    dummy_caps = np.array([1.0], dtype=np.float64)
+    dummy_sd = np.array([200], dtype=np.int64)
+    _extract_feasible(
+        scores_2d.ravel(), 1, 2, 2, 2, 1,
+        b4, b8, ld, h2,
+        dummy_caps, dummy_caps, dummy_caps, dummy_sd,
+        0.5, 150, 1e-6)
 
 
 if __name__ == '__main__':
