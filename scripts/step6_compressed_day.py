@@ -14,8 +14,8 @@ Pipeline position: Step 5 of 5
   Step 5 — Compressed day profiles (this file)
 
 Input:
-  - data/eia_demand_profiles.json (8760 demand)
-  - data/eia_generation_profiles.json (solar, wind, hydro hourly)
+  - data/eia-930/eia_demand_profiles.json (8760 demand)
+  - data/eia-930/eia_generation_profiles.json (solar, wind, hydro hourly)
   - dashboard/overprocure_results.json (all scenarios with resource mixes)
 
 Output:
