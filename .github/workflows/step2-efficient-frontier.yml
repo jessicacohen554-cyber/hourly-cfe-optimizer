@@ -56,6 +56,11 @@ on:
         required: false
         default: '200'
         type: string
+      thresholds:
+        description: 'Comma-separated thresholds to process (e.g. "95" or "92.5,95,97.5"). Leave blank for all 21.'
+        required: false
+        default: ''
+        type: string
       dry_run:
         description: 'Dry run for expand-ef (simulate only, no parquet changes)'
         required: false
@@ -160,7 +165,13 @@ jobs:
       - name: "Run Efficient Frontier filter (${{ matrix.iso }})"
         if: ${{ inputs.script == 'ef-only' || inputs.script == 'ef-then-expand' }}
         timeout-minutes: 90
-        run: python scripts/step2_efficient_frontier.py --iso ${{ matrix.iso }}
+        run: |
+          ARGS="--iso ${{ matrix.iso }}"
+          THRESHOLDS="${{ inputs.thresholds }}"
+          if [ -n "$THRESHOLDS" ]; then
+            ARGS="$ARGS --thresholds $THRESHOLDS"
+          fi
+          python scripts/step2_efficient_frontier.py $ARGS
 
       - name: "Expand EF with floor-compatible PFS mixes (${{ matrix.iso }})"
         if: ${{ inputs.script == 'expand-ef' || inputs.script == 'ef-then-expand' }}
@@ -266,12 +277,36 @@ jobs:
       - name: Ensure output directories
         run: mkdir -p data/step2-ef-parquets
 
+      # ── Custom thresholds (skip batching, run direct) ────────────────
+      - name: "Custom thresholds: ${{ inputs.thresholds }} (${{ matrix.iso }})"
+        if: ${{ inputs.thresholds != '' }}
+        timeout-minutes: 60
+        run: |
+          python scripts/step2_efficient_frontier.py \
+            --iso ${{ matrix.iso }} \
+            --thresholds "${{ inputs.thresholds }}"
+
+      - name: "Commit custom thresholds (${{ matrix.iso }})"
+        if: ${{ inputs.thresholds != '' }}
+        run: |
+          git config http.postBuffer 524288000
+          git add -f data/step2-ef-parquets/step2_ef_${{ matrix.iso }}_t*.parquet 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "Step 2 EF: ${{ matrix.iso }} thresholds=${{ inputs.thresholds }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git push -u origin "$TARGET_BRANCH" 2>&1 || true
+            echo "✓ Custom thresholds committed and pushed"
+          else
+            echo "No output from custom thresholds"
+          fi
+
       # ── Batch 1: low thresholds (10-75%) ──────────────────────────────
       - name: "Batch LOW: thresholds 10-75% (${{ matrix.iso }})"
+        if: ${{ inputs.thresholds == '' }}
         timeout-minutes: 30
         run: python scripts/step2_efficient_frontier.py --iso ${{ matrix.iso }} --batch low
 
       - name: "Commit batch LOW (${{ matrix.iso }})"
+        if: ${{ inputs.thresholds == '' }}
         run: |
           git config http.postBuffer 524288000
           # Batch outputs: step2_ef_{ISO}_t{T}_batch_low.parquet (one per threshold)
@@ -286,10 +321,12 @@ jobs:
 
       # ── Batch 2: mid thresholds (80-95%) ──────────────────────────────
       - name: "Batch MID: thresholds 80-95% (${{ matrix.iso }})"
+        if: ${{ inputs.thresholds == '' }}
         timeout-minutes: 30
         run: python scripts/step2_efficient_frontier.py --iso ${{ matrix.iso }} --batch mid
 
       - name: "Commit batch MID (${{ matrix.iso }})"
+        if: ${{ inputs.thresholds == '' }}
         run: |
           git config http.postBuffer 524288000
           # Batch outputs: step2_ef_{ISO}_t{T}_batch_mid.parquet (one per threshold)
@@ -304,10 +341,12 @@ jobs:
 
       # ── Batch 3: high thresholds (97.5-99.99%) ────────────────────────
       - name: "Batch HIGH: thresholds 97.5-99.99% (${{ matrix.iso }})"
+        if: ${{ inputs.thresholds == '' }}
         timeout-minutes: 45
         run: python scripts/step2_efficient_frontier.py --iso ${{ matrix.iso }} --batch high
 
       - name: "Commit batch HIGH (${{ matrix.iso }})"
+        if: ${{ inputs.thresholds == '' }}
         run: |
           git config http.postBuffer 524288000
           # Batch outputs: step2_ef_{ISO}_t{T}_batch_high.parquet (one per threshold)
@@ -320,8 +359,9 @@ jobs:
             echo "No output from batch HIGH"
           fi
 
-      # ── Merge all batches into final EF ────────────────────────────────
+      # ── Merge all batches into final EF (skip if custom thresholds) ───
       - name: "Merge batches into final EF (${{ matrix.iso }})"
+        if: ${{ inputs.thresholds == '' }}
         timeout-minutes: 30
         run: python scripts/step2_efficient_frontier.py --iso ${{ matrix.iso }} --merge
 
