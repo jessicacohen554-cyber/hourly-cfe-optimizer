@@ -1289,7 +1289,8 @@ The optimizer runs as a 7-step pipeline. Each step is independent — only re-ru
 | Step | Script | Name | What It Does | When to Re-run |
 |------|--------|------|-------------|---------------|
 | **Step 1** | `step1_pfs_generator.py` | **PFS Generator** | Generates the Physics Feasible Space (PFS). Sweeps 4D resource mixes × procurement × battery × LDES, evaluates hourly generation vs. demand, computes match scores, curtailment, storage dispatch. Produces physics-validated mixes across 7 ISOs × 15 thresholds. | Only if dispatch logic, generation curves, or demand curves change. |
-| **Step 2** | `step2_efficient_frontier.py` | **Efficient Frontier (EF)** | Extracts the efficient frontier from the PFS. Filters existing generation utilization, minimizes procurement per allocation, removes strictly dominated mixes. Reduces 21.4M → ~1.8M rows. | Only if PFS changes or filtering criteria change. |
+| **Step 1D** | `step1d_storage_refinement.py` | **Storage Refinement** | Fills storage exploration gaps from Step 1C. Tests intermediate storage levels (bat4 0.05-3%, bat8 0.1-4%, LDES 0.25-10%) that Step 1C's coarse grid missed. For ≥95%: LDES intermediates only. Reads coarse cache, no rerun of 1A-1C. Output: `data/step1d-storage-parquets/`. | After Step 1C, when storage granularity needs improvement. Does not rerun physics. |
+| **Step 2** | `step2_efficient_frontier.py` | **Efficient Frontier (EF)** | Extracts the efficient frontier from the PFS. Reads both `step1-pfs-parquets/` and `step1d-storage-parquets/`. Filters existing generation utilization, minimizes procurement per allocation, removes strictly dominated mixes. Reduces 21.4M → ~1.8M rows. | Only if PFS or Step 1D outputs change, or filtering criteria change. |
 | **Step 3** | `step3_cost_optimization.py` + `step3_track_nb_ctr.py` | **Cost Optimization** | Track 1 baseline: Vectorized cross-evaluation of all EF mixes under 5,832 sensitivity combos. Track 2 (NB) + Track 3 (CTR): greenfield cost analysis. Workflow has track selector dropdown. | When cost assumptions, tranche caps, LCOE tables, or sensitivity toggles change. |
 | **Step 4** | `step4_gas_ccs_adjustement.py` | **Gas/CCS Adjustments** | NEISO gas constraint, 45Q correction, gas capacity backup, CCS vs LDES crossover analysis. | When Step 3 outputs change. |
 | **Step 5** | `step5_build_dispatch_cache.py` + independent scripts | **Dispatch Cache + Independent Analysis** | Builds 8760-hour dispatch cache for all unique mixes. Also runs cache-independent scripts: EAC scarcity, track export, track analysis. | After Step 4 changes or when new mixes added. |
@@ -2489,6 +2490,45 @@ Levels above the per-mix cap are auto-skipped in the storage sweep.
 #### 4. Curtailment Frequency Filter
 
 Daily-cycle batteries (bat4/bat8) need **≥ 150 surplus days** to justify capacity. Mixes with fewer surplus days skip battery combos entirely; only LDES is evaluated (which accumulates across multi-day windows).
+
+### 6.5 Step 1D Storage Refinement Module (Decision: Mar 1, 2026)
+
+**Problem**: Step 1C's coarse storage levels at <95% thresholds ([0,1,3] for bat4, [0,2,4] for bat8, [0,5,10] for LDES as % of annual demand) are too wide for the physical storage caps. Typical caps are bat4=0.2–0.5%, bat8=0.5–1.0%, LDES=1.0–3.0%. The first non-zero coarse level already exceeds the cap for most mixes, so the cap filtering skips ALL non-zero levels — effectively never exploring storage at <95% thresholds.
+
+**Solution**: `step1d_storage_refinement.py` — a standalone module that reads the Step 1C coarse cache to identify candidate mixes and evaluates intermediate storage levels. No rerun of Steps 1A–1C.
+
+**Storage levels for 65–92.5% thresholds** (full intermediate sweep):
+```python
+bat4:  [0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0]  # 14 levels
+bat8:  [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 4.0]                 # 12 levels
+LDES:  [0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0, 5.0, 7.0, 10.0]          # 13 levels
+H2:    [0]                                                                                # 1 level
+# Total: 14 × 12 × 13 × 1 = 2,184 storage combos per mix
+```
+
+**Storage levels for ≥95% thresholds** (LDES intermediates only):
+```python
+bat4:  [0, 1, 3, 5]           # same as 1C (caps are larger at high procurement)
+bat8:  [0, 2, 4, 6]           # same as 1C
+LDES:  [0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 7.0, 10.0, 15.0, 20.0]  # 13 levels (fills 0→5 gap)
+H2:    [0, 5, 10, 20]         # same as 1C
+# Total: 4 × 4 × 13 × 4 = 832 storage combos per mix
+```
+
+**Algorithm**:
+1. Load coarse cache (no-storage scores) from Step 1B
+2. For each threshold ≥65%: identify near-miss mixes (score >= max(target − 0.40, 0.50) AND score < target)
+3. Compute physical storage caps per mix via `_batch_compute_storage_caps` (Numba parallel)
+4. Batch-evaluate all storage combos via `_batch_mixes_storage_screen` (100 mixes/batch, Numba prange)
+5. Cap filtering: skip levels exceeding per-mix physical cap (same as 1C §6.4.3)
+6. Curtailment filter: batteries need ≥150 surplus days (same as 1C §6.4.4)
+7. Output feasible solutions (score ≥ target AND at least one storage > 0) to new parquets
+
+**Output**: `data/step1d-storage-parquets/{ISO}_t{XX}_storage_refined.parquet` — same schema as Step 1C PFS parquets, `pareto_type = 'storage_refined'`.
+
+**Step 2 integration**: `step2_efficient_frontier.py` scans both `data/step1-pfs-parquets/` and `data/step1d-storage-parquets/`. Deduplication handles any overlap between 1C and 1D results (keeps max score per unique resource + storage key).
+
+**Test results** (ERCOT t75): 3,303,625 new storage-enabled solutions found in 78s (vs 0 from Step 1C). Cap ranges confirmed: bat4=[0.00%, 0.34%, 0.80%], LDES=[0.00%, 2.10%, 5.15%].
 
 #### 5. Bat8 Two-Day Dispatch Window
 
