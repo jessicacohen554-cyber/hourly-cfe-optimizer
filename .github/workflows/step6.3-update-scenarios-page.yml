@@ -1,10 +1,12 @@
 name: "Step 6.3: Update Scenarios Page"
 
-# Runs scenario scripts sequentially to populate the Scenarios comparison page:
+# Runs scenario scripts to populate the Scenarios comparison page:
 #   1. step6_scenario_a.py — Consequential scenario
 #   2. step6_scenario_b.py — Hourly matching scenario
 #   3. step6_scenario_compare.py — Merges A+B results into comparison data
 #
+# iso=ALL fans out parallel matrix jobs (each ISO runs A→B→Compare), then
+# merges into one branch + PR.
 # Prerequisite: Step 6.0 (CO2) should have run first.
 # Output: data/step5-post-processing/scenario_*.json, dashboard/js/scenario-comparison-data.js
 
@@ -12,7 +14,7 @@ on:
   workflow_dispatch:
     inputs:
       iso:
-        description: 'ISO region to process'
+        description: 'ISO region to process (ALL = parallel)'
         required: true
         default: 'ALL'
         type: choice
@@ -45,31 +47,33 @@ env:
   BRANCH_PREFIX: step6-3-scenarios
 
 jobs:
-  update-scenarios-page:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            echo 'matrix=["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix=["${{ inputs.iso }}"]' >> "$GITHUB_OUTPUT"
+          fi
+
+  process:
+    needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 240
-
-    permissions:
-      contents: write
-      pull-requests: write
+    strategy:
+      matrix:
+        iso: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.branch || 'master' }}
-          fetch-depth: 0
-
-      - name: Create output branch
-        run: |
-          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
-          ISO_LABEL="${{ inputs.iso }}"
-          SCRIPT_LABEL="${{ inputs.script }}"
-          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${SCRIPT_LABEL}-${ISO_LABEL}"
-          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b "$TARGET_BRANCH"
 
       - name: Verify upstream data exists
         run: |
@@ -92,41 +96,68 @@ jobs:
       - name: Install dependencies
         run: pip install numpy numba pyarrow pandas scipy
 
-      - name: Build ISO arguments
-        id: iso-args
-        run: |
-          if [ "${{ inputs.iso }}" = "ALL" ]; then
-            echo "iso_flags=" >> "$GITHUB_OUTPUT"
-          else
-            echo "iso_flags=--iso ${{ inputs.iso }}" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Ensure output directories
         run: |
           mkdir -p data/step5-post-processing
           mkdir -p dashboard/js
 
-      # ════════════════════════════════════════════════════════════════════
-      # Sequential: Scenario A → Scenario B → Compare
-      # ════════════════════════════════════════════════════════════════════
-
-      - name: "1/3 — Scenario A (Consequential)"
+      - name: "Scenario A (Consequential) — ${{ matrix.iso }}"
         if: ${{ inputs.script == 'ALL' || inputs.script == 'scenario-a' }}
-        run: |
-          echo "=== Scenario A ==="
-          python scripts/step6_scenario_a.py ${{ steps.iso-args.outputs.iso_flags }}
+        run: python scripts/step6_scenario_a.py --iso ${{ matrix.iso }}
 
-      - name: "2/3 — Scenario B (Hourly Matching)"
+      - name: "Scenario B (Hourly Matching) — ${{ matrix.iso }}"
         if: ${{ inputs.script == 'ALL' || inputs.script == 'scenario-b' }}
-        run: |
-          echo "=== Scenario B ==="
-          python scripts/step6_scenario_b.py ${{ steps.iso-args.outputs.iso_flags }}
+        run: python scripts/step6_scenario_b.py --iso ${{ matrix.iso }}
 
-      - name: "3/3 — Scenario Comparison (merge A+B)"
+      - name: "Scenario Comparison — ${{ matrix.iso }}"
         if: ${{ inputs.script == 'ALL' || inputs.script == 'scenario-compare' }}
+        run: python scripts/step6_scenario_compare.py --iso ${{ matrix.iso }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: scenarios-${{ matrix.iso }}
+          path: |
+            data/step5-post-processing/
+            dashboard/js/scenario-comparison-data.js
+          retention-days: 1
+
+  merge:
+    needs: [prepare, process]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Create output branch
         run: |
-          echo "=== Scenario Comparison ==="
-          python scripts/step6_scenario_compare.py ${{ steps.iso-args.outputs.iso_flags }}
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${{ inputs.script }}-${{ inputs.iso }}"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$TARGET_BRANCH"
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: scenarios-*
+          path: ./artifact-tmp/
+          merge-multiple: true
+
+      - name: Place artifacts
+        run: |
+          cp -rf artifact-tmp/data/step5-post-processing/* data/step5-post-processing/ 2>/dev/null || true
+          cp -f artifact-tmp/dashboard/js/scenario-comparison-data.js dashboard/js/ 2>/dev/null || true
 
       - name: Commit and push
         run: |
@@ -163,7 +194,7 @@ jobs:
             --body "## Summary
           Updates the Scenarios comparison page for **${{ inputs.iso }}** (script: ${{ inputs.script }}).
 
-          ## Scripts (sequential when ALL)
+          ## Scripts (sequential per ISO, ISOs run in parallel)
           1. \`step6_scenario_a.py\` — Consequential scenario
           2. \`step6_scenario_b.py\` — Hourly matching scenario
           3. \`step6_scenario_compare.py\` — Merges A+B into comparison data

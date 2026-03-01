@@ -4,10 +4,12 @@ name: "Step 5: Dispatch Cache & Track Analysis"
 # then exports and analyzes track results.
 #
 # Execution order:
-#   1. step5_build_dispatch_cache.py — builds cache (MUST run first)
-#   2. step5_export_track_results.py — exports track parquets to JSON (parallel)
-#   3. step5_analyze_tracks.py — track cost envelopes, mix differentials (parallel)
+#   1. step5_build_dispatch_cache.py — builds cache per-ISO (parallel matrix)
+#   2. step5_export_track_results.py — exports track parquets to JSON (global, in merge)
+#   3. step5_analyze_tracks.py — track cost envelopes, mix differentials (global, in merge)
 #
+# iso=ALL fans out parallel matrix jobs for dispatch cache, then merge job
+# runs global track scripts and commits everything.
 # Prerequisite: Step 4 (or Step 3) must have produced parquets.
 # Output: data/step5-post-processing/dispatch_cache/, dashboard/track_results.json
 
@@ -15,7 +17,7 @@ on:
   workflow_dispatch:
     inputs:
       iso:
-        description: 'ISO region to process'
+        description: 'ISO region to process (ALL = parallel)'
         required: true
         default: 'ALL'
         type: choice
@@ -48,29 +50,34 @@ env:
   BRANCH_PREFIX: step5-dispatch
 
 jobs:
-  run-step5:
+  prepare:
     runs-on: ubuntu-latest
-    timeout-minutes: 240
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            echo 'matrix=["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix=["${{ inputs.iso }}"]' >> "$GITHUB_OUTPUT"
+          fi
 
-    permissions:
-      contents: write
-      pull-requests: write
+  process:
+    needs: prepare
+    if: ${{ inputs.script == 'ALL' || inputs.script == 'dispatch-cache-only' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      matrix:
+        iso: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.branch || 'master' }}
-          fetch-depth: 0
-
-      - name: Create output branch
-        run: |
-          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
-          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${{ inputs.script }}-${{ inputs.iso }}"
-          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b "$TARGET_BRANCH"
 
       - name: Verify upstream data
         run: |
@@ -93,31 +100,64 @@ jobs:
       - name: Install dependencies
         run: pip install numpy numba pyarrow pandas
 
-      - name: Build ISO arguments
-        id: iso-args
-        run: |
-          if [ "${{ inputs.iso }}" = "ALL" ]; then
-            echo "iso_flags=" >> "$GITHUB_OUTPUT"
-          else
-            echo "iso_flags=--iso ${{ inputs.iso }}" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Ensure output directories
+        run: mkdir -p data/step5-post-processing/dispatch_cache
+
+      - name: "Build Dispatch Cache — ${{ matrix.iso }}"
+        run: python scripts/step5_build_dispatch_cache.py --iso ${{ matrix.iso }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dispatch-${{ matrix.iso }}
+          path: data/step5-post-processing/dispatch_cache/
+          retention-days: 1
+
+  merge:
+    needs: [prepare, process]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Create output branch
         run: |
-          mkdir -p data/step5-post-processing/dispatch_cache
-          mkdir -p dashboard
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${{ inputs.script }}-${{ inputs.iso }}"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$TARGET_BRANCH"
 
-      # ════════════════════════════════════════════════════════════════════
-      # Dispatch cache MUST run first, then track scripts in parallel
-      # ════════════════════════════════════════════════════════════════════
-
-      - name: "Build Dispatch Cache"
+      - name: Download dispatch cache artifacts
         if: ${{ inputs.script == 'ALL' || inputs.script == 'dispatch-cache-only' }}
-        run: |
-          echo "=== Building dispatch cache ==="
-          python scripts/step5_build_dispatch_cache.py ${{ steps.iso-args.outputs.iso_flags }}
+        uses: actions/download-artifact@v4
+        with:
+          pattern: dispatch-*
+          path: data/step5-post-processing/dispatch_cache/
+          merge-multiple: true
 
-      - name: "Parallel Track Analysis (Export + Analyze)"
+      - name: Set up Python
+        if: ${{ inputs.script == 'ALL' || inputs.script == 'export-tracks-only' || inputs.script == 'analyze-tracks-only' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        if: ${{ inputs.script == 'ALL' || inputs.script == 'export-tracks-only' || inputs.script == 'analyze-tracks-only' }}
+        run: pip install numpy numba pyarrow pandas
+
+      - name: "Track Analysis (Export + Analyze)"
         if: ${{ inputs.script == 'ALL' }}
         run: |
           echo "=== Launching track scripts in parallel ==="
@@ -130,7 +170,6 @@ jobs:
           wait $PID_EXPORT  || { echo "FAILED: Export Track Results"; FAILED=1; }
           wait $PID_ANALYZE || { echo "FAILED: Analyze Tracks"; FAILED=1; }
           if [ "$FAILED" -ne 0 ]; then exit 1; fi
-          echo "=== Track analysis completed ==="
 
       - name: "Export Track Results"
         if: ${{ inputs.script == 'export-tracks-only' }}
@@ -174,7 +213,7 @@ jobs:
             --title "Step 5: ${{ inputs.script }} ${{ inputs.iso }}" \
             --body "## Summary
           - Dispatch cache & track analysis (${{ inputs.script }}) for **${{ inputs.iso }}**
-          - Cache → export → analyze (sequential where dependent, parallel where independent)
+          - Cache built per-ISO in parallel, track analysis runs globally
           - Output: \`data/step5-post-processing/dispatch_cache/\`, \`dashboard/track_results.json\`" \
             --base ${{ inputs.branch || 'master' }} \
             --head "$TARGET_BRANCH" || echo "PR creation skipped"
