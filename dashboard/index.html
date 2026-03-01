@@ -2765,12 +2765,13 @@ const INCREMENTAL_INSIGHTS = {
 };
 
 function getIncrementalData(region) {
-    // Utilized/curtailed split: at each threshold, total utilized = threshold% of demand,
-    // curtailed = total procurement - threshold%. Dispatchable resources fully utilized;
-    // variable renewables (solar/wind) absorb all curtailment proportionally.
+    // Utilized/curtailed split: uses actual hourly match score (not target threshold)
+    // because the cost-optimal mix may over-achieve the target. Dispatchable resources
+    // fully utilized; variable renewables (solar/wind) absorb all curtailment.
     const allThresholds = (typeof THRESHOLDS !== 'undefined') ? THRESHOLDS.filter(t => t >= 50) : [];
     const baseDemandTWh = (typeof REGIONAL_DEMAND_TWH !== 'undefined') ? (REGIONAL_DEMAND_TWH[region] || 100) : 100;
     const demandByThreshold = (typeof DEMAND_TWH_BY_THRESHOLD !== 'undefined') ? DEMAND_TWH_BY_THRESHOLD[region] : null;
+    const matchScores = (typeof HOURLY_MATCH_SCORES !== 'undefined') ? HOURLY_MATCH_SCORES[region] : null;
     const labels = [];
     const utilizedExistingData = {};
     const utilizedNewData = {};
@@ -2826,19 +2827,22 @@ function getIncrementalData(region) {
             totalProcPct += procPcts[r];
         });
 
-        const targetPct = t;
+        // Use actual match score (not target threshold) for utilized/curtailed split.
+        // The cost-optimal mix often over-achieves the target at low thresholds.
+        const actualScore = (matchScores && matchScores[ti]) ? matchScores[ti] : t;
+        const utilizedPctCeiling = Math.min(actualScore, totalProcPct);
         // Dispatchable totals
         let dispatchableTotal = 0;
         DISPATCHABLE.forEach(r => { dispatchableTotal += procPcts[r]; });
         // Variable totals
         const variableTotalProc = VARIABLE.reduce((s, r) => s + procPcts[r], 0);
-        const variableUtilizedNeeded = Math.max(0, targetPct - dispatchableTotal);
+        const variableUtilizedNeeded = Math.max(0, utilizedPctCeiling - dispatchableTotal);
 
         MIX_RESOURCES.forEach(r => {
             let utilizedPct, curtailedPct;
             if (DISPATCHABLE.includes(r)) {
-                if (dispatchableTotal > targetPct && dispatchableTotal > 0) {
-                    utilizedPct = procPcts[r] * (targetPct / dispatchableTotal);
+                if (dispatchableTotal > utilizedPctCeiling && dispatchableTotal > 0) {
+                    utilizedPct = procPcts[r] * (utilizedPctCeiling / dispatchableTotal);
                     curtailedPct = procPcts[r] - utilizedPct;
                 } else {
                     utilizedPct = procPcts[r];
@@ -2867,7 +2871,7 @@ function getIncrementalData(region) {
         });
 
         // Gap = demand - utilized total
-        const utilizedTotal = Math.min(targetPct, totalProcPct) * demandTWh / 100;
+        const utilizedTotal = utilizedPctCeiling * demandTWh / 100;
         gapData.push(Math.round(Math.max(0, demandTWh - utilizedTotal) * 10) / 10);
     }
 
