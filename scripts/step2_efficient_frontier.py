@@ -476,12 +476,33 @@ def partitioned_dedup(table, iso):
     return result
 
 
+def _batch_labels_cover_all_thresholds(batch_files):
+    """Check if batch files cover all 3 predefined threshold batches (low/mid/high).
+
+    When all 3 batches are present they span every threshold in
+    TARGET_THRESHOLDS, so the existing final EF is fully superseded and
+    does not need to be loaded during merge.
+    """
+    labels = set()
+    for bf in batch_files:
+        base = os.path.basename(bf)
+        # step2_ef_{ISO}_batch_{label}.parquet
+        m = re.match(r'^step2_ef_[A-Z]+_batch_(.+)\.parquet$', base)
+        if m:
+            labels.add(m.group(1))
+    return labels >= {'low', 'mid', 'high'}
+
+
 def merge_batch_outputs(iso):
     """Merge all batch parquet files for an ISO into a single final EF.
 
-    Reads step2_ef_{ISO}_batch_*.parquet files, concatenates them, runs
-    partitioned dedup (by clean_firm) to resolve cross-batch duplicates,
-    and writes the final step2_ef_{ISO}.parquet.
+    Memory-efficient streaming merge: reads batch files one at a time,
+    deduplicating incrementally so peak memory never exceeds ~2x the
+    largest single batch (instead of the sum of all inputs).
+
+    When all 3 predefined batches (low/mid/high) are present, the
+    existing final EF is skipped entirely since the batches already
+    cover every threshold.
 
     Returns (final_rows, n_batches) or (0, 0) if no batch files found.
     """
@@ -495,48 +516,74 @@ def merge_batch_outputs(iso):
         return 0, 0
 
     print(f"\n  {iso}: Merging {len(batch_files)} batch files...")
-    tables = []
-    total_rows = 0
-    for bf in batch_files:
-        t = pq.read_table(bf)
-        total_rows += t.num_rows
-        tables.append(t)
-        size_mb = os.path.getsize(bf) / (1024 * 1024)
-        print(f"    {os.path.basename(bf)}: {t.num_rows:,} rows ({size_mb:.1f} MB)")
 
-    # Also include existing final EF if it exists (incremental merge)
+    # Determine whether to include the existing final EF.
+    # If all 3 batches (low/mid/high) are present, they cover every
+    # threshold — the existing final is fully superseded.
     final_path = os.path.join(STEP2_EF_OUTPUT_DIR, f'step2_ef_{iso}.parquet')
-    if os.path.exists(final_path):
-        existing = pq.read_table(final_path)
-        total_rows += existing.num_rows
-        tables.append(existing)
-        print(f"    Existing EF: {existing.num_rows:,} rows")
+    all_batches_present = _batch_labels_cover_all_thresholds(batch_files)
+    include_existing = (not all_batches_present) and os.path.exists(final_path)
 
-    if not tables:
+    if all_batches_present:
+        print(f"    All 3 batches present — skipping existing EF (fully superseded)")
+
+    # Build the list of files to stream through
+    files_to_merge = list(batch_files)
+    if include_existing:
+        files_to_merge.append(final_path)
+
+    # ── Streaming merge with incremental dedup ────────────────────────
+    # Instead of concat-then-dedup (peak memory = sum of all inputs),
+    # we stream one file at a time: load file, concat with accumulator,
+    # dedup, free the input. Peak memory ≈ accumulator + one file.
+    accumulated = None
+    total_rows_in = 0
+    n_sources = 0
+
+    for fpath in files_to_merge:
+        t = pq.read_table(fpath)
+        total_rows_in += t.num_rows
+        n_sources += 1
+        basename = os.path.basename(fpath)
+        size_mb = os.path.getsize(fpath) / (1024 * 1024)
+        is_existing = (fpath == final_path)
+        label = "Existing EF" if is_existing else basename
+        print(f"    {label}: {t.num_rows:,} rows ({size_mb:.1f} MB)")
+
+        if accumulated is None:
+            # First file — no dedup needed yet (already deduped within batch)
+            accumulated = t
+        else:
+            # Merge with accumulator, then dedup to bound memory
+            merged = pa.concat_tables([accumulated, t], promote_options='permissive')
+            del accumulated, t
+            gc.collect()
+
+            pre = merged.num_rows
+            accumulated = partitioned_dedup(merged, iso)
+            del merged
+            gc.collect()
+            print(f"    Streaming dedup: {pre:,} -> {accumulated.num_rows:,}", flush=True)
+
+    if accumulated is None or accumulated.num_rows == 0:
         return 0, 0
 
-    combined = pa.concat_tables(tables, promote_options='permissive')
-    del tables
-    gc.collect()
-
-    print(f"  Combined: {combined.num_rows:,} rows (from {total_rows:,} input rows)")
-
-    # Partitioned dedup to stay under memory limits
-    result = partitioned_dedup(combined, iso)
-    del combined
-    gc.collect()
+    print(f"  Combined: {total_rows_in:,} input rows -> {accumulated.num_rows:,} after streaming dedup")
 
     # Write final output
-    pq.write_table(result, final_path, compression='snappy')
+    pq.write_table(accumulated, final_path, compression='snappy')
     size_mb = os.path.getsize(final_path) / (1024 * 1024)
-    print(f"  Final: {final_path} ({result.num_rows:,} rows, {size_mb:.1f} MB)")
+    print(f"  Final: {final_path} ({accumulated.num_rows:,} rows, {size_mb:.1f} MB)")
+    final_rows = accumulated.num_rows
+    del accumulated
+    gc.collect()
 
     # Clean up batch files after successful merge
     for bf in batch_files:
         os.remove(bf)
         print(f"    Removed: {os.path.basename(bf)}")
 
-    return result.num_rows, len(batch_files)
+    return final_rows, len(batch_files)
 
 
 # Predefined threshold batches for large ISOs. Each batch processes a subset
