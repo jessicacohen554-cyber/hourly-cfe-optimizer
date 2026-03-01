@@ -1,17 +1,10 @@
-name: "Step 5: Dispatch Cache & Track Analysis"
+name: "Step 5.1: Build Dispatch Cache"
 
-# Pre-computes 8760-hour dispatch for all unique mixes (dispatch cache),
-# then exports and analyzes track results.
+# Pre-computes 8760-hour dispatch for all unique mixes per ISO.
+# Fans out parallel matrix jobs (one per ISO), merges artifacts, commits.
 #
-# Execution order:
-#   1. step5_build_dispatch_cache.py — builds cache per-ISO (parallel matrix)
-#   2. step5_export_track_results.py — exports track parquets to JSON (global, in merge)
-#   3. step5_analyze_tracks.py — track cost envelopes, mix differentials (global, in merge)
-#
-# iso=ALL fans out parallel matrix jobs for dispatch cache, then merge job
-# runs global track scripts and commits everything.
 # Prerequisite: Step 4 (or Step 3) must have produced parquets.
-# Output: data/step5-post-processing/dispatch_cache/, dashboard/track_results.json
+# Output: data/step5-post-processing/dispatch_cache/{ISO}_dispatch_cache.parquet
 
 on:
   workflow_dispatch:
@@ -30,16 +23,6 @@ on:
           - NEISO
           - MISO
           - SPP
-      script:
-        description: 'Which scripts to run'
-        required: true
-        default: 'ALL'
-        type: choice
-        options:
-          - ALL
-          - dispatch-cache-only
-          - export-tracks-only
-          - analyze-tracks-only
       force:
         description: 'Force rebuild dispatch cache (ignore existing)'
         required: false
@@ -52,7 +35,7 @@ on:
         type: string
 
 env:
-  BRANCH_PREFIX: step5-dispatch
+  BRANCH_PREFIX: step5-dispatch-cache
 
 jobs:
   prepare:
@@ -70,7 +53,6 @@ jobs:
 
   process:
     needs: prepare
-    if: ${{ inputs.script == 'ALL' || inputs.script == 'dispatch-cache-only' }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     strategy:
@@ -120,11 +102,11 @@ jobs:
           path: data/step5-post-processing/dispatch_cache/
           retention-days: 1
 
-  merge:
+  commit:
     needs: [prepare, process]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 30
 
     permissions:
       contents: write
@@ -139,65 +121,31 @@ jobs:
       - name: Create output branch
         run: |
           TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
-          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${{ inputs.script }}-${{ inputs.iso }}"
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${{ inputs.iso }}"
           echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$TARGET_BRANCH"
 
       - name: Download dispatch cache artifacts
-        if: ${{ inputs.script == 'ALL' || inputs.script == 'dispatch-cache-only' }}
         uses: actions/download-artifact@v4
         with:
           pattern: dispatch-*
           path: data/step5-post-processing/dispatch_cache/
           merge-multiple: true
 
-      - name: Set up Python
-        if: ${{ inputs.script == 'ALL' || inputs.script == 'export-tracks-only' || inputs.script == 'analyze-tracks-only' }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        if: ${{ inputs.script == 'ALL' || inputs.script == 'export-tracks-only' || inputs.script == 'analyze-tracks-only' }}
-        run: pip install numpy numba pyarrow pandas
-
-      - name: "Track Analysis (Export + Analyze)"
-        if: ${{ inputs.script == 'ALL' }}
-        run: |
-          echo "=== Launching track scripts in parallel ==="
-          python scripts/step5_export_track_results.py &
-          PID_EXPORT=$!
-          python scripts/step5_analyze_tracks.py &
-          PID_ANALYZE=$!
-
-          FAILED=0
-          wait $PID_EXPORT  || { echo "FAILED: Export Track Results"; FAILED=1; }
-          wait $PID_ANALYZE || { echo "FAILED: Analyze Tracks"; FAILED=1; }
-          if [ "$FAILED" -ne 0 ]; then exit 1; fi
-
-      - name: "Export Track Results"
-        if: ${{ inputs.script == 'export-tracks-only' }}
-        run: python scripts/step5_export_track_results.py
-
-      - name: "Analyze Tracks"
-        if: ${{ inputs.script == 'analyze-tracks-only' }}
-        run: python scripts/step5_analyze_tracks.py
-
       - name: Commit and push
         run: |
           git config http.postBuffer 524288000
 
-          git add -f data/step5-post-processing/ 2>/dev/null || true
-          git add -f dashboard/track_results.json 2>/dev/null || true
+          git add -f data/step5-post-processing/dispatch_cache/ 2>/dev/null || true
 
           if git diff --cached --quiet; then
             echo "No changes to commit"
             exit 0
           fi
 
-          git commit -m "Step 5: ${{ inputs.script }} ${{ inputs.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git commit -m "Step 5.1: dispatch cache ${{ inputs.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
           MAX_RETRIES=4
           for i in $(seq 1 $MAX_RETRIES); do
@@ -211,4 +159,3 @@ jobs:
             echo "Retrying in ${BACKOFF}s..."
             sleep "$BACKOFF"
           done
-
