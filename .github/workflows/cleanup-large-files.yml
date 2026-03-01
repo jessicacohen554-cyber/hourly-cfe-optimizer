@@ -1,0 +1,112 @@
+name: Cleanup Large File Blobs from History
+
+# Removes all .parquet, .npz, and .json blobs from git history using git-filter-repo.
+# WARNING: This rewrites history. All collaborators must re-clone afterward.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type REWRITE-HISTORY to confirm (irreversible)'
+        required: true
+        type: string
+      dry_run:
+        description: 'Dry run only — show what would be removed'
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Validate confirmation
+        if: ${{ inputs.dry_run == false && inputs.confirm != 'REWRITE-HISTORY' }}
+        run: |
+          echo "::error::You must type 'REWRITE-HISTORY' to confirm. Aborting."
+          exit 1
+
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install git-filter-repo
+        run: pip install git-filter-repo
+
+      - name: Repo size before
+        run: |
+          echo "=== Repo size BEFORE ==="
+          git count-objects -vH
+          echo ""
+          echo "=== Top 25 largest blobs ==="
+          git rev-list --objects --all \
+            | git cat-file --batch-check='%(objecttype) %(objectname) %(objectsize) %(rest)' \
+            | sed -n 's/^blob //p' \
+            | sort -rnk2 \
+            | head -25 \
+            | numfmt --to=iec --field=2
+
+      - name: "Dry run: list matching paths"
+        if: ${{ inputs.dry_run == true }}
+        run: |
+          echo "=== Files that would be stripped from history ==="
+          echo ""
+          echo "--- By extension ---"
+          for ext in parquet npz json; do
+            count=$(git log --all --diff-filter=A --name-only --pretty=format:"" -- "*.${ext}" | grep -c "\.${ext}$" || true)
+            size=$(git rev-list --objects --all -- "*.${ext}" \
+              | git cat-file --batch-check='%(objecttype) %(objectsize)' \
+              | awk '/^blob/{s+=$2} END{printf "%.1f MB\n", s/1048576}')
+            echo "  *.${ext}  →  ${count} files, ${size} in history"
+          done
+          echo ""
+          echo "--- By directory ---"
+          for dir in data/step1-pfs-parquets data/step1d-storage-parquets data/step2-ef-parquets \
+                     data/step3-cost-opt-parquets data/step4-gas-ccs-parquets \
+                     data/step5-post-processing data/checkpoints data/checkpoints_v4; do
+            size=$(git rev-list --objects --all -- "$dir" \
+              | git cat-file --batch-check='%(objecttype) %(objectsize)' \
+              | awk '/^blob/{s+=$2} END{printf "%.1f MB\n", s/1048576}')
+            echo "  ${dir}/  →  ${size}"
+          done
+          echo ""
+          echo "Re-run with dry_run=false and confirm=REWRITE-HISTORY to execute."
+
+      - name: Run git-filter-repo
+        if: ${{ inputs.dry_run == false }}
+        run: |
+          echo "Removing *.parquet, *.npz, and large *.json blobs from all history..."
+          git filter-repo \
+            --path-glob '*.parquet' \
+            --path-glob '*.npz' \
+            --path data/analysis_results.json \
+            --path data/optimizer_cache.json \
+            --invert-paths --force
+
+      - name: Repo size after
+        if: ${{ inputs.dry_run == false }}
+        run: |
+          echo "=== Repo size AFTER ==="
+          git count-objects -vH
+          echo ""
+          echo "=== Top 25 remaining blobs ==="
+          git rev-list --objects --all \
+            | git cat-file --batch-check='%(objecttype) %(objectname) %(objectsize) %(rest)' \
+            | sed -n 's/^blob //p' \
+            | sort -rnk2 \
+            | head -25 \
+            | numfmt --to=iec --field=2
+
+      - name: Force push cleaned history
+        if: ${{ inputs.dry_run == false }}
+        run: |
+          git remote add origin-rw https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git 2>/dev/null || true
+          git push --force --all origin-rw
+          git push --force --tags origin-rw
+          echo ""
+          echo "Done. All branches force-pushed with cleaned history."
+          echo "WARNING: All collaborators must re-clone the repository."
