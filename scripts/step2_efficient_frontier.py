@@ -30,10 +30,12 @@ at ANY threshold, ensuring no true optimum is lost during Step 3.
 """
 
 import argparse
+import gc
 import os
 import time
 import re
 import numpy as np
+import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pyarrow.compute as pc
@@ -266,7 +268,7 @@ def load_and_process_iso(iso, fnames):
         t = t.select(keep_cols)
 
         # Per-file dedup for large files: dedup BEFORE accumulating to avoid
-        # a lexsort on 25M+ rows when the file joins the accumulator.
+        # a huge merge when the file joins the accumulator.
         # E.g., SPP_t99.5 has 23M rows → dedup to ~1-2M unique mixes first.
         if t.num_rows > PER_FILE_DEDUP_THRESHOLD:
             pre_dedup = t.num_rows
@@ -276,6 +278,7 @@ def load_and_process_iso(iso, fnames):
             keep_idx = deduplicate_mixes(arrays, resource_cols)
             t = t.take(keep_idx)
             del arrays
+            gc.collect()
             n_incremental_dedups += 1
             print(f"    Per-file dedup {fname}: {pre_dedup:,} -> {t.num_rows:,}")
 
@@ -294,6 +297,7 @@ def load_and_process_iso(iso, fnames):
             keep_idx = deduplicate_mixes(arrays, resource_cols)
             accumulated = accumulated.take(keep_idx)
             del arrays
+            gc.collect()
             n_incremental_dedups += 1
 
     if accumulated is None or accumulated.num_rows == 0:
@@ -307,6 +311,7 @@ def load_and_process_iso(iso, fnames):
     result = accumulated.take(keep_idx)
     n_dedup = result.num_rows
     del accumulated, arrays
+    gc.collect()
 
     if n_incremental_dedups > 0:
         print(f"    ({n_incremental_dedups} incremental dedup passes used)")
@@ -335,8 +340,11 @@ def deduplicate_mixes(arrays, resource_cols):
     granularity from Step 1. They are scaled by 20x (0.05% -> 1) to produce
     exact integer keys.
 
-    Uses multi-column lexsort + boundary detection instead of a composite int64
-    key to avoid overflow for CAISO (5 resources: 101^4 × 2001^3 × 100 > int64 max).
+    Uses pandas hash-based groupby (O(n) average) instead of np.lexsort
+    (O(n log n)) for ~3x less peak memory and faster execution on large
+    datasets (18M+ rows). The previous lexsort approach created sorted
+    copies of all 9 key columns (~2.8 GB for 18M rows), causing OOM on
+    GitHub Actions runners (7 GB RAM).
 
     Returns indices into the original arrays of rows to keep.
     """
@@ -344,42 +352,30 @@ def deduplicate_mixes(arrays, resource_cols):
     if n == 0:
         return np.array([], dtype=np.int64)
 
-    score = arrays['hourly_match_score']
-
     # Scale storage dispatch to integer keys at 0.05% resolution.
+    # Use int32 (not int64) — max resource ~200, max storage key ~2000,
+    # both fit in int32 and halve memory vs int64.
     STORAGE_SCALE = 20
-    bat_key = np.round(arrays['battery_dispatch_pct'] * STORAGE_SCALE).astype(np.int64)
-    bat8_key = np.round(arrays['battery8_dispatch_pct'] * STORAGE_SCALE).astype(np.int64)
-    ldes_key = np.round(arrays['ldes_dispatch_pct'] * STORAGE_SCALE).astype(np.int64)
-    h2_key = np.round(arrays['h2_dispatch_pct'] * STORAGE_SCALE).astype(np.int64)
 
-    # Build integer arrays for each resource column
-    res_keys = [arrays[col].astype(np.int64) for col in resource_cols]
+    data = {}
+    for col in resource_cols:
+        data[col] = arrays[col].astype(np.int32)
+    data['_bat'] = np.round(arrays['battery_dispatch_pct'] * STORAGE_SCALE).astype(np.int32)
+    data['_bat8'] = np.round(arrays['battery8_dispatch_pct'] * STORAGE_SCALE).astype(np.int32)
+    data['_ldes'] = np.round(arrays['ldes_dispatch_pct'] * STORAGE_SCALE).astype(np.int32)
+    data['_h2'] = np.round(arrays['h2_dispatch_pct'] * STORAGE_SCALE).astype(np.int32)
+    data['_score'] = arrays['hourly_match_score']
 
-    # Multi-column lexsort: sort by all group columns (ascending), then score (descending).
-    # lexsort sorts by LAST key first → resource_cols[0] is primary sort key.
-    sort_keys = [-score, h2_key, ldes_key, bat8_key, bat_key]
-    for rk in reversed(res_keys):
-        sort_keys.append(rk)
-    sort_idx = np.lexsort(sort_keys)
+    df = pd.DataFrame(data)
+    del data
 
-    # Detect group boundaries: new group starts when ANY group column differs.
-    # Build sorted column views for boundary detection.
-    sorted_group_cols = [rk[sort_idx] for rk in res_keys]
-    sorted_group_cols.append(bat_key[sort_idx])
-    sorted_group_cols.append(bat8_key[sort_idx])
-    sorted_group_cols.append(ldes_key[sort_idx])
-    sorted_group_cols.append(h2_key[sort_idx])
+    group_cols = list(resource_cols) + ['_bat', '_bat8', '_ldes', '_h2']
 
-    is_first = np.empty(n, dtype=np.bool_)
-    is_first[0] = True
-    # OR across all columns: any change → new group
-    changed = sorted_group_cols[0][1:] != sorted_group_cols[0][:-1]
-    for sc in sorted_group_cols[1:]:
-        changed |= (sc[1:] != sc[:-1])
-    is_first[1:] = changed
+    # Hash-based groupby: O(n) average, returns index of max-score row per group
+    keep_idx = df.groupby(group_cols, sort=False)['_score'].idxmax().values
+    del df
 
-    return sort_idx[is_first]
+    return keep_idx.astype(np.int64)
 
 
 
