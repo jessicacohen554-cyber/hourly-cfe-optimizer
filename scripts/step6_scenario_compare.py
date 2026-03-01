@@ -437,7 +437,7 @@ def main():
     # Load pre-computed scenario results from intermediate JSON files
     # ------------------------------------------------------------------
     print("\nLoading Scenario A results...")
-    results_a = load_scenario_results('A')
+    results_a, _meta_a = load_scenario_results('A')
     if results_a is None:
         print("ERROR: Scenario A results not found.")
         print("  Run the Scenario A script first to produce intermediate results.")
@@ -445,7 +445,7 @@ def main():
         sys.exit(1)
 
     print("Loading Scenario B results...")
-    results_b = load_scenario_results('B')
+    results_b, _meta_b = load_scenario_results('B')
     if results_b is None:
         print("ERROR: Scenario B results not found.")
         print("  Run the Scenario B script first to produce intermediate results.")
