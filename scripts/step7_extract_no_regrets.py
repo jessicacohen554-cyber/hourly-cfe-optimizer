@@ -31,7 +31,7 @@ import numpy as np
 # CONFIGURATION
 # ============================================================================
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
-THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.99]
+THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
 
 # Threshold-to-file key mapping (DG parquets use integer or decimal keys)
 THRESHOLD_FILE_KEYS = {
