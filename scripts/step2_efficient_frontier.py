@@ -68,6 +68,10 @@ STORAGE_COLS = ['battery_dispatch_pct', 'battery8_dispatch_pct', 'ldes_dispatch_
 # Common columns in output (resource cols are ISO-dependent)
 COMMON_COLS = ['iso', 'hourly_match_score', 'pareto_type']
 
+# Resource caps — must match Step 1 (step1_pfs_generator.py)
+SOLAR_CAP = 100       # Max solar as % of demand
+TOTAL_PROCUREMENT_CAP = 350  # Max sum of all resources as % of demand
+
 
 def get_resource_cols(iso):
     """Return resource column names for the given ISO."""
@@ -295,6 +299,7 @@ def load_and_process_iso(iso, fnames):
 
             rg = normalize_table(rg, iso)
             rg = threshold_gate(rg)
+            rg = resource_cap_filter(rg, iso)
             total_gated += rg.num_rows
 
             if rg.num_rows == 0:
@@ -358,6 +363,28 @@ def threshold_gate(table):
     threshold_col = table.column('threshold')
     target_set = pa.array(sorted(TARGET_THRESHOLD_SET), type=pa.float64())
     mask = pc.is_in(threshold_col, value_set=target_set)
+    return table.filter(mask)
+
+
+def resource_cap_filter(table, iso):
+    """Enforce solar cap and total procurement cap (matching Step 1 constraints).
+
+    Removes mixes where solar > SOLAR_CAP or total resources > TOTAL_PROCUREMENT_CAP.
+    """
+    if table.num_rows == 0:
+        return table
+
+    resource_cols = get_resource_cols(iso)
+    solar = table.column('solar').to_numpy()
+    mask = solar <= SOLAR_CAP
+
+    total = np.zeros(len(solar))
+    for col in resource_cols:
+        total += table.column(col).to_numpy()
+    mask &= total <= TOTAL_PROCUREMENT_CAP
+
+    if mask.all():
+        return table
     return table.filter(mask)
 
 
