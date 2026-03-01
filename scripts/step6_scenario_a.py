@@ -428,23 +428,13 @@ def find_scenario_a_mixes(feasible_mixes, isos=None, max_pfs_eval=MAX_PFS_EVAL):
 
 def main():
     """Run Scenario A (Pure Consequential) optimization."""
-    import argparse
-
-    parser = argparse.ArgumentParser(
-        description='Scenario A: Pure Consequential optimization')
-    parser.add_argument('--iso', type=str, default='ALL',
-                        help='ISO to run (e.g. PJM, CAISO) or ALL (default: ALL)')
-    parser.add_argument('--max-pfs-eval', type=int, default=MAX_PFS_EVAL,
-                        help=f'Max PFS mixes per fallback step (default: {MAX_PFS_EVAL})')
-    args = parser.parse_args()
-
-    isos_to_run = parse_iso_args(args.iso)
+    isos_to_run, max_pfs_eval = parse_iso_args()
 
     print("=" * 80)
     print("SCENARIO A: PURE CONSEQUENTIAL")
     print("  Forward-stepping, FOAK firm costs (no learning), cheap $/tCO2 first")
     print(f"  ISOs: {', '.join(isos_to_run)}")
-    print(f"  Max PFS eval: {args.max_pfs_eval}")
+    print(f"  Max PFS eval: {max_pfs_eval}")
     print("=" * 80)
 
     # Load feasible mixes from shared-data.js (physics-validated EF mixes)
@@ -457,7 +447,7 @@ def main():
     # Run Scenario A
     print("\nRunning Scenario A (Pure Consequential)...")
     results_a = find_scenario_a_mixes(
-        feasible_mixes, isos=isos_to_run, max_pfs_eval=args.max_pfs_eval)
+        feasible_mixes, isos=isos_to_run, max_pfs_eval=max_pfs_eval)
 
     # Save results
     save_scenario_results(results_a, 'A', isos_to_run)
