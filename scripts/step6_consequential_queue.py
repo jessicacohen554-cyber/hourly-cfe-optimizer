@@ -895,6 +895,107 @@ def write_outputs(queue, cumulative, stranding, trajectories, projections,
             'coal_oil_retirement_threshold': COAL_OIL_RETIREMENT_THRESHOLD,
         }
 
+    # ---- Derive keys that the page animation needs (server-side) ----
+    # These used to be computed client-side in a fragile IIFE. Computing them here
+    # ensures the data file arrives complete and the animation always works.
+
+    # 1. existing_clean_floor — 2025 EIA clean generation per ISO
+    existing_clean_floor = {}
+    for iso in ISOS:
+        shares = GRID_MIX_SHARES.get(iso, {})
+        demand = BASE_DEMAND_TWH[iso]
+        by_resource = {}
+        total = 0
+        for r in ['clean_firm', 'solar', 'wind', 'hydro']:
+            twh = round(demand * shares.get(r, 0) / 100, 1)
+            by_resource[r] = twh
+            total += twh
+        by_resource['ccs_ccgt'] = 0
+        by_resource['battery'] = 0
+        by_resource['ldes'] = 0
+        existing_clean_floor[iso] = {
+            'by_resource': by_resource,
+            'total_twh': round(total, 1),
+        }
+
+    # 2. growth_adjusted_cumulative — alias for cumulative_deployment
+    growth_adjusted_cumulative = cumulative
+
+    # 3. fossil_baselines_2045 — fossil generation at 2045 demand
+    fossil_baselines_2045 = {}
+    for iso in ISOS:
+        demand_2045 = projections[iso][2045]['demand_twh'] if 2045 in projections.get(iso, {}) else BASE_DEMAND_TWH[iso] * 1.43
+        ecf_total = existing_clean_floor[iso]['total_twh']
+        fossil_twh_total = max(0, demand_2045 - ecf_total)
+
+        fuels_list = stack_summary[iso]['fuels']
+        total_fuel = sum(max(0, f['cap_twh']) for f in fuels_list)
+
+        coal_twh = oil_twh = gas_twh = 0.0
+        coal_rate = oil_rate = gas_rate = 0.0
+        for f in fuels_list:
+            ratio = max(0, f['cap_twh']) / total_fuel if total_fuel > 0 else 0
+            twh = fossil_twh_total * ratio
+            if f['type'] == 'coal':
+                coal_twh, coal_rate = twh, f['emission_rate']
+            elif f['type'] == 'oil':
+                oil_twh, oil_rate = twh, f['emission_rate']
+            elif f['type'] == 'gas':
+                gas_twh, gas_rate = twh, f['emission_rate']
+
+        fossil_baselines_2045[iso] = {
+            'demand_2045_twh': round(demand_2045, 1),
+            'fossil_twh': round(fossil_twh_total, 1),
+            'coal_twh': round(coal_twh, 1),
+            'oil_twh': round(oil_twh, 1),
+            'gas_twh': round(gas_twh, 1),
+            'fossil_co2_mt': round(coal_twh * coal_rate + oil_twh * oil_rate + gas_twh * gas_rate, 2),
+        }
+
+    # 4. first_deployments — scan queue for first occurrence of each tech
+    first_deployments = {'first_clean_firm': None, 'first_battery': None, 'first_ccs': None, 'first_ldes': None}
+    for idx, qe in enumerate(queue):
+        dr = qe.get('delta_resources', {})
+        if not first_deployments['first_clean_firm'] and dr.get('clean_firm', 0) > 0.5:
+            first_deployments['first_clean_firm'] = {
+                'queue_position': idx, 'iso': qe['iso'], 'zone_label': qe['zone_label'],
+                'year_end': qe.get('year_end'), 'clean_firm_twh': dr['clean_firm'],
+            }
+        if not first_deployments['first_battery'] and dr.get('battery', 0) > 0.5:
+            first_deployments['first_battery'] = {
+                'queue_position': idx, 'iso': qe['iso'], 'zone_label': qe['zone_label'],
+                'year_end': qe.get('year_end'),
+            }
+        if not first_deployments['first_ccs'] and dr.get('ccs_ccgt', 0) > 0.5:
+            first_deployments['first_ccs'] = {
+                'queue_position': idx, 'iso': qe['iso'], 'zone_label': qe['zone_label'],
+                'year_end': qe.get('year_end'),
+            }
+        if not first_deployments['first_ldes'] and dr.get('ldes', 0) > 0.5:
+            first_deployments['first_ldes'] = {
+                'queue_position': idx, 'iso': qe['iso'], 'zone_label': qe['zone_label'],
+                'year_end': qe.get('year_end'),
+            }
+
+    # 5. iso_cfe_progress — CFE delta from resource trajectories
+    iso_cfe_progress = {}
+    for iso in ISOS:
+        iso_traj = trajectories.get(iso, [])
+        stack = stack_summary.get(iso)
+        if not iso_traj or not stack:
+            continue
+        first = iso_traj[0]
+        last = iso_traj[-1]
+        start_cfe = stack.get('baseline_clean_pct', 50)
+        end_cfe = last.get('match_score', start_cfe)
+        iso_cfe_progress[iso] = {
+            'start_cfe_pct': start_cfe,
+            'end_cfe_pct': end_cfe,
+            'delta_cfe_pct': end_cfe - start_cfe,
+            'new_gas_mw_at_start': first.get('new_gas_mw', 0),
+            'new_gas_mw_at_end': last.get('new_gas_mw', 0),
+        }
+
     output = {
         'metadata': {
             'description': 'Consequential deployment queue with dispatch-cache hourly emission accounting',
@@ -911,6 +1012,11 @@ def write_outputs(queue, cumulative, stranding, trajectories, projections,
         'dispatch_stacks': stack_summary,
         'deployment_queue': queue,
         'cumulative_deployment': cumulative,
+        'growth_adjusted_cumulative': growth_adjusted_cumulative,
+        'existing_clean_floor': existing_clean_floor,
+        'fossil_baselines_2045': fossil_baselines_2045,
+        'first_deployments': first_deployments,
+        'iso_cfe_progress': iso_cfe_progress,
         'stranding_analysis': stranding,
         'resource_trajectories': trajectories,
         'demand_growth_projections': projections,
