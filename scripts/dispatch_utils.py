@@ -1004,34 +1004,30 @@ def _archetype_key(iso, resource_pcts, procurement_pct=100, battery_dispatch_pct
 
 
 def _cache_path(iso):
-    """Per-ISO cache file path."""
+    """Per-ISO cache file path (parquet format)."""
+    return os.path.join(DISPATCH_CACHE_DIR, f'{iso}_dispatch_cache.parquet')
+
+
+def _cache_path_npz(iso):
+    """Legacy NPZ cache path for backward compatibility."""
     return os.path.join(DISPATCH_CACHE_DIR, f'{iso}_dispatch_cache.npz')
 
 
-def load_dispatch_cache(iso, require_version=None):
-    """Load existing dispatch cache for an ISO. Returns dict of {key: arrays_dict}.
-
-    Args:
-        require_version: if set, returns empty dict if cache version doesn't match.
-    """
-    path = _cache_path(iso)
+def _load_dispatch_cache_npz(iso, require_version=None):
+    """Load legacy NPZ dispatch cache. Returns dict of {key: arrays_dict}."""
+    path = _cache_path_npz(iso)
     if not os.path.exists(path):
         return {}
     try:
         data = np.load(path, allow_pickle=True)
-
-        # Check cache version if required
         if require_version is not None:
             if '_meta_version' in data.files:
                 stored_version = int(data['_meta_version'][0])
                 if stored_version != require_version:
                     return {}
             else:
-                # No version metadata — stale v1 cache
                 return {}
-
         cache = {}
-        # Keys stored as 'key_{hash}_{field}' → reconstruct
         for arr_name in data.files:
             if arr_name.startswith('_meta_'):
                 continue
@@ -1047,25 +1043,93 @@ def load_dispatch_cache(iso, require_version=None):
         return {}
 
 
-def save_dispatch_cache(iso, cache, version=None):
-    """Save dispatch cache for an ISO. Overwrites existing file.
+def load_dispatch_cache(iso, require_version=None):
+    """Load existing dispatch cache for an ISO. Returns dict of {key: arrays_dict}.
+
+    Reads parquet format (primary), falls back to legacy NPZ if parquet not found.
 
     Args:
-        version: if set, stores version metadata in the cache file.
+        require_version: if set, returns empty dict if cache version doesn't match.
     """
-    os.makedirs(DISPATCH_CACHE_DIR, exist_ok=True)
-    arrays = {}
-    if version is not None:
-        arrays['_meta_version'] = np.array([version], dtype=np.int32)
-    for k, fields in cache.items():
-        for field, arr in fields.items():
-            arrays[f'k_{k}_{field}'] = arr
+    import pyarrow.parquet as pq
+
     path = _cache_path(iso)
-    # np.savez_compressed auto-appends .npz, so use a stem without extension
-    tmp_stem = path.replace('.npz', '') + '_tmp'
-    np.savez_compressed(tmp_stem, **arrays)
-    tmp_file = tmp_stem + '.npz'
-    os.replace(tmp_file, path)
+    if os.path.exists(path):
+        try:
+            table = pq.read_table(path)
+            metadata = table.schema.metadata or {}
+            if require_version is not None:
+                stored = int(metadata.get(b'cache_version', b'0'))
+                if stored != require_version:
+                    return {}
+
+            keys = table.column('archetype_key').to_pylist()
+            field_names = [n for n in table.schema.names if n != 'archetype_key']
+            cache = {}
+
+            # Efficient extraction via flat values + offsets per list column
+            col_data = {}
+            for field in field_names:
+                col = table.column(field).combine_chunks()
+                col_data[field] = (col.values.to_numpy().copy(),
+                                   col.offsets.to_numpy())
+
+            for i, key in enumerate(keys):
+                entry = {}
+                for field in field_names:
+                    vals, offs = col_data[field]
+                    entry[field] = vals[offs[i]:offs[i + 1]].copy()
+                cache[key] = entry
+            return cache
+        except Exception:
+            pass
+
+    # Fallback to legacy NPZ format
+    return _load_dispatch_cache_npz(iso, require_version=require_version)
+
+
+def save_dispatch_cache(iso, cache, version=None):
+    """Save dispatch cache for an ISO as parquet. Overwrites existing file.
+
+    Uses pyarrow list columns: one row per archetype, each dispatch field
+    stored as a list<float64> of 8760 hourly values. Snappy-compressed.
+
+    Args:
+        version: if set, stores version metadata in parquet schema metadata.
+    """
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    os.makedirs(DISPATCH_CACHE_DIR, exist_ok=True)
+    if not cache:
+        return
+
+    keys = list(cache.keys())
+    sample_fields = list(next(iter(cache.values())).keys())
+
+    # Build pyarrow arrays
+    key_arr = pa.array(keys, type=pa.string())
+    field_arrays = {}
+    for field in sample_fields:
+        field_arrays[field] = pa.array(
+            [cache[k].get(field, np.zeros(H)) for k in keys],
+            type=pa.list_(pa.float64()),
+        )
+
+    schema_fields = [pa.field('archetype_key', pa.string())]
+    schema_fields += [pa.field(f, pa.list_(pa.float64())) for f in sample_fields]
+    meta = {b'cache_version': str(version or 0).encode()}
+    schema = pa.schema(schema_fields, metadata=meta)
+
+    table = pa.table(
+        [key_arr] + [field_arrays[f] for f in sample_fields],
+        schema=schema,
+    )
+
+    path = _cache_path(iso)
+    tmp_path = path + '.tmp'
+    pq.write_table(table, tmp_path, compression='snappy')
+    os.replace(tmp_path, path)
 
 
 def get_or_compute_dispatch(iso, demand_norm, supply_profiles, resource_pcts,
