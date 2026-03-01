@@ -180,7 +180,8 @@ jobs:
         run: |
           git config http.postBuffer 524288000
 
-          git add -f data/step2-ef-parquets/step2_ef_${{ matrix.iso }}.parquet 2>/dev/null || true
+          # Step 2 outputs per-threshold files: step2_ef_{ISO}_t{T}.parquet
+          git add -f data/step2-ef-parquets/step2_ef_${{ matrix.iso }}_t*.parquet 2>/dev/null || true
           git add -f data/step3-cost-opt-parquets/step3_feasible_${{ matrix.iso }}.parquet 2>/dev/null || true
           git add -f data/step5-post-processing/ef_expansion_log.json 2>/dev/null || true
 
@@ -273,7 +274,8 @@ jobs:
       - name: "Commit batch LOW (${{ matrix.iso }})"
         run: |
           git config http.postBuffer 524288000
-          git add -f data/step2-ef-parquets/step2_ef_${{ matrix.iso }}_batch_low.parquet 2>/dev/null || true
+          # Batch outputs: step2_ef_{ISO}_t{T}_batch_low.parquet (one per threshold)
+          git add -f data/step2-ef-parquets/step2_ef_${{ matrix.iso }}_t*_batch_low.parquet 2>/dev/null || true
           if ! git diff --cached --quiet; then
             git commit -m "Step 2 EF batch LOW: ${{ matrix.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             git push -u origin "$TARGET_BRANCH" 2>&1 || true
@@ -290,7 +292,8 @@ jobs:
       - name: "Commit batch MID (${{ matrix.iso }})"
         run: |
           git config http.postBuffer 524288000
-          git add -f data/step2-ef-parquets/step2_ef_${{ matrix.iso }}_batch_mid.parquet 2>/dev/null || true
+          # Batch outputs: step2_ef_{ISO}_t{T}_batch_mid.parquet (one per threshold)
+          git add -f data/step2-ef-parquets/step2_ef_${{ matrix.iso }}_t*_batch_mid.parquet 2>/dev/null || true
           if ! git diff --cached --quiet; then
             git commit -m "Step 2 EF batch MID: ${{ matrix.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             git push origin "$TARGET_BRANCH" 2>&1 || true
@@ -307,7 +310,8 @@ jobs:
       - name: "Commit batch HIGH (${{ matrix.iso }})"
         run: |
           git config http.postBuffer 524288000
-          git add -f data/step2-ef-parquets/step2_ef_${{ matrix.iso }}_batch_high.parquet 2>/dev/null || true
+          # Batch outputs: step2_ef_{ISO}_t{T}_batch_high.parquet (one per threshold)
+          git add -f data/step2-ef-parquets/step2_ef_${{ matrix.iso }}_t*_batch_high.parquet 2>/dev/null || true
           if ! git diff --cached --quiet; then
             git commit -m "Step 2 EF batch HIGH: ${{ matrix.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             git push origin "$TARGET_BRANCH" 2>&1 || true
@@ -339,10 +343,11 @@ jobs:
       - name: "Commit final EF and push (${{ matrix.iso }})"
         run: |
           git config http.postBuffer 524288000
-          # Add final EF (merge removed batch files and wrote final)
-          git add -f data/step2-ef-parquets/step2_ef_${{ matrix.iso }}.parquet 2>/dev/null || true
+          # Add final per-threshold EF files: step2_ef_{ISO}_t{T}.parquet
+          git add -f data/step2-ef-parquets/step2_ef_${{ matrix.iso }}_t*.parquet 2>/dev/null || true
           # Remove batch files from git (merge_batch_outputs deletes them from disk)
-          git add -u data/step2-ef-parquets/step2_ef_${{ matrix.iso }}_batch_*.parquet 2>/dev/null || true
+          # Batch files are: step2_ef_{ISO}_t{T}_batch_{label}.parquet
+          git add -u data/step2-ef-parquets/ 2>/dev/null || true
           git add -f data/step3-cost-opt-parquets/step3_feasible_${{ matrix.iso }}.parquet 2>/dev/null || true
           git add -f data/step5-post-processing/ef_expansion_log.json 2>/dev/null || true
 
