@@ -1199,10 +1199,10 @@ html, body {
     <div class="hero-findings-row">
         <div class="hero-narrative-block">
             <h3>Key findings across regions</h3>
-            <p>Grid decarbonization beats DAC to at least <strong>70&ndash;97.5%</strong> in every region under medium cost assumptions. The spread is driven by two factors: renewable resource quality (solar/wind capacity factors) and firm generation costs (nuclear, geothermal, CCS).</p>
-            <p>Firm generation investment is the single largest lever. Cheap nuclear or geothermal shifts the crossover <strong>10&ndash;15 percentage points higher</strong> in constrained regions (NEISO, NYISO). Renewable tax credits add 2&ndash;5 points. Storage costs contribute less than 1% of variance everywhere.</p>
-            <p>The no-regrets investments identified below represent resources that appear in the optimal portfolio across the <em>entire</em> crossover range and under all 5,832 cost sensitivity combinations — they should be built regardless of how cost uncertainty resolves.</p>
-            <span class="finding-highlight">Grid wins to 70&ndash;97.5% (region-dependent) &middot; Firm gen is the decisive lever</span>
+            <p>Grid decarbonization beats DAC to at least <strong>84&ndash;96%</strong> in every region under medium cost assumptions &mdash; and in ERCOT, grid investment is cheaper than DAC at <em>every</em> threshold. The spread is driven by two factors: renewable resource quality (solar/wind capacity factors) and firm generation costs (nuclear, geothermal, CCS).</p>
+            <p>Firm generation investment is the single largest lever. Cheap nuclear or geothermal extends the grid advantage deep into the 90s in constrained regions (NEISO to 99.4%, NYISO to 99.9%). The optimal crossover range spans from 84% (CAISO under high grid costs) to 99.9% (NYISO under conservative DAC assumptions).</p>
+            <p>The no-regrets investments identified below represent resources that appear in the optimal portfolio across the <em>entire</em> crossover range and under all 5,832 cost sensitivity combinations &mdash; they should be built regardless of how cost uncertainty resolves.</p>
+            <span class="finding-highlight">Grid wins to 84&ndash;99%+ (region-dependent) &middot; ERCOT: grid always cheaper than DAC</span>
         </div>
         <div class="hero-chart-block">
             <div class="chart-panel chart-panel-overview">
@@ -1463,47 +1463,48 @@ const BASELINE_DEMAND_TWH = {
 };
 
 // Regional narrative data for deep-dive cards
+// Updated Mar 2026 to match optimal_targets.json crossover ranges
 const REGION_NARRATIVES = {
     ERCOT: {
-        title: "ERCOT: Grid investment beats DAC through 99% \u2014 strongest case nationwide",
-        text: "At medium costs, ERCOT's grid decarb beats central DAC through 99%. Under P25/P75 cost assumptions, the optimal range is 89\u201399%. Even under the tightest cost scenario (P75 grid \u00d7 optimistic DAC), grid investment wins through 89%. Deep solar and wind resources make ERCOT a no-regrets bet: no plausible cost future makes DAC cheaper before ~89%.",
-        stat: "P25/P75 range: 89\u201399% \u00b7 Central crossover: 99%",
+        title: "ERCOT: Grid investment beats DAC at every threshold \u2014 strongest case nationwide",
+        text: "ERCOT is the standout: grid-based hourly matching is cheaper than DAC at every threshold under all P25/P75 cost scenarios. No plausible cost future makes DAC cheaper. Deep wind resources ($40/MWh LCOE) and strong solar keep costs flat through 99%. Only under extreme assumptions (P75 grid \u00d7 optimistic DAC) does a crossover appear at ~99.6%. ERCOT demonstrates that where renewable resources are abundant, hourly matching is unambiguously superior to offsets.",
+        stat: "Grid always cheaper than DAC \u00b7 No crossover under P25/P75",
         statClass: "step-stat-green"
     },
     PJM: {
-        title: "PJM: Clean firm generation extends the grid advantage to 97%",
-        text: "At medium costs, PJM's marginal grid cost beats DAC central through 96.6%. Under P25/P75 assumptions, the optimal range spans 82\u201398%. PJM's existing nuclear fleet provides a strong baseline, but the path past 95% depends on whether new firm generation achieves cost learning. Clean firm dominates the resource mix at 74% average share within the optimal range.",
-        stat: "P25/P75 range: 82\u201398% \u00b7 Clean firm: 74% of mix",
+        title: "PJM: Nuclear fleet anchors grid advantage through 97.8%",
+        text: "PJM\u2019s 32% existing nuclear fleet provides a massive head start. Under P25/P75 cost assumptions, the optimal range spans 89.2\u201397.8%. The path past 95% depends on whether new firm generation achieves cost learning. Clean firm dominates the resource mix within the optimal range. The lower bound (89.2%) comes from P25 grid \u00d7 optimistic DAC; the upper bound (97.8%) from P25 grid \u00d7 conservative DAC.",
+        stat: "P25/P75 range: 89\u201398% \u00b7 Lower bound: 89.2%",
         statClass: "step-stat-green"
     },
     CAISO: {
-        title: "CAISO: Wide optimal range reflects extreme cost sensitivity",
-        text: "CAISO's P25/P75 optimal range spans 58\u201397% \u2014 the widest of any ISO, driven by volatile clean firm dispatch costs. At medium costs, grid beats central DAC through 92.5%. The resource mix within the optimal range is balanced: wind (34%), clean firm (32%), solar (25%), hydro (9%). CAISO's path past 90% is a bet on firm generation, not more solar.",
-        stat: "P25/P75 range: 58\u201397% \u00b7 Central crossover: 92.5%",
+        title: "CAISO: Moderate optimal range driven by firm gen cost sensitivity",
+        text: "CAISO\u2019s P25/P75 optimal range spans 84.4\u201396.4%. Under P75 grid costs \u00d7 optimistic DAC, the crossover comes as low as 84.4%. Under medium grid \u00d7 conservative DAC, grid investment wins through 96.4%. The resource mix within the optimal range is balanced across wind, clean firm, solar, and hydro. CAISO\u2019s path past 90% is a bet on firm generation costs, not more solar.",
+        stat: "P25/P75 range: 84\u201396% \u00b7 Firm gen is the swing factor",
         statClass: "step-stat-amber"
     },
     NYISO: {
-        title: "NYISO: Hydro and nuclear carry the grid deep, with firm gen the swing factor",
-        text: "New York's existing hydro (13%) and nuclear capacity anchor the grid through moderate targets. At medium costs, grid beats DAC central through 97.6%. The P25/P75 range is 88\u201398%. Past 90%, limited wind resources and constrained transmission corridors drive marginal costs higher, but firm generation investment extends the grid advantage.",
-        stat: "P25/P75 range: 88\u201398% \u00b7 Central crossover: 97.6%",
-        statClass: "step-stat-amber"
+        title: "NYISO: Hydro and nuclear carry the grid deep \u2014 to 99.9%",
+        text: "New York\u2019s existing hydro (16%) and nuclear (18.4%) anchor the grid through high targets. Under P25/P75 assumptions, the optimal range spans 91.2\u201399.9% \u2014 the highest upper bound of any ISO. Under P25 grid \u00d7 conservative DAC, grid investment beats DAC through 99.9%. Past 90%, limited wind resources and constrained transmission drive marginal costs higher, but firm generation investment extends the grid advantage remarkably deep.",
+        stat: "P25/P75 range: 91\u201399.9% \u00b7 Highest upper bound",
+        statClass: "step-stat-green"
     },
     NEISO: {
-        title: "NEISO: Steep cost curve, but grid still wins through 94% at medium costs",
-        text: "New England faces the steepest marginal cost curve of any region, yet grid decarb beats DAC central through 93.8% at medium costs. The P25/P75 optimal range is 77\u201398%. Clean firm generation is decisive: 61% average share within the range. Winter gas pipeline constraints add $13/MWh to CCS costs, making nuclear and enhanced geothermal the key technologies.",
-        stat: "P25/P75 range: 77\u201398% \u00b7 Clean firm: 61% of mix",
-        statClass: "step-stat-amber"
+        title: "NEISO: Grid wins through 99.4% despite steep cost curve",
+        text: "New England faces steep marginal costs, yet grid decarb beats DAC through 99.4% under medium grid \u00d7 conservative DAC. The P25/P75 range is 88.7\u201399.4%. Clean firm generation is decisive within the range. Winter gas pipeline constraints add $13.13/MWh to CCS costs, making nuclear and enhanced geothermal the key technologies. The lower bound (88.7%) comes from P75 grid \u00d7 optimistic DAC.",
+        stat: "P25/P75 range: 89\u201399% \u00b7 Clean firm decisive",
+        statClass: "step-stat-green"
     },
     MISO: {
-        title: "MISO: Wind-rich Midwest with grid advantage through 99%",
-        text: "MISO's vast wind resources and strong nuclear fleet make grid investment a winner through 99% at medium costs. The P25/P75 range is 86\u201399%. Wind dominates the resource mix at 55% average share, supplemented by solar (27%) and clean firm (17%). Transmission across MISO's 15-state footprint is the binding constraint, not generation cost.",
-        stat: "P25/P75 range: 86\u201399% \u00b7 Wind: 55% of mix",
+        title: "MISO: Wind-rich Midwest with grid advantage through 97%",
+        text: "MISO\u2019s vast wind resources and strong nuclear fleet make grid investment a winner. The P25/P75 range is 88.9\u201397.2%. Wind dominates the resource mix, supplemented by solar and clean firm. The upper bound (97.2%) comes from P25 grid \u00d7 conservative DAC. Transmission across MISO\u2019s 15-state footprint is the binding constraint past 95%, not generation cost.",
+        stat: "P25/P75 range: 89\u201397% \u00b7 Wind-dominated mix",
         statClass: "step-stat-green"
     },
     SPP: {
-        title: "SPP: Wind capital of the US, grid wins to 97% at medium costs",
-        text: "SPP leads the nation in wind penetration, and it shows: wind accounts for 81% average share within the P25/P75 optimal range of 89\u201398%. At medium costs, grid beats DAC central through 97%. Limited firm generation (Wolf Creek only) means the path to ≥99% requires new-build firm capacity \u2014 a significant cost adder.",
-        stat: "P25/P75 range: 89\u201398% \u00b7 Wind: 81% of mix",
+        title: "SPP: Wind capital of the US with narrow optimal band at 96\u201398%",
+        text: "SPP leads the nation in wind penetration (37% of demand), and it shows: extremely low marginal abatement costs through 95%. The P25/P75 optimal range is remarkably narrow at 96.2\u201398.1%, reflecting the fact that grid investment stays cheap until very high thresholds. Limited firm generation (Wolf Creek only) means the path past 98% requires new-build firm capacity \u2014 a significant cost adder.",
+        stat: "P25/P75 range: 96\u201398% \u00b7 Narrow band, grid wins deep",
         statClass: "step-stat-green"
     }
 };
