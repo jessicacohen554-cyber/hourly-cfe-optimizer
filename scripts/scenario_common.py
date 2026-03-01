@@ -166,7 +166,7 @@ ZONES = [
     {'label': '97.5→99%', 'start': 97.5, 'end': 99},
     {'label': '99→99.5%', 'start': 99, 'end': 99.5},
     {'label': '99.5→99.9%', 'start': 99.5, 'end': 99.9},
-    {'label': '99.9→100%', 'start': 99.9, 'end': 100},
+    {'label': '99.9→≥99.99%', 'start': 99.9, 'end': 99.99},
 ]
 
 # ============================================================================
@@ -748,6 +748,121 @@ def _build_existing_only_entry(iso, threshold, demand_twh, gf, existing_twh, sen
 
 
 # ============================================================================
+# SHARED HELPERS (gas backup, augmented results)
+# ============================================================================
+
+def recompute_gas_backup(iso, resource_twh, battery_twh, ldes_twh, gf):
+    """Recompute gas backup MW from augmented clean capacity.
+
+    Used after floor-ratchet augmentation to update gas needs.
+    Returns (gas_backup_mw, new_gas_mw, existing_gas_used_mw, clean_peak_mw).
+    """
+    clean_peak_mw = 0
+    for r, twh in resource_twh.items():
+        pcc = PEAK_CAPACITY_CREDITS.get(r, 0)
+        if pcc > 0 and twh > 0:
+            clean_peak_mw += (twh * 1e6 / 8760) * pcc
+    clean_peak_mw += (battery_twh * 1e6 / 8760) * PEAK_CAPACITY_CREDITS.get('battery', 0.95)
+    clean_peak_mw += (ldes_twh * 1e6 / 8760) * PEAK_CAPACITY_CREDITS.get('ldes', 0.90)
+
+    ra_peak_mw = PEAK_DEMAND_MW[iso] * gf * (1 + RESOURCE_ADEQUACY_MARGIN)
+    gaf = GAS_AVAILABILITY_FACTOR[iso]
+    gas_needed_mw = max(0, ra_peak_mw - clean_peak_mw) / gaf
+    existing_gas_mw = EXISTING_GAS_CAPACITY_MW[iso]
+
+    return (
+        round(gas_needed_mw),
+        round(max(0, gas_needed_mw - existing_gas_mw)),
+        round(min(gas_needed_mw, existing_gas_mw)),
+        round(clean_peak_mw),
+    )
+
+
+def build_augmented_result(best_result, best_mix, floor_twh, deployed,
+                           best_total_cost, best_excess_per_mwh,
+                           iso, demand_twh, gf, source='EF', extra_fields=None):
+    """Build a floor-ratcheted augmented result dict from a best-mix selection.
+
+    Handles: augmented resources, effective cost recalculation, gas backup,
+    new-build cost tracking, dispatch parameters.
+
+    Args:
+        best_result: dict from compute_mix_cost()
+        best_mix: raw mix vector (list or array)
+        floor_twh: current floor dict {resource: TWh}
+        deployed: dict from _mix_resource_twh()
+        best_total_cost: total cost including floor excess
+        best_excess_per_mwh: excess cost penalty $/MWh
+        iso: ISO string
+        demand_twh: demand in TWh for this threshold
+        gf: demand growth factor
+        source: mix source label ('EF', 'PFS+10', etc.)
+        extra_fields: optional dict of additional fields to set on the result
+
+    Returns: (aug_result_dict, augmented_dict, excess_twh_dict, total_excess)
+    """
+    demand_mwh = demand_twh * 1e6
+
+    # Compute augmented = max(floor, deployed) per resource
+    augmented = {}
+    excess_twh_dict = {}
+    for res in floor_twh:
+        ef_val = deployed.get(res, 0)
+        floor_val = floor_twh.get(res, 0)
+        augmented[res] = max(ef_val, floor_val)
+        excess_twh_dict[res] = max(0, floor_val - ef_val)
+
+    total_excess = sum(excess_twh_dict.values())
+
+    # Build result dict
+    aug = dict(best_result)
+    aug['total_cost'] = round(best_total_cost, 2)
+    match_frac = best_result['match_score'] / 100.0
+    aug['effective_cost'] = round(
+        aug['total_cost'] / match_frac if match_frac > 0 else 0, 2)
+    aug['incremental'] = round(
+        aug['effective_cost'] - best_result['wholesale'], 2)
+
+    # Augmented resource TWh
+    aug['resource_twh'] = {res: augmented.get(res, 0) for res in RESOURCES}
+    aug['battery_twh'] = augmented.get('battery', 0)
+    aug['battery8_twh'] = 0
+    aug['ldes_twh'] = augmented.get('ldes', 0)
+    aug['demand_twh'] = demand_twh
+    aug['mix_raw'] = list(best_mix)
+    aug['mix_source'] = source
+
+    # Recompute gas backup from augmented clean capacity
+    gas_mw, new_gas_mw, existing_gas_used_mw, clean_peak_mw = recompute_gas_backup(
+        iso, aug['resource_twh'], augmented.get('battery', 0),
+        augmented.get('ldes', 0), gf)
+    aug['gas_backup_mw'] = gas_mw
+    aug['new_gas_mw'] = new_gas_mw
+    aug['existing_gas_used_mw'] = existing_gas_used_mw
+    aug['clean_peak_mw'] = clean_peak_mw
+
+    # New-build cost tracking (for MAC calculation)
+    aug['new_build_cost_total'] = (
+        best_result['new_build_cost_total'] +
+        best_excess_per_mwh * demand_mwh)
+    aug['new_gen_twh'] = round(
+        best_result['new_gen_twh'] +
+        sum(v for k, v in excess_twh_dict.items() if k != 'hydro'), 3)
+
+    # Dispatch parameters
+    aug['battery_dispatch_pct'] = float(best_mix[6])
+    aug['battery8_dispatch_pct'] = float(best_mix[7])
+    aug['ldes_dispatch_pct'] = float(best_mix[8])
+    aug['h2_dispatch_pct'] = float(best_mix[9]) if len(best_mix) > 9 else 0.0
+    aug['demand_mwh'] = demand_mwh
+
+    if extra_fields:
+        aug.update(extra_fields)
+
+    return aug, augmented, excess_twh_dict, total_excess
+
+
+# ============================================================================
 # DISPATCH CO2 HELPER
 # ============================================================================
 
@@ -942,69 +1057,130 @@ def compute_stranding(scenario_results):
 # ============================================================================
 
 def parse_iso_args():
-    """Parse --iso and --max-pfs-eval CLI arguments. Returns (iso_list, max_pfs_eval)."""
+    """Parse --iso and --max-pfs-eval CLI arguments. Returns (iso_list, max_pfs_eval).
+
+    Supports multiple ISOs:
+      --iso CAISO ERCOT PJM   (multiple positional after --iso)
+      --iso CAISO --iso ERCOT  (repeated flag)
+      --iso ALL                (all ISOs)
+    """
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--iso', type=str, default='ALL',
-                        help='ISO to process (CAISO, ERCOT, PJM, NYISO, NEISO, MISO, SPP, or ALL)')
+    parser.add_argument('--iso', type=str, nargs='+', default=['ALL'],
+                        help='ISO(s) to process (CAISO, ERCOT, PJM, NYISO, NEISO, MISO, SPP, or ALL)')
     parser.add_argument('--max-pfs-eval', type=int, default=MAX_PFS_EVAL,
                         help=f'Max PFS mixes to evaluate per fallback (default: {MAX_PFS_EVAL})')
     args, _ = parser.parse_known_args()
-    if args.iso == 'ALL':
+    iso_list = args.iso
+    if 'ALL' in iso_list:
         return ISOS, args.max_pfs_eval
-    elif args.iso in ISOS:
-        return [args.iso], args.max_pfs_eval
-    else:
-        print(f"ERROR: Unknown ISO: {args.iso}. Valid: {', '.join(ISOS)} or ALL")
-        sys.exit(1)
+    for iso in iso_list:
+        if iso not in ISOS:
+            print(f"ERROR: Unknown ISO: {iso}. Valid: {', '.join(ISOS)} or ALL")
+            sys.exit(1)
+    return iso_list, args.max_pfs_eval
+
+
+def _serialize_result_entry(d):
+    """Convert numpy types to JSON-serializable Python types."""
+    entry = {}
+    for k, v in d.items():
+        if isinstance(v, (np.integer,)):
+            entry[k] = int(v)
+        elif isinstance(v, (np.floating,)):
+            entry[k] = float(v)
+        elif isinstance(v, np.ndarray):
+            entry[k] = v.tolist()
+        else:
+            entry[k] = v
+    return entry
 
 
 def save_scenario_results(results, scenario_label, isos_processed):
-    """Save scenario results to intermediate JSON for the comparison script."""
-    output = {
-        'metadata': {
-            'scenario': scenario_label,
-            'isos_processed': isos_processed,
-            'timestamp': datetime.datetime.utcnow().isoformat(),
-            'thresholds': list(THRESHOLDS),
-        },
-        'results': {}
-    }
+    """Save scenario results as per-ISO JSON files for parallel-safe operation.
+
+    Each ISO gets its own file: scenario_{label}_{iso}.json
+    This allows parallel matrix jobs (one per ISO) to write without clobbering.
+    """
+    out_dir = 'data/step5-post-processing'
+    os.makedirs(out_dir, exist_ok=True)
+
     for iso in isos_processed:
         iso_data = results.get(iso, {})
-        output['results'][iso] = {}
+        output = {
+            'metadata': {
+                'scenario': scenario_label,
+                'iso': iso,
+                'timestamp': datetime.datetime.utcnow().isoformat(),
+                'thresholds': list(THRESHOLDS),
+            },
+            'results': {}
+        }
         for t, d in iso_data.items():
             t_key = str(int(t)) if t == int(t) else str(t)
-            entry = {}
-            for k, v in d.items():
-                if isinstance(v, (np.integer,)):
-                    entry[k] = int(v)
-                elif isinstance(v, (np.floating,)):
-                    entry[k] = float(v)
-                elif isinstance(v, np.ndarray):
-                    entry[k] = v.tolist()
-                else:
-                    entry[k] = v
-            output['results'][iso][t_key] = entry
-    out_path = f'data/step5-post-processing/scenario_{scenario_label.lower()}_results.json'
-    os.makedirs(os.path.dirname(out_path), exist_ok=True)
-    with open(out_path, 'w') as f:
-        json.dump(output, f, indent=2, default=str)
-    print(f"\nSaved {scenario_label} results: {out_path} ({os.path.getsize(out_path) / 1024:.0f} KB)")
-    return out_path
+            output['results'][t_key] = _serialize_result_entry(d)
+
+        out_path = os.path.join(out_dir, f'scenario_{scenario_label.lower()}_{iso}.json')
+        with open(out_path, 'w') as f:
+            json.dump(output, f, indent=2, default=str)
+        print(f"  Saved {scenario_label} {iso}: {out_path} ({os.path.getsize(out_path) / 1024:.0f} KB)")
 
 
-def load_scenario_results(scenario_label):
-    """Load scenario results from intermediate JSON. Returns (results_dict, metadata)."""
-    path = f'data/step5-post-processing/scenario_{scenario_label.lower()}_results.json'
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"Scenario results not found: {path}")
-    with open(path) as f:
-        data = json.load(f)
+def load_scenario_results(scenario_label, isos=None):
+    """Load scenario results from per-ISO JSON files. Merges all available ISOs.
+
+    Args:
+        scenario_label: 'A' or 'B'
+        isos: optional list of ISOs to load (defaults to all found files)
+
+    Returns: (results_dict, metadata) or (None, None) if no files found.
+    """
+    out_dir = 'data/step5-post-processing'
+    label_lower = scenario_label.lower()
+    pattern = f'scenario_{label_lower}_'
+
     results = {}
-    for iso, iso_data in data['results'].items():
-        results[iso] = {}
-        for t_str, d in iso_data.items():
-            t = float(t_str)
-            results[iso][t] = d
-    return results, data['metadata']
+    metadata = None
+
+    # Discover per-ISO files
+    if not os.path.isdir(out_dir):
+        return None, None
+
+    for fname in sorted(os.listdir(out_dir)):
+        if not fname.startswith(pattern) or not fname.endswith('.json'):
+            continue
+        # Extract ISO from filename: scenario_a_CAISO.json -> CAISO
+        iso_part = fname[len(pattern):-len('.json')]
+        if iso_part == 'results':
+            # Legacy single-file format — load and merge
+            path = os.path.join(out_dir, fname)
+            with open(path) as f:
+                data = json.load(f)
+            for iso, iso_data in data['results'].items():
+                if isos and iso not in isos:
+                    continue
+                results[iso] = {}
+                for t_str, d in iso_data.items():
+                    results[iso][float(t_str)] = d
+            if metadata is None:
+                metadata = data['metadata']
+            continue
+
+        # Per-ISO file
+        if isos and iso_part not in isos:
+            continue
+
+        path = os.path.join(out_dir, fname)
+        with open(path) as f:
+            data = json.load(f)
+
+        results[iso_part] = {}
+        for t_str, d in data['results'].items():
+            results[iso_part][float(t_str)] = d
+        if metadata is None:
+            metadata = data['metadata']
+
+    if not results:
+        return None, None
+
+    return results, metadata
