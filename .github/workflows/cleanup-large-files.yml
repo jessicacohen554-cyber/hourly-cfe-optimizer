@@ -1,18 +1,20 @@
 name: Cleanup Large File Blobs from History (Protected)
 
-# Removes old/deleted/overwritten .parquet, .npz, and large JSON blobs from
-# git history — but PROTECTS every blob currently live in HEAD.
+# Removes old/deleted/overwritten data blobs from git history — but PROTECTS
+# every file currently live in HEAD. Targets the entire data/ directory plus
+# any *.parquet and *.npz files anywhere in the repo.
 #
 # How it works:
-#   1. Snapshot all blob SHAs in the current HEAD tree (the "protected set")
-#   2. Walk all history to find blobs matching target extensions
-#   3. Only blobs NOT in the protected set are candidates for removal
-#   4. Build an explicit blob-map file for git-filter-repo
-#   5. Rewrite history, replacing dead blobs with empty content
+#   1. Record the HEAD tree hash (for post-cleanup integrity verification)
+#   2. Snapshot all blob SHAs in the current HEAD tree (the "protected set")
+#   3. Walk all history to find blobs under data/ or matching target extensions
+#   4. Only blobs NOT in the protected set are candidates for removal
+#   5. Build an explicit blob-map file for git-filter-repo
+#   6. Rewrite history, replacing dead blobs with empty content
+#   7. Verify HEAD tree hash is unchanged after rewrite
 #
-# This means: if a parquet file exists in the repo today, its current version
-# is NEVER touched. Only old versions of overwritten files and entirely deleted
-# files are stripped.
+# Protected files include ALL live files: EIA 930 profiles, eGRID data,
+# pipeline parquets (step1–step5), JSON results, and everything else in HEAD.
 #
 # WARNING: This rewrites history. All collaborators must re-clone afterward.
 
@@ -55,18 +57,44 @@ jobs:
           echo "=== Repo size BEFORE ==="
           git count-objects -vH
 
-      - name: Build protected blob set from HEAD
+      - name: Build protected blob set and record HEAD tree hash
         id: protect
         run: |
           echo "=== Building protected blob set (all blobs live in HEAD) ==="
 
+          # Record HEAD tree hash for post-cleanup integrity verification
+          HEAD_TREE=$(git rev-parse HEAD^{tree})
+          echo "HEAD tree hash: $HEAD_TREE"
+          echo "head_tree=$HEAD_TREE" >> "$GITHUB_OUTPUT"
+
           # Every blob currently in the working tree — these are sacred
           PROTECTED_BLOBS=$(mktemp)
           git ls-tree -r HEAD | awk '{print $3}' | sort -u > "$PROTECTED_BLOBS"
-          echo "Protected blob SHAs (live in HEAD): $(wc -l < "$PROTECTED_BLOBS")"
-          echo "protected_blobs=$PROTECTED_BLOBS" >> "$GITHUB_OUTPUT"
+          protected_count=$(wc -l < "$PROTECTED_BLOBS")
+          echo "Protected blob SHAs (live in HEAD): $protected_count"
 
-      - name: Enumerate all historical blobs matching target extensions
+          # Also show what's protected in data/ specifically
+          PROTECTED_DATA=$(mktemp)
+          git ls-tree -r HEAD -- data/ | awk '{print $3, $4}' > "$PROTECTED_DATA"
+          protected_data_count=$(wc -l < "$PROTECTED_DATA")
+          echo "Protected data/ files: $protected_data_count"
+          echo ""
+
+          echo "--- Protected data/ files by directory ---"
+          for dir in data/eia-930 data/step1-pfs-parquets data/step1d-storage-parquets \
+                     data/step2-ef-parquets data/step3-cost-opt-parquets \
+                     data/step4-gas-ccs-parquets data/step5-post-processing; do
+            count=$(grep -c "^.* ${dir}/" "$PROTECTED_DATA" 2>/dev/null || echo 0)
+            [ "$count" -gt 0 ] && echo "  ${dir}/  →  ${count} live files"
+          done
+          # Top-level data/ files
+          toplevel=$(git ls-tree HEAD -- data/ | grep -c blob || echo 0)
+          [ "$toplevel" -gt 0 ] && echo "  data/ (top-level)  →  ${toplevel} live files"
+
+          echo "protected_blobs=$PROTECTED_BLOBS" >> "$GITHUB_OUTPUT"
+          echo "protected_data=$PROTECTED_DATA" >> "$GITHUB_OUTPUT"
+
+      - name: Enumerate all historical blobs in target scope
         id: enumerate
         run: |
           PROTECTED_BLOBS="${{ steps.protect.outputs.protected_blobs }}"
@@ -81,21 +109,36 @@ jobs:
 
           echo "Total blobs in all history: $(wc -l < "$ALL_BLOBS")"
 
-          # Filter to target extensions only
+          # Target scope: everything under data/ + any *.parquet/*.npz anywhere
           TARGET_BLOBS=$(mktemp)
-          grep -iE '\.(parquet|npz)$' "$ALL_BLOBS" > "$TARGET_BLOBS" || true
-          grep -E '(data/step5-post-processing/co2_results/.*\.json|data/analysis_results\.json|data/optimizer_cache\.json)$' \
-            "$ALL_BLOBS" >> "$TARGET_BLOBS" || true
-          echo "Target blobs (matching extensions): $(wc -l < "$TARGET_BLOBS")"
+          grep -E ' data/' "$ALL_BLOBS" > "$TARGET_BLOBS" || true
+          grep -iE '\.(parquet|npz)$' "$ALL_BLOBS" >> "$TARGET_BLOBS" || true
+          # Deduplicate (a data/*.parquet would match both patterns)
+          sort -u -o "$TARGET_BLOBS" "$TARGET_BLOBS"
+          echo "Target blobs (data/ + *.parquet + *.npz): $(wc -l < "$TARGET_BLOBS")"
 
-          # Split into protected vs removable
+          # Split into protected vs removable using fast comm instead of per-line grep
           REMOVABLE=$(mktemp)
           KEPT=$(mktemp)
+
+          # Extract just SHAs from target blobs for set comparison
+          TARGET_SHAS=$(mktemp)
+          awk '{print $1}' "$TARGET_BLOBS" | sort -u > "$TARGET_SHAS"
+
+          # SHAs that are in targets but NOT in protected = removable
+          REMOVABLE_SHAS=$(mktemp)
+          comm -23 "$TARGET_SHAS" "$PROTECTED_BLOBS" > "$REMOVABLE_SHAS"
+
+          # SHAs that are in BOTH targets and protected = kept
+          KEPT_SHAS=$(mktemp)
+          comm -12 "$TARGET_SHAS" "$PROTECTED_BLOBS" > "$KEPT_SHAS"
+
+          # Now filter the full blob list by these SHA sets
           while IFS=' ' read -r sha size path; do
-            if grep -qF "$sha" "$PROTECTED_BLOBS"; then
-              echo "$sha $size $path" >> "$KEPT"
-            else
+            if grep -qF "$sha" "$REMOVABLE_SHAS"; then
               echo "$sha $size $path" >> "$REMOVABLE"
+            elif grep -qF "$sha" "$KEPT_SHAS"; then
+              echo "$sha $size $path" >> "$KEPT"
             fi
           done < "$TARGET_BLOBS"
 
@@ -109,8 +152,8 @@ jobs:
 
           echo ""
           echo "========================================"
-          echo "  PROTECTED (live in HEAD): $kept_count blobs ($(echo "$kept_bytes" | awk '{printf "%.1f MB", $1/1048576}'))"
-          echo "  REMOVABLE (dead/old):     $removable_count blobs ($(echo "$removable_bytes" | awk '{printf "%.1f MB", $1/1048576}'))"
+          echo "  PROTECTED (live in HEAD): $kept_count blob entries ($(echo "$kept_bytes" | awk '{printf "%.1f MB", $1/1048576}'))"
+          echo "  REMOVABLE (dead/old):     $removable_count blob entries ($(echo "$removable_bytes" | awk '{printf "%.1f MB", $1/1048576}'))"
           echo "========================================"
 
           echo "removable=$REMOVABLE" >> "$GITHUB_OUTPUT"
@@ -118,64 +161,84 @@ jobs:
           echo "all_blobs=$ALL_BLOBS" >> "$GITHUB_OUTPUT"
           echo "target_blobs=$TARGET_BLOBS" >> "$GITHUB_OUTPUT"
           echo "removable_count=$removable_count" >> "$GITHUB_OUTPUT"
+          echo "removable_shas=$REMOVABLE_SHAS" >> "$GITHUB_OUTPUT"
 
       - name: "Dry run: show protected vs. removable breakdown"
         if: ${{ inputs.dry_run == true }}
         run: |
           REMOVABLE="${{ steps.enumerate.outputs.removable }}"
           KEPT="${{ steps.enumerate.outputs.kept }}"
-          ALL_BLOBS="${{ steps.enumerate.outputs.all_blobs }}"
 
-          echo "=== PROTECTED FILES (will NOT be touched) ==="
+          echo "============================================================"
+          echo "  PROTECTED FILES — will NOT be touched (live in HEAD)"
+          echo "============================================================"
           if [ -s "$KEPT" ]; then
             echo ""
             echo "--- Protected by extension ---"
-            for ext in parquet npz json; do
+            for ext in parquet npz json csv xlsx gitkeep; do
               matched=$(grep -i "\.${ext}$" "$KEPT" || true)
               count=$(echo "$matched" | grep -c "." 2>/dev/null || echo 0)
               size=$(echo "$matched" | awk '{s+=$2} END{printf "%.1f MB", s/1048576}')
-              echo "  *.${ext}  →  ${count} live blobs, ${size}"
+              [ "$count" -gt 0 ] && echo "  *.${ext}  →  ${count} live blobs, ${size}"
             done
             echo ""
             echo "--- Protected by directory ---"
-            for dir in data/step1-pfs-parquets data/step1d-storage-parquets data/step2-ef-parquets \
-                       data/step3-cost-opt-parquets data/step4-gas-ccs-parquets \
-                       data/step5-post-processing; do
+            for dir in data/eia-930 data/step1-pfs-parquets data/step1d-storage-parquets \
+                       data/step2-ef-parquets data/step3-cost-opt-parquets \
+                       data/step4-gas-ccs-parquets data/step5-post-processing \
+                       data/step5-post-processing/lmp data/step5-post-processing/co2_results; do
               matched=$(grep " ${dir}/" "$KEPT" || true)
               count=$(echo "$matched" | grep -c "." 2>/dev/null || echo 0)
               size=$(echo "$matched" | awk '{s+=$2} END{printf "%.1f MB", s/1048576}')
               [ "$count" -gt 0 ] && echo "  ${dir}/  →  ${count} blobs, ${size}"
             done
+            # Top-level data/ files (not in subdirectories)
+            toplevel=$(grep -E ' data/[^/]+$' "$KEPT" || true)
+            tl_count=$(echo "$toplevel" | grep -c "." 2>/dev/null || echo 0)
+            tl_size=$(echo "$toplevel" | awk '{s+=$2} END{printf "%.1f MB", s/1048576}')
+            [ "$tl_count" -gt 0 ] && echo "  data/ (top-level files)  →  ${tl_count} blobs, ${tl_size}"
+            echo ""
+            echo "--- All protected data/ files ---"
+            sort -k3 "$KEPT" | awk '{printf "  %-12s %s\n", sprintf("%.1f MB", $2/1048576), $3}'
           else
             echo "  (none — no target blobs in HEAD)"
           fi
 
           echo ""
-          echo "=== REMOVABLE BLOBS (dead/overwritten — will be stripped) ==="
+          echo "============================================================"
+          echo "  REMOVABLE BLOBS — dead/overwritten, will be stripped"
+          echo "============================================================"
           if [ -s "$REMOVABLE" ]; then
             echo ""
             echo "--- Removable by extension ---"
-            for ext in parquet npz json; do
+            for ext in parquet npz json csv xlsx; do
               matched=$(grep -i "\.${ext}$" "$REMOVABLE" || true)
               count=$(echo "$matched" | grep -c "." 2>/dev/null || echo 0)
               size=$(echo "$matched" | awk '{s+=$2} END{printf "%.1f MB", s/1048576}')
-              echo "  *.${ext}  →  ${count} dead blob versions, ${size}"
+              [ "$count" -gt 0 ] && echo "  *.${ext}  →  ${count} dead blob versions, ${size}"
             done
             echo ""
             echo "--- Removable by directory ---"
-            for dir in data/step1-pfs-parquets data/step1d-storage-parquets data/step2-ef-parquets \
-                       data/step3-cost-opt-parquets data/step4-gas-ccs-parquets \
-                       data/step5-post-processing data/checkpoints data/checkpoints_v4; do
+            for dir in data/eia-930 data/step1-pfs-parquets data/step1d-storage-parquets \
+                       data/step2-ef-parquets data/step3-cost-opt-parquets \
+                       data/step4-gas-ccs-parquets data/step5-post-processing \
+                       data/step5-post-processing/lmp data/step5-post-processing/co2_results \
+                       data/checkpoints data/checkpoints_v4; do
               matched=$(grep " ${dir}/" "$REMOVABLE" || true)
               count=$(echo "$matched" | grep -c "." 2>/dev/null || echo 0)
               size=$(echo "$matched" | awk '{s+=$2} END{printf "%.1f MB", s/1048576}')
               [ "$count" -gt 0 ] && echo "  ${dir}/  →  ${count} dead blobs, ${size}"
             done
+            # Top-level data/ files
+            toplevel=$(grep -E ' data/[^/]+$' "$REMOVABLE" || true)
+            tl_count=$(echo "$toplevel" | grep -c "." 2>/dev/null || echo 0)
+            tl_size=$(echo "$toplevel" | awk '{s+=$2} END{printf "%.1f MB", s/1048576}')
+            [ "$tl_count" -gt 0 ] && echo "  data/ (top-level files)  →  ${tl_count} dead blobs, ${tl_size}"
             echo ""
             echo "--- Top 30 largest removable blobs ---"
             sort -rnk2 "$REMOVABLE" | head -30 | awk '{printf "  %s  %.1f MB  %s\n", $1, $2/1048576, $3}'
           else
-            echo "  (none — all target blobs are live in HEAD)"
+            echo "  (none — all target blobs are live in HEAD, nothing to remove)"
           fi
 
           echo ""
@@ -185,7 +248,7 @@ jobs:
         if: ${{ inputs.dry_run == false }}
         id: blobmap
         run: |
-          REMOVABLE="${{ steps.enumerate.outputs.removable }}"
+          REMOVABLE_SHAS="${{ steps.enumerate.outputs.removable_shas }}"
           removable_count="${{ steps.enumerate.outputs.removable_count }}"
 
           if [ "$removable_count" = "0" ]; then
@@ -200,20 +263,40 @@ jobs:
           EMPTY_SHA=$(git hash-object -t blob --stdin < /dev/null)
           echo "Empty blob SHA: $EMPTY_SHA"
 
-          # Build the blob-map: old-sha → empty-sha
-          # git-filter-repo --replace-blob expects: OLD_SHA NEW_SHA
+          # Build the blob-map from unique removable SHAs: old-sha → empty-sha
           BLOB_MAP=$(mktemp)
-          awk -v empty="$EMPTY_SHA" '{print $1, empty}' "$REMOVABLE" | sort -u > "$BLOB_MAP"
-          echo "Blob map entries: $(wc -l < "$BLOB_MAP")"
+          awk -v empty="$EMPTY_SHA" '{print $1, empty}' "$REMOVABLE_SHAS" > "$BLOB_MAP"
+          echo "Unique blob map entries: $(wc -l < "$BLOB_MAP")"
           echo "blob_map=$BLOB_MAP" >> "$GITHUB_OUTPUT"
 
       - name: Run git-filter-repo with blob replacement map
         if: ${{ inputs.dry_run == false && steps.blobmap.outputs.skip != 'true' }}
         run: |
           BLOB_MAP="${{ steps.blobmap.outputs.blob_map }}"
-          echo "Replacing $( wc -l < "$BLOB_MAP" ) dead blobs with empty content..."
+          echo "Replacing $(wc -l < "$BLOB_MAP") dead blobs with empty content..."
           echo "(All live HEAD blobs are protected and untouched)"
           git filter-repo --replace-blob "$BLOB_MAP" --force
+
+      - name: Verify HEAD integrity after cleanup
+        if: ${{ inputs.dry_run == false && steps.blobmap.outputs.skip != 'true' }}
+        run: |
+          EXPECTED_TREE="${{ steps.protect.outputs.head_tree }}"
+          ACTUAL_TREE=$(git rev-parse HEAD^{tree})
+
+          echo "=== HEAD Tree Integrity Check ==="
+          echo "Expected tree hash (before): $EXPECTED_TREE"
+          echo "Actual tree hash (after):    $ACTUAL_TREE"
+
+          if [ "$EXPECTED_TREE" = "$ACTUAL_TREE" ]; then
+            echo "PASSED — HEAD tree is identical. All live files are intact."
+          else
+            echo "::error::FAILED — HEAD tree hash changed! Live files may have been modified."
+            echo "Expected: $EXPECTED_TREE"
+            echo "Got:      $ACTUAL_TREE"
+            echo ""
+            echo "Aborting push. Investigate before force-pushing."
+            exit 1
+          fi
 
       - name: Repo size after
         if: ${{ inputs.dry_run == false && steps.blobmap.outputs.skip != 'true' }}
@@ -222,8 +305,6 @@ jobs:
           git count-objects -vH
           echo ""
 
-          # Verify HEAD content is identical
-          echo "=== Verifying HEAD integrity ==="
           file_count=$(git ls-tree -r HEAD | wc -l)
           echo "Files in HEAD after cleanup: $file_count"
           echo ""
