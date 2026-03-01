@@ -3,13 +3,15 @@ name: "Step 6.0: Compute CO2 (Shared)"
 # Shared utility — computes dispatch-stack CO2 emissions for all ISOs.
 # Must run BEFORE Step 6.1 (MAC depends on CO2 output).
 # Merit-order retirement: coal → oil → gas. Demand-growth-aware.
+#
+# iso=ALL fans out parallel matrix jobs, then merges into one branch + PR.
 # Output: data/step5-post-processing/co2_*.json
 
 on:
   workflow_dispatch:
     inputs:
       iso:
-        description: 'ISO region to process'
+        description: 'ISO region to process (ALL = parallel)'
         required: true
         default: 'ALL'
         type: choice
@@ -32,9 +34,75 @@ env:
   BRANCH_PREFIX: step6-0-co2
 
 jobs:
-  compute-co2:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            echo 'matrix=["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix=["${{ inputs.iso }}"]' >> "$GITHUB_OUTPUT"
+          fi
+
+  process:
+    needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    strategy:
+      matrix:
+        iso: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+
+      - name: Verify upstream data exists
+        run: |
+          HAS_DATA=false
+          if [ -d "data/step4-gas-ccs-parquets" ] && ls data/step4-gas-ccs-parquets/*.parquet >/dev/null 2>&1; then
+            HAS_DATA=true
+          fi
+          if [ -d "data/step3-cost-opt-parquets" ] && ls data/step3-cost-opt-parquets/*.parquet >/dev/null 2>&1; then
+            HAS_DATA=true
+          fi
+          if [ "$HAS_DATA" = "false" ]; then
+            echo "ERROR: Neither step-4 nor step-3 parquets found."
+            exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy numba pyarrow pandas scipy
+
+      - name: Ensure output directories
+        run: mkdir -p data/step5-post-processing
+
+      - name: "Compute CO2 — ${{ matrix.iso }}"
+        run: |
+          echo "=== Step 6.0: Compute CO2 for ${{ matrix.iso }} ==="
+          python scripts/step6_recompute_co2.py --iso ${{ matrix.iso }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: co2-${{ matrix.iso }}
+          path: data/step5-post-processing/
+          retention-days: 1
+
+  merge:
+    needs: [prepare, process]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     permissions:
       contents: write
@@ -49,59 +117,18 @@ jobs:
       - name: Create output branch
         run: |
           TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
-          ISO_LABEL="${{ inputs.iso }}"
-          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${ISO_LABEL}"
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${{ inputs.iso }}"
           echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$TARGET_BRANCH"
 
-      - name: Verify upstream data exists
-        run: |
-          HAS_DATA=false
-          if [ -d "data/step4-gas-ccs-parquets" ] && ls data/step4-gas-ccs-parquets/*.parquet >/dev/null 2>&1; then
-            echo "Step-4 Gas CCS parquets found"
-            HAS_DATA=true
-          fi
-          if [ -d "data/step3-cost-opt-parquets" ] && ls data/step3-cost-opt-parquets/*.parquet >/dev/null 2>&1; then
-            echo "Step-3 CO parquets found"
-            HAS_DATA=true
-          fi
-          if [ "$HAS_DATA" = "false" ]; then
-            echo "ERROR: Neither step-4 nor step-3 parquets found."
-            exit 1
-          fi
-
-          if [ -d "data/step5-post-processing/dispatch_cache" ] && ls data/step5-post-processing/dispatch_cache/*.npz >/dev/null 2>&1; then
-            echo "Dispatch cache found"
-          else
-            echo "WARNING: No dispatch cache found. CO2 script will compute dispatch live (slower)."
-          fi
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
         with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: pip install numpy numba pyarrow pandas scipy
-
-      - name: Build ISO arguments
-        id: iso-args
-        run: |
-          if [ "${{ inputs.iso }}" = "ALL" ]; then
-            echo "iso_flags=" >> "$GITHUB_OUTPUT"
-          else
-            echo "iso_flags=--iso ${{ inputs.iso }}" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Ensure output directories
-        run: mkdir -p data/step5-post-processing
-
-      - name: "Compute CO2 emissions"
-        run: |
-          echo "=== Step 6.0: Compute CO2 ==="
-          python scripts/step6_recompute_co2.py ${{ steps.iso-args.outputs.iso_flags }}
+          pattern: co2-*
+          path: data/step5-post-processing/
+          merge-multiple: true
 
       - name: Commit and push
         run: |

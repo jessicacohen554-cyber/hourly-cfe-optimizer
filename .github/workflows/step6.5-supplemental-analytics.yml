@@ -6,13 +6,14 @@ name: "Step 6.5: Supplemental Analytics"
 #   - step6_consequential_queue.py — cross-regional deployment path
 #
 # These scripts use dispatch cache but are independent of each other.
+# iso=ALL fans out parallel matrix jobs, then merges into one branch + PR.
 # Output: data/step5-post-processing/
 
 on:
   workflow_dispatch:
     inputs:
       iso:
-        description: 'ISO region to process'
+        description: 'ISO region to process (ALL = parallel)'
         required: true
         default: 'ALL'
         type: choice
@@ -44,30 +45,33 @@ env:
   BRANCH_PREFIX: step6-5-supplemental
 
 jobs:
-  supplemental-analytics:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            echo 'matrix=["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix=["${{ inputs.iso }}"]' >> "$GITHUB_OUTPUT"
+          fi
+
+  process:
+    needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 180
-
-    permissions:
-      contents: write
+    strategy:
+      matrix:
+        iso: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.branch || 'master' }}
-          fetch-depth: 0
-
-      - name: Create output branch
-        run: |
-          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
-          ISO_LABEL="${{ inputs.iso }}"
-          SCRIPT_LABEL="${{ inputs.script }}"
-          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${SCRIPT_LABEL}-${ISO_LABEL}"
-          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b "$TARGET_BRANCH"
 
       - name: Verify dispatch cache exists
         run: |
@@ -75,7 +79,6 @@ jobs:
             echo "Dispatch cache found"
           else
             echo "WARNING: No dispatch cache found. Scripts will compute dispatch live (slower)."
-            echo "Consider running Step 5 (dispatch cache) first."
           fi
 
       - name: Set up Python
@@ -89,38 +92,74 @@ jobs:
       - name: Ensure output directories
         run: mkdir -p data/step5-post-processing
 
-      # ════════════════════════════════════════════════════════════════════
-      # Run selected analytics (parallel when ALL)
-      # ════════════════════════════════════════════════════════════════════
-
-      - name: "Run analytics (parallel)"
+      - name: "Run analytics (parallel) — ${{ matrix.iso }}"
         if: ${{ inputs.script == 'ALL' }}
         run: |
-          echo "=== Launching compressed day + consequential queue in parallel ==="
-
-          python scripts/step6_compressed_day.py &
+          python scripts/step6_compressed_day.py --iso ${{ matrix.iso }} &
           PID_CD=$!
-
-          python scripts/step6_consequential_queue.py &
+          python scripts/step6_consequential_queue.py --iso ${{ matrix.iso }} &
           PID_CQ=$!
 
           FAILED=0
           wait $PID_CD || { echo "FAILED: Compressed Day"; FAILED=1; }
           wait $PID_CQ || { echo "FAILED: Consequential Queue"; FAILED=1; }
+          if [ "$FAILED" -ne 0 ]; then exit 1; fi
 
-          if [ "$FAILED" -ne 0 ]; then
-            echo "ERROR: One or more scripts failed"
-            exit 1
-          fi
-          echo "=== All analytics completed ==="
-
-      - name: "Compressed Day profiles"
+      - name: "Compressed Day — ${{ matrix.iso }}"
         if: ${{ inputs.script == 'compressed-day' }}
-        run: python scripts/step6_compressed_day.py
+        run: python scripts/step6_compressed_day.py --iso ${{ matrix.iso }}
 
-      - name: "Consequential Queue"
+      - name: "Consequential Queue — ${{ matrix.iso }}"
         if: ${{ inputs.script == 'consequential-queue' }}
-        run: python scripts/step6_consequential_queue.py
+        run: python scripts/step6_consequential_queue.py --iso ${{ matrix.iso }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: supplemental-${{ matrix.iso }}
+          path: |
+            data/step5-post-processing/
+            dashboard/compressed_day_profiles.json
+            dashboard/js/consequential-queue-data.js
+          retention-days: 1
+
+  merge:
+    needs: [prepare, process]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      contents: write
+
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Create output branch
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${{ inputs.script }}-${{ inputs.iso }}"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$TARGET_BRANCH"
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: supplemental-*
+          path: ./artifact-tmp/
+          merge-multiple: true
+
+      - name: Place artifacts
+        run: |
+          cp -rf artifact-tmp/data/step5-post-processing/* data/step5-post-processing/ 2>/dev/null || true
+          cp -f artifact-tmp/dashboard/compressed_day_profiles.json dashboard/ 2>/dev/null || true
+          cp -f artifact-tmp/dashboard/js/consequential-queue-data.js dashboard/js/ 2>/dev/null || true
 
       - name: Commit and push
         run: |
@@ -147,3 +186,4 @@ jobs:
             echo "Retrying in ${BACKOFF}s..."
             sleep "$BACKOFF"
           done
+

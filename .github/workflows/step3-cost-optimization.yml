@@ -4,6 +4,7 @@ name: "Step 3: Cost Optimization"
 # (17,496 for CAISO with geothermal). Merit-order tranche pricing for clean firm.
 # Supports 3 tracks: baseline (Track 1), new-build (Track 2), cost-to-replace (Track 3).
 #
+# iso=ALL fans out parallel matrix jobs, then merges into one branch + PR.
 # Prerequisite: Step 2 (Efficient Frontier) must have produced EF parquets.
 # Output: data/step3-cost-opt-parquets/
 
@@ -11,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       iso:
-        description: 'ISO region to run'
+        description: 'ISO region to run (ALL = parallel)'
         required: true
         default: 'ALL'
         type: choice
@@ -53,9 +54,97 @@ env:
   BRANCH_PREFIX: step3-cost-opt
 
 jobs:
-  run-step3:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            echo 'matrix=["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix=["${{ inputs.iso }}"]' >> "$GITHUB_OUTPUT"
+          fi
+
+  process:
+    needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 480
+    strategy:
+      matrix:
+        iso: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+
+      - name: Verify step-2 EF parquets exist
+        run: |
+          if [ ! -d data/step2-ef-parquets ] || [ -z "$(ls data/step2-ef-parquets/*.parquet 2>/dev/null)" ]; then
+            echo "ERROR: Step-2 EF parquets not found. Run Step 2 first."
+            exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy numba pyarrow
+
+      - name: Ensure output directories
+        run: |
+          mkdir -p data/step3-cost-opt-parquets
+          mkdir -p dashboard
+
+      - name: Build sensitivity flag
+        id: build-args
+        run: |
+          if [ "${{ inputs.sensitivity_mode }}" = "full" ]; then
+            echo "sens_flags=--full" >> "$GITHUB_OUTPUT"
+          else
+            echo "sens_flags=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: "Track 1: Baseline — ${{ matrix.iso }}"
+        if: ${{ inputs.track == 'track1-baseline' || inputs.track == 'ALL' }}
+        run: |
+          echo "=== Track 1: Baseline ==="
+          python scripts/step3_cost_optimization.py --track baseline --iso ${{ matrix.iso }}
+
+      - name: "Track 2: New-Build — ${{ matrix.iso }}"
+        if: ${{ inputs.track == 'track2-newbuild' || inputs.track == 'track2-and-3' || inputs.track == 'ALL' }}
+        run: |
+          echo "=== Track 2: New-Build ==="
+          python scripts/step3_track_nb_ctr.py --fresh --track nb \
+            --iso ${{ matrix.iso }} ${{ steps.build-args.outputs.sens_flags }}
+
+      - name: "Track 3: Cost-to-Replace — ${{ matrix.iso }}"
+        if: ${{ inputs.track == 'track3-cost-to-replace' || inputs.track == 'track2-and-3' || inputs.track == 'ALL' }}
+        run: |
+          echo "=== Track 3: Cost-to-Replace ==="
+          python scripts/step3_track_nb_ctr.py --fresh --track ctr \
+            --iso ${{ matrix.iso }} ${{ steps.build-args.outputs.sens_flags }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: step3-${{ matrix.iso }}
+          path: |
+            data/step3-cost-opt-parquets/
+            dashboard/track_scenarios.parquet
+            dashboard/track_demand_growth.parquet
+          retention-days: 1
+
+  merge:
+    needs: [prepare, process]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     permissions:
       contents: write
@@ -76,80 +165,17 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$TARGET_BRANCH"
 
-      - name: Verify step-2 EF parquets exist
-        run: |
-          if [ ! -d data/step2-ef-parquets ] || [ -z "$(ls data/step2-ef-parquets/*.parquet 2>/dev/null)" ]; then
-            echo "ERROR: Step-2 EF parquets not found. Run Step 2 first."
-            exit 1
-          fi
-          echo "Step-2 EF parquets found:"
-          ls -lh data/step2-ef-parquets/
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
         with:
-          python-version: '3.11'
+          pattern: step3-*
+          path: ./artifact-tmp/
+          merge-multiple: true
 
-      - name: Install dependencies
-        run: pip install numpy numba pyarrow
-
-      - name: Ensure output directories
+      - name: Place artifacts
         run: |
-          mkdir -p data/step3-cost-opt-parquets
-          mkdir -p dashboard
-
-      - name: Build arguments
-        id: build-args
-        run: |
-          # ISO flag
-          if [ "${{ inputs.iso }}" = "ALL" ]; then
-            echo "iso_flags=" >> "$GITHUB_OUTPUT"
-          else
-            echo "iso_flags=--iso ${{ inputs.iso }}" >> "$GITHUB_OUTPUT"
-          fi
-
-          # Sensitivity flag
-          if [ "${{ inputs.sensitivity_mode }}" = "full" ]; then
-            echo "sens_flags=--full" >> "$GITHUB_OUTPUT"
-          else
-            echo "sens_flags=" >> "$GITHUB_OUTPUT"
-          fi
-
-      # ════════════════════════════════════════════════════════════════════
-      # TRACK 1: Baseline
-      # ════════════════════════════════════════════════════════════════════
-
-      - name: "Track 1: Baseline Cost Optimization"
-        if: ${{ inputs.track == 'track1-baseline' || inputs.track == 'ALL' }}
-        run: |
-          echo "=== Track 1: Baseline ==="
-          python scripts/step3_cost_optimization.py --track baseline ${{ steps.build-args.outputs.iso_flags }}
-
-      # ════════════════════════════════════════════════════════════════════
-      # TRACK 2: New-Build
-      # ════════════════════════════════════════════════════════════════════
-
-      - name: "Track 2: New-Build Cost Optimization"
-        if: ${{ inputs.track == 'track2-newbuild' || inputs.track == 'track2-and-3' || inputs.track == 'ALL' }}
-        run: |
-          echo "=== Track 2: New-Build ==="
-          python scripts/step3_track_nb_ctr.py --fresh --track nb \
-            ${{ steps.build-args.outputs.iso_flags }} ${{ steps.build-args.outputs.sens_flags }}
-
-      # ════════════════════════════════════════════════════════════════════
-      # TRACK 3: Cost-to-Replace
-      # ════════════════════════════════════════════════════════════════════
-
-      - name: "Track 3: Cost-to-Replace Optimization"
-        if: ${{ inputs.track == 'track3-cost-to-replace' || inputs.track == 'track2-and-3' || inputs.track == 'ALL' }}
-        run: |
-          echo "=== Track 3: Cost-to-Replace ==="
-          python scripts/step3_track_nb_ctr.py --fresh --track ctr \
-            ${{ steps.build-args.outputs.iso_flags }} ${{ steps.build-args.outputs.sens_flags }}
-
-      # ════════════════════════════════════════════════════════════════════
-      # COMMIT & PR
-      # ════════════════════════════════════════════════════════════════════
+          cp -f artifact-tmp/data/step3-cost-opt-parquets/*.parquet data/step3-cost-opt-parquets/ 2>/dev/null || true
+          cp -f artifact-tmp/dashboard/*.parquet dashboard/ 2>/dev/null || true
 
       - name: Commit and push
         run: |

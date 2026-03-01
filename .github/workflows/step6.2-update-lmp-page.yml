@@ -1,16 +1,18 @@
 name: "Step 6.2: Update LMP Page"
 
-# Runs scripts sequentially to populate the Wholesale Price (LMP) page:
+# Runs scripts to populate the Wholesale Price (LMP) page:
 #   1. step6_compute_lmp_prices.py — synthetic 8760-hour LMP per ISO × threshold × fuel level
 #   2. extract_lmp_dashboard_data.py — extracts LMP parquets into dashboard/js/lmp-data.js
 #
+# iso=ALL fans out parallel matrix jobs for LMP computation, then merge job
+# runs the global extract-dashboard script and commits everything.
 # Output: data/step5-post-processing/lmp/{ISO}_lmp.parquet, dashboard/js/lmp-data.js
 
 on:
   workflow_dispatch:
     inputs:
       iso:
-        description: 'ISO region to compute'
+        description: 'ISO region to compute (ALL = parallel)'
         required: true
         default: 'ALL'
         type: choice
@@ -52,31 +54,35 @@ env:
   BRANCH_PREFIX: step6-2-lmp
 
 jobs:
-  update-lmp-page:
+  prepare:
     runs-on: ubuntu-latest
-    timeout-minutes: 480
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            echo 'matrix=["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix=["${{ inputs.iso }}"]' >> "$GITHUB_OUTPUT"
+          fi
 
-    permissions:
-      contents: write
+  process:
+    needs: prepare
+    if: ${{ inputs.script == 'ALL' || inputs.script == 'compute-lmp' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    strategy:
+      matrix:
+        iso: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.branch || 'master' }}
-          fetch-depth: 0
           lfs: true
-
-      - name: Create output branch
-        run: |
-          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
-          ISO_LABEL="${{ inputs.iso }}"
-          SCRIPT_LABEL="${{ inputs.script }}"
-          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${SCRIPT_LABEL}-${ISO_LABEL}"
-          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b "$TARGET_BRANCH"
 
       - name: Verify upstream data exists
         run: |
@@ -100,38 +106,72 @@ jobs:
         run: pip install numpy numba pyarrow pandas scipy
 
       - name: Ensure output directories
-        run: |
-          mkdir -p data/step5-post-processing/lmp
-          mkdir -p dashboard/js
+        run: mkdir -p data/step5-post-processing/lmp
 
-      # ════════════════════════════════════════════════════════════════════
-      # Sequential: Compute LMP → Extract dashboard JS
-      # ════════════════════════════════════════════════════════════════════
-
-      - name: "1/2 — Compute LMP Prices"
-        if: ${{ inputs.script == 'ALL' || inputs.script == 'compute-lmp' }}
+      - name: "Compute LMP — ${{ matrix.iso }}"
         run: |
-          ISO="${{ inputs.iso }}"
           FL="${{ inputs.fuel_level }}"
-
-          if [ "$ISO" = "ALL" ]; then
-            for iso in CAISO ERCOT PJM NYISO NEISO MISO SPP; do
-              echo "=== Computing LMP for $iso ==="
-              if [ "$FL" = "ALL" ]; then
-                python scripts/step6_compute_lmp_prices.py --iso "$iso" || echo "WARNING: $iso failed, continuing..."
-              else
-                python scripts/step6_compute_lmp_prices.py --iso "$iso" --fuel-level "$FL" || echo "WARNING: $iso failed, continuing..."
-              fi
-            done
+          if [ "$FL" = "ALL" ]; then
+            python scripts/step6_compute_lmp_prices.py --iso ${{ matrix.iso }}
           else
-            if [ "$FL" = "ALL" ]; then
-              python scripts/step6_compute_lmp_prices.py --iso "$ISO"
-            else
-              python scripts/step6_compute_lmp_prices.py --iso "$ISO" --fuel-level "$FL"
-            fi
+            python scripts/step6_compute_lmp_prices.py --iso ${{ matrix.iso }} --fuel-level "$FL"
           fi
 
-      - name: "2/2 — Extract Dashboard Data"
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lmp-${{ matrix.iso }}
+          path: data/step5-post-processing/lmp/
+          retention-days: 1
+
+  merge:
+    needs: [prepare, process]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: write
+
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Create output branch
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${{ inputs.script }}-${{ inputs.iso }}"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$TARGET_BRANCH"
+
+      - name: Download LMP artifacts
+        if: ${{ inputs.script == 'ALL' || inputs.script == 'compute-lmp' }}
+        uses: actions/download-artifact@v4
+        with:
+          pattern: lmp-*
+          path: data/step5-post-processing/lmp/
+          merge-multiple: true
+
+      - name: Set up Python
+        if: ${{ inputs.script == 'ALL' || inputs.script == 'extract-dashboard' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        if: ${{ inputs.script == 'ALL' || inputs.script == 'extract-dashboard' }}
+        run: pip install numpy numba pyarrow pandas scipy
+
+      - name: Ensure JS directory
+        run: mkdir -p dashboard/js
+
+      - name: "Extract Dashboard Data"
         if: ${{ inputs.script == 'ALL' || inputs.script == 'extract-dashboard' }}
         run: |
           if [ -f scripts/extract_lmp_dashboard_data.py ]; then

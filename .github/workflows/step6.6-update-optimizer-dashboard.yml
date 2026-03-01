@@ -4,9 +4,8 @@ name: "Step 6.6: Update Optimizer Dashboard"
 #   1. step6_compressed_day.py — 24-hour representative day profiles per unique mix
 #   2. step7_generate_shared_data.py — consolidates all results into shared-data.js
 #
-# The dashboard reads from shared-data.js (cost/mix/threshold data) and uses
-# compressed day profiles for the dispatch visualization chart.
-#
+# iso=ALL fans out parallel matrix jobs for compressed-day, then merge job
+# runs the global shared-data generation and commits everything.
 # Prerequisite: Steps 3-5 complete (cost optimization + dispatch cache).
 # Output: dashboard/js/shared-data.js, data/step5-post-processing/compressed_day/
 
@@ -14,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       iso:
-        description: 'ISO region to process'
+        description: 'ISO region to process (ALL = parallel)'
         required: true
         default: 'ALL'
         type: choice
@@ -46,30 +45,34 @@ env:
   BRANCH_PREFIX: step6-6-dashboard
 
 jobs:
-  update-optimizer-dashboard:
+  prepare:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            echo 'matrix=["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix=["${{ inputs.iso }}"]' >> "$GITHUB_OUTPUT"
+          fi
 
-    permissions:
-      contents: write
+  process:
+    needs: prepare
+    if: ${{ inputs.script == 'ALL' || inputs.script == 'compressed-day' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      matrix:
+        iso: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.branch || 'master' }}
-          fetch-depth: 0
-
-      - name: Create output branch
-        run: |
-          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
-          ISO_LABEL="${{ inputs.iso }}"
-          SCRIPT_LABEL="${{ inputs.script }}"
-          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${SCRIPT_LABEL}-${ISO_LABEL}"
-          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout -b "$TARGET_BRANCH"
 
       - name: Verify upstream data exists
         run: |
@@ -80,17 +83,8 @@ jobs:
             fi
           done
           if [ "$HAS_DATA" = "false" ]; then
-            echo "ERROR: No step-3 or step-4 parquets found. Run earlier steps first."
+            echo "ERROR: No step-3 or step-4 parquets found."
             exit 1
-          fi
-
-      - name: Check dispatch cache
-        run: |
-          if [ -d "data/step5-post-processing/dispatch_cache" ] && ls data/step5-post-processing/dispatch_cache/*.npz >/dev/null 2>&1; then
-            echo "Dispatch cache found — compressed day will use cache"
-          else
-            echo "WARNING: No dispatch cache found. Compressed day will compute dispatch live (slower)."
-            echo "Consider running Step 5 (dispatch cache) first."
           fi
 
       - name: Set up Python
@@ -102,21 +96,66 @@ jobs:
         run: pip install numpy numba pyarrow pandas scipy
 
       - name: Ensure output directories
+        run: mkdir -p data/step5-post-processing
+
+      - name: "Compressed Day — ${{ matrix.iso }}"
+        run: python scripts/step6_compressed_day.py --iso ${{ matrix.iso }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-${{ matrix.iso }}
+          path: data/step5-post-processing/
+          retention-days: 1
+
+  merge:
+    needs: [prepare, process]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    permissions:
+      contents: write
+
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Create output branch
         run: |
-          mkdir -p data/step5-post-processing
-          mkdir -p dashboard/js
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${{ inputs.script }}-${{ inputs.iso }}"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$TARGET_BRANCH"
 
-      # ════════════════════════════════════════════════════════════════════
-      # Sequential: Compressed Day → Shared Data
-      # ════════════════════════════════════════════════════════════════════
-
-      - name: "1/2 — Compute Compressed Day Profiles"
+      - name: Download compressed-day artifacts
         if: ${{ inputs.script == 'ALL' || inputs.script == 'compressed-day' }}
-        run: |
-          echo "=== Compressed Day (24-hour representative dispatch profiles) ==="
-          python scripts/step6_compressed_day.py
+        uses: actions/download-artifact@v4
+        with:
+          pattern: dashboard-*
+          path: data/step5-post-processing/
+          merge-multiple: true
 
-      - name: "2/2 — Generate Shared Data"
+      - name: Set up Python
+        if: ${{ inputs.script == 'ALL' || inputs.script == 'shared-data' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        if: ${{ inputs.script == 'ALL' || inputs.script == 'shared-data' }}
+        run: pip install numpy numba pyarrow pandas scipy
+
+      - name: Ensure JS directory
+        run: mkdir -p dashboard/js
+
+      - name: "Generate Shared Data"
         if: ${{ inputs.script == 'ALL' || inputs.script == 'shared-data' }}
         run: |
           echo "=== Consolidate results into shared-data.js ==="
@@ -147,3 +186,4 @@ jobs:
             echo "Retrying in ${BACKOFF}s..."
             sleep "$BACKOFF"
           done
+
