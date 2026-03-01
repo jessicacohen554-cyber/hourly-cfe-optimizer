@@ -209,6 +209,81 @@ CCS_LCOE_45Q_OFF = {
     'H': {'CAISO': 144, 'ERCOT': 121, 'PJM': 131, 'NYISO': 157, 'NEISO': 151, 'MISO': 125, 'SPP': 117},
 }
 
+# ============================================================================
+# FOAK COST TABLES — First-of-a-kind costs before any learning curve
+# ============================================================================
+# Single value per technology × ISO. These represent the cost of the first
+# commercial-scale project (pre-Wright's Law learning). Applied in Phase 2
+# (demand growth sweep) only — Phase 1 (base year 2025) uses static L/M/H.
+#
+# Sources: Nuclear FOAK ~1.25× High (Vogtle-era), CCS ~1.20× High (Boundary Dam),
+#   Geothermal ~1.35× High (Fervo EGS), LDES ~1.40× High (Form Energy pre-commercial),
+#   H2 ~1.30× High (electrolysis + H2 turbine FOAK).
+
+FOAK_NUCLEAR_NEWBUILD = {
+    'CAISO': 175, 'ERCOT': 169, 'PJM': 200, 'NYISO': 212,
+    'NEISO': 206, 'MISO': 194, 'SPP': 175,
+}
+FOAK_CCS_45Q_ON = {
+    'CAISO': 138, 'ERCOT': 110, 'PJM': 122, 'NYISO': 154,
+    'NEISO': 146, 'MISO': 115, 'SPP': 106,
+}
+FOAK_CCS_45Q_OFF = {
+    'CAISO': 173, 'ERCOT': 145, 'PJM': 157, 'NYISO': 188,
+    'NEISO': 181, 'MISO': 150, 'SPP': 140,
+}
+FOAK_GEOTHERMAL = 150  # CAISO only, $/MWh
+
+FOAK_LDES = {
+    'CAISO': 328, 'ERCOT': 283, 'PJM': 309, 'NYISO': 364,
+    'NEISO': 346, 'MISO': 295, 'SPP': 287,
+}
+FOAK_H2 = {
+    'CAISO': 546, 'ERCOT': 481, 'PJM': 520, 'NYISO': 598,
+    'NEISO': 572, 'MISO': 494, 'SPP': 475,
+}
+
+# ============================================================================
+# LEARNING CURVE PARAMETERS — Wright's Law FOAK→NOAK by toggle level
+# ============================================================================
+# Paired adoption speed + NOAK optimism: L=Fast/Optimistic, M=Central, H=Slow/Pessimistic.
+# Each technology has its own timeline (CCS/geo more mature → slightly faster).
+# Exponent 0.6 produces concave ramp: steep initial drop, asymptotic approach to NOAK.
+#
+# Format: {toggle_level: (foak_start_year, noak_year)}
+LEARNING_PARAMS = {
+    'nuclear': {'L': (2028, 2038), 'M': (2030, 2042), 'H': (2035, 2047)},
+    'ccs':     {'L': (2028, 2037), 'M': (2030, 2040), 'H': (2033, 2045)},
+    'geo':     {'L': (2027, 2036), 'M': (2029, 2039), 'H': (2033, 2043)},
+    'ldes':    {'L': (2029, 2039), 'M': (2031, 2043), 'H': (2035, 2047)},
+    'h2':      {'L': (2029, 2039), 'M': (2031, 2043), 'H': (2035, 2047)},
+}
+LEARNING_EXPONENT = 0.6  # Wright's Law concave ramp
+
+
+def learning_fraction(year, foak_start, noak_year):
+    """Compute Wright's Law learning fraction for a given year.
+
+    Returns 0.0 (pure FOAK) before foak_start, 1.0 (full NOAK) after noak_year,
+    and a concave ramp in between: ((year - foak_start) / duration) ** 0.6.
+    """
+    if year < foak_start:
+        return 0.0
+    if year >= noak_year:
+        return 1.0
+    active = (year - foak_start) / (noak_year - foak_start)
+    return active ** LEARNING_EXPONENT
+
+
+def year_adjusted_cost(foak_cost, noak_cost, year, foak_start, noak_year):
+    """Interpolate between FOAK and NOAK costs using Wright's Law.
+
+    cost(year) = FOAK × (1 - frac) + NOAK × frac
+    """
+    frac = learning_fraction(year, foak_start, noak_year)
+    return foak_cost * (1.0 - frac) + noak_cost * frac
+
+
 # Uprate cap: 8% of existing nuclear × 90% CF → TWh/yr
 # Includes MUR + stretch + good EPU opportunities across fleet
 EXISTING_NUCLEAR_GW = {'CAISO': 2.3, 'ERCOT': 2.7, 'PJM': 32.0, 'NYISO': 3.4, 'NEISO': 3.5, 'MISO': 12.0, 'SPP': 1.2}
@@ -988,11 +1063,20 @@ def eval_and_argmin_all(coeff_matrix, constant, prices, scores, thresholds_desc)
     return best_idxs, best_vals
 
 
-def precompute_all_prices(iso, all_combos):
+def precompute_all_prices(iso, all_combos, target_year=None):
     """Pre-compute price vectors + metadata for all sensitivity combos at once.
 
     Inlines price lookups and fills the pre-allocated matrix directly, avoiding
     ~5,832-17,496 temporary np.array allocations from get_scenario_prices().
+
+    Args:
+        iso: region string
+        all_combos: list of (scenario_key, sens_dict) tuples
+        target_year: optional int — if provided, applies Wright's Law FOAK→NOAK
+            learning curves to new-build clean firm technologies (nuclear, CCS,
+            geothermal, LDES, H2). Used in Phase 2 (demand growth sweep) where
+            each threshold maps to a future SBTi year. If None (Phase 1),
+            uses static L/M/H costs from the LCOE tables.
 
     Returns:
         price_matrix: (B, 11) float64 price vectors
@@ -1026,6 +1110,47 @@ def precompute_all_prices(iso, all_combos):
         for tx_name in ['None', 'Low', 'Medium', 'High']:
             _tx_cache[(rtype, tx_name)] = get_tx(rtype, tx_name, iso)
 
+    # Pre-compute year-adjusted FOAK→NOAK costs if target_year provided
+    # Each (technology, toggle_level) gets a pre-resolved cost for this year
+    _use_learning = target_year is not None
+    if _use_learning:
+        _foak_nuc = FOAK_NUCLEAR_NEWBUILD[iso]
+        _foak_ccs_on = FOAK_CCS_45Q_ON[iso]
+        _foak_ccs_off = FOAK_CCS_45Q_OFF[iso]
+        _foak_geo = FOAK_GEOTHERMAL  # scalar, CAISO only
+        _foak_ldes = FOAK_LDES[iso]
+        _foak_h2 = FOAK_H2[iso]
+
+        # Pre-compute year-adjusted nuclear new-build per firm level
+        _nuc_yr = {}
+        for lev in LMH:
+            foak_s, noak_y = LEARNING_PARAMS['nuclear'][lev]
+            _nuc_yr[lev] = year_adjusted_cost(_foak_nuc, _nuc_nb_iso[lev], target_year, foak_s, noak_y)
+
+        # Pre-compute year-adjusted CCS per CCS level × 45Q
+        _ccs_on_yr = {}
+        _ccs_off_yr = {}
+        for lev in LMH:
+            foak_s, noak_y = LEARNING_PARAMS['ccs'][lev]
+            _ccs_on_yr[lev] = year_adjusted_cost(_foak_ccs_on, _ccs_on_iso[lev], target_year, foak_s, noak_y)
+            _ccs_off_yr[lev] = year_adjusted_cost(_foak_ccs_off, _ccs_off_iso[lev], target_year, foak_s, noak_y)
+
+        # Pre-compute year-adjusted geothermal per geo level
+        _geo_yr = {}
+        if _is_caiso:
+            for lev in LMH:
+                foak_s, noak_y = LEARNING_PARAMS['geo'][lev]
+                _geo_yr[lev] = year_adjusted_cost(_foak_geo, GEOTHERMAL_LCOE[lev], target_year, foak_s, noak_y)
+
+        # Pre-compute year-adjusted LDES and H2 per LDES level
+        _ldes_yr = {}
+        _h2_yr = {}
+        for name, lev in [('Low', 'L'), ('Medium', 'M'), ('High', 'H')]:
+            foak_s, noak_y = LEARNING_PARAMS['ldes'][lev]
+            _ldes_yr[name] = year_adjusted_cost(_foak_ldes, _ldes_lcoe_iso[name], target_year, foak_s, noak_y)
+            foak_s_h2, noak_y_h2 = LEARNING_PARAMS['h2'][lev]
+            _h2_yr[name] = year_adjusted_cost(_foak_h2, _h2_lcoe_iso[name], target_year, foak_s_h2, noak_y_h2)
+
     for j, (scenario_key, sens) in enumerate(all_combos):
         ren_name = LEVEL_NAME[sens['ren']]
         batt_name = LEVEL_NAME[sens['batt']]
@@ -1038,17 +1163,38 @@ def precompute_all_prices(iso, all_combos):
         geo_lev = sens.get('geo')
 
         wholesale = max(5, _ws_base + _fuel_adj[fuel_name])
-        ccs_lcoe = _ccs_on_iso[ccs_lev] if q45 == '1' else _ccs_off_iso[ccs_lev]
+
+        # CCS price: year-adjusted if learning curves active, static otherwise
+        if _use_learning:
+            ccs_lcoe = _ccs_on_yr[ccs_lev] if q45 == '1' else _ccs_off_yr[ccs_lev]
+        else:
+            ccs_lcoe = _ccs_on_iso[ccs_lev] if q45 == '1' else _ccs_off_iso[ccs_lev]
         ccs_tx = _tx_cache[('ccs_ccgt', tx_name)]
         ccs_price = ccs_lcoe + ccs_tx
 
+        # Nuclear new-build price: year-adjusted if learning curves active
         tx_cf = _tx_cache[('clean_firm', tx_name)]
-        nuclear_price = _nuc_nb_iso[firm_lev] + tx_cf
+        if _use_learning:
+            nuclear_price = _nuc_yr[firm_lev] + tx_cf
+        else:
+            nuclear_price = _nuc_nb_iso[firm_lev] + tx_cf
         remaining_price = min(nuclear_price, ccs_price)
 
+        # Geothermal price: year-adjusted if learning curves active
         geo_price = 0.0
         if _is_caiso and geo_lev:
-            geo_price = GEOTHERMAL_LCOE[geo_lev] + tx_cf
+            if _use_learning:
+                geo_price = _geo_yr[geo_lev] + tx_cf
+            else:
+                geo_price = GEOTHERMAL_LCOE[geo_lev] + tx_cf
+
+        # LDES and H2 prices: year-adjusted if learning curves active
+        if _use_learning:
+            ldes_price = _ldes_yr[ldes_name] + _tx_cache[('ldes', tx_name)]
+            h2_price = _h2_yr[ldes_name] + _tx_cache[('h2', tx_name)]
+        else:
+            ldes_price = _ldes_lcoe_iso[ldes_name] + _tx_cache[('ldes', tx_name)]
+            h2_price = _h2_lcoe_iso[ldes_name] + _tx_cache[('h2', tx_name)]
 
         # Fill directly into pre-allocated matrix (avoids np.array() allocation per call)
         price_matrix[j, _COL_WHOLESALE] = wholesale
@@ -1060,8 +1206,8 @@ def precompute_all_prices(iso, all_combos):
         price_matrix[j, _COL_REMAINING] = remaining_price
         price_matrix[j, _COL_BAT4] = _bat_lcoe_iso[batt_name] + _tx_cache[('battery', tx_name)]
         price_matrix[j, _COL_BAT8] = _bat8_lcoe_iso[batt_name] + _tx_cache[('battery8', tx_name)]
-        price_matrix[j, _COL_LDES] = _ldes_lcoe_iso[ldes_name] + _tx_cache[('ldes', tx_name)]
-        price_matrix[j, _COL_H2] = _h2_lcoe_iso[ldes_name] + _tx_cache[('h2', tx_name)]
+        price_matrix[j, _COL_LDES] = ldes_price
+        price_matrix[j, _COL_H2] = h2_price
         wholesale_arr[j] = wholesale
         nuclear_arr[j] = nuclear_price
         ccs_arr[j] = ccs_price
@@ -2186,8 +2332,16 @@ def main():
             'base_year': 2025,
             'fields': ['mix_idx', 'total_cost', 'effective_cost', 'incremental',
                         'growth_factor', 'annual_demand_mwh'],
-            'note': 'Threshold-year paired DG: each threshold evaluated at its SBTi target year only. '
-                    'Full resource mix stored for downstream pipeline (Step 4+).',
+            'note': 'Threshold-year paired DG with Wright\'s Law FOAK→NOAK learning curves. '
+                    'Each DG year uses year-adjusted clean firm costs (nuclear, CCS, geo, LDES, H2). '
+                    'L/M/H toggles control both NOAK endpoint and adoption speed.',
+            'learning_curves': {
+                'enabled': True,
+                'exponent': LEARNING_EXPONENT,
+                'params': {tech: {lev: {'foak_start': s, 'noak_year': n}
+                                  for lev, (s, n) in params.items()}
+                           for tech, params in LEARNING_PARAMS.items()},
+            },
         },
         'results': {},
     }
@@ -2219,8 +2373,15 @@ def main():
         # Initialize per-threshold result dicts
         thr_dg = {thr: {} for thr in arch_thr_mask}
 
-        # Reuse cached price matrix from Phase 1 (same iso + combos)
-        dg_price_matrix, dg_ws_arr, _, _ = iso_price_cache[iso]
+        # Phase 1 wholesale prices (scenario-invariant, no learning curve)
+        _, dg_ws_arr, _, _ = iso_price_cache[iso]
+
+        # Pre-compute year-specific price matrices with learning curves.
+        # Each DG year gets its own price matrix where nuclear/CCS/geo/LDES/H2
+        # costs are adjusted via Wright's Law FOAK→NOAK interpolation.
+        dg_price_cache = {}
+        for year in DG_UNIQUE_YEARS:
+            dg_price_cache[year] = precompute_all_prices(iso, all_combos, target_year=year)
 
         # Archetype scores for batched eval + effective cost
         # Already float64 from _table_to_arrays — no .astype() needed
@@ -2250,6 +2411,9 @@ def main():
             if not matched_thresholds:
                 continue
 
+            # Year-specific price matrix with learning curves applied
+            dg_price_matrix_yr, _, _, _ = dg_price_cache[year]
+
             for g_level in DEMAND_GROWTH_LEVELS:
                 g_rate = iso_rates[g_level]
                 gf = (1 + g_rate) ** years_out
@@ -2265,9 +2429,9 @@ def main():
                 cm_g, const_g, dg_extras = precompute_base_year_coefficients(
                     iso, arch_arrays, demand_grown, existing_override=scaled_existing)
 
-                # Batch eval all combos at once
+                # Batch eval all combos at once using year-adjusted prices
                 dg_best_idxs, dg_best_vals = batch_eval_and_argmin_all(
-                    cm_g, const_g, dg_price_matrix, arch_scores_f64, thresholds_desc_dg)
+                    cm_g, const_g, dg_price_matrix_yr, arch_scores_f64, thresholds_desc_dg)
 
                 # Extract winners — ONLY for thresholds that map to this year
                 yr_str = str(year)
@@ -2360,8 +2524,13 @@ def main():
 
             thr_dg = {thr: {} for thr in arch_thr_mask}
 
-            # Reuse cached price matrix from Phase 1 (same iso + combos)
-            tk_price_matrix, tk_ws_arr, _, _ = iso_price_cache[iso]
+            # Phase 1 wholesale prices (scenario-invariant, no learning curve)
+            _, tk_ws_arr, _, _ = iso_price_cache[iso]
+
+            # Pre-compute year-specific price matrices with learning curves
+            tk_price_cache = {}
+            for year in DG_UNIQUE_YEARS:
+                tk_price_cache[year] = precompute_all_prices(iso, all_combos, target_year=year)
 
             # Archetype scores for batched eval
             # Already float64 from _table_to_arrays — no .astype() needed
@@ -2389,6 +2558,9 @@ def main():
                 if not matched_thresholds:
                     continue
 
+                # Year-specific price matrix with learning curves applied
+                tk_price_matrix_yr, _, _, _ = tk_price_cache[year]
+
                 for g_level in DEMAND_GROWTH_LEVELS:
                     g_rate = iso_rates[g_level]
                     gf = (1 + g_rate) ** years_out
@@ -2405,7 +2577,7 @@ def main():
                         uprate_cap_override=uprate_override)
 
                     tk_best_idxs, tk_best_vals = batch_eval_and_argmin_all(
-                        cm_g, const_g, tk_price_matrix, tk_scores_f64, tk_thr_desc)
+                        cm_g, const_g, tk_price_matrix_yr, tk_scores_f64, tk_thr_desc)
 
                     yr_str = str(year)
                     for combo_i in range(len(all_combos)):
