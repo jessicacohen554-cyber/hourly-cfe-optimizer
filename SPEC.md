@@ -3893,19 +3893,19 @@ Green H2 FOAK ($/MWh-cap, annualized capacity cost) — ~1.30× High:
 
 | Level | Adoption | FOAK Start | NOAK Year | Duration | NOAK Endpoint | Wright's Law Exponent |
 |-------|----------|------------|-----------|----------|---------------|----------------------|
-| L (Optimistic/Fast) | Fast | 2028 | 2038 | 10 years | Low cost table | 0.6 |
-| M (Central) | Central | 2030 | 2042 | 12 years | Medium cost table | 0.6 |
-| H (Pessimistic/Slow) | Slow | 2035 | 2047 | 12 years | High cost table | 0.6 |
+| L (Optimistic/Fast) | Fast | 2028 | 2036 | 8 years | Low cost table | 0.6 |
+| M (Central) | Central | 2030 | 2040 | 10 years | Medium cost table | 0.6 |
+| H (Pessimistic/Slow) | Slow | 2036 | 2048 | 12 years | High cost table | 0.6 |
 
-**Per-technology timeline overrides** (CCS/geothermal are more mature, slightly faster learning):
+**Unified timelines for all clean firm technologies** (simplified from prior per-technology overrides — now all clean firm techs share the same L/M/H learning schedule):
 
 | Technology | Toggle | L FOAK→NOAK | M FOAK→NOAK | H FOAK→NOAK |
 |------------|--------|-------------|-------------|-------------|
-| Nuclear new-build | Firm | 2028→2038 | 2030→2042 | 2035→2047 |
-| CCS-CCGT | CCS | 2028→2037 | 2030→2040 | 2033→2045 |
-| Geothermal | Geo | 2027→2036 | 2029→2039 | 2033→2043 |
-| LDES | LDES | 2029→2039 | 2031→2043 | 2035→2047 |
-| Green H2 | LDES | 2029→2039 | 2031→2043 | 2035→2047 |
+| Nuclear new-build | Firm | 2028→2036 | 2030→2040 | 2036→2048 |
+| CCS-CCGT | CCS | 2028→2036 | 2030→2040 | 2036→2048 |
+| Geothermal | Geo | 2028→2036 | 2030→2040 | 2036→2048 |
+| LDES | LDES | 2028→2036 | 2030→2040 | 2036→2048 |
+| Green H2 | LDES | 2028→2036 | 2030→2040 | 2036→2048 |
 | Battery 4hr | Batt | 2025→2030 | 2026→2032 | 2027→2035 |
 | Battery 8hr | Batt | 2025→2030 | 2026→2032 | 2027→2035 |
 
@@ -3918,7 +3918,7 @@ Green H2 FOAK ($/MWh-cap, annualized capacity cost) — ~1.30× High:
 - Exponent 0.6 produces Wright's Law concave ramp: steep initial drop (first 40% of cost reduction in first 30% of timeline), then asymptotic approach to NOAK.
 
 **Example impact (PJM, 70% threshold = year 2035, Firm=M, CCS=M)**:
-- Nuclear FOAK=$200, NOAK_M=$105, frac=`((2035-2030)/(2042-2030))^0.6 = 0.42^0.6 ≈ 0.58` → year cost = $200×0.42 + $105×0.58 = **$145/MWh**
+- Nuclear FOAK=$200, NOAK_M=$105, frac=`((2035-2030)/(2040-2030))^0.6 = 0.50^0.6 ≈ 0.66` → year cost = $200×0.34 + $105×0.66 = **$137/MWh**
 - CCS FOAK 45Q ON=$122, NOAK_M=$79, frac=`((2035-2030)/(2040-2030))^0.6 = 0.50^0.6 ≈ 0.66` → year cost = $122×0.34 + $79×0.66 = **$93/MWh**
 - Battery 4hr (static): **$98/MWh**
 - **Battery now competitive with nuclear new-build at 70% threshold**
