@@ -156,7 +156,7 @@ hourly-cfe-optimizer/
 │   │   ├── dispatch_cache/               # Per-ISO NPZ dispatch cache (PP0 output)
 │   │   ├── lmp/                          # LMP analysis results (PP6 output)
 │   │   └── ...
-│   ├── EIA 930 Data/                     # Source EIA profiles
+│   ├── eia-930/                     # Source EIA profiles
 │   ├── egrid_emission_rates.json
 │   └── ...
 ├── dashboard/
