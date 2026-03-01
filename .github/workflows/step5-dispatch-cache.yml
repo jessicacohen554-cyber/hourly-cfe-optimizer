@@ -40,6 +40,11 @@ on:
           - dispatch-cache-only
           - export-tracks-only
           - analyze-tracks-only
+      force:
+        description: 'Force rebuild dispatch cache (ignore existing)'
+        required: false
+        default: true
+        type: boolean
       branch:
         description: 'Branch to checkout'
         required: false
@@ -104,7 +109,9 @@ jobs:
         run: mkdir -p data/step5-post-processing/dispatch_cache
 
       - name: "Build Dispatch Cache — ${{ matrix.iso }}"
-        run: python scripts/step5_build_dispatch_cache.py --iso ${{ matrix.iso }}
+        run: |
+          FORCE_FLAG="${{ inputs.force == true && '--force' || '' }}"
+          python scripts/step5_build_dispatch_cache.py $FORCE_FLAG --iso ${{ matrix.iso }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -121,7 +128,6 @@ jobs:
 
     permissions:
       contents: write
-      pull-requests: write
 
     steps:
       - name: Checkout repo
@@ -204,16 +210,3 @@ jobs:
             sleep "$BACKOFF"
           done
 
-      - name: Create pull request
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh pr create \
-            --title "Step 5: ${{ inputs.script }} ${{ inputs.iso }}" \
-            --body "## Summary
-          - Dispatch cache & track analysis (${{ inputs.script }}) for **${{ inputs.iso }}**
-          - Cache built per-ISO in parallel, track analysis runs globally
-          - Output: \`data/step5-post-processing/dispatch_cache/\`, \`dashboard/track_results.json\`" \
-            --base ${{ inputs.branch || 'master' }} \
-            --head "$TARGET_BRANCH" || echo "PR creation skipped"

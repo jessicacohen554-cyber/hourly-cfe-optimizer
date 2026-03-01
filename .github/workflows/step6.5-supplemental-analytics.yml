@@ -130,7 +130,7 @@ jobs:
 
     permissions:
       contents: write
-      pull-requests: write
+
 
     steps:
       - name: Checkout repo
@@ -187,18 +187,3 @@ jobs:
             sleep "$BACKOFF"
           done
 
-      - name: Create pull request
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh pr create \
-            --title "Step 6.5 Supplemental: ${{ inputs.script }} ${{ inputs.iso }}" \
-            --body "## Summary
-          Supplemental dispatch-dependent analytics for **${{ inputs.iso }}** (${{ inputs.script }}).
-
-          ## Scripts (per-ISO parallel)
-          - \`step6_compressed_day.py\` — 24-hour representative day profiles per unique mix
-          - \`step6_consequential_queue.py\` — cross-regional deployment path under consequential accounting" \
-            --base ${{ inputs.branch || 'master' }} \
-            --head "$TARGET_BRANCH" || echo "PR creation skipped"
