@@ -130,27 +130,36 @@ LCOE_TABLES = {
         'Medium': {'CAISO': 73, 'ERCOT': 40, 'PJM': 62, 'NYISO': 81, 'NEISO': 73, 'MISO': 43, 'SPP': 37},
         'High':   {'CAISO': 95, 'ERCOT': 52, 'PJM': 81, 'NYISO': 105, 'NEISO': 95, 'MISO': 56, 'SPP': 48},
     },
+    # ---- Storage: annualized capacity cost ($/MWh-cap) ----
+    # NOT LCOS. These are annualized fixed costs of storage capacity, normalized to
+    # the coefficient model where coeff = bat_pct/100 (energy capacity as fraction
+    # of avg hourly demand). Formula:
+    #   price = 1000 × (CAPEX_kWh × CRF + FOM_kW / duration) / 8760 × regional_mult
+    # Regional variation baked in (no separate TX adder for storage).
+    # LCOS cross-check: Bat4hr Low @ 250 cycles = $72/MWh, Med @ 250 = $82/MWh.
+    # CAPEX source: NREL ATB 2024. Financial: WACC=8%, Bat life=20yr, LDES=25yr.
     'battery': {
-        'Low':    {'CAISO': 77, 'ERCOT': 69, 'PJM': 74, 'NYISO': 81, 'NEISO': 79, 'MISO': 72, 'SPP': 70},
-        'Medium': {'CAISO': 102, 'ERCOT': 92, 'PJM': 98, 'NYISO': 108, 'NEISO': 105, 'MISO': 96, 'SPP': 93},
-        'High':   {'CAISO': 133, 'ERCOT': 120, 'PJM': 127, 'NYISO': 140, 'NEISO': 137, 'MISO': 125, 'SPP': 121},
+        'Low':    {'CAISO': 2.27, 'ERCOT': 2.05, 'PJM': 2.18, 'NYISO': 2.41, 'NEISO': 2.34, 'MISO': 2.14, 'SPP': 2.07},
+        'Medium': {'CAISO': 2.60, 'ERCOT': 2.34, 'PJM': 2.49, 'NYISO': 2.75, 'NEISO': 2.67, 'MISO': 2.44, 'SPP': 2.37},
+        'High':   {'CAISO': 2.92, 'ERCOT': 2.63, 'PJM': 2.80, 'NYISO': 3.09, 'NEISO': 3.00, 'MISO': 2.75, 'SPP': 2.66},
     },
     'battery8': {
-        'Low':    {'CAISO': 85, 'ERCOT': 77, 'PJM': 82, 'NYISO': 90, 'NEISO': 88, 'MISO': 80, 'SPP': 78},
-        'Medium': {'CAISO': 125, 'ERCOT': 113, 'PJM': 120, 'NYISO': 132, 'NEISO': 129, 'MISO': 117, 'SPP': 115},
-        'High':   {'CAISO': 165, 'ERCOT': 149, 'PJM': 159, 'NYISO': 175, 'NEISO': 170, 'MISO': 155, 'SPP': 152},
+        'Low':    {'CAISO': 1.62, 'ERCOT': 1.46, 'PJM': 1.55, 'NYISO': 1.71, 'NEISO': 1.67, 'MISO': 1.51, 'SPP': 1.49},
+        'Medium': {'CAISO': 1.94, 'ERCOT': 1.75, 'PJM': 1.86, 'NYISO': 2.05, 'NEISO': 2.00, 'MISO': 1.81, 'SPP': 1.78},
+        'High':   {'CAISO': 2.26, 'ERCOT': 2.04, 'PJM': 2.17, 'NYISO': 2.39, 'NEISO': 2.33, 'MISO': 2.11, 'SPP': 2.08},
     },
     'ldes': {
-        'Low':    {'CAISO': 135, 'ERCOT': 116, 'PJM': 128, 'NYISO': 150, 'NEISO': 143, 'MISO': 122, 'SPP': 118},
-        'Medium': {'CAISO': 180, 'ERCOT': 155, 'PJM': 170, 'NYISO': 200, 'NEISO': 190, 'MISO': 162, 'SPP': 158},
-        'High':   {'CAISO': 234, 'ERCOT': 202, 'PJM': 221, 'NYISO': 260, 'NEISO': 247, 'MISO': 211, 'SPP': 205},
+        'Low':    {'CAISO': 0.38, 'ERCOT': 0.33, 'PJM': 0.36, 'NYISO': 0.42, 'NEISO': 0.40, 'MISO': 0.34, 'SPP': 0.33},
+        'Medium': {'CAISO': 0.63, 'ERCOT': 0.54, 'PJM': 0.59, 'NYISO': 0.70, 'NEISO': 0.66, 'MISO': 0.56, 'SPP': 0.55},
+        'High':   {'CAISO': 1.00, 'ERCOT': 0.86, 'PJM': 0.94, 'NYISO': 1.11, 'NEISO': 1.06, 'MISO': 0.90, 'SPP': 0.88},
     },
-    # Green H2: electrolysis + salt cavern + H2 turbine. 35% RTE drives high LCOS.
+    # Green H2: electrolysis + salt cavern + H2 turbine. 35% RTE.
+    # CAPEX/kWh: L=$150, M=$220, H=$310. Duration=168hr, FOM=$8/kW-yr.
     # Shares 'ldes_lvl' sensitivity toggle (both long-duration storage).
     'h2': {
-        'Low':    {'CAISO': 210, 'ERCOT': 185, 'PJM': 200, 'NYISO': 230, 'NEISO': 220, 'MISO': 190, 'SPP': 182},
-        'Medium': {'CAISO': 300, 'ERCOT': 265, 'PJM': 285, 'NYISO': 330, 'NEISO': 315, 'MISO': 272, 'SPP': 260},
-        'High':   {'CAISO': 420, 'ERCOT': 370, 'PJM': 400, 'NYISO': 460, 'NEISO': 440, 'MISO': 380, 'SPP': 365},
+        'Low':    {'CAISO': 1.98, 'ERCOT': 1.75, 'PJM': 1.88, 'NYISO': 2.18, 'NEISO': 2.08, 'MISO': 1.80, 'SPP': 1.72},
+        'Medium': {'CAISO': 2.90, 'ERCOT': 2.56, 'PJM': 2.76, 'NYISO': 3.19, 'NEISO': 3.05, 'MISO': 2.63, 'SPP': 2.52},
+        'High':   {'CAISO': 4.09, 'ERCOT': 3.61, 'PJM': 3.88, 'NYISO': 4.50, 'NEISO': 4.29, 'MISO': 3.71, 'SPP': 3.54},
     },
 }
 
@@ -168,18 +177,11 @@ TX_TABLES = {
     'ccs_ccgt':   {'None': 0, 'Low': {'CAISO': 1, 'ERCOT': 1, 'PJM': 1, 'NYISO': 2, 'NEISO': 2, 'MISO': 1, 'SPP': 1},
                    'Medium': {'CAISO': 2, 'ERCOT': 2, 'PJM': 3, 'NYISO': 4, 'NEISO': 3, 'MISO': 2, 'SPP': 2},
                    'High': {'CAISO': 4, 'ERCOT': 3, 'PJM': 5, 'NYISO': 7, 'NEISO': 6, 'MISO': 4, 'SPP': 3}},
-    'battery':    {'None': 0, 'Low': {'CAISO': 0, 'ERCOT': 0, 'PJM': 0, 'NYISO': 1, 'NEISO': 1, 'MISO': 0, 'SPP': 0},
-                   'Medium': {'CAISO': 1, 'ERCOT': 1, 'PJM': 1, 'NYISO': 2, 'NEISO': 2, 'MISO': 1, 'SPP': 1},
-                   'High': {'CAISO': 2, 'ERCOT': 2, 'PJM': 3, 'NYISO': 4, 'NEISO': 3, 'MISO': 2, 'SPP': 2}},
-    'battery8':   {'None': 0, 'Low': {'CAISO': 0, 'ERCOT': 0, 'PJM': 0, 'NYISO': 1, 'NEISO': 1, 'MISO': 0, 'SPP': 0},
-                   'Medium': {'CAISO': 1, 'ERCOT': 1, 'PJM': 1, 'NYISO': 2, 'NEISO': 2, 'MISO': 1, 'SPP': 1},
-                   'High': {'CAISO': 2, 'ERCOT': 2, 'PJM': 3, 'NYISO': 4, 'NEISO': 3, 'MISO': 2, 'SPP': 2}},
-    'ldes':       {'None': 0, 'Low': {'CAISO': 1, 'ERCOT': 1, 'PJM': 1, 'NYISO': 2, 'NEISO': 2, 'MISO': 1, 'SPP': 1},
-                   'Medium': {'CAISO': 2, 'ERCOT': 2, 'PJM': 3, 'NYISO': 4, 'NEISO': 3, 'MISO': 2, 'SPP': 2},
-                   'High': {'CAISO': 4, 'ERCOT': 3, 'PJM': 5, 'NYISO': 7, 'NEISO': 6, 'MISO': 4, 'SPP': 3}},
-    'h2':         {'None': 0, 'Low': {'CAISO': 2, 'ERCOT': 2, 'PJM': 2, 'NYISO': 3, 'NEISO': 3, 'MISO': 2, 'SPP': 2},
-                   'Medium': {'CAISO': 4, 'ERCOT': 3, 'PJM': 4, 'NYISO': 6, 'NEISO': 5, 'MISO': 3, 'SPP': 3},
-                   'High': {'CAISO': 7, 'ERCOT': 5, 'PJM': 7, 'NYISO': 10, 'NEISO': 9, 'MISO': 6, 'SPP': 5}},
+    # Storage TX = 0: regional variation already baked into annualized capacity costs
+    'battery':    {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
+    'battery8':   {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
+    'ldes':       {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
+    'h2':         {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
     'hydro':      {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
 }
 
@@ -234,13 +236,24 @@ FOAK_CCS_45Q_OFF = {
 }
 FOAK_GEOTHERMAL = 150  # CAISO only, $/MWh
 
+# Storage FOAK: annualized capacity cost ($/MWh-cap), same units as LCOE_TABLES storage.
+# Battery: 1.05× High (mature tech, minimal FOAK premium).
+# LDES: 1.40× High (Form Energy pre-commercial). H2: 1.30× High (first commercial H2 turbines).
+FOAK_BATTERY = {
+    'CAISO': 3.07, 'ERCOT': 2.76, 'PJM': 2.94, 'NYISO': 3.24,
+    'NEISO': 3.15, 'MISO': 2.89, 'SPP': 2.79,
+}
+FOAK_BATTERY8 = {
+    'CAISO': 2.37, 'ERCOT': 2.14, 'PJM': 2.28, 'NYISO': 2.51,
+    'NEISO': 2.45, 'MISO': 2.22, 'SPP': 2.18,
+}
 FOAK_LDES = {
-    'CAISO': 328, 'ERCOT': 283, 'PJM': 309, 'NYISO': 364,
-    'NEISO': 346, 'MISO': 295, 'SPP': 287,
+    'CAISO': 1.40, 'ERCOT': 1.20, 'PJM': 1.32, 'NYISO': 1.55,
+    'NEISO': 1.48, 'MISO': 1.26, 'SPP': 1.23,
 }
 FOAK_H2 = {
-    'CAISO': 546, 'ERCOT': 481, 'PJM': 520, 'NYISO': 598,
-    'NEISO': 572, 'MISO': 494, 'SPP': 475,
+    'CAISO': 5.32, 'ERCOT': 4.69, 'PJM': 5.04, 'NYISO': 5.85,
+    'NEISO': 5.58, 'MISO': 4.82, 'SPP': 4.60,
 }
 
 # ============================================================================
@@ -257,6 +270,10 @@ LEARNING_PARAMS = {
     'geo':     {'L': (2027, 2036), 'M': (2029, 2039), 'H': (2033, 2043)},
     'ldes':    {'L': (2029, 2039), 'M': (2031, 2043), 'H': (2035, 2047)},
     'h2':      {'L': (2029, 2039), 'M': (2031, 2043), 'H': (2035, 2047)},
+    # Battery: mature tech, shallow curve. FOAK only 5% above High.
+    # Fast timelines — all at NOAK by ~2035 even in pessimistic case.
+    'bat4':    {'L': (2025, 2030), 'M': (2026, 2032), 'H': (2027, 2035)},
+    'bat8':    {'L': (2025, 2030), 'M': (2026, 2032), 'H': (2027, 2035)},
 }
 LEARNING_EXPONENT = 0.6  # Wright's Law concave ramp
 
@@ -564,15 +581,17 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     cf_cost_per_demand = cf_total_new_cost / demand
     total_cost += cf_cost_per_demand  # existing CF = $0
 
-    # --- Storage (battery toggle = 4hr + 8hr paired; LDES toggle = LDES + H2 paired) ---
-    bat4_lcoe = LCOE_TABLES['battery'][batt_name][iso] + get_tx('battery', tx_name, iso)
-    bat8_lcoe = LCOE_TABLES['battery8'][batt_name][iso] + get_tx('battery8', tx_name, iso)
-    ldes_lcoe = LCOE_TABLES['ldes'][ldes_name][iso] + get_tx('ldes', tx_name, iso)
-    h2_lcoe = LCOE_TABLES['h2'][ldes_name][iso] + get_tx('h2', tx_name, iso)
-    total_cost += (bat_pct / 100.0 * bat4_lcoe +
-                   bat8_pct / 100.0 * bat8_lcoe +
-                   ldes_pct / 100.0 * ldes_lcoe +
-                   h2_pct / 100.0 * h2_lcoe)
+    # --- Storage (annualized capacity costs; TX=0, baked into regional CAPEX) ---
+    # coeff = bat_pct/100 is energy capacity as fraction of avg hourly demand.
+    # price = annualized fixed cost of that capacity, normalized to demand.
+    bat4_price = LCOE_TABLES['battery'][batt_name][iso]
+    bat8_price = LCOE_TABLES['battery8'][batt_name][iso]
+    ldes_price = LCOE_TABLES['ldes'][ldes_name][iso]
+    h2_price = LCOE_TABLES['h2'][ldes_name][iso]
+    total_cost += (bat_pct / 100.0 * bat4_price +
+                   bat8_pct / 100.0 * bat8_price +
+                   ldes_pct / 100.0 * ldes_price +
+                   h2_pct / 100.0 * h2_price)
 
     # --- Gas Capacity Backup (delta RA approach) ---
     # Calibrated to 2025 reality: gas = EXISTING_GAS at base year.
@@ -1120,6 +1139,8 @@ def precompute_all_prices(iso, all_combos, target_year=None):
         _foak_geo = FOAK_GEOTHERMAL  # scalar, CAISO only
         _foak_ldes = FOAK_LDES[iso]
         _foak_h2 = FOAK_H2[iso]
+        _foak_bat4 = FOAK_BATTERY[iso]
+        _foak_bat8 = FOAK_BATTERY8[iso]
 
         # Pre-compute year-adjusted nuclear new-build per firm level
         _nuc_yr = {}
@@ -1150,6 +1171,16 @@ def precompute_all_prices(iso, all_combos, target_year=None):
             _ldes_yr[name] = year_adjusted_cost(_foak_ldes, _ldes_lcoe_iso[name], target_year, foak_s, noak_y)
             foak_s_h2, noak_y_h2 = LEARNING_PARAMS['h2'][lev]
             _h2_yr[name] = year_adjusted_cost(_foak_h2, _h2_lcoe_iso[name], target_year, foak_s_h2, noak_y_h2)
+
+        # Pre-compute year-adjusted battery (4hr, 8hr) per batt level
+        # Shallow curve: FOAK only 5% above High, fast convergence
+        _bat4_yr = {}
+        _bat8_yr = {}
+        for name, lev in [('Low', 'L'), ('Medium', 'M'), ('High', 'H')]:
+            foak_s_4, noak_y_4 = LEARNING_PARAMS['bat4'][lev]
+            _bat4_yr[name] = year_adjusted_cost(_foak_bat4, _bat_lcoe_iso[name], target_year, foak_s_4, noak_y_4)
+            foak_s_8, noak_y_8 = LEARNING_PARAMS['bat8'][lev]
+            _bat8_yr[name] = year_adjusted_cost(_foak_bat8, _bat8_lcoe_iso[name], target_year, foak_s_8, noak_y_8)
 
     for j, (scenario_key, sens) in enumerate(all_combos):
         ren_name = LEVEL_NAME[sens['ren']]
@@ -1204,8 +1235,14 @@ def precompute_all_prices(iso, all_combos, target_year=None):
         price_matrix[j, _COL_UPRATE] = UPRATE_LCOE[firm_lev]
         price_matrix[j, _COL_GEO] = geo_price
         price_matrix[j, _COL_REMAINING] = remaining_price
-        price_matrix[j, _COL_BAT4] = _bat_lcoe_iso[batt_name] + _tx_cache[('battery', tx_name)]
-        price_matrix[j, _COL_BAT8] = _bat8_lcoe_iso[batt_name] + _tx_cache[('battery8', tx_name)]
+        # Battery prices: year-adjusted if learning curves active, else static.
+        # TX is always 0 for storage (baked into regional capacity costs).
+        if _use_learning:
+            price_matrix[j, _COL_BAT4] = _bat4_yr[batt_name]
+            price_matrix[j, _COL_BAT8] = _bat8_yr[batt_name]
+        else:
+            price_matrix[j, _COL_BAT4] = _bat_lcoe_iso[batt_name]
+            price_matrix[j, _COL_BAT8] = _bat8_lcoe_iso[batt_name]
         price_matrix[j, _COL_LDES] = ldes_price
         price_matrix[j, _COL_H2] = h2_price
         wholesale_arr[j] = wholesale
