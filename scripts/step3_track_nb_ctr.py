@@ -4,12 +4,12 @@ Track 2-3: New-Build (NB) + Cost-to-Replace (CTR) analysis.
 Does NOT rerun baseline — preserves existing overprocure_results.json.
 
 Track 2 (newbuild / NB): hydro=0 mixes, uprates ON
-  Source: per-ISO EF parquets (data/step2-ef-parquets/step2_ef_{ISO}.parquet)
+  Source: per-ISO EF parquets (data/step2-ef-parquets/step2_ef_{ISO}_t{T}.parquet)
   Filtered to hydro=0 mixes.
   Purpose: What does hourly matching incentivize from scratch?
 
 Track 3 (cost-to-replace / CTR): all mixes (hydro≤existing), uprates OFF
-  Source: per-ISO EF parquets (data/step2-ef-parquets/step2_ef_{ISO}.parquet)
+  Source: per-ISO EF parquets (data/step2-ef-parquets/step2_ef_{ISO}_t{T}.parquet)
   Purpose: Cost to replace existing clean generation
 
 Checkpoint: Parquet-based. After each (iso, track) completes, results are
@@ -327,20 +327,42 @@ def append_to_parquet(new_rows, pq_path):
 
 
 def load_iso_ef_parquet(iso):
-    """Load numpy arrays for a single ISO from its per-ISO EF parquet.
+    """Load numpy arrays for a single ISO from its per-threshold EF parquets.
 
-    Reads from data/step2-ef-parquets/step2_ef_{ISO}.parquet (Step 2 output).
-    Returns None if the file doesn't exist or is empty.
+    Reads from data/step2-ef-parquets/step2_ef_{ISO}_t{T}.parquet (Step 2 output).
+    Falls back to legacy monolithic step2_ef_{ISO}.parquet if per-threshold
+    files don't exist. Returns None if no files found or all empty.
     """
-    path = os.path.join(EF_ISO_DIR, f'step2_ef_{iso}.parquet')
-    if not os.path.exists(path):
-        print(f"  WARNING: EF parquet not found for {iso}: {path}")
-        return None
-    sub = pq.read_table(path)
-    if sub.num_rows == 0:
-        return None
-    n = sub.num_rows
-    print(f"  {iso}: loaded {n:,} EF mixes from {path}")
+    import glob as globmod
+
+    # Try per-threshold files first (new format)
+    pattern = os.path.join(EF_ISO_DIR, f'step2_ef_{iso}_t*.parquet')
+    thr_files = sorted(globmod.glob(pattern))
+    thr_files = [f for f in thr_files if '_batch_' not in os.path.basename(f)]
+
+    if thr_files:
+        tables = []
+        for fpath in thr_files:
+            t = pq.read_table(fpath)
+            if t.num_rows > 0:
+                tables.append(t)
+        if not tables:
+            return None
+        sub = pa.concat_tables(tables, promote_options='permissive') if len(tables) > 1 else tables[0]
+        del tables
+        n = sub.num_rows
+        print(f"  {iso}: loaded {n:,} EF mixes from {len(thr_files)} threshold files")
+    else:
+        # Fall back to legacy monolithic file
+        path = os.path.join(EF_ISO_DIR, f'step2_ef_{iso}.parquet')
+        if not os.path.exists(path):
+            print(f"  WARNING: EF parquet not found for {iso}: {path}")
+            return None
+        sub = pq.read_table(path)
+        if sub.num_rows == 0:
+            return None
+        n = sub.num_rows
+        print(f"  {iso}: loaded {n:,} EF mixes from {path}")
     result = {
         'clean_firm': sub.column('clean_firm').to_numpy(),
         'solar': sub.column('solar').to_numpy(),
