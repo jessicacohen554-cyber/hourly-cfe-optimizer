@@ -988,12 +988,15 @@ body {
     <div class="insight-box">
         <h4>Why 1B is the superior method</h4>
         <p>
-            At 80% C&amp;I participation, Strategy 1B attributes <strong id="co2DiffPct">~40%</strong>
-            more CO&#8322; displacement than 1A &mdash; for the exact same investment.
+            At 80% C&amp;I participation, Strategy 1B attributes <strong id="co2DiffPct">~33%</strong>
+            more emissions to corporate load than 1A &mdash; setting a higher bar for displacement.
             This isn&rsquo;t a rounding error; it&rsquo;s the difference between measuring what you
-            <em>actually</em> displace (fossil generation) versus what you statistically offset
-            (grid average including existing clean). 1B gives a more honest &mdash; and more
-            motivating &mdash; picture of impact.
+            <em>actually</em> need to displace (fossil fleet emissions) versus a diluted grid average
+            (which counts existing clean energy in the denominator). 1B gives a more honest &mdash;
+            and more motivating &mdash; picture of corporate responsibility.
+            The blue line shows what the consequential queue can actually deliver &mdash;
+            at high participation levels, even the full deployment queue falls short, highlighting
+            the need for expanded clean energy capacity.
         </p>
     </div>
 </div>
@@ -1036,11 +1039,13 @@ body {
     <h3>Where Capital Flows: Resource Deployment by Participation Level</h3>
     <div class="narrative-prose">
         <p>
-            The consequential queue reveals a clear deployment hierarchy. At low participation,
-            <strong>all investment goes to nuclear uprate</strong> &mdash; the cheapest form of clean firm
-            generation, unlocking existing capacity that&rsquo;s already licensed and connected. Wind enters
-            next, concentrated in ERCOT and SPP where capacity factors are highest. Solar follows at higher
-            participation levels. Clean firm new-build (beyond uprate) doesn&rsquo;t appear until ~80% participation.
+            The consequential queue reveals a clear deployment hierarchy. At low participation (2&ndash;5%),
+            <strong>variable renewables dominate</strong> &mdash; wind in ERCOT and SPP (highest capacity factors)
+            and solar in MISO. As participation scales above 5%, <strong>clean firm generation</strong>
+            rapidly takes over, because higher CFE thresholds require dispatchable capacity that VRE alone
+            cannot provide. By 10% participation, clean firm accounts for over 70% of new build.
+            The deployment queue is exhausted at ~15% participation &mdash; beyond that, additional capacity
+            pathways would be needed.
         </p>
     </div>
 
@@ -1049,13 +1054,13 @@ body {
     </div>
 
     <div class="insight-box blue">
-        <h4>First clean firm new-build: not until ~80% participation</h4>
+        <h4>VRE first, then clean firm takes over</h4>
         <p>
-            In the consequential merit order, CCS-equipped gas (the first new firm resource beyond uprate)
-            doesn&rsquo;t appear until 80% C&amp;I participation &mdash; and even then only 6 TWh. The economics
-            strongly favor variable renewables (wind, then solar) for the first ~60% of deployment. This means
-            early corporate procurement through consequential methods is overwhelmingly a <strong>VRE story</strong>,
-            concentrated in wind-rich ERCOT and SPP.
+            At 2% C&amp;I participation, wind and solar account for nearly all new deployment (480 TWh
+            combined vs. 16 TWh clean firm). But as participation rises to 5&ndash;10%, the queue
+            moves into higher-threshold zones where hourly matching demands reliable generation.
+            Clean firm surges from 16 TWh to over 2,000 TWh. This shift illustrates why
+            <strong>early procurement is a VRE story, but scale requires firm clean energy</strong>.
         </p>
     </div>
 
@@ -1703,7 +1708,44 @@ function resetSim() {
     if (log) log.innerHTML = '<div class="log-entry" style="color:#9CA3AF;font-style:italic;">Select a participation level and press Play\u2026</div>';
 }
 
-// ---- 1A/1B CO2 Comparison Chart ----
+// ---- Helper: walk queue to find CO2 displaced at a given participation level ----
+function walkQueueForPct(pct) {
+    var fb = CQ_DATA.fossil_baselines_2045;
+    var gac = CQ_DATA.growth_adjusted_cumulative;
+    var dq = CQ_DATA.deployment_queue;
+    if (!fb || !gac || !dq) return { target1B: 0, target1A: 0, co2: 0, stepReached: 0, exhausted: true, newBuild: {} };
+
+    // Compute 1A and 1B targets
+    var target1B = 0, target1A = 0;
+    ISOS.forEach(function(iso) {
+        var bl = fb[iso]; if (!bl) return;
+        var corpLoad = bl.demand_2045_twh * (pct / 100);
+        target1A += corpLoad * (bl.fossil_co2_mt / bl.demand_2045_twh);
+        target1B += corpLoad * (bl.fossil_twh > 0 ? bl.fossil_co2_mt / bl.fossil_twh : 0);
+    });
+
+    // Walk queue until 1B target met or exhausted
+    var stepReached = gac.length - 1;
+    var exhausted = true;
+    for (var i = 0; i < gac.length; i++) {
+        if (gac[i].cumulative_co2_mt >= target1B) { stepReached = i; exhausted = false; break; }
+    }
+
+    var cd = gac[Math.min(stepReached, gac.length - 1)];
+    var co2 = cd.cumulative_co2_mt;
+
+    // Accumulate positive-only deltas (new build)
+    var newBuild = {};
+    for (var j = 0; j <= stepReached && j < dq.length; j++) {
+        var dr = dq[j].delta_resources;
+        if (!dr) continue;
+        for (var k in dr) { if (dr[k] > 0) newBuild[k] = (newBuild[k] || 0) + dr[k]; }
+    }
+
+    return { target1B: target1B, target1A: target1A, co2: co2, stepReached: stepReached, exhausted: exhausted, newBuild: newBuild };
+}
+
+// ---- 1A/1B CO2 Comparison Chart — rebuilt from CQ_DATA ----
 function initCO2CompareChart() {
     var canvas = document.getElementById('co2CompareChart');
     if (!canvas) return;
@@ -1711,14 +1753,17 @@ function initCO2CompareChart() {
     var labels = [];
     var data1A = [];
     var data1B = [];
-    PART_KEYS.forEach(function(pk, i) {
-        var d1a = getStratData('strategy1A', pk);
-        var d1b = getStratData('strategy1B', pk);
-        labels.push(PART_PCTS[i] + '%');
-        data1A.push(d1a.co2);
-        data1B.push(d1b.co2);
+    var dataQueue = [];
+
+    PART_PCTS.forEach(function(pct) {
+        labels.push(pct + '%');
+        var w = walkQueueForPct(pct);
+        data1A.push(Math.round(w.target1A * 10) / 10);
+        data1B.push(Math.round(w.target1B * 10) / 10);
+        dataQueue.push(Math.round(w.co2 * 10) / 10);
     });
 
+    // Update insight text
     var diff = data1B[data1B.length - 1] - data1A[data1A.length - 1];
     var diffPct = data1A[data1A.length - 1] > 0 ? Math.round((diff / data1A[data1A.length - 1]) * 100) : 0;
     var diffEl = document.getElementById('co2DiffPct');
@@ -1730,10 +1775,10 @@ function initCO2CompareChart() {
             labels: labels,
             datasets: [
                 {
-                    label: '1B Fossil-Average',
+                    label: '1B Fossil-Average Target',
                     data: data1B,
                     borderColor: '#16A34A',
-                    backgroundColor: 'rgba(22,163,74,0.1)',
+                    backgroundColor: 'rgba(22,163,74,0.06)',
                     borderWidth: 3,
                     pointRadius: 4,
                     pointBackgroundColor: '#16A34A',
@@ -1741,15 +1786,27 @@ function initCO2CompareChart() {
                     tension: 0.3
                 },
                 {
-                    label: '1A Grid-Average',
+                    label: '1A Grid-Average Target',
                     data: data1A,
                     borderColor: '#9CA3AF',
-                    backgroundColor: 'rgba(156,163,175,0.08)',
+                    backgroundColor: 'rgba(156,163,175,0.05)',
                     borderWidth: 2,
                     borderDash: [6, 4],
                     pointRadius: 4,
                     pointBackgroundColor: '#9CA3AF',
                     fill: true,
+                    tension: 0.3
+                },
+                {
+                    label: 'Queue Displacement (actual)',
+                    data: dataQueue,
+                    borderColor: '#3B82F6',
+                    backgroundColor: 'rgba(59,130,246,0.08)',
+                    borderWidth: 2.5,
+                    pointRadius: 5,
+                    pointBackgroundColor: '#3B82F6',
+                    pointStyle: 'rectRounded',
+                    fill: false,
                     tension: 0.3
                 }
             ]
@@ -1764,7 +1821,23 @@ function initCO2CompareChart() {
                 },
                 tooltip: {
                     callbacks: {
-                        label: function(ctx) { return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2) + ' MMT CO\u2082'; }
+                        label: function(ctx) {
+                            var suffix = ctx.datasetIndex < 2 ? ' (target)' : ' (delivered)';
+                            return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + ' MT CO\u2082' + suffix;
+                        }
+                    }
+                },
+                annotation: {
+                    annotations: {
+                        queueCap: {
+                            type: 'line', yMin: dataQueue[dataQueue.length - 1], yMax: dataQueue[dataQueue.length - 1],
+                            borderColor: 'rgba(59,130,246,0.4)', borderWidth: 1.5, borderDash: [4, 4],
+                            label: {
+                                display: true, content: 'Queue capacity: ' + dataQueue[dataQueue.length - 1] + ' MT',
+                                position: 'end', backgroundColor: 'rgba(59,130,246,0.8)', color: '#fff',
+                                font: { size: 10, weight: 600, family: FONT }, borderRadius: 4, padding: 4
+                            }
+                        }
                     }
                 }
             },
@@ -1773,7 +1846,7 @@ function initCO2CompareChart() {
                     beginAtZero: true,
                     title: {
                         display: true,
-                        text: 'CO\u2082 Displaced (MMT/year)',
+                        text: 'CO\u2082 Attributed to Corporate Load (MT)',
                         font: { family: FONT, size: 12, weight: 600 }
                     },
                     grid: { color: 'rgba(0,0,0,0.05)' }
@@ -1874,31 +1947,55 @@ function initFuelDisplaceChart() {
     });
 }
 
-// ---- Resource Deployment by Participation Level ----
+// ---- Resource Deployment by Participation Level — rebuilt from CQ_DATA queue walk ----
 function initResourceByPartChart() {
     var canvas = document.getElementById('resourceByPartChart');
     if (!canvas) return;
 
     var labels = PART_PCTS.map(function(p) { return p + '%'; });
-    var uprate = [], wind = [], solar = [], ccs = [];
+    var cleanFirm = [], wind = [], solar = [], battery = [];
 
-    PART_KEYS.forEach(function(pk) {
-        var d = getStratData('strategy1B', pk);
-        uprate.push(d.byType.uprate || 0);
-        wind.push(d.byType.wind || 0);
-        solar.push(d.byType.solar || 0);
-        ccs.push(d.byType.ccs || 0);
+    PART_PCTS.forEach(function(pct) {
+        var w = walkQueueForPct(pct);
+        var nb = w.newBuild;
+        cleanFirm.push(Math.round(nb.clean_firm || 0));
+        solar.push(Math.round(nb.solar || 0));
+        wind.push(Math.round(nb.wind || 0));
+        battery.push(Math.round(nb.battery || 0));
     });
+
+    // Find where queue gets exhausted (first pct where exhausted=true)
+    var exhaustIdx = -1;
+    for (var i = 0; i < PART_PCTS.length; i++) {
+        var w = walkQueueForPct(PART_PCTS[i]);
+        if (w.exhausted) { exhaustIdx = i; break; }
+    }
+
+    var annotations = {};
+    // Current ~13% participation reference
+    annotations.currentLine = {
+        type: 'line', xMin: 2.5, xMax: 2.5,
+        borderColor: 'rgba(220,38,38,0.5)', borderWidth: 2, borderDash: [6, 4],
+        label: { display: true, content: 'Current (~13%)', position: 'start', backgroundColor: 'rgba(220,38,38,0.8)', color: '#fff', font: { size: 10, weight: 600 }, borderRadius: 4 }
+    };
+    // Queue exhaustion line
+    if (exhaustIdx >= 0) {
+        annotations.exhaustLine = {
+            type: 'line', xMin: exhaustIdx - 0.5, xMax: exhaustIdx - 0.5,
+            borderColor: 'rgba(245,158,11,0.6)', borderWidth: 2, borderDash: [4, 3],
+            label: { display: true, content: 'Queue exhausted', position: 'end', backgroundColor: 'rgba(245,158,11,0.85)', color: '#fff', font: { size: 10, weight: 600 }, borderRadius: 4 }
+        };
+    }
 
     resourceByPartChart = new Chart(canvas, {
         type: 'bar',
         data: {
             labels: labels,
             datasets: [
-                { label: 'Nuclear Uprate', data: uprate, backgroundColor: 'rgba(30,58,95,0.7)', borderColor: '#1E3A5F', borderWidth: 1, borderRadius: 3 },
-                { label: 'Wind', data: wind, backgroundColor: 'rgba(34,197,94,0.55)', borderColor: '#22C55E', borderWidth: 1, borderRadius: 3 },
-                { label: 'Solar', data: solar, backgroundColor: 'rgba(245,158,11,0.55)', borderColor: '#F59E0B', borderWidth: 1, borderRadius: 3 },
-                { label: 'CCS-CCGT', data: ccs, backgroundColor: 'rgba(6,182,212,0.55)', borderColor: '#06B6D4', borderWidth: 1, borderRadius: 3 }
+                { label: 'Nuclear / Clean Firm', data: cleanFirm, backgroundColor: 'rgba(30,58,95,0.75)', borderColor: '#1E3A5F', borderWidth: 1, borderRadius: 3, stack: 'stack0' },
+                { label: 'Wind', data: wind, backgroundColor: 'rgba(34,197,94,0.55)', borderColor: '#22C55E', borderWidth: 1, borderRadius: 3, stack: 'stack0' },
+                { label: 'Solar', data: solar, backgroundColor: 'rgba(245,158,11,0.55)', borderColor: '#F59E0B', borderWidth: 1, borderRadius: 3, stack: 'stack0' },
+                { label: 'Battery', data: battery, backgroundColor: 'rgba(168,85,247,0.55)', borderColor: '#A855F7', borderWidth: 1, borderRadius: 3, stack: 'stack0' }
             ]
         },
         options: {
@@ -1907,19 +2004,11 @@ function initResourceByPartChart() {
             plugins: {
                 legend: { position: 'bottom', labels: { usePointStyle: true, font: { family: FONT, size: 12 } } },
                 tooltip: { mode: 'index', callbacks: { label: function(ctx) { return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(0) + ' TWh'; } } },
-                annotation: {
-                    annotations: {
-                        currentLine: {
-                            type: 'line', xMin: 2.5, xMax: 2.5,
-                            borderColor: 'rgba(220,38,38,0.5)', borderWidth: 2, borderDash: [6, 4],
-                            label: { display: true, content: 'Current (~13%)', position: 'start', backgroundColor: 'rgba(220,38,38,0.8)', color: '#fff', font: { size: 10, weight: 600 }, borderRadius: 4 }
-                        }
-                    }
-                }
+                annotation: { annotations: annotations }
             },
             scales: {
                 x: { stacked: true, grid: { display: false }, title: { display: true, text: 'C&I Participation Level', font: { family: FONT, size: 12, weight: 600 } }, ticks: { font: { family: FONT, size: 11, weight: 600 } } },
-                y: { stacked: true, title: { display: true, text: 'Total Clean Energy Deployed (TWh)', font: { family: FONT, size: 12, weight: 600 } }, grid: { color: 'rgba(0,0,0,0.05)' } }
+                y: { stacked: true, title: { display: true, text: 'New Clean Energy Built (TWh)', font: { family: FONT, size: 12, weight: 600 } }, grid: { color: 'rgba(0,0,0,0.05)' } }
             }
         }
     });
