@@ -64,6 +64,10 @@ data/step5-post-processing/strategy3_annual.json
 # Dispatch cache temp files (real .npz is kept, .tmp.npz is not)
 data/step5-post-processing/dispatch_cache/*.tmp.npz
 
+# LMP archetypes — write-only intermediate output of step6_compute_lmp_prices.py
+# No downstream consumer; the _lmp.parquet files are the consumed artifacts.
+data/step5-post-processing/lmp/*_archetypes.parquet
+
 # Dashboard parquets — not consumed by any HTML/JS; data lives in shared-data.js
 dashboard/physics_results_v4*.parquet
 dashboard/eac_scarcity_results.json
