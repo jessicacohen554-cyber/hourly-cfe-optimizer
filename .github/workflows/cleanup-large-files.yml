@@ -1,6 +1,6 @@
 name: Cleanup Large File Blobs from History
 
-# Removes all .parquet, .npz, and .json blobs from git history using git-filter-repo.
+# Removes all .parquet, .npz, and large JSON blobs from git history.
 # WARNING: This rewrites history. All collaborators must re-clone afterward.
 
 on:
@@ -41,48 +41,59 @@ jobs:
         run: |
           echo "=== Repo size BEFORE ==="
           git count-objects -vH
-          echo ""
-          echo "=== Top 25 largest blobs ==="
-          git rev-list --objects --all \
-            | git cat-file --batch-check='%(objecttype) %(objectname) %(objectsize) %(rest)' \
-            | sed -n 's/^blob //p' \
-            | sort -rnk2 \
-            | head -25 \
-            | numfmt --to=iec --field=2
 
       - name: "Dry run: list matching paths"
         if: ${{ inputs.dry_run == true }}
         run: |
+          set +o pipefail
           echo "=== Files that would be stripped from history ==="
           echo ""
+
+          # Dump all blobs once to a temp file to avoid repeated traversals
+          BLOB_LIST=$(mktemp)
+          git rev-list --objects --all \
+            | git cat-file --batch-check='%(objecttype) %(objectname) %(objectsize) %(rest)' \
+            | awk '/^blob /{print $2, $3, substr($0, index($0,$4))}' > "$BLOB_LIST"
+
+          echo "Total blobs in history: $(wc -l < "$BLOB_LIST")"
+          total_bytes=$(awk '{s+=$2} END{print s}' "$BLOB_LIST")
+          echo "Total blob size: $(echo "$total_bytes" | awk '{printf "%.1f MB", $1/1048576}')"
+          echo ""
+
           echo "--- By extension ---"
           for ext in parquet npz json; do
-            count=$(git log --all --diff-filter=A --name-only --pretty=format:"" -- "*.${ext}" | grep -c "\.${ext}$" || true)
-            size=$(git rev-list --objects --all -- "*.${ext}" \
-              | git cat-file --batch-check='%(objecttype) %(objectsize)' \
-              | awk '/^blob/{s+=$2} END{printf "%.1f MB\n", s/1048576}')
-            echo "  *.${ext}  →  ${count} files, ${size} in history"
+            matched=$(grep -i "\.${ext}$" "$BLOB_LIST" || true)
+            count=$(echo "$matched" | grep -c "\.${ext}$" 2>/dev/null || echo 0)
+            size=$(echo "$matched" | awk '{s+=$2} END{printf "%.1f MB", s/1048576}')
+            echo "  *.${ext}  →  ${count} blob versions, ${size}"
           done
           echo ""
+
+          echo "--- Top 30 largest blobs ---"
+          sort -rnk2 "$BLOB_LIST" | head -30 | awk '{printf "  %s  %.1f MB  %s\n", $1, $2/1048576, $3}'
+          echo ""
+
           echo "--- By directory ---"
           for dir in data/step1-pfs-parquets data/step1d-storage-parquets data/step2-ef-parquets \
                      data/step3-cost-opt-parquets data/step4-gas-ccs-parquets \
                      data/step5-post-processing data/checkpoints data/checkpoints_v4; do
-            size=$(git rev-list --objects --all -- "$dir" \
-              | git cat-file --batch-check='%(objecttype) %(objectsize)' \
-              | awk '/^blob/{s+=$2} END{printf "%.1f MB\n", s/1048576}')
+            matched=$(grep " ${dir}/" "$BLOB_LIST" || true)
+            size=$(echo "$matched" | awk '{s+=$2} END{printf "%.1f MB", s/1048576}')
             echo "  ${dir}/  →  ${size}"
           done
           echo ""
+
+          rm -f "$BLOB_LIST"
           echo "Re-run with dry_run=false and confirm=REWRITE-HISTORY to execute."
 
       - name: Run git-filter-repo
         if: ${{ inputs.dry_run == false }}
         run: |
-          echo "Removing *.parquet, *.npz, and large *.json blobs from all history..."
+          echo "Removing *.parquet, *.npz, and large data JSON blobs from all history..."
           git filter-repo \
             --path-glob '*.parquet' \
             --path-glob '*.npz' \
+            --path-glob 'data/step5-post-processing/co2_results/*.json' \
             --path data/analysis_results.json \
             --path data/optimizer_cache.json \
             --invert-paths --force
@@ -94,12 +105,12 @@ jobs:
           git count-objects -vH
           echo ""
           echo "=== Top 25 remaining blobs ==="
+          BLOB_LIST=$(mktemp)
           git rev-list --objects --all \
             | git cat-file --batch-check='%(objecttype) %(objectname) %(objectsize) %(rest)' \
-            | sed -n 's/^blob //p' \
-            | sort -rnk2 \
-            | head -25 \
-            | numfmt --to=iec --field=2
+            | awk '/^blob /{print $2, $3, substr($0, index($0,$4))}' > "$BLOB_LIST"
+          sort -rnk2 "$BLOB_LIST" | head -25 | awk '{printf "  %s  %.1f MB  %s\n", $1, $2/1048576, $3}'
+          rm -f "$BLOB_LIST"
 
       - name: Force push cleaned history
         if: ${{ inputs.dry_run == false }}
