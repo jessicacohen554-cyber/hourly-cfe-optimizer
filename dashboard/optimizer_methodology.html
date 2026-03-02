@@ -683,7 +683,10 @@
         (100% &minus; hydro cap).
     </p>
 
-    <!-- ======== SECTION 5: OPTIMIZATION MODEL ======== -->
+    <!-- ======== SECTION 5: OPTIMIZATION MODEL (dark panel) ======== -->
+</div>
+<section class="section-dark">
+<div class="section-dark-inner" style="max-width:900px;">
     <h2 id="optimization-model">5. Optimization Model</h2>
     <p>
         The optimizer searches simultaneously across <strong>multiple dimensions</strong>: a 4D resource mix
@@ -714,6 +717,8 @@
         mix ($90/MWh new-build), even though the wind-heavy portfolio procures more total energy. A sequential
         approach would miss this.
     </div>
+
+    <hr class="dark-divider">
 
     <h3>5.2 Three-Phase Refinement</h3>
     <p>
@@ -771,6 +776,8 @@
         low (5&ndash;7 effective degrees of freedom).
     </p>
 
+    <hr class="dark-divider">
+
     <h3>5.2.2 MAC Uncertainty Characterization (Option B)</h3>
     <p>
         Marginal abatement costs are characterized using a hybrid approach combining statistical post-processing
@@ -789,6 +796,8 @@
             is explained by each toggle group (firm generation, renewables, storage, fossil fuel, transmission),
             enabling identification of the dominant cost drivers by region and threshold.</li>
     </ul>
+
+    <hr class="dark-divider">
 
     <h3>5.3 Hourly Matching Calculation</h3>
     <p>
@@ -837,6 +846,9 @@
         and hydro percentages summing to 100% (subject to hydro caps) at the given step size. At 5% steps
         this yields several hundred valid combinations per region.
     </p>
+</div>
+</section>
+<div class="content">
 
     <!-- ======== SECTION 6: STORAGE MODEL ======== -->
     <h2 id="storage-model">6. Storage Model (Battery &amp; LDES)</h2>
