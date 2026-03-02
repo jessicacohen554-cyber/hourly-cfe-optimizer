@@ -577,7 +577,21 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
         print(f"  ERROR: No near-miss data for {iso}. Run step1c first.")
         return
 
-    print(f"  Near-miss mixes: {len(nm_combos):,}")
+    n_raw = len(nm_combos)
+    print(f"  Near-miss mixes (raw): {n_raw:,}")
+
+    # ── Dominance filter: remove mixes where another uses ≤ of every resource ──
+    # A mix is dominated if another mix uses less-or-equal of ALL resources and
+    # strictly less of at least one.  These dominated mixes can never be optimal
+    # under any cost assumption, so testing storage on them is wasted compute.
+    # Typical reduction: 95-99% (e.g., 706k → 4.9k for PJM).
+    from step1c_zone_search import dominance_filter_arrays
+    t_dom = time.time()
+    kept_mask = dominance_filter_arrays(nm_combos, nm_base_scores)
+    nm_combos = nm_combos[kept_mask]
+    nm_base_scores = nm_base_scores[kept_mask]
+    print(f"  Dominance filter: {n_raw:,} → {len(nm_combos):,} "
+          f"({len(nm_combos)/n_raw*100:.1f}%) in {time.time()-t_dom:.1f}s")
 
     # ── Load EIA data ──
     print(f"  Loading EIA data...")
