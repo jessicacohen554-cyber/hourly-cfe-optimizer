@@ -462,15 +462,21 @@ def get_supply_profiles(iso, gen_profiles):
     # Hydro
     profiles['hydro'] = np.array(gen_profiles[iso].get('hydro', [0.0] * H)[:H], dtype=np.float64)
 
-    # Offshore wind (NYISO, NEISO, PJM, CAISO — loaded from NOW-23 profiles)
+    # Offshore wind (NYISO, NEISO, PJM, CAISO)
+    # Prefer local-time profile from EIA parquet (appended by step0_fix_offshore_wind.py).
+    # Fall back to JSON loader (UTC) only if parquet doesn't have it yet.
     if iso in OFFSHORE_ISOS:
-        osw_profile = _load_offshore_wind_profile(iso)
-        if osw_profile is not None:
-            profiles['offshore_wind'] = osw_profile
+        osw_from_parquet = gen_profiles[iso].get('offshore_wind')
+        if osw_from_parquet is not None:
+            profiles['offshore_wind'] = np.array(osw_from_parquet[:H], dtype=np.float64)
         else:
-            # Fallback: zero profile (profile fetch hasn't run yet)
-            print(f"    WARNING: No offshore wind profile for {iso}, using zeros")
-            profiles['offshore_wind'] = np.zeros(H, dtype=np.float64)
+            osw_profile = _load_offshore_wind_profile(iso)
+            if osw_profile is not None:
+                profiles['offshore_wind'] = osw_profile
+                print(f"    NOTE: offshore wind loaded from JSON (UTC) — run step0_fix_offshore_wind.py for local-time alignment")
+            else:
+                print(f"    WARNING: No offshore wind profile for {iso}, using zeros")
+                profiles['offshore_wind'] = np.zeros(H, dtype=np.float64)
 
     # CAISO: add geothermal as flat year-round profile (no seasonal derate)
     if iso == 'CAISO':
