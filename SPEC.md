@@ -416,7 +416,7 @@ Full 8760-hour LMP model for **all 7 ISOs**. All 7 ISOs now have calibrated pric
 **Actual LMP fetching:** `step0_fetch_lmp_2025.py` extended to support `--year 2024` and all 7 ISOs (MISO + SPP added via gridstatus). GitHub Actions workflow: `fetch-actual-lmp.yml`.
 
 **Wholesale price degradation analysis (Decided Feb 28):**
-- Run LMP model for all 7 ISOs at all 15 thresholds to produce price degradation curves
+- Run LMP model for all 7 ISOs at all 21 thresholds to produce price degradation curves
 - Key output: avg LMP vs clean energy threshold (50%→99.99%) showing merit-order price depression
 - Correlation with clean penetration demonstrates cannibalization effect
 - Data feeds into both the wholesale price dashboard page AND the procurement strategy comparison
@@ -1071,7 +1071,7 @@ Step 4 → dispatch cache → CO2/MAC/LMP/compressed day (read from cache, run i
 
 **Track Sweep Status:**
 - CAISO: Complete (NB + replace, 12 thresholds × 209,952 scenarios each)
-- ERCOT: NB partial (10/15 thresholds), replace not started
+- ERCOT: NB partial (10/21 thresholds), replace not started
 - PJM, NYISO, NEISO: Not started
 - Checkpoint: `data/track_checkpoint.json` (partial results)
 - Parquet export: `dashboard/track_scenarios.parquet` (CAISO only)
@@ -1341,7 +1341,7 @@ Complete optimizer rebuild with new architecture. All 9 design decisions + 5 eff
 | 2 | Solution output | **2B — Pareto frontier** | 3-5 points per mix along procurement/storage tradeoff (not single-point optimal). |
 | 3 | Procurement bounds | **3C — Threshold-adaptive** | Narrow bounds at low thresholds (e.g., 100-110% at 50%), wider at high (100-150% at 99-≥99.99%). |
 | 4 | min_dispatchable constraint | **4B — Drop it** | No dispatchable floor. Let physics prove/disprove — constraint was potentially biasing results. |
-| 5 | Thresholds | **5E — 15 total** | v4.0 list + 55%, 65% for finer low-range granularity. Full list: 50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, ≥99.99. Top threshold is ≥99.99% (not 100%) — true 100% hourly matching is physically unreachable. |
+| 5 | Thresholds | **5F — 21 total** | 10/20/30/40 (coarse only) + 50/55/60/65/70/75/80/85/87.5/90/92.5/95/97.5/99/99.5/99.9/≥99.99 (17 active, full pipeline). Top threshold is ≥99.99% (not 100%) — true 100% hourly matching is physically unreachable. Thresholds 10–40 are coarse-grid only (no fine zone search, no step1d storage). |
 | 6 | CCS-CCGT resource | **6D — Collapse into Clean Firm** | Merge CCS into Clean Firm allocation. Reduces resource space from 5D to 4D. CCS retains its own cost profile and dispatch characteristics within the merged allocation — the optimizer determines sub-allocation internally. |
 | 7 | Storage parameters | **7A — Keep current** | Battery: 4hr Li-ion, 85% RT, daily cycle. LDES: 100hr iron-air, 50% RT, 7-day window. |
 | 8 | Output format | **8C — Both** | JSON (backward compat) + Parquet (analytics). |
@@ -1357,7 +1357,7 @@ Complete optimizer rebuild with new architecture. All 9 design decisions + 5 eff
 | D | Numba JIT (try/fallback) | Compile storage scoring to machine code; fall back to B+C if install fails | 10-50× on storage (if available) |
 | F | Shared memory cache | `multiprocessing.shared_memory` for parallel ISO workers to share data | Enables A |
 
-**Scope**: Step 1 only (physics). No cost model — the optimizer generates the feasible solution space (all viable resource mixes per threshold×ISO). Cost sensitivities (5,832 paired-toggle scenarios) applied in Step 3 cost optimization. This reduces from 21,060 cost-coupled optimizations to 105 physics-only sweeps (15 thresholds × 7 ISOs), each finding the Pareto frontier of feasible mixes.
+**Scope**: Step 1 only (physics). No cost model — the optimizer generates the feasible solution space (all viable resource mixes per threshold×ISO). Cost sensitivities (5,832 paired-toggle scenarios) applied in Step 3 cost optimization. This reduces from 25,872 cost-coupled optimizations to 147 physics-only sweeps (21 thresholds × 7 ISOs), each finding the Pareto frontier of feasible mixes.
 
 **Projected runtime**: ~1-3 min with Numba (installed successfully). Down from multi-hour current architecture.
 
@@ -2168,18 +2168,19 @@ data/step5-post-processing/lmp/                      # Output directory
 
 ---
 
-## 3. Thresholds (15 total — v4.1: added 55%, 65% for finer low-range granularity)
+## 3. Thresholds (21 total — v4.2: added 10/20/30/40 coarse low range + 99.5/99.9 last-mile)
 
 ```
-50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, ≥99.99
+10, 20, 30, 40 [coarse only], 50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, ≥99.99
 ```
 
-- **50%, 55%, 60%, 65%, 70%** (v4.0+v4.1): Captures the easy-to-achieve baseline region where most mixes succeed. 55% and 65% added for finer resolution in the low-cost transition zone. Provides context for "how cheap is partial decarbonization" and anchors the cost curve left side. These thresholds run fast (most mixes hit target, narrow procurement bounds).
-- 5% intervals from 75-85 (captures broad trend)
-- 2.5% intervals from 87.5-97.5 (captures steep cost inflection zone)
-- 99% and ≥99.99% anchor the extreme end (true 100% is physically unreachable)
-- Key inflection behavior (CCS/LDES entering mix, storage costs spiking) captured at 90-97.5
-- Dashboard interpolates smoothly between these anchor points for abatement curves
+- **10%, 20%, 30%, 40%** (v4.2): Coarse-grid only — no fine zone search, no step1d storage refinement. Captures early adoption / RPS-range where mixes are easy to achieve and cost curves are flat.
+- **50%, 55%, 60%, 65%, 70%**: Captures the easy-to-achieve baseline region where most mixes succeed. 5% granularity anchors the cost curve left side.
+- 5% intervals from 75–85 (captures broad trend)
+- 2.5% intervals from 87.5–97.5 (captures steep cost inflection zone)
+- **99%, 99.5%, 99.9%, ≥99.99%** (v4.2 added 99.5/99.9): Last-mile granularity at the near-perfect end. True 100% is physically unreachable.
+- Key inflection behavior (CCS/LDES entering mix, storage costs spiking) captured at 90–97.5
+- Dashboard interpolates smoothly between anchor points for abatement curves
 
 ---
 
@@ -2267,7 +2268,7 @@ Cost sensitivities are organized into 7 graduated toggles (L/M/H) plus one binar
 
 ### 4.2 Scenario Pruning & Adaptive Resampling Pipeline
 
-**Problem**: 5,832 cost scenarios × 15 thresholds × 5 ISOs = 437,400 co-optimizations. Even with warm-start, running all 5,832 per threshold is slow. Empirically, physics dominates at lower thresholds — only ~14 unique mixes serve all 5,832 scenarios.
+**Problem**: 5,832 cost scenarios × 21 thresholds × 5 ISOs = 611,280 co-optimizations (17 active thresholds for full cost optimization, 4 coarse thresholds for coarse pass only). Even with warm-start, running all 5,832 per threshold is slow. Empirically, physics dominates at lower thresholds — only ~14 unique mixes serve all 5,832 scenarios.
 
 **Solution**: 5-stage pipeline runs 44 representative scenarios, then fills the remaining ~5,788 via cross-pollination, with adaptive resampling as a safety net.
 
@@ -3109,10 +3110,10 @@ For each resource:
 - **Vectorized storage dispatch (B)**: Battery and LDES scoring use NumPy reshape/vectorized ops instead of Python day-loops. `surplus.reshape(365, 24)` for battery, vectorized rolling windows for LDES.
 - **Batch mix evaluation (C)**: Grid search evaluates all combos in a single matrix multiply: `(N, 4) @ (4, 8760) = (N, 8760)`. Eliminates Python loop over individual mixes.
 - **Numba JIT with fallback (D)**: Storage scoring functions compiled to machine code via Numba. If Numba unavailable, falls back to B+C (vectorized NumPy).
-- **Checkpointing**: Saves after each threshold (15 per ISO); resumes from checkpoint on restart
+- **Checkpointing**: Saves after each threshold (21 per ISO); resumes from checkpoint on restart
 - **Score caching**: Matching scores cached across 5,832 cost scenarios per threshold (physics reuse — cost-independent)
 - **Cross-pollination**: After representative scenarios run per threshold, every unique mix re-evaluated against all scenarios
-- **15 thresholds × 5 regions × 5,832 scenarios** — incremental saves essential for reliability
+- **21 thresholds × 5 regions × 5,832 scenarios** — incremental saves essential for reliability
 
 ### 11.1 Direct Resource Fractions (v5.0 — replaces procurement multiplier)
 
