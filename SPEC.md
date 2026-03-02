@@ -488,17 +488,6 @@ The split varies dramatically by ISO. Nuclear-heavy ISOs (PJM 32%, NEISO 24%) al
 
 Data sources: Track 2 NB (new-build costs), Track 3 CTR (existing premium costs), learning curve parameters from `step6_scenario_comparison.py`, resource mix data from shared-data.js.
 
-**Step 8 implementation: `scripts/step8_wrights_law_curves.py`** — COMPLETE. Vectorized numpy, no sequential loops. Output:
-- `data/step8-wrights-law/wrights_law_curves.parquet` (4 KB, snappy compressed — 252 rows: 12 participation levels × 21 thresholds)
-- `data/step8-wrights-law/wrights_law_curves.json` (8.4 KB — dashboard-ready figure data)
-
-Key results at 90% CFE:
-- **Critical mass threshold: 25% C&I participation** — where cumulative CCS-CCGT deployment exceeds 8 GW globally
-- At 95% CFE: 10% participation; at 99.99%: 5% (higher thresholds drive more new-build per participant)
-- PJM dominates new-build spend (largest demand, most CCS needed); SPP is 100% premium (all wind, zero new firm)
-- Wright's Law gating: learning fraction = 0 below critical mass (maintenance mode), ramps via exponent 0.6 above it
-- First-doubling thresholds: nuclear 5 GW, CCS 8 GW, LDES 3 GW, geothermal 2 GW (DOE Liftoff / INL SOAR calibrated)
-
 #### §15.5.3 Cross-References to Deep Dive Pages
 
 The procurement comparison page is a **hub**. At each failure mode inflection point, surface the relevant link:
