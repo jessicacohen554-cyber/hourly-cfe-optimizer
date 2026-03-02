@@ -4,12 +4,14 @@ name: "Step 1d: Two-Pass Fine Storage"
 #   Pass 1: Coarse global sweep on ALL near-miss mixes (score once per combo)
 #   Pass 2: Fine 0.05% targeted refinement on boundary mixes per threshold
 #
-# What's new vs. legacy:
-#   - Parallel per-ISO jobs (matrix strategy, each on its own runner)
-#   - Each job creates its own auto/* branch and commits there (never master)
-#   - Intermittent auto-commits after every threshold completion
-#   - Threshold filtering: run only the subset you need
-#   - O(1) hash-map lookup for Pass 2 resume (was O(N²) linear search)
+# Modes:
+#   full   — run all thresholds in one job (may hit 6hr timeout on large ISOs)
+#   batched — run LOW (50-80%), MID (85-95%), HIGH (97.5-99.99%) as separate
+#             steps with independent commits. Best for CAISO/ERCOT/PJM.
+#   custom — specify thresholds= input directly (e.g. "90,95")
+#
+# Each ISO runs on its own runner in parallel. Every threshold commits
+# individually via --auto-commit so partial progress is always banked.
 #
 # Prerequisite: Step 1c (Zone Search) must have run first.
 # Output: data/step1d-storage-parquets/{ISO}_t{XX}_storage.parquet
@@ -31,8 +33,16 @@ on:
           - NEISO
           - MISO
           - SPP
+      batch_mode:
+        description: 'full (all thresholds at once) or batched (LOW/MID/HIGH steps)'
+        required: true
+        default: 'batched'
+        type: choice
+        options:
+          - batched
+          - full
       thresholds:
-        description: 'Comma-separated thresholds (e.g. "90,95,99"). Leave blank for all 17.'
+        description: 'Custom thresholds (e.g. "90,95,99"). Overrides batch_mode when set.'
         required: false
         default: ''
         type: string
@@ -45,6 +55,10 @@ on:
 env:
   BRANCH_PREFIX: step1d-fine-storage
   PYTHONUNBUFFERED: "1"
+  # Threshold bands for batched mode
+  THRESHOLDS_LOW:  "50,55,60,65,70,75,80"
+  THRESHOLDS_MID:  "85,87.5,90,92.5,95"
+  THRESHOLDS_HIGH: "97.5,99,99.5,99.9,99.99"
 
 jobs:
   # ════════════════════════════════════════════════════════════════════════
@@ -90,7 +104,14 @@ jobs:
       run: |
         TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
         ISO_LOWER=$(echo "${{ matrix.iso }}" | tr '[:upper:]' '[:lower:]')
-        TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${ISO_LOWER}"
+        MODE="${{ inputs.batch_mode }}"
+        CUSTOM="${{ inputs.thresholds }}"
+        if [ -n "$CUSTOM" ]; then
+          LABEL="custom"
+        else
+          LABEL="$MODE"
+        fi
+        TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${ISO_LOWER}-${LABEL}"
         echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -115,39 +136,107 @@ jobs:
         if [ ! -f "$NM" ]; then
           echo "ERROR: Missing near-miss data for $ISO"
           echo "  Expected: $NM"
-          echo "  Run Step 1c (Zone Search) first."
+          echo "  Run Step 1c (Zone Search) first, or generate from coarse cache."
           exit 1
         fi
+        ROWS=$(python3 -c "import pyarrow.parquet as pq; t=pq.read_table('$NM'); print(t.num_rows)")
         SIZE=$(du -h "$NM" | cut -f1)
-        echo "OK: $ISO near-miss data ($SIZE)"
-
-    - name: "Run two-pass storage sweep — ${{ matrix.iso }}"
-      run: |
-        ISO="${{ matrix.iso }}"
-        ARGS="--iso $ISO --auto-commit"
-
-        THRESHOLDS="${{ inputs.thresholds }}"
-        if [ -n "$THRESHOLDS" ]; then
-          ARGS="$ARGS --thresholds \"$THRESHOLDS\""
-          echo "Threshold filter: $THRESHOLDS"
+        echo "OK: $ISO near-miss ($ROWS rows, $SIZE)"
+        if [ "$ROWS" -eq 0 ]; then
+          echo "ERROR: Near-miss file is empty (0 rows). Re-run Step 1c."
+          exit 1
         fi
 
-        echo "=== Two-pass storage for $ISO ==="
-        echo "Command: python scripts/step1d_fine_storage.py $ARGS"
-        eval python scripts/step1d_fine_storage.py $ARGS
+    - name: Ensure output directory
+      run: mkdir -p data/step1d-storage-parquets
 
+    # ── Custom thresholds (skip batching) ───────────────────────────────────
+    - name: "Custom thresholds — ${{ matrix.iso }}"
+      if: ${{ inputs.thresholds != '' }}
+      timeout-minutes: 300
+      run: |
+        python scripts/step1d_fine_storage.py \
+          --iso "${{ matrix.iso }}" \
+          --thresholds "${{ inputs.thresholds }}" \
+          --auto-commit
+
+    # ── Full mode (all thresholds in one run) ──────────────────────────────
+    - name: "Full run — ${{ matrix.iso }}"
+      if: ${{ inputs.thresholds == '' && inputs.batch_mode == 'full' }}
+      timeout-minutes: 340
+      run: |
+        python scripts/step1d_fine_storage.py \
+          --iso "${{ matrix.iso }}" \
+          --auto-commit
+
+    # ── Batched mode: LOW thresholds (50–80%) ────────────────────────────
+    - name: "Batch LOW (50-80%) — ${{ matrix.iso }}"
+      if: ${{ inputs.thresholds == '' && inputs.batch_mode == 'batched' }}
+      timeout-minutes: 90
+      run: |
+        python scripts/step1d_fine_storage.py \
+          --iso "${{ matrix.iso }}" \
+          --thresholds "${{ env.THRESHOLDS_LOW }}" \
+          --auto-commit
+
+    - name: "Commit batch LOW — ${{ matrix.iso }}"
+      if: ${{ inputs.thresholds == '' && inputs.batch_mode == 'batched' }}
+      run: |
+        git add -A data/step1d-storage-parquets/
+        if ! git diff --cached --quiet; then
+          git commit -m "Step 1d batch LOW: ${{ matrix.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push -u origin "$TARGET_BRANCH" || true
+        fi
+
+    # ── Batched mode: MID thresholds (85–95%) ────────────────────────────
+    - name: "Batch MID (85-95%) — ${{ matrix.iso }}"
+      if: ${{ inputs.thresholds == '' && inputs.batch_mode == 'batched' }}
+      timeout-minutes: 120
+      run: |
+        python scripts/step1d_fine_storage.py \
+          --iso "${{ matrix.iso }}" \
+          --thresholds "${{ env.THRESHOLDS_MID }}" \
+          --auto-commit
+
+    - name: "Commit batch MID — ${{ matrix.iso }}"
+      if: ${{ inputs.thresholds == '' && inputs.batch_mode == 'batched' }}
+      run: |
+        git add -A data/step1d-storage-parquets/
+        if ! git diff --cached --quiet; then
+          git commit -m "Step 1d batch MID: ${{ matrix.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push origin "$TARGET_BRANCH" || true
+        fi
+
+    # ── Batched mode: HIGH thresholds (97.5–99.99%) ──────────────────────
+    - name: "Batch HIGH (97.5-99.99%) — ${{ matrix.iso }}"
+      if: ${{ inputs.thresholds == '' && inputs.batch_mode == 'batched' }}
+      timeout-minutes: 120
+      run: |
+        python scripts/step1d_fine_storage.py \
+          --iso "${{ matrix.iso }}" \
+          --thresholds "${{ env.THRESHOLDS_HIGH }}" \
+          --auto-commit
+
+    - name: "Commit batch HIGH — ${{ matrix.iso }}"
+      if: ${{ inputs.thresholds == '' && inputs.batch_mode == 'batched' }}
+      run: |
+        git add -A data/step1d-storage-parquets/
+        if ! git diff --cached --quiet; then
+          git commit -m "Step 1d batch HIGH: ${{ matrix.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push origin "$TARGET_BRANCH" || true
+        fi
+
+    # ── Final sweep: catch anything not yet committed ─────────────────────
     - name: Final commit and push
       if: always()
       run: |
-        mkdir -p data/step1d-storage-parquets
         git add -A data/step1d-storage-parquets/
         if ! git diff --cached --quiet; then
-          THRESHOLDS="${{ inputs.thresholds }}"
           LABEL="${{ matrix.iso }}"
-          [ -n "$THRESHOLDS" ] && LABEL="$LABEL thresholds=$THRESHOLDS"
-          git commit -m "Step 1d Fine Storage: $LABEL — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-        else
-          echo "No remaining changes to commit"
+          CUSTOM="${{ inputs.thresholds }}"
+          MODE="${{ inputs.batch_mode }}"
+          [ -n "$CUSTOM" ] && LABEL="$LABEL thresholds=$CUSTOM" || LABEL="$LABEL $MODE"
+          git commit -m "Step 1d final: $LABEL — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
         fi
 
         # Push with retry
@@ -157,4 +246,4 @@ jobs:
           sleep $((2**i))
         done
         echo "Branch: $TARGET_BRANCH"
-        echo "Merge this branch into master to bank the storage results."
+        echo "Merge into master to bank the storage results."
