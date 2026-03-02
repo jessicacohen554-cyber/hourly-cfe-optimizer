@@ -29,6 +29,17 @@ import time
 
 import numpy as np
 
+# Collision-free int64 hash per mix row (base-301, same as step1c _row_keys).
+# Each resource value ∈ [0, 300], so 301^i is collision-free up to 7 dims.
+_MIX_HASH_BASES = np.array([301**i for i in range(7)], dtype=np.int64)
+
+
+def _mix_keys(combos):
+    """Vectorized collision-free int64 hash per row. No Python loops."""
+    n_res = combos.shape[1]
+    return np.round(combos).astype(np.int64) @ _MIX_HASH_BASES[:n_res]
+
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
@@ -533,22 +544,26 @@ def _save_manifest(iso, code_hash, pass1_done, pass2_done):
 # MAIN PIPELINE
 # ══════════════════════════════════════════════════════════════════════════════
 
-def process_iso(iso, thresholds=None, auto_commit=False):
-    """Run two-pass storage sweep for one ISO and specified thresholds."""
-    if thresholds is None:
-        thresholds = STORAGE_THRESHOLDS
+def process_iso(iso, auto_commit=False, thresholds_filter=None):
+    """Run two-pass storage sweep for one ISO.
 
+    Args:
+        thresholds_filter: list of thresholds to process (None = all)
+    """
     iso_start = time.time()
     rtypes = s1.get_resource_types(iso)
     n_res = len(rtypes)
-    requested_thresholds = sorted(set(thresholds))
 
     print(f"\n{'=' * 70}")
     print(f"  Step 1d Fine Storage — {iso}")
     print(f"  Resources: {n_res}D ({', '.join(rtypes)})")
-    print(f"  Thresholds: {len(requested_thresholds)} ({', '.join(f'{t}%' for t in requested_thresholds)})")
     print(f"  Numba: {'enabled' if s1.HAS_NUMBA else 'disabled'}")
     print(f"{'=' * 70}")
+
+    # ── Determine which thresholds to process ──
+    active_thresholds = thresholds_filter if thresholds_filter else STORAGE_THRESHOLDS
+    if thresholds_filter:
+        print(f"  Threshold filter: {active_thresholds}")
 
     # ── Resume logic ──
     code_hash = _compute_code_hash(iso)
@@ -600,8 +615,8 @@ def process_iso(iso, thresholds=None, auto_commit=False):
         coarse_results = run_coarse_storage(
             iso, nm_combos, nm_base_scores, demand_arr, supply_matrix)
 
-        # Save coarse results per threshold (only requested thresholds)
-        for t in requested_thresholds:
+        # Save coarse results per threshold (filtered to active set)
+        for t in active_thresholds:
             t_results = coarse_results[t]
             if t_results:
                 save_storage_results(iso, t, nm_combos, t_results, rtypes)
@@ -613,28 +628,35 @@ def process_iso(iso, thresholds=None, auto_commit=False):
         _save_manifest(iso, code_hash, pass1_done, pass2_done)
     else:
         print(f"\n  Pass 1: skipped (already done)")
-        # Reload coarse results from saved parquets for Pass 2
-        coarse_results = {t: [] for t in STORAGE_THRESHOLDS}
-        for t in STORAGE_THRESHOLDS:
+        # Reload coarse results from saved parquets for Pass 2.
+        # Use hash-map lookup (O(1) per row) instead of O(N) linear search.
+        nm_key_to_idx = {k: i for i, k in
+                         enumerate(_mix_keys(nm_combos).tolist())}
+
+        coarse_results = {t: [] for t in active_thresholds}
+        for t in active_thresholds:
             t_str = s1._normalize_threshold_str(t)
             t_path = os.path.join(STEP1D_OUTPUT_DIR,
                                   f'{iso}_t{t_str}_storage.parquet')
-            if os.path.exists(t_path):
-                table = pq.read_table(t_path)
-                for i in range(table.num_rows):
-                    # Find mix index in nm_combos
-                    mix_vals = np.array([table.column(rt)[i].as_py()
-                                        for rt in rtypes])
-                    # Simple linear search (small parquets)
-                    diffs = np.abs(nm_combos - mix_vals).sum(axis=1)
-                    mi = int(np.argmin(diffs))
-                    coarse_results[t].append(
-                        (mi,
-                         float(table.column('battery_dispatch_pct')[i].as_py()),
-                         float(table.column('battery8_dispatch_pct')[i].as_py()),
-                         float(table.column('ldes_dispatch_pct')[i].as_py()),
-                         float(table.column('h2_dispatch_pct')[i].as_py()),
-                         float(table.column('hourly_match_score')[i].as_py())))
+            if not os.path.exists(t_path):
+                continue
+            table = pq.read_table(t_path)
+            # Bulk-extract resource columns as numpy arrays for vectorized hashing
+            mix_mat = np.column_stack(
+                [table.column(rt).to_numpy() for rt in rtypes])
+            row_keys = _mix_keys(mix_mat).tolist()
+            bat4 = table.column('battery_dispatch_pct').to_numpy()
+            bat8 = table.column('battery8_dispatch_pct').to_numpy()
+            ldes = table.column('ldes_dispatch_pct').to_numpy()
+            h2 = table.column('h2_dispatch_pct').to_numpy()
+            score = table.column('hourly_match_score').to_numpy()
+            for i, key in enumerate(row_keys):
+                mi = nm_key_to_idx.get(key, -1)
+                if mi == -1:
+                    continue  # mix not in near-miss set (shouldn't happen)
+                coarse_results[t].append(
+                    (mi, float(bat4[i]), float(bat8[i]),
+                     float(ldes[i]), float(h2[i]), float(score[i])))
 
     # ══════════════════════════════════════════════════════
     # PASS 2: Fine targeted storage (per-threshold boundary)
@@ -642,7 +664,7 @@ def process_iso(iso, thresholds=None, auto_commit=False):
 
     print(f"\n  Pass 2 — Fine storage refinement (0.05% resolution)")
 
-    for t in requested_thresholds:
+    for t in active_thresholds:
         if t in pass2_done:
             print(f"    {iso} t{t}%: skipped (already done)")
             continue
@@ -684,15 +706,35 @@ def process_iso(iso, thresholds=None, auto_commit=False):
     print(f"{'=' * 70}")
 
 
+def _parse_thresholds(raw):
+    """Parse comma-separated threshold list, return sorted list of floats or None."""
+    if not raw or raw.strip().upper() in ('', 'ALL'):
+        return None
+    parts = [p.strip() for p in raw.split(',') if p.strip()]
+    result = []
+    for p in parts:
+        try:
+            result.append(float(p))
+        except ValueError:
+            print(f"WARNING: Ignoring invalid threshold '{p}'")
+    valid = set(STORAGE_THRESHOLDS)
+    filtered = [t for t in sorted(set(result)) if t in valid]
+    bad = [t for t in result if t not in valid]
+    if bad:
+        print(f"WARNING: Thresholds not in STORAGE_THRESHOLDS: {bad}")
+    return filtered if filtered else None
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Step 1d: Two-pass storage sweep.")
     parser.add_argument("--iso", required=True,
                         help="ISO name or 'ALL'")
-    parser.add_argument("--thresholds", default="all",
-                        help='Thresholds to run: "all", comma-separated (e.g., "95,99"), or single value')
     parser.add_argument("--auto-commit", action="store_true",
                         help="Commit & push after each threshold")
+    parser.add_argument("--thresholds", default="",
+                        help="Comma-separated thresholds to process "
+                             "(e.g. '90,95,99'). Default: all 17.")
     args = parser.parse_args()
 
     isos = list(s1.ISOS) if args.iso.upper() == 'ALL' else [args.iso.upper()]
@@ -702,18 +744,13 @@ def main():
             print(f"ERROR: Unknown ISO '{iso}'")
             sys.exit(1)
 
-    # Parse thresholds
-    if args.thresholds.lower() == "all":
-        thresholds = STORAGE_THRESHOLDS
-    else:
-        try:
-            thresholds = [float(t.strip()) for t in args.thresholds.split(',')]
-        except ValueError:
-            print(f"ERROR: Cannot parse thresholds '{args.thresholds}'")
-            sys.exit(1)
+    thresholds_filter = _parse_thresholds(args.thresholds)
+    if thresholds_filter:
+        print(f"Threshold filter: {thresholds_filter}")
 
     for iso in isos:
-        process_iso(iso, thresholds=thresholds, auto_commit=args.auto_commit)
+        process_iso(iso, auto_commit=args.auto_commit,
+                    thresholds_filter=thresholds_filter)
 
 
 if __name__ == "__main__":
