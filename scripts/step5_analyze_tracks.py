@@ -161,12 +161,10 @@ def load_baseline():
 
 def extract_costs_and_mixes(scenarios):
     """Extract cost and mix arrays from a scenarios dict."""
-    costs = []
-    mixes = []
-    for key, sc in scenarios.items():
-        costs.append(sc['costs']['effective_cost'])
-        mixes.append(sc['resource_mix'])
-    return np.array(costs), mixes
+    vals = list(scenarios.values())
+    costs = np.array([sc['costs']['effective_cost'] for sc in vals])
+    mixes = [sc['resource_mix'] for sc in vals]
+    return costs, mixes
 
 
 def percentiles(arr, ps=[10, 25, 50, 75, 90]):
@@ -205,37 +203,37 @@ def main():
               f"{'P10':>7} {'P50':>7} {'P90':>7}   | {'P50':>12}")
         print(f"  {'-'*6}-+-{'-'*25}-+-{'-'*25}-+-{'-'*25}-+-{'-'*12}")
 
+        # Extract ISO-level data once to avoid repeated nested dict lookups
+        iso_baseline = baseline.get('results', {}).get(iso, {})
+        iso_tracks = tracks.get('results', {}).get(iso, {})
+        iso_bl_thresholds = iso_baseline.get('thresholds', {})
+        iso_nb_data = iso_tracks.get('newbuild', {})
+        iso_rp_data = iso_tracks.get('cost_to_replace', {})
+
         for thr in THRESHOLDS:
             t_str = str(thr)
 
-            # Baseline
-            bl_sc = (baseline.get('results', {}).get(iso, {})
-                     .get('thresholds', {}).get(t_str, {}).get('scenarios', {}))
+            bl_sc = iso_bl_thresholds.get(t_str, {}).get('scenarios', {})
             if bl_sc:
                 bl_costs, bl_mixes = extract_costs_and_mixes(bl_sc)
                 bl_p = percentiles(bl_costs)
             else:
                 bl_p = {10: 0, 50: 0, 90: 0}
 
-            # Newbuild
-            nb_sc = (tracks.get('results', {}).get(iso, {})
-                     .get('newbuild', {}).get(t_str, {}).get('scenarios', {}))
+            nb_sc = iso_nb_data.get(t_str, {}).get('scenarios', {})
             if nb_sc:
                 nb_costs, nb_mixes = extract_costs_and_mixes(nb_sc)
                 nb_p = percentiles(nb_costs)
             else:
                 nb_p = {10: 0, 50: 0, 90: 0}
 
-            # Cost-to-replace
-            rp_sc = (tracks.get('results', {}).get(iso, {})
-                     .get('cost_to_replace', {}).get(t_str, {}).get('scenarios', {}))
+            rp_sc = iso_rp_data.get(t_str, {}).get('scenarios', {})
             if rp_sc:
                 rp_costs, rp_mixes = extract_costs_and_mixes(rp_sc)
                 rp_p = percentiles(rp_costs)
             else:
                 rp_p = {10: 0, 50: 0, 90: 0}
 
-            # Replacement premium (P50)
             delta = rp_p[50] - bl_p[50] if bl_p[50] > 0 and rp_p[50] > 0 else 0
 
             print(f"  {thr:>5}% | ${bl_p[10]:>6.1f} ${bl_p[50]:>6.1f} ${bl_p[90]:>6.1f}   | "
@@ -256,15 +254,15 @@ def main():
         print(f"  {'Thr':>6} | {'':>8} | {'CF':>5} {'Sol':>5} {'Wnd':>5} {'CCS':>5} {'Hyd':>5}")
         print(f"  {'-'*6}-+-{'-'*8}-+-{'-'*5}-{'-'*5}-{'-'*5}-{'-'*5}-{'-'*5}")
 
+        # Extract ISO-level data once
+        iso_bl_thresholds = baseline.get('results', {}).get(iso, {}).get('thresholds', {})
+        iso_nb_data = tracks.get('results', {}).get(iso, {}).get('newbuild', {})
+
         for thr in THRESHOLDS:
             t_str = str(thr)
 
-            # Baseline mixes
-            bl_sc = (baseline.get('results', {}).get(iso, {})
-                     .get('thresholds', {}).get(t_str, {}).get('scenarios', {}))
-            # Newbuild mixes
-            nb_sc = (tracks.get('results', {}).get(iso, {})
-                     .get('newbuild', {}).get(t_str, {}).get('scenarios', {}))
+            bl_sc = iso_bl_thresholds.get(t_str, {}).get('scenarios', {})
+            nb_sc = iso_nb_data.get(t_str, {}).get('scenarios', {})
 
             if not bl_sc or not nb_sc:
                 continue
@@ -272,9 +270,9 @@ def main():
             bl_costs, bl_mixes = extract_costs_and_mixes(bl_sc)
             nb_costs, nb_mixes = extract_costs_and_mixes(nb_sc)
 
-            # P50 mixes (median cost scenario's mix)
-            bl_med_idx = np.argsort(bl_costs)[len(bl_costs)//2]
-            nb_med_idx = np.argsort(nb_costs)[len(nb_costs)//2]
+            # P50 mixes — use argpartition (O(n)) instead of argsort (O(n log n))
+            bl_med_idx = np.argpartition(bl_costs, len(bl_costs)//2)[len(bl_costs)//2]
+            nb_med_idx = np.argpartition(nb_costs, len(nb_costs)//2)[len(nb_costs)//2]
             bl_mix = bl_mixes[bl_med_idx]
             nb_mix = nb_mixes[nb_med_idx]
 
@@ -286,7 +284,6 @@ def main():
                   f"{nb_mix.get('clean_firm',0):>5} {nb_mix.get('solar',0):>5} "
                   f"{nb_mix.get('wind',0):>5} {nb_mix.get('ccs_ccgt',0):>5} "
                   f"{nb_mix.get('hydro',0):>5}")
-            # Delta
             d = {r: nb_mix.get(r,0) - bl_mix.get(r,0) for r in RESOURCES}
             print(f"  {'':>6} | {'Δ':>8} | "
                   f"{d['clean_firm']:>+5} {d['solar']:>+5} "
@@ -307,34 +304,31 @@ def main():
               f"{'% of BL':>8}")
         print(f"  {'-'*6}-+-{'-'*8}-{'-'*8}-{'-'*8}-{'-'*8}-{'-'*8}-+-{'-'*8}")
 
+        # Extract ISO-level data once
+        iso_bl_thresholds = baseline.get('results', {}).get(iso, {}).get('thresholds', {})
+        iso_rp_data = tracks.get('results', {}).get(iso, {}).get('cost_to_replace', {})
+
         for thr in THRESHOLDS:
             t_str = str(thr)
 
-            bl_sc = (baseline.get('results', {}).get(iso, {})
-                     .get('thresholds', {}).get(t_str, {}).get('scenarios', {}))
-            rp_sc = (tracks.get('results', {}).get(iso, {})
-                     .get('cost_to_replace', {}).get(t_str, {}).get('scenarios', {}))
+            bl_sc = iso_bl_thresholds.get(t_str, {}).get('scenarios', {})
+            rp_sc = iso_rp_data.get(t_str, {}).get('scenarios', {})
 
             if not bl_sc or not rp_sc:
                 continue
 
-            # Match scenarios by key to compute per-scenario deltas
-            deltas = []
-            bl_costs_matched = []
-            for key in rp_sc:
-                if key in bl_sc:
-                    rp_cost = rp_sc[key]['costs']['effective_cost']
-                    bl_cost = bl_sc[key]['costs']['effective_cost']
-                    deltas.append(rp_cost - bl_cost)
-                    bl_costs_matched.append(bl_cost)
-
-            if not deltas:
+            # Vectorized: match scenarios by key using set intersection
+            common_keys = set(rp_sc) & set(bl_sc)
+            if not common_keys:
                 continue
 
-            d_arr = np.array(deltas)
-            bl_arr = np.array(bl_costs_matched)
+            rp_costs = np.array([rp_sc[k]['costs']['effective_cost'] for k in common_keys])
+            bl_costs_matched = np.array([bl_sc[k]['costs']['effective_cost'] for k in common_keys])
+            d_arr = rp_costs - bl_costs_matched
+
             dp = percentiles(d_arr)
-            pct_premium = dp[50] / np.median(bl_arr) * 100 if np.median(bl_arr) > 0 else 0
+            bl_median = np.median(bl_costs_matched)
+            pct_premium = dp[50] / bl_median * 100 if bl_median > 0 else 0
 
             print(f"  {thr:>5}% | +${dp[10]:>6.1f} +${dp[25]:>6.1f} +${dp[50]:>6.1f} "
                   f"+${dp[75]:>6.1f} +${dp[90]:>6.1f} | {pct_premium:>6.1f}%")
@@ -351,16 +345,19 @@ def main():
         print(f"  {'Thr':>6} | {'Baseline':>10} {'Newbuild':>10} {'CTR':>10} | {'NB wider?':>10}")
         print(f"  {'-'*6}-+-{'-'*10}-{'-'*10}-{'-'*10}-+-{'-'*10}")
 
+        # Extract ISO-level data once
+        iso_bl_thresholds = baseline.get('results', {}).get(iso, {}).get('thresholds', {})
+        iso_tracks = tracks.get('results', {}).get(iso, {})
+
         for thr in THRESHOLDS:
             t_str = str(thr)
             widths = {}
-            for label, source in [('baseline', baseline), ('newbuild', tracks), ('cost_to_replace', tracks)]:
-                if label == 'baseline':
-                    sc = (source.get('results', {}).get(iso, {})
-                          .get('thresholds', {}).get(t_str, {}).get('scenarios', {}))
-                else:
-                    sc = (source.get('results', {}).get(iso, {})
-                          .get(label, {}).get(t_str, {}).get('scenarios', {}))
+
+            bl_sc = iso_bl_thresholds.get(t_str, {}).get('scenarios', {})
+            nb_sc = iso_tracks.get('newbuild', {}).get(t_str, {}).get('scenarios', {})
+            rp_sc = iso_tracks.get('cost_to_replace', {}).get(t_str, {}).get('scenarios', {})
+
+            for label, sc in [('baseline', bl_sc), ('newbuild', nb_sc), ('cost_to_replace', rp_sc)]:
                 if sc:
                     costs, _ = extract_costs_and_mixes(sc)
                     p = percentiles(costs)
