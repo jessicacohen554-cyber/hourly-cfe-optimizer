@@ -4,54 +4,24 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Procurement Strategies | The 8,760 Problem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/shared.css">
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
 <style>
 /* ========== PAGE VARIABLES ========== */
 :root {
-    --navy: #1A2744;
     --slate: #4A4540;
     --light-bg: #F3F4F8;
     --card-bg: #FFFFFF;
-    --accent-green: #22C55E;
-    --accent-amber: #F59E0B;
-    --accent-blue: #0EA5E9;
-    --accent-red: #EF4444;
-    --accent-purple: #9C27B0;
-    --accent-teal: #06B6D4;
-    --font-display: 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
-    --font-body: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+    --font-display: var(--font-heading);
 }
 
-/* ========== GLOBAL RESETS ========== */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* ========== PAGE BODY ========== */
 body {
-    font-family: var(--font-body);
-    background: var(--light-bg);
-    color: var(--slate);
-    line-height: 1.7;
-    -webkit-font-smoothing: antialiased;
-}
-
-/* ========== HEADER ========== */
-.header {
-    background: linear-gradient(135deg, #0f1729 0%, #1a2744 40%, #2d3a5c 100%);
-    color: white;
-    text-align: center;
-    padding: 48px 24px 40px;
-}
-.header h1 {
-    font-family: var(--font-display);
-    font-size: 2.2rem;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    margin-bottom: 8px;
-}
-.header .subtitle {
-    font-size: 1rem;
-    color: rgba(255,255,255,0.7);
-    max-width: 700px;
-    margin: 0 auto;
-    line-height: 1.6;
+    background: var(--bg-page);
 }
 
 /* ========== CONTENT WRAPPER ========== */
@@ -63,17 +33,17 @@ body {
 
 /* ========== INTRO SECTION ========== */
 .intro-section {
-    background: var(--card-bg);
-    border-radius: 16px;
+    background: var(--bg-card);
+    border-radius: var(--radius-xl);
     padding: 40px 36px;
     margin: -20px auto 32px;
     max-width: 960px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    box-shadow: var(--shadow-md);
     position: relative;
     z-index: 2;
 }
 .intro-section h2 {
-    font-family: var(--font-display);
+    font-family: var(--font-heading);
     font-size: 1.5rem;
     color: var(--navy);
     margin-bottom: 12px;
@@ -95,31 +65,31 @@ body {
 }
 .strat-card {
     background: var(--light-bg);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     padding: 20px;
-    border-left: 4px solid #ccc;
+    border-left: 4px solid var(--border);
     transition: transform 0.2s, box-shadow 0.2s;
 }
 .strat-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    box-shadow: var(--shadow-md);
 }
-.strat-card.strat-1 { border-left-color: var(--accent-green); }
-.strat-card.strat-2 { border-left-color: var(--accent-blue); }
-.strat-card.strat-3 { border-left-color: var(--accent-amber); }
+.strat-card.strat-1 { border-left-color: var(--wind); }
+.strat-card.strat-2 { border-left-color: var(--hydro); }
+.strat-card.strat-3 { border-left-color: var(--solar); }
 .strat-card .strat-label {
-    font-family: var(--font-display);
+    font-family: var(--font-heading);
     font-size: 0.75rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     margin-bottom: 4px;
 }
-.strat-card.strat-1 .strat-label { color: #16A34A; }
+.strat-card.strat-1 .strat-label { color: var(--green-pos); }
 .strat-card.strat-2 .strat-label { color: #0284C7; }
-.strat-card.strat-3 .strat-label { color: #D97706; }
+.strat-card.strat-3 .strat-label { color: var(--amber-warn); }
 .strat-card h3 {
-    font-family: var(--font-display);
+    font-family: var(--font-heading);
     font-size: 1.1rem;
     font-weight: 700;
     color: var(--navy);
@@ -128,7 +98,7 @@ body {
 .strat-card p {
     font-size: 0.85rem;
     line-height: 1.55;
-    color: #6B7280;
+    color: var(--text-muted);
     margin-bottom: 0;
 }
 .strat-card .strat-variant {
@@ -136,7 +106,7 @@ body {
     padding-top: 10px;
     border-top: 1px solid rgba(0,0,0,0.06);
     font-size: 0.82rem;
-    color: #6B7280;
+    color: var(--text-muted);
     line-height: 1.5;
 }
 .strat-card .strat-variant strong { color: var(--navy); }
@@ -147,18 +117,18 @@ body {
 }
 .section-badge {
     display: inline-block;
-    font-family: var(--font-display);
+    font-family: var(--font-heading);
     font-size: 0.72rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     padding: 4px 12px;
-    border-radius: 20px;
+    border-radius: var(--radius-pill);
     margin-bottom: 10px;
 }
-.section-badge-green { background: rgba(34,197,94,0.12); color: #16A34A; }
+.section-badge-green { background: rgba(34,197,94,0.12); color: var(--green-pos); }
 .section-block h2 {
-    font-family: var(--font-display);
+    font-family: var(--font-heading);
     font-size: 1.65rem;
     font-weight: 700;
     color: var(--navy);
@@ -175,14 +145,14 @@ body {
 
 /* ========== SIMULATION PANEL ========== */
 .sim-panel {
-    background: var(--card-bg);
-    border-radius: 16px;
+    background: var(--bg-card);
+    border-radius: var(--radius-xl);
     padding: 28px 24px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    box-shadow: var(--shadow-md);
     margin-bottom: 28px;
 }
 .sim-panel h3 {
-    font-family: var(--font-display);
+    font-family: var(--font-heading);
     font-size: 1.15rem;
     font-weight: 700;
     color: var(--navy);
@@ -201,7 +171,7 @@ body {
     border-radius: 10px;
 }
 .sim-btn {
-    font-family: var(--font-display);
+    font-family: var(--font-heading);
     font-size: 0.85rem;
     font-weight: 600;
     padding: 8px 18px;
@@ -217,11 +187,11 @@ body {
 }
 .sim-btn:active { transform: scale(0.97); }
 .sim-btn-play {
-    background: var(--accent-green);
+    background: var(--wind);
     color: white;
 }
-.sim-btn-play:hover { background: #16A34A; }
-.sim-btn-play.paused { background: var(--accent-amber); }
+.sim-btn-play:hover { background: var(--green-pos); }
+.sim-btn-play.paused { background: var(--solar); }
 .sim-btn-reset {
     background: rgba(0,0,0,0.06);
     color: var(--slate);
@@ -235,7 +205,7 @@ body {
     gap: 6px;
 }
 .sim-speed select {
-    font-family: var(--font-display);
+    font-family: var(--font-heading);
     font-size: 0.82rem;
     padding: 4px 8px;
     border: 1px solid #D1D5DB;
@@ -257,13 +227,13 @@ body {
 }
 .sim-progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, var(--accent-green), var(--accent-blue));
+    background: linear-gradient(90deg, var(--wind), var(--hydro));
     border-radius: 3px;
     transition: width 0.3s ease;
     width: 0%;
 }
 .sim-step-label {
-    font-family: var(--font-display);
+    font-family: var(--font-heading);
     font-size: 0.78rem;
     color: #9CA3AF;
     text-align: right;
@@ -280,7 +250,7 @@ body {
     margin-left: auto;
 }
 .strat-toggle button {
-    font-family: var(--font-display);
+    font-family: var(--font-heading);
     font-size: 0.82rem;
     font-weight: 600;
     padding: 6px 16px;
@@ -320,17 +290,17 @@ body {
     box-shadow: 0 0 12px rgba(34,197,94,0.2);
 }
 .iso-card .iso-name {
-    font-family: var(--font-display);
+    font-family: var(--font-heading);
     font-size: 0.85rem;
     font-weight: 700;
     color: var(--navy);
     margin-bottom: 4px;
 }
 .iso-card .iso-threshold {
-    font-family: var(--font-display);
+    font-family: var(--font-data);
     font-size: 1.4rem;
     font-weight: 700;
-    color: var(--accent-green);
+    color: var(--wind);
     line-height: 1;
 }
 .iso-card .iso-threshold-label {
@@ -366,7 +336,7 @@ body {
     text-align: center;
 }
 .counter-value {
-    font-family: var(--font-display);
+    font-family: var(--font-data);
     font-size: 1.6rem;
     font-weight: 700;
     color: var(--navy);
@@ -378,10 +348,10 @@ body {
     margin-top: 4px;
     line-height: 1.3;
 }
-.counter-box.highlight-green .counter-value { color: #16A34A; }
+.counter-box.highlight-green .counter-value { color: var(--green-pos); }
 .counter-box.highlight-blue .counter-value { color: #0284C7; }
-.counter-box.highlight-amber .counter-value { color: #D97706; }
-.counter-box.highlight-red .counter-value { color: #DC2626; }
+.counter-box.highlight-amber .counter-value { color: var(--amber-warn); }
+.counter-box.highlight-red .counter-value { color: var(--red-dark); }
 
 /* ========== CHART CONTAINERS ========== */
 .chart-wrap {
@@ -392,30 +362,30 @@ body {
 }
 
 /* ========== INSIGHT BOXES ========== */
-.insight-box {
+.page-insight-box {
     background: linear-gradient(135deg, #F0FDF4 0%, #ECFDF5 100%);
     border: 1px solid rgba(34,197,94,0.2);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     padding: 20px 24px;
     margin: 24px 0;
     font-size: 0.92rem;
     line-height: 1.7;
 }
-.insight-box.amber {
+.page-insight-box.amber {
     background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
     border-color: rgba(245,158,11,0.2);
 }
-.insight-box.blue {
+.page-insight-box.blue {
     background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
     border-color: rgba(14,165,233,0.2);
 }
-.insight-box.red {
+.page-insight-box.red {
     background: linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%);
     border-color: rgba(239,68,68,0.2);
 }
-.insight-box strong { color: var(--navy); }
-.insight-box h4 {
-    font-family: var(--font-display);
+.page-insight-box strong { color: var(--navy); }
+.page-insight-box h4 {
+    font-family: var(--font-heading);
     font-size: 1rem;
     font-weight: 700;
     color: var(--navy);
@@ -430,7 +400,7 @@ body {
     margin: 16px 0;
 }
 .compare-table th {
-    font-family: var(--font-display);
+    font-family: var(--font-heading);
     font-weight: 700;
     color: var(--navy);
     text-align: left;
@@ -446,8 +416,8 @@ body {
     color: var(--slate);
 }
 .compare-table tr:last-child td { border-bottom: none; }
-.compare-table .val-green { color: #16A34A; font-weight: 600; }
-.compare-table .val-red { color: #DC2626; font-weight: 600; }
+.compare-table .val-green { color: var(--green-pos); font-weight: 600; }
+.compare-table .val-red { color: var(--red-dark); font-weight: 600; }
 
 /* ========== NARRATIVE PROSE ========== */
 .narrative-prose {
@@ -476,14 +446,14 @@ body {
 .cfe-tile.positive { border-color: rgba(34,197,94,0.3); }
 .cfe-tile.zero { border-color: rgba(156,163,175,0.2); }
 .cfe-tile .cfe-iso {
-    font-family: var(--font-display);
+    font-family: var(--font-heading);
     font-size: 0.85rem;
     font-weight: 700;
     color: var(--navy);
     margin-bottom: 4px;
 }
 .cfe-tile .cfe-delta {
-    font-family: var(--font-display);
+    font-family: var(--font-heading);
     font-size: 1.5rem;
     font-weight: 700;
     line-height: 1.1;
@@ -550,7 +520,7 @@ body {
 .participation-selector { margin: 20px 0; }
 .participation-selector label {
     display: block;
-    font-family: var(--font-display);
+    font-family: var(--font-heading);
     font-size: 0.85rem;
     font-weight: 700;
     color: var(--navy);
@@ -568,7 +538,7 @@ body {
     display: inline-block;
     padding: 8px 20px;
     border-radius: 9999px;
-    font-family: var(--font-display);
+    font-family: var(--font-heading);
     font-size: 0.85rem;
     font-weight: 700;
     cursor: pointer;
@@ -602,7 +572,7 @@ body {
 .baseline-card:hover { border-color: rgba(34,197,94,0.3); }
 .baseline-card.active { border-color: var(--accent-green); background: rgba(34,197,94,0.06); }
 .baseline-card .bl-label {
-    font-family: var(--font-display);
+    font-family: var(--font-heading);
     font-size: 0.72rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -611,7 +581,7 @@ body {
     margin-bottom: 4px;
 }
 .baseline-card .bl-value {
-    font-family: var(--font-display);
+    font-family: var(--font-heading);
     font-size: 2rem;
     font-weight: 700;
     color: var(--navy);
@@ -633,7 +603,7 @@ body {
     justify-content: space-between;
     align-items: baseline;
     margin-bottom: 6px;
-    font-family: var(--font-display);
+    font-family: var(--font-heading);
     font-size: 0.82rem;
     color: var(--slate);
 }
@@ -667,7 +637,7 @@ body {
 .co2-target-reached {
     display: none;
     text-align: center;
-    font-family: var(--font-display);
+    font-family: var(--font-heading);
     font-size: 0.95rem;
     font-weight: 700;
     color: #16A34A;
@@ -691,7 +661,7 @@ body {
     padding: 16px;
 }
 .chart-panel h4 {
-    font-family: var(--font-display);
+    font-family: var(--font-heading);
     font-size: 0.82rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -708,7 +678,7 @@ body {
     border-radius: 10px;
     padding: 12px 14px;
     margin-top: 12px;
-    font-family: var(--font-display);
+    font-family: var(--font-heading);
     font-size: 0.8rem;
     color: #6B7280;
     line-height: 1.6;
@@ -741,6 +711,7 @@ body {
 <header class="header">
     <h1>Corporate Procurement Strategies</h1>
     <p class="subtitle">How different approaches to clean energy procurement drive real-world grid decarbonization &mdash; and where each strategy actually deploys capital.</p>
+    <div class="header-accent"></div>
 </header>
 
 <!-- INTRO -->
@@ -955,7 +926,7 @@ body {
     <div class="iso-cfe-grid" id="cfeTileGrid"></div>
 
     <!-- First deployment callout -->
-    <div class="insight-box blue" id="firstDeployCallout" style="margin-top:20px;"></div>
+    <div class="page-insight-box blue" id="firstDeployCallout" style="margin-top:20px;"></div>
 </div>
 
 <!-- 1A vs 1B COMPARISON -->
@@ -985,7 +956,7 @@ body {
         <canvas id="co2CompareChart"></canvas>
     </div>
 
-    <div class="insight-box">
+    <div class="page-insight-box">
         <h4>Why 1B is the superior method</h4>
         <p>
             At 80% C&amp;I participation, Strategy 1B attributes <strong id="co2DiffPct">~33%</strong>
@@ -1022,7 +993,7 @@ body {
         <canvas id="fuelDisplaceChart"></canvas>
     </div>
 
-    <div class="insight-box amber">
+    <div class="page-insight-box amber">
         <h4>CAISO: No coal wall at all</h4>
         <p>
             CAISO is the only ISO with zero coal in its dispatch stack &mdash; its fossil fleet is
@@ -1053,7 +1024,7 @@ body {
         <canvas id="resourceByPartChart"></canvas>
     </div>
 
-    <div class="insight-box blue">
+    <div class="page-insight-box blue">
         <h4>VRE first, then clean firm takes over</h4>
         <p>
             At 2% C&amp;I participation, wind and solar account for nearly all new deployment (480 TWh
@@ -1064,7 +1035,7 @@ body {
         </p>
     </div>
 
-    <div class="insight-box red" style="margin-top:16px;">
+    <div class="page-insight-box red" style="margin-top:16px;">
         <h4>Investment deserts: NEISO, NYISO, and CAISO lag behind</h4>
         <p>
             The three most expensive ISOs &mdash; NEISO, NYISO, and CAISO &mdash; receive almost no consequential
@@ -1079,9 +1050,18 @@ body {
 </div><!-- /content-wrap -->
 
 <!-- FOOTER -->
-<footer style="text-align:center;padding:32px 20px;color:#9CA3AF;font-size:0.8rem;background:var(--navy);color:rgba(255,255,255,0.5);">
-    The 8,760 Problem &copy; 2026 &mdash; Hourly Clean Energy Optimization Model
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="dashboard.html">Cost Optimizer</a>
+        <a href="abatement_dashboard.html">CO&#8322; Abatement</a>
+        <a href="scenario_comparison.html">Scenarios</a>
+        <a href="research_paper.html">Research Paper</a>
+        <a href="optimizer_methodology.html">Methodology</a>
+    </div>
+    <div class="footer-note">The 8,760 Problem &copy; 2026 &mdash; Hourly Clean Energy Optimization Model</div>
 </footer>
+<div class="bottom-banner"></div>
 
 <!-- ================================================================== -->
 <!-- SCRIPTS                                                            -->
@@ -1247,7 +1227,7 @@ var RES_LABELS = {
 };
 var PART_KEYS = ['2pct','5pct','10pct','15pct','20pct','30pct','40pct','50pct','60pct','80pct'];
 var PART_PCTS = [2, 5, 10, 15, 20, 30, 40, 50, 60, 80];
-var FONT = "'Barlow Semi Condensed', 'Arial Narrow', sans-serif";
+var FONT = getComputedStyle(document.documentElement).getPropertyValue('--font-heading').trim() || "'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif";
 
 // ---- State ----
 var simRunning = false;
