@@ -544,7 +544,7 @@ const PIPELINE = [
         badge: 's1',
         time: '~3-6 hrs',
         timeClass: 'hours',
-        desc: '4D adaptive grid search over clean_firm, solar, wind, hydro with procurement sweep. Battery 4hr (85% RTE) and LDES 100hr (50% RTE) dispatch. Produces physics-validated resource mixes across 15 thresholds x 7 ISOs.',
+        desc: '4D adaptive grid search over clean_firm, solar, wind, hydro with procurement sweep. Battery 4hr (85% RTE) and LDES 100hr (50% RTE) dispatch. Produces physics-validated resource mixes across 21 thresholds x 7 ISOs.',
         tooltip: 'The most compute-intensive step. Searches the entire resource mix space to find all physically feasible portfolios that meet each CFE threshold. 4D grid: clean_firm (0-120%), solar (0-250%), wind (0-250%), hydro (capped). Battery and LDES dispatch algorithms simulate 8760-hour storage cycling.',
         uses: 'Step 0 generation/demand profiles',
         scripts: [
@@ -902,7 +902,7 @@ const PIPELINE = [
                 consumers: ['All dashboard pages'],
                 consumerBadges: ['all'],
                 fields: [
-                    ['THRESHOLDS', 'Array of 15 CFE thresholds [50, 55, ..., 99.99]'],
+                    ['THRESHOLDS', 'Array of 21 CFE thresholds [10, 20, 30, 40, 50, 55, ..., 99.5, 99.9, 99.99]'],
                     ['ISOS', "Array of 7 ISO names ['CAISO', ...]"],
                     ['RESOURCE_MIX_DATA', '{iso: {threshold: {resource: %}}} — optimal mix per scenario'],
                     ['EFFECTIVE_COST_DATA', '{iso: [costs per threshold]} — clean energy cost'],

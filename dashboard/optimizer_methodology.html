@@ -472,7 +472,7 @@
     </p>
     <p>
         The tool <strong>co-optimizes cost and hourly matching</strong> simultaneously. For each target
-        threshold (50%, 55%, 60%, 65%, 70%, 75%, 80%, 85%, 87.5%, 90%, 92.5%, 95%, 97.5%, 99%, &ge;99.99%&mdash;15 thresholds
+        threshold (50%, 55%, 60%, 65%, 70%, 75%, 80%, 85%, 10%, 20%, 30%, 40%, 50%, 55%, 60%, 65%, 70%, 75%, 80%, 85%, 87.5%, 90%, 92.5%, 95%, 97.5%, 99%, 99.5%, 99.9%, &ge;99.99%&mdash;21 thresholds
         with 2.5% granularity in the inflection zone), the model searches across procurement levels (70% to 300%
         of annual demand), resource mix combinations (clean firm, solar, wind, hydro), and battery + LDES storage
         dispatch levels to find the <strong>lowest-cost portfolio</strong> that meets or exceeds the target.
@@ -703,7 +703,7 @@
         the matching frontier&mdash;the best possible matching at each procurement level.
     </p>
 
-    <p><strong>Strategy B &mdash; Threshold (Min-Cost):</strong> For each of the 15 target thresholds (50%
+    <p><strong>Strategy B &mdash; Threshold (Min-Cost):</strong> For each of the 21 target thresholds (10%
         through &ge;99.99%, with 5% granularity from 50&ndash;70%, 2.5% from 87.5%&ndash;99%), the model searches simultaneously across procurement levels AND resource mixes to find
         the <strong>cheapest combination</strong> that meets or exceeds the target. This produces the
         threshold-specific results with cost estimates.
