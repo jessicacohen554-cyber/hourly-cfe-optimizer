@@ -190,19 +190,19 @@
 .nuclear-callout {
     max-width: var(--max-content);
     margin: 0 auto;
-    padding: 0 var(--pad-page);
+    padding: 0;
 }
 .nuclear-callout-inner {
-    background: linear-gradient(135deg, rgba(239,68,68,0.06) 0%, rgba(245,158,11,0.05) 100%);
-    border: 1px solid rgba(239,68,68,0.2);
+    background: rgba(239,68,68,0.10);
+    border: 1px solid rgba(239,68,68,0.25);
     border-left: 4px solid var(--red);
     border-radius: 14px;
     padding: 24px 28px;
     display: flex;
     gap: 20px;
     align-items: flex-start;
-    margin-top: -16px;
-    margin-bottom: 16px;
+    margin-top: 0;
+    margin-bottom: 0;
 }
 .nuclear-callout-icon {
     font-size: 1.6rem;
@@ -214,13 +214,13 @@
     font-family: var(--font-heading);
     font-size: 0.95rem;
     font-weight: 800;
-    color: var(--red-dark);
+    color: #f87171;
     margin-bottom: 6px;
     letter-spacing: -0.2px;
 }
 .nuclear-callout-text p {
     font-size: 0.85rem;
-    color: rgba(15,23,42,0.65);
+    color: rgba(255,255,255,0.68);
     line-height: 1.65;
     margin: 0;
 }
@@ -473,15 +473,19 @@
 </section>
 
 <!-- NUCLEAR RETIREMENT CALLOUT -->
-<div class="nuclear-callout">
-    <div class="nuclear-callout-inner">
-        <div class="nuclear-callout-icon">&#9762;</div>
-        <div class="nuclear-callout-text" id="nuclearCalloutContent">
-            <h4>Existing Nuclear at Risk: Wholesale prices cross below operating cost by ~2038 (85% clean)</h4>
-            <p>PJM's 32 GW nuclear fleet needs <strong>$25&ndash;30/MWh</strong> to cover operating costs. Our LMP model shows median wholesale prices fall through this floor between the SBTi ~2038 (85%) and 2040 (90%) milestones &mdash; and off-peak prices collapse even earlier. By the SBTi 2045 target (95%), nearly half the year prices at zero or below. <a href="#nuclear-deepdive" style="color:var(--accent-cyan);text-decoration:underline;">Jump to full analysis &darr;</a></p>
+<section class="section-dark" style="padding-top: var(--space-xl); padding-bottom: var(--space-xl);">
+<div class="section-dark-inner">
+    <div class="nuclear-callout">
+        <div class="nuclear-callout-inner">
+            <div class="nuclear-callout-icon">&#9762;</div>
+            <div class="nuclear-callout-text" id="nuclearCalloutContent">
+                <h4>Existing Nuclear at Risk: Wholesale prices cross below operating cost by ~2038 (85% clean)</h4>
+                <p>PJM's 32 GW nuclear fleet needs <strong>$25&ndash;30/MWh</strong> to cover operating costs. Our LMP model shows median wholesale prices fall through this floor between the SBTi ~2038 (85%) and 2040 (90%) milestones &mdash; and off-peak prices collapse even earlier. By the SBTi 2045 target (95%), nearly half the year prices at zero or below. <a href="#nuclear-deepdive" style="color:var(--accent-cyan);text-decoration:underline;">Jump to full analysis &darr;</a></p>
+            </div>
         </div>
     </div>
 </div>
+</section>
 
 <!-- ================================================================ -->
 <!-- SECTION 1: Fuel Prices Dominate                                   -->
