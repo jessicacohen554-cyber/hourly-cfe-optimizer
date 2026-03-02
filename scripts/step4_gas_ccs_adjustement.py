@@ -98,22 +98,32 @@ FULL_LCOE_TABLES = {
         'Medium': {'CAISO': 86, 'ERCOT': 71, 'PJM': 79, 'NYISO': 99, 'NEISO': 96, 'MISO': 74, 'SPP': 68},
         'High':   {'CAISO': 115, 'ERCOT': 92, 'PJM': 102, 'NYISO': 128, 'NEISO': 122, 'MISO': 96, 'SPP': 88},
     },
+    # ---- Storage: annualized capacity cost ($/MWh-cap) ----
+    # Same format as step3 LCOE_TABLES. NOT LCOS. Annualized fixed costs of storage
+    # capacity, normalized to demand. TX=0 for storage (baked into regional CAPEX).
+    # Formula: CAPEX_kWh × (CRF + FOM_rate) / 8760 × 1000 × regional_mult
+    # Source: NREL ATB 2024 component model. See step3 for full derivation.
     'battery': {
-        'Low':    {'CAISO': 77, 'ERCOT': 69, 'PJM': 74, 'NYISO': 81, 'NEISO': 79, 'MISO': 71, 'SPP': 68},
-        'Medium': {'CAISO': 102, 'ERCOT': 92, 'PJM': 98, 'NYISO': 108, 'NEISO': 105, 'MISO': 94, 'SPP': 90},
-        'High':   {'CAISO': 133, 'ERCOT': 120, 'PJM': 127, 'NYISO': 140, 'NEISO': 137, 'MISO': 122, 'SPP': 117},
+        'Low':    {'CAISO': 3.86, 'ERCOT': 3.48, 'PJM': 3.70, 'NYISO': 4.08, 'NEISO': 3.97, 'MISO': 3.62, 'SPP': 3.52},
+        'Medium': {'CAISO': 4.75, 'ERCOT': 4.27, 'PJM': 4.55, 'NYISO': 5.02, 'NEISO': 4.87, 'MISO': 4.46, 'SPP': 4.33},
+        'High':   {'CAISO': 6.03, 'ERCOT': 5.43, 'PJM': 5.78, 'NYISO': 6.38, 'NEISO': 6.20, 'MISO': 5.66, 'SPP': 5.50},
+    },
+    'battery8': {
+        'Low':    {'CAISO': 3.30, 'ERCOT': 2.97, 'PJM': 3.16, 'NYISO': 3.49, 'NEISO': 3.39, 'MISO': 3.10, 'SPP': 3.01},
+        'Medium': {'CAISO': 4.06, 'ERCOT': 3.66, 'PJM': 3.89, 'NYISO': 4.30, 'NEISO': 4.17, 'MISO': 3.81, 'SPP': 3.70},
+        'High':   {'CAISO': 5.19, 'ERCOT': 4.67, 'PJM': 4.97, 'NYISO': 5.49, 'NEISO': 5.33, 'MISO': 4.87, 'SPP': 4.73},
     },
     'ldes': {
-        'Low':    {'CAISO': 135, 'ERCOT': 116, 'PJM': 128, 'NYISO': 150, 'NEISO': 143, 'MISO': 120, 'SPP': 114},
-        'Medium': {'CAISO': 180, 'ERCOT': 155, 'PJM': 170, 'NYISO': 200, 'NEISO': 190, 'MISO': 160, 'SPP': 152},
-        'High':   {'CAISO': 234, 'ERCOT': 202, 'PJM': 221, 'NYISO': 260, 'NEISO': 247, 'MISO': 208, 'SPP': 198},
+        'Low':    {'CAISO': 0.38, 'ERCOT': 0.33, 'PJM': 0.36, 'NYISO': 0.42, 'NEISO': 0.40, 'MISO': 0.34, 'SPP': 0.33},
+        'Medium': {'CAISO': 0.63, 'ERCOT': 0.54, 'PJM': 0.59, 'NYISO': 0.70, 'NEISO': 0.66, 'MISO': 0.56, 'SPP': 0.55},
+        'High':   {'CAISO': 1.00, 'ERCOT': 0.86, 'PJM': 0.94, 'NYISO': 1.11, 'NEISO': 1.06, 'MISO': 0.90, 'SPP': 0.88},
     },
     # Green H2: electrolysis + salt cavern + H2 turbine. 35% RTE.
     # Shares 'ldes_lvl' sensitivity toggle (both long-duration storage).
     'h2': {
-        'Low':    {'CAISO': 210, 'ERCOT': 185, 'PJM': 200, 'NYISO': 230, 'NEISO': 220, 'MISO': 190, 'SPP': 182},
-        'Medium': {'CAISO': 300, 'ERCOT': 265, 'PJM': 285, 'NYISO': 330, 'NEISO': 315, 'MISO': 272, 'SPP': 260},
-        'High':   {'CAISO': 420, 'ERCOT': 370, 'PJM': 400, 'NYISO': 460, 'NEISO': 440, 'MISO': 380, 'SPP': 365},
+        'Low':    {'CAISO': 1.98, 'ERCOT': 1.75, 'PJM': 1.88, 'NYISO': 2.18, 'NEISO': 2.08, 'MISO': 1.80, 'SPP': 1.72},
+        'Medium': {'CAISO': 2.90, 'ERCOT': 2.56, 'PJM': 2.76, 'NYISO': 3.19, 'NEISO': 3.05, 'MISO': 2.63, 'SPP': 2.52},
+        'High':   {'CAISO': 4.09, 'ERCOT': 3.61, 'PJM': 3.88, 'NYISO': 4.50, 'NEISO': 4.29, 'MISO': 3.71, 'SPP': 3.54},
     },
 }
 
@@ -142,24 +152,11 @@ FULL_TRANSMISSION_TABLES = {
         'Medium': {'CAISO': 2, 'ERCOT': 2, 'PJM': 3, 'NYISO': 4, 'NEISO': 3, 'MISO': 2, 'SPP': 2},
         'High': {'CAISO': 4, 'ERCOT': 3, 'PJM': 5, 'NYISO': 7, 'NEISO': 6, 'MISO': 4, 'SPP': 3},
     },
-    'battery': {
-        'None': {'CAISO': 0, 'ERCOT': 0, 'PJM': 0, 'NYISO': 0, 'NEISO': 0, 'MISO': 0, 'SPP': 0},
-        'Low': {'CAISO': 0, 'ERCOT': 0, 'PJM': 0, 'NYISO': 1, 'NEISO': 1, 'MISO': 0, 'SPP': 0},
-        'Medium': {'CAISO': 1, 'ERCOT': 1, 'PJM': 1, 'NYISO': 2, 'NEISO': 2, 'MISO': 1, 'SPP': 1},
-        'High': {'CAISO': 2, 'ERCOT': 2, 'PJM': 3, 'NYISO': 4, 'NEISO': 3, 'MISO': 2, 'SPP': 2},
-    },
-    'ldes': {
-        'None': {'CAISO': 0, 'ERCOT': 0, 'PJM': 0, 'NYISO': 0, 'NEISO': 0, 'MISO': 0, 'SPP': 0},
-        'Low': {'CAISO': 1, 'ERCOT': 1, 'PJM': 1, 'NYISO': 2, 'NEISO': 2, 'MISO': 1, 'SPP': 1},
-        'Medium': {'CAISO': 2, 'ERCOT': 2, 'PJM': 3, 'NYISO': 4, 'NEISO': 3, 'MISO': 2, 'SPP': 2},
-        'High': {'CAISO': 4, 'ERCOT': 3, 'PJM': 5, 'NYISO': 7, 'NEISO': 6, 'MISO': 3, 'SPP': 3},
-    },
-    'h2': {
-        'None': {'CAISO': 0, 'ERCOT': 0, 'PJM': 0, 'NYISO': 0, 'NEISO': 0, 'MISO': 0, 'SPP': 0},
-        'Low': {'CAISO': 2, 'ERCOT': 2, 'PJM': 2, 'NYISO': 3, 'NEISO': 3, 'MISO': 2, 'SPP': 2},
-        'Medium': {'CAISO': 4, 'ERCOT': 3, 'PJM': 4, 'NYISO': 6, 'NEISO': 5, 'MISO': 3, 'SPP': 3},
-        'High': {'CAISO': 7, 'ERCOT': 5, 'PJM': 7, 'NYISO': 10, 'NEISO': 9, 'MISO': 6, 'SPP': 5},
-    },
+    # Storage TX = 0: regional variation already baked into annualized capacity costs
+    'battery':  {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
+    'battery8': {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
+    'ldes':     {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
+    'h2':       {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
     'hydro': {
         'None': {'CAISO': 0, 'ERCOT': 0, 'PJM': 0, 'NYISO': 0, 'NEISO': 0, 'MISO': 0, 'SPP': 0},
         'Low': {'CAISO': 0, 'ERCOT': 0, 'PJM': 0, 'NYISO': 0, 'NEISO': 0, 'MISO': 0, 'SPP': 0},
@@ -186,6 +183,8 @@ RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
 _LCOE_FLAT = {}    # key: (resource, level, iso) → float
 _TX_FLAT = {}      # key: (resource, level, iso) → float
 
+_ALL_ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
+
 def _build_flat_lookups():
     """Build flat (resource, level, iso) → cost lookup dicts at module load."""
     for resource, level_dict in FULL_LCOE_TABLES.items():
@@ -193,9 +192,14 @@ def _build_flat_lookups():
             for iso, val in iso_dict.items():
                 _LCOE_FLAT[(resource, level, iso)] = val
     for resource, level_dict in FULL_TRANSMISSION_TABLES.items():
-        for level, iso_dict in level_dict.items():
-            for iso, val in iso_dict.items():
-                _TX_FLAT[(resource, level, iso)] = val
+        for level, val_or_dict in level_dict.items():
+            if isinstance(val_or_dict, dict):
+                for iso, val in val_or_dict.items():
+                    _TX_FLAT[(resource, level, iso)] = val
+            else:
+                # Scalar value (e.g., 0 for storage with TX baked into CAPEX)
+                for iso in _ALL_ISOS:
+                    _TX_FLAT[(resource, level, iso)] = val_or_dict
 
 _build_flat_lookups()
 
@@ -660,6 +664,7 @@ def _cached_base_maps(scenario_key, iso):
         'wind': _LCOE_FLAT[('wind', renewable, iso)],
         'clean_firm': _LCOE_FLAT[('clean_firm', firm, iso)],
         'battery': _LCOE_FLAT[('battery', battery, iso)],
+        'battery8': _LCOE_FLAT[('battery8', battery, iso)],
         'ldes': _LCOE_FLAT[('ldes', ldes, iso)],
         'h2': _LCOE_FLAT[('h2', ldes, iso)],  # H2 shares LDES toggle
         'hydro': 0,
@@ -678,7 +683,7 @@ def compute_costs_for_scenario(iso, resource_mix, battery_pct,
                                 apply_45q=True, neiso_gas_adder=False,
                                 tranche_cf_lcoe=None,
                                 existing_shares_override=None,
-                                h2_pct=0):
+                                h2_pct=0, battery8_pct=0):
     """Recalculate costs for a scenario with optional corrections.
 
     Args:
@@ -741,6 +746,10 @@ def compute_costs_for_scenario(iso, resource_mix, battery_pct,
     battery_cost = (battery_pct / 100.0) * battery_cost_rate
     total_cost_per_demand += battery_cost
 
+    battery8_cost_rate = lcoe_map.get('battery8', lcoe_map['battery']) + tx_map.get('battery8', 0)
+    battery8_cost = (battery8_pct / 100.0) * battery8_cost_rate
+    total_cost_per_demand += battery8_cost
+
     ldes_cost_rate = lcoe_map['ldes'] + tx_map.get('ldes', 0)
     ldes_cost = (ldes_pct / 100.0) * ldes_cost_rate
     total_cost_per_demand += ldes_cost
@@ -798,6 +807,7 @@ def add_neiso_gas_constraint(data):
                 neiso_gas_adder=True,
                 tranche_cf_lcoe=tcl,
                 h2_pct=scenario.get('h2_dispatch_pct', 0),
+                battery8_pct=scenario.get('battery8_dispatch_pct', 0),
             )
 
             neiso_no45q_costs = compute_costs_for_scenario(
@@ -810,6 +820,7 @@ def add_neiso_gas_constraint(data):
                 neiso_gas_adder=True,
                 tranche_cf_lcoe=tcl,
                 h2_pct=scenario.get('h2_dispatch_pct', 0),
+                battery8_pct=scenario.get('battery8_dispatch_pct', 0),
             )
 
             scenario['neiso_gas_adjusted'] = neiso_costs
@@ -861,6 +872,7 @@ def add_no45q_overlay(data, run_isos):
                     neiso_gas_adder=False,
                     tranche_cf_lcoe=get_tranche_cf_lcoe(scenario),
                     h2_pct=scenario.get('h2_dispatch_pct', 0),
+                    battery8_pct=scenario.get('battery8_dispatch_pct', 0),
                 )
 
                 scenario['no_45q_costs'] = no45q_costs
@@ -1196,15 +1208,18 @@ def process_dg_corrections(dg_rows, run_isos):
         }
 
         # [1] NEISO gas constraint
+        battery8_pct_dg = row.get('battery8_dispatch_pct', 0) or 0
         if iso == 'NEISO':
             neiso_costs = compute_costs_for_scenario(
                 iso, resource_mix, battery_pct, ldes_pct,
                 match_score, scenario_key, apply_45q=True, neiso_gas_adder=True,
-                existing_shares_override=existing_shares_scaled, h2_pct=h2_pct)
+                existing_shares_override=existing_shares_scaled, h2_pct=h2_pct,
+                battery8_pct=battery8_pct_dg)
             neiso_no45q = compute_costs_for_scenario(
                 iso, resource_mix, battery_pct, ldes_pct,
                 match_score, scenario_key, apply_45q=False, neiso_gas_adder=True,
-                existing_shares_override=existing_shares_scaled, h2_pct=h2_pct)
+                existing_shares_override=existing_shares_scaled, h2_pct=h2_pct,
+                battery8_pct=battery8_pct_dg)
             for ckey in ['total_cost', 'effective_cost', 'incremental', 'wholesale']:
                 row[f'neiso_gas_adj_{ckey}'] = neiso_costs.get(ckey)
                 row[f'neiso_gas_no45q_{ckey}'] = neiso_no45q.get(ckey)
@@ -1218,7 +1233,8 @@ def process_dg_corrections(dg_rows, run_isos):
             no45q_costs = compute_costs_for_scenario(
                 iso, resource_mix, battery_pct, ldes_pct,
                 match_score, scenario_key, apply_45q=False, neiso_gas_adder=False,
-                existing_shares_override=existing_shares_scaled, h2_pct=h2_pct)
+                existing_shares_override=existing_shares_scaled, h2_pct=h2_pct,
+                battery8_pct=battery8_pct_dg)
         else:
             no45q_costs = neiso_no45q  # Already computed above
         for ckey in ['total_cost', 'effective_cost', 'incremental', 'wholesale']:
