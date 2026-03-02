@@ -722,16 +722,12 @@ def apply_existing_clean_floor(arrays, iso):
 def apply_hydro_cap(arrays, iso):
     """Filter PFS arrays to keep only mixes where hydro <= existing hydro cap.
 
-    The PFS (Step 1) explores hydro on a 5% grid (0, 5, 10, ...). Storage
-    refinement (Step 1d) adds battery/LDES dispatch to near-miss mixes but
-    preserves the coarse hydro values. If the cap falls between grid points
-    (e.g., PJM hydro=2%, cap=2%), a strict filter kills ALL storage-containing
-    mixes because they only exist at hydro=5%+.
+    The PFS (Step 1) explores hydro up to HYDRO_CAP + 10% adder for physics
+    experimentation. Those extended-hydro mixes belong in the EF cache for
+    Track 2 (newbuild analysis) but must NOT enter Track 1 baseline costing,
+    where hydro is existing-only at $0 wholesale.
 
-    Fix: snap the cap up to the next PFS grid step (multiple of 5) so that
-    mixes at the first grid point above the cap survive. The hydro "excess"
-    is at most 4% of procurement — negligible vs the value of preserving
-    storage dispatch in the optimization.
+    Cap is ceil(GRID_MIX_SHARES[iso]['hydro']) since PFS uses integer %.
 
     Args:
         arrays: dict of numpy arrays keyed by resource name + dispatch fields
@@ -742,11 +738,7 @@ def apply_hydro_cap(arrays, iso):
         n_removed: count of mixes removed
     """
     import math
-    PFS_GRID_STEP = 5
-    raw_cap = GRID_MIX_SHARES[iso].get('hydro', 0)
-    # Snap up to next PFS grid step so storage mixes at the first grid point
-    # above the actual cap survive filtering
-    hydro_cap = int(math.ceil(raw_cap / PFS_GRID_STEP) * PFS_GRID_STEP)
+    hydro_cap = math.ceil(GRID_MIX_SHARES[iso].get('hydro', 0))
     N = len(arrays['clean_firm'])
     mask = arrays['hydro'] <= hydro_cap
     n_removed = N - int(mask.sum())
