@@ -2372,6 +2372,36 @@ CCS cost is controlled by two independent toggles: **CCS Cost** (L/M/H maturity)
 
 **45Q behavioral note**: With 45Q ON, CCS modeled as flat baseload (45Q incentivizes max CF to maximize capture credits). With 45Q OFF, CCS dispatch assumption unchanged in Step 3 (same cached physics), but the cost premium reflects the absence of the policy subsidy.
 
+#### 5.4.3 Regional CCS Capacity Caps (TWh/yr)
+
+CCS-CCGT allocation is capped per ISO based on geologic CO₂ storage availability, infrastructure, and regulatory feasibility — identical pattern to the geothermal cap (`GEO_CAP_TWH = 39.0`) for CAISO. The cap is enforced in Step 3 cost optimization (merit-order tranche logic) and will be propagated to Step 1 mix filtering in the next physics run.
+
+```python
+CCS_CAP_TWH = {
+    'CAISO': 25.0,    # 11% of 224 TWh demand
+    'ERCOT': 200.0,   # 41% of 488 TWh demand
+    'PJM':   125.0,   # 15% of 843 TWh demand
+    'NYISO': 0.0,     # Hard zero — no geologic storage
+    'NEISO': 0.0,     # Hard zero — no geologic storage
+    'MISO':  200.0,   # 30% of 660 TWh demand
+    'SPP':   50.0,    # 17% of 296 TWh demand
+}
+```
+
+**Regional justification:**
+
+- **NYISO (0 TWh)**: No suitable onshore CO₂ storage geology. Newark Rift Basin assessed as "low potential" by USGS/NETL. Offshore Atlantic (Baltimore Canyon Trough) is decades from permitting. Zero Class VI well applications filed, state not pursuing primacy.
+- **NEISO (0 TWh)**: Crystalline and metamorphic bedrock — zero identified CO₂ storage units in the USGS National Carbon Sequestration Database. No saline formations or depleted reservoirs anywhere in New England. Additionally constrained by winter gas pipeline bottleneck (Step 4 adder).
+- **CAISO (25 TWh / 11%)**: Excellent geology (San Joaquin Basin 14–56 Gt, Sacramento Basin ~3 Gt) but SB 905 imposes strictest CCS regulatory framework in US. Zero operating CCS projects, zero CO₂ pipeline infrastructure in-state.
+- **SPP (50 TWh / 17%)**: Good geology (Anadarko Basin, Arbuckle Group — 780 Mt P50 in KS) but Oklahoma induced seismicity from underground injection creates regulatory/social resistance. State pursuing but has not received Class VI primacy.
+- **PJM (125 TWh / 15%)**: Stark east-west split. Western PJM (WV/OH/western PA) sits on Appalachian Basin (450–500 Gt theoretical); WV received Class VI primacy Jan 2025. Eastern PJM (DC/MD/VA/NJ/DE — majority of demand) has unsuitable Piedmont/Coastal Plain geology. No CO₂ transport infrastructure connecting east to west.
+- **ERCOT (200 TWh / 41%)**: Best CCS region in US. Gulf Coast has 20+ Gt depleted offshore fields, 100s Gt offshore saline formations. TX received Class VI primacy Dec 2025 (64 apps from EPA). Denbury CO₂ pipeline network (900+ mi) is densest in US. Multiple storage hubs under development.
+- **MISO (200 TWh / 30%)**: Mt. Simon Sandstone (12–172 Gt) is the most characterized formation in US with 2+ Mt successfully injected at ADM Decatur. ND has had primacy since 2018 with 3 active projects. Broadwing 400 MW CCS-CCGT (Google-backed, FID Q2 2026) would be first in US.
+
+**Implementation**: Step 3 enforces `ccs_twh = min(ccs_twh, CCS_CAP_TWH[iso])` in all merit-order paths. Step 1 will filter `ccs_pct × demand_TWh ≤ CCS_CAP_TWH[iso]` in the next physics run (deferred to avoid re-running Step 1 this iteration).
+
+*Sources: USGS National Carbon Sequestration Database (NATCARB), NETL Carbon Storage Atlas V (2015), DOE CarbonSAFE program status (2024–2025), EPA Class VI well permit tracker, California SB 905 (2022), Princeton Net-Zero America (2021), Global CCS Institute Status Report (2024), IEEFA CCS deployment analysis (2024).*
+
 ### 5.5 Battery LCOS ($/MWh) — Regionalized
 
 | Level | CAISO | ERCOT | PJM | NYISO | NEISO |
