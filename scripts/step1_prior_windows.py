@@ -32,8 +32,11 @@ except ImportError:
     sys.exit(1)
 
 
-# Buffer added to prior [min, max] per resource (absolute percentage points)
-PRIOR_BUFFER_PP = 15
+# Buffer added to prior [min, max] per resource (absolute percentage points).
+# 8pp is generous — zone union across thresholds already widens ranges,
+# and the coarse grid (5% step) provides additional coverage beyond EF bounds.
+# Previous 15pp produced near-full-range bounds for most zones.
+PRIOR_BUFFER_PP = 8
 
 # Zone definitions: (name, score_low, score_high, thresholds_covered)
 ZONES = [
