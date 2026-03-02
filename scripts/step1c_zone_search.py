@@ -97,13 +97,18 @@ LOW_THRESHOLDS = [10, 20, 30, 40]
 
 
 def get_near_miss_width(threshold):
-    """Near-miss half-width by threshold range (in 0-1 score space)."""
-    if threshold >= 95:
-        return 0.15
+    """Near-miss half-width by threshold range (in 0-1 score space).
+
+    High-solar mixes can have low base scores but massive curtailment
+    surplus that storage captures, so sub-85% thresholds need a wider
+    window.  Step1d applies a surplus >= gap filter at binning time to
+    prevent candidate bloat even with wider windows here.
+    """
+    if threshold >= 99:
+        return 0.20   # 20pp — last-mile, few mixes
     elif threshold >= 85:
-        return 0.30
-    else:
-        return 0.40
+        return 0.20   # 20pp
+    return 0.25        # 25pp — high-solar + storage mixes need wider window
 
 
 def _row_keys(combos):
