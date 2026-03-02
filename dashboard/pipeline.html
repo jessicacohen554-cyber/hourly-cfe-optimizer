@@ -258,8 +258,7 @@ body { background: var(--bg-page-white); }
 
 /* ========== TRACKS ========== */
 .tracks-section {
-    background: #FFFFFF;
-    padding: 56px 24px;
+    /* background and padding handled by .section-dark */
 }
 .tracks-inner {
     max-width: 1100px;
@@ -1157,12 +1156,12 @@ body { background: var(--bg-page-white); }
 </section>
 
 <!-- ========== TRACK SYSTEM ========== -->
-<section class="tracks-section">
-<div class="tracks-inner">
+<section class="tracks-section section-dark">
+<div class="tracks-inner section-dark-inner">
     <h2 class="section-heading">Analysis Tracks</h2>
     <p class="section-subheading">
         Three analysis tracks share the same Physics Feasible Space but apply different resource constraints and cost assumptions.
-        All tracks read from <code style="font-family:var(--font-mono); font-size:0.82rem; color:#374151; background:rgba(0,0,0,0.04); padding:2px 6px; border-radius:4px;">data/step2-ef-parquets/</code>.
+        All tracks read from <code style="font-family:var(--font-mono); font-size:0.82rem; color:rgba(255,255,255,0.7); background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px;">data/step2-ef-parquets/</code>.
     </p>
 
     <div class="track-grid">

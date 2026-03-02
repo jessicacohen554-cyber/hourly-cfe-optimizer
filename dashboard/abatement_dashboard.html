@@ -999,9 +999,7 @@ html, body {
 
 /* ========== METHODOLOGY SECTION ========== */
 .methodology-section {
-    background: var(--bg-page-white);
     padding: 56px var(--pad-page);
-    border-top: 1px solid rgba(0,0,0,0.04);
 }
 .methodology-inner {
     max-width: var(--max-prose);
@@ -1011,20 +1009,17 @@ html, body {
     font-family: var(--font-heading);
     font-size: 1.4rem;
     font-weight: 800;
-    color: var(--text-secondary);
     margin-bottom: 16px;
 }
 .methodology-inner h3 {
     font-family: var(--font-heading);
     font-size: 1.05rem;
     font-weight: 700;
-    color: var(--text-secondary);
     margin-top: 24px;
     margin-bottom: 8px;
 }
 .methodology-inner p {
     font-size: 0.88rem;
-    color: rgba(15,23,42,0.65);
     line-height: 1.75;
     margin-bottom: 12px;
 }
@@ -1034,7 +1029,6 @@ html, body {
 }
 .methodology-inner li {
     font-size: 0.85rem;
-    color: rgba(15,23,42,0.6);
     line-height: 1.7;
     margin-bottom: 4px;
 }
@@ -1271,8 +1265,8 @@ html, body {
 <!-- ================================================================== -->
 <!-- METHODOLOGY & SOURCES                                               -->
 <!-- ================================================================== -->
-<section class="methodology-section">
-    <div class="methodology-inner">
+<section class="methodology-section section-dark">
+    <div class="methodology-inner section-dark-inner">
         <h2>Methodology</h2>
 
         <h3>Marginal Abatement Cost (MAC) Calculation</h3>
@@ -1293,7 +1287,7 @@ html, body {
         </ul>
 
         <p><strong>Step 3 &mdash; Marginal MAC via differentiation.</strong> The marginal abatement cost at each threshold is the derivative of the PCHIP spline:</p>
-        <p style="text-align:center;font-family:var(--font-mono);font-size:0.95rem;color:var(--text-secondary);padding:8px 0;">
+        <p style="text-align:center;font-family:var(--font-mono);font-size:0.95rem;padding:8px 0;">
             MAC(t) = d(Cost) / d(CO&#8322;) &nbsp;evaluated at threshold t
         </p>
         <p>This derivative captures the instantaneous rate of cost increase per unit of additional abatement &mdash; the true marginal cost of deeper decarbonization at each point along the supply curve.</p>
@@ -1327,9 +1321,9 @@ html, body {
         <h3>Data Sources</h3>
         <p>MAC curves derived from the 8,760 Problem hourly matching optimizer using EIA hourly generation profiles, eGRID emission rates, and NREL ATB 2024 cost projections. DAC cost trajectories from DOE Liftoff (2023), Sievert et al. (Joule 2024), and IEA (2022/2024). Demand growth rates from ISO-specific forecasts (EIA AEO 2025, FERC data).</p>
 
-        <details style="background:rgba(0,0,0,0.025);border:1px solid rgba(0,0,0,0.08);border-radius:10px;padding:16px 20px;margin-top:24px;">
-            <summary style="font-family:var(--font-heading);font-size:0.9rem;font-weight:600;color:rgba(15,23,42,0.85);cursor:pointer;min-height:44px;display:flex;align-items:center;">Full Sources &amp; References</summary>
-            <ol style="font-size:0.8rem;color:rgba(15,23,42,0.5);line-height:1.8;padding-left:20px;margin-top:12px;">
+        <details style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.10);border-radius:10px;padding:16px 20px;margin-top:24px;">
+            <summary style="font-family:var(--font-heading);font-size:0.9rem;font-weight:600;color:rgba(255,255,255,0.85);cursor:pointer;min-height:44px;display:flex;align-items:center;">Full Sources &amp; References</summary>
+            <ol style="font-size:0.8rem;color:rgba(255,255,255,0.55);line-height:1.8;padding-left:20px;margin-top:12px;">
                 <li>EPA eGRID 2022 &mdash; regional emission rates and CO&#8322; intensity by balancing authority.</li>
                 <li>EPA Social Cost of Carbon &mdash; Technical Support Document (2020), central estimate $51/metric ton.</li>
                 <li>Rennert, K. et al. (2022). &ldquo;Comprehensive evidence implies a higher social cost of CO&#8322;.&rdquo; <em>Nature</em>, 610, 687&ndash;692. $185/metric ton.</li>
