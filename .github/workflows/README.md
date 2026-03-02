@@ -43,6 +43,7 @@ Each workflow is organized by **which dashboard page it updates**. Every multi-s
 | Workflow | Display Name | What It Does |
 |----------|-------------|--------------|
 | `lmp-calibration.yml` | **LMP Calibration: Validate Model** | Validates synthetic LMP model against calibration targets (weather-normalized or QA against actual data). |
+| `squash-pipeline-branches.yml` | **Squash Pipeline Branches** | Consolidates all unmerged `auto/*` branches into a single squash commit. Skips conflicts, closes old PRs, deletes merged branches. |
 
 ## Common Inputs
 
@@ -89,3 +90,12 @@ Step 3 → Step 4 → Step 5 → Step 6.0 → Steps 6.1 + 6.2 + 6.3 + 6.6 (paral
 ```
 Step 0 (optional) → Step 1a → Step 1b → Step 2 → Step 3 → Step 4 → Step 5 → Step 6.0 → Steps 6.1-6.6 → Step 7
 ```
+
+### "I ran a bunch of pipeline steps and want to merge all the branches at once"
+```
+Squash Pipeline Branches (dry_run=true first to preview, then dry_run=false)
+```
+- **`branch_pattern`** — Filter branches: `auto/` (all), `auto/.*step1d` (step 1d only), `auto/.*step3` (step 3 only)
+- **`merge_direct`** — `true` to merge straight to master, `false` (default) to open a PR for review
+- **`delete_branches`** — Cleans up merged remote branches (default: true)
+- **`close_prs`** — Auto-closes superseded PRs (default: true)
