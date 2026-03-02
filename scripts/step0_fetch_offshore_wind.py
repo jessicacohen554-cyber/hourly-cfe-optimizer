@@ -149,7 +149,7 @@ def fetch_year(iso: str, year: int, api_key: str) -> pd.DataFrame:
         'utc': 'true',
         'leap_day': 'true',
         'interval': '60',
-        'email': 'noreply@example.com',
+        'email': os.environ.get('NREL_API_EMAIL', 'cfe.optimizer@gmail.com'),
     }
 
     # Retry with exponential backoff on transient network errors only.
