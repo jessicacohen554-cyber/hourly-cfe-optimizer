@@ -64,16 +64,17 @@ LCOE_TABLES = {
         'High':   {'CAISO': 95, 'ERCOT': 52, 'PJM': 81, 'NYISO': 105, 'NEISO': 95, 'MISO': 56, 'SPP': 48},
     },
     # Storage: annualized capacity cost ($/MWh-cap), NOT LCOS.
-    # Regional variation baked in; TX=0 for all storage.
+    # NREL ATB 2024 component model: Energy($/kWh) + Power($/kW)/Duration.
+    # 4hr→8hr ~14% cheaper (power spread over 2× energy). Regional variation baked in; TX=0.
     'battery': {
-        'Low':    {'CAISO': 2.27, 'ERCOT': 2.05, 'PJM': 2.18, 'NYISO': 2.41, 'NEISO': 2.34, 'MISO': 2.14, 'SPP': 2.07},
-        'Medium': {'CAISO': 2.60, 'ERCOT': 2.34, 'PJM': 2.49, 'NYISO': 2.75, 'NEISO': 2.67, 'MISO': 2.44, 'SPP': 2.37},
-        'High':   {'CAISO': 2.92, 'ERCOT': 2.63, 'PJM': 2.80, 'NYISO': 3.09, 'NEISO': 3.00, 'MISO': 2.75, 'SPP': 2.66},
+        'Low':    {'CAISO': 3.86, 'ERCOT': 3.48, 'PJM': 3.70, 'NYISO': 4.08, 'NEISO': 3.97, 'MISO': 3.62, 'SPP': 3.52},
+        'Medium': {'CAISO': 4.75, 'ERCOT': 4.27, 'PJM': 4.55, 'NYISO': 5.02, 'NEISO': 4.87, 'MISO': 4.46, 'SPP': 4.33},
+        'High':   {'CAISO': 6.03, 'ERCOT': 5.43, 'PJM': 5.78, 'NYISO': 6.38, 'NEISO': 6.20, 'MISO': 5.66, 'SPP': 5.50},
     },
     'battery8': {
-        'Low':    {'CAISO': 1.62, 'ERCOT': 1.46, 'PJM': 1.55, 'NYISO': 1.71, 'NEISO': 1.67, 'MISO': 1.51, 'SPP': 1.49},
-        'Medium': {'CAISO': 1.94, 'ERCOT': 1.75, 'PJM': 1.86, 'NYISO': 2.05, 'NEISO': 2.00, 'MISO': 1.81, 'SPP': 1.78},
-        'High':   {'CAISO': 2.26, 'ERCOT': 2.04, 'PJM': 2.17, 'NYISO': 2.39, 'NEISO': 2.33, 'MISO': 2.11, 'SPP': 2.08},
+        'Low':    {'CAISO': 3.30, 'ERCOT': 2.97, 'PJM': 3.16, 'NYISO': 3.49, 'NEISO': 3.39, 'MISO': 3.10, 'SPP': 3.01},
+        'Medium': {'CAISO': 4.06, 'ERCOT': 3.66, 'PJM': 3.89, 'NYISO': 4.30, 'NEISO': 4.17, 'MISO': 3.81, 'SPP': 3.70},
+        'High':   {'CAISO': 5.19, 'ERCOT': 4.67, 'PJM': 4.97, 'NYISO': 5.49, 'NEISO': 5.33, 'MISO': 4.87, 'SPP': 4.73},
     },
     'ldes': {
         'Low':    {'CAISO': 0.38, 'ERCOT': 0.33, 'PJM': 0.36, 'NYISO': 0.42, 'NEISO': 0.40, 'MISO': 0.34, 'SPP': 0.33},
