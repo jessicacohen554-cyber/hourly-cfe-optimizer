@@ -12,45 +12,30 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
 <style>
 /* Page-specific background */
-body { background: #F7F8FC; }
+body { background: var(--bg-page); }
 
-/* ========== FOOTER — uses shared.css dark navy .page-footer ========== */
-.footer-links { display: flex; flex-wrap: wrap; gap: 16px 24px; justify-content: center; margin-bottom: 12px; }
-.footer-links a {
-    text-decoration: none;
-    font-size: 0.85rem;
-    font-weight: 500;
-    transition: color 0.2s;
-    min-height: 44px;
-    display: inline-flex;
-    align-items: center;
-    padding: 8px 4px;
-}
-.footer-note { font-size: 0.78rem; }
-
-.bottom-banner {
-    height: 4px;
-    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%);
-}
+/* Footer, footer-links, footer-note, bottom-banner use shared.css */
 
 /* ========== ENERGY SPECTRUM BAR ========== */
 .energy-spectrum-bar {
     height: 3px;
-    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 15%, #22C55E 35%, #F59E0B 55%, #EF4444 80%, #DC2626 100%);
+    background: linear-gradient(90deg, var(--navy) 0%, var(--hydro) 15%, var(--wind) 35%, var(--solar) 55%, var(--red) 80%, var(--red-dark) 100%);
     border-radius: 2px;
     margin: 0 auto;
-    max-width: 1320px;
+    max-width: var(--max-content);
     opacity: 0.5;
 }
 
 /* ========== HERO OVERVIEW SECTION (dark navy intro) ========== */
 .hero-overview {
-    background: linear-gradient(180deg, #0F1A2E 0%, #1A2744 60%, #1E3A5F 100%);
+    background: linear-gradient(180deg, var(--navy-dark) 0%, var(--navy) 60%, var(--navy-mid) 100%);
     position: relative;
     overflow: hidden;
-    padding: 48px 24px;
+    padding: 48px var(--pad-page);
 }
 .hero-overview::before {
     content: '';
@@ -62,7 +47,7 @@ body { background: #F7F8FC; }
 }
 .hero-overview-inner {
     position: relative;
-    max-width: 1320px;
+    max-width: var(--max-content);
     margin: 0 auto;
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -81,7 +66,7 @@ body { background: #F7F8FC; }
     transform: translateY(0);
 }
 .hero-text-block h2 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 2rem;
     font-weight: 800;
     color: #ffffff;
@@ -107,8 +92,8 @@ body { background: #F7F8FC; }
 .key-finding-badge {
     display: inline-block;
     padding: 4px 12px;
-    border-radius: 6px;
-    font-family: 'Barlow Semi Condensed', sans-serif;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-data);
     font-size: 0.72rem;
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -129,7 +114,7 @@ body { background: #F7F8FC; }
     text-align: center;
 }
 .hero-callout .counter-value {
-    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-data);
     font-size: 2.5rem;
     font-weight: 800;
     color: #fbbf24;
@@ -143,17 +128,10 @@ body { background: #F7F8FC; }
     display: block;
 }
 
-/* ========== CHART PANELS ========== */
+/* ========== CHART PANELS (overrides for CTR page) ========== */
+/* Base .chart-panel from shared.css; only page-specific overrides here */
 .chart-panel {
-    background: rgba(255,255,255,0.97);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(74,144,217,0.12);
-    border-radius: 16px;
-    padding: 28px 24px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
-    width: 100%;
-    box-sizing: border-box;
+    border-color: rgba(74,144,217,0.12);
 }
 .chart-panel-overview,
 .chart-panel-region {
@@ -169,7 +147,7 @@ body { background: #F7F8FC; }
     min-height: 350px;
 }
 .hero-chart-title {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 0.85rem;
     font-weight: 700;
     color: rgba(15,23,42,0.85);
@@ -178,7 +156,7 @@ body { background: #F7F8FC; }
     letter-spacing: 0.02em;
 }
 .hero-chart-subtitle {
-    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-data);
     font-size: 0.72rem;
     color: rgba(15,23,42,0.4);
     text-align: center;
@@ -187,12 +165,12 @@ body { background: #F7F8FC; }
 
 /* ========== REGION SECTIONS ========== */
 .region-section {
-    background: #F7F8FC;
+    background: var(--bg-page);
     position: relative;
     border-top: 1px solid rgba(0,0,0,0.025);
 }
 .region-section-inner {
-    max-width: 1320px;
+    max-width: var(--max-content);
     margin: 0 auto;
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -238,7 +216,7 @@ body { background: #F7F8FC; }
     transform: translateY(0);
 }
 .region-step-card h3 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.5rem;
     font-weight: 800;
     color: #1E293B;
@@ -257,7 +235,7 @@ body { background: #F7F8FC; }
     margin-top: 14px;
     padding: 8px 16px;
     border-radius: 10px;
-    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-data);
     font-size: 0.88rem;
     font-weight: 700;
 }
@@ -290,7 +268,7 @@ body { background: #F7F8FC; }
     display: inline-block;
     padding: 3px 10px;
     border-radius: 6px;
-    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-data);
     font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.04em;
@@ -300,12 +278,12 @@ body { background: #F7F8FC; }
 
 /* ========== SYNTHESIS SECTION ========== */
 .synthesis-section {
-    background: #F7F8FC;
-    padding: 64px 24px;
+    background: var(--bg-page);
+    padding: 64px var(--pad-page);
     border-top: 1px solid rgba(0,0,0,0.025);
 }
 .synthesis-section-title {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.8rem;
     font-weight: 800;
     color: #1E293B;
@@ -314,7 +292,7 @@ body { background: #F7F8FC; }
     letter-spacing: -0.3px;
 }
 .synthesis-inner {
-    max-width: 1320px;
+    max-width: var(--max-content);
     margin: 0 auto;
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -337,7 +315,7 @@ body { background: #F7F8FC; }
     transform: translateY(0);
 }
 .synthesis-card h3 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.3rem;
     font-weight: 800;
     color: #1E293B;
@@ -355,7 +333,7 @@ body { background: #F7F8FC; }
     margin-top: 14px;
     padding: 8px 16px;
     border-radius: 10px;
-    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-data);
     font-size: 0.88rem;
     font-weight: 700;
 }
@@ -373,7 +351,7 @@ body { background: #F7F8FC; }
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-data);
     font-size: 0.7rem;
     color: rgba(15,23,42,0.55);
     white-space: nowrap;
@@ -557,8 +535,6 @@ html, body {
     .chart-legend-item { font-size: 0.55rem; gap: 3px; }
     .swatch-line, .swatch-dashed { width: 10px; }
     .swatch-band { width: 10px; height: 6px; }
-    .footer-links { gap: 8px 16px; }
-    .footer-links a { font-size: 0.78rem; }
 }
 
 /* ========== RESPONSIVE — Tiny phone (320px) ========== */
@@ -582,7 +558,7 @@ html, body {
 <!-- TOP NAV (injected by nav.js) -->
 <nav id="topNav"></nav>
 <script src="js/nav.js"></script>
-<div style="background:#0F1A2E;padding:8px 24px;"><a href="index.html" style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:rgba(255,255,255,0.75);text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;min-height:44px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
+<div style="background:var(--navy-dark);padding:8px var(--pad-page);"><a href="index.html" style="font-family:var(--font-heading);font-size:0.82rem;font-weight:600;color:rgba(255,255,255,0.75);text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;min-height:44px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
 
 <!-- HEADER BANNER -->
 <header class="header">
@@ -797,7 +773,7 @@ html, body {
 <!-- SOURCES -->
 <div style="max-width:1320px;margin:0 auto;padding:24px 24px 24px;">
     <details style="background:rgba(0,0,0,0.025);border:1px solid rgba(0,0,0,0.08);border-radius:10px;padding:16px 20px;">
-        <summary style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.9rem;font-weight:600;color:rgba(15,23,42,0.85);cursor:pointer;min-height:44px;display:flex;align-items:center;">Sources &amp; References</summary>
+        <summary style="font-family:var(--font-heading);font-size:0.9rem;font-weight:600;color:rgba(15,23,42,0.85);cursor:pointer;min-height:44px;display:flex;align-items:center;">Sources &amp; References</summary>
         <ol style="font-size:0.8rem;color:rgba(15,23,42,0.5);line-height:1.8;padding-left:20px;margin-top:12px;">
             <li>NREL Annual Technology Baseline (ATB) 2024 &mdash; technology costs for wind, solar, storage, nuclear, CCS, geothermal.</li>
             <li>Lazard Levelized Cost of Energy Analysis v17.0 (2024) &mdash; generation technology cost benchmarks.</li>

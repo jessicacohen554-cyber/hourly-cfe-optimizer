@@ -12,7 +12,7 @@
 <style>
 /* Page-specific body background */
 body {
-    background: #FFFFFF;
+    background: var(--bg-page-white);
     background-image:
         radial-gradient(ellipse at 20% 0%, rgba(14,165,233,0.03) 0%, transparent 50%),
         radial-gradient(ellipse at 80% 100%, rgba(245,158,11,0.02) 0%, transparent 50%);
@@ -21,7 +21,7 @@ body {
 
 /* ========== SCROLLYTELL CONTENT ========== */
 .content-wrap {
-    background: #F3F4F8;
+    background: var(--bg-alt-warm);
     max-width: 1440px;
     margin: 0 auto;
     border-radius: 0 0 16px 16px;
@@ -53,13 +53,13 @@ body {
     padding: 5px 18px;
     border-radius: 9999px;
     font-size: 0.8rem;
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    font-family: var(--font-heading);
     font-weight: 700;
     letter-spacing: 1px;
     text-transform: capitalize;
     margin-bottom: 18px;
     background: rgba(26,39,68,0.1);
-    color: #1A2744;
+    color: var(--navy);
 }
 .story-badge-blue { background: rgba(14,165,233,0.12); color: #0369A1; }
 .story-badge-green { background: rgba(34,197,94,0.12); color: #15803D; }
@@ -69,32 +69,32 @@ body {
 .story-badge-teal { background: rgba(20,184,166,0.12); color: #0F766E; }
 
 .story-section h2 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 2rem;
     font-weight: 700;
-    color: #1A2744;
+    color: var(--navy);
     letter-spacing: -0.3px;
     line-height: 1.2;
     margin-bottom: 18px;
 }
 .story-section h3 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.3rem;
     font-weight: 600;
-    color: #1A2744;
+    color: var(--navy);
     margin-bottom: 12px;
     margin-top: 24px;
 }
 .story-section p {
     font-size: 1.05rem;
-    color: #374151;
+    color: var(--text-secondary);
     line-height: 1.75;
     margin-bottom: 16px;
 }
 .story-section p.lead {
     font-size: 1.15rem;
     font-weight: 500;
-    color: #1A2744;
+    color: var(--navy);
     line-height: 1.7;
 }
 
@@ -103,35 +103,35 @@ body {
     max-width: 900px;
     margin: 0 auto;
     border: none;
-    border-top: 1px solid #D4D8E0;
+    border-top: 1px solid var(--border);
 }
 
 /* ========== INSIGHT CALLOUT BOXES ========== */
 .callout-box {
-    background: #FFFFFF;
-    border: 1px solid #D4D8E0;
-    border-left: 4px solid #0EA5E9;
+    background: var(--bg-page-white);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--hydro);
     border-radius: 8px;
     padding: 20px 24px;
     margin: 20px 0;
 }
 .callout-box.callout-warning {
-    border-left-color: #F59E0B;
+    border-left-color: var(--solar);
     background: #FFFBEB;
 }
 .callout-box.callout-danger {
-    border-left-color: #EF4444;
+    border-left-color: var(--red);
     background: #FEF2F2;
 }
 .callout-box.callout-success {
-    border-left-color: #22C55E;
+    border-left-color: var(--wind);
     background: #F0FDF4;
 }
 .callout-box h4 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1rem;
     font-weight: 700;
-    color: #1A2744;
+    color: var(--navy);
     margin-bottom: 8px;
 }
 .callout-box p {
@@ -150,8 +150,8 @@ body {
     margin: 24px 0;
 }
 .layer-card {
-    background: #FFFFFF;
-    border: 1px solid #D4D8E0;
+    background: var(--bg-page-white);
+    border: 1px solid var(--border);
     border-radius: 10px;
     padding: 20px 24px;
     position: relative;
@@ -166,17 +166,17 @@ body {
     position: absolute;
     top: 12px;
     right: 16px;
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 2.5rem;
     font-weight: 800;
     color: rgba(26,39,68,0.06);
     line-height: 1;
 }
 .layer-card h4 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.1rem;
     font-weight: 700;
-    color: #1A2744;
+    color: var(--navy);
     margin-bottom: 6px;
     display: flex;
     align-items: center;
@@ -187,7 +187,7 @@ body {
 }
 .layer-card p {
     font-size: 0.95rem;
-    color: #4B5563;
+    color: var(--text-secondary);
     line-height: 1.65;
     margin-bottom: 0;
 }
@@ -201,8 +201,8 @@ body {
 
 /* ========== MIND MAP ========== */
 .mindmap-container {
-    background: #FFFFFF;
-    border: 1px solid #D4D8E0;
+    background: var(--bg-page-white);
+    border: 1px solid var(--border);
     border-radius: 12px;
     padding: 32px 24px;
     margin: 32px 0;
@@ -235,8 +235,8 @@ body {
     .insights-grid { grid-template-columns: 1fr; }
 }
 .insight-card {
-    background: #FFFFFF;
-    border: 1px solid #D4D8E0;
+    background: var(--bg-page-white);
+    border: 1px solid var(--border);
     border-radius: 10px;
     padding: 20px 22px;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -246,24 +246,24 @@ body {
     box-shadow: 0 6px 20px rgba(0,0,0,0.08);
 }
 .insight-card .insight-num {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 1px;
-    color: #0EA5E9;
+    color: var(--hydro);
     margin-bottom: 6px;
 }
 .insight-card h4 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.05rem;
     font-weight: 700;
-    color: #1A2744;
+    color: var(--navy);
     margin-bottom: 8px;
     line-height: 1.3;
 }
 .insight-card p {
     font-size: 0.92rem;
-    color: #4B5563;
+    color: var(--text-secondary);
     line-height: 1.6;
     margin-bottom: 0;
 }
@@ -281,7 +281,7 @@ body {
     display: inline-block;
     padding: 12px 24px;
     border-radius: 8px;
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 0.9rem;
     font-weight: 600;
     text-decoration: none;
@@ -296,14 +296,14 @@ body {
     box-shadow: 0 4px 16px rgba(0,0,0,0.12);
 }
 .nav-btn-primary {
-    background: #1A2744;
+    background: var(--navy);
     color: #ffffff;
 }
-.nav-btn-primary:hover { background: #2D3A52; }
+.nav-btn-primary:hover { background: var(--navy-light); }
 .nav-btn-secondary {
-    background: #FFFFFF;
-    color: #1A2744;
-    border: 1px solid #D4D8E0;
+    background: var(--bg-page-white);
+    color: var(--navy);
+    border: 1px solid var(--border);
 }
 .nav-btn-secondary:hover { background: #F7F8FA; }
 @media (max-width: 768px) {
@@ -313,7 +313,7 @@ body {
 
 /* ========== FOOTER ========== */
 .site-footer {
-    background: #F3F4F6;
+    background: var(--bg-alt);
     padding: 24px;
     text-align: center;
 }
@@ -322,7 +322,7 @@ body {
     text-decoration: none;
     font-size: 0.85rem;
 }
-.site-footer a:hover { color: #1A2744; }
+.site-footer a:hover { color: var(--navy); }
 .site-footer p {
     color: rgba(15,23,42,0.35);
     font-size: 0.78rem;
@@ -394,8 +394,8 @@ body {
     margin: 28px 0;
 }
 .stat-block {
-    background: #FFFFFF;
-    border: 1px solid #D4D8E0;
+    background: var(--bg-page-white);
+    border: 1px solid var(--border);
     border-radius: 10px;
     padding: 18px 22px;
     text-align: center;
@@ -404,10 +404,10 @@ body {
     max-width: 200px;
 }
 .stat-number {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 2rem;
     font-weight: 800;
-    color: #1A2744;
+    color: var(--navy);
     line-height: 1.1;
 }
 .stat-label {
@@ -419,8 +419,8 @@ body {
 
 /* ========== PERVERSE INCENTIVE DIAGRAM ========== */
 .flow-diagram {
-    background: #FFFFFF;
-    border: 1px solid #D4D8E0;
+    background: var(--bg-page-white);
+    border: 1px solid var(--border);
     border-radius: 12px;
     padding: 28px 24px;
     margin: 24px 0;
@@ -437,7 +437,7 @@ body {
 .flow-box {
     padding: 12px 18px;
     border-radius: 8px;
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 0.88rem;
     font-weight: 600;
     text-align: center;
@@ -458,6 +458,8 @@ body {
     .flow-arrow { transform: rotate(90deg); }
 }
 </style>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
 </head>
 <body>
 
@@ -466,12 +468,12 @@ body {
 <script src="js/nav.js"></script>
 
 <!-- HEADER / BANNER -->
-<header class="header">
+<header class="header" id="pageHeader">
     <h1>The 8,760 Problem</h1>
-    <p class="subtitle">
+    <div class="subtitle">
         A systems-level analysis of how grid economics, corporate procurement, policy frameworks, and
         accounting rules interact &mdash; and where the gaps create both risk and opportunity for affordable decarbonization.
-    </p>
+    </div>
     <div class="header-accent"></div>
 </header>
 
