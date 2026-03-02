@@ -76,8 +76,11 @@ MAX_FINE_ARCHETYPES_5D = 500
 SCORE_CHUNK_SIZE = 20000
 
 # Max fine grid combos before falling back to archetype-based search.
-# Prevents hang/OOM for 5D ISOs with wide prior-informed bounds.
-MAX_GRID_COMBOS_BEFORE_FALLBACK = 50_000_000
+# 10M keeps Zone A feasible for 4D ISOs (~11-14M after procurement cap)
+# while pushing Zones B/C into the fast archetype path.
+# Previous value of 50M caused 4D ISOs (ERCOT/MISO/SPP) to score
+# 30-46M mixes per zone while 5D ISOs fell back to archetypes.
+MAX_GRID_COMBOS_BEFORE_FALLBACK = 10_000_000
 
 # Near-miss width for storage sweep (in 0-1 score space)
 STORAGE_SWEEP_FLOOR = 0.50
@@ -175,13 +178,44 @@ if s1.HAS_NUMBA:
 # ZONE FINE GRID GENERATION
 # ══════════════════════════════════════════════════════════════════════════════
 
+def _tighten_bounds_by_procurement_cap(bounds):
+    """Tighten per-resource upper bounds using TOTAL_PROCUREMENT_CAP.
+
+    For each resource i, hi[i] <= cap - sum(lo[j] for j != i).
+    E.g., if cap=350 and other resources' minimums sum to 0, wind can be 250
+    (its own cap). But if clean_firm min=10, solar min=5, hydro min=2, then
+    wind <= 350-10-5-2 = 333 (may still be capped by resource cap).
+
+    Iterates until convergence since tightening one bound can allow others
+    to tighten further.
+    """
+    pcap = s1.TOTAL_PROCUREMENT_CAP
+    n = len(bounds)
+    bounds = list(bounds)  # make mutable copy
+
+    for _iteration in range(5):  # converges in 2-3 iterations
+        changed = False
+        sum_lo = sum(lo for lo, hi in bounds)
+        for i in range(n):
+            lo_i, hi_i = bounds[i]
+            other_min = sum_lo - lo_i
+            new_hi = min(hi_i, pcap - other_min)
+            if new_hi < hi_i:
+                bounds[i] = (lo_i, max(lo_i, new_hi))
+                changed = True
+        if not changed:
+            break
+
+    return bounds
+
+
 def compute_zone_resource_bounds(iso, coarse_combos, coarse_scores,
                                  zone_score_low, zone_score_high,
                                  prior_zone_bounds=None):
     """Compute resource bounds for fine search within a score zone.
 
     Uses prior EF bounds if available, otherwise derives from coarse boundary
-    mixes. Always clamps to resource caps.
+    mixes. Always clamps to resource caps and TOTAL_PROCUREMENT_CAP.
     """
     rtypes = s1.get_resource_types(iso)
     n_res = len(rtypes)
@@ -206,14 +240,14 @@ def compute_zone_resource_bounds(iso, coarse_combos, coarse_scores,
             else:
                 lo, hi = 0, caps[i]
             bounds.append((max(0, lo), min(caps[i], hi)))
-        return bounds
+        return _tighten_bounds_by_procurement_cap(bounds)
 
     # Derive from coarse boundary mixes
     zone_mask = (coarse_scores >= zone_score_low) & (coarse_scores <= zone_score_high)
     zone_mixes = coarse_combos[zone_mask]
 
     if len(zone_mixes) == 0:
-        return [(0, c) for c in caps]
+        return _tighten_bounds_by_procurement_cap([(0, c) for c in caps])
 
     bounds = []
     for i in range(n_res):
@@ -222,7 +256,7 @@ def compute_zone_resource_bounds(iso, coarse_combos, coarse_scores,
         hi = min(caps[i], int(np.max(col)) + ZONE_RESOURCE_BUFFER)
         bounds.append((lo, hi))
 
-    return bounds
+    return _tighten_bounds_by_procurement_cap(bounds)
 
 
 def generate_fine_grid(bounds, step=1):
