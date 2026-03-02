@@ -182,9 +182,8 @@ def run_coarse_storage(iso, nm_combos, nm_base_scores, demand_arr, supply_matrix
         chunk_surplus = np.maximum(chunk_supply - demand_arr[np.newaxis, :], 0.0)
         total_surplus[cs:ce] = chunk_surplus.sum(axis=1)
 
-    # Pre-filter: must have curtailment
+    # Pre-filter: must have curtailment (fast skip in inner loop)
     has_curtailment = hc_arr.astype(bool)
-    best_eff = max(batt_eff, batt8_eff, ldes_eff)
 
     # Per-threshold results
     results = {t: [] for t in STORAGE_THRESHOLDS}
@@ -580,26 +579,33 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
     n_raw = len(nm_combos)
     print(f"  Near-miss mixes (raw): {n_raw:,}")
 
-    # ── Dominance filter: remove mixes where another uses ≤ of every resource ──
-    # A mix is dominated if another mix uses less-or-equal of ALL resources and
-    # strictly less of at least one.  These dominated mixes can never be optimal
-    # under any cost assumption, so testing storage on them is wasted compute.
-    # Typical reduction: 95-99% (e.g., 706k → 4.9k for PJM).
-    from step1c_zone_search import dominance_filter_arrays
-    t_dom = time.time()
-    kept_mask = dominance_filter_arrays(nm_combos, nm_base_scores)
-    nm_combos = nm_combos[kept_mask]
-    nm_base_scores = nm_base_scores[kept_mask]
-    print(f"  Dominance filter: {n_raw:,} → {len(nm_combos):,} "
-          f"({len(nm_combos)/n_raw*100:.1f}%) in {time.time()-t_dom:.1f}s")
-
-    # ── Load EIA data ──
+    # ── Load EIA data (needed for curtailment bridge filter) ──
     print(f"  Loading EIA data...")
     demand_data, gen_profiles, _, _ = s1.load_data()
     demand_norm = demand_data[iso]['normalized']
     supply_profiles = s1.get_supply_profiles(iso, gen_profiles)
     demand_arr, supply_matrix = s1.prepare_numpy_profiles(
         iso, demand_norm, supply_profiles)
+
+    # ── Curtailment bridge filter (replaces dominance filter) ──
+    # Keep mixes where raw curtailment surplus can bridge the gap to at least
+    # one active threshold.  Check: score + surplus_pct >= min_target.
+    t_bridge = time.time()
+    demand_total = demand_arr.sum()
+    total_surplus = np.empty(n_raw, dtype=np.float64)
+    for cs in range(0, n_raw, NM_CHUNK):
+        ce = min(cs + NM_CHUNK, n_raw)
+        chunk_fracs = nm_combos[cs:ce].astype(np.float64) / 100.0
+        chunk_supply = chunk_fracs @ supply_matrix
+        chunk_surplus = np.maximum(chunk_supply - demand_arr[np.newaxis, :], 0.0)
+        total_surplus[cs:ce] = chunk_surplus.sum(axis=1)
+    surplus_pct = total_surplus / demand_total
+    min_target = min(active_thresholds) / 100.0
+    bridge_mask = (nm_base_scores + surplus_pct) >= min_target
+    nm_combos = nm_combos[bridge_mask]
+    nm_base_scores = nm_base_scores[bridge_mask]
+    print(f"  Bridge filter: {n_raw:,} → {len(nm_combos):,} "
+          f"({len(nm_combos)/n_raw*100:.1f}%) in {time.time()-t_bridge:.1f}s")
 
     # ── JIT warmup ──
     if s1.HAS_NUMBA:
