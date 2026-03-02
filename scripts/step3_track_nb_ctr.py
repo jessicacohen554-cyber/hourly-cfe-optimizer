@@ -223,10 +223,10 @@ def flatten_dg_rows(iso, track_name, dg_dict, arrays=None):
                         row['mix_ccs_ccgt'] = max(0, 100 - (cf + sol + wnd + hyd))
                         row['mix_hydro'] = hyd
                         row['hourly_match_score'] = float(arr_score[mix_idx])
-                        row['battery_dispatch_pct'] = int(arr_bat[mix_idx])
-                        row['battery8_dispatch_pct'] = int(arr_bat8[mix_idx])
-                        row['ldes_dispatch_pct'] = int(arr_ldes[mix_idx])
-                        row['h2_dispatch_pct'] = int(arr_h2[mix_idx])
+                        row['battery_dispatch_pct'] = round(float(arr_bat[mix_idx]), 4)
+                        row['battery8_dispatch_pct'] = round(float(arr_bat8[mix_idx]), 4)
+                        row['ldes_dispatch_pct'] = round(float(arr_ldes[mix_idx]), 4)
+                        row['h2_dispatch_pct'] = round(float(arr_h2[mix_idx]), 4)
                     else:
                         row['best_mix_idx'] = mix_idx
                     rows.append(row)
