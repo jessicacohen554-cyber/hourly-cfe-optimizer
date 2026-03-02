@@ -1,7 +1,7 @@
-name: "Step 1a: Build Scored Mix Database"
+name: "Step 1a+1b: Build Scored Mix Database"
 
 # Generates all resource fraction combos (1a) and scores them (1b) → coarse_cache.parquet.
-# This is the database that Step 1b (build PFS) mines per-threshold.
+# This is the database that Step 1b (zone search) mines per-threshold.
 # Run once after physics changes or code updates.
 # Output: data/step1-pfs-parquets/{ISO}_mixes.parquet, {ISO}_coarse_cache.parquet
 
