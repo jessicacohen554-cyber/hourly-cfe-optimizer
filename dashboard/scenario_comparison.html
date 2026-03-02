@@ -38,6 +38,11 @@ body { background: var(--bg-alt-warm); }
 .scenario-card h3 { font-family: var(--font-heading); font-size: 0.95rem; color: var(--navy); margin-bottom: 6px; }
 .scenario-card .toggles { font-size: 0.75rem; color: rgba(0,0,0,0.4); margin-bottom: 8px; font-family: var(--font-data); }
 .scenario-card p { color: rgba(0,0,0,0.6); font-size: 0.85rem; line-height: 1.7; margin: 0; }
+/* Dark overrides for scenario cards inside section-dark */
+.section-dark .scenario-card { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.10); box-shadow: none; }
+.section-dark .scenario-card h3 { color: rgba(255,255,255,0.95); }
+.section-dark .scenario-card .toggles { color: rgba(255,255,255,0.45); }
+.section-dark .scenario-card p { color: rgba(255,255,255,0.72); }
 
 /* ===== PAGE-SPECIFIC: Charts side-by-side ===== */
 .chart-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 32px; }
@@ -257,16 +262,17 @@ body { background: var(--bg-alt-warm); }
 </div>
 
 <!-- ===== SCENARIO A / B SIDE-BY-SIDE INTRO ===== -->
-<section class="content-section" style="padding-top:0; padding-bottom:16px;">
+<section class="section-dark" style="padding-top: var(--space-xl); padding-bottom: var(--space-xl);">
+<div class="section-dark-inner">
     <div class="scenario-cards">
-        <div class="scenario-card" style="border-color: rgba(79,70,229,0.2);">
+        <div class="scenario-card">
             <span class="scenario-tag tag-a">Scenario A &mdash; Pure Consequential</span>
             <h3>Cheapest $/tCO&#8322; First</h3>
             <div class="toggles">Ren: Low | Firm: Low (NOAK) | CCS: Low | LDES: Low | Geo: Low | Battery: Low | Fuel: Med | Tx: Med</div>
             <p>Sequential optimization: at each threshold, buy cheapest resources first. Prior deployments locked in.
             Low MAC early (cheap renewables), but overbuilding creates path dependency &mdash; cost cliff when firm is finally needed.</p>
         </div>
-        <div class="scenario-card" style="border-color: rgba(8,145,178,0.2);">
+        <div class="scenario-card">
             <span class="scenario-tag tag-b">Scenario B &mdash; Hourly Matching</span>
             <h3>Early Clean Firm at FOAK Prices</h3>
             <div class="toggles">Ren: Low | Firm: High (FOAK) | CCS: High | LDES: High | Geo: High | Battery: Low | Fuel: Med | Tx: Med</div>
@@ -274,6 +280,7 @@ body { background: var(--bg-alt-warm); }
             learning curve. Costs decline as Wright's Law drives deployments. Balanced portfolio, no lock-in trap.</p>
         </div>
     </div>
+</div>
 </section>
 
 <!-- ===== REGION TOGGLE + TARGET SLIDER (sticky, single row on desktop) ===== -->
@@ -364,20 +371,21 @@ each ISO must complete prior threshold steps before advancing. First row per ISO
 </section>
 
 <!-- Methodology -->
-<section class="content-section" style="border-top: 1px solid rgba(0,0,0,0.08); padding-top: 48px;">
+<section class="section-dark">
+<div class="section-dark-inner">
     <h2 class="section-title">Methodology</h2>
     <p class="section-subtitle">How this comparison is constructed and what it does (and doesn't) model.</p>
 
-    <div style="color: rgba(0,0,0,0.65); font-size: 0.88rem; line-height: 1.8; max-width: 900px;">
+    <div style="font-size: 0.88rem; line-height: 1.8; max-width: 900px;">
 
-    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; color: var(--navy); margin: 24px 0 8px;">Same Physics, Different Procurement Strategies</h3>
+    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; margin: 24px 0 8px;">Same Physics, Different Procurement Strategies</h3>
     <p>Both scenarios draw from an <strong>identical pool of ~33,000 physics-feasible resource mixes</strong> produced by the 8,760-hour dispatch model
     (Step 1 PFS Generator). Each mix is a validated combination of clean firm, solar, wind, CCS-CCGT, hydro, 4-hour battery, 8-hour battery,
     and 100-hour LDES that achieves a specific hourly CFE threshold across all 8,760 hours of 2025 demand and generation data.
     The physics are fixed — what changes between scenarios is the <em>procurement strategy</em>: sequential path-dependent
     optimization vs. targeting a single high threshold directly.</p>
 
-    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; color: var(--navy); margin: 24px 0 8px;">Scenario A: Pure Consequential</h3>
+    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; margin: 24px 0 8px;">Scenario A: Pure Consequential</h3>
     <p>The consequential scenario models a buyer who procures the cheapest resources at each threshold step,
     with <strong>prior deployments locked in as committed infrastructure</strong>:</p>
     <ol style="padding-left: 20px; margin: 8px 0;">
@@ -393,7 +401,7 @@ each ISO must complete prior threshold steps before advancing. First row per ISO
     each mix is scored by its total floor violation (TWh shortfall across all resources), and the cheapest mix with
     minimum violation is selected. The floor ratchets up using the element-wise maximum of the old floor and new deployment.</p>
 
-    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; color: var(--navy); margin: 24px 0 8px;">Scenario B: Hourly Matching</h3>
+    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; margin: 24px 0 8px;">Scenario B: Hourly Matching</h3>
     <p>The hourly matching scenario models <strong>graduated clean firm deployment along the FOAK&rarr;NOAK learning curve</strong>.
     At each threshold, clean firm / CCS / LDES / geothermal costs are interpolated between High (FOAK) and Low (NOAK) based
     on the threshold's position on the SBTi timeline, using a convex ramp function: <code>frac = 0.05 + 0.95 &times; ((t&minus;50)/50)<sup>1.8</sup></code>.
@@ -405,7 +413,7 @@ each ISO must complete prior threshold steps before advancing. First row per ISO
     increasing deployment emerges from the interaction of declining costs and increasing physics requirements for firm
     generation at higher CFE thresholds.</p>
 
-    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; color: var(--navy); margin: 24px 0 8px;">Cost Toggle Comparison</h3>
+    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; margin: 24px 0 8px;">Cost Toggle Comparison</h3>
 
     <table style="width:100%; border-collapse:collapse; margin: 16px 0 24px; font-size: 0.82rem;">
         <thead>
@@ -434,7 +442,7 @@ each ISO must complete prior threshold steps before advancing. First row per ISO
     requires firm generation, and the buyer commits early at premium FOAK prices before the learning curve matures.
     Mature tech (solar, wind, battery) remains at Low cost in both scenarios.</p>
 
-    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; color: var(--navy); margin: 24px 0 8px;">Cost Function (Both Scenarios)</h3>
+    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; margin: 24px 0 8px;">Cost Function (Both Scenarios)</h3>
     <p>Effective system cost = total procurement cost / hourly match fraction, including:</p>
     <ul style="padding-left: 20px; margin: 8px 0;">
         <li>Existing generation at wholesale price; new generation at LCOE + transmission adder</li>
@@ -445,24 +453,24 @@ each ISO must complete prior threshold steps before advancing. First row per ISO
     <p>The cost function is identical between scenarios. What differs is (a) the cost toggle levels, (b) the optimization
     strategy (sequential with floor constraints vs. single-target), and (c) the resulting optimal resource mix.</p>
 
-    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; color: var(--navy); margin: 24px 0 8px;">Gas Backup &amp; Capacity Credits</h3>
+    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; margin: 24px 0 8px;">Gas Backup &amp; Capacity Credits</h3>
     <p>Gas capacity is <strong>not a choice variable</strong> — it's derived from resource adequacy constraints. Each clean resource receives a
     capacity credit (clean firm: 100%, CCS: 90%, LDES: 90%, battery: 95%, hydro: 50%, solar: 30%, wind: 10%). The remaining gap between
     clean capacity and the RA requirement (peak demand &times; 1.15) must be filled by gas. Clean firm's 100% capacity credit
     displaces gas MW-for-MW; wind's 10% credit means 10 MW of wind displaces only 1 MW of gas.</p>
 
-    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; color: var(--navy); margin: 24px 0 8px;">Marginal Abatement Cost</h3>
+    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; margin: 24px 0 8px;">Marginal Abatement Cost</h3>
     <p>Stepwise MAC is computed between consecutive thresholds using the dispatch-stack fossil retirement model:
     coal retires first (highest emissions + marginal cost), then oil, then gas. The marginal emission rate
     of displaced fossil shifts from coal-heavy (~1.0 tCO<sub>2</sub>/MWh) at low thresholds to gas-only (~0.4 tCO<sub>2</sub>/MWh) at high thresholds.
     MAC = &Delta;(system cost &times; demand) / &Delta;CO<sub>2</sub> displaced between threshold steps.</p>
 
-    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; color: var(--navy); margin: 24px 0 8px;">SBTi Timeline Mapping</h3>
+    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; margin: 24px 0 8px;">SBTi Timeline Mapping</h3>
     <p>CFE thresholds are mapped to SBTi-aligned deployment years: 50%&rarr;2025, 60%&rarr;2027, 70%&rarr;2029, 75%&rarr;2030, 80%&rarr;2032,
     85%&rarr;2035, 87.5%&rarr;2037, 90%&rarr;2040, 92.5%&rarr;2042, 95%&rarr;2045, 97.5%&rarr;2047, 99%&rarr;2049, &ge;99.99%&rarr;2050.
     This maps the static threshold comparison onto a temporal deployment trajectory.</p>
 
-    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; color: var(--navy); margin: 24px 0 8px;">What This Analysis Does Not Model</h3>
+    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; margin: 24px 0 8px;">What This Analysis Does Not Model</h3>
     <ul style="padding-left: 20px; margin: 8px 0;">
         <li><strong>Dynamic learning curves</strong> — costs are fixed within each scenario. The hourly matching scenario assumes the FOAK&rarr;NOAK learning curve has driven costs to Low levels; it does not model the investment-to-learning feedback loop endogenously.</li>
         <li><strong>Construction timelines</strong> — all resources are assumed available at each threshold. In practice, the 99% cliff in the consequential path would face multi-year nuclear/CCS construction lead times.</li>
@@ -471,7 +479,7 @@ each ISO must complete prior threshold steps before advancing. First row per ISO
         <li><strong>Gas stranding economics</strong> — gas backup is costed at annual fixed O&amp;M / annualized capital, not lifecycle NPV. The economic loss from building-then-stranding gas is understated.</li>
     </ul>
 
-    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; color: var(--navy); margin: 24px 0 8px;">Data Sources</h3>
+    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; margin: 24px 0 8px;">Data Sources</h3>
     <p>EIA hourly generation profiles (2025), eGRID emission rates, NREL ATB cost projections (Low/Medium/High), Lazard LCOE benchmarks,
     regional wholesale prices from ISO market data. Full cost tables and assumptions documented in the
     <a href="optimizer_methodology.html" style="color: #0284C7;">Optimizer Methodology</a> page.</p>
