@@ -134,19 +134,26 @@ LCOE_TABLES = {
     # NOT LCOS. These are annualized fixed costs of storage capacity, normalized to
     # the coefficient model where coeff = bat_pct/100 (energy capacity as fraction
     # of avg hourly demand). Formula:
-    #   price = 1000 × (CAPEX_kWh × CRF + FOM_kW / duration) / 8760 × regional_mult
+    #   price = CAPEX_kWh × (CRF + FOM_rate) / 8760 × 1000 × regional_mult
+    # where CRF=0.1019 (8%, 20yr), FOM_rate=2.5% of CAPEX($/kW) per NREL ATB.
     # Regional variation baked in (no separate TX adder for storage).
-    # LCOS cross-check: Bat4hr Low @ 250 cycles = $72/MWh, Med @ 250 = $82/MWh.
-    # CAPEX source: NREL ATB 2024. Financial: WACC=8%, Bat life=20yr, LDES=25yr.
+    #
+    # CAPEX source: NREL ATB 2024 component model (Energy $/kWh + Power $/kW).
+    #   4hr = Energy + Power/4;  8hr = Energy + Power/8.
+    #   Component splits: L=(170+280), M=(210+340), H=(270+420).
+    #   4hr: L=$240, M=$295, H=$375.  8hr: L=$205, M=$253, H=$323.
+    #   8hr is ~14% cheaper per kWh (power component spread over 2× energy).
+    # LCOS cross-check: 4hr Med @ 365 cycles, 85% RTE = $121/MWh.
+    # Financial: WACC=8%, Bat life=20yr. FOM=2.5% of CAPEX($/kW) per NREL (incl augmentation).
     'battery': {
-        'Low':    {'CAISO': 2.27, 'ERCOT': 2.05, 'PJM': 2.18, 'NYISO': 2.41, 'NEISO': 2.34, 'MISO': 2.14, 'SPP': 2.07},
-        'Medium': {'CAISO': 2.60, 'ERCOT': 2.34, 'PJM': 2.49, 'NYISO': 2.75, 'NEISO': 2.67, 'MISO': 2.44, 'SPP': 2.37},
-        'High':   {'CAISO': 2.92, 'ERCOT': 2.63, 'PJM': 2.80, 'NYISO': 3.09, 'NEISO': 3.00, 'MISO': 2.75, 'SPP': 2.66},
+        'Low':    {'CAISO': 3.86, 'ERCOT': 3.48, 'PJM': 3.70, 'NYISO': 4.08, 'NEISO': 3.97, 'MISO': 3.62, 'SPP': 3.52},
+        'Medium': {'CAISO': 4.75, 'ERCOT': 4.27, 'PJM': 4.55, 'NYISO': 5.02, 'NEISO': 4.87, 'MISO': 4.46, 'SPP': 4.33},
+        'High':   {'CAISO': 6.03, 'ERCOT': 5.43, 'PJM': 5.78, 'NYISO': 6.38, 'NEISO': 6.20, 'MISO': 5.66, 'SPP': 5.50},
     },
     'battery8': {
-        'Low':    {'CAISO': 1.62, 'ERCOT': 1.46, 'PJM': 1.55, 'NYISO': 1.71, 'NEISO': 1.67, 'MISO': 1.51, 'SPP': 1.49},
-        'Medium': {'CAISO': 1.94, 'ERCOT': 1.75, 'PJM': 1.86, 'NYISO': 2.05, 'NEISO': 2.00, 'MISO': 1.81, 'SPP': 1.78},
-        'High':   {'CAISO': 2.26, 'ERCOT': 2.04, 'PJM': 2.17, 'NYISO': 2.39, 'NEISO': 2.33, 'MISO': 2.11, 'SPP': 2.08},
+        'Low':    {'CAISO': 3.30, 'ERCOT': 2.97, 'PJM': 3.16, 'NYISO': 3.49, 'NEISO': 3.39, 'MISO': 3.10, 'SPP': 3.01},
+        'Medium': {'CAISO': 4.06, 'ERCOT': 3.66, 'PJM': 3.89, 'NYISO': 4.30, 'NEISO': 4.17, 'MISO': 3.81, 'SPP': 3.70},
+        'High':   {'CAISO': 5.19, 'ERCOT': 4.67, 'PJM': 4.97, 'NYISO': 5.49, 'NEISO': 5.33, 'MISO': 4.87, 'SPP': 4.73},
     },
     'ldes': {
         'Low':    {'CAISO': 0.38, 'ERCOT': 0.33, 'PJM': 0.36, 'NYISO': 0.42, 'NEISO': 0.40, 'MISO': 0.34, 'SPP': 0.33},
@@ -237,15 +244,18 @@ FOAK_CCS_45Q_OFF = {
 FOAK_GEOTHERMAL = 150  # CAISO only, $/MWh
 
 # Storage FOAK: annualized capacity cost ($/MWh-cap), same units as LCOE_TABLES storage.
-# Battery: 1.05× High (mature tech, minimal FOAK premium).
+# Battery FOAK = LCOE_TABLES High (no FOAK premium — batteries are at manufacturing scale).
+# NOTE: For batteries, Wright's Law now goes LCOE_TABLES → NOAK_BATTERY (decline over time),
+# NOT FOAK → LCOE_TABLES. These FOAK values are kept for backward compatibility but are
+# not used in Phase 2 learning curves for bat4/bat8.
 # LDES: 1.40× High (Form Energy pre-commercial). H2: 1.30× High (first commercial H2 turbines).
 FOAK_BATTERY = {
-    'CAISO': 3.07, 'ERCOT': 2.76, 'PJM': 2.94, 'NYISO': 3.24,
-    'NEISO': 3.15, 'MISO': 2.89, 'SPP': 2.79,
+    'CAISO': 6.03, 'ERCOT': 5.43, 'PJM': 5.78, 'NYISO': 6.38,
+    'NEISO': 6.20, 'MISO': 5.66, 'SPP': 5.50,
 }
 FOAK_BATTERY8 = {
-    'CAISO': 2.37, 'ERCOT': 2.14, 'PJM': 2.28, 'NYISO': 2.51,
-    'NEISO': 2.45, 'MISO': 2.22, 'SPP': 2.18,
+    'CAISO': 5.19, 'ERCOT': 4.67, 'PJM': 4.97, 'NYISO': 5.49,
+    'NEISO': 5.33, 'MISO': 4.87, 'SPP': 4.73,
 }
 FOAK_LDES = {
     'CAISO': 1.40, 'ERCOT': 1.20, 'PJM': 1.32, 'NYISO': 1.55,
@@ -254,6 +264,27 @@ FOAK_LDES = {
 FOAK_H2 = {
     'CAISO': 5.32, 'ERCOT': 4.69, 'PJM': 5.04, 'NYISO': 5.85,
     'NEISO': 5.58, 'MISO': 4.82, 'SPP': 4.60,
+}
+
+# ============================================================================
+# WRIGHT'S LAW NOAK TERMINAL COSTS — Battery long-term floor
+# ============================================================================
+# For batteries, Wright's Law goes FORWARD from 2025 starting costs (LCOE_TABLES)
+# toward these terminal NOAK values. This is the REVERSE direction from other
+# technologies (which go FOAK → LCOE_TABLES). Batteries are already at manufacturing
+# scale, so their 2025 costs ARE the starting point, declining toward these floors.
+#
+# Calibrated to NREL 2050 projections: L=50%, M=56%, H=80% of 2025 starting cost.
+# Sources: NREL ATB 2024 + Cost Projections for Utility-Scale Battery Storage 2025 Update.
+NOAK_BATTERY = {
+    'Low':    {'CAISO': 1.93, 'ERCOT': 1.74, 'PJM': 1.85, 'NYISO': 2.04, 'NEISO': 1.98, 'MISO': 1.81, 'SPP': 1.76},
+    'Medium': {'CAISO': 2.65, 'ERCOT': 2.39, 'PJM': 2.54, 'NYISO': 2.81, 'NEISO': 2.73, 'MISO': 2.49, 'SPP': 2.42},
+    'High':   {'CAISO': 4.83, 'ERCOT': 4.34, 'PJM': 4.62, 'NYISO': 5.10, 'NEISO': 4.96, 'MISO': 4.53, 'SPP': 4.40},
+}
+NOAK_BATTERY8 = {
+    'Low':    {'CAISO': 1.64, 'ERCOT': 1.48, 'PJM': 1.57, 'NYISO': 1.74, 'NEISO': 1.69, 'MISO': 1.54, 'SPP': 1.50},
+    'Medium': {'CAISO': 2.27, 'ERCOT': 2.04, 'PJM': 2.17, 'NYISO': 2.40, 'NEISO': 2.33, 'MISO': 2.13, 'SPP': 2.07},
+    'High':   {'CAISO': 4.15, 'ERCOT': 3.74, 'PJM': 3.98, 'NYISO': 4.39, 'NEISO': 4.26, 'MISO': 3.90, 'SPP': 3.78},
 }
 
 # ============================================================================
@@ -270,10 +301,12 @@ LEARNING_PARAMS = {
     'geo':     {'L': (2028, 2036), 'M': (2030, 2040), 'H': (2036, 2048)},
     'ldes':    {'L': (2028, 2036), 'M': (2030, 2040), 'H': (2036, 2048)},
     'h2':      {'L': (2028, 2036), 'M': (2030, 2040), 'H': (2036, 2048)},
-    # Battery: mature tech, shallow curve. FOAK only 5% above High.
-    # Fast timelines — all at NOAK by ~2035 even in pessimistic case.
-    'bat4':    {'L': (2025, 2030), 'M': (2026, 2032), 'H': (2027, 2035)},
-    'bat8':    {'L': (2025, 2030), 'M': (2026, 2032), 'H': (2027, 2035)},
+    # Battery: Wright's Law from 2025 starting cost → NOAK terminal floor.
+    # Slower decline — on the mature part of the curve, not FOAK steep drops.
+    # Calibrated to NREL Low/Mid/High projections. L=fastest, H=near-flat.
+    # 8hr declines slightly faster (cell cost is larger share, cells decline faster).
+    'bat4':    {'L': (2025, 2042), 'M': (2025, 2048), 'H': (2025, 2050)},
+    'bat8':    {'L': (2025, 2040), 'M': (2025, 2046), 'H': (2025, 2050)},
 }
 LEARNING_EXPONENT = 0.6  # Wright's Law concave ramp
 
@@ -1135,8 +1168,8 @@ def precompute_all_prices(iso, all_combos, target_year=None):
         _foak_geo = FOAK_GEOTHERMAL  # scalar, CAISO only
         _foak_ldes = FOAK_LDES[iso]
         _foak_h2 = FOAK_H2[iso]
-        _foak_bat4 = FOAK_BATTERY[iso]
-        _foak_bat8 = FOAK_BATTERY8[iso]
+        # Battery FOAK tables kept for reference but not used for learning curves.
+        # Battery learning goes LCOE_TABLES (2025) → NOAK_BATTERY (terminal floor).
 
         # Pre-compute year-adjusted nuclear new-build per firm level
         _nuc_yr = {}
@@ -1168,15 +1201,20 @@ def precompute_all_prices(iso, all_combos, target_year=None):
             foak_s_h2, noak_y_h2 = LEARNING_PARAMS['h2'][lev]
             _h2_yr[name] = year_adjusted_cost(_foak_h2, _h2_lcoe_iso[name], target_year, foak_s_h2, noak_y_h2)
 
-        # Pre-compute year-adjusted battery (4hr, 8hr) per batt level
-        # Shallow curve: FOAK only 5% above High, fast convergence
+        # Pre-compute year-adjusted battery (4hr, 8hr) per batt level.
+        # Battery Wright's Law: DECLINE from 2025 starting costs (LCOE_TABLES)
+        # toward NOAK terminal floor. Direction is REVERSED vs other technologies
+        # because batteries are already at scale — no FOAK premium, only future decline.
         _bat4_yr = {}
         _bat8_yr = {}
+        _noak_bat4_iso = {name: NOAK_BATTERY[name][iso] for name in ['Low', 'Medium', 'High']}
+        _noak_bat8_iso = {name: NOAK_BATTERY8[name][iso] for name in ['Low', 'Medium', 'High']}
         for name, lev in [('Low', 'L'), ('Medium', 'M'), ('High', 'H')]:
             foak_s_4, noak_y_4 = LEARNING_PARAMS['bat4'][lev]
-            _bat4_yr[name] = year_adjusted_cost(_foak_bat4, _bat_lcoe_iso[name], target_year, foak_s_4, noak_y_4)
+            # start_cost=LCOE_TABLES (2025), terminal=NOAK (Wright's Law floor)
+            _bat4_yr[name] = year_adjusted_cost(_bat_lcoe_iso[name], _noak_bat4_iso[name], target_year, foak_s_4, noak_y_4)
             foak_s_8, noak_y_8 = LEARNING_PARAMS['bat8'][lev]
-            _bat8_yr[name] = year_adjusted_cost(_foak_bat8, _bat8_lcoe_iso[name], target_year, foak_s_8, noak_y_8)
+            _bat8_yr[name] = year_adjusted_cost(_bat8_lcoe_iso[name], _noak_bat8_iso[name], target_year, foak_s_8, noak_y_8)
 
     for j, (scenario_key, sens) in enumerate(all_combos):
         ren_name = LEVEL_NAME[sens['ren']]
