@@ -206,6 +206,20 @@ NUCLEAR_NEWBUILD_LCOE = {
 GEOTHERMAL_LCOE = {'L': 63, 'M': 88, 'H': 110}
 GEO_CAP_TWH = 39.0
 
+# CCS-CCGT regional capacity caps (TWh/yr) — geologic CO2 storage availability
+# Mixes with CCS deployment exceeding these caps are filtered out.
+# NYISO/NEISO: hard zero (no geologic storage).
+# See SPEC.md §5.4.3 for sources and rationale.
+CCS_CAP_TWH = {
+    'CAISO': 25.0,    # 11% of 224 TWh demand — limited geology, regulatory barriers
+    'ERCOT': 200.0,   # 41% of 488 TWh demand — Gulf Coast saline formations
+    'PJM':   125.0,   # 15% of 843 TWh demand — Appalachian basin, east-west split
+    'NYISO': 0.0,     # Hard zero — crystalline bedrock, no geologic storage
+    'NEISO': 0.0,     # Hard zero — crystalline bedrock, no geologic storage
+    'MISO':  200.0,   # 30% of 660 TWh demand — Illinois/Michigan basins
+    'SPP':   50.0,    # 17% of 296 TWh demand — Anadarko basin, seismicity risk
+}
+
 # CCS-CCGT LCOE with/without 45Q
 CCS_LCOE_45Q_ON = {
     'L': {'CAISO': 58, 'ERCOT': 52, 'PJM': 62, 'NYISO': 78, 'NEISO': 75, 'MISO': 55, 'SPP': 50},
@@ -540,6 +554,15 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     ccs_pct = 100.0 - (cf_pct + sol_pct + wnd_pct + hyd_pct)
     ccs_pct = np.maximum(ccs_pct, 0.0)
 
+    # CCS regional cap: limit CCS deployment to geologically feasible TWh.
+    # Excess CCS above cap → priced as nuclear new-build instead.
+    # For NYISO/NEISO (cap=0), ALL implicit CCS → nuclear new-build.
+    ccs_cap = CCS_CAP_TWH.get(iso, 9999.0)
+    ccs_total_twh = ccs_pct / 100.0 * demand
+    ccs_capped_twh = np.minimum(ccs_total_twh, ccs_cap)
+    ccs_overflow_twh = np.maximum(0, ccs_total_twh - ccs_capped_twh)
+    ccs_capped_pct = np.where(demand > 0, ccs_capped_twh / demand * 100.0, 0.0)
+
     bat_pct = arrays['battery_dispatch_pct']
     bat8_pct = arrays.get('battery8_dispatch_pct', np.zeros(N, dtype=np.float64))
     ldes_pct = arrays['ldes_dispatch_pct']
@@ -564,14 +587,19 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     # --- Hydro (always existing, $0 cost — sunk fleet) ---
     # No cost added for hydro (existing fleet, $0 price)
 
-    # --- CCS-CCGT (existing = $0, only new-build costs money) ---
+    # --- CCS-CCGT (existing = $0, only new-build costs money; capped at regional TWh limit) ---
     ccs_existing = min(existing.get('ccs_ccgt', 0) * existing_scale, 100.0)
-    ccs_existing_pct = np.minimum(ccs_pct, ccs_existing)
-    ccs_new_pct = np.maximum(0, ccs_pct - ccs_existing)
+    ccs_existing_pct = np.minimum(ccs_capped_pct, ccs_existing)
+    ccs_new_pct = np.maximum(0, ccs_capped_pct - ccs_existing)
     ccs_table = CCS_LCOE_45Q_ON if q45 == '1' else CCS_LCOE_45Q_OFF
     ccs_lcoe = ccs_table[ccs_lev][iso]
     ccs_tx = get_tx('ccs_ccgt', tx_name, iso)
     total_cost += ccs_new_pct / 100.0 * (ccs_lcoe + ccs_tx)
+
+    # CCS overflow → nuclear new-build (CCS exceeding regional geologic cap)
+    # This capacity is physically needed but can't be CCS, so it's nuclear.
+    nuclear_overflow_price = NUCLEAR_NEWBUILD_LCOE[firm_lev][iso] + get_tx('clean_firm', tx_name, iso)
+    total_cost += np.where(demand > 0, ccs_overflow_twh / demand * nuclear_overflow_price, 0.0)
 
     # --- Clean Firm (existing = $0, new = merit-order tranche pricing) ---
     cf_existing = min(existing['clean_firm'] * existing_scale, 100.0)
@@ -599,16 +627,24 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
         geo_cost = geo_twh * geo_price
         remaining = np.maximum(0, remaining - geo_twh)
 
-    # Tranche 3: Cheapest of nuclear new-build vs CCS
+    # Tranche 3: Cheapest of nuclear new-build vs CCS (CCS capped at regional headroom)
     nuclear_price = NUCLEAR_NEWBUILD_LCOE[firm_lev][iso] + tx_cf
     ccs_tranche_price = ccs_table[ccs_lev][iso] + tx_ccs_cf
-    tranche3_is_nuclear = nuclear_price <= ccs_tranche_price
-    tranche3_price = min(nuclear_price, ccs_tranche_price)
-    tranche3_cost = remaining * tranche3_price
 
-    # Tranche 3 split: nuclear new-build vs CCS-CCGT
-    nuclear_newbuild_twh = remaining if tranche3_is_nuclear else np.zeros(N)
-    ccs_tranche_twh = np.zeros(N) if tranche3_is_nuclear else remaining
+    # CCS headroom: cap minus what's already used by implicit CCS residual
+    ccs_headroom_twh = np.maximum(0, ccs_cap - ccs_capped_twh)
+
+    if nuclear_price <= ccs_tranche_price:
+        # Nuclear cheaper → all remaining goes to nuclear
+        nuclear_newbuild_twh = remaining
+        ccs_tranche_twh = np.zeros(N)
+        tranche3_cost = remaining * nuclear_price
+    else:
+        # CCS cheaper → CCS gets min(remaining, headroom), nuclear gets overflow
+        ccs_tranche_twh = np.minimum(remaining, ccs_headroom_twh)
+        nuclear_newbuild_twh = np.maximum(0, remaining - ccs_tranche_twh)
+        tranche3_cost = (ccs_tranche_twh * ccs_tranche_price +
+                         nuclear_newbuild_twh * nuclear_price)
 
     cf_total_new_cost = uprate_cost + geo_cost + tranche3_cost
     cf_cost_per_demand = cf_total_new_cost / demand
