@@ -9,9 +9,8 @@ name: Cleanup Large File Blobs from History (Protected)
 #   2. Snapshot all blob SHAs in the current HEAD tree (the "protected set")
 #   3. Walk all history to find blobs under data/ or matching target extensions
 #   4. Only blobs NOT in the protected set are candidates for removal
-#   5. Build an explicit blob-map file for git-filter-repo
-#   6. Rewrite history, replacing dead blobs with empty content
-#   7. Verify HEAD tree hash is unchanged after rewrite
+#   5. Strip dead blobs via git-filter-repo --strip-blobs-with-ids
+#   6. Verify HEAD tree hash is unchanged after rewrite
 #
 # Protected files include ALL live files: EIA 930 profiles, eGRID data,
 # pipeline parquets (step1–step5), JSON results, and everything else in HEAD.
@@ -244,11 +243,10 @@ jobs:
           echo ""
           echo "Re-run with dry_run=false and confirm=REWRITE-HISTORY to execute."
 
-      - name: Build blob replacement map
+      - name: Check if cleanup needed
         if: ${{ inputs.dry_run == false }}
         id: blobmap
         run: |
-          REMOVABLE_SHAS="${{ steps.enumerate.outputs.removable_shas }}"
           removable_count="${{ steps.enumerate.outputs.removable_count }}"
 
           if [ "$removable_count" = "0" ]; then
@@ -258,24 +256,15 @@ jobs:
           fi
 
           echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "Will strip $removable_count unique dead blob SHAs."
 
-          # Create an empty blob to replace dead blobs with
-          EMPTY_SHA=$(git hash-object -t blob --stdin < /dev/null)
-          echo "Empty blob SHA: $EMPTY_SHA"
-
-          # Build the blob-map from unique removable SHAs: old-sha → empty-sha
-          BLOB_MAP=$(mktemp)
-          awk -v empty="$EMPTY_SHA" '{print $1, empty}' "$REMOVABLE_SHAS" > "$BLOB_MAP"
-          echo "Unique blob map entries: $(wc -l < "$BLOB_MAP")"
-          echo "blob_map=$BLOB_MAP" >> "$GITHUB_OUTPUT"
-
-      - name: Run git-filter-repo with blob replacement map
+      - name: Run git-filter-repo to strip dead blobs
         if: ${{ inputs.dry_run == false && steps.blobmap.outputs.skip != 'true' }}
         run: |
-          BLOB_MAP="${{ steps.blobmap.outputs.blob_map }}"
-          echo "Replacing $(wc -l < "$BLOB_MAP") dead blobs with empty content..."
+          REMOVABLE_SHAS="${{ steps.enumerate.outputs.removable_shas }}"
+          echo "Stripping $(wc -l < "$REMOVABLE_SHAS") dead blobs..."
           echo "(All live HEAD blobs are protected and untouched)"
-          git filter-repo --replace-blob "$BLOB_MAP" --force
+          git filter-repo --strip-blobs-with-ids "$REMOVABLE_SHAS" --force
 
       - name: Verify HEAD integrity after cleanup
         if: ${{ inputs.dry_run == false && steps.blobmap.outputs.skip != 'true' }}
