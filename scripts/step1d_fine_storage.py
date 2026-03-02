@@ -644,11 +644,11 @@ def _load_manifest(iso, current_hash):
         return None
 
 
-def _save_manifest(iso, code_hash, pass1_done, pass2_done):
+def _save_manifest(iso, code_hash, pass1_thresholds, pass2_done):
     os.makedirs(STEP1D_OUTPUT_DIR, exist_ok=True)
     manifest = {
         'code_hash': code_hash,
-        'pass1_done': pass1_done,
+        'pass1_thresholds': sorted(pass1_thresholds),
         'pass2_done': sorted(pass2_done),
     }
     with open(_manifest_path(iso), 'w') as f:
@@ -687,7 +687,17 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
     # ── Resume logic ──
     code_hash = _compute_code_hash(iso)
     manifest = _load_manifest(iso, code_hash)
-    pass1_done = manifest.get('pass1_done', False) if manifest else False
+    # Per-threshold tracking (backward-compat: old bool pass1_done → empty set)
+    if manifest:
+        old_p1 = manifest.get('pass1_done', False)
+        if isinstance(old_p1, bool) and old_p1:
+            # Old manifest had pass1_done=True for all thresholds at once.
+            # Migrate: treat pass2_done as the set of completed thresholds.
+            pass1_thresholds = set(manifest.get('pass2_done', []))
+        else:
+            pass1_thresholds = set(manifest.get('pass1_thresholds', []))
+    else:
+        pass1_thresholds = set()
     pass2_done = set(manifest.get('pass2_done', [])) if manifest else set()
 
     # ── Load near-miss mixes ──
@@ -755,32 +765,39 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
     # PASS 1: Adaptive coarse storage sweep
     # ══════════════════════════════════════════════════════
 
-    coarse_results = None
-    if not pass1_done:
-        coarse_results = run_adaptive_coarse(
-            iso, nm_combos, nm_base_scores, max_scores,
-            demand_arr, supply_matrix, active_thresholds, sc)
+    # Determine which thresholds need Pass 1 (coarse sweep)
+    pass1_needed = [t for t in active_thresholds if t not in pass1_thresholds]
+    pass1_cached = [t for t in active_thresholds if t in pass1_thresholds]
 
-        # Save coarse results per threshold (filtered to active set)
-        for t in active_thresholds:
-            t_results = coarse_results[t]
+    coarse_results = {t: [] for t in active_thresholds}
+
+    # Run Pass 1 for thresholds that haven't been processed yet
+    if pass1_needed:
+        new_coarse = run_adaptive_coarse(
+            iso, nm_combos, nm_base_scores, max_scores,
+            demand_arr, supply_matrix, pass1_needed, sc)
+
+        # Save coarse results per threshold
+        for t in pass1_needed:
+            t_results = new_coarse[t]
+            coarse_results[t] = t_results
             if t_results:
                 save_storage_results(iso, t, nm_combos, t_results, rtypes)
                 print(f"    {iso} t{t}%: {len(t_results):,} storage-feasible "
                       f"(coarse)")
             git_commit_threshold(iso, t, "Pass1", auto_commit)
 
-        pass1_done = True
-        _save_manifest(iso, code_hash, pass1_done, pass2_done)
+        pass1_thresholds.update(pass1_needed)
+        _save_manifest(iso, code_hash, pass1_thresholds, pass2_done)
     else:
-        print(f"\n  Pass 1: skipped (already done)")
-        # Reload coarse results from saved parquets for Pass 2.
-        # Use hash-map lookup (O(1) per row) instead of O(N) linear search.
+        print(f"\n  Pass 1: all active thresholds already done")
+
+    # Reload coarse results from saved parquets for cached thresholds
+    if pass1_cached:
         nm_key_to_idx = {k: i for i, k in
                          enumerate(_mix_keys(nm_combos).tolist())}
 
-        coarse_results = {t: [] for t in active_thresholds}
-        for t in active_thresholds:
+        for t in pass1_cached:
             t_str = s1._normalize_threshold_str(t)
             t_path = os.path.join(STEP1D_OUTPUT_DIR,
                                   f'{iso}_t{t_str}_storage.parquet')
@@ -844,7 +861,7 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
 
         git_commit_threshold(iso, t, "Pass2", auto_commit)
         pass2_done.add(t)
-        _save_manifest(iso, code_hash, pass1_done, pass2_done)
+        _save_manifest(iso, code_hash, pass1_thresholds, pass2_done)
 
     iso_elapsed = time.time() - iso_start
     print(f"\n{'=' * 70}")
