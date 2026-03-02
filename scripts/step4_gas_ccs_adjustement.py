@@ -402,10 +402,10 @@ def load_from_parquets(input_dir, isos):
                     'costs': costs,
                     'tranche_costs': tranche_costs,
                     'hourly_match_score': float(match_arr[i]) if match_arr is not None else 0.0,
-                    'battery_dispatch_pct': int(batt_arr[i]) if batt_arr is not None else 0,
-                    'battery8_dispatch_pct': int(batt8_arr[i]) if batt8_arr is not None else 0,
-                    'ldes_dispatch_pct': int(ldes_arr[i]) if ldes_arr is not None else 0,
-                    'h2_dispatch_pct': int(h2_arr[i]) if h2_arr is not None else 0,
+                    'battery_dispatch_pct': round(float(batt_arr[i]), 4) if batt_arr is not None else 0.0,
+                    'battery8_dispatch_pct': round(float(batt8_arr[i]), 4) if batt8_arr is not None else 0.0,
+                    'ldes_dispatch_pct': round(float(ldes_arr[i]), 4) if ldes_arr is not None else 0.0,
+                    'h2_dispatch_pct': round(float(h2_arr[i]), 4) if h2_arr is not None else 0.0,
                     'gas_backup_step3': gas_step3,
                 }
 
