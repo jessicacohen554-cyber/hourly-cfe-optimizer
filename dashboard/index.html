@@ -1619,8 +1619,10 @@ if (typeof ChartDataLabels !== 'undefined') {
     Chart.defaults.set('plugins.datalabels', { display: false });
 }
 
-// Resource color map
-const RESOURCE_COLORS = {
+// Resource color map for homepage charts (display-name keys)
+// NOTE: RESOURCE_COLORS is already declared by chart-colors.js (camelCase keys).
+// This map uses display-name keys for chart dataset labels.
+var HOMEPAGE_COLORS = {
     'Solar': '#F59E0B',
     'Wind': '#22C55E',
     'New Nuclear': '#1E3A5F',
