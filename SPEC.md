@@ -2398,7 +2398,10 @@ CCS_CAP_TWH = {
 - **ERCOT (200 TWh / 41%)**: Best CCS region in US. Gulf Coast has 20+ Gt depleted offshore fields, 100s Gt offshore saline formations. TX received Class VI primacy Dec 2025 (64 apps from EPA). Denbury CO₂ pipeline network (900+ mi) is densest in US. Multiple storage hubs under development.
 - **MISO (200 TWh / 30%)**: Mt. Simon Sandstone (12–172 Gt) is the most characterized formation in US with 2+ Mt successfully injected at ADM Decatur. ND has had primacy since 2018 with 3 active projects. Broadwing 400 MW CCS-CCGT (Google-backed, FID Q2 2026) would be first in US.
 
-**Implementation**: Step 3 enforces `ccs_twh = min(ccs_twh, CCS_CAP_TWH[iso])` in all merit-order paths. Step 1 will filter `ccs_pct × demand_TWh ≤ CCS_CAP_TWH[iso]` in the next physics run (deferred to avoid re-running Step 1 this iteration).
+**Implementation (Step 3, March 2026)**: CCS cap enforced in two places within `price_mix_batch`:
+1. **Implicit CCS residual** (`ccs_pct = 100 - sum(cf, sol, wnd, hyd)`): TWh capped at `CCS_CAP_TWH[iso]`. Excess priced as nuclear new-build at the firm gen toggle level.
+2. **Tranche 3 CCS** (clean_firm overflow after uprate + geothermal): CCS headroom = `cap - residual_ccs_twh`. If CCS is cheaper than nuclear but headroom exhausted, overflow goes to nuclear new-build.
+For NYISO/NEISO (cap=0), all CCS → nuclear automatically. Step 1 will filter `ccs_pct × demand_TWh ≤ CCS_CAP_TWH[iso]` in the next physics run (deferred to avoid re-running Step 1 this iteration).
 
 *Sources: USGS National Carbon Sequestration Database (NATCARB), NETL Carbon Storage Atlas V (2015), DOE CarbonSAFE program status (2024–2025), EPA Class VI well permit tracker, California SB 905 (2022), Princeton Net-Zero America (2021), Global CCS Institute Status Report (2024), IEEFA CCS deployment analysis (2024).*
 
