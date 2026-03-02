@@ -101,6 +101,61 @@ def get_near_miss_width(threshold):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# VECTORIZED HASH / DEDUP UTILITIES
+# ══════════════════════════════════════════════════════════════════════════════
+
+# Collision-free hashing: base-351 positional encoding.
+# Each resource dimension ∈ [0, 350], so 351^i gives unique int64 per mix.
+# Max 7 dims × 9 bits = 63 bits → fits int64 with no collisions.
+_HASH_BASES = np.array([351**i for i in range(7)], dtype=np.int64)
+
+
+def _hash_mixes(combos):
+    """Vectorized collision-free int64 hash per mix row. No Python loops."""
+    n_res = combos.shape[1]
+    return combos.astype(np.int64) @ _HASH_BASES[:n_res]
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# NUMBA JIT DOMINANCE FILTER
+# ══════════════════════════════════════════════════════════════════════════════
+
+if s1.HAS_NUMBA:
+    from numba import njit as _njit
+
+    @_njit(cache=True)
+    def _dominance_filter_jit(combos, order):
+        """Numba JIT Pareto front with early-exit inner loop."""
+        n = len(combos)
+        n_res = combos.shape[1]
+        kept = np.ones(n, dtype=np.bool_)
+        front = np.empty((n, n_res), dtype=np.float64)
+        front_size = 0
+
+        for oi in range(n):
+            idx = order[oi]
+            dominated = False
+            for fi in range(front_size):
+                all_leq = True
+                strict = False
+                for d in range(n_res):
+                    if front[fi, d] > combos[idx, d]:
+                        all_leq = False
+                        break
+                    if front[fi, d] < combos[idx, d]:
+                        strict = True
+                if all_leq and strict:
+                    dominated = True
+                    break
+            if dominated:
+                kept[idx] = False
+            else:
+                front[front_size] = combos[idx]
+                front_size += 1
+        return kept
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # ZONE FINE GRID GENERATION
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -187,20 +242,26 @@ def generate_archetype_fine_grid(iso, boundary_mixes, n_res):
     radius = FINE_RADIUS_5D if n_res >= 5 else FINE_RADIUS_DEFAULT
     max_arch = MAX_FINE_ARCHETYPES_5D if n_res >= 5 else MAX_FINE_ARCHETYPES
 
-    # Deduplicate boundary mixes to archetypes
-    archetypes = set()
-    for mix in boundary_mixes:
-        archetypes.add(tuple(int(mix[j]) for j in range(n_res)))
+    # Vectorized dedup of boundary mixes to integer archetypes
+    int_mixes = boundary_mixes.astype(np.int64)
+    if len(int_mixes) > 0:
+        hashes = _hash_mixes(int_mixes)
+        _, uniq_idx = np.unique(hashes, return_index=True)
+        unique_archetypes = int_mixes[uniq_idx]
+    else:
+        unique_archetypes = int_mixes
 
-    if len(archetypes) > max_arch:
-        archetype_list = sorted(archetypes, key=sum)
-        step_size = max(1, len(archetype_list) // max_arch)
-        archetypes = set(archetype_list[::step_size][:max_arch])
+    if len(unique_archetypes) > max_arch:
+        totals = unique_archetypes.sum(axis=1)
+        order = np.argsort(totals)
+        unique_archetypes = unique_archetypes[order]
+        step_size = max(1, len(unique_archetypes) // max_arch)
+        unique_archetypes = unique_archetypes[::step_size][:max_arch]
 
     # Generate fine grid around each archetype
     parts = []
-    for arch in archetypes:
-        base = np.array(arch, dtype=np.float64)
+    for i in range(len(unique_archetypes)):
+        base = unique_archetypes[i].astype(np.float64)
         fine = s1.generate_resource_combos_around(base, iso, step=FINE_STEP, radius=radius)
         if len(fine) > 0:
             parts.append(fine)
@@ -276,12 +337,10 @@ def assign_to_thresholds_vectorized(combos, scores, thresholds):
 # ══════════════════════════════════════════════════════════════════════════════
 
 def dominance_filter_arrays(combos, scores, storage_pcts=None):
-    """Vectorized dominance filter on numpy arrays.
+    """Dominance filter: Numba JIT with early-exit, numpy fallback.
 
-    A mix is dominated if another mix has all resources <= AND achieves
-    the same or higher score. Returns mask of non-dominated entries.
-
-    For PFS without storage, storage_pcts is None (all zeros).
+    A mix is dominated if another mix has all resources <= AND at least one <.
+    Returns boolean mask of non-dominated entries.
     """
     n = len(combos)
     if n <= 1:
@@ -289,29 +348,27 @@ def dominance_filter_arrays(combos, scores, storage_pcts=None):
 
     # Sort by total procurement ascending (leanest first)
     total = combos.sum(axis=1)
-    order = np.argsort(total)
+    order = np.argsort(total).astype(np.int64)
 
+    if s1.HAS_NUMBA:
+        return _dominance_filter_jit(combos.astype(np.float64), order)
+
+    # Numpy fallback (Python outer loop, vectorized inner comparison)
     kept = np.ones(n, dtype=bool)
     n_res = combos.shape[1]
-
-    # Incremental Pareto front
     front = np.empty((min(n, 50000), n_res), dtype=np.float64)
     front_size = 0
 
     for idx in order:
         mix_i = combos[idx]
-
         if front_size > 0:
             fslice = front[:front_size]
-            # Check if any front member dominates mix_i
             leq = np.all(fslice <= mix_i, axis=1)
             if np.any(leq):
                 eq = np.all(fslice == mix_i, axis=1)
                 if np.any(leq & ~eq):
                     kept[idx] = False
                     continue
-
-        # Add to front
         if front_size >= len(front):
             front = np.vstack([front, np.empty((10000, n_res), dtype=np.float64)])
         front[front_size] = mix_i
@@ -522,14 +579,8 @@ def process_iso(iso, auto_commit=False):
                                    coarse_combos[:2])
         print(f"  JIT ready")
 
-    # ── Global tracking ──
-    # Hash set for dedup: tuple of (int, ...) resource percentages
-    global_scored_hashes = set()
-
-    # Add all coarse mixes to global hash (already scored)
-    for i in range(len(coarse_combos)):
-        key = tuple(int(coarse_combos[i, j]) for j in range(n_res))
-        global_scored_hashes.add(key)
+    # ── Global tracking (vectorized dedup via collision-free int64 hash) ──
+    global_hash_arr = _hash_mixes(coarse_combos)
 
     # Accumulate ALL scored mixes (coarse + fine) with their scores
     all_combos_list = [coarse_combos]
@@ -574,16 +625,19 @@ def process_iso(iso, auto_commit=False):
 
         print(f"    Raw fine grid: {len(fine_combos):,} combos")
 
-        # 3. Dedup against global hash
+        # 3. Dedup against global hash (fully vectorized — no Python loops)
         if len(fine_combos) > 0:
-            new_mask = np.ones(len(fine_combos), dtype=bool)
-            for i in range(len(fine_combos)):
-                key = tuple(int(fine_combos[i, j]) for j in range(n_res))
-                if key in global_scored_hashes:
-                    new_mask[i] = False
-                else:
-                    global_scored_hashes.add(key)
+            fine_hashes = _hash_mixes(fine_combos)
+            # Self-dedup within fine grid
+            _, uniq_idx = np.unique(fine_hashes, return_index=True)
+            fine_combos = fine_combos[uniq_idx]
+            fine_hashes = fine_hashes[uniq_idx]
+            # Cross-dedup against all previously scored mixes
+            new_mask = ~np.isin(fine_hashes, global_hash_arr)
             fine_combos = fine_combos[new_mask]
+            fine_hashes = fine_hashes[new_mask]
+            # Update running hash array
+            global_hash_arr = np.concatenate([global_hash_arr, fine_hashes])
 
         print(f"    After dedup: {len(fine_combos):,} new mixes to score")
 
