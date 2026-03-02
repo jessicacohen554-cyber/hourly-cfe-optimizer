@@ -1,0 +1,150 @@
+name: "Prune Duplicate Mixes"
+
+# Removes mixes that fall outside their threshold band from PFS, storage-refined,
+# and EF parquet files.  Each threshold file should only contain mixes scoring
+# within [threshold, next_threshold).  The top threshold (99.99) keeps >= 99.99.
+#
+# Targets: Step 1c raw PFS, Step 1d storage-refined, Step 2 EF, Step 2.5 expanded EF.
+# Step 2 EF is typically already banded correctly, but included for safety.
+#
+# Prerequisite: Step 1c/1d/2 parquets must exist in the repo.
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO region to process'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      step:
+        description: 'Which steps to prune'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - 1c
+          - 1d
+          - '2'
+          - '2.5'
+      dry_run:
+        description: 'Dry run (report only, no file changes)'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  # ════════════════════════════════════════════════════════════════════════
+  # Build the ISO matrix: single ISO or fan out to all 7
+  # ════════════════════════════════════════════════════════════════════════
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Build ISO matrix
+        id: set-matrix
+        run: |
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            echo 'matrix={"iso":["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]}' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix={"iso":["${{ inputs.iso }}"]}' >> "$GITHUB_OUTPUT"
+          fi
+
+  # ════════════════════════════════════════════════════════════════════════
+  # Per-ISO pruning job
+  # ════════════════════════════════════════════════════════════════════════
+  prune:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    strategy:
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Create output branch
+        if: ${{ inputs.dry_run == 'false' }}
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          TARGET_BRANCH="auto/${TIMESTAMP}-prune-dupes-${{ matrix.iso }}"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$TARGET_BRANCH"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pyarrow pandas
+
+      - name: "Prune duplicate mixes (${{ matrix.iso }})"
+        run: |
+          ARGS="--iso ${{ matrix.iso }} --step ${{ inputs.step }}"
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            ARGS="$ARGS --dry-run"
+          fi
+          python scripts/prune_duplicate_mixes.py $ARGS
+
+      - name: Commit and push
+        if: ${{ inputs.dry_run == 'false' }}
+        run: |
+          git config http.postBuffer 524288000
+
+          git add -f data/step1-pfs-parquets/${{ matrix.iso }}_t*_raw_pfs.parquet 2>/dev/null || true
+          git add -f data/step1d-storage-parquets/${{ matrix.iso }}_t*_storage_refined.parquet 2>/dev/null || true
+          git add -f data/step2-ef-parquets/step2_ef_${{ matrix.iso }}_t*.parquet 2>/dev/null || true
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit for ${{ matrix.iso }}"
+            exit 0
+          fi
+
+          git commit -m "Prune duplicate mixes: ${{ matrix.iso }} (step=${{ inputs.step }}) — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i/$MAX_RETRIES..."
+            git push -u origin "$TARGET_BRANCH" 2>&1 && break
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "ERROR: Push failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done
