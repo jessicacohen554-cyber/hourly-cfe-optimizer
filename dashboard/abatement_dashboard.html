@@ -13,34 +13,12 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <style>
-/* Page-specific background */
-body { background: #F7F8FC; }
-
-/* ========== FOOTER — uses shared.css dark navy .page-footer ========== */
-.footer-links { display: flex; flex-wrap: wrap; gap: 16px 24px; justify-content: center; margin-bottom: 12px; }
-.footer-links a {
-    text-decoration: none;
-    font-size: 0.85rem;
-    font-weight: 500;
-    transition: color 0.2s;
-    min-height: 44px;
-    display: inline-flex;
-    align-items: center;
-    padding: 8px 4px;
-}
-.footer-note { font-size: 0.78rem; }
-
-.bottom-banner {
-    height: 4px;
-    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%);
-}
-
-/* ========== HERO OVERVIEW SECTION (dark navy intro) ========== */
+/* ========== HERO OVERVIEW SECTION (extends shared.css .hero-section) ========== */
 .hero-overview {
-    background: linear-gradient(180deg, #0F1A2E 0%, #1A2744 60%, #1E3A5F 100%);
+    background: linear-gradient(180deg, var(--navy-dark) 0%, var(--navy) 60%, var(--navy-mid) 100%);
     position: relative;
     overflow: hidden;
-    padding: 48px 24px;
+    padding: 48px var(--pad-page);
 }
 .hero-overview::before {
     content: '';
@@ -52,18 +30,18 @@ body { background: #F7F8FC; }
 }
 .hero-overview-inner {
     position: relative;
-    max-width: 1320px;
+    max-width: var(--max-content);
     margin: 0 auto;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 48px;
+    gap: var(--space-2xl);
     align-items: center;
 }
 .hero-text-block {
     z-index: 2;
 }
 .hero-text-block h2 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 2rem;
     font-weight: 800;
     color: #ffffff;
@@ -81,18 +59,7 @@ body { background: #F7F8FC; }
     z-index: 1;
 }
 
-/* ========== CHART PANELS ========== */
-.chart-panel {
-    background: rgba(255,255,255,0.97);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(74,144,217,0.12);
-    border-radius: 16px;
-    padding: 28px 24px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
-    width: 100%;
-    box-sizing: border-box;
-}
+/* ========== CHART PANEL OVERRIDES (base in shared.css) ========== */
 .chart-panel-overview,
 .chart-panel-region {
     background: rgba(255,255,255,0.98);
@@ -102,12 +69,10 @@ body { background: #F7F8FC; }
     min-height: 400px;
 }
 .chart-panel-overview .chart-container {
-    position: relative;
-    width: 100%;
     min-height: 350px;
 }
 .hero-chart-title {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 0.85rem;
     font-weight: 700;
     color: rgba(15,23,42,0.85);
@@ -116,21 +81,21 @@ body { background: #F7F8FC; }
     letter-spacing: 0.02em;
 }
 .hero-chart-subtitle {
-    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-data);
     font-size: 0.72rem;
-    color: rgba(15,23,42,0.4);
+    color: var(--text-dim);
     text-align: center;
     margin-top: 6px;
 }
 
 /* ========== REGION SECTIONS ========== */
 .region-section {
-    background: #F7F8FC;
+    background: var(--bg-page);
     position: relative;
     border-top: 1px solid rgba(0,0,0,0.025);
 }
 .region-section-inner {
-    max-width: 1320px;
+    max-width: var(--max-content);
     margin: 0 auto;
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -141,7 +106,7 @@ body { background: #F7F8FC; }
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 32px;
+    padding: var(--pad-section);
 }
 .chart-panel-region {
     background: rgba(255,255,255,0.98);
@@ -149,8 +114,6 @@ body { background: #F7F8FC; }
     min-height: 400px;
 }
 .chart-panel-region .chart-container {
-    position: relative;
-    width: 100%;
     min-height: 350px;
 }
 .region-narrative-col {
@@ -164,8 +127,8 @@ body { background: #F7F8FC; }
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(0,0,0,0.08);
-    border-radius: 16px;
-    padding: 32px;
+    border-radius: var(--radius-xl);
+    padding: var(--pad-section);
     opacity: 0;
     transform: translateY(30px);
     transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
@@ -176,10 +139,10 @@ body { background: #F7F8FC; }
     transform: translateY(0);
 }
 .region-step-card h3 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.5rem;
     font-weight: 800;
-    color: #1E293B;
+    color: var(--text-secondary);
     margin-bottom: 12px;
     line-height: 1.25;
     letter-spacing: -0.3px;
@@ -195,24 +158,24 @@ body { background: #F7F8FC; }
     margin-top: 14px;
     padding: 8px 16px;
     border-radius: 10px;
-    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-data);
     font-size: 0.88rem;
     font-weight: 700;
 }
 .step-stat-green {
     background: rgba(34,197,94,0.08);
     border: 1px solid rgba(34,197,94,0.2);
-    color: #16a34a;
+    color: var(--green-pos);
 }
 .step-stat-amber {
     background: rgba(245,158,11,0.08);
     border: 1px solid rgba(245,158,11,0.18);
-    color: #d97706;
+    color: var(--amber-warn);
 }
 .step-stat-red {
     background: rgba(239,68,68,0.06);
     border: 1px solid rgba(239,68,68,0.2);
-    color: #dc2626;
+    color: var(--red-dark);
 }
 .step-stat-blue {
     background: rgba(14,165,233,0.08);
@@ -222,8 +185,8 @@ body { background: #F7F8FC; }
 .region-tag {
     display: inline-block;
     padding: 3px 10px;
-    border-radius: 6px;
-    font-family: 'Barlow Semi Condensed', sans-serif;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-data);
     font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.04em;
@@ -233,24 +196,24 @@ body { background: #F7F8FC; }
 
 /* ========== SYNTHESIS SECTION ========== */
 .synthesis-section {
-    background: #F7F8FC;
-    padding: 64px 24px;
+    background: var(--bg-page);
+    padding: 64px var(--pad-page);
     border-top: 1px solid rgba(0,0,0,0.025);
 }
 .synthesis-inner {
-    max-width: 1320px;
+    max-width: var(--max-content);
     margin: 0 auto;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 32px;
+    gap: var(--pad-section);
 }
 .synthesis-card {
     background: rgba(0,0,0,0.025);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(0,0,0,0.08);
-    border-radius: 16px;
-    padding: 32px;
+    border-radius: var(--radius-xl);
+    padding: var(--pad-section);
     opacity: 0;
     transform: translateY(30px);
     transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
@@ -261,10 +224,10 @@ body { background: #F7F8FC; }
     transform: translateY(0);
 }
 .synthesis-card h3 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.3rem;
     font-weight: 800;
-    color: #1E293B;
+    color: var(--text-secondary);
     margin-bottom: 12px;
     line-height: 1.25;
 }
@@ -279,7 +242,7 @@ body { background: #F7F8FC; }
     margin-top: 14px;
     padding: 8px 16px;
     border-radius: 10px;
-    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-data);
     font-size: 0.88rem;
     font-weight: 700;
 }
@@ -297,9 +260,9 @@ body { background: #F7F8FC; }
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-data);
     font-size: 0.7rem;
-    color: rgba(15,23,42,0.55);
+    color: var(--text-dim);
     white-space: nowrap;
 }
 .chart-legend-swatch {
@@ -358,7 +321,7 @@ html, body {
     /* Hero overview: stack text + chart vertically */
     .hero-overview-inner {
         grid-template-columns: 1fr;
-        gap: 24px;
+        gap: var(--space-lg);
     }
     .hero-overview {
         padding: 36px 16px;
@@ -378,11 +341,7 @@ html, body {
         padding: 16px 16px 32px;
     }
 
-    /* Chart panels */
-    .chart-panel {
-        padding: 16px 14px;
-        border-radius: 12px;
-    }
+    /* Chart panel overrides */
     .chart-panel-overview {
         min-height: 350px;
     }
@@ -425,10 +384,6 @@ html, body {
 @media (max-width: 600px) {
     .hero-overview {
         padding: 28px 12px;
-    }
-    .chart-panel {
-        padding: 12px 10px;
-        border-radius: 10px;
     }
     .chart-panel-overview {
         min-height: 320px;
@@ -473,10 +428,6 @@ html, body {
     .hero-overview {
         padding: 20px 8px;
     }
-    .chart-panel {
-        padding: 10px 8px;
-        border-radius: 8px;
-    }
     .chart-panel-overview {
         min-height: 300px;
     }
@@ -497,14 +448,14 @@ html, body {
     }
     .region-step-card {
         padding: 16px 12px;
-        border-radius: 12px;
+        border-radius: var(--radius-lg);
     }
     .region-step-card h3 { font-size: 1.05rem; }
     .region-step-card p { font-size: 0.82rem; line-height: 1.6; }
     .region-step-card .step-stat { font-size: 0.78rem; padding: 6px 12px; }
     .synthesis-card {
         padding: 16px 12px;
-        border-radius: 12px;
+        border-radius: var(--radius-lg);
     }
     .synthesis-card h3 { font-size: 1rem; }
     .synthesis-card p { font-size: 0.82rem; line-height: 1.6; }
@@ -517,16 +468,11 @@ html, body {
     .swatch-line, .swatch-dashed, .swatch-dot-line { width: 10px; }
     .swatch-band { width: 10px; height: 6px; }
     .chart-legend-divider { height: 8px; }
-
-    /* Footer */
-    .footer-links { gap: 8px 16px; }
-    .footer-links a { font-size: 0.78rem; }
 }
 
 /* ========== RESPONSIVE — Tiny phone (320px) ========== */
 @media (max-width: 320px) {
     .hero-overview { padding: 16px 6px; }
-    .chart-panel { padding: 8px 6px; }
     .chart-panel-overview { min-height: 280px; }
     .chart-panel-overview .chart-container { min-height: 230px; }
     .chart-panel-region { min-height: 280px; }
@@ -543,9 +489,9 @@ html, body {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 14px;
-    max-width: 1320px;
+    max-width: var(--max-content);
     margin: 32px auto 0;
-    padding: 0 24px;
+    padding: 0 var(--pad-page);
     position: relative;
     z-index: 2;
 }
@@ -572,7 +518,7 @@ html, body {
     border-radius: 14px 14px 0 0;
 }
 .tile-iso-name {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 0.78rem;
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -585,7 +531,7 @@ html, body {
     margin-bottom: 10px;
 }
 .tile-range {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.6rem;
     font-weight: 800;
     color: #fff;
@@ -612,8 +558,8 @@ html, body {
     display: inline-block;
     margin-top: 8px;
     padding: 3px 10px;
-    border-radius: 6px;
-    font-family: 'Barlow Semi Condensed', sans-serif;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-data);
     font-size: 0.68rem;
     font-weight: 700;
     letter-spacing: 0.02em;
@@ -621,9 +567,9 @@ html, body {
 
 /* ========== HERO FINDINGS ROW (narrative + chart) ========== */
 .hero-findings-row {
-    max-width: 1320px;
+    max-width: var(--max-content);
     margin: 36px auto 0;
-    padding: 0 24px;
+    padding: 0 var(--pad-page);
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 40px;
@@ -632,7 +578,7 @@ html, body {
     z-index: 2;
 }
 .hero-narrative-block h3 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.3rem;
     font-weight: 700;
     color: #fff;
@@ -651,29 +597,29 @@ html, body {
     background: rgba(34,197,94,0.10);
     border: 1px solid rgba(34,197,94,0.25);
     border-radius: 10px;
-    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-data);
     font-size: 0.85rem;
     font-weight: 700;
-    color: #22C55E;
+    color: var(--wind);
     margin-top: 8px;
 }
 
 /* ========== ISO DEEP-DIVE SECTION ========== */
 .deepdive-section {
-    background: #F7F8FC;
-    padding: 56px 24px;
+    background: var(--bg-page);
+    padding: 56px var(--pad-page);
     border-top: 1px solid rgba(0,0,0,0.025);
 }
 .deepdive-header {
-    max-width: 1320px;
+    max-width: var(--max-content);
     margin: 0 auto 32px;
     text-align: center;
 }
 .deepdive-header h2 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.6rem;
     font-weight: 800;
-    color: #1E293B;
+    color: var(--text-secondary);
     margin-bottom: 8px;
 }
 .deepdive-header p {
@@ -683,24 +629,21 @@ html, body {
     margin: 0 auto;
 }
 
-/* ISO Selector Tabs */
+/* ISO Selector Tabs (base .iso-selector in shared.css) */
 .iso-selector {
-    display: flex;
+    max-width: var(--max-content);
+    margin: 0 auto var(--pad-section);
     gap: 8px;
-    justify-content: center;
-    flex-wrap: wrap;
-    max-width: 1320px;
-    margin: 0 auto 32px;
 }
 .iso-tab {
     padding: 10px 22px;
     border-radius: 10px;
     border: 1px solid rgba(0,0,0,0.08);
     background: rgba(0,0,0,0.02);
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 0.82rem;
     font-weight: 600;
-    color: rgba(15,23,42,0.6);
+    color: var(--text-dim);
     cursor: pointer;
     transition: all 0.25s ease;
     min-height: 44px;
@@ -713,8 +656,8 @@ html, body {
     border-color: rgba(0,0,0,0.15);
 }
 .iso-tab.active {
-    background: #1A2744;
-    border-color: #1A2744;
+    background: var(--navy);
+    border-color: var(--navy);
     color: #fff;
     box-shadow: 0 2px 12px rgba(26,39,68,0.25);
 }
@@ -727,7 +670,7 @@ html, body {
 
 /* Deep-Dive Content — vertical stack: narrative → chart → no-regrets */
 .deepdive-content {
-    max-width: 1320px;
+    max-width: var(--max-content);
     margin: 0 auto;
     display: flex;
     flex-direction: column;
@@ -755,7 +698,7 @@ html, body {
     border: 1px solid rgba(0,0,0,0.06);
 }
 .narrative-callout-label {
-    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-data);
     font-size: 0.68rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -763,7 +706,7 @@ html, body {
     margin-bottom: 4px;
 }
 .narrative-callout-value {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.3rem;
     font-weight: 800;
     color: #0F172A;
@@ -781,7 +724,7 @@ html, body {
 }
 .deepdive-chart-col {
     width: 100%;
-    max-width: 900px;
+    max-width: var(--max-prose);
     margin: 0 auto;
 }
 .deepdive-chart-col .chart-panel {
@@ -800,7 +743,7 @@ html, body {
 .nr-panel {
     background: rgba(0,0,0,0.025);
     border: 1px solid rgba(0,0,0,0.08);
-    border-radius: 16px;
+    border-radius: var(--radius-xl);
     padding: 28px 24px;
 }
 .nr-reading-guide {
@@ -811,10 +754,10 @@ html, body {
     border-radius: 10px;
 }
 .nr-reading-guide-title {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 0.85rem;
     font-weight: 700;
-    color: #16a34a;
+    color: var(--green-pos);
     margin-bottom: 8px;
 }
 .nr-reading-guide-text {
@@ -836,14 +779,14 @@ html, body {
     align-items: flex-start;
 }
 .nr-col-header-label {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 0.72rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.3px;
 }
 .nr-col-header-twh {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.1rem;
     font-weight: 800;
     color: #0F172A;
@@ -857,10 +800,10 @@ html, body {
     margin-bottom: 20px;
 }
 .nr-panel-header h3 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.15rem;
     font-weight: 800;
-    color: #1E293B;
+    color: var(--text-secondary);
     margin-bottom: 4px;
 }
 .nr-panel-header p {
@@ -878,7 +821,7 @@ html, body {
 .nr-resource-label {
     width: 100px;
     flex-shrink: 0;
-    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-data);
     font-size: 0.82rem;
     font-weight: 600;
     color: rgba(15,23,42,0.7);
@@ -942,7 +885,7 @@ html, body {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-data);
     font-size: 0.65rem;
     font-weight: 700;
     color: #fff;
@@ -964,10 +907,10 @@ html, body {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-data);
     font-size: 0.6rem;
     font-weight: 600;
-    color: rgba(15,23,42,0.5);
+    color: var(--text-dim);
     z-index: 4;
     white-space: nowrap;
     padding-left: 4px;
@@ -979,7 +922,7 @@ html, body {
     display: inline-block;
     padding: 2px 8px;
     border-radius: 4px;
-    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-data);
     font-size: 0.62rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -988,12 +931,12 @@ html, body {
 }
 .nr-badge-yes {
     background: rgba(34,197,94,0.10);
-    color: #16a34a;
+    color: var(--green-pos);
     border: 1px solid rgba(34,197,94,0.2);
 }
 .nr-badge-partial {
     background: rgba(245,158,11,0.08);
-    color: #d97706;
+    color: var(--amber-warn);
     border: 1px solid rgba(245,158,11,0.18);
 }
 .nr-badge-no {
@@ -1009,8 +952,8 @@ html, body {
 .nr-summary-stat {
     display: inline-block;
     padding: 6px 14px;
-    border-radius: 8px;
-    font-family: 'Barlow Semi Condensed', sans-serif;
+    border-radius: var(--radius-md);
+    font-family: var(--font-data);
     font-size: 0.78rem;
     font-weight: 600;
 }
@@ -1027,7 +970,7 @@ html, body {
     align-items: flex-start;
     gap: 10px;
     margin-bottom: 8px;
-    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-data);
     font-size: 0.76rem;
     line-height: 1.4;
     color: rgba(15,23,42,0.6);
@@ -1056,26 +999,26 @@ html, body {
 
 /* ========== METHODOLOGY SECTION ========== */
 .methodology-section {
-    background: #fff;
-    padding: 56px 24px;
+    background: var(--bg-page-white);
+    padding: 56px var(--pad-page);
     border-top: 1px solid rgba(0,0,0,0.04);
 }
 .methodology-inner {
-    max-width: 900px;
+    max-width: var(--max-prose);
     margin: 0 auto;
 }
 .methodology-inner h2 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.4rem;
     font-weight: 800;
-    color: #1E293B;
+    color: var(--text-secondary);
     margin-bottom: 16px;
 }
 .methodology-inner h3 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.05rem;
     font-weight: 700;
-    color: #1E293B;
+    color: var(--text-secondary);
     margin-top: 24px;
     margin-bottom: 8px;
 }
@@ -1169,7 +1112,9 @@ html, body {
 <!-- TOP NAV (injected by nav.js) -->
 <nav id="topNav"></nav>
 <script src="js/nav.js"></script>
-<div style="background:#0F1A2E;padding:8px 24px;"><a href="index.html" style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:rgba(255,255,255,0.75);text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;min-height:44px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+<div style="background:var(--navy-dark);padding:8px 24px;"><a href="index.html" style="font-family:var(--font-heading);font-size:0.82rem;font-weight:600;color:rgba(255,255,255,0.75);text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;min-height:44px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
 
 <!-- HEADER BANNER -->
 <header class="header">
@@ -1348,7 +1293,7 @@ html, body {
         </ul>
 
         <p><strong>Step 3 &mdash; Marginal MAC via differentiation.</strong> The marginal abatement cost at each threshold is the derivative of the PCHIP spline:</p>
-        <p style="text-align:center;font-family:'Courier New',monospace;font-size:0.95rem;color:#1E293B;padding:8px 0;">
+        <p style="text-align:center;font-family:var(--font-mono);font-size:0.95rem;color:var(--text-secondary);padding:8px 0;">
             MAC(t) = d(Cost) / d(CO&#8322;) &nbsp;evaluated at threshold t
         </p>
         <p>This derivative captures the instantaneous rate of cost increase per unit of additional abatement &mdash; the true marginal cost of deeper decarbonization at each point along the supply curve.</p>
@@ -1383,7 +1328,7 @@ html, body {
         <p>MAC curves derived from the 8,760 Problem hourly matching optimizer using EIA hourly generation profiles, eGRID emission rates, and NREL ATB 2024 cost projections. DAC cost trajectories from DOE Liftoff (2023), Sievert et al. (Joule 2024), and IEA (2022/2024). Demand growth rates from ISO-specific forecasts (EIA AEO 2025, FERC data).</p>
 
         <details style="background:rgba(0,0,0,0.025);border:1px solid rgba(0,0,0,0.08);border-radius:10px;padding:16px 20px;margin-top:24px;">
-            <summary style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.9rem;font-weight:600;color:rgba(15,23,42,0.85);cursor:pointer;min-height:44px;display:flex;align-items:center;">Full Sources &amp; References</summary>
+            <summary style="font-family:var(--font-heading);font-size:0.9rem;font-weight:600;color:rgba(15,23,42,0.85);cursor:pointer;min-height:44px;display:flex;align-items:center;">Full Sources &amp; References</summary>
             <ol style="font-size:0.8rem;color:rgba(15,23,42,0.5);line-height:1.8;padding-left:20px;margin-top:12px;">
                 <li>EPA eGRID 2022 &mdash; regional emission rates and CO&#8322; intensity by balancing authority.</li>
                 <li>EPA Social Cost of Carbon &mdash; Technical Support Document (2020), central estimate $51/metric ton.</li>
