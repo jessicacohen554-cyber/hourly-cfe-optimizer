@@ -130,6 +130,19 @@ LCOE_TABLES = {
         'Medium': {'CAISO': 73, 'ERCOT': 40, 'PJM': 62, 'NYISO': 81, 'NEISO': 73, 'MISO': 43, 'SPP': 37},
         'High':   {'CAISO': 95, 'ERCOT': 52, 'PJM': 81, 'NYISO': 105, 'NEISO': 95, 'MISO': 56, 'SPP': 48},
     },
+    # ---- Offshore wind LCOE ($/MWh) ----
+    # Fixed-bottom (NYISO, NEISO, PJM): Lazard v17-18, BNEF 2025, NREL ATB 2024.
+    # Floating (CAISO): NREL FORCE model, DOE Floating Wind Shot reference.
+    # Non-offshore ISOs (ERCOT, MISO, SPP): set to 0 — no offshore resource.
+    # PJM cheapest (shallowest water, largest pipeline, NJ 7.5 GW mandated).
+    # NEISO mid (Vineyard Wind precedent, strong resource ~51% CF).
+    # NYISO most expensive East Coast (NY Bight permitting, Jones Act).
+    # CAISO dramatically higher — floating technology, no US commercial experience.
+    'offshore_wind': {
+        'Low':    {'CAISO': 110, 'ERCOT': 0, 'PJM': 65, 'NYISO': 72, 'NEISO': 68, 'MISO': 0, 'SPP': 0},
+        'Medium': {'CAISO': 150, 'ERCOT': 0, 'PJM': 85, 'NYISO': 95, 'NEISO': 90, 'MISO': 0, 'SPP': 0},
+        'High':   {'CAISO': 200, 'ERCOT': 0, 'PJM': 112, 'NYISO': 125, 'NEISO': 118, 'MISO': 0, 'SPP': 0},
+    },
     # ---- Storage: annualized capacity cost ($/MWh-cap) ----
     # NOT LCOS. These are annualized fixed costs of storage capacity, normalized to
     # the coefficient model where coeff = bat_pct/100 (energy capacity as fraction
@@ -184,6 +197,13 @@ TX_TABLES = {
     'ccs_ccgt':   {'None': 0, 'Low': {'CAISO': 1, 'ERCOT': 1, 'PJM': 1, 'NYISO': 2, 'NEISO': 2, 'MISO': 1, 'SPP': 1},
                    'Medium': {'CAISO': 2, 'ERCOT': 2, 'PJM': 3, 'NYISO': 4, 'NEISO': 3, 'MISO': 2, 'SPP': 2},
                    'High': {'CAISO': 4, 'ERCOT': 3, 'PJM': 5, 'NYISO': 7, 'NEISO': 6, 'MISO': 4, 'SPP': 3}},
+    # Offshore wind TX: submarine cable + offshore substation.
+    # Higher than onshore — export cable ($1-3M/km), 20-80 km to shore.
+    # CAISO highest: floating platform + longer cable + deeper water.
+    # Non-offshore ISOs: 0 (no offshore resource).
+    'offshore_wind': {'None': 0, 'Low': {'CAISO': 10, 'ERCOT': 0, 'PJM': 6, 'NYISO': 8, 'NEISO': 7, 'MISO': 0, 'SPP': 0},
+                      'Medium': {'CAISO': 20, 'ERCOT': 0, 'PJM': 11, 'NYISO': 15, 'NEISO': 13, 'MISO': 0, 'SPP': 0},
+                      'High': {'CAISO': 35, 'ERCOT': 0, 'PJM': 18, 'NYISO': 25, 'NEISO': 22, 'MISO': 0, 'SPP': 0}},
     # Storage TX = 0: regional variation already baked into annualized capacity costs
     'battery':    {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
     'battery8':   {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
@@ -205,6 +225,9 @@ NUCLEAR_NEWBUILD_LCOE = {
 # Geothermal (CAISO only)
 GEOTHERMAL_LCOE = {'L': 63, 'M': 88, 'H': 110}
 GEO_CAP_TWH = 39.0
+
+# ISOs with offshore wind resource (must match step1_pfs_generator.OFFSHORE_ISOS)
+OFFSHORE_ISOS = ['NYISO', 'NEISO', 'PJM', 'CAISO']
 
 # CCS-CCGT regional capacity caps (TWh/yr) — geologic CO2 storage availability
 # Mixes with CCS deployment exceeding these caps are filtered out.
@@ -257,6 +280,19 @@ FOAK_CCS_45Q_OFF = {
 }
 FOAK_GEOTHERMAL = 150  # CAISO only, $/MWh
 
+# Offshore wind FOAK: pre-learning-curve costs for first commercial-scale projects.
+# Fixed-bottom (NYISO/NEISO/PJM): 1.15× High (Vineyard Wind era, supply chain stress,
+#   Jones Act vessel premiums). Sources: BNEF 2023-24 $114/MWh subsidized US,
+#   Lazard v17 high-end $140/MWh.
+# Floating (CAISO): 1.25× High (pre-commercial, no US floating experience,
+#   port infrastructure not built). Sources: NREL FORCE model 2025 baseline ~$200+/MWh.
+FOAK_OFFSHORE_WIND = {
+    'CAISO': 250,  # floating: 1.25× $200 High
+    'PJM':   129,  # fixed: 1.15× $112 High
+    'NYISO': 144,  # fixed: 1.15× $125 High
+    'NEISO': 136,  # fixed: 1.15× $118 High
+}
+
 # Storage FOAK: annualized capacity cost ($/MWh-cap), same units as LCOE_TABLES storage.
 # Battery FOAK = LCOE_TABLES High (no FOAK premium — batteries are at manufacturing scale).
 # NOTE: For batteries, Wright's Law now goes LCOE_TABLES → NOAK_BATTERY (decline over time),
@@ -295,6 +331,20 @@ NOAK_BATTERY = {
     'Medium': {'CAISO': 2.65, 'ERCOT': 2.39, 'PJM': 2.54, 'NYISO': 2.81, 'NEISO': 2.73, 'MISO': 2.49, 'SPP': 2.42},
     'High':   {'CAISO': 4.83, 'ERCOT': 4.34, 'PJM': 4.62, 'NYISO': 5.10, 'NEISO': 4.96, 'MISO': 4.53, 'SPP': 4.40},
 }
+# ============================================================================
+# WRIGHT'S LAW NOAK TERMINAL COSTS — Offshore wind long-term floor
+# ============================================================================
+# Fixed-bottom: converges toward $50-65/MWh (NREL FORCE 2035: $53/MWh average).
+# Floating (CAISO): converges toward $55-80/MWh (DOE Wind Shot $45 target in 2020$,
+#   NREL FORCE 2035: $47-100/MWh range). Multiple doublings from 0.3 GW base.
+# Learning rates: NREL ATB 2024: Conservative 6.3%, Moderate 8.8%, Advanced 11.2% (fixed);
+#   Conservative 8.7%, Moderate 11.5%, Advanced 14.2% (floating).
+NOAK_OFFSHORE_WIND = {
+    'Low':    {'CAISO': 55, 'PJM': 50, 'NYISO': 52, 'NEISO': 50},
+    'Medium': {'CAISO': 72, 'PJM': 62, 'NYISO': 65, 'NEISO': 63},
+    'High':   {'CAISO': 100, 'PJM': 82, 'NYISO': 88, 'NEISO': 85},
+}
+
 NOAK_BATTERY8 = {
     'Low':    {'CAISO': 1.64, 'ERCOT': 1.48, 'PJM': 1.57, 'NYISO': 1.74, 'NEISO': 1.69, 'MISO': 1.54, 'SPP': 1.50},
     'Medium': {'CAISO': 2.27, 'ERCOT': 2.04, 'PJM': 2.17, 'NYISO': 2.40, 'NEISO': 2.33, 'MISO': 2.13, 'SPP': 2.07},
@@ -321,6 +371,15 @@ LEARNING_PARAMS = {
     # 8hr declines slightly faster (cell cost is larger share, cells decline faster).
     'bat4':    {'L': (2025, 2042), 'M': (2025, 2048), 'H': (2025, 2050)},
     'bat8':    {'L': (2025, 2040), 'M': (2025, 2046), 'H': (2025, 2050)},
+    # Offshore wind (fixed-bottom): Moderate learning — 83 GW global base,
+    # ~8.8% learning rate (NREL ATB Moderate). Faster learning than nuclear/CCS
+    # because offshore wind benefits from onshore wind supply chain maturity.
+    # First US commercial projects (Vineyard Wind, South Fork) establish baseline.
+    'offshore_wind_fixed': {'L': (2026, 2034), 'M': (2028, 2038), 'H': (2032, 2045)},
+    # Offshore wind (floating): Steeper learning — only 0.3 GW global base,
+    # ~11.5% learning rate (NREL ATB Moderate). Multiple doublings ahead.
+    # No US commercial experience; first projects ~2030. DOE Wind Shot $45/MWh target by 2035.
+    'offshore_wind_float': {'L': (2029, 2037), 'M': (2031, 2042), 'H': (2035, 2050)},
 }
 LEARNING_EXPONENT = 0.6  # Wright's Law concave ramp
 
@@ -411,6 +470,7 @@ PEAK_CAPACITY_CREDITS = {
     'clean_firm': 1.0, 'solar': 0.30, 'wind': 0.10, 'ccs_ccgt': 0.90,
     'hydro': 0.50, 'battery': 0.95, 'battery8': 0.95, 'ldes': 0.90,
     'h2': 0.85,  # H2 turbine: dispatchable but slower ramp than gas/battery
+    'offshore_wind': 0.25,  # Higher than onshore (0.10) — flatter profile, less correlated with peak
 }
 
 # Gas Availability Factor (GAF) — accounts for forced outages + correlated weather risk
@@ -440,6 +500,8 @@ RESOURCE_CAPACITY_FACTORS = {
                    'NEISO': 0.85, 'MISO': 0.85, 'SPP': 0.85},
     'hydro':      {'CAISO': 0.40, 'ERCOT': 0.30, 'PJM': 0.35, 'NYISO': 0.40,
                    'NEISO': 0.40, 'MISO': 0.35, 'SPP': 0.30},
+    'offshore_wind': {'CAISO': 0.43, 'ERCOT': 0.35, 'PJM': 0.48, 'NYISO': 0.49,
+                      'NEISO': 0.51, 'MISO': 0.35, 'SPP': 0.35},
 }
 
 # Existing clean generation in absolute TWh (constant, does NOT change with demand growth)
@@ -546,12 +608,13 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
 
     total_cost = np.zeros(N, dtype=np.float64)
 
-    # CCS pct = 100 - (cf + sol + wnd + hyd) -- implicit 5th resource
+    # CCS pct = 100 - (cf + sol + wnd + hyd + osw) -- implicit residual resource
     cf_pct = arrays['clean_firm']
     sol_pct = arrays['solar']
     wnd_pct = arrays['wind']
     hyd_pct = arrays['hydro']
-    ccs_pct = 100.0 - (cf_pct + sol_pct + wnd_pct + hyd_pct)
+    osw_pct = arrays.get('offshore_wind', np.zeros(N, dtype=np.float64))
+    ccs_pct = 100.0 - (cf_pct + sol_pct + wnd_pct + hyd_pct + osw_pct)
     ccs_pct = np.maximum(ccs_pct, 0.0)
 
     # CCS regional cap: limit CCS deployment to geologically feasible TWh.
@@ -583,6 +646,12 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     wnd_lcoe = LCOE_TABLES['wind'][ren_name][iso]
     wnd_tx = get_tx('wind', tx_name, iso)
     total_cost += wnd_new_pct / 100.0 * (wnd_lcoe + wnd_tx)
+
+    # --- Offshore Wind (all new-build — no existing offshore wind fleet) ---
+    if iso in OFFSHORE_ISOS:
+        osw_lcoe = LCOE_TABLES['offshore_wind'][ren_name][iso]
+        osw_tx = get_tx('offshore_wind', tx_name, iso)
+        total_cost += osw_pct / 100.0 * (osw_lcoe + osw_tx)
 
     # --- Hydro (always existing, $0 cost — sunk fleet) ---
     # No cost added for hydro (existing fleet, $0 price)
@@ -676,8 +745,11 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     # New-build clean peak capacity: energy → installed MW → peak MW
     # Only new-build above existing floor contributes incremental peak
     new_clean_peak_mw = np.zeros(N, dtype=np.float64)
+    # Offshore wind is all new-build (no existing fleet)
+    _osw_new_pct = osw_pct if iso in OFFSHORE_ISOS else np.zeros(N, dtype=np.float64)
     for _res, _new_pct in [('clean_firm', cf_new_pct), ('solar', sol_new_pct),
-                           ('wind', wnd_new_pct), ('ccs_ccgt', ccs_new_pct)]:
+                           ('wind', wnd_new_pct), ('offshore_wind', _osw_new_pct),
+                           ('ccs_ccgt', ccs_new_pct)]:
         _cf_r = RESOURCE_CAPACITY_FACTORS[_res][iso]
         _cc_r = PEAK_CAPACITY_CREDITS[_res]
         _new_avg_mw = _new_pct / 100.0 * avg_demand_mw
@@ -829,15 +901,16 @@ def apply_hydro_cap(arrays, iso):
 _COL_WHOLESALE = 0  # existing generation — $0 (sunk fleet, coefficient zeroed out)
 _COL_SOL_NEW   = 1  # new solar (LCOE + tx)
 _COL_WND_NEW   = 2  # new wind (LCOE + tx)
-_COL_CCS_NEW   = 3  # new CCS-CCGT standalone (LCOE + tx)
-_COL_UPRATE    = 4  # nuclear uprate tranche
-_COL_GEO       = 5  # geothermal tranche (CAISO only, 0 elsewhere)
-_COL_REMAINING = 6  # tranche 3: min(nuclear, CCS) new-build
-_COL_BAT4      = 7  # 4hr battery dispatch
-_COL_BAT8      = 8  # 8hr battery dispatch
-_COL_LDES      = 9  # LDES dispatch
-_COL_H2        = 10 # Green H2 seasonal storage dispatch
-_N_COEFFS = 11
+_COL_OSW_NEW   = 3  # new offshore wind (LCOE + tx) — offshore ISOs only, 0 elsewhere
+_COL_CCS_NEW   = 4  # new CCS-CCGT standalone (LCOE + tx)
+_COL_UPRATE    = 5  # nuclear uprate tranche
+_COL_GEO       = 6  # geothermal tranche (CAISO only, 0 elsewhere)
+_COL_REMAINING = 7  # tranche 3: min(nuclear, CCS) new-build
+_COL_BAT4      = 8  # 4hr battery dispatch
+_COL_BAT8      = 9  # 8hr battery dispatch
+_COL_LDES      = 10 # LDES dispatch
+_COL_H2        = 11 # Green H2 seasonal storage dispatch
+_N_COEFFS = 12
 
 
 def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_override=None,
@@ -870,7 +943,8 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
     sol_pct = arrays['solar']
     wnd_pct = arrays['wind']
     hyd_pct = arrays['hydro']
-    ccs_pct = np.maximum(0.0, 100.0 - (cf_pct + sol_pct + wnd_pct + hyd_pct))
+    osw_pct = arrays.get('offshore_wind', np.zeros(N, dtype=np.float64))
+    ccs_pct = np.maximum(0.0, 100.0 - (cf_pct + sol_pct + wnd_pct + hyd_pct + osw_pct))
 
     bat_pct = arrays['battery_dispatch_pct']
     bat8_pct = arrays.get('battery8_dispatch_pct', np.zeros(N, dtype=np.float64))
@@ -885,6 +959,9 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
 
     wnd_existing_pct = np.minimum(wnd_pct, existing['wind'])
     wnd_new_pct = np.maximum(0, wnd_pct - existing['wind'])
+
+    # Offshore wind: all new-build (no existing fleet)
+    osw_new_pct = osw_pct
 
     ccs_ex = existing.get('ccs_ccgt', 0)
     ccs_existing_pct = np.minimum(ccs_pct, ccs_ex)
@@ -919,8 +996,11 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
 
     # New-build clean peak capacity: energy → installed MW → peak MW
     new_clean_peak_mw = np.zeros(N, dtype=np.float64)
+    # Offshore wind is all new-build (no existing fleet)
+    _osw_new_pct = osw_pct if iso in OFFSHORE_ISOS else np.zeros(N, dtype=np.float64)
     for _res, _new_pct in [('clean_firm', cf_new_pct), ('solar', sol_new_pct),
-                           ('wind', wnd_new_pct), ('ccs_ccgt', ccs_new_pct)]:
+                           ('wind', wnd_new_pct), ('offshore_wind', _osw_new_pct),
+                           ('ccs_ccgt', ccs_new_pct)]:
         _cf_r = RESOURCE_CAPACITY_FACTORS[_res][iso]
         _cc_r = PEAK_CAPACITY_CREDITS[_res]
         _new_avg_mw = _new_pct / 100.0 * avg_demand_mw
@@ -952,12 +1032,13 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
         new_gas_mw * NEW_CCGT_COST_KW_YR[iso] * 1000
     ) / demand_mwh
 
-    # Build coefficient matrix (N, 11)
+    # Build coefficient matrix (N, 12)
     coeff_matrix = np.empty((N, _N_COEFFS), dtype=np.float64)
     # Existing clean resources = $0 (sunk fleet, no cost to buyer)
     coeff_matrix[:, _COL_WHOLESALE] = 0.0
     coeff_matrix[:, _COL_SOL_NEW] = sol_new_pct / 100.0
     coeff_matrix[:, _COL_WND_NEW] = wnd_new_pct / 100.0
+    coeff_matrix[:, _COL_OSW_NEW] = osw_new_pct / 100.0  # all new-build, no existing
     coeff_matrix[:, _COL_CCS_NEW] = ccs_new_pct / 100.0
     coeff_matrix[:, _COL_UPRATE] = uprate_twh / demand_twh
     coeff_matrix[:, _COL_GEO] = geo_twh / demand_twh
@@ -1023,10 +1104,15 @@ def get_scenario_prices(iso, sens):
     if iso == 'CAISO' and geo_lev:
         geo_price = GEOTHERMAL_LCOE[geo_lev] + get_tx('clean_firm', tx_name, iso)
 
+    osw_price = 0.0
+    if iso in OFFSHORE_ISOS:
+        osw_price = LCOE_TABLES['offshore_wind'][ren_name][iso] + get_tx('offshore_wind', tx_name, iso)
+
     prices = np.array([
         wholesale,
         LCOE_TABLES['solar'][ren_name][iso] + get_tx('solar', tx_name, iso),
         LCOE_TABLES['wind'][ren_name][iso] + get_tx('wind', tx_name, iso),
+        osw_price,
         ccs_price,
         UPRATE_LCOE[firm_lev],
         geo_price,
@@ -1186,11 +1272,13 @@ def precompute_all_prices(iso, all_combos, target_year=None):
     _bat8_lcoe_iso = {name: LCOE_TABLES['battery8'][name][iso] for name in ['Low', 'Medium', 'High']}
     _ldes_lcoe_iso = {name: LCOE_TABLES['ldes'][name][iso] for name in ['Low', 'Medium', 'High']}
     _h2_lcoe_iso = {name: LCOE_TABLES['h2'][name][iso] for name in ['Low', 'Medium', 'High']}
+    _osw_lcoe_iso = {name: LCOE_TABLES['offshore_wind'][name][iso] for name in ['Low', 'Medium', 'High']}
     _is_caiso = (iso == 'CAISO')
+    _is_offshore = (iso in OFFSHORE_ISOS)
 
     # Pre-resolve transmission adders for all (resource, tx_level) combos for this ISO
     _tx_cache = {}
-    for rtype in ['solar', 'wind', 'clean_firm', 'ccs_ccgt', 'battery', 'battery8', 'ldes', 'h2']:
+    for rtype in ['solar', 'wind', 'offshore_wind', 'clean_firm', 'ccs_ccgt', 'battery', 'battery8', 'ldes', 'h2']:
         for tx_name in ['None', 'Low', 'Medium', 'High']:
             _tx_cache[(rtype, tx_name)] = get_tx(rtype, tx_name, iso)
 
@@ -1236,6 +1324,16 @@ def precompute_all_prices(iso, all_combos, target_year=None):
             _ldes_yr[name] = year_adjusted_cost(_foak_ldes, _ldes_lcoe_iso[name], target_year, foak_s, noak_y)
             foak_s_h2, noak_y_h2 = LEARNING_PARAMS['h2'][lev]
             _h2_yr[name] = year_adjusted_cost(_foak_h2, _h2_lcoe_iso[name], target_year, foak_s_h2, noak_y_h2)
+
+        # Pre-compute year-adjusted offshore wind per ren level
+        _osw_yr = {}
+        if _is_offshore:
+            _foak_osw = FOAK_OFFSHORE_WIND.get(iso, 0)
+            _noak_osw_iso = {name: NOAK_OFFSHORE_WIND[name].get(iso, 0) for name in ['Low', 'Medium', 'High']}
+            _lp_key = 'offshore_wind_float' if _is_caiso else 'offshore_wind_fixed'
+            for name, lev in [('Low', 'L'), ('Medium', 'M'), ('High', 'H')]:
+                foak_s, noak_y = LEARNING_PARAMS[_lp_key][lev]
+                _osw_yr[name] = year_adjusted_cost(_foak_osw, _noak_osw_iso[name], target_year, foak_s, noak_y)
 
         # Pre-compute year-adjusted battery (4hr, 8hr) per batt level.
         # Battery Wright's Law: DECLINE from 2025 starting costs (LCOE_TABLES)
@@ -1297,10 +1395,20 @@ def precompute_all_prices(iso, all_combos, target_year=None):
             ldes_price = _ldes_lcoe_iso[ldes_name] + _tx_cache[('ldes', tx_name)]
             h2_price = _h2_lcoe_iso[ldes_name] + _tx_cache[('h2', tx_name)]
 
+        # Offshore wind price: year-adjusted if learning curves active
+        if _is_offshore:
+            if _use_learning:
+                osw_price = _osw_yr[ren_name] + _tx_cache[('offshore_wind', tx_name)]
+            else:
+                osw_price = _osw_lcoe_iso[ren_name] + _tx_cache[('offshore_wind', tx_name)]
+        else:
+            osw_price = 0.0
+
         # Fill directly into pre-allocated matrix (avoids np.array() allocation per call)
         price_matrix[j, _COL_WHOLESALE] = wholesale
         price_matrix[j, _COL_SOL_NEW] = _sol_lcoe_iso[ren_name] + _tx_cache[('solar', tx_name)]
         price_matrix[j, _COL_WND_NEW] = _wnd_lcoe_iso[ren_name] + _tx_cache[('wind', tx_name)]
+        price_matrix[j, _COL_OSW_NEW] = osw_price
         price_matrix[j, _COL_CCS_NEW] = ccs_price
         price_matrix[j, _COL_UPRATE] = UPRATE_LCOE[firm_lev]
         price_matrix[j, _COL_GEO] = geo_price
