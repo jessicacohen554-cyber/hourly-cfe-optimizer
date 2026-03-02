@@ -490,9 +490,46 @@ def save_threshold_pfs(iso, threshold, combos, scores, rtypes):
     return out_path
 
 
-def save_near_miss(iso, combos, scores, rtypes):
-    """Save union near-miss mixes for step1d storage sweep."""
+def _has_curtailment_mask(combos, demand_arr, supply_matrix, chunk_size=10000):
+    """Vectorized curtailment check: True if any hour has supply > demand.
+
+    Processes in chunks to limit peak memory (combos × 8760 can be large).
+    """
+    n = len(combos)
+    mask = np.empty(n, dtype=np.bool_)
+    for cs in range(0, n, chunk_size):
+        ce = min(cs + chunk_size, n)
+        fracs = combos[cs:ce].astype(np.float64) / 100.0
+        supply = fracs @ supply_matrix              # (chunk, 8760)
+        surplus = supply - demand_arr[np.newaxis, :]  # broadcast
+        mask[cs:ce] = np.any(surplus > 0, axis=1)
+    return mask
+
+
+def save_near_miss(iso, combos, scores, rtypes,
+                   demand_arr=None, supply_matrix=None):
+    """Save union near-miss mixes for step1d storage sweep.
+
+    If demand_arr and supply_matrix are provided, pre-filters to only mixes
+    with curtailment > 0 (at least one hour of surplus). Mixes without any
+    curtailment cannot benefit from storage, so they are pruned to save space.
+    """
     if len(combos) == 0:
+        return
+
+    # Pre-filter: only keep mixes with at least one hour of curtailment
+    n_before = len(combos)
+    if demand_arr is not None and supply_matrix is not None:
+        mask = _has_curtailment_mask(combos, demand_arr, supply_matrix)
+        combos = combos[mask]
+        scores = scores[mask]
+        n_pruned = n_before - len(combos)
+        if n_pruned > 0:
+            print(f"  Near-miss curtailment filter: {n_before:,} → "
+                  f"{len(combos):,} ({n_pruned:,} pruned, no curtailment)")
+
+    if len(combos) == 0:
+        print(f"  Near-miss union: 0 mixes after curtailment filter (skipped)")
         return
 
     os.makedirs(s1.STEP1_RAW_PFS_PARQUET_DIR, exist_ok=True)
@@ -512,7 +549,8 @@ def save_near_miss(iso, combos, scores, rtypes):
 
 
 def save_near_miss_interim(iso, all_combos_lists, all_scores_lists, rtypes,
-                           thresholds_to_use):
+                           thresholds_to_use, demand_arr=None,
+                           supply_matrix=None):
     """Compute and save near-miss parquet from accumulated scored mixes so far.
 
     Called after each zone so step1d has a valid near-miss file even if the
@@ -534,7 +572,8 @@ def save_near_miss_interim(iso, all_combos_lists, all_scores_lists, rtypes,
         return
 
     nm_arr = np.array(sorted(all_nm), dtype=np.int64)
-    save_near_miss(iso, interim_combos[nm_arr], interim_scores[nm_arr], rtypes)
+    save_near_miss(iso, interim_combos[nm_arr], interim_scores[nm_arr], rtypes,
+                   demand_arr=demand_arr, supply_matrix=supply_matrix)
 
 
 def git_commit_threshold_pfs(iso, threshold, auto_commit):
@@ -826,7 +865,9 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None, zones_filter=Non
         # this job times out before all zones complete.
         print(f"    Saving interim near-miss parquet...")
         save_near_miss_interim(iso, all_combos_list, all_scores_list,
-                               rtypes, active_thresholds)
+                               rtypes, active_thresholds,
+                               demand_arr=demand_arr,
+                               supply_matrix=supply_matrix)
 
         # Auto-commit after each zone (near-miss + any PFS written so far)
         git_commit_iso_progress(iso, zone_name, len(z_thresholds), auto_commit)
@@ -856,7 +897,8 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None, zones_filter=Non
     # Save near-miss union (final authoritative version overwrites interim)
     if len(all_nm_indices) > 0:
         save_near_miss(iso, all_combos[all_nm_indices],
-                       all_scores[all_nm_indices], rtypes)
+                       all_scores[all_nm_indices], rtypes,
+                       demand_arr=demand_arr, supply_matrix=supply_matrix)
 
     # Per-threshold: dominance filter + save
     for t in active_thresholds:
