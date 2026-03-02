@@ -316,6 +316,15 @@ body { background: var(--bg-page-white); }
     transform: translateY(0);
 }
 
+/* ========== DARK PANEL OVERRIDES ========== */
+.section-dark .mechanism-card { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.10); }
+.section-dark .mechanism-card h4 { color: #EF4444; }
+.section-dark .mechanism-card p { color: rgba(255,255,255,0.75); }
+.section-dark .mechanism-card .evidence { color: rgba(14,165,233,0.8); border-top-color: rgba(255,255,255,0.1); }
+.section-dark .page-insight-box h3 { color: #EF4444; }
+.section-dark .page-insight-box p { color: rgba(255,255,255,0.75); }
+.section-dark blockquote { color: rgba(255,255,255,0.82); border-left: 3px solid rgba(56,189,248,0.5); margin: 24px 0; padding: 16px 20px; background: rgba(255,255,255,0.05); border-radius: 0 8px 8px 0; font-size: 0.9rem; line-height: 1.7; }
+
 /* ========== MOBILE ========== */
 @media (max-width: 768px) {
     .hero-inner h2 { font-size: 1.5rem; }
@@ -587,7 +596,8 @@ body { background: var(--bg-page-white); }
     <p>Each failure mode reinforces the others. Marginal signal degradation makes displacement claims less credible. Saturation exhausts cheap abatement. Lock-in preserves fossil infrastructure. Geographic clustering starves the grids that need investment most. Together, they produce a collectively catastrophic outcome from individually rational decisions.</p>
 </div>
 
-<section class="content-section fade-in">
+<section class="section-dark fade-in">
+<div class="section-dark-inner">
     <p><strong>The game-theoretic structure is a textbook tragedy of the commons.</strong> Each buyer optimizing for their own cheapest $/tCO₂ is locally rational. But the shared resource — each grid's need for investment in firm clean power and long-duration storage — is neglected because every actor is incentivized to free-ride on cheaper abatement elsewhere.</p>
 
     <p><strong>Hourly attribution avoids this trap</strong> by construction. When procurement must match load hour-by-hour within a deliverability region, there is no mechanism for free-riding. A NEISO buyer must solve NEISO's winter gas problem. A CAISO buyer must cover the evening ramp. The constraint forces investment in the technologies each grid actually needs — not the cheapest global displacement.</p>
@@ -597,6 +607,8 @@ body { background: var(--bg-page-white); }
     <blockquote>
         <strong>Individual optimization vs. system outcome:</strong> Consequential accounting minimizes $/tCO₂ for each buyer. Hourly matching minimizes total emissions across the grid system. The GHG Protocol's choice between these frameworks isn't just accounting methodology — it's a choice between individual rationality and collective decarbonization.
     </blockquote>
+
+    <hr class="dark-divider">
 
     <div class="mechanism-grid">
         <div class="mechanism-card">
@@ -610,16 +622,17 @@ body { background: var(--bg-page-white); }
             <div class="evidence">Our optimizer shows NEISO hourly matching at 90% CFE requires 15–20% firm clean power (nuclear/CCS). No consequential framework produces this demand signal.</div>
         </div>
     </div>
-</section>
 
-<div class="insight-callout fade-in">
-    <div class="page-insight-box">
+    <hr class="dark-divider">
+
+    <div class="page-insight-box" style="background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.15);">
         <h3>The Bottom Line</h3>
         <p>Consequential accounting works as a niche analytical tool — measuring displacement impact alongside an hourly matching procurement strategy. It fails catastrophically as a <span class="highlight">primary procurement framework at scale</span>. The five failure modes documented here aren't edge cases; they're the predictable, mathematically inevitable consequences of optimizing for cheapest $/tCO₂ across unconstrained geographies.</p>
         <p><strong>The coal/oil transition tells the timeline story.</strong> Under SBTi-aligned pathways (~2–4% annual clean penetration growth), SPP exhausts its coal/oil stock by the late 2030s (~52% penetration), MISO by the mid-2030s (~42%), and PJM/ERCOT by the early 2030s (~24%). After those thresholds, every grid converges to the same efficient-gas baseline at ~850 lb/MWh — and the consequential "discount" vanishes entirely. NEISO, NYISO, and CAISO are already there today. <span class="highlight">By ~2035, the majority of U.S. load-weighted generation will have crossed this threshold</span>, leaving consequential buyers paying the same $/tCO₂ as hourly matching — but having starved gas-dependent grids of firm clean investment for a decade.</p>
         <p>The GHG Protocol's Scope 2 revision should recognize hourly attribution as the robust default — the framework that works at 1% participation and at 100%.</p>
     </div>
 </div>
+</section>
 
 <!-- ============ SOURCES ============ -->
 <section class="sources-section fade-in">
