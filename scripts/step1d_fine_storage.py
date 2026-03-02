@@ -97,13 +97,19 @@ PROGRESS_INTERVAL = 25   # save every N batches
 
 
 def get_near_miss_width(threshold):
-    """Near-miss half-width by threshold range."""
-    if threshold >= 95:
-        return 0.15
+    """Near-miss half-width by threshold range.
+
+    Maximum pp below the threshold a mix's base score can be and still
+    be a candidate for storage enhancement.  High-solar mixes can have
+    low base scores but massive curtailment surplus that storage captures,
+    so sub-85% thresholds need a wider window.  The surplus >= gap filter
+    in the binning loop is the primary gate that prevents candidate bloat.
+    """
+    if threshold >= 99:
+        return 0.20   # 20pp — last-mile, few mixes
     elif threshold >= 85:
-        return 0.30
-    else:
-        return 0.40
+        return 0.20   # 20pp
+    return 0.25        # 25pp — high-solar + storage mixes need wider window
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -185,6 +191,17 @@ def run_coarse_storage(iso, nm_combos, nm_base_scores, demand_arr, supply_matrix
     # Pre-filter: must have curtailment (fast skip in inner loop)
     has_curtailment = hc_arr.astype(bool)
 
+    # Surplus fraction per mix (curtailment as % of demand).
+    # Used to gate per-threshold binning: only bin a mix to threshold t
+    # if its curtailment surplus can bridge the gap from base score to t.
+    surplus_pct = total_surplus / demand_total
+
+    # Pre-compute per-threshold near-miss floors (avoid repeated calls)
+    threshold_floors = {
+        t: max(STORAGE_SWEEP_FLOOR, t / 100.0 - get_near_miss_width(t))
+        for t in STORAGE_THRESHOLDS
+    }
+
     # Per-threshold results
     results = {t: [] for t in STORAGE_THRESHOLDS}
 
@@ -235,6 +252,10 @@ def run_coarse_storage(iso, nm_combos, nm_base_scores, demand_arr, supply_matrix
             if not has_curtailment[mi]:
                 continue
 
+            # Per-mix base score and surplus for threshold gating
+            mix_base = nm_base_scores[mi]
+            mix_surplus = surplus_pct[mi]
+
             scores = batch_scores[bi]  # (n_combos,) flat array
 
             for b4i in range(n_b4):
@@ -261,18 +282,35 @@ def run_coarse_storage(iso, nm_combos, nm_base_scores, demand_arr, supply_matrix
                             if score < 0:
                                 continue
 
-                            # Bin to ALL thresholds where feasible
+                            # Bin to thresholds where this mix is a
+                            # genuine near-miss candidate:
+                            #  1. score >= target  (storage reaches it)
+                            #  2. base < target    (actually needs storage)
+                            #  3. surplus >= gap   (enough curtailment to bridge)
+                            #  4. EITHER within near-miss window (base >= floor)
+                            #     OR outlier with surplus >= 1.5x gap
+                            #     (high-solar mixes with massive curtailment)
                             for t in STORAGE_THRESHOLDS:
                                 target = t / 100.0
-                                if score >= target:
-                                    # H2 only for >= 95%
-                                    if h2p > 0 and t < 95:
-                                        continue
-                                    results[t].append(
-                                        (int(mi), float(bp), float(b8p),
-                                         float(lp), float(h2p),
-                                         round(score * 100, 2)))
-                                    total_feasible += 1
+                                if score < target:
+                                    continue
+                                if mix_base >= target:
+                                    continue   # already meets threshold w/o storage
+                                gap = target - mix_base
+                                if mix_surplus < gap:
+                                    continue   # not enough surplus to bridge
+                                # Near-miss window OR outlier surplus gate
+                                if (mix_base < threshold_floors[t]
+                                        and mix_surplus < 1.5 * gap):
+                                    continue   # outside window & not an outlier
+                                # H2 only for >= 95%
+                                if h2p > 0 and t < 95:
+                                    continue
+                                results[t].append(
+                                    (int(mi), float(bp), float(b8p),
+                                     float(lp), float(h2p),
+                                     round(score * 100, 2)))
+                                total_feasible += 1
 
     print(f"\n    Pass 1 complete: {total_feasible:,} total feasible "
           f"(mix, storage) combos across all thresholds")
