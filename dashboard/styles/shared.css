@@ -1012,6 +1012,135 @@ p {
     font-size: 0.75rem;
 }
 
+/* ========== DARK NAVY PANELS (visual variety — alternate with light sections) ========== */
+/* Usage: <section class="section-dark"><div class="section-dark-inner"> … </div></section>
+   Supports: .card, .stat-card, .insight-box, .chart-panel, grids, tables inside.
+   Adds depth with subtle radial glow and horizontal rule accents. */
+.section-dark {
+    background: linear-gradient(135deg, var(--navy-dark) 0%, var(--navy) 60%, var(--navy-mid) 100%);
+    color: rgba(255,255,255,0.88);
+    padding: var(--space-3xl) var(--pad-page);
+    position: relative;
+    overflow: hidden;
+}
+/* Subtle radial color hints for depth */
+.section-dark::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse 50% 60% at 15% 50%, rgba(14,165,233,0.06) 0%, transparent 60%),
+        radial-gradient(ellipse 45% 55% at 85% 50%, rgba(245,158,11,0.05) 0%, transparent 55%);
+}
+.section-dark-inner {
+    position: relative;
+    max-width: var(--max-content);
+    margin: 0 auto;
+    z-index: 1;
+}
+.section-dark-narrow {
+    max-width: var(--max-prose);
+}
+/* Typography overrides for dark background */
+.section-dark h2 {
+    color: #ffffff;
+    font-size: 1.55rem;
+}
+.section-dark h3 {
+    color: rgba(255,255,255,0.95);
+}
+.section-dark p {
+    color: rgba(255,255,255,0.72);
+    line-height: 1.7;
+}
+.section-dark a {
+    color: var(--accent-cyan);
+}
+.section-dark strong {
+    color: #ffffff;
+}
+/* Kicker / eyebrow label */
+.section-dark .section-kicker {
+    font-family: var(--font-heading);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent-cyan);
+    margin-bottom: 10px;
+}
+/* Cards on dark bg: frosted glass */
+.section-dark .card,
+.section-dark .chart-panel {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.10);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: rgba(255,255,255,0.88);
+}
+/* Stat cards */
+.section-dark .stat-card {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.10);
+}
+.section-dark .stat-value {
+    color: #ffffff;
+}
+.section-dark .stat-label {
+    color: rgba(255,255,255,0.50);
+}
+/* Headline cards */
+.section-dark .headline-card {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.12);
+}
+.section-dark .headline-card .lbl {
+    color: rgba(255,255,255,0.50);
+}
+/* Insight boxes */
+.section-dark .insight-box {
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(56,189,248,0.35);
+    color: rgba(255,255,255,0.82);
+}
+/* Tables */
+.section-dark .data-table th {
+    color: rgba(255,255,255,0.50);
+    border-bottom-color: rgba(255,255,255,0.12);
+}
+.section-dark .data-table td {
+    color: rgba(255,255,255,0.72);
+    border-bottom-color: rgba(255,255,255,0.06);
+}
+.section-dark .data-table tr:hover td {
+    background: rgba(255,255,255,0.04);
+}
+/* Legend */
+.section-dark .legend-item {
+    color: rgba(255,255,255,0.72);
+}
+/* Section title styles */
+.section-dark .section-title {
+    color: #ffffff;
+}
+.section-dark .section-subtitle {
+    color: rgba(255,255,255,0.55);
+}
+/* Accent divider — thin gradient rule, optional inside dark panels */
+.dark-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15) 20%, rgba(56,189,248,0.25) 50%, rgba(255,255,255,0.15) 80%, transparent);
+    margin: var(--space-xl) 0;
+    border: none;
+}
+
+@media (max-width: 768px) {
+    .section-dark {
+        padding: var(--space-2xl) var(--pad-page);
+    }
+}
+
 /* ========== FOOTER ========== */
 .page-footer {
     background: linear-gradient(135deg, var(--navy-dark) 0%, var(--navy) 100%);
