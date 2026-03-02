@@ -4,8 +4,14 @@ name: "Step 1d: Two-Pass Fine Storage"
 #   Pass 1: Coarse global sweep on ALL near-miss mixes (score once per combo)
 #   Pass 2: Fine 0.05% targeted refinement on boundary mixes per threshold
 #
-# Prerequisite: Step 1c (Zone Search) must have run first.
+# Prerequisite: Step 1c (Zone Search) must have run first and near_miss
+#               parquets must exist in data/step1-pfs-parquets/.
 # Output: data/step1d-storage-parquets/{ISO}_t{XX}_storage.parquet
+#
+# Batching tips:
+#   - Run one ISO at a time for large ISOs
+#   - Select specific thresholds to process (e.g. "90,95,99,99.99")
+#   - create-branch=true (default) commits results to a fresh branch
 
 on:
   workflow_dispatch:
@@ -24,8 +30,18 @@ on:
           - NEISO
           - MISO
           - SPP
+      thresholds:
+        description: 'Thresholds to process: "ALL" or comma-separated (e.g. "90,95,99,99.99")'
+        required: false
+        default: 'ALL'
+        type: string
+      create-branch:
+        description: 'Create a fresh data branch for commits (recommended)'
+        required: false
+        default: 'true'
+        type: boolean
       branch:
-        description: 'Branch to checkout'
+        description: 'Base branch to checkout (used when create-branch=false)'
         required: false
         default: 'master'
         type: string
@@ -75,7 +91,8 @@ jobs:
         done
         if [ -n "$MISSING" ]; then
           echo "ERROR: Missing near-miss data for:$MISSING"
-          echo "Run Step 1c (Zone Search) first."
+          echo "Run Step 1c (Zone Search) first — near_miss parquets are saved"
+          echo "after each zone completes, so partial runs are sufficient."
           exit 1
         fi
 
@@ -85,29 +102,57 @@ jobs:
         git config user.email "github-actions[bot]@users.noreply.github.com"
         git config http.postBuffer 524288000
 
-    - name: "Run two-pass storage sweep"
+    - name: Create results branch
       run: |
         ISO="${{ inputs.iso }}"
+        CREATE="${{ inputs.create-branch }}"
+        if [ "$CREATE" = "true" ]; then
+          BRANCH="data/step1d-${ISO}-$(date -u +%Y%m%d-%H%M)"
+          git checkout -b "$BRANCH"
+          git push -u origin "$BRANCH"
+          echo "RESULTS_BRANCH=$BRANCH" >> "$GITHUB_ENV"
+          echo "Created and pushed results branch: $BRANCH"
+        else
+          echo "RESULTS_BRANCH=${{ inputs.branch || 'master' }}" >> "$GITHUB_ENV"
+          echo "Using existing branch: ${{ inputs.branch || 'master' }}"
+        fi
+
+    - name: "Run two-pass storage sweep"
+      timeout-minutes: 330
+      run: |
+        ISO="${{ inputs.iso }}"
+        THRESHOLDS="${{ inputs.thresholds || 'ALL' }}"
+
+        run_iso() {
+          local iso="$1"
+          echo "=== Two-pass storage: $iso  thresholds=$THRESHOLDS ==="
+          python scripts/step1d_fine_storage.py \
+            --iso "$iso" \
+            --auto-commit \
+            --thresholds "$THRESHOLDS"
+        }
+
         if [ "$ISO" = "ALL" ]; then
           for iso in CAISO ERCOT PJM NYISO NEISO MISO SPP; do
-            echo "=== Two-pass storage for $iso ==="
-            python scripts/step1d_fine_storage.py --iso "$iso" --auto-commit
+            run_iso "$iso"
           done
         else
-          python scripts/step1d_fine_storage.py --iso "$ISO" --auto-commit
+          run_iso "$ISO"
         fi
 
     - name: Final commit and push
+      if: always()
       run: |
         mkdir -p data/step1d-storage-parquets
         git add -A data/step1d-storage-parquets/
         if ! git diff --cached --quiet; then
-          git commit -m "Step 1d Fine Storage: ${{ inputs.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git commit -m "Step 1d Fine Storage: ${{ inputs.iso }} t=${{ inputs.thresholds }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           for i in 1 2 3 4; do
-            git push -u origin HEAD && break
+            git push -u origin HEAD && { echo "Push succeeded"; break; }
             echo "Push attempt $i failed, retrying in $((2**i))s..."
             sleep $((2**i))
           done
         else
           echo "No remaining changes to commit"
         fi
+        echo "Results committed to branch: $RESULTS_BRANCH"

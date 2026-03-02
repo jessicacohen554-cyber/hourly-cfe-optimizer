@@ -6,6 +6,12 @@ name: "Step 1c: Zone-Based Fine Search"
 # Prerequisite: Step 1a/1b (Scored Database) must have run first.
 # Output: data/step1-pfs-parquets/{ISO}_t{XX}_raw_pfs.parquet (per threshold)
 #         data/step1-pfs-parquets/{ISO}_near_miss.parquet (for step1d)
+#
+# Batching tips:
+#   - Run one ISO at a time for large ISOs (CAISO, PJM, ERCOT)
+#   - Run a subset of thresholds to limit runtime (e.g. "90,95,99,99.99")
+#   - create-branch=true (default) auto-creates data/step1c-{ISO}-{date}
+#     so results commit to a fresh branch and don't block master
 
 on:
   workflow_dispatch:
@@ -24,10 +30,25 @@ on:
           - NEISO
           - MISO
           - SPP
+      thresholds:
+        description: 'Thresholds to process: "ALL" or comma-separated (e.g. "90,95,99,99.99")'
+        required: false
+        default: 'ALL'
+        type: string
+      create-branch:
+        description: 'Create a fresh data branch for commits (recommended — avoids blocking master)'
+        required: false
+        default: 'true'
+        type: boolean
       branch:
-        description: 'Branch to checkout'
+        description: 'Base branch to checkout (used when create-branch=false)'
         required: false
         default: 'master'
+        type: string
+      max-zone-combos:
+        description: 'Max Cartesian combos per zone before archetype fallback (default 3M)'
+        required: false
+        default: '3000000'
         type: string
 
 jobs:
@@ -95,28 +116,59 @@ jobs:
         git config user.email "github-actions[bot]@users.noreply.github.com"
         git config http.postBuffer 524288000
 
-    - name: "Run zone search"
+    - name: Create results branch
       run: |
         ISO="${{ inputs.iso }}"
+        CREATE="${{ inputs.create-branch }}"
+        if [ "$CREATE" = "true" ]; then
+          BRANCH="data/step1c-${ISO}-$(date -u +%Y%m%d-%H%M)"
+          git checkout -b "$BRANCH"
+          # Push empty branch so auto-commits from the script can push to it
+          git push -u origin "$BRANCH"
+          echo "RESULTS_BRANCH=$BRANCH" >> "$GITHUB_ENV"
+          echo "Created and pushed results branch: $BRANCH"
+        else
+          echo "RESULTS_BRANCH=${{ inputs.branch || 'master' }}" >> "$GITHUB_ENV"
+          echo "Using existing branch: ${{ inputs.branch || 'master' }}"
+        fi
+
+    - name: "Run zone search"
+      timeout-minutes: 330
+      run: |
+        ISO="${{ inputs.iso }}"
+        THRESHOLDS="${{ inputs.thresholds || 'ALL' }}"
+        MAX_COMBOS="${{ inputs.max-zone-combos || '3000000' }}"
+
+        run_iso() {
+          local iso="$1"
+          echo "=== Zone search: $iso  thresholds=$THRESHOLDS  cap=$MAX_COMBOS ==="
+          python scripts/step1c_zone_search.py \
+            --iso "$iso" \
+            --auto-commit \
+            --thresholds "$THRESHOLDS" \
+            --max-zone-combos "$MAX_COMBOS"
+        }
+
         if [ "$ISO" = "ALL" ]; then
           for iso in CAISO ERCOT PJM NYISO NEISO MISO SPP; do
-            echo "=== Zone search for $iso ==="
-            python scripts/step1c_zone_search.py --iso "$iso" --auto-commit
+            run_iso "$iso"
           done
         else
-          python scripts/step1c_zone_search.py --iso "$ISO" --auto-commit
+          run_iso "$ISO"
         fi
 
     - name: Final commit and push
+      if: always()
       run: |
         git add -A data/step1-pfs-parquets/
         if ! git diff --cached --quiet; then
-          git commit -m "Step 1c Zone Search: ${{ inputs.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git commit -m "Step 1c Zone Search: ${{ inputs.iso }} t=${{ inputs.thresholds }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           for i in 1 2 3 4; do
-            git push -u origin HEAD && break
+            git push -u origin HEAD && { echo "Push succeeded"; break; }
             echo "Push attempt $i failed, retrying in $((2**i))s..."
             sleep $((2**i))
           done
         else
           echo "No remaining changes to commit"
         fi
+        echo "Results committed to branch: $RESULTS_BRANCH"

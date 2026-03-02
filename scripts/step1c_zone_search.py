@@ -467,6 +467,31 @@ def save_near_miss(iso, combos, scores, rtypes):
     return out_path
 
 
+def _save_incremental_near_miss(iso, combos_list, scores_list,
+                                selected_thresholds, rtypes):
+    """Save near_miss after each zone so step1d can start even if run is partial.
+
+    Overwrites the previous file with the union of all near-miss mixes from
+    every completed zone so far.
+    """
+    if not combos_list:
+        return
+    try:
+        cur_combos = np.vstack(combos_list)
+        cur_scores = np.concatenate(scores_list)
+        _, nm_idx = assign_to_thresholds_vectorized(
+            cur_combos, cur_scores, selected_thresholds)
+        all_nm: set = set()
+        for t in selected_thresholds:
+            all_nm.update(nm_idx[t].tolist())
+        nm_arr = np.array(sorted(all_nm), dtype=np.int64)
+        if len(nm_arr) > 0:
+            save_near_miss(iso, cur_combos[nm_arr], cur_scores[nm_arr], rtypes)
+            print(f"    [near_miss] Incremental save: {len(nm_arr):,} mixes")
+    except Exception as exc:
+        print(f"    [near_miss] Incremental save failed: {exc}")
+
+
 def git_commit_iso_progress(iso, zone_name, n_thresholds, auto_commit):
     """Commit current ISO progress after a zone completes."""
     if not auto_commit:
@@ -565,8 +590,12 @@ def _save_manifest(iso, code_hash, zones_done, thresholds_done):
 # MAIN PIPELINE
 # ══════════════════════════════════════════════════════════════════════════════
 
-def process_iso(iso, auto_commit=False):
+def process_iso(iso, auto_commit=False, selected_thresholds=None,
+               max_zone_combos=3_000_000):
     """Run zone-based fine search for one ISO."""
+    if selected_thresholds is None:
+        selected_thresholds = LOW_THRESHOLDS + ACTIVE_THRESHOLDS
+
     iso_start = time.time()
     rtypes = s1.get_resource_types(iso)
     n_res = len(rtypes)
@@ -575,6 +604,8 @@ def process_iso(iso, auto_commit=False):
     print(f"  Step 1c Zone Search — {iso}")
     print(f"  Resources: {n_res}D ({', '.join(rtypes)})")
     print(f"  Numba: {'enabled' if s1.HAS_NUMBA else 'disabled'}")
+    print(f"  Thresholds: {selected_thresholds}")
+    print(f"  Max zone combos cap: {max_zone_combos:,}")
     print(f"{'=' * 70}")
 
     # ── Resume logic ──
@@ -585,6 +616,16 @@ def process_iso(iso, auto_commit=False):
 
     if zones_done:
         print(f"  Resuming — zones done: {sorted(zones_done)}")
+
+    # ── Determine which zones are needed for selected thresholds ──
+    required_zones: set = set()
+    for zn, _zlo, _zhi, z_thresholds in ZONES:
+        if any(t in selected_thresholds for t in z_thresholds):
+            required_zones.add(zn)
+    # Zone A also covers low thresholds (coarse-only)
+    if any(t in selected_thresholds for t in LOW_THRESHOLDS):
+        required_zones.add('A')
+    print(f"  Required zones: {sorted(required_zones) or '(none)'}")
 
     # ── Load coarse cache ──
     print(f"\n  Loading coarse cache...")
@@ -629,6 +670,9 @@ def process_iso(iso, auto_commit=False):
     os.makedirs(s1.STEP1_RAW_PFS_PARQUET_DIR, exist_ok=True)
 
     for zone_name, z_score_low, z_score_high, z_thresholds in ZONES:
+        if zone_name not in required_zones:
+            print(f"\n  Zone {zone_name}: skipped (not needed for selected thresholds)")
+            continue
         if zone_name in zones_done:
             print(f"\n  Zone {zone_name}: skipped (already done)")
             continue
@@ -652,11 +696,20 @@ def process_iso(iso, auto_commit=False):
         print(f"    Bounds: {bounds_str}")
 
         # 2. Generate fine 1% grid within zone bounds
-        if prior_windows:
-            # Prior-informed: full Cartesian within zone bounds
+        #    Pre-check estimated size to avoid OOM / silent hangs on large zones
+        est_size = 1
+        for lo, hi in bounds:
+            est_size *= max(1, int((hi - lo) / FINE_STEP) + 1)
+        print(f"    Estimated Cartesian size: {est_size:,}  cap: {max_zone_combos:,}")
+
+        if prior_windows and est_size <= max_zone_combos:
+            # Prior-informed Cartesian within zone bounds
             fine_combos = generate_fine_grid(bounds, step=FINE_STEP)
         else:
-            # No prior: archetype-based around boundary mixes
+            # Archetype fallback: enumerate fine grid around coarse boundary mixes.
+            # Used when no prior windows exist OR when the Cartesian would exceed cap.
+            if prior_windows and est_size > max_zone_combos:
+                print(f"    Cartesian exceeds cap — switching to archetype fallback")
             zone_mask = ((coarse_scores >= z_score_low) &
                          (coarse_scores <= z_score_high))
             boundary_mixes = coarse_combos[zone_mask]
@@ -693,7 +746,11 @@ def process_iso(iso, auto_commit=False):
         zones_done.add(zone_name)
         _save_manifest(iso, code_hash, zones_done, thresholds_done)
 
-        # Auto-commit after each zone
+        # Save near_miss incrementally so step1d can start even if run is partial
+        _save_incremental_near_miss(iso, all_combos_list, all_scores_list,
+                                    selected_thresholds, rtypes)
+
+        # Auto-commit after each zone (includes near_miss)
         git_commit_iso_progress(iso, zone_name, len(z_thresholds), auto_commit)
         gc.collect()
 
@@ -704,7 +761,7 @@ def process_iso(iso, auto_commit=False):
     print(f"  Total unique scored mixes: {len(all_combos):,}")
 
     # ── Assign to thresholds + save ──
-    all_thresholds = LOW_THRESHOLDS + ACTIVE_THRESHOLDS
+    all_thresholds = selected_thresholds
     print(f"\n  Assigning to {len(all_thresholds)} thresholds...")
 
     # Vectorized assignment
@@ -774,6 +831,11 @@ def main():
                         help="ISO name or 'ALL'")
     parser.add_argument("--auto-commit", action="store_true",
                         help="Commit & push after each zone completes")
+    parser.add_argument("--thresholds", default="ALL",
+                        help="Comma-separated thresholds (e.g. '90,95,99.99') or 'ALL'")
+    parser.add_argument("--max-zone-combos", type=int, default=3_000_000,
+                        help="Max Cartesian combos per zone before archetype fallback "
+                             "(default: 3M)")
     args = parser.parse_args()
 
     isos = list(s1.ISOS) if args.iso.upper() == 'ALL' else [args.iso.upper()]
@@ -783,8 +845,21 @@ def main():
             print(f"ERROR: Unknown ISO '{iso}'")
             sys.exit(1)
 
+    # Parse threshold selection
+    all_defined = LOW_THRESHOLDS + ACTIVE_THRESHOLDS
+    if args.thresholds.strip().upper() == 'ALL':
+        selected = all_defined
+    else:
+        try:
+            selected = [float(t.strip()) for t in args.thresholds.split(',')]
+        except ValueError:
+            print(f"ERROR: Invalid --thresholds value '{args.thresholds}'")
+            sys.exit(1)
+
     for iso in isos:
-        process_iso(iso, auto_commit=args.auto_commit)
+        process_iso(iso, auto_commit=args.auto_commit,
+                    selected_thresholds=selected,
+                    max_zone_combos=args.max_zone_combos)
 
 
 if __name__ == "__main__":
