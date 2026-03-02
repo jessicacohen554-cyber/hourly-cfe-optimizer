@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/shared.css">
 <style>
-body { background: #F7F8FC; }
+body { background: var(--bg-page); }
 
 /* Hero */
 .hero {
@@ -221,11 +221,6 @@ body { background: #F7F8FC; }
 }
 .site-footer a { color: rgba(255,255,255,0.75); text-decoration: none; }
 .site-footer a:hover { color: #fff; }
-.bottom-banner {
-    height: 4px;
-    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%);
-}
-
 /* Responsive */
 @media (max-width: 768px) {
     .hero h1 { font-size: 1.6rem; }
@@ -241,12 +236,13 @@ body { background: #F7F8FC; }
 <!-- TOP NAV -->
 <nav id="topNav"></nav>
 <script src="js/nav.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
 
-<!-- HERO -->
-<div class="hero">
+<div class="header" id="pageHeader">
     <h1>Corporate Procurement Strategy Simulation</h1>
-    <p class="subtitle">Research foundations for modeling how different GHG accounting policies and procurement strategies affect clean energy deployment, costs, and emissions across 7 US ISOs.</p>
-    <span class="status-badge">Research in Progress</span>
+    <div class="subtitle">Research foundations for modeling how different GHG accounting policies and procurement strategies affect clean energy deployment, costs, and emissions across 7 US ISOs.</div>
+    <div class="header-accent"></div>
 </div>
 
 <div class="content">

@@ -9,8 +9,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/shared.css">
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
 <style>
-body { background: #FFFFFF; }
+body { background: var(--bg-page-white); }
 
 .ref-intro {
     max-width: 800px;
@@ -22,12 +24,12 @@ body { background: #FFFFFF; }
     font-family: var(--font-heading);
     font-size: 1.8rem;
     font-weight: 700;
-    color: #1A2744;
+    color: var(--navy);
     margin-bottom: 16px;
     letter-spacing: -0.3px;
 }
 .ref-intro p {
-    color: #374151;
+    color: var(--text-secondary);
     font-size: 1rem;
     line-height: 1.75;
     max-width: 620px;
@@ -44,8 +46,8 @@ body { background: #FFFFFF; }
     gap: 24px;
 }
 .ref-card {
-    background: #FFFFFF;
-    border: 1px solid #E5E7EB;
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
     border-radius: 12px;
     padding: 28px;
     transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
@@ -69,7 +71,7 @@ body { background: #FFFFFF; }
 .ref-card-tag {
     display: inline-block;
     background: rgba(14,165,233,0.15);
-    color: #0EA5E9;
+    color: var(--hydro);
     font-size: 0.72rem;
     font-weight: 600;
     padding: 4px 10px;
@@ -80,7 +82,7 @@ body { background: #FFFFFF; }
     font-family: var(--font-heading);
 }
 .ref-card h3 {
-    color: #1A2744;
+    color: var(--navy);
     font-family: var(--font-heading);
     font-size: 1.1rem;
     font-weight: 700;
@@ -88,13 +90,13 @@ body { background: #FFFFFF; }
     line-height: 1.35;
 }
 .ref-card p {
-    color: #374151;
+    color: var(--text-secondary);
     font-size: 0.88rem;
     line-height: 1.65;
     margin: 0;
 }
 .ref-card-arrow {
-    color: #0EA5E9;
+    color: var(--hydro);
     font-size: 0.82rem;
     font-weight: 600;
     margin-top: 18px;
@@ -116,24 +118,7 @@ body { background: #FFFFFF; }
     font-style: italic;
 }
 
-/* ===== Footer ===== */
-/* Uses shared.css .page-footer (dark navy, white text) */
-.footer-links { display: flex; flex-wrap: wrap; gap: 16px 24px; justify-content: center; margin-bottom: 12px; }
-.footer-links a {
-    text-decoration: none;
-    font-size: 0.85rem;
-    font-weight: 500;
-    transition: color 0.2s;
-    min-height: 44px;
-    display: inline-flex;
-    align-items: center;
-    padding: 8px 4px;
-}
-.footer-note { font-size: 0.78rem; color: rgba(255,255,255,0.35); }
-.bottom-banner {
-    height: 4px;
-    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%);
-}
+/* Footer and bottom-banner use shared.css .page-footer, .footer-links, .bottom-banner */
 
 @media (max-width: 768px) {
     .ref-intro { padding: 40px 20px 24px; }
