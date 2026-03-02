@@ -1,0 +1,122 @@
+name: "Step 1c: Zone-Based Fine Search"
+
+# Score-band zone search: generates fine 1% mixes per score zone, scores each
+# mix ONCE, assigns to thresholds. Replaces old per-threshold PFS build.
+#
+# Prerequisite: Step 1a/1b (Scored Database) must have run first.
+# Output: data/step1-pfs-parquets/{ISO}_t{XX}_raw_pfs.parquet (per threshold)
+#         data/step1-pfs-parquets/{ISO}_near_miss.parquet (for step1d)
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO region to run'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'master'
+        type: string
+
+jobs:
+  zone-search:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.branch || 'master' }}
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        pip install numpy numba pyarrow pandas
+        python -c "from numba import njit; print('Numba OK')"
+
+    - name: Verify scored database exists
+      run: |
+        ISO="${{ inputs.iso }}"
+        if [ "$ISO" = "ALL" ]; then
+          ISOS="CAISO ERCOT PJM NYISO NEISO MISO SPP"
+        else
+          ISOS="$ISO"
+        fi
+        MISSING=""
+        for iso in $ISOS; do
+          CACHE="data/step1-pfs-parquets/${iso}_coarse_cache.parquet"
+          if [ ! -f "$CACHE" ]; then
+            MISSING="$MISSING $iso"
+          else
+            SIZE=$(du -h "$CACHE" | cut -f1)
+            echo "OK: $iso scored database ($SIZE)"
+          fi
+        done
+        if [ -n "$MISSING" ]; then
+          echo "ERROR: Missing scored databases for:$MISSING"
+          echo "Run Step 1a (Scored Database) first."
+          exit 1
+        fi
+
+    - name: "Compute prior windows (optional)"
+      continue-on-error: true
+      run: |
+        ISO="${{ inputs.iso }}"
+        if [ "$ISO" = "ALL" ]; then
+          python scripts/step1_prior_windows.py --iso ALL
+        else
+          python scripts/step1_prior_windows.py --iso "$ISO"
+        fi
+
+    - name: Configure git
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git config http.postBuffer 524288000
+
+    - name: "Run zone search"
+      run: |
+        ISO="${{ inputs.iso }}"
+        if [ "$ISO" = "ALL" ]; then
+          for iso in CAISO ERCOT PJM NYISO NEISO MISO SPP; do
+            echo "=== Zone search for $iso ==="
+            python scripts/step1c_zone_search.py --iso "$iso" --auto-commit
+          done
+        else
+          python scripts/step1c_zone_search.py --iso "$ISO" --auto-commit
+        fi
+
+    - name: Final commit and push
+      run: |
+        git add -A data/step1-pfs-parquets/
+        if ! git diff --cached --quiet; then
+          git commit -m "Step 1c Zone Search: ${{ inputs.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          for i in 1 2 3 4; do
+            git push -u origin HEAD && break
+            echo "Push attempt $i failed, retrying in $((2**i))s..."
+            sleep $((2**i))
+          done
+        else
+          echo "No remaining changes to commit"
+        fi

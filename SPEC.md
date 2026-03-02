@@ -1,9 +1,67 @@
 # Advanced Sensitivity Model — Complete Specification
 
 > **Authoritative reference for all design decisions.** If a future session needs context, read this file first.
-> Last updated: 2026-02-28.
+> Last updated: 2026-03-02.
 
-## Current Status (Feb 28, 2026)
+## Current Status (Mar 2, 2026)
+
+### Streamlined PFS Architecture Redesign (Mar 2, 2026)
+
+**Branch:** `claude/streamline-pfs-architecture-0RMKJ`
+
+**Problem:** Current Step 1c/1d runs `optimize_threshold()` independently per threshold. A mix scoring 63% base gets storage-swept for t50, t55, t60, t65 independently — 4× redundant scoring. Fine 1% refinement around boundary archetypes duplicates across adjacent thresholds. Estimated 5-8× compute waste from per-threshold duplication.
+
+**Architecture Decision: "Score Once, Bin by Threshold"**
+
+A mix's hourly match score is a fixed physics property — it doesn't change per threshold. Score every unique (mix) and (mix, storage_config) tuple exactly once, then assign results to thresholds by their score.
+
+**5-Script Pipeline (replacing old 1a/1b/1c/1d):**
+
+| Script | Status | Purpose |
+|--------|--------|---------|
+| `step1_prior_windows.py` | NEW | Reads prior EF parquets → search window JSON |
+| `step1a_generate_mixes.py` | MODIFIED | Prior-informed bounds + 100 scout mixes |
+| `step1b_score_mixes.py` | MINIMAL CHANGES | Add caching layer |
+| `step1c_zone_search.py` | NEW (replaces old 1c) | Score-band zone fine search with global dedup |
+| `step1d_fine_storage.py` | NEW (replaces old 1d) | Two-pass: coarse global → fine targeted 0.05% |
+
+**Decision 1: Prior-Informed Search Windows (Hard Windows + Scouts)**
+- Load prior EF parquets, compute per-resource [min, max] per threshold
+- Add 15pp absolute buffer: [max(min-15, 0), min(max+15, cap)]
+- Union across thresholds → outer bounds for coarse grid
+- 100 scout mixes (50 random outside window + 50 corner combos) to catch regime shifts
+- If any scout scores near a boundary, dynamically expand the window
+- Saves ~30% of coarse grid compute vs. full Cartesian
+
+**Decision 2: Score-Band Zones (Fine Search Grouping)**
+- 3 overlapping zones replace 15+ per-threshold fine searches:
+  - Zone A: score [0.45, 0.78] → covers t50–t75
+  - Zone B: score [0.73, 0.93] → covers t75–t90
+  - Zone C: score [0.88, 1.00] → covers t90–t99.99
+- Fine 1% grid generated per zone with zone-specific resource windows
+- Global hash set prevents any mix from being scored twice across zones
+- Each scored mix assigned to ALL thresholds where feasible or near-miss
+- ~4× reduction in fine scoring operations
+
+**Decision 3: Two-Pass Storage (Coarse Global → Fine Targeted)**
+- Pass 1: Collect UNION of all near-miss mixes across ALL thresholds (unique set). Sweep storage at coarse resolution (bat4 0-6%, bat8 0-8%, LDES 0-25%, H2 0-25%). Score each (mix, storage) combo ONCE. Bin results to thresholds by score. ~8× reduction vs. per-threshold storage sweep.
+- Pass 2: For each threshold, identify boundary mixes (score within [T-2pp, T+1pp] after Pass 1). Refine winning storage dims at 0.05% resolution ±0.5pp around Pass 1 winner (~21 values/dim). Importance-weighted subset if cross-product >1000. Gets 0.05% storage accuracy on frontier mixes.
+
+**Decision 4: Full Rewrite of 1c/1d**
+- Keep 1a (mix generation) and 1b (scoring kernel) largely intact
+- Numba dispatch kernels preserved — proven, fast
+- Old 1c/1d preserved as `step1c_build_pfs_legacy.py` / `step1d_storage_refinement_legacy.py`
+- New `step1c_zone_search.py` + `step1d_fine_storage.py`
+
+**Accuracy Targets:**
+- Resource mix: 1% (fine grid step)
+- Storage: 0.05% on frontier boundary mixes, 1% elsewhere
+
+**Estimated Compute Savings:** ~5× total reduction in scoring operations. Same or better PFS quality due to finer storage resolution on frontier.
+
+---
+
+## Previous Status (Feb 28, 2026)
 
 ### MAC Formula: Pure LCOE / CO₂ Displaced — No Wholesale Offset (Mar 1, 2026)
 
