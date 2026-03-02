@@ -533,15 +533,20 @@ def _save_manifest(iso, code_hash, pass1_done, pass2_done):
 # MAIN PIPELINE
 # ══════════════════════════════════════════════════════════════════════════════
 
-def process_iso(iso, auto_commit=False):
-    """Run two-pass storage sweep for one ISO."""
+def process_iso(iso, thresholds=None, auto_commit=False):
+    """Run two-pass storage sweep for one ISO and specified thresholds."""
+    if thresholds is None:
+        thresholds = STORAGE_THRESHOLDS
+
     iso_start = time.time()
     rtypes = s1.get_resource_types(iso)
     n_res = len(rtypes)
+    requested_thresholds = sorted(set(thresholds))
 
     print(f"\n{'=' * 70}")
     print(f"  Step 1d Fine Storage — {iso}")
     print(f"  Resources: {n_res}D ({', '.join(rtypes)})")
+    print(f"  Thresholds: {len(requested_thresholds)} ({', '.join(f'{t}%' for t in requested_thresholds)})")
     print(f"  Numba: {'enabled' if s1.HAS_NUMBA else 'disabled'}")
     print(f"{'=' * 70}")
 
@@ -595,8 +600,8 @@ def process_iso(iso, auto_commit=False):
         coarse_results = run_coarse_storage(
             iso, nm_combos, nm_base_scores, demand_arr, supply_matrix)
 
-        # Save coarse results per threshold
-        for t in STORAGE_THRESHOLDS:
+        # Save coarse results per threshold (only requested thresholds)
+        for t in requested_thresholds:
             t_results = coarse_results[t]
             if t_results:
                 save_storage_results(iso, t, nm_combos, t_results, rtypes)
@@ -637,7 +642,7 @@ def process_iso(iso, auto_commit=False):
 
     print(f"\n  Pass 2 — Fine storage refinement (0.05% resolution)")
 
-    for t in STORAGE_THRESHOLDS:
+    for t in requested_thresholds:
         if t in pass2_done:
             print(f"    {iso} t{t}%: skipped (already done)")
             continue
@@ -684,6 +689,8 @@ def main():
         description="Step 1d: Two-pass storage sweep.")
     parser.add_argument("--iso", required=True,
                         help="ISO name or 'ALL'")
+    parser.add_argument("--thresholds", default="all",
+                        help='Thresholds to run: "all", comma-separated (e.g., "95,99"), or single value')
     parser.add_argument("--auto-commit", action="store_true",
                         help="Commit & push after each threshold")
     args = parser.parse_args()
@@ -695,8 +702,18 @@ def main():
             print(f"ERROR: Unknown ISO '{iso}'")
             sys.exit(1)
 
+    # Parse thresholds
+    if args.thresholds.lower() == "all":
+        thresholds = STORAGE_THRESHOLDS
+    else:
+        try:
+            thresholds = [float(t.strip()) for t in args.thresholds.split(',')]
+        except ValueError:
+            print(f"ERROR: Cannot parse thresholds '{args.thresholds}'")
+            sys.exit(1)
+
     for iso in isos:
-        process_iso(iso, auto_commit=args.auto_commit)
+        process_iso(iso, thresholds=thresholds, auto_commit=args.auto_commit)
 
 
 if __name__ == "__main__":
