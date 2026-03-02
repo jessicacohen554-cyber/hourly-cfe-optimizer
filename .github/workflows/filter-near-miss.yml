@@ -35,7 +35,7 @@ env:
 jobs:
   filter:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     permissions:
       contents: write
 
@@ -44,7 +44,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         ref: ${{ inputs.branch || 'master' }}
-        fetch-depth: 0
+        fetch-depth: 1
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -75,7 +75,8 @@ jobs:
         Near-miss: remove zero-curtailment + bridge-fail mixes.
         All parquets: downcast float64 → int8/float32, recompress with zstd."
           for i in 1 2 3 4; do
-            git pull --rebase origin "$BRANCH" || true
+            git fetch origin "$BRANCH" --depth=5 || true
+            git rebase "origin/$BRANCH" || git rebase --abort || true
             git push origin HEAD:"$BRANCH" && break
             echo "Push attempt $i failed, retrying in $((2**i))s..."
             sleep $((2**i))
