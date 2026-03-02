@@ -17,7 +17,7 @@ Pipeline position: Step 1 of 7
   Steps 4-7 — Post-processing, dispatch, dashboard
 
 Key features:
-  - 4D non-CAISO / 5D CAISO (with geothermal): independent resource fractions
+  - 4D interior / 5D offshore / 6D CAISO: independent resource fractions
   - 17 thresholds: 50..100 with finer resolution at inflection zone
   - Coarse 5% → Fine 1% adaptive grid (±4% radius around archetypes)
   - Numba JIT-compiled scoring functions
@@ -33,6 +33,7 @@ Resource types:
   - Solar (0-250%): EIA 2021-2025 averaged hourly profile (DST-aware)
   - Wind (0-250%): EIA 2021-2025 averaged hourly profile
   - Hydro (0-cap+10%): EIA 2021-2025 averaged hourly (capped by region)
+  - Offshore Wind (NYISO/NEISO/PJM/CAISO, 0-cap%): NOW-23 + IEA 15MW power curve
   - Geothermal (CAISO only, 0-20%): Flat year-round, no seasonal derate
 
 Storage (swept as separate dimensions after resource fractions):
@@ -104,13 +105,26 @@ H2_EFFICIENCY = 0.35         # Green H2: electrolysis (70%) × storage (95%) × 
 H2_DURATION_HOURS = 1000     # ~42 days at full power (salt cavern)
 H2_WINDOW_DAYS = 30          # 30-day rolling window for multi-week weather bridging
 
-# Resource types — 4D for non-CAISO, 5D for CAISO (geothermal)
+# Resource types — dimensionality depends on ISO's available resources
+# Non-CAISO non-offshore: 4D (clean_firm, solar, wind, hydro)
+# Offshore ISOs (NYISO, NEISO, PJM): 5D (+ offshore_wind)
+# CAISO: 6D (+ offshore_wind + geothermal)
+# Interior ISOs (ERCOT, MISO, SPP): 4D (no offshore resource)
 RESOURCE_TYPES_BASE = ['clean_firm', 'solar', 'wind', 'hydro']
-RESOURCE_TYPES_CAISO = ['clean_firm', 'solar', 'wind', 'hydro', 'geothermal']
+RESOURCE_TYPES_OFFSHORE = ['clean_firm', 'solar', 'wind', 'hydro', 'offshore_wind']
+RESOURCE_TYPES_CAISO = ['clean_firm', 'solar', 'wind', 'hydro', 'offshore_wind', 'geothermal']
+
+# ISOs with offshore wind resource
+OFFSHORE_ISOS = ['NYISO', 'NEISO', 'PJM', 'CAISO']
 
 def get_resource_types(iso):
     """Return resource type list for this ISO."""
-    return RESOURCE_TYPES_CAISO if iso == 'CAISO' else RESOURCE_TYPES_BASE
+    if iso == 'CAISO':
+        return RESOURCE_TYPES_CAISO
+    elif iso in OFFSHORE_ISOS:
+        return RESOURCE_TYPES_OFFSHORE
+    else:
+        return RESOURCE_TYPES_BASE
 
 # Regions
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
@@ -136,6 +150,24 @@ HYDRO_ADDER_PCT = 10
 # CAISO geothermal cap: (existing_geo_TWh + potential) / demand
 # = (5.31 + 39.0) / 224.039 = 19.8% → cap at 20%
 GEO_CAP_PCT = 20
+
+# Offshore wind caps (TWh pipeline → % of demand)
+# Derived from lease area pipelines and ISO annual demand
+OFFSHORE_WIND_CAPS_TWH = {
+    'NYISO': 37,   # 9 GW pipeline (Empire Wind, Sunrise Wind, etc.)
+    'NEISO': 37,   # 9 GW capacity (Vineyard Wind, Revolution Wind, etc.)
+    'PJM':   30,   # NJ 7.5 GW mandated + DE/MD/VA pipeline
+    'CAISO': 20,   # ~5 GW (Morro Bay + Humboldt WEAs)
+}
+# ISO annual demand TWh (2025 actuals) for converting caps to percentages
+ISO_DEMAND_TWH = {
+    'CAISO': 224.0, 'ERCOT': 435.0, 'PJM': 757.0, 'NYISO': 148.0,
+    'NEISO': 112.0, 'MISO': 618.0, 'SPP': 252.0,
+}
+OFFSHORE_WIND_CAP_PCT = {
+    iso: round(twh / ISO_DEMAND_TWH[iso] * 100, 1)
+    for iso, twh in OFFSHORE_WIND_CAPS_TWH.items()
+}  # NYISO: 25%, NEISO: 33%, PJM: 4%, CAISO: 8.9%
 
 # Resource caps: max % of demand for each resource in coarse grid search
 # Each resource varies independently — no sum-to-100 constraint.
@@ -325,8 +357,46 @@ def load_data():
     return demand_data, gen_profiles, emission_rates, fossil_mix
 
 
+def _load_offshore_wind_profile(iso):
+    """Load offshore wind 8760 profile for an ISO from the NOW-23 processed data.
+
+    Returns numpy array of shape (H,) normalized to sum=1.0, or None if not found.
+    Reads from data/offshore_wind_profiles.json (output of step0_fetch_offshore_wind.py).
+    Averages across available years (same methodology as EIA onshore profiles).
+    """
+    osw_path = os.path.join(DATA_DIR, 'offshore_wind_profiles.json')
+    if not os.path.exists(osw_path):
+        return None
+
+    with open(osw_path) as f:
+        osw_data = json.load(f)
+
+    if iso not in osw_data:
+        return None
+
+    iso_data = osw_data[iso]
+    yearly_profiles = []
+    for year_str, fuels in iso_data.items():
+        profile = fuels.get('offshore_wind')
+        if profile and len(profile) >= H:
+            yearly_profiles.append(np.array(profile[:H], dtype=np.float64))
+
+    if not yearly_profiles:
+        return None
+
+    # Average across years (same as _average_profiles for onshore)
+    avg = np.mean(yearly_profiles, axis=0)
+
+    # Re-normalize to sum=1.0
+    total = avg.sum()
+    if total > 0:
+        avg /= total
+
+    return avg
+
+
 def get_supply_profiles(iso, gen_profiles):
-    """Get generation profiles for resource types (4D non-CAISO, 5D CAISO).
+    """Get generation profiles for resource types (4D/5D/6D depending on ISO).
 
     Returns dict mapping resource type to numpy array of H floats.
     Each profile represents the hourly generation shape per unit of annual demand
@@ -392,6 +462,16 @@ def get_supply_profiles(iso, gen_profiles):
     # Hydro
     profiles['hydro'] = np.array(gen_profiles[iso].get('hydro', [0.0] * H)[:H], dtype=np.float64)
 
+    # Offshore wind (NYISO, NEISO, PJM, CAISO — loaded from NOW-23 profiles)
+    if iso in OFFSHORE_ISOS:
+        osw_profile = _load_offshore_wind_profile(iso)
+        if osw_profile is not None:
+            profiles['offshore_wind'] = osw_profile
+        else:
+            # Fallback: zero profile (profile fetch hasn't run yet)
+            print(f"    WARNING: No offshore wind profile for {iso}, using zeros")
+            profiles['offshore_wind'] = np.zeros(H, dtype=np.float64)
+
     # CAISO: add geothermal as flat year-round profile (no seasonal derate)
     if iso == 'CAISO':
         profiles['geothermal'] = np.full(H, 1.0 / H, dtype=np.float64)
@@ -413,7 +493,8 @@ def prepare_numpy_profiles(iso, demand_norm, supply_profiles):
     """Convert to numpy arrays + build supply matrix (N_resources, 8760).
 
     Returns (demand_arr, supply_matrix) where supply_matrix shape is
-    (4, 8760) for non-CAISO or (5, 8760) for CAISO (includes geothermal).
+    (4, 8760) for interior ISOs, (5, 8760) for offshore ISOs, or
+    (6, 8760) for CAISO (offshore_wind + geothermal).
 
     Re-normalizes demand_arr to sum to exactly 1.0 to fix a scaling issue
     where leap-year profiles (2024) were normalized over 8784 hours then
@@ -1033,10 +1114,20 @@ def generate_resource_combos(iso, step=5):
     if int(hydro_cap) not in hyd_vals and hydro_cap > 0:
         hyd_vals.append(int(hydro_cap))
 
+    if iso in OFFSHORE_ISOS:
+        osw_cap = int(OFFSHORE_WIND_CAP_PCT.get(iso, 0))
+        osw_vals = list(range(0, osw_cap + 1, step))
+        if osw_cap not in osw_vals and osw_cap > 0:
+            osw_vals.append(osw_cap)
+
     if iso == 'CAISO':
         geo_vals = list(range(0, GEO_CAP_PCT + 1, step))
         combos = np.array(list(itertools.product(
-            cf_vals, sol_vals, wnd_vals, hyd_vals, geo_vals
+            cf_vals, sol_vals, wnd_vals, hyd_vals, osw_vals, geo_vals
+        )), dtype=np.float64)
+    elif iso in OFFSHORE_ISOS:
+        combos = np.array(list(itertools.product(
+            cf_vals, sol_vals, wnd_vals, hyd_vals, osw_vals
         )), dtype=np.float64)
     else:
         combos = np.array(list(itertools.product(
@@ -1072,6 +1163,8 @@ def generate_resource_combos_around(base_combo, iso, step=1, radius=4):
             caps.append(int(hydro_cap))
         elif rt == 'geothermal':
             caps.append(GEO_CAP_PCT)
+        elif rt == 'offshore_wind':
+            caps.append(int(OFFSHORE_WIND_CAP_PCT.get(iso, 0)))
         else:
             caps.append(RESOURCE_CAPS[rt])
 
@@ -1133,51 +1226,93 @@ EDGE_CASE_SEEDS_BASE = [
     [0, 80, 80, 0],
 ]
 
-# Extra CAISO seeds with geothermal (5th column = geothermal %)
+# Extra seeds with offshore wind (5th column = offshore_wind %)
+# For NYISO/NEISO/PJM: (clean_firm, solar, wind, hydro, offshore_wind)
+EDGE_CASE_SEEDS_OFFSHORE = [
+    [0, 50, 50, 0, 20],     # Balanced onshore + offshore
+    [0, 80, 0, 0, 25],      # Solar + offshore, no onshore wind
+    [0, 0, 100, 0, 25],     # Pure wind (onshore + offshore)
+    [0, 50, 100, 0, 20],    # High wind mix
+    [50, 50, 0, 0, 20],     # Firm + solar + offshore
+    [0, 80, 50, 0, 15],     # Solar-heavy + offshore supplement
+    [20, 50, 80, 0, 20],    # Moderate mix
+]
+
+# Extra CAISO seeds with geothermal (6th column = geothermal %)
+# Format: (clean_firm, solar, wind, hydro, offshore_wind, geothermal)
 EDGE_CASE_SEEDS_CAISO_GEO = [
-    # (clean_firm, solar, wind, hydro, geothermal) as % of demand
-    [0, 80, 0, 0, 20],
-    [0, 80, 50, 0, 20],
-    [0, 0, 150, 0, 20],
-    [50, 80, 0, 0, 20],
-    [80, 50, 0, 0, 20],
-    [0, 80, 80, 0, 10],
-    [20, 100, 100, 0, 15],
+    [0, 80, 0, 0, 0, 20],
+    [0, 80, 50, 0, 0, 20],
+    [0, 0, 150, 0, 0, 20],
+    [50, 80, 0, 0, 0, 20],
+    [80, 50, 0, 0, 0, 20],
+    [0, 80, 80, 0, 0, 10],
+    [20, 100, 100, 0, 0, 15],
+    # Offshore + geothermal combos
+    [0, 80, 0, 0, 5, 20],
+    [0, 50, 50, 0, 5, 15],
+    [30, 50, 0, 0, 5, 20],
 ]
 
 
 def get_seed_combos(iso):
-    """Return edge case seeds valid for this ISO's resource caps."""
+    """Return edge case seeds valid for this ISO's resource caps.
+
+    Resource order: [clean_firm, solar, wind, hydro, offshore_wind?, geothermal?]
+    - Interior ISOs (ERCOT, MISO, SPP): 4D base seeds
+    - Offshore ISOs (NYISO, NEISO, PJM): 5D (base + offshore_wind)
+    - CAISO: 6D (base + offshore_wind + geothermal)
+    """
     hydro_cap = HYDRO_CAPS[iso] + HYDRO_ADDER_PCT
+    osw_cap = OFFSHORE_WIND_CAP_PCT.get(iso, 0)
     rtypes = get_resource_types(iso)
     n_res = len(rtypes)
 
     seeds = []
     if iso == 'CAISO':
-        # Add base seeds with geo=0, then CAISO-specific geo seeds
+        # Base seeds with osw=0, geo=0
         for seed in EDGE_CASE_SEEDS_BASE:
-            seeds.append(seed + [0])  # append geo=0
+            seeds.append(seed + [0, 0])
+        # Offshore seeds with geo=0
+        for seed in EDGE_CASE_SEEDS_OFFSHORE:
+            seeds.append(seed + [0])
+        # CAISO-specific geo seeds (already have osw column)
         seeds.extend(EDGE_CASE_SEEDS_CAISO_GEO)
+    elif iso in OFFSHORE_ISOS:
+        # Base seeds with osw=0
+        for seed in EDGE_CASE_SEEDS_BASE:
+            seeds.append(seed + [0])
+        # Offshore-specific seeds
+        seeds.extend(EDGE_CASE_SEEDS_OFFSHORE)
     else:
         seeds = list(EDGE_CASE_SEEDS_BASE)
+
+    # Build per-resource cap lookup
+    cap_map = {}
+    for i, rt in enumerate(rtypes):
+        if rt == 'hydro':
+            cap_map[i] = hydro_cap
+        elif rt == 'geothermal':
+            cap_map[i] = GEO_CAP_PCT
+        elif rt == 'offshore_wind':
+            cap_map[i] = osw_cap
+        elif rt in RESOURCE_CAPS:
+            cap_map[i] = RESOURCE_CAPS[rt]
+        else:
+            cap_map[i] = 999  # no cap
 
     valid = []
     seen = set()
     for seed in seeds:
         if len(seed) != n_res:
             continue
-        # Check resource caps
-        if seed[3] > hydro_cap:
-            continue
-        if n_res > 4 and seed[4] > GEO_CAP_PCT:
-            continue
-        if seed[0] > RESOURCE_CAPS['clean_firm']:
-            continue
-        if seed[1] > RESOURCE_CAPS['solar']:
-            continue
-        if seed[2] > RESOURCE_CAPS['wind']:
-            continue
-        if sum(seed) == 0:
+        # Check all resource caps
+        skip = False
+        for i in range(n_res):
+            if seed[i] > cap_map[i]:
+                skip = True
+                break
+        if skip or sum(seed) == 0:
             continue
         key = tuple(seed)
         if key not in seen:
