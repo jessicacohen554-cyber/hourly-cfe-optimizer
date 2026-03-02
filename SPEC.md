@@ -2398,19 +2398,60 @@ CCS_CAP_TWH = {
 - **ERCOT (200 TWh / 41%)**: Best CCS region in US. Gulf Coast has 20+ Gt depleted offshore fields, 100s Gt offshore saline formations. TX received Class VI primacy Dec 2025 (64 apps from EPA). Denbury CO₂ pipeline network (900+ mi) is densest in US. Multiple storage hubs under development.
 - **MISO (200 TWh / 30%)**: Mt. Simon Sandstone (12–172 Gt) is the most characterized formation in US with 2+ Mt successfully injected at ADM Decatur. ND has had primacy since 2018 with 3 active projects. Broadwing 400 MW CCS-CCGT (Google-backed, FID Q2 2026) would be first in US.
 
-**Implementation**: Step 3 enforces `ccs_twh = min(ccs_twh, CCS_CAP_TWH[iso])` in all merit-order paths. Step 1 will filter `ccs_pct × demand_TWh ≤ CCS_CAP_TWH[iso]` in the next physics run (deferred to avoid re-running Step 1 this iteration).
+**Implementation (Step 3, March 2026)**: CCS cap enforced in two places within `price_mix_batch`:
+1. **Implicit CCS residual** (`ccs_pct = 100 - sum(cf, sol, wnd, hyd)`): TWh capped at `CCS_CAP_TWH[iso]`. Excess priced as nuclear new-build at the firm gen toggle level.
+2. **Tranche 3 CCS** (clean_firm overflow after uprate + geothermal): CCS headroom = `cap - residual_ccs_twh`. If CCS is cheaper than nuclear but headroom exhausted, overflow goes to nuclear new-build.
+For NYISO/NEISO (cap=0), all CCS → nuclear automatically. Step 1 will filter `ccs_pct × demand_TWh ≤ CCS_CAP_TWH[iso]` in the next physics run (deferred to avoid re-running Step 1 this iteration).
 
 *Sources: USGS National Carbon Sequestration Database (NATCARB), NETL Carbon Storage Atlas V (2015), DOE CarbonSAFE program status (2024–2025), EPA Class VI well permit tracker, California SB 905 (2022), Princeton Net-Zero America (2021), Global CCS Institute Status Report (2024), IEEFA CCS deployment analysis (2024).*
 
-### 5.5 Battery LCOS ($/MWh) — Regionalized
+### 5.5 Battery Costs — NREL Component Model + Wright's Law Decline
 
-| Level | CAISO | ERCOT | PJM | NYISO | NEISO |
+**Updated March 2026.** Battery costs re-anchored to NREL ATB 2024 component model with Wright's Law learning curves for future cost decline.
+
+**CAPEX derivation** — NREL ATB 2024 separates battery costs into energy ($/kWh) and power ($/kW) components. Total installed cost per kWh = Energy + Power/Duration. This gives the correct 4hr→8hr ratio (~14% cheaper for 8hr, because power electronics spread over 2× the energy capacity).
+
+| Level | Energy ($/kWh) | Power ($/kW) | 4hr Total | 8hr Total | 8hr/4hr |
 |---|---|---|---|---|---|
-| Low | $77 | $69 | $74 | $81 | $79 |
-| Medium | $102 | $92 | $98 | $108 | $105 |
-| High | $133 | $120 | $127 | $140 | $137 |
+| Low | $170 | $280 | $240/kWh | $205/kWh | 85.4% |
+| Medium | $210 | $340 | $295/kWh | $253/kWh | 85.6% |
+| High | $270 | $420 | $375/kWh | $323/kWh | 86.0% |
 
-*ERCOT lowest (low labor, fast permitting, flat land). NYISO highest (highest labor, most constrained siting).*
+*Low = aggressive LFP procurement + competitive BOS. Medium = typical US utility project (~$295/kWh vs NREL $334 benchmark — reflecting 2025 market reality below NREL's conservative bottom-up model). High = tariff-exposed, constrained interconnection.*
+
+**Financial parameters**: WACC=8%, 20yr life, FOM=2.5% of CAPEX($/kW) per NREL (includes augmentation). Annualized = CAPEX × (CRF + 0.025) / 8760 × 1000 × regional_mult. Regional multipliers: ERCOT=1.00 (cheapest), CAISO=1.11, NYISO=1.18 (highest).
+
+**Annualized capacity costs** ($/MWh-cap, 2025 starting values):
+
+| Level | Type | CAISO | ERCOT | PJM | NYISO | NEISO | MISO | SPP |
+|---|---|---|---|---|---|---|---|---|
+| Low | 4hr | 3.86 | 3.48 | 3.70 | 4.08 | 3.97 | 3.62 | 3.52 |
+| Medium | 4hr | 4.75 | 4.27 | 4.55 | 5.02 | 4.87 | 4.46 | 4.33 |
+| High | 4hr | 6.03 | 5.43 | 5.78 | 6.38 | 6.20 | 5.66 | 5.50 |
+| Low | 8hr | 3.30 | 2.97 | 3.16 | 3.49 | 3.39 | 3.10 | 3.01 |
+| Medium | 8hr | 4.06 | 3.66 | 3.89 | 4.30 | 4.17 | 3.81 | 3.70 |
+| High | 8hr | 5.19 | 4.67 | 4.97 | 5.49 | 5.33 | 4.87 | 4.73 |
+
+**LCOS cross-check** (4hr Medium ERCOT, 365 cycles, 85% RTE): **$121/MWh**. Consistent with Lazard 2024 ($115-220/MWh range).
+
+**Wright's Law learning curves** — Battery costs decline from 2025 starting values toward terminal NOAK floor. This is the reverse direction from other technologies (which start at FOAK and decline to NOAK): batteries are already at manufacturing scale, so 2025 IS the starting point. Curves calibrated to NREL 2050 cost projections.
+
+Terminal NOAK ($/kWh): Low=50%, Medium=56%, High=80% of 2025 starting cost.
+- Low 4hr: $120/kWh by 2042 | Med 4hr: $165/kWh by 2048 | High 4hr: $300/kWh by 2050
+- Low 8hr: $102/kWh by 2040 | Med 8hr: $141/kWh by 2046 | High 8hr: $258/kWh by 2050
+
+Learning curve exponent: 0.6 (concave ramp — steeper initially, asymptotic approach). 8hr reaches NOAK ~2yr faster than 4hr because cell costs (which decline faster) are a larger share of 8hr total cost.
+
+**Trajectory (4hr Medium ERCOT):**
+| Year | Wright's fraction | CAPEX | Annualized | LCOS (365 cyc) |
+|---|---|---|---|---|
+| 2025 | 0.00 | $295/kWh | $4.27/MWh-cap | $121/MWh |
+| 2030 | 0.40 | $243/kWh | $3.52/MWh-cap | $99/MWh |
+| 2035 | 0.61 | $216/kWh | $3.13/MWh-cap | $88/MWh |
+| 2040 | 0.77 | $194/kWh | $2.82/MWh-cap | $79/MWh |
+| 2048+ | 1.00 | $165/kWh | $2.39/MWh-cap | $67/MWh |
+
+*Sources: [NREL ATB 2024](https://atb.nrel.gov/electricity/2024/utility-scale_battery_storage), [NREL Cost Projections 2025 Update](https://docs.nrel.gov/docs/fy25osti/93281.pdf), [Ember Battery Storage Costs](https://ember-energy.org/latest-insights/how-cheap-is-battery-storage/), Wright's Law learning rate literature.*
 
 ### 5.6 LDES LCOS ($/MWh, 100hr iron-air) — Regionalized
 
@@ -3986,22 +4027,22 @@ Now `bat_pct / 100.0 × price` directly gives the annual fixed cost of that stor
 **Regional multipliers**: Derived from existing LCOS ratio (normalize to ERCOT=1.0), baked into capacity prices. TX adders set to $0 for all storage types.
 
 **LCOS cross-check** (validates capacity prices against known LCOS benchmarks):
-- Battery 4hr Low @ 250 cycles/yr = $72/MWh (matches ~$70 benchmark)
-- Battery 4hr Med @ 250 cycles/yr = $82/MWh
-- Battery 8hr Med @ 180 cycles/yr = $85/MWh
+- Battery 4hr Med @ 365 cycles/yr = $121/MWh (Lazard 2024 range: $115-220)
+- Battery 8hr Med @ 300 cycles/yr = $107/MWh
 - LDES Med @ 50 cycles/yr = $95/MWh
 
-**Battery learning curves** (added with this fix): Batteries are mature but still declining 5-8%/yr. Shallow curves:
-- FOAK: 1.05× High (minimal pre-learning premium, already at manufacturing scale)
-- Timelines: L=(2025,2030), M=(2026,2032), H=(2027,2035) — all at NOAK by 2035
-- Net effect: small uplift at early thresholds (2030-2032), zero by 2035
+**Battery learning curves** (updated March 2026 — Wright's Law with NREL-calibrated trajectories):
+- Direction: LCOE_TABLES (2025 starting) → NOAK_BATTERY (terminal floor). Reverse of other techs.
+- NOAK fractions: Low=50%, Med=56%, High=80% of starting cost. Calibrated to NREL 2050 projections.
+- Timelines: bat4 L=(2025,2042), M=(2025,2048), H=(2025,2050). bat8 2yr faster.
+- Exponent: 0.6 (concave ramp). Net effect: meaningful decline over 20+ year horizon, not the old shallow 5yr curve.
+- See §5.5 for full trajectory table.
 
-**Storage FOAK tables** (now in $/MWh-cap, not LCOS):
-- Battery 4hr: 1.05× High capacity cost per ISO
-- Battery 8hr: 1.05× High capacity cost per ISO
+**Storage FOAK tables** ($/MWh-cap):
+- Battery 4hr/8hr: FOAK = High (no premium — batteries at scale). Not used by learning curves (batteries use LCOE→NOAK direction).
 - LDES: 1.40× High capacity cost per ISO
 - H2: 1.30× High capacity cost per ISO
 
-**Propagated to**: `step3_cost_optimization.py`, `scenario_common.py`, `step6_scenario_comparison.py`. All three files have independent LCOE_TABLES copies — all updated.
+**Propagated to**: `step3_cost_optimization.py`. Other files (`scenario_common.py`, `step6_scenario_comparison.py`) may need separate update if they have independent LCOE_TABLES copies.
 
 **Supersedes**: Prior LCOS values in LCOE_TABLES for battery, battery8, ldes, h2. Line 3764 of this file updated — batteries now have learning curves too (previously listed as "already mature — static costs").
