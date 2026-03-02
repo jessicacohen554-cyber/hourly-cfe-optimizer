@@ -550,9 +550,11 @@ def git_commit_iso_progress(iso, zone_name, n_thresholds, auto_commit):
 
     try:
         # Must use -f: data/step1-pfs-parquets/ is gitignored, normal add skips it.
+        # Only add parquets — zone_manifest.json is a run-time checkpoint (gitignored)
+        # and causes add/add conflicts when squash-merging parallel ISO branches.
         pfs_dir = s1.STEP1_RAW_PFS_PARQUET_DIR
         subprocess.run(
-            f'git add -f "{pfs_dir}"/*.parquet "{pfs_dir}"/*.json 2>/dev/null; true',
+            f'git add -f "{pfs_dir}"/*.parquet 2>/dev/null; true',
             shell=True, capture_output=True)
 
 
