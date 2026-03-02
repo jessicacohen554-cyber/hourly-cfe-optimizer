@@ -122,6 +122,13 @@ body { background: var(--bg-page-white); }
     line-height: 1.6;
     max-width: 800px;
 }
+/* Dark overrides for section-header and insight-box inside section-dark */
+.section-dark .section-header h3 { color: rgba(255,255,255,0.95); }
+.section-dark .section-header p { color: rgba(255,255,255,0.65); }
+.section-dark .insight-box h5 { color: rgba(255,255,255,0.95); }
+.section-dark .insight-box p { color: rgba(255,255,255,0.72); }
+.section-dark .insight-box.purple { background: rgba(139,92,246,0.12); border-left-color: var(--battery); }
+.section-dark .insight-box { background: rgba(255,255,255,0.06); }
 
 /* ========== CHART HEIGHT OVERRIDES (storage-specific) ========== */
 .chart-panel h4 {
