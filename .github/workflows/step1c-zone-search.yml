@@ -3,6 +3,12 @@ name: "Step 1c: Zone-Based Fine Search"
 # Score-band zone search: generates fine 1% mixes per score zone, scores each
 # mix ONCE, assigns to thresholds. Replaces old per-threshold PFS build.
 #
+# Features:
+#   - Run individual ISOs and/or thresholds (batching)
+#   - Creates a results branch and auto-commits after each ISO
+#   - Near-miss parquets always created for step1d downstream
+#   - Fine grid safety cap prevents zone search hangs on 5D ISOs
+#
 # Prerequisite: Step 1a/1b (Scored Database) must have run first.
 # Output: data/step1-pfs-parquets/{ISO}_t{XX}_raw_pfs.parquet (per threshold)
 #         data/step1-pfs-parquets/{ISO}_near_miss.parquet (for step1d)
@@ -11,7 +17,7 @@ on:
   workflow_dispatch:
     inputs:
       iso:
-        description: 'ISO region to run'
+        description: 'ISO region to run (individual or ALL)'
         required: true
         default: 'ALL'
         type: choice
@@ -24,8 +30,13 @@ on:
           - NEISO
           - MISO
           - SPP
+      thresholds:
+        description: 'Comma-separated thresholds or "all" (e.g., "90,95,99")'
+        required: false
+        default: 'all'
+        type: string
       branch:
-        description: 'Branch to checkout'
+        description: 'Branch to checkout (source of code + data)'
         required: false
         default: 'master'
         type: string
@@ -45,6 +56,21 @@ jobs:
         ref: ${{ inputs.branch || 'master' }}
         fetch-depth: 0
 
+    - name: Create results branch
+      run: |
+        SOURCE_BRANCH="${{ inputs.branch || 'master' }}"
+        ISO="${{ inputs.iso }}"
+        TIMESTAMP=$(date -u +%Y%m%d-%H%M%S)
+        RESULTS_BRANCH="results/step1c-${ISO,,}-${TIMESTAMP}"
+
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git config http.postBuffer 524288000
+
+        git checkout -b "$RESULTS_BRANCH"
+        echo "RESULTS_BRANCH=$RESULTS_BRANCH" >> "$GITHUB_ENV"
+        echo "Created results branch: $RESULTS_BRANCH"
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
@@ -55,14 +81,19 @@ jobs:
         pip install numpy numba pyarrow pandas
         python -c "from numba import njit; print('Numba OK')"
 
-    - name: Verify scored database exists
+    - name: Determine ISOs to process
+      id: iso-list
       run: |
         ISO="${{ inputs.iso }}"
         if [ "$ISO" = "ALL" ]; then
-          ISOS="CAISO ERCOT PJM NYISO NEISO MISO SPP"
+          echo "isos=CAISO ERCOT PJM NYISO NEISO MISO SPP" >> "$GITHUB_OUTPUT"
         else
-          ISOS="$ISO"
+          echo "isos=$ISO" >> "$GITHUB_OUTPUT"
         fi
+
+    - name: Verify scored database exists
+      run: |
+        ISOS="${{ steps.iso-list.outputs.isos }}"
         MISSING=""
         for iso in $ISOS; do
           CACHE="data/step1-pfs-parquets/${iso}_coarse_cache.parquet"
@@ -82,41 +113,96 @@ jobs:
     - name: "Compute prior windows (optional)"
       continue-on-error: true
       run: |
-        ISO="${{ inputs.iso }}"
-        if [ "$ISO" = "ALL" ]; then
-          python scripts/step1_prior_windows.py --iso ALL
+        ISOS="${{ steps.iso-list.outputs.isos }}"
+        for iso in $ISOS; do
+          echo "--- Prior windows for $iso ---"
+          python scripts/step1_prior_windows.py --iso "$iso" || true
+        done
+
+    - name: "Run zone search (per-ISO with intermittent commits)"
+      run: |
+        ISOS="${{ steps.iso-list.outputs.isos }}"
+        THRESHOLDS="${{ inputs.thresholds || 'all' }}"
+
+        # Build threshold arg
+        if [ "$THRESHOLDS" = "all" ] || [ -z "$THRESHOLDS" ]; then
+          THRESHOLD_ARG=""
         else
-          python scripts/step1_prior_windows.py --iso "$ISO"
+          THRESHOLD_ARG="--thresholds $THRESHOLDS"
         fi
 
-    - name: Configure git
-      run: |
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-        git config http.postBuffer 524288000
+        FAILED=""
+        for iso in $ISOS; do
+          echo ""
+          echo "================================================================"
+          echo "  Zone search: $iso (thresholds: ${THRESHOLDS:-all})"
+          echo "================================================================"
 
-    - name: "Run zone search"
+          # Run zone search with auto-commit for this ISO
+          if python scripts/step1c_zone_search.py --iso "$iso" --auto-commit $THRESHOLD_ARG; then
+            echo "--- $iso zone search SUCCEEDED ---"
+          else
+            echo "--- $iso zone search FAILED (exit code $?) ---"
+            FAILED="$FAILED $iso"
+          fi
+
+          # Intermittent commit: stage + commit + push whatever we have
+          echo "--- Committing $iso results ---"
+          git add -A data/step1-pfs-parquets/
+          if ! git diff --cached --quiet; then
+            git commit -m "Step 1c: $iso zone search — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            for attempt in 1 2 3 4; do
+              git push -u origin "$RESULTS_BRANCH" && break
+              echo "Push attempt $attempt failed, retrying in $((2**attempt))s..."
+              sleep $((2**attempt))
+            done
+          else
+            echo "No changes to commit for $iso"
+          fi
+        done
+
+        if [ -n "$FAILED" ]; then
+          echo ""
+          echo "WARNING: Zone search failed for:$FAILED"
+          echo "Successful ISOs were committed. Check logs above for errors."
+          # Don't exit 1 — partial results are still valuable
+        fi
+
+    - name: Verify near-miss parquets exist
       run: |
-        ISO="${{ inputs.iso }}"
-        if [ "$ISO" = "ALL" ]; then
-          for iso in CAISO ERCOT PJM NYISO NEISO MISO SPP; do
-            echo "=== Zone search for $iso ==="
-            python scripts/step1c_zone_search.py --iso "$iso" --auto-commit
-          done
-        else
-          python scripts/step1c_zone_search.py --iso "$ISO" --auto-commit
+        ISOS="${{ steps.iso-list.outputs.isos }}"
+        echo "--- Near-miss parquet check ---"
+        MISSING=""
+        for iso in $ISOS; do
+          NM="data/step1-pfs-parquets/${iso}_near_miss.parquet"
+          if [ -f "$NM" ]; then
+            SIZE=$(du -h "$NM" | cut -f1)
+            echo "OK: $iso near-miss ($SIZE)"
+          else
+            MISSING="$MISSING $iso"
+            echo "MISSING: $iso near-miss parquet"
+          fi
+        done
+        if [ -n "$MISSING" ]; then
+          echo "WARNING: Missing near-miss parquets for:$MISSING"
+          echo "Step 1d will not be able to process these ISOs."
         fi
 
     - name: Final commit and push
       run: |
         git add -A data/step1-pfs-parquets/
         if ! git diff --cached --quiet; then
-          git commit -m "Step 1c Zone Search: ${{ inputs.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          for i in 1 2 3 4; do
-            git push -u origin HEAD && break
-            echo "Push attempt $i failed, retrying in $((2**i))s..."
-            sleep $((2**i))
+          git commit -m "Step 1c final: ${{ inputs.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          for attempt in 1 2 3 4; do
+            git push -u origin "$RESULTS_BRANCH" && break
+            echo "Push attempt $attempt failed, retrying in $((2**attempt))s..."
+            sleep $((2**attempt))
           done
         else
           echo "No remaining changes to commit"
         fi
+        echo ""
+        echo "================================================================"
+        echo "  Results branch: $RESULTS_BRANCH"
+        echo "  Merge into ${{ inputs.branch || 'master' }} when ready."
+        echo "================================================================"

@@ -4,6 +4,11 @@ name: "Step 1d: Two-Pass Fine Storage"
 #   Pass 1: Coarse global sweep on ALL near-miss mixes (score once per combo)
 #   Pass 2: Fine 0.05% targeted refinement on boundary mixes per threshold
 #
+# Features:
+#   - Run individual ISOs and/or thresholds (batching)
+#   - Creates a results branch and auto-commits after each ISO
+#   - Resume support via manifest files
+#
 # Prerequisite: Step 1c (Zone Search) must have run first.
 # Output: data/step1d-storage-parquets/{ISO}_t{XX}_storage.parquet
 
@@ -11,7 +16,7 @@ on:
   workflow_dispatch:
     inputs:
       iso:
-        description: 'ISO region to run'
+        description: 'ISO region to run (individual or ALL)'
         required: true
         default: 'ALL'
         type: choice
@@ -24,8 +29,13 @@ on:
           - NEISO
           - MISO
           - SPP
+      thresholds:
+        description: 'Comma-separated thresholds or "all" (e.g., "90,95,99")'
+        required: false
+        default: 'all'
+        type: string
       branch:
-        description: 'Branch to checkout'
+        description: 'Branch to checkout (source of code + data)'
         required: false
         default: 'master'
         type: string
@@ -45,6 +55,21 @@ jobs:
         ref: ${{ inputs.branch || 'master' }}
         fetch-depth: 0
 
+    - name: Create results branch
+      run: |
+        SOURCE_BRANCH="${{ inputs.branch || 'master' }}"
+        ISO="${{ inputs.iso }}"
+        TIMESTAMP=$(date -u +%Y%m%d-%H%M%S)
+        RESULTS_BRANCH="results/step1d-${ISO,,}-${TIMESTAMP}"
+
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git config http.postBuffer 524288000
+
+        git checkout -b "$RESULTS_BRANCH"
+        echo "RESULTS_BRANCH=$RESULTS_BRANCH" >> "$GITHUB_ENV"
+        echo "Created results branch: $RESULTS_BRANCH"
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
@@ -55,14 +80,19 @@ jobs:
         pip install numpy numba pyarrow pandas
         python -c "from numba import njit; print('Numba OK')"
 
-    - name: Verify near-miss data exists
+    - name: Determine ISOs to process
+      id: iso-list
       run: |
         ISO="${{ inputs.iso }}"
         if [ "$ISO" = "ALL" ]; then
-          ISOS="CAISO ERCOT PJM NYISO NEISO MISO SPP"
+          echo "isos=CAISO ERCOT PJM NYISO NEISO MISO SPP" >> "$GITHUB_OUTPUT"
         else
-          ISOS="$ISO"
+          echo "isos=$ISO" >> "$GITHUB_OUTPUT"
         fi
+
+    - name: Verify near-miss data exists
+      run: |
+        ISOS="${{ steps.iso-list.outputs.isos }}"
         MISSING=""
         for iso in $ISOS; do
           NM="data/step1-pfs-parquets/${iso}_near_miss.parquet"
@@ -79,22 +109,54 @@ jobs:
           exit 1
         fi
 
-    - name: Configure git
+    - name: "Run two-pass storage sweep (per-ISO with intermittent commits)"
       run: |
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-        git config http.postBuffer 524288000
+        ISOS="${{ steps.iso-list.outputs.isos }}"
+        THRESHOLDS="${{ inputs.thresholds || 'all' }}"
 
-    - name: "Run two-pass storage sweep"
-      run: |
-        ISO="${{ inputs.iso }}"
-        if [ "$ISO" = "ALL" ]; then
-          for iso in CAISO ERCOT PJM NYISO NEISO MISO SPP; do
-            echo "=== Two-pass storage for $iso ==="
-            python scripts/step1d_fine_storage.py --iso "$iso" --auto-commit
-          done
+        # Build threshold arg
+        if [ "$THRESHOLDS" = "all" ] || [ -z "$THRESHOLDS" ]; then
+          THRESHOLD_ARG=""
         else
-          python scripts/step1d_fine_storage.py --iso "$ISO" --auto-commit
+          THRESHOLD_ARG="--thresholds $THRESHOLDS"
+        fi
+
+        mkdir -p data/step1d-storage-parquets
+
+        FAILED=""
+        for iso in $ISOS; do
+          echo ""
+          echo "================================================================"
+          echo "  Two-pass storage: $iso (thresholds: ${THRESHOLDS:-all})"
+          echo "================================================================"
+
+          # Run storage sweep with auto-commit for this ISO
+          if python scripts/step1d_fine_storage.py --iso "$iso" --auto-commit $THRESHOLD_ARG; then
+            echo "--- $iso storage sweep SUCCEEDED ---"
+          else
+            echo "--- $iso storage sweep FAILED (exit code $?) ---"
+            FAILED="$FAILED $iso"
+          fi
+
+          # Intermittent commit: stage + commit + push whatever we have
+          echo "--- Committing $iso results ---"
+          git add -A data/step1d-storage-parquets/
+          if ! git diff --cached --quiet; then
+            git commit -m "Step 1d: $iso storage sweep — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            for attempt in 1 2 3 4; do
+              git push -u origin "$RESULTS_BRANCH" && break
+              echo "Push attempt $attempt failed, retrying in $((2**attempt))s..."
+              sleep $((2**attempt))
+            done
+          else
+            echo "No changes to commit for $iso"
+          fi
+        done
+
+        if [ -n "$FAILED" ]; then
+          echo ""
+          echo "WARNING: Storage sweep failed for:$FAILED"
+          echo "Successful ISOs were committed. Check logs above for errors."
         fi
 
     - name: Final commit and push
@@ -102,12 +164,17 @@ jobs:
         mkdir -p data/step1d-storage-parquets
         git add -A data/step1d-storage-parquets/
         if ! git diff --cached --quiet; then
-          git commit -m "Step 1d Fine Storage: ${{ inputs.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          for i in 1 2 3 4; do
-            git push -u origin HEAD && break
-            echo "Push attempt $i failed, retrying in $((2**i))s..."
-            sleep $((2**i))
+          git commit -m "Step 1d final: ${{ inputs.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          for attempt in 1 2 3 4; do
+            git push -u origin "$RESULTS_BRANCH" && break
+            echo "Push attempt $attempt failed, retrying in $((2**attempt))s..."
+            sleep $((2**attempt))
           done
         else
           echo "No remaining changes to commit"
         fi
+        echo ""
+        echo "================================================================"
+        echo "  Results branch: $RESULTS_BRANCH"
+        echo "  Merge into ${{ inputs.branch || 'master' }} when ready."
+        echo "================================================================"

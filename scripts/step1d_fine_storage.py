@@ -14,6 +14,7 @@ Output: data/step1d-storage-parquets/{ISO}_t{XX}_storage.parquet
 
 Usage:
   python scripts/step1d_fine_storage.py --iso CAISO
+  python scripts/step1d_fine_storage.py --iso CAISO --thresholds "90,95,99"
   python scripts/step1d_fine_storage.py --iso PJM --auto-commit
   python scripts/step1d_fine_storage.py --iso ALL
 """
@@ -533,15 +534,32 @@ def _save_manifest(iso, code_hash, pass1_done, pass2_done):
 # MAIN PIPELINE
 # ══════════════════════════════════════════════════════════════════════════════
 
-def process_iso(iso, auto_commit=False):
-    """Run two-pass storage sweep for one ISO."""
+def process_iso(iso, auto_commit=False, target_thresholds=None):
+    """Run two-pass storage sweep for one ISO.
+
+    Args:
+        iso: ISO name (e.g. 'CAISO')
+        auto_commit: whether to git commit/push after each threshold
+        target_thresholds: list of specific thresholds to process, or None for all
+    """
     iso_start = time.time()
     rtypes = s1.get_resource_types(iso)
     n_res = len(rtypes)
 
+    # Determine which thresholds to process
+    active_thresholds = STORAGE_THRESHOLDS
+    if target_thresholds is not None:
+        active_thresholds = [t for t in target_thresholds if t in STORAGE_THRESHOLDS]
+        if not active_thresholds:
+            print(f"  WARNING: No valid thresholds for {iso}. "
+                  f"Valid: {', '.join(str(t) for t in STORAGE_THRESHOLDS)}")
+            return
+
     print(f"\n{'=' * 70}")
     print(f"  Step 1d Fine Storage — {iso}")
     print(f"  Resources: {n_res}D ({', '.join(rtypes)})")
+    print(f"  Thresholds: {len(active_thresholds)} "
+          f"({', '.join(str(t) for t in sorted(active_thresholds))})")
     print(f"  Numba: {'enabled' if s1.HAS_NUMBA else 'disabled'}")
     print(f"{'=' * 70}")
 
@@ -595,14 +613,15 @@ def process_iso(iso, auto_commit=False):
         coarse_results = run_coarse_storage(
             iso, nm_combos, nm_base_scores, demand_arr, supply_matrix)
 
-        # Save coarse results per threshold
+        # Save coarse results per threshold (all thresholds for completeness)
         for t in STORAGE_THRESHOLDS:
             t_results = coarse_results[t]
             if t_results:
                 save_storage_results(iso, t, nm_combos, t_results, rtypes)
                 print(f"    {iso} t{t}%: {len(t_results):,} storage-feasible "
                       f"(coarse)")
-            git_commit_threshold(iso, t, "Pass1", auto_commit)
+            if t in active_thresholds:
+                git_commit_threshold(iso, t, "Pass1", auto_commit)
 
         pass1_done = True
         _save_manifest(iso, code_hash, pass1_done, pass2_done)
@@ -610,7 +629,7 @@ def process_iso(iso, auto_commit=False):
         print(f"\n  Pass 1: skipped (already done)")
         # Reload coarse results from saved parquets for Pass 2
         coarse_results = {t: [] for t in STORAGE_THRESHOLDS}
-        for t in STORAGE_THRESHOLDS:
+        for t in active_thresholds:
             t_str = s1._normalize_threshold_str(t)
             t_path = os.path.join(STEP1D_OUTPUT_DIR,
                                   f'{iso}_t{t_str}_storage.parquet')
@@ -637,18 +656,18 @@ def process_iso(iso, auto_commit=False):
 
     print(f"\n  Pass 2 — Fine storage refinement (0.05% resolution)")
 
-    for t in STORAGE_THRESHOLDS:
+    for t in active_thresholds:
         if t in pass2_done:
             print(f"    {iso} t{t}%: skipped (already done)")
             continue
 
         t_start = time.time()
         fine_results = run_fine_storage(
-            iso, t, nm_combos, coarse_results[t],
+            iso, t, nm_combos, coarse_results.get(t, []),
             demand_arr, supply_matrix)
 
         # Merge coarse + fine results (fine supersedes coarse for boundary mixes)
-        all_results = coarse_results[t] + fine_results
+        all_results = coarse_results.get(t, []) + fine_results
 
         # Deduplicate: keep best score per unique (mix, storage) tuple
         seen = {}
@@ -666,7 +685,8 @@ def process_iso(iso, auto_commit=False):
         t_elapsed = time.time() - t_start
         n_fine = len(fine_results)
         n_total = len(deduped)
-        print(f"    {iso} t{t}%: {n_fine:,} fine + {len(coarse_results[t]):,} "
+        print(f"    {iso} t{t}%: {n_fine:,} fine + "
+              f"{len(coarse_results.get(t, [])):,} "
               f"coarse = {n_total:,} total ({t_elapsed:.1f}s)")
 
         git_commit_threshold(iso, t, "Pass2", auto_commit)
@@ -679,16 +699,42 @@ def process_iso(iso, auto_commit=False):
     print(f"{'=' * 70}")
 
 
+def parse_thresholds(raw):
+    """Parse threshold input: comma-separated values or 'all'."""
+    if raw is None or raw.strip().lower() == 'all':
+        return None  # None = all thresholds
+    parts = [p.strip() for p in raw.split(',') if p.strip()]
+    parsed = []
+    for p in parts:
+        try:
+            parsed.append(float(p))
+        except ValueError:
+            print(f"ERROR: Cannot parse threshold '{p}' as a number.")
+            sys.exit(1)
+    # Validate against known thresholds
+    valid = set(STORAGE_THRESHOLDS)
+    for t in parsed:
+        if t not in valid:
+            print(f"ERROR: Unknown threshold {t}. Valid: "
+                  f"{', '.join(str(v) for v in sorted(valid))}")
+            sys.exit(1)
+    return parsed
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Step 1d: Two-pass storage sweep.")
     parser.add_argument("--iso", required=True,
                         help="ISO name or 'ALL'")
+    parser.add_argument("--thresholds", default=None,
+                        help='Comma-separated thresholds or "all" '
+                             '(e.g., "90,95,99"). Default: all')
     parser.add_argument("--auto-commit", action="store_true",
                         help="Commit & push after each threshold")
     args = parser.parse_args()
 
     isos = list(s1.ISOS) if args.iso.upper() == 'ALL' else [args.iso.upper()]
+    target_thresholds = parse_thresholds(args.thresholds)
 
     for iso in isos:
         if iso not in s1.ISOS:
@@ -696,7 +742,8 @@ def main():
             sys.exit(1)
 
     for iso in isos:
-        process_iso(iso, auto_commit=args.auto_commit)
+        process_iso(iso, auto_commit=args.auto_commit,
+                    target_thresholds=target_thresholds)
 
 
 if __name__ == "__main__":

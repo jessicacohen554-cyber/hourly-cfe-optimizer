@@ -23,6 +23,7 @@ Output:
 
 Usage:
   python scripts/step1c_zone_search.py --iso CAISO
+  python scripts/step1c_zone_search.py --iso CAISO --thresholds "90,95,99"
   python scripts/step1c_zone_search.py --iso PJM --auto-commit
   python scripts/step1c_zone_search.py --iso ALL
 """
@@ -80,6 +81,13 @@ STORAGE_SWEEP_FLOOR = 0.50
 
 # Flush candidates to disk above this count
 CHUNK_CANDIDATE_LIMIT = 500_000
+
+# Safety cap for fine grid with prior windows (prevents runaway Cartesian product)
+MAX_FINE_GRID_SIZE = 5_000_000
+MAX_FINE_GRID_SIZE_5D = 1_000_000
+
+# Per-zone timeout in seconds (prevents hangs on combinatorial explosion)
+ZONE_TIMEOUT_SECONDS = 1800  # 30 minutes
 
 # All active thresholds
 ACTIVE_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5,
@@ -221,19 +229,25 @@ def compute_zone_resource_bounds(iso, coarse_combos, coarse_scores,
     return bounds
 
 
-def generate_fine_grid(bounds, step=1):
+def generate_fine_grid(bounds, step=1, max_grid_size=None):
     """Generate Cartesian product of 1%-step ranges within bounds.
 
     Uses numpy meshgrid instead of itertools.product for speed.
     Chunks by first dimension to limit peak memory for 5D+ grids.
+    Safety cap prevents runaway combinatorial explosion.
 
     Args:
         bounds: list of (lo, hi) per resource dimension
         step: step size in percentage points
+        max_grid_size: safety cap on total grid size (None = use default)
 
     Returns:
         numpy array (N, n_res) of mix combinations
     """
+    n_res = len(bounds)
+    if max_grid_size is None:
+        max_grid_size = MAX_FINE_GRID_SIZE_5D if n_res >= 5 else MAX_FINE_GRID_SIZE
+
     ranges = [np.arange(lo, hi + 1, step, dtype=np.float64) for lo, hi in bounds]
 
     # Estimate total Cartesian product size
@@ -242,7 +256,21 @@ def generate_fine_grid(bounds, step=1):
         total_size *= len(r)
 
     if total_size == 0:
-        return np.empty((0, len(bounds)), dtype=np.float64)
+        return np.empty((0, n_res), dtype=np.float64)
+
+    # Safety cap: if the raw Cartesian product exceeds max_grid_size, widen the
+    # step until it fits. This prevents OOM / multi-hour hangs on 5D grids.
+    effective_step = step
+    while total_size > max_grid_size * 2 and effective_step < 10:
+        effective_step += 1
+        ranges = [np.arange(lo, hi + 1, effective_step, dtype=np.float64)
+                  for lo, hi in bounds]
+        total_size = 1
+        for r in ranges:
+            total_size *= len(r)
+        if effective_step > step:
+            print(f"      [fine-grid] Step widened {step}→{effective_step} "
+                  f"({total_size:,} combos) to stay under cap")
 
     if total_size <= 10_000_000:
         # Small enough for full meshgrid in memory
@@ -262,6 +290,7 @@ def generate_fine_grid(bounds, step=1):
     rest_sums = rest_product.sum(axis=1)
 
     parts = []
+    collected = 0
     for val in first:
         total_sum = val + rest_sums
         mask = (total_sum > 0) & (total_sum <= s1.TOTAL_PROCUREMENT_CAP)
@@ -269,9 +298,13 @@ def generate_fine_grid(bounds, step=1):
         if n_keep > 0:
             col0 = np.full((n_keep, 1), val, dtype=np.float64)
             parts.append(np.hstack([col0, rest_product[mask]]))
+            collected += n_keep
+            if collected >= max_grid_size:
+                print(f"      [fine-grid] Hit safety cap at {collected:,} combos")
+                break
 
     if not parts:
-        return np.empty((0, len(bounds)), dtype=np.float64)
+        return np.empty((0, n_res), dtype=np.float64)
     return np.vstack(parts)
 
 
@@ -447,15 +480,22 @@ def save_threshold_pfs(iso, threshold, combos, scores, rtypes):
 
 
 def save_near_miss(iso, combos, scores, rtypes):
-    """Save union near-miss mixes for step1d storage sweep."""
-    if len(combos) == 0:
-        return
+    """Save union near-miss mixes for step1d storage sweep.
 
+    Always writes a parquet file (even if empty) so step1d doesn't fail
+    on a missing file check.
+    """
     os.makedirs(s1.STEP1_RAW_PFS_PARQUET_DIR, exist_ok=True)
-    data = {}
-    for i, rt in enumerate(rtypes):
-        data[rt] = combos[:, i].astype(np.float64)
-    data['base_score'] = scores
+
+    if len(combos) == 0:
+        # Write empty parquet with correct schema
+        data = {rt: np.array([], dtype=np.float64) for rt in rtypes}
+        data['base_score'] = np.array([], dtype=np.float64)
+    else:
+        data = {}
+        for i, rt in enumerate(rtypes):
+            data[rt] = combos[:, i].astype(np.float64)
+        data['base_score'] = scores
 
     table = pa.table(data)
     out_path = os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR,
@@ -565,15 +605,40 @@ def _save_manifest(iso, code_hash, zones_done, thresholds_done):
 # MAIN PIPELINE
 # ══════════════════════════════════════════════════════════════════════════════
 
-def process_iso(iso, auto_commit=False):
-    """Run zone-based fine search for one ISO."""
+def process_iso(iso, auto_commit=False, target_thresholds=None):
+    """Run zone-based fine search for one ISO.
+
+    Args:
+        iso: ISO name (e.g. 'CAISO')
+        auto_commit: whether to git commit/push after each zone
+        target_thresholds: list of specific thresholds to process, or None for all
+    """
     iso_start = time.time()
     rtypes = s1.get_resource_types(iso)
     n_res = len(rtypes)
 
+    # Determine which thresholds to process
+    if target_thresholds is not None:
+        # Filter to only zones/thresholds the user requested
+        requested_active = [t for t in target_thresholds if t in ACTIVE_THRESHOLDS]
+        requested_low = [t for t in target_thresholds if t in LOW_THRESHOLDS]
+        all_thresholds = requested_low + requested_active
+        # Only process zones that contain at least one requested threshold
+        zones_to_process = []
+        for zone_name, z_lo, z_hi, z_thresholds in ZONES:
+            overlap = [t for t in z_thresholds if t in requested_active]
+            if overlap:
+                zones_to_process.append((zone_name, z_lo, z_hi, z_thresholds))
+    else:
+        all_thresholds = LOW_THRESHOLDS + ACTIVE_THRESHOLDS
+        zones_to_process = list(ZONES)
+
     print(f"\n{'=' * 70}")
     print(f"  Step 1c Zone Search — {iso}")
     print(f"  Resources: {n_res}D ({', '.join(rtypes)})")
+    print(f"  Thresholds: {len(all_thresholds)} "
+          f"({', '.join(str(t) for t in sorted(all_thresholds))})")
+    print(f"  Zones: {', '.join(z[0] for z in zones_to_process)}")
     print(f"  Numba: {'enabled' if s1.HAS_NUMBA else 'disabled'}")
     print(f"{'=' * 70}")
 
@@ -628,7 +693,7 @@ def process_iso(iso, auto_commit=False):
     # ── Process zones ──
     os.makedirs(s1.STEP1_RAW_PFS_PARQUET_DIR, exist_ok=True)
 
-    for zone_name, z_score_low, z_score_high, z_thresholds in ZONES:
+    for zone_name, z_score_low, z_score_high, z_thresholds in zones_to_process:
         if zone_name in zones_done:
             print(f"\n  Zone {zone_name}: skipped (already done)")
             continue
@@ -653,7 +718,7 @@ def process_iso(iso, auto_commit=False):
 
         # 2. Generate fine 1% grid within zone bounds
         if prior_windows:
-            # Prior-informed: full Cartesian within zone bounds
+            # Prior-informed: full Cartesian within zone bounds (with safety cap)
             fine_combos = generate_fine_grid(bounds, step=FINE_STEP)
         else:
             # No prior: archetype-based around boundary mixes
@@ -690,6 +755,11 @@ def process_iso(iso, auto_commit=False):
         zone_elapsed = time.time() - zone_start
         print(f"    Zone {zone_name} complete: {zone_elapsed:.1f}s")
 
+        # Check for zone timeout
+        if zone_elapsed > ZONE_TIMEOUT_SECONDS:
+            print(f"    WARNING: Zone {zone_name} took {zone_elapsed:.0f}s "
+                  f"(limit {ZONE_TIMEOUT_SECONDS}s)")
+
         zones_done.add(zone_name)
         _save_manifest(iso, code_hash, zones_done, thresholds_done)
 
@@ -704,7 +774,6 @@ def process_iso(iso, auto_commit=False):
     print(f"  Total unique scored mixes: {len(all_combos):,}")
 
     # ── Assign to thresholds + save ──
-    all_thresholds = LOW_THRESHOLDS + ACTIVE_THRESHOLDS
     print(f"\n  Assigning to {len(all_thresholds)} thresholds...")
 
     # Vectorized assignment
@@ -717,10 +786,15 @@ def process_iso(iso, auto_commit=False):
         all_nm_indices.update(near_miss_idx[t].tolist())
     all_nm_indices = np.array(sorted(all_nm_indices), dtype=np.int64)
 
-    # Save near-miss union
+    # Always save near-miss union (critical for step1d downstream)
     if len(all_nm_indices) > 0:
         save_near_miss(iso, all_combos[all_nm_indices],
                        all_scores[all_nm_indices], rtypes)
+    else:
+        # Save empty near-miss parquet so step1d doesn't fail on missing file
+        print(f"  WARNING: No near-miss mixes found — saving empty near-miss parquet")
+        save_near_miss(iso, np.empty((0, n_res), dtype=np.float64),
+                       np.empty(0, dtype=np.float64), rtypes)
 
     # Per-threshold: dominance filter + save
     for t in all_thresholds:
@@ -767,16 +841,42 @@ def process_iso(iso, auto_commit=False):
     print(f"{'=' * 70}")
 
 
+def parse_thresholds(raw):
+    """Parse threshold input: comma-separated values or 'all'."""
+    if raw is None or raw.strip().lower() == 'all':
+        return None  # None = all thresholds
+    parts = [p.strip() for p in raw.split(',') if p.strip()]
+    parsed = []
+    for p in parts:
+        try:
+            parsed.append(float(p))
+        except ValueError:
+            print(f"ERROR: Cannot parse threshold '{p}' as a number.")
+            sys.exit(1)
+    # Validate against known thresholds
+    valid = set(ACTIVE_THRESHOLDS + LOW_THRESHOLDS)
+    for t in parsed:
+        if t not in valid:
+            print(f"ERROR: Unknown threshold {t}. Valid: "
+                  f"{', '.join(str(v) for v in sorted(valid))}")
+            sys.exit(1)
+    return parsed
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Step 1c: Zone-based fine search with global dedup.")
     parser.add_argument("--iso", required=True,
                         help="ISO name or 'ALL'")
+    parser.add_argument("--thresholds", default=None,
+                        help='Comma-separated thresholds or "all" '
+                             '(e.g., "90,95,99"). Default: all')
     parser.add_argument("--auto-commit", action="store_true",
                         help="Commit & push after each zone completes")
     args = parser.parse_args()
 
     isos = list(s1.ISOS) if args.iso.upper() == 'ALL' else [args.iso.upper()]
+    target_thresholds = parse_thresholds(args.thresholds)
 
     for iso in isos:
         if iso not in s1.ISOS:
@@ -784,7 +884,8 @@ def main():
             sys.exit(1)
 
     for iso in isos:
-        process_iso(iso, auto_commit=args.auto_commit)
+        process_iso(iso, auto_commit=args.auto_commit,
+                    target_thresholds=target_thresholds)
 
 
 if __name__ == "__main__":
