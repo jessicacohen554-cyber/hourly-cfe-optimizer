@@ -75,6 +75,10 @@ MAX_FINE_ARCHETYPES_5D = 500
 # Scoring chunk size (mixes per batch for batch_hourly_scores)
 SCORE_CHUNK_SIZE = 20000
 
+# Max fine grid combos before falling back to archetype-based search.
+# Prevents hang/OOM for 5D ISOs with wide prior-informed bounds.
+MAX_GRID_COMBOS_BEFORE_FALLBACK = 50_000_000
+
 # Near-miss width for storage sweep (in 0-1 score space)
 STORAGE_SWEEP_FLOOR = 0.50
 
@@ -243,6 +247,12 @@ def generate_fine_grid(bounds, step=1):
 
     if total_size == 0:
         return np.empty((0, len(bounds)), dtype=np.float64)
+
+    if total_size > MAX_GRID_COMBOS_BEFORE_FALLBACK:
+        print(f"    WARNING: Fine grid too large ({total_size:,.0f} combos > "
+              f"{MAX_GRID_COMBOS_BEFORE_FALLBACK:,}) — falling back to "
+              f"archetype search")
+        return None  # Caller handles fallback
 
     if total_size <= 10_000_000:
         # Small enough for full meshgrid in memory
@@ -467,6 +477,32 @@ def save_near_miss(iso, combos, scores, rtypes):
     return out_path
 
 
+def save_near_miss_interim(iso, all_combos_lists, all_scores_lists, rtypes,
+                           thresholds_to_use):
+    """Compute and save near-miss parquet from accumulated scored mixes so far.
+
+    Called after each zone so step1d has a valid near-miss file even if the
+    job times out before all zones complete.
+    """
+    if not all_combos_lists:
+        return
+    interim_combos = np.vstack(all_combos_lists)
+    interim_scores = np.concatenate(all_scores_lists)
+
+    _, nm_idx_dict = assign_to_thresholds_vectorized(
+        interim_combos, interim_scores, thresholds_to_use)
+
+    all_nm = set()
+    for t in thresholds_to_use:
+        all_nm.update(nm_idx_dict[t].tolist())
+
+    if not all_nm:
+        return
+
+    nm_arr = np.array(sorted(all_nm), dtype=np.int64)
+    save_near_miss(iso, interim_combos[nm_arr], interim_scores[nm_arr], rtypes)
+
+
 def git_commit_iso_progress(iso, zone_name, n_thresholds, auto_commit):
     """Commit current ISO progress after a zone completes."""
     if not auto_commit:
@@ -508,44 +544,6 @@ def git_commit_iso_progress(iso, zone_name, n_thresholds, auto_commit):
 
     except subprocess.CalledProcessError as e:
         print(f"    [auto-commit] Git error: {e}")
-
-
-def git_commit_threshold_single(iso, threshold):
-    """Commit a single threshold's PFS parquet with retry."""
-    try:
-        pfs_dir = s1.STEP1_RAW_PFS_PARQUET_DIR
-        result = subprocess.run(
-            ['git', 'add', '-A', pfs_dir],
-            capture_output=True, text=True)
-        if result.returncode != 0:
-            return
-
-        # Check for changes
-        result = subprocess.run(['git', 'diff', '--cached', '--quiet'],
-                                capture_output=True)
-        if result.returncode == 0:
-            return  # nothing to commit
-
-        msg = (f"PFS 1c: {iso} {threshold}% — auto-commit")
-        subprocess.run(['git', 'commit', '-m', msg],
-                       check=True, capture_output=True, text=True)
-
-        # Push with retry
-        for attempt in range(1, 5):
-            result = subprocess.run(
-                ['git', 'push', '-u', 'origin', 'HEAD'],
-                capture_output=True, text=True)
-            if result.returncode == 0:
-                print(f"      [auto-commit] {iso} {threshold}% committed & pushed")
-                return
-            if attempt < 4:
-                wait = 2 ** attempt
-                time.sleep(wait)
-
-        print(f"      [auto-commit] Push failed — committed locally")
-
-    except Exception as e:
-        print(f"      [auto-commit] Git error: {e}")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -603,11 +601,13 @@ def _save_manifest(iso, code_hash, zones_done, thresholds_done):
 # MAIN PIPELINE
 # ══════════════════════════════════════════════════════════════════════════════
 
-def process_iso(iso, thresholds=None, auto_commit=False):
-    """Run zone-based fine search for one ISO and specified thresholds."""
-    if thresholds is None:
-        thresholds = LOW_THRESHOLDS + ACTIVE_THRESHOLDS
+def process_iso(iso, auto_commit=False, thresholds_filter=None, zones_filter=None):
+    """Run zone-based fine search for one ISO.
 
+    Args:
+        thresholds_filter: list of thresholds to process (None = all)
+        zones_filter: set of zone names to run, e.g. {'B', 'C'} (None = all)
+    """
     iso_start = time.time()
     rtypes = s1.get_resource_types(iso)
     n_res = len(rtypes)
@@ -615,7 +615,6 @@ def process_iso(iso, thresholds=None, auto_commit=False):
     print(f"\n{'=' * 70}")
     print(f"  Step 1c Zone Search — {iso}")
     print(f"  Resources: {n_res}D ({', '.join(rtypes)})")
-    print(f"  Thresholds: {len(thresholds)} ({', '.join(f'{t}%' for t in sorted(set(thresholds)))})")
     print(f"  Numba: {'enabled' if s1.HAS_NUMBA else 'disabled'}")
     print(f"{'=' * 70}")
 
@@ -645,16 +644,11 @@ def process_iso(iso, thresholds=None, auto_commit=False):
     demand_arr, supply_matrix = s1.prepare_numpy_profiles(
         iso, demand_norm, supply_profiles)
 
-    # ── Load prior windows (optional, fail gracefully) ──
-    prior_windows = None
-    try:
-        prior_windows = load_prior_windows(iso)
-        if prior_windows:
-            print(f"  Prior windows loaded — search space narrowed")
-    except Exception:
-        pass
-
-    if not prior_windows:
+    # ── Load prior windows (optional) ──
+    prior_windows = load_prior_windows(iso)
+    if prior_windows:
+        print(f"  Prior windows loaded — search space narrowed")
+    else:
         print(f"  No prior windows — using coarse-derived bounds")
 
     # ── JIT warmup ──
@@ -672,10 +666,19 @@ def process_iso(iso, thresholds=None, auto_commit=False):
     all_combos_list = [coarse_combos]
     all_scores_list = [coarse_scores]
 
+    # ── Determine which thresholds / zones to run ──
+    all_thresholds = LOW_THRESHOLDS + ACTIVE_THRESHOLDS
+    active_thresholds = thresholds_filter if thresholds_filter else all_thresholds
+
     # ── Process zones ──
     os.makedirs(s1.STEP1_RAW_PFS_PARQUET_DIR, exist_ok=True)
 
     for zone_name, z_score_low, z_score_high, z_thresholds in ZONES:
+        # Skip zone if caller requested specific zones and this isn't one of them
+        if zones_filter and zone_name not in zones_filter:
+            print(f"\n  Zone {zone_name}: skipped (not in zones_filter={zones_filter})")
+            continue
+
         if zone_name in zones_done:
             print(f"\n  Zone {zone_name}: skipped (already done)")
             continue
@@ -698,12 +701,16 @@ def process_iso(iso, thresholds=None, auto_commit=False):
                                for i, (lo, hi) in enumerate(bounds))
         print(f"    Bounds: {bounds_str}")
 
-        # 2. Generate fine 1% grid within zone bounds
+        # 2. Generate fine 1% grid within zone bounds.
+        #    generate_fine_grid returns None when the grid would exceed
+        #    MAX_GRID_COMBOS_BEFORE_FALLBACK — fall back to archetype search.
+        fine_combos = None
         if prior_windows:
             # Prior-informed: full Cartesian within zone bounds
             fine_combos = generate_fine_grid(bounds, step=FINE_STEP)
-        else:
-            # No prior: archetype-based around boundary mixes
+
+        if fine_combos is None:
+            # Either no prior windows or grid too large — archetype-based fallback
             zone_mask = ((coarse_scores >= z_score_low) &
                          (coarse_scores <= z_score_high))
             boundary_mixes = coarse_combos[zone_mask]
@@ -740,7 +747,13 @@ def process_iso(iso, thresholds=None, auto_commit=False):
         zones_done.add(zone_name)
         _save_manifest(iso, code_hash, zones_done, thresholds_done)
 
-        # Auto-commit after each zone
+        # Save incremental near-miss so step1d has valid input even if
+        # this job times out before all zones complete.
+        print(f"    Saving interim near-miss parquet...")
+        save_near_miss_interim(iso, all_combos_list, all_scores_list,
+                               rtypes, active_thresholds)
+
+        # Auto-commit after each zone (near-miss + any PFS written so far)
         git_commit_iso_progress(iso, zone_name, len(z_thresholds), auto_commit)
         gc.collect()
 
@@ -750,28 +763,28 @@ def process_iso(iso, thresholds=None, auto_commit=False):
     all_scores = np.concatenate(all_scores_list)
     print(f"  Total unique scored mixes: {len(all_combos):,}")
 
-    # ── Filter to requested thresholds + save ──
-    requested_thresholds = sorted(set(thresholds))
+    # ── Assign to thresholds + save ──
     all_thresholds = LOW_THRESHOLDS + ACTIVE_THRESHOLDS
-    print(f"\n  Processing {len(requested_thresholds)} requested thresholds...")
+    print(f"\n  Assigning to {len(active_thresholds)} thresholds "
+          f"(of {len(all_thresholds)} total)...")
 
-    # Vectorized assignment to ALL thresholds (for near-miss union)
+    # Vectorized assignment (use active_thresholds for targeted runs)
     feasible_idx, near_miss_idx = assign_to_thresholds_vectorized(
-        all_combos, all_scores, all_thresholds)
+        all_combos, all_scores, active_thresholds)
 
-    # Collect union of near-miss mixes (unique, for step1d)
+    # Collect union of near-miss mixes (unique, for step1d) — final authoritative save
     all_nm_indices = set()
-    for t in all_thresholds:
+    for t in active_thresholds:
         all_nm_indices.update(near_miss_idx[t].tolist())
     all_nm_indices = np.array(sorted(all_nm_indices), dtype=np.int64)
 
-    # Save near-miss union (always save for all thresholds)
+    # Save near-miss union (final authoritative version overwrites interim)
     if len(all_nm_indices) > 0:
         save_near_miss(iso, all_combos[all_nm_indices],
                        all_scores[all_nm_indices], rtypes)
 
-    # Per-threshold: dominance filter + save (only requested thresholds)
-    for t in requested_thresholds:
+    # Per-threshold: dominance filter + save
+    for t in active_thresholds:
         if t in thresholds_done:
             print(f"    {iso} t{t}%: skipped (already done)")
             continue
@@ -782,8 +795,6 @@ def process_iso(iso, thresholds=None, auto_commit=False):
             save_threshold_pfs(iso, t, np.empty((0, n_res)), np.empty(0), rtypes)
             thresholds_done.add(t)
             _save_manifest(iso, code_hash, zones_done, thresholds_done)
-            if auto_commit:
-                git_commit_threshold_single(iso, t)
             continue
 
         t_combos = all_combos[feas_i]
@@ -806,9 +817,8 @@ def process_iso(iso, thresholds=None, auto_commit=False):
         thresholds_done.add(t)
         _save_manifest(iso, code_hash, zones_done, thresholds_done)
 
-        # Auto-commit after each threshold
-        if auto_commit:
-            git_commit_threshold_single(iso, t)
+    # Auto-commit final results
+    git_commit_iso_progress(iso, "final", len(all_thresholds), auto_commit)
 
     iso_elapsed = time.time() - iso_start
     print(f"\n{'=' * 70}")
@@ -818,15 +828,46 @@ def process_iso(iso, thresholds=None, auto_commit=False):
     print(f"{'=' * 70}")
 
 
+def _parse_thresholds(raw):
+    """Parse comma-separated threshold list, return sorted list of floats or None."""
+    if not raw or raw.strip().upper() in ('', 'ALL'):
+        return None
+    parts = [p.strip() for p in raw.split(',') if p.strip()]
+    result = []
+    for p in parts:
+        try:
+            result.append(float(p))
+        except ValueError:
+            print(f"WARNING: Ignoring invalid threshold '{p}'")
+    return sorted(set(result)) if result else None
+
+
+def _parse_zones(raw):
+    """Parse comma-separated zone list (A/B/C), return set or None (= all)."""
+    if not raw or raw.strip().upper() in ('', 'ALL'):
+        return None
+    valid = {'A', 'B', 'C'}
+    parts = {p.strip().upper() for p in raw.split(',') if p.strip()}
+    bad = parts - valid
+    if bad:
+        print(f"WARNING: Unknown zones {bad} — ignoring. Valid: A, B, C")
+    result = parts & valid
+    return result if result else None
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Step 1c: Zone-based fine search with global dedup.")
     parser.add_argument("--iso", required=True,
                         help="ISO name or 'ALL'")
-    parser.add_argument("--thresholds", default="all",
-                        help='Thresholds to run: "all", comma-separated (e.g., "95,99"), or single value')
     parser.add_argument("--auto-commit", action="store_true",
-                        help="Commit & push after each threshold completes")
+                        help="Commit & push after each zone completes")
+    parser.add_argument("--thresholds", default="",
+                        help="Comma-separated thresholds to process "
+                             "(e.g. '90,95,99'). Default: all 21.")
+    parser.add_argument("--zones", default="",
+                        help="Comma-separated zones to run: A, B, C "
+                             "(e.g. 'B,C'). Default: all zones.")
     args = parser.parse_args()
 
     isos = list(s1.ISOS) if args.iso.upper() == 'ALL' else [args.iso.upper()]
@@ -836,18 +877,18 @@ def main():
             print(f"ERROR: Unknown ISO '{iso}'")
             sys.exit(1)
 
-    # Parse thresholds
-    if args.thresholds.lower() == "all":
-        thresholds = LOW_THRESHOLDS + ACTIVE_THRESHOLDS
-    else:
-        try:
-            thresholds = [float(t.strip()) for t in args.thresholds.split(',')]
-        except ValueError:
-            print(f"ERROR: Cannot parse thresholds '{args.thresholds}'")
-            sys.exit(1)
+    thresholds_filter = _parse_thresholds(args.thresholds)
+    zones_filter = _parse_zones(args.zones)
+
+    if thresholds_filter:
+        print(f"Threshold filter: {thresholds_filter}")
+    if zones_filter:
+        print(f"Zone filter: {sorted(zones_filter)}")
 
     for iso in isos:
-        process_iso(iso, thresholds=thresholds, auto_commit=args.auto_commit)
+        process_iso(iso, auto_commit=args.auto_commit,
+                    thresholds_filter=thresholds_filter,
+                    zones_filter=zones_filter)
 
 
 if __name__ == "__main__":
