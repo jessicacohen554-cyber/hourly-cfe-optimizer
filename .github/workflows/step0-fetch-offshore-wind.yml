@@ -1,0 +1,140 @@
+name: "Step 0: Fetch Offshore Wind Profiles (NOW-23)"
+
+# Fetches hourly wind speed data from NREL NOW-23 dataset, applies IEA 15MW
+# power curve, and generates normalized 8760 offshore wind profiles per ISO.
+#
+# Requires NREL_API_KEY secret (free from developer.nrel.gov/signup).
+# Output: data/offshore_wind_profiles.json
+#
+# Rate limit: 10,000 CSV requests/day (we need 20 total: 4 ISOs × 5 years).
+# Runtime: ~2-3 minutes (20 API calls with 1.1s delay between each).
+
+on:
+  workflow_dispatch:
+    inputs:
+      isos:
+        description: 'ISOs to fetch (space-separated, or ALL)'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - NYISO
+          - NEISO
+          - PJM
+          - CAISO
+      branch:
+        description: 'Branch to commit results to'
+        required: false
+        default: 'master'
+        type: string
+
+jobs:
+  fetch-profiles:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests numpy pandas
+
+      - name: Resolve ISO list
+        id: isos
+        run: |
+          if [ "${{ inputs.isos }}" = "ALL" ]; then
+            echo "list=NYISO NEISO PJM CAISO" >> "$GITHUB_OUTPUT"
+          else
+            echo "list=${{ inputs.isos }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: "Fetch offshore wind profiles"
+        env:
+          NREL_API_KEY: ${{ secrets.NREL_API_KEY }}
+        run: |
+          python scripts/step0_fetch_offshore_wind.py \
+            --isos ${{ steps.isos.outputs.list }}
+
+      - name: Validate output
+        run: |
+          python3 -c "
+          import json, numpy as np
+          with open('data/offshore_wind_profiles.json') as f:
+              d = json.load(f)
+          for iso, years in d.items():
+              for yr, fuels in years.items():
+                  p = np.array(fuels['offshore_wind'])
+                  cf = p.mean() * 8760
+                  assert len(p) == 8760, f'{iso}/{yr}: wrong length {len(p)}'
+                  assert abs(p.sum() - 1.0) < 1e-6, f'{iso}/{yr}: sum={p.sum()}'
+                  assert 0.30 < cf < 0.60, f'{iso}/{yr}: CF={cf:.3f} out of range'
+                  print(f'  {iso}/{yr}: CF={cf:.3f} OK')
+          print('All validations passed')
+          "
+
+      - name: Create branch and commit
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          TARGET_BRANCH="auto/${TIMESTAMP}-step0-offshore-wind"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$TARGET_BRANCH"
+
+          git add -f data/offshore_wind_profiles.json
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "Step 0: Fetch offshore wind profiles (NOW-23) — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i/$MAX_RETRIES..."
+            git push -u origin "$TARGET_BRANCH" 2>&1 && break
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "ERROR: Push failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done
+
+      - name: Create PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --title "Step 0: Offshore wind profiles from NOW-23" \
+            --body "$(cat <<'PREOF'
+          ## Summary
+          - Fetched hourly wind speeds from NREL NOW-23 dataset (2016-2020)
+          - Applied IEA 15MW reference turbine power curve (59-point, 3-25 m/s)
+          - Loss stack: wake 10% × electrical 2.5% × availability 5% = 83.4% net
+          - Generated normalized 8760 profiles for: ${{ steps.isos.outputs.list }}
+
+          ## Output
+          `data/offshore_wind_profiles.json` — ready for Step 1 PFS consumption
+
+          ## Validation
+          All profiles validated: length=8760, sum=1.0, CF in 30-60% range
+          PREOF
+          )" \
+            --base "${{ inputs.branch || 'master' }}" || echo "PR creation skipped (may already exist)"
