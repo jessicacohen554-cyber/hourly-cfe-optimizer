@@ -111,13 +111,18 @@ def _build_trajectory(results, egrid, fossil_mix, demand_data, gen_profiles,
 
             # Ensure cumulative CO2 is strictly increasing for PCHIP
             # (monotone interpolant requires strictly increasing x)
-            mask = np.ones(len(co2_arr), dtype=bool)
-            for i in range(1, len(co2_arr)):
-                if co2_arr[i] <= co2_arr[i - 1]:
-                    mask[i] = False
+            # Vectorized: diff > 0 ensures strictly increasing (removes equal AND decreasing)
+            diffs = np.diff(co2_arr)
+            strictly_increasing = diffs > 0
+            mask = np.concatenate([[True], strictly_increasing])
+            # Also need cumulative max enforcement: if a later value is <= any prior max,
+            # it must be removed. np.maximum.accumulate handles this.
+            co2_cummax = np.maximum.accumulate(co2_arr)
+            # A point is valid if it equals its cumulative max AND is the first occurrence
+            mask[1:] = mask[1:] & (co2_arr[1:] > co2_cummax[:-1])
             co2_mono = co2_arr[mask]
             cost_mono = cost_arr[mask]
-            thresholds_mono = [valid_thresholds[i] for i in range(len(valid_thresholds)) if mask[i]]
+            thresholds_mono = np.array(valid_thresholds)[mask].tolist()
 
             if len(co2_mono) >= 3:
                 # Fit PCHIP spline: cost = f(co2)
