@@ -1,0 +1,345 @@
+name: "Squash Pipeline Branches"
+
+# Consolidates multiple auto/* branches (created by step 1-7 workflows) into a
+# single squash commit and opens a PR against master. Branches that conflict are
+# skipped and reported — no manual conflict resolution needed.
+#
+# Typical use: after running a batch of pipeline steps (1a → 1d → 2 → 3 → ...),
+# each creates its own auto/* branch. Instead of merging 20+ PRs individually,
+# run this workflow to combine them into one clean squash commit.
+#
+# How it works:
+#   1. Finds all remote auto/* branches not yet merged to master
+#   2. Creates a temp branch from master
+#   3. Sequentially merges each branch (skip on conflict)
+#   4. Squashes all merged changes into a single commit (git reset --soft)
+#   5. Pushes and opens a PR
+#   6. Optionally closes old PRs and deletes merged branches
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch_pattern:
+        description: 'Branch prefix to match (e.g., "auto/" for all, "auto/.*step1d" for step 1d only)'
+        default: 'auto/'
+        type: string
+      dry_run:
+        description: 'Preview only — list branches without merging'
+        default: false
+        type: boolean
+      delete_branches:
+        description: 'Delete remote branches after successful squash'
+        default: true
+        type: boolean
+      close_prs:
+        description: 'Auto-close associated open PRs for squashed branches'
+        default: true
+        type: boolean
+      merge_direct:
+        description: 'Merge squash commit directly to master (skip PR)'
+        default: false
+        type: boolean
+      commit_message:
+        description: 'Custom squash commit message (auto-generated if empty)'
+        default: ''
+        type: string
+
+jobs:
+  squash-pipeline-branches:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout master
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config http.postBuffer 524288000
+          git config push.default current
+
+      - name: Fetch and identify unmerged branches
+        id: find-branches
+        run: |
+          PATTERN="${{ inputs.branch_pattern }}"
+          echo "Looking for unmerged remote branches matching: ${PATTERN}"
+
+          # Fetch all remote branches
+          git fetch origin --prune
+
+          # Find unmerged branches matching pattern
+          BRANCHES=()
+          while IFS= read -r ref; do
+            # Strip remotes/origin/ prefix and whitespace
+            branch=$(echo "$ref" | sed 's|^ *remotes/origin/||; s|^ *origin/||; s/^ *//')
+            [ -z "$branch" ] && continue
+            BRANCHES+=("$branch")
+          done < <(git branch -r --no-merged master | grep "origin/${PATTERN}")
+
+          echo "Found ${#BRANCHES[@]} unmerged branch(es):"
+          printf '  %s\n' "${BRANCHES[@]}"
+
+          if [ ${#BRANCHES[@]} -eq 0 ]; then
+            echo "No unmerged branches found matching pattern '${PATTERN}'"
+            echo "has_branches=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Sort by branch name (timestamp prefix = chronological order)
+          IFS=$'\n' SORTED=($(printf '%s\n' "${BRANCHES[@]}" | sort))
+          unset IFS
+
+          # Save for subsequent steps
+          printf '%s\n' "${SORTED[@]}" > /tmp/branches.txt
+          echo "has_branches=true" >> "$GITHUB_OUTPUT"
+          echo "branch_count=${#SORTED[@]}" >> "$GITHUB_OUTPUT"
+
+      # ── Dry Run ─────────────────────────────────────────────────────────
+      - name: Preview (dry run)
+        if: inputs.dry_run && steps.find-branches.outputs.has_branches == 'true'
+        run: |
+          echo "═══════════════════════════════════════════════"
+          echo "  DRY RUN — No changes will be made"
+          echo "═══════════════════════════════════════════════"
+          echo ""
+          echo "Branches that would be squash-merged into master:"
+          echo ""
+          while IFS= read -r branch; do
+            COMMITS=$(git rev-list --count master.."origin/$branch" 2>/dev/null || echo "?")
+            LATEST=$(git log -1 --format="%s" "origin/$branch" 2>/dev/null || echo "?")
+            FILES=$(git diff --name-only master..."origin/$branch" 2>/dev/null | wc -l || echo "?")
+            echo "  [$COMMITS commits, $FILES files] $branch"
+            echo "    └─ $LATEST"
+          done < /tmp/branches.txt
+          echo ""
+          echo "To execute, re-run with dry_run=false"
+
+      # ── Squash Merge ────────────────────────────────────────────────────
+      - name: Squash-merge branches
+        if: ${{ !inputs.dry_run && steps.find-branches.outputs.has_branches == 'true' }}
+        id: squash
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          SQUASH_BRANCH="auto/${TIMESTAMP}-squash-pipeline"
+          echo "SQUASH_BRANCH=$SQUASH_BRANCH" >> "$GITHUB_ENV"
+
+          git checkout -b "$SQUASH_BRANCH" master
+
+          MERGED=()
+          SKIPPED=()
+          MERGED_SUMMARIES=()
+
+          while IFS= read -r branch; do
+            echo "─── Merging: $branch ───"
+
+            if git merge --no-edit "origin/$branch" 2>/dev/null; then
+              echo "  ✓ Merged successfully"
+              MERGED+=("$branch")
+              LATEST=$(git log -1 --format="%s" "origin/$branch" 2>/dev/null)
+              MERGED_SUMMARIES+=("$branch → $LATEST")
+            else
+              echo "  ✗ Conflict detected — skipping"
+              git merge --abort 2>/dev/null || true
+              SKIPPED+=("$branch")
+            fi
+          done < /tmp/branches.txt
+
+          echo ""
+          echo "═══════════════════════════════════════════════"
+          echo "  Merged: ${#MERGED[@]}    Skipped: ${#SKIPPED[@]}"
+          echo "═══════════════════════════════════════════════"
+
+          if [ ${#MERGED[@]} -eq 0 ]; then
+            echo "No branches merged successfully — nothing to squash."
+            echo "has_merges=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # ── Squash: collapse all merge commits into one ──
+          git reset --soft master
+
+          # Build commit message
+          CUSTOM_MSG="${{ inputs.commit_message }}"
+          if [ -n "$CUSTOM_MSG" ]; then
+            TITLE="$CUSTOM_MSG"
+          else
+            TITLE="Squash ${#MERGED[@]} pipeline branches"
+          fi
+
+          # Compose detailed body
+          BODY="Consolidated ${#MERGED[@]} auto/* branches into a single commit."
+          BODY+=$'\n\nMerged branches:'
+          for summary in "${MERGED_SUMMARIES[@]}"; do
+            BODY+=$'\n'"  - $summary"
+          done
+          if [ ${#SKIPPED[@]} -gt 0 ]; then
+            BODY+=$'\n\nSkipped (conflicts):'
+            for s in "${SKIPPED[@]}"; do
+              BODY+=$'\n'"  - $s"
+            done
+          fi
+
+          git commit -m "$TITLE" -m "$BODY"
+
+          echo "has_merges=true" >> "$GITHUB_OUTPUT"
+          echo "merged_count=${#MERGED[@]}" >> "$GITHUB_OUTPUT"
+          echo "skipped_count=${#SKIPPED[@]}" >> "$GITHUB_OUTPUT"
+
+          # Persist lists for cleanup steps
+          printf '%s\n' "${MERGED[@]}" > /tmp/merged_branches.txt
+          if [ ${#SKIPPED[@]} -gt 0 ]; then
+            printf '%s\n' "${SKIPPED[@]}" > /tmp/skipped_branches.txt
+          else
+            touch /tmp/skipped_branches.txt
+          fi
+
+      # ── Push ────────────────────────────────────────────────────────────
+      - name: Push squash branch
+        if: ${{ !inputs.dry_run && steps.squash.outputs.has_merges == 'true' }}
+        run: |
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i/$MAX_RETRIES..."
+            git push -u origin "$SQUASH_BRANCH" 2>&1 && break
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "ERROR: Push failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done
+
+      # ── Merge directly to master (optional) ────────────────────────────
+      - name: Fast-forward master
+        if: ${{ !inputs.dry_run && inputs.merge_direct && steps.squash.outputs.has_merges == 'true' }}
+        run: |
+          git checkout master
+          git merge --ff-only "$SQUASH_BRANCH"
+
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push master attempt $i/$MAX_RETRIES..."
+            git push origin master 2>&1 && break
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "ERROR: Push to master failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done
+
+      # ── Create PR (if not merging directly) ─────────────────────────────
+      - name: Create PR
+        if: ${{ !inputs.dry_run && !inputs.merge_direct && steps.squash.outputs.has_merges == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          MERGED_COUNT=$(wc -l < /tmp/merged_branches.txt | tr -d ' ')
+          SKIPPED_COUNT=$(grep -c . /tmp/skipped_branches.txt 2>/dev/null || echo 0)
+
+          # Build PR body
+          cat > /tmp/pr_body.md <<'HEADER'
+          ## Squashed Pipeline Branches
+
+          HEADER
+          # Trim leading whitespace from heredoc
+          sed -i 's/^          //' /tmp/pr_body.md
+
+          echo "Consolidated **${MERGED_COUNT}** auto/* branches into a single squash commit." >> /tmp/pr_body.md
+          echo "" >> /tmp/pr_body.md
+
+          echo "### Merged Branches" >> /tmp/pr_body.md
+          while IFS= read -r branch; do
+            echo "- \`$branch\`" >> /tmp/pr_body.md
+          done < /tmp/merged_branches.txt
+          echo "" >> /tmp/pr_body.md
+
+          if [ "$SKIPPED_COUNT" -gt 0 ] && [ "$SKIPPED_COUNT" != "0" ]; then
+            echo "### Skipped (Conflicts)" >> /tmp/pr_body.md
+            while IFS= read -r branch; do
+              [ -z "$branch" ] && continue
+              echo "- \`$branch\` — needs manual resolution" >> /tmp/pr_body.md
+            done < /tmp/skipped_branches.txt
+            echo "" >> /tmp/pr_body.md
+          fi
+
+          echo "### How to Merge" >> /tmp/pr_body.md
+          echo "Use **Squash and merge** or **Rebase and merge** to keep master history clean." >> /tmp/pr_body.md
+
+          gh pr create \
+            --title "Squash: ${MERGED_COUNT} pipeline branches" \
+            --body-file /tmp/pr_body.md \
+            --base master \
+            --head "$SQUASH_BRANCH" || echo "PR creation failed (may already exist)"
+
+      # ── Cleanup: close old PRs ──────────────────────────────────────────
+      - name: Close superseded PRs
+        if: ${{ !inputs.dry_run && inputs.close_prs && steps.squash.outputs.has_merges == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Closing PRs for merged branches..."
+          CLOSED=0
+          while IFS= read -r branch; do
+            PR_NUM=$(gh pr list --head "$branch" --state open --json number --jq '.[0].number' 2>/dev/null || true)
+            if [ -n "$PR_NUM" ] && [ "$PR_NUM" != "null" ]; then
+              echo "  Closing PR #${PR_NUM} for $branch"
+              gh pr close "$PR_NUM" \
+                --comment "Superseded by squash commit in \`${SQUASH_BRANCH}\`" 2>/dev/null || true
+              CLOSED=$((CLOSED + 1))
+            fi
+          done < /tmp/merged_branches.txt
+          echo "Closed $CLOSED PR(s)"
+
+      # ── Cleanup: delete remote branches ─────────────────────────────────
+      - name: Delete merged remote branches
+        if: ${{ !inputs.dry_run && inputs.delete_branches && steps.squash.outputs.has_merges == 'true' }}
+        run: |
+          echo "Deleting merged remote branches..."
+          DELETED=0
+          while IFS= read -r branch; do
+            echo "  Deleting origin/$branch"
+            git push origin --delete "$branch" 2>/dev/null && DELETED=$((DELETED + 1)) || echo "    (already deleted or protected)"
+          done < /tmp/merged_branches.txt
+          echo "Deleted $DELETED branch(es)"
+
+      # ── Summary ─────────────────────────────────────────────────────────
+      - name: Summary
+        if: ${{ always() && steps.find-branches.outputs.has_branches == 'true' }}
+        run: |
+          MERGED_COUNT=0
+          SKIPPED_COUNT=0
+          [ -f /tmp/merged_branches.txt ] && MERGED_COUNT=$(grep -c . /tmp/merged_branches.txt 2>/dev/null || echo 0)
+          [ -f /tmp/skipped_branches.txt ] && SKIPPED_COUNT=$(grep -c . /tmp/skipped_branches.txt 2>/dev/null || echo 0)
+
+          echo ""
+          echo "═══════════════════════════════════════════════"
+          echo "  SQUASH PIPELINE — SUMMARY"
+          echo "═══════════════════════════════════════════════"
+          echo "  Branches squashed:  $MERGED_COUNT"
+          echo "  Branches skipped:   $SKIPPED_COUNT"
+          if [ "$MERGED_COUNT" -gt 0 ] && [ "$MERGED_COUNT" != "0" ]; then
+            echo "  Squash branch:      ${SQUASH_BRANCH:-n/a}"
+            echo "  Direct merge:       ${{ inputs.merge_direct }}"
+            echo "  Old PRs closed:     ${{ inputs.close_prs }}"
+            echo "  Old branches deleted: ${{ inputs.delete_branches }}"
+          fi
+          echo "═══════════════════════════════════════════════"
+
+          if [ "$SKIPPED_COUNT" -gt 0 ] && [ "$SKIPPED_COUNT" != "0" ]; then
+            echo ""
+            echo "Skipped branches (need manual resolution):"
+            cat /tmp/skipped_branches.txt
+          fi
