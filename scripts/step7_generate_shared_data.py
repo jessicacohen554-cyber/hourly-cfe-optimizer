@@ -1511,6 +1511,7 @@ print("Extracting FEASIBLE_MIXES from Step 3 feasible-mix parquets...")
 # For t=99.99: practically unreachable — we use mixes from the feasible set
 # that score >=99.5% (matching Step 3's effective_gate logic).
 
+import numpy as np
 import pandas as pd
 
 STEP3_DIR = os.path.join(SCRIPT_DIR, '..', 'data', 'step3-cost-opt-parquets')
@@ -1547,12 +1548,11 @@ for iso_idx, iso in enumerate(ISOS):
         if t_num == 99.99:
             # t=99.99: use mixes from t=99 feasible set that score >=99.5%
             if len(feas_df) > 0:
-                t99 = feas_df[feas_df['threshold'] == 99.0]
-                high_score = t99[t99['hourly_match_score'] >= 99.5]
-                if len(high_score) == 0:
-                    # Fallback: take the highest-scoring mixes from ANY threshold
-                    high_score = feas_df[feas_df['hourly_match_score'] >= 99.5]
-                sub = high_score
+                # Combined filter: threshold==99 AND score>=99.5 in one pass
+                sub = feas_df[(feas_df['threshold'] == 99.0) & (feas_df['hourly_match_score'] >= 99.5)]
+                if sub.empty:
+                    # Fallback: highest-scoring mixes from ANY threshold
+                    sub = feas_df[feas_df['hourly_match_score'] >= 99.5]
             else:
                 sub = pd.DataFrame()
         else:
@@ -1560,14 +1560,13 @@ for iso_idx, iso in enumerate(ISOS):
 
         mix_rows = []
         if len(sub) > 0:
-            for _, row in sub.iterrows():
-                mix_rows.append([
-                    row['clean_firm'], row['solar'], row['wind'],
-                    row['ccs_ccgt'], row['hydro'],
-                    round(row['hourly_match_score'], 1),
-                    row['battery_dispatch_pct'], row['battery8_dispatch_pct'],
-                    row['ldes_dispatch_pct'], row['h2_dispatch_pct'],
-                ])
+            # Vectorized: extract columns as numpy arrays, round, then convert to list of lists
+            mix_cols = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro',
+                        'hourly_match_score', 'battery_dispatch_pct',
+                        'battery8_dispatch_pct', 'ldes_dispatch_pct', 'h2_dispatch_pct']
+            arr = sub[mix_cols].to_numpy(copy=False)
+            arr[:, 5] = np.round(arr[:, 5], 1)  # round hourly_match_score
+            mix_rows = arr.tolist()
 
         total_fm += len(mix_rows)
         lines.append(f'        "{t}": [')

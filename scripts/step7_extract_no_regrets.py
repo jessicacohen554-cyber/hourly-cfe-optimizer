@@ -234,26 +234,37 @@ def analyze_no_regrets(iso, crossover_range):
         df = pd.read_parquet(fpath)
         thresholds_loaded.append(t)
 
-        # Extract resource mix and storage data per scenario × growth level
-        for _, row in df.iterrows():
+        # Vectorized: build records from DataFrame columns without iterrows
+        n_rows = len(df)
+        # Pre-extract columns as arrays for fast access
+        scenarios = df['scenario'].values if 'scenario' in df.columns else [''] * n_rows
+        growth_levels = df['growth_level'].values if 'growth_level' in df.columns else ['Medium'] * n_rows
+
+        mix_vals = {}
+        for res in MIX_RESOURCES:
+            col = f'mix_{res}'
+            mix_vals[res] = df[col].fillna(0).values if col in df.columns else np.zeros(n_rows)
+
+        storage_vals = {}
+        for res in STORAGE_RESOURCES:
+            col = 'battery8_dispatch_pct' if res == 'battery8' else f'{res}_dispatch_pct'
+            storage_vals[res] = df[col].fillna(0).values if col in df.columns else np.zeros(n_rows)
+
+        eff_costs = df['cost_effective_cost'].fillna(0).values if 'cost_effective_cost' in df.columns else np.zeros(n_rows)
+        total_costs = df['cost_total_cost'].fillna(0).values if 'cost_total_cost' in df.columns else np.zeros(n_rows)
+
+        for i in range(n_rows):
             record = {
                 'threshold': t,
-                'scenario': row.get('scenario', ''),
-                'growth_level': row.get('growth_level', 'Medium'),
+                'scenario': scenarios[i],
+                'growth_level': growth_levels[i],
             }
-            # Resource mix (% of procurement allocation)
             for res in MIX_RESOURCES:
-                record[res] = row.get(f'mix_{res}', 0) or 0
-            # Storage dispatch
+                record[res] = float(mix_vals[res][i])
             for res in STORAGE_RESOURCES:
-                col = f'{res}_dispatch_pct'
-                if res == 'battery8':
-                    col = 'battery8_dispatch_pct'
-                record[res] = row.get(col, 0) or 0
-            # Cost
-            record['effective_cost'] = row.get('cost_effective_cost', 0)
-            record['total_cost'] = row.get('cost_total_cost', 0)
-
+                record[res] = float(storage_vals[res][i])
+            record['effective_cost'] = float(eff_costs[i])
+            record['total_cost'] = float(total_costs[i])
             all_records.append(record)
 
     if not all_records:
@@ -266,15 +277,16 @@ def analyze_no_regrets(iso, crossover_range):
     analysis = {}
 
     for res in ALL_RESOURCES:
-        values = [r[res] for r in all_records]
-        non_zero = [v for v in values if v > 0.5]
+        # Vectorized: numpy array + boolean mask instead of list comprehensions
+        arr = np.array([r[res] for r in all_records])
+        non_zero = arr[arr > 0.5]
 
         presence_rate = len(non_zero) / total_combos if total_combos > 0 else 0
-        floor_val = min(non_zero) if non_zero else 0
-        avg_val = sum(non_zero) / len(non_zero) if non_zero else 0
-        ceiling_val = max(non_zero) if non_zero else 0
-        p25_val = float(np.percentile(non_zero, 25)) if non_zero else 0
-        p75_val = float(np.percentile(non_zero, 75)) if non_zero else 0
+        floor_val = float(non_zero.min()) if len(non_zero) > 0 else 0
+        avg_val = float(non_zero.mean()) if len(non_zero) > 0 else 0
+        ceiling_val = float(non_zero.max()) if len(non_zero) > 0 else 0
+        p25_val = float(np.percentile(non_zero, 25)) if len(non_zero) > 0 else 0
+        p75_val = float(np.percentile(non_zero, 75)) if len(non_zero) > 0 else 0
 
         analysis[res] = {
             'presenceRate': round(presence_rate, 4),
