@@ -60,20 +60,28 @@ def filter_iso(iso, demand_arr, supply_matrix):
     ])
     base_scores = table.column('base_score').to_numpy().astype(np.float64) / 100.0
 
-    demand_total = demand_arr.sum()
+    # float32 throughout — halves memory, plenty of precision for 0-100% scores
+    supply_f32 = supply_matrix.astype(np.float32)
+    demand_f32 = demand_arr.astype(np.float32)
+    demand_total = float(demand_f32.sum())
 
     # Chunked: compute curtailment mask AND total surplus in one pass
-    chunk_size = 10000
+    # 50K chunks → ~1.7 GB peak per chunk (float32), fits 7GB CI runner
+    chunk_size = 50_000
+    n_chunks = (n_before + chunk_size - 1) // chunk_size
     has_curtailment = np.empty(n_before, dtype=np.bool_)
-    total_surplus = np.empty(n_before, dtype=np.float64)
+    total_surplus = np.empty(n_before, dtype=np.float32)
 
-    for cs in range(0, n_before, chunk_size):
+    for ci, cs in enumerate(range(0, n_before, chunk_size)):
         ce = min(cs + chunk_size, n_before)
-        fracs = combos[cs:ce].astype(np.float64) / 100.0
-        supply = fracs @ supply_matrix
-        surplus = np.maximum(supply - demand_arr[np.newaxis, :], 0.0)
-        has_curtailment[cs:ce] = np.any(surplus > 0, axis=1)
-        total_surplus[cs:ce] = surplus.sum(axis=1)
+        fracs = combos[cs:ce].astype(np.float32) * np.float32(0.01)
+        buf = fracs @ supply_f32              # (chunk, 8760) float32
+        buf -= demand_f32                     # in-place: surplus = supply - demand
+        has_curtailment[cs:ce] = np.any(buf > 0, axis=1)
+        np.maximum(buf, 0.0, out=buf)        # in-place: clamp negatives
+        total_surplus[cs:ce] = buf.sum(axis=1)
+        if (ci + 1) % 20 == 0 or ce == n_before:
+            print(f"    chunk {ci+1}/{n_chunks} ({ce:,}/{n_before:,} rows)")
 
     surplus_pct = total_surplus / demand_total
 
