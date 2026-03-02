@@ -121,6 +121,8 @@ def compute_zone_resource_bounds(iso, coarse_combos, coarse_scores,
             caps.append(int(s1.HYDRO_CAPS[iso] + s1.HYDRO_ADDER_PCT))
         elif rt == 'geothermal':
             caps.append(s1.GEO_CAP_PCT)
+        elif rt == 'offshore_wind':
+            caps.append(int(s1.OFFSHORE_WIND_CAP_PCT.get(iso, 0)))
         else:
             caps.append(s1.RESOURCE_CAPS[rt])
 
