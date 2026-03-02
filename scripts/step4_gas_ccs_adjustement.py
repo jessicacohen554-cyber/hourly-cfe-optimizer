@@ -31,6 +31,7 @@ See SPEC.md for methodology documentation.
 """
 
 import argparse
+import collections
 import functools
 import json
 import os
@@ -360,56 +361,87 @@ def load_from_parquets(input_dir, isos):
             row_indices = np.where(row_mask)[0]
 
             scenarios = {}
-            for i in row_indices:
-                sc_key = scenario_arr[i]
 
-                # Reconstruct resource_mix from pre-extracted arrays
-                resource_mix = {}
-                for rtype in ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']:
-                    arr = mix_arrays[rtype]
-                    resource_mix[rtype] = int(arr[i]) if arr is not None else 0
+            # Pre-extract scalar arrays once outside threshold loop
+            match_arr = scalar_arrays['hourly_match_score']
+            batt_arr = scalar_arrays['battery_dispatch_pct']
+            batt8_arr = scalar_arrays['battery8_dispatch_pct']
+            ldes_arr = scalar_arrays['ldes_dispatch_pct']
+            h2_arr = scalar_arrays['h2_dispatch_pct']
 
-                # Reconstruct costs from pre-extracted arrays
-                costs = {}
-                for ckey in ['total_cost', 'effective_cost', 'incremental', 'wholesale']:
-                    arr = cost_arrays[ckey]
-                    costs[ckey] = float(arr[i]) if arr is not None else 0.0
+            # Vectorized: extract sub-arrays for this threshold's rows
+            sub_sc_keys = scenario_arr[row_indices]
 
-                # Reconstruct tranche_costs from pre-extracted arrays
+            # Build resource mix arrays for all rows at once
+            sub_mix = {rtype: (mix_arrays[rtype][row_indices].astype(int)
+                               if mix_arrays[rtype] is not None
+                               else np.zeros(len(row_indices), dtype=int))
+                       for rtype in ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']}
+
+            # Build cost arrays for all rows at once
+            sub_cost = {ckey: (cost_arrays[ckey][row_indices].astype(float)
+                               if cost_arrays[ckey] is not None
+                               else np.zeros(len(row_indices)))
+                        for ckey in ['total_cost', 'effective_cost', 'incremental', 'wholesale']}
+
+            # Extract scalar values vectorized
+            sub_match = match_arr[row_indices].astype(float) if match_arr is not None else np.zeros(len(row_indices))
+            sub_batt = np.round(batt_arr[row_indices].astype(float), 4) if batt_arr is not None else np.zeros(len(row_indices))
+            sub_batt8 = np.round(batt8_arr[row_indices].astype(float), 4) if batt8_arr is not None else np.zeros(len(row_indices))
+            sub_ldes = np.round(ldes_arr[row_indices].astype(float), 4) if ldes_arr is not None else np.zeros(len(row_indices))
+            sub_h2 = np.round(h2_arr[row_indices].astype(float), 4) if h2_arr is not None else np.zeros(len(row_indices))
+
+            # Pre-extract tranche sub-arrays and detect NaNs vectorized
+            sub_tranche = {}
+            tranche_nan_masks = {}
+            for col in tranche_cols:
+                arr = tranche_arrays[col][row_indices].astype(float)
+                sub_tranche[col] = arr
+                tranche_nan_masks[col] = np.isnan(arr)
+
+            # Pre-extract gas sub-arrays and detect NaNs vectorized
+            sub_gas = {}
+            gas_nan_masks = {}
+            gas_is_float = {}
+            for col in gas_cols:
+                raw = gas_arrays[col][row_indices]
+                try:
+                    arr = raw.astype(float)
+                    sub_gas[col] = arr
+                    gas_nan_masks[col] = np.isnan(arr)
+                    gas_is_float[col] = True
+                except (ValueError, TypeError):
+                    sub_gas[col] = raw
+                    gas_nan_masks[col] = np.zeros(len(row_indices), dtype=bool)
+                    gas_is_float[col] = False
+
+            # Build scenario dicts using pre-extracted sub-arrays (index into flat arrays)
+            for j in range(len(row_indices)):
+                resource_mix = {rtype: int(sub_mix[rtype][j]) for rtype in sub_mix}
+                costs = {ckey: float(sub_cost[ckey][j]) for ckey in sub_cost}
+
                 tranche_costs = {}
                 for col in tranche_cols:
-                    key = col[len('tranche_'):]
-                    val = tranche_arrays[col][i]
-                    if val is not None and not (isinstance(val, float) and np.isnan(val)):
-                        tranche_costs[key] = float(val)
+                    if not tranche_nan_masks[col][j]:
+                        tranche_costs[col[len('tranche_'):]] = float(sub_tranche[col][j])
 
-                # Reconstruct gas_backup from pre-extracted arrays
                 gas_step3 = {}
                 for col in gas_cols:
-                    key = col[len('gas_'):]
-                    val = gas_arrays[col][i]
-                    if val is not None and not (isinstance(val, float) and np.isnan(val)):
-                        gas_step3[key] = float(val) if isinstance(val, float) else int(val)
+                    if not gas_nan_masks[col][j]:
+                        val = sub_gas[col][j]
+                        gas_step3[col[len('gas_'):]] = float(val) if gas_is_float[col] else int(val)
 
-                match_arr = scalar_arrays['hourly_match_score']
-                batt_arr = scalar_arrays['battery_dispatch_pct']
-                batt8_arr = scalar_arrays['battery8_dispatch_pct']
-                ldes_arr = scalar_arrays['ldes_dispatch_pct']
-                h2_arr = scalar_arrays['h2_dispatch_pct']
-
-                scenario = {
+                scenarios[sub_sc_keys[j]] = {
                     'resource_mix': resource_mix,
                     'costs': costs,
                     'tranche_costs': tranche_costs,
-                    'hourly_match_score': float(match_arr[i]) if match_arr is not None else 0.0,
-                    'battery_dispatch_pct': round(float(batt_arr[i]), 4) if batt_arr is not None else 0.0,
-                    'battery8_dispatch_pct': round(float(batt8_arr[i]), 4) if batt8_arr is not None else 0.0,
-                    'ldes_dispatch_pct': round(float(ldes_arr[i]), 4) if ldes_arr is not None else 0.0,
-                    'h2_dispatch_pct': round(float(h2_arr[i]), 4) if h2_arr is not None else 0.0,
+                    'hourly_match_score': float(sub_match[j]),
+                    'battery_dispatch_pct': float(sub_batt[j]),
+                    'battery8_dispatch_pct': float(sub_batt8[j]),
+                    'ldes_dispatch_pct': float(sub_ldes[j]),
+                    'h2_dispatch_pct': float(sub_h2[j]),
                     'gas_backup_step3': gas_step3,
                 }
-
-                scenarios[sc_key] = scenario
 
             iso_data['thresholds'][t_str] = {'scenarios': scenarios}
 
@@ -531,10 +563,8 @@ def save_to_parquets(data, output_dir, isos):
         if not rows:
             continue
 
-        # Build pyarrow table from list-of-dicts (no pandas)
-        all_keys = list(dict.fromkeys(k for r in rows for k in r))
-        arrays = [pa.array([r.get(k) for r in rows]) for k in all_keys]
-        table = pa.table(dict(zip(all_keys, arrays)))
+        # Build pyarrow table from list-of-dicts (batch conversion)
+        table = pa.Table.from_pylist(rows)
         out_path = os.path.join(output_dir, f'step4_{iso}.parquet')
         pq.write_table(table, out_path, compression='zstd')
         print(f"  {out_path}: {len(rows):,} rows, "
@@ -1008,18 +1038,16 @@ def compute_gas_capacity_and_ra(data, run_isos):
                 ldes = scenario.get('ldes_dispatch_pct', 0)
                 h2 = scenario.get('h2_dispatch_pct', 0)
 
-                clean_peak_mw = 0
-                for rtype in RESOURCE_TYPES:
-                    pct = mix.get(rtype, 0)
-                    resource_mw = (pct / 100.0) * avg_demand_mw
-                    credit = PEAK_CAPACITY_CREDITS.get(rtype, 0)
-                    clean_peak_mw += resource_mw * credit
+                # Vectorized peak capacity: dot product of resource pcts × credits
+                resource_pcts = np.array([mix.get(r, 0) for r in RESOURCE_TYPES])
+                resource_credits = np.array([PEAK_CAPACITY_CREDITS.get(r, 0) for r in RESOURCE_TYPES])
+                clean_peak_mw = float(np.dot(resource_pcts, resource_credits)) / 100.0 * avg_demand_mw
 
-                batt_mw = (batt / 100.0) * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery']
-                batt8_mw = (batt8 / 100.0) * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery8']
-                ldes_mw = (ldes / 100.0) * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes']
-                h2_mw = (h2 / 100.0) * avg_demand_mw * PEAK_CAPACITY_CREDITS['h2']
-                clean_peak_mw += batt_mw + batt8_mw + ldes_mw + h2_mw
+                storage_pcts = np.array([batt, batt8, ldes, h2])
+                storage_credits = np.array([
+                    PEAK_CAPACITY_CREDITS['battery'], PEAK_CAPACITY_CREDITS['battery8'],
+                    PEAK_CAPACITY_CREDITS['ldes'], PEAK_CAPACITY_CREDITS['h2']])
+                clean_peak_mw += float(np.dot(storage_pcts, storage_credits)) / 100.0 * avg_demand_mw
 
                 gaf = GAS_AVAILABILITY_FACTOR[iso]
                 gas_needed_mw = max(0, ra_peak_mw - clean_peak_mw) / gaf
@@ -1201,18 +1229,18 @@ def process_dg_corrections(dg_rows, run_isos):
         ra_peak_mw = peak_mw * (1 + RESOURCE_ADEQUACY_MARGIN)
         avg_demand_mw = dg_demand_mwh / 8760
 
-        clean_peak_mw = 0
-        for rtype in RESOURCE_TYPES:
-            pct = resource_mix.get(rtype, 0)
-            resource_mw = (pct / 100.0) * avg_demand_mw
-            credit = PEAK_CAPACITY_CREDITS.get(rtype, 0)
-            clean_peak_mw += resource_mw * credit
+        # Vectorized peak capacity: dot product of resource pcts × credits
+        resource_pcts = np.array([resource_mix.get(r, 0) for r in RESOURCE_TYPES])
+        resource_credits = np.array([PEAK_CAPACITY_CREDITS.get(r, 0) for r in RESOURCE_TYPES])
+        clean_peak_mw = float(np.dot(resource_pcts, resource_credits)) / 100.0 * avg_demand_mw
+
         battery8_pct = row.get('battery8_dispatch_pct', 0) or 0
-        batt_mw = (battery_pct / 100.0) * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery']
-        batt8_mw = (battery8_pct / 100.0) * avg_demand_mw * PEAK_CAPACITY_CREDITS.get('battery8', PEAK_CAPACITY_CREDITS['battery'])
-        ldes_mw = (ldes_pct / 100.0) * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes']
-        h2_mw = (h2_pct / 100.0) * avg_demand_mw * PEAK_CAPACITY_CREDITS['h2']
-        clean_peak_mw += batt_mw + batt8_mw + ldes_mw + h2_mw
+        storage_pcts = np.array([battery_pct, battery8_pct, ldes_pct, h2_pct])
+        storage_credits = np.array([
+            PEAK_CAPACITY_CREDITS['battery'],
+            PEAK_CAPACITY_CREDITS.get('battery8', PEAK_CAPACITY_CREDITS['battery']),
+            PEAK_CAPACITY_CREDITS['ldes'], PEAK_CAPACITY_CREDITS['h2']])
+        clean_peak_mw += float(np.dot(storage_pcts, storage_credits)) / 100.0 * avg_demand_mw
 
         existing_gas_mw = EXISTING_GAS_CAPACITY_MW[iso]
         gaf = GAS_AVAILABILITY_FACTOR[iso]
@@ -1254,22 +1282,19 @@ def save_dg_parquets(dg_rows, output_dir, isos):
 
     os.makedirs(output_dir, exist_ok=True)
 
-    # Group rows by (iso, threshold)
-    groups = {}
+    # Group rows by (iso, threshold) using defaultdict
+    groups = collections.defaultdict(list)
     for row in dg_rows:
         iso = row.get('iso')
         if iso not in isos:
             continue
         thr = row.get('threshold', 0)
-        key = (iso, thr)
-        groups.setdefault(key, []).append(row)
+        groups[(iso, thr)].append(row)
 
     for (iso, thr), rows in sorted(groups.items()):
         t_label = f"{thr:g}"
         out_path = os.path.join(output_dir, f'step4_dg_{iso}_t{t_label}.parquet')
-        all_keys = list(dict.fromkeys(k for r in rows for k in r))
-        arrays = [pa.array([r.get(k) for r in rows]) for k in all_keys]
-        table = pa.table(dict(zip(all_keys, arrays)))
+        table = pa.Table.from_pylist(rows)
         pq.write_table(table, out_path, compression='zstd')
 
     # Summary
