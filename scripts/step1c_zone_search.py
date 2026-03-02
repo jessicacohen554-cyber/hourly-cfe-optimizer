@@ -510,6 +510,44 @@ def git_commit_iso_progress(iso, zone_name, n_thresholds, auto_commit):
         print(f"    [auto-commit] Git error: {e}")
 
 
+def git_commit_threshold_single(iso, threshold):
+    """Commit a single threshold's PFS parquet with retry."""
+    try:
+        pfs_dir = s1.STEP1_RAW_PFS_PARQUET_DIR
+        result = subprocess.run(
+            ['git', 'add', '-A', pfs_dir],
+            capture_output=True, text=True)
+        if result.returncode != 0:
+            return
+
+        # Check for changes
+        result = subprocess.run(['git', 'diff', '--cached', '--quiet'],
+                                capture_output=True)
+        if result.returncode == 0:
+            return  # nothing to commit
+
+        msg = (f"PFS 1c: {iso} {threshold}% — auto-commit")
+        subprocess.run(['git', 'commit', '-m', msg],
+                       check=True, capture_output=True, text=True)
+
+        # Push with retry
+        for attempt in range(1, 5):
+            result = subprocess.run(
+                ['git', 'push', '-u', 'origin', 'HEAD'],
+                capture_output=True, text=True)
+            if result.returncode == 0:
+                print(f"      [auto-commit] {iso} {threshold}% committed & pushed")
+                return
+            if attempt < 4:
+                wait = 2 ** attempt
+                time.sleep(wait)
+
+        print(f"      [auto-commit] Push failed — committed locally")
+
+    except Exception as e:
+        print(f"      [auto-commit] Git error: {e}")
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # MANIFEST (resume support)
 # ══════════════════════════════════════════════════════════════════════════════
@@ -565,8 +603,11 @@ def _save_manifest(iso, code_hash, zones_done, thresholds_done):
 # MAIN PIPELINE
 # ══════════════════════════════════════════════════════════════════════════════
 
-def process_iso(iso, auto_commit=False):
-    """Run zone-based fine search for one ISO."""
+def process_iso(iso, thresholds=None, auto_commit=False):
+    """Run zone-based fine search for one ISO and specified thresholds."""
+    if thresholds is None:
+        thresholds = LOW_THRESHOLDS + ACTIVE_THRESHOLDS
+
     iso_start = time.time()
     rtypes = s1.get_resource_types(iso)
     n_res = len(rtypes)
@@ -574,6 +615,7 @@ def process_iso(iso, auto_commit=False):
     print(f"\n{'=' * 70}")
     print(f"  Step 1c Zone Search — {iso}")
     print(f"  Resources: {n_res}D ({', '.join(rtypes)})")
+    print(f"  Thresholds: {len(thresholds)} ({', '.join(f'{t}%' for t in sorted(set(thresholds)))})")
     print(f"  Numba: {'enabled' if s1.HAS_NUMBA else 'disabled'}")
     print(f"{'=' * 70}")
 
@@ -603,11 +645,16 @@ def process_iso(iso, auto_commit=False):
     demand_arr, supply_matrix = s1.prepare_numpy_profiles(
         iso, demand_norm, supply_profiles)
 
-    # ── Load prior windows (optional) ──
-    prior_windows = load_prior_windows(iso)
-    if prior_windows:
-        print(f"  Prior windows loaded — search space narrowed")
-    else:
+    # ── Load prior windows (optional, fail gracefully) ──
+    prior_windows = None
+    try:
+        prior_windows = load_prior_windows(iso)
+        if prior_windows:
+            print(f"  Prior windows loaded — search space narrowed")
+    except Exception:
+        pass
+
+    if not prior_windows:
         print(f"  No prior windows — using coarse-derived bounds")
 
     # ── JIT warmup ──
@@ -703,11 +750,12 @@ def process_iso(iso, auto_commit=False):
     all_scores = np.concatenate(all_scores_list)
     print(f"  Total unique scored mixes: {len(all_combos):,}")
 
-    # ── Assign to thresholds + save ──
+    # ── Filter to requested thresholds + save ──
+    requested_thresholds = sorted(set(thresholds))
     all_thresholds = LOW_THRESHOLDS + ACTIVE_THRESHOLDS
-    print(f"\n  Assigning to {len(all_thresholds)} thresholds...")
+    print(f"\n  Processing {len(requested_thresholds)} requested thresholds...")
 
-    # Vectorized assignment
+    # Vectorized assignment to ALL thresholds (for near-miss union)
     feasible_idx, near_miss_idx = assign_to_thresholds_vectorized(
         all_combos, all_scores, all_thresholds)
 
@@ -717,13 +765,13 @@ def process_iso(iso, auto_commit=False):
         all_nm_indices.update(near_miss_idx[t].tolist())
     all_nm_indices = np.array(sorted(all_nm_indices), dtype=np.int64)
 
-    # Save near-miss union
+    # Save near-miss union (always save for all thresholds)
     if len(all_nm_indices) > 0:
         save_near_miss(iso, all_combos[all_nm_indices],
                        all_scores[all_nm_indices], rtypes)
 
-    # Per-threshold: dominance filter + save
-    for t in all_thresholds:
+    # Per-threshold: dominance filter + save (only requested thresholds)
+    for t in requested_thresholds:
         if t in thresholds_done:
             print(f"    {iso} t{t}%: skipped (already done)")
             continue
@@ -734,6 +782,8 @@ def process_iso(iso, auto_commit=False):
             save_threshold_pfs(iso, t, np.empty((0, n_res)), np.empty(0), rtypes)
             thresholds_done.add(t)
             _save_manifest(iso, code_hash, zones_done, thresholds_done)
+            if auto_commit:
+                git_commit_threshold_single(iso, t)
             continue
 
         t_combos = all_combos[feas_i]
@@ -756,8 +806,9 @@ def process_iso(iso, auto_commit=False):
         thresholds_done.add(t)
         _save_manifest(iso, code_hash, zones_done, thresholds_done)
 
-    # Auto-commit final results
-    git_commit_iso_progress(iso, "final", len(all_thresholds), auto_commit)
+        # Auto-commit after each threshold
+        if auto_commit:
+            git_commit_threshold_single(iso, t)
 
     iso_elapsed = time.time() - iso_start
     print(f"\n{'=' * 70}")
@@ -772,8 +823,10 @@ def main():
         description="Step 1c: Zone-based fine search with global dedup.")
     parser.add_argument("--iso", required=True,
                         help="ISO name or 'ALL'")
+    parser.add_argument("--thresholds", default="all",
+                        help='Thresholds to run: "all", comma-separated (e.g., "95,99"), or single value')
     parser.add_argument("--auto-commit", action="store_true",
-                        help="Commit & push after each zone completes")
+                        help="Commit & push after each threshold completes")
     args = parser.parse_args()
 
     isos = list(s1.ISOS) if args.iso.upper() == 'ALL' else [args.iso.upper()]
@@ -783,8 +836,18 @@ def main():
             print(f"ERROR: Unknown ISO '{iso}'")
             sys.exit(1)
 
+    # Parse thresholds
+    if args.thresholds.lower() == "all":
+        thresholds = LOW_THRESHOLDS + ACTIVE_THRESHOLDS
+    else:
+        try:
+            thresholds = [float(t.strip()) for t in args.thresholds.split(',')]
+        except ValueError:
+            print(f"ERROR: Cannot parse thresholds '{args.thresholds}'")
+            sys.exit(1)
+
     for iso in isos:
-        process_iso(iso, auto_commit=args.auto_commit)
+        process_iso(iso, thresholds=thresholds, auto_commit=args.auto_commit)
 
 
 if __name__ == "__main__":
