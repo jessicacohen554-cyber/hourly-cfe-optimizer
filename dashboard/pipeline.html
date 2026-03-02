@@ -805,7 +805,7 @@ body { background: var(--bg-page-white); }
                     4D adaptive grid search over clean_firm, solar, wind, and hydro resource fractions with
                     procurement sweep. Two-phase adaptive storage sweep (0.25% coarse &rarr; 0.05% fine within saturation range).
                     Battery daily-cycle dispatch (4hr, 85% RTE) and LDES multi-day dispatch (100hr, 50% RTE, 7-day window).
-                    Produces physics-validated resource mixes across 15 thresholds and 7 ISOs.
+                    Produces physics-validated resource mixes across 21 thresholds and 7 ISOs.
                 </p>
                 <p style="color:rgba(239,68,68,0.8); font-size:0.8rem; font-weight:600;">
                     Only re-run if dispatch logic, generation curves, or demand curves change.
@@ -817,7 +817,7 @@ body { background: var(--bg-page-white); }
                     </div>
                     <div class="flow-file">
                         <span class="flow-file-label out">OUT</span>
-                        <span class="flow-file-path">data/step1-pfs-parquets/{ISO}_t{XX}_raw_pfs.parquet (105 files: 7 ISOs &times; 15 thresholds)</span>
+                        <span class="flow-file-path">data/step1-pfs-parquets/{ISO}_t{XX}_raw_pfs.parquet (147 files: 7 ISOs &times; 21 thresholds)</span>
                     </div>
                 </div>
             </div>
@@ -1907,7 +1907,7 @@ cost_solar = sol_new_pct / 100 &times; (LCOE_solar[level][iso] + TX_solar[level]
             among all mixes where <code>hourly_match_score &ge; threshold</code> (with 100% mapped to 99.5% gate for floating-point safety).
         </p>
         <p>
-            A Numba-compiled <strong>bucketed argmin</strong> processes all 15 thresholds in O(N) instead of O(15N):
+            A Numba-compiled <strong>bucketed argmin</strong> processes all 21 thresholds in O(N) instead of O(21N):
             a single pass assigns each mix to its highest-qualifying threshold bucket, then a cumulative min sweep
             propagates the cheapest mix downward from highest to lowest threshold.
         </p>
