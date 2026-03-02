@@ -332,27 +332,31 @@ def extract_medium_scenarios(df):
         tr_nuclear = iso_df['tranche_nuclear_newbuild_twh'].values
         tr_ccs = iso_df['tranche_ccs_tranche_twh'].values
 
+        # Build result dicts from pre-extracted arrays (vectorized field access)
         iso_result = {}
+        # Pre-compute resource TWh arrays (vectorized multiply)
+        resource_twh_arrays = {res: mix_cols[res] / 100.0 * demand_twh for res in RESOURCES}
+        battery_twh_arr = bat_pct / 100.0 * demand_twh
+        ldes_twh_arr = ldes_pct / 100.0 * demand_twh
+
         for i in range(len(iso_df)):
             t = float(thresholds[i])
-            dt = demand_twh[i]
             iso_result[t] = {
-                'demand_twh': dt,
+                'demand_twh': float(demand_twh[i]),
                 'demand_mwh': float(demand_mwh[i]),
                 'match_score': float(match_scores[i]),
                 'eff_cost': float(eff_costs[i]),
                 'total_cost': float(total_costs[i]),
                 'incremental_cost': float(incr_costs[i]),
                 'wholesale': float(wholesale[i]),
-                'resource_twh': {res: float(mix_cols[res][i]) / 100 * dt for res in RESOURCES},
-                'battery_twh': float(bat_pct[i]) / 100 * dt,
-                'ldes_twh': float(ldes_pct[i]) / 100 * dt,
+                'resource_twh': {res: float(resource_twh_arrays[res][i]) for res in RESOURCES},
+                'battery_twh': float(battery_twh_arr[i]),
+                'ldes_twh': float(ldes_twh_arr[i]),
                 'resource_pct': {res: float(mix_cols[res][i]) for res in RESOURCES},
                 'battery_dispatch_pct': float(bat_pct[i]),
                 'battery8_dispatch_pct': float(bat8_pct[i]),
                 'ldes_dispatch_pct': float(ldes_pct[i]),
                 'h2_dispatch_pct': float(h2_pct[i]),
-                'wholesale': float(wholesale[i]),
                 'gas_backup_mw': float(gas_backup[i]),
                 'new_gas_mw': float(new_gas[i]),
                 'gas_cost': float(gas_cost[i]),
