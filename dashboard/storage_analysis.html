@@ -12,15 +12,17 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
 <style>
-body { background: #FFFFFF; }
+body { background: var(--bg-page-white); }
 
-/* ========== HERO ========== */
+/* ========== HERO (storage-specific: light gradient, not dark navy) ========== */
 .hero-storage {
-    background: linear-gradient(180deg, #FFFFFF 0%, #F8F9FC 100%);
+    background: linear-gradient(180deg, #FFFFFF 0%, var(--bg-alt) 100%);
     position: relative;
     overflow: hidden;
-    padding: 48px 24px 32px;
+    padding: 48px var(--pad-page) 32px;
 }
 .hero-storage::before {
     content: '';
@@ -30,39 +32,40 @@ body { background: #FFFFFF; }
                 radial-gradient(ellipse at 70% 80%, rgba(139,92,246,0.05) 0%, transparent 60%);
     pointer-events: none;
 }
-.hero-inner {
+.hero-storage .hero-inner {
     position: relative;
-    max-width: 1320px;
+    max-width: var(--max-content);
     margin: 0 auto;
+    display: block;
 }
-.hero-text h2 {
+.hero-storage .hero-text h2 {
     font-family: var(--font-heading);
     font-size: 2rem;
     font-weight: 800;
-    color: #1A2744;
-    margin-bottom: 16px;
+    color: var(--navy);
+    margin-bottom: var(--space-md);
     line-height: 1.2;
     letter-spacing: -0.5px;
 }
-.hero-text p {
+.hero-storage .hero-text p {
     font-size: 0.95rem;
-    color: rgba(0,0,0,0.7);
+    color: var(--text-dim);
     line-height: 1.75;
-    margin-bottom: 16px;
-    max-width: 900px;
+    margin-bottom: var(--space-md);
+    max-width: var(--max-prose);
 }
 
-/* ========== COUNTER CARDS ========== */
+/* ========== COUNTER CARDS (storage-specific) ========== */
 .counter-row {
     display: flex;
     gap: 12px;
     flex-wrap: wrap;
-    margin: 24px 0 0;
+    margin: var(--space-lg) 0 0;
 }
 .counter-card {
-    background: #FFFFFF;
-    border: 1px solid #E5E7EB;
-    border-radius: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
     padding: 20px 14px;
     text-align: center;
     flex: 1;
@@ -72,95 +75,74 @@ body { background: #FFFFFF; }
     font-family: var(--font-heading);
     font-size: 1.8rem;
     font-weight: 800;
-    color: #EF4444;
+    color: var(--red);
     line-height: 1;
     margin-bottom: 4px;
 }
-.counter-val.purple { color: #8B5CF6; }
+.counter-val.purple { color: var(--battery); }
 .counter-val.blue { color: #0284c7; }
-.counter-val.green { color: #16a34a; }
-.counter-val.amber { color: #D97706; }
+.counter-val.green { color: var(--green-pos); }
+.counter-val.amber { color: var(--amber-warn); }
 .counter-lbl {
     font-size: 0.72rem;
-    color: rgba(0,0,0,0.55);
+    color: var(--text-dim);
     font-weight: 600;
     letter-spacing: 0.3px;
     text-transform: uppercase;
 }
 .counter-sub {
     font-size: 0.78rem;
-    color: rgba(0,0,0,0.45);
+    color: var(--text-muted);
     margin-top: 6px;
 }
 
-/* ========== SECTIONS ========== */
-.content-section {
-    max-width: 1320px;
-    margin: 0 auto;
-    padding: 48px 24px;
-}
+/* ========== SECTIONS (storage-specific overrides) ========== */
 .full-width-section {
-    background: #F8F9FC;
+    background: var(--bg-alt);
     padding: 48px 0;
 }
 .full-width-section .section-inner {
-    max-width: 1320px;
+    max-width: var(--max-content);
     margin: 0 auto;
-    padding: 0 24px;
+    padding: 0 var(--pad-page);
 }
 .section-header {
-    margin-bottom: 32px;
+    margin-bottom: var(--space-xl);
 }
 .section-header h3 {
     font-family: var(--font-heading);
     font-size: 1.5rem;
     font-weight: 700;
-    color: #1A2744;
-    margin-bottom: 8px;
+    color: var(--navy);
+    margin-bottom: var(--space-sm);
 }
 .section-header p {
     font-size: 0.9rem;
-    color: rgba(0,0,0,0.6);
+    color: var(--text-dim);
     line-height: 1.6;
     max-width: 800px;
 }
 
-/* ========== CHART PANELS ========== */
-.chart-panel {
-    background: #FFFFFF;
-    border: 1px solid #E5E7EB;
-    border-radius: 16px;
-    padding: 24px 20px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
-    margin-bottom: 24px;
-}
+/* ========== CHART HEIGHT OVERRIDES (storage-specific) ========== */
 .chart-panel h4 {
     font-family: var(--font-heading);
     font-size: 1.05rem;
     font-weight: 700;
-    color: #1A2744;
+    color: var(--navy);
     margin-bottom: 4px;
 }
-.chart-panel .chart-subtitle {
-    font-size: 0.82rem;
-    color: rgba(0,0,0,0.5);
-    margin-bottom: 16px;
-}
 .chart-container {
-    position: relative;
-    width: 100%;
-    min-height: 300px;
     height: 340px;
 }
 @media (min-width: 769px) {
     .chart-container { height: 380px; }
 }
 
-/* ========== GRID LAYOUTS ========== */
+/* ========== GRID LAYOUTS (storage-specific naming) ========== */
 .grid-2 {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 24px;
+    gap: var(--space-lg);
 }
 .grid-3 {
     display: grid;
@@ -177,73 +159,75 @@ body { background: #FFFFFF; }
     .grid-3 { grid-template-columns: 1fr; }
 }
 
-/* ========== INSIGHT CALLOUTS ========== */
-.insight-box {
-    background: linear-gradient(135deg, rgba(239,68,68,0.05), rgba(139,92,246,0.04));
-    border-left: 4px solid #EF4444;
-    border-radius: 0 12px 12px 0;
-    padding: 20px 24px;
-    margin: 24px 0;
+/* ========== INSIGHT CALLOUT VARIANTS (storage-specific color combos) ========== */
+.insight-box.purple {
+    border-left-color: var(--battery);
+    background: linear-gradient(135deg, rgba(139,92,246,0.06), rgba(236,72,153,0.04));
 }
-.insight-box.purple { border-left-color: #8B5CF6; background: linear-gradient(135deg, rgba(139,92,246,0.06), rgba(236,72,153,0.04)); }
-.insight-box.green { border-left-color: #16a34a; background: linear-gradient(135deg, rgba(22,163,106,0.06), rgba(14,165,233,0.04)); }
-.insight-box.blue { border-left-color: #0284c7; background: linear-gradient(135deg, rgba(2,132,199,0.06), rgba(139,92,246,0.04)); }
+.insight-box.green {
+    border-left-color: var(--green-pos);
+    background: linear-gradient(135deg, rgba(22,163,106,0.06), rgba(14,165,233,0.04));
+}
+.insight-box.blue {
+    border-left-color: #0284c7;
+    background: linear-gradient(135deg, rgba(2,132,199,0.06), rgba(139,92,246,0.04));
+}
 .insight-box h5 {
     font-family: var(--font-heading);
     font-weight: 700;
     font-size: 0.95rem;
-    color: #1A2744;
-    margin-bottom: 8px;
+    color: var(--navy);
+    margin-bottom: var(--space-sm);
 }
 .insight-box p {
     font-size: 0.88rem;
-    color: rgba(0,0,0,0.7);
+    color: var(--text-secondary);
     line-height: 1.6;
     margin: 0;
 }
 
-/* ========== ISO ONSET TABLE ========== */
+/* ========== ISO ONSET TABLE (storage-specific) ========== */
 .onset-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.85rem;
-    margin: 16px 0;
+    margin: var(--space-md) 0;
 }
 .onset-table th {
-    background: #F3F4F6;
+    background: var(--bg-alt);
     font-weight: 700;
     text-align: left;
     padding: 12px 16px;
-    border-bottom: 2px solid #E5E7EB;
+    border-bottom: 2px solid var(--border-light);
     font-size: 0.72rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: rgba(0,0,0,0.6);
+    color: var(--text-dim);
 }
 .onset-table td {
     padding: 12px 16px;
-    border-bottom: 1px solid #F3F4F6;
+    border-bottom: 1px solid var(--bg-alt);
 }
 .onset-table tr:hover td {
-    background: #F9FAFB;
+    background: var(--bg-alt);
 }
 .onset-badge {
     display: inline-block;
     padding: 3px 10px;
-    border-radius: 20px;
+    border-radius: var(--radius-pill);
     font-size: 0.75rem;
     font-weight: 700;
 }
-.onset-badge.early { background: rgba(239,68,68,0.1); color: #DC2626; }
+.onset-badge.early { background: var(--red-light); color: var(--red-dark); }
 .onset-badge.mid { background: rgba(217,119,6,0.1); color: #B45309; }
 .onset-badge.late { background: rgba(22,163,106,0.1); color: #15803D; }
 
-/* ========== CLUSTER CARDS ========== */
+/* ========== CLUSTER CARDS (storage-specific) ========== */
 .cluster-card {
-    background: #FFFFFF;
-    border: 1px solid #E5E7EB;
-    border-radius: 16px;
-    padding: 24px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-xl);
+    padding: var(--space-lg);
     position: relative;
     overflow: hidden;
 }
@@ -253,34 +237,34 @@ body { background: #FFFFFF; }
     top: 0; left: 0; right: 0;
     height: 4px;
 }
-.cluster-card.wind::before { background: linear-gradient(90deg, #22C55E, #16a34a); }
-.cluster-card.balanced::before { background: linear-gradient(90deg, #D97706, #F59E0B); }
-.cluster-card.firm::before { background: linear-gradient(90deg, #1E3A5F, #374151); }
+.cluster-card.wind::before { background: linear-gradient(90deg, var(--wind), var(--green-pos)); }
+.cluster-card.balanced::before { background: linear-gradient(90deg, var(--amber-warn), var(--solar)); }
+.cluster-card.firm::before { background: linear-gradient(90deg, var(--clean-firm), var(--fossil-gas)); }
 .cluster-card h4 {
     font-family: var(--font-heading);
     font-size: 1rem;
     font-weight: 700;
-    color: #1A2744;
+    color: var(--navy);
     margin-bottom: 4px;
 }
 .cluster-card .cluster-isos {
     font-size: 0.82rem;
-    color: rgba(0,0,0,0.5);
+    color: var(--text-muted);
     margin-bottom: 12px;
 }
 .cluster-card p {
     font-size: 0.88rem;
-    color: rgba(0,0,0,0.7);
+    color: var(--text-secondary);
     line-height: 1.6;
 }
 
-/* ========== ISO DEEP DIVE TABS ========== */
+/* ========== ISO DEEP DIVE TABS (storage-specific) ========== */
 .iso-tabs {
     display: flex;
     gap: 4px;
     flex-wrap: wrap;
-    margin-bottom: 24px;
-    border-bottom: 2px solid #E5E7EB;
+    margin-bottom: var(--space-lg);
+    border-bottom: 2px solid var(--border-light);
     padding-bottom: 0;
 }
 .iso-tab {
@@ -290,7 +274,7 @@ body { background: #FFFFFF; }
     font-family: var(--font-heading);
     font-size: 0.85rem;
     font-weight: 600;
-    color: rgba(0,0,0,0.5);
+    color: var(--text-muted);
     cursor: pointer;
     border-bottom: 3px solid transparent;
     margin-bottom: -2px;
@@ -298,53 +282,59 @@ body { background: #FFFFFF; }
     min-width: 44px;
     min-height: 44px;
 }
-.iso-tab:hover { color: rgba(0,0,0,0.8); }
+.iso-tab:hover { color: var(--text-primary); }
 .iso-tab.active {
-    color: #EF4444;
-    border-bottom-color: #EF4444;
+    color: var(--red);
+    border-bottom-color: var(--red);
 }
 
-/* ========== TECH TABLE ========== */
+/* ========== TECH TABLE (storage-specific) ========== */
 .tech-table {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.82rem;
-    margin: 16px 0;
+    margin: var(--space-md) 0;
 }
 .tech-table th {
-    background: #F3F4F6;
+    background: var(--bg-alt);
     font-weight: 700;
     text-align: left;
     padding: 10px 12px;
-    border-bottom: 2px solid #E5E7EB;
+    border-bottom: 2px solid var(--border-light);
     font-size: 0.7rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: rgba(0,0,0,0.6);
+    color: var(--text-dim);
 }
 .tech-table td {
     padding: 10px 12px;
-    border-bottom: 1px solid #F3F4F6;
+    border-bottom: 1px solid var(--bg-alt);
 }
-.tech-table tr:hover td { background: #F9FAFB; }
-.tech-table tr.ldes-active { background: rgba(239,68,68,0.04); }
-.tech-table tr.ldes-active td:nth-child(6) { font-weight: 700; color: #DC2626; }
-.tech-table .zero { color: rgba(0,0,0,0.25); }
+.tech-table tr:hover td { background: var(--bg-alt); }
+.tech-table tr.ldes-active { background: var(--red-light); }
+.tech-table tr.ldes-active td:nth-child(6) { font-weight: 700; color: var(--red-dark); }
+.tech-table .zero { color: var(--text-muted); }
 
-/* ========== FOOTER LEGEND ========== */
-.footer-note {
-    max-width: 1320px;
+/* ========== PAGE FOOTER NOTE (storage-specific override) ========== */
+.storage-footer-note {
+    max-width: var(--max-content);
     margin: 0 auto;
-    padding: 24px;
+    padding: var(--space-lg);
     font-size: 0.78rem;
-    color: rgba(0,0,0,0.45);
+    color: var(--text-muted);
     line-height: 1.6;
-    border-top: 1px solid #E5E7EB;
+    border-top: 1px solid var(--border-light);
 }
 </style>
 </head>
 <body>
 <nav id="topNav"></nav>
+
+<div class="header" id="pageHeader">
+    <h1>Storage Analysis</h1>
+    <div class="subtitle">Battery and long-duration storage dispatch patterns across all 7 ISOs</div>
+    <div class="header-accent"></div>
+</div>
 
 <!-- ========== HERO ========== -->
 <section class="hero-storage">
@@ -614,8 +604,8 @@ body { background: #FFFFFF; }
 
     <div class="grid-2">
         <div class="chart-panel">
-            <h4 style="color: #EF4444;">Short-duration storage: never cost-optimal</h4>
-            <p style="font-size: 0.88rem; color: rgba(0,0,0,0.7); line-height: 1.7;">
+            <h4 style="color: var(--red);">Short-duration storage: never cost-optimal</h4>
+            <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.7;">
                 Across 1.1 million scenario evaluations, 4-hour batteries, 8-hour batteries,
                 and hydrogen never appear in any cost-optimal mix. The daily charge/discharge
                 cycle isn't the binding constraint for hourly CFE matching &mdash; multi-day
@@ -623,24 +613,24 @@ body { background: #FFFFFF; }
             </p>
         </div>
         <div class="chart-panel">
-            <h4 style="color: #8B5CF6;">LDES: a last-mile gap-filler, not a foundation</h4>
-            <p style="font-size: 0.88rem; color: rgba(0,0,0,0.7); line-height: 1.7;">
+            <h4 style="color: var(--battery);">LDES: a last-mile gap-filler, not a foundation</h4>
+            <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.7;">
                 100-hour iron-air LDES is the only storage technology that enters optimal mixes,
                 and only at 92.5%+ CFE thresholds. Even then, it never exceeds 5% of demand.
                 The optimizer achieves 90%+ CFE across all ISOs with zero storage.
             </p>
         </div>
         <div class="chart-panel">
-            <h4 style="color: #22C55E;">LDES substitutes for clean firm, not for VRE</h4>
-            <p style="font-size: 0.88rem; color: rgba(0,0,0,0.7); line-height: 1.7;">
+            <h4 style="color: var(--wind);">LDES substitutes for clean firm, not for VRE</h4>
+            <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.7;">
                 Where LDES appears, it's always paired with high wind / low clean firm. It enables
                 wind-heavy ISOs (ERCOT, CAISO, SPP) to avoid expensive clean firm buildout.
                 The total system cost of "wind + 1% LDES" often beats "3x clean firm."
             </p>
         </div>
         <div class="chart-panel">
-            <h4 style="color: #0284C7;">Regional resources drive the storage decision</h4>
-            <p style="font-size: 0.88rem; color: rgba(0,0,0,0.7); line-height: 1.7;">
+            <h4 style="color: var(--hydro);">Regional resources drive the storage decision</h4>
+            <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.7;">
                 Wind-rich ISOs get LDES at 92.5&ndash;95% CFE. Nuclear-rich ISOs don't need storage
                 until 99.5&ndash;99.9%. The divergence isn't about storage economics &mdash; it's
                 about what alternatives each region has available.
@@ -649,7 +639,7 @@ body { background: #FFFFFF; }
     </div>
 </section>
 
-<div class="footer-note">
+<div class="storage-footer-note">
     Data source: Step 3 cost optimization results. 7 ISOs &times; 21 CFE thresholds &times; 5,832&ndash;17,496
     cost sensitivity scenarios per region. Storage technologies evaluated: 4-hour Li-ion battery (85% RTE),
     8-hour Li-ion battery (85% RTE), 100-hour iron-air LDES (50% RTE), green hydrogen (168hr, ~40% RTE).
