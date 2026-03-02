@@ -122,6 +122,13 @@ body { background: var(--bg-page-white); }
     line-height: 1.6;
     max-width: 800px;
 }
+/* Dark overrides for section-header and insight-box inside section-dark */
+.section-dark .section-header h3 { color: rgba(255,255,255,0.95); }
+.section-dark .section-header p { color: rgba(255,255,255,0.65); }
+.section-dark .insight-box h5 { color: rgba(255,255,255,0.95); }
+.section-dark .insight-box p { color: rgba(255,255,255,0.72); }
+.section-dark .insight-box.purple { background: rgba(139,92,246,0.12); border-left-color: var(--battery); }
+.section-dark .insight-box { background: rgba(255,255,255,0.06); }
 
 /* ========== CHART HEIGHT OVERRIDES (storage-specific) ========== */
 .chart-panel h4 {
@@ -381,7 +388,8 @@ body { background: var(--bg-page-white); }
 </section>
 
 <!-- ========== WHY STORAGE ISN'T SELECTED ========== -->
-<section class="content-section">
+<section class="section-dark">
+<div class="section-dark-inner">
     <div class="section-header">
         <h3>Why the Optimizer Rejects Short-Duration Storage</h3>
         <p>The binding constraint for hourly CFE matching isn't daily solar cycling &mdash; it's multi-day
@@ -398,6 +406,8 @@ body { background: var(--bg-page-white); }
            costs across all 5,832+ scenarios per region, the math never favors them.</p>
     </div>
 
+    <hr class="dark-divider">
+
     <div class="insight-box purple">
         <h5>Hydrogen: too expensive, too lossy</h5>
         <p>Green hydrogen (168-hour duration, ~40% round-trip efficiency) never appears in any optimal mix.
@@ -405,6 +415,7 @@ body { background: var(--bg-page-white); }
            (100hr, 50% RTE) or clean firm generation. Even at the lowest projected hydrogen costs, the
            optimizer always finds a cheaper path using existing technologies.</p>
     </div>
+</div>
 </section>
 
 <!-- ========== CROSS-ISO ONSET RANKING ========== -->
@@ -597,7 +608,8 @@ body { background: var(--bg-page-white); }
 </section>
 
 <!-- ========== KEY TAKEAWAYS ========== -->
-<section class="content-section">
+<section class="section-dark">
+<div class="section-dark-inner">
     <div class="section-header">
         <h3>Key Takeaways</h3>
     </div>
@@ -605,7 +617,7 @@ body { background: var(--bg-page-white); }
     <div class="grid-2">
         <div class="chart-panel">
             <h4 style="color: var(--red);">Short-duration storage: never cost-optimal</h4>
-            <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.7;">
+            <p style="font-size: 0.88rem; line-height: 1.7;">
                 Across 1.1 million scenario evaluations, 4-hour batteries, 8-hour batteries,
                 and hydrogen never appear in any cost-optimal mix. The daily charge/discharge
                 cycle isn't the binding constraint for hourly CFE matching &mdash; multi-day
@@ -614,7 +626,7 @@ body { background: var(--bg-page-white); }
         </div>
         <div class="chart-panel">
             <h4 style="color: var(--battery);">LDES: a last-mile gap-filler, not a foundation</h4>
-            <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.7;">
+            <p style="font-size: 0.88rem; line-height: 1.7;">
                 100-hour iron-air LDES is the only storage technology that enters optimal mixes,
                 and only at 92.5%+ CFE thresholds. Even then, it never exceeds 5% of demand.
                 The optimizer achieves 90%+ CFE across all ISOs with zero storage.
@@ -622,7 +634,7 @@ body { background: var(--bg-page-white); }
         </div>
         <div class="chart-panel">
             <h4 style="color: var(--wind);">LDES substitutes for clean firm, not for VRE</h4>
-            <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.7;">
+            <p style="font-size: 0.88rem; line-height: 1.7;">
                 Where LDES appears, it's always paired with high wind / low clean firm. It enables
                 wind-heavy ISOs (ERCOT, CAISO, SPP) to avoid expensive clean firm buildout.
                 The total system cost of "wind + 1% LDES" often beats "3x clean firm."
@@ -630,13 +642,14 @@ body { background: var(--bg-page-white); }
         </div>
         <div class="chart-panel">
             <h4 style="color: var(--hydro);">Regional resources drive the storage decision</h4>
-            <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.7;">
+            <p style="font-size: 0.88rem; line-height: 1.7;">
                 Wind-rich ISOs get LDES at 92.5&ndash;95% CFE. Nuclear-rich ISOs don't need storage
                 until 99.5&ndash;99.9%. The divergence isn't about storage economics &mdash; it's
                 about what alternatives each region has available.
             </p>
         </div>
     </div>
+</div>
 </section>
 
 <div class="storage-footer-note">
