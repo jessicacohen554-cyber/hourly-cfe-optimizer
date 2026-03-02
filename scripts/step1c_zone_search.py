@@ -30,7 +30,6 @@ Usage:
 import argparse
 import gc
 import hashlib
-import itertools
 import json
 import os
 import subprocess
@@ -98,6 +97,19 @@ def get_near_miss_width(threshold):
         return 0.30
     else:
         return 0.40
+
+
+def _row_keys(combos):
+    """Vectorized collision-free integer key per row for dedup.
+
+    Resource values are integers 0-300, so base-301 polynomial
+    hash is collision-free and fits in int64 for up to 7 dimensions
+    (301^7 ≈ 2.2e17 < 2^63 ≈ 9.2e18).
+    """
+    int_arr = np.round(combos).astype(np.int64)
+    n_res = int_arr.shape[1]
+    multipliers = np.array([301**i for i in range(n_res)], dtype=np.int64)
+    return int_arr @ multipliers
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -212,6 +224,9 @@ def compute_zone_resource_bounds(iso, coarse_combos, coarse_scores,
 def generate_fine_grid(bounds, step=1):
     """Generate Cartesian product of 1%-step ranges within bounds.
 
+    Uses numpy meshgrid instead of itertools.product for speed.
+    Chunks by first dimension to limit peak memory for 5D+ grids.
+
     Args:
         bounds: list of (lo, hi) per resource dimension
         step: step size in percentage points
@@ -219,22 +234,45 @@ def generate_fine_grid(bounds, step=1):
     Returns:
         numpy array (N, n_res) of mix combinations
     """
-    ranges = []
-    for lo, hi in bounds:
-        vals = list(range(lo, hi + 1, step))
-        if not vals:
-            vals = [lo]
-        ranges.append(vals)
+    ranges = [np.arange(lo, hi + 1, step, dtype=np.float64) for lo, hi in bounds]
 
-    combos = np.array(list(itertools.product(*ranges)), dtype=np.float64)
+    # Estimate total Cartesian product size
+    total_size = 1
+    for r in ranges:
+        total_size *= len(r)
 
-    if len(combos) == 0:
-        return combos
+    if total_size == 0:
+        return np.empty((0, len(bounds)), dtype=np.float64)
 
-    # Filter: sum > 0 and within procurement cap
-    row_sums = combos.sum(axis=1)
-    mask = (row_sums > 0) & (row_sums <= s1.TOTAL_PROCUREMENT_CAP)
-    return combos[mask]
+    if total_size <= 10_000_000:
+        # Small enough for full meshgrid in memory
+        grids = np.meshgrid(*ranges, indexing='ij')
+        combos = np.column_stack([g.ravel() for g in grids])
+
+        row_sums = combos.sum(axis=1)
+        mask = (row_sums > 0) & (row_sums <= s1.TOTAL_PROCUREMENT_CAP)
+        return combos[mask]
+
+    # Large grid: chunk by first dimension to limit peak memory.
+    # Build the (N-1)-dimensional sub-product once, then iterate the first axis.
+    first = ranges[0]
+    rest = ranges[1:]
+    rest_grids = np.meshgrid(*rest, indexing='ij')
+    rest_product = np.column_stack([g.ravel() for g in rest_grids])
+    rest_sums = rest_product.sum(axis=1)
+
+    parts = []
+    for val in first:
+        total_sum = val + rest_sums
+        mask = (total_sum > 0) & (total_sum <= s1.TOTAL_PROCUREMENT_CAP)
+        n_keep = int(np.sum(mask))
+        if n_keep > 0:
+            col0 = np.full((n_keep, 1), val, dtype=np.float64)
+            parts.append(np.hstack([col0, rest_product[mask]]))
+
+    if not parts:
+        return np.empty((0, len(bounds)), dtype=np.float64)
+    return np.vstack(parts)
 
 
 def generate_archetype_fine_grid(iso, boundary_mixes, n_res):
@@ -579,8 +617,9 @@ def process_iso(iso, auto_commit=False):
                                    coarse_combos[:2])
         print(f"  JIT ready")
 
-    # ── Global tracking (vectorized dedup via collision-free int64 hash) ──
-    global_hash_arr = _hash_mixes(coarse_combos)
+    # ── Global tracking ──
+    # Vectorized dedup keys (collision-free int64 hash per row)
+    global_scored_keys = _row_keys(coarse_combos)
 
     # Accumulate ALL scored mixes (coarse + fine) with their scores
     all_combos_list = [coarse_combos]
@@ -625,19 +664,14 @@ def process_iso(iso, auto_commit=False):
 
         print(f"    Raw fine grid: {len(fine_combos):,} combos")
 
-        # 3. Dedup against global hash (fully vectorized — no Python loops)
+        # 3. Dedup against global keys (vectorized — no Python loop)
         if len(fine_combos) > 0:
-            fine_hashes = _hash_mixes(fine_combos)
-            # Self-dedup within fine grid
-            _, uniq_idx = np.unique(fine_hashes, return_index=True)
-            fine_combos = fine_combos[uniq_idx]
-            fine_hashes = fine_hashes[uniq_idx]
-            # Cross-dedup against all previously scored mixes
-            new_mask = ~np.isin(fine_hashes, global_hash_arr)
+            fine_keys = _row_keys(fine_combos)
+            new_mask = ~np.isin(fine_keys, global_scored_keys)
             fine_combos = fine_combos[new_mask]
-            fine_hashes = fine_hashes[new_mask]
-            # Update running hash array
-            global_hash_arr = np.concatenate([global_hash_arr, fine_hashes])
+            if np.any(new_mask):
+                global_scored_keys = np.concatenate([
+                    global_scored_keys, fine_keys[new_mask]])
 
         print(f"    After dedup: {len(fine_combos):,} new mixes to score")
 
