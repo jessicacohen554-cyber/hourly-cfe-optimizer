@@ -21,6 +21,7 @@ Pipeline position: Step 1D of 7 (runs after Step 1C, before Step 2)
 """
 
 import os
+import subprocess
 import sys
 import time
 import numpy as np
@@ -806,10 +807,60 @@ def _save_empty(iso, threshold):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# AUTO-COMMIT
+# ══════════════════════════════════════════════════════════════════════════════
+
+def git_commit_threshold(iso, threshold, n_solutions):
+    """Commit and push a single threshold's parquet file to preserve progress.
+
+    Uses subprocess so failures don't crash the optimizer — just warns.
+    """
+    out_path = _output_path(iso, threshold)
+    if not os.path.exists(out_path):
+        print(f"      [auto-commit] No file to commit for {iso} {threshold}%")
+        return False
+
+    try:
+        subprocess.run(['git', 'add', '-f', out_path],
+                       check=True, capture_output=True, text=True)
+
+        result = subprocess.run(['git', 'diff', '--cached', '--quiet'],
+                                capture_output=True)
+        if result.returncode == 0:
+            return False  # no changes
+
+        size_mb = os.path.getsize(out_path) / (1024 * 1024)
+        msg = (f"Step 1D: Storage refinement for {iso} ({threshold}%) — "
+               f"{n_solutions:,} solutions, {size_mb:.1f} MB")
+        subprocess.run(['git', 'commit', '-m', msg],
+                       check=True, capture_output=True, text=True)
+
+        for attempt in range(1, 5):
+            result = subprocess.run(
+                ['git', 'push', '-u', 'origin', 'HEAD'],
+                capture_output=True, text=True)
+            if result.returncode == 0:
+                print(f"      [auto-commit] {iso} {threshold}% committed & pushed")
+                return True
+            if attempt < 4:
+                wait = 2 ** attempt
+                print(f"      [auto-commit] Push attempt {attempt} failed, retrying in {wait}s...")
+                time.sleep(wait)
+
+        print(f"      [auto-commit] Push failed for {iso} {threshold}% "
+              f"(committed locally)")
+        return True
+
+    except subprocess.CalledProcessError as e:
+        print(f"      [auto-commit] Git error for {iso} {threshold}%: {e}")
+        return False
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # ISO PROCESSING
 # ══════════════════════════════════════════════════════════════════════════════
 
-def process_iso(iso, thresholds, demand_data, gen_profiles):
+def process_iso(iso, thresholds, demand_data, gen_profiles, auto_commit=False):
     """Process all thresholds for a single ISO."""
     print(f"\n{'='*60}")
     print(f"  Processing {iso}")
@@ -849,6 +900,9 @@ def process_iso(iso, thresholds, demand_data, gen_profiles):
             coarse_combos, coarse_scores)
         total_new += n_new
 
+        if auto_commit and n_new > 0:
+            git_commit_threshold(iso, threshold, n_new)
+
     elapsed = time.time() - iso_start
     print(f"\n  {iso}: {total_new:,} total new solutions in {elapsed:.1f}s")
     return total_new
@@ -862,22 +916,26 @@ def parse_args(argv):
     """Parse CLI args.
 
     Usage:
-      step1d_storage_refinement.py [ISO ...] [--threshold T1,T2,...] [--force]
+      step1d_storage_refinement.py [ISO ...] [--threshold T1,T2,...] [--force] [--auto-commit]
 
     Examples:
       step1d_storage_refinement.py ERCOT --threshold 75
       step1d_storage_refinement.py CAISO ERCOT PJM
       step1d_storage_refinement.py --force   # rerun even if output exists
+      step1d_storage_refinement.py MISO --auto-commit
     """
     target_isos = []
     target_thresholds = None
     force = False
+    auto_commit = False
 
     i = 0
     while i < len(argv):
         arg = argv[i]
         if arg == '--force':
             force = True
+        elif arg == '--auto-commit':
+            auto_commit = True
         elif arg.startswith('--threshold'):
             if '=' in arg:
                 val = arg.split('=', 1)[1]
@@ -902,7 +960,7 @@ def parse_args(argv):
                 print(f"  Warning: threshold {t} not in Step 1D range (65+) — skipping")
         target_thresholds = [t for t in target_thresholds if t in valid]
 
-    return target_isos, target_thresholds, force
+    return target_isos, target_thresholds, force, auto_commit
 
 
 def main():
@@ -911,10 +969,11 @@ def main():
     print("  Fills intermediate storage levels missing from Step 1C")
     print("=" * 70)
 
-    target_isos, thresholds, force = parse_args(sys.argv[1:])
+    target_isos, thresholds, force, auto_commit = parse_args(sys.argv[1:])
     print(f"  ISOs: {target_isos}")
     print(f"  Thresholds: {thresholds}")
     print(f"  Force rerun: {force}")
+    print(f"  Auto-commit: {'ON' if auto_commit else 'OFF'}")
 
     if force:
         # Remove existing outputs + progress/partial files for target ISOs/thresholds
@@ -940,7 +999,7 @@ def main():
     grand_total = 0
     for iso in target_isos:
         try:
-            n = process_iso(iso, thresholds, demand_data, gen_profiles)
+            n = process_iso(iso, thresholds, demand_data, gen_profiles, auto_commit)
             grand_total += n
         except FileNotFoundError as e:
             print(f"  Skipping {iso}: {e}")
