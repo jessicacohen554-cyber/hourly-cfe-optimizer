@@ -254,15 +254,18 @@ def build_profile(iso: str, api_key: str) -> dict:
 
         # Normalize to sum = 1.0 (consistent with all gen profiles)
         total = cf.sum()
+        annual_cf = float(cf.mean())
         if total > 0:
             profile = (cf / total).tolist()
         else:
             profile = [0.0] * 8760
 
-        result[str(year)] = {'offshore_wind': profile}
+        result[str(year)] = {
+            'offshore_wind': profile,
+            'capacity_factor': round(annual_cf, 6),
+        }
 
         # Stats
-        annual_cf = cf.mean()
         zero_hours = np.sum(cf == 0)
         print(f"    Annual CF: {annual_cf:.3f}, Zero-gen hours: {zero_hours} ({zero_hours/87.6:.1f}%)")
 
@@ -290,13 +293,16 @@ def build_profiles_from_cache(iso: str, cache_dir: str) -> dict:
         cf = wind_speed_to_cf(ws_150)
 
         total = cf.sum()
+        annual_cf = float(cf.mean())
         if total > 0:
             profile = (cf / total).tolist()
         else:
             profile = [0.0] * 8760
 
-        result[str(year)] = {'offshore_wind': profile}
-        annual_cf = cf.mean()
+        result[str(year)] = {
+            'offshore_wind': profile,
+            'capacity_factor': round(annual_cf, 6),
+        }
         print(f"  {iso} {year}: CF={annual_cf:.3f}")
 
     return result
@@ -309,10 +315,20 @@ def validate_profiles(all_profiles: dict):
         yearly_cfs = []
         for year_str, fuels in years.items():
             profile = np.array(fuels['offshore_wind'])
-            # Denormalize: profile × 8760 gives relative CF per hour
-            cf_hourly = profile * 8760
-            annual_cf = cf_hourly.mean()
-            yearly_cfs.append(annual_cf)
+
+            # Validate shape
+            assert len(profile) == 8760, f"{iso}/{year_str}: expected 8760, got {len(profile)}"
+            assert abs(profile.sum() - 1.0) < 1e-6, f"{iso}/{year_str}: sum={profile.sum()}"
+            assert np.all(profile >= 0), f"{iso}/{year_str}: negative values found"
+
+            # Read saved capacity factor (stored pre-normalization)
+            annual_cf = fuels.get('capacity_factor')
+            if annual_cf is not None:
+                yearly_cfs.append(annual_cf)
+
+        if not yearly_cfs:
+            print(f"  {iso}: no capacity_factor metadata — skipping CF validation")
+            continue
 
         avg_cf = np.mean(yearly_cfs)
         print(f"  {iso}: avg CF = {avg_cf:.3f} (target: 0.40-0.52)")
