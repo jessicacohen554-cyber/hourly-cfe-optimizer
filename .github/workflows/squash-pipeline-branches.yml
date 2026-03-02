@@ -4,23 +4,40 @@ name: "Squash Pipeline Branches"
 # single squash commit and opens a PR against master. Branches that conflict are
 # skipped and reported — no manual conflict resolution needed.
 #
-# Typical use: after running a batch of pipeline steps (1a → 1d → 2 → 3 → ...),
+# Typical use: after running a batch of pipeline steps (1a → 1c → 1d → 2 → 3 → ...),
 # each creates its own auto/* branch. Instead of merging 20+ PRs individually,
 # run this workflow to combine them into one clean squash commit.
+#
+# Branch naming conventions produced by each step:
+#   Step 1c:  auto/{TS}-step1c-zone-search-{iso}          (PFS parquets — gitignored, force-added)
+#   Step 1d:  auto/{TS}-step1d-fine-storage-{iso}-{mode}  (storage parquets — tracked normally)
+#   Others:   auto/{TS}-{step}-{iso}
+#
+# branch_pattern examples:
+#   "auto/"                    — all auto/* branches (default)
+#   "auto/.*step1c"            — only Step 1c zone-search branches
+#   "auto/.*step1d"            — only Step 1d fine-storage branches
+#   "auto/.*step1[cd]"         — Step 1c AND 1d together
+#   "auto/.*step1[cd].*caiso"  — only CAISO 1c/1d branches
+#
+# NOTE: Step 1c writes to data/step1-pfs-parquets/ which is gitignored.
+# Those files are force-committed on the auto/* branches and re-force-added
+# here during squash so they survive the git reset --soft master step.
 #
 # How it works:
 #   1. Finds all remote auto/* branches not yet merged to master
 #   2. Creates a temp branch from master
 #   3. Sequentially merges each branch (skip on conflict)
-#   4. Squashes all merged changes into a single commit (git reset --soft)
-#   5. Pushes and opens a PR
-#   6. Optionally closes old PRs and deletes merged branches
+#   4. Force-adds gitignored data dirs (step1c PFS, step1d storage)
+#   5. Squashes all merged changes into a single commit (git reset --soft)
+#   6. Pushes and opens a PR
+#   7. Optionally closes old PRs and deletes merged branches
 
 on:
   workflow_dispatch:
     inputs:
       branch_pattern:
-        description: 'Branch prefix to match (e.g., "auto/" for all, "auto/.*step1d" for step 1d only)'
+        description: 'Regex to match branches. "auto/" = all; "auto/.*step1c" = 1c only; "auto/.*step1d" = 1d only; "auto/.*step1[cd]" = 1c+1d'
         default: 'auto/'
         type: string
       dry_run:
@@ -167,6 +184,13 @@ jobs:
 
           # ── Squash: collapse all merge commits into one ──
           git reset --soft master
+
+          # Force-add gitignored data directories that step1c/step1d committed
+          # via "git add -f" on their branches. After git reset --soft master,
+          # those files are in the working tree but gitignore would block a plain
+          # "git add". Re-force-add so they're included in the squash commit.
+          git add -f data/step1-pfs-parquets/ 2>/dev/null || true
+          git add    data/step1d-storage-parquets/ 2>/dev/null || true
 
           # Build commit message
           CUSTOM_MSG="${{ inputs.commit_message }}"
