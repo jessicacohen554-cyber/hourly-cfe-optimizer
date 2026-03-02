@@ -3756,17 +3756,43 @@ It smooths:
 - Offshore wind appears as a distinct resource in mix charts (new color in `chart-colors.js`)
 - Capacity caps shown in methodology page
 
-#### 21.4.5 Cost Tables (Preliminary — TBD)
+#### 21.4.5 Cost Tables (Finalized, Mar 2, 2026)
 
-Offshore wind LCOE ranges ($/MWh) — to be finalized from NREL ATB 2024 + Lazard:
+**LCOE tables ($/MWh)** — shares `Renewable Gen` sensitivity toggle with solar + onshore wind:
 
-| Level | NYISO | NEISO | PJM | CAISO | Notes |
-|-------|-------|-------|-----|-------|-------|
-| Low | TBD | TBD | TBD | TBD | Fixed-bottom, mature supply chain |
-| Medium | TBD | TBD | TBD | TBD | Current pipeline avg |
-| High | TBD | TBD | TBD | TBD | Floating (CAISO), early projects |
+| Level | NYISO | NEISO | PJM | CAISO (floating) | Sources |
+|-------|-------|-------|-----|---------|---------|
+| Low | 72 | 68 | 65 | 110 | Lazard v17 low, NREL ATB Advanced |
+| Medium | 95 | 90 | 85 | 150 | BNEF 2025, NREL ATB Moderate |
+| High | 125 | 118 | 112 | 200 | NREL FORCE model, supply-chain stress |
 
-CAISO costs will be higher (floating platforms at Morro Bay) vs. Atlantic ISOs (fixed-bottom).
+Regional hierarchy: PJM cheapest (shallowest, closest to shore, NJ 7.5 GW pipeline), NEISO mid (Vineyard Wind precedent, 51% CF), NYISO most expensive East Coast (NY Bight permitting + Jones Act), CAISO dramatically higher (floating, no US commercial experience).
+
+**Transmission tables ($/MWh)** — submarine cable + offshore substation:
+
+| Level | NYISO | NEISO | PJM | CAISO |
+|-------|-------|-------|-----|-------|
+| None | 0 | 0 | 0 | 0 |
+| Low | 8 | 7 | 6 | 10 |
+| Medium | 15 | 13 | 11 | 20 |
+| High | 25 | 22 | 18 | 35 |
+
+**Wright's Law learning curves** — two separate curves for fixed-bottom vs floating:
+
+Fixed-bottom (NYISO, NEISO, PJM):
+- FOAK: 1.15× High (Vineyard Wind era, supply chain stress). NYISO $144, NEISO $136, PJM $129.
+- NOAK: Low values (post-learning equilibrium). NYISO $52-88, NEISO $50-85, PJM $50-82.
+- Learning rate: ~8.8% per capacity doubling (NREL ATB 2024 Moderate). Global base: 83 GW.
+- Window: L=(2026,2034), M=(2028,2038), H=(2032,2045)
+
+Floating (CAISO):
+- FOAK: 1.25× High (pre-commercial, no US floating experience). $250/MWh.
+- NOAK: DOE Wind Shot aligned. $55-100/MWh.
+- Learning rate: ~11.5% per capacity doubling (NREL ATB Moderate). Global base: 0.3 GW (nascent). Multiple doublings ahead.
+- Window: L=(2029,2037), M=(2031,2042), H=(2035,2050)
+
+**Capacity factor**: NYISO 0.49, NEISO 0.51, PJM 0.48, CAISO 0.43 (from NOW-23 profiles).
+**Peak capacity credit**: 0.25 (higher than onshore wind 0.10 — flatter profile, less correlated with system peak).
 
 #### 21.4.6 NOW-23 API Details (Research Complete, Mar 2, 2026)
 
@@ -3791,7 +3817,7 @@ CAISO costs will be higher (floating platforms at Morro Bay) vs. Atlantic ISOs (
 
 **Available heights**: 10m, 20m, 40m, 60m, 80m, 100m, 120m, **140m**, **160m**, 180m, 200m, 220m, 240m, 260m, 280m, 300m, 400m, 500m. Both 140m and 160m confirmed available — linear interpolation to 150m hub height.
 
-**Coverage**: 2000–2020 (21 years) for Atlantic regions; 2000–2022 (23 years) for California.
+**Coverage**: 2000–2020 (21 years) for Atlantic regions; 2000–2019 (20 years) for California (API returns 400 for 2020+).
 
 **Rate limits**: CSV format = 10,000 requests/day, 1/second. Each request = 1 point × 1 year. 5 years × 4 ISOs = 20 requests total — well within limits.
 
