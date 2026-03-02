@@ -37,6 +37,14 @@
         .narrative p:last-child { margin-bottom: 0; }
         .narrative ul { color: #374151; font-size: 0.92rem; padding-left: 20px; margin-bottom: 10px; }
         .narrative li { margin-bottom: 5px; }
+        /* Dark panel overrides for narrative */
+        .section-dark .narrative h3 { color: #ffffff; }
+        .section-dark .narrative p { color: rgba(255,255,255,0.75); }
+        .section-dark .narrative ul { color: rgba(255,255,255,0.75); }
+        .section-dark .narrative li { color: rgba(255,255,255,0.75); }
+        .section-dark .narrative strong { color: #ffffff; }
+        .section-dark .narrative .callout { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); color: rgba(255,255,255,0.8); }
+        .section-dark .narrative .callout-warn { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.25); color: rgba(255,255,255,0.8); }
         .narrative .callout { background: rgba(59,130,246,0.06); border-left: 3px solid #3B82F6; padding: 12px 16px; border-radius: 0 var(--radius-md) var(--radius-md) 0; margin: 14px 0; font-size: 0.9rem; color: var(--navy-mid); }
         .narrative .callout-warn { background: rgba(245,158,11,0.06); border-left: 3px solid var(--solar); padding: 12px 16px; border-radius: 0 var(--radius-md) var(--radius-md) 0; margin: 14px 0; font-size: 0.9rem; color: #78350F; }
 
@@ -148,9 +156,13 @@
         </div>
 
         <!-- Dynamic Narrative -->
-        <div class="narrative" id="narrativeInsight">
+        <section class="section-dark" style="margin:24px -24px;border-radius:var(--radius-lg);">
+        <div class="section-dark-inner">
+        <div class="narrative" id="narrativeInsight" style="background:transparent;border:none;box-shadow:none;">
             <h3>Loading...</h3>
         </div>
+        </div>
+        </section>
 
         <!-- Charts 4 & 5: CF + CCGT Focus side by side -->
         <div class="grid-2">
