@@ -3,6 +3,12 @@ name: "Step 1c: Zone-Based Fine Search"
 # Score-band zone search: generates fine 1% mixes per score zone, scores each
 # mix ONCE, assigns to thresholds. Replaces old per-threshold PFS build.
 #
+# When ISO=ALL, uses a matrix strategy to run each ISO as a separate parallel
+# job. This prevents one slow/failed ISO from blocking the others.
+#
+# Threshold selection: pass comma-separated thresholds to only output PFS
+# parquets for specific thresholds. Near-miss is always computed for all.
+#
 # Prerequisite: Step 1a/1b (Scored Database) must have run first.
 # Output: data/step1-pfs-parquets/{ISO}_t{XX}_raw_pfs.parquet (per threshold)
 #         data/step1-pfs-parquets/{ISO}_near_miss.parquet (for step1d)
@@ -11,7 +17,7 @@ on:
   workflow_dispatch:
     inputs:
       iso:
-        description: 'ISO region to run'
+        description: 'ISO region to process (ALL = parallel matrix)'
         required: true
         default: 'ALL'
         type: choice
@@ -24,99 +30,159 @@ on:
           - NEISO
           - MISO
           - SPP
+      thresholds:
+        description: 'Comma-separated thresholds to output (e.g. "95,97.5,99"). Blank = all. Near-miss always computed for all.'
+        required: false
+        default: ''
+        type: string
       branch:
         description: 'Branch to checkout'
         required: false
         default: 'master'
         type: string
 
+env:
+  BRANCH_PREFIX: step1c-zone
+  PYTHONUNBUFFERED: "1"
+
 jobs:
-  zone-search:
+  # ════════════════════════════════════════════════════════════════════════
+  # Build the ISO matrix: single ISO or fan out to all 7
+  # ════════════════════════════════════════════════════════════════════════
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Build ISO matrix
+        id: set-matrix
+        run: |
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            echo 'matrix=["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix=["${{ inputs.iso }}"]' >> "$GITHUB_OUTPUT"
+          fi
+
+  # ════════════════════════════════════════════════════════════════════════
+  # Per-ISO job: Zone search with auto-commit per zone
+  # ════════════════════════════════════════════════════════════════════════
+  process:
+    needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 360
+
+    strategy:
+      matrix:
+        iso: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
 
     permissions:
       contents: write
 
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v4
-      with:
-        ref: ${{ inputs.branch || 'master' }}
-        fetch-depth: 0
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
+      - name: Create output branch
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${{ matrix.iso }}"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config http.postBuffer 524288000
+          git checkout -b "$TARGET_BRANCH"
 
-    - name: Install dependencies
-      run: |
-        pip install numpy numba pyarrow pandas
-        python -c "from numba import njit; print('Numba OK')"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-    - name: Verify scored database exists
-      run: |
-        ISO="${{ inputs.iso }}"
-        if [ "$ISO" = "ALL" ]; then
-          ISOS="CAISO ERCOT PJM NYISO NEISO MISO SPP"
-        else
-          ISOS="$ISO"
-        fi
-        MISSING=""
-        for iso in $ISOS; do
-          CACHE="data/step1-pfs-parquets/${iso}_coarse_cache.parquet"
+      - name: Install dependencies
+        run: |
+          pip install numpy numba pyarrow pandas
+          python -c "from numba import njit; print('Numba OK')"
+
+      - name: Verify scored database exists
+        run: |
+          CACHE="data/step1-pfs-parquets/${{ matrix.iso }}_coarse_cache.parquet"
           if [ ! -f "$CACHE" ]; then
-            MISSING="$MISSING $iso"
-          else
-            SIZE=$(du -h "$CACHE" | cut -f1)
-            echo "OK: $iso scored database ($SIZE)"
+            echo "ERROR: Missing scored database for ${{ matrix.iso }}"
+            echo "Run Step 1a (Scored Database) first."
+            exit 1
           fi
-        done
-        if [ -n "$MISSING" ]; then
-          echo "ERROR: Missing scored databases for:$MISSING"
-          echo "Run Step 1a (Scored Database) first."
-          exit 1
-        fi
+          SIZE=$(du -h "$CACHE" | cut -f1)
+          echo "OK: ${{ matrix.iso }} scored database ($SIZE)"
 
-    - name: "Compute prior windows (optional)"
-      continue-on-error: true
-      run: |
-        ISO="${{ inputs.iso }}"
-        if [ "$ISO" = "ALL" ]; then
-          python scripts/step1_prior_windows.py --iso ALL
-        else
-          python scripts/step1_prior_windows.py --iso "$ISO"
-        fi
+      - name: "Compute prior windows (optional)"
+        continue-on-error: true
+        run: python scripts/step1_prior_windows.py --iso ${{ matrix.iso }}
 
-    - name: Configure git
-      run: |
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-        git config http.postBuffer 524288000
+      - name: Ensure output directory
+        run: mkdir -p data/step1-pfs-parquets
 
-    - name: "Run zone search"
-      run: |
-        ISO="${{ inputs.iso }}"
-        if [ "$ISO" = "ALL" ]; then
-          for iso in CAISO ERCOT PJM NYISO NEISO MISO SPP; do
-            echo "=== Zone search for $iso ==="
-            python scripts/step1c_zone_search.py --iso "$iso" --auto-commit
-          done
-        else
-          python scripts/step1c_zone_search.py --iso "$ISO" --auto-commit
-        fi
+      - name: "Run zone search (${{ matrix.iso }})"
+        timeout-minutes: 300
+        run: |
+          ARGS="--iso ${{ matrix.iso }} --auto-commit"
+          THRESHOLDS="${{ inputs.thresholds }}"
+          if [ -n "$THRESHOLDS" ]; then
+            ARGS="$ARGS --thresholds $THRESHOLDS"
+          fi
+          python scripts/step1c_zone_search.py $ARGS
 
-    - name: Final commit and push
-      run: |
-        git add -A data/step1-pfs-parquets/
-        if ! git diff --cached --quiet; then
-          git commit -m "Step 1c Zone Search: ${{ inputs.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          for i in 1 2 3 4; do
-            git push -u origin HEAD && break
-            echo "Push attempt $i failed, retrying in $((2**i))s..."
-            sleep $((2**i))
-          done
-        else
-          echo "No remaining changes to commit"
-        fi
+      - name: "Verify near-miss parquet exists"
+        run: |
+          NM="data/step1-pfs-parquets/${{ matrix.iso }}_near_miss.parquet"
+          if [ ! -f "$NM" ]; then
+            echo "WARNING: Near-miss parquet not found for ${{ matrix.iso }}"
+            echo "Step 1d will not be able to run for this ISO."
+          else
+            SIZE=$(du -h "$NM" | cut -f1)
+            echo "OK: Near-miss parquet for ${{ matrix.iso }} ($SIZE)"
+          fi
+
+      - name: "Final commit and push"
+        run: |
+          push_with_retry() {
+            local label="$1"
+            local MAX_RETRIES=4
+            for i in $(seq 1 $MAX_RETRIES); do
+              echo "  Push attempt $i/$MAX_RETRIES for ${label}..."
+              git push -u origin "$TARGET_BRANCH" 2>&1 && return 0
+              if [ "$i" -eq "$MAX_RETRIES" ]; then
+                echo "  ERROR: Push failed for ${label} after $MAX_RETRIES attempts"
+                return 1
+              fi
+              BACKOFF=$((2 ** i))
+              echo "  Retrying in ${BACKOFF}s..."
+              sleep "$BACKOFF"
+            done
+          }
+
+          # Stage PFS parquets + near-miss + manifest
+          git add -f data/step1-pfs-parquets/${{ matrix.iso }}_t*_raw_pfs.parquet 2>/dev/null || true
+          git add -f data/step1-pfs-parquets/${{ matrix.iso }}_near_miss.parquet 2>/dev/null || true
+          git add -f data/step1-pfs-parquets/${{ matrix.iso }}_zone_manifest.json 2>/dev/null || true
+
+          if git diff --cached --quiet; then
+            echo "No remaining changes to commit for ${{ matrix.iso }}"
+            exit 0
+          fi
+
+          git commit -m "Step 1c Zone Search: ${{ matrix.iso }} — final $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          if ! push_with_retry "final-${{ matrix.iso }}"; then
+            echo "Final push failed — trying per-file fallback"
+            git reset HEAD~1
+            for f in $(find data/step1-pfs-parquets/ -name "${{ matrix.iso }}_*" -type f 2>/dev/null); do
+              FNAME=$(basename "$f")
+              git add -f "$f"
+              if git diff --cached --quiet; then continue; fi
+              git commit -m "Step 1c: ${{ matrix.iso }} ${FNAME}"
+              push_with_retry "$FNAME" || git reset HEAD~1
+            done
+          fi

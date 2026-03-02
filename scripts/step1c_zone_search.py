@@ -565,8 +565,15 @@ def _save_manifest(iso, code_hash, zones_done, thresholds_done):
 # MAIN PIPELINE
 # ══════════════════════════════════════════════════════════════════════════════
 
-def process_iso(iso, auto_commit=False):
-    """Run zone-based fine search for one ISO."""
+def process_iso(iso, auto_commit=False, threshold_filter=None):
+    """Run zone-based fine search for one ISO.
+
+    Args:
+        iso: ISO name (e.g. 'CAISO')
+        auto_commit: If True, commit & push after each zone completes
+        threshold_filter: Optional set of thresholds to output PFS parquets for.
+                         Near-miss is always computed for ALL thresholds regardless.
+    """
     iso_start = time.time()
     rtypes = s1.get_resource_types(iso)
     n_res = len(rtypes)
@@ -704,8 +711,14 @@ def process_iso(iso, auto_commit=False):
     print(f"  Total unique scored mixes: {len(all_combos):,}")
 
     # ── Assign to thresholds + save ──
+    # Always compute all thresholds for near-miss (step1d needs full set)
     all_thresholds = LOW_THRESHOLDS + ACTIVE_THRESHOLDS
-    print(f"\n  Assigning to {len(all_thresholds)} thresholds...")
+    # Filter output thresholds if requested
+    output_thresholds = all_thresholds
+    if threshold_filter:
+        output_thresholds = [t for t in all_thresholds if t in threshold_filter]
+    print(f"\n  Assigning to {len(all_thresholds)} thresholds "
+          f"(output: {len(output_thresholds)})...")
 
     # Vectorized assignment
     feasible_idx, near_miss_idx = assign_to_thresholds_vectorized(
@@ -722,8 +735,8 @@ def process_iso(iso, auto_commit=False):
         save_near_miss(iso, all_combos[all_nm_indices],
                        all_scores[all_nm_indices], rtypes)
 
-    # Per-threshold: dominance filter + save
-    for t in all_thresholds:
+    # Per-threshold: dominance filter + save (only output_thresholds)
+    for t in output_thresholds:
         if t in thresholds_done:
             print(f"    {iso} t{t}%: skipped (already done)")
             continue
@@ -767,6 +780,18 @@ def process_iso(iso, auto_commit=False):
     print(f"{'=' * 70}")
 
 
+def _parse_thresholds(threshold_str):
+    """Parse comma-separated threshold string into set of floats."""
+    if not threshold_str:
+        return None
+    result = set()
+    for t in threshold_str.split(','):
+        t = t.strip()
+        if t:
+            result.add(float(t))
+    return result if result else None
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Step 1c: Zone-based fine search with global dedup.")
@@ -774,17 +799,26 @@ def main():
                         help="ISO name or 'ALL'")
     parser.add_argument("--auto-commit", action="store_true",
                         help="Commit & push after each zone completes")
+    parser.add_argument("--thresholds", type=str, default='',
+                        help="Comma-separated thresholds to output "
+                             "(e.g. '95,97.5,99'). Blank = all. "
+                             "Near-miss is always computed for all thresholds.")
     args = parser.parse_args()
 
     isos = list(s1.ISOS) if args.iso.upper() == 'ALL' else [args.iso.upper()]
+    threshold_filter = _parse_thresholds(args.thresholds)
 
     for iso in isos:
         if iso not in s1.ISOS:
             print(f"ERROR: Unknown ISO '{iso}'")
             sys.exit(1)
 
+    if threshold_filter:
+        print(f"Threshold filter: {sorted(threshold_filter)}")
+
     for iso in isos:
-        process_iso(iso, auto_commit=args.auto_commit)
+        process_iso(iso, auto_commit=args.auto_commit,
+                    threshold_filter=threshold_filter)
 
 
 if __name__ == "__main__":

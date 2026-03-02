@@ -117,12 +117,19 @@ def load_near_miss(iso):
 # PASS 1: COARSE GLOBAL STORAGE SWEEP
 # ══════════════════════════════════════════════════════════════════════════════
 
-def run_coarse_storage(iso, nm_combos, nm_base_scores, demand_arr, supply_matrix):
+def run_coarse_storage(iso, nm_combos, nm_base_scores, demand_arr, supply_matrix,
+                       target_thresholds=None):
     """Sweep coarse storage levels on ALL near-miss mixes globally.
+
+    Args:
+        target_thresholds: Optional list of thresholds to bin results into.
+                          Defaults to STORAGE_THRESHOLDS.
 
     Returns per-threshold feasible lists:
         results[threshold] = list of (mix_idx, bat4, bat8, ldes, h2, score)
     """
+    if target_thresholds is None:
+        target_thresholds = STORAGE_THRESHOLDS
     n_mixes = len(nm_combos)
     rtypes = s1.get_resource_types(iso)
     n_res = len(rtypes)
@@ -176,7 +183,7 @@ def run_coarse_storage(iso, nm_combos, nm_base_scores, demand_arr, supply_matrix
     best_eff = max(batt_eff, batt8_eff, ldes_eff)
 
     # Per-threshold results
-    results = {t: [] for t in STORAGE_THRESHOLDS}
+    results = {t: [] for t in target_thresholds}
 
     # Process in batches (vectorized Numba kernel per batch)
     n_batches = (n_mixes + batch_size - 1) // batch_size
@@ -251,8 +258,8 @@ def run_coarse_storage(iso, nm_combos, nm_base_scores, demand_arr, supply_matrix
                             if score < 0:
                                 continue
 
-                            # Bin to ALL thresholds where feasible
-                            for t in STORAGE_THRESHOLDS:
+                            # Bin to target thresholds where feasible
+                            for t in target_thresholds:
                                 target = t / 100.0
                                 if score >= target:
                                     # H2 only for >= 95%
@@ -533,8 +540,14 @@ def _save_manifest(iso, code_hash, pass1_done, pass2_done):
 # MAIN PIPELINE
 # ══════════════════════════════════════════════════════════════════════════════
 
-def process_iso(iso, auto_commit=False):
-    """Run two-pass storage sweep for one ISO."""
+def process_iso(iso, auto_commit=False, threshold_filter=None):
+    """Run two-pass storage sweep for one ISO.
+
+    Args:
+        iso: ISO name (e.g. 'CAISO')
+        auto_commit: If True, commit & push after each threshold
+        threshold_filter: Optional set of thresholds to process. Blank = all.
+    """
     iso_start = time.time()
     rtypes = s1.get_resource_types(iso)
     n_res = len(rtypes)
@@ -586,6 +599,13 @@ def process_iso(iso, auto_commit=False):
 
     os.makedirs(STEP1D_OUTPUT_DIR, exist_ok=True)
 
+    # Filter thresholds if requested
+    active_thresholds = STORAGE_THRESHOLDS
+    if threshold_filter:
+        active_thresholds = [t for t in STORAGE_THRESHOLDS
+                             if t in threshold_filter]
+        print(f"  Filtered thresholds: {active_thresholds}")
+
     # ══════════════════════════════════════════════════════
     # PASS 1: Coarse global storage sweep
     # ══════════════════════════════════════════════════════
@@ -593,10 +613,11 @@ def process_iso(iso, auto_commit=False):
     coarse_results = None
     if not pass1_done:
         coarse_results = run_coarse_storage(
-            iso, nm_combos, nm_base_scores, demand_arr, supply_matrix)
+            iso, nm_combos, nm_base_scores, demand_arr, supply_matrix,
+            target_thresholds=active_thresholds)
 
         # Save coarse results per threshold
-        for t in STORAGE_THRESHOLDS:
+        for t in active_thresholds:
             t_results = coarse_results[t]
             if t_results:
                 save_storage_results(iso, t, nm_combos, t_results, rtypes)
@@ -609,8 +630,8 @@ def process_iso(iso, auto_commit=False):
     else:
         print(f"\n  Pass 1: skipped (already done)")
         # Reload coarse results from saved parquets for Pass 2
-        coarse_results = {t: [] for t in STORAGE_THRESHOLDS}
-        for t in STORAGE_THRESHOLDS:
+        coarse_results = {t: [] for t in active_thresholds}
+        for t in active_thresholds:
             t_str = s1._normalize_threshold_str(t)
             t_path = os.path.join(STEP1D_OUTPUT_DIR,
                                   f'{iso}_t{t_str}_storage.parquet')
@@ -637,7 +658,7 @@ def process_iso(iso, auto_commit=False):
 
     print(f"\n  Pass 2 — Fine storage refinement (0.05% resolution)")
 
-    for t in STORAGE_THRESHOLDS:
+    for t in active_thresholds:
         if t in pass2_done:
             print(f"    {iso} t{t}%: skipped (already done)")
             continue
@@ -679,6 +700,18 @@ def process_iso(iso, auto_commit=False):
     print(f"{'=' * 70}")
 
 
+def _parse_thresholds(threshold_str):
+    """Parse comma-separated threshold string into set of floats."""
+    if not threshold_str:
+        return None
+    result = set()
+    for t in threshold_str.split(','):
+        t = t.strip()
+        if t:
+            result.add(float(t))
+    return result if result else None
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Step 1d: Two-pass storage sweep.")
@@ -686,17 +719,25 @@ def main():
                         help="ISO name or 'ALL'")
     parser.add_argument("--auto-commit", action="store_true",
                         help="Commit & push after each threshold")
+    parser.add_argument("--thresholds", type=str, default='',
+                        help="Comma-separated thresholds to process "
+                             "(e.g. '95,97.5,99'). Blank = all.")
     args = parser.parse_args()
 
     isos = list(s1.ISOS) if args.iso.upper() == 'ALL' else [args.iso.upper()]
+    threshold_filter = _parse_thresholds(args.thresholds)
 
     for iso in isos:
         if iso not in s1.ISOS:
             print(f"ERROR: Unknown ISO '{iso}'")
             sys.exit(1)
 
+    if threshold_filter:
+        print(f"Threshold filter: {sorted(threshold_filter)}")
+
     for iso in isos:
-        process_iso(iso, auto_commit=args.auto_commit)
+        process_iso(iso, auto_commit=args.auto_commit,
+                    threshold_filter=threshold_filter)
 
 
 if __name__ == "__main__":
