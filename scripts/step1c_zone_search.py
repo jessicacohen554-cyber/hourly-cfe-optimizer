@@ -503,19 +503,58 @@ def save_near_miss_interim(iso, all_combos_lists, all_scores_lists, rtypes,
     save_near_miss(iso, interim_combos[nm_arr], interim_scores[nm_arr], rtypes)
 
 
+def git_commit_threshold_pfs(iso, threshold, auto_commit):
+    """Commit a single threshold's PFS parquet after it's saved."""
+    if not auto_commit:
+        return
+    try:
+        pfs_dir = s1.STEP1_RAW_PFS_PARQUET_DIR
+        t_str = s1._normalize_threshold_str(threshold)
+        pfs_path = os.path.join(pfs_dir, f'{iso}_t{t_str}_raw_pfs.parquet')
+        nm_path = os.path.join(pfs_dir, f'{iso}_near_miss.parquet')
+
+        # Stage the threshold parquet + updated near-miss
+        for path in [pfs_path, nm_path]:
+            if os.path.exists(path):
+                subprocess.run(['git', 'add', '-f', path],
+                               capture_output=True, text=True)
+
+        result = subprocess.run(['git', 'diff', '--cached', '--quiet'],
+                                capture_output=True)
+        if result.returncode == 0:
+            return  # nothing staged
+
+        msg = f"PFS 1c: {iso} {threshold}% — auto-commit"
+        subprocess.run(['git', 'commit', '-m', msg],
+                       check=True, capture_output=True, text=True)
+
+        for attempt in range(1, 5):
+            result = subprocess.run(
+                ['git', 'push', '-u', 'origin', 'HEAD'],
+                capture_output=True, text=True)
+            if result.returncode == 0:
+                print(f"      [auto-commit] {iso} t{threshold}% pushed")
+                return
+            if attempt < 4:
+                time.sleep(2 ** attempt)
+
+        print(f"      [auto-commit] Push failed — committed locally")
+    except subprocess.CalledProcessError as e:
+        print(f"      [auto-commit] Git error: {e}")
+
+
 def git_commit_iso_progress(iso, zone_name, n_thresholds, auto_commit):
     """Commit current ISO progress after a zone completes."""
     if not auto_commit:
         return
 
     try:
-        # Stage all PFS files for this ISO
+        # Must use -f: data/step1-pfs-parquets/ is gitignored, normal add skips it.
         pfs_dir = s1.STEP1_RAW_PFS_PARQUET_DIR
-        result = subprocess.run(
-            ['git', 'add', '-A', pfs_dir],
-            capture_output=True, text=True)
-        if result.returncode != 0:
-            return
+        subprocess.run(
+            f'git add -f "{pfs_dir}"/*.parquet "{pfs_dir}"/*.json 2>/dev/null; true',
+            shell=True, capture_output=True)
+
 
         # Check for changes
         result = subprocess.run(['git', 'diff', '--cached', '--quiet'],
@@ -795,6 +834,7 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None, zones_filter=Non
             save_threshold_pfs(iso, t, np.empty((0, n_res)), np.empty(0), rtypes)
             thresholds_done.add(t)
             _save_manifest(iso, code_hash, zones_done, thresholds_done)
+            git_commit_threshold_pfs(iso, t, auto_commit)
             continue
 
         t_combos = all_combos[feas_i]
@@ -817,8 +857,8 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None, zones_filter=Non
         thresholds_done.add(t)
         _save_manifest(iso, code_hash, zones_done, thresholds_done)
 
-    # Auto-commit final results
-    git_commit_iso_progress(iso, "final", len(all_thresholds), auto_commit)
+        # Commit after each threshold so partial results are banked
+        git_commit_threshold_pfs(iso, t, auto_commit)
 
     iso_elapsed = time.time() - iso_start
     print(f"\n{'=' * 70}")
