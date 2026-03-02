@@ -3623,6 +3623,174 @@ Any post-processing (cost overlays, BECCS, gas constraints, carbon pricing) oper
 
 **Decision**: Implemented in post-processing (Feb 15, 2026). See §22.
 
+### 21.4 Offshore Wind — New Resource Dimension (Planned, Mar 2, 2026)
+
+**Rationale**: Onshore wind is 22–25% CF with strong diurnal swing. Offshore wind at ~47% CF with a flat diurnal profile fundamentally changes the cost curve for 80%+ thresholds — less storage needed to cover overnight gaps, less VRE overbuild required. This is material for Atlantic ISOs.
+
+#### 21.4.1 Capacity Caps (TWh)
+
+| ISO | Cap (TWh) | Rationale |
+|-----|-----------|-----------|
+| NYISO | 37 | 9 GW pipeline (Empire Wind, Sunrise Wind, etc.) |
+| NEISO | 37 | 9 GW capacity (Vineyard Wind, Revolution Wind, etc.) |
+| PJM | 30 | NJ 7.5 GW mandated + DE/MD/VA pipeline |
+| CAISO | 20 | ~5 GW (Morro Bay + Humboldt WEAs) |
+| ERCOT | 0 | No meaningful offshore resource |
+| MISO | 0 | No meaningful offshore resource |
+| SPP | 0 | No meaningful offshore resource |
+
+#### 21.4.2 Profile Shape (8760)
+
+**Data source**: NREL NOW-23 (National Offshore Wind dataset) — 2 km grid, hourly wind speeds, 2000–2020 (21 years).
+
+**Reference turbine**: IEA 15 MW (150 m hub height, 240 m rotor diameter). Power curve CSV from NREL/IEA Wind Task 37 GitHub.
+
+**Build process**:
+1. Extract wind speeds at 140 m + 160 m from NOW-23 at lease area coordinates
+2. Interpolate to 150 m hub height (linear between heights)
+3. Apply IEA 15 MW power curve (wind speed → capacity factor)
+4. Apply loss stack: wake (~10%) × electrical (~2.5%) × availability (~5%) = **net ~83.4% of gross**
+5. Average across 5 years (2016–2020) — same methodology as EIA onshore profiles
+6. Normalize profile to sum = 1.0 (consistent with all other generation profiles)
+
+**Representative coordinates per ISO**:
+
+| ISO | Location |
+|-----|----------|
+| NYISO | NY Bight (Empire Wind lease area) |
+| NEISO | Vineyard Wind area (south of Martha's Vineyard) |
+| PJM | NJ lease areas (Atlantic Shores / Ocean Wind) |
+| CAISO | Morro Bay WEA |
+
+#### 21.4.3 Variability Calibration
+
+The 5-year average preserves:
+- **Seasonal swing** (winter peak in NE, summer peak in CA)
+- **Multi-day weather patterns** (storm cycles, lull periods)
+- **Flat diurnal envelope** (no day/night swing like onshore — key differentiator)
+- **Realistic zero-generation hours** (~20% of hours for offshore)
+
+It smooths:
+- **Interannual anomalies** (e.g., whether 2018 was unusually windy)
+
+**Validation targets**: Compare resulting annual CF against South Fork Wind actual (46.4%) and NREL ATB projections (~49%). This is the **exact same treatment** as onshore wind and solar — the offshore profile naturally shows higher CF and flatter diurnal, but still has weather-driven gaps. The optimizer handles it as VRE, not firm.
+
+#### 21.4.4 Integration in the Pipeline
+
+**Step 0** — New `step0_fetch_offshore_wind.py`:
+- Fetches NOW-23 data via NREL API (requires API key from developer.nrel.gov)
+- Applies IEA 15 MW power curve + loss stack
+- Generates normalized 8760 profiles per ISO
+- Output: `data/offshore_wind_profiles/` (one parquet per ISO)
+
+**Step 1** — `offshore_wind` as new resource dimension:
+- NYISO, NEISO, PJM, CAISO: 5D grid search (clean_firm, solar, wind, **offshore_wind**, hydro) — analogous to CAISO's 5D with geothermal
+- CAISO becomes 6D (clean_firm, solar, wind, offshore_wind, hydro, geothermal)
+- ERCOT, MISO, SPP: remain 4D (no offshore resource)
+- Offshore wind grid levels: [0, 5, 10, 15, 20, 25, 30]% of demand (capped by ISO TWh limits above)
+
+**Step 3** — Cost tables:
+- New `OFFSHORE_WIND_LCOE` table (L/M/H by ISO). Range: ~$80–150/MWh (higher than onshore $30–95 reflecting fixed-bottom/floating costs)
+- New `OFFSHORE_WIND_TX` transmission adder table (submarine cable + grid interconnection)
+- Shares `Renewable Gen` sensitivity toggle pairing with solar + onshore wind
+
+**Dashboard** — Toggle and display:
+- Offshore wind appears as a distinct resource in mix charts (new color in `chart-colors.js`)
+- Capacity caps shown in methodology page
+
+#### 21.4.5 Cost Tables (Preliminary — TBD)
+
+Offshore wind LCOE ranges ($/MWh) — to be finalized from NREL ATB 2024 + Lazard:
+
+| Level | NYISO | NEISO | PJM | CAISO | Notes |
+|-------|-------|-------|-----|-------|-------|
+| Low | TBD | TBD | TBD | TBD | Fixed-bottom, mature supply chain |
+| Medium | TBD | TBD | TBD | TBD | Current pipeline avg |
+| High | TBD | TBD | TBD | TBD | Floating (CAISO), early projects |
+
+CAISO costs will be higher (floating platforms at Morro Bay) vs. Atlantic ISOs (fixed-bottom).
+
+#### 21.4.6 NOW-23 API Details (Research Complete, Mar 2, 2026)
+
+**Regional endpoints** — NOW-23 uses separate API endpoints per region:
+
+| Region | API Path | ISOs Served |
+|--------|----------|-------------|
+| North Atlantic | `offshore-north-atlantic-download` | NEISO |
+| Mid Atlantic | `offshore-mid-atlantic-download` | NYISO, PJM |
+| California | `offshore-ca-download` | CAISO |
+
+**Base URL**: `https://developer.nrel.gov/api/wind-toolkit/v2/wind/{endpoint}.{format}`
+
+**Key parameters**:
+- `api_key` — free from developer.nrel.gov/signup
+- `wkt` — WKT geometry, e.g., `POINT(-74.5 39.5)` (longitude first!)
+- `attributes` — e.g., `windspeed_140m,windspeed_160m`
+- `names` — year, e.g., `2020`
+- `interval` — `60` for hourly
+- `utc` — `true`
+- `email` — required for async requests
+
+**Available heights**: 10m, 20m, 40m, 60m, 80m, 100m, 120m, **140m**, **160m**, 180m, 200m, 220m, 240m, 260m, 280m, 300m, 400m, 500m. Both 140m and 160m confirmed available — linear interpolation to 150m hub height.
+
+**Coverage**: 2000–2020 (21 years) for Atlantic regions; 2000–2022 (23 years) for California.
+
+**Rate limits**: CSV format = 10,000 requests/day, 1/second. Each request = 1 point × 1 year. 5 years × 4 ISOs = 20 requests total — well within limits.
+
+**Bulk alternative**: AWS S3 at `s3://nrel-pds-wtk/` (no account needed). Also accessible via NREL's HSDS service with `h5pyd` or `NREL-rex` packages.
+
+#### 21.4.7 IEA 15 MW Power Curve (Research Complete, Mar 2, 2026)
+
+**Source**: `turbine-models` Python package (`pip install turbine-models`), file `Offshore/IEA_Reference_15MW_240.csv`. Also on GitHub: `github.com/NREL/turbine-models`.
+
+**Key turbine specs**:
+| Parameter | Value |
+|-----------|-------|
+| Rated Power | 15 MW |
+| Rotor Diameter | 240 m |
+| Hub Height | 150 m |
+| Cut-in Wind Speed | 3 m/s |
+| Rated Wind Speed | 10.59 m/s |
+| Cut-out Wind Speed | 25 m/s |
+| IEC Class | IB |
+| Design Cp | 0.489 |
+
+**Power curve summary** (59 data points from 3–25 m/s):
+- 3 m/s: 70 kW (cut-in)
+- 7 m/s: 4,339 kW
+- 10 m/s: 12,661 kW
+- 10.59 m/s: ~14,995 kW (rated)
+- 10.6–25 m/s: 14,995 kW (constant, pitch-controlled)
+- 25 m/s: 14,998 kW → cut-out
+
+Full CSV with 59 wind speed × power × Cp × thrust data points available in the installed package.
+
+#### 21.4.8 Implementation Approach (Decided)
+
+**Recommended approach** (simplest, no HSDS complexity):
+1. Use developer.nrel.gov CSV endpoint — one request per point per year
+2. Request `windspeed_140m` + `windspeed_160m` at `interval=60`
+3. Linear interpolation to 150m hub height
+4. Apply IEA 15MW power curve via `numpy.interp()` on the 59-point CSV
+5. Apply loss stack (wake 10% × electrical 2.5% × availability 5% = net 83.4%)
+6. Average 5 years (2016–2020), normalize to sum = 1.0
+
+**Python packages needed**: `requests`, `numpy`, `pandas` (all already in the project). The `turbine-models` package provides the power curve CSV but isn't needed at runtime — we'll embed the 59-point curve directly in the script.
+
+#### 21.4.9 Blockers
+
+1. **NREL API key** required for NOW-23 data access — sign up at developer.nrel.gov/signup
+2. **Cost table finalization** — need NREL ATB 2024 offshore wind LCOE by region + Lazard cross-check
+3. **Step 1 compute impact** — adding a 5th/6th dimension increases grid search combinatorics significantly. May need aggressive pruning or adaptive grid for offshore ISOs.
+
+#### 21.4.10 Why This Matters
+
+Offshore wind at 47% CF with flat diurnal is a **qualitatively different resource** from onshore wind:
+- Onshore: low CF, strong diurnal → needs massive overbuild + storage for 80%+ matching
+- Offshore: high CF, flat diurnal → approaches dispatchable VRE characteristics
+- At 90%+ thresholds, offshore wind could displace significant clean firm / storage need in Atlantic ISOs
+- The cost question is whether the $80–150/MWh LCOE premium over onshore ($30–95) is offset by reduced storage and overbuild needs — this is exactly what the optimizer will answer
+
 ---
 
 ## 22. Post-Processing Corrections & Overlays (Feb 15, 2026)
