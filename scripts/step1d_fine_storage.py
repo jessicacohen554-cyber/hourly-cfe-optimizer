@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
-"""Step 1d: Two-pass storage sweep — coarse global + fine targeted.
+"""Step 1d: Three-pass adaptive storage sweep.
 
-Reads the union near-miss mixes from step1c and runs storage dispatch on
-each unique (mix, storage_config) exactly ONCE, then bins results to thresholds.
+Reads the union near-miss mixes from step1c and runs storage dispatch using
+an adaptive funnel that minimizes compute while preserving accuracy.
 
 Architecture:
-  Pass 1 — Coarse global: sweep ALL near-miss mixes at 1% storage steps.
-           Score each (mix, storage) combo once, bin by threshold.
+  Pass 0 — Max screen: score each mix with maximum storage (1 combo per mix).
+           Eliminates mixes that can't reach any active threshold even with
+           max storage. ~40s per ISO.
+  Pass 1 — Adaptive coarse: group surviving mixes by gap-to-threshold into
+           buckets. Each bucket gets a right-sized storage grid (fewer levels
+           for small gaps). Captures cross-dimensional interactions without
+           testing irrelevant combos.
   Pass 2 — Fine targeted: for mixes near each threshold's storage-enhanced
            boundary, refine storage at 0.05% resolution.
 
@@ -65,12 +70,23 @@ STEP1D_OUTPUT_DIR = os.path.join(DATA_DIR, 'step1d-storage-parquets')
 STORAGE_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5,
                       90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
 
-# Pass 1: Coarse storage levels (global sweep)
-COARSE_BAT4 = np.array([0, 1, 2, 3, 4, 5, 6], dtype=np.float64)
-COARSE_BAT8 = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8], dtype=np.float64)
-COARSE_LDES = np.array([0, 2, 5, 8, 10, 15, 20, 25], dtype=np.float64)
-COARSE_H2 = np.array([0, 5, 10, 15, 20, 25], dtype=np.float64)
-COARSE_H2_NONE = np.array([0], dtype=np.float64)  # H2 only for >= 95%
+# Pass 0: Maximum storage levels (ceiling screen)
+MAX_BAT4 = np.array([6.0], dtype=np.float64)
+MAX_BAT8 = np.array([8.0], dtype=np.float64)
+MAX_LDES = np.array([25.0], dtype=np.float64)
+MAX_H2 = np.array([25.0], dtype=np.float64)
+NO_H2 = np.array([0.0], dtype=np.float64)
+
+# Pass 1: Full coarse grids (used to build per-bucket adaptive grids)
+FULL_BAT4 = np.array([0, 1, 2, 3, 4, 5, 6], dtype=np.float64)
+FULL_BAT8 = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8], dtype=np.float64)
+FULL_LDES = np.array([0, 2, 5, 8, 10, 15, 20, 25], dtype=np.float64)
+FULL_H2 = np.array([0, 5, 10, 15, 20, 25], dtype=np.float64)
+
+# Gap bucket boundaries (in percentage points).
+# Mixes are grouped by how far their base score is from the threshold.
+# Each bucket gets a grid capped at ~3× its max gap (storage efficiency headroom).
+GAP_BUCKET_PP = [5, 10, 20, 50]  # bucket edges: 0-5pp, 5-10pp, 10-20pp, 20-50pp
 
 # Pass 2: Fine storage resolution
 FINE_STEP = 0.05         # 0.05 percentage points
@@ -134,71 +150,114 @@ def load_near_miss(iso):
 # PASS 1: COARSE GLOBAL STORAGE SWEEP
 # ══════════════════════════════════════════════════════════════════════════════
 
-def run_coarse_storage(iso, nm_combos, nm_base_scores, demand_arr, supply_matrix,
-                       active_thresholds=None):
-    """Sweep coarse storage levels on near-miss mixes.
+def _get_storage_constants():
+    """Return all storage dispatch constants as a dict."""
+    return dict(
+        batt_eff=s1.BATTERY_EFFICIENCY,
+        batt8_eff=s1.BATTERY8_EFFICIENCY,
+        ldes_eff=s1.LDES_EFFICIENCY,
+        batt4_dur=s1.BATTERY_DURATION_HOURS,
+        batt8_dur=s1.BATTERY8_DURATION_HOURS,
+        ldes_dur=s1.LDES_DURATION_HOURS,
+        ldes_window=s1.LDES_WINDOW_DAYS * 24,
+        batt8_window=48,
+        h2_eff=s1.H2_EFFICIENCY,
+        h2_dur=float(s1.H2_DURATION_HOURS),
+        h2_window=s1.H2_WINDOW_DAYS * 24,
+    )
 
-    Args:
-        active_thresholds: list of thresholds to bin into. Defaults to all.
+
+def _build_bucket_grid(max_gap_pp, include_h2):
+    """Build storage grid sized to the gap bucket.
+
+    Returns (bat4_arr, bat8_arr, ldes_arr, h2_arr) numpy arrays.
+    Storage levels are capped at ~3× the bucket's max gap (efficiency headroom).
+    """
+    cap = max_gap_pp * 3.0  # storage capacity headroom
+
+    bat4 = FULL_BAT4[FULL_BAT4 <= max(cap, 1)]
+    if len(bat4) < 2:
+        bat4 = FULL_BAT4[:2]  # at least [0, 1]
+
+    bat8 = FULL_BAT8[FULL_BAT8 <= max(cap, 1)]
+    if len(bat8) < 2:
+        bat8 = FULL_BAT8[:2]
+
+    ldes = FULL_LDES[FULL_LDES <= max(cap, 2)]
+    if len(ldes) < 2:
+        ldes = FULL_LDES[:2]
+
+    h2 = FULL_H2 if include_h2 else NO_H2
+
+    return bat4, bat8, ldes, h2
+
+
+def run_max_screen(nm_combos, nm_base_scores, demand_arr, supply_matrix,
+                   active_thresholds, sc):
+    """Pass 0: Score each mix with maximum storage to find the ceiling.
+
+    Returns max_scores array (N,) — the best score each mix can achieve
+    with maximum storage. Mixes where max_score < min(active_thresholds)
+    are guaranteed to be unreachable and can be eliminated.
+    """
+    n_mixes = len(nm_combos)
+    include_h2 = any(t >= 95 for t in active_thresholds)
+    h2_arr = MAX_H2 if include_h2 else NO_H2
+
+    print(f"\n  Pass 0 — Max-storage screen: {n_mixes:,} mixes "
+          f"(H2={'yes' if include_h2 else 'no'})")
+
+    max_scores = np.empty(n_mixes, dtype=np.float64)
+    batch_size = MAX_MIX_BATCH
+    t0 = time.time()
+
+    for cs in range(0, n_mixes, batch_size):
+        ce = min(cs + batch_size, n_mixes)
+        fracs = nm_combos[cs:ce].astype(np.float64) / 100.0
+        supply = fracs @ supply_matrix
+        n_batch = ce - cs
+
+        result = s1._batch_mixes_storage_screen(
+            demand_arr, supply, 1.0, n_batch,
+            MAX_BAT4, MAX_BAT8, MAX_LDES,
+            1, 1, 1,
+            sc['batt_eff'], sc['batt8_eff'], sc['ldes_eff'],
+            sc['batt4_dur'], sc['batt8_dur'], sc['ldes_dur'],
+            sc['ldes_window'], sc['batt8_window'],
+            h2_arr, len(h2_arr), sc['h2_eff'], sc['h2_dur'], sc['h2_window'])
+
+        max_scores[cs:ce] = result[:, 0]
+
+    elapsed = time.time() - t0
+    print(f"    Completed in {elapsed:.1f}s")
+    return max_scores
+
+
+def run_adaptive_coarse(iso, nm_combos, nm_base_scores, max_scores,
+                        demand_arr, supply_matrix, active_thresholds, sc):
+    """Pass 1: Adaptive coarse storage sweep with gap-bucketed grids.
+
+    Groups mixes by their gap to the closest active threshold, builds
+    a right-sized storage grid per bucket, and runs the Numba kernel
+    on each bucket. This avoids testing LDES=25% on mixes that only
+    need 3pp of storage boost.
 
     Returns per-threshold feasible lists:
         results[threshold] = list of (mix_idx, bat4, bat8, ldes, h2, score)
     """
-    if active_thresholds is None:
-        active_thresholds = STORAGE_THRESHOLDS
     n_mixes = len(nm_combos)
-    rtypes = s1.get_resource_types(iso)
-    n_res = len(rtypes)
     batch_size = CAISO_MIX_BATCH if iso == 'CAISO' else MAX_MIX_BATCH
+    include_h2 = any(t >= 95 for t in active_thresholds)
 
-    # ── Trim storage grids based on active thresholds ──
-    # Cap storage levels to what's physically useful: no point testing
-    # LDES=25% when the max gap to any active threshold is 10pp.
-    max_target = max(active_thresholds) / 100.0
-    max_gap_pp = (max_target - nm_base_scores.min()) * 100.0 if len(nm_base_scores) else 25.0
-    # Storage capacity headroom: 3× the max gap (storage isn't 100% efficient)
-    storage_cap = min(max_gap_pp * 3.0, 100.0)
-
-    eff_bat4 = COARSE_BAT4[COARSE_BAT4 <= max(storage_cap, 1)]
-    if len(eff_bat4) == 0 or eff_bat4[-1] == 0:
-        eff_bat4 = COARSE_BAT4[:2]  # keep at least [0, 1]
-    eff_bat8 = COARSE_BAT8[COARSE_BAT8 <= max(storage_cap, 1)]
-    if len(eff_bat8) == 0 or eff_bat8[-1] == 0:
-        eff_bat8 = COARSE_BAT8[:2]
-    eff_ldes = COARSE_LDES[COARSE_LDES <= max(storage_cap, 2)]
-    if len(eff_ldes) == 0 or eff_ldes[-1] == 0:
-        eff_ldes = COARSE_LDES[:2]
-
-    # H2 only relevant for thresholds >= 95%
-    any_h2_threshold = any(t >= 95 for t in active_thresholds)
-    eff_h2 = COARSE_H2 if any_h2_threshold else COARSE_H2_NONE
-
-    n_combos = len(eff_bat4) * len(eff_bat8) * len(eff_ldes) * len(eff_h2)
-    print(f"\n  Pass 1 — Coarse storage sweep: {n_mixes:,} mixes × "
-          f"{n_combos:,} storage combos "
-          f"(b4={len(eff_bat4)} b8={len(eff_bat8)} ldes={len(eff_ldes)} h2={len(eff_h2)})")
-
-    # Storage constants
-    batt_eff = s1.BATTERY_EFFICIENCY
-    batt8_eff = s1.BATTERY8_EFFICIENCY
-    ldes_eff = s1.LDES_EFFICIENCY
-    batt4_dur = s1.BATTERY_DURATION_HOURS
-    batt8_dur = s1.BATTERY8_DURATION_HOURS
-    ldes_dur = s1.LDES_DURATION_HOURS
-    ldes_window = s1.LDES_WINDOW_DAYS * 24
-    batt8_window = 48
-    h2_eff = s1.H2_EFFICIENCY
-    h2_dur = float(s1.H2_DURATION_HOURS)
-    h2_window = s1.H2_WINDOW_DAYS * 24
-
-    # Compute storage caps for all near-miss mixes (vectorized in chunks)
+    # Compute storage caps for all mixes (needed for per-mix cap filtering)
+    print(f"\n  Pass 1 — Adaptive coarse sweep")
     print(f"    Computing storage caps...")
     b4_caps = np.empty(n_mixes, dtype=np.float64)
     b8_caps = np.empty(n_mixes, dtype=np.float64)
     l_caps = np.empty(n_mixes, dtype=np.float64)
     surplus_days = np.empty(n_mixes, dtype=np.int64)
     hc_arr = np.empty(n_mixes, dtype=np.int64)
-    total_surplus = np.empty(n_mixes, dtype=np.float64)
+    surplus_pct = np.empty(n_mixes, dtype=np.float64)
     demand_total = demand_arr.sum()
 
     for cs in range(0, n_mixes, NM_CHUNK):
@@ -209,7 +268,7 @@ def run_coarse_storage(iso, nm_combos, nm_base_scores, demand_arr, supply_matrix
 
         cb4, cb8, cl, chc, csd = s1._batch_compute_storage_caps(
             demand_arr, chunk_supply, 1.0, chunk_n,
-            batt4_dur, batt8_dur, ldes_dur)
+            sc['batt4_dur'], sc['batt8_dur'], sc['ldes_dur'])
         b4_caps[cs:ce] = cb4
         b8_caps[cs:ce] = cb8
         l_caps[cs:ce] = cl
@@ -217,130 +276,131 @@ def run_coarse_storage(iso, nm_combos, nm_base_scores, demand_arr, supply_matrix
         surplus_days[cs:ce] = csd
 
         chunk_surplus = np.maximum(chunk_supply - demand_arr[np.newaxis, :], 0.0)
-        total_surplus[cs:ce] = chunk_surplus.sum(axis=1)
+        surplus_pct[cs:ce] = chunk_surplus.sum(axis=1) / demand_total
 
-    # Pre-filter: must have curtailment (fast skip in inner loop)
     has_curtailment = hc_arr.astype(bool)
 
-    # Surplus fraction per mix (curtailment as % of demand).
-    # Used to gate per-threshold binning: only bin a mix to threshold t
-    # if its curtailment surplus can bridge the gap from base score to t.
-    surplus_pct = total_surplus / demand_total
-
-    # Pre-compute per-threshold near-miss floors (avoid repeated calls)
+    # Pre-compute per-threshold floors
     threshold_floors = {
         t: max(STORAGE_SWEEP_FLOOR, t / 100.0 - get_near_miss_width(t))
         for t in active_thresholds
     }
 
-    # Per-threshold results
+    # For each mix, compute min gap to any active threshold it could serve.
+    # This determines which bucket (grid size) to use.
+    # gap = max(0, target - base_score) for the closest reachable threshold.
+    min_gap_pp = np.full(n_mixes, 999.0, dtype=np.float64)
+    for t in active_thresholds:
+        target = t / 100.0
+        gap = np.maximum(target - nm_base_scores, 0.0) * 100.0
+        reachable = max_scores >= target
+        mix_gap = np.where(reachable, gap, 999.0)
+        min_gap_pp = np.minimum(min_gap_pp, mix_gap)
+
+    # ── Bucket mixes by gap range ──
+    bucket_edges = [0] + GAP_BUCKET_PP
     results = {t: [] for t in active_thresholds}
-
-    # Process in batches (vectorized Numba kernel per batch)
-    n_batches = (n_mixes + batch_size - 1) // batch_size
     total_feasible = 0
+    total_kernel_evals = 0
 
-    for batch_start in range(0, n_mixes, batch_size):
-        batch_end = min(batch_start + batch_size, n_mixes)
-        batch_idx = np.arange(batch_start, batch_end)
-        n_batch = len(batch_idx)
-        batch_num = batch_start // batch_size + 1
+    for bi in range(len(bucket_edges) - 1):
+        lo_pp, hi_pp = bucket_edges[bi], bucket_edges[bi + 1]
+        mask = (min_gap_pp >= lo_pp) & (min_gap_pp < hi_pp) & has_curtailment
+        bucket_idx = np.where(mask)[0]
+        if len(bucket_idx) == 0:
+            continue
 
-        if batch_num % 10 == 0 or batch_num == 1:
-            print(f"\r    Batch {batch_num}/{n_batches} "
-                  f"({batch_start:,}/{n_mixes:,}), "
-                  f"{total_feasible:,} feasible so far", end="", flush=True)
+        # Build grid for this bucket
+        b4_grid, b8_grid, ldes_grid, h2_grid = _build_bucket_grid(
+            hi_pp, include_h2)
+        n_combos = len(b4_grid) * len(b8_grid) * len(ldes_grid) * len(h2_grid)
+        n_b4, n_b8, n_l, n_h2 = (len(b4_grid), len(b8_grid),
+                                   len(ldes_grid), len(h2_grid))
 
-        # Build supply for batch
-        batch_fracs = nm_combos[batch_idx].astype(np.float64) / 100.0
-        batch_supply = batch_fracs @ supply_matrix
+        print(f"    Bucket {lo_pp}-{hi_pp}pp: {len(bucket_idx):,} mixes × "
+              f"{n_combos:,} combos "
+              f"(b4={n_b4} b8={n_b8} ldes={n_l} h2={n_h2})")
 
-        # Run Numba storage screen with trimmed grids
-        n_h2 = len(eff_h2)
-        batch_scores = s1._batch_mixes_storage_screen(
-            demand_arr, batch_supply, 1.0, n_batch,
-            eff_bat4, eff_bat8, eff_ldes,
-            len(eff_bat4), len(eff_bat8), len(eff_ldes),
-            batt_eff, batt8_eff, ldes_eff,
-            batt4_dur, batt8_dur, ldes_dur,
-            ldes_window, batt8_window,
-            eff_h2, n_h2, h2_eff, h2_dur, h2_window)
+        # Process in batches
+        for batch_start in range(0, len(bucket_idx), batch_size):
+            batch_end = min(batch_start + batch_size, len(bucket_idx))
+            b_idx = bucket_idx[batch_start:batch_end]
+            n_batch = len(b_idx)
 
-        # Extract feasible results and bin to thresholds
-        n_b4, n_b8, n_l = len(eff_bat4), len(eff_bat8), len(eff_ldes)
+            batch_fracs = nm_combos[b_idx].astype(np.float64) / 100.0
+            batch_supply = batch_fracs @ supply_matrix
 
-        for bi in range(n_batch):
-            mi = batch_idx[bi]
-            b4_max = b4_caps[mi] * 100.0 * 1.1
-            b8_max = b8_caps[mi] * 100.0 * 1.1
-            l_max = l_caps[mi] * 100.0 * 1.1
-            n_sd = int(surplus_days[mi])
+            batch_scores = s1._batch_mixes_storage_screen(
+                demand_arr, batch_supply, 1.0, n_batch,
+                b4_grid, b8_grid, ldes_grid,
+                n_b4, n_b8, n_l,
+                sc['batt_eff'], sc['batt8_eff'], sc['ldes_eff'],
+                sc['batt4_dur'], sc['batt8_dur'], sc['ldes_dur'],
+                sc['ldes_window'], sc['batt8_window'],
+                h2_grid, n_h2, sc['h2_eff'], sc['h2_dur'], sc['h2_window'])
 
-            if not has_curtailment[mi]:
-                continue
+            total_kernel_evals += n_batch * n_combos
 
-            # Per-mix base score and surplus for threshold gating
-            mix_base = nm_base_scores[mi]
-            mix_surplus = surplus_pct[mi]
+            # Extract feasible results and bin to thresholds
+            for local_i in range(n_batch):
+                mi = int(b_idx[local_i])
+                b4_max = b4_caps[mi] * 100.0 * 1.1
+                b8_max = b8_caps[mi] * 100.0 * 1.1
+                l_max = l_caps[mi] * 100.0 * 1.1
+                n_sd = int(surplus_days[mi])
+                mix_base = nm_base_scores[mi]
+                mix_surplus = surplus_pct[mi]
 
-            scores = batch_scores[bi]  # (n_combos,) flat array
+                scores = batch_scores[local_i]
 
-            for b4i in range(n_b4):
-                bp = eff_bat4[b4i]
-                if bp > 0 and (n_sd < MIN_SURPLUS_DAYS_FOR_BATTERY or bp > b4_max):
-                    continue
-                for b8i in range(n_b8):
-                    b8p = eff_bat8[b8i]
-                    if b8p > 0 and (n_sd < MIN_SURPLUS_DAYS_FOR_BATTERY or b8p > b8_max):
+                for b4i in range(n_b4):
+                    bp = b4_grid[b4i]
+                    if bp > 0 and (n_sd < MIN_SURPLUS_DAYS_FOR_BATTERY
+                                   or bp > b4_max):
                         continue
-                    for li in range(n_l):
-                        lp = eff_ldes[li]
-                        if lp > 0 and lp > l_max:
+                    for b8i in range(n_b8):
+                        b8p = b8_grid[b8i]
+                        if b8p > 0 and (n_sd < MIN_SURPLUS_DAYS_FOR_BATTERY
+                                        or b8p > b8_max):
                             continue
-                        for h2i in range(n_h2):
-                            h2p = eff_h2[h2i]
-                            if bp == 0 and b8p == 0 and lp == 0 and h2p == 0:
+                        for li in range(n_l):
+                            lp = ldes_grid[li]
+                            if lp > 0 and lp > l_max:
                                 continue
-
-                            idx = (b4i * n_b8 * n_l * n_h2 +
-                                   b8i * n_l * n_h2 +
-                                   li * n_h2 + h2i)
-                            score = scores[idx]
-                            if score < 0:
-                                continue
-
-                            # Bin to thresholds where this mix is a
-                            # genuine near-miss candidate:
-                            #  1. score >= target  (storage reaches it)
-                            #  2. base < target    (actually needs storage)
-                            #  3. surplus >= gap   (enough curtailment to bridge)
-                            #  4. EITHER within near-miss window (base >= floor)
-                            #     OR outlier with surplus >= 1.5x gap
-                            #     (high-solar mixes with massive curtailment)
-                            for t in active_thresholds:
-                                target = t / 100.0
-                                if score < target:
+                            for h2i in range(n_h2):
+                                h2p = h2_grid[h2i]
+                                if bp == 0 and b8p == 0 and lp == 0 and h2p == 0:
                                     continue
-                                if mix_base >= target:
-                                    continue   # already meets threshold w/o storage
-                                gap = target - mix_base
-                                if mix_surplus < gap:
-                                    continue   # not enough surplus to bridge
-                                # Near-miss window OR outlier surplus gate
-                                if (mix_base < threshold_floors[t]
-                                        and mix_surplus < 1.5 * gap):
-                                    continue   # outside window & not an outlier
-                                # H2 only for >= 95%
-                                if h2p > 0 and t < 95:
-                                    continue
-                                results[t].append(
-                                    (int(mi), float(bp), float(b8p),
-                                     float(lp), float(h2p),
-                                     round(score * 100, 2)))
-                                total_feasible += 1
 
-    print(f"\n    Pass 1 complete: {total_feasible:,} total feasible "
-          f"(mix, storage) combos across all thresholds")
+                                idx = (b4i * n_b8 * n_l * n_h2 +
+                                       b8i * n_l * n_h2 +
+                                       li * n_h2 + h2i)
+                                score = scores[idx]
+                                if score < 0:
+                                    continue
+
+                                for t in active_thresholds:
+                                    target = t / 100.0
+                                    if score < target:
+                                        continue
+                                    if mix_base >= target:
+                                        continue
+                                    gap = target - mix_base
+                                    if mix_surplus < gap:
+                                        continue
+                                    if (mix_base < threshold_floors[t]
+                                            and mix_surplus < 1.5 * gap):
+                                        continue
+                                    if h2p > 0 and t < 95:
+                                        continue
+                                    results[t].append(
+                                        (mi, float(bp), float(b8p),
+                                         float(lp), float(h2p),
+                                         round(score * 100, 2)))
+                                    total_feasible += 1
+
+    print(f"    Pass 1 complete: {total_feasible:,} feasible, "
+          f"{total_kernel_evals:,.0f} kernel evals")
     return results
 
 
@@ -609,7 +669,11 @@ def _save_manifest(iso, code_hash, pass1_done, pass2_done):
 # ══════════════════════════════════════════════════════════════════════════════
 
 def process_iso(iso, auto_commit=False, thresholds_filter=None):
-    """Run two-pass storage sweep for one ISO.
+    """Run three-pass adaptive storage sweep for one ISO.
+
+    Pass 0: Max-storage screen (1 combo/mix) → eliminates unreachable mixes
+    Pass 1: Adaptive coarse (gap-bucketed grids) → finds feasible combos
+    Pass 2: Fine 0.05% refinement → sharpens boundary mixes
 
     Args:
         thresholds_filter: list of thresholds to process (None = all)
@@ -652,40 +716,8 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
     demand_arr, supply_matrix = s1.prepare_numpy_profiles(
         iso, demand_norm, supply_profiles)
 
-    # ── Pre-filter: keep only mixes that are genuine near-miss candidates ──
-    # For each mix, check if it qualifies for ANY active threshold:
-    #   1. base_score < target (needs storage)
-    #   2. base_score + surplus_pct >= target (surplus can bridge the gap)
-    #   3. base_score >= floor OR surplus >= 1.5 * gap (within window or outlier)
-    # This mirrors the per-threshold gating in run_coarse_storage but applies
-    # it upfront to avoid scoring mixes that will all be rejected.
-    t_bridge = time.time()
-    demand_total = demand_arr.sum()
-    total_surplus = np.empty(n_raw, dtype=np.float64)
-    for cs in range(0, n_raw, NM_CHUNK):
-        ce = min(cs + NM_CHUNK, n_raw)
-        chunk_fracs = nm_combos[cs:ce].astype(np.float64) / 100.0
-        chunk_supply = chunk_fracs @ supply_matrix
-        chunk_surplus = np.maximum(chunk_supply - demand_arr[np.newaxis, :], 0.0)
-        total_surplus[cs:ce] = chunk_surplus.sum(axis=1)
-    surplus_pct = total_surplus / demand_total
-
-    # A mix qualifies if it's a candidate for at least one active threshold
-    bridge_mask = np.zeros(n_raw, dtype=np.bool_)
-    for t in active_thresholds:
-        target = t / 100.0
-        floor = max(STORAGE_SWEEP_FLOOR, target - get_near_miss_width(t))
-        needs_storage = nm_base_scores < target
-        can_bridge = (nm_base_scores + surplus_pct) >= target
-        gap = target - nm_base_scores
-        in_window = nm_base_scores >= floor
-        is_outlier = surplus_pct >= 1.5 * gap
-        bridge_mask |= (needs_storage & can_bridge & (in_window | is_outlier))
-
-    nm_combos = nm_combos[bridge_mask]
-    nm_base_scores = nm_base_scores[bridge_mask]
-    print(f"  Pre-filter: {n_raw:,} → {len(nm_combos):,} "
-          f"({len(nm_combos)/n_raw*100:.1f}%) in {time.time()-t_bridge:.1f}s")
+    # ── Storage dispatch constants (shared across all passes) ──
+    sc = _get_storage_constants()
 
     # ── JIT warmup ──
     if s1.HAS_NUMBA:
@@ -707,14 +739,36 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
     os.makedirs(STEP1D_OUTPUT_DIR, exist_ok=True)
 
     # ══════════════════════════════════════════════════════
-    # PASS 1: Coarse global storage sweep
+    # PASS 0: Max-storage ceiling screen
+    # ══════════════════════════════════════════════════════
+
+    max_scores = run_max_screen(
+        nm_combos, nm_base_scores, demand_arr, supply_matrix,
+        active_thresholds, sc)
+
+    # Eliminate mixes that can't reach ANY active threshold with max storage
+    min_target = min(active_thresholds) / 100.0
+    reachable = max_scores >= min_target
+    # Also require base < max target (needs storage for at least one threshold)
+    max_target = max(active_thresholds) / 100.0
+    needs_storage = nm_base_scores < max_target
+    keep = reachable & needs_storage
+    n_before = len(nm_combos)
+    nm_combos = nm_combos[keep]
+    nm_base_scores = nm_base_scores[keep]
+    max_scores = max_scores[keep]
+    print(f"    Max-screen filter: {n_before:,} → {len(nm_combos):,} "
+          f"({len(nm_combos)/max(n_before,1)*100:.1f}%)")
+
+    # ══════════════════════════════════════════════════════
+    # PASS 1: Adaptive coarse storage sweep
     # ══════════════════════════════════════════════════════
 
     coarse_results = None
     if not pass1_done:
-        coarse_results = run_coarse_storage(
-            iso, nm_combos, nm_base_scores, demand_arr, supply_matrix,
-            active_thresholds=active_thresholds)
+        coarse_results = run_adaptive_coarse(
+            iso, nm_combos, nm_base_scores, max_scores,
+            demand_arr, supply_matrix, active_thresholds, sc)
 
         # Save coarse results per threshold (filtered to active set)
         for t in active_thresholds:
