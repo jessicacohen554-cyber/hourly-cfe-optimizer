@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wright's Law Learning Curves | The 8,760 Problem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+<style>
+body { background: var(--bg-page); }
+
+.content-wrap {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 20px 60px;
+}
+
+/* Intro card */
+.intro-section {
+    background: var(--bg-card);
+    border-radius: var(--radius-xl);
+    padding: 40px 36px;
+    margin: -20px auto 32px;
+    max-width: 1000px;
+    box-shadow: var(--shadow-md);
+    position: relative;
+    z-index: 2;
+}
+.intro-section h2 {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    color: var(--navy);
+    margin-bottom: 12px;
+}
+.intro-section p {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    margin-bottom: 14px;
+    color: #4A4540;
+}
+.intro-section p:last-child { margin-bottom: 0; }
+
+/* Key finding callouts */
+.key-findings {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin: 24px 0 8px;
+}
+.key-finding {
+    background: var(--bg-page);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    text-align: center;
+    border-top: 3px solid var(--hydro);
+}
+.key-finding .val {
+    font-family: var(--font-data);
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--navy);
+    line-height: 1.1;
+}
+.key-finding .lbl {
+    font-size: 0.8rem;
+    color: #6B7280;
+    margin-top: 6px;
+    line-height: 1.3;
+}
+
+/* Section styling */
+.analysis-section {
+    background: var(--bg-card);
+    border-radius: var(--radius-xl);
+    padding: 32px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow-sm);
+}
+.analysis-section h3 {
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+    color: var(--navy);
+    margin-bottom: 8px;
+}
+.analysis-section .section-desc {
+    font-size: 0.9rem;
+    color: #6B7280;
+    margin-bottom: 20px;
+    line-height: 1.6;
+}
+
+/* Chart containers */
+.chart-box {
+    position: relative;
+    min-height: 380px;
+    margin-bottom: 16px;
+}
+@media (max-width: 768px) {
+    .chart-box { min-height: 300px; }
+    .intro-section { padding: 24px 20px; }
+    .analysis-section { padding: 24px 16px; }
+    .key-findings { grid-template-columns: 1fr 1fr; }
+}
+
+/* Zone annotation legend */
+.zone-legend {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin: 12px 0 4px;
+    font-size: 0.82rem;
+    color: #6B7280;
+}
+.zone-legend span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.zone-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    display: inline-block;
+}
+
+/* Insight boxes */
+.insight {
+    background: rgba(14, 165, 233, 0.06);
+    border-left: 4px solid var(--hydro);
+    border-radius: var(--radius-md);
+    padding: 16px 20px;
+    margin-top: 16px;
+    font-size: 0.88rem;
+    line-height: 1.6;
+    color: #374151;
+}
+.insight strong { color: var(--navy); }
+
+/* ISO spend chart grid */
+.iso-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+}
+.iso-chart-card {
+    background: var(--bg-page);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+}
+.iso-chart-card h4 {
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    color: var(--navy);
+    margin-bottom: 8px;
+}
+.iso-chart-box {
+    position: relative;
+    min-height: 220px;
+}
+
+/* Threshold selector */
+.threshold-selector {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+.threshold-selector label {
+    font-family: var(--font-heading);
+    font-size: 0.9rem;
+    color: var(--navy);
+    font-weight: 600;
+}
+.threshold-selector select {
+    font-family: var(--font-body);
+    font-size: 0.88rem;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+    color: var(--navy);
+    cursor: pointer;
+}
+</style>
+</head>
+<body>
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+
+<div class="header" id="pageHeader">
+    <h1>Wright's Law Learning Curves</h1>
+    <div class="subtitle">How collective procurement drives clean energy cost declines</div>
+    <div class="header-accent"></div>
+</div>
+
+<div class="content-wrap">
+
+<!-- Intro Section -->
+<div class="intro-section">
+    <h2>The Critical Mass Question</h2>
+    <p>Wright's Law predicts that technology costs decline by a fixed percentage each time cumulative production doubles. Solar panels followed this pattern &mdash; falling 99% since 1976. But clean firm generation (advanced nuclear, CCS-CCGT) hasn't hit the first doubling yet. The question isn't <em>whether</em> costs will fall, but <em>when enough buyers commit</em> to trigger the learning curve.</p>
+    <p>This analysis models what happens when C&I electricity buyers collectively adopt hourly CFE matching (Strategy 2C) at different participation levels. Below a critical mass threshold, new-build clean firm stays at FOAK pricing. Above it, Wright's Law activates and costs plummet toward NOAK levels &mdash; benefiting every participant.</p>
+
+    <div class="key-findings" id="keyFindings">
+        <div class="key-finding">
+            <div class="val" id="kfCriticalMass">--</div>
+            <div class="lbl">C&I participation to trigger learning at 90% CFE</div>
+        </div>
+        <div class="key-finding">
+            <div class="val" id="kfFoakCost">--</div>
+            <div class="lbl">Blended $/MWh before critical mass</div>
+        </div>
+        <div class="key-finding">
+            <div class="val" id="kfNoakCost">--</div>
+            <div class="lbl">Blended $/MWh at full NOAK pricing</div>
+        </div>
+        <div class="key-finding">
+            <div class="val" id="kfSavings">--</div>
+            <div class="lbl">Cost reduction from FOAK to NOAK</div>
+        </div>
+    </div>
+</div>
+
+<!-- Section 1: Strategy Cost Comparison -->
+<div class="analysis-section">
+    <h3>Strategy Cost Trajectories at 90% CFE</h3>
+    <p class="section-desc">How procurement strategy costs evolve as more C&I buyers participate. Strategy 2C (hourly matching with new-build investment) is the only strategy that gets <em>cheaper</em> at scale &mdash; once critical mass triggers Wright's Law learning curves. All others degrade or stay flat.</p>
+    <div class="chart-box"><canvas id="chartStrategyComparison"></canvas></div>
+    <div class="zone-legend">
+        <span><span class="zone-dot" style="background: rgba(239, 68, 68, 0.15);"></span> Pre-critical-mass (FOAK pricing)</span>
+        <span><span class="zone-dot" style="background: rgba(34, 197, 94, 0.15);"></span> Post-critical-mass (learning activated)</span>
+    </div>
+    <div class="insight">
+        <strong>Key finding:</strong> Strategy 2C crosses below Strategy 3A (annual matching) at <span id="crossoverPct">--</span> participation, and continues declining. By 80% adoption, 2C delivers the lowest cost of any strategy while driving the most decarbonization.
+    </div>
+</div>
+
+<!-- Section 2: Technology LCOE Trajectories -->
+<div class="analysis-section">
+    <h3>Technology Learning Curves: FOAK to NOAK</h3>
+    <p class="section-desc">Wright's Law cost trajectories for CCS-CCGT and advanced nuclear, gated by critical mass. Below the first-doubling threshold (8 GW CCS, 5 GW nuclear), costs stay at FOAK levels. After critical mass, they follow the standard learning curve toward NOAK pricing.</p>
+    <div class="chart-box"><canvas id="chartLcoeTraj"></canvas></div>
+    <div class="insight">
+        <strong>The doubling threshold matters.</strong> CCS-CCGT needs ~8 GW of global deployment to trigger its learning curve (down from $<span id="ccsFoak">--</span>/MWh to $<span id="ccsNoak">--</span>/MWh). Nuclear needs ~5 GW (down from $<span id="nucFoak">--</span>/MWh to $<span id="nucNoak">--</span>/MWh). At 25% C&I participation targeting 90% CFE, both thresholds are crossed.
+    </div>
+</div>
+
+<!-- Section 3: Critical Mass by CFE Threshold -->
+<div class="analysis-section">
+    <h3>Critical Mass: Participation Required by CFE Threshold</h3>
+    <p class="section-desc">Higher CFE targets require more clean firm generation per participant, meaning fewer participants are needed to collectively cross the first-doubling threshold. At 99% CFE, just 5% participation triggers learning. At 90% CFE, it takes 25%.</p>
+    <div class="chart-box" style="min-height: 320px;"><canvas id="chartCriticalMass"></canvas></div>
+    <div class="insight">
+        <strong>Ambitious targets are self-reinforcing.</strong> The companies that set the highest CFE targets contribute the most new-build capacity per MWh of demand &mdash; reaching critical mass faster and unlocking cost declines for everyone, including latecomers at lower thresholds.
+    </div>
+</div>
+
+<!-- Section 4: Per-ISO Spend Decomposition -->
+<div class="analysis-section">
+    <h3>Per-ISO Spend Decomposition at 90% CFE</h3>
+    <p class="section-desc">Where the money goes: existing clean premium payments vs. new-build investment, by ISO. ISOs with large existing nuclear fleets (PJM, NYISO, NEISO) have high premium shares. ISOs with less existing clean (ERCOT, SPP) are predominantly new-build.</p>
+
+    <div class="threshold-selector">
+        <label for="partSelect">Participation level:</label>
+        <select id="partSelect"></select>
+    </div>
+
+    <div class="iso-grid" id="isoGrid"></div>
+
+    <div class="insight" style="margin-top: 20px;">
+        <strong>PJM is the new-build engine.</strong> With 843 TWh of demand, even modest participation in PJM generates massive new-build volume &mdash; the single largest contributor to reaching Wright's Law critical mass globally.
+    </div>
+</div>
+
+</div><!-- /content-wrap -->
+
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="dashboard.html">Grid Simulation</a>
+        <a href="procurement_strategies.html">Procurement Strategies</a>
+        <a href="research_paper.html">Research Paper</a>
+    </div>
+    <p>The 8,760 Problem &mdash; Hourly CFE Optimization Model</p>
+</footer>
+<div class="bottom-banner"></div>
+
+<script>
+(function() {
+'use strict';
+
+// ══════════════════════════════════════════════════════════════════════════════
+// DATA (loaded inline from Step 8 JSON — will be replaced by fetch in prod)
+// ══════════════════════════════════════════════════════════════════════════════
+
+let DATA = null;
+
+async function loadData() {
+    try {
+        const resp = await fetch('../data/step8-wrights-law/wrights_law_curves.json');
+        DATA = await resp.json();
+    } catch(e) {
+        console.warn('Failed to fetch JSON, using embedded fallback');
+        DATA = null;
+    }
+    if (!DATA) return;
+    populateKeyFindings();
+    renderStrategyComparison();
+    renderLcoeTrajectories();
+    renderCriticalMass();
+    buildIsoSpendSection();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// KEY FINDINGS
+// ══════════════════════════════════════════════════════════════════════════════
+
+function populateKeyFindings() {
+    const fig8 = DATA.figure8;
+    const cm = fig8.critical_mass_pct_at_90;
+    const foakCost = fig8.blended_2c_at_90[0];
+    const noakCost = fig8.blended_2c_noak_at_90[fig8.blended_2c_noak_at_90.length - 1];
+    const savings = ((foakCost - noakCost) / foakCost * 100);
+
+    document.getElementById('kfCriticalMass').textContent = cm ? (cm * 100).toFixed(0) + '%' : 'N/A';
+    document.getElementById('kfFoakCost').textContent = '$' + foakCost.toFixed(0);
+    document.getElementById('kfNoakCost').textContent = '$' + noakCost.toFixed(0);
+    document.getElementById('kfSavings').textContent = savings.toFixed(0) + '%';
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CHART 1: STRATEGY COST COMPARISON
+// ══════════════════════════════════════════════════════════════════════════════
+
+function renderStrategyComparison() {
+    const ctx = document.getElementById('chartStrategyComparison').getContext('2d');
+    const fig8 = DATA.figure8;
+    const parts = fig8.participation_pcts.map(p => (p * 100).toFixed(0) + '%');
+    const cm = fig8.critical_mass_pct_at_90;
+    const cmIdx = cm ? fig8.participation_pcts.indexOf(cm) : -1;
+
+    // Find crossover: where 2C gated < 3A
+    let crossoverLabel = 'N/A';
+    for (let i = 0; i < fig8.blended_2c_at_90.length; i++) {
+        if (fig8.blended_2c_at_90[i] < fig8.strat_3a_at_90[i]) {
+            crossoverLabel = (fig8.participation_pcts[i] * 100).toFixed(0) + '%';
+            break;
+        }
+    }
+    document.getElementById('crossoverPct').textContent = crossoverLabel;
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: parts,
+            datasets: [
+                {
+                    label: '2C: Hourly + New-Build (gated)',
+                    data: fig8.blended_2c_at_90,
+                    borderColor: RESOURCE_COLORS.hydro,
+                    backgroundColor: RESOURCE_COLORS.hydroBg,
+                    borderWidth: 3,
+                    pointRadius: 4,
+                    pointHoverRadius: 7,
+                    tension: 0.3,
+                    fill: false,
+                    order: 1
+                },
+                {
+                    label: '2C: NOAK trajectory',
+                    data: fig8.blended_2c_noak_at_90,
+                    borderColor: RESOURCE_COLORS.hydro,
+                    borderDash: [6, 4],
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: 0.3,
+                    fill: false,
+                    order: 2
+                },
+                {
+                    label: '1A: Consequential',
+                    data: fig8.strat_1a_at_90,
+                    borderColor: RESOURCE_COLORS.wind,
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    tension: 0.3,
+                    fill: false,
+                    order: 3
+                },
+                {
+                    label: '2A: Hourly (no credit)',
+                    data: fig8.strat_2a_at_90,
+                    borderColor: RESOURCE_COLORS.nuclear,
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    tension: 0.3,
+                    fill: false,
+                    order: 4
+                },
+                {
+                    label: '2B: Hourly (free-ride)',
+                    data: fig8.strat_2b_at_90,
+                    borderColor: RESOURCE_COLORS.ldes,
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    tension: 0.3,
+                    fill: false,
+                    order: 5
+                },
+                {
+                    label: '3A: Annual matching',
+                    data: fig8.strat_3a_at_90,
+                    borderColor: RESOURCE_COLORS.solar,
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    tension: 0.3,
+                    fill: false,
+                    order: 6
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: { usePointStyle: true, padding: 16, font: { size: 12 } }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            return ctx.dataset.label + ': $' + ctx.parsed.y.toFixed(1) + '/MWh';
+                        }
+                    }
+                },
+                annotation: cmIdx >= 0 ? {
+                    annotations: {
+                        criticalMassLine: {
+                            type: 'line',
+                            xMin: cmIdx,
+                            xMax: cmIdx,
+                            borderColor: 'rgba(239, 68, 68, 0.6)',
+                            borderWidth: 2,
+                            borderDash: [8, 4],
+                            label: {
+                                display: true,
+                                content: 'Critical Mass',
+                                position: 'start',
+                                backgroundColor: 'rgba(239, 68, 68, 0.85)',
+                                color: '#fff',
+                                font: { size: 11, weight: 'bold' },
+                                padding: 6
+                            }
+                        },
+                        foakZone: {
+                            type: 'box',
+                            xMin: 0,
+                            xMax: cmIdx,
+                            backgroundColor: 'rgba(239, 68, 68, 0.04)',
+                            borderWidth: 0
+                        },
+                        noakZone: {
+                            type: 'box',
+                            xMin: cmIdx,
+                            xMax: parts.length - 1,
+                            backgroundColor: 'rgba(34, 197, 94, 0.04)',
+                            borderWidth: 0
+                        }
+                    }
+                } : {}
+            },
+            scales: {
+                x: {
+                    title: { display: true, text: 'C&I Participation Level', font: { weight: 'bold' } },
+                    grid: { display: false }
+                },
+                y: {
+                    title: { display: true, text: 'Blended Cost ($/MWh)', font: { weight: 'bold' } },
+                    min: 20,
+                    max: 90,
+                    grid: { color: 'rgba(0,0,0,0.06)' }
+                }
+            }
+        }
+    });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CHART 2: LCOE TRAJECTORIES
+// ══════════════════════════════════════════════════════════════════════════════
+
+function renderLcoeTrajectories() {
+    const ctx = document.getElementById('chartLcoeTraj').getContext('2d');
+    const lcoe = DATA.lcoe_trajectories;
+
+    document.getElementById('ccsFoak').textContent = lcoe.ccs_foak.toFixed(0);
+    document.getElementById('ccsNoak').textContent = lcoe.ccs_noak.toFixed(0);
+    document.getElementById('nucFoak').textContent = lcoe.nuclear_foak.toFixed(0);
+    document.getElementById('nucNoak').textContent = lcoe.nuclear_noak.toFixed(0);
+
+    // Use SBTi years as x-axis (unique sorted)
+    const years = DATA.metadata.sbti_years;
+    const uniqueYears = [...new Set(years)].sort((a, b) => a - b);
+    const yearLabels = uniqueYears.map(y => y.toFixed(0));
+
+    // FOAK/NOAK as horizontal reference lines
+    new Chart(ctx, {
+        type: 'scatter',
+        data: {
+            datasets: [
+                {
+                    label: 'CCS-CCGT FOAK',
+                    data: uniqueYears.map(y => ({x: y, y: lcoe.ccs_foak})),
+                    borderColor: RESOURCE_COLORS.ccs,
+                    borderDash: [8, 4],
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    showLine: true,
+                    fill: false
+                },
+                {
+                    label: 'CCS-CCGT NOAK',
+                    data: uniqueYears.map(y => ({x: y, y: lcoe.ccs_noak})),
+                    borderColor: RESOURCE_COLORS.ccs,
+                    borderDash: [3, 3],
+                    borderWidth: 1.5,
+                    pointRadius: 0,
+                    showLine: true,
+                    fill: false
+                },
+                {
+                    label: 'Nuclear FOAK',
+                    data: uniqueYears.map(y => ({x: y, y: lcoe.nuclear_foak})),
+                    borderColor: RESOURCE_COLORS.nuclear,
+                    borderDash: [8, 4],
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    showLine: true,
+                    fill: false
+                },
+                {
+                    label: 'Nuclear NOAK',
+                    data: uniqueYears.map(y => ({x: y, y: lcoe.nuclear_noak})),
+                    borderColor: RESOURCE_COLORS.nuclear,
+                    borderDash: [3, 3],
+                    borderWidth: 1.5,
+                    pointRadius: 0,
+                    showLine: true,
+                    fill: false
+                },
+                {
+                    label: 'CCS-CCGT Learning Curve',
+                    data: (() => {
+                        // Plot learning curve from 2030 to 2050
+                        const pts = [];
+                        for (let y = 2025; y <= 2050; y++) {
+                            const dur = 2040 - 2030;
+                            const active = Math.max(0, Math.min(1, (y - 2030) / dur));
+                            const frac = Math.pow(active, 0.6);
+                            const cost = lcoe.ccs_foak * (1 - frac) + lcoe.ccs_noak * frac;
+                            pts.push({x: y, y: cost});
+                        }
+                        return pts;
+                    })(),
+                    borderColor: RESOURCE_COLORS.ccs,
+                    backgroundColor: RESOURCE_COLORS.ccsBg,
+                    borderWidth: 3,
+                    pointRadius: 0,
+                    pointHoverRadius: 5,
+                    showLine: true,
+                    fill: true,
+                    tension: 0.4
+                },
+                {
+                    label: 'Nuclear Learning Curve',
+                    data: (() => {
+                        const pts = [];
+                        for (let y = 2025; y <= 2050; y++) {
+                            const dur = 2040 - 2030;
+                            const active = Math.max(0, Math.min(1, (y - 2030) / dur));
+                            const frac = Math.pow(active, 0.6);
+                            const cost = lcoe.nuclear_foak * (1 - frac) + lcoe.nuclear_noak * frac;
+                            pts.push({x: y, y: cost});
+                        }
+                        return pts;
+                    })(),
+                    borderColor: RESOURCE_COLORS.nuclear,
+                    backgroundColor: RESOURCE_COLORS.nuclearBg,
+                    borderWidth: 3,
+                    pointRadius: 0,
+                    pointHoverRadius: 5,
+                    showLine: true,
+                    fill: true,
+                    tension: 0.4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'nearest', intersect: false },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: { usePointStyle: true, padding: 12, font: { size: 11 },
+                        filter: function(item) {
+                            // Hide FOAK/NOAK reference lines from legend
+                            return !item.text.includes('FOAK') && !item.text.includes('NOAK');
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            return ctx.dataset.label + ': $' + ctx.parsed.y.toFixed(0) + '/MWh';
+                        }
+                    }
+                },
+                annotation: {
+                    annotations: {
+                        foakStart: {
+                            type: 'line',
+                            xMin: 2030,
+                            xMax: 2030,
+                            borderColor: 'rgba(107, 114, 128, 0.4)',
+                            borderWidth: 1.5,
+                            borderDash: [4, 4],
+                            label: {
+                                display: true,
+                                content: 'FOAK Start',
+                                position: 'start',
+                                backgroundColor: 'rgba(107, 114, 128, 0.8)',
+                                color: '#fff',
+                                font: { size: 10 },
+                                padding: 4
+                            }
+                        },
+                        noakTarget: {
+                            type: 'line',
+                            xMin: 2040,
+                            xMax: 2040,
+                            borderColor: 'rgba(34, 197, 94, 0.4)',
+                            borderWidth: 1.5,
+                            borderDash: [4, 4],
+                            label: {
+                                display: true,
+                                content: 'NOAK Target',
+                                position: 'start',
+                                backgroundColor: 'rgba(34, 197, 94, 0.8)',
+                                color: '#fff',
+                                font: { size: 10 },
+                                padding: 4
+                            }
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    type: 'linear',
+                    title: { display: true, text: 'Year', font: { weight: 'bold' } },
+                    min: 2025,
+                    max: 2050,
+                    ticks: { stepSize: 5 },
+                    grid: { display: false }
+                },
+                y: {
+                    title: { display: true, text: 'LCOE ($/MWh)', font: { weight: 'bold' } },
+                    min: 50,
+                    max: 170,
+                    grid: { color: 'rgba(0,0,0,0.06)' }
+                }
+            }
+        }
+    });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CHART 3: CRITICAL MASS BY THRESHOLD
+// ══════════════════════════════════════════════════════════════════════════════
+
+function renderCriticalMass() {
+    const ctx = document.getElementById('chartCriticalMass').getContext('2d');
+    const cm = DATA.critical_mass;
+
+    // Filter to thresholds where critical mass is achievable
+    const entries = Object.entries(cm)
+        .filter(([_, v]) => v !== null)
+        .map(([k, v]) => ({ threshold: parseFloat(k), pct: v * 100 }))
+        .sort((a, b) => a.threshold - b.threshold);
+
+    const labels = entries.map(e => e.threshold >= 99.9 ? '≥' + e.threshold + '%' : e.threshold + '%');
+    const values = entries.map(e => e.pct);
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'C&I Participation Required',
+                data: values,
+                backgroundColor: entries.map(e =>
+                    e.pct <= 10 ? 'rgba(34, 197, 94, 0.7)' :
+                    e.pct <= 25 ? 'rgba(14, 165, 233, 0.7)' :
+                    e.pct <= 50 ? 'rgba(245, 158, 11, 0.7)' :
+                    'rgba(239, 68, 68, 0.7)'
+                ),
+                borderColor: entries.map(e =>
+                    e.pct <= 10 ? RESOURCE_COLORS.wind :
+                    e.pct <= 25 ? RESOURCE_COLORS.hydro :
+                    e.pct <= 50 ? RESOURCE_COLORS.solar :
+                    '#EF4444'
+                ),
+                borderWidth: 2,
+                borderRadius: 6,
+                barPercentage: 0.7
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            return ctx.parsed.y + '% participation needed';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    title: { display: true, text: 'CFE Threshold', font: { weight: 'bold' } },
+                    grid: { display: false }
+                },
+                y: {
+                    title: { display: true, text: 'Participation Required (%)', font: { weight: 'bold' } },
+                    min: 0,
+                    max: 100,
+                    grid: { color: 'rgba(0,0,0,0.06)' }
+                }
+            }
+        }
+    });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SECTION 4: PER-ISO SPEND DECOMPOSITION
+// ══════════════════════════════════════════════════════════════════════════════
+
+const isoCharts = {};
+
+function buildIsoSpendSection() {
+    const parts = DATA.metadata.participation_pcts;
+    const sel = document.getElementById('partSelect');
+    parts.forEach((p, i) => {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = (p * 100).toFixed(0) + '% C&I demand';
+        if (p === 0.20) opt.selected = true;
+        sel.appendChild(opt);
+    });
+    sel.addEventListener('change', () => renderIsoSpend(parseInt(sel.value)));
+
+    // Build grid
+    const grid = document.getElementById('isoGrid');
+    const isoColorMap = {
+        'CAISO': ISO_COLORS.CAISO, 'ERCOT': ISO_COLORS.ERCOT, 'PJM': ISO_COLORS.PJM,
+        'NYISO': ISO_COLORS.NYISO, 'NEISO': ISO_COLORS.NEISO, 'MISO': ISO_COLORS.MISO,
+        'SPP': ISO_COLORS.SPP
+    };
+    DATA.metadata.isos.forEach(iso => {
+        const card = document.createElement('div');
+        card.className = 'iso-chart-card';
+        card.innerHTML = `<h4 style="border-left: 3px solid ${isoColorMap[iso] || '#6B7280'}; padding-left: 8px;">${iso}</h4><div class="iso-chart-box"><canvas id="isoChart_${iso}"></canvas></div>`;
+        grid.appendChild(card);
+    });
+
+    // Initial render at 20% (index 4)
+    const defaultIdx = parts.indexOf(0.20);
+    renderIsoSpend(defaultIdx >= 0 ? defaultIdx : 4);
+}
+
+function renderIsoSpend(partIdx) {
+    const spend = DATA.iso_spend_90;
+    DATA.metadata.isos.forEach(iso => {
+        const canvas = document.getElementById('isoChart_' + iso);
+        if (!canvas) return;
+
+        // Destroy existing chart
+        if (isoCharts[iso]) isoCharts[iso].destroy();
+
+        const isoData = spend[iso];
+        const existSpend = isoData.existing_spend[partIdx];
+        const nbSpend = isoData.newbuild_spend[partIdx];
+        const total = existSpend + nbSpend;
+
+        isoCharts[iso] = new Chart(canvas.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Existing Clean Premium', 'New-Build Investment'],
+                datasets: [{
+                    data: [existSpend, nbSpend],
+                    backgroundColor: [
+                        'rgba(14, 165, 233, 0.65)',
+                        'rgba(124, 58, 237, 0.65)'
+                    ],
+                    borderColor: [RESOURCE_COLORS.hydro, RESOURCE_COLORS.nuclear],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '55%',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                const val = ctx.parsed;
+                                const pct = total > 0 ? (val / total * 100).toFixed(0) : 0;
+                                return ctx.label + ': $' + val.toFixed(0) + 'M (' + pct + '%)';
+                            }
+                        }
+                    }
+                }
+            },
+            plugins: [{
+                id: 'centerText',
+                afterDraw: function(chart) {
+                    const {ctx, chartArea} = chart;
+                    const cx = (chartArea.left + chartArea.right) / 2;
+                    const cy = (chartArea.top + chartArea.bottom) / 2;
+                    ctx.save();
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.font = 'bold 14px "Rajdhani", sans-serif';
+                    ctx.fillStyle = '#1E3A5F';
+                    ctx.fillText('$' + (total / 1000).toFixed(1) + 'B', cx, cy - 8);
+                    ctx.font = '11px "Plus Jakarta Sans", sans-serif';
+                    ctx.fillStyle = '#6B7280';
+                    ctx.fillText('total', cx, cy + 10);
+                    ctx.restore();
+                }
+            }]
+        });
+    });
+}
+
+// Initialize
+loadData();
+
+})();
+</script>
+</body>
+</html>
