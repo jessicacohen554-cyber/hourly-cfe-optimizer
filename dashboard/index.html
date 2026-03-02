@@ -15,31 +15,22 @@
 <style>
 /* ========== PAGE-SPECIFIC BODY ========== */
 body {
-    background: #FFFFFF;
+    background: var(--bg-page-white);
 }
 
 /* ========== NARRATIVE STORY SECTIONS (grid_story-inspired) ========== */
 #narrativeSection {
-    background: #F3F4F8;
-    border-radius: 16px;
-    max-width: 1440px;
+    background: var(--bg-alt-warm);
+    border-radius: var(--radius-xl);
+    max-width: var(--max-content-wide);
     margin: 24px auto 0;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+    box-shadow: var(--shadow-xl);
     padding: 20px 0 40px;
 }
-.story-section {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 72px 48px;
-    opacity: 0;
-    transform: translateY(40px);
-    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
-                transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.story-section.visible {
-    opacity: 1;
-    transform: translateY(0);
-}
+/* story-section, story-badge, story-badge-red, story-badge-green,
+   story-section h2, story-lead, story-section p,
+   story-stat-row, story-stat-card, story-stat-label, story-stat-value, story-stat-sub
+   — all provided by shared.css */
 .cta-card:hover {
     transform: translateY(-4px) !important;
     box-shadow: 0 8px 28px rgba(0,0,0,0.15) !important;
@@ -53,94 +44,6 @@ body {
 .story-content {
     position: relative;
 }
-.story-badge {
-    display: inline-block;
-    padding: 5px 18px;
-    border-radius: 9999px;
-    font-size: 0.8rem;
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
-    font-weight: 700;
-    letter-spacing: 1px;
-    text-transform: capitalize;
-    margin-bottom: 18px;
-    background: rgba(26,39,68,0.1);
-    color: #1A2744;
-}
-.story-badge-orange {
-    background: rgba(239,68,68,0.1);
-    color: #DC2626;
-}
-.story-badge-green {
-    background: rgba(34,197,94,0.12);
-    color: #7A8B5C;
-}
-.story-badge-red {
-    background: rgba(239,68,68,0.12);
-    color: #DC2626;
-}
-.story-section h2 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
-    font-size: 2.6rem;
-    font-weight: 800;
-    color: #DC2626;
-    margin-bottom: 20px;
-    letter-spacing: -0.5px;
-    line-height: 1.2;
-}
-.story-lead {
-    font-size: 1.05rem;
-    color: #1A1A1A;
-    line-height: 1.75;
-    margin-bottom: 18px;
-}
-.story-section p {
-    font-size: 0.98rem;
-    color: #1A1A1A;
-    line-height: 1.75;
-    margin-bottom: 16px;
-}
-.story-stat-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-    gap: 20px;
-    margin: 36px 0;
-}
-.story-stat-card {
-    background: rgba(255,255,255,0.92);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(221,208,192,0.5);
-    border-radius: 16px;
-    padding: 32px 24px;
-    text-align: center;
-    box-shadow: 0 4px 6px -4px rgba(0,0,0,0.04);
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.story-stat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
-}
-.story-stat-label {
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: #6B7280;
-    letter-spacing: 0.8px;
-    text-transform: capitalize;
-    margin-bottom: 10px;
-}
-.story-stat-value {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
-    font-size: 2.4rem;
-    font-weight: 800;
-    color: var(--navy);
-    line-height: 1;
-}
-.story-stat-sub {
-    font-size: 0.88rem;
-    color: #6B7280;
-    margin-top: 8px;
-}
 .story-insight-box {
     display: flex;
     gap: 16px;
@@ -149,11 +52,11 @@ body {
     -webkit-backdrop-filter: blur(8px);
     border: 1px solid rgba(221,208,192,0.5);
     border-left: 4px solid #C75B4A;
-    border-radius: 0 16px 16px 0;
+    border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
     padding: 24px 28px;
     margin: 28px 0;
     font-size: 0.92rem;
-    color: #1A1A1A;
+    color: var(--text-primary);
     line-height: 1.7;
     box-shadow: 0 4px 6px -4px rgba(0,0,0,0.04);
 }
@@ -166,8 +69,8 @@ body {
 /* Hero callout cards (narrative intro) */
 .hero-callout-row {
     display: flex;
-    gap: 24px;
-    margin: 32px 0;
+    gap: var(--space-lg);
+    margin: var(--space-xl) 0;
     flex-wrap: wrap;
 }
 .hero-callout-card {
@@ -175,7 +78,7 @@ body {
     min-width: 140px;
     text-align: center;
     padding: 28px 16px;
-    border-radius: 16px;
+    border-radius: var(--radius-xl);
     background: linear-gradient(135deg, rgba(26,39,68,0.04) 0%, rgba(26,39,68,0.08) 100%);
     border: 1px solid rgba(26,39,68,0.1);
 }
@@ -196,7 +99,7 @@ body {
 }
 .hero-callout-label {
     font-size: 0.8rem;
-    color: #6B7280;
+    color: var(--text-muted);
     margin-top: 6px;
     font-weight: 600;
     letter-spacing: 1px;
@@ -238,22 +141,22 @@ body {
 /* Energy spectrum accent bar */
 .energy-spectrum-bar {
     height: 3px;
-    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 15%, #22C55E 35%, #F59E0B 55%, #EF4444 80%, #DC2626 100%);
+    background: linear-gradient(90deg, var(--navy) 0%, var(--hydro) 15%, var(--wind) 35%, var(--solar) 55%, var(--red) 80%, var(--red-dark) 100%);
     border-radius: 2px;
-    margin: 32px 0;
+    margin: var(--space-xl) 0;
     opacity: 0.6;
 }
 
 /* ========== SCROLLYTELLING (grid_story-inspired) ========== */
 .story-divider-wrap {
-    max-width: 1400px;
+    max-width: var(--max-content-wide);
     margin: 0 auto;
     padding: 0;
 }
 .story-divider {
     border: none;
     height: 3px;
-    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 15%, #22C55E 35%, #F59E0B 55%, #EF4444 80%, #DC2626 100%);
+    background: linear-gradient(90deg, var(--navy) 0%, var(--hydro) 15%, var(--wind) 35%, var(--solar) 55%, var(--red) 80%, var(--red-dark) 100%);
     margin: 0;
     opacity: 0.7;
 }
@@ -261,7 +164,7 @@ body {
 .scrolly-container {
     position: relative;
     display: flex;
-    max-width: 1400px;
+    max-width: var(--max-content-wide);
     margin: 0 auto;
 }
 
@@ -273,7 +176,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 32px;
+    padding: var(--space-xl);
 }
 
 .scrolly-chart-wrap {
@@ -281,7 +184,7 @@ body {
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(221,208,192,0.5);
-    border-radius: 16px;
+    border-radius: var(--radius-xl);
     padding: 32px 28px;
     box-shadow: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
     min-height: 430px;
@@ -337,7 +240,7 @@ body {
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(221,208,192,0.5);
-    border-radius: 16px;
+    border-radius: var(--radius-xl);
     padding: 32px 32px;
     transition: border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1),
                 box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1),
@@ -345,10 +248,10 @@ body {
 }
 
 .step-card h3 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.82rem;
     font-weight: 800;
-    color: #DC2626;
+    color: var(--red-dark);
     margin-bottom: 14px;
     line-height: 1.25;
     letter-spacing: -0.3px;
@@ -356,7 +259,7 @@ body {
 
 .step-card p {
     font-size: 0.95rem;
-    color: #1A1A1A;
+    color: var(--text-primary);
     line-height: 1.75;
     margin-bottom: 0;
 }
@@ -364,9 +267,9 @@ body {
 .step-cost-callout {
     margin-top: 16px;
     padding: 12px 16px;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     font-size: 0.92rem;
-    color: #1A1A1A;
+    color: var(--text-primary);
 }
 .step-cost-callout.step-cost-green {
     background: rgba(34,197,94,0.08);
@@ -376,11 +279,11 @@ body {
     color: #7A8B5C;
 }
 .step-cost-callout.step-cost-red {
-    background: rgba(239,68,68,0.08);
+    background: var(--red-light);
     border: 1px solid rgba(239,68,68,0.15);
 }
 .step-cost-callout.step-cost-red strong {
-    color: #DC2626;
+    color: var(--red-dark);
 }
 @media (max-width: 480px) {
     .step-cost-callout {
@@ -402,7 +305,7 @@ body {
         margin-bottom: 18px;
         background: rgba(255,255,255,0.92);
         border: 1px solid rgba(221,208,192,0.5);
-        border-radius: 12px;
+        border-radius: var(--radius-lg);
         padding: 12px 8px;
     }
     .step-inline-chart canvas {
@@ -469,7 +372,7 @@ body {
     text-align: center;
 }
 .curtail-bar-label {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+    font-family: var(--font-heading);
     font-size: 0.92rem;
     font-weight: 600;
     color: var(--text-muted);
@@ -490,7 +393,7 @@ body {
     border-radius: 0;
 }
 .curtail-bar-value {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+    font-family: var(--font-heading);
     font-size: 0.9rem;
     font-weight: 700;
     color: var(--navy);
@@ -499,23 +402,23 @@ body {
 
 /* ========== HOMEPAGE SPECIFIC ========== */
 .homepage-hero {
-    background: #F3F4F8;
-    max-width: 900px;
+    background: var(--bg-alt-warm);
+    max-width: var(--max-prose);
     margin: 0 auto;
     padding: 48px 48px 24px;
 }
 .homepage-hero h1 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 2.6rem;
     font-weight: 800;
-    color: #1A2744;
+    color: var(--navy);
     letter-spacing: -0.5px;
     line-height: 1.15;
     margin-bottom: 16px;
 }
 .homepage-hero .subtitle {
     font-size: 1.05rem;
-    color: #374151;
+    color: var(--text-secondary);
     line-height: 1.7;
     max-width: 750px;
 }
@@ -523,19 +426,19 @@ body {
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
-    max-width: 900px;
+    max-width: var(--max-prose);
     margin: 0 auto;
     padding: 12px 48px 32px;
-    background: #F3F4F8;
+    background: var(--bg-alt-warm);
 }
 .nav-btn {
     display: inline-flex;
     align-items: center;
     gap: 8px;
     padding: 12px 22px;
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     text-decoration: none;
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 0.88rem;
     font-weight: 700;
     letter-spacing: 0.02em;
@@ -547,13 +450,13 @@ body {
     box-shadow: 0 4px 16px rgba(0,0,0,0.12);
 }
 .nav-btn-primary {
-    background: #0EA5E9;
+    background: var(--hydro);
     color: #fff;
 }
 .nav-btn-secondary {
     background: #fff;
-    color: #1A2744;
-    border-color: #D4D8E0;
+    color: var(--navy);
+    border-color: var(--border);
 }
 @media (max-width: 768px) {
     .homepage-hero { padding: 32px 20px 16px; }
@@ -564,9 +467,9 @@ body {
 
 /* Narrative section wrapper for homepage */
 .narrative-wrap {
-    background: #F3F4F8;
-    border-radius: 0 0 16px 16px;
-    max-width: 1440px;
+    background: var(--bg-alt-warm);
+    border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+    max-width: var(--max-content-wide);
     margin: 0 auto;
     padding: 0 0 40px;
 }
@@ -574,11 +477,11 @@ body {
 /* ========== CONCLUSION PANEL ========== */
 .conclusion-panel {
     background: linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 100%);
-    border: 1px solid #E5E7EB;
+    border: 1px solid var(--border-light);
     border-radius: 20px;
     padding: 48px 40px;
     margin: 48px 0 32px;
-    color: #1A2744;
+    color: var(--navy);
     position: relative;
     overflow: hidden;
 }
@@ -603,32 +506,32 @@ body {
     border-radius: 50%;
 }
 .conclusion-panel h2 {
-    font-family: 'Franklin Gothic Demi', 'Lexend', 'Plus Jakarta Sans', sans-serif;
+    font-family: var(--font-heading);
     font-size: 2rem;
     font-weight: 700;
-    color: #1A2744;
+    color: var(--navy);
     margin: 0 0 8px;
     line-height: 1.2;
     position: relative;
     z-index: 1;
 }
 .conclusion-panel .conclusion-subtitle {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.1rem;
     font-weight: 400;
-    color: #6B7280;
+    color: var(--text-muted);
     margin-bottom: 28px;
     position: relative;
     z-index: 1;
 }
 .conclusion-panel p {
-    color: #374151;
+    color: var(--text-secondary);
     line-height: 1.7;
     position: relative;
     z-index: 1;
 }
 .conclusion-panel strong {
-    color: #1A2744;
+    color: var(--navy);
 }
 .conclusion-pillars {
     display: flex;
@@ -650,7 +553,7 @@ body {
 .conclusion-pillar-icon {
     width: 48px;
     height: 48px;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -658,40 +561,40 @@ body {
     font-size: 1.5rem;
 }
 .conclusion-pillar h4 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.05rem;
     font-weight: 700;
-    color: #1A2744;
+    color: var(--navy);
     margin: 0 0 8px;
 }
 .conclusion-pillar p {
     font-size: 0.88rem;
-    color: #6B7280;
+    color: var(--text-muted);
     margin: 0;
     line-height: 1.5;
 }
 .conclusion-warning {
     background: rgba(239,68,68,0.12);
     border: 1px solid rgba(239,68,68,0.25);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     padding: 20px 24px;
     margin: 28px 0;
     position: relative;
     z-index: 1;
 }
 .conclusion-warning strong {
-    color: #DC2626;
+    color: var(--red-dark);
 }
 .conclusion-warning p {
-    color: #374151;
+    color: var(--text-secondary);
     margin: 0;
     font-size: 0.95rem;
 }
 .conclusion-bottom-line {
-    font-family: 'Franklin Gothic Demi', 'Lexend', 'Plus Jakarta Sans', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.25rem;
     font-weight: 600;
-    color: #22C55E;
+    color: var(--wind);
     text-align: center;
     margin-top: 28px;
     padding-top: 20px;
@@ -735,11 +638,11 @@ body {
 /* ========== CHART CONTAINERS ========== */
 .chart-container {
     width: 100%;
-    max-width: 900px;
-    margin: 32px auto;
+    max-width: var(--max-prose);
+    margin: var(--space-xl) auto;
     background: var(--bg-card);
     border: 1px solid var(--border-light);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     padding: 28px;
     position: relative;
 }
@@ -749,7 +652,7 @@ body {
     animation: scaleIn 0.8s cubic-bezier(0.23, 1, 0.32, 1) both;
 }
 .chart-container .chart-title {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-weight: 600;
     font-size: 1.0rem;
     color: var(--navy);
@@ -767,7 +670,7 @@ body {
     justify-content: center;
     gap: 24px;
     margin-bottom: 8px;
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 0.82rem;
     font-weight: 600;
     color: var(--text-secondary);
@@ -823,13 +726,13 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.1rem;
     font-weight: 700;
     color: var(--navy);
 }
 .gauge-name {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+    font-family: var(--font-heading);
     font-size: 0.8rem;
     font-weight: 600;
     color: var(--text-muted);
@@ -855,33 +758,33 @@ body {
 .region-toggle-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: var(--space-sm);
     justify-content: center;
-    margin: 16px 0 8px;
+    margin: var(--space-md) 0 var(--space-sm);
 }
 .region-toggle-btn {
     display: inline-block;
     padding: 6px 18px;
-    border-radius: 9999px;
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    border-radius: var(--radius-pill);
+    font-family: var(--font-heading);
     font-size: 0.82rem;
     font-weight: 700;
     letter-spacing: 0.6px;
     cursor: pointer;
-    border: 2px solid #D4D8E0;
+    border: 2px solid var(--border);
     background: rgba(255,255,255,0.7);
-    color: #374151;
+    color: var(--text-secondary);
     transition: all 0.2s;
     text-transform: uppercase;
 }
 .region-toggle-btn:hover {
-    border-color: #0EA5E9;
+    border-color: var(--hydro);
     color: #0284C7;
-    background: rgba(14,165,233,0.06);
+    background: var(--hydro-bg);
 }
 .region-toggle-btn.active {
-    border-color: #1A2744;
-    background: #1A2744;
+    border-color: var(--navy);
+    background: var(--navy);
     color: #fff;
 }
 
@@ -903,40 +806,40 @@ body {
 .incremental-pill {
     display: inline-block;
     padding: 5px 16px;
-    border-radius: 9999px;
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    border-radius: var(--radius-pill);
+    font-family: var(--font-heading);
     font-size: 0.78rem;
     font-weight: 700;
     letter-spacing: 0.6px;
     cursor: pointer;
-    border: 2px solid #D4D8E0;
+    border: 2px solid var(--border);
     background: rgba(255,255,255,0.7);
-    color: #374151;
+    color: var(--text-secondary);
     transition: all 0.2s;
     text-transform: uppercase;
 }
 .incremental-pill:hover {
-    border-color: #0EA5E9;
+    border-color: var(--hydro);
     color: #0284C7;
 }
 .incremental-pill.active {
-    border-color: #1A2744;
-    background: #1A2744;
+    border-color: var(--navy);
+    background: var(--navy);
     color: #fff;
 }
 .incremental-insight {
-    margin-top: 16px;
+    margin-top: var(--space-md);
     padding: 14px 20px;
     background: rgba(26,39,68,0.04);
-    border-left: 4px solid #1A2744;
+    border-left: 4px solid var(--navy);
     border-radius: 0 10px 10px 0;
     font-size: 0.9rem;
-    color: #374151;
+    color: var(--text-secondary);
     line-height: 1.65;
     transition: opacity 0.3s;
 }
 .incremental-insight strong {
-    color: #1A2744;
+    color: var(--navy);
 }
 
 /* ========== TRANSITION FUEL CARDS ========== */
@@ -962,7 +865,7 @@ body {
     margin-bottom: 12px;
 }
 .transition-fuel-title {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.1rem;
     font-weight: 700;
     color: var(--navy);
@@ -974,7 +877,7 @@ body {
     line-height: 1.6;
 }
 .transition-fuel-stat {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.5rem;
     font-weight: 800;
     margin-top: 10px;
@@ -991,10 +894,10 @@ body {
     box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
 .preservation-panel h3 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.3rem;
     font-weight: 700;
-    color: #DC2626;
+    color: var(--red-dark);
     margin: 0 0 6px;
 }
 .preservation-panel .preservation-sub {
@@ -1021,13 +924,13 @@ body {
     margin-bottom: 10px;
 }
 .preservation-card-iso {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1rem;
     font-weight: 700;
     color: var(--navy);
 }
 .preservation-card-share {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 0.82rem;
     font-weight: 600;
     color: #fff;
@@ -1036,10 +939,10 @@ body {
     padding: 2px 8px;
 }
 .preservation-card-cost {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.5rem;
     font-weight: 700;
-    color: #DC2626;
+    color: var(--red-dark);
 }
 .preservation-card-desc {
     font-size: 0.85rem;
@@ -1057,7 +960,7 @@ body {
 .preservation-bar-fill {
     height: 100%;
     border-radius: 3px;
-    background: linear-gradient(90deg, #F59E0B, #DC2626);
+    background: linear-gradient(90deg, var(--solar), var(--red-dark));
 }
 
 /* ========== CCS ECONOMICS ========== */
@@ -1077,7 +980,7 @@ body {
     text-align: center;
 }
 .ccs-econ-value {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.5rem;
     font-weight: 700;
     color: var(--navy);
@@ -1150,11 +1053,7 @@ body {
     .hero-callout-card { min-width: 70px; padding: 12px 6px; }
     .hero-callout-value { font-size: 1.4rem; }
 }
-
-/* Story-section mobile padding (768px) */
-@media (max-width: 768px) {
-    .story-section { padding: 40px 20px; }
-}
+/* Story-section 768px padding provided by shared.css */
 </style>
 </head>
 <body>
@@ -1162,13 +1061,15 @@ body {
 <!-- TOP NAV (injected by nav.js) -->
 <nav id="topNav"></nav>
 <script src="js/nav.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
 
 <!-- HEADER / BANNER -->
-<header class="header">
+<div class="header" id="pageHeader">
     <h1>The 8,760 Problem</h1>
-    <p class="subtitle">Optimizing clean energy procurement across 8,760 hours, seven power markets<sup style="font-size:0.7em;color:rgba(255,255,255,0.6);">[1]</sup>, and thousands of cost scenarios.<sup style="font-size:0.7em;color:rgba(255,255,255,0.6);">[2][3]</sup></p>
+    <div class="subtitle">Optimizing clean energy procurement across 8,760 hours, seven power markets<sup style="font-size:0.7em;color:rgba(255,255,255,0.6);">[1]</sup>, and thousands of cost scenarios.<sup style="font-size:0.7em;color:rgba(255,255,255,0.6);">[2][3]</sup></div>
     <div class="header-accent"></div>
-</header>
+</div>
 
 <!-- HERO INTRO -->
 <div class="homepage-hero">
@@ -1348,7 +1249,7 @@ body {
     <!-- SECTION: THE ENERGY TRILEMMA — reliability & affordability → clean, reliable, affordable -->
     <section class="story-section story-fade-in">
         <div class="story-content">
-            <span class="story-badge story-badge-orange">The Trilemma</span>
+            <span class="story-badge story-badge-red">The Trilemma</span>
             <h2>From Two Dimensions to Three</h2>
 
             <p class="story-lead">
@@ -1698,17 +1599,17 @@ body {
 </div>
 
 <!-- FOOTER -->
-<footer style="background:#F3F4F6;padding:24px;text-align:center;border-top:1px solid #E5E7EB;">
-    <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:16px;margin-bottom:12px;">
-        <a href="dashboard.html" style="color:#6B7280;text-decoration:none;font-size:0.85rem;">Dashboard</a>
-        <a href="abatement_dashboard.html" style="color:#6B7280;text-decoration:none;font-size:0.85rem;">CO&#8322; Abatement</a>
-        <a href="research_paper.html" style="color:#6B7280;text-decoration:none;font-size:0.85rem;">Methodology &amp; Paper</a>
-        <a href="about.html" style="color:#6B7280;text-decoration:none;font-size:0.85rem;">About</a>
-        <a href="../power-gen-decarbonization/site/index.html" style="color:#6B7280;text-decoration:none;font-size:0.85rem;">Generator Analysis</a>
-        <a href="about.html" style="color:#6B7280;text-decoration:none;font-size:0.85rem;">About</a>
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="dashboard.html">Dashboard</a>
+        <a href="abatement_dashboard.html">CO&#8322; Abatement</a>
+        <a href="research_paper.html">Methodology &amp; Paper</a>
+        <a href="about.html">About</a>
+        <a href="../power-gen-decarbonization/site/index.html">Generator Analysis</a>
     </div>
-    <p style="color:#9CA3AF;font-size:0.78rem;">The 8,760 Problem &mdash; 2025 Snapshot Model</p>
+    <p class="footer-note">The 8,760 Problem &mdash; 2025 Snapshot Model</p>
 </footer>
+<div class="bottom-banner"></div>
 
 <script src="js/shared-data.js"></script>
 <script src="js/mac-stats-data.js"></script>
