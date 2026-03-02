@@ -12,30 +12,17 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
 <style>
-body { background: #F7F8FC; margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; color: #1E293B; }
-
-/* ===== HERO ===== */
-.hero-section {
-    background: linear-gradient(135deg, #0F1A2E 0%, #122952 30%, #1565C0 70%, #0D47A1 100%);
-    padding: 48px 24px 48px;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-}
-.hero-inner { max-width: 900px; margin: 0 auto; position: relative; z-index: 2; }
-.hero-kicker {
-    font-family: 'Barlow Semi Condensed', sans-serif;
-    font-size: 0.75rem; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase;
-    color: #F59E0B; margin-bottom: 12px;
-}
+/* ===== HERO OVERRIDES (centered variant + dark stat cards) ===== */
 .hero-inner h1 {
-    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 2.4rem; font-weight: 800; line-height: 1.15; margin: 0 0 16px;
     color: #ffffff;
     text-shadow: 0 2px 20px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.3);
 }
-.hero-inner h1 .accent { color: #F59E0B; }
+.hero-inner h1 .accent { color: var(--solar); }
 .hero-desc {
     font-size: 0.95rem; color: rgba(255,255,255,0.8); line-height: 1.7;
     max-width: 700px; margin: 0 auto 32px;
@@ -44,37 +31,34 @@ body { background: #F7F8FC; margin: 0; font-family: 'Plus Jakarta Sans', sans-se
 .stats-row {
     display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
 }
-.stat-card {
-    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 12px; padding: 16px 24px; min-width: 120px; text-align: center;
-}
-.stat-value {
-    font-family: 'Rajdhani', sans-serif; font-size: 1.6rem; font-weight: 700; line-height: 1.1;
-}
-.stat-value.red { color: #EF4444; }
-.stat-value.amber { color: #F59E0B; }
+.stat-value.red { color: var(--red); }
+.stat-value.amber { color: var(--solar); }
 .stat-value.slate { color: #94A3B8; }
 .stat-value.green { color: #22C55E; }
-.stat-label { font-size: 0.72rem; color: rgba(255,255,255,0.5); margin-top: 4px; font-weight: 500; }
+/* Dark-background stat cards in hero */
+.hero-section .stat-card {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: var(--radius-lg);
+    padding: 16px 24px;
+    min-width: 120px;
+}
+.hero-section .stat-label {
+    color: rgba(255,255,255,0.5);
+}
 
-/* ===== NARRATIVE ===== */
-.narrative-section {
-    padding: 48px 24px 32px; text-align: center;
-}
-.narrative-inner {
-    max-width: 740px; margin: 0 auto;
-}
+/* ===== NARRATIVE SECTION ===== */
 .narrative-inner h2 {
-    font-family: 'Barlow Semi Condensed', sans-serif;
-    font-size: 1.5rem; font-weight: 700; margin: 0 0 14px; color: #1E293B;
+    font-family: var(--font-heading);
+    font-size: 1.5rem; font-weight: 700; margin: 0 0 14px; color: var(--text-secondary);
 }
 .narrative-inner p {
-    font-size: 0.9rem; color: rgba(15,23,42,0.55); line-height: 1.75; margin: 0 0 12px;
+    font-size: 0.9rem; color: var(--text-dim); line-height: 1.75; margin: 0 0 12px;
 }
 .narrative-inner p strong { color: rgba(15,23,42,0.85); }
-.narrative-inner p em { color: #F59E0B; font-style: normal; font-weight: 500; }
+.narrative-inner p em { color: var(--solar); font-style: normal; font-weight: 500; }
 
-/* ===== CHART SECTIONS ===== */
+/* ===== CHART SECTIONS (page-specific grid layout) ===== */
 .chart-section {
     padding: 16px 24px 48px;
 }
@@ -83,47 +67,33 @@ body { background: #F7F8FC; margin: 0; font-family: 'Plus Jakarta Sans', sans-se
     display: grid; grid-template-columns: 1.3fr 1fr; gap: 32px; align-items: start;
 }
 .chart-section-inner.reverse { grid-template-columns: 1fr 1.3fr; }
-.chart-panel {
-    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(74,144,217,0.12); border-radius: 16px;
-    padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.06);
-}
-.chart-panel h3 {
-    font-family: 'Barlow Semi Condensed', sans-serif;
-    font-size: 1.05rem; font-weight: 700; margin: 0 0 4px; color: #1E293B;
-}
-.chart-panel .chart-subtitle {
-    font-size: 0.78rem; color: rgba(15,23,42,0.35); margin-bottom: 16px;
-}
-.chart-container { position: relative; width: 100%; min-height: 360px; }
-.chart-container canvas { width: 100% !important; }
 
-/* ===== ISO SELECTOR ===== */
+/* ===== ISO SELECTOR (page-specific active-state colors) ===== */
 .chart-controls {
     display: flex; align-items: center; gap: 16px; margin-bottom: 18px; flex-wrap: wrap;
 }
-.iso-selector { display: flex; gap: 6px; flex-wrap: wrap; }
+.iso-selector { margin-bottom: 0; }
 .iso-btn {
-    padding: 7px 18px; border-radius: 24px;
-    border: 1px solid rgba(0,0,0,0.1); background: rgba(0,0,0,0.02);
-    color: rgba(15,23,42,0.55); font-family: 'Barlow Semi Condensed', sans-serif;
-    font-size: 0.82rem; font-weight: 600; cursor: pointer;
-    transition: all 0.3s; min-height: 36px;
+    border-radius: 24px;
+    padding: 7px 18px;
+    min-height: 36px;
+    background: rgba(0,0,0,0.02);
+    color: var(--text-dim);
 }
 .iso-btn:hover { background: rgba(0,0,0,0.08); border-color: rgba(0,0,0,0.14); }
-.iso-btn.active { color: #1E293B; }
-.iso-btn.active[data-iso="PJM"]   { background: rgba(74,144,217,0.25); border-color: #4a90d9; }
+.iso-btn.active { color: var(--text-secondary); }
+.iso-btn.active[data-iso="PJM"]   { background: rgba(74,144,217,0.25); border-color: var(--accent-blue); }
 .iso-btn.active[data-iso="ERCOT"] { background: rgba(34,197,94,0.2);  border-color: #22C55E; }
-.iso-btn.active[data-iso="CAISO"] { background: rgba(245,158,11,0.18); border-color: #F59E0B; }
+.iso-btn.active[data-iso="CAISO"] { background: rgba(245,158,11,0.18); border-color: var(--solar); }
 .iso-btn.active[data-iso="NYISO"] { background: rgba(233,30,99,0.25);  border-color: #E91E63; }
 .iso-btn.active[data-iso="NEISO"] { background: rgba(156,39,176,0.25); border-color: #9C27B0; }
 .iso-btn.active[data-iso="MISO"] { background: rgba(6,182,212,0.25); border-color: #06B6D4; }
-.iso-btn.active[data-iso="SPP"]  { background: rgba(239,68,68,0.25); border-color: #EF4444; }
+.iso-btn.active[data-iso="SPP"]  { background: rgba(239,68,68,0.25); border-color: var(--red); }
 
 /* ===== GROWTH TOGGLE ===== */
 .growth-toggle {
     display: flex; align-items: center; gap: 8px; cursor: pointer;
-    font-size: 0.78rem; color: rgba(15,23,42,0.45); font-weight: 500;
+    font-size: 0.78rem; color: var(--text-dim); font-weight: 500;
     user-select: none;
 }
 .growth-toggle input[type="checkbox"] { display: none; }
@@ -141,37 +111,36 @@ body { background: #F7F8FC; margin: 0; font-family: 'Plus Jakarta Sans', sans-se
     background: rgba(245,158,11,0.35);
 }
 .growth-toggle input:checked + .toggle-track::after {
-    transform: translateX(16px); background: #F59E0B;
+    transform: translateX(16px); background: var(--solar);
 }
 
 /* ===== NARRATIVE CARD (alongside chart) ===== */
 .narrative-card {
     background: rgba(0,0,0,0.015); border: 1px solid rgba(0,0,0,0.07);
-    border-radius: 16px; padding: 28px; align-self: start;
+    border-radius: var(--radius-xl); padding: 28px; align-self: start;
 }
 .narrative-card h4 {
-    font-family: 'Barlow Semi Condensed', sans-serif;
-    font-size: 1rem; font-weight: 700; margin: 0 0 12px; color: #1E293B;
+    font-family: var(--font-heading);
+    font-size: 1rem; font-weight: 700; margin: 0 0 12px; color: var(--text-secondary);
 }
 .narrative-card p {
-    font-size: 0.84rem; color: rgba(15,23,42,0.5); line-height: 1.7; margin: 0 0 10px;
+    font-size: 0.84rem; color: var(--text-dim); line-height: 1.7; margin: 0 0 10px;
 }
 .narrative-card p:last-child { margin-bottom: 0; }
 .narrative-card strong { color: rgba(15,23,42,0.75); }
 .insight-badge {
-    display: inline-block; padding: 5px 12px; border-radius: 6px;
+    display: inline-block; padding: 5px 12px; border-radius: var(--radius-sm);
     font-size: 0.75rem; font-weight: 600; margin-top: 8px;
 }
-.insight-badge.red   { background: rgba(239,68,68,0.1); color: #dc2626; }
-.insight-badge.amber { background: rgba(245,158,11,0.1); color: #d97706; }
-.insight-badge.green { background: rgba(34,197,94,0.1);  color: #16a34a; }
+.insight-badge.red   { background: rgba(239,68,68,0.1); color: var(--red-dark); }
+.insight-badge.amber { background: rgba(245,158,11,0.1); color: var(--amber-warn); }
+.insight-badge.green { background: rgba(34,197,94,0.1);  color: var(--green-pos); }
 
 /* ===== CHART LEGEND ===== */
 .chart-legend {
     display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px;
-    font-size: 0.72rem; color: rgba(15,23,42,0.4);
+    font-size: 0.72rem; color: var(--text-dim);
 }
-.legend-item { display: flex; align-items: center; gap: 5px; }
 .legend-swatch {
     width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0;
 }
@@ -181,26 +150,19 @@ body { background: #F7F8FC; margin: 0; font-family: 'Plus Jakarta Sans', sans-se
     padding: 32px 24px 56px;
 }
 .takeaway-inner {
-    max-width: 740px; margin: 0 auto; text-align: center;
+    max-width: var(--max-narrow); margin: 0 auto; text-align: center;
 }
 .takeaway-box {
     background: rgba(245,158,11,0.05); border: 1px solid rgba(245,158,11,0.18);
-    border-radius: 16px; padding: 32px;
+    border-radius: var(--radius-xl); padding: 32px;
 }
 .takeaway-box h3 {
-    font-family: 'Barlow Semi Condensed', sans-serif;
-    font-size: 1.15rem; font-weight: 700; color: #F59E0B; margin: 0 0 12px;
+    font-family: var(--font-heading);
+    font-size: 1.15rem; font-weight: 700; color: var(--solar); margin: 0 0 12px;
 }
 .takeaway-box p {
-    font-size: 0.88rem; color: rgba(15,23,42,0.55); line-height: 1.7; margin: 0;
+    font-size: 0.88rem; color: var(--text-dim); line-height: 1.7; margin: 0;
 }
-
-/* ===== FOOTER ===== */
-/* Uses shared.css .page-footer (dark navy, white text) */
-.footer-links { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; margin-bottom: 12px; }
-.footer-links a { text-decoration: none; font-size: 0.8rem; transition: color 0.3s; }
-.footer-note { font-size: 0.72rem; color: rgba(255,255,255,0.35); }
-.bottom-banner { height: 4px; background: linear-gradient(90deg, #F59E0B, #EF4444, #8B5CF6, #3B82F6); }
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 900px) {
@@ -208,14 +170,12 @@ body { background: #F7F8FC; margin: 0; font-family: 'Plus Jakarta Sans', sans-se
         grid-template-columns: 1fr; gap: 20px;
     }
     .hero-inner h1 { font-size: 1.8rem; }
-    .chart-container { min-height: 300px; }
 }
 @media (max-width: 600px) {
     .hero-section { padding: 36px 16px 36px; }
     .stats-row { display: grid; grid-template-columns: 1fr 1fr; }
     .hero-inner h1 { font-size: 1.4rem; }
     .chart-section { padding: 12px 12px 36px; }
-    .chart-panel { padding: 16px; }
 }
 </style>
 </head>
@@ -231,7 +191,7 @@ body { background: #F7F8FC; margin: 0; font-family: 'Plus Jakarta Sans', sans-se
 </header>
 
 <!-- ========== HERO ========== -->
-<section class="hero-section">
+<section class="hero-section hero-centered">
 <div class="hero-inner">
     <div class="hero-kicker">Analysis</div>
     <h1>Fossil Fuel <span class="accent">Deep Dive</span></h1>
@@ -263,7 +223,7 @@ body { background: #F7F8FC; margin: 0; font-family: 'Plus Jakarta Sans', sans-se
 </section>
 
 <!-- ========== NARRATIVE: INTRO ========== -->
-<section class="narrative-section">
+<section class="content-section-narrow" style="text-align:center;">
 <div class="narrative-inner">
     <h2>The fossil fleet is not one thing</h2>
     <p>
@@ -313,7 +273,7 @@ body { background: #F7F8FC; margin: 0; font-family: 'Plus Jakarta Sans', sans-se
 </section>
 
 <!-- ========== NARRATIVE: MERIT ORDER ========== -->
-<section class="narrative-section">
+<section class="content-section-narrow" style="text-align:center;">
 <div class="narrative-inner">
     <h2>Coal retires first &mdash; but when depends on demand growth</h2>
     <p>

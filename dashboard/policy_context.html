@@ -12,7 +12,7 @@
 <style>
 /* ========== PAGE-SPECIFIC BODY ========== */
 body {
-    background: #FFFFFF;
+    background: var(--bg-page-white);
     background-image:
         radial-gradient(ellipse at 20% 0%, rgba(14,165,233,0.03) 0%, transparent 50%),
         radial-gradient(ellipse at 80% 100%, rgba(245,158,11,0.02) 0%, transparent 50%);
@@ -21,7 +21,7 @@ body {
 
 /* ========== MAIN CONTENT ========== */
 .content-wrap {
-    background: #F3F4F8;
+    background: var(--bg-alt-warm);
     border-radius: 16px;
     max-width: 1100px;
     margin: 24px auto 0;
@@ -37,19 +37,19 @@ body {
 
 /* ========== SECTION TYPOGRAPHY ========== */
 .section-title {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Lexend', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.8rem;
     font-weight: 700;
     color: var(--navy);
     margin: 48px 0 16px;
     padding-bottom: 12px;
-    border-bottom: 3px solid #0EA5E9;
+    border-bottom: 3px solid var(--hydro);
     letter-spacing: -0.01em;
 }
 .section-title:first-child { margin-top: 0; }
 
 .subsection-title {
-    font-family: 'Lexend', 'Plus Jakarta Sans', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.25rem;
     font-weight: 600;
     color: var(--navy);
@@ -66,7 +66,7 @@ p {
 .intro-text {
     font-size: 1.1rem;
     line-height: 1.7;
-    color: #374151;
+    color: var(--text-secondary);
     max-width: 900px;
 }
 
@@ -121,7 +121,7 @@ p {
     border: 1px solid rgba(139,92,246,0.3);
 }
 .framework-card h3 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Lexend', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.3rem;
     font-weight: 700;
     color: var(--navy);
@@ -143,18 +143,18 @@ p {
 /* ========== KEY INSIGHT CALLOUTS ========== */
 .insight-box {
     background: linear-gradient(135deg, rgba(14,165,233,0.06) 0%, rgba(34,197,94,0.06) 100%);
-    border-left: 4px solid #0EA5E9;
+    border-left: 4px solid var(--hydro);
     border-radius: 0 10px 10px 0;
     padding: 20px 24px;
     margin: 24px 0;
 }
 .insight-box.warn {
     background: linear-gradient(135deg, rgba(245,158,11,0.06) 0%, rgba(239,68,68,0.06) 100%);
-    border-left-color: #F59E0B;
+    border-left-color: var(--solar);
 }
 .insight-box.critical {
     background: linear-gradient(135deg, rgba(239,68,68,0.06) 0%, rgba(245,158,11,0.06) 100%);
-    border-left-color: #EF4444;
+    border-left-color: var(--red);
 }
 .insight-box strong {
     color: var(--navy);
@@ -169,8 +169,8 @@ p {
 }
 .comparison-table th {
     background: #F0F4F8;
-    color: #1A2744;
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    color: var(--navy);
+    font-family: var(--font-heading);
     font-weight: 600;
     padding: 12px 16px;
     text-align: left;
@@ -234,14 +234,14 @@ p {
     50% { box-shadow: 0 0 0 6px rgba(245,158,11,0.15); }
 }
 .timeline-year {
-    font-family: 'Rajdhani', 'Lexend', sans-serif;
+    font-family: var(--font-data);
     font-size: 1.1rem;
     font-weight: 700;
     color: var(--navy);
 }
 .timeline-desc {
     font-size: 0.95rem;
-    color: #374151;
+    color: var(--text-secondary);
     margin-top: 2px;
 }
 
@@ -270,7 +270,7 @@ p {
     line-height: 1;
 }
 .convergence-card h4 {
-    font-family: 'Lexend', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.05rem;
     font-weight: 600;
     color: var(--navy);
@@ -278,7 +278,7 @@ p {
 }
 .convergence-card p {
     font-size: 0.9rem;
-    color: #374151;
+    color: var(--text-secondary);
     margin: 0;
 }
 
@@ -291,9 +291,9 @@ p {
     justify-content: center;
 }
 .stat-card {
-    background: #FFFFFF;
-    color: #1A2744;
-    border: 1px solid #E5E7EB;
+    background: var(--bg-page-white);
+    color: var(--navy);
+    border: 1px solid var(--border-light);
     border-radius: 12px;
     padding: 24px 28px;
     min-width: 180px;
@@ -302,7 +302,7 @@ p {
     max-width: 240px;
 }
 .stat-value {
-    font-family: 'Rajdhani', 'Lexend', sans-serif;
+    font-family: var(--font-data);
     font-size: 2.2rem;
     font-weight: 700;
     line-height: 1.1;
@@ -310,7 +310,7 @@ p {
 }
 .stat-label {
     font-size: 0.8rem;
-    color: #6B7280;
+    color: var(--text-muted);
     letter-spacing: 0.03em;
 }
 @media (max-width: 480px) {
@@ -325,7 +325,7 @@ p {
     border-top: 2px solid var(--border-light);
 }
 .sources-section h3 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.1rem;
     color: var(--navy);
     margin-bottom: 12px;
@@ -363,6 +363,8 @@ p {
     font-size: 0.8rem;
 }
 </style>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
 </head>
 <body>
 
@@ -371,9 +373,9 @@ p {
 <script src="js/nav.js"></script>
 
 <!-- HEADER / BANNER -->
-<header class="header">
+<header class="header" id="pageHeader">
     <h1>The 8,760 Problem</h1>
-    <p class="subtitle">How hourly clean energy matching fits into the global landscape of climate policy, corporate commitments, and academic research on grid decarbonization.</p>
+    <div class="subtitle">How hourly clean energy matching fits into the global landscape of climate policy, corporate commitments, and academic research on grid decarbonization.</div>
     <div class="header-accent"></div>
 </header>
 

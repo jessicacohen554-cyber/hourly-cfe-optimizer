@@ -9,37 +9,13 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/shared.css">
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <style>
-body { background: #FFFFFF; }
-
-/* ========== FOOTER ========== */
-.page-footer {
-    background: #F3F4F6;
-    color: rgba(0,0,0,0.7);
-    padding: 32px 24px;
-    text-align: center;
-}
-.footer-links { display: flex; flex-wrap: wrap; gap: 16px 24px; justify-content: center; margin-bottom: 12px; }
-.footer-links a {
-    color: rgba(0,0,0,0.6);
-    text-decoration: none;
-    font-size: 0.85rem;
-    font-weight: 500;
-    transition: color 0.2s;
-    min-height: 44px;
-    display: inline-flex;
-    align-items: center;
-    padding: 8px 4px;
-}
-.footer-links a:hover { color: #1A2744; }
-.footer-note { font-size: 0.78rem; color: rgba(0,0,0,0.4); }
-.bottom-banner {
-    height: 4px;
-    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%);
-}
+body { background: var(--bg-page-white); }
 
 /* ========== HERO ========== */
 .hero-overview {
@@ -63,10 +39,10 @@ body { background: #FFFFFF; }
     text-align: center;
 }
 .hero-inner h2 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 2.2rem;
     font-weight: 800;
-    color: #1A2744;
+    color: var(--navy);
     margin-bottom: 20px;
     line-height: 1.2;
     letter-spacing: -0.5px;
@@ -118,16 +94,16 @@ body { background: #FFFFFF; }
     border-radius: 50%;
     background: rgba(239,68,68,0.15);
     color: #EF4444;
-    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.1rem;
     font-weight: 700;
     margin-bottom: 16px;
 }
 .section-header h2 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.6rem;
     font-weight: 700;
-    color: #1A2744;
+    color: var(--navy);
     margin-bottom: 12px;
     line-height: 1.3;
 }
@@ -179,7 +155,7 @@ body { background: #FFFFFF; }
     padding: 24px;
 }
 .mechanism-card h4 {
-    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1rem;
     font-weight: 700;
     color: #EF4444;
@@ -206,14 +182,14 @@ body { background: #FFFFFF; }
     padding: 0 24px 48px;
 }
 .chart-panel {
-    background: rgba(0,0,0,0.03);
-    border: 1px solid rgba(0,0,0,0.06);
-    border-radius: 12px;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
     padding: 24px;
     margin-bottom: 24px;
 }
 .chart-title {
-    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1rem;
     font-weight: 700;
     color: rgba(0,0,0,0.85);
@@ -237,35 +213,7 @@ body { background: #FFFFFF; }
     color: rgba(0,0,0,0.85);
 }
 
-/* ========== ISO SELECTOR ========== */
-.iso-selector {
-    display: flex;
-    gap: 6px;
-    justify-content: center;
-    flex-wrap: wrap;
-    margin-bottom: 16px;
-}
-.iso-btn {
-    background: #FFFFFF;
-    border: 1px solid rgba(0,0,0,0.08);
-    color: rgba(0,0,0,0.55);
-    padding: 6px 14px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.78rem;
-    font-weight: 600;
-    transition: all 0.2s;
-    min-height: 36px;
-}
-.iso-btn:hover {
-    background: rgba(0,0,0,0.05);
-    color: rgba(0,0,0,0.85);
-}
-.iso-btn.active {
-    background: rgba(14,165,233,0.2);
-    border-color: rgba(14,165,233,0.5);
-    color: #0EA5E9;
-}
+/* ISO selector and iso-btn styles provided by shared.css */
 
 /* ========== INSIGHT CALLOUT ========== */
 .insight-callout {
@@ -273,20 +221,20 @@ body { background: #FFFFFF; }
     margin: 0 auto;
     padding: 0 24px 48px;
 }
-.insight-box {
+.page-insight-box {
     background: linear-gradient(135deg, rgba(239,68,68,0.08), rgba(245,158,11,0.06));
     border: 1px solid rgba(239,68,68,0.2);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     padding: 28px 24px;
 }
-.insight-box h3 {
-    font-family: 'Barlow Semi Condensed', sans-serif;
+.page-insight-box h3 {
+    font-family: var(--font-heading);
     font-size: 1.15rem;
     font-weight: 700;
     color: #EF4444;
     margin-bottom: 12px;
 }
-.insight-box p {
+.page-insight-box p {
     font-size: 0.9rem;
     color: rgba(0,0,0,0.7);
     line-height: 1.75;
@@ -337,7 +285,7 @@ body { background: #FFFFFF; }
     border-top: 1px solid rgba(0,0,0,0.06);
 }
 .sources-section h3 {
-    font-family: 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     color: rgba(0,0,0,0.7);
     font-size: 1rem;
     margin-bottom: 16px;
@@ -382,6 +330,13 @@ body { background: #FFFFFF; }
 <!-- ============ NAV ============ -->
 <nav id="topNav"></nav>
 <script src="js/nav.js"></script>
+
+<!-- ============ HEADER ============ -->
+<header class="header">
+    <h1>Consequential Accounting in a Vacuum</h1>
+    <p class="subtitle">What happens when every corporate buyer optimizes for cheapest $/tCO&#8322; without geographic constraints</p>
+    <div class="header-accent"></div>
+</header>
 
 <!-- ============ HERO ============ -->
 <section class="hero-overview">
@@ -431,7 +386,7 @@ body { background: #FFFFFF; }
 </section>
 
 <div class="insight-callout fade-in">
-    <div class="insight-box">
+    <div class="page-insight-box">
         <h3>The Measurement Paradox</h3>
         <p>Consequential accounting claims superiority because it measures "actual impact." But the measurement instrument — marginal emissions rates — <span class="highlight">becomes less accurate as more buyers use it</span>. At low adoption, the signal is clean. At scale, it's noise. The framework is most reliable precisely when it's least needed (few buyers, small volumes) and least reliable when it matters most (widespread adoption, system-level decisions).</p>
     </div>
@@ -500,7 +455,7 @@ body { background: #FFFFFF; }
 </section>
 
 <div class="insight-callout fade-in">
-    <div class="insight-box">
+    <div class="page-insight-box">
         <h3>The Lifespan Extension</h3>
         <p>Under hourly matching, a NEISO corporate buyer must contract firm clean power to cover winter peak hours — creating demand signals for offshore wind, nuclear, or CCS. Under consequential accounting, that same buyer funds MISO wind instead. <span class="highlight">Every year of delayed firm clean investment in gas-dependent grids is another year those gas plants run</span>. At current gas fleet ages (median 15–20 years in NEISO/NYISO), consequential accounting could extend gas dependence by 10–20 years — exactly the timeframe in which deep decarbonization must occur.</p>
     </div>
@@ -658,7 +613,7 @@ body { background: #FFFFFF; }
 </section>
 
 <div class="insight-callout fade-in">
-    <div class="insight-box">
+    <div class="page-insight-box">
         <h3>The Bottom Line</h3>
         <p>Consequential accounting works as a niche analytical tool — measuring displacement impact alongside an hourly matching procurement strategy. It fails catastrophically as a <span class="highlight">primary procurement framework at scale</span>. The five failure modes documented here aren't edge cases; they're the predictable, mathematically inevitable consequences of optimizing for cheapest $/tCO₂ across unconstrained geographies.</p>
         <p><strong>The coal/oil transition tells the timeline story.</strong> Under SBTi-aligned pathways (~2–4% annual clean penetration growth), SPP exhausts its coal/oil stock by the late 2030s (~52% penetration), MISO by the mid-2030s (~42%), and PJM/ERCOT by the early 2030s (~24%). After those thresholds, every grid converges to the same efficient-gas baseline at ~850 lb/MWh — and the consequential "discount" vanishes entirely. NEISO, NYISO, and CAISO are already there today. <span class="highlight">By ~2035, the majority of U.S. load-weighted generation will have crossed this threshold</span>, leaving consequential buyers paying the same $/tCO₂ as hourly matching — but having starved gas-dependent grids of firm clean investment for a decade.</p>
