@@ -11,97 +11,12 @@
 <link rel="stylesheet" href="styles/shared.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
 <style>
-/* Page-specific dark background */
-body { background: #F7F8FC; }
-
-/* ========== FOOTER — uses shared.css dark navy .page-footer ========== */
-.footer-links { display: flex; flex-wrap: wrap; gap: 16px 24px; justify-content: center; margin-bottom: 12px; }
-.footer-links a {
-    text-decoration: none;
-    font-size: 0.85rem;
-    font-weight: 500;
-    transition: color 0.2s;
-    min-height: 44px;
-    display: inline-flex;
-    align-items: center;
-    padding: 8px 4px;
-}
-.footer-note { font-size: 0.78rem; }
-
-.bottom-banner {
-    height: 4px;
-    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%);
-}
-
-/* ========== HERO SECTION (dark navy intro) ========== */
-.hero-section {
-    background: linear-gradient(180deg, #0F1A2E 0%, #1A2744 60%, #1E3A5F 100%);
-    position: relative;
-    overflow: hidden;
-    padding: 56px 24px 48px;
-}
-.hero-section::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(ellipse at 25% 15%, rgba(14,165,233,0.08) 0%, transparent 55%),
-                radial-gradient(ellipse at 75% 85%, rgba(34,197,94,0.06) 0%, transparent 55%);
-    pointer-events: none;
-}
-.hero-inner {
-    position: relative;
-    max-width: 1320px;
-    margin: 0 auto;
-    display: grid;
-    grid-template-columns: 1fr 1.2fr;
-    gap: 48px;
-    align-items: center;
-}
-.hero-text {
-    z-index: 2;
-}
-.hero-kicker {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: #38bdf8;
-    margin-bottom: 12px;
-}
-.hero-text h1 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
-    font-size: 2.2rem;
-    font-weight: 800;
-    color: #ffffff;
-    margin-bottom: 20px;
-    line-height: 1.15;
-    letter-spacing: -0.5px;
-}
-.hero-text h1 span.accent { color: #38bdf8; }
-.hero-text p {
-    font-size: 0.95rem;
-    color: rgba(255,255,255,0.7);
-    line-height: 1.75;
-    margin-bottom: 14px;
-}
-.hero-stats-row {
-    display: flex;
-    gap: 20px;
-    margin-top: 24px;
-    flex-wrap: wrap;
-}
-.hero-stat {
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 12px;
-    padding: 16px 20px;
-    min-width: 140px;
-    flex: 1;
-}
+/* ========== PAGE-SPECIFIC: Hero stat value/label (custom markup) ========== */
 .hero-stat-value {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.6rem;
     font-weight: 800;
     color: #ffffff;
@@ -110,7 +25,7 @@ body { background: #F7F8FC; }
 .hero-stat-value.green { color: #4ade80; }
 .hero-stat-value.amber { color: #fbbf24; }
 .hero-stat-value.red { color: #f87171; }
-.hero-stat-value.blue { color: #38bdf8; }
+.hero-stat-value.blue { color: var(--accent-cyan); }
 .hero-stat-label {
     font-size: 0.72rem;
     color: rgba(255,255,255,0.5);
@@ -121,38 +36,15 @@ body { background: #F7F8FC; }
     z-index: 1;
 }
 
-/* ========== CHART PANELS ========== */
-.chart-panel {
-    background: rgba(255,255,255,0.97);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(74,144,217,0.12);
-    border-radius: 16px;
-    padding: 24px 20px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
-    width: 100%;
-}
-.chart-title {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: rgba(15,23,42,0.85);
-    letter-spacing: 0.02em;
-    margin-bottom: 12px;
-}
-.chart-container {
-    position: relative;
-    width: 100%;
-    min-height: 320px;
-}
+/* ========== PAGE-SPECIFIC: Chart legend ========== */
 .chart-legend {
     display: flex;
     flex-wrap: wrap;
     gap: 6px 16px;
     margin-top: 12px;
     font-size: 0.7rem;
-    color: rgba(15,23,42,0.5);
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    color: var(--text-dim);
+    font-family: var(--font-body);
 }
 .chart-legend-item {
     display: inline-flex;
@@ -172,18 +64,18 @@ body { background: #F7F8FC; }
     align-self: center;
 }
 
-/* ========== SCROLLYTELL SECTIONS ========== */
+/* ========== PAGE-SPECIFIC: Scrollytell sections ========== */
 .scroll-section {
-    padding: 0 24px;
-    max-width: 1320px;
+    padding: 0 var(--pad-page);
+    max-width: var(--max-content);
     margin: 0 auto;
 }
 .scroll-section-inner {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 48px;
+    gap: var(--space-2xl);
     align-items: start;
-    padding: 64px 0;
+    padding: var(--space-3xl) 0;
     border-top: 1px solid rgba(0,0,0,0.025);
 }
 .scroll-chart-col {
@@ -193,10 +85,10 @@ body { background: #F7F8FC; }
 .scroll-narrative-col {
     display: flex;
     flex-direction: column;
-    gap: 32px;
+    gap: var(--space-xl);
 }
 
-/* ========== NARRATIVE CARDS ========== */
+/* ========== PAGE-SPECIFIC: Narrative cards ========== */
 .narrative-card {
     background: rgba(255,255,255,0.95);
     border: 1px solid rgba(74,144,217,0.10);
@@ -212,10 +104,10 @@ body { background: #F7F8FC; }
     transform: translateY(0);
 }
 .narrative-card h3 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.25rem;
     font-weight: 800;
-    color: #1E293B;
+    color: var(--text-secondary);
     margin-bottom: 12px;
     line-height: 1.25;
     letter-spacing: -0.3px;
@@ -230,7 +122,7 @@ body { background: #F7F8FC; }
 
 .section-tag {
     display: inline-block;
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 0.68rem;
     font-weight: 700;
     letter-spacing: 0.1em;
@@ -245,26 +137,26 @@ body { background: #F7F8FC; }
     font-size: 0.78rem;
     font-weight: 600;
     padding: 6px 12px;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     margin-top: 8px;
     line-height: 1.4;
 }
-.stat-badge-green { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); color: #16a34a; }
-.stat-badge-amber { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.18); color: #d97706; }
-.stat-badge-red { background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2); color: #dc2626; }
+.stat-badge-green { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); color: var(--green-pos); }
+.stat-badge-amber { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.18); color: var(--amber-warn); }
+.stat-badge-red { background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2); color: var(--red-dark); }
 .stat-badge-blue { background: rgba(14,165,233,0.08); border: 1px solid rgba(14,165,233,0.2); color: #0284c7; }
 
-/* ========== SYNTHESIS SECTION ========== */
+/* ========== PAGE-SPECIFIC: Synthesis section ========== */
 .synthesis-section {
-    max-width: 1320px;
+    max-width: var(--max-content);
     margin: 0 auto;
-    padding: 64px 24px;
+    padding: var(--space-3xl) var(--pad-page);
     border-top: 1px solid rgba(0,0,0,0.025);
 }
 .synthesis-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 24px;
+    gap: var(--space-lg);
 }
 .synthesis-card {
     background: rgba(255,255,255,0.95);
@@ -281,10 +173,10 @@ body { background: #F7F8FC; }
     transform: translateY(0);
 }
 .synthesis-card h3 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.15rem;
     font-weight: 800;
-    color: #1E293B;
+    color: var(--text-secondary);
     margin-bottom: 12px;
     line-height: 1.25;
 }
@@ -294,16 +186,16 @@ body { background: #F7F8FC; }
     line-height: 1.75;
 }
 
-/* ========== NUCLEAR CALLOUT ========== */
+/* ========== PAGE-SPECIFIC: Nuclear callout ========== */
 .nuclear-callout {
-    max-width: 1320px;
+    max-width: var(--max-content);
     margin: 0 auto;
-    padding: 0 24px;
+    padding: 0 var(--pad-page);
 }
 .nuclear-callout-inner {
     background: linear-gradient(135deg, rgba(239,68,68,0.06) 0%, rgba(245,158,11,0.05) 100%);
     border: 1px solid rgba(239,68,68,0.2);
-    border-left: 4px solid #EF4444;
+    border-left: 4px solid var(--red);
     border-radius: 14px;
     padding: 24px 28px;
     display: flex;
@@ -319,10 +211,10 @@ body { background: #F7F8FC; }
     margin-top: 2px;
 }
 .nuclear-callout-text h4 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 0.95rem;
     font-weight: 800;
-    color: #dc2626;
+    color: var(--red-dark);
     margin-bottom: 6px;
     letter-spacing: -0.2px;
 }
@@ -332,37 +224,37 @@ body { background: #F7F8FC; }
     line-height: 1.65;
     margin: 0;
 }
-.nuclear-callout-text strong { color: #d97706; }
+.nuclear-callout-text strong { color: var(--amber-warn); }
 
-/* ========== NUCLEAR DEEP-DIVE SECTION ========== */
+/* ========== PAGE-SPECIFIC: Nuclear deep-dive section ========== */
 .nuclear-section {
-    max-width: 1320px;
+    max-width: var(--max-content);
     margin: 0 auto;
-    padding: 64px 24px;
+    padding: var(--space-3xl) var(--pad-page);
     border-top: 1px solid rgba(239,68,68,0.1);
 }
 .nuclear-section-header {
     margin-bottom: 40px;
 }
 .nuclear-section-header h2 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.7rem;
     font-weight: 800;
-    color: #1E293B;
+    color: var(--text-secondary);
     margin-bottom: 12px;
     line-height: 1.2;
     letter-spacing: -0.5px;
 }
 .nuclear-section-header p {
     font-size: 0.92rem;
-    color: rgba(15,23,42,0.6);
+    color: var(--text-dim);
     line-height: 1.7;
     max-width: 780px;
 }
 .nuclear-grid {
     display: grid;
     grid-template-columns: 1.2fr 1fr;
-    gap: 32px;
+    gap: var(--space-xl);
     align-items: start;
 }
 .nuclear-chart-col .chart-panel {
@@ -372,30 +264,30 @@ body { background: #F7F8FC; }
 .nuclear-narrative-col {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: var(--space-lg);
 }
 .nuclear-metric-row {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-    margin-top: 24px;
+    gap: var(--space-md);
+    margin-top: var(--space-lg);
 }
 .nuclear-metric {
     background: rgba(255,255,255,0.95);
     border: 1px solid rgba(74,144,217,0.10);
     border-radius: 10px;
-    padding: 16px;
+    padding: var(--space-md);
     text-align: center;
 }
 .nuclear-metric-value {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.5rem;
     font-weight: 800;
     line-height: 1.1;
 }
 .nuclear-metric-label {
     font-size: 0.7rem;
-    color: rgba(15,23,42,0.45);
+    color: var(--text-dim);
     margin-top: 6px;
     line-height: 1.35;
 }
@@ -415,10 +307,10 @@ body { background: #F7F8FC; }
     transform: translateY(0);
 }
 .nuclear-paradox h3 {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.15rem;
     font-weight: 800;
-    color: #d97706;
+    color: var(--amber-warn);
     margin-bottom: 12px;
 }
 .nuclear-paradox p {
@@ -429,25 +321,25 @@ body { background: #F7F8FC; }
 }
 .nuclear-paradox p:last-child { margin-bottom: 0; }
 
-/* ========== REGION PILLS ========== */
+/* ========== PAGE-SPECIFIC: Region pills ========== */
 .region-pills-bar {
     background: #fff;
     border-bottom: 1px solid rgba(0,0,0,0.06);
-    padding: 12px 24px;
+    padding: 12px var(--pad-page);
     position: sticky;
     top: 0;
     z-index: 100;
 }
 .region-pills-inner {
-    max-width: 1320px;
+    max-width: var(--max-content);
     margin: 0 auto;
     display: flex;
-    gap: 8px;
+    gap: var(--space-sm);
     flex-wrap: wrap;
     justify-content: center;
 }
 .region-pill {
-    font-family: 'Franklin Gothic Demi', 'Barlow Semi Condensed', sans-serif;
+    font-family: var(--font-heading);
     font-size: 0.82rem;
     font-weight: 600;
     letter-spacing: 0.03em;
@@ -455,7 +347,7 @@ body { background: #F7F8FC; }
     border-radius: 20px;
     border: 1.5px solid rgba(14,165,233,0.2);
     background: rgba(14,165,233,0.04);
-    color: rgba(15,23,42,0.6);
+    color: var(--text-dim);
     cursor: pointer;
     transition: all 0.25s ease;
     min-height: 44px;
@@ -468,20 +360,23 @@ body { background: #F7F8FC; }
     color: #0284c7;
 }
 .region-pill.active {
-    background: linear-gradient(135deg, #0EA5E9, #0284c7);
+    background: linear-gradient(135deg, var(--hydro), #0284c7);
     color: #fff;
     border-color: transparent;
     box-shadow: 0 2px 8px rgba(14,165,233,0.3);
 }
 
+/* ========== PAGE-SPECIFIC: Hero section padding override ========== */
+.hero-section {
+    padding: 56px var(--pad-page) 48px;
+}
+
 /* ========== RESPONSIVE ========== */
 @media (max-width: 900px) {
-    .hero-inner { grid-template-columns: 1fr; gap: 28px; }
     .scroll-section-inner { grid-template-columns: 1fr; gap: 28px; }
     .scroll-chart-col { position: relative; top: 0; }
     .synthesis-grid { grid-template-columns: 1fr; }
     .hero-text h1 { font-size: 1.7rem; }
-    .chart-container { min-height: 280px; }
     .nuclear-grid { grid-template-columns: 1fr; }
     .nuclear-chart-col .chart-panel { position: relative; top: 0; }
     .nuclear-metric-row { grid-template-columns: repeat(3, 1fr); }
@@ -496,8 +391,6 @@ body { background: #F7F8FC; }
     .scroll-section { padding: 0 16px; }
     .scroll-section-inner { padding: 40px 0; gap: 20px; }
     .narrative-card { padding: 20px 16px; }
-    .chart-panel { padding: 16px 12px; }
-    .chart-container { min-height: 250px; }
     .chart-legend { font-size: 0.6rem; gap: 4px 10px; }
     .nuclear-section { padding: 40px 16px; }
     .nuclear-section-header h2 { font-size: 1.35rem; }
@@ -585,7 +478,7 @@ body { background: #F7F8FC; }
         <div class="nuclear-callout-icon">&#9762;</div>
         <div class="nuclear-callout-text" id="nuclearCalloutContent">
             <h4>Existing Nuclear at Risk: Wholesale prices cross below operating cost by ~2038 (85% clean)</h4>
-            <p>PJM's 32 GW nuclear fleet needs <strong>$25&ndash;30/MWh</strong> to cover operating costs. Our LMP model shows median wholesale prices fall through this floor between the SBTi ~2038 (85%) and 2040 (90%) milestones &mdash; and off-peak prices collapse even earlier. By the SBTi 2045 target (95%), nearly half the year prices at zero or below. <a href="#nuclear-deepdive" style="color:#38bdf8;text-decoration:underline;">Jump to full analysis &darr;</a></p>
+            <p>PJM's 32 GW nuclear fleet needs <strong>$25&ndash;30/MWh</strong> to cover operating costs. Our LMP model shows median wholesale prices fall through this floor between the SBTi ~2038 (85%) and 2040 (90%) milestones &mdash; and off-peak prices collapse even earlier. By the SBTi 2045 target (95%), nearly half the year prices at zero or below. <a href="#nuclear-deepdive" style="color:var(--accent-cyan);text-decoration:underline;">Jump to full analysis &darr;</a></p>
         </div>
     </div>
 </div>
@@ -764,7 +657,7 @@ body { background: #F7F8FC; }
 
             <div class="narrative-card">
                 <h3>45U buys time &mdash; but how much?</h3>
-                <p>The IRA's Section 45U provides <strong>$15/MWh</strong> (with prevailing wage, 5&times; the $3 base credit) for existing nuclear through 2032. It phases out at 80&cent; per dollar above $25/MWh gross receipts, reaching $0 at <strong>$43.75/MWh</strong>. When wholesale is &le;$25, total revenue = $40/MWh. The credit functions as a contract-for-differences: maximum support when prices are lowest. At current PJM wholesale ($30&ndash;45/MWh), most plants receive a partial credit of $5&ndash;15/MWh, landing total revenue at <strong>$40&ndash;45/MWh</strong> &mdash; right in the viable zone.</p>
+                <p>The IRA's Section 45U provides <strong>$15/MWh</strong> (with prevailing wage, 5&times; the $3 base credit) for existing nuclear through 2032. It phases out at 80&cent; per dollar above $25/MWh gross receipts, reaching $0 at <strong>$43.75/MWh</strong>. When wholesale is &le;$25, total revenue = $40/MWh. The credit functions as a contract-for-differences: maximum support when prices are lowest. At current PJM wholesale ($30&ndash;$45/MWh), most plants receive a partial credit of $5&ndash;15/MWh, landing total revenue at <strong>$40&ndash;45/MWh</strong> &mdash; right in the viable zone.</p>
                 <p>But 45U expires in 2032. At the SBTi 2040 target (90% clean), medium-fuel LMP is <strong>$20/MWh</strong>. Without 45U, nuclear loses $15&ndash;24 on every MWh sold against viable costs. The gap between 45U expiration and the point where wholesale prices become unviable (~68% clean) is razor-thin &mdash; and by 2032, clean energy penetration may already be past that threshold.</p>
                 <p>Under <strong>low fuel prices</strong>: LMP drops to $16/MWh at 90% clean. Nuclear loses $22&ndash;28/MWh against viable costs. No realistic extension of 45U fills that hole without structural market redesign (capacity reform, clean energy credits, or long-term PPAs).</p>
                 <span class="stat-badge stat-badge-blue">45U: $15/MWh credit, effective floor $40, phases out at $43.75 &middot; Expires 2032</span>

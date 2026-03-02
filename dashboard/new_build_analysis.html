@@ -11,8 +11,10 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <link rel="stylesheet" href="styles/shared.css">
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
 <style>
-body { background: #F7F8FC; }
+body { background: var(--bg-page); }
 
 /* ========== MIX COMPARE PILLS ========== */
 .mix-compare-pills {
@@ -24,30 +26,30 @@ body { background: #F7F8FC; }
 .mix-compare-pill {
     padding: 6px 16px;
     border-radius: 20px;
-    border: 1.5px solid #d1d5db;
-    background: #fff;
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    border: 1.5px solid var(--border);
+    background: var(--bg-card);
+    font-family: var(--font-body);
     font-size: 0.82rem;
     font-weight: 600;
-    color: #6b7280;
+    color: var(--text-muted);
     cursor: pointer;
     transition: all 0.2s;
 }
 .mix-compare-pill:hover {
-    border-color: #1E3A5F;
-    color: #1E3A5F;
+    border-color: var(--navy-mid);
+    color: var(--navy-mid);
 }
 .mix-compare-pill.active {
-    background: #1E3A5F;
-    border-color: #1E3A5F;
+    background: var(--navy-mid);
+    border-color: var(--navy-mid);
     color: #fff;
 }
 .mix-compare-insight {
     margin-top: 16px;
     padding: 14px 18px;
     background: rgba(30,58,95,0.04);
-    border-left: 3px solid #1E3A5F;
-    border-radius: 6px;
+    border-left: 3px solid var(--navy-mid);
+    border-radius: var(--radius-sm);
     font-size: 0.85rem;
     line-height: 1.7;
     color: #374151;
@@ -55,29 +57,28 @@ body { background: #F7F8FC; }
 
 /* ========== SECTION CARDS ========== */
 .section-card {
-    background: #fff;
-    border-radius: 12px;
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
     padding: 28px 28px 24px;
-    margin-bottom: 24px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    margin-bottom: var(--space-lg);
+    box-shadow: var(--shadow-md);
     border: 1px solid rgba(0,0,0,0.06);
 }
 .section-card h2 {
-    font-family: 'Lexend', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.25rem;
-    color: #1A2744;
+    color: var(--navy);
     margin: 0 0 6px;
     font-weight: 700;
 }
 .section-sub {
     font-size: 0.88rem;
-    color: #6b7280;
+    color: var(--text-muted);
     line-height: 1.6;
     margin: 0 0 20px;
 }
-.chart-container {
-    position: relative;
-    width: 100%;
+/* page-specific override: chart-container with margin */
+.section-card .chart-container {
     margin: 16px 0;
 }
 .chart-tall { height: 380px; }
@@ -106,16 +107,16 @@ body { background: #F7F8FC; }
 .track-card.t1 { border-color: #0EA5E9; background: rgba(14,165,233,0.04); }
 .track-card.t2 { border-color: #F59E0B; background: rgba(245,158,11,0.04); }
 .track-card h3 {
-    font-family: 'Lexend', sans-serif;
+    font-family: var(--font-heading);
     font-size: 0.95rem;
     margin: 0 0 4px;
     font-weight: 700;
 }
-.track-card.t1 h3 { color: #0EA5E9; }
-.track-card.t2 h3 { color: #F59E0B; }
-.track-card p { font-size: 0.82rem; color: #6b7280; line-height: 1.5; margin: 0 0 12px; }
+.track-card.t1 h3 { color: var(--hydro); }
+.track-card.t2 h3 { color: var(--solar); }
+.track-card p { font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; margin: 0 0 12px; }
 .track-cost {
-    font-family: 'Rajdhani', sans-serif;
+    font-family: var(--font-data);
     font-size: 2rem;
     font-weight: 700;
     line-height: 1;
@@ -136,10 +137,10 @@ body { background: #F7F8FC; }
     text-align: center;
 }
 .metric-item .val {
-    font-family: 'Rajdhani', sans-serif;
+    font-family: var(--font-data);
     font-size: 1.5rem;
     font-weight: 700;
-    color: #1A2744;
+    color: var(--navy);
     line-height: 1.1;
 }
 .metric-item .lbl {
@@ -177,7 +178,7 @@ body { background: #F7F8FC; }
 }
 .waterfall-legend span {
     font-size: 0.72rem;
-    color: #6b7280;
+    color: var(--text-muted);
     display: flex;
     align-items: center;
     gap: 4px;
@@ -196,14 +197,14 @@ body { background: #F7F8FC; }
     padding: 18px 20px;
     margin: 16px 0;
 }
-.callout-box.danger { background: #FEF2F2; border-left: 4px solid #EF4444; }
+.callout-box.danger { background: #FEF2F2; border-left: 4px solid var(--red); }
 .callout-box.info { background: #EFF6FF; border-left: 4px solid #3B82F6; }
-.callout-box.warn { background: #FFFBEB; border-left: 4px solid #F59E0B; }
+.callout-box.warn { background: #FFFBEB; border-left: 4px solid var(--solar); }
 .callout-box h4 {
-    font-family: 'Lexend', sans-serif;
+    font-family: var(--font-heading);
     font-size: 0.9rem;
     font-weight: 700;
-    color: #1A2744;
+    color: var(--navy);
     margin: 0 0 6px;
 }
 .callout-box p { font-size: 0.82rem; color: #374151; line-height: 1.6; margin: 0; }
@@ -211,14 +212,14 @@ body { background: #F7F8FC; }
 
 /* ========== BOTTOM LINE ========== */
 .bottom-line {
-    background: #0F1A2E;
+    background: var(--navy-dark);
     color: #fff;
     border-radius: 12px;
     padding: 32px 28px;
     margin-bottom: 24px;
 }
 .bottom-line h2 {
-    font-family: 'Lexend', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.2rem;
     margin: 0 0 16px;
 }
@@ -240,19 +241,19 @@ body { background: #F7F8FC; }
 .target-bar {
     background: rgba(255,255,255,0.95);
     border: 1px solid rgba(0,0,0,0.1);
-    border-radius: 10px;
-    padding: 16px 24px;
+    border-radius: var(--radius-md);
+    padding: 16px var(--pad-page);
     margin: -16px 0 20px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    box-shadow: var(--shadow-md);
     display: flex;
     align-items: center;
     gap: 16px;
     flex-wrap: wrap;
 }
 .target-bar label {
-    font-family: 'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;
+    font-family: var(--font-heading);
     font-size: 0.85rem;
-    color: #1A2744;
+    color: var(--navy);
     font-weight: 700;
     white-space: nowrap;
 }
@@ -284,10 +285,10 @@ body { background: #F7F8FC; }
     cursor: pointer;
 }
 .target-val {
-    font-family: 'Rajdhani', sans-serif;
+    font-family: var(--font-data);
     font-size: 1.4rem;
     font-weight: 700;
-    color: #1A2744;
+    color: var(--navy);
     min-width: 52px;
     text-align: center;
 }
@@ -318,7 +319,7 @@ body { background: #F7F8FC; }
 <!-- Navigation -->
 <nav id="topNav"></nav>
 <script src="js/nav.js"></script>
-<div style="background:#0F1A2E;padding:8px 24px;">
+<div style="background:var(--navy-dark);padding:8px var(--pad-page);">
     <a href="index.html" style="color:rgba(255,255,255,0.6);font-size:0.82rem;text-decoration:none;">&#8592; Back to Home</a>
 </div>
 
@@ -552,7 +553,7 @@ body { background: #F7F8FC; }
 </div><!-- end max-width container -->
 
 <!-- Footer -->
-<footer class="page-footer" style="background:#0F1A2E;padding:32px var(--pad-page,24px);text-align:center;color:rgba(255,255,255,0.5);">
+<footer class="page-footer" style="background:var(--navy-dark);padding:32px var(--pad-page);text-align:center;color:rgba(255,255,255,0.5);">
     <div class="footer-links" style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px 20px;margin-bottom:12px;">
         <a href="index.html" style="color:rgba(255,255,255,0.6);text-decoration:none;font-size:0.82rem;">Home</a>
         <a href="dashboard.html" style="color:rgba(255,255,255,0.6);text-decoration:none;font-size:0.82rem;">Grid Simulation</a>
