@@ -58,7 +58,7 @@ def filter_iso(iso, demand_arr, supply_matrix):
     combos = np.column_stack([
         table.column(rt).to_numpy() for rt in rtypes
     ])
-    base_scores = table.column('base_score').to_numpy().astype(np.float64) / 100.0
+    base_scores = table.column('base_score').to_numpy().astype(np.float64)
 
     # float32 throughout — halves memory, plenty of precision for 0-100% scores
     supply_f32 = supply_matrix.astype(np.float32)
@@ -107,18 +107,13 @@ def filter_iso(iso, demand_arr, supply_matrix):
     else:
         filtered = table
 
-    # Downcast to smallest sufficient dtypes:
-    # - Resource columns are integers 0-100 → int8 (max 127)
-    # - base_score is float → float32 (0.01 precision is plenty)
+    # Downcast to smallest sufficient dtypes using _compact_dtype
+    # (range-checked: int8 for 0-127, int16 for larger, float32 for scores)
     compact_cols = {}
     for col_name in filtered.column_names:
         col = filtered.column(col_name)
         arr = col.to_numpy()
-        if col_name == 'base_score':
-            compact_cols[col_name] = pa.array(arr.astype(np.float32))
-        else:
-            # Resource percentages: int8 handles 0-100
-            compact_cols[col_name] = pa.array(arr.astype(np.int8))
+        compact_cols[col_name] = _compact_dtype(col_name, arr)
 
     compact_table = pa.table(compact_cols)
     size_before = os.path.getsize(path)
