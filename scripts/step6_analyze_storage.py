@@ -142,61 +142,57 @@ def compute_storage_metrics(storage_by_threshold):
     Returns structured data for dashboard visualization.
     """
     metrics = {}
+    res_types = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
 
     for iso in ISOS:
-        iso_metrics = {
-            'thresholds': [],
-            'battery4_pct': [],
-            'battery8_pct': [],
-            'ldes_pct': [],
-            'h2_pct': [],
-            'total_storage_pct': [],
-            'storage_share_of_clean': [],
-            'battery_twh': [],
-            'ldes_twh': [],
-            'h2_twh': [],
-            'total_storage_twh': [],
-            'resource_mix': {r: [] for r in ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']},
-        }
-
         demand_twh = BASE_DEMAND_TWH.get(iso, 0)
 
-        for i, th in enumerate(SD_THRESHOLDS):
-            if th < 50:
-                continue  # Skip below 50% — not relevant for storage analysis
+        # Filter thresholds >= 50 and collect storage data
+        valid_indices = [(i, th) for i, th in enumerate(SD_THRESHOLDS) if th >= 50]
+        n = len(valid_indices)
 
+        # Pre-allocate numpy arrays instead of repeated list.append()
+        thresholds_arr = np.zeros(n)
+        bat4_arr = np.zeros(n)
+        bat8_arr = np.zeros(n)
+        ldes_arr = np.zeros(n)
+        h2_arr = np.zeros(n)
+        res_arrs = {r: np.zeros(n) for r in res_types}
+
+        for j, (i, th) in enumerate(valid_indices):
             s = storage_by_threshold[iso].get(i, {})
-            bat4 = s.get('battery', 0)
-            bat8 = s.get('battery8', 0)
-            ldes = s.get('ldes', 0)
-            h2 = s.get('h2', 0)
-            total_storage = bat4 + bat8 + ldes + h2
+            thresholds_arr[j] = th
+            bat4_arr[j] = s.get('battery', 0)
+            bat8_arr[j] = s.get('battery8', 0)
+            ldes_arr[j] = s.get('ldes', 0)
+            h2_arr[j] = s.get('h2', 0)
+            for r in res_types:
+                res_arrs[r][j] = s.get(r, 0)
 
-            # Resource mix percentages
-            total_clean = sum(s.get(r, 0) for r in ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro'])
+        # Vectorized computations
+        total_storage = bat4_arr + bat8_arr + ldes_arr + h2_arr
+        total_clean = sum(res_arrs[r] for r in res_types)
+        denom = total_clean + total_storage
+        storage_share = np.where(denom > 0, np.divide(total_storage, denom, where=denom > 0, out=np.zeros_like(denom)) * 100, 0)
 
-            # Storage as share of clean procurement
-            storage_share = (total_storage / (total_clean + total_storage) * 100) if (total_clean + total_storage) > 0 else 0
+        bat_twh = bat4_arr * demand_twh / 100.0
+        ldes_twh = ldes_arr * demand_twh / 100.0
+        h2_twh = h2_arr * demand_twh / 100.0
 
-            # Convert dispatch % to TWh (dispatch_pct is % of annual demand dispatched by storage)
-            bat_twh = bat4 * demand_twh / 100.0
-            ldes_twh_val = ldes * demand_twh / 100.0
-            h2_twh_val = h2 * demand_twh / 100.0
-
-            iso_metrics['thresholds'].append(th)
-            iso_metrics['battery4_pct'].append(round(bat4, 2))
-            iso_metrics['battery8_pct'].append(round(bat8, 2))
-            iso_metrics['ldes_pct'].append(round(ldes, 2))
-            iso_metrics['h2_pct'].append(round(h2, 2))
-            iso_metrics['total_storage_pct'].append(round(total_storage, 2))
-            iso_metrics['storage_share_of_clean'].append(round(storage_share, 1))
-            iso_metrics['battery_twh'].append(round(bat_twh, 2))
-            iso_metrics['ldes_twh'].append(round(ldes_twh_val, 2))
-            iso_metrics['h2_twh'].append(round(h2_twh_val, 2))
-            iso_metrics['total_storage_twh'].append(round(bat_twh + ldes_twh_val + h2_twh_val, 2))
-
-            for r in ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']:
-                iso_metrics['resource_mix'][r].append(round(s.get(r, 0), 1))
+        iso_metrics = {
+            'thresholds': np.round(thresholds_arr, 2).tolist(),
+            'battery4_pct': np.round(bat4_arr, 2).tolist(),
+            'battery8_pct': np.round(bat8_arr, 2).tolist(),
+            'ldes_pct': np.round(ldes_arr, 2).tolist(),
+            'h2_pct': np.round(h2_arr, 2).tolist(),
+            'total_storage_pct': np.round(total_storage, 2).tolist(),
+            'storage_share_of_clean': np.round(storage_share, 1).tolist(),
+            'battery_twh': np.round(bat_twh, 2).tolist(),
+            'ldes_twh': np.round(ldes_twh, 2).tolist(),
+            'h2_twh': np.round(h2_twh, 2).tolist(),
+            'total_storage_twh': np.round(bat_twh + ldes_twh + h2_twh, 2).tolist(),
+            'resource_mix': {r: np.round(res_arrs[r], 1).tolist() for r in res_types},
+        }
 
         metrics[iso] = iso_metrics
 
