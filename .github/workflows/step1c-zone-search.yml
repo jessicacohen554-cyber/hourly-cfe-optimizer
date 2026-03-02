@@ -162,7 +162,9 @@ jobs:
         # never write conflicting changes when squash-merged later.
         ISO="${{ matrix.iso }}"
         mkdir -p data/step1-pfs-parquets
-        git add -f data/step1-pfs-parquets/"${ISO}"_*.parquet data/step1-pfs-parquets/"${ISO}"_*.json 2>/dev/null || true
+        # Only add parquets — zone_manifest.json is a run-time checkpoint (gitignored)
+        # and causes add/add conflicts when squash-merging parallel ISO branches.
+        git add -f data/step1-pfs-parquets/"${ISO}"_*.parquet 2>/dev/null || true
         if ! git diff --cached --quiet; then
           THRESHOLDS="${{ inputs.thresholds }}"
           ZONES="${{ inputs.zones }}"
