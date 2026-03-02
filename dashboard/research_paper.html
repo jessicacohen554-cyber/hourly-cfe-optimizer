@@ -782,7 +782,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         The optimizer uses a four-step pipeline. <strong>Step 1 (Physics Feasible Space)</strong> performs a 4D
         adaptive grid search across clean firm, solar, wind, and hydro shares, combined with a procurement
         sweep and storage dispatch optimization (battery 4hr Li-ion daily-cycle + LDES 100hr iron-air 7-day
-        rolling), producing physics-validated resource mixes across 15 thresholds
+        rolling), producing physics-validated resource mixes across 21 thresholds
         [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, &ge;99.99%].
         <strong>Step 2 (Efficient Frontier)</strong> applies existing utilization filters, procurement
         minimization, and strict dominance removal to reduce 21.4M mixes to ~1.8M Pareto-optimal candidates.
@@ -809,7 +809,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
             <!-- Strategy B Box -->
             <rect x="380" y="48" width="280" height="85" rx="10" fill="rgba(239,68,68,0.08)" stroke="#EF4444" stroke-width="1.5"/>
             <text x="520" y="68" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="12" font-weight="700" fill="#DC2626">STRATEGY B: THRESHOLD</text>
-            <text x="520" y="86" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="10" fill="#374151">For each target (50-100%, 15 thresholds):</text>
+            <text x="520" y="86" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="10" fill="#374151">For each target (10-&ge;99.99%, 21 thresholds):</text>
             <text x="520" y="102" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="10" fill="#374151">Find portfolio that MINIMIZES cost</text>
             <text x="520" y="122" text-anchor="middle" font-family="Barlow Semi Condensed, sans-serif" font-size="10" font-weight="600" fill="#DC2626">Output: Cost-Optimal Portfolios</text>
             <!-- Arrow down from both -->
@@ -1500,7 +1500,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
         8-hour Li-ion (85% RTE, daily cycle, half power rating), and 100-hour iron-air LDES (50% RTE,
         7-day rolling window). A notable finding is that <strong>8-hour battery storage is never selected
         in optimal solutions</strong> across any of the 718,502 evaluated scenarios (7 ISOs &times;
-        15 thresholds &times; 5,832+ cost combinations). Despite appearing in 48&ndash;57% of
+        21 thresholds &times; 5,832+ cost combinations). Despite appearing in 48&ndash;57% of
         physics-feasible mixes, the 4-hour battery strictly dominates: identical round-trip efficiency
         and LCOE ($77&ndash;140/MWh depending on region and sensitivity), but twice the power rating
         per unit capacity. In daily-cycle dispatch, the 4-hour battery&rsquo;s faster discharge rate
