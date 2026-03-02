@@ -58,9 +58,16 @@ TARGET_THRESHOLD_SET = set(TARGET_THRESHOLDS)
 
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 
-# Resource columns per ISO — CAISO has 5D (geothermal), others have 4D
+# Resource columns per ISO — dimensionality depends on available resources
+# Interior ISOs (ERCOT, MISO, SPP): 4D
+# Offshore ISOs (NYISO, NEISO, PJM): 5D (+ offshore_wind)
+# CAISO: 6D (+ offshore_wind + geothermal)
 RESOURCE_COLS_BASE = ['clean_firm', 'solar', 'wind', 'hydro']
-RESOURCE_COLS_CAISO = ['clean_firm', 'solar', 'wind', 'hydro', 'geothermal']
+RESOURCE_COLS_OFFSHORE = ['clean_firm', 'solar', 'wind', 'hydro', 'offshore_wind']
+RESOURCE_COLS_CAISO = ['clean_firm', 'solar', 'wind', 'hydro', 'offshore_wind', 'geothermal']
+
+# ISOs with offshore wind resource (must match step1_pfs_generator.py)
+OFFSHORE_ISOS = ['NYISO', 'NEISO', 'PJM', 'CAISO']
 
 # Storage dispatch columns (always present)
 STORAGE_COLS = ['battery_dispatch_pct', 'battery8_dispatch_pct', 'ldes_dispatch_pct', 'h2_dispatch_pct']
@@ -75,7 +82,12 @@ TOTAL_PROCUREMENT_CAP = 350  # Max sum of all resources as % of demand
 
 def get_resource_cols(iso):
     """Return resource column names for the given ISO."""
-    return RESOURCE_COLS_CAISO if iso == 'CAISO' else RESOURCE_COLS_BASE
+    if iso == 'CAISO':
+        return RESOURCE_COLS_CAISO
+    elif iso in OFFSHORE_ISOS:
+        return RESOURCE_COLS_OFFSHORE
+    else:
+        return RESOURCE_COLS_BASE
 
 
 def normalize_table(t, iso):
@@ -101,7 +113,7 @@ def normalize_table(t, iso):
         if name in t.column_names:
             col = t.column(name)
             cols[name] = col if col.type == pa.int16() else pc.cast(col, pa.int16())
-        elif name == 'geothermal':
+        elif name in ('geothermal', 'offshore_wind'):
             cols[name] = pa.array(np.zeros(t.num_rows, dtype=np.int16))
         else:
             raise ValueError(f"Missing required column '{name}' in {t.column_names}")
