@@ -532,13 +532,15 @@ def process_threshold(iso, threshold, demand_arr, supply_matrix,
     h2_window_hours = H2_WINDOW_DAYS * 24
     batt8_window = 48
 
-    # ── Compute storage caps (chunked, Numba parallel) ──
+    # ── Compute storage caps + total surplus (chunked, Numba parallel) ──
     b4_caps = np.empty(n_nm, dtype=np.float64)
     b8_caps = np.empty(n_nm, dtype=np.float64)
     l_caps = np.empty(n_nm, dtype=np.float64)
     hc_arr = np.empty(n_nm, dtype=np.int64)
     sd_arr = np.empty(n_nm, dtype=np.int64)
+    total_surplus = np.empty(n_nm, dtype=np.float64)
 
+    demand_total = demand_arr.sum()
     n_cap_chunks = (n_nm + NM_CHUNK - 1) // NM_CHUNK
     for cs in range(0, n_nm, NM_CHUNK):
         ce = min(cs + NM_CHUNK, n_nm)
@@ -555,16 +557,33 @@ def process_threshold(iso, threshold, demand_arr, supply_matrix,
         l_caps[cs:ce] = cl
         hc_arr[cs:ce] = chc
         sd_arr[cs:ce] = csd
+        # Total annual surplus energy per mix (for curtailment-magnitude gate)
+        chunk_surplus = np.maximum(chunk_supply - demand_arr[np.newaxis, :], 0.0)
+        total_surplus[cs:ce] = chunk_surplus.sum(axis=1)
 
     if n_cap_chunks > 1:
         print()
 
-    # ── Filter: only mixes with any curtailment ──
+    # ── Filter 1: only mixes with any curtailment ──
     has_curtailment = hc_arr.astype(bool)
-    valid_ci = np.where(has_curtailment)[0]
+    n_with_curtailment = has_curtailment.sum()
+
+    # ── Filter 2: curtailment-magnitude gate ──
+    # Physical upper bound: max score lift = total_surplus × best_eff / demand_total
+    # If this is less than the score gap, storage CANNOT bridge it — skip.
+    best_eff = max(BATTERY_EFFICIENCY, BATTERY8_EFFICIENCY, LDES_EFFICIENCY)
+    score_gap = target - coarse_scores[near_miss_idx]
+    max_score_lift = total_surplus * best_eff / demand_total
+    can_bridge = max_score_lift >= score_gap
+
+    # Combine both filters
+    valid_mask = has_curtailment & can_bridge
+    valid_ci = np.where(valid_mask)[0]
+    n_gated = int(n_with_curtailment) - len(valid_ci)
 
     if len(valid_ci) == 0:
-        print(f"      0 mixes with curtailment — skipping")
+        print(f"      0 viable mixes (curtailment: {n_with_curtailment:,}, "
+              f"gated out: {n_gated:,} insufficient surplus) — skipping")
         return 0
 
     # Build numpy arrays directly (no Python list of tuples)
@@ -575,7 +594,8 @@ def process_threshold(iso, threshold, demand_arr, supply_matrix,
     valid_orig_idx = near_miss_idx[valid_ci]
 
     n_valid = len(valid_ci)
-    print(f"      {n_valid:,} mixes with curtailment")
+    print(f"      {n_valid:,} viable mixes (curtailment: {n_with_curtailment:,}, "
+          f"gated: {n_gated:,} insufficient surplus)")
 
     # ── Cap distribution summary (diagnostic) ──
     valid_b4_diag = b4_caps[valid_ci] * 100.0
