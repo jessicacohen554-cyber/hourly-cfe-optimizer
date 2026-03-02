@@ -161,9 +161,10 @@ def main():
 
                 # Always include medium scenario(s) with full detail
                 medium_rows = thr_df[thr_df['scenario'].isin(MEDIUM_KEYS)]
-                scenarios = {}
-                for _, row in medium_rows.iterrows():
-                    scenarios[row['scenario']] = build_scenario_dict(row)
+                scenarios = {
+                    row['scenario']: build_scenario_dict(row)
+                    for row in medium_rows.to_dict('records')
+                }
 
                 # If only 1 scenario total and it wasn't in MEDIUM_KEYS, include it
                 if not scenarios and n_scenarios > 0:
