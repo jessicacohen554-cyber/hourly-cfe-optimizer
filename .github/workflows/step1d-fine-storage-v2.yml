@@ -182,7 +182,9 @@ jobs:
     - name: "Commit batch LOW — ${{ matrix.iso }}"
       if: ${{ inputs.thresholds == '' && inputs.batch_mode == 'batched' }}
       run: |
-        git add -A data/step1d-storage-parquets/
+        # Scope to THIS ISO's files so parallel jobs don't create merge conflicts
+        git add data/step1d-storage-parquets/"${{ matrix.iso }}"_*.parquet \
+                data/step1d-storage-parquets/"${{ matrix.iso }}"_*.json 2>/dev/null || true
         if ! git diff --cached --quiet; then
           git commit -m "Step 1d batch LOW: ${{ matrix.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           git push -u origin "$TARGET_BRANCH" || true
@@ -201,7 +203,8 @@ jobs:
     - name: "Commit batch MID — ${{ matrix.iso }}"
       if: ${{ inputs.thresholds == '' && inputs.batch_mode == 'batched' }}
       run: |
-        git add -A data/step1d-storage-parquets/
+        git add data/step1d-storage-parquets/"${{ matrix.iso }}"_*.parquet \
+                data/step1d-storage-parquets/"${{ matrix.iso }}"_*.json 2>/dev/null || true
         if ! git diff --cached --quiet; then
           git commit -m "Step 1d batch MID: ${{ matrix.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           git push origin "$TARGET_BRANCH" || true
@@ -220,7 +223,8 @@ jobs:
     - name: "Commit batch HIGH — ${{ matrix.iso }}"
       if: ${{ inputs.thresholds == '' && inputs.batch_mode == 'batched' }}
       run: |
-        git add -A data/step1d-storage-parquets/
+        git add data/step1d-storage-parquets/"${{ matrix.iso }}"_*.parquet \
+                data/step1d-storage-parquets/"${{ matrix.iso }}"_*.json 2>/dev/null || true
         if ! git diff --cached --quiet; then
           git commit -m "Step 1d batch HIGH: ${{ matrix.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           git push origin "$TARGET_BRANCH" || true
@@ -230,7 +234,9 @@ jobs:
     - name: Final commit and push
       if: always()
       run: |
-        git add -A data/step1d-storage-parquets/
+        # Scope to THIS ISO's files only to prevent cross-ISO merge conflicts
+        git add data/step1d-storage-parquets/"${{ matrix.iso }}"_*.parquet \
+                data/step1d-storage-parquets/"${{ matrix.iso }}"_*.json 2>/dev/null || true
         if ! git diff --cached --quiet; then
           LABEL="${{ matrix.iso }}"
           CUSTOM="${{ inputs.thresholds }}"
