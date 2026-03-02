@@ -41,6 +41,7 @@ os.makedirs(OUT_DIR, exist_ok=True)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
+OFFSHORE_ISOS = ['NYISO', 'NEISO', 'PJM', 'CAISO']  # ISOs with offshore wind resource
 
 BASE_DEMAND_TWH = {
     'CAISO': 224.0, 'ERCOT': 488.0, 'PJM': 843.3, 'NYISO': 151.6,
@@ -66,6 +67,12 @@ LEARNING_PARAMS = {
     'ccs':     {'L': (2028, 2036), 'M': (2030, 2040), 'H': (2036, 2048)},
     'geo':     {'L': (2028, 2036), 'M': (2030, 2040), 'H': (2036, 2048)},
     'ldes':    {'L': (2028, 2036), 'M': (2030, 2040), 'H': (2036, 2048)},
+    # Offshore wind (fixed-bottom): 83 GW global base, ~8.5% learning rate.
+    # East Coast ISOs: NYISO, NEISO, PJM. Mature supply chain in Europe/Asia.
+    'offshore_wind_fixed': {'L': (2026, 2034), 'M': (2028, 2038), 'H': (2032, 2045)},
+    # Offshore wind (floating): 0.3 GW global base, ~11.5% learning rate.
+    # CAISO only. No US commercial experience; first projects ~2030.
+    'offshore_wind_float': {'L': (2029, 2037), 'M': (2031, 2042), 'H': (2035, 2050)},
 }
 LEARNING_EXPONENT = 0.6
 
@@ -80,6 +87,29 @@ CCS_LCOE = {
     'L': {'CAISO': 58,  'ERCOT': 52, 'PJM': 62,  'NYISO': 65,  'NEISO': 70,  'MISO': 58, 'SPP': 55},
 }
 GEOTHERMAL_LCOE = {'H': 110, 'L': 63}  # CAISO only
+
+# Offshore wind LCOE anchors ($/MWh) — per-ISO, from step3
+# FOAK = first-of-a-kind premium above High LCOE
+OFFSHORE_WIND_FOAK = {
+    'CAISO': 250,  # floating: 1.25× $200 High
+    'PJM':   129,  # fixed: 1.15× $112 High
+    'NYISO': 144,  # fixed: 1.15× $125 High
+    'NEISO': 136,  # fixed: 1.15× $118 High
+}
+# NOAK = terminal learning floor (Medium scenario)
+OFFSHORE_WIND_NOAK = {
+    'CAISO': 72,   # floating NOAK Medium
+    'PJM':   62,   # fixed NOAK Medium
+    'NYISO': 65,   # fixed NOAK Medium
+    'NEISO': 63,   # fixed NOAK Medium
+}
+# Current (2025) LCOE at Medium cost — the starting price before learning
+OFFSHORE_WIND_LCOE_2025 = {
+    'CAISO': 150,  # floating: Medium
+    'PJM':   85,   # fixed: Medium
+    'NYISO': 95,   # fixed: Medium
+    'NEISO': 90,   # fixed: Medium
+}
 
 # Existing clean premium prices ($/MWh above wholesale for Strategy 2C)
 EXISTING_CLEAN_PREMIUM = {
@@ -115,10 +145,12 @@ GRID_MIX_SHARES = {
 # Wright's Law first-doubling thresholds (GW installed for FOAK→NOAK ramp start)
 # Based on DOE Liftoff / INL SOAR. Learning kicks in after first commercial doubling.
 FIRST_DOUBLING_GW = {
-    'nuclear': 5.0,   # ~5 GW of new SMR/AP1000 construction triggers learning
-    'ccs':     8.0,   # ~8 GW of CCS-CCGT triggers cost declines
-    'ldes':    3.0,   # ~3 GW of iron-air triggers manufacturing scaling
-    'geo':     2.0,   # ~2 GW of enhanced geothermal (CAISO only)
+    'nuclear': 5.0,           # ~5 GW of new SMR/AP1000 construction triggers learning
+    'ccs':     8.0,           # ~8 GW of CCS-CCGT triggers cost declines
+    'ldes':    3.0,           # ~3 GW of iron-air triggers manufacturing scaling
+    'geo':     2.0,           # ~2 GW of enhanced geothermal (CAISO only)
+    'offshore_wind_fixed': 10.0,  # ~10 GW US fixed-bottom (83 GW global base, US ramp-up)
+    'offshore_wind_float': 2.0,   # ~2 GW floating (only 0.3 GW global, earlier doubling)
 }
 
 # Capacity factor assumptions for converting TWh → GW
@@ -127,6 +159,9 @@ CAPACITY_FACTORS = {
     'ccs':     0.85,
     'ldes':    0.25,  # 100hr iron-air; low CF but critical role
     'geo':     0.90,
+    'offshore_wind': {  # Per-ISO CFs (from NREL NOW-23 profiles)
+        'CAISO': 0.43, 'PJM': 0.48, 'NYISO': 0.49, 'NEISO': 0.51,
+    },
 }
 
 
@@ -203,6 +238,7 @@ def compute_wrights_law_curves():
     ccs_twh = np.zeros((N_iso, N_thr), dtype=np.float64)
     nuc_nb_twh = np.zeros((N_iso, N_thr), dtype=np.float64)
     geo_twh_arr = np.zeros((N_iso, N_thr), dtype=np.float64)
+    osw_twh_arr = np.zeros((N_iso, N_thr), dtype=np.float64)
     base_demand = np.zeros(N_iso, dtype=np.float64)
     growth_rates = np.zeros(N_iso, dtype=np.float64)
 
@@ -218,6 +254,10 @@ def compute_wrights_law_curves():
             nuc_nb_twh[i, :n] = ct['nuclear_newbuild_twh'][:n]
             if 'geo_twh' in ct:
                 geo_twh_arr[i, :n] = ct['geo_twh'][:n]
+            if 'osw_twh' in ct:
+                osw_twh_arr[i, :n] = ct['osw_twh'][:n]
+            elif 'offshore_wind_twh' in ct:
+                osw_twh_arr[i, :n] = ct['offshore_wind_twh'][:n]
 
     # Demand growth factor per threshold: (N_iso, N_thr)
     # demand(year) = base × (1 + rate)^(year - 2025)
@@ -252,6 +292,9 @@ def compute_wrights_law_curves():
     part_geo = (PARTICIPATION_PCTS[:, np.newaxis, np.newaxis]
                 * geo_twh_arr[np.newaxis, :, :])
 
+    part_osw = (PARTICIPATION_PCTS[:, np.newaxis, np.newaxis]
+                * osw_twh_arr[np.newaxis, :, :])
+
     # Existing clean: capped at existing supply, doesn't scale with participation beyond 100%
     part_existing = (PARTICIPATION_PCTS[:, np.newaxis, np.newaxis]
                      * existing_cf_twh[np.newaxis, :, :])
@@ -261,7 +304,18 @@ def compute_wrights_law_curves():
     global_ccs_twh = part_ccs.sum(axis=1)                # (N_part, N_thr)
     global_nuc_nb_twh = part_nuc_nb.sum(axis=1)          # (N_part, N_thr)
     global_geo_twh = part_geo.sum(axis=1)                # (N_part, N_thr)
+    global_osw_twh = part_osw.sum(axis=1)                # (N_part, N_thr)
     global_existing_twh = part_existing.sum(axis=1)      # (N_part, N_thr)
+
+    # ── Per-ISO offshore wind TWh split by tech type (fixed vs floating) ──
+    # Needed to compute GW separately for fixed-bottom and floating learning curves
+    osw_fixed_twh = np.zeros((N_part, N_thr), dtype=np.float64)
+    osw_float_twh = np.zeros((N_part, N_thr), dtype=np.float64)
+    for i, iso in enumerate(ISOS):
+        if iso == 'CAISO':
+            osw_float_twh += part_osw[:, i, :]
+        elif iso in OFFSHORE_ISOS:
+            osw_fixed_twh += part_osw[:, i, :]
 
     # ── Convert TWh → GW installed (for Wright's Law doubling check) ──
     # GW = TWh / (CF × 8.76)
@@ -275,6 +329,15 @@ def compute_wrights_law_curves():
     remaining_cf_twh = np.maximum(global_new_cf_twh - global_ccs_twh
                                    - global_nuc_nb_twh - global_geo_twh, 0.0)
 
+    # Offshore wind GW — use demand-weighted average CF for each tech type
+    osw_fixed_avg_cf = np.average(
+        [CAPACITY_FACTORS['offshore_wind'][iso] for iso in ['PJM', 'NYISO', 'NEISO']],
+        weights=[BASE_DEMAND_TWH[iso] for iso in ['PJM', 'NYISO', 'NEISO']]
+    )
+    osw_float_avg_cf = CAPACITY_FACTORS['offshore_wind']['CAISO']
+    global_osw_fixed_gw = twh_to_gw(osw_fixed_twh, osw_fixed_avg_cf)
+    global_osw_float_gw = twh_to_gw(osw_float_twh, osw_float_avg_cf)
+
     # ── Wright's Law learning fractions by technology ──
     # Using Medium learning params: (2030, 2040) for all firm
     foak_start_m, noak_year_m = LEARNING_PARAMS['ccs']['M']
@@ -284,16 +347,30 @@ def compute_wrights_law_curves():
     # (in reality, higher participation → faster learning, but we model the SBTi timeline)
     frac_2d = np.broadcast_to(frac_m[np.newaxis, :], (N_part, N_thr)).copy()
 
+    # Offshore wind learning fractions (separate timelines for fixed vs floating)
+    osw_fixed_foak_s, osw_fixed_noak_y = LEARNING_PARAMS['offshore_wind_fixed']['M']
+    osw_float_foak_s, osw_float_noak_y = LEARNING_PARAMS['offshore_wind_float']['M']
+    frac_osw_fixed = learning_fraction_vec(years, osw_fixed_foak_s, osw_fixed_noak_y)  # (N_thr,)
+    frac_osw_float = learning_fraction_vec(years, osw_float_foak_s, osw_float_noak_y)  # (N_thr,)
+    frac_osw_fixed_2d = np.broadcast_to(frac_osw_fixed[np.newaxis, :], (N_part, N_thr)).copy()
+    frac_osw_float_2d = np.broadcast_to(frac_osw_float[np.newaxis, :], (N_part, N_thr)).copy()
+
     # ── Critical mass check: suppress learning below first doubling ──
     # For each (part, thr), check if cumulative global GW exceeds first doubling
     ccs_above_doubling = global_ccs_gw >= FIRST_DOUBLING_GW['ccs']      # (N_part, N_thr) bool
     nuc_above_doubling = global_nuc_gw >= FIRST_DOUBLING_GW['nuclear']
+    osw_fixed_above = global_osw_fixed_gw >= FIRST_DOUBLING_GW['offshore_wind_fixed']
+    osw_float_above = global_osw_float_gw >= FIRST_DOUBLING_GW['offshore_wind_float']
 
     # Combined: at least CCS OR nuclear has hit critical mass
     any_above_critical = ccs_above_doubling | nuc_above_doubling
 
     # Learning fraction gated by critical mass: 0 below threshold
     frac_gated = np.where(any_above_critical, frac_2d, 0.0)  # (N_part, N_thr)
+
+    # Offshore wind gating — independent critical mass thresholds
+    frac_osw_fixed_gated = np.where(osw_fixed_above, frac_osw_fixed_2d, 0.0)
+    frac_osw_float_gated = np.where(osw_float_above, frac_osw_float_2d, 0.0)
 
     # ── Cost trajectories per technology ──
     # CCS LCOE across ISOs (demand-weighted average for blended metric)
@@ -323,10 +400,38 @@ def compute_wrights_law_curves():
     ccs_lcoe_pure = year_adjusted_cost_vec(ccs_foak_avg, ccs_noak_avg, frac_2d)
     nuc_lcoe_pure = year_adjusted_cost_vec(nuc_foak_avg, nuc_noak_avg, frac_2d)
 
+    # ── Offshore wind LCOE trajectories (per-ISO, then demand-weighted avg) ──
+    # Fixed-bottom (East Coast): demand-weighted across PJM/NYISO/NEISO
+    osw_fixed_isos = ['PJM', 'NYISO', 'NEISO']
+    osw_fixed_foak_avg = np.average(
+        [OFFSHORE_WIND_FOAK[iso] for iso in osw_fixed_isos],
+        weights=[BASE_DEMAND_TWH[iso] for iso in osw_fixed_isos]
+    )
+    osw_fixed_noak_avg = np.average(
+        [OFFSHORE_WIND_NOAK[iso] for iso in osw_fixed_isos],
+        weights=[BASE_DEMAND_TWH[iso] for iso in osw_fixed_isos]
+    )
+    osw_fixed_lcoe_gated = year_adjusted_cost_vec(osw_fixed_foak_avg, osw_fixed_noak_avg, frac_osw_fixed_gated)
+    osw_fixed_lcoe_pure = year_adjusted_cost_vec(osw_fixed_foak_avg, osw_fixed_noak_avg, frac_osw_fixed_2d)
+
+    # Floating (CAISO only)
+    osw_float_foak = OFFSHORE_WIND_FOAK['CAISO']
+    osw_float_noak = OFFSHORE_WIND_NOAK['CAISO']
+    osw_float_lcoe_gated = year_adjusted_cost_vec(osw_float_foak, osw_float_noak, frac_osw_float_gated)
+    osw_float_lcoe_pure = year_adjusted_cost_vec(osw_float_foak, osw_float_noak, frac_osw_float_2d)
+
+    # Blended offshore wind LCOE (weighted by fixed vs floating TWh shares)
+    total_osw_twh = np.maximum(osw_fixed_twh + osw_float_twh, 1e-6)
+    osw_fixed_weight = osw_fixed_twh / total_osw_twh
+    osw_float_weight = osw_float_twh / total_osw_twh
+    osw_blended_lcoe_gated = osw_fixed_lcoe_gated * osw_fixed_weight + osw_float_lcoe_gated * osw_float_weight
+    osw_blended_lcoe_pure = osw_fixed_lcoe_pure * osw_fixed_weight + osw_float_lcoe_pure * osw_float_weight
+
     # ── Blended 2C effective $/MWh ──
     # 2C cost = weighted average of:
     #   - Existing clean premium (low $/MWh, maintenance spend)
     #   - New-build firm (learning-curve-adjusted LCOE)
+    #   - New-build offshore wind (separate learning curve)
     #   - New-build VRE (constant — already at scale)
     existing_price = 20.0  # Blended existing clean $/MWh (nuclear premium + hydro + vre)
     vre_price = 45.0       # Average new-build VRE $/MWh (solar+wind PPA)
@@ -335,15 +440,17 @@ def compute_wrights_law_curves():
     total_part_demand = part_demand.sum(axis=1)  # (N_part, N_thr)
     total_existing = global_existing_twh
     total_new_cf = global_new_cf_twh
+    total_osw = global_osw_twh
 
-    # VRE portion: whatever isn't existing or new-build firm
-    total_new_vre = np.maximum(total_part_demand - total_existing - total_new_cf, 0.0)
+    # VRE portion: whatever isn't existing, new-build firm, or offshore wind
+    total_new_vre = np.maximum(total_part_demand - total_existing - total_new_cf - total_osw, 0.0)
 
     # Blended cost: weighted by TWh shares
     safe_denom = np.maximum(total_part_demand, 1e-6)  # avoid div/0
     blended_2c = (
         (total_existing * existing_price
          + total_new_cf * ccs_lcoe_gated  # New firm priced at gated learning
+         + total_osw * osw_blended_lcoe_gated  # Offshore wind with gated learning
          + total_new_vre * vre_price)
         / safe_denom
     )  # (N_part, N_thr)
@@ -352,6 +459,7 @@ def compute_wrights_law_curves():
     blended_2c_noak = (
         (total_existing * existing_price
          + total_new_cf * ccs_lcoe_pure
+         + total_osw * osw_blended_lcoe_pure
          + total_new_vre * vre_price)
         / safe_denom
     )
@@ -459,6 +567,17 @@ def compute_wrights_law_curves():
             'ccs_noak': float(ccs_noak_avg),
             'nuclear_foak': float(nuc_foak_avg),
             'nuclear_noak': float(nuc_noak_avg),
+            # Offshore wind learning trajectories
+            'osw_fixed_gated': osw_fixed_lcoe_gated.tolist(),
+            'osw_fixed_pure': osw_fixed_lcoe_pure.tolist(),
+            'osw_float_gated': osw_float_lcoe_gated.tolist(),
+            'osw_float_pure': osw_float_lcoe_pure.tolist(),
+            'osw_blended_gated': osw_blended_lcoe_gated.tolist(),
+            'osw_blended_pure': osw_blended_lcoe_pure.tolist(),
+            'osw_fixed_foak': float(osw_fixed_foak_avg),
+            'osw_fixed_noak': float(osw_fixed_noak_avg),
+            'osw_float_foak': float(osw_float_foak),
+            'osw_float_noak': float(osw_float_noak),
         },
 
         # ── Critical mass thresholds ──
@@ -469,7 +588,11 @@ def compute_wrights_law_curves():
             },
             'global_new_build_gw_ccs': global_ccs_gw.tolist(),    # (N_part, N_thr)
             'global_new_build_gw_nuclear': global_nuc_gw.tolist(),
+            'global_new_build_gw_osw_fixed': global_osw_fixed_gw.tolist(),
+            'global_new_build_gw_osw_float': global_osw_float_gw.tolist(),
             'above_critical_mass': any_above_critical.tolist(),    # (N_part, N_thr) bool
+            'osw_fixed_above_critical': osw_fixed_above.tolist(),
+            'osw_float_above_critical': osw_float_above.tolist(),
         },
 
         # ── Comparison strategies at 90% CFE ──
@@ -490,19 +613,25 @@ def compute_wrights_law_curves():
             'new_cf_twh': global_new_cf_twh.tolist(),         # (N_part, N_thr)
             'existing_twh': global_existing_twh.tolist(),
             'new_vre_twh': total_new_vre.tolist(),
+            'osw_twh': global_osw_twh.tolist(),               # (N_part, N_thr)
+            'osw_fixed_twh': osw_fixed_twh.tolist(),
+            'osw_float_twh': osw_float_twh.tolist(),
         },
     }
 
     # Per-ISO spend at 90% CFE threshold
     thr_90_idx = thresholds.tolist().index(90)
     for i, iso in enumerate(ISOS):
-        results['iso_spend_90'][iso] = {
+        iso_result = {
             'existing_spend': existing_spend_iso[i, :, thr_90_idx].tolist(),
             'newbuild_spend': newbuild_spend_iso[i, :, thr_90_idx].tolist(),
             'premium_share': premium_share_iso[i, :, thr_90_idx].tolist(),
             'new_cf_twh': part_new_cf[:, i, thr_90_idx].tolist(),
             'existing_cf_twh': part_existing[:, i, thr_90_idx].tolist(),
         }
+        if iso in OFFSHORE_ISOS:
+            iso_result['osw_twh'] = part_osw[:, i, thr_90_idx].tolist()
+        results['iso_spend_90'][iso] = iso_result
 
     return results
 
@@ -549,6 +678,12 @@ def save_parquet(results):
         'ccs_lcoe_gated': pa.array(
             np.array(results['lcoe_trajectories']['ccs_gated'], dtype=np.float32).ravel()
         ),
+        'osw_blended_lcoe_gated': pa.array(
+            np.array(results['lcoe_trajectories']['osw_blended_gated'], dtype=np.float32).ravel()
+        ),
+        'osw_twh': pa.array(
+            np.array(results['global_aggregation']['osw_twh'], dtype=np.float32).ravel()
+        ),
         'above_critical_mass': pa.array(
             np.array(results['critical_mass']['above_critical_mass']).ravel()
         ),
@@ -571,6 +706,10 @@ def save_json(results):
             'ccs_noak': results['lcoe_trajectories']['ccs_noak'],
             'nuclear_foak': results['lcoe_trajectories']['nuclear_foak'],
             'nuclear_noak': results['lcoe_trajectories']['nuclear_noak'],
+            'osw_fixed_foak': results['lcoe_trajectories']['osw_fixed_foak'],
+            'osw_fixed_noak': results['lcoe_trajectories']['osw_fixed_noak'],
+            'osw_float_foak': results['lcoe_trajectories']['osw_float_foak'],
+            'osw_float_noak': results['lcoe_trajectories']['osw_float_noak'],
         },
         'critical_mass': results['critical_mass']['pct_by_threshold'],
         'strategy_comparison_90': results['strategy_comparison_90'],
