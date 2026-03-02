@@ -38,12 +38,13 @@ OUTPUT_PATH = os.path.join(DATA_DIR, 'offshore_wind_profiles.json')
 OFFSHORE_ISOS = ['NYISO', 'NEISO', 'PJM', 'CAISO']
 
 # Representative lease area coordinates (lon, lat) — longitude first for WKT
-# These are centroids of the primary lease areas per ISO
+# These are centroids of the primary BOEM lease areas per ISO, verified to be
+# well offshore (in the NOW-23 ocean grid domain, not on land).
 LEASE_AREA_COORDS = {
-    'NYISO': (-73.5, 40.3),    # NY Bight (Empire Wind / Sunrise Wind area)
-    'NEISO': (-70.5, 41.1),    # Vineyard Wind area (south of Martha's Vineyard)
-    'PJM':   (-74.0, 39.3),    # NJ lease areas (Atlantic Shores / Ocean Wind)
-    'CAISO': (-121.0, 35.3),   # Morro Bay WEA (floating)
+    'NYISO': (-72.75, 40.08),   # NY Bight — Empire Wind / Sunrise Wind area (~20mi S of Long Island)
+    'NEISO': (-70.60, 41.05),   # Vineyard Wind 1 area (S of Martha's Vineyard)
+    'PJM':   (-73.40, 39.10),   # NJ Atlantic Shores / Ocean Wind (~20mi E of Atlantic City)
+    'CAISO': (-121.60, 35.50),  # Morro Bay WEA (floating, ~30mi offshore)
 }
 
 # NOW-23 regional API endpoint for each ISO
@@ -142,7 +143,7 @@ def fetch_year(iso: str, year: int, api_key: str) -> pd.DataFrame:
 
     params = {
         'api_key': api_key,
-        'wkt': f'POINT({lon} {lat})',
+        'wkt': f'POINT ({lon} {lat})',
         'attributes': 'windspeed_140m,windspeed_160m',
         'names': str(year),
         'utc': 'true',
@@ -151,10 +152,19 @@ def fetch_year(iso: str, year: int, api_key: str) -> pd.DataFrame:
         'email': 'noreply@example.com',
     }
 
-    # Retry with exponential backoff on network errors
+    # Retry with exponential backoff on transient network errors only.
+    # 400/422 errors are not transient — log and raise immediately.
     for attempt in range(4):
         try:
             response = requests.get(url, params=params, timeout=120)
+            if response.status_code in (400, 422):
+                # Log response body for diagnosis — NREL returns specific error details
+                body = response.text[:1000] if response.text else "(empty)"
+                raise RuntimeError(
+                    f"NREL API {response.status_code} for {iso}/{year}. "
+                    f"URL: {response.url}\n"
+                    f"Response body: {body}"
+                )
             response.raise_for_status()
             break
         except (requests.ConnectionError, requests.Timeout) as e:
