@@ -5,6 +5,27 @@
 
 ## Current Status (Mar 2, 2026)
 
+### Step 1c/1d Workflow Fixes (Mar 2, 2026 — COMPLETED)
+
+**Branch:** `claude/fix-workflow-batching-c1EFG`
+
+**Problems Fixed:**
+1. **Zone search getting stuck**: Removed problematic `step1_prior_windows.py` call from workflow that tried to compute from non-existent EF results. Scripts now gracefully handle missing prior windows.
+2. **No threshold batching**: Added `--thresholds` parameter to both `step1c_zone_search.py` and `step1d_fine_storage.py` to allow running individual thresholds or custom subsets (e.g., `--thresholds "95,99"`).
+3. **No per-threshold commits**: Added `git_commit_threshold_single()` function to step1c and updated both scripts to commit after each threshold completes (with retry logic).
+4. **Near-miss parquets**: Verified step1c creates `{ISO}_near_miss.parquet` (union of all near-miss mixes across all thresholds) for step1d to consume.
+5. **Graceful error handling**: Prior windows loading now catches exceptions and falls back to coarse-derived bounds.
+
+**Changes:**
+- `step1c_zone_search.py`: Added `--thresholds` arg, per-threshold commits, graceful prior windows loading
+- `step1d_fine_storage.py`: Added `--thresholds` arg, filtering to requested thresholds only
+- `.github/workflows/step1c-zone-search.yml`: Removed prior windows step, added `thresholds` input, updated script call
+- `.github/workflows/step1d-fine-storage-v2.yml`: Added `thresholds` input, updated script call
+
+**Result:** Both 1c and 1d now support per-threshold execution with auto-commits, preventing work loss on timeout.
+
+---
+
 ### Streamlined PFS Architecture Redesign (Mar 2, 2026)
 
 **Branch:** `claude/streamline-pfs-architecture-0RMKJ`
