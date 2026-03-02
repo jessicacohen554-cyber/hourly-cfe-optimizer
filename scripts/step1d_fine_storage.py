@@ -134,12 +134,18 @@ def load_near_miss(iso):
 # PASS 1: COARSE GLOBAL STORAGE SWEEP
 # ══════════════════════════════════════════════════════════════════════════════
 
-def run_coarse_storage(iso, nm_combos, nm_base_scores, demand_arr, supply_matrix):
-    """Sweep coarse storage levels on ALL near-miss mixes globally.
+def run_coarse_storage(iso, nm_combos, nm_base_scores, demand_arr, supply_matrix,
+                       active_thresholds=None):
+    """Sweep coarse storage levels on near-miss mixes.
+
+    Args:
+        active_thresholds: list of thresholds to bin into. Defaults to all.
 
     Returns per-threshold feasible lists:
         results[threshold] = list of (mix_idx, bat4, bat8, ldes, h2, score)
     """
+    if active_thresholds is None:
+        active_thresholds = STORAGE_THRESHOLDS
     n_mixes = len(nm_combos)
     rtypes = s1.get_resource_types(iso)
     n_res = len(rtypes)
@@ -199,11 +205,11 @@ def run_coarse_storage(iso, nm_combos, nm_base_scores, demand_arr, supply_matrix
     # Pre-compute per-threshold near-miss floors (avoid repeated calls)
     threshold_floors = {
         t: max(STORAGE_SWEEP_FLOOR, t / 100.0 - get_near_miss_width(t))
-        for t in STORAGE_THRESHOLDS
+        for t in active_thresholds
     }
 
     # Per-threshold results
-    results = {t: [] for t in STORAGE_THRESHOLDS}
+    results = {t: [] for t in active_thresholds}
 
     # Process in batches (vectorized Numba kernel per batch)
     n_batches = (n_mixes + batch_size - 1) // batch_size
@@ -290,7 +296,7 @@ def run_coarse_storage(iso, nm_combos, nm_base_scores, demand_arr, supply_matrix
                             #  4. EITHER within near-miss window (base >= floor)
                             #     OR outlier with surplus >= 1.5x gap
                             #     (high-solar mixes with massive curtailment)
-                            for t in STORAGE_THRESHOLDS:
+                            for t in active_thresholds:
                                 target = t / 100.0
                                 if score < target:
                                     continue
@@ -671,7 +677,8 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
     coarse_results = None
     if not pass1_done:
         coarse_results = run_coarse_storage(
-            iso, nm_combos, nm_base_scores, demand_arr, supply_matrix)
+            iso, nm_combos, nm_base_scores, demand_arr, supply_matrix,
+            active_thresholds=active_thresholds)
 
         # Save coarse results per threshold (filtered to active set)
         for t in active_thresholds:
