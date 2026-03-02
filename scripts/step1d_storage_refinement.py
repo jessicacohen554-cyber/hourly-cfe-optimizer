@@ -78,8 +78,17 @@ STEP1D_THRESHOLDS = [65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.
 # meaningful surplus to shift.
 STORAGE_SWEEP_FLOOR = 0.50
 
-# Near-miss half-width in 0-1 score space (same as Step 1C: 40pp)
-NEAR_MISS_WIDTH = 0.40
+# Tiered near-miss half-widths by threshold range (in 0-1 score space).
+# Higher thresholds use tighter windows because storage contributes fewer
+# percentage points when procurement is already high.
+def get_near_miss_width(threshold):
+    """Return near-miss half-width for a given threshold."""
+    if threshold >= 95:
+        return 0.15   # 15pp — storage adds at most 5-10pp at high procurement
+    elif threshold >= 85:
+        return 0.30   # 30pp
+    else:
+        return 0.40   # 40pp — wide window needed for low-procurement mixes
 
 # Minimum surplus days for battery deployment (same as Step 1C)
 MIN_SURPLUS_DAYS_FOR_BATTERY = 150
@@ -277,10 +286,13 @@ def load_coarse_cache(iso):
         ])
         coarse_scores = table.column('score').to_numpy().astype(np.float64)
         coarse_hydro_set = set(np.unique(coarse_combos[:, rtypes.index('hydro')]).tolist())
+        coarse_hydro_arr = np.unique(coarse_combos[:, rtypes.index('hydro')])
+        coarse_hydro_arr = np.unique(coarse_combos[:, rtypes.index('hydro')])
     else:
         coarse_combos = None
         coarse_scores = None
         coarse_hydro_set = set()
+        coarse_hydro_arr = np.array([], dtype=np.int64)
 
     # 2. Load fine-grid mixes from raw PFS (1% adaptive refinement).
     #    These contain hydro at exact cap values (1,2,3,4,etc.) that the
@@ -308,8 +320,7 @@ def load_coarse_cache(iso):
             if has_coarse:
                 # Only keep mixes at hydro levels NOT in the coarse grid
                 hydro_vals = c[:, hydro_col]
-                new_hydro_mask = np.array(
-                    [h not in coarse_hydro_set for h in hydro_vals])
+                new_hydro_mask = ~np.isin(hydro_vals, coarse_hydro_arr)
                 if new_hydro_mask.any():
                     fine_combos_list.append(c[new_hydro_mask])
                     fine_scores_list.append(s[new_hydro_mask])
@@ -485,7 +496,7 @@ def process_threshold(iso, threshold, demand_arr, supply_matrix,
     chunk_limit = CAISO_CHUNK_LIMIT if iso == 'CAISO' else CHUNK_CANDIDATE_LIMIT
 
     # ── Identify near-miss mixes ──
-    near_miss_lower = max(target - NEAR_MISS_WIDTH, STORAGE_SWEEP_FLOOR)
+    near_miss_lower = max(target - get_near_miss_width(threshold), STORAGE_SWEEP_FLOOR)
     near_miss_mask = (coarse_scores >= near_miss_lower) & (coarse_scores < target)
     near_miss_idx = np.where(near_miss_mask)[0]
 
