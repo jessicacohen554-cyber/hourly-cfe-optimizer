@@ -4069,7 +4069,7 @@ const SBTI_MILESTONES = [
     { year: 2050, threshold: 99.99, label: 'Net-Zero' },
 ];
 
-// Full threshold-year mapping: each of 15 thresholds paired with its target year
+// Full threshold-year mapping: each of 21 thresholds paired with its target year
 // Interpolated between SBTi anchors (50%→2030, 70%→2035, 90%→2040, 95%→2045, ≥99.99%→2050)
 const THRESHOLD_TARGET_YEARS = {
     10: 2026,
