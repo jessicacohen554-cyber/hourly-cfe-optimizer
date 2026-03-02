@@ -298,6 +298,13 @@ body { background: var(--bg-page); }
     text-align: center;
 }
 
+/* ========== DARK PANEL OVERRIDES ========== */
+.section-dark .section-card h2 { color: #ffffff; }
+.section-dark .section-sub { color: rgba(255,255,255,0.55); }
+.section-dark .callout-box.warn { background: rgba(245,158,11,0.1); border-left-color: var(--solar); }
+.section-dark .callout-box h4 { color: rgba(255,255,255,0.95); }
+.section-dark .callout-box p { color: rgba(255,255,255,0.75); }
+
 /* ========== RESPONSIVE ========== */
 @media (max-width: 768px) {
     .track-grid { grid-template-columns: 1fr; }
@@ -437,7 +444,9 @@ body { background: var(--bg-page); }
 <!-- ═══════════════════════════════════════════════════════════════════ -->
 <!-- SECTION 4: THE COST CONVERGENCE                                   -->
 <!-- ═══════════════════════════════════════════════════════════════════ -->
-<div class="section-card scroll-step">
+<section class="section-dark">
+<div class="section-dark-inner">
+<div class="section-card scroll-step" style="background:transparent;border:none;box-shadow:none;">
     <h2>4. The Cost Convergence</h2>
     <p class="section-sub">Track 1's cost advantage narrows as more buyers compete for the same pool of existing clean energy. Beyond the supply ceiling, every new MWh of corporate demand requires new-build — and the cost curves converge.</p>
 
@@ -450,6 +459,8 @@ body { background: var(--bg-page); }
         <p>Buyers who secure existing clean generation early — through long-term EAC contracts or PPAs — lock in $20+/MWh savings. Late movers face new-build economics regardless of strategy. The window narrows as corporate hourly matching adoption accelerates.</p>
     </div>
 </div>
+</div>
+</section>
 
 <!-- ═══════════════════════════════════════════════════════════════════ -->
 <!-- SECTION 5: SUPPLY OWNERSHIP — WHO HAS IT?                         -->

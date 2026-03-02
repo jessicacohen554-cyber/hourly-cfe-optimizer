@@ -550,6 +550,11 @@ body { background: var(--bg-page-white); }
     line-height: 1.5;
 }
 
+/* Dark panel overrides for findings */
+.section-dark .finding-card { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.10); }
+.section-dark .finding-label { color: rgba(255,255,255,0.85); }
+.section-dark .finding-desc { color: rgba(255,255,255,0.55); }
+
 @media (max-width: 768px) {
     .finding-row.mid { grid-template-columns: 1fr; }
     .finding-row.base { grid-template-columns: 1fr; }
@@ -677,8 +682,9 @@ body { background: var(--bg-page-white); }
 </section>
 
 <!-- ============ KEY FINDINGS PYRAMID ============ -->
-<section class="findings-panel fade-in">
-    <div class="findings-title">Key Findings — Top Down</div>
+<section class="section-dark fade-in">
+<div class="section-dark-inner">
+    <div class="findings-title" style="color:rgba(255,255,255,0.5);">Key Findings — Top Down</div>
     <div class="findings-grid">
         <!-- Tier 1: The headline -->
         <div class="finding-row top">
@@ -720,6 +726,7 @@ body { background: var(--bg-page-white); }
             </div>
         </div>
     </div>
+</div>
 </section>
 
 <!-- ============ SECTION 1: Three Methods ============ -->
