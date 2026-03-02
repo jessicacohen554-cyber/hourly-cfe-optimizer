@@ -77,9 +77,11 @@ jobs:
           for iso, years in d.items():
               for yr, fuels in years.items():
                   p = np.array(fuels['offshore_wind'])
-                  cf = p.mean() * 8760
                   assert len(p) == 8760, f'{iso}/{yr}: wrong length {len(p)}'
                   assert abs(p.sum() - 1.0) < 1e-6, f'{iso}/{yr}: sum={p.sum()}'
+                  assert np.all(p >= 0), f'{iso}/{yr}: negative values found'
+                  cf = fuels.get('capacity_factor')
+                  assert cf is not None, f'{iso}/{yr}: missing capacity_factor metadata'
                   assert 0.30 < cf < 0.60, f'{iso}/{yr}: CF={cf:.3f} out of range'
                   print(f'  {iso}/{yr}: CF={cf:.3f} OK')
           print('All validations passed')
