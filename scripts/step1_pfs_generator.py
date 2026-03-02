@@ -1401,48 +1401,170 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
     print(f"      {iso} {threshold}%: Procurement window {window_str} → "
           f"{len(coarse_combos):,} of {n_before:,} mixes retained")
 
-    # ── Phase 1a: Filter coarse cache (no storage) ──
-    # Combos where score >= target are feasible without storage
+    # ══════════════════════════════════════════════════════════════════
+    # PHASE 1: GENERATION SCORING (coarse + fine, NO storage)
+    # Score all generation mixes first, then run storage on the combined
+    # set. This ensures storage sweep sees all hydro levels including
+    # fine-grid values at exact hydro caps (e.g., hydro=2 for PJM).
+    # ══════════════════════════════════════════════════════════════════
+
+    # ── Phase 1a: Score coarse cache (no storage) ──
     feasible_mask = coarse_scores >= target
     feasible_idx = np.where(feasible_mask)[0]
 
     for i in feasible_idx:
         add_candidate(coarse_combos[i], 0, 0, 0, coarse_scores[i])
-    # Flush no-storage feasible to disk immediately (CAISO can have 1.6M+ here)
     _maybe_flush()
 
-    print(f"      {iso} {threshold}%: {len(feasible_idx):,} feasible without storage", end="")
+    print(f"      {iso} {threshold}%: {len(feasible_idx):,} coarse feasible (no storage)")
 
-    # ── Phase 1b: Storage sweep on near-miss combos ──
-    # Near-miss: within 40pp of target at coarse level, but MUST score >50%.
-    # Storage only helps mixes that already generate substantial clean energy
-    # (surplus in some hours that can be shifted to deficit hours).
-    # Mixes below 50% don't have meaningful curtailment to shift.
+    # ── Phase 1b: Fine 1% refinement around boundary archetypes (no storage) ──
+    FINE_REFINEMENT_BAND = 0.03  # 3pp above target
+    FINE_REFINEMENT_MIN_THRESHOLD = 50
+    FINE_RADIUS = 2 if n_res >= 5 else 4
+    MAX_FINE_ARCHETYPES = 500 if n_res >= 5 else 5000
+
+    # Collect all fine-grid mixes and their scores for the storage sweep
+    all_fine_combos_for_storage = []
+    all_fine_scores_for_storage = []
+
+    has_any_candidates = len(candidates) > 0 or chunk_num[0] > 0
+    fine_total_feasible = 0
+    fine_total_combos = 0
+
+    if has_any_candidates and threshold >= FINE_REFINEMENT_MIN_THRESHOLD:
+        boundary_upper = target + FINE_REFINEMENT_BAND
+        boundary_mask = (coarse_scores >= target) & (coarse_scores <= boundary_upper)
+        boundary_idx = np.where(boundary_mask)[0]
+        mix_archetypes = set()
+        for i in boundary_idx:
+            m = tuple(int(coarse_combos[i][j]) for j in range(n_res))
+            mix_archetypes.add(m)
+
+        if len(mix_archetypes) > MAX_FINE_ARCHETYPES:
+            print(f"      {iso} {threshold}%: Capping fine archetypes "
+                  f"{len(mix_archetypes):,} → {MAX_FINE_ARCHETYPES} (5D safety)")
+            archetype_list = sorted(mix_archetypes, key=lambda m: sum(m))
+            step_size = max(1, len(archetype_list) // MAX_FINE_ARCHETYPES)
+            mix_archetypes = set(archetype_list[::step_size][:MAX_FINE_ARCHETYPES])
+
+        print(f"      {iso} {threshold}%: Phase 1b — {len(mix_archetypes):,} boundary archetypes, "
+              f"radius={FINE_RADIUS}, ~{len(mix_archetypes) * (2*FINE_RADIUS+1)**n_res:,} max fine combos")
+
+        ARCHETYPE_BATCH_SIZE = 100 if n_res >= 5 else 500
+        archetype_list = list(mix_archetypes)
+        n_arch = len(archetype_list)
+
+        for arch_start in range(0, n_arch, ARCHETYPE_BATCH_SIZE):
+            arch_end = min(arch_start + ARCHETYPE_BATCH_SIZE, n_arch)
+            arch_batch = archetype_list[arch_start:arch_end]
+
+            batch_fine_parts = []
+            for mix_tuple in arch_batch:
+                base = np.array(mix_tuple, dtype=np.float64)
+                fine = generate_resource_combos_around(base, iso, step=1, radius=FINE_RADIUS)
+                if len(fine) > 0:
+                    batch_fine_parts.append(fine)
+
+            if not batch_fine_parts:
+                continue
+
+            all_fine = np.unique(np.vstack(batch_fine_parts), axis=0)
+            fine_proc_sums = all_fine.sum(axis=1)
+            all_fine = all_fine[fine_proc_sums >= threshold]
+            n_all_fine = len(all_fine)
+            fine_total_combos += n_all_fine
+
+            if n_all_fine == 0:
+                continue
+
+            all_fine_scores_arr = batch_hourly_scores(demand_arr, supply_matrix, all_fine)
+
+            # Feasible fine combos (no storage)
+            fine_feas_mask = all_fine_scores_arr >= target
+            fine_feas_idx = np.where(fine_feas_mask)[0]
+            for fi in fine_feas_idx:
+                add_candidate(all_fine[fi], 0, 0, 0, all_fine_scores_arr[fi])
+            fine_total_feasible += len(fine_feas_idx)
+
+            # Collect ALL fine combos + scores for storage sweep later
+            all_fine_combos_for_storage.append(all_fine)
+            all_fine_scores_for_storage.append(all_fine_scores_arr)
+
+            _maybe_flush()
+
+            print(f"\r      {iso} {threshold}%: Fine arch batch "
+                  f"{min(arch_end, n_arch)}/{n_arch}, "
+                  f"{fine_total_combos:,} combos, "
+                  f"{fine_total_feasible:,} feasible so far", end="", flush=True)
+
+        print(f"\n      {iso} {threshold}%: Phase 1b complete — {fine_total_combos:,} fine combos, "
+              f"{fine_total_feasible:,} feasible (no storage)")
+
+    # ══════════════════════════════════════════════════════════════════
+    # PHASE 2: STORAGE SWEEP on combined coarse + fine near-miss mixes
+    # Runs on ALL generation mixes from Phase 1a+1b, so storage sees
+    # every hydro level including fine-grid values.
+    # ══════════════════════════════════════════════════════════════════
+
     STORAGE_SWEEP_FLOOR = 0.50
     near_miss_lower = max(target - 0.40, STORAGE_SWEEP_FLOOR)
-    near_miss_mask = (~feasible_mask) & (coarse_scores >= near_miss_lower)
-    near_miss_idx = np.where(near_miss_mask)[0]
+    storage_feasible = 0
 
-    storage_feasible = 0  # track coarse storage hits for Phase 2 skip logic
+    # Build combined near-miss array: coarse + fine mixes
+    # Coarse near-miss
+    coarse_nm_mask = (~feasible_mask) & (coarse_scores >= near_miss_lower)
+    coarse_nm_idx = np.where(coarse_nm_mask)[0]
+    coarse_nm_combos = coarse_combos[coarse_nm_idx]
 
-    if len(near_miss_idx) > 0:
-        n_nm = len(near_miss_idx)
+    # Fine near-miss
+    fine_nm_combos_list = []
+    if all_fine_combos_for_storage:
+        for fc, fs in zip(all_fine_combos_for_storage, all_fine_scores_for_storage):
+            fine_nm_lower = max(target - 0.30, STORAGE_SWEEP_FLOOR)
+            fine_feas = fs >= target
+            fine_nm = (~fine_feas) & (fs >= fine_nm_lower)
+            if fine_nm.any():
+                fine_nm_combos_list.append(fc[fine_nm])
 
-        # Chunk-wise storage cap computation (avoids allocating full N_nm × 8760)
-        b4_caps = np.empty(n_nm, dtype=np.float64)
-        b8_caps = np.empty(n_nm, dtype=np.float64)
-        l_caps = np.empty(n_nm, dtype=np.float64)
-        hc_arr = np.empty(n_nm, dtype=np.int64)
-        sd_arr = np.empty(n_nm, dtype=np.int64)
-        n_cap_chunks = (n_nm + NM_CHUNK - 1) // NM_CHUNK
+    # Combine
+    if fine_nm_combos_list:
+        fine_nm_combos = np.vstack(fine_nm_combos_list)
+        combined_nm = np.vstack([coarse_nm_combos, fine_nm_combos]) if len(coarse_nm_combos) > 0 else fine_nm_combos
+        # Track which source each mix came from (for supply computation)
+        combined_source = np.concatenate([
+            np.zeros(len(coarse_nm_combos), dtype=np.int8),
+            np.ones(len(fine_nm_combos), dtype=np.int8)])
+    elif len(coarse_nm_combos) > 0:
+        combined_nm = coarse_nm_combos
+        combined_source = np.zeros(len(coarse_nm_combos), dtype=np.int8)
+    else:
+        combined_nm = np.empty((0, n_res), dtype=coarse_combos.dtype)
+        combined_source = np.empty(0, dtype=np.int8)
 
-        for cs in range(0, n_nm, NM_CHUNK):
-            ce = min(cs + NM_CHUNK, n_nm)
+    n_combined_nm = len(combined_nm)
+    n_coarse_nm = len(coarse_nm_combos)
+    n_fine_nm = n_combined_nm - n_coarse_nm
+
+    if n_combined_nm > 0:
+        print(f"      {iso} {threshold}%: Storage sweep — {n_combined_nm:,} near-miss "
+              f"({n_coarse_nm:,} coarse + {n_fine_nm:,} fine)")
+
+        # Chunk-wise storage cap computation
+        b4_caps = np.empty(n_combined_nm, dtype=np.float64)
+        b8_caps = np.empty(n_combined_nm, dtype=np.float64)
+        l_caps = np.empty(n_combined_nm, dtype=np.float64)
+        hc_arr = np.empty(n_combined_nm, dtype=np.int64)
+        sd_arr = np.empty(n_combined_nm, dtype=np.int64)
+        n_cap_chunks = (n_combined_nm + NM_CHUNK - 1) // NM_CHUNK
+
+        for cs in range(0, n_combined_nm, NM_CHUNK):
+            ce = min(cs + NM_CHUNK, n_combined_nm)
             cap_chunk_idx = cs // NM_CHUNK + 1
             if n_cap_chunks > 1:
                 print(f"\r        Cap computation: chunk {cap_chunk_idx}/{n_cap_chunks} "
-                      f"({cs:,}/{n_nm:,} mixes)", end="", flush=True)
-            chunk_fracs = coarse_combos[near_miss_idx[cs:ce]] / 100.0
+                      f"({cs:,}/{n_combined_nm:,} mixes)", end="", flush=True)
+            chunk_fracs = combined_nm[cs:ce].astype(np.float64) / 100.0
             chunk_supply = chunk_fracs @ supply_matrix
             chunk_n = ce - cs
             cb4, cb8, cl, chc, csd = _batch_compute_storage_caps(
@@ -1454,18 +1576,16 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
             hc_arr[cs:ce] = chc
             sd_arr[cs:ce] = csd
         if n_cap_chunks > 1:
-            print()  # newline after progress
+            print()
 
-        # Vectorized curtailment filter (replaces Python for-loop)
         has_curtailment = hc_arr.astype(bool)
         valid_ci = np.where(has_curtailment)[0]
-        nm_valid = [(int(ci), int(near_miss_idx[ci]),
+        nm_valid = [(int(ci), ci,  # ci IS the index into combined_nm
                      b4_caps[ci] * 100.0 * 1.1,
                      b8_caps[ci] * 100.0 * 1.1,
                      l_caps[ci] * 100.0 * 1.1,
                      int(sd_arr[ci])) for ci in valid_ci]
 
-        # Storage level arrays
         b4_arr = np.array(batt_levels, dtype=np.float64)
         b8_arr = np.array(batt8_levels, dtype=np.float64)
         l_arr = np.array(ldes_levels, dtype=np.float64)
@@ -1481,16 +1601,13 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
             n_batch = len(batch)
             batch_num += 1
 
-            # Progress output every batch (prevents apparent idle)
             print(f"\r        Storage sweep: batch {batch_num}/{n_total_batches} "
                   f"({batch_start}/{len(nm_valid)} mixes, "
                   f"{storage_feasible:,} feasible so far)", end="", flush=True)
 
-            # Vectorized supply computation: single matmul instead of per-mix loop
             batch_orig_idx = np.array([batch[bi][1] for bi in range(n_batch)])
-            batch_supply = (coarse_combos[batch_orig_idx] / 100.0) @ supply_matrix
+            batch_supply = (combined_nm[batch_orig_idx].astype(np.float64) / 100.0) @ supply_matrix
 
-            # Batch screen all mixes × all storage combos (procurement=1.0)
             batch_scores = _batch_mixes_storage_screen(
                 demand_arr, batch_supply, 1.0, n_batch,
                 b4_arr, b8_arr, l_arr, n_b4, n_b8, n_l,
@@ -1499,11 +1616,9 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
                 ldes_window_hours, batt8_window,
                 h2_arr, n_h2, h2_eff, float(h2_dur), h2_window_hours)
 
-            # Process results: no procurement binary search needed!
-            # Each (mix, storage) combo has exactly one score.
             for bi in range(n_batch):
                 ci, orig_idx, bat4_max_pct, bat8_max_pct, ldes_max_pct, n_sd = batch[bi]
-                mix = coarse_combos[orig_idx]
+                mix = combined_nm[orig_idx]
                 scores = batch_scores[bi]
 
                 for b4_idx in range(n_b4):
@@ -1531,240 +1646,22 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
                                 add_candidate(mix, bp, b8p, lp, score, h2p)
                                 storage_feasible += 1
 
-            # Periodic chunk save during storage sweep
             total_batches[0] += 1
             if total_batches[0] % CHUNK_SAVE_INTERVAL == 0:
                 _maybe_flush(force=True)
             else:
-                _maybe_flush()  # flush if over candidate limit
+                _maybe_flush()
 
         print(f"\r        Storage sweep: {n_total_batches}/{n_total_batches} batches done"
-              f"                                        ")  # clear line
+              f"                                        ")
         print(f"      {iso} {threshold}%: +{storage_feasible:,} with storage "
-              f"({len(nm_valid):,} curtailing / {len(near_miss_idx):,} near-miss)")
-        # Flush any remaining storage candidates before fine refinement
+              f"({len(nm_valid):,} curtailing / {n_combined_nm:,} near-miss)")
         _maybe_flush()
     else:
-        print(f", 0 near-miss")
+        print(f"      {iso} {threshold}%: 0 near-miss for storage sweep")
 
-    # ── Phase 2: Fine refinement at 1% step around boundary archetypes ──
-    # Skip for thresholds < 50%: at low thresholds nearly everything passes,
-    # there's no meaningful boundary to refine, and CAISO 5D generates millions
-    # of fine combos that OOM the runner (11.9M at 40% alone).
-    # The coarse 5% grid is more than sufficient for low thresholds.
-    FINE_REFINEMENT_BAND = 0.03  # 3pp above target
-    FINE_REFINEMENT_MIN_THRESHOLD = 50  # skip below this
-
-    # CAISO 5D adaptive limits to prevent OOM:
-    #   - 4D: radius=4 → 9^4 = 6,561 combos/archetype (manageable)
-    #   - 5D: radius=2 → 5^5 = 3,125 combos/archetype (was 9^5=59,049 at radius=4)
-    #   - Cap total archetypes for 5D to prevent combinatorial blowup
-    FINE_RADIUS = 2 if n_res >= 5 else 4
-    MAX_FINE_ARCHETYPES = 500 if n_res >= 5 else 5000  # cap for 5D ISOs
-
-    # Detect boundary archetypes from coarse cache directly (works even if
-    # candidates were flushed to chunks). This is more robust than iterating
-    # the in-memory candidates list.
-    has_any_candidates = len(candidates) > 0 or chunk_num[0] > 0
-    if has_any_candidates and threshold >= FINE_REFINEMENT_MIN_THRESHOLD:
-        boundary_upper = target + FINE_REFINEMENT_BAND
-        boundary_mask = (coarse_scores >= target) & (coarse_scores <= boundary_upper)
-        boundary_idx = np.where(boundary_mask)[0]
-        mix_archetypes = set()
-        for i in boundary_idx:
-            m = tuple(int(coarse_combos[i][j]) for j in range(n_res))
-            mix_archetypes.add(m)
-
-        # Cap archetypes for 5D to prevent OOM
-        if len(mix_archetypes) > MAX_FINE_ARCHETYPES:
-            print(f"      {iso} {threshold}%: Capping fine archetypes "
-                  f"{len(mix_archetypes):,} → {MAX_FINE_ARCHETYPES} (5D safety)")
-            # Sample a diverse subset: sort by total procurement, take evenly spaced
-            archetype_list = sorted(mix_archetypes, key=lambda m: sum(m))
-            step_size = max(1, len(archetype_list) // MAX_FINE_ARCHETYPES)
-            mix_archetypes = set(archetype_list[::step_size][:MAX_FINE_ARCHETYPES])
-
-        print(f"      {iso} {threshold}%: Phase 2 — {len(mix_archetypes):,} boundary archetypes, "
-              f"radius={FINE_RADIUS}, ~{len(mix_archetypes) * (2*FINE_RADIUS+1)**n_res:,} max fine combos")
-
-        # Generate fine combos in batches to avoid materializing all at once.
-        # Process ARCHETYPE_BATCH_SIZE archetypes at a time.
-        ARCHETYPE_BATCH_SIZE = 100 if n_res >= 5 else 500
-        archetype_list = list(mix_archetypes)
-        n_arch = len(archetype_list)
-        fine_total_feasible = 0
-        fine_total_combos = 0
-
-        for arch_start in range(0, n_arch, ARCHETYPE_BATCH_SIZE):
-            arch_end = min(arch_start + ARCHETYPE_BATCH_SIZE, n_arch)
-            arch_batch = archetype_list[arch_start:arch_end]
-
-            # Generate fine combos for this batch of archetypes
-            batch_fine_parts = []
-            for mix_tuple in arch_batch:
-                base = np.array(mix_tuple, dtype=np.float64)
-                fine = generate_resource_combos_around(base, iso, step=1, radius=FINE_RADIUS)
-                if len(fine) > 0:
-                    batch_fine_parts.append(fine)
-
-            if not batch_fine_parts:
-                continue
-
-            all_fine = np.unique(np.vstack(batch_fine_parts), axis=0)
-
-            # Pre-filter: remove combos whose total procurement < threshold.
-            # Hourly match score <= total_procurement/100 (since min(D,S) <= S
-            # per hour), so combos below threshold are guaranteed infeasible.
-            fine_proc_sums = all_fine.sum(axis=1)
-            all_fine = all_fine[fine_proc_sums >= threshold]
-            n_all_fine = len(all_fine)
-            fine_total_combos += n_all_fine
-
-            if n_all_fine == 0:
-                continue
-
-            # Score all fine combos (no procurement — direct fractions)
-            all_fine_scores = batch_hourly_scores(demand_arr, supply_matrix, all_fine)
-
-            # Feasible fine combos
-            fine_feas_mask = all_fine_scores >= target
-            fine_feas_idx = np.where(fine_feas_mask)[0]
-            for fi in fine_feas_idx:
-                add_candidate(all_fine[fi], 0, 0, 0, all_fine_scores[fi])
-            fine_total_feasible += len(fine_feas_idx)
-
-            # Near-miss fine combos → storage sweep (same >50% floor as Phase 1b)
-            # Skip entirely if coarse storage sweep found 0 solutions — fine
-            # sweep uses the same storage levels on similar mixes, so it won't
-            # find anything the coarse sweep missed.
-            fine_nm_lower = max(target - 0.30, STORAGE_SWEEP_FLOOR)
-            fine_nm_mask = (~fine_feas_mask) & (all_fine_scores >= fine_nm_lower)
-            fine_nm_idx = np.where(fine_nm_mask)[0]
-
-            if len(fine_nm_idx) > 0 and storage_feasible > 0:
-                n_nm_fine = len(fine_nm_idx)
-
-                # Chunk-wise storage cap computation
-                p2_b4c = np.empty(n_nm_fine, dtype=np.float64)
-                p2_b8c = np.empty(n_nm_fine, dtype=np.float64)
-                p2_lc = np.empty(n_nm_fine, dtype=np.float64)
-                p2_hc = np.empty(n_nm_fine, dtype=np.int64)
-                p2_sd = np.empty(n_nm_fine, dtype=np.int64)
-                p2_cap_chunks = (n_nm_fine + NM_CHUNK - 1) // NM_CHUNK
-
-                for cs in range(0, n_nm_fine, NM_CHUNK):
-                    ce = min(cs + NM_CHUNK, n_nm_fine)
-                    p2_chunk_num_local = cs // NM_CHUNK + 1
-                    if p2_cap_chunks > 1:
-                        print(f"\r        Fine cap computation: chunk {p2_chunk_num_local}/{p2_cap_chunks} "
-                              f"({cs:,}/{n_nm_fine:,} mixes)", end="", flush=True)
-                    chunk_fracs = all_fine[fine_nm_idx[cs:ce]] / 100.0
-                    chunk_supply = chunk_fracs @ supply_matrix
-                    chunk_n = ce - cs
-                    cb4, cb8, cl, chc, csd = _batch_compute_storage_caps(
-                        demand_arr, chunk_supply, 1.0, chunk_n,
-                        BATTERY_DURATION_HOURS, BATTERY8_DURATION_HOURS,
-                        LDES_DURATION_HOURS)
-                    p2_b4c[cs:ce] = cb4
-                    p2_b8c[cs:ce] = cb8
-                    p2_lc[cs:ce] = cl
-                    p2_hc[cs:ce] = chc
-                    p2_sd[cs:ce] = csd
-                if p2_cap_chunks > 1:
-                    print()  # newline after progress
-
-                # Vectorized curtailment filter
-                p2_has_curt = p2_hc.astype(bool)
-                p2_valid_ci = np.where(p2_has_curt)[0]
-                nm_fine_valid = [(int(ci), int(fine_nm_idx[ci]),
-                                  p2_b4c[ci] * 100.0 * 1.1,
-                                  p2_b8c[ci] * 100.0 * 1.1,
-                                  p2_lc[ci] * 100.0 * 1.1,
-                                  int(p2_sd[ci])) for ci in p2_valid_ci]
-
-                p2_b4 = np.array(batt_levels, dtype=np.float64)
-                p2_b8 = np.array(batt8_levels, dtype=np.float64)
-                p2_l = np.array(ldes_levels, dtype=np.float64)
-                p2_h2 = np.array(h2_levels, dtype=np.float64)
-                p2_nb4, p2_nb8, p2_nl, p2_nh2 = len(p2_b4), len(p2_b8), len(p2_l), len(p2_h2)
-                p2_n_batches = (len(nm_fine_valid) + MAX_MIX_BATCH - 1) // MAX_MIX_BATCH
-                p2_batch_num = 0
-
-                for batch_start_p2 in range(0, len(nm_fine_valid), MAX_MIX_BATCH):
-                    batch_end_p2 = min(batch_start_p2 + MAX_MIX_BATCH, len(nm_fine_valid))
-                    batch_p2 = nm_fine_valid[batch_start_p2:batch_end_p2]
-                    n_bp2 = len(batch_p2)
-                    p2_batch_num += 1
-
-                    # Progress output (prevents apparent idle)
-                    print(f"\r        Fine storage sweep: batch {p2_batch_num}/{p2_n_batches} "
-                          f"({batch_start_p2}/{len(nm_fine_valid)} mixes)", end="", flush=True)
-
-                    # Vectorized supply computation: single matmul
-                    batch_fine_idx = np.array([batch_p2[bi][1] for bi in range(n_bp2)])
-                    batch_supply_p2 = (all_fine[batch_fine_idx] / 100.0) @ supply_matrix
-
-                    batch_scores_p2 = _batch_mixes_storage_screen(
-                        demand_arr, batch_supply_p2, 1.0, n_bp2,
-                        p2_b4, p2_b8, p2_l, p2_nb4, p2_nb8, p2_nl,
-                        batt_eff, batt8_eff, ldes_eff,
-                        BATTERY_DURATION_HOURS, BATTERY8_DURATION_HOURS,
-                        LDES_DURATION_HOURS, ldes_window_hours, batt8_window,
-                        p2_h2, p2_nh2, h2_eff, float(h2_dur), h2_window_hours)
-
-                    for bi in range(n_bp2):
-                        ci, orig_idx, b4_ceil, b8_ceil, l_ceil, n_sd = batch_p2[bi]
-                        scores = batch_scores_p2[bi]
-
-                        for bi4 in range(p2_nb4):
-                            bp = p2_b4[bi4]
-                            if bp > 0 and (n_sd < MIN_SURPLUS_DAYS_FOR_BATTERY or bp > b4_ceil):
-                                continue
-                            for bi8 in range(p2_nb8):
-                                b8p = p2_b8[bi8]
-                                if b8p > 0 and (n_sd < MIN_SURPLUS_DAYS_FOR_BATTERY or b8p > b8_ceil):
-                                    continue
-                                for li in range(p2_nl):
-                                    lp = p2_l[li]
-                                    if lp > 0 and lp > l_ceil:
-                                        continue
-                                    for h2i in range(p2_nh2):
-                                        h2p = p2_h2[h2i]
-                                        if bp == 0 and b8p == 0 and lp == 0 and h2p == 0:
-                                            continue
-                                        sidx = (bi4 * p2_nb8 * p2_nl * p2_nh2 +
-                                                 bi8 * p2_nl * p2_nh2 +
-                                                 li * p2_nh2 + h2i)
-                                        sc = scores[sidx]
-                                        if sc < 0 or sc < target:
-                                            continue
-                                        add_candidate(all_fine[orig_idx], bp, b8p, lp, sc, h2p)
-
-                    # Periodic chunk save during fine storage sweep
-                    total_batches[0] += 1
-                    if total_batches[0] % CHUNK_SAVE_INTERVAL == 0:
-                        _maybe_flush(force=True)
-                    else:
-                        _maybe_flush()
-
-                if nm_fine_valid:
-                    print()  # newline after progress
-
-            elif len(fine_nm_idx) > 0 and storage_feasible == 0:
-                print(f"        Skipping fine storage sweep ({len(fine_nm_idx):,} near-miss) "
-                      f"— coarse storage found 0 solutions")
-
-            # Flush after each archetype batch to keep memory bounded
-            _maybe_flush()
-
-            # Progress for archetype batches
-            print(f"\r      {iso} {threshold}%: Fine arch batch "
-                  f"{min(arch_end, n_arch)}/{n_arch}, "
-                  f"{fine_total_combos:,} combos, "
-                  f"{fine_total_feasible:,} feasible so far", end="", flush=True)
-
-        print(f"\n      {iso} {threshold}%: Phase 2 complete — {fine_total_combos:,} fine combos, "
-              f"{fine_total_feasible:,} feasible")
+    # Free fine-grid arrays
+    del all_fine_combos_for_storage, all_fine_scores_for_storage
 
     # Final flush of any remaining candidates
     _maybe_flush(force=True)
