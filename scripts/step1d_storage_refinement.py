@@ -545,8 +545,17 @@ def process_threshold(iso, threshold, demand_arr, supply_matrix,
         print(f"    {iso} {threshold}%: 0 near-miss mixes — skipping")
         return 0
 
+    # ── Dominance filter: remove mixes where another uses ≤ of every resource ──
+    n_before_dom = len(near_miss_idx)
+    from step1c_zone_search import dominance_filter_arrays
+    nm_combos_sub = coarse_combos[near_miss_idx]
+    nm_scores_sub = coarse_scores[near_miss_idx]
+    dom_mask = dominance_filter_arrays(nm_combos_sub, nm_scores_sub)
+    near_miss_idx = near_miss_idx[dom_mask]
+
     n_nm = len(near_miss_idx)
     force_str = f" + {n_forced} forced" if n_forced > 0 else ""
+    dom_str = f", dominance {n_before_dom:,}→{n_nm:,}" if n_nm < n_before_dom else ""
 
     # ── Storage levels for this threshold regime ──
     levels = get_storage_levels(threshold)
@@ -560,7 +569,7 @@ def process_threshold(iso, threshold, demand_arr, supply_matrix,
     n_h2 = len(h2_arr)
     n_combos = n_b4 * n_b8 * n_l * n_h2
 
-    print(f"    {iso} {threshold}%: {n_nm:,} near-miss mixes{force_str}, "
+    print(f"    {iso} {threshold}%: {n_nm:,} near-miss mixes{force_str}{dom_str}, "
           f"{n_b4}×{n_b8}×{n_l}×{n_h2}={n_combos:,} storage combos "
           f"(batch={mix_batch})")
 
