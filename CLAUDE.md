@@ -33,7 +33,7 @@
   - Loading a subset of data to validate vectorization, filtering, or cost logic
   - Benchmarking performance on a representative slice
   - Syntax checks, import validation, unit tests
-- **Full dataset / all-ISO runs**: Create or update GitHub Actions workflows so the user can trigger full execution independently. Do not run all 7 ISOs × 15 thresholds locally unless the user explicitly asks.
+- **Full dataset / all-ISO runs**: Create or update GitHub Actions workflows so the user can trigger full execution independently. Do not run all 7 ISOs × 21 thresholds locally unless the user explicitly asks.
 - **Session compute should be limited to**: syntax checks, quick verification reads (parquet schema, constants), targeted tests on subsets, and lightweight validation.
 - **This rule exists because**: Previous sessions burned significant token budget running multi-minute optimizer scripts locally when the same compute could have been done for free via GitHub Actions. The user's token budget is finite and expensive — but short iterative tests are essential for efficient debugging and should not require a full CI roundtrip.
 
@@ -262,7 +262,7 @@
 - All new features layered on top of existing — never remove existing visuals or controls
 - **COST DRIVES RESOURCE MIX** — cost and resource mix are co-optimized for every scenario. Different cost assumptions produce different optimal resource mixes. This is the core scientific contribution of the project. Never decouple cost from mix optimization or treat cost as a secondary overlay.
 - **8 toggle groups**: 5 paired (Renewable Gen, Firm Gen, Storage, Fossil Fuel, Transmission) + CCS (L/M/H) + 45Q (On/Off) + Geothermal (CAISO-only, L/M/H)
-- **15 thresholds** (50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, ≥99.99) — 5% granularity in low range, 2.5% in inflection zone. Top threshold is ≥99.99% (not 100%) — true 100% hourly matching is physically unreachable.
+- **21 thresholds** (10, 20, 30, 40 [coarse only], 50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, ≥99.99) — 10% steps in coarse low range, 5% in mid range, 2.5% in inflection zone, 0.5%/0.1% in the last mile. Top threshold is ≥99.99% (not 100%) — true 100% hourly matching is physically unreachable. Thresholds 10–40 are coarse-grid only (no fine zone search, no step1d storage). Thresholds 50–≥99.99 are the 17 active thresholds with full pipeline coverage.
 - **5,832 cost scenarios per region/threshold** (3×3×3×3×2×3×4 = non-CAISO; 17,496 for CAISO with geothermal toggle)
 - Resource mix optimization at Medium costs; sensitivity toggles recalculate costs on cached physics
 - Hydro is always existing-only, wholesale-priced, $0 transmission
@@ -280,7 +280,7 @@ When facing compute vs. rigor tradeoffs:
 1. **Always discuss the tradeoff with the user first** — don't unilaterally choose minimal compute
 2. **Find the best middle ground** that balances rigor with feasibility
 3. **Pairing variables** (e.g., 5 paired toggles vs. 10 individual) is an acceptable rigor-compute tradeoff because it reflects real-world cost correlations
-4. **15 thresholds** preserves inflection points while covering the full range with finer low-range granularity
+4. **21 thresholds** preserves inflection points while covering the full range — 10/20/30/40 coarse low range, 5% steps 50–80, 2.5% steps 85–97.5, last-mile 99/99.5/99.9/≥99.99
 5. **Never decouple cost from optimization** — the co-optimization of cost + resource mix is the whole point
 6. **Never re-rank cached results as a shortcut** when full optimization is needed — if costs change the cost function, the optimization must use that cost function
 
