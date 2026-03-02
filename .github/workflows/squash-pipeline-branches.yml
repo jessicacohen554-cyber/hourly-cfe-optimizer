@@ -159,7 +159,11 @@ jobs:
           while IFS= read -r branch; do
             echo "─── Merging: $branch ───"
 
-            if git merge --no-edit "origin/$branch" 2>/dev/null; then
+            # -X theirs: auto-resolve conflicts by preferring the incoming branch.
+            # Safe for pipeline data branches: PFS/storage parquets are binary
+            # (git picks one whole file), and checkpoint JSON files (zone_manifest,
+            # prior_windows) should always take the newer run's version.
+            if git merge --no-edit -X theirs "origin/$branch" 2>/dev/null; then
               echo "  ✓ Merged successfully"
               MERGED+=("$branch")
               LATEST=$(git log -1 --format="%s" "origin/$branch" 2>/dev/null)
