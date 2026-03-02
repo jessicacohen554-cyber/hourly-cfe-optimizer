@@ -741,7 +741,7 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
     min_target = min(active_thresholds) / 100.0
     reachable = max_scores >= min_target
     # Also require base < max target (needs storage for at least one threshold)
-    max_target = max(active_thresholds) / 100.0
+    max_target = max(STORAGE_THRESHOLDS) / 100.0
     needs_storage = nm_base_scores < max_target
     keep = reachable & needs_storage
     n_before = len(nm_combos)
