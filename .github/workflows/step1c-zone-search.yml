@@ -157,8 +157,9 @@ jobs:
       if: always()
       run: |
         # Commit all remaining PFS + near-miss files not yet pushed
+        # Must use -f: data/step1-pfs-parquets/ is gitignored, normal add skips it.
         mkdir -p data/step1-pfs-parquets
-        git add -A data/step1-pfs-parquets/
+        git add -f data/step1-pfs-parquets/*.parquet data/step1-pfs-parquets/*.json 2>/dev/null || true
         if ! git diff --cached --quiet; then
           THRESHOLDS="${{ inputs.thresholds }}"
           ZONES="${{ inputs.zones }}"
