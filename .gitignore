@@ -79,6 +79,12 @@ scripts/dashboard/
 data/step1-pfs-parquets/*
 !data/step1-pfs-parquets/.gitkeep
 
+# Zone manifest — runtime checkpoint file for step1c resumability; never track in git.
+# Committing it causes add/add conflicts when squash-merging parallel ISO branches
+# (each run generates a different code_hash). The downstream consumer is step1c itself
+# during an active run — not any downstream pipeline step.
+data/step1-pfs-parquets/*_zone_manifest.json
+
 # Large consolidated EIA JSON files — use parquet versions instead
 # Pipeline reads parquets via scripts/eia_data_io.py (JSON fallback preserved)
 data/eia-930/eia_generation_profiles.json
