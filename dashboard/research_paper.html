@@ -25,7 +25,7 @@ html { font-size: 16px; }
 body {
     font-family: var(--font-body);
     color: var(--text-primary);
-    background: #FFFFFF;
+    background: var(--bg-page-white);
     line-height: 1.85;
 }
 .paper-badge {
@@ -166,7 +166,7 @@ h3 {
     font-family: var(--font-heading);
     font-size: 1.15rem;
     font-weight: 600;
-    color: #DC2626;
+    color: var(--red-dark);
     margin-top: 32px;
     margin-bottom: 12px;
 }
@@ -212,7 +212,7 @@ strong { color: var(--navy); }
 /* ========== FORMULA BOX ========== */
 .formula-box {
     background: linear-gradient(145deg, #F0F4F8 0%, #E8ECF1 100%);
-    border: 1px solid #D4D8E0;
+    border: 1px solid var(--border);
     border-radius: 10px;
     padding: 22px 28px;
     margin: 20px 0 24px;
@@ -220,7 +220,7 @@ strong { color: var(--navy); }
     font-size: 0.88rem;
     line-height: 1.9;
     overflow-x: auto;
-    color: #1A2744;
+    color: var(--navy);
 }
 .formula-box .label {
     font-family: var(--font-heading);
@@ -249,7 +249,7 @@ strong { color: var(--navy); }
 /* ========== TABLES ========== */
 .table-wrap { overflow-x: auto; margin: 20px 0 28px; }
 table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-thead { background: linear-gradient(145deg, #F0F4F8 0%, #E2E8F0 100%); color: #1A2744; }
+thead { background: linear-gradient(145deg, #F0F4F8 0%, #E2E8F0 100%); color: var(--navy); }
 th {
     font-family: var(--font-heading);
     padding: 12px 16px;
@@ -300,7 +300,7 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     position: fixed;
     bottom: 0; left: 0; right: 0;
     height: 4px;
-    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 25%, #22C55E 50%, #F59E0B 75%, #EF4444 100%);
+    background: linear-gradient(90deg, var(--navy) 0%, var(--hydro) 25%, var(--wind) 50%, var(--solar) 75%, var(--red) 100%);
     z-index: 1000;
 }
 
@@ -363,15 +363,17 @@ td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
     .cite { color: var(--text-muted) !important; }
 }
     </style>
+    <script src="js/chart-colors.js"></script>
+    <script src="js/shared-header.js"></script>
 </head>
 <body>
 
 <!-- TOP NAV (injected by nav.js) -->
 <nav id="topNav"></nav>
 <script src="js/nav.js"></script>
-<div style="background:#0F1A2E;padding:8px 24px;"><a href="index.html" style="font-family:'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif;font-size:0.82rem;font-weight:600;color:rgba(255,255,255,0.75);text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;min-height:44px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
+<div style="background:var(--navy-dark);padding:8px 24px;"><a href="index.html" style="font-family:var(--font-heading);font-size:0.82rem;font-weight:600;color:rgba(255,255,255,0.75);text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;min-height:44px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
 
-<header class="header">
+<header class="header" id="pageHeader">
     <div class="header-accent"></div>
     <h1>The 8,760 Problem</h1>
     <p class="subtitle">A comprehensive analysis of hourly clean energy matching costs, resource optimization, and regional decarbonization pathways.</p>
