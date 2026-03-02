@@ -1,7 +1,9 @@
-name: "Filter near-miss parquets (remove zero-curtailment)"
+name: "Filter near-miss parquets (curtailment + bridge)"
 
-# Removes mixes with no curtailment from near-miss parquets.
-# These mixes cannot benefit from storage dispatch and waste 1d compute.
+# Two-pass filter on near-miss parquets to shrink them before Step 1d:
+#  1. Remove zero-curtailment mixes (no surplus hours → can't charge storage)
+#  2. Remove bridge-fail mixes (base_score + surplus_pct < 50% → can't reach
+#     any storage threshold even with all available surplus)
 # Run after Step 1c to prune before Step 1d.
 
 on:
@@ -52,7 +54,7 @@ jobs:
     - name: Install dependencies
       run: pip install numpy numba pyarrow pandas
 
-    - name: Run curtailment filter
+    - name: Run curtailment + bridge filter
       run: |
         ISO="${{ inputs.iso }}"
         if [ "$ISO" = "ALL" ]; then
@@ -61,22 +63,22 @@ jobs:
           python scripts/filter_near_miss_curtailment.py "$ISO"
         fi
 
-    - name: Commit and push filtered parquets
+    - name: Commit and push filtered/compressed parquets
       run: |
         BRANCH="${{ inputs.branch || 'master' }}"
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
-        git add -f data/step1-pfs-parquets/*_near_miss.parquet
+        git add -f data/step1-pfs-parquets/*.parquet data/step1d-storage-parquets/*.parquet 2>/dev/null || true
         if ! git diff --cached --quiet; then
-          git commit -m "Filter near-miss parquets: remove zero-curtailment mixes
+          git commit -m "Filter + compress PFS parquets (int8/float32 + zstd)
 
-        Removes mixes with no surplus hours (curtailment <= 0) that cannot
-        benefit from storage dispatch. Pruning before Step 1d."
+        Near-miss: remove zero-curtailment + bridge-fail mixes.
+        All parquets: downcast float64 → int8/float32, recompress with zstd."
           for i in 1 2 3 4; do
             git push origin HEAD:"$BRANCH" && break
             echo "Push attempt $i failed, retrying in $((2**i))s..."
             sleep $((2**i))
           done
         else
-          echo "No changes — all parquets already clean."
+          echo "No changes — all parquets already optimized."
         fi
