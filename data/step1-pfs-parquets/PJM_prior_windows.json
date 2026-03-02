@@ -1,0 +1,606 @@
+{
+  "iso": "PJM",
+  "buffer_pp": 15,
+  "union_bounds": {
+    "clean_firm": [
+      0,
+      120
+    ],
+    "solar": [
+      0,
+      100
+    ],
+    "wind": [
+      0,
+      250
+    ],
+    "hydro": [
+      0,
+      11
+    ],
+    "offshore_wind": [
+      0,
+      4
+    ]
+  },
+  "per_threshold": {
+    "10": {
+      "clean_firm": [
+        0,
+        30
+      ],
+      "solar": [
+        0,
+        30
+      ],
+      "wind": [
+        0,
+        30
+      ],
+      "hydro": [
+        0,
+        11
+      ],
+      "offshore_wind": [
+        0,
+        4
+      ]
+    },
+    "20": {
+      "clean_firm": [
+        0,
+        45
+      ],
+      "solar": [
+        0,
+        55
+      ],
+      "wind": [
+        0,
+        45
+      ],
+      "hydro": [
+        0,
+        11
+      ],
+      "offshore_wind": [
+        0,
+        4
+      ]
+    },
+    "30": {
+      "clean_firm": [
+        0,
+        55
+      ],
+      "solar": [
+        0,
+        75
+      ],
+      "wind": [
+        0,
+        55
+      ],
+      "hydro": [
+        0,
+        11
+      ],
+      "offshore_wind": [
+        0,
+        4
+      ]
+    },
+    "40": {
+      "clean_firm": [
+        0,
+        65
+      ],
+      "solar": [
+        0,
+        75
+      ],
+      "wind": [
+        0,
+        65
+      ],
+      "hydro": [
+        0,
+        11
+      ],
+      "offshore_wind": [
+        0,
+        4
+      ]
+    },
+    "50": {
+      "clean_firm": [
+        0,
+        70
+      ],
+      "solar": [
+        0,
+        94
+      ],
+      "wind": [
+        0,
+        70
+      ],
+      "hydro": [
+        0,
+        11
+      ],
+      "offshore_wind": [
+        0,
+        4
+      ]
+    },
+    "55": {
+      "clean_firm": [
+        0,
+        75
+      ],
+      "solar": [
+        0,
+        99
+      ],
+      "wind": [
+        0,
+        75
+      ],
+      "hydro": [
+        0,
+        11
+      ],
+      "offshore_wind": [
+        0,
+        4
+      ]
+    },
+    "60": {
+      "clean_firm": [
+        0,
+        80
+      ],
+      "solar": [
+        0,
+        100
+      ],
+      "wind": [
+        0,
+        80
+      ],
+      "hydro": [
+        0,
+        11
+      ],
+      "offshore_wind": [
+        0,
+        4
+      ]
+    },
+    "65": {
+      "clean_firm": [
+        0,
+        85
+      ],
+      "solar": [
+        0,
+        100
+      ],
+      "wind": [
+        0,
+        85
+      ],
+      "hydro": [
+        0,
+        11
+      ],
+      "offshore_wind": [
+        0,
+        4
+      ]
+    },
+    "70": {
+      "clean_firm": [
+        0,
+        90
+      ],
+      "solar": [
+        0,
+        100
+      ],
+      "wind": [
+        0,
+        92
+      ],
+      "hydro": [
+        0,
+        11
+      ],
+      "offshore_wind": [
+        0,
+        4
+      ]
+    },
+    "75": {
+      "clean_firm": [
+        0,
+        95
+      ],
+      "solar": [
+        0,
+        100
+      ],
+      "wind": [
+        0,
+        102
+      ],
+      "hydro": [
+        0,
+        11
+      ],
+      "offshore_wind": [
+        0,
+        4
+      ]
+    },
+    "80": {
+      "clean_firm": [
+        0,
+        100
+      ],
+      "solar": [
+        0,
+        100
+      ],
+      "wind": [
+        0,
+        115
+      ],
+      "hydro": [
+        0,
+        11
+      ],
+      "offshore_wind": [
+        0,
+        4
+      ]
+    },
+    "85": {
+      "clean_firm": [
+        0,
+        101
+      ],
+      "solar": [
+        0,
+        100
+      ],
+      "wind": [
+        0,
+        135
+      ],
+      "hydro": [
+        0,
+        11
+      ],
+      "offshore_wind": [
+        0,
+        4
+      ]
+    },
+    "87.5": {
+      "clean_firm": [
+        0,
+        110
+      ],
+      "solar": [
+        0,
+        100
+      ],
+      "wind": [
+        0,
+        149
+      ],
+      "hydro": [
+        0,
+        11
+      ],
+      "offshore_wind": [
+        0,
+        4
+      ]
+    },
+    "90": {
+      "clean_firm": [
+        0,
+        112
+      ],
+      "solar": [
+        0,
+        100
+      ],
+      "wind": [
+        0,
+        166
+      ],
+      "hydro": [
+        0,
+        11
+      ],
+      "offshore_wind": [
+        0,
+        4
+      ]
+    },
+    "92.5": {
+      "clean_firm": [
+        0,
+        120
+      ],
+      "solar": [
+        0,
+        100
+      ],
+      "wind": [
+        0,
+        220
+      ],
+      "hydro": [
+        0,
+        11
+      ],
+      "offshore_wind": [
+        0,
+        4
+      ]
+    },
+    "95": {
+      "clean_firm": [
+        0,
+        120
+      ],
+      "solar": [
+        0,
+        100
+      ],
+      "wind": [
+        0,
+        250
+      ],
+      "hydro": [
+        0,
+        11
+      ],
+      "offshore_wind": [
+        0,
+        4
+      ]
+    },
+    "97.5": {
+      "clean_firm": [
+        0,
+        120
+      ],
+      "solar": [
+        0,
+        100
+      ],
+      "wind": [
+        0,
+        250
+      ],
+      "hydro": [
+        0,
+        11
+      ],
+      "offshore_wind": [
+        0,
+        4
+      ]
+    },
+    "99": {
+      "clean_firm": [
+        0,
+        120
+      ],
+      "solar": [
+        0,
+        100
+      ],
+      "wind": [
+        0,
+        250
+      ],
+      "hydro": [
+        0,
+        11
+      ],
+      "offshore_wind": [
+        0,
+        4
+      ]
+    },
+    "99.5": {
+      "clean_firm": [
+        0,
+        120
+      ],
+      "solar": [
+        0,
+        100
+      ],
+      "wind": [
+        0,
+        250
+      ],
+      "hydro": [
+        0,
+        11
+      ],
+      "offshore_wind": [
+        0,
+        4
+      ]
+    },
+    "99.9": {
+      "clean_firm": [
+        0,
+        120
+      ],
+      "solar": [
+        0,
+        100
+      ],
+      "wind": [
+        0,
+        250
+      ],
+      "hydro": [
+        0,
+        11
+      ],
+      "offshore_wind": [
+        0,
+        4
+      ]
+    },
+    "99.99": {
+      "clean_firm": [
+        0,
+        120
+      ],
+      "solar": [
+        0,
+        100
+      ],
+      "wind": [
+        0,
+        250
+      ],
+      "hydro": [
+        0,
+        11
+      ],
+      "offshore_wind": [
+        0,
+        4
+      ]
+    }
+  },
+  "resource_caps": {
+    "clean_firm": 120,
+    "solar": 100,
+    "wind": 250,
+    "hydro": 11,
+    "offshore_wind": 4
+  },
+  "zone_A": {
+    "score_range": [
+      0.45,
+      0.78
+    ],
+    "thresholds": [
+      50,
+      55,
+      60,
+      65,
+      70,
+      75
+    ],
+    "bounds": {
+      "clean_firm": [
+        0,
+        95
+      ],
+      "solar": [
+        0,
+        100
+      ],
+      "wind": [
+        0,
+        102
+      ],
+      "hydro": [
+        0,
+        11
+      ],
+      "offshore_wind": [
+        0,
+        4
+      ]
+    }
+  },
+  "zone_B": {
+    "score_range": [
+      0.73,
+      0.93
+    ],
+    "thresholds": [
+      75,
+      80,
+      85,
+      87.5,
+      90
+    ],
+    "bounds": {
+      "clean_firm": [
+        0,
+        112
+      ],
+      "solar": [
+        0,
+        100
+      ],
+      "wind": [
+        0,
+        166
+      ],
+      "hydro": [
+        0,
+        11
+      ],
+      "offshore_wind": [
+        0,
+        4
+      ]
+    }
+  },
+  "zone_C": {
+    "score_range": [
+      0.88,
+      1.0
+    ],
+    "thresholds": [
+      90,
+      92.5,
+      95,
+      97.5,
+      99,
+      99.5,
+      99.9,
+      99.99
+    ],
+    "bounds": {
+      "clean_firm": [
+        0,
+        120
+      ],
+      "solar": [
+        0,
+        100
+      ],
+      "wind": [
+        0,
+        250
+      ],
+      "hydro": [
+        0,
+        11
+      ],
+      "offshore_wind": [
+        0,
+        4
+      ]
+    }
+  }
+}
