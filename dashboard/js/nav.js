@@ -113,14 +113,14 @@
                 { label: 'Wholesale Price Trends', href: 'lmp_trends.html' },
                 { label: 'Fossil Fuel Deep Dive', href: 'fossil_fuel_deepdive.html' },
                 { label: 'Storage Analysis', href: 'storage_analysis.html' },
+                { label: 'Wright\'s Law Curves', href: 'wrights_law.html' },
                 { separator: true, label: 'Consequential Accounting' },
                 { label: 'Overview', href: 'consequential_accounting.html' },
                 { label: 'Failure Modes at Scale', href: 'consequential_vacuum.html' },
                 { label: 'Scenario Comparison', href: 'scenario_comparison.html' },
                 { separator: true, label: 'Corporate Procurement' },
                 { label: 'Procurement Strategies', href: 'procurement_strategies.html' },
-                { label: 'Strategy Comparison (Legacy)', href: 'procurement_comparison.html' },
-                { label: 'Wright\'s Law Curves', href: 'wrights_law.html' }
+                { label: 'Strategy Comparison (Legacy)', href: 'procurement_comparison.html' }
             ]
         },
         {
