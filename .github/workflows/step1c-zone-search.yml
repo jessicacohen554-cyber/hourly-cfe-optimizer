@@ -24,6 +24,11 @@ on:
           - NEISO
           - MISO
           - SPP
+      thresholds:
+        description: 'Thresholds to run: "all" or comma-separated (e.g., "95,99")'
+        required: false
+        default: 'all'
+        type: string
       branch:
         description: 'Branch to checkout'
         required: false
@@ -79,15 +84,6 @@ jobs:
           exit 1
         fi
 
-    - name: "Compute prior windows (optional)"
-      continue-on-error: true
-      run: |
-        ISO="${{ inputs.iso }}"
-        if [ "$ISO" = "ALL" ]; then
-          python scripts/step1_prior_windows.py --iso ALL
-        else
-          python scripts/step1_prior_windows.py --iso "$ISO"
-        fi
 
     - name: Configure git
       run: |
@@ -98,13 +94,14 @@ jobs:
     - name: "Run zone search"
       run: |
         ISO="${{ inputs.iso }}"
+        THRESHOLDS="${{ inputs.thresholds }}"
         if [ "$ISO" = "ALL" ]; then
           for iso in CAISO ERCOT PJM NYISO NEISO MISO SPP; do
-            echo "=== Zone search for $iso ==="
-            python scripts/step1c_zone_search.py --iso "$iso" --auto-commit
+            echo "=== Zone search for $iso (thresholds: $THRESHOLDS) ==="
+            python scripts/step1c_zone_search.py --iso "$iso" --thresholds "$THRESHOLDS" --auto-commit
           done
         else
-          python scripts/step1c_zone_search.py --iso "$ISO" --auto-commit
+          python scripts/step1c_zone_search.py --iso "$ISO" --thresholds "$THRESHOLDS" --auto-commit
         fi
 
     - name: Final commit and push
