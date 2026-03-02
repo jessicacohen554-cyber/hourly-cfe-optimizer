@@ -545,17 +545,8 @@ def process_threshold(iso, threshold, demand_arr, supply_matrix,
         print(f"    {iso} {threshold}%: 0 near-miss mixes — skipping")
         return 0
 
-    # ── Dominance filter: remove mixes where another uses ≤ of every resource ──
-    n_before_dom = len(near_miss_idx)
-    from step1c_zone_search import dominance_filter_arrays
-    nm_combos_sub = coarse_combos[near_miss_idx]
-    nm_scores_sub = coarse_scores[near_miss_idx]
-    dom_mask = dominance_filter_arrays(nm_combos_sub, nm_scores_sub)
-    near_miss_idx = near_miss_idx[dom_mask]
-
     n_nm = len(near_miss_idx)
     force_str = f" + {n_forced} forced" if n_forced > 0 else ""
-    dom_str = f", dominance {n_before_dom:,}→{n_nm:,}" if n_nm < n_before_dom else ""
 
     # ── Storage levels for this threshold regime ──
     levels = get_storage_levels(threshold)
@@ -569,7 +560,7 @@ def process_threshold(iso, threshold, demand_arr, supply_matrix,
     n_h2 = len(h2_arr)
     n_combos = n_b4 * n_b8 * n_l * n_h2
 
-    print(f"    {iso} {threshold}%: {n_nm:,} near-miss mixes{force_str}{dom_str}, "
+    print(f"    {iso} {threshold}%: {n_nm:,} near-miss mixes{force_str}, "
           f"{n_b4}×{n_b8}×{n_l}×{n_h2}={n_combos:,} storage combos "
           f"(batch={mix_batch})")
 
@@ -615,26 +606,23 @@ def process_threshold(iso, threshold, demand_arr, supply_matrix,
     if n_cap_chunks > 1:
         print()
 
-    # ── Filter 1: only mixes with any curtailment ──
-    has_curtailment = hc_arr.astype(bool)
-    n_with_curtailment = has_curtailment.sum()
-
-    # ── Filter 2: curtailment-magnitude gate ──
-    # Physical upper bound: max score lift = total_surplus × best_eff / demand_total
-    # If this is less than the score gap, storage CANNOT bridge it — skip.
-    best_eff = max(BATTERY_EFFICIENCY, BATTERY8_EFFICIENCY, LDES_EFFICIENCY)
+    # ── Curtailment bridge filter ──
+    # Keep mixes where curtailment surplus can bridge the gap to target.
+    # Check: surplus_pct >= gap  (raw curtailed energy covers the deficit)
+    # This is the physics bridge: if a mix curtails >= the gap, storage can
+    # potentially time-shift that surplus to cover deficit hours.
+    # RT efficiency losses are handled downstream by the storage dispatch sim.
+    surplus_pct = total_surplus / demand_total   # curtailment as fraction of demand
     score_gap = target - coarse_scores[near_miss_idx]
-    max_score_lift = total_surplus * best_eff / demand_total
-    can_bridge = max_score_lift >= score_gap
+    bridge_mask = surplus_pct >= score_gap
 
-    # Combine both filters
-    valid_mask = has_curtailment & can_bridge
-    valid_ci = np.where(valid_mask)[0]
-    n_gated = int(n_with_curtailment) - len(valid_ci)
+    valid_ci = np.where(bridge_mask)[0]
+    n_no_curtailment = int((hc_arr == 0).sum())
+    n_gated = n_nm - len(valid_ci)
 
     if len(valid_ci) == 0:
-        print(f"      0 viable mixes (curtailment: {n_with_curtailment:,}, "
-              f"gated out: {n_gated:,} insufficient surplus) — skipping")
+        print(f"      0 viable mixes (no curtailment: {n_no_curtailment:,}, "
+              f"gated: {n_gated:,} insufficient surplus) — skipping")
         return 0
 
     # Build numpy arrays directly (no Python list of tuples)
@@ -645,8 +633,8 @@ def process_threshold(iso, threshold, demand_arr, supply_matrix,
     valid_orig_idx = near_miss_idx[valid_ci]
 
     n_valid = len(valid_ci)
-    print(f"      {n_valid:,} viable mixes (curtailment: {n_with_curtailment:,}, "
-          f"gated: {n_gated:,} insufficient surplus)")
+    print(f"      {n_valid:,} viable mixes (bridge filter: {n_nm:,}→{n_valid:,}, "
+          f"gated: {n_gated:,}, no curtailment: {n_no_curtailment:,})")
 
     # ── Cap distribution summary (diagnostic) ──
     valid_b4_diag = b4_caps[valid_ci] * 100.0
