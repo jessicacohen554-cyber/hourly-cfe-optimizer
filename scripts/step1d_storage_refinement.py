@@ -250,23 +250,119 @@ def get_storage_levels(threshold):
 # ══════════════════════════════════════════════════════════════════════════════
 
 def load_coarse_cache(iso):
-    """Load coarse cache from Step 1B.
+    """Load base mix cache: coarse 5% grid + fine-grid mixes from raw PFS.
+
+    The coarse cache (5% grid) only has hydro at 0,5,10,... which misses
+    exact hydro cap values (e.g., hydro=2 for PJM). The raw PFS files from
+    Step 1's adaptive refinement contain fine-grid mixes (1% step) at all
+    hydro levels. Merging both ensures Step 1d can add storage to mixes at
+    valid hydro cap values — without this, ALL storage mixes get killed by
+    the hydro cap filter in Step 3.
 
     Returns (combos, scores) where:
       combos: (N, n_resources) int array of resource percentages
       scores: (N,) float64 array of hourly match scores in [0, 1]
     """
-    path = os.path.join(STEP1_RAW_PFS_PARQUET_DIR, f'{iso}_coarse_cache.parquet')
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"Coarse cache not found: {path}")
+    import glob as globmod
 
-    table = pq.read_table(path)
     rtypes = get_resource_types(iso)
-    combos = np.column_stack([
-        table.column(rt).to_numpy().astype(np.int64) for rt in rtypes
-    ])
-    scores = table.column('score').to_numpy().astype(np.float64)
-    return combos, scores
+
+    # 1. Load coarse cache (5% grid) if it exists
+    path = os.path.join(STEP1_RAW_PFS_PARQUET_DIR, f'{iso}_coarse_cache.parquet')
+    has_coarse = os.path.exists(path)
+    if has_coarse:
+        table = pq.read_table(path)
+        coarse_combos = np.column_stack([
+            table.column(rt).to_numpy().astype(np.int64) for rt in rtypes
+        ])
+        coarse_scores = table.column('score').to_numpy().astype(np.float64)
+        coarse_hydro_set = set(np.unique(coarse_combos[:, rtypes.index('hydro')]).tolist())
+    else:
+        coarse_combos = None
+        coarse_scores = None
+        coarse_hydro_set = set()
+
+    # 2. Load fine-grid mixes from raw PFS (1% adaptive refinement).
+    #    These contain hydro at exact cap values (1,2,3,4,etc.) that the
+    #    coarse 5% grid misses. If no coarse cache exists (some ISOs), the
+    #    raw PFS becomes the sole source of base mixes.
+    pfs_pattern = os.path.join(STEP1_RAW_PFS_PARQUET_DIR, f'{iso}_t*_raw_pfs.parquet')
+    pfs_files = sorted(globmod.glob(pfs_pattern))
+
+    if not pfs_files and not has_coarse:
+        raise FileNotFoundError(
+            f"No coarse cache or raw PFS files found for {iso}")
+
+    hydro_col = rtypes.index('hydro')
+    fine_combos_list = []
+    fine_scores_list = []
+
+    for fpath in pfs_files:
+        try:
+            t = pq.read_table(fpath, columns=rtypes + ['hourly_match_score'])
+            c = np.column_stack([
+                t.column(rt).to_numpy().astype(np.int64) for rt in rtypes
+            ])
+            s = t.column('hourly_match_score').to_numpy().astype(np.float64) / 100.0
+
+            if has_coarse:
+                # Only keep mixes at hydro levels NOT in the coarse grid
+                hydro_vals = c[:, hydro_col]
+                new_hydro_mask = np.array(
+                    [h not in coarse_hydro_set for h in hydro_vals])
+                if new_hydro_mask.any():
+                    fine_combos_list.append(c[new_hydro_mask])
+                    fine_scores_list.append(s[new_hydro_mask])
+            else:
+                # No coarse cache — take all mixes from raw PFS
+                fine_combos_list.append(c)
+                fine_scores_list.append(s)
+        except Exception:
+            continue
+
+    if fine_combos_list:
+        fine_combos = np.vstack(fine_combos_list)
+        fine_scores = np.concatenate(fine_scores_list)
+
+        # Deduplicate fine-grid mixes: keep max score per unique combo
+        n_res = fine_combos.shape[1]
+        fine_contig = np.ascontiguousarray(fine_combos)
+        void_view = fine_contig.view(
+            np.dtype((np.void, fine_contig.dtype.itemsize * n_res))
+        ).ravel()
+        _, unique_idx, inverse = np.unique(
+            void_view, return_index=True, return_inverse=True)
+
+        unique_combos = fine_combos[unique_idx]
+        unique_scores = np.full(len(unique_idx), -1.0)
+        np.maximum.at(unique_scores, inverse, fine_scores)
+
+        new_hydro_levels = sorted(
+            set(unique_combos[:, hydro_col].tolist()) - coarse_hydro_set)
+
+        if has_coarse:
+            combos = np.vstack([coarse_combos, unique_combos])
+            scores = np.concatenate([coarse_scores, unique_scores])
+            print(f"  Coarse cache: {len(coarse_combos):,} + "
+                  f"fine-grid: {len(unique_combos):,} = "
+                  f"{len(combos):,} total mixes")
+        else:
+            combos = unique_combos
+            scores = unique_scores
+            print(f"  Raw PFS only (no coarse cache): "
+                  f"{len(combos):,} unique mixes from "
+                  f"{len(pfs_files)} files")
+
+        if new_hydro_levels:
+            print(f"  New hydro levels from fine grid: {new_hydro_levels}")
+
+        return combos, scores
+
+    if has_coarse:
+        return coarse_combos, coarse_scores
+
+    raise FileNotFoundError(
+        f"No usable mix data found for {iso}")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
