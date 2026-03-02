@@ -249,16 +249,11 @@ def run_adaptive_coarse(iso, nm_combos, nm_base_scores, max_scores,
     batch_size = CAISO_MIX_BATCH if iso == 'CAISO' else MAX_MIX_BATCH
     include_h2 = any(t >= 95 for t in active_thresholds)
 
-    # Compute storage caps for all mixes (needed for per-mix cap filtering)
+    # Compute curtailment flags and surplus days (needed for bucketing/gating)
     print(f"\n  Pass 1 — Adaptive coarse sweep")
-    print(f"    Computing storage caps...")
-    b4_caps = np.empty(n_mixes, dtype=np.float64)
-    b8_caps = np.empty(n_mixes, dtype=np.float64)
-    l_caps = np.empty(n_mixes, dtype=np.float64)
+    print(f"    Computing curtailment stats...")
     surplus_days = np.empty(n_mixes, dtype=np.int64)
     hc_arr = np.empty(n_mixes, dtype=np.int64)
-    surplus_pct = np.empty(n_mixes, dtype=np.float64)
-    demand_total = demand_arr.sum()
 
     for cs in range(0, n_mixes, NM_CHUNK):
         ce = min(cs + NM_CHUNK, n_mixes)
@@ -266,25 +261,13 @@ def run_adaptive_coarse(iso, nm_combos, nm_base_scores, max_scores,
         chunk_supply = chunk_fracs @ supply_matrix
         chunk_n = ce - cs
 
-        cb4, cb8, cl, chc, csd = s1._batch_compute_storage_caps(
+        _, _, _, chc, csd = s1._batch_compute_storage_caps(
             demand_arr, chunk_supply, 1.0, chunk_n,
             sc['batt4_dur'], sc['batt8_dur'], sc['ldes_dur'])
-        b4_caps[cs:ce] = cb4
-        b8_caps[cs:ce] = cb8
-        l_caps[cs:ce] = cl
         hc_arr[cs:ce] = chc
         surplus_days[cs:ce] = csd
 
-        chunk_surplus = np.maximum(chunk_supply - demand_arr[np.newaxis, :], 0.0)
-        surplus_pct[cs:ce] = chunk_surplus.sum(axis=1) / demand_total
-
     has_curtailment = hc_arr.astype(bool)
-
-    # Pre-compute per-threshold floors
-    threshold_floors = {
-        t: max(STORAGE_SWEEP_FLOOR, t / 100.0 - get_near_miss_width(t))
-        for t in active_thresholds
-    }
 
     # For each mix, compute min gap to any active threshold it could serve.
     # This determines which bucket (grid size) to use.
@@ -321,6 +304,28 @@ def run_adaptive_coarse(iso, nm_combos, nm_base_scores, max_scores,
               f"{n_combos:,} combos "
               f"(b4={n_b4} b8={n_b8} ldes={n_l} h2={n_h2})")
 
+        # Pre-sort combo indices by total storage (ascending).
+        # For each mix, we iterate in this order and stop at the first
+        # hit per threshold — no need to test larger storage combos.
+        sorted_combos = []
+        for b4i in range(n_b4):
+            for b8i in range(n_b8):
+                for li in range(n_l):
+                    for h2i in range(n_h2):
+                        bp = b4_grid[b4i]
+                        b8p = b8_grid[b8i]
+                        lp = ldes_grid[li]
+                        h2p = h2_grid[h2i]
+                        if bp == 0 and b8p == 0 and lp == 0 and h2p == 0:
+                            continue
+                        flat_idx = (b4i * n_b8 * n_l * n_h2 +
+                                    b8i * n_l * n_h2 +
+                                    li * n_h2 + h2i)
+                        total_s = bp + b8p + lp + h2p
+                        sorted_combos.append(
+                            (total_s, flat_idx, bp, b8p, lp, h2p))
+        sorted_combos.sort()  # ascending by total storage
+
         # Process in batches
         for batch_start in range(0, len(bucket_idx), batch_size):
             batch_end = min(batch_start + batch_size, len(bucket_idx))
@@ -341,66 +346,52 @@ def run_adaptive_coarse(iso, nm_combos, nm_base_scores, max_scores,
 
             total_kernel_evals += n_batch * n_combos
 
-            # Extract feasible results and bin to thresholds
+            # Extract: iterate combos smallest-first, stop per threshold
             for local_i in range(n_batch):
                 mi = int(b_idx[local_i])
-                b4_max = b4_caps[mi] * 100.0 * 1.1
-                b8_max = b8_caps[mi] * 100.0 * 1.1
-                l_max = l_caps[mi] * 100.0 * 1.1
                 n_sd = int(surplus_days[mi])
                 mix_base = nm_base_scores[mi]
-                mix_surplus = surplus_pct[mi]
-
                 scores = batch_scores[local_i]
 
-                for b4i in range(n_b4):
-                    bp = b4_grid[b4i]
-                    if bp > 0 and (n_sd < MIN_SURPLUS_DAYS_FOR_BATTERY
-                                   or bp > b4_max):
+                # Track which thresholds still need a solution for this mix
+                unsatisfied = set()
+                for t in active_thresholds:
+                    if mix_base < t / 100.0:
+                        unsatisfied.add(t)
+                if not unsatisfied:
+                    continue
+
+                for (_, flat_idx, bp, b8p, lp, h2p) in sorted_combos:
+                    if not unsatisfied:
+                        break  # all thresholds satisfied for this mix
+
+                    # Skip battery if insufficient surplus days
+                    if (bp > 0 or b8p > 0) and n_sd < MIN_SURPLUS_DAYS_FOR_BATTERY:
                         continue
-                    for b8i in range(n_b8):
-                        b8p = b8_grid[b8i]
-                        if b8p > 0 and (n_sd < MIN_SURPLUS_DAYS_FOR_BATTERY
-                                        or b8p > b8_max):
+
+                    score = scores[flat_idx]
+                    if score < 0:
+                        continue
+
+                    score_pct = round(score * 100, 2)
+                    satisfied_now = []
+                    for t in unsatisfied:
+                        target = t / 100.0
+                        if score < target:
                             continue
-                        for li in range(n_l):
-                            lp = ldes_grid[li]
-                            if lp > 0 and lp > l_max:
-                                continue
-                            for h2i in range(n_h2):
-                                h2p = h2_grid[h2i]
-                                if bp == 0 and b8p == 0 and lp == 0 and h2p == 0:
-                                    continue
+                        if h2p > 0 and t < 95:
+                            continue
+                        results[t].append(
+                            (mi, float(bp), float(b8p),
+                             float(lp), float(h2p), score_pct))
+                        satisfied_now.append(t)
+                        total_feasible += 1
 
-                                idx = (b4i * n_b8 * n_l * n_h2 +
-                                       b8i * n_l * n_h2 +
-                                       li * n_h2 + h2i)
-                                score = scores[idx]
-                                if score < 0:
-                                    continue
+                    for t in satisfied_now:
+                        unsatisfied.discard(t)
 
-                                for t in active_thresholds:
-                                    target = t / 100.0
-                                    if score < target:
-                                        continue
-                                    if mix_base >= target:
-                                        continue
-                                    gap = target - mix_base
-                                    if mix_surplus < gap:
-                                        continue
-                                    if (mix_base < threshold_floors[t]
-                                            and mix_surplus < 1.5 * gap):
-                                        continue
-                                    if h2p > 0 and t < 95:
-                                        continue
-                                    results[t].append(
-                                        (mi, float(bp), float(b8p),
-                                         float(lp), float(h2p),
-                                         round(score * 100, 2)))
-                                    total_feasible += 1
-
-    print(f"    Pass 1 complete: {total_feasible:,} feasible, "
-          f"{total_kernel_evals:,.0f} kernel evals")
+    print(f"    Pass 1 complete: {total_feasible:,} feasible "
+          f"(min-storage per mix), {total_kernel_evals:,.0f} kernel evals")
     return results
 
 
