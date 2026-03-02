@@ -481,10 +481,11 @@ def compute_envelope_and_path(df):
         iso_med = med_df[med_df['iso'] == iso].sort_values('threshold')
         demand_mwh = iso_med['annual_demand_mwh'].iloc[0] if len(iso_med) > 0 else 1
 
-        # Build threshold lookup once for both computations
-        results_by_t = {}
-        for _, row in iso_med.iterrows():
-            results_by_t[row['threshold']] = row
+        # Build threshold lookup once for both computations (vectorized, no iterrows)
+        results_by_t = {row['threshold']: row for row in iso_med.to_dict('records')}
+        # Convert records back to Series-like access via dict .get()
+        results_by_t = {t: iso_med[iso_med['threshold'] == t].iloc[0]
+                        for t in iso_med['threshold'].unique()}
 
         # Baseline emissions (Mt) — fossil emissions with only existing clean
         baseline_mt = BASELINE_EMISSIONS_MT.get(iso, 0)
