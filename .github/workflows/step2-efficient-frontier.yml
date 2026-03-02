@@ -166,7 +166,7 @@ jobs:
         if: ${{ inputs.script == 'ef-only' || inputs.script == 'ef-then-expand' }}
         timeout-minutes: 90
         run: |
-          ARGS="--iso ${{ matrix.iso }}"
+          ARGS="--iso ${{ matrix.iso }} --clear"
           THRESHOLDS="${{ inputs.thresholds }}"
           if [ -n "$THRESHOLDS" ]; then
             ARGS="$ARGS --thresholds $THRESHOLDS"
@@ -283,7 +283,7 @@ jobs:
         timeout-minutes: 60
         run: |
           python scripts/step2_efficient_frontier.py \
-            --iso ${{ matrix.iso }} \
+            --iso ${{ matrix.iso }} --clear \
             --thresholds "${{ inputs.thresholds }}"
 
       - name: "Commit custom thresholds (${{ matrix.iso }})"
@@ -303,7 +303,7 @@ jobs:
       - name: "Batch LOW: thresholds 10-75% (${{ matrix.iso }})"
         if: ${{ inputs.thresholds == '' }}
         timeout-minutes: 30
-        run: python scripts/step2_efficient_frontier.py --iso ${{ matrix.iso }} --batch low
+        run: python scripts/step2_efficient_frontier.py --iso ${{ matrix.iso }} --clear --batch low
 
       - name: "Commit batch LOW (${{ matrix.iso }})"
         if: ${{ inputs.thresholds == '' }}

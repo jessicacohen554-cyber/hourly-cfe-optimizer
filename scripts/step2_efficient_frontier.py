@@ -132,7 +132,7 @@ def normalize_table(t, iso):
 def _extract_threshold_from_filename(fname):
     """Extract threshold value from a PFS filename. Returns float or None."""
     # Handles: {ISO}_t{XX}_raw_pfs.parquet, {ISO}_t{XX}_raw_pfs_b{N}.parquet
-    # Also handles 1d/ prefixed files: 1d/{ISO}_t{XX}_storage_refined.parquet
+    # Also handles 1d/ prefixed files: 1d/{ISO}_t{XX}_storage.parquet
     base = fname[3:] if fname.startswith('1d/') else fname
     m = re.match(r'^[A-Z]+_t([\d.]+)_', base)
     return float(m.group(1)) if m else None
@@ -719,6 +719,9 @@ def parse_args():
                         help='Merge mode: combine batch parquet files into final EF. '
                              'Reads step2_ef_{ISO}_batch_*.parquet, deduplicates, '
                              'writes step2_ef_{ISO}.parquet.')
+    parser.add_argument('--clear', action='store_true',
+                        help='Clear existing step2-ef-parquets for the target ISO(s) '
+                             'before running. Removes stale EF files from previous runs.')
     return parser.parse_args()
 
 
@@ -733,6 +736,18 @@ def main():
         target_isos = [iso_arg]
     else:
         target_isos = ISOS
+
+    # ── Clear existing EF outputs for target ISOs ─────────────────────
+    if args.clear and os.path.isdir(STEP2_EF_OUTPUT_DIR):
+        import glob as globmod
+        removed = 0
+        for iso in target_isos:
+            pattern = os.path.join(STEP2_EF_OUTPUT_DIR, f'step2_ef_{iso}_t*.parquet')
+            for f in globmod.glob(pattern):
+                os.remove(f)
+                removed += 1
+        if removed:
+            print(f"  Cleared {removed} existing EF file(s) for {', '.join(target_isos)}")
 
     # ── Merge mode ─────────────────────────────────────────────────────
     if args.merge:
