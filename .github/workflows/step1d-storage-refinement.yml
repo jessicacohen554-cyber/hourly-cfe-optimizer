@@ -40,10 +40,6 @@ on:
         default: 'master'
         type: string
 
-concurrency:
-  group: step1d-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   # ── Determine ISO matrix ──
   setup:

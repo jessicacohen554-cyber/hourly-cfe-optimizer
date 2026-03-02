@@ -57,6 +57,7 @@ from step1_pfs_generator import (
     H2_EFFICIENCY, H2_DURATION_HOURS, H2_WINDOW_DAYS,
     _batch_compute_storage_caps, _batch_mixes_storage_screen,
     _normalize_threshold_str, H, STEP1_RAW_PFS_PARQUET_DIR,
+    _force_1d_path,
 )
 
 if sys.stdout.encoding != 'utf-8':
@@ -501,11 +502,51 @@ def process_threshold(iso, threshold, demand_arr, supply_matrix,
     near_miss_mask = (coarse_scores >= near_miss_lower) & (coarse_scores < target)
     near_miss_idx = np.where(near_miss_mask)[0]
 
+    # ── Load force_1d candidates from step1c (if available) ──
+    n_forced = 0
+    force_path = _force_1d_path(iso)
+    if os.path.exists(force_path):
+        try:
+            force_table = pq.read_table(force_path)
+            if 'threshold' in force_table.column_names:
+                # Filter to this threshold
+                t_col = force_table.column('threshold').to_pylist()
+                mask = [abs(t - threshold) < 0.01 for t in t_col]
+                force_table = force_table.filter(mask)
+
+                if force_table.num_rows > 0:
+                    # Extract resource mix columns and find matching coarse indices
+                    force_mixes = np.column_stack([
+                        force_table.column(rt).to_numpy() for rt in rtypes
+                    ])
+                    # Match force mixes against coarse_combos to find indices
+                    # Build a set of existing near-miss tuples for dedup
+                    existing_nm = set(map(tuple, coarse_combos[near_miss_idx].tolist()))
+                    new_force_idx = []
+                    for fi in range(len(force_mixes)):
+                        fmix = tuple(int(force_mixes[fi][j]) for j in range(n_res))
+                        if fmix in existing_nm:
+                            continue  # already in near-miss pool
+                        # Find this mix in coarse_combos
+                        match_mask = np.all(coarse_combos == force_mixes[fi], axis=1)
+                        match_idx = np.where(match_mask)[0]
+                        if len(match_idx) > 0:
+                            new_force_idx.append(match_idx[0])
+                            existing_nm.add(fmix)
+
+                    if new_force_idx:
+                        force_idx_arr = np.array(new_force_idx, dtype=near_miss_idx.dtype)
+                        near_miss_idx = np.concatenate([near_miss_idx, force_idx_arr])
+                        n_forced = len(new_force_idx)
+        except Exception as e:
+            print(f"      [force_1d] Could not load {force_path}: {e}")
+
     if len(near_miss_idx) == 0:
         print(f"    {iso} {threshold}%: 0 near-miss mixes — skipping")
         return 0
 
     n_nm = len(near_miss_idx)
+    force_str = f" + {n_forced} forced" if n_forced > 0 else ""
 
     # ── Storage levels for this threshold regime ──
     levels = get_storage_levels(threshold)
@@ -519,7 +560,7 @@ def process_threshold(iso, threshold, demand_arr, supply_matrix,
     n_h2 = len(h2_arr)
     n_combos = n_b4 * n_b8 * n_l * n_h2
 
-    print(f"    {iso} {threshold}%: {n_nm:,} near-miss mixes, "
+    print(f"    {iso} {threshold}%: {n_nm:,} near-miss mixes{force_str}, "
           f"{n_b4}×{n_b8}×{n_l}×{n_h2}={n_combos:,} storage combos "
           f"(batch={mix_batch})")
 
