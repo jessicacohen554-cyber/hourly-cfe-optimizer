@@ -57,8 +57,13 @@ API_ENDPOINTS = {
 
 BASE_URL = 'https://developer.nrel.gov/api/wind-toolkit/v2/wind'
 
-# Years to fetch (5-year average, matching EIA onshore methodology: 2016-2020)
-FETCH_YEARS = [2016, 2017, 2018, 2019, 2020]
+# Years to fetch (5-year average, matching EIA onshore methodology)
+# Atlantic datasets (mid-atlantic, north-atlantic) cover 2000-2020.
+# California offshore dataset covers 2000-2019 only — no 2020 data.
+FETCH_YEARS_DEFAULT = [2016, 2017, 2018, 2019, 2020]
+FETCH_YEARS_BY_ISO = {
+    'CAISO': [2015, 2016, 2017, 2018, 2019],  # CA dataset ends at 2019
+}
 
 # Loss stack (multiplicative)
 WAKE_LOSS = 0.90          # 10% wake losses
@@ -244,7 +249,8 @@ def build_profile(iso: str, api_key: str) -> dict:
     Returns: {year_str: {"offshore_wind": [8760 normalized floats]}}
     """
     result = {}
-    for year in FETCH_YEARS:
+    years = FETCH_YEARS_BY_ISO.get(iso, FETCH_YEARS_DEFAULT)
+    for year in years:
         print(f"  Fetching {iso} {year}...")
         df = fetch_year(iso, year, api_key)
         ws_150 = process_to_8760(df)
@@ -282,7 +288,8 @@ def build_profiles_from_cache(iso: str, cache_dir: str) -> dict:
     Each CSV should have windspeed_140m and windspeed_160m columns.
     """
     result = {}
-    for year in FETCH_YEARS:
+    years = FETCH_YEARS_BY_ISO.get(iso, FETCH_YEARS_DEFAULT)
+    for year in years:
         csv_path = os.path.join(cache_dir, f"{iso}_{year}.csv")
         if not os.path.exists(csv_path):
             print(f"  SKIP {iso} {year} — no cached file at {csv_path}")
@@ -364,12 +371,15 @@ def main():
 
     if args.dry_run:
         print("DRY RUN — would fetch:")
+        total_calls = 0
         for iso in args.isos:
             lon, lat = LEASE_AREA_COORDS[iso]
             endpoint = API_ENDPOINTS[iso]
-            for year in FETCH_YEARS:
+            years = FETCH_YEARS_BY_ISO.get(iso, FETCH_YEARS_DEFAULT)
+            for year in years:
                 print(f"  {iso} {year}: {endpoint} @ POINT({lon}, {lat})")
-        print(f"\nTotal API calls: {len(args.isos) * len(FETCH_YEARS)}")
+            total_calls += len(years)
+        print(f"\nTotal API calls: {total_calls}")
         return
 
     if not api_key and not args.cache_dir:
@@ -385,7 +395,7 @@ def main():
         print(f"Loaded existing profiles: {list(all_profiles.keys())}")
 
     print(f"\nFetching offshore wind profiles for: {args.isos}")
-    print(f"Years: {FETCH_YEARS}")
+    print(f"Default years: {FETCH_YEARS_DEFAULT}")
     print(f"Loss factor: {NET_LOSS_FACTOR:.4f} (wake={WAKE_LOSS}, elec={ELECTRICAL_LOSS}, avail={AVAILABILITY})")
     print()
 
