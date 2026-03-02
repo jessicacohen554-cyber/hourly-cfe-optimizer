@@ -677,6 +677,20 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
 #
 # Tracks (newbuild, CTR) bypass this filter via their own existing_override.
 
+def _apply_mask(arrays, mask, N):
+    """Apply a boolean mask to all length-N numpy arrays in a dict.
+
+    Non-array values and arrays with length != N are passed through unchanged.
+    """
+    filtered = {}
+    for key, arr in arrays.items():
+        if isinstance(arr, np.ndarray) and len(arr) == N:
+            filtered[key] = arr[mask]
+        else:
+            filtered[key] = arr
+    return filtered
+
+
 def apply_existing_clean_floor(arrays, iso):
     """Filter PFS arrays to keep only mixes where each resource >= existing share.
 
@@ -699,19 +713,10 @@ def apply_existing_clean_floor(arrays, iso):
             floor = int(floor_raw)
             mask &= arrays[resource] >= floor
 
-    n_kept = int(mask.sum())
-    n_removed = N - n_kept
-
+    n_removed = N - int(mask.sum())
     if n_removed == 0:
         return arrays, 0
-
-    filtered = {}
-    for key, arr in arrays.items():
-        if isinstance(arr, np.ndarray) and len(arr) == N:
-            filtered[key] = arr[mask]
-        else:
-            filtered[key] = arr
-    return filtered, n_removed
+    return _apply_mask(arrays, mask, N), n_removed
 
 
 def apply_hydro_cap(arrays, iso):
@@ -736,19 +741,10 @@ def apply_hydro_cap(arrays, iso):
     hydro_cap = math.ceil(GRID_MIX_SHARES[iso].get('hydro', 0))
     N = len(arrays['clean_firm'])
     mask = arrays['hydro'] <= hydro_cap
-    n_kept = int(mask.sum())
-    n_removed = N - n_kept
-
+    n_removed = N - int(mask.sum())
     if n_removed == 0:
         return arrays, 0
-
-    filtered = {}
-    for key, arr in arrays.items():
-        if isinstance(arr, np.ndarray) and len(arr) == N:
-            filtered[key] = arr[mask]
-        else:
-            filtered[key] = arr
-    return filtered, n_removed
+    return _apply_mask(arrays, mask, N), n_removed
 
 
 # ============================================================================
@@ -1662,24 +1658,19 @@ def build_sensitivity_combos(iso):
     """
     combos = []
     tx_levels = ['N', 'L', 'M', 'H']
-    ccs_levels = LMH
     q45_states = ['1', '0']
     geo_levels = LMH if iso == 'CAISO' else [None]
 
-    for r, f, batt, ldes in product(LMH, LMH, LMH, LMH):
-        for ff in LMH:
-            for tx in tx_levels:
-                for ccs in ccs_levels:
-                    for q45 in q45_states:
-                        for geo in geo_levels:
-                            key = make_scenario_key(r, f, batt, ldes, ff, tx, ccs, q45, geo)
-                            sens = {
-                                'ren': r, 'firm': f,
-                                'batt': batt, 'ldes_lvl': ldes,
-                                'ccs': ccs, 'q45': q45,
-                                'fuel': ff, 'tx': tx, 'geo': geo,
-                            }
-                            combos.append((key, sens))
+    for r, f, batt, ldes, ff, tx, ccs, q45, geo in product(
+            LMH, LMH, LMH, LMH, LMH, tx_levels, LMH, q45_states, geo_levels):
+        key = make_scenario_key(r, f, batt, ldes, ff, tx, ccs, q45, geo)
+        sens = {
+            'ren': r, 'firm': f,
+            'batt': batt, 'ldes_lvl': ldes,
+            'ccs': ccs, 'q45': q45,
+            'fuel': ff, 'tx': tx, 'geo': geo,
+        }
+        combos.append((key, sens))
     return combos
 
 
@@ -2757,15 +2748,19 @@ def main():
 
         Uses pq.ParquetWriter to stream chunks so we never hold the full
         dataset in memory as both list-of-dicts AND columnar arrays.
+        Schema is discovered from the first chunk and reused for all subsequent
+        chunks, avoiding O(chunk_size × n_keys) key discovery per flush.
         """
         writer = None
+        schema_keys = None
         total = 0
 
         def _flush(chunk):
-            nonlocal writer
-            all_keys = list(dict.fromkeys(k for r in chunk for k in r))
+            nonlocal writer, schema_keys
+            if schema_keys is None:
+                schema_keys = list(dict.fromkeys(k for r in chunk for k in r))
             arrays = {key: pa.array([r.get(key) for r in chunk])
-                      for key in all_keys}
+                      for key in schema_keys}
             tbl = pa.table(arrays)
             if writer is None:
                 writer = pq.ParquetWriter(str(path), tbl.schema,
@@ -2784,6 +2779,20 @@ def main():
         if writer is not None:
             writer.close()
         return total
+
+    # Collect lightweight summary data BEFORE the save loop deletes results.
+    # Only keeps the all-Medium scenario per ISO × threshold for the final printout.
+    summary_baseline = {}
+    for iso in run_isos:
+        iso_res = output.get('results', {}).get(iso, {})
+        mk = medium_key(iso)
+        iso_summary = {}
+        for thr in OUTPUT_THRESHOLDS:
+            sc = iso_res.get('thresholds', {}).get(str(thr), {}).get('scenarios', {}).get(mk)
+            if sc:
+                iso_summary[thr] = sc
+        if iso_summary:
+            summary_baseline[iso] = iso_summary
 
     for iso in run_isos:
         if iso not in output['results']:
@@ -2838,103 +2847,13 @@ def main():
         for _ci, (skey, _) in enumerate(iso_combos):
             iso_t3_cache[skey] = _cached_nuc_arr[_ci] <= _cached_ccs_arr[_ci]
 
-        if iso_dg and iso_arrays:
-            dg_total = 0
+        def _dg_row_gen(iso_, t_str_, thr_sc_, arrs_, t3_cache_, track_name_=None):
+            """Yield DG rows with full resource mix + tranche breakdown.
 
-            for t_str, thr_scenarios in iso_dg.items():
-                t_label = f"{float(t_str):g}"
-                dg_t_out = output_dir / f'step3_dg_{iso}_t{t_label}.parquet'
-
-                def _dg_threshold_gen(iso_, t_str_, thr_sc_, arrs_, t3_cache_):
-                    """Yield DG rows with full resource mix + tranche breakdown."""
-                    for sc_key, year_data in thr_sc_.items():
-                        for year_str, growth_data in year_data.items():
-                            for g_level, vals in growth_data.items():
-                                mix_idx = vals[0]
-                                tranche = vals[6] if len(vals) > 6 else {}
-                                row = {
-                                    'iso': iso_,
-                                    'threshold': float(t_str_),
-                                    'scenario': sc_key,
-                                    'year': int(year_str),
-                                    'growth_level': g_level,
-                                    'growth_factor': vals[4],
-                                    'annual_demand_mwh': vals[5],
-                                }
-                                # Resource mix from PFS arrays
-                                cf = int(arrs_['clean_firm'][mix_idx])
-                                sol = int(arrs_['solar'][mix_idx])
-                                wnd = int(arrs_['wind'][mix_idx])
-                                hyd = int(arrs_['hydro'][mix_idx])
-                                ccs_alloc = max(0, 100 - (cf + sol + wnd + hyd))
-                                row['mix_clean_firm'] = cf
-                                row['mix_solar'] = sol
-                                row['mix_wind'] = wnd
-                                row['mix_ccs_ccgt'] = ccs_alloc
-                                row['mix_hydro'] = hyd
-                                row['hourly_match_score'] = float(
-                                    arrs_['hourly_match_score'][mix_idx])
-
-                                # Storage (all 4 types — float, not int: values are sub-1.0 fractions)
-                                row['battery_dispatch_pct'] = round(float(
-                                    arrs_.get('battery_dispatch_pct', np.zeros(1))[mix_idx]), 4)
-                                row['battery8_dispatch_pct'] = round(float(
-                                    arrs_.get('battery8_dispatch_pct', np.zeros(1))[mix_idx]), 4)
-                                row['ldes_dispatch_pct'] = round(float(
-                                    arrs_.get('ldes_dispatch_pct', np.zeros(1))[mix_idx]), 4)
-                                row['h2_dispatch_pct'] = round(float(
-                                    arrs_.get('h2_dispatch_pct', np.zeros(1))[mix_idx]), 4)
-
-                                # Existing clean TWh available (constant, independent of mix/growth)
-                                _ex = EXISTING_CLEAN_TWH[iso_]
-                                row['existing_cf_twh_available'] = _ex['clean_firm']
-                                row['existing_solar_twh_available'] = _ex['solar']
-                                row['existing_wind_twh_available'] = _ex['wind']
-                                row['existing_hydro_twh_available'] = _ex['hydro']
-
-                                # Tranche breakdown (from precompute extras)
-                                if tranche:
-                                    row['tranche_cf_existing_twh'] = round(tranche['cf_existing_twh'], 3)
-                                    row['tranche_uprate_twh'] = round(tranche['uprate_twh'], 3)
-                                    row['tranche_geo_twh'] = round(tranche['geo_twh'], 3)
-                                    row['tranche_new_cf_twh'] = round(tranche['new_cf_twh'], 3)
-
-                                    # Tranche 3 split: nuclear vs CCS (pre-computed per scenario)
-                                    remaining_twh = tranche['remaining_twh']
-                                    t3_is_nuclear = t3_cache_.get(sc_key, False)
-                                    row['tranche_nuclear_newbuild_twh'] = round(
-                                        remaining_twh if t3_is_nuclear else 0.0, 3)
-                                    row['tranche_ccs_tranche_twh'] = round(
-                                        0.0 if t3_is_nuclear else remaining_twh, 3)
-
-                                    # Gas backup
-                                    row['ra_gas_needed_mw'] = round(tranche['gas_needed_mw'])
-                                    row['ra_existing_gas_mw'] = round(tranche['existing_gas_mw'])
-                                    row['ra_new_gas_mw'] = round(tranche['new_gas_mw'])
-
-                                # Costs
-                                row['cost_total_cost'] = vals[1]
-                                row['cost_effective_cost'] = vals[2]
-                                row['cost_incremental'] = vals[3]
-                                yield row
-
-                n = _rows_to_parquet(
-                    _dg_threshold_gen(iso, t_str, thr_scenarios, iso_arrays, iso_t3_cache),
-                    dg_t_out)
-                dg_total += n
-            print(f"  step3_dg_{iso}: {dg_total:,} demand growth rows "
-                  f"across {len(iso_dg)} threshold files")
-            del iso_dg
-            gc.collect()
-
-        # --- 4. Track demand growth (per-threshold files, full resource mix) ---
-        # Track archetypes use different PFS arrays (newbuild: hydro=0, replace: uprates=OFF)
-        def _flatten_track_dg_threshold(iso_, track_name_, t_str_, thr_sc_,
-                                        tarrs_, t3_cache_):
-            """Yield track DG rows with full resource mix + tranche breakdown.
-
-            t3_cache_ is pre-computed once per ISO (nuclear-vs-CCS decision per scenario key).
+            Unified generator for both baseline and track demand growth parquets.
+            If track_name_ is provided, a 'track' column is added to each row.
             """
+            _ex = EXISTING_CLEAN_TWH[iso_]
             for sc_key, year_data in thr_sc_.items():
                 for year_str, growth_data in year_data.items():
                     for g_level, vals in growth_data.items():
@@ -2942,7 +2861,6 @@ def main():
                         tranche = vals[6] if len(vals) > 6 else {}
                         row = {
                             'iso': iso_,
-                            'track': track_name_,
                             'threshold': float(t_str_),
                             'scenario': sc_key,
                             'year': int(year_str),
@@ -2950,34 +2868,39 @@ def main():
                             'growth_factor': vals[4],
                             'annual_demand_mwh': vals[5],
                         }
-                        cf = int(tarrs_['clean_firm'][mix_idx])
-                        sol = int(tarrs_['solar'][mix_idx])
-                        wnd = int(tarrs_['wind'][mix_idx])
-                        hyd = int(tarrs_['hydro'][mix_idx])
-                        ccs = max(0, 100 - (cf + sol + wnd + hyd))
+                        if track_name_ is not None:
+                            row['track'] = track_name_
+
+                        # Resource mix from PFS arrays
+                        cf = int(arrs_['clean_firm'][mix_idx])
+                        sol = int(arrs_['solar'][mix_idx])
+                        wnd = int(arrs_['wind'][mix_idx])
+                        hyd = int(arrs_['hydro'][mix_idx])
                         row['mix_clean_firm'] = cf
                         row['mix_solar'] = sol
                         row['mix_wind'] = wnd
-                        row['mix_ccs_ccgt'] = ccs
+                        row['mix_ccs_ccgt'] = max(0, 100 - (cf + sol + wnd + hyd))
                         row['mix_hydro'] = hyd
                         row['hourly_match_score'] = float(
-                            tarrs_['hourly_match_score'][mix_idx])
+                            arrs_['hourly_match_score'][mix_idx])
+
+                        # Storage (all 4 types)
                         row['battery_dispatch_pct'] = round(float(
-                            tarrs_.get('battery_dispatch_pct', np.zeros(1))[mix_idx]), 4)
+                            arrs_.get('battery_dispatch_pct', np.zeros(1))[mix_idx]), 4)
                         row['battery8_dispatch_pct'] = round(float(
-                            tarrs_.get('battery8_dispatch_pct', np.zeros(1))[mix_idx]), 4)
+                            arrs_.get('battery8_dispatch_pct', np.zeros(1))[mix_idx]), 4)
                         row['ldes_dispatch_pct'] = round(float(
-                            tarrs_.get('ldes_dispatch_pct', np.zeros(1))[mix_idx]), 4)
+                            arrs_.get('ldes_dispatch_pct', np.zeros(1))[mix_idx]), 4)
                         row['h2_dispatch_pct'] = round(float(
-                            tarrs_.get('h2_dispatch_pct', np.zeros(1))[mix_idx]), 4)
+                            arrs_.get('h2_dispatch_pct', np.zeros(1))[mix_idx]), 4)
 
                         # Existing clean TWh available (constant)
-                        _ex = EXISTING_CLEAN_TWH[iso_]
                         row['existing_cf_twh_available'] = _ex['clean_firm']
                         row['existing_solar_twh_available'] = _ex['solar']
                         row['existing_wind_twh_available'] = _ex['wind']
                         row['existing_hydro_twh_available'] = _ex['hydro']
 
+                        # Tranche breakdown (from precompute extras)
                         if tranche:
                             row['tranche_cf_existing_twh'] = round(tranche['cf_existing_twh'], 3)
                             row['tranche_uprate_twh'] = round(tranche['uprate_twh'], 3)
@@ -2993,14 +2916,31 @@ def main():
                             row['ra_existing_gas_mw'] = round(tranche['existing_gas_mw'])
                             row['ra_new_gas_mw'] = round(tranche['new_gas_mw'])
 
+                        # Costs
                         row['cost_total_cost'] = vals[1]
                         row['cost_effective_cost'] = vals[2]
                         row['cost_incremental'] = vals[3]
                         yield row
 
+        if iso_dg and iso_arrays:
+            dg_total = 0
+
+            for t_str, thr_scenarios in iso_dg.items():
+                t_label = f"{float(t_str):g}"
+                dg_t_out = output_dir / f'step3_dg_{iso}_t{t_label}.parquet'
+                n = _rows_to_parquet(
+                    _dg_row_gen(iso, t_str, thr_scenarios, iso_arrays, iso_t3_cache),
+                    dg_t_out)
+                dg_total += n
+            print(f"  step3_dg_{iso}: {dg_total:,} demand growth rows "
+                  f"across {len(iso_dg)} threshold files")
+            del iso_dg
+            gc.collect()
+
+        # --- 4. Track demand growth (per-threshold files, full resource mix) ---
+        # Track archetypes use different PFS arrays (newbuild: hydro=0, replace: uprates=OFF)
         tdg_total = 0
         tdg_thresholds = set()
-        # iso_t3_cache was built unconditionally above — reuse directly
 
         for track_name in ['newbuild', 'replace']:
             iso_tdg = track_dg.get(track_name, {}).get(iso, {})
@@ -3011,9 +2951,8 @@ def main():
                 t_label = f"{float(t_str):g}"
                 tdg_t_out = output_dir / f'step3_track_dg_{iso}_t{t_label}_{track_name}.parquet'
                 n = _rows_to_parquet(
-                    _flatten_track_dg_threshold(
-                        iso, track_name, t_str, thr_scenarios,
-                        track_pfs_arrays, iso_t3_cache),
+                    _dg_row_gen(iso, t_str, thr_scenarios, track_pfs_arrays,
+                                iso_t3_cache, track_name_=track_name),
                     tdg_t_out)
                 tdg_total += n
         if tdg_total > 0:
@@ -3048,16 +2987,16 @@ def main():
     print(f"  Output: {output_dir}/")
     print(f"{'='*70}")
 
-    # Print Medium scenario summary (ISO-aware medium key)
+    # Print Medium scenario summary from pre-collected data
     print("\nAll-Medium (45Q=ON) summary — Baseline:")
     for iso in run_isos:
-        if iso not in output['results']:
+        iso_summary = summary_baseline.get(iso)
+        if not iso_summary:
             continue
         mk = medium_key(iso)
         print(f"\n  {iso} (key={mk}):")
         for thr in OUTPUT_THRESHOLDS:
-            t_str = str(thr)
-            sc = output['results'][iso].get('thresholds', {}).get(t_str, {}).get('scenarios', {}).get(mk)
+            sc = iso_summary.get(thr)
             if not sc:
                 continue
             rm = sc['resource_mix']
