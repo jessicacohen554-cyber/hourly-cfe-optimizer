@@ -75,6 +75,7 @@ jobs:
         Near-miss: remove zero-curtailment + bridge-fail mixes.
         All parquets: downcast float64 → int8/float32, recompress with zstd."
           for i in 1 2 3 4; do
+            git pull --rebase origin "$BRANCH" || true
             git push origin HEAD:"$BRANCH" && break
             echo "Push attempt $i failed, retrying in $((2**i))s..."
             sleep $((2**i))
