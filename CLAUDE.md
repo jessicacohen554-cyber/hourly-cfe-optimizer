@@ -303,6 +303,106 @@ When facing compute vs. rigor tradeoffs:
 - Clean, crisp visual identity — no clutter
 - Both mobile and desktop compatible (44px min tap targets, responsive charts, no horizontal overflow)
 
+### Dashboard CSS/HTML Standards (Critical — No Off-Book Styles)
+
+**All dashboard pages MUST use the centralized design system.** Never write new inline CSS for any component that already has a shared class. This section is the law.
+
+#### Architecture
+- **`dashboard/styles/shared.css`** — Single source of truth for ALL visual styles (variables, components, layout, responsive rules). Every page links to this file.
+- **`dashboard/js/nav.js`** — Shared navigation bar (auto-injected). Include on every page.
+- **`dashboard/js/shared-header.js`** — Injects SVG waveform/heartbeat overlay into `.header` elements. Include on every page.
+- **`dashboard/js/chart-colors.js`** — Canonical color constants for Chart.js (`RESOURCE_COLORS`, `ISO_COLORS`, `SEMANTIC_COLORS`). Include on every page with charts.
+
+#### Required `<head>` Includes (Every Page)
+```html
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<script src="js/nav.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+```
+
+#### Standard Page Header (Every Page)
+```html
+<div class="header" id="pageHeader">
+    <h1>Page Title Here</h1>
+    <div class="subtitle">One-line page description</div>
+    <div class="header-accent"></div>
+</div>
+```
+The SVG waveform overlay (energy curves + heartbeat/EKG lines) is auto-injected by `shared-header.js`. Do NOT create custom header gradients or banner styles.
+
+#### Canonical Resource Colors (NEVER Hardcode — Use These)
+| Resource | CSS Variable | Hex | Chart.js Constant |
+|----------|-------------|-----|-------------------|
+| Solar | `--solar` | `#F59E0B` | `RESOURCE_COLORS.solar` |
+| Wind | `--wind` | `#22C55E` | `RESOURCE_COLORS.wind` |
+| Hydro | `--hydro` | `#0EA5E9` | `RESOURCE_COLORS.hydro` |
+| Nuclear | `--nuclear` | `#7C3AED` | `RESOURCE_COLORS.nuclear` |
+| CCS-CCGT | `--ccs` | `#0891B2` | `RESOURCE_COLORS.ccs` |
+| Clean Firm | `--clean-firm` | `#1E3A5F` | `RESOURCE_COLORS.cleanFirm` |
+| Battery | `--battery` | `#8B5CF6` | `RESOURCE_COLORS.battery` |
+| LDES | `--ldes` | `#E91E63` | `RESOURCE_COLORS.ldes` |
+| Green H₂ | `--green-h2` | `#10B981` | `RESOURCE_COLORS.greenH2` |
+| Geothermal | `--geothermal` | `#10B981` | `RESOURCE_COLORS.geothermal` |
+| Fossil Gas | `--fossil-gas` | `#6B7280` | `RESOURCE_COLORS.fossilGas` |
+| Fossil Coal | `--fossil-coal` | `#374151` | `RESOURCE_COLORS.fossilCoal` |
+
+#### Canonical ISO Colors
+| ISO | CSS Variable | Hex | Chart.js Constant |
+|-----|-------------|-----|-------------------|
+| CAISO | `--iso-caiso` | `#F59E0B` | `ISO_COLORS.CAISO` |
+| ERCOT | `--iso-ercot` | `#22C55E` | `ISO_COLORS.ERCOT` |
+| PJM | `--iso-pjm` | `#0EA5E9` | `ISO_COLORS.PJM` |
+| NYISO | `--iso-nyiso` | `#E91E63` | `ISO_COLORS.NYISO` |
+| NEISO | `--iso-neiso` | `#9C27B0` | `ISO_COLORS.NEISO` |
+| MISO | `--iso-miso` | `#06B6D4` | `ISO_COLORS.MISO` |
+| SPP | `--iso-spp` | `#A855F7` | `ISO_COLORS.SPP` |
+
+Each color has transparent variants: CSS `--iso-caiso-t` (12% opacity) / JS `ISO_COLORS.CAISO_T`.
+
+#### Standard Component Classes (Use Instead of Custom CSS)
+| Component | Class | Notes |
+|-----------|-------|-------|
+| White card | `.card` | White bg, light border, subtle shadow |
+| Chart panel | `.chart-panel` | Glass effect, blur backdrop |
+| Stat card | `.stat-card` + `.stat-value` + `.stat-label` | Metric display |
+| Insight callout | `.insight-box` | Blue left border; variants: `.insight-warn`, `.insight-danger`, `.insight-success` |
+| Section container | `.content-section` | 1320px max-width, padded |
+| Narrow container | `.content-section-narrow` | 900px max-width |
+| Section heading | `.section-title` | Navy, heading font |
+| Section subtitle | `.section-subtitle` | Muted, body font |
+| Toggle group | `.toggle-btn-group` + `button.active` | L/M/H toggles |
+| ISO selector | `.iso-selector` + `.iso-btn.active` | ISO pill buttons |
+| Chart container | `.chart-container` | 320px min-height |
+| Chart small | `.chart-container-sm` | 240px min-height |
+| Chart large | `.chart-container-lg` | 400px min-height |
+| 2-column grid | `.grid-2col` | Responsive, collapses to 1col on mobile |
+| 3-column grid | `.grid-3col` | Responsive |
+| Auto-fit grid | `.grid-auto` | `minmax(280px, 1fr)` |
+| Stats grid | `.grid-stats` | `minmax(120px, 1fr)` |
+| Data table | `.data-table` | Compact, hover rows |
+| Legend | `.legend` + `.legend-item` + `.legend-dot` | Chart legend |
+| Headline card | `.headline-card` + `.val` + `.lbl` | Hero stats |
+| Story section | `.story-section` | Scrollytell with fade-in |
+| Badge | `.story-badge` | Pill tag; variants: `.story-badge-red`, `.story-badge-green` |
+| Footer | `.page-footer` | Dark navy footer |
+| Bottom accent | `.bottom-banner` | 4px gradient bar |
+
+#### Rules for New Pages or Features
+1. **NEVER write inline `<style>` blocks for components that exist in shared.css.** Page-specific styles are ONLY for layouts/elements unique to that page.
+2. **NEVER hardcode font-family** — use `var(--font-heading)`, `var(--font-body)`, `var(--font-data)`, `var(--font-mono)`.
+3. **NEVER hardcode hex colors for resources or ISOs** — use CSS variables in styles, `RESOURCE_COLORS.*` / `ISO_COLORS.*` in Chart.js.
+4. **NEVER create custom header/banner gradients** — use `.header` class and `shared-header.js` for the SVG overlay.
+5. **NEVER duplicate footer styles** — use `.page-footer`, `.footer-links`, `.bottom-banner`.
+6. **Use spacing variables** — `var(--space-xs)` through `var(--space-3xl)` and `var(--pad-page)`.
+7. **Use shadow variables** — `var(--shadow-sm)` through `var(--shadow-xl)`.
+8. **Use radius variables** — `var(--radius-sm)` through `var(--radius-pill)`.
+9. **Body background** — use `var(--bg-page)` (light gray default) or `var(--bg-page-white)`. Never hardcode.
+10. **If a shared component is close but not quite right**, extend it with a modifier class rather than creating a new component. Add the modifier to shared.css if it will be reused.
+
 ### Content & Audience
 - Dashboard audience: Business professionals, minimal energy sector knowledge
 - Tooltips/info icons on controls explaining what each toggle does and why it matters
@@ -326,7 +426,7 @@ When facing compute vs. rigor tradeoffs:
 - **Threshold label spacing**: Don't label every threshold point. Space labels to avoid crowding — show 75, 90, 95, ≥99.99 (skip intermediate values) on scrollytell figures. Dashboard charts can use tooltips for unlabeled points
 - **Data-driven but clean**: Scrollytell figures pull from actual optimizer results but should be illustrative — clean axes, clear legends, readable font sizes (min 12px on mobile)
 - **Dashboard tooltips**: Interactive dashboard charts should have hover tooltips showing exact values at all threshold points, so labeled points can be sparse without losing precision
-- **Consistent color palette**: Use the same colors for resources across all pages (Solar=amber, Wind=blue, Clean Firm=green, CCS=teal, Hydro=cyan, Battery=purple, LDES=pink)
+- **Consistent color palette**: Use `RESOURCE_COLORS.*` from `chart-colors.js` and CSS variables from `shared.css`. See "Dashboard CSS/HTML Standards" section above for the canonical color table. NEVER hardcode hex values in Chart.js datasets.
 - **Chart.js responsive options**: Always set `responsive: true`, `maintainAspectRatio: false`, and use `padding` options for readable labels
 - **Mobile tap targets**: Touch targets on charts/controls must be 44px minimum
 
