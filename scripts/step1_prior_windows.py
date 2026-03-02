@@ -69,6 +69,8 @@ def compute_prior_windows(iso):
             caps[rt] = int(s1.HYDRO_CAPS[iso] + s1.HYDRO_ADDER_PCT)
         elif rt == 'geothermal':
             caps[rt] = s1.GEO_CAP_PCT
+        elif rt == 'offshore_wind':
+            caps[rt] = int(s1.OFFSHORE_WIND_CAP_PCT.get(iso, 0))
         else:
             caps[rt] = s1.RESOURCE_CAPS[rt]
 

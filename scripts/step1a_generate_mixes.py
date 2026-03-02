@@ -88,6 +88,8 @@ def _generate_prior_informed(iso, prior_windows):
             cap = hydro_cap
         elif rt == 'geothermal':
             cap = s1.GEO_CAP_PCT
+        elif rt == 'offshore_wind':
+            cap = int(s1.OFFSHORE_WIND_CAP_PCT.get(iso, 0))
         else:
             cap = s1.RESOURCE_CAPS[rt]
 
