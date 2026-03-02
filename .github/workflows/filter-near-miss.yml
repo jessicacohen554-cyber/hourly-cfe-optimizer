@@ -61,15 +61,19 @@ jobs:
           python scripts/filter_near_miss_curtailment.py "$ISO"
         fi
 
-    - name: Commit and push
+    - name: Commit and push filtered parquets
       run: |
+        BRANCH="${{ inputs.branch || 'master' }}"
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
-        git add data/step1-pfs-parquets/*_near_miss.parquet
+        git add -f data/step1-pfs-parquets/*_near_miss.parquet
         if ! git diff --cached --quiet; then
-          git commit -m "Filter near-miss parquets: remove zero-curtailment mixes"
+          git commit -m "Filter near-miss parquets: remove zero-curtailment mixes
+
+        Removes mixes with no surplus hours (curtailment <= 0) that cannot
+        benefit from storage dispatch. Pruning before Step 1d."
           for i in 1 2 3 4; do
-            git push origin HEAD && break
+            git push origin HEAD:"$BRANCH" && break
             echo "Push attempt $i failed, retrying in $((2**i))s..."
             sleep $((2**i))
           done
