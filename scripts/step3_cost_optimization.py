@@ -929,7 +929,7 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
             keeps hydro at existing share, zeros everything else.
 
     Returns:
-        coeff_matrix: (N, 11) float64 — multiply by scenario prices
+        coeff_matrix: (N, 12) float64 — multiply by scenario prices
         constant: (N,) float64 — gas backup cost (scenario-invariant)
         extras: dict with per-element data needed for winner detail extraction
     """
@@ -1249,7 +1249,7 @@ def precompute_all_prices(iso, all_combos, target_year=None):
             uses static L/M/H costs from the LCOE tables.
 
     Returns:
-        price_matrix: (B, 11) float64 price vectors
+        price_matrix: (B, 12) float64 price vectors
         wholesale_arr: (B,) float64 wholesale prices
         nuclear_arr: (B,) float64 nuclear new-build prices
         ccs_arr: (B,) float64 CCS tranche prices
