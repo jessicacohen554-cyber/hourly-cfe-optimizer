@@ -1508,7 +1508,14 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
     # ══════════════════════════════════════════════════════════════════
 
     STORAGE_SWEEP_FLOOR = 0.50
-    near_miss_lower = max(target - 0.40, STORAGE_SWEEP_FLOOR)
+    # Tiered near-miss window: wider at lower thresholds where storage has more headroom
+    if threshold >= 95:
+        nm_width = 0.15   # 15pp
+    elif threshold >= 85:
+        nm_width = 0.30   # 30pp
+    else:
+        nm_width = 0.40   # 40pp
+    near_miss_lower = max(target - nm_width, STORAGE_SWEEP_FLOOR)
     storage_feasible = 0
 
     # Build combined near-miss array: coarse + fine mixes
@@ -1550,12 +1557,14 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
         print(f"      {iso} {threshold}%: Storage sweep — {n_combined_nm:,} near-miss "
               f"({n_coarse_nm:,} coarse + {n_fine_nm:,} fine)")
 
-        # Chunk-wise storage cap computation
+        # Chunk-wise storage cap computation + total surplus for curtailment gate
         b4_caps = np.empty(n_combined_nm, dtype=np.float64)
         b8_caps = np.empty(n_combined_nm, dtype=np.float64)
         l_caps = np.empty(n_combined_nm, dtype=np.float64)
         hc_arr = np.empty(n_combined_nm, dtype=np.int64)
         sd_arr = np.empty(n_combined_nm, dtype=np.int64)
+        total_surplus = np.empty(n_combined_nm, dtype=np.float64)
+        demand_total = demand_arr.sum()
         n_cap_chunks = (n_combined_nm + NM_CHUNK - 1) // NM_CHUNK
 
         for cs in range(0, n_combined_nm, NM_CHUNK):
@@ -1575,11 +1584,48 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
             l_caps[cs:ce] = cl
             hc_arr[cs:ce] = chc
             sd_arr[cs:ce] = csd
+            # Total annual surplus for curtailment-magnitude gate
+            chunk_surplus = np.maximum(chunk_supply - demand_arr[np.newaxis, :], 0.0)
+            total_surplus[cs:ce] = chunk_surplus.sum(axis=1)
         if n_cap_chunks > 1:
             print()
 
+        # Curtailment-magnitude gate: if total surplus × best efficiency < gap,
+        # storage physically cannot bridge the gap — skip the mix.
         has_curtailment = hc_arr.astype(bool)
-        valid_ci = np.where(has_curtailment)[0]
+        n_with_curtailment = has_curtailment.sum()
+        best_eff = max(BATTERY_EFFICIENCY, BATTERY8_EFFICIENCY, LDES_EFFICIENCY)
+
+        # Score each near-miss mix — coarse mixes have scores, fine mixes need recompute
+        nm_scores = np.empty(n_combined_nm, dtype=np.float64)
+        nm_scores[:n_coarse_nm] = coarse_scores[coarse_nm_idx]
+        if n_fine_nm > 0:
+            # Fine mix scores were computed in Phase 1b; recompute cheaply
+            fine_nm_supply = (combined_nm[n_coarse_nm:].astype(np.float64) / 100.0) @ supply_matrix
+            nm_scores[n_coarse_nm:] = _batch_score_no_storage(
+                demand_arr, fine_nm_supply, 1.0, n_fine_nm)
+
+        score_gap = target - nm_scores
+        max_score_lift = total_surplus * best_eff / demand_total
+        can_bridge = max_score_lift >= score_gap
+
+        # Combine curtailment + bridge filters
+        valid_mask = has_curtailment & can_bridge
+        valid_ci = np.where(valid_mask)[0]
+        n_gated = int(n_with_curtailment) - len(valid_ci)
+        print(f"      {iso} {threshold}%: {len(valid_ci):,} viable for storage sweep "
+              f"(curtailment: {n_with_curtailment:,}, gated: {n_gated:,} insufficient surplus)")
+
+        # Identify force_1d candidates: mixes with curtailment & surplus headroom
+        # that are outside step1d's normal near-miss window. These get flagged so
+        # step1d includes them even if they'd normally be excluded.
+        # force_1d = has curtailment AND can bridge AND score < (target - 2×nm_width)
+        # (i.e., outside 2× the tiered near-miss window that step1d uses)
+        force_1d_width = nm_width * 2.0
+        force_1d_mask = (has_curtailment & can_bridge &
+                         (nm_scores < (target - force_1d_width)))
+        force_1d_indices = np.where(force_1d_mask)[0]
+
         nm_valid = [(int(ci), ci,  # ci IS the index into combined_nm
                      b4_caps[ci] * 100.0 * 1.1,
                      b8_caps[ci] * 100.0 * 1.1,
@@ -1657,8 +1703,15 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
         print(f"      {iso} {threshold}%: +{storage_feasible:,} with storage "
               f"({len(nm_valid):,} curtailing / {n_combined_nm:,} near-miss)")
         _maybe_flush()
+        # Write force_1d candidates: mixes with surplus headroom but outside
+        # step1d's normal near-miss window. Step1d can read this to expand its pool.
+        if len(force_1d_indices) > 0:
+            _write_force_1d_candidates(
+                iso, threshold, combined_nm, force_1d_indices,
+                nm_scores, total_surplus, max_score_lift, score_gap, rtypes)
     else:
         print(f"      {iso} {threshold}%: 0 near-miss for storage sweep")
+        force_1d_indices = np.empty(0, dtype=np.int64)
 
     # Free fine-grid arrays
     del all_fine_combos_for_storage, all_fine_scores_for_storage
@@ -2038,6 +2091,53 @@ def _threshold_done_path(iso, threshold):
 def _is_threshold_done(iso, threshold):
     """Check if a threshold has a completed parquet."""
     return os.path.exists(_threshold_done_path(iso, threshold))
+
+
+def _force_1d_path(iso):
+    """Path for force_1d candidates: {ISO}_force_1d_candidates.parquet."""
+    return os.path.join(STEP1_RAW_PFS_PARQUET_DIR, f'{iso}_force_1d_candidates.parquet')
+
+
+def _write_force_1d_candidates(iso, threshold, combined_nm, force_indices,
+                                nm_scores, total_surplus, max_lift, score_gap, rtypes):
+    """Write force_1d candidate mixes to a parquet file for step1d to pick up.
+
+    These are mixes that have sufficient curtailment surplus to theoretically
+    bridge the gap but are outside step1d's normal near-miss window. Step1d
+    can read this file and include them in its candidate pool.
+
+    Appends to existing file (across thresholds within an ISO).
+    """
+    if not HAS_PARQUET or len(force_indices) == 0:
+        return
+
+    n = len(force_indices)
+    rows = {
+        'iso': [iso] * n,
+        'threshold': [float(threshold)] * n,
+    }
+    for j, rt in enumerate(rtypes):
+        rows[rt] = [int(combined_nm[fi][j]) for fi in force_indices]
+    rows['base_score'] = [float(nm_scores[fi]) for fi in force_indices]
+    rows['total_surplus'] = [float(total_surplus[fi]) for fi in force_indices]
+    rows['max_score_lift'] = [float(max_lift[fi]) for fi in force_indices]
+    rows['score_gap'] = [float(score_gap[fi]) for fi in force_indices]
+
+    new_table = pa.table(rows)
+
+    # Append to existing file if it exists
+    fpath = _force_1d_path(iso)
+    os.makedirs(os.path.dirname(fpath), exist_ok=True)
+    if os.path.exists(fpath):
+        try:
+            existing = pq.read_table(fpath)
+            new_table = pa.concat_tables([existing, new_table], promote_options='permissive')
+        except Exception:
+            pass  # overwrite if existing is corrupt
+
+    pq.write_table(new_table, fpath, compression='snappy')
+    print(f"      {iso} {threshold}%: {n:,} force_1d candidates written → "
+          f"{os.path.basename(fpath)} ({new_table.num_rows:,} total)")
 
 
 def _candidate_to_row(iso, threshold, c):
