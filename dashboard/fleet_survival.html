@@ -4,45 +4,50 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fleet Survival & Capacity Dispatch | Hourly CFE Optimizer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles/shared.css">
+    <script src="js/chart-colors.js"></script>
+    <script src="js/shared-header.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <style>
-        body { background: #F3F4F8; color: #1a1a2e; }
+        body { background: var(--bg-page); color: #1a1a2e; }
         .container { max-width: 1320px; margin: 0 auto; padding: 32px 24px; }
 
         /* Stats */
         .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; margin-bottom: 28px; }
-        .stat-card { background: #fff; border: 1px solid #E5E7EB; border-radius: 12px; padding: 18px 14px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .stat-card .label { font-size: 0.72rem; color: #6B7280; text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 2px; }
-        .stat-card .value { font-size: 1.55rem; font-weight: 700; font-family: 'Barlow Semi Condensed', sans-serif; }
-        .stat-card .sub { font-size: 0.78rem; color: #9CA3AF; margin-top: 3px; }
+        .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px 14px; text-align: center; box-shadow: var(--shadow-sm); }
+        .stat-card .label { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 2px; }
+        .stat-card .value { font-size: 1.55rem; font-weight: 700; font-family: var(--font-data); }
+        .stat-card .sub { font-size: 0.78rem; color: var(--text-light); margin-top: 3px; }
 
         /* Panels */
-        .panel { background: #fff; border: 1px solid #E5E7EB; border-radius: 12px; padding: 26px 26px 18px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 26px 26px 18px; margin-bottom: 24px; box-shadow: var(--shadow-sm); }
         .panel-title { font-family: var(--font-heading); font-size: 1.08rem; font-weight: 600; color: #1a1a2e; margin-bottom: 3px; }
-        .panel-subtitle { font-size: 0.82rem; color: #6B7280; margin-bottom: 18px; }
+        .panel-subtitle { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 18px; }
         .chart-wrap { position: relative; width: 100%; }
 
         /* Narrative */
-        .narrative { background: #fff; border: 1px solid #E5E7EB; border-radius: 12px; padding: 26px 30px; margin-bottom: 24px; line-height: 1.7; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .narrative { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 26px 30px; margin-bottom: 24px; line-height: 1.7; box-shadow: var(--shadow-sm); }
         .narrative h3 { font-family: var(--font-heading); font-size: 1.12rem; color: #1a1a2e; margin-bottom: 10px; }
         .narrative p { color: #374151; margin-bottom: 10px; font-size: 0.92rem; }
         .narrative p:last-child { margin-bottom: 0; }
         .narrative ul { color: #374151; font-size: 0.92rem; padding-left: 20px; margin-bottom: 10px; }
         .narrative li { margin-bottom: 5px; }
-        .narrative .callout { background: rgba(59,130,246,0.06); border-left: 3px solid #3B82F6; padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 14px 0; font-size: 0.9rem; color: #1E3A5F; }
-        .narrative .callout-warn { background: rgba(245,158,11,0.06); border-left: 3px solid #F59E0B; padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 14px 0; font-size: 0.9rem; color: #78350F; }
+        .narrative .callout { background: rgba(59,130,246,0.06); border-left: 3px solid #3B82F6; padding: 12px 16px; border-radius: 0 var(--radius-md) var(--radius-md) 0; margin: 14px 0; font-size: 0.9rem; color: var(--navy-mid); }
+        .narrative .callout-warn { background: rgba(245,158,11,0.06); border-left: 3px solid var(--solar); padding: 12px 16px; border-radius: 0 var(--radius-md) var(--radius-md) 0; margin: 14px 0; font-size: 0.9rem; color: #78350F; }
 
         /* Company Selector */
         .company-selector { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
-        .co-pill { padding: 9px 20px; border: 1px solid #D4D8E0; border-radius: 24px; background: #fff; color: #6B7280; cursor: pointer; font-size: 0.88rem; font-weight: 600; transition: all 0.2s; font-family: var(--font-heading); }
-        .co-pill:hover { border-color: #3B82F6; color: #3B82F6; }
-        .co-pill.active { background: #3B82F6; border-color: #3B82F6; color: #fff; }
+        .co-pill { padding: 9px 20px; border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--bg-card); color: var(--text-muted); cursor: pointer; font-size: 0.88rem; font-weight: 600; transition: all 0.2s; font-family: var(--font-heading); }
+        .co-pill:hover { border-color: var(--hydro); color: var(--hydro); }
+        .co-pill.active { background: var(--hydro); border-color: var(--hydro); color: #fff; }
 
         /* Company Profile */
-        .profile { background: #fff; border: 1px solid #E5E7EB; border-radius: 12px; padding: 24px 26px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .profile { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px 26px; margin-bottom: 24px; box-shadow: var(--shadow-sm); }
         .profile-top { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
         .profile-name { font-family: var(--font-heading); font-size: 1.4rem; font-weight: 700; color: #1a1a2e; }
         .profile-badge { display: inline-block; padding: 3px 12px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
@@ -55,19 +60,19 @@
         .grid-2 .panel { margin-bottom: 0; }
 
         /* Method note */
-        .method-note { background: #F8FAFC; border: 1px solid #E5E7EB; border-radius: 12px; padding: 22px 26px; margin-bottom: 24px; }
-        .method-note h3 { font-family: var(--font-heading); font-size: 0.95rem; color: #6B7280; margin-bottom: 6px; }
-        .method-note p { color: #6B7280; font-size: 0.82rem; line-height: 1.6; margin-bottom: 5px; }
+        .method-note { background: var(--bg-subtle); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 22px 26px; margin-bottom: 24px; }
+        .method-note h3 { font-family: var(--font-heading); font-size: 0.95rem; color: var(--text-muted); margin-bottom: 6px; }
+        .method-note p { color: var(--text-muted); font-size: 0.82rem; line-height: 1.6; margin-bottom: 5px; }
 
         /* ISO Selector */
         .iso-selector { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-        .iso-pill { padding: 8px 18px; border: 1px solid #D4D8E0; border-radius: 20px; background: #fff; color: #6B7280; cursor: pointer; font-size: 0.84rem; font-weight: 600; transition: all 0.2s; font-family: var(--font-heading); }
-        .iso-pill:hover { border-color: #10B981; color: #10B981; }
-        .iso-pill.active { background: #10B981; border-color: #10B981; color: #fff; }
+        .iso-pill { padding: 8px 18px; border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--bg-card); color: var(--text-muted); cursor: pointer; font-size: 0.84rem; font-weight: 600; transition: all 0.2s; font-family: var(--font-heading); }
+        .iso-pill:hover { border-color: var(--green-pos); color: var(--green-pos); }
+        .iso-pill.active { background: var(--green-pos); border-color: var(--green-pos); color: #fff; }
 
         /* Plant Table */
         .plant-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
-        .plant-table th { text-align: left; padding: 10px 12px; border-bottom: 2px solid #E5E7EB; color: #6B7280; font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .plant-table th { text-align: left; padding: 10px 12px; border-bottom: 2px solid var(--border); color: var(--text-muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; }
         .plant-table td { padding: 9px 12px; border-bottom: 1px solid #F3F4F6; color: #374151; }
         .plant-table tr:hover td { background: rgba(59,130,246,0.03); }
         .plant-table .fuel-tag { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 0.75rem; font-weight: 600; }
@@ -84,11 +89,11 @@
 <body>
     <script src="js/nav.js"></script>
 
-    <div class="header">
-        <div class="header-accent"></div>
+    <header class="header">
         <h1>Fleet Survival & Capacity Dispatch</h1>
         <p class="subtitle">Company-level analysis: how do major competitive power suppliers' fleets fare as clean energy scales along the SBTi trajectory?</p>
-    </div>
+        <div class="header-accent"></div>
+    </header>
 
     <div class="container">
 
@@ -887,5 +892,20 @@
     // ========================================================================
     selectCompany(0);
     </script>
+
+<!-- FOOTER -->
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="dashboard.html">Cost Optimizer</a>
+        <a href="abatement_dashboard.html">CO&#8322; Abatement</a>
+        <a href="scenario_comparison.html">Scenarios</a>
+        <a href="research_paper.html">Research Paper</a>
+        <a href="optimizer_methodology.html">Methodology</a>
+    </div>
+    <div class="footer-note">The 8,760 Problem &copy; 2026 &mdash; Fleet Survival & Capacity Dispatch Analysis</div>
+</footer>
+<div class="bottom-banner"></div>
+
 </body>
 </html>
