@@ -1,0 +1,78 @@
+name: "Filter near-miss parquets (remove zero-curtailment)"
+
+# Removes mixes with no curtailment from near-miss parquets.
+# These mixes cannot benefit from storage dispatch and waste 1d compute.
+# Run after Step 1c to prune before Step 1d.
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO to filter (or ALL)'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      branch:
+        description: 'Branch to run on'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  filter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.branch || 'master' }}
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: pip install numpy numba pyarrow pandas
+
+    - name: Run curtailment filter
+      run: |
+        ISO="${{ inputs.iso }}"
+        if [ "$ISO" = "ALL" ]; then
+          python scripts/filter_near_miss_curtailment.py
+        else
+          python scripts/filter_near_miss_curtailment.py "$ISO"
+        fi
+
+    - name: Commit and push
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git add data/step1-pfs-parquets/*_near_miss.parquet
+        if ! git diff --cached --quiet; then
+          git commit -m "Filter near-miss parquets: remove zero-curtailment mixes"
+          for i in 1 2 3 4; do
+            git push origin HEAD && break
+            echo "Push attempt $i failed, retrying in $((2**i))s..."
+            sleep $((2**i))
+          done
+        else
+          echo "No changes — all parquets already clean."
+        fi
