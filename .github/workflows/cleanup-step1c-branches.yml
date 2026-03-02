@@ -1,8 +1,8 @@
-name: "Cleanup: Deduplicate Step 1c Branches"
+name: "Cleanup: Deduplicate Pipeline Branches"
 
-# One-shot cleanup for existing step1c auto/* branches.
+# One-shot cleanup for existing step1c and step1d auto/* branches.
 #
-# Problem: multiple step1c runs for the same ISO create separate branches
+# Problem: multiple step1c/step1d runs for the same ISO create separate branches
 # (e.g. 4 CAISO branches, 3 MISO branches). When squash-merged they conflict
 # because the same parquet files appear with different content.
 #
@@ -10,10 +10,14 @@ name: "Cleanup: Deduplicate Step 1c Branches"
 # and delete all older same-ISO branches. The squash workflow then has exactly
 # one branch per ISO — guaranteed no same-file conflicts.
 #
+# Branch formats handled:
+#   Step 1c:  auto/{TS}-step1c-zone-search-{iso}
+#   Step 1d:  auto/{TS}-step1d-fine-storage-{iso}-{mode}
+#
 # After this runs:
 #   - 1 branch per ISO remains (the latest)
 #   - Older branches are deleted and their PRs are closed
-#   - Run "Squash Pipeline Branches" with pattern "auto/.*step1c" to bank results
+#   - Run "Squash Pipeline Branches" with the matching pattern to bank results
 #
 # Dry-run first — see what would be kept/deleted before committing.
 
@@ -33,9 +37,13 @@ on:
         default: true
         type: boolean
       branch_pattern:
-        description: 'Branch pattern to scan (regex after "origin/")'
+        description: 'Branch pattern to scan'
         default: 'auto/.*step1c-zone-search'
-        type: string
+        type: choice
+        options:
+          - 'auto/.*step1c-zone-search'
+          - 'auto/.*step1d-fine-storage'
+          - 'auto/.*step1[cd]'
       then_squash:
         description: 'Automatically trigger squash after cleanup completes'
         default: false
@@ -181,7 +189,7 @@ jobs:
             if [ -n "$PR_NUM" ] && [ "$PR_NUM" != "null" ]; then
               echo "Closing PR #${PR_NUM} for $branch (superseded by newer run)"
               gh pr close "$PR_NUM" \
-                --comment "Superseded by a more recent step1c run. Keeping latest branch only." 2>/dev/null || true
+                --comment "Superseded by a more recent pipeline run. Keeping latest branch only." 2>/dev/null || true
               CLOSED=$((CLOSED + 1))
             fi
           done < /tmp/branches_to_delete.txt
@@ -224,11 +232,12 @@ jobs:
             done < /tmp/branches_to_keep.txt
           fi
           echo ""
+          PATTERN="${{ inputs.branch_pattern }}"
           if [ "${{ inputs.dry_run }}" = "false" ] && [ "${{ inputs.then_squash }}" = "true" ]; then
-            echo "  Next: run 'Squash Pipeline Branches' with pattern 'auto/.*step1c' to bank results."
+            echo "  Next: run 'Squash Pipeline Branches' with matching pattern to bank results."
           elif [ "${{ inputs.dry_run }}" = "true" ]; then
             echo "  Re-run with dry_run=false to apply."
           else
-            echo "  Next: run 'Squash Pipeline Branches' with pattern 'auto/.*step1c' to bank results."
+            echo "  Next: run 'Squash Pipeline Branches' with matching pattern to bank results."
           fi
           echo "════════════════════════════════════════════════"

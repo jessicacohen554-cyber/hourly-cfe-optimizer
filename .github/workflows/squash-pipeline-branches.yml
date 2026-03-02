@@ -37,9 +37,15 @@ on:
   workflow_dispatch:
     inputs:
       branch_pattern:
-        description: 'Regex to match branches. "auto/" = all; "auto/.*step1c" = 1c only; "auto/.*step1d" = 1d only; "auto/.*step1[cd]" = 1c+1d'
+        description: 'Which pipeline branches to squash'
         default: 'auto/'
-        type: string
+        type: choice
+        options:
+          - 'auto/'
+          - 'auto/.*step1d'
+          - 'auto/.*step1c'
+          - 'auto/.*step1[cd]'
+          - 'auto/.*step1[cd].*caiso'
       dry_run:
         description: 'Preview only — list branches without merging'
         default: false
