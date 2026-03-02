@@ -4,6 +4,13 @@ name: "Step 1d: Two-Pass Fine Storage"
 #   Pass 1: Coarse global sweep on ALL near-miss mixes (score once per combo)
 #   Pass 2: Fine 0.05% targeted refinement on boundary mixes per threshold
 #
+# What's new vs. legacy:
+#   - Parallel per-ISO jobs (matrix strategy, each on its own runner)
+#   - Each job creates its own auto/* branch and commits there (never master)
+#   - Intermittent auto-commits after every threshold completion
+#   - Threshold filtering: run only the subset you need
+#   - O(1) hash-map lookup for Pass 2 resume (was O(N²) linear search)
+#
 # Prerequisite: Step 1c (Zone Search) must have run first.
 # Output: data/step1d-storage-parquets/{ISO}_t{XX}_storage.parquet
 
@@ -25,20 +32,49 @@ on:
           - MISO
           - SPP
       thresholds:
-        description: 'Thresholds to run: "all" or comma-separated (e.g., "95,99")'
+        description: 'Comma-separated thresholds (e.g. "90,95,99"). Leave blank for all 17.'
         required: false
-        default: 'all'
+        default: ''
         type: string
       branch:
-        description: 'Branch to checkout'
+        description: 'Source branch to checkout code from'
         required: false
         default: 'master'
         type: string
 
+env:
+  BRANCH_PREFIX: step1d-fine-storage
+  PYTHONUNBUFFERED: "1"
+
 jobs:
+  # ════════════════════════════════════════════════════════════════════════
+  # Build the ISO matrix: single ISO or fan out to all 7
+  # ════════════════════════════════════════════════════════════════════════
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Build ISO matrix
+        id: set-matrix
+        run: |
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            echo 'matrix={"iso":["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]}' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix={"iso":["${{ inputs.iso }}"]}' >> "$GITHUB_OUTPUT"
+          fi
+
+  # ════════════════════════════════════════════════════════════════════════
+  # Per-ISO job: runs on its own runner in parallel
+  # ════════════════════════════════════════════════════════════════════════
   fine-storage:
+    needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 360
+
+    strategy:
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false   # don't cancel other ISOs if one fails
 
     permissions:
       contents: write
@@ -49,6 +85,18 @@ jobs:
       with:
         ref: ${{ inputs.branch || 'master' }}
         fetch-depth: 0
+
+    - name: Create output branch
+      run: |
+        TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+        ISO_LOWER=$(echo "${{ matrix.iso }}" | tr '[:upper:]' '[:lower:]')
+        TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${ISO_LOWER}"
+        echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git config http.postBuffer 524288000
+        git checkout -b "$TARGET_BRANCH"
+        echo "Working on branch: $TARGET_BRANCH"
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -62,58 +110,51 @@ jobs:
 
     - name: Verify near-miss data exists
       run: |
-        ISO="${{ inputs.iso }}"
-        if [ "$ISO" = "ALL" ]; then
-          ISOS="CAISO ERCOT PJM NYISO NEISO MISO SPP"
-        else
-          ISOS="$ISO"
-        fi
-        MISSING=""
-        for iso in $ISOS; do
-          NM="data/step1-pfs-parquets/${iso}_near_miss.parquet"
-          if [ ! -f "$NM" ]; then
-            MISSING="$MISSING $iso"
-          else
-            SIZE=$(du -h "$NM" | cut -f1)
-            echo "OK: $iso near-miss data ($SIZE)"
-          fi
-        done
-        if [ -n "$MISSING" ]; then
-          echo "ERROR: Missing near-miss data for:$MISSING"
-          echo "Run Step 1c (Zone Search) first."
+        ISO="${{ matrix.iso }}"
+        NM="data/step1-pfs-parquets/${ISO}_near_miss.parquet"
+        if [ ! -f "$NM" ]; then
+          echo "ERROR: Missing near-miss data for $ISO"
+          echo "  Expected: $NM"
+          echo "  Run Step 1c (Zone Search) first."
           exit 1
         fi
+        SIZE=$(du -h "$NM" | cut -f1)
+        echo "OK: $ISO near-miss data ($SIZE)"
 
-    - name: Configure git
+    - name: "Run two-pass storage sweep — ${{ matrix.iso }}"
       run: |
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-        git config http.postBuffer 524288000
+        ISO="${{ matrix.iso }}"
+        ARGS="--iso $ISO --auto-commit"
 
-    - name: "Run two-pass storage sweep"
-      run: |
-        ISO="${{ inputs.iso }}"
         THRESHOLDS="${{ inputs.thresholds }}"
-        if [ "$ISO" = "ALL" ]; then
-          for iso in CAISO ERCOT PJM NYISO NEISO MISO SPP; do
-            echo "=== Two-pass storage for $iso (thresholds: $THRESHOLDS) ==="
-            python scripts/step1d_fine_storage.py --iso "$iso" --thresholds "$THRESHOLDS" --auto-commit
-          done
-        else
-          python scripts/step1d_fine_storage.py --iso "$ISO" --thresholds "$THRESHOLDS" --auto-commit
+        if [ -n "$THRESHOLDS" ]; then
+          ARGS="$ARGS --thresholds \"$THRESHOLDS\""
+          echo "Threshold filter: $THRESHOLDS"
         fi
 
+        echo "=== Two-pass storage for $ISO ==="
+        echo "Command: python scripts/step1d_fine_storage.py $ARGS"
+        eval python scripts/step1d_fine_storage.py $ARGS
+
     - name: Final commit and push
+      if: always()
       run: |
         mkdir -p data/step1d-storage-parquets
         git add -A data/step1d-storage-parquets/
         if ! git diff --cached --quiet; then
-          git commit -m "Step 1d Fine Storage: ${{ inputs.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          for i in 1 2 3 4; do
-            git push -u origin HEAD && break
-            echo "Push attempt $i failed, retrying in $((2**i))s..."
-            sleep $((2**i))
-          done
+          THRESHOLDS="${{ inputs.thresholds }}"
+          LABEL="${{ matrix.iso }}"
+          [ -n "$THRESHOLDS" ] && LABEL="$LABEL thresholds=$THRESHOLDS"
+          git commit -m "Step 1d Fine Storage: $LABEL — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
         else
           echo "No remaining changes to commit"
         fi
+
+        # Push with retry
+        for i in 1 2 3 4; do
+          git push -u origin "$TARGET_BRANCH" && break
+          echo "Push attempt $i failed, retrying in $((2**i))s..."
+          sleep $((2**i))
+        done
+        echo "Branch: $TARGET_BRANCH"
+        echo "Merge this branch into master to bank the storage results."
