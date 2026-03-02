@@ -20,14 +20,14 @@
         /* Stats */
         .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; margin-bottom: 28px; }
         .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px 14px; text-align: center; box-shadow: var(--shadow-sm); }
-        .stat-card .label { font-size: 0.72rem; color: #6B7280; text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 2px; }
+        .stat-card .label { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 2px; }
         .stat-card .value { font-size: 1.55rem; font-weight: 700; font-family: var(--font-data); }
-        .stat-card .sub { font-size: 0.78rem; color: #9CA3AF; margin-top: 3px; }
+        .stat-card .sub { font-size: 0.78rem; color: var(--text-light); margin-top: 3px; }
 
         /* Panels */
         .panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 26px 26px 18px; margin-bottom: 24px; box-shadow: var(--shadow-sm); }
         .panel-title { font-family: var(--font-heading); font-size: 1.08rem; font-weight: 600; color: #1a1a2e; margin-bottom: 3px; }
-        .panel-subtitle { font-size: 0.82rem; color: #6B7280; margin-bottom: 18px; }
+        .panel-subtitle { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 18px; }
         .chart-wrap { position: relative; width: 100%; }
 
         /* Narrative */
@@ -37,8 +37,8 @@
         .narrative p:last-child { margin-bottom: 0; }
         .narrative ul { color: #374151; font-size: 0.92rem; padding-left: 20px; margin-bottom: 10px; }
         .narrative li { margin-bottom: 5px; }
-        .narrative .callout { background: rgba(59,130,246,0.06); border-left: 3px solid #3B82F6; padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 14px 0; font-size: 0.9rem; color: #1E3A5F; }
-        .narrative .callout-warn { background: rgba(245,158,11,0.06); border-left: 3px solid #F59E0B; padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 14px 0; font-size: 0.9rem; color: #78350F; }
+        .narrative .callout { background: rgba(59,130,246,0.06); border-left: 3px solid #3B82F6; padding: 12px 16px; border-radius: 0 var(--radius-md) var(--radius-md) 0; margin: 14px 0; font-size: 0.9rem; color: var(--navy-mid); }
+        .narrative .callout-warn { background: rgba(245,158,11,0.06); border-left: 3px solid var(--solar); padding: 12px 16px; border-radius: 0 var(--radius-md) var(--radius-md) 0; margin: 14px 0; font-size: 0.9rem; color: #78350F; }
 
         /* Company Selector */
         .company-selector { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
@@ -61,8 +61,8 @@
 
         /* Method note */
         .method-note { background: var(--bg-subtle); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 22px 26px; margin-bottom: 24px; }
-        .method-note h3 { font-family: var(--font-heading); font-size: 0.95rem; color: #6B7280; margin-bottom: 6px; }
-        .method-note p { color: #6B7280; font-size: 0.82rem; line-height: 1.6; margin-bottom: 5px; }
+        .method-note h3 { font-family: var(--font-heading); font-size: 0.95rem; color: var(--text-muted); margin-bottom: 6px; }
+        .method-note p { color: var(--text-muted); font-size: 0.82rem; line-height: 1.6; margin-bottom: 5px; }
 
         /* ISO Selector */
         .iso-selector { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
@@ -89,11 +89,11 @@
 <body>
     <script src="js/nav.js"></script>
 
-    <div class="header">
-        <div class="header-accent"></div>
+    <header class="header">
         <h1>Fleet Survival & Capacity Dispatch</h1>
         <p class="subtitle">Company-level analysis: how do major competitive power suppliers' fleets fare as clean energy scales along the SBTi trajectory?</p>
-    </div>
+        <div class="header-accent"></div>
+    </header>
 
     <div class="container">
 
@@ -892,5 +892,20 @@
     // ========================================================================
     selectCompany(0);
     </script>
+
+<!-- FOOTER -->
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="dashboard.html">Cost Optimizer</a>
+        <a href="abatement_dashboard.html">CO&#8322; Abatement</a>
+        <a href="scenario_comparison.html">Scenarios</a>
+        <a href="research_paper.html">Research Paper</a>
+        <a href="optimizer_methodology.html">Methodology</a>
+    </div>
+    <div class="footer-note">The 8,760 Problem &copy; 2026 &mdash; Fleet Survival & Capacity Dispatch Analysis</div>
+</footer>
+<div class="bottom-banner"></div>
+
 </body>
 </html>
