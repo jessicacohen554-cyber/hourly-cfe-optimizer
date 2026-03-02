@@ -49,9 +49,9 @@ from step3_cost_optimization import (
 )
 
 from step3_cost_optimization import (
-    _N_COEFFS, _COL_WHOLESALE, _COL_SOL_NEW, _COL_WND_NEW, _COL_CCS_NEW,
-    _COL_UPRATE, _COL_GEO, _COL_REMAINING, _COL_BAT4, _COL_BAT8, _COL_LDES,
-    _COL_H2,
+    _N_COEFFS, _COL_WHOLESALE, _COL_SOL_NEW, _COL_WND_NEW, _COL_OSW_NEW,
+    _COL_CCS_NEW, _COL_UPRATE, _COL_GEO, _COL_REMAINING, _COL_BAT4,
+    _COL_BAT8, _COL_LDES, _COL_H2, OFFSHORE_ISOS,
 )
 
 # Additional constants needed for DG coefficient computation
@@ -630,13 +630,17 @@ def _precompute_dg_coefficients(iso, arch_arrays, demand_twh,
     sol_pct = arch_arrays['solar']
     wnd_pct = arch_arrays['wind']
     hyd_pct = arch_arrays['hydro']
-    ccs_pct = np.maximum(0.0, 100.0 - (cf_pct + sol_pct + wnd_pct + hyd_pct))
+    osw_pct = arch_arrays.get('offshore_wind', np.zeros(N, dtype=np.float64))
+    ccs_pct = np.maximum(0.0, 100.0 - (cf_pct + sol_pct + wnd_pct + hyd_pct + osw_pct))
     bat_pct = arch_arrays['battery_dispatch_pct']
     bat8_pct = arch_arrays.get('battery8_dispatch_pct', np.zeros(N, dtype=np.float64))
     ldes_pct = arch_arrays['ldes_dispatch_pct']
     h2_pct = arch_arrays.get('h2_dispatch_pct', np.zeros(N, dtype=np.float64))
 
-    # Storage coefficients are fully growth-invariant (columns 7-10)
+    # Offshore wind coefficient (all new-build, no existing fleet)
+    osw_coeff = osw_pct / 100.0
+
+    # Storage coefficients are fully growth-invariant (columns 8-11)
     bat4_coeff = bat_pct / 100.0
     bat8_coeff = bat8_pct / 100.0
     ldes_coeff = ldes_pct / 100.0
@@ -661,6 +665,7 @@ def _precompute_dg_coefficients(iso, arch_arrays, demand_twh,
         cf_pct / 100.0 * PEAK_CAPACITY_CREDITS['clean_firm'] +
         sol_pct / 100.0 * PEAK_CAPACITY_CREDITS['solar'] +
         wnd_pct / 100.0 * PEAK_CAPACITY_CREDITS['wind'] +
+        osw_pct / 100.0 * PEAK_CAPACITY_CREDITS['offshore_wind'] +
         ccs_pct / 100.0 * PEAK_CAPACITY_CREDITS['ccs_ccgt'] +
         hyd_pct / 100.0 * PEAK_CAPACITY_CREDITS['hydro'] +
         bat_pct / 100.0 * PEAK_CAPACITY_CREDITS['battery'] +
@@ -727,13 +732,14 @@ def _precompute_dg_coefficients(iso, arch_arrays, demand_twh,
                 new_gas_mw * new_ccgt_cost
             ) / demand_grown_mwh
 
-            # Build coefficient matrix (N, 11)
+            # Build coefficient matrix (N, 12)
             coeff_matrix = np.empty((N, _N_COEFFS), dtype=np.float64)
             coeff_matrix[:, _COL_WHOLESALE] = (sol_existing_pct + wnd_existing_pct +
                                                 hyd_pct + ccs_existing_pct +
                                                 cf_existing_pct) / 100.0
             coeff_matrix[:, _COL_SOL_NEW] = sol_new_pct / 100.0
             coeff_matrix[:, _COL_WND_NEW] = wnd_new_pct / 100.0
+            coeff_matrix[:, _COL_OSW_NEW] = osw_coeff  # all new-build, growth-invariant
             coeff_matrix[:, _COL_CCS_NEW] = ccs_new_pct / 100.0
             coeff_matrix[:, _COL_UPRATE] = uprate_twh / demand_grown
             coeff_matrix[:, _COL_GEO] = geo_twh / demand_grown
