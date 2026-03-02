@@ -119,7 +119,8 @@
                 { label: 'Scenario Comparison', href: 'scenario_comparison.html' },
                 { separator: true, label: 'Corporate Procurement' },
                 { label: 'Procurement Strategies', href: 'procurement_strategies.html' },
-                { label: 'Strategy Comparison (Legacy)', href: 'procurement_comparison.html' }
+                { label: 'Strategy Comparison (Legacy)', href: 'procurement_comparison.html' },
+                { label: 'Wright\'s Law Curves', href: 'wrights_law.html' }
             ]
         },
         {
