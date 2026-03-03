@@ -351,17 +351,18 @@ body { background: var(--bg-page-white); }
         <p>A common assumption in clean energy planning is that massive battery and long-duration storage
            deployment is essential for decarbonization. Across <strong>1,102,248 scenario evaluations</strong>
            spanning 7 ISOs, 21 thresholds, and up to 17,496 cost sensitivity combinations per region,
-           our optimization tells a starkly different story: <strong>4-hour batteries, 8-hour batteries,
-           and hydrogen storage are never cost-optimal</strong>. The only storage technology that appears
-           is 100-hour iron-air LDES &mdash; and only as a last-mile gap-filler at high CFE thresholds,
-           never exceeding 5% of demand.</p>
+           our optimization reveals a nuanced picture: <strong>100-hour iron-air LDES is the dominant
+           storage technology</strong>, appearing as early as 50% CFE in PJM and 65% in CAISO. Short-duration
+           batteries appear marginally (0.1% dispatch) in some regions, while 8-hour batteries and hydrogen
+           are never cost-optimal. The storage story is fundamentally regional &mdash; driven by
+           offshore wind availability, nuclear baseload, and VRE resource quality.</p>
     </div>
 
     <div class="counter-row">
         <div class="counter-card">
-            <div class="counter-val">0%</div>
-            <div class="counter-lbl">Battery 4hr</div>
-            <div class="counter-sub">Never cost-optimal</div>
+            <div class="counter-val">0.1%</div>
+            <div class="counter-lbl">Battery 4hr Max</div>
+            <div class="counter-sub">CAISO &amp; PJM only</div>
         </div>
         <div class="counter-card">
             <div class="counter-val">0%</div>
@@ -374,14 +375,14 @@ body { background: var(--bg-page-white); }
             <div class="counter-sub">Never cost-optimal</div>
         </div>
         <div class="counter-card">
-            <div class="counter-val purple" id="ldesOnsetVal">92.5%</div>
+            <div class="counter-val purple" id="ldesOnsetVal">50%</div>
             <div class="counter-lbl">Earliest LDES Onset</div>
-            <div class="counter-sub">CAISO & ERCOT</div>
+            <div class="counter-sub">PJM (wind + LDES path)</div>
         </div>
         <div class="counter-card">
             <div class="counter-val amber" id="ldesMaxVal">5%</div>
             <div class="counter-lbl">Max LDES Dispatch</div>
-            <div class="counter-sub">MISO & PJM only</div>
+            <div class="counter-sub">PJM &amp; CAISO</div>
         </div>
     </div>
 </div>
@@ -391,29 +392,31 @@ body { background: var(--bg-page-white); }
 <section class="section-dark">
 <div class="section-dark-inner">
     <div class="section-header">
-        <h3>Why the Optimizer Rejects Short-Duration Storage</h3>
+        <h3>Why Storage Plays a Supporting Role, Not a Leading One</h3>
         <p>The binding constraint for hourly CFE matching isn't daily solar cycling &mdash; it's multi-day
-           weather events. Wind droughts and extended cloud cover create gaps that 4-hour or even 8-hour
-           batteries cannot bridge.</p>
+           weather events. This makes LDES (100hr iron-air) the only storage technology that consistently
+           enters optimal mixes. Short-duration batteries appear marginally in some regions.</p>
     </div>
 
     <div class="insight-box">
-        <h5>The daily cycle isn't the bottleneck</h5>
-        <p>4-hour Li-ion batteries excel at daily arbitrage: charge during solar peak, discharge in the evening.
-           But hourly CFE matching requires covering <em>every</em> hour, including multi-day low-wind/low-solar
-           events. The optimizer consistently finds that overbuilding wind or adding clean firm capacity is
-           cheaper than deploying batteries that can only discharge for 4&ndash;8 hours. Even at Low battery
-           costs across all 5,832+ scenarios per region, the math never favors them.</p>
+        <h5>Batteries: viable but rarely cost-optimal</h5>
+        <p>4-hour Li-ion batteries appear at just 0.1% dispatch in CAISO (from 70% CFE) and PJM (from 95% CFE)
+           under medium cost assumptions. In the broader efficient frontier, batteries appear in 30&ndash;55% of
+           feasible mixes at high thresholds &mdash; they're physically viable but the optimizer almost always
+           finds wind overbuild + LDES or clean firm buildout to be cheaper. Under low-VRE / high-firm cost
+           scenarios, batteries become more relevant: appearing in 20&ndash;28% of NEISO and CAISO scenario
+           evaluations. The daily charge/discharge cycle helps but doesn't solve the multi-day gap problem.</p>
     </div>
 
     <hr class="dark-divider">
 
     <div class="insight-box purple">
         <h5>Hydrogen: too expensive, too lossy</h5>
-        <p>Green hydrogen (168-hour duration, ~40% round-trip efficiency) never appears in any optimal mix.
-           The energy losses from electrolysis and reconversion make it uncompetitive against either LDES
-           (100hr, 50% RTE) or clean firm generation. Even at the lowest projected hydrogen costs, the
-           optimizer always finds a cheaper path using existing technologies.</p>
+        <p>Green hydrogen (1000-hour duration, 35% round-trip efficiency) never appears in any medium-cost
+           optimal mix. It enters the efficient frontier at t&ge;95% thresholds (18&ndash;50% of EF mixes in PJM)
+           but loses on cost to clean firm + LDES combinations. The triple conversion loss
+           (electrolysis &times; storage &times; turbine = 35% round-trip) means nearly two-thirds of input energy
+           is lost, making it uncompetitive even at the lowest projected costs.</p>
     </div>
 </div>
 </section>
@@ -458,34 +461,38 @@ body { background: var(--bg-page-white); }
 <section class="content-section">
     <div class="section-header">
         <h3>Three Archetypes: How Regional Resources Shape Storage Need</h3>
-        <p>ISOs cluster into three distinct patterns based on their existing resource endowments
-           and how aggressively they rely on wind, clean firm, or a balanced mix.</p>
+        <p>ISOs cluster into three distinct patterns based on their VRE resource quality,
+           offshore wind potential, and nuclear/hydro baseload. The dominant factor isn't
+           storage technology cost &mdash; it's what <em>alternatives</em> each region has available.</p>
     </div>
 
     <div class="grid-3" id="clusterCards">
         <div class="cluster-card wind">
-            <h4>Wind-Dominant</h4>
-            <div class="cluster-isos">CAISO &middot; ERCOT</div>
-            <p>LDES enters at <strong>92.5% CFE</strong> in up to 94% of scenarios. Massive wind
-               buildout provides bulk coverage; LDES fills multi-day intermittency gaps at just
-               1% dispatch. These ISOs keep clean firm low (10&ndash;14 GW) because cheap wind +
-               small LDES is more economical than building firm capacity.</p>
+            <h4>Early LDES Adopters</h4>
+            <div class="cluster-isos">PJM &middot; CAISO</div>
+            <p>LDES enters early: <strong>50% CFE in PJM</strong> (5% dispatch via wind overbuild),
+               <strong>65% in CAISO</strong> (solar-to-wind transition). PJM's cheapest path at low thresholds
+               is wind-heavy (50 GW) + LDES (5%) rather than clean firm. CAISO uses LDES to bridge
+               evening ramps as solar share declines. Both ISOs also see marginal battery entry
+               (0.1% dispatch) at higher thresholds.</p>
         </div>
         <div class="cluster-card balanced">
-            <h4>Balanced / Moderate</h4>
-            <div class="cluster-isos">NYISO &middot; NEISO &middot; SPP</div>
-            <p>LDES enters at <strong>95% CFE</strong> with moderate scenario penetration (2&ndash;52%).
-               These ISOs balance wind and clean firm. SPP is wind-heavy but uses more diversified mixes;
-               NYISO and NEISO have strong existing nuclear/hydro that delays storage need. LDES stays
-               at 1% dispatch when present.</p>
+            <h4>Late LDES / VRE-Heavy</h4>
+            <div class="cluster-isos">ERCOT &middot; NEISO &middot; SPP</div>
+            <p>LDES enters at <strong>90&ndash;95% CFE</strong> with moderate penetration.
+               ERCOT and SPP rely on massive wind overbuild (80&ndash;105 GW) with LDES as a small
+               multi-day buffer (1%). NEISO's offshore wind resource (up to 33% of demand) reduces
+               storage need significantly &mdash; offshore wind's higher capacity factor and nighttime
+               generation profile fills gaps that would otherwise require storage.</p>
         </div>
         <div class="cluster-card firm">
-            <h4>Clean Firm Dominant</h4>
-            <div class="cluster-isos">PJM &middot; MISO</div>
-            <p>LDES enters at <strong>99.5&ndash;99.9% CFE</strong> in under 9% of scenarios.
-               Massive clean firm buildout (up to 120 GW) makes storage nearly irrelevant.
-               When LDES does appear, it's at 5% dispatch in extreme wind-overbuild mixes
-               that aren't cost-optimal under Medium assumptions.</p>
+            <h4>No Storage Needed</h4>
+            <div class="cluster-isos">NYISO &middot; MISO</div>
+            <p>LDES <strong>never appears in medium-cost optimal mixes</strong>. NYISO's combination
+               of nuclear baseload (79 GW clean firm) + hydro (16 GW) + offshore wind (up to 20 GW)
+               eliminates the need for storage entirely. MISO's abundant wind (80 GW) + aggressive
+               clean firm ramp (14&rarr;120 GW) achieves 99.99% without any storage. These ISOs prove
+               that strong baseload + quality VRE can substitute for storage completely.</p>
         </div>
     </div>
 </section>
@@ -518,21 +525,21 @@ body { background: var(--bg-page-white); }
     </div>
 
     <div class="insight-box green">
-        <h5>Wind-heavy ISOs: LDES mixes are often <em>cheaper</em></h5>
-        <p>In ERCOT, CAISO, NYISO, and SPP, the wind + LDES pathway has a lower average cost than
-           the clean-firm-heavy alternative at the same CFE threshold. ERCOT's cheapest LDES mix
-           ($20.61/MWh) beats its cheapest non-LDES mix ($30.16/MWh) by 32%. The optimizer selects
-           LDES not because storage is cheap, but because the <em>total system cost</em> of
-           wind overbuild + 1% LDES is lower than building 3&ndash;7x more clean firm capacity.</p>
+        <h5>PJM: wind + LDES is cheaper than clean firm at low thresholds</h5>
+        <p>PJM's cheapest path to 50&ndash;90% CFE is a wind-heavy mix (50 GW onshore) with 5% LDES
+           at just $36.61/MWh. The optimizer prefers this over building additional clean firm because
+           PJM's wind resource, combined with multi-day LDES bridging, covers enough hours cheaply.
+           Above 92.5%, the mix pivots to clean firm + solar + small offshore wind (4 GW) &mdash; but LDES
+           remains at 0.2% dispatch for gap-filling even at 99.99%.</p>
     </div>
 
     <div class="insight-box blue">
-        <h5>Clean-firm ISOs: storage adds cost, not value</h5>
-        <p>In PJM and MISO, LDES-bearing mixes are <em>more expensive</em> than clean-firm alternatives.
-           PJM's LDES mixes average $95&ndash;105/MWh vs. $52&ndash;73/MWh without LDES. These ISOs
-           have weaker VRE profiles where massive wind buildout (174&ndash;206 GW in PJM) plus storage
-           can't compete with nuclear/clean firm buildout. Storage only enters in extreme cost scenarios
-           where firm generation is priced out.</p>
+        <h5>Offshore wind displaces storage in NEISO and NYISO</h5>
+        <p>NEISO's offshore wind scales from 0% to 25&ndash;30% of demand above 90% CFE, providing
+           nighttime and winter generation that would otherwise require storage. NYISO goes further:
+           above 92.5% CFE, <em>100% of wind capacity is offshore</em>, and the ISO achieves 99.99%
+           matching with <strong>zero storage of any kind</strong>. Offshore wind's higher capacity factor
+           (~45% vs ~30% onshore) and complementary diurnal profile effectively substitute for batteries.</p>
     </div>
 </div>
 </section>
@@ -574,9 +581,12 @@ body { background: var(--bg-page-white); }
                         <th>Clean Firm</th>
                         <th>Solar</th>
                         <th>Wind</th>
+                        <th>Offshore</th>
                         <th>CCS</th>
+                        <th>Hydro</th>
+                        <th>Bat4</th>
                         <th>LDES</th>
-                        <th>Cost ($/MWh)</th>
+                        <th>Cost</th>
                         <th>Match</th>
                     </tr>
                 </thead>
@@ -616,36 +626,39 @@ body { background: var(--bg-page-white); }
 
     <div class="grid-2">
         <div class="chart-panel">
-            <h4 style="color: var(--red);">Short-duration storage: never cost-optimal</h4>
+            <h4 style="color: var(--red);">LDES enters earlier than expected</h4>
             <p style="font-size: 0.88rem; line-height: 1.7;">
-                Across 1.1 million scenario evaluations, 4-hour batteries, 8-hour batteries,
-                and hydrogen never appear in any cost-optimal mix. The daily charge/discharge
-                cycle isn't the binding constraint for hourly CFE matching &mdash; multi-day
-                weather variability is.
+                PJM's cheapest path to 50% CFE already includes 5% LDES dispatch paired with
+                50 GW wind. CAISO follows at 65%. The optimizer reveals LDES isn't just a
+                last-mile technology &mdash; it's a cost-effective complement to wind overbuild
+                even at moderate CFE targets in some regions.
             </p>
         </div>
         <div class="chart-panel">
-            <h4 style="color: var(--battery);">LDES: a last-mile gap-filler, not a foundation</h4>
+            <h4 style="color: var(--battery);">Batteries: marginal, not transformative</h4>
             <p style="font-size: 0.88rem; line-height: 1.7;">
-                100-hour iron-air LDES is the only storage technology that enters optimal mixes,
-                and only at 92.5%+ CFE thresholds. Even then, it never exceeds 5% of demand.
-                The optimizer achieves 90%+ CFE across all ISOs with zero storage.
+                4-hour batteries appear at 0.1% dispatch in CAISO (from 70% CFE) and PJM
+                (from 95% CFE) &mdash; but 8-hour batteries and hydrogen are never cost-optimal.
+                Batteries exist in 30&ndash;55% of feasible mixes but can't compete with
+                wind + LDES or clean firm buildout on total system cost.
             </p>
         </div>
         <div class="chart-panel">
-            <h4 style="color: var(--wind);">LDES substitutes for clean firm, not for VRE</h4>
+            <h4 style="color: var(--wind);">Offshore wind substitutes for storage</h4>
             <p style="font-size: 0.88rem; line-height: 1.7;">
-                Where LDES appears, it's always paired with high wind / low clean firm. It enables
-                wind-heavy ISOs (ERCOT, CAISO, SPP) to avoid expensive clean firm buildout.
-                The total system cost of "wind + 1% LDES" often beats "3x clean firm."
+                NEISO and NYISO demonstrate that offshore wind's higher capacity factor and
+                nighttime generation can replace the need for storage entirely. NYISO achieves
+                99.99% CFE with zero storage &mdash; offshore wind (up to 20 GW) fills gaps
+                that would otherwise require batteries or LDES.
             </p>
         </div>
         <div class="chart-panel">
             <h4 style="color: var(--hydro);">Regional resources drive the storage decision</h4>
             <p style="font-size: 0.88rem; line-height: 1.7;">
-                Wind-rich ISOs get LDES at 92.5&ndash;95% CFE. Nuclear-rich ISOs don't need storage
-                until 99.5&ndash;99.9%. The divergence isn't about storage economics &mdash; it's
-                about what alternatives each region has available.
+                PJM uses LDES from 50% CFE, CAISO from 65%, NEISO from 90%. NYISO and MISO
+                never need it. The divergence isn't about storage economics &mdash; it's about
+                what alternatives each region has: nuclear baseload, offshore wind, or cheap
+                onshore wind.
             </p>
         </div>
     </div>
@@ -653,10 +666,11 @@ body { background: var(--bg-page-white); }
 </section>
 
 <div class="storage-footer-note">
-    Data source: Step 3 cost optimization results. 7 ISOs &times; 21 CFE thresholds &times; 5,832&ndash;17,496
-    cost sensitivity scenarios per region. Storage technologies evaluated: 4-hour Li-ion battery (85% RTE),
-    8-hour Li-ion battery (85% RTE), 100-hour iron-air LDES (50% RTE), green hydrogen (168hr, ~40% RTE).
-    Resource mixes and costs shown for Medium cost scenario (MMMM_M_M_M1).
+    Data source: Step 2 efficient frontier + Step 3 cost optimization results. 7 ISOs &times; 21 CFE thresholds
+    &times; 5,832&ndash;17,496 cost sensitivity scenarios per region. Storage technologies evaluated: 4-hour
+    Li-ion battery (85% RTE), 8-hour Li-ion battery (85% RTE), 100-hour iron-air LDES (50% RTE, 7-day window),
+    green hydrogen (1000hr, 35% RTE, 30-day window). Resource mixes shown for Medium cost scenario; offshore
+    wind traced from Step 2 EF parquets. CAISO and MISO data missing a few thresholds but coverage is sufficient.
 </div>
 
 <script src="js/storage-analysis-data.js"></script>
@@ -685,6 +699,7 @@ body { background: var(--bg-page-white); }
         clean_firm: '#1E3A5F',
         solar: '#F59E0B',
         wind: '#22C55E',
+        offshore_wind: '#15803D',
         ccs_ccgt: '#0EA5E9',
         hydro: '#06B6D4'
     };
@@ -697,14 +712,15 @@ body { background: var(--bg-page-white); }
             labels: THRESH_LABELS,
             datasets: ISOS.map(iso => ({
                 label: iso,
-                data: SM[iso].ldes_scenario_penetration,
+                data: SM[iso].ldes_scenario_penetration.map(v => v === null ? undefined : v),
                 borderColor: ISO_COLORS[iso],
                 backgroundColor: ISO_COLORS[iso] + '20',
                 borderWidth: 2.5,
                 pointRadius: 0,
                 pointHoverRadius: 5,
                 tension: 0.3,
-                fill: false
+                fill: false,
+                spanGaps: true
             }))
         },
         options: {
@@ -730,13 +746,13 @@ body { background: var(--bg-page-white); }
     // ========== 2. Onset Summary Table ==========
     const onsetBody = document.getElementById('onsetTableBody');
     const archetypes = {
-        CAISO: { type: 'Wind-Dominant', badge: 'early', resource: 'Wind + Solar' },
-        ERCOT: { type: 'Wind-Dominant', badge: 'early', resource: 'Wind' },
-        SPP:   { type: 'Balanced', badge: 'mid', resource: 'Wind' },
-        NYISO: { type: 'Balanced', badge: 'mid', resource: 'Wind + Nuclear + Hydro' },
-        NEISO: { type: 'Balanced', badge: 'mid', resource: 'Wind + Nuclear' },
-        PJM:   { type: 'Firm-Dominant', badge: 'late', resource: 'Clean Firm (Nuclear)' },
-        MISO:  { type: 'Firm-Dominant', badge: 'late', resource: 'Clean Firm' }
+        PJM:   { type: 'Early LDES', badge: 'early', resource: 'Wind + LDES + Offshore' },
+        CAISO: { type: 'Early LDES', badge: 'early', resource: 'Solar + Wind + LDES' },
+        NEISO: { type: 'Late LDES', badge: 'mid', resource: 'Offshore Wind + Nuclear' },
+        ERCOT: { type: 'Late LDES', badge: 'mid', resource: 'Wind (onshore)' },
+        SPP:   { type: 'Late LDES', badge: 'mid', resource: 'Wind (onshore)' },
+        NYISO: { type: 'No Storage', badge: 'late', resource: 'Nuclear + Hydro + Offshore' },
+        MISO:  { type: 'No Storage', badge: 'late', resource: 'Wind + Clean Firm' }
     };
 
     // Sort by onset
@@ -745,7 +761,7 @@ body { background: var(--bg-page-white); }
         const m = SM[iso];
         const onset = m.ldes_onset;
         const maxDisp = m.ldes_max_dispatch_pct;
-        const maxPen = Math.max(...m.ldes_scenario_penetration);
+        const maxPen = Math.max(...m.ldes_scenario_penetration.filter(v => v !== null));
         const a = archetypes[iso];
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -834,7 +850,7 @@ body { background: var(--bg-page-white); }
 
     // ========== 5. ISO Deep Dive: Tabs + Charts ==========
     const tabContainer = document.getElementById('isoTabs');
-    let activeISO = 'ERCOT';
+    let activeISO = 'PJM';
     let mixChart = null, costChart = null;
 
     ISOS.forEach(iso => {
@@ -857,6 +873,8 @@ body { background: var(--bg-page-white); }
         const thresholds = m.thresholds;
         const labels = thresholds.map(t => t >= 99.99 ? '≥99.99%' : t + '%');
         const onset = m.ldes_onset;
+        // Null-safe helper for arrays with missing thresholds
+        const safe = arr => (arr || []).map(v => v === null ? undefined : v);
 
         // Mix progression stacked bar
         if (mixChart) mixChart.destroy();
@@ -868,11 +886,16 @@ body { background: var(--bg-page-white); }
             data: {
                 labels: labels,
                 datasets: [
-                    { label: 'Clean Firm', data: m.resource_mix.clean_firm, backgroundColor: RES_COLORS.clean_firm, stack: 'stack' },
-                    { label: 'Solar', data: m.resource_mix.solar, backgroundColor: RES_COLORS.solar, stack: 'stack' },
-                    { label: 'Wind', data: m.resource_mix.wind, backgroundColor: RES_COLORS.wind, stack: 'stack' },
-                    { label: 'CCS-CCGT', data: m.resource_mix.ccs_ccgt, backgroundColor: RES_COLORS.ccs_ccgt, stack: 'stack' },
-                    { label: 'Hydro', data: m.resource_mix.hydro, backgroundColor: RES_COLORS.hydro, stack: 'stack' }
+                    { label: 'Clean Firm', data: safe(m.resource_mix.clean_firm), backgroundColor: RES_COLORS.clean_firm, stack: 'stack' },
+                    { label: 'Solar', data: safe(m.resource_mix.solar), backgroundColor: RES_COLORS.solar, stack: 'stack' },
+                    { label: 'Wind (onshore)', data: safe(m.resource_mix.wind).map((v, i) => {
+                        if (v === undefined) return undefined;
+                        const ow = m.resource_mix.offshore_wind ? (m.resource_mix.offshore_wind[i] || 0) : 0;
+                        return Math.max(0, v - ow);
+                    }), backgroundColor: RES_COLORS.wind, stack: 'stack' },
+                    { label: 'Wind (offshore)', data: safe(m.resource_mix.offshore_wind), backgroundColor: RES_COLORS.offshore_wind, stack: 'stack' },
+                    { label: 'CCS-CCGT', data: safe(m.resource_mix.ccs_ccgt), backgroundColor: RES_COLORS.ccs_ccgt, stack: 'stack' },
+                    { label: 'Hydro', data: safe(m.resource_mix.hydro), backgroundColor: RES_COLORS.hydro, stack: 'stack' }
                 ]
             },
             options: {
@@ -915,8 +938,8 @@ body { background: var(--bg-page-white); }
         const cCtx = document.getElementById('costTrajectoryChart').getContext('2d');
         document.getElementById('costChartTitle').textContent = iso + ' — System Cost';
 
-        const costData = m.cost_total;
-        const ldesFlags = m.ldes_pct.map(v => v > 0);
+        const costData = safe(m.cost_total);
+        const ldesFlags = m.ldes_pct.map(v => v !== null && v > 0);
 
         costChart = new Chart(cCtx, {
             type: 'line',
@@ -944,8 +967,10 @@ body { background: var(--bg-page-white); }
                         callbacks: {
                             label: ctx => {
                                 const i = ctx.dataIndex;
+                                if (ctx.parsed.y === undefined || ctx.parsed.y === null) return '';
                                 let lbl = '$' + ctx.parsed.y.toFixed(2) + '/MWh';
-                                if (ldesFlags[i]) lbl += ' (LDES: ' + m.ldes_pct[i] + '%)';
+                                if (ldesFlags[i] && m.ldes_pct[i]) lbl += ' (LDES: ' + m.ldes_pct[i] + '%)';
+                                if (m.battery4_pct[i] > 0) lbl += ' (Bat4: ' + m.battery4_pct[i] + '%)';
                                 return lbl;
                             }
                         }
@@ -985,24 +1010,31 @@ body { background: var(--bg-page-white); }
         tbody.innerHTML = '';
 
         // Show subset of thresholds for readability
-        const showThresholds = [50, 75, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99];
+        const showThresholds = [50, 65, 75, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99];
         showThresholds.forEach(t => {
             const idx = thresholds.indexOf(t);
             if (idx === -1) return;
+            if (m.cost_total[idx] === null) return;
             const hasLDES = m.ldes_pct[idx] > 0;
+            const hasBat = m.battery4_pct[idx] > 0;
             const tr = document.createElement('tr');
             if (hasLDES) tr.className = 'ldes-active';
 
-            const fmt = v => v === 0 ? '<span class="zero">0</span>' : v;
+            const fmt = v => (v === 0 || v === null) ? '<span class="zero">0</span>' : v;
+            const fmtPct = v => (v === 0 || v === null) ? '<span class="zero">—</span>' : v + '%';
             const tLabel = t >= 99.99 ? '≥99.99%' : (t <= 50 ? '≤50%' : t + '%');
+            const offshore = m.resource_mix.offshore_wind ? m.resource_mix.offshore_wind[idx] : 0;
 
             tr.innerHTML = `
                 <td>${tLabel}</td>
                 <td>${m.resource_mix.clean_firm[idx]} GW</td>
                 <td>${fmt(m.resource_mix.solar[idx])} GW</td>
                 <td>${m.resource_mix.wind[idx]} GW</td>
+                <td>${fmt(offshore)} GW</td>
                 <td>${fmt(m.resource_mix.ccs_ccgt[idx])} GW</td>
-                <td>${hasLDES ? '<strong>' + m.ldes_pct[idx] + '%</strong>' : '<span class="zero">None</span>'}</td>
+                <td>${fmt(m.resource_mix.hydro[idx])} GW</td>
+                <td>${fmtPct(m.battery4_pct[idx])}</td>
+                <td>${hasLDES ? '<strong>' + m.ldes_pct[idx] + '%</strong>' : '<span class="zero">—</span>'}</td>
                 <td>$${m.cost_total[idx].toFixed(2)}</td>
                 <td>${m.match_score[idx].toFixed(1)}%</td>
             `;
@@ -1014,33 +1046,33 @@ body { background: var(--bg-page-white); }
     }
 
     const insights = {
+        PJM: {
+            title: 'PJM: earliest LDES adopter via wind overbuild',
+            text: 'PJM has the earliest LDES onset of any ISO &mdash; appearing at <strong>50% CFE</strong> with 5% dispatch in a 35 GW clean firm + 50 GW wind + 13 GW solar mix ($36.61/MWh). This wind + LDES combination is PJM\'s cheapest path through 90% CFE. At 92.5%, the mix pivots to firm-dominant (72 GW clean firm) with minimal LDES (0.2%). Offshore wind appears from 87.5% (2&ndash;4 GW, max 4% of demand) as a complement. Batteries enter marginally at 95% (0.1%). At the top, 99.9%+ uses 47 GW clean firm + 43 GW solar + 42 GW wind + 4 GW offshore &mdash; a diversified mix with persistent 0.2% LDES.'
+        },
         CAISO: {
-            title: 'CAISO: Solar-wind balance with early LDES',
-            text: 'CAISO leverages its solar and wind resources, holding clean firm at 10&ndash;20 GW through 92.5% CFE. LDES enters at 92.5% in <strong>40% of cost scenarios</strong>, rising to 57% at 99%. The optimizer shifts from solar-heavy (70 GW) at low thresholds to wind-heavy (50&ndash;55 GW) as matching requirements tighten. Above 99.5%, clean firm ramps to 55&ndash;60 GW as even LDES can\'t bridge the last gaps. CAISO\'s geothermal option adds a third clean firm pathway not available to other ISOs.'
-        },
-        ERCOT: {
-            title: 'ERCOT: the wind machine with LDES smoothing',
-            text: 'ERCOT\'s extraordinary wind resource drives the most LDES-friendly mix of any ISO. Wind scales from 73 to 95 GW while clean firm stays locked at 10 GW from 87.5% onward. LDES enters at 92.5% in <strong>86% of cost scenarios</strong>, rising to 94%. But it\'s always just 1% dispatch &mdash; a multi-day smoothing buffer. ERCOT achieves 100% hourly match by 99.5% at a remarkably low $35.66/MWh. The wind + LDES pathway is <strong>$5&ndash;10/MWh cheaper</strong> than the clean-firm alternative at every threshold above 92.5%.'
-        },
-        MISO: {
-            title: 'MISO: clean firm dominance, storage nearly irrelevant',
-            text: 'MISO shows the most dramatic clean firm ramp: 14 GW at 85% to 120 GW at 99.99%. The pivot happens at 95% CFE, where the optimizer abandons the wind-heavy strategy (80 GW) in favor of massive firm buildout. LDES only appears at 99.9%+ in <strong>&lt;9% of cost scenarios</strong>, always at 5% dispatch, and never under Medium cost assumptions. When LDES does appear, it\'s in extreme wind-overbuild mixes (181 GW wind) that cost $103&ndash;107/MWh vs. $58&ndash;85/MWh for clean-firm paths.'
-        },
-        NYISO: {
-            title: 'NYISO: nuclear + hydro advantage delays storage',
-            text: 'NYISO\'s existing 20 GW nuclear + 15&ndash;16 GW hydro base provides a strong foundation. LDES enters at 95% in <strong>37% of scenarios</strong>, staying at 1% dispatch. The optimizer balances wind (40&ndash;64 GW), solar (0&ndash;35 GW), and clean firm (20&ndash;70 GW) depending on the threshold. Above 97.5%, clean firm ramps rapidly. LDES-bearing mixes are <strong>$6&ndash;13/MWh cheaper</strong> than non-LDES alternatives at the 95% onset threshold.'
+            title: 'CAISO: solar-to-wind transition reveals LDES need',
+            text: 'CAISO\'s mix evolution is the most dramatic. Below 65% CFE, it\'s nearly all solar (25 GW) + CCS (45 GW) with just 10 GW wind. As thresholds rise, the optimizer drops CCS and adds solar: 65 GW solar at 80%. <strong>LDES enters at 65%</strong> (0.5%) as the mix starts diversifying. By 90%, CAISO hits peak LDES (5% dispatch) with 40 GW each of solar and wind. Batteries appear at 70% CFE (0.1%). Offshore wind stays constant at 5 GW (5% of demand) across all thresholds. Above 92.5%, clean firm ramps to 55&ndash;65 GW and LDES drops to 0.2&ndash;0.5%.'
         },
         NEISO: {
-            title: 'NEISO: late bloomer with cost-effective LDES',
-            text: 'New England\'s mix is uniquely sensitive to threshold. Below 95%, diverse strategies compete: clean firm (26&ndash;50 GW), wind (32&ndash;60 GW), solar (5&ndash;37 GW). LDES enters at 95% in just <strong>1.9% of scenarios</strong>, but by 99% it\'s in 49% and by 99.5% in 52%. When present, LDES-bearing mixes are <strong>$13/MWh cheaper</strong> at the onset threshold. NEISO\'s winter gas pipeline constraints make clean firm relatively expensive, giving LDES a stronger value proposition than in MISO or PJM.'
+            title: 'NEISO: offshore wind is the game-changer',
+            text: 'NEISO demonstrates how <strong>offshore wind substitutes for storage</strong>. Below 85%, the mix is wind-heavy (60 GW onshore) at $48.82/MWh with zero storage. Offshore wind enters the optimal mix at 80% (25 GW) and by 90% reaches 30 GW &mdash; providing the nighttime and winter generation that other ISOs need LDES to cover. <strong>LDES only enters at 90%</strong> (0.2%) and stays minimal through 99.99%. At 95%, the mix is 100% offshore wind (25 GW, 0% onshore) + 75 GW clean firm. No batteries appear in any medium-cost optimal mix. NEISO\'s winter gas pipeline constraint makes clean firm expensive, but offshore wind fills the gap before storage needs to.'
         },
-        PJM: {
-            title: 'PJM: nuclear heavyweight, storage only at the extreme',
-            text: 'PJM starts with 34 GW of clean firm (largely existing nuclear) and ramps to 120 GW at 99.99%. VRE shifts from solar-heavy at low thresholds (39 GW solar) to nearly zero at 99.5% (4 GW each). LDES enters at 99.5% in just <strong>0.5% of scenarios</strong>, all with extreme wind (174&ndash;206 GW). These mixes cost $95+/MWh vs. $52&ndash;69/MWh without storage. PJM\'s message is clear: when you have abundant nuclear, storage adds cost without adding value.'
+        ERCOT: {
+            title: 'ERCOT: wind machine with late LDES',
+            text: 'ERCOT runs on massive onshore wind (73&ndash;95 GW) with minimal clean firm (10 GW through 87.5%). <strong>LDES enters at 92.5%</strong> (1% dispatch) as a multi-day weather buffer. This is later than PJM or CAISO because ERCOT\'s wind resource is so strong that it covers more hours before gaps become binding. ERCOT has no offshore wind and no batteries in the optimal mix. Cost escalation is modest: $27.69/MWh at 50% to $35.66/MWh at 99.5%. The wind + LDES pathway remains cheaper than the clean-firm alternative at every threshold above 92.5%.'
+        },
+        MISO: {
+            title: 'MISO: wind + clean firm, no storage needed',
+            text: 'MISO achieves <strong>99.99% CFE with zero storage</strong> of any kind. The mix evolves from wind-dominant (80 GW wind, 14 GW clean firm) below 85% to firm-dominant (120 GW clean firm, 20 GW wind) at 99.99%. The pivot happens at 87.5&ndash;90% where clean firm begins ramping dramatically. MISO has no offshore wind (inland) and no batteries. Cost progression is $30.53 at 50% to $61.99 at 99.99%. MISO\'s message: with enough cheap onshore wind and willing nuclear/firm buildout, storage is unnecessary even at near-100% CFE.'
+        },
+        NYISO: {
+            title: 'NYISO: nuclear + hydro + offshore eliminates storage',
+            text: 'NYISO is the most storage-hostile ISO. Its 79 GW nuclear + 16 GW hydro base provides a massive clean foundation, and <strong>zero storage appears in any medium-cost optimal mix</strong>. Below 90%, the mix barely changes (79 GW clean firm + 5 GW wind). Above 92.5%, <em>offshore wind</em> replaces onshore entirely: 5 GW offshore at 92.5%, surging to 20 GW at 97.5%. This is NYISO\'s substitution for storage &mdash; offshore wind\'s ~45% capacity factor and nighttime profile fills the same gaps. At 99.99%, the mix is 70 GW clean firm + 15 GW solar + 10 GW offshore + 5 GW onshore + 15 GW hydro. Cost: $47.18&ndash;$61.96.'
         },
         SPP: {
-            title: 'SPP: wind-rich with moderate LDES uptake',
-            text: 'SPP is the cheapest ISO overall ($24&ndash;34/MWh), leveraging 85&ndash;105 GW of wind with just 5 GW clean firm. LDES enters at 95% in <strong>34% of scenarios</strong>, rising to 93% by 99%. Like ERCOT, SPP keeps clean firm minimal and uses wind overbuild + 1% LDES as the cost-optimal path. SPP\'s LDES mixes are <strong>$2&ndash;3/MWh cheaper</strong> than non-LDES alternatives. The wide gap between SPP costs ($33/MWh at 99.99%) and PJM ($92/MWh) or MISO ($85/MWh) highlights how wind resource quality determines whether storage is needed.'
+            title: 'SPP: wind-rich with late LDES',
+            text: 'SPP mirrors ERCOT: massive wind (85&ndash;105 GW) with minimal clean firm (5&ndash;10 GW). <strong>LDES enters at 95%</strong> (1% dispatch) as a gap-filler for multi-day wind lulls. Like ERCOT, SPP\'s excellent wind resource delays storage need by covering most hours with overbuild. No offshore wind, no batteries. SPP remains the cheapest ISO overall ($24&ndash;34/MWh) thanks to its extraordinary onshore wind quality.'
         }
     };
 
@@ -1063,13 +1095,14 @@ body { background: var(--bg-page-white); }
             labels: THRESH_LABELS,
             datasets: ISOS.map(iso => ({
                 label: iso,
-                data: SM[iso].cost_total,
+                data: SM[iso].cost_total.map(v => v === null ? undefined : v),
                 borderColor: ISO_COLORS[iso],
                 borderWidth: 2.5,
                 pointRadius: 0,
                 pointHoverRadius: 5,
                 tension: 0.3,
-                fill: false
+                fill: false,
+                spanGaps: true
             }))
         },
         options: {
@@ -1093,7 +1126,7 @@ body { background: var(--bg-page-white); }
     });
 
     // Initial render
-    selectISO('ERCOT');
+    selectISO('PJM');
 
 })();
 </script>
