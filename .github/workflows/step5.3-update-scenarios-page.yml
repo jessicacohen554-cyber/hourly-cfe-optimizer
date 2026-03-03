@@ -1,9 +1,9 @@
 name: "Step 6.3: Update Scenarios Page"
 
 # Runs scenario scripts to populate the Scenarios comparison page:
-#   1. step6_scenario_a.py — Consequential scenario (per-ISO parallel)
-#   2. step6_scenario_b.py — Hourly matching scenario (per-ISO parallel)
-#   3. step6_scenario_compare.py — Merges A+B per-ISO results into comparison data
+#   1. step5_scenario_a_consequential.py — Consequential scenario (per-ISO parallel)
+#   2. step5_scenario_b_hourly.py — Hourly matching scenario (per-ISO parallel)
+#   3. step5_scenario_comparison.py — Merges A+B per-ISO results into comparison data
 #
 # Three-phase architecture:
 #   Phase 1 (compute-a): Matrix fans out ISOs for Scenario A (parallel)
@@ -116,7 +116,7 @@ jobs:
         run: mkdir -p data/step5-post-processing
 
       - name: "Scenario A (Consequential) — ${{ matrix.iso }}"
-        run: python scripts/step6_scenario_a.py --iso ${{ matrix.iso }}
+        run: python scripts/step5_scenario_a_consequential.py --iso ${{ matrix.iso }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -169,7 +169,7 @@ jobs:
         run: mkdir -p data/step5-post-processing
 
       - name: "Scenario B (Hourly Matching) — ${{ matrix.iso }}"
-        run: python scripts/step6_scenario_b.py --iso ${{ matrix.iso }}
+        run: python scripts/step5_scenario_b_hourly.py --iso ${{ matrix.iso }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -230,7 +230,7 @@ jobs:
       - name: "Scenario Comparison — all ISOs"
         run: |
           ISO_LIST="${{ needs.prepare.outputs.iso_list }}"
-          python scripts/step6_scenario_compare.py --iso $ISO_LIST
+          python scripts/step5_scenario_comparison.py --iso $ISO_LIST
 
       - name: Upload comparison artifact
         uses: actions/upload-artifact@v4

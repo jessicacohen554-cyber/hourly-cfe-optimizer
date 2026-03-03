@@ -74,7 +74,7 @@ jobs:
       - name: "Generate Shared Data"
         run: |
           echo "=== Generating shared-data.js ==="
-          python scripts/step7_generate_shared_data.py
+          python scripts/step6_generate_shared_data.py
 
       - name: Commit and push
         run: |
