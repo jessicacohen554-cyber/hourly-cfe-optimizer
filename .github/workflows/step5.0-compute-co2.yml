@@ -1,4 +1,4 @@
-name: "Step 6.0: Compute CO2 (Shared)"
+name: "Step 5.0: Compute CO2 (Shared)"
 
 # Shared utility — computes dispatch-stack CO2 emissions for all ISOs.
 # Must run BEFORE Step 6.1 (MAC depends on CO2 output).
@@ -31,7 +31,7 @@ on:
         type: string
 
 env:
-  BRANCH_PREFIX: step6-0-co2
+  BRANCH_PREFIX: step5-0-co2
 
 jobs:
   prepare:

@@ -1,4 +1,4 @@
-name: "Step 6.6: Update Optimizer Dashboard"
+name: "Step 5.6: Update Optimizer Dashboard"
 
 # Runs scripts to populate the interactive Cost Optimizer dashboard (dashboard.html):
 #   1. step5_compress_day_profiles.py — 24-hour representative day profiles per unique mix
@@ -42,7 +42,7 @@ on:
         type: string
 
 env:
-  BRANCH_PREFIX: step6-6-dashboard
+  BRANCH_PREFIX: step5-6-dashboard
 
 jobs:
   prepare:
