@@ -63,23 +63,27 @@ jobs:
     - name: Show near-miss sizes after
       run: ls -lh data/step1-pfs-parquets/*near_miss*.parquet 2>/dev/null || echo "No near-miss files found"
 
-    - name: Commit and push refiltered parquets
+    - name: Commit and push refiltered parquets to auto branch
       run: |
-        BRANCH="${{ inputs.branch || 'master' }}"
+        ISO="${{ inputs.iso }}"
+        TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
+        TARGET_BRANCH="auto/${TIMESTAMP}-refilter-near-miss-${ISO}"
+
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
+
+        git checkout -b "$TARGET_BRANCH"
         git add -f data/step1-pfs-parquets/*near_miss*.parquet 2>/dev/null || true
+
         if ! git diff --cached --quiet; then
-          ISO="${{ inputs.iso }}"
           git commit -m "Refilter ${ISO} near-miss: threshold-crossing + 100K stratified cap
 
         Applies threshold-crossing filter (keep only mixes where storage pushes
         base_score across an active threshold) + 100K stratified cap per ISO.
         Typical reduction: 60-80 MB → 1-2 MB (97%+ reduction)."
+
           for i in 1 2 3 4; do
-            git fetch origin "$BRANCH" --depth=5 || true
-            git rebase "origin/$BRANCH" || git rebase --abort || true
-            git push origin HEAD:"$BRANCH" && break
+            git push -u origin "$TARGET_BRANCH" && break
             echo "Push attempt $i failed, retrying in $((2**i))s..."
             sleep $((2**i))
           done
