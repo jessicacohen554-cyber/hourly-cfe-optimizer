@@ -7,10 +7,16 @@
 <title>About — The 8,760 Problem</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/reference.css">
 <style>
-/* Page-specific body background */
+/* ========== ABOUT PAGE — Page-specific styles only ========== */
+/* Shared: story-section, story-badge, story-badge-*, callout-box, layer-stack,
+   layer-card, mindmap-*, insight-card, insights-grid, nav-buttons, nav-btn,
+   stat-row, stat-block, stat-number, flow-diagram, flow-row, flow-box,
+   section-divider, mm-* animations → reference.css / shared.css */
+
 body {
     background: var(--bg-page-white);
     background-image:
@@ -19,66 +25,15 @@ body {
     background-attachment: fixed;
 }
 
-/* ========== SCROLLYTELL CONTENT ========== */
-.content-wrap {
-    background: var(--bg-alt-warm);
-    max-width: 1440px;
-    margin: 0 auto;
-    border-radius: 0 0 16px 16px;
-    padding: 0 0 40px;
-}
-
-.story-section {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 72px 48px;
-    opacity: 0;
-    transform: translateY(40px);
-    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
-                transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.story-section.visible {
-    opacity: 1;
-    transform: translateY(0);
-}
-@media (max-width: 768px) {
-    .story-section { padding: 48px 20px; }
-}
-@media (max-width: 480px) {
-    .story-section { padding: 36px 16px; }
-}
-
-.story-badge {
-    display: inline-block;
-    padding: 5px 18px;
-    border-radius: 9999px;
-    font-size: 0.8rem;
-    font-family: var(--font-heading);
-    font-weight: 700;
-    letter-spacing: 1px;
-    text-transform: capitalize;
-    margin-bottom: 18px;
-    background: rgba(26,39,68,0.1);
-    color: var(--navy);
-}
-.story-badge-blue { background: rgba(14,165,233,0.12); color: #0369A1; }
-.story-badge-green { background: rgba(34,197,94,0.12); color: #15803D; }
-.story-badge-orange { background: rgba(239,68,68,0.1); color: #B91C1C; }
-.story-badge-amber { background: rgba(245,158,11,0.12); color: #B45309; }
-.story-badge-purple { background: rgba(139,92,246,0.12); color: #6D28D9; }
-.story-badge-teal { background: rgba(20,184,166,0.12); color: #0F766E; }
-
+/* About-page story-section typography overrides */
 .story-section h2 {
-    font-family: var(--font-heading);
     font-size: 2rem;
     font-weight: 700;
     color: var(--navy);
     letter-spacing: -0.3px;
-    line-height: 1.2;
     margin-bottom: 18px;
 }
 .story-section h3 {
-    font-family: var(--font-heading);
     font-size: 1.3rem;
     font-weight: 600;
     color: var(--navy);
@@ -89,7 +44,6 @@ body {
     font-size: 1.05rem;
     color: var(--text-secondary);
     line-height: 1.75;
-    margin-bottom: 16px;
 }
 .story-section p.lead {
     font-size: 1.15rem;
@@ -98,15 +52,7 @@ body {
     line-height: 1.7;
 }
 
-/* Divider between sections */
-.section-divider {
-    max-width: 900px;
-    margin: 0 auto;
-    border: none;
-    border-top: 1px solid var(--border);
-}
-
-/* ========== INSIGHT CALLOUT BOXES ========== */
+/* About-page callout overrides (left-border style) */
 .callout-box {
     background: var(--bg-page-white);
     border: 1px solid var(--border);
@@ -115,351 +61,28 @@ body {
     padding: 20px 24px;
     margin: 20px 0;
 }
-.callout-box.callout-warning {
-    border-left-color: var(--solar);
-    background: #FFFBEB;
-}
-.callout-box.callout-danger {
-    border-left-color: var(--red);
-    background: #FEF2F2;
-}
-.callout-box.callout-success {
-    border-left-color: var(--wind);
-    background: #F0FDF4;
-}
-.callout-box h4 {
-    font-family: var(--font-heading);
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--navy);
-    margin-bottom: 8px;
-}
-.callout-box p {
-    font-size: 0.95rem;
-    margin-bottom: 8px;
-}
-.callout-box p:last-child {
-    margin-bottom: 0;
-}
+.callout-box.callout-warning { border-left-color: var(--solar); background: #FFFBEB; }
+.callout-box.callout-danger { border-left-color: var(--red); background: #FEF2F2; }
+.callout-box.callout-success { border-left-color: var(--wind); background: #F0FDF4; }
+.callout-box h4 { font-size: 1rem; color: var(--navy); text-transform: none; letter-spacing: normal; }
+.callout-box p { font-size: 0.95rem; margin-bottom: 8px; }
 
-/* ========== LAYER CARDS (for stacked topics) ========== */
-.layer-stack {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    margin: 24px 0;
-}
-.layer-card {
-    background: var(--bg-page-white);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 20px 24px;
-    position: relative;
-    overflow: hidden;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-.layer-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-}
-.layer-card .layer-num {
-    position: absolute;
-    top: 12px;
-    right: 16px;
-    font-family: var(--font-heading);
-    font-size: 2.5rem;
-    font-weight: 800;
-    color: rgba(26,39,68,0.06);
-    line-height: 1;
-}
-.layer-card h4 {
-    font-family: var(--font-heading);
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--navy);
-    margin-bottom: 6px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.layer-card h4 .layer-icon {
-    font-size: 1.3rem;
-}
-.layer-card p {
-    font-size: 0.95rem;
-    color: var(--text-secondary);
-    line-height: 1.65;
-    margin-bottom: 0;
-}
-.layer-card .layer-accent {
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 4px;
-}
+/* About-page stat-label override */
+.stat-label { margin-top: 4px; font-weight: 500; }
 
-/* ========== MIND MAP ========== */
-.mindmap-container {
-    background: var(--bg-page-white);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 32px 24px;
-    margin: 32px 0;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-}
-.mindmap-container h3 {
-    text-align: center;
-    margin-bottom: 24px;
-    margin-top: 0;
-}
-.mindmap-svg-wrap {
-    display: flex;
-    justify-content: center;
-    min-height: 520px;
-}
-.mindmap-svg-wrap svg {
-    max-width: 100%;
-    height: auto;
-}
-
-/* ========== NOVEL INSIGHTS GRID ========== */
-.insights-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    margin: 24px 0;
-}
-@media (max-width: 640px) {
-    .insights-grid { grid-template-columns: 1fr; }
-}
-.insight-card {
-    background: var(--bg-page-white);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 20px 22px;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.insight-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-}
-.insight-card .insight-num {
-    font-family: var(--font-heading);
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 1px;
-    color: var(--hydro);
-    margin-bottom: 6px;
-}
-.insight-card h4 {
-    font-family: var(--font-heading);
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: var(--navy);
-    margin-bottom: 8px;
-    line-height: 1.3;
-}
-.insight-card p {
-    font-size: 0.92rem;
-    color: var(--text-secondary);
-    line-height: 1.6;
-    margin-bottom: 0;
-}
-
-/* ========== CTA NAVIGATION ========== */
-.nav-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 0 48px 48px;
-}
-.nav-btn {
-    display: inline-block;
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-family: var(--font-heading);
-    font-size: 0.9rem;
-    font-weight: 600;
-    text-decoration: none;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-    min-width: 44px;
-    min-height: 44px;
-    display: inline-flex;
-    align-items: center;
-}
-.nav-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-}
-.nav-btn-primary {
-    background: var(--navy);
-    color: #ffffff;
-}
-.nav-btn-primary:hover { background: var(--navy-light); }
-.nav-btn-secondary {
-    background: var(--bg-page-white);
-    color: var(--navy);
-    border: 1px solid var(--border);
-}
-.nav-btn-secondary:hover { background: #F7F8FA; }
-@media (max-width: 768px) {
-    .nav-buttons { padding: 0 20px 36px; }
-    .nav-btn { padding: 10px 16px; font-size: 0.82rem; }
-}
-
-/* ========== FOOTER ========== */
-.site-footer {
-    background: var(--bg-alt);
-    padding: 24px;
-    text-align: center;
-}
-.site-footer a {
-    color: rgba(15,23,42,0.6);
-    text-decoration: none;
-    font-size: 0.85rem;
-}
+/* ========== FOOTER (about-specific light footer) ========== */
+.site-footer { background: var(--bg-alt); padding: 24px; text-align: center; }
+.site-footer a { color: rgba(15,23,42,0.6); text-decoration: none; font-size: 0.85rem; }
 .site-footer a:hover { color: var(--navy); }
-.site-footer p {
-    color: rgba(15,23,42,0.35);
-    font-size: 0.78rem;
-    margin: 0;
-}
+.site-footer p { color: rgba(15,23,42,0.35); font-size: 0.78rem; margin: 0; }
 
-/* ========== MIND MAP NODE ANIMATIONS ========== */
-.mm-node {
-    cursor: default;
-    transition: filter 0.3s ease;
-}
-.mm-node:hover {
-    filter: brightness(1.1);
-}
-.mm-node:hover .mm-label {
-    font-weight: 800;
-}
-.mm-link {
-    transition: stroke-opacity 0.3s ease;
-}
-@keyframes pulse-glow {
-    0%, 100% { filter: drop-shadow(0 0 4px rgba(14,165,233,0.3)); }
-    50% { filter: drop-shadow(0 0 12px rgba(14,165,233,0.6)); }
-}
-.mm-center-node {
-    animation: pulse-glow 3s ease-in-out infinite;
-}
-@keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-.mm-node { opacity: 0; }
-.mindmap-visible .mm-node {
-    animation: fadeInUp 0.5s ease forwards;
-}
-.mindmap-visible .mm-node:nth-child(1) { animation-delay: 0.1s; }
-.mindmap-visible .mm-node:nth-child(2) { animation-delay: 0.15s; }
-.mindmap-visible .mm-node:nth-child(3) { animation-delay: 0.2s; }
-.mindmap-visible .mm-node:nth-child(4) { animation-delay: 0.25s; }
-.mindmap-visible .mm-node:nth-child(5) { animation-delay: 0.3s; }
-.mindmap-visible .mm-node:nth-child(6) { animation-delay: 0.35s; }
-.mindmap-visible .mm-node:nth-child(7) { animation-delay: 0.4s; }
-.mindmap-visible .mm-node:nth-child(8) { animation-delay: 0.45s; }
-.mindmap-visible .mm-node:nth-child(9) { animation-delay: 0.5s; }
-.mindmap-visible .mm-node:nth-child(10) { animation-delay: 0.55s; }
-.mindmap-visible .mm-node:nth-child(11) { animation-delay: 0.6s; }
-.mindmap-visible .mm-node:nth-child(12) { animation-delay: 0.65s; }
-.mindmap-visible .mm-link {
-    stroke-dasharray: 1000;
-    stroke-dashoffset: 1000;
-    animation: drawLine 1.5s ease forwards;
-}
-@keyframes drawLine {
-    to { stroke-dashoffset: 0; }
-}
-@media (prefers-reduced-motion: reduce) {
-    .mm-node, .mindmap-visible .mm-node { animation: none; opacity: 1; }
-    .mm-center-node { animation: none; }
-    .mindmap-visible .mm-link { animation: none; stroke-dashoffset: 0; }
-    .story-section { opacity: 1; transform: none; transition: none; }
-}
-
-/* ========== STAT COUNTERS ========== */
-.stat-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-    justify-content: center;
-    margin: 28px 0;
-}
-.stat-block {
-    background: var(--bg-page-white);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 18px 22px;
-    text-align: center;
-    min-width: 140px;
-    flex: 1;
-    max-width: 200px;
-}
-.stat-number {
-    font-family: var(--font-heading);
-    font-size: 2rem;
-    font-weight: 800;
-    color: var(--navy);
-    line-height: 1.1;
-}
-.stat-label {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    margin-top: 4px;
-    font-weight: 500;
-}
-
-/* ========== PERVERSE INCENTIVE DIAGRAM ========== */
-.flow-diagram {
-    background: var(--bg-page-white);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 28px 24px;
-    margin: 24px 0;
-    overflow-x: auto;
-}
-.flow-row {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin: 12px 0;
-}
-.flow-box {
-    padding: 12px 18px;
-    border-radius: 8px;
-    font-family: var(--font-heading);
-    font-size: 0.88rem;
-    font-weight: 600;
-    text-align: center;
-    min-width: 160px;
-    line-height: 1.3;
-}
-.flow-box-policy { background: #EFF6FF; border: 1px solid #BFDBFE; color: #1E40AF; }
-.flow-box-action { background: #F0FDF4; border: 1px solid #BBF7D0; color: #166534; }
-.flow-box-bad { background: #FEF2F2; border: 1px solid #FECACA; color: #991B1B; }
-.flow-box-good { background: #ECFDF5; border: 1px solid #A7F3D0; color: #065F46; }
-.flow-arrow {
-    font-size: 1.2rem;
-    color: #9CA3AF;
-    flex-shrink: 0;
-}
-@media (max-width: 640px) {
-    .flow-row { flex-direction: column; gap: 6px; }
-    .flow-arrow { transform: rotate(90deg); }
+@media (max-width: 480px) {
+    .story-section { padding: 36px 16px; }
 }
 </style>
 <script src="js/chart-colors.js"></script>
 <script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
 </head>
 <body>
 
@@ -674,14 +297,14 @@ body {
                     <!-- CENTER NODE: Affordable Decarbonization -->
                     <g class="mm-node mm-center-node" filter="url(#glow)">
                         <rect x="370" y="300" width="220" height="80" rx="40" fill="#1A2744" stroke="#0EA5E9" stroke-width="2"/>
-                        <text x="480" y="332" text-anchor="middle" fill="#ffffff" font-family="'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif" font-size="13" font-weight="700">Affordable &amp;</text>
-                        <text x="480" y="352" text-anchor="middle" fill="#ffffff" font-family="'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif" font-size="13" font-weight="700">Feasible Decarbonization</text>
+                        <text x="480" y="332" text-anchor="middle" fill="#ffffff" font-family="'Space Grotesk','Barlow Semi Condensed',sans-serif" font-size="13" font-weight="700">Affordable &amp;</text>
+                        <text x="480" y="352" text-anchor="middle" fill="#ffffff" font-family="'Space Grotesk','Barlow Semi Condensed',sans-serif" font-size="13" font-weight="700">Feasible Decarbonization</text>
                     </g>
 
                     <!-- NODE 1: Grid Economics (top center) -->
                     <g class="mm-node">
                         <rect x="380" y="85" width="200" height="70" rx="12" fill="#EFF6FF" stroke="#0EA5E9" stroke-width="1.5"/>
-                        <text x="480" y="114" text-anchor="middle" fill="#0369A1" font-family="'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif" font-size="12.5" font-weight="700">Grid Economics</text>
+                        <text x="480" y="114" text-anchor="middle" fill="#0369A1" font-family="'Space Grotesk','Barlow Semi Condensed',sans-serif" font-size="12.5" font-weight="700">Grid Economics</text>
                         <text x="480" y="133" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">Marginal dispatch, last-mile</text>
                         <text x="480" y="146" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">costs, hourly supply gaps</text>
                     </g>
@@ -689,7 +312,7 @@ body {
                     <!-- NODE 2: Generators (top left) -->
                     <g class="mm-node">
                         <rect x="100" y="165" width="200" height="70" rx="12" fill="#F0FDF4" stroke="#22C55E" stroke-width="1.5"/>
-                        <text x="200" y="194" text-anchor="middle" fill="#15803D" font-family="'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif" font-size="12.5" font-weight="700">Power Generators</text>
+                        <text x="200" y="194" text-anchor="middle" fill="#15803D" font-family="'Space Grotesk','Barlow Semi Condensed',sans-serif" font-size="12.5" font-weight="700">Power Generators</text>
                         <text x="200" y="213" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">Fleet transition, nuclear,</text>
                         <text x="200" y="226" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">CCS, renewables build-out</text>
                     </g>
@@ -697,7 +320,7 @@ body {
                     <!-- NODE 3: Corporate Buyers (top right) -->
                     <g class="mm-node">
                         <rect x="660" y="165" width="200" height="70" rx="12" fill="#FFFBEB" stroke="#F59E0B" stroke-width="1.5"/>
-                        <text x="760" y="194" text-anchor="middle" fill="#B45309" font-family="'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif" font-size="12.5" font-weight="700">Corporate Buyers</text>
+                        <text x="760" y="194" text-anchor="middle" fill="#B45309" font-family="'Space Grotesk','Barlow Semi Condensed',sans-serif" font-size="12.5" font-weight="700">Corporate Buyers</text>
                         <text x="760" y="213" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">PPAs, 24/7 CFE, hourly</text>
                         <text x="760" y="226" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">matching, EAC demand</text>
                     </g>
@@ -705,7 +328,7 @@ body {
                     <!-- NODE 4: Policy (bottom left) -->
                     <g class="mm-node">
                         <rect x="100" y="445" width="200" height="70" rx="12" fill="#F5F3FF" stroke="#8B5CF6" stroke-width="1.5"/>
-                        <text x="200" y="474" text-anchor="middle" fill="#6D28D9" font-family="'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif" font-size="12.5" font-weight="700">Policy &amp; Regulation</text>
+                        <text x="200" y="474" text-anchor="middle" fill="#6D28D9" font-family="'Space Grotesk','Barlow Semi Condensed',sans-serif" font-size="12.5" font-weight="700">Policy &amp; Regulation</text>
                         <text x="200" y="493" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">RPS, ITC/PTC, 45Q,</text>
                         <text x="200" y="506" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">capacity markets, mandates</text>
                     </g>
@@ -713,7 +336,7 @@ body {
                     <!-- NODE 5: Accounting (bottom right) -->
                     <g class="mm-node">
                         <rect x="660" y="445" width="200" height="70" rx="12" fill="#FEF2F2" stroke="#EF4444" stroke-width="1.5"/>
-                        <text x="760" y="474" text-anchor="middle" fill="#991B1B" font-family="'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif" font-size="12.5" font-weight="700">Accounting Rules</text>
+                        <text x="760" y="474" text-anchor="middle" fill="#991B1B" font-family="'Space Grotesk','Barlow Semi Condensed',sans-serif" font-size="12.5" font-weight="700">Accounting Rules</text>
                         <text x="760" y="493" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">GHG Protocol Scope 2,</text>
                         <text x="760" y="506" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">SBTi, EPRI SMARTargets</text>
                     </g>
@@ -721,7 +344,7 @@ body {
                     <!-- NODE 6: Global Goals (bottom center) -->
                     <g class="mm-node">
                         <rect x="380" y="545" width="200" height="70" rx="12" fill="#F0FDFA" stroke="#14B8A6" stroke-width="1.5"/>
-                        <text x="480" y="574" text-anchor="middle" fill="#0F766E" font-family="'Franklin Gothic Demi','Barlow Semi Condensed',sans-serif" font-size="12.5" font-weight="700">Global Goals</text>
+                        <text x="480" y="574" text-anchor="middle" fill="#0F766E" font-family="'Space Grotesk','Barlow Semi Condensed',sans-serif" font-size="12.5" font-weight="700">Global Goals</text>
                         <text x="480" y="593" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">Paris, IEA NZE, US targets,</text>
                         <text x="480" y="606" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">EU climate law, NDCs</text>
                     </g>
@@ -757,6 +380,8 @@ body {
 </section>
 
 <hr class="section-divider">
+
+<div class="gradient-transition"></div>
 
 <!-- SECTION 4: CATALYTIC vs PERVERSE -->
 <section class="section-dark">
@@ -832,6 +457,8 @@ body {
 </div>
 </section>
 
+<div class="gradient-transition"></div>
+
 <hr class="section-divider">
 
 <!-- SECTION 5: THE GAPS -->
@@ -890,6 +517,8 @@ body {
 </section>
 
 <hr class="section-divider">
+
+<div class="gradient-transition"></div>
 
 <!-- SECTION 6: NOVEL INSIGHTS -->
 <section class="section-dark">
@@ -965,6 +594,8 @@ body {
 </div>
 </div>
 </section>
+
+<div class="gradient-transition"></div>
 
 <hr class="section-divider">
 

@@ -7,53 +7,29 @@
 <title>The 8,760 Problem — Cost to Replace Existing Clean Generation</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/article.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script src="js/chart-colors.js"></script>
 <script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
 <style>
-/* Page-specific background */
+/* Page-specific overrides only — shared styles in article.css */
 body { background: var(--bg-page); }
 
-/* Footer, footer-links, footer-note, bottom-banner use shared.css */
-
-/* ========== ENERGY SPECTRUM BAR ========== */
-.energy-spectrum-bar {
-    height: 3px;
-    background: linear-gradient(90deg, var(--navy) 0%, var(--hydro) 15%, var(--wind) 35%, var(--solar) 55%, var(--red) 80%, var(--red-dark) 100%);
-    border-radius: 2px;
-    margin: 0 auto;
-    max-width: var(--max-content);
-    opacity: 0.5;
-}
-
-/* ========== HERO OVERVIEW SECTION (dark navy intro) ========== */
+/* Dark navy hero override (this page uses dark bg, not light) */
 .hero-overview {
     background: linear-gradient(180deg, var(--navy-dark) 0%, var(--navy) 60%, var(--navy-mid) 100%);
-    position: relative;
-    overflow: hidden;
-    padding: 48px var(--pad-page);
 }
 .hero-overview::before {
-    content: '';
-    position: absolute;
-    inset: 0;
     background: radial-gradient(ellipse at 30% 20%, rgba(14,165,233,0.06) 0%, transparent 60%),
                 radial-gradient(ellipse at 70% 80%, rgba(245,158,11,0.04) 0%, transparent 60%);
-    pointer-events: none;
 }
-.hero-overview-inner {
-    position: relative;
-    max-width: var(--max-content);
-    margin: 0 auto;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 48px;
-    align-items: center;
-}
+
+/* Hero text block (dark-bg animated text) */
 .hero-text-block {
     z-index: 2;
     opacity: 0;
@@ -61,10 +37,7 @@ body { background: var(--bg-page); }
     transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
                 transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.hero-text-block.visible {
-    opacity: 1;
-    transform: translateY(0);
-}
+.hero-text-block.visible { opacity: 1; transform: translateY(0); }
 .hero-text-block h2 {
     font-family: var(--font-heading);
     font-size: 2rem;
@@ -86,9 +59,8 @@ body { background: var(--bg-page); }
     line-height: 1.75;
     margin-bottom: 20px;
 }
-.hero-chart-block {
-    z-index: 1;
-}
+
+/* Key finding badge (cyan pill on dark bg) */
 .key-finding-badge {
     display: inline-block;
     padding: 4px 12px;
@@ -104,7 +76,7 @@ body { background: var(--bg-page); }
     margin-bottom: 14px;
 }
 
-/* ========== HERO CALLOUT STAT ========== */
+/* Hero callout stat (dark-bg stat box) */
 .hero-callout {
     margin-top: 24px;
     padding: 20px 24px;
@@ -128,24 +100,15 @@ body { background: var(--bg-page); }
     display: block;
 }
 
-/* ========== CHART PANELS (overrides for CTR page) ========== */
-/* Base .chart-panel from shared.css; only page-specific overrides here */
-.chart-panel {
-    border-color: rgba(74,144,217,0.12);
-}
+/* Chart panel overrides */
+.chart-panel { border-color: rgba(74,144,217,0.12); }
 .chart-panel-overview,
 .chart-panel-region {
     background: rgba(255,255,255,0.98);
     border-color: rgba(74,144,217,0.12);
 }
-.chart-panel-overview {
-    min-height: 400px;
-}
-.chart-panel-overview .chart-container {
-    position: relative;
-    width: 100%;
-    min-height: 350px;
-}
+.chart-panel-overview { min-height: 400px; }
+.chart-panel-overview .chart-container { position: relative; width: 100%; min-height: 350px; }
 .hero-chart-title {
     font-family: var(--font-heading);
     font-size: 0.85rem;
@@ -163,7 +126,7 @@ body { background: var(--bg-page); }
     margin-top: 6px;
 }
 
-/* ========== REGION SECTIONS ========== */
+/* Region sections (alternating chart+narrative rows) */
 .region-section {
     background: var(--bg-page);
     position: relative;
@@ -188,11 +151,7 @@ body { background: var(--bg-page); }
     border-color: rgba(74,144,217,0.10);
     min-height: 400px;
 }
-.chart-panel-region .chart-container {
-    position: relative;
-    width: 100%;
-    min-height: 350px;
-}
+.chart-panel-region .chart-container { position: relative; width: 100%; min-height: 350px; }
 .region-narrative-col {
     padding: 48px 48px 48px 40px;
     display: flex;
@@ -211,10 +170,7 @@ body { background: var(--bg-page); }
     transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
                 transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.region-step-card.visible {
-    opacity: 1;
-    transform: translateY(0);
-}
+.region-step-card.visible { opacity: 1; transform: translateY(0); }
 .region-step-card h3 {
     font-family: var(--font-heading);
     font-size: 1.5rem;
@@ -239,31 +195,11 @@ body { background: var(--bg-page); }
     font-size: 0.88rem;
     font-weight: 700;
 }
-.step-stat-green {
-    background: rgba(34,197,94,0.08);
-    border: 1px solid rgba(34,197,94,0.2);
-    color: #16a34a;
-}
-.step-stat-amber {
-    background: rgba(245,158,11,0.08);
-    border: 1px solid rgba(245,158,11,0.18);
-    color: #d97706;
-}
-.step-stat-red {
-    background: rgba(239,68,68,0.06);
-    border: 1px solid rgba(239,68,68,0.2);
-    color: #dc2626;
-}
-.step-stat-blue {
-    background: rgba(14,165,233,0.08);
-    border: 1px solid rgba(14,165,233,0.2);
-    color: #0284c7;
-}
-.step-stat-purple {
-    background: rgba(156,39,176,0.08);
-    border: 1px solid rgba(156,39,176,0.25);
-    color: #9C27B0;
-}
+.step-stat-green { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); color: #16a34a; }
+.step-stat-amber { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.18); color: #d97706; }
+.step-stat-red { background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2); color: #dc2626; }
+.step-stat-blue { background: rgba(14,165,233,0.08); border: 1px solid rgba(14,165,233,0.2); color: #0284c7; }
+.step-stat-purple { background: rgba(156,39,176,0.08); border: 1px solid rgba(156,39,176,0.25); color: #9C27B0; }
 .region-tag {
     display: inline-block;
     padding: 3px 10px;
@@ -276,7 +212,7 @@ body { background: var(--bg-page); }
     text-transform: uppercase;
 }
 
-/* ========== SYNTHESIS SECTION ========== */
+/* Synthesis overrides (larger text on this page) */
 .synthesis-section-title {
     font-family: var(--font-heading);
     font-size: 1.8rem;
@@ -293,39 +229,8 @@ body { background: var(--bg-page); }
     grid-template-columns: 1fr 1fr;
     gap: 32px;
 }
-.synthesis-card {
-    background: rgba(255,255,255,0.07);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255,255,255,0.10);
-    border-radius: 16px;
-    padding: 32px;
-    opacity: 0;
-    transform: translateY(30px);
-    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
-                transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.synthesis-card.visible {
-    opacity: 1;
-    transform: translateY(0);
-}
-.synthesis-card h3 {
-    font-family: var(--font-heading);
-    font-size: 1.3rem;
-    font-weight: 800;
-    color: rgba(255,255,255,0.95);
-    margin-bottom: 12px;
-    line-height: 1.25;
-}
-.synthesis-card p {
-    font-size: 0.92rem;
-    color: rgba(255,255,255,0.72);
-    line-height: 1.75;
-    margin-bottom: 0;
-}
-.synthesis-card strong {
-    color: #ffffff;
-}
+.synthesis-card h3 { font-size: 1.3rem; }
+.synthesis-card p { font-size: 0.92rem; }
 .synthesis-card .step-stat {
     display: inline-block;
     margin-top: 14px;
@@ -336,208 +241,62 @@ body { background: var(--bg-page); }
     font-weight: 700;
 }
 
-/* ========== FIGURE LEGENDS ========== */
-.chart-legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px 16px;
-    justify-content: center;
-    padding: 8px 12px 2px;
-    margin-top: 4px;
-}
-.chart-legend-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-family: var(--font-data);
-    font-size: 0.7rem;
-    color: rgba(15,23,42,0.55);
-    white-space: nowrap;
-}
-.chart-legend-swatch {
-    display: inline-block;
-    flex-shrink: 0;
-}
-.swatch-line {
-    width: 18px;
-    height: 3px;
-    border-radius: 1.5px;
-}
-.swatch-dashed {
-    width: 18px;
-    height: 0;
-    border-top: 2px dashed;
-}
-.swatch-band {
-    width: 18px;
-    height: 10px;
-    border-radius: 2px;
-    border: 1px solid rgba(0,0,0,0.1);
-}
+/* Chart legend overrides (centered, data font) */
+.chart-legend { justify-content: center; padding: 8px 12px 2px; margin-top: 4px; }
+.chart-legend-item { font-family: var(--font-data); color: rgba(15,23,42,0.55); gap: 6px; }
 
-/* ========== RESPONSIVE — Prevent horizontal overflow ========== */
-html, body {
-    overflow-x: hidden;
-    max-width: 100vw;
-}
-
-/* ========== RESPONSIVE — Tablet (900px) ========== */
+/* Responsive */
 @media (max-width: 900px) {
-    .hero-overview-inner {
-        grid-template-columns: 1fr;
-        gap: 24px;
-    }
-    .hero-overview {
-        padding: 36px 16px;
-    }
-    .region-section-inner {
-        grid-template-columns: 1fr;
-        min-height: auto;
-    }
-    .region-chart-col {
-        position: relative;
-        height: auto;
-        padding: 24px 16px 16px;
-    }
-    .region-narrative-col {
-        padding: 16px 16px 32px;
-    }
-    .chart-panel {
-        padding: 16px 14px;
-        border-radius: 12px;
-    }
-    .chart-panel-overview {
-        min-height: 350px;
-    }
-    .chart-panel-overview .chart-container {
-        min-height: 300px;
-    }
-    .chart-panel-region {
-        min-height: 350px;
-    }
-    .chart-panel-region .chart-container {
-        min-height: 300px;
-    }
-    .synthesis-inner {
-        grid-template-columns: 1fr;
-        gap: 20px;
-    }
-    .synthesis-section {
-        padding: 40px 16px;
-    }
-    .region-step-card {
-        padding: 24px 20px;
-    }
+    .region-section-inner { grid-template-columns: 1fr; min-height: auto; }
+    .region-chart-col { position: relative; height: auto; padding: 24px 16px 16px; }
+    .region-narrative-col { padding: 16px 16px 32px; }
+    .chart-panel { padding: 16px 14px; border-radius: 12px; }
+    .chart-panel-overview { min-height: 350px; }
+    .chart-panel-overview .chart-container { min-height: 300px; }
+    .chart-panel-region { min-height: 350px; }
+    .chart-panel-region .chart-container { min-height: 300px; }
+    .synthesis-inner { grid-template-columns: 1fr; gap: 20px; }
+    .synthesis-section { padding: 40px 16px; }
+    .region-step-card { padding: 24px 20px; }
     .region-step-card h3 { font-size: 1.25rem; }
-    .chart-legend {
-        gap: 4px 10px;
-        padding: 6px 8px 2px;
-    }
-    .chart-legend-item { font-size: 0.62rem; }
-    .swatch-line, .swatch-dashed { width: 14px; }
-    .swatch-band { width: 14px; height: 8px; }
+    .chart-legend { padding: 6px 8px 2px; }
 }
-
-/* ========== RESPONSIVE — Small tablet / large phone (600px) ========== */
 @media (max-width: 600px) {
-    .hero-overview {
-        padding: 28px 12px;
-    }
-    .chart-panel {
-        padding: 12px 10px;
-        border-radius: 10px;
-    }
-    .chart-panel-overview {
-        min-height: 320px;
-    }
-    .chart-panel-overview .chart-container {
-        min-height: 270px;
-    }
-    .chart-panel-region {
-        min-height: 320px;
-    }
-    .chart-panel-region .chart-container {
-        min-height: 270px;
-    }
-    .region-chart-col {
-        padding: 16px 10px 10px;
-    }
-    .region-narrative-col {
-        padding: 10px 12px 24px;
-    }
-    .region-step-card {
-        padding: 20px 16px;
-    }
+    .chart-panel { padding: 12px 10px; border-radius: 10px; }
+    .chart-panel-overview { min-height: 320px; }
+    .chart-panel-overview .chart-container { min-height: 270px; }
+    .chart-panel-region { min-height: 320px; }
+    .chart-panel-region .chart-container { min-height: 270px; }
+    .region-chart-col { padding: 16px 10px 10px; }
+    .region-narrative-col { padding: 10px 12px 24px; }
+    .region-step-card { padding: 20px 16px; }
     .region-step-card h3 { font-size: 1.15rem; }
     .region-step-card p { font-size: 0.85rem; }
-    .synthesis-card {
-        padding: 20px 16px;
-    }
-    .synthesis-card h3 { font-size: 1.1rem; }
-    .synthesis-card p { font-size: 0.85rem; }
     .hero-text-block h2 { font-size: 1.5rem; }
     .hero-text-block p { font-size: 0.85rem; }
     .hero-callout .counter-value { font-size: 2rem; }
-    .chart-legend { gap: 3px 8px; padding: 4px 4px 0; }
-    .chart-legend-item { font-size: 0.58rem; gap: 4px; }
-    .swatch-line, .swatch-dashed { width: 12px; }
-    .swatch-band { width: 12px; height: 7px; }
+    .chart-legend { padding: 4px 4px 0; }
 }
-
-/* ========== RESPONSIVE — Phone (480px) ========== */
 @media (max-width: 480px) {
-    .hero-overview {
-        padding: 20px 8px;
-    }
-    .chart-panel {
-        padding: 10px 8px;
-        border-radius: 8px;
-    }
-    .chart-panel-overview {
-        min-height: 300px;
-    }
-    .chart-panel-overview .chart-container {
-        min-height: 250px;
-    }
-    .chart-panel-region {
-        min-height: 300px;
-    }
-    .chart-panel-region .chart-container {
-        min-height: 250px;
-    }
-    .region-chart-col {
-        padding: 12px 8px 8px;
-    }
-    .region-narrative-col {
-        padding: 8px 10px 20px;
-    }
-    .region-step-card {
-        padding: 16px 12px;
-        border-radius: 12px;
-    }
+    .chart-panel { padding: 10px 8px; border-radius: 8px; }
+    .chart-panel-overview { min-height: 300px; }
+    .chart-panel-overview .chart-container { min-height: 250px; }
+    .chart-panel-region { min-height: 300px; }
+    .chart-panel-region .chart-container { min-height: 250px; }
+    .region-chart-col { padding: 12px 8px 8px; }
+    .region-narrative-col { padding: 8px 10px 20px; }
+    .region-step-card { padding: 16px 12px; border-radius: 12px; }
     .region-step-card h3 { font-size: 1.05rem; }
     .region-step-card p { font-size: 0.82rem; line-height: 1.6; }
     .region-step-card .step-stat { font-size: 0.78rem; padding: 6px 12px; }
-    .synthesis-card {
-        padding: 16px 12px;
-        border-radius: 12px;
-    }
-    .synthesis-card h3 { font-size: 1rem; }
-    .synthesis-card p { font-size: 0.82rem; line-height: 1.6; }
     .synthesis-card .step-stat { font-size: 0.78rem; padding: 6px 12px; }
     .hero-text-block h2 { font-size: 1.3rem; }
     .hero-text-block p { font-size: 0.8rem; line-height: 1.6; }
     .hero-callout .counter-value { font-size: 1.7rem; }
     .hero-callout .counter-label { font-size: 0.75rem; }
-    .chart-legend { gap: 3px 6px; padding: 4px 2px 0; }
-    .chart-legend-item { font-size: 0.55rem; gap: 3px; }
-    .swatch-line, .swatch-dashed { width: 10px; }
-    .swatch-band { width: 10px; height: 6px; }
+    .chart-legend { padding: 4px 2px 0; }
 }
-
-/* ========== RESPONSIVE — Tiny phone (320px) ========== */
 @media (max-width: 320px) {
-    .hero-overview { padding: 16px 6px; }
     .chart-panel { padding: 8px 6px; }
     .chart-panel-overview { min-height: 280px; }
     .chart-panel-overview .chart-container { min-height: 230px; }
@@ -545,8 +304,6 @@ html, body {
     .chart-panel-region .chart-container { min-height: 230px; }
     .region-step-card { padding: 14px 10px; }
     .region-step-card h3 { font-size: 0.95rem; }
-    .synthesis-card { padding: 14px 10px; }
-    .synthesis-card h3 { font-size: 0.95rem; }
     .hero-text-block h2 { font-size: 1.15rem; }
 }
 </style>
@@ -568,7 +325,7 @@ html, body {
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 <!-- SECTION 1: HERO OVERVIEW — Conclusion first                          -->
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
-<section class="hero-overview">
+<section class="hero-overview section-light">
     <div class="hero-overview-inner">
         <div class="hero-text-block">
             <span class="key-finding-badge">Key Finding</span>
@@ -604,7 +361,7 @@ html, body {
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 
 <!-- REGION: PJM -->
-<section class="region-section" data-region="PJM">
+<section class="region-section section-light" data-region="PJM">
     <div class="region-section-inner">
         <div class="region-chart-col">
             <div class="chart-panel chart-panel-region" style="width:100%;">
@@ -632,7 +389,7 @@ html, body {
 </section>
 
 <!-- REGION: ERCOT -->
-<section class="region-section" data-region="ERCOT">
+<section class="region-section section-light" data-region="ERCOT">
     <div class="region-section-inner">
         <div class="region-chart-col">
             <div class="chart-panel chart-panel-region" style="width:100%;">
@@ -662,7 +419,7 @@ html, body {
 <div class="energy-spectrum-bar"></div>
 
 <!-- REGION: CAISO -->
-<section class="region-section" data-region="CAISO">
+<section class="region-section section-light" data-region="CAISO">
     <div class="region-section-inner">
         <div class="region-chart-col">
             <div class="chart-panel chart-panel-region" style="width:100%;">
@@ -690,7 +447,7 @@ html, body {
 </section>
 
 <!-- REGION: NYISO -->
-<section class="region-section" data-region="NYISO">
+<section class="region-section section-light" data-region="NYISO">
     <div class="region-section-inner">
         <div class="region-chart-col">
             <div class="chart-panel chart-panel-region" style="width:100%;">
@@ -720,7 +477,7 @@ html, body {
 <div class="energy-spectrum-bar"></div>
 
 <!-- REGION: NEISO -->
-<section class="region-section" data-region="NEISO">
+<section class="region-section section-light" data-region="NEISO">
     <div class="region-section-inner">
         <div class="region-chart-col">
             <div class="chart-panel chart-panel-region" style="width:100%;">
@@ -752,6 +509,7 @@ html, body {
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 <!-- SECTION 3: WHAT DRIVES THE PREMIUM (synthesis)                       -->
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="gradient-transition"></div>
 <section class="section-dark">
 <div class="section-dark-inner">
     <h2 class="synthesis-section-title">What Drives the Replacement Premium?</h2>
@@ -769,6 +527,7 @@ html, body {
     </div>
 </div>
 </section>
+<div class="gradient-transition"></div>
 
 <!-- SOURCES -->
 <div style="max-width:1320px;margin:0 auto;padding:24px 24px 24px;">
@@ -783,6 +542,31 @@ html, body {
             <li>EIA Wholesale Electricity Market Data &mdash; regional hub prices for existing resource valuation.</li>
         </ol>
     </details>
+</div>
+
+<!-- ============ RELATED ANALYSES ============ -->
+<div class="related-analyses">
+    <div class="related-analyses-title">Related Analyses</div>
+    <div class="related-analyses-grid">
+        <a href="clean_firm_case.html" class="related-card">
+            <div class="related-card-tag">Economics</div>
+            <div class="related-card-title">The Clean Firm Case</div>
+            <div class="related-card-desc">The technical and economic case for always-on clean power as the foundation of decarbonization.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="new_build_analysis.html" class="related-card">
+            <div class="related-card-tag">Economics</div>
+            <div class="related-card-title">New Build Analysis</div>
+            <div class="related-card-desc">Greenfield cost analysis: when does building new beat maintaining old?</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="abatement_dashboard.html" class="related-card">
+            <div class="related-card-tag">Carbon</div>
+            <div class="related-card-title">CO&#8322; Abatement</div>
+            <div class="related-card-desc">Marginal abatement costs &mdash; where does each dollar deliver the most decarbonization?</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+    </div>
 </div>
 
 <!-- FOOTER -->
