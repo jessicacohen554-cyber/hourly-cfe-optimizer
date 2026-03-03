@@ -98,6 +98,11 @@ FULL_LCOE_TABLES = {
         'Medium': {'CAISO': 86, 'ERCOT': 71, 'PJM': 79, 'NYISO': 99, 'NEISO': 96, 'MISO': 74, 'SPP': 68},
         'High':   {'CAISO': 115, 'ERCOT': 92, 'PJM': 102, 'NYISO': 128, 'NEISO': 122, 'MISO': 96, 'SPP': 88},
     },
+    'offshore_wind': {
+        'Low':    {'CAISO': 110, 'ERCOT': 0, 'PJM': 65, 'NYISO': 72, 'NEISO': 68, 'MISO': 0, 'SPP': 0},
+        'Medium': {'CAISO': 150, 'ERCOT': 0, 'PJM': 85, 'NYISO': 95, 'NEISO': 90, 'MISO': 0, 'SPP': 0},
+        'High':   {'CAISO': 200, 'ERCOT': 0, 'PJM': 112, 'NYISO': 125, 'NEISO': 118, 'MISO': 0, 'SPP': 0},
+    },
     # ---- Storage: annualized capacity cost ($/MWh-cap) ----
     # Same format as step3 LCOE_TABLES. NOT LCOS. Annualized fixed costs of storage
     # capacity, normalized to demand. TX=0 for storage (baked into regional CAPEX).
@@ -152,6 +157,12 @@ FULL_TRANSMISSION_TABLES = {
         'Medium': {'CAISO': 2, 'ERCOT': 2, 'PJM': 3, 'NYISO': 4, 'NEISO': 3, 'MISO': 2, 'SPP': 2},
         'High': {'CAISO': 4, 'ERCOT': 3, 'PJM': 5, 'NYISO': 7, 'NEISO': 6, 'MISO': 4, 'SPP': 3},
     },
+    'offshore_wind': {
+        'None': {'CAISO': 0, 'ERCOT': 0, 'PJM': 0, 'NYISO': 0, 'NEISO': 0, 'MISO': 0, 'SPP': 0},
+        'Low':  {'CAISO': 8, 'ERCOT': 0, 'PJM': 5, 'NYISO': 6, 'NEISO': 5, 'MISO': 0, 'SPP': 0},
+        'Medium': {'CAISO': 15, 'ERCOT': 0, 'PJM': 10, 'NYISO': 12, 'NEISO': 10, 'MISO': 0, 'SPP': 0},
+        'High': {'CAISO': 25, 'ERCOT': 0, 'PJM': 18, 'NYISO': 20, 'NEISO': 18, 'MISO': 0, 'SPP': 0},
+    },
     # Storage TX = 0: regional variation already baked into annualized capacity costs
     'battery':  {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
     'battery8': {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
@@ -166,16 +177,16 @@ FULL_TRANSMISSION_TABLES = {
 }
 
 GRID_MIX_SHARES = {
-    'CAISO': {'clean_firm': 7.9, 'solar': 22.3, 'wind': 8.8, 'ccs_ccgt': 0, 'hydro': 9.5},
-    'ERCOT': {'clean_firm': 8.6, 'solar': 13.8, 'wind': 23.6, 'ccs_ccgt': 0, 'hydro': 0.1},
-    'PJM':   {'clean_firm': 32.1, 'solar': 2.9, 'wind': 3.8, 'ccs_ccgt': 0, 'hydro': 1.8},
-    'NYISO': {'clean_firm': 18.4, 'solar': 0.0, 'wind': 4.7, 'ccs_ccgt': 0, 'hydro': 15.9},
-    'NEISO': {'clean_firm': 23.8, 'solar': 1.4, 'wind': 3.9, 'ccs_ccgt': 0, 'hydro': 4.4},
-    'MISO':  {'clean_firm': 13.1, 'solar': 2.1, 'wind': 14.5, 'ccs_ccgt': 0, 'hydro': 1.6},
-    'SPP':   {'clean_firm': 5.2, 'solar': 0.4, 'wind': 37.1, 'ccs_ccgt': 0, 'hydro': 4.3},
+    'CAISO': {'clean_firm': 7.9, 'solar': 22.3, 'wind': 8.8, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 9.5},
+    'ERCOT': {'clean_firm': 8.6, 'solar': 13.8, 'wind': 23.6, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 0.1},
+    'PJM':   {'clean_firm': 32.1, 'solar': 2.9, 'wind': 3.8, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 1.8},
+    'NYISO': {'clean_firm': 18.4, 'solar': 0.0, 'wind': 4.7, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 15.9},
+    'NEISO': {'clean_firm': 23.8, 'solar': 1.4, 'wind': 3.9, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 4.4},
+    'MISO':  {'clean_firm': 13.1, 'solar': 2.1, 'wind': 14.5, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 1.6},
+    'SPP':   {'clean_firm': 5.2, 'solar': 0.4, 'wind': 37.1, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 4.3},
 }
 
-RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
+RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']
 
 # ── Pre-computed flat lookup dicts for O(1) access in hot loops ──
 # Avoids repeated 3-level nested dict traversals like
@@ -245,7 +256,7 @@ EXISTING_GAS_FOM_KW_YR = {
 }
 
 PEAK_CAPACITY_CREDITS = {
-    'clean_firm': 1.0, 'solar': 0.30, 'wind': 0.10, 'ccs_ccgt': 0.90,
+    'clean_firm': 1.0, 'solar': 0.30, 'wind': 0.10, 'offshore_wind': 0.25, 'ccs_ccgt': 0.90,
     'hydro': 0.50, 'battery': 0.95, 'battery8': 0.95, 'ldes': 0.90,
     'h2': 0.85,  # H2 turbine: dispatchable but slower ramp than gas/battery
 }
@@ -276,7 +287,7 @@ def load_from_parquets(input_dir, isos):
 
     Parquet schema (flat):
         iso, threshold, scenario, annual_demand_mwh,
-        mix_clean_firm, mix_solar, mix_wind, mix_ccs_ccgt, mix_hydro,
+        mix_clean_firm, mix_solar, mix_wind, mix_offshore_wind, mix_ccs_ccgt, mix_hydro,
         hourly_match_score,
         battery_dispatch_pct, battery8_dispatch_pct, ldes_dispatch_pct, h2_dispatch_pct,
         cost_total_cost, cost_effective_cost, cost_incremental, cost_wholesale,
@@ -288,7 +299,7 @@ def load_from_parquets(input_dir, isos):
     Nested dict output:
         data['results'][iso]['annual_demand_mwh'] = float
         data['results'][iso]['thresholds'][t_str]['scenarios'][scenario_key] = {
-            'resource_mix': {clean_firm, solar, wind, ccs_ccgt, hydro},
+            'resource_mix': {clean_firm, solar, wind, offshore_wind, ccs_ccgt, hydro},
             'costs': {total_cost, effective_cost, incremental, wholesale},
             'tranche_costs': {cf_existing_twh, uprate_twh, ...},
             'hourly_match_score',
@@ -332,7 +343,7 @@ def load_from_parquets(input_dir, isos):
         scenario_arr = df['scenario'].values
 
         mix_arrays = {}
-        for rtype in ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']:
+        for rtype in ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']:
             col = f'mix_{rtype}'
             mix_arrays[rtype] = df[col].values if col in col_names else None
 
@@ -380,7 +391,7 @@ def load_from_parquets(input_dir, isos):
             sub_mix = {rtype: (mix_arrays[rtype][row_indices].astype(int)
                                if mix_arrays[rtype] is not None
                                else np.zeros(len(row_indices), dtype=int))
-                       for rtype in ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']}
+                       for rtype in ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']}
 
             # Build cost arrays for all rows at once
             sub_cost = {ckey: (cost_arrays[ckey][row_indices].astype(float)
@@ -496,7 +507,7 @@ def save_to_parquets(data, output_dir, isos):
 
                 # Resource mix
                 mix = sc.get('resource_mix', {})
-                for rtype in ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']:
+                for rtype in ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']:
                     row[f'mix_{rtype}'] = mix.get(rtype, 0)
 
                 # Physics
@@ -1193,7 +1204,7 @@ def process_dg_corrections(dg_rows, run_isos):
 
         # Build resource_mix dict from flat columns
         resource_mix = {}
-        for rtype in ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']:
+        for rtype in ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']:
             resource_mix[rtype] = row.get(f'mix_{rtype}', 0) or 0
 
         battery_pct = row.get('battery_dispatch_pct', 0) or 0
