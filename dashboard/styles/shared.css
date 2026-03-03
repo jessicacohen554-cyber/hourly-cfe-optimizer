@@ -63,14 +63,15 @@ body {
     /* ---- Resource colors (CANONICAL — use these everywhere) ---- */
     --solar: #F59E0B;
     --wind: #22C55E;
+    --offshore-wind: #009688;
     --hydro: #0EA5E9;
-    --nuclear: #7C3AED;
-    --ccs: #0891B2;
-    --clean-firm: #1E3A5F;
+    --nuclear: #6366F1;
+    --ccs: #64748B;
+    --clean-firm: #6366F1;
     --battery: #8B5CF6;
     --ldes: #E91E63;
     --green-h2: #10B981;
-    --geothermal: #10B981;
+    --geothermal: #B45309;
     --storage: #EF4444;
     --gap: #D1D5DB;
     --fossil-gas: #6B7280;
@@ -80,23 +81,25 @@ body {
     /* Transparent variants (55% opacity for chart fills) */
     --solar-t: rgba(245, 158, 11, 0.55);
     --wind-t: rgba(34, 197, 94, 0.55);
+    --offshore-wind-t: rgba(0, 150, 136, 0.55);
     --hydro-t: rgba(14, 165, 233, 0.55);
-    --nuclear-t: rgba(124, 58, 237, 0.55);
-    --ccs-t: rgba(8, 145, 178, 0.55);
-    --clean-firm-t: rgba(30, 58, 95, 0.55);
+    --nuclear-t: rgba(99, 102, 241, 0.55);
+    --ccs-t: rgba(100, 116, 139, 0.55);
+    --clean-firm-t: rgba(99, 102, 241, 0.55);
     --battery-t: rgba(139, 92, 246, 0.55);
     --ldes-t: rgba(233, 30, 99, 0.55);
     --green-h2-t: rgba(16, 185, 129, 0.55);
-    --geothermal-t: rgba(16, 185, 129, 0.55);
+    --geothermal-t: rgba(180, 83, 9, 0.55);
     --storage-t: rgba(239, 68, 68, 0.55);
     --gap-t: rgba(209, 213, 219, 0.55);
 
     /* Light tint variants (for backgrounds, 8-12% opacity) */
     --solar-bg: rgba(245, 158, 11, 0.08);
     --wind-bg: rgba(34, 197, 94, 0.08);
+    --offshore-wind-bg: rgba(0, 150, 136, 0.08);
     --hydro-bg: rgba(14, 165, 233, 0.08);
-    --nuclear-bg: rgba(124, 58, 237, 0.08);
-    --ccs-bg: rgba(8, 145, 178, 0.08);
+    --nuclear-bg: rgba(99, 102, 241, 0.08);
+    --ccs-bg: rgba(100, 116, 139, 0.08);
     --battery-bg: rgba(139, 92, 246, 0.08);
     --ldes-bg: rgba(233, 30, 99, 0.08);
     --storage-bg: rgba(239, 68, 68, 0.08);
