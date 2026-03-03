@@ -1,7 +1,7 @@
 # Advanced Sensitivity Model — Complete Specification
 
 > **Authoritative reference for all design decisions.** If a future session needs context, read this file first.
-> Last updated: 2026-03-02.
+> Last updated: 2026-03-03.
 
 ## Current Status (Mar 3, 2026)
 
@@ -20,14 +20,54 @@
 - **CSS Architecture**: 5 files (shared.css + 4 page-type CSS files)
 - **Kids pages**: Excluded from scope
 
-**Status:**
+**Completed:**
 - [x] Design preview page created with 4 variants (dashboard/design_preview.html)
 - [x] Observatory variant selected with light/dark contrast enhancement
-- [ ] Enhanced Observatory variant with light/dark rhythm system
-- [ ] Update shared.css with Observatory design tokens
-- [ ] Create page-type CSS files (scrollytell, dashboard-ui, article, reference)
-- [ ] Implement mega-menu navigation
-- [ ] Apply template to all 28 pages (tiered)
+- [x] Enhanced Observatory variant with light/dark rhythm system in shared.css
+- [x] Updated shared.css with Observatory font stacks + rhythm components
+- [x] Google Fonts links updated to Observatory stack across all 28 non-kids pages
+- [x] Created 4 page-type CSS files: scrollytell.css, dashboard-ui.css, article.css, reference.css
+- [x] Linked page-type CSS files to all 28 pages by type category
+- [x] Mega-menu navigation implemented (3-column Explore + Research dropdown)
+- [x] Applied light/dark rhythm to index.html (5 gradient transitions, section-light on Cost Curve + Nuclear)
+- [x] Applied light/dark rhythm to abatement_dashboard.html (section-light on Deep Dive, transitions)
+
+**In Progress:**
+- [ ] Apply light/dark rhythm to remaining article, dashboard-ui, and reference pages
+- [ ] Extract inline CSS from Tier 1 pages into page-type CSS files
+
+**Next Steps:**
+- [ ] Create scroll-observer.js (centralize IntersectionObserver for fade-ins)
+- [ ] Begin inline CSS extraction from highest-impact pages (dashboard.html: 2,753 lines)
+- [ ] Archive procurement_comparison.html (Legacy)
+- [ ] Merge pipeline_map.html into pipeline.html
+- [ ] Add cross-linking "Related Analyses" components to article pages
+
+**CSS Architecture:**
+```
+dashboard/styles/
+├── shared.css          — Core design tokens, nav, footer, components (~1,460 lines)
+├── scrollytell.css     — Scroll-reveal, glass cards, scrolly layout, chart legends (~290 lines)
+├── dashboard-ui.css    — Controls, metric tiles, chart grids, cost tables (~530 lines)
+├── article.css         — Narrative cards, scroll sections, synthesis, stat badges (~350 lines)
+└── reference.css       — Long-form typography, TOC, formulas, citations, print (~420 lines)
+```
+
+**Navigation Structure (Mega-Menu):**
+```
+Home | The Grid | Explore ▾ | Research ▾
+
+EXPLORE (3-column mega-menu):
+Economics           │ Markets & Grid       │ Procurement & Strategy
+CO₂ Abatement       │ Wholesale Prices     │ Carbon Accounting
+Clean Firm Case     │ Fossil Fuel Analysis │ Scenario Comparison
+Cost to Replace     │ Storage Analysis     │ Procurement Strategies
+New Build Analysis  │ Fleet Survival       │ Failure Modes
+Wright's Law        │                      │
+
+RESEARCH (dropdown):
+Research Paper | Methodology | Policy Context | About the Model | About | Reference
+```
 
 ---
 
