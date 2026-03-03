@@ -968,7 +968,7 @@ for iso_idx, iso in enumerate(ISOS):
     lines.append('        },')
 
     # surplus
-    surplus_resources = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
+    surplus_resources = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']
     lines.append('        surplus: {')
     for res_idx, res in enumerate(surplus_resources):
         res_comma = ',' if res_idx < len(surplus_resources) - 1 else ''
@@ -1503,7 +1503,7 @@ if optimal_targets:
         nr = iso_data.get('no_regrets', {})
         if isinstance(nr, dict) and 'resources' in nr:
             nr_summary = {}
-            for res in ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes', 'h2']:
+            for res in ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes', 'h2']:
                 stats = nr.get('resources', {}).get(res, {})
                 if stats.get('max_pct', 0) == 0:
                     continue
