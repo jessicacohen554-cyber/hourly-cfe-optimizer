@@ -162,17 +162,28 @@ def get_near_miss_width(threshold):
 # ══════════════════════════════════════════════════════════════════════════════
 
 def load_near_miss(iso):
-    """Load union near-miss mixes from step1c output."""
+    """Load union near-miss mixes from step1c output.
+
+    Returns (combos, scores, max_storage_scores).
+    max_storage_scores is None if the column is absent (old near_miss file).
+    """
     path = os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR,
                         f'{iso}_near_miss.parquet')
     if not os.path.exists(path):
-        return None, None
+        return None, None, None
 
     table = pq.read_table(path)
     rtypes = s1.get_resource_types(iso)
     combos = np.column_stack([table.column(rt).to_numpy() for rt in rtypes])
     scores = table.column('base_score').to_numpy()
-    return combos, scores
+
+    # Read pre-computed max-storage scores if available (step1c full_filter)
+    max_storage_scores = None
+    if 'max_storage_score' in table.column_names:
+        max_storage_scores = table.column('max_storage_score').to_numpy()
+        print(f"  Near-miss has max_storage_score column — Pass 0 can be skipped")
+
+    return combos, scores, max_storage_scores
 
 
 def load_coarse_cache(iso):
@@ -201,11 +212,13 @@ def load_mixes_with_coarse_fallback(iso, active_thresholds):
     the coarse cache provides low-score mixes that are storage candidates
     at lower thresholds.
 
-    Returns (combos, scores) with coarse fallback mixes appended if needed.
+    Returns (combos, scores, max_storage_scores) with coarse fallback mixes
+    appended if needed. max_storage_scores is None if not available in
+    near_miss or if coarse fallback mixes were added (forces Pass 0).
     """
-    nm_combos, nm_scores = load_near_miss(iso)
+    nm_combos, nm_scores, nm_max_scores = load_near_miss(iso)
     if nm_combos is None:
-        return None, None
+        return None, None, None
 
     # Check if near-miss covers the lowest requested threshold
     min_threshold = min(active_thresholds)
@@ -214,13 +227,13 @@ def load_mixes_with_coarse_fallback(iso, active_thresholds):
 
     if n_eligible_low > 0:
         # Near-miss has eligible mixes for all thresholds — no fallback needed
-        return nm_combos, nm_scores
+        return nm_combos, nm_scores, nm_max_scores
 
     # Need coarse fallback: near-miss has no mixes below lowest threshold
     cc_combos, cc_scores = load_coarse_cache(iso)
     if cc_combos is None:
         print(f"  WARNING: No coarse cache for {iso}, cannot augment near-miss")
-        return nm_combos, nm_scores
+        return nm_combos, nm_scores, nm_max_scores
 
     # Only add coarse mixes that are in the near-miss window for any threshold
     # and aren't already in the near-miss file
@@ -241,14 +254,15 @@ def load_mixes_with_coarse_fallback(iso, active_thresholds):
     n_add = int(add_mask.sum())
 
     if n_add == 0:
-        return nm_combos, nm_scores
+        return nm_combos, nm_scores, nm_max_scores
 
     print(f"  Coarse cache fallback: adding {n_add:,} mixes "
           f"(near-miss had 0 eligible below {min_threshold}%)")
 
     combined_combos = np.vstack([nm_combos, cc_combos[add_mask]])
     combined_scores = np.concatenate([nm_scores, cc_scores[add_mask]])
-    return combined_combos, combined_scores
+    # Coarse fallback mixes don't have max_storage_scores — force Pass 0
+    return combined_combos, combined_scores, None
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -905,8 +919,8 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
     pass2_done = set(manifest.get('pass2_done', [])) if manifest else set()
 
     # ── Load near-miss mixes (with coarse cache fallback for low thresholds) ──
-    nm_combos, nm_base_scores = load_mixes_with_coarse_fallback(
-        iso, active_thresholds)
+    nm_combos, nm_base_scores, precomputed_max_scores = \
+        load_mixes_with_coarse_fallback(iso, active_thresholds)
     if nm_combos is None:
         print(f"  ERROR: No near-miss data for {iso}. Run step1c first.")
         return
@@ -948,9 +962,16 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
     # PASS 0: Max-storage ceiling screen
     # ══════════════════════════════════════════════════════
 
-    max_scores = run_max_screen(
-        nm_combos, nm_base_scores, demand_arr, supply_matrix,
-        active_thresholds, sc)
+    if precomputed_max_scores is not None:
+        # Step1c already computed max-storage scores — skip Pass 0 entirely
+        print(f"\n  Pass 0 — SKIPPED (using pre-computed max_storage_score from near-miss)")
+        max_scores = precomputed_max_scores
+    else:
+        # Old near-miss file or coarse fallback — run Pass 0 as before
+        print(f"\n  Pass 0 — Running max-storage screen (no pre-computed scores)")
+        max_scores = run_max_screen(
+            nm_combos, nm_base_scores, demand_arr, supply_matrix,
+            active_thresholds, sc)
 
     # Eliminate mixes that can't reach ANY active threshold with max storage
     min_target = min(active_thresholds) / 100.0
