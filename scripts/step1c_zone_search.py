@@ -82,8 +82,8 @@ SCORE_CHUNK_SIZE = 20000
 # 30-46M mixes per zone while 5D ISOs fell back to archetypes.
 MAX_GRID_COMBOS_BEFORE_FALLBACK = 10_000_000
 
-# Near-miss width for storage sweep (in 0-1 score space)
-STORAGE_SWEEP_FLOOR = 0.50
+# Maximum near-miss mixes per ISO (union across all thresholds)
+MAX_NEAR_MISS = 100_000
 
 # Flush candidates to disk above this count
 CHUNK_CANDIDATE_LIMIT = 500_000
@@ -377,7 +377,7 @@ def assign_to_thresholds(combos, scores, thresholds):
     for t in thresholds:
         target = t / 100.0
         nm_width = get_near_miss_width(t)
-        nm_floor = max(target - nm_width, STORAGE_SWEEP_FLOOR)
+        nm_floor = max(target - nm_width, 0.50)
 
         feas_mask = scores >= target
         nm_mask = (~feas_mask) & (scores >= nm_floor)
@@ -408,7 +408,7 @@ def assign_to_thresholds_vectorized(combos, scores, thresholds):
     for t in thresholds:
         target = t / 100.0
         nm_width = get_near_miss_width(t)
-        nm_floor = max(target - nm_width, STORAGE_SWEEP_FLOOR)
+        nm_floor = max(target - nm_width, 0.50)
 
         feas_mask = scores >= target
         nm_mask = (~feas_mask) & (scores >= nm_floor)
@@ -515,7 +515,7 @@ def _compute_max_storage_scores(combos, demand_arr, supply_matrix, chunk_size=50
     """Max-storage ceiling score for each mix (same kernel as step1d Pass 0).
 
     Returns float64 array (N,) — best score achievable with maximum storage.
-    Mixes with max_score >= STORAGE_SWEEP_FLOOR necessarily have curtailment
+    Mixes with max_score >= 0.50 necessarily have curtailment
     (subsumes the curtailment check). Uses same constants and Numba kernel
     as step1d, so the math is identical.
 
@@ -567,37 +567,90 @@ def _compute_max_storage_scores(combos, demand_arr, supply_matrix, chunk_size=50
     return max_scores
 
 
+def _stratified_sample(combos, scores, max_storage_scores, rtypes, max_n):
+    """Proportional sample by archetype ensuring diversity.
+
+    Archetypes: solar-heavy (solar>40%), wind-heavy (RE>70% & solar<=40%),
+                balanced (30-70% RE), high-firm (<30% RE).
+    Within each archetype, select by max_storage_score descending.
+    """
+    total = combos.sum(axis=1).astype(np.float64)
+    solar_idx = rtypes.index('solar')
+    wind_idx = rtypes.index('wind')
+    solar_frac = combos[:, solar_idx] / np.maximum(total, 1.0)
+    re_frac = (combos[:, solar_idx] + combos[:, wind_idx]) / np.maximum(total, 1.0)
+
+    # Assign archetypes: 0=solar-heavy, 1=wind-heavy, 2=balanced, 3=high-firm
+    arch = np.full(len(combos), 2, dtype=np.int8)
+    arch[solar_frac > 0.40] = 0
+    arch[(re_frac > 0.70) & (solar_frac <= 0.40)] = 1
+    arch[re_frac < 0.30] = 3
+
+    result = []
+    n_total = len(combos)
+    for a in range(4):
+        mask = arch == a
+        n_in_arch = int(mask.sum())
+        if n_in_arch == 0:
+            continue
+        n_alloc = max(1, int(round(max_n * n_in_arch / n_total)))
+        n_alloc = min(n_alloc, n_in_arch)
+        arch_idx = np.where(mask)[0]
+        top_k = np.argsort(max_storage_scores[arch_idx])[-n_alloc:]
+        result.append(arch_idx[top_k])
+
+    combined = np.concatenate(result)
+    if len(combined) > max_n:
+        keep = np.argsort(max_storage_scores[combined])[-max_n:]
+        combined = combined[keep]
+    return combined
+
+
 def save_near_miss(iso, combos, scores, rtypes,
                    demand_arr=None, supply_matrix=None,
                    full_filter=False):
     """Save union near-miss mixes for step1d storage sweep.
 
     Args:
-        full_filter: If True (final save), compute max-storage scores and
-            filter to mixes with max_score >= STORAGE_SWEEP_FLOOR. This
-            eliminates mixes that can't benefit from storage and persists
-            the max_storage_score column so step1d can skip its Pass 0.
+        full_filter: If True (final save), compute max-storage scores,
+            apply threshold-crossing filter (keep only mixes where
+            max_storage_score crosses at least one threshold above
+            base_score), then cap at MAX_NEAR_MISS with stratified
+            archetype sampling. No max_storage_score column persisted.
             If False (interim saves), use the cheaper curtailment-only check.
     """
     if len(combos) == 0:
         return
 
     n_before = len(combos)
-    max_storage_scores = None
 
     if full_filter and demand_arr is not None and supply_matrix is not None:
-        # Full max-storage screen: subsumes curtailment check
+        # 1. Compute max-storage ceiling scores
         print(f"  Running max-storage pre-filter on {n_before:,} near-miss mixes...")
         max_storage_scores = _compute_max_storage_scores(
             combos, demand_arr, supply_matrix)
-        mask = max_storage_scores >= STORAGE_SWEEP_FLOOR
-        combos = combos[mask]
-        scores = scores[mask]
-        max_storage_scores = max_storage_scores[mask]
-        n_pruned = n_before - len(combos)
-        if n_pruned > 0:
-            print(f"  Max-storage filter: {n_before:,} → "
-                  f"{len(combos):,} ({n_pruned:,} pruned, max score < {STORAGE_SWEEP_FLOOR})")
+
+        # 2. Threshold-crossing filter: keep only mixes where
+        #    max_storage_score >= some threshold T > base_score
+        targets = np.array([t / 100.0 for t in ACTIVE_THRESHOLDS])
+        crosses_any = np.zeros(len(combos), dtype=bool)
+        for target in targets:
+            crosses_any |= (scores < target) & (max_storage_scores >= target)
+        combos = combos[crosses_any]
+        scores = scores[crosses_any]
+        max_storage_scores = max_storage_scores[crosses_any]
+        n_after_cross = len(combos)
+        print(f"  Threshold-crossing filter: {n_before:,} → {n_after_cross:,} "
+              f"({n_before - n_after_cross:,} pruned)")
+
+        # 3. Cap at MAX_NEAR_MISS with stratified archetype sampling
+        if len(combos) > MAX_NEAR_MISS:
+            idx = _stratified_sample(combos, scores, max_storage_scores,
+                                     rtypes, MAX_NEAR_MISS)
+            combos = combos[idx]
+            scores = scores[idx]
+            print(f"  Stratified cap: {n_after_cross:,} → {len(combos):,}")
+
     elif demand_arr is not None and supply_matrix is not None:
         # Cheap curtailment-only filter (interim saves)
         mask = _has_curtailment_mask(combos, demand_arr, supply_matrix)
@@ -612,22 +665,20 @@ def save_near_miss(iso, combos, scores, rtypes,
         print(f"  Near-miss union: 0 mixes after filter (skipped)")
         return
 
+    # Save WITHOUT max_storage_score column (step1d computes its own Pass 0)
     os.makedirs(s1.STEP1_RAW_PFS_PARQUET_DIR, exist_ok=True)
     data = {}
     for i, rt in enumerate(rtypes):
         data[rt] = combos[:, i].astype(np.float64)
     data['base_score'] = scores
-    if max_storage_scores is not None:
-        data['max_storage_score'] = max_storage_scores
 
     table = pa.table(data)
     out_path = os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR,
                             f'{iso}_near_miss.parquet')
     pq.write_table(table, out_path, compression='snappy')
     size_mb = os.path.getsize(out_path) / (1024 * 1024)
-    extra = " (with max_storage_score)" if max_storage_scores is not None else ""
-    print(f"  Near-miss union: {len(combos):,} unique mixes → "
-          f"{out_path} ({size_mb:.1f} MB){extra}")
+    print(f"  Near-miss union: {len(combos):,} mixes → "
+          f"{out_path} ({size_mb:.1f} MB)")
     return out_path
 
 
