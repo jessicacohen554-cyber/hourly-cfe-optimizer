@@ -16,179 +16,18 @@
 <script src="js/shared-header.js"></script>
     <script src="js/scroll-observer.js"></script>
 <style>
-/* ========== PAGE-SPECIFIC: Hero stat value/label (custom markup) ========== */
-.hero-stat-value {
-    font-family: var(--font-heading);
-    font-size: 1.6rem;
-    font-weight: 800;
-    color: #ffffff;
-    line-height: 1.1;
-}
-.hero-stat-value.green { color: #4ade80; }
-.hero-stat-value.amber { color: #fbbf24; }
-.hero-stat-value.red { color: #f87171; }
-.hero-stat-value.blue { color: var(--accent-cyan); }
-.hero-stat-label {
-    font-size: 0.72rem;
-    color: rgba(255,255,255,0.5);
-    margin-top: 4px;
-    line-height: 1.3;
-}
-.hero-chart-block {
-    z-index: 1;
-}
+/* Page-specific overrides only — all shared styles in article.css */
 
-/* ========== PAGE-SPECIFIC: Chart legend ========== */
-.chart-legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px 16px;
-    margin-top: 12px;
-    font-size: 0.7rem;
-    color: var(--text-dim);
-    font-family: var(--font-body);
-}
-.chart-legend-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    white-space: nowrap;
-}
-.chart-legend-swatch { display: inline-block; }
-.swatch-line { width: 18px; height: 3px; border-radius: 1.5px; }
-.swatch-band { width: 18px; height: 10px; border-radius: 2px; border: 1px solid rgba(0,0,0,0.1); }
-.swatch-dashed { width: 18px; height: 0; border-top: 2px dashed; }
-.chart-legend-divider {
-    width: 1px;
-    height: 12px;
-    background: rgba(0,0,0,0.1);
-    margin: 0 4px;
-    align-self: center;
-}
-
-/* ========== PAGE-SPECIFIC: Scrollytell sections ========== */
-.scroll-section {
-    padding: 0 var(--pad-page);
-    max-width: var(--max-content);
-    margin: 0 auto;
-}
-.scroll-section-inner {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--space-2xl);
-    align-items: start;
-    padding: var(--space-3xl) 0;
-    border-top: 1px solid rgba(0,0,0,0.025);
-}
-.scroll-chart-col {
-    position: sticky;
-    top: 80px;
-}
-.scroll-narrative-col {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-xl);
-}
-
-/* ========== PAGE-SPECIFIC: Narrative cards ========== */
-.narrative-card {
-    background: rgba(255,255,255,0.95);
-    border: 1px solid rgba(74,144,217,0.10);
-    border-radius: 14px;
-    padding: 28px 24px;
-    opacity: 0;
-    transform: translateY(30px);
-    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
-                transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.narrative-card.visible {
-    opacity: 1;
-    transform: translateY(0);
-}
-.narrative-card h3 {
-    font-family: var(--font-heading);
-    font-size: 1.25rem;
-    font-weight: 800;
-    color: var(--text-secondary);
-    margin-bottom: 12px;
-    line-height: 1.25;
-    letter-spacing: -0.3px;
-}
-.narrative-card p {
-    font-size: 0.9rem;
-    color: rgba(15,23,42,0.68);
-    line-height: 1.75;
-    margin-bottom: 12px;
-}
-.narrative-card p:last-child { margin-bottom: 0; }
-
-.section-tag {
-    display: inline-block;
-    font-family: var(--font-heading);
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    padding: 4px 10px;
-    border-radius: 4px;
-    margin-bottom: 12px;
-}
-
-.stat-badge {
-    display: inline-block;
-    font-size: 0.78rem;
-    font-weight: 600;
-    padding: 6px 12px;
-    border-radius: var(--radius-sm);
-    margin-top: 8px;
-    line-height: 1.4;
-}
-.stat-badge-green { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); color: var(--green-pos); }
-.stat-badge-amber { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.18); color: var(--amber-warn); }
-.stat-badge-red { background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2); color: var(--red-dark); }
-.stat-badge-blue { background: rgba(14,165,233,0.08); border: 1px solid rgba(14,165,233,0.2); color: #0284c7; }
-
-/* ========== PAGE-SPECIFIC: Synthesis section ========== */
-.synthesis-section {
-    max-width: var(--max-content);
-    margin: 0 auto;
-    padding: var(--space-3xl) var(--pad-page);
-    border-top: 1px solid rgba(0,0,0,0.025);
-}
-.synthesis-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--space-lg);
-}
+/* LMP synthesis uses light bg instead of dark glass */
+.synthesis-section { border-top: 1px solid rgba(0,0,0,0.025); }
 .synthesis-card {
     background: rgba(255,255,255,0.95);
-    border: 1px solid rgba(74,144,217,0.10);
-    border-radius: 14px;
-    padding: 28px 24px;
-    opacity: 0;
-    transform: translateY(30px);
-    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
-                transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    border-color: rgba(74,144,217,0.10);
 }
-.synthesis-card.visible {
-    opacity: 1;
-    transform: translateY(0);
-}
-.synthesis-card h3 {
-    font-family: var(--font-heading);
-    font-size: 1.15rem;
-    font-weight: 800;
-    color: var(--text-secondary);
-    margin-bottom: 12px;
-    line-height: 1.25;
-}
-.synthesis-card p {
-    font-size: 0.88rem;
-    color: rgba(15,23,42,0.68);
-    line-height: 1.75;
-}
+.synthesis-card h3 { color: var(--text-secondary); }
+.synthesis-card p { color: rgba(15,23,42,0.68); }
 
-/* ========== PAGE-SPECIFIC: Nuclear callout ========== */
+/* Nuclear callout (dark-bg alert box) */
 .nuclear-callout {
     max-width: var(--max-content);
     margin: 0 auto;
@@ -203,8 +42,6 @@
     display: flex;
     gap: 20px;
     align-items: flex-start;
-    margin-top: 0;
-    margin-bottom: 0;
 }
 .nuclear-callout-icon {
     font-size: 1.6rem;
@@ -228,16 +65,14 @@
 }
 .nuclear-callout-text strong { color: var(--amber-warn); }
 
-/* ========== PAGE-SPECIFIC: Nuclear deep-dive section ========== */
+/* Nuclear deep-dive section */
 .nuclear-section {
     max-width: var(--max-content);
     margin: 0 auto;
     padding: var(--space-3xl) var(--pad-page);
     border-top: 1px solid rgba(239,68,68,0.1);
 }
-.nuclear-section-header {
-    margin-bottom: 40px;
-}
+.nuclear-section-header { margin-bottom: 40px; }
 .nuclear-section-header h2 {
     font-family: var(--font-heading);
     font-size: 1.7rem;
@@ -259,10 +94,7 @@
     gap: var(--space-xl);
     align-items: start;
 }
-.nuclear-chart-col .chart-panel {
-    position: sticky;
-    top: 80px;
-}
+.nuclear-chart-col .chart-panel { position: sticky; top: 80px; }
 .nuclear-narrative-col {
     display: flex;
     flex-direction: column;
@@ -304,10 +136,7 @@
     transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
                 transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.nuclear-paradox.visible {
-    opacity: 1;
-    transform: translateY(0);
-}
+.nuclear-paradox.visible { opacity: 1; transform: translateY(0); }
 .nuclear-paradox h3 {
     font-family: var(--font-heading);
     font-size: 1.15rem;
@@ -323,65 +152,14 @@
 }
 .nuclear-paradox p:last-child { margin-bottom: 0; }
 
-/* ========== PAGE-SPECIFIC: Region pills ========== */
-.region-pills-bar {
-    background: #fff;
-    border-bottom: 1px solid rgba(0,0,0,0.06);
-    padding: 12px var(--pad-page);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-}
-.region-pills-inner {
-    max-width: var(--max-content);
-    margin: 0 auto;
-    display: flex;
-    gap: var(--space-sm);
-    flex-wrap: wrap;
-    justify-content: center;
-}
-.region-pill {
-    font-family: var(--font-heading);
-    font-size: 0.82rem;
-    font-weight: 600;
-    letter-spacing: 0.03em;
-    padding: 8px 18px;
-    border-radius: 20px;
-    border: 1.5px solid rgba(14,165,233,0.2);
-    background: rgba(14,165,233,0.04);
-    color: var(--text-dim);
-    cursor: pointer;
-    transition: all 0.25s ease;
-    min-height: 44px;
-    display: inline-flex;
-    align-items: center;
-}
-.region-pill:hover {
-    border-color: rgba(14,165,233,0.4);
-    background: rgba(14,165,233,0.08);
-    color: #0284c7;
-}
-.region-pill.active {
-    background: linear-gradient(135deg, var(--hydro), #0284c7);
-    color: #fff;
-    border-color: transparent;
-    box-shadow: 0 2px 8px rgba(14,165,233,0.3);
-}
+/* Hero section padding override */
+.hero-section { padding: 56px var(--pad-page) 48px; }
 
-/* ========== PAGE-SPECIFIC: Hero section padding override ========== */
-.hero-section {
-    padding: 56px var(--pad-page) 48px;
-}
-
-/* ========== RESPONSIVE ========== */
+/* Responsive */
 @media (max-width: 900px) {
-    .scroll-section-inner { grid-template-columns: 1fr; gap: 28px; }
-    .scroll-chart-col { position: relative; top: 0; }
-    .synthesis-grid { grid-template-columns: 1fr; }
     .hero-text h1 { font-size: 1.7rem; }
     .nuclear-grid { grid-template-columns: 1fr; }
     .nuclear-chart-col .chart-panel { position: relative; top: 0; }
-    .nuclear-metric-row { grid-template-columns: repeat(3, 1fr); }
     .nuclear-callout-inner { flex-direction: column; gap: 12px; }
 }
 @media (max-width: 600px) {
@@ -390,10 +168,6 @@
     .hero-stats-row { gap: 12px; }
     .hero-stat { min-width: 110px; padding: 12px 14px; }
     .hero-stat-value { font-size: 1.3rem; }
-    .scroll-section { padding: 0 16px; }
-    .scroll-section-inner { padding: 40px 0; gap: 20px; }
-    .narrative-card { padding: 20px 16px; }
-    .chart-legend { font-size: 0.6rem; gap: 4px 10px; }
     .nuclear-section { padding: 40px 16px; }
     .nuclear-section-header h2 { font-size: 1.35rem; }
     .nuclear-metric-row { grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
@@ -722,6 +496,31 @@
         </div>
     </div>
 </section>
+
+<!-- ============ RELATED ANALYSES ============ -->
+<div class="related-analyses">
+    <div class="related-analyses-title">Related Analyses</div>
+    <div class="related-analyses-grid">
+        <a href="fossil_fuel_deepdive.html" class="related-card">
+            <div class="related-card-tag">Grid</div>
+            <div class="related-card-title">Fossil Fuel Deep Dive</div>
+            <div class="related-card-desc">Detailed analysis of fossil fleet composition and displacement mechanics.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="storage_analysis.html" class="related-card">
+            <div class="related-card-tag">Technology</div>
+            <div class="related-card-title">Storage Analysis</div>
+            <div class="related-card-desc">How battery and long-duration storage affect grid operations and pricing.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="scenario_comparison.html" class="related-card">
+            <div class="related-card-tag">Strategy</div>
+            <div class="related-card-title">Scenario Comparison</div>
+            <div class="related-card-desc">Side-by-side comparison of procurement strategies and their market impacts.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+    </div>
+</div>
 
 <!-- FOOTER -->
 <footer class="page-footer">

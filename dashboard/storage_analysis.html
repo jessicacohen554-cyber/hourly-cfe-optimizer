@@ -57,41 +57,17 @@ body { background: var(--bg-page-white); }
     max-width: var(--max-prose);
 }
 
-/* ========== COUNTER CARDS (storage-specific) ========== */
-.counter-row {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin: var(--space-lg) 0 0;
-}
+/* ========== COUNTER CARDS (storage-specific overrides of article.css base) ========== */
 .counter-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border-light);
-    border-radius: var(--radius-lg);
     padding: 20px 14px;
-    text-align: center;
-    flex: 1;
     min-width: 120px;
+    border-color: var(--border-light);
 }
 .counter-val {
-    font-family: var(--font-heading);
-    font-size: 1.8rem;
-    font-weight: 800;
     color: var(--red);
-    line-height: 1;
-    margin-bottom: 4px;
 }
 .counter-val.purple { color: var(--battery); }
-.counter-val.blue { color: #0284c7; }
 .counter-val.green { color: var(--green-pos); }
-.counter-val.amber { color: var(--amber-warn); }
-.counter-lbl {
-    font-size: 0.72rem;
-    color: var(--text-dim);
-    font-weight: 600;
-    letter-spacing: 0.3px;
-    text-transform: uppercase;
-}
 .counter-sub {
     font-size: 0.78rem;
     color: var(--text-muted);
@@ -346,7 +322,7 @@ body { background: var(--bg-page-white); }
 </div>
 
 <!-- ========== HERO ========== -->
-<section class="hero-storage">
+<section class="hero-storage section-light">
 <div class="hero-inner">
     <div class="hero-text">
         <h2>Storage in the Optimal Mix: All 7 ISOs</h2>
@@ -390,6 +366,7 @@ body { background: var(--bg-page-white); }
 </section>
 
 <!-- ========== WHY STORAGE ISN'T SELECTED ========== -->
+<div class="gradient-transition"></div>
 <section class="section-dark">
 <div class="section-dark-inner">
     <div class="section-header">
@@ -419,9 +396,10 @@ body { background: var(--bg-page-white); }
     </div>
 </div>
 </section>
+<div class="gradient-transition"></div>
 
 <!-- ========== CROSS-ISO ONSET RANKING ========== -->
-<section class="full-width-section">
+<section class="full-width-section section-light">
 <div class="section-inner">
     <div class="section-header">
         <h3>LDES Onset: When Storage First Enters the Optimal Mix</h3>
@@ -457,7 +435,7 @@ body { background: var(--bg-page-white); }
 </section>
 
 <!-- ========== THREE ARCHETYPES ========== -->
-<section class="content-section">
+<section class="content-section section-light">
     <div class="section-header">
         <h3>Three Archetypes: How Regional Resources Shape Storage Need</h3>
         <p>ISOs cluster into three distinct patterns based on their existing resource endowments
@@ -493,7 +471,7 @@ body { background: var(--bg-page-white); }
 </section>
 
 <!-- ========== LDES vs CLEAN FIRM COST ========== -->
-<section class="full-width-section">
+<section class="full-width-section section-light">
 <div class="section-inner">
     <div class="section-header">
         <h3>The Storage&ndash;Firm Tradeoff: Wind + LDES vs. Clean Firm Buildout</h3>
@@ -540,7 +518,7 @@ body { background: var(--bg-page-white); }
 </section>
 
 <!-- ========== ISO DEEP DIVES ========== -->
-<section class="content-section">
+<section class="content-section section-light">
     <div class="section-header">
         <h3>Regional Deep Dives: Storage Patterns by ISO</h3>
         <p>Select an ISO to see the full resource mix progression and where LDES enters
@@ -591,7 +569,7 @@ body { background: var(--bg-page-white); }
 </section>
 
 <!-- ========== CROSS-ISO COST CHART ========== -->
-<section class="full-width-section">
+<section class="full-width-section section-light">
 <div class="section-inner">
     <div class="section-header">
         <h3>System Cost Across All ISOs</h3>
@@ -610,6 +588,7 @@ body { background: var(--bg-page-white); }
 </section>
 
 <!-- ========== KEY TAKEAWAYS ========== -->
+<div class="gradient-transition"></div>
 <section class="section-dark">
 <div class="section-dark-inner">
     <div class="section-header">
@@ -1099,5 +1078,31 @@ body { background: var(--bg-page-white); }
 
 })();
 </script>
+
+<!-- ============ RELATED ANALYSES ============ -->
+<div class="related-analyses">
+    <div class="related-analyses-title">Related Analyses</div>
+    <div class="related-analyses-grid">
+        <a href="lmp_trends.html" class="related-card">
+            <div class="related-card-tag">Markets</div>
+            <div class="related-card-title">LMP Trends</div>
+            <div class="related-card-desc">How wholesale prices respond to storage deployment and clean energy growth.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="scenario_comparison.html" class="related-card">
+            <div class="related-card-tag">Strategy</div>
+            <div class="related-card-title">Scenario Comparison</div>
+            <div class="related-card-desc">How storage fits into consequential vs. hourly matching procurement strategies.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="abatement_dashboard.html" class="related-card">
+            <div class="related-card-tag">Carbon</div>
+            <div class="related-card-title">CO&#8322; Abatement</div>
+            <div class="related-card-desc">Where storage-backed clean energy delivers the most decarbonization impact.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+    </div>
+</div>
+
 </body>
 </html>
