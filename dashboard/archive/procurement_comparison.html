@@ -1,0 +1,2359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Procurement Strategy Comparison — The 8,760 Problem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/dashboard-ui.css">
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<style>
+body { background: var(--bg-page); }
+
+/* ====== SCROLLYTELL CORE ====== */
+.scroll-section {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 60px 24px;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.scroll-section.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.scroll-section.wide { max-width: 1100px; }
+
+/* Act dividers */
+.act-divider {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 80px 24px 40px;
+    text-align: center;
+}
+/* Dark act dividers */
+.act-divider-dark {
+    max-width: 100%;
+    background: linear-gradient(135deg, var(--navy-dark) 0%, var(--navy) 100%);
+    padding: 80px 24px 40px;
+    text-align: center;
+}
+.act-divider-dark .act-number { color: rgba(255,255,255,0.3); }
+.act-divider-dark .act-title { color: #fff; }
+.act-divider-dark .act-subtitle { color: rgba(255,255,255,0.55); }
+.act-number {
+    font-family: var(--font-data);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: rgba(0,0,0,0.3);
+    margin-bottom: 8px;
+}
+.act-title {
+    font-family: var(--font-heading);
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--navy);
+    letter-spacing: -0.5px;
+    margin-bottom: 12px;
+}
+.act-subtitle {
+    font-size: 0.92rem;
+    color: rgba(0,0,0,0.5);
+    max-width: 620px;
+    margin: 0 auto;
+    line-height: 1.7;
+}
+
+/* ====== HERO ====== */
+.hero-opening {
+    background: linear-gradient(180deg, var(--navy-dark) 0%, var(--navy) 60%, var(--navy-mid) 100%);
+    padding: 80px 24px 60px;
+    text-align: center;
+}
+.hero-opening h1 {
+    font-family: var(--font-heading);
+    font-size: 2.4rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 16px;
+    letter-spacing: -0.5px;
+}
+.hero-opening .lead {
+    font-size: 1.05rem;
+    color: rgba(255,255,255,0.65);
+    max-width: 720px;
+    margin: 0 auto 40px;
+    line-height: 1.8;
+}
+/* Big animated counter */
+.hero-counter {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.counter-value {
+    font-family: var(--font-heading);
+    font-size: 5rem;
+    font-weight: 900;
+    color: var(--hydro);
+    line-height: 1;
+    letter-spacing: -2px;
+}
+.counter-unit {
+    font-size: 1.2rem;
+    color: rgba(255,255,255,0.5);
+    font-weight: 600;
+}
+.counter-context {
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.4);
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+/* ====== KEY FINDINGS HERO ====== */
+.findings-hero {
+    background: linear-gradient(135deg, var(--navy-dark) 0%, #162440 50%, var(--navy-mid) 100%);
+    padding: 60px 24px;
+}
+.findings-inner {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+.findings-hero .findings-label {
+    font-family: var(--font-data);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent-cyan);
+    margin-bottom: 12px;
+}
+.findings-hero h2 {
+    font-family: var(--font-heading);
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 28px;
+    letter-spacing: -0.3px;
+}
+.findings-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+.finding-card {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 24px 20px;
+    transition: background 0.2s;
+}
+.finding-card:hover { background: rgba(255,255,255,0.09); }
+.finding-number {
+    font-family: var(--font-heading);
+    font-size: 2.4rem;
+    font-weight: 900;
+    color: var(--accent-cyan);
+    line-height: 1;
+    margin-bottom: 8px;
+}
+.finding-card h4 {
+    font-family: var(--font-heading);
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 8px;
+}
+.finding-card p {
+    font-size: 0.82rem;
+    color: rgba(255,255,255,0.5);
+    line-height: 1.7;
+}
+@media (max-width: 768px) {
+    .findings-grid { grid-template-columns: 1fr; }
+}
+
+/* ====== STRATEGY COLUMNS (3-column by strategy) ====== */
+.strategy-columns {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    max-width: 1100px;
+    margin: 0 auto 40px;
+}
+.strategy-column {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.6s ease;
+}
+.strategy-column.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.strat-col-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    border-radius: 10px 10px 0 0;
+    margin-bottom: 0;
+}
+.strat-col-header .family-dot {
+    width: 12px; height: 12px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+.strat-col-header h4 {
+    font-family: var(--font-heading);
+    font-size: 0.88rem;
+    color: var(--navy);
+    font-weight: 700;
+}
+.strat-col-header .strat-subtitle {
+    font-size: 0.75rem;
+    color: rgba(0,0,0,0.45);
+    font-weight: 400;
+    display: block;
+}
+.strat-col-header-1 { background: rgba(79,70,229,0.06); border-bottom: 2px solid #4F46E5; }
+.strat-col-header-2 { background: rgba(8,145,178,0.06); border-bottom: 2px solid #0891B2; }
+.strat-col-header-3 { background: rgba(217,119,6,0.06); border-bottom: 2px solid #D97706; }
+.strat-variant-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 0 0;
+}
+.strat-variant-item {
+    background: rgba(255,255,255,0.95);
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 8px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+}
+.strat-variant-item:hover {
+    border-color: rgba(14,165,233,0.3);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.strat-variant-item.selected {
+    border-color: #0284C7;
+    background: rgba(14,165,233,0.04);
+    box-shadow: 0 0 0 2px rgba(14,165,233,0.15);
+}
+.strat-variant-item .variant-code {
+    font-family: var(--font-data);
+    font-size: 0.88rem;
+    font-weight: 800;
+    margin-bottom: 2px;
+}
+.strat-variant-item .variant-name {
+    font-size: 0.78rem;
+    color: rgba(0,0,0,0.6);
+    line-height: 1.5;
+}
+.strat-variant-item .variant-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.dot-consequential { background: #4F46E5; }
+.dot-hourly { background: #0891B2; }
+.dot-annual { background: #D97706; }
+.code-1a, .code-1b, .code-1c { color: #4F46E5; }
+.code-2a, .code-2b, .code-2c { color: #0891B2; }
+.code-3a, .code-3b, .code-3c, .code-3d { color: #D97706; }
+.badge-data { background: rgba(22,163,74,0.1); color: #16A34A; }
+.badge-pending { background: rgba(245,158,11,0.1); color: #D97706; }
+@media (max-width: 768px) {
+    .strategy-columns { grid-template-columns: 1fr; }
+    .hero-opening h1 { font-size: 1.8rem; }
+    .counter-value { font-size: 3.5rem; }
+}
+
+/* ====== STRATEGY FAMILY CARDS (intro) ====== */
+.family-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    max-width: 860px;
+    margin: 0 auto 40px;
+}
+.family-card {
+    background: rgba(255,255,255,0.95);
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 14px;
+    padding: 24px 20px;
+    text-align: center;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.6s ease;
+}
+.family-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.family-card .family-icon {
+    font-size: 2rem;
+    margin-bottom: 12px;
+    line-height: 1;
+}
+.family-card h3 {
+    font-family: var(--font-heading);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 4px;
+}
+.family-card .family-code {
+    font-family: var(--font-data);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: rgba(0,0,0,0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+}
+.family-card p {
+    font-size: 0.85rem;
+    color: rgba(0,0,0,0.6);
+    line-height: 1.7;
+}
+.family-card .variant-count {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 4px 12px;
+    background: rgba(14,165,233,0.08);
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #0284C7;
+}
+@media (max-width: 768px) {
+    .family-cards { grid-template-columns: 1fr; }
+}
+
+/* ====== PARTICIPATION SLIDER (STICKY) ====== */
+.participation-bar {
+    background: rgba(255,255,255,0.97);
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+    padding: 14px 24px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    max-width: 100%;
+}
+.participation-bar .bar-label {
+    font-family: var(--font-heading);
+    font-size: 0.82rem;
+    color: var(--navy);
+    font-weight: 700;
+    white-space: nowrap;
+}
+.participation-slider-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 200px;
+    max-width: 420px;
+}
+.participation-slider-wrap input[type=range] {
+    flex: 1;
+    height: 6px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: linear-gradient(90deg, #22C55E 0%, #F59E0B 40%, #EF4444 100%);
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+}
+.participation-slider-wrap input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--navy);
+    border: 2px solid #fff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    cursor: pointer;
+}
+.participation-slider-wrap input[type=range]::-moz-range-thumb {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--navy);
+    border: 2px solid #fff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    cursor: pointer;
+}
+.participation-readout {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    white-space: nowrap;
+}
+.participation-readout .pct-val {
+    font-family: var(--font-heading);
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--hydro);
+}
+.participation-readout .pct-label {
+    font-size: 0.72rem;
+    color: rgba(0,0,0,0.4);
+    font-weight: 600;
+}
+.participation-context {
+    font-size: 0.72rem;
+    color: rgba(0,0,0,0.35);
+    margin-left: auto;
+    white-space: nowrap;
+}
+@media (max-width: 768px) {
+    .participation-context { display: none; }
+    .participation-slider-wrap { max-width: 100%; }
+}
+
+/* ====== CHART CONTAINERS ====== */
+.figure-block {
+    max-width: 1000px;
+    margin: 0 auto 48px;
+    padding: 0 24px;
+}
+.figure-card {
+    background: rgba(255,255,255,0.95);
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 14px;
+    padding: 28px 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+}
+.figure-card h3 {
+    font-family: var(--font-heading);
+    font-size: 1.05rem;
+    color: var(--navy);
+    margin-bottom: 4px;
+}
+.figure-card .chart-note {
+    font-size: 0.78rem;
+    color: rgba(0,0,0,0.4);
+    margin-bottom: 16px;
+    line-height: 1.6;
+}
+.figure-chart-container {
+    position: relative;
+    height: 400px;
+}
+@media (max-width: 768px) {
+    .figure-chart-container { height: 300px; }
+    .figure-card { padding: 20px 16px; }
+}
+
+/* Figure number badge */
+.fig-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-family: var(--font-data);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    background: rgba(14,165,233,0.08);
+    color: #0284C7;
+}
+
+/* Callout boxes (amber insight) */
+.callout-box {
+    background: rgba(245,158,11,0.06);
+    border: 1px solid rgba(245,158,11,0.2);
+    border-left: 3px solid var(--amber-warn);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    padding: 14px 18px;
+    margin-top: 20px;
+}
+.callout-box p {
+    color: rgba(0,0,0,0.65);
+    font-size: 0.85rem;
+    line-height: 1.7;
+    margin: 0;
+}
+.callout-box strong { color: #92400E; }
+
+/* Insight boxes (blue) */
+.page-insight-box {
+    background: rgba(14,165,233,0.05);
+    border-left: 3px solid var(--hydro);
+    padding: 14px 18px;
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    margin-top: 20px;
+}
+.page-insight-box p {
+    color: rgba(0,0,0,0.65);
+    font-size: 0.85rem;
+    line-height: 1.7;
+    margin: 0;
+}
+.page-insight-box strong { color: #0284C7; }
+
+/* ====== RESPONSIVE TABLE WRAPPER ====== */
+.table-scroll-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 20px -16px;
+    padding: 0 16px;
+}
+.table-scroll-wrapper table { min-width: 520px; }
+
+/* ====== COMPARISON TABLE (ACT 3) ====== */
+.comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+}
+.comparison-table th {
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 12px 14px;
+    text-align: center;
+    border-bottom: 2px solid rgba(0,0,0,0.12);
+}
+.comparison-table th:first-child { text-align: left; }
+.comparison-table th.col-2a { color: #0891B2; }
+.comparison-table th.col-2b { color: #6B7280; }
+.comparison-table th.col-2c { color: #16A34A; }
+.comparison-table td {
+    padding: 14px;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+    font-size: 0.85rem;
+    color: rgba(0,0,0,0.7);
+    text-align: center;
+    vertical-align: top;
+}
+.comparison-table td:first-child {
+    text-align: left;
+    font-weight: 600;
+    color: var(--navy);
+    font-size: 0.82rem;
+}
+.comparison-table tr {
+    opacity: 0;
+    transform: translateX(-20px);
+    transition: all 0.5s ease;
+}
+.comparison-table tr.row-visible {
+    opacity: 1;
+    transform: translateX(0);
+}
+.cell-good { background: rgba(22,163,74,0.06); color: #16A34A; font-weight: 600; }
+.cell-mixed { background: rgba(245,158,11,0.06); color: #D97706; font-weight: 600; }
+.cell-bad { background: rgba(220,38,38,0.06); color: #DC2626; font-weight: 600; }
+.cell-worst { background: rgba(220,38,38,0.12); color: #DC2626; font-weight: 700; }
+
+/* ====== COMPOUNDING TABLE (ACT 4) ====== */
+.timeline-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+}
+.timeline-table th {
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 14px 16px;
+    text-align: center;
+    border-bottom: 2px solid rgba(0,0,0,0.12);
+    color: rgba(0,0,0,0.45);
+}
+.timeline-table th:first-child { text-align: left; }
+.timeline-table th.col-delayed { color: #4F46E5; }
+.timeline-table th.col-hourly { color: #0891B2; }
+.timeline-table td {
+    padding: 16px;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+    font-size: 0.85rem;
+    text-align: center;
+    vertical-align: top;
+    line-height: 1.6;
+}
+.timeline-table td:first-child {
+    text-align: left;
+    font-family: var(--font-data);
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: var(--navy);
+    white-space: nowrap;
+}
+.timeline-table .milestone-label {
+    display: block;
+    font-size: 0.7rem;
+    color: rgba(0,0,0,0.35);
+    font-family: var(--font-body);
+    font-weight: 400;
+}
+.td-green { background: rgba(22,163,74,0.06); color: #16A34A; }
+.td-amber { background: rgba(245,158,11,0.06); color: #92400E; }
+.td-red { background: rgba(220,38,38,0.08); color: #DC2626; font-weight: 600; }
+.timeline-table tr {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.5s ease;
+}
+.timeline-table tr.row-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ====== ZONE DIAGRAM (2C THRESHOLD) ====== */
+.zone-diagram {
+    display: flex;
+    gap: 0;
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 20px 0;
+    border: 1px solid rgba(0,0,0,0.08);
+}
+.zone {
+    flex: 1;
+    padding: 20px;
+    text-align: center;
+}
+.zone-maintenance {
+    background: linear-gradient(135deg, rgba(220,38,38,0.06) 0%, rgba(245,158,11,0.08) 100%);
+    border-right: 2px dashed rgba(0,0,0,0.15);
+}
+.zone-learning {
+    background: linear-gradient(135deg, rgba(22,163,74,0.06) 0%, rgba(14,165,233,0.08) 100%);
+}
+.zone h4 {
+    font-family: var(--font-heading);
+    font-size: 0.88rem;
+    margin-bottom: 6px;
+}
+.zone-maintenance h4 { color: #DC2626; }
+.zone-learning h4 { color: #16A34A; }
+.zone p {
+    font-size: 0.82rem;
+    color: rgba(0,0,0,0.55);
+    line-height: 1.6;
+}
+@media (max-width: 640px) {
+    .zone-diagram { flex-direction: column; }
+    .zone-maintenance { border-right: none; border-bottom: 2px dashed rgba(0,0,0,0.15); }
+}
+
+/* ====== HORSE RACE (ACT 5) ====== */
+.horse-race-container {
+    max-width: 1000px;
+    margin: 0 auto 48px;
+    padding: 0 24px;
+}
+.race-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+@media (max-width: 768px) { .race-grid { grid-template-columns: 1fr; } }
+
+/* ====== EXPLORER (ACT 6) ====== */
+.explorer-panel {
+    max-width: 100%;
+    margin: 0 auto 48px;
+    padding: 0 24px;
+    box-sizing: border-box;
+}
+.explorer-controls {
+    background: rgba(255,255,255,0.95);
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 14px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.controls-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+@media (max-width: 768px) {
+    .controls-grid { grid-template-columns: 1fr; }
+}
+.control-group label {
+    display: block;
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--navy);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+}
+.control-group select,
+.control-group input[type=range] {
+    width: 100%;
+    min-height: 44px;
+    box-sizing: border-box;
+}
+.control-group select {
+    padding: 8px 12px;
+    border: 1px solid rgba(0,0,0,0.12);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    background: #fff;
+}
+.strategy-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.strat-check {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(0,0,0,0.1);
+    background: rgba(255,255,255,0.7);
+    cursor: pointer;
+    font-size: 0.78rem;
+    font-weight: 600;
+    transition: all 0.2s;
+    min-height: 36px;
+}
+.strat-check:hover { background: rgba(255,255,255,0.95); }
+.strat-check.active { border-color: rgba(14,165,233,0.4); background: rgba(14,165,233,0.08); color: #0284C7; }
+.strat-check input { display: none; }
+.explorer-results {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+@media (max-width: 1024px) { .explorer-results { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 640px) { .explorer-results { grid-template-columns: 1fr; } }
+
+/* ====== ISO ROLE MAP (Regional bars) ====== */
+.role-bars {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 12px;
+    margin: 20px 0;
+}
+.role-bar-item {
+    text-align: center;
+}
+.role-bar-item .iso-label {
+    font-family: var(--font-data);
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 6px;
+}
+.role-bar-stack {
+    height: 160px;
+    border-radius: 6px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column-reverse;
+    border: 1px solid rgba(0,0,0,0.08);
+}
+.bar-segment {
+    transition: height 0.6s ease;
+}
+.bar-premium { background: #6B7280; }
+.bar-newbuild { background: #0891B2; }
+.role-bar-item .bar-pct {
+    font-size: 0.7rem;
+    color: rgba(0,0,0,0.4);
+    margin-top: 4px;
+}
+</style>
+</head>
+<body>
+<nav id="topNav"></nav>
+
+<!-- ============================================================ -->
+<!-- HEADER BANNER                                                 -->
+<!-- ============================================================ -->
+<header class="header">
+    <h1>The 8,760 Problem</h1>
+    <p class="subtitle">Procurement Strategy Comparison &mdash; which approach survives at scale?</p>
+    <div class="header-accent"></div>
+</header>
+
+<!-- ============================================================ -->
+<!-- ACT 1: EVERY STRATEGY LOOKS FINE AT LOW ADOPTION              -->
+<!-- ============================================================ -->
+
+<!-- 1.1 Opening Hook -->
+<section class="hero-opening">
+    <h1>Every Strategy Looks Fine at Low Adoption</h1>
+    <p class="lead">
+        Today, voluntary corporate procurement covers a fraction of US commercial &amp; industrial electricity demand.
+        At that level, every strategy works. The question isn't which approach looks best today &mdash;
+        it's which ones survive at 40%, 60%, 80%.
+    </p>
+    <div class="hero-counter">
+        <span class="counter-value" id="counterPct">13</span>
+        <span class="counter-unit">%</span>
+    </div>
+    <p class="counter-context">of C&amp;I electricity covered by voluntary clean energy procurement</p>
+</section>
+
+<!-- 1.2 The Three Families -->
+<div class="scroll-section" id="familyCards">
+    <div class="family-cards">
+        <div class="family-card" id="card-consequential">
+            <div class="family-icon">&#x1F30D;</div>
+            <div class="family-code">Strategy 1 &mdash; Consequential</div>
+            <h3>Cross-Regional Netting</h3>
+            <p>Buy the cheapest clean energy anywhere in the US. Net it against your emissions. Maximum flexibility, minimum cost.</p>
+            <span class="variant-count">3 variants: 1A, 1B, 1C</span>
+        </div>
+        <div class="family-card" id="card-hourly">
+            <div class="family-icon">&#x23F0;</div>
+            <div class="family-code">Strategy 2 &mdash; Hourly</div>
+            <h3>Same-ISO Hourly Matching</h3>
+            <p>Match your load hour-by-hour within your own grid region. Most rigorous. Most expensive.</p>
+            <span class="variant-count">3 variants: 2A, 2B, 2C</span>
+        </div>
+        <div class="family-card" id="card-annual">
+            <div class="family-icon">&#x1F4C5;</div>
+            <div class="family-code">Strategy 3 &mdash; Annual</div>
+            <h3>Annual Matching</h3>
+            <p>Match annual consumption with clean energy certificates. The status quo for most corporate buyers today.</p>
+            <span class="variant-count">4 variants: 3A, 3B, 3C, 3D</span>
+        </div>
+    </div>
+</div>
+
+<!-- 1.3 The Variant Tree (3-column by strategy) -->
+<div class="scroll-section wide" id="taxonomySection">
+    <div style="text-align:center; margin-bottom: 24px;">
+        <p style="font-size:0.92rem; color:rgba(0,0,0,0.6); max-width:620px; margin:0 auto; line-height:1.7;">
+            Within each family, design choices matter enormously. There are 10 distinct strategy variants &mdash;
+            and the differences <em>within</em> a family can be larger than the differences between families.
+        </p>
+    </div>
+
+    <div class="fig-badge" style="margin-left:auto; margin-right:auto; display:table;">Figure 1 &mdash; Strategy Taxonomy</div>
+
+    <div class="strategy-columns" id="strategyColumns">
+        <!-- Column 1: Consequential -->
+        <div class="strategy-column" id="col-consequential">
+            <div class="strat-col-header strat-col-header-1">
+                <span class="family-dot dot-consequential"></span>
+                <h4>Strategy 1<span class="strat-subtitle">Consequential Cross-Regional</span></h4>
+            </div>
+            <div class="strat-variant-list">
+                <div class="strat-variant-item selected" data-strategy="1A">
+                    <span class="variant-badge badge-data">data</span>
+                    <div class="variant-code code-1a">1A</div>
+                    <div class="variant-name">Grid-average baseline &mdash; lowest bar for emission netting</div>
+                </div>
+                <div class="strat-variant-item" data-strategy="1B">
+                    <span class="variant-badge badge-data">data</span>
+                    <div class="variant-code code-1b">1B</div>
+                    <div class="variant-name">Fossil-average baseline &mdash; higher bar, excludes clean from denominator</div>
+                </div>
+                <div class="strat-variant-item" data-strategy="1C">
+                    <span class="variant-badge badge-data">data</span>
+                    <div class="variant-code code-1c">1C</div>
+                    <div class="variant-name">Marginal emissions &mdash; highest bar in coal-heavy ISOs</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Column 2: Hourly -->
+        <div class="strategy-column" id="col-hourly">
+            <div class="strat-col-header strat-col-header-2">
+                <span class="family-dot dot-hourly"></span>
+                <h4>Strategy 2<span class="strat-subtitle">Hourly Matching (Same-ISO)</span></h4>
+            </div>
+            <div class="strat-variant-list">
+                <div class="strat-variant-item selected" data-strategy="2A">
+                    <span class="variant-badge badge-data">data</span>
+                    <div class="variant-code code-2a">2A</div>
+                    <div class="variant-name">100% new build &mdash; maximum additionality, no existing credit</div>
+                </div>
+                <div class="strat-variant-item" data-strategy="2B">
+                    <span class="variant-badge badge-pending">pending</span>
+                    <div class="variant-code code-2b">2B</div>
+                    <div class="variant-name">Grid baseline credit &mdash; credit for existing clean, new build on top</div>
+                </div>
+                <div class="strat-variant-item selected" data-strategy="2C">
+                    <span class="variant-badge badge-data">data</span>
+                    <div class="variant-code code-2c">2C</div>
+                    <div class="variant-name">Pro-rata allocation + premium &mdash; pays existing clean to stay online</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Column 3: Annual -->
+        <div class="strategy-column" id="col-annual">
+            <div class="strat-col-header strat-col-header-3">
+                <span class="family-dot dot-annual"></span>
+                <h4>Strategy 3<span class="strat-subtitle">Annual Matching</span></h4>
+            </div>
+            <div class="strat-variant-list">
+                <div class="strat-variant-item" data-strategy="3A">
+                    <span class="variant-badge badge-pending">pending</span>
+                    <div class="variant-code code-3a">3A</div>
+                    <div class="variant-name">Same-ISO, new build required &mdash; annual version of 2A</div>
+                </div>
+                <div class="strat-variant-item" data-strategy="3B">
+                    <span class="variant-badge badge-pending">pending</span>
+                    <div class="variant-code code-3b">3B</div>
+                    <div class="variant-name">Cross-regional, new build &mdash; annual version of consequential</div>
+                </div>
+                <div class="strat-variant-item" data-strategy="3C">
+                    <span class="variant-badge badge-pending">pending</span>
+                    <div class="variant-code code-3c">3C</div>
+                    <div class="variant-name">Same-ISO, no additionality &mdash; existing clean counts</div>
+                </div>
+                <div class="strat-variant-item selected" data-strategy="3D">
+                    <span class="variant-badge badge-data">data</span>
+                    <div class="variant-code code-3d">3D</div>
+                    <div class="variant-name">Cross-regional, no additionality &mdash; unbundled RECs, cheapest option</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- KEY FINDINGS HERO (placeholder — populated with data)         -->
+<!-- ============================================================ -->
+<section class="findings-hero" id="findingsHero">
+    <div class="findings-inner">
+        <div class="findings-label">Key Findings</div>
+        <h2>What the data reveals about procurement strategy choice</h2>
+        <div class="findings-grid">
+            <div class="finding-card">
+                <div class="finding-number" id="findingNum1">&mdash;</div>
+                <h4>Strategies look identical at low adoption</h4>
+                <p>Cost spreads are negligible below 20% C&amp;I participation. The divergence begins where most corporate buyers haven't looked yet.</p>
+            </div>
+            <div class="finding-card">
+                <div class="finding-number" id="findingNum2">&mdash;</div>
+                <h4>Hourly matching builds the grid you need</h4>
+                <p>Only hourly strategies force investment in firm clean generation and long-duration storage &mdash; the resources a deeply decarbonized grid requires.</p>
+            </div>
+            <div class="finding-card">
+                <div class="finding-number" id="findingNum3">&mdash;</div>
+                <h4>Cheap today, expensive tomorrow</h4>
+                <p>Consequential and annual strategies defer learning-curve investment. By 2040, they pay near-FOAK prices for technology that hourly buyers unlocked at NOAK a decade earlier.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- ACT 2: WHAT BREAKS, AND WHEN                                  -->
+<!-- ============================================================ -->
+
+<div class="act-divider scroll-section">
+    <div class="act-number">Act II</div>
+    <div class="act-title">What Breaks, and When</div>
+    <div class="act-subtitle">
+        Drag the participation slider from today's level to 80%.
+        Watch every failure mode activate in sequence.
+    </div>
+</div>
+
+<!-- Sticky participation slider -->
+<div class="participation-bar" id="participationBar">
+    <span class="bar-label">C&amp;I Participation</span>
+    <div class="participation-slider-wrap">
+        <input type="range" id="participationSlider" min="5" max="80" value="13" step="1">
+    </div>
+    <div class="participation-readout">
+        <span class="pct-val" id="participationValue">13</span>
+        <span class="pct-label">% of C&amp;I load</span>
+    </div>
+    <span class="participation-context" id="participationContext">Current market level</span>
+</div>
+
+<!-- 2.1 Cost Trajectory Divergence -->
+<div class="scroll-section">
+    <div class="figure-block">
+        <div class="figure-card">
+            <div class="fig-badge">Figure 2 &mdash; Cost Divergence</div>
+            <h3>At Low Participation, All Strategies Cost Roughly the Same</h3>
+            <p class="chart-note">
+                Effective cost per MWh at 90% CFE threshold under each strategy variant.
+                Strategies cluster in a narrow band at current market levels, then diverge dramatically.
+            </p>
+            <div class="figure-chart-container">
+                <canvas id="chartCostDivergence"></canvas>
+            </div>
+            <div class="callout-box">
+                <p><strong>The cheap strategies aren't actually cheap</strong> &mdash; they're deferring costs to the future.
+                Low prices at low participation reflect cherry-picking the easiest abatement first.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 2.2 Capital Allocation -->
+<div class="scroll-section">
+    <div class="figure-block">
+        <div class="figure-card">
+            <div class="fig-badge">Figure 3 &mdash; Capital Allocation</div>
+            <h3>Where the Money Goes</h3>
+            <p class="chart-note">
+                Share of total clean energy investment allocated to each ISO under cross-regional vs same-ISO strategies.
+                Dashed lines show demand-proportional "fair share."
+            </p>
+            <div class="figure-chart-container">
+                <canvas id="chartCapitalAllocation"></canvas>
+            </div>
+            <div class="callout-box">
+                <p><strong>Cross-regional strategies concentrate capital</strong> in regions with the cheapest abatement,
+                starving other regions of investment in their own clean energy transition.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 2.3 Wholesale Price Erosion -->
+<div class="scroll-section">
+    <div class="figure-block">
+        <div class="figure-card">
+            <div class="fig-badge">Figure 4 &mdash; Wholesale Erosion</div>
+            <h3>Every Zero-Marginal-Cost MWh Pushes Prices Down</h3>
+            <p class="chart-note">
+                Estimated wholesale LMP trajectory as clean energy penetration increases under each strategy.
+                Horizontal band at nuclear operating cost threshold.
+            </p>
+            <div class="figure-chart-container">
+                <canvas id="chartWholesaleErosion"></canvas>
+            </div>
+            <div class="page-insight-box">
+                <p><strong>Strategy 2C is the only variant with a built-in mechanism to prevent wholesale destruction.</strong>
+                Its premium creates a revenue floor for existing generators rather than flooding the market with competing new zero-marginal-cost generation.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 2.4 MAC Wall -->
+<div class="scroll-section">
+    <div class="figure-block">
+        <div class="figure-card">
+            <div class="fig-badge">Figure 5 &mdash; MAC Escalation</div>
+            <h3>The Coal Wall</h3>
+            <p class="chart-note">
+                Marginal abatement cost for the next ton of CO&#8322; displaced under each strategy.
+                Reference bands show DAC, EU ETS, and social cost of carbon benchmarks.
+            </p>
+            <div class="figure-chart-container">
+                <canvas id="chartMACWall"></canvas>
+            </div>
+            <div class="callout-box">
+                <p><strong>The coal wall is a cliff, not a hill.</strong> Once you've displaced all the coal,
+                the next ton costs 3&ndash;5&times; more. Hourly strategies avoid this cliff by building the full
+                resource stack from the start.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 2.5 Resource Mix Divergence -->
+<div class="scroll-section">
+    <div class="figure-block">
+        <div class="figure-card">
+            <div class="fig-badge">Figure 6 &mdash; Resource Mix</div>
+            <h3>Different Strategies Build Different Grids</h3>
+            <p class="chart-note">
+                Resource mix composition at 90% CFE threshold for representative strategies.
+                What gets built matters more than what it costs.
+            </p>
+            <div class="figure-chart-container">
+                <canvas id="chartResourceMix"></canvas>
+            </div>
+            <div class="page-insight-box">
+                <p><strong>Hourly matching is the only approach that forces investment in the resources you actually need</strong>
+                for a deeply decarbonized grid &mdash; firm clean generation and long-duration storage.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- ACT 3: THE DEBATE WITHIN HOURLY                               -->
+<!-- ============================================================ -->
+
+<div class="act-divider scroll-section">
+    <div class="act-number">Act III</div>
+    <div class="act-title">The Debate Within Hourly</div>
+    <div class="act-subtitle">
+        If hourly matching is the most robust family, the next question is: which version?
+        The differences are larger than you'd think.
+    </div>
+</div>
+
+<!-- 3.1 The Stranding Paradox -->
+<div class="scroll-section" id="strandingSection">
+    <div class="figure-block">
+        <div class="figure-card">
+            <div class="fig-badge">Figure 7 &mdash; Strategy 2 Internal Comparison</div>
+            <h3>The Stranding Paradox: 2A vs 2B vs 2C</h3>
+            <p class="chart-note">
+                Six dimensions compared across the three hourly matching variants.
+                The variant that sounds safest (2B) has the worst failure mode.
+            </p>
+
+            <div class="table-scroll-wrapper">
+            <table class="comparison-table" id="comparisonTable">
+                <thead>
+                <tr class="row-visible">
+                    <th>Dimension</th>
+                    <th class="col-2a">2A &mdash; All New</th>
+                    <th class="col-2b">2B &mdash; Grid Baseline</th>
+                    <th class="col-2c">2C &mdash; Premium + New</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>Wholesale erosion</td>
+                    <td class="cell-bad">Accelerates locally</td>
+                    <td class="cell-mixed">Moderate</td>
+                    <td class="cell-good">Revenue floor mitigates</td>
+                </tr>
+                <tr>
+                    <td>Existing clean stranding</td>
+                    <td class="cell-mixed">Ignores &mdash; no help, no harm</td>
+                    <td class="cell-worst">Worst &mdash; claims credit without paying</td>
+                    <td class="cell-good">Addressed &mdash; premium keeps plants online</td>
+                </tr>
+                <tr>
+                    <td>Learning curve signal</td>
+                    <td class="cell-good">Strong &mdash; maximum new deployment</td>
+                    <td class="cell-mixed">Diluted &mdash; less new build needed</td>
+                    <td class="cell-good">Strong &mdash; new build layered on top</td>
+                </tr>
+                <tr>
+                    <td>Cost trajectory</td>
+                    <td class="cell-bad">Highest near-term cost</td>
+                    <td class="cell-good">Lowest &mdash; free-rides on existing</td>
+                    <td class="cell-mixed">Moderate &mdash; premium + new build</td>
+                </tr>
+                <tr>
+                    <td>Firm investment signal</td>
+                    <td class="cell-good">Builds firm + storage from day one</td>
+                    <td class="cell-mixed">Reduces requirement for firm</td>
+                    <td class="cell-good">Preserves existing + builds new firm</td>
+                </tr>
+                <tr>
+                    <td>Additionality</td>
+                    <td class="cell-good">100% additional by definition</td>
+                    <td class="cell-bad">Reduced &mdash; existing clean offsets requirement</td>
+                    <td class="cell-good">Existing preserved + new added on top</td>
+                </tr>
+                </tbody>
+            </table>
+            </div>
+
+            <div class="callout-box">
+                <p><strong>Strategy 2B is arguably the worst hourly variant</strong> &mdash;
+                it actively takes credit for existing clean generation without directing any revenue to those generators.
+                When unpaid existing generation retires, 2B buyers face the same replacement cost spike as everyone else.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 3.2 The 2C Critical Mass -->
+<section class="section-dark">
+<div class="section-dark-inner">
+
+<div class="scroll-section">
+    <div class="figure-block">
+        <div class="figure-card">
+            <div class="fig-badge">Figure 8 &mdash; Critical Mass Threshold</div>
+            <h3>Strategy 2C Has the Opposite Problem</h3>
+            <p class="chart-note">
+                Every other strategy degrades as adoption increases. Strategy 2C needs
+                <em>enough</em> adoption to work &mdash; below a critical mass, you're just paying premiums.
+                Above it, you've funded the learning curve.
+            </p>
+
+            <!-- Zone diagram (above chart) -->
+            <div class="zone-diagram">
+                <div class="zone zone-maintenance">
+                    <h4>Maintenance Mode</h4>
+                    <p>Below critical mass. Premium spend dominates. Not enough new-build volume to trigger learning curve.</p>
+                </div>
+                <div class="zone zone-learning">
+                    <h4>Learning Activated</h4>
+                    <p>Past critical mass. Aggregate new-build firm hits first Wright's Law doubling. NOAK pricing begins. Cost curve bends down.</p>
+                </div>
+            </div>
+
+            <div class="figure-chart-container">
+                <canvas id="chart2CThreshold"></canvas>
+            </div>
+
+            <div class="page-insight-box">
+                <p><strong>The critical mass threshold is lower than you'd think</strong> &mdash; because learning is global.
+                A nuclear plant built in PJM drives NOAK pricing for nuclear in NEISO.
+                All 7 ISOs contribute to the same global learning pool.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<hr class="dark-divider">
+
+<!-- 3.3 Regional Role Map -->
+<div class="scroll-section">
+    <div class="figure-block">
+        <div class="figure-card">
+            <div class="fig-badge">Figure 9 &mdash; Regional Investment Roles</div>
+            <h3>Different Regions Play Different Roles Under Strategy 2C</h3>
+            <p class="chart-note">
+                Nuclear-heavy ISOs are the premium-payers &mdash; their spend keeps existing clean alive.
+                Renewable-rich ISOs are the learning-curve drivers. Both are essential.
+            </p>
+
+            <div class="figure-chart-container">
+                <canvas id="chartRegionalRoles"></canvas>
+            </div>
+
+            <div class="callout-box">
+                <p><strong>Each region contributes differently to the same NOAK outcome.</strong>
+                Regions with large existing clean fleets pay premiums to prevent stranding.
+                Regions with strong renewable resources deploy the new capacity that drives the learning curve.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- ACT 4: THE TIMELINE TRAP                                      -->
+<!-- ============================================================ -->
+
+<div class="act-divider-dark scroll-section">
+    <div class="act-number">Act IV</div>
+    <div class="act-title">The Timeline Trap</div>
+    <div class="act-subtitle">
+        Corporate decarbonization is a 25-year ratchet. What you build at 50% determines what you face at 90%.
+    </div>
+</div>
+
+<!-- 4.1 FOAK→NOAK Timeline -->
+<div class="scroll-section">
+    <div class="figure-block">
+        <div class="figure-card">
+            <div class="fig-badge">Figure 10 &mdash; Learning Curve Divergence</div>
+            <h3>The FOAK&rarr;NOAK Timeline</h3>
+            <p class="chart-note">
+                Clean firm LCOE trajectory under two procurement regimes. SBTi milestones mark
+                when corporations need to hit each target. The gap between the lines is the cost
+                of delayed investment.
+            </p>
+            <div class="figure-chart-container" style="height: 420px;">
+                <canvas id="chartFOAKNOAK"></canvas>
+            </div>
+            <div class="callout-box">
+                <p><strong>By 2040, hourly matching has driven clean firm costs to NOAK.</strong>
+                Consequential strategies are still paying near-FOAK &mdash;
+                for the same technology, at the same time &mdash; because they delayed investment.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 4.2 Three Compounding Failures -->
+<section class="section-dark">
+<div class="section-dark-inner">
+<div class="scroll-section" id="compoundingSection">
+    <div class="figure-block">
+        <div class="figure-card">
+            <div class="fig-badge">Figure 11 &mdash; Compounding Timeline</div>
+            <h3>Three Failures Compound on the SBTi Timeline</h3>
+            <p class="chart-note">
+                Learning delay, stranded VRE overbuild, and gas lock-in create a compounding divergence.
+                The gap widens at every milestone.
+            </p>
+
+            <div class="table-scroll-wrapper">
+            <table class="timeline-table" id="timelineTable">
+                <thead>
+                <tr class="row-visible">
+                    <th>Milestone</th>
+                    <th class="col-delayed">Strategy 1/3<br><small>Consequential / Annual</small></th>
+                    <th class="col-hourly">Strategy 2<br><small>Hourly Matching</small></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>2030<span class="milestone-label">SBTi 50%</span></td>
+                    <td class="td-green">Cheap &mdash; lots of VRE, looks great on paper</td>
+                    <td class="td-amber">Slightly more expensive &mdash; investing in firm + storage</td>
+                </tr>
+                <tr>
+                    <td>2035<span class="milestone-label">SBTi ~70%</span></td>
+                    <td class="td-green">Still cheap &mdash; more VRE, gas fills gaps</td>
+                    <td class="td-amber">Firm clean hitting learning curve, storage displacing gas</td>
+                </tr>
+                <tr>
+                    <td>2040<span class="milestone-label">SBTi 90%</span></td>
+                    <td class="td-red">WALL &mdash; VRE saturated, firm at FOAK, gas locked in</td>
+                    <td class="td-green">Firm at NOAK, storage mature, gas already retiring</td>
+                </tr>
+                <tr>
+                    <td>2050<span class="milestone-label">Net-Zero 100%</span></td>
+                    <td class="td-red">Scramble &mdash; paying FOAK for firm, retiring gas at huge cost, stranded VRE</td>
+                    <td class="td-green">Smooth glide &mdash; infrastructure already in place</td>
+                </tr>
+                </tbody>
+            </table>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- ACT 5: THE HORSE RACE                                         -->
+<!-- ============================================================ -->
+
+<div class="act-divider scroll-section">
+    <div class="act-number">Act V</div>
+    <div class="act-title">The Horse Race</div>
+    <div class="act-subtitle">
+        Same outcome &mdash; which strategy gets there cheapest?
+        Same budget &mdash; which strategy achieves the most?
+    </div>
+</div>
+
+<div class="scroll-section">
+    <div class="horse-race-container">
+        <div class="race-grid">
+            <!-- Fixed Outcome -->
+            <div class="figure-card">
+                <div class="fig-badge">Figure 12 &mdash; Fixed Outcome</div>
+                <h3>Cost to Reach 90% CFE</h3>
+                <p class="chart-note">
+                    What does each strategy cost to achieve the same level of hourly clean energy matching?
+                    Bars annotated with what each strategy actually builds.
+                </p>
+                <div class="figure-chart-container" style="height: 380px;">
+                    <canvas id="chartFixedOutcome"></canvas>
+                </div>
+            </div>
+
+            <!-- Fixed Budget -->
+            <div class="figure-card">
+                <div class="fig-badge">Figure 13 &mdash; Fixed Budget</div>
+                <h3>What Does $60/MWh Get You?</h3>
+                <p class="chart-note">
+                    Same budget, different outcomes. Which strategy achieves the most
+                    decarbonization per dollar spent?
+                </p>
+                <div class="figure-chart-container" style="height: 380px;">
+                    <canvas id="chartFixedBudget"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- ACT 6: THE SYSTEM VIEW                                        -->
+<!-- ============================================================ -->
+
+<div class="act-divider scroll-section">
+    <div class="act-number">Act VI</div>
+    <div class="act-title">The System View</div>
+    <div class="act-subtitle">
+        Flip the question: what participation level does each strategy need to hit a system-wide CO&#8322; target?
+    </div>
+</div>
+
+<!-- 6.1 Required Participation -->
+<div class="scroll-section">
+    <div class="figure-block">
+        <div class="figure-card">
+            <div class="fig-badge">Figure 14 &mdash; System-Wide Requirements</div>
+            <h3>Required Participation by Strategy</h3>
+            <p class="chart-note">
+                What C&amp;I participation rate would each strategy need to achieve a meaningful
+                US power sector CO&#8322; reduction? Some strategies can't get there at any level.
+            </p>
+            <div style="margin-bottom: 16px;">
+                <label style="font-size:0.78rem; font-weight:600; color:var(--navy); display:block; margin-bottom:6px;">
+                    CO&#8322; Reduction Target
+                </label>
+                <div style="display:flex; align-items:center; gap:10px; max-width:400px;">
+                    <input type="range" id="co2TargetSlider" min="10" max="50" value="30" step="5"
+                        style="flex:1; height:5px; -webkit-appearance:none; appearance:none;
+                        background:linear-gradient(90deg,#22C55E,#F59E0B,#EF4444); border-radius:3px; outline:none; cursor:pointer;">
+                    <span id="co2TargetValue"
+                        style="font-family:var(--font-heading);
+                        font-size:1.2rem; font-weight:800; color:var(--hydro);">30%</span>
+                </div>
+            </div>
+            <div class="figure-chart-container">
+                <canvas id="chartSystemReq"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 6.2 Interactive Explorer -->
+<div class="scroll-section" style="max-width:1200px;">
+    <div class="explorer-panel">
+        <div class="figure-card">
+            <div class="fig-badge">Figure 15 &mdash; Interactive Explorer</div>
+            <h3>Explore the Full Parameter Space</h3>
+            <p class="chart-note">
+                Select strategies, adjust participation and targets, compare across ISOs.
+            </p>
+
+            <div class="explorer-controls">
+                <div class="controls-grid">
+                    <!-- Strategy selector -->
+                    <div class="control-group" style="grid-column: 1 / -1;">
+                        <label>Strategies to Compare</label>
+                        <div class="strategy-checkboxes" id="explorerStrategies">
+                            <label class="strat-check active"><input type="checkbox" value="1A" checked> 1A</label>
+                            <label class="strat-check"><input type="checkbox" value="1B"> 1B</label>
+                            <label class="strat-check"><input type="checkbox" value="1C"> 1C</label>
+                            <label class="strat-check active"><input type="checkbox" value="2A" checked> 2A</label>
+                            <label class="strat-check"><input type="checkbox" value="2B"> 2B</label>
+                            <label class="strat-check active"><input type="checkbox" value="2C" checked> 2C</label>
+                            <label class="strat-check"><input type="checkbox" value="3A"> 3A</label>
+                            <label class="strat-check"><input type="checkbox" value="3B"> 3B</label>
+                            <label class="strat-check"><input type="checkbox" value="3C"> 3C</label>
+                            <label class="strat-check active"><input type="checkbox" value="3D" checked> 3D</label>
+                        </div>
+                    </div>
+
+                    <!-- ISO selector -->
+                    <div class="control-group">
+                        <label>ISO Region</label>
+                        <select id="explorerISO">
+                            <option value="all">All ISOs (weighted)</option>
+                            <option value="CAISO">CAISO</option>
+                            <option value="ERCOT">ERCOT</option>
+                            <option value="PJM">PJM</option>
+                            <option value="NYISO">NYISO</option>
+                            <option value="NEISO">NEISO</option>
+                            <option value="MISO">MISO</option>
+                            <option value="SPP">SPP</option>
+                        </select>
+                    </div>
+
+                    <!-- CFE Threshold -->
+                    <div class="control-group">
+                        <label>CFE Threshold</label>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <input type="range" id="explorerThreshold" min="50" max="99" value="90" step="5">
+                            <span id="explorerThresholdVal"
+                                style="font-family:'Rajdhani',monospace; font-weight:700; font-size:1rem; color:#0284C7; min-width:40px;">90%</span>
+                        </div>
+                    </div>
+
+                    <!-- Learning Curves toggle -->
+                    <div class="control-group">
+                        <label>Learning Curves</label>
+                        <div style="display:flex; gap:8px;">
+                            <button class="iso-btn active" id="lcOn" style="flex:1;">On</button>
+                            <button class="iso-btn" id="lcOff" style="flex:1;">Off</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Explorer result panels -->
+            <div class="explorer-results">
+                <div class="figure-card" style="padding:16px;">
+                    <h3 style="font-size:0.85rem; margin-bottom:8px;">Cost ($/MWh)</h3>
+                    <div style="position:relative; height:240px;">
+                        <canvas id="explorerCost"></canvas>
+                    </div>
+                </div>
+                <div class="figure-card" style="padding:16px;">
+                    <h3 style="font-size:0.85rem; margin-bottom:8px;">Resource Mix</h3>
+                    <div style="position:relative; height:240px;">
+                        <canvas id="explorerMix"></canvas>
+                    </div>
+                </div>
+                <div class="figure-card" style="padding:16px;">
+                    <h3 style="font-size:0.85rem; margin-bottom:8px;">CO&#8322; Abated (Mt/yr)</h3>
+                    <div style="position:relative; height:240px;">
+                        <canvas id="explorerCO2"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- FOOTER                                                        -->
+<!-- ============================================================ -->
+
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="dashboard.html">Cost Optimizer</a>
+        <a href="scenario_comparison.html">Scenario Comparison</a>
+        <a href="consequential_accounting.html">Consequential Accounting</a>
+        <a href="abatement_dashboard.html">Abatement Analysis</a>
+        <a href="research_paper.html">Research Paper</a>
+    </div>
+    <div class="footer-note">Hourly CFE Optimizer &mdash; 8,760-hour dispatch model</div>
+</footer>
+<div class="bottom-banner"></div>
+
+<!-- ============================================================ -->
+<!-- SCRIPTS                                                       -->
+<!-- ============================================================ -->
+<script src="js/procurement-strategy-data.js"></script>
+<script src="js/nav.js"></script>
+<script>
+(function() {
+'use strict';
+
+// ── Strategy color palette ──
+const STRATEGY_COLORS = {
+    '1A': '#6366F1', '1B': '#818CF8', '1C': '#A5B4FC',
+    '2A': '#0891B2', '2B': '#67E8F9', '2C': '#14B8A6',
+    '3A': '#D97706', '3B': '#FBBF24', '3C': '#F59E0B', '3D': '#FCD34D'
+};
+const STRATEGY_LABELS = {
+    '1A': '1A — Consequential (Grid Avg)',
+    '1B': '1B — Consequential (Fossil Avg)',
+    '1C': '1C — Consequential (Marginal)',
+    '2A': '2A — Hourly (All New)',
+    '2B': '2B — Hourly (Grid Baseline)',
+    '2C': '2C — Hourly (Premium + New)',
+    '3A': '3A — Annual (Same-ISO, New)',
+    '3B': '3B — Annual (Cross-Regional, New)',
+    '3C': '3C — Annual (Same-ISO, Existing)',
+    '3D': '3D — Annual (Cross-Regional, Existing)'
+};
+
+// Resource category colors
+const RES_COLORS = {
+    existing_nuclear: '#1E3A5F',
+    existing_vre_hydro: '#0EA5E9',
+    nuclear_uprate: '#4A7C59',
+    new_build_vre: '#F59E0B',
+    new_build_firm: '#22C55E',
+    sss_allocation: '#A855F7',
+    cross_regional_recs: '#EC4899',
+    uprate: '#4A7C59',
+    wind: '#22C55E',
+    solar: '#F59E0B',
+    clean_firm: '#1E3A5F',
+    ccs_ccgt: '#0891B2',
+    hydro: '#0EA5E9',
+    battery: '#A855F7',
+    ldes: '#EC4899'
+};
+
+const RES_LABELS = {
+    existing_nuclear: 'Existing Nuclear',
+    existing_vre_hydro: 'Existing VRE/Hydro',
+    nuclear_uprate: 'Nuclear Uprate',
+    new_build_vre: 'New VRE',
+    new_build_firm: 'New Firm',
+    sss_allocation: 'SSS Allocation',
+    cross_regional_recs: 'Cross-Regional RECs',
+    uprate: 'Uprate',
+    wind: 'Wind',
+    solar: 'Solar'
+};
+
+const ALL_STRATEGIES = ['1A','1B','1C','2A','2B','2C','3A','3B','3C','3D'];
+const ISOS = ['CAISO','ERCOT','PJM','NYISO','NEISO','MISO','SPP'];
+const PARTICIPATION_KEYS = ['2pct','5pct','10pct','15pct','20pct','30pct','40pct','50pct','60pct','80pct'];
+const PARTICIPATION_VALUES = [2, 5, 10, 15, 20, 30, 40, 50, 60, 80];
+
+// ── Data helpers ──
+// Compact format: y=year, t=threshold, p=participation_pct, c=cost_per_mwh,
+// tc=total_cost_m, co2=co2_abated_mmt, mac=mac_per_ton, dt=demand_twh,
+// bt=buyer_demand_twh, rm=resource_mix (t=twh, $=cost_m), lmp=lmp_impact
+const DATA = (typeof PROCUREMENT_DATA !== 'undefined') ? PROCUREMENT_DATA : null;
+
+// Normalize a compact entry to readable field names
+function N(e) {
+    if (!e || e._n) return e;
+    return {
+        _n: true,
+        year: e.y, threshold: e.t, participation_pct: e.p,
+        cost_per_mwh: e.c || 0, total_cost_m: e.tc || 0,
+        co2_abated_mmt: e.co2 || 0, mac_per_ton: e.mac,
+        demand_twh: e.dt || 0, buyer_demand_twh: e.bt || 0,
+        lmp_impact: e.lmp || null,
+        resource_mix: normalizeRM(e.rm)
+    };
+}
+
+function normalizeRM(rm) {
+    if (!rm) return {};
+    const out = {};
+    for (const [k, v] of Object.entries(rm)) {
+        if (typeof v === 'number') {
+            out[k] = v; // Strategy 1 flat format
+        } else if (v && typeof v.t === 'number') {
+            out[k] = { twh: v.t, cost_m: v['$'] || 0 };
+        } else {
+            out[k] = v; // pass through
+        }
+    }
+    return out;
+}
+
+function getStrategyData(stratId, iso, growth, partKey) {
+    if (!DATA) return [];
+    const key = 'strategy' + stratId;
+    try {
+        const raw = DATA[key][iso][growth][partKey];
+        return raw ? raw.map(N) : [];
+    } catch(e) { return []; }
+}
+
+function closestPartKey(pct) {
+    let best = 0;
+    for (let i = 0; i < PARTICIPATION_VALUES.length; i++) {
+        if (Math.abs(PARTICIPATION_VALUES[i] - pct) < Math.abs(PARTICIPATION_VALUES[best] - pct)) best = i;
+    }
+    return PARTICIPATION_KEYS[best];
+}
+
+function getEntryAtYear(entries, year) {
+    if (!entries || !entries.length) return null;
+    let best = entries[0];
+    for (const e of entries) {
+        if (Math.abs(e.year - year) < Math.abs(best.year - year)) best = e;
+    }
+    return best;
+}
+
+function getEntryAtThreshold(entries, threshold) {
+    if (!entries || !entries.length) return null;
+    let best = entries[0];
+    for (const e of entries) {
+        if (Math.abs(e.threshold - threshold) < Math.abs(best.threshold - threshold)) best = e;
+    }
+    return best;
+}
+
+function extractResourceCategories(mix) {
+    const cats = {};
+    if (!mix) return cats;
+    for (const [k, v] of Object.entries(mix)) {
+        if (typeof v === 'number') {
+            // Strategy 1: ISO_resource format (e.g. CAISO_uprate, SPP_wind)
+            const parts = k.split('_');
+            const res = parts.length > 1 ? parts.slice(1).join('_') : k;
+            cats[res] = (cats[res] || 0) + v;
+        } else if (v && typeof v.twh === 'number') {
+            // Strategy 2/3: {twh, cost_m}
+            cats[k] = (cats[k] || 0) + v.twh;
+        }
+    }
+    return cats;
+}
+
+// ── Scroll animations ──
+const scrollObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            if (entry.target.id === 'familyCards') {
+                const cards = entry.target.querySelectorAll('.family-card');
+                cards.forEach((card, i) => {
+                    setTimeout(() => card.classList.add('visible'), i * 200);
+                });
+            }
+        }
+    });
+}, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
+document.querySelectorAll('.scroll-section').forEach(s => scrollObserver.observe(s));
+
+const colObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            const cols = entry.target.querySelectorAll('.strategy-column');
+            cols.forEach((col, i) => {
+                setTimeout(() => col.classList.add('visible'), i * 200);
+            });
+        }
+    });
+}, { threshold: 0.15 });
+const stratCols = document.getElementById('strategyColumns');
+if (stratCols) colObserver.observe(stratCols);
+
+const tableObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            const rows = entry.target.querySelectorAll('tbody tr');
+            rows.forEach((row, i) => {
+                setTimeout(() => row.classList.add('row-visible'), i * 300);
+            });
+        }
+    });
+}, { threshold: 0.2 });
+const compTable = document.getElementById('comparisonTable');
+if (compTable) tableObserver.observe(compTable);
+const tlTable = document.getElementById('timelineTable');
+if (tlTable) tableObserver.observe(tlTable);
+
+// ── Animated counter ──
+function animateCounter(el, target, duration) {
+    const start = performance.now();
+    function tick(now) {
+        const progress = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        el.textContent = Math.round(target * eased);
+        if (progress < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+}
+const counterEl = document.getElementById('counterPct');
+if (counterEl) setTimeout(() => animateCounter(counterEl, 13, 1500), 400);
+
+// ── Chart defaults ──
+Chart.defaults.font.family = getComputedStyle(document.documentElement).getPropertyValue('--font-body').trim() || "'Plus Jakarta Sans', 'Helvetica Neue', sans-serif";
+Chart.defaults.font.size = 12;
+Chart.defaults.color = 'rgba(0,0,0,0.5)';
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
+Chart.defaults.plugins.legend.labels.pointStyleWidth = 10;
+
+const TOOLTIP_OPTS = {
+    backgroundColor: 'rgba(26,39,68,0.95)',
+    titleFont: { weight: 700 },
+    padding: 12,
+    cornerRadius: 8
+};
+
+// ── Chart factory helpers ──
+function createChart(canvasId, type, opts) {
+    const ctx = document.getElementById(canvasId);
+    if (!ctx) return null;
+    return new Chart(ctx, { type, data: { labels: [], datasets: [] }, options: opts });
+}
+
+function lineOpts(yLabel, xLabel) {
+    return {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        scales: {
+            x: { title: { display: true, text: xLabel || 'C&I Participation (%)', font: { weight: 600 } }, grid: { color: 'rgba(0,0,0,0.04)' } },
+            y: { title: { display: true, text: yLabel, font: { weight: 600 } }, grid: { color: 'rgba(0,0,0,0.06)' }, beginAtZero: true }
+        },
+        plugins: { tooltip: TOOLTIP_OPTS }
+    };
+}
+
+function barOpts(yLabel, horizontal) {
+    return {
+        responsive: true, maintainAspectRatio: false,
+        indexAxis: horizontal ? 'y' : 'x',
+        scales: {
+            x: { title: { display: true, text: horizontal ? yLabel : '', font: { weight: 600 } }, grid: { color: 'rgba(0,0,0,0.04)' }, beginAtZero: true },
+            y: { title: { display: true, text: horizontal ? '' : yLabel, font: { weight: 600 } }, grid: { color: 'rgba(0,0,0,0.06)' } }
+        },
+        plugins: { tooltip: TOOLTIP_OPTS }
+    };
+}
+
+// ── Create all charts ──
+// Act 2
+const chartCostDiv = createChart('chartCostDivergence', 'line', lineOpts('Effective Cost ($/MWh)'));
+const chartCapital = createChart('chartCapitalAllocation', 'bar', barOpts('% of Total Investment', false));
+const chartWholesale = createChart('chartWholesaleErosion', 'line', lineOpts('Wholesale LMP ($/MWh)'));
+const chartMAC = createChart('chartMACWall', 'line', lineOpts('Marginal $/tCO₂'));
+const chartMix = createChart('chartResourceMix', 'bar', {
+    ...barOpts('TWh', false),
+    scales: {
+        x: { stacked: true, grid: { color: 'rgba(0,0,0,0.04)' } },
+        y: { stacked: true, title: { display: true, text: 'TWh', font: { weight: 600 } }, grid: { color: 'rgba(0,0,0,0.06)' } }
+    }
+});
+// Act 3
+const chart2C = createChart('chart2CThreshold', 'line', lineOpts('Effective $/MWh', 'Year'));
+const chartRoles = createChart('chartRegionalRoles', 'bar', {
+    ...barOpts('$M Investment', false),
+    scales: {
+        x: { stacked: true, grid: { color: 'rgba(0,0,0,0.04)' } },
+        y: { stacked: true, title: { display: true, text: '$M Investment', font: { weight: 600 } }, grid: { color: 'rgba(0,0,0,0.06)' } }
+    }
+});
+// Act 4
+const chartFOAK = createChart('chartFOAKNOAK', 'line', lineOpts('Effective $/MWh', 'Year'));
+// Act 5
+const chartOutcome = createChart('chartFixedOutcome', 'bar', barOpts('$/MWh', true));
+const chartBudget = createChart('chartFixedBudget', 'bar', barOpts('CFE % Achieved', true));
+// Act 6
+const chartSysReq = createChart('chartSystemReq', 'bar', barOpts('Required C&I Participation (%)', true));
+const expCostChart = createChart('explorerCost', 'bar', barOpts('$/MWh', false));
+const expMixChart = createChart('explorerMix', 'bar', {
+    ...barOpts('TWh', false),
+    scales: {
+        x: { stacked: true, grid: { color: 'rgba(0,0,0,0.04)' } },
+        y: { stacked: true, title: { display: true, text: 'TWh', font: { weight: 600 } }, grid: { color: 'rgba(0,0,0,0.06)' } }
+    }
+});
+const expCO2Chart = createChart('explorerCO2', 'bar', barOpts('Mt CO₂/yr', false));
+
+// ════════════════════════════════════════════════════════════════
+// DATA WIRING — connects PROCUREMENT_DATA to all charts
+// ════════════════════════════════════════════════════════════════
+
+if (!DATA) {
+    console.warn('PROCUREMENT_DATA not loaded — charts will be empty.');
+}
+
+// Currently selected strategies for the scrollytell (variant tree clicks)
+function getSelectedStrategies() {
+    const sel = [];
+    document.querySelectorAll('.strat-variant-item.selected').forEach(el => {
+        sel.push(el.getAttribute('data-strategy'));
+    });
+    return sel.length ? sel : ['1A', '2C', '3D'];
+}
+
+// Explorer strategy checkboxes
+function getExplorerStrategies() {
+    const sel = [];
+    document.querySelectorAll('#explorerStrategies .strat-check input:checked').forEach(cb => {
+        sel.push(cb.value);
+    });
+    return sel.length ? sel : ['1A', '2A', '2C', '3D'];
+}
+
+const growth = 'Medium'; // Static pages default to Medium
+const TARGET_YEAR_90 = 2040; // Year when SBTi ratchet hits 90%
+
+// ── Act 2 update: Cost Divergence, Capital, Wholesale, MAC, Resource Mix ──
+function updateAct2Charts() {
+    if (!DATA) return;
+    const partPct = parseInt(pSlider.value);
+    const partKey = closestPartKey(partPct);
+    const strats = getSelectedStrategies();
+    const refISO = 'PJM'; // Representative ISO for scrollytell
+
+    // Fig 2: Cost Divergence — cost_per_mwh across participation levels
+    if (chartCostDiv) {
+        chartCostDiv.data.labels = PARTICIPATION_VALUES.map(v => v + '%');
+        chartCostDiv.data.datasets = strats.map(s => ({
+            label: STRATEGY_LABELS[s] || s,
+            data: PARTICIPATION_KEYS.map(pk => {
+                const entries = getStrategyData(s, refISO, growth, pk);
+                const e = getEntryAtThreshold(entries, 90);
+                return e ? e.cost_per_mwh : null;
+            }),
+            borderColor: STRATEGY_COLORS[s],
+            backgroundColor: STRATEGY_COLORS[s] + '20',
+            tension: 0.3,
+            pointRadius: 3,
+            borderWidth: 2
+        }));
+        // Highlight current participation
+        chartCostDiv.options.plugins.annotation = {
+            annotations: {
+                currentLine: {
+                    type: 'line', xMin: PARTICIPATION_VALUES.indexOf(closestPartVal(partPct)),
+                    xMax: PARTICIPATION_VALUES.indexOf(closestPartVal(partPct)),
+                    borderColor: 'rgba(239,68,68,0.5)', borderWidth: 2, borderDash: [6,4],
+                    label: { display: true, content: partPct + '%', position: 'start', backgroundColor: 'rgba(239,68,68,0.8)', font: { size: 10 } }
+                }
+            }
+        };
+        chartCostDiv.update('none');
+    }
+
+    // Fig 3: Capital Allocation — investment by ISO for cross-regional vs same-ISO
+    if (chartCapital) {
+        const crossStrat = strats.find(s => ['1A','1B','1C','3B','3D'].includes(s)) || '1A';
+        const sameStrat = strats.find(s => ['2A','2B','2C','3A','3C'].includes(s)) || '2C';
+        chartCapital.data.labels = ISOS;
+        const crossData = ISOS.map(iso => {
+            const entries = getStrategyData(crossStrat, iso, growth, partKey);
+            const e = getEntryAtThreshold(entries, 90);
+            return e ? e.total_cost_m : 0;
+        });
+        const sameData = ISOS.map(iso => {
+            const entries = getStrategyData(sameStrat, iso, growth, partKey);
+            const e = getEntryAtThreshold(entries, 90);
+            return e ? e.total_cost_m : 0;
+        });
+        const crossTotal = crossData.reduce((a, b) => a + b, 0) || 1;
+        const sameTotal = sameData.reduce((a, b) => a + b, 0) || 1;
+        chartCapital.data.datasets = [
+            { label: STRATEGY_LABELS[crossStrat] || crossStrat, data: crossData.map(v => (v / crossTotal * 100).toFixed(1)), backgroundColor: STRATEGY_COLORS[crossStrat] + 'CC', borderRadius: 4 },
+            { label: STRATEGY_LABELS[sameStrat] || sameStrat, data: sameData.map(v => (v / sameTotal * 100).toFixed(1)), backgroundColor: STRATEGY_COLORS[sameStrat] + 'CC', borderRadius: 4 }
+        ];
+        chartCapital.update('none');
+    }
+
+    // Fig 4: Wholesale Erosion — LMP impact across participation
+    if (chartWholesale) {
+        chartWholesale.data.labels = PARTICIPATION_VALUES.map(v => v + '%');
+        chartWholesale.data.datasets = strats.map(s => ({
+            label: STRATEGY_LABELS[s] || s,
+            data: PARTICIPATION_KEYS.map(pk => {
+                const entries = getStrategyData(s, refISO, growth, pk);
+                const e = getEntryAtThreshold(entries, 90);
+                return (e && e.lmp_impact != null) ? e.lmp_impact : null;
+            }),
+            borderColor: STRATEGY_COLORS[s],
+            tension: 0.3, pointRadius: 3, borderWidth: 2
+        })).filter(ds => ds.data.some(v => v !== null));
+        chartWholesale.update('none');
+    }
+
+    // Fig 5: MAC Wall — mac_per_ton across participation
+    if (chartMAC) {
+        chartMAC.data.labels = PARTICIPATION_VALUES.map(v => v + '%');
+        chartMAC.data.datasets = strats.map(s => ({
+            label: STRATEGY_LABELS[s] || s,
+            data: PARTICIPATION_KEYS.map(pk => {
+                const entries = getStrategyData(s, refISO, growth, pk);
+                const e = getEntryAtThreshold(entries, 90);
+                if (!e || e.mac_per_ton == null || e.mac_per_ton > 5000) return null;
+                return e.mac_per_ton;
+            }),
+            borderColor: STRATEGY_COLORS[s],
+            tension: 0.3, pointRadius: 3, borderWidth: 2
+        }));
+        // Add DAC / SCC reference bands
+        chartMAC.options.plugins.annotation = {
+            annotations: {
+                dacBand: { type: 'box', yMin: 250, yMax: 600, backgroundColor: 'rgba(239,68,68,0.08)', borderWidth: 0, label: { display: true, content: 'DAC range', position: { x: 'end', y: 'start' }, font: { size: 10 }, color: 'rgba(239,68,68,0.6)' } },
+                sccLine: { type: 'line', yMin: 185, yMax: 185, borderColor: 'rgba(34,197,94,0.4)', borderWidth: 1.5, borderDash: [6,4], label: { display: true, content: 'SCC $185', position: 'start', font: { size: 10 }, backgroundColor: 'rgba(34,197,94,0.7)' } }
+            }
+        };
+        chartMAC.update('none');
+    }
+
+    // Fig 6: Resource Mix — stacked bar per strategy at current participation
+    if (chartMix) {
+        const resStrats = strats.slice(0, 5); // Limit for readability
+        chartMix.data.labels = resStrats.map(s => STRATEGY_LABELS[s] || s);
+        // Collect all resource categories
+        const allCats = new Set();
+        const mixData = resStrats.map(s => {
+            const entries = getStrategyData(s, refISO, growth, partKey);
+            const e = getEntryAtThreshold(entries, 90);
+            const cats = extractResourceCategories(e ? e.resource_mix : {});
+            Object.keys(cats).forEach(c => allCats.add(c));
+            return cats;
+        });
+        const catArr = Array.from(allCats);
+        chartMix.data.datasets = catArr.map(cat => ({
+            label: RES_LABELS[cat] || cat.replace(/_/g, ' '),
+            data: mixData.map(m => (m[cat] || 0).toFixed(2)),
+            backgroundColor: RES_COLORS[cat] || '#999',
+            borderRadius: 2
+        }));
+        chartMix.update('none');
+    }
+}
+
+function closestPartVal(pct) {
+    let best = PARTICIPATION_VALUES[0];
+    for (const v of PARTICIPATION_VALUES) {
+        if (Math.abs(v - pct) < Math.abs(best - pct)) best = v;
+    }
+    return best;
+}
+
+// ── Act 3: Strategy 2C deep-dive ──
+function updateAct3Charts() {
+    if (!DATA) return;
+    const partPct = parseInt(pSlider.value);
+    const partKey = closestPartKey(partPct);
+
+    // Fig 8: Strategy 2C cost across years (SBTi trajectory)
+    if (chart2C) {
+        const variants = ['2A', '2B', '2C'];
+        const entries2C = getStrategyData('2C', 'PJM', growth, partKey);
+        chart2C.data.labels = entries2C.map(e => e.year);
+        chart2C.data.datasets = variants.map(v => {
+            const entries = getStrategyData(v, 'PJM', growth, partKey);
+            return {
+                label: STRATEGY_LABELS[v] || v,
+                data: entries.map(e => e.cost_per_mwh),
+                borderColor: STRATEGY_COLORS[v],
+                backgroundColor: STRATEGY_COLORS[v] + '15',
+                fill: v === '2C',
+                tension: 0.3, pointRadius: 2, borderWidth: v === '2C' ? 3 : 2
+            };
+        });
+        chart2C.update('none');
+    }
+
+    // Fig 9: Regional Roles — investment breakdown by ISO under 2C
+    if (chartRoles) {
+        chartRoles.data.labels = ISOS;
+        const catSet = new Set();
+        const isoMixes = ISOS.map(iso => {
+            const entries = getStrategyData('2C', iso, growth, partKey);
+            const e = getEntryAtThreshold(entries, 90);
+            const cats = {};
+            if (e && e.resource_mix) {
+                for (const [k, v] of Object.entries(e.resource_mix)) {
+                    if (v && typeof v.cost_m === 'number') {
+                        cats[k] = v.cost_m;
+                        catSet.add(k);
+                    }
+                }
+            }
+            return cats;
+        });
+        const catArr = Array.from(catSet);
+        chartRoles.data.datasets = catArr.map(cat => ({
+            label: RES_LABELS[cat] || cat.replace(/_/g, ' '),
+            data: isoMixes.map(m => (m[cat] || 0).toFixed(0)),
+            backgroundColor: RES_COLORS[cat] || '#999',
+            borderRadius: 2
+        }));
+        chartRoles.update('none');
+    }
+}
+
+// ── Act 4: FOAK→NOAK ──
+function updateAct4Charts() {
+    if (!DATA) return;
+    const partKey = closestPartKey(parseInt(pSlider.value));
+
+    if (chartFOAK) {
+        // Compare strategy 2C (hourly → faster learning) vs 1A (consequential → slower)
+        const strat2C = getStrategyData('2C', 'PJM', growth, partKey);
+        const strat1A = getStrategyData('1A', 'PJM', growth, partKey);
+        const years = strat2C.map(e => e.year);
+        chartFOAK.data.labels = years;
+        chartFOAK.data.datasets = [
+            {
+                label: 'Strategy 2C (Hourly — accelerated learning)',
+                data: strat2C.map(e => e.cost_per_mwh),
+                borderColor: STRATEGY_COLORS['2C'],
+                backgroundColor: STRATEGY_COLORS['2C'] + '15',
+                fill: true, tension: 0.3, borderWidth: 3, pointRadius: 2
+            },
+            {
+                label: 'Strategy 1A (Consequential — delayed learning)',
+                data: strat1A.map(e => e.cost_per_mwh),
+                borderColor: STRATEGY_COLORS['1A'],
+                borderDash: [6, 4],
+                tension: 0.3, borderWidth: 2, pointRadius: 2
+            }
+        ];
+        // SBTi milestone markers
+        chartFOAK.options.plugins.annotation = {
+            annotations: {
+                sbti2030: { type: 'line', xMin: years.indexOf(2030), xMax: years.indexOf(2030), borderColor: 'rgba(0,0,0,0.15)', borderWidth: 1, borderDash: [4,4], label: { display: true, content: 'SBTi 50%', position: 'start', font: { size: 9 }, color: 'rgba(0,0,0,0.5)' } },
+                sbti2040: { type: 'line', xMin: years.indexOf(2040), xMax: years.indexOf(2040), borderColor: 'rgba(0,0,0,0.15)', borderWidth: 1, borderDash: [4,4], label: { display: true, content: 'SBTi 90%', position: 'start', font: { size: 9 }, color: 'rgba(0,0,0,0.5)' } }
+            }
+        };
+        chartFOAK.update('none');
+    }
+}
+
+// ── Act 5: Horse Race ──
+function updateAct5Charts() {
+    if (!DATA) return;
+    const partKey = closestPartKey(parseInt(pSlider.value));
+    const strats = getSelectedStrategies();
+
+    // Fig 12: Fixed outcome — cost to reach 90% CFE
+    if (chartOutcome) {
+        chartOutcome.data.labels = strats.map(s => STRATEGY_LABELS[s] || s);
+        chartOutcome.data.datasets = [{
+            label: '$/MWh at 90% CFE',
+            data: strats.map(s => {
+                const entries = getStrategyData(s, 'PJM', growth, partKey);
+                const e = getEntryAtThreshold(entries, 90);
+                return e ? e.cost_per_mwh : 0;
+            }),
+            backgroundColor: strats.map(s => STRATEGY_COLORS[s] + 'CC'),
+            borderRadius: 6
+        }];
+        chartOutcome.update('none');
+    }
+
+    // Fig 13: Fixed budget — what threshold do you reach at $60/MWh?
+    if (chartBudget) {
+        chartBudget.data.labels = strats.map(s => STRATEGY_LABELS[s] || s);
+        chartBudget.data.datasets = [{
+            label: 'CFE % at $60/MWh budget',
+            data: strats.map(s => {
+                const entries = getStrategyData(s, 'PJM', growth, partKey);
+                if (!entries.length) return 0;
+                // Find highest threshold achievable at ≤$60/MWh
+                let bestThresh = 0;
+                for (const e of entries) {
+                    if (e.cost_per_mwh > 0 && e.cost_per_mwh <= 60 && e.threshold > bestThresh) {
+                        bestThresh = e.threshold;
+                    }
+                }
+                return bestThresh;
+            }),
+            backgroundColor: strats.map(s => STRATEGY_COLORS[s] + 'CC'),
+            borderRadius: 6
+        }];
+        chartBudget.update('none');
+    }
+}
+
+// ── Act 6: System View ──
+function updateAct6SystemReq() {
+    if (!DATA || !chartSysReq) return;
+    const co2Target = parseInt(co2Slider ? co2Slider.value : 30) / 100;
+    const strats = getSelectedStrategies();
+
+    chartSysReq.data.labels = strats.map(s => STRATEGY_LABELS[s] || s);
+    chartSysReq.data.datasets = [{
+        label: 'Required C&I Participation (%)',
+        data: strats.map(s => {
+            // Find the lowest participation that achieves the CO2 target at 90% threshold
+            for (const pk of PARTICIPATION_KEYS) {
+                let totalAbated = 0;
+                for (const iso of ISOS) {
+                    const entries = getStrategyData(s, iso, growth, pk);
+                    const e = getEntryAtThreshold(entries, 90);
+                    if (e) totalAbated += e.co2_abated_mmt;
+                }
+                if (totalAbated >= co2Target) {
+                    return PARTICIPATION_VALUES[PARTICIPATION_KEYS.indexOf(pk)];
+                }
+            }
+            return 80; // Can't achieve — cap at max
+        }),
+        backgroundColor: strats.map(s => STRATEGY_COLORS[s] + 'CC'),
+        borderRadius: 6
+    }];
+    chartSysReq.update('none');
+}
+
+// ── Explorer ──
+function updateExplorer() {
+    if (!DATA) return;
+    const strats = getExplorerStrategies();
+    const iso = document.getElementById('explorerISO').value;
+    const threshold = parseInt(expThresh ? expThresh.value : 90);
+    const partKey = closestPartKey(parseInt(pSlider.value));
+
+    function getVal(s, field) {
+        if (iso === 'all') {
+            // Weighted average across ISOs
+            let total = 0, weight = 0;
+            for (const r of ISOS) {
+                const entries = getStrategyData(s, r, growth, partKey);
+                const e = getEntryAtThreshold(entries, threshold);
+                if (e && e[field] != null && e.buyer_demand_twh > 0) {
+                    total += e[field] * e.buyer_demand_twh;
+                    weight += e.buyer_demand_twh;
+                }
+            }
+            return weight > 0 ? total / weight : 0;
+        }
+        const entries = getStrategyData(s, iso, growth, partKey);
+        const e = getEntryAtThreshold(entries, threshold);
+        return e ? (e[field] || 0) : 0;
+    }
+
+    // Explorer Cost
+    if (expCostChart) {
+        expCostChart.data.labels = strats.map(s => s);
+        expCostChart.data.datasets = [{
+            label: '$/MWh',
+            data: strats.map(s => getVal(s, 'cost_per_mwh').toFixed(1)),
+            backgroundColor: strats.map(s => STRATEGY_COLORS[s] + 'CC'),
+            borderRadius: 6
+        }];
+        expCostChart.update('none');
+    }
+
+    // Explorer CO2
+    if (expCO2Chart) {
+        expCO2Chart.data.labels = strats.map(s => s);
+        expCO2Chart.data.datasets = [{
+            label: 'Mt CO₂/yr abated',
+            data: strats.map(s => {
+                if (iso === 'all') {
+                    let total = 0;
+                    for (const r of ISOS) {
+                        const entries = getStrategyData(s, r, growth, partKey);
+                        const e = getEntryAtThreshold(entries, threshold);
+                        if (e) total += e.co2_abated_mmt;
+                    }
+                    return (total * 1000).toFixed(1); // MMT → Mt
+                }
+                const entries = getStrategyData(s, iso, growth, partKey);
+                const e = getEntryAtThreshold(entries, threshold);
+                return e ? (e.co2_abated_mmt * 1000).toFixed(1) : 0;
+            }),
+            backgroundColor: strats.map(s => STRATEGY_COLORS[s] + 'CC'),
+            borderRadius: 6
+        }];
+        expCO2Chart.update('none');
+    }
+
+    // Explorer Resource Mix — stacked bar
+    if (expMixChart) {
+        const catSet = new Set();
+        const mixArr = strats.map(s => {
+            if (iso === 'all') {
+                // Sum resource TWh across all ISOs
+                const agg = {};
+                for (const r of ISOS) {
+                    const entries = getStrategyData(s, r, growth, partKey);
+                    const e = getEntryAtThreshold(entries, threshold);
+                    if (e && e.resource_mix) {
+                        const cats = extractResourceCategories(e.resource_mix);
+                        for (const [k, v] of Object.entries(cats)) {
+                            agg[k] = (agg[k] || 0) + v;
+                            catSet.add(k);
+                        }
+                    }
+                }
+                return agg;
+            }
+            const entries = getStrategyData(s, iso, growth, partKey);
+            const e = getEntryAtThreshold(entries, threshold);
+            const cats = extractResourceCategories(e ? e.resource_mix : {});
+            Object.keys(cats).forEach(c => catSet.add(c));
+            return cats;
+        });
+        const catArr = Array.from(catSet);
+        expMixChart.data.labels = strats.map(s => s);
+        expMixChart.data.datasets = catArr.map(cat => ({
+            label: RES_LABELS[cat] || cat.replace(/_/g, ' '),
+            data: mixArr.map(m => (m[cat] || 0).toFixed(2)),
+            backgroundColor: RES_COLORS[cat] || '#999',
+            borderRadius: 2
+        }));
+        expMixChart.update('none');
+    }
+}
+
+// ════════════════════════════════════════════════════════════════
+// EVENT WIRING
+// ════════════════════════════════════════════════════════════════
+
+// Participation slider — updates all Act 2-5 charts
+const pSlider = document.getElementById('participationSlider');
+const pValue = document.getElementById('participationValue');
+const pContext = document.getElementById('participationContext');
+
+function updateParticipation() {
+    const val = parseInt(pSlider.value);
+    pValue.textContent = val;
+    if (val <= 15) pContext.textContent = 'Current market level';
+    else if (val <= 30) pContext.textContent = 'Near-term growth scenario';
+    else if (val <= 50) pContext.textContent = 'Ambitious corporate adoption';
+    else pContext.textContent = 'Transformational participation';
+
+    updateAct2Charts();
+    updateAct3Charts();
+    updateAct4Charts();
+    updateAct5Charts();
+    updateExplorer();
+}
+pSlider.addEventListener('input', updateParticipation);
+
+// CO2 target slider
+const co2Slider = document.getElementById('co2TargetSlider');
+const co2Value = document.getElementById('co2TargetValue');
+if (co2Slider) {
+    co2Slider.addEventListener('input', () => {
+        co2Value.textContent = co2Slider.value + '%';
+        updateAct6SystemReq();
+    });
+}
+
+// Explorer threshold slider
+const expThresh = document.getElementById('explorerThreshold');
+const expThreshVal = document.getElementById('explorerThresholdVal');
+if (expThresh) {
+    expThresh.addEventListener('input', () => {
+        expThreshVal.textContent = expThresh.value + '%';
+        updateExplorer();
+    });
+}
+
+// Explorer ISO selector
+const explorerISO = document.getElementById('explorerISO');
+if (explorerISO) explorerISO.addEventListener('change', updateExplorer);
+
+// Explorer strategy checkboxes
+document.querySelectorAll('#explorerStrategies .strat-check').forEach(label => {
+    const cb = label.querySelector('input');
+    label.addEventListener('click', (e) => {
+        if (e.target !== cb) cb.checked = !cb.checked;
+        label.classList.toggle('active', cb.checked);
+        updateExplorer();
+    });
+});
+
+// Learning curve toggle
+const lcOn = document.getElementById('lcOn');
+const lcOff = document.getElementById('lcOff');
+if (lcOn && lcOff) {
+    lcOn.addEventListener('click', () => { lcOn.classList.add('active'); lcOff.classList.remove('active'); });
+    lcOff.addEventListener('click', () => { lcOff.classList.add('active'); lcOn.classList.remove('active'); });
+}
+
+// Strategy variant selection in taxonomy — updates scrollytell charts
+document.querySelectorAll('.strat-variant-item').forEach(v => {
+    v.addEventListener('click', () => {
+        v.classList.toggle('selected');
+        updateAct2Charts();
+        updateAct3Charts();
+        updateAct4Charts();
+        updateAct5Charts();
+    });
+});
+
+// ── Initial render ──
+if (DATA) {
+    updateParticipation();
+    updateAct6SystemReq();
+}
+
+})();
+</script>
+</body>
+</html>

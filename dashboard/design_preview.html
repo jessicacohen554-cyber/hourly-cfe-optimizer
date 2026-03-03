@@ -1,0 +1,1638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Design Preview — The 8,760 Problem</title>
+
+<!-- All Google Fonts for 4 variants -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;0,9..144,900;1,9..144,400&family=Inter:wght@300;400;500;600;700&family=Source+Code+Pro:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Sora:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+
+<style>
+/* ================================================================
+   DESIGN PREVIEW — THEME SYSTEM
+   All 4 variants use the SAME HTML. Only CSS custom properties change.
+   ================================================================ */
+
+:root {
+    /* Shared color tokens (same across all themes) */
+    --navy-dark: #0B1120;
+    --navy: #0F172A;
+    --navy-mid: #1E293B;
+    --navy-light: #334155;
+    --text-primary: #0F172A;
+    --text-secondary: #475569;
+    --text-dim: #94A3B8;
+    --bg-page: #F1F5F9;
+    --bg-white: #FFFFFF;
+    --border-light: rgba(0,0,0,0.06);
+    --border-medium: rgba(0,0,0,0.1);
+
+    /* Resource colors */
+    --solar: #F59E0B;
+    --wind: #22C55E;
+    --hydro: #0EA5E9;
+    --nuclear: #6366F1;
+    --ccs: #64748B;
+    --battery: #8B5CF6;
+    --ldes: #E91E63;
+    --clean-firm: #6366F1;
+
+    /* ISO colors */
+    --iso-caiso: #F59E0B;
+    --iso-ercot: #22C55E;
+    --iso-pjm: #0EA5E9;
+    --iso-nyiso: #E91E63;
+    --iso-neiso: #9C27B0;
+    --iso-miso: #06B6D4;
+    --iso-spp: #A855F7;
+
+    /* Theme-switchable properties (defaults = Variant C) */
+    --font-heading: 'Sora', sans-serif;
+    --font-body: 'Plus Jakarta Sans', sans-serif;
+    --font-data: 'Rajdhani', sans-serif;
+    --font-mono: 'Source Code Pro', monospace;
+    --heading-weight: 700;
+    --heading-letter-spacing: -0.02em;
+    --body-size: 0.95rem;
+    --body-line-height: 1.75;
+    --card-radius: 12px;
+    --card-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.04);
+    --card-border: 1px solid rgba(0,0,0,0.06);
+    --card-bg: #FFFFFF;
+    --section-pad: 64px;
+    --hero-title-size: 2.4rem;
+    --stat-size: 2rem;
+    --insight-border-width: 4px;
+    --insight-border-color: var(--hydro);
+    --accent-glow: none;
+    --hero-gradient: linear-gradient(180deg, var(--navy-dark) 0%, var(--navy) 60%, var(--navy-mid) 100%);
+    --dark-section-bg: var(--navy-dark);
+    --drop-cap: none;
+    --heading-decoration: none;
+    --card-hover-transform: translateY(-2px);
+    --card-hover-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+
+/* ================================================================
+   VARIANT A: THE EDITORIAL
+   ================================================================ */
+body.theme-editorial {
+    --font-heading: 'Fraunces', serif;
+    --font-body: 'Inter', sans-serif;
+    --font-data: 'Source Code Pro', monospace;
+    --font-mono: 'Source Code Pro', monospace;
+    --heading-weight: 600;
+    --heading-letter-spacing: -0.03em;
+    --body-size: 1rem;
+    --body-line-height: 1.8;
+    --card-radius: 4px;
+    --card-shadow: none;
+    --card-border: 1px solid rgba(0,0,0,0.1);
+    --section-pad: 72px;
+    --hero-title-size: 2.8rem;
+    --stat-size: 2.2rem;
+    --insight-border-width: 2px;
+    --insight-border-color: var(--navy-mid);
+    --hero-gradient: linear-gradient(180deg, #0a0f1e 0%, #111827 70%, #1a2332 100%);
+    --drop-cap: editorial;
+    --heading-decoration: underline;
+    --card-hover-transform: none;
+    --card-hover-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+/* ================================================================
+   VARIANT B: THE OBSERVATORY — with light/dark rhythm
+   ================================================================ */
+body.theme-observatory {
+    --font-heading: 'Space Grotesk', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+    --font-data: 'Space Mono', monospace;
+    --font-mono: 'Space Mono', monospace;
+    --heading-weight: 700;
+    --heading-letter-spacing: -0.02em;
+    --body-size: 0.95rem;
+    --body-line-height: 1.7;
+    --card-radius: 16px;
+    --card-shadow: 0 2px 8px rgba(0,0,0,0.04), 0 8px 32px rgba(0,0,0,0.06);
+    --card-border: 1px solid rgba(0,0,0,0.06);
+    --card-bg: #FFFFFF;
+    --section-pad: 72px;
+    --hero-title-size: 2.4rem;
+    --stat-size: 2rem;
+    --insight-border-width: 3px;
+    --insight-border-color: var(--iso-miso);
+    --accent-glow: 0 0 40px rgba(14,165,233,0.15);
+    --hero-gradient: linear-gradient(135deg, #070d1f 0%, #0d1526 50%, #0f1a2e 100%);
+    --card-hover-transform: translateY(-4px);
+    --card-hover-shadow: 0 8px 32px rgba(0,0,0,0.12), 0 0 0 1px rgba(14,165,233,0.1);
+    --bg-page: #F8FAFC;
+
+    /* Light section tokens */
+    --light-bg: #FFFFFF;
+    --light-card-bg: #FFFFFF;
+    --light-card-shadow: 0 1px 4px rgba(0,0,0,0.06), 0 6px 20px rgba(0,0,0,0.04);
+    --light-card-border: 1px solid rgba(0,0,0,0.06);
+    --light-text: #0F172A;
+    --light-text-secondary: #475569;
+
+    /* Dark section tokens */
+    --dark-bg: #0B1120;
+    --dark-card-bg: rgba(255,255,255,0.06);
+    --dark-card-border: 1px solid rgba(255,255,255,0.10);
+    --dark-card-shadow: 0 4px 24px rgba(0,0,0,0.3), 0 0 40px rgba(14,165,233,0.06);
+    --dark-text: #FFFFFF;
+    --dark-text-secondary: rgba(255,255,255,0.6);
+}
+
+/* ---- Observatory: Light sections (data, charts, analytical) ---- */
+body.theme-observatory .section-light {
+    background: var(--light-bg);
+    border-top: 1px solid rgba(0,0,0,0.04);
+}
+body.theme-observatory .section-light .stat-card,
+body.theme-observatory .section-light .chart-panel,
+body.theme-observatory .section-light .insight-box,
+body.theme-observatory .section-light .related-card {
+    background: var(--light-card-bg);
+    border: var(--light-card-border);
+    box-shadow: var(--light-card-shadow);
+}
+body.theme-observatory .section-light .stat-card:hover,
+body.theme-observatory .section-light .chart-panel:hover,
+body.theme-observatory .section-light .related-card:hover {
+    box-shadow: 0 8px 32px rgba(0,0,0,0.08), 0 0 0 1px rgba(14,165,233,0.08);
+    transform: translateY(-3px);
+}
+
+/* ---- Observatory: Dark sections (narrative, emphasis, story) ---- */
+body.theme-observatory .section-dark {
+    background: linear-gradient(180deg, #080e1e 0%, #0c1424 100%);
+    position: relative;
+}
+body.theme-observatory .section-dark::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse at 20% 30%, rgba(6,182,212,0.06) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 70%, rgba(99,102,241,0.04) 0%, transparent 60%);
+    pointer-events: none;
+}
+body.theme-observatory .section-dark h2,
+body.theme-observatory .section-dark h3 {
+    color: var(--dark-text);
+}
+body.theme-observatory .section-dark p {
+    color: var(--dark-text-secondary);
+}
+body.theme-observatory .section-dark .stat-card {
+    background: var(--dark-card-bg);
+    border: var(--dark-card-border);
+    box-shadow: var(--dark-card-shadow);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+body.theme-observatory .section-dark .stat-value { color: #FFFFFF; }
+body.theme-observatory .section-dark .stat-label { color: rgba(255,255,255,0.55); }
+body.theme-observatory .section-dark .chart-panel {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    backdrop-filter: blur(8px);
+}
+body.theme-observatory .section-dark .chart-title { color: rgba(255,255,255,0.9); }
+body.theme-observatory .section-dark .finding-highlight {
+    background: rgba(6,182,212,0.15);
+    color: #22d3ee;
+}
+body.theme-observatory .section-dark .insight-box {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-left: 3px solid var(--iso-miso);
+}
+body.theme-observatory .section-dark .insight-box h4 { color: #FFFFFF; }
+body.theme-observatory .section-dark .insight-box p { color: rgba(255,255,255,0.6); }
+
+/* ---- Observatory: Section transitions (gradient dividers) ---- */
+body.theme-observatory .section-transition-light-to-dark {
+    height: 64px;
+    background: linear-gradient(180deg, #FFFFFF 0%, #0B1120 100%);
+}
+body.theme-observatory .section-transition-dark-to-light {
+    height: 64px;
+    background: linear-gradient(180deg, #0B1120 0%, #FFFFFF 100%);
+}
+body.theme-observatory .section-transition-dark-to-gray {
+    height: 64px;
+    background: linear-gradient(180deg, #0B1120 0%, #F8FAFC 100%);
+}
+
+/* ---- Observatory: Dot grid texture on dark sections ---- */
+body.theme-observatory .section-dark::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 32px 32px;
+    pointer-events: none;
+}
+
+/* ---- Observatory: Glowing accent line between sections ---- */
+body.theme-observatory .accent-line {
+    display: block;
+    height: 2px;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(6,182,212,0.3) 20%,
+        rgba(14,165,233,0.5) 50%,
+        rgba(99,102,241,0.3) 80%,
+        transparent 100%);
+    margin: 0;
+}
+
+/* ---- Observatory: Section title on light backgrounds ---- */
+body.theme-observatory .section-light .section-title {
+    color: var(--light-text);
+    position: relative;
+    display: inline-block;
+}
+body.theme-observatory .section-light .section-title::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 0;
+    width: 40px;
+    height: 3px;
+    background: linear-gradient(90deg, var(--iso-miso), var(--hydro));
+    border-radius: 2px;
+}
+
+/* ---- Observatory: ISO tabs on light background ---- */
+body.theme-observatory .section-light .iso-tab {
+    background: #FFFFFF;
+    border: 1px solid rgba(0,0,0,0.1);
+}
+body.theme-observatory .section-light .iso-tab.active {
+    background: var(--navy);
+    border-color: var(--navy);
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(15,23,42,0.2);
+}
+
+/* ---- Observatory: Narrative text on light bg ---- */
+body.theme-observatory .section-light .narrative-block p {
+    color: var(--light-text-secondary);
+}
+body.theme-observatory .section-light .narrative-block strong {
+    color: var(--light-text);
+}
+
+/* ================================================================
+   VARIANT C: THE CURRENT (Enhanced)
+   ================================================================ */
+/* (defaults in :root — no overrides needed) */
+
+/* ================================================================
+   VARIANT D: THE SIGNAL
+   ================================================================ */
+body.theme-signal {
+    --font-heading: 'Bricolage Grotesque', sans-serif;
+    --font-body: 'Outfit', sans-serif;
+    --font-data: 'IBM Plex Mono', monospace;
+    --font-mono: 'IBM Plex Mono', monospace;
+    --heading-weight: 800;
+    --heading-letter-spacing: -0.03em;
+    --body-size: 0.95rem;
+    --body-line-height: 1.7;
+    --card-radius: 2px;
+    --card-shadow: none;
+    --card-border: 2px solid rgba(0,0,0,0.08);
+    --section-pad: 56px;
+    --hero-title-size: 3rem;
+    --stat-size: 2.4rem;
+    --insight-border-width: 6px;
+    --insight-border-color: var(--solar);
+    --hero-gradient: linear-gradient(180deg, #050810 0%, #0a0f1e 100%);
+    --heading-decoration: none;
+    --card-hover-transform: none;
+    --card-hover-shadow: inset 0 0 0 2px var(--hydro);
+}
+
+/* ================================================================
+   GLOBAL RESETS & BASE
+   ================================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+    font-family: var(--font-body);
+    font-size: var(--body-size);
+    line-height: var(--body-line-height);
+    color: var(--text-primary);
+    background: var(--bg-page);
+    -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 {
+    font-family: var(--font-heading);
+    font-weight: var(--heading-weight);
+    letter-spacing: var(--heading-letter-spacing);
+    line-height: 1.2;
+    color: var(--text-primary);
+}
+
+/* ================================================================
+   THEME TOGGLE BAR (sticky top)
+   ================================================================ */
+.theme-bar {
+    position: sticky;
+    top: 0;
+    z-index: 9999;
+    background: #0a0f1e;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.theme-bar-label {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgba(255,255,255,0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+}
+.theme-btn {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 8px 16px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px;
+    background: transparent;
+    color: rgba(255,255,255,0.6);
+    cursor: pointer;
+    transition: all 0.25s ease;
+    white-space: nowrap;
+}
+.theme-btn:hover {
+    border-color: rgba(255,255,255,0.3);
+    color: rgba(255,255,255,0.9);
+    background: rgba(255,255,255,0.05);
+}
+.theme-btn.active {
+    background: rgba(14,165,233,0.15);
+    border-color: rgba(14,165,233,0.5);
+    color: #38bdf8;
+}
+.theme-btn-name {
+    display: block;
+    font-weight: 600;
+}
+.theme-btn-fonts {
+    display: block;
+    font-size: 0.65rem;
+    color: rgba(255,255,255,0.35);
+    margin-top: 2px;
+}
+.theme-btn.active .theme-btn-fonts { color: rgba(56,189,248,0.5); }
+
+/* ================================================================
+   HEADER / BANNER
+   ================================================================ */
+.header {
+    background: var(--hero-gradient);
+    position: relative;
+    overflow: hidden;
+    padding: 48px 24px 36px;
+    text-align: center;
+}
+.header h1 {
+    font-family: var(--font-heading);
+    font-weight: var(--heading-weight);
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    color: #ffffff;
+    position: relative;
+    z-index: 2;
+    letter-spacing: var(--heading-letter-spacing);
+}
+.header .subtitle {
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    color: rgba(255,255,255,0.6);
+    margin-top: 8px;
+    position: relative;
+    z-index: 2;
+}
+.header-accent {
+    width: 60px;
+    height: 3px;
+    background: linear-gradient(90deg, var(--hydro), var(--solar));
+    margin: 16px auto 0;
+    border-radius: 2px;
+    position: relative;
+    z-index: 2;
+}
+.header-svg-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+}
+.header-svg-overlay svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* ================================================================
+   HERO SECTION
+   ================================================================ */
+.hero-section {
+    background: var(--hero-gradient);
+    position: relative;
+    overflow: hidden;
+    padding: var(--section-pad) 24px;
+}
+.hero-section::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 30% 20%, rgba(14,165,233,0.06) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 80%, rgba(233,30,99,0.04) 0%, transparent 60%);
+    pointer-events: none;
+}
+.hero-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 2;
+    text-align: center;
+}
+.hero-title {
+    font-family: var(--font-heading);
+    font-weight: var(--heading-weight);
+    font-size: var(--hero-title-size);
+    color: #ffffff;
+    letter-spacing: var(--heading-letter-spacing);
+    margin-bottom: 20px;
+    line-height: 1.15;
+}
+.hero-subtitle {
+    font-family: var(--font-body);
+    font-size: 1.05rem;
+    color: rgba(255,255,255,0.65);
+    max-width: 740px;
+    margin: 0 auto 40px;
+    line-height: 1.7;
+}
+
+/* ================================================================
+   STAT CARDS (hero stats row)
+   ================================================================ */
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    max-width: 1100px;
+    margin: 0 auto 40px;
+}
+.stat-card {
+    background: var(--card-bg);
+    border: var(--card-border);
+    border-radius: var(--card-radius);
+    box-shadow: var(--card-shadow);
+    padding: 24px 20px;
+    text-align: center;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.stat-card:hover {
+    transform: var(--card-hover-transform);
+    box-shadow: var(--card-hover-shadow);
+}
+.stat-value {
+    font-family: var(--font-data);
+    font-size: var(--stat-size);
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.1;
+}
+.stat-label {
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    margin-top: 6px;
+    line-height: 1.4;
+}
+.stat-accent { color: var(--hydro); }
+
+/* Signal variant: left accent stripe on stat cards */
+body.theme-signal .stat-card {
+    border-left: 4px solid var(--hydro);
+    text-align: left;
+}
+body.theme-signal .stat-card:nth-child(2) { border-left-color: var(--solar); }
+body.theme-signal .stat-card:nth-child(3) { border-left-color: var(--wind); }
+body.theme-signal .stat-card:nth-child(4) { border-left-color: var(--ldes); }
+
+/* Observatory variant: hero stat cards use glassmorphism (hero is always dark) */
+body.theme-observatory .hero-section .stat-card {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.12);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2), 0 0 30px rgba(14,165,233,0.06);
+}
+body.theme-observatory .hero-section .stat-value { color: #ffffff; }
+body.theme-observatory .hero-section .stat-label { color: rgba(255,255,255,0.55); }
+body.theme-observatory .hero-section .stat-accent { color: #22d3ee; }
+
+/* ================================================================
+   ISO TILES GRID
+   ================================================================ */
+.iso-tiles {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 12px;
+    max-width: 1100px;
+    margin: 0 auto 48px;
+}
+.iso-tile {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: var(--card-radius);
+    padding: 16px 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
+}
+.iso-tile::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--tile-color, var(--hydro));
+}
+.iso-tile:hover {
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(255,255,255,0.2);
+}
+.iso-tile-name {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: #ffffff;
+    margin-bottom: 4px;
+}
+.iso-tile-range {
+    font-family: var(--font-data);
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.5);
+}
+
+/* Editorial: remove top bar, add subtle dot */
+body.theme-editorial .iso-tile::before { display: none; }
+body.theme-editorial .iso-tile-name::before {
+    content: '';
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--tile-color, var(--hydro));
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+/* Signal: square tiles with thick left border */
+body.theme-signal .iso-tile {
+    border-radius: 0;
+    border-left: 4px solid var(--tile-color, var(--hydro));
+    text-align: left;
+}
+body.theme-signal .iso-tile::before { display: none; }
+
+@media (max-width: 768px) {
+    .iso-tiles { grid-template-columns: repeat(4, 1fr); }
+}
+@media (max-width: 480px) {
+    .iso-tiles { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ================================================================
+   CONTENT SECTIONS
+   ================================================================ */
+.content-section {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: var(--section-pad) 24px;
+}
+.section-title {
+    font-family: var(--font-heading);
+    font-weight: var(--heading-weight);
+    font-size: 1.6rem;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+    letter-spacing: var(--heading-letter-spacing);
+}
+.section-subtitle {
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 32px;
+    max-width: 680px;
+}
+
+/* Editorial: thin underline on section titles */
+body.theme-editorial .section-title {
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    display: inline-block;
+}
+
+/* Signal: thick left accent on section titles */
+body.theme-signal .section-title {
+    padding-left: 16px;
+    border-left: 5px solid var(--hydro);
+}
+
+/* ================================================================
+   NARRATIVE + CHART LAYOUT (2-column)
+   ================================================================ */
+.narrative-chart-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    align-items: start;
+}
+@media (max-width: 768px) {
+    .narrative-chart-grid { grid-template-columns: 1fr; }
+}
+
+.narrative-block p {
+    margin-bottom: 16px;
+    color: var(--text-secondary);
+}
+.narrative-block strong { color: var(--text-primary); }
+
+/* Editorial: drop cap on first paragraph */
+body.theme-editorial .narrative-block > p:first-child::first-letter {
+    font-family: 'Fraunces', serif;
+    font-size: 3.2rem;
+    float: left;
+    line-height: 0.85;
+    margin: 4px 10px 0 0;
+    color: var(--navy);
+    font-weight: 700;
+}
+
+.finding-highlight {
+    display: inline-block;
+    font-family: var(--font-data);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--hydro);
+    background: rgba(14,165,233,0.08);
+    padding: 6px 14px;
+    border-radius: 20px;
+    margin-top: 8px;
+}
+
+/* ================================================================
+   CHART PANEL
+   ================================================================ */
+.chart-panel {
+    background: var(--card-bg);
+    border: var(--card-border);
+    border-radius: var(--card-radius);
+    box-shadow: var(--card-shadow);
+    padding: 24px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.chart-panel:hover {
+    transform: var(--card-hover-transform);
+    box-shadow: var(--card-hover-shadow);
+}
+.chart-title {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: var(--text-primary);
+    text-align: center;
+    margin-bottom: 16px;
+}
+.chart-container {
+    position: relative;
+    min-height: 320px;
+}
+
+/* Observatory: chart panel adapts to section context (light/dark handled above) */
+body.theme-observatory .chart-panel {
+    border-radius: var(--card-radius);
+    transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+}
+
+/* Signal: left accent stripe */
+body.theme-signal .chart-panel {
+    border-left: 4px solid var(--hydro);
+    border-radius: 0 var(--card-radius) var(--card-radius) 0;
+}
+
+/* ================================================================
+   INSIGHT CALLOUT
+   ================================================================ */
+.insight-box {
+    background: var(--card-bg);
+    border: var(--card-border);
+    border-left: var(--insight-border-width) solid var(--insight-border-color);
+    border-radius: var(--card-radius);
+    padding: 24px 28px;
+    margin: 32px 0;
+}
+.insight-box h4 {
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+}
+.insight-box p {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.7;
+}
+
+/* Observatory: insight box adapts to section context (handled in section-light/dark above) */
+
+/* ================================================================
+   ISO SELECTOR TABS
+   ================================================================ */
+.iso-selector {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 32px;
+    justify-content: center;
+}
+.iso-tab {
+    font-family: var(--font-heading);
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 8px 16px;
+    border: 1px solid var(--border-medium);
+    border-radius: 20px;
+    background: var(--bg-white);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.iso-tab:hover { border-color: var(--text-dim); }
+.iso-tab.active {
+    background: var(--navy);
+    color: #ffffff;
+    border-color: var(--navy);
+}
+.tab-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+/* Signal: square tabs */
+body.theme-signal .iso-tab { border-radius: 2px; }
+
+/* Editorial: pill with serif font */
+body.theme-editorial .iso-tab {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.78rem;
+    letter-spacing: 0.02em;
+}
+
+/* ================================================================
+   DARK SECTION (narrative on dark bg)
+   ================================================================ */
+.dark-section {
+    background: var(--dark-section-bg);
+    padding: var(--section-pad) 24px;
+    position: relative;
+    overflow: hidden;
+}
+.dark-section::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(14,165,233,0.04), transparent 70%);
+    pointer-events: none;
+}
+.dark-inner {
+    max-width: 800px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 2;
+    text-align: center;
+}
+.dark-section h2 {
+    font-family: var(--font-heading);
+    font-weight: var(--heading-weight);
+    font-size: 1.8rem;
+    color: #ffffff;
+    margin-bottom: 20px;
+    letter-spacing: var(--heading-letter-spacing);
+}
+.dark-section p {
+    font-size: 0.95rem;
+    color: rgba(255,255,255,0.6);
+    line-height: 1.8;
+    margin-bottom: 16px;
+}
+.dark-section .highlight-text {
+    color: var(--solar);
+    font-weight: 600;
+}
+
+/* Signal: left-aligned dark section */
+body.theme-signal .dark-inner { text-align: left; max-width: 900px; }
+body.theme-signal .dark-section h2 { border-left: 5px solid var(--solar); padding-left: 16px; }
+
+/* ================================================================
+   RELATED ANALYSES CARDS
+   ================================================================ */
+.related-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+@media (max-width: 768px) {
+    .related-grid { grid-template-columns: 1fr; }
+}
+.related-card {
+    background: var(--card-bg);
+    border: var(--card-border);
+    border-radius: var(--card-radius);
+    box-shadow: var(--card-shadow);
+    padding: 28px 24px;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    display: block;
+}
+.related-card:hover {
+    transform: var(--card-hover-transform);
+    box-shadow: var(--card-hover-shadow);
+}
+.related-card h4 {
+    font-size: 1rem;
+    margin-bottom: 8px;
+}
+.related-card p {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+.related-card .card-tag {
+    display: inline-block;
+    font-family: var(--font-data);
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--hydro);
+    margin-bottom: 10px;
+}
+
+/* Signal: colored top border per card */
+body.theme-signal .related-card { border-top: 3px solid var(--hydro); }
+body.theme-signal .related-card:nth-child(2) { border-top-color: var(--solar); }
+body.theme-signal .related-card:nth-child(3) { border-top-color: var(--wind); }
+
+/* ================================================================
+   FOOTER
+   ================================================================ */
+.page-footer {
+    background: var(--navy-dark);
+    padding: 32px 24px;
+    text-align: center;
+    border-top: 1px solid rgba(255,255,255,0.06);
+}
+.footer-text {
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.4);
+}
+.bottom-banner {
+    height: 4px;
+    background: linear-gradient(90deg,
+        var(--solar), var(--wind), var(--hydro), var(--nuclear), var(--battery), var(--ldes));
+}
+
+/* ================================================================
+   CHART LEGEND
+   ================================================================ */
+.chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 12px;
+    font-size: 0.72rem;
+    color: var(--text-dim);
+}
+.chart-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.chart-legend-swatch {
+    width: 12px;
+    height: 3px;
+    border-radius: 1px;
+    display: inline-block;
+}
+
+/* ================================================================
+   RESPONSIVE
+   ================================================================ */
+@media (max-width: 768px) {
+    .theme-bar { justify-content: center; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .narrative-chart-grid { grid-template-columns: 1fr; }
+    .related-grid { grid-template-columns: 1fr; }
+    .header h1 { font-size: 1.5rem; }
+    .hero-title { font-size: 1.8rem; }
+    .section-title { font-size: 1.3rem; }
+}
+@media (max-width: 480px) {
+    .stats-row { grid-template-columns: 1fr; }
+    .theme-btn { padding: 6px 10px; font-size: 0.72rem; }
+}
+
+/* ================================================================
+   PULL QUOTE (editorial-specific)
+   ================================================================ */
+.pull-quote {
+    display: none;
+}
+body.theme-editorial .pull-quote {
+    display: block;
+    font-family: 'Fraunces', serif;
+    font-size: 1.3rem;
+    font-style: italic;
+    font-weight: 400;
+    color: var(--navy-mid);
+    border-top: 1px solid rgba(0,0,0,0.1);
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    padding: 24px 0;
+    margin: 32px 0;
+    text-align: center;
+    line-height: 1.5;
+}
+
+/* ================================================================
+   TRANSITION DIVIDERS (Observatory-only — hidden on other themes)
+   ================================================================ */
+.section-transition-light-to-dark,
+.section-transition-dark-to-light,
+.section-transition-dark-to-gray,
+.accent-line {
+    display: none;
+}
+body.theme-observatory .section-transition-light-to-dark,
+body.theme-observatory .section-transition-dark-to-light,
+body.theme-observatory .section-transition-dark-to-gray,
+body.theme-observatory .accent-line {
+    display: block;
+}
+
+/* ================================================================
+   DARK METRICS BAND (mid-page emphasis section)
+   ================================================================ */
+.dark-metrics-band {
+    background: var(--dark-section-bg);
+    padding: 56px 24px;
+    position: relative;
+    overflow: hidden;
+}
+.metrics-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 2;
+    text-align: center;
+}
+.metrics-title {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255,255,255,0.4);
+    margin-bottom: 24px;
+}
+.metrics-stats {
+    max-width: 1100px;
+}
+/* On non-Observatory themes, the dark metrics band just uses standard dark styling */
+
+/* ================================================================
+   ANIMATIONS
+   ================================================================ */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.fade-in {
+    opacity: 0;
+    animation: fadeInUp 0.6s ease forwards;
+}
+.fade-in:nth-child(2) { animation-delay: 0.1s; }
+.fade-in:nth-child(3) { animation-delay: 0.2s; }
+.fade-in:nth-child(4) { animation-delay: 0.3s; }
+
+/* Animated number counter */
+@keyframes countUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.animate-number {
+    animation: countUp 0.5s ease forwards;
+}
+
+/* Observatory: subtle glow pulse on dark-section stat cards only */
+body.theme-observatory .section-dark .stat-card {
+    animation: glowPulse 4s ease-in-out infinite;
+}
+@keyframes glowPulse {
+    0%, 100% { box-shadow: 0 4px 20px rgba(0,0,0,0.2), 0 0 20px rgba(14,165,233,0.05); }
+    50% { box-shadow: 0 4px 20px rgba(0,0,0,0.2), 0 0 35px rgba(14,165,233,0.12); }
+}
+
+/* Observatory: light section stat cards get clean hover instead */
+body.theme-observatory .section-light .stat-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+body.theme-observatory .section-light .stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.08);
+}
+</style>
+</head>
+<body class="theme-observatory">
+
+<!-- ================================================================ -->
+<!-- THEME TOGGLE BAR                                                  -->
+<!-- ================================================================ -->
+<div class="theme-bar">
+    <span class="theme-bar-label">Design Variant</span>
+    <button class="theme-btn" data-theme="theme-editorial" onclick="switchTheme('theme-editorial', this)">
+        <span class="theme-btn-name">A: The Editorial</span>
+        <span class="theme-btn-fonts">Fraunces + Inter</span>
+    </button>
+    <button class="theme-btn active" data-theme="theme-observatory" onclick="switchTheme('theme-observatory', this)">
+        <span class="theme-btn-name">B: The Observatory</span>
+        <span class="theme-btn-fonts">Space Grotesk + DM Sans</span>
+    </button>
+    <button class="theme-btn" data-theme="theme-current" onclick="switchTheme('theme-current', this)">
+        <span class="theme-btn-name">C: The Current</span>
+        <span class="theme-btn-fonts">Sora + Plus Jakarta Sans</span>
+    </button>
+    <button class="theme-btn" data-theme="theme-signal" onclick="switchTheme('theme-signal', this)">
+        <span class="theme-btn-name">D: The Signal</span>
+        <span class="theme-btn-fonts">Bricolage Grotesque + Outfit</span>
+    </button>
+</div>
+
+<!-- ================================================================ -->
+<!-- HEADER BANNER                                                     -->
+<!-- ================================================================ -->
+<header class="header" id="pageHeader">
+    <h1>The 8,760 Problem</h1>
+    <div class="subtitle">CO&#x2082; Abatement Analysis &mdash; Optimal clean energy targets across US power markets</div>
+    <div class="header-accent"></div>
+</header>
+
+<!-- ================================================================ -->
+<!-- HERO SECTION: Title + Stats + ISO Tiles                           -->
+<!-- ================================================================ -->
+<section class="hero-section">
+    <div class="hero-inner">
+        <h2 class="hero-title fade-in">Every region has an optimal clean energy target</h2>
+        <p class="hero-subtitle fade-in">Grid decarbonization is cheaper than Direct Air Capture &mdash; up to a point.
+            That point varies by region and depends on technology costs. Below, we map the crossover range where
+            each region&rsquo;s marginal abatement cost exceeds projected DAC costs across 5,832 cost scenarios.</p>
+
+        <!-- Stat Cards -->
+        <div class="stats-row">
+            <div class="stat-card fade-in">
+                <div class="stat-value"><span class="stat-accent">84&ndash;96%</span></div>
+                <div class="stat-label">Optimal crossover range under medium costs</div>
+            </div>
+            <div class="stat-card fade-in">
+                <div class="stat-value">5,832</div>
+                <div class="stat-label">Cost scenarios evaluated per region/threshold</div>
+            </div>
+            <div class="stat-card fade-in">
+                <div class="stat-value">7 ISOs</div>
+                <div class="stat-label">Regional power markets analyzed</div>
+            </div>
+            <div class="stat-card fade-in">
+                <div class="stat-value">$47&ndash;412</div>
+                <div class="stat-label">Marginal abatement cost range ($/tCO&#x2082;)</div>
+            </div>
+        </div>
+
+        <!-- ISO Tiles -->
+        <div class="iso-tiles">
+            <div class="iso-tile" style="--tile-color: var(--iso-caiso)">
+                <div class="iso-tile-name">CAISO</div>
+                <div class="iso-tile-range">84&ndash;92%</div>
+            </div>
+            <div class="iso-tile" style="--tile-color: var(--iso-ercot)">
+                <div class="iso-tile-name">ERCOT</div>
+                <div class="iso-tile-range">Always grid</div>
+            </div>
+            <div class="iso-tile" style="--tile-color: var(--iso-pjm)">
+                <div class="iso-tile-name">PJM</div>
+                <div class="iso-tile-range">90&ndash;97%</div>
+            </div>
+            <div class="iso-tile" style="--tile-color: var(--iso-nyiso)">
+                <div class="iso-tile-name">NYISO</div>
+                <div class="iso-tile-range">92&ndash;99.9%</div>
+            </div>
+            <div class="iso-tile" style="--tile-color: var(--iso-neiso)">
+                <div class="iso-tile-name">NEISO</div>
+                <div class="iso-tile-range">88&ndash;99.4%</div>
+            </div>
+            <div class="iso-tile" style="--tile-color: var(--iso-miso)">
+                <div class="iso-tile-name">MISO</div>
+                <div class="iso-tile-range">86&ndash;95%</div>
+            </div>
+            <div class="iso-tile" style="--tile-color: var(--iso-spp)">
+                <div class="iso-tile-name">SPP</div>
+                <div class="iso-tile-range">88&ndash;96%</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Observatory: transition gradient from dark hero to light content -->
+<div class="section-transition-dark-to-light" aria-hidden="true"></div>
+<div class="accent-line" aria-hidden="true"></div>
+
+<!-- ================================================================ -->
+<!-- REGIONAL DEEP DIVE SECTION (LIGHT — analytical, data-forward)     -->
+<!-- ================================================================ -->
+<section class="content-section section-light">
+    <h2 class="section-title">Regional Deep Dive</h2>
+    <p class="section-subtitle">Select a region to explore its marginal abatement cost crossover analysis
+        and the clean energy investments that pay off under every cost scenario.</p>
+
+    <!-- ISO Selector Tabs -->
+    <div class="iso-selector">
+        <button class="iso-tab active" onclick="selectISO(this, 'ERCOT')">
+            <span class="tab-dot" style="background: var(--iso-ercot)"></span>ERCOT
+        </button>
+        <button class="iso-tab" onclick="selectISO(this, 'PJM')">
+            <span class="tab-dot" style="background: var(--iso-pjm)"></span>PJM
+        </button>
+        <button class="iso-tab" onclick="selectISO(this, 'CAISO')">
+            <span class="tab-dot" style="background: var(--iso-caiso)"></span>CAISO
+        </button>
+        <button class="iso-tab" onclick="selectISO(this, 'NYISO')">
+            <span class="tab-dot" style="background: var(--iso-nyiso)"></span>NYISO
+        </button>
+        <button class="iso-tab" onclick="selectISO(this, 'NEISO')">
+            <span class="tab-dot" style="background: var(--iso-neiso)"></span>NEISO
+        </button>
+        <button class="iso-tab" onclick="selectISO(this, 'MISO')">
+            <span class="tab-dot" style="background: var(--iso-miso)"></span>MISO
+        </button>
+        <button class="iso-tab" onclick="selectISO(this, 'SPP')">
+            <span class="tab-dot" style="background: var(--iso-spp)"></span>SPP
+        </button>
+    </div>
+
+    <!-- Narrative + Chart Grid -->
+    <div class="narrative-chart-grid">
+        <div class="narrative-block">
+            <p><strong>ERCOT stands alone</strong> as the only US power market where grid-based decarbonization
+                is cheaper than DAC at every threshold tested. Its exceptional wind and solar resources (capacity
+                factors of 35% and 28% respectively) mean that even at 99.9% clean energy, the marginal cost of
+                the last MWh stays below the projected cost of carbon removal.</p>
+            <p>The key driver is simple: ERCOT&rsquo;s renewable resource quality is unmatched in the continental US.
+                Combined with moderate firm generation costs and efficient battery dispatch, the total system cost
+                curve stays flat deep into the high-90s.</p>
+            <p>No-regrets investments for ERCOT include <strong>18 GW of additional wind</strong>,
+                <strong>12 GW of solar</strong>, and <strong>4 GW of battery storage</strong> &mdash; resources
+                that appear in the optimal portfolio under all 5,832 cost sensitivity combinations.</p>
+            <span class="finding-highlight">Grid always cheaper than DAC &middot; Wind + Solar dominate</span>
+
+            <div class="pull-quote">
+                &ldquo;In ERCOT, the question isn&rsquo;t whether to decarbonize the grid &mdash;
+                it&rsquo;s how fast you can build.&rdquo;
+            </div>
+        </div>
+        <div>
+            <div class="chart-panel">
+                <div class="chart-title">Marginal Abatement Cost &mdash; ERCOT</div>
+                <div class="chart-container">
+                    <canvas id="macChart"></canvas>
+                </div>
+                <div class="chart-legend">
+                    <span class="chart-legend-item"><span class="chart-legend-swatch" style="background: var(--iso-ercot)"></span>ERCOT P50</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch" style="background: rgba(34,197,94,0.2)"></span>P10&ndash;P90</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch" style="background: var(--ldes); opacity: 0.6"></span>DAC Central</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Insight Callout -->
+    <div class="insight-box">
+        <h4>Why does firm generation cost matter so much?</h4>
+        <p>In constrained regions like NEISO and NYISO, firm generation (nuclear, CCS, geothermal) is the
+            swing factor. Cheap nuclear extends the grid advantage deep into the 90s &mdash; NYISO reaches
+            99.9% when nuclear costs are low. But expensive firm generation can push the crossover as low as
+            84% (CAISO under high grid costs). The uncertainty band spans 15 percentage points in some regions,
+            driven almost entirely by firm generation cost assumptions.</p>
+    </div>
+</section>
+
+<!-- Observatory: transition to dark metrics band -->
+<div class="section-transition-light-to-dark" aria-hidden="true"></div>
+
+<!-- ================================================================ -->
+<!-- KEY METRICS BAND (DARK — glowing stats, emphasis)                  -->
+<!-- ================================================================ -->
+<section class="dark-metrics-band section-dark">
+    <div class="metrics-inner">
+        <h3 class="metrics-title">Across All Regions</h3>
+        <div class="stats-row metrics-stats">
+            <div class="stat-card fade-in">
+                <div class="stat-value" style="color: var(--iso-ercot)">100%</div>
+                <div class="stat-label">ERCOT: Grid always beats DAC</div>
+            </div>
+            <div class="stat-card fade-in">
+                <div class="stat-value" style="color: var(--solar)">18 GW</div>
+                <div class="stat-label">No-regrets wind investment (ERCOT alone)</div>
+            </div>
+            <div class="stat-card fade-in">
+                <div class="stat-value" style="color: var(--iso-miso)">15 pp</div>
+                <div class="stat-label">Crossover uncertainty driven by firm gen costs</div>
+            </div>
+            <div class="stat-card fade-in">
+                <div class="stat-value" style="color: var(--ldes)">$12&ndash;47B</div>
+                <div class="stat-label">Cost of locking in today&rsquo;s last-mile prices</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Observatory: transition back to light -->
+<div class="section-transition-dark-to-light" aria-hidden="true"></div>
+<div class="accent-line" aria-hidden="true"></div>
+
+<!-- ================================================================ -->
+<!-- METHODOLOGY PEEK (LIGHT — brief, analytical)                      -->
+<!-- ================================================================ -->
+<section class="content-section section-light" style="padding-top: 48px; padding-bottom: 48px;">
+    <div class="insight-box" style="max-width: 800px; margin: 0 auto;">
+        <h4>How we calculate these numbers</h4>
+        <p>Each region&rsquo;s marginal abatement cost is computed across 5,832 cost scenarios
+            (3&times;3&times;3&times;3&times;2&times;3 paired sensitivities covering renewable gen, firm gen, storage,
+            fossil fuel, CCS, and transmission). The P10/P50/P90 bands represent the distribution of marginal
+            costs across this scenario space. The crossover point is where the P50 MAC exceeds the central
+            DAC cost projection ($250/tCO&#x2082;).</p>
+    </div>
+</section>
+
+<!-- Observatory: transition to dark narrative -->
+<div class="section-transition-light-to-dark" aria-hidden="true"></div>
+
+<!-- ================================================================ -->
+<!-- DARK NARRATIVE SECTION (DARK — emphasis, storytelling)             -->
+<!-- ================================================================ -->
+<section class="dark-section section-dark">
+    <div class="dark-inner">
+        <h2>The Last Mile Is the Hardest</h2>
+        <p>Moving from 90% to 99% clean energy costs more than moving from 0% to 90%.
+            The marginal abatement cost curve is exponential &mdash; each additional percentage point of
+            clean energy requires disproportionately more resources, more storage, and more firm generation.</p>
+        <p>This is where <span class="highlight-text">technology learning curves become decisive</span>.
+            Wright&rsquo;s Law projections suggest that battery costs will decline 18&ndash;25% per doubling
+            of cumulative production, while advanced nuclear (SMRs) could see 15&ndash;20% cost reductions.
+            Today&rsquo;s &ldquo;last mile&rdquo; premium may be tomorrow&rsquo;s bargain.</p>
+        <p>The optimal strategy is to invest aggressively in no-regrets resources now, then reassess the
+            last-mile approach as technology costs evolve. Locking in today&rsquo;s firm generation costs
+            for a 99% target would be a $12&ndash;47B mistake.</p>
+    </div>
+</section>
+
+<!-- Observatory: transition gradient from dark to light -->
+<div class="section-transition-dark-to-gray" aria-hidden="true"></div>
+<div class="accent-line" aria-hidden="true"></div>
+
+<!-- ================================================================ -->
+<!-- RELATED ANALYSES (LIGHT — clean card grid)                        -->
+<!-- ================================================================ -->
+<section class="content-section section-light">
+    <h2 class="section-title">Continue Exploring</h2>
+    <p class="section-subtitle">Related analyses that build on these findings.</p>
+
+    <div class="related-grid">
+        <a href="clean_firm_case.html" class="related-card">
+            <span class="card-tag">Economics</span>
+            <h4>The Clean Firm Case</h4>
+            <p>Why firm generation is the single largest lever in grid decarbonization economics &mdash;
+                and what it means for resource planning.</p>
+        </a>
+        <a href="procurement_strategies.html" class="related-card">
+            <span class="card-tag">Strategy</span>
+            <h4>Procurement Strategies</h4>
+            <p>How corporate buyers can act on these findings &mdash; consequential accounting,
+                hourly matching, and hybrid approaches compared.</p>
+        </a>
+        <a href="scenario_comparison.html" class="related-card">
+            <span class="card-tag">Scenarios</span>
+            <h4>Scenario Comparison</h4>
+            <p>What happens when procurement strategies scale? Failure modes, free-rider effects,
+                and the path to real-world impact.</p>
+        </a>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- FOOTER                                                            -->
+<!-- ================================================================ -->
+<footer class="page-footer">
+    <div class="footer-text">The 8,760 Problem &mdash; 2025 Snapshot Model &middot; Data: EIA, eGRID, NREL ATB</div>
+</footer>
+<div class="bottom-banner"></div>
+
+<!-- ================================================================ -->
+<!-- JAVASCRIPT: Theme switching + Chart + Header SVGs                 -->
+<!-- ================================================================ -->
+<script>
+// ---- Theme Switching ----
+function switchTheme(theme, btn) {
+    // Remove all theme classes
+    document.body.className = theme;
+    // Update active button
+    document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    // Swap header SVG
+    injectHeaderSVG(theme);
+    // Re-render chart with new fonts
+    renderChart();
+}
+
+// ---- ISO Selector ----
+function selectISO(btn, iso) {
+    document.querySelectorAll('.iso-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+}
+
+// ---- Header SVG Injection ----
+function injectHeaderSVG(theme) {
+    var header = document.getElementById('pageHeader');
+    var existing = header.querySelector('.header-svg-overlay');
+    if (existing) existing.remove();
+
+    var svg = '';
+    if (theme === 'theme-editorial') {
+        svg = getEditorialSVG();
+    } else if (theme === 'theme-observatory') {
+        svg = getObservatorySVG();
+    } else if (theme === 'theme-signal') {
+        svg = getSignalSVG();
+    } else {
+        svg = getCurrentSVG();
+    }
+    header.insertAdjacentHTML('afterbegin', svg);
+}
+
+function getCurrentSVG() {
+    return '<div class="header-svg-overlay"><svg viewBox="0 0 1440 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">' +
+    '<defs><linearGradient id="hdr-blue-fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(14,165,233,0.18)"/><stop offset="100%" stop-color="rgba(14,165,233,0)"/></linearGradient>' +
+    '<linearGradient id="hdr-amber-fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(245,158,11,0.14)"/><stop offset="100%" stop-color="rgba(245,158,11,0)"/></linearGradient>' +
+    '<linearGradient id="hdr-green-fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(34,197,94,0.12)"/><stop offset="100%" stop-color="rgba(34,197,94,0)"/></linearGradient></defs>' +
+    '<path d="M0,200 C120,180 240,160 360,170 C480,180 600,200 720,190 C840,180 960,160 1080,170 C1200,180 1320,200 1440,190 L1440,280 L0,280 Z" fill="url(#hdr-blue-fade)" opacity="0.6"><animate attributeName="d" dur="12s" repeatCount="indefinite" values="M0,200 C120,180 240,160 360,170 C480,180 600,200 720,190 C840,180 960,160 1080,170 C1200,180 1320,200 1440,190 L1440,280 L0,280 Z;M0,195 C120,175 240,165 360,175 C480,185 600,195 720,185 C840,175 960,165 1080,175 C1200,185 1320,195 1440,185 L1440,280 L0,280 Z;M0,200 C120,180 240,160 360,170 C480,180 600,200 720,190 C840,180 960,160 1080,170 C1200,180 1320,200 1440,190 L1440,280 L0,280 Z"/></path>' +
+    '<path d="M0,200 C120,180 240,160 360,170 C480,180 600,200 720,190 C840,180 960,160 1080,170 C1200,180 1320,200 1440,190" fill="none" stroke="rgba(14,165,233,0.35)" stroke-width="1.8"><animate attributeName="d" dur="12s" repeatCount="indefinite" values="M0,200 C120,180 240,160 360,170 C480,180 600,200 720,190 C840,180 960,160 1080,170 C1200,180 1320,200 1440,190;M0,195 C120,175 240,165 360,175 C480,185 600,195 720,185 C840,175 960,165 1080,175 C1200,185 1320,195 1440,185;M0,200 C120,180 240,160 360,170 C480,180 600,200 720,190 C840,180 960,160 1080,170 C1200,180 1320,200 1440,190"/></path>' +
+    '<path d="M0,240 C180,230 300,180 450,140 C600,100 720,90 900,130 C1050,165 1200,210 1350,230 L1440,240 L1440,280 L0,280 Z" fill="url(#hdr-amber-fade)" opacity="0.5"><animate attributeName="d" dur="15s" repeatCount="indefinite" values="M0,240 C180,230 300,180 450,140 C600,100 720,90 900,130 C1050,165 1200,210 1350,230 L1440,240 L1440,280 L0,280 Z;M0,235 C180,225 300,175 450,145 C600,105 720,95 900,125 C1050,160 1200,205 1350,225 L1440,235 L1440,280 L0,280 Z;M0,240 C180,230 300,180 450,140 C600,100 720,90 900,130 C1050,165 1200,210 1350,230 L1440,240 L1440,280 L0,280 Z"/></path>' +
+    '<path d="M0,240 C180,230 300,180 450,140 C600,100 720,90 900,130 C1050,165 1200,210 1350,230 L1440,240" fill="none" stroke="rgba(245,158,11,0.30)" stroke-width="1.5"><animate attributeName="d" dur="15s" repeatCount="indefinite" values="M0,240 C180,230 300,180 450,140 C600,100 720,90 900,130 C1050,165 1200,210 1350,230 L1440,240;M0,235 C180,225 300,175 450,145 C600,105 720,95 900,125 C1050,160 1200,205 1350,225 L1440,235;M0,240 C180,230 300,180 450,140 C600,100 720,90 900,130 C1050,165 1200,210 1350,230 L1440,240"/></path>' +
+    '<path d="M0,180 C80,165 160,190 280,160 C400,130 480,170 600,150 C720,130 840,160 960,140 C1080,120 1200,155 1320,145 L1440,160 L1440,280 L0,280 Z" fill="url(#hdr-green-fade)" opacity="0.4"><animate attributeName="d" dur="18s" repeatCount="indefinite" values="M0,180 C80,165 160,190 280,160 C400,130 480,170 600,150 C720,130 840,160 960,140 C1080,120 1200,155 1320,145 L1440,160 L1440,280 L0,280 Z;M0,175 C80,160 160,185 280,155 C400,135 480,165 600,155 C720,135 840,155 960,135 C1080,125 1200,150 1320,140 L1440,155 L1440,280 L0,280 Z;M0,180 C80,165 160,190 280,160 C400,130 480,170 600,150 C720,130 840,160 960,140 C1080,120 1200,155 1320,145 L1440,160 L1440,280 L0,280 Z"/></path>' +
+    '<path d="M0,140 L180,140 L210,138 L218,142 L225,120 L232,165 L240,95 L248,170 L255,115 L262,145 L270,140 L450,140 L475,118 L482,162 L490,90 L498,168 L505,112 L512,148 L520,140 L750,140 L775,122 L782,160 L790,98 L798,165 L805,118 L812,146 L820,140 L1050,140 L1075,120 L1082,164 L1090,92 L1098,170 L1105,114 L1112,148 L1120,140 L1350,140 L1375,124 L1382,158 L1390,100 L1398,166 L1405,120 L1412,144 L1420,140 L1440,140" fill="none" stroke="rgba(239,68,68,0.30)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><animate attributeName="stroke-opacity" dur="3s" repeatCount="indefinite" values="0.30;0.50;0.30"/></path>' +
+    '<line x1="0" y1="70" x2="1440" y2="70" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/><line x1="0" y1="140" x2="1440" y2="140" stroke="rgba(255,255,255,0.05)" stroke-width="0.5"/><line x1="0" y1="210" x2="1440" y2="210" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>' +
+    '</svg></div>';
+}
+
+function getEditorialSVG() {
+    // Elegant thin-stroke energy curves — static illustration, not animated
+    return '<div class="header-svg-overlay"><svg viewBox="0 0 1440 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">' +
+    // Thin elegant energy curves
+    '<path d="M0,220 C240,200 480,180 720,190 C960,200 1200,210 1440,195" fill="none" stroke="rgba(14,165,233,0.25)" stroke-width="1"/>' +
+    '<path d="M0,200 C180,190 360,170 540,160 C720,150 900,165 1080,175 C1260,185 1380,195 1440,200" fill="none" stroke="rgba(245,158,11,0.20)" stroke-width="0.8"/>' +
+    '<path d="M0,240 C360,235 720,225 1080,230 C1260,232 1380,238 1440,240" fill="none" stroke="rgba(34,197,94,0.15)" stroke-width="0.8"/>' +
+    // Single heartbeat — refined, thin
+    '<path d="M0,140 L500,140 L518,138 L525,120 L532,160 L540,100 L548,165 L555,118 L562,142 L570,140 L900,140 L918,138 L925,122 L932,158 L940,102 L948,163 L955,120 L962,142 L970,140 L1440,140" fill="none" stroke="rgba(239,68,68,0.18)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">' +
+    '<animate attributeName="stroke-opacity" dur="4s" repeatCount="indefinite" values="0.18;0.30;0.18"/></path>' +
+    // Subtle dots — like data points
+    '<circle cx="540" cy="100" r="2" fill="rgba(239,68,68,0.2)"/>' +
+    '<circle cx="940" cy="102" r="2" fill="rgba(239,68,68,0.2)"/>' +
+    // Fine grid lines
+    '<line x1="0" y1="140" x2="1440" y2="140" stroke="rgba(255,255,255,0.03)" stroke-width="0.5" stroke-dasharray="4,8"/>' +
+    '</svg></div>';
+}
+
+function getObservatorySVG() {
+    // Glowing neon oscilloscope style — animated, with dot grid
+    return '<div class="header-svg-overlay"><svg viewBox="0 0 1440 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">' +
+    '<defs>' +
+    '<filter id="glow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>' +
+    '<linearGradient id="obs-cyan" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="rgba(6,182,212,0)"/><stop offset="50%" stop-color="rgba(6,182,212,0.4)"/><stop offset="100%" stop-color="rgba(6,182,212,0)"/></linearGradient>' +
+    '</defs>' +
+    // Dot grid pattern
+    '<pattern id="dotGrid" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">' +
+    '<circle cx="20" cy="20" r="0.8" fill="rgba(255,255,255,0.06)"/></pattern>' +
+    '<rect width="1440" height="280" fill="url(#dotGrid)"/>' +
+    // Glowing energy curves
+    '<path d="M0,200 C120,180 240,160 360,170 C480,180 600,200 720,190 C840,180 960,160 1080,170 C1200,180 1320,200 1440,190" fill="none" stroke="rgba(6,182,212,0.5)" stroke-width="2" filter="url(#glow)"><animate attributeName="d" dur="10s" repeatCount="indefinite" values="M0,200 C120,180 240,160 360,170 C480,180 600,200 720,190 C840,180 960,160 1080,170 C1200,180 1320,200 1440,190;M0,195 C120,175 240,165 360,175 C480,185 600,195 720,185 C840,175 960,165 1080,175 C1200,185 1320,195 1440,185;M0,200 C120,180 240,160 360,170 C480,180 600,200 720,190 C840,180 960,160 1080,170 C1200,180 1320,200 1440,190"/></path>' +
+    '<path d="M0,230 C180,220 300,180 450,150 C600,120 720,110 900,140 C1050,160 1200,200 1440,220" fill="none" stroke="rgba(245,158,11,0.35)" stroke-width="1.5" filter="url(#glow)"><animate attributeName="d" dur="14s" repeatCount="indefinite" values="M0,230 C180,220 300,180 450,150 C600,120 720,110 900,140 C1050,160 1200,200 1440,220;M0,225 C180,215 300,175 450,155 C600,125 720,115 900,135 C1050,155 1200,195 1440,215;M0,230 C180,220 300,180 450,150 C600,120 720,110 900,140 C1050,160 1200,200 1440,220"/></path>' +
+    // Heartbeat — neon red glow
+    '<path d="M0,140 L300,140 L318,138 L325,118 L332,162 L340,88 L348,170 L355,112 L362,145 L370,140 L700,140 L718,138 L725,120 L732,160 L740,90 L748,168 L755,114 L762,144 L770,140 L1100,140 L1118,138 L1125,122 L1132,158 L1140,94 L1148,166 L1155,116 L1162,143 L1170,140 L1440,140" fill="none" stroke="rgba(239,68,68,0.45)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"><animate attributeName="stroke-opacity" dur="2.5s" repeatCount="indefinite" values="0.35;0.6;0.35"/></path>' +
+    // Scan line effect
+    '<line x1="0" y1="0" x2="0" y2="280" stroke="rgba(6,182,212,0.08)" stroke-width="2"><animate attributeName="x1" dur="6s" repeatCount="indefinite" values="0;1440"/><animate attributeName="x2" dur="6s" repeatCount="indefinite" values="0;1440"/></line>' +
+    '</svg></div>';
+}
+
+function getSignalSVG() {
+    // Bold transmission tower silhouettes with energy flowing between them
+    return '<div class="header-svg-overlay"><svg viewBox="0 0 1440 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">' +
+    // Transmission tower silhouettes (simplified geometric)
+    '<g opacity="0.12" fill="rgba(255,255,255,1)">' +
+    // Tower 1
+    '<polygon points="180,280 195,120 200,120 210,280"/>' +
+    '<line x1="183" y1="180" x2="207" y2="180" stroke="rgba(255,255,255,0.12)" stroke-width="2"/>' +
+    '<line x1="185" y1="220" x2="205" y2="220" stroke="rgba(255,255,255,0.12)" stroke-width="2"/>' +
+    '<line x1="192" y1="140" x2="203" y2="140" stroke="rgba(255,255,255,0.12)" stroke-width="1.5"/>' +
+    // Tower 2
+    '<polygon points="660,280 675,100 680,100 695,280"/>' +
+    '<line x1="663" y1="160" x2="692" y2="160" stroke="rgba(255,255,255,0.12)" stroke-width="2"/>' +
+    '<line x1="665" y1="200" x2="690" y2="200" stroke="rgba(255,255,255,0.12)" stroke-width="2"/>' +
+    '<line x1="672" y1="120" x2="683" y2="120" stroke="rgba(255,255,255,0.12)" stroke-width="1.5"/>' +
+    // Tower 3
+    '<polygon points="1140,280 1155,110 1160,110 1175,280"/>' +
+    '<line x1="1143" y1="170" x2="1172" y2="170" stroke="rgba(255,255,255,0.12)" stroke-width="2"/>' +
+    '<line x1="1145" y1="210" x2="1170" y2="210" stroke="rgba(255,255,255,0.12)" stroke-width="2"/>' +
+    '<line x1="1152" y1="130" x2="1163" y2="130" stroke="rgba(255,255,255,0.12)" stroke-width="1.5"/>' +
+    '</g>' +
+    // Power lines between towers (catenary curves)
+    '<path d="M198,125 C300,155 400,160 500,155 C600,150 650,130 678,105" fill="none" stroke="rgba(245,158,11,0.25)" stroke-width="1.5"><animate attributeName="stroke-opacity" dur="3s" repeatCount="indefinite" values="0.20;0.35;0.20"/></path>' +
+    '<path d="M198,130 C300,165 400,170 500,160 C600,155 650,135 678,110" fill="none" stroke="rgba(14,165,233,0.20)" stroke-width="1.2"/>' +
+    '<path d="M680,105 C800,135 900,140 1000,135 C1100,130 1130,115 1158,115" fill="none" stroke="rgba(245,158,11,0.25)" stroke-width="1.5"><animate attributeName="stroke-opacity" dur="3s" repeatCount="indefinite" values="0.25;0.40;0.25"/></path>' +
+    '<path d="M680,110 C800,145 900,150 1000,140 C1100,135 1130,120 1158,120" fill="none" stroke="rgba(14,165,233,0.20)" stroke-width="1.2"/>' +
+    // Bold heartbeat signal — thick, confident
+    '<path d="M0,140 L250,140 L268,137 L275,110 L282,170 L290,75 L298,180 L305,105 L312,148 L320,140 L680,140 L698,137 L705,112 L712,168 L720,78 L728,178 L735,108 L742,146 L750,140 L1100,140 L1118,137 L1125,115 L1132,165 L1140,80 L1148,175 L1155,110 L1162,145 L1170,140 L1440,140" fill="none" stroke="rgba(239,68,68,0.40)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><animate attributeName="stroke-opacity" dur="2s" repeatCount="indefinite" values="0.35;0.55;0.35"/></path>' +
+    // Horizontal grid
+    '<line x1="0" y1="70" x2="1440" y2="70" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>' +
+    '<line x1="0" y1="140" x2="1440" y2="140" stroke="rgba(255,255,255,0.06)" stroke-width="0.5"/>' +
+    '<line x1="0" y1="210" x2="1440" y2="210" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>' +
+    '</svg></div>';
+}
+
+// ---- Sample Chart ----
+var macChartInstance = null;
+function renderChart() {
+    if (macChartInstance) macChartInstance.destroy();
+
+    var ctx = document.getElementById('macChart').getContext('2d');
+    var style = getComputedStyle(document.body);
+    var fontBody = style.getPropertyValue('--font-body').trim().replace(/'/g, '');
+    var fontData = style.getPropertyValue('--font-data').trim().replace(/'/g, '');
+
+    // Sample MAC data (illustrative)
+    var thresholds = [50, 60, 70, 75, 80, 85, 90, 92.5, 95, 97.5, 99, 99.5, 99.9];
+    var p50 = [12, 18, 28, 38, 52, 74, 110, 148, 205, 295, 412, 520, 780];
+    var p10 = [8, 12, 19, 26, 36, 52, 78, 105, 148, 215, 305, 390, 600];
+    var p90 = [18, 28, 42, 58, 78, 108, 158, 210, 290, 405, 560, 700, 1020];
+    var dacCentral = thresholds.map(function() { return 250; });
+    var dacLow = thresholds.map(function() { return 150; });
+    var dacHigh = thresholds.map(function() { return 400; });
+
+    macChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: thresholds.map(function(t) { return t + '%'; }),
+            datasets: [
+                {
+                    label: 'DAC Range',
+                    data: dacHigh,
+                    backgroundColor: 'rgba(233,30,99,0.06)',
+                    borderColor: 'transparent',
+                    fill: '+1',
+                    pointRadius: 0,
+                    order: 5
+                },
+                {
+                    label: 'DAC Range Lower',
+                    data: dacLow,
+                    backgroundColor: 'transparent',
+                    borderColor: 'transparent',
+                    fill: false,
+                    pointRadius: 0,
+                    order: 5
+                },
+                {
+                    label: 'DAC Central',
+                    data: dacCentral,
+                    borderColor: 'rgba(233,30,99,0.5)',
+                    borderDash: [6, 4],
+                    borderWidth: 1.5,
+                    pointRadius: 0,
+                    fill: false,
+                    order: 3
+                },
+                {
+                    label: 'P10-P90 Band',
+                    data: p90,
+                    backgroundColor: 'rgba(34,197,94,0.12)',
+                    borderColor: 'transparent',
+                    fill: '+1',
+                    pointRadius: 0,
+                    order: 4
+                },
+                {
+                    label: 'P10 Lower',
+                    data: p10,
+                    backgroundColor: 'transparent',
+                    borderColor: 'transparent',
+                    fill: false,
+                    pointRadius: 0,
+                    order: 4
+                },
+                {
+                    label: 'ERCOT P50',
+                    data: p50,
+                    borderColor: '#22C55E',
+                    backgroundColor: 'rgba(34,197,94,0.1)',
+                    borderWidth: 2.5,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#22C55E',
+                    fill: false,
+                    tension: 0.3,
+                    order: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(15,23,42,0.9)',
+                    titleFont: { family: fontBody, size: 12 },
+                    bodyFont: { family: fontData, size: 12 },
+                    callbacks: {
+                        label: function(ctx) {
+                            if (ctx.dataset.label.includes('Range') || ctx.dataset.label.includes('Lower')) return null;
+                            return ctx.dataset.label + ': $' + ctx.parsed.y + '/tCO\u2082';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    title: { display: true, text: 'Clean Energy Target', font: { family: fontBody, size: 12 }, color: '#64748B' },
+                    ticks: { font: { family: fontData, size: 11 }, color: '#94A3B8', maxRotation: 45 },
+                    grid: { color: 'rgba(0,0,0,0.04)' }
+                },
+                y: {
+                    title: { display: true, text: 'Marginal Abatement Cost ($/tCO\u2082)', font: { family: fontBody, size: 12 }, color: '#64748B' },
+                    ticks: { font: { family: fontData, size: 11 }, color: '#94A3B8', callback: function(v) { return '$' + v; } },
+                    grid: { color: 'rgba(0,0,0,0.04)' },
+                    suggestedMax: 600
+                }
+            }
+        }
+    });
+}
+
+// ---- Initialize ----
+document.addEventListener('DOMContentLoaded', function() {
+    injectHeaderSVG('theme-observatory');
+    renderChart();
+});
+</script>
+</body>
+</html>
