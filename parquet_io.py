@@ -19,7 +19,7 @@ except ImportError:
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 ALL_ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
-RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
+RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']
 
 # Fallback demand (MWh) for ISOs without annual_demand_mwh in parquet
 REGIONAL_DEMAND_MWH = {
@@ -125,11 +125,15 @@ def load_from_parquets(input_dir, isos):
             for _, row in thr_group.iterrows():
                 sc_key = row['scenario']
 
-                # Resource mix
+                # Resource mix (gracefully handle missing columns like mix_offshore_wind
+                # in older step3 parquets that predate the offshore wind addition)
                 resource_mix = {}
                 for rtype in RESOURCE_TYPES:
                     col = f'mix_{rtype}'
-                    resource_mix[rtype] = int(row[col]) if col in row.index else 0
+                    if col in row.index and pd.notna(row[col]):
+                        resource_mix[rtype] = int(row[col])
+                    else:
+                        resource_mix[rtype] = 0
 
                 # Costs
                 costs = {}
@@ -361,11 +365,14 @@ def load_dg_from_parquets(input_dir, isos, prefix='step4_dg_'):
                     if dg_key not in iso_dg[t_str]:
                         iso_dg[t_str][dg_key] = {}
 
-                    # Build scenario dict
+                    # Build scenario dict (handle missing columns gracefully)
                     resource_mix = {}
                     for rtype in RESOURCE_TYPES:
                         col = f'mix_{rtype}'
-                        resource_mix[rtype] = int(row[col]) if col in row.index else 0
+                        if col in row.index and pd.notna(row[col]):
+                            resource_mix[rtype] = int(row[col])
+                        else:
+                            resource_mix[rtype] = 0
 
                     costs = {}
                     for ckey in ['total_cost', 'effective_cost', 'incremental', 'wholesale']:
