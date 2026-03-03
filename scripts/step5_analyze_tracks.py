@@ -251,8 +251,8 @@ def main():
 
     for iso in ISOS:
         print(f"\n  {iso}")
-        print(f"  {'Thr':>6} | {'':>8} | {'CF':>5} {'Sol':>5} {'Wnd':>5} {'CCS':>5} {'Hyd':>5}")
-        print(f"  {'-'*6}-+-{'-'*8}-+-{'-'*5}-{'-'*5}-{'-'*5}-{'-'*5}-{'-'*5}")
+        print(f"  {'Thr':>6} | {'':>8} | {'CF':>5} {'Sol':>5} {'Wnd':>5} {'OSW':>5} {'CCS':>5} {'Hyd':>5}")
+        print(f"  {'-'*6}-+-{'-'*8}-+-{'-'*5}-{'-'*5}-{'-'*5}-{'-'*5}-{'-'*5}-{'-'*5}")
 
         # Extract ISO-level data once
         iso_bl_thresholds = baseline.get('results', {}).get(iso, {}).get('thresholds', {})
@@ -278,17 +278,17 @@ def main():
 
             print(f"  {thr:>5}% | {'baseline':>8} | "
                   f"{bl_mix.get('clean_firm',0):>5} {bl_mix.get('solar',0):>5} "
-                  f"{bl_mix.get('wind',0):>5} {bl_mix.get('ccs_ccgt',0):>5} "
-                  f"{bl_mix.get('hydro',0):>5}")
+                  f"{bl_mix.get('wind',0):>5} {bl_mix.get('offshore_wind',0):>5} "
+                  f"{bl_mix.get('ccs_ccgt',0):>5} {bl_mix.get('hydro',0):>5}")
             print(f"  {'':>6} | {'newbuild':>8} | "
                   f"{nb_mix.get('clean_firm',0):>5} {nb_mix.get('solar',0):>5} "
-                  f"{nb_mix.get('wind',0):>5} {nb_mix.get('ccs_ccgt',0):>5} "
-                  f"{nb_mix.get('hydro',0):>5}")
+                  f"{nb_mix.get('wind',0):>5} {nb_mix.get('offshore_wind',0):>5} "
+                  f"{nb_mix.get('ccs_ccgt',0):>5} {nb_mix.get('hydro',0):>5}")
             d = {r: nb_mix.get(r,0) - bl_mix.get(r,0) for r in RESOURCES}
             print(f"  {'':>6} | {'Δ':>8} | "
                   f"{d['clean_firm']:>+5} {d['solar']:>+5} "
-                  f"{d['wind']:>+5} {d['ccs_ccgt']:>+5} "
-                  f"{d['hydro']:>+5}")
+                  f"{d['wind']:>+5} {d['offshore_wind']:>+5} "
+                  f"{d['ccs_ccgt']:>+5} {d['hydro']:>+5}")
 
     # ================================================================
     # 3. REPLACEMENT PREMIUM — Cost delta distributions

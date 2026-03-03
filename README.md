@@ -52,8 +52,8 @@ The monolithic `step1_pfs_generator.py` has been decomposed into modular scripts
 | Script | What It Does | Cache Dependency |
 |--------|-------------|-----------------|
 | `step4_build_dispatch_cache.py` | **Run first.** Pre-computes 8,760-hour dispatch for all unique mixes. Versioned NPZ cache (v2) with per-resource matched/surplus + charge profiles. | Creates cache |
-| `step4_export_track_results.py` | Exports track parquets (NB + CTR) to `track_results.json` for dashboard. | None |
-| `step4_analyze_tracks.py` | Track result analysis: cost envelopes (P10/P50/P90), resource mix differentials. | None |
+| `step5_export_track_results.py` | Exports track parquets (NB + CTR) to `track_results.json` for dashboard. | None |
+| `step5_analyze_tracks.py` | Track result analysis: cost envelopes (P10/P50/P90), resource mix differentials. | None |
 
 ### Step 6: Dispatch-Cache-Dependent Analysis
 
@@ -162,8 +162,8 @@ hourly-cfe-optimizer/
 │   ├── step3_track_nb_ctr.py              # Track 2 (NB) + Track 3 (CTR)
 │   ├── step4_gas_ccs_adjustement.py        # Gas/CCS post-processing
 │   ├── step4_build_dispatch_cache.py       # Dispatch cache (NPZ v2)
-│   ├── step4_export_track_results.py       # Track result export
-│   ├── step4_analyze_tracks.py             # Track cost envelope analysis
+│   ├── step5_export_track_results.py       # Track result export
+│   ├── step5_analyze_tracks.py             # Track cost envelope analysis
 │   ├── step5_compute_co2.py              # CO₂ dispatch model
 │   ├── step5_compute_mac_stats.py          # MAC statistics + ANOVA
 │   ├── step5_compute_lmp_prices.py         # Synthetic LMP (7 ISOs)
