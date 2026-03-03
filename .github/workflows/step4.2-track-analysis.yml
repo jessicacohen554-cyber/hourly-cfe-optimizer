@@ -1,4 +1,4 @@
-name: "Step 5.2: Export & Analyze Tracks"
+name: "Step 4.2: Export & Analyze Tracks"
 
 # Exports track parquets to JSON and runs track cost envelope / mix
 # differential analysis. Independent of dispatch cache — reads from
@@ -8,7 +8,7 @@ name: "Step 5.2: Export & Analyze Tracks"
 #   - step5_export_track_results.py — exports track parquets to dashboard JSON
 #   - step5_analyze_tracks.py — track cost envelopes (P10/P50/P90), mix differentials
 #
-# Prerequisite: Step 3/4 parquets must exist.
+# Prerequisite: Step 3 parquets must exist.
 # Output: dashboard/track_results.json, data/step5-post-processing/
 
 on:
@@ -30,7 +30,7 @@ on:
         type: string
 
 env:
-  BRANCH_PREFIX: step5-tracks
+  BRANCH_PREFIX: step4-tracks
 
 jobs:
   run:
