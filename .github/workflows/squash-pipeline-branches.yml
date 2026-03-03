@@ -12,6 +12,7 @@ name: "Squash Pipeline Branches"
 #   Step 1c:  auto/{TS}-step1c-zone-search-{iso}          (PFS parquets — gitignored, force-added)
 #   Step 1d:  auto/{TS}-step1d-storage-{iso}-{band}       (storage parquets — tracked normally)
 #             auto/{TS}-step1d-fine-storage-{iso}-{mode}   (legacy naming, still matched)
+#   Refilter: auto/{TS}-refilter-near-miss-{iso}          (refiltered near-miss parquets)
 #   Others:   auto/{TS}-{step}-{iso}
 #
 # branch_pattern examples:
@@ -22,6 +23,7 @@ name: "Squash Pipeline Branches"
 #   "auto/.*step1[cd].*caiso"  — only CAISO 1c/1d branches
 #   "auto/.*step1d.*high"      — only Step 1d HIGH-band branches
 #   "auto/.*step1d.*caiso"     — only CAISO Step 1d branches
+#   "auto/.*refilter"          — all refilter near-miss branches
 #
 # NOTE: Step 1c writes to data/step1-pfs-parquets/ which is gitignored.
 # Those files are force-committed on the auto/* branches and re-force-added
@@ -52,6 +54,7 @@ on:
           - 'auto/.*step1c'
           - 'auto/.*step1[cd]'
           - 'auto/.*step1[cd].*caiso'
+          - 'auto/.*refilter-near-miss'
           - 'auto/.*step2'
           - 'auto/.*step3'
       custom_pattern:
