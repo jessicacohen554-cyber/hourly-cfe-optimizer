@@ -61,7 +61,7 @@ OUTPUT_JS = os.path.join(BASE_DIR, 'dashboard', 'js', 'consequential-queue-data.
 
 # ========== CONSTANTS ==========
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
-RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
+RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']
 
 MEDIUM_KEYS = {
     'CAISO': 'MMMM_M_M_M1_L',
