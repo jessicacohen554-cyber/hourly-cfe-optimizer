@@ -11,358 +11,79 @@
     <link rel="stylesheet" href="styles/shared.css">
     <link rel="stylesheet" href="styles/reference.css">
     <style>
-/* ========== PAGE-SPECIFIC OVERRIDES ========== */
-:root {
-    --accent: #EF4444;
-    --accent-dark: #DC2626;
-    --bg: #FFFFFF;
-    --border-light: #E8EBF0;
-    --text-primary: #1A1A1A;
-    --text-secondary: #374151;
-    --link: #1D4ED8;
-    --link-hover: #1E40AF;
-}
-html { font-size: 16px; }
-body {
-    font-family: var(--font-body);
-    color: var(--text-primary);
-    background: var(--bg-page-white);
-    line-height: 1.85;
-}
-.paper-badge {
-    display: inline-block;
-    background: rgba(255,255,255,0.12);
-    border: 1px solid rgba(255,255,255,0.25);
-    color: rgba(255,255,255,0.9);
-    border-radius: 20px;
-    padding: 6px 18px;
-    font-family: var(--font-heading);
-    font-size: 0.78rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    margin-bottom: 18px;
-    position: relative;
-    z-index: 2;
-}
-.paper-title {
-    font-family: var(--font-heading);
-    font-size: 2.2rem;
-    font-weight: 700;
-    color: #ffffff;
-    letter-spacing: 0.3px;
-    line-height: 1.25;
-    max-width: 820px;
-    margin: 0 auto 16px;
-    position: relative;
-    z-index: 2;
-    text-shadow: none;
-}
-.paper-subtitle {
-    font-size: 1.05rem;
-    font-weight: 400;
-    color: rgba(255,255,255,0.85);
-    max-width: 680px;
-    margin: 0 auto 20px;
-    position: relative;
-    z-index: 2;
-}
-.paper-meta {
-    font-size: 0.85rem;
-    color: rgba(255,255,255,0.6);
-    position: relative;
-    z-index: 2;
-}
+        /* ========== RESEARCH PAPER — Page-specific styles only ========== */
+        /* Shared: paper-badge, paper-title, paper-subtitle, paper-meta, paper-toolbar,
+           pdf-download-btn, paper-body, paper-footer, toc, toc-title, cite, figure,
+           figure-caption, figure-number, formula-box, note-box, table-wrap, ref-list,
+           accent-bar, responsive, touch, print → reference.css */
 
-/* ========== TOOLBAR ========== */
-.paper-toolbar {
-    background: var(--bg-alt);
-    border-bottom: 1px solid var(--border-light);
-    padding: 12px 24px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    position: sticky;
-    top: 48px;
-    z-index: 100;
-}
-.paper-toolbar a {
-    color: var(--navy);
-    font-family: var(--font-heading);
-    font-weight: 600;
-    font-size: 0.88rem;
-    text-decoration: none;
-    border-bottom: 1px solid rgba(239,68,68,0.3);
-    transition: all 0.15s;
-}
-.paper-toolbar a:hover { color: var(--accent-dark); border-bottom-color: var(--accent-dark); }
-.pdf-download-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--navy);
-    color: #fff;
-    font-family: var(--font-heading);
-    font-weight: 600;
-    font-size: 0.85rem;
-    padding: 8px 20px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    transition: all 0.2s;
-    text-decoration: none;
-    letter-spacing: 0.02em;
-}
-.pdf-download-btn:hover { background: var(--accent-dark); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(239,68,68,0.3); }
-.pdf-download-btn svg { flex-shrink: 0; }
+        html { font-size: 16px; }
+        body {
+            background: var(--bg-page-white);
+            line-height: 1.85;
+        }
 
-/* ========== CONTENT ========== */
-.paper-body {
-    max-width: 820px;
-    margin: 0 auto;
-    padding: 40px 28px 80px;
-}
+        /* Paper long-form typography (uses bare selectors) */
+        h2 {
+            font-size: 1.55rem;
+            color: var(--accent);
+            margin-top: 56px;
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--border);
+            letter-spacing: 0.02em;
+        }
+        h3 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--red-dark);
+            margin-top: 32px;
+            margin-bottom: 12px;
+        }
+        p { margin-bottom: 16px; font-size: 0.95rem; color: var(--text-secondary); line-height: 1.85; }
+        strong { color: var(--navy); }
 
-/* ========== TABLE OF CONTENTS ========== */
-.toc {
-    background: var(--bg-alt);
-    border: 1px solid var(--border-light);
-    border-radius: 12px;
-    padding: 28px 36px;
-    margin-bottom: 40px;
-}
-.toc-title {
-    font-family: var(--font-heading);
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--accent);
-    margin-bottom: 14px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-}
-.toc ol { padding-left: 22px; }
-.toc li { margin-bottom: 5px; }
-.toc a {
-    color: var(--navy);
-    text-decoration: none;
-    font-size: 0.92rem;
-    border-bottom: 1px solid rgba(239,68,68,0.15);
-    transition: all 0.15s;
-}
-.toc a:hover { color: var(--accent-dark); border-bottom-color: var(--accent-dark); }
+        /* Bare table styles (paper uses unclassed tables) */
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        thead { background: linear-gradient(145deg, #F0F4F8 0%, #E2E8F0 100%); color: var(--navy); }
+        th {
+            font-family: var(--font-heading);
+            padding: 12px 16px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-align: center;
+            letter-spacing: 0.04em;
+        }
+        th:first-child { text-align: left; }
+        td { padding: 10px 16px; border-bottom: 1px solid var(--border-light); font-size: 0.88rem; }
+        tbody tr:nth-child(even) { background: rgba(243,244,248,0.5); }
+        td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
 
-/* ========== SECTIONS ========== */
-h2 {
-    font-family: var(--font-heading);
-    font-size: 1.55rem;
-    color: var(--accent);
-    margin-top: 56px;
-    margin-bottom: 16px;
-    padding-bottom: 10px;
-    border-bottom: 2px solid var(--border);
-    font-weight: 700;
-    letter-spacing: 0.02em;
-}
-h3 {
-    font-family: var(--font-heading);
-    font-size: 1.15rem;
-    font-weight: 600;
-    color: var(--red-dark);
-    margin-top: 32px;
-    margin-bottom: 12px;
-}
-p { margin-bottom: 16px; font-size: 0.95rem; color: var(--text-secondary); line-height: 1.85; }
-strong { color: var(--navy); }
+        /* Paper TOC has slightly larger border-radius */
+        .toc { border-radius: 12px; }
+        .toc ol { padding-left: 22px; }
 
-/* ========== CITATIONS ========== */
-.cite {
-    color: var(--link);
-    text-decoration: none;
-    font-size: 0.88em;
-    cursor: pointer;
-    border-bottom: 1px dotted var(--link);
-    transition: all 0.15s;
-    white-space: nowrap;
-}
-.cite:hover { color: var(--link-hover); border-bottom-style: solid; }
-
-/* ========== FIGURES ========== */
-.figure {
-    margin: 32px 0;
-    background: var(--bg-alt);
-    border: 1px solid var(--border-light);
-    border-radius: 12px;
-    padding: 24px;
-    text-align: center;
-}
-.figure svg { max-width: 100%; height: auto; }
-.figure-caption {
-    font-size: 0.82rem;
-    color: var(--text-muted);
-    margin-top: 14px;
-    line-height: 1.6;
-    font-style: italic;
-}
-.figure-number {
-    font-family: var(--font-heading);
-    font-weight: 700;
-    color: var(--accent);
-    font-style: normal;
-}
-
-/* ========== FORMULA BOX ========== */
-.formula-box {
-    background: linear-gradient(145deg, #F0F4F8 0%, #E8ECF1 100%);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 22px 28px;
-    margin: 20px 0 24px;
-    font-family: var(--font-mono);
-    font-size: 0.88rem;
-    line-height: 1.9;
-    overflow-x: auto;
-    color: var(--navy);
-}
-.formula-box .label {
-    font-family: var(--font-heading);
-    font-weight: 700;
-    color: var(--solar);
-    font-size: 0.78rem;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-bottom: 10px;
-    display: block;
-}
-
-/* ========== NOTE BOX ========== */
-.note-box {
-    background: linear-gradient(135deg, rgba(245,158,11,0.06) 0%, rgba(239,68,68,0.04) 100%);
-    border: 1px solid rgba(245,158,11,0.2);
-    border-left: 4px solid var(--accent);
-    border-radius: 0 10px 10px 0;
-    padding: 18px 24px;
-    margin: 20px 0 24px;
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-}
-.note-box strong { color: var(--accent); }
-
-/* ========== TABLES ========== */
-.table-wrap { overflow-x: auto; margin: 20px 0 28px; }
-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-thead { background: linear-gradient(145deg, #F0F4F8 0%, #E2E8F0 100%); color: var(--navy); }
-th {
-    font-family: var(--font-heading);
-    padding: 12px 16px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    text-align: center;
-    letter-spacing: 0.04em;
-}
-th:first-child { text-align: left; }
-td { padding: 10px 16px; border-bottom: 1px solid var(--border-light); font-size: 0.88rem; }
-tbody tr:nth-child(even) { background: rgba(243,244,248,0.5); }
-td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
-
-/* ========== REFERENCES ========== */
-.ref-list { list-style: none; padding: 0; counter-reset: ref; }
-.ref-list li {
-    margin-bottom: 16px;
-    padding-left: 32px;
-    position: relative;
-    font-size: 0.88rem;
-    line-height: 1.7;
-    color: var(--text-secondary);
-}
-.ref-list li::before {
-    counter-increment: ref;
-    content: '[' counter(ref) ']';
-    position: absolute;
-    left: 0;
-    font-family: var(--font-heading);
-    font-weight: 700;
-    color: var(--accent);
-    font-size: 0.82rem;
-}
-.ref-list a { color: var(--link); text-decoration: none; border-bottom: 1px solid rgba(29,78,216,0.2); transition: all 0.15s; word-break: break-all; }
-.ref-list a:hover { color: var(--link-hover); border-bottom-color: var(--link-hover); }
-
-/* ========== FOOTER ========== */
-.paper-footer {
-    text-align: center;
-    padding: 24px 28px;
-    font-size: 0.82rem;
-    color: var(--text-muted);
-    border-top: 1px solid var(--border-light);
-}
-
-/* ========== ACCENT BAR ========== */
-.accent-bar {
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, var(--navy) 0%, var(--hydro) 25%, var(--wind) 50%, var(--solar) 75%, var(--red) 100%);
-    z-index: 1000;
-}
-
-/* ========== RESPONSIVE ========== */
-@media (max-width: 768px) {
-    .header { padding: 40px 18px 36px; }
-    .paper-title { font-size: 1.6rem; }
-    .paper-subtitle { font-size: 0.92rem; }
-    .paper-body { padding: 28px 18px 60px; }
-    .paper-toolbar { padding: 10px 16px; flex-direction: column; gap: 10px; }
-    h2 { font-size: 1.35rem; margin-top: 40px; }
-    h3 { font-size: 1.05rem; }
-    p { font-size: 0.9rem; }
-    .toc { padding: 20px 18px; }
-    .figure { padding: 16px 12px; }
-    .formula-box { padding: 16px 14px; font-size: 0.8rem; }
-}
-@media (max-width: 480px) {
-    .header { padding: 28px 12px 24px; }
-    .paper-title { font-size: 1.35rem; }
-    .paper-body { padding: 20px 12px 48px; }
-    h2 { font-size: 1.2rem; }
-    p { font-size: 0.85rem; }
-}
-
-/* 375px breakpoint (mid-range phones) */
-@media (max-width: 375px) {
-    .header { padding: 20px 8px 16px; }
-    .paper-title { font-size: 1.2rem; }
-    .paper-body { padding: 16px 8px 40px; }
-}
-
-/* Touch-friendly */
-@media (hover: none) and (pointer: coarse) {
-    .toc a {
-        padding: 8px 4px;
-        display: flex;
-        align-items: center;
-        min-height: 44px;
-    }
-    .pdf-download-btn {
-        min-height: 44px;
-        padding: 10px 20px;
-    }
-}
-
-/* ========== PRINT ========== */
-@media print {
-    body { background: white; font-size: 11pt; line-height: 1.6; }
-    .top-nav, .paper-toolbar, .accent-bar { display: none; }
-    .header { background: var(--navy) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 36px 24px 28px; }
-    .paper-body { max-width: 100%; padding: 24px 20px 40px; }
-    .figure { break-inside: avoid; }
-    .formula-box { break-inside: avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    table { break-inside: avoid; }
-    thead { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    h2 { break-before: auto; }
-    .toc { break-inside: avoid; }
-    a { color: var(--text-primary) !important; text-decoration: none !important; border-bottom: none !important; }
-    .cite { color: var(--text-muted) !important; }
-}
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 768px) {
+            .header { padding: 40px 18px 36px; }
+            h2 { font-size: 1.35rem; margin-top: 40px; }
+            h3 { font-size: 1.05rem; }
+            p { font-size: 0.9rem; }
+        }
+        @media (max-width: 480px) {
+            .header { padding: 28px 12px 24px; }
+            h2 { font-size: 1.2rem; }
+            p { font-size: 0.85rem; }
+        }
+        @media (max-width: 375px) {
+            .header { padding: 20px 8px 16px; }
+        }
+        @media print {
+            .header { background: var(--navy) !important; padding: 36px 24px 28px; }
+            .formula-box { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            h2 { break-before: auto; }
+            .toc { break-inside: avoid; }
+        }
     </style>
     <script src="js/chart-colors.js"></script>
     <script src="js/shared-header.js"></script>

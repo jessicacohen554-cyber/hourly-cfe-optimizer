@@ -46,8 +46,7 @@ body { background: var(--bg-alt-warm); }
 .section-dark .scenario-card .toggles { color: rgba(255,255,255,0.45); }
 .section-dark .scenario-card p { color: rgba(255,255,255,0.72); }
 
-/* ===== PAGE-SPECIFIC: Charts side-by-side ===== */
-.chart-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 32px; }
+/* Chart pair — base in dashboard-ui.css */
 .chart-box { background: rgba(255,255,255,0.9); border: 1px solid rgba(0,0,0,0.08); border-radius: var(--radius-lg); padding: var(--pad-card); box-shadow: var(--shadow-sm); }
 .chart-box h3 { font-family: var(--font-heading); font-size: 0.95rem; color: var(--navy); margin-bottom: 4px; }
 .chart-box .chart-note { font-size: 0.75rem; color: rgba(0,0,0,0.4); margin-bottom: 12px; }
@@ -66,26 +65,15 @@ body { background: var(--bg-alt-warm); }
 .domino-table .num { font-family: var(--font-data); font-weight: 600; font-size: 0.82rem; }
 .mac-cheap { color: var(--ccs); } .mac-mid { color: var(--amber-warn); } .mac-exp { color: var(--red-dark); }
 
-/* ===== PAGE-SPECIFIC: Global ISO bar — sticky, region + slider in one row ===== */
+/* ===== PAGE-SPECIFIC: Global ISO bar — uses .sticky-control-bar + .bar-label from dashboard-ui.css ===== */
 .global-iso-bar { background: rgba(255,255,255,0.97); border-bottom: 1px solid rgba(0,0,0,0.08); padding: 14px var(--pad-page); position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; box-shadow: var(--shadow-sm); }
 .global-iso-bar .bar-label { font-family: var(--font-heading); font-size: 0.82rem; color: var(--navy); font-weight: 700; white-space: nowrap; }
-.bar-divider { width: 1px; height: 28px; background: rgba(0,0,0,0.12); flex-shrink: 0; }
-.bar-slider-wrap { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 180px; max-width: 320px; }
-.bar-slider-wrap input[type=range] { flex: 1; height: 5px; -webkit-appearance: none; appearance: none; background: linear-gradient(90deg, var(--hydro) 0%, var(--green-pos) 50%, var(--solar) 80%, var(--red-dark) 100%); border-radius: 3px; outline: none; cursor: pointer; }
-.bar-slider-wrap input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: var(--navy); border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.25); cursor: pointer; }
-.bar-slider-wrap input[type=range]::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: var(--navy); border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.25); cursor: pointer; }
+/* bar-divider, bar-slider-wrap, range thumbs — in dashboard-ui.css */
 .bar-slider-readout { display: flex; align-items: baseline; gap: 6px; white-space: nowrap; }
 .bar-slider-readout .target-val { font-family: var(--font-heading); font-size: 1.2rem; font-weight: 800; color: #0284C7; }
 .bar-slider-readout .target-year { font-size: 0.72rem; color: rgba(0,0,0,0.4); font-weight: 600; }
-@media (max-width: 768px) {
-    .bar-divider { display: none; }
-    .bar-slider-wrap { min-width: 140px; max-width: 100%; }
-}
 
-/* ===== PAGE-SPECIFIC: Dashboard grid ===== */
-.dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: var(--max-content); margin: 0 auto; padding: 0 var(--pad-page) 40px; }
-.dashboard-grid > .span-2 { grid-column: 1 / -1; }
-@media (max-width: 768px) { .dashboard-grid { grid-template-columns: 1fr; } }
+/* Dashboard grid — in dashboard-ui.css */
 
 /* ===== PAGE-SPECIFIC: Callout ===== */
 .callout { background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.2); border-radius: 10px; padding: 16px 20px; margin-bottom: 28px; }
@@ -168,10 +156,10 @@ body { background: var(--bg-alt-warm); }
 .winner-badge.a-wins { background: rgba(79,70,229,0.12); color: var(--indigo); }
 .winner-badge.tie { background: rgba(0,0,0,0.06); color: rgba(0,0,0,0.5); }
 
-/* ===== MOBILE OVERRIDES ===== */
+/* ===== MOBILE OVERRIDES (page-specific; chart-pair in dashboard-ui.css) ===== */
 @media (max-width: 768px) {
     .hero h1 { font-size: 1.5rem; }
-    .chart-pair, .scenario-cards { grid-template-columns: 1fr; }
+    .scenario-cards { grid-template-columns: 1fr; }
     .chart-container { height: 280px; }
     .chart-container-wide { height: 320px; }
     .deploy-chart-container { height: 320px; }
@@ -496,6 +484,31 @@ each ISO must complete prior threshold steps before advancing. First row per ISO
 
     </div>
 </section>
+
+<!-- ============ RELATED ANALYSES ============ -->
+<div class="related-analyses">
+    <div class="related-analyses-title">Related Analyses</div>
+    <div class="related-analyses-grid">
+        <a href="consequential_accounting.html" class="related-card">
+            <div class="related-card-tag">Carbon Accounting</div>
+            <div class="related-card-title">Consequential Accounting</div>
+            <div class="related-card-desc">Three ways to count carbon and why the choice determines investment incentives.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="procurement_strategies.html" class="related-card">
+            <div class="related-card-tag">Strategy</div>
+            <div class="related-card-title">Procurement Strategies</div>
+            <div class="related-card-desc">Full corporate procurement strategy simulation with learning curves.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="abatement_dashboard.html" class="related-card">
+            <div class="related-card-tag">Carbon</div>
+            <div class="related-card-title">CO&#8322; Abatement</div>
+            <div class="related-card-desc">Marginal abatement costs reveal where each dollar has the most impact.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+    </div>
+</div>
 
 <footer class="page-footer">
     <div class="footer-links">
