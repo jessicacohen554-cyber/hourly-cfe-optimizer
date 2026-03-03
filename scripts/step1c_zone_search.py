@@ -511,20 +511,95 @@ def _has_curtailment_mask(combos, demand_arr, supply_matrix, chunk_size=10000):
     return mask
 
 
+def _compute_max_storage_scores(combos, demand_arr, supply_matrix, chunk_size=500):
+    """Max-storage ceiling score for each mix (same kernel as step1d Pass 0).
+
+    Returns float64 array (N,) — best score achievable with maximum storage.
+    Mixes with max_score >= STORAGE_SWEEP_FLOOR necessarily have curtailment
+    (subsumes the curtailment check). Uses same constants and Numba kernel
+    as step1d, so the math is identical.
+
+    Always includes H2 (MAX_H2=[25.0]) for a conservative ceiling — step1d
+    still gates H2 by threshold in its Pass 1 sweep.
+    """
+    n = len(combos)
+    max_scores = np.empty(n, dtype=np.float64)
+
+    # Storage constants (same as step1d._get_storage_constants)
+    batt_eff = s1.BATTERY_EFFICIENCY
+    batt8_eff = s1.BATTERY8_EFFICIENCY
+    ldes_eff = s1.LDES_EFFICIENCY
+    batt4_dur = s1.BATTERY_DURATION_HOURS
+    batt8_dur = s1.BATTERY8_DURATION_HOURS
+    ldes_dur = s1.LDES_DURATION_HOURS
+    ldes_window = s1.LDES_WINDOW_DAYS * 24
+    batt8_window = 48
+    h2_eff = s1.H2_EFFICIENCY
+    h2_dur = float(s1.H2_DURATION_HOURS)
+    h2_window = s1.H2_WINDOW_DAYS * 24
+
+    # Max storage arrays (same as step1d Pass 0)
+    MAX_BAT4 = np.array([0.5], dtype=np.float64)
+    MAX_BAT8 = np.array([1.0], dtype=np.float64)
+    MAX_LDES = np.array([5.0], dtype=np.float64)
+    MAX_H2 = np.array([25.0], dtype=np.float64)
+
+    t0 = time.time()
+    for cs in range(0, n, chunk_size):
+        ce = min(cs + chunk_size, n)
+        fracs = combos[cs:ce].astype(np.float64) / 100.0
+        supply = fracs @ supply_matrix
+        n_batch = ce - cs
+
+        result = s1._batch_mixes_storage_screen(
+            demand_arr, supply, 1.0, n_batch,
+            MAX_BAT4, MAX_BAT8, MAX_LDES,
+            1, 1, 1,
+            batt_eff, batt8_eff, ldes_eff,
+            batt4_dur, batt8_dur, ldes_dur,
+            ldes_window, batt8_window,
+            MAX_H2, 1, h2_eff, h2_dur, h2_window)
+
+        max_scores[cs:ce] = result[:, 0]
+
+    elapsed = time.time() - t0
+    print(f"    Max-storage screen: {n:,} mixes in {elapsed:.1f}s")
+    return max_scores
+
+
 def save_near_miss(iso, combos, scores, rtypes,
-                   demand_arr=None, supply_matrix=None):
+                   demand_arr=None, supply_matrix=None,
+                   full_filter=False):
     """Save union near-miss mixes for step1d storage sweep.
 
-    If demand_arr and supply_matrix are provided, pre-filters to only mixes
-    with curtailment > 0 (at least one hour of surplus). Mixes without any
-    curtailment cannot benefit from storage, so they are pruned to save space.
+    Args:
+        full_filter: If True (final save), compute max-storage scores and
+            filter to mixes with max_score >= STORAGE_SWEEP_FLOOR. This
+            eliminates mixes that can't benefit from storage and persists
+            the max_storage_score column so step1d can skip its Pass 0.
+            If False (interim saves), use the cheaper curtailment-only check.
     """
     if len(combos) == 0:
         return
 
-    # Pre-filter: only keep mixes with at least one hour of curtailment
     n_before = len(combos)
-    if demand_arr is not None and supply_matrix is not None:
+    max_storage_scores = None
+
+    if full_filter and demand_arr is not None and supply_matrix is not None:
+        # Full max-storage screen: subsumes curtailment check
+        print(f"  Running max-storage pre-filter on {n_before:,} near-miss mixes...")
+        max_storage_scores = _compute_max_storage_scores(
+            combos, demand_arr, supply_matrix)
+        mask = max_storage_scores >= STORAGE_SWEEP_FLOOR
+        combos = combos[mask]
+        scores = scores[mask]
+        max_storage_scores = max_storage_scores[mask]
+        n_pruned = n_before - len(combos)
+        if n_pruned > 0:
+            print(f"  Max-storage filter: {n_before:,} → "
+                  f"{len(combos):,} ({n_pruned:,} pruned, max score < {STORAGE_SWEEP_FLOOR})")
+    elif demand_arr is not None and supply_matrix is not None:
+        # Cheap curtailment-only filter (interim saves)
         mask = _has_curtailment_mask(combos, demand_arr, supply_matrix)
         combos = combos[mask]
         scores = scores[mask]
@@ -534,7 +609,7 @@ def save_near_miss(iso, combos, scores, rtypes,
                   f"{len(combos):,} ({n_pruned:,} pruned, no curtailment)")
 
     if len(combos) == 0:
-        print(f"  Near-miss union: 0 mixes after curtailment filter (skipped)")
+        print(f"  Near-miss union: 0 mixes after filter (skipped)")
         return
 
     os.makedirs(s1.STEP1_RAW_PFS_PARQUET_DIR, exist_ok=True)
@@ -542,14 +617,17 @@ def save_near_miss(iso, combos, scores, rtypes,
     for i, rt in enumerate(rtypes):
         data[rt] = combos[:, i].astype(np.float64)
     data['base_score'] = scores
+    if max_storage_scores is not None:
+        data['max_storage_score'] = max_storage_scores
 
     table = pa.table(data)
     out_path = os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR,
                             f'{iso}_near_miss.parquet')
     pq.write_table(table, out_path, compression='snappy')
     size_mb = os.path.getsize(out_path) / (1024 * 1024)
+    extra = " (with max_storage_score)" if max_storage_scores is not None else ""
     print(f"  Near-miss union: {len(combos):,} unique mixes → "
-          f"{out_path} ({size_mb:.1f} MB)")
+          f"{out_path} ({size_mb:.1f} MB){extra}")
     return out_path
 
 
@@ -775,7 +853,22 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None, zones_filter=Non
         print(f"  Warming up Numba JIT...")
         _ = s1.batch_hourly_scores(demand_arr, supply_matrix,
                                    coarse_combos[:2])
-        print(f"  JIT ready")
+        # Warmup storage kernel for final max-storage pre-filter
+        dummy_supply = np.ones((1, s1.H), dtype=np.float64)
+        dummy_b = np.array([0.0, 1.0], dtype=np.float64)
+        dummy_l = np.array([0.0], dtype=np.float64)
+        dummy_h = np.array([0.0], dtype=np.float64)
+        s1._batch_mixes_storage_screen(
+            demand_arr, dummy_supply, 1.0, 1,
+            dummy_b, dummy_b, dummy_l,
+            2, 2, 1,
+            s1.BATTERY_EFFICIENCY, s1.BATTERY8_EFFICIENCY, s1.LDES_EFFICIENCY,
+            s1.BATTERY_DURATION_HOURS, s1.BATTERY8_DURATION_HOURS,
+            s1.LDES_DURATION_HOURS,
+            s1.LDES_WINDOW_DAYS * 24, 48,
+            dummy_h, 1, s1.H2_EFFICIENCY,
+            float(s1.H2_DURATION_HOURS), s1.H2_WINDOW_DAYS * 24)
+        print(f"  JIT ready (scoring + storage kernels)")
 
     # ── Global tracking ──
     # Vectorized dedup keys (collision-free int64 hash per row)
@@ -900,10 +993,13 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None, zones_filter=Non
     all_nm_indices = np.array(sorted(all_nm_indices), dtype=np.int64)
 
     # Save near-miss union (final authoritative version overwrites interim)
+    # full_filter=True: compute max-storage scores and persist as column,
+    # so step1d can skip its Pass 0 recomputation.
     if len(all_nm_indices) > 0:
         save_near_miss(iso, all_combos[all_nm_indices],
                        all_scores[all_nm_indices], rtypes,
-                       demand_arr=demand_arr, supply_matrix=supply_matrix)
+                       demand_arr=demand_arr, supply_matrix=supply_matrix,
+                       full_filter=True)
 
     # Per-threshold: dominance filter + save
     for t in active_thresholds:
