@@ -65,6 +65,7 @@ def build_scenario_dict(row):
             'clean_firm': int(row['mix_clean_firm']),
             'solar': int(row['mix_solar']),
             'wind': int(row['mix_wind']),
+            'offshore_wind': int(row.get('mix_offshore_wind', 0)),
             'ccs_ccgt': int(row['mix_ccs_ccgt']),
             'hydro': int(row['mix_hydro']),
         },
