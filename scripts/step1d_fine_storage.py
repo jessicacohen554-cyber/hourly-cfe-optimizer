@@ -838,7 +838,7 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
           f"({len(nm_combos)/max(n_before,1)*100:.1f}%)")
 
     # ══════════════════════════════════════════════════════
-    # PASS 1: Adaptive coarse storage sweep
+    # PASS 1: Adaptive coarse storage sweep (per-threshold)
     # ══════════════════════════════════════════════════════
 
     # Determine which thresholds need Pass 1 (coarse sweep)
@@ -847,24 +847,48 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
 
     coarse_results = {t: [] for t in active_thresholds}
 
-    # Run Pass 1 for thresholds that haven't been processed yet
+    # Run Pass 1 one threshold at a time so each commits immediately.
+    # Per-threshold reachability filter: higher thresholds score fewer mixes.
     if pass1_needed:
-        new_coarse = run_adaptive_coarse(
-            iso, nm_combos, nm_base_scores, max_scores,
-            demand_arr, supply_matrix, pass1_needed, sc)
+        print(f"\n  Pass 1 — {len(pass1_needed)} thresholds to process "
+              f"(committing after each)")
+        for ti, t in enumerate(pass1_needed):
+            target = t / 100.0
+            t_reachable = max_scores >= target
+            t_needs = nm_base_scores < target
+            t_mask = t_reachable & t_needs
+            t_combos = nm_combos[t_mask]
+            t_base = nm_base_scores[t_mask]
+            t_max = max_scores[t_mask]
 
-        # Save coarse results per threshold
-        for t in pass1_needed:
-            t_results = new_coarse[t]
-            coarse_results[t] = t_results
-            if t_results:
-                save_storage_results(iso, t, nm_combos, t_results, rtypes)
-                print(f"    {iso} t{t}%: {len(t_results):,} storage-feasible "
-                      f"(coarse)")
+            print(f"\n  Pass 1 [{ti+1}/{len(pass1_needed)}] — "
+                  f"threshold {t}%: {len(t_combos):,} eligible mixes "
+                  f"(of {len(nm_combos):,})")
+
+            if len(t_combos) == 0:
+                print(f"    No eligible mixes for {t}% — skipping")
+                coarse_results[t] = []
+            else:
+                new_coarse = run_adaptive_coarse(
+                    iso, t_combos, t_base, t_max,
+                    demand_arr, supply_matrix, [t], sc)
+
+                # Remap mix indices back to the full nm_combos array
+                full_idx = np.where(t_mask)[0]
+                t_results = []
+                for r in new_coarse[t]:
+                    t_results.append(
+                        (int(full_idx[r[0]]), r[1], r[2], r[3], r[4], r[5]))
+                coarse_results[t] = t_results
+
+                if t_results:
+                    save_storage_results(iso, t, nm_combos, t_results, rtypes)
+                    print(f"    {iso} t{t}%: {len(t_results):,} storage-feasible "
+                          f"(coarse)")
+
             git_commit_threshold(iso, t, "Pass1", auto_commit)
-
-        pass1_thresholds.update(pass1_needed)
-        _save_manifest(iso, code_hash, pass1_thresholds, pass2_done)
+            pass1_thresholds.add(t)
+            _save_manifest(iso, code_hash, pass1_thresholds, pass2_done)
     else:
         print(f"\n  Pass 1: all active thresholds already done")
 
