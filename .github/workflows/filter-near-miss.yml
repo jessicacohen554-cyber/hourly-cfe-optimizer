@@ -1,10 +1,9 @@
-name: "Filter near-miss parquets (curtailment + bridge)"
+name: "Refilter near-miss parquets (threshold-crossing + stratified cap)"
 
-# Two-pass filter on near-miss parquets to shrink them before Step 1d:
-#  1. Remove zero-curtailment mixes (no surplus hours → can't charge storage)
-#  2. Remove bridge-fail mixes (base_score + surplus_pct < 50% → can't reach
-#     any storage threshold even with all available surplus)
-# Run after Step 1c to prune before Step 1d.
+# Applies threshold-crossing filter + 100K stratified cap to near-miss parquets.
+# Computes max_storage_score for each mix, keeps only mixes that cross at least
+# one active threshold with storage, then caps at 100K via stratified sampling.
+# Reduces bloated near-miss files from 60-80 MB to ~1-2 MB.
 
 on:
   workflow_dispatch:
@@ -45,6 +44,7 @@ jobs:
       with:
         ref: ${{ inputs.branch || 'master' }}
         fetch-depth: 1
+        lfs: true
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -54,26 +54,28 @@ jobs:
     - name: Install dependencies
       run: pip install numpy numba pyarrow pandas
 
-    - name: Run curtailment + bridge filter
-      run: |
-        ISO="${{ inputs.iso }}"
-        if [ "$ISO" = "ALL" ]; then
-          python scripts/filter_near_miss_curtailment.py
-        else
-          python scripts/filter_near_miss_curtailment.py "$ISO"
-        fi
+    - name: Show near-miss sizes before
+      run: ls -lh data/step1-pfs-parquets/*near_miss*.parquet 2>/dev/null || echo "No near-miss files found"
 
-    - name: Commit and push filtered/compressed parquets
+    - name: Run threshold-crossing refilter
+      run: python scripts/temp_refilter_near_miss.py --iso "${{ inputs.iso }}"
+
+    - name: Show near-miss sizes after
+      run: ls -lh data/step1-pfs-parquets/*near_miss*.parquet 2>/dev/null || echo "No near-miss files found"
+
+    - name: Commit and push refiltered parquets
       run: |
         BRANCH="${{ inputs.branch || 'master' }}"
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
-        git add -f data/step1-pfs-parquets/*.parquet data/step1d-storage-parquets/*.parquet 2>/dev/null || true
+        git add -f data/step1-pfs-parquets/*near_miss*.parquet 2>/dev/null || true
         if ! git diff --cached --quiet; then
-          git commit -m "Filter + compress PFS parquets (int8/float32 + zstd)
+          ISO="${{ inputs.iso }}"
+          git commit -m "Refilter ${ISO} near-miss: threshold-crossing + 100K stratified cap
 
-        Near-miss: remove zero-curtailment + bridge-fail mixes.
-        All parquets: downcast float64 → int8/float32, recompress with zstd."
+        Applies threshold-crossing filter (keep only mixes where storage pushes
+        base_score across an active threshold) + 100K stratified cap per ISO.
+        Typical reduction: 60-80 MB → 1-2 MB (97%+ reduction)."
           for i in 1 2 3 4; do
             git fetch origin "$BRANCH" --depth=5 || true
             git rebase "origin/$BRANCH" || git rebase --abort || true
@@ -82,5 +84,5 @@ jobs:
             sleep $((2**i))
           done
         else
-          echo "No changes — all parquets already optimized."
+          echo "No changes — near-miss parquets already filtered."
         fi
