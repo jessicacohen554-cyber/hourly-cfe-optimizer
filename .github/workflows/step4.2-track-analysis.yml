@@ -5,8 +5,8 @@ name: "Step 5.2: Export & Analyze Tracks"
 # step3/step4 parquets directly.
 #
 # Scripts:
-#   - step4_export_track_results.py — exports track parquets to dashboard JSON
-#   - step4_analyze_tracks.py — track cost envelopes (P10/P50/P90), mix differentials
+#   - step5_export_track_results.py — exports track parquets to dashboard JSON
+#   - step5_analyze_tracks.py — track cost envelopes (P10/P50/P90), mix differentials
 #
 # Prerequisite: Step 3/4 parquets must exist.
 # Output: dashboard/track_results.json, data/step5-post-processing/
@@ -68,9 +68,9 @@ jobs:
         if: ${{ inputs.script == 'ALL' }}
         run: |
           echo "=== Launching track scripts in parallel ==="
-          python scripts/step4_export_track_results.py &
+          python scripts/step5_export_track_results.py &
           PID_EXPORT=$!
-          python scripts/step4_analyze_tracks.py &
+          python scripts/step5_analyze_tracks.py &
           PID_ANALYZE=$!
 
           FAILED=0
@@ -80,11 +80,11 @@ jobs:
 
       - name: "Export Track Results"
         if: ${{ inputs.script == 'export-tracks-only' }}
-        run: python scripts/step4_export_track_results.py
+        run: python scripts/step5_export_track_results.py
 
       - name: "Analyze Tracks"
         if: ${{ inputs.script == 'analyze-tracks-only' }}
-        run: python scripts/step4_analyze_tracks.py
+        run: python scripts/step5_analyze_tracks.py
 
       - name: Commit and push
         run: |

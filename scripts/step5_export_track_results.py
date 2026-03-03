@@ -58,43 +58,49 @@ STEP5_DIR = os.path.join(SCRIPT_DIR, 'data', 'step5-post-processing')
 MEDIUM_KEYS = {'MMMM_M_M_M1_X', 'MMMM_M_M_M1_M'}
 
 
+def _g(row, attr, default=0):
+    """Fast getattr with default — works with namedtuples from itertuples()."""
+    return getattr(row, attr, default)
+
+
 def build_scenario_dict(row):
-    """Convert a parquet row to the nested scenario dict the frontend expects."""
+    """Convert a parquet row (namedtuple from itertuples) to the nested scenario
+    dict the frontend expects. Uses getattr for optional columns with defaults."""
     return {
         'resource_mix': {
-            'clean_firm': int(row['mix_clean_firm']),
-            'solar': int(row['mix_solar']),
-            'wind': int(row['mix_wind']),
-            'offshore_wind': int(row.get('mix_offshore_wind', 0)),
-            'ccs_ccgt': int(row['mix_ccs_ccgt']),
-            'hydro': int(row['mix_hydro']),
+            'clean_firm': int(row.mix_clean_firm),
+            'solar': int(row.mix_solar),
+            'wind': int(row.mix_wind),
+            'offshore_wind': int(_g(row, 'mix_offshore_wind', 0)),
+            'ccs_ccgt': int(row.mix_ccs_ccgt),
+            'hydro': int(row.mix_hydro),
         },
         'costs': {
-            'total_cost': round(float(row['cost_total_cost']), 2),
-            'effective_cost': round(float(row['cost_effective_cost']), 2),
-            'incremental': round(float(row['cost_incremental']), 2),
-            'wholesale': round(float(row['cost_wholesale']), 2),
+            'total_cost': round(float(row.cost_total_cost), 2),
+            'effective_cost': round(float(row.cost_effective_cost), 2),
+            'incremental': round(float(row.cost_incremental), 2),
+            'wholesale': round(float(row.cost_wholesale), 2),
         },
-        'hourly_match_score': round(float(row['hourly_match_score']), 2),
-        'battery_dispatch_pct': round(float(row['battery_dispatch_pct']), 4),
-        'battery8_dispatch_pct': round(float(row.get('battery8_dispatch_pct', 0)), 4),
-        'ldes_dispatch_pct': round(float(row['ldes_dispatch_pct']), 4),
-        'h2_dispatch_pct': round(float(row.get('h2_dispatch_pct', 0)), 4),
+        'hourly_match_score': round(float(row.hourly_match_score), 2),
+        'battery_dispatch_pct': round(float(row.battery_dispatch_pct), 4),
+        'battery8_dispatch_pct': round(float(_g(row, 'battery8_dispatch_pct', 0)), 4),
+        'ldes_dispatch_pct': round(float(row.ldes_dispatch_pct), 4),
+        'h2_dispatch_pct': round(float(_g(row, 'h2_dispatch_pct', 0)), 4),
         'tranche_costs': {
-            'cf_existing_twh': round(float(row.get('tranche_cf_existing_twh', 0)), 3),
-            'uprate_twh': round(float(row.get('tranche_uprate_twh', 0)), 3),
-            'geo_twh': round(float(row.get('tranche_geo_twh', 0)), 3),
-            'nuclear_newbuild_twh': round(float(row.get('tranche_nuclear_newbuild_twh', 0)), 3),
-            'ccs_tranche_twh': round(float(row.get('tranche_ccs_tranche_twh', 0)), 3),
-            'new_cf_twh': round(float(row.get('tranche_new_cf_twh', 0)), 3),
+            'cf_existing_twh': round(float(_g(row, 'tranche_cf_existing_twh', 0)), 3),
+            'uprate_twh': round(float(_g(row, 'tranche_uprate_twh', 0)), 3),
+            'geo_twh': round(float(_g(row, 'tranche_geo_twh', 0)), 3),
+            'nuclear_newbuild_twh': round(float(_g(row, 'tranche_nuclear_newbuild_twh', 0)), 3),
+            'ccs_tranche_twh': round(float(_g(row, 'tranche_ccs_tranche_twh', 0)), 3),
+            'new_cf_twh': round(float(_g(row, 'tranche_new_cf_twh', 0)), 3),
         },
         'gas': {
-            'gas_backup_needed_mw': int(row.get('gas_gas_backup_needed_mw', 0)),
-            'existing_gas_used_mw': int(row.get('gas_existing_gas_used_mw', 0)),
-            'new_gas_build_mw': int(row.get('gas_new_gas_build_mw', 0)),
-            'gas_cost_per_mwh': round(float(row.get('gas_gas_cost_per_mwh', 0)), 2),
-            'clean_peak_capacity_mw': int(row.get('gas_clean_peak_capacity_mw', 0)),
-            'ra_peak_mw': int(row.get('gas_ra_peak_mw', 0)),
+            'gas_backup_needed_mw': int(_g(row, 'gas_gas_backup_needed_mw', 0)),
+            'existing_gas_used_mw': int(_g(row, 'gas_existing_gas_used_mw', 0)),
+            'new_gas_build_mw': int(_g(row, 'gas_new_gas_build_mw', 0)),
+            'gas_cost_per_mwh': round(float(_g(row, 'gas_gas_cost_per_mwh', 0)), 2),
+            'clean_peak_capacity_mw': int(_g(row, 'gas_clean_peak_capacity_mw', 0)),
+            'ra_peak_mw': int(_g(row, 'gas_ra_peak_mw', 0)),
         },
     }
 
@@ -163,14 +169,14 @@ def main():
                 # Always include medium scenario(s) with full detail
                 medium_rows = thr_df[thr_df['scenario'].isin(MEDIUM_KEYS)]
                 scenarios = {
-                    row['scenario']: build_scenario_dict(row)
-                    for row in medium_rows.to_dict('records')
+                    row.scenario: build_scenario_dict(row)
+                    for row in medium_rows.itertuples(index=False)
                 }
 
                 # If only 1 scenario total and it wasn't in MEDIUM_KEYS, include it
                 if not scenarios and n_scenarios > 0:
-                    row = thr_df.iloc[0]
-                    scenarios[row['scenario']] = build_scenario_dict(row)
+                    row = next(thr_df.itertuples(index=False))
+                    scenarios[row.scenario] = build_scenario_dict(row)
 
                 thr_out = {'scenarios': scenarios}
 
