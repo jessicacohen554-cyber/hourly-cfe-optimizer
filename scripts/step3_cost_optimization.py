@@ -244,16 +244,28 @@ CCS_CAP_TWH = {
 }
 
 # CCS-CCGT LCOE with/without 45Q
+# 45Q credit: $85/ton × 0.323 tCO2/MWh captured (90% capture × 0.359 tCO2/MWh unabated)
+# = $27.5/MWh offset between ON and OFF tables.
+# Previous values used $29/MWh offset (corrected 2026-03-03).
 CCS_LCOE_45Q_ON = {
-    'L': {'CAISO': 58, 'ERCOT': 52, 'PJM': 62, 'NYISO': 78, 'NEISO': 75, 'MISO': 55, 'SPP': 50},
-    'M': {'CAISO': 86, 'ERCOT': 71, 'PJM': 79, 'NYISO': 99, 'NEISO': 96, 'MISO': 74, 'SPP': 68},
-    'H': {'CAISO': 115, 'ERCOT': 92, 'PJM': 102, 'NYISO': 128, 'NEISO': 122, 'MISO': 96, 'SPP': 88},
+    'L': {'CAISO': 59.5, 'ERCOT': 53.5, 'PJM': 63.5, 'NYISO': 79.5, 'NEISO': 76.5, 'MISO': 56.5, 'SPP': 51.5},
+    'M': {'CAISO': 87.5, 'ERCOT': 72.5, 'PJM': 80.5, 'NYISO': 100.5, 'NEISO': 97.5, 'MISO': 75.5, 'SPP': 69.5},
+    'H': {'CAISO': 116.5, 'ERCOT': 93.5, 'PJM': 103.5, 'NYISO': 129.5, 'NEISO': 123.5, 'MISO': 97.5, 'SPP': 89.5},
 }
 CCS_LCOE_45Q_OFF = {
     'L': {'CAISO': 87, 'ERCOT': 81, 'PJM': 91, 'NYISO': 107, 'NEISO': 104, 'MISO': 84, 'SPP': 79},
     'M': {'CAISO': 115, 'ERCOT': 100, 'PJM': 108, 'NYISO': 128, 'NEISO': 125, 'MISO': 103, 'SPP': 97},
     'H': {'CAISO': 144, 'ERCOT': 121, 'PJM': 131, 'NYISO': 157, 'NEISO': 151, 'MISO': 125, 'SPP': 117},
 }
+
+# NEISO Winter Gas Pipeline Constraint (Algonquin Citygates)
+# During winter months (~25% of year), New England's gas pipeline capacity is
+# constrained, driving gas prices $7.50/MMBtu above Henry Hub. This affects:
+#   1. CCS-CCGT operating costs: +$13.13/MWh annualized (7 HR × $7.50 × 0.25 winter)
+#   2. Wholesale electricity prices: +$4/MWh annualized (marginal gas pricing)
+# Source: ISO-NE Winter Energy Security Study, Algonquin Citygates basis.
+NEISO_CCS_GAS_ADDER = 13.13    # $/MWh annualized CCS adder
+NEISO_WHOLESALE_ADDER = 4.0    # $/MWh annualized wholesale adder
 
 # ============================================================================
 # FOAK COST TABLES — First-of-a-kind costs before any learning curve
@@ -600,6 +612,9 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     geo_lev = sens.get('geo')
 
     wholesale = max(5, WHOLESALE_PRICES[iso] + FUEL_ADJUSTMENTS[iso][fuel_name])
+    # NEISO winter gas pipeline constraint — wholesale adder
+    if iso == 'NEISO':
+        wholesale += NEISO_WHOLESALE_ADDER
     existing = existing_override if existing_override is not None else GRID_MIX_SHARES[iso]
 
     # Arrays are pre-converted to float64 in _table_to_arrays — no .astype() needed
@@ -662,6 +677,9 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     ccs_new_pct = np.maximum(0, ccs_capped_pct - ccs_existing)
     ccs_table = CCS_LCOE_45Q_ON if q45 == '1' else CCS_LCOE_45Q_OFF
     ccs_lcoe = ccs_table[ccs_lev][iso]
+    # NEISO winter gas pipeline constraint — CCS fuel cost adder
+    if iso == 'NEISO':
+        ccs_lcoe += NEISO_CCS_GAS_ADDER
     ccs_tx = get_tx('ccs_ccgt', tx_name, iso)
     total_cost += ccs_new_pct / 100.0 * (ccs_lcoe + ccs_tx)
 
