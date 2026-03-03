@@ -116,7 +116,7 @@ def find_floor_compatible_pfs(iso, threshold, floor_twh, demand_twh,
     Returns list of mix vectors in v5.0 format.
     """
     pfs_mixes = _load_pfs_mixes(iso, threshold)
-    if not pfs_mixes:
+    if len(pfs_mixes) == 0:
         return []
 
     # Cap scan for memory
@@ -124,7 +124,7 @@ def find_floor_compatible_pfs(iso, threshold, floor_twh, demand_twh,
         # Random subsample
         rng = np.random.default_rng(42)
         indices = rng.choice(len(pfs_mixes), max_scan, replace=False)
-        pfs_mixes = [pfs_mixes[i] for i in indices]
+        pfs_mixes = pfs_mixes[indices]
 
     # Filter by floor
     filtered = _filter_mixes_by_floor(pfs_mixes, floor_twh, demand_twh, iso)
