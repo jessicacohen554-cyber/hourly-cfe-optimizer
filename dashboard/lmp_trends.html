@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The 8,760 Problem — Wholesale Price Trends: All Regions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/article.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
+<style>
+/* Page-specific overrides only — all shared styles in article.css */
+
+/* LMP synthesis uses light bg instead of dark glass */
+.synthesis-section { border-top: 1px solid rgba(0,0,0,0.025); }
+.synthesis-card {
+    background: rgba(255,255,255,0.95);
+    border-color: rgba(74,144,217,0.10);
+}
+.synthesis-card h3 { color: var(--text-secondary); }
+.synthesis-card p { color: rgba(15,23,42,0.68); }
+
+/* Nuclear callout (dark-bg alert box) */
+.nuclear-callout {
+    max-width: var(--max-content);
+    margin: 0 auto;
+    padding: 0;
+}
+.nuclear-callout-inner {
+    background: rgba(239,68,68,0.10);
+    border: 1px solid rgba(239,68,68,0.25);
+    border-left: 4px solid var(--red);
+    border-radius: 14px;
+    padding: 24px 28px;
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+.nuclear-callout-icon {
+    font-size: 1.6rem;
+    line-height: 1;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+.nuclear-callout-text h4 {
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #f87171;
+    margin-bottom: 6px;
+    letter-spacing: -0.2px;
+}
+.nuclear-callout-text p {
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.68);
+    line-height: 1.65;
+    margin: 0;
+}
+.nuclear-callout-text strong { color: var(--amber-warn); }
+
+/* Nuclear deep-dive section */
+.nuclear-section {
+    max-width: var(--max-content);
+    margin: 0 auto;
+    padding: var(--space-3xl) var(--pad-page);
+    border-top: 1px solid rgba(239,68,68,0.1);
+}
+.nuclear-section-header { margin-bottom: 40px; }
+.nuclear-section-header h2 {
+    font-family: var(--font-heading);
+    font-size: 1.7rem;
+    font-weight: 800;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    line-height: 1.2;
+    letter-spacing: -0.5px;
+}
+.nuclear-section-header p {
+    font-size: 0.92rem;
+    color: var(--text-dim);
+    line-height: 1.7;
+    max-width: 780px;
+}
+.nuclear-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: var(--space-xl);
+    align-items: start;
+}
+.nuclear-chart-col .chart-panel { position: sticky; top: 80px; }
+.nuclear-narrative-col {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+}
+.nuclear-metric-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-md);
+    margin-top: var(--space-lg);
+}
+.nuclear-metric {
+    background: rgba(255,255,255,0.95);
+    border: 1px solid rgba(74,144,217,0.10);
+    border-radius: 10px;
+    padding: var(--space-md);
+    text-align: center;
+}
+.nuclear-metric-value {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1.1;
+}
+.nuclear-metric-label {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    margin-top: 6px;
+    line-height: 1.35;
+}
+.nuclear-paradox {
+    background: rgba(255,255,255,0.95);
+    border: 1px solid rgba(245,158,11,0.18);
+    border-radius: 14px;
+    padding: 28px 24px;
+    margin-top: 12px;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.nuclear-paradox.visible { opacity: 1; transform: translateY(0); }
+.nuclear-paradox h3 {
+    font-family: var(--font-heading);
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--amber-warn);
+    margin-bottom: 12px;
+}
+.nuclear-paradox p {
+    font-size: 0.88rem;
+    color: rgba(15,23,42,0.68);
+    line-height: 1.75;
+    margin-bottom: 12px;
+}
+.nuclear-paradox p:last-child { margin-bottom: 0; }
+
+/* Hero section padding override */
+.hero-section { padding: 56px var(--pad-page) 48px; }
+
+/* Responsive */
+@media (max-width: 900px) {
+    .hero-text h1 { font-size: 1.7rem; }
+    .nuclear-grid { grid-template-columns: 1fr; }
+    .nuclear-chart-col .chart-panel { position: relative; top: 0; }
+    .nuclear-callout-inner { flex-direction: column; gap: 12px; }
+}
+@media (max-width: 600px) {
+    .hero-section { padding: 40px 16px 36px; }
+    .hero-text h1 { font-size: 1.45rem; }
+    .hero-stats-row { gap: 12px; }
+    .hero-stat { min-width: 110px; padding: 12px 14px; }
+    .hero-stat-value { font-size: 1.3rem; }
+    .nuclear-section { padding: 40px 16px; }
+    .nuclear-section-header h2 { font-size: 1.35rem; }
+    .nuclear-metric-row { grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .nuclear-metric { padding: 12px 8px; }
+    .nuclear-metric-value { font-size: 1.2rem; }
+    .nuclear-callout { padding: 0 16px; }
+    .nuclear-callout-inner { padding: 18px 16px; }
+}
+@media (max-width: 480px) {
+    .hero-stats-row { flex-direction: column; }
+    .hero-stat { min-width: unset; }
+}
+</style>
+</head>
+<body>
+
+<nav id="topNav"></nav>
+
+<!-- HEADER BANNER -->
+<header class="header">
+    <h1>The 8,760 Problem</h1>
+    <p class="subtitle" id="headerSubtitle">How clean energy procurement reshapes wholesale electricity prices &mdash; 7 U.S. electricity markets</p>
+    <div class="header-accent"></div>
+</header>
+
+<!-- REGION SELECTOR PILLS -->
+<div class="region-pills-bar">
+    <div class="region-pills-inner">
+        <button class="region-pill active" data-iso="PJM">PJM</button>
+        <button class="region-pill" data-iso="CAISO">CAISO</button>
+        <button class="region-pill" data-iso="ERCOT">ERCOT</button>
+        <button class="region-pill" data-iso="MISO">MISO</button>
+        <button class="region-pill" data-iso="NEISO">ISO-NE</button>
+        <button class="region-pill" data-iso="NYISO">NYISO</button>
+        <button class="region-pill" data-iso="SPP">SPP</button>
+    </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- HERO SECTION                                                      -->
+<!-- ================================================================ -->
+<section class="hero-section section-light">
+    <div class="hero-inner">
+        <div class="hero-text">
+            <div class="hero-kicker" id="heroKicker">PJM Wholesale Market Analysis</div>
+            <h1 id="heroTitle">Clean energy <span class="accent">halves wholesale prices</span> in PJM — but the path is narrower than you think</h1>
+            <p id="heroDesc1">Across 151,944 simulated PJM scenarios, wholesale prices decline from $35/MWh at 50% clean (SBTi 2030) to $17/MWh at 95% (SBTi ~2045). But the spread between best- and worst-case outcomes peaks in the middle of the transition — precisely where most utilities are planning today.</p>
+            <p id="heroDesc2">Fuel prices explain nearly everything until &ge;99.99% clean, where the rules change entirely and renewable costs, transmission, and policy levers take over.</p>
+            <div class="hero-stats-row" id="heroStats">
+                <div class="hero-stat">
+                    <div class="hero-stat-value green">&minus;52%</div>
+                    <div class="hero-stat-label">Median wholesale price decline, 2030 (50%) &rarr; 2045 (95%)</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="hero-stat-value amber">$30/MWh</div>
+                    <div class="hero-stat-label">Peak uncertainty band (P10&ndash;P90) at 75&ndash;80% clean</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="hero-stat-value red">~2038</div>
+                    <div class="hero-stat-label">Year LMP falls below nuclear operating cost (~85% clean)</div>
+                </div>
+            </div>
+        </div>
+        <div class="hero-chart-block">
+            <div class="chart-panel">
+                <div class="chart-title">Average Wholesale Price by Clean Energy Threshold — All Scenarios</div>
+                <div class="chart-container">
+                    <canvas id="heroEnvelopeChart"></canvas>
+                </div>
+                <div class="chart-legend">
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#0EA5E9;"></span>Median (P50)</span>
+                    <span class="chart-legend-divider"></span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(14,165,233,0.35);"></span>P25&ndash;P75</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(14,165,233,0.18);"></span>P10&ndash;P90</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- NUCLEAR RETIREMENT CALLOUT -->
+<div class="gradient-transition"></div>
+<section class="section-dark" style="padding-top: var(--space-xl); padding-bottom: var(--space-xl);">
+<div class="section-dark-inner">
+    <div class="nuclear-callout">
+        <div class="nuclear-callout-inner">
+            <div class="nuclear-callout-icon">&#9762;</div>
+            <div class="nuclear-callout-text" id="nuclearCalloutContent">
+                <h4>Existing Nuclear at Risk: Wholesale prices cross below operating cost by ~2038 (85% clean)</h4>
+                <p>PJM's 32 GW nuclear fleet needs <strong>$25&ndash;30/MWh</strong> to cover operating costs. Our LMP model shows median wholesale prices fall through this floor between the SBTi ~2038 (85%) and 2040 (90%) milestones &mdash; and off-peak prices collapse even earlier. By the SBTi 2045 target (95%), nearly half the year prices at zero or below. <a href="#nuclear-deepdive" style="color:var(--accent-cyan);text-decoration:underline;">Jump to full analysis &darr;</a></p>
+            </div>
+        </div>
+    </div>
+</div>
+</section>
+<div class="gradient-transition"></div>
+
+<!-- ================================================================ -->
+<!-- SECTION 1: Fuel Prices Dominate                                   -->
+<!-- ================================================================ -->
+<div class="scroll-section section-light">
+    <div class="scroll-section-inner">
+        <div class="scroll-chart-col">
+            <div class="chart-panel">
+                <div class="chart-title">Wholesale Price by Fuel Assumption — Low / Medium / High</div>
+                <div class="chart-container">
+                    <canvas id="fuelEnvelopeChart"></canvas>
+                </div>
+                <div class="chart-legend">
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#22C55E;"></span>Low fuel</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#F59E0B;"></span>Medium fuel</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#EF4444;"></span>High fuel</span>
+                    <span class="chart-legend-divider"></span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(0,0,0,0.12);"></span>P10&ndash;P90 within each</span>
+                </div>
+            </div>
+        </div>
+        <div class="scroll-narrative-col" id="sect1Narrative">
+            <div class="narrative-card">
+                <span class="section-tag" style="background:rgba(14,165,233,0.08);color:#38bdf8;">Price Drivers</span>
+                <h3>Fuel prices explain 88&ndash;100% of wholesale cost variation — until they don't</h3>
+                <p>From 50% to 95% clean energy, the single biggest determinant of wholesale prices is the fossil fuel price assumption. At 50% clean, fuel level explains <strong>100%</strong> of the variance in average LMP. At 80%, it still accounts for <strong>88%</strong>.</p>
+                <p>The gap between Low and High fuel scenarios in PJM is massive: at 80% clean, Low fuel yields $17/MWh while High fuel yields $37/MWh — a 2.2&times; difference driven entirely by what marginal gas plants cost to run.</p>
+                <span class="stat-badge stat-badge-blue">Low fuel: $17/MWh at 80% &middot; High fuel: $37/MWh at 80%</span>
+            </div>
+            <div class="narrative-card">
+                <h3>At &ge;99.99% clean, the game changes completely</h3>
+                <p>When clean energy reaches &ge;99.99%, fuel prices become irrelevant — there are no fossil plants left to set the price. Variance fragments across multiple levers: <strong>renewable costs</strong> (14%), <strong>fuel level</strong> (14%), <strong>transmission</strong> (11%), <strong>45Q policy</strong> (7%), and <strong>CO&#8322; price</strong> (5%).</p>
+                <p>This is the structural break in the wholesale market. Everything that mattered before &ge;99.99% stops mattering. Everything that didn't — transmission buildout, tax policy, clean generation costs — becomes decisive.</p>
+                <span class="stat-badge stat-badge-amber">At &ge;99.99%: No single factor explains &gt;15% of price variance</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- SECTION 2: Market Regime Shift                                    -->
+<!-- ================================================================ -->
+<div class="scroll-section section-light">
+    <div class="scroll-section-inner">
+        <div class="scroll-chart-col">
+            <div class="chart-panel">
+                <div class="chart-title">Market Regime Shift — Zero-Price &amp; Scarcity Hours</div>
+                <div class="chart-container">
+                    <canvas id="regimeChart"></canvas>
+                </div>
+                <div class="chart-legend">
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#0EA5E9;"></span>Zero-price hours (P50)</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(14,165,233,0.2);"></span>Zero-price P50&ndash;P90</span>
+                    <span class="chart-legend-divider"></span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#EF4444;"></span>Scarcity hours (&gt;$200)</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(239,68,68,0.2);"></span>Scarcity P50&ndash;P90</span>
+                </div>
+            </div>
+        </div>
+        <div class="scroll-narrative-col" id="sect2Narrative">
+            <div class="narrative-card">
+                <span class="section-tag" style="background:rgba(34,197,94,0.08);color:#4ade80;">Market Structure</span>
+                <h3>PJM zero-price hours explode from 265 to 7,980 — and the market flips inside out</h3>
+                <p>At 50% clean, PJM sees about 265 zero-or-negative-price hours per year — roughly 3% of the time, typically overnight with must-run nuclear surplus. By 95%, that figure hits <strong>4,268 hours</strong> — nearly half the year. At &ge;99.99%, it's <strong>7,980 hours</strong>: 91% of all hours produce free or negatively-priced electricity.</p>
+                <p>This isn't a gradual shift. The curve accelerates sharply past 75%, as each incremental percentage of clean energy adds more zero-marginal-cost generation to hours where fossil was already barely dispatching.</p>
+                <span class="stat-badge stat-badge-green">265 &rarr; 7,980 zero-price hours: a 30&times; increase</span>
+            </div>
+            <div class="narrative-card">
+                <h3>Scarcity events decline but never disappear</h3>
+                <p>Hours above $200/MWh drop from a median of 68 at 50% clean to 10 at &ge;99.99% — but they persist even in a fully clean grid. Clean firm generation and storage smooth the worst supply crunches, but extreme weather and demand spikes still produce scarcity pricing in the tail.</p>
+                <p>The P90 of scarcity hours (worst 10% of scenarios) remains above 40 even at &ge;99.99% clean — a reminder that resource adequacy risk doesn't vanish, it transforms.</p>
+                <span class="stat-badge stat-badge-red">Scarcity hours: 68 &rarr; 10 median, but P90 stays at 41</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- SECTION 3: Peak vs Off-peak                                       -->
+<!-- ================================================================ -->
+<div class="scroll-section section-light">
+    <div class="scroll-section-inner">
+        <div class="scroll-chart-col">
+            <div class="chart-panel">
+                <div class="chart-title">Peak vs. Off-Peak Wholesale Price &mdash; Structural Arbitrage</div>
+                <div class="chart-container">
+                    <canvas id="peakSpreadChart"></canvas>
+                </div>
+                <div class="chart-legend">
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#F59E0B;"></span>Peak (weekday 7am&ndash;10pm)</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#9C27B0;"></span>Off-peak</span>
+                    <span class="chart-legend-divider"></span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(0,0,0,0.1);"></span>Peak&ndash;off-peak spread</span>
+                </div>
+            </div>
+        </div>
+        <div class="scroll-narrative-col" id="sect3Narrative">
+            <div class="narrative-card">
+                <span class="section-tag" style="background:rgba(245,158,11,0.08);color:#fbbf24;">Price Structure</span>
+                <h3>The peak premium persists — and that's the arbitrage signal</h3>
+                <p>Off-peak prices crash faster than peak: at 95% clean, off-peak hits $14/MWh while peak holds at $22/MWh. The median spread between peak and off-peak actually <em>widens</em> from 80% to 97.5% before collapsing only at &ge;99.99%.</p>
+                <p>For storage operators and demand-response providers, this is the signal: the economic case for time-shifting energy <strong>strengthens</strong> through most of the clean energy transition, even as absolute prices fall.</p>
+                <span class="stat-badge stat-badge-amber">Peak&ndash;offpeak spread: $13&ndash;$16/MWh from 80% to 97.5%</span>
+            </div>
+            <div class="narrative-card">
+                <h3>Off-peak prices go negative first — creating the duck curve in price space</h3>
+                <p>At &ge;99.99% clean, off-peak median is <strong>&minus;$12/MWh</strong> while peak is still <strong>&minus;$2/MWh</strong>. Even in a fully decarbonized grid, demand-supply timing mismatch creates a $10 spread. This is the price manifestation of the duck curve — too much clean energy when demand is low, and storage arbitrage is the only remedy.</p>
+                <span class="stat-badge stat-badge-blue">At &ge;99.99%: peak &minus;$2, off-peak &minus;$12 &mdash; $10 spread remains</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- SECTION 4: Nuclear Economics Deep-Dive                            -->
+<!-- ================================================================ -->
+<section class="nuclear-section section-light" id="nuclear-deepdive">
+    <div class="nuclear-section-header" id="nuclearSectionHeader">
+        <span class="section-tag" style="background:rgba(239,68,68,0.06);color:#f87171;">PJM Nuclear Economics</span>
+        <h2>The Clean Energy Paradox: Decarbonization Destroys the Price Signal That Keeps Nuclear Alive</h2>
+        <p>PJM's 32 GW existing nuclear fleet is the cheapest firm clean energy on the grid at $34/MWh wholesale. But the very renewable buildout needed to decarbonize the grid collapses wholesale prices below nuclear's all-in costs &mdash; not just cash operating costs, but the capital expenditures, decommissioning reserves, and profit margin needed to justify continued investment over 40&ndash;60 year license periods.</p>
+    </div>
+
+    <div class="nuclear-grid">
+        <div class="nuclear-chart-col">
+            <div class="chart-panel">
+                <div class="chart-title" id="nuclearChartTitle1">PJM Wholesale Price vs. Nuclear Operating Cost — By Clean Energy %</div>
+                <div class="chart-container">
+                    <canvas id="nuclearEconChart"></canvas>
+                </div>
+                <div class="chart-legend">
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#EF4444;"></span>High fuel LMP</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#F59E0B;"></span>Medium fuel LMP</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#22C55E;"></span>Low fuel LMP</span>
+                    <span class="chart-legend-divider"></span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(239,68,68,0.35);border-color:rgba(239,68,68,0.5);"></span>Cash ops ($25&ndash;30)</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(239,68,68,0.18);border-color:rgba(239,68,68,0.35);"></span>All-in sustaining ($35&ndash;40)</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.4);"></span>Viable w/ 10% margin ($38&ndash;44)</span>
+                    <span class="chart-legend-divider"></span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:rgba(96,165,250,0.7);"></span>45U effective floor ($40, thru 2032)</span>
+                </div>
+            </div>
+
+            <div class="chart-panel" style="margin-top: 24px;">
+                <div class="chart-title" id="nuclearChartTitle2">PJM Hours Per Year at Zero or Negative Price — Nuclear Revenue Erosion</div>
+                <div class="chart-container" style="min-height: 260px;">
+                    <canvas id="nuclearZeroHoursChart"></canvas>
+                </div>
+                <div class="chart-legend">
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#9C27B0;"></span>Off-peak avg LMP</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#0EA5E9;"></span>Zero/negative hours (right axis)</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="nuclear-narrative-col" id="nuclearNarrative">
+            <div class="narrative-card">
+                <span class="section-tag" style="background:rgba(239,68,68,0.06);color:#f87171;">Viable Operation Threshold</span>
+                <h3>The real line isn't breakeven &mdash; it's viability (~70% clean, ~2033)</h3>
+                <p>Cash operating costs ($25&ndash;30/MWh) are only part of the picture. NEI's own "total generating cost" is $31.76/MWh (multi-unit avg), including $7/MWh in capital additions. But NEI explicitly excludes property taxes ($1&ndash;1.50/MWh), insurance ($1&ndash;3), decommissioning fund ($1&ndash;2), and spent fuel storage ($1&ndash;1.50). All-in sustaining cost: <strong>$35&ndash;40/MWh</strong>. Single-unit plants: $46&ndash;50/MWh.</p>
+                <p>And break-even doesn't justify continued investment. Regulated utilities earn 9&ndash;11% ROE on nuclear assets. A 10% margin pushes the viable price to <strong>$38&ndash;44/MWh</strong>. Medium-fuel wholesale LMP is already below this at 50% clean ($34.80). Even under <strong>high fuel prices</strong>, wholesale crosses below $38 at <strong>~68% clean</strong>. Above that threshold, no fuel price scenario supports viable nuclear without out-of-market revenue.</p>
+                <span class="stat-badge stat-badge-red">Viable operation requires $38&ndash;44/MWh &middot; Even high fuel LMP crosses below at ~68% clean</span>
+            </div>
+
+            <div class="narrative-card">
+                <span class="section-tag" style="background:rgba(239,68,68,0.06);color:#f87171;">Historic Precedent</span>
+                <h3>We've seen this movie before: TMI-1, Byron, Clinton</h3>
+                <p><strong>Three Mile Island Unit 1 (2019)</strong>: Exelon shut down its 837 MW reactor when PJM wholesale prices collapsed to ~$25&ndash;27/MWh (2019 avg). As a single-unit plant, all-in costs were ~$40&ndash;42/MWh (NEI single-unit avg: $41.62). Exelon reported $300M in losses over five years. The plant also failed to clear PJM's capacity auction four consecutive years. Pennsylvania declined to pass a ZEC subsidy.</p>
+                <p><strong>Illinois (2016)</strong>: Clinton and Quad Cities faced the same squeeze at ~$29&ndash;31/MWh wholesale. The Future Energy Jobs Act created Zero Emission Credits at <strong>$16.50/MWh</strong> (pegged to social cost of carbon). In 2021, CEJA extended subsidies to Byron and Dresden via Carbon Mitigation Credits at ~$30&ndash;33/MWh (contract-for-differences structure).</p>
+                <p><strong>New York (2017)</strong>: ZECs at <strong>$17.48/MWh</strong> for Ginna, Nine Mile Point, FitzPatrick. Program extended through 2049. <strong>New Jersey (2019)</strong>: ZECs at ~<strong>$10/MWh</strong> for Hope Creek and Salem. All programs responding to the same structural problem: wholesale prices below all-in nuclear costs.</p>
+                <span class="stat-badge stat-badge-amber">TMI-1: $27 wholesale vs. $42 all-in &middot; IL ZEC $16.50 &middot; NY ZEC $17.48 &middot; NJ ZEC $10</span>
+            </div>
+
+            <div class="narrative-card">
+                <h3>45U buys time &mdash; but how much?</h3>
+                <p>The IRA's Section 45U provides <strong>$15/MWh</strong> (with prevailing wage, 5&times; the $3 base credit) for existing nuclear through 2032. It phases out at 80&cent; per dollar above $25/MWh gross receipts, reaching $0 at <strong>$43.75/MWh</strong>. When wholesale is &le;$25, total revenue = $40/MWh. The credit functions as a contract-for-differences: maximum support when prices are lowest. At current PJM wholesale ($30&ndash;$45/MWh), most plants receive a partial credit of $5&ndash;15/MWh, landing total revenue at <strong>$40&ndash;45/MWh</strong> &mdash; right in the viable zone.</p>
+                <p>But 45U expires in 2032. At the SBTi 2040 target (90% clean), medium-fuel LMP is <strong>$20/MWh</strong>. Without 45U, nuclear loses $15&ndash;24 on every MWh sold against viable costs. The gap between 45U expiration and the point where wholesale prices become unviable (~68% clean) is razor-thin &mdash; and by 2032, clean energy penetration may already be past that threshold.</p>
+                <p>Under <strong>low fuel prices</strong>: LMP drops to $16/MWh at 90% clean. Nuclear loses $22&ndash;28/MWh against viable costs. No realistic extension of 45U fills that hole without structural market redesign (capacity reform, clean energy credits, or long-term PPAs).</p>
+                <span class="stat-badge stat-badge-blue">45U: $15/MWh credit, effective floor $40, phases out at $43.75 &middot; Expires 2032</span>
+            </div>
+
+            <div class="nuclear-metric-row">
+                <div class="nuclear-metric">
+                    <div class="nuclear-metric-value" style="color:#4ade80;">$34</div>
+                    <div class="nuclear-metric-label">Today (2025)<br>PJM wholesale $/MWh</div>
+                </div>
+                <div class="nuclear-metric">
+                    <div class="nuclear-metric-value" style="color:#f87171;">$38&ndash;44</div>
+                    <div class="nuclear-metric-label">Viable nuclear<br>All-in + 10% margin</div>
+                </div>
+                <div class="nuclear-metric">
+                    <div class="nuclear-metric-value" style="color:#fbbf24;">$20</div>
+                    <div class="nuclear-metric-label">SBTi 2040 (90%)<br>Median LMP $/MWh</div>
+                </div>
+                <div class="nuclear-metric">
+                    <div class="nuclear-metric-value" style="color:#60a5fa;">$40</div>
+                    <div class="nuclear-metric-label">45U floor<br>Through 2032</div>
+                </div>
+            </div>
+
+            <div class="nuclear-paradox">
+                <h3>The Replacement Cost Paradox</h3>
+                <p>If nuclear retires due to price depression, replacing its firm generation capacity costs <strong>$105&ndash;163/MWh</strong> for new nuclear or <strong>$79&ndash;131/MWh</strong> for CCS-CCGT &mdash; 3&ndash;5&times; the wholesale price that caused the retirement.</p>
+                <p>This is the central tension: the grid needs nuclear at SBTi 2040&ndash;2050 targets (90&ndash;&ge;99.99%), but the market doesn't pay enough to keep it running. Without capacity payments, clean energy standards, or nuclear production credits, the economic signal and the system need diverge completely &mdash; potentially as early as the late 2030s.</p>
+                <p>High demand growth (PJM: up to 3.6%/yr) provides some price support by absorbing renewable output &mdash; but the LMP data shows it's insufficient. The wholesale price collapse is structural, not cyclical.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- SYNTHESIS                                                         -->
+<!-- ================================================================ -->
+<div class="gradient-transition"></div>
+<section class="section-dark">
+<div class="section-dark-inner">
+    <div class="synthesis-grid" id="synthesisGrid">
+        <div class="synthesis-card">
+            <h3>The uncertainty paradox: widest where it matters most</h3>
+            <p>The P10&ndash;P90 spread in wholesale prices peaks at 75&ndash;80% clean energy — exactly the threshold range where most corporate buyers and utilities are currently planning. At 80%, the gap between the best- and worst-case outcome is <strong>$31/MWh</strong>. That's the difference between wholesale power cheaper than natural gas alone and wholesale power more expensive than today's average.</p>
+            <p>The implication: forecasting wholesale prices at 75&ndash;85% clean requires getting fuel cost assumptions right. Every other input is noise until you approach &ge;99.99%.</p>
+            <span class="stat-badge stat-badge-amber">$31/MWh spread at 80% &middot; $0.4/MWh spread at &ge;99.99%</span>
+        </div>
+        <div class="synthesis-card">
+            <h3>Three eras of the wholesale market</h3>
+            <p><strong>Era 1: 50&ndash;75% (2030&ndash;~2034)</strong> &mdash; Fossil sets the price. Fuel costs dominate. Wholesale markets function as they do today, just at modestly lower levels. Zero-price hours are a nuisance, not a structural feature.</p>
+            <p><strong>Era 2: 75&ndash;95% (~2034&ndash;2045)</strong> &mdash; The transition zone. Price uncertainty is at its peak. Zero-price hours become a defining feature (half the year by 95%). Storage and flexibility gain premium value.</p>
+            <p><strong>Era 3: 95&ndash;&ge;99.99% (2045&ndash;2050)</strong> &mdash; The structural break. Fossil no longer sets marginal price. All hours converge toward zero or negative. Revenue for all generators collapses. The market requires fundamental redesign.</p>
+            <span class="stat-badge stat-badge-green">2030&ndash;2034: business as usual &middot; 2034&ndash;2045: transition &middot; 2045+: new paradigm</span>
+        </div>
+    </div>
+</section>
+
+<!-- ============ RELATED ANALYSES ============ -->
+<div class="related-analyses">
+    <div class="related-analyses-title">Related Analyses</div>
+    <div class="related-analyses-grid">
+        <a href="fossil_fuel_deepdive.html" class="related-card">
+            <div class="related-card-tag">Grid</div>
+            <div class="related-card-title">Fossil Fuel Deep Dive</div>
+            <div class="related-card-desc">Detailed analysis of fossil fleet composition and displacement mechanics.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="storage_analysis.html" class="related-card">
+            <div class="related-card-tag">Technology</div>
+            <div class="related-card-title">Storage Analysis</div>
+            <div class="related-card-desc">How battery and long-duration storage affect grid operations and pricing.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="scenario_comparison.html" class="related-card">
+            <div class="related-card-tag">Strategy</div>
+            <div class="related-card-title">Scenario Comparison</div>
+            <div class="related-card-desc">Side-by-side comparison of procurement strategies and their market impacts.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+    </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="dashboard.html">Grid Simulation</a>
+        <a href="abatement_dashboard.html">CO&#8322; Abatement</a>
+        <a href="research_paper.html">Research Paper</a>
+        <a href="optimizer_methodology.html">Methodology</a>
+    </div>
+    <div class="footer-note" id="footerNote">All analysis on this page is PJM Interconnection &middot; 151,944 simulated scenarios &middot; Synthetic LMP model calibrated to PJM IMM State of the Market 2024</div>
+</footer>
+<div class="bottom-banner"></div>
+
+
+<!-- DATA + CHARTS + REGION SWITCHING -->
+<script src="js/lmp-data.js"></script>
+<script src="js/lmp-charts.js"></script>
+<script src="js/nav.js"></script>
+
+
+</body>
+</html>
