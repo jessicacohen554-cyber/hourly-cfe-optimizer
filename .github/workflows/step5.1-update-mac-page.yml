@@ -1,11 +1,11 @@
-name: "Step 6.1: Update Abatement Page"
+name: "Step 5.1: Update Abatement Page"
 
 # Runs three scripts sequentially to fully populate the Abatement / MAC page:
 #   1. step5_compute_mac_stats.py  — 6 MAC metrics, ANOVA decomposition, crossover analysis
 #   2. step5_compute_optimal_targets.py — optimal CFE target per ISO via DAC crossover
 #   3. step6_generate_shared_data.py — consolidates all results into shared-data.js
 #
-# Prerequisite: Step 6.0 (CO2) must have run first — MAC depends on CO2 output.
+# Prerequisite: Step 5.0 (CO2) must have run first — MAC depends on CO2 output.
 # Output: dashboard/js/mac-stats-data.js, optimal-target-data.js, shared-data.js
 
 on:
@@ -42,7 +42,7 @@ on:
         type: string
 
 env:
-  BRANCH_PREFIX: step6-1-mac
+  BRANCH_PREFIX: step5-1-mac
 
 jobs:
   update-mac-page:
