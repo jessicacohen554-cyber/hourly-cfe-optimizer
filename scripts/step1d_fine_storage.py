@@ -1290,7 +1290,7 @@ def print_batch_info(iso, target_minutes=10):
     rtypes = s1.get_resource_types(iso)
 
     # Load mixes (with coarse fallback)
-    nm_combos, nm_scores = load_mixes_with_coarse_fallback(
+    nm_combos, nm_scores, _ = load_mixes_with_coarse_fallback(
         iso, STORAGE_THRESHOLDS)
     if nm_combos is None:
         print(f"  ERROR: No near-miss data for {iso}. Run step1c first.")
