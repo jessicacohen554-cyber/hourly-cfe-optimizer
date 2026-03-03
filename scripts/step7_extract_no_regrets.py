@@ -45,7 +45,7 @@ OUTPUT_JS = Path('dashboard/js/no-regrets-data.js')
 OUTPUT_JSON = Path('data/step5-post-processing/no_regrets_analysis.json')
 
 # Resources to track
-MIX_RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
+MIX_RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']
 STORAGE_RESOURCES = ['battery', 'battery8', 'ldes']
 ALL_RESOURCES = MIX_RESOURCES + STORAGE_RESOURCES
 

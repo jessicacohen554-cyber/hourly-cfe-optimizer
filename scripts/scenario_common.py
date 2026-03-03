@@ -1025,16 +1025,17 @@ def batch_floor_excess(mixes_arr, floor_twh, existing_twh, demand_twh, iso,
     excess = np.zeros(N, dtype=np.float64)
 
     # Map resources to mix columns and their TWh
-    # cf=0, sol=1, wnd=2, ccs=3, hyd=4, bat=6+7, ldes=8
-    resources = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'ldes']
+    # 11-element: cf=0, sol=1, wnd=2, osw=3, ccs=4, hyd=5, score=6, bat4=7, bat8=8, ldes=9, h2=10
+    resources = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro', 'battery', 'ldes']
     cols = {
-        'clean_firm': lambda m: m[:, 0] / 100.0 * demand_twh,
-        'solar':      lambda m: m[:, 1] / 100.0 * demand_twh,
-        'wind':       lambda m: m[:, 2] / 100.0 * demand_twh,
-        'ccs_ccgt':   lambda m: m[:, 3] / 100.0 * demand_twh,
-        'hydro':      lambda m: np.minimum(m[:, 4] / 100.0 * demand_twh, HYDRO_CAP_TWH[iso]),
-        'battery':    lambda m: (m[:, 6] + m[:, 7]) / 100.0 * demand_twh,
-        'ldes':       lambda m: m[:, 8] / 100.0 * demand_twh,
+        'clean_firm':    lambda m: m[:, 0] / 100.0 * demand_twh,
+        'solar':         lambda m: m[:, 1] / 100.0 * demand_twh,
+        'wind':          lambda m: m[:, 2] / 100.0 * demand_twh,
+        'offshore_wind': lambda m: m[:, 3] / 100.0 * demand_twh,
+        'ccs_ccgt':      lambda m: m[:, 4] / 100.0 * demand_twh,
+        'hydro':         lambda m: np.minimum(m[:, 5] / 100.0 * demand_twh, HYDRO_CAP_TWH[iso]),
+        'battery':       lambda m: (m[:, 7] + m[:, 8]) / 100.0 * demand_twh,
+        'ldes':          lambda m: m[:, 9] / 100.0 * demand_twh,
     }
 
     for res in resources:
