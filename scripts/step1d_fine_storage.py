@@ -305,8 +305,6 @@ def run_adaptive_coarse(iso, nm_combos, nm_base_scores, max_scores,
               f"(b4={n_b4} b8={n_b8} ldes={n_l} h2={n_h2})")
 
         # Pre-sort combo indices by total storage (ascending).
-        # For each mix, we iterate in this order and stop at the first
-        # hit per threshold — no need to test larger storage combos.
         sorted_combos = []
         for b4i in range(n_b4):
             for b8i in range(n_b8):
@@ -326,7 +324,23 @@ def run_adaptive_coarse(iso, nm_combos, nm_base_scores, max_scores,
                             (total_s, flat_idx, bp, b8p, lp, h2p))
         sorted_combos.sort()  # ascending by total storage
 
-        # Process in batches
+        # Convert to numpy arrays for vectorized access
+        n_sorted = len(sorted_combos)
+        sc_flat_idx = np.array([c[1] for c in sorted_combos], dtype=np.intp)
+        sc_bp = np.array([c[2] for c in sorted_combos], dtype=np.float64)
+        sc_b8p = np.array([c[3] for c in sorted_combos], dtype=np.float64)
+        sc_lp = np.array([c[4] for c in sorted_combos], dtype=np.float64)
+        sc_h2p = np.array([c[5] for c in sorted_combos], dtype=np.float64)
+
+        # Per-combo archetype eligibility (static)
+        # 5 archetypes: min_total, bat4_heavy, bat8_heavy, ldes_heavy, balanced
+        sc_bat4_heavy = sc_bp > sc_b8p
+        sc_bat8_heavy = sc_b8p > sc_bp
+        sc_ldes_heavy = sc_lp > (sc_bp + sc_b8p)
+        sc_balanced = (sc_bp > 0) & (sc_b8p > 0)  # uses both battery durations
+        sc_has_battery = (sc_bp > 0) | (sc_b8p > 0)
+
+        # Process in batches — vectorized across mixes, loop over combos
         for batch_start in range(0, len(bucket_idx), batch_size):
             batch_end = min(batch_start + batch_size, len(bucket_idx))
             b_idx = bucket_idx[batch_start:batch_end]
@@ -346,52 +360,99 @@ def run_adaptive_coarse(iso, nm_combos, nm_base_scores, max_scores,
 
             total_kernel_evals += n_batch * n_combos
 
-            # Extract: iterate combos smallest-first, stop per threshold
-            for local_i in range(n_batch):
-                mi = int(b_idx[local_i])
-                n_sd = int(surplus_days[mi])
-                mix_base = nm_base_scores[mi]
-                scores = batch_scores[local_i]
+            # Pre-compute per-mix constraints (vectorized)
+            battery_ok = surplus_days[b_idx] >= MIN_SURPLUS_DAYS_FOR_BATTERY
 
-                # Track which thresholds still need a solution for this mix
-                unsatisfied = set()
+            # Pre-compute per-threshold base eligibility
+            base_below = {}
+            for t in active_thresholds:
+                base_below[t] = nm_base_scores[b_idx] < (t / 100.0)
+
+            # Archetype tracking: 5 slots per (mix, threshold)
+            # 0=min_total, 1=bat4_heavy, 2=bat8_heavy, 3=ldes_heavy, 4=balanced
+            N_ARCH = 5
+            got = {}
+            for t in active_thresholds:
+                got[t] = np.zeros((n_batch, N_ARCH), dtype=bool)
+
+            # Iterate combos in sorted order (ascending total storage).
+            # Vectorized across all mixes per combo — no per-mix Python loop.
+            for ci in range(n_sorted):
+                # Early exit: all 5 archetypes filled for all mixes
+                all_done = True
                 for t in active_thresholds:
-                    if mix_base < t / 100.0:
-                        unsatisfied.add(t)
-                if not unsatisfied:
-                    continue
+                    if not got[t].all():
+                        all_done = False
+                        break
+                if all_done:
+                    break
 
-                for (_, flat_idx, bp, b8p, lp, h2p) in sorted_combos:
-                    if not unsatisfied:
-                        break  # all thresholds satisfied for this mix
+                fidx = int(sc_flat_idx[ci])
+                bp = float(sc_bp[ci])
+                b8p = float(sc_b8p[ci])
+                lp = float(sc_lp[ci])
+                h2p = float(sc_h2p[ci])
+                combo_has_bat = bool(sc_has_battery[ci])
+                combo_b4h = bool(sc_bat4_heavy[ci])
+                combo_b8h = bool(sc_bat8_heavy[ci])
+                combo_ldh = bool(sc_ldes_heavy[ci])
+                combo_bal = bool(sc_balanced[ci])
 
-                    # Skip battery if insufficient surplus days
-                    if (bp > 0 or b8p > 0) and n_sd < MIN_SURPLUS_DAYS_FOR_BATTERY:
+                # Score for this combo across all mixes (vectorized)
+                scores_col = batch_scores[:, fidx]
+
+                for t in active_thresholds:
+                    if h2p > 0 and t < 95:
                         continue
 
-                    score = scores[flat_idx]
-                    if score < 0:
+                    target = t / 100.0
+                    hits = (scores_col >= target) & base_below[t]
+                    if combo_has_bat:
+                        hits = hits & battery_ok
+                    if not hits.any():
                         continue
 
-                    score_pct = round(score * 100, 2)
-                    satisfied_now = []
-                    for t in unsatisfied:
-                        target = t / 100.0
-                        if score < target:
-                            continue
-                        if h2p > 0 and t < 95:
-                            continue
-                        results[t].append(
-                            (mi, float(bp), float(b8p),
-                             float(lp), float(h2p), score_pct))
-                        satisfied_now.append(t)
-                        total_feasible += 1
+                    # Compute per-archetype new fills
+                    fills_0 = hits & ~got[t][:, 0]
+                    fills_1 = (hits & ~got[t][:, 1]) if combo_b4h else None
+                    fills_2 = (hits & ~got[t][:, 2]) if combo_b8h else None
+                    fills_3 = (hits & ~got[t][:, 3]) if combo_ldh else None
+                    fills_4 = (hits & ~got[t][:, 4]) if combo_bal else None
 
-                    for t in satisfied_now:
-                        unsatisfied.discard(t)
+                    # Record once per mix if any archetype newly filled
+                    any_new = fills_0.copy()
+                    if fills_1 is not None:
+                        any_new |= fills_1
+                    if fills_2 is not None:
+                        any_new |= fills_2
+                    if fills_3 is not None:
+                        any_new |= fills_3
+                    if fills_4 is not None:
+                        any_new |= fills_4
+
+                    if any_new.any():
+                        idxs = np.where(any_new)[0]
+                        score_pcts = np.round(scores_col[idxs] * 100, 2)
+                        for k in range(len(idxs)):
+                            mi = int(b_idx[idxs[k]])
+                            results[t].append(
+                                (mi, bp, b8p, lp, h2p,
+                                 float(score_pcts[k])))
+                        total_feasible += len(idxs)
+
+                    # Update filled status
+                    got[t][:, 0] |= fills_0
+                    if fills_1 is not None:
+                        got[t][:, 1] |= fills_1
+                    if fills_2 is not None:
+                        got[t][:, 2] |= fills_2
+                    if fills_3 is not None:
+                        got[t][:, 3] |= fills_3
+                    if fills_4 is not None:
+                        got[t][:, 4] |= fills_4
 
     print(f"    Pass 1 complete: {total_feasible:,} feasible "
-          f"(min-storage per mix), {total_kernel_evals:,.0f} kernel evals")
+          f"(5-archetype per mix), {total_kernel_evals:,.0f} kernel evals")
     return results
 
 
