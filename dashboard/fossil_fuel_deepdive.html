@@ -7,13 +7,15 @@
 <title>The 8,760 Problem — Fossil Fuel Deep Dive</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/article.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script src="js/chart-colors.js"></script>
 <script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
 <style>
 /* ===== HERO OVERRIDES (centered variant + dark stat cards) ===== */
 .hero-inner h1 {
@@ -82,13 +84,7 @@
 }
 .iso-btn:hover { background: rgba(0,0,0,0.08); border-color: rgba(0,0,0,0.14); }
 .iso-btn.active { color: var(--text-secondary); }
-.iso-btn.active[data-iso="PJM"]   { background: rgba(74,144,217,0.25); border-color: var(--accent-blue); }
-.iso-btn.active[data-iso="ERCOT"] { background: rgba(34,197,94,0.2);  border-color: #22C55E; }
-.iso-btn.active[data-iso="CAISO"] { background: rgba(245,158,11,0.18); border-color: var(--solar); }
-.iso-btn.active[data-iso="NYISO"] { background: rgba(233,30,99,0.25);  border-color: #E91E63; }
-.iso-btn.active[data-iso="NEISO"] { background: rgba(156,39,176,0.25); border-color: #9C27B0; }
-.iso-btn.active[data-iso="MISO"] { background: rgba(6,182,212,0.25); border-color: #06B6D4; }
-.iso-btn.active[data-iso="SPP"]  { background: rgba(239,68,68,0.25); border-color: var(--red); }
+/* ISO active colors — in article.css */
 
 /* ===== GROWTH TOGGLE ===== */
 .growth-toggle {
@@ -136,33 +132,12 @@
 .insight-badge.amber { background: rgba(245,158,11,0.1); color: var(--amber-warn); }
 .insight-badge.green { background: rgba(34,197,94,0.1);  color: var(--green-pos); }
 
-/* ===== CHART LEGEND ===== */
-.chart-legend {
-    display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px;
-    font-size: 0.72rem; color: var(--text-dim);
-}
+/* Chart legend — base in article.css; page-specific swatch */
 .legend-swatch {
     width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0;
 }
 
-/* ===== TAKEAWAY SECTION ===== */
-.takeaway-section {
-    padding: 32px 24px 56px;
-}
-.takeaway-inner {
-    max-width: var(--max-narrow); margin: 0 auto; text-align: center;
-}
-.takeaway-box {
-    background: rgba(245,158,11,0.05); border: 1px solid rgba(245,158,11,0.18);
-    border-radius: var(--radius-xl); padding: 32px;
-}
-.takeaway-box h3 {
-    font-family: var(--font-heading);
-    font-size: 1.15rem; font-weight: 700; color: var(--solar); margin: 0 0 12px;
-}
-.takeaway-box p {
-    font-size: 0.88rem; color: var(--text-dim); line-height: 1.7; margin: 0;
-}
+/* Takeaway section — in article.css */
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 900px) {
@@ -223,6 +198,7 @@
 </section>
 
 <!-- ========== NARRATIVE: INTRO ========== -->
+<div class="gradient-transition"></div>
 <section class="section-dark">
 <div class="section-dark-inner" style="text-align:center; max-width: 900px;">
     <h2>The fossil fleet is not one thing</h2>
@@ -239,9 +215,10 @@
     </p>
 </div>
 </section>
+<div class="gradient-transition"></div>
 
 <!-- ========== FIGURE 1: REGIONAL FOSSIL SUPPLY STACK ========== -->
-<section class="chart-section">
+<section class="chart-section section-light">
 <div class="chart-section-inner">
     <div class="chart-panel">
         <h3>Today&rsquo;s Fossil Fleet by Region</h3>
@@ -273,7 +250,7 @@
 </section>
 
 <!-- ========== NARRATIVE: MERIT ORDER ========== -->
-<section class="content-section-narrow" style="text-align:center;">
+<section class="content-section-narrow section-light" style="text-align:center;">
 <div class="narrative-inner">
     <h2>Coal retires first &mdash; but when depends on demand growth</h2>
     <p>
@@ -291,7 +268,7 @@
 </section>
 
 <!-- ========== FIGURE 2: FOSSIL RETIREMENT PATHWAY ========== -->
-<section class="chart-section">
+<section class="chart-section section-light">
 <div class="chart-section-inner reverse">
     <div class="narrative-card" id="retirementNarrative">
         <h4 id="retireNarrTitle">PJM: The coal retirement story</h4>
@@ -338,6 +315,7 @@
 </section>
 
 <!-- ========== TAKEAWAY ========== -->
+<div class="gradient-transition"></div>
 <section class="section-dark">
 <div class="section-dark-inner">
     <div class="takeaway-box" style="background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12);">
@@ -352,6 +330,31 @@
     </div>
 </div>
 </section>
+
+<!-- ============ RELATED ANALYSES ============ -->
+<div class="related-analyses">
+    <div class="related-analyses-title">Related Analyses</div>
+    <div class="related-analyses-grid">
+        <a href="scenario_comparison.html" class="related-card">
+            <div class="related-card-tag">Strategy</div>
+            <div class="related-card-title">Scenario Comparison</div>
+            <div class="related-card-desc">How consequential and hourly matching approaches displace different fossil resources.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="lmp_trends.html" class="related-card">
+            <div class="related-card-tag">Markets</div>
+            <div class="related-card-title">LMP Trends</div>
+            <div class="related-card-desc">How wholesale electricity prices respond to clean energy deployment.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="abatement_dashboard.html" class="related-card">
+            <div class="related-card-tag">Carbon</div>
+            <div class="related-card-title">CO&#8322; Abatement</div>
+            <div class="related-card-desc">The cost of each ton of CO&#8322; avoided through clean energy procurement.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+    </div>
+</div>
 
 <!-- ========== FOOTER ========== -->
 <footer class="page-footer">

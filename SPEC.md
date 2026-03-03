@@ -1,9 +1,87 @@
 # Advanced Sensitivity Model — Complete Specification
 
 > **Authoritative reference for all design decisions.** If a future session needs context, read this file first.
-> Last updated: 2026-03-02.
+> Last updated: 2026-03-03.
 
 ## Current Status (Mar 3, 2026)
+
+### Dashboard Design Refactor — Observatory Theme (In Progress)
+
+**Branch:** `claude/dashboard-redesign-refactor-BtmrP`
+
+**Design Direction**: Variant B "The Observatory" selected — Space Grotesk + DM Sans + Space Mono font stack. Enhanced with **light/dark rhythm system**: alternating crisp white panels (data-forward, analytical clarity) and dark navy sections (dramatic narrative, emphasis). Not monochromatic dark — uses contrast between light and dark to create visual breathing room and hierarchy.
+
+**Key Design Decisions:**
+- **Fonts**: Space Grotesk (headings), DM Sans (body), Space Mono (data/numbers)
+- **Light/dark rhythm**: White card panels for data + charts, dark navy sections for narrative emphasis and storytelling. Sections alternate to create visual cadence.
+- **Header**: Animated oscilloscope-style SVG — glowing neon energy curves, dot grid, heartbeat pulse
+- **Cards**: Rounded (16px radius), subtle glassmorphism on dark backgrounds, clean white with soft shadow on light backgrounds
+- **Navigation**: Mega-menu with 3 columns (Economics / Markets & Grid / Procurement & Strategy)
+- **CSS Architecture**: 5 files (shared.css + 4 page-type CSS files)
+- **Kids pages**: Excluded from scope
+
+**Completed:**
+- [x] Design preview page created with 4 variants (dashboard/design_preview.html)
+- [x] Observatory variant selected with light/dark contrast enhancement
+- [x] Enhanced Observatory variant with light/dark rhythm system in shared.css
+- [x] Updated shared.css with Observatory font stacks + rhythm components
+- [x] Google Fonts links updated to Observatory stack across all 28 non-kids pages
+- [x] Created 4 page-type CSS files: scrollytell.css, dashboard-ui.css, article.css, reference.css
+- [x] Linked page-type CSS files to all 28 pages by type category
+- [x] Mega-menu navigation implemented (3-column Explore + Research dropdown)
+- [x] Applied light/dark rhythm to ALL pages (scrollytell, article, dashboard-ui, reference)
+- [x] Created scroll-observer.js (centralized IntersectionObserver for all fade-in classes)
+- [x] Linked scroll-observer.js to all 28 pages
+- [x] Removed Franklin Gothic @font-face and all references (replaced by Google Fonts)
+- [x] Extracted ~8,000 lines of inline CSS into page-type CSS files:
+  - dashboard.html: 2,753 → 447 lines (84% reduction)
+  - abatement_dashboard.html: 1,088 → 6 lines (99% reduction)
+  - index.html: 1,043 → 136 lines (87% reduction)
+  - consequential_accounting.html: 610 → 35 lines (94% reduction)
+  - about.html: 449 → 70 lines (84% reduction)
+  - pipeline.html: 686 → 233 lines (66% reduction)
+  - research_paper.html: 354 → 75 lines (79% reduction)
+  - Plus 15 more pages with 40-65% reductions
+- [x] Archived procurement_comparison.html (Legacy, superseded by procurement_strategies)
+- [x] Archived pipeline_map.html (content covered by pipeline.html)
+- [x] Added .related-analyses cross-linking component to shared.css
+- [x] Added Related Analyses cards to 13 article/analysis pages (thematic clusters)
+
+**Next Steps:**
+- [ ] QA/QC visual verification at 320px, 375px, 768px, 1024px, 1440px breakpoints
+- [ ] Test mega-menu on mobile (hamburger collapse, touch targets)
+- [ ] Verify all Chart.js instances use centralized RESOURCE_COLORS/ISO_COLORS
+- [ ] Extract remaining inline CSS from ref-* sub-pages and procurement_research.html
+- [ ] Apply design system to kids pages (currently excluded from scope)
+
+**CSS Architecture:**
+```
+dashboard/styles/
+├── shared.css          — Core design tokens, nav, footer, components, related-analyses (~1,549 lines)
+├── scrollytell.css     — Hero, story sections, glass cards, scrolly layout, region deep-dives (~1,956 lines)
+├── dashboard-ui.css    — Controls, metric tiles, chart grids, cost tables, pathway planning (~1,966 lines)
+├── article.css         — Narrative cards, scroll sections, synthesis, concept cards, timeline (~901 lines)
+└── reference.css       — Long-form typography, TOC, formulas, citations, mind maps, print (~1,176 lines)
+Total centralized: 7,548 lines
+```
+
+**Navigation Structure (Mega-Menu):**
+```
+Home | The Grid | Explore ▾ | Research ▾
+
+EXPLORE (3-column mega-menu):
+Economics           │ Markets & Grid       │ Procurement & Strategy
+CO₂ Abatement       │ Wholesale Prices     │ Carbon Accounting
+Clean Firm Case     │ Fossil Fuel Analysis │ Scenario Comparison
+Cost to Replace     │ Storage Analysis     │ Procurement Strategies
+New Build Analysis  │ Fleet Survival       │ Failure Modes
+Wright's Law        │                      │
+
+RESEARCH (dropdown):
+Research Paper | Methodology | Policy Context | About the Model | About | Reference
+```
+
+---
 
 ### Offshore Wind Integration — Steps 4–7 + Dashboard (In Progress)
 

@@ -7,10 +7,12 @@
 <title>The 8,760 Problem — Reference Library</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/reference.css">
 <script src="js/chart-colors.js"></script>
 <script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
 <style>
 body { background: var(--bg-page-white); }
 
@@ -138,12 +140,12 @@ body { background: var(--bg-page-white); }
     <div class="header-accent"></div>
 </header>
 
-<section class="ref-intro">
+<section class="ref-intro section-light">
     <h2>How Electricity Markets Actually Work</h2>
     <p>A curated collection of questions and answers exploring the mechanics of power markets, resource economics, and grid decarbonization. Each entry tackles one question with clear illustrations and concise analysis.</p>
 </section>
 
-<section class="ref-grid">
+<section class="ref-grid section-light">
     <a href="ref-lmp-ccs-nuclear.html" class="ref-card">
         <span class="ref-card-tag">Market Design</span>
         <h3>How Would Dispatchable CCS or Nuclear Change Wholesale Prices?</h3>
@@ -168,6 +170,8 @@ body { background: var(--bg-page-white); }
     <!-- Future entries: add more <a class="ref-card"> blocks here -->
 </section>
 
+<div class="gradient-transition"></div>
+
 <!-- ===== Kids Section (dark panel) ===== -->
 <section class="section-dark">
 <div class="section-dark-inner" style="max-width:800px;text-align:center;">
@@ -184,6 +188,8 @@ body { background: var(--bg-page-white); }
     </div>
 </div>
 </section>
+
+<div class="gradient-transition"></div>
 
 <p class="ref-coming-soon">More entries coming soon.</p>
 

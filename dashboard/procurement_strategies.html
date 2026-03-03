@@ -6,10 +6,12 @@
 <title>Procurement Strategies | The 8,760 Problem</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/dashboard-ui.css">
 <script src="js/chart-colors.js"></script>
 <script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
 <style>
 /* ========== PAGE VARIABLES ========== */
 :root {
@@ -19,10 +21,7 @@
     --font-display: var(--font-heading);
 }
 
-/* ========== PAGE BODY ========== */
-body {
-    background: var(--bg-page);
-}
+/* body bg: var(--bg-page) — same as shared.css default */
 
 /* ========== CONTENT WRAPPER ========== */
 .content-wrap {
@@ -143,49 +142,7 @@ body {
     margin-bottom: 28px;
 }
 
-/* ========== SIMULATION PANEL ========== */
-.sim-panel {
-    background: var(--bg-card);
-    border-radius: var(--radius-xl);
-    padding: 28px 24px;
-    box-shadow: var(--shadow-md);
-    margin-bottom: 28px;
-}
-.sim-panel h3 {
-    font-family: var(--font-heading);
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: var(--navy);
-    margin-bottom: 16px;
-}
-
-/* ========== SIMULATION CONTROLS ========== */
-.sim-controls {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin-bottom: 20px;
-    padding: 12px 16px;
-    background: var(--light-bg);
-    border-radius: 10px;
-}
-.sim-btn {
-    font-family: var(--font-heading);
-    font-size: 0.85rem;
-    font-weight: 600;
-    padding: 8px 18px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background 0.2s, transform 0.1s;
-    min-width: 44px;
-    min-height: 44px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-.sim-btn:active { transform: scale(0.97); }
+/* ========== SIMULATION CONTROLS (page-specific additions only; base in dashboard-ui.css) ========== */
 .sim-btn-play {
     background: var(--wind);
     color: white;
@@ -216,21 +173,6 @@ body {
 .sim-progress-wrap {
     flex: 1;
     min-width: 120px;
-}
-.sim-progress-bar {
-    width: 100%;
-    height: 6px;
-    background: #E5E7EB;
-    border-radius: 3px;
-    overflow: hidden;
-    cursor: pointer;
-}
-.sim-progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--wind), var(--hydro));
-    border-radius: 3px;
-    transition: width 0.3s ease;
-    width: 0%;
 }
 .sim-step-label {
     font-family: var(--font-heading);
@@ -322,36 +264,7 @@ body {
     width: 0%;
 }
 
-/* ========== ANIMATED COUNTERS ========== */
-.counter-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 12px;
-    margin: 20px 0;
-}
-.counter-box {
-    background: var(--light-bg);
-    border-radius: 10px;
-    padding: 14px 16px;
-    text-align: center;
-}
-.counter-value {
-    font-family: var(--font-data);
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: var(--navy);
-    line-height: 1.1;
-}
-.counter-label {
-    font-size: 0.75rem;
-    color: #9CA3AF;
-    margin-top: 4px;
-    line-height: 1.3;
-}
-.counter-box.highlight-green .counter-value { color: var(--green-pos); }
-.counter-box.highlight-blue .counter-value { color: #0284C7; }
-.counter-box.highlight-amber .counter-value { color: var(--amber-warn); }
-.counter-box.highlight-red .counter-value { color: var(--red-dark); }
+/* Counter row / counter box — base styles in dashboard-ui.css */
 
 /* ========== CHART CONTAINERS ========== */
 .chart-wrap {
@@ -361,36 +274,7 @@ body {
     margin: 16px 0;
 }
 
-/* ========== INSIGHT BOXES ========== */
-.page-insight-box {
-    background: linear-gradient(135deg, #F0FDF4 0%, #ECFDF5 100%);
-    border: 1px solid rgba(34,197,94,0.2);
-    border-radius: var(--radius-lg);
-    padding: 20px 24px;
-    margin: 24px 0;
-    font-size: 0.92rem;
-    line-height: 1.7;
-}
-.page-insight-box.amber {
-    background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
-    border-color: rgba(245,158,11,0.2);
-}
-.page-insight-box.blue {
-    background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
-    border-color: rgba(14,165,233,0.2);
-}
-.page-insight-box.red {
-    background: linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%);
-    border-color: rgba(239,68,68,0.2);
-}
-.page-insight-box strong { color: var(--navy); }
-.page-insight-box h4 {
-    font-family: var(--font-heading);
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--navy);
-    margin-bottom: 6px;
-}
+/* Page insight boxes — base styles in dashboard-ui.css */
 
 /* ========== COMPARISON TABLE ========== */
 .compare-table {
@@ -419,15 +303,8 @@ body {
 .compare-table .val-green { color: var(--green-pos); font-weight: 600; }
 .compare-table .val-red { color: var(--red-dark); font-weight: 600; }
 
-/* ========== NARRATIVE PROSE ========== */
-.narrative-prose {
-    font-size: 0.95rem;
-    line-height: 1.75;
-    color: var(--slate);
-    margin: 20px 0;
-}
-.narrative-prose p { margin-bottom: 14px; }
-.narrative-prose strong { color: var(--navy); }
+/* Narrative prose — base styles in dashboard-ui.css; page uses --slate color */
+.narrative-prose { color: var(--slate); }
 
 /* ========== CFE PROGRESS TILES ========== */
 .iso-cfe-grid {
@@ -475,32 +352,14 @@ body {
 }
 .cfe-tile .cfe-gas strong { color: var(--navy); }
 
-/* ========== FADE-IN ANIMATION ========== */
-.fade-in {
-    opacity: 0;
-    transform: translateY(30px);
-    transition: opacity 0.7s ease, transform 0.7s ease;
-}
-.fade-in.visible {
-    opacity: 1;
-    transform: translateY(0);
-}
-@media (prefers-reduced-motion: reduce) {
-    .fade-in { opacity: 1; transform: none; transition: none; }
-}
+/* Fade-in animation — in dashboard-ui.css */
 
-/* ========== MOBILE RESPONSIVE ========== */
+/* ========== MOBILE RESPONSIVE (page-specific only; shared rules in shared.css + dashboard-ui.css) ========== */
 @media (max-width: 768px) {
-    .header { padding: 36px 16px 28px; }
-    .header h1 { font-size: 1.6rem; }
     .intro-section { padding: 24px 18px; margin: -12px 10px 24px; }
     .content-wrap { padding: 0 12px 40px; }
-    .sim-panel { padding: 20px 14px; }
-    .counter-row { grid-template-columns: repeat(2, 1fr); }
-    .counter-value { font-size: 1.3rem; }
     .chart-wrap { min-height: 260px; }
     .section-block h2 { font-size: 1.35rem; }
-    .sim-controls { flex-direction: column; align-items: stretch; gap: 8px; }
     .sim-controls > * { width: 100%; }
     .strat-toggle { justify-content: center; margin-left: 0; }
     .strategy-framework { grid-template-columns: 1fr; }
@@ -511,7 +370,6 @@ body {
     .part-pill { padding: 6px 14px; font-size: 0.8rem; }
 }
 @media (max-width: 480px) {
-    .counter-row { grid-template-columns: 1fr 1fr; }
     .part-pills { gap: 6px; }
     .part-pill { padding: 6px 12px; min-width: 40px; }
 }
@@ -648,13 +506,8 @@ body {
 }
 .co2-target-reached.visible { display: block; }
 
-/* ========== DUAL CHART LAYOUT ========== */
-.dual-chart-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    margin: 16px 0;
-}
+/* Dual chart row — base in dashboard-ui.css */
+/* Chart panel — page override: lighter bg than shared glass effect */
 .chart-panel {
     background: var(--light-bg);
     border-radius: 12px;
@@ -715,7 +568,7 @@ body {
 </header>
 
 <!-- INTRO -->
-<div class="intro-section fade-in">
+<div class="intro-section section-light fade-in">
     <h2>The Framework: Six Strategies, Three Philosophies</h2>
     <p>
         Not all clean energy procurement is created equal. The same corporate dollar can displace
@@ -782,7 +635,7 @@ body {
 </div>
 
 <!-- MAIN CONTENT -->
-<div class="content-wrap">
+<div class="content-wrap section-light">
 
 <!-- ================================================================== -->
 <!-- SECTION 1: CONSEQUENTIAL STRATEGIES                                -->
@@ -929,6 +782,8 @@ body {
     <div class="page-insight-box blue" id="firstDeployCallout" style="margin-top:20px;"></div>
 </div>
 
+<div class="gradient-transition"></div>
+
 <!-- 1A vs 1B COMPARISON -->
 <section class="section-dark">
 <div class="section-dark-inner">
@@ -1013,8 +868,10 @@ body {
 </div>
 </section>
 
+<div class="gradient-transition"></div>
+
 <!-- RESOURCE DEPLOYMENT PATTERNS -->
-<div class="sim-panel fade-in" id="resourcePatternsPanel">
+<div class="sim-panel section-light fade-in" id="resourcePatternsPanel">
     <h3>Where Capital Flows: Resource Deployment by Participation Level</h3>
     <div class="narrative-prose">
         <p>
@@ -1056,6 +913,31 @@ body {
 </div>
 
 </div><!-- /content-wrap -->
+
+<!-- ============ RELATED ANALYSES ============ -->
+<div class="related-analyses">
+    <div class="related-analyses-title">Related Analyses</div>
+    <div class="related-analyses-grid">
+        <a href="scenario_comparison.html" class="related-card">
+            <div class="related-card-tag">Strategy</div>
+            <div class="related-card-title">Scenario Comparison</div>
+            <div class="related-card-desc">Consequential vs. hourly matching procurement strategies compared.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="consequential_accounting.html" class="related-card">
+            <div class="related-card-tag">Carbon Accounting</div>
+            <div class="related-card-title">Consequential Accounting</div>
+            <div class="related-card-desc">How different carbon accounting frameworks create different investment incentives.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="abatement_dashboard.html" class="related-card">
+            <div class="related-card-tag">Carbon</div>
+            <div class="related-card-title">CO&#8322; Abatement</div>
+            <div class="related-card-desc">Regional marginal abatement costs &mdash; the foundation for strategic procurement.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+    </div>
+</div>
 
 <!-- FOOTER -->
 <footer class="page-footer">
@@ -1236,7 +1118,7 @@ var RES_LABELS = {
 };
 var PART_KEYS = ['2pct','5pct','10pct','15pct','20pct','30pct','40pct','50pct','60pct','80pct'];
 var PART_PCTS = [2, 5, 10, 15, 20, 30, 40, 50, 60, 80];
-var FONT = getComputedStyle(document.documentElement).getPropertyValue('--font-heading').trim() || "'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif";
+var FONT = getComputedStyle(document.documentElement).getPropertyValue('--font-heading').trim() || "'Space Grotesk', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif";
 
 // ---- State ----
 var simRunning = false;

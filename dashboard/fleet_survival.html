@@ -6,15 +6,17 @@
     <title>Fleet Survival & Capacity Dispatch | Hourly CFE Optimizer</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/dashboard-ui.css">
     <script src="js/chart-colors.js"></script>
     <script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <style>
-        body { background: var(--bg-page); color: #1a1a2e; }
+        body { color: #1a1a2e; }
         .container { max-width: 1320px; margin: 0 auto; padding: 32px 24px; }
 
         /* Stats */
@@ -104,7 +106,7 @@
         <div class="header-accent"></div>
     </header>
 
-    <div class="container">
+    <div class="container section-light">
 
         <!-- Company Selector -->
         <div class="company-selector" id="companySelector"></div>
@@ -155,6 +157,8 @@
             </div>
         </div>
 
+        <div class="gradient-transition"></div>
+
         <!-- Dynamic Narrative -->
         <section class="section-dark" style="margin:24px -24px;border-radius:var(--radius-lg);">
         <div class="section-dark-inner">
@@ -163,6 +167,8 @@
         </div>
         </div>
         </section>
+
+        <div class="gradient-transition"></div>
 
         <!-- Charts 4 & 5: CF + CCGT Focus side by side -->
         <div class="grid-2">
@@ -905,6 +911,31 @@
     // ========================================================================
     selectCompany(0);
     </script>
+
+<!-- ============ RELATED ANALYSES ============ -->
+<div class="related-analyses">
+    <div class="related-analyses-title">Related Analyses</div>
+    <div class="related-analyses-grid">
+        <a href="fossil_fuel_deepdive.html" class="related-card">
+            <div class="related-card-tag">Grid</div>
+            <div class="related-card-title">Fossil Fuel Deep Dive</div>
+            <div class="related-card-desc">Regional fossil fleet composition and displacement mechanics across 7 ISOs.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="lmp_trends.html" class="related-card">
+            <div class="related-card-tag">Markets</div>
+            <div class="related-card-title">LMP Trends</div>
+            <div class="related-card-desc">How clean energy deployment affects wholesale electricity prices.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="cost_to_replace.html" class="related-card">
+            <div class="related-card-tag">Economics</div>
+            <div class="related-card-title">Cost to Replace</div>
+            <div class="related-card-desc">The cost premium for replacing fossil generation with clean firm power.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+    </div>
+</div>
 
 <!-- FOOTER -->
 <footer class="page-footer">
