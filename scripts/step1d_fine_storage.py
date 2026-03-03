@@ -838,8 +838,14 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
           f"({len(nm_combos)/max(n_before,1)*100:.1f}%)")
 
     # ══════════════════════════════════════════════════════
-    # PASS 1: Adaptive coarse storage sweep (per-threshold)
+    # PASS 1: Adaptive coarse storage sweep (multi-threshold)
     # ══════════════════════════════════════════════════════
+    #
+    # PERF FIX: run_adaptive_coarse handles multiple thresholds in one pass —
+    # the Numba kernel is called ONCE per batch and scores are reused for all
+    # thresholds.  The old per-threshold loop re-evaluated overlapping mixes
+    # for each threshold, causing ~4× redundant kernel evaluations on ERCOT
+    # (6.4M near-miss mixes, heavily overlapping eligible sets across t85–t99.99).
 
     # Determine which thresholds need Pass 1 (coarse sweep)
     pass1_needed = [t for t in active_thresholds if t not in pass1_thresholds]
@@ -847,48 +853,91 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
 
     coarse_results = {t: [] for t in active_thresholds}
 
-    # Run Pass 1 one threshold at a time so each commits immediately.
-    # Per-threshold reachability filter: higher thresholds score fewer mixes.
     if pass1_needed:
-        print(f"\n  Pass 1 — {len(pass1_needed)} thresholds to process "
-              f"(committing after each)")
-        for ti, t in enumerate(pass1_needed):
+        # ── Build union eligible mask: mixes eligible for ANY pending threshold ──
+        # A mix is eligible for threshold t if base < t/100 AND max >= t/100.
+        # The union avoids re-running the Numba kernel on overlapping eligible sets.
+        union_mask = np.zeros(len(nm_combos), dtype=bool)
+        per_t_eligible = {}
+        for t in pass1_needed:
             target = t / 100.0
-            t_reachable = max_scores >= target
-            t_needs = nm_base_scores < target
-            t_mask = t_reachable & t_needs
-            t_combos = nm_combos[t_mask]
-            t_base = nm_base_scores[t_mask]
-            t_max = max_scores[t_mask]
+            t_mask = (max_scores >= target) & (nm_base_scores < target)
+            per_t_eligible[t] = int(t_mask.sum())
+            union_mask |= t_mask
 
-            print(f"\n  Pass 1 [{ti+1}/{len(pass1_needed)}] — "
-                  f"threshold {t}%: {len(t_combos):,} eligible mixes "
-                  f"(of {len(nm_combos):,})")
+        n_union = int(union_mask.sum())
+        # Skip thresholds with 0 eligible mixes (log them, keep in pass1_needed
+        # so they get marked done in the manifest)
+        real_needed = [t for t in pass1_needed if per_t_eligible[t] > 0]
 
-            if len(t_combos) == 0:
-                print(f"    No eligible mixes for {t}% — skipping")
+        print(f"\n  Pass 1 — {len(pass1_needed)} thresholds, "
+              f"{len(real_needed)} with eligible mixes")
+        for t in pass1_needed:
+            print(f"    t{t:>6.1f}%: {per_t_eligible[t]:>10,} eligible")
+        print(f"    Union: {n_union:,} unique mixes "
+              f"(vs {sum(per_t_eligible.values()):,} sum-of-per-threshold)")
+
+        if n_union == 0:
+            print(f"    No eligible mixes for any threshold — skipping all")
+            for t in pass1_needed:
                 coarse_results[t] = []
-            else:
-                new_coarse = run_adaptive_coarse(
-                    iso, t_combos, t_base, t_max,
-                    demand_arr, supply_matrix, [t], sc)
-
-                # Remap mix indices back to the full nm_combos array
-                full_idx = np.where(t_mask)[0]
-                t_results = []
-                for r in new_coarse[t]:
-                    t_results.append(
-                        (int(full_idx[r[0]]), r[1], r[2], r[3], r[4], r[5]))
-                coarse_results[t] = t_results
-
-                if t_results:
-                    save_storage_results(iso, t, nm_combos, t_results, rtypes)
-                    print(f"    {iso} t{t}%: {len(t_results):,} storage-feasible "
-                          f"(coarse)")
-
-            git_commit_threshold(iso, t, "Pass1", auto_commit)
-            pass1_thresholds.add(t)
+                git_commit_threshold(iso, t, "Pass1", auto_commit)
+                pass1_thresholds.add(t)
             _save_manifest(iso, code_hash, pass1_thresholds, pass2_done)
+        else:
+            # Split thresholds by H2 requirement to avoid grid inflation.
+            # Thresholds < 95% use a 150-combo grid (no H2);
+            # thresholds >= 95% use 900 combos (with H2). Running them
+            # together forces the 900-combo grid on sub-95% mixes — 6× waste.
+            non_h2_thresholds = [t for t in real_needed if t < 95]
+            h2_thresholds = [t for t in real_needed if t >= 95]
+            groups = []
+            if non_h2_thresholds:
+                groups.append(('non-H2', non_h2_thresholds))
+            if h2_thresholds:
+                groups.append(('H2', h2_thresholds))
+
+            all_coarse = {}  # merged results across groups
+            for group_label, group_thresholds in groups:
+                # Build union mask for this group's thresholds only
+                group_mask = np.zeros(len(nm_combos), dtype=bool)
+                for t in group_thresholds:
+                    target = t / 100.0
+                    t_mask = (max_scores >= target) & (nm_base_scores < target)
+                    group_mask |= t_mask
+
+                n_group = int(group_mask.sum())
+                combos_est = 900 if group_label == 'H2' else 150
+                print(f"\n    Group {group_label}: {len(group_thresholds)} thresholds, "
+                      f"{n_group:,} union mixes, ~{combos_est} combos/mix")
+
+                group_coarse = run_adaptive_coarse(
+                    iso, nm_combos[group_mask], nm_base_scores[group_mask],
+                    max_scores[group_mask],
+                    demand_arr, supply_matrix, group_thresholds, sc)
+
+                # Remap group indices → full nm_combos indices
+                group_full_idx = np.where(group_mask)[0]
+                for t in group_thresholds:
+                    all_coarse[t] = [
+                        (int(group_full_idx[r[0]]), r[1], r[2], r[3], r[4], r[5])
+                        for r in group_coarse[t]]
+
+            # Save per-threshold results with commits
+            for t in pass1_needed:
+                if per_t_eligible[t] == 0:
+                    coarse_results[t] = []
+                else:
+                    coarse_results[t] = all_coarse.get(t, [])
+                    if coarse_results[t]:
+                        save_storage_results(iso, t, nm_combos,
+                                             coarse_results[t], rtypes)
+                        print(f"    {iso} t{t}%: {len(coarse_results[t]):,} "
+                              f"storage-feasible (coarse)")
+
+                git_commit_threshold(iso, t, "Pass1", auto_commit)
+                pass1_thresholds.add(t)
+                _save_manifest(iso, code_hash, pass1_thresholds, pass2_done)
     else:
         print(f"\n  Pass 1: all active thresholds already done")
 
