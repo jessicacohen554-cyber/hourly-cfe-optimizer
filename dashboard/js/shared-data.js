@@ -2,7 +2,7 @@
 // SHARED DATA MODULE — Single source of truth for all dashboard pages
 // ============================================================================
 // RULE: No data constants defined in HTML files. Change here, propagates everywhere.
-// Generated: 2026-03-03 16:46 by generate_shared_data.py
+// Generated: 2026-03-03 17:12 by generate_shared_data.py
 // Source: overprocure_results.json (Step 2 tranche-repriced + postprocess + CO2)
 // ============================================================================
 
