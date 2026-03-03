@@ -247,6 +247,66 @@ def scan_iso_files(target_isos=None, threshold_filter=None):
     return files_by_iso
 
 
+# Active thresholds (50+) that require Step 1D storage refinement data
+STEP1D_REQUIRED_THRESHOLDS = [t for t in TARGET_THRESHOLDS if t >= 50.0]
+
+
+def validate_step1d_coverage(files_by_iso, target_isos, threshold_filter=None):
+    """Validate that Step 1D storage-refined parquets exist for active thresholds.
+
+    Step 1D fills storage dispatch gaps from Step 1C's coarse grid. Without
+    these files, the EF will miss high-quality storage-optimized mixes,
+    leading to suboptimal results at thresholds >= 50%.
+
+    Args:
+        files_by_iso: Dict from scan_iso_files()
+        target_isos: List of ISOs being processed
+        threshold_filter: Optional threshold filter set
+
+    Returns:
+        True if all required 1D files are present, False if any are missing.
+        Always prints warnings for missing coverage.
+    """
+    required_thresholds = STEP1D_REQUIRED_THRESHOLDS
+    if threshold_filter is not None:
+        required_thresholds = [t for t in required_thresholds if t in threshold_filter]
+
+    if not required_thresholds:
+        return True  # No active thresholds need 1D data
+
+    if not os.path.isdir(STEP1D_DIR):
+        print(f"\n  WARNING: Step 1D directory missing: {STEP1D_DIR}")
+        print(f"  Run step1d_storage_refinement.py to generate storage-refined parquets.")
+        print(f"  Proceeding without 1D data — results may have suboptimal storage dispatch.\n")
+        return False
+
+    all_ok = True
+    for iso in target_isos:
+        fnames = files_by_iso.get(iso, [])
+        # Extract thresholds covered by 1D files
+        step1d_thresholds = set()
+        for f in fnames:
+            if f.startswith('1d/'):
+                thr = _extract_threshold_from_filename(f[3:])  # Strip '1d/' prefix
+                if thr is not None:
+                    step1d_thresholds.add(thr)
+
+        missing = [t for t in required_thresholds if t not in step1d_thresholds]
+        if missing:
+            all_ok = False
+            print(f"  WARNING: {iso} missing Step 1D data for thresholds: "
+                  f"{', '.join(f'{t}%' for t in missing)}")
+
+    if not all_ok:
+        print(f"  Run step1d_storage_refinement.py to fill gaps.")
+        print(f"  Proceeding with available data — storage dispatch may be suboptimal.\n")
+    else:
+        print(f"  Step 1D validation: all {len(target_isos)} ISOs have "
+              f"storage-refined data for {len(required_thresholds)} active thresholds")
+
+    return all_ok
+
+
 # Maximum accumulated rows before triggering an incremental dedup pass.
 # Keeps peak memory under ~2GB during dedup (groupby on ~5M rows).
 INCREMENTAL_DEDUP_THRESHOLD = 5_000_000
@@ -830,6 +890,9 @@ def main():
     for iso in found:
         n_files = len(files_by_iso[iso])
         print(f"  {iso}: {n_files} files to process")
+
+    # Validate Step 1D coverage for active thresholds (50%+)
+    validate_step1d_coverage(files_by_iso, target_isos, threshold_filter=threshold_filter)
 
     # Process each ISO incrementally: load → gate → dedup per file
     print("\nStep 2: Threshold gate + deduplication (threshold-free)")

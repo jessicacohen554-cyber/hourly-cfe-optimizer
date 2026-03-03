@@ -129,7 +129,7 @@ def load_from_co2_batches(batch_dir):
 
 def load_baseline():
     """Load baseline results: CO2 parquets → monolithic JSON → batched co2 JSONs → step4 parquets."""
-    # Prefer CO2-enriched parquets (output of step6_recompute_co2.py)
+    # Prefer CO2-enriched parquets (output of step5_compute_co2.py)
     if os.path.isdir(CO2_BATCH_DIR):
         data = load_from_co2_parquets(CO2_BATCH_DIR)
         if data and data.get('results'):
