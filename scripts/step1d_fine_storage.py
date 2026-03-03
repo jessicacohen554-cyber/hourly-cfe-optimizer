@@ -117,6 +117,13 @@ STORAGE_SWEEP_FLOOR = 0.50
 # Progress save interval
 PROGRESS_INTERVAL = 25   # save every N batches
 
+# Threshold bands for batch-commit (matches workflow LOW/MID/HIGH)
+BATCH_BANDS = [
+    ('LOW',  [50, 55, 60, 65, 70, 75, 80]),
+    ('MID',  [85, 87.5, 90, 92.5, 95]),
+    ('HIGH', [97.5, 99, 99.5, 99.9, 99.99]),
+]
+
 
 def get_near_miss_width(threshold):
     """Near-miss half-width by threshold range.
@@ -145,10 +152,14 @@ def load_near_miss(iso):
     if not os.path.exists(path):
         return None, None
 
+    size_mb = os.path.getsize(path) / (1024 * 1024)
+    print(f"  Reading near-miss parquet ({size_mb:.1f} MB)...")
+    t0 = time.time()
     table = pq.read_table(path)
     rtypes = s1.get_resource_types(iso)
     combos = np.column_stack([table.column(rt).to_numpy() for rt in rtypes])
     scores = table.column('base_score').to_numpy()
+    print(f"  Loaded {table.num_rows:,} mixes in {time.time() - t0:.1f}s")
     return combos, scores
 
 
@@ -313,33 +324,33 @@ def run_adaptive_coarse(iso, nm_combos, nm_base_scores, max_scores,
               f"{n_combos:,} combos "
               f"(b4={n_b4} b8={n_b8} ldes={n_l} h2={n_h2})")
 
-        # Pre-sort combo indices by total storage (ascending).
-        sorted_combos = []
-        for b4i in range(n_b4):
-            for b8i in range(n_b8):
-                for li in range(n_l):
-                    for h2i in range(n_h2):
-                        bp = b4_grid[b4i]
-                        b8p = b8_grid[b8i]
-                        lp = ldes_grid[li]
-                        h2p = h2_grid[h2i]
-                        if bp == 0 and b8p == 0 and lp == 0 and h2p == 0:
-                            continue
-                        flat_idx = (b4i * n_b8 * n_l * n_h2 +
-                                    b8i * n_l * n_h2 +
-                                    li * n_h2 + h2i)
-                        total_s = bp + b8p + lp + h2p
-                        sorted_combos.append(
-                            (total_s, flat_idx, bp, b8p, lp, h2p))
-        sorted_combos.sort()  # ascending by total storage
-
-        # Convert to numpy arrays for vectorized access
-        n_sorted = len(sorted_combos)
-        sc_flat_idx = np.array([c[1] for c in sorted_combos], dtype=np.intp)
-        sc_bp = np.array([c[2] for c in sorted_combos], dtype=np.float64)
-        sc_b8p = np.array([c[3] for c in sorted_combos], dtype=np.float64)
-        sc_lp = np.array([c[4] for c in sorted_combos], dtype=np.float64)
-        sc_h2p = np.array([c[5] for c in sorted_combos], dtype=np.float64)
+        # Pre-sort combo indices by total storage (ascending) — vectorized.
+        b4_idx, b8_idx, l_idx, h2_idx = [x.ravel() for x in np.meshgrid(
+            np.arange(n_b4), np.arange(n_b8), np.arange(n_l), np.arange(n_h2),
+            indexing='ij')]
+        all_flat = (b4_idx * n_b8 * n_l * n_h2 + b8_idx * n_l * n_h2 +
+                    l_idx * n_h2 + h2_idx)
+        all_bp = b4_grid[b4_idx]
+        all_b8p = b8_grid[b8_idx]
+        all_lp = ldes_grid[l_idx]
+        all_h2p = h2_grid[h2_idx]
+        all_total = all_bp + all_b8p + all_lp + all_h2p
+        # Remove all-zero combo
+        nonzero = all_total > 0
+        all_flat = all_flat[nonzero]
+        all_bp = all_bp[nonzero]
+        all_b8p = all_b8p[nonzero]
+        all_lp = all_lp[nonzero]
+        all_h2p = all_h2p[nonzero]
+        all_total = all_total[nonzero]
+        # Sort ascending by total storage
+        order = np.argsort(all_total, kind='stable')
+        n_sorted = len(order)
+        sc_flat_idx = all_flat[order].astype(np.intp)
+        sc_bp = all_bp[order]
+        sc_b8p = all_b8p[order]
+        sc_lp = all_lp[order]
+        sc_h2p = all_h2p[order]
 
         sc_has_battery = (sc_bp > 0) | (sc_b8p > 0)
 
@@ -464,29 +475,19 @@ def _fine_range(center, step, half_width, cap_lo, cap_hi):
 
 
 def run_fine_storage(iso, threshold, nm_combos, coarse_results,
-                     demand_arr, supply_matrix):
+                     demand_arr, supply_matrix, sc):
     """Fine 0.05% storage refinement for one threshold's boundary mixes.
 
     Identifies mixes near the threshold boundary from coarse results,
     refines storage around the coarse winner at 0.05% resolution.
 
+    Groups boundary mixes by shared fine-grid signature so the Numba
+    kernel evaluates full batches instead of one mix at a time.
+
     Returns list of (mix_idx, bat4, bat8, ldes, h2, score).
     """
     target = threshold / 100.0
     batch_size = CAISO_MIX_BATCH if iso == 'CAISO' else MAX_MIX_BATCH
-
-    # Storage constants
-    batt_eff = s1.BATTERY_EFFICIENCY
-    batt8_eff = s1.BATTERY8_EFFICIENCY
-    ldes_eff = s1.LDES_EFFICIENCY
-    batt4_dur = s1.BATTERY_DURATION_HOURS
-    batt8_dur = s1.BATTERY8_DURATION_HOURS
-    ldes_dur = s1.LDES_DURATION_HOURS
-    ldes_window = s1.LDES_WINDOW_DAYS * 24
-    batt8_window = 48
-    h2_eff = s1.H2_EFFICIENCY
-    h2_dur = float(s1.H2_DURATION_HOURS)
-    h2_window = s1.H2_WINDOW_DAYS * 24
 
     if not coarse_results:
         return []
@@ -504,99 +505,128 @@ def run_fine_storage(iso, threshold, nm_combos, coarse_results,
     if not boundary_mixes:
         return []
 
+    # Pre-compute fine grids and group mixes by shared grid signature.
+    # Mixes with the same coarse winner produce identical fine grids and
+    # can be evaluated in a single batched kernel call.
+    grid_groups = {}  # grid_key → (fine_b4, fine_b8, fine_l, fine_h2, [mix_indices])
+    for mi, (best_b4, best_b8, best_l, best_h2, _) in boundary_mixes.items():
+        fine_b4 = _fine_range(best_b4, FINE_STEP, FINE_HALF_WIDTH,
+                              0, float(FULL_BAT4[-1]))
+        fine_b8 = _fine_range(best_b8, FINE_STEP, FINE_HALF_WIDTH,
+                              0, float(FULL_BAT8[-1]))
+        fine_l = _fine_range(best_l, FINE_STEP, FINE_HALF_WIDTH,
+                             0, float(FULL_LDES[-1]))
+
+        if threshold >= 95 and best_h2 > 0:
+            fine_h2 = _fine_range(best_h2, FINE_STEP * 10,
+                                  FINE_HALF_WIDTH * 5, 0, 25)
+        else:
+            fine_h2 = np.array([0.0], dtype=np.float64)
+
+        n_combos = len(fine_b4) * len(fine_b8) * len(fine_l) * len(fine_h2)
+        if n_combos > MAX_FINE_COMBOS:
+            fine_b8 = np.array([best_b8], dtype=np.float64)
+            fine_h2 = np.array([best_h2 if best_h2 > 0 else 0.0],
+                               dtype=np.float64)
+
+        grid_key = (fine_b4.tobytes(), fine_b8.tobytes(),
+                    fine_l.tobytes(), fine_h2.tobytes())
+        if grid_key not in grid_groups:
+            grid_groups[grid_key] = (fine_b4, fine_b8, fine_l, fine_h2, [])
+        grid_groups[grid_key][4].append(mi)
+
     fine_results = []
-    n_boundary = len(boundary_mixes)
-    processed = 0
 
-    # Process boundary mixes in batches
-    boundary_items = list(boundary_mixes.items())
+    # Process each grid group — all mixes in a group share the same fine
+    # grid, so they can be evaluated in a single batched kernel call.
+    for fine_b4, fine_b8, fine_l, fine_h2, group_mis in grid_groups.values():
+        n_b4, n_b8, n_l, n_h2 = (len(fine_b4), len(fine_b8),
+                                  len(fine_l), len(fine_h2))
+        n_combos = n_b4 * n_b8 * n_l * n_h2
 
-    for batch_start in range(0, len(boundary_items), batch_size):
-        batch_end = min(batch_start + batch_size, len(boundary_items))
-        batch = boundary_items[batch_start:batch_end]
+        # Build combo index arrays once per grid (vectorized)
+        b4_idx, b8_idx, l_idx, h2_idx = [x.ravel() for x in np.meshgrid(
+            np.arange(n_b4), np.arange(n_b8), np.arange(n_l),
+            np.arange(n_h2), indexing='ij')]
+        flat_idx = (b4_idx * n_b8 * n_l * n_h2 + b8_idx * n_l * n_h2 +
+                    l_idx * n_h2 + h2_idx)
+        combo_b4 = fine_b4[b4_idx]
+        combo_b8 = fine_b8[b8_idx]
+        combo_l = fine_l[l_idx]
+        combo_h2 = fine_h2[h2_idx]
+        combo_total = combo_b4 + combo_b8 + combo_l + combo_h2
+        # Pre-sort combos by total storage for dominance filter
+        combo_order = np.argsort(combo_total, kind='stable')
 
-        for mi, (best_b4, best_b8, best_l, best_h2, best_score) in batch:
-            # Generate fine ranges around the coarse winner
-            fine_b4 = _fine_range(best_b4, FINE_STEP, FINE_HALF_WIDTH,
-                                  0, float(FULL_BAT4[-1]))
-            fine_b8 = _fine_range(best_b8, FINE_STEP, FINE_HALF_WIDTH,
-                                  0, float(FULL_BAT8[-1]))
-            fine_l = _fine_range(best_l, FINE_STEP, FINE_HALF_WIDTH,
-                                 0, float(FULL_LDES[-1]))
+        # Process mixes in batches through the kernel
+        for batch_start in range(0, len(group_mis), batch_size):
+            batch_end = min(batch_start + batch_size, len(group_mis))
+            batch_mis = group_mis[batch_start:batch_end]
+            n_batch = len(batch_mis)
 
-            if threshold >= 95 and best_h2 > 0:
-                fine_h2 = _fine_range(best_h2, FINE_STEP * 10, FINE_HALF_WIDTH * 5, 0, 25)
-            else:
-                fine_h2 = np.array([0.0], dtype=np.float64)
+            mi_arr = np.array(batch_mis)
+            batch_fracs = nm_combos[mi_arr].astype(np.float64) / 100.0
+            batch_supply = batch_fracs @ supply_matrix
 
-            # Check if cross-product exceeds limit
-            n_combos = len(fine_b4) * len(fine_b8) * len(fine_l) * len(fine_h2)
-            if n_combos > MAX_FINE_COMBOS:
-                # Importance sampling: fix least-important dims at winner,
-                # sweep the 2 most-important (most variation in coarse results)
-                # Default: sweep b4 and ldes (usually highest impact)
-                fine_b8 = np.array([best_b8], dtype=np.float64)
-                fine_h2 = np.array([best_h2 if best_h2 > 0 else 0.0],
-                                   dtype=np.float64)
-                n_combos = len(fine_b4) * len(fine_b8) * len(fine_l) * len(fine_h2)
+            # Batched kernel call — evaluates all mixes × all combos at once
+            batch_scores = s1._batch_mixes_storage_screen(
+                demand_arr, batch_supply, 1.0, n_batch,
+                fine_b4, fine_b8, fine_l, n_b4, n_b8, n_l,
+                sc['batt_eff'], sc['batt8_eff'], sc['ldes_eff'],
+                sc['batt4_dur'], sc['batt8_dur'], sc['ldes_dur'],
+                sc['ldes_window'], sc['batt8_window'],
+                fine_h2, n_h2, sc['h2_eff'], sc['h2_dur'], sc['h2_window'])
 
-            # Build supply for this mix
-            mix_fracs = nm_combos[mi].astype(np.float64) / 100.0
-            mix_supply = (mix_fracs @ supply_matrix).reshape(1, -1)
+            # Per-mix feasibility + dominance filter
+            for k in range(n_batch):
+                mi = batch_mis[k]
+                scores_row = batch_scores[k]
 
-            # Run Numba storage screen on single mix
-            mix_scores = s1._batch_mixes_storage_screen(
-                demand_arr, mix_supply, 1.0, 1,
-                fine_b4, fine_b8, fine_l,
-                len(fine_b4), len(fine_b8), len(fine_l),
-                batt_eff, batt8_eff, ldes_eff,
-                batt4_dur, batt8_dur, ldes_dur,
-                ldes_window, batt8_window,
-                fine_h2, len(fine_h2), h2_eff, h2_dur, h2_window)
-
-            scores_flat = mix_scores[0]  # (n_combos,)
-
-            # Collect feasible combos, sort by total storage, dominance-filter
-            n_b4, n_b8, n_l, n_h2 = (len(fine_b4), len(fine_b8),
-                                      len(fine_l), len(fine_h2))
-            feasible = []
-            for b4i in range(n_b4):
-                for b8i in range(n_b8):
-                    for li in range(n_l):
-                        for h2i in range(n_h2):
-                            idx = (b4i * n_b8 * n_l * n_h2 +
-                                   b8i * n_l * n_h2 +
-                                   li * n_h2 + h2i)
-                            score = scores_flat[idx]
-                            if score >= 0 and score >= target:
-                                b4v = fine_b4[b4i]
-                                b8v = fine_b8[b8i]
-                                lv = fine_l[li]
-                                h2v = fine_h2[h2i]
-                                feasible.append(
-                                    (b4v + b8v + lv + h2v,
-                                     b4v, b8v, lv, h2v, score))
-
-            # Sort ascending by total storage, then dominance filter
-            feasible.sort()
-            recorded = []
-            for _, b4v, b8v, lv, h2v, score in feasible:
-                dominated = False
-                for rb4, rb8, rld, rh2 in recorded:
-                    if rb4 <= b4v and rb8 <= b8v and rld <= lv and rh2 <= h2v:
-                        dominated = True
-                        break
-                if dominated:
+                # Vectorized feasibility check across all combos
+                feasible_mask = scores_row[flat_idx] >= target
+                if not feasible_mask.any():
                     continue
-                recorded.append((b4v, b8v, lv, h2v))
-                fine_results.append(
-                    (int(mi), float(b4v), float(b8v),
-                     float(lv), float(h2v),
-                     round(score * 100, 2)))
-                if len(recorded) >= N_KEEP:
-                    break
 
-            processed += 1
+                f_idx = np.where(feasible_mask)[0]
+                # Sort feasible combos by total storage (ascending)
+                f_order = combo_order[np.isin(combo_order, f_idx)]
+
+                f_b4 = combo_b4[f_order]
+                f_b8 = combo_b8[f_order]
+                f_l = combo_l[f_order]
+                f_h2 = combo_h2[f_order]
+                f_scores = scores_row[flat_idx[f_order]]
+                n_feasible = len(f_b4)
+
+                # Dominance filter with vectorized inner check
+                rec_b4 = np.empty(min(n_feasible, N_KEEP), dtype=np.float64)
+                rec_b8 = np.empty(min(n_feasible, N_KEEP), dtype=np.float64)
+                rec_l = np.empty(min(n_feasible, N_KEEP), dtype=np.float64)
+                rec_h2 = np.empty(min(n_feasible, N_KEEP), dtype=np.float64)
+                n_rec = 0
+
+                for ci in range(n_feasible):
+                    if n_rec >= N_KEEP:
+                        break
+                    if n_rec > 0:
+                        # Vectorized dominance check against all recorded
+                        dom_check = ((rec_b4[:n_rec] <= f_b4[ci]) &
+                                     (rec_b8[:n_rec] <= f_b8[ci]) &
+                                     (rec_l[:n_rec] <= f_l[ci]) &
+                                     (rec_h2[:n_rec] <= f_h2[ci]))
+                        if dom_check.any():
+                            continue
+
+                    rec_b4[n_rec] = f_b4[ci]
+                    rec_b8[n_rec] = f_b8[ci]
+                    rec_l[n_rec] = f_l[ci]
+                    rec_h2[n_rec] = f_h2[ci]
+                    n_rec += 1
+
+                    fine_results.append(
+                        (int(mi), float(f_b4[ci]), float(f_b8[ci]),
+                         float(f_l[ci]), float(f_h2[ci]),
+                         round(float(f_scores[ci]) * 100, 2)))
 
     return fine_results
 
@@ -682,6 +712,49 @@ def git_commit_threshold(iso, threshold, phase_label, auto_commit):
         print(f"    [auto-commit] Git error: {e}")
 
 
+def git_batch_commit(iso, band_label):
+    """Commit and push all storage results for one threshold band."""
+    try:
+        import glob as globmod
+        pattern = os.path.join(STEP1D_OUTPUT_DIR, f'{iso}_*.parquet')
+        files = globmod.glob(pattern)
+        manifest = os.path.join(STEP1D_OUTPUT_DIR,
+                                f'{iso}_storage_manifest.json')
+        if os.path.exists(manifest):
+            files.append(manifest)
+        if not files:
+            return
+
+        for f in files:
+            subprocess.run(['git', 'add', '-f', f],
+                           check=True, capture_output=True, text=True)
+
+        result = subprocess.run(['git', 'diff', '--cached', '--quiet'],
+                                capture_output=True)
+        if result.returncode == 0:
+            return
+
+        msg = (f"Step 1d batch {band_label}: {iso} — "
+               f"{time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}")
+        subprocess.run(['git', 'commit', '-m', msg],
+                       check=True, capture_output=True, text=True)
+
+        for attempt in range(1, 5):
+            result = subprocess.run(
+                ['git', 'push', '-u', 'origin', 'HEAD'],
+                capture_output=True, text=True)
+            if result.returncode == 0:
+                print(f"    [batch-commit] {iso} {band_label} committed & pushed")
+                return
+            if attempt < 4:
+                time.sleep(2 ** attempt)
+
+        print(f"    [batch-commit] Push failed — committed locally")
+
+    except subprocess.CalledProcessError as e:
+        print(f"    [batch-commit] Git error: {e}")
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 # MANIFEST (resume support)
 # ══════════════════════════════════════════════════════════════════════════════
@@ -735,7 +808,8 @@ def _save_manifest(iso, code_hash, pass1_thresholds, pass2_done):
 # MAIN PIPELINE
 # ══════════════════════════════════════════════════════════════════════════════
 
-def process_iso(iso, auto_commit=False, thresholds_filter=None):
+def process_iso(iso, auto_commit=False, batch_commit=False,
+                thresholds_filter=None):
     """Run three-pass adaptive storage sweep for one ISO.
 
     Pass 0: Max-storage screen (1 combo/mix) → eliminates unreachable mixes
@@ -744,6 +818,9 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
 
     Args:
         thresholds_filter: list of thresholds to process (None = all)
+        batch_commit: if True, commit+push after each threshold band
+                      (LOW/MID/HIGH) completes — for single-invocation
+                      workflow mode.
     """
     iso_start = time.time()
     rtypes = s1.get_resource_types(iso)
@@ -798,7 +875,8 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
 
     # ── JIT warmup ──
     if s1.HAS_NUMBA:
-        print(f"  Warming up Numba JIT...")
+        print(f"  Warming up Numba JIT (compiling kernels)...")
+        jit_t0 = time.time()
         dummy_supply = np.ones((1, s1.H), dtype=np.float64)
         dummy_b = np.array([0.0, 1.0], dtype=np.float64)
         dummy_l = np.array([0.0], dtype=np.float64)
@@ -811,7 +889,7 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
             4, 8, 100, 168, 48,
             dummy_h, 1, 0.35, 1000.0, 720)
         s1._batch_compute_storage_caps(demand_arr, dummy_supply, 1.0, 1, 4, 8, 100)
-        print(f"  JIT ready")
+        print(f"  JIT ready ({time.time() - jit_t0:.1f}s)")
 
     os.makedirs(STEP1D_OUTPUT_DIR, exist_ok=True)
 
@@ -903,6 +981,13 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
 
     print(f"\n  Pass 2 — Fine storage refinement (0.05% resolution)")
 
+    # Build band lookup for batch-commit: threshold → band label
+    band_lookup = {}
+    for label, band_ts in BATCH_BANDS:
+        for bt in band_ts:
+            band_lookup[bt] = label
+    last_band = None
+
     for t in active_thresholds:
         if t in pass2_done:
             print(f"    {iso} t{t}%: skipped (already done)")
@@ -911,7 +996,7 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
         t_start = time.time()
         fine_results = run_fine_storage(
             iso, t, nm_combos, coarse_results[t],
-            demand_arr, supply_matrix)
+            demand_arr, supply_matrix, sc)
 
         # Merge coarse + fine results (fine supersedes coarse for boundary mixes)
         all_results = coarse_results[t] + fine_results
@@ -938,6 +1023,16 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
         git_commit_threshold(iso, t, "Pass2", auto_commit)
         pass2_done.add(t)
         _save_manifest(iso, code_hash, pass1_thresholds, pass2_done)
+
+        # Batch-commit: push after each band boundary
+        current_band = band_lookup.get(t)
+        if batch_commit and current_band and current_band != last_band and last_band is not None:
+            git_batch_commit(iso, last_band)
+        last_band = current_band
+
+    # Final batch-commit for the last band
+    if batch_commit and last_band is not None:
+        git_batch_commit(iso, last_band)
 
     iso_elapsed = time.time() - iso_start
     print(f"\n{'=' * 70}")
@@ -966,11 +1061,16 @@ def _parse_thresholds(raw):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 1d: Two-pass storage sweep.")
+        description="Step 1d: Three-pass adaptive storage sweep.")
     parser.add_argument("--iso", required=True,
                         help="ISO name or 'ALL'")
     parser.add_argument("--auto-commit", action="store_true",
                         help="Commit & push after each threshold")
+    parser.add_argument("--batch-commit", action="store_true",
+                        help="Commit & push after each threshold band "
+                             "(LOW/MID/HIGH). Use with single-invocation "
+                             "workflow to get partial-progress banking "
+                             "without 3× startup overhead.")
     parser.add_argument("--thresholds", default="",
                         help="Comma-separated thresholds to process "
                              "(e.g. '90,95,99'). Default: all 17.")
@@ -989,6 +1089,7 @@ def main():
 
     for iso in isos:
         process_iso(iso, auto_commit=args.auto_commit,
+                    batch_commit=args.batch_commit,
                     thresholds_filter=thresholds_filter)
 
 
