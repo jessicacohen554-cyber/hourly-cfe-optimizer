@@ -686,7 +686,7 @@ def _to_mix_array(mixes):
 def _precompute_cost_params(sens, iso, demand_twh, overrides=None, growth_factor=1.0):
     """Pack all scalar cost parameters into a flat float64 array for the batch kernel.
 
-    Returns (params, is_caiso) where params is float64[33].
+    Returns (params, is_caiso) where params is float64[36].
     Column layout documented in _batch_costs_numpy / _batch_costs_numba.
     """
     ren_name = LEVEL_NAME[sens['ren']]
@@ -736,6 +736,16 @@ def _precompute_cost_params(sens, iso, demand_twh, overrides=None, growth_factor
     else:
         ldes_price = LCOE_TABLES['ldes'][ldes_name][iso] + get_tx('ldes', tx_name, iso)
 
+    # Offshore wind price
+    if iso in OFFSHORE_ISOS:
+        osw_ren_name = ren_name  # Same sensitivity level as onshore
+        if overrides and 'osw_lcoe' in overrides:
+            osw_price = overrides['osw_lcoe'] + get_tx('offshore_wind', tx_name, iso)
+        else:
+            osw_price = LCOE_TABLES['offshore_wind'][osw_ren_name][iso] + get_tx('offshore_wind', tx_name, iso)
+    else:
+        osw_price = 0.0  # Non-offshore ISOs: no offshore wind available
+
     demand_mwh = demand_twh * 1e6
     avg_demand_mw = demand_mwh / 8760.0
     peak_mw = PEAK_DEMAND_MW[iso] * growth_factor
@@ -776,6 +786,9 @@ def _precompute_cost_params(sens, iso, demand_twh, overrides=None, growth_factor
         EXISTING_GAS_FOM_KW_YR[iso] * 1000,  # 30: gas_fom per MW
         NEW_CCGT_COST_KW_YR[iso] * 1000,     # 31: new ccgt per MW
         wholesale,                           # 32
+        existing.get('offshore_wind', 0),    # 33: exist_osw_pct
+        osw_price,                           # 34: offshore wind price (LCOE+TX)
+        pcc.get('offshore_wind', 0),         # 35: offshore wind capacity credit
     ], dtype=np.float64)
 
     return params
@@ -785,19 +798,20 @@ def _batch_costs_numpy(mixes, params):
     """Vectorized cost computation using pure numpy.
 
     Args:
-        mixes: (N, 10) float64 array — [cf, sol, wnd, ccs, hyd, match, bat4, bat8, ldes, h2]
-        params: float64[33] from _precompute_cost_params
+        mixes: (N, 11) float64 array — [cf, sol, wnd, osw, ccs, hyd, match, bat4, bat8, ldes, h2]
+        params: float64[36] from _precompute_cost_params
 
     Returns: (N,) array of total_cost per MWh
     """
     cf  = mixes[:, 0]
     sol = mixes[:, 1]
     wnd = mixes[:, 2]
-    ccs = mixes[:, 3]
-    hyd = mixes[:, 4]
-    bat4 = mixes[:, 6]
-    bat8 = mixes[:, 7]
-    ldes = mixes[:, 8]
+    osw = mixes[:, 3]
+    ccs = mixes[:, 4]
+    hyd = mixes[:, 5]
+    bat4 = mixes[:, 7]
+    bat8 = mixes[:, 8]
+    ldes = mixes[:, 9]
 
     p = params  # alias
     dt = p[4]   # demand_twh
@@ -807,6 +821,7 @@ def _batch_costs_numpy(mixes, params):
     wnd_new = np.maximum(0.0, wnd - p[2])
     ccs_new = np.maximum(0.0, ccs - p[3])
     cf_new  = np.maximum(0.0, cf  - p[0])
+    osw_new = np.maximum(0.0, osw - p[33])
 
     # Clean firm merit order: uprate → geo → nuclear/CCS
     new_cf_twh = cf_new / 100.0 * dt
@@ -823,6 +838,7 @@ def _batch_costs_numpy(mixes, params):
         cf   / 100.0 * p[18] * p[20] +
         sol  / 100.0 * p[18] * p[21] +
         wnd  / 100.0 * p[18] * p[22] +
+        osw  / 100.0 * p[18] * p[35] +
         ccs  / 100.0 * p[18] * p[23] +
         hydro_avg_mw * p[24] +
         bat4 / 100.0 * p[18] * p[25] +
@@ -840,6 +856,7 @@ def _batch_costs_numpy(mixes, params):
     total_cost = (
         sol_new / 100.0 * p[6] +
         wnd_new / 100.0 * p[7] +
+        osw_new / 100.0 * p[34] +
         ccs_new / 100.0 * p[8] +
         uprate_twh / dt * p[10] +
         geo_twh / dt * p[12] +
@@ -863,11 +880,12 @@ def _make_numba_kernel():
             cf   = mixes[i, 0]
             sol  = mixes[i, 1]
             wnd  = mixes[i, 2]
-            ccs  = mixes[i, 3]
-            hyd  = mixes[i, 4]
-            bat4 = mixes[i, 6]
-            bat8 = mixes[i, 7]
-            ld   = mixes[i, 8]
+            osw  = mixes[i, 3]
+            ccs  = mixes[i, 4]
+            hyd  = mixes[i, 5]
+            bat4 = mixes[i, 7]
+            bat8 = mixes[i, 8]
+            ld   = mixes[i, 9]
 
             dt = params[4]
 
@@ -875,6 +893,7 @@ def _make_numba_kernel():
             wnd_new = max(0.0, wnd - params[2])
             ccs_new = max(0.0, ccs - params[3])
             cf_new  = max(0.0, cf  - params[0])
+            osw_new = max(0.0, osw - params[33])
 
             new_cf_twh = cf_new / 100.0 * dt
             uprate_twh = min(new_cf_twh, params[9])
@@ -889,6 +908,7 @@ def _make_numba_kernel():
                 cf   / 100.0 * params[18] * params[20] +
                 sol  / 100.0 * params[18] * params[21] +
                 wnd  / 100.0 * params[18] * params[22] +
+                osw  / 100.0 * params[18] * params[35] +
                 ccs  / 100.0 * params[18] * params[23] +
                 hyd_avg_mw * params[24] +
                 bat4 / 100.0 * params[18] * params[25] +
@@ -905,6 +925,7 @@ def _make_numba_kernel():
             costs[i] = (
                 sol_new / 100.0 * params[6] +
                 wnd_new / 100.0 * params[7] +
+                osw_new / 100.0 * params[34] +
                 ccs_new / 100.0 * params[8] +
                 uprate_twh / dt * params[10] +
                 geo_twh / dt * params[12] +
@@ -925,8 +946,8 @@ def batch_compute_total_costs(mixes_arr, params):
     """Compute total_cost for all mixes. Uses Numba if available, else numpy.
 
     Args:
-        mixes_arr: (N, 10) float64 array
-        params: float64[33] from _precompute_cost_params
+        mixes_arr: (N, 11) float64 array — [cf, sol, wnd, osw, ccs, hyd, match, bat4, bat8, ldes, h2]
+        params: float64[36] from _precompute_cost_params
 
     Returns: (N,) float64 array of total_cost per MWh
     """
@@ -942,7 +963,7 @@ def batch_effective_costs(mixes_arr, params):
     Mixes with match_score == 0 get cost = inf.
     """
     total = batch_compute_total_costs(mixes_arr, params)
-    match_frac = mixes_arr[:, 5] / 100.0
+    match_frac = mixes_arr[:, 6] / 100.0  # col 6 = match_score (was col 5 in 10-elem format)
     eff = np.where(match_frac > 0, total / match_frac, np.inf)
     return eff
 
@@ -951,7 +972,7 @@ def batch_filter_floor(mixes_arr, floor_twh, demand_twh, iso):
     """Vectorized floor filter. Returns boolean mask (True = passes floor).
 
     Args:
-        mixes_arr: (N, 10) float64 array
+        mixes_arr: (N, 11) float64 array — [cf, sol, wnd, osw, ccs, hyd, match, bat4, bat8, ldes, h2]
         floor_twh: dict with per-resource floor TWh values
         demand_twh: scalar
         iso: ISO string (for hydro cap lookup)
@@ -964,6 +985,7 @@ def batch_filter_floor(mixes_arr, floor_twh, demand_twh, iso):
     floor_cf  = floor_twh.get('clean_firm', 0) / demand_twh * 100.0
     floor_sol = floor_twh.get('solar', 0) / demand_twh * 100.0
     floor_wnd = floor_twh.get('wind', 0) / demand_twh * 100.0
+    floor_osw = floor_twh.get('offshore_wind', 0) / demand_twh * 100.0
     floor_ccs = floor_twh.get('ccs_ccgt', 0) / demand_twh * 100.0
     floor_hyd_twh = min(floor_twh.get('hydro', 0), HYDRO_CAP_TWH[iso])
     floor_bat = floor_twh.get('battery', 0) / demand_twh * 100.0
@@ -974,11 +996,12 @@ def batch_filter_floor(mixes_arr, floor_twh, demand_twh, iso):
         (mixes_arr[:, 0] >= floor_cf  - eps) &
         (mixes_arr[:, 1] >= floor_sol - eps) &
         (mixes_arr[:, 2] >= floor_wnd - eps) &
-        (mixes_arr[:, 3] >= floor_ccs - eps) &
-        (np.minimum(mixes_arr[:, 4] / 100.0 * demand_twh, HYDRO_CAP_TWH[iso])
+        (mixes_arr[:, 3] >= floor_osw - eps) &
+        (mixes_arr[:, 4] >= floor_ccs - eps) &
+        (np.minimum(mixes_arr[:, 5] / 100.0 * demand_twh, HYDRO_CAP_TWH[iso])
             >= floor_hyd_twh - eps) &
-        ((mixes_arr[:, 6] + mixes_arr[:, 7]) >= floor_bat - eps) &
-        (mixes_arr[:, 8] >= floor_ldes - eps)
+        ((mixes_arr[:, 7] + mixes_arr[:, 8]) >= floor_bat - eps) &
+        (mixes_arr[:, 9] >= floor_ldes - eps)
     )
     return mask
 
