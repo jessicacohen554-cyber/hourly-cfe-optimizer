@@ -388,8 +388,139 @@ def load_canonical_data():
 # Populated by load_parquet_costs() in main(), used by compute_marginal_mac_curve()
 _PARQUET_COSTS = None  # {iso: {threshold: {'low': v, 'p25': v, 'medium': v, 'p75': v, 'high': v}}}
 
+# Runtime parquet-sourced resource mixes: replaces hardcoded RESOURCE_MIX_DATA
+# when parquets available. Includes offshore_wind and h2 from EF data.
+_PARQUET_MIXES = None  # {iso: {resource: [val_per_threshold]}}
+
 # Resource types for existing/new split
 _RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']
+
+# ISOs that have offshore wind resources
+OFFSHORE_ISOS = {'CAISO', 'NYISO', 'NEISO', 'PJM'}
+
+
+def load_parquet_mixes():
+    """Load medium-scenario resource mixes from step3 parquets + EF parquets.
+
+    Replaces the hardcoded RESOURCE_MIX_DATA with actual optimizer results.
+    Step3 provides: clean_firm, solar, wind, ccs_ccgt, hydro + storage dispatch.
+    EF (step2) provides: offshore_wind (separate dimension not stored in step3).
+
+    Returns dict matching RESOURCE_MIX_DATA format:
+        {iso: {resource: [val_per_threshold_index]}}
+    """
+    global _PARQUET_MIXES
+    import pandas as pd
+
+    base_dir = Path(__file__).parent.parent
+    step3_dir = base_dir / 'data' / 'step3-cost-opt-parquets'
+    ef_dir = base_dir / 'data' / 'step2-ef-parquets'
+
+    result = {}
+    mix_resources = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
+    storage_resources = ['battery', 'battery8', 'ldes', 'h2']
+
+    for iso in ISOS:
+        step3_path = step3_dir / f'step3_co_{iso}.parquet'
+        if not step3_path.exists():
+            print(f"  {iso}: No step3 parquet — using hardcoded RESOURCE_MIX_DATA")
+            continue
+
+        df = pd.read_parquet(step3_path)
+
+        # Find the medium scenario key for this ISO
+        geo_suffix = 'M' if iso == 'CAISO' else 'X'
+        med_key = f'MMMM_M_M_M1_{geo_suffix}'
+        med_df = df[df['scenario'] == med_key]
+        if len(med_df) == 0:
+            # Try alternate medium keys
+            for alt_key in ['MMMM_M_M_M1_X', 'MMMM_M_M_M1_M', 'MMM_M_M_M1_M']:
+                med_df = df[df['scenario'] == alt_key]
+                if len(med_df) > 0:
+                    break
+        if len(med_df) == 0:
+            print(f"  {iso}: No medium scenario found — using hardcoded RESOURCE_MIX_DATA")
+            continue
+
+        # Build per-threshold mix arrays
+        iso_mixes = {r: [0] * len(THRESHOLDS) for r in RESOURCES}
+
+        for i, t in enumerate(THRESHOLDS):
+            t_rows = med_df[med_df['threshold'] == t]
+            if len(t_rows) == 0:
+                # Fall back to hardcoded for this threshold
+                if iso in RESOURCE_MIX_DATA:
+                    for r in RESOURCES:
+                        if r in RESOURCE_MIX_DATA[iso]:
+                            iso_mixes[r][i] = RESOURCE_MIX_DATA[iso][r][i]
+                continue
+
+            row = t_rows.iloc[0]
+
+            # Extract standard mix columns from step3
+            for r in mix_resources:
+                col = f'mix_{r}'
+                if col in row.index:
+                    iso_mixes[r][i] = int(row[col])
+
+            # Extract storage dispatch percentages from step3
+            for r_name, col_name in [('battery', 'battery_dispatch_pct'),
+                                      ('battery8', 'battery8_dispatch_pct'),
+                                      ('ldes', 'ldes_dispatch_pct'),
+                                      ('h2', 'h2_dispatch_pct')]:
+                if col_name in row.index and pd.notna(row[col_name]):
+                    iso_mixes[r_name][i] = int(round(float(row[col_name])))
+
+            # Offshore wind: look up from EF parquet
+            if iso in OFFSHORE_ISOS:
+                t_str = str(t) if t != int(t) else str(int(t))
+                ef_path = ef_dir / f'step2_ef_{iso}_t{t_str}.parquet'
+                if ef_path.exists():
+                    try:
+                        ef_df = pd.read_parquet(ef_path,
+                            columns=['clean_firm', 'solar', 'wind', 'hydro',
+                                     'offshore_wind', 'battery_dispatch_pct',
+                                     'ldes_dispatch_pct', 'h2_dispatch_pct'])
+
+                        # Match EF row to step3 winner on resource composition
+                        cf_val = iso_mixes['clean_firm'][i]
+                        s_val = iso_mixes['solar'][i]
+                        w_val = iso_mixes['wind'][i]
+                        h_val = iso_mixes['hydro'][i]
+
+                        match = ef_df[
+                            (ef_df['clean_firm'] == cf_val) &
+                            (ef_df['solar'] == s_val) &
+                            (ef_df['wind'] == w_val) &
+                            (ef_df['hydro'] == h_val)
+                        ]
+
+                        if len(match) > 0:
+                            # If multiple matches (different offshore_wind values),
+                            # take the median — that's the most representative
+                            osw = int(round(match['offshore_wind'].median()))
+                            iso_mixes['offshore_wind'][i] = osw
+                        # else: leave at 0 (no match found)
+                    except Exception as e:
+                        pass  # Silently fall back to 0
+
+        result[iso] = iso_mixes
+        # Summary
+        osw_nonzero = sum(1 for v in iso_mixes['offshore_wind'] if v > 0)
+        h2_nonzero = sum(1 for v in iso_mixes['h2'] if v > 0)
+        print(f"  {iso}: loaded mixes from parquets "
+              f"(offshore_wind>0 at {osw_nonzero} thresholds, "
+              f"h2>0 at {h2_nonzero} thresholds)")
+
+    _PARQUET_MIXES = result if result else None
+    return result
+
+
+def get_resource_mix(iso):
+    """Get resource mix data for an ISO. Prefers parquet-loaded data, falls back to hardcoded."""
+    if _PARQUET_MIXES and iso in _PARQUET_MIXES:
+        return _PARQUET_MIXES[iso]
+    return RESOURCE_MIX_DATA.get(iso, {})
 
 
 def load_parquet_costs():
@@ -947,14 +1078,15 @@ def compute_resource_twh_at_threshold(iso, threshold_idx, growth_tier='medium'):
     Resource TWh = (resource_pct / 100) × demand × gf
     (v5.0: procurement is baked into resource percentages directly)
     """
-    mix = RESOURCE_MIX_DATA[iso]
+    mix = get_resource_mix(iso)
     t = THRESHOLDS[threshold_idx]
     gf = demand_growth_factor(iso, t, growth_tier)
     demand = DEMAND_TWH[iso] * gf
 
     result = {}
     for res in RESOURCES:
-        res_pct = mix[res][threshold_idx]
+        res_data = mix.get(res, [0] * len(THRESHOLDS))
+        res_pct = res_data[threshold_idx] if threshold_idx < len(res_data) else 0
         twh = (res_pct / 100.0) * demand
         result[res] = round(twh, 2)
     result['total_clean_twh'] = round(sum(result[r] for r in RESOURCES), 2)
@@ -984,12 +1116,13 @@ def compute_no_regrets_investments(iso, lower_bound, upper_bound):
     range_indices = list(range(lower_idx, upper_idx + 1))
     range_thresholds = [THRESHOLDS[i] for i in range_indices]
 
-    mix = RESOURCE_MIX_DATA[iso]
+    mix = get_resource_mix(iso)
 
     # Compute per-resource statistics across the range
     resource_stats = {}
     for res in RESOURCES:
-        pct_values = [mix[res][i] for i in range_indices]
+        res_data = mix.get(res, [0] * len(THRESHOLDS))
+        pct_values = [res_data[i] if i < len(res_data) else 0 for i in range_indices]
 
         # v5.0: procurement is baked into resource percentages directly
         # Effective share of demand = (res_pct/100)
@@ -1016,7 +1149,8 @@ def compute_no_regrets_investments(iso, lower_bound, upper_bound):
                 t = THRESHOLDS[i]
                 gf = demand_growth_factor(iso, t, growth_tier)
                 demand = DEMAND_TWH[iso] * gf
-                res_twh = (mix[res][i] / 100.0) * demand
+                pct_val = res_data[i] if i < len(res_data) else 0
+                res_twh = (pct_val / 100.0) * demand
                 floor_twh_values.append(res_twh)
                 avg_twh_values.append(res_twh)
                 max_twh_values.append(res_twh)
@@ -1039,8 +1173,8 @@ def compute_no_regrets_investments(iso, lower_bound, upper_bound):
             'per_threshold': [
                 {
                     'threshold': THRESHOLDS[i],
-                    'pct': mix[res][i],
-                    'pct_of_demand': round(mix[res][i] / 100.0, 4),
+                    'pct': res_data[i] if i < len(res_data) else 0,
+                    'pct_of_demand': round((res_data[i] if i < len(res_data) else 0) / 100.0, 4),
                 }
                 for i in range_indices
             ],
@@ -1054,7 +1188,11 @@ def compute_no_regrets_investments(iso, lower_bound, upper_bound):
             t = THRESHOLDS[i]
             gf = demand_growth_factor(iso, t, growth_tier)
             demand = DEMAND_TWH[iso] * gf
-            total_pct = sum(mix[res][i] for res in RESOURCES)
+            total_pct = sum(
+                (mix.get(res, [0] * len(THRESHOLDS))[i]
+                 if i < len(mix.get(res, [0] * len(THRESHOLDS))) else 0)
+                for res in RESOURCES
+            )
             total_twh = (total_pct / 100.0) * demand
             total_twh_values.append(total_twh)
         total_clean_by_growth[growth_tier] = {
@@ -1108,6 +1246,14 @@ def main():
         print(f"  Parquet costs loaded for {len(_PARQUET_COSTS)} ISOs — using for MAC computation")
     else:
         print("  WARNING: No parquet costs loaded — falling back to hardcoded CLEAN_COST")
+
+    # Load resource mixes from parquets (includes offshore wind + H2 from EF data)
+    print("\nLoading resource mixes from parquets (step3 + EF for offshore wind)...")
+    parquet_mixes = load_parquet_mixes()
+    if _PARQUET_MIXES:
+        print(f"  Parquet mixes loaded for {len(_PARQUET_MIXES)} ISOs — using for no-regrets analysis")
+    else:
+        print("  WARNING: No parquet mixes loaded — falling back to hardcoded RESOURCE_MIX_DATA")
 
     all_results = {}
 
