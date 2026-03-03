@@ -273,8 +273,15 @@ DISPATCH_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 's
 # GAS/CCS ADJUSTMENTS (Step 4)
 # ============================================================================
 
-NEISO_WINTER_GAS_CONSTRAINT = 13.13  # $/MWh CCS adder for NEISO
-CCS_45Q_CREDIT = 27.5               # $/MWh 45Q credit value
+# NEISO Winter Gas Pipeline Constraint (Algonquin Citygates)
+# During winter (~25% of year), gas pipeline capacity is constrained,
+# driving gas prices $7.50/MMBtu above Henry Hub.
+NEISO_CCS_GAS_ADDER = 13.13    # $/MWh annualized CCS adder (7 HR × $7.50 × 0.25)
+NEISO_WHOLESALE_ADDER = 4.0    # $/MWh annualized wholesale adder
+
+# 45Q Tax Credit for CCS
+# $85/ton × 0.323 tCO2/MWh captured (90% capture × 0.359 tCO2/MWh unabated)
+CCS_45Q_CREDIT_PER_MWH = 27.5  # $/MWh offset between 45Q ON and OFF tables
 
 # ============================================================================
 # NUCLEAR PARAMETERS
