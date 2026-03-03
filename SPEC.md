@@ -29,28 +29,40 @@
 - [x] Created 4 page-type CSS files: scrollytell.css, dashboard-ui.css, article.css, reference.css
 - [x] Linked page-type CSS files to all 28 pages by type category
 - [x] Mega-menu navigation implemented (3-column Explore + Research dropdown)
-- [x] Applied light/dark rhythm to index.html (5 gradient transitions, section-light on Cost Curve + Nuclear)
-- [x] Applied light/dark rhythm to abatement_dashboard.html (section-light on Deep Dive, transitions)
-
-**In Progress:**
-- [ ] Apply light/dark rhythm to remaining article, dashboard-ui, and reference pages
-- [ ] Extract inline CSS from Tier 1 pages into page-type CSS files
+- [x] Applied light/dark rhythm to ALL pages (scrollytell, article, dashboard-ui, reference)
+- [x] Created scroll-observer.js (centralized IntersectionObserver for all fade-in classes)
+- [x] Linked scroll-observer.js to all 28 pages
+- [x] Removed Franklin Gothic @font-face and all references (replaced by Google Fonts)
+- [x] Extracted ~8,000 lines of inline CSS into page-type CSS files:
+  - dashboard.html: 2,753 → 447 lines (84% reduction)
+  - abatement_dashboard.html: 1,088 → 6 lines (99% reduction)
+  - index.html: 1,043 → 136 lines (87% reduction)
+  - consequential_accounting.html: 610 → 35 lines (94% reduction)
+  - about.html: 449 → 70 lines (84% reduction)
+  - pipeline.html: 686 → 233 lines (66% reduction)
+  - research_paper.html: 354 → 75 lines (79% reduction)
+  - Plus 15 more pages with 40-65% reductions
+- [x] Archived procurement_comparison.html (Legacy, superseded by procurement_strategies)
+- [x] Archived pipeline_map.html (content covered by pipeline.html)
+- [x] Added .related-analyses cross-linking component to shared.css
+- [x] Added Related Analyses cards to 13 article/analysis pages (thematic clusters)
 
 **Next Steps:**
-- [ ] Create scroll-observer.js (centralize IntersectionObserver for fade-ins)
-- [ ] Begin inline CSS extraction from highest-impact pages (dashboard.html: 2,753 lines)
-- [ ] Archive procurement_comparison.html (Legacy)
-- [ ] Merge pipeline_map.html into pipeline.html
-- [ ] Add cross-linking "Related Analyses" components to article pages
+- [ ] QA/QC visual verification at 320px, 375px, 768px, 1024px, 1440px breakpoints
+- [ ] Test mega-menu on mobile (hamburger collapse, touch targets)
+- [ ] Verify all Chart.js instances use centralized RESOURCE_COLORS/ISO_COLORS
+- [ ] Extract remaining inline CSS from ref-* sub-pages and procurement_research.html
+- [ ] Apply design system to kids pages (currently excluded from scope)
 
 **CSS Architecture:**
 ```
 dashboard/styles/
-├── shared.css          — Core design tokens, nav, footer, components (~1,460 lines)
-├── scrollytell.css     — Scroll-reveal, glass cards, scrolly layout, chart legends (~290 lines)
-├── dashboard-ui.css    — Controls, metric tiles, chart grids, cost tables (~530 lines)
-├── article.css         — Narrative cards, scroll sections, synthesis, stat badges (~350 lines)
-└── reference.css       — Long-form typography, TOC, formulas, citations, print (~420 lines)
+├── shared.css          — Core design tokens, nav, footer, components, related-analyses (~1,549 lines)
+├── scrollytell.css     — Hero, story sections, glass cards, scrolly layout, region deep-dives (~1,956 lines)
+├── dashboard-ui.css    — Controls, metric tiles, chart grids, cost tables, pathway planning (~1,966 lines)
+├── article.css         — Narrative cards, scroll sections, synthesis, concept cards, timeline (~901 lines)
+└── reference.css       — Long-form typography, TOC, formulas, citations, mind maps, print (~1,176 lines)
+Total centralized: 7,548 lines
 ```
 
 **Navigation Structure (Mega-Menu):**
