@@ -27,6 +27,7 @@ from dispatch_utils import (
     H, load_common_data, get_supply_profiles, get_demand_profile,
     build_supply_matrix, reconstruct_hourly_dispatch,
     _archetype_key, load_dispatch_cache, get_or_compute_dispatch,
+    OFFSHORE_ISOS, OFFSHORE_WIND_CAP_TWH, CCS_CAP_TWH, GEOTHERMAL_CAP_TWH,
 )
 
 # ============================================================================
@@ -36,7 +37,7 @@ from dispatch_utils import (
 from step3_cost_optimization import OUTPUT_THRESHOLDS as THRESHOLDS
 
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
-RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
+RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']
 
 HYDRO_CAP_TWH = {iso: GRID_MIX_SHARES[iso].get('hydro', 0) / 100.0 * BASE_DEMAND_TWH[iso]
                  for iso in ISOS}
@@ -62,6 +63,11 @@ LCOE_TABLES = {
         'Low':    {'CAISO': 55, 'ERCOT': 30, 'PJM': 47, 'NYISO': 61, 'NEISO': 55, 'MISO': 33, 'SPP': 28},
         'Medium': {'CAISO': 73, 'ERCOT': 40, 'PJM': 62, 'NYISO': 81, 'NEISO': 73, 'MISO': 43, 'SPP': 37},
         'High':   {'CAISO': 95, 'ERCOT': 52, 'PJM': 81, 'NYISO': 105, 'NEISO': 95, 'MISO': 56, 'SPP': 48},
+    },
+    'offshore_wind': {
+        'Low':    {'CAISO': 110, 'ERCOT': 0, 'PJM': 65, 'NYISO': 72, 'NEISO': 68, 'MISO': 0, 'SPP': 0},
+        'Medium': {'CAISO': 150, 'ERCOT': 0, 'PJM': 85, 'NYISO': 95, 'NEISO': 90, 'MISO': 0, 'SPP': 0},
+        'High':   {'CAISO': 200, 'ERCOT': 0, 'PJM': 112, 'NYISO': 125, 'NEISO': 118, 'MISO': 0, 'SPP': 0},
     },
     # Storage: annualized capacity cost ($/MWh-cap), NOT LCOS.
     # NREL ATB 2024 component model: Energy($/kWh) + Power($/kW)/Duration.
@@ -96,6 +102,9 @@ TX_TABLES = {
     'ccs_ccgt':   {'None': 0, 'Low': {'CAISO': 1, 'ERCOT': 1, 'PJM': 1, 'NYISO': 2, 'NEISO': 2, 'MISO': 1, 'SPP': 1},
                    'Medium': {'CAISO': 2, 'ERCOT': 2, 'PJM': 3, 'NYISO': 4, 'NEISO': 3, 'MISO': 2, 'SPP': 2},
                    'High': {'CAISO': 4, 'ERCOT': 3, 'PJM': 5, 'NYISO': 7, 'NEISO': 6, 'MISO': 4, 'SPP': 3}},
+    'offshore_wind': {'None': 0, 'Low': {'CAISO': 10, 'ERCOT': 0, 'PJM': 6, 'NYISO': 8, 'NEISO': 7, 'MISO': 0, 'SPP': 0},
+                      'Medium': {'CAISO': 20, 'ERCOT': 0, 'PJM': 11, 'NYISO': 15, 'NEISO': 13, 'MISO': 0, 'SPP': 0},
+                      'High': {'CAISO': 35, 'ERCOT': 0, 'PJM': 18, 'NYISO': 25, 'NEISO': 22, 'MISO': 0, 'SPP': 0}},
     # Storage TX = 0: regional variation baked into annualized capacity costs
     'battery':    {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
     'battery8':   {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
@@ -126,8 +135,8 @@ EXISTING_GAS_CAPACITY_MW = {'CAISO': 37000, 'ERCOT': 55000, 'PJM': 75000, 'NYISO
 NEW_CCGT_COST_KW_YR = {'CAISO': 112, 'ERCOT': 89, 'PJM': 99, 'NYISO': 114, 'NEISO': 105, 'MISO': 95, 'SPP': 88}
 EXISTING_GAS_FOM_KW_YR = {'CAISO': 16, 'ERCOT': 13, 'PJM': 14, 'NYISO': 17, 'NEISO': 15, 'MISO': 14, 'SPP': 13}
 PEAK_CAPACITY_CREDITS = {
-    'clean_firm': 1.0, 'solar': 0.30, 'wind': 0.10, 'ccs_ccgt': 0.90,
-    'hydro': 0.50, 'battery': 0.95, 'battery8': 0.95, 'ldes': 0.90,
+    'clean_firm': 1.0, 'solar': 0.30, 'wind': 0.10, 'offshore_wind': 0.25,
+    'ccs_ccgt': 0.90, 'hydro': 0.50, 'battery': 0.95, 'battery8': 0.95, 'ldes': 0.90,
 }
 GAS_AVAILABILITY_FACTOR = {
     'CAISO': 0.88, 'ERCOT': 0.83, 'PJM': 0.82, 'NYISO': 0.82, 'NEISO': 0.85,
@@ -250,16 +259,16 @@ def _load_feasible_from_parquet(iso, step3_dir='data/step3-cost-opt-parquets'):
     if not os.path.exists(feasible_path):
         return {}
     df = pd.read_parquet(feasible_path)
-    mix_fields = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro',
+    mix_fields = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro',
                   'hourly_match_score',
                   'battery_dispatch_pct', 'battery8_dispatch_pct',
                   'ldes_dispatch_pct', 'h2_dispatch_pct']
     for col in mix_fields:
         if col not in df.columns:
             df[col] = 0
-    # Vectorized: build (N, 10) array, then split by threshold
+    # Vectorized: build (N, 11) array, then split by threshold
     vals = df[mix_fields].values.astype(np.float64)
-    vals[:, 5] = np.round(vals[:, 5], 1)  # round match score
+    vals[:, 6] = np.round(vals[:, 6], 1)  # round match score
     result = {}
     for t_val, grp_idx in df.groupby('threshold').groups.items():
         t_str = str(int(t_val)) if t_val == int(t_val) else str(t_val)
@@ -340,6 +349,9 @@ def _resource_new_build_lcoe(res, sens, iso):
         return LCOE_TABLES['solar'][ren_name][iso] + get_tx('solar', tx_name, iso)
     elif res == 'wind':
         return LCOE_TABLES['wind'][ren_name][iso] + get_tx('wind', tx_name, iso)
+    elif res == 'offshore_wind':
+        osw_lcoe = LCOE_TABLES['offshore_wind'][ren_name].get(iso, 0)
+        return osw_lcoe + get_tx('offshore_wind', tx_name, iso) if osw_lcoe > 0 else 0
     elif res == 'clean_firm':
         return NUCLEAR_NEWBUILD_LCOE[firm_lev][iso] + get_tx('clean_firm', tx_name, iso)
     elif res == 'ccs_ccgt':
@@ -355,11 +367,24 @@ def _resource_new_build_lcoe(res, sens, iso):
 
 
 def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1.0):
-    """Compute total system cost per MWh for a single mix under a sensitivity scenario."""
-    cf_pct, sol_pct, wnd_pct, ccs_pct, hyd_pct = mix[0], mix[1], mix[2], mix[3], mix[4]
-    match_score = mix[5]
-    bat4_pct, bat8_pct, ldes_pct = mix[6], mix[7], mix[8]
-    h2_pct = mix[9] if len(mix) > 9 else 0
+    """Compute total system cost per MWh for a single mix under a sensitivity scenario.
+
+    Mix format: [cf, sol, wnd, osw, ccs, hyd, score, bat4, bat8, ldes, h2] (11 elements)
+    Backward compat: 10-element mixes treated as [cf, sol, wnd, ccs, hyd, score, bat4, bat8, ldes, h2]
+    """
+    if len(mix) >= 11:
+        cf_pct, sol_pct, wnd_pct, osw_pct = mix[0], mix[1], mix[2], mix[3]
+        ccs_pct, hyd_pct = mix[4], mix[5]
+        match_score = mix[6]
+        bat4_pct, bat8_pct, ldes_pct = mix[7], mix[8], mix[9]
+        h2_pct = mix[10] if len(mix) > 10 else 0
+    else:
+        # Legacy 10-element format (no offshore wind)
+        cf_pct, sol_pct, wnd_pct, ccs_pct, hyd_pct = mix[0], mix[1], mix[2], mix[3], mix[4]
+        osw_pct = 0
+        match_score = mix[5]
+        bat4_pct, bat8_pct, ldes_pct = mix[6], mix[7], mix[8]
+        h2_pct = mix[9] if len(mix) > 9 else 0
     match_frac = match_score / 100.0
     ren_name = LEVEL_NAME[sens['ren']]
     batt_name = LEVEL_NAME[sens['batt']]
@@ -392,6 +417,7 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
             geo_price = GEOTHERMAL_LCOE[geo_lev] + get_tx('clean_firm', tx_name, iso)
     sol_demand = sol_pct
     wnd_demand = wnd_pct
+    osw_demand = osw_pct
     ccs_demand = ccs_pct
     cf_demand = cf_pct
     hydro_twh_raw = hyd_pct / 100.0 * demand_twh
@@ -401,6 +427,8 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
     sol_new = max(0, sol_demand - existing['solar'])
     wnd_existing = min(wnd_demand, existing['wind'])
     wnd_new = max(0, wnd_demand - existing['wind'])
+    osw_existing = min(osw_demand, existing.get('offshore_wind', 0))
+    osw_new = max(0, osw_demand - existing.get('offshore_wind', 0))
     ccs_existing = min(ccs_demand, existing.get('ccs_ccgt', 0))
     ccs_new = max(0, ccs_demand - existing.get('ccs_ccgt', 0))
     cf_existing = min(cf_demand, existing['clean_firm'])
@@ -422,6 +450,7 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
         cf_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['clean_firm'] +
         sol_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['solar'] +
         wnd_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['wind'] +
+        osw_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['offshore_wind'] +
         ccs_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ccs_ccgt'] +
         hydro_avg_mw * PEAK_CAPACITY_CREDITS['hydro'] +
         bat4_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery'] +
@@ -442,9 +471,13 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
         ldes_price = overrides['ldes_lcoe'] + get_tx('ldes', tx_name, iso)
     else:
         ldes_price = LCOE_TABLES['ldes'][ldes_name][iso] + get_tx('ldes', tx_name, iso)
+    # Offshore wind cost (0 for non-offshore ISOs since osw_new=0 and LCOE=0)
+    osw_lcoe = LCOE_TABLES['offshore_wind'][ren_name].get(iso, 0)
+    osw_tx = get_tx('offshore_wind', tx_name, iso)
     total_cost = (
         sol_new / 100.0 * (LCOE_TABLES['solar'][ren_name][iso] + get_tx('solar', tx_name, iso)) +
         wnd_new / 100.0 * (LCOE_TABLES['wind'][ren_name][iso] + get_tx('wind', tx_name, iso)) +
+        osw_new / 100.0 * (osw_lcoe + osw_tx) +
         ccs_new / 100.0 * ccs_price +
         uprate_twh / demand_twh * uprate_price +
         geo_twh / demand_twh * geo_price +
@@ -455,7 +488,7 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
         gas_cost
     )
     new_build_per_mwh = total_cost - gas_cost
-    new_gen_twh = (sol_new + wnd_new + ccs_new + cf_new) / 100.0 * demand_twh
+    new_gen_twh = (sol_new + wnd_new + osw_new + ccs_new + cf_new) / 100.0 * demand_twh
     new_build_cost_total = new_build_per_mwh * demand_mwh
     if new_gen_twh > 0.01:
         blended_new_lcoe = new_build_per_mwh * demand_twh / new_gen_twh
@@ -464,7 +497,7 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
     eff_cost = total_cost / match_frac if match_frac > 0 else 0
     incremental = eff_cost - wholesale
     resource_twh = {}
-    for res, pct in zip(RESOURCES, [cf_pct, sol_pct, wnd_pct, ccs_pct, hyd_pct]):
+    for res, pct in zip(RESOURCES, [cf_pct, sol_pct, wnd_pct, osw_pct, ccs_pct, hyd_pct]):
         if res == 'hydro':
             resource_twh[res] = hydro_twh_capped
         else:
@@ -476,7 +509,7 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
         'wholesale': wholesale,
         'resource_twh': resource_twh,
         'resource_pct': {'clean_firm': cf_pct, 'solar': sol_pct, 'wind': wnd_pct,
-                         'ccs_ccgt': ccs_pct, 'hydro': hyd_pct},
+                         'offshore_wind': osw_pct, 'ccs_ccgt': ccs_pct, 'hydro': hyd_pct},
         'match_score': match_score,
         'battery_twh': bat4_pct / 100.0 * demand_twh,
         'battery8_twh': bat8_pct / 100.0 * demand_twh,
@@ -497,16 +530,27 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
 # ============================================================================
 
 def _mix_resource_twh(mix, demand_twh, iso=None):
-    """Extract deployed resource TWh from a raw mix vector."""
-    cf, sol, wnd, ccs, hyd = mix[0], mix[1], mix[2], mix[3], mix[4]
-    bat4, bat8, ldes = mix[6], mix[7], mix[8]
-    h2 = mix[9] if len(mix) > 9 else 0
+    """Extract deployed resource TWh from a raw mix vector.
+
+    Mix format: 11 elements [cf, sol, wnd, osw, ccs, hyd, score, bat4, bat8, ldes, h2]
+    or legacy 10 elements [cf, sol, wnd, ccs, hyd, score, bat4, bat8, ldes, h2]
+    """
+    if len(mix) >= 11:
+        cf, sol, wnd, osw, ccs, hyd = mix[0], mix[1], mix[2], mix[3], mix[4], mix[5]
+        bat4, bat8, ldes = mix[7], mix[8], mix[9]
+        h2 = mix[10] if len(mix) > 10 else 0
+    else:
+        cf, sol, wnd, ccs, hyd = mix[0], mix[1], mix[2], mix[3], mix[4]
+        osw = 0
+        bat4, bat8, ldes = mix[6], mix[7], mix[8]
+        h2 = mix[9] if len(mix) > 9 else 0
     hydro_twh = min(hyd / 100.0 * demand_twh,
                     HYDRO_CAP_TWH[iso]) if iso else hyd / 100.0 * demand_twh
     return {
         'clean_firm': cf / 100.0 * demand_twh,
         'solar':      sol / 100.0 * demand_twh,
         'wind':       wnd / 100.0 * demand_twh,
+        'offshore_wind': osw / 100.0 * demand_twh,
         'ccs_ccgt':   ccs / 100.0 * demand_twh,
         'hydro':      hydro_twh,
         'battery':    (bat4 + bat8) / 100.0 * demand_twh,
@@ -566,6 +610,10 @@ def _get_excess_lcoe(res, sens, iso, overrides):
         if overrides and 'nuclear_lcoe' in overrides:
             return overrides['nuclear_lcoe'] + get_tx('clean_firm', tx_name, iso)
         return NUCLEAR_NEWBUILD_LCOE[sens['firm']][iso] + get_tx('clean_firm', tx_name, iso)
+    elif res == 'offshore_wind':
+        ren_name = LEVEL_NAME[sens['ren']]
+        osw_lcoe = LCOE_TABLES['offshore_wind'][ren_name].get(iso, 0)
+        return osw_lcoe + get_tx('offshore_wind', tx_name, iso) if osw_lcoe > 0 else 0
     elif res == 'ccs_ccgt':
         if overrides and 'ccs_lcoe' in overrides:
             return overrides['ccs_lcoe'] + get_tx('ccs_ccgt', tx_name, iso)
@@ -605,15 +653,33 @@ except ImportError:
     _HAS_NUMBA = False
 
 def _to_mix_array(mixes):
-    """Convert list-of-lists mixes to (N, 10) float64 array."""
+    """Convert list-of-lists mixes to (N, 11) float64 array.
+
+    Mix format: [cf, sol, wnd, osw, ccs, hyd, score, bat4, bat8, ldes, h2]
+    Backward compat: 10-element mixes (no osw) auto-padded with osw=0 at index 3.
+    """
     if isinstance(mixes, np.ndarray):
-        if mixes.ndim == 2 and mixes.shape[1] >= 10:
+        if mixes.ndim == 2 and mixes.shape[1] >= 11:
             return mixes.astype(np.float64, copy=False)
-    arr = np.zeros((len(mixes), 10), dtype=np.float64)
+        if mixes.ndim == 2 and mixes.shape[1] == 10:
+            # Old 10-col format: [cf, sol, wnd, ccs, hyd, score, bat4, bat8, ldes, h2]
+            # Insert osw=0 at index 3
+            padded = np.zeros((mixes.shape[0], 11), dtype=np.float64)
+            padded[:, :3] = mixes[:, :3]       # cf, sol, wnd
+            padded[:, 3] = 0.0                   # osw = 0
+            padded[:, 4:] = mixes[:, 3:]         # ccs, hyd, score, bat4, bat8, ldes, h2
+            return padded
+    arr = np.zeros((len(mixes), 11), dtype=np.float64)
     for i, m in enumerate(mixes):
-        n = min(len(m), 10)
-        for j in range(n):
-            arr[i, j] = m[j]
+        if len(m) == 10:
+            # Old format — insert osw=0 at index 3
+            arr[i, :3] = m[:3]
+            arr[i, 3] = 0.0
+            arr[i, 4:] = m[3:]
+        else:
+            n = min(len(m), 11)
+            for j in range(n):
+                arr[i, j] = m[j]
     return arr
 
 
@@ -1035,35 +1101,36 @@ def find_cheapest_mix(mixes, floor_twh, existing_twh, demand_twh, iso,
 def _load_pfs_mixes(iso, threshold):
     """Load PFS mixes for a single ISO/threshold from step1 parquets.
 
-    Returns (N, 10) numpy array: [cf, sol, wnd, ccs, hyd, match, bat4, bat8, ldes, h2].
+    Returns (N, 11) numpy array: [cf, sol, wnd, osw, ccs, hyd, match, bat4, bat8, ldes, h2].
     Uses vectorized column extraction — no iterrows().
     """
     t_str = str(int(threshold)) if threshold == int(threshold) else str(threshold)
     pfs_path = Path(f'data/step1-pfs-parquets/{iso}_t{t_str}_raw_pfs.parquet')
     if not pfs_path.exists():
-        return np.empty((0, 10), dtype=np.float64)
+        return np.empty((0, 11), dtype=np.float64)
     df = pd.read_parquet(pfs_path)
     if df.empty:
-        return np.empty((0, 10), dtype=np.float64)
+        return np.empty((0, 11), dtype=np.float64)
     N = len(df)
-    arr = np.zeros((N, 10), dtype=np.float64)
+    arr = np.zeros((N, 11), dtype=np.float64)
     arr[:, 0] = df['clean_firm'].values if 'clean_firm' in df.columns else 0
     arr[:, 1] = df['solar'].values if 'solar' in df.columns else 0
     arr[:, 2] = df['wind'].values if 'wind' in df.columns else 0
-    arr[:, 3] = 0  # ccs_ccgt not in PFS
-    arr[:, 4] = df['hydro'].values if 'hydro' in df.columns else 0
-    arr[:, 5] = np.round(df['hourly_match_score'].values, 1) if 'hourly_match_score' in df.columns else 0
-    arr[:, 6] = df['battery_dispatch_pct'].values if 'battery_dispatch_pct' in df.columns else 0
-    arr[:, 7] = df['battery8_dispatch_pct'].values if 'battery8_dispatch_pct' in df.columns else 0
-    arr[:, 8] = df['ldes_dispatch_pct'].values if 'ldes_dispatch_pct' in df.columns else 0
-    arr[:, 9] = df['h2_dispatch_pct'].values if 'h2_dispatch_pct' in df.columns else 0
+    arr[:, 3] = df['offshore_wind'].values if 'offshore_wind' in df.columns else 0
+    arr[:, 4] = 0  # ccs_ccgt not in PFS
+    arr[:, 5] = df['hydro'].values if 'hydro' in df.columns else 0
+    arr[:, 6] = np.round(df['hourly_match_score'].values, 1) if 'hourly_match_score' in df.columns else 0
+    arr[:, 7] = df['battery_dispatch_pct'].values if 'battery_dispatch_pct' in df.columns else 0
+    arr[:, 8] = df['battery8_dispatch_pct'].values if 'battery8_dispatch_pct' in df.columns else 0
+    arr[:, 9] = df['ldes_dispatch_pct'].values if 'ldes_dispatch_pct' in df.columns else 0
+    arr[:, 10] = df['h2_dispatch_pct'].values if 'h2_dispatch_pct' in df.columns else 0
     return arr
 
 
 def _filter_mixes_by_floor(mixes, floor_twh, demand_twh, iso):
     """Filter mixes to those meeting per-resource TWh floors."""
     floor_pct = {}
-    for res in ['clean_firm', 'solar', 'wind', 'ccs_ccgt']:
+    for res in ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt']:
         floor_pct[res] = floor_twh.get(res, 0) / demand_twh * 100.0 if demand_twh > 0 else 0
     hydro_floor_twh = min(floor_twh.get('hydro', 0), HYDRO_CAP_TWH[iso])
     floor_pct['hydro'] = hydro_floor_twh / demand_twh * 100.0 if demand_twh > 0 else 0
@@ -1071,11 +1138,17 @@ def _filter_mixes_by_floor(mixes, floor_twh, demand_twh, iso):
     floor_pct['ldes'] = floor_twh.get('ldes', 0) / demand_twh * 100.0 if demand_twh > 0 else 0
     passed = []
     for mix in mixes:
-        cf, sol, wnd, ccs, hyd = mix[0], mix[1], mix[2], mix[3], mix[4]
-        bat4, bat8, ldes = mix[6], mix[7], mix[8]
+        if len(mix) >= 11:
+            cf, sol, wnd, osw, ccs, hyd = mix[0], mix[1], mix[2], mix[3], mix[4], mix[5]
+            bat4, bat8, ldes = mix[7], mix[8], mix[9]
+        else:
+            cf, sol, wnd, ccs, hyd = mix[0], mix[1], mix[2], mix[3], mix[4]
+            osw = 0
+            bat4, bat8, ldes = mix[6], mix[7], mix[8]
         if cf < floor_pct['clean_firm'] - 0.01: continue
         if sol < floor_pct['solar'] - 0.01: continue
         if wnd < floor_pct['wind'] - 0.01: continue
+        if osw < floor_pct.get('offshore_wind', 0) - 0.01: continue
         if ccs < floor_pct['ccs_ccgt'] - 0.01: continue
         hyd_twh = min(hyd / 100.0 * demand_twh, HYDRO_CAP_TWH[iso])
         if hyd_twh < hydro_floor_twh - 0.01: continue
@@ -1088,7 +1161,7 @@ def _filter_mixes_by_floor(mixes, floor_twh, demand_twh, iso):
 def _filter_pfs_by_floor_window(mixes, floor_twh, demand_twh, iso, max_pct_above=10.0):
     """Filter PFS mixes within a search window above the per-resource floor."""
     floor_pct = {}
-    for res in ['clean_firm', 'solar', 'wind']:
+    for res in ['clean_firm', 'solar', 'wind', 'offshore_wind']:
         floor_pct[res] = floor_twh.get(res, 0) / demand_twh * 100.0 if demand_twh > 0 else 0
     floor_pct['ccs_ccgt'] = 0
     hydro_floor_twh = min(floor_twh.get('hydro', 0), HYDRO_CAP_TWH[iso])
@@ -1097,8 +1170,13 @@ def _filter_pfs_by_floor_window(mixes, floor_twh, demand_twh, iso, max_pct_above
     floor_pct['ldes'] = floor_twh.get('ldes', 0) / demand_twh * 100.0 if demand_twh > 0 else 0
     passed = []
     for mix in mixes:
-        cf, sol, wnd, ccs, hyd = mix[0], mix[1], mix[2], mix[3], mix[4]
-        bat4, bat8, ldes = mix[6], mix[7], mix[8]
+        if len(mix) >= 11:
+            cf, sol, wnd, osw, ccs, hyd = mix[0], mix[1], mix[2], mix[3], mix[4], mix[5]
+            bat4, bat8, ldes = mix[7], mix[8], mix[9]
+        else:
+            cf, sol, wnd, ccs, hyd = mix[0], mix[1], mix[2], mix[3], mix[4]
+            osw = 0
+            bat4, bat8, ldes = mix[6], mix[7], mix[8]
         if cf < floor_pct['clean_firm'] - 0.01 or cf > floor_pct['clean_firm'] + max_pct_above + 0.01: continue
         if sol < floor_pct['solar'] - 0.01 or sol > floor_pct['solar'] + max_pct_above + 0.01: continue
         if wnd < floor_pct['wind'] - 0.01 or wnd > floor_pct['wind'] + max_pct_above + 0.01: continue
@@ -1298,11 +1376,17 @@ def build_augmented_result(best_result, best_mix, floor_twh, deployed,
         best_result['new_gen_twh'] +
         sum(v for k, v in excess_twh_dict.items() if k != 'hydro'), 3)
 
-    # Dispatch parameters
-    aug['battery_dispatch_pct'] = float(best_mix[6])
-    aug['battery8_dispatch_pct'] = float(best_mix[7])
-    aug['ldes_dispatch_pct'] = float(best_mix[8])
-    aug['h2_dispatch_pct'] = float(best_mix[9]) if len(best_mix) > 9 else 0.0
+    # Dispatch parameters (11-element mix: score at [6], storage at [7..10])
+    if len(best_mix) >= 11:
+        aug['battery_dispatch_pct'] = float(best_mix[7])
+        aug['battery8_dispatch_pct'] = float(best_mix[8])
+        aug['ldes_dispatch_pct'] = float(best_mix[9])
+        aug['h2_dispatch_pct'] = float(best_mix[10]) if len(best_mix) > 10 else 0.0
+    else:
+        aug['battery_dispatch_pct'] = float(best_mix[6])
+        aug['battery8_dispatch_pct'] = float(best_mix[7])
+        aug['ldes_dispatch_pct'] = float(best_mix[8])
+        aug['h2_dispatch_pct'] = float(best_mix[9]) if len(best_mix) > 9 else 0.0
     aug['demand_mwh'] = demand_mwh
 
     if extra_fields:
