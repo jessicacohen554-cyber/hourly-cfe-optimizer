@@ -343,7 +343,16 @@ def run_adaptive_coarse(iso, nm_combos, nm_base_scores, max_scores,
 
         sc_has_battery = (sc_bp > 0) | (sc_b8p > 0)
 
-        # Process in batches — kernel is vectorized, extraction per-mix
+        # Precompute static dominance matrix: dom[i,j] = True means combo i
+        # dominates combo j (i has ≤ values in ALL 4 storage dims).
+        # This is a property of the grid, not the mixes — compute once per bucket.
+        dom = ((sc_bp[:, np.newaxis] <= sc_bp[np.newaxis, :]) &
+               (sc_b8p[:, np.newaxis] <= sc_b8p[np.newaxis, :]) &
+               (sc_lp[:, np.newaxis] <= sc_lp[np.newaxis, :]) &
+               (sc_h2p[:, np.newaxis] <= sc_h2p[np.newaxis, :]))
+        np.fill_diagonal(dom, False)  # combo doesn't dominate itself
+
+        # Process in batches — fully vectorized across mixes
         for batch_start in range(0, len(bucket_idx), batch_size):
             batch_end = min(batch_start + batch_size, len(bucket_idx))
             b_idx = bucket_idx[batch_start:batch_end]
@@ -366,62 +375,71 @@ def run_adaptive_coarse(iso, nm_combos, nm_base_scores, max_scores,
             # Pre-compute per-mix constraints (vectorized)
             battery_ok = surplus_days[b_idx] >= MIN_SURPLUS_DAYS_FOR_BATTERY
 
+            # Score matrix reindexed to sorted combo order (computed once per batch)
+            sorted_scores = batch_scores[:, sc_flat_idx]  # (n_batch, n_sorted)
+
             # Pre-compute per-threshold base eligibility
             base_below = {}
             for t in active_thresholds:
                 base_below[t] = nm_base_scores[b_idx] < (t / 100.0)
 
-            # Build feasibility mask per threshold, then extract
-            # non-dominated combos per mix (dominance = lower/equal in ALL dims).
+            # Battery ban mask (same for all thresholds)
+            battery_ban = np.outer(~battery_ok, sc_has_battery) if sc_has_battery.any() else None
+
+            # Vectorized dominance-filtered extraction.
+            # Iterates combos in sorted order (ascending total storage).
+            # For each combo, vectorized feasibility check across all mixes.
+            # When a combo is recorded for a mix, all combos it dominates
+            # are blocked for that mix via the precomputed dominance matrix.
             for t in active_thresholds:
                 target = t / 100.0
 
-                # Vectorized feasibility: (n_batch, n_sorted) boolean
-                sorted_scores = batch_scores[:, sc_flat_idx]
-                feas = (sorted_scores >= target)
-                feas &= base_below[t][:, np.newaxis]
+                # Per-mix blocked mask and record count
+                blocked = np.zeros((n_batch, n_sorted), dtype=bool)
+                n_recorded = np.zeros(n_batch, dtype=np.int32)
 
-                # Battery gate: ban battery combos for low-surplus mixes
-                if sc_has_battery.any():
-                    battery_banned = np.outer(~battery_ok, sc_has_battery)
-                    feas &= ~battery_banned
+                for ci in range(n_sorted):
+                    # Early exit: all mixes have N_KEEP combos
+                    if n_recorded.min() >= N_KEEP:
+                        break
 
-                # H2 gate: no H2 below 95%
-                if t < 95:
-                    h2_mask = sc_h2p > 0
-                    if h2_mask.any():
-                        feas[:, h2_mask] = False
-
-                # Per-mix dominance-filtered extraction.
-                # Combos are pre-sorted by total storage ascending, so
-                # earlier combos have less total capacity. A combo is dominated
-                # if ANY already-recorded combo has ≤ values in ALL 4 dims.
-                for local_i in range(n_batch):
-                    if not feas[local_i].any():
+                    # H2 gate
+                    if sc_h2p[ci] > 0 and t < 95:
                         continue
-                    mi = int(b_idx[local_i])
-                    recorded = []  # list of (b4, b8, ldes, h2)
-                    for ci in range(n_sorted):
-                        if not feas[local_i, ci]:
-                            continue
-                        b4 = sc_bp[ci]
-                        b8 = sc_b8p[ci]
-                        ld = sc_lp[ci]
-                        h2 = sc_h2p[ci]
-                        # Dominance check against recorded combos
-                        dominated = False
-                        for rb4, rb8, rld, rh2 in recorded:
-                            if rb4 <= b4 and rb8 <= b8 and rld <= ld and rh2 <= h2:
-                                dominated = True
-                                break
-                        if dominated:
-                            continue
-                        recorded.append((b4, b8, ld, h2))
-                        score = round(float(sorted_scores[local_i, ci]) * 100, 2)
-                        results[t].append((mi, b4, b8, ld, h2, score))
-                        total_feasible += 1
-                        if len(recorded) >= N_KEEP:
-                            break
+
+                    fidx = int(sc_flat_idx[ci])
+                    scores_col = batch_scores[:, fidx]
+
+                    # Vectorized feasibility
+                    hits = ((scores_col >= target) &
+                            base_below[t] &
+                            ~blocked[:, ci] &
+                            (n_recorded < N_KEEP))
+
+                    if sc_has_battery[ci] and battery_ban is not None:
+                        hits &= battery_ok
+
+                    if not hits.any():
+                        continue
+
+                    # Record results for all hit mixes
+                    hit_idx = np.where(hits)[0]
+                    bp = float(sc_bp[ci])
+                    b8p = float(sc_b8p[ci])
+                    lp = float(sc_lp[ci])
+                    h2p = float(sc_h2p[ci])
+                    score_pcts = np.round(scores_col[hit_idx] * 100, 2)
+
+                    for k in range(len(hit_idx)):
+                        mi = int(b_idx[hit_idx[k]])
+                        results[t].append(
+                            (mi, bp, b8p, lp, h2p,
+                             float(score_pcts[k])))
+                    total_feasible += len(hit_idx)
+
+                    # Block dominated combos for hit mixes (vectorized)
+                    blocked[hits] |= dom[ci]
+                    n_recorded[hits] += 1
 
     print(f"    Pass 1 complete: {total_feasible:,} feasible "
           f"(dominance-filtered, N≤{N_KEEP} per mix), "
