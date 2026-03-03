@@ -30,7 +30,7 @@ from step3_cost_optimization import OUTPUT_THRESHOLDS as THRESHOLDS
 
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 THRESHOLDS_STR = [str(t) for t in THRESHOLDS]
-RESOURCES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
+RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']
 
 
 def load_from_co2_parquets(batch_dir):
