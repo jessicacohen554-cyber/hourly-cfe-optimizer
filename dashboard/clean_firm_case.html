@@ -7,96 +7,29 @@
 <title>The Case for Clean Firm Power — The 8,760 Problem</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/article.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script src="js/chart-colors.js"></script>
 <script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
 <style>
+/* Page-specific overrides only — shared styles in article.css */
 body { background: var(--bg-page-white); }
 
-/* ========== HERO ========== */
-.hero-overview {
-    background: linear-gradient(180deg, var(--bg-page-white) 0%, var(--bg-page) 100%);
-    position: relative;
-    overflow: hidden;
-    padding: 48px var(--pad-page);
-}
+/* Hero ::before uses red tint instead of amber */
 .hero-overview::before {
-    content: '';
-    position: absolute;
-    inset: 0;
     background: radial-gradient(ellipse at 30% 20%, rgba(14,165,233,0.08) 0%, transparent 60%),
                 radial-gradient(ellipse at 70% 80%, rgba(239,68,68,0.06) 0%, transparent 60%);
-    pointer-events: none;
-}
-.hero-text h2 {
-    font-family: var(--font-heading);
-    font-size: 2rem;
-    font-weight: 800;
-    color: var(--navy);
-    margin-bottom: 16px;
-    line-height: 1.2;
-    letter-spacing: -0.5px;
-}
-.hero-text p {
-    font-size: 0.95rem;
-    color: rgba(0,0,0,0.7);
-    line-height: 1.75;
-    margin-bottom: 16px;
 }
 
-/* ========== COUNTERS ========== */
-.counter-row {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin: 24px 0 0;
-}
-.counter-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border-light);
-    border-radius: var(--radius-lg);
-    padding: 16px 14px;
-    text-align: center;
-    flex: 1;
-    min-width: 110px;
-}
-.counter-val {
-    font-family: var(--font-heading);
-    font-size: 1.8rem;
-    font-weight: 800;
-    color: var(--red);
-    line-height: 1;
-    margin-bottom: 4px;
-}
-.counter-val.green { color: var(--green-pos); }
-.counter-val.blue { color: #0284c7; }
-.counter-lbl {
-    font-size: 0.72rem;
-    color: var(--text-dim);
-    font-weight: 600;
-    letter-spacing: 0.3px;
-    text-transform: uppercase;
-}
+/* Chart panel min-height override */
+.chart-panel .chart-container { min-height: 340px; }
 
-/* ========== PAGE-SPECIFIC: chart-panel min-height override ========== */
-.chart-panel .chart-container {
-    min-height: 340px;
-}
-
-/* ========== ISO per-region active colors ========== */
-.iso-btn.active[data-iso="PJM"]   { background: rgba(74,144,217,0.25); border-color: var(--accent-blue); }
-.iso-btn.active[data-iso="ERCOT"] { background: rgba(34,197,94,0.2);  border-color: var(--wind); }
-.iso-btn.active[data-iso="CAISO"] { background: rgba(245,158,11,0.18); border-color: var(--solar); }
-.iso-btn.active[data-iso="NYISO"] { background: rgba(233,30,99,0.25);  border-color: var(--ldes); }
-.iso-btn.active[data-iso="NEISO"] { background: rgba(156,39,176,0.25); border-color: #9C27B0; }
-.iso-btn.active[data-iso="MISO"] { background: rgba(6,182,212,0.25); border-color: var(--iso-miso); }
-.iso-btn.active[data-iso="SPP"]  { background: rgba(239,68,68,0.25); border-color: var(--red); }
-
-/* ========== CONCEPT SECTIONS ========== */
+/* Concept layout (full-width card bg, 2-col inner) */
 .concept-section {
     background: var(--bg-card);
     position: relative;
@@ -123,38 +56,11 @@ body { background: var(--bg-page-white); }
     justify-content: center;
 }
 
-/* ========== NARRATIVE CARDS ========== */
-.narrative-card {
-    background: var(--bg-card);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid var(--border-light);
-    border-radius: var(--radius-xl);
-    padding: 28px;
-    opacity: 0;
-    transform: translateY(30px);
-    transition: opacity 0.8s cubic-bezier(0.4,0,0.2,1),
-                transform 0.8s cubic-bezier(0.4,0,0.2,1);
-}
-.narrative-card.visible {
-    opacity: 1;
-    transform: translateY(0);
-}
-.narrative-card h3 {
-    font-family: var(--font-heading);
-    font-size: 1.4rem;
-    font-weight: 800;
-    color: var(--navy);
-    margin-bottom: 10px;
-    line-height: 1.25;
-    letter-spacing: -0.3px;
-}
-.narrative-card p {
-    font-size: 0.9rem;
-    color: rgba(0,0,0,0.7);
-    line-height: 1.7;
-    margin-bottom: 0;
-}
+/* Narrative card overrides (larger h3, different color) */
+.narrative-card h3 { font-size: 1.4rem; color: var(--navy); margin-bottom: 10px; }
+.narrative-card p { color: rgba(0,0,0,0.7); line-height: 1.7; margin-bottom: 0; }
+
+/* ISO tag (colored region badge) */
 .iso-tag {
     display: inline-block;
     padding: 3px 10px;
@@ -166,6 +72,8 @@ body { background: var(--bg-page-white); }
     margin-bottom: 10px;
     text-transform: uppercase;
 }
+
+/* Stat callout (inline metric badge) */
 .stat-callout {
     display: inline-block;
     margin-top: 12px;
@@ -175,28 +83,12 @@ body { background: var(--bg-page-white); }
     font-size: 0.82rem;
     font-weight: 700;
 }
-.stat-red {
-    background: var(--red-light);
-    border: 1px solid rgba(239,68,68,0.2);
-    color: var(--red-dark);
-}
-.stat-green {
-    background: var(--wind-bg);
-    border: 1px solid rgba(34,197,94,0.2);
-    color: var(--green-pos);
-}
-.stat-blue {
-    background: var(--hydro-bg);
-    border: 1px solid rgba(14,165,233,0.2);
-    color: #0284c7;
-}
-.stat-amber {
-    background: var(--solar-bg);
-    border: 1px solid rgba(245,158,11,0.2);
-    color: var(--amber-warn);
-}
+.stat-red { background: var(--red-light); border: 1px solid rgba(239,68,68,0.2); color: var(--red-dark); }
+.stat-green { background: var(--wind-bg); border: 1px solid rgba(34,197,94,0.2); color: var(--green-pos); }
+.stat-blue { background: var(--hydro-bg); border: 1px solid rgba(14,165,233,0.2); color: #0284c7; }
+.stat-amber { background: var(--solar-bg); border: 1px solid rgba(245,158,11,0.2); color: var(--amber-warn); }
 
-/* ========== SYNTHESIS ========== */
+/* Synthesis overrides (light bg, border) */
 .synthesis-section {
     background: var(--bg-page);
     padding: 56px var(--pad-page);
@@ -209,74 +101,27 @@ body { background: var(--bg-page-white); }
     grid-template-columns: 1fr 1fr;
     gap: 24px;
 }
-.synthesis-card {
-    background: rgba(255,255,255,0.07);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255,255,255,0.10);
-    border-radius: var(--radius-xl);
-    padding: 28px;
-    opacity: 0;
-    transform: translateY(30px);
-    transition: opacity 0.8s cubic-bezier(0.4,0,0.2,1),
-                transform 0.8s cubic-bezier(0.4,0,0.2,1);
-}
-.synthesis-card.visible {
-    opacity: 1;
-    transform: translateY(0);
-}
-.synthesis-card h3 {
-    font-family: var(--font-heading);
-    font-size: 1.2rem;
-    font-weight: 800;
-    color: #ffffff;
-    margin-bottom: 10px;
-    line-height: 1.25;
-}
-.synthesis-card p {
-    font-size: 0.88rem;
-    color: rgba(255,255,255,0.72);
-    line-height: 1.7;
-    margin-bottom: 0;
-}
+.synthesis-card h3 { font-size: 1.2rem; margin-bottom: 10px; }
+.synthesis-card p { line-height: 1.7; }
 
-/* ========== SECTION HEADERS ========== */
+/* Section header overrides (wider, red number badge) */
 .section-header {
     max-width: var(--max-content);
-    margin: 0 auto;
     padding: 40px var(--pad-section) 0;
-    text-align: center;
 }
 .section-number {
-    display: inline-block;
     width: 32px;
     height: 32px;
     line-height: 32px;
-    border-radius: 50%;
     background: var(--red-light);
     color: var(--red-dark);
-    font-family: var(--font-heading);
     font-size: 0.85rem;
     font-weight: 800;
-    text-align: center;
-    margin-bottom: 10px;
 }
-.section-header h2 {
-    font-family: var(--font-heading);
-    font-size: 1.6rem;
-    font-weight: 800;
-    color: var(--navy);
-    margin-bottom: 8px;
-    letter-spacing: -0.3px;
-}
-.section-header p {
-    font-size: 0.88rem;
-    color: var(--text-dim);
-    max-width: 700px;
-    margin: 0 auto;
-    line-height: 1.6;
-}
+.section-header h2 { margin-bottom: 8px; }
+.section-header p { font-size: 0.88rem; line-height: 1.6; }
 
-/* ========== FOAK → NOAK HERO ========== */
+/* FOAK -> NOAK hero */
 .foak-hero {
     background: linear-gradient(180deg, var(--bg-page-white) 0%, var(--bg-page) 100%);
     position: relative;
@@ -340,65 +185,38 @@ body { background: var(--bg-page-white); }
 }
 .foak-sources .src-list li { margin-bottom: 2px; }
 
-@media (max-width: 900px) {
-    .foak-inner { grid-template-columns: 1fr; gap: 24px; }
-    .foak-hero { padding: 36px 16px; }
-    .foak-text h2 { font-size: 1.5rem; }
-    .foak-text p { font-size: 0.85rem; }
-}
-@media (max-width: 600px) {
-    .foak-hero { padding: 28px 12px; }
-    .foak-text h2 { font-size: 1.3rem; }
-    .foak-text p { font-size: 0.8rem; line-height: 1.6; }
-}
-@media (max-width: 480px) {
-    .foak-hero { padding: 20px 8px; }
-    .foak-text h2 { font-size: 1.15rem; }
-}
-
-/* Footer and bottom-banner use shared.css .page-footer, .footer-links, .footer-note, .bottom-banner */
-
-/* ========== RESPONSIVE ========== */
-html, body { overflow-x: hidden; max-width: 100vw; }
-
+/* Responsive */
 @media (max-width: 900px) {
     .hero-inner { grid-template-columns: 1fr; gap: var(--space-lg); }
-    .hero-overview { padding: 36px var(--pad-page); }
     .concept-inner { grid-template-columns: 1fr; }
     .concept-chart-col { padding: 24px 16px 16px; }
     .concept-narrative-col { padding: 16px 16px 32px; }
     .chart-panel .chart-container { min-height: 300px; }
     .synthesis-inner { grid-template-columns: 1fr; gap: 16px; }
     .synthesis-section { padding: 36px var(--pad-page); }
-    .narrative-card { padding: 22px 18px; }
-    .narrative-card h3 { font-size: 1.2rem; }
     .section-header { padding: 32px 16px 0; }
-    .section-header h2 { font-size: 1.35rem; }
+    .foak-inner { grid-template-columns: 1fr; gap: 24px; }
+    .foak-hero { padding: 36px 16px; }
+    .foak-text h2 { font-size: 1.5rem; }
+    .foak-text p { font-size: 0.85rem; }
 }
 @media (max-width: 600px) {
-    .hero-overview { padding: 28px 12px; }
     .chart-panel { padding: 12px 10px; }
     .chart-panel .chart-container { min-height: 260px; }
     .concept-chart-col { padding: 16px 10px 10px; }
     .concept-narrative-col { padding: 10px 12px 24px; }
-    .narrative-card { padding: 18px 14px; }
-    .narrative-card h3 { font-size: 1.1rem; }
-    .narrative-card p { font-size: 0.82rem; }
     .synthesis-card { padding: 18px 14px; }
     .synthesis-card h3 { font-size: 1rem; }
-    .counter-card { min-width: 80px; padding: 10px 8px; }
-    .counter-val { font-size: 1.4rem; }
-    .counter-lbl { font-size: 0.65rem; }
-    .hero-text h2 { font-size: 1.5rem; }
-    .hero-text p { font-size: 0.85rem; }
+    .foak-hero { padding: 28px 12px; }
+    .foak-text h2 { font-size: 1.3rem; }
+    .foak-text p { font-size: 0.8rem; line-height: 1.6; }
 }
 @media (max-width: 480px) {
-    .hero-overview { padding: 20px 8px; }
     .chart-panel .chart-container { min-height: 240px; }
     .iso-btn { padding: 4px 9px; font-size: 0.68rem; min-height: 30px; }
     .stat-callout { font-size: 0.75rem; padding: 6px 10px; }
-    .section-header h2 { font-size: 1.2rem; }
-    .section-header p { font-size: 0.8rem; }
+    .foak-hero { padding: 20px 8px; }
+    .foak-text h2 { font-size: 1.15rem; }
 }
 </style>
 </head>
@@ -415,7 +233,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 </header>
 
 <!-- ==================== FOAK → NOAK: THE INVESTMENT CASE (HERO) ==================== -->
-<section class="foak-hero">
+<section class="foak-hero section-light">
     <div class="foak-inner">
         <div class="foak-text">
             <h2>Build clean firm today.<br>It's cheaper in the long run.</h2>
@@ -477,7 +295,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 </section>
 
 <!-- ==================== STRANDED ASSETS OVERVIEW ==================== -->
-<section class="hero-overview">
+<section class="hero-overview section-light">
     <div class="hero-inner">
         <div class="hero-text">
             <h2>You're building gas plants today that become stranded assets tomorrow.</h2>
@@ -518,7 +336,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     <h2>The Gas Trap: You're Paying to Build Stranded Assets</h2>
     <p>Every ISO needs new gas capacity to guarantee reliability — but that capital becomes stranded as clean energy scales. Click each ISO to see the scale of the problem.</p>
 </div>
-<section class="concept-section">
+<section class="concept-section section-light">
     <div class="concept-inner">
         <div class="concept-chart-col">
             <div class="chart-panel" style="width:100%;">
@@ -549,7 +367,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     <h2>Clean Firm Displaces Gas — Dollar for Dollar</h2>
     <p>As dispatchable clean generation enters, gas backup drops and clean coverage rises. The displacement is consistent across every cost scenario.</p>
 </div>
-<section class="concept-section">
+<section class="concept-section section-light">
     <div class="concept-inner">
         <div class="concept-chart-col">
             <div class="chart-panel" style="width:100%;">
@@ -580,7 +398,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     <h2>The Investment Math: Gas Costs Are Permanent, FOAK Costs Decline</h2>
     <p>Gas backup cost recurs annually and compounds with demand growth. Clean firm FOAK costs are one-time premiums that shrink with every deployment.</p>
 </div>
-<section class="concept-section">
+<section class="concept-section section-light">
     <div class="concept-inner">
         <div class="concept-chart-col">
             <div class="chart-panel" style="width:100%;">
@@ -597,6 +415,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 </section>
 
 <!-- ==================== SYNTHESIS ==================== -->
+<div class="gradient-transition"></div>
 <section class="section-dark">
 <div class="section-dark-inner">
     <div class="synthesis-inner">
@@ -613,6 +432,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     </div>
 </div>
 </section>
+<div class="gradient-transition"></div>
 
 <!-- SOURCES -->
 <div style="max-width:1320px;margin:0 auto;padding:24px;">
@@ -637,6 +457,31 @@ html, body { overflow-x: hidden; max-width: 100vw; }
             ITIF (2025), &ldquo;Small Modular Reactors: A Realist Approach&rdquo; &mdash; Wright&rsquo;s Law 4&ndash;10%/doubling</p>
         </div>
     </details>
+</div>
+
+<!-- ============ RELATED ANALYSES ============ -->
+<div class="related-analyses">
+    <div class="related-analyses-title">Related Analyses</div>
+    <div class="related-analyses-grid">
+        <a href="cost_to_replace.html" class="related-card">
+            <div class="related-card-tag">Economics</div>
+            <div class="related-card-title">Cost to Replace</div>
+            <div class="related-card-desc">What does it actually cost to replace fossil generation with clean firm power?</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="new_build_analysis.html" class="related-card">
+            <div class="related-card-tag">Economics</div>
+            <div class="related-card-title">New Build Analysis</div>
+            <div class="related-card-desc">When do new-build clean resources become cheaper than maintaining existing fossil plants?</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="wrights_law.html" class="related-card">
+            <div class="related-card-tag">Learning Curves</div>
+            <div class="related-card-title">Wright's Law</div>
+            <div class="related-card-desc">How technology cost declines reshape the economics of clean firm power over time.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+    </div>
 </div>
 
 <!-- FOOTER -->

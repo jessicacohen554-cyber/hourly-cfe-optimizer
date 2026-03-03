@@ -8,13 +8,8 @@
    ============================================================================ */
 
 /* ========== FONT FACE ========== */
-@font-face {
-    font-family: 'Franklin Gothic Demi';
-    src: local('Franklin Gothic Demi'), local('Franklin Gothic Medium'), local('ITC Franklin Gothic Demi'), local('Franklin Gothic Demi Cond');
-    font-weight: 600;
-    font-style: normal;
-    font-display: swap;
-}
+/* Observatory theme: Space Grotesk + DM Sans + Space Mono loaded via Google Fonts.
+   No @font-face declarations needed — fonts are loaded via <link> tags. */
 
 /* ========== RESET & BASE ========== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -141,11 +136,11 @@ body {
     --critical: #ef4444;
 
     /* ---- Typography stacks ---- */
-    --font-body: 'Plus Jakarta Sans', 'Helvetica Neue', Arial, sans-serif;
-    --font-heading: 'Franklin Gothic Demi', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
-    --font-heading-banner: 'Franklin Gothic Demi', 'Lexend', 'Rajdhani', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
-    --font-mono: 'Consolas', 'Courier New', monospace;
-    --font-data: 'Rajdhani', 'Barlow Semi Condensed', monospace;
+    --font-body: 'DM Sans', 'Plus Jakarta Sans', 'Helvetica Neue', Arial, sans-serif;
+    --font-heading: 'Space Grotesk', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
+    --font-heading-banner: 'Space Grotesk', 'Lexend', 'Rajdhani', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+    --font-mono: 'Space Mono', 'Consolas', 'Courier New', monospace;
+    --font-data: 'Space Mono', 'Rajdhani', monospace;
 
     /* ---- Spacing scale ---- */
     --space-xs: 4px;
@@ -1351,6 +1346,196 @@ p {
     .headline-row {
         grid-template-columns: 1fr;
     }
+}
+
+/* ========== LIGHT / DARK RHYTHM SYSTEM (Observatory Design) ========== */
+/* Use .section-light for analytical/data sections (white bg, crisp shadows) */
+/* Use .section-dark for narrative/emphasis sections (navy bg, glassmorphism) */
+
+.section-light {
+    background: #FFFFFF;
+    border-top: 1px solid rgba(0,0,0,0.04);
+}
+.section-light .card,
+.section-light .chart-panel,
+.section-light .stat-card {
+    background: #FFFFFF;
+    border: 1px solid rgba(0,0,0,0.06);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06), 0 6px 20px rgba(0,0,0,0.04);
+}
+
+.section-dark {
+    background: linear-gradient(180deg, #080e1e 0%, #0c1424 100%);
+    position: relative;
+}
+.section-dark::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse at 20% 30%, rgba(6,182,212,0.06) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 70%, rgba(99,102,241,0.04) 0%, transparent 60%);
+    pointer-events: none;
+}
+.section-dark::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 32px 32px;
+    pointer-events: none;
+}
+.section-dark h2,
+.section-dark h3,
+.section-dark h4 { color: #FFFFFF; }
+.section-dark p { color: rgba(255,255,255,0.6); }
+.section-dark .card,
+.section-dark .chart-panel,
+.section-dark .stat-card {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.10);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.3), 0 0 40px rgba(14,165,233,0.06);
+}
+.section-dark .stat-value { color: #FFFFFF; }
+.section-dark .stat-label { color: rgba(255,255,255,0.55); }
+.section-dark .insight-box {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+}
+.section-dark .insight-box h4 { color: #FFFFFF; }
+.section-dark .insight-box p { color: rgba(255,255,255,0.6); }
+
+/* Section transitions (gradient dividers between light and dark) */
+.gradient-transition {
+    height: 48px;
+    background: linear-gradient(180deg, var(--bg-page) 0%, rgba(11,17,32,0.04) 50%, var(--bg-page) 100%);
+    position: relative;
+}
+.gradient-transition::after {
+    content: '';
+    position: absolute;
+    left: 10%; right: 10%; top: 50%;
+    height: 1px;
+    background: linear-gradient(90deg,
+        transparent, rgba(14,165,233,0.2) 30%, rgba(6,182,212,0.3) 50%, rgba(14,165,233,0.2) 70%, transparent);
+}
+.section-transition-light-to-dark {
+    height: 64px;
+    background: linear-gradient(180deg, #FFFFFF 0%, #0B1120 100%);
+}
+.section-transition-dark-to-light {
+    height: 64px;
+    background: linear-gradient(180deg, #0B1120 0%, #FFFFFF 100%);
+}
+.section-transition-dark-to-gray {
+    height: 64px;
+    background: linear-gradient(180deg, #0B1120 0%, var(--bg-page) 100%);
+}
+
+/* Accent glow line (horizontal divider between sections) */
+.accent-line {
+    height: 2px;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(6,182,212,0.3) 20%,
+        rgba(14,165,233,0.5) 50%,
+        rgba(99,102,241,0.3) 80%,
+        transparent 100%);
+}
+
+/* ========== RELATED ANALYSES (cross-linking cards) ========== */
+.related-analyses {
+    max-width: var(--max-w, 1320px);
+    margin: 0 auto;
+    padding: 48px var(--pad-page) 56px;
+}
+.related-analyses-title {
+    font-family: var(--font-heading);
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+}
+.related-analyses-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+}
+.related-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md, 10px);
+    padding: 20px 22px;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    box-shadow: var(--shadow-sm);
+}
+.related-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+    border-color: rgba(14,165,233,0.3);
+}
+.related-card-tag {
+    font-family: var(--font-heading);
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--hydro);
+    margin-bottom: 8px;
+}
+.related-card-title {
+    font-family: var(--font-heading);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--navy);
+    margin-bottom: 6px;
+    line-height: 1.3;
+}
+.related-card-desc {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    line-height: 1.55;
+    flex: 1;
+}
+.related-card-arrow {
+    margin-top: 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--hydro);
+    opacity: 0;
+    transform: translateX(-4px);
+    transition: opacity 0.2s, transform 0.2s;
+}
+.related-card:hover .related-card-arrow {
+    opacity: 1;
+    transform: translateX(0);
+}
+/* Dark section variant */
+.section-dark .related-card {
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.10);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+.section-dark .related-card:hover {
+    border-color: rgba(14,165,233,0.4);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+.section-dark .related-card-title { color: #FFFFFF; }
+.section-dark .related-card-desc { color: rgba(255,255,255,0.55); }
+.section-dark .related-analyses-title { color: rgba(255,255,255,0.4); }
+
+@media (max-width: 640px) {
+    .related-analyses { padding: 32px var(--pad-page) 40px; }
+    .related-analyses-grid { grid-template-columns: 1fr; gap: 12px; }
 }
 
 /* ========== REDUCED MOTION ========== */

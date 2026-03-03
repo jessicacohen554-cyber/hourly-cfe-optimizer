@@ -7,127 +7,29 @@
 <title>Consequential Accounting Under the Microscope — The 8,760 Problem</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/article.css">
 <script src="js/chart-colors.js"></script>
 <script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
 <style>
+/* Page-specific overrides only — all shared styles in article.css */
 body { background: var(--bg-page-white); }
 
-/* ========== HERO ========== */
-.hero-overview {
-    background: linear-gradient(180deg, var(--bg-page-white) 0%, var(--bg-page) 100%);
-    position: relative;
-    overflow: hidden;
-    padding: 48px var(--pad-page) 56px;
-}
-.hero-overview::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(ellipse at 30% 20%, rgba(14,165,233,0.08) 0%, transparent 60%),
-                radial-gradient(ellipse at 70% 80%, rgba(245,158,11,0.06) 0%, transparent 60%);
-    pointer-events: none;
-}
-.hero-inner {
-    position: relative;
-    max-width: var(--max-content);
-    margin: 0 auto;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 48px;
-    align-items: center;
-}
-.hero-text h2 {
-    font-family: var(--font-heading);
-    font-size: 2rem;
-    font-weight: 800;
-    color: var(--navy);
-    margin-bottom: 16px;
-    line-height: 1.2;
-    letter-spacing: -0.5px;
-}
-.hero-text p {
-    font-size: 0.95rem;
-    color: rgba(0,0,0,0.7);
-    line-height: 1.75;
-    margin-bottom: 16px;
-}
-.hero-text .hero-lead {
-    font-size: 1.05rem;
-    color: rgba(0,0,0,0.85);
-    font-weight: 500;
-}
+/* Hero uses shared hero-overview; just override bottom padding */
+.hero-overview { padding-bottom: 56px; }
 
-/* ========== COUNTER CARDS ========== */
-.counter-row {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin: 24px 0 0;
-}
-.counter-card {
-    background: var(--bg-card);
-    border: 1px solid rgba(0,0,0,0.08);
-    border-radius: var(--radius-lg);
-    padding: 16px 14px;
-    text-align: center;
-    flex: 1;
-    min-width: 110px;
-}
-.counter-val {
-    font-family: var(--font-heading);
-    font-size: 1.8rem;
-    font-weight: 800;
-    color: var(--hydro);
-    line-height: 1;
-    margin-bottom: 4px;
-}
-.counter-val.green { color: var(--wind); }
-.counter-val.amber { color: var(--solar); }
-.counter-val.red { color: var(--red); }
-.counter-lbl {
-    font-size: 0.72rem;
-    color: rgba(0,0,0,0.5);
-    font-weight: 600;
-    letter-spacing: 0.3px;
-    text-transform: uppercase;
-}
+/* This page uses shared.css .hero-inner with tighter gap */
+.hero-inner { gap: 48px; }
 
-/* ========== COMPARISON VISUAL ========== */
-.comparison-visual {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 14px;
-    align-items: stretch;
-    max-width: 780px;
-    margin: 0 auto;
-}
-.compare-box {
-    background: rgba(0,0,0,0.025);
-    border: 1px solid rgba(0,0,0,0.08);
-    border-radius: 14px;
-    padding: 20px 16px;
-    text-align: center;
-}
-.compare-box.attr { border-color: rgba(239,68,68,0.3); }
-.compare-box.hourly { border-color: rgba(14,165,233,0.3); }
-.compare-box.conseq { border-color: rgba(34,197,94,0.3); }
-.compare-box h4 {
-    font-family: var(--font-heading);
-    font-size: 0.82rem;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    margin-bottom: 10px;
-}
-.compare-box.attr h4 { color: var(--red); }
-.compare-box.hourly h4 { color: var(--hydro); }
-.compare-box.conseq h4 { color: var(--wind); }
-.compare-box p {
-    font-size: 0.82rem;
-    color: rgba(0,0,0,0.55);
-    line-height: 1.6;
-}
+/* Section header padding override for this page */
+.section-header { padding-top: 56px; }
+
+/* Chart panel fixed height for sticky charts */
+.chart-panel .chart-container { height: 380px; }
+
+/* compare-vs divider between comparison boxes */
 .compare-vs {
     display: flex;
     align-items: center;
@@ -138,487 +40,12 @@ body { background: var(--bg-page-white); }
     color: rgba(0,0,0,0.3);
 }
 
-/* ========== SECTION HEADERS ========== */
-.section-header {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 56px 24px 0;
-    text-align: center;
-}
-.section-number {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: var(--hydro-bg);
-    color: var(--hydro);
-    font-family: var(--font-heading);
-    font-size: 0.9rem;
-    font-weight: 700;
-    margin-bottom: 12px;
-}
-.section-header h2 {
-    font-family: var(--font-heading);
-    font-size: 1.6rem;
-    font-weight: 800;
-    color: var(--navy);
-    margin-bottom: 10px;
-    letter-spacing: -0.3px;
-}
-.section-header p {
-    font-size: 0.9rem;
-    color: rgba(0,0,0,0.55);
-    line-height: 1.65;
-    max-width: 700px;
-    margin: 0 auto;
-}
-
-/* ========== CONTENT SECTIONS ========== */
-.concept-section {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 32px 24px 48px;
-}
-.concept-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-}
-.concept-card {
-    background: var(--bg-card);
-    border: 1px solid rgba(0,0,0,0.06);
-    border-radius: 14px;
-    padding: 24px 20px;
-}
-.concept-card h3 {
-    font-family: var(--font-heading);
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--navy);
-    margin-bottom: 10px;
-    letter-spacing: 0.02em;
-}
-.concept-card p, .concept-card li {
-    font-size: 0.85rem;
-    color: rgba(0,0,0,0.6);
-    line-height: 1.7;
-}
-.concept-card ul {
-    list-style: none;
-    padding: 0;
-    margin: 8px 0 0;
-}
-.concept-card li {
-    padding: 4px 0 4px 16px;
-    position: relative;
-}
-.concept-card li::before {
-    content: '→';
-    position: absolute;
-    left: 0;
-    color: rgba(0,0,0,0.3);
-}
-
-/* ========== FRAMEWORK TIMELINE ========== */
-.timeline-section {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 32px 24px 48px;
-}
-.timeline {
-    position: relative;
-    padding-left: 32px;
-}
-.timeline::before {
-    content: '';
-    position: absolute;
-    left: 12px;
-    top: 0;
-    bottom: 0;
-    width: 2px;
-    background: linear-gradient(180deg, var(--hydro) 0%, var(--wind) 50%, var(--solar) 100%);
-    border-radius: 1px;
-}
-.timeline-item {
-    position: relative;
-    padding-bottom: 28px;
-}
-.timeline-dot {
-    position: absolute;
-    left: -26px;
-    top: 4px;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: var(--hydro);
-    border: 2px solid var(--bg-card);
-}
-.timeline-item:nth-child(2) .timeline-dot { background: var(--wind); }
-.timeline-item:nth-child(3) .timeline-dot { background: var(--solar); }
-.timeline-item:nth-child(4) .timeline-dot { background: var(--ldes); }
-.timeline-item:nth-child(5) .timeline-dot { background: var(--battery); }
-.timeline-year {
-    font-family: var(--font-heading);
-    font-size: 0.78rem;
-    font-weight: 700;
-    color: var(--hydro);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-bottom: 4px;
-}
-.timeline-item:nth-child(2) .timeline-year { color: var(--wind); }
-.timeline-item:nth-child(3) .timeline-year { color: var(--solar); }
-.timeline-item:nth-child(4) .timeline-year { color: var(--ldes); }
-.timeline-item:nth-child(5) .timeline-year { color: var(--battery); }
-.timeline-title {
-    font-family: var(--font-heading);
-    font-size: 0.92rem;
-    font-weight: 700;
-    color: var(--navy);
-    margin-bottom: 4px;
-}
-.timeline-desc {
-    font-size: 0.82rem;
-    color: rgba(0,0,0,0.55);
-    line-height: 1.6;
-}
-
-/* ========== CHART PANELS (STICKY) ========== */
-.chart-narrative-wrap {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 24px 48px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 32px;
-    align-items: start;
-}
-.chart-sticky {
-    position: sticky;
-    top: 60px;
-    z-index: 10;
-}
-/* chart-panel base styles from shared.css */
-.chart-panel .chart-container {
-    height: 380px;
-}
-.chart-narrative {
-    padding-top: 8px;
-}
-.chart-narrative p {
-    font-size: 0.88rem;
-    color: rgba(0,0,0,0.6);
-    line-height: 1.75;
-    margin-bottom: 16px;
-}
-.chart-narrative strong {
-    color: rgba(0,0,0,0.85);
-}
-/* chart-title from shared.css */
-.chart-subtitle {
-    font-size: 0.78rem;
-    color: rgba(0,0,0,0.45);
-    text-align: center;
-    margin-bottom: 16px;
-}
-/* Standalone chart section (no narrative pair) */
-.chart-section {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 0 24px 48px;
-}
-
-@media (max-width: 768px) {
-    .chart-narrative-wrap {
-        grid-template-columns: 1fr;
-        gap: 16px;
-    }
-    .chart-sticky {
-        position: static;
-    }
-    .chart-panel .chart-container {
-        height: 300px;
-    }
-}
-@media (max-width: 480px) {
-    .chart-panel .chart-container {
-        height: 260px;
-    }
-}
-
-/* ISO selector and iso-btn use shared.css */
-
-/* ========== KEY INSIGHT CALLOUT ========== */
-.insight-callout {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 0 24px 48px;
-}
-.insight-box {
-    background: linear-gradient(135deg, rgba(14,165,233,0.08) 0%, rgba(34,197,94,0.06) 100%);
-    border: 1px solid rgba(14,165,233,0.2);
-    border-radius: 14px;
-    padding: 28px 24px;
-}
-.insight-box h3 {
-    font-family: var(--font-heading);
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--hydro);
-    margin-bottom: 10px;
-}
-.insight-box p {
-    font-size: 0.88rem;
-    color: rgba(0,0,0,0.7);
-    line-height: 1.7;
-}
-.insight-box .highlight {
-    color: var(--solar);
-    font-weight: 600;
-}
-
-/* ========== NARRATIVE BLOCKS ========== */
-.narrative-section {
-    max-width: 780px;
-    margin: 0 auto;
-    padding: 0 24px 48px;
-}
-.narrative-section p {
-    font-size: 0.9rem;
-    color: rgba(0,0,0,0.6);
-    line-height: 1.8;
-    margin-bottom: 16px;
-}
-.narrative-section strong {
-    color: rgba(0,0,0,0.85);
-}
-
-/* ========== TABLE ========== */
-.comparison-table-wrap {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 0 24px 48px;
-    overflow-x: auto;
-}
-.comparison-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.82rem;
-}
-.comparison-table th {
-    font-family: var(--font-heading);
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: rgba(0,0,0,0.5);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    padding: 10px 14px;
-    text-align: left;
-    border-bottom: 1px solid rgba(0,0,0,0.1);
-}
-.comparison-table td {
-    padding: 10px 14px;
-    color: rgba(0,0,0,0.7);
-    border-bottom: 1px solid rgba(0,0,0,0.06);
-    vertical-align: top;
-}
-.comparison-table tr:hover td {
-    background: rgba(0,0,0,0.03);
-}
-.badge {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 0.72rem;
-    font-weight: 600;
-}
-.badge.attr { background: var(--red-light); color: var(--red); }
-.badge.hourly { background: var(--hydro-bg); color: var(--hydro); }
-.badge.conseq { background: var(--wind-bg); color: var(--wind); }
-.badge.both { background: var(--hydro-bg); color: var(--hydro); }
-
-/* Perverse incentive cards */
-.incentive-card {
-    background: var(--bg-card);
-    border: 1px solid rgba(239,68,68,0.15);
-    border-radius: 14px;
-    padding: 20px 18px;
-    border-left: 3px solid var(--red);
-}
-.incentive-card h4 {
-    font-family: var(--font-heading);
-    font-size: 0.88rem;
-    font-weight: 700;
-    color: var(--red);
-    margin-bottom: 6px;
-}
-.incentive-card p {
-    font-size: 0.82rem;
-    color: rgba(0,0,0,0.55);
-    line-height: 1.7;
-}
-.incentive-card .example {
-    margin-top: 8px;
-    padding: 10px 12px;
-    background: rgba(239,68,68,0.06);
-    border-radius: 8px;
-    font-size: 0.78rem;
-    color: rgba(0,0,0,0.5);
-    font-style: italic;
-}
-.incentive-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-}
-@media (max-width: 768px) {
-    .incentive-grid { grid-template-columns: 1fr; }
-}
-
-/* ========== KEY FINDINGS PYRAMID ========== */
-.findings-panel {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 48px 24px;
-}
-.findings-title {
-    font-family: var(--font-heading);
-    font-size: 0.78rem;
-    font-weight: 700;
-    color: rgba(0,0,0,0.4);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    text-align: center;
-    margin-bottom: 24px;
-}
-.findings-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 16px;
-}
-.finding-row {
-    display: grid;
-    gap: 16px;
-}
-.finding-row.top { grid-template-columns: 1fr; max-width: 700px; margin: 0 auto; }
-.finding-row.mid { grid-template-columns: 1fr 1fr; }
-.finding-row.base { grid-template-columns: 1fr 1fr 1fr; }
-.finding-card {
-    background: var(--bg-card);
-    border: 1px solid rgba(0,0,0,0.06);
-    border-radius: 14px;
-    padding: 20px 18px;
-    position: relative;
-    overflow: hidden;
-}
-.finding-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    border-radius: 14px 14px 0 0;
-}
-.finding-card.tier1::before { background: linear-gradient(90deg, #EF4444, #F59E0B); }
-.finding-card.tier2::before { background: linear-gradient(90deg, #0EA5E9, #22C55E); }
-.finding-card.tier3::before { background: linear-gradient(90deg, #8B5CF6, #0EA5E9); }
-.finding-num {
-    font-family: var(--font-heading);
-    font-size: 1.6rem;
-    font-weight: 800;
-    line-height: 1;
-    margin-bottom: 6px;
-}
-.finding-num.red { color: var(--red); }
-.finding-num.amber { color: var(--solar); }
-.finding-num.green { color: var(--wind); }
-.finding-num.blue { color: var(--hydro); }
-.finding-num.purple { color: var(--battery); }
-.finding-label {
-    font-family: var(--font-heading);
-    font-size: 0.78rem;
-    font-weight: 700;
-    color: rgba(0,0,0,0.7);
-    margin-bottom: 4px;
-}
-.finding-desc {
-    font-size: 0.78rem;
-    color: rgba(0,0,0,0.45);
-    line-height: 1.5;
-}
-
-/* Dark panel overrides for findings */
-.section-dark .finding-card { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.10); }
-.section-dark .finding-label { color: rgba(255,255,255,0.85); }
-.section-dark .finding-desc { color: rgba(255,255,255,0.55); }
-
-@media (max-width: 768px) {
-    .finding-row.mid { grid-template-columns: 1fr; }
-    .finding-row.base { grid-template-columns: 1fr; }
-}
-
-/* ========== SCROLL ANIMATIONS ========== */
-.fade-in {
-    opacity: 0;
-    transform: translateY(24px);
-    transition: opacity 0.7s ease-out, transform 0.7s ease-out;
-}
-.fade-in.visible {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-/* ========== SOURCES ========== */
-.sources-section {
-    max-width: 780px;
-    margin: 0 auto;
-    padding: 32px 24px 48px;
-    border-top: 1px solid rgba(0,0,0,0.06);
-}
-.sources-section h3 {
-    font-family: var(--font-heading);
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: rgba(0,0,0,0.5);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-bottom: 16px;
-}
-.sources-section ol {
-    list-style: decimal;
-    padding-left: 20px;
-}
-.sources-section li {
-    font-size: 0.78rem;
-    color: rgba(0,0,0,0.45);
-    line-height: 1.6;
-    margin-bottom: 6px;
-}
-.sources-section a {
-    color: var(--hydro);
-    text-decoration: none;
-}
-.sources-section a:hover { text-decoration: underline; }
-
-/* ========== RESPONSIVE ========== */
 @media (max-width: 768px) {
     .hero-inner { grid-template-columns: 1fr; gap: 24px; }
-    .hero-text h2 { font-size: 1.5rem; }
-    .comparison-visual { grid-template-columns: 1fr; gap: 12px; }
-    .concept-grid { grid-template-columns: 1fr; }
-    .section-header h2 { font-size: 1.35rem; }
     .chart-panel .chart-container { min-height: 280px; }
-    .counter-row { gap: 8px; }
-    .counter-card { min-width: 90px; padding: 12px 10px; }
-    .counter-val { font-size: 1.4rem; }
 }
 @media (max-width: 480px) {
-    .hero-text h2 { font-size: 1.3rem; }
-    .section-header h2 { font-size: 1.2rem; }
-    .section-header p { font-size: 0.82rem; }
+    .chart-panel .chart-container { height: 260px; }
 }
 </style>
 </head>
@@ -635,7 +62,7 @@ body { background: var(--bg-page-white); }
 </div>
 
 <!-- ============ HERO ============ -->
-<section class="hero-overview">
+<section class="hero-overview section-light">
 <div class="hero-inner">
     <div class="hero-text">
         <h2>Three Ways to Count Carbon: Which One Actually Decarbonizes the Grid?</h2>
@@ -682,6 +109,7 @@ body { background: var(--bg-page-white); }
 </section>
 
 <!-- ============ KEY FINDINGS PYRAMID ============ -->
+<div class="gradient-transition"></div>
 <section class="section-dark fade-in">
 <div class="section-dark-inner">
     <div class="findings-title" style="color:rgba(255,255,255,0.5);">Key Findings — Top Down</div>
@@ -728,6 +156,7 @@ body { background: var(--bg-page-white); }
     </div>
 </div>
 </section>
+<div class="gradient-transition"></div>
 
 <!-- ============ SECTION 1: Three Methods ============ -->
 <div class="section-header fade-in">
@@ -736,7 +165,7 @@ body { background: var(--bg-page-white); }
     <p>The debate isn't just "attributional vs. consequential." It's a three-way contest between fundamentally different theories of how carbon accounting should drive decarbonization — and each creates radically different investment incentives.</p>
 </div>
 
-<section class="concept-section fade-in">
+<section class="concept-section section-light fade-in">
     <div class="concept-grid">
         <div class="concept-card">
             <h3 style="color: #EF4444;">1. Annual Attribution <span class="badge attr">Current</span></h3>
@@ -788,7 +217,7 @@ body { background: var(--bg-page-white); }
     <p>The GHG Protocol is running two parallel consultations: one revising Scope 2 attributional accounting (proposing hourly matching), another developing a new consequential framework. 800+ stakeholders have weighed in. The outcome will reshape corporate clean energy investment globally.</p>
 </div>
 
-<section class="timeline-section fade-in">
+<section class="timeline-section section-light fade-in">
     <div class="timeline">
         <div class="timeline-item">
             <div class="timeline-dot"></div>
@@ -930,6 +359,31 @@ body { background: var(--bg-page-white); }
         <li>Bjørn et al., "Ensuring low-emission electricity purchasing requires broader systems perspective" (2024). <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC12032940/" target="_blank">Nature Communications</a></li>
     </ol>
 </section>
+
+<!-- ============ RELATED ANALYSES ============ -->
+<div class="related-analyses">
+    <div class="related-analyses-title">Related Analyses</div>
+    <div class="related-analyses-grid">
+        <a href="consequential_vacuum.html" class="related-card">
+            <div class="related-card-tag">Carbon Accounting</div>
+            <div class="related-card-title">Consequential in a Vacuum</div>
+            <div class="related-card-desc">What happens when consequential accounting ignores cross-regional coordination?</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="scenario_comparison.html" class="related-card">
+            <div class="related-card-tag">Strategy</div>
+            <div class="related-card-title">Scenario Comparison</div>
+            <div class="related-card-desc">Head-to-head comparison of consequential vs. hourly matching procurement.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="procurement_strategies.html" class="related-card">
+            <div class="related-card-tag">Strategy</div>
+            <div class="related-card-title">Procurement Strategies</div>
+            <div class="related-card-desc">Corporate procurement strategy simulation across 25-year planning horizons.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+    </div>
+</div>
 
 <!-- ============ FOOTER ============ -->
 <footer class="page-footer">

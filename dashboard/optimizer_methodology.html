@@ -7,18 +7,16 @@
     <title>The 8,760 Problem — Methodology & Technical Reference</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/reference.css">
     <style>
-        :root {
-            --accent: #EF4444;
-            --accent-dark: #DC2626;
-        }
+        /* ========== METHODOLOGY PAGE — Page-specific styles only ========== */
+        /* Shared: toc, formula-box, note-box, table-wrap, prose tables, source-list,
+           color-swatch, accent-bar, back-link, responsive, touch, print → reference.css */
 
         html { font-size: 16px; }
         body {
-            font-family: var(--font-body);
-            color: var(--text-primary);
             background: var(--bg-alt-warm);
             background-image:
                 radial-gradient(ellipse at 20% 0%, rgba(245,158,11,0.04) 0%, transparent 50%),
@@ -33,17 +31,12 @@
             padding: 40px 24px 80px;
         }
 
+        /* Methodology back-link override (padded, bordered variant) */
         .back-link {
-            display: inline-flex;
-            align-items: center;
             gap: 6px;
             margin-bottom: 32px;
             color: var(--navy);
-            font-family: var(--font-heading);
-            font-weight: 600;
-            text-decoration: none;
             font-size: 0.95rem;
-            transition: all 0.2s ease;
             padding: 8px 14px;
             border-radius: 8px;
             border-bottom: 1px solid rgba(239,68,68,0.3);
@@ -54,64 +47,28 @@
             border-bottom-color: var(--accent-dark);
         }
 
-        .toc {
-            background: var(--bg-card);
-            border: 1px solid var(--border-light);
-            border-radius: 10px;
-            padding: 28px 36px;
-            margin-bottom: 40px;
-            box-shadow: 0 4px 6px -4px rgba(0,0,0,0.04);
-        }
-        .toc h2 {
-            font-family: var(--font-heading);
-            font-size: 1.15rem;
-            font-weight: 700;
-            color: var(--accent);
-            margin-bottom: 14px;
-            text-transform: capitalize;
-            letter-spacing: 0.04em;
-            border-bottom: none;
-            margin-top: 0;
-            padding-bottom: 0;
-        }
-        .toc ol { padding-left: 20px; }
-        .toc li {
-            margin-bottom: 6px;
-            color: var(--text-secondary);
-        }
-        .toc a {
-            color: var(--navy);
-            text-decoration: none;
-            font-size: 0.92rem;
-            border-bottom: 1px solid rgba(239,68,68,0.2);
-            transition: all 0.15s ease;
-        }
-        .toc a:hover {
-            color: var(--accent-dark);
-            border-bottom-color: var(--accent-dark);
-        }
+        /* Methodology TOC override (card shadow) */
+        .toc { background: var(--bg-card); box-shadow: 0 4px 6px -4px rgba(0,0,0,0.04); }
+        .toc h2 { text-transform: capitalize; }
 
+        /* Long-form typography (scoped to page) */
         h2 {
-            font-family: var(--font-heading);
             font-size: 1.6rem;
             color: var(--accent);
             margin-top: 52px;
             margin-bottom: 18px;
             padding-bottom: 10px;
             border-bottom: 2px solid var(--border);
-            font-weight: 700;
             letter-spacing: 0.02em;
             text-transform: capitalize;
         }
         h3 {
-            font-family: var(--font-heading);
             font-size: 1.15rem;
             font-weight: 600;
             color: var(--red-dark);
             margin-top: 28px;
             margin-bottom: 10px;
         }
-
         p {
             margin-bottom: 14px;
             font-size: 0.95rem;
@@ -120,48 +77,7 @@
         }
         strong { color: var(--navy); }
 
-        .formula-box {
-            background: linear-gradient(145deg, #F0F4F8 0%, #E8ECF1 100%);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 22px 28px;
-            margin: 20px 0 24px;
-            font-family: var(--font-mono);
-            font-size: 0.88rem;
-            line-height: 1.9;
-            overflow-x: auto;
-            color: var(--navy);
-        }
-        .formula-box .label {
-            font-family: var(--font-heading);
-            font-weight: 700;
-            color: var(--solar);
-            font-size: 0.78rem;
-            text-transform: capitalize;
-            letter-spacing: 0.06em;
-            margin-bottom: 10px;
-            display: block;
-        }
-
-        .note-box {
-            background: linear-gradient(135deg, rgba(245,158,11,0.06) 0%, rgba(239,68,68,0.04) 100%);
-            border: 1px solid rgba(245,158,11,0.2);
-            border-left: 4px solid var(--accent);
-            border-radius: 0 10px 10px 0;
-            padding: 18px 24px;
-            margin: 20px 0 24px;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-        }
-        .note-box strong {
-            color: var(--accent);
-        }
-
-        .table-wrap {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            margin: 16px 0 24px;
-        }
+        /* Bare table overrides (methodology uses unclassed tables) */
         table {
             width: 100%;
             border-collapse: collapse;
@@ -196,194 +112,45 @@
         tbody tr:last-child td { border-bottom: none; }
         td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
 
-        .figure {
-            margin: 24px 0;
-            text-align: center;
-        }
-        .figure img {
-            max-width: 100%;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        .figure-caption {
-            font-size: 0.82rem;
-            color: var(--text-muted);
-            font-style: italic;
-            margin-top: 8px;
-        }
-
-        .source-list {
-            list-style: none;
-            padding: 0;
-        }
-        .source-list li {
-            margin-bottom: 14px;
-            padding-left: 20px;
-            position: relative;
-            font-size: 0.9rem;
-        }
-        .source-list li::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 9px;
-            width: 8px;
-            height: 8px;
-            background: linear-gradient(135deg, var(--accent) 0%, var(--solar) 100%);
-            border-radius: 50%;
-        }
-        .source-list a {
-            color: var(--navy);
-            text-decoration: none;
-            border-bottom: 1px solid rgba(239,68,68,0.3);
-            transition: all 0.15s ease;
-        }
-        .source-list a:hover {
-            color: var(--accent-dark);
-            border-bottom-color: var(--accent-dark);
-        }
-
-        .color-swatch {
-            display: inline-block;
-            width: 14px;
-            height: 14px;
-            border-radius: 3px;
-            vertical-align: middle;
-            margin-right: 6px;
-            border: 1.5px solid var(--fossil-coal);
-        }
-
-        .accent-bar {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--navy) 0%, var(--hydro) 25%, var(--wind) 50%, var(--solar) 75%, var(--red) 100%);
-            z-index: 1000;
-        }
+        /* Figure override (simpler style) */
+        .figure { margin: 24px 0; text-align: center; background: none; border: none; padding: 0; }
+        .figure img { max-width: 100%; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .figure-caption { margin-top: 8px; }
 
         /* ========== RESPONSIVE ========== */
         @media (max-width: 768px) {
             html { font-size: 15px; }
-            .content {
-                padding: 28px 16px 60px;
-            }
-            .toc {
-                padding: 20px 18px;
-            }
-            h2 {
-                font-size: 1.35rem;
-                margin-top: 36px;
-            }
-            h3 {
-                font-size: 1.05rem;
-            }
+            .content { padding: 28px 16px 60px; }
+            h2 { font-size: 1.35rem; margin-top: 36px; }
+            h3 { font-size: 1.05rem; }
             p { font-size: 0.9rem; }
-            .formula-box {
-                padding: 16px 14px;
-                font-size: 0.78rem;
-                border-radius: 8px;
-            }
-            .note-box {
-                padding: 14px 16px;
-                font-size: 0.85rem;
-            }
-            th {
-                padding: 10px 10px;
-                font-size: 0.78rem;
-            }
-            td {
-                padding: 8px 10px;
-                font-size: 0.82rem;
-            }
-            .source-list li {
-                font-size: 0.85rem;
-            }
+            th { padding: 10px 10px; font-size: 0.78rem; }
+            td { padding: 8px 10px; font-size: 0.82rem; }
         }
-
         @media (max-width: 480px) {
             html { font-size: 14px; }
-            .content {
-                padding: 20px 10px 48px;
-            }
-            .toc {
-                padding: 16px 14px;
-            }
-            .toc a {
-                font-size: 0.85rem;
-            }
-            h2 {
-                font-size: 1.2rem;
-                margin-top: 28px;
-                margin-bottom: 12px;
-            }
-            h3 {
-                font-size: 1rem;
-                margin-top: 20px;
-            }
+            .content { padding: 20px 10px 48px; }
+            h2 { font-size: 1.2rem; margin-top: 28px; margin-bottom: 12px; }
+            h3 { font-size: 1rem; margin-top: 20px; }
             p { font-size: 0.85rem; }
-            .formula-box {
-                padding: 12px 10px;
-                font-size: 0.82rem;
-                line-height: 1.7;
-            }
-            .formula-box .label {
-                font-size: 0.78rem;
-            }
-            .note-box {
-                padding: 12px 12px;
-                font-size: 0.82rem;
-            }
-            th {
-                padding: 8px 6px;
-                font-size: 0.78rem;
-            }
-            td {
-                padding: 6px 6px;
-                font-size: 0.82rem;
-            }
-            .back-link {
-                font-size: 0.85rem;
-                padding: 6px 10px;
-            }
-            .source-list li {
-                font-size: 0.82rem;
-                word-break: break-word;
-            }
+            .formula-box .label { font-size: 0.78rem; }
+            th { padding: 8px 6px; font-size: 0.78rem; }
+            td { padding: 6px 6px; font-size: 0.82rem; }
+            .back-link { font-size: 0.85rem; padding: 6px 10px; }
+            .source-list li { font-size: 0.82rem; word-break: break-word; }
         }
-
-        /* 375px breakpoint (mid-range phones) */
         @media (max-width: 375px) {
             .content { padding: 16px 8px 40px; }
         }
-
-        /* Touch-friendly */
-        @media (hover: none) and (pointer: coarse) {
-            .back-link {
-                min-height: 44px;
-                display: inline-flex;
-                align-items: center;
-            }
-            .toc a {
-                padding: 8px 4px;
-                display: flex;
-                align-items: center;
-                min-height: 44px;
-            }
-        }
-
         @media print {
             body { background: white; }
             .header { background: var(--navy); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             h2 { page-break-before: auto; }
-            .formula-box { page-break-inside: avoid; }
-            table { page-break-inside: avoid; }
-            .accent-bar { display: none; }
         }
     </style>
     <script src="js/chart-colors.js"></script>
     <script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
 </head>
 <body>
 
@@ -409,7 +176,7 @@
     </p>
 </div>
 
-<div class="content">
+<div class="content section-light">
     <div class="toc">
         <h2>Table of Contents</h2>
         <ol>
@@ -685,6 +452,7 @@
 
     <!-- ======== SECTION 5: OPTIMIZATION MODEL (dark panel) ======== -->
 </div>
+<div class="gradient-transition"></div>
 <section class="section-dark">
 <div class="section-dark-inner" style="max-width:900px;">
     <h2 id="optimization-model">5. Optimization Model</h2>
@@ -848,7 +616,8 @@
     </p>
 </div>
 </section>
-<div class="content">
+<div class="gradient-transition"></div>
+<div class="content section-light">
 
     <!-- ======== SECTION 6: STORAGE MODEL ======== -->
     <h2 id="storage-model">6. Storage Model (Battery &amp; LDES)</h2>

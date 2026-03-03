@@ -6,15 +6,15 @@
 <title>Wright's Law Learning Curves | The 8,760 Problem</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/article.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1"></script>
 <script src="js/chart-colors.js"></script>
 <script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
 <style>
-body { background: var(--bg-page); }
-
 .content-wrap {
     max-width: 1000px;
     margin: 0 auto;
@@ -204,7 +204,7 @@ body { background: var(--bg-page); }
 <div class="content-wrap">
 
 <!-- Intro Section -->
-<div class="intro-section">
+<div class="intro-section section-light">
     <h2>The Critical Mass Question</h2>
     <p>Wright's Law predicts that technology costs decline by a fixed percentage each time cumulative production doubles. Solar panels followed this pattern &mdash; falling 99% since 1976. But clean firm generation (advanced nuclear, CCS-CCGT) hasn't hit the first doubling yet. The question isn't <em>whether</em> costs will fall, but <em>when enough buyers commit</em> to trigger the learning curve.</p>
     <p>This analysis models what happens when C&I electricity buyers collectively adopt hourly CFE matching (Strategy 2C) at different participation levels. Below a critical mass threshold, new-build clean firm stays at FOAK pricing. Above it, Wright's Law activates and costs plummet toward NOAK levels &mdash; benefiting every participant.</p>
@@ -230,7 +230,7 @@ body { background: var(--bg-page); }
 </div>
 
 <!-- Section 1: Strategy Cost Comparison -->
-<div class="analysis-section">
+<div class="analysis-section section-light">
     <h3>Strategy Cost Trajectories at 90% CFE</h3>
     <p class="section-desc">How procurement strategy costs evolve as more C&I buyers participate. Strategy 2C (hourly matching with new-build investment) is the only strategy that gets <em>cheaper</em> at scale &mdash; once critical mass triggers Wright's Law learning curves. All others degrade or stay flat.</p>
     <div class="chart-box"><canvas id="chartStrategyComparison"></canvas></div>
@@ -244,7 +244,7 @@ body { background: var(--bg-page); }
 </div>
 
 <!-- Section 2: Technology LCOE Trajectories -->
-<div class="analysis-section">
+<div class="analysis-section section-light">
     <h3>Technology Learning Curves: FOAK to NOAK</h3>
     <p class="section-desc">Wright's Law cost trajectories for CCS-CCGT and advanced nuclear, gated by critical mass. Below the first-doubling threshold (8 GW CCS, 5 GW nuclear), costs stay at FOAK levels. After critical mass, they follow the standard learning curve toward NOAK pricing.</p>
     <div class="chart-box"><canvas id="chartLcoeTraj"></canvas></div>
@@ -254,7 +254,7 @@ body { background: var(--bg-page); }
 </div>
 
 <!-- Section 3: Critical Mass by CFE Threshold -->
-<div class="analysis-section">
+<div class="analysis-section section-light">
     <h3>Critical Mass: Participation Required by CFE Threshold</h3>
     <p class="section-desc">Higher CFE targets require more clean firm generation per participant, meaning fewer participants are needed to collectively cross the first-doubling threshold. At 99% CFE, just 5% participation triggers learning. At 90% CFE, it takes 25%.</p>
     <div class="chart-box" style="min-height: 320px;"><canvas id="chartCriticalMass"></canvas></div>
@@ -264,7 +264,7 @@ body { background: var(--bg-page); }
 </div>
 
 <!-- Section 4: Per-ISO Spend Decomposition -->
-<div class="analysis-section">
+<div class="analysis-section section-light">
     <h3>Per-ISO Spend Decomposition at 90% CFE</h3>
     <p class="section-desc">Where the money goes: existing clean premium payments vs. new-build investment, by ISO. ISOs with large existing nuclear fleets (PJM, NYISO, NEISO) have high premium shares. ISOs with less existing clean (ERCOT, SPP) are predominantly new-build.</p>
 
@@ -281,6 +281,31 @@ body { background: var(--bg-page); }
 </div>
 
 </div><!-- /content-wrap -->
+
+<!-- ============ RELATED ANALYSES ============ -->
+<div class="related-analyses">
+    <div class="related-analyses-title">Related Analyses</div>
+    <div class="related-analyses-grid">
+        <a href="new_build_analysis.html" class="related-card">
+            <div class="related-card-tag">Economics</div>
+            <div class="related-card-title">New Build Analysis</div>
+            <div class="related-card-desc">How learning curve projections translate to real investment decisions.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="clean_firm_case.html" class="related-card">
+            <div class="related-card-tag">Economics</div>
+            <div class="related-card-title">The Clean Firm Case</div>
+            <div class="related-card-desc">The technical and economic case for always-on clean power.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="abatement_dashboard.html" class="related-card">
+            <div class="related-card-tag">Carbon</div>
+            <div class="related-card-title">CO&#8322; Abatement</div>
+            <div class="related-card-desc">Regional marginal abatement costs across all 7 ISOs.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+    </div>
+</div>
 
 <footer class="page-footer">
     <div class="footer-links">
