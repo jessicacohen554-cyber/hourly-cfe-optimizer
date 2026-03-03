@@ -4318,7 +4318,7 @@ const DG_MAC = {"CAISO": {"50": {"High": {"mac_p10": 661.4, "mac_p50": 1007.3, "
 
 // ============================================================================
 // OPTIMAL CFE TARGETS — MAC × DAC crossover analysis
-// Source: step6_compute_optimal_targets.py → optimal_targets.json
+// Source: step5_compute_optimal_targets.py → optimal_targets.json
 // Crossover range = 3 grid cost tiers × 3 DAC scenarios = 9 combos
 // No-regrets: minimum resource floor across crossover range × L/M/H demand growth
 // ============================================================================

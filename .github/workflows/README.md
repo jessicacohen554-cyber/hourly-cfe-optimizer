@@ -21,7 +21,7 @@ Run these in sequence. Each step depends on the output of the previous step.
 | 2 | `step2-efficient-frontier.yml` | **Step 2: Efficient Frontier** | EF filter + optional EF expansion for Scenario A floors (merged from step 2.5). | ISO, **script** (ef-only / expand-ef / ef-then-expand), target_mixes, dry_run |
 | 3 | `step3-cost-optimization.yml` | **Step 3: Cost Optimization** | Vectorized cost optimization across 5,832 sensitivity combos. 3 tracks. | ISO, **track**, sensitivity_mode |
 | 4 | `step4-gas-ccs.yml` | **Step 4: Gas CCS Post-Processing** | NEISO winter pipeline constraint, 45Q correction, resource adequacy margin. | ISO |
-| 5 | `step5-dispatch-cache.yml` | **Step 5: Dispatch Cache & Track Analysis** | Pre-computes 8760-hour dispatch cache, exports/analyzes track results. | ISO, **script** (dispatch-cache / export-tracks / analyze-tracks) |
+| 5 | `step4-dispatch-cache.yml` | **Step 5: Dispatch Cache & Track Analysis** | Pre-computes 8760-hour dispatch cache, exports/analyzes track results. | ISO, **script** (dispatch-cache / export-tracks / analyze-tracks) |
 
 ## Page-Oriented Workflows (Step 6+)
 
@@ -29,14 +29,14 @@ Each workflow is organized by **which dashboard page it updates**. Every multi-s
 
 | # | Workflow | Display Name | What It Does | Scripts (sequential) |
 |---|----------|-------------|--------------|---------------------|
-| 6.0 | `step6.0-compute-co2.yml` | **Step 6.0: Compute CO₂ (Shared)** | Shared utility — dispatch-stack CO₂ emissions. **Run before 6.1.** | `step6_recompute_co2.py` |
-| 6.1 | `step6.1-update-mac-page.yml` | **Step 6.1: Update Abatement Page** | MAC stats → Optimal targets → Shared data. | **script**: mac-stats / optimal-targets / shared-data |
-| 6.2 | `step6.2-update-lmp-page.yml` | **Step 6.2: Update LMP Page** | Compute synthetic LMP → Extract dashboard JS. | **script**: compute-lmp / extract-dashboard |
-| 6.3 | `step6.3-update-scenarios-page.yml` | **Step 6.3: Update Scenarios Page** | Scenario A → B → Compare. | **script**: scenario-a / scenario-b / scenario-compare |
-| 6.4 | `step6.4-procurement-strategies.yml` | **Step 6.4: Update Procurement Page** | 10 strategy variants → combined dashboard JS. | **strategy**: strategy1 / strategy2 / strategy3 |
-| 6.5 | `step6.5-supplemental-analytics.yml` | **Step 6.5: Supplemental Analytics** | Compressed day + consequential queue (parallel). | **script**: compressed-day / consequential-queue |
-| 6.6 | `step6.6-update-optimizer-dashboard.yml` | **Step 6.6: Update Optimizer Dashboard** | Compressed day profiles + shared-data.js for dashboard.html. | **script**: compressed-day / shared-data |
-| 7 | `step7-generate-shared-data.yml` | **Step 7: Update Home Page / Shared Data** | Consolidates all results into `shared-data.js`. | (single script) |
+| 6.0 | `step5.0-compute-co2.yml` | **Step 6.0: Compute CO₂ (Shared)** | Shared utility — dispatch-stack CO₂ emissions. **Run before 6.1.** | `step5_compute_co2.py` |
+| 6.1 | `step5.1-update-mac-page.yml` | **Step 6.1: Update Abatement Page** | MAC stats → Optimal targets → Shared data. | **script**: mac-stats / optimal-targets / shared-data |
+| 6.2 | `step5.2-update-lmp-page.yml` | **Step 6.2: Update LMP Page** | Compute synthetic LMP → Extract dashboard JS. | **script**: compute-lmp / extract-dashboard |
+| 6.3 | `step5.3-update-scenarios-page.yml` | **Step 6.3: Update Scenarios Page** | Scenario A → B → Compare. | **script**: scenario-a / scenario-b / scenario-compare |
+| 6.4 | `step5.4-procurement-strategies.yml` | **Step 6.4: Update Procurement Page** | 10 strategy variants → combined dashboard JS. | **strategy**: strategy1 / strategy2 / strategy3 |
+| 6.5 | `step5.5-supplemental-analytics.yml` | **Step 6.5: Supplemental Analytics** | Compressed day + consequential queue (parallel). | **script**: compressed-day / consequential-queue |
+| 6.6 | `step5.6-update-optimizer-dashboard.yml` | **Step 6.6: Update Optimizer Dashboard** | Compressed day profiles + shared-data.js for dashboard.html. | **script**: compressed-day / shared-data |
+| 7 | `step6-generate-shared-data.yml` | **Step 7: Update Home Page / Shared Data** | Consolidates all results into `shared-data.js`. | (single script) |
 
 ## Utilities
 
