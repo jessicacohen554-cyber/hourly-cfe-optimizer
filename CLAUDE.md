@@ -318,9 +318,11 @@ When facing compute vs. rigor tradeoffs:
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/{page-type}.css"> <!-- scrollytell / dashboard-ui / article / reference -->
 <script src="js/nav.js"></script>
 <script src="js/chart-colors.js"></script>
 <script src="js/shared-header.js"></script>
+<script src="js/scroll-observer.js"></script>
 ```
 
 #### Standard Page Header (Every Page)
