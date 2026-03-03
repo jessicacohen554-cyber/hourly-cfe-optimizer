@@ -71,9 +71,9 @@ _THR_STR = {thr: str(thr) for thr in OUTPUT_THRESHOLDS}
 _YEAR_STR = {yr: str(yr) for yr in DG_UNIQUE_YEARS}
 
 # Pareto pruning price bounds (module-level constant, avoid per-call allocation)
-# Cols: wholesale, sol_new, wnd_new, ccs_new, uprate, geo, remaining, bat4, bat8, ldes, h2
-_PARETO_MIN_PRICES = np.array([20, 40, 30, 52, 15, 0, 52, 69, 77, 116, 182], dtype=np.float64)
-_PARETO_MAX_PRICES = np.array([50, 82, 83, 164, 15, 116, 84, 144, 179, 267, 470], dtype=np.float64)
+# Cols: wholesale, sol_new, wnd_new, osw_new, ccs_new, uprate, geo, remaining, bat4, bat8, ldes, h2
+_PARETO_MIN_PRICES = np.array([20, 40, 30, 0, 52, 15, 0, 52, 69, 77, 116, 182], dtype=np.float64)
+_PARETO_MAX_PRICES = np.array([50, 82, 83, 235, 164, 15, 116, 84, 144, 179, 267, 470], dtype=np.float64)
 
 # Per-ISO EF parquet directory (Step 2 output)
 EF_ISO_DIR = os.path.join(SCRIPT_DIR, 'data', 'step2-ef-parquets')
@@ -454,7 +454,7 @@ def pareto_prune_fast(coeff_matrix, constant, scores, thresholds):
         if Q < 2:
             continue
 
-        q_coeff = coeff_matrix[qual_idx]  # (Q, 11)
+        q_coeff = coeff_matrix[qual_idx]  # (Q, 12)
         q_const = constant[qual_idx]      # (Q,)
 
         # Min possible cost = q_coeff @ min_prices + q_const
