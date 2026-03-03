@@ -1229,6 +1229,26 @@ function initObservers() {
 // INIT
 // ============================================================================
 function initPage() {
+    // Check for incomplete data and show banner
+    var availableISOs = trackData ? Object.keys(trackData.results || trackData || {}).filter(function(k) { return REGIONS.indexOf(k) >= 0; }) : [];
+    var missingISOs = REGIONS.filter(function(iso) { return availableISOs.indexOf(iso) < 0; });
+    if (!trackData || missingISOs.length > 0) {
+        var banner = document.createElement('div');
+        banner.className = 'insight-box insight-warn';
+        banner.style.maxWidth = '900px';
+        banner.style.margin = '20px auto';
+        var msg = '<strong>Limited Data Available</strong><br>';
+        if (!trackData) {
+            msg += 'track_results.json could not be loaded. Charts may show incomplete data.';
+        } else {
+            msg += 'Data available for: <strong>' + (availableISOs.length > 0 ? availableISOs.join(', ') : 'none') + '</strong>. ';
+            msg += 'Missing: ' + missingISOs.join(', ') + '. Run Step 4.2 pipeline for all ISOs to populate.';
+        }
+        banner.innerHTML = msg;
+        var main = document.querySelector('.main-content') || document.querySelector('.content-section') || document.body;
+        main.insertBefore(banner, main.firstChild);
+    }
+
     buildHeroChart();
     updateStatBadges();
     initObservers();

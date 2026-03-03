@@ -1047,11 +1047,32 @@ function buildDataFromSharedData() {
 }
 
 // Build DATA from shared-data.js (no fetch needed)
-DATA = buildDataFromSharedData();
+try {
+    if (typeof THRESHOLDS === 'undefined' || typeof EFFECTIVE_COST_DATA === 'undefined') {
+        throw new Error('shared-data.js not loaded — required globals are undefined');
+    }
+    DATA = buildDataFromSharedData();
+} catch(e) {
+    console.error('Failed to build homepage data:', e);
+    DATA = null;
+}
 
 // Initialize — supports both DOMContentLoaded and already-loaded states
 function startHomepage() {
-    if (DATA) initHomepage();
+    if (DATA) {
+        initHomepage();
+    } else {
+        // Show error banner when data is unavailable
+        var main = document.querySelector('.main-content') || document.body;
+        var msg = document.createElement('div');
+        msg.className = 'insight-box insight-warn';
+        msg.style.maxWidth = '700px';
+        msg.style.margin = '40px auto';
+        msg.innerHTML = '<strong>Dashboard Data Not Available</strong><br>' +
+            'shared-data.js could not be loaded or is missing required data. ' +
+            'Run the Step 6 pipeline workflow to generate dashboard data.';
+        main.prepend(msg);
+    }
 }
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', startHomepage);

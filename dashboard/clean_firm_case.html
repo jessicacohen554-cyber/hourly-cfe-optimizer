@@ -283,7 +283,7 @@ body { background: var(--bg-page-white); }
                 <div class="chart-container" style="min-height:380px;position:relative;">
                     <canvas id="foakNOAKChart"></canvas>
                 </div>
-                <div style="display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:center;padding:8px 12px 12px;font-size:0.72rem;color:rgba(0,0,0,0.55);">
+                <div style="display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:center;padding:8px 12px 12px;font-size:0.72rem;color:rgba(0,0,0,0.65);">
                     <span><span style="display:inline-block;width:20px;height:3px;background:#22C55E;vertical-align:middle;margin-right:4px;border-radius:2px;"></span> Clean Firm (central)</span>
                     <span><span style="display:inline-block;width:20px;height:3px;background:rgba(34,197,94,0.3);vertical-align:middle;margin-right:4px;border-radius:2px;"></span> Learning range</span>
                     <span style="border-left:1px solid rgba(0,0,0,0.1);padding-left:12px;"><span style="display:inline-block;width:20px;height:3px;background:#EF4444;vertical-align:middle;margin-right:4px;border-radius:2px;"></span> Gas + carbon pricing</span>
@@ -513,35 +513,42 @@ let gasTrapChart = null;
 let displacementChart = null;
 let investmentChart = null;
 
+// Defensive guards for data globals
+const _THR = typeof THRESHOLDS !== 'undefined' ? THRESHOLDS : [];
+const _GAS = typeof GAS_BACKUP_DATA !== 'undefined' ? GAS_BACKUP_DATA : {};
+const _DEMAND = typeof REGIONAL_DEMAND_TWH !== 'undefined' ? REGIONAL_DEMAND_TWH : {};
+const _NUC_LCOE = typeof NUCLEAR_NEWBUILD_LCOE !== 'undefined' ? NUCLEAR_NEWBUILD_LCOE : {L:{},M:{},H:{}};
+
 // Threshold indices for readable charts: 50,70,80,85,90,95,97.5,99
 const DISPLAY_IDXS = [0, 2, 4, 5, 7, 9, 10, 11];
-const DISPLAY_LABELS = DISPLAY_IDXS.map(i => THRESHOLDS[i] + '%');
+const DISPLAY_LABELS = DISPLAY_IDXS.map(i => (_THR[i] || 0) + '%');
 
 // ============================================================================
 // DATA HELPERS
 // ============================================================================
-function gd(iso) { return GAS_BACKUP_DATA[iso]; }
+function gd(iso) { return _GAS[iso] || null; }
 function gw(mw) { return (mw / 1000).toFixed(0); }
 function gwf(mw) { return (mw / 1000).toFixed(1); }
 
 // Per-ISO narrative data at 90% threshold (index 7)
 function isoStats(iso) {
     var d = gd(iso);
-    var demand = REGIONAL_DEMAND_TWH[iso];
+    if (!d) return null;
+    var demand = _DEMAND[iso] || 0;
     return {
-        newGW: gw(d.new_gas_build_mw[7]),
-        existGW: gw(d.existing_gas_used_mw[7]),
-        totalGW: gw(d.gas_backup_mw[7]),
-        newCost: d.new_gas_cost[7].toFixed(1),
-        totalCost: d.gas_backup_cost[7].toFixed(1),
-        annualB: (d.new_gas_cost[7] * demand / 1000).toFixed(1),
-        covStart: d.clean_coverage_pct[0].toFixed(0),
-        cov90: d.clean_coverage_pct[7].toFixed(0),
-        covEnd: d.clean_coverage_pct[10].toFixed(0),
-        gasDisplaced: gw(d.gas_backup_mw[0] - d.gas_backup_mw[10]),
-        nucFOAK: NUCLEAR_NEWBUILD_LCOE.H[iso],
-        nucNOAK: NUCLEAR_NEWBUILD_LCOE.L[iso],
-        nucMed: NUCLEAR_NEWBUILD_LCOE.M[iso]
+        newGW: gw(d.new_gas_build_mw ? d.new_gas_build_mw[7] : 0),
+        existGW: gw(d.existing_gas_used_mw ? d.existing_gas_used_mw[7] : 0),
+        totalGW: gw(d.gas_backup_mw ? d.gas_backup_mw[7] : 0),
+        newCost: d.new_gas_cost ? d.new_gas_cost[7].toFixed(1) : '0',
+        totalCost: d.gas_backup_cost ? d.gas_backup_cost[7].toFixed(1) : '0',
+        annualB: d.new_gas_cost ? (d.new_gas_cost[7] * demand / 1000).toFixed(1) : '0',
+        covStart: d.clean_coverage_pct ? d.clean_coverage_pct[0].toFixed(0) : '0',
+        cov90: d.clean_coverage_pct ? d.clean_coverage_pct[7].toFixed(0) : '0',
+        covEnd: d.clean_coverage_pct ? d.clean_coverage_pct[10].toFixed(0) : '0',
+        gasDisplaced: d.gas_backup_mw ? gw(d.gas_backup_mw[0] - d.gas_backup_mw[10]) : '0',
+        nucFOAK: _NUC_LCOE.H[iso] || 0,
+        nucNOAK: _NUC_LCOE.L[iso] || 0,
+        nucMed: _NUC_LCOE.M[iso] || 0
     };
 }
 
@@ -848,11 +855,11 @@ function buildInvestmentChart() {
     var ctx = document.getElementById('investmentChart');
     if (!ctx) return;
 
-    var gasTotal = ISOS.map(function(iso) { return gd(iso).gas_backup_cost[7]; });
-    var newGasCost = ISOS.map(function(iso) { return gd(iso).new_gas_cost[7]; });
-    var foakLCOE = ISOS.map(function(iso) { return NUCLEAR_NEWBUILD_LCOE.H[iso]; });
-    var noakLCOE = ISOS.map(function(iso) { return NUCLEAR_NEWBUILD_LCOE.L[iso]; });
-    var medLCOE = ISOS.map(function(iso) { return NUCLEAR_NEWBUILD_LCOE.M[iso]; });
+    var gasTotal = ISOS.map(function(iso) { var d = gd(iso); return d && d.gas_backup_cost ? d.gas_backup_cost[7] : 0; });
+    var newGasCost = ISOS.map(function(iso) { var d = gd(iso); return d && d.new_gas_cost ? d.new_gas_cost[7] : 0; });
+    var foakLCOE = ISOS.map(function(iso) { return _NUC_LCOE.H[iso] || 0; });
+    var noakLCOE = ISOS.map(function(iso) { return _NUC_LCOE.L[iso] || 0; });
+    var medLCOE = ISOS.map(function(iso) { return _NUC_LCOE.M[iso] || 0; });
 
     investmentChart = new Chart(ctx, {
         type: 'bar',
@@ -1286,8 +1293,10 @@ document.addEventListener('DOMContentLoaded', function() {
     var totalNewGas = 0;
     var totalAnnualCost = 0;
     ISOS.forEach(function(iso) {
-        totalNewGas += gd(iso).new_gas_build_mw[7];
-        totalAnnualCost += gd(iso).new_gas_cost[7] * REGIONAL_DEMAND_TWH[iso];
+        var d = gd(iso);
+        if (!d) return;
+        totalNewGas += (d.new_gas_build_mw ? d.new_gas_build_mw[7] : 0);
+        totalAnnualCost += (d.new_gas_cost ? d.new_gas_cost[7] : 0) * (_DEMAND[iso] || 0);
     });
     var newGasGW = Math.round(totalNewGas / 1000);
     var annualCostB = Math.round(totalAnnualCost / 1000);
