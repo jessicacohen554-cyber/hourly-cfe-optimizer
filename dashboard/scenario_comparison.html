@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="styles/dashboard-ui.css">
 <script src="js/chart-colors.js"></script>
 <script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <style>
@@ -255,12 +256,16 @@ body { background: var(--bg-alt-warm); }
     </div>
 </section>
 
+<div class="gradient-transition"></div>
+
 <!-- ===== DASHBOARD TITLE ===== -->
-<div class="dashboard-header">
+<div class="dashboard-header section-light">
     <h2>Interactive Scenario Dashboard</h2>
     <p>Compare two procurement strategies across 5 US grid regions and 21 CFE thresholds.
     Toggle the region and target below to see how each scenario performs.</p>
 </div>
+
+<div class="gradient-transition"></div>
 
 <!-- ===== SCENARIO A / B SIDE-BY-SIDE INTRO ===== -->
 <section class="section-dark" style="padding-top: var(--space-xl); padding-bottom: var(--space-xl);">
@@ -284,6 +289,8 @@ body { background: var(--bg-alt-warm); }
 </div>
 </section>
 
+<div class="gradient-transition"></div>
+
 <!-- ===== REGION TOGGLE + TARGET SLIDER (sticky, single row on desktop) ===== -->
 <div class="global-iso-bar">
     <span class="bar-label">Region:</span>
@@ -305,7 +312,7 @@ body { background: var(--bg-alt-warm); }
 </div>
 
 <!-- ===== CHARTS SECTION ===== -->
-<section class="content-section" style="padding-top: 24px;">
+<section class="content-section section-light" style="padding-top: 24px;">
 
 <!-- 1. What Gets Built — Resource Mix Side-by-Side -->
 <h2 class="section-title">What Gets Built: Scenario A vs Scenario B</h2>
@@ -370,6 +377,8 @@ each ISO must complete prior threshold steps before advancing. First row per ISO
 </div>
 
 </section>
+
+<div class="gradient-transition"></div>
 
 <!-- Methodology -->
 <section class="section-dark">
