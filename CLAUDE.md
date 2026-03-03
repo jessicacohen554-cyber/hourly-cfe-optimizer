@@ -131,8 +131,8 @@
 
 **Step 4: Dispatch Cache + Independent Analysis** (run after Step 3, output to `data/step5-post-processing/`):
 - `step4_build_dispatch_cache.py` — **Run first.** Pre-computes 8,760-hour dispatch for all unique mixes. Versioned NPZ cache (v2) with per-resource matched/surplus + charge profiles.
-- `step4_export_track_results.py` — Exports track parquets (NB + CTR) to `track_results.json`. No cache dependency.
-- `step4_analyze_tracks.py` — Track cost envelopes (P10/P50/P90), resource mix differentials. No cache dependency.
+- `step5_export_track_results.py` — Exports track parquets (NB + CTR) to `track_results.json`. No cache dependency.
+- `step5_analyze_tracks.py` — Track cost envelopes (P10/P50/P90), resource mix differentials. No cache dependency.
 
 **Step 5: Dispatch-Cache-Dependent Analysis** (10 scripts, output to `data/step5-post-processing/`):
 - `step5_compute_co2.py` — CO₂ dispatch-stack model. Merit-order retirement (coal → oil → gas). Coal/oil capped at 2025 TWh. **Run before MAC stats.**
