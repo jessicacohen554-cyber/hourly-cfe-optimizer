@@ -71,16 +71,19 @@ STORAGE_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5,
                       90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
 
 # Pass 0: Maximum storage levels (ceiling screen)
-MAX_BAT4 = np.array([6.0], dtype=np.float64)
-MAX_BAT8 = np.array([8.0], dtype=np.float64)
-MAX_LDES = np.array([25.0], dtype=np.float64)
+MAX_BAT4 = np.array([0.5], dtype=np.float64)
+MAX_BAT8 = np.array([1.0], dtype=np.float64)
+MAX_LDES = np.array([5.0], dtype=np.float64)
 MAX_H2 = np.array([25.0], dtype=np.float64)
 NO_H2 = np.array([0.0], dtype=np.float64)
 
-# Pass 1: Full coarse grids (used to build per-bucket adaptive grids)
-FULL_BAT4 = np.array([0, 1, 2, 3, 4, 5, 6], dtype=np.float64)
-FULL_BAT8 = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8], dtype=np.float64)
-FULL_LDES = np.array([0, 2, 5, 8, 10, 15, 20, 25], dtype=np.float64)
+# Pass 1: Log-spaced coarse grids (fine low-end where cost-meaningful sizing lives)
+# Old integer grids [0,1,2,...6] missed the 0.05-0.50 range entirely — bat4=1.0
+# was 5-20× oversized for most mixes. These grids match the refined-file range
+# (bat4: 0.05-0.20, bat8: 0.10-0.40, LDES: 0.25-1.50 for typical thresholds).
+FULL_BAT4 = np.array([0, 0.05, 0.1, 0.2, 0.5], dtype=np.float64)
+FULL_BAT8 = np.array([0, 0.1, 0.2, 0.5, 1.0], dtype=np.float64)
+FULL_LDES = np.array([0, 0.25, 0.5, 1.0, 2.0, 5.0], dtype=np.float64)
 FULL_H2 = np.array([0, 5, 10, 15, 20, 25], dtype=np.float64)
 
 # Gap bucket boundaries (in percentage points).
@@ -104,6 +107,9 @@ CAISO_MIX_BATCH = 500    # CAISO (5D, same batch size)
 
 # Minimum surplus days for battery deployment
 MIN_SURPLUS_DAYS_FOR_BATTERY = 150
+
+# Dominance filter: max non-dominated combos per mix per threshold
+N_KEEP = 10
 
 # Storage sweep floor
 STORAGE_SWEEP_FLOOR = 0.50
@@ -171,19 +177,22 @@ def _build_bucket_grid(max_gap_pp, include_h2):
     """Build storage grid sized to the gap bucket.
 
     Returns (bat4_arr, bat8_arr, ldes_arr, h2_arr) numpy arrays.
-    Storage levels are capped at ~3× the bucket's max gap (efficiency headroom).
+    With the log-spaced fine grid (bat4 up to 0.5, bat8 up to 1.0,
+    LDES up to 5.0), the full grid is only 150 combos — always used
+    in full. The gap-bucket cap is kept for future-proofing but rarely
+    filters at current grid sizes.
     """
-    cap = max_gap_pp * 3.0  # storage capacity headroom
+    cap = max_gap_pp * 3.0
 
-    bat4 = FULL_BAT4[FULL_BAT4 <= max(cap, 1)]
+    bat4 = FULL_BAT4[FULL_BAT4 <= max(cap, 0.5)]
     if len(bat4) < 2:
-        bat4 = FULL_BAT4[:2]  # at least [0, 1]
+        bat4 = FULL_BAT4[:2]
 
-    bat8 = FULL_BAT8[FULL_BAT8 <= max(cap, 1)]
+    bat8 = FULL_BAT8[FULL_BAT8 <= max(cap, 1.0)]
     if len(bat8) < 2:
         bat8 = FULL_BAT8[:2]
 
-    ldes = FULL_LDES[FULL_LDES <= max(cap, 2)]
+    ldes = FULL_LDES[FULL_LDES <= max(cap, 2.0)]
     if len(ldes) < 2:
         ldes = FULL_LDES[:2]
 
@@ -305,8 +314,6 @@ def run_adaptive_coarse(iso, nm_combos, nm_base_scores, max_scores,
               f"(b4={n_b4} b8={n_b8} ldes={n_l} h2={n_h2})")
 
         # Pre-sort combo indices by total storage (ascending).
-        # For each mix, we iterate in this order and stop at the first
-        # hit per threshold — no need to test larger storage combos.
         sorted_combos = []
         for b4i in range(n_b4):
             for b8i in range(n_b8):
@@ -326,7 +333,26 @@ def run_adaptive_coarse(iso, nm_combos, nm_base_scores, max_scores,
                             (total_s, flat_idx, bp, b8p, lp, h2p))
         sorted_combos.sort()  # ascending by total storage
 
-        # Process in batches
+        # Convert to numpy arrays for vectorized access
+        n_sorted = len(sorted_combos)
+        sc_flat_idx = np.array([c[1] for c in sorted_combos], dtype=np.intp)
+        sc_bp = np.array([c[2] for c in sorted_combos], dtype=np.float64)
+        sc_b8p = np.array([c[3] for c in sorted_combos], dtype=np.float64)
+        sc_lp = np.array([c[4] for c in sorted_combos], dtype=np.float64)
+        sc_h2p = np.array([c[5] for c in sorted_combos], dtype=np.float64)
+
+        sc_has_battery = (sc_bp > 0) | (sc_b8p > 0)
+
+        # Precompute static dominance matrix: dom[i,j] = True means combo i
+        # dominates combo j (i has ≤ values in ALL 4 storage dims).
+        # This is a property of the grid, not the mixes — compute once per bucket.
+        dom = ((sc_bp[:, np.newaxis] <= sc_bp[np.newaxis, :]) &
+               (sc_b8p[:, np.newaxis] <= sc_b8p[np.newaxis, :]) &
+               (sc_lp[:, np.newaxis] <= sc_lp[np.newaxis, :]) &
+               (sc_h2p[:, np.newaxis] <= sc_h2p[np.newaxis, :]))
+        np.fill_diagonal(dom, False)  # combo doesn't dominate itself
+
+        # Process in batches — fully vectorized across mixes
         for batch_start in range(0, len(bucket_idx), batch_size):
             batch_end = min(batch_start + batch_size, len(bucket_idx))
             b_idx = bucket_idx[batch_start:batch_end]
@@ -346,52 +372,78 @@ def run_adaptive_coarse(iso, nm_combos, nm_base_scores, max_scores,
 
             total_kernel_evals += n_batch * n_combos
 
-            # Extract: iterate combos smallest-first, stop per threshold
-            for local_i in range(n_batch):
-                mi = int(b_idx[local_i])
-                n_sd = int(surplus_days[mi])
-                mix_base = nm_base_scores[mi]
-                scores = batch_scores[local_i]
+            # Pre-compute per-mix constraints (vectorized)
+            battery_ok = surplus_days[b_idx] >= MIN_SURPLUS_DAYS_FOR_BATTERY
 
-                # Track which thresholds still need a solution for this mix
-                unsatisfied = set()
-                for t in active_thresholds:
-                    if mix_base < t / 100.0:
-                        unsatisfied.add(t)
-                if not unsatisfied:
-                    continue
+            # Score matrix reindexed to sorted combo order (computed once per batch)
+            sorted_scores = batch_scores[:, sc_flat_idx]  # (n_batch, n_sorted)
 
-                for (_, flat_idx, bp, b8p, lp, h2p) in sorted_combos:
-                    if not unsatisfied:
-                        break  # all thresholds satisfied for this mix
+            # Pre-compute per-threshold base eligibility
+            base_below = {}
+            for t in active_thresholds:
+                base_below[t] = nm_base_scores[b_idx] < (t / 100.0)
 
-                    # Skip battery if insufficient surplus days
-                    if (bp > 0 or b8p > 0) and n_sd < MIN_SURPLUS_DAYS_FOR_BATTERY:
+            # Battery ban mask (same for all thresholds)
+            battery_ban = np.outer(~battery_ok, sc_has_battery) if sc_has_battery.any() else None
+
+            # Vectorized dominance-filtered extraction.
+            # Iterates combos in sorted order (ascending total storage).
+            # For each combo, vectorized feasibility check across all mixes.
+            # When a combo is recorded for a mix, all combos it dominates
+            # are blocked for that mix via the precomputed dominance matrix.
+            for t in active_thresholds:
+                target = t / 100.0
+
+                # Per-mix blocked mask and record count
+                blocked = np.zeros((n_batch, n_sorted), dtype=bool)
+                n_recorded = np.zeros(n_batch, dtype=np.int32)
+
+                for ci in range(n_sorted):
+                    # Early exit: all mixes have N_KEEP combos
+                    if n_recorded.min() >= N_KEEP:
+                        break
+
+                    # H2 gate
+                    if sc_h2p[ci] > 0 and t < 95:
                         continue
 
-                    score = scores[flat_idx]
-                    if score < 0:
+                    fidx = int(sc_flat_idx[ci])
+                    scores_col = batch_scores[:, fidx]
+
+                    # Vectorized feasibility
+                    hits = ((scores_col >= target) &
+                            base_below[t] &
+                            ~blocked[:, ci] &
+                            (n_recorded < N_KEEP))
+
+                    if sc_has_battery[ci] and battery_ban is not None:
+                        hits &= battery_ok
+
+                    if not hits.any():
                         continue
 
-                    score_pct = round(score * 100, 2)
-                    satisfied_now = []
-                    for t in unsatisfied:
-                        target = t / 100.0
-                        if score < target:
-                            continue
-                        if h2p > 0 and t < 95:
-                            continue
+                    # Record results for all hit mixes
+                    hit_idx = np.where(hits)[0]
+                    bp = float(sc_bp[ci])
+                    b8p = float(sc_b8p[ci])
+                    lp = float(sc_lp[ci])
+                    h2p = float(sc_h2p[ci])
+                    score_pcts = np.round(scores_col[hit_idx] * 100, 2)
+
+                    for k in range(len(hit_idx)):
+                        mi = int(b_idx[hit_idx[k]])
                         results[t].append(
-                            (mi, float(bp), float(b8p),
-                             float(lp), float(h2p), score_pct))
-                        satisfied_now.append(t)
-                        total_feasible += 1
+                            (mi, bp, b8p, lp, h2p,
+                             float(score_pcts[k])))
+                    total_feasible += len(hit_idx)
 
-                    for t in satisfied_now:
-                        unsatisfied.discard(t)
+                    # Block dominated combos for hit mixes (vectorized)
+                    blocked[hits] |= dom[ci]
+                    n_recorded[hits] += 1
 
     print(f"    Pass 1 complete: {total_feasible:,} feasible "
-          f"(min-storage per mix), {total_kernel_evals:,.0f} kernel evals")
+          f"(dominance-filtered, N≤{N_KEEP} per mix), "
+          f"{total_kernel_evals:,.0f} kernel evals")
     return results
 
 
@@ -465,9 +517,12 @@ def run_fine_storage(iso, threshold, nm_combos, coarse_results,
 
         for mi, (best_b4, best_b8, best_l, best_h2, best_score) in batch:
             # Generate fine ranges around the coarse winner
-            fine_b4 = _fine_range(best_b4, FINE_STEP, FINE_HALF_WIDTH, 0, 6)
-            fine_b8 = _fine_range(best_b8, FINE_STEP, FINE_HALF_WIDTH, 0, 8)
-            fine_l = _fine_range(best_l, FINE_STEP, FINE_HALF_WIDTH, 0, 25)
+            fine_b4 = _fine_range(best_b4, FINE_STEP, FINE_HALF_WIDTH,
+                                  0, float(FULL_BAT4[-1]))
+            fine_b8 = _fine_range(best_b8, FINE_STEP, FINE_HALF_WIDTH,
+                                  0, float(FULL_BAT8[-1]))
+            fine_l = _fine_range(best_l, FINE_STEP, FINE_HALF_WIDTH,
+                                 0, float(FULL_LDES[-1]))
 
             if threshold >= 95 and best_h2 > 0:
                 fine_h2 = _fine_range(best_h2, FINE_STEP * 10, FINE_HALF_WIDTH * 5, 0, 25)
@@ -501,9 +556,10 @@ def run_fine_storage(iso, threshold, nm_combos, coarse_results,
 
             scores_flat = mix_scores[0]  # (n_combos,)
 
-            # Extract feasible results
+            # Collect feasible combos, sort by total storage, dominance-filter
             n_b4, n_b8, n_l, n_h2 = (len(fine_b4), len(fine_b8),
                                       len(fine_l), len(fine_h2))
+            feasible = []
             for b4i in range(n_b4):
                 for b8i in range(n_b8):
                     for li in range(n_l):
@@ -513,12 +569,32 @@ def run_fine_storage(iso, threshold, nm_combos, coarse_results,
                                    li * n_h2 + h2i)
                             score = scores_flat[idx]
                             if score >= 0 and score >= target:
-                                fine_results.append(
-                                    (int(mi), float(fine_b4[b4i]),
-                                     float(fine_b8[b8i]),
-                                     float(fine_l[li]),
-                                     float(fine_h2[h2i]),
-                                     round(score * 100, 2)))
+                                b4v = fine_b4[b4i]
+                                b8v = fine_b8[b8i]
+                                lv = fine_l[li]
+                                h2v = fine_h2[h2i]
+                                feasible.append(
+                                    (b4v + b8v + lv + h2v,
+                                     b4v, b8v, lv, h2v, score))
+
+            # Sort ascending by total storage, then dominance filter
+            feasible.sort()
+            recorded = []
+            for _, b4v, b8v, lv, h2v, score in feasible:
+                dominated = False
+                for rb4, rb8, rld, rh2 in recorded:
+                    if rb4 <= b4v and rb8 <= b8v and rld <= lv and rh2 <= h2v:
+                        dominated = True
+                        break
+                if dominated:
+                    continue
+                recorded.append((b4v, b8v, lv, h2v))
+                fine_results.append(
+                    (int(mi), float(b4v), float(b8v),
+                     float(lv), float(h2v),
+                     round(score * 100, 2)))
+                if len(recorded) >= N_KEEP:
+                    break
 
             processed += 1
 
