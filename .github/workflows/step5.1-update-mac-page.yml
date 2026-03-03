@@ -1,9 +1,9 @@
 name: "Step 6.1: Update Abatement Page"
 
 # Runs three scripts sequentially to fully populate the Abatement / MAC page:
-#   1. step6_compute_mac_stats.py  — 6 MAC metrics, ANOVA decomposition, crossover analysis
-#   2. step6_compute_optimal_targets.py — optimal CFE target per ISO via DAC crossover
-#   3. step7_generate_shared_data.py — consolidates all results into shared-data.js
+#   1. step5_compute_mac_stats.py  — 6 MAC metrics, ANOVA decomposition, crossover analysis
+#   2. step5_compute_optimal_targets.py — optimal CFE target per ISO via DAC crossover
+#   3. step6_generate_shared_data.py — consolidates all results into shared-data.js
 #
 # Prerequisite: Step 6.0 (CO2) must have run first — MAC depends on CO2 output.
 # Output: dashboard/js/mac-stats-data.js, optimal-target-data.js, shared-data.js
@@ -104,19 +104,19 @@ jobs:
         if: ${{ inputs.script == 'ALL' || inputs.script == 'mac-stats' }}
         run: |
           echo "=== MAC Statistics (6 metrics, ANOVA, crossover) ==="
-          python scripts/step6_compute_mac_stats.py
+          python scripts/step5_compute_mac_stats.py
 
       - name: "2/3 — Compute Optimal Targets"
         if: ${{ inputs.script == 'ALL' || inputs.script == 'optimal-targets' }}
         run: |
           echo "=== Optimal CFE Targets (DAC crossover analysis) ==="
-          python scripts/step6_compute_optimal_targets.py
+          python scripts/step5_compute_optimal_targets.py
 
       - name: "3/3 — Generate Shared Data"
         if: ${{ inputs.script == 'ALL' || inputs.script == 'shared-data' }}
         run: |
           echo "=== Consolidate results into shared-data.js ==="
-          python scripts/step7_generate_shared_data.py
+          python scripts/step6_generate_shared_data.py
 
       - name: Batched commit and push
         run: |

@@ -3,9 +3,9 @@
 Shared constants, cost functions, and utilities for scenario comparison scripts.
 
 Used by:
-  - step6_scenario_a.py (Scenario A: Pure Consequential)
-  - step6_scenario_b.py (Scenario B: Hourly Matching)
-  - step6_scenario_compare.py (comparison and output)
+  - step5_scenario_a_consequential.py (Scenario A: Pure Consequential)
+  - step5_scenario_b_hourly.py (Scenario B: Hourly Matching)
+  - step5_scenario_comparison.py (comparison and output)
   - step2_5_expand_ef_for_floors.py (EF expansion)
 """
 
@@ -18,40 +18,39 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 
-# Import dispatch utilities
+# Import shared constants from pipeline_config (single source of truth)
 sys.path.insert(0, str(Path(__file__).parent))
+from pipeline_config import (
+    ISOS, OFFSHORE_ISOS,
+    OFFSHORE_WIND_CAP_TWH, CCS_CAP_TWH, GEOTHERMAL_CAP_TWH,
+    GRID_MIX_SHARES, REGIONAL_DEMAND_TWH,
+    WHOLESALE_PRICES, FUEL_ADJUSTMENTS,
+    NEISO_CCS_GAS_ADDER, NEISO_WHOLESALE_ADDER,
+    H,
+)
+
+# Import dispatch utilities
 from dispatch_utils import (
     compute_fossil_retirement, compute_co2_from_dispatch,
-    BASE_DEMAND_TWH, GRID_MIX_SHARES,
     COAL_CAP_TWH, OIL_CAP_TWH, COAL_OIL_RETIREMENT_THRESHOLD,
-    H, load_common_data, get_supply_profiles, get_demand_profile,
+    load_common_data, get_supply_profiles, get_demand_profile,
     build_supply_matrix, reconstruct_hourly_dispatch,
     _archetype_key, load_dispatch_cache, get_or_compute_dispatch,
-    OFFSHORE_ISOS, OFFSHORE_WIND_CAP_TWH, CCS_CAP_TWH, GEOTHERMAL_CAP_TWH,
 )
 
 # ============================================================================
-# CONSTANTS (from step3_cost_optimization.py)
+# CONSTANTS
 # ============================================================================
 
 from step3_cost_optimization import OUTPUT_THRESHOLDS as THRESHOLDS
 
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']
 
-HYDRO_CAP_TWH = {iso: GRID_MIX_SHARES[iso].get('hydro', 0) / 100.0 * BASE_DEMAND_TWH[iso]
-                 for iso in ISOS}
+# Backward compatibility alias
+BASE_DEMAND_TWH = REGIONAL_DEMAND_TWH
 
-WHOLESALE_PRICES = {'CAISO': 30, 'ERCOT': 27, 'PJM': 34, 'NYISO': 42, 'NEISO': 41, 'MISO': 30, 'SPP': 25}
-FUEL_ADJUSTMENTS = {
-    'CAISO': {'Low': -5, 'Medium': 0, 'High': 10},
-    'ERCOT': {'Low': -7, 'Medium': 0, 'High': 12},
-    'PJM':   {'Low': -6, 'Medium': 0, 'High': 11},
-    'NYISO': {'Low': -4, 'Medium': 0, 'High': 8},
-    'NEISO': {'Low': -4, 'Medium': 0, 'High': 8},
-    'MISO':  {'Low': -6, 'Medium': 0, 'High': 11},
-    'SPP':   {'Low': -7, 'Medium': 0, 'High': 12},
-}
+HYDRO_CAP_TWH = {iso: GRID_MIX_SHARES[iso].get('hydro', 0) / 100.0 * REGIONAL_DEMAND_TWH[iso]
+                 for iso in ISOS}
 
 LCOE_TABLES = {
     'solar': {
@@ -121,10 +120,12 @@ NUCLEAR_NEWBUILD_LCOE = {
 GEOTHERMAL_LCOE = {'L': 63, 'M': 88, 'H': 110}
 GEO_CAP_TWH = 39.0
 CCS_LCOE_45Q_ON = {
-    'L': {'CAISO': 58, 'ERCOT': 52, 'PJM': 62, 'NYISO': 78, 'NEISO': 75, 'MISO': 55, 'SPP': 50},
-    'M': {'CAISO': 86, 'ERCOT': 71, 'PJM': 79, 'NYISO': 99, 'NEISO': 96, 'MISO': 74, 'SPP': 68},
-    'H': {'CAISO': 115, 'ERCOT': 92, 'PJM': 102, 'NYISO': 128, 'NEISO': 122, 'MISO': 96, 'SPP': 88},
+    'L': {'CAISO': 59.5, 'ERCOT': 53.5, 'PJM': 63.5, 'NYISO': 79.5, 'NEISO': 76.5, 'MISO': 56.5, 'SPP': 51.5},
+    'M': {'CAISO': 87.5, 'ERCOT': 72.5, 'PJM': 80.5, 'NYISO': 100.5, 'NEISO': 97.5, 'MISO': 75.5, 'SPP': 69.5},
+    'H': {'CAISO': 116.5, 'ERCOT': 93.5, 'PJM': 103.5, 'NYISO': 129.5, 'NEISO': 123.5, 'MISO': 97.5, 'SPP': 89.5},
 }
+
+NEISO_CCS_GAS_ADDER = 13.13  # $/MWh — winter gas pipeline constraint (Algonquin Citygates)
 
 EXISTING_NUCLEAR_GW = {'CAISO': 2.3, 'ERCOT': 2.7, 'PJM': 32.0, 'NYISO': 3.4, 'NEISO': 3.5, 'MISO': 12.0, 'SPP': 1.2}
 UPRATE_CAP_TWH = {iso: round(gw * 0.08 * 0.90 * 8760 / 1e3, 3)
@@ -356,7 +357,10 @@ def _resource_new_build_lcoe(res, sens, iso):
         return NUCLEAR_NEWBUILD_LCOE[firm_lev][iso] + get_tx('clean_firm', tx_name, iso)
     elif res == 'ccs_ccgt':
         ccs_table = CCS_LCOE_45Q_ON if q45 == '1' else None
-        return ccs_table[ccs_lev][iso] + get_tx('ccs_ccgt', tx_name, iso)
+        ccs_lcoe = ccs_table[ccs_lev][iso]
+        if iso == 'NEISO':
+            ccs_lcoe += NEISO_CCS_GAS_ADDER
+        return ccs_lcoe + get_tx('ccs_ccgt', tx_name, iso)
     elif res == 'hydro':
         return 0
     elif res == 'battery':
@@ -402,6 +406,8 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
     else:
         ccs_table = CCS_LCOE_45Q_ON if q45 == '1' else None
         ccs_lcoe = ccs_table[ccs_lev][iso]
+    if iso == 'NEISO':
+        ccs_lcoe += NEISO_CCS_GAS_ADDER
     ccs_tx = get_tx('ccs_ccgt', tx_name, iso)
     ccs_price = ccs_lcoe + ccs_tx
     if overrides and 'nuclear_lcoe' in overrides:
@@ -615,11 +621,12 @@ def _get_excess_lcoe(res, sens, iso, overrides):
         osw_lcoe = LCOE_TABLES['offshore_wind'][ren_name].get(iso, 0)
         return osw_lcoe + get_tx('offshore_wind', tx_name, iso) if osw_lcoe > 0 else 0
     elif res == 'ccs_ccgt':
+        neiso_adder = NEISO_CCS_GAS_ADDER if iso == 'NEISO' else 0
         if overrides and 'ccs_lcoe' in overrides:
-            return overrides['ccs_lcoe'] + get_tx('ccs_ccgt', tx_name, iso)
+            return overrides['ccs_lcoe'] + neiso_adder + get_tx('ccs_ccgt', tx_name, iso)
         ccs_table = CCS_LCOE_45Q_ON if sens.get('q45') == '1' else None
         if ccs_table:
-            return ccs_table[sens['ccs']][iso] + get_tx('ccs_ccgt', tx_name, iso)
+            return ccs_table[sens['ccs']][iso] + neiso_adder + get_tx('ccs_ccgt', tx_name, iso)
         return 0
     elif res == 'ldes':
         if overrides and 'ldes_lcoe' in overrides:
@@ -708,6 +715,8 @@ def _precompute_cost_params(sens, iso, demand_twh, overrides=None, growth_factor
     else:
         ccs_table = CCS_LCOE_45Q_ON if q45 == '1' else None
         ccs_lcoe = ccs_table[ccs_lev][iso]
+    if iso == 'NEISO':
+        ccs_lcoe += NEISO_CCS_GAS_ADDER
     ccs_price = ccs_lcoe + get_tx('ccs_ccgt', tx_name, iso)
 
     # Nuclear / remaining price
