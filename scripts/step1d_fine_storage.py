@@ -71,16 +71,19 @@ STORAGE_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5,
                       90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
 
 # Pass 0: Maximum storage levels (ceiling screen)
-MAX_BAT4 = np.array([6.0], dtype=np.float64)
-MAX_BAT8 = np.array([8.0], dtype=np.float64)
-MAX_LDES = np.array([25.0], dtype=np.float64)
+MAX_BAT4 = np.array([0.5], dtype=np.float64)
+MAX_BAT8 = np.array([1.0], dtype=np.float64)
+MAX_LDES = np.array([5.0], dtype=np.float64)
 MAX_H2 = np.array([25.0], dtype=np.float64)
 NO_H2 = np.array([0.0], dtype=np.float64)
 
-# Pass 1: Full coarse grids (used to build per-bucket adaptive grids)
-FULL_BAT4 = np.array([0, 1, 2, 3, 4, 5, 6], dtype=np.float64)
-FULL_BAT8 = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8], dtype=np.float64)
-FULL_LDES = np.array([0, 2, 5, 8, 10, 15, 20, 25], dtype=np.float64)
+# Pass 1: Log-spaced coarse grids (fine low-end where cost-meaningful sizing lives)
+# Old integer grids [0,1,2,...6] missed the 0.05-0.50 range entirely — bat4=1.0
+# was 5-20× oversized for most mixes. These grids match the refined-file range
+# (bat4: 0.05-0.20, bat8: 0.10-0.40, LDES: 0.25-1.50 for typical thresholds).
+FULL_BAT4 = np.array([0, 0.05, 0.1, 0.2, 0.5], dtype=np.float64)
+FULL_BAT8 = np.array([0, 0.1, 0.2, 0.5, 1.0], dtype=np.float64)
+FULL_LDES = np.array([0, 0.25, 0.5, 1.0, 2.0, 5.0], dtype=np.float64)
 FULL_H2 = np.array([0, 5, 10, 15, 20, 25], dtype=np.float64)
 
 # Gap bucket boundaries (in percentage points).
@@ -171,19 +174,22 @@ def _build_bucket_grid(max_gap_pp, include_h2):
     """Build storage grid sized to the gap bucket.
 
     Returns (bat4_arr, bat8_arr, ldes_arr, h2_arr) numpy arrays.
-    Storage levels are capped at ~3× the bucket's max gap (efficiency headroom).
+    With the log-spaced fine grid (bat4 up to 0.5, bat8 up to 1.0,
+    LDES up to 5.0), the full grid is only 150 combos — always used
+    in full. The gap-bucket cap is kept for future-proofing but rarely
+    filters at current grid sizes.
     """
-    cap = max_gap_pp * 3.0  # storage capacity headroom
+    cap = max_gap_pp * 3.0
 
-    bat4 = FULL_BAT4[FULL_BAT4 <= max(cap, 1)]
+    bat4 = FULL_BAT4[FULL_BAT4 <= max(cap, 0.5)]
     if len(bat4) < 2:
-        bat4 = FULL_BAT4[:2]  # at least [0, 1]
+        bat4 = FULL_BAT4[:2]
 
-    bat8 = FULL_BAT8[FULL_BAT8 <= max(cap, 1)]
+    bat8 = FULL_BAT8[FULL_BAT8 <= max(cap, 1.0)]
     if len(bat8) < 2:
         bat8 = FULL_BAT8[:2]
 
-    ldes = FULL_LDES[FULL_LDES <= max(cap, 2)]
+    ldes = FULL_LDES[FULL_LDES <= max(cap, 2.0)]
     if len(ldes) < 2:
         ldes = FULL_LDES[:2]
 
@@ -332,15 +338,15 @@ def run_adaptive_coarse(iso, nm_combos, nm_base_scores, max_scores,
         sc_lp = np.array([c[4] for c in sorted_combos], dtype=np.float64)
         sc_h2p = np.array([c[5] for c in sorted_combos], dtype=np.float64)
 
-        # Per-combo archetype eligibility (static)
-        # 5 archetypes: min_total, bat4_heavy, bat8_heavy, ldes_heavy, balanced
-        sc_bat4_heavy = sc_bp > sc_b8p
-        sc_bat8_heavy = sc_b8p > sc_bp
-        sc_ldes_heavy = sc_lp > (sc_bp + sc_b8p)
-        sc_balanced = (sc_bp > 0) & (sc_b8p > 0)  # uses both battery durations
         sc_has_battery = (sc_bp > 0) | (sc_b8p > 0)
 
-        # Process in batches — vectorized across mixes, loop over combos
+        # Dominance filter: max non-dominated combos to keep per mix/threshold.
+        # The non-dominated set naturally spans all archetype structures
+        # (bat4-heavy, bat8-heavy, LDES-heavy, balanced) because no archetype
+        # dominates another — different dimensions are higher/lower.
+        N_KEEP = 10
+
+        # Process in batches — kernel is vectorized, extraction per-mix
         for batch_start in range(0, len(bucket_idx), batch_size):
             batch_end = min(batch_start + batch_size, len(bucket_idx))
             b_idx = bucket_idx[batch_start:batch_end]
@@ -368,91 +374,61 @@ def run_adaptive_coarse(iso, nm_combos, nm_base_scores, max_scores,
             for t in active_thresholds:
                 base_below[t] = nm_base_scores[b_idx] < (t / 100.0)
 
-            # Archetype tracking: 5 slots per (mix, threshold)
-            # 0=min_total, 1=bat4_heavy, 2=bat8_heavy, 3=ldes_heavy, 4=balanced
-            N_ARCH = 5
-            got = {}
+            # Build feasibility mask per threshold, then extract
+            # non-dominated combos per mix (dominance = lower/equal in ALL dims).
             for t in active_thresholds:
-                got[t] = np.zeros((n_batch, N_ARCH), dtype=bool)
+                target = t / 100.0
 
-            # Iterate combos in sorted order (ascending total storage).
-            # Vectorized across all mixes per combo — no per-mix Python loop.
-            for ci in range(n_sorted):
-                # Early exit: all 5 archetypes filled for all mixes
-                all_done = True
-                for t in active_thresholds:
-                    if not got[t].all():
-                        all_done = False
-                        break
-                if all_done:
-                    break
+                # Vectorized feasibility: (n_batch, n_sorted) boolean
+                sorted_scores = batch_scores[:, sc_flat_idx]
+                feas = (sorted_scores >= target)
+                feas &= base_below[t][:, np.newaxis]
 
-                fidx = int(sc_flat_idx[ci])
-                bp = float(sc_bp[ci])
-                b8p = float(sc_b8p[ci])
-                lp = float(sc_lp[ci])
-                h2p = float(sc_h2p[ci])
-                combo_has_bat = bool(sc_has_battery[ci])
-                combo_b4h = bool(sc_bat4_heavy[ci])
-                combo_b8h = bool(sc_bat8_heavy[ci])
-                combo_ldh = bool(sc_ldes_heavy[ci])
-                combo_bal = bool(sc_balanced[ci])
+                # Battery gate: ban battery combos for low-surplus mixes
+                if sc_has_battery.any():
+                    battery_banned = np.outer(~battery_ok, sc_has_battery)
+                    feas &= ~battery_banned
 
-                # Score for this combo across all mixes (vectorized)
-                scores_col = batch_scores[:, fidx]
+                # H2 gate: no H2 below 95%
+                if t < 95:
+                    h2_mask = sc_h2p > 0
+                    if h2_mask.any():
+                        feas[:, h2_mask] = False
 
-                for t in active_thresholds:
-                    if h2p > 0 and t < 95:
+                # Per-mix dominance-filtered extraction.
+                # Combos are pre-sorted by total storage ascending, so
+                # earlier combos have less total capacity. A combo is dominated
+                # if ANY already-recorded combo has ≤ values in ALL 4 dims.
+                for local_i in range(n_batch):
+                    if not feas[local_i].any():
                         continue
-
-                    target = t / 100.0
-                    hits = (scores_col >= target) & base_below[t]
-                    if combo_has_bat:
-                        hits = hits & battery_ok
-                    if not hits.any():
-                        continue
-
-                    # Compute per-archetype new fills
-                    fills_0 = hits & ~got[t][:, 0]
-                    fills_1 = (hits & ~got[t][:, 1]) if combo_b4h else None
-                    fills_2 = (hits & ~got[t][:, 2]) if combo_b8h else None
-                    fills_3 = (hits & ~got[t][:, 3]) if combo_ldh else None
-                    fills_4 = (hits & ~got[t][:, 4]) if combo_bal else None
-
-                    # Record once per mix if any archetype newly filled
-                    any_new = fills_0.copy()
-                    if fills_1 is not None:
-                        any_new |= fills_1
-                    if fills_2 is not None:
-                        any_new |= fills_2
-                    if fills_3 is not None:
-                        any_new |= fills_3
-                    if fills_4 is not None:
-                        any_new |= fills_4
-
-                    if any_new.any():
-                        idxs = np.where(any_new)[0]
-                        score_pcts = np.round(scores_col[idxs] * 100, 2)
-                        for k in range(len(idxs)):
-                            mi = int(b_idx[idxs[k]])
-                            results[t].append(
-                                (mi, bp, b8p, lp, h2p,
-                                 float(score_pcts[k])))
-                        total_feasible += len(idxs)
-
-                    # Update filled status
-                    got[t][:, 0] |= fills_0
-                    if fills_1 is not None:
-                        got[t][:, 1] |= fills_1
-                    if fills_2 is not None:
-                        got[t][:, 2] |= fills_2
-                    if fills_3 is not None:
-                        got[t][:, 3] |= fills_3
-                    if fills_4 is not None:
-                        got[t][:, 4] |= fills_4
+                    mi = int(b_idx[local_i])
+                    recorded = []  # list of (b4, b8, ldes, h2)
+                    for ci in range(n_sorted):
+                        if not feas[local_i, ci]:
+                            continue
+                        b4 = sc_bp[ci]
+                        b8 = sc_b8p[ci]
+                        ld = sc_lp[ci]
+                        h2 = sc_h2p[ci]
+                        # Dominance check against recorded combos
+                        dominated = False
+                        for rb4, rb8, rld, rh2 in recorded:
+                            if rb4 <= b4 and rb8 <= b8 and rld <= ld and rh2 <= h2:
+                                dominated = True
+                                break
+                        if dominated:
+                            continue
+                        recorded.append((b4, b8, ld, h2))
+                        score = round(float(sorted_scores[local_i, ci]) * 100, 2)
+                        results[t].append((mi, b4, b8, ld, h2, score))
+                        total_feasible += 1
+                        if len(recorded) >= N_KEEP:
+                            break
 
     print(f"    Pass 1 complete: {total_feasible:,} feasible "
-          f"(5-archetype per mix), {total_kernel_evals:,.0f} kernel evals")
+          f"(dominance-filtered, N≤{N_KEEP} per mix), "
+          f"{total_kernel_evals:,.0f} kernel evals")
     return results
 
 
@@ -526,9 +502,12 @@ def run_fine_storage(iso, threshold, nm_combos, coarse_results,
 
         for mi, (best_b4, best_b8, best_l, best_h2, best_score) in batch:
             # Generate fine ranges around the coarse winner
-            fine_b4 = _fine_range(best_b4, FINE_STEP, FINE_HALF_WIDTH, 0, 6)
-            fine_b8 = _fine_range(best_b8, FINE_STEP, FINE_HALF_WIDTH, 0, 8)
-            fine_l = _fine_range(best_l, FINE_STEP, FINE_HALF_WIDTH, 0, 25)
+            fine_b4 = _fine_range(best_b4, FINE_STEP, FINE_HALF_WIDTH,
+                                  0, float(FULL_BAT4[-1]))
+            fine_b8 = _fine_range(best_b8, FINE_STEP, FINE_HALF_WIDTH,
+                                  0, float(FULL_BAT8[-1]))
+            fine_l = _fine_range(best_l, FINE_STEP, FINE_HALF_WIDTH,
+                                 0, float(FULL_LDES[-1]))
 
             if threshold >= 95 and best_h2 > 0:
                 fine_h2 = _fine_range(best_h2, FINE_STEP * 10, FINE_HALF_WIDTH * 5, 0, 25)
