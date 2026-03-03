@@ -52,7 +52,7 @@ from parquet_io import find_input_dir, find_parquet, ALL_ISOS
 
 
 MIX_COLUMNS = [
-    'mix_clean_firm', 'mix_solar', 'mix_wind', 'mix_ccs_ccgt', 'mix_hydro',
+    'mix_clean_firm', 'mix_solar', 'mix_wind', 'mix_offshore_wind', 'mix_ccs_ccgt', 'mix_hydro',
     'battery_dispatch_pct', 'battery8_dispatch_pct',
     'ldes_dispatch_pct', 'h2_dispatch_pct',
 ]
@@ -86,6 +86,7 @@ def extract_unique_mixes(iso, input_dir):
     cf = unique['mix_clean_firm'].to_numpy(dtype=np.float64)
     sol = unique['mix_solar'].to_numpy(dtype=np.float64)
     wnd = unique['mix_wind'].to_numpy(dtype=np.float64)
+    osw = unique['mix_offshore_wind'].to_numpy(dtype=np.float64)
     ccs = unique['mix_ccs_ccgt'].to_numpy(dtype=np.float64)
     hyd = unique['mix_hydro'].to_numpy(dtype=np.float64)
     bat = unique['battery_dispatch_pct'].to_numpy(dtype=np.float64)
@@ -99,7 +100,7 @@ def extract_unique_mixes(iso, input_dir):
         mixes[i] = {
             'resource_pcts': {
                 'clean_firm': cf[i], 'solar': sol[i], 'wind': wnd[i],
-                'ccs_ccgt': ccs[i], 'hydro': hyd[i],
+                'offshore_wind': osw[i], 'ccs_ccgt': ccs[i], 'hydro': hyd[i],
             },
             'battery_dispatch_pct': bat[i],
             'battery8_dispatch_pct': bat8[i],
