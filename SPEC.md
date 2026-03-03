@@ -3,7 +3,26 @@
 > **Authoritative reference for all design decisions.** If a future session needs context, read this file first.
 > Last updated: 2026-03-02.
 
-## Current Status (Mar 2, 2026)
+## Current Status (Mar 3, 2026)
+
+### Offshore Wind Integration — Steps 4–7 + Dashboard (In Progress)
+
+**Branch:** `claude/integrate-offshore-wind-SkQIr`
+
+**Scope**: Thread offshore wind through Steps 4–7, update all dashboard pages, integrate resource caps (geothermal, CCS, offshore wind) into Scenario A/B, Procurement 1-3, Track 2 NB, Track 3 CTR. Simultaneously updating resource colors (nuclear → #6366F1, CCS → #64748B) and display order.
+
+**Status:**
+- [ ] Phase 1: Core infrastructure (dispatch_utils.py + scenario_common.py)
+- [ ] Phase 2: Step 4 (gas/CCS adjustments)
+- [ ] Phase 3: Step 5 (dispatch cache)
+- [ ] Phase 4: Step 6 scripts (10+ files)
+- [ ] Phase 5: Step 7 (shared data generation)
+- [ ] Phase 6: Dashboard (JS + HTML + CSS, 12+ files)
+- [ ] Phase 7: GitHub Actions workflows
+
+---
+
+## Previous Status (Mar 2, 2026)
 
 ### Step 1c/1d Workflow Fixes (Mar 2, 2026 — COMPLETED)
 
@@ -1248,16 +1267,20 @@ All resource mix figures must differentiate ALL individual resources (not aggreg
 
 | Resource | Color | Hex | Notes |
 |---|---|---|---|
-| Nuclear | Navy | `#1E3A5F` | Existing dispatchable clean |
-| CCS-CCGT | Teal | `#0D9488` | Carbon capture gas |
+| Nuclear | Indigo | `#6366F1` | Existing dispatchable clean (updated Mar 3, 2026 from #1E3A5F) |
+| CCS-CCGT | Slate | `#64748B` | Carbon capture gas (updated Mar 3, 2026 from #0D9488) |
 | Geothermal | Ochre/Brown | `#B45309` | CAISO only |
-| Wind | Green | `#22C55E` | Onshore wind |
+| Offshore Wind | Teal | `#009688` | Atlantic ISOs + CAISO (added Mar 3, 2026) |
+| Wind (Onshore) | Green | `#22C55E` | Onshore wind |
 | Solar | Amber | `#F59E0B` | Utility-scale PV |
 | Hydro | Cyan | `#0EA5E9` | Existing only, wholesale-priced |
 | LDES (100hr) | Pink | `#EC4899` | Iron-air, 50% RTE |
 | Battery (4hr) | Purple | `#8B5CF6` | Li-ion, 85% RTE |
 | Battery (8hr) | Light Purple | `#A78BFA` | Li-ion extended duration |
+| Green H₂ | Emerald | `#10B981` | 1000hr, 35% RTE, ≥95% only |
 | Curtailment | Gray + cross-hatch | `#D1D5DB` | Diagonal hatching pattern |
+
+**Display order** (updated Mar 3, 2026): Nuclear → Geothermal → Hydro → CCS → Offshore Wind → Onshore Wind → Solar → Battery 4 → Battery 8 → LDES → H2
 
 **Bar chart styling**: ALL bar charts across the entire site must have **rounded corners** (`borderRadius` in Chart.js).
 
@@ -3870,6 +3893,52 @@ Floating (CAISO):
 - 25 m/s: 14,998 kW → cut-out
 
 Full CSV with 59 wind speed × power × Cp × thrust data points available in the installed package.
+
+#### 21.4.8 Steps 4–7 + Dashboard Integration (Decided, Mar 3, 2026)
+
+**Resource display order** (user-confirmed): Nuclear → Geothermal → Hydro → CCS → Offshore Wind → Onshore Wind → Solar → Battery 4 → Battery 8 → LDES → H2. Internal `RESOURCE_TYPES` in dispatch_utils.py keeps processing order; display order applied at presentation layer (Step 7 + dashboard JS).
+
+**Color palette updates** (user-confirmed):
+| Resource | Old Color | New Color | Hex |
+|----------|-----------|-----------|-----|
+| Nuclear (clean_firm) | Dark Navy `#1E3A5F` | Indigo 500 | `#6366F1` |
+| CCS-CCGT | Cyan `#0891B2` | Slate | `#64748B` |
+| Offshore Wind | (new) | Material Teal | `#009688` |
+| Geothermal | Green `#10B981` | Ochre | `#B45309` |
+
+**FEASIBLE_MIXES positional array**: 12 elements in display order:
+`[clean_firm, geothermal, hydro, ccs_ccgt, offshore_wind, wind, solar, score, bat4, bat8, ldes, h2]`
+
+**Resource cap integration scope** (user-confirmed): Geothermal, CCS, and offshore wind TWh caps propagated into:
+- Scenario A (step6_scenario_a.py) — floor ratchet respects caps as upper bounds
+- Scenario B (step6_scenario_b.py) — hourly matching cap enforcement
+- Scenario comparison (step6_scenario_compare.py)
+- Procurement Strategies 1–3 (step6_5_strategy1/2/3)
+- Track 2 New-Build (step3_track_nb_ctr.py)
+- Track 3 Cost-to-Replace (step3_track_nb_ctr.py)
+
+**CCS cap table** (geological sequestration storage, from USGS/NETL):
+| ISO | Cap (TWh) | Rationale |
+|-----|-----------|-----------|
+| ERCOT | 85 | Gulf Coast saline formations + depleted O&G reservoirs |
+| PJM | 120 | Appalachian Basin + Midcontinent saline formations |
+| MISO | 95 | Illinois Basin + Gulf Coast formations |
+| SPP | 110 | Anadarko Basin + Permian Basin saline formations |
+| NYISO | 15 | Limited NY/NJ offshore saline capacity |
+| NEISO | 10 | Very limited NE geological storage |
+| CAISO | 0 | No significant identified storage (seismic risk) |
+
+**Dashboard cap export**: `RESOURCE_CAPS` JS constant in shared-data.js containing all three cap dicts (offshore_wind, ccs_ccgt, geothermal).
+
+**dispatch_utils.py changes**:
+- `RESOURCE_TYPES` expanded from 5 → 6 (add `offshore_wind`)
+- `OFFSHORE_ISOS`, `OFFSHORE_WIND_CAP_TWH`, `CCS_CAP_TWH`, `GEOTHERMAL_CAP_TWH` constants
+- `get_supply_profiles()` loads offshore wind profile (zeros for non-offshore ISOs)
+- `build_supply_matrix()` builds (6, H) matrix
+- `reconstruct_hourly_dispatch()` adds matched/surplus offshore_wind arrays
+- `CACHE_VERSION` → v3 (old v2 caches rebuilt)
+
+**Backward compat**: All parquet loading defaults `mix_offshore_wind` to 0 when column is missing.
 
 #### 21.4.8 Implementation Approach (Decided)
 
