@@ -346,7 +346,7 @@ def compute_fan_and_anova(df):
 
     # Single pass: group by (iso, threshold), compute both fan + ANOVA per group
     for (iso, t), grp in valid.groupby(['iso', 'threshold']):
-        if iso not in threshold_index or t not in threshold_index:
+        if iso not in fan_data or t not in threshold_index:
             continue
         t_idx = threshold_index[t]
         t_macs = grp['mac'].values
@@ -540,7 +540,15 @@ def compute_envelope_and_path(df):
 
             # ── Path-constrained computation ──
             if has_any_row:
-                mix = {r: int(row[f'mix_{r}']) for r in RESOURCE_TYPES}
+                # Build resource mix — handle missing columns gracefully
+                # (e.g., mix_offshore_wind may not exist in older step3 parquets)
+                mix = {}
+                for r in RESOURCE_TYPES:
+                    col = f'mix_{r}'
+                    if col in row.index and not pd.isna(row[col]):
+                        mix[r] = int(row[col])
+                    else:
+                        mix[r] = 0
                 # v5.0: procurement_pct is always 100 (baked into resource percentages)
                 batt = round(float(row['battery_dispatch_pct']), 4)
                 ldes = round(float(row['ldes_dispatch_pct']), 4)
