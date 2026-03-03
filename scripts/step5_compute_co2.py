@@ -502,7 +502,7 @@ def main():
         print(f"  CO2 columns added to parquets in {output_dir}")
 
     # Save per-ISO CO2-enriched parquets to step5 results directory
-    # (canonical copy for downstream consumers like step7_generate_shared_data)
+    # (canonical copy for downstream consumers like step6_generate_shared_data)
     co2_parquet_dir = os.path.join(STEP5_DIR, 'co2_results')
     os.makedirs(co2_parquet_dir, exist_ok=True)
     save_to_parquets(results_data, co2_parquet_dir, isos_present, file_prefix='co2_')

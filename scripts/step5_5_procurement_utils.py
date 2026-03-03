@@ -15,7 +15,7 @@ Constants and data structures are sourced from:
   - dispatch_utils.py (grid mix, demand, ISOS)
   - step3_cost_optimization.py (LCOE tables, uprate costs, CCS costs)
   - step6_scenario_comparison.py (learning_fraction, SBTI_YEAR_MAP)
-  - step7_generate_shared_data.py (SBTI_MILESTONES, DAC_TRAJECTORY)
+  - step6_generate_shared_data.py (SBTI_MILESTONES, DAC_TRAJECTORY)
 """
 
 import os
@@ -605,7 +605,7 @@ def estimate_lmp_at_clean_pct(iso, clean_pct, fuel_level='Medium'):
     - At very high clean %, scarcity pricing partially offsets depression
     - Cannibalization S-curve: steep depression 30-70%, flattening at extremes
 
-    For full 8760 LMP, use step6_compute_lmp_prices.py.
+    For full 8760 LMP, use step5_compute_lmp_prices.py.
     This is a fast approximation for cost modeling.
     """
     base_lmp = get_wholesale_price(iso, fuel_level)
