@@ -108,6 +108,9 @@ CAISO_MIX_BATCH = 500    # CAISO (5D, same batch size)
 # Minimum surplus days for battery deployment
 MIN_SURPLUS_DAYS_FOR_BATTERY = 150
 
+# Dominance filter: max non-dominated combos per mix per threshold
+N_KEEP = 10
+
 # Storage sweep floor
 STORAGE_SWEEP_FLOOR = 0.50
 
@@ -340,12 +343,6 @@ def run_adaptive_coarse(iso, nm_combos, nm_base_scores, max_scores,
 
         sc_has_battery = (sc_bp > 0) | (sc_b8p > 0)
 
-        # Dominance filter: max non-dominated combos to keep per mix/threshold.
-        # The non-dominated set naturally spans all archetype structures
-        # (bat4-heavy, bat8-heavy, LDES-heavy, balanced) because no archetype
-        # dominates another — different dimensions are higher/lower.
-        N_KEEP = 10
-
         # Process in batches — kernel is vectorized, extraction per-mix
         for batch_start in range(0, len(bucket_idx), batch_size):
             batch_end = min(batch_start + batch_size, len(bucket_idx))
@@ -541,9 +538,10 @@ def run_fine_storage(iso, threshold, nm_combos, coarse_results,
 
             scores_flat = mix_scores[0]  # (n_combos,)
 
-            # Extract feasible results
+            # Collect feasible combos, sort by total storage, dominance-filter
             n_b4, n_b8, n_l, n_h2 = (len(fine_b4), len(fine_b8),
                                       len(fine_l), len(fine_h2))
+            feasible = []
             for b4i in range(n_b4):
                 for b8i in range(n_b8):
                     for li in range(n_l):
@@ -553,12 +551,32 @@ def run_fine_storage(iso, threshold, nm_combos, coarse_results,
                                    li * n_h2 + h2i)
                             score = scores_flat[idx]
                             if score >= 0 and score >= target:
-                                fine_results.append(
-                                    (int(mi), float(fine_b4[b4i]),
-                                     float(fine_b8[b8i]),
-                                     float(fine_l[li]),
-                                     float(fine_h2[h2i]),
-                                     round(score * 100, 2)))
+                                b4v = fine_b4[b4i]
+                                b8v = fine_b8[b8i]
+                                lv = fine_l[li]
+                                h2v = fine_h2[h2i]
+                                feasible.append(
+                                    (b4v + b8v + lv + h2v,
+                                     b4v, b8v, lv, h2v, score))
+
+            # Sort ascending by total storage, then dominance filter
+            feasible.sort()
+            recorded = []
+            for _, b4v, b8v, lv, h2v, score in feasible:
+                dominated = False
+                for rb4, rb8, rld, rh2 in recorded:
+                    if rb4 <= b4v and rb8 <= b8v and rld <= lv and rh2 <= h2v:
+                        dominated = True
+                        break
+                if dominated:
+                    continue
+                recorded.append((b4v, b8v, lv, h2v))
+                fine_results.append(
+                    (int(mi), float(b4v), float(b8v),
+                     float(lv), float(h2v),
+                     round(score * 100, 2)))
+                if len(recorded) >= N_KEEP:
+                    break
 
             processed += 1
 
