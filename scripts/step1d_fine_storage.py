@@ -16,11 +16,28 @@ Architecture:
            boundary, refine storage at 0.05% resolution.
 
 Output: data/step1d-storage-parquets/{ISO}_t{XX}_storage.parquet
+        data/step1d-storage-parquets/{ISO}_t{XX}_storage_b{N}.parquet  (batched)
+
+Batch mode:
+  For large ISO/threshold pairs (ERCOT 95%, SPP 97.5%, etc.), the full
+  eligible set can be millions of mixes, exceeding CI timeout. Batch mode
+  splits eligible mixes into N equal chunks, each targeting ~10 min runtime.
+
+  python scripts/step1d_fine_storage.py --iso ERCOT --thresholds 95 --batch 1 --total-batches 8
+  python scripts/step1d_fine_storage.py --iso ERCOT --batch-info
+
+Coarse cache fallback:
+  For ISOs where the near-miss file has no eligible mixes at low thresholds
+  (e.g., ERCOT 50-75% where all near-miss mixes already score >80%), step1d
+  falls back to the coarse cache from step1b, which contains mixes at all
+  score levels.
 
 Usage:
   python scripts/step1d_fine_storage.py --iso CAISO
   python scripts/step1d_fine_storage.py --iso PJM --auto-commit
   python scripts/step1d_fine_storage.py --iso ALL
+  python scripts/step1d_fine_storage.py --iso ERCOT --batch-info
+  python scripts/step1d_fine_storage.py --iso ERCOT --thresholds 95 --batch 1 --total-batches 8
 """
 
 import argparse
@@ -150,6 +167,82 @@ def load_near_miss(iso):
     combos = np.column_stack([table.column(rt).to_numpy() for rt in rtypes])
     scores = table.column('base_score').to_numpy()
     return combos, scores
+
+
+def load_coarse_cache(iso):
+    """Load coarse cache mixes from step1b output.
+
+    Used as fallback when the near-miss file has no eligible mixes at low
+    thresholds (e.g., ERCOT 50-75% where all near-miss mixes score >80%).
+    The coarse cache contains mixes at all score levels.
+    """
+    path = os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR,
+                        f'{iso}_coarse_cache.parquet')
+    if not os.path.exists(path):
+        return None, None
+
+    table = pq.read_table(path)
+    rtypes = s1.get_resource_types(iso)
+    combos = np.column_stack([table.column(rt).to_numpy() for rt in rtypes])
+    scores = table.column('score').to_numpy()
+    return combos, scores
+
+
+def load_mixes_with_coarse_fallback(iso, active_thresholds):
+    """Load near-miss mixes, augmenting with coarse cache for low thresholds.
+
+    For ISOs like ERCOT where the near-miss file has no mixes below 80%,
+    the coarse cache provides low-score mixes that are storage candidates
+    at lower thresholds.
+
+    Returns (combos, scores) with coarse fallback mixes appended if needed.
+    """
+    nm_combos, nm_scores = load_near_miss(iso)
+    if nm_combos is None:
+        return None, None
+
+    # Check if near-miss covers the lowest requested threshold
+    min_threshold = min(active_thresholds)
+    min_target = min_threshold / 100.0
+    n_eligible_low = int(np.sum(nm_scores < min_target))
+
+    if n_eligible_low > 0:
+        # Near-miss has eligible mixes for all thresholds — no fallback needed
+        return nm_combos, nm_scores
+
+    # Need coarse fallback: near-miss has no mixes below lowest threshold
+    cc_combos, cc_scores = load_coarse_cache(iso)
+    if cc_combos is None:
+        print(f"  WARNING: No coarse cache for {iso}, cannot augment near-miss")
+        return nm_combos, nm_scores
+
+    # Only add coarse mixes that are in the near-miss window for any threshold
+    # and aren't already in the near-miss file
+    nm_keys = set(_mix_keys(nm_combos).tolist())
+    cc_keys = _mix_keys(cc_combos)
+    new_mask = np.array([k not in nm_keys for k in cc_keys.tolist()], dtype=bool)
+
+    # Filter to mixes in the near-miss window for at least one active threshold
+    nm_eligible = np.zeros(len(cc_combos), dtype=bool)
+    for t in active_thresholds:
+        target = t / 100.0
+        nm_width = get_near_miss_width(t)
+        nm_floor = max(target - nm_width, STORAGE_SWEEP_FLOOR)
+        t_mask = (cc_scores < target) & (cc_scores >= nm_floor)
+        nm_eligible |= t_mask
+
+    add_mask = new_mask & nm_eligible
+    n_add = int(add_mask.sum())
+
+    if n_add == 0:
+        return nm_combos, nm_scores
+
+    print(f"  Coarse cache fallback: adding {n_add:,} mixes "
+          f"(near-miss had 0 eligible below {min_threshold}%)")
+
+    combined_combos = np.vstack([nm_combos, cc_combos[add_mask]])
+    combined_scores = np.concatenate([nm_scores, cc_scores[add_mask]])
+    return combined_combos, combined_scores
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -605,8 +698,13 @@ def run_fine_storage(iso, threshold, nm_combos, coarse_results,
 # SAVE / COMMIT
 # ══════════════════════════════════════════════════════════════════════════════
 
-def save_storage_results(iso, threshold, nm_combos, results, rtypes):
-    """Save storage-enhanced feasible mixes for one threshold."""
+def save_storage_results(iso, threshold, nm_combos, results, rtypes,
+                         batch_num=None):
+    """Save storage-enhanced feasible mixes for one threshold.
+
+    Args:
+        batch_num: If set, saves as {ISO}_t{XX}_storage_b{N}.parquet
+    """
     if not results:
         return
 
@@ -633,22 +731,29 @@ def save_storage_results(iso, threshold, nm_combos, results, rtypes):
 
     table = pa.table(data)
     t_str = s1._normalize_threshold_str(threshold)
-    out_path = os.path.join(STEP1D_OUTPUT_DIR,
-                            f'{iso}_t{t_str}_storage.parquet')
+    if batch_num is not None:
+        fname = f'{iso}_t{t_str}_storage_b{batch_num}.parquet'
+    else:
+        fname = f'{iso}_t{t_str}_storage.parquet'
+    out_path = os.path.join(STEP1D_OUTPUT_DIR, fname)
     pq.write_table(table, out_path, compression='snappy')
     size_mb = os.path.getsize(out_path) / (1024 * 1024)
     return out_path
 
 
-def git_commit_threshold(iso, threshold, phase_label, auto_commit):
+def git_commit_threshold(iso, threshold, phase_label, auto_commit,
+                         batch_num=None):
     """Commit and push threshold results."""
     if not auto_commit:
         return
 
     try:
         t_str = s1._normalize_threshold_str(threshold)
-        out_path = os.path.join(STEP1D_OUTPUT_DIR,
-                                f'{iso}_t{t_str}_storage.parquet')
+        if batch_num is not None:
+            fname = f'{iso}_t{t_str}_storage_b{batch_num}.parquet'
+        else:
+            fname = f'{iso}_t{t_str}_storage.parquet'
+        out_path = os.path.join(STEP1D_OUTPUT_DIR, fname)
         if not os.path.exists(out_path):
             return
 
@@ -661,7 +766,8 @@ def git_commit_threshold(iso, threshold, phase_label, auto_commit):
             return
 
         size_mb = os.path.getsize(out_path) / (1024 * 1024)
-        msg = (f"Storage {phase_label}: {iso} {threshold}% "
+        batch_label = f" batch {batch_num}" if batch_num is not None else ""
+        msg = (f"Storage {phase_label}: {iso} {threshold}%{batch_label} "
                f"({size_mb:.1f} MB) — auto-commit")
         subprocess.run(['git', 'commit', '-m', msg],
                        check=True, capture_output=True, text=True)
@@ -671,7 +777,8 @@ def git_commit_threshold(iso, threshold, phase_label, auto_commit):
                 ['git', 'push', '-u', 'origin', 'HEAD'],
                 capture_output=True, text=True)
             if result.returncode == 0:
-                print(f"    [auto-commit] {iso} {threshold}% committed & pushed")
+                batch_str = f" b{batch_num}" if batch_num is not None else ""
+                print(f"    [auto-commit] {iso} {threshold}%{batch_str} committed & pushed")
                 return
             if attempt < 4:
                 time.sleep(2 ** attempt)
@@ -776,8 +883,9 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
         pass1_thresholds = set()
     pass2_done = set(manifest.get('pass2_done', [])) if manifest else set()
 
-    # ── Load near-miss mixes ──
-    nm_combos, nm_base_scores = load_near_miss(iso)
+    # ── Load near-miss mixes (with coarse cache fallback for low thresholds) ──
+    nm_combos, nm_base_scores = load_mixes_with_coarse_fallback(
+        iso, active_thresholds)
     if nm_combos is None:
         print(f"  ERROR: No near-miss data for {iso}. Run step1c first.")
         return
@@ -1037,9 +1145,273 @@ def _parse_thresholds(raw):
     return filtered if filtered else None
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# BATCH INFO — Estimates batch counts for each ISO/threshold pair
+# ══════════════════════════════════════════════════════════════════════════════
+
+# Throughput estimates (mixes per minute) for CI runners (2 vCPU, Numba JIT).
+# H2 thresholds (>=95%) use 900-combo grids; non-H2 use 150-combo grids.
+# These are conservative estimates calibrated from actual CI runs.
+THROUGHPUT_H2 = 10_000        # mixes/min with 900-combo H2 grid
+THROUGHPUT_NON_H2 = 30_000    # mixes/min with 150-combo non-H2 grid
+
+
+def print_batch_info(iso, target_minutes=10):
+    """Print batch count estimates for an ISO.
+
+    Loads near-miss data, runs Pass 0 max-screen, and for each threshold
+    reports eligible mix count and recommended batch count.
+    """
+    print(f"\n{'=' * 70}")
+    print(f"  Step 1d Batch Info — {iso}")
+    print(f"  Target: ~{target_minutes} min per batch")
+    print(f"{'=' * 70}")
+
+    rtypes = s1.get_resource_types(iso)
+
+    # Load mixes (with coarse fallback)
+    nm_combos, nm_scores = load_mixes_with_coarse_fallback(
+        iso, STORAGE_THRESHOLDS)
+    if nm_combos is None:
+        print(f"  ERROR: No near-miss data for {iso}. Run step1c first.")
+        return
+
+    print(f"  Near-miss mixes: {len(nm_combos):,}")
+    print(f"  Score range: {nm_scores.min()*100:.2f}% — {nm_scores.max()*100:.2f}%")
+
+    # Load EIA data for Pass 0
+    print(f"  Loading EIA data for Pass 0...")
+    demand_data, gen_profiles, _, _ = s1.load_data()
+    demand_norm = demand_data[iso]['normalized']
+    supply_profiles = s1.get_supply_profiles(iso, gen_profiles)
+    demand_arr, supply_matrix = s1.prepare_numpy_profiles(
+        iso, demand_norm, supply_profiles)
+
+    sc = _get_storage_constants()
+
+    # JIT warmup
+    if s1.HAS_NUMBA:
+        print(f"  Warming up Numba JIT...")
+        dummy_supply = np.ones((1, s1.H), dtype=np.float64)
+        dummy_b = np.array([0.0, 1.0], dtype=np.float64)
+        dummy_l = np.array([0.0], dtype=np.float64)
+        dummy_h = np.array([0.0], dtype=np.float64)
+        s1._batch_mixes_storage_screen(
+            demand_arr, dummy_supply, 1.0, 1,
+            dummy_b, dummy_b, dummy_l, 2, 2, 1,
+            0.85, 0.85, 0.50, 4, 8, 100, 168, 48,
+            dummy_h, 1, 0.35, 1000.0, 720)
+
+    # Run Pass 0 max-screen
+    max_scores = run_max_screen(
+        nm_combos, nm_scores, demand_arr, supply_matrix,
+        STORAGE_THRESHOLDS, sc)
+
+    # Print table header
+    print(f"\n  {'Threshold':>10} | {'Eligible':>10} | {'Group':>6} | "
+          f"{'Est. min':>8} | {'Batches':>7} | {'Per batch':>10}")
+    print(f"  {'-'*10}-+-{'-'*10}-+-{'-'*6}-+-{'-'*8}-+-{'-'*7}-+-{'-'*10}")
+
+    total_batches_needed = 0
+    batch_table = []  # for JSON output
+
+    for t in STORAGE_THRESHOLDS:
+        target = t / 100.0
+        eligible = (max_scores >= target) & (nm_scores < target)
+        n_eligible = int(eligible.sum())
+
+        if n_eligible == 0:
+            print(f"  {t:>9.1f}% | {n_eligible:>10,} | {'—':>6} | "
+                  f"{'—':>8} | {'0':>7} | {'—':>10}")
+            batch_table.append({
+                'threshold': t, 'eligible': 0, 'group': 'none',
+                'est_minutes': 0, 'batches': 0, 'per_batch': 0})
+            continue
+
+        group = 'H2' if t >= 95 else 'non-H2'
+        throughput = THROUGHPUT_H2 if t >= 95 else THROUGHPUT_NON_H2
+        est_minutes = n_eligible / throughput
+        n_batches = max(1, int(np.ceil(est_minutes / target_minutes)))
+        per_batch = int(np.ceil(n_eligible / n_batches))
+
+        total_batches_needed += n_batches
+        print(f"  {t:>9.1f}% | {n_eligible:>10,} | {group:>6} | "
+              f"{est_minutes:>7.1f}m | {n_batches:>7} | {per_batch:>10,}")
+
+        batch_table.append({
+            'threshold': t, 'eligible': n_eligible, 'group': group,
+            'est_minutes': round(est_minutes, 1),
+            'batches': n_batches, 'per_batch': per_batch})
+
+    print(f"\n  Total batches needed: {total_batches_needed}")
+    print(f"  Total estimated compute: "
+          f"{sum(b['est_minutes'] for b in batch_table):.0f} min")
+
+    # Save batch info as JSON for workflow reference
+    info_path = os.path.join(STEP1D_OUTPUT_DIR, f'{iso}_batch_info.json')
+    os.makedirs(STEP1D_OUTPUT_DIR, exist_ok=True)
+    with open(info_path, 'w') as f:
+        json.dump({
+            'iso': iso,
+            'target_minutes': target_minutes,
+            'total_mixes': len(nm_combos),
+            'thresholds': batch_table
+        }, f, indent=2)
+    print(f"\n  Batch info saved: {info_path}")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# BATCHED PROCESSING — Runs a single batch for one ISO/threshold pair
+# ══════════════════════════════════════════════════════════════════════════════
+
+def process_iso_batched(iso, threshold, batch_num, total_batches,
+                        auto_commit=False):
+    """Run storage sweep for a single batch of one ISO/threshold pair.
+
+    Splits eligible mixes into total_batches equal chunks and processes
+    only batch_num (1-indexed). Each batch independently runs Pass 0
+    (~40s overhead), then processes its chunk through Pass 1 and Pass 2.
+
+    Output: {ISO}_t{XX}_storage_b{batch_num}.parquet
+    """
+    iso_start = time.time()
+    rtypes = s1.get_resource_types(iso)
+    n_res = len(rtypes)
+
+    print(f"\n{'=' * 70}")
+    print(f"  Step 1d Batched Storage — {iso} t{threshold}%"
+          f" (batch {batch_num}/{total_batches})")
+    print(f"  Resources: {n_res}D ({', '.join(rtypes)})")
+    print(f"  Numba: {'enabled' if s1.HAS_NUMBA else 'disabled'}")
+    print(f"{'=' * 70}")
+
+    active_thresholds = [threshold]
+
+    # Load mixes (with coarse fallback)
+    nm_combos, nm_base_scores = load_mixes_with_coarse_fallback(
+        iso, active_thresholds)
+    if nm_combos is None:
+        print(f"  ERROR: No near-miss data for {iso}. Run step1c first.")
+        return
+
+    n_raw = len(nm_combos)
+    print(f"  Total near-miss mixes: {n_raw:,}")
+
+    # Load EIA data
+    print(f"  Loading EIA data...")
+    demand_data, gen_profiles, _, _ = s1.load_data()
+    demand_norm = demand_data[iso]['normalized']
+    supply_profiles = s1.get_supply_profiles(iso, gen_profiles)
+    demand_arr, supply_matrix = s1.prepare_numpy_profiles(
+        iso, demand_norm, supply_profiles)
+
+    sc = _get_storage_constants()
+
+    # JIT warmup
+    if s1.HAS_NUMBA:
+        print(f"  Warming up Numba JIT...")
+        dummy_supply = np.ones((1, s1.H), dtype=np.float64)
+        dummy_b = np.array([0.0, 1.0], dtype=np.float64)
+        dummy_l = np.array([0.0], dtype=np.float64)
+        dummy_h = np.array([0.0], dtype=np.float64)
+        s1._batch_mixes_storage_screen(
+            demand_arr, dummy_supply, 1.0, 1,
+            dummy_b, dummy_b, dummy_l, 2, 2, 1,
+            0.85, 0.85, 0.50, 4, 8, 100, 168, 48,
+            dummy_h, 1, 0.35, 1000.0, 720)
+        s1._batch_compute_storage_caps(
+            demand_arr, dummy_supply, 1.0, 1, 4, 8, 100)
+        print(f"  JIT ready")
+
+    os.makedirs(STEP1D_OUTPUT_DIR, exist_ok=True)
+
+    # ── Pass 0: Max-storage screen ──
+    max_scores = run_max_screen(
+        nm_combos, nm_base_scores, demand_arr, supply_matrix,
+        active_thresholds, sc)
+
+    # Filter to mixes that can reach the threshold with max storage
+    target = threshold / 100.0
+    eligible = (max_scores >= target) & (nm_base_scores < target)
+    eligible_idx = np.where(eligible)[0]
+    n_eligible = len(eligible_idx)
+
+    print(f"\n  Eligible mixes for t{threshold}%: {n_eligible:,}")
+
+    if n_eligible == 0:
+        print(f"  No eligible mixes — nothing to process.")
+        return
+
+    # ── Split into batches ──
+    batch_size = int(np.ceil(n_eligible / total_batches))
+    start_idx = (batch_num - 1) * batch_size
+    end_idx = min(batch_num * batch_size, n_eligible)
+
+    if start_idx >= n_eligible:
+        print(f"  Batch {batch_num} is beyond eligible range "
+              f"({n_eligible} mixes, {total_batches} batches). Nothing to do.")
+        return
+
+    batch_eligible = eligible_idx[start_idx:end_idx]
+    n_batch = len(batch_eligible)
+    print(f"  Batch {batch_num}/{total_batches}: mixes {start_idx:,}–{end_idx:,} "
+          f"({n_batch:,} mixes)")
+
+    # Create a sub-array for this batch (re-index to 0-based for this chunk)
+    batch_combos = nm_combos[batch_eligible]
+    batch_base_scores = nm_base_scores[batch_eligible]
+    batch_max_scores = max_scores[batch_eligible]
+
+    # ── Pass 1: Adaptive coarse sweep ──
+    coarse_results = run_adaptive_coarse(
+        iso, batch_combos, batch_base_scores, batch_max_scores,
+        demand_arr, supply_matrix, active_thresholds, sc)
+
+    n_coarse = len(coarse_results[threshold])
+    print(f"  Pass 1: {n_coarse:,} coarse results")
+
+    # ── Pass 2: Fine refinement ──
+    fine_results = run_fine_storage(
+        iso, threshold, batch_combos, coarse_results[threshold],
+        demand_arr, supply_matrix)
+
+    # Merge coarse + fine
+    all_results = coarse_results[threshold] + fine_results
+
+    # Deduplicate
+    seen = {}
+    for r in all_results:
+        key = (r[0], round(r[1], 4), round(r[2], 4),
+               round(r[3], 4), round(r[4], 4))
+        if key not in seen or r[5] > seen[key][5]:
+            seen[key] = r
+    deduped = list(seen.values())
+
+    n_total = len(deduped)
+    print(f"  Total: {len(fine_results):,} fine + {n_coarse:,} coarse "
+          f"= {n_total:,} after dedup")
+
+    if deduped:
+        out_path = save_storage_results(
+            iso, threshold, batch_combos, deduped, rtypes,
+            batch_num=batch_num)
+        if out_path:
+            size_mb = os.path.getsize(out_path) / (1024 * 1024)
+            print(f"  Saved: {os.path.basename(out_path)} ({size_mb:.1f} MB)")
+
+    git_commit_threshold(iso, threshold, "Batch", auto_commit,
+                         batch_num=batch_num)
+
+    elapsed = time.time() - iso_start
+    print(f"\n{'=' * 70}")
+    print(f"  {iso} t{threshold}% batch {batch_num}/{total_batches} "
+          f"COMPLETE — {elapsed:.1f}s ({elapsed/60:.1f}m)")
+    print(f"{'=' * 70}")
+
+
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 1d: Two-pass storage sweep.")
+        description="Step 1d: Three-pass storage sweep with batch support.")
     parser.add_argument("--iso", required=True,
                         help="ISO name or 'ALL'")
     parser.add_argument("--auto-commit", action="store_true",
@@ -1047,6 +1419,17 @@ def main():
     parser.add_argument("--thresholds", default="",
                         help="Comma-separated thresholds to process "
                              "(e.g. '90,95,99'). Default: all 17.")
+    parser.add_argument("--batch-info", action="store_true",
+                        help="Print batch count estimates and exit "
+                             "(no processing).")
+    parser.add_argument("--target-minutes", type=float, default=10,
+                        help="Target minutes per batch for --batch-info "
+                             "(default: 10).")
+    parser.add_argument("--batch", type=int, default=None,
+                        help="Batch number to process (1-indexed). "
+                             "Requires --total-batches and single threshold.")
+    parser.add_argument("--total-batches", type=int, default=None,
+                        help="Total number of batches to split into.")
     args = parser.parse_args()
 
     isos = list(s1.ISOS) if args.iso.upper() == 'ALL' else [args.iso.upper()]
@@ -1056,6 +1439,32 @@ def main():
             print(f"ERROR: Unknown ISO '{iso}'")
             sys.exit(1)
 
+    # Batch info mode
+    if args.batch_info:
+        for iso in isos:
+            print_batch_info(iso, target_minutes=args.target_minutes)
+        return
+
+    # Batch processing mode
+    if args.batch is not None:
+        if args.total_batches is None:
+            print("ERROR: --batch requires --total-batches")
+            sys.exit(1)
+        thresholds = _parse_thresholds(args.thresholds)
+        if not thresholds or len(thresholds) != 1:
+            print("ERROR: Batch mode requires exactly one threshold "
+                  "(e.g., --thresholds 95)")
+            sys.exit(1)
+        if args.batch < 1 or args.batch > args.total_batches:
+            print(f"ERROR: --batch must be 1..{args.total_batches}")
+            sys.exit(1)
+        for iso in isos:
+            process_iso_batched(
+                iso, thresholds[0], args.batch, args.total_batches,
+                auto_commit=args.auto_commit)
+        return
+
+    # Standard (non-batched) processing
     thresholds_filter = _parse_thresholds(args.thresholds)
     if thresholds_filter:
         print(f"Threshold filter: {thresholds_filter}")
