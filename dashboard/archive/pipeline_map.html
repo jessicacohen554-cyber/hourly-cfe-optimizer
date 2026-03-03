@@ -728,8 +728,8 @@ const PIPELINE = [
         scripts: [
             { name: 'step4_build_dispatch_cache.py', what: 'Pre-computes 8760h dispatch for all unique mixes; populates dispatch_cache/*.npz' },
             { name: 'step5_compute_eac_scarcity.py', what: 'EAC supply scarcity under RPS + voluntary demand (cache-independent)' },
-            { name: 'step4_export_track_results.py', what: 'Exports track parquets to track_results.json for dashboard (cache-independent)' },
-            { name: 'step4_analyze_tracks.py', what: 'Track cost envelopes (P10/P50/P90), resource mix differentials (cache-independent)' }
+            { name: 'step5_export_track_results.py', what: 'Exports track parquets to track_results.json for dashboard (cache-independent)' },
+            { name: 'step5_analyze_tracks.py', what: 'Track cost envelopes (P10/P50/P90), resource mix differentials (cache-independent)' }
         ],
         outputs: [
             {
