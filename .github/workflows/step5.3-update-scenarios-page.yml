@@ -1,4 +1,4 @@
-name: "Step 6.3: Update Scenarios Page"
+name: "Step 5.3: Update Scenarios Page"
 
 # Runs scenario scripts to populate the Scenarios comparison page:
 #   1. step5_scenario_a_consequential.py — Consequential scenario (per-ISO parallel)
@@ -13,7 +13,7 @@ name: "Step 6.3: Update Scenarios Page"
 # Each scenario script saves per-ISO JSON files (scenario_a_CAISO.json, etc.)
 # so parallel matrix jobs don't clobber each other.
 #
-# Prerequisite: Step 6.0 (CO2) should have run first.
+# Prerequisite: Step 5.0 (CO2) should have run first.
 # Output: data/step5-post-processing/scenario_*.json, dashboard/js/scenario-comparison-data.js
 
 on:
@@ -50,7 +50,7 @@ on:
         type: string
 
 env:
-  BRANCH_PREFIX: step6-3-scenarios
+  BRANCH_PREFIX: step5-3-scenarios
 
 jobs:
   # ====================================================================
