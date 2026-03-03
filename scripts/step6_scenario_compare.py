@@ -311,8 +311,10 @@ def print_comparison(results_a, results_b, queue_a, queue_b, stranding_a, strand
 
             print(f"{t:>5} {year:>5} {demand_twh:>5.0f} | "
                   f"{a_rt['clean_firm']:>6.0f} {a_rt['solar']:>6.0f} {a_rt['wind']:>6.0f} "
+                  f"{a_rt.get('offshore_wind', 0):>6.0f} "
                   f"{a['gas_backup_mw']:>8,} {a['effective_cost']:>7.1f} | "
                   f"{b_rt['clean_firm']:>6.0f} {b_rt['solar']:>6.0f} {b_rt['wind']:>6.0f} "
+                  f"{b_rt.get('offshore_wind', 0):>6.0f} "
                   f"{b['gas_backup_mw']:>8,} {b['effective_cost']:>7.1f} | "
                   f"{delta_cost:>+7.1f} {delta_gas:>+8,}")
 

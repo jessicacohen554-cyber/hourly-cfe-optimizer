@@ -951,11 +951,11 @@ def main():
             combos = [(mk, sens)]
 
         # Greenfield existing override: all clean resources zeroed
-        greenfield_all = {'clean_firm': 0, 'solar': 0, 'wind': 0, 'ccs_ccgt': 0, 'hydro': 0}
+        greenfield_all = {'clean_firm': 0, 'solar': 0, 'wind': 0, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 0}
         # CTR override: hydro stays at existing floor, everything else zeroed
         existing_shares = GRID_MIX_SHARES[iso]
         greenfield_keep_hydro = {
-            'clean_firm': 0, 'solar': 0, 'wind': 0, 'ccs_ccgt': 0,
+            'clean_firm': 0, 'solar': 0, 'wind': 0, 'offshore_wind': 0, 'ccs_ccgt': 0,
             'hydro': existing_shares['hydro'],
         }
 

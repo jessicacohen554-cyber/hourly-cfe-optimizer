@@ -212,6 +212,7 @@ def _compute_clean_peak_mw(iso, resource_mix, battery_pct=0,
         resource_mix.get('clean_firm', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['clean_firm'] +
         resource_mix.get('solar', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['solar'] +
         resource_mix.get('wind', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['wind'] +
+        resource_mix.get('offshore_wind', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS.get('offshore_wind', 0.25) +
         resource_mix.get('ccs_ccgt', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ccs_ccgt'] +
         resource_mix.get('hydro', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['hydro'] +
         battery_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery'] +
@@ -726,7 +727,7 @@ def archetype_key(mix, fuel_level, threshold):
     """
     mix_tuple = (
         mix.get('clean_firm', 0), mix.get('solar', 0), mix.get('wind', 0),
-        mix.get('ccs_ccgt', 0), mix.get('hydro', 0),
+        mix.get('offshore_wind', 0), mix.get('ccs_ccgt', 0), mix.get('hydro', 0),
     )
     return f"{mix_tuple}_{fuel_level}_{threshold}"
 
@@ -1117,6 +1118,7 @@ def load_scenarios(iso=None, threshold=None):
             'clean_firm': row.get('mix_clean_firm', 0),
             'solar': row.get('mix_solar', 0),
             'wind': row.get('mix_wind', 0),
+            'offshore_wind': row.get('mix_offshore_wind', 0),
             'ccs_ccgt': row.get('mix_ccs_ccgt', 0),
             'hydro': row.get('mix_hydro', 0),
         }
@@ -1315,8 +1317,8 @@ def run_test_cases(iso='PJM'):
         sc = med_scenarios[0]
         resource_mix = sc['resource_mix']
         print(f"    Mix: CF={resource_mix['clean_firm']}% Sol={resource_mix['solar']}% "
-              f"Wind={resource_mix['wind']}% CCS={resource_mix['ccs_ccgt']}% "
-              f"Hydro={resource_mix['hydro']}%")
+              f"Wind={resource_mix['wind']}% OSW={resource_mix.get('offshore_wind', 0)}% "
+              f"CCS={resource_mix['ccs_ccgt']}% Hydro={resource_mix['hydro']}%")
         print(f"    Batt4: {sc.get('battery_dispatch_pct', 0)}%, "
               f"LDES: {sc.get('ldes_dispatch_pct', 0)}%, "
               f"H2: {sc.get('h2_dispatch_pct', 0)}%")
