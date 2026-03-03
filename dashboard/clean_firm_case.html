@@ -1,0 +1,1359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Case for Clean Firm Power — The 8,760 Problem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/article.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
+<style>
+/* Page-specific overrides only — shared styles in article.css */
+body { background: var(--bg-page-white); }
+
+/* Hero ::before uses red tint instead of amber */
+.hero-overview::before {
+    background: radial-gradient(ellipse at 30% 20%, rgba(14,165,233,0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 80%, rgba(239,68,68,0.06) 0%, transparent 60%);
+}
+
+/* Chart panel min-height override */
+.chart-panel .chart-container { min-height: 340px; }
+
+/* Concept layout (full-width card bg, 2-col inner) */
+.concept-section {
+    background: var(--bg-card);
+    position: relative;
+    border-top: 1px solid rgba(0,0,0,0.06);
+}
+.concept-inner {
+    max-width: var(--max-content);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    min-height: auto;
+}
+.concept-chart-col {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+}
+.concept-narrative-col {
+    padding: 48px 48px 48px 32px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* Narrative card overrides (larger h3, different color) */
+.narrative-card h3 { font-size: 1.4rem; color: var(--navy); margin-bottom: 10px; }
+.narrative-card p { color: rgba(0,0,0,0.7); line-height: 1.7; margin-bottom: 0; }
+
+/* ISO tag (colored region badge) */
+.iso-tag {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-family: var(--font-heading);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+}
+
+/* Stat callout (inline metric badge) */
+.stat-callout {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-family: var(--font-heading);
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+.stat-red { background: var(--red-light); border: 1px solid rgba(239,68,68,0.2); color: var(--red-dark); }
+.stat-green { background: var(--wind-bg); border: 1px solid rgba(34,197,94,0.2); color: var(--green-pos); }
+.stat-blue { background: var(--hydro-bg); border: 1px solid rgba(14,165,233,0.2); color: #0284c7; }
+.stat-amber { background: var(--solar-bg); border: 1px solid rgba(245,158,11,0.2); color: var(--amber-warn); }
+
+/* Synthesis overrides (light bg, border) */
+.synthesis-section {
+    background: var(--bg-page);
+    padding: 56px var(--pad-page);
+    border-top: 1px solid rgba(0,0,0,0.06);
+}
+.synthesis-inner {
+    max-width: var(--max-content);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+.synthesis-card h3 { font-size: 1.2rem; margin-bottom: 10px; }
+.synthesis-card p { line-height: 1.7; }
+
+/* Section header overrides (wider, red number badge) */
+.section-header {
+    max-width: var(--max-content);
+    padding: 40px var(--pad-section) 0;
+}
+.section-number {
+    width: 32px;
+    height: 32px;
+    line-height: 32px;
+    background: var(--red-light);
+    color: var(--red-dark);
+    font-size: 0.85rem;
+    font-weight: 800;
+}
+.section-header h2 { margin-bottom: 8px; }
+.section-header p { font-size: 0.88rem; line-height: 1.6; }
+
+/* FOAK -> NOAK hero */
+.foak-hero {
+    background: linear-gradient(180deg, var(--bg-page-white) 0%, var(--bg-page) 100%);
+    position: relative;
+    overflow: hidden;
+    padding: 48px var(--pad-page);
+}
+.foak-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 30% 20%, rgba(14,165,233,0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 80%, rgba(233,30,99,0.06) 0%, transparent 60%);
+    pointer-events: none;
+}
+.foak-inner {
+    position: relative;
+    max-width: var(--max-content);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+    align-items: center;
+}
+.foak-text { z-index: 2; }
+.foak-text h2 {
+    font-family: var(--font-heading);
+    font-size: 1.7rem;
+    font-weight: 800;
+    color: var(--navy);
+    margin-bottom: 16px;
+    line-height: 1.25;
+    letter-spacing: -0.5px;
+}
+.foak-text p {
+    font-size: 0.92rem;
+    color: rgba(0,0,0,0.7);
+    line-height: 1.7;
+    margin-bottom: 14px;
+}
+.foak-chart { z-index: 1; }
+.foak-sources {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(0,0,0,0.08);
+}
+.foak-sources summary {
+    font-size: 0.78rem;
+    color: rgba(0,0,0,0.55);
+    cursor: pointer;
+    font-weight: 600;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+}
+.foak-sources .src-list {
+    font-size: 0.73rem;
+    color: rgba(0,0,0,0.5);
+    line-height: 1.7;
+    margin-top: 8px;
+    padding-left: 16px;
+}
+.foak-sources .src-list li { margin-bottom: 2px; }
+
+/* Responsive */
+@media (max-width: 900px) {
+    .hero-inner { grid-template-columns: 1fr; gap: var(--space-lg); }
+    .concept-inner { grid-template-columns: 1fr; }
+    .concept-chart-col { padding: 24px 16px 16px; }
+    .concept-narrative-col { padding: 16px 16px 32px; }
+    .chart-panel .chart-container { min-height: 300px; }
+    .synthesis-inner { grid-template-columns: 1fr; gap: 16px; }
+    .synthesis-section { padding: 36px var(--pad-page); }
+    .section-header { padding: 32px 16px 0; }
+    .foak-inner { grid-template-columns: 1fr; gap: 24px; }
+    .foak-hero { padding: 36px 16px; }
+    .foak-text h2 { font-size: 1.5rem; }
+    .foak-text p { font-size: 0.85rem; }
+}
+@media (max-width: 600px) {
+    .chart-panel { padding: 12px 10px; }
+    .chart-panel .chart-container { min-height: 260px; }
+    .concept-chart-col { padding: 16px 10px 10px; }
+    .concept-narrative-col { padding: 10px 12px 24px; }
+    .synthesis-card { padding: 18px 14px; }
+    .synthesis-card h3 { font-size: 1rem; }
+    .foak-hero { padding: 28px 12px; }
+    .foak-text h2 { font-size: 1.3rem; }
+    .foak-text p { font-size: 0.8rem; line-height: 1.6; }
+}
+@media (max-width: 480px) {
+    .chart-panel .chart-container { min-height: 240px; }
+    .iso-btn { padding: 4px 9px; font-size: 0.68rem; min-height: 30px; }
+    .stat-callout { font-size: 0.75rem; padding: 6px 10px; }
+    .foak-hero { padding: 20px 8px; }
+    .foak-text h2 { font-size: 1.15rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="topNav"></nav>
+
+<!-- HEADER -->
+<header class="header">
+    <div class="header-accent"></div>
+    <h1>The Case for Clean Firm Power</h1>
+    <p class="subtitle">Why every ISO needs dispatchable clean generation — and why the gas alternative is more expensive than it looks</p>
+</header>
+
+<!-- ==================== FOAK → NOAK: THE INVESTMENT CASE (HERO) ==================== -->
+<section class="foak-hero section-light">
+    <div class="foak-inner">
+        <div class="foak-text">
+            <h2>Build clean firm today.<br>It's cheaper in the long run.</h2>
+            <p>
+                High matching targets need clean firm power in most regions. Without it, the gap between demand and variable renewable supply must be filled by gas backup &mdash; and every new gas plant built today becomes a stranded asset tomorrow.
+            </p>
+            <p>
+                Clean firm is expensive today because it's <strong style="color:#F59E0B;">first-of-a-kind</strong>. Vogtle Units 3&amp;4 came in at ~$15,000/kW; NuScale's SMR reached ~$20,000/kW before cancellation. Lazard (2025) puts unsubsidized new nuclear at $141&ndash;220/MWh. But every energy technology follows Wright's Law: costs decline with deployment. Solar achieved a 24% learning rate per doubling. Wind: 15%. NREL ATB 2024 models nuclear learning at 8&ndash;9.5% per doubling; the DOE's Liftoff report projects ~40% total reduction after 5&ndash;10 reactors per design, reaching $3,600/kW and ~$66/MWh. MIT's 2024 analysis puts AP1000 NOAK at $4,625/kW ($66/MWh unsubsidized).
+            </p>
+            <p>
+                Meanwhile, gas gets <em>more</em> expensive. Fuel prices rise (EIA AEO2025: $3.50&rarr;$4.95/MMBtu by 2050). Capital costs have <strong style="color:#EF4444;">tripled</strong> &mdash; market quotes are $2,400/kW vs. EIA's $1,200/kW estimate (GridLab 2025). As clean energy scales, gas plants run fewer hours, spreading fixed costs over declining output. Add carbon pricing &mdash; EU ETS already at &euro;77/ton, heading to &euro;126+ by 2030 &mdash; and the true cost of gas rises relentlessly. Carbon Tracker estimates $3.5 trillion in stranded fossil assets globally under IEA net-zero scenarios.
+            </p>
+            <p>
+                CCS follows a parallel trajectory. DOE OCED projects ~25% CAPEX reduction from FOAK to NOAK, with learning rates of 3&ndash;5% per doubling (NETL). The 45Q tax credit ($85/ton for saline storage) reduces CCS-CCGT LCOE by over 25%, bringing near-term costs to ~$92/MWh (Frontiers 2022). As both nuclear and CCS descend their learning curves, the clean firm portfolio converges on $68&ndash;75/MWh by the late 2030s.
+            </p>
+            <p style="color:rgba(0,0,0,0.6);font-size:0.85rem;line-height:1.6;font-style:italic;">
+                Diversifying beyond VRE + storage derisks grid decarbonization and prevents wasted investment solidifying the future of fossil fuels via redundant gas backup. The FOAK premium is temporary. The gas trap is permanent.
+            </p>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;">
+                <span class="stat-callout stat-green" style="font-size:0.78rem;">Nuclear NOAK target: $68&ndash;75/MWh (vs. FOAK $135&ndash;170)</span>
+                <span class="stat-callout stat-red" style="font-size:0.78rem;">Gas true cost by 2040: $85&ndash;112/MWh (and rising)</span>
+            </div>
+
+            <!-- Inline research citations -->
+            <details class="foak-sources">
+                <summary>Research Sources &amp; Citations</summary>
+                <ol class="src-list">
+                    <li><strong>Lazard LCOE+ v18 (June 2025)</strong> &mdash; unsubsidized new nuclear $141&ndash;220/MWh; CCGT $48&ndash;109/MWh.</li>
+                    <li><strong>DOE (Sept 2024), &ldquo;Pathways to Commercial Liftoff: Advanced Nuclear&rdquo;</strong> &mdash; FOAK ~$6,200/kW &rarr; NOAK $3,600/kW target; ~$66/MWh with 48E ITC; 5&ndash;10 reactors per design.</li>
+                    <li><strong>MIT Advanced Nuclear Power Program (2024)</strong> &mdash; AP1000 NOAK: $4,625/kW, $66/MWh unsubsidized. SMR 300 MWe NOAK: ~$6,700/kW, $95/MWh.</li>
+                    <li><strong>NREL ATB 2024</strong> &mdash; nuclear learning rates: 8% (large), 9.5% (SMR) per doubling. Based on INL meta-analysis (Abou-Jaoude et al., RPT-24-77048).</li>
+                    <li><strong>INL (2024), &ldquo;Quantifying Capital Cost Reduction Pathways&rdquo;</strong> &mdash; optimized NOAK: ~$3,421/kW.</li>
+                    <li><strong>Vogtle Units 3&amp;4</strong> &mdash; actual construction cost ~$15,000/kW (Georgia Power, 2023). <strong>NuScale CFPP</strong> &mdash; ~$20,000/kW at cancellation (IEEFA 2023).</li>
+                    <li><strong>EIA AEO 2025</strong> &mdash; natural gas $3.50&rarr;$4.95/MMBtu; nuclear $7,821/kWe reference case.</li>
+                    <li><strong>DOE OCED (2024)</strong> &mdash; CCS FOAK&rarr;NOAK ~25% CAPEX reduction.</li>
+                    <li><strong>NETL Baseline Study</strong> &mdash; CCS learning rates: CO&#8322; capture 3%/doubling; transport &amp; sequestration 5%/doubling.</li>
+                    <li><strong>Frontiers in Energy Research (2022)</strong> &mdash; CCGT+CCS: FOAK ~$103/MWh; NOAK ~$92/MWh.</li>
+                    <li><strong>Carbon Tracker</strong> &mdash; $3.5 trillion in stranded fossil fuel assets under net-zero scenarios.</li>
+                    <li><strong>ITIF (2025), &ldquo;Small Modular Reactors: A Realist Approach&rdquo;</strong> &mdash; ~$10,000/kW representative FOAK; Wright&rsquo;s Law 4&ndash;10%/doubling.</li>
+                    <li><strong>GridLab (2025)</strong> &mdash; gas turbine market quotes $2,200&ndash;2,600/kW vs. EIA's $1,200/kW estimate.</li>
+                </ol>
+            </details>
+        </div>
+        <div class="foak-chart">
+            <div class="chart-panel">
+                <div class="chart-title">FOAK &rarr; NOAK: Clean Firm Costs Fall as Gas Costs Rise</div>
+                <div class="chart-container" style="min-height:380px;position:relative;">
+                    <canvas id="foakNOAKChart"></canvas>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:center;padding:8px 12px 12px;font-size:0.72rem;color:rgba(0,0,0,0.55);">
+                    <span><span style="display:inline-block;width:20px;height:3px;background:#22C55E;vertical-align:middle;margin-right:4px;border-radius:2px;"></span> Clean Firm (central)</span>
+                    <span><span style="display:inline-block;width:20px;height:3px;background:rgba(34,197,94,0.3);vertical-align:middle;margin-right:4px;border-radius:2px;"></span> Learning range</span>
+                    <span style="border-left:1px solid rgba(0,0,0,0.1);padding-left:12px;"><span style="display:inline-block;width:20px;height:3px;background:#EF4444;vertical-align:middle;margin-right:4px;border-radius:2px;"></span> Gas + carbon pricing</span>
+                    <span><span style="display:inline-block;width:20px;height:3px;background:rgba(239,68,68,0.4);vertical-align:middle;margin-right:4px;border-radius:2px;border:1px dashed rgba(239,68,68,0.6);"></span> Gas (no carbon price)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== STRANDED ASSETS OVERVIEW ==================== -->
+<section class="hero-overview section-light">
+    <div class="hero-inner">
+        <div class="hero-text">
+            <h2>You're building gas plants today that become stranded assets tomorrow.</h2>
+            <p>At 90% clean energy, America's 5 major ISOs need <strong style="color:#f87171;">120 GW of new gas construction</strong> to maintain reliability. That's billions in capital that earns diminishing returns as decarbonization continues. Clean firm power &mdash; nuclear, enhanced geothermal, CCS &mdash; prevents this trap. The investment case holds across all 324 cost scenarios we tested.</p>
+            <div class="counter-row">
+                <div class="counter-card">
+                    <div class="counter-val" id="ctrNewGas">120</div>
+                    <div class="counter-lbl">GW New Gas at Risk</div>
+                </div>
+                <div class="counter-card">
+                    <div class="counter-val" id="ctrAnnualCost">$12B</div>
+                    <div class="counter-lbl">Annual Stranding Cost</div>
+                </div>
+                <div class="counter-card">
+                    <div class="counter-val blue" id="ctrISOs">5</div>
+                    <div class="counter-lbl">ISOs Analyzed</div>
+                </div>
+                <div class="counter-card">
+                    <div class="counter-val green" id="ctrScenarios">324</div>
+                    <div class="counter-lbl">Cost Scenarios</div>
+                </div>
+            </div>
+        </div>
+        <div class="hero-chart-block">
+            <div class="chart-panel">
+                <div class="chart-title">New Gas Construction Required at 90% Clean (GW)</div>
+                <div class="chart-container">
+                    <canvas id="heroChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== SECTION 1: THE GAS TRAP ==================== -->
+<div class="section-header">
+    <div class="section-number">1</div>
+    <h2>The Gas Trap: You're Paying to Build Stranded Assets</h2>
+    <p>Every ISO needs new gas capacity to guarantee reliability — but that capital becomes stranded as clean energy scales. Click each ISO to see the scale of the problem.</p>
+</div>
+<section class="concept-section section-light">
+    <div class="concept-inner">
+        <div class="concept-chart-col">
+            <div class="chart-panel" style="width:100%;">
+                <div class="iso-selector" id="gasTrapISO">
+                    <button class="iso-btn active" data-iso="PJM">PJM</button>
+                    <button class="iso-btn" data-iso="ERCOT">ERCOT</button>
+                    <button class="iso-btn" data-iso="CAISO">CAISO</button>
+                    <button class="iso-btn" data-iso="NYISO">NYISO</button>
+                    <button class="iso-btn" data-iso="NEISO">NEISO</button>
+                    <button class="iso-btn" data-iso="MISO">MISO</button>
+                    <button class="iso-btn" data-iso="SPP">SPP</button>
+                </div>
+                <div class="chart-title" id="gasTrapTitle">PJM: Gas Backup Capacity by Threshold</div>
+                <div class="chart-container">
+                    <canvas id="gasTrapChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="concept-narrative-col">
+            <div class="narrative-card" id="gasTrapCard"></div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== SECTION 2: CLEAN FIRM DISPLACES GAS ==================== -->
+<div class="section-header">
+    <div class="section-number">2</div>
+    <h2>Clean Firm Displaces Gas — Dollar for Dollar</h2>
+    <p>As dispatchable clean generation enters, gas backup drops and clean coverage rises. The displacement is consistent across every cost scenario.</p>
+</div>
+<section class="concept-section section-light">
+    <div class="concept-inner">
+        <div class="concept-chart-col">
+            <div class="chart-panel" style="width:100%;">
+                <div class="iso-selector" id="displacementISO">
+                    <button class="iso-btn active" data-iso="PJM">PJM</button>
+                    <button class="iso-btn" data-iso="ERCOT">ERCOT</button>
+                    <button class="iso-btn" data-iso="CAISO">CAISO</button>
+                    <button class="iso-btn" data-iso="NYISO">NYISO</button>
+                    <button class="iso-btn" data-iso="NEISO">NEISO</button>
+                    <button class="iso-btn" data-iso="MISO">MISO</button>
+                    <button class="iso-btn" data-iso="SPP">SPP</button>
+                </div>
+                <div class="chart-title" id="displacementTitle">PJM: Gas Drops as Clean Firm Rises</div>
+                <div class="chart-container">
+                    <canvas id="displacementChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="concept-narrative-col">
+            <div class="narrative-card" id="displacementCard"></div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== SECTION 3: THE INVESTMENT CASE ==================== -->
+<div class="section-header">
+    <div class="section-number">3</div>
+    <h2>The Investment Math: Gas Costs Are Permanent, FOAK Costs Decline</h2>
+    <p>Gas backup cost recurs annually and compounds with demand growth. Clean firm FOAK costs are one-time premiums that shrink with every deployment.</p>
+</div>
+<section class="concept-section section-light">
+    <div class="concept-inner">
+        <div class="concept-chart-col">
+            <div class="chart-panel" style="width:100%;">
+                <div class="chart-title">Gas Backup Cost vs Nuclear LCOE at 90% Clean — All ISOs</div>
+                <div class="chart-container">
+                    <canvas id="investmentChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="concept-narrative-col">
+            <div class="narrative-card" id="investmentCard"></div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== SYNTHESIS ==================== -->
+<div class="gradient-transition"></div>
+<section class="section-dark">
+<div class="section-dark-inner">
+    <div class="synthesis-inner">
+        <div class="synthesis-card">
+            <h3>The stranding risk is already here</h3>
+            <p>120 GW of new gas construction across 5 ISOs at 90% clean energy. This capital earns diminishing returns as clean targets rise. The stranding cost is $7&ndash;10/MWh — a permanent annual tax on every region's ratepayers. Without clean firm power, this cost is unavoidable.</p>
+            <span class="stat-callout stat-red">120 GW new gas &middot; $12B/yr stranding cost &middot; Permanent</span>
+        </div>
+        <div class="synthesis-card">
+            <h3>The FOAK premium is an investment, not a cost</h3>
+            <p>Lazard (2025) puts unsubsidized new nuclear at $141&ndash;220/MWh &mdash; consistent with Vogtle ($15,000/kW) and NuScale ($20,000/kW) experience. But DOE&rsquo;s Liftoff report targets $3,600/kW after 5&ndash;10 deployments per design; MIT (2024) models AP1000 NOAK at $66/MWh unsubsidized. NREL ATB 2024 applies 8&ndash;9.5% learning rates per doubling. Geothermal is moving even faster &mdash; Fervo cut drilling costs 50% in 3 years. CCS follows suit: NETL documents 3&ndash;5% learning per doubling, with DOE OCED projecting 25% CAPEX reduction to NOAK. The gas cost it displaces never declines.</p>
+            <span class="stat-callout stat-green">~40% cost decline FOAK&rarr;NOAK &middot; Fervo: 35% learning rate</span>
+        </div>
+    </div>
+</div>
+</section>
+<div class="gradient-transition"></div>
+
+<!-- SOURCES -->
+<div style="max-width:1320px;margin:0 auto;padding:24px;">
+    <details style="background:rgba(0,0,0,0.025);border:1px solid rgba(0,0,0,0.08);border-radius:10px;padding:16px 20px;">
+        <summary style="font-family:var(--font-heading);font-size:0.85rem;font-weight:600;color:rgba(0,0,0,0.85);cursor:pointer;min-height:44px;display:flex;align-items:center;">Sources &amp; Methodology</summary>
+        <div style="font-size:0.78rem;color:rgba(0,0,0,0.5);line-height:1.8;margin-top:12px;">
+            <p><strong>Data:</strong> Hourly CFE Optimizer (2025 snapshot, 5 ISOs, 21 thresholds, 324 sensitivity scenarios). Gas backup modeled with 15% reserve margin above ISO peak demand.</p>
+            <p><strong>Key sources:</strong> Sepulveda &amp; Jenkins (2018), <em>Joule</em> &mdash; 10&ndash;62% cost reduction from firm resources &bull;
+            CATF (2025), &ldquo;Clean Firm Electricity Technologies&rdquo; &bull;
+            DOE (Sept 2024), &ldquo;Pathways to Commercial Liftoff: Advanced Nuclear&rdquo; &mdash; FOAK $6,200/kW &rarr; NOAK $3,600/kW; ~$66/MWh with 48E ITC; 5&ndash;10 reactors per design &bull;
+            MIT Advanced Nuclear Power Program (2024) &mdash; AP1000 NOAK $4,625/kW, $66/MWh; SMR NOAK ~$6,700/kW, $95/MWh &bull;
+            INL (2024), &ldquo;Meta-Analysis of Advanced Nuclear Reactor Cost Estimations&rdquo; (RPT-24-77048) &bull;
+            NREL ATB 2024 &mdash; nuclear learning rates 8% (large), 9.5% (SMR) per doubling &bull;
+            Lazard LCOE+ v18 (June 2025) &mdash; new nuclear $141&ndash;220/MWh unsubsidized &bull;
+            Vogtle Units 3&amp;4 actual cost ~$15,000/kW; NuScale CFPP ~$20,000/kW at cancellation (IEEFA 2023) &bull;
+            NETL &mdash; CCS learning rates: capture 3%/doubling, transport 5%/doubling &bull;
+            DOE OCED (2024) &mdash; CCS FOAK&rarr;NOAK ~25% CAPEX reduction &bull;
+            Fervo Energy (2024) &mdash; 35% learning rate, 50% drilling cost reduction &bull;
+            NREL (2021), &ldquo;The Challenge of the Last Few Percent&rdquo; &mdash; 29% cost spike at 100% RE &bull;
+            IEA (2025), World Energy Outlook &bull;
+            Princeton Net-Zero America Project (2021) &bull;
+            ITIF (2025), &ldquo;Small Modular Reactors: A Realist Approach&rdquo; &mdash; Wright&rsquo;s Law 4&ndash;10%/doubling</p>
+        </div>
+    </details>
+</div>
+
+<!-- ============ RELATED ANALYSES ============ -->
+<div class="related-analyses">
+    <div class="related-analyses-title">Related Analyses</div>
+    <div class="related-analyses-grid">
+        <a href="cost_to_replace.html" class="related-card">
+            <div class="related-card-tag">Economics</div>
+            <div class="related-card-title">Cost to Replace</div>
+            <div class="related-card-desc">What does it actually cost to replace fossil generation with clean firm power?</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="new_build_analysis.html" class="related-card">
+            <div class="related-card-tag">Economics</div>
+            <div class="related-card-title">New Build Analysis</div>
+            <div class="related-card-desc">When do new-build clean resources become cheaper than maintaining existing fossil plants?</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="wrights_law.html" class="related-card">
+            <div class="related-card-tag">Learning Curves</div>
+            <div class="related-card-title">Wright's Law</div>
+            <div class="related-card-desc">How technology cost declines reshape the economics of clean firm power over time.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+    </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="dashboard.html">Grid Simulation</a>
+        <a href="abatement_dashboard.html">CO&#8322; Abatement</a>
+        <a href="research_paper.html">Research Paper</a>
+    </div>
+    <div class="footer-note">The 8,760 Problem &mdash; 2025 Snapshot Model &middot; <a href="dashboard.html" style="color:#4B5563;">Explore all 324 scenarios &rarr;</a></div>
+</footer>
+<div class="bottom-banner"></div>
+
+<!-- ==================== SCRIPTS ==================== -->
+<script src="js/shared-data.js"></script>
+<script src="js/nav.js"></script>
+<script>
+// ============================================================================
+// STATE & CONSTANTS
+// ============================================================================
+const ISOS = ['PJM', 'ERCOT', 'CAISO', 'NYISO', 'NEISO', 'MISO', 'SPP'];
+const ISO_CLR = { CAISO: '#F59E0B', ERCOT: '#22C55E', PJM: '#4a90d9', NYISO: '#E91E63', NEISO: '#9C27B0', MISO: '#06B6D4', SPP: '#EF4444' };
+const ISO_TAG_BG = { CAISO: 'rgba(245,158,11,0.15)', ERCOT: 'rgba(34,197,94,0.15)', PJM: 'rgba(74,144,217,0.15)', NYISO: 'rgba(233,30,99,0.15)', NEISO: 'rgba(156,39,176,0.15)', MISO: 'rgba(6,182,212,0.15)', SPP: 'rgba(239,68,68,0.15)' };
+
+let gasTrapISO = 'PJM';
+let displacementISO = 'PJM';
+let gasTrapChart = null;
+let displacementChart = null;
+let investmentChart = null;
+
+// Threshold indices for readable charts: 50,70,80,85,90,95,97.5,99
+const DISPLAY_IDXS = [0, 2, 4, 5, 7, 9, 10, 11];
+const DISPLAY_LABELS = DISPLAY_IDXS.map(i => THRESHOLDS[i] + '%');
+
+// ============================================================================
+// DATA HELPERS
+// ============================================================================
+function gd(iso) { return GAS_BACKUP_DATA[iso]; }
+function gw(mw) { return (mw / 1000).toFixed(0); }
+function gwf(mw) { return (mw / 1000).toFixed(1); }
+
+// Per-ISO narrative data at 90% threshold (index 7)
+function isoStats(iso) {
+    var d = gd(iso);
+    var demand = REGIONAL_DEMAND_TWH[iso];
+    return {
+        newGW: gw(d.new_gas_build_mw[7]),
+        existGW: gw(d.existing_gas_used_mw[7]),
+        totalGW: gw(d.gas_backup_mw[7]),
+        newCost: d.new_gas_cost[7].toFixed(1),
+        totalCost: d.gas_backup_cost[7].toFixed(1),
+        annualB: (d.new_gas_cost[7] * demand / 1000).toFixed(1),
+        covStart: d.clean_coverage_pct[0].toFixed(0),
+        cov90: d.clean_coverage_pct[7].toFixed(0),
+        covEnd: d.clean_coverage_pct[10].toFixed(0),
+        gasDisplaced: gw(d.gas_backup_mw[0] - d.gas_backup_mw[10]),
+        nucFOAK: NUCLEAR_NEWBUILD_LCOE.H[iso],
+        nucNOAK: NUCLEAR_NEWBUILD_LCOE.L[iso],
+        nucMed: NUCLEAR_NEWBUILD_LCOE.M[iso]
+    };
+}
+
+// ============================================================================
+// PER-ISO NARRATIVES
+// ============================================================================
+var GAS_TRAP_TEXT = {
+    PJM: {
+        headline: '{newGW} GW of new gas — the largest absolute build',
+        text: 'PJM needs {newGW} GW of new gas construction at 90% clean, on top of {existGW} GW existing. The Mid-Atlantic\'s moderate wind and solar resources leave a large shape gap that only dispatchable generation can fill. That\'s <strong>${annualB}B/yr</strong> in new gas capital at risk of stranding.',
+        statClass: 'stat-red'
+    },
+    ERCOT: {
+        headline: '{newGW} GW of new gas — highest per-MWh cost',
+        text: 'Texas needs {newGW} GW of new gas at 90% clean, driven by extreme summer peaks. Despite leading in wind deployment, ERCOT\'s {totalGW} GW gas dependency costs <strong>${totalCost}/MWh</strong> across all generation — the highest rate of any ISO.',
+        statClass: 'stat-red'
+    },
+    CAISO: {
+        headline: '{newGW} GW of new gas despite leading in solar',
+        text: 'Even with America\'s deepest solar resources, California needs {newGW} GW of new gas at 90% clean. Solar overproduction during the day doesn\'t help at night. The evening ramp demands gas backup every single day.',
+        statClass: 'stat-amber'
+    },
+    NYISO: {
+        headline: '{newGW} GW of new gas — hydro delays but doesn\'t prevent',
+        text: 'New York\'s existing hydro and nuclear reduce the new gas need to {newGW} GW — relatively modest. But at <strong>${newCost}/MWh</strong> in new gas cost, the per-unit burden is substantial. CLCPA mandates require this gap to close.',
+        statClass: 'stat-red'
+    },
+    NEISO: {
+        headline: '{newGW} GW of new gas with winter vulnerability',
+        text: 'New England needs {newGW} GW of new gas at 90% clean. Winter gas pipeline constraints make this the most vulnerable region — when heating demand spikes, gas for power becomes scarce and prices spike. At <strong>${totalCost}/MWh</strong>, it\'s among the costliest per-MWh.',
+        statClass: 'stat-red'
+    },
+    MISO: {
+        headline: '{newGW} GW of new gas — coal retirement accelerates the need',
+        text: 'MISO\'s massive coal fleet (216.5 TWh) is retiring on a regulatory timeline, but replacement capacity defaults to gas. At 90% clean, MISO needs {newGW} GW of new gas on top of {existGW} GW existing — <strong>${annualB}B/yr</strong> in stranding risk. The Midwest\'s strong wind resources help but can\'t fill the baseload gap alone.',
+        statClass: 'stat-red'
+    },
+    SPP: {
+        headline: '{newGW} GW of new gas — wind-rich but firm-short',
+        text: 'SPP\'s deep wind resources (43.5% clean share) reduce but don\'t eliminate the gas backup need. At 90% clean, {newGW} GW of new gas is required at <strong>${totalCost}/MWh</strong>. Wind intermittency during summer peaks and calm winter nights drives the firm capacity requirement.',
+        statClass: 'stat-amber'
+    }
+};
+
+var DISPLACEMENT_TEXT = {
+    PJM: {
+        headline: 'Clean coverage: {covStart}% → {covEnd}% of peak',
+        text: 'PJM\'s existing nuclear fleet gives it the highest starting coverage of any ISO. Adding new clean firm lifts coverage to {cov90}% at 90% clean, displacing {gasDisplaced} GW of gas backup. Each GW of clean firm added here is leveraged against the largest gas fleet in the country.',
+        statClass: 'stat-green'
+    },
+    ERCOT: {
+        headline: 'Clean coverage: {covStart}% → {covEnd}% of peak',
+        text: 'ERCOT\'s 96 GW peak means each percentage point of clean coverage requires enormous capacity. Coverage rises from {covStart}% to {covEnd}% — modest in percentage terms, but the absolute gas displaced ({gasDisplaced} GW) is significant.',
+        statClass: 'stat-green'
+    },
+    CAISO: {
+        headline: 'Clean coverage: {covStart}% → {covEnd}% of peak',
+        text: 'Enhanced geothermal potential in the Imperial Valley makes CAISO the strongest long-term displacement story. Clean coverage rises from {covStart}% to {covEnd}%, with each additional GW of firm generation directly eliminating gas capacity.',
+        statClass: 'stat-green'
+    },
+    NYISO: {
+        headline: 'Clean coverage: {covStart}% → {covEnd}% of peak',
+        text: 'Existing hydro and nuclear give New York a head start at {covStart}% coverage. New clean firm lifts this to {covEnd}% at 97.5% threshold — the second-highest proportional gain. But the last 10 points require breakthrough firm generation costs.',
+        statClass: 'stat-blue'
+    },
+    NEISO: {
+        headline: 'Clean coverage: {covStart}% → {covEnd}% of peak',
+        text: 'New England\'s small 30 GW peak means each new firm GW has outsized impact. Coverage rises from {covStart}% to {covEnd}%, and {gasDisplaced} GW of gas is displaced. This region shows the strongest per-MW return on clean firm investment.',
+        statClass: 'stat-green'
+    },
+    MISO: {
+        headline: 'Clean coverage: {covStart}% → {covEnd}% of peak',
+        text: 'MISO\'s large demand base (664 TWh) means clean firm additions displace significant absolute gas volumes. Coverage rises from {covStart}% to {covEnd}%, displacing {gasDisplaced} GW of gas backup. As coal retires, clean firm generation fills the baseload role that gas would otherwise inherit.',
+        statClass: 'stat-green'
+    },
+    SPP: {
+        headline: 'Clean coverage: {covStart}% → {covEnd}% of peak',
+        text: 'SPP\'s strong wind foundation (43.5% clean) pairs well with new firm generation. Coverage rises from {covStart}% to {covEnd}%, with {gasDisplaced} GW of gas displaced. Wind handles daytime and shoulder-season demand while clean firm covers nights and peaks — a complementary pairing.',
+        statClass: 'stat-green'
+    }
+};
+
+function renderNarrative(cardId, textObj, iso) {
+    var s = isoStats(iso);
+    var t = textObj[iso];
+    var headline = t.headline.replace(/\{(\w+)\}/g, function(_, k) { return s[k]; });
+    var text = t.text.replace(/\{(\w+)\}/g, function(_, k) { return s[k]; });
+    var stat = iso + ': ' + s.newGW + ' GW new gas · $' + s.totalCost + '/MWh gas cost · $' + s.annualB + 'B/yr';
+    if (cardId === 'displacementCard') {
+        stat = iso + ': ' + s.gasDisplaced + ' GW gas displaced · ' + s.covStart + '% → ' + s.covEnd + '% clean coverage';
+    }
+    var card = document.getElementById(cardId);
+    card.innerHTML =
+        '<span class="iso-tag" style="background:' + ISO_TAG_BG[iso] + ';color:' + ISO_CLR[iso] + ';">' + iso + '</span>' +
+        '<h3>' + headline + '</h3>' +
+        '<p>' + text + '</p>' +
+        '<span class="stat-callout ' + t.statClass + '">' + stat + '</span>';
+    card.classList.add('visible');
+}
+
+// ============================================================================
+// HERO CHART — All ISOs horizontal stacked bar at 90%
+// ============================================================================
+function buildHeroChart() {
+    var ctx = document.getElementById('heroChart');
+    if (!ctx) return;
+
+    var existData = ISOS.map(function(iso) { return gd(iso).existing_gas_used_mw[7] / 1000; });
+    var newData = ISOS.map(function(iso) { return gd(iso).new_gas_build_mw[7] / 1000; });
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ISOS,
+            datasets: [
+                {
+                    label: 'Existing Gas (GW)',
+                    data: existData,
+                    backgroundColor: 'rgba(156,163,175,0.5)',
+                    borderColor: 'rgba(156,163,175,0.8)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'New Gas Build (GW)',
+                    data: newData,
+                    backgroundColor: 'rgba(239,68,68,0.65)',
+                    borderColor: '#EF4444',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: 'rgba(0,0,0,0.6)', font: { size: 11 }, usePointStyle: true, padding: 12 }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(255,255,255,0.95)',
+                    titleColor: '#374151',
+                    bodyColor: '#374151',
+                    borderColor: 'rgba(0,0,0,0.1)',
+                    borderWidth: 1,
+                    padding: 10,
+                    cornerRadius: 8,
+                    callbacks: {
+                        label: function(c) { return c.dataset.label + ': ' + c.raw.toFixed(0) + ' GW'; }
+                    }
+                },
+                datalabels: {
+                    display: true,
+                    color: '#374151',
+                    font: { size: 11, weight: 'bold', family: "'Barlow Semi Condensed', sans-serif" },
+                    anchor: 'center',
+                    align: 'center',
+                    formatter: function(v) { return v >= 5 ? v.toFixed(0) : ''; }
+                }
+            },
+            scales: {
+                x: {
+                    stacked: true,
+                    title: { display: true, text: 'Capacity (GW)', color: 'rgba(0,0,0,0.45)', font: { size: 10 } },
+                    ticks: { color: 'rgba(0,0,0,0.55)', font: { size: 10 } },
+                    grid: { color: 'rgba(0,0,0,0.06)' },
+                    border: { color: 'rgba(0,0,0,0.1)' }
+                },
+                y: {
+                    stacked: true,
+                    ticks: { color: 'rgba(0,0,0,0.7)', font: { size: 12, weight: '600' } },
+                    grid: { display: false },
+                    border: { color: 'rgba(0,0,0,0.1)' }
+                }
+            }
+        },
+        plugins: [ChartDataLabels]
+    });
+}
+
+// ============================================================================
+// SECTION 1: GAS TRAP CHART — Stacked bar + cost line, per ISO
+// ============================================================================
+function buildGasTrapChart() {
+    var ctx = document.getElementById('gasTrapChart');
+    if (!ctx) return;
+    var d = gd(gasTrapISO);
+
+    gasTrapChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: DISPLAY_LABELS,
+            datasets: [
+                {
+                    label: 'Existing Gas (GW)',
+                    data: DISPLAY_IDXS.map(function(i) { return (d.gas_backup_mw[i] - d.new_gas_build_mw[i]) / 1000; }),
+                    backgroundColor: 'rgba(156,163,175,0.45)',
+                    borderColor: 'rgba(156,163,175,0.7)',
+                    borderWidth: 1,
+                    stack: 'gas',
+                    order: 2
+                },
+                {
+                    label: 'New Gas Build (GW)',
+                    data: DISPLAY_IDXS.map(function(i) { return d.new_gas_build_mw[i] / 1000; }),
+                    backgroundColor: 'rgba(239,68,68,0.6)',
+                    borderColor: '#EF4444',
+                    borderWidth: 1,
+                    stack: 'gas',
+                    order: 2
+                },
+                {
+                    label: 'Gas Cost ($/MWh)',
+                    data: DISPLAY_IDXS.map(function(i) { return d.gas_backup_cost[i]; }),
+                    type: 'line',
+                    yAxisID: 'y2',
+                    borderColor: '#fbbf24',
+                    backgroundColor: 'rgba(251,191,36,0.08)',
+                    borderWidth: 3,
+                    pointRadius: 5,
+                    pointBackgroundColor: '#fbbf24',
+                    tension: 0.3,
+                    fill: true,
+                    order: 1
+                }
+            ]
+        },
+        options: chartOpts('Gas Backup (GW)', 'Gas Cost ($/MWh)', true),
+        plugins: [ChartDataLabels]
+    });
+}
+
+function updateGasTrapChart() {
+    if (!gasTrapChart) return;
+    var d = gd(gasTrapISO);
+    gasTrapChart.data.datasets[0].data = DISPLAY_IDXS.map(function(i) { return (d.gas_backup_mw[i] - d.new_gas_build_mw[i]) / 1000; });
+    gasTrapChart.data.datasets[1].data = DISPLAY_IDXS.map(function(i) { return d.new_gas_build_mw[i] / 1000; });
+    gasTrapChart.data.datasets[2].data = DISPLAY_IDXS.map(function(i) { return d.gas_backup_cost[i]; });
+    document.getElementById('gasTrapTitle').textContent = gasTrapISO + ': Gas Backup Capacity by Threshold';
+    gasTrapChart.update('none');
+}
+
+// ============================================================================
+// SECTION 2: DISPLACEMENT CHART — Gas bars declining + clean coverage rising
+// ============================================================================
+function buildDisplacementChart() {
+    var ctx = document.getElementById('displacementChart');
+    if (!ctx) return;
+    var d = gd(displacementISO);
+    var c = ISO_CLR[displacementISO];
+
+    displacementChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: DISPLAY_LABELS,
+            datasets: [
+                {
+                    label: 'Gas Backup (GW)',
+                    data: DISPLAY_IDXS.map(function(i) { return d.gas_backup_mw[i] / 1000; }),
+                    backgroundColor: 'rgba(239,68,68,0.35)',
+                    borderColor: 'rgba(239,68,68,0.6)',
+                    borderWidth: 1,
+                    order: 2
+                },
+                {
+                    label: 'Clean Coverage (%)',
+                    data: DISPLAY_IDXS.map(function(i) { return d.clean_coverage_pct[i]; }),
+                    type: 'line',
+                    yAxisID: 'y2',
+                    borderColor: c,
+                    backgroundColor: c + '18',
+                    borderWidth: 3,
+                    pointRadius: 5,
+                    pointBackgroundColor: c,
+                    tension: 0.3,
+                    fill: true,
+                    order: 1
+                }
+            ]
+        },
+        options: chartOpts('Gas Backup (GW)', 'Clean Coverage (%)'),
+        plugins: [ChartDataLabels]
+    });
+}
+
+function updateDisplacementChart() {
+    if (!displacementChart) return;
+    var d = gd(displacementISO);
+    var c = ISO_CLR[displacementISO];
+    displacementChart.data.datasets[0].data = DISPLAY_IDXS.map(function(i) { return d.gas_backup_mw[i] / 1000; });
+    displacementChart.data.datasets[1].data = DISPLAY_IDXS.map(function(i) { return d.clean_coverage_pct[i]; });
+    displacementChart.data.datasets[1].borderColor = c;
+    displacementChart.data.datasets[1].pointBackgroundColor = c;
+    displacementChart.data.datasets[1].backgroundColor = c + '18';
+    document.getElementById('displacementTitle').textContent = displacementISO + ': Gas Drops as Clean Firm Rises';
+    displacementChart.update('none');
+}
+
+// ============================================================================
+// SECTION 3: INVESTMENT CHART — All-ISO comparison: gas cost vs nuclear LCOE
+// ============================================================================
+function buildInvestmentChart() {
+    var ctx = document.getElementById('investmentChart');
+    if (!ctx) return;
+
+    var gasTotal = ISOS.map(function(iso) { return gd(iso).gas_backup_cost[7]; });
+    var newGasCost = ISOS.map(function(iso) { return gd(iso).new_gas_cost[7]; });
+    var foakLCOE = ISOS.map(function(iso) { return NUCLEAR_NEWBUILD_LCOE.H[iso]; });
+    var noakLCOE = ISOS.map(function(iso) { return NUCLEAR_NEWBUILD_LCOE.L[iso]; });
+    var medLCOE = ISOS.map(function(iso) { return NUCLEAR_NEWBUILD_LCOE.M[iso]; });
+
+    investmentChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ISOS,
+            datasets: [
+                {
+                    label: 'Total Gas Backup Cost',
+                    data: gasTotal,
+                    backgroundColor: 'rgba(239,68,68,0.55)',
+                    borderColor: '#EF4444',
+                    borderWidth: 1,
+                    barPercentage: 0.5,
+                    order: 3
+                },
+                {
+                    label: 'New Gas Cost Only',
+                    data: newGasCost,
+                    backgroundColor: 'rgba(239,68,68,0.25)',
+                    borderColor: 'rgba(239,68,68,0.5)',
+                    borderWidth: 1,
+                    borderDash: [4, 2],
+                    barPercentage: 0.5,
+                    order: 3
+                },
+                {
+                    label: 'Nuclear FOAK LCOE',
+                    data: foakLCOE,
+                    type: 'line',
+                    borderColor: 'rgba(239,68,68,0.8)',
+                    borderWidth: 2,
+                    borderDash: [6, 3],
+                    pointRadius: 6,
+                    pointBackgroundColor: '#EF4444',
+                    tension: 0,
+                    fill: false,
+                    order: 1
+                },
+                {
+                    label: 'Nuclear Medium LCOE',
+                    data: medLCOE,
+                    type: 'line',
+                    borderColor: 'rgba(245,158,11,0.8)',
+                    borderWidth: 2,
+                    pointRadius: 6,
+                    pointBackgroundColor: '#F59E0B',
+                    tension: 0,
+                    fill: '+1',
+                    backgroundColor: 'rgba(245,158,11,0.08)',
+                    order: 1
+                },
+                {
+                    label: 'Nuclear NOAK LCOE',
+                    data: noakLCOE,
+                    type: 'line',
+                    borderColor: 'rgba(34,197,94,0.8)',
+                    borderWidth: 2,
+                    pointRadius: 6,
+                    pointBackgroundColor: '#22C55E',
+                    tension: 0,
+                    fill: false,
+                    order: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: 'rgba(0,0,0,0.6)', font: { size: 10 }, usePointStyle: true, padding: 10 }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(255,255,255,0.95)',
+                    titleColor: '#374151',
+                    bodyColor: '#374151',
+                    borderColor: 'rgba(0,0,0,0.1)',
+                    borderWidth: 1,
+                    padding: 10,
+                    cornerRadius: 8,
+                    callbacks: {
+                        label: function(c) { return c.dataset.label + ': $' + c.raw.toFixed(1) + '/MWh'; }
+                    }
+                },
+                datalabels: { display: false },
+                annotation: {
+                    annotations: {
+                        catalyticBand: {
+                            type: 'box',
+                            yMin: Math.min.apply(null, noakLCOE),
+                            yMax: Math.max.apply(null, foakLCOE),
+                            backgroundColor: 'rgba(30,58,95,0.06)',
+                            borderColor: 'rgba(30,58,95,0.12)',
+                            borderWidth: 1,
+                            label: {
+                                display: true,
+                                content: 'Catalytic Premium',
+                                position: 'end',
+                                font: { size: 10, style: 'italic' },
+                                color: 'rgba(0,0,0,0.4)'
+                            }
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: 'rgba(0,0,0,0.7)', font: { size: 12, weight: '600' } },
+                    grid: { display: false },
+                    border: { color: 'rgba(0,0,0,0.1)' }
+                },
+                y: {
+                    title: { display: true, text: '$/MWh', color: 'rgba(0,0,0,0.45)', font: { size: 10 } },
+                    ticks: { color: 'rgba(0,0,0,0.55)', font: { size: 10 }, callback: function(v) { return '$' + v; } },
+                    grid: { color: 'rgba(0,0,0,0.06)' },
+                    border: { color: 'rgba(0,0,0,0.1)' },
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Render investment narrative
+    var card = document.getElementById('investmentCard');
+    card.innerHTML =
+        '<h3>Gas costs are permanent. Clean firm costs decline.</h3>' +
+        '<p>The red bars show each ISO\'s annual gas backup cost at 90% clean — $7&ndash;10/MWh that recurs every year and grows with demand. The lines show nuclear LCOE at three price points: FOAK (red dashed), Medium (amber), and NOAK (green). The shaded band between FOAK and NOAK is the catalytic premium — the gap that early deployment closes.</p>' +
+        '<p style="margin-top:10px;">At NOAK costs ($68&ndash;75/MWh), nuclear is competitive with wholesale electricity in every ISO. The only question is how quickly we get there. DOE projects ~40% cost reduction after 10&ndash;20 deployments. Geothermal is even faster — Fervo cut costs 50% in 3 years.</p>' +
+        '<span class="stat-callout stat-blue">FOAK: $135&ndash;170/MWh &rarr; NOAK: $68&ndash;75/MWh &middot; ~40% decline after 10&ndash;20 builds</span>';
+    card.classList.add('visible');
+}
+
+// ============================================================================
+// SHARED CHART OPTIONS
+// ============================================================================
+function chartOpts(yTitle, y2Title, stacked) {
+    return {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: { color: 'rgba(0,0,0,0.6)', font: { size: 10 }, usePointStyle: true, padding: 10 }
+            },
+            tooltip: {
+                backgroundColor: 'rgba(255,255,255,0.95)',
+                titleColor: '#374151',
+                bodyColor: '#374151',
+                borderColor: 'rgba(0,0,0,0.1)',
+                borderWidth: 1,
+                padding: 10,
+                cornerRadius: 8,
+                callbacks: {
+                    label: function(c) {
+                        if (c.dataset.yAxisID === 'y2') return c.dataset.label + ': ' + c.raw.toFixed(1) + (y2Title.indexOf('%') >= 0 ? '%' : '');
+                        return c.dataset.label + ': ' + c.raw.toFixed(1) + (yTitle.indexOf('GW') >= 0 ? ' GW' : '');
+                    }
+                }
+            },
+            datalabels: { display: false }
+        },
+        scales: {
+            x: {
+                title: { display: true, text: 'Clean Energy Threshold', color: 'rgba(0,0,0,0.45)', font: { size: 10 } },
+                ticks: { color: 'rgba(0,0,0,0.55)', font: { size: 10 } },
+                grid: { display: false },
+                border: { color: 'rgba(0,0,0,0.1)' },
+                stacked: !!stacked
+            },
+            y: {
+                title: { display: true, text: yTitle, color: 'rgba(0,0,0,0.45)', font: { size: 10 } },
+                ticks: { color: 'rgba(0,0,0,0.55)', font: { size: 10 } },
+                grid: { color: 'rgba(0,0,0,0.06)' },
+                border: { color: 'rgba(0,0,0,0.1)' },
+                stacked: !!stacked
+            },
+            y2: {
+                position: 'right',
+                title: { display: true, text: y2Title, color: 'rgba(0,0,0,0.45)', font: { size: 10 } },
+                ticks: {
+                    color: 'rgba(0,0,0,0.55)',
+                    font: { size: 10 },
+                    callback: function(v) { return y2Title.indexOf('%') >= 0 ? v + '%' : '$' + v; }
+                },
+                grid: { display: false },
+                border: { color: 'rgba(0,0,0,0.1)' },
+                min: 0,
+                max: y2Title.indexOf('%') >= 0 ? 100 : undefined
+            }
+        }
+    };
+}
+
+// ============================================================================
+// ISO SELECTOR WIRING
+// ============================================================================
+function wireISOSelector(containerId, updateFn, narrativeFn) {
+    document.querySelectorAll('#' + containerId + ' .iso-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('#' + containerId + ' .iso-btn').forEach(function(b) { b.classList.remove('active'); });
+            this.classList.add('active');
+            var iso = this.getAttribute('data-iso');
+            updateFn(iso);
+            narrativeFn(iso);
+        });
+    });
+}
+
+// ============================================================================
+// SCROLL ANIMATIONS
+// ============================================================================
+function initFadeIn() {
+    var obs = new IntersectionObserver(function(entries) {
+        entries.forEach(function(e) {
+            if (e.isIntersecting) e.target.classList.add('visible');
+        });
+    }, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
+    document.querySelectorAll('.narrative-card, .synthesis-card').forEach(function(el) { obs.observe(el); });
+}
+
+// ============================================================================
+// ANIMATED COUNTERS
+// ============================================================================
+function animateCounter(el, target, prefix, suffix) {
+    var duration = 1200;
+    var start = performance.now();
+    function step(ts) {
+        var p = Math.min((ts - start) / duration, 1);
+        var eased = 1 - Math.pow(1 - p, 3);
+        el.textContent = prefix + Math.round(target * eased) + suffix;
+        if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+}
+
+// ============================================================================
+// FOAK → NOAK CHART: Clean Firm Learning Curve vs. Rising Gas Cost
+// ============================================================================
+let foakChart = null;
+
+function buildFoakNOAKChart() {
+    var ctx = document.getElementById('foakNOAKChart');
+    if (!ctx || foakChart) return;
+
+    var years = FOAK_NOAK_YEARS;
+    var cf = CLEAN_FIRM_LEARNING;
+    var gas = GAS_TRUE_COST;
+
+    // Find crossover year (central clean firm vs gas with carbon)
+    var crossoverYear = null;
+    for (var i = 0; i < years.length - 1; i++) {
+        if (cf.central[i] > gas.with_carbon[i] && cf.central[i + 1] <= gas.with_carbon[i + 1]) {
+            var cfSlope = (cf.central[i + 1] - cf.central[i]) / (years[i + 1] - years[i]);
+            var gasSlope = (gas.with_carbon[i + 1] - gas.with_carbon[i]) / (years[i + 1] - years[i]);
+            crossoverYear = years[i] + (cf.central[i] - gas.with_carbon[i]) / (gasSlope - cfSlope);
+            break;
+        }
+    }
+
+    function interpAt(arr, yr) {
+        for (var i = 0; i < years.length - 1; i++) {
+            if (yr >= years[i] && yr <= years[i + 1]) {
+                var frac = (yr - years[i]) / (years[i + 1] - years[i]);
+                return arr[i] + frac * (arr[i + 1] - arr[i]);
+            }
+        }
+        return arr[arr.length - 1];
+    }
+
+    var crossoverCost = crossoverYear ? Math.round(interpAt(cf.central, crossoverYear)) : null;
+
+    var annotations = {};
+    if (crossoverYear) {
+        annotations.crossoverLine = {
+            type: 'line',
+            xMin: crossoverYear, xMax: crossoverYear,
+            borderColor: 'rgba(0,0,0,0.25)', borderWidth: 1, borderDash: [4, 4],
+            label: {
+                display: true, content: 'Crossover ~' + Math.round(crossoverYear),
+                position: 'start', backgroundColor: 'rgba(0,0,0,0.7)', color: '#fff',
+                font: { size: 10, weight: '600' }, padding: { top: 4, bottom: 4, left: 6, right: 6 },
+                borderRadius: 4, yAdjust: -8
+            }
+        };
+        annotations.crossoverPoint = {
+            type: 'point', xValue: crossoverYear, yValue: crossoverCost,
+            radius: 7, backgroundColor: '#F59E0B',
+            borderColor: '#fff', borderWidth: 2.5
+        };
+        annotations.wastedArea = {
+            type: 'box', xMin: crossoverYear, xMax: 2050,
+            yMin: crossoverCost, yMax: gas.with_carbon[gas.with_carbon.length - 1],
+            backgroundColor: 'rgba(239,68,68,0.06)', borderColor: 'rgba(239,68,68,0.15)',
+            borderWidth: 1, borderDash: [3, 3],
+            label: { display: true, content: 'Wasted gas investment',
+                position: { x: 'center', y: 'start' }, color: 'rgba(239,68,68,0.6)',
+                font: { size: 9, style: 'italic' }, yAdjust: 10 }
+        };
+        annotations.catalyticArea = {
+            type: 'box', xMin: 2025, xMax: crossoverYear,
+            yMin: gas.with_carbon[0], yMax: cf.central[0],
+            backgroundColor: 'rgba(34,197,94,0.04)', borderColor: 'rgba(34,197,94,0.12)',
+            borderWidth: 1, borderDash: [3, 3],
+            label: { display: true, content: 'Catalytic premium',
+                position: { x: 'center', y: 'end' }, color: 'rgba(34,197,94,0.5)',
+                font: { size: 9, style: 'italic' }, yAdjust: -10 }
+        };
+    }
+
+    if (typeof SBTI_MILESTONES !== 'undefined') {
+        SBTI_MILESTONES.forEach(function(ms) {
+            if (ms.year >= 2025 && ms.year <= 2050 && ms.threshold > 0) {
+                annotations['sbti_' + ms.year] = {
+                    type: 'label', xValue: ms.year, yValue: 0,
+                    content: ms.label, color: 'rgba(0,0,0,0.3)',
+                    font: { size: 8 }, position: 'start', yAdjust: 16
+                };
+            }
+        });
+    }
+
+    foakChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: [
+                {
+                    label: 'Clean Firm (conservative)',
+                    data: years.map(function(y, i) { return { x: y, y: cf.conservative[i] }; }),
+                    borderColor: 'rgba(34,197,94,0.15)', borderWidth: 0, pointRadius: 0,
+                    fill: '+2', backgroundColor: 'rgba(34,197,94,0.08)', tension: 0.35, order: 6
+                },
+                {
+                    label: 'Clean Firm (central learning)',
+                    data: years.map(function(y, i) { return { x: y, y: cf.central[i] }; }),
+                    borderColor: '#22C55E', borderWidth: 3, pointRadius: 4,
+                    pointBackgroundColor: '#22C55E', pointBorderColor: '#FFFFFF',
+                    pointBorderWidth: 1.5, fill: false, tension: 0.35, order: 2
+                },
+                {
+                    label: 'Clean Firm (optimistic)',
+                    data: years.map(function(y, i) { return { x: y, y: cf.optimistic[i] }; }),
+                    borderColor: 'rgba(34,197,94,0.15)', borderWidth: 0, pointRadius: 0,
+                    fill: false, tension: 0.35, order: 6
+                },
+                {
+                    label: 'Gas + carbon pricing',
+                    data: years.map(function(y, i) { return { x: y, y: gas.with_carbon[i] }; }),
+                    borderColor: '#EF4444', borderWidth: 3, pointRadius: 4,
+                    pointBackgroundColor: '#EF4444', pointBorderColor: '#FFFFFF',
+                    pointBorderWidth: 1.5, fill: false, tension: 0.35, order: 1
+                },
+                {
+                    label: 'Gas (no carbon price)',
+                    data: years.map(function(y, i) { return { x: y, y: gas.base[i] }; }),
+                    borderColor: 'rgba(239,68,68,0.4)', borderWidth: 2, borderDash: [6, 4],
+                    pointRadius: 3, pointBackgroundColor: 'rgba(239,68,68,0.4)', pointBorderWidth: 0,
+                    fill: '+0', backgroundColor: 'rgba(239,68,68,0.04)', tension: 0.35, order: 4
+                }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            animation: { duration: 1400, easing: 'easeOutQuart' },
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(255,255,255,0.95)', padding: 12, cornerRadius: 8,
+                    titleColor: '#374151', bodyColor: 'rgba(0,0,0,0.7)',
+                    borderColor: 'rgba(0,0,0,0.1)', borderWidth: 1,
+                    bodyFont: { size: 11 },
+                    callbacks: {
+                        title: function(items) {
+                            var yr = items[0].parsed.x;
+                            var ms = typeof SBTI_MILESTONES !== 'undefined' ? SBTI_MILESTONES.find(function(m) { return m.year === yr; }) : null;
+                            return yr + (ms && ms.threshold > 0 ? ' (' + ms.label + ')' : '');
+                        },
+                        label: function(ctx) {
+                            if (ctx.datasetIndex === 0 || ctx.datasetIndex === 2) return null;
+                            return ctx.dataset.label + ': $' + ctx.parsed.y + '/MWh';
+                        }
+                    }
+                },
+                datalabels: {
+                    display: function(ctx) {
+                        if (ctx.datasetIndex === 1 || ctx.datasetIndex === 3) {
+                            return ctx.dataIndex === 0 || ctx.dataIndex === ctx.dataset.data.length - 1;
+                        }
+                        return false;
+                    },
+                    color: function(ctx) { return ctx.datasetIndex === 1 ? '#22C55E' : '#EF4444'; },
+                    font: { size: 11, weight: '700' },
+                    anchor: function(ctx) { return ctx.datasetIndex === 1 ? 'end' : 'start'; },
+                    align: function(ctx) {
+                        if (ctx.dataIndex === 0) return ctx.datasetIndex === 1 ? 'top' : 'bottom';
+                        return ctx.datasetIndex === 1 ? 'bottom' : 'top';
+                    },
+                    formatter: function(val) { return '$' + val.y; },
+                    offset: 6
+                },
+                annotation: { annotations: annotations }
+            },
+            scales: {
+                x: {
+                    type: 'linear', min: 2024, max: 2051,
+                    ticks: { stepSize: 5, color: 'rgba(0,0,0,0.55)', font: { size: 11, weight: '600' }, callback: function(v) { return v; } },
+                    grid: { color: 'rgba(0,0,0,0.04)' },
+                    border: { color: 'rgba(0,0,0,0.1)' },
+                    title: { display: true, text: 'SBTi Target Year', color: 'rgba(0,0,0,0.45)', font: { size: 10 } }
+                },
+                y: {
+                    min: 0, max: 180,
+                    ticks: { stepSize: 20, color: 'rgba(0,0,0,0.55)', font: { size: 10 }, callback: function(v) { return '$' + v; } },
+                    grid: { color: 'rgba(0,0,0,0.06)' },
+                    border: { color: 'rgba(0,0,0,0.1)' },
+                    title: { display: true, text: 'LCOE ($/MWh)', color: 'rgba(0,0,0,0.45)', font: { size: 10 } }
+                }
+            }
+        },
+        plugins: [ChartDataLabels]
+    });
+}
+
+// ============================================================================
+// INIT
+// ============================================================================
+document.addEventListener('DOMContentLoaded', function() {
+    // Compute hero counters from data
+    var totalNewGas = 0;
+    var totalAnnualCost = 0;
+    ISOS.forEach(function(iso) {
+        totalNewGas += gd(iso).new_gas_build_mw[7];
+        totalAnnualCost += gd(iso).new_gas_cost[7] * REGIONAL_DEMAND_TWH[iso];
+    });
+    var newGasGW = Math.round(totalNewGas / 1000);
+    var annualCostB = Math.round(totalAnnualCost / 1000);
+
+    // Animate counters
+    animateCounter(document.getElementById('ctrNewGas'), newGasGW, '', '');
+    animateCounter(document.getElementById('ctrAnnualCost'), annualCostB, '$', 'B');
+
+    // Build charts
+    buildHeroChart();
+
+    // Lazy-build section charts when they scroll into view
+    var chartObs = new IntersectionObserver(function(entries) {
+        entries.forEach(function(e) {
+            if (!e.isIntersecting) return;
+            var id = e.target.id;
+            if (id === 'gasTrapChart' && !gasTrapChart) {
+                buildGasTrapChart();
+                renderNarrative('gasTrapCard', GAS_TRAP_TEXT, gasTrapISO);
+            }
+            if (id === 'displacementChart' && !displacementChart) {
+                buildDisplacementChart();
+                renderNarrative('displacementCard', DISPLACEMENT_TEXT, displacementISO);
+            }
+            if (id === 'investmentChart' && !investmentChart) {
+                buildInvestmentChart();
+            }
+            chartObs.unobserve(e.target);
+        });
+    }, { threshold: 0.05, rootMargin: '200px' });
+
+    ['gasTrapChart', 'displacementChart', 'investmentChart'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) chartObs.observe(el);
+    });
+
+    // FOAK → NOAK chart (lazy: build on scroll into view)
+    var foakObs = new IntersectionObserver(function(entries) {
+        entries.forEach(function(e) {
+            if (e.isIntersecting && !foakChart) {
+                requestAnimationFrame(buildFoakNOAKChart);
+                foakObs.unobserve(e.target);
+            }
+        });
+    }, { threshold: 0.1, rootMargin: '200px 0px 200px 0px' });
+    var foakCanvas = document.getElementById('foakNOAKChart');
+    if (foakCanvas) foakObs.observe(foakCanvas.closest('.chart-panel') || foakCanvas);
+
+    // Wire ISO selectors
+    wireISOSelector('gasTrapISO', function(iso) {
+        gasTrapISO = iso;
+        updateGasTrapChart();
+    }, function(iso) {
+        renderNarrative('gasTrapCard', GAS_TRAP_TEXT, iso);
+    });
+
+    wireISOSelector('displacementISO', function(iso) {
+        displacementISO = iso;
+        updateDisplacementChart();
+    }, function(iso) {
+        renderNarrative('displacementCard', DISPLACEMENT_TEXT, iso);
+    });
+
+    // Scroll fade-in
+    initFadeIn();
+});
+</script>
+</body>
+</html>

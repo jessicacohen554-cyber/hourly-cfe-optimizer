@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The 8,760 Problem — Cost to Replace Existing Clean Generation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/article.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
+<style>
+/* Page-specific overrides only — shared styles in article.css */
+body { background: var(--bg-page); }
+
+/* Dark navy hero override (this page uses dark bg, not light) */
+.hero-overview {
+    background: linear-gradient(180deg, var(--navy-dark) 0%, var(--navy) 60%, var(--navy-mid) 100%);
+}
+.hero-overview::before {
+    background: radial-gradient(ellipse at 30% 20%, rgba(14,165,233,0.06) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 80%, rgba(245,158,11,0.04) 0%, transparent 60%);
+}
+
+/* Hero text block (dark-bg animated text) */
+.hero-text-block {
+    z-index: 2;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.hero-text-block.visible { opacity: 1; transform: translateY(0); }
+.hero-text-block h2 {
+    font-family: var(--font-heading);
+    font-size: 2rem;
+    font-weight: 800;
+    color: #ffffff;
+    margin-bottom: 16px;
+    line-height: 1.2;
+    letter-spacing: -0.5px;
+}
+.hero-text-block p {
+    font-size: 0.95rem;
+    color: rgba(255,255,255,0.7);
+    line-height: 1.75;
+    margin-bottom: 16px;
+}
+.hero-text-block .lead-text {
+    font-size: 1rem;
+    color: rgba(255,255,255,0.8);
+    line-height: 1.75;
+    margin-bottom: 20px;
+}
+
+/* Key finding badge (cyan pill on dark bg) */
+.key-finding-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-data);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: rgba(56,189,248,0.12);
+    border: 1px solid rgba(56,189,248,0.3);
+    color: #38bdf8;
+    margin-bottom: 14px;
+}
+
+/* Hero callout stat (dark-bg stat box) */
+.hero-callout {
+    margin-top: 24px;
+    padding: 20px 24px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px;
+    text-align: center;
+}
+.hero-callout .counter-value {
+    font-family: var(--font-data);
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #fbbf24;
+    display: block;
+    line-height: 1.1;
+}
+.hero-callout .counter-label {
+    font-size: 0.82rem;
+    color: rgba(255,255,255,0.5);
+    margin-top: 6px;
+    display: block;
+}
+
+/* Chart panel overrides */
+.chart-panel { border-color: rgba(74,144,217,0.12); }
+.chart-panel-overview,
+.chart-panel-region {
+    background: rgba(255,255,255,0.98);
+    border-color: rgba(74,144,217,0.12);
+}
+.chart-panel-overview { min-height: 400px; }
+.chart-panel-overview .chart-container { position: relative; width: 100%; min-height: 350px; }
+.hero-chart-title {
+    font-family: var(--font-heading);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: rgba(15,23,42,0.85);
+    text-align: center;
+    margin-bottom: 10px;
+    letter-spacing: 0.02em;
+}
+.hero-chart-subtitle {
+    font-family: var(--font-data);
+    font-size: 0.72rem;
+    color: rgba(15,23,42,0.4);
+    text-align: center;
+    margin-top: 6px;
+}
+
+/* Region sections (alternating chart+narrative rows) */
+.region-section {
+    background: var(--bg-page);
+    position: relative;
+    border-top: 1px solid rgba(0,0,0,0.025);
+}
+.region-section-inner {
+    max-width: var(--max-content);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    min-height: auto;
+}
+.region-chart-col {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+}
+.chart-panel-region {
+    background: rgba(255,255,255,0.98);
+    border-color: rgba(74,144,217,0.10);
+    min-height: 400px;
+}
+.chart-panel-region .chart-container { position: relative; width: 100%; min-height: 350px; }
+.region-narrative-col {
+    padding: 48px 48px 48px 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.region-step-card {
+    background: rgba(0,0,0,0.025);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 16px;
+    padding: 32px;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.region-step-card.visible { opacity: 1; transform: translateY(0); }
+.region-step-card h3 {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #1E293B;
+    margin-bottom: 12px;
+    line-height: 1.25;
+    letter-spacing: -0.3px;
+}
+.region-step-card p {
+    font-size: 0.92rem;
+    color: rgba(15,23,42,0.7);
+    line-height: 1.75;
+    margin-bottom: 0;
+}
+.region-step-card .step-stat {
+    display: inline-block;
+    margin-top: 14px;
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-family: var(--font-data);
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+.step-stat-green { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); color: #16a34a; }
+.step-stat-amber { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.18); color: #d97706; }
+.step-stat-red { background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2); color: #dc2626; }
+.step-stat-blue { background: rgba(14,165,233,0.08); border: 1px solid rgba(14,165,233,0.2); color: #0284c7; }
+.step-stat-purple { background: rgba(156,39,176,0.08); border: 1px solid rgba(156,39,176,0.25); color: #9C27B0; }
+.region-tag {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-family: var(--font-data);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+}
+
+/* Synthesis overrides (larger text on this page) */
+.synthesis-section-title {
+    font-family: var(--font-heading);
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: #ffffff;
+    text-align: center;
+    margin-bottom: 40px;
+    letter-spacing: -0.3px;
+}
+.synthesis-inner {
+    max-width: var(--max-content);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+}
+.synthesis-card h3 { font-size: 1.3rem; }
+.synthesis-card p { font-size: 0.92rem; }
+.synthesis-card .step-stat {
+    display: inline-block;
+    margin-top: 14px;
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-family: var(--font-data);
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+
+/* Chart legend overrides (centered, data font) */
+.chart-legend { justify-content: center; padding: 8px 12px 2px; margin-top: 4px; }
+.chart-legend-item { font-family: var(--font-data); color: rgba(15,23,42,0.55); gap: 6px; }
+
+/* Responsive */
+@media (max-width: 900px) {
+    .region-section-inner { grid-template-columns: 1fr; min-height: auto; }
+    .region-chart-col { position: relative; height: auto; padding: 24px 16px 16px; }
+    .region-narrative-col { padding: 16px 16px 32px; }
+    .chart-panel { padding: 16px 14px; border-radius: 12px; }
+    .chart-panel-overview { min-height: 350px; }
+    .chart-panel-overview .chart-container { min-height: 300px; }
+    .chart-panel-region { min-height: 350px; }
+    .chart-panel-region .chart-container { min-height: 300px; }
+    .synthesis-inner { grid-template-columns: 1fr; gap: 20px; }
+    .synthesis-section { padding: 40px 16px; }
+    .region-step-card { padding: 24px 20px; }
+    .region-step-card h3 { font-size: 1.25rem; }
+    .chart-legend { padding: 6px 8px 2px; }
+}
+@media (max-width: 600px) {
+    .chart-panel { padding: 12px 10px; border-radius: 10px; }
+    .chart-panel-overview { min-height: 320px; }
+    .chart-panel-overview .chart-container { min-height: 270px; }
+    .chart-panel-region { min-height: 320px; }
+    .chart-panel-region .chart-container { min-height: 270px; }
+    .region-chart-col { padding: 16px 10px 10px; }
+    .region-narrative-col { padding: 10px 12px 24px; }
+    .region-step-card { padding: 20px 16px; }
+    .region-step-card h3 { font-size: 1.15rem; }
+    .region-step-card p { font-size: 0.85rem; }
+    .hero-text-block h2 { font-size: 1.5rem; }
+    .hero-text-block p { font-size: 0.85rem; }
+    .hero-callout .counter-value { font-size: 2rem; }
+    .chart-legend { padding: 4px 4px 0; }
+}
+@media (max-width: 480px) {
+    .chart-panel { padding: 10px 8px; border-radius: 8px; }
+    .chart-panel-overview { min-height: 300px; }
+    .chart-panel-overview .chart-container { min-height: 250px; }
+    .chart-panel-region { min-height: 300px; }
+    .chart-panel-region .chart-container { min-height: 250px; }
+    .region-chart-col { padding: 12px 8px 8px; }
+    .region-narrative-col { padding: 8px 10px 20px; }
+    .region-step-card { padding: 16px 12px; border-radius: 12px; }
+    .region-step-card h3 { font-size: 1.05rem; }
+    .region-step-card p { font-size: 0.82rem; line-height: 1.6; }
+    .region-step-card .step-stat { font-size: 0.78rem; padding: 6px 12px; }
+    .synthesis-card .step-stat { font-size: 0.78rem; padding: 6px 12px; }
+    .hero-text-block h2 { font-size: 1.3rem; }
+    .hero-text-block p { font-size: 0.8rem; line-height: 1.6; }
+    .hero-callout .counter-value { font-size: 1.7rem; }
+    .hero-callout .counter-label { font-size: 0.75rem; }
+    .chart-legend { padding: 4px 2px 0; }
+}
+@media (max-width: 320px) {
+    .chart-panel { padding: 8px 6px; }
+    .chart-panel-overview { min-height: 280px; }
+    .chart-panel-overview .chart-container { min-height: 230px; }
+    .chart-panel-region { min-height: 280px; }
+    .chart-panel-region .chart-container { min-height: 230px; }
+    .region-step-card { padding: 14px 10px; }
+    .region-step-card h3 { font-size: 0.95rem; }
+    .hero-text-block h2 { font-size: 1.15rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- TOP NAV (injected by nav.js) -->
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+<div style="background:var(--navy-dark);padding:8px var(--pad-page);"><a href="index.html" style="font-family:var(--font-heading);font-size:0.82rem;font-weight:600;color:rgba(255,255,255,0.75);text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;min-height:44px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
+
+<!-- HEADER BANNER -->
+<header class="header">
+    <div class="header-accent"></div>
+    <h1>Cost to Replace Existing Clean Generation</h1>
+    <p class="subtitle">What would it cost to rebuild the grid's clean energy fleet from scratch?<br>A greenfield pricing analysis across 5 U.S. ISOs</p>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 1: HERO OVERVIEW — Conclusion first                          -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section class="hero-overview section-light">
+    <div class="hero-overview-inner">
+        <div class="hero-text-block">
+            <span class="key-finding-badge">Key Finding</span>
+            <h2>The Replacement Premium Is Real &mdash; and Regional</h2>
+            <p class="lead-text">Replacing all existing clean generation with new-build equivalents adds a significant cost premium. The size of that premium depends heavily on <strong>what you're replacing</strong> &mdash; regions with large nuclear and hydro fleets pay the steepest price.</p>
+            <p>Existing clean resources operate at wholesale electricity prices ($25&ndash;37/MWh), far below the levelized cost of building new equivalents ($50&ndash;120/MWh). This gap &mdash; the replacement premium &mdash; quantifies the hidden economic value of the clean generation already on the grid.</p>
+            <div class="hero-callout">
+                <span class="counter-value" id="heroCounter" data-target="0" data-prefix="+$" data-suffix="/MWh">+$--/MWh</span>
+                <span class="counter-label">Average replacement premium across all ISOs at 90% clean</span>
+            </div>
+        </div>
+        <div class="hero-chart-block">
+            <div class="chart-panel chart-panel-overview">
+                <div class="hero-chart-title">Replacement Premium by Region at 90% Clean Energy</div>
+                <div class="chart-container">
+                    <canvas id="heroOverviewChart"></canvas>
+                </div>
+                <div class="chart-legend">
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#4a90d9;"></span>Track 1 Baseline</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#F59E0B;"></span>Track 2 Replacement</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(239,68,68,0.18);"></span>Cost to Replace Premium</span>
+                </div>
+                <div class="hero-chart-subtitle">Effective $/MWh &middot; Medium cost sensitivities &middot; All thresholds</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="energy-spectrum-bar"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 2: REGIONAL DEEP-DIVES (scrollytell)                         -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+
+<!-- REGION: PJM -->
+<section class="region-section section-light" data-region="PJM">
+    <div class="region-section-inner">
+        <div class="region-chart-col">
+            <div class="chart-panel chart-panel-region" style="width:100%;">
+                <div class="hero-chart-title">PJM (Mid-Atlantic) &mdash; Track 1 Baseline vs. Track 2 Replacement</div>
+                <div class="chart-container">
+                    <canvas id="regionChart_PJM"></canvas>
+                </div>
+                <div class="chart-legend">
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#4a90d9;"></span>Track 1 Baseline</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#4a90d9;"></span>Track 2 Replacement</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(239,68,68,0.18);"></span>Cost to Replace Premium</span>
+                </div>
+            </div>
+        </div>
+        <div class="region-narrative-col">
+            <div class="region-step-card">
+                <span class="region-tag" style="background:rgba(74,144,217,0.10);color:#4a90d9;">PJM</span>
+                <h3>PJM: Nuclear dominance means the highest replacement cost</h3>
+                <p>PJM's grid is anchored by 32.1% existing clean firm generation &mdash; overwhelmingly nuclear. These plants dispatch at wholesale rates (~$30/MWh), but new nuclear construction costs $75&ndash;120/MWh. Replacing this fleet from scratch roughly doubles the effective cost at moderate thresholds and pushes higher targets into prohibitively expensive territory. PJM illustrates why preserving existing nuclear capacity is among the most cost-effective decarbonization strategies available.</p>
+                <span class="step-stat step-stat-red" id="statPJM">Premium at 90%: loading...</span>
+                <div class="annual-cost-callout" id="annualPJM" style="margin-top:12px;padding:10px 14px;background:rgba(74,144,217,0.06);border:1px solid rgba(74,144,217,0.15);border-radius:8px;font-size:0.82rem;color:rgba(15,23,42,0.65);line-height:1.5;"></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- REGION: ERCOT -->
+<section class="region-section section-light" data-region="ERCOT">
+    <div class="region-section-inner">
+        <div class="region-chart-col">
+            <div class="chart-panel chart-panel-region" style="width:100%;">
+                <div class="hero-chart-title">ERCOT (Texas) &mdash; Track 1 Baseline vs. Track 2 Replacement</div>
+                <div class="chart-container">
+                    <canvas id="regionChart_ERCOT"></canvas>
+                </div>
+                <div class="chart-legend">
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#22C55E;"></span>Track 1 Baseline</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#22C55E;"></span>Track 2 Replacement</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(239,68,68,0.18);"></span>Cost to Replace Premium</span>
+                </div>
+            </div>
+        </div>
+        <div class="region-narrative-col">
+            <div class="region-step-card">
+                <span class="region-tag" style="background:rgba(34,197,94,0.1);color:#22C55E;">ERCOT</span>
+                <h3>ERCOT: Minimal existing clean firm means a small premium</h3>
+                <p>With only 8.6% existing clean firm capacity (nuclear), ERCOT has the least to lose from a greenfield rebuild. The existing fleet is dominated by gas and wind &mdash; resources where new-build costs are closest to wholesale. The replacement premium stays modest across all thresholds, making ERCOT the region least penalized by a full-replacement scenario. The lesson: when most of your clean fleet is already renewable, the greenfield penalty is small.</p>
+                <span class="step-stat step-stat-green" id="statERCOT">Premium at 90%: loading...</span>
+                <div class="annual-cost-callout" id="annualERCOT" style="margin-top:12px;padding:10px 14px;background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.15);border-radius:8px;font-size:0.82rem;color:rgba(15,23,42,0.65);line-height:1.5;"></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="energy-spectrum-bar"></div>
+
+<!-- REGION: CAISO -->
+<section class="region-section section-light" data-region="CAISO">
+    <div class="region-section-inner">
+        <div class="region-chart-col">
+            <div class="chart-panel chart-panel-region" style="width:100%;">
+                <div class="hero-chart-title">CAISO (California) &mdash; Track 1 Baseline vs. Track 2 Replacement</div>
+                <div class="chart-container">
+                    <canvas id="regionChart_CAISO"></canvas>
+                </div>
+                <div class="chart-legend">
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#F59E0B;"></span>Track 1 Baseline</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#F59E0B;"></span>Track 2 Replacement</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(239,68,68,0.18);"></span>Cost to Replace Premium</span>
+                </div>
+            </div>
+        </div>
+        <div class="region-narrative-col">
+            <div class="region-step-card">
+                <span class="region-tag" style="background:rgba(245,158,11,0.1);color:#F59E0B;">CAISO</span>
+                <h3>CAISO: Diablo Canyon + hydro create a moderate premium</h3>
+                <p>California's grid carries 7.9% nuclear (Diablo Canyon, since relicensed) and 9.5% hydro. Both operate well below new-build costs. Replacing them at greenfield prices layers a moderate premium onto an already-expensive grid. The premium widens at higher thresholds as the optimizer can no longer lean on cheap existing dispatchable resources. CAISO's geothermal potential (The Geysers, Salton Sea) helps offset some replacement cost, but nuclear remains the biggest swing factor.</p>
+                <span class="step-stat step-stat-amber" id="statCAISO">Premium at 90%: loading...</span>
+                <div class="annual-cost-callout" id="annualCAISO" style="margin-top:12px;padding:10px 14px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15);border-radius:8px;font-size:0.82rem;color:rgba(15,23,42,0.65);line-height:1.5;"></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- REGION: NYISO -->
+<section class="region-section section-light" data-region="NYISO">
+    <div class="region-section-inner">
+        <div class="region-chart-col">
+            <div class="chart-panel chart-panel-region" style="width:100%;">
+                <div class="hero-chart-title">NYISO (New York) &mdash; Track 1 Baseline vs. Track 2 Replacement</div>
+                <div class="chart-container">
+                    <canvas id="regionChart_NYISO"></canvas>
+                </div>
+                <div class="chart-legend">
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#E91E63;"></span>Track 1 Baseline</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E63;"></span>Track 2 Replacement</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(239,68,68,0.18);"></span>Cost to Replace Premium</span>
+                </div>
+            </div>
+        </div>
+        <div class="region-narrative-col">
+            <div class="region-step-card">
+                <span class="region-tag" style="background:rgba(233,30,99,0.15);color:#E91E63;">NYISO</span>
+                <h3>NYISO: Hydro and nuclear deliver a steep two-part premium</h3>
+                <p>New York benefits from 15.9% hydro (Niagara Falls, St. Lawrence) priced at floor rates and 18.4% nuclear (Indian Point legacy, Nine Mile Point, FitzPatrick). Together, these assets supply over a third of clean energy at wholesale cost. Rebuilding them from scratch would require new nuclear ($75&ndash;120/MWh) or imported Canadian hydro at negotiated PPA rates &mdash; either way, significantly more expensive. NYISO's premium is among the steepest because both of its largest clean resources are far below new-build cost.</p>
+                <span class="step-stat step-stat-red" id="statNYISO">Premium at 90%: loading...</span>
+                <div class="annual-cost-callout" id="annualNYISO" style="margin-top:12px;padding:10px 14px;background:rgba(233,30,99,0.06);border:1px solid rgba(233,30,99,0.15);border-radius:8px;font-size:0.82rem;color:rgba(15,23,42,0.65);line-height:1.5;"></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="energy-spectrum-bar"></div>
+
+<!-- REGION: NEISO -->
+<section class="region-section section-light" data-region="NEISO">
+    <div class="region-section-inner">
+        <div class="region-chart-col">
+            <div class="chart-panel chart-panel-region" style="width:100%;">
+                <div class="hero-chart-title">NEISO (New England) &mdash; Track 1 Baseline vs. Track 2 Replacement</div>
+                <div class="chart-container">
+                    <canvas id="regionChart_NEISO"></canvas>
+                </div>
+                <div class="chart-legend">
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#9C27B0;"></span>Track 1 Baseline</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#9C27B0;"></span>Track 2 Replacement</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(239,68,68,0.18);"></span>Cost to Replace Premium</span>
+                </div>
+            </div>
+        </div>
+        <div class="region-narrative-col">
+            <div class="region-step-card">
+                <span class="region-tag" style="background:rgba(156,39,176,0.1);color:#9C27B0;">NEISO</span>
+                <h3>NEISO: Millstone anchors the fleet &mdash; losing it would be catastrophic</h3>
+                <p>New England runs 23.8% of its clean energy from nuclear (Millstone, Seabrook). These plants provide baseload capacity through harsh winters when gas pipeline constraints already spike energy costs. Replacing this nuclear capacity at new-build prices would push NEISO's already-steep cost curve even higher. The winter gas constraint means CCS-CCGT replacement carries an additional $13/MWh adder, compounding the premium. NEISO demonstrates that existing nuclear is not just cheap &mdash; it's irreplaceable in constrained grids.</p>
+                <span class="step-stat step-stat-purple" id="statNEISO">Premium at 90%: loading...</span>
+                <div class="annual-cost-callout" id="annualNEISO" style="margin-top:12px;padding:10px 14px;background:rgba(156,39,176,0.06);border:1px solid rgba(156,39,176,0.15);border-radius:8px;font-size:0.82rem;color:rgba(15,23,42,0.65);line-height:1.5;"></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="energy-spectrum-bar"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 3: WHAT DRIVES THE PREMIUM (synthesis)                       -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="gradient-transition"></div>
+<section class="section-dark">
+<div class="section-dark-inner">
+    <h2 class="synthesis-section-title">What Drives the Replacement Premium?</h2>
+    <div class="synthesis-inner">
+        <div class="synthesis-card">
+            <h3>Existing Generation: The Hidden Subsidy</h3>
+            <p>Existing clean resources are priced at wholesale electricity rates ($25&ndash;37/MWh) because their capital costs are sunk. New-build equivalents must recover their full capital investment, pushing levelized costs to $50&ndash;120/MWh depending on technology. This spread &mdash; the difference between operating cost and full lifecycle cost &mdash; <strong>is</strong> the replacement premium. It's not a market distortion; it's the economic reality that makes early retirement of working clean plants the most expensive path to decarbonization.</p>
+            <span class="step-stat step-stat-amber">Wholesale: $25&ndash;37/MWh &middot; New-build: $50&ndash;120/MWh &middot; Spread = premium</span>
+        </div>
+        <div class="synthesis-card">
+            <h3>Nuclear Is the Anchor</h3>
+            <p>Regions with large nuclear fleets &mdash; PJM (32.1%), NEISO (23.8%), NYISO (18.4%) &mdash; show the largest replacement premiums. Nuclear new-build ($75&ndash;120/MWh) dwarfs wholesale pricing. Meanwhile, ERCOT (8.6% nuclear) shows minimal premium because its clean fleet is weighted toward renewables, where new-build costs are closer to existing PPA rates. <strong>The single largest driver of replacement cost is the share of nuclear in the existing fleet.</strong> Preserving these plants isn't sentimentality &mdash; it's the cheapest decarbonization resource available.</p>
+            <span class="step-stat step-stat-blue">PJM 32% nuclear = highest premium &middot; ERCOT 8.6% = lowest premium</span>
+        </div>
+    </div>
+</div>
+</section>
+<div class="gradient-transition"></div>
+
+<!-- SOURCES -->
+<div style="max-width:1320px;margin:0 auto;padding:24px 24px 24px;">
+    <details style="background:rgba(0,0,0,0.025);border:1px solid rgba(0,0,0,0.08);border-radius:10px;padding:16px 20px;">
+        <summary style="font-family:var(--font-heading);font-size:0.9rem;font-weight:600;color:rgba(15,23,42,0.85);cursor:pointer;min-height:44px;display:flex;align-items:center;">Sources &amp; References</summary>
+        <ol style="font-size:0.8rem;color:rgba(15,23,42,0.5);line-height:1.8;padding-left:20px;margin-top:12px;">
+            <li>NREL Annual Technology Baseline (ATB) 2024 &mdash; technology costs for wind, solar, storage, nuclear, CCS, geothermal.</li>
+            <li>Lazard Levelized Cost of Energy Analysis v17.0 (2024) &mdash; generation technology cost benchmarks.</li>
+            <li>EIA Hourly Electric Grid Monitor &mdash; hourly generation data by fuel type and balancing authority.</li>
+            <li>EPA eGRID 2022 &mdash; regional emission rates, fuel mix, and generator-level data.</li>
+            <li>EIA-860 Annual Electric Generator Report &mdash; existing generator capacity by ISO and fuel type.</li>
+            <li>EIA Wholesale Electricity Market Data &mdash; regional hub prices for existing resource valuation.</li>
+        </ol>
+    </details>
+</div>
+
+<!-- ============ RELATED ANALYSES ============ -->
+<div class="related-analyses">
+    <div class="related-analyses-title">Related Analyses</div>
+    <div class="related-analyses-grid">
+        <a href="clean_firm_case.html" class="related-card">
+            <div class="related-card-tag">Economics</div>
+            <div class="related-card-title">The Clean Firm Case</div>
+            <div class="related-card-desc">The technical and economic case for always-on clean power as the foundation of decarbonization.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="new_build_analysis.html" class="related-card">
+            <div class="related-card-tag">Economics</div>
+            <div class="related-card-title">New Build Analysis</div>
+            <div class="related-card-desc">Greenfield cost analysis: when does building new beat maintaining old?</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="abatement_dashboard.html" class="related-card">
+            <div class="related-card-tag">Carbon</div>
+            <div class="related-card-title">CO&#8322; Abatement</div>
+            <div class="related-card-desc">Marginal abatement costs &mdash; where does each dollar deliver the most decarbonization?</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+    </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="dashboard.html">Grid Simulation</a>
+        <a href="abatement_dashboard.html">CO&#8322; Abatement</a>
+        <a href="research_paper.html">Research Paper</a>
+        <a href="about.html">About</a>
+    </div>
+    <div class="footer-note">The 8,760 Problem &mdash; 2025 Snapshot Model</div>
+</footer>
+<div class="bottom-banner"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- DATA & CHART SCRIPTS                                                  -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<script src="js/shared-data.js"></script>
+<script>
+// ============================================================================
+// CONSTANTS & STATE
+// ============================================================================
+const REGIONS = ['PJM', 'ERCOT', 'CAISO', 'NYISO', 'NEISO'];
+const REGION_CLR = { ERCOT: '#22C55E', PJM: '#4a90d9', CAISO: '#F59E0B', NYISO: '#E91E63', NEISO: '#9C27B0' };
+const REGION_NAMES = { PJM: 'PJM', ERCOT: 'ERCOT', CAISO: 'CAISO', NYISO: 'NYISO', NEISO: 'NEISO' };
+const THR = typeof THRESHOLDS !== 'undefined' ? THRESHOLDS : [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.99];
+
+let trackData = null;
+let heroChart = null;
+const regionCharts = {};
+
+// Baseline effective cost from shared-data.js
+const BASELINE = typeof EFFECTIVE_COST_DATA !== 'undefined' ? EFFECTIVE_COST_DATA : {};
+
+// ============================================================================
+// DATA LOADING
+// ============================================================================
+fetch('track_results.json')
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+        trackData = d;
+        initPage();
+    })
+    .catch(function(err) {
+        console.warn('track_results.json not found or failed to load:', err);
+        // Still initialize with placeholder data for visual structure
+        initPage();
+    });
+
+// ============================================================================
+// EXTRACT REPLACE TRACK DATA
+// ============================================================================
+function getReplaceEffectiveCost(iso) {
+    // Structure: { results: { ISO: { cost_to_replace: { "90": { scenarios: { KEY: { costs: {...} } } } } } } }
+    if (!trackData) return null;
+
+    var root = trackData.results || trackData;
+    var isoData = root[iso];
+    if (!isoData) return null;
+
+    // Navigate to cost_to_replace track data
+    var ctr = isoData.cost_to_replace || isoData.thresholds;
+    if (!ctr) return null;
+
+    return THR.map(function(t) {
+        var thrKey = String(t % 1 === 0 ? Math.floor(t) : t);
+        var thrData = ctr[thrKey];
+        if (!thrData || !thrData.scenarios) return null;
+        // Return first scenario's effective_cost (medium scenario)
+        var keys = Object.keys(thrData.scenarios);
+        for (var i = 0; i < keys.length; i++) {
+            var s = thrData.scenarios[keys[i]];
+            if (s && s.costs && s.costs.effective_cost != null) return s.costs.effective_cost;
+        }
+        return null;
+    });
+}
+
+// Get full scenario sweep data for P10/P50/P90 bands if available
+function getReplaceSweepData(iso) {
+    if (!trackData) return null;
+    var root = trackData.results || trackData;
+    var isoData = root[iso];
+    if (!isoData) return null;
+
+    // Navigate to cost_to_replace track
+    var ctr = isoData.cost_to_replace || isoData.thresholds;
+    if (!ctr) return null;
+
+    // Check per-threshold precomputed sweep percentiles
+    var p10 = [], p50 = [], p90 = [];
+    var hasSweep = false;
+    THR.forEach(function(t) {
+        var thrKey = String(t % 1 === 0 ? Math.floor(t) : t);
+        var thrData = ctr[thrKey];
+        if (!thrData) {
+            p10.push(null); p50.push(null); p90.push(null);
+            return;
+        }
+        // Use precomputed sweep if available
+        if (thrData.sweep) {
+            hasSweep = true;
+            p10.push(thrData.sweep.p10 ? thrData.sweep.p10.effective_cost : null);
+            p50.push(thrData.sweep.p50 ? thrData.sweep.p50.effective_cost : null);
+            p90.push(thrData.sweep.p90 ? thrData.sweep.p90.effective_cost : null);
+        } else if (thrData.scenarios) {
+            // Fallback: single scenario → use as all percentiles
+            var keys = Object.keys(thrData.scenarios);
+            if (keys.length >= 1) {
+                var c = thrData.scenarios[keys[0]].costs.effective_cost;
+                p10.push(c); p50.push(c); p90.push(c);
+            } else {
+                p10.push(null); p50.push(null); p90.push(null);
+            }
+        } else {
+            p10.push(null); p50.push(null); p90.push(null);
+        }
+    });
+    if (hasSweep) return { p10: p10, p50: p50, p90: p90 };
+    return null;
+}
+
+// ============================================================================
+// DEMAND DATA (for total annual cost computation)
+// ============================================================================
+var DEMAND_TWH = typeof REGIONAL_DEMAND_TWH !== 'undefined' ? REGIONAL_DEMAND_TWH : {};
+
+// ============================================================================
+// BUILD HERO OVERVIEW CHART (all regions: baseline vs replace)
+// ============================================================================
+function buildHeroChart() {
+    var ctx = document.getElementById('heroOverviewChart');
+    if (!ctx) return;
+    ctx = ctx.getContext('2d');
+
+    var datasets = [];
+    var premiumAt90 = [];
+
+    REGIONS.forEach(function(iso) {
+        var c = REGION_CLR[iso];
+        var bl = BASELINE[iso];
+        var rp = getReplaceEffectiveCost(iso);
+
+        if (!bl) return;
+
+        // Track 1 Baseline line (solid)
+        var blPts = THR.map(function(t, i) {
+            return bl[i] != null ? { x: t, y: bl[i] } : null;
+        }).filter(function(d) { return d !== null; });
+
+        datasets.push({
+            label: iso + ' Track 1 Baseline',
+            data: blPts,
+            borderColor: c,
+            backgroundColor: c + '10',
+            borderWidth: 2.5,
+            pointRadius: 0,
+            fill: false,
+            tension: 0.3,
+            order: 2,
+            _iso: iso,
+            _type: 'baseline'
+        });
+
+        if (rp) {
+            // Track 2 Replacement line (dashed)
+            var rpPts = THR.map(function(t, i) {
+                return rp[i] != null ? { x: t, y: rp[i] } : null;
+            }).filter(function(d) { return d !== null; });
+
+            datasets.push({
+                label: iso + ' Track 2 Replacement',
+                data: rpPts,
+                borderColor: c,
+                backgroundColor: c + '20',
+                borderWidth: 2,
+                borderDash: [6, 4],
+                pointRadius: 0,
+                fill: false,
+                tension: 0.3,
+                order: 3,
+                _iso: iso,
+                _type: 'replace'
+            });
+
+            // Compute premium at 90% for hero counter
+            var idx90 = THR.indexOf(90);
+            if (idx90 !== -1 && rp[idx90] != null && bl[idx90] != null) {
+                premiumAt90.push(rp[idx90] - bl[idx90]);
+            }
+        }
+    });
+
+    // Compute average premium at 90%
+    var avgPremium = 0;
+    if (premiumAt90.length > 0) {
+        avgPremium = premiumAt90.reduce(function(a, b) { return a + b; }, 0) / premiumAt90.length;
+    }
+
+    var heroCounter = document.getElementById('heroCounter');
+    if (heroCounter) {
+        heroCounter.setAttribute('data-target', avgPremium.toFixed(1));
+    }
+
+    // Compute Y max
+    var yMax = 0;
+    datasets.forEach(function(ds) {
+        ds.data.forEach(function(pt) {
+            if (pt.y > yMax) yMax = pt.y;
+        });
+    });
+    yMax = Math.ceil(yMax / 20) * 20 + 20;
+    if (yMax < 80) yMax = 160;
+
+    heroChart = new Chart(ctx, {
+        type: 'line',
+        data: { datasets: datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'nearest', axis: 'x', intersect: false },
+            animation: {
+                duration: 1200,
+                easing: 'easeOutQuart',
+                delay: function(context) {
+                    return context.type === 'data' ? context.dataIndex * 30 + context.datasetIndex * 100 : 0;
+                }
+            },
+            scales: {
+                x: {
+                    type: 'linear',
+                    min: 48,
+                    max: 99.99,
+                    afterBuildTicks: function(axis) {
+                        axis.ticks = [50, 60, 70, 80, 90, 95, 99.99].map(function(v) { return { value: v }; });
+                    },
+                    ticks: {
+                        callback: function(v) { return v === 99.99 ? '≥99.99%' : v + '%'; },
+                        font: { size: 9 },
+                        color: 'rgba(15,23,42,0.45)',
+                        maxRotation: 0
+                    },
+                    grid: { color: 'rgba(0,0,0,0.025)' },
+                    border: { display: true, color: 'rgba(0,0,0,0.1)' },
+                    title: { display: true, text: 'Clean Energy Target', color: 'rgba(15,23,42,0.35)', font: { size: 9 } }
+                },
+                y: {
+                    min: 0,
+                    max: yMax,
+                    ticks: {
+                        callback: function(v) { return '$' + v; },
+                        font: { size: 9 },
+                        color: 'rgba(15,23,42,0.45)'
+                    },
+                    grid: { color: 'rgba(0,0,0,0.025)' },
+                    border: { display: true, color: 'rgba(0,0,0,0.1)' },
+                    title: { display: true, text: 'Effective $/MWh', color: 'rgba(15,23,42,0.35)', font: { size: 9 } }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    enabled: true,
+                    backgroundColor: 'rgba(255,255,255,0.97)',
+                    titleColor: '#1E293B',
+                    bodyColor: '#374151',
+                    borderColor: 'rgba(0,0,0,0.1)',
+                    borderWidth: 1,
+                    titleFont: { size: 11, weight: 600 },
+                    bodyFont: { size: 10 },
+                    cornerRadius: 8,
+                    padding: 12,
+                    callbacks: {
+                        title: function(items) {
+                            return items[0] ? items[0].raw.x + '% Clean Energy Target' : '';
+                        },
+                        label: function(item) {
+                            var ds = item.dataset;
+                            var type = ds._type === 'replace' ? ' (Track 2)' : ' (Track 1)';
+                            return ds._iso + type + ': $' + item.raw.y.toFixed(1) + '/MWh';
+                        },
+                        afterBody: function(items) {
+                            // Show premium for each ISO at this threshold
+                            if (!items || items.length === 0) return [];
+                            var thrX = items[0].raw.x;
+                            var thrIdx = THR.indexOf(thrX);
+                            if (thrIdx === -1) return [];
+                            var lines = [''];
+                            var isosSeen = {};
+                            items.forEach(function(item) {
+                                var iso = item.dataset._iso;
+                                if (isosSeen[iso] || item.dataset._type !== 'baseline') return;
+                                isosSeen[iso] = true;
+                                var bl = BASELINE[iso];
+                                var rp = getReplaceEffectiveCost(iso);
+                                if (bl && rp && bl[thrIdx] != null && rp[thrIdx] != null) {
+                                    var prem = rp[thrIdx] - bl[thrIdx];
+                                    if (prem > 0) {
+                                        lines.push(iso + ' Premium: +$' + prem.toFixed(1) + '/MWh');
+                                    }
+                                }
+                            });
+                            return lines.length > 1 ? lines : [];
+                        }
+                    }
+                },
+                datalabels: { display: false },
+                annotation: { annotations: {} }
+            }
+        }
+    });
+}
+
+// ============================================================================
+// BUILD REGIONAL CHART (baseline vs replace with premium band)
+// ============================================================================
+function buildRegionalChart(iso) {
+    var canvasId = 'regionChart_' + iso;
+    var ctx = document.getElementById(canvasId);
+    if (!ctx) return;
+    ctx = ctx.getContext('2d');
+
+    var c = REGION_CLR[iso];
+    var bl = BASELINE[iso];
+    var rp = getReplaceEffectiveCost(iso);
+    var sweep = getReplaceSweepData(iso);
+
+    if (!bl) return;
+
+    var datasets = [];
+    var baselineIdx = 0; // baseline is always dataset 0
+
+    // Dataset 0: Track 1 Baseline line (solid, thick)
+    var blPts = THR.map(function(t, i) {
+        return bl[i] != null ? { x: t, y: bl[i] } : null;
+    }).filter(function(d) { return d !== null; });
+
+    datasets.push({
+        label: 'Track 1 Baseline',
+        data: blPts,
+        borderColor: c,
+        backgroundColor: c + '10',
+        borderWidth: 3,
+        pointRadius: 3,
+        pointBackgroundColor: c,
+        pointBorderColor: '#000',
+        pointBorderWidth: 1,
+        pointHoverRadius: 6,
+        fill: false,
+        tension: 0.3,
+        order: 1,
+        _type: 'baseline'
+    });
+
+    if (rp) {
+        // Track 2 Replacement line (dashed) — always comes right after baseline
+        var rpPts = THR.map(function(t, i) {
+            var val = (sweep && sweep.p50 && sweep.p50[i] != null) ? sweep.p50[i] : rp[i];
+            return val != null ? { x: t, y: val } : null;
+        }).filter(function(d) { return d !== null; });
+
+        // The replace line fills DOWN to baseline (dataset 0) to show the premium
+        var replaceIdx = datasets.length;
+        datasets.push({
+            label: 'Track 2 Replacement',
+            data: rpPts,
+            borderColor: c,
+            backgroundColor: 'rgba(239,68,68,0.12)',
+            borderWidth: 2.5,
+            borderDash: [8, 5],
+            pointRadius: 3,
+            pointBackgroundColor: c,
+            pointBorderColor: '#000',
+            pointBorderWidth: 1,
+            pointHoverRadius: 6,
+            pointStyle: 'rectRot',
+            fill: { target: baselineIdx, above: 'rgba(239,68,68,0.14)', below: 'transparent' },
+            tension: 0.3,
+            order: 2,
+            _type: 'replace'
+        });
+
+        // P90 upper band (gray, separate from premium)
+        if (sweep && sweep.p90) {
+            var p90Pts = THR.map(function(t, i) {
+                return sweep.p90[i] != null ? { x: t, y: sweep.p90[i] } : null;
+            }).filter(function(d) { return d !== null; });
+
+            datasets.push({
+                label: 'P90',
+                data: p90Pts,
+                borderColor: 'transparent',
+                backgroundColor: 'rgba(148,163,184,0.12)',
+                borderWidth: 0,
+                pointRadius: 0,
+                fill: '+1' in {} ? undefined : replaceIdx,
+                tension: 0.3,
+                order: 5,
+                _type: 'band'
+            });
+            // Fix: fill from P90 down to Replace line
+            datasets[datasets.length - 1].fill = { target: replaceIdx, above: 'rgba(148,163,184,0.12)', below: 'transparent' };
+        }
+
+        // P10 lower band
+        if (sweep && sweep.p10) {
+            var p10Pts = THR.map(function(t, i) {
+                return sweep.p10[i] != null ? { x: t, y: sweep.p10[i] } : null;
+            }).filter(function(d) { return d !== null; });
+
+            datasets.push({
+                label: 'P10',
+                data: p10Pts,
+                borderColor: 'rgba(148,163,184,0.3)',
+                backgroundColor: 'transparent',
+                borderWidth: 0.5,
+                borderDash: [2, 2],
+                pointRadius: 0,
+                fill: { target: replaceIdx, below: 'rgba(148,163,184,0.12)', above: 'transparent' },
+                tension: 0.3,
+                order: 5,
+                _type: 'band'
+            });
+        }
+    }
+
+    // Compute Y range
+    var yMax = 0;
+    datasets.forEach(function(ds) {
+        ds.data.forEach(function(pt) {
+            if (pt && pt.y != null && pt.y > yMax) yMax = pt.y;
+        });
+    });
+    yMax = Math.ceil(yMax / 20) * 20 + 20;
+    if (yMax < 80) yMax = 160;
+
+    regionCharts[iso] = new Chart(ctx, {
+        type: 'line',
+        data: { datasets: datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'nearest', axis: 'x', intersect: false },
+            animation: {
+                duration: 1400,
+                easing: 'easeOutQuart',
+                delay: function(context) {
+                    return context.type === 'data' ? context.dataIndex * 40 + context.datasetIndex * 150 : 0;
+                }
+            },
+            scales: {
+                x: {
+                    type: 'linear',
+                    min: 48,
+                    max: 99.99,
+                    afterBuildTicks: function(axis) {
+                        axis.ticks = [50, 60, 70, 80, 90, 95, 99.99].map(function(v) { return { value: v }; });
+                    },
+                    ticks: {
+                        callback: function(v) { return v === 99.99 ? '≥99.99%' : v + '%'; },
+                        font: { size: 9 },
+                        color: 'rgba(15,23,42,0.5)',
+                        maxRotation: 0
+                    },
+                    grid: { color: 'rgba(0,0,0,0.07)' },
+                    border: { display: true, color: 'rgba(0,0,0,0.12)' },
+                    title: { display: true, text: 'Clean Energy Target', color: 'rgba(15,23,42,0.35)', font: { size: 9 } }
+                },
+                y: {
+                    min: 0,
+                    max: yMax,
+                    ticks: {
+                        callback: function(v) { return '$' + v; },
+                        font: { size: 9 },
+                        color: 'rgba(15,23,42,0.5)'
+                    },
+                    grid: { color: 'rgba(0,0,0,0.07)' },
+                    border: { display: true, color: 'rgba(0,0,0,0.12)' },
+                    title: { display: true, text: 'Effective $/MWh', color: 'rgba(15,23,42,0.35)', font: { size: 9 } }
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    enabled: true,
+                    backgroundColor: 'rgba(255,255,255,0.97)',
+                    titleColor: '#1E293B',
+                    bodyColor: '#374151',
+                    borderColor: 'rgba(0,0,0,0.1)',
+                    borderWidth: 1,
+                    titleFont: { size: 11, weight: 600 },
+                    bodyFont: { size: 10 },
+                    footerFont: { size: 9, style: 'italic' },
+                    footerColor: '#6B7280',
+                    cornerRadius: 8,
+                    padding: 12,
+                    callbacks: {
+                        title: function(items) {
+                            return items[0] ? items[0].raw.x + '% Clean Energy Target' : '';
+                        },
+                        label: function(item) {
+                            if (item.dataset._type === 'band') return null;
+                            return item.dataset.label + ': $' + item.raw.y.toFixed(1) + '/MWh';
+                        },
+                        afterBody: function(items) {
+                            if (!items || items.length === 0) return [];
+                            var thrX = items[0].raw.x;
+                            var thrIdx = THR.indexOf(thrX);
+                            if (thrIdx === -1) return [];
+                            var blVal = bl[thrIdx];
+                            var rpVal = rp ? rp[thrIdx] : null;
+                            if (sweep && sweep.p50 && sweep.p50[thrIdx] != null) rpVal = sweep.p50[thrIdx];
+                            if (blVal == null || rpVal == null) return [];
+                            var prem = rpVal - blVal;
+                            var pct = blVal > 0 ? ((prem / blVal) * 100).toFixed(0) : '—';
+                            var lines = [
+                                '',
+                                'Cost to Replace Premium: +$' + prem.toFixed(1) + '/MWh (+' + pct + '%)'
+                            ];
+                            // Total annual cost
+                            var demand = DEMAND_TWH[iso];
+                            if (demand) {
+                                var blAnnual = (blVal * demand / 1000).toFixed(1);
+                                var rpAnnual = (rpVal * demand / 1000).toFixed(1);
+                                var premAnnual = (prem * demand / 1000).toFixed(1);
+                                lines.push('');
+                                lines.push('Annual Cost (Track 1): $' + blAnnual + 'B/yr');
+                                lines.push('Annual Cost (Track 2): $' + rpAnnual + 'B/yr');
+                                lines.push('Annual Premium: +$' + premAnnual + 'B/yr');
+                            }
+                            return lines;
+                        }
+                    },
+                    filter: function(item) {
+                        return item.dataset._type !== 'band';
+                    }
+                },
+                datalabels: { display: false },
+                annotation: { annotations: {} }
+            }
+        }
+    });
+}
+
+// ============================================================================
+// UPDATE STAT BADGES WITH ACTUAL DATA + ANNUAL COST
+// ============================================================================
+function updateStatBadges() {
+    var idx95 = THR.indexOf(95);
+    var idx90 = THR.indexOf(90);
+
+    REGIONS.forEach(function(iso) {
+        var bl = BASELINE[iso];
+        var rp = getReplaceEffectiveCost(iso);
+        var el = document.getElementById('stat' + iso);
+        var annualEl = document.getElementById('annual' + iso);
+        if (!el) return;
+
+        // Try 95% first, fall back to 90%
+        var refIdx = (idx95 !== -1 && rp && rp[idx95] != null) ? idx95 : idx90;
+        var refThr = (refIdx === idx95) ? 95 : 90;
+
+        if (bl && rp && refIdx !== -1 && bl[refIdx] != null && rp[refIdx] != null) {
+            var premium = rp[refIdx] - bl[refIdx];
+            var pct = ((premium / bl[refIdx]) * 100).toFixed(0);
+            el.textContent = 'Premium at ' + refThr + '%: +$' + premium.toFixed(1) + '/MWh (+' + pct + '%)';
+
+            // Annual cost callout
+            if (annualEl) {
+                var demand = DEMAND_TWH[iso];
+                if (demand) {
+                    var blAnnual = (bl[refIdx] * demand / 1000).toFixed(1);
+                    var rpAnnual = (rp[refIdx] * demand / 1000).toFixed(1);
+                    var premAnnual = (premium * demand / 1000).toFixed(1);
+                    annualEl.innerHTML = '<strong>At ' + refThr + '% clean:</strong> ' +
+                        'Track 1 annual cost: <strong>$' + blAnnual + 'B/yr</strong> &middot; ' +
+                        'Track 2 replacement: <strong>$' + rpAnnual + 'B/yr</strong> &middot; ' +
+                        'Annual premium: <strong style="color:#EF4444;">+$' + premAnnual + 'B/yr</strong>';
+                } else {
+                    annualEl.textContent = '';
+                }
+            }
+        } else if (bl && idx90 !== -1 && bl[idx90] != null) {
+            el.textContent = 'Track 1 at 90%: $' + bl[idx90].toFixed(1) + '/MWh (Track 2 data pending)';
+            if (annualEl) annualEl.textContent = '';
+        } else {
+            el.textContent = 'Data loading...';
+            if (annualEl) annualEl.textContent = '';
+        }
+    });
+}
+
+// ============================================================================
+// ANIMATED COUNTERS
+// ============================================================================
+function animateCounters() {
+    document.querySelectorAll('.counter-value[data-target]').forEach(function(el) {
+        var observer = new IntersectionObserver(function(entries) {
+            if (entries[0].isIntersecting) {
+                var target = parseFloat(el.getAttribute('data-target'));
+                var suffix = el.getAttribute('data-suffix') || '';
+                var prefix = el.getAttribute('data-prefix') || '';
+                if (isNaN(target) || target === 0) {
+                    el.textContent = prefix + '--' + suffix;
+                    observer.disconnect();
+                    return;
+                }
+                var current = 0;
+                var duration = 1500;
+                var start = performance.now();
+                function step(timestamp) {
+                    var progress = Math.min((timestamp - start) / duration, 1);
+                    var eased = 1 - Math.pow(1 - progress, 3);
+                    current = target * eased;
+                    el.textContent = prefix + current.toFixed(1) + suffix;
+                    if (progress < 1) requestAnimationFrame(step);
+                }
+                requestAnimationFrame(step);
+                observer.disconnect();
+            }
+        }, { threshold: 0.5 });
+        observer.observe(el);
+    });
+}
+
+// ============================================================================
+// SCROLL OBSERVERS (fade-in + lazy chart builds)
+// ============================================================================
+function initObservers() {
+    // Fade-in observer for narrative cards, synthesis cards, hero text
+    var fadeObs = new IntersectionObserver(function(entries) {
+        entries.forEach(function(e) {
+            if (e.isIntersecting) e.target.classList.add('visible');
+        });
+    }, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
+
+    document.querySelectorAll('.region-step-card, .synthesis-card, .hero-text-block').forEach(function(el) {
+        fadeObs.observe(el);
+    });
+
+    // Lazy chart build observer for region sections
+    var chartObs = new IntersectionObserver(function(entries) {
+        entries.forEach(function(e) {
+            if (!e.isIntersecting) return;
+            var iso = e.target.getAttribute('data-region');
+            if (iso && !regionCharts[iso]) {
+                requestAnimationFrame(function() { buildRegionalChart(iso); });
+            }
+            chartObs.unobserve(e.target);
+        });
+    }, { threshold: 0.1, rootMargin: '200px 0px 200px 0px' });
+
+    document.querySelectorAll('.region-section').forEach(function(el) {
+        chartObs.observe(el);
+    });
+}
+
+// ============================================================================
+// INIT
+// ============================================================================
+function initPage() {
+    buildHeroChart();
+    updateStatBadges();
+    initObservers();
+    animateCounters();
+}
+
+// If track_results.json fails to load, still init on DOMContentLoaded
+document.addEventListener('DOMContentLoaded', function() {
+    // If fetch hasn't completed yet, initPage() will be called when it does.
+    // If it already completed (or failed), this ensures observers are set up.
+    if (!heroChart) {
+        initPage();
+    }
+});
+</script>
+</body>
+</html>
