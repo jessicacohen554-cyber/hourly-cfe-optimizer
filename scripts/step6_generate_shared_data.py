@@ -697,15 +697,6 @@ lines.append("    h2:            { fill: 'rgba(16,185,129,0.50)',  border: '#10B
 lines.append('};')
 lines.append('')
 
-# RESOURCE_CAPS — TWh caps for supply-constrained resources
-lines.append('// --- Resource TWh Caps (physics/geological constraints) ---')
-lines.append('const RESOURCE_CAPS = {')
-lines.append('    offshore_wind: { NYISO: 37, NEISO: 37, PJM: 30, CAISO: 20 },')
-lines.append('    ccs_ccgt: { ERCOT: 85, PJM: 120, NYISO: 15, NEISO: 10, MISO: 95, SPP: 110 },')
-lines.append('    geothermal: { CAISO: 39 }')
-lines.append('};')
-lines.append('')
-
 # RESOURCE_CAPS — TWh caps by resource × ISO
 lines.append('// --- Resource TWh Caps (physics-constrained maximum deployment) ---')
 lines.append('const RESOURCE_CAPS = {')
@@ -1120,7 +1111,8 @@ lines.append('')
 # LCOE tables (solar, wind, battery, battery8, LDES, H2 — from Step 3 constants)
 lines.append('// --- LCOE Tables ($/MWh) for client-side repricing ---')
 lines.append('const LCOE_TABLES = {')
-for res in ['solar', 'wind', 'battery', 'battery8', 'ldes', 'h2']:
+lcoe_resources = ['solar', 'wind', 'offshore_wind', 'battery', 'battery8', 'ldes', 'h2']
+for res_idx, res in enumerate(lcoe_resources):
     rt = _LCOE_TABLES.get(res, {})
     lines.append(f'    {res}: {{')
     for lev_idx, lev in enumerate(['Low', 'Medium', 'High']):
@@ -1128,7 +1120,7 @@ for res in ['solar', 'wind', 'battery', 'battery8', 'ldes', 'h2']:
         parts = [f'{iso}: {vals.get(iso, 0)}' for iso in ISOS]
         comma = ',' if lev_idx < 2 else ''
         lines.append(f'        {lev}: {{ {", ".join(parts)} }}{comma}')
-    res_comma = ',' if res != 'h2' else ''
+    res_comma = ',' if res_idx < len(lcoe_resources) - 1 else ''
     lines.append(f'    }}{res_comma}')
 lines.append('};')
 lines.append('')
@@ -1141,7 +1133,8 @@ lines.append('')
 # Transmission tables (from Step 3 constants)
 lines.append('// --- Transmission Adders ($/MWh) ---')
 lines.append('const TX_TABLES = {')
-for res_idx, res in enumerate(['solar', 'wind', 'clean_firm', 'ccs_ccgt', 'battery', 'battery8', 'ldes', 'h2']):
+tx_resources = ['solar', 'wind', 'offshore_wind', 'clean_firm', 'ccs_ccgt', 'battery', 'battery8', 'ldes', 'h2']
+for res_idx, res in enumerate(tx_resources):
     rt = _TX_TABLES.get(res, {})
     lines.append(f'    {res}: {{')
     tx_levels = ['None', 'Low', 'Medium', 'High']
@@ -1153,7 +1146,7 @@ for res_idx, res in enumerate(['solar', 'wind', 'clean_firm', 'ccs_ccgt', 'batte
             parts = [f'{iso}: {vals.get(iso, 0)}' for iso in ISOS]
         comma = ',' if lev_idx < len(tx_levels) - 1 else ''
         lines.append(f'        {lev}: {{ {", ".join(parts)} }}{comma}')
-    res_comma = ',' if res_idx < 7 else ''
+    res_comma = ',' if res_idx < len(tx_resources) - 1 else ''
     lines.append(f'    }}{res_comma}')
 lines.append('};')
 lines.append('')
