@@ -45,8 +45,30 @@ jobs:
       - name: Checkout full history
         uses: actions/checkout@v4
         with:
+          ref: master
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Ensure latest master HEAD (hard refresh)
+        run: |
+          echo "=== Ensuring we are on the absolute latest master ==="
+          echo "Pre-fetch HEAD: $(git rev-parse HEAD)"
+
+          # Fetch the latest remote state
+          git fetch origin master --force
+
+          # Hard reset to the remote master tip
+          git reset --hard origin/master
+
+          echo "Post-reset HEAD: $(git rev-parse HEAD)"
+          echo "HEAD commit: $(git log -1 --oneline)"
+          echo "Verified: working tree matches origin/master"
+
+          # Sanity check: confirm no uncommitted differences
+          if ! git diff --quiet; then
+            echo "::error::Working tree has unexpected changes after reset. Aborting."
+            exit 1
+          fi
 
       - name: Install git-filter-repo
         run: pip install git-filter-repo
