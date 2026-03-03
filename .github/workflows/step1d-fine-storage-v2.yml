@@ -84,7 +84,7 @@ jobs:
   fine-storage:
     needs: prepare
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    timeout-minutes: 420
 
     strategy:
       matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
@@ -213,7 +213,7 @@ jobs:
     # ── Batched mode: HIGH thresholds (97.5–99.99%) ──────────────────────
     - name: "Batch HIGH (97.5-99.99%) — ${{ matrix.iso }}"
       if: ${{ inputs.thresholds == '' && inputs.batch_mode == 'batched' }}
-      timeout-minutes: 120
+      timeout-minutes: 180
       run: |
         python scripts/step1d_fine_storage.py \
           --iso "${{ matrix.iso }}" \
