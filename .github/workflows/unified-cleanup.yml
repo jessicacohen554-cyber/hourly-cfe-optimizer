@@ -1,0 +1,375 @@
+name: "Cleanup: Unified Data Directory Cleanup"
+
+# Selectively clears pipeline step data directories. Toggle each directory
+# independently, optionally filter by ISO, and preview with dry_run before
+# committing deletions. Directory folders are preserved — only files are removed.
+#
+# Replaces the individual clear-step1d-storage, clear-step2-ef,
+# cleanup-old-step1d-files, and cleanup-step1c-branches workflows.
+
+on:
+  workflow_dispatch:
+    inputs:
+      clear_step1:
+        description: 'Clear data/step1-pfs-parquets/ (PFS mixes, coarse cache, near-miss)'
+        default: false
+        type: boolean
+      clear_step1d:
+        description: 'Clear data/step1d-storage-parquets/ (storage refinement)'
+        default: false
+        type: boolean
+      clear_step2:
+        description: 'Clear data/step2-ef-parquets/ (efficient frontier)'
+        default: false
+        type: boolean
+      clear_step3:
+        description: 'Clear data/step3-cost-opt-parquets/ (cost optimization)'
+        default: false
+        type: boolean
+      clear_step4:
+        description: 'Clear data/step4-gas-ccs-parquets/ (gas/CCS track parquets)'
+        default: false
+        type: boolean
+      clear_step5:
+        description: 'Clear data/step5-post-processing/ (top-level files only)'
+        default: false
+        type: boolean
+      clear_step5_co2:
+        description: 'Clear data/step5-post-processing/co2_results/'
+        default: false
+        type: boolean
+      clear_step5_dispatch:
+        description: 'Clear data/step5-post-processing/dispatch_cache/'
+        default: false
+        type: boolean
+      clear_step5_lmp:
+        description: 'Clear data/step5-post-processing/lmp/'
+        default: false
+        type: boolean
+      clear_step8:
+        description: 'Clear data/step8-wrights-law/'
+        default: false
+        type: boolean
+      iso:
+        description: 'ISO to clear (or ALL for everything)'
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      dry_run:
+        description: 'Preview only — list files that would be deleted without changing anything'
+        default: true
+        type: boolean
+      branch:
+        description: 'Branch to commit the deletion to'
+        default: 'master'
+        type: string
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Validate inputs
+        run: |
+          # At least one directory must be selected
+          ANY_SELECTED="false"
+          for toggle in "${{ inputs.clear_step1 }}" "${{ inputs.clear_step1d }}" \
+                        "${{ inputs.clear_step2 }}" "${{ inputs.clear_step3 }}" \
+                        "${{ inputs.clear_step4 }}" "${{ inputs.clear_step5 }}" \
+                        "${{ inputs.clear_step5_co2 }}" "${{ inputs.clear_step5_dispatch }}" \
+                        "${{ inputs.clear_step5_lmp }}" "${{ inputs.clear_step8 }}"; do
+            [ "$toggle" = "true" ] && ANY_SELECTED="true"
+          done
+
+          if [ "$ANY_SELECTED" = "false" ]; then
+            echo "::error::No directories selected. Toggle at least one clear_* input."
+            exit 1
+          fi
+
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 1
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config http.postBuffer 524288000
+
+      - name: Enumerate files to clear
+        id: enumerate
+        run: |
+          FILES="/tmp/files_to_clear.txt"
+          > "$FILES"
+          ISO="${{ inputs.iso }}"
+
+          # ── Helper: find files in a directory ──
+          # Usage: add_files <dir> <maxdepth> <pattern1> [<pattern2> ...]
+          add_files() {
+            local dir="$1"
+            local depth="$2"
+            shift 2
+            [ ! -d "$dir" ] && return
+            for pattern in "$@"; do
+              find "$dir" -maxdepth "$depth" -type f -name "$pattern" ! -name ".gitkeep" >> "$FILES" 2>/dev/null || true
+            done
+          }
+
+          # ── Step 1: PFS parquets ──
+          if [ "${{ inputs.clear_step1 }}" = "true" ]; then
+            DIR="data/step1-pfs-parquets"
+            if [ "$ISO" = "ALL" ]; then
+              add_files "$DIR" 1 "*.parquet" "*.json"
+            else
+              add_files "$DIR" 1 "${ISO}_*.parquet" "${ISO}_*.json"
+            fi
+          fi
+
+          # ── Step 1d: storage parquets ──
+          if [ "${{ inputs.clear_step1d }}" = "true" ]; then
+            DIR="data/step1d-storage-parquets"
+            if [ "$ISO" = "ALL" ]; then
+              add_files "$DIR" 1 "*.parquet" "*.json"
+            else
+              add_files "$DIR" 1 "${ISO}_*.parquet" "${ISO}_*.json"
+            fi
+          fi
+
+          # ── Step 2: efficient frontier ──
+          if [ "${{ inputs.clear_step2 }}" = "true" ]; then
+            DIR="data/step2-ef-parquets"
+            if [ "$ISO" = "ALL" ]; then
+              add_files "$DIR" 1 "step2_ef_*.parquet"
+            else
+              add_files "$DIR" 1 "step2_ef_${ISO}_*.parquet"
+            fi
+          fi
+
+          # ── Step 3: cost optimization ──
+          if [ "${{ inputs.clear_step3 }}" = "true" ]; then
+            DIR="data/step3-cost-opt-parquets"
+            if [ "$ISO" = "ALL" ]; then
+              add_files "$DIR" 1 "step3_*.parquet"
+            else
+              add_files "$DIR" 1 "step3_co_${ISO}.parquet" "step3_dg_${ISO}_*.parquet"
+            fi
+          fi
+
+          # ── Step 4: gas/CCS track parquets ──
+          if [ "${{ inputs.clear_step4 }}" = "true" ]; then
+            DIR="data/step4-gas-ccs-parquets"
+            if [ "$ISO" = "ALL" ]; then
+              add_files "$DIR" 1 "step4_*.parquet" "step4_*.json"
+            else
+              add_files "$DIR" 1 "step4_${ISO}.parquet" "step4_dg_${ISO}_*.parquet"
+            fi
+          fi
+
+          # ── Step 5: post-processing (top-level files only) ──
+          if [ "${{ inputs.clear_step5 }}" = "true" ]; then
+            DIR="data/step5-post-processing"
+            if [ "$ISO" = "ALL" ]; then
+              add_files "$DIR" 1 "*.json" "*.parquet"
+            else
+              # ISO-specific files: scenario_a_{ISO}.json, scenario_b_{ISO}.json
+              add_files "$DIR" 1 "*_${ISO}.json" "*_${ISO}.parquet"
+            fi
+          fi
+
+          # ── Step 5: CO2 results ──
+          if [ "${{ inputs.clear_step5_co2 }}" = "true" ]; then
+            DIR="data/step5-post-processing/co2_results"
+            if [ "$ISO" = "ALL" ]; then
+              add_files "$DIR" 1 "*.parquet" "*.json"
+            else
+              add_files "$DIR" 1 "co2_${ISO}.parquet"
+            fi
+          fi
+
+          # ── Step 5: dispatch cache ──
+          if [ "${{ inputs.clear_step5_dispatch }}" = "true" ]; then
+            DIR="data/step5-post-processing/dispatch_cache"
+            if [ "$ISO" = "ALL" ]; then
+              add_files "$DIR" 1 "*.parquet" "*.npz"
+            else
+              add_files "$DIR" 1 "${ISO}_dispatch_cache.parquet" "${ISO}_*.npz"
+            fi
+          fi
+
+          # ── Step 5: LMP ──
+          if [ "${{ inputs.clear_step5_lmp }}" = "true" ]; then
+            DIR="data/step5-post-processing/lmp"
+            if [ "$ISO" = "ALL" ]; then
+              add_files "$DIR" 1 "*.parquet" "*.json"
+            else
+              add_files "$DIR" 1 "${ISO}_lmp.parquet" "${ISO}_calibration.json"
+            fi
+          fi
+
+          # ── Step 8: Wright's Law ──
+          if [ "${{ inputs.clear_step8 }}" = "true" ]; then
+            DIR="data/step8-wrights-law"
+            # No ISO dimension — always clear all files
+            add_files "$DIR" 1 "*.json" "*.parquet"
+          fi
+
+          # ── Deduplicate and sort ──
+          sort -u -o "$FILES" "$FILES"
+          COUNT=$(grep -c . "$FILES" 2>/dev/null || echo 0)
+
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+          echo ""
+          echo "Found $COUNT file(s) to clear."
+
+      - name: Preview (dry run)
+        if: ${{ inputs.dry_run && steps.enumerate.outputs.count != '0' }}
+        run: |
+          FILES="/tmp/files_to_clear.txt"
+
+          echo "═══════════════════════════════════════════════"
+          echo "  DRY RUN — No files will be deleted"
+          echo "═══════════════════════════════════════════════"
+          echo ""
+          echo "ISO: ${{ inputs.iso }}"
+          echo ""
+
+          # Group by directory
+          for dir in data/step1-pfs-parquets data/step1d-storage-parquets \
+                     data/step2-ef-parquets data/step3-cost-opt-parquets \
+                     data/step4-gas-ccs-parquets data/step5-post-processing \
+                     data/step5-post-processing/co2_results \
+                     data/step5-post-processing/dispatch_cache \
+                     data/step5-post-processing/lmp data/step8-wrights-law; do
+            matched=$(grep "^${dir}/" "$FILES" 2>/dev/null || true)
+            if [ -n "$matched" ]; then
+              count=$(echo "$matched" | wc -l)
+              size=0
+              while IFS= read -r f; do
+                if [ -f "$f" ]; then
+                  s=$(stat -c%s "$f" 2>/dev/null || echo 0)
+                  size=$((size + s))
+                fi
+              done <<< "$matched"
+              size_mb=$(awk "BEGIN{printf \"%.1f\", $size/1048576}")
+              echo "  ${dir}/  →  ${count} file(s), ${size_mb} MB"
+              echo "$matched" | sed 's/^/    /'
+              echo ""
+            fi
+          done
+
+          TOTAL=${{ steps.enumerate.outputs.count }}
+          echo "═══════════════════════════════════════════════"
+          echo "  Total: $TOTAL file(s)"
+          echo "  Re-run with dry_run=false to delete."
+          echo "═══════════════════════════════════════════════"
+
+      - name: Nothing to clear
+        if: ${{ steps.enumerate.outputs.count == '0' }}
+        run: |
+          echo "No files found matching the selected directories and ISO filter."
+          echo "Nothing to do."
+
+      - name: Delete files and commit
+        if: ${{ !inputs.dry_run && steps.enumerate.outputs.count != '0' }}
+        run: |
+          FILES="/tmp/files_to_clear.txt"
+          COUNT=${{ steps.enumerate.outputs.count }}
+          ISO="${{ inputs.iso }}"
+
+          echo "Deleting $COUNT file(s)..."
+
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            rm -f "$f"
+          done < "$FILES"
+
+          # Stage deletions — git add -u on each affected directory
+          for dir in data/step1-pfs-parquets data/step1d-storage-parquets \
+                     data/step2-ef-parquets data/step3-cost-opt-parquets \
+                     data/step4-gas-ccs-parquets data/step5-post-processing \
+                     data/step8-wrights-law; do
+            git add -u "$dir/" 2>/dev/null || true
+          done
+
+          # Check if there are staged changes
+          if git diff --cached --quiet; then
+            echo "No tracked file changes to commit."
+            echo "Files may have been untracked/gitignored only."
+            exit 0
+          fi
+
+          # Build directory list for commit message
+          DIRS=""
+          [ "${{ inputs.clear_step1 }}" = "true" ] && DIRS="${DIRS} step1-pfs"
+          [ "${{ inputs.clear_step1d }}" = "true" ] && DIRS="${DIRS} step1d-storage"
+          [ "${{ inputs.clear_step2 }}" = "true" ] && DIRS="${DIRS} step2-ef"
+          [ "${{ inputs.clear_step3 }}" = "true" ] && DIRS="${DIRS} step3-cost"
+          [ "${{ inputs.clear_step4 }}" = "true" ] && DIRS="${DIRS} step4-gas-ccs"
+          [ "${{ inputs.clear_step5 }}" = "true" ] && DIRS="${DIRS} step5-top"
+          [ "${{ inputs.clear_step5_co2 }}" = "true" ] && DIRS="${DIRS} step5-co2"
+          [ "${{ inputs.clear_step5_dispatch }}" = "true" ] && DIRS="${DIRS} step5-dispatch"
+          [ "${{ inputs.clear_step5_lmp }}" = "true" ] && DIRS="${DIRS} step5-lmp"
+          [ "${{ inputs.clear_step8 }}" = "true" ] && DIRS="${DIRS} step8-wrights"
+          DIRS=$(echo "$DIRS" | xargs)  # trim whitespace
+
+          git commit -m "Unified cleanup ($ISO): $COUNT files removed
+
+          Directories cleared: $DIRS
+          Clean slate before re-running pipeline steps."
+
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i/$MAX_RETRIES..."
+            git push origin "${{ inputs.branch || 'master' }}" 2>&1 && break
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "::error::Push failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done
+
+      - name: Summary
+        if: always()
+        run: |
+          echo ""
+          echo "═══════════════════════════════════════════════"
+          echo "  UNIFIED CLEANUP SUMMARY"
+          echo "═══════════════════════════════════════════════"
+          echo "  ISO:         ${{ inputs.iso }}"
+          echo "  Files found: ${{ steps.enumerate.outputs.count }}"
+          echo "  Dry run:     ${{ inputs.dry_run }}"
+          echo ""
+          echo "  Directories selected:"
+          [ "${{ inputs.clear_step1 }}" = "true" ]          && echo "    ✓ data/step1-pfs-parquets/"
+          [ "${{ inputs.clear_step1d }}" = "true" ]         && echo "    ✓ data/step1d-storage-parquets/"
+          [ "${{ inputs.clear_step2 }}" = "true" ]          && echo "    ✓ data/step2-ef-parquets/"
+          [ "${{ inputs.clear_step3 }}" = "true" ]          && echo "    ✓ data/step3-cost-opt-parquets/"
+          [ "${{ inputs.clear_step4 }}" = "true" ]          && echo "    ✓ data/step4-gas-ccs-parquets/"
+          [ "${{ inputs.clear_step5 }}" = "true" ]          && echo "    ✓ data/step5-post-processing/ (top-level)"
+          [ "${{ inputs.clear_step5_co2 }}" = "true" ]      && echo "    ✓ data/step5-post-processing/co2_results/"
+          [ "${{ inputs.clear_step5_dispatch }}" = "true" ]  && echo "    ✓ data/step5-post-processing/dispatch_cache/"
+          [ "${{ inputs.clear_step5_lmp }}" = "true" ]      && echo "    ✓ data/step5-post-processing/lmp/"
+          [ "${{ inputs.clear_step8 }}" = "true" ]          && echo "    ✓ data/step8-wrights-law/"
+          echo ""
+          if [ "${{ inputs.dry_run }}" = "true" ] && [ "${{ steps.enumerate.outputs.count }}" != "0" ]; then
+            echo "  Re-run with dry_run=false to execute."
+          elif [ "${{ inputs.dry_run }}" = "false" ] && [ "${{ steps.enumerate.outputs.count }}" != "0" ]; then
+            echo "  Status: Deleted and committed"
+          fi
+          echo "═══════════════════════════════════════════════"
