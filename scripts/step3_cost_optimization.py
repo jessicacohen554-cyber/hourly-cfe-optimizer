@@ -306,19 +306,8 @@ FOAK_OFFSHORE_WIND = {
 }
 
 # Storage FOAK: annualized capacity cost ($/MWh-cap), same units as LCOE_TABLES storage.
-# Battery FOAK = LCOE_TABLES High (no FOAK premium — batteries are at manufacturing scale).
-# NOTE: For batteries, Wright's Law now goes LCOE_TABLES → NOAK_BATTERY (decline over time),
-# NOT FOAK → LCOE_TABLES. These FOAK values are kept for backward compatibility but are
-# not used in Phase 2 learning curves for bat4/bat8.
+# Battery FOAK not needed — Wright's Law goes LCOE_TABLES → NOAK_BATTERY (decline over time).
 # LDES: 1.40× High (Form Energy pre-commercial). H2: 1.30× High (first commercial H2 turbines).
-FOAK_BATTERY = {
-    'CAISO': 6.03, 'ERCOT': 5.43, 'PJM': 5.78, 'NYISO': 6.38,
-    'NEISO': 6.20, 'MISO': 5.66, 'SPP': 5.50,
-}
-FOAK_BATTERY8 = {
-    'CAISO': 5.19, 'ERCOT': 4.67, 'PJM': 4.97, 'NYISO': 5.49,
-    'NEISO': 5.33, 'MISO': 4.87, 'SPP': 4.73,
-}
 FOAK_LDES = {
     'CAISO': 1.40, 'ERCOT': 1.20, 'PJM': 1.32, 'NYISO': 1.55,
     'NEISO': 1.48, 'MISO': 1.26, 'SPP': 1.23,
@@ -717,6 +706,8 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     # Tranche 3: Cheapest of nuclear new-build vs CCS (CCS capped at regional headroom)
     nuclear_price = NUCLEAR_NEWBUILD_LCOE[firm_lev][iso] + tx_cf
     ccs_tranche_price = ccs_table[ccs_lev][iso] + tx_ccs_cf
+    if iso == 'NEISO':
+        ccs_tranche_price += NEISO_CCS_GAS_ADDER
 
     # CCS headroom: cap minus what's already used by implicit CCS residual
     ccs_headroom_twh = np.maximum(0, ccs_cap - ccs_capped_twh)
@@ -1824,6 +1815,8 @@ def compute_tranche_for_mix(iso, cf_pct, demand_twh,
     ccs_table = CCS_LCOE_45Q_ON if q45 == '1' else CCS_LCOE_45Q_OFF
     nuclear_price = NUCLEAR_NEWBUILD_LCOE[firm_lev][iso] + tx_cf
     ccs_tranche_price = ccs_table[ccs_lev][iso] + tx_ccs_cf
+    if iso == 'NEISO':
+        ccs_tranche_price += NEISO_CCS_GAS_ADDER
     tranche3_is_nuclear = nuclear_price <= ccs_tranche_price
 
     nuclear_newbuild_twh = remaining if tranche3_is_nuclear else 0.0

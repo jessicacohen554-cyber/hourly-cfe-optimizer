@@ -1,13 +1,11 @@
-name: "Step 6.5: Supplemental Analytics"
+name: "Step 6.0: Compute CO2 (Shared)"
 
-# Runs supplemental dispatch-cache-dependent analytics that don't belong
-# to a specific dashboard page:
-#   - step6_compressed_day.py — 24-hour representative day profiles
-#   - step6_consequential_queue.py — cross-regional deployment path
+# Shared utility — computes dispatch-stack CO2 emissions for all ISOs.
+# Must run BEFORE Step 6.1 (MAC depends on CO2 output).
+# Merit-order retirement: coal → oil → gas. Demand-growth-aware.
 #
-# These scripts use dispatch cache but are independent of each other.
 # iso=ALL fans out parallel matrix jobs, then merges into one branch + PR.
-# Output: data/step5-post-processing/
+# Output: data/step5-post-processing/co2_*.json
 
 on:
   workflow_dispatch:
@@ -26,15 +24,6 @@ on:
           - NEISO
           - MISO
           - SPP
-      script:
-        description: 'Which analytics to run'
-        required: true
-        default: 'ALL'
-        type: choice
-        options:
-          - ALL
-          - compressed-day
-          - consequential-queue
       branch:
         description: 'Branch to checkout'
         required: false
@@ -42,7 +31,7 @@ on:
         type: string
 
 env:
-  BRANCH_PREFIX: step6-5-supplemental
+  BRANCH_PREFIX: step6-0-co2
 
 jobs:
   prepare:
@@ -61,7 +50,7 @@ jobs:
   process:
     needs: prepare
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 120
     strategy:
       matrix:
         iso: ${{ fromJson(needs.prepare.outputs.matrix) }}
@@ -73,12 +62,18 @@ jobs:
         with:
           ref: ${{ inputs.branch || 'master' }}
 
-      - name: Verify dispatch cache exists
+      - name: Verify upstream data exists
         run: |
-          if [ -d "data/step5-post-processing/dispatch_cache" ] && ls data/step5-post-processing/dispatch_cache/*.npz >/dev/null 2>&1; then
-            echo "Dispatch cache found"
-          else
-            echo "WARNING: No dispatch cache found. Scripts will compute dispatch live (slower)."
+          HAS_DATA=false
+          if [ -d "data/step4-gas-ccs-parquets" ] && ls data/step4-gas-ccs-parquets/*.parquet >/dev/null 2>&1; then
+            HAS_DATA=true
+          fi
+          if [ -d "data/step3-cost-opt-parquets" ] && ls data/step3-cost-opt-parquets/*.parquet >/dev/null 2>&1; then
+            HAS_DATA=true
+          fi
+          if [ "$HAS_DATA" = "false" ]; then
+            echo "ERROR: Neither step-4 nor step-3 parquets found."
+            exit 1
           fi
 
       - name: Set up Python
@@ -92,35 +87,16 @@ jobs:
       - name: Ensure output directories
         run: mkdir -p data/step5-post-processing
 
-      - name: "Run analytics (parallel) — ${{ matrix.iso }}"
-        if: ${{ inputs.script == 'ALL' }}
+      - name: "Compute CO2 — ${{ matrix.iso }}"
         run: |
-          python scripts/step6_compressed_day.py --iso ${{ matrix.iso }} &
-          PID_CD=$!
-          python scripts/step6_consequential_queue.py --iso ${{ matrix.iso }} &
-          PID_CQ=$!
-
-          FAILED=0
-          wait $PID_CD || { echo "FAILED: Compressed Day"; FAILED=1; }
-          wait $PID_CQ || { echo "FAILED: Consequential Queue"; FAILED=1; }
-          if [ "$FAILED" -ne 0 ]; then exit 1; fi
-
-      - name: "Compressed Day — ${{ matrix.iso }}"
-        if: ${{ inputs.script == 'compressed-day' }}
-        run: python scripts/step6_compressed_day.py --iso ${{ matrix.iso }}
-
-      - name: "Consequential Queue — ${{ matrix.iso }}"
-        if: ${{ inputs.script == 'consequential-queue' }}
-        run: python scripts/step6_consequential_queue.py --iso ${{ matrix.iso }}
+          echo "=== Step 6.0: Compute CO2 for ${{ matrix.iso }} ==="
+          python scripts/step5_compute_co2.py --iso ${{ matrix.iso }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: supplemental-${{ matrix.iso }}
-          path: |
-            data/step5-post-processing/
-            dashboard/compressed_day_profiles.json
-            dashboard/js/consequential-queue-data.js
+          name: co2-${{ matrix.iso }}
+          path: data/step5-post-processing/
           retention-days: 1
 
   merge:
@@ -130,7 +106,6 @@ jobs:
 
     permissions:
       contents: write
-
 
     steps:
       - name: Checkout repo
@@ -142,7 +117,7 @@ jobs:
       - name: Create output branch
         run: |
           TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
-          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${{ inputs.script }}-${{ inputs.iso }}"
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${{ inputs.iso }}"
           echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -151,15 +126,9 @@ jobs:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: supplemental-*
-          path: ./artifact-tmp/
+          pattern: co2-*
+          path: data/step5-post-processing/
           merge-multiple: true
-
-      - name: Place artifacts
-        run: |
-          cp -rf artifact-tmp/data/step5-post-processing/* data/step5-post-processing/ 2>/dev/null || true
-          cp -f artifact-tmp/dashboard/compressed_day_profiles.json dashboard/ 2>/dev/null || true
-          cp -f artifact-tmp/dashboard/js/consequential-queue-data.js dashboard/js/ 2>/dev/null || true
 
       - name: Batched commit and push (per-ISO)
         run: |
@@ -183,6 +152,7 @@ jobs:
 
           PUSHED=false
 
+          # Determine ISOs to batch
           if [ "${{ inputs.iso }}" = "ALL" ]; then
             ISOS="CAISO ERCOT PJM NYISO NEISO MISO SPP"
           else
@@ -191,45 +161,47 @@ jobs:
 
           for iso in $ISOS; do
             echo "--- Batching commit for $iso ---"
+
+            # Collect all files for this ISO (co2_results/ parquets + step4 enriched parquets)
             FILES=$(find data/step5-post-processing/ -name "*${iso}*" -type f 2>/dev/null || true)
             if [ -z "$FILES" ]; then
-              echo "  No files for $iso — skipping"
+              echo "  No output files for $iso — skipping"
               continue
             fi
+
             git add -f $FILES
             if git diff --cached --quiet; then
               echo "  No changes for $iso — skipping"
               continue
             fi
+
             BATCH_MB=$(du -cm $FILES | tail -1 | cut -f1)
             echo "  Staging ~${BATCH_MB} MB for $iso"
-            git commit -m "Step 6.5 Supplemental: ${iso} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git commit -m "Step 6.0 CO2: ${iso} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
             if push_with_retry "$iso"; then
               PUSHED=true
             else
-              echo "  Per-ISO push failed for $iso — falling back to per-file"
+              echo "  Per-ISO push failed for $iso — falling back to per-file batching"
               git reset HEAD~1
+
               for f in $FILES; do
                 FNAME=$(basename "$f")
                 git add -f "$f"
                 if git diff --cached --quiet; then continue; fi
-                git commit -m "Step 6.5 Supplemental: ${iso} ${FNAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-                if push_with_retry "$FNAME"; then PUSHED=true; else git reset HEAD~1; fi
+                FILE_MB=$(du -m "$f" | cut -f1)
+                echo "  Staging file: $FNAME (~${FILE_MB} MB)"
+                git commit -m "Step 6.0 CO2: ${iso} ${FNAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                if push_with_retry "$FNAME"; then
+                  PUSHED=true
+                else
+                  echo "  WARNING: Could not push $FNAME — resetting commit"
+                  git reset HEAD~1
+                fi
               done
             fi
           done
 
-          # Remaining post-processing + dashboard files
-          git add -f data/step5-post-processing/ 2>/dev/null || true
-          git add -f dashboard/compressed_day_profiles.json 2>/dev/null || true
-          git add -f dashboard/js/consequential-queue-data.js 2>/dev/null || true
-          if ! git diff --cached --quiet; then
-            echo "--- Staging remaining files + dashboard data ---"
-            git commit -m "Step 6.5 Supplemental: dashboard data — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            if push_with_retry "dashboard-data"; then PUSHED=true; else git reset HEAD~1; fi
-          fi
-
           if [ "$PUSHED" = "false" ]; then
             echo "No changes were pushed"
           fi
-
