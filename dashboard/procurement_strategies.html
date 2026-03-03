@@ -1090,13 +1090,13 @@ body {
     }
     var DERIVE_ISOS = ['SPP', 'ERCOT', 'MISO', 'PJM', 'CAISO', 'NYISO', 'NEISO'];
     var GRID_MIX_SHARES = {
-        CAISO: { clean_firm: 7.9, solar: 22.3, wind: 8.8, hydro: 9.5 },
-        ERCOT: { clean_firm: 8.6, solar: 13.8, wind: 23.6, hydro: 0.1 },
-        PJM:   { clean_firm: 32.1, solar: 2.9, wind: 3.8, hydro: 1.8 },
-        NYISO: { clean_firm: 18.4, solar: 0.0, wind: 4.7, hydro: 15.9 },
-        NEISO: { clean_firm: 23.8, solar: 1.4, wind: 3.9, hydro: 4.4 },
-        MISO:  { clean_firm: 13.1, solar: 2.1, wind: 14.5, hydro: 1.6 },
-        SPP:   { clean_firm: 5.2, solar: 0.4, wind: 37.1, hydro: 4.3 }
+        CAISO: { clean_firm: 7.9, solar: 22.3, wind: 8.8, offshore_wind: 0, hydro: 9.5 },
+        ERCOT: { clean_firm: 8.6, solar: 13.8, wind: 23.6, offshore_wind: 0, hydro: 0.1 },
+        PJM:   { clean_firm: 32.1, solar: 2.9, wind: 3.8, offshore_wind: 0, hydro: 1.8 },
+        NYISO: { clean_firm: 18.4, solar: 0.0, wind: 4.7, offshore_wind: 0, hydro: 15.9 },
+        NEISO: { clean_firm: 23.8, solar: 1.4, wind: 3.9, offshore_wind: 0, hydro: 4.4 },
+        MISO:  { clean_firm: 13.1, solar: 2.1, wind: 14.5, offshore_wind: 0, hydro: 1.6 },
+        SPP:   { clean_firm: 5.2, solar: 0.4, wind: 37.1, offshore_wind: 0, hydro: 4.3 }
     };
     var BASE_DEMAND_TWH = {
         CAISO: 224.0, ERCOT: 488.0, PJM: 843.3,
@@ -1219,19 +1219,20 @@ var ISO_COLORS = {
     CAISO: '#F59E0B', ERCOT: '#22C55E', PJM: '#4a90d9',
     NYISO: '#E91E63', NEISO: '#9C27B0', MISO: '#06B6D4', SPP: '#EF4444'
 };
-var RES_TYPES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'ldes'];
+var RES_TYPES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro', 'battery', 'ldes'];
 var RES_COLORS = {
-    clean_firm: { bg: 'rgba(30,58,95,0.85)', border: '#1E3A5F', existing: 'rgba(30,58,95,0.35)' },
-    solar:      { bg: 'rgba(245,158,11,0.8)', border: '#F59E0B', existing: 'rgba(245,158,11,0.3)' },
-    wind:       { bg: 'rgba(34,197,94,0.8)', border: '#22C55E', existing: 'rgba(34,197,94,0.3)' },
-    ccs_ccgt:   { bg: 'rgba(6,182,212,0.8)', border: '#06B6D4', existing: 'rgba(6,182,212,0.3)' },
-    hydro:      { bg: 'rgba(56,189,248,0.7)', border: '#38BDF8', existing: 'rgba(56,189,248,0.3)' },
-    battery:    { bg: 'rgba(168,85,247,0.7)', border: '#A855F7', existing: 'rgba(168,85,247,0.3)' },
-    ldes:       { bg: 'rgba(236,72,153,0.7)', border: '#EC4899', existing: 'rgba(236,72,153,0.3)' }
+    clean_firm:    { bg: 'rgba(99,102,241,0.85)', border: '#6366F1', existing: 'rgba(99,102,241,0.35)' },
+    solar:         { bg: 'rgba(245,158,11,0.8)', border: '#F59E0B', existing: 'rgba(245,158,11,0.3)' },
+    wind:          { bg: 'rgba(34,197,94,0.8)', border: '#22C55E', existing: 'rgba(34,197,94,0.3)' },
+    offshore_wind: { bg: 'rgba(0,150,136,0.8)', border: '#009688', existing: 'rgba(0,150,136,0.3)' },
+    ccs_ccgt:      { bg: 'rgba(100,116,139,0.8)', border: '#64748B', existing: 'rgba(100,116,139,0.3)' },
+    hydro:         { bg: 'rgba(14,165,233,0.7)', border: '#0EA5E9', existing: 'rgba(14,165,233,0.3)' },
+    battery:       { bg: 'rgba(139,92,246,0.7)', border: '#8B5CF6', existing: 'rgba(139,92,246,0.3)' },
+    ldes:          { bg: 'rgba(236,72,153,0.7)', border: '#EC4899', existing: 'rgba(236,72,153,0.3)' }
 };
 var RES_LABELS = {
-    clean_firm: 'Nuclear / Clean Firm', solar: 'Solar', wind: 'Wind',
-    ccs_ccgt: 'CCS-CCGT', hydro: 'Hydro', battery: 'Battery', ldes: 'LDES'
+    clean_firm: 'Nuclear', solar: 'Solar', wind: 'Onshore Wind',
+    offshore_wind: 'Offshore Wind', ccs_ccgt: 'CCS-CCGT', hydro: 'Hydro', battery: 'Battery', ldes: 'LDES'
 };
 var PART_KEYS = ['2pct','5pct','10pct','15pct','20pct','30pct','40pct','50pct','60pct','80pct'];
 var PART_PCTS = [2, 5, 10, 15, 20, 30, 40, 50, 60, 80];
@@ -1429,7 +1430,7 @@ function updateResourceByISOChart() {
     if (!canvas) return;
 
     var ecf = CQ_DATA.existing_clean_floor;
-    var newResOrder = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro', 'battery', 'ldes'];
+    var newResOrder = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro', 'battery', 'ldes'];
 
     // Dataset 1: Existing clean floor — single combined block at the bottom
     var existingData = ISOS.map(function(iso) {

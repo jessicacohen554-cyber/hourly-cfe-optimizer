@@ -3585,21 +3585,21 @@ function priceMix(iso, mixArr, baseDemandTwh, targetYear, growthRate) {
     // Existing shares are % of 2025 demand — scale down to % of grown demand
     const existingScaleFactor = 1 / growthFactor;
 
-    const rm = { clean_firm: mixArr[0], solar: mixArr[1], wind: mixArr[2], ccs_ccgt: mixArr[3], hydro: mixArr[4] };
+    const rm = { clean_firm: mixArr[0], solar: mixArr[1], wind: mixArr[2], offshore_wind: mixArr[3], ccs_ccgt: mixArr[4], hydro: mixArr[5] };
     // Procurement = sum of all generation resources as % of demand
-    const proc = (rm.clean_firm + rm.solar + rm.wind + rm.ccs_ccgt + rm.hydro) / 100.0;
-    const matchFrac = mixArr[5] / 100.0;
-    const batPct = mixArr[6] || 0;
-    const bat8Pct = mixArr[7] || 0;
-    const ldesPct = mixArr[8] || 0;
-    const h2Pct = mixArr[9] || 0;
+    const proc = (rm.clean_firm + rm.solar + rm.wind + rm.offshore_wind + rm.ccs_ccgt + rm.hydro) / 100.0;
+    const matchFrac = mixArr[6] / 100.0;
+    const batPct = mixArr[7] || 0;
+    const bat8Pct = mixArr[8] || 0;
+    const ldesPct = mixArr[9] || 0;
+    const h2Pct = mixArr[10] || 0;
 
     const baseExisting = GRID_MIX_SHARES[iso] || {};
     let wholesale = WHOLESALE_PRICES[iso] || 30;
 
     let totalCost = 0;
     const resourceCosts = {};
-    const RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro'];
+    const RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro'];
 
     for (const rtype of RESOURCE_TYPES) {
         const pct = rm[rtype] || 0;
@@ -4003,13 +4003,13 @@ function getCompressedDayProfile(iso, entry) {
         const isoData = COMPRESSED_DAY_PROFILES[iso];
         if (isoData) {
             const rm = entry.resource_mix || {};
-            const cf = rm.clean_firm||0, s = rm.solar||0, w = rm.wind||0, c = rm.ccs_ccgt||0, h = rm.hydro||0;
+            const cf = rm.clean_firm||0, s = rm.solar||0, w = rm.wind||0, osw = rm.offshore_wind||0, c = rm.ccs_ccgt||0, h = rm.hydro||0;
             const proc = entry.procurement_pct||0;
             const bat = entry.battery_dispatch_pct||0;
             const bat8 = entry.battery8_dispatch_pct||0;
             const ldes = entry.ldes_dispatch_pct||0;
-            // Try 9-dim key first (with battery8), then 8-dim fallback (battery + ldes only)
-            const mk9 = `${cf}_${s}_${w}_${c}_${h}_${proc}_${bat}_${bat8}_${ldes}`;
+            // Try 10-dim key first (with offshore_wind + battery8), then 9-dim fallback
+            const mk9 = `${cf}_${s}_${w}_${osw}_${c}_${h}_${proc}_${bat}_${bat8}_${ldes}`;
             const mk8 = `${cf}_${s}_${w}_${c}_${h}_${proc}_${bat}_${ldes}`;
             const profile = isoData.profiles?.[mk9] || isoData.profiles?.[mk8];
             if (profile) return profile;
@@ -4083,7 +4083,7 @@ function buildDashboardData() {
             battery_efficiency: 0.85,
             ldes_duration: '100h',
             ldes_efficiency: 0.5,
-            resource_types: ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro'],
+            resource_types: ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro'],
             grid_mix_shares: typeof GRID_MIX_SHARES !== 'undefined' ? GRID_MIX_SHARES : {},
             hydro_caps: {}
         }
@@ -4466,7 +4466,7 @@ function updateDonut(entry) {
     const h2Pct = entry.h2_dispatch_pct || 0;
 
     // All 5 generation resources from resource_mix
-    const genResources = ['clean_firm', 'ccs_ccgt', 'solar', 'wind', 'hydro'];
+    const genResources = ['clean_firm', 'ccs_ccgt', 'offshore_wind', 'solar', 'wind', 'hydro'];
     const mixTotal = genResources.reduce((s, r) => s + (mix[r] || 0), 0) || 100;
 
     // Storage dispatch contributes to match score but isn't in resource_mix
@@ -5150,7 +5150,7 @@ function updateCostPanel(entry) {
     const adj = cfAdjust(entry, iso);
     const rc = costs.resource_costs;
     // Generation resources then storage types
-    const genResources = ['clean_firm', 'ccs_ccgt', 'solar', 'wind', 'hydro'];
+    const genResources = ['clean_firm', 'ccs_ccgt', 'offshore_wind', 'solar', 'wind', 'hydro'];
     const storageResources = ['battery', 'battery8', 'ldes', 'h2'];
 
     let rows = '';
