@@ -724,10 +724,10 @@ const PIPELINE = [
         tooltip: 'The dispatch cache pre-computes hourly supply/demand/storage profiles for every unique resource mix. This avoids redundant computation in Step 6 scripts. Cache-independent scripts (EAC, track analysis) run in parallel.',
         uses: 'Step 4 parquets, Step 0 profiles',
         scripts: [
-            { name: 'step5_build_dispatch_cache.py', what: 'Pre-computes 8760h dispatch for all unique mixes; populates dispatch_cache/*.npz' },
+            { name: 'step4_build_dispatch_cache.py', what: 'Pre-computes 8760h dispatch for all unique mixes; populates dispatch_cache/*.npz' },
             { name: 'step5_compute_eac_scarcity.py', what: 'EAC supply scarcity under RPS + voluntary demand (cache-independent)' },
-            { name: 'step5_export_track_results.py', what: 'Exports track parquets to track_results.json for dashboard (cache-independent)' },
-            { name: 'step5_analyze_tracks.py', what: 'Track cost envelopes (P10/P50/P90), resource mix differentials (cache-independent)' }
+            { name: 'step4_export_track_results.py', what: 'Exports track parquets to track_results.json for dashboard (cache-independent)' },
+            { name: 'step4_analyze_tracks.py', what: 'Track cost envelopes (P10/P50/P90), resource mix differentials (cache-independent)' }
         ],
         outputs: [
             {
@@ -788,13 +788,13 @@ const PIPELINE = [
         tooltip: 'All Step 6 scripts read from the dispatch cache built in Step 5. They run independently and in parallel. Each produces analysis-specific JSON or JS output consumed by one or more dashboard pages.',
         uses: 'Step 5 dispatch cache, Step 4 parquets',
         scripts: [
-            { name: 'step6_compressed_day.py', what: '24-hour representative day profiles per unique mix from dispatch cache' },
-            { name: 'step6_consequential_queue.py', what: 'Cross-regional deployment path: cheapest $/tCO2 ordering across 7 ISOs x 9 zones' },
+            { name: 'step5_compress_day_profiles.py', what: '24-hour representative day profiles per unique mix from dispatch cache' },
+            { name: 'step5_consequential_deployment_queue.py', what: 'Cross-regional deployment path: cheapest $/tCO2 ordering across 7 ISOs x 9 zones' },
             { name: 'step6_scenario_comparison.py', what: 'Consequential vs hourly matching strategy comparison using dispatch emissions' },
-            { name: 'step6_recompute_co2.py', what: 'Dispatch-stack emission model: merit-order retirement (coal > oil > gas), demand-aware' },
-            { name: 'step6_compute_mac_stats.py', what: '6 MAC metrics: fan (P10/P50/P90), stepwise, envelope, path-constrained + ANOVA' },
-            { name: 'step6_compute_lmp_prices.py', what: 'Synthetic hourly LMP from merit-order fossil stack reconstruction' },
-            { name: 'step6_compute_optimal_targets.py', what: 'Optimal CFE target per ISO via PCHIP spline MAC x DAC crossover' }
+            { name: 'step5_compute_co2.py', what: 'Dispatch-stack emission model: merit-order retirement (coal > oil > gas), demand-aware' },
+            { name: 'step5_compute_mac_stats.py', what: '6 MAC metrics: fan (P10/P50/P90), stepwise, envelope, path-constrained + ANOVA' },
+            { name: 'step5_compute_lmp_prices.py', what: 'Synthetic hourly LMP from merit-order fossil stack reconstruction' },
+            { name: 'step5_compute_optimal_targets.py', what: 'Optimal CFE target per ISO via PCHIP spline MAC x DAC crossover' }
         ],
         outputs: [
             {
@@ -892,7 +892,7 @@ const PIPELINE = [
         tooltip: 'The final aggregation step. Reads Step 4 parquets + all Step 5/6 JSON outputs and packages everything into a single JS file consumed by the interactive dashboard. Includes LCOE cost tables, demand growth rates, grid mix shares, and all precomputed analytics.',
         uses: 'Step 4 parquets, Step 5/6 JSON outputs',
         scripts: [
-            { name: 'step7_generate_shared_data.py', what: 'Master aggregator: extracts all results into shared-data.js for dashboard' }
+            { name: 'step6_generate_shared_data.py', what: 'Master aggregator: extracts all results into shared-data.js for dashboard' }
         ],
         outputs: [
             {

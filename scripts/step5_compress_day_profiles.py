@@ -50,14 +50,14 @@ DATA_YEAR = '2025'
 
 
 # ============================================================================
-# DISPATCH — uses dispatch_utils cache (populated by step5_build_dispatch_cache)
+# DISPATCH — uses dispatch_utils cache (populated by step4_build_dispatch_cache)
 # ============================================================================
 
 def dispatch_from_cache(iso, mix, battery_pct, battery8_pct,
                         ldes_pct, h2_pct, demand_norm, gen_profiles, dispatch_cache):
     """Look up or compute dispatch and return compressed-day-format result dict.
 
-    Tries the pre-built dispatch cache (step5_build_dispatch_cache) first. Falls back to live computation
+    Tries the pre-built dispatch cache (step4_build_dispatch_cache) first. Falls back to live computation
     via reconstruct_hourly_dispatch(detailed=True) if cache miss.
     """
     resource_pcts = {
@@ -201,7 +201,7 @@ def main():
     print("Step 6: Compressed Day Profile Generator")
     print("=" * 70)
     print("Generates profiles for ALL feasible mixes (not just base-year optimal).")
-    print("Uses dispatch cache from step5_build_dispatch_cache when available; falls back to live compute.\n")
+    print("Uses dispatch cache from step4_build_dispatch_cache when available; falls back to live compute.\n")
 
     # Load hourly profiles via dispatch_utils (single source of truth)
     print("Loading data...")
@@ -237,7 +237,7 @@ def main():
             print(f"  No results for {iso}, skipping")
             continue
 
-        # Load dispatch cache from step5_build_dispatch_cache (v2 required for detailed fields)
+        # Load dispatch cache from step4_build_dispatch_cache (v2 required for detailed fields)
         dispatch_cache = load_dispatch_cache(iso, require_version=CACHE_VERSION)
         if dispatch_cache:
             print(f"  Dispatch cache: {len(dispatch_cache)} archetypes (v{CACHE_VERSION})")

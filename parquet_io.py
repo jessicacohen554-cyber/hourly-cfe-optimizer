@@ -2,10 +2,8 @@
 """
 Shared Parquet I/O — per-ISO parquet ↔ nested dict conversion
 ==============================================================
-Used by step 5 post-processor scripts to read step 3/4 output parquets
-into the nested dict format expected by processing functions.
-
-Supports auto-detection of step4 vs step3 parquet files.
+Used by post-processing scripts (Steps 4-5) to read Step 3 cost optimization
+parquets into the nested dict format expected by processing functions.
 """
 
 import os
@@ -29,16 +27,15 @@ REGIONAL_DEMAND_MWH = {
     'NYISO': 151.599e6, 'NEISO': 115.336e6, 'MISO': 660.000e6, 'SPP': 296.000e6,
 }
 
-# Default parquet directories (in priority order)
+# Default parquet directory for cost optimization results
 DEFAULT_INPUT_DIRS = [
-    os.path.join(SCRIPT_DIR, 'data', 'step4-gas-ccs-parquets'),
     os.path.join(SCRIPT_DIR, 'data', 'step3-cost-opt-parquets'),
 ]
 
 
 def find_parquet(input_dir, iso):
-    """Find parquet file for an ISO, trying step4 then step3 naming."""
-    for prefix in ['step4_', 'step3_co_', 'co2_']:
+    """Find parquet file for an ISO in the given directory."""
+    for prefix in ['step3_co_', 'co2_']:
         path = os.path.join(input_dir, f'{prefix}{iso}.parquet')
         if os.path.exists(path):
             return path
@@ -69,7 +66,7 @@ def load_from_parquets(input_dir, isos):
     """
     Read per-ISO parquets and reconstruct nested dict format.
 
-    Handles both step3 (step3_co_<ISO>.parquet) and step4 (step4_<ISO>.parquet).
+    Reads step3_co_<ISO>.parquet files from cost optimization output.
 
     Returns:
         data: {
