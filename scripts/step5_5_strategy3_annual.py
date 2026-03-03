@@ -28,7 +28,7 @@ import numpy as np
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, SCRIPT_DIR)
 
-from step6_5_procurement_utils import (
+from step5_5_procurement_utils import (
     ISOS, THRESHOLDS, TIMELINE_YEARS, BASE_YEAR,
     PARTICIPATION_LEVELS,
     CI_SHARE, BASE_DEMAND_TWH,
