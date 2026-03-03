@@ -38,7 +38,7 @@ body { background: var(--bg-alt-warm); }
 .scenario-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 32px; }
 .scenario-card { background: rgba(255,255,255,0.9); border: 1px solid rgba(0,0,0,0.08); border-radius: var(--radius-lg); padding: var(--pad-card); box-shadow: var(--shadow-sm); }
 .scenario-card h3 { font-family: var(--font-heading); font-size: 0.95rem; color: var(--navy); margin-bottom: 6px; }
-.scenario-card .toggles { font-size: 0.75rem; color: rgba(0,0,0,0.4); margin-bottom: 8px; font-family: var(--font-data); }
+.scenario-card .toggles { font-size: 0.75rem; color: rgba(0,0,0,0.6); margin-bottom: 8px; font-family: var(--font-data); }
 .scenario-card p { color: rgba(0,0,0,0.6); font-size: 0.85rem; line-height: 1.7; margin: 0; }
 /* Dark overrides for scenario cards inside section-dark */
 .section-dark .scenario-card { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.10); box-shadow: none; }
@@ -49,7 +49,7 @@ body { background: var(--bg-alt-warm); }
 /* Chart pair — base in dashboard-ui.css */
 .chart-box { background: rgba(255,255,255,0.9); border: 1px solid rgba(0,0,0,0.08); border-radius: var(--radius-lg); padding: var(--pad-card); box-shadow: var(--shadow-sm); }
 .chart-box h3 { font-family: var(--font-heading); font-size: 0.95rem; color: var(--navy); margin-bottom: 4px; }
-.chart-box .chart-note { font-size: 0.75rem; color: rgba(0,0,0,0.4); margin-bottom: 12px; }
+.chart-box .chart-note { font-size: 0.75rem; color: rgba(0,0,0,0.6); margin-bottom: 12px; }
 
 /* Page-specific chart-container override: fixed height instead of shared min-height */
 .chart-container { height: 340px; min-height: auto; }
@@ -57,7 +57,7 @@ body { background: var(--bg-alt-warm); }
 /* ===== PAGE-SPECIFIC: Single wide chart ===== */
 .chart-wide { background: rgba(255,255,255,0.9); border: 1px solid rgba(0,0,0,0.08); border-radius: var(--radius-lg); padding: var(--pad-card); margin-bottom: 32px; box-shadow: var(--shadow-sm); }
 .chart-wide h3 { font-family: var(--font-heading); font-size: 0.95rem; color: var(--navy); margin-bottom: 4px; }
-.chart-wide .chart-note { font-size: 0.75rem; color: rgba(0,0,0,0.4); margin-bottom: 12px; }
+.chart-wide .chart-note { font-size: 0.75rem; color: rgba(0,0,0,0.6); margin-bottom: 12px; }
 .chart-container-wide { position: relative; height: 420px; }
 
 /* ===== PAGE-SPECIFIC: Domino table — extends shared .data-table ===== */
@@ -71,7 +71,7 @@ body { background: var(--bg-alt-warm); }
 /* bar-divider, bar-slider-wrap, range thumbs — in dashboard-ui.css */
 .bar-slider-readout { display: flex; align-items: baseline; gap: 6px; white-space: nowrap; }
 .bar-slider-readout .target-val { font-family: var(--font-heading); font-size: 1.2rem; font-weight: 800; color: #0284C7; }
-.bar-slider-readout .target-year { font-size: 0.72rem; color: rgba(0,0,0,0.4); font-weight: 600; }
+.bar-slider-readout .target-year { font-size: 0.72rem; color: rgba(0,0,0,0.6); font-weight: 600; }
 
 /* Dashboard grid — in dashboard-ui.css */
 
@@ -528,6 +528,23 @@ each ISO must complete prior threshold steps before advancing. First row per ISO
 (function() {
 'use strict';
 
+// Defensive guard: bail gracefully if data file not loaded
+if (typeof SCENARIO_COMPARISON === 'undefined' || !SCENARIO_COMPARISON || !SCENARIO_COMPARISON.metadata) {
+    console.warn('scenario-comparison-data.js not loaded or invalid');
+    document.addEventListener('DOMContentLoaded', function() {
+        var main = document.querySelector('.main-content') || document.body;
+        var msg = document.createElement('div');
+        msg.className = 'insight-box insight-warn';
+        msg.style.maxWidth = '700px';
+        msg.style.margin = '40px auto';
+        msg.innerHTML = '<strong>Scenario Comparison Data Not Available</strong><br>' +
+            'The scenario comparison data file could not be loaded. ' +
+            'Run the Step 5.3 pipeline workflow for all ISOs to populate this page.';
+        main.prepend(msg);
+    });
+    return;
+}
+
 const DATA = SCENARIO_COMPARISON;
 const ISOS = DATA.metadata.isos;
 const THRESHOLDS = DATA.metadata.thresholds;
@@ -551,8 +568,8 @@ function updateSliderDisplay() {
 }
 updateSliderDisplay();
 
-// Single global ISO — all charts use this
-let globalIso = 'PJM';
+// Single global ISO — default to first available instead of hardcoded PJM
+let globalIso = ISOS.indexOf('PJM') >= 0 ? 'PJM' : (ISOS[0] || 'CAISO');
 
 function renderAll(iso) {
     globalIso = iso;
