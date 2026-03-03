@@ -1070,8 +1070,8 @@ National C&I = ~62% of total US load (~2,400 of ~3,860 TWh). Range by ISO: 52-57
 | `step5_compute_mac_stats.py` | `step5_compute_mac_stats.py` |
 | `step5_compute_lmp_prices.py` | `step5_compute_lmp_prices.py` |
 | `step5_PP7_compute_eac_scarcity.py` | `step5_compute_eac_scarcity.py` |
-| `step5_PP8_export_track_results.py` | `step4_export_track_results.py` |
-| `step5_PP9_analyze_tracks.py` | `step4_analyze_tracks.py` |
+| `step5_PP8_export_track_results.py` | `step5_export_track_results.py` |
+| `step5_PP9_analyze_tracks.py` | `step5_analyze_tracks.py` |
 | `step6_generate_shared_data.py` | `step6_generate_shared_data.py` |
 
 **Pipeline execution order:**
@@ -1501,8 +1501,8 @@ The optimizer runs as a 7-step pipeline. Step 1 is expensive (hours). Steps 2–
 | Script | What It Does | Cache Dep? |
 |--------|-------------|-----------|
 | `step4_build_dispatch_cache.py` | **Run first.** Pre-computes 8,760-hour dispatch for all unique mixes. Versioned NPZ cache (v2) with per-resource matched/surplus + charge profiles. | Creates cache |
-| `step4_export_track_results.py` | Exports track parquets (NB + CTR) to `track_results.json`. | None |
-| `step4_analyze_tracks.py` | Track cost envelopes (P10/P50/P90), resource mix differentials. | None |
+| `step5_export_track_results.py` | Exports track parquets (NB + CTR) to `track_results.json`. | None |
+| `step5_analyze_tracks.py` | Track cost envelopes (P10/P50/P90), resource mix differentials. | None |
 
 #### Step 6: Dispatch-Cache-Dependent Analysis (10 scripts, run in parallel)
 

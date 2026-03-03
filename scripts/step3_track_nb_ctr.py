@@ -154,6 +154,7 @@ def flatten_track_rows(iso, track_name, result_dict):
             row['battery_dispatch_pct'] = _get(sc, 'battery_dispatch_pct', None)
             row['battery8_dispatch_pct'] = _get(sc, 'battery8_dispatch_pct', None)
             row['ldes_dispatch_pct'] = _get(sc, 'ldes_dispatch_pct', None)
+            row['h2_dispatch_pct'] = _get(sc, 'h2_dispatch_pct', None)
             costs = _get(sc, 'costs', None)
             if costs:
                 for k, v in costs.items():
@@ -174,10 +175,8 @@ def flatten_dg_rows(iso, track_name, dg_dict, arrays=None):
     """Flatten demand growth result dict into flat rows for parquet.
 
     If arrays (PFS arrays) are provided, resolves mix_idx to full resource mix
-    for downstream pipeline compatibility.
-
-    Optimized: uses direct indexing with pre-checked vals length (always 6 in
-    current pipeline), avoids repeated .get() on arrays dict.
+    for downstream pipeline compatibility. Uses vectorized numpy fancy indexing
+    to batch-resolve mix indices per growth-level group.
     """
     rows = []
     # Pre-resolve array references once (avoids repeated dict lookups in inner loop)
@@ -186,6 +185,7 @@ def flatten_dg_rows(iso, track_name, dg_dict, arrays=None):
         arr_sol = arrays['solar']
         arr_wnd = arrays['wind']
         arr_hyd = arrays['hydro']
+        arr_osw = arrays.get('offshore_wind', np.zeros(len(arr_cf), dtype=np.int64))
         arr_score = arrays['hourly_match_score']
         arr_bat = arrays.get('battery_dispatch_pct', np.zeros(1))
         arr_bat8 = arrays.get('battery8_dispatch_pct', np.zeros(1))
@@ -197,39 +197,80 @@ def flatten_dg_rows(iso, track_name, dg_dict, arrays=None):
         for sc_key, year_data in sc_dict.items():
             for year_str, growth_data in year_data.items():
                 year_int = int(year_str)
-                for g_level, vals in growth_data.items():
-                    mix_idx = vals[0]
-                    row = {
-                        'iso': iso,
-                        'track': track_name,
-                        'threshold': thr_float,
-                        'scenario': sc_key,
-                        'year': year_int,
-                        'growth_level': g_level,
-                        'growth_factor': vals[4] if len(vals) > 4 else None,
-                        'annual_demand_mwh': vals[5] if len(vals) > 5 else None,
-                        'cost_total_cost': vals[1],
-                        'cost_effective_cost': vals[2],
-                        'cost_incremental': vals[3],
-                    }
-                    if arrays is not None:
-                        cf = int(arr_cf[mix_idx])
-                        sol = int(arr_sol[mix_idx])
-                        wnd = int(arr_wnd[mix_idx])
-                        hyd = int(arr_hyd[mix_idx])
-                        row['mix_clean_firm'] = cf
-                        row['mix_solar'] = sol
-                        row['mix_wind'] = wnd
-                        row['mix_ccs_ccgt'] = max(0, 100 - (cf + sol + wnd + hyd))
-                        row['mix_hydro'] = hyd
-                        row['hourly_match_score'] = float(arr_score[mix_idx])
-                        row['battery_dispatch_pct'] = round(float(arr_bat[mix_idx]), 4)
-                        row['battery8_dispatch_pct'] = round(float(arr_bat8[mix_idx]), 4)
-                        row['ldes_dispatch_pct'] = round(float(arr_ldes[mix_idx]), 4)
-                        row['h2_dispatch_pct'] = round(float(arr_h2[mix_idx]), 4)
-                    else:
-                        row['best_mix_idx'] = mix_idx
-                    rows.append(row)
+
+                # Vectorized: batch-resolve all mix indices for this group
+                g_levels = list(growth_data.keys())
+                g_vals = [growth_data[g] for g in g_levels]
+
+                if arrays is not None and len(g_levels) > 1:
+                    idxs = np.array([v[0] for v in g_vals], dtype=np.intp)
+                    cf_batch = arr_cf[idxs].astype(int)
+                    sol_batch = arr_sol[idxs].astype(int)
+                    wnd_batch = arr_wnd[idxs].astype(int)
+                    hyd_batch = arr_hyd[idxs].astype(int)
+                    osw_batch = arr_osw[idxs].astype(int)
+                    score_batch = arr_score[idxs]
+                    bat_batch = np.round(arr_bat[idxs].astype(np.float64), 4)
+                    bat8_batch = np.round(arr_bat8[idxs].astype(np.float64), 4)
+                    ldes_batch = np.round(arr_ldes[idxs].astype(np.float64), 4)
+                    h2_batch = np.round(arr_h2[idxs].astype(np.float64), 4)
+
+                    for i, (g_level, vals) in enumerate(zip(g_levels, g_vals)):
+                        cf, sol, wnd, hyd, osw = (
+                            int(cf_batch[i]), int(sol_batch[i]),
+                            int(wnd_batch[i]), int(hyd_batch[i]), int(osw_batch[i]))
+                        rows.append({
+                            'iso': iso, 'track': track_name,
+                            'threshold': thr_float, 'scenario': sc_key,
+                            'year': year_int, 'growth_level': g_level,
+                            'growth_factor': vals[4] if len(vals) > 4 else None,
+                            'annual_demand_mwh': vals[5] if len(vals) > 5 else None,
+                            'cost_total_cost': vals[1],
+                            'cost_effective_cost': vals[2],
+                            'cost_incremental': vals[3],
+                            'mix_clean_firm': cf, 'mix_solar': sol,
+                            'mix_wind': wnd, 'mix_offshore_wind': osw,
+                            'mix_ccs_ccgt': max(0, 100 - (cf + sol + wnd + hyd + osw)),
+                            'mix_hydro': hyd,
+                            'hourly_match_score': float(score_batch[i]),
+                            'battery_dispatch_pct': float(bat_batch[i]),
+                            'battery8_dispatch_pct': float(bat8_batch[i]),
+                            'ldes_dispatch_pct': float(ldes_batch[i]),
+                            'h2_dispatch_pct': float(h2_batch[i]),
+                        })
+                else:
+                    for g_level, vals in zip(g_levels, g_vals):
+                        mix_idx = vals[0]
+                        row = {
+                            'iso': iso, 'track': track_name,
+                            'threshold': thr_float, 'scenario': sc_key,
+                            'year': year_int, 'growth_level': g_level,
+                            'growth_factor': vals[4] if len(vals) > 4 else None,
+                            'annual_demand_mwh': vals[5] if len(vals) > 5 else None,
+                            'cost_total_cost': vals[1],
+                            'cost_effective_cost': vals[2],
+                            'cost_incremental': vals[3],
+                        }
+                        if arrays is not None:
+                            cf = int(arr_cf[mix_idx])
+                            sol = int(arr_sol[mix_idx])
+                            wnd = int(arr_wnd[mix_idx])
+                            hyd = int(arr_hyd[mix_idx])
+                            osw = int(arr_osw[mix_idx])
+                            row['mix_clean_firm'] = cf
+                            row['mix_solar'] = sol
+                            row['mix_wind'] = wnd
+                            row['mix_offshore_wind'] = osw
+                            row['mix_ccs_ccgt'] = max(0, 100 - (cf + sol + wnd + hyd + osw))
+                            row['mix_hydro'] = hyd
+                            row['hourly_match_score'] = float(arr_score[mix_idx])
+                            row['battery_dispatch_pct'] = round(float(arr_bat[mix_idx]), 4)
+                            row['battery8_dispatch_pct'] = round(float(arr_bat8[mix_idx]), 4)
+                            row['ldes_dispatch_pct'] = round(float(arr_ldes[mix_idx]), 4)
+                            row['h2_dispatch_pct'] = round(float(arr_h2[mix_idx]), 4)
+                        else:
+                            row['best_mix_idx'] = mix_idx
+                        rows.append(row)
     return rows
 
 
@@ -368,6 +409,9 @@ def load_iso_ef_parquet(iso):
         'solar': sub.column('solar').to_numpy(),
         'wind': sub.column('wind').to_numpy(),
         'hydro': sub.column('hydro').to_numpy(),
+        'offshore_wind': (sub.column('offshore_wind').to_numpy()
+                          if 'offshore_wind' in sub.column_names
+                          else np.zeros(n, dtype=np.int64)),
         'battery_dispatch_pct': sub.column('battery_dispatch_pct').to_numpy(),
         'battery8_dispatch_pct': (sub.column('battery8_dispatch_pct').to_numpy()
                                    if 'battery8_dispatch_pct' in sub.column_names
