@@ -257,7 +257,7 @@ def get_sss_twh(iso, year, growth_level='Medium'):
 
     # Existing clean from grid mix (constant at 2025 levels)
     gm = GRID_MIX_SHARES[iso]
-    existing_clean_pct = sum(gm[r] for r in ['clean_firm', 'solar', 'wind', 'hydro']) / 100.0
+    existing_clean_pct = sum(gm[r] for r in ['clean_firm', 'solar', 'wind', 'offshore_wind', 'hydro']) / 100.0
     existing_clean_twh = existing_clean_pct * BASE_DEMAND_TWH[iso]
 
     # New RPS build needed above existing clean
@@ -272,7 +272,7 @@ def get_sss_twh(iso, year, growth_level='Medium'):
 def get_existing_clean_twh(iso):
     """Get total existing clean generation TWh (2025 baseline)."""
     gm = GRID_MIX_SHARES[iso]
-    existing_pct = sum(gm[r] for r in ['clean_firm', 'solar', 'wind', 'hydro']) / 100.0
+    existing_pct = sum(gm[r] for r in ['clean_firm', 'solar', 'wind', 'offshore_wind', 'hydro']) / 100.0
     return existing_pct * BASE_DEMAND_TWH[iso]
 
 
@@ -335,7 +335,7 @@ def get_existing_clean_hourly_shape(iso, gen_profiles):
     # Weights by resource share in existing clean
     weights = {}
     total_pct = 0
-    for r in ['clean_firm', 'solar', 'wind', 'hydro']:
+    for r in ['clean_firm', 'solar', 'wind', 'offshore_wind', 'hydro']:
         pct = gm.get(r, 0)
         weights[r] = pct
         total_pct += pct
