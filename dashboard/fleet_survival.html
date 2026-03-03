@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fleet Survival & Capacity Dispatch | Hourly CFE Optimizer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/dashboard-ui.css">
+    <script src="js/chart-colors.js"></script>
+    <script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <style>
+        body { color: #1a1a2e; }
+        .container { max-width: 1320px; margin: 0 auto; padding: 32px 24px; }
+
+        /* Stats */
+        .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; margin-bottom: 28px; }
+        .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px 14px; text-align: center; box-shadow: var(--shadow-sm); }
+        .stat-card .label { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 2px; }
+        .stat-card .value { font-size: 1.55rem; font-weight: 700; font-family: var(--font-data); }
+        .stat-card .sub { font-size: 0.78rem; color: var(--text-light); margin-top: 3px; }
+
+        /* Panels */
+        .panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 26px 26px 18px; margin-bottom: 24px; box-shadow: var(--shadow-sm); }
+        .panel-title { font-family: var(--font-heading); font-size: 1.08rem; font-weight: 600; color: #1a1a2e; margin-bottom: 3px; }
+        .panel-subtitle { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 18px; }
+        .chart-wrap { position: relative; width: 100%; }
+
+        /* Narrative */
+        .narrative { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 26px 30px; margin-bottom: 24px; line-height: 1.7; box-shadow: var(--shadow-sm); }
+        .narrative h3 { font-family: var(--font-heading); font-size: 1.12rem; color: #1a1a2e; margin-bottom: 10px; }
+        .narrative p { color: #374151; margin-bottom: 10px; font-size: 0.92rem; }
+        .narrative p:last-child { margin-bottom: 0; }
+        .narrative ul { color: #374151; font-size: 0.92rem; padding-left: 20px; margin-bottom: 10px; }
+        .narrative li { margin-bottom: 5px; }
+        /* Dark panel overrides for narrative */
+        .section-dark .narrative h3 { color: #ffffff; }
+        .section-dark .narrative p { color: rgba(255,255,255,0.75); }
+        .section-dark .narrative ul { color: rgba(255,255,255,0.75); }
+        .section-dark .narrative li { color: rgba(255,255,255,0.75); }
+        .section-dark .narrative strong { color: #ffffff; }
+        .section-dark .narrative .callout { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); color: rgba(255,255,255,0.8); }
+        .section-dark .narrative .callout-warn { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.25); color: rgba(255,255,255,0.8); }
+        .narrative .callout { background: rgba(59,130,246,0.06); border-left: 3px solid #3B82F6; padding: 12px 16px; border-radius: 0 var(--radius-md) var(--radius-md) 0; margin: 14px 0; font-size: 0.9rem; color: var(--navy-mid); }
+        .narrative .callout-warn { background: rgba(245,158,11,0.06); border-left: 3px solid var(--solar); padding: 12px 16px; border-radius: 0 var(--radius-md) var(--radius-md) 0; margin: 14px 0; font-size: 0.9rem; color: #78350F; }
+
+        /* Company Selector */
+        .company-selector { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+        .co-pill { padding: 9px 20px; border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--bg-card); color: var(--text-muted); cursor: pointer; font-size: 0.88rem; font-weight: 600; transition: all 0.2s; font-family: var(--font-heading); }
+        .co-pill:hover { border-color: var(--hydro); color: var(--hydro); }
+        .co-pill.active { background: var(--hydro); border-color: var(--hydro); color: #fff; }
+
+        /* Company Profile */
+        .profile { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px 26px; margin-bottom: 24px; box-shadow: var(--shadow-sm); }
+        .profile-top { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+        .profile-name { font-family: var(--font-heading); font-size: 1.4rem; font-weight: 700; color: #1a1a2e; }
+        .profile-badge { display: inline-block; padding: 3px 12px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+        .profile-badge.merchant { background: rgba(59,130,246,0.1); color: #3B82F6; }
+        .profile-badge.hybrid { background: rgba(245,158,11,0.1); color: #D97706; }
+        .profile-target { font-size: 0.85rem; color: #6B7280; }
+
+        /* Two-col grid */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+        .grid-2 .panel { margin-bottom: 0; }
+
+        /* Method note */
+        .method-note { background: var(--bg-subtle); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 22px 26px; margin-bottom: 24px; }
+        .method-note h3 { font-family: var(--font-heading); font-size: 0.95rem; color: var(--text-muted); margin-bottom: 6px; }
+        .method-note p { color: var(--text-muted); font-size: 0.82rem; line-height: 1.6; margin-bottom: 5px; }
+
+        /* ISO Selector */
+        .iso-selector { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+        .iso-pill { padding: 8px 18px; border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--bg-card); color: var(--text-muted); cursor: pointer; font-size: 0.84rem; font-weight: 600; transition: all 0.2s; font-family: var(--font-heading); }
+        .iso-pill:hover { border-color: var(--green-pos); color: var(--green-pos); }
+        .iso-pill.active { background: var(--green-pos); border-color: var(--green-pos); color: #fff; }
+
+        /* Plant Table */
+        .plant-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+        .plant-table th { text-align: left; padding: 10px 12px; border-bottom: 2px solid var(--border); color: var(--text-muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .plant-table td { padding: 9px 12px; border-bottom: 1px solid #F3F4F6; color: #374151; }
+        .plant-table tr:hover td { background: rgba(59,130,246,0.03); }
+        .plant-table .fuel-tag { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 0.75rem; font-weight: 600; }
+
+        @media (max-width: 768px) {
+            .grid-2 { grid-template-columns: 1fr; }
+            .container { padding: 18px 12px; }
+            .panel { padding: 18px 14px 14px; }
+            .stats-row { grid-template-columns: 1fr 1fr; gap: 10px; }
+        }
+        @media (max-width: 480px) { .stats-row { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <nav id="topNav"></nav>
+    <script src="js/nav.js"></script>
+
+    <header class="header">
+        <h1>Fleet Survival & Capacity Dispatch</h1>
+        <p class="subtitle">Company-level analysis: how do major competitive power suppliers' fleets fare as clean energy scales along the SBTi trajectory?</p>
+        <div class="header-accent"></div>
+    </header>
+
+    <div class="container section-light">
+
+        <!-- Company Selector -->
+        <div class="company-selector" id="companySelector"></div>
+
+        <!-- Company Profile -->
+        <div class="profile" id="profileCard">
+            <div class="profile-top">
+                <div>
+                    <div class="profile-name" id="prName">—</div>
+                    <span class="profile-badge merchant" id="prBadge">—</span>
+                </div>
+                <div class="profile-target" id="prTarget">—</div>
+            </div>
+            <div class="stats-row" id="prStats">
+                <div class="stat-card"><div class="label">Total Capacity</div><div class="value" id="prTotalCap">—</div><div class="sub">nameplate</div></div>
+                <div class="stat-card"><div class="label">Fossil Fleet</div><div class="value" id="prFossilCap">—</div><div class="sub" id="prFossilPct">—</div></div>
+                <div class="stat-card"><div class="label">2024 CO2</div><div class="value" id="prCO2">—</div><div class="sub">million metric tons</div></div>
+                <div class="stat-card"><div class="label">Intensity</div><div class="value" id="prIntensity">—</div><div class="sub">kg CO2/MWh</div></div>
+                <div class="stat-card"><div class="label">Coal Exit</div><div class="value" id="prCoalExit">—</div><div class="sub" id="prCoalExitSub">—</div></div>
+                <div class="stat-card"><div class="label">ISOs</div><div class="value" id="prISOs">—</div><div class="sub">regions</div></div>
+            </div>
+        </div>
+
+        <!-- Chart 1: Regional Footprint -->
+        <div class="panel">
+            <div class="panel-title" id="regTitle">Regional Footprint</div>
+            <div class="panel-subtitle" id="regSub">Capacity distribution by ISO and fuel type</div>
+            <div class="chart-wrap" style="height: 260px;">
+                <canvas id="chartRegional"></canvas>
+            </div>
+        </div>
+
+        <!-- Charts 2 & 3: Nameplate + Dispatch side by side -->
+        <div class="grid-2">
+            <div class="panel">
+                <div class="panel-title">Nameplate Capacity Over Time</div>
+                <div class="panel-subtitle" id="npSub">Coal retires physically; gas stays on grid | All fuel types shown</div>
+                <div class="chart-wrap" style="height: 380px;">
+                    <canvas id="chartNameplate"></canvas>
+                </div>
+            </div>
+            <div class="panel">
+                <div class="panel-title">Dispatch by Fuel Type</div>
+                <div class="panel-subtitle" id="dispSub">Generation declines as clean energy displaces fossil dispatch</div>
+                <div class="chart-wrap" style="height: 380px;">
+                    <canvas id="chartDispatch"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="gradient-transition"></div>
+
+        <!-- Dynamic Narrative -->
+        <section class="section-dark" style="margin:24px -24px;border-radius:var(--radius-lg);">
+        <div class="section-dark-inner">
+        <div class="narrative" id="narrativeInsight" style="background:transparent;border:none;box-shadow:none;">
+            <h3>Loading...</h3>
+        </div>
+        </div>
+        </section>
+
+        <div class="gradient-transition"></div>
+
+        <!-- Charts 4 & 5: CF + CCGT Focus side by side -->
+        <div class="grid-2">
+            <div class="panel">
+                <div class="panel-title">Capacity Factor by Fuel Type</div>
+                <div class="panel-subtitle">Fossil fuel utilization over SBTi trajectory | 15% = economic retirement threshold</div>
+                <div class="chart-wrap" style="height: 380px;">
+                    <canvas id="chartCapFactor"></canvas>
+                </div>
+            </div>
+            <div class="panel">
+                <div class="panel-title">CCGT: Capacity vs. Utilization</div>
+                <div class="panel-subtitle" id="ccgtSub">Nameplate max (dashed) vs. actual dispatch | CF% labels</div>
+                <div class="chart-wrap" style="height: 380px;">
+                    <canvas id="chartCCGTFocus"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- ISO DRILL-DOWN SECTION -->
+        <!-- ============================================================ -->
+        <div class="panel" style="margin-top: 12px; padding-bottom: 8px;">
+            <div class="panel-title" style="font-size: 1.18rem; margin-bottom: 4px;">Regional Drill-Down</div>
+            <div class="panel-subtitle" id="isoDrillSub">Select an ISO to see this company's fleet in that region</div>
+            <div class="iso-selector" id="isoSelector"></div>
+        </div>
+
+        <!-- ISO Stats Row -->
+        <div class="stats-row" id="isoStats" style="display: none;">
+            <div class="stat-card"><div class="label">ISO Capacity</div><div class="value" id="isCapVal">—</div><div class="sub" id="isCapSub">—</div></div>
+            <div class="stat-card"><div class="label">Fossil</div><div class="value" id="isFossilVal">—</div><div class="sub" id="isFossilSub">—</div></div>
+            <div class="stat-card"><div class="label">Clean</div><div class="value" id="isCleanVal">—</div><div class="sub" id="isCleanSub">—</div></div>
+            <div class="stat-card"><div class="label">Plants</div><div class="value" id="isPlantCnt">—</div><div class="sub">in this ISO</div></div>
+        </div>
+
+        <!-- ISO Charts: Nameplate + Dispatch -->
+        <div class="grid-2" id="isoChartsRow" style="display: none;">
+            <div class="panel">
+                <div class="panel-title" id="isoNpTitle">ISO Nameplate Capacity</div>
+                <div class="panel-subtitle" id="isoNpSub">Capacity by fuel over SBTi trajectory</div>
+                <div class="chart-wrap" style="height: 360px;">
+                    <canvas id="chartIsoNameplate"></canvas>
+                </div>
+            </div>
+            <div class="panel">
+                <div class="panel-title" id="isoDispTitle">ISO Dispatch by Fuel</div>
+                <div class="panel-subtitle" id="isoDispSub">Generation by fuel over SBTi trajectory</div>
+                <div class="chart-wrap" style="height: 360px;">
+                    <canvas id="chartIsoDispatch"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- ISO Chart: Capacity Factor -->
+        <div class="panel" id="isoCfPanel" style="display: none;">
+            <div class="panel-title" id="isoCfTitle">ISO Capacity Factor by Fuel</div>
+            <div class="panel-subtitle">Fossil fuel utilization in this ISO | 15% = economic retirement threshold</div>
+            <div class="chart-wrap" style="height: 340px;">
+                <canvas id="chartIsoCF"></canvas>
+            </div>
+        </div>
+
+        <!-- ISO Plant Table -->
+        <div class="panel" id="isoPlantPanel" style="display: none;">
+            <div class="panel-title" id="isoPlantTitle">Plants in ISO</div>
+            <div class="panel-subtitle">Individual plant-level data for this company in the selected region</div>
+            <div style="overflow-x: auto;">
+                <table class="plant-table" id="isoPlantTable">
+                    <thead>
+                        <tr>
+                            <th>Plant</th>
+                            <th>Fuel</th>
+                            <th>Capacity (MW)</th>
+                            <th>Generation (TWh)</th>
+                            <th>CO2 (MT/yr)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="isoPlantBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Methodology -->
+        <div class="method-note">
+            <h3>Methodology</h3>
+            <p>Company fleet data from EIA Form 860/923, eGRID, company sustainability reports, and MJ Bradley/ERM Benchmarking Air Emissions (21st ed., 2025). Constellation includes Calpine fleet post-acquisition. Dispatch from Track 1 baseline merit-order retirement model (Step 4/PP4). Gas dispatch split CCGT vs peaker via merit-order priority: CCGTs dispatch first (7.0 MMBtu/MWh heat rate vs CT 10.5). Coal nameplate removed when regional coal dispatch reaches zero (physical retirement). Gas nameplate held constant — economic retirement modeled at ~15% CF threshold. SBTi timeline: 50% clean = 2030 through 100% = 2050.</p>
+        </div>
+
+    </div>
+
+    <script src="js/fleet-survival-data.js"></script>
+    <script>
+    // ========================================================================
+    // CHART DEFAULTS — Light theme
+    // ========================================================================
+    Chart.defaults.color = '#374151';
+    Chart.defaults.borderColor = '#E5E7EB';
+    Chart.defaults.font.family = "'Plus Jakarta Sans', 'Inter', sans-serif";
+    Chart.defaults.plugins.datalabels = { display: false };
+
+    // 25% transparent fills, saturated 2px outlines
+    const FS = {
+        coal:       { fill: 'rgba(55,65,81,0.25)',    border: '#374151' },
+        gas_ccgt:   { fill: 'rgba(239,68,68,0.25)',   border: '#EF4444' },
+        gas_peaker: { fill: 'rgba(251,146,60,0.25)',  border: '#FB923C' },
+        oil:        { fill: 'rgba(156,163,175,0.25)', border: '#9CA3AF' },
+        nuclear:    { fill: 'rgba(124,58,237,0.25)',  border: '#7C3AED' },
+        solar:      { fill: 'rgba(245,158,11,0.25)',  border: '#F59E0B' },
+        wind:       { fill: 'rgba(34,197,94,0.25)',   border: '#22C55E' },
+        battery:    { fill: 'rgba(139,92,246,0.25)',  border: '#8B5CF6' },
+        hydro:      { fill: 'rgba(14,165,233,0.25)',  border: '#0EA5E9' },
+        geothermal: { fill: 'rgba(16,185,129,0.25)',  border: '#10B981' },
+    };
+    // Stacking order: stable on bottom, declining on top
+    const FUEL_ORDER = ['nuclear','hydro','geothermal','wind','solar','battery','gas_ccgt','gas_peaker','oil','coal'];
+    const gCol = '#E5E7EB';
+    const gColL = 'rgba(229,231,235,0.5)';
+
+    // ========================================================================
+    // COMPANY NARRATIVES
+    // ========================================================================
+    const COMPANY_NARRATIVES = {
+        'Vistra': 'Martin Lake (2,250 MW) and Coleto Creek (630 MW) in ERCOT retire by 2027. The Illinois coal fleet — Kincaid, Baldwin, Newton (3.1 GW) — exits PJM by 2028. Post-coal, Vistra pivots to gas CCGTs across ERCOT, PJM, and NEISO, plus 4.4 GW of nuclear at Comanche Peak, Perry, Davis-Besse, and Beaver Valley. The CCGT fleet faces steady CF erosion as clean energy scales.',
+        'Constellation': 'The Calpine acquisition makes Constellation the nation\'s largest competitive power supplier. The combined fleet is nuclear-dominant — 13+ GW across PJM, NYISO, and ERCOT — with the lowest carbon intensity (177 kg/MWh) among major merchants. The Calpine gas portfolio adds 16+ GW of CCGTs across ERCOT, CAISO, and NEISO. The Geysers geothermal (725 MW) provides unique clean firm capacity. Nuclear operations are unaffected by dispatch decline; the CCGT fleet bears the full weight of gas displacement.',
+        'NRG': 'W.A. Parish (2,697 MW) and Limestone (1,629 MW) represent the largest remaining merchant coal fleet in ERCOT — 4.3 GW facing retirement by ~2030. Post-coal, NRG is gas-heavy with substantial CCGT presence across ERCOT, PJM (Doswell, Hunterstown, Ironwood, Springdale), and NYISO (Ravenswood). No nuclear hedge — NRG\'s entire remaining fleet faces dispatch decline. Ravenswood (1.9 GW) in NYISO is particularly exposed as NYC gas displacement accelerates.',
+        'Talen': 'Susquehanna Nuclear (2.2 GW, 90% owned) provides emissions-free baseload plus data center revenue (Cumulus deal), but the rest of Talen\'s fleet is fossil-heavy. Brandon Shores coal (1.3 GW, RMR through 2029) and Brunner Island (1.4 GW, coal ceasing 2028) exit within 3 years. The gas CT fleet (Martins Creek 1.7 GW) is high on the curtailment queue. Post-2030, Talen becomes a nuclear + declining-gas company.',
+        'PSEG': 'PSEG Power is effectively a nuclear pure-play — Hope Creek, Salem (57%), and Peach Bottom (50%) total 3.8 GW of emissions-free baseload. With only 1 MT of 2024 CO2 and 22 kg/MWh intensity, PSEG has virtually zero fossil stranding risk. The fleet is immune to dispatch decline dynamics.',
+        'NextEra': 'NextEra Energy Resources has the most diversified merchant fleet — nuclear (Point Beach 1.2 GW), wind (10.8 GW), solar (7.5 GW), battery (3.5 GW), and gas (4.4 GW CCGT). Only ~13% fossil by capacity. The ERCOT and CAISO gas CCGTs face CF erosion, but NextEra\'s clean portfolio generates stable returns. Gas stranding risk is manageable relative to fleet size.',
+        'AES': 'AES is a hybrid utility with aggressive SBTi-validated 1.5°C targets. Petersburg Coal (1.7 GW) in PJM exits by ~2033. The CAISO portfolio — Alamitos CCGT (2.0 GW) + solar/battery — faces California-specific dispatch dynamics where solar+battery displacement is most acute. AES\'s large battery portfolio (2.0 GW) partially hedges their own gas fleet\'s CF erosion.',
+    };
+
+    // ========================================================================
+    // STATE
+    // ========================================================================
+    let selIdx = 0;
+    let charts = { regional: null, nameplate: null, dispatch: null, cf: null, ccgt: null };
+
+    // ========================================================================
+    // BUILD COMPANY PILLS
+    // ========================================================================
+    const selEl = document.getElementById('companySelector');
+    FLEET_COMPANIES.forEach((c, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'co-pill' + (i === 0 ? ' active' : '');
+        btn.textContent = c.shortName;
+        btn.onclick = () => selectCompany(i);
+        selEl.appendChild(btn);
+    });
+
+    function selectCompany(idx) {
+        selIdx = idx;
+        document.querySelectorAll('.co-pill').forEach((p, i) => p.classList.toggle('active', i === idx));
+        renderCompany();
+    }
+
+    // ========================================================================
+    // RENDER COMPANY
+    // ========================================================================
+    function renderCompany() {
+        const c = FLEET_COMPANIES[selIdx];
+        const bd = getFleetBreakdown(c);
+        const ms = computeFleetMilestones(c);
+        const cd = computeCompanyCapacityDispatch(c);
+
+        // --- Profile ---
+        document.getElementById('prName').textContent = c.name;
+        const badge = document.getElementById('prBadge');
+        badge.textContent = c.type;
+        badge.className = 'profile-badge ' + (c.type.includes('Merchant') ? 'merchant' : 'hybrid');
+        document.getElementById('prTarget').textContent = c.target;
+        document.getElementById('prTotalCap').textContent = (bd.total_capacity / 1000).toFixed(1) + ' GW';
+        document.getElementById('prFossilCap').textContent = (bd.fossil_capacity / 1000).toFixed(1) + ' GW';
+        document.getElementById('prFossilPct').textContent = bd.fossil_pct.toFixed(0) + '% of fleet';
+        document.getElementById('prCO2').textContent = c.co2_2024_mt + ' MT';
+        document.getElementById('prIntensity').textContent = c.intensity_kg_per_mwh;
+        document.getElementById('prCoalExit').textContent = ms.coal_exit_year ? '~' + ms.coal_exit_year : 'N/A';
+        document.getElementById('prCoalExitSub').textContent = ms.coal_exit_year ? 'coal retirement' : 'no coal fleet';
+        const isoList = [...new Set(c.plants.map(p => p.iso))];
+        document.getElementById('prISOs').textContent = isoList.join(', ');
+
+        // --- Charts ---
+        renderRegionalChart(c, bd);
+        renderNameplateChart(c, cd);
+        renderDispatchChart(c, cd);
+        renderCFChart(c, cd, ms);
+        renderCCGTChart(c, cd);
+
+        // --- Dynamic Narrative ---
+        renderNarrative(c, cd, ms, bd);
+
+        // --- ISO Drill-Down Pills ---
+        buildIsoPills(c);
+    }
+
+    // ========================================================================
+    // CHART 1: Regional Footprint (Horizontal Stacked Bar)
+    // ========================================================================
+    function renderRegionalChart(c, bd) {
+        if (charts.regional) charts.regional.destroy();
+        const ctx = document.getElementById('chartRegional').getContext('2d');
+        document.getElementById('regTitle').textContent = c.shortName + ' — Regional Footprint';
+        document.getElementById('regSub').textContent = 'Capacity by ISO and fuel type | ' + (bd.total_capacity / 1000).toFixed(1) + ' GW total';
+
+        const isos = Object.keys(bd.byISO).sort((a, b) => bd.byISO[b].capacity_mw - bd.byISO[a].capacity_mw);
+        const fuels = [...new Set(c.plants.map(p => p.fuel))];
+        const ordered = FUEL_ORDER.filter(f => fuels.includes(f));
+
+        const datasets = ordered.map(f => ({
+            label: FUEL_LABELS[f] || f,
+            data: isos.map(iso => c.plants.filter(p => p.iso === iso && p.fuel === f).reduce((s, p) => s + p.capacity_mw, 0) / 1000),
+            backgroundColor: (FS[f] || {}).fill || 'rgba(100,100,100,0.25)',
+            borderColor: (FS[f] || {}).border || '#666',
+            borderWidth: 2, borderRadius: 4, borderSkipped: false,
+        }));
+
+        charts.regional = new Chart(ctx, {
+            type: 'bar',
+            data: { labels: isos, datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+                layout: { padding: { top: 4, right: 16, bottom: 4, left: 4 } },
+                scales: {
+                    x: { stacked: true, title: { display: true, text: 'Capacity (GW)', color: '#6B7280', font: { size: 11 } }, grid: { color: gCol }, ticks: { font: { size: 11 } } },
+                    y: { stacked: true, grid: { display: false }, ticks: { font: { size: 12, weight: '600' } } }
+                },
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 14, padding: 12, font: { size: 10 } } },
+                    tooltip: { callbacks: { label: item => item.dataset.label + ': ' + item.raw.toFixed(2) + ' GW' } }
+                }
+            }
+        });
+    }
+
+    // ========================================================================
+    // CHART 2: Nameplate Capacity (Stacked Bar)
+    // ========================================================================
+    function renderNameplateChart(c, cd) {
+        if (charts.nameplate) charts.nameplate.destroy();
+        const ctx = document.getElementById('chartNameplate').getContext('2d');
+        const labels = cd.years.map(y => String(y));
+        const ordered = FUEL_ORDER.filter(f => cd.fuels.includes(f) && cd.nameplate_gw[f] && cd.nameplate_gw[f].some(v => v > 0.005));
+
+        const datasets = ordered.map(f => ({
+            label: FUEL_LABELS[f] || f,
+            data: cd.nameplate_gw[f],
+            backgroundColor: (FS[f] || {}).fill || 'rgba(100,100,100,0.25)',
+            borderColor: (FS[f] || {}).border || '#666',
+            borderWidth: 2, borderRadius: 4, borderSkipped: false,
+        }));
+
+        charts.nameplate = new Chart(ctx, {
+            type: 'bar',
+            data: { labels, datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                layout: { padding: { top: 8, right: 12, bottom: 4, left: 4 } },
+                scales: {
+                    x: { stacked: true, grid: { color: gColL }, ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 8, font: { size: 10 } },
+                         title: { display: true, text: 'Year', color: '#6B7280', font: { size: 11 } } },
+                    y: { stacked: true, grid: { color: gCol }, ticks: { font: { size: 10 }, padding: 4 }, beginAtZero: true,
+                         title: { display: true, text: 'Nameplate (GW)', color: '#6B7280', font: { size: 11 } } }
+                },
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 12, padding: 10, font: { size: 10 } } },
+                    tooltip: { mode: 'index', callbacks: {
+                        label: item => item.dataset.label + ': ' + item.raw.toFixed(2) + ' GW',
+                        footer: items => 'Total: ' + items.reduce((s, i) => s + i.raw, 0).toFixed(1) + ' GW'
+                    }}
+                }
+            }
+        });
+    }
+
+    // ========================================================================
+    // CHART 3: Dispatch by Fuel (Stacked Bar)
+    // ========================================================================
+    function renderDispatchChart(c, cd) {
+        if (charts.dispatch) charts.dispatch.destroy();
+        const ctx = document.getElementById('chartDispatch').getContext('2d');
+        const labels = cd.years.map(y => String(y));
+        const ordered = FUEL_ORDER.filter(f => cd.fuels.includes(f) && cd.dispatch_twh[f] && cd.dispatch_twh[f].some(v => v > 0.05));
+
+        const datasets = ordered.map(f => ({
+            label: FUEL_LABELS[f] || f,
+            data: cd.dispatch_twh[f],
+            backgroundColor: (FS[f] || {}).fill || 'rgba(100,100,100,0.25)',
+            borderColor: (FS[f] || {}).border || '#666',
+            borderWidth: 2, borderRadius: 4, borderSkipped: false,
+        }));
+
+        charts.dispatch = new Chart(ctx, {
+            type: 'bar',
+            data: { labels, datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                layout: { padding: { top: 8, right: 12, bottom: 4, left: 4 } },
+                scales: {
+                    x: { stacked: true, grid: { color: gColL }, ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 8, font: { size: 10 } },
+                         title: { display: true, text: 'Year', color: '#6B7280', font: { size: 11 } } },
+                    y: { stacked: true, grid: { color: gCol }, ticks: { font: { size: 10 }, padding: 4 }, beginAtZero: true,
+                         title: { display: true, text: 'Dispatch (TWh/yr)', color: '#6B7280', font: { size: 11 } } }
+                },
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 12, padding: 10, font: { size: 10 } } },
+                    tooltip: { mode: 'index', callbacks: {
+                        label: item => item.dataset.label + ': ' + item.raw.toFixed(1) + ' TWh',
+                        footer: items => 'Total: ' + items.reduce((s, i) => s + i.raw, 0).toFixed(1) + ' TWh'
+                    }}
+                }
+            }
+        });
+    }
+
+    // ========================================================================
+    // CHART 4: Capacity Factor (Line — Fossil only)
+    // ========================================================================
+    function renderCFChart(c, cd, ms) {
+        if (charts.cf) charts.cf.destroy();
+        const ctx = document.getElementById('chartCapFactor').getContext('2d');
+        const fossilFuels = ['coal', 'gas_ccgt', 'gas_peaker', 'oil'];
+        const datasets = [];
+
+        fossilFuels.forEach(f => {
+            if (!cd.fuels.includes(f) || !cd.capacity_factor_pct[f]) return;
+            if (cd.capacity_factor_pct[f].every(v => v === 0)) return;
+            datasets.push({
+                label: FUEL_LABELS[f] || f,
+                data: cd.years.map((y, i) => ({ x: y, y: cd.capacity_factor_pct[f][i] })),
+                borderColor: (FS[f] || {}).border || '#666',
+                backgroundColor: (FS[f] || {}).fill || 'rgba(100,100,100,0.25)',
+                borderWidth: 2.5, fill: true, tension: 0.3,
+                pointRadius: 4, pointBackgroundColor: (FS[f] || {}).border || '#666',
+                pointBorderColor: '#fff', pointBorderWidth: 1.5, pointHoverRadius: 7,
+            });
+        });
+
+        const annotations = {
+            retLine: { type: 'line', yMin: 15, yMax: 15, borderColor: '#EF444455', borderWidth: 2, borderDash: [8, 4],
+                label: { display: true, content: 'Economic Retirement (~15% CF)', position: 'end', font: { size: 9 }, color: '#EF4444', backgroundColor: 'rgba(255,255,255,0.9)', padding: 3 } }
+        };
+        if (ms.ccgt_erosion_year) {
+            annotations.erosion = { type: 'line', xMin: ms.ccgt_erosion_year, xMax: ms.ccgt_erosion_year,
+                borderColor: '#F59E0B66', borderWidth: 2, borderDash: [6, 3],
+                label: { display: true, content: 'CCGT CF Erosion', position: 'start', font: { size: 9, weight: 'bold' }, color: '#D97706', backgroundColor: 'rgba(255,255,255,0.9)', padding: 3 } };
+        }
+
+        charts.cf = new Chart(ctx, {
+            type: 'line', data: { datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                layout: { padding: { top: 8, right: 16, bottom: 4, left: 4 } },
+                scales: {
+                    x: { type: 'linear', min: 2030, max: 2050, ticks: { stepSize: 5, font: { size: 10 } }, grid: { color: gCol },
+                         title: { display: true, text: 'Year', color: '#6B7280', font: { size: 11 } } },
+                    y: { min: 0, max: 100, ticks: { callback: v => v + '%', font: { size: 10 }, padding: 4 }, grid: { color: gCol },
+                         title: { display: true, text: 'Capacity Factor (%)', color: '#6B7280', font: { size: 11 } } }
+                },
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 12, padding: 12, usePointStyle: true, font: { size: 10 } } },
+                    tooltip: { callbacks: {
+                        title: items => 'Year: ' + Math.round(items[0].parsed.x),
+                        label: item => item.dataset.label + ': ' + item.parsed.y.toFixed(1) + '% CF'
+                    }},
+                    annotation: { annotations }
+                }
+            }
+        });
+    }
+
+    // ========================================================================
+    // CHART 5: CCGT Focus (Dispatch bar + Nameplate line + CF labels)
+    // ========================================================================
+    function renderCCGTChart(c, cd) {
+        if (charts.ccgt) charts.ccgt.destroy();
+        const ctx = document.getElementById('chartCCGTFocus').getContext('2d');
+
+        const hasCCGT = cd.fuels.includes('gas_ccgt') && cd.dispatch_twh.gas_ccgt &&
+            cd.dispatch_twh.gas_ccgt.some(v => v > 0.1);
+
+        if (!hasCCGT) {
+            // No CCGT fleet — show empty state
+            charts.ccgt = new Chart(ctx, {
+                type: 'bar', data: { labels: ['No CCGT fleet'], datasets: [] },
+                options: { responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { x: { display: false }, y: { display: false } } }
+            });
+            document.getElementById('ccgtSub').textContent = c.shortName + ' has no gas CCGT fleet';
+            return;
+        }
+
+        document.getElementById('ccgtSub').textContent = c.shortName +
+            ' CCGT fleet | Nameplate max (dashed) vs actual dispatch | CF% labels';
+
+        const labels = cd.years.map(y => String(y));
+        const ccgtDisp = cd.dispatch_twh.gas_ccgt;
+        const ccgtNp = cd.nameplate_gw.gas_ccgt;
+        const ccgtCf = cd.capacity_factor_pct.gas_ccgt;
+        const maxGen = ccgtNp.map(gw => +(gw * 8.76).toFixed(0));
+
+        charts.ccgt = new Chart(ctx, {
+            type: 'bar',
+            data: { labels, datasets: [
+                {
+                    label: 'CCGT Dispatch (TWh)',
+                    data: ccgtDisp,
+                    backgroundColor: 'rgba(239,68,68,0.25)',
+                    borderColor: '#EF4444', borderWidth: 2, borderRadius: 4, borderSkipped: false,
+                    yAxisID: 'y',
+                    datalabels: {
+                        display: true, color: '#EF4444', anchor: 'end', align: 'end', offset: 2,
+                        font: { size: 9, weight: '600' },
+                        formatter: (val, ctx) => {
+                            const cf = ccgtCf[ctx.dataIndex];
+                            return cf > 0 ? cf + '%' : '';
+                        }
+                    }
+                },
+                {
+                    label: 'Nameplate Max (100% CF)',
+                    data: maxGen, type: 'line',
+                    borderColor: '#9CA3AF', backgroundColor: 'transparent',
+                    borderWidth: 2, borderDash: [8, 4], pointRadius: 0, tension: 0,
+                    yAxisID: 'y', datalabels: { display: false }
+                }
+            ]},
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                layout: { padding: { top: 22, right: 12, bottom: 4, left: 4 } },
+                scales: {
+                    x: { grid: { color: gColL }, ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 8, font: { size: 10 } },
+                         title: { display: true, text: 'Year', color: '#6B7280', font: { size: 11 } } },
+                    y: { grid: { color: gCol }, ticks: { font: { size: 10 }, padding: 4 }, beginAtZero: true,
+                         title: { display: true, text: 'TWh/yr', color: '#6B7280', font: { size: 11 } } }
+                },
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 14, padding: 12, font: { size: 10 } } },
+                    tooltip: { callbacks: {
+                        title: items => items[0] ? 'Year ' + items[0].label : '',
+                        label: item => {
+                            if (item.dataset.type === 'line') return 'Nameplate: ' + (item.raw / 8.76).toFixed(1) + ' GW';
+                            const cf = ccgtCf[item.dataIndex];
+                            return 'Dispatch: ' + item.raw.toFixed(1) + ' TWh (' + cf + '% CF)';
+                        }
+                    }}
+                }
+            }
+        });
+    }
+
+    // ========================================================================
+    // DYNAMIC NARRATIVE
+    // ========================================================================
+    function renderNarrative(c, cd, ms, bd) {
+        const el = document.getElementById('narrativeInsight');
+        const isos = [...new Set(c.plants.map(p => p.iso))].join(', ');
+        const compNarrative = COMPANY_NARRATIVES[c.shortName] || '';
+
+        // Compute key metrics
+        const coalGW = bd.byFuel.coal ? (bd.byFuel.coal.capacity_mw / 1000).toFixed(1) : '0';
+        const ccgtGW = bd.byFuel.gas_ccgt ? (bd.byFuel.gas_ccgt.capacity_mw / 1000).toFixed(1) : '0';
+        const peakerGW = bd.byFuel.gas_peaker ? (bd.byFuel.gas_peaker.capacity_mw / 1000).toFixed(1) : '0';
+
+        // CCGT CF at key milestones (indices: 0=50%, 3=65%, 5=75%, 7=85%, 9=90%, 11=95%)
+        const ccgtCf = cd.capacity_factor_pct.gas_ccgt || [];
+        const cf2034 = ccgtCf[3] || 0;
+        const cf2040 = ccgtCf[9] || 0;
+        const cf2045 = ccgtCf[11] || 0;
+
+        // Find when CCGT CF drops below 15%
+        let ccgtRetYear = null;
+        if (ccgtCf.length > 0) {
+            for (let i = 0; i < ccgtCf.length; i++) {
+                if (ccgtCf[i] > 0 && ccgtCf[i] < 15) { ccgtRetYear = cd.years[i]; break; }
+            }
+        }
+
+        let html = '<h3>' + c.shortName + ': Fleet Outlook</h3>';
+
+        if (compNarrative) {
+            html += '<p>' + compNarrative + '</p>';
+        }
+
+        // Coal section
+        if (parseFloat(coalGW) > 0) {
+            html += '<div class="callout"><strong>Coal fleet (' + coalGW + ' GW):</strong> Projected exit by <strong>' +
+                (ms.coal_exit_year || '~2033') + '</strong>. Once retired, this nameplate capacity is permanently removed — visible as the dark bars disappearing from the nameplate chart above.</div>';
+        }
+
+        // CCGT section
+        if (parseFloat(ccgtGW) > 0.1) {
+            html += '<div class="callout-warn"><strong>CCGT fleet (' + ccgtGW + ' GW across ' + isos + '):</strong> ';
+            html += 'Capacity factor trajectory: <strong>' + cf2034 + '%</strong> in 2034 → <strong>' + cf2040 + '%</strong> in 2040 → <strong>' + cf2045 + '%</strong> in 2045. ';
+            if (ccgtRetYear) {
+                html += 'Economic retirement threshold (~15% CF) reached around <strong>' + ccgtRetYear + '</strong>. ';
+            }
+            html += 'Nameplate stays constant — the growing gap between the dashed line and bars in the CCGT chart represents stranded capacity.</div>';
+        }
+
+        // Peaker section
+        if (parseFloat(peakerGW) > 0.1) {
+            html += '<p><strong>Gas CT/Peaker (' + peakerGW + ' GW):</strong> Curtailed first in the merit order. ';
+            html += ms.peaker_squeeze_year ? 'Dispatch drops below 50% by <strong>' + ms.peaker_squeeze_year + '</strong>.' : 'Declining rapidly as battery storage displaces peak-hour generation.';
+            html += '</p>';
+        }
+
+        // Clean fleet note
+        if (bd.clean_pct > 30) {
+            html += '<p><strong>Clean portfolio (' + (bd.clean_capacity / 1000).toFixed(1) + ' GW, ' + bd.clean_pct.toFixed(0) + '% of fleet):</strong> Nuclear, wind, solar, battery, and hydro assets are unaffected by fossil dispatch decline — the stable base visible at the bottom of both charts above.</p>';
+        }
+
+        el.innerHTML = html;
+    }
+
+    // ========================================================================
+    // ISO DRILL-DOWN
+    // ========================================================================
+    let selIso = null;
+    let isoCharts = { nameplate: null, dispatch: null, cf: null };
+
+    function buildIsoPills(company) {
+        const el = document.getElementById('isoSelector');
+        el.innerHTML = '';
+        selIso = null;
+        const isos = [...new Set(company.plants.map(p => p.iso))].sort();
+        isos.forEach(iso => {
+            const btn = document.createElement('button');
+            btn.className = 'iso-pill';
+            btn.textContent = iso;
+            btn.onclick = () => selectIso(iso, company);
+            el.appendChild(btn);
+        });
+        // Hide ISO charts until an ISO is selected
+        document.getElementById('isoStats').style.display = 'none';
+        document.getElementById('isoChartsRow').style.display = 'none';
+        document.getElementById('isoCfPanel').style.display = 'none';
+        document.getElementById('isoPlantPanel').style.display = 'none';
+    }
+
+    function selectIso(iso, company) {
+        if (!company) company = FLEET_COMPANIES[selIdx];
+        selIso = iso;
+        document.querySelectorAll('.iso-pill').forEach(p => p.classList.toggle('active', p.textContent === iso));
+        document.getElementById('isoStats').style.display = '';
+        document.getElementById('isoChartsRow').style.display = '';
+        document.getElementById('isoCfPanel').style.display = '';
+        document.getElementById('isoPlantPanel').style.display = '';
+        renderIsoDrillDown(company, iso);
+    }
+
+    function renderIsoDrillDown(company, iso) {
+        const cd = computeCompanyCapacityDispatch(company);
+        const plants = company.plants.filter(p => p.iso === iso);
+        const allFuels = cd.fuels;
+
+        // --- ISO Stats ---
+        const totalCap = plants.reduce((s, p) => s + p.capacity_mw, 0);
+        const fossilCap = plants.filter(p => !CLEAN_FUELS.includes(p.fuel)).reduce((s, p) => s + p.capacity_mw, 0);
+        const cleanCap = totalCap - fossilCap;
+        document.getElementById('isCapVal').textContent = (totalCap / 1000).toFixed(1) + ' GW';
+        document.getElementById('isCapSub').textContent = 'in ' + iso;
+        document.getElementById('isFossilVal').textContent = (fossilCap / 1000).toFixed(1) + ' GW';
+        document.getElementById('isFossilSub').textContent = totalCap > 0 ? (fossilCap / totalCap * 100).toFixed(0) + '% fossil' : '—';
+        document.getElementById('isCleanVal').textContent = (cleanCap / 1000).toFixed(1) + ' GW';
+        document.getElementById('isCleanSub').textContent = totalCap > 0 ? (cleanCap / totalCap * 100).toFixed(0) + '% clean' : '—';
+        document.getElementById('isPlantCnt').textContent = plants.length;
+
+        document.getElementById('isoDrillSub').textContent = company.shortName + ' fleet in ' + iso + ' — ' + plants.length + ' plants, ' + (totalCap / 1000).toFixed(1) + ' GW';
+
+        // --- ISO Nameplate Chart ---
+        renderIsoNameplate(company, cd, iso, allFuels);
+        renderIsoDispatch(company, cd, iso, allFuels);
+        renderIsoCF(company, cd, iso, allFuels);
+        renderIsoPlantTable(company, iso, plants);
+    }
+
+    function renderIsoNameplate(company, cd, iso, allFuels) {
+        if (isoCharts.nameplate) isoCharts.nameplate.destroy();
+        const ctx = document.getElementById('chartIsoNameplate').getContext('2d');
+        document.getElementById('isoNpTitle').textContent = company.shortName + ' in ' + iso + ' — Nameplate';
+        document.getElementById('isoNpSub').textContent = 'Capacity by fuel over SBTi trajectory';
+        const labels = cd.years.map(y => String(y));
+        const npData = cd.nameplate_by_iso_fuel[iso];
+        if (!npData) return;
+
+        const ordered = FUEL_ORDER.filter(f => allFuels.includes(f) && npData[f] && npData[f].some(v => v > 0.003));
+        const datasets = ordered.map(f => ({
+            label: FUEL_LABELS[f] || f,
+            data: npData[f],
+            backgroundColor: (FS[f] || {}).fill || 'rgba(100,100,100,0.25)',
+            borderColor: (FS[f] || {}).border || '#666',
+            borderWidth: 2, borderRadius: 4, borderSkipped: false,
+        }));
+
+        isoCharts.nameplate = new Chart(ctx, {
+            type: 'bar', data: { labels, datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                layout: { padding: { top: 8, right: 12, bottom: 4, left: 4 } },
+                scales: {
+                    x: { stacked: true, grid: { color: gColL }, ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 8, font: { size: 10 } },
+                         title: { display: true, text: 'Year', color: '#6B7280', font: { size: 11 } } },
+                    y: { stacked: true, grid: { color: gCol }, ticks: { font: { size: 10 }, padding: 4 }, beginAtZero: true,
+                         title: { display: true, text: 'Nameplate (GW)', color: '#6B7280', font: { size: 11 } } }
+                },
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 12, padding: 10, font: { size: 10 } } },
+                    tooltip: { mode: 'index', callbacks: {
+                        label: item => item.dataset.label + ': ' + item.raw.toFixed(2) + ' GW',
+                        footer: items => 'Total: ' + items.reduce((s, i) => s + i.raw, 0).toFixed(2) + ' GW'
+                    }}
+                }
+            }
+        });
+    }
+
+    function renderIsoDispatch(company, cd, iso, allFuels) {
+        if (isoCharts.dispatch) isoCharts.dispatch.destroy();
+        const ctx = document.getElementById('chartIsoDispatch').getContext('2d');
+        document.getElementById('isoDispTitle').textContent = company.shortName + ' in ' + iso + ' — Dispatch';
+        document.getElementById('isoDispSub').textContent = 'Generation by fuel over SBTi trajectory';
+        const labels = cd.years.map(y => String(y));
+        const dispData = cd.dispatch_by_iso_fuel[iso];
+        if (!dispData) return;
+
+        const ordered = FUEL_ORDER.filter(f => allFuels.includes(f) && dispData[f] && dispData[f].some(v => v > 0.03));
+        const datasets = ordered.map(f => ({
+            label: FUEL_LABELS[f] || f,
+            data: dispData[f],
+            backgroundColor: (FS[f] || {}).fill || 'rgba(100,100,100,0.25)',
+            borderColor: (FS[f] || {}).border || '#666',
+            borderWidth: 2, borderRadius: 4, borderSkipped: false,
+        }));
+
+        isoCharts.dispatch = new Chart(ctx, {
+            type: 'bar', data: { labels, datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                layout: { padding: { top: 8, right: 12, bottom: 4, left: 4 } },
+                scales: {
+                    x: { stacked: true, grid: { color: gColL }, ticks: { maxRotation: 45, autoSkip: true, maxTicksLimit: 8, font: { size: 10 } },
+                         title: { display: true, text: 'Year', color: '#6B7280', font: { size: 11 } } },
+                    y: { stacked: true, grid: { color: gCol }, ticks: { font: { size: 10 }, padding: 4 }, beginAtZero: true,
+                         title: { display: true, text: 'Dispatch (TWh/yr)', color: '#6B7280', font: { size: 11 } } }
+                },
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 12, padding: 10, font: { size: 10 } } },
+                    tooltip: { mode: 'index', callbacks: {
+                        label: item => item.dataset.label + ': ' + item.raw.toFixed(2) + ' TWh',
+                        footer: items => 'Total: ' + items.reduce((s, i) => s + i.raw, 0).toFixed(1) + ' TWh'
+                    }}
+                }
+            }
+        });
+    }
+
+    function renderIsoCF(company, cd, iso, allFuels) {
+        if (isoCharts.cf) isoCharts.cf.destroy();
+        const ctx = document.getElementById('chartIsoCF').getContext('2d');
+        document.getElementById('isoCfTitle').textContent = company.shortName + ' in ' + iso + ' — Capacity Factor';
+        const cfData = cd.cf_by_iso_fuel[iso];
+        if (!cfData) return;
+
+        const fossilFuels = ['coal', 'gas_ccgt', 'gas_peaker', 'oil'];
+        const datasets = [];
+        fossilFuels.forEach(f => {
+            if (!allFuels.includes(f) || !cfData[f]) return;
+            if (cfData[f].every(v => v === 0)) return;
+            datasets.push({
+                label: FUEL_LABELS[f] || f,
+                data: cd.years.map((y, i) => ({ x: y, y: cfData[f][i] })),
+                borderColor: (FS[f] || {}).border || '#666',
+                backgroundColor: (FS[f] || {}).fill || 'rgba(100,100,100,0.25)',
+                borderWidth: 2.5, fill: true, tension: 0.3,
+                pointRadius: 4, pointBackgroundColor: (FS[f] || {}).border || '#666',
+                pointBorderColor: '#fff', pointBorderWidth: 1.5, pointHoverRadius: 7,
+            });
+        });
+
+        if (datasets.length === 0) {
+            // No fossil fuels in this ISO
+            isoCharts.cf = new Chart(ctx, {
+                type: 'bar', data: { labels: ['No fossil fleet in ' + iso], datasets: [] },
+                options: { responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
+            });
+            return;
+        }
+
+        isoCharts.cf = new Chart(ctx, {
+            type: 'line', data: { datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                layout: { padding: { top: 8, right: 16, bottom: 4, left: 4 } },
+                scales: {
+                    x: { type: 'linear', min: 2030, max: 2050, ticks: { stepSize: 5, font: { size: 10 } }, grid: { color: gCol },
+                         title: { display: true, text: 'Year', color: '#6B7280', font: { size: 11 } } },
+                    y: { min: 0, max: 100, ticks: { callback: v => v + '%', font: { size: 10 }, padding: 4 }, grid: { color: gCol },
+                         title: { display: true, text: 'Capacity Factor (%)', color: '#6B7280', font: { size: 11 } } }
+                },
+                plugins: {
+                    legend: { position: 'top', labels: { boxWidth: 12, padding: 12, usePointStyle: true, font: { size: 10 } } },
+                    tooltip: { callbacks: {
+                        title: items => 'Year: ' + Math.round(items[0].parsed.x),
+                        label: item => item.dataset.label + ': ' + item.parsed.y.toFixed(1) + '% CF'
+                    }},
+                    annotation: { annotations: {
+                        retLine: { type: 'line', yMin: 15, yMax: 15, borderColor: '#EF444455', borderWidth: 2, borderDash: [8, 4],
+                            label: { display: true, content: '~15% Economic Retirement', position: 'end', font: { size: 9 }, color: '#EF4444', backgroundColor: 'rgba(255,255,255,0.9)', padding: 3 } }
+                    }}
+                }
+            }
+        });
+    }
+
+    function renderIsoPlantTable(company, iso, plants) {
+        document.getElementById('isoPlantTitle').textContent = company.shortName + ' Plants in ' + iso;
+        const tbody = document.getElementById('isoPlantBody');
+        tbody.innerHTML = '';
+        const sorted = [...plants].sort((a, b) => b.capacity_mw - a.capacity_mw);
+        sorted.forEach(p => {
+            const tr = document.createElement('tr');
+            const fuelColor = (FS[p.fuel] || {}).border || '#666';
+            const fuelBg = (FS[p.fuel] || {}).fill || 'rgba(100,100,100,0.15)';
+            tr.innerHTML =
+                '<td>' + p.name + '</td>' +
+                '<td><span class="fuel-tag" style="background:' + fuelBg + ';color:' + fuelColor + ';">' + (FUEL_LABELS[p.fuel] || p.fuel) + '</span></td>' +
+                '<td style="text-align:right;font-variant-numeric:tabular-nums;">' + p.capacity_mw.toLocaleString() + '</td>' +
+                '<td style="text-align:right;font-variant-numeric:tabular-nums;">' + p.generation_twh.toFixed(1) + '</td>' +
+                '<td style="text-align:right;font-variant-numeric:tabular-nums;">' + (p.co2_mt || 0).toFixed(1) + '</td>';
+            tbody.appendChild(tr);
+        });
+    }
+
+    // ========================================================================
+    // INIT
+    // ========================================================================
+    selectCompany(0);
+    </script>
+
+<!-- ============ RELATED ANALYSES ============ -->
+<div class="related-analyses">
+    <div class="related-analyses-title">Related Analyses</div>
+    <div class="related-analyses-grid">
+        <a href="fossil_fuel_deepdive.html" class="related-card">
+            <div class="related-card-tag">Grid</div>
+            <div class="related-card-title">Fossil Fuel Deep Dive</div>
+            <div class="related-card-desc">Regional fossil fleet composition and displacement mechanics across 7 ISOs.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="lmp_trends.html" class="related-card">
+            <div class="related-card-tag">Markets</div>
+            <div class="related-card-title">LMP Trends</div>
+            <div class="related-card-desc">How clean energy deployment affects wholesale electricity prices.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="cost_to_replace.html" class="related-card">
+            <div class="related-card-tag">Economics</div>
+            <div class="related-card-title">Cost to Replace</div>
+            <div class="related-card-desc">The cost premium for replacing fossil generation with clean firm power.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+    </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="dashboard.html">Cost Optimizer</a>
+        <a href="abatement_dashboard.html">CO&#8322; Abatement</a>
+        <a href="scenario_comparison.html">Scenarios</a>
+        <a href="research_paper.html">Research Paper</a>
+        <a href="optimizer_methodology.html">Methodology</a>
+    </div>
+    <div class="footer-note">The 8,760 Problem &copy; 2026 &mdash; Fleet Survival & Capacity Dispatch Analysis</div>
+</footer>
+<div class="bottom-banner"></div>
+
+</body>
+</html>

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Consequential Accounting Under the Microscope — The 8,760 Problem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/article.css">
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
+<style>
+/* Page-specific overrides only — all shared styles in article.css */
+body { background: var(--bg-page-white); }
+
+/* Hero uses shared hero-overview; just override bottom padding */
+.hero-overview { padding-bottom: 56px; }
+
+/* This page uses shared.css .hero-inner with tighter gap */
+.hero-inner { gap: 48px; }
+
+/* Section header padding override for this page */
+.section-header { padding-top: 56px; }
+
+/* Chart panel fixed height for sticky charts */
+.chart-panel .chart-container { height: 380px; }
+
+/* compare-vs divider between comparison boxes */
+.compare-vs {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-heading);
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: rgba(0,0,0,0.3);
+}
+
+@media (max-width: 768px) {
+    .hero-inner { grid-template-columns: 1fr; gap: 24px; }
+    .chart-panel .chart-container { min-height: 280px; }
+}
+@media (max-width: 480px) {
+    .chart-panel .chart-container { height: 260px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============ NAV ============ -->
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+
+<div class="header" id="pageHeader">
+    <h1>Consequential Accounting Under the Microscope</h1>
+    <div class="subtitle">Three ways to count carbon — and which one actually decarbonizes the grid</div>
+    <div class="header-accent"></div>
+</div>
+
+<!-- ============ HERO ============ -->
+<section class="hero-overview section-light">
+<div class="hero-inner">
+    <div class="hero-text">
+        <h2>Three Ways to Count Carbon: Which One Actually Decarbonizes the Grid?</h2>
+        <p class="hero-lead">The GHG Protocol Scope 2 revision has sparked a three-way debate about how corporations should account for electricity emissions. The answer determines where hundreds of billions in clean energy capital flows — and whether it actually decarbonizes anything.</p>
+        <p>Annual RECs are the status quo. The proposed revision adds hourly matching with deliverability constraints — still attributional, but aligned to grid physics. A third camp argues for pure consequential accounting: chase the cheapest $/tCO₂ anywhere, regardless of whether it matches your load in time or space. Our analysis of 7 ISO/RTO regions shows that at just 20–30% C&amp;I participation, pure consequential creates capital flight from gas-dependent grids toward coal displacement — leaving the hardest decarbonization problems permanently underfunded.</p>
+        <div class="counter-row">
+            <div class="counter-card">
+                <div class="counter-val red" data-target="0" data-suffix="">~0</div>
+                <div class="counter-lbl">Emissions Impact<br>of Annual RECs</div>
+            </div>
+            <div class="counter-card">
+                <div class="counter-val green" data-target="8760" data-suffix="">0</div>
+                <div class="counter-lbl">Hours/Year<br>Hourly Tracks</div>
+            </div>
+            <div class="counter-card">
+                <div class="counter-val amber" data-target="25" data-suffix="%">0%</div>
+                <div class="counter-lbl">C&amp;I Participation<br>= Perverse Incentives</div>
+            </div>
+            <div class="counter-card">
+                <div class="counter-val" data-target="7" data-suffix="">7</div>
+                <div class="counter-lbl">ISO/RTOs<br>Analyzed</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="comparison-visual">
+        <div class="compare-box attr">
+            <h4>Annual Attribution</h4>
+            <p>"We purchased RECs equal to 100% of our annual consumption."</p>
+            <p style="margin-top:10px; font-size:0.72rem; color:rgba(239,68,68,0.7);">Current Scope 2 MBM<br>✗ No temporal matching<br>✗ No deliverability<br>✗ Near-zero grid impact</p>
+        </div>
+        <div class="compare-box hourly">
+            <h4>Hourly Attribution</h4>
+            <p>"We matched 92% of consumption hour-by-hour with CFE in our grid region."</p>
+            <p style="margin-top:10px; font-size:0.72rem; color:rgba(14,165,233,0.7);">Proposed Scope 2 Revision<br>✓ Hourly granularity<br>✓ Deliverability regions<br>✓ Drives firm clean power</p>
+        </div>
+        <div class="compare-box conseq">
+            <h4>Consequential</h4>
+            <p>"Our investment displaced 45,000 tCO₂ at $38/ton — the cheapest abatement we could find."</p>
+            <p style="margin-top:10px; font-size:0.72rem; color:rgba(34,197,94,0.7);">WattTime / Emissions First<br>✓ Cheapest $/tCO₂<br>✗ No temporal matching<br>✗ No spatial matching</p>
+        </div>
+    </div>
+</div>
+</section>
+
+<!-- ============ KEY FINDINGS PYRAMID ============ -->
+<div class="gradient-transition"></div>
+<section class="section-dark fade-in">
+<div class="section-dark-inner">
+    <div class="findings-title" style="color:rgba(255,255,255,0.5);">Key Findings — Top Down</div>
+    <div class="findings-grid">
+        <!-- Tier 1: The headline -->
+        <div class="finding-row top">
+            <div class="finding-card tier1">
+                <div class="finding-num red">20–30%</div>
+                <div class="finding-label">The participation threshold where consequential accounting breaks: just 20–30% of C&amp;I load</div>
+                <div class="finding-desc">Across 7 ISO/RTOs (~2.7 million GWh), pure consequential drives capital toward coal-heavy grids (SPP, MISO) at ~$15–25/tCO₂ and away from gas-dependent grids (NEISO, NYISO, CAISO) where displacement costs $40–80/tCO₂. At 25% C&amp;I participation, gas-only grids receive less investment than their load share — the free-rider dynamics dominate and nobody funds firm clean power where it's needed most.</div>
+            </div>
+        </div>
+        <!-- Tier 2: The two pillars -->
+        <div class="finding-row mid">
+            <div class="finding-card tier2">
+                <div class="finding-num amber">2–5×</div>
+                <div class="finding-label">The last 10% costs more — and that's exactly where innovation happens</div>
+                <div class="finding-desc">Hourly matching from 90% → 100% costs 2–5× more per ton. Consequential accounting would tell you to stop and spend that dollar elsewhere. But these hard hours drive the technology development (firm clean power, LDES) that deep decarbonization requires.</div>
+            </div>
+            <div class="finding-card tier2">
+                <div class="finding-num green">Both</div>
+                <div class="finding-label">Hourly attribution is attributional AND has strong consequential impact</div>
+                <div class="finding-desc">Hourly matching with deliverability creates accurate inventory accounting aligned to grid physics — while simultaneously driving real emissions displacement. It's not one or the other. The best attributional method also produces the best real-world outcomes.</div>
+            </div>
+        </div>
+        <!-- Tier 3: Supporting details -->
+        <div class="finding-row base">
+            <div class="finding-card tier3">
+                <div class="finding-num blue">3 Methods</div>
+                <div class="finding-label">Annual, hourly, and consequential are distinct frameworks</div>
+                <div class="finding-desc">Annual attribution (current Scope 2) and hourly attribution (proposed revision) are both inventory accounting. Consequential is a separate paradigm — estimating marginal impact rather than tracking consumption. The GHG Protocol is consulting on both tracks simultaneously.</div>
+            </div>
+            <div class="finding-card tier3">
+                <div class="finding-num purple">Free Rider</div>
+                <div class="finding-label">Consequential creates free-rider dynamics</div>
+                <div class="finding-desc">If everyone chases the cheapest $/tCO₂ regardless of location, buyers cluster on the same low-hanging fruit while their own grids remain dirty. The data center in PJM claims abatement from a MISO wind farm while running on coal.</div>
+            </div>
+            <div class="finding-card tier3">
+                <div class="finding-num amber">Counterfactual</div>
+                <div class="finding-label">Marginal impact modeling is inherently unverifiable</div>
+                <div class="finding-desc">Consequential accounting depends on estimating what would have happened without the intervention. Marginal emissions rates shift hourly and vary by model assumptions. This creates massive scope for cherry-picking baselines and gaming results.</div>
+            </div>
+        </div>
+    </div>
+</div>
+</section>
+<div class="gradient-transition"></div>
+
+<!-- ============ SECTION 1: Three Methods ============ -->
+<div class="section-header fade-in">
+    <div class="section-number">1</div>
+    <h2>Three Methods, Three Philosophies</h2>
+    <p>The debate isn't just "attributional vs. consequential." It's a three-way contest between fundamentally different theories of how carbon accounting should drive decarbonization — and each creates radically different investment incentives.</p>
+</div>
+
+<section class="concept-section section-light fade-in">
+    <div class="concept-grid">
+        <div class="concept-card">
+            <h3 style="color: #EF4444;">1. Annual Attribution <span class="badge attr">Current</span></h3>
+            <p>The status quo. Buy RECs equal to your annual consumption. No requirement for when, where, or whether the clean energy was actually delivered to your grid.</p>
+            <ul>
+                <li>GHG Protocol Scope 2 market-based method (2015)</li>
+                <li>Annual matching: total RECs ≥ total consumption</li>
+                <li>No temporal or locational granularity required</li>
+                <li>A New England company buys Texas wind RECs at 2 AM to cover a winter 6 PM gas peak</li>
+                <li><strong>Near-zero consequential emissions impact</strong> (Xu et al. 2024, WattTime 2024)</li>
+            </ul>
+        </div>
+        <div class="concept-card">
+            <h3 style="color: #0EA5E9;">2. Hourly Attribution <span class="badge hourly">Proposed</span></h3>
+            <p>The proposed Scope 2 revision. Match consumption with CFE hour-by-hour within deliverability regions. Still attributional inventory accounting — but aligned to grid physics.</p>
+            <ul>
+                <li>Proposed GHG Protocol Scope 2 revision (expected ~2027)</li>
+                <li>Hourly matching: CFE supply = demand each hour</li>
+                <li>Deliverability constraints: same grid region / market boundary</li>
+                <li>Reveals need for firm clean power (nuclear, CCS, geothermal) + storage</li>
+                <li><strong>Strong consequential impact as a byproduct</strong> of physics-aligned accounting</li>
+            </ul>
+        </div>
+        <div class="concept-card">
+            <h3 style="color: #22C55E;">3. Consequential / Impact <span class="badge conseq">Advocated</span></h3>
+            <p>Championed by WattTime and the Emissions First Partnership. Estimate marginal emissions impact of procurement decisions. Optimize for cheapest $/tCO₂ abated — anywhere, anytime.</p>
+            <ul>
+                <li>Separate GHG Protocol consultation track (parallel to Scope 2 revision)</li>
+                <li>No requirement to match load temporally or spatially</li>
+                <li>Metric: tCO₂ displaced per dollar, measured via marginal emissions rates</li>
+                <li>Philosophy: pursue the cheapest abatement wherever it exists on the grid</li>
+                <li><strong>Intellectual appeal but potential perverse incentives</strong> when decoupled from load</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<div class="insight-callout fade-in">
+    <div class="insight-box">
+        <h3>The Critical Distinction</h3>
+        <p>Hourly attribution is <em>attributional</em> — it tracks what you consume and what you procure. But because it aligns accounting to grid physics and deliverability, it produces <span class="highlight">strong consequential impact as a natural byproduct</span>. You can't match every hour without deploying resources that actually serve your grid. Pure consequential accounting, by contrast, explicitly <em>doesn't require</em> matching your load. It says: forget your consumption profile — just find the cheapest ton of CO₂ to displace anywhere. The question is whether that philosophy, scaled across thousands of corporate buyers, creates the right incentives for deep grid decarbonization.</p>
+    </div>
+</div>
+
+<!-- ============ SECTION 2: The Frameworks ============ -->
+<div class="section-header fade-in">
+    <div class="section-number">2</div>
+    <h2>The Evolving Landscape</h2>
+    <p>The GHG Protocol is running two parallel consultations: one revising Scope 2 attributional accounting (proposing hourly matching), another developing a new consequential framework. 800+ stakeholders have weighed in. The outcome will reshape corporate clean energy investment globally.</p>
+</div>
+
+<section class="timeline-section section-light fade-in">
+    <div class="timeline">
+        <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div class="timeline-year">2020</div>
+            <div class="timeline-title">Google Commits to 24/7 CFE by 2030</div>
+            <div class="timeline-desc">First major company to commit to matching electricity consumption with carbon-free energy every hour of every day, on every grid where it operates. Published the CFE% metric for hourly tracking.</div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div class="timeline-year">2021</div>
+            <div class="timeline-title">UN 24/7 CFE Compact Launched</div>
+            <div class="timeline-desc">140+ signatories including governments, corporates, and NGOs committed to advancing hourly carbon-free energy. The U.S. Government joined at COP28 in 2023, directing federal facilities toward 50% 24/7 CFE by 2030.</div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div class="timeline-year">2022–23</div>
+            <div class="timeline-title">EnergyTag & Granular Certificates</div>
+            <div class="timeline-desc">EnergyTag develops standards for hourly energy attribute tracking. Time-based Energy Attribute Certificates (T-EACs) enable granular trading — not just "how much" but "when and where" clean energy was generated.</div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div class="timeline-year">2024–26</div>
+            <div class="timeline-title">GHG Protocol Dual-Track Consultation</div>
+            <div class="timeline-desc">Two parallel consultations (Oct 2025 – Jan 2026): Scope 2 revision proposing hourly matching + deliverability for attributional accounting, and a separate consequential accounting framework for impact-based disclosure. 800+ stakeholder responses. WattTime and Emissions First Partnership advocate for the consequential track; EnergyTag and 24/7 CFE supporters push for hourly attribution.</div>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-dot"></div>
+            <div class="timeline-year">~2027</div>
+            <div class="timeline-title">New Standards Expected</div>
+            <div class="timeline-desc">The revised Scope 2 standard and consequential guidance are scheduled for publication. Whether hourly attribution, consequential impact, or both become the corporate reporting default will determine the trajectory of hundreds of GW in clean energy procurement.</div>
+        </div>
+    </div>
+</section>
+
+<!-- ============ SECTION 3: Comparison Table ============ -->
+<div class="section-header fade-in">
+    <div class="section-number">3</div>
+    <h2>Three Methods Compared</h2>
+    <p>How the three approaches differ across the dimensions that matter for real climate impact — and what incentives each creates at scale.</p>
+</div>
+
+<div class="comparison-table-wrap fade-in">
+<table class="comparison-table">
+<thead>
+<tr>
+    <th>Dimension</th>
+    <th>Annual Attribution <span class="badge attr">Current</span></th>
+    <th>Hourly Attribution <span class="badge hourly">Proposed</span></th>
+    <th>Consequential <span class="badge conseq">Advocated</span></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+    <td><strong>Core Question</strong></td>
+    <td>What share of consumption can I allocate to clean sources?</td>
+    <td>What resources match my consumption every hour on my grid?</td>
+    <td>What procurement displaces the most CO₂ per dollar anywhere?</td>
+</tr>
+<tr>
+    <td><strong>Temporal</strong></td>
+    <td>Annual</td>
+    <td>Hourly (8,760)</td>
+    <td>Varies — not required</td>
+</tr>
+<tr>
+    <td><strong>Spatial</strong></td>
+    <td>National / broad market</td>
+    <td>Deliverability region</td>
+    <td>Not required — anywhere on grid</td>
+</tr>
+<tr>
+    <td><strong>Additionality</strong></td>
+    <td>Not required</td>
+    <td>Strongly incentivized (hard hours need new build)</td>
+    <td>Required (must prove marginal impact)</td>
+</tr>
+<tr>
+    <td><strong>Metric</strong></td>
+    <td>% renewable (RECs ÷ MWh)</td>
+    <td>CFE% + resource mix + cost</td>
+    <td>tCO₂ displaced, $/tCO₂</td>
+</tr>
+<tr>
+    <td><strong>Firm Power Signal</strong></td>
+    <td>None — solar/wind RECs suffice</td>
+    <td>Strong — can't cover night/winter without it</td>
+    <td>Weak — firms chase cheapest marginal displacement</td>
+</tr>
+<tr>
+    <td><strong>Grid Impact</strong></td>
+    <td>Near-zero (Xu et al. 2024)</td>
+    <td>High — drives local deployment that serves your grid</td>
+    <td>Variable — depends on additionality verification</td>
+</tr>
+<tr>
+    <td><strong>Gaming Risk</strong></td>
+    <td>High (temporal/spatial arbitrage)</td>
+    <td>Low (physics constrains claims)</td>
+    <td>High (counterfactual modeling is unverifiable)</td>
+</tr>
+<tr>
+    <td><strong>Typical Claim</strong></td>
+    <td>"100% renewable energy"</td>
+    <td>"92% hourly CFE in PJM with firm clean power"</td>
+    <td>"Displaced 45,000 tCO₂ at $38/ton via MISO wind"</td>
+</tr>
+<tr>
+    <td><strong>Standard</strong></td>
+    <td>GHG Protocol Scope 2 MBM (2015)</td>
+    <td>GHG Protocol Scope 2 revision (~2027)</td>
+    <td>GHG Protocol consequential track (parallel)</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<!-- ============ DEEP DIVE CTA ============ -->
+<div class="section-header fade-in">
+    <div class="section-number">→</div>
+    <h2>Go Deeper: Five Failure Modes of Consequential Accounting at Scale</h2>
+    <p>What happens when you evaluate consequential accounting in a vacuum — as a system-wide procurement framework, not just a single buyer's decision? We model marginal signal degradation, saturation effects, fossil lock-in, geographic capital clustering, and the collective action problem across 7 ISO/RTO regions.</p>
+</div>
+
+<section class="concept-section fade-in" style="max-width:700px; margin:0 auto; padding:0 24px 48px; text-align:center;">
+    <a href="consequential_vacuum.html" style="display:inline-block; background:linear-gradient(135deg, rgba(239,68,68,0.2), rgba(245,158,11,0.15)); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:20px 40px; color:#fff; text-decoration:none; font-family:var(--font-data); font-size:1.1rem; font-weight:700; transition:all 0.2s; min-height:44px;">
+        Read the Deep Dive →
+    </a>
+    <p style="margin-top:16px; font-size:0.82rem; color:rgba(0,0,0,0.5);">5 sections · Interactive charts · 7-ISO participation threshold analysis</p>
+</section>
+
+<section class="sources-section fade-in">
+    <h3>Sources & Further Reading</h3>
+    <ol>
+        <li>GHG Protocol, "Scope 2 Guidance" (2015; revision expected ~2027). <a href="https://ghgprotocol.org/scope-2-guidance" target="_blank">ghgprotocol.org</a></li>
+        <li>GHG Protocol, "Scope 2 Proposed Updates & Consequential Accounting Consultation" (Oct 2025 – Jan 2026). 800+ stakeholder responses.</li>
+        <li>Clean Air Task Force, "Modernizing GHG Accounting Rules" (2024). <a href="https://www.catf.us/resource/modernizing-ghg-accounting-rules/" target="_blank">catf.us</a></li>
+        <li>EnergyTag, "Scope 2 for the Age of Deep Decarbonization" (2024). <a href="https://energytag.org/scope-2-for-the-age-of-deep-decarbonization/" target="_blank">energytag.org</a></li>
+        <li>Xu et al., "System-level impacts of 24/7 carbon-free energy procurement" (2024). <a href="https://www.sciencedirect.com/science/article/pii/S2211467X24001950" target="_blank">ScienceDirect</a></li>
+        <li>Bjørn et al., "Ensuring low-emission electricity purchasing requires broader systems perspective" (2024). <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC12032940/" target="_blank">Nature Communications</a></li>
+    </ol>
+</section>
+
+<!-- ============ RELATED ANALYSES ============ -->
+<div class="related-analyses">
+    <div class="related-analyses-title">Related Analyses</div>
+    <div class="related-analyses-grid">
+        <a href="consequential_vacuum.html" class="related-card">
+            <div class="related-card-tag">Carbon Accounting</div>
+            <div class="related-card-title">Consequential in a Vacuum</div>
+            <div class="related-card-desc">What happens when consequential accounting ignores cross-regional coordination?</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="scenario_comparison.html" class="related-card">
+            <div class="related-card-tag">Strategy</div>
+            <div class="related-card-title">Scenario Comparison</div>
+            <div class="related-card-desc">Head-to-head comparison of consequential vs. hourly matching procurement.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="procurement_strategies.html" class="related-card">
+            <div class="related-card-tag">Strategy</div>
+            <div class="related-card-title">Procurement Strategies</div>
+            <div class="related-card-desc">Corporate procurement strategy simulation across 25-year planning horizons.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+    </div>
+</div>
+
+<!-- ============ FOOTER ============ -->
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="dashboard.html">Grid Simulation</a>
+        <a href="abatement_dashboard.html">CO₂ Abatement</a>
+        <a href="research_paper.html">Research Paper</a>
+        <a href="optimizer_methodology.html">Methodology</a>
+        <a href="about.html">About</a>
+    </div>
+    <div class="footer-note">The 8,760 Problem — Hourly Clean Energy Optimization &amp; Carbon Accounting Analysis</div>
+</footer>
+<div class="bottom-banner"></div>
+
+<!-- ============ INTERACTIVITY ============ -->
+<script>
+(function() {
+'use strict';
+
+// --- Scroll animation ---
+var fadeEls = document.querySelectorAll('.fade-in');
+var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) {
+        if (e.isIntersecting) {
+            e.target.classList.add('visible');
+            obs.unobserve(e.target);
+        }
+    });
+}, { threshold: 0.15 });
+fadeEls.forEach(function(el) { obs.observe(el); });
+
+// --- Animated counters ---
+function animateCounters() {
+    document.querySelectorAll('.counter-val[data-target]').forEach(function(el) {
+        var target = parseInt(el.dataset.target);
+        var suffix = el.dataset.suffix || '';
+        var duration = 1200;
+        var start = null;
+        if (target > 2000) {
+            el.textContent = target + suffix;
+            return;
+        }
+        function step(ts) {
+            if (!start) start = ts;
+            var progress = Math.min((ts - start) / duration, 1);
+            var eased = 1 - Math.pow(1 - progress, 3);
+            el.textContent = Math.round(eased * target).toLocaleString() + suffix;
+            if (progress < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+    });
+}
+var heroObs = new IntersectionObserver(function(entries) {
+    if (entries[0].isIntersecting) {
+        animateCounters();
+        heroObs.disconnect();
+    }
+}, { threshold: 0.3 });
+heroObs.observe(document.querySelector('.hero-overview'));
+
+})();
+</script>
+</body>
+</html>
