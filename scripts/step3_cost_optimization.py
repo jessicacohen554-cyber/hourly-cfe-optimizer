@@ -1950,6 +1950,9 @@ def _table_to_arrays(table):
                             else np.zeros(table.num_rows, dtype=np.float64)),
         'hourly_match_score': table.column('hourly_match_score').to_numpy().astype(np.float64),
     }
+    # Offshore wind (CAISO, PJM, NYISO, NEISO)
+    if 'offshore_wind' in table.column_names:
+        result['offshore_wind'] = table.column('offshore_wind').to_numpy().astype(np.float64)
     # CAISO geothermal (5th resource dimension)
     if 'geothermal' in table.column_names:
         result['geothermal'] = table.column('geothermal').to_numpy().astype(np.float64)
