@@ -1,4 +1,4 @@
-name: "Step 7: Update Home Page / Shared Data"
+name: "Step 6: Update Home Page / Shared Data"
 
 # Consolidates all pipeline results into dashboard/js/shared-data.js.
 # This is the data file that powers the Home Page (index.html) and Dashboard.
@@ -7,7 +7,7 @@ name: "Step 7: Update Home Page / Shared Data"
 # Includes: SBTi milestone mapping, DAC trajectory projections, LCOE/transmission
 # tables, and aggregated Step 5/6 outputs (mac_stats, etc.).
 #
-# Prerequisite: Steps 4-6 should have produced their respective outputs.
+# Prerequisite: Steps 4-5 should have produced their respective outputs.
 # Output: dashboard/js/shared-data.js, data/step5-post-processing/shared_data.json
 
 on:
@@ -20,7 +20,7 @@ on:
         type: string
 
 env:
-  BRANCH_PREFIX: step7-shared-data
+  BRANCH_PREFIX: step6-shared-data
 
 jobs:
   generate-shared-data:
