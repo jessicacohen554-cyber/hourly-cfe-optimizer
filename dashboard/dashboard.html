@@ -743,6 +743,7 @@ const COLORS = {
     ccs_ccgt:   { base: '#0D9488', alpha: 'rgba(13,148,136,0.55)' },
     solar:      { base: '#F59E0B', alpha: 'rgba(245,158,11,0.55)' },
     wind:       { base: '#22C55E', alpha: 'rgba(34,197,94,0.55)' },
+    offshore_wind: { base: '#009688', alpha: 'rgba(0,150,136,0.55)' },
     hydro:      { base: '#0EA5E9', alpha: 'rgba(14,165,233,0.55)' },
     battery:    { base: '#8B5CF6', alpha: 'rgba(139,92,246,0.55)' },
     battery8:   { base: '#A78BFA', alpha: 'rgba(167,139,250,0.55)' },
@@ -760,6 +761,7 @@ const RESOURCE_LABELS = {
     ccs_ccgt: 'CCS-CCGT',
     solar: 'Solar',
     wind: 'Wind',
+    offshore_wind: 'Offshore Wind',
     hydro: 'Hydro',
     battery: 'Battery (4hr)',
     battery8: 'Battery (8hr)',
@@ -927,7 +929,7 @@ const GAS_CAPACITY_CONSTANTS = {
     NEW_CCGT_COST_KW_YR: { CAISO: 112, ERCOT: 89, PJM: 99, NYISO: 114, NEISO: 105, MISO: 92, SPP: 88 },
     EXISTING_GAS_FOM_KW_YR: { CAISO: 16, ERCOT: 13, PJM: 14, NYISO: 17, NEISO: 15, MISO: 13, SPP: 12 },
     PEAK_CAPACITY_CREDITS: {
-        clean_firm: 1.0, solar: 0.30, wind: 0.10, ccs_ccgt: 0.90,
+        clean_firm: 1.0, solar: 0.30, wind: 0.10, offshore_wind: 0.25, ccs_ccgt: 0.90,
         hydro: 0.50, battery: 0.95, battery8: 0.95, ldes: 0.90, h2: 0.90
     }
 };
@@ -1108,6 +1110,7 @@ function priceMix(iso, mixArr, baseDemandTwh, targetYear, growthRate) {
         ((rm.clean_firm || 0) / 100 * avgDemandMw * cc.clean_firm) +
         ((rm.solar || 0) / 100 * avgDemandMw * cc.solar) +
         ((rm.wind || 0) / 100 * avgDemandMw * cc.wind) +
+        ((rm.offshore_wind || 0) / 100 * avgDemandMw * (cc.offshore_wind || 0.25)) +
         ((rm.ccs_ccgt || 0) / 100 * avgDemandMw * cc.ccs_ccgt) +
         ((rm.hydro || 0) / 100 * avgDemandMw * cc.hydro) +
         (batPct / 100 * avgDemandMw * cc.battery) +
@@ -1254,6 +1257,7 @@ function resolveEntry(region, thresholdKey) {
                 const rm = normalized.resource_mix;
                 const mixArr = [
                     rm.clean_firm || 0, rm.solar || 0, rm.wind || 0,
+                    rm.offshore_wind || 0,
                     rm.ccs_ccgt || 0, rm.hydro || 0,
                     normalized.hourly_match_score || 0,
                     normalized.battery_dispatch_pct || 0,
