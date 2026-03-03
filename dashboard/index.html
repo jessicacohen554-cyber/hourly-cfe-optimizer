@@ -1660,19 +1660,20 @@ function priceMixMedium(iso, mixArr, baseDemandTwh) {
     const tx = 'Medium';
     const demandTwh = baseDemandTwh;
 
-    const rm = { clean_firm: mixArr[0], solar: mixArr[1], wind: mixArr[2], ccs_ccgt: mixArr[3], hydro: mixArr[4] };
-    const proc = mixArr[5] / 100.0;
+    const rm = { clean_firm: mixArr[0], solar: mixArr[1], wind: mixArr[2], offshore_wind: mixArr[3], ccs_ccgt: mixArr[4], hydro: mixArr[5] };
+    const proc = mixArr[6] / 100.0;
     const matchFrac = mixArr[6] / 100.0;
     const batPct = mixArr[7] || 0;
     const bat8Pct = mixArr[8] || 0;
     const ldesPct = mixArr[9] || 0;
+    const h2Pct = mixArr[10] || 0;
 
     const baseExisting = (typeof GRID_MIX_SHARES !== 'undefined' ? GRID_MIX_SHARES[iso] : {}) || {};
     const wholesale = (typeof WHOLESALE_PRICES !== 'undefined' ? WHOLESALE_PRICES[iso] : 30) || 30;
 
     let totalCost = 0;
     const resourceCosts = {};
-    const RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro'];
+    const RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro'];
 
     for (const rtype of RESOURCE_TYPES) {
         const pct = rm[rtype] || 0;
@@ -1807,7 +1808,7 @@ function priceMixMedium(iso, mixArr, baseDemandTwh) {
         wholesale: wholesale,
         resource_costs: resourceCosts,
         resource_mix: rm,
-        procurement_pct: mixArr[5],
+        procurement_pct: mixArr[6],
         hourly_match_score: mixArr[6],
         battery_dispatch_pct: batPct,
         battery8_dispatch_pct: bat8Pct,
@@ -2398,7 +2399,7 @@ const existingBoundaryPlugin = {
 
 function buildMixDatasets(data) {
     const { existingData, newData } = data;
-    const EXISTING_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'wind', 'solar'];
+    const EXISTING_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar'];
     const NEW_ORDER = ['solar', 'wind', 'hydro', 'battery', 'battery8', 'ldes', 'ccs_ccgt', 'clean_firm'];
 
     const existingAlpha = 0.75;
@@ -2697,7 +2698,7 @@ function getIncrementalData(region) {
     }
 
     const DISPATCHABLE = ['clean_firm', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes', 'h2'];
-    const VARIABLE = ['solar', 'wind'];
+    const VARIABLE = ['solar', 'wind', 'offshore_wind'];
     const STORAGE = ['battery', 'battery8', 'ldes', 'h2'];
 
     // ---- First entry: 2025 existing clean only ----
@@ -2786,7 +2787,7 @@ function getIncrementalData(region) {
 function buildIncrementalDatasets(data) {
     const { utilizedExistingData, utilizedNewData, curtailedData, gapData, demandTrajectory } = data;
     // Stack order (bottom to top): existing utilized, new utilized, gap spacer, curtailed
-    const EXISTING_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'wind', 'solar'];
+    const EXISTING_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar'];
     const NEW_ORDER = ['solar', 'wind', 'hydro', 'battery', 'battery8', 'ldes', 'ccs_ccgt', 'clean_firm', 'h2'];
     const CURTAIL_ORDER = ['solar', 'wind', 'hydro', 'clean_firm', 'ccs_ccgt', 'h2'];
     const existingAlpha = 0.75;
