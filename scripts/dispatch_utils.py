@@ -43,7 +43,15 @@ H = 8760
 DATA_YEAR = '2025'
 
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
-RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
+RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']
+
+# ISOs with offshore wind resource potential
+OFFSHORE_ISOS = ['NYISO', 'NEISO', 'PJM', 'CAISO']
+
+# Resource capacity caps (TWh) — enforced in optimization and scenarios
+OFFSHORE_WIND_CAP_TWH = {'NYISO': 37, 'NEISO': 37, 'PJM': 30, 'CAISO': 20}
+CCS_CAP_TWH = {'CAISO': 0, 'ERCOT': 85, 'PJM': 120, 'NYISO': 15, 'NEISO': 10, 'MISO': 95, 'SPP': 110}
+GEOTHERMAL_CAP_TWH = {'CAISO': 39}  # CAISO only
 
 # ══════════════════════════════════════════════════════════════════════════════
 # STORAGE PARAMETERS (must match Step 1 / optimizer)
@@ -70,13 +78,13 @@ HYDRO_CAPS = {
 }
 
 GRID_MIX_SHARES = {
-    'CAISO': {'clean_firm': 7.9, 'solar': 22.3, 'wind': 8.8, 'ccs_ccgt': 0, 'hydro': 9.5},
-    'ERCOT': {'clean_firm': 8.6, 'solar': 13.8, 'wind': 23.6, 'ccs_ccgt': 0, 'hydro': 0.1},
-    'PJM':   {'clean_firm': 32.1, 'solar': 2.9, 'wind': 3.8, 'ccs_ccgt': 0, 'hydro': 1.8},
-    'NYISO': {'clean_firm': 18.4, 'solar': 0.0, 'wind': 4.7, 'ccs_ccgt': 0, 'hydro': 15.9},
-    'NEISO': {'clean_firm': 23.8, 'solar': 1.4, 'wind': 3.9, 'ccs_ccgt': 0, 'hydro': 4.4},
-    'MISO':  {'clean_firm': 13.1, 'solar': 2.1, 'wind': 14.5, 'ccs_ccgt': 0, 'hydro': 1.6},
-    'SPP':   {'clean_firm': 5.2, 'solar': 0.4, 'wind': 37.1, 'ccs_ccgt': 0, 'hydro': 4.3},
+    'CAISO': {'clean_firm': 7.9, 'solar': 22.3, 'wind': 8.8, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 9.5},
+    'ERCOT': {'clean_firm': 8.6, 'solar': 13.8, 'wind': 23.6, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 0.1},
+    'PJM':   {'clean_firm': 32.1, 'solar': 2.9, 'wind': 3.8, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 1.8},
+    'NYISO': {'clean_firm': 18.4, 'solar': 0.0, 'wind': 4.7, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 15.9},
+    'NEISO': {'clean_firm': 23.8, 'solar': 1.4, 'wind': 3.9, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 4.4},
+    'MISO':  {'clean_firm': 13.1, 'solar': 2.1, 'wind': 14.5, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 1.6},
+    'SPP':   {'clean_firm': 5.2, 'solar': 0.4, 'wind': 37.1, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 4.3},
 }
 
 BASE_DEMAND_TWH = {
@@ -239,6 +247,17 @@ def get_supply_profiles(iso, gen_profiles):
     else:
         profiles['wind'] = [0.0] * H
 
+    # Offshore wind (NYISO, NEISO, PJM, CAISO only — zeros for other ISOs)
+    if iso in OFFSHORE_ISOS:
+        iso_data_osw = gen_profiles.get(iso, {})
+        year_data_osw = iso_data_osw.get(DATA_YEAR, iso_data_osw)
+        if isinstance(year_data_osw, dict):
+            profiles['offshore_wind'] = year_data_osw.get('offshore_wind', [0.0] * H)[:H]
+        else:
+            profiles['offshore_wind'] = [0.0] * H
+    else:
+        profiles['offshore_wind'] = [0.0] * H
+
     # CCS-CCGT: flat baseload (same as clean firm but separate for cost tracking)
     profiles['ccs_ccgt'] = [1.0 / H] * H
 
@@ -266,16 +285,16 @@ def get_supply_profiles(iso, gen_profiles):
 
 # --- Numba-accelerated inner loops (10-50x faster than pure Python) ---
 
-DISPATCH_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'wind', 'solar']
+DISPATCH_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar']
 
 # Pre-computed dispatch order as array indices into RESOURCE_TYPES for @njit
-# RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
-# DISPATCH_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'wind', 'solar'] → indices [0, 3, 4, 2, 1]
+# RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']
+# DISPATCH_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar']
 _DISPATCH_ORDER_INDICES = np.array([RESOURCE_TYPES.index(r) for r in DISPATCH_ORDER],
                                     dtype=np.int64)
 
 # Cache version — bump when dispatch algorithm or field set changes
-CACHE_VERSION = 2  # v2 = full supply profiles + detailed fields
+CACHE_VERSION = 3  # v3 = offshore wind added (6 resource types)
 
 
 @njit(cache=True)
@@ -692,7 +711,7 @@ def _dispatch_ldes(residual_surplus, residual_gap, dispatch_pct, demand_arr):
 
 
 def build_supply_matrix(supply_profiles):
-    """Pre-convert supply profile dict → (5, H) numpy matrix.
+    """Pre-convert supply profile dict → (N_RESOURCES, H) numpy matrix.
 
     Call once per ISO. Pass the matrix to reconstruct_hourly_dispatch via
     supply_matrix kwarg for ~3x speedup on repeated dispatches.
@@ -712,7 +731,7 @@ def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
     """Reconstruct full 8760 hourly dispatch for a resource mix.
 
     Args:
-        supply_matrix: optional (5, H) numpy array from build_supply_matrix().
+        supply_matrix: optional (N_RESOURCES, H) numpy array from build_supply_matrix().
             If provided, skips per-call array conversion (faster for batch calls).
         detailed: if True, also compute per-resource matched/surplus arrays and
             storage charge profiles. Used by step5_build_dispatch_cache and step6_compressed_day.
@@ -732,8 +751,8 @@ def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
           - fossil_displaced: (H,) fossil MWh displaced at each hour (normalized)
 
         When detailed=True, also includes:
-          - matched_{clean_firm,ccs_ccgt,solar,wind,hydro}: (H,) per-resource dispatched
-          - surplus_{clean_firm,ccs_ccgt,solar,wind,hydro}: (H,) per-resource surplus
+          - matched_{clean_firm,ccs_ccgt,solar,wind,offshore_wind,hydro}: (H,) per-resource dispatched
+          - surplus_{clean_firm,ccs_ccgt,solar,wind,offshore_wind,hydro}: (H,) per-resource surplus
           - battery4_charge: (H,) battery4 charge profile
           - battery8_charge: (H,) battery8 charge profile
           - ldes_charge: (H,) LDES charge profile
@@ -992,6 +1011,7 @@ def _archetype_key(iso, resource_pcts, procurement_pct=100, battery_dispatch_pct
         str(resource_pcts.get('clean_firm', 0)),
         str(resource_pcts.get('solar', 0)),
         str(resource_pcts.get('wind', 0)),
+        str(resource_pcts.get('offshore_wind', 0)),
         str(resource_pcts.get('ccs_ccgt', 0)),
         str(resource_pcts.get('hydro', 0)),
         str(procurement_pct),
