@@ -16,15 +16,16 @@ Architecture:
            boundary, refine storage at 0.05% resolution.
 
 Output: data/step1d-storage-parquets/{ISO}_t{XX}_storage.parquet
-        data/step1d-storage-parquets/{ISO}_t{XX}_storage_b{N}.parquet  (batched)
+        data/step1d-storage-parquets/{ISO}_t{XX}_storage_b{N}.parquet  (auto-batched)
 
-Batch mode:
-  For large ISO/threshold pairs (ERCOT 95%, SPP 97.5%, etc.), the full
-  eligible set can be millions of mixes, exceeding CI timeout. Batch mode
-  splits eligible mixes into N equal chunks, each targeting ~10 min runtime.
+Auto-batching:
+  For thresholds with large eligible mix counts (>500K results), results are
+  automatically flushed to numbered batch files (_b1, _b2, _b3...) and
+  committed during processing. This protects against CI timeout — partial
+  progress is banked even if the job dies. Step 2 discovers and loads all
+  batch files natively (no manual merge needed).
 
-  python scripts/step1d_fine_storage.py --iso ERCOT --thresholds 95 --batch 1 --total-batches 8
-  python scripts/step1d_fine_storage.py --iso ERCOT --batch-info
+  Small thresholds produce a single monolithic _storage.parquet as before.
 
 Coarse cache fallback:
   For ISOs where the near-miss file has no eligible mixes at low thresholds
@@ -37,7 +38,7 @@ Usage:
   python scripts/step1d_fine_storage.py --iso PJM --auto-commit
   python scripts/step1d_fine_storage.py --iso ALL
   python scripts/step1d_fine_storage.py --iso ERCOT --batch-info
-  python scripts/step1d_fine_storage.py --iso ERCOT --thresholds 95 --batch 1 --total-batches 8
+  python scripts/step1d_fine_storage.py --iso ERCOT --thresholds "70,75,95,99" --auto-commit
 """
 
 import argparse
@@ -133,6 +134,11 @@ STORAGE_SWEEP_FLOOR = 0.50
 
 # Progress save interval
 PROGRESS_INTERVAL = 25   # save every N batches
+
+# Auto-batch: flush results to disk when accumulator exceeds this per threshold.
+# Targets ~10 min of results per batch file on CI (2 vCPU, Numba JIT).
+# Only triggers for thresholds with large eligible mix counts.
+BATCH_FLUSH_SIZE = 500_000
 
 
 def get_near_miss_width(threshold):
@@ -336,13 +342,21 @@ def run_max_screen(nm_combos, nm_base_scores, demand_arr, supply_matrix,
 
 
 def run_adaptive_coarse(iso, nm_combos, nm_base_scores, max_scores,
-                        demand_arr, supply_matrix, active_thresholds, sc):
+                        demand_arr, supply_matrix, active_thresholds, sc,
+                        global_idx_map=None, on_bucket_done=None):
     """Pass 1: Adaptive coarse storage sweep with gap-bucketed grids.
 
     Groups mixes by their gap to the closest active threshold, builds
     a right-sized storage grid per bucket, and runs the Numba kernel
     on each bucket. This avoids testing LDES=25% on mixes that only
     need 3pp of storage boost.
+
+    Args:
+        global_idx_map: Optional array mapping local indices → full nm_combos
+            indices. When provided, result mix_idx values use full indices
+            (eliminating the need for post-hoc remapping in process_iso).
+        on_bucket_done: Optional callback(results, active_thresholds) called
+            after each bucket completes. Used for auto-flush to batch files.
 
     Returns per-threshold feasible lists:
         results[threshold] = list of (mix_idx, bat4, bat8, ldes, h2, score)
@@ -524,7 +538,10 @@ def run_adaptive_coarse(iso, nm_combos, nm_base_scores, max_scores,
                     score_pcts = np.round(scores_col[hit_idx] * 100, 2)
 
                     for k in range(len(hit_idx)):
-                        mi = int(b_idx[hit_idx[k]])
+                        local_mi = int(b_idx[hit_idx[k]])
+                        mi = (int(global_idx_map[local_mi])
+                              if global_idx_map is not None
+                              else local_mi)
                         results[t].append(
                             (mi, bp, b8p, lp, h2p,
                              float(score_pcts[k])))
@@ -533,6 +550,10 @@ def run_adaptive_coarse(iso, nm_combos, nm_base_scores, max_scores,
                     # Block dominated combos for hit mixes (vectorized)
                     blocked[hits] |= dom[ci]
                     n_recorded[hits] += 1
+
+        # Auto-flush callback after each bucket completes
+        if on_bucket_done is not None:
+            on_bucket_done(results, active_thresholds)
 
     print(f"    Pass 1 complete: {total_feasible:,} feasible "
           f"(dominance-filtered, N≤{N_KEEP} per mix), "
@@ -961,6 +982,36 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
 
     coarse_results = {t: [] for t in active_thresholds}
 
+    # ── Auto-batch state: tracks per-threshold batch file numbers ──
+    # When a threshold accumulates > BATCH_FLUSH_SIZE results during Pass 1,
+    # results are flushed to {ISO}_t{XX}_storage_b{N}.parquet and committed
+    # immediately. This protects against CI timeout — partial progress is
+    # banked even if the job dies. Step 2 reads all batch files natively.
+    batch_nums = {}  # threshold → last batch number written
+    # Parallel accumulator for Pass 2 boundary detection. Keeps ALL coarse
+    # results in memory (flushed + unflushed) so run_fine_storage can find
+    # boundary mixes. Memory is bounded (~48 bytes/result, 5M results ≈ 240MB).
+    pass2_coarse = {t: [] for t in active_thresholds}
+
+    def _auto_flush(results, thresholds):
+        """Flush accumulated results to batch files when they exceed threshold."""
+        for t in thresholds:
+            if len(results[t]) >= BATCH_FLUSH_SIZE:
+                batch_nums[t] = batch_nums.get(t, 0) + 1
+                bn = batch_nums[t]
+                n_flush = len(results[t])
+                # Keep for Pass 2 boundary detection
+                pass2_coarse[t].extend(results[t])
+                # Save batch file and commit
+                save_storage_results(iso, t, nm_combos, results[t], rtypes,
+                                     batch_num=bn)
+                git_commit_threshold(iso, t, f"Pass1-b{bn}", auto_commit,
+                                     batch_num=bn)
+                print(f"    Auto-flush {iso} t{t}%: {n_flush:,} results → "
+                      f"b{bn}")
+                # Clear accumulator for next batch
+                results[t] = []
+
     if pass1_needed:
         # ── Build union eligible mask: mixes eligible for ANY pending threshold ──
         # A mix is eligible for threshold t if base < t/100 AND max >= t/100.
@@ -1005,7 +1056,6 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
             if h2_thresholds:
                 groups.append(('H2', h2_thresholds))
 
-            all_coarse = {}  # merged results across groups
             for group_label, group_thresholds in groups:
                 # Build union mask for this group's thresholds only
                 group_mask = np.zeros(len(nm_combos), dtype=bool)
@@ -1019,64 +1069,97 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
                 print(f"\n    Group {group_label}: {len(group_thresholds)} thresholds, "
                       f"{n_group:,} union mixes, ~{combos_est} combos/mix")
 
+                # Pass global_idx_map so results use full nm_combos indices
+                # (no post-hoc remapping needed). Pass _auto_flush callback
+                # so results get committed to batch files during processing.
+                group_full_idx = np.where(group_mask)[0]
                 group_coarse = run_adaptive_coarse(
                     iso, nm_combos[group_mask], nm_base_scores[group_mask],
                     max_scores[group_mask],
-                    demand_arr, supply_matrix, group_thresholds, sc)
+                    demand_arr, supply_matrix, group_thresholds, sc,
+                    global_idx_map=group_full_idx,
+                    on_bucket_done=_auto_flush)
 
-                # Remap group indices → full nm_combos indices
-                group_full_idx = np.where(group_mask)[0]
+                # Results already use full indices — no remapping needed.
+                # Flush remaining unflushed results for each threshold.
                 for t in group_thresholds:
-                    all_coarse[t] = [
-                        (int(group_full_idx[r[0]]), r[1], r[2], r[3], r[4], r[5])
-                        for r in group_coarse[t]]
+                    remaining = group_coarse.get(t, [])
+                    if remaining:
+                        pass2_coarse[t].extend(remaining)
+                    if t in batch_nums:
+                        # Threshold was auto-batched — save remainder as
+                        # next batch file (even if small)
+                        if remaining:
+                            batch_nums[t] += 1
+                            bn = batch_nums[t]
+                            save_storage_results(iso, t, nm_combos, remaining,
+                                                 rtypes, batch_num=bn)
+                            git_commit_threshold(iso, t, f"Pass1-b{bn}",
+                                                 auto_commit, batch_num=bn)
+                            print(f"    Final flush {iso} t{t}%: "
+                                  f"{len(remaining):,} results → b{bn}")
+                        n_total = len(pass2_coarse[t])
+                        print(f"    {iso} t{t}%: {n_total:,} storage-feasible "
+                              f"(coarse, {batch_nums[t]} batches)")
+                    else:
+                        # Small threshold — save as monolithic file
+                        coarse_results[t] = remaining
+                        if remaining:
+                            save_storage_results(iso, t, nm_combos, remaining,
+                                                 rtypes)
+                            print(f"    {iso} t{t}%: {len(remaining):,} "
+                                  f"storage-feasible (coarse)")
+                        git_commit_threshold(iso, t, "Pass1", auto_commit)
 
-            # Save per-threshold results with commits
+            # Mark all thresholds as Pass 1 done (including 0-eligible ones)
             for t in pass1_needed:
-                if per_t_eligible[t] == 0:
-                    coarse_results[t] = []
-                else:
-                    coarse_results[t] = all_coarse.get(t, [])
-                    if coarse_results[t]:
-                        save_storage_results(iso, t, nm_combos,
-                                             coarse_results[t], rtypes)
-                        print(f"    {iso} t{t}%: {len(coarse_results[t]):,} "
-                              f"storage-feasible (coarse)")
-
-                git_commit_threshold(iso, t, "Pass1", auto_commit)
                 pass1_thresholds.add(t)
-                _save_manifest(iso, code_hash, pass1_thresholds, pass2_done)
+            _save_manifest(iso, code_hash, pass1_thresholds, pass2_done)
     else:
         print(f"\n  Pass 1: all active thresholds already done")
 
-    # Reload coarse results from saved parquets for cached thresholds
+    # Reload coarse results from saved parquets for cached thresholds.
+    # Supports both monolithic (_storage.parquet) and batch (_storage_b{N})
+    # files from previous runs.
     if pass1_cached:
+        import glob as globmod
         nm_key_to_idx = {k: i for i, k in
                          enumerate(_mix_keys(nm_combos).tolist())}
 
         for t in pass1_cached:
             t_str = s1._normalize_threshold_str(t)
-            t_path = os.path.join(STEP1D_OUTPUT_DIR,
-                                  f'{iso}_t{t_str}_storage.parquet')
-            if not os.path.exists(t_path):
-                continue
-            table = pq.read_table(t_path)
-            # Bulk-extract resource columns as numpy arrays for vectorized hashing
-            mix_mat = np.column_stack(
-                [table.column(rt).to_numpy() for rt in rtypes])
-            row_keys = _mix_keys(mix_mat).tolist()
-            bat4 = table.column('battery_dispatch_pct').to_numpy()
-            bat8 = table.column('battery8_dispatch_pct').to_numpy()
-            ldes = table.column('ldes_dispatch_pct').to_numpy()
-            h2 = table.column('h2_dispatch_pct').to_numpy()
-            score = table.column('hourly_match_score').to_numpy()
-            for i, key in enumerate(row_keys):
-                mi = nm_key_to_idx.get(key, -1)
-                if mi == -1:
-                    continue  # mix not in near-miss set (shouldn't happen)
-                coarse_results[t].append(
-                    (mi, float(bat4[i]), float(bat8[i]),
-                     float(ldes[i]), float(h2[i]), float(score[i])))
+            # Discover all files for this threshold (monolithic + batches)
+            mono_path = os.path.join(STEP1D_OUTPUT_DIR,
+                                     f'{iso}_t{t_str}_storage.parquet')
+            batch_pattern = os.path.join(STEP1D_OUTPUT_DIR,
+                                         f'{iso}_t{t_str}_storage_b*.parquet')
+            batch_files = sorted(globmod.glob(batch_pattern))
+
+            t_files = []
+            if batch_files:
+                t_files = batch_files  # prefer batches if they exist
+            elif os.path.exists(mono_path):
+                t_files = [mono_path]
+
+            for t_path in t_files:
+                table = pq.read_table(t_path)
+                mix_mat = np.column_stack(
+                    [table.column(rt).to_numpy() for rt in rtypes])
+                row_keys = _mix_keys(mix_mat).tolist()
+                bat4 = table.column('battery_dispatch_pct').to_numpy()
+                bat8 = table.column('battery8_dispatch_pct').to_numpy()
+                ldes = table.column('ldes_dispatch_pct').to_numpy()
+                h2_col = table.column('h2_dispatch_pct').to_numpy()
+                score = table.column('hourly_match_score').to_numpy()
+                for i, key in enumerate(row_keys):
+                    mi = nm_key_to_idx.get(key, -1)
+                    if mi == -1:
+                        continue
+                    coarse_results[t].append(
+                        (mi, float(bat4[i]), float(bat8[i]),
+                         float(ldes[i]), float(h2_col[i]), float(score[i])))
+            # Also populate pass2_coarse for cached thresholds
+            pass2_coarse[t] = coarse_results[t]
 
     # ══════════════════════════════════════════════════════
     # PASS 2: Fine targeted storage (per-threshold boundary)
@@ -1090,33 +1173,49 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
             continue
 
         t_start = time.time()
+        # Use pass2_coarse which has ALL coarse results (flushed + unflushed)
+        coarse_for_t = pass2_coarse.get(t, coarse_results.get(t, []))
         fine_results = run_fine_storage(
-            iso, t, nm_combos, coarse_results[t],
+            iso, t, nm_combos, coarse_for_t,
             demand_arr, supply_matrix)
 
-        # Merge coarse + fine results (fine supersedes coarse for boundary mixes)
-        all_results = coarse_results[t] + fine_results
-
-        # Deduplicate: keep best score per unique (mix, storage) tuple
-        seen = {}
-        for r in all_results:
-            key = (r[0], round(r[1], 4), round(r[2], 4),
-                   round(r[3], 4), round(r[4], 4))
-            if key not in seen or r[5] > seen[key][5]:
-                seen[key] = r
-
-        deduped = list(seen.values())
-
-        if deduped:
-            save_storage_results(iso, t, nm_combos, deduped, rtypes)
-
         t_elapsed = time.time() - t_start
+        n_coarse = len(coarse_for_t)
         n_fine = len(fine_results)
-        n_total = len(deduped)
-        print(f"    {iso} t{t}%: {n_fine:,} fine + {len(coarse_results[t]):,} "
-              f"coarse = {n_total:,} total ({t_elapsed:.1f}s)")
 
-        git_commit_threshold(iso, t, "Pass2", auto_commit)
+        if t in batch_nums:
+            # Batched threshold — save fine results as next batch file.
+            # Step 2 loads all batch files and deduplicates natively.
+            if fine_results:
+                batch_nums[t] += 1
+                bn = batch_nums[t]
+                save_storage_results(iso, t, nm_combos, fine_results, rtypes,
+                                     batch_num=bn)
+                git_commit_threshold(iso, t, f"Pass2-b{bn}", auto_commit,
+                                     batch_num=bn)
+            print(f"    {iso} t{t}%: {n_fine:,} fine + {n_coarse:,} coarse "
+                  f"({batch_nums[t]} batch files, {t_elapsed:.1f}s)")
+        else:
+            # Non-batched — merge coarse + fine, save as monolithic file
+            all_results = coarse_for_t + fine_results
+
+            # Deduplicate: keep best score per unique (mix, storage) tuple
+            seen = {}
+            for r in all_results:
+                key = (r[0], round(r[1], 4), round(r[2], 4),
+                       round(r[3], 4), round(r[4], 4))
+                if key not in seen or r[5] > seen[key][5]:
+                    seen[key] = r
+            deduped = list(seen.values())
+
+            if deduped:
+                save_storage_results(iso, t, nm_combos, deduped, rtypes)
+
+            n_total = len(deduped)
+            print(f"    {iso} t{t}%: {n_fine:,} fine + {n_coarse:,} coarse "
+                  f"= {n_total:,} total ({t_elapsed:.1f}s)")
+            git_commit_threshold(iso, t, "Pass2", auto_commit)
+
         pass2_done.add(t)
         _save_manifest(iso, code_hash, pass1_thresholds, pass2_done)
 
@@ -1260,176 +1359,23 @@ def print_batch_info(iso, target_minutes=10):
     print(f"\n  Batch info saved: {info_path}")
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# BATCHED PROCESSING — Runs a single batch for one ISO/threshold pair
-# ══════════════════════════════════════════════════════════════════════════════
-
-def process_iso_batched(iso, threshold, batch_num, total_batches,
-                        auto_commit=False):
-    """Run storage sweep for a single batch of one ISO/threshold pair.
-
-    Splits eligible mixes into total_batches equal chunks and processes
-    only batch_num (1-indexed). Each batch independently runs Pass 0
-    (~40s overhead), then processes its chunk through Pass 1 and Pass 2.
-
-    Output: {ISO}_t{XX}_storage_b{batch_num}.parquet
-    """
-    iso_start = time.time()
-    rtypes = s1.get_resource_types(iso)
-    n_res = len(rtypes)
-
-    print(f"\n{'=' * 70}")
-    print(f"  Step 1d Batched Storage — {iso} t{threshold}%"
-          f" (batch {batch_num}/{total_batches})")
-    print(f"  Resources: {n_res}D ({', '.join(rtypes)})")
-    print(f"  Numba: {'enabled' if s1.HAS_NUMBA else 'disabled'}")
-    print(f"{'=' * 70}")
-
-    active_thresholds = [threshold]
-
-    # Load mixes (with coarse fallback)
-    nm_combos, nm_base_scores = load_mixes_with_coarse_fallback(
-        iso, active_thresholds)
-    if nm_combos is None:
-        print(f"  ERROR: No near-miss data for {iso}. Run step1c first.")
-        return
-
-    n_raw = len(nm_combos)
-    print(f"  Total near-miss mixes: {n_raw:,}")
-
-    # Load EIA data
-    print(f"  Loading EIA data...")
-    demand_data, gen_profiles, _, _ = s1.load_data()
-    demand_norm = demand_data[iso]['normalized']
-    supply_profiles = s1.get_supply_profiles(iso, gen_profiles)
-    demand_arr, supply_matrix = s1.prepare_numpy_profiles(
-        iso, demand_norm, supply_profiles)
-
-    sc = _get_storage_constants()
-
-    # JIT warmup
-    if s1.HAS_NUMBA:
-        print(f"  Warming up Numba JIT...")
-        dummy_supply = np.ones((1, s1.H), dtype=np.float64)
-        dummy_b = np.array([0.0, 1.0], dtype=np.float64)
-        dummy_l = np.array([0.0], dtype=np.float64)
-        dummy_h = np.array([0.0], dtype=np.float64)
-        s1._batch_mixes_storage_screen(
-            demand_arr, dummy_supply, 1.0, 1,
-            dummy_b, dummy_b, dummy_l, 2, 2, 1,
-            0.85, 0.85, 0.50, 4, 8, 100, 168, 48,
-            dummy_h, 1, 0.35, 1000.0, 720)
-        s1._batch_compute_storage_caps(
-            demand_arr, dummy_supply, 1.0, 1, 4, 8, 100)
-        print(f"  JIT ready")
-
-    os.makedirs(STEP1D_OUTPUT_DIR, exist_ok=True)
-
-    # ── Pass 0: Max-storage screen ──
-    max_scores = run_max_screen(
-        nm_combos, nm_base_scores, demand_arr, supply_matrix,
-        active_thresholds, sc)
-
-    # Filter to mixes that can reach the threshold with max storage
-    target = threshold / 100.0
-    eligible = (max_scores >= target) & (nm_base_scores < target)
-    eligible_idx = np.where(eligible)[0]
-    n_eligible = len(eligible_idx)
-
-    print(f"\n  Eligible mixes for t{threshold}%: {n_eligible:,}")
-
-    if n_eligible == 0:
-        print(f"  No eligible mixes — nothing to process.")
-        return
-
-    # ── Split into batches ──
-    batch_size = int(np.ceil(n_eligible / total_batches))
-    start_idx = (batch_num - 1) * batch_size
-    end_idx = min(batch_num * batch_size, n_eligible)
-
-    if start_idx >= n_eligible:
-        print(f"  Batch {batch_num} is beyond eligible range "
-              f"({n_eligible} mixes, {total_batches} batches). Nothing to do.")
-        return
-
-    batch_eligible = eligible_idx[start_idx:end_idx]
-    n_batch = len(batch_eligible)
-    print(f"  Batch {batch_num}/{total_batches}: mixes {start_idx:,}–{end_idx:,} "
-          f"({n_batch:,} mixes)")
-
-    # Create a sub-array for this batch (re-index to 0-based for this chunk)
-    batch_combos = nm_combos[batch_eligible]
-    batch_base_scores = nm_base_scores[batch_eligible]
-    batch_max_scores = max_scores[batch_eligible]
-
-    # ── Pass 1: Adaptive coarse sweep ──
-    coarse_results = run_adaptive_coarse(
-        iso, batch_combos, batch_base_scores, batch_max_scores,
-        demand_arr, supply_matrix, active_thresholds, sc)
-
-    n_coarse = len(coarse_results[threshold])
-    print(f"  Pass 1: {n_coarse:,} coarse results")
-
-    # ── Pass 2: Fine refinement ──
-    fine_results = run_fine_storage(
-        iso, threshold, batch_combos, coarse_results[threshold],
-        demand_arr, supply_matrix)
-
-    # Merge coarse + fine
-    all_results = coarse_results[threshold] + fine_results
-
-    # Deduplicate
-    seen = {}
-    for r in all_results:
-        key = (r[0], round(r[1], 4), round(r[2], 4),
-               round(r[3], 4), round(r[4], 4))
-        if key not in seen or r[5] > seen[key][5]:
-            seen[key] = r
-    deduped = list(seen.values())
-
-    n_total = len(deduped)
-    print(f"  Total: {len(fine_results):,} fine + {n_coarse:,} coarse "
-          f"= {n_total:,} after dedup")
-
-    if deduped:
-        out_path = save_storage_results(
-            iso, threshold, batch_combos, deduped, rtypes,
-            batch_num=batch_num)
-        if out_path:
-            size_mb = os.path.getsize(out_path) / (1024 * 1024)
-            print(f"  Saved: {os.path.basename(out_path)} ({size_mb:.1f} MB)")
-
-    git_commit_threshold(iso, threshold, "Batch", auto_commit,
-                         batch_num=batch_num)
-
-    elapsed = time.time() - iso_start
-    print(f"\n{'=' * 70}")
-    print(f"  {iso} t{threshold}% batch {batch_num}/{total_batches} "
-          f"COMPLETE — {elapsed:.1f}s ({elapsed/60:.1f}m)")
-    print(f"{'=' * 70}")
-
-
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 1d: Three-pass storage sweep with batch support.")
+        description="Step 1d: Three-pass storage sweep with auto-batching.")
     parser.add_argument("--iso", required=True,
                         help="ISO name or 'ALL'")
     parser.add_argument("--auto-commit", action="store_true",
-                        help="Commit & push after each threshold")
+                        help="Commit & push after each threshold (and each "
+                             "auto-batch for large thresholds)")
     parser.add_argument("--thresholds", default="",
                         help="Comma-separated thresholds to process "
                              "(e.g. '90,95,99'). Default: all 17.")
     parser.add_argument("--batch-info", action="store_true",
-                        help="Print batch count estimates and exit "
-                             "(no processing).")
+                        help="Print eligible mix counts and runtime estimates "
+                             "per threshold (no processing).")
     parser.add_argument("--target-minutes", type=float, default=10,
-                        help="Target minutes per batch for --batch-info "
+                        help="Target minutes per auto-batch for --batch-info "
                              "(default: 10).")
-    parser.add_argument("--batch", type=int, default=None,
-                        help="Batch number to process (1-indexed). "
-                             "Requires --total-batches and single threshold.")
-    parser.add_argument("--total-batches", type=int, default=None,
-                        help="Total number of batches to split into.")
     args = parser.parse_args()
 
     isos = list(s1.ISOS) if args.iso.upper() == 'ALL' else [args.iso.upper()]
@@ -1445,26 +1391,7 @@ def main():
             print_batch_info(iso, target_minutes=args.target_minutes)
         return
 
-    # Batch processing mode
-    if args.batch is not None:
-        if args.total_batches is None:
-            print("ERROR: --batch requires --total-batches")
-            sys.exit(1)
-        thresholds = _parse_thresholds(args.thresholds)
-        if not thresholds or len(thresholds) != 1:
-            print("ERROR: Batch mode requires exactly one threshold "
-                  "(e.g., --thresholds 95)")
-            sys.exit(1)
-        if args.batch < 1 or args.batch > args.total_batches:
-            print(f"ERROR: --batch must be 1..{args.total_batches}")
-            sys.exit(1)
-        for iso in isos:
-            process_iso_batched(
-                iso, thresholds[0], args.batch, args.total_batches,
-                auto_commit=args.auto_commit)
-        return
-
-    # Standard (non-batched) processing
+    # Standard processing (auto-batching happens internally for large thresholds)
     thresholds_filter = _parse_thresholds(args.thresholds)
     if thresholds_filter:
         print(f"Threshold filter: {thresholds_filter}")
