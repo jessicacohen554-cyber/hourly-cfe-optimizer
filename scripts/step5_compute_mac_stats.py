@@ -370,18 +370,11 @@ def compute_fan_and_anova(df):
                     eta_squared = ss_between / ss_total
                     toggle_contributions[iso][toggle_name].append(eta_squared)
 
-    # Apply isotonic regression to fan percentile curves for smooth monotonic shape
-    if HAS_SCIPY:
-        for iso in ISOS:
-            for p in pct_names:
-                vals = fan_data[iso][p]
-                valid = [(i, v) for i, v in enumerate(vals) if v is not None]
-                if len(valid) >= 3:
-                    idx, arr = zip(*valid)
-                    result = _scipy_isotonic(np.array(arr, dtype=np.float64))
-                    smoothed = result.x if hasattr(result, 'x') else result
-                    for j, i in enumerate(idx):
-                        fan_data[iso][p][i] = round(float(smoothed[j]), 1)
+    # NOTE: No isotonic regression on average MAC fan chart percentiles.
+    # Average MAC is naturally U-shaped (high at low thresholds, drops to
+    # minimum around 85-95%, rises slightly at last-mile). Isotonic regression
+    # (enforcing non-decreasing) collapses U-shaped data to a flat constant.
+    # Raw percentile values are the correct representation of average MAC.
 
     # Average ANOVA contributions across thresholds
     for iso in ISOS:
@@ -464,13 +457,15 @@ def compute_stepwise_fan(df):
 
 
 def compute_envelope_and_path(df):
-    """Compute monotonic envelope MAC AND path-constrained MAC in a single pass.
+    """Compute average MAC, marginal MAC (PCHIP), AND path-constrained MAC.
 
     Consolidates compute_monotonic_envelope() and compute_path_constrained_mac()
     which both filter to medium scenario and iterate over the same ISO/threshold
     pairs. One medium-scenario filter, one ISO loop, one threshold loop.
 
-    Envelope: running max to enforce non-decreasing MAC.
+    Envelope: raw average MAC (no isotonic — U-shape is scientifically correct).
+    Stepwise envelope: PCHIP derivative of cost vs CO₂ curve + isotonic regression
+        for smooth monotonic marginal MAC ($/ton CO₂).
     Path-constrained: enforces non-decreasing absolute resource deployment.
     """
     envelope = {}
@@ -604,24 +599,30 @@ def compute_envelope_and_path(df):
         step_env = [None] * len(THRESHOLDS)
 
         if HAS_SCIPY:
-            # --- Average MAC envelope: isotonic regression ---
+            # --- Average MAC: PCHIP smoothing (NO isotonic — U-shape is correct) ---
+            # Average MAC (total_cost / total_CO₂_reduced) naturally decreases
+            # with scale then rises slightly at high thresholds. Isotonic
+            # regression on a U-shaped curve collapses it to a flat constant.
+            # Use raw values directly — they are the scientifically correct
+            # average MAC at each threshold.
             valid_avg = [(i, v) for i, v in enumerate(raw_macs) if v is not None]
             if len(valid_avg) >= 3:
                 idx_avg, vals_avg = zip(*valid_avg)
-                iso_result = _scipy_isotonic(np.array(vals_avg, dtype=np.float64))
-                smoothed_avg = iso_result.x if hasattr(iso_result, 'x') else iso_result
+                # Use raw values directly — no isotonic
                 for j, i in enumerate(idx_avg):
-                    env_macs[i] = round(float(smoothed_avg[j]), 1)
+                    env_macs[i] = round(float(vals_avg[j]), 1)
             else:
                 env_macs = list(raw_macs)
 
             # --- Stepwise marginal MAC: PCHIP derivative + isotonic ---
+            # FIX: Convert CO₂ from Mt to tons so PCHIP derivative is $/ton
+            # (previously was $/Mt = 1e6× too large, all values hit 9999 cap)
             valid_pts = [(i, co2_at_t[i], costs_at_t[i])
                          for i in range(len(THRESHOLDS))
                          if costs_at_t[i] is not None and co2_at_t[i] and co2_at_t[i] > 0]
             if len(valid_pts) >= 3:
                 v_idx, v_co2, v_cost = zip(*valid_pts)
-                co2_arr = np.array(v_co2, dtype=np.float64)
+                co2_arr = np.array(v_co2, dtype=np.float64) * 1e6  # Mt → tons
                 cost_total = np.array(v_cost, dtype=np.float64) * demand_mwh
 
                 # Ensure CO2 strictly increasing for PCHIP
@@ -635,24 +636,23 @@ def compute_envelope_and_path(df):
 
                 if len(co2_mono) >= 3:
                     pchip = PchipInterpolator(co2_mono, cost_mono)
-                    raw_deriv = pchip.derivative()(co2_mono)
+                    raw_deriv = pchip.derivative()(co2_mono)  # now $/ton
                     raw_deriv = np.maximum(raw_deriv, 0.01)
                     iso_step = _scipy_isotonic(raw_deriv)
                     smoothed_step = iso_step.x if hasattr(iso_step, 'x') else iso_step
                     for j, i in enumerate(idx_mono):
                         step_env[i] = round(min(float(smoothed_step[j]), 9999), 1)
         else:
-            # Fallback: running max (no scipy)
-            running_max = 0
+            # Fallback: running max (no scipy) — use raw for envelope
             for i, mac in enumerate(raw_macs):
                 if mac is not None:
-                    running_max = max(running_max, mac)
-                    env_macs[i] = round(running_max, 1)
+                    env_macs[i] = round(mac, 1)
             step_running_max = 0
             for i in range(1, len(THRESHOLDS)):
                 if costs_at_t[i] is not None and costs_at_t[i - 1] is not None:
                     delta_cost = (costs_at_t[i] - costs_at_t[i - 1]) * demand_mwh
-                    delta_co2 = (co2_at_t[i] or 0) - (co2_at_t[i - 1] or 0)
+                    # Convert CO2 delta from Mt to tons
+                    delta_co2 = ((co2_at_t[i] or 0) - (co2_at_t[i - 1] or 0)) * 1e6
                     if delta_co2 > 0 and delta_cost >= 0:
                         step_mac = delta_cost / delta_co2
                         step_running_max = max(step_running_max, step_mac)
