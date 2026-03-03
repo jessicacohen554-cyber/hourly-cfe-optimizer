@@ -1,0 +1,1826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scenario A vs Scenario B — Procurement Strategy Comparison</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/dashboard-ui.css">
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<style>
+/* Page background — uses shared.css var */
+body { background: var(--bg-alt-warm); }
+
+/* ===== PAGE-SPECIFIC: Hero (article intro below dark header) ===== */
+.hero { background: linear-gradient(180deg, var(--navy-dark) 0%, var(--navy) 60%, var(--navy-mid) 100%); padding: 48px var(--pad-page) 40px; text-align: center; }
+.hero h1 { font-family: var(--font-heading); font-size: 2.2rem; font-weight: 800; color: #ffffff; margin-bottom: 12px; letter-spacing: -0.5px; }
+.hero .subtitle { font-size: 1.05rem; color: rgba(255,255,255,0.7); max-width: 860px; margin: 0 auto 24px; line-height: 1.7; }
+
+/* ===== PAGE-SPECIFIC: Scenario legend (persistent) ===== */
+.scenario-legend { display: flex; gap: 24px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+.legend-dot.scn-a { background: var(--indigo); }
+.legend-dot.scn-b { background: var(--ccs); }
+
+/* ===== PAGE-SPECIFIC: Scenario tags ===== */
+.scenario-tag { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 8px; }
+.tag-a { background: rgba(79,70,229,0.1); color: var(--indigo); border: 1px solid rgba(79,70,229,0.25); }
+.tag-b { background: rgba(8,145,178,0.1); color: var(--ccs); border: 1px solid rgba(8,145,178,0.25); }
+
+/* ===== PAGE-SPECIFIC: Scenario desc cards ===== */
+.scenario-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 32px; }
+.scenario-card { background: rgba(255,255,255,0.9); border: 1px solid rgba(0,0,0,0.08); border-radius: var(--radius-lg); padding: var(--pad-card); box-shadow: var(--shadow-sm); }
+.scenario-card h3 { font-family: var(--font-heading); font-size: 0.95rem; color: var(--navy); margin-bottom: 6px; }
+.scenario-card .toggles { font-size: 0.75rem; color: rgba(0,0,0,0.4); margin-bottom: 8px; font-family: var(--font-data); }
+.scenario-card p { color: rgba(0,0,0,0.6); font-size: 0.85rem; line-height: 1.7; margin: 0; }
+/* Dark overrides for scenario cards inside section-dark */
+.section-dark .scenario-card { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.10); box-shadow: none; }
+.section-dark .scenario-card h3 { color: rgba(255,255,255,0.95); }
+.section-dark .scenario-card .toggles { color: rgba(255,255,255,0.45); }
+.section-dark .scenario-card p { color: rgba(255,255,255,0.72); }
+
+/* Chart pair — base in dashboard-ui.css */
+.chart-box { background: rgba(255,255,255,0.9); border: 1px solid rgba(0,0,0,0.08); border-radius: var(--radius-lg); padding: var(--pad-card); box-shadow: var(--shadow-sm); }
+.chart-box h3 { font-family: var(--font-heading); font-size: 0.95rem; color: var(--navy); margin-bottom: 4px; }
+.chart-box .chart-note { font-size: 0.75rem; color: rgba(0,0,0,0.4); margin-bottom: 12px; }
+
+/* Page-specific chart-container override: fixed height instead of shared min-height */
+.chart-container { height: 340px; min-height: auto; }
+
+/* ===== PAGE-SPECIFIC: Single wide chart ===== */
+.chart-wide { background: rgba(255,255,255,0.9); border: 1px solid rgba(0,0,0,0.08); border-radius: var(--radius-lg); padding: var(--pad-card); margin-bottom: 32px; box-shadow: var(--shadow-sm); }
+.chart-wide h3 { font-family: var(--font-heading); font-size: 0.95rem; color: var(--navy); margin-bottom: 4px; }
+.chart-wide .chart-note { font-size: 0.75rem; color: rgba(0,0,0,0.4); margin-bottom: 12px; }
+.chart-container-wide { position: relative; height: 420px; }
+
+/* ===== PAGE-SPECIFIC: Domino table — extends shared .data-table ===== */
+.domino-table { white-space: nowrap; }
+.domino-table .num { font-family: var(--font-data); font-weight: 600; font-size: 0.82rem; }
+.mac-cheap { color: var(--ccs); } .mac-mid { color: var(--amber-warn); } .mac-exp { color: var(--red-dark); }
+
+/* ===== PAGE-SPECIFIC: Global ISO bar — uses .sticky-control-bar + .bar-label from dashboard-ui.css ===== */
+.global-iso-bar { background: rgba(255,255,255,0.97); border-bottom: 1px solid rgba(0,0,0,0.08); padding: 14px var(--pad-page); position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; box-shadow: var(--shadow-sm); }
+.global-iso-bar .bar-label { font-family: var(--font-heading); font-size: 0.82rem; color: var(--navy); font-weight: 700; white-space: nowrap; }
+/* bar-divider, bar-slider-wrap, range thumbs — in dashboard-ui.css */
+.bar-slider-readout { display: flex; align-items: baseline; gap: 6px; white-space: nowrap; }
+.bar-slider-readout .target-val { font-family: var(--font-heading); font-size: 1.2rem; font-weight: 800; color: #0284C7; }
+.bar-slider-readout .target-year { font-size: 0.72rem; color: rgba(0,0,0,0.4); font-weight: 600; }
+
+/* Dashboard grid — in dashboard-ui.css */
+
+/* ===== PAGE-SPECIFIC: Callout ===== */
+.callout { background: rgba(245,158,11,0.06); border: 1px solid rgba(245,158,11,0.2); border-radius: 10px; padding: 16px 20px; margin-bottom: 28px; }
+.callout-title { font-family: var(--font-heading); color: var(--amber-warn); font-size: 0.85rem; font-weight: 700; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.03em; }
+.callout p { color: rgba(0,0,0,0.65); font-size: 0.88rem; line-height: 1.7; margin: 0; }
+
+/* ===== PAGE-SPECIFIC: Insight box ===== */
+.insight { background: rgba(14,165,233,0.06); border-left: 3px solid var(--hydro); padding: 16px 20px; border-radius: 0 var(--radius-md) var(--radius-md) 0; margin-bottom: 24px; }
+.insight p { color: rgba(0,0,0,0.7); font-size: 0.88rem; line-height: 1.7; margin: 0; }
+.insight strong { color: #0284C7; }
+.insight.green { background: rgba(8,145,178,0.06); border-color: var(--ccs); }
+.insight.green strong { color: var(--ccs); }
+
+/* ===== PAGE-SPECIFIC: Deploy bar chart containers ===== */
+.deploy-chart-container { position: relative; height: 380px; }
+
+/* ===== PAGE-SPECIFIC: Key findings hero panel ===== */
+.key-findings { background: linear-gradient(135deg, rgba(26,39,68,0.04) 0%, rgba(14,165,233,0.06) 100%); border: 1px solid rgba(14,165,233,0.15); border-radius: 14px; padding: 28px 32px; max-width: 1200px; margin: -24px auto 20px; position: relative; z-index: 5; }
+.key-findings-title { font-family: var(--font-heading); font-size: 0.78rem; color: #0284C7; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; margin-bottom: 16px; }
+.key-findings-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.kf-item { display: flex; gap: 12px; align-items: flex-start; }
+.kf-icon { font-size: 1.4rem; flex-shrink: 0; width: 32px; text-align: center; line-height: 1; padding-top: 2px; }
+.kf-text { font-size: 0.85rem; color: rgba(0,0,0,0.7); line-height: 1.6; }
+.kf-text strong { color: var(--navy); font-weight: 700; }
+.kf-text .kf-num { font-family: var(--font-data); font-weight: 700; font-size: 0.95rem; }
+@media (max-width: 768px) {
+    .key-findings-grid { grid-template-columns: 1fr; gap: 14px; }
+    .key-findings { margin: -16px 16px 16px; padding: 20px; }
+}
+
+/* ===== PAGE-SPECIFIC: Metric tiles grid ===== */
+.metric-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; max-width: var(--max-content); margin: 0 auto; padding: 12px var(--pad-page) 24px; }
+.metric-tile { background: rgba(255,255,255,0.92); border: 1px solid rgba(0,0,0,0.08); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-sm); }
+.tile-conclusion { padding: 16px 16px 12px; text-align: center; border-bottom: 1px solid rgba(0,0,0,0.06); }
+.tile-conclusion .conclusion-val { font-family: var(--font-heading); font-size: 1.8rem; font-weight: 900; line-height: 1.1; margin-bottom: 4px; letter-spacing: -0.5px; }
+.tile-conclusion .conclusion-context { font-size: 0.78rem; color: var(--text-dim); line-height: 1.5; }
+.tile-conclusion .conclusion-context strong { font-weight: 700; }
+/* Heat-map backgrounds for conclusion severity */
+.tile-conclusion.heat-green { background: linear-gradient(135deg, rgba(22,163,74,0.08) 0%, rgba(22,163,74,0.15) 100%); }
+.tile-conclusion.heat-green .conclusion-val { color: var(--green-pos); }
+.tile-conclusion.heat-amber { background: linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(245,158,11,0.15) 100%); }
+.tile-conclusion.heat-amber .conclusion-val { color: var(--amber-warn); }
+.tile-conclusion.heat-red { background: linear-gradient(135deg, rgba(220,38,38,0.06) 0%, rgba(220,38,38,0.14) 100%); }
+.tile-conclusion.heat-red .conclusion-val { color: var(--red-dark); }
+.tile-conclusion.heat-blue { background: linear-gradient(135deg, rgba(14,165,233,0.06) 0%, rgba(14,165,233,0.12) 100%); }
+.tile-conclusion.heat-blue .conclusion-val { color: #0284C7; }
+.tile-conclusion.heat-neutral { background: rgba(0,0,0,0.02); }
+.tile-conclusion.heat-neutral .conclusion-val { color: rgba(0,0,0,0.5); }
+/* Compact A/B detail panels */
+.tile-details { display: flex; gap: 0; }
+.tile-ab-compact { flex: 1; padding: 8px 10px; text-align: center; font-size: 0.7rem; line-height: 1.35; }
+.tile-ab-compact + .tile-ab-compact { border-left: 1px solid rgba(0,0,0,0.06); }
+.tile-ab-compact.ab-a { background: rgba(79,70,229,0.04); color: var(--indigo); }
+.tile-ab-compact.ab-b { background: rgba(8,145,178,0.04); color: var(--ccs); }
+.tile-ab-compact .ab-tag { font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.6; font-weight: 700; display: block; margin-bottom: 1px; }
+.tile-ab-compact .ab-num { font-family: var(--font-data); font-size: 0.88rem; font-weight: 800; }
+@media (max-width: 1024px) { .metric-tiles { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px) { .metric-tiles { grid-template-columns: 1fr; } }
+
+/* ===== PAGE-SPECIFIC: Hero chart (FOAK->NOAK at top) ===== */
+.hero-chart-wrap { max-width: var(--max-prose); margin: 24px auto 0; background: rgba(255,255,255,0.92); border-radius: var(--radius-lg); padding: var(--pad-card); border: 1px solid rgba(255,255,255,0.15); }
+.hero-chart-wrap h3 { color: var(--navy); font-family: var(--font-heading); font-size: 0.95rem; margin-bottom: 4px; }
+.hero-chart-wrap .chart-note { font-size: 0.75rem; color: var(--text-dim); margin-bottom: 10px; }
+.hero-chart-container { position: relative; height: 400px; }
+
+/* ===== PAGE-SPECIFIC: Hero stats row ===== */
+.hero-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; max-width: var(--max-prose); margin: 28px auto 0; }
+.hero-stat { text-align: center; }
+.hero-stat .stat-val { font-family: var(--font-heading); font-size: 1.6rem; font-weight: 800; color: #fff; }
+.hero-stat .stat-label { font-size: 0.68rem; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 4px; }
+
+/* ===== PAGE-SPECIFIC: Dashboard section title ===== */
+.dashboard-header { text-align: center; max-width: var(--max-content); margin: 0 auto; padding: 40px var(--pad-page) 16px; }
+.dashboard-header h2 { font-family: var(--font-heading); font-size: 1.8rem; font-weight: 800; color: var(--navy); margin-bottom: 8px; }
+.dashboard-header p { color: var(--text-dim); font-size: 0.9rem; }
+
+/* ===== PAGE-SPECIFIC: Winner badge in tiles ===== */
+.winner-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; }
+.winner-badge.b-wins { background: rgba(8,145,178,0.12); color: var(--ccs); }
+.winner-badge.a-wins { background: rgba(79,70,229,0.12); color: var(--indigo); }
+.winner-badge.tie { background: rgba(0,0,0,0.06); color: rgba(0,0,0,0.5); }
+
+/* ===== MOBILE OVERRIDES (page-specific; chart-pair in dashboard-ui.css) ===== */
+@media (max-width: 768px) {
+    .hero h1 { font-size: 1.5rem; }
+    .scenario-cards { grid-template-columns: 1fr; }
+    .chart-container { height: 280px; }
+    .chart-container-wide { height: 320px; }
+    .deploy-chart-container { height: 320px; }
+    .hero-chart-container { height: 380px; }
+    .domino-table { font-size: 0.7rem; }
+    .domino-table td, .domino-table th { padding: 5px 4px; }
+    .deploy-table { font-size: 0.7rem; }
+    .hero-stats { gap: 12px; }
+    .hero-stat .stat-val { font-size: 1.3rem; }
+}
+</style>
+</head>
+<body>
+<nav id="topNav"></nav>
+
+<!-- HEADER BANNER -->
+<header class="header">
+    <h1>The 8,760 Problem</h1>
+    <p class="subtitle">Scenario A vs Scenario B &mdash; two procurement strategies, radically different outcomes</p>
+    <div class="header-accent"></div>
+</header>
+
+<!-- ===== HERO: FOAK→NOAK chart + all-region key findings ===== -->
+<section class="hero">
+    <h1>The Learning Curve Dividend</h1>
+    <p class="subtitle">
+        Clean firm technologies start expensive (FOAK) but follow Wright's Law &mdash; costs decline
+        ~40% after 10&ndash;20 deployments. <strong>Scenario B</strong> invests early along this curve.
+        <strong>Scenario A</strong> defers firm commitment, locks in renewables, and faces a cost cliff
+        when firm generation is finally needed. Same physics &mdash; radically different outcomes.
+    </p>
+    <p class="subtitle" style="margin-top: 8px; font-size: 0.92rem; color: rgba(255,255,255,0.55); max-width: 920px;">
+        The choice between these scenarios isn't just about cost &mdash; it determines whether the grid
+        decarbonizes or locks in decades of gas infrastructure. Scenario A (consequential accounting) optimizes
+        each buyer's $/tCO&#8322; individually, but creates five systemic failure modes: <strong style="color:rgba(255,255,255,0.85);">marginal signal
+        degradation</strong> as coal displacement saturates, <strong style="color:rgba(255,255,255,0.85);">fossil lock-in</strong>
+        from deferred firm investment extending gas infrastructure 10&ndash;20 years,
+        <strong style="color:rgba(255,255,255,0.85);">geographic capital clustering</strong> that starves
+        gas-dependent grids (NEISO, NYISO, CAISO) of firm clean power, <strong style="color:rgba(255,255,255,0.85);">saturation
+        &amp; diminishing returns</strong> once cheap coal displacement is exhausted, and a
+        <strong style="color:rgba(255,255,255,0.85);">collective action tragedy</strong> where individual
+        rationality undermines system-wide decarbonization. Scenario B &mdash; hourly matching &mdash; avoids
+        all five by requiring balanced, local portfolios that seed the clean firm learning curve from day one.
+    </p>
+
+    <div class="hero-chart-wrap">
+        <h3>Scenario A vs B: Clean Firm Cost Trajectory &amp; Gas Reference</h3>
+        <p class="chart-note"><span style="color:#4F46E5;font-weight:600;">Scenario A</span> (deferred firm) vs <span style="color:#0891B2;font-weight:600;">Scenario B</span> (early investment). <span style="color:#DC2626;">Red</span> = gas reference.</p>
+        <div class="hero-chart-container"><canvas id="foakNOAKChart"></canvas></div>
+    </div>
+
+    <div class="hero-stats" id="heroStats">
+        <!-- Populated by JS at page load (all-region aggregates at 95%) -->
+    </div>
+
+    <!-- Five Modes of Failure -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; max-width: 1200px; margin: 28px auto 0; padding: 0 24px; text-align: left;">
+        <div style="padding: 12px 14px; background: rgba(220,38,38,0.08); border-left: 3px solid #DC2626; border-radius: 0 8px 8px 0;">
+            <strong style="color: #FF6B6B; font-size: 0.82rem;">1. Marginal Signal Degradation</strong>
+            <p style="color: rgba(255,255,255,0.55); font-size: 0.75rem; line-height: 1.5; margin: 4px 0 0;">First coal unit displaced at 2,200 lb/MWh &mdash; but as participation grows, all buyers claim the same displacement. Signal is most reliable when least needed.</p>
+        </div>
+        <div style="padding: 12px 14px; background: rgba(245,158,11,0.08); border-left: 3px solid #D97706; border-radius: 0 8px 8px 0;">
+            <strong style="color: #FBBF24; font-size: 0.82rem;">2. Saturation &amp; Diminishing Returns</strong>
+            <p style="color: rgba(255,255,255,0.55); font-size: 0.75rem; line-height: 1.5; margin: 4px 0 0;">Coal/oil stock exhausts at 20&ndash;50% participation by region. After saturation, consequential $/tCO&#8322; converges to hourly matching cost.</p>
+        </div>
+        <div style="padding: 12px 14px; background: rgba(79,70,229,0.08); border-left: 3px solid #4F46E5; border-radius: 0 8px 8px 0;">
+            <strong style="color: #A5B4FC; font-size: 0.82rem;">3. Fossil Lock-In</strong>
+            <p style="color: rgba(255,255,255,0.55); font-size: 0.75rem; line-height: 1.5; margin: 4px 0 0;">Every year of deferred firm clean investment extends gas infrastructure by 10&ndash;20 years. Gas-dependent grids need 5&ndash;8 GW of firm clean but capital flows elsewhere.</p>
+        </div>
+        <div style="padding: 12px 14px; background: rgba(8,145,178,0.08); border-left: 3px solid #0891B2; border-radius: 0 8px 8px 0;">
+            <strong style="color: #67E8F9; font-size: 0.82rem;">4. Geographic Capital Clustering</strong>
+            <p style="color: rgba(255,255,255,0.55); font-size: 0.75rem; line-height: 1.5; margin: 4px 0 0;">SPP+MISO attract 45&ndash;55% of capital with 33% of C&amp;I load. NEISO+NYISO+CAISO get 8&ndash;12% with 18% of load.</p>
+        </div>
+        <div style="padding: 12px 14px; background: rgba(22,163,74,0.08); border-left: 3px solid #16A34A; border-radius: 0 8px 8px 0;">
+            <strong style="color: #86EFAC; font-size: 0.82rem;">5. Collective Action Tragedy</strong>
+            <p style="color: rgba(255,255,255,0.55); font-size: 0.75rem; line-height: 1.5; margin: 4px 0 0;">Each buyer locally rational, but firm clean power is neglected. Only hourly matching forces balanced local portfolios that seed the learning curve.</p>
+        </div>
+    </div>
+
+    <div style="text-align:center; margin-top:16px; font-size:0.65rem; color:rgba(255,255,255,0.3);">
+        DOE Pathways to Liftoff (2024) &middot; NREL ATB 2024 &middot; Lazard LCOE+ v18 &middot; EIA AEO 2025
+    </div>
+</section>
+
+<div class="gradient-transition"></div>
+
+<!-- ===== DASHBOARD TITLE ===== -->
+<div class="dashboard-header section-light">
+    <h2>Interactive Scenario Dashboard</h2>
+    <p>Compare two procurement strategies across 5 US grid regions and 21 CFE thresholds.
+    Toggle the region and target below to see how each scenario performs.</p>
+</div>
+
+<div class="gradient-transition"></div>
+
+<!-- ===== SCENARIO A / B SIDE-BY-SIDE INTRO ===== -->
+<section class="section-dark" style="padding-top: var(--space-xl); padding-bottom: var(--space-xl);">
+<div class="section-dark-inner">
+    <div class="scenario-cards">
+        <div class="scenario-card">
+            <span class="scenario-tag tag-a">Scenario A &mdash; Pure Consequential</span>
+            <h3>Cheapest $/tCO&#8322; First</h3>
+            <div class="toggles">Ren: Low | Firm: Low (NOAK) | CCS: Low | LDES: Low | Geo: Low | Battery: Low | Fuel: Med | Tx: Med</div>
+            <p>Sequential optimization: at each threshold, buy cheapest resources first. Prior deployments locked in.
+            Low MAC early (cheap renewables), but overbuilding creates path dependency &mdash; cost cliff when firm is finally needed.</p>
+        </div>
+        <div class="scenario-card">
+            <span class="scenario-tag tag-b">Scenario B &mdash; Hourly Matching</span>
+            <h3>Early Clean Firm at FOAK Prices</h3>
+            <div class="toggles">Ren: Low | Firm: High (FOAK) | CCS: High | LDES: High | Geo: High | Battery: Low | Fuel: Med | Tx: Med</div>
+            <p>Hourly matching with FOAK&rarr;NOAK learning curve. Higher cost early, but firm investment seeds the
+            learning curve. Costs decline as Wright's Law drives deployments. Balanced portfolio, no lock-in trap.</p>
+        </div>
+    </div>
+</div>
+</section>
+
+<div class="gradient-transition"></div>
+
+<!-- ===== REGION TOGGLE + TARGET SLIDER (sticky, single row on desktop) ===== -->
+<div class="global-iso-bar">
+    <span class="bar-label">Region:</span>
+    <div class="iso-selector" id="globalIsoSelector" style="margin-bottom:0;"></div>
+    <div class="bar-divider"></div>
+    <span class="bar-label">Target:</span>
+    <div class="bar-slider-wrap">
+        <input type="range" id="targetSlider" min="0" max="16" step="1" value="11">
+        <div class="bar-slider-readout">
+            <span class="target-val" id="targetVal">95%</span>
+            <span class="target-year" id="targetYear">SBTi 2045</span>
+        </div>
+    </div>
+</div>
+
+<!-- ===== REGION-SPECIFIC METRIC TILES ===== -->
+<div class="metric-tiles" id="metricTiles">
+    <!-- Populated by buildMetricTiles() -->
+</div>
+
+<!-- ===== CHARTS SECTION ===== -->
+<section class="content-section section-light" style="padding-top: 24px;">
+
+<!-- 1. What Gets Built — Resource Mix Side-by-Side -->
+<h2 class="section-title">What Gets Built: Scenario A vs Scenario B</h2>
+<p class="section-subtitle">Resource mix in TWh at each threshold.
+<strong>Dashed line = CFE target</strong> &mdash; solid bars = utilized generation, hatched bars above = curtailed.</p>
+
+<div class="chart-pair">
+    <div class="chart-box">
+        <span class="scenario-tag tag-a">Scenario A</span>
+        <h3 id="mixTitleA">PJM &mdash; Resource Mix (TWh)</h3>
+        <div class="chart-container"><canvas id="mixChartA"></canvas></div>
+    </div>
+    <div class="chart-box">
+        <span class="scenario-tag tag-b">Scenario B</span>
+        <h3 id="mixTitleB">PJM &mdash; Resource Mix (TWh)</h3>
+        <div class="chart-container"><canvas id="mixChartB"></canvas></div>
+    </div>
+</div>
+
+<!-- 2. Effective System Cost (left) + MAC (right) -->
+<h2 class="section-title" style="margin-top:32px;">System Cost &amp; Marginal Abatement Cost</h2>
+<p class="section-subtitle">Effective $/MWh system cost (left) and stepwise $/tCO&#8322; (right) at each SBTi milestone.</p>
+
+<div class="chart-pair">
+    <div class="chart-box">
+        <h3 id="costChartTitle">PJM &mdash; Effective System Cost ($/MWh)</h3>
+        <p class="chart-note">Red = A | Green = B. Shaded gap = learning curve savings.</p>
+        <div class="chart-container"><canvas id="costChart"></canvas></div>
+    </div>
+    <div class="chart-box">
+        <h3 id="macTimelineTitle">PJM &mdash; Marginal $/tCO&#8322; by SBTi Year</h3>
+        <p class="chart-note">Indigo = A | Teal = B. <span style="color:rgba(0,0,0,0.5);">&#9888; = no new CO&#8322; displaced at that step (cost increased but mix didn't add clean generation).</span></p>
+        <div class="chart-container"><canvas id="macTimelineChart"></canvas></div>
+    </div>
+</div>
+
+<!-- 3. Clean Firm Deployment (left) + Gas Capacity (right) -->
+<h2 class="section-title" style="margin-top:32px;">Clean Firm &amp; Gas Capacity</h2>
+<p class="section-subtitle">Clean firm deployment (left) and gas backup capacity (right) at each milestone.</p>
+
+<div class="chart-pair">
+    <div class="chart-box">
+        <h3 id="firmChartTitle">PJM &mdash; Clean Firm + CCS (TWh)</h3>
+        <p class="chart-note">Scenario B deploys firm 2&ndash;3&times; earlier, seeding the learning curve.</p>
+        <div class="chart-container"><canvas id="firmChart"></canvas></div>
+    </div>
+    <div class="chart-box">
+        <h3 id="gasChartTitle">PJM &mdash; Gas Backup Capacity</h3>
+        <p class="chart-note">Shaded gap = avoided gas infrastructure.</p>
+        <div class="chart-container"><canvas id="gasChart"></canvas></div>
+    </div>
+</div>
+
+<!-- 5. Sequential Deployment Queue -->
+<h2 class="section-title" style="margin-top:32px;">Sequential Deployment Queue</h2>
+<p class="section-subtitle">Scenario A's build order, sorted by cheapest MAC first but constrained by sequential build reality &mdash;
+each ISO must complete prior threshold steps before advancing. First row per ISO = new build from existing grid mix to 50%.</p>
+
+<div class="chart-wide" style="overflow-x: auto;">
+    <span class="scenario-tag tag-a">Scenario A &mdash; Sequential Queue</span>
+    <table class="data-table domino-table" id="dominoTableA"></table>
+</div>
+
+</section>
+
+<div class="gradient-transition"></div>
+
+<!-- Methodology -->
+<section class="section-dark">
+<div class="section-dark-inner">
+    <h2 class="section-title">Methodology</h2>
+    <p class="section-subtitle">How this comparison is constructed and what it does (and doesn't) model.</p>
+
+    <div style="font-size: 0.88rem; line-height: 1.8; max-width: 900px;">
+
+    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; margin: 24px 0 8px;">Same Physics, Different Procurement Strategies</h3>
+    <p>Both scenarios draw from an <strong>identical pool of ~33,000 physics-feasible resource mixes</strong> produced by the 8,760-hour dispatch model
+    (Step 1 PFS Generator). Each mix is a validated combination of clean firm, solar, wind, CCS-CCGT, hydro, 4-hour battery, 8-hour battery,
+    and 100-hour LDES that achieves a specific hourly CFE threshold across all 8,760 hours of 2025 demand and generation data.
+    The physics are fixed — what changes between scenarios is the <em>procurement strategy</em>: sequential path-dependent
+    optimization vs. targeting a single high threshold directly.</p>
+
+    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; margin: 24px 0 8px;">Scenario A: Pure Consequential</h3>
+    <p>The consequential scenario models a buyer who procures the cheapest resources at each threshold step,
+    with <strong>prior deployments locked in as committed infrastructure</strong>:</p>
+    <ol style="padding-left: 20px; margin: 8px 0;">
+        <li>At 50% CFE: find the cheapest feasible mix from the existing grid floor. Deploy those resources.</li>
+        <li>At 60% CFE: resources deployed at 50% are now the <strong>floor</strong> — they can't be unbuilt.
+            The optimizer can only add on top. Among all feasible mixes at 60% that meet the floor constraint
+            (every resource &ge; what was deployed at 50%), select the cheapest.</li>
+        <li>Continue sequentially through 70%, 75%, 80%, ... &ge;99.99%. Each step inherits all prior commitments.</li>
+        <li>Resources remain priced at their original LCOE — committed capacity does NOT shift to wholesale pricing.
+            The sunk cost creates path dependency but doesn't create a pricing advantage.</li>
+    </ol>
+    <p>When the discrete feasible-mix space is too sparse for strict monotonicity, the optimizer uses a <strong>soft floor</strong>:
+    each mix is scored by its total floor violation (TWh shortfall across all resources), and the cheapest mix with
+    minimum violation is selected. The floor ratchets up using the element-wise maximum of the old floor and new deployment.</p>
+
+    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; margin: 24px 0 8px;">Scenario B: Hourly Matching</h3>
+    <p>The hourly matching scenario models <strong>graduated clean firm deployment along the FOAK&rarr;NOAK learning curve</strong>.
+    At each threshold, clean firm / CCS / LDES / geothermal costs are interpolated between High (FOAK) and Low (NOAK) based
+    on the threshold's position on the SBTi timeline, using a convex ramp function: <code>frac = 0.05 + 0.95 &times; ((t&minus;50)/50)<sup>1.8</sup></code>.
+    Mature technologies (solar, wind, battery) remain at Low cost throughout — they're already down their learning curves.</p>
+    <p>At each threshold, the optimizer independently selects the cheapest feasible mix given the interpolated costs.
+    Early thresholds see less clean firm (costs are near FOAK), but the 5% floor ensures some investment begins —
+    enough to seed the learning curve. As cumulative deployment drives Wright's Law doublings, costs decline and the
+    optimizer naturally selects more clean firm at each subsequent milestone. There is no path-dependency floor; the
+    increasing deployment emerges from the interaction of declining costs and increasing physics requirements for firm
+    generation at higher CFE thresholds.</p>
+
+    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; margin: 24px 0 8px;">Cost Toggle Comparison</h3>
+
+    <table style="width:100%; border-collapse:collapse; margin: 16px 0 24px; font-size: 0.82rem;">
+        <thead>
+            <tr style="border-bottom: 1px solid rgba(0,0,0,0.15);">
+                <th style="text-align:left; padding: 8px; color: rgba(0,0,0,0.45); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em;">Toggle</th>
+                <th style="text-align:center; padding: 8px; color: #4F46E5; font-size: 0.72rem; text-transform: uppercase;">Scenario A</th>
+                <th style="text-align:center; padding: 8px; color: #0891B2; font-size: 0.72rem; text-transform: uppercase;">Scenario B</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">Renewable Gen (Solar/Wind LCOE)</td><td style="text-align:center; padding:6px;">Low</td><td style="text-align:center; padding:6px;">Low</td></tr>
+            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">Firm Gen (Nuclear new-build LCOE)</td><td style="text-align:center; padding:6px; color:#22C55E;">Low (NOAK)</td><td style="text-align:center; padding:6px; color:#EF4444;">High (FOAK)</td></tr>
+            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">CCS-CCGT (w/ 45Q offset)</td><td style="text-align:center; padding:6px; color:#22C55E;">Low (NOAK)</td><td style="text-align:center; padding:6px; color:#EF4444;">High (FOAK)</td></tr>
+            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">LDES (100hr iron-air storage)</td><td style="text-align:center; padding:6px; color:#22C55E;">Low (NOAK)</td><td style="text-align:center; padding:6px; color:#EF4444;">High (FOAK)</td></tr>
+            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">Geothermal (CAISO only)</td><td style="text-align:center; padding:6px; color:#22C55E;">Low (NOAK)</td><td style="text-align:center; padding:6px; color:#EF4444;">High (FOAK)</td></tr>
+            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">Battery (4hr Li-ion)</td><td style="text-align:center; padding:6px;">Low</td><td style="text-align:center; padding:6px;">Low</td></tr>
+            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">Fossil Fuel (wholesale price)</td><td style="text-align:center; padding:6px;">Medium</td><td style="text-align:center; padding:6px;">Medium</td></tr>
+            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">Transmission</td><td style="text-align:center; padding:6px;">Medium</td><td style="text-align:center; padding:6px;">Medium</td></tr>
+            <tr><td style="padding:6px 8px;">45Q Tax Credit</td><td style="text-align:center; padding:6px;">On</td><td style="text-align:center; padding:6px;">On</td></tr>
+        </tbody>
+    </table>
+
+    <p>In Scenario A, all technologies are at <strong>Low (NOAK) cost</strong> — the consequential buyer
+    gravitates to the cheapest available $/tCO₂, which means mature-market pricing for all resources.
+    In Scenario B, clean firm / CCS / LDES are at <strong>High (FOAK) cost</strong> — hourly matching
+    requires firm generation, and the buyer commits early at premium FOAK prices before the learning curve matures.
+    Mature tech (solar, wind, battery) remains at Low cost in both scenarios.</p>
+
+    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; margin: 24px 0 8px;">Cost Function (Both Scenarios)</h3>
+    <p>Effective system cost = total procurement cost / hourly match fraction, including:</p>
+    <ul style="padding-left: 20px; margin: 8px 0;">
+        <li>Existing generation at wholesale price; new generation at LCOE + transmission adder</li>
+        <li>Clean firm tranche pricing: uprates first, then geothermal (CAISO), then cheapest of nuclear/CCS</li>
+        <li>Storage costs: battery (4hr/8hr) and LDES at scenario-specific LCOE</li>
+        <li>Gas backup: resource adequacy requirement (15% margin above peak) minus clean capacity credits, priced at fixed O&amp;M (existing) or full annualized cost (new build)</li>
+    </ul>
+    <p>The cost function is identical between scenarios. What differs is (a) the cost toggle levels, (b) the optimization
+    strategy (sequential with floor constraints vs. single-target), and (c) the resulting optimal resource mix.</p>
+
+    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; margin: 24px 0 8px;">Gas Backup &amp; Capacity Credits</h3>
+    <p>Gas capacity is <strong>not a choice variable</strong> — it's derived from resource adequacy constraints. Each clean resource receives a
+    capacity credit (clean firm: 100%, CCS: 90%, LDES: 90%, battery: 95%, hydro: 50%, solar: 30%, wind: 10%). The remaining gap between
+    clean capacity and the RA requirement (peak demand &times; 1.15) must be filled by gas. Clean firm's 100% capacity credit
+    displaces gas MW-for-MW; wind's 10% credit means 10 MW of wind displaces only 1 MW of gas.</p>
+
+    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; margin: 24px 0 8px;">Marginal Abatement Cost</h3>
+    <p>Stepwise MAC is computed between consecutive thresholds using the dispatch-stack fossil retirement model:
+    coal retires first (highest emissions + marginal cost), then oil, then gas. The marginal emission rate
+    of displaced fossil shifts from coal-heavy (~1.0 tCO<sub>2</sub>/MWh) at low thresholds to gas-only (~0.4 tCO<sub>2</sub>/MWh) at high thresholds.
+    MAC = &Delta;(system cost &times; demand) / &Delta;CO<sub>2</sub> displaced between threshold steps.</p>
+
+    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; margin: 24px 0 8px;">SBTi Timeline Mapping</h3>
+    <p>CFE thresholds are mapped to SBTi-aligned deployment years: 50%&rarr;2025, 60%&rarr;2027, 70%&rarr;2029, 75%&rarr;2030, 80%&rarr;2032,
+    85%&rarr;2035, 87.5%&rarr;2037, 90%&rarr;2040, 92.5%&rarr;2042, 95%&rarr;2045, 97.5%&rarr;2047, 99%&rarr;2049, &ge;99.99%&rarr;2050.
+    This maps the static threshold comparison onto a temporal deployment trajectory.</p>
+
+    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; margin: 24px 0 8px;">What This Analysis Does Not Model</h3>
+    <ul style="padding-left: 20px; margin: 8px 0;">
+        <li><strong>Dynamic learning curves</strong> — costs are fixed within each scenario. The hourly matching scenario assumes the FOAK&rarr;NOAK learning curve has driven costs to Low levels; it does not model the investment-to-learning feedback loop endogenously.</li>
+        <li><strong>Construction timelines</strong> — all resources are assumed available at each threshold. In practice, the 99% cliff in the consequential path would face multi-year nuclear/CCS construction lead times.</li>
+        <li><strong>Demand growth</strong> — base 2025 demand is used throughout. Real demand growth (1-3.5%/yr by region) would amplify all effects shown here.</li>
+        <li><strong>Inter-regional transmission</strong> — each ISO is optimized independently. Cross-ISO power flows could moderate some regional cost differences.</li>
+        <li><strong>Gas stranding economics</strong> — gas backup is costed at annual fixed O&amp;M / annualized capital, not lifecycle NPV. The economic loss from building-then-stranding gas is understated.</li>
+    </ul>
+
+    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; margin: 24px 0 8px;">Data Sources</h3>
+    <p>EIA hourly generation profiles (2025), eGRID emission rates, NREL ATB cost projections (Low/Medium/High), Lazard LCOE benchmarks,
+    regional wholesale prices from ISO market data. Full cost tables and assumptions documented in the
+    <a href="optimizer_methodology.html" style="color: #0284C7;">Optimizer Methodology</a> page.</p>
+
+    </div>
+</section>
+
+<!-- ============ RELATED ANALYSES ============ -->
+<div class="related-analyses">
+    <div class="related-analyses-title">Related Analyses</div>
+    <div class="related-analyses-grid">
+        <a href="consequential_accounting.html" class="related-card">
+            <div class="related-card-tag">Carbon Accounting</div>
+            <div class="related-card-title">Consequential Accounting</div>
+            <div class="related-card-desc">Three ways to count carbon and why the choice determines investment incentives.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="procurement_strategies.html" class="related-card">
+            <div class="related-card-tag">Strategy</div>
+            <div class="related-card-title">Procurement Strategies</div>
+            <div class="related-card-desc">Full corporate procurement strategy simulation with learning curves.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="abatement_dashboard.html" class="related-card">
+            <div class="related-card-tag">Carbon</div>
+            <div class="related-card-title">CO&#8322; Abatement</div>
+            <div class="related-card-desc">Marginal abatement costs reveal where each dollar has the most impact.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+    </div>
+</div>
+
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="dashboard.html">Cost Optimizer</a>
+        <a href="consequential_accounting.html">Consequential Accounting</a>
+        <a href="research_paper.html">Research Paper</a>
+    </div>
+    <div class="footer-note">Hourly CFE Optimizer &mdash; 8,760-hour dispatch model</div>
+</footer>
+<div class="bottom-banner"></div>
+
+<script src="js/nav.js"></script>
+<script src="js/shared-data.js"></script>
+<script src="js/scenario-comparison-data.js"></script>
+<script>
+(function() {
+'use strict';
+
+const DATA = SCENARIO_COMPARISON;
+const ISOS = DATA.metadata.isos;
+const THRESHOLDS = DATA.metadata.thresholds;
+const YEAR_MAP = {};
+Object.entries(DATA.metadata.sbti_year_map).forEach(([k,v]) => YEAR_MAP[parseFloat(k)] = v);
+
+// Global target threshold (slider-controlled)
+let targetThreshold = 95;
+const SLIDER_STEPS = THRESHOLDS.filter(t => t >= 50); // [50, 55, 60, ..., 99.99]
+const slider = document.getElementById('targetSlider');
+const sliderVal = document.getElementById('targetVal');
+const sliderYear = document.getElementById('targetYear');
+
+function updateSliderDisplay() {
+    const t = SLIDER_STEPS[parseInt(slider.value)];
+    targetThreshold = t;
+    const tStr = t === Math.floor(t) ? t + '%' : t + '%';
+    sliderVal.textContent = tStr;
+    const yr = YEAR_MAP[t] || '?';
+    sliderYear.textContent = 'SBTi ' + yr;
+}
+updateSliderDisplay();
+
+// Single global ISO — all charts use this
+let globalIso = 'PJM';
+
+function renderAll(iso) {
+    globalIso = iso;
+    try { renderMixCharts(iso); } catch(e) { console.warn('renderMixCharts error for', iso, e); }
+    try { renderCostChart(iso); } catch(e) { console.warn('renderCostChart error for', iso, e); }
+    try { renderMacTimeline(iso); } catch(e) { console.warn('renderMacTimeline error for', iso, e); }
+    try { renderFirmChart(iso); } catch(e) { console.warn('renderFirmChart error for', iso, e); }
+    try { renderGasChart(iso); } catch(e) { console.warn('renderGasChart error for', iso, e); }
+    buildMetricTiles();
+}
+
+slider.addEventListener('input', () => {
+    updateSliderDisplay();
+    renderAll(globalIso);
+});
+
+// Helper: get annotation config for the target threshold vertical line
+function targetAnnotation(labels, trajRef) {
+    if (!labels || !trajRef || trajRef.length === 0) return {};
+    const idx = trajRef.findIndex(d => d.threshold === targetThreshold);
+    if (idx < 0) return {};
+    return {
+        targetLine: {
+            type: 'line',
+            xMin: idx, xMax: idx,
+            borderColor: 'rgba(14,165,233,0.5)', borderWidth: 2, borderDash: [6, 3],
+            label: {
+                display: true,
+                content: 'Target: ' + targetThreshold + '%',
+                position: 'start',
+                backgroundColor: 'rgba(14,165,233,0.85)',
+                color: '#fff',
+                font: { size: 10, weight: '600' },
+                padding: { top: 3, bottom: 3, left: 6, right: 6 },
+                borderRadius: 4,
+                yAdjust: -6,
+            }
+        }
+    };
+}
+
+// Match dashboard color palette — neutral scenario colors (no red/green good/bad signaling)
+// Scenario A = indigo, Scenario B = teal. Gas/fossil = warm reds/oranges.
+const COLORS = {
+    A: '#4F46E5', B: '#0891B2',
+    A85: 'rgba(79,70,229,0.85)', B85: 'rgba(8,145,178,0.85)',
+    A_fill: 'rgba(79,70,229,0.08)', B_fill: 'rgba(8,145,178,0.08)',
+    A_area: 'rgba(79,70,229,0.12)', B_area: 'rgba(8,145,178,0.12)',
+    nuclear: '#1E3A5F', geothermal: '#8B5CF6', solar: '#D97706', wind: '#16A34A',
+    ccs: '#0D9488', hydro: '#0284C7', battery: '#7C3AED', ldes: '#DB2777',
+    gas: '#DC2626',
+};
+const RES_RGB = {
+    nuclear: '30,58,95', geothermal: '139,92,246', solar: '245,158,11', wind: '34,197,94',
+    ccs_ccgt: '13,148,136', hydro: '14,165,233', battery: '139,92,246', ldes: '236,72,153',
+    gas: '220,38,38',
+};
+const RES_LABELS = {
+    nuclear: 'Nuclear', geothermal: 'Geothermal', ccs_ccgt: 'CCS-CCGT', solar: 'Solar', wind: 'Wind',
+    hydro: 'Hydro', battery: 'Battery', ldes: 'LDES', gas: 'Gas Backup',
+};
+
+// Clean firm tranche breakdown constants (from Step 3 cost optimization)
+const EXISTING_NUCLEAR_GW = { CAISO: 2.3, ERCOT: 2.7, PJM: 32.0, NYISO: 3.4, NEISO: 3.5, MISO: 12.0, SPP: 1.2 };
+const UPRATE_CAP_TWH = {};
+for (const [iso, gw] of Object.entries(EXISTING_NUCLEAR_GW)) {
+    UPRATE_CAP_TWH[iso] = Math.round(gw * 0.08 * 0.90 * 8760 / 1e3 * 1000) / 1000;
+}
+const GEO_CAP_TWH = 39.0; // CAISO only
+
+// Split clean_firm TWh into nuclear (existing + uprate + new build) and geothermal
+function splitCleanFirm(iso, totalCfTwh, existingCfTwh) {
+    const existTwh = Math.min(totalCfTwh, existingCfTwh);
+    const newCfTwh = Math.max(0, totalCfTwh - existTwh);
+    const uprateTwh = Math.min(newCfTwh, UPRATE_CAP_TWH[iso] || 0);
+    let remaining = Math.max(0, newCfTwh - uprateTwh);
+    let geoTwh = 0;
+    if (iso === 'CAISO') {
+        geoTwh = Math.min(remaining, GEO_CAP_TWH);
+        remaining = Math.max(0, remaining - geoTwh);
+    }
+    // remaining = new nuclear (or CCS from tranche 3, but for display we label it nuclear)
+    return {
+        nuclear_existing: existTwh,
+        nuclear_uprate: uprateTwh,
+        geothermal: geoTwh,
+        nuclear_new: remaining,
+    };
+}
+const GRID_MIX = DATA.metadata.grid_mix_shares;
+const DEMAND_TWH = DATA.metadata.base_demand_twh;
+
+const CHART_DEFAULTS = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { onClick: () => {}, labels: { color: 'rgba(0,0,0,0.6)', font: { size: 11 } } } },
+};
+
+function yearLabel(d) { return d.year + '\n(' + (d.threshold >= 99.99 ? '≥99.99' : d.threshold) + '%)'; }
+function pctLabel(d) { return (d.threshold >= 99.99 ? '≥99.99' : d.threshold) + '%'; }
+
+// Filter trajectory to thresholds >= 50%, no synthetic baseline
+function filterTraj(iso, rawTraj) {
+    const isoShares = (GRID_MIX || {})[iso] || {};
+    const existingCleanPct = Object.values(isoShares).reduce((s, v) => s + v, 0);
+    const filtered = rawTraj.filter(d => d.threshold >= 50);
+    return { traj: filtered, existingCleanPct };
+}
+function trajLabels(traj, existingCleanPct) {
+    return traj.map(d => d.year + '\n' + (d.threshold >= 99.99 ? '≥99.99' : d.threshold) + '%');
+}
+
+// ===== HERO STATS (all-region aggregates at 95%, static) =====
+function buildHeroStats() {
+    const container = document.getElementById('heroStats');
+    if (!container) return;
+    const t = 95;
+    let costA = 0, costB = 0, gasA = 0, gasB = 0;
+    ISOS.forEach(iso => {
+        const trajA = DATA.trajectories.pure_consequential[iso] || [];
+        const trajB = DATA.trajectories.hourly_matching[iso] || [];
+        const aT = trajA.find(d => d.threshold === t);
+        const bT = trajB.find(d => d.threshold === t);
+        if (aT && bT) {
+            costA += aT.effective_cost * (aT.demand_twh || DEMAND_TWH[iso]);
+            costB += bT.effective_cost * (bT.demand_twh || DEMAND_TWH[iso]);
+            gasA += (aT.new_gas_mw || 0);
+            gasB += (bT.new_gas_mw || 0);
+        }
+    });
+    const mult = costB > 0 ? (costA / costB).toFixed(2) : '—';
+    const savB = Math.round((costA - costB) / 1000);
+    const annuity = (1 - Math.pow(1.05, -25)) / 0.05;
+    const npv = Math.round(savB * annuity);
+    const gasGW = Math.round((gasA - gasB) / 1000);
+    container.innerHTML = `
+        <div class="hero-stat"><div class="stat-val" style="color:#FF6B6B;">${mult}&times;</div><div class="stat-label">Cost Multiple (All Regions, 95%)</div></div>
+        <div class="hero-stat"><div class="stat-val" style="color:#FCD34D;">$${savB}B/yr</div><div class="stat-label">Annual Savings</div></div>
+        <div class="hero-stat"><div class="stat-val" style="color:#6EE7B7;">$${npv}B</div><div class="stat-label">25-Year NPV (5% WACC)</div></div>
+        <div class="hero-stat"><div class="stat-val" style="color:#93C5FD;">${gasGW} GW</div><div class="stat-label">New Gas Build Avoided</div></div>
+    `;
+}
+
+// ===== METRIC TILES (region-specific, updates with ISO + slider) =====
+function buildMetricTiles() {
+    const container = document.getElementById('metricTiles');
+    if (!container) return;
+    const iso = globalIso;
+    const t = targetThreshold;
+    const tLabel = t + '%';
+    const trajA = DATA.trajectories.pure_consequential[iso] || [];
+    const trajB = getScenarioB(iso);
+    let aT = trajA.find(d => d.threshold === t);
+    let bT = trajB.find(d => d.threshold === t);
+    if (!aT && trajA.length > 0) {
+        aT = trajA.reduce((best, d) => (!best || Math.abs(d.threshold - t) < Math.abs(best.threshold - t)) ? d : best, null);
+    }
+    if (!bT && trajB.length > 0) {
+        bT = trajB.reduce((best, d) => (!best || Math.abs(d.threshold - t) < Math.abs(best.threshold - t)) ? d : best, null);
+    }
+    if (!aT || !bT) { container.innerHTML = ''; return; }
+
+    const demA = aT.demand_twh || DEMAND_TWH[iso];
+    const demB = bT.demand_twh || DEMAND_TWH[iso];
+    const annuity = (1 - Math.pow(1.05, -25)) / 0.05;
+
+    const mult = bT.effective_cost > 0 ? (aT.effective_cost / bT.effective_cost) : 1;
+    const annSave = (aT.effective_cost - bT.effective_cost) * demA;
+    const annSaveB = (annSave / 1000).toFixed(1);
+    const npvB = (annSave * annuity / 1000).toFixed(0);
+    const gap = (aT.effective_cost - bT.effective_cost).toFixed(1);
+
+    const gasA = aT.new_gas_mw || 0;
+    const gasB = bT.new_gas_mw || 0;
+    const totalGasA = aT.gas_backup_mw || 0;
+    const totalGasB = bT.gas_backup_mw || 0;
+    const gasAvoided = ((totalGasA - totalGasB) / 1000).toFixed(1);
+
+    const totalResA = Object.values(aT.resource_twh).reduce((s,v) => s + v, 0);
+    const totalResB = Object.values(bT.resource_twh).reduce((s,v) => s + v, 0);
+    const matchedA = t / 100 * demA;
+    const matchedB = t / 100 * demB;
+    const strandCleanA = Math.max(0, totalResA - matchedA);
+    const strandCleanB = Math.max(0, totalResB - matchedB);
+
+    const firmA = aT.firm_total_twh || (aT.resource_twh.clean_firm + (aT.resource_twh.ccs_ccgt || 0));
+    const firmB = bT.firm_total_twh || (bT.resource_twh.clean_firm + (bT.resource_twh.ccs_ccgt || 0));
+
+    const bWins = mult > 1.01;
+    const aWins = mult < 0.99;
+
+    // Heat-map class based on magnitude
+    function heatClass(ratio) {
+        if (ratio >= 1.5) return 'heat-red';
+        if (ratio >= 1.15) return 'heat-amber';
+        if (ratio >= 1.01) return 'heat-green';
+        return 'heat-neutral';
+    }
+
+    function heatTile(conclusionVal, conclusionCtx, heat, aTag, aVal, bTag, bVal) {
+        return `<div class="metric-tile">
+            <div class="tile-conclusion ${heat}">
+                <div class="conclusion-val">${conclusionVal}</div>
+                <div class="conclusion-context">${conclusionCtx}</div>
+            </div>
+            <div class="tile-details">
+                <div class="tile-ab-compact ab-a"><span class="ab-tag">Scenario A</span><span class="ab-num">${aVal}</span><br>${aTag}</div>
+                <div class="tile-ab-compact ab-b"><span class="ab-tag">Scenario B</span><span class="ab-num">${bVal}</span><br>${bTag}</div>
+            </div>
+        </div>`;
+    }
+
+    // 1. Cost multiple
+    const costConclusion = mult > 1.01
+        ? `${mult.toFixed(2)}&times;`
+        : mult < 0.99 ? `${(1/mult).toFixed(2)}&times;` : 'Parity';
+    const costCtx = mult > 1.01
+        ? `more expensive under <strong>Scenario A</strong> at ${tLabel}`
+        : mult < 0.99 ? `more expensive under <strong>Scenario B</strong> at ${tLabel}` : `at ${tLabel} in ${iso}`;
+    const costHeat = mult > 1.01 ? heatClass(mult) : mult < 0.99 ? heatClass(1/mult) : 'heat-neutral';
+
+    // 2. Annual savings
+    const savAbs = Math.abs(parseFloat(annSaveB));
+    const savConclusion = `$${savAbs.toFixed(1)}B/yr`;
+    const savCtx = parseFloat(annSaveB) > 0
+        ? `saved by <strong>Scenario B</strong> in ${iso}`
+        : `saved by <strong>Scenario A</strong> in ${iso}`;
+    const savHeat = savAbs > 5 ? 'heat-red' : savAbs > 1 ? 'heat-amber' : savAbs > 0.1 ? 'heat-green' : 'heat-neutral';
+
+    // 3. 25yr NPV
+    const npvAbs = Math.abs(parseFloat(npvB));
+    const npvConclusion = `$${npvAbs}B`;
+    const npvCtx = parseFloat(npvB) > 0
+        ? `25-year NPV savings (<strong>B vs A</strong>, 5% WACC)`
+        : `25-year NPV savings (<strong>A vs B</strong>, 5% WACC)`;
+    const npvHeat = npvAbs > 50 ? 'heat-red' : npvAbs > 10 ? 'heat-amber' : npvAbs > 1 ? 'heat-green' : 'heat-neutral';
+
+    // 4. Gas avoided
+    const gasAbsF = Math.abs(parseFloat(gasAvoided));
+    const gasConclusion = `${gasAbsF.toFixed(1)} GW`;
+    const gasCtx = parseFloat(gasAvoided) > 0
+        ? `gas capacity <strong>avoided</strong> by Scenario B`
+        : `<strong>additional</strong> gas in Scenario B`;
+    const gasHeat = parseFloat(gasAvoided) > 0
+        ? (gasAbsF > 20 ? 'heat-green' : gasAbsF > 5 ? 'heat-green' : 'heat-neutral')
+        : (gasAbsF > 5 ? 'heat-red' : 'heat-neutral');
+
+    // 5. Curtailment delta
+    const strandDelta = Math.round(strandCleanA - strandCleanB);
+    const strandAbs = Math.abs(strandDelta);
+    const strandConclusion = `${strandAbs} TWh`;
+    const strandCtx = strandDelta > 0
+        ? `more clean energy <strong>wasted</strong> in Scenario A`
+        : `more clean energy <strong>wasted</strong> in Scenario B`;
+    const strandHeat = strandAbs > 50 ? 'heat-amber' : strandAbs > 10 ? 'heat-green' : 'heat-neutral';
+
+    // 6. Clean firm delta
+    const firmDelta = Math.round(firmB - firmA);
+    const firmAbs = Math.abs(firmDelta);
+    const firmConclusion = `${firmAbs} TWh`;
+    const firmCtx = firmDelta > 0
+        ? `more clean firm in <strong>Scenario B</strong> — seeds learning curve`
+        : `more clean firm in <strong>Scenario A</strong>`;
+    const firmHeat = 'heat-blue';
+
+    container.innerHTML = [
+        heatTile(costConclusion, costCtx, costHeat, 'System cost', '$' + aT.effective_cost.toFixed(1) + '/MWh', 'System cost', '$' + bT.effective_cost.toFixed(1) + '/MWh'),
+        heatTile(savConclusion, savCtx, savHeat, 'Annual cost', '$' + (aT.annual_cost_billion || (aT.effective_cost * demA / 1000)).toFixed(1) + 'B', 'Annual cost', '$' + (bT.annual_cost_billion || (bT.effective_cost * demB / 1000)).toFixed(1) + 'B'),
+        heatTile(npvConclusion, npvCtx, npvHeat, '25yr NPV', '$' + (aT.npv_25yr_billion || 0).toFixed(0) + 'B', '25yr NPV', '$' + (bT.npv_25yr_billion || 0).toFixed(0) + 'B'),
+        heatTile(gasConclusion, gasCtx, gasHeat, 'Gas capacity', (totalGasA/1000).toFixed(0) + ' GW', 'Gas capacity', (totalGasB/1000).toFixed(0) + ' GW'),
+        heatTile(strandConclusion, strandCtx, strandHeat, 'Curtailed', Math.round(strandCleanA) + ' TWh', 'Curtailed', Math.round(strandCleanB) + ' TWh'),
+        heatTile(firmConclusion, firmCtx, firmHeat, 'Clean firm', Math.round(firmA) + ' TWh', 'Clean firm', Math.round(firmB) + ' TWh'),
+    ].join('');
+}
+
+// ===== ISO SELECTOR FACTORY =====
+function createIsoSelector(containerId, defaultIso, onChange) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    ISOS.forEach(iso => {
+        const btn = document.createElement('button');
+        btn.className = 'iso-btn' + (iso === defaultIso ? ' active' : '');
+        btn.textContent = iso;
+        btn.addEventListener('click', () => {
+            container.querySelectorAll('.iso-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            onChange(iso);
+        });
+        container.appendChild(btn);
+    });
+}
+
+// ===== Helper: get Scenario B trajectory for current target =====
+function getScenarioB(iso) {
+    // Parametric: if multi-target data exists, use it; otherwise fall back to single trajectory
+    const tKey = String(targetThreshold);
+    if (DATA.trajectories_b_by_target && DATA.trajectories_b_by_target[tKey]) {
+        return DATA.trajectories_b_by_target[tKey][iso] || [];
+    }
+    return DATA.trajectories.hourly_matching[iso] || [];
+}
+
+// ===== 1. MAC TIMELINE CHART =====
+let macTimelineChart;
+function renderMacTimeline(iso) {
+    document.getElementById('macTimelineTitle').innerHTML = iso + ' &mdash; Marginal $/tCO<sub>2</sub> by SBTi Year';
+    const { traj: fullA, existingCleanPct } = filterTraj(iso, DATA.trajectories.pure_consequential[iso] || []);
+    const { traj: fullB } = filterTraj(iso, getScenarioB(iso));
+    // Filter to only points with stepwise_mac
+    const ptsA = fullA.filter(d => d.stepwise_mac !== null && d.stepwise_mac !== undefined);
+    const ptsB = fullB.filter(d => d.stepwise_mac !== null && d.stepwise_mac !== undefined);
+    const labels = trajLabels(ptsA, existingCleanPct);
+
+    // Compute a reasonable y-axis max from finite values only
+    const finiteVals = [...ptsA, ...ptsB].map(d => d.stepwise_mac).filter(v => v < 9999 && v > 0);
+    const macYMax = finiteVals.length ? Math.ceil(Math.max(...finiteVals) * 1.15 / 50) * 50 : 500;
+
+    // For infinite MAC: show bar as null (no bar) and draw a symbol instead
+    // "No emissions displaced" means the cost increased but CO2 didn't change — MAC is undefined
+    const NO_DISP_SYMBOL = '\u26A0'; // ⚠ warning triangle
+
+    // Plugin to draw ⚠ symbols where MAC is infinite (no emissions displaced at that step)
+    const noDisplacementPlugin = {
+        id: 'noDisplacementSymbols',
+        afterDatasetsDraw(chart) {
+            const ctx = chart.ctx;
+            ctx.save();
+            const srcPts = [ptsA, ptsB];
+            const colors = [COLORS.A, COLORS.B];
+            const yScale = chart.scales.y;
+            const yPos = yScale.getPixelForValue(macYMax * 0.5); // center of chart
+            for (let di = 0; di < srcPts.length; di++) {
+                const pts = srcPts[di];
+                if (!pts) continue;
+                for (let i = 0; i < pts.length; i++) {
+                    if (pts[i].stepwise_mac >= 9999) {
+                        const meta = chart.getDatasetMeta(di);
+                        const bar = meta.data[i];
+                        if (!bar) continue;
+                        // Draw a circle with ⚠ symbol
+                        const cx = bar.x;
+                        const cy = yPos + (di === 0 ? -14 : 14); // offset A vs B
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, 13, 0, Math.PI * 2);
+                        ctx.fillStyle = di === 0 ? 'rgba(79,70,229,0.1)' : 'rgba(8,145,178,0.1)';
+                        ctx.fill();
+                        ctx.strokeStyle = colors[di];
+                        ctx.lineWidth = 1.5;
+                        ctx.setLineDash([3, 2]);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                        ctx.closePath();
+                        // Symbol text
+                        ctx.font = 'bold 12px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillStyle = colors[di];
+                        ctx.fillText(NO_DISP_SYMBOL, cx, cy);
+                    }
+                }
+            }
+            ctx.restore();
+        }
+    };
+
+    if (macTimelineChart) macTimelineChart.destroy();
+    macTimelineChart = new Chart(document.getElementById('macTimelineChart'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Scenario A',
+                    data: ptsA.map(d => d.stepwise_mac >= 9999 ? null : d.stepwise_mac),
+                    backgroundColor: 'rgba(79,70,229,0.45)',
+                    borderColor: COLORS.A,
+                    borderWidth: 1.5,
+                    borderRadius: 6,
+                    borderSkipped: 'start',
+                    barPercentage: 0.85,
+                    categoryPercentage: 0.85,
+                },
+                {
+                    label: 'Scenario B',
+                    data: ptsB.map(d => d.stepwise_mac >= 9999 ? null : d.stepwise_mac),
+                    backgroundColor: 'rgba(8,145,178,0.45)',
+                    borderColor: COLORS.B,
+                    borderWidth: 1.5,
+                    borderRadius: 6,
+                    borderSkipped: 'start',
+                    barPercentage: 0.85,
+                    categoryPercentage: 0.85,
+                }
+            ]
+        },
+        plugins: [noDisplacementPlugin],
+        options: {
+            ...CHART_DEFAULTS,
+            plugins: {
+                ...CHART_DEFAULTS.plugins,
+                legend: {
+                    onClick: () => {},
+                    labels: {
+                        color: 'rgba(0,0,0,0.6)', font: { size: 11 },
+                        generateLabels: chart => {
+                            const defaultLabels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                            defaultLabels.push({
+                                text: '\u26A0 No emissions displaced',
+                                fillStyle: 'rgba(0,0,0,0.06)',
+                                strokeStyle: 'rgba(0,0,0,0.3)',
+                                lineWidth: 1.5,
+                                lineDash: [3, 2],
+                                hidden: false,
+                                index: 99,
+                            });
+                            return defaultLabels;
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        title: ctx => {
+                            const idx = ctx[0].dataIndex;
+                            return ptsA[idx].year + ' (' + ptsA[idx].threshold + '% CFE)';
+                        },
+                        label: ctx => {
+                            const pts = ctx.datasetIndex === 0 ? ptsA : ptsB;
+                            const raw = pts[ctx.dataIndex].stepwise_mac;
+                            if (raw >= 9999) return ctx.dataset.label + ': \u26A0 No new CO\u2082 displaced at this step';
+                            return ctx.dataset.label + ': $' + Math.round(raw).toLocaleString() + '/tCO\u2082';
+                        }
+                    }
+                },
+                annotation: { annotations: targetAnnotation(labels, ptsA) },
+            },
+            scales: {
+                x: { ticks: { color: 'rgba(0,0,0,0.5)', font: { size: 10 }, maxRotation: 55 }, grid: { color: 'rgba(0,0,0,0.06)' } },
+                y: {
+                    max: macYMax,
+                    ticks: { color: 'rgba(0,0,0,0.5)', callback: v => '$' + v.toLocaleString() },
+                    grid: { color: 'rgba(0,0,0,0.08)' },
+                    title: { display: true, text: 'Marginal $/tCO\u2082', color: 'rgba(0,0,0,0.5)' },
+                }
+            }
+        }
+    });
+}
+// MAC init called from global renderAll()
+
+// ===== 2. GAS BACKUP CHART =====
+let gasChart;
+function renderGasChart(iso) {
+    document.getElementById('gasChartTitle').textContent = iso + ' \u2014 Gas Backup Capacity (MW)';
+    const { traj: trajA, existingCleanPct: gasPct } = filterTraj(iso, DATA.trajectories.pure_consequential[iso] || []);
+    const { traj: trajB } = filterTraj(iso, getScenarioB(iso));
+    const labels = trajLabels(trajA, gasPct);
+
+    if (gasChart) gasChart.destroy();
+    gasChart = new Chart(document.getElementById('gasChart'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Scenario A',
+                    data: trajA.map(d => d.gas_backup_mw),
+                    borderColor: COLORS.A85,
+                    backgroundColor: COLORS.A_area,
+                    fill: '+1',
+                    tension: 0.3,
+                    pointRadius: 5,
+                    pointBackgroundColor: COLORS.A,
+                    borderWidth: 2.5,
+                },
+                {
+                    label: 'Scenario B',
+                    data: trajB.map(d => d.gas_backup_mw),
+                    borderColor: COLORS.B85,
+                    backgroundColor: COLORS.B_fill,
+                    fill: 'origin',
+                    tension: 0.3,
+                    pointRadius: 5,
+                    pointBackgroundColor: COLORS.B,
+                    borderWidth: 2.5,
+                }
+            ]
+        },
+        options: {
+            ...CHART_DEFAULTS,
+            plugins: {
+                ...CHART_DEFAULTS.plugins,
+                tooltip: {
+                    callbacks: {
+                        title: ctx => {
+                            const idx = ctx[0].dataIndex;
+                            return trajA[idx].year + ' (' + trajA[idx].threshold + '% CFE)';
+                        },
+                        label: ctx => ctx.dataset.label + ': ' + Math.round(ctx.parsed.y).toLocaleString() + ' MW',
+                        afterBody: ctx => {
+                            const idx = ctx[0].dataIndex;
+                            const aVal = trajA[idx] ? trajA[idx].gas_backup_mw : 0;
+                            const bVal = trajB[idx] ? trajB[idx].gas_backup_mw : 0;
+                            const gap = aVal - bVal;
+                            return gap > 0 ? ['\u0394 Gap: ' + Math.round(gap).toLocaleString() + ' MW avoided'] : [];
+                        }
+                    }
+                },
+                annotation: { annotations: targetAnnotation(labels, trajA) },
+            },
+            scales: {
+                x: { ticks: { color: 'rgba(0,0,0,0.5)', font: { size: 10 }, maxRotation: 55 }, grid: { color: 'rgba(0,0,0,0.06)' } },
+                y: {
+                    ticks: { color: 'rgba(0,0,0,0.5)', callback: v => (v/1000).toFixed(0) + ' GW' },
+                    grid: { color: 'rgba(0,0,0,0.08)' },
+                    title: { display: true, text: 'Gas Backup Capacity (MW)', color: 'rgba(0,0,0,0.5)' },
+                }
+            }
+        }
+    });
+}
+// Gas init called from global renderAll()
+
+// ===== 4. WYN-PANEL RESOURCE MIX: existing (transparent) + new (saturated) + curtailment (striped) =====
+
+// Create diagonal stripe pattern for curtailment — bold stripes for visibility
+function createStripePattern(ctx, rgb) {
+    const size = 10;
+    const pCanvas = document.createElement('canvas');
+    pCanvas.width = size; pCanvas.height = size;
+    const pCtx = pCanvas.getContext('2d');
+    // Semi-transparent background fill
+    pCtx.fillStyle = 'rgba(' + rgb + ',0.12)';
+    pCtx.fillRect(0, 0, size, size);
+    // Bold diagonal stripes
+    pCtx.strokeStyle = 'rgba(' + rgb + ',0.7)';
+    pCtx.lineWidth = 3;
+    pCtx.beginPath();
+    pCtx.moveTo(0, size); pCtx.lineTo(size, 0);
+    pCtx.stroke();
+    pCtx.beginPath();
+    pCtx.moveTo(-3, 3); pCtx.lineTo(3, -3);
+    pCtx.stroke();
+    pCtx.beginPath();
+    pCtx.moveTo(size - 3, size + 3); pCtx.lineTo(size + 3, size - 3);
+    pCtx.stroke();
+    return ctx.createPattern(pCanvas, 'repeat');
+}
+
+// Resources that have existing grid share (for "existing" bars)
+const EXISTING_RES = ['ccs_ccgt', 'hydro', 'wind', 'solar']; // nuclear existing handled by splitCleanFirm
+// New-build resources (stacking order, bottom → top)
+const NEWBUILD_RES = ['solar', 'wind', 'hydro', 'battery', 'ldes', 'ccs_ccgt'];
+// Nuclear/geothermal are built from the clean_firm breakdown, rendered separately
+
+let mixChartA, mixChartB;
+function renderMixCharts(iso) {
+    document.getElementById('mixTitleA').textContent = iso + ' \u2014 Scenario A Resource Mix (TWh)';
+    document.getElementById('mixTitleB').textContent = iso + ' \u2014 Scenario B Resource Mix (TWh)';
+
+    const baseDemandTwh = DEMAND_TWH[iso];
+    const isoShares = (GRID_MIX || {})[iso] || {};
+
+    // Filter trajectory points to thresholds >= 50%
+    const trajA = (DATA.trajectories.pure_consequential[iso] || []).filter(d => d.threshold >= 50);
+    const trajB = getScenarioB(iso).filter(d => d.threshold >= 50);
+
+    // Labels: "Year\nThreshold%"
+    const labels = trajA.map(d => d.year + '\n' + (d.threshold >= 99.99 ? '≥99.99' : d.threshold) + '%');
+
+    // Compute existing TWh per non-nuclear resource
+    const existingTwh = {};
+    for (const res of EXISTING_RES) {
+        existingTwh[res] = (isoShares[res] || 0) / 100 * baseDemandTwh;
+    }
+    // Existing nuclear TWh (used by splitCleanFirm)
+    const existingNuclearTwh = (isoShares['clean_firm'] || 0) / 100 * baseDemandTwh;
+
+    function makeDatasets(traj, canvasId) {
+        const canvas = document.getElementById(canvasId);
+        const ctx = canvas.getContext('2d');
+        const datasets = [];
+
+        // Pre-compute clean_firm breakdown for each trajectory point
+        const cfBreakdown = traj.map(d => {
+            const totalCf = d.resource_twh.clean_firm || 0;
+            return splitCleanFirm(iso, totalCf, existingNuclearTwh);
+        });
+
+        // Pre-compute curtailment per trajectory point.
+        // Curtailment = total clean generation that structurally exceeds total demand.
+        // Battery/LDES are storage (not generation) — excluded from curtailment math.
+        // Demand line = total annual demand (d.demand_twh), not threshold% × demand.
+        const curtailData = traj.map((d, idx) => {
+            // Generation resources only — battery/ldes are storage, not curtailable gen
+            const totalProcured = Object.values(d.resource_twh).reduce((s, v) => s + v, 0);
+            const demandTwh = d.demand_twh || baseDemandTwh;
+            // Structural curtailment: clean gen procured beyond what total demand can absorb
+            const totalCurtailed = Math.max(0, totalProcured - demandTwh);
+
+            // Compute new-build TWh for each generation resource (excl. battery/ldes)
+            const cf = cfBreakdown[idx];
+            const newBuildTwh = {
+                solar: Math.max(0, (d.resource_twh.solar || 0) - (existingTwh.solar || 0)),
+                wind: Math.max(0, (d.resource_twh.wind || 0) - (existingTwh.wind || 0)),
+                hydro: Math.max(0, (d.resource_twh.hydro || 0) - (existingTwh.hydro || 0)),
+                ccs_ccgt: Math.max(0, (d.resource_twh.ccs_ccgt || 0) - (existingTwh.ccs_ccgt || 0)),
+                nuclear_uprate: cf.nuclear_uprate,
+                nuclear_new: cf.nuclear_new,
+                geothermal: cf.geothermal,
+            };
+            const totalNewBuild = Object.values(newBuildTwh).reduce((s, v) => s + v, 0);
+
+            // Pro-rata curtailment across generation new-build resources
+            const curtail = {};
+            for (const [res, val] of Object.entries(newBuildTwh)) {
+                curtail[res] = totalNewBuild > 1 ? totalCurtailed * (val / totalNewBuild) : 0;
+            }
+            curtail.total = totalCurtailed;
+            curtail.demandTwh = demandTwh;
+            return curtail;
+        });
+
+        // === 1) EXISTING RESOURCES (transparent, bottom of stack) ===
+
+        // Nuclear (existing)
+        if (existingNuclearTwh >= 0.5) {
+            datasets.push({
+                label: 'Nuclear (existing)',
+                data: cfBreakdown.map(b => Math.round(b.nuclear_existing)),
+                backgroundColor: 'rgba(' + RES_RGB.nuclear + ',0.18)',
+                borderColor: 'rgba(' + RES_RGB.nuclear + ',0.45)',
+                borderWidth: 1.5, borderRadius: 6, stack: 'mix',
+            });
+        }
+
+        // Other existing resources
+        for (const res of EXISTING_RES) {
+            const ex = existingTwh[res] || 0;
+            if (ex < 0.5) continue;
+            datasets.push({
+                label: (RES_LABELS[res] || res) + ' (existing)',
+                data: traj.map(() => Math.round(ex)),
+                backgroundColor: 'rgba(' + (RES_RGB[res] || '128,128,128') + ',0.18)',
+                borderColor: 'rgba(' + (RES_RGB[res] || '128,128,128') + ',0.45)',
+                borderWidth: 1.5, borderRadius: 6, stack: 'mix',
+            });
+        }
+
+        // === 2) NEW BUILD RESOURCES (solid, middle of stack) ===
+        // Subtract curtailed portion from solar/wind so bars show only UTILIZED generation.
+        // This ensures the demand line sits exactly at the boundary between utilized and curtailed.
+
+        for (const res of NEWBUILD_RES) {
+            datasets.push({
+                label: (RES_LABELS[res] || res) + ' (new)',
+                data: traj.map((d, i) => {
+                    const total = d.resource_twh[res] || 0;
+                    const ex = existingTwh[res] || 0;
+                    let newBuild = Math.max(0, total - ex);
+                    // Subtract pro-rata curtailed portion
+                    newBuild = Math.max(0, newBuild - (curtailData[i][res] || 0));
+                    return Math.round(newBuild);
+                }),
+                backgroundColor: 'rgba(' + (RES_RGB[res] || '128,128,128') + ',0.55)',
+                borderColor: 'rgba(' + (RES_RGB[res] || '128,128,128') + ',1)',
+                borderWidth: 1.5, borderRadius: 6, borderSkipped: 'start', stack: 'mix',
+            });
+        }
+
+        // Battery storage (shown separately from generation — cap stale data at 20% of demand)
+        // battery_dispatch_pct in the source is 0–1%, so correct value ≈ 1% of demand max.
+        // The 20% cap guards against a data bug in older JSON where battery_twh = demand_twh.
+        const battData = traj.map(d => {
+            const dem = d.demand_twh || baseDemandTwh;
+            const bat = Math.min(d.battery_twh || 0, 0.20 * dem);
+            return Math.round(bat);
+        });
+        if (battData.some(v => v > 0)) {
+            datasets.push({
+                label: 'Battery Storage (new)',
+                data: battData,
+                backgroundColor: 'rgba(' + RES_RGB.battery + ',0.55)',
+                borderColor: 'rgba(' + RES_RGB.battery + ',1)',
+                borderWidth: 1.5, borderRadius: 6, borderSkipped: 'start', stack: 'mix',
+            });
+        }
+
+        // Nuclear uprate + new build (combined as "Nuclear (new)") — subtract curtailment
+        datasets.push({
+            label: 'Nuclear (new)',
+            data: cfBreakdown.map((b, i) => {
+                const raw = b.nuclear_uprate + b.nuclear_new;
+                const curt = (curtailData[i].nuclear_uprate || 0) + (curtailData[i].nuclear_new || 0);
+                return Math.round(Math.max(0, raw - curt));
+            }),
+            backgroundColor: 'rgba(' + RES_RGB.nuclear + ',0.65)',
+            borderColor: 'rgba(' + RES_RGB.nuclear + ',1)',
+            borderWidth: 1.5, borderRadius: 6, borderSkipped: 'start', stack: 'mix',
+        });
+
+        // Geothermal (CAISO only) — subtract curtailment
+        if (iso === 'CAISO') {
+            datasets.push({
+                label: 'Geothermal (new)',
+                data: cfBreakdown.map((b, i) => {
+                    return Math.round(Math.max(0, b.geothermal - (curtailData[i].geothermal || 0)));
+                }),
+                backgroundColor: 'rgba(' + RES_RGB.geothermal + ',0.55)',
+                borderColor: 'rgba(' + RES_RGB.geothermal + ',1)',
+                borderWidth: 1.5, borderRadius: 6, borderSkipped: 'start', stack: 'mix',
+            });
+        }
+
+        // === 3) CURTAILMENT (diagonal stripes, top of stack) ===
+        // Structural curtailment: clean generation procured above total annual demand.
+        // Battery and LDES are storage, not generation — excluded from curtailment.
+        const curtailResources = [
+            { key: 'solar', label: 'Solar', rgb: RES_RGB.solar },
+            { key: 'wind', label: 'Wind', rgb: RES_RGB.wind },
+            { key: 'hydro', label: 'Hydro', rgb: RES_RGB.hydro },
+            { key: 'nuclear_uprate', label: 'Nuclear', rgb: RES_RGB.nuclear, combineWith: 'nuclear_new' },
+            { key: 'ccs_ccgt', label: 'CCS', rgb: RES_RGB.ccs_ccgt },
+            { key: 'geothermal', label: 'Geothermal', rgb: RES_RGB.geothermal, onlyIso: 'CAISO' },
+        ];
+        for (const cr of curtailResources) {
+            if (cr.onlyIso && iso !== cr.onlyIso) continue;
+            datasets.push({
+                label: cr.label + ' (curtailed)',
+                data: curtailData.map(c => {
+                    let v = c[cr.key] || 0;
+                    if (cr.combineWith) v += (c[cr.combineWith] || 0);
+                    return v >= 1 ? Math.round(v) : 0;
+                }),
+                backgroundColor: createStripePattern(ctx, cr.rgb),
+                borderColor: 'rgba(' + cr.rgb + ',0.4)',
+                borderWidth: 1, borderRadius: 6, borderSkipped: 'start', stack: 'mix',
+            });
+        }
+
+        // === 4) TOTAL DEMAND LINE ===
+        // Shows total annual electricity demand — bars above this line = structural curtailment.
+        datasets.push({
+            label: 'Total Demand',
+            data: curtailData.map(c => Math.round(c.demandTwh)),
+            type: 'line',
+            borderColor: 'rgba(0,0,0,0.7)', borderWidth: 2, borderDash: [6, 3],
+            pointRadius: 0, pointHoverRadius: 4, pointBackgroundColor: 'rgba(0,0,0,0.7)',
+            fill: false, tension: 0, yAxisID: 'y', order: -2,
+        });
+
+        // === 5) EXISTING CLEAN GEN REFERENCE LINE ===
+        const existingCleanTwh = Object.values(existingTwh).reduce((s, v) => s + v, 0) + existingNuclearTwh;
+        datasets.push({
+            label: 'Existing Clean',
+            data: traj.map(() => Math.round(existingCleanTwh)),
+            type: 'line',
+            borderColor: 'rgba(14,165,233,0.5)', borderWidth: 1.5, borderDash: [4, 4],
+            pointRadius: 0, pointHoverRadius: 3, pointBackgroundColor: 'rgba(14,165,233,0.5)',
+            fill: false, tension: 0, yAxisID: 'y', order: -1,
+        });
+
+        return datasets;
+    }
+
+    // Compute shared y-axis max across BOTH trajectories for equal scaling
+    // Stack = generation TWh + capped battery storage (demand line needs headroom too)
+    function computeMaxStack(traj) {
+        let maxV = 0;
+        traj.forEach(d => {
+            const genTwh = Object.values(d.resource_twh).reduce((s, v) => s + v, 0);
+            const dem = d.demand_twh || baseDemandTwh;
+            // Cap battery at 20% of demand to guard against stale data
+            const bat = Math.min(d.battery_twh || 0, 0.20 * dem);
+            maxV = Math.max(maxV, genTwh + bat, dem);
+        });
+        return maxV;
+    }
+    const sharedYMax = Math.ceil(Math.max(computeMaxStack(trajA), computeMaxStack(trajB)) / 50) * 50;
+
+    const opts = {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                onClick: () => {},
+                labels: {
+                    color: 'rgba(0,0,0,0.6)', font: { size: 10 },
+                    filter: item => {
+                        // Show representative legend items, not every duplicate
+                        if (item.text.includes('(curtailed)') && !item.text.startsWith('Solar'))
+                            return false;
+                        return true;
+                    }
+                }
+            },
+            tooltip: {
+                callbacks: {
+                    label: ctx => {
+                        const v = ctx.parsed.y;
+                        if (v === 0) return null;
+                        if (ctx.dataset.label === 'Total Demand')
+                            return 'Total Demand: ' + v.toLocaleString() + ' TWh';
+                        return ctx.dataset.label + ': ' + v.toLocaleString() + ' TWh';
+                    }
+                }
+            }
+        },
+        scales: {
+            x: { stacked: true, ticks: { color: 'rgba(0,0,0,0.5)', font: { size: 9 }, maxRotation: 55 }, grid: { color: 'rgba(0,0,0,0.06)' } },
+            y: { stacked: true, max: sharedYMax, ticks: { color: 'rgba(0,0,0,0.5)' }, grid: { color: 'rgba(0,0,0,0.08)' }, title: { display: true, text: 'TWh', color: 'rgba(0,0,0,0.5)' } },
+        }
+    };
+
+    const mixAnnotations = targetAnnotation(labels, trajA);
+    const optsA = { ...opts, plugins: { ...opts.plugins, annotation: { annotations: mixAnnotations } } };
+    const optsB = { ...opts, plugins: { ...opts.plugins, annotation: { annotations: mixAnnotations } } };
+
+    if (mixChartA) mixChartA.destroy();
+    if (mixChartB) mixChartB.destroy();
+    mixChartA = new Chart(document.getElementById('mixChartA'), { type: 'bar', data: { labels, datasets: makeDatasets(trajA, 'mixChartA') }, options: optsA });
+    mixChartB = new Chart(document.getElementById('mixChartB'), { type: 'bar', data: { labels, datasets: makeDatasets(trajB, 'mixChartB') }, options: optsB });
+}
+// Mix init called from global renderAll()
+
+// ===== 5. EFFECTIVE COST OVERLAY =====
+let costChart;
+function renderCostChart(iso) {
+    document.getElementById('costChartTitle').textContent = iso + ' \u2014 Effective System Cost ($/MWh)';
+    const { traj: trajA, existingCleanPct: costPct } = filterTraj(iso, DATA.trajectories.pure_consequential[iso] || []);
+    const { traj: trajB } = filterTraj(iso, getScenarioB(iso));
+    const labels = trajLabels(trajA, costPct);
+
+    if (costChart) costChart.destroy();
+    costChart = new Chart(document.getElementById('costChart'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Scenario A',
+                    data: trajA.map(d => d.effective_cost),
+                    borderColor: COLORS.A85,
+                    backgroundColor: COLORS.A_area,
+                    fill: '+1',
+                    tension: 0.3,
+                    pointRadius: 5,
+                    pointBackgroundColor: COLORS.A,
+                    borderWidth: 2.5,
+                },
+                {
+                    label: 'Scenario B',
+                    data: trajB.map(d => d.effective_cost),
+                    borderColor: COLORS.B85,
+                    backgroundColor: COLORS.B_fill,
+                    fill: 'origin',
+                    tension: 0.3,
+                    pointRadius: 5,
+                    pointBackgroundColor: COLORS.B,
+                    borderWidth: 2.5,
+                }
+            ]
+        },
+        options: {
+            ...CHART_DEFAULTS,
+            plugins: {
+                ...CHART_DEFAULTS.plugins,
+                tooltip: {
+                    callbacks: {
+                        title: ctx => {
+                            const idx = ctx[0].dataIndex;
+                            return trajA[idx].year + ' (' + trajA[idx].threshold + '% CFE)';
+                        },
+                        label: ctx => ctx.dataset.label + ': $' + ctx.parsed.y.toFixed(1) + '/MWh',
+                        afterBody: ctx => {
+                            const idx = ctx[0].dataIndex;
+                            const aVal = trajA[idx] ? trajA[idx].effective_cost : 0;
+                            const bVal = trajB[idx] ? trajB[idx].effective_cost : 0;
+                            const gap = aVal - bVal;
+                            return gap > 0 ? ['\u0394 Savings: $' + gap.toFixed(1) + '/MWh'] : [];
+                        }
+                    }
+                },
+                annotation: { annotations: targetAnnotation(labels, trajA) },
+            },
+            scales: {
+                x: { ticks: { color: 'rgba(0,0,0,0.5)', font: { size: 10 }, maxRotation: 55 }, grid: { color: 'rgba(0,0,0,0.06)' } },
+                y: {
+                    ticks: { color: 'rgba(0,0,0,0.5)', callback: v => '$' + v },
+                    grid: { color: 'rgba(0,0,0,0.08)' },
+                    title: { display: true, text: 'Effective $/MWh', color: 'rgba(0,0,0,0.5)' },
+                }
+            }
+        }
+    });
+}
+// Cost init called from global renderAll()
+
+// ===== 6. CLEAN FIRM DEPLOYMENT CHART =====
+let firmChart;
+function renderFirmChart(iso) {
+    document.getElementById('firmChartTitle').textContent = iso + ' \u2014 New Clean Firm + CCS Deployment (TWh)';
+    const { traj: trajA, existingCleanPct: firmPct } = filterTraj(iso, DATA.trajectories.pure_consequential[iso] || []);
+    const { traj: trajB } = filterTraj(iso, getScenarioB(iso));
+    const labels = trajLabels(trajA, firmPct);
+
+    if (firmChart) firmChart.destroy();
+    firmChart = new Chart(document.getElementById('firmChart'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Scenario A',
+                    data: trajA.map(d => d.firm_total_twh || (d.resource_twh.clean_firm + (d.resource_twh.ccs_ccgt || 0))),
+                    borderColor: COLORS.A85,
+                    backgroundColor: COLORS.A_fill,
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 5,
+                    pointBackgroundColor: COLORS.A,
+                    borderWidth: 2.5,
+                },
+                {
+                    label: 'Scenario B',
+                    data: trajB.map(d => d.firm_total_twh || (d.resource_twh.clean_firm + (d.resource_twh.ccs_ccgt || 0))),
+                    borderColor: COLORS.B85,
+                    backgroundColor: COLORS.B_fill,
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 5,
+                    pointBackgroundColor: COLORS.B,
+                    borderWidth: 2.5,
+                }
+            ]
+        },
+        options: {
+            ...CHART_DEFAULTS,
+            plugins: {
+                ...CHART_DEFAULTS.plugins,
+                tooltip: {
+                    callbacks: {
+                        title: ctx => {
+                            const idx = ctx[0].dataIndex;
+                            return trajA[idx].year + ' (' + trajA[idx].threshold + '% CFE)';
+                        },
+                        label: ctx => ctx.dataset.label + ': ' + Math.round(ctx.parsed.y) + ' TWh',
+                    }
+                },
+                annotation: { annotations: targetAnnotation(labels, trajA) },
+            },
+            scales: {
+                x: { ticks: { color: 'rgba(0,0,0,0.5)', font: { size: 10 }, maxRotation: 55 }, grid: { color: 'rgba(0,0,0,0.06)' } },
+                y: {
+                    ticks: { color: 'rgba(0,0,0,0.5)' },
+                    grid: { color: 'rgba(0,0,0,0.08)' },
+                    title: { display: true, text: 'New Clean Firm + CCS (TWh)', color: 'rgba(0,0,0,0.5)' },
+                }
+            }
+        }
+    });
+}
+// Firm init called from global renderAll()
+
+// ===== 7. SEQUENTIAL DEPLOYMENT QUEUE =====
+// Build queue from trajectory data with sequential constraint per ISO.
+// Each ISO must complete prior thresholds before advancing.
+// First step per ISO = existing grid mix → 50%.
+function buildSequentialQueue() {
+    const isoSteps = {};
+    const WHOLESALE_EST = { CAISO: 45, ERCOT: 30, PJM: 35, NYISO: 40, NEISO: 38, MISO: 32, SPP: 28 };
+    const EMISSION_EST = 0.45; // tCO2/MWh average displaced
+
+    ISOS.forEach(iso => {
+        const traj = DATA.trajectories.pure_consequential[iso] || [];
+        if (traj.length < 2) return;
+        const steps = [];
+        const gridMix = GRID_MIX[iso] || {};
+        const existingCleanPct = Object.values(gridMix).reduce((s, v) => s + v, 0);
+        const baseDem = DEMAND_TWH[iso];
+
+        // Step 0: existing → 50%
+        const first = traj[0];
+        const deltaRes0 = {};
+        for (const res of Object.keys(first.resource_twh)) {
+            const existing = (gridMix[res] || 0) / 100 * baseDem;
+            deltaRes0[res] = Math.max(0, (first.resource_twh[res] || 0) - existing);
+        }
+        const pctGain = Math.max(0, 50 - existingCleanPct);
+        const wholCost = WHOLESALE_EST[iso] || 35;
+        const costDelta0 = Math.max(0, first.effective_cost - wholCost) * (first.demand_twh || baseDem);
+        const co2Delta0 = pctGain / 100 * (first.demand_twh || baseDem) * EMISSION_EST;
+        const mac0 = co2Delta0 > 0.01 ? costDelta0 / co2Delta0 : 0;
+
+        steps.push({
+            iso: iso,
+            zone_label: Math.round(existingCleanPct) + '\u219250%',
+            marginal_mac: mac0,
+            delta_resources: deltaRes0,
+            delta_gas_mw: (first.gas_backup_mw || 0) - (first.gas_backup_mw || 0), // net 0 for base
+            is_base: true,
+        });
+
+        // Consecutive threshold steps
+        for (let i = 0; i < traj.length - 1; i++) {
+            const from = traj[i];
+            const to = traj[i + 1];
+            const dr = {};
+            for (const res of Object.keys(to.resource_twh)) {
+                dr[res] = (to.resource_twh[res] || 0) - (from.resource_twh[res] || 0);
+            }
+            steps.push({
+                iso: iso,
+                zone_label: from.threshold + '\u2192' + to.threshold + '%',
+                marginal_mac: to.stepwise_mac || 0,
+                delta_resources: dr,
+                delta_gas_mw: (to.gas_backup_mw || 0) - (from.gas_backup_mw || 0),
+            });
+        }
+        isoSteps[iso] = steps;
+    });
+
+    // Merge with sequential constraint: greedy cheapest-MAC first, but each ISO's
+    // steps must be taken in order (can't do 55→60% before 50→55%).
+    const ptrs = {};
+    ISOS.forEach(iso => { ptrs[iso] = 0; });
+    const queue = [];
+    const maxRows = 45;
+    while (queue.length < maxRows) {
+        let bestStep = null, bestIso = null, bestMac = Infinity;
+        for (const iso of ISOS) {
+            const steps = isoSteps[iso];
+            if (!steps || ptrs[iso] >= steps.length) continue;
+            const step = steps[ptrs[iso]];
+            const mac = step.marginal_mac;
+            if (mac < bestMac || (mac === bestMac && !bestStep)) {
+                bestMac = mac;
+                bestStep = step;
+                bestIso = iso;
+            }
+        }
+        if (!bestStep) break;
+        queue.push(bestStep);
+        ptrs[bestIso]++;
+    }
+    return queue;
+}
+
+function renderDominoTable() {
+    const table = document.getElementById('dominoTableA');
+    if (!table) return;
+    const queue = buildSequentialQueue();
+    let html = '<thead><tr><th>#</th><th>ISO</th><th>Zone</th><th>MAC</th><th>Primary Resource</th><th>\u0394Gas</th></tr></thead><tbody>';
+    queue.forEach((step, i) => {
+        const mac = step.marginal_mac >= 9999 ? '\u26A0' : '$' + Math.round(step.marginal_mac).toLocaleString();
+        const macClass = step.marginal_mac >= 9999 ? '' : step.marginal_mac < 0 ? 'mac-cheap' : step.marginal_mac < 100 ? 'mac-cheap' : step.marginal_mac < 500 ? 'mac-mid' : 'mac-exp';
+
+        const deltas = step.delta_resources || {};
+        const sorted = Object.entries(deltas).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1]));
+        let primaryParts = [];
+        sorted.forEach(([res, val]) => {
+            if (Math.abs(val) < 1) return;
+            if (primaryParts.length >= 2) return;
+            const name = res.replace('clean_firm','CF').replace('ccs_ccgt','CCS');
+            primaryParts.push(name + ' ' + (val > 0 ? '+' : '') + Math.round(val));
+        });
+
+        const dg = step.delta_gas_mw || 0;
+        const gasDir = dg > 500 ? 'positive' : dg < -500 ? 'negative' : '';
+        const baseTag = step.is_base ? ' style="background:rgba(14,165,233,0.04);"' : '';
+        html += `<tr${baseTag}>
+            <td class="num">${i+1}</td>
+            <td>${step.iso}</td>
+            <td>${step.zone_label}</td>
+            <td class="${macClass} num">${mac}</td>
+            <td>${primaryParts.join(', ')}</td>
+            <td class="${gasDir} num">${Math.abs(dg) < 500 ? '—' : (dg > 0 ? '+' : '') + (dg/1000).toFixed(1) + 'k'}</td>
+        </tr>`;
+    });
+    html += '</tbody>';
+    table.innerHTML = html;
+}
+
+renderDominoTable();
+
+// ===== 8. FOAK → NOAK LEARNING CURVE CHART =====
+// Learning curve data derived from SPEC.md FOAK→NOAK decision (Feb 25, 2026)
+// Nuclear LCOE: FOAK=$160/MWh, NOAK=$72/MWh (PJM reference)
+// Scenario B: FOAK starts 2029, NOAK by 2038 (concave exponent 0.6)
+// Scenario A: FOAK starts 2036, NOAK by 2048 (delayed, 12yr stretch)
+// Gas: $45-55/MWh base, +$20-30 carbon pricing trajectory (EPA SCC → ETS convergence)
+const FOAK_NOAK_YEARS_LOCAL = [2025, 2028, 2029, 2030, 2032, 2034, 2036, 2038, 2040, 2042, 2045, 2048, 2050];
+const CLEAN_FIRM_LEARNING_LOCAL = {
+    // Scenario A (conservative/delayed): flat FOAK until 2036, then concave ramp to NOAK by 2048
+    conservative: [160, 160, 160, 160, 160, 160, 160, 130, 114, 100, 86, 72, 72],
+    // Scenario B (central/early investment): learning starts 2029, NOAK by 2038
+    central:      [160, 160, 155, 126, 102, 85, 77, 72, 72, 72, 72, 72, 72],
+    // Optimistic bound: aggressive learning, NOAK by 2035
+    optimistic:   [160, 155, 140, 110, 85, 75, 72, 70, 68, 66, 65, 64, 63],
+};
+const GAS_TRUE_COST_LOCAL = {
+    // Gas CCGT base cost (fuel + O&M, no carbon price)
+    base:        [48, 50, 50, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61],
+    // Gas + carbon pricing (EPA SCC ramp: ~$51→$85/ton, converted to $/MWh at 0.4 tCO2/MWh)
+    with_carbon: [68, 72, 73, 75, 78, 82, 85, 88, 91, 94, 97, 100, 103],
+};
+
+function renderFoakNOAKChart() {
+    const canvas = document.getElementById('foakNOAKChart');
+    if (!canvas) return;
+
+    const years = FOAK_NOAK_YEARS_LOCAL;
+    const cf = CLEAN_FIRM_LEARNING_LOCAL;
+    const gas = GAS_TRUE_COST_LOCAL;
+
+    // Find crossover year (central clean firm vs gas with carbon)
+    let crossoverYear = null;
+    for (let i = 0; i < years.length - 1; i++) {
+        if (cf.central[i] > gas.with_carbon[i] && cf.central[i + 1] <= gas.with_carbon[i + 1]) {
+            const cfSlope = (cf.central[i + 1] - cf.central[i]) / (years[i + 1] - years[i]);
+            const gasSlope = (gas.with_carbon[i + 1] - gas.with_carbon[i]) / (years[i + 1] - years[i]);
+            crossoverYear = years[i] + (cf.central[i] - gas.with_carbon[i]) / (gasSlope - cfSlope);
+            break;
+        }
+    }
+
+    function interpAt(arr, yr) {
+        for (let i = 0; i < years.length - 1; i++) {
+            if (yr >= years[i] && yr <= years[i + 1]) {
+                const frac = (yr - years[i]) / (years[i + 1] - years[i]);
+                return arr[i] + frac * (arr[i + 1] - arr[i]);
+            }
+        }
+        return arr[arr.length - 1];
+    }
+
+    const crossoverCost = crossoverYear ? Math.round(interpAt(cf.central, crossoverYear)) : null;
+
+    // Scenario A (conservative learning — deferred procurement, less market seeding)
+    // Scenario B (central learning — early firm investment, rides the curve)
+    const scenA = cf.conservative;  // deferred → conservative cost trajectory
+    const scenB = cf.central;       // early investment → central learning trajectory
+
+    // Crossover: Scenario B vs gas+carbon
+    const annotations = {};
+    if (crossoverYear) {
+        annotations.crossoverLine = {
+            type: 'line',
+            xMin: crossoverYear, xMax: crossoverYear,
+            borderColor: 'rgba(0,0,0,0.25)', borderWidth: 1, borderDash: [4, 4],
+            label: {
+                display: true, content: 'Crossover ~' + Math.round(crossoverYear),
+                position: 'start', backgroundColor: 'rgba(0,0,0,0.7)', color: '#fff',
+                font: { size: 10, weight: '600' }, padding: { top: 4, bottom: 4, left: 6, right: 6 },
+                borderRadius: 4, yAdjust: -8
+            }
+        };
+        annotations.crossoverPoint = {
+            type: 'point', xValue: crossoverYear, yValue: crossoverCost,
+            radius: 7, backgroundColor: '#F59E0B',
+            borderColor: '#fff', borderWidth: 2.5
+        };
+    }
+
+    new Chart(canvas, {
+        type: 'line',
+        data: {
+            datasets: [
+                // Scenario A band (conservative → central range, light indigo fill)
+                {
+                    label: 'Scenario A band',
+                    data: years.map((y, i) => ({ x: y, y: scenA[i] })),
+                    borderColor: 'rgba(79,70,229,0.12)', borderWidth: 0, pointRadius: 0,
+                    fill: '+1', backgroundColor: 'rgba(79,70,229,0.08)', tension: 0.35, order: 6
+                },
+                // Scenario A main line (indigo/purple)
+                {
+                    label: 'Scenario A (deferred firm)',
+                    data: years.map((y, i) => ({ x: y, y: scenA[i] })),
+                    borderColor: COLORS.A, borderWidth: 3, pointRadius: 2,
+                    pointBackgroundColor: COLORS.A, pointHoverRadius: 5, fill: false, tension: 0.35, order: 2
+                },
+                // Scenario B band (central → optimistic range, light blue fill)
+                {
+                    label: 'Scenario B band lower',
+                    data: years.map((y, i) => ({ x: y, y: scenB[i] })),
+                    borderColor: 'rgba(8,145,178,0.12)', borderWidth: 0, pointRadius: 0,
+                    fill: '+1', backgroundColor: 'rgba(8,145,178,0.08)', tension: 0.35, order: 6
+                },
+                // Scenario B main line (blue)
+                {
+                    label: 'Scenario B (early firm investment)',
+                    data: years.map((y, i) => ({ x: y, y: scenB[i] })),
+                    borderColor: COLORS.B, borderWidth: 3, pointRadius: 2,
+                    pointBackgroundColor: COLORS.B, pointHoverRadius: 5, fill: false, tension: 0.35, order: 1
+                },
+                // Optimistic bound (hidden — just closes the Scenario B band)
+                {
+                    label: 'Optimistic bound',
+                    data: years.map((y, i) => ({ x: y, y: cf.optimistic[i] })),
+                    borderColor: 'rgba(8,145,178,0.12)', borderWidth: 0, pointRadius: 0,
+                    fill: false, tension: 0.35, order: 6
+                },
+                // Gas + carbon pricing (red reference)
+                {
+                    label: 'Gas + carbon pricing',
+                    data: years.map((y, i) => ({ x: y, y: gas.with_carbon[i] })),
+                    borderColor: COLORS.gas, borderWidth: 3, pointRadius: 2,
+                    pointBackgroundColor: COLORS.gas, pointHoverRadius: 5, fill: false, tension: 0.35, order: 3
+                },
+                // Gas (no carbon price — dashed red reference)
+                {
+                    label: 'Gas (no carbon price)',
+                    data: years.map((y, i) => ({ x: y, y: gas.base[i] })),
+                    borderColor: 'rgba(220,38,38,0.4)', borderWidth: 2, borderDash: [6, 4],
+                    pointRadius: 2, pointBackgroundColor: 'rgba(220,38,38,0.4)', pointBorderWidth: 0,
+                    pointHoverRadius: 4, fill: false, tension: 0.35, order: 5
+                }
+            ]
+        },
+        options: {
+            ...CHART_DEFAULTS,
+            animation: { duration: 1000, easing: 'easeOutQuart' },
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                ...CHART_DEFAULTS.plugins,
+                legend: {
+                    onClick: () => {},
+                    labels: {
+                        color: 'rgba(0,0,0,0.6)', font: { size: 11 },
+                        // Show only the main lines: Scenario A (1), Scenario B (3), Gas+carbon (5), Gas base (6)
+                        filter: item => [1, 3, 5, 6].includes(item.datasetIndex)
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        title: items => items[0].parsed.x + '',
+                        label: ctx => {
+                            // Hide band datasets from tooltip
+                            if ([0, 2, 4].includes(ctx.datasetIndex)) return null;
+                            return ctx.dataset.label + ': $' + ctx.parsed.y + '/MWh';
+                        }
+                    }
+                },
+                annotation: { annotations: annotations }
+            },
+            scales: {
+                x: {
+                    type: 'linear', min: 2024, max: 2051,
+                    ticks: { stepSize: 5, color: 'rgba(0,0,0,0.5)', font: { size: 11 }, callback: v => v },
+                    grid: { color: 'rgba(0,0,0,0.06)' },
+                    title: { display: true, text: 'SBTi Target Year', color: 'rgba(0,0,0,0.5)', font: { size: 10 } }
+                },
+                y: {
+                    min: 0, max: 180,
+                    ticks: { stepSize: 20, color: 'rgba(0,0,0,0.5)', font: { size: 10 }, callback: v => '$' + v },
+                    grid: { color: 'rgba(0,0,0,0.08)' },
+                    title: { display: true, text: 'LCOE ($/MWh)', color: 'rgba(0,0,0,0.5)', font: { size: 10 } }
+                }
+            }
+        }
+    });
+}
+renderFoakNOAKChart();
+buildHeroStats();
+
+// ===== GLOBAL ISO SELECTOR — single toggle for ALL charts =====
+createIsoSelector('globalIsoSelector', 'PJM', iso => renderAll(iso));
+renderAll('PJM');
+
+})();
+</script>
+</body>
+</html>
