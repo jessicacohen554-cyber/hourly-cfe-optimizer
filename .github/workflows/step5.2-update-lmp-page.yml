@@ -1,4 +1,4 @@
-name: "Step 6.2: Update LMP Page"
+name: "Step 5.2: Update LMP Page"
 
 # Runs scripts to populate the Wholesale Price (LMP) page:
 #   1. step5_compute_lmp_prices.py — synthetic 8760-hour LMP per ISO × threshold × fuel level
@@ -51,7 +51,7 @@ on:
         type: string
 
 env:
-  BRANCH_PREFIX: step6-2-lmp
+  BRANCH_PREFIX: step5-2-lmp
 
 jobs:
   prepare:
