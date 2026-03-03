@@ -81,7 +81,7 @@ def load_from_co2_batches(batch_dir, isos, thresholds):
     """Reassemble results dict from batched co2 result files.
 
     Reads _config.json, per-ISO meta files, and per-ISO/threshold files
-    written by step6_recompute_co2.py.
+    written by step5_compute_co2.py.
     """
     import glob as _glob
 
@@ -123,7 +123,7 @@ print("Loading data...")
 # Priority: (1) CO2 parquets, (2) monolithic JSON, (3) batched CO2 JSONs (legacy)
 data = None
 
-# Try CO2 parquets first (preferred — output of step6_recompute_co2.py)
+# Try CO2 parquets first (preferred — output of step5_compute_co2.py)
 if os.path.isdir(CO2_BATCH_DIR):
     co2_parquets = [f for f in os.listdir(CO2_BATCH_DIR) if f.endswith('.parquet')]
     if co2_parquets:
@@ -157,7 +157,7 @@ with open(MAC_STATS_PATH) as f:
     mac_stats = json.load(f)
 print(f"  MAC stats: {os.path.getsize(MAC_STATS_PATH) / 1024:.0f} KB")
 
-# Optimal targets (from step6_compute_optimal_targets.py) — optional
+# Optimal targets (from step5_compute_optimal_targets.py) — optional
 OPTIMAL_TARGETS_PATH = os.path.join(STEP5_DIR, 'optimal_targets.json')
 optimal_targets = {}
 if os.path.exists(OPTIMAL_TARGETS_PATH):
@@ -165,7 +165,7 @@ if os.path.exists(OPTIMAL_TARGETS_PATH):
         optimal_targets = json.load(f)
     print(f"  Optimal targets: {os.path.getsize(OPTIMAL_TARGETS_PATH) / 1024:.0f} KB")
 else:
-    print("  Optimal targets: not found (step6_compute_optimal_targets.py not yet run)")
+    print("  Optimal targets: not found (step5_compute_optimal_targets.py not yet run)")
 
 # Filter ISOS to only those present in BOTH results and mac_stats
 results_isos = set(data.get('results', {}).keys())
@@ -1454,13 +1454,13 @@ else:
     print("  No DG MAC data in mac_stats.json — skipping")
 
 # ============================================================================
-# OPTIMAL TARGETS (from step6_compute_optimal_targets.py)
+# OPTIMAL TARGETS (from step5_compute_optimal_targets.py)
 # ============================================================================
 if optimal_targets:
     print("Adding optimal targets data to shared-data.js...")
     lines.append('// ============================================================================')
     lines.append('// OPTIMAL CFE TARGETS — MAC × DAC crossover analysis')
-    lines.append('// Source: step6_compute_optimal_targets.py → optimal_targets.json')
+    lines.append('// Source: step5_compute_optimal_targets.py → optimal_targets.json')
     lines.append('// Crossover range = 3 grid cost tiers × 3 DAC scenarios = 9 combos')
     lines.append('// No-regrets: minimum resource floor across crossover range × L/M/H demand growth')
     lines.append('// ============================================================================')

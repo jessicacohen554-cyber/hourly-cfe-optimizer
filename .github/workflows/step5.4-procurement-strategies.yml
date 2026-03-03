@@ -102,7 +102,7 @@ jobs:
         run: |
           QUICK_FLAG=""
           if [ "${{ inputs.mode }}" = "quick" ]; then QUICK_FLAG="--quick"; fi
-          python scripts/step6_5_strategy1_consequential.py \
+          python scripts/step5_5_strategy1_consequential.py \
             --iso ${{ matrix.iso }} $QUICK_FLAG
 
       - name: "Strategy 2: Hourly — ${{ matrix.iso }}"
@@ -110,7 +110,7 @@ jobs:
         run: |
           QUICK_FLAG=""
           if [ "${{ inputs.mode }}" = "quick" ]; then QUICK_FLAG="--quick"; fi
-          python scripts/step6_5_strategy2_hourly.py \
+          python scripts/step5_5_strategy2_hourly.py \
             --iso ${{ matrix.iso }} $QUICK_FLAG
 
       - name: "Strategy 3: Annual — ${{ matrix.iso }}"
@@ -118,7 +118,7 @@ jobs:
         run: |
           QUICK_FLAG=""
           if [ "${{ inputs.mode }}" = "quick" ]; then QUICK_FLAG="--quick"; fi
-          python scripts/step6_5_strategy3_annual.py \
+          python scripts/step5_5_strategy3_annual.py \
             --iso ${{ matrix.iso }} $QUICK_FLAG
 
       - name: Upload artifact

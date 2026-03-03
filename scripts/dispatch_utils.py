@@ -2,7 +2,7 @@
 """
 Shared Dispatch Utilities — Single source of truth for hourly dispatch reconstruction.
 ======================================================================================
-Extracted from step6_recompute_co2.py to avoid duplicating dispatch logic between the CO2
+Extracted from step5_compute_co2.py to avoid duplicating dispatch logic between the CO2
 model and the LMP pricing module. Both import from here.
 
 Provides:
@@ -39,60 +39,34 @@ except ImportError:
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(SCRIPT_DIR, 'data')
 
-H = 8760
-DATA_YEAR = '2025'
+# Import shared constants from pipeline_config (single source of truth)
+from pipeline_config import (
+    ISOS, OFFSHORE_ISOS,
+    OFFSHORE_WIND_CAP_TWH, CCS_CAP_TWH, GEOTHERMAL_CAP_TWH,
+    BATTERY_EFFICIENCY, BATTERY_DURATION_HOURS,
+    BATTERY8_EFFICIENCY, BATTERY8_DURATION_HOURS,
+    LDES_EFFICIENCY, LDES_DURATION_HOURS, LDES_WINDOW_DAYS,
+    H2_EFFICIENCY, H2_DURATION_HOURS, H2_WINDOW_DAYS,
+    GRID_MIX_SHARES, REGIONAL_DEMAND_TWH,
+    WHOLESALE_PRICES, FUEL_ADJUSTMENTS,
+    CCS_RESIDUAL_EMISSION_RATE, COAL_OIL_RETIREMENT_THRESHOLD,
+    H,
+)
 
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
+DATA_YEAR = '2025'
 RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']
 
-# ISOs with offshore wind resource potential
-OFFSHORE_ISOS = ['NYISO', 'NEISO', 'PJM', 'CAISO']
-
-# Resource capacity caps (TWh) — enforced in optimization and scenarios
-OFFSHORE_WIND_CAP_TWH = {'NYISO': 37, 'NEISO': 37, 'PJM': 30, 'CAISO': 20}
-CCS_CAP_TWH = {'CAISO': 0, 'ERCOT': 85, 'PJM': 120, 'NYISO': 15, 'NEISO': 10, 'MISO': 95, 'SPP': 110}
-GEOTHERMAL_CAP_TWH = {'CAISO': 39}  # CAISO only
+# Alias for backward compatibility
+BASE_DEMAND_TWH = REGIONAL_DEMAND_TWH
 
 # ══════════════════════════════════════════════════════════════════════════════
-# STORAGE PARAMETERS (must match Step 1 / optimizer)
-# ══════════════════════════════════════════════════════════════════════════════
-
-BATTERY_EFFICIENCY = 0.85
-BATTERY_DURATION_HOURS = 4
-BATTERY8_EFFICIENCY = 0.85
-BATTERY8_DURATION_HOURS = 8
-LDES_EFFICIENCY = 0.50
-LDES_DURATION_HOURS = 100
-LDES_WINDOW_DAYS = 7
-H2_EFFICIENCY = 0.35           # Green H2: electrolysis (70%) × storage (95%) × turbine (55%)
-H2_DURATION_HOURS = 1000       # ~42 days at full power (salt cavern)
-H2_WINDOW_DAYS = 30            # 30-day rolling window for multi-week weather bridging
-
-# ══════════════════════════════════════════════════════════════════════════════
-# REGIONAL CONSTANTS
+# DISPATCH-SPECIFIC CONSTANTS (not in pipeline_config)
 # ══════════════════════════════════════════════════════════════════════════════
 
 HYDRO_CAPS = {
     'CAISO': 30, 'ERCOT': 5, 'PJM': 15, 'NYISO': 40, 'NEISO': 30,
     'MISO': 1.6, 'SPP': 4.3,
 }
-
-GRID_MIX_SHARES = {
-    'CAISO': {'clean_firm': 7.9, 'solar': 22.3, 'wind': 8.8, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 9.5},
-    'ERCOT': {'clean_firm': 8.6, 'solar': 13.8, 'wind': 23.6, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 0.1},
-    'PJM':   {'clean_firm': 32.1, 'solar': 2.9, 'wind': 3.8, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 1.8},
-    'NYISO': {'clean_firm': 18.4, 'solar': 0.0, 'wind': 4.7, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 15.9},
-    'NEISO': {'clean_firm': 23.8, 'solar': 1.4, 'wind': 3.9, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 4.4},
-    'MISO':  {'clean_firm': 13.1, 'solar': 2.1, 'wind': 14.5, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 1.6},
-    'SPP':   {'clean_firm': 5.2, 'solar': 0.4, 'wind': 37.1, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 4.3},
-}
-
-BASE_DEMAND_TWH = {
-    'CAISO': 224.0, 'ERCOT': 488.0, 'PJM': 843.3, 'NYISO': 151.6, 'NEISO': 115.3,
-    'MISO': 660.0, 'SPP': 296.0,
-}
-
-COAL_OIL_RETIREMENT_THRESHOLD = 70.0
 
 COAL_CAP_TWH = {
     'CAISO': 0.00, 'ERCOT': 67.58, 'PJM': 139.09, 'NYISO': 0.00, 'NEISO': 0.31,
@@ -103,9 +77,7 @@ OIL_CAP_TWH = {
     'MISO': 0.50, 'SPP': 0.20,
 }
 
-CCS_RESIDUAL_EMISSION_RATE = 0.037  # tCO2/MWh after 90% capture
-
-# Nuclear seasonal derate (from Step 1)
+# Nuclear seasonal derate — detailed monthly profiles (from Step 1)
 NUCLEAR_SHARE_OF_CLEAN_FIRM = {
     'CAISO': 0.70, 'ERCOT': 1.0, 'PJM': 1.0, 'NYISO': 1.0, 'NEISO': 1.0,
     'MISO': 1.0, 'SPP': 1.0,
@@ -125,18 +97,6 @@ NUCLEAR_MONTHLY_CF = {
               7: 0.99, 8: 0.97, 9: 0.93, 10: 0.88, 11: 0.91, 12: 1.0},
     'SPP':   {1: 1.0, 2: 1.0, 3: 0.90, 4: 0.80, 5: 0.88, 6: 0.97,
               7: 0.97, 8: 0.96, 9: 0.88, 10: 0.80, 11: 0.85, 12: 1.0},
-}
-
-# Wholesale prices and fuel adjustments (from Step 3)
-WHOLESALE_PRICES = {'CAISO': 30, 'ERCOT': 27, 'PJM': 34, 'NYISO': 42, 'NEISO': 41, 'MISO': 30, 'SPP': 25}
-FUEL_ADJUSTMENTS = {
-    'CAISO': {'Low': -5, 'Medium': 0, 'High': 10},
-    'ERCOT': {'Low': -7, 'Medium': 0, 'High': 12},
-    'PJM':   {'Low': -6, 'Medium': 0, 'High': 11},
-    'NYISO': {'Low': -4, 'Medium': 0, 'High': 8},
-    'NEISO': {'Low': -4, 'Medium': 0, 'High': 8},
-    'MISO':  {'Low': -6, 'Medium': 0, 'High': 11},
-    'SPP':   {'Low': -5, 'Medium': 0, 'High': 10},
 }
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -174,7 +134,7 @@ def get_demand_profile(iso, demand_data):
 def get_supply_profiles(iso, gen_profiles):
     """Get generation shape profiles — Step 1 version with nuclear seasonal derate.
 
-    This is the authoritative version. step6_recompute_co2.py's simpler version (flat
+    This is the authoritative version. step5_compute_co2.py's simpler version (flat
     clean_firm) is preserved for backward compatibility but new code should use this.
     """
     profiles = {}
@@ -734,7 +694,7 @@ def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
         supply_matrix: optional (N_RESOURCES, H) numpy array from build_supply_matrix().
             If provided, skips per-call array conversion (faster for batch calls).
         detailed: if True, also compute per-resource matched/surplus arrays and
-            storage charge profiles. Used by step5_build_dispatch_cache and step6_compressed_day.
+            storage charge profiles. Used by step4_build_dispatch_cache and step5_compress_day_profiles.
         h2_dispatch_pct: green H2 seasonal storage capacity as % of demand (default 0).
 
     Returns:

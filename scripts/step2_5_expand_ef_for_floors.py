@@ -9,7 +9,7 @@ existing nuclear is high and the floor ratchet accumulates aggressively.
 
 Solution: Simulate Scenario A's floor progression, identify the floor constraints
 at each threshold, then extract PFS mixes satisfying those floors and append them
-to the EF parquets. This way step6_scenario_a.py never needs PFS fallback.
+to the EF parquets. This way step5_scenario_a_consequential.py never needs PFS fallback.
 
 Inputs:
   - data/step1-pfs-parquets/{ISO}_t{threshold}_raw_pfs.parquet (PFS mixes)
@@ -326,7 +326,7 @@ def main():
         print("Run without --dry-run to apply changes.")
     else:
         print(f"\nTotal mixes added across all ISOs: {log['total_added']}")
-        print("\nIMPORTANT: If you modified parquets, re-run step7_generate_shared_data.py")
+        print("\nIMPORTANT: If you modified parquets, re-run step6_generate_shared_data.py")
         print("to update dashboard/js/shared-data.js with the expanded EF.")
 
     print("\nDone.")
