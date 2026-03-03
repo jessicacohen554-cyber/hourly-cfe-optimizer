@@ -10,45 +10,48 @@
 
 var RESOURCE_COLORS = {
     // Full opacity (borders, lines)
-    solar:      '#F59E0B',
-    wind:       '#22C55E',
-    hydro:      '#0EA5E9',
-    nuclear:    '#7C3AED',
-    ccs:        '#0891B2',
-    cleanFirm:  '#1E3A5F',
-    battery:    '#8B5CF6',
-    ldes:       '#E91E63',
-    greenH2:    '#10B981',
-    geothermal: '#10B981',
-    storage:    '#EF4444',
-    gap:        '#D1D5DB',
-    fossilGas:  '#6B7280',
-    fossilCoal: '#374151',
-    fossilOil:  '#92400E',
+    solar:        '#F59E0B',
+    wind:         '#22C55E',
+    offshoreWind: '#009688',
+    hydro:        '#0EA5E9',
+    nuclear:      '#6366F1',
+    ccs:          '#64748B',
+    cleanFirm:    '#6366F1',
+    battery:      '#8B5CF6',
+    ldes:         '#E91E63',
+    greenH2:      '#10B981',
+    geothermal:   '#B45309',
+    storage:      '#EF4444',
+    gap:          '#D1D5DB',
+    fossilGas:    '#6B7280',
+    fossilCoal:   '#374151',
+    fossilOil:    '#92400E',
 
     // Transparent fills (55% opacity)
-    solarT:      'rgba(245, 158, 11, 0.55)',
-    windT:       'rgba(34, 197, 94, 0.55)',
-    hydroT:      'rgba(14, 165, 233, 0.55)',
-    nuclearT:    'rgba(124, 58, 237, 0.55)',
-    ccsT:        'rgba(8, 145, 178, 0.55)',
-    cleanFirmT:  'rgba(30, 58, 95, 0.55)',
-    batteryT:    'rgba(139, 92, 246, 0.55)',
-    ldesT:       'rgba(233, 30, 99, 0.55)',
-    greenH2T:    'rgba(16, 185, 129, 0.55)',
-    geothermalT: 'rgba(16, 185, 129, 0.55)',
-    storageT:    'rgba(239, 68, 68, 0.55)',
-    gapT:        'rgba(209, 213, 219, 0.55)',
+    solarT:        'rgba(245, 158, 11, 0.55)',
+    windT:         'rgba(34, 197, 94, 0.55)',
+    offshoreWindT: 'rgba(0, 150, 136, 0.55)',
+    hydroT:        'rgba(14, 165, 233, 0.55)',
+    nuclearT:      'rgba(99, 102, 241, 0.55)',
+    ccsT:          'rgba(100, 116, 139, 0.55)',
+    cleanFirmT:    'rgba(99, 102, 241, 0.55)',
+    batteryT:      'rgba(139, 92, 246, 0.55)',
+    ldesT:         'rgba(233, 30, 99, 0.55)',
+    greenH2T:      'rgba(16, 185, 129, 0.55)',
+    geothermalT:   'rgba(180, 83, 9, 0.55)',
+    storageT:      'rgba(239, 68, 68, 0.55)',
+    gapT:          'rgba(209, 213, 219, 0.55)',
 
     // Light backgrounds (8% opacity)
-    solarBg:   'rgba(245, 158, 11, 0.08)',
-    windBg:    'rgba(34, 197, 94, 0.08)',
-    hydroBg:   'rgba(14, 165, 233, 0.08)',
-    nuclearBg: 'rgba(124, 58, 237, 0.08)',
-    ccsBg:     'rgba(8, 145, 178, 0.08)',
-    batteryBg: 'rgba(139, 92, 246, 0.08)',
-    ldesBg:    'rgba(233, 30, 99, 0.08)',
-    storageBg: 'rgba(239, 68, 68, 0.08)'
+    solarBg:        'rgba(245, 158, 11, 0.08)',
+    windBg:         'rgba(34, 197, 94, 0.08)',
+    offshoreWindBg: 'rgba(0, 150, 136, 0.08)',
+    hydroBg:        'rgba(14, 165, 233, 0.08)',
+    nuclearBg:      'rgba(99, 102, 241, 0.08)',
+    ccsBg:          'rgba(100, 116, 139, 0.08)',
+    batteryBg:      'rgba(139, 92, 246, 0.08)',
+    ldesBg:         'rgba(233, 30, 99, 0.08)',
+    storageBg:      'rgba(239, 68, 68, 0.08)'
 };
 
 var ISO_COLORS = {
@@ -92,4 +95,4 @@ var SEMANTIC_COLORS = {
 };
 
 // Resource stack order (for stacked charts — bottom to top)
-var RESOURCE_STACK_ORDER = ['solar', 'wind', 'hydro', 'nuclear', 'ccs', 'battery', 'ldes', 'greenH2', 'geothermal', 'gap'];
+var RESOURCE_STACK_ORDER = ['solar', 'wind', 'offshoreWind', 'hydro', 'nuclear', 'ccs', 'battery', 'ldes', 'greenH2', 'geothermal', 'gap'];
