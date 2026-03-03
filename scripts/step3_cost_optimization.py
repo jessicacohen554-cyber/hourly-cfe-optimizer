@@ -1700,8 +1700,11 @@ def build_winner_scenario(arrays, extras, best_idx, sens, iso, demand_twh,
     sol = int(arrays['solar'][best_idx])
     wnd = int(arrays['wind'][best_idx])
     hyd = int(arrays['hydro'][best_idx])
-    ccs_alloc = max(0, 100 - (cf + sol + wnd + hyd))
+    osw_arr = arrays.get('offshore_wind')
+    osw = int(osw_arr[best_idx]) if osw_arr is not None else 0
+    ccs_alloc = max(0, 100 - (cf + sol + wnd + hyd + osw))
     bat8_arr = arrays.get('battery8_dispatch_pct')
+    h2_arr = arrays.get('h2_dispatch_pct')
 
     # Tranche detail (scenario-dependent: which is cheaper, nuclear or CCS?)
     tranche3_is_nuclear = nuclear_price <= ccs_price
@@ -1721,6 +1724,7 @@ def build_winner_scenario(arrays, extras, best_idx, sens, iso, demand_twh,
             'clean_firm': cf,
             'solar': sol,
             'wind': wnd,
+            'offshore_wind': osw,
             'ccs_ccgt': ccs_alloc,
             'hydro': hyd,
         },
@@ -1728,6 +1732,7 @@ def build_winner_scenario(arrays, extras, best_idx, sens, iso, demand_twh,
         'battery_dispatch_pct': round(float(arrays['battery_dispatch_pct'][best_idx]), 4),
         'battery8_dispatch_pct': round(float(bat8_arr[best_idx]), 4) if bat8_arr is not None else 0.0,
         'ldes_dispatch_pct': round(float(arrays['ldes_dispatch_pct'][best_idx]), 4),
+        'h2_dispatch_pct': round(float(h2_arr[best_idx]), 4) if h2_arr is not None else 0.0,
         'costs': {
             'total_cost': round(tc_val, 2),
             'effective_cost': round(ec_val, 2),
@@ -2069,8 +2074,10 @@ def load_pfs_post_ef(input_dir, selected_isos=None):
 
 def arrays_to_mix_dict(arrays, idx):
     """Extract a single mix from arrays as a dict."""
+    osw_arr = arrays.get('offshore_wind')
+    osw = int(osw_arr[idx]) if osw_arr is not None else 0
     ccs_pct = max(0, 100 - (int(arrays['clean_firm'][idx]) + int(arrays['solar'][idx]) +
-                             int(arrays['wind'][idx]) + int(arrays['hydro'][idx])))
+                             int(arrays['wind'][idx]) + int(arrays['hydro'][idx]) + osw))
     bat8 = arrays.get('battery8_dispatch_pct')
     h2 = arrays.get('h2_dispatch_pct')
     return {
@@ -2078,6 +2085,7 @@ def arrays_to_mix_dict(arrays, idx):
             'clean_firm': int(arrays['clean_firm'][idx]),
             'solar': int(arrays['solar'][idx]),
             'wind': int(arrays['wind'][idx]),
+            'offshore_wind': osw,
             'ccs_ccgt': ccs_pct,
             'hydro': int(arrays['hydro'][idx]),
         },
