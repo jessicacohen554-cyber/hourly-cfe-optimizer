@@ -84,13 +84,6 @@ const MIX_COLORS = {
     h2:            { fill: 'rgba(16,185,129,0.50)',  border: '#10B981' }
 };
 
-// --- Resource TWh Caps (physics/geological constraints) ---
-const RESOURCE_CAPS = {
-    offshore_wind: { NYISO: 37, NEISO: 37, PJM: 30, CAISO: 20 },
-    ccs_ccgt: { ERCOT: 85, PJM: 120, NYISO: 15, NEISO: 10, MISO: 95, SPP: 110 },
-    geothermal: { CAISO: 39 }
-};
-
 // --- Resource TWh Caps (physics-constrained maximum deployment) ---
 const RESOURCE_CAPS = {
     offshore_wind: { NYISO: 37, NEISO: 37, PJM: 30, CAISO: 20 },
@@ -4253,6 +4246,11 @@ const LCOE_TABLES = {
         Medium: { CAISO: 73, ERCOT: 40, PJM: 62, NYISO: 81, NEISO: 73, MISO: 43, SPP: 37 },
         High: { CAISO: 95, ERCOT: 52, PJM: 81, NYISO: 105, NEISO: 95, MISO: 56, SPP: 48 }
     },
+    offshore_wind: {
+        Low: { CAISO: 110, ERCOT: 0, PJM: 65, NYISO: 72, NEISO: 68, MISO: 0, SPP: 0 },
+        Medium: { CAISO: 150, ERCOT: 0, PJM: 85, NYISO: 95, NEISO: 90, MISO: 0, SPP: 0 },
+        High: { CAISO: 200, ERCOT: 0, PJM: 112, NYISO: 125, NEISO: 118, MISO: 0, SPP: 0 }
+    },
     battery: {
         Low: { CAISO: 3.86, ERCOT: 3.48, PJM: 3.7, NYISO: 4.08, NEISO: 3.97, MISO: 3.62, SPP: 3.52 },
         Medium: { CAISO: 4.75, ERCOT: 4.27, PJM: 4.55, NYISO: 5.02, NEISO: 4.87, MISO: 4.46, SPP: 4.33 },
@@ -4291,6 +4289,12 @@ const TX_TABLES = {
         Low: { CAISO: 4, ERCOT: 3, PJM: 5, NYISO: 7, NEISO: 6, MISO: 5, SPP: 4 },
         Medium: { CAISO: 8, ERCOT: 6, PJM: 10, NYISO: 14, NEISO: 12, MISO: 9, SPP: 7 },
         High: { CAISO: 14, ERCOT: 10, PJM: 18, NYISO: 22, NEISO: 20, MISO: 16, SPP: 12 }
+    },
+    offshore_wind: {
+        None: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0, MISO: 0, SPP: 0 },
+        Low: { CAISO: 10, ERCOT: 0, PJM: 6, NYISO: 8, NEISO: 7, MISO: 0, SPP: 0 },
+        Medium: { CAISO: 20, ERCOT: 0, PJM: 11, NYISO: 15, NEISO: 13, MISO: 0, SPP: 0 },
+        High: { CAISO: 35, ERCOT: 0, PJM: 18, NYISO: 25, NEISO: 22, MISO: 0, SPP: 0 }
     },
     clean_firm: {
         None: { CAISO: 0, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0, MISO: 0, SPP: 0 },
