@@ -35,7 +35,7 @@ on:
         type: string
 
 env:
-  BRANCH_PREFIX: step5-dispatch-cache
+  BRANCH_PREFIX: step4-dispatch-cache
 
 jobs:
   prepare:
@@ -93,7 +93,7 @@ jobs:
       - name: "Build Dispatch Cache — ${{ matrix.iso }}"
         run: |
           FORCE_FLAG="${{ inputs.force == true && '--force' || '' }}"
-          python scripts/step5_build_dispatch_cache.py $FORCE_FLAG --iso ${{ matrix.iso }}
+          python scripts/step4_build_dispatch_cache.py $FORCE_FLAG --iso ${{ matrix.iso }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
