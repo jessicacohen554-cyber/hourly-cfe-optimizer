@@ -5,6 +5,32 @@
 
 ## Current Status (Mar 3, 2026)
 
+### Dashboard Design Refactor — Observatory Theme (In Progress)
+
+**Branch:** `claude/dashboard-redesign-refactor-BtmrP`
+
+**Design Direction**: Variant B "The Observatory" selected — Space Grotesk + DM Sans + Space Mono font stack. Enhanced with **light/dark rhythm system**: alternating crisp white panels (data-forward, analytical clarity) and dark navy sections (dramatic narrative, emphasis). Not monochromatic dark — uses contrast between light and dark to create visual breathing room and hierarchy.
+
+**Key Design Decisions:**
+- **Fonts**: Space Grotesk (headings), DM Sans (body), Space Mono (data/numbers)
+- **Light/dark rhythm**: White card panels for data + charts, dark navy sections for narrative emphasis and storytelling. Sections alternate to create visual cadence.
+- **Header**: Animated oscilloscope-style SVG — glowing neon energy curves, dot grid, heartbeat pulse
+- **Cards**: Rounded (16px radius), subtle glassmorphism on dark backgrounds, clean white with soft shadow on light backgrounds
+- **Navigation**: Mega-menu with 3 columns (Economics / Markets & Grid / Procurement & Strategy)
+- **CSS Architecture**: 5 files (shared.css + 4 page-type CSS files)
+- **Kids pages**: Excluded from scope
+
+**Status:**
+- [x] Design preview page created with 4 variants (dashboard/design_preview.html)
+- [x] Observatory variant selected with light/dark contrast enhancement
+- [ ] Enhanced Observatory variant with light/dark rhythm system
+- [ ] Update shared.css with Observatory design tokens
+- [ ] Create page-type CSS files (scrollytell, dashboard-ui, article, reference)
+- [ ] Implement mega-menu navigation
+- [ ] Apply template to all 28 pages (tiered)
+
+---
+
 ### Offshore Wind Integration — Steps 4–7 + Dashboard (In Progress)
 
 **Branch:** `claude/integrate-offshore-wind-SkQIr`
