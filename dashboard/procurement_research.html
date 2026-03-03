@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Corporate Procurement Strategy Research — The 8,760 Problem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/reference.css">
+<style>
+body { background: var(--bg-page); }
+
+/* Hero */
+.hero {
+    background: linear-gradient(180deg, #0F1A2E 0%, #1A2744 60%, #1E3A5F 100%);
+    padding: 48px 24px 40px;
+    text-align: center;
+}
+.hero h1 {
+    font-family: var(--font-heading);
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #ffffff;
+    margin-bottom: 12px;
+    letter-spacing: -0.5px;
+}
+.hero .subtitle {
+    font-size: 1.05rem;
+    color: rgba(255,255,255,0.7);
+    max-width: 860px;
+    margin: 0 auto 8px;
+    line-height: 1.7;
+}
+.hero .status-badge {
+    display: inline-block;
+    background: rgba(245,158,11,0.15);
+    color: #F59E0B;
+    border: 1px solid rgba(245,158,11,0.3);
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-top: 12px;
+}
+
+/* Content */
+.content { max-width: 1100px; margin: 0 auto; padding: 32px 24px 60px; }
+
+.research-section {
+    background: #fff;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    padding: 28px 28px 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.research-section h2 {
+    font-family: var(--font-heading);
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.research-section h2 .section-num {
+    background: var(--navy);
+    color: #fff;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+.research-section .section-desc {
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    margin-bottom: 18px;
+    line-height: 1.6;
+}
+.research-section h3 {
+    font-family: var(--font-heading);
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #374151;
+    margin: 20px 0 10px;
+}
+.research-section p, .research-section li {
+    font-size: 0.9rem;
+    line-height: 1.65;
+    color: #1f2937;
+}
+.research-section ul, .research-section ol {
+    padding-left: 20px;
+    margin-bottom: 12px;
+}
+.research-section li { margin-bottom: 6px; }
+
+/* Data tables */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    margin: 16px 0 20px;
+}
+.data-table th {
+    background: #F3F4F8;
+    color: var(--navy);
+    font-weight: 700;
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 2px solid var(--border);
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+.data-table td {
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border-light);
+    vertical-align: top;
+}
+.data-table tr:hover td { background: rgba(14,165,233,0.03); }
+.data-table .num { text-align: right; font-family: var(--font-mono); font-weight: 600; }
+.data-table .highlight { background: rgba(34,197,94,0.08); }
+.data-table .tight { background: rgba(239,68,68,0.06); }
+
+/* Key findings */
+.key-finding {
+    background: linear-gradient(135deg, rgba(14,165,233,0.06) 0%, rgba(34,197,94,0.06) 100%);
+    border-left: 4px solid #0EA5E9;
+    padding: 14px 18px;
+    border-radius: 0 8px 8px 0;
+    margin: 16px 0;
+    font-size: 0.88rem;
+    line-height: 1.6;
+}
+.key-finding strong { color: var(--navy); }
+
+/* Strategy cards */
+.strategy-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+    margin: 16px 0;
+}
+.strategy-card {
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    padding: 18px;
+    background: #FAFBFD;
+    transition: box-shadow 0.2s;
+}
+.strategy-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+.strategy-card h4 {
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 4px;
+}
+.strategy-card .strategy-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+.strategy-card .tag-consequential { background: rgba(79,70,229,0.1); color: #4F46E5; }
+.strategy-card .tag-hourly { background: rgba(8,145,178,0.1); color: #0891B2; }
+.strategy-card .tag-annual { background: rgba(245,158,11,0.1); color: #D97706; }
+.strategy-card p { font-size: 0.82rem; line-height: 1.55; color: #4b5563; }
+
+/* Source links */
+.sources {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-light);
+}
+.sources h4 {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+.sources ul { list-style: none; padding: 0; }
+.sources li {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+.sources a { color: #0284C7; text-decoration: none; }
+.sources a:hover { text-decoration: underline; }
+
+/* Scarcity indicators */
+.scarcity-abundant { color: var(--abundant); font-weight: 700; }
+.scarcity-tightening { color: var(--tightening); font-weight: 700; }
+.scarcity-scarce { color: var(--scarce); font-weight: 700; }
+.scarcity-critical { color: var(--critical); font-weight: 700; }
+
+/* Footer */
+.site-footer {
+    background: var(--navy);
+    color: rgba(255,255,255,0.6);
+    text-align: center;
+    padding: 24px;
+    font-size: 0.82rem;
+}
+.site-footer a { color: rgba(255,255,255,0.75); text-decoration: none; }
+.site-footer a:hover { color: #fff; }
+/* Responsive */
+@media (max-width: 768px) {
+    .hero h1 { font-size: 1.6rem; }
+    .research-section { padding: 20px 16px; }
+    .data-table { font-size: 0.75rem; }
+    .data-table th, .data-table td { padding: 7px 8px; }
+    .strategy-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
+
+<div class="header" id="pageHeader">
+    <h1>Corporate Procurement Strategy Simulation</h1>
+    <div class="subtitle">Research foundations for modeling how different GHG accounting policies and procurement strategies affect clean energy deployment, costs, and emissions across 7 US ISOs.</div>
+    <div class="header-accent"></div>
+</div>
+
+<div class="content">
+
+<!-- ============================================================ -->
+<!-- SECTION 1: C&I Load Share -->
+<!-- ============================================================ -->
+<div class="research-section" id="ci-load">
+    <h2><span class="section-num">1</span> C&I Load Share by ISO</h2>
+    <p class="section-desc">Commercial and industrial electricity consumption as a share of total load determines the addressable market for voluntary corporate procurement.</p>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>ISO</th>
+                <th>Total Load (TWh)</th>
+                <th>C&I Share (%)</th>
+                <th>Residential (%)</th>
+                <th>Key Characteristics</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>CAISO</strong></td>
+                <td class="num">~215</td>
+                <td class="num">55-60%</td>
+                <td class="num">40-45%</td>
+                <td>Service economy; large commercial sector, minimal heavy industry. High BTM solar reduces metered residential.</td>
+            </tr>
+            <tr>
+                <td><strong>ERCOT</strong></td>
+                <td class="num">~444</td>
+                <td class="num">63-67%</td>
+                <td class="num">33-37%</td>
+                <td>Dominant industrial: petrochemicals, refining, LNG. Fastest-growing data center market. Industrial grew 28% (2007-2023).</td>
+            </tr>
+            <tr>
+                <td><strong>PJM</strong></td>
+                <td class="num">~810</td>
+                <td class="num">60-65%</td>
+                <td class="num">35-40%</td>
+                <td>Largest US ISO. VA data centers driving unprecedented load growth. Rust Belt heavy manufacturing.</td>
+            </tr>
+            <tr>
+                <td><strong>MISO</strong></td>
+                <td class="num">~650</td>
+                <td class="num">60-65%</td>
+                <td class="num">35-40%</td>
+                <td>Auto manufacturing, steel, ag processing. Heavily regulated/vertically integrated.</td>
+            </tr>
+            <tr>
+                <td><strong>NYISO</strong></td>
+                <td class="num">~152</td>
+                <td class="num">60-65%</td>
+                <td class="num">34-35%</td>
+                <td>Lopsided: commercial ~56%, industrial ~9%. NYC office/transit dominated. Lowest industrial share.</td>
+            </tr>
+            <tr>
+                <td><strong>NEISO</strong></td>
+                <td class="num">~117</td>
+                <td class="num">52-57%</td>
+                <td class="num">43-48%</td>
+                <td>Highest residential share among major ISOs. Limited heavy industry. Healthcare/education/finance.</td>
+            </tr>
+            <tr>
+                <td><strong>SPP</strong></td>
+                <td class="num">~283</td>
+                <td class="num">55-60%</td>
+                <td class="num">40-45%</td>
+                <td>Oil/gas extraction in OK, agriculture. Less urbanized. Wind 37% of generation.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="key-finding">
+        <strong>National benchmark:</strong> C&I load is ~62% of total US electricity (~2,400 TWh of ~3,860 TWh). This is the theoretical maximum addressable market for voluntary corporate procurement. ERCOT has the highest C&I share (63-67%), NEISO the lowest (52-57%).
+    </div>
+
+    <div class="sources">
+        <h4>Sources</h4>
+        <ul>
+            <li><a href="https://www.eia.gov/electricity/sales_revenue_price/">EIA Electric Sales, Revenue, and Average Price</a></li>
+            <li><a href="https://www.eia.gov/electricity/data/eia861/">EIA Form 861 Detailed Data Files</a> (utility-level sales by sector &amp; balancing authority)</li>
+            <li><a href="https://www.ferc.gov/sites/default/files/2025-03/25_State-of-the-Market_0320_1200.pdf">FERC 2024 State of the Markets Report</a></li>
+            <li>ISO annual reports and state-of-market publications for each ISO</li>
+        </ul>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 2: Current State of Corporate Procurement -->
+<!-- ============================================================ -->
+<div class="research-section" id="procurement-state">
+    <h2><span class="section-num">2</span> Current State of Corporate Clean Energy Procurement</h2>
+    <p class="section-desc">Voluntary corporate procurement is now a primary driver of US clean energy deployment, not a marginal overlay.</p>
+
+    <h3>Market Scale (2024)</h3>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Metric</th>
+                <th>Value</th>
+                <th>Source</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Voluntary renewable power procured</td>
+                <td class="num">~315 TWh</td>
+                <td>NREL</td>
+            </tr>
+            <tr>
+                <td>Corporate PPAs signed (US)</td>
+                <td class="num">28 GW (2024); 29.5 GW (2025)</td>
+                <td>BNEF</td>
+            </tr>
+            <tr>
+                <td>Cumulative corporate capacity (2014-2024)</td>
+                <td class="num">&gt;100 GW</td>
+                <td>CEBA</td>
+            </tr>
+            <tr>
+                <td>Voluntary as % of total US demand</td>
+                <td class="num">~7.7%</td>
+                <td>Derived</td>
+            </tr>
+            <tr>
+                <td>Voluntary as % of C&I load</td>
+                <td class="num">~13%</td>
+                <td>Derived</td>
+            </tr>
+            <tr>
+                <td>Corporate share of all US clean energy added since 2014</td>
+                <td class="num">41%</td>
+                <td>CEBA</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="key-finding">
+        <strong>Structural market shift:</strong> Long-term contracts (PPAs + utility contracts) now account for ~46% of all voluntary renewable power, overtaking unbundled RECs for the first time in 2023. An estimated 45-50% (~140-160 TWh) of the voluntary market directly supports new build.
+    </div>
+
+    <h3>Concentration Risk</h3>
+    <ul>
+        <li>Tech/data centers accounted for <strong>84% of US deal activity</strong> in 2024 (BNEF)</li>
+        <li>Big 4 hyperscalers (Meta, Amazon, Google, Microsoft) = 49% of all global corporate PPA activity in 2025</li>
+        <li>Number of unique corporate buyers in the US fell 51% YoY in 2025 to just 33 companies</li>
+        <li>Market increasingly bifurcated between hyperscalers and everyone else</li>
+    </ul>
+
+    <h3>Realistic Addressable Market Projections</h3>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Timeframe</th>
+                <th>C&I Penetration</th>
+                <th>Implied Volume</th>
+                <th>Key Assumptions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Current (2024)</td>
+                <td class="num">~13%</td>
+                <td class="num">~315 TWh</td>
+                <td>Actual data</td>
+            </tr>
+            <tr>
+                <td>Near-term (2027-28)</td>
+                <td class="num">15-20%</td>
+                <td class="num">~370-490 TWh</td>
+                <td>Hyperscaler expansion; smaller buyer pullback</td>
+            </tr>
+            <tr>
+                <td>Medium-term (2030)</td>
+                <td class="num">20-30%</td>
+                <td class="num">~500-750 TWh</td>
+                <td>Depends on IRA durability, GHG Protocol revisions</td>
+            </tr>
+            <tr>
+                <td>Long-term (2035)</td>
+                <td class="num">25-40%</td>
+                <td class="num">~700-1,200 TWh</td>
+                <td>Upper bound requires sustained policy + mid-market activation</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="sources">
+        <h4>Sources</h4>
+        <ul>
+            <li><a href="https://docs.nrel.gov/docs/fy25osti/92289.pdf">NREL: Status and Trends in the U.S. Voluntary Green Power Market (2023 Data)</a></li>
+            <li><a href="https://cebuyers.org/deal-tracker/">CEBA Deal Tracker</a></li>
+            <li><a href="https://about.bnef.com/insights/clean-energy/corporate-clean-energy-buying-fell-in-2025-after-nearly-a-decade-of-growth/">BloombergNEF: Corporate Clean Energy Buying 2025</a></li>
+            <li><a href="https://www.ethree.com/wp-content/uploads/2024/07/E3_VoluntaryCorporateProcurement_HourlyEmissions_June-2024.pdf">E3: Voluntary Corporate Procurement Hourly Emissions (2024)</a></li>
+        </ul>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 3: Clean Energy Already "Spoken For" -->
+<!-- ============================================================ -->
+<div class="research-section" id="committed-clean">
+    <h2><span class="section-num">3</span> Clean Energy Already Committed by Compliance Programs</h2>
+    <p class="section-desc">Before voluntary buyers can claim clean energy, RPS mandates, nuclear support programs, and regulated utility supply have first claim on existing clean generation.</p>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>ISO</th>
+                <th>Total Clean (TWh)</th>
+                <th>RPS-Committed</th>
+                <th>Nuclear Programs</th>
+                <th>Utility Default</th>
+                <th>Available for Voluntary</th>
+                <th>Market Signal</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>CAISO</strong></td>
+                <td class="num">~172</td>
+                <td class="num">~110-115</td>
+                <td class="num">~18-19</td>
+                <td class="num">~30</td>
+                <td class="num tight">10-20</td>
+                <td><span class="scarcity-tightening">Moderate</span></td>
+            </tr>
+            <tr class="highlight">
+                <td><strong>ERCOT</strong></td>
+                <td class="num">~200-205</td>
+                <td class="num">~0</td>
+                <td class="num">~0</td>
+                <td class="num">~30-40</td>
+                <td class="num">130-160</td>
+                <td><span class="scarcity-abundant">Abundant</span></td>
+            </tr>
+            <tr>
+                <td><strong>PJM</strong></td>
+                <td class="num">~310-330</td>
+                <td class="num">~120-170</td>
+                <td class="num">~40-50</td>
+                <td class="num">~50-70</td>
+                <td class="num">50-80</td>
+                <td><span class="scarcity-scarce">High REC $35+</span></td>
+            </tr>
+            <tr>
+                <td><strong>MISO</strong></td>
+                <td class="num">~200-215</td>
+                <td class="num">~65-100</td>
+                <td class="num">~25-30</td>
+                <td class="num">~80-100</td>
+                <td class="num">30-50</td>
+                <td><span class="scarcity-tightening">Low-Moderate</span></td>
+            </tr>
+            <tr>
+                <td><strong>NYISO</strong></td>
+                <td class="num">~62-66</td>
+                <td class="num">~15-20</td>
+                <td class="num">~26-28</td>
+                <td class="num">~30-35</td>
+                <td class="num tight">5-15</td>
+                <td><span class="scarcity-scarce">High $20-35</span></td>
+            </tr>
+            <tr>
+                <td><strong>NEISO</strong></td>
+                <td class="num">~43-45</td>
+                <td class="num">~35-40</td>
+                <td class="num">~10</td>
+                <td class="num">~15-20</td>
+                <td class="num tight">3-8</td>
+                <td><span class="scarcity-critical">Critical ~$40</span></td>
+            </tr>
+            <tr class="highlight">
+                <td><strong>SPP</strong></td>
+                <td class="num">~136</td>
+                <td class="num">~0-5</td>
+                <td class="num">~0</td>
+                <td class="num">~65-85</td>
+                <td class="num">40-60</td>
+                <td><span class="scarcity-abundant">Abundant</span></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="key-finding">
+        <strong>20x scarcity variation across ISOs.</strong> ERCOT has ~130-160 TWh of unclaimed clean energy; NEISO has ~3-8 TWh. This directly drives the economics of each procurement strategy and explains why cross-regional netting (Strategy 1) can be dramatically cheaper than same-ISO hourly matching (Strategy 2) in supply-constrained markets.
+    </div>
+
+    <div class="sources">
+        <h4>Sources</h4>
+        <ul>
+            <li><a href="https://emp.lbl.gov/publications/us-state-renewables-portfolio-clean-0">LBNL: U.S. State Renewables Portfolio &amp; Clean Electricity Standards 2024</a></li>
+            <li><a href="https://www.dsireusa.org/resources/detailed-summary-maps/">DSIRE Database</a></li>
+            <li>EIA-860, EIA-923, ISO annual market reports, state PUC filings</li>
+        </ul>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 4: Emission Rate Comparison -->
+<!-- ============================================================ -->
+<div class="research-section" id="emission-rates">
+    <h2><span class="section-num">4</span> Grid Average vs. Fossil Average vs. Marginal Emission Rates</h2>
+    <p class="section-desc">The choice of emission rate baseline determines how much CO&#8322; a buyer needs to "offset" under consequential accounting. Three different baselines produce three different procurement strategies.</p>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>ISO</th>
+                <th>Grid Avg (A)<br><span style="font-weight:400;text-transform:none">tCO&#8322;/MWh</span></th>
+                <th>Fossil Avg (B)<br><span style="font-weight:400;text-transform:none">tCO&#8322;/MWh</span></th>
+                <th>Marginal (C)<br><span style="font-weight:400;text-transform:none">tCO&#8322;/MWh</span></th>
+                <th>Marginal Fuel</th>
+                <th>C vs B</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>CAISO</strong></td>
+                <td class="num">0.168</td>
+                <td class="num">0.392</td>
+                <td class="num">0.397</td>
+                <td>Gas CCGT/CT</td>
+                <td>C &approx; B</td>
+            </tr>
+            <tr>
+                <td><strong>ERCOT</strong></td>
+                <td class="num">0.333</td>
+                <td class="num">0.535</td>
+                <td class="num">0.526</td>
+                <td>Gas + coal mix</td>
+                <td>C &approx; B</td>
+            </tr>
+            <tr>
+                <td><strong>PJM</strong></td>
+                <td class="num">0.325</td>
+                <td class="num">0.539</td>
+                <td class="num">0.573</td>
+                <td>Coal + gas mix</td>
+                <td><strong>C &gt; B</strong></td>
+            </tr>
+            <tr>
+                <td><strong>MISO</strong></td>
+                <td class="num">0.354</td>
+                <td class="num">0.567</td>
+                <td class="num">0.663</td>
+                <td>Coal + gas mix</td>
+                <td><strong>C &gt;&gt; B (+17%)</strong></td>
+            </tr>
+            <tr>
+                <td><strong>NYISO</strong></td>
+                <td class="num">0.217</td>
+                <td class="num">0.415</td>
+                <td class="num">0.437</td>
+                <td>Gas CCGT/CT</td>
+                <td>C &approx; B</td>
+            </tr>
+            <tr>
+                <td><strong>NEISO</strong></td>
+                <td class="num">0.246</td>
+                <td class="num">0.387</td>
+                <td class="num">0.425</td>
+                <td>Gas CCGT/CT</td>
+                <td>C slightly &gt; B</td>
+            </tr>
+            <tr>
+                <td><strong>SPP</strong></td>
+                <td class="num">0.340</td>
+                <td class="num">0.544</td>
+                <td class="num">0.665</td>
+                <td>Coal + gas mix</td>
+                <td><strong>C &gt;&gt; B (+22%)</strong></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="key-finding">
+        <strong>Marginal &gt; Fossil Average in coal-heavy ISOs.</strong> In MISO (+17%) and SPP (+22%), the short-run marginal emission rate significantly exceeds the fossil fleet average because coal plants cycling at low utilization have degraded thermal efficiency. In gas-dominated ISOs (CAISO, NYISO, NEISO), marginal &approx; fossil average because gas is both average and marginal.<br><br>
+        <strong>Implication for Strategy 1C:</strong> Netting against marginal rates means buyers in MISO/SPP face a higher starting bar to reach "zero" &mdash; but each MWh of clean energy procured also displaces more CO&#8322;, so the $/tCO&#8322; may still be favorable if cheap wind is available.
+    </div>
+
+    <div class="sources">
+        <h4>Sources</h4>
+        <ul>
+            <li><a href="https://www.epa.gov/egrid">EPA eGRID2023</a> &mdash; grid-average and fossil-only average rates</li>
+            <li><a href="https://veraci-t.org/wp-content/uploads/2023/08/VERACI-T-paper-marginalemissionsfactorsaccuracy-WattTime-202308.pdf">VERACI-T: Marginal Emission Factor Accuracy</a> &mdash; empirical annual MEFs</li>
+            <li>Holland et al. (2022), PNAS &mdash; "Why marginal CO&#8322; emissions are not decreasing"</li>
+            <li>Siler-Evans et al. (2012), ES&T &mdash; first systematic MEF calculation</li>
+        </ul>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 5: Procurement Strategy Taxonomy -->
+<!-- ============================================================ -->
+<section class="section-dark">
+<div class="section-dark-inner">
+<div class="research-section" id="strategies" style="background:transparent;border:none;box-shadow:none;">
+    <h2><span class="section-num">5</span> Procurement Strategy Taxonomy</h2>
+    <p class="section-desc">Three families of strategies, each with sub-variants that define what counts as "clean" and how matching works.</p>
+
+    <h3>Strategy 1 &mdash; Consequential Cross-Regional Netting</h3>
+    <p>Buyers purchase the cheapest $/tCO&#8322; clean energy anywhere in the US to "net" against their location-based carbon emissions. Requires new build or nuclear uprates. No ISO boundary constraint.</p>
+
+    <div class="strategy-grid">
+        <div class="strategy-card">
+            <span class="strategy-tag tag-consequential">1A</span>
+            <h4>Grid-Average Baseline</h4>
+            <p>Buyer starts from their ISO's <strong>grid-average emission rate</strong> (includes clean energy in the denominator). Lowest starting bar. A CA buyer with 0.168 tCO&#8322;/MWh can reach "zero" cheaply by buying MISO wind that displaces coal at ~1.0 tCO&#8322;/MWh.</p>
+        </div>
+        <div class="strategy-card">
+            <span class="strategy-tag tag-consequential">1B</span>
+            <h4>Fossil-Average Baseline</h4>
+            <p>Buyer starts from their ISO's <strong>fossil-only average emission rate</strong>. Higher bar &mdash; you're betting against the fossil fleet's average intensity. CA buyer faces 0.392 vs 0.168 in 1A.</p>
+        </div>
+        <div class="strategy-card">
+            <span class="strategy-tag tag-consequential">1C</span>
+            <h4>Marginal Emission Baseline</h4>
+            <p>Buyer starts from the <strong>short-run marginal emission rate</strong>. Potentially highest bar in coal-heavy ISOs (MISO: 0.663 vs fossil avg 0.567). <em>Optional &mdash; depends on whether marginal &gt; fossil avg is material enough to model.</em></p>
+        </div>
+    </div>
+
+    <h3>Strategy 2 &mdash; Hourly Matching (Same-ISO)</h3>
+    <p>Buyer matches load hour-by-hour within their own ISO. No cross-regional procurement. Highest verifiability but highest cost.</p>
+
+    <div class="strategy-grid">
+        <div class="strategy-card">
+            <span class="strategy-tag tag-hourly">2A</span>
+            <h4>Pure New Build</h4>
+            <p>100% new build requirement. No credit for existing grid clean. Most expensive; maximum additionality. This is the existing <strong>Track 2 NB</strong> analysis.</p>
+        </div>
+        <div class="strategy-card">
+            <span class="strategy-tag tag-hourly">2B</span>
+            <h4>Existing Clean Baseline + New Build</h4>
+            <p>Buyer takes credit for existing clean grid mix as baseline, then procures new build on top. Reduces cost significantly in clean-grid ISOs (CAISO, NYISO, NEISO).</p>
+        </div>
+        <div class="strategy-card">
+            <span class="strategy-tag tag-hourly">2C</span>
+            <h4>Pro-Rata Allocation + Premium Existing + New Build</h4>
+            <p>Pro-rata share of RPS/nuclear/public utility clean allocated to each buyer. Premium for existing clean to keep it online (cost-to-replace). New build on top. <em>Premium TBD.</em></p>
+        </div>
+    </div>
+
+    <h3>Strategy 3 &mdash; Annual Matching</h3>
+    <p>Volumetric annual matching without hourly temporal constraint. 2&times;2 matrix: {Same-ISO, Cross-Regional} &times; {Additionality Required, No Additionality}.</p>
+
+    <div class="strategy-grid">
+        <div class="strategy-card">
+            <span class="strategy-tag tag-annual">3A</span>
+            <h4>Same-ISO + New Build</h4>
+            <p>Annual matching within buyer's ISO. Only new-build clean energy counts. Comparable to Strategy 2A but without hourly granularity.</p>
+        </div>
+        <div class="strategy-card">
+            <span class="strategy-tag tag-annual">3B</span>
+            <h4>Cross-Regional + New Build</h4>
+            <p>Annual matching from any US ISO. Only new-build clean counts. Comparable to Strategy 1 but annual volumetric rather than consequential netting.</p>
+        </div>
+        <div class="strategy-card">
+            <span class="strategy-tag tag-annual">3C</span>
+            <h4>Same-ISO + No Additionality</h4>
+            <p>Annual matching within buyer's ISO. Existing clean counts (includes unbundled RECs from existing generators).</p>
+        </div>
+        <div class="strategy-card">
+            <span class="strategy-tag tag-annual">3D</span>
+            <h4>Cross-Regional + No Additionality</h4>
+            <p>Annual matching from any US ISO. Existing clean counts. Cheapest option &mdash; unbundled RECs from anywhere. This is the <strong>"status quo"</strong> for most corporate procurement today.</p>
+        </div>
+    </div>
+
+    <h3>Cross-Cutting Layer: FOAK-to-NOAK Learning Curves (2ABC-i)</h3>
+    <p>An optional layer applicable to any Strategy 2 variant that incorporates first-of-a-kind to Nth-of-a-kind cost learning for clean firm resources. Prioritizes cheapest $/tCO&#8322; queueing while reflecting the deployment-driven cost reductions modeled in the existing Scenario A/B consequential analysis.</p>
+</div>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SECTION 6: Dashboard Concept -->
+<!-- ============================================================ -->
+<div class="research-section" id="dashboard-concept">
+    <h2><span class="section-num">6</span> Dashboard Concept</h2>
+    <p class="section-desc">Hybrid scrollytelling + interactive comparison tool. Integrates tradeoff matrix and strategy horse race elements.</p>
+
+    <h3>Page Structure (Decided)</h3>
+    <ol>
+        <li><strong>Scrollytell intro:</strong> Explains the three strategy families, builds intuition about tradeoffs</li>
+        <li><strong>Tradeoff matrix:</strong> All strategies &times; key metrics (cost, CO&#8322;, build, $/tCO&#8322;) &mdash; embedded in scrollytell</li>
+        <li><strong>Strategy horse race:</strong> Fixed outcome ("to achieve 80% clean: cheapest strategy?") + fixed budget ("with $X/MWh: what does each achieve?")</li>
+        <li><strong>Interactive section:</strong> Strategy selector, participation sliders, CFE threshold, ISO selector</li>
+        <li><strong>System-wide panel:</strong> CO&#8322; reduction target &rarr; required participation by strategy</li>
+    </ol>
+
+    <h3>Controls (Decided)</h3>
+    <ul>
+        <li><strong>Strategy selector:</strong> Toggle between 1A/1B/1C, 2A/2B/2C, 3A/3B/3C/3D (and compare any 2-3 side by side)</li>
+        <li><strong>Hyperscaler participation slider:</strong> % of C&I load from top ~30 hyperscaler/tech buyers</li>
+        <li><strong>Other corporate participation slider:</strong> % of remaining C&I load from mid-market buyers</li>
+        <li><strong>Per-buyer CFE target:</strong> CFE threshold slider (parallels main dashboard)</li>
+        <li><strong>ISO selector:</strong> Per-region or all-region view</li>
+    </ul>
+
+    <h3>Outputs</h3>
+    <ul>
+        <li>Total cost ($/year and $/MWh premium)</li>
+        <li>CO&#8322; displaced (mtCO&#8322;/year)</li>
+        <li>Resource build required (GW by type)</li>
+        <li>$/tCO&#8322; abated (MAC)</li>
+        <li>Cross-strategy comparison for equivalent outcomes</li>
+        <li>System-wide: required participation to achieve target CO&#8322; reduction by strategy</li>
+    </ul>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 7: Academic Literature -->
+<!-- ============================================================ -->
+<div class="research-section" id="literature">
+    <h2><span class="section-num">7</span> Academic Literature on Participation Modeling</h2>
+    <p class="section-desc">How do existing models treat corporate procurement participation rates and consequential vs. attributional accounting?</p>
+    <p><em>Research in progress &mdash; results will be populated when the literature review agent completes.</em></p>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 8: Open Questions -->
+<!-- ============================================================ -->
+<section class="section-dark">
+<div class="section-dark-inner">
+<div class="research-section" id="open-questions" style="background:transparent;border:none;box-shadow:none;">
+    <h2><span class="section-num">8</span> Open Design Questions</h2>
+    <p class="section-desc">Decisions needed before implementation can proceed.</p>
+
+    <h3>Decided</h3>
+    <ul>
+        <li><s>Strategy 3 sub-variants</s> &rarr; 2&times;2 matrix: 3A/3B/3C/3D (boundary &times; additionality)</li>
+        <li><s>Participation slider</s> &rarr; Dual national sliders: hyperscaler + all other corporate</li>
+        <li><s>Emissions reduction</s> &rarr; Dual-mode: per-buyer CFE target + system-wide CO&#8322; reduction panel</li>
+        <li><s>Dashboard framing</s> &rarr; Hybrid scrollytell with integrated tradeoff matrix + strategy horse race</li>
+    </ul>
+
+    <h3>Remaining</h3>
+    <ol>
+        <li><strong>Cost-to-replace premium (Strategy 2C):</strong> What premium to keep existing clean online? How to balance existing vs. new build consumption order?</li>
+        <li><strong>Strategy 1C inclusion:</strong> Marginal &gt; fossil average is material in MISO (+17%) and SPP (+22%) but negligible in gas-dominated ISOs. Include or skip?</li>
+        <li><strong>FOAK-to-NOAK layer:</strong> Apply same learning curve logic from Scenario A/B to hourly matching strategies? Does deployment sequencing matter across ISOs?</li>
+        <li><strong>Hyperscaler vs. other split:</strong> What % of C&I load is "hyperscaler"? Need a defensible estimate (BNEF data suggests ~10-15% of C&I and growing rapidly).</li>
+        <li><strong>System-wide panel mechanics:</strong> When backing into required participation, how does the model handle supply constraints (e.g., NEISO can't source enough clean for 100% hourly matching)?</li>
+    </ol>
+</div>
+</div>
+</section>
+
+</div><!-- /content -->
+
+<!-- FOOTER -->
+<footer class="site-footer">
+    <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:16px;margin-bottom:12px;">
+        <a href="index.html">Home</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="abatement_dashboard.html">CO&#8322; Abatement Analysis</a>
+        <a href="research_paper.html">Methodology &amp; Paper</a>
+    </div>
+    <p>The 8,760 Problem &mdash; 2025 Snapshot Model</p>
+</footer>
+<div class="bottom-banner"></div>
+
+</body>
+</html>
