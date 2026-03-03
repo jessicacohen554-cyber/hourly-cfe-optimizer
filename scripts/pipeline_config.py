@@ -389,9 +389,11 @@ def step1_pfs_filename(iso, threshold):
     t_str = f'{threshold:g}'
     return f'{iso}_t{t_str}_raw_pfs.parquet'
 
-def step1d_storage_filename(iso, threshold):
-    """Step 1d storage filename: {ISO}_t{T}_storage.parquet"""
+def step1d_storage_filename(iso, threshold, batch=None):
+    """Step 1d storage filename: {ISO}_t{T}_storage.parquet or _b{N}.parquet"""
     t_str = f'{threshold:g}'
+    if batch is not None:
+        return f'{iso}_t{t_str}_storage_b{batch}.parquet'
     return f'{iso}_t{t_str}_storage.parquet'
 
 def step2_ef_filename(iso, threshold):
