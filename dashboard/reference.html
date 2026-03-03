@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The 8,760 Problem — Reference Library</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/reference.css">
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
+<style>
+body { background: var(--bg-page-white); }
+
+.ref-intro {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 56px 24px 32px;
+    text-align: center;
+}
+.ref-intro h2 {
+    font-family: var(--font-heading);
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 16px;
+    letter-spacing: -0.3px;
+}
+.ref-intro p {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    line-height: 1.75;
+    max-width: 620px;
+    margin: 0 auto;
+}
+
+/* ===== Card Grid ===== */
+.ref-grid {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 16px 24px 80px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 24px;
+}
+.ref-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    padding: 28px;
+    transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    text-decoration: none;
+    display: block;
+    opacity: 0;
+    transform: translateY(24px);
+}
+.ref-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.7s cubic-bezier(0.4,0,0.2,1),
+                transform 0.7s cubic-bezier(0.4,0,0.2,1),
+                border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.ref-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(14,165,233,0.5);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+}
+.ref-card-tag {
+    display: inline-block;
+    background: rgba(14,165,233,0.15);
+    color: var(--hydro);
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-family: var(--font-heading);
+}
+.ref-card h3 {
+    color: var(--navy);
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    line-height: 1.35;
+}
+.ref-card p {
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+    line-height: 1.65;
+    margin: 0;
+}
+.ref-card-arrow {
+    color: var(--hydro);
+    font-size: 0.82rem;
+    font-weight: 600;
+    margin-top: 18px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-heading);
+    letter-spacing: 0.03em;
+    transition: gap 0.2s ease;
+}
+.ref-card:hover .ref-card-arrow { gap: 10px; }
+
+/* ===== Empty state ===== */
+.ref-coming-soon {
+    text-align: center;
+    padding: 48px 24px;
+    color: rgba(0,0,0,0.35);
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+/* Footer and bottom-banner use shared.css .page-footer, .footer-links, .bottom-banner */
+
+@media (max-width: 768px) {
+    .ref-intro { padding: 40px 20px 24px; }
+    .ref-intro h2 { font-size: 1.5rem; }
+    .ref-grid { padding: 12px 16px 64px; grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+
+<header class="header">
+    <h1>Reference Library</h1>
+    <p class="subtitle">Concepts, mechanics, and deep dives into electricity market design</p>
+    <div class="header-accent"></div>
+</header>
+
+<section class="ref-intro section-light">
+    <h2>How Electricity Markets Actually Work</h2>
+    <p>A curated collection of questions and answers exploring the mechanics of power markets, resource economics, and grid decarbonization. Each entry tackles one question with clear illustrations and concise analysis.</p>
+</section>
+
+<section class="ref-grid section-light">
+    <a href="ref-lmp-ccs-nuclear.html" class="ref-card">
+        <span class="ref-card-tag">Market Design</span>
+        <h3>How Would Dispatchable CCS or Nuclear Change Wholesale Prices?</h3>
+        <p>If CCS-equipped gas plants or advanced nuclear could flex their output, how would that reshape the merit order and LMP formation across U.S. wholesale markets?</p>
+        <div class="ref-card-arrow">Read <span>&rarr;</span></div>
+    </a>
+
+    <a href="ref-market-design-low-carbon.html" class="ref-card">
+        <span class="ref-card-tag">Market Design</span>
+        <h3>If Nobody Burns Fuel, How Do You Build a Market?</h3>
+        <p>Current wholesale markets price at marginal fuel cost. When the grid runs on nuclear, wind, and solar with near-zero fuel costs, the entire capital recovery mechanism breaks. What are the proposals for a post-fossil market design?</p>
+        <div class="ref-card-arrow">Read <span>&rarr;</span></div>
+    </a>
+
+    <a href="ref-lcoe-vs-capacity-cost.html" class="ref-card">
+        <span class="ref-card-tag">Resource Economics</span>
+        <h3>Energy Economics Metric Dictionary</h3>
+        <p>LCOE, $/kW capacity cost, LCOS, capacity factor, LMP, MAC, and more &mdash; what each metric measures, how they relate, and when to use which one.</p>
+        <div class="ref-card-arrow">Read <span>&rarr;</span></div>
+    </a>
+
+    <!-- Future entries: add more <a class="ref-card"> blocks here -->
+</section>
+
+<div class="gradient-transition"></div>
+
+<!-- ===== Kids Section (dark panel) ===== -->
+<section class="section-dark">
+<div class="section-dark-inner" style="max-width:800px;text-align:center;">
+    <h2 style="margin-bottom:16px;">For Young Learners</h2>
+    <p style="max-width:620px;margin:0 auto 32px;">Interactive, kid-friendly explanations of clean energy, fossil fuels, and how the grid works.</p>
+
+    <div style="display:grid;grid-template-columns:1fr;gap:24px;max-width:420px;margin:0 auto;">
+        <a href="kids_energy.html" class="ref-card" style="opacity:1;transform:none;">
+            <span class="ref-card-tag">Kids</span>
+            <h3>Clean Energy for Kids</h3>
+            <p>Wind, solar, nuclear, geothermal, and storage &mdash; explained for young minds. Includes pages on how each technology works, plus a fun intro to dinosaurs and fossil fuels.</p>
+            <div class="ref-card-arrow">Explore <span>&rarr;</span></div>
+        </a>
+    </div>
+</div>
+</section>
+
+<div class="gradient-transition"></div>
+
+<p class="ref-coming-soon">More entries coming soon.</p>
+
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="dashboard.html">Grid Simulation</a>
+        <a href="abatement_dashboard.html">CO&#8322; Abatement</a>
+        <a href="research_paper.html">Research Paper</a>
+    </div>
+    <p class="footer-note">The 8,760 Problem &mdash; Reference Library</p>
+</footer>
+<div class="bottom-banner"></div>
+
+<script>
+// Fade-in cards on scroll
+var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e, i) {
+        if (e.isIntersecting) {
+            setTimeout(function() { e.target.classList.add('visible'); }, i * 100);
+            obs.unobserve(e.target);
+        }
+    });
+}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+document.querySelectorAll('.ref-card').forEach(function(el) { obs.observe(el); });
+</script>
+
+</body>
+</html>
