@@ -125,7 +125,7 @@ def extract_storage_by_threshold(feasible_mixes):
         for i, th in enumerate(SD_THRESHOLDS):
             storage = {
                 'battery': 0, 'battery8': 0, 'ldes': 0, 'h2': 0,
-                'clean_firm': 0, 'solar': 0, 'wind': 0, 'ccs_ccgt': 0, 'hydro': 0,
+                'clean_firm': 0, 'solar': 0, 'wind': 0, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 0,
             }
             for res in storage:
                 arr = iso_data.get(res, [])
@@ -142,7 +142,7 @@ def compute_storage_metrics(storage_by_threshold):
     Returns structured data for dashboard visualization.
     """
     metrics = {}
-    res_types = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
+    res_types = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']
 
     for iso in ISOS:
         demand_twh = BASE_DEMAND_TWH.get(iso, 0)
@@ -281,7 +281,7 @@ def compute_storage_value_metrics(storage_by_threshold):
             total_storage = s.get('battery', 0) + s.get('battery8', 0) + s.get('ldes', 0) + s.get('h2', 0)
 
             # Without storage: gap = threshold target - (clean resources only)
-            total_clean_gen = sum(s.get(r, 0) for r in ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro'])
+            total_clean_gen = sum(s.get(r, 0) for r in ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro'])
 
             # Storage fills the temporal mismatch — it doesn't add new energy,
             # it shifts surplus from high-gen hours to deficit hours
