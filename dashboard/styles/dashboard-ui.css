@@ -1,5 +1,5 @@
 /* ============================================================================
-   DASHBOARD-UI — Interactive dashboard components
+   DASHBOARD-UI -- Interactive dashboard components
    Used by: dashboard, scenario_comparison, procurement_strategies, fleet_survival
    Dependencies: shared.css (must be loaded first)
    ============================================================================ */
@@ -136,6 +136,9 @@
 .metric-tile.tile-negative .tile-label,
 .metric-tile.tile-negative .tile-sub { color: rgba(255,255,255,0.75); }
 .metric-tile.tile-negative .tile-value { color: #FFFFFF; }
+.metric-tile.tile-negative:hover {
+    box-shadow: 0 8px 24px rgba(239,68,68,0.3);
+}
 
 /* Heatmap variants */
 .metric-tile.heatmap-1 { background: #15803D !important; border: none; }
@@ -191,6 +194,74 @@
 }
 .dashboard-grid > .span-2 { grid-column: 1 / -1; }
 
+/* ========== CHART PANEL OVERRIDES (dashboard-specific) ========== */
+.chart-panel.donut-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    max-width: 380px;
+}
+
+/* ========== DONUT CHART ========== */
+.donut-container {
+    position: relative;
+    width: 100%;
+    max-width: 240px;
+    margin: 0 auto;
+    padding: 4px;
+    aspect-ratio: 1 / 1;
+}
+.donut-center-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+}
+.donut-center-label .dcl-value {
+    font-family: var(--font-heading);
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--navy);
+    line-height: 1;
+}
+.donut-center-label .dcl-label {
+    font-size: 0.85rem;
+    text-transform: capitalize;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+.donut-legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px 14px;
+    margin-top: 16px;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+}
+.donut-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+.donut-legend-swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    border: 1.5px solid var(--outline);
+    flex-shrink: 0;
+}
+.compressed-day-container {
+    position: relative;
+    height: 370px;
+    min-width: 0;
+}
+
 /* ========== COST / COMPARISON TABLE ========== */
 .cost-table {
     width: 100%;
@@ -230,7 +301,44 @@
     height: 12px;
     border-radius: 3px;
     margin-right: 8px;
+    border: 1.5px solid var(--outline);
     vertical-align: middle;
+}
+
+/* ========== COST PANEL ========== */
+.cost-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    padding: 28px;
+    margin-bottom: 28px;
+}
+.cost-panel h3 {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 1.3rem;
+    color: var(--red-dark);
+    margin-bottom: 16px;
+    text-transform: capitalize;
+    letter-spacing: 0.04em;
+}
+.cost-table-wrapper {
+    overflow-x: auto;
+}
+.cost-note {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 14px;
+    font-style: italic;
+}
+.cost-unavailable {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 120px;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    font-style: italic;
 }
 
 /* ========== PILL SELECTOR ========== */
@@ -347,6 +455,10 @@
     align-items: center;
     gap: 6px;
 }
+.key-findings h4::before {
+    content: '\2605';
+    font-size: 0.9rem;
+}
 .key-findings p {
     font-size: 0.88rem;
     color: var(--text-primary);
@@ -455,6 +567,10 @@
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
 }
+@keyframes bounceDown {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(10px); }
+}
 .fade-in {
     opacity: 0;
     transform: translateY(30px);
@@ -466,6 +582,32 @@
 }
 @media (prefers-reduced-motion: reduce) {
     .fade-in { opacity: 1; transform: none; transition: none; }
+}
+
+/* ========== TILE ENTRY ANIMATIONS ========== */
+.metrics-row .metric-tile {
+    animation: fadeInUp 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+.metrics-row .metric-tile:nth-child(1) { animation-delay: 0.05s; }
+.metrics-row .metric-tile:nth-child(2) { animation-delay: 0.1s; }
+.metrics-row .metric-tile:nth-child(3) { animation-delay: 0.15s; }
+.metrics-row .metric-tile:nth-child(4) { animation-delay: 0.2s; }
+.metrics-row .metric-tile:nth-child(5) { animation-delay: 0.25s; }
+.metrics-row .metric-tile:nth-child(6) { animation-delay: 0.3s; }
+.metrics-row .metric-tile:nth-child(7) { animation-delay: 0.35s; }
+.metrics-row .metric-tile:nth-child(8) { animation-delay: 0.4s; }
+.key-findings {
+    animation: slideInLeft 0.5s ease both;
+    animation-delay: 0.3s;
+}
+.charts-row {
+    animation: fadeInUp 0.6s ease both;
+    animation-delay: 0.35s;
+}
+
+/* Smooth transitions when switching selections */
+.tile-value, .dcl-value {
+    transition: all 0.3s ease;
 }
 
 /* ========== SIM PANEL + CONTROLS ========== */
@@ -562,184 +704,237 @@
     cursor: pointer;
 }
 
-/* ========== RESPONSIVE — DASHBOARD UI ========== */
-@media (max-width: 1100px) {
-    .charts-row { grid-template-columns: 1fr !important; }
-    .charts-row-duo { grid-template-columns: minmax(0, 320px) minmax(0, 1fr) !important; }
+/* ========== STRANDED ASSET BREAKDOWN ========== */
+.stranded-breakdown {
+    margin-bottom: 20px;
 }
-@media (max-width: 1000px) {
-    .metrics-row { grid-template-columns: repeat(3, 1fr); }
+.stranded-breakdown-title {
+    font-family: var(--font-heading);
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 12px;
 }
-@media (max-width: 860px) {
-    .metrics-row { grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 768px) {
-    .controls-row {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 14px;
-    }
-    .control-group select {
-        min-width: 100%;
-        padding: 13px 38px 13px 16px;
-        font-size: 1rem;
-    }
-    .metrics-row {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
-    }
-    .metric-tile { padding: 16px 12px; }
-    .metric-tile .tile-value { font-size: 1.8rem; }
-    .metric-tile .tile-label { font-size: 0.75rem; }
-    .metric-tile .tile-sub { font-size: 0.75rem; }
-    .metric-tile:hover { transform: none; }
-    .chart-pair, .dual-chart-row, .dashboard-grid { grid-template-columns: 1fr; }
-    .charts-row-duo { grid-template-columns: 1fr !important; }
-    .bar-divider { display: none; }
-    .bar-slider-wrap { min-width: 140px; max-width: 100%; }
-    .sim-controls { flex-direction: column; align-items: stretch; gap: 8px; }
-    .counter-row { grid-template-columns: repeat(2, 1fr); }
-    .counter-value { font-size: 1.3rem; }
-    .key-findings { padding: 18px 16px; }
-    .key-findings h4 { font-size: 0.95rem; }
-    .key-findings p { font-size: 0.84rem; }
-    .cost-table { font-size: 0.82rem; }
-    .cost-table th { padding: 8px 8px; font-size: 0.8rem; }
-    .cost-table td { padding: 8px 8px; }
-}
-@media (max-width: 480px) {
-    .metrics-row { grid-template-columns: 1fr 1fr; gap: 8px; }
-    .metric-tile { padding: 14px 10px; }
-    .metric-tile .tile-value { font-size: 1.55rem; }
-    .counter-row { grid-template-columns: 1fr 1fr; }
-    .cost-table { font-size: 0.75rem; }
-    .cost-table th { padding: 6px 5px; font-size: 0.73rem; }
-    .cost-table td { padding: 6px 5px; }
-    .cost-table .resource-dot { width: 9px; height: 9px; margin-right: 4px; }
-}
-@media (max-width: 375px) {
-    .metrics-row { grid-template-columns: 1fr; gap: 6px; }
-    .metric-tile .tile-value { font-size: 1.3rem; }
-    .control-group select { min-width: 100%; font-size: 0.82rem; }
-    .cost-table { font-size: 0.7rem; }
-}
-
-/* ========== CHART PANEL + DONUT ========== */
-.chart-panel {
-    background: var(--bg-card);
-    border: 1px solid var(--border-light);
-    border-radius: 10px;
-    padding: 28px;
-    min-width: 0;
-}
-.chart-panel.donut-panel {
+.stranded-bars-wrapper {
     display: flex;
     flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.sbar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.sbar-label {
+    flex: 0 0 90px;
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-align: right;
+    line-height: 1.2;
+}
+.sbar-label.sbar-label-warn {
+    color: #C75B4A;
+}
+.sbar-track {
+    flex: 1;
+    display: flex;
+    height: 26px;
+    border-radius: 5px;
+    overflow: hidden;
+    border: 1px solid var(--border-light);
+    background: #f5f5f7;
+    position: relative;
+}
+.sbar-track-stranded {
+    border-color: rgba(239,68,68,0.25);
+    background: rgba(239,68,68,0.04);
+}
+.sbar-seg {
+    display: flex;
     align-items: center;
     justify-content: center;
-    max-width: 380px;
-}
-.chart-panel h3 {
-    font-family: var(--font-heading);
+    font-size: 0.65rem;
     font-weight: 600;
-    font-size: 1.3rem;
-    color: var(--red-dark);
-    margin-bottom: 16px;
-    text-transform: capitalize;
-    letter-spacing: 0.04em;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0 4px;
+    transition: width 0.5s ease;
+    min-width: 0;
 }
-.donut-container {
-    position: relative;
-    width: 100%;
-    max-width: 240px;
-    margin: 0 auto;
-    padding: 4px;
-    aspect-ratio: 1 / 1;
-}
-.donut-center-label {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
-    pointer-events: none;
-}
-.donut-center-label .dcl-value {
+.sbar-total {
+    flex: 0 0 auto;
     font-family: var(--font-heading);
-    font-size: 2.2rem;
+    font-size: 0.78rem;
     font-weight: 700;
     color: var(--navy);
-    line-height: 1;
+    margin-left: 8px;
+    white-space: nowrap;
 }
-.donut-center-label .dcl-label {
-    font-size: 0.85rem;
-    text-transform: capitalize;
-    letter-spacing: 0.05em;
-    color: var(--text-muted);
-    margin-top: 4px;
+.sbar-total-warn {
+    color: #C75B4A;
 }
-.donut-legend {
+.stranded-legend {
     display: flex;
     flex-wrap: wrap;
-    justify-content: center;
-    gap: 6px 14px;
-    margin-top: 16px;
-    font-size: 0.82rem;
+    gap: 4px 14px;
+    font-size: 0.75rem;
     color: var(--text-secondary);
 }
-.donut-legend-item {
+.stranded-legend-item {
     display: flex;
     align-items: center;
     gap: 4px;
+}
+.stranded-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+.stranded-legend-item .sl-val {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* Stranded Clean Cost Summary */
+.stranded-clean-cost {
+    margin-top: 14px;
+    padding: 12px 16px;
+    background: rgba(239,68,68,0.06);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+.stranded-clean-cost .scc-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #C75B4A;
+}
+.stranded-clean-cost .scc-label {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+/* ========== GAS CAPACITY STRANDING VISUAL ========== */
+.gas-strand-panel {
+    margin-top: 22px;
+    padding: 18px 20px;
+    background: rgba(239,68,68,0.03);
+    border: 1px solid rgba(239,68,68,0.15);
+    border-radius: 12px;
+}
+.gas-strand-subtitle {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin: 6px 0 14px 0;
+}
+.gas-strand-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.gas-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.gas-bar-label {
+    flex: 0 0 100px;
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-align: right;
+    line-height: 1.2;
+}
+.gas-bar-track {
+    flex: 1;
+    display: flex;
+    height: 28px;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid rgba(0,0,0,0.08);
+    background: rgba(0,0,0,0.02);
+}
+.gas-bar-seg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-heading);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #fff;
+    min-width: 0;
+    transition: width 0.4s ease;
+    overflow: hidden;
     white-space: nowrap;
 }
-.donut-legend-swatch {
+.gas-bar-val {
+    flex: 0 0 auto;
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-left: 8px;
+    white-space: nowrap;
+}
+.gas-bar-val-warn { color: #C75B4A; }
+.gas-strand-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    margin-top: 12px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+.gas-strand-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.gas-strand-legend-dot {
     width: 12px;
     height: 12px;
     border-radius: 3px;
-    border: 1.5px solid var(--outline);
     flex-shrink: 0;
 }
-.compressed-day-container {
-    position: relative;
-    height: 370px;
-    min-width: 0;
-}
 
-/* ========== COST PANEL ========== */
-.cost-panel {
+/* ========== WHAT YOU NEED PANEL ========== */
+.what-you-need-panel {
     background: var(--bg-card);
     border: 1px solid var(--border-light);
     border-radius: 10px;
     padding: 28px;
     margin-bottom: 28px;
 }
-.cost-panel h3 {
+.what-you-need-panel h3 {
     font-family: var(--font-heading);
     font-weight: 600;
     font-size: 1.3rem;
     color: var(--red-dark);
-    margin-bottom: 16px;
-    text-transform: capitalize;
+    margin-bottom: 8px;
     letter-spacing: 0.04em;
 }
-.cost-table-wrapper {
-    overflow-x: auto;
-}
-.cost-note {
-    font-size: 0.8rem;
+.what-you-need-panel .wyn-subtitle {
+    font-size: 0.88rem;
     color: var(--text-muted);
-    margin-top: 14px;
-    font-style: italic;
+    margin-bottom: 20px;
+    line-height: 1.5;
 }
-.cost-unavailable {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 120px;
-    color: var(--text-muted);
-    font-size: 0.9rem;
-    font-style: italic;
+.wyn-chart-container {
+    position: relative;
+    height: 300px;
+    margin-bottom: 16px;
 }
 
 /* ========== PEAK CAPACITY + COST ROW ========== */
@@ -755,9 +950,6 @@
 .peak-cost-row .cost-panel {
     flex: 1.3;
     margin-bottom: 0;
-}
-@media (max-width: 900px) {
-    .peak-cost-row { flex-direction: column; }
 }
 
 /* ========== PEAK CAPACITY VISUAL ========== */
@@ -838,6 +1030,56 @@
     color: var(--navy);
     font-weight: 700;
 }
+.peak-capacity-panel {
+    animation: fadeInUp 0.5s ease both;
+    animation-delay: 0.38s;
+}
+.cost-panel {
+    animation: fadeInUp 0.5s ease both;
+    animation-delay: 0.4s;
+}
+
+/* ========== SCROLL TRANSITION ========== */
+.scroll-transition {
+    padding: 64px 0 48px;
+    text-align: center;
+    animation: fadeIn 0.8s ease both;
+    animation-delay: 0.6s;
+}
+.scroll-transition-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 40px 32px;
+    background: linear-gradient(135deg, rgba(26,39,68,0.03) 0%, rgba(239,68,68,0.05) 50%, rgba(245,158,11,0.03) 100%);
+    border: 1px solid rgba(26,39,68,0.12);
+    border-radius: 16px;
+    max-width: 560px;
+    margin: 0 auto;
+}
+.scroll-transition-line {
+    width: 2px;
+    height: 40px;
+    background: linear-gradient(to bottom, transparent, var(--clean-firm), transparent);
+    border-radius: 1px;
+}
+.scroll-transition-text {
+    font-family: var(--font-heading);
+    font-size: 1.43rem;
+    font-weight: 600;
+    color: var(--red-dark);
+    letter-spacing: 0.01em;
+    max-width: 440px;
+    line-height: 1.55;
+}
+.scroll-transition-arrow {
+    font-size: 2rem;
+    color: var(--clean-firm);
+    animation: bounceDown 1.8s ease-in-out infinite;
+    opacity: 0.85;
+    filter: drop-shadow(0 2px 6px rgba(26,39,68,0.25));
+}
 
 /* ========== TARGET MODE TOGGLE (Interim / Long-term) ========== */
 .target-mode-panel {
@@ -896,7 +1138,7 @@
     color: var(--text-primary);
 }
 
-/* ========== PATHWAY PLANNING ========== */
+/* ========== PATHWAY PLANNING PANEL ========== */
 .pathway-controls {
     display: flex;
     gap: 20px;
@@ -967,50 +1209,6 @@
     line-height: 1.35;
 }
 
-/* ========== SCROLL TRANSITION ========== */
-.scroll-transition {
-    padding: 64px 0 48px;
-    text-align: center;
-}
-.scroll-transition-inner {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-    padding: 40px 32px;
-    background: linear-gradient(135deg, rgba(26,39,68,0.03) 0%, rgba(239,68,68,0.05) 50%, rgba(245,158,11,0.03) 100%);
-    border: 1px solid rgba(26,39,68,0.12);
-    border-radius: 16px;
-    max-width: 560px;
-    margin: 0 auto;
-}
-.scroll-transition-line {
-    width: 2px;
-    height: 40px;
-    background: linear-gradient(to bottom, transparent, var(--clean-firm), transparent);
-    border-radius: 1px;
-}
-.scroll-transition-text {
-    font-family: var(--font-heading);
-    font-size: 1.43rem;
-    font-weight: 600;
-    color: var(--red-dark);
-    letter-spacing: 0.01em;
-    max-width: 440px;
-    line-height: 1.55;
-}
-.scroll-transition-arrow {
-    font-size: 2rem;
-    color: var(--clean-firm);
-    animation: bounceDown 1.8s ease-in-out infinite;
-    opacity: 0.85;
-    filter: drop-shadow(0 2px 6px rgba(26,39,68,0.25));
-}
-@keyframes bounceDown {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(10px); }
-}
-
 /* ========== SCROLLYTELLING ========== */
 .story-divider-wrap {
     max-width: 1400px;
@@ -1023,6 +1221,13 @@
     background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 15%, #22C55E 35%, #F59E0B 55%, #EF4444 80%, #DC2626 100%);
     margin: 0;
     opacity: 0.7;
+}
+.energy-spectrum-bar {
+    height: 3px;
+    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 15%, #22C55E 35%, #F59E0B 55%, #EF4444 80%, #DC2626 100%);
+    border-radius: 2px;
+    margin: 32px 0;
+    opacity: 0.6;
 }
 .scrolly-container {
     position: relative;
@@ -1073,8 +1278,12 @@
     transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
                 transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.scrolly-step:first-child { padding-top: 120px; }
-.scrolly-step:last-child { padding-bottom: 120px; }
+.scrolly-step:first-child {
+    padding-top: 120px;
+}
+.scrolly-step:last-child {
+    padding-bottom: 120px;
+}
 .scrolly-step.visible {
     opacity: 1;
     transform: translateY(0);
@@ -1121,19 +1330,27 @@
     background: rgba(34,197,94,0.08);
     border: 1px solid rgba(34,197,94,0.15);
 }
-.step-cost-callout.step-cost-green strong { color: #7A8B5C; }
+.step-cost-callout.step-cost-green strong {
+    color: #7A8B5C;
+}
 .step-cost-callout.step-cost-red {
     background: rgba(239,68,68,0.08);
     border: 1px solid rgba(239,68,68,0.15);
 }
-.step-cost-callout.step-cost-red strong { color: var(--red-dark); }
+.step-cost-callout.step-cost-red strong {
+    color: var(--red-dark);
+}
 
-/* Inline step charts: hidden on desktop, shown on mobile when sticky chart scrolls away */
+/* Inline step charts: hidden on desktop, shown on mobile */
 .step-inline-chart {
     display: none;
 }
 
-/* ========== STORY INSIGHT BOX ========== */
+/* Story narrative elements */
+.story-badge-orange {
+    background: rgba(239,68,68,0.1);
+    color: var(--red-dark);
+}
 .story-insight-box {
     display: flex;
     gap: 16px;
@@ -1154,6 +1371,19 @@
     font-size: 1.4rem;
     flex-shrink: 0;
     margin-top: 2px;
+}
+.story-content {
+    position: relative;
+}
+.cta-card:hover {
+    transform: translateY(-4px) !important;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.08) !important;
+}
+.cta-card:active {
+    transform: translateY(-1px) !important;
+}
+@media (prefers-reduced-motion: reduce) {
+    .cta-card:hover { transform: none !important; }
 }
 
 /* ========== HERO CALLOUT CARDS ========== */
@@ -1194,15 +1424,6 @@
     font-weight: 600;
     letter-spacing: 1px;
     text-transform: capitalize;
-}
-
-/* ========== ENERGY SPECTRUM BAR ========== */
-.energy-spectrum-bar {
-    height: 3px;
-    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 15%, #22C55E 35%, #F59E0B 55%, #EF4444 80%, #DC2626 100%);
-    border-radius: 2px;
-    margin: 32px 0;
-    opacity: 0.6;
 }
 
 /* ========== INLINE VISUALIZATIONS ========== */
@@ -1301,7 +1522,9 @@
     margin: 0 auto 10px;
     position: relative;
 }
-.gauge-ring svg { transform: rotate(-90deg); }
+.gauge-ring svg {
+    transform: rotate(-90deg);
+}
 .gauge-ring-label {
     position: absolute;
     top: 50%;
@@ -1353,7 +1576,9 @@
     font-size: 1.1rem;
     flex-shrink: 0;
 }
-.cf-cost-indicator strong { font-weight: 700; }
+.cf-cost-indicator strong {
+    font-weight: 700;
+}
 
 /* ========== REGION TOGGLE PILLS ========== */
 .region-toggle-row {
@@ -1391,8 +1616,10 @@
     color: #fff;
 }
 
-/* ========== INCREMENTAL MIX ========== */
-.incremental-mix-wrap { margin: 24px 0; }
+/* ========== INCREMENTAL MIX SECTION ========== */
+.incremental-mix-wrap {
+    margin: 24px 0;
+}
 .incremental-chart-container {
     min-height: 320px;
     position: relative;
@@ -1439,9 +1666,11 @@
     line-height: 1.65;
     transition: opacity 0.3s;
 }
-.incremental-insight strong { color: var(--navy); }
+.incremental-insight strong {
+    color: var(--navy);
+}
 
-/* ========== TRANSITION FUEL CARDS ========== */
+/* ========== TRANSITION FUEL VISUAL ========== */
 .transition-fuel-row {
     display: flex;
     gap: 24px;
@@ -1460,7 +1689,9 @@
     padding: 24px 20px;
     text-align: center;
 }
-.transition-fuel-icon { margin-bottom: 12px; }
+.transition-fuel-icon {
+    margin-bottom: 12px;
+}
 .transition-fuel-title {
     font-family: var(--font-heading);
     font-size: 1.1rem;
@@ -1495,16 +1726,20 @@
 .conclusion-panel::before {
     content: '';
     position: absolute;
-    top: -60px; right: -60px;
-    width: 200px; height: 200px;
+    top: -60px;
+    right: -60px;
+    width: 200px;
+    height: 200px;
     background: radial-gradient(circle, rgba(34,197,94,0.08) 0%, transparent 70%);
     border-radius: 50%;
 }
 .conclusion-panel::after {
     content: '';
     position: absolute;
-    bottom: -40px; left: -40px;
-    width: 160px; height: 160px;
+    bottom: -40px;
+    left: -40px;
+    width: 160px;
+    height: 160px;
     background: radial-gradient(circle, rgba(14,165,233,0.06) 0%, transparent 70%);
     border-radius: 50%;
 }
@@ -1533,7 +1768,9 @@
     position: relative;
     z-index: 1;
 }
-.conclusion-panel strong { color: var(--navy); }
+.conclusion-panel strong {
+    color: var(--navy);
+}
 .conclusion-pillars {
     display: flex;
     gap: 20px;
@@ -1552,7 +1789,8 @@
     backdrop-filter: none;
 }
 .conclusion-pillar-icon {
-    width: 48px; height: 48px;
+    width: 48px;
+    height: 48px;
     border-radius: 12px;
     display: flex;
     align-items: center;
@@ -1582,7 +1820,9 @@
     position: relative;
     z-index: 1;
 }
-.conclusion-warning strong { color: var(--red-dark); }
+.conclusion-warning strong {
+    color: var(--red-dark);
+}
 .conclusion-warning p {
     color: var(--text-secondary);
     margin: 0;
@@ -1652,7 +1892,9 @@
     margin: 0 auto;
     position: relative; z-index: 1;
 }
-.hero-takeaway-sub strong { color: var(--navy); }
+.hero-takeaway-sub strong {
+    color: var(--navy);
+}
 
 /* ========== SITE INTRO ========== */
 .site-intro {
@@ -1761,15 +2003,117 @@
     font-weight: 600;
 }
 
-/* ========== RESPONSIVE — DASHBOARD UI (continued) ========== */
+/* ========== RESPONSIVE -- DASHBOARD UI ========== */
+
+/* 1100px: chart layout collapse */
 @media (max-width: 1100px) {
+    .charts-row { grid-template-columns: 1fr !important; }
+    .charts-row-duo { grid-template-columns: minmax(0, 320px) minmax(0, 1fr) !important; }
     .chart-panel.donut-panel { max-width: 100%; }
 }
+
+/* 1024px: scrollytelling stacks */
+@media (max-width: 1024px) {
+    .scrolly-container {
+        flex-direction: column;
+    }
+    .scrolly-sticky {
+        width: 100%;
+        height: 50vh;
+        position: relative;
+        top: auto;
+        padding: 24px 20px;
+    }
+    .scrolly-steps {
+        width: 100%;
+    }
+    .scrolly-step {
+        min-height: auto;
+        padding: 48px 24px;
+    }
+    .step-inline-chart {
+        display: block;
+        width: 100%;
+        height: 240px;
+        margin-bottom: 18px;
+        background: rgba(255,255,255,0.92);
+        border: 1px solid rgba(221,208,192,0.5);
+        border-radius: 12px;
+        padding: 12px 8px;
+    }
+    .step-inline-chart canvas {
+        width: 100% !important;
+        height: 100% !important;
+    }
+    /* Hide the main sticky chart panel on tablet/mobile */
+    .scrolly-sticky {
+        display: none;
+    }
+}
+/* Mobile scrollytelling: re-enable sticky behavior in stacked layout */
+@media (max-width: 1024px) and (min-width: 481px) {
+    .scrolly-sticky {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        height: 45vh;
+    }
+}
+
+/* 1000px: metric tiles 3-col */
+@media (max-width: 1000px) {
+    .metrics-row { grid-template-columns: repeat(3, 1fr); }
+}
+
+/* 900px: peak-cost stacks */
+@media (max-width: 900px) {
+    .peak-cost-row {
+        flex-direction: column;
+    }
+}
+
+/* 860px: metric tiles 2-col */
+@media (max-width: 860px) {
+    .metrics-row { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* 768px: tablet responsive */
 @media (max-width: 768px) {
+    .controls-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 14px;
+    }
+    .control-group select {
+        min-width: 100%;
+        padding: 13px 38px 13px 16px;
+        font-size: 1rem;
+    }
+    .metrics-row {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    .metric-tile { padding: 16px 12px; }
+    .metric-tile .tile-value { font-size: 1.8rem; }
+    .metric-tile .tile-label { font-size: 0.75rem; }
+    .metric-tile .tile-sub { font-size: 0.75rem; }
+    .metric-tile:hover { transform: none; }
+    .chart-pair, .dual-chart-row, .dashboard-grid { grid-template-columns: 1fr; }
     .charts-row-duo { grid-template-columns: 1fr !important; }
     .chart-panel.donut-panel { max-width: 100%; }
-    .chart-panel { padding: 18px 14px; }
-    .chart-panel h3 { font-size: 1.1rem; margin-bottom: 12px; }
+    .bar-divider { display: none; }
+    .bar-slider-wrap { min-width: 140px; max-width: 100%; }
+    .sim-controls { flex-direction: column; align-items: stretch; gap: 8px; }
+    .counter-row { grid-template-columns: repeat(2, 1fr); }
+    .counter-value { font-size: 1.3rem; }
+    .key-findings { padding: 18px 16px; }
+    .key-findings h4 { font-size: 0.95rem; }
+    .key-findings p { font-size: 0.84rem; }
+    .cost-table { font-size: 0.82rem; }
+    .cost-table th { padding: 8px 8px; font-size: 0.8rem; }
+    .cost-table td { padding: 8px 8px; }
+    .what-you-need-panel { padding: 18px 16px; }
+    .wyn-chart-container { height: 340px; }
     .donut-container { max-width: 210px; }
     .donut-center-label .dcl-value { font-size: 1.6rem; }
     .donut-legend { gap: 4px 10px; font-size: 0.75rem; margin-top: 12px; }
@@ -1779,23 +2123,29 @@
     .peak-tower { max-width: 80px; }
     .peak-tower-value { font-size: 0.8rem; }
     .peak-tower-label { font-size: 0.72rem; }
-    .peak-capacity-panel, .cost-panel { padding: 18px 14px; }
+    .peak-capacity-panel,
+    .cost-panel { padding: 18px 14px; }
     .peak-capacity-note { font-size: 0.82rem; }
     .scroll-transition-inner { padding: 28px 20px; }
     .scroll-transition-text { font-size: 1.15rem; }
-    .story-insight-box { padding: 18px 16px; font-size: 0.85rem; gap: 12px; flex-direction: column; }
-    .step-card { padding: 22px 18px; }
-    .step-card h3 { font-size: 1.4rem; }
-    .step-card p { font-size: 0.88rem; }
-    .scrolly-chart-wrap { padding: 18px 14px; min-height: 280px; }
-    .scrolly-chart-wrap canvas { max-height: 300px; }
-    .target-mode-panel { flex-direction: column; align-items: flex-start; gap: 12px; padding: 14px 16px; }
+    .target-mode-panel {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 14px 16px;
+    }
     .target-mode-toggle button { padding: 10px 16px; font-size: 0.82rem; }
     .target-mode-info { font-size: 0.78rem; }
     .pathway-controls { flex-direction: column; gap: 14px; }
     .pathway-ctrl { min-width: auto; }
     .pathway-metrics { grid-template-columns: 1fr; gap: 12px; }
     .pathway-metric-value { font-size: 1.5rem; }
+    .sbar-label { flex: 0 0 70px; font-size: 0.7rem; }
+    .sbar-track { height: 22px; }
+    .sbar-seg { font-size: 0.58rem; }
+    .sbar-total { font-size: 0.7rem; }
+    .stranded-legend { font-size: 0.7rem; gap: 3px 10px; }
+    .cf-cost-indicator { font-size: 0.8rem; padding: 8px 14px; }
     .curtailment-visual { gap: 8px; }
     .curtail-bar-group { min-width: 50px; }
     .curtail-bar-stack { height: 90px; }
@@ -1809,7 +2159,12 @@
     .transition-fuel-row { flex-direction: column; gap: 14px; }
     .transition-fuel-card { min-width: unset; padding: 18px 14px; }
     .transition-fuel-stat { font-size: 1.3rem; }
-    .section-illustration { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 18px -10px; padding: 0 10px; }
+    .section-illustration {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 18px -10px;
+        padding: 0 10px;
+    }
     .section-illustration svg { min-width: min(340px, 100%); }
     .trilemma-svg { max-width: 300px !important; min-width: min(260px, 100%) !important; }
     .region-toggle-row, .incremental-region-pills { gap: 6px; }
@@ -1819,6 +2174,12 @@
     .hero-callout-card { min-width: 100px; padding: 20px 10px; }
     .hero-callout-value { font-size: 2rem; }
     .hero-callout-label { font-size: 0.7rem; }
+    .story-insight-box { padding: 18px 16px; font-size: 0.85rem; gap: 12px; flex-direction: column; }
+    .step-card { padding: 22px 18px; }
+    .step-card h3 { font-size: 1.4rem; }
+    .step-card p { font-size: 0.88rem; }
+    .scrolly-chart-wrap { padding: 18px 14px; min-height: 280px; }
+    .scrolly-chart-wrap canvas { max-height: 300px; }
     .conclusion-panel { padding: 32px 24px; margin: 32px 0 24px; }
     .conclusion-panel h2 { font-size: 1.6rem; }
     .conclusion-pillars { flex-direction: column; gap: 14px; }
@@ -1834,11 +2195,21 @@
     .dashboard-intro { padding: 22px 18px 18px; }
     .dashboard-intro-title { font-size: 1.25rem; }
     .dashboard-intro-text { font-size: 0.9rem; }
-    .cf-cost-indicator { font-size: 0.8rem; padding: 8px 14px; }
+    .scrolly-step { min-height: 60vh; }
 }
+
+/* 480px: small phone */
 @media (max-width: 480px) {
-    .chart-panel { padding: 14px 10px; }
-    .chart-panel h3 { font-size: 1rem; }
+    .metrics-row { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .metric-tile { padding: 14px 10px; }
+    .metric-tile .tile-value { font-size: 1.55rem; }
+    .metric-tile .tile-label { font-size: 0.75rem; margin-bottom: 5px; }
+    .metric-tile .tile-sub { font-size: 0.75rem; }
+    .counter-row { grid-template-columns: 1fr 1fr; }
+    .cost-table { font-size: 0.75rem; }
+    .cost-table th { padding: 6px 5px; font-size: 0.73rem; }
+    .cost-table td { padding: 6px 5px; }
+    .cost-table .resource-dot { width: 9px; height: 9px; margin-right: 4px; }
     .donut-container { max-width: 170px; }
     .donut-center-label .dcl-value { font-size: 1.35rem; }
     .donut-legend { gap: 3px 8px; font-size: 0.72rem; margin-top: 10px; }
@@ -1847,14 +2218,8 @@
     .peak-tower-wrap { height: 200px; gap: 10px; }
     .peak-tower { max-width: 65px; }
     .step-cost-callout { padding: 10px 12px; font-size: 0.82rem; border-radius: 8px; }
-    .story-insight-box { padding: 14px 12px; font-size: 0.82rem; }
-    .scrolly-sticky { height: 40vh; padding: 14px 10px; }
-    .scrolly-chart-wrap { padding: 12px 8px; min-height: 220px; border-radius: 12px; }
-    .scrolly-chart-wrap canvas { max-height: 240px; }
-    .scrolly-step { padding: 28px 12px; }
-    .step-card { padding: 18px 14px; border-radius: 12px; }
-    .step-card h3 { font-size: 1.2rem; margin-bottom: 10px; }
-    .step-card p { font-size: 0.84rem; line-height: 1.65; }
+    .step-inline-chart { height: 200px; padding: 8px 4px; margin-bottom: 14px; }
+    .wyn-chart-container { height: 260px; }
     .curtailment-visual { gap: 5px; }
     .curtail-bar-group { min-width: 42px; }
     .curtail-bar-stack { height: 70px; }
@@ -1881,6 +2246,14 @@
     .hero-callout-card { min-width: 80px; padding: 16px 8px; border-radius: 12px; }
     .hero-callout-value { font-size: 1.6rem; }
     .hero-callout-label { font-size: 0.75rem; letter-spacing: 0.5px; }
+    .story-insight-box { padding: 14px 12px; font-size: 0.82rem; }
+    .scrolly-sticky { height: 40vh; padding: 14px 10px; }
+    .scrolly-chart-wrap { padding: 12px 8px; min-height: 220px; border-radius: 12px; }
+    .scrolly-chart-wrap canvas { max-height: 240px; }
+    .scrolly-step { padding: 28px 12px; min-height: 50vh; }
+    .step-card { padding: 18px 14px; border-radius: 12px; }
+    .step-card h3 { font-size: 1.2rem; margin-bottom: 10px; }
+    .step-card p { font-size: 0.84rem; line-height: 1.65; }
     .conclusion-panel { padding: 24px 18px; border-radius: 14px; }
     .conclusion-panel h2 { font-size: 1.25rem; }
     .conclusion-panel .conclusion-subtitle { font-size: 0.9rem; }
@@ -1900,57 +2273,41 @@
     .dashboard-intro { padding: 18px 14px 14px; }
     .dashboard-intro-title { font-size: 1.1rem; }
     .dashboard-intro-text { font-size: 0.85rem; }
-    .step-inline-chart { height: 200px; padding: 8px 4px; margin-bottom: 14px; }
 }
+
+/* 375px: mid-range phones */
 @media (max-width: 375px) {
+    .metrics-row { grid-template-columns: 1fr; gap: 6px; }
+    .metric-tile .tile-value { font-size: 1.3rem; }
+    .control-group select { min-width: 100%; font-size: 0.82rem; padding: 11px 32px 11px 14px; }
+    .cost-table { font-size: 0.7rem; }
+    .cost-table th { padding: 5px 3px; font-size: 0.68rem; }
+    .cost-table td { padding: 5px 3px; }
+    .cost-table .resource-dot { width: 8px; height: 8px; margin-right: 3px; }
+    .sensitivity-toggles-grid { gap: 10px 16px; }
+    .toggle-btn-group button { padding: 6px 10px; font-size: 0.74rem; min-width: 44px; min-height: 44px; }
     .donut-container { max-width: 150px; }
     .donut-center-label .dcl-value { font-size: 1.2rem; }
     .donut-legend { gap: 2px 6px; font-size: 0.68rem; }
+    .compressed-day-container { height: 340px; }
     .hero-callout-card { min-width: 70px; padding: 12px 6px; }
     .hero-callout-value { font-size: 1.4rem; }
+    .scrolly-chart-wrap { min-height: 250px; }
+    .step-card { padding: 16px 12px; }
+    .hero-callout-row { gap: 4px; }
+    .hero-callout-card { min-width: 65px; padding: 12px 6px; }
+    .story-section { padding: 32px 14px; }
+    .region-context .ctx-label { font-size: 0.86rem; }
+    .info-tooltip { width: 200px; }
 }
 
-/* Responsive scrollytelling */
-@media (max-width: 1024px) {
-    .scrolly-container { flex-direction: column; }
-    .scrolly-sticky {
-        width: 100%;
-        height: 50vh;
-        position: relative;
-        top: auto;
-        padding: 24px 20px;
-    }
-    .scrolly-steps { width: 100%; }
-    .scrolly-step { min-height: auto; padding: 48px 24px; }
-    .step-inline-chart {
-        display: block;
-        width: 100%;
-        height: 240px;
-        margin-bottom: 18px;
-        background: rgba(255,255,255,0.92);
-        border: 1px solid rgba(221,208,192,0.5);
-        border-radius: 12px;
-        padding: 12px 8px;
-    }
-    .step-inline-chart canvas { width: 100% !important; height: 100% !important; }
-    /* Hide the main sticky chart panel on mobile */
-    .scrolly-sticky { display: none; }
-}
-/* Mobile scrollytelling: re-enable sticky behavior in stacked layout */
-@media (max-width: 1024px) and (min-width: 481px) {
-    .scrolly-sticky {
-        position: sticky;
-        top: 0;
-        z-index: 10;
-        height: 45vh;
-    }
-}
-
-/* Landscape phones */
-@media (max-height: 500px) and (orientation: landscape) {
-    .scrolly-sticky { height: 70vh; }
-    .scrolly-chart-wrap { min-height: 200px; }
-    .scrolly-chart-wrap canvas { max-height: 200px; }
+/* 320px: smallest phones */
+@media (max-width: 320px) {
+    .metrics-row { gap: 6px; }
+    .region-context .ctx-label { font-size: 0.86rem; }
+    .info-tooltip { width: 180px; }
+    .controls-row { gap: 8px; }
+    .control-group select { padding: 11px 30px 11px 12px; }
 }
 
 /* ========== TOUCH FRIENDLY ========== */
@@ -1959,8 +2316,30 @@
         min-height: 48px;
         font-size: 16px;
     }
+    .toggle-btn-group button {
+        min-height: 48px;
+        min-width: 48px;
+        padding: 8px 12px;
+    }
     .metric-tile:hover {
         transform: none;
         box-shadow: none;
+    }
+    .story-stat-card:hover {
+        transform: none;
+        box-shadow: 0 4px 6px -4px rgba(0,0,0,0.04);
+    }
+}
+
+/* Landscape phones */
+@media (max-height: 500px) and (orientation: landscape) {
+    .scrolly-sticky {
+        height: 70vh;
+    }
+    .scrolly-chart-wrap {
+        min-height: 200px;
+    }
+    .scrolly-chart-wrap canvas {
+        max-height: 200px;
     }
 }

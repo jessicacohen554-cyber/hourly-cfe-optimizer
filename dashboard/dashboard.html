@@ -18,244 +18,16 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <style>
 /* ===== PAGE-SPECIFIC STYLES — dashboard.html ===== */
+/* Everything else lives in dashboard-ui.css */
 
-/* Page-specific background override */
+/* Page background override */
 body {
     background: var(--bg-page-white);
     background-image: none;
     background-attachment: fixed;
 }
 
-/* ========== WHAT YOU NEED CHART ========== */
-.wyn-chart-container {
-    position: relative;
-    height: 300px;
-    margin-bottom: 16px;
-}
-
-/* ========== STRANDED ASSET BREAKDOWN ========== */
-.stranded-breakdown { margin-bottom: 20px; }
-.stranded-breakdown-title {
-    font-family: var(--font-heading);
-    font-size: 0.88rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    margin-bottom: 12px;
-}
-.stranded-bars-wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 12px;
-}
-.sbar-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.sbar-label {
-    flex: 0 0 90px;
-    font-family: var(--font-heading);
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: var(--text-secondary);
-    text-align: right;
-    line-height: 1.2;
-}
-.sbar-label.sbar-label-warn { color: #C75B4A; }
-.sbar-track {
-    flex: 1;
-    display: flex;
-    height: 26px;
-    border-radius: 5px;
-    overflow: hidden;
-    border: 1px solid var(--border-light);
-    background: #f5f5f7;
-    position: relative;
-}
-.sbar-track-stranded {
-    border-color: rgba(239,68,68,0.25);
-    background: rgba(239,68,68,0.04);
-}
-.sbar-seg {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.65rem;
-    font-weight: 600;
-    color: #fff;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    padding: 0 4px;
-    transition: width 0.5s ease;
-    min-width: 0;
-}
-.sbar-total {
-    flex: 0 0 auto;
-    font-family: var(--font-heading);
-    font-size: 0.78rem;
-    font-weight: 700;
-    color: var(--navy);
-    margin-left: 8px;
-    white-space: nowrap;
-}
-.sbar-total-warn { color: #C75B4A; }
-.stranded-legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 14px;
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-}
-.stranded-legend-item {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-.stranded-legend-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 3px;
-    flex-shrink: 0;
-}
-.stranded-legend-item .sl-val {
-    font-weight: 600;
-    color: var(--text-primary);
-}
-
-/* Stranded Clean Cost Summary */
-.stranded-clean-cost {
-    margin-top: 14px;
-    padding: 12px 16px;
-    background: rgba(239,68,68,0.06);
-    border-radius: 8px;
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-}
-.stranded-clean-cost .scc-value {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: #C75B4A;
-}
-.stranded-clean-cost .scc-label {
-    color: var(--text-muted);
-    font-size: 0.8rem;
-}
-
-/* ========== GAS CAPACITY STRANDING VISUAL ========== */
-.gas-strand-panel {
-    margin-top: 22px;
-    padding: 18px 20px;
-    background: rgba(239,68,68,0.03);
-    border: 1px solid rgba(239,68,68,0.15);
-    border-radius: 12px;
-}
-.gas-strand-subtitle {
-    font-size: 0.82rem;
-    color: var(--text-muted);
-    margin: 6px 0 14px 0;
-}
-.gas-strand-bars {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-.gas-bar-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.gas-bar-label {
-    flex: 0 0 100px;
-    font-family: var(--font-heading);
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: var(--text-secondary);
-    text-align: right;
-    line-height: 1.2;
-}
-.gas-bar-track {
-    flex: 1;
-    display: flex;
-    height: 28px;
-    border-radius: 6px;
-    overflow: hidden;
-    border: 1px solid rgba(0,0,0,0.08);
-    background: rgba(0,0,0,0.02);
-}
-.gas-bar-seg {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: var(--font-heading);
-    font-size: 0.72rem;
-    font-weight: 700;
-    color: #fff;
-    min-width: 0;
-    transition: width 0.4s ease;
-    overflow: hidden;
-    white-space: nowrap;
-}
-.gas-bar-val {
-    flex: 0 0 auto;
-    font-family: var(--font-heading);
-    font-size: 0.78rem;
-    font-weight: 700;
-    color: var(--navy);
-    margin-left: 8px;
-    white-space: nowrap;
-}
-.gas-bar-val-warn { color: #C75B4A; }
-.gas-strand-legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px 18px;
-    margin-top: 12px;
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-}
-.gas-strand-legend-item {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-.gas-strand-legend-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 3px;
-    flex-shrink: 0;
-}
-
-/* ========== WHAT YOU NEED PANEL ========== */
-.what-you-need-panel {
-    background: var(--bg-card);
-    border: 1px solid var(--border-light);
-    border-radius: 10px;
-    padding: 28px;
-    margin-bottom: 28px;
-}
-.what-you-need-panel h3 {
-    font-family: var(--font-heading);
-    font-weight: 600;
-    font-size: 1.3rem;
-    color: var(--red-dark);
-    margin-bottom: 8px;
-    letter-spacing: 0.04em;
-}
-.what-you-need-panel .wyn-subtitle {
-    font-size: 0.88rem;
-    color: var(--text-muted);
-    margin-bottom: 20px;
-    line-height: 1.5;
-}
-
-/* ========== BOTTOM BANNER (SVG heartbeat override) ========== */
+/* Bottom banner: fixed position + SVG heartbeat overlay (overrides shared.css) */
 .bottom-banner {
     position: fixed;
     bottom: 0;
@@ -275,7 +47,7 @@ body {
     pointer-events: none;
 }
 
-/* ========== MAIN CONTENT ========== */
+/* Main content wrapper */
 .main-content {
     max-width: 1440px;
     margin: 0 auto;
@@ -285,7 +57,7 @@ body {
     box-shadow: 0 4px 24px rgba(0,0,0,0.06);
 }
 
-/* ========== PAGE-SPECIFIC CONTROL OVERRIDES ========== */
+/* Year display (read-only control) */
 .year-display {
     font-family: var(--font-heading);
     font-size: 1.0rem;
@@ -299,6 +71,8 @@ body {
     box-sizing: border-box;
     font-weight: 600;
 }
+
+/* Region context stats beside controls */
 .region-context {
     margin-left: auto;
     display: flex;
@@ -325,46 +99,7 @@ body {
     font-size: 0.98rem;
 }
 
-/* ========== COST TABLE OUTLINE VARIANT ========== */
-.cost-table .resource-dot {
-    border: 1.5px solid var(--outline);
-}
-
-/* ========== METRIC TILE — NEGATIVE HOVER ========== */
-.metric-tile.tile-negative .tile-sub { opacity: 1; }
-.metric-tile .tile-sub.accent { opacity: 1; }
-.metric-tile.tile-negative:hover {
-    box-shadow: 0 8px 24px rgba(239,68,68,0.3);
-}
-
-/* ========== KEY FINDINGS STAR ========== */
-.key-findings h4::before {
-    content: '\2605';
-    font-size: 0.9rem;
-}
-
-/* ========== DASHBOARD ANIMATIONS ========== */
-.metrics-row .metric-tile {
-    animation: fadeInUp 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
-}
-.metrics-row .metric-tile:nth-child(1) { animation-delay: 0.05s; }
-.metrics-row .metric-tile:nth-child(2) { animation-delay: 0.1s; }
-.metrics-row .metric-tile:nth-child(3) { animation-delay: 0.15s; }
-.metrics-row .metric-tile:nth-child(4) { animation-delay: 0.2s; }
-.metrics-row .metric-tile:nth-child(5) { animation-delay: 0.25s; }
-.metrics-row .metric-tile:nth-child(6) { animation-delay: 0.3s; }
-.metrics-row .metric-tile:nth-child(7) { animation-delay: 0.35s; }
-.metrics-row .metric-tile:nth-child(8) { animation-delay: 0.4s; }
-.key-findings { animation: slideInLeft 0.5s ease both; animation-delay: 0.3s; }
-.charts-row { animation: fadeInUp 0.6s ease both; animation-delay: 0.35s; }
-.peak-capacity-panel { animation: fadeInUp 0.5s ease both; animation-delay: 0.38s; }
-.cost-panel { animation: fadeInUp 0.5s ease both; animation-delay: 0.4s; }
-.scroll-transition { animation: fadeIn 0.8s ease both; animation-delay: 0.6s; }
-
-/* Smooth transitions when switching selections */
-.tile-value, .dcl-value { transition: all 0.3s ease; }
-
-/* ========== NARRATIVE SECTION ========== */
+/* Narrative section wrapper */
 #narrativeSection {
     background: var(--bg-alt-warm);
     border-radius: 16px;
@@ -373,23 +108,8 @@ body {
     box-shadow: 0 4px 24px rgba(0,0,0,0.06);
     padding: 20px 0 40px;
 }
-.story-content { position: relative; }
-.story-badge-orange {
-    background: rgba(239,68,68,0.1);
-    color: var(--red-dark);
-}
 
-/* CTA card hover */
-.cta-card:hover {
-    transform: translateY(-4px) !important;
-    box-shadow: 0 8px 28px rgba(0,0,0,0.08) !important;
-}
-.cta-card:active { transform: translateY(-1px) !important; }
-@media (prefers-reduced-motion: reduce) {
-    .cta-card:hover { transform: none !important; }
-}
-
-/* ========== FOOTER OVERRIDE ========== */
+/* Footer override */
 .footer {
     text-align: center;
     padding: 20px 40px;
@@ -404,63 +124,19 @@ body {
     html { font-size: 15px; }
     .main-content { padding: 20px 14px 40px; }
     .region-context { margin-left: 0; gap: 16px; flex-wrap: wrap; }
-    .what-you-need-panel { padding: 18px 16px; }
-    .wyn-chart-container { height: 340px; }
     .footer { padding: 16px 14px; font-size: 0.75rem; }
-    .controls-row { gap: 12px; }
-    .scrolly-step { min-height: 60vh; }
-    .sbar-label { flex: 0 0 70px; font-size: 0.7rem; }
-    .sbar-track { height: 22px; }
-    .sbar-seg { font-size: 0.58rem; }
-    .sbar-total { font-size: 0.7rem; }
-    .stranded-legend { font-size: 0.7rem; gap: 3px 10px; }
 }
 @media (max-width: 480px) {
     html { font-size: 14px; }
     .main-content { padding: 14px 10px 32px; }
-    .wyn-chart-container { height: 260px; }
-    .scrolly-step { min-height: 50vh; }
     .footer { font-size: 0.75rem; padding: 12px 10px; }
-    .scroll-transition { padding: 40px 0 28px; }
-    .scroll-transition-inner { padding: 22px 16px; border-radius: 12px; }
-    .scroll-transition-text { font-size: 1rem; }
 }
 @media (max-width: 375px) {
     .main-content { padding: 10px 8px 24px; }
-    .story-section { padding: 32px 14px; }
-    .scrolly-chart-wrap { min-height: 250px; }
-    .control-group select { min-width: 100%; font-size: 0.82rem; }
-    .sensitivity-toggles-grid { gap: 10px 16px; }
-    .toggle-btn-group button { padding: 6px 10px; font-size: 0.74rem; min-width: 44px; min-height: 44px; }
-    .compressed-day-container { height: 340px; }
-    .control-group select { padding: 11px 32px 11px 14px; }
-    .region-context .ctx-label { font-size: 0.86rem; }
-    .info-tooltip { width: 200px; }
-    .step-card { padding: 16px 12px; }
-    .hero-callout-row { gap: 4px; }
-    .hero-callout-card { min-width: 65px; padding: 12px 6px; }
 }
 @media (max-width: 320px) {
     .main-content { padding: 12px 8px 28px; }
-    .metrics-row { gap: 6px; }
-    .metric-tile { padding: 12px 8px; }
     .region-context .ctx-label { font-size: 0.86rem; }
-    .info-tooltip { width: 180px; }
-    .controls-row { gap: 8px; }
-    .control-group select { padding: 11px 30px 11px 12px; }
-}
-
-/* Touch-friendly tap targets */
-@media (hover: none) and (pointer: coarse) {
-    .toggle-btn-group button {
-        min-height: 48px;
-        min-width: 48px;
-        padding: 8px 12px;
-    }
-    .story-stat-card:hover {
-        transform: none;
-        box-shadow: 0 4px 6px -4px rgba(0,0,0,0.04);
-    }
 }
 </style>
 </head>
