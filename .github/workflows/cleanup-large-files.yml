@@ -1,8 +1,8 @@
 name: Cleanup Large File Blobs from History (Protected)
 
 # Removes old/deleted/overwritten data blobs from git history — but PROTECTS
-# every file currently live in HEAD. Targets the entire data/ directory plus
-# any *.parquet and *.npz files anywhere in the repo.
+# every file currently live in HEAD. Targets the data/ and dashboard/ directories
+# plus any *.parquet, *.npz, and *.json files anywhere in the repo.
 #
 # How it works:
 #   1. Record the HEAD tree hash (for post-cleanup integrity verification)
@@ -13,7 +13,7 @@ name: Cleanup Large File Blobs from History (Protected)
 #   6. Verify HEAD tree hash is unchanged after rewrite
 #
 # Protected files include ALL live files: EIA 930 profiles, eGRID data,
-# pipeline parquets (step1–step5), JSON results, and everything else in HEAD.
+# pipeline parquets (step1–step5), dashboard JSON results, and everything else in HEAD.
 #
 # WARNING: This rewrites history. All collaborators must re-clone afterward.
 
@@ -108,13 +108,13 @@ jobs:
 
           echo "Total blobs in all history: $(wc -l < "$ALL_BLOBS")"
 
-          # Target scope: everything under data/ + any *.parquet/*.npz anywhere
+          # Target scope: everything under data/ or dashboard/ + any *.parquet/*.npz/*.json anywhere
           TARGET_BLOBS=$(mktemp)
-          grep -E ' data/' "$ALL_BLOBS" > "$TARGET_BLOBS" || true
-          grep -iE '\.(parquet|npz)$' "$ALL_BLOBS" >> "$TARGET_BLOBS" || true
+          grep -E ' (data|dashboard)/' "$ALL_BLOBS" > "$TARGET_BLOBS" || true
+          grep -iE '\.(parquet|npz|json)$' "$ALL_BLOBS" >> "$TARGET_BLOBS" || true
           # Deduplicate (a data/*.parquet would match both patterns)
           sort -u -o "$TARGET_BLOBS" "$TARGET_BLOBS"
-          echo "Target blobs (data/ + *.parquet + *.npz): $(wc -l < "$TARGET_BLOBS")"
+          echo "Target blobs (data/ + dashboard/ + *.parquet + *.npz + *.json): $(wc -l < "$TARGET_BLOBS")"
 
           # Split into protected vs removable using fast comm instead of per-line grep
           REMOVABLE=$(mktemp)
@@ -185,7 +185,8 @@ jobs:
             for dir in data/eia-930 data/step1-pfs-parquets data/step1d-storage-parquets \
                        data/step2-ef-parquets data/step3-cost-opt-parquets \
                        data/step4-gas-ccs-parquets data/step5-post-processing \
-                       data/step5-post-processing/lmp data/step5-post-processing/co2_results; do
+                       data/step5-post-processing/lmp data/step5-post-processing/co2_results \
+                       dashboard dashboard/js; do
               matched=$(grep " ${dir}/" "$KEPT" || true)
               count=$(echo "$matched" | grep -c "." 2>/dev/null || echo 0)
               size=$(echo "$matched" | awk '{s+=$2} END{printf "%.1f MB", s/1048576}')
@@ -197,7 +198,7 @@ jobs:
             tl_size=$(echo "$toplevel" | awk '{s+=$2} END{printf "%.1f MB", s/1048576}')
             [ "$tl_count" -gt 0 ] && echo "  data/ (top-level files)  →  ${tl_count} blobs, ${tl_size}"
             echo ""
-            echo "--- All protected data/ files ---"
+            echo "--- All protected data/ + dashboard/ files ---"
             sort -k3 "$KEPT" | awk '{printf "  %-12s %s\n", sprintf("%.1f MB", $2/1048576), $3}'
           else
             echo "  (none — no target blobs in HEAD)"
@@ -222,7 +223,8 @@ jobs:
                        data/step2-ef-parquets data/step3-cost-opt-parquets \
                        data/step4-gas-ccs-parquets data/step5-post-processing \
                        data/step5-post-processing/lmp data/step5-post-processing/co2_results \
-                       data/checkpoints data/checkpoints_v4; do
+                       data/checkpoints data/checkpoints_v4 \
+                       dashboard dashboard/js; do
               matched=$(grep " ${dir}/" "$REMOVABLE" || true)
               count=$(echo "$matched" | grep -c "." 2>/dev/null || echo 0)
               size=$(echo "$matched" | awk '{s+=$2} END{printf "%.1f MB", s/1048576}')
