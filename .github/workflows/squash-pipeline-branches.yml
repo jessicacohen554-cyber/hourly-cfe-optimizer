@@ -12,7 +12,6 @@ name: "Squash Pipeline Branches"
 #   Step 1c:  auto/{TS}-step1c-zone-search-{iso}          (PFS parquets — gitignored, force-added)
 #   Step 1d:  auto/{TS}-step1d-storage-{iso}-{band}       (storage parquets — tracked normally)
 #             auto/{TS}-step1d-fine-storage-{iso}-{mode}   (legacy naming, still matched)
-#   Refilter: auto/{TS}-refilter-near-miss-{iso}          (refiltered near-miss parquets)
 #   Others:   auto/{TS}-{step}-{iso}
 #
 # branch_pattern examples:
@@ -54,7 +53,6 @@ on:
           - 'auto/.*step1c'
           - 'auto/.*step1[cd]'
           - 'auto/.*step1[cd].*caiso'
-          - 'auto/.*refilter-near-miss'
           - 'auto/.*step2'
           - 'auto/.*step3'
       custom_pattern:
