@@ -1,4 +1,4 @@
-name: "Step 6.5: Supplemental Analytics"
+name: "Step 5.5: Supplemental Analytics"
 
 # Runs supplemental dispatch-cache-dependent analytics that don't belong
 # to a specific dashboard page:
@@ -42,7 +42,7 @@ on:
         type: string
 
 env:
-  BRANCH_PREFIX: step6-5-supplemental
+  BRANCH_PREFIX: step5-5-supplemental
 
 jobs:
   prepare:
