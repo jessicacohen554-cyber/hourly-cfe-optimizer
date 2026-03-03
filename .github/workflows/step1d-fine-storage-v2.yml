@@ -101,12 +101,17 @@ jobs:
     strategy:
       matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
       fail-fast: false   # don't cancel other cells if one fails
+      max-parallel: 7    # limit concurrent clones (matches step1c)
+
+    permissions:
+      contents: read     # explicit read for checkout (safe against restrictive repo defaults)
 
     steps:
     - name: Checkout repo
       uses: actions/checkout@v4
       with:
         ref: ${{ inputs.branch || 'master' }}
+        lfs: false
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -178,7 +183,7 @@ jobs:
           data/step1d-storage-parquets/${{ matrix.iso }}_*.parquet
           data/step1d-storage-parquets/${{ matrix.iso }}_*.json
         retention-days: 7
-        if-no-files-found: warn
+        if-no-files-found: error
 
   # ════════════════════════════════════════════════════════════════════════
   # Download all artifacts and commit to a single output branch
@@ -195,7 +200,8 @@ jobs:
       uses: actions/checkout@v4
       with:
         ref: ${{ inputs.branch || 'master' }}
-        fetch-depth: 0
+        fetch-depth: 1    # shallow clone — full history not needed for branching
+        lfs: false
 
     - name: Create output branch
       run: |
@@ -222,17 +228,23 @@ jobs:
         path: data/step1d-storage-parquets/
         merge-multiple: true
 
-    - name: List downloaded files
+    - name: Validate downloaded files
       run: |
         echo "Downloaded results:"
         find data/step1d-storage-parquets/ -name "*.parquet" -o -name "*.json" | sort
         COUNT=$(find data/step1d-storage-parquets/ -name "*.parquet" | wc -l)
         echo "Total parquet files: $COUNT"
+        if [ "$COUNT" -eq 0 ]; then
+          echo "ERROR: No parquet files found after artifact download."
+          echo "All fine-storage jobs may have failed. Check individual job logs."
+          exit 1
+        fi
 
     - name: Commit and push
       run: |
-        git add data/step1d-storage-parquets/*.parquet \
-                data/step1d-storage-parquets/*.json 2>/dev/null || true
+        # Stage all downloaded parquet and json files
+        find data/step1d-storage-parquets/ -name "*.parquet" -exec git add {} +
+        find data/step1d-storage-parquets/ -name "*.json" -exec git add {} +
 
         if ! git diff --cached --quiet; then
           ISO="${{ inputs.iso }}"
@@ -242,16 +254,25 @@ jobs:
           COUNT=$(git diff --cached --name-only | wc -l)
           git commit -m "Step 1d storage refinement: ${ISO} × ${BAND} — ${COUNT} files — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
         else
-          echo "No new results to commit."
+          echo "No new results to commit (files already match HEAD)."
           exit 0
         fi
 
-        # Push with retry (exponential backoff)
+        # Push with retry (exponential backoff) — fail loudly if all retries exhausted
+        PUSH_OK=false
         for i in 1 2 3 4; do
-          git push -u origin "$TARGET_BRANCH" && break
+          if git push -u origin "$TARGET_BRANCH"; then
+            PUSH_OK=true
+            break
+          fi
           echo "Push attempt $i failed, retrying in $((2**i))s..."
           sleep $((2**i))
         done
+
+        if [ "$PUSH_OK" != "true" ]; then
+          echo "ERROR: Push failed after 4 attempts."
+          exit 1
+        fi
 
         echo "════════════════════════════════════════════════════"
         echo "  Branch: $TARGET_BRANCH"
