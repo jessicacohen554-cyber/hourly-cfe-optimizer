@@ -150,7 +150,7 @@ jobs:
     - name: Ensure output directory
       run: mkdir -p data/step1d-storage-parquets
 
-    # ── Custom thresholds ───────────────────────────────────────────────────
+    # ── Custom thresholds (skip batching) ───────────────────────────────────
     - name: "Custom thresholds — ${{ matrix.iso }}"
       if: ${{ inputs.thresholds != '' }}
       timeout-minutes: 300
@@ -160,10 +160,7 @@ jobs:
           --thresholds "${{ inputs.thresholds }}" \
           --auto-commit
 
-    # ── Full mode (all thresholds, single invocation) ────────────────────
-    # Both 'full' and 'batched' now use a single Python invocation.
-    # --batch-commit handles per-band commits internally, avoiding 3×
-    # startup overhead (data load + Numba JIT + Pass 0 screen).
+    # ── Full mode (all thresholds in one run) ──────────────────────────────
     - name: "Full run — ${{ matrix.iso }}"
       if: ${{ inputs.thresholds == '' && inputs.batch_mode == 'full' }}
       timeout-minutes: 340
@@ -172,13 +169,66 @@ jobs:
           --iso "${{ matrix.iso }}" \
           --auto-commit
 
-    - name: "Batched run — ${{ matrix.iso }}"
+    # ── Batched mode: LOW thresholds (50–80%) ────────────────────────────
+    - name: "Batch LOW (50-80%) — ${{ matrix.iso }}"
       if: ${{ inputs.thresholds == '' && inputs.batch_mode == 'batched' }}
-      timeout-minutes: 340
+      timeout-minutes: 90
       run: |
         python scripts/step1d_fine_storage.py \
           --iso "${{ matrix.iso }}" \
-          --auto-commit --batch-commit
+          --thresholds "${{ env.THRESHOLDS_LOW }}" \
+          --auto-commit
+
+    - name: "Commit batch LOW — ${{ matrix.iso }}"
+      if: ${{ inputs.thresholds == '' && inputs.batch_mode == 'batched' }}
+      run: |
+        # Scope to THIS ISO's files so parallel jobs don't create merge conflicts
+        git add data/step1d-storage-parquets/"${{ matrix.iso }}"_*.parquet \
+                data/step1d-storage-parquets/"${{ matrix.iso }}"_*.json 2>/dev/null || true
+        if ! git diff --cached --quiet; then
+          git commit -m "Step 1d batch LOW: ${{ matrix.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push -u origin "$TARGET_BRANCH" || true
+        fi
+
+    # ── Batched mode: MID thresholds (85–95%) ────────────────────────────
+    - name: "Batch MID (85-95%) — ${{ matrix.iso }}"
+      if: ${{ inputs.thresholds == '' && inputs.batch_mode == 'batched' }}
+      timeout-minutes: 120
+      run: |
+        python scripts/step1d_fine_storage.py \
+          --iso "${{ matrix.iso }}" \
+          --thresholds "${{ env.THRESHOLDS_MID }}" \
+          --auto-commit
+
+    - name: "Commit batch MID — ${{ matrix.iso }}"
+      if: ${{ inputs.thresholds == '' && inputs.batch_mode == 'batched' }}
+      run: |
+        git add data/step1d-storage-parquets/"${{ matrix.iso }}"_*.parquet \
+                data/step1d-storage-parquets/"${{ matrix.iso }}"_*.json 2>/dev/null || true
+        if ! git diff --cached --quiet; then
+          git commit -m "Step 1d batch MID: ${{ matrix.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push origin "$TARGET_BRANCH" || true
+        fi
+
+    # ── Batched mode: HIGH thresholds (97.5–99.99%) ──────────────────────
+    - name: "Batch HIGH (97.5-99.99%) — ${{ matrix.iso }}"
+      if: ${{ inputs.thresholds == '' && inputs.batch_mode == 'batched' }}
+      timeout-minutes: 120
+      run: |
+        python scripts/step1d_fine_storage.py \
+          --iso "${{ matrix.iso }}" \
+          --thresholds "${{ env.THRESHOLDS_HIGH }}" \
+          --auto-commit
+
+    - name: "Commit batch HIGH — ${{ matrix.iso }}"
+      if: ${{ inputs.thresholds == '' && inputs.batch_mode == 'batched' }}
+      run: |
+        git add data/step1d-storage-parquets/"${{ matrix.iso }}"_*.parquet \
+                data/step1d-storage-parquets/"${{ matrix.iso }}"_*.json 2>/dev/null || true
+        if ! git diff --cached --quiet; then
+          git commit -m "Step 1d batch HIGH: ${{ matrix.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push origin "$TARGET_BRANCH" || true
+        fi
 
     # ── Final sweep: catch anything not yet committed ─────────────────────
     - name: Final commit and push
