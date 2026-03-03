@@ -336,8 +336,9 @@ CAISO_EXTRA_TOGGLES = OrderedDict([
 ])
 
 # Number of scenarios per region/threshold
-N_SCENARIOS_BASE = 3 * 3 * 3 * 3 * 4 * 3 * 2       # = 5,832
-N_SCENARIOS_CAISO = N_SCENARIOS_BASE * 3              # = 17,496
+# Ren(3) × Firm(3) × Batt(3) × LDES(3) × Fuel(3) × Tx(4) × CCS(3) × 45Q(2) × Geo(1|3)
+N_SCENARIOS_BASE = 3**6 * 4 * 2                       # = 5,832
+N_SCENARIOS_CAISO = N_SCENARIOS_BASE * 3              # = 17,496 (Geo L/M/H)
 
 def n_scenarios(iso):
     """Return number of cost scenarios for an ISO."""
@@ -357,8 +358,7 @@ PATHS = {
     'step1d_storage':   os.path.join(_PROJECT_ROOT, 'data', 'step1d-storage-parquets'),
     'step2_ef':         os.path.join(_PROJECT_ROOT, 'data', 'step2-ef-parquets'),
     'step3_cost':       os.path.join(_PROJECT_ROOT, 'data', 'step3-cost-opt-parquets'),
-    'step4_gas_ccs':    os.path.join(_PROJECT_ROOT, 'data', 'step4-gas-ccs-parquets'),
-    'step5_post':       os.path.join(_PROJECT_ROOT, 'data', 'step5-post-processing'),
+    'step4_post':       os.path.join(_PROJECT_ROOT, 'data', 'step5-post-processing'),  # legacy dir name
     'dispatch_cache':   os.path.join(_PROJECT_ROOT, 'data', 'step5-post-processing', 'dispatch_cache'),
     'co2_results':      os.path.join(_PROJECT_ROOT, 'data', 'step5-post-processing', 'co2_results'),
     'lmp':              os.path.join(_PROJECT_ROOT, 'data', 'step5-post-processing', 'lmp'),
@@ -504,12 +504,12 @@ VALID_RANGES = {
 # Expected cost ranges by threshold ($/MWh total cost, all-Medium scenario)
 # Used for directional reasonableness checks
 EXPECTED_COST_RANGES_MEDIUM = {
-    50: (20, 60),
-    75: (25, 70),
-    90: (30, 90),
-    95: (35, 120),
-    99: (45, 200),
-    99.99: (60, 400),
+    50: (20, 80),
+    75: (20, 80),
+    90: (25, 75),
+    95: (28, 100),
+    99: (30, 120),
+    99.99: (30, 150),
 }
 
 

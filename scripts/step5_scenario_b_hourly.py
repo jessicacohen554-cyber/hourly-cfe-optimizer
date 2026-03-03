@@ -20,9 +20,9 @@ Strategy:
   6. Floor ratchet prevents un-deploying committed resources.
 
 Usage:
-  python step6_scenario_b.py             # Run all ISOs
-  python step6_scenario_b.py --iso CAISO  # Run single ISO
-  python step6_scenario_b.py --iso CAISO ERCOT  # Run multiple ISOs
+  python step5_scenario_b_hourly.py             # Run all ISOs
+  python step5_scenario_b_hourly.py --iso CAISO  # Run single ISO
+  python step5_scenario_b_hourly.py --iso CAISO ERCOT  # Run multiple ISOs
 """
 
 import json

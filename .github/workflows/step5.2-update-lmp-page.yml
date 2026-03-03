@@ -1,19 +1,18 @@
-name: "Step 6.6: Update Optimizer Dashboard"
+name: "Step 6.2: Update LMP Page"
 
-# Runs scripts to populate the interactive Cost Optimizer dashboard (dashboard.html):
-#   1. step6_compressed_day.py — 24-hour representative day profiles per unique mix
-#   2. step7_generate_shared_data.py — consolidates all results into shared-data.js
+# Runs scripts to populate the Wholesale Price (LMP) page:
+#   1. step5_compute_lmp_prices.py — synthetic 8760-hour LMP per ISO × threshold × fuel level
+#   2. extract_lmp_dashboard_data.py — extracts LMP parquets into dashboard/js/lmp-data.js
 #
-# iso=ALL fans out parallel matrix jobs for compressed-day, then merge job
-# runs the global shared-data generation and commits everything.
-# Prerequisite: Steps 3-5 complete (cost optimization + dispatch cache).
-# Output: dashboard/js/shared-data.js, data/step5-post-processing/compressed_day/
+# iso=ALL fans out parallel matrix jobs for LMP computation, then merge job
+# runs the global extract-dashboard script and commits everything.
+# Output: data/step5-post-processing/lmp/{ISO}_lmp.parquet, dashboard/js/lmp-data.js
 
 on:
   workflow_dispatch:
     inputs:
       iso:
-        description: 'ISO region to process (ALL = parallel)'
+        description: 'ISO region to compute (ALL = parallel)'
         required: true
         default: 'ALL'
         type: choice
@@ -33,8 +32,18 @@ on:
         type: choice
         options:
           - ALL
-          - compressed-day
-          - shared-data
+          - compute-lmp
+          - extract-dashboard
+      fuel_level:
+        description: 'Fuel price level (or ALL for L/M/H)'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - L
+          - M
+          - H
       branch:
         description: 'Branch to checkout'
         required: false
@@ -42,7 +51,7 @@ on:
         type: string
 
 env:
-  BRANCH_PREFIX: step6-6-dashboard
+  BRANCH_PREFIX: step6-2-lmp
 
 jobs:
   prepare:
@@ -60,9 +69,9 @@ jobs:
 
   process:
     needs: prepare
-    if: ${{ inputs.script == 'ALL' || inputs.script == 'compressed-day' }}
+    if: ${{ inputs.script == 'ALL' || inputs.script == 'compute-lmp' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 240
     strategy:
       matrix:
         iso: ${{ fromJson(needs.prepare.outputs.matrix) }}
@@ -73,6 +82,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.branch || 'master' }}
+          lfs: true
 
       - name: Verify upstream data exists
         run: |
@@ -96,23 +106,29 @@ jobs:
         run: pip install numpy numba pyarrow pandas scipy
 
       - name: Ensure output directories
-        run: mkdir -p data/step5-post-processing
+        run: mkdir -p data/step5-post-processing/lmp
 
-      - name: "Compressed Day — ${{ matrix.iso }}"
-        run: python scripts/step6_compressed_day.py --iso ${{ matrix.iso }}
+      - name: "Compute LMP — ${{ matrix.iso }}"
+        run: |
+          FL="${{ inputs.fuel_level }}"
+          if [ "$FL" = "ALL" ]; then
+            python scripts/step5_compute_lmp_prices.py --iso ${{ matrix.iso }}
+          else
+            python scripts/step5_compute_lmp_prices.py --iso ${{ matrix.iso }} --fuel-level "$FL"
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: dashboard-${{ matrix.iso }}
-          path: data/step5-post-processing/
+          name: lmp-${{ matrix.iso }}
+          path: data/step5-post-processing/lmp/
           retention-days: 1
 
   merge:
     needs: [prepare, process]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 30
 
     permissions:
       contents: write
@@ -134,34 +150,38 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$TARGET_BRANCH"
 
-      - name: Download compressed-day artifacts
-        if: ${{ inputs.script == 'ALL' || inputs.script == 'compressed-day' }}
+      - name: Download LMP artifacts
+        if: ${{ inputs.script == 'ALL' || inputs.script == 'compute-lmp' }}
         uses: actions/download-artifact@v4
         with:
-          pattern: dashboard-*
-          path: data/step5-post-processing/
+          pattern: lmp-*
+          path: data/step5-post-processing/lmp/
           merge-multiple: true
 
       - name: Set up Python
-        if: ${{ inputs.script == 'ALL' || inputs.script == 'shared-data' }}
+        if: ${{ inputs.script == 'ALL' || inputs.script == 'extract-dashboard' }}
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
       - name: Install dependencies
-        if: ${{ inputs.script == 'ALL' || inputs.script == 'shared-data' }}
+        if: ${{ inputs.script == 'ALL' || inputs.script == 'extract-dashboard' }}
         run: pip install numpy numba pyarrow pandas scipy
 
       - name: Ensure JS directory
         run: mkdir -p dashboard/js
 
-      - name: "Generate Shared Data"
-        if: ${{ inputs.script == 'ALL' || inputs.script == 'shared-data' }}
+      - name: "Extract Dashboard Data"
+        if: ${{ inputs.script == 'ALL' || inputs.script == 'extract-dashboard' }}
         run: |
-          echo "=== Consolidate results into shared-data.js ==="
-          python scripts/step7_generate_shared_data.py
+          if [ -f scripts/extract_lmp_dashboard_data.py ]; then
+            echo "=== Extracting LMP dashboard data ==="
+            python scripts/extract_lmp_dashboard_data.py
+          else
+            echo "extract_lmp_dashboard_data.py not found — skipping JS generation"
+          fi
 
-      - name: Batched commit and push (per-ISO)
+      - name: Batched commit and push (per-ISO + dashboard JS)
         run: |
           git config http.postBuffer 524288000
 
@@ -183,50 +203,69 @@ jobs:
 
           PUSHED=false
 
+          # Determine ISOs to batch
           if [ "${{ inputs.iso }}" = "ALL" ]; then
             ISOS="CAISO ERCOT PJM NYISO NEISO MISO SPP"
           else
             ISOS="${{ inputs.iso }}"
           fi
 
+          # Batch 1: LMP parquets per-ISO
           for iso in $ISOS; do
-            echo "--- Batching commit for $iso ---"
-            FILES=$(find data/step5-post-processing/ -name "*${iso}*" -type f 2>/dev/null || true)
+            echo "--- Batching LMP commit for $iso ---"
+
+            FILES=$(find data/step5-post-processing/lmp/ -name "*${iso}*" -type f 2>/dev/null || true)
             if [ -z "$FILES" ]; then
-              echo "  No files for $iso — skipping"
+              echo "  No LMP files for $iso — skipping"
               continue
             fi
+
             git add -f $FILES
             if git diff --cached --quiet; then
               echo "  No changes for $iso — skipping"
               continue
             fi
+
             BATCH_MB=$(du -cm $FILES | tail -1 | cut -f1)
             echo "  Staging ~${BATCH_MB} MB for $iso"
-            git commit -m "Step 6.6 Dashboard: ${iso} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git commit -m "Step 6.2 LMP: ${iso} fuel=${{ inputs.fuel_level }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
             if push_with_retry "$iso"; then
               PUSHED=true
             else
-              echo "  Per-ISO push failed for $iso — falling back to per-file"
+              echo "  Per-ISO push failed for $iso — falling back to per-file batching"
               git reset HEAD~1
+
               for f in $FILES; do
                 FNAME=$(basename "$f")
                 git add -f "$f"
                 if git diff --cached --quiet; then continue; fi
-                git commit -m "Step 6.6 Dashboard: ${iso} ${FNAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-                if push_with_retry "$FNAME"; then PUSHED=true; else git reset HEAD~1; fi
+                FILE_MB=$(du -m "$f" | cut -f1)
+                echo "  Staging file: $FNAME (~${FILE_MB} MB)"
+                git commit -m "Step 6.2 LMP: ${iso} ${FNAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                if push_with_retry "$FNAME"; then
+                  PUSHED=true
+                else
+                  echo "  WARNING: Could not push $FNAME — resetting commit"
+                  git reset HEAD~1
+                fi
               done
             fi
           done
 
-          # Remaining post-processing + dashboard JS
-          git add -f data/step5-post-processing/ 2>/dev/null || true
-          git add -f dashboard/js/shared-data.js 2>/dev/null || true
-          git add -f data/step5-post-processing/shared_data.json 2>/dev/null || true
-          if ! git diff --cached --quiet; then
-            echo "--- Staging remaining files + dashboard JS ---"
-            git commit -m "Step 6.6 Dashboard: shared-data.js — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            if push_with_retry "shared-data-js"; then PUSHED=true; else git reset HEAD~1; fi
+          # Batch 2: Dashboard JS (small file, separate commit)
+          if [ -f dashboard/js/lmp-data.js ]; then
+            git add -f dashboard/js/lmp-data.js
+            if ! git diff --cached --quiet; then
+              echo "--- Committing dashboard JS ---"
+              git commit -m "Step 6.2 LMP: lmp-data.js — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+              if push_with_retry "lmp-data.js"; then
+                PUSHED=true
+              else
+                echo "  WARNING: Could not push lmp-data.js — resetting commit"
+                git reset HEAD~1
+              fi
+            fi
           fi
 
           if [ "$PUSHED" = "false" ]; then
