@@ -45,7 +45,9 @@ Each workflow is organized by **which dashboard page it updates**. Every multi-s
 | Workflow | Display Name | What It Does |
 |----------|-------------|--------------|
 | `lmp-calibration.yml` | **LMP Calibration: Validate Model** | Validates synthetic LMP model against calibration targets (weather-normalized or QA against actual data). |
+| `unified-cleanup.yml` | **Unified Data Directory Cleanup** | Selectively clears pipeline step data directories. Boolean toggle per directory, ISO selector, dry-run preview. Replaces individual cleanup workflows. |
 | `squash-pipeline-branches.yml` | **Squash Pipeline Branches** | Consolidates all unmerged `auto/*` branches into a single squash commit. Skips conflicts, closes old PRs, deletes merged branches. |
+| `cleanup-large-files.yml` | **Cleanup Large File Blobs from History** | Rewrites git history to strip dead/overwritten data blobs. Protects all files live in HEAD. Destructive — all collaborators must re-clone. |
 
 ## Common Inputs
 
@@ -92,6 +94,14 @@ Step 3 → Step 4 → Step 5.0 → Steps 5.1 + 5.2 + 5.3 + 5.6 (parallel) → St
 ```
 Step 0 (optional) → Step 1a → Step 1c → Step 1d → Step 2 → Step 3 → Step 4 → Step 5.0 → Steps 5.1-5.6 → Step 6
 ```
+
+### "I want to clear data directories before re-running a pipeline step"
+```
+Unified Data Directory Cleanup (dry_run=true first to preview, then dry_run=false)
+```
+- Toggle each directory independently (checkboxes in the GitHub UI)
+- Filter by ISO or clear ALL
+- Directories are preserved — only files are removed
 
 ### "I ran a bunch of pipeline steps and want to merge all the branches at once"
 ```
