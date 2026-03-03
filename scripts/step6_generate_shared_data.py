@@ -178,21 +178,29 @@ if set(available_isos) != set(ISOS):
 print(f"  Processing ISOs: {ISOS}")
 
 # ============================================================================
-# EXTRACT MAC_DATA (average MAC — medium/low/high)
+# EXTRACT MAC_DATA (marginal MAC — medium/low/high)
 # ============================================================================
+# Uses stepwise marginal MAC (finite-difference ∆cost/∆CO₂ between adjacent
+# thresholds), isotonic-smoothed for monotonicity. This produces the hockey-
+# stick shaped curves that reflect the increasing cost of each additional ton
+# of CO₂ abatement as clean energy targets rise.
+#
+# Previous code used the average MAC (total_cost / total_CO₂_reduced) with
+# isotonic regression, which collapsed the naturally U-shaped average MAC
+# curve into a flat constant. Average MAC is stored in envelope['raw'] for
+# reference but is not used for the dashboard MAC curves.
 
-print("\nExtracting MAC_DATA...")
+print("\nExtracting MAC_DATA (marginal MAC from stepwise_fan)...")
 mac_data = {'medium': {}, 'low': {}, 'high': {}}
 for iso in ISOS:
-    env = mac_stats['envelope'][iso]['envelope']
-    fan = mac_stats['fan_chart'][iso]
+    sw_fan = mac_stats['stepwise_fan'][iso]
 
-    # Medium = envelope (monotonic running-max of medium key (9-dim))
-    mac_data['medium'][iso] = [round(v) if v is not None else None for v in env]
-    # Low = P10 of fan chart
-    mac_data['low'][iso] = [round(v) if v is not None else None for v in fan['p10']]
-    # High = P90 of fan chart
-    mac_data['high'][iso] = [round(v) if v is not None else None for v in fan['p90']]
+    # Medium = P50 of stepwise marginal MAC (isotonic-smoothed, $/ton CO₂)
+    mac_data['medium'][iso] = [round(v) if v is not None else None for v in sw_fan['p50']]
+    # Low = P10 of stepwise marginal MAC
+    mac_data['low'][iso] = [round(v) if v is not None else None for v in sw_fan['p10']]
+    # High = P90 of stepwise marginal MAC
+    mac_data['high'][iso] = [round(v) if v is not None else None for v in sw_fan['p90']]
 
     print(f"  {iso} medium: {mac_data['medium'][iso]}")
 
@@ -275,34 +283,62 @@ for iso in ISOS:
             arr[i] = arr[i + 1]
 
 # ============================================================================
-# EXTRACT SYSTEM_COST_DATA (P10/Median/P90 of total_system_cost across 324 scenarios)
+# EXTRACT SYSTEM_COST_DATA (P10/Median/P90 of total_system_cost across scenarios)
 # ============================================================================
+# total_system_cost = clean procurement cost (effective_cost) + gas backup cost
+# Loaded directly from step3 parquets which have both cost_effective_cost and
+# gas_gas_cost_per_mwh columns. CO2 parquets don't carry gas columns, so the
+# previous approach of reading gas_backup.total_system_cost_per_mwh from the
+# loaded data dict returned all nulls for ISOs processed through the new pipeline.
 
-print("\nExtracting SYSTEM_COST_DATA (P10/Median/P90)...")
+print("\nExtracting SYSTEM_COST_DATA (P10/Median/P90 from step3 parquets)...")
 import numpy as np_sc
 
+STEP3_DIR = os.path.join(SCRIPT_DIR, '..', 'data', 'step3-cost-opt-parquets')
 system_cost_data = {'medium': {}, 'low': {}, 'high': {}}
 for iso in ISOS:
     med_line, lo_line, hi_line = [], [], []
-    for t in THRESHOLDS:
-        scenarios = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {})
-        costs = []
-        for sc_key, sc in scenarios.items():
-            tsc = sc.get('gas_backup', {}).get('total_system_cost_per_mwh')
-            if tsc is not None and tsc > 0:
-                costs.append(tsc)
-        if costs:
-            med_line.append(round(float(np_sc.median(costs)), 2))
-            lo_line.append(round(float(np_sc.percentile(costs, 10)), 2))
-            hi_line.append(round(float(np_sc.percentile(costs, 90)), 2))
-        else:
-            med_line.append(None)
-            lo_line.append(None)
-            hi_line.append(None)
+    step3_path = os.path.join(STEP3_DIR, f'step3_co_{iso}.parquet')
+    if os.path.exists(step3_path):
+        import pandas as _pd_sc
+        _df_sc = _pd_sc.read_parquet(step3_path,
+                                      columns=['threshold', 'cost_effective_cost',
+                                               'gas_gas_cost_per_mwh'])
+        # total_system_cost = clean procurement + gas backup (RA)
+        _df_sc['total_system_cost'] = (_df_sc['cost_effective_cost']
+                                       + _df_sc['gas_gas_cost_per_mwh'].fillna(0))
+        for t in THRESHOLDS:
+            t_costs = _df_sc.loc[_df_sc['threshold'] == t, 'total_system_cost'].values
+            if len(t_costs) > 0:
+                med_line.append(round(float(np_sc.median(t_costs)), 2))
+                lo_line.append(round(float(np_sc.percentile(t_costs, 10)), 2))
+                hi_line.append(round(float(np_sc.percentile(t_costs, 90)), 2))
+            else:
+                med_line.append(None)
+                lo_line.append(None)
+                hi_line.append(None)
+        del _df_sc  # free memory
+    else:
+        # Fallback: try existing data dict (legacy JSON with gas_backup)
+        for t in THRESHOLDS:
+            scenarios = data['results'].get(iso, {}).get('thresholds', {}).get(t, {}).get('scenarios', {})
+            costs = []
+            for sc_key, sc in scenarios.items():
+                tsc = sc.get('gas_backup', {}).get('total_system_cost_per_mwh')
+                if tsc is not None and tsc > 0:
+                    costs.append(tsc)
+            if costs:
+                med_line.append(round(float(np_sc.median(costs)), 2))
+                lo_line.append(round(float(np_sc.percentile(costs, 10)), 2))
+                hi_line.append(round(float(np_sc.percentile(costs, 90)), 2))
+            else:
+                med_line.append(None)
+                lo_line.append(None)
+                hi_line.append(None)
     system_cost_data['medium'][iso] = med_line
     system_cost_data['low'][iso] = lo_line
     system_cost_data['high'][iso] = hi_line
-    print(f"  {iso} med: {med_line}")
+    print(f"  {iso} med: {med_line[:5]}...")
 
 # ============================================================================
 # EXTRACT CLEAN_COST_DATA (P10/Median/P90 of effective_cost — NO gas backup)
@@ -587,23 +623,60 @@ for iso in ISOS:
         'new_gas_cost': [],
         'existing_gas_cost': [],
     }
-    for t in THRESHOLDS:
-        sc = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {}).get(medium_key(iso))
-        if sc and 'gas_backup' in sc:
-            gb = sc['gas_backup']
-            iso_gb['total_system_cost'].append(round(gb.get('total_system_cost_per_mwh', 0), 2))
-            iso_gb['incremental_with_new_gas'].append(round(gb.get('incremental_with_new_gas', 0), 2))
-            iso_gb['gas_backup_mw'].append(gb.get('gas_backup_needed_mw', 0))
-            iso_gb['new_gas_build_mw'].append(gb.get('new_gas_build_mw', 0))
-            iso_gb['existing_gas_used_mw'].append(gb.get('existing_gas_used_mw', 0))
-            iso_gb['clean_coverage_pct'].append(gb.get('clean_coverage_pct', 0))
-            iso_gb['ra_peak_mw'].append(gb.get('ra_peak_mw', 0))
-            iso_gb['gas_backup_cost'].append(round(gb.get('gas_backup_cost_per_mwh', 0), 2))
-            iso_gb['new_gas_cost'].append(round(gb.get('new_gas_cost_per_mwh', 0), 2))
-            iso_gb['existing_gas_cost'].append(round(gb.get('existing_gas_cost_per_mwh', 0), 2))
-        else:
-            for key in iso_gb:
-                iso_gb[key].append(0)
+
+    # Try loading from step3 parquets (preferred — has all gas_* columns)
+    step3_gb_path = os.path.join(STEP3_DIR, f'step3_co_{iso}.parquet')
+    _gb_from_parquet = False
+    if os.path.exists(step3_gb_path):
+        import pandas as _pd_gb
+        _df_gb = _pd_gb.read_parquet(step3_gb_path)
+        _med_key = medium_key(iso)
+        _med_gb = _df_gb[_df_gb['scenario'] == _med_key].sort_values('threshold')
+        if len(_med_gb) > 0:
+            _gb_from_parquet = True
+            for t in THRESHOLDS:
+                row = _med_gb[_med_gb['threshold'] == t]
+                if len(row) > 0:
+                    r = row.iloc[0]
+                    eff_cost = float(r.get('cost_effective_cost', 0) or 0)
+                    gas_cost = float(r.get('gas_gas_cost_per_mwh', 0) or 0)
+                    iso_gb['total_system_cost'].append(round(eff_cost + gas_cost, 2))
+                    iso_gb['incremental_with_new_gas'].append(round(eff_cost + gas_cost, 2))
+                    iso_gb['gas_backup_mw'].append(float(r.get('gas_gas_backup_needed_mw', 0) or 0))
+                    iso_gb['new_gas_build_mw'].append(float(r.get('gas_new_gas_build_mw', 0) or 0))
+                    iso_gb['existing_gas_used_mw'].append(float(r.get('gas_existing_gas_used_mw', 0) or 0))
+                    # Clean coverage = clean_peak / ra_peak * 100
+                    ra_peak = float(r.get('gas_ra_peak_mw', 0) or 0)
+                    clean_peak = float(r.get('gas_clean_peak_capacity_mw', 0) or 0)
+                    iso_gb['clean_coverage_pct'].append(round(clean_peak / ra_peak * 100, 1) if ra_peak > 0 else 0)
+                    iso_gb['ra_peak_mw'].append(ra_peak)
+                    iso_gb['gas_backup_cost'].append(round(gas_cost, 2))
+                    iso_gb['new_gas_cost'].append(0)  # Not broken out in step3
+                    iso_gb['existing_gas_cost'].append(0)
+                else:
+                    for key in iso_gb:
+                        iso_gb[key].append(0)
+            del _df_gb, _med_gb
+
+    if not _gb_from_parquet:
+        # Fallback: legacy data dict with gas_backup sub-dict
+        for t in THRESHOLDS:
+            sc = data['results'][iso]['thresholds'].get(t, {}).get('scenarios', {}).get(medium_key(iso))
+            if sc and 'gas_backup' in sc:
+                gb = sc['gas_backup']
+                iso_gb['total_system_cost'].append(round(gb.get('total_system_cost_per_mwh', 0), 2))
+                iso_gb['incremental_with_new_gas'].append(round(gb.get('incremental_with_new_gas', 0), 2))
+                iso_gb['gas_backup_mw'].append(gb.get('gas_backup_needed_mw', 0))
+                iso_gb['new_gas_build_mw'].append(gb.get('new_gas_build_mw', 0))
+                iso_gb['existing_gas_used_mw'].append(gb.get('existing_gas_used_mw', 0))
+                iso_gb['clean_coverage_pct'].append(gb.get('clean_coverage_pct', 0))
+                iso_gb['ra_peak_mw'].append(gb.get('ra_peak_mw', 0))
+                iso_gb['gas_backup_cost'].append(round(gb.get('gas_backup_cost_per_mwh', 0), 2))
+                iso_gb['new_gas_cost'].append(round(gb.get('new_gas_cost_per_mwh', 0), 2))
+                iso_gb['existing_gas_cost'].append(round(gb.get('existing_gas_cost_per_mwh', 0), 2))
+            else:
+                for key in iso_gb:
+                    iso_gb[key].append(0)
     gas_backup_data[iso] = iso_gb
     print(f"  {iso}: total_sys_cost={iso_gb['total_system_cost'][:3]}... gas_mw={iso_gb['gas_backup_mw'][:3]}...")
 
