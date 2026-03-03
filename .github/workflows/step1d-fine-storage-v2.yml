@@ -1,17 +1,14 @@
-name: "Step 1d: Two-Pass Fine Storage"
+name: "Step 1d: Matrix Storage Refinement"
 
-# Two-pass storage sweep:
-#   Pass 1: Coarse global sweep on ALL near-miss mixes (score once per combo)
-#   Pass 2: Fine 0.05% targeted refinement on boundary mixes per threshold
+# Matrix strategy: ISO × threshold band — up to 21 parallel jobs (7 ISOs × 3 bands).
 #
-# Modes:
-#   full   — run all thresholds in one job (may hit 6hr timeout on large ISOs)
-#   batched — run LOW (50-80%), MID (85-95%), HIGH (97.5-99.99%) as separate
-#             steps with independent commits. Best for CAISO/ERCOT/PJM.
-#   custom — specify thresholds= input directly (e.g. "90,95")
+# Each (ISO, band) cell runs on its own runner, uploads results as artifacts.
+# A final commit job downloads all artifacts and pushes to a single output branch.
 #
-# Each ISO runs on its own runner in parallel. Every threshold commits
-# individually via --auto-commit so partial progress is always banked.
+# Threshold bands:
+#   LOW  — 50, 55, 60, 65, 70, 75, 80
+#   MID  — 85, 87.5, 90, 92.5, 95
+#   HIGH — 97.5, 99, 99.5, 99.9, 99.99
 #
 # Prerequisite: Step 1c (Zone Search) must have run first.
 # Output: data/step1d-storage-parquets/{ISO}_t{XX}_storage.parquet
@@ -20,7 +17,7 @@ on:
   workflow_dispatch:
     inputs:
       iso:
-        description: 'ISO region to run'
+        description: 'ISO region(s) to run'
         required: true
         default: 'ALL'
         type: choice
@@ -33,16 +30,18 @@ on:
           - NEISO
           - MISO
           - SPP
-      batch_mode:
-        description: 'full (all thresholds at once) or batched (LOW/MID/HIGH steps)'
+      threshold_band:
+        description: 'Threshold band(s) to run (ignored if custom_thresholds set)'
         required: true
-        default: 'batched'
+        default: 'ALL'
         type: choice
         options:
-          - batched
-          - full
-      thresholds:
-        description: 'Custom thresholds (e.g. "90,95,99"). Overrides batch_mode when set.'
+          - ALL
+          - LOW
+          - MID
+          - HIGH
+      custom_thresholds:
+        description: 'Custom thresholds (e.g. "90,95,99"). Overrides threshold_band.'
         required: false
         default: ''
         type: string
@@ -53,71 +52,61 @@ on:
         type: string
 
 env:
-  BRANCH_PREFIX: step1d-fine-storage
   PYTHONUNBUFFERED: "1"
-  # Threshold bands for batched mode
+  # Threshold bands for matrix expansion
   THRESHOLDS_LOW:  "50,55,60,65,70,75,80"
   THRESHOLDS_MID:  "85,87.5,90,92.5,95"
   THRESHOLDS_HIGH: "97.5,99,99.5,99.9,99.99"
 
 jobs:
   # ════════════════════════════════════════════════════════════════════════
-  # Build the ISO matrix: single ISO or fan out to all 7
+  # Build the ISO × threshold-band matrix
   # ════════════════════════════════════════════════════════════════════════
   prepare:
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      matrix: ${{ steps.build.outputs.matrix }}
     steps:
-      - name: Build ISO matrix
-        id: set-matrix
+      - name: Build matrix
+        id: build
         run: |
+          # ── ISO dimension ────────────────────────────────────────────
           if [ "${{ inputs.iso }}" = "ALL" ]; then
-            echo 'matrix={"iso":["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]}' >> "$GITHUB_OUTPUT"
+            ISOS='["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]'
           else
-            echo 'matrix={"iso":["${{ inputs.iso }}"]}' >> "$GITHUB_OUTPUT"
+            ISOS='["${{ inputs.iso }}"]'
           fi
 
+          # ── Threshold-band dimension ────────────────────────────────
+          CUSTOM="${{ inputs.custom_thresholds }}"
+          if [ -n "$CUSTOM" ]; then
+            BANDS='["CUSTOM"]'
+          elif [ "${{ inputs.threshold_band }}" = "ALL" ]; then
+            BANDS='["LOW","MID","HIGH"]'
+          else
+            BANDS='["${{ inputs.threshold_band }}"]'
+          fi
+
+          echo "matrix={\"iso\":${ISOS},\"band\":${BANDS}}" >> "$GITHUB_OUTPUT"
+          echo "Matrix: iso=${ISOS} × band=${BANDS}"
+
   # ════════════════════════════════════════════════════════════════════════
-  # Per-ISO job: runs on its own runner in parallel
+  # Per (ISO, band) job — runs on its own runner in parallel
   # ════════════════════════════════════════════════════════════════════════
   fine-storage:
     needs: prepare
     runs-on: ubuntu-latest
-    timeout-minutes: 420
+    timeout-minutes: 200
 
     strategy:
       matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
-      fail-fast: false   # don't cancel other ISOs if one fails
-
-    permissions:
-      contents: write
+      fail-fast: false   # don't cancel other cells if one fails
 
     steps:
     - name: Checkout repo
       uses: actions/checkout@v4
       with:
         ref: ${{ inputs.branch || 'master' }}
-        fetch-depth: 0
-
-    - name: Create output branch
-      run: |
-        TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
-        ISO_LOWER=$(echo "${{ matrix.iso }}" | tr '[:upper:]' '[:lower:]')
-        MODE="${{ inputs.batch_mode }}"
-        CUSTOM="${{ inputs.thresholds }}"
-        if [ -n "$CUSTOM" ]; then
-          LABEL="custom"
-        else
-          LABEL="$MODE"
-        fi
-        TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${ISO_LOWER}-${LABEL}"
-        echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-        git config http.postBuffer 524288000
-        git checkout -b "$TARGET_BRANCH"
-        echo "Working on branch: $TARGET_BRANCH"
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -136,7 +125,7 @@ jobs:
         if [ ! -f "$NM" ]; then
           echo "ERROR: Missing near-miss data for $ISO"
           echo "  Expected: $NM"
-          echo "  Run Step 1c (Zone Search) first, or generate from coarse cache."
+          echo "  Run Step 1c (Zone Search) first."
           exit 1
         fi
         ROWS=$(python3 -c "import pyarrow.parquet as pq; t=pq.read_table('$NM'); print(t.num_rows)")
@@ -150,106 +139,121 @@ jobs:
     - name: Ensure output directory
       run: mkdir -p data/step1d-storage-parquets
 
-    # ── Custom thresholds (skip batching) ───────────────────────────────────
-    - name: "Custom thresholds — ${{ matrix.iso }}"
-      if: ${{ inputs.thresholds != '' }}
-      timeout-minutes: 300
+    - name: Resolve thresholds for this band
+      id: resolve
       run: |
-        python scripts/step1d_fine_storage.py \
-          --iso "${{ matrix.iso }}" \
-          --thresholds "${{ inputs.thresholds }}" \
-          --auto-commit
-
-    # ── Full mode (all thresholds in one run) ──────────────────────────────
-    - name: "Full run — ${{ matrix.iso }}"
-      if: ${{ inputs.thresholds == '' && inputs.batch_mode == 'full' }}
-      timeout-minutes: 340
-      run: |
-        python scripts/step1d_fine_storage.py \
-          --iso "${{ matrix.iso }}" \
-          --auto-commit
-
-    # ── Batched mode: LOW thresholds (50–80%) ────────────────────────────
-    - name: "Batch LOW (50-80%) — ${{ matrix.iso }}"
-      if: ${{ inputs.thresholds == '' && inputs.batch_mode == 'batched' }}
-      timeout-minutes: 90
-      run: |
-        python scripts/step1d_fine_storage.py \
-          --iso "${{ matrix.iso }}" \
-          --thresholds "${{ env.THRESHOLDS_LOW }}" \
-          --auto-commit
-
-    - name: "Commit batch LOW — ${{ matrix.iso }}"
-      if: ${{ inputs.thresholds == '' && inputs.batch_mode == 'batched' }}
-      run: |
-        # Scope to THIS ISO's files so parallel jobs don't create merge conflicts
-        git add data/step1d-storage-parquets/"${{ matrix.iso }}"_*.parquet \
-                data/step1d-storage-parquets/"${{ matrix.iso }}"_*.json 2>/dev/null || true
-        if ! git diff --cached --quiet; then
-          git commit -m "Step 1d batch LOW: ${{ matrix.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          git push -u origin "$TARGET_BRANCH" || true
+        BAND="${{ matrix.band }}"
+        CUSTOM="${{ inputs.custom_thresholds }}"
+        if [ "$BAND" = "CUSTOM" ]; then
+          echo "thresholds=$CUSTOM" >> "$GITHUB_OUTPUT"
+          echo "label=custom" >> "$GITHUB_OUTPUT"
+        elif [ "$BAND" = "LOW" ]; then
+          echo "thresholds=$THRESHOLDS_LOW" >> "$GITHUB_OUTPUT"
+          echo "label=low-50-80" >> "$GITHUB_OUTPUT"
+        elif [ "$BAND" = "MID" ]; then
+          echo "thresholds=$THRESHOLDS_MID" >> "$GITHUB_OUTPUT"
+          echo "label=mid-85-95" >> "$GITHUB_OUTPUT"
+        elif [ "$BAND" = "HIGH" ]; then
+          echo "thresholds=$THRESHOLDS_HIGH" >> "$GITHUB_OUTPUT"
+          echo "label=high-97.5-99.99" >> "$GITHUB_OUTPUT"
         fi
 
-    # ── Batched mode: MID thresholds (85–95%) ────────────────────────────
-    - name: "Batch MID (85-95%) — ${{ matrix.iso }}"
-      if: ${{ inputs.thresholds == '' && inputs.batch_mode == 'batched' }}
-      timeout-minutes: 120
-      run: |
-        python scripts/step1d_fine_storage.py \
-          --iso "${{ matrix.iso }}" \
-          --thresholds "${{ env.THRESHOLDS_MID }}" \
-          --auto-commit
-
-    - name: "Commit batch MID — ${{ matrix.iso }}"
-      if: ${{ inputs.thresholds == '' && inputs.batch_mode == 'batched' }}
-      run: |
-        git add data/step1d-storage-parquets/"${{ matrix.iso }}"_*.parquet \
-                data/step1d-storage-parquets/"${{ matrix.iso }}"_*.json 2>/dev/null || true
-        if ! git diff --cached --quiet; then
-          git commit -m "Step 1d batch MID: ${{ matrix.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          git push origin "$TARGET_BRANCH" || true
-        fi
-
-    # ── Batched mode: HIGH thresholds (97.5–99.99%) ──────────────────────
-    - name: "Batch HIGH (97.5-99.99%) — ${{ matrix.iso }}"
-      if: ${{ inputs.thresholds == '' && inputs.batch_mode == 'batched' }}
+    - name: "Run Step 1d — ${{ matrix.iso }} / ${{ matrix.band }}"
       timeout-minutes: 180
       run: |
+        echo "═══════════════════════════════════════════════════════════"
+        echo "  ISO: ${{ matrix.iso }}  |  Band: ${{ matrix.band }}"
+        echo "  Thresholds: ${{ steps.resolve.outputs.thresholds }}"
+        echo "═══════════════════════════════════════════════════════════"
         python scripts/step1d_fine_storage.py \
           --iso "${{ matrix.iso }}" \
-          --thresholds "${{ env.THRESHOLDS_HIGH }}" \
-          --auto-commit
+          --thresholds "${{ steps.resolve.outputs.thresholds }}"
 
-    - name: "Commit batch HIGH — ${{ matrix.iso }}"
-      if: ${{ inputs.thresholds == '' && inputs.batch_mode == 'batched' }}
-      run: |
-        git add data/step1d-storage-parquets/"${{ matrix.iso }}"_*.parquet \
-                data/step1d-storage-parquets/"${{ matrix.iso }}"_*.json 2>/dev/null || true
-        if ! git diff --cached --quiet; then
-          git commit -m "Step 1d batch HIGH: ${{ matrix.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          git push origin "$TARGET_BRANCH" || true
-        fi
-
-    # ── Final sweep: catch anything not yet committed ─────────────────────
-    - name: Final commit and push
+    - name: Upload results
       if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: step1d-${{ matrix.iso }}-${{ matrix.band }}
+        path: |
+          data/step1d-storage-parquets/${{ matrix.iso }}_*.parquet
+          data/step1d-storage-parquets/${{ matrix.iso }}_*.json
+        retention-days: 7
+        if-no-files-found: warn
+
+  # ════════════════════════════════════════════════════════════════════════
+  # Download all artifacts and commit to a single output branch
+  # ════════════════════════════════════════════════════════════════════════
+  commit-results:
+    needs: [prepare, fine-storage]
+    if: always() && needs.fine-storage.result != 'cancelled'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.branch || 'master' }}
+        fetch-depth: 0
+
+    - name: Create output branch
       run: |
-        # Scope to THIS ISO's files only to prevent cross-ISO merge conflicts
-        git add data/step1d-storage-parquets/"${{ matrix.iso }}"_*.parquet \
-                data/step1d-storage-parquets/"${{ matrix.iso }}"_*.json 2>/dev/null || true
+        TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+        ISO_LOWER=$(echo "${{ inputs.iso }}" | tr '[:upper:]' '[:lower:]')
+        BAND="${{ inputs.threshold_band }}"
+        CUSTOM="${{ inputs.custom_thresholds }}"
+        [ -n "$CUSTOM" ] && BAND="custom"
+        TARGET_BRANCH="auto/${TIMESTAMP}-step1d-storage-${ISO_LOWER}-${BAND,,}"
+        echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git config http.postBuffer 524288000
+        git checkout -b "$TARGET_BRANCH"
+        echo "Output branch: $TARGET_BRANCH"
+
+    - name: Ensure output directory
+      run: mkdir -p data/step1d-storage-parquets
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        pattern: step1d-*
+        path: data/step1d-storage-parquets/
+        merge-multiple: true
+
+    - name: List downloaded files
+      run: |
+        echo "Downloaded results:"
+        find data/step1d-storage-parquets/ -name "*.parquet" -o -name "*.json" | sort
+        COUNT=$(find data/step1d-storage-parquets/ -name "*.parquet" | wc -l)
+        echo "Total parquet files: $COUNT"
+
+    - name: Commit and push
+      run: |
+        git add data/step1d-storage-parquets/*.parquet \
+                data/step1d-storage-parquets/*.json 2>/dev/null || true
+
         if ! git diff --cached --quiet; then
-          LABEL="${{ matrix.iso }}"
-          CUSTOM="${{ inputs.thresholds }}"
-          MODE="${{ inputs.batch_mode }}"
-          [ -n "$CUSTOM" ] && LABEL="$LABEL thresholds=$CUSTOM" || LABEL="$LABEL $MODE"
-          git commit -m "Step 1d final: $LABEL — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          ISO="${{ inputs.iso }}"
+          BAND="${{ inputs.threshold_band }}"
+          CUSTOM="${{ inputs.custom_thresholds }}"
+          [ -n "$CUSTOM" ] && BAND="custom($CUSTOM)"
+          COUNT=$(git diff --cached --name-only | wc -l)
+          git commit -m "Step 1d storage refinement: ${ISO} × ${BAND} — ${COUNT} files — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        else
+          echo "No new results to commit."
+          exit 0
         fi
 
-        # Push with retry
+        # Push with retry (exponential backoff)
         for i in 1 2 3 4; do
           git push -u origin "$TARGET_BRANCH" && break
           echo "Push attempt $i failed, retrying in $((2**i))s..."
           sleep $((2**i))
         done
-        echo "Branch: $TARGET_BRANCH"
-        echo "Merge into master to bank the storage results."
+
+        echo "════════════════════════════════════════════════════"
+        echo "  Branch: $TARGET_BRANCH"
+        echo "  Merge into master to bank the storage results."
+        echo "════════════════════════════════════════════════════"
