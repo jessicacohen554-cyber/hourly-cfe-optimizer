@@ -507,20 +507,14 @@ for iso in ISOS:
             batt8 = sc.get('battery8_dispatch_pct', 0)
             ldes = sc.get('ldes_dispatch_pct', 0)
             h2 = sc.get('h2_dispatch_pct', 0)
-            mk = f"{rm.get('clean_firm',0)}_{rm.get('solar',0)}_{rm.get('wind',0)}_{rm.get('offshore_wind',0)}_{rm.get('ccs_ccgt',0)}_{rm.get('hydro',0)}_100_{batt}_{batt8}_{ldes}_{h2}"
+            # Primary key: matches step5_compress_day_profiles.py mix_key()
+            # Format: {cf}_{s}_{w}_{c}_{h}_{battery_pct}_{ldes_pct}_{h2_pct}
+            mk = f"{rm.get('clean_firm',0)}_{rm.get('solar',0)}_{rm.get('wind',0)}_{rm.get('ccs_ccgt',0)}_{rm.get('hydro',0)}_{batt}_{ldes}_{h2}"
             profile = iso_profiles.get(mk)
-            # Fallback to old mix_key format without offshore_wind
+            # Fallback: without h2
             if not profile:
-                mk_v2 = f"{rm.get('clean_firm',0)}_{rm.get('solar',0)}_{rm.get('wind',0)}_{rm.get('ccs_ccgt',0)}_{rm.get('hydro',0)}_100_{batt}_{batt8}_{ldes}_{h2}"
+                mk_v2 = f"{rm.get('clean_firm',0)}_{rm.get('solar',0)}_{rm.get('wind',0)}_{rm.get('ccs_ccgt',0)}_{rm.get('hydro',0)}_{batt}_{ldes}_0"
                 profile = iso_profiles.get(mk_v2)
-            # Fallback to old mix_key format without h2
-            if not profile:
-                mk_old = f"{rm.get('clean_firm',0)}_{rm.get('solar',0)}_{rm.get('wind',0)}_{rm.get('ccs_ccgt',0)}_{rm.get('hydro',0)}_100_{batt}_{batt8}_{ldes}"
-                profile = iso_profiles.get(mk_old)
-            # Fallback to old mix_key format without battery8/h2
-            if not profile:
-                mk_old2 = f"{rm.get('clean_firm',0)}_{rm.get('solar',0)}_{rm.get('wind',0)}_{rm.get('ccs_ccgt',0)}_{rm.get('hydro',0)}_100_{batt}_{ldes}"
-                profile = iso_profiles.get(mk_old2)
 
         if profile:
             iso_cd['demand'].append([round(v, 5) for v in profile['demand']])

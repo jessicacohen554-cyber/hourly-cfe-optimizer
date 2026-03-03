@@ -1379,15 +1379,14 @@ function getCompressedDayProfile(iso, entry) {
         const isoData = COMPRESSED_DAY_PROFILES[iso];
         if (isoData) {
             const rm = entry.resource_mix || {};
-            const cf = rm.clean_firm||0, s = rm.solar||0, w = rm.wind||0, osw = rm.offshore_wind||0, c = rm.ccs_ccgt||0, h = rm.hydro||0;
-            const proc = entry.procurement_pct||0;
+            const cf = rm.clean_firm||0, s = rm.solar||0, w = rm.wind||0, c = rm.ccs_ccgt||0, h = rm.hydro||0;
             const bat = entry.battery_dispatch_pct||0;
-            const bat8 = entry.battery8_dispatch_pct||0;
             const ldes = entry.ldes_dispatch_pct||0;
-            // Try 10-dim key first (with offshore_wind + battery8), then 9-dim fallback
-            const mk9 = `${cf}_${s}_${w}_${osw}_${c}_${h}_${proc}_${bat}_${bat8}_${ldes}`;
-            const mk8 = `${cf}_${s}_${w}_${c}_${h}_${proc}_${bat}_${ldes}`;
-            const profile = isoData.profiles?.[mk9] || isoData.profiles?.[mk8];
+            const h2 = entry.h2_dispatch_pct||0;
+            // Key matches step5_compress_day_profiles.py mix_key():
+            // {cf}_{s}_{w}_{c}_{h}_{battery_pct}_{ldes_pct}_{h2_pct}
+            const mk = `${cf}_${s}_${w}_${c}_${h}_${bat}_${ldes}_${h2}`;
+            const profile = isoData.profiles?.[mk];
             if (profile) return profile;
         }
     }
