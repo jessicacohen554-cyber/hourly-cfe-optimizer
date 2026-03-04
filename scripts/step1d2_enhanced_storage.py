@@ -49,13 +49,17 @@ V2_MAX_BAT8 = np.array([10.0], dtype=np.float64)
 V2_MAX_LDES = np.array([25.0], dtype=np.float64)
 V2_MAX_H2 = np.array([25.0], dtype=np.float64)
 
-# Pass 1: Extended coarse grids covering the wider range
-# Log-spaced with denser coverage in the cost-meaningful low range
-V2_FULL_BAT4 = np.array([0, 0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 3.0, 5.0],
+# Pass 1: Extended coarse grids with intermediate points at high end.
+# Dense in the cost-meaningful low range (0-1%), intermediate points at high
+# end to ensure max coarse gap ≤ fine sweep half-width bridgeable.
+# Previous grids had 5pp gaps (LDES 20→25%) where Pass 2 (±0.5pp) couldn't
+# reach the true optimum. These grids cap max gap at ~4pp for LDES, ~2pp
+# for batteries.
+V2_FULL_BAT4 = np.array([0, 0.05, 0.1, 0.2, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0],
                          dtype=np.float64)
-V2_FULL_BAT8 = np.array([0, 0.1, 0.2, 0.5, 1.0, 2.0, 4.0, 6.0, 8.0, 10.0],
+V2_FULL_BAT8 = np.array([0, 0.1, 0.2, 0.5, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 10.0],
                          dtype=np.float64)
-V2_FULL_LDES = np.array([0, 0.25, 0.5, 1.0, 2.0, 5.0, 10.0, 15.0, 20.0, 25.0],
+V2_FULL_LDES = np.array([0, 0.25, 0.5, 1.0, 2.0, 5.0, 8.0, 12.0, 15.0, 17.0, 21.0, 25.0],
                          dtype=np.float64)
 V2_FULL_H2 = np.array([0, 5, 10, 15, 20, 25], dtype=np.float64)
 
