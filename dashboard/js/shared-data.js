@@ -2,7 +2,7 @@
 // SHARED DATA MODULE — Single source of truth for all dashboard pages
 // ============================================================================
 // RULE: No data constants defined in HTML files. Change here, propagates everywhere.
-// Generated: 2026-03-04 03:55 by generate_shared_data.py
+// Generated: 2026-03-04 05:47 by generate_shared_data.py
 // Source: overprocure_results.json (Step 2 tranche-repriced + postprocess + CO2)
 // ============================================================================
 
@@ -4617,50 +4617,50 @@ const GROWTH_COUNTERFACTUAL = {
         "99.99": { year: 2050, Low: { twh: 29.0, mt: 10.13, gf: 1.2511 }, Medium: { twh: 64.8, mt: 22.69, gf: 1.562 }, High: { twh: 120.4, mt: 42.13, gf: 2.0435 } }
     },
     MISO: {
-        "10": { year: 2026, Low: { twh: 0.0, mt: 0.0, gf: 1.02 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.02 }, High: { twh: 0.0, mt: 0.0, gf: 1.02 } },
-        "20": { year: 2027, Low: { twh: 0.0, mt: 0.0, gf: 1.0404 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.0404 }, High: { twh: 0.0, mt: 0.0, gf: 1.0404 } },
-        "30": { year: 2028, Low: { twh: 0.0, mt: 0.0, gf: 1.0612 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.0612 }, High: { twh: 0.0, mt: 0.0, gf: 1.0612 } },
-        "40": { year: 2029, Low: { twh: 0.0, mt: 0.0, gf: 1.0824 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.0824 }, High: { twh: 0.0, mt: 0.0, gf: 1.0824 } },
-        "50": { year: 2030, Low: { twh: 0.0, mt: 0.0, gf: 1.1041 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.1041 }, High: { twh: 0.0, mt: 0.0, gf: 1.1041 } },
-        "55": { year: 2031, Low: { twh: 0.0, mt: 0.0, gf: 1.1262 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.1262 }, High: { twh: 0.0, mt: 0.0, gf: 1.1262 } },
-        "60": { year: 2033, Low: { twh: 0.0, mt: 0.0, gf: 1.1717 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.1717 }, High: { twh: 0.0, mt: 0.0, gf: 1.1717 } },
-        "65": { year: 2034, Low: { twh: 0.0, mt: 0.0, gf: 1.1951 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.1951 }, High: { twh: 0.0, mt: 0.0, gf: 1.1951 } },
-        "70": { year: 2035, Low: { twh: 0.0, mt: 0.0, gf: 1.219 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.219 }, High: { twh: 0.0, mt: 0.0, gf: 1.219 } },
-        "75": { year: 2036, Low: { twh: 0.0, mt: 0.0, gf: 1.2434 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.2434 }, High: { twh: 0.0, mt: 0.0, gf: 1.2434 } },
-        "80": { year: 2037, Low: { twh: 0.0, mt: 0.0, gf: 1.2682 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.2682 }, High: { twh: 0.0, mt: 0.0, gf: 1.2682 } },
-        "85": { year: 2038, Low: { twh: 0.0, mt: 0.0, gf: 1.2936 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.2936 }, High: { twh: 0.0, mt: 0.0, gf: 1.2936 } },
-        "87.5": { year: 2039, Low: { twh: 0.0, mt: 0.0, gf: 1.3195 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.3195 }, High: { twh: 0.0, mt: 0.0, gf: 1.3195 } },
-        "90": { year: 2040, Low: { twh: 0.0, mt: 0.0, gf: 1.3459 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.3459 }, High: { twh: 0.0, mt: 0.0, gf: 1.3459 } },
-        "92.5": { year: 2043, Low: { twh: 0.0, mt: 0.0, gf: 1.4282 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.4282 }, High: { twh: 0.0, mt: 0.0, gf: 1.4282 } },
-        "95": { year: 2045, Low: { twh: 0.0, mt: 0.0, gf: 1.4859 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.4859 }, High: { twh: 0.0, mt: 0.0, gf: 1.4859 } },
-        "97.5": { year: 2048, Low: { twh: 0.0, mt: 0.0, gf: 1.5769 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.5769 }, High: { twh: 0.0, mt: 0.0, gf: 1.5769 } },
-        "99": { year: 2049, Low: { twh: 0.0, mt: 0.0, gf: 1.6084 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.6084 }, High: { twh: 0.0, mt: 0.0, gf: 1.6084 } },
-        "99.5": { year: 2049, Low: { twh: 0.0, mt: 0.0, gf: 1.6084 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.6084 }, High: { twh: 0.0, mt: 0.0, gf: 1.6084 } },
-        "99.9": { year: 2050, Low: { twh: 0.0, mt: 0.0, gf: 1.6406 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.6406 }, High: { twh: 0.0, mt: 0.0, gf: 1.6406 } },
-        "99.99": { year: 2050, Low: { twh: 0.0, mt: 0.0, gf: 1.6406 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.6406 }, High: { twh: 0.0, mt: 0.0, gf: 1.6406 } }
+        "10": { year: 2026, Low: { twh: 7.9, mt: 2.77, gf: 1.012 }, Medium: { twh: 14.5, mt: 5.08, gf: 1.022 }, High: { twh: 25.1, mt: 8.78, gf: 1.038 } },
+        "20": { year: 2027, Low: { twh: 15.9, mt: 5.58, gf: 1.0241 }, Medium: { twh: 29.4, mt: 10.28, gf: 1.0445 }, High: { twh: 51.1, mt: 17.89, gf: 1.0774 } },
+        "30": { year: 2028, Low: { twh: 24.0, mt: 8.42, gf: 1.0364 }, Medium: { twh: 44.5, mt: 15.58, gf: 1.0675 }, High: { twh: 78.1, mt: 27.35, gf: 1.1184 } },
+        "40": { year: 2029, Low: { twh: 32.3, mt: 11.29, gf: 1.0489 }, Medium: { twh: 60.0, mt: 21.01, gf: 1.0909 }, High: { twh: 106.2, mt: 37.16, gf: 1.1609 } },
+        "50": { year: 2030, Low: { twh: 40.6, mt: 14.2, gf: 1.0615 }, Medium: { twh: 75.9, mt: 26.55, gf: 1.1149 }, High: { twh: 135.3, mt: 47.35, gf: 1.205 } },
+        "55": { year: 2031, Low: { twh: 49.0, mt: 17.14, gf: 1.0742 }, Medium: { twh: 92.1, mt: 32.22, gf: 1.1395 }, High: { twh: 165.5, mt: 57.93, gf: 1.2508 } },
+        "60": { year: 2033, Low: { twh: 66.1, mt: 23.13, gf: 1.1001 }, Medium: { twh: 125.5, mt: 43.93, gf: 1.1902 }, High: { twh: 229.5, mt: 80.31, gf: 1.3477 } },
+        "65": { year: 2034, Low: { twh: 74.8, mt: 26.18, gf: 1.1133 }, Medium: { twh: 142.8, mt: 49.98, gf: 1.2163 }, High: { twh: 263.3, mt: 92.14, gf: 1.3989 } },
+        "70": { year: 2035, Low: { twh: 83.6, mt: 29.27, gf: 1.1267 }, Medium: { twh: 160.5, mt: 56.16, gf: 1.2431 }, High: { twh: 298.3, mt: 104.42, gf: 1.452 } },
+        "75": { year: 2036, Low: { twh: 92.5, mt: 32.39, gf: 1.1402 }, Medium: { twh: 178.5, mt: 62.48, gf: 1.2705 }, High: { twh: 334.8, mt: 117.16, gf: 1.5072 } },
+        "80": { year: 2037, Low: { twh: 101.6, mt: 35.55, gf: 1.1539 }, Medium: { twh: 196.9, mt: 68.93, gf: 1.2984 }, High: { twh: 372.6, mt: 130.39, gf: 1.5645 } },
+        "85": { year: 2038, Low: { twh: 110.7, mt: 38.75, gf: 1.1677 }, Medium: { twh: 215.8, mt: 75.53, gf: 1.327 }, High: { twh: 411.8, mt: 144.13, gf: 1.6239 } },
+        "87.5": { year: 2039, Low: { twh: 120.0, mt: 41.99, gf: 1.1818 }, Medium: { twh: 235.1, mt: 82.27, gf: 1.3562 }, High: { twh: 452.5, mt: 158.38, gf: 1.6856 } },
+        "90": { year: 2040, Low: { twh: 129.3, mt: 45.26, gf: 1.1959 }, Medium: { twh: 254.8, mt: 89.17, gf: 1.386 }, High: { twh: 494.8, mt: 173.18, gf: 1.7497 } },
+        "92.5": { year: 2043, Low: { twh: 158.1, mt: 55.33, gf: 1.2395 }, Medium: { twh: 316.5, mt: 110.77, gf: 1.4795 }, High: { twh: 631.5, mt: 221.03, gf: 1.9568 } },
+        "95": { year: 2045, Low: { twh: 177.8, mt: 62.24, gf: 1.2694 }, Medium: { twh: 359.9, mt: 125.97, gf: 1.5453 }, High: { twh: 731.5, mt: 256.03, gf: 2.1084 } },
+        "97.5": { year: 2048, Low: { twh: 208.4, mt: 72.92, gf: 1.3157 }, Medium: { twh: 428.7, mt: 150.05, gf: 1.6496 }, High: { twh: 896.3, mt: 313.69, gf: 2.358 } },
+        "99": { year: 2049, Low: { twh: 218.8, mt: 76.57, gf: 1.3315 }, Medium: { twh: 452.7, mt: 158.43, gf: 1.6859 }, High: { twh: 955.4, mt: 334.39, gf: 2.4476 } },
+        "99.5": { year: 2049, Low: { twh: 218.8, mt: 76.57, gf: 1.3315 }, Medium: { twh: 452.7, mt: 158.43, gf: 1.6859 }, High: { twh: 955.4, mt: 334.39, gf: 2.4476 } },
+        "99.9": { year: 2050, Low: { twh: 229.3, mt: 80.26, gf: 1.3475 }, Medium: { twh: 477.1, mt: 167.0, gf: 1.7229 }, High: { twh: 1016.8, mt: 355.88, gf: 2.5406 } },
+        "99.99": { year: 2050, Low: { twh: 229.3, mt: 80.26, gf: 1.3475 }, Medium: { twh: 477.1, mt: 167.0, gf: 1.7229 }, High: { twh: 1016.8, mt: 355.88, gf: 2.5406 } }
     },
     SPP: {
-        "10": { year: 2026, Low: { twh: 0.0, mt: 0.0, gf: 1.02 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.02 }, High: { twh: 0.0, mt: 0.0, gf: 1.02 } },
-        "20": { year: 2027, Low: { twh: 0.0, mt: 0.0, gf: 1.0404 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.0404 }, High: { twh: 0.0, mt: 0.0, gf: 1.0404 } },
-        "30": { year: 2028, Low: { twh: 0.0, mt: 0.0, gf: 1.0612 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.0612 }, High: { twh: 0.0, mt: 0.0, gf: 1.0612 } },
-        "40": { year: 2029, Low: { twh: 0.0, mt: 0.0, gf: 1.0824 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.0824 }, High: { twh: 0.0, mt: 0.0, gf: 1.0824 } },
-        "50": { year: 2030, Low: { twh: 0.0, mt: 0.0, gf: 1.1041 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.1041 }, High: { twh: 0.0, mt: 0.0, gf: 1.1041 } },
-        "55": { year: 2031, Low: { twh: 0.0, mt: 0.0, gf: 1.1262 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.1262 }, High: { twh: 0.0, mt: 0.0, gf: 1.1262 } },
-        "60": { year: 2033, Low: { twh: 0.0, mt: 0.0, gf: 1.1717 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.1717 }, High: { twh: 0.0, mt: 0.0, gf: 1.1717 } },
-        "65": { year: 2034, Low: { twh: 0.0, mt: 0.0, gf: 1.1951 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.1951 }, High: { twh: 0.0, mt: 0.0, gf: 1.1951 } },
-        "70": { year: 2035, Low: { twh: 0.0, mt: 0.0, gf: 1.219 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.219 }, High: { twh: 0.0, mt: 0.0, gf: 1.219 } },
-        "75": { year: 2036, Low: { twh: 0.0, mt: 0.0, gf: 1.2434 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.2434 }, High: { twh: 0.0, mt: 0.0, gf: 1.2434 } },
-        "80": { year: 2037, Low: { twh: 0.0, mt: 0.0, gf: 1.2682 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.2682 }, High: { twh: 0.0, mt: 0.0, gf: 1.2682 } },
-        "85": { year: 2038, Low: { twh: 0.0, mt: 0.0, gf: 1.2936 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.2936 }, High: { twh: 0.0, mt: 0.0, gf: 1.2936 } },
-        "87.5": { year: 2039, Low: { twh: 0.0, mt: 0.0, gf: 1.3195 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.3195 }, High: { twh: 0.0, mt: 0.0, gf: 1.3195 } },
-        "90": { year: 2040, Low: { twh: 0.0, mt: 0.0, gf: 1.3459 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.3459 }, High: { twh: 0.0, mt: 0.0, gf: 1.3459 } },
-        "92.5": { year: 2043, Low: { twh: 0.0, mt: 0.0, gf: 1.4282 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.4282 }, High: { twh: 0.0, mt: 0.0, gf: 1.4282 } },
-        "95": { year: 2045, Low: { twh: 0.0, mt: 0.0, gf: 1.4859 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.4859 }, High: { twh: 0.0, mt: 0.0, gf: 1.4859 } },
-        "97.5": { year: 2048, Low: { twh: 0.0, mt: 0.0, gf: 1.5769 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.5769 }, High: { twh: 0.0, mt: 0.0, gf: 1.5769 } },
-        "99": { year: 2049, Low: { twh: 0.0, mt: 0.0, gf: 1.6084 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.6084 }, High: { twh: 0.0, mt: 0.0, gf: 1.6084 } },
-        "99.5": { year: 2049, Low: { twh: 0.0, mt: 0.0, gf: 1.6084 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.6084 }, High: { twh: 0.0, mt: 0.0, gf: 1.6084 } },
-        "99.9": { year: 2050, Low: { twh: 0.0, mt: 0.0, gf: 1.6406 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.6406 }, High: { twh: 0.0, mt: 0.0, gf: 1.6406 } },
-        "99.99": { year: 2050, Low: { twh: 0.0, mt: 0.0, gf: 1.6406 }, Medium: { twh: 0.0, mt: 0.0, gf: 1.6406 }, High: { twh: 0.0, mt: 0.0, gf: 1.6406 } }
+        "10": { year: 2026, Low: { twh: 3.0, mt: 1.04, gf: 1.01 }, Medium: { twh: 5.3, mt: 1.86, gf: 1.018 }, High: { twh: 8.9, mt: 3.11, gf: 1.03 } },
+        "20": { year: 2027, Low: { twh: 5.9, mt: 2.08, gf: 1.0201 }, Medium: { twh: 10.8, mt: 3.76, gf: 1.0363 }, High: { twh: 18.0, mt: 6.31, gf: 1.0609 } },
+        "30": { year: 2028, Low: { twh: 9.0, mt: 3.14, gf: 1.0303 }, Medium: { twh: 16.3, mt: 5.7, gf: 1.055 }, High: { twh: 27.4, mt: 9.61, gf: 1.0927 } },
+        "40": { year: 2029, Low: { twh: 12.0, mt: 4.21, gf: 1.0406 }, Medium: { twh: 21.9, mt: 7.66, gf: 1.074 }, High: { twh: 37.2, mt: 13.0, gf: 1.1255 } },
+        "50": { year: 2030, Low: { twh: 15.1, mt: 5.28, gf: 1.051 }, Medium: { twh: 27.6, mt: 9.67, gf: 1.0933 }, High: { twh: 47.1, mt: 16.5, gf: 1.1593 } },
+        "55": { year: 2031, Low: { twh: 18.2, mt: 6.37, gf: 1.0615 }, Medium: { twh: 33.4, mt: 11.7, gf: 1.113 }, High: { twh: 57.4, mt: 20.1, gf: 1.1941 } },
+        "60": { year: 2033, Low: { twh: 24.5, mt: 8.58, gf: 1.0829 }, Medium: { twh: 45.4, mt: 15.89, gf: 1.1534 }, High: { twh: 79.0, mt: 27.64, gf: 1.2668 } },
+        "65": { year: 2034, Low: { twh: 27.7, mt: 9.71, gf: 1.0937 }, Medium: { twh: 51.6, mt: 18.04, gf: 1.1742 }, High: { twh: 90.2, mt: 31.57, gf: 1.3048 } },
+        "70": { year: 2035, Low: { twh: 31.0, mt: 10.84, gf: 1.1046 }, Medium: { twh: 57.8, mt: 20.23, gf: 1.1953 }, High: { twh: 101.8, mt: 35.63, gf: 1.3439 } },
+        "75": { year: 2036, Low: { twh: 34.2, mt: 11.98, gf: 1.1157 }, Medium: { twh: 64.2, mt: 22.46, gf: 1.2168 }, High: { twh: 113.7, mt: 39.81, gf: 1.3842 } },
+        "80": { year: 2037, Low: { twh: 37.5, mt: 13.14, gf: 1.1268 }, Medium: { twh: 70.7, mt: 24.73, gf: 1.2387 }, High: { twh: 126.0, mt: 44.11, gf: 1.4258 } },
+        "85": { year: 2038, Low: { twh: 40.9, mt: 14.31, gf: 1.1381 }, Medium: { twh: 77.3, mt: 27.04, gf: 1.261 }, High: { twh: 138.7, mt: 48.54, gf: 1.4685 } },
+        "87.5": { year: 2039, Low: { twh: 44.2, mt: 15.49, gf: 1.1495 }, Medium: { twh: 84.0, mt: 29.39, gf: 1.2837 }, High: { twh: 151.7, mt: 53.1, gf: 1.5126 } },
+        "90": { year: 2040, Low: { twh: 47.6, mt: 16.68, gf: 1.161 }, Medium: { twh: 90.8, mt: 31.79, gf: 1.3068 }, High: { twh: 165.2, mt: 57.81, gf: 1.558 } },
+        "92.5": { year: 2043, Low: { twh: 58.1, mt: 20.32, gf: 1.1961 }, Medium: { twh: 112.1, mt: 39.23, gf: 1.3787 }, High: { twh: 207.9, mt: 72.77, gf: 1.7024 } },
+        "95": { year: 2045, Low: { twh: 65.2, mt: 22.81, gf: 1.2202 }, Medium: { twh: 126.9, mt: 44.42, gf: 1.4287 }, High: { twh: 238.6, mt: 83.51, gf: 1.8061 } },
+        "97.5": { year: 2048, Low: { twh: 76.1, mt: 26.64, gf: 1.2572 }, Medium: { twh: 150.2, mt: 52.56, gf: 1.5073 }, High: { twh: 288.2, mt: 100.86, gf: 1.9736 } },
+        "99": { year: 2049, Low: { twh: 79.8, mt: 27.94, gf: 1.2697 }, Medium: { twh: 158.2, mt: 55.37, gf: 1.5344 }, High: { twh: 305.7, mt: 107.0, gf: 2.0328 } },
+        "99.5": { year: 2049, Low: { twh: 79.8, mt: 27.94, gf: 1.2697 }, Medium: { twh: 158.2, mt: 55.37, gf: 1.5344 }, High: { twh: 305.7, mt: 107.0, gf: 2.0328 } },
+        "99.9": { year: 2050, Low: { twh: 83.6, mt: 29.26, gf: 1.2824 }, Medium: { twh: 166.4, mt: 58.23, gf: 1.562 }, High: { twh: 323.8, mt: 113.32, gf: 2.0938 } },
+        "99.99": { year: 2050, Low: { twh: 83.6, mt: 29.26, gf: 1.2824 }, Medium: { twh: 166.4, mt: 58.23, gf: 1.562 }, High: { twh: 323.8, mt: 113.32, gf: 2.0938 } }
     }
 };
 
