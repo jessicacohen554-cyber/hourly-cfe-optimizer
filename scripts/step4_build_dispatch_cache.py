@@ -164,6 +164,157 @@ def build_cache_for_iso(iso, unique_mixes, demand_data, gen_profiles,
     return cache, computed, skipped
 
 
+def enrich_parquets_with_dispatch_shares(iso, input_dir, cache):
+    """Add actual battery/LDES dispatch share columns to step3 parquets.
+
+    For each row in the step3 parquet, looks up the dispatch cache entry,
+    sums the 8760-hour dispatch profiles, and computes actual energy dispatched
+    as % of annual demand. Writes new columns alongside the existing capacity
+    parameters.
+
+    The dispatch profiles in the cache are in demand-normalized units where
+    demand sums to 8760. So sum(profile) / 8760 * 100 gives % of demand met.
+    """
+    path = find_parquet(input_dir, iso)
+    if not path:
+        return 0
+
+    df = pd.read_parquet(path)
+    n = len(df)
+
+    # Pre-fill new columns with 0
+    batt4_shares = np.zeros(n, dtype=np.float64)
+    batt8_shares = np.zeros(n, dtype=np.float64)
+    ldes_shares = np.zeros(n, dtype=np.float64)
+    h2_shares = np.zeros(n, dtype=np.float64)
+
+    # Extract arrays for archetype key computation
+    cf = df['mix_clean_firm'].to_numpy(dtype=np.float64)
+    sol = df['mix_solar'].to_numpy(dtype=np.float64)
+    wnd = df['mix_wind'].to_numpy(dtype=np.float64)
+    osw = df['mix_offshore_wind'].to_numpy(dtype=np.float64) if 'mix_offshore_wind' in df.columns else np.zeros(n)
+    ccs = df['mix_ccs_ccgt'].to_numpy(dtype=np.float64)
+    hyd = df['mix_hydro'].to_numpy(dtype=np.float64)
+    bat = df['battery_dispatch_pct'].to_numpy(dtype=np.float64)
+    bat8 = df['battery8_dispatch_pct'].to_numpy(dtype=np.float64)
+    ldes_arr = df['ldes_dispatch_pct'].to_numpy(dtype=np.float64)
+
+    # Build unique key → dispatch share mapping (avoid redundant sums)
+    key_cache = {}
+    hits = 0
+    misses = 0
+
+    for i in range(n):
+        rp = {
+            'clean_firm': cf[i], 'solar': sol[i], 'wind': wnd[i],
+            'offshore_wind': osw[i], 'ccs_ccgt': ccs[i], 'hydro': hyd[i],
+        }
+        key = _archetype_key(iso, rp, 100, bat[i], bat8[i], ldes_arr[i])
+
+        if key in key_cache:
+            b4, b8, ld, h2v = key_cache[key]
+            batt4_shares[i] = b4
+            batt8_shares[i] = b8
+            ldes_shares[i] = ld
+            h2_shares[i] = h2v
+            hits += 1
+            continue
+
+        entry = cache.get(key)
+        if entry is not None:
+            b4 = float(np.sum(entry['battery4_profile'])) / H * 100
+            b8 = float(np.sum(entry['battery8_profile'])) / H * 100
+            ld = float(np.sum(entry['ldes_profile'])) / H * 100
+            h2v = float(np.sum(entry.get('h2_profile', np.zeros(H)))) / H * 100
+            key_cache[key] = (b4, b8, ld, h2v)
+            batt4_shares[i] = b4
+            batt8_shares[i] = b8
+            ldes_shares[i] = ld
+            h2_shares[i] = h2v
+            hits += 1
+        else:
+            misses += 1
+
+    # Add columns to DataFrame
+    df['battery_dispatch_share'] = np.round(batt4_shares, 4)
+    df['battery8_dispatch_share'] = np.round(batt8_shares, 4)
+    df['ldes_dispatch_share'] = np.round(ldes_shares, 4)
+    df['h2_dispatch_share'] = np.round(h2_shares, 4)
+
+    # Write back
+    df.to_parquet(path, index=False, compression='zstd')
+    print(f"    Enriched {os.path.basename(path)}: {hits} cache hits, {misses} misses, "
+          f"batt4 share max={batt4_shares.max():.2f}%, ldes max={ldes_shares.max():.2f}%")
+
+    # Also enrich the feasible parquet (used by FEASIBLE_MIXES in shared-data.js)
+    feas_path = os.path.join(input_dir, f'step3_feasible_{iso}.parquet')
+    if os.path.exists(feas_path):
+        _enrich_single_parquet(feas_path, iso, cache)
+
+    return hits
+
+
+def _enrich_single_parquet(path, iso, cache):
+    """Add dispatch share columns to a single parquet file using the dispatch cache."""
+    df = pd.read_parquet(path)
+    n = len(df)
+    if n == 0:
+        return
+
+    batt4_shares = np.zeros(n, dtype=np.float64)
+    batt8_shares = np.zeros(n, dtype=np.float64)
+    ldes_shares = np.zeros(n, dtype=np.float64)
+    h2_shares = np.zeros(n, dtype=np.float64)
+
+    cf = df['clean_firm'].to_numpy(dtype=np.float64) if 'clean_firm' in df.columns else df.get('mix_clean_firm', pd.Series(dtype=float)).to_numpy(dtype=np.float64)
+    sol = df['solar'].to_numpy(dtype=np.float64) if 'solar' in df.columns else df.get('mix_solar', pd.Series(dtype=float)).to_numpy(dtype=np.float64)
+    wnd = df['wind'].to_numpy(dtype=np.float64) if 'wind' in df.columns else df.get('mix_wind', pd.Series(dtype=float)).to_numpy(dtype=np.float64)
+    osw_col = 'offshore_wind' if 'offshore_wind' in df.columns else 'mix_offshore_wind'
+    osw = df[osw_col].to_numpy(dtype=np.float64) if osw_col in df.columns else np.zeros(n)
+    ccs = df['ccs_ccgt'].to_numpy(dtype=np.float64) if 'ccs_ccgt' in df.columns else df.get('mix_ccs_ccgt', pd.Series(dtype=float)).to_numpy(dtype=np.float64)
+    hyd = df['hydro'].to_numpy(dtype=np.float64) if 'hydro' in df.columns else df.get('mix_hydro', pd.Series(dtype=float)).to_numpy(dtype=np.float64)
+    bat = df['battery_dispatch_pct'].to_numpy(dtype=np.float64)
+    bat8 = df['battery8_dispatch_pct'].to_numpy(dtype=np.float64)
+    ldes_arr = df['ldes_dispatch_pct'].to_numpy(dtype=np.float64)
+
+    key_cache_local = {}
+    hits = 0
+
+    for i in range(n):
+        rp = {
+            'clean_firm': cf[i], 'solar': sol[i], 'wind': wnd[i],
+            'offshore_wind': osw[i], 'ccs_ccgt': ccs[i], 'hydro': hyd[i],
+        }
+        key = _archetype_key(iso, rp, 100, bat[i], bat8[i], ldes_arr[i])
+
+        if key in key_cache_local:
+            b4, b8, ld, h2v = key_cache_local[key]
+        else:
+            entry = cache.get(key)
+            if entry is not None:
+                b4 = float(np.sum(entry['battery4_profile'])) / H * 100
+                b8 = float(np.sum(entry['battery8_profile'])) / H * 100
+                ld = float(np.sum(entry['ldes_profile'])) / H * 100
+                h2v = float(np.sum(entry.get('h2_profile', np.zeros(H)))) / H * 100
+                key_cache_local[key] = (b4, b8, ld, h2v)
+                hits += 1
+            else:
+                b4 = b8 = ld = h2v = 0.0
+
+        batt4_shares[i] = b4
+        batt8_shares[i] = b8
+        ldes_shares[i] = ld
+        h2_shares[i] = h2v
+
+    df['battery_dispatch_share'] = np.round(batt4_shares, 4)
+    df['battery8_dispatch_share'] = np.round(batt8_shares, 4)
+    df['ldes_dispatch_share'] = np.round(ldes_shares, 4)
+    df['h2_dispatch_share'] = np.round(h2_shares, 4)
+
+    df.to_parquet(path, index=False, compression='zstd')
+    print(f"    Enriched {os.path.basename(path)}: {n} rows, {hits} unique cache hits")
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='Build comprehensive dispatch cache for all unique mixes.',
@@ -235,6 +386,9 @@ def main():
 
         print(f"    Computed: {computed}, skipped (cached): {skipped}")
         print(f"    Total archetypes: {len(cache)}, time: {iso_elapsed:.1f}s")
+
+        # Enrich step3 parquets with actual dispatch shares
+        enrich_parquets_with_dispatch_shares(iso, input_dir, cache)
 
         total_computed += computed
         total_skipped += skipped
