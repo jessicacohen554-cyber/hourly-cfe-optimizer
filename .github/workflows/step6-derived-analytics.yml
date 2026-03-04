@@ -1,11 +1,14 @@
 name: "Step 6: Derived Analytics"
 
-# Runs two scripts sequentially to populate the Abatement / MAC page:
+# Runs derived analytics scripts sequentially:
 #   1. step6a_compute_mac_stats.py  — 6 MAC metrics, ANOVA decomposition, crossover analysis
 #   2. step6b_compute_optimal_targets.py — optimal CFE target per ISO via DAC crossover
+#   3. step6d_extract_building_blocks.py — hourly profiles + resource mix data for building blocks page
+#   4. step6e_extract_resource_density.py — per-scenario resource density strip plots
 #
 # Prerequisite: Step 5A (CO2) must have run first — MAC depends on CO2 output.
-# Output: dashboard/js/mac-stats-data.js, optimal-target-data.js
+# Output: dashboard/js/{mac-stats,optimal-target,building-blocks,resource-density}-data.js
+#         data/step6-derived-analytics/{building-blocks,resource-density}/
 # Note: Run Step 9 separately afterward to regenerate shared-data.js.
 
 on:
@@ -34,6 +37,8 @@ on:
           - ALL
           - mac-stats
           - optimal-targets
+          - building-blocks
+          - resource-density
       branch:
         description: 'Branch to checkout'
         required: false
@@ -87,23 +92,37 @@ jobs:
       - name: Ensure output directories
         run: |
           mkdir -p data/step5-post-processing
+          mkdir -p data/step6-derived-analytics/building-blocks
+          mkdir -p data/step6-derived-analytics/resource-density
           mkdir -p dashboard/js
 
       # ════════════════════════════════════════════════════════════════════
-      # Sequential: MAC Stats → Optimal Targets
+      # Sequential: MAC Stats → Optimal Targets → Building Blocks → Resource Density
       # ════════════════════════════════════════════════════════════════════
 
-      - name: "1/2 — Compute MAC Statistics"
+      - name: "1/4 — Compute MAC Statistics"
         if: ${{ inputs.script == 'ALL' || inputs.script == 'mac-stats' }}
         run: |
           echo "=== MAC Statistics (6 metrics, ANOVA, crossover) ==="
           python scripts/step6a_compute_mac_stats.py
 
-      - name: "2/2 — Compute Optimal Targets"
+      - name: "2/4 — Compute Optimal Targets"
         if: ${{ inputs.script == 'ALL' || inputs.script == 'optimal-targets' }}
         run: |
           echo "=== Optimal CFE Targets (DAC crossover analysis) ==="
           python scripts/step6b_compute_optimal_targets.py
+
+      - name: "3/4 — Extract Building Blocks Data"
+        if: ${{ inputs.script == 'ALL' || inputs.script == 'building-blocks' }}
+        run: |
+          echo "=== Building Blocks (hourly profiles + resource mixes) ==="
+          python scripts/step6d_extract_building_blocks.py
+
+      - name: "4/4 — Extract Resource Density Data"
+        if: ${{ inputs.script == 'ALL' || inputs.script == 'resource-density' }}
+        run: |
+          echo "=== Resource Density (per-scenario strip plot data) ==="
+          python scripts/step6e_extract_resource_density.py
 
       - name: Batched commit and push
         run: |
@@ -162,16 +181,25 @@ jobs:
             if push_with_retry "aggregate-data"; then PUSHED=true; else git reset HEAD~1; fi
           fi
 
-          # Batch 3: Dashboard JS files
+          # Batch 3: Step 6 derived analytics output directory
+          git add -f data/step6-derived-analytics/ 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            echo "--- Staging step6 derived analytics data ---"
+            git commit -m "Step 6 derived analytics: building-blocks + resource-density — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            if push_with_retry "step6-data"; then PUSHED=true; else git reset HEAD~1; fi
+          fi
+
+          # Batch 4: Dashboard JS files
           git add -f dashboard/js/mac-stats-data.js 2>/dev/null || true
           git add -f dashboard/js/optimal-target-data.js 2>/dev/null || true
+          git add -f dashboard/js/building-blocks-data.js 2>/dev/null || true
+          git add -f dashboard/js/resource-density-data.js 2>/dev/null || true
           if ! git diff --cached --quiet; then
             echo "--- Staging dashboard JS ---"
-            git commit -m "Step 6 MAC: dashboard JS — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git commit -m "Step 6 derived analytics: dashboard JS — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             if push_with_retry "dashboard-js"; then PUSHED=true; else git reset HEAD~1; fi
           fi
 
           if [ "$PUSHED" = "false" ]; then
             echo "No changes were pushed"
           fi
-
