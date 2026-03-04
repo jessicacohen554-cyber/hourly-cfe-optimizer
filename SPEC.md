@@ -4820,3 +4820,40 @@ bridge.
 Maximum coarse gap: bat4=1.0pp, bat8=2.0pp, LDES=4.0pp. Fine sweep at ±0.5pp
 ensures all gaps are bridgeable. 1.6× the original 900 combos — minimal
 compute increase for significantly better coverage at the high end.
+
+**Empirical validation (March 2026)**: Grid sensitivity tests across CAISO (solar-heavy,
+6D), NEISO (winter-constrained, 5D), and ERCOT (wind-heavy, 4D) confirm:
+- **Storage grid precision does NOT change which resource mix wins** — at every threshold
+  (95%, 97.5%, 99%, 99.9%), the same mix is cost-optimal regardless of LDES grid density.
+- **Coarse grid only overshoots LDES level** by ~2-2.5pp at 99.9% threshold — same mix
+  wins but at a higher (costlier) LDES than necessary. Pass 2 fine sweep corrects this.
+- **Score response to LDES is smooth and monotonic** — no step-function behavior, no
+  discontinuities. Each 0.25pp LDES adds a consistent ~0.02pp score (92% base) to
+  ~0.002pp (99% base).
+- **ERCOT plateaus at 1% LDES** (wind diversity fills gaps), **CAISO gains steadily to 25%**
+  (solar intermittency needs long-duration shifting).
+- **Winner flips**: 0/51 at thresholds ≤99%, 2-3/51 at 99.9% — all same-mix, different LDES.
+- **Conclusion**: V2 grid density is adequate for storage-vs-storage comparison.
+
+**Cost tradeoff: storage substitution vs resource overbuild (March 2026)**:
+The critical question is not whether storage grid precision flips one storage mix vs
+another — it's whether storage-augmented mixes outcompete pure resource overbuild.
+
+CAISO empirical test at 99.9% threshold (Medium LCOE, Medium TX):
+- **Baseline winner** (no storage search): 106% CF / 7% solar / 13% wind — 148% total
+  overbuild at $75.57/MWh. Already scores 99.9995% from sheer overbuild.
+- **With LDES substitution**: Scaling down to 88% of this mix + 20.5% LDES achieves
+  99.9% at $65.89/MWh — a **$9.69/MWh (13%) savings**. LDES at ~$0.63/%-demand is
+  far cheaper than the marginal new resources it replaces ($63-98/MWh).
+- **Floor at ~86% scale**: Below this, 25% LDES cannot compensate — the resource mix
+  must provide sufficient base hourly diversity. Storage shifts surplus to gaps but
+  cannot create energy.
+- **Near-miss cache limitation**: Step 1C's 100k near-miss mixes were optimized WITHOUT
+  storage. They over-represent fat overbuild mixes and under-represent lean+storage
+  combos. Step 1D.2 specifically searches the storage dimension to find these cheaper
+  alternatives.
+- **Implication for Step 1D.2**: The storage search IS the cost optimization mechanism
+  for the last-mile thresholds (≥99%). The value is not in storage grid precision
+  (LDES cost per pp is negligible) but in **unlocking cheaper resource mixes** that
+  wouldn't qualify without storage. This means adequate coverage of the near-miss
+  mix space is more important than fine LDES granularity.
