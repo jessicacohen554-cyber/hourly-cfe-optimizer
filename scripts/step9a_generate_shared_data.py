@@ -307,7 +307,7 @@ for iso in ISOS:
         # total_system_cost = clean procurement + gas backup (RA)
         _df_sc['total_system_cost'] = (_df_sc['cost_effective_cost']
                                        + _df_sc['gas_gas_cost_per_mwh'].fillna(0))
-        for t in THRESHOLDS:
+        for t in THRESHOLDS_NUM:
             t_costs = _df_sc.loc[_df_sc['threshold'] == t, 'total_system_cost'].values
             if len(t_costs) > 0:
                 med_line.append(round(float(np_sc.median(t_costs)), 2))
@@ -628,7 +628,7 @@ for iso in ISOS:
         _med_gb = _df_gb[_df_gb['scenario'] == _med_key].sort_values('threshold')
         if len(_med_gb) > 0:
             _gb_from_parquet = True
-            for t in THRESHOLDS:
+            for t in THRESHOLDS_NUM:
                 row = _med_gb[_med_gb['threshold'] == t]
                 if len(row) > 0:
                     r = row.iloc[0]
