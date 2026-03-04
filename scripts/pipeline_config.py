@@ -231,12 +231,12 @@ STORAGE_MAX_V2 = {
 # STORAGE ECONOMICS (Step 1D.2 Economic Assessment)
 # ============================================================================
 
-# Capacity market prices ($/kW-yr) — from 2024 auction results
+# Capacity market prices ($/kW-yr) — from 2024-2025 auction results
 # ERCOT and SPP have energy-only markets (no capacity payment)
 CAPACITY_MARKET_PRICES = {
     'CAISO': 75,    # RA program, system-wide avg
     'ERCOT': 0,     # No capacity market (energy-only)
-    'PJM': 50,      # RPM 2025/2026 BRA clearing price
+    'PJM': 120,     # RPM 2025/2026-2027/2028 BRA clearing ($98-269/MW-day, avg ~$120/kW-yr)
     'NYISO': 85,    # ICAP monthly spot, annualized
     'NEISO': 55,    # FCM FCA-19 clearing price
     'MISO': 25,     # PRA Zone 1-7 average
@@ -261,6 +261,103 @@ ANCILLARY_HOURS = {
     'regulation': 2000,  # ~23% of year — battery available when not cycling
     'spinning': 4000,    # ~46% of year — can provide while partially charged
 }
+
+# Storage arbitrage revenue ($/kW-yr) — from ISO LMP price spreads
+# Battery: daily cycling captures peak-to-trough spread (duck curve, evening ramp)
+# LDES: weekly cycling captures workday/weekend and multi-day weather patterns
+# H2: seasonal cycling, minimal arbitrage value
+# Sources: LBNL Utility-Scale Solar/Storage 2024, Lazard LCOS v9, ISO market reports
+STORAGE_ARBITRAGE_REVENUE = {
+    'battery': {
+        'CAISO': 50,   # Duck curve compressed 2024-25 w/ 10GW+ storage ($30-55/MWh spread)
+        'ERCOT': 50,   # Volatility moderated, 2024-25 spreads lower than 2022-23 peaks
+        'PJM':   45,   # Moderate day/night spread
+        'NYISO': 55,   # Moderate, higher in NYC/LI zones
+        'NEISO': 35,   # Modest spreads
+        'MISO':  30,   # Low-moderate spreads
+        'SPP':   25,   # Lowest price differentials
+    },
+    'battery8': {  # ~85% of bat4 per kW (more energy shifted, lower peak capture)
+        'CAISO': 43,
+        'ERCOT': 43,
+        'PJM':   38,
+        'NYISO': 47,
+        'NEISO': 30,
+        'MISO':  26,
+        'SPP':   21,
+    },
+    'ldes': {  # Weekly cycling — captures multi-day weather patterns
+        'CAISO': 15,
+        'ERCOT': 20,
+        'PJM':   12,
+        'NYISO': 14,
+        'NEISO': 10,
+        'MISO':   8,
+        'SPP':    7,
+    },
+    'h2': {  # Seasonal cycling — minimal arbitrage
+        'CAISO': 5,
+        'ERCOT': 6,
+        'PJM':   4,
+        'NYISO': 5,
+        'NEISO': 3,
+        'MISO':  3,
+        'SPP':   2,
+    },
+}
+
+# Revenue stacking factor — can't simultaneously do arbitrage + ancillary in same hour
+# Capacity payments are always earned (availability-based), so no stacking limit
+# Arbitrage and ancillary compete for the same hours → 70% co-optimization efficiency
+REVENUE_STACKING_FACTOR = 0.70
+
+# Ancillary service product eligibility by storage type
+# Battery: regulation (fast response); LDES: spinning reserve
+STORAGE_ANCILLARY_PRODUCT = {
+    'battery': 'regulation',
+    'battery8': 'regulation',
+    'ldes': 'spinning',
+    'h2': 'spinning',  # H2 too slow for regulation, marginal spinning value
+}
+
+
+def compute_storage_revenue_credit(storage_type, iso):
+    """Compute net revenue credit in LCOE units (same as LCOE_TABLES) for a storage type.
+
+    Revenue credit = capacity_payment + (arbitrage + ancillary) × stacking_factor
+    Converted to LCOE units: credit_lcoe = 1000 × total_$/kW-yr ÷ duration_hr
+
+    Returns the credit value to SUBTRACT from gross LCOE.
+    """
+    durations = {'battery': 4, 'battery8': 8, 'ldes': 100, 'h2': 1000}
+
+    capacity = CAPACITY_MARKET_PRICES.get(iso, 0)
+
+    # Ancillary revenue
+    product = STORAGE_ANCILLARY_PRODUCT[storage_type]
+    anc_rate = ANCILLARY_SERVICE_RATES[product].get(iso, 0)
+    anc_hours = ANCILLARY_HOURS[product]
+    ancillary_kw_yr = anc_rate * anc_hours / 1000  # $/MW-hr → $/kW-yr
+
+    # Arbitrage revenue
+    arbitrage = STORAGE_ARBITRAGE_REVENUE[storage_type].get(iso, 0)
+
+    # Stack: capacity is always earned; arbitrage + ancillary compete
+    total_kw_yr = capacity + (arbitrage + ancillary_kw_yr) * REVENUE_STACKING_FACTOR
+
+    # Convert to LCOE units: $/kW-yr → same units as LCOE_TABLES
+    duration = durations[storage_type]
+    credit_lcoe = 1000.0 * total_kw_yr / duration
+
+    return credit_lcoe
+
+
+# Pre-compute revenue credits for all types × ISOs
+STORAGE_REVENUE_CREDITS = {}
+for _stype in ['battery', 'battery8', 'ldes', 'h2']:
+    STORAGE_REVENUE_CREDITS[_stype] = {}
+    for _iso in ISOS:
+        STORAGE_REVENUE_CREDITS[_stype][_iso] = compute_storage_revenue_credit(_stype, _iso)
 
 # Battery degradation parameters
 BATTERY_DEGRADATION = {
