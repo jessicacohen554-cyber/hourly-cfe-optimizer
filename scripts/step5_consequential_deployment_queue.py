@@ -296,6 +296,7 @@ def extract_medium_scenarios(df):
     result = {}
 
     # Pre-compute optional columns that may not exist
+    has_offshore_wind = 'mix_offshore_wind' in df.columns
     has_battery8 = 'battery8_dispatch_pct' in df.columns
     has_h2 = 'h2_dispatch_pct' in df.columns
 
@@ -310,7 +311,13 @@ def extract_medium_scenarios(df):
 
         # Vectorized column computations
         demand_twh = iso_df['annual_demand_mwh'].values / 1e6
-        mix_cols = {res: iso_df[f'mix_{res}'].values for res in RESOURCES}
+        mix_cols = {}
+        for res in RESOURCES:
+            col_name = f'mix_{res}'
+            if col_name in iso_df.columns:
+                mix_cols[res] = iso_df[col_name].values
+            else:
+                mix_cols[res] = np.zeros(len(iso_df))
         bat_pct = iso_df['battery_dispatch_pct'].values
         bat8_pct = iso_df['battery8_dispatch_pct'].values if has_battery8 else np.zeros(len(iso_df))
         ldes_pct = iso_df['ldes_dispatch_pct'].values
@@ -1111,7 +1118,7 @@ def write_outputs(queue, cumulative, stranding, trajectories, projections,
         demand = BASE_DEMAND_TWH[iso]
         by_resource = {}
         total = 0
-        for r in ['clean_firm', 'solar', 'wind', 'hydro']:
+        for r in ['clean_firm', 'solar', 'wind', 'offshore_wind', 'hydro']:
             twh = round(demand * shares.get(r, 0) / 100, 1)
             by_resource[r] = twh
             total += twh
