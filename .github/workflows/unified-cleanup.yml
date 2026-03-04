@@ -26,10 +26,6 @@ on:
         description: 'Clear data/step3-cost-opt-parquets/ (cost optimization)'
         default: false
         type: boolean
-      clear_step4:
-        description: 'Clear data/step4-gas-ccs-parquets/ (gas/CCS track parquets)'
-        default: false
-        type: boolean
       clear_step5:
         description: 'Clear data/step5-post-processing/ (top-level files only)'
         default: false
@@ -169,16 +165,6 @@ jobs:
             fi
           fi
 
-          # ── Step 4: gas/CCS track parquets ──
-          if [ "${{ inputs.clear_step4 }}" = "true" ]; then
-            DIR="data/step4-gas-ccs-parquets"
-            if [ "$ISO" = "ALL" ]; then
-              add_files "$DIR" 1 "step4_*.parquet" "step4_*.json"
-            else
-              add_files "$DIR" 1 "step4_${ISO}.parquet" "step4_dg_${ISO}_*.parquet"
-            fi
-          fi
-
           # ── Step 5: post-processing (top-level files only) ──
           if [ "${{ inputs.clear_step5 }}" = "true" ]; then
             DIR="data/step5-post-processing"
@@ -250,7 +236,7 @@ jobs:
           # Group by directory
           for dir in data/step1-pfs-parquets data/step1d-storage-parquets \
                      data/step2-ef-parquets data/step3-cost-opt-parquets \
-                     data/step4-gas-ccs-parquets data/step5-post-processing \
+                     data/step5-post-processing \
                      data/step5-post-processing/co2_results \
                      data/step5-post-processing/dispatch_cache \
                      data/step5-post-processing/lmp data/step8-wrights-law; do
@@ -300,7 +286,7 @@ jobs:
           # Stage deletions — git add -u on each affected directory
           for dir in data/step1-pfs-parquets data/step1d-storage-parquets \
                      data/step2-ef-parquets data/step3-cost-opt-parquets \
-                     data/step4-gas-ccs-parquets data/step5-post-processing \
+                     data/step5-post-processing \
                      data/step8-wrights-law; do
             git add -u "$dir/" 2>/dev/null || true
           done
@@ -318,7 +304,6 @@ jobs:
           [ "${{ inputs.clear_step1d }}" = "true" ] && DIRS="${DIRS} step1d-storage"
           [ "${{ inputs.clear_step2 }}" = "true" ] && DIRS="${DIRS} step2-ef"
           [ "${{ inputs.clear_step3 }}" = "true" ] && DIRS="${DIRS} step3-cost"
-          [ "${{ inputs.clear_step4 }}" = "true" ] && DIRS="${DIRS} step4-gas-ccs"
           [ "${{ inputs.clear_step5 }}" = "true" ] && DIRS="${DIRS} step5-top"
           [ "${{ inputs.clear_step5_co2 }}" = "true" ] && DIRS="${DIRS} step5-co2"
           [ "${{ inputs.clear_step5_dispatch }}" = "true" ] && DIRS="${DIRS} step5-dispatch"
@@ -360,7 +345,6 @@ jobs:
           [ "${{ inputs.clear_step1d }}" = "true" ]         && echo "    ✓ data/step1d-storage-parquets/"
           [ "${{ inputs.clear_step2 }}" = "true" ]          && echo "    ✓ data/step2-ef-parquets/"
           [ "${{ inputs.clear_step3 }}" = "true" ]          && echo "    ✓ data/step3-cost-opt-parquets/"
-          [ "${{ inputs.clear_step4 }}" = "true" ]          && echo "    ✓ data/step4-gas-ccs-parquets/"
           [ "${{ inputs.clear_step5 }}" = "true" ]          && echo "    ✓ data/step5-post-processing/ (top-level)"
           [ "${{ inputs.clear_step5_co2 }}" = "true" ]      && echo "    ✓ data/step5-post-processing/co2_results/"
           [ "${{ inputs.clear_step5_dispatch }}" = "true" ]  && echo "    ✓ data/step5-post-processing/dispatch_cache/"

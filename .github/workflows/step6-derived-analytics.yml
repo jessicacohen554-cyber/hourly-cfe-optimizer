@@ -1,0 +1,177 @@
+name: "Step 6: Derived Analytics"
+
+# Runs two scripts sequentially to populate the Abatement / MAC page:
+#   1. step6a_compute_mac_stats.py  — 6 MAC metrics, ANOVA decomposition, crossover analysis
+#   2. step6b_compute_optimal_targets.py — optimal CFE target per ISO via DAC crossover
+#
+# Prerequisite: Step 5.0 (CO2) must have run first — MAC depends on CO2 output.
+# Output: dashboard/js/mac-stats-data.js, optimal-target-data.js
+# Note: Run Step 6 separately afterward to regenerate shared-data.js.
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO region to process'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      script:
+        description: 'Which script to run'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - mac-stats
+          - optimal-targets
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  BRANCH_PREFIX: step5-1-mac
+
+jobs:
+  update-mac-page:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Create output branch
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          ISO_LABEL="${{ inputs.iso }}"
+          SCRIPT_LABEL="${{ inputs.script }}"
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${SCRIPT_LABEL}-${ISO_LABEL}"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$TARGET_BRANCH"
+
+      - name: Verify upstream data exists
+        run: |
+          if [ ! -d "data/step3-cost-opt-parquets" ] || ! ls data/step3-cost-opt-parquets/*.parquet >/dev/null 2>&1; then
+            echo "ERROR: No step-3 parquets found. Run earlier steps first."
+            exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy numba pyarrow pandas scipy
+
+      - name: Ensure output directories
+        run: |
+          mkdir -p data/step5-post-processing
+          mkdir -p dashboard/js
+
+      # ════════════════════════════════════════════════════════════════════
+      # Sequential: MAC Stats → Optimal Targets
+      # ════════════════════════════════════════════════════════════════════
+
+      - name: "1/2 — Compute MAC Statistics"
+        if: ${{ inputs.script == 'ALL' || inputs.script == 'mac-stats' }}
+        run: |
+          echo "=== MAC Statistics (6 metrics, ANOVA, crossover) ==="
+          python scripts/step6a_compute_mac_stats.py
+
+      - name: "2/2 — Compute Optimal Targets"
+        if: ${{ inputs.script == 'ALL' || inputs.script == 'optimal-targets' }}
+        run: |
+          echo "=== Optimal CFE Targets (DAC crossover analysis) ==="
+          python scripts/step6b_compute_optimal_targets.py
+
+      - name: Batched commit and push
+        run: |
+          git config http.postBuffer 524288000
+
+          push_with_retry() {
+            local label="$1"
+            local MAX_RETRIES=4
+            for i in $(seq 1 $MAX_RETRIES); do
+              echo "  Push attempt $i/$MAX_RETRIES for ${label}..."
+              git push -u origin "$TARGET_BRANCH" 2>&1 && return 0
+              if [ "$i" -eq "$MAX_RETRIES" ]; then
+                echo "  ERROR: Push failed for ${label} after $MAX_RETRIES attempts"
+                return 1
+              fi
+              BACKOFF=$((2 ** i))
+              echo "  Retrying in ${BACKOFF}s..."
+              sleep "$BACKOFF"
+            done
+          }
+
+          PUSHED=false
+
+          # Batch 1: Post-processing parquets/data (per-ISO)
+          ISOS="CAISO ERCOT PJM NYISO NEISO MISO SPP"
+          for iso in $ISOS; do
+            FILES=$(find data/step5-post-processing/ -name "*${iso}*" -type f 2>/dev/null || true)
+            if [ -z "$FILES" ]; then continue; fi
+            git add -f $FILES
+            if git diff --cached --quiet; then continue; fi
+            BATCH_MB=$(du -cm $FILES | tail -1 | cut -f1)
+            echo "--- Staging ~${BATCH_MB} MB for $iso ---"
+            git commit -m "Step 6.1 MAC data: ${iso} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            if push_with_retry "$iso"; then
+              PUSHED=true
+            else
+              echo "  Per-ISO push failed for $iso — falling back to per-file"
+              git reset HEAD~1
+              for f in $FILES; do
+                FNAME=$(basename "$f")
+                git add -f "$f"
+                if git diff --cached --quiet; then continue; fi
+                git commit -m "Step 6.1 MAC: ${iso} ${FNAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                if push_with_retry "$FNAME"; then PUSHED=true; else git reset HEAD~1; fi
+              done
+            fi
+          done
+
+          # Batch 2: Non-ISO post-processing files (JSON aggregates)
+          git add -f data/step5-post-processing/optimal_targets.json 2>/dev/null || true
+          # Catch any remaining non-ISO files
+          git add -f data/step5-post-processing/ 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            echo "--- Staging aggregate JSON files ---"
+            git commit -m "Step 6.1 MAC: aggregate data — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            if push_with_retry "aggregate-data"; then PUSHED=true; else git reset HEAD~1; fi
+          fi
+
+          # Batch 3: Dashboard JS files
+          git add -f dashboard/js/mac-stats-data.js 2>/dev/null || true
+          git add -f dashboard/js/optimal-target-data.js 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            echo "--- Staging dashboard JS ---"
+            git commit -m "Step 6.1 MAC: dashboard JS — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            if push_with_retry "dashboard-js"; then PUSHED=true; else git reset HEAD~1; fi
+          fi
+
+          if [ "$PUSHED" = "false" ]; then
+            echo "No changes were pushed"
+          fi
+

@@ -19,7 +19,7 @@ cost optimums. Cost-based selection happens in Step 3.
 Pipeline position: Step 2 of 4
   Step 1 — PFS Generator (step1_pfs_generator.py)
   Step 2 — Efficient Frontier extraction (this file)
-  Step 3 — Cost optimization (step3_cost_optimization.py)
+  Step 3 — Cost optimization (step3a_cost_optimization.py)
   Step 4 — Post-processing (step4_postprocess.py)
 
 Input:  data/step1-pfs-parquets/{ISO}_t{XX}_raw_pfs.parquet (from Step 1)

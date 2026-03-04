@@ -709,10 +709,10 @@ H = 8760  # Convenience constant
 # ============================================================================
 # COST TABLES — Single source of truth for all pipeline scripts
 # ============================================================================
-# Used by: step3_cost_optimization.py, step3_track_nb_ctr.py, scenario_common.py,
-#          step5_5_procurement_utils.py, step6_generate_shared_data.py
+# Used by: step3a_cost_optimization.py, step3b_track_nb_ctr.py, scenario_common.py,
+#          procurement_utils.py, step9a_generate_shared_data.py
 #
-# Previously defined separately in step3_cost_optimization.py and scenario_common.py.
+# Previously defined separately in step3a_cost_optimization.py and scenario_common.py.
 # Unified here 2026-03-04 to eliminate duplication and drift risk.
 
 # LCOE tables by resource type × sensitivity × ISO ($/MWh)

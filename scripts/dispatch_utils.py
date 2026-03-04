@@ -2,7 +2,7 @@
 """
 Shared Dispatch Utilities — Single source of truth for hourly dispatch reconstruction.
 ======================================================================================
-Extracted from step5_compute_co2.py to avoid duplicating dispatch logic between the CO2
+Extracted from step5a_compute_co2.py to avoid duplicating dispatch logic between the CO2
 model and the LMP pricing module. Both import from here.
 
 Provides:
@@ -134,7 +134,7 @@ def get_demand_profile(iso, demand_data):
 def get_supply_profiles(iso, gen_profiles):
     """Get generation shape profiles — Step 1 version with nuclear seasonal derate.
 
-    This is the authoritative version. step5_compute_co2.py's simpler version (flat
+    This is the authoritative version. step5a_compute_co2.py's simpler version (flat
     clean_firm) is preserved for backward compatibility but new code should use this.
     """
     profiles = {}
@@ -694,7 +694,7 @@ def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
         supply_matrix: optional (N_RESOURCES, H) numpy array from build_supply_matrix().
             If provided, skips per-call array conversion (faster for batch calls).
         detailed: if True, also compute per-resource matched/surplus arrays and
-            storage charge profiles. Used by step4_build_dispatch_cache and step5_compress_day_profiles.
+            storage charge profiles. Used by step4_build_dispatch_cache and step5c_compress_day_profiles.
         h2_dispatch_pct: green H2 seasonal storage capacity as % of demand (default 0).
 
     Returns:
