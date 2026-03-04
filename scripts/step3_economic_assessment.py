@@ -3,17 +3,28 @@
 
 Augments Step 3 cost optimization results with storage revenue streams:
   1. Capacity market payments ($/kW-yr × capacity × credit)
-  2. Energy arbitrage (peak-offpeak spread × daily cycles × RTE)
-  3. Ancillary services (regulation + spinning reserve)
+  2. Energy arbitrage: profit = peak × discharge - offpeak × (discharge/RTE)
+  3. Ancillary services (regulation + spinning reserve, hours-constrained)
   4. Degradation costs (cycle-based battery replacement)
 
 Applied to ALL tracks (1, 2, 3) — this is an enhanced economic lens on
 existing results, not a separate track.
 
-Revenue model uses summary LMP stats (peak/offpeak/avg) from
-step5_compute_lmp_prices.py rather than 8,760-hour profiles. This is
-accurate for V1 (daily-cycle dispatch) and can be upgraded to hourly
-dispatch in V2 when the enhanced multi-service model is built.
+Methodology notes:
+  - Revenue streams are computed independently using summary LMP stats
+    (peak/offpeak/avg) from step5_compute_lmp_prices.py.
+  - Ancillary service hours are capped at (8760 - cycling_hours) to prevent
+    double-counting with arbitrage. Within available hours, regulation is
+    allocated first (higher value), spinning fills the remainder.
+  - This is a summary-stat approximation, NOT co-optimized hourly dispatch.
+    Industry tools (EPRI StorageVET) co-optimize service selection hour-by-hour.
+    Our stacked values represent a reasonable estimate but not a true optimum.
+  - V2 (future) will use 8,760-hour dispatch profiles for co-optimization.
+
+Key references:
+  - NREL: Turan & Cole (2024) "Revenue Analysis for Energy Storage Systems"
+  - Lazard LCOS v10.0 (2025): Value Snapshots methodology
+  - EPRI StorageVET: Co-optimization framework for value stacking
 
 Output: data/step3-economic-parquets/{ISO}_economic.parquet
 
@@ -111,25 +122,27 @@ def load_lmp_spreads(iso):
     return spreads
 
 
-def get_spread_for_row(spreads, threshold, fuel_level):
-    """Get LMP spread for a given threshold and fuel level.
+def get_prices_for_row(spreads, threshold, fuel_level):
+    """Get peak and offpeak LMP prices for a given threshold and fuel level.
 
-    Falls back to nearest threshold, then to default spread.
+    Returns (peak, offpeak) tuple in $/MWh.
+    Falls back to nearest threshold, then to defaults.
     """
     if spreads is None:
-        return 20.0  # Default peak-offpeak spread ($/MWh)
+        return (50.0, 30.0)  # Default peak/offpeak ($/MWh)
 
     key = (threshold, fuel_level)
     if key in spreads:
-        return max(spreads[key]['spread'], 0.0)
+        return (max(spreads[key]['peak'], 0.0), max(spreads[key]['offpeak'], 0.0))
 
     # Fallback: nearest threshold at same fuel level
     same_fuel = {k: v for k, v in spreads.items() if k[1] == fuel_level}
     if same_fuel:
         nearest = min(same_fuel.keys(), key=lambda k: abs(k[0] - threshold))
-        return max(same_fuel[nearest]['spread'], 0.0)
+        return (max(same_fuel[nearest]['peak'], 0.0),
+                max(same_fuel[nearest]['offpeak'], 0.0))
 
-    return 20.0  # Default
+    return (50.0, 30.0)  # Default
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -195,49 +208,103 @@ def compute_storage_economics(iso, step3_table, lmp_spreads):
     capacity_rev_per_mwh = np.where(demand_mwh > 0, cap_rev / demand_mwh, 0.0)
 
     # ── 2. ENERGY ARBITRAGE REVENUE ──
-    # Revenue = cycles × duration × RTE × spread × MW
-    # For battery: buy at offpeak, sell at peak, earn spread × RTE
-    # Using LMP peak-offpeak spread as proxy
+    # Correct formula: profit/cycle = peak × discharge - offpeak × charge
+    #   discharge = MW × duration (MWh)
+    #   charge = MW × duration / RTE (MWh)  [need more energy in than out]
+    #   profit/cycle = MW × duration × (peak - offpeak/RTE)
+    # This properly accounts for round-trip energy losses.
 
-    # Build spread array (one per row, keyed by threshold)
-    # For vectorized efficiency, compute spread per unique (threshold, fuel_level)
-    # and map back to rows
-    spread_arr = np.zeros(n, dtype=np.float64)
-    for i in range(n):
-        # Extract fuel level from scenario key (format: LMLH_M_M_H1_X etc.)
-        # The fuel level is typically at position 4 in the scenario key
-        scen = scenarios[i]
-        parts = scen.split('_') if isinstance(scen, str) else []
-        fuel_lvl = 'Medium'  # Default
-        if len(parts) > 4:
-            fuel_map = {'L': 'Low', 'M': 'Medium', 'H': 'High'}
-            fuel_lvl = fuel_map.get(parts[4], 'Medium')
-        spread_arr[i] = get_spread_for_row(lmp_spreads, float(thresholds[i]), fuel_lvl)
+    # Build peak/offpeak arrays via INDEX MAPPING — O(unique_combos) lookups.
+    # There are at most ~63 unique (threshold, fuel_level) combos even with
+    # 122k+ rows, so the expensive dict lookups happen <100 times.
+    if lmp_spreads is not None:
+        fuel_names = ['Low', 'Medium', 'High']
+        fuel_char_to_idx = {'L': 0, 'M': 1, 'H': 2}
 
-    # Battery arbitrage: daily cycle, earn spread × RTE on each cycle
-    bat4_arb = 365 * BATTERY_DURATION_HOURS * BATTERY_EFFICIENCY * spread_arr * bat4_mw
-    bat8_arb = 365 * BATTERY8_DURATION_HOURS * BATTERY8_EFFICIENCY * spread_arr * bat8_mw
-    # LDES: weekly cycle, spread is less predictable — use 50% of spread
-    ldes_arb = 52 * LDES_DURATION_HOURS * LDES_EFFICIENCY * spread_arr * 0.5 * ldes_mw
-    # H2: Seasonal, minimal arbitrage value
-    h2_arb = h2_cycles * H2_DURATION_HOURS * H2_EFFICIENCY * spread_arr * 0.3 * h2_mw
+        # Parse fuel index per unique scenario (not per row)
+        unique_scenarios = list(set(scenarios))
+        scen_to_fuel_idx = {}
+        for s in unique_scenarios:
+            parts = s.split('_') if isinstance(s, str) else []
+            scen_to_fuel_idx[s] = fuel_char_to_idx.get(parts[4], 1) if len(parts) > 4 else 1
+
+        # Build fuel_idx array via dict lookup on scenarios list
+        fuel_idx = np.array([scen_to_fuel_idx.get(s, 1) for s in scenarios], dtype=np.int8)
+
+        # Get unique thresholds
+        unique_thresholds = np.unique(thresholds)
+
+        # Build price tables: shape (n_thresholds, 3) for peak and offpeak
+        peak_table = np.full((len(unique_thresholds), 3), 50.0, dtype=np.float64)
+        offpeak_table = np.full((len(unique_thresholds), 3), 30.0, dtype=np.float64)
+        for ti, thr in enumerate(unique_thresholds):
+            for fi, fname in enumerate(fuel_names):
+                pk, opk = get_prices_for_row(lmp_spreads, float(thr), fname)
+                peak_table[ti, fi] = pk
+                offpeak_table[ti, fi] = opk
+
+        # Map threshold values to indices (vectorized via searchsorted)
+        thr_idx = np.searchsorted(unique_thresholds, thresholds)
+        thr_idx = np.clip(thr_idx, 0, len(unique_thresholds) - 1)
+
+        # Index into price tables — fully vectorized
+        peak_arr = peak_table[thr_idx, fuel_idx]
+        offpeak_arr = offpeak_table[thr_idx, fuel_idx]
+    else:
+        peak_arr = np.full(n, 50.0, dtype=np.float64)
+        offpeak_arr = np.full(n, 30.0, dtype=np.float64)
+
+    # Arbitrage profit per cycle = MW × duration × (peak - offpeak/RTE)
+    # Clamp to zero — negative arbitrage means it's not worth cycling.
+    bat4_profit_per_cycle = np.maximum(peak_arr - offpeak_arr / BATTERY_EFFICIENCY, 0.0)
+    bat8_profit_per_cycle = np.maximum(peak_arr - offpeak_arr / BATTERY8_EFFICIENCY, 0.0)
+    # LDES: weekly cycle, less price predictability — apply 50% capture rate
+    ldes_profit_per_cycle = np.maximum(peak_arr - offpeak_arr / LDES_EFFICIENCY, 0.0) * 0.5
+    # H2: seasonal, minimal arbitrage — 30% capture rate
+    h2_profit_per_cycle = np.maximum(peak_arr - offpeak_arr / H2_EFFICIENCY, 0.0) * 0.3
+
+    bat4_arb = 365 * BATTERY_DURATION_HOURS * bat4_profit_per_cycle * bat4_mw
+    bat8_arb = 365 * BATTERY8_DURATION_HOURS * bat8_profit_per_cycle * bat8_mw
+    ldes_arb = 52 * LDES_DURATION_HOURS * ldes_profit_per_cycle * ldes_mw
+    h2_arb = h2_cycles * H2_DURATION_HOURS * h2_profit_per_cycle * h2_mw
 
     arb_rev = bat4_arb + bat8_arb + ldes_arb + h2_arb
     arbitrage_rev_per_mwh = np.where(demand_mwh > 0, arb_rev / demand_mwh, 0.0)
 
     # ── 3. ANCILLARY SERVICES REVENUE ──
     # Battery: regulation + spinning. LDES: spinning only.
+    # CRITICAL: Hours are capped at (8760 - cycling_hours) to prevent
+    # double-counting with arbitrage. A battery can't provide ancillary
+    # services while it's charging or discharging for arbitrage.
     reg_rate = ANCILLARY_SERVICE_RATES['regulation'].get(iso, 10)
     spin_rate = ANCILLARY_SERVICE_RATES['spinning'].get(iso, 5)
-    reg_hours = ANCILLARY_HOURS['regulation']
-    spin_hours = ANCILLARY_HOURS['spinning']
+
+    # Cycling hours per year: charge + discharge hours
+    # 4hr battery: 365 cycles × (4hr discharge + 4hr/RTE charge) ≈ 365 × 8.7 = 3176 hrs
+    bat4_cycle_hrs = 365 * BATTERY_DURATION_HOURS * (1 + 1 / BATTERY_EFFICIENCY)
+    bat8_cycle_hrs = 365 * BATTERY8_DURATION_HOURS * (1 + 1 / BATTERY8_EFFICIENCY)
+    ldes_cycle_hrs = 52 * LDES_DURATION_HOURS * (1 + 1 / LDES_EFFICIENCY)
+    h2_cycle_hrs = h2_cycles * H2_DURATION_HOURS * (1 + 1 / H2_EFFICIENCY)
+
+    # Available hours for ancillary services (capped at 8760)
+    bat4_avail_hrs = max(H - bat4_cycle_hrs, 0)
+    bat8_avail_hrs = max(H - bat8_cycle_hrs, 0)
+    ldes_avail_hrs = max(H - ldes_cycle_hrs, 0)
+    h2_avail_hrs = max(H - h2_cycle_hrs, 0)
+
+    # Allocate available hours: regulation first (higher value), then spinning
+    # Regulation: up to 30% of available hours (response quality degrades beyond)
+    bat_reg_hrs = min(bat4_avail_hrs * 0.30, 2000)
+    bat_spin_hrs = min(bat4_avail_hrs - bat_reg_hrs, 4000)
+    ldes_spin_hrs = min(ldes_avail_hrs, 4000)
+    h2_spin_hrs = min(h2_avail_hrs * 0.5, 2000)  # H2 limited availability
 
     # Revenue = MW × rate × hours available
     ancillary_rev = (
-        (bat4_mw + bat8_mw) * reg_rate * reg_hours +     # Battery regulation
-        (bat4_mw + bat8_mw) * spin_rate * spin_hours +    # Battery spinning
-        ldes_mw * spin_rate * spin_hours +                 # LDES spinning only
-        h2_mw * spin_rate * spin_hours * 0.5               # H2 limited availability
+        (bat4_mw + bat8_mw) * reg_rate * bat_reg_hrs +     # Battery regulation
+        (bat4_mw + bat8_mw) * spin_rate * bat_spin_hrs +    # Battery spinning
+        ldes_mw * spin_rate * ldes_spin_hrs +                # LDES spinning only
+        h2_mw * spin_rate * h2_spin_hrs                      # H2 limited
     )
     ancillary_rev_per_mwh = np.where(demand_mwh > 0, ancillary_rev / demand_mwh, 0.0)
 

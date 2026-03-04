@@ -4611,39 +4611,50 @@ Step 1D.2 addresses gap (1) with research-informed 2050 capacity caps. The Econo
 ### §16.5 Economic Assessment Model
 
 **Script**: `scripts/step3_economic_assessment.py`
-- Post-processing on Step 3 output (reads cost parquets + dispatch cache + LMP data)
+- Post-processing on Step 3 output (reads cost parquets + LMP summary stats)
 - Applies to ALL tracks (1, 2, 3) — not a separate track
+- Summary-stat approximation (V1); endogenous pricing (V2, see §16.9)
 
 **Revenue streams (per storage type, per mix, per threshold × ISO):**
 
-1. **Capacity market revenue**: `capacity_MW × capacity_credit × capacity_price_per_kW_yr`
-   - `capacity_MW` = `storage_dispatch_pct × demand_MW / duration_hours`
-   - `capacity_credit` from `PEAK_CAPACITY_CREDITS` (already exists: battery=0.95, LDES=0.90)
-   - `capacity_price_per_kW_yr` = new constant per ISO (from PJM RPM, NYISO ICAP, NEISO FCM, etc.)
+1. **Capacity market revenue**: `capacity_MW × capacity_credit × capacity_price_per_kW_yr × 1000`
+   - `capacity_MW` = `dispatch_energy / (cycles_per_year × duration × RTE)`
+   - `capacity_credit` from `PEAK_CAPACITY_CREDITS` (battery=0.95, LDES=0.90, H2=0.85)
+   - `capacity_price_per_kW_yr` per ISO (PJM=$50, NYISO=$85, ERCOT/SPP=$0)
 
-2. **Energy arbitrage revenue**: Sum over 8,760 hours of price differentials
-   - Uses synthetic LMP from `step5_compute_lmp_prices.py` (already exists for all 7 ISOs)
-   - Revenue = Σ(discharge_hour × LMP_high) - Σ(charge_hour × LMP_low)
-   - Bounded by dispatch profiles from dispatch cache
+2. **Energy arbitrage revenue**: `cycles × duration × MW × max(peak − offpeak/RTE, 0)`
+   - Correct formula accounts for round-trip energy losses in charging cost
+   - Uses peak/offpeak LMP from `step5_compute_lmp_prices.py`
+   - LDES: 50% capture rate (weekly cycles, less price predictability)
+   - H2: 30% capture rate (seasonal, minimal arbitrage value)
+   - Clamped to zero — negative profit means don't cycle
 
-3. **Ancillary services revenue**: `eligible_capacity_MW × ancillary_rate_per_MW_hr × hours`
-   - Frequency regulation + spinning reserve
-   - Battery eligible for regulation (fast response); LDES eligible for spinning reserve only
-   - New constants per ISO
+3. **Ancillary services revenue**: `MW × rate × available_hours`
+   - Available hours = `max(8760 − cycling_hours, 0)` — prevents double-counting with arbitrage
+   - Regulation allocated first (30% of available, cap 2000 hrs), spinning fills remainder (cap 4000 hrs)
+   - Battery: regulation + spinning. LDES: spinning only. H2: 50% availability.
 
-4. **Degradation cost**: `cycles_per_year × degradation_rate × replacement_fraction × capex`
-   - Battery: ~365 cycles/yr (daily), ~80% capacity at 5,000 cycles (Li-ion)
-   - LDES: ~52 cycles/yr (weekly), iron-air minimal degradation
-   - Replacement cost = fraction of original CAPEX when capacity drops below threshold
+4. **Degradation cost**: `(cycles/yr ÷ cycle_life) × replacement_fraction × LCOE × energy`
+   - Battery 4hr: 365 cycles/yr, 5000 cycle life, 40% replacement
+   - Battery 8hr: 365 cycles/yr, 4000 cycle life, 45% replacement
+   - LDES: 52 cycles/yr, 20000 cycle life, 15% replacement
+   - H2: 12 cycles/yr, 50000 cycle life, 25% replacement (electrolyzer stack)
+
+**Known limitations (V1)**:
+- Revenue streams computed independently, not co-optimized hour-by-hour
+- Storage deployment doesn't affect prices (no spread compression feedback)
+- Capacity market prices are static (no ELCC saturation with penetration)
+- References: NREL Turan & Cole (2024), Lazard LCOS v10.0, EPRI StorageVET
 
 **Output**: `data/step3-economic-parquets/` — augments Step 3 results with:
-- `storage_capacity_revenue_per_mwh` — capacity market offset
-- `storage_arbitrage_revenue_per_mwh` — energy arbitrage offset
-- `storage_ancillary_revenue_per_mwh` — ancillary services offset
+- `storage_capacity_rev_per_mwh` — capacity market offset
+- `storage_arbitrage_rev_per_mwh` — energy arbitrage offset
+- `storage_ancillary_rev_per_mwh` — ancillary services offset
 - `storage_degradation_cost_per_mwh` — degradation/replacement adder
 - `storage_net_revenue_per_mwh` — net of all above
 - `economic_effective_cost` — `effective_cost - storage_net_revenue_per_mwh`
 - `economic_total_cost` — `total_cost - storage_net_revenue × demand`
+- `storage_battery4_mw`, `storage_battery8_mw`, `storage_ldes_mw`, `storage_h2_mw`
 
 ### §16.6 New Constants (pipeline_config.py)
 
@@ -4744,3 +4755,68 @@ BATTERY_DEGRADATION = {
 - Depends on: Step 3 cost output + dispatch cache + LMP data
 - Runs economic assessment post-processing
 - Output: `data/step3-economic-parquets/`
+
+### §16.9 Level 2: Endogenous Price Feedback (Future)
+
+**Goal**: Close the feedback loop between storage deployment and wholesale prices.
+Currently (V1), each mix sees the same base-case LMPs regardless of how much
+storage/clean energy it deploys. In reality, high clean energy penetration
+suppresses prices and high storage deployment compresses peak-offpeak spreads.
+
+**Architecture**: `step3b_endogenous_pricing.py` — single forward-pass post-processor.
+
+**Pipeline position**: Runs after Step 4 dispatch cache + Step 5 LMP model.
+```
+Step 1D.2 (physics) → Step 3 (cost) → Step 4 (dispatch cache)
+                                         ↓
+Step 5 LMP (base case) → Step 3b (endogenous pricing)
+```
+
+**Algorithm per mix**:
+1. Load 8,760-hour dispatch profile from Step 4 cache (matched, surplus, gap per resource)
+2. Compute residual fossil demand = `total_demand − clean_supply − storage_discharge`, hourly
+3. Run residual through merit-order fossil stack to get **mix-specific hourly LMPs**
+   - Same stack as `step5_compute_lmp_prices.py` but with this mix's residual, not base-case
+   - High clean energy → less fossil on the margin → lower LMPs in those hours
+   - High storage → peaks shaved → less scarcity pricing → compressed spreads
+4. Compute arbitrage revenue on **endogenous prices** (not base-case)
+   - Specifically: `profit = Σ_h(discharge_h × LMP_h) − Σ_h(charge_h × LMP_h)`
+   - This is true co-optimized hourly arbitrage value
+5. Adjust capacity value: if residual peak demand is significantly reduced,
+   haircut capacity price proportionally (ELCC saturation proxy)
+
+**Feedback loops captured**:
+- **Spread compression**: More storage → flatter price profile → less arbitrage
+- **Renewable price suppression**: More solar/wind → more zero-marginal-cost hours
+- **Fossil retirement pricing**: As clean energy displaces fossil, marginal generator changes
+- **Duck curve dynamics**: Solar midday trough deepens/fills based on mix composition
+
+**Feedback NOT captured** (would require Level 3 equilibrium model):
+- Capacity market clearing price response to aggregate storage deployment
+- Cross-regional price effects
+- Investor response dynamics (build/no-build decisions over time)
+- Iterative equilibrium (storage changes prices which changes optimal storage)
+
+**Compute**: Reads from existing caches. No Step 1 rerun. Per-mix merit-order dispatch
+is O(8760) per mix — fast enough for all 7 ISOs × all thresholds as post-processing.
+
+**Key design principle**: One forward pass, not iterative. The endogenous prices
+reflect "what would prices be IF this mix were deployed" — not "what is the
+equilibrium deployment." This is the sweet spot between static overlay (V1) and
+full equilibrium (Level 3) in terms of rigor vs. complexity.
+
+### §16.10 Coarse Grid Density (Step 1D.2)
+
+The V2 expanded storage range requires denser intermediate grid points at the
+high end to avoid coarse-sweep gaps that Pass 2 fine refinement (±0.5pp) cannot
+bridge.
+
+**V2 coarse grids (11 × 11 × 12 = 1,452 combos, excluding H2)**:
+- bat4:  `[0, 0.05, 0.1, 0.2, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0]` — 11 levels
+- bat8:  `[0, 0.1, 0.2, 0.5, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 10.0]` — 11 levels
+- LDES:  `[0, 0.25, 0.5, 1.0, 2.0, 5.0, 8.0, 12.0, 15.0, 17.0, 21.0, 25.0]` — 12 levels
+- H2:    `[0, 5, 10, 15, 20, 25]` — 6 levels (unchanged)
+
+Maximum coarse gap: bat4=1.0pp, bat8=2.0pp, LDES=4.0pp. Fine sweep at ±0.5pp
+ensures all gaps are bridgeable. 1.6× the original 900 combos — minimal
+compute increase for significantly better coverage at the high end.
