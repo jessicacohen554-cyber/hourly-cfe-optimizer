@@ -1,14 +1,10 @@
-name: "Step 9: Generate Shared Data"
+name: "Step 9D: Resource Density Data"
 
-# Consolidates all pipeline results into dashboard/js/shared-data.js.
-# This is the data file that powers the Home Page (index.html) and Dashboard.
-# Run this when you want to refresh the home page after upstream data changes.
+# Extracts per-scenario resource density data from Step 3 DG parquets
+# for the resource investment deep dive strip plots on the abatement dashboard.
 #
-# Includes: SBTi milestone mapping, DAC trajectory projections, LCOE/transmission
-# tables, and aggregated Step 5-8 outputs (mac_stats, etc.).
-#
-# Prerequisite: Steps 4-5 should have produced their respective outputs.
-# Output: dashboard/js/shared-data.js, data/step5-post-processing/shared_data.json
+# Prerequisite: Step 3 DG parquets + optimal_targets.json must exist.
+# Output: dashboard/js/resource-density-data.js
 
 on:
   workflow_dispatch:
@@ -20,12 +16,12 @@ on:
         type: string
 
 env:
-  BRANCH_PREFIX: step9-shared-data
+  BRANCH_PREFIX: step9d-resource-density
 
 jobs:
-  generate-shared-data:
+  extract-density:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 30
 
     permissions:
       contents: write
@@ -48,13 +44,17 @@ jobs:
 
       - name: Verify upstream data
         run: |
-          echo "Available inputs:"
-          ls -lh data/step5-post-processing/ 2>/dev/null || echo "  No step5 results dir"
-          ls -lh dashboard/overprocure_results.json 2>/dev/null || echo "  No overprocure_results.json"
-
-          if [ ! -d "data/step5-post-processing" ]; then
-            echo "ERROR: No step-5 data found. Run earlier pipeline steps first."
+          echo "Checking for Step 3 DG parquets..."
+          DG_COUNT=$(ls data/step3-cost-opt-parquets/step3_dg_*.parquet 2>/dev/null | wc -l)
+          echo "  Found $DG_COUNT DG parquet files"
+          if [ "$DG_COUNT" -eq 0 ]; then
+            echo "ERROR: No Step 3 DG parquets found. Run Step 3 first."
             exit 1
+          fi
+
+          echo "Checking for optimal_targets.json..."
+          if [ ! -f "data/step5-post-processing/optimal_targets.json" ]; then
+            echo "WARNING: No optimal_targets.json found. Will use default crossover ranges."
           fi
 
       - name: Set up Python
@@ -63,37 +63,25 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install numpy numba pandas pyarrow
-
-      - name: Ensure output directories
-        run: |
-          mkdir -p dashboard/js
-          mkdir -p data/step5-post-processing
-
-      - name: "Generate Shared Data"
-        run: |
-          echo "=== Generating shared-data.js ==="
-          python scripts/step9a_generate_shared_data.py
+        run: pip install numpy pandas pyarrow
 
       - name: "Extract Resource Density Data"
         run: |
-          echo "=== Extracting resource density data (step9d) ==="
-          python scripts/step9d_extract_resource_density.py || echo "WARNING: step9d failed (non-fatal)"
+          echo "=== Extracting resource density data ==="
+          python scripts/step9d_extract_resource_density.py
 
       - name: Commit and push
         run: |
           git config http.postBuffer 524288000
 
-          git add -f dashboard/js/shared-data.js 2>/dev/null || true
           git add -f dashboard/js/resource-density-data.js 2>/dev/null || true
-          git add -f data/step5-post-processing/shared_data.json 2>/dev/null || true
 
           if git diff --cached --quiet; then
             echo "No changes to commit"
             exit 0
           fi
 
-          git commit -m "Step 9 Shared Data — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git commit -m "Step 9D Resource Density — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
           MAX_RETRIES=4
           for i in $(seq 1 $MAX_RETRIES); do
