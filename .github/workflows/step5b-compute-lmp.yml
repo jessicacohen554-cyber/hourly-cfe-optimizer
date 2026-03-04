@@ -51,7 +51,7 @@ on:
         type: string
 
 env:
-  BRANCH_PREFIX: step5-2-lmp
+  BRANCH_PREFIX: step5b-lmp
 
 jobs:
   prepare:
@@ -222,7 +222,7 @@ jobs:
 
             BATCH_MB=$(du -cm $FILES | tail -1 | cut -f1)
             echo "  Staging ~${BATCH_MB} MB for $iso"
-            git commit -m "Step 6.2 LMP: ${iso} fuel=${{ inputs.fuel_level }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git commit -m "Step 5B LMP: ${iso} fuel=${{ inputs.fuel_level }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
             if push_with_retry "$iso"; then
               PUSHED=true
@@ -236,7 +236,7 @@ jobs:
                 if git diff --cached --quiet; then continue; fi
                 FILE_MB=$(du -m "$f" | cut -f1)
                 echo "  Staging file: $FNAME (~${FILE_MB} MB)"
-                git commit -m "Step 6.2 LMP: ${iso} ${FNAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                git commit -m "Step 5B LMP: ${iso} ${FNAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
                 if push_with_retry "$FNAME"; then
                   PUSHED=true
                 else
@@ -252,7 +252,7 @@ jobs:
             git add -f dashboard/js/lmp-data.js
             if ! git diff --cached --quiet; then
               echo "--- Committing dashboard JS ---"
-              git commit -m "Step 6.2 LMP: lmp-data.js — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+              git commit -m "Step 5B LMP: lmp-data.js — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
               if push_with_retry "lmp-data.js"; then
                 PUSHED=true
               else

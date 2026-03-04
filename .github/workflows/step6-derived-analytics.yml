@@ -4,9 +4,9 @@ name: "Step 6: Derived Analytics"
 #   1. step6a_compute_mac_stats.py  — 6 MAC metrics, ANOVA decomposition, crossover analysis
 #   2. step6b_compute_optimal_targets.py — optimal CFE target per ISO via DAC crossover
 #
-# Prerequisite: Step 5.0 (CO2) must have run first — MAC depends on CO2 output.
+# Prerequisite: Step 5A (CO2) must have run first — MAC depends on CO2 output.
 # Output: dashboard/js/mac-stats-data.js, optimal-target-data.js
-# Note: Run Step 6 separately afterward to regenerate shared-data.js.
+# Note: Run Step 9 separately afterward to regenerate shared-data.js.
 
 on:
   workflow_dispatch:
@@ -41,7 +41,7 @@ on:
         type: string
 
 env:
-  BRANCH_PREFIX: step5-1-mac
+  BRANCH_PREFIX: step6-analytics
 
 jobs:
   update-mac-page:
@@ -136,7 +136,7 @@ jobs:
             if git diff --cached --quiet; then continue; fi
             BATCH_MB=$(du -cm $FILES | tail -1 | cut -f1)
             echo "--- Staging ~${BATCH_MB} MB for $iso ---"
-            git commit -m "Step 6.1 MAC data: ${iso} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git commit -m "Step 6 MAC data: ${iso} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             if push_with_retry "$iso"; then
               PUSHED=true
             else
@@ -146,7 +146,7 @@ jobs:
                 FNAME=$(basename "$f")
                 git add -f "$f"
                 if git diff --cached --quiet; then continue; fi
-                git commit -m "Step 6.1 MAC: ${iso} ${FNAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                git commit -m "Step 6 MAC: ${iso} ${FNAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
                 if push_with_retry "$FNAME"; then PUSHED=true; else git reset HEAD~1; fi
               done
             fi
@@ -158,7 +158,7 @@ jobs:
           git add -f data/step5-post-processing/ 2>/dev/null || true
           if ! git diff --cached --quiet; then
             echo "--- Staging aggregate JSON files ---"
-            git commit -m "Step 6.1 MAC: aggregate data — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git commit -m "Step 6 MAC: aggregate data — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             if push_with_retry "aggregate-data"; then PUSHED=true; else git reset HEAD~1; fi
           fi
 
@@ -167,7 +167,7 @@ jobs:
           git add -f dashboard/js/optimal-target-data.js 2>/dev/null || true
           if ! git diff --cached --quiet; then
             echo "--- Staging dashboard JS ---"
-            git commit -m "Step 6.1 MAC: dashboard JS — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git commit -m "Step 6 MAC: dashboard JS — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             if push_with_retry "dashboard-js"; then PUSHED=true; else git reset HEAD~1; fi
           fi
 

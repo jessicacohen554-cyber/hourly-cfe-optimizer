@@ -10,7 +10,7 @@ name: "Step 2: Efficient Frontier"
 # When ISO=ALL, uses a matrix strategy to run each ISO as a separate parallel
 # job. This prevents one slow/failed ISO from blocking the others.
 #
-# Prerequisite: Step 1b PFS parquets + Step 1D/1D.2 storage parquets
+# Prerequisite: Step 1A PFS parquets + Step 1C storage parquets
 # Output: data/step2-ef-parquets/
 
 on:
@@ -106,7 +106,7 @@ jobs:
       - name: Verify PFS parquets exist
         run: |
           if [ ! -d "data/step1-pfs-parquets" ] || ! ls data/step1-pfs-parquets/${{ matrix.iso }}_t*_raw_pfs.parquet >/dev/null 2>&1; then
-            echo "ERROR: PFS parquets not found for ${{ matrix.iso }}. Run Step 1b first."
+            echo "ERROR: PFS parquets not found for ${{ matrix.iso }}. Run Step 1A first."
             exit 1
           fi
           echo "Found PFS parquets for ${{ matrix.iso }}:"
@@ -198,7 +198,7 @@ jobs:
       - name: Verify PFS parquets exist
         run: |
           if [ ! -d "data/step1-pfs-parquets" ] || ! ls data/step1-pfs-parquets/${{ matrix.iso }}_t*_raw_pfs.parquet >/dev/null 2>&1; then
-            echo "ERROR: PFS parquets not found for ${{ matrix.iso }}. Run Step 1b first."
+            echo "ERROR: PFS parquets not found for ${{ matrix.iso }}. Run Step 1A first."
             exit 1
           fi
           echo "Found PFS parquets for ${{ matrix.iso }}:"

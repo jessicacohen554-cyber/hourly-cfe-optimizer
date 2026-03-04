@@ -143,14 +143,14 @@ jobs:
         if [ ! -f "$NM" ]; then
           echo "ERROR: Missing near-miss data for $ISO"
           echo "  Expected: $NM"
-          echo "  Run Step 1c (Zone Search) first."
+          echo "  Run Step 1B (Zone Search) first."
           exit 1
         fi
         ROWS=$(python3 -c "import pyarrow.parquet as pq; t=pq.read_table('$NM'); print(t.num_rows)")
         SIZE=$(du -h "$NM" | cut -f1)
         echo "OK: $ISO near-miss ($ROWS rows, $SIZE)"
         if [ "$ROWS" -eq 0 ]; then
-          echo "ERROR: Near-miss file is empty (0 rows). Re-run Step 1c."
+          echo "ERROR: Near-miss file is empty (0 rows). Re-run Step 1B."
           exit 1
         fi
 
@@ -176,7 +176,7 @@ jobs:
           echo "label=high-97.5-99.99" >> "$GITHUB_OUTPUT"
         fi
 
-    - name: "Run Step 1d — ${{ matrix.iso }} / ${{ matrix.band }}"
+    - name: "Run Step 1C — ${{ matrix.iso }} / ${{ matrix.band }}"
       timeout-minutes: 180
       run: |
         echo "═══════════════════════════════════════════════════════════"
@@ -271,7 +271,7 @@ jobs:
           CUSTOM="${{ inputs.custom_thresholds }}"
           [ -n "$CUSTOM" ] && BAND="custom($CUSTOM)"
           COUNT=$(git diff --cached --name-only | wc -l)
-          git commit -m "Step 1d storage refinement: ${ISO} × ${BAND} — ${COUNT} files — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git commit -m "Step 1C Storage Refinement: ${ISO} × ${BAND} — ${COUNT} files — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
         else
           echo "No new results to commit (files already match HEAD)."
           exit 0
