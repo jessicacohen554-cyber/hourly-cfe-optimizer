@@ -183,7 +183,7 @@ var ISO_PARAMS = {
     PJM: {
         heroTitle: 'Clean energy <span class="accent">halves wholesale prices</span> in PJM \u2014 but the path is narrower than you think',
         heroDesc1: 'Across 151,944 simulated PJM scenarios, wholesale prices decline from $35/MWh at 50% clean (SBTi 2030) to $17/MWh at 95% (SBTi ~2045). But the spread between best- and worst-case outcomes peaks in the middle of the transition \u2014 precisely where most utilities are planning today.',
-        heroStat3: { value: '~2038', label: 'Year LMP falls below nuclear operating cost (~85% clean)', color: 'red' },
+        heroStat3: { value: '~2033', label: 'Year LMP falls below nuclear viability threshold (~70% clean)', color: 'red' },
         scenarioCount: '151,944', source: 'PJM IMM State of the Market 2024',
         zeroContext: 'Roughly 3% of the time, typically overnight with must-run nuclear surplus. ',
         scarcityExtra: '',
