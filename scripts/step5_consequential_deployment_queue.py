@@ -34,7 +34,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE_DIR)
 sys.path.insert(0, os.path.join(BASE_DIR, 'scripts'))
 
-from step3_cost_optimization import OUTPUT_THRESHOLDS as _ALL_THRESHOLDS
+from pipeline_config import OUTPUT_THRESHOLDS as _ALL_THRESHOLDS
 
 # Consequential queue only operates at >= 50% (below 50% is pre-SBTi baseline)
 THRESHOLDS = [t for t in _ALL_THRESHOLDS if t >= 50]
@@ -118,7 +118,7 @@ def cached_fossil_retirement(iso, threshold_pct, emission_rates, fossil_mix,
 
 # Import canonical threshold-year mapping from Step 3
 try:
-    from step3_cost_optimization import THRESHOLD_TARGET_YEARS
+    from pipeline_config import THRESHOLD_TARGET_YEARS
     SBTI_YEAR_MAP = THRESHOLD_TARGET_YEARS
 except ImportError:
     SBTI_YEAR_MAP = {

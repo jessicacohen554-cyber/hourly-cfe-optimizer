@@ -252,9 +252,8 @@ print("\n" + "=" * 70)
 print("4. COST COMPARISON (Low VRE / Low TX / Low Battery / High Firm)")
 print("=" * 70)
 
-# Import updated LCOE tables + revenue credits
-from step3_cost_optimization import LCOE_TABLES, WHOLESALE_PRICES, FUEL_ADJUSTMENTS
-from pipeline_config import STORAGE_REVENUE_CREDITS
+# Import cost tables + revenue credits from unified source
+from pipeline_config import LCOE_TABLES, WHOLESALE_PRICES, FUEL_ADJUSTMENTS, STORAGE_REVENUE_CREDITS
 
 iso = 'CAISO'
 # Low VRE, Low TX, Low Battery, High Clean Firm

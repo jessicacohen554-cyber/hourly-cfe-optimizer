@@ -51,7 +51,27 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.parquet as pq
-from pipeline_config import STORAGE_REVENUE_CREDITS
+from pipeline_config import (
+    ISOS, REGIONAL_DEMAND_TWH, GRID_MIX_SHARES,
+    WHOLESALE_PRICES, FUEL_ADJUSTMENTS, LMH, LEVEL_NAME,
+    LCOE_TABLES, TX_TABLES, get_tx, UPRATE_LCOE,
+    NUCLEAR_NEWBUILD_LCOE, GEOTHERMAL_LCOE, GEO_CAP_TWH,
+    CCS_LCOE_45Q_ON, CCS_LCOE_45Q_OFF,
+    CCS_CAP_TWH, OFFSHORE_ISOS,
+    NEISO_CCS_GAS_ADDER, NEISO_WHOLESALE_ADDER,
+    FOAK_NUCLEAR_NEWBUILD, FOAK_CCS_45Q_ON, FOAK_CCS_45Q_OFF,
+    FOAK_GEOTHERMAL, FOAK_OFFSHORE_WIND, FOAK_LDES, FOAK_H2,
+    NOAK_BATTERY, NOAK_BATTERY8, NOAK_OFFSHORE_WIND,
+    LEARNING_PARAMS, LEARNING_EXPONENT, learning_fraction, year_adjusted_cost,
+    EXISTING_NUCLEAR_GW, UPRATE_CAP_TWH,
+    DEMAND_GROWTH_RATES, DEMAND_GROWTH_YEARS, DEMAND_GROWTH_LEVELS,
+    THRESHOLD_TARGET_YEARS, DG_UNIQUE_YEARS, _DG_YEAR_TO_THRESHOLDS,
+    RESOURCE_ADEQUACY_MARGIN, PEAK_DEMAND_MW,
+    EXISTING_GAS_CAPACITY_MW, GAS_AVAILABILITY_FACTOR,
+    PEAK_CAPACITY_CREDITS, RESOURCE_CAPACITY_FACTORS,
+    NEW_CCGT_COST_KW_YR, EXISTING_GAS_FOM_KW_YR,
+    STORAGE_REVENUE_CREDITS, OUTPUT_THRESHOLDS,
+)
 from pathlib import Path
 from itertools import chain, product
 from functools import lru_cache
@@ -78,437 +98,12 @@ except ImportError:
     )
 
 # ============================================================================
-# COST TABLES
+# STEP3-SPECIFIC CONSTANTS (cost tables imported from pipeline_config above)
 # ============================================================================
 
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']
-LMH = ['L', 'M', 'H']
-LEVEL_NAME = {'L': 'Low', 'M': 'Medium', 'H': 'High', 'N': 'None'}
-
-# Regional demand (TWh, 2025 base year)
-REGIONAL_DEMAND_TWH = {
-    'CAISO': 224.039, 'ERCOT': 488.020, 'PJM': 843.331,
-    'NYISO': 151.599, 'NEISO': 115.336,
-    'MISO': 660.000, 'SPP': 296.000,
-}
-
-# Existing clean generation as % of demand
-GRID_MIX_SHARES = {
-    'CAISO': {'clean_firm': 7.9, 'solar': 22.3, 'wind': 8.8, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 9.5},
-    'ERCOT': {'clean_firm': 8.6, 'solar': 13.8, 'wind': 23.6, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 0.1},
-    'PJM':   {'clean_firm': 32.1, 'solar': 2.9, 'wind': 3.8, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 1.8},
-    'NYISO': {'clean_firm': 18.4, 'solar': 0.0, 'wind': 4.7, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 15.9},
-    'NEISO': {'clean_firm': 23.8, 'solar': 1.4, 'wind': 3.9, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 4.4},
-    'MISO':  {'clean_firm': 13.1, 'solar': 2.1, 'wind': 14.5, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 1.6},
-    'SPP':   {'clean_firm': 5.2, 'solar': 0.4, 'wind': 37.1, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 4.3},
-}
-
-# Wholesale electricity prices ($/MWh, base)
-WHOLESALE_PRICES = {'CAISO': 30, 'ERCOT': 27, 'PJM': 34, 'NYISO': 42, 'NEISO': 41,
-                    'MISO': 30, 'SPP': 25}
-
-# Fossil fuel price adjustments ($/MWh delta from base wholesale)
-FUEL_ADJUSTMENTS = {
-    'CAISO': {'Low': -5, 'Medium': 0, 'High': 10},
-    'ERCOT': {'Low': -7, 'Medium': 0, 'High': 12},
-    'PJM':   {'Low': -6, 'Medium': 0, 'High': 11},
-    'NYISO': {'Low': -4, 'Medium': 0, 'High': 8},
-    'NEISO': {'Low': -4, 'Medium': 0, 'High': 8},
-    'MISO':  {'Low': -6, 'Medium': 0, 'High': 11},
-    'SPP':   {'Low': -7, 'Medium': 0, 'High': 12},
-}
-
-# LCOE tables by resource type × sensitivity × ISO ($/MWh)
-LCOE_TABLES = {
-    'solar': {
-        'Low':    {'CAISO': 45, 'ERCOT': 40, 'PJM': 50, 'NYISO': 70, 'NEISO': 62, 'MISO': 48, 'SPP': 43},
-        'Medium': {'CAISO': 60, 'ERCOT': 54, 'PJM': 65, 'NYISO': 92, 'NEISO': 82, 'MISO': 62, 'SPP': 57},
-        'High':   {'CAISO': 78, 'ERCOT': 70, 'PJM': 85, 'NYISO': 120, 'NEISO': 107, 'MISO': 82, 'SPP': 74},
-    },
-    'wind': {
-        'Low':    {'CAISO': 55, 'ERCOT': 30, 'PJM': 47, 'NYISO': 61, 'NEISO': 55, 'MISO': 33, 'SPP': 28},
-        'Medium': {'CAISO': 73, 'ERCOT': 40, 'PJM': 62, 'NYISO': 81, 'NEISO': 73, 'MISO': 43, 'SPP': 37},
-        'High':   {'CAISO': 95, 'ERCOT': 52, 'PJM': 81, 'NYISO': 105, 'NEISO': 95, 'MISO': 56, 'SPP': 48},
-    },
-    # ---- Offshore wind LCOE ($/MWh) ----
-    # Fixed-bottom (NYISO, NEISO, PJM): Lazard v17-18, BNEF 2025, NREL ATB 2024.
-    # Floating (CAISO): NREL FORCE model, DOE Floating Wind Shot reference.
-    # Non-offshore ISOs (ERCOT, MISO, SPP): set to 0 — no offshore resource.
-    # PJM cheapest (shallowest water, largest pipeline, NJ 7.5 GW mandated).
-    # NEISO mid (Vineyard Wind precedent, strong resource ~51% CF).
-    # NYISO most expensive East Coast (NY Bight permitting, Jones Act).
-    # CAISO dramatically higher — floating technology, no US commercial experience.
-    'offshore_wind': {
-        'Low':    {'CAISO': 110, 'ERCOT': 0, 'PJM': 65, 'NYISO': 72, 'NEISO': 68, 'MISO': 0, 'SPP': 0},
-        'Medium': {'CAISO': 150, 'ERCOT': 0, 'PJM': 85, 'NYISO': 95, 'NEISO': 90, 'MISO': 0, 'SPP': 0},
-        'High':   {'CAISO': 200, 'ERCOT': 0, 'PJM': 112, 'NYISO': 125, 'NEISO': 118, 'MISO': 0, 'SPP': 0},
-    },
-    # ---- Storage: annualized capacity cost per % of annual demand ----
-    # NOT LCOS. These are annualized fixed costs of storage capacity, normalized to
-    # the coefficient model where coeff = bat_pct/100 (energy capacity as fraction
-    # of annual demand — same unit as all other resources). Formula:
-    #   price = CAPEX_kWh × (CRF + FOM_rate) × 1000 × regional_mult
-    # where CRF=0.1019 (8%, 20yr), FOM_rate=2.5% of CAPEX($/kW) per NREL ATB.
-    # Regional variation baked in (no separate TX adder for storage).
-    #
-    # CAPEX source: NREL ATB 2024 component model (Energy $/kWh + Power $/kW).
-    #   4hr = Energy + Power/4;  8hr = Energy + Power/8.
-    #   Component splits: L=(170+280), M=(210+340), H=(270+420).
-    #   4hr: L=$240, M=$295, H=$375.  8hr: L=$205, M=$253, H=$323.
-    #   8hr is ~14% cheaper per kWh (power component spread over 2× energy).
-    # LCOS cross-check: 4hr Med @ 365 cycles, 85% RTE = $121/MWh.
-    # Financial: WACC=8%, Bat life=20yr. FOM=2.5% of CAPEX($/kW) per NREL (incl augmentation).
-    #
-    # Verification: 0.01% bat4 at CAISO (224 TWh) = 22,400 MWh.
-    #   Cost = 0.0001 × 41610 = $4.16/MWh. Physical: 22.4M kWh × $295/kWh × 0.127 × 1.11
-    #   = $924M/yr ÷ 224 TWh = $4.13/MWh. ✓
-    'battery': {
-        'Low':    {'CAISO': 33813.60, 'ERCOT': 30484.80, 'PJM': 32412.00, 'NYISO': 35740.80, 'NEISO': 34777.20, 'MISO': 31711.20, 'SPP': 30835.20},
-        'Medium': {'CAISO': 41610.00, 'ERCOT': 37405.20, 'PJM': 39858.00, 'NYISO': 43975.20, 'NEISO': 42661.20, 'MISO': 39069.60, 'SPP': 37930.80},
-        'High':   {'CAISO': 52822.80, 'ERCOT': 47566.80, 'PJM': 50632.80, 'NYISO': 55888.80, 'NEISO': 54312.00, 'MISO': 49581.60, 'SPP': 48180.00},
-    },
-    'battery8': {
-        'Low':    {'CAISO': 28908.00, 'ERCOT': 26017.20, 'PJM': 27681.60, 'NYISO': 30572.40, 'NEISO': 29696.40, 'MISO': 27156.00, 'SPP': 26367.60},
-        'Medium': {'CAISO': 35565.60, 'ERCOT': 32061.60, 'PJM': 34076.40, 'NYISO': 37668.00, 'NEISO': 36529.20, 'MISO': 33375.60, 'SPP': 32412.00},
-        'High':   {'CAISO': 45464.40, 'ERCOT': 40909.20, 'PJM': 43537.20, 'NYISO': 48092.40, 'NEISO': 46690.80, 'MISO': 42661.20, 'SPP': 41434.80},
-    },
-    'ldes': {
-        'Low':    {'CAISO': 3328.80, 'ERCOT': 2890.80, 'PJM': 3153.60, 'NYISO': 3679.20, 'NEISO': 3504.00, 'MISO': 2978.40, 'SPP': 2890.80},
-        'Medium': {'CAISO': 5518.80, 'ERCOT': 4730.40, 'PJM': 5168.40, 'NYISO': 6132.00, 'NEISO': 5781.60, 'MISO': 4905.60, 'SPP': 4818.00},
-        'High':   {'CAISO': 8760.00, 'ERCOT': 7533.60, 'PJM': 8234.40, 'NYISO': 9723.60, 'NEISO': 9285.60, 'MISO': 7884.00, 'SPP': 7708.80},
-    },
-    # Green H2: electrolysis + salt cavern + H2 turbine. 35% RTE.
-    # CAPEX/kWh: L=$150, M=$220, H=$310. Duration=168hr, FOM=$8/kW-yr.
-    # Shares 'ldes_lvl' sensitivity toggle (both long-duration storage).
-    'h2': {
-        'Low':    {'CAISO': 17344.80, 'ERCOT': 15330.00, 'PJM': 16468.80, 'NYISO': 19096.80, 'NEISO': 18220.80, 'MISO': 15768.00, 'SPP': 15067.20},
-        'Medium': {'CAISO': 25404.00, 'ERCOT': 22425.60, 'PJM': 24177.60, 'NYISO': 27944.40, 'NEISO': 26718.00, 'MISO': 23038.80, 'SPP': 22075.20},
-        'High':   {'CAISO': 35828.40, 'ERCOT': 31623.60, 'PJM': 33988.80, 'NYISO': 39420.00, 'NEISO': 37580.40, 'MISO': 32499.60, 'SPP': 31010.40},
-    },
-}
-
-# Transmission adders ($/MWh) by resource × tx level × ISO
-TX_TABLES = {
-    'wind':       {'None': 0, 'Low': {'CAISO': 4, 'ERCOT': 3, 'PJM': 5, 'NYISO': 7, 'NEISO': 6, 'MISO': 5, 'SPP': 4},
-                   'Medium': {'CAISO': 8, 'ERCOT': 6, 'PJM': 10, 'NYISO': 14, 'NEISO': 12, 'MISO': 9, 'SPP': 7},
-                   'High': {'CAISO': 14, 'ERCOT': 10, 'PJM': 18, 'NYISO': 22, 'NEISO': 20, 'MISO': 16, 'SPP': 12}},
-    'solar':      {'None': 0, 'Low': {'CAISO': 1, 'ERCOT': 1, 'PJM': 2, 'NYISO': 3, 'NEISO': 3, 'MISO': 2, 'SPP': 1},
-                   'Medium': {'CAISO': 3, 'ERCOT': 3, 'PJM': 5, 'NYISO': 7, 'NEISO': 6, 'MISO': 4, 'SPP': 3},
-                   'High': {'CAISO': 6, 'ERCOT': 5, 'PJM': 9, 'NYISO': 12, 'NEISO': 10, 'MISO': 8, 'SPP': 6}},
-    'clean_firm': {'None': 0, 'Low': {'CAISO': 1, 'ERCOT': 1, 'PJM': 1, 'NYISO': 2, 'NEISO': 2, 'MISO': 1, 'SPP': 1},
-                   'Medium': {'CAISO': 3, 'ERCOT': 2, 'PJM': 3, 'NYISO': 5, 'NEISO': 4, 'MISO': 3, 'SPP': 2},
-                   'High': {'CAISO': 6, 'ERCOT': 4, 'PJM': 6, 'NYISO': 9, 'NEISO': 7, 'MISO': 5, 'SPP': 4}},
-    'ccs_ccgt':   {'None': 0, 'Low': {'CAISO': 1, 'ERCOT': 1, 'PJM': 1, 'NYISO': 2, 'NEISO': 2, 'MISO': 1, 'SPP': 1},
-                   'Medium': {'CAISO': 2, 'ERCOT': 2, 'PJM': 3, 'NYISO': 4, 'NEISO': 3, 'MISO': 2, 'SPP': 2},
-                   'High': {'CAISO': 4, 'ERCOT': 3, 'PJM': 5, 'NYISO': 7, 'NEISO': 6, 'MISO': 4, 'SPP': 3}},
-    # Offshore wind TX: submarine cable + offshore substation.
-    # Higher than onshore — export cable ($1-3M/km), 20-80 km to shore.
-    # CAISO highest: floating platform + longer cable + deeper water.
-    # Non-offshore ISOs: 0 (no offshore resource).
-    'offshore_wind': {'None': 0, 'Low': {'CAISO': 10, 'ERCOT': 0, 'PJM': 6, 'NYISO': 8, 'NEISO': 7, 'MISO': 0, 'SPP': 0},
-                      'Medium': {'CAISO': 20, 'ERCOT': 0, 'PJM': 11, 'NYISO': 15, 'NEISO': 13, 'MISO': 0, 'SPP': 0},
-                      'High': {'CAISO': 35, 'ERCOT': 0, 'PJM': 18, 'NYISO': 25, 'NEISO': 22, 'MISO': 0, 'SPP': 0}},
-    # Storage TX = 0: regional variation already baked into annualized capacity costs
-    'battery':    {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
-    'battery8':   {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
-    'ldes':       {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
-    'h2':         {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
-    'hydro':      {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
-}
-
-# Nuclear uprate LCOE ($/MWh)
-UPRATE_LCOE = {'L': 15, 'M': 25, 'H': 40}
-
-# Nuclear new-build LCOE ($/MWh)
-NUCLEAR_NEWBUILD_LCOE = {
-    'L': {'CAISO': 70, 'ERCOT': 68, 'PJM': 72, 'NYISO': 75, 'NEISO': 73, 'MISO': 70, 'SPP': 68},
-    'M': {'CAISO': 95, 'ERCOT': 90, 'PJM': 105, 'NYISO': 110, 'NEISO': 108, 'MISO': 100, 'SPP': 92},
-    'H': {'CAISO': 140, 'ERCOT': 135, 'PJM': 160, 'NYISO': 170, 'NEISO': 165, 'MISO': 155, 'SPP': 140},
-}
-
-# Geothermal (CAISO only)
-GEOTHERMAL_LCOE = {'L': 63, 'M': 88, 'H': 110}
-GEO_CAP_TWH = 39.0
-
-# ISOs with offshore wind resource (must match step1_pfs_generator.OFFSHORE_ISOS)
-OFFSHORE_ISOS = ['NYISO', 'NEISO', 'PJM', 'CAISO']
-
-# CCS-CCGT regional capacity caps (TWh/yr) — geologic CO2 storage availability
-# Mixes with CCS deployment exceeding these caps are filtered out.
-# NYISO/NEISO: hard zero (no geologic storage).
-# See SPEC.md §5.4.3 for sources and rationale.
-CCS_CAP_TWH = {
-    'CAISO': 25.0,    # 11% of 224 TWh demand — limited geology, regulatory barriers
-    'ERCOT': 200.0,   # 41% of 488 TWh demand — Gulf Coast saline formations
-    'PJM':   125.0,   # 15% of 843 TWh demand — Appalachian basin, east-west split
-    'NYISO': 0.0,     # Hard zero — crystalline bedrock, no geologic storage
-    'NEISO': 0.0,     # Hard zero — crystalline bedrock, no geologic storage
-    'MISO':  200.0,   # 30% of 660 TWh demand — Illinois/Michigan basins
-    'SPP':   50.0,    # 17% of 296 TWh demand — Anadarko basin, seismicity risk
-}
-
-# CCS-CCGT LCOE with/without 45Q
-# 45Q credit: $85/ton × 0.323 tCO2/MWh captured (90% capture × 0.359 tCO2/MWh unabated)
-# = $27.5/MWh offset between ON and OFF tables.
-# Previous values used $29/MWh offset (corrected 2026-03-03).
-CCS_LCOE_45Q_ON = {
-    'L': {'CAISO': 59.5, 'ERCOT': 53.5, 'PJM': 63.5, 'NYISO': 79.5, 'NEISO': 76.5, 'MISO': 56.5, 'SPP': 51.5},
-    'M': {'CAISO': 87.5, 'ERCOT': 72.5, 'PJM': 80.5, 'NYISO': 100.5, 'NEISO': 97.5, 'MISO': 75.5, 'SPP': 69.5},
-    'H': {'CAISO': 116.5, 'ERCOT': 93.5, 'PJM': 103.5, 'NYISO': 129.5, 'NEISO': 123.5, 'MISO': 97.5, 'SPP': 89.5},
-}
-CCS_LCOE_45Q_OFF = {
-    'L': {'CAISO': 87, 'ERCOT': 81, 'PJM': 91, 'NYISO': 107, 'NEISO': 104, 'MISO': 84, 'SPP': 79},
-    'M': {'CAISO': 115, 'ERCOT': 100, 'PJM': 108, 'NYISO': 128, 'NEISO': 125, 'MISO': 103, 'SPP': 97},
-    'H': {'CAISO': 144, 'ERCOT': 121, 'PJM': 131, 'NYISO': 157, 'NEISO': 151, 'MISO': 125, 'SPP': 117},
-}
-
-# NEISO Winter Gas Pipeline Constraint (Algonquin Citygates)
-# During winter months (~25% of year), New England's gas pipeline capacity is
-# constrained, driving gas prices $7.50/MMBtu above Henry Hub. This affects:
-#   1. CCS-CCGT operating costs: +$13.13/MWh annualized (7 HR × $7.50 × 0.25 winter)
-#   2. Wholesale electricity prices: +$4/MWh annualized (marginal gas pricing)
-# Source: ISO-NE Winter Energy Security Study, Algonquin Citygates basis.
-NEISO_CCS_GAS_ADDER = 13.13    # $/MWh annualized CCS adder
-NEISO_WHOLESALE_ADDER = 4.0    # $/MWh annualized wholesale adder
-
-# ============================================================================
-# FOAK COST TABLES — First-of-a-kind costs before any learning curve
-# ============================================================================
-# Single value per technology × ISO. These represent the cost of the first
-# commercial-scale project (pre-Wright's Law learning). Applied in Phase 2
-# (demand growth sweep) only — Phase 1 (base year 2025) uses static L/M/H.
-#
-# Sources: Nuclear FOAK ~1.25× High (Vogtle-era), CCS ~1.20× High (Boundary Dam),
-#   Geothermal ~1.35× High (Fervo EGS), LDES ~1.40× High (Form Energy pre-commercial),
-#   H2 ~1.30× High (electrolysis + H2 turbine FOAK).
-
-FOAK_NUCLEAR_NEWBUILD = {
-    'CAISO': 175, 'ERCOT': 169, 'PJM': 200, 'NYISO': 212,
-    'NEISO': 206, 'MISO': 194, 'SPP': 175,
-}
-FOAK_CCS_45Q_ON = {
-    'CAISO': 138, 'ERCOT': 110, 'PJM': 122, 'NYISO': 154,
-    'NEISO': 146, 'MISO': 115, 'SPP': 106,
-}
-FOAK_CCS_45Q_OFF = {
-    'CAISO': 173, 'ERCOT': 145, 'PJM': 157, 'NYISO': 188,
-    'NEISO': 181, 'MISO': 150, 'SPP': 140,
-}
-FOAK_GEOTHERMAL = 150  # CAISO only, $/MWh
-
-# Offshore wind FOAK: pre-learning-curve costs for first commercial-scale projects.
-# Fixed-bottom (NYISO/NEISO/PJM): 1.15× High (Vineyard Wind era, supply chain stress,
-#   Jones Act vessel premiums). Sources: BNEF 2023-24 $114/MWh subsidized US,
-#   Lazard v17 high-end $140/MWh.
-# Floating (CAISO): 1.25× High (pre-commercial, no US floating experience,
-#   port infrastructure not built). Sources: NREL FORCE model 2025 baseline ~$200+/MWh.
-FOAK_OFFSHORE_WIND = {
-    'CAISO': 250,  # floating: 1.25× $200 High
-    'PJM':   129,  # fixed: 1.15× $112 High
-    'NYISO': 144,  # fixed: 1.15× $125 High
-    'NEISO': 136,  # fixed: 1.15× $118 High
-}
-
-# Storage FOAK: annualized capacity cost ($/MWh-cap), same units as LCOE_TABLES storage.
-# Battery FOAK not needed — Wright's Law goes LCOE_TABLES → NOAK_BATTERY (decline over time).
-# LDES: 1.40× High (Form Energy pre-commercial). H2: 1.30× High (first commercial H2 turbines).
-FOAK_LDES = {
-    'CAISO': 12264.00, 'ERCOT': 10512.00, 'PJM': 11563.20, 'NYISO': 13578.00,
-    'NEISO': 12964.80, 'MISO': 11037.60, 'SPP': 10774.80,
-}
-FOAK_H2 = {
-    'CAISO': 46603.20, 'ERCOT': 41084.40, 'PJM': 44150.40, 'NYISO': 51246.00,
-    'NEISO': 48880.80, 'MISO': 42223.20, 'SPP': 40296.00,
-}
-
-# ============================================================================
-# WRIGHT'S LAW NOAK TERMINAL COSTS — Battery long-term floor
-# ============================================================================
-# For batteries, Wright's Law goes FORWARD from 2025 starting costs (LCOE_TABLES)
-# toward these terminal NOAK values. This is the REVERSE direction from other
-# technologies (which go FOAK → LCOE_TABLES). Batteries are already at manufacturing
-# scale, so their 2025 costs ARE the starting point, declining toward these floors.
-#
-# Calibrated to NREL 2050 projections: L=50%, M=56%, H=80% of 2025 starting cost.
-# Sources: NREL ATB 2024 + Cost Projections for Utility-Scale Battery Storage 2025 Update.
-NOAK_BATTERY = {
-    'Low':    {'CAISO': 16906.80, 'ERCOT': 15242.40, 'PJM': 16206.00, 'NYISO': 17870.40, 'NEISO': 17344.80, 'MISO': 15855.60, 'SPP': 15417.60},
-    'Medium': {'CAISO': 23214.00, 'ERCOT': 20936.40, 'PJM': 22250.40, 'NYISO': 24615.60, 'NEISO': 23914.80, 'MISO': 21812.40, 'SPP': 21199.20},
-    'High':   {'CAISO': 42310.80, 'ERCOT': 38018.40, 'PJM': 40471.20, 'NYISO': 44676.00, 'NEISO': 43449.60, 'MISO': 39682.80, 'SPP': 38544.00},
-}
-# ============================================================================
-# WRIGHT'S LAW NOAK TERMINAL COSTS — Offshore wind long-term floor
-# ============================================================================
-# Fixed-bottom: converges toward $50-65/MWh (NREL FORCE 2035: $53/MWh average).
-# Floating (CAISO): converges toward $55-80/MWh (DOE Wind Shot $45 target in 2020$,
-#   NREL FORCE 2035: $47-100/MWh range). Multiple doublings from 0.3 GW base.
-# Learning rates: NREL ATB 2024: Conservative 6.3%, Moderate 8.8%, Advanced 11.2% (fixed);
-#   Conservative 8.7%, Moderate 11.5%, Advanced 14.2% (floating).
-NOAK_OFFSHORE_WIND = {
-    'Low':    {'CAISO': 55, 'PJM': 50, 'NYISO': 52, 'NEISO': 50},
-    'Medium': {'CAISO': 72, 'PJM': 62, 'NYISO': 65, 'NEISO': 63},
-    'High':   {'CAISO': 100, 'PJM': 82, 'NYISO': 88, 'NEISO': 85},
-}
-
-NOAK_BATTERY8 = {
-    'Low':    {'CAISO': 14366.40, 'ERCOT': 12964.80, 'PJM': 13753.20, 'NYISO': 15242.40, 'NEISO': 14804.40, 'MISO': 13490.40, 'SPP': 13140.00},
-    'Medium': {'CAISO': 19885.20, 'ERCOT': 17870.40, 'PJM': 19009.20, 'NYISO': 21024.00, 'NEISO': 20410.80, 'MISO': 18658.80, 'SPP': 18133.20},
-    'High':   {'CAISO': 36354.00, 'ERCOT': 32762.40, 'PJM': 34864.80, 'NYISO': 38456.40, 'NEISO': 37317.60, 'MISO': 34164.00, 'SPP': 33112.80},
-}
-
-# ============================================================================
-# LEARNING CURVE PARAMETERS — Wright's Law FOAK→NOAK by toggle level
-# ============================================================================
-# Paired adoption speed + NOAK optimism: L=Fast/Optimistic, M=Central, H=Slow/Pessimistic.
-# Each technology has its own timeline (CCS/geo more mature → slightly faster).
-# Exponent 0.6 produces concave ramp: steep initial drop, asymptotic approach to NOAK.
-#
-# Format: {toggle_level: (foak_start_year, noak_year)}
-LEARNING_PARAMS = {
-    'nuclear': {'L': (2028, 2036), 'M': (2030, 2040), 'H': (2036, 2048)},
-    'ccs':     {'L': (2028, 2036), 'M': (2030, 2040), 'H': (2036, 2048)},
-    'geo':     {'L': (2028, 2036), 'M': (2030, 2040), 'H': (2036, 2048)},
-    'ldes':    {'L': (2028, 2036), 'M': (2030, 2040), 'H': (2036, 2048)},
-    'h2':      {'L': (2028, 2036), 'M': (2030, 2040), 'H': (2036, 2048)},
-    # Battery: Wright's Law from 2025 starting cost → NOAK terminal floor.
-    # Slower decline — on the mature part of the curve, not FOAK steep drops.
-    # Calibrated to NREL Low/Mid/High projections. L=fastest, H=near-flat.
-    # 8hr declines slightly faster (cell cost is larger share, cells decline faster).
-    'bat4':    {'L': (2025, 2042), 'M': (2025, 2048), 'H': (2025, 2050)},
-    'bat8':    {'L': (2025, 2040), 'M': (2025, 2046), 'H': (2025, 2050)},
-    # Offshore wind (fixed-bottom): Moderate learning — 83 GW global base,
-    # ~8.8% learning rate (NREL ATB Moderate). Faster learning than nuclear/CCS
-    # because offshore wind benefits from onshore wind supply chain maturity.
-    # First US commercial projects (Vineyard Wind, South Fork) establish baseline.
-    'offshore_wind_fixed': {'L': (2026, 2034), 'M': (2028, 2038), 'H': (2032, 2045)},
-    # Offshore wind (floating): Steeper learning — only 0.3 GW global base,
-    # ~11.5% learning rate (NREL ATB Moderate). Multiple doublings ahead.
-    # No US commercial experience; first projects ~2030. DOE Wind Shot $45/MWh target by 2035.
-    'offshore_wind_float': {'L': (2029, 2037), 'M': (2031, 2042), 'H': (2035, 2050)},
-}
-LEARNING_EXPONENT = 0.6  # Wright's Law concave ramp
 
 
-def learning_fraction(year, foak_start, noak_year):
-    """Compute Wright's Law learning fraction for a given year.
-
-    Returns 0.0 (pure FOAK) before foak_start, 1.0 (full NOAK) after noak_year,
-    and a concave ramp in between: ((year - foak_start) / duration) ** 0.6.
-    """
-    if year < foak_start:
-        return 0.0
-    if year >= noak_year:
-        return 1.0
-    active = (year - foak_start) / (noak_year - foak_start)
-    return active ** LEARNING_EXPONENT
-
-
-def year_adjusted_cost(foak_cost, noak_cost, year, foak_start, noak_year):
-    """Interpolate between FOAK and NOAK costs using Wright's Law.
-
-    cost(year) = FOAK × (1 - frac) + NOAK × frac
-    """
-    frac = learning_fraction(year, foak_start, noak_year)
-    return foak_cost * (1.0 - frac) + noak_cost * frac
-
-
-# Uprate cap: 8% of existing nuclear × 90% CF → TWh/yr
-# Includes MUR + stretch + good EPU opportunities across fleet
-EXISTING_NUCLEAR_GW = {'CAISO': 2.3, 'ERCOT': 2.7, 'PJM': 32.0, 'NYISO': 3.4, 'NEISO': 3.5, 'MISO': 12.0, 'SPP': 1.2}
-UPRATE_CAP_TWH = {iso: round(gw * 0.08 * 0.90 * 8760 / 1e3, 3) for iso, gw in EXISTING_NUCLEAR_GW.items()}
-
-# Demand growth
-DEMAND_GROWTH_RATES = {
-    'CAISO':  {'Low': 0.014, 'Medium': 0.019, 'High': 0.025},
-    'ERCOT':  {'Low': 0.020, 'Medium': 0.035, 'High': 0.055},
-    'PJM':    {'Low': 0.015, 'Medium': 0.024, 'High': 0.036},
-    'NYISO':  {'Low': 0.013, 'Medium': 0.020, 'High': 0.044},
-    'NEISO':  {'Low': 0.009, 'Medium': 0.018, 'High': 0.029},
-    'MISO':   {'Low': 0.012, 'Medium': 0.022, 'High': 0.038},
-    'SPP':    {'Low': 0.010, 'Medium': 0.018, 'High': 0.030},
-}
-DEMAND_GROWTH_YEARS = list(range(2026, 2051))  # kept for backward compat
-DEMAND_GROWTH_LEVELS = ['Low', 'Medium', 'High']
-
-# Threshold → target achievement year (interpolated from SBTi milestones:
-# 2030→50%, 2035→70%, 2040→90%, 2045→95%, 2050→100%)
-# Each threshold is paired with the year when that clean energy % is expected.
-# DG sweep evaluates each threshold only at its matched year × L/M/H growth.
-THRESHOLD_TARGET_YEARS = {
-    10: 2026, 20: 2027, 30: 2028, 40: 2029,
-    50: 2030, 55: 2031, 60: 2033, 65: 2034,
-    70: 2035, 75: 2036, 80: 2037, 85: 2038, 87.5: 2039,
-    90: 2040, 92.5: 2043,
-    95: 2045, 97.5: 2048, 99: 2049, 99.5: 2049, 99.9: 2050, 99.99: 2050,
-}
-
-# Unique DG years (for efficient batching — group thresholds that share a year)
-_DG_YEAR_TO_THRESHOLDS = {}
-for _thr, _yr in THRESHOLD_TARGET_YEARS.items():
-    _DG_YEAR_TO_THRESHOLDS.setdefault(_yr, []).append(_thr)
-DG_UNIQUE_YEARS = sorted(_DG_YEAR_TO_THRESHOLDS.keys())
-
-
-# ── Gas Capacity Backup (resource adequacy) ──
-RESOURCE_ADEQUACY_MARGIN = 0.15  # 15% reserve margin
-
-PEAK_DEMAND_MW = {
-    'CAISO': 43860, 'ERCOT': 83597, 'PJM': 160560, 'NYISO': 31857, 'NEISO': 25898,
-    'MISO': 127125, 'SPP': 54368,
-}
-EXISTING_GAS_CAPACITY_MW = {
-    'CAISO': 37000, 'ERCOT': 55000, 'PJM': 75000, 'NYISO': 18000, 'NEISO': 14000,
-    'MISO': 68000, 'SPP': 32000,
-}
-# Lazard v16.0 CCGT annualized capacity cost ($/kW-yr)
-NEW_CCGT_COST_KW_YR = {
-    'CAISO': 112, 'ERCOT': 89, 'PJM': 99, 'NYISO': 114, 'NEISO': 105,
-    'MISO': 95, 'SPP': 88,
-}
-# Existing gas fixed O&M ($/kW-yr)
-EXISTING_GAS_FOM_KW_YR = {
-    'CAISO': 16, 'ERCOT': 13, 'PJM': 14, 'NYISO': 17, 'NEISO': 15,
-    'MISO': 14, 'SPP': 13,
-}
-# Capacity credits at system peak
-PEAK_CAPACITY_CREDITS = {
-    'clean_firm': 1.0, 'solar': 0.30, 'wind': 0.10, 'ccs_ccgt': 0.90,
-    'hydro': 0.50, 'battery': 0.95, 'battery8': 0.95, 'ldes': 0.90,
-    'h2': 0.85,  # H2 turbine: dispatchable but slower ramp than gas/battery
-    'offshore_wind': 0.25,  # Higher than onshore (0.10) — flatter profile, less correlated with peak
-}
-
-# Gas Availability Factor (GAF) — accounts for forced outages + correlated weather risk
-# gas_needed_mw is divided by GAF to reflect that not all gas capacity is available at peak.
-# Sources: PJM ELCC Class Ratings (2024/25), NERC GADS EFORd, FERC Winter Storm reports.
-# NEISO uses mechanical+weather only (pipeline constraint handled separately downstream).
-GAS_AVAILABILITY_FACTOR = {
-    'CAISO': 0.88,  # 12% deration — summer ambient derate + mechanical outages
-    'ERCOT': 0.83,  # 17% deration — extreme weather both seasons, gas supply correlation
-    'PJM':   0.82,  # 18% deration — PJM ELCC data, Winter Storm Elliott evidence
-    'NYISO': 0.82,  # 18% deration — pipeline constraints, winter gas competition
-    'NEISO': 0.85,  # 15% deration — mechanical + weather only (pipeline separate)
-    'MISO':  0.84,  # 16% deration — polar vortex exposure, gas supply correlation
-    'SPP':   0.84,  # 16% deration — extreme weather both seasons, similar to MISO
-}
-
-# Resource capacity factors by ISO (EIA Form 923, eGRID 2022-2024 fleet averages)
-# Used to convert average generation MW → installed MW for RA peak calculations
-RESOURCE_CAPACITY_FACTORS = {
-    'clean_firm': {'CAISO': 0.90, 'ERCOT': 0.93, 'PJM': 0.93, 'NYISO': 0.90,
-                   'NEISO': 0.90, 'MISO': 0.92, 'SPP': 0.92},
-    'solar':      {'CAISO': 0.28, 'ERCOT': 0.24, 'PJM': 0.17, 'NYISO': 0.15,
-                   'NEISO': 0.15, 'MISO': 0.19, 'SPP': 0.22},
-    'wind':       {'CAISO': 0.25, 'ERCOT': 0.38, 'PJM': 0.30, 'NYISO': 0.28,
-                   'NEISO': 0.30, 'MISO': 0.36, 'SPP': 0.42},
-    'ccs_ccgt':   {'CAISO': 0.85, 'ERCOT': 0.85, 'PJM': 0.85, 'NYISO': 0.85,
-                   'NEISO': 0.85, 'MISO': 0.85, 'SPP': 0.85},
-    'hydro':      {'CAISO': 0.40, 'ERCOT': 0.30, 'PJM': 0.35, 'NYISO': 0.40,
-                   'NEISO': 0.40, 'MISO': 0.35, 'SPP': 0.30},
-    'offshore_wind': {'CAISO': 0.43, 'ERCOT': 0.35, 'PJM': 0.48, 'NYISO': 0.49,
-                      'NEISO': 0.51, 'MISO': 0.35, 'SPP': 0.35},
-}
 
 # Existing clean generation in absolute TWh (constant, does NOT change with demand growth)
 EXISTING_CLEAN_TWH = {}
@@ -549,12 +144,6 @@ GAS_RAW_2025 = {
 }
 
 
-def get_tx(rtype, tx_name, iso):
-    """Lookup transmission adder for a resource type."""
-    entry = TX_TABLES.get(rtype, {}).get(tx_name, 0)
-    if isinstance(entry, dict):
-        return entry.get(iso, 0)
-    return entry
 
 
 # ============================================================================
@@ -1918,8 +1507,7 @@ def prepare_threshold_metadata(scores, thresholds):
 INPUT_DIR = Path('data/step2-ef-parquets')
 OUTPUT_DIR = Path('data/step3-cost-opt-parquets')
 
-# Thresholds to evaluate
-OUTPUT_THRESHOLDS = [10, 20, 30, 40, 50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
+# Thresholds to evaluate (imported from pipeline_config, re-assigned here for backward compat)
 
 
 def effective_gate(thr):
