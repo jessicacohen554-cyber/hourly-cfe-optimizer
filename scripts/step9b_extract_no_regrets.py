@@ -27,11 +27,17 @@ from collections import defaultdict
 import pandas as pd
 import numpy as np
 
+# Import canonical constants from pipeline_config (single source of truth)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from pipeline_config import (
+    ISOS, ACTIVE_THRESHOLDS,
+    THRESHOLD_TARGET_YEARS as _THRESHOLD_TARGET_YEARS_PC,
+)
+
 # ============================================================================
 # CONFIGURATION
 # ============================================================================
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
-THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
+THRESHOLDS = ACTIVE_THRESHOLDS
 
 # Threshold-to-file key mapping (DG parquets use integer or decimal keys)
 THRESHOLD_FILE_KEYS = {
@@ -56,12 +62,8 @@ DAC_TRAJECTORY = {
     'conservative': {2025: 1100, 2030: 750, 2035: 550, 2040: 450, 2045: 375, 2050: 300},
 }
 
-# SBTi milestone threshold-to-year mapping
-THRESHOLD_TARGET_YEARS = {
-    50: 2030, 55: 2031, 60: 2033, 65: 2034, 70: 2035,
-    75: 2036, 80: 2037, 85: 2038, 87.5: 2039, 90: 2040,
-    92.5: 2043, 95: 2045, 97.5: 2048, 99: 2050, 99.99: 2050
-}
+# SBTi milestone threshold-to-year mapping — from pipeline_config
+THRESHOLD_TARGET_YEARS = _THRESHOLD_TARGET_YEARS_PC
 
 ISO_LABELS = {
     'CAISO': 'California', 'ERCOT': 'Texas', 'PJM': 'Mid-Atlantic',
