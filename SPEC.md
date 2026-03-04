@@ -4820,3 +4820,18 @@ bridge.
 Maximum coarse gap: bat4=1.0pp, bat8=2.0pp, LDES=4.0pp. Fine sweep at ±0.5pp
 ensures all gaps are bridgeable. 1.6× the original 900 combos — minimal
 compute increase for significantly better coverage at the high end.
+
+**Empirical validation (March 2026)**: Grid sensitivity tests across CAISO (solar-heavy,
+6D), NEISO (winter-constrained, 5D), and ERCOT (wind-heavy, 4D) confirm:
+- **Storage grid precision does NOT change which resource mix wins** — at every threshold
+  (95%, 97.5%, 99%, 99.9%), the same mix is cost-optimal regardless of LDES grid density.
+- **Coarse grid only overshoots LDES level** by ~2-2.5pp at 99.9% threshold — same mix
+  wins but at a higher (costlier) LDES than necessary. Pass 2 fine sweep corrects this.
+- **Score response to LDES is smooth and monotonic** — no step-function behavior, no
+  discontinuities. Each 0.25pp LDES adds a consistent ~0.02pp score (92% base) to
+  ~0.002pp (99% base).
+- **ERCOT plateaus at 1% LDES** (wind diversity fills gaps), **CAISO gains steadily to 25%**
+  (solar intermittency needs long-duration shifting).
+- **Winner flips**: 0/51 at thresholds ≤99%, 2-3/51 at 99.9% — all same-mix, different LDES.
+- **Conclusion**: V2 grid density is adequate. The binding constraint is resource mix
+  diversity from Step 1C's near-miss cache, not storage grid resolution.
