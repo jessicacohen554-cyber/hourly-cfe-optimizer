@@ -134,7 +134,7 @@ All workflows: `workflow_dispatch`, ISO selectors. See `.github/workflows/README
 | 4 | `step4-dispatch-cache.yml` | Dispatch cache build |
 | 5A | `step5a-compute-co2.yml` | CO₂ dispatch model |
 | 5B | `step5b-compute-lmp.yml` | Synthetic LMP |
-| 5C+D | `step5cd-supplemental.yml` | Day profiles + deployment queue |
+| 5D | `step5d-consequential-queue.yml` | Consequential deployment queue |
 | 5E | `step5e-track-analysis.yml` | Track export + analysis |
 | 5F | `step5f-storage-analysis.yml` | Storage dispatch analysis |
 | 6 | `step6-derived-analytics.yml` | MAC stats + optimal targets |
