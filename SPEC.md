@@ -3,7 +3,44 @@
 > **Authoritative reference for all design decisions.** If a future session needs context, read this file first.
 > Last updated: 2026-03-03.
 
-## Current Status (Mar 3, 2026)
+## Current Status (Mar 4, 2026)
+
+### Consequential Queue Consolidation + MAC Bug Fix (Mar 4, 2026)
+
+**Branch:** `claude/analyze-consequential-queue-lsLaJ`
+
+**Problem:** Two parallel implementations of the consequential deployment queue algorithm existed with divergent MAC formulas:
+1. `scenario_common.py::build_consequential_queue()` — used `effective_cost` (wrong: inflated by match_frac, no gas subtraction)
+2. `step5_consequential_deployment_queue.py::compute_zone_metrics()` — used `incremental_cost - gas_cost` where `incremental_cost = effective_cost - wholesale` (wrong: subtracts wholesale, yielding near-$0 MAC)
+
+**MAC Bug Fix:** Both implementations now use the correct formula matching `step5_compute_mac_stats.py`:
+```
+MAC = (total_cost - gas_backup_cost) × demand_mwh / CO2_displaced_tons  ($/tCO2)
+```
+- `total_cost` = LCOE of all new-build clean resources (existing at $0). No wholesale offset.
+- `gas_backup_cost` = resource adequacy cost (reliability, not abatement). Subtracted.
+- No PCHIP, no isotonic regression — flat LCOE + battery capacity cost / tons CO2 reduced.
+
+**Decisions made:**
+1. **Single source of truth**: `build_consequential_queue()` in `scenario_common.py` is the canonical queue builder. Supports both `per_iso_sequential` and `global_merit_order` sequencing via parameter.
+2. **ISO-aware zone building**: `build_zones(iso=iso)` starts zones from the nearest threshold at or below each ISO's existing clean floor. ISOs with 30-40% existing clean (NYISO, NEISO, MISO) get 30→40→50 zones instead of jumping from existing clean straight to 50%.
+   - CAISO (48.5%), ERCOT (46.1%), PJM (40.6%), SPP (47.0%): start at 40%
+   - NYISO (39.0%), NEISO (33.5%), MISO (31.3%): start at 30%
+3. **gas_cost added to scenario result dicts**: `compute_mix_cost()` now returns `gas_cost` per MWh. `build_augmented_result()` recomputes `gas_cost` from augmented gas MW.
+4. **Strategy 1 consumes queue output**: `step5_5_strategy1_consequential.py` reads `consequential_queue.json` for deployment ordering (cheapest $/tCO2 first) instead of building its own $/MWh ranking. Falls back to price-based ordering when queue file unavailable.
+
+**Files changed:**
+- `scripts/scenario_common.py` — Added `gas_cost` to return dicts, `build_zones()` ISO-aware zone builder, refactored `build_consequential_queue()` with correct MAC formula
+- `scripts/step5_consequential_deployment_queue.py` — Fixed MAC to use `total_cost - gas_cost`, ISO-aware zones via `_build_zones(iso=iso)`
+- `scripts/step5_5_strategy1_consequential.py` — Queue consumption via `_load_queue()`, falls back to price-based
+
+**Next steps:**
+- [ ] Run `step5_consequential_deployment_queue.py` to regenerate queue JSON with corrected MACs
+- [ ] Run `step5_scenario_comparison.py` to regenerate scenario comparison with corrected MACs
+- [ ] Run `step5_5_strategy1_consequential.py` to verify queue consumption
+- [ ] Verify MAC values are in reasonable range ($30-$500/tCO2 for most zones)
+
+---
 
 ### Dashboard Design Refactor — Observatory Theme (In Progress)
 

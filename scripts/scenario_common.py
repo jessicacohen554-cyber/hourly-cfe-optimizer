@@ -165,20 +165,34 @@ DEMAND_GROWTH_RATES = {
 }
 BASE_YEAR = 2025
 
-ZONES = [
-    {'label': '50→55%', 'start': 50, 'end': 55},
-    {'label': '55→60%', 'start': 55, 'end': 60},
-    {'label': '60→65%', 'start': 60, 'end': 65},
-    {'label': '65→70%', 'start': 65, 'end': 70},
-    {'label': '70→75%', 'start': 70, 'end': 75},
-    {'label': '75→90%', 'start': 75, 'end': 90},
-    {'label': '90→95%', 'start': 90, 'end': 95},
-    {'label': '95→97.5%', 'start': 95, 'end': 97.5},
-    {'label': '97.5→99%', 'start': 97.5, 'end': 99},
-    {'label': '99→99.5%', 'start': 99, 'end': 99.5},
-    {'label': '99.5→99.9%', 'start': 99.5, 'end': 99.9},
-    {'label': '99.9→≥99.99%', 'start': 99.9, 'end': 99.99},
-]
+def build_zones(iso=None, thresholds=None, min_threshold=None):
+    """Build zone list from consecutive threshold pairs.
+
+    If iso is provided, zones start from the highest threshold at or below
+    the ISO's existing clean floor (so ISOs with 30-40% existing clean get
+    the 30→40 and 40→50 zones rather than jumping straight to 50%).
+    """
+    if thresholds is None:
+        thresholds = THRESHOLDS
+    if min_threshold is None:
+        if iso:
+            existing_pct = sum(GRID_MIX_SHARES[iso].values())
+            # Find highest threshold at or below existing clean floor
+            candidates = [t for t in thresholds if t <= existing_pct]
+            min_threshold = max(candidates) if candidates else min(thresholds)
+        else:
+            min_threshold = 50
+    sorted_t = sorted(t for t in thresholds if t >= min_threshold)
+    zones = []
+    for i in range(len(sorted_t) - 1):
+        s, e = sorted_t[i], sorted_t[i + 1]
+        s_str = str(int(s)) if s == int(s) else str(s)
+        e_str = '≥99.99' if e >= 99.99 else (str(int(e)) if e == int(e) else str(e))
+        zones.append({'label': f'{s_str}→{e_str}%', 'start': s, 'end': e})
+    return zones
+
+# Backward compatibility — default zones starting at 50% (no ISO awareness)
+ZONES = build_zones()
 
 # ============================================================================
 # SCENARIO DEFINITIONS
@@ -513,6 +527,7 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
         'effective_cost': round(eff_cost, 2),
         'incremental': round(incremental, 2),
         'wholesale': wholesale,
+        'gas_cost': round(gas_cost, 4),
         'resource_twh': resource_twh,
         'resource_pct': {'clean_firm': cf_pct, 'solar': sol_pct, 'wind': wnd_pct,
                          'offshore_wind': osw_pct, 'ccs_ccgt': ccs_pct, 'hydro': hyd_pct},
@@ -1401,6 +1416,13 @@ def build_augmented_result(best_result, best_mix, floor_twh, deployed,
     aug['existing_gas_used_mw'] = existing_gas_used_mw
     aug['clean_peak_mw'] = clean_peak_mw
 
+    # Recompute gas_cost from augmented gas MW values
+    aug_gas_cost = (
+        existing_gas_used_mw * EXISTING_GAS_FOM_KW_YR[iso] * 1000 +
+        new_gas_mw * NEW_CCGT_COST_KW_YR[iso] * 1000
+    ) / (demand_twh * 1e6)
+    aug['gas_cost'] = round(aug_gas_cost, 4)
+
     # New-build cost tracking (for MAC calculation)
     aug['new_build_cost_total'] = (
         best_result['new_build_cost_total'] +
@@ -1461,14 +1483,75 @@ def _get_dispatch_co2_for_mix(iso, mix_result, egrid, demand_data, gen_profiles,
 # CONSEQUENTIAL QUEUE BUILDER
 # ============================================================================
 
-def build_consequential_queue(scenario_results, egrid, fossil_mix, cfr_fn=None,
-                               demand_data=None, gen_profiles=None, dispatch_caches=None):
-    """Build the consequential deployment queue for a scenario."""
+def _get_gas_cost_per_mwh(data, iso):
+    """Extract gas backup cost per MWh from a result dict.
+
+    Supports multiple key names across data sources:
+      - 'gas_cost' (scenario results, deployment queue)
+      - 'ra_gas_backup_cost_per_mwh' (step3 parquet columns)
+    Falls back to deriving from gas MW + constants if missing.
+    """
+    for key in ('gas_cost', 'ra_gas_backup_cost_per_mwh'):
+        if key in data:
+            return data[key]
+    # Derive from gas MW values + constants
+    gas_mw = data.get('gas_backup_mw', 0)
+    new_gas_mw = data.get('new_gas_mw', 0)
+    existing_gas_used = min(gas_mw, EXISTING_GAS_CAPACITY_MW.get(iso, 0))
+    demand_mwh = data.get('demand_mwh', 0)
+    if demand_mwh <= 0:
+        demand_twh = data.get('demand_twh', BASE_DEMAND_TWH.get(iso, 400))
+        demand_mwh = demand_twh * 1e6
+    if demand_mwh > 0:
+        return (
+            existing_gas_used * EXISTING_GAS_FOM_KW_YR.get(iso, 14) * 1000 +
+            new_gas_mw * NEW_CCGT_COST_KW_YR.get(iso, 95) * 1000
+        ) / demand_mwh
+    return 0
+
+
+def _get_total_cost(data):
+    """Extract total cost per MWh from a result dict.
+
+    Supports 'total_cost' (scenario results) and 'cost_total_cost' (parquets).
+    """
+    for key in ('total_cost', 'cost_total_cost'):
+        if key in data:
+            return data[key]
+    return data.get('effective_cost', 0)
+
+
+def build_consequential_queue(scenario_results, egrid, fossil_mix=None, cfr_fn=None,
+                               demand_data=None, gen_profiles=None, dispatch_caches=None,
+                               sequencing='per_iso_sequential',
+                               iso_aware_zones=True):
+    """Build the consequential deployment queue — single source of truth.
+
+    MAC formula: (LCOE of new clean resources) / (metric tons CO2 displaced).
+    Cost numerator = total_cost - gas_backup_cost (per MWh demand).
+    No wholesale offset. No PCHIP/isotonic smoothing.
+
+    Args:
+        scenario_results: {iso: {threshold: result_dict}} with cost/resource data
+        egrid: eGRID emission rate dict
+        fossil_mix: regional fossil mix data (for analytical CO2 fallback)
+        cfr_fn: fossil retirement function (defaults to compute_fossil_retirement)
+        demand_data: EIA demand profiles (enables dispatch-based CO2)
+        gen_profiles: EIA generation profiles (enables dispatch-based CO2)
+        dispatch_caches: pre-loaded dispatch cache dict
+        sequencing: 'per_iso_sequential' (respects per-ISO threshold ordering) or
+                    'global_merit_order' (global sort by $/tCO2)
+        iso_aware_zones: if True, build zones per-ISO starting from existing clean
+                         floor (ISOs with 30-40% existing clean get 30→40, 40→50
+                         zones). If False, all ISOs start at 50%.
+    """
     use_dispatch = demand_data is not None and gen_profiles is not None
     if cfr_fn is None:
         cfr_fn = compute_fossil_retirement
     if dispatch_caches is None:
         dispatch_caches = {}
+
+    # Pre-compute dispatch CO2 for all available thresholds
     _co2_cache = {}
     if use_dispatch:
         for iso in ISOS:
@@ -1481,31 +1564,61 @@ def build_consequential_queue(scenario_results, egrid, fossil_mix, cfr_fn=None,
                                                  demand_data, gen_profiles, dispatch_caches)
                 if co2:
                     _co2_cache[(iso, t)] = co2
+
     zone_metrics = []
+    iso_zone_lists = {}  # track per-ISO zone lists for sequencing
+
     for iso in ISOS:
         iso_data = scenario_results.get(iso, {})
         if not iso_data:
             continue
-        baseline_clean = sum(GRID_MIX_SHARES[iso].values())
-        for zone in ZONES:
+
+        # Build zones for this ISO
+        iso_zones = build_zones(iso=iso) if iso_aware_zones else ZONES
+        iso_zone_lists[iso] = iso_zones
+
+        for zone in iso_zones:
             t_start, t_end = zone['start'], zone['end']
             start_data = iso_data.get(t_start, {})
             end_data = iso_data.get(t_end, {})
             if not start_data or not end_data:
                 continue
-            cost_start = start_data['effective_cost']
-            cost_end = end_data['effective_cost']
-            delta_cost = cost_end - cost_start
-            gas_start = start_data['gas_backup_mw']
-            gas_end = end_data['gas_backup_mw']
+
+            # ── Cost delta: LCOE of new clean resources (no wholesale) ──
+            cost_start = _get_total_cost(start_data) - _get_gas_cost_per_mwh(start_data, iso)
+            cost_end = _get_total_cost(end_data) - _get_gas_cost_per_mwh(end_data, iso)
+            delta_new_clean_cost = cost_end - cost_start
+
+            # Gas backup tracking
+            gas_start = start_data.get('gas_backup_mw', 0)
+            gas_end = end_data.get('gas_backup_mw', 0)
             delta_gas = gas_end - gas_start
             new_gas_end = end_data.get('new_gas_mw', 0)
+
+            # ── CO2 displacement ──
             co2_start = _co2_cache.get((iso, t_start))
             co2_end = _co2_cache.get((iso, t_end))
+            displacement_detail = {}
+
             if co2_start and co2_end:
                 co2_mt = max(0, co2_end['total_co2_abated_tons'] -
                              co2_start['total_co2_abated_tons']) / 1e6
+                # Marginal fuel displacement
+                marginal_coal = co2_end.get('coal_displaced_twh', 0) - co2_start.get('coal_displaced_twh', 0)
+                marginal_oil = co2_end.get('oil_displaced_twh', 0) - co2_start.get('oil_displaced_twh', 0)
+                marginal_gas = co2_end.get('gas_displaced_twh', 0) - co2_start.get('gas_displaced_twh', 0)
+                fuels = {'coal': marginal_coal, 'oil': marginal_oil, 'gas': marginal_gas}
+                primary_fuel = max(fuels, key=lambda k: fuels[k]) if any(v > 0.01 for v in fuels.values()) else 'gas'
+                ep_rate = co2_end.get('weighted_emission_rate', 0)
+                displacement_detail = {
+                    'marginal_coal_twh': round(marginal_coal, 2),
+                    'marginal_oil_twh': round(marginal_oil, 2),
+                    'marginal_gas_twh': round(marginal_gas, 2),
+                    'primary_fuel': primary_fuel,
+                    'avg_rate_at_end': round(ep_rate, 4),
+                }
             else:
+                # Analytical fallback
                 demand_twh = get_demand_twh(iso, t_end)
                 gf_end = get_demand_growth_factor(iso, t_end)
                 rate_end, _ = cfr_fn(iso, t_end, egrid, fossil_mix, gf_end)
@@ -1516,13 +1629,23 @@ def build_consequential_queue(scenario_results, egrid, fossil_mix, cfr_fn=None,
                 delta_gen = max(0, new_gen_end - new_gen_start)
                 avg_rate = (rate_start + rate_end) / 2 if (rate_start + rate_end) > 0 else 0.4
                 co2_mt = delta_gen * 1e6 * avg_rate / 1e6
+                displacement_detail = {'primary_fuel': 'gas', 'avg_rate_at_end': round(rate_end, 4)}
+
             if co2_mt < 0.001:
                 co2_mt = 0.001
-            marginal_mac = abs(delta_cost * BASE_DEMAND_TWH[iso] * 1e6 / (co2_mt * 1e6)) if co2_mt > 0.001 else 9999
+
+            # ── MAC = new clean LCOE delta × demand_mwh / CO2 displaced (tons) ──
+            demand_mwh = end_data.get('demand_mwh', 0)
+            if demand_mwh <= 0:
+                demand_twh_val = end_data.get('demand_twh', BASE_DEMAND_TWH.get(iso, 400))
+                demand_mwh = demand_twh_val * 1e6
+            marginal_mac = abs(delta_new_clean_cost * demand_mwh / (co2_mt * 1e6)) if co2_mt > 0.001 else 9999
+
+            # ── Resource deltas ──
             delta_resources = {}
             for res in RESOURCES:
-                r_start = start_data['resource_twh'].get(res, 0)
-                r_end = end_data['resource_twh'].get(res, 0)
+                r_start = start_data.get('resource_twh', {}).get(res, 0)
+                r_end = end_data.get('resource_twh', {}).get(res, 0)
                 if abs(r_end - r_start) > 0.5:
                     delta_resources[res] = r_end - r_start
             for stor in ['battery', 'ldes']:
@@ -1535,12 +1658,13 @@ def build_consequential_queue(scenario_results, egrid, fossil_mix, cfr_fn=None,
                     s_end += end_data.get('battery8_twh', 0)
                 if abs(s_end - s_start) > 0.5:
                     delta_resources[stor] = s_end - s_start
+
             zone_metrics.append({
                 'iso': iso,
                 'zone_label': zone['label'],
                 'threshold_start': t_start,
                 'threshold_end': t_end,
-                'delta_cost_per_mwh': round(delta_cost, 2),
+                'delta_cost_per_mwh': round(delta_new_clean_cost, 2),
                 'co2_displaced_mt': round(co2_mt, 3),
                 'marginal_mac': round(min(marginal_mac, 9999), 1),
                 'gas_backup_mw_start': gas_start,
@@ -1548,7 +1672,19 @@ def build_consequential_queue(scenario_results, egrid, fossil_mix, cfr_fn=None,
                 'delta_gas_mw': delta_gas,
                 'new_gas_mw_end': new_gas_end,
                 'delta_resources': delta_resources,
+                'displacement_detail': displacement_detail,
+                'endpoint_emission_rate': displacement_detail.get('avg_rate_at_end', 0),
+                'primary_fuel_displaced': displacement_detail.get('primary_fuel', 'gas'),
             })
+
+    # ── Sequencing ──
+    if sequencing == 'global_merit_order':
+        zone_metrics.sort(key=lambda x: (x['marginal_mac'], -x['co2_displaced_mt']))
+        for i, step in enumerate(zone_metrics):
+            step['queue_position'] = i + 1
+        return zone_metrics
+
+    # Per-ISO sequential: enforce threshold ordering within each ISO
     ordered = sorted(zone_metrics, key=lambda x: x['marginal_mac'])
     iso_next_zone = {iso: 0 for iso in ISOS}
     final_ordered = []
@@ -1557,7 +1693,8 @@ def build_consequential_queue(scenario_results, egrid, fossil_mix, cfr_fn=None,
         placed = False
         for item in remaining:
             iso = item['iso']
-            zone_idx = next((i for i, z in enumerate(ZONES)
+            zones_for_iso = iso_zone_lists.get(iso, ZONES)
+            zone_idx = next((i for i, z in enumerate(zones_for_iso)
                             if z['start'] == item['threshold_start']
                             and z['end'] == item['threshold_end']), -1)
             if zone_idx <= iso_next_zone[iso]:
