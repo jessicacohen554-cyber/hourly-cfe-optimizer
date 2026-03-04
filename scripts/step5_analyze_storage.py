@@ -428,7 +428,7 @@ def write_js_data(metrics, compressed_storage, h2_feasibility, storage_value, re
 
 
 def extract_parquet_storage_stats():
-    """Extract storage statistics directly from Step 4 parquets.
+    """Extract storage statistics directly from Step 3 CO parquets.
 
     Provides richer data than shared-data.js: distribution of storage across
     ALL feasible mixes (not just the single optimal), showing storage landscape.
@@ -439,18 +439,16 @@ def extract_parquet_storage_stats():
         print("  pandas not available — skipping parquet analysis")
         return {}
 
-    pdir = os.path.join(DATA_DIR, 'step4-gas-ccs-parquets')
+    pdir = os.path.join(DATA_DIR, 'step3-cost-opt-parquets')
     if not os.path.exists(pdir):
-        pdir = os.path.join(DATA_DIR, 'step3-cost-opt-parquets')
-    if not os.path.exists(pdir):
+        print(f"  WARNING: {pdir} not found — skipping parquet analysis")
         return {}
 
     result = {}
     for iso in ISOS:
-        fpath = os.path.join(pdir, f'step4_{iso}.parquet')
+        fpath = os.path.join(pdir, f'step3_co_{iso}.parquet')
         if not os.path.exists(fpath):
-            fpath = os.path.join(pdir, f'step3_{iso}.parquet')
-        if not os.path.exists(fpath):
+            print(f"  WARNING: {fpath} not found — skipping {iso}")
             continue
 
         try:
