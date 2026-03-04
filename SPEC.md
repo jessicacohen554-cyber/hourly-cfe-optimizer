@@ -1,9 +1,32 @@
 # Advanced Sensitivity Model — Complete Specification
 
 > **Authoritative reference for all design decisions.** If a future session needs context, read this file first.
-> Last updated: 2026-03-03.
+> Last updated: 2026-03-04.
 
 ## Current Status (Mar 4, 2026)
+
+### Step 1D.2 Enhanced Storage Model + Economic Assessment (In Progress)
+
+**Branch:** `claude/advanced-tech-storage-analysis-0bVl5`
+
+**Scope**: Build enhanced storage dispatch model (Step 1D.2) with research-informed 2050 capacity caps, and create full economic & revenue source assessment layer for Tracks 1-3. Phased approach: V1 = higher caps with same dispatch, V2 = enhanced multi-service dispatch (later).
+
+**Key Decisions:**
+- 1D.2 uses existing near-miss cache (100k mixes/ISO) — no 1A-1C rerun needed
+- Research-informed 2050 caps: bat4=5%, bat8=10%, LDES=25%, H2=25% (see §16.2)
+- Phased dispatch: V1 same kernels + higher caps, V2 enhanced multi-service (later)
+- Economic assessment = enhanced lens on Tracks 1-3, NOT a separate Track 4
+- Dashboard integration deferred — focus on compute infrastructure first
+
+**Status:**
+- [ ] Step 1D.2 script (`step1d2_enhanced_storage.py`)
+- [ ] Economic assessment constants in `pipeline_config.py`
+- [ ] Step 2 integration (--source flag for 1D.2 parquets)
+- [ ] Economic assessment script (`step3_economic_assessment.py`)
+- [ ] GitHub Actions workflows
+- [ ] Storage analysis page enhancements (deferred)
+
+---
 
 ### Consequential Queue Consolidation + MAC Bug Fix (Mar 4, 2026)
 
@@ -41,6 +64,8 @@ MAC = (total_cost - gas_backup_cost) × demand_mwh / CO2_displaced_tons  ($/tCO2
 - [ ] Verify MAC values are in reasonable range ($30-$500/tCO2 for most zones)
 
 ---
+
+## Previous Status (Mar 3, 2026)
 
 ### Dashboard Design Refactor — Observatory Theme (In Progress)
 
@@ -4515,3 +4540,207 @@ Now `bat_pct / 100.0 × price` directly gives the annual fixed cost of that stor
 **Propagated to**: `step3_cost_optimization.py`. Other files (`scenario_common.py`, `step6_scenario_comparison.py`) may need separate update if they have independent LCOE_TABLES copies.
 
 **Supersedes**: Prior LCOS values in LCOE_TABLES for battery, battery8, ldes, h2. Line 3764 of this file updated — batteries now have learning curves too (previously listed as "already mature — static costs").
+
+---
+
+## §16: Step 1D.2 Enhanced Storage Model + Full Economic Assessment
+
+### §16.1 Overview
+
+The current pipeline has two gaps:
+1. **Storage caps are conservative**: Battery 4hr=0.5%, Battery 8hr=1.0%, LDES=5.0% of demand — reflecting near-term (2025-2030) deployment. For a model analyzing paths to 2050, these caps artificially constrain storage-dominant solutions.
+2. **No revenue offsets**: Tracks 1-3 price storage as pure annualized CAPEX. Real-world storage economics include capacity market payments, energy arbitrage revenue, and ancillary services — which can offset 30-60% of gross cost.
+
+Step 1D.2 addresses gap (1) with research-informed 2050 capacity caps. The Economic Assessment layer addresses gap (2) by adding revenue streams to the cost evaluation of Tracks 1-3.
+
+**Key framing**: This is NOT a separate Track 4. It's a full economic & revenue source assessment applied to the same Tracks 1-3. The output is "here's what Track 1/2/3 looks like under pure LCOE vs. full lifecycle economics."
+
+### §16.2 Storage Capacity Caps (Research-Informed, 2050 Horizon)
+
+**Current (Step 1D):**
+| Storage Type | Max (% of demand) | Rationale |
+|---|---|---|
+| Battery 4hr | 0.5% | Near-term deployment |
+| Battery 8hr | 1.0% | Near-term deployment |
+| LDES | 5.0% | Early iron-air |
+| H2 | 25.0% | Seasonal storage |
+
+**Step 1D.2 (2050-oriented):**
+| Storage Type | Max (% of demand) | Rationale |
+|---|---|---|
+| Battery 4hr | 5.0% | NREL: 200 GW / ~456 GW avg US load. 4hr daily cycling at 85% RTE → ~6% of demand served. |
+| Battery 8hr | 10.0% | DOE: 8hr battery key for deep decarb. Longer duration enables overnight coverage. |
+| LDES | 25.0% | DOE: 225-460 GW LDES by 2050. Iron-air at 100hr, 7-day window, 50% RTE → covers weekly variability. |
+| H2 | 25.0% | Unchanged — seasonal storage caps already generous. |
+
+**Research basis:**
+- NREL Storage Futures Study: 125-680 GW total storage by 2050, 200 GW / 1,200 GWh reference case
+- DOE LDES Liftoff: 225-460 GW LDES needed for net-zero; $10-20B annual savings vs. gas capacity
+- Princeton Net Zero America: 1,300 GWh grid storage by 2050
+- NREL ATB 2024: Battery costs decline 47-68% by 2050 (mid/low scenarios)
+
+### §16.3 Step 1D.2 Script Architecture
+
+**Script**: `scripts/step1d2_enhanced_storage.py`
+- Fork of `step1d_fine_storage.py` with higher caps from `STORAGE_MAX_V2`
+- Same three-pass architecture (Pass 0 ceiling screen, Pass 1 adaptive coarse, Pass 2 fine refinement)
+- Same Numba dispatch kernels from `dispatch_utils.py`
+- Uses existing near-miss cache (already 100k mixes/ISO from Step 1C)
+- Output: `data/step1d2-storage-parquets/{ISO}_t{THRESHOLD}_storage.parquet`
+
+**Key differences from Step 1D:**
+1. Reads `STORAGE_MAX_V2` instead of `STORAGE_MAX`
+2. Coarser initial grid (wider range → need 0.5% coarse step instead of 0.25%)
+3. Same fine resolution (0.05%) on frontier boundary mixes
+4. Output directory: `data/step1d2-storage-parquets/` (parallel to `data/step1d-storage-parquets/`)
+
+### §16.4 Pipeline Integration
+
+**Step 2 (Efficient Frontier)**:
+- Add `--storage-source` flag: `step1d` (default) or `step1d2`
+- When `--storage-source step1d2`: reads from `data/step1d2-storage-parquets/`, outputs to `data/step2-ef-v2-parquets/`
+- Both EF sets maintained in parallel — downstream scripts choose which to consume
+
+**Step 3 (Cost Optimization)**:
+- Add `--ef-source` flag: `step2` (default) or `step2-v2`
+- Economic assessment applied as post-processing on Step 3 output (see §16.5)
+
+**Dispatch Cache**:
+- Separate cache for 1D.2 mixes (higher storage penetration = different dispatch profiles)
+
+### §16.5 Economic Assessment Model
+
+**Script**: `scripts/step3_economic_assessment.py`
+- Post-processing on Step 3 output (reads cost parquets + dispatch cache + LMP data)
+- Applies to ALL tracks (1, 2, 3) — not a separate track
+
+**Revenue streams (per storage type, per mix, per threshold × ISO):**
+
+1. **Capacity market revenue**: `capacity_MW × capacity_credit × capacity_price_per_kW_yr`
+   - `capacity_MW` = `storage_dispatch_pct × demand_MW / duration_hours`
+   - `capacity_credit` from `PEAK_CAPACITY_CREDITS` (already exists: battery=0.95, LDES=0.90)
+   - `capacity_price_per_kW_yr` = new constant per ISO (from PJM RPM, NYISO ICAP, NEISO FCM, etc.)
+
+2. **Energy arbitrage revenue**: Sum over 8,760 hours of price differentials
+   - Uses synthetic LMP from `step5_compute_lmp_prices.py` (already exists for all 7 ISOs)
+   - Revenue = Σ(discharge_hour × LMP_high) - Σ(charge_hour × LMP_low)
+   - Bounded by dispatch profiles from dispatch cache
+
+3. **Ancillary services revenue**: `eligible_capacity_MW × ancillary_rate_per_MW_hr × hours`
+   - Frequency regulation + spinning reserve
+   - Battery eligible for regulation (fast response); LDES eligible for spinning reserve only
+   - New constants per ISO
+
+4. **Degradation cost**: `cycles_per_year × degradation_rate × replacement_fraction × capex`
+   - Battery: ~365 cycles/yr (daily), ~80% capacity at 5,000 cycles (Li-ion)
+   - LDES: ~52 cycles/yr (weekly), iron-air minimal degradation
+   - Replacement cost = fraction of original CAPEX when capacity drops below threshold
+
+**Output**: `data/step3-economic-parquets/` — augments Step 3 results with:
+- `storage_capacity_revenue_per_mwh` — capacity market offset
+- `storage_arbitrage_revenue_per_mwh` — energy arbitrage offset
+- `storage_ancillary_revenue_per_mwh` — ancillary services offset
+- `storage_degradation_cost_per_mwh` — degradation/replacement adder
+- `storage_net_revenue_per_mwh` — net of all above
+- `economic_effective_cost` — `effective_cost - storage_net_revenue_per_mwh`
+- `economic_total_cost` — `total_cost - storage_net_revenue × demand`
+
+### §16.6 New Constants (pipeline_config.py)
+
+```python
+# Step 1D.2 storage caps (2050-oriented)
+STORAGE_MAX_V2 = {
+    'battery': 5.0,     # 5.0% of demand (10× current)
+    'battery8': 10.0,   # 10.0% of demand (10× current)
+    'ldes': 25.0,       # 25.0% of demand (5× current)
+    'h2': 25.0,         # 25.0% of demand (unchanged)
+}
+
+# Capacity market prices ($/kW-yr) — from 2024 auction results
+CAPACITY_MARKET_PRICES = {
+    'CAISO': 75,    # RA program, system-wide avg
+    'ERCOT': 0,     # No capacity market (energy-only)
+    'PJM': 50,      # RPM 2025/2026 BRA clearing price
+    'NYISO': 85,    # ICAP monthly spot, annualized
+    'NEISO': 55,    # FCM FCA-19 clearing price
+    'MISO': 25,     # PRA Zone 1-7 average
+    'SPP': 0,       # No capacity market
+}
+
+# Ancillary service rates ($/MW-hr)
+ANCILLARY_SERVICE_RATES = {
+    'regulation': {  # Frequency regulation (battery only)
+        'CAISO': 12, 'ERCOT': 15, 'PJM': 18, 'NYISO': 14,
+        'NEISO': 10, 'MISO': 8, 'SPP': 6,
+    },
+    'spinning': {  # Spinning reserve (battery + LDES)
+        'CAISO': 5, 'ERCOT': 8, 'PJM': 6, 'NYISO': 5,
+        'NEISO': 4, 'MISO': 3, 'SPP': 3,
+    },
+}
+
+# Ancillary service eligibility (hours/year)
+ANCILLARY_HOURS = {
+    'regulation': 2000,  # Battery available ~23% of year for reg
+    'spinning': 4000,    # Battery/LDES available ~46% of year for spin
+}
+
+# Battery degradation parameters
+BATTERY_DEGRADATION = {
+    'battery': {
+        'cycles_per_year': 365,     # Daily cycling
+        'cycle_life_80pct': 5000,   # Cycles to 80% capacity
+        'replacement_fraction': 0.4, # Cost of augmentation/replacement
+    },
+    'battery8': {
+        'cycles_per_year': 365,
+        'cycle_life_80pct': 4000,   # Deeper discharge = faster degradation
+        'replacement_fraction': 0.45,
+    },
+    'ldes': {
+        'cycles_per_year': 52,      # Weekly cycling
+        'cycle_life_80pct': 20000,  # Iron-air minimal degradation
+        'replacement_fraction': 0.15,
+    },
+    'h2': {
+        'cycles_per_year': 12,      # Monthly cycling
+        'cycle_life_80pct': 50000,  # Electrolysis replacement is the main cost
+        'replacement_fraction': 0.25,
+    },
+}
+```
+
+### §16.7 Phased Implementation
+
+**Phase 1 (Current)**: Step 1D.2 V1 — higher caps, same dispatch
+- `step1d2_enhanced_storage.py` — fork with `STORAGE_MAX_V2`
+- `pipeline_config.py` — add `STORAGE_MAX_V2`, economic constants
+- GitHub Actions workflow: `step1d2-enhanced-storage.yml`
+
+**Phase 2 (Current)**: Economic assessment
+- `step3_economic_assessment.py` — revenue stacking post-processor
+- Step 2 integration (`--storage-source step1d2`)
+
+**Phase 3 (Later)**: Enhanced multi-service dispatch
+- Price-responsive charge/discharge (LMP-aware scheduling)
+- Co-optimized battery + LDES dispatch
+- New Numba kernels
+- Replaces V1 dispatch in 1D.2
+
+**Phase 4 (Later)**: Dashboard integration
+- Revenue waterfall charts on storage_analysis.html
+- Toggle: LCOE vs Full Economic on dashboard.html
+- Enhanced storage section with economic metrics
+
+### §16.8 GitHub Actions
+
+**New workflow**: `.github/workflows/step1d2-enhanced-storage.yml`
+- Same structure as `step1d-fine-storage-v2.yml`
+- Uses `STORAGE_MAX_V2` caps
+- Per-threshold execution with auto-commits
+- Output: `data/step1d2-storage-parquets/`
+
+**New workflow**: `.github/workflows/step3-economic-assessment.yml`
+- Depends on: Step 3 cost output + dispatch cache + LMP data
+- Runs economic assessment post-processing
+- Output: `data/step3-economic-parquets/`
