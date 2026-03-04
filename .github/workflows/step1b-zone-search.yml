@@ -11,7 +11,7 @@ name: "Step 1B: Zone-Based Fine Search"
 #   - Grid size cap prevents hang/OOM on wide 5D CAISO bounds
 #   - Near-miss parquet saved incrementally so step1d can start immediately
 #
-# Prerequisite: Step 1a/1b (Scored Database) must have run first.
+# Prerequisite: Step 1A (Scored Database) must have run first.
 # Output: data/step1-pfs-parquets/{ISO}_t{XX}_raw_pfs.parquet (per threshold)
 #         data/step1-pfs-parquets/{ISO}_near_miss.parquet (for step1d)
 
@@ -49,7 +49,7 @@ on:
         type: string
 
 env:
-  BRANCH_PREFIX: step1c-zone-search
+  BRANCH_PREFIX: step1b-zone-search
   PYTHONUNBUFFERED: "1"
 
 jobs:
@@ -121,7 +121,7 @@ jobs:
         if [ ! -f "$CACHE" ]; then
           echo "ERROR: Missing scored database for $ISO"
           echo "  Expected: $CACHE"
-          echo "  Run Step 1a/1b (Scored Database) first."
+          echo "  Run Step 1A (Scored Database) first."
           exit 1
         fi
         SIZE=$(du -h "$CACHE" | cut -f1)
@@ -171,7 +171,7 @@ jobs:
           LABEL="${{ matrix.iso }}"
           [ -n "$THRESHOLDS" ] && LABEL="$LABEL thresholds=$THRESHOLDS"
           [ -n "$ZONES" ] && LABEL="$LABEL zones=$ZONES"
-          git commit -m "Step 1c Zone Search: $LABEL — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git commit -m "Step 1B Zone Search: $LABEL — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
         else
           echo "No remaining changes to commit"
         fi
