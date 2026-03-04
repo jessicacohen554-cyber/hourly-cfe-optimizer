@@ -465,6 +465,9 @@ def compute_zone_metrics(med_data, egrid, fossil_mix, demand_data, gen_profiles)
             zt_end = float(zone['end_thresh'])
             if zt_start not in iso_data or zt_end not in iso_data:
                 continue
+            # Skip zones entirely below existing clean floor (no new procurement)
+            if zt_end <= existing_pct:
+                continue
             d_start = iso_data[zt_start]
             d_end = iso_data[zt_end]
             changed = abs(d_end['match_score'] - d_start['match_score']) > 0.01
@@ -521,7 +524,8 @@ def compute_zone_metrics(med_data, egrid, fossil_mix, demand_data, gen_profiles)
                 d = first_z['data_start']
                 start_res = _res_dict(d)
                 start_co2 = co2_at_threshold.get(first_z['t_start'], baseline_co2_mt)
-                # MAC formula: LCOE of new clean = total_cost - gas_cost (no wholesale)
+                # MAC numerator: clean-only LCOE = total_cost - gas_cost
+                # (Step 3 total_cost includes gas RA; subtract to isolate clean resource cost)
                 start_cost_per_mwh = d['total_cost'] - d['gas_cost']
                 start_gas_cost = d['gas_cost']
                 start_gas_mw = d['new_gas_mw']
@@ -531,7 +535,8 @@ def compute_zone_metrics(med_data, egrid, fossil_mix, demand_data, gen_profiles)
             d_end = last_z['data_end']
             end_res = _res_dict(d_end)
             end_co2 = co2_at_threshold.get(last_z['t_end'], baseline_co2_mt)
-            # MAC formula: LCOE of new clean = total_cost - gas_cost (no wholesale)
+            # MAC numerator: clean-only LCOE = total_cost - gas_cost
+            # (Step 3 total_cost includes gas RA; subtract to isolate clean resource cost)
             end_cost_per_mwh = d_end['total_cost'] - d_end['gas_cost']
             end_gas_cost = d_end['gas_cost']
             end_gas_mw = d_end['new_gas_mw']
@@ -557,7 +562,7 @@ def compute_zone_metrics(med_data, egrid, fossil_mix, demand_data, gen_profiles)
                 regional = egrid.get(iso, {})
                 ep_rate = regional.get('gas_co2_lb_per_mwh', 0.0) / 2204.62
 
-            # Newbuild LCOE at run endpoint
+            # Clean-only LCOE at run endpoint (total_cost includes gas RA; subtract it)
             newbuild_lcoe = d_end['total_cost'] - d_end['gas_cost']
             match_frac = end_match / 100.0
             lcoe_per_cfe = newbuild_lcoe / match_frac if match_frac > 0.01 else float('inf')
@@ -590,6 +595,10 @@ def compute_zone_metrics(med_data, egrid, fossil_mix, demand_data, gen_profiles)
                 year_end = SBTI_YEAR_MAP.get(z['t_end'], 2050)
                 midpoint_year = (year_start + year_end) / 2
                 growth_factor = (1 + GROWTH_RATES[iso] / 100) ** (midpoint_year - 2025)
+
+                # Skip zones with no meaningful change (below existing clean floor)
+                if abs(zone_cost_per_mwh) < 0.01 and zone_co2 < 0.001:
+                    continue
 
                 # Interpolated match at zone end
                 interp_match = start_match + (end_match - start_match) * (zi + 1) / n_zones

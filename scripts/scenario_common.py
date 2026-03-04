@@ -1474,14 +1474,20 @@ def build_consequential_queue(scenario_results, egrid, fossil_mix=None, cfr_fn=N
         iso_zones = build_zones(iso=iso) if iso_aware_zones else ZONES
         iso_zone_lists[iso] = iso_zones
 
+        # Existing clean floor for this ISO
+        _existing_pct = sum(GRID_MIX_SHARES.get(iso, {}).values())
+
         for zone in iso_zones:
             t_start, t_end = zone['start'], zone['end']
+            # Skip zones entirely below existing clean floor (no new procurement)
+            if t_end <= _existing_pct:
+                continue
             start_data = iso_data.get(t_start, {})
             end_data = iso_data.get(t_end, {})
             if not start_data or not end_data:
                 continue
 
-            # ── Cost delta: LCOE of new clean resources (no wholesale) ──
+            # ── Cost delta: clean-only LCOE (total_cost includes gas RA; subtract it) ──
             cost_start = _get_total_cost(start_data) - _get_gas_cost_per_mwh(start_data, iso)
             cost_end = _get_total_cost(end_data) - _get_gas_cost_per_mwh(end_data, iso)
             delta_new_clean_cost = cost_end - cost_start
@@ -1531,12 +1537,16 @@ def build_consequential_queue(scenario_results, egrid, fossil_mix=None, cfr_fn=N
             if co2_mt < 0.001:
                 co2_mt = 0.001
 
-            # ── MAC = new clean LCOE delta × demand_mwh / CO2 displaced (tons) ──
+            # ── MAC = clean_resource_LCOE_delta × demand_mwh / CO₂_displaced (tons) ──
             demand_mwh = end_data.get('demand_mwh', 0)
             if demand_mwh <= 0:
                 demand_twh_val = end_data.get('demand_twh', BASE_DEMAND_TWH.get(iso, 400))
                 demand_mwh = demand_twh_val * 1e6
             marginal_mac = abs(delta_new_clean_cost * demand_mwh / (co2_mt * 1e6)) if co2_mt > 0.001 else 9999
+
+            # Skip zones with no meaningful change (below existing clean floor)
+            if abs(delta_new_clean_cost) < 0.001 and co2_mt < 0.001:
+                continue
 
             # ── Resource deltas ──
             delta_resources = {}
