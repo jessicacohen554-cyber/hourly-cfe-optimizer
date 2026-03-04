@@ -664,7 +664,17 @@ const DEMAND_TWH = DATA.metadata.base_demand_twh;
 
 const CHART_DEFAULTS = {
     responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { onClick: () => {}, labels: { color: 'rgba(0,0,0,0.6)', font: { size: 11 } } } },
+    plugins: { legend: { onClick: () => {}, labels: {
+        color: 'rgba(0,0,0,0.6)', font: { size: 11 }, usePointStyle: true,
+        generateLabels: (chart) => Chart.defaults.plugins.legend.labels.generateLabels(chart).map(l => {
+            const ds = chart.data.datasets[l.datasetIndex];
+            if (ds && (ds.type === 'line' || (!ds.type && chart.config.type === 'line'))) {
+                l.pointStyle = 'line';
+                if (ds.borderDash && ds.borderDash.length) l.lineDash = ds.borderDash;
+            }
+            return l;
+        })
+    } } },
 };
 
 function yearLabel(d) { return d.year + '\n(' + (d.threshold >= 99.99 ? '≥99.99' : d.threshold) + '%)'; }
@@ -972,19 +982,24 @@ function renderMacTimeline(iso) {
                 legend: {
                     onClick: () => {},
                     labels: {
-                        color: 'rgba(0,0,0,0.6)', font: { size: 11 },
+                        color: 'rgba(0,0,0,0.6)', font: { size: 11 }, usePointStyle: true,
                         generateLabels: chart => {
-                            const defaultLabels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
-                            defaultLabels.push({
+                            const labels = Chart.defaults.plugins.legend.labels.generateLabels(chart).map(l => {
+                                const ds = chart.data.datasets[l.datasetIndex];
+                                if (ds && ds.type === 'line') { l.pointStyle = 'line'; if (ds.borderDash) l.lineDash = ds.borderDash; }
+                                return l;
+                            });
+                            labels.push({
                                 text: '\u26A0 No emissions displaced',
                                 fillStyle: 'rgba(0,0,0,0.06)',
                                 strokeStyle: 'rgba(0,0,0,0.3)',
                                 lineWidth: 1.5,
                                 lineDash: [3, 2],
+                                pointStyle: 'line',
                                 hidden: false,
                                 index: 99,
                             });
-                            return defaultLabels;
+                            return labels;
                         }
                     }
                 },
@@ -1355,12 +1370,21 @@ function renderMixCharts(iso) {
                 onClick: () => {},
                 labels: {
                     color: 'rgba(0,0,0,0.6)', font: { size: 10 },
+                    usePointStyle: true,
                     filter: item => {
                         // Show representative legend items, not every duplicate
                         if (item.text.includes('(curtailed)') && !item.text.startsWith('Solar'))
                             return false;
                         return true;
-                    }
+                    },
+                    generateLabels: (chart) => Chart.defaults.plugins.legend.labels.generateLabels(chart).map(l => {
+                        const ds = chart.data.datasets[l.datasetIndex];
+                        if (ds && ds.type === 'line') {
+                            l.pointStyle = 'line';
+                            if (ds.borderDash && ds.borderDash.length) l.lineDash = ds.borderDash;
+                        }
+                        return l;
+                    })
                 }
             },
             tooltip: {
@@ -1796,9 +1820,16 @@ function renderFoakNOAKChart() {
                 legend: {
                     onClick: () => {},
                     labels: {
-                        color: 'rgba(0,0,0,0.6)', font: { size: 11 },
-                        // Show only the main lines: Scenario A (1), Scenario B (3), Gas+carbon (5), Gas base (6)
-                        filter: item => [1, 3, 5, 6].includes(item.datasetIndex)
+                        color: 'rgba(0,0,0,0.6)', font: { size: 11 }, usePointStyle: true,
+                        filter: item => [1, 3, 5, 6].includes(item.datasetIndex),
+                        generateLabels: chart => Chart.defaults.plugins.legend.labels.generateLabels(chart).map(l => {
+                            const ds = chart.data.datasets[l.datasetIndex];
+                            if (ds && (ds.type === 'line' || chart.config.type === 'line')) {
+                                l.pointStyle = 'line';
+                                if (ds.borderDash) l.lineDash = ds.borderDash;
+                            }
+                            return l;
+                        })
                     }
                 },
                 tooltip: {

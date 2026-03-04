@@ -96,3 +96,76 @@ var SEMANTIC_COLORS = {
 
 // Resource stack order (for stacked charts — bottom to top)
 var RESOURCE_STACK_ORDER = ['solar', 'wind', 'offshoreWind', 'hydro', 'nuclear', 'ccs', 'battery', 'ldes', 'greenH2', 'geothermal', 'gap'];
+
+// ============================================================================
+// SHARED LEGEND UTILITY — buildLegend()
+// ============================================================================
+// Generates consistent HTML legends with correct swatch types for all pages.
+// Swatch types: 'line', 'band', 'dashed', 'dot-line', 'hatch'
+//
+// Usage:
+//   buildLegend(container, [
+//     { label: 'Solar', color: RESOURCE_COLORS.solar, type: 'band' },
+//     { label: 'Demand', color: '#1A2744', type: 'dashed' },
+//     { label: 'Existing', color: '#888', type: 'line' },
+//   ]);
+//
+// Or inject as innerHTML:
+//   el.innerHTML = buildLegendHTML([...items]);
+// ============================================================================
+
+function buildLegendHTML(items) {
+    return items.map(function(item) {
+        var type = item.type || 'band';
+        var cls = 'swatch-' + type;
+        var style = '';
+        if (type === 'line' || type === 'dot-line') {
+            style = 'background:' + item.color;
+        } else if (type === 'band') {
+            style = 'background:' + item.color;
+        } else if (type === 'dashed') {
+            style = 'border-color:' + item.color;
+        } else if (type === 'hatch') {
+            style = 'color:' + item.color;
+        }
+        return '<span class="chart-legend-item">' +
+            '<span class="' + cls + '" style="' + style + '"></span>' +
+            item.label + '</span>';
+    }).join('');
+}
+
+function buildLegend(container, items) {
+    if (typeof container === 'string') {
+        container = document.getElementById(container);
+    }
+    if (!container) return;
+    container.className = (container.className || '').indexOf('chart-legend') >= 0
+        ? container.className
+        : (container.className + ' chart-legend').trim();
+    container.innerHTML = buildLegendHTML(items);
+}
+
+// Helper: build legend items from a Chart.js chart instance
+// Automatically detects line vs bar datasets and uses correct swatch types
+function buildLegendFromChart(container, chart, options) {
+    options = options || {};
+    var filter = options.filter || function() { return true; };
+    var items = [];
+    chart.data.datasets.forEach(function(ds, i) {
+        if (!filter(ds, i)) return;
+        var type = 'band';
+        if (ds.type === 'line' || (!ds.type && chart.config.type === 'line')) {
+            if (ds.borderDash && ds.borderDash.length) {
+                type = 'dashed';
+            } else if (ds.fill === false || ds.fill === undefined) {
+                type = 'line';
+            }
+        }
+        items.push({
+            label: ds.label,
+            color: ds.borderColor || ds.backgroundColor,
+            type: type
+        });
+    });
+    buildLegend(container, items);
+}
