@@ -1,13 +1,12 @@
-name: "Step 5.6: Update Optimizer Dashboard"
+name: "Step 5.6: Compress Day Profiles"
 
-# Runs scripts to populate the interactive Cost Optimizer dashboard (dashboard.html):
-#   1. step5_compress_day_profiles.py — 24-hour representative day profiles per unique mix
-#   2. step6_generate_shared_data.py — consolidates all results into shared-data.js
+# Computes 24-hour representative day profiles per unique mix:
+#   step5_compress_day_profiles.py — compressed dispatch profiles for dashboard charts
 #
-# iso=ALL fans out parallel matrix jobs for compressed-day, then merge job
-# runs the global shared-data generation and commits everything.
+# iso=ALL fans out parallel matrix jobs, then merge job commits everything.
 # Prerequisite: Steps 3-5 complete (cost optimization + dispatch cache).
-# Output: dashboard/js/shared-data.js, data/step5-post-processing/compressed_day/
+# Output: data/step5-post-processing/compressed_day/
+# Note: Run Step 6 separately afterward to regenerate shared-data.js.
 
 on:
   workflow_dispatch:
@@ -26,15 +25,6 @@ on:
           - NEISO
           - MISO
           - SPP
-      script:
-        description: 'Which script to run'
-        required: true
-        default: 'ALL'
-        type: choice
-        options:
-          - ALL
-          - compressed-day
-          - shared-data
       branch:
         description: 'Branch to checkout'
         required: false
@@ -60,7 +50,6 @@ jobs:
 
   process:
     needs: prepare
-    if: ${{ inputs.script == 'ALL' || inputs.script == 'compressed-day' }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     strategy:
@@ -128,38 +117,18 @@ jobs:
       - name: Create output branch
         run: |
           TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
-          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${{ inputs.script }}-${{ inputs.iso }}"
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${{ inputs.iso }}"
           echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$TARGET_BRANCH"
 
       - name: Download compressed-day artifacts
-        if: ${{ inputs.script == 'ALL' || inputs.script == 'compressed-day' }}
         uses: actions/download-artifact@v4
         with:
           pattern: dashboard-*
           path: data/step5-post-processing/
           merge-multiple: true
-
-      - name: Set up Python
-        if: ${{ inputs.script == 'ALL' || inputs.script == 'shared-data' }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        if: ${{ inputs.script == 'ALL' || inputs.script == 'shared-data' }}
-        run: pip install numpy numba pyarrow pandas scipy
-
-      - name: Ensure JS directory
-        run: mkdir -p dashboard/js
-
-      - name: "Generate Shared Data"
-        if: ${{ inputs.script == 'ALL' || inputs.script == 'shared-data' }}
-        run: |
-          echo "=== Consolidate results into shared-data.js ==="
-          python scripts/step6_generate_shared_data.py
 
       - name: Batched commit and push (per-ISO)
         run: |
@@ -203,7 +172,7 @@ jobs:
             fi
             BATCH_MB=$(du -cm $FILES | tail -1 | cut -f1)
             echo "  Staging ~${BATCH_MB} MB for $iso"
-            git commit -m "Step 6.6 Dashboard: ${iso} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git commit -m "Step 5.6 Day Profiles: ${iso} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             if push_with_retry "$iso"; then
               PUSHED=true
             else
@@ -213,20 +182,18 @@ jobs:
                 FNAME=$(basename "$f")
                 git add -f "$f"
                 if git diff --cached --quiet; then continue; fi
-                git commit -m "Step 6.6 Dashboard: ${iso} ${FNAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                git commit -m "Step 5.6 Day Profiles: ${iso} ${FNAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
                 if push_with_retry "$FNAME"; then PUSHED=true; else git reset HEAD~1; fi
               done
             fi
           done
 
-          # Remaining post-processing + dashboard JS
+          # Remaining post-processing files
           git add -f data/step5-post-processing/ 2>/dev/null || true
-          git add -f dashboard/js/shared-data.js 2>/dev/null || true
-          git add -f data/step5-post-processing/shared_data.json 2>/dev/null || true
           if ! git diff --cached --quiet; then
-            echo "--- Staging remaining files + dashboard JS ---"
-            git commit -m "Step 6.6 Dashboard: shared-data.js — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            if push_with_retry "shared-data-js"; then PUSHED=true; else git reset HEAD~1; fi
+            echo "--- Staging remaining files ---"
+            git commit -m "Step 5.6 Day Profiles: remaining — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            if push_with_retry "remaining"; then PUSHED=true; else git reset HEAD~1; fi
           fi
 
           if [ "$PUSHED" = "false" ]; then

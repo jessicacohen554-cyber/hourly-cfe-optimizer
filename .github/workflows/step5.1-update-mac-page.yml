@@ -1,12 +1,12 @@
 name: "Step 5.1: Update Abatement Page"
 
-# Runs three scripts sequentially to fully populate the Abatement / MAC page:
+# Runs two scripts sequentially to populate the Abatement / MAC page:
 #   1. step5_compute_mac_stats.py  — 6 MAC metrics, ANOVA decomposition, crossover analysis
 #   2. step5_compute_optimal_targets.py — optimal CFE target per ISO via DAC crossover
-#   3. step6_generate_shared_data.py — consolidates all results into shared-data.js
 #
 # Prerequisite: Step 5.0 (CO2) must have run first — MAC depends on CO2 output.
-# Output: dashboard/js/mac-stats-data.js, optimal-target-data.js, shared-data.js
+# Output: dashboard/js/mac-stats-data.js, optimal-target-data.js
+# Note: Run Step 6 separately afterward to regenerate shared-data.js.
 
 on:
   workflow_dispatch:
@@ -34,7 +34,6 @@ on:
           - ALL
           - mac-stats
           - optimal-targets
-          - shared-data
       branch:
         description: 'Branch to checkout'
         required: false
@@ -97,26 +96,20 @@ jobs:
           mkdir -p dashboard/js
 
       # ════════════════════════════════════════════════════════════════════
-      # Sequential: MAC Stats → Optimal Targets → Shared Data
+      # Sequential: MAC Stats → Optimal Targets
       # ════════════════════════════════════════════════════════════════════
 
-      - name: "1/3 — Compute MAC Statistics"
+      - name: "1/2 — Compute MAC Statistics"
         if: ${{ inputs.script == 'ALL' || inputs.script == 'mac-stats' }}
         run: |
           echo "=== MAC Statistics (6 metrics, ANOVA, crossover) ==="
           python scripts/step5_compute_mac_stats.py
 
-      - name: "2/3 — Compute Optimal Targets"
+      - name: "2/2 — Compute Optimal Targets"
         if: ${{ inputs.script == 'ALL' || inputs.script == 'optimal-targets' }}
         run: |
           echo "=== Optimal CFE Targets (DAC crossover analysis) ==="
           python scripts/step5_compute_optimal_targets.py
-
-      - name: "3/3 — Generate Shared Data"
-        if: ${{ inputs.script == 'ALL' || inputs.script == 'shared-data' }}
-        run: |
-          echo "=== Consolidate results into shared-data.js ==="
-          python scripts/step6_generate_shared_data.py
 
       - name: Batched commit and push
         run: |
@@ -166,7 +159,6 @@ jobs:
           done
 
           # Batch 2: Non-ISO post-processing files (JSON aggregates)
-          git add -f data/step5-post-processing/shared_data.json 2>/dev/null || true
           git add -f data/step5-post-processing/optimal_targets.json 2>/dev/null || true
           # Catch any remaining non-ISO files
           git add -f data/step5-post-processing/ 2>/dev/null || true
@@ -179,7 +171,6 @@ jobs:
           # Batch 3: Dashboard JS files
           git add -f dashboard/js/mac-stats-data.js 2>/dev/null || true
           git add -f dashboard/js/optimal-target-data.js 2>/dev/null || true
-          git add -f dashboard/js/shared-data.js 2>/dev/null || true
           if ! git diff --cached --quiet; then
             echo "--- Staging dashboard JS ---"
             git commit -m "Step 6.1 MAC: dashboard JS — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
