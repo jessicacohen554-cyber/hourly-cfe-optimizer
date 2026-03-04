@@ -13,7 +13,7 @@ name: "Step 7: Scenario Comparison"
 # Each scenario script saves per-ISO JSON files (scenario_a_CAISO.json, etc.)
 # so parallel matrix jobs don't clobber each other.
 #
-# Prerequisite: Step 5.0 (CO2) should have run first.
+# Prerequisite: Step 5A (CO2) should have run first.
 # Output: data/step5-post-processing/scenario_*.json, dashboard/js/scenario-comparison-data.js
 
 on:
@@ -50,7 +50,7 @@ on:
         type: string
 
 env:
-  BRANCH_PREFIX: step5-3-scenarios
+  BRANCH_PREFIX: step7-scenarios
 
 jobs:
   # ====================================================================
@@ -316,7 +316,7 @@ jobs:
             fi
             BATCH_MB=$(du -cm $FILES | tail -1 | cut -f1)
             echo "  Staging ~${BATCH_MB} MB for $iso"
-            git commit -m "Step 6.3 Scenarios: ${iso} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git commit -m "Step 7 Scenarios: ${iso} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             if push_with_retry "$iso"; then
               PUSHED=true
             else
@@ -326,7 +326,7 @@ jobs:
                 FNAME=$(basename "$f")
                 git add -f "$f"
                 if git diff --cached --quiet; then continue; fi
-                git commit -m "Step 6.3 Scenarios: ${iso} ${FNAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                git commit -m "Step 7 Scenarios: ${iso} ${FNAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
                 if push_with_retry "$FNAME"; then PUSHED=true; else git reset HEAD~1; fi
               done
             fi
@@ -337,7 +337,7 @@ jobs:
           git add -f dashboard/js/scenario-comparison-data.js 2>/dev/null || true
           if ! git diff --cached --quiet; then
             echo "--- Staging remaining files + dashboard JS ---"
-            git commit -m "Step 6.3 Scenarios: dashboard JS — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git commit -m "Step 7 Scenarios: dashboard JS — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             if push_with_retry "dashboard-js"; then PUSHED=true; else git reset HEAD~1; fi
           fi
 
