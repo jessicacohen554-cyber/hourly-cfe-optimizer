@@ -199,20 +199,44 @@ def compute_storage_economics(iso, step3_table, lmp_spreads):
     # For battery: buy at offpeak, sell at peak, earn spread × RTE
     # Using LMP peak-offpeak spread as proxy
 
-    # Build spread array (one per row, keyed by threshold)
-    # For vectorized efficiency, compute spread per unique (threshold, fuel_level)
-    # and map back to rows
-    spread_arr = np.zeros(n, dtype=np.float64)
-    for i in range(n):
-        # Extract fuel level from scenario key (format: LMLH_M_M_H1_X etc.)
-        # The fuel level is typically at position 4 in the scenario key
-        scen = scenarios[i]
-        parts = scen.split('_') if isinstance(scen, str) else []
-        fuel_lvl = 'Medium'  # Default
-        if len(parts) > 4:
-            fuel_map = {'L': 'Low', 'M': 'Medium', 'H': 'High'}
-            fuel_lvl = fuel_map.get(parts[4], 'Medium')
-        spread_arr[i] = get_spread_for_row(lmp_spreads, float(thresholds[i]), fuel_lvl)
+    # Build spread array via INDEX MAPPING — O(unique_combos) lookups, not O(n).
+    # There are at most ~63 unique (threshold, fuel_level) combos even with
+    # 122k+ rows, so the expensive dict lookups happen <100 times.
+    if lmp_spreads is not None:
+        # Extract fuel level index from scenario key.
+        # Scenario format: "LMLH_M_M_H1_X" — fuel char at position after 4th '_'
+        # Map: L=0, M=1, H=2 → index into fuel_names
+        fuel_names = ['Low', 'Medium', 'High']
+        fuel_char_to_idx = {'L': 0, 'M': 1, 'H': 2}
+
+        # Parse fuel index per unique scenario (not per row)
+        unique_scenarios = list(set(scenarios))
+        scen_to_fuel_idx = {}
+        for s in unique_scenarios:
+            parts = s.split('_') if isinstance(s, str) else []
+            scen_to_fuel_idx[s] = fuel_char_to_idx.get(parts[4], 1) if len(parts) > 4 else 1
+
+        # Build fuel_idx array via dict lookup on scenarios list
+        fuel_idx = np.array([scen_to_fuel_idx.get(s, 1) for s in scenarios], dtype=np.int8)
+
+        # Get unique thresholds
+        unique_thresholds = np.unique(thresholds)
+
+        # Build spread table: shape (n_thresholds, 3) indexed by [thr_idx, fuel_idx]
+        spread_table = np.full((len(unique_thresholds), 3), 20.0, dtype=np.float64)
+        thr_to_idx = {float(t): i for i, t in enumerate(unique_thresholds)}
+        for ti, thr in enumerate(unique_thresholds):
+            for fi, fname in enumerate(fuel_names):
+                spread_table[ti, fi] = get_spread_for_row(lmp_spreads, float(thr), fname)
+
+        # Map threshold values to indices (vectorized via searchsorted)
+        thr_idx = np.searchsorted(unique_thresholds, thresholds)
+        thr_idx = np.clip(thr_idx, 0, len(unique_thresholds) - 1)
+
+        # Index into spread table — fully vectorized
+        spread_arr = spread_table[thr_idx, fuel_idx]
+    else:
+        spread_arr = np.full(n, 20.0, dtype=np.float64)
 
     # Battery arbitrage: daily cycle, earn spread × RTE on each cycle
     bat4_arb = 365 * BATTERY_DURATION_HOURS * BATTERY_EFFICIENCY * spread_arr * bat4_mw
