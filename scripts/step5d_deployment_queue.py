@@ -34,7 +34,11 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE_DIR)
 sys.path.insert(0, os.path.join(BASE_DIR, 'scripts'))
 
-from pipeline_config import OUTPUT_THRESHOLDS as _ALL_THRESHOLDS
+from pipeline_config import (
+    OUTPUT_THRESHOLDS as _ALL_THRESHOLDS,
+    DEMAND_GROWTH_RATES as _DEMAND_GROWTH_RATES_PC,
+    THRESHOLD_TARGET_YEARS as _THRESHOLD_TARGET_YEARS_PC,
+)
 
 # Consequential queue only operates at >= 50% (below 50% is pre-SBTi baseline)
 THRESHOLDS = [t for t in _ALL_THRESHOLDS if t >= 50]
@@ -92,10 +96,8 @@ for _i in range(len(_zone_thresholds) - 1):
         'end_thresh': _te,
     })
 
-GROWTH_RATES = {
-    'CAISO': 1.8, 'ERCOT': 3.5, 'PJM': 2.4, 'NYISO': 1.2, 'NEISO': 1.0,
-    'MISO': 2.2, 'SPP': 1.8,
-}
+# Demand growth rates (Medium, as percentages) — derived from pipeline_config
+GROWTH_RATES = {iso: _DEMAND_GROWTH_RATES_PC[iso]['Medium'] * 100 for iso in _DEMAND_GROWTH_RATES_PC}
 
 # Pre-compute threshold-to-string mapping (avoids repeated str() calls in loops)
 THRESHOLD_STRS = {t: str(int(t)) if t == int(t) else str(t) for t in THRESHOLDS}
@@ -114,16 +116,8 @@ def cached_fossil_retirement(iso, threshold_pct, emission_rates, fossil_mix,
             demand_growth_factor=demand_growth_factor)
     return _fossil_retirement_cache[cache_key]
 
-# Import canonical threshold-year mapping from Step 3
-try:
-    from pipeline_config import THRESHOLD_TARGET_YEARS
-    SBTI_YEAR_MAP = THRESHOLD_TARGET_YEARS
-except ImportError:
-    SBTI_YEAR_MAP = {
-        50: 2030, 55: 2031, 60: 2033, 65: 2034, 70: 2035, 75: 2036, 80: 2037,
-        85: 2038, 87.5: 2039, 90: 2040, 92.5: 2043,
-        95: 2045, 97.5: 2048, 99: 2049, 99.5: 2049, 99.9: 2050, 100: 2050,
-    }
+# Canonical threshold-year mapping from pipeline_config (already imported)
+SBTI_YEAR_MAP = _THRESHOLD_TARGET_YEARS_PC
 
 
 # ========== DISPATCH CACHE CO₂ ACCOUNTING ==========
