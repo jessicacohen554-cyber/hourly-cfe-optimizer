@@ -813,11 +813,11 @@ def parse_args():
     parser.add_argument('--clear', action='store_true',
                         help='Clear existing step2-ef-parquets for the target ISO(s) '
                              'before running. Removes stale EF files from previous runs.')
-    parser.add_argument('--storage-source', type=str, default='step1d',
+    parser.add_argument('--storage-source', type=str, default='step1d2',
                         choices=['step1d', 'step1d2'],
                         help='Which storage-refined parquets to use. '
-                             'step1d = current caps (default), '
-                             'step1d2 = 2050-oriented enhanced caps.')
+                             'step1d2 = enhanced caps (default), '
+                             'step1d = legacy caps.')
     return parser.parse_args()
 
 
