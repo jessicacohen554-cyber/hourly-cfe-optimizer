@@ -8,9 +8,11 @@ Track 2 (newbuild / NB): hydro=0 mixes, uprates ON
   Filtered to hydro=0 mixes.
   Purpose: What does hourly matching incentivize from scratch?
 
-Track 3 (cost-to-replace / CTR): all mixes (hydro≤existing), uprates OFF
+Track 3 (cost-to-replace / CTR): nuclear retirement scenario, uprates OFF
   Source: per-ISO EF parquets (data/step2-ef-parquets/step2_ef_{ISO}_t{T}.parquet)
-  Purpose: Cost to replace existing clean generation
+  Purpose: Cost if existing nuclear retires and must be replaced with new-build.
+  All other existing clean (hydro, solar, wind, geothermal) continues operating.
+  CAISO: geothermal portion of clean_firm kept at wholesale (32.4% of clean_firm energy).
 
 Checkpoint: Parquet-based. After each (iso, track) completes, results are
   appended to track_scenarios.parquet. On resume, completed (iso, track) pairs
@@ -998,10 +1000,19 @@ def main():
 
         # Greenfield existing override: all clean resources zeroed
         greenfield_all = {'clean_firm': 0, 'solar': 0, 'wind': 0, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 0}
-        # CTR override: hydro stays at existing floor, everything else zeroed
+        # CTR override: nuclear retires, all other existing clean stays
+        # Only clean_firm (nuclear) is zeroed. Hydro, solar, wind, CCS keep existing shares.
+        # CAISO special case: clean_firm includes geothermal (32.4% of clean_firm energy).
+        # Keep geothermal portion at wholesale pricing; only nuclear portion retires.
         existing_shares = GRID_MIX_SHARES[iso]
-        greenfield_keep_hydro = {
-            'clean_firm': 0, 'solar': 0, 'wind': 0, 'offshore_wind': 0, 'ccs_ccgt': 0,
+        CAISO_GEO_ENERGY_FRACTION = 0.324  # From eGRID: 30% capacity × CF 1.0 / blended CF
+        cf_keep = existing_shares['clean_firm'] * CAISO_GEO_ENERGY_FRACTION if iso == 'CAISO' else 0
+        nuclear_retirement = {
+            'clean_firm': cf_keep,
+            'solar': existing_shares['solar'],
+            'wind': existing_shares['wind'],
+            'offshore_wind': existing_shares.get('offshore_wind', 0),
+            'ccs_ccgt': existing_shares.get('ccs_ccgt', 0),
             'hydro': existing_shares['hydro'],
         }
 
@@ -1033,7 +1044,7 @@ def main():
         elif args.track in ('nb', 'both'):
             print(f"  {iso:>6}   newbuild: skipped (in parquet)")
 
-        # Track 3: cost-to-replace / CTR (hydro at existing floor, everything else zeroed, uprates OFF)
+        # Track 3: cost-to-replace / CTR (nuclear retires, all other existing clean stays, uprates OFF)
         if args.track in ('ctr', 'both') and (iso, 'cost_to_replace') not in completed_tracks:
             # Compute 2050 high-demand hydro floor
             hydro_existing_share = GRID_MIX_SHARES[iso]['hydro']
@@ -1068,13 +1079,13 @@ def main():
             if N_ctr > _CHUNK_THRESHOLD:
                 ctr_data, ctr_arch, ctr_eval = _run_track_chunked(
                     'cost_to_replace', iso, ctr_arrays, demand_twh, combos,
-                    uprate_cap_override=0, existing_override=greenfield_keep_hydro)
+                    uprate_cap_override=0, existing_override=nuclear_retirement)
                 del ctr_arrays
                 gc.collect()
             else:
                 ctr_data, ctr_arch = run_track(
                     'cost_to_replace', iso, ctr_arrays, demand_twh, combos,
-                    uprate_cap_override=0, existing_override=greenfield_keep_hydro)
+                    uprate_cap_override=0, existing_override=nuclear_retirement)
                 ctr_eval = ctr_arrays
 
             # Save to parquet immediately
@@ -1084,7 +1095,7 @@ def main():
             if ctr_arch:
                 ctr_dg = run_track_demand_growth(
                     'cost_to_replace', iso, ctr_eval, ctr_arch, combos,
-                    uprate_cap_override=0, existing_override=greenfield_keep_hydro)
+                    uprate_cap_override=0, existing_override=nuclear_retirement)
                 dg_rows = flatten_dg_rows(iso, 'cost_to_replace', ctr_dg)
                 if dg_rows:
                     append_to_parquet(dg_rows, PQ_DG_PATH)
