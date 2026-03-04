@@ -135,7 +135,7 @@ jobs:
             fi
           fi
 
-          # ── Step 1d: storage parquets ──
+          # ── Step 1C: storage parquets ──
           if [ "${{ inputs.clear_step1d }}" = "true" ]; then
             DIR="data/step1d-storage-parquets"
             if [ "$ISO" = "ALL" ]; then
@@ -165,7 +165,7 @@ jobs:
             fi
           fi
 
-          # ── Step 5: post-processing (top-level files only) ──
+          # ── Step 5-8: post-processing (top-level files only) ──
           if [ "${{ inputs.clear_step5 }}" = "true" ]; then
             DIR="data/step5-post-processing"
             if [ "$ISO" = "ALL" ]; then
@@ -176,7 +176,7 @@ jobs:
             fi
           fi
 
-          # ── Step 5: CO2 results ──
+          # ── Step 5A: CO2 results ──
           if [ "${{ inputs.clear_step5_co2 }}" = "true" ]; then
             DIR="data/step5-post-processing/co2_results"
             if [ "$ISO" = "ALL" ]; then
@@ -186,7 +186,7 @@ jobs:
             fi
           fi
 
-          # ── Step 5: dispatch cache ──
+          # ── Step 4: dispatch cache ──
           if [ "${{ inputs.clear_step5_dispatch }}" = "true" ]; then
             DIR="data/step5-post-processing/dispatch_cache"
             if [ "$ISO" = "ALL" ]; then
@@ -196,7 +196,7 @@ jobs:
             fi
           fi
 
-          # ── Step 5: LMP ──
+          # ── Step 5B: LMP ──
           if [ "${{ inputs.clear_step5_lmp }}" = "true" ]; then
             DIR="data/step5-post-processing/lmp"
             if [ "$ISO" = "ALL" ]; then
@@ -206,7 +206,7 @@ jobs:
             fi
           fi
 
-          # ── Step 8: Wright's Law ──
+          # ── Step 8D: Wright's Law ──
           if [ "${{ inputs.clear_step8 }}" = "true" ]; then
             DIR="data/step8-wrights-law"
             # No ISO dimension — always clear all files

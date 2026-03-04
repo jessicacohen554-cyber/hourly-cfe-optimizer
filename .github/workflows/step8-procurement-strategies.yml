@@ -1,4 +1,4 @@
-name: "Step 5.4: Update Procurement Page"
+name: "Step 8: Procurement Strategies"
 
 # Computes procurement strategy comparison for the Procurement Strategy page.
 # 10 strategy variants across 3 families:
@@ -58,7 +58,7 @@ on:
         type: string
 
 env:
-  BRANCH_PREFIX: step5-4-procurement
+  BRANCH_PREFIX: step8-procurement
 
 jobs:
   prepare:
@@ -319,7 +319,7 @@ jobs:
             fi
             BATCH_MB=$(du -cm $FILES | tail -1 | cut -f1)
             echo "  Staging ~${BATCH_MB} MB for $iso"
-            git commit -m "Step 6.4 Procurement: ${iso} (${{ inputs.mode }}) — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git commit -m "Step 8 Procurement: ${iso} (${{ inputs.mode }}) — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             if push_with_retry "$iso"; then
               PUSHED=true
             else
@@ -329,7 +329,7 @@ jobs:
                 FNAME=$(basename "$f")
                 git add -f "$f"
                 if git diff --cached --quiet; then continue; fi
-                git commit -m "Step 6.4 Procurement: ${iso} ${FNAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                git commit -m "Step 8 Procurement: ${iso} ${FNAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
                 if push_with_retry "$FNAME"; then PUSHED=true; else git reset HEAD~1; fi
               done
             fi
@@ -340,7 +340,7 @@ jobs:
           git add -f dashboard/js/ 2>/dev/null || true
           if ! git diff --cached --quiet; then
             echo "--- Staging remaining files + dashboard JS ---"
-            git commit -m "Step 6.4 Procurement: dashboard JS (${{ inputs.mode }}) — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git commit -m "Step 8 Procurement: dashboard JS (${{ inputs.mode }}) — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             if push_with_retry "dashboard-js"; then PUSHED=true; else git reset HEAD~1; fi
           fi
 

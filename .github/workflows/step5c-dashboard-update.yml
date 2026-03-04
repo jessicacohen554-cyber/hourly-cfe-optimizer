@@ -1,4 +1,4 @@
-name: "Step 5.6: Compress Day Profiles"
+name: "Step 5C: Compress Day Profiles"
 
 # Computes 24-hour representative day profiles per unique mix:
 #   step5c_compress_day_profiles.py — compressed dispatch profiles for dashboard charts
@@ -6,7 +6,7 @@ name: "Step 5.6: Compress Day Profiles"
 # iso=ALL fans out parallel matrix jobs, then merge job commits everything.
 # Prerequisite: Steps 3-5 complete (cost optimization + dispatch cache).
 # Output: data/step5-post-processing/compressed_day/
-# Note: Run Step 6 separately afterward to regenerate shared-data.js.
+# Note: Run Step 9 separately afterward to regenerate shared-data.js.
 
 on:
   workflow_dispatch:
@@ -32,7 +32,7 @@ on:
         type: string
 
 env:
-  BRANCH_PREFIX: step5-6-dashboard
+  BRANCH_PREFIX: step5c-dashboard
 
 jobs:
   prepare:
@@ -166,7 +166,7 @@ jobs:
             fi
             BATCH_MB=$(du -cm $FILES | tail -1 | cut -f1)
             echo "  Staging ~${BATCH_MB} MB for $iso"
-            git commit -m "Step 5.6 Day Profiles: ${iso} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git commit -m "Step 5C Day Profiles: ${iso} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             if push_with_retry "$iso"; then
               PUSHED=true
             else
@@ -176,7 +176,7 @@ jobs:
                 FNAME=$(basename "$f")
                 git add -f "$f"
                 if git diff --cached --quiet; then continue; fi
-                git commit -m "Step 5.6 Day Profiles: ${iso} ${FNAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                git commit -m "Step 5C Day Profiles: ${iso} ${FNAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
                 if push_with_retry "$FNAME"; then PUSHED=true; else git reset HEAD~1; fi
               done
             fi
@@ -186,7 +186,7 @@ jobs:
           git add -f data/step5-post-processing/ 2>/dev/null || true
           if ! git diff --cached --quiet; then
             echo "--- Staging remaining files ---"
-            git commit -m "Step 5.6 Day Profiles: remaining — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git commit -m "Step 5C Day Profiles: remaining — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             if push_with_retry "remaining"; then PUSHED=true; else git reset HEAD~1; fi
           fi
 
