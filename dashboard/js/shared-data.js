@@ -4666,7 +4666,7 @@ const GROWTH_COUNTERFACTUAL = {
 
 // ============================================================================
 // CO2 DISPATCH DATA — per-threshold CO2 abatement + fossil displacement
-// Source: step5_compute_co2.py dispatch-stack retirement model
+// Source: step5a_compute_co2.py dispatch-stack retirement model
 // abated_mt = total CO2 abated (Mt), rate = emission rate of displaced fossil (tCO2/MWh)
 // matched_twh = clean energy matched to demand (TWh)
 // coal/oil/gas_disp = displaced fossil generation (TWh)
@@ -4845,7 +4845,7 @@ const DG_MAC = {"CAISO": {"50": {"High": {"mac_p10": 1039.6, "mac_p50": 1384.4, 
 
 // ============================================================================
 // OPTIMAL CFE TARGETS — MAC × DAC crossover analysis
-// Source: step5_compute_optimal_targets.py → optimal_targets.json
+// Source: step6b_compute_optimal_targets.py → optimal_targets.json
 // Crossover range = 3 grid cost tiers × 3 DAC scenarios = 9 combos
 // No-regrets: minimum resource floor across crossover range × L/M/H demand growth
 // ============================================================================

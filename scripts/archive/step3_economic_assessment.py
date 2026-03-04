@@ -12,7 +12,7 @@ existing results, not a separate track.
 
 Methodology notes:
   - Revenue streams are computed independently using summary LMP stats
-    (peak/offpeak/avg) from step5_compute_lmp_prices.py.
+    (peak/offpeak/avg) from step5b_compute_lmp_prices.py.
   - Ancillary service hours are capped at (8760 - cycling_hours) to prevent
     double-counting with arbitrage. Within available hours, regulation is
     allocated first (higher value), spinning fills the remainder.
@@ -331,7 +331,7 @@ def compute_storage_economics(iso, step3_table, lmp_spreads):
     h2_deg_rate = h2_deg_params['cycles_per_year'] / h2_deg_params['cycle_life_80pct'] * h2_deg_params['replacement_fraction']
 
     # Import LCOE tables for storage cost reference
-    from step3_cost_optimization import LCOE_TABLES
+    from step3a_cost_optimization import LCOE_TABLES
 
     # Get Medium LCOE for storage ($/MWh-capacity)
     bat4_lcoe = LCOE_TABLES.get('battery', {}).get('Medium', {}).get(iso, 5.0)

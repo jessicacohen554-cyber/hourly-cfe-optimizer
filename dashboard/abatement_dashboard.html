@@ -405,7 +405,7 @@ function dacDatasets() {
 function computeCrossover(iso) {
     if (crossoverCache[iso]) return crossoverCache[iso];
 
-    // Prefer pre-computed smooth crossover from step5_compute_optimal_targets.py
+    // Prefer pre-computed smooth crossover from step6b_compute_optimal_targets.py
     var ot = typeof OPTIMAL_TARGETS !== 'undefined' ? OPTIMAL_TARGETS : null;
     if (ot && ot[iso] && ot[iso].crossover_range) {
         var rng = ot[iso].crossover_range;
