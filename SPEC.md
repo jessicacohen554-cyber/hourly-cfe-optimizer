@@ -5,6 +5,37 @@
 
 ## Current Status (Mar 4, 2026)
 
+### Storage Unit Standardization (Completed — Mar 4, 2026)
+
+**Bug**: Storage grid levels were 8,760× too large. The PFS kernel normalizes demand so `sum(demand_arr) = 1.0` over 8,760 hours, making `bp/100` a fraction of **annual** demand. But grid levels were labeled and calibrated as "% of avg hourly demand" — e.g., `bat4=1%` was treated as 1% of annual demand = 2,240 GWh for CAISO, when the intent was 1% of hourly demand = 25.6 MWh. Even the smallest non-zero grid point saturated the battery immediately.
+
+**Fix**: Standardized all storage units to **% of annual demand** — the same unit used by all other resources (solar, wind, clean_firm). Changes across 8 files:
+
+| File | Change |
+|------|--------|
+| `step1_pfs_generator.py` | Recalibrated coarse + fine grid level arrays |
+| `step1d_fine_storage.py` | Recalibrated V1 MAX caps, FULL grids, FINE_STEP, floor values |
+| `step1d2_enhanced_storage.py` | Recalibrated V2 MAX caps + FULL grids |
+| `step3_cost_optimization.py` | LCOE prices ×8760 (remove `/8760` from formula); FOAK/NOAK tables ×8760; peak capacity formula: `pct/100 * demand_mwh / duration_hr * cc` |
+| `step3_track_nb_ctr.py` | Peak capacity formula: `(8760/dur)` factor for storage terms |
+| `scenario_common.py` | LCOE tables ×8760; peak capacity in 3 locations (scalar, numpy, numba) |
+| `pipeline_config.py` | STORAGE_MAX, STORAGE_MAX_V2, STORAGE_FINE_RESOLUTION |
+| `dispatch_utils.py` | Comments only — formulas unchanged (same normalized space) |
+
+**Physical reference (CAISO, 224 TWh):**
+| Grid % | Energy (MWh) | Power 4hr (MW) | vs CAISO fleet |
+|--------|-------------|----------------|----------------|
+| 0.002% | 4,480 | 1,120 | 11% of fleet |
+| 0.01% | 22,400 | 5,600 | 56% |
+| 0.02% | 44,800 | 11,200 | ≈ fleet |
+| 0.05% | 112,000 | 28,000 | 2.8× fleet |
+
+**Cost verification**: 0.01% bat4 CAISO Med = 0.0001 × $41,610 = $4.16/MWh. Physical: 22.4M kWh × $295/kWh × 0.127 CRF+FOM × 1.11 regional = $924M/yr ÷ 224 TWh = $4.13/MWh. ✓
+
+**All existing step1/step1d parquets invalidated** — must regenerate via pipeline rerun.
+
+---
+
 ### Step 1D.2 Enhanced Storage Model + Economic Assessment (In Progress)
 
 **Branch:** `claude/advanced-tech-storage-analysis-0bVl5`
@@ -13,12 +44,14 @@
 
 **Key Decisions:**
 - 1D.2 uses existing near-miss cache (100k mixes/ISO) — no 1A-1C rerun needed
-- Research-informed 2050 caps: bat4=5%, bat8=10%, LDES=25%, H2=25% (see §16.2)
+- Research-informed 2050 caps (% of annual demand): bat4=0.10%, bat8=0.15%, LDES=1.0%, H2=3.0% (see §16.2)
+- V1 conservative caps: bat4=0.06%, bat8=0.08%, LDES=0.5%, H2=2.0%
 - Phased dispatch: V1 same kernels + higher caps, V2 enhanced multi-service (later)
 - Economic assessment = enhanced lens on Tracks 1-3, NOT a separate Track 4
 - Dashboard integration deferred — focus on compute infrastructure first
 
 **Status:**
+- [x] Storage unit standardization (% of annual demand everywhere)
 - [ ] Step 1D.2 script (`step1d2_enhanced_storage.py`)
 - [ ] Economic assessment constants in `pipeline_config.py`
 - [ ] Step 2 integration (--source flag for 1D.2 parquets)
@@ -4498,11 +4531,11 @@ Green H2 FOAK ($/MWh-cap, annualized capacity cost) — ~1.30× High:
 
 **Bug**: Step 3 priced storage as `bat_pct / 100.0 × LCOS`, where `bat_pct/100` is a normalized energy capacity parameter (energy capacity as fraction of avg hourly demand MWh). LCOS is $/MWh of *discharged* energy. The product gives the wrong units — it treats the capacity sizing parameter as an annual dispatch fraction, overpricing storage by 10-50× depending on utilization assumptions. Example: bat_pct=3, LCOS=$102 → $3.06/MWh, but actual annual cost of a 900 MW/3.6 GWh battery for CAISO is ~$0.28/MWh of demand.
 
-**Fix**: Replace LCOS tables with annualized capacity cost per MWh-cap, matching the coefficient model:
+**Fix**: Replace LCOS tables with annualized capacity cost per % of annual demand, matching the coefficient model:
 ```
-price = 1000 × (CAPEX_kWh × CRF + FOM_kW / duration) / 8760 × regional_mult
+price = CAPEX_kWh × (CRF + FOM_rate) × 1000 × regional_mult
 ```
-Now `bat_pct / 100.0 × price` directly gives the annual fixed cost of that storage capacity as a fraction of total demand cost ($/MWh of demand). Eliminates cycling assumptions — prices pure capacity, not utilization.
+Now `bat_pct / 100.0 × price` directly gives the annual fixed cost of that storage capacity as a fraction of total demand cost ($/MWh of demand). Storage uses the same unit (% of annual demand) as all other resources. Eliminates cycling assumptions — prices pure capacity, not utilization.
 
 **Financial parameters**:
 - WACC: 8%
@@ -4537,7 +4570,7 @@ Now `bat_pct / 100.0 × price` directly gives the annual fixed cost of that stor
 - LDES: 1.40× High capacity cost per ISO
 - H2: 1.30× High capacity cost per ISO
 
-**Propagated to**: `step3_cost_optimization.py`. Other files (`scenario_common.py`, `step6_scenario_comparison.py`) may need separate update if they have independent LCOE_TABLES copies.
+**Propagated to**: `step3_cost_optimization.py`, `scenario_common.py` (has independent LCOE_TABLES copy — updated Mar 4, 2026). All storage LCOE/FOAK/NOAK tables now use % of annual demand unit across all files.
 
 **Supersedes**: Prior LCOS values in LCOE_TABLES for battery, battery8, ldes, h2. Line 3764 of this file updated — batteries now have learning curves too (previously listed as "already mature — static costs").
 
@@ -4557,21 +4590,23 @@ Step 1D.2 addresses gap (1) with research-informed 2050 capacity caps. The Econo
 
 ### §16.2 Storage Capacity Caps (Research-Informed, 2050 Horizon)
 
+**NOTE**: All storage values are in **% of annual demand** (energy capacity as fraction of annual demand). Same unit as all other resources.
+
 **Current (Step 1D):**
-| Storage Type | Max (% of demand) | Rationale |
-|---|---|---|
-| Battery 4hr | 0.5% | Near-term deployment |
-| Battery 8hr | 1.0% | Near-term deployment |
-| LDES | 5.0% | Early iron-air |
-| H2 | 25.0% | Seasonal storage |
+| Storage Type | Max (% of annual demand) | CAISO equivalent | Rationale |
+|---|---|---|---|
+| Battery 4hr | 0.06% | 134 GWh / 33.6 GW | Near-term deployment |
+| Battery 8hr | 0.08% | 179 GWh / 22.4 GW | Near-term deployment |
+| LDES | 0.5% | 1,120 GWh / 11.2 GW | Early iron-air |
+| H2 | 2.0% | 4,480 GWh / 4.5 GW | Seasonal storage |
 
 **Step 1D.2 (2050-oriented):**
-| Storage Type | Max (% of demand) | Rationale |
-|---|---|---|
-| Battery 4hr | 5.0% | NREL: 200 GW / ~456 GW avg US load. 4hr daily cycling at 85% RTE → ~6% of demand served. |
-| Battery 8hr | 10.0% | DOE: 8hr battery key for deep decarb. Longer duration enables overnight coverage. |
-| LDES | 25.0% | DOE: 225-460 GW LDES by 2050. Iron-air at 100hr, 7-day window, 50% RTE → covers weekly variability. |
-| H2 | 25.0% | Unchanged — seasonal storage caps already generous. |
+| Storage Type | Max (% of annual demand) | CAISO equivalent | Rationale |
+|---|---|---|---|
+| Battery 4hr | 0.10% | 224 GWh / 56 GW | NREL: 200 GW reference case |
+| Battery 8hr | 0.15% | 336 GWh / 42 GW | DOE: 8hr key for deep decarb overnight coverage |
+| LDES | 1.0% | 2,240 GWh / 22.4 GW | DOE: 225-460 GW LDES by 2050 |
+| H2 | 3.0% | 6,720 GWh / 6.7 GW | Seasonal storage |
 
 **Research basis:**
 - NREL Storage Futures Study: 125-680 GW total storage by 2050, 200 GW / 1,200 GWh reference case

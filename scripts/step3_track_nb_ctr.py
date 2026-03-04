@@ -704,7 +704,9 @@ def _precompute_dg_coefficients(iso, arch_arrays, demand_twh,
 
     # Pre-compute peak capacity coefficient (invariant factor for clean_peak_mw / avg_demand_mw)
     # clean_peak_mw = peak_coeff_per_avg_mw * avg_demand_mw
-    # where peak_coeff_per_avg_mw is independent of demand growth
+    # where peak_coeff_per_avg_mw is independent of demand growth.
+    # Storage: pct is % of annual demand (energy), convert to power via 8760/duration.
+    # When multiplied by avg_demand_mw: pct/100 * (8760/dur) * avg_mw = pct/100 * demand_mwh / dur.
     peak_coeff = (
         cf_pct / 100.0 * PEAK_CAPACITY_CREDITS['clean_firm'] +
         sol_pct / 100.0 * PEAK_CAPACITY_CREDITS['solar'] +
@@ -712,10 +714,10 @@ def _precompute_dg_coefficients(iso, arch_arrays, demand_twh,
         osw_pct / 100.0 * PEAK_CAPACITY_CREDITS['offshore_wind'] +
         ccs_pct / 100.0 * PEAK_CAPACITY_CREDITS['ccs_ccgt'] +
         hyd_pct / 100.0 * PEAK_CAPACITY_CREDITS['hydro'] +
-        bat_pct / 100.0 * PEAK_CAPACITY_CREDITS['battery'] +
-        bat8_pct / 100.0 * PEAK_CAPACITY_CREDITS['battery8'] +
-        ldes_pct / 100.0 * PEAK_CAPACITY_CREDITS['ldes'] +
-        h2_pct / 100.0 * PEAK_CAPACITY_CREDITS['h2']
+        bat_pct / 100.0 * (8760.0 / 4.0) * PEAK_CAPACITY_CREDITS['battery'] +
+        bat8_pct / 100.0 * (8760.0 / 8.0) * PEAK_CAPACITY_CREDITS['battery8'] +
+        ldes_pct / 100.0 * (8760.0 / 100.0) * PEAK_CAPACITY_CREDITS['ldes'] +
+        h2_pct / 100.0 * (8760.0 / 1000.0) * PEAK_CAPACITY_CREDITS['h2']
     )
 
     # Base existing shares (before scaling)

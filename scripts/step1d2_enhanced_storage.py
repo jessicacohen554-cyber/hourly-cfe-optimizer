@@ -55,23 +55,24 @@ import step1_pfs_generator as s1
 DATA_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), 'data')
 V2_OUTPUT_DIR = os.path.join(DATA_DIR, 'step1d2-storage-parquets')
 
-# Pass 0: Maximum storage levels (ceiling screen)
-V2_MAX_BAT4 = np.array([5.0], dtype=np.float64)
-V2_MAX_BAT8 = np.array([10.0], dtype=np.float64)
-V2_MAX_LDES = np.array([25.0], dtype=np.float64)
-V2_MAX_H2 = np.array([25.0], dtype=np.float64)
+# Pass 0: Maximum storage levels (ceiling screen) — % of annual demand
+# 2050-oriented caps: wider than V1 for future scenario analysis
+V2_MAX_BAT4 = np.array([0.10], dtype=np.float64)     # ~224 GWh for CAISO
+V2_MAX_BAT8 = np.array([0.15], dtype=np.float64)
+V2_MAX_LDES = np.array([1.0], dtype=np.float64)
+V2_MAX_H2 = np.array([3.0], dtype=np.float64)
 
-# Pass 1: Extended coarse grids with intermediate points at high end.
-V2_FULL_BAT4 = np.array([0, 0.05, 0.1, 0.2, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0],
+# Pass 1: Extended coarse grids in % of annual demand.
+V2_FULL_BAT4 = np.array([0, 0.002, 0.005, 0.01, 0.02, 0.03, 0.05, 0.07, 0.10],
                          dtype=np.float64)
-V2_FULL_BAT8 = np.array([0, 0.1, 0.2, 0.5, 1.0, 2.0, 3.0, 4.0, 6.0, 8.0, 10.0],
+V2_FULL_BAT8 = np.array([0, 0.005, 0.01, 0.02, 0.04, 0.06, 0.08, 0.10, 0.15],
                          dtype=np.float64)
-V2_FULL_LDES = np.array([0, 0.25, 0.5, 1.0, 2.0, 5.0, 8.0, 12.0, 15.0, 17.0, 21.0, 25.0],
+V2_FULL_LDES = np.array([0, 0.02, 0.05, 0.1, 0.2, 0.3, 0.5, 0.7, 1.0],
                          dtype=np.float64)
-V2_FULL_H2 = np.array([0, 5, 10, 15, 20, 25], dtype=np.float64)
+V2_FULL_H2 = np.array([0, 0.2, 0.5, 1.0, 1.5, 2.0, 3.0], dtype=np.float64)
 
 # Wider gap buckets: with higher storage caps, larger gaps are reachable
-V2_GAP_BUCKET_PP = [10, 25, 50, 100]
+V2_GAP_BUCKET_PP = [5, 10, 25, 50]
 
 # ══════════════════════════════════════════════════════════════════════════════
 # LEAN MIX AUGMENTATION
