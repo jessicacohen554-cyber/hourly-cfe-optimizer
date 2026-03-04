@@ -318,9 +318,9 @@ def extract_medium_scenarios(df):
         total_costs = iso_df['cost_total_cost'].values
         incr_costs = iso_df['cost_incremental'].values
         wholesale = iso_df['cost_wholesale'].values
-        gas_backup = iso_df['ra_gas_backup_needed_mw'].values
-        new_gas = iso_df['ra_new_gas_build_mw'].values
-        gas_cost = iso_df['ra_gas_backup_cost_per_mwh'].values
+        gas_backup = iso_df['gas_gas_backup_needed_mw'].values
+        new_gas = iso_df['gas_new_gas_build_mw'].values
+        gas_cost = iso_df['gas_gas_cost_per_mwh'].values
         tr_existing = iso_df['tranche_cf_existing_twh'].values
         tr_uprate = iso_df['tranche_uprate_twh'].values
         tr_geo = iso_df['tranche_geo_twh'].values
