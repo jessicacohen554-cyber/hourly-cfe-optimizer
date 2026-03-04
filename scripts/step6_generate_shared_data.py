@@ -1499,6 +1499,68 @@ for iso_idx, iso in enumerate(ISOS):
 lines.append('};')
 lines.append('')
 
+# ============================================================================
+# CO2 DISPATCH DATA (from step5_compute_co2.py)
+# ============================================================================
+# Per-threshold CO2 abated tons, emission rate, and fossil displacement
+# breakdown for the medium scenario.  Used by dashboard metric tiles and
+# compressed day chart fossil fill.
+
+print("\nExtracting CO2_DISPATCH_DATA (per-threshold CO2 + fossil displacement)...")
+co2_dispatch_data = {}
+for iso in ISOS:
+    iso_co2 = []
+    for t in THRESHOLDS:
+        sc = data['results'].get(iso, {}).get('thresholds', {}).get(t, {}).get('scenarios', {}).get(medium_key(iso))
+        if sc and 'co2_abated' in sc:
+            co2 = sc['co2_abated']
+            ri = co2.get('retirement_info', {})
+            if isinstance(ri, str):
+                import json as _j
+                ri = _j.loads(ri)
+            iso_co2.append({
+                'abated_mt': round((co2.get('total_co2_abated_tons', 0) or 0) / 1e6, 2),
+                'rate': round(co2.get('co2_rate_per_mwh', 0) or 0, 4),
+                'matched_twh': round((co2.get('matched_mwh', 0) or 0) / 1e6, 2),
+                'coal_disp': round(ri.get('coal_displaced_twh', 0) or 0, 2),
+                'oil_disp': round(ri.get('oil_displaced_twh', 0) or 0, 2),
+                'gas_disp': round(ri.get('gas_displaced_twh', 0) or 0, 2),
+                'coal_rem': round(ri.get('coal_remaining_twh', 0) or 0, 2),
+                'oil_rem': round(ri.get('oil_remaining_twh', 0) or 0, 2),
+                'gas_rem': round(ri.get('gas_remaining_twh', 0) or 0, 2),
+            })
+        else:
+            iso_co2.append(None)
+    co2_dispatch_data[iso] = iso_co2
+    sample = iso_co2[10] if len(iso_co2) > 10 and iso_co2[10] else {}
+    print(f"  {iso}: T=80% abated={sample.get('abated_mt', '?')} Mt, rate={sample.get('rate', '?')}")
+
+lines.append('// ============================================================================')
+lines.append('// CO2 DISPATCH DATA — per-threshold CO2 abatement + fossil displacement')
+lines.append('// Source: step5_compute_co2.py dispatch-stack retirement model')
+lines.append('// abated_mt = total CO2 abated (Mt), rate = emission rate of displaced fossil (tCO2/MWh)')
+lines.append('// matched_twh = clean energy matched to demand (TWh)')
+lines.append('// coal/oil/gas_disp = displaced fossil generation (TWh)')
+lines.append('// coal/oil/gas_rem = remaining fossil generation (TWh)')
+lines.append('// ============================================================================')
+lines.append('const CO2_DISPATCH_DATA = {')
+for iso_idx, iso in enumerate(ISOS):
+    lines.append(f'    {iso}: [')
+    for t_idx, entry in enumerate(co2_dispatch_data[iso]):
+        t_comma = ',' if t_idx < len(co2_dispatch_data[iso]) - 1 else ''
+        if entry:
+            lines.append(
+                f'        {{ abated_mt: {entry["abated_mt"]}, rate: {entry["rate"]}, '
+                f'matched_twh: {entry["matched_twh"]}, '
+                f'coal_disp: {entry["coal_disp"]}, oil_disp: {entry["oil_disp"]}, gas_disp: {entry["gas_disp"]}, '
+                f'coal_rem: {entry["coal_rem"]}, oil_rem: {entry["oil_rem"]}, gas_rem: {entry["gas_rem"]} }}{t_comma}')
+        else:
+            lines.append(f'        null{t_comma}')
+    iso_comma = ',' if iso_idx < len(ISOS) - 1 else ''
+    lines.append(f'    ]{iso_comma}')
+lines.append('};')
+lines.append('')
+
 # DG MAC data from mac_stats.json (if available)
 dg_mac = mac_stats.get('demand_growth_mac', {})
 if dg_mac:
