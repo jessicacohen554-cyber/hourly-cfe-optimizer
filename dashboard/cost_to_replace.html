@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The 8,760 Problem — Cost to Replace Existing Clean Generation</title>
+<title>The 8,760 Problem — Nuclear Retirement Premium</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -318,8 +318,8 @@ body { background: var(--bg-page); }
 <!-- HEADER BANNER -->
 <header class="header">
     <div class="header-accent"></div>
-    <h1>Cost to Replace Existing Clean Generation</h1>
-    <p class="subtitle">What would it cost to rebuild the grid's clean energy fleet from scratch?<br>A greenfield pricing analysis across 7 U.S. ISOs</p>
+    <h1>The Nuclear Retirement Premium</h1>
+    <p class="subtitle">What happens to clean energy costs if existing nuclear plants retire?<br>Isolating the economic value of nuclear in 7 U.S. ISOs</p>
 </header>
 
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
@@ -329,26 +329,24 @@ body { background: var(--bg-page); }
     <div class="hero-overview-inner">
         <div class="hero-text-block">
             <span class="key-finding-badge">Key Finding</span>
-            <h2>The Replacement Premium Is Real &mdash; and Regional</h2>
-            <p class="lead-text">Replacing all existing clean generation with new-build equivalents adds a significant cost premium. The size of that premium depends heavily on <strong>what you're replacing</strong> &mdash; regions with large nuclear and hydro fleets pay the steepest price.</p>
-            <p>Existing clean resources operate at wholesale electricity prices ($25&ndash;37/MWh), far below the levelized cost of building new equivalents ($50&ndash;120/MWh). This gap &mdash; the replacement premium &mdash; quantifies the hidden economic value of the clean generation already on the grid.</p>
+            <h2>The Nuclear Retirement Premium Is Real &mdash; and Regional</h2>
+            <p class="lead-text">If existing nuclear plants retire and must be replaced with new-build equivalents, the cost of clean energy rises significantly. The size of that premium depends on <strong>how much nuclear a region has</strong> &mdash; regions with large nuclear fleets pay the steepest price.</p>
+            <p>Existing nuclear operates at wholesale electricity prices ($25&ndash;42/MWh), far below the cost of building new clean firm capacity ($50&ndash;120/MWh). This gap &mdash; the nuclear retirement premium &mdash; quantifies the hidden economic value of keeping existing nuclear on the grid. All other existing clean generation (hydro, solar, wind) continues operating.</p>
             <div class="hero-callout">
                 <span class="counter-value" id="heroCounter" data-target="0" data-prefix="+$" data-suffix="/MWh">+$--/MWh</span>
-                <span class="counter-label">Average replacement premium across all ISOs at 90% clean</span>
+                <span class="counter-label">Average nuclear retirement premium across all ISOs at 90% clean</span>
             </div>
         </div>
         <div class="hero-chart-block">
             <div class="chart-panel chart-panel-overview">
-                <div class="hero-chart-title">Replacement Premium by Region at 90% Clean Energy</div>
+                <div class="hero-chart-title">Nuclear Retirement Premium by Region at 90% Clean Energy</div>
                 <div class="chart-container">
                     <canvas id="heroOverviewChart"></canvas>
                 </div>
                 <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#0EA5E9;"></span>Track 1 Baseline</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#F59E0B;"></span>Track 3 Replacement</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:currentColor;opacity:0.15;"></span>Replacement Premium</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:var(--navy-dark);opacity:0.35;"></span>Additional $/MWh if nuclear retires</span>
                 </div>
-                <div class="hero-chart-subtitle">Effective $/MWh &middot; Medium cost sensitivities &middot; All thresholds</div>
+                <div class="hero-chart-subtitle">Premium = (cost without nuclear) &minus; (cost with nuclear) &middot; Medium sensitivities</div>
             </div>
         </div>
     </div>
@@ -365,22 +363,22 @@ body { background: var(--bg-page); }
     <div class="region-section-inner">
         <div class="region-chart-col">
             <div class="chart-panel chart-panel-region" style="width:100%;">
-                <div class="hero-chart-title">PJM (Mid-Atlantic) &mdash; Track 1 Baseline vs. Track 3 Replacement</div>
+                <div class="hero-chart-title">PJM (Mid-Atlantic) &mdash; With Nuclear vs. Nuclear Retired</div>
                 <div class="chart-container">
                     <canvas id="regionChart_PJM"></canvas>
                 </div>
                 <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#0EA5E9;"></span>Track 1 Baseline</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#0EA5E9;"></span>Track 3 Replacement</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:currentColor;opacity:0.15;"></span>Replacement Premium</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#0EA5E9;"></span>With Nuclear</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#0EA5E9;"></span>Nuclear Retired</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:currentColor;opacity:0.15;"></span>Nuclear Retirement Premium</span>
                 </div>
             </div>
         </div>
         <div class="region-narrative-col">
             <div class="region-step-card">
                 <span class="region-tag" style="background:rgba(14,165,233,0.10);color:#0EA5E9;">PJM</span>
-                <h3>PJM: Nuclear dominance means the highest replacement cost</h3>
-                <p>PJM's grid is anchored by 32.1% existing clean firm generation &mdash; overwhelmingly nuclear. These plants dispatch at wholesale rates (~$30/MWh), but new nuclear construction costs $75&ndash;120/MWh. Replacing this fleet from scratch roughly doubles the effective cost at moderate thresholds and pushes higher targets into prohibitively expensive territory. PJM illustrates why preserving existing nuclear capacity is among the most cost-effective decarbonization strategies available.</p>
+                <h3>PJM: 32.1% nuclear means the highest retirement premium</h3>
+                <p>PJM has the largest nuclear fleet of any ISO at 32.1% of clean generation (Limerick, Peach Bottom, Susquehanna, and 15+ other plants). These plants dispatch at wholesale rates (~$34/MWh), but new nuclear construction costs $75&ndash;120/MWh. If this fleet retires, the cost premium is the steepest in the country &mdash; existing solar (2.9%) and wind (3.8%) continue operating, but they can't replace firm dispatchable capacity. PJM illustrates why preserving existing nuclear is the single most cost-effective decarbonization strategy.</p>
                 <span class="step-stat step-stat-red" id="statPJM">Premium at 90%: loading...</span>
                 <div class="annual-cost-callout" id="annualPJM" style="margin-top:12px;padding:10px 14px;background:rgba(14,165,233,0.06);border:1px solid rgba(14,165,233,0.15);border-radius:8px;font-size:0.82rem;color:rgba(15,23,42,0.65);line-height:1.5;"></div>
             </div>
@@ -393,22 +391,22 @@ body { background: var(--bg-page); }
     <div class="region-section-inner">
         <div class="region-chart-col">
             <div class="chart-panel chart-panel-region" style="width:100%;">
-                <div class="hero-chart-title">ERCOT (Texas) &mdash; Track 1 Baseline vs. Track 3 Replacement</div>
+                <div class="hero-chart-title">ERCOT (Texas) &mdash; With Nuclear vs. Nuclear Retired</div>
                 <div class="chart-container">
                     <canvas id="regionChart_ERCOT"></canvas>
                 </div>
                 <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#22C55E;"></span>Track 1 Baseline</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#22C55E;"></span>Track 3 Replacement</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:currentColor;opacity:0.15;"></span>Replacement Premium</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#22C55E;"></span>With Nuclear</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#22C55E;"></span>Nuclear Retired</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:currentColor;opacity:0.15;"></span>Nuclear Retirement Premium</span>
                 </div>
             </div>
         </div>
         <div class="region-narrative-col">
             <div class="region-step-card">
                 <span class="region-tag" style="background:rgba(34,197,94,0.1);color:#22C55E;">ERCOT</span>
-                <h3>ERCOT: Minimal existing clean firm means a small premium</h3>
-                <p>With only 8.6% existing clean firm capacity (nuclear), ERCOT has the least to lose from a greenfield rebuild. The existing fleet is dominated by gas and wind &mdash; resources where new-build costs are closest to wholesale. The replacement premium stays modest across all thresholds, making ERCOT the region least penalized by a full-replacement scenario. The lesson: when most of your clean fleet is already renewable, the greenfield penalty is small.</p>
+                <h3>ERCOT: Small nuclear fleet means a small retirement premium</h3>
+                <p>With only 8.6% nuclear capacity (South Texas Project, Comanche Peak), ERCOT has the least nuclear exposure of any ISO. If these plants retire, the cost increase is modest because the region's existing wind and solar fleet &mdash; which continues operating at wholesale &mdash; already supplies most clean energy. ERCOT shows that regions with small nuclear shares face minimal retirement risk.</p>
                 <span class="step-stat step-stat-green" id="statERCOT">Premium at 90%: loading...</span>
                 <div class="annual-cost-callout" id="annualERCOT" style="margin-top:12px;padding:10px 14px;background:rgba(34,197,94,0.06);border:1px solid rgba(34,197,94,0.15);border-radius:8px;font-size:0.82rem;color:rgba(15,23,42,0.65);line-height:1.5;"></div>
             </div>
@@ -423,22 +421,22 @@ body { background: var(--bg-page); }
     <div class="region-section-inner">
         <div class="region-chart-col">
             <div class="chart-panel chart-panel-region" style="width:100%;">
-                <div class="hero-chart-title">CAISO (California) &mdash; Track 1 Baseline vs. Track 3 Replacement</div>
+                <div class="hero-chart-title">CAISO (California) &mdash; With Nuclear vs. Nuclear Retired</div>
                 <div class="chart-container">
                     <canvas id="regionChart_CAISO"></canvas>
                 </div>
                 <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#F59E0B;"></span>Track 1 Baseline</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#F59E0B;"></span>Track 3 Replacement</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:currentColor;opacity:0.15;"></span>Replacement Premium</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#F59E0B;"></span>With Nuclear</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#F59E0B;"></span>Nuclear Retired</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:currentColor;opacity:0.15;"></span>Nuclear Retirement Premium</span>
                 </div>
             </div>
         </div>
         <div class="region-narrative-col">
             <div class="region-step-card">
                 <span class="region-tag" style="background:rgba(245,158,11,0.1);color:#F59E0B;">CAISO</span>
-                <h3>CAISO: Diablo Canyon + hydro create a moderate premium</h3>
-                <p>California's grid carries 7.9% nuclear (Diablo Canyon, since relicensed) and 9.5% hydro. Both operate well below new-build costs. Replacing them at greenfield prices layers a moderate premium onto an already-expensive grid. The premium widens at higher thresholds as the optimizer can no longer lean on cheap existing dispatchable resources. CAISO's geothermal potential (The Geysers, Salton Sea) helps offset some replacement cost, but nuclear remains the biggest swing factor.</p>
+                <h3>CAISO: Diablo Canyon retirement would widen the cost gap</h3>
+                <p>California's 5.3% nuclear share (Diablo Canyon, since relicensed) provides firm baseload at wholesale rates. If it retires, the optimizer must replace that dispatchable capacity with new-build clean firm &mdash; at 2&ndash;4&times; the cost. Existing hydro (9.5%) and geothermal (2.6%) continue operating, dampening the premium. But at higher thresholds where firm capacity becomes critical, losing Diablo Canyon forces the grid toward expensive alternatives like new nuclear or CCS.</p>
                 <span class="step-stat step-stat-amber" id="statCAISO">Premium at 90%: loading...</span>
                 <div class="annual-cost-callout" id="annualCAISO" style="margin-top:12px;padding:10px 14px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15);border-radius:8px;font-size:0.82rem;color:rgba(15,23,42,0.65);line-height:1.5;"></div>
             </div>
@@ -451,22 +449,22 @@ body { background: var(--bg-page); }
     <div class="region-section-inner">
         <div class="region-chart-col">
             <div class="chart-panel chart-panel-region" style="width:100%;">
-                <div class="hero-chart-title">NYISO (New York) &mdash; Track 1 Baseline vs. Track 3 Replacement</div>
+                <div class="hero-chart-title">NYISO (New York) &mdash; With Nuclear vs. Nuclear Retired</div>
                 <div class="chart-container">
                     <canvas id="regionChart_NYISO"></canvas>
                 </div>
                 <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#E91E63;"></span>Track 1 Baseline</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E63;"></span>Track 3 Replacement</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:currentColor;opacity:0.15;"></span>Replacement Premium</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#E91E63;"></span>With Nuclear</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E63;"></span>Nuclear Retired</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:currentColor;opacity:0.15;"></span>Nuclear Retirement Premium</span>
                 </div>
             </div>
         </div>
         <div class="region-narrative-col">
             <div class="region-step-card">
                 <span class="region-tag" style="background:rgba(233,30,99,0.15);color:#E91E63;">NYISO</span>
-                <h3>NYISO: Hydro and nuclear deliver a steep two-part premium</h3>
-                <p>New York benefits from 15.9% hydro (Niagara Falls, St. Lawrence) priced at floor rates and 18.4% nuclear (Indian Point legacy, Nine Mile Point, FitzPatrick). Together, these assets supply over a third of clean energy at wholesale cost. Rebuilding them from scratch would require new nuclear ($75&ndash;120/MWh) or imported Canadian hydro at negotiated PPA rates &mdash; either way, significantly more expensive. NYISO's premium is among the steepest because both of its largest clean resources are far below new-build cost.</p>
+                <h3>NYISO: 18.4% nuclear makes retirement a high-stakes bet</h3>
+                <p>New York's 18.4% nuclear fleet (Nine Mile Point, FitzPatrick, Ginna) provides firm dispatchable power at wholesale rates. Hydro (15.9% from Niagara Falls, St. Lawrence) continues operating regardless. But if nuclear retires, replacing that 18.4% with new-build clean firm at $75&ndash;120/MWh drives a significant premium. NYISO's already-high wholesale prices ($42/MWh) mean the relative premium is smaller than PJM's, but the absolute cost impact is substantial for a region with limited renewable resources.</p>
                 <span class="step-stat step-stat-red" id="statNYISO">Premium at 90%: loading...</span>
                 <div class="annual-cost-callout" id="annualNYISO" style="margin-top:12px;padding:10px 14px;background:rgba(233,30,99,0.06);border:1px solid rgba(233,30,99,0.15);border-radius:8px;font-size:0.82rem;color:rgba(15,23,42,0.65);line-height:1.5;"></div>
             </div>
@@ -481,14 +479,14 @@ body { background: var(--bg-page); }
     <div class="region-section-inner">
         <div class="region-chart-col">
             <div class="chart-panel chart-panel-region" style="width:100%;">
-                <div class="hero-chart-title">NEISO (New England) &mdash; Track 1 Baseline vs. Track 3 Replacement</div>
+                <div class="hero-chart-title">NEISO (New England) &mdash; With Nuclear vs. Nuclear Retired</div>
                 <div class="chart-container">
                     <canvas id="regionChart_NEISO"></canvas>
                 </div>
                 <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#9C27B0;"></span>Track 1 Baseline</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#9C27B0;"></span>Track 3 Replacement</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:currentColor;opacity:0.15;"></span>Replacement Premium</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#9C27B0;"></span>With Nuclear</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#9C27B0;"></span>Nuclear Retired</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:currentColor;opacity:0.15;"></span>Nuclear Retirement Premium</span>
                 </div>
             </div>
         </div>
@@ -509,22 +507,22 @@ body { background: var(--bg-page); }
     <div class="region-section-inner">
         <div class="region-chart-col">
             <div class="chart-panel chart-panel-region" style="width:100%;">
-                <div class="hero-chart-title">MISO (Midwest) &mdash; Track 1 Baseline vs. Track 3 Replacement</div>
+                <div class="hero-chart-title">MISO (Midwest) &mdash; With Nuclear vs. Nuclear Retired</div>
                 <div class="chart-container">
                     <canvas id="regionChart_MISO"></canvas>
                 </div>
                 <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#06B6D4;"></span>Track 1 Baseline</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#06B6D4;"></span>Track 3 Replacement</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:currentColor;opacity:0.15;"></span>Replacement Premium</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#06B6D4;"></span>With Nuclear</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#06B6D4;"></span>Nuclear Retired</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:currentColor;opacity:0.15;"></span>Nuclear Retirement Premium</span>
                 </div>
             </div>
         </div>
         <div class="region-narrative-col">
             <div class="region-step-card">
                 <span class="region-tag" style="background:rgba(6,182,212,0.10);color:#06B6D4;">MISO</span>
-                <h3>MISO: Wind-heavy fleet keeps replacement costs moderate</h3>
-                <p>MISO's clean generation mix is heavily weighted toward wind, with a modest nuclear contribution. Existing wind farms operate under legacy PPAs priced near wholesale, so the greenfield rebuild premium is relatively contained. Nuclear plants like Braidwood and Byron still anchor the firm component, and replacing them at new-build rates drives most of the premium at higher thresholds. MISO's vast wind resource means renewable replacement is comparatively cheap, but the firm gap remains the key cost driver.</p>
+                <h3>MISO: 13.1% nuclear retirement hits harder than it looks</h3>
+                <p>MISO's 13.1% nuclear fleet (Braidwood, Byron, Prairie Island, and others) provides firm baseload that complements the region's massive 14.5% wind fleet. If nuclear retires, the existing wind and solar continue operating &mdash; but the loss of dispatchable firm capacity forces expensive new-build replacements at higher thresholds where the grid needs reliability. MISO illustrates that even moderate nuclear shares create meaningful retirement premiums when firm capacity is what's needed most.</p>
                 <span class="step-stat step-stat-cyan" id="statMISO">Premium at 90%: loading...</span>
                 <div class="annual-cost-callout" id="annualMISO" style="margin-top:12px;padding:10px 14px;background:rgba(6,182,212,0.06);border:1px solid rgba(6,182,212,0.15);border-radius:8px;font-size:0.82rem;color:rgba(15,23,42,0.65);line-height:1.5;"></div>
             </div>
@@ -539,22 +537,22 @@ body { background: var(--bg-page); }
     <div class="region-section-inner">
         <div class="region-chart-col">
             <div class="chart-panel chart-panel-region" style="width:100%;">
-                <div class="hero-chart-title">SPP (Great Plains) &mdash; Track 1 Baseline vs. Track 3 Replacement</div>
+                <div class="hero-chart-title">SPP (Great Plains) &mdash; With Nuclear vs. Nuclear Retired</div>
                 <div class="chart-container">
                     <canvas id="regionChart_SPP"></canvas>
                 </div>
                 <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#A855F7;"></span>Track 1 Baseline</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#A855F7;"></span>Track 3 Replacement</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:currentColor;opacity:0.15;"></span>Replacement Premium</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#A855F7;"></span>With Nuclear</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#A855F7;"></span>Nuclear Retired</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:currentColor;opacity:0.15;"></span>Nuclear Retirement Premium</span>
                 </div>
             </div>
         </div>
         <div class="region-narrative-col">
             <div class="region-step-card">
                 <span class="region-tag" style="background:rgba(168,85,247,0.10);color:#A855F7;">SPP</span>
-                <h3>SPP: America's wind corridor delivers the lowest premium</h3>
-                <p>SPP leads the nation in wind penetration, with wind farms supplying a large share of clean generation at competitive PPA rates. The region's minimal nuclear fleet means there's less expensive-to-replace firm capacity on the grid. Rebuilding SPP's clean fleet from scratch is closer to its current cost than any other region because new wind is already near wholesale parity. The lesson: when your existing fleet is dominated by technology where new-build costs have converged with operating costs, the replacement premium nearly vanishes.</p>
+                <h3>SPP: Minimal nuclear means minimal retirement risk</h3>
+                <p>SPP's 5.2% nuclear share (Wolf Creek) is the smallest of any ISO. The region's dominant 37.1% wind fleet continues operating at wholesale regardless of nuclear retirement. Losing Wolf Creek creates a small premium because the firm capacity gap is narrow and the existing renewable fleet covers most clean energy needs. SPP demonstrates that wind-dominated grids with small nuclear fleets face the lowest nuclear retirement risk.</p>
                 <span class="step-stat step-stat-purple" id="statSPP">Premium at 90%: loading...</span>
                 <div class="annual-cost-callout" id="annualSPP" style="margin-top:12px;padding:10px 14px;background:rgba(168,85,247,0.06);border:1px solid rgba(168,85,247,0.15);border-radius:8px;font-size:0.82rem;color:rgba(15,23,42,0.65);line-height:1.5;"></div>
             </div>
@@ -570,12 +568,12 @@ body { background: var(--bg-page); }
 <div class="gradient-transition"></div>
 <section class="section-dark">
 <div class="section-dark-inner">
-    <h2 class="synthesis-section-title">What Drives the Replacement Premium?</h2>
+    <h2 class="synthesis-section-title">What Drives the Nuclear Retirement Premium?</h2>
     <div class="synthesis-inner">
         <div class="synthesis-card">
-            <h3>Existing Generation: The Hidden Subsidy</h3>
-            <p>Existing clean resources are priced at wholesale electricity rates ($25&ndash;37/MWh) because their capital costs are sunk. New-build equivalents must recover their full capital investment, pushing levelized costs to $50&ndash;120/MWh depending on technology. This spread &mdash; the difference between operating cost and full lifecycle cost &mdash; <strong>is</strong> the replacement premium. It's not a market distortion; it's the economic reality that makes early retirement of working clean plants the most expensive path to decarbonization.</p>
-            <span class="step-stat step-stat-amber">Wholesale: $25&ndash;37/MWh &middot; New-build: $50&ndash;120/MWh &middot; Spread = premium</span>
+            <h3>Nuclear: The Hidden Economic Anchor</h3>
+            <p>Existing nuclear plants dispatch at wholesale electricity rates ($25&ndash;42/MWh) because their capital costs are sunk. New nuclear costs $75&ndash;120/MWh; CCS-CCGT alternatives run $55&ndash;85/MWh. This spread &mdash; the difference between operating existing nuclear and building new firm capacity &mdash; <strong>is</strong> the retirement premium. Existing hydro, solar, and wind continue operating regardless; this analysis isolates the cost impact of losing nuclear specifically. Allowing working nuclear plants to retire is the most expensive path to decarbonization.</p>
+            <span class="step-stat step-stat-amber">Nuclear wholesale: $25&ndash;42/MWh &middot; New-build firm: $55&ndash;120/MWh &middot; Spread = retirement premium</span>
         </div>
         <div class="synthesis-card">
             <h3>Nuclear Is the Anchor</h3>
@@ -761,129 +759,90 @@ function buildHeroChart() {
     if (!ctx) return;
     ctx = ctx.getContext('2d');
 
-    var datasets = [];
-    var premiumAt90 = [];
+    var idx90 = THR.indexOf(90);
+    if (idx90 === -1) return;
 
+    // Compute premium (Track 3 - Track 1) at 90% for each region
+    var labels = [];
+    var premiums = [];
+    var colors = [];
+    var borderColors = [];
+
+    // Sort regions by premium descending for visual impact
+    var regionData = [];
     REGIONS.forEach(function(iso) {
-        var c = REGION_CLR[iso];
         var bl = BASELINE[iso];
         var rp = getReplaceEffectiveCost(iso);
+        if (!bl || !rp || bl[idx90] == null || rp[idx90] == null) return;
+        var prem = rp[idx90] - bl[idx90];
+        regionData.push({ iso: iso, premium: prem });
+    });
+    regionData.sort(function(a, b) { return b.premium - a.premium; });
 
-        if (!bl) return;
-
-        // Track 1 Baseline line (solid)
-        var blPts = THR.map(function(t, i) {
-            return bl[i] != null ? { x: t, y: bl[i] } : null;
-        }).filter(function(d) { return d !== null; });
-
-        datasets.push({
-            label: iso + ' Track 1 Baseline',
-            data: blPts,
-            borderColor: c,
-            backgroundColor: c + '10',
-            borderWidth: 2.5,
-            pointRadius: 0,
-            fill: false,
-            tension: 0.3,
-            order: 2,
-            _iso: iso,
-            _type: 'baseline'
-        });
-
-        if (rp) {
-            // Track 3 Replacement line (dashed)
-            var rpPts = THR.map(function(t, i) {
-                return rp[i] != null ? { x: t, y: rp[i] } : null;
-            }).filter(function(d) { return d !== null; });
-
-            var blIdx = datasets.length - 1; // baseline is the dataset we just pushed
-            datasets.push({
-                label: iso + ' Track 3 Replacement',
-                data: rpPts,
-                borderColor: c,
-                backgroundColor: c + '18',
-                borderWidth: 2,
-                borderDash: [6, 4],
-                pointRadius: 0,
-                fill: { target: blIdx, above: c + '18', below: 'transparent' },
-                tension: 0.3,
-                order: 3,
-                _iso: iso,
-                _type: 'replace'
-            });
-
-            // Compute premium at 90% for hero counter
-            var idx90 = THR.indexOf(90);
-            if (idx90 !== -1 && rp[idx90] != null && bl[idx90] != null) {
-                premiumAt90.push(rp[idx90] - bl[idx90]);
-            }
-        }
+    regionData.forEach(function(d) {
+        labels.push(d.iso);
+        premiums.push(d.premium);
+        colors.push(REGION_CLR[d.iso] + '88');
+        borderColors.push(REGION_CLR[d.iso]);
     });
 
-    // Compute average premium at 90%
+    // Set hero counter to average premium
     var avgPremium = 0;
-    if (premiumAt90.length > 0) {
-        avgPremium = premiumAt90.reduce(function(a, b) { return a + b; }, 0) / premiumAt90.length;
+    if (premiums.length > 0) {
+        avgPremium = premiums.reduce(function(a, b) { return a + b; }, 0) / premiums.length;
     }
-
     var heroCounter = document.getElementById('heroCounter');
     if (heroCounter) {
         heroCounter.setAttribute('data-target', avgPremium.toFixed(1));
     }
 
-    // Compute Y max
-    var yMax = 0;
-    datasets.forEach(function(ds) {
-        ds.data.forEach(function(pt) {
-            if (pt.y > yMax) yMax = pt.y;
-        });
-    });
-    yMax = Math.ceil(yMax / 20) * 20 + 20;
-    if (yMax < 80) yMax = 160;
+    var yMax = Math.ceil(Math.max.apply(null, premiums) / 5) * 5 + 5;
 
     heroChart = new Chart(ctx, {
-        type: 'line',
-        data: { datasets: datasets },
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Nuclear Retirement Premium',
+                data: premiums,
+                backgroundColor: colors,
+                borderColor: borderColors,
+                borderWidth: 2,
+                borderRadius: 6,
+                barPercentage: 0.7
+            }]
+        },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            interaction: { mode: 'nearest', axis: 'x', intersect: false },
+            indexAxis: 'x',
             animation: {
                 duration: 1200,
                 easing: 'easeOutQuart',
                 delay: function(context) {
-                    return context.type === 'data' ? context.dataIndex * 30 + context.datasetIndex * 100 : 0;
+                    return context.type === 'data' ? context.dataIndex * 120 : 0;
                 }
             },
             scales: {
                 x: {
-                    type: 'linear',
-                    min: 48,
-                    max: 99.99,
-                    afterBuildTicks: function(axis) {
-                        axis.ticks = [50, 60, 70, 80, 90, 95, 99.99].map(function(v) { return { value: v }; });
-                    },
                     ticks: {
-                        callback: function(v) { return v === 99.99 ? '≥99.99%' : v + '%'; },
-                        font: { size: 9 },
-                        color: 'rgba(15,23,42,0.45)',
-                        maxRotation: 0
+                        font: { size: 11, weight: 600 },
+                        color: 'rgba(15,23,42,0.7)'
                     },
-                    grid: { color: 'rgba(0,0,0,0.025)' },
-                    border: { display: true, color: 'rgba(0,0,0,0.1)' },
-                    title: { display: true, text: 'Clean Energy Target', color: 'rgba(15,23,42,0.35)', font: { size: 9 } }
+                    grid: { display: false },
+                    border: { display: true, color: 'rgba(0,0,0,0.1)' }
                 },
                 y: {
                     min: 0,
                     max: yMax,
                     ticks: {
-                        callback: function(v) { return '$' + v; },
+                        callback: function(v) { return '+$' + v; },
                         font: { size: 9 },
                         color: 'rgba(15,23,42,0.45)'
                     },
                     grid: { color: 'rgba(0,0,0,0.025)' },
                     border: { display: true, color: 'rgba(0,0,0,0.1)' },
-                    title: { display: true, text: 'Effective $/MWh', color: 'rgba(15,23,42,0.35)', font: { size: 9 } }
+                    title: { display: true, text: 'Premium ($/MWh)', color: 'rgba(15,23,42,0.35)', font: { size: 9 } }
                 }
             },
             plugins: {
@@ -901,40 +860,29 @@ function buildHeroChart() {
                     padding: 12,
                     callbacks: {
                         title: function(items) {
-                            return items[0] ? items[0].raw.x + '% Clean Energy Target' : '';
+                            return items[0] ? items[0].label + ' at 90% Clean Energy' : '';
                         },
                         label: function(item) {
-                            var ds = item.dataset;
-                            var type = ds._type === 'replace' ? ' (Track 3)' : ' (Track 1)';
-                            return ds._iso + type + ': $' + item.raw.y.toFixed(1) + '/MWh';
-                        },
-                        afterBody: function(items) {
-                            // Show premium for each ISO at this threshold
-                            if (!items || items.length === 0) return [];
-                            var thrX = items[0].raw.x;
-                            var thrIdx = THR.indexOf(thrX);
-                            if (thrIdx === -1) return [];
-                            var lines = [''];
-                            var isosSeen = {};
-                            items.forEach(function(item) {
-                                var iso = item.dataset._iso;
-                                if (isosSeen[iso] || item.dataset._type !== 'baseline') return;
-                                isosSeen[iso] = true;
-                                var bl = BASELINE[iso];
-                                var rp = getReplaceEffectiveCost(iso);
-                                if (bl && rp && bl[thrIdx] != null && rp[thrIdx] != null) {
-                                    var prem = rp[thrIdx] - bl[thrIdx];
-                                    if (prem > 0) {
-                                        lines.push(iso + ' Premium: +$' + prem.toFixed(1) + '/MWh');
-                                    }
-                                }
-                            });
-                            return lines.length > 1 ? lines : [];
+                            var iso = item.label;
+                            var bl = BASELINE[iso];
+                            var rp = getReplaceEffectiveCost(iso);
+                            var lines = ['Nuclear Retirement Premium: +$' + item.raw.toFixed(1) + '/MWh'];
+                            if (bl && rp && bl[idx90] != null && rp[idx90] != null) {
+                                lines.push('With Nuclear: $' + bl[idx90].toFixed(1) + '/MWh');
+                                lines.push('Nuclear Retired: $' + rp[idx90].toFixed(1) + '/MWh');
+                            }
+                            return lines;
                         }
                     }
                 },
-                datalabels: { display: false },
-                annotation: { annotations: {} }
+                datalabels: {
+                    display: true,
+                    anchor: 'end',
+                    align: 'end',
+                    formatter: function(v) { return '+$' + v.toFixed(1); },
+                    color: 'rgba(15,23,42,0.6)',
+                    font: { size: 10, weight: 600 }
+                }
             }
         }
     });
@@ -959,13 +907,13 @@ function buildRegionalChart(iso) {
     var datasets = [];
     var baselineIdx = 0; // baseline is always dataset 0
 
-    // Dataset 0: Track 1 Baseline line (solid, thick)
+    // Dataset 0: With Nuclear line (solid, thick)
     var blPts = THR.map(function(t, i) {
         return bl[i] != null ? { x: t, y: bl[i] } : null;
     }).filter(function(d) { return d !== null; });
 
     datasets.push({
-        label: 'Track 1 Baseline',
+        label: 'With Nuclear',
         data: blPts,
         borderColor: c,
         backgroundColor: c + '10',
@@ -982,7 +930,7 @@ function buildRegionalChart(iso) {
     });
 
     if (rp) {
-        // Track 3 Replacement line (dashed) — always comes right after baseline
+        // Nuclear Retired line (dashed) — always comes right after baseline
         var rpPts = THR.map(function(t, i) {
             var val = (sweep && sweep.p50 && sweep.p50[i] != null) ? sweep.p50[i] : rp[i];
             return val != null ? { x: t, y: val } : null;
@@ -991,7 +939,7 @@ function buildRegionalChart(iso) {
         // The replace line fills DOWN to baseline (dataset 0) to show the premium
         var replaceIdx = datasets.length;
         datasets.push({
-            label: 'Track 3 Replacement',
+            label: 'Nuclear Retired',
             data: rpPts,
             borderColor: c,
             backgroundColor: c + '20',
@@ -1144,7 +1092,7 @@ function buildRegionalChart(iso) {
                             var pct = blVal > 0 ? ((prem / blVal) * 100).toFixed(0) : '—';
                             var lines = [
                                 '',
-                                'Cost to Replace Premium: +$' + prem.toFixed(1) + '/MWh (+' + pct + '%)'
+                                'Nuclear Retirement Premium: +$' + prem.toFixed(1) + '/MWh (+' + pct + '%)'
                             ];
                             // Total annual cost
                             var demand = DEMAND_TWH[iso];
@@ -1153,8 +1101,8 @@ function buildRegionalChart(iso) {
                                 var rpAnnual = (rpVal * demand / 1000).toFixed(1);
                                 var premAnnual = (prem * demand / 1000).toFixed(1);
                                 lines.push('');
-                                lines.push('Annual Cost (Track 1): $' + blAnnual + 'B/yr');
-                                lines.push('Annual Cost (Track 3): $' + rpAnnual + 'B/yr');
+                                lines.push('Annual Cost (With Nuclear): $' + blAnnual + 'B/yr');
+                                lines.push('Annual Cost (Nuclear Retired): $' + rpAnnual + 'B/yr');
                                 lines.push('Annual Premium: +$' + premAnnual + 'B/yr');
                             }
                             return lines;
@@ -1202,15 +1150,15 @@ function updateStatBadges() {
                     var rpAnnual = (rp[refIdx] * demand / 1000).toFixed(1);
                     var premAnnual = (premium * demand / 1000).toFixed(1);
                     annualEl.innerHTML = '<strong>At ' + refThr + '% clean:</strong> ' +
-                        'Track 1 annual cost: <strong>$' + blAnnual + 'B/yr</strong> &middot; ' +
-                        'Track 3 replacement: <strong>$' + rpAnnual + 'B/yr</strong> &middot; ' +
-                        'Annual premium: <strong style="color:#EF4444;">+$' + premAnnual + 'B/yr</strong>';
+                        'With nuclear: <strong>$' + blAnnual + 'B/yr</strong> &middot; ' +
+                        'Nuclear retired: <strong>$' + rpAnnual + 'B/yr</strong> &middot; ' +
+                        'Retirement premium: <strong style="color:#EF4444;">+$' + premAnnual + 'B/yr</strong>';
                 } else {
                     annualEl.textContent = '';
                 }
             }
         } else if (bl && idx90 !== -1 && bl[idx90] != null) {
-            el.textContent = 'Track 1 at 90%: $' + bl[idx90].toFixed(1) + '/MWh (Track 3 data pending)';
+            el.textContent = 'With nuclear at 90%: $' + bl[idx90].toFixed(1) + '/MWh (retirement data pending)';
             if (annualEl) annualEl.textContent = '';
         } else {
             el.textContent = 'Data loading...';
