@@ -2552,6 +2552,7 @@ function updatePeakCapacity(entry, region) {
 // ---- Cost Panel ----
 function updateCostPanel(entry) {
     const content = document.getElementById('costContent');
+    if (!content) return;  // Element removed in dashboard cleanup
     const costs = getUnifiedCosts(entry);
     const iso = document.getElementById('regionSelect').value;
 
