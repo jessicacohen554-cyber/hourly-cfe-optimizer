@@ -430,10 +430,11 @@ for iso in ISOS:
             iso_data['offshore_wind'].append(int(dg_row.get('mix_offshore_wind', 0)))
             iso_data['ccs_ccgt'].append(int(dg_row['mix_ccs_ccgt']))
             iso_data['hydro'].append(int(dg_row['mix_hydro']))
-            iso_data['battery'].append(round(float(dg_row.get('battery_dispatch_pct', 0)), 4))
-            iso_data['battery8'].append(round(float(dg_row.get('battery8_dispatch_pct', 0)), 4))
-            iso_data['ldes'].append(round(float(dg_row.get('ldes_dispatch_pct', 0)), 4))
-            iso_data['h2'].append(round(float(dg_row.get('h2_dispatch_pct', 0)), 4))
+            # Prefer actual dispatch shares (from step4 enrichment) over capacity parameters
+            iso_data['battery'].append(round(float(dg_row.get('battery_dispatch_share', dg_row.get('battery_dispatch_pct', 0))), 4))
+            iso_data['battery8'].append(round(float(dg_row.get('battery8_dispatch_share', dg_row.get('battery8_dispatch_pct', 0))), 4))
+            iso_data['ldes'].append(round(float(dg_row.get('ldes_dispatch_share', dg_row.get('ldes_dispatch_pct', 0))), 4))
+            iso_data['h2'].append(round(float(dg_row.get('h2_dispatch_share', dg_row.get('h2_dispatch_pct', 0))), 4))
             iso_match_scores.append(round(float(dg_row.get('hourly_match_score', t_num)), 2))
         else:
             # Fallback to base results (no demand growth)
@@ -442,10 +443,10 @@ for iso in ISOS:
                 rm = sc.get('resource_mix', {})
                 for res in RESOURCES:
                     iso_data[res].append(rm.get(res, 0))
-                iso_data['battery'].append(sc.get('battery_dispatch_pct', 0))
-                iso_data['battery8'].append(sc.get('battery8_dispatch_pct', 0))
-                iso_data['ldes'].append(sc.get('ldes_dispatch_pct', 0))
-                iso_data['h2'].append(sc.get('h2_dispatch_pct', 0))
+                iso_data['battery'].append(sc.get('battery_dispatch_share', sc.get('battery_dispatch_pct', 0)))
+                iso_data['battery8'].append(sc.get('battery8_dispatch_share', sc.get('battery8_dispatch_pct', 0)))
+                iso_data['ldes'].append(sc.get('ldes_dispatch_share', sc.get('ldes_dispatch_pct', 0)))
+                iso_data['h2'].append(sc.get('h2_dispatch_share', sc.get('h2_dispatch_pct', 0)))
             else:
                 for res in RESOURCES:
                     iso_data[res].append(0)
@@ -593,8 +594,9 @@ for iso in ISOS:
         for res in WYN_RESOURCES:
             rd = rc.get(res, {})
             if res in ('battery', 'battery8', 'ldes', 'h2'):
+                # Prefer actual dispatch share (from step4) over capacity parameter
                 entry[res] = {
-                    'dispatch_pct': rd.get('dispatch_pct', 0),
+                    'dispatch_pct': rd.get('dispatch_share', rd.get('dispatch_pct', 0)),
                     'cost': round(rd.get('cost_per_demand_mwh', 0), 2),
                 }
             else:
@@ -1701,13 +1703,18 @@ for iso_idx, iso in enumerate(ISOS):
         mix_rows = []
         if len(sub) > 0:
             # Vectorized: extract columns as numpy arrays, round, then convert to list of lists
+            # Prefer actual dispatch shares (from step4) over capacity parameters
+            sub = sub.copy()
+            if 'offshore_wind' not in sub.columns:
+                sub['offshore_wind'] = 0
+            for _sc in ['battery', 'battery8', 'ldes', 'h2']:
+                _share_col = f'{_sc}_dispatch_share'
+                _cap_col = f'{_sc}_dispatch_pct'
+                if _share_col in sub.columns:
+                    sub[_cap_col] = sub[_share_col]
             mix_cols = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro',
                         'hourly_match_score', 'battery_dispatch_pct',
                         'battery8_dispatch_pct', 'ldes_dispatch_pct', 'h2_dispatch_pct']
-            # Backward compat: add offshore_wind column if missing
-            if 'offshore_wind' not in sub.columns:
-                sub = sub.copy()
-                sub['offshore_wind'] = 0
             arr = sub[mix_cols].to_numpy(copy=False)
             arr[:, 6] = np.round(arr[:, 6], 1)  # round hourly_match_score (col 6 now, was col 5)
             mix_rows = arr.tolist()

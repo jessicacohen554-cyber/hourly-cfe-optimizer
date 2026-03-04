@@ -145,11 +145,17 @@ def load_from_parquets(input_dir, isos):
                     'resource_mix': resource_mix,
                     'costs': costs,
                     'hourly_match_score': float(row['hourly_match_score']) if 'hourly_match_score' in row.index else 0.0,
-                    'battery_dispatch_pct': int(row['battery_dispatch_pct']) if 'battery_dispatch_pct' in row.index else 0,
-                    'battery8_dispatch_pct': int(row['battery8_dispatch_pct']) if 'battery8_dispatch_pct' in row.index else 0,
-                    'ldes_dispatch_pct': int(row['ldes_dispatch_pct']) if 'ldes_dispatch_pct' in row.index else 0,
-                    'h2_dispatch_pct': int(row['h2_dispatch_pct']) if 'h2_dispatch_pct' in row.index else 0,
+                    'battery_dispatch_pct': round(float(row['battery_dispatch_pct']), 4) if 'battery_dispatch_pct' in row.index else 0.0,
+                    'battery8_dispatch_pct': round(float(row['battery8_dispatch_pct']), 4) if 'battery8_dispatch_pct' in row.index else 0.0,
+                    'ldes_dispatch_pct': round(float(row['ldes_dispatch_pct']), 4) if 'ldes_dispatch_pct' in row.index else 0.0,
+                    'h2_dispatch_pct': round(float(row['h2_dispatch_pct']), 4) if 'h2_dispatch_pct' in row.index else 0.0,
                 }
+
+                # Actual dispatch shares (from step4 enrichment — % of demand met)
+                for _sc in ['battery', 'battery8', 'ldes', 'h2']:
+                    _col = f'{_sc}_dispatch_share'
+                    if _col in row.index and pd.notna(row[_col]):
+                        scenario[_col] = round(float(row[_col]), 4)
 
                 # CO2 data (if present from previous recompute)
                 co2_cols = [c for c in row.index if c.startswith('co2_')]
@@ -244,6 +250,12 @@ def save_to_parquets(data, output_dir, isos, file_prefix='step4_'):
                 row['battery8_dispatch_pct'] = sc.get('battery8_dispatch_pct', 0)
                 row['ldes_dispatch_pct'] = sc.get('ldes_dispatch_pct', 0)
                 row['h2_dispatch_pct'] = sc.get('h2_dispatch_pct', 0)
+
+                # Actual dispatch shares (if enriched by step4)
+                for _sc in ['battery', 'battery8', 'ldes', 'h2']:
+                    _key = f'{_sc}_dispatch_share'
+                    if _key in sc:
+                        row[_key] = sc[_key]
 
                 # Costs
                 costs = sc.get('costs', {})
