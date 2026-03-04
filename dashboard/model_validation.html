@@ -351,7 +351,7 @@ body { background: var(--bg-page-white); }
                 where \(\text{LCOE}_r\) is the levelized cost from NREL ATB 2024 / Lazard v17-18, and \(\text{TX}_r\) is the transmission interconnection adder ($/MWh).
             </p>
         </div>
-        <p><span class="code-ref">step3_cost_optimization.py:638–658</span></p>
+        <p><span class="code-ref">step3a_cost_optimization.py:638–658</span></p>
 
         <div class="justification">
             <strong>Justification:</strong> Existing fleet at $0 is standard in capacity expansion models (GenX, ReEDS, NREL Standard Scenarios). Nuclear, hydro, and existing renewables have near-zero marginal operating cost — their capital is sunk. The model evaluates incremental cost of achieving a <em>higher</em> clean energy target, not total system cost.
@@ -364,7 +364,7 @@ body { background: var(--bg-page-white); }
             <li><strong>Tranche 2: Geothermal</strong> (CAISO only) — Enhanced geothermal systems, capped at 39 TWh (~5 GW × 90% CF). LCOE varies by Low/Medium/High toggle.</li>
             <li><strong>Tranche 3: Nuclear New-Build vs. CCS</strong> — Remaining demand filled by the cheaper of new nuclear or CCS-CCGT. CCS is capped at regional geologic storage limits; overflow goes to nuclear.</li>
         </ol>
-        <p><span class="code-ref">step3_cost_optimization.py:692–729</span></p>
+        <p><span class="code-ref">step3a_cost_optimization.py:692–729</span></p>
 
         <h3>5.4 CCS-CCGT Special Pricing</h3>
         <table class="data-table">
@@ -394,7 +394,7 @@ body { background: var(--bg-page-white); }
                 RA_peak = peak demand × 1.15. Clean peak MW includes capacity credits per resource (nuclear 100%, solar 30%, wind 10%, battery 95%). GAF = gas availability factor (82–88% by ISO).
             </p>
         </div>
-        <p><span class="code-ref">step3_cost_optimization.py:744–794</span></p>
+        <p><span class="code-ref">step3a_cost_optimization.py:744–794</span></p>
     </div>
 </div>
 
@@ -569,7 +569,7 @@ body { background: var(--bg-page-white); }
             </tbody>
         </table>
         <p style="font-size: 0.88rem; color: #64748b; margin-top: 8px;">
-            The 4 skipped tests require importing LCOE tables from <code>step3_cost_optimization.py</code>, which has dependencies not available in the lightweight CI environment. These tests pass when run locally with full dependencies. All tests use synthetic deterministic data (no 100+ MB EIA data dependency), enabling fast CI execution.
+            The 4 skipped tests require importing LCOE tables from <code>step3a_cost_optimization.py</code>, which has dependencies not available in the lightweight CI environment. These tests pass when run locally with full dependencies. All tests use synthetic deterministic data (no 100+ MB EIA data dependency), enabling fast CI execution.
         </p>
     </div>
 

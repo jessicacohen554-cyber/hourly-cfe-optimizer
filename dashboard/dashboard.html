@@ -923,7 +923,7 @@ const GAS_CAPACITY_CONSTANTS = {
 };
 
 // ---- Client-Side Repricing Engine ----
-// Mirrors Python step3_cost_optimization.price_mix_batch() for sensitivity combos
+// Mirrors Python step3a_cost_optimization.price_mix_batch() for sensitivity combos
 // Uses FEASIBLE_MIXES + cost tables from shared-data.js
 // targetYear & growthRate: optional demand growth params. Existing generation stays
 // flat in absolute TWh; its share of grown demand shrinks, requiring more new-build.
@@ -1371,7 +1371,7 @@ function getCompressedDayProfile(iso, entry) {
             const bat = entry.battery_dispatch_pct||0;
             const ldes = entry.ldes_dispatch_pct||0;
             const h2 = entry.h2_dispatch_pct||0;
-            // Key matches step5_compress_day_profiles.py mix_key():
+            // Key matches step5c_compress_day_profiles.py mix_key():
             // {cf}_{s}_{w}_{c}_{h}_{battery_pct}_{ldes_pct}_{h2_pct}
             const mk = `${cf}_${s}_${w}_${c}_${h}_${bat}_${ldes}_${h2}`;
             const profile = isoData.profiles?.[mk];
@@ -4553,7 +4553,7 @@ const CCGT_CO2_RATE = 0.350; // metric tons CO2 per MWh
 // Get CO2 abated in metric tons — uses dispatch model data when available
 function getCO2Abated(entry, iso) {
     if (!entry || !iso) return 0;
-    // Try CO2_DISPATCH_DATA first (from step5_compute_co2.py dispatch-stack model)
+    // Try CO2_DISPATCH_DATA first (from step5a_compute_co2.py dispatch-stack model)
     if (typeof CO2_DISPATCH_DATA !== 'undefined' && CO2_DISPATCH_DATA[iso]) {
         const threshVal = parseFloat(findClosestThreshold(
             DATA?.results?.[iso], document.getElementById('thresholdSelect')?.value));

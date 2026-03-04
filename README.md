@@ -22,183 +22,187 @@ python -m http.server 8000
 # Open http://localhost:8000/index.html
 ```
 
-## 7-Step Pipeline
+## 10-Step Pipeline
 
-The optimizer runs as a 7-step pipeline. Step 1 is expensive (hours). Steps 2–4 are cheap (seconds to minutes). Step 5 builds a dispatch cache. Step 6 runs parallel analytics. Step 7 exports dashboard data.
+The optimizer runs as a 10-step pipeline (Steps 0–9). Step 1 is expensive (hours). Steps 2–9 are cheap (seconds to minutes). Each step maps to a clear dependency layer.
 
-### Core Pipeline (Steps 1–4)
+### Core Pipeline (Steps 0–4)
 
 | Step | Script(s) | What It Does | When to Re-run |
 |------|-----------|-------------|---------------|
-| **Step 0** | `step0_*.py` (8 scripts) | **Data Fetch/Prep** — EIA hourly profiles, eGRID emissions, LMP data, DST/UTC fixes, MISO/SPP consolidation. | When source data updates. |
-| **Step 1** | `step1_pfs_generator.py` (monolithic) or `step1a` → `step1b` → `step1c` → `step1d` (modular) | **PFS Generator** — Generates the Physics Feasible Space. 4D/5D adaptive grid search × procurement × battery × LDES. Two-phase storage sweep (coarse → fine). Output: `data/step1-pfs-parquets/` + `data/step1d-storage-parquets/`. | Only if dispatch logic, generation profiles, or demand curves change. |
-| **Step 2** | `step2_efficient_frontier.py` + `step2_5_expand_ef_for_floors.py` | **Efficient Frontier** — Extracts non-dominated mixes from PFS. Reads both step1 and step1d parquets. Optional EF expansion for Scenario A floor constraints. Output: `data/step2-ef-parquets/`. | Only if PFS or filtering criteria change. |
-| **Step 3** | `step3_cost_optimization.py` + `step3_track_nb_ctr.py` | **Cost Optimization** — Track 1 baseline: vectorized cross-eval of all EF mixes under 5,832 sensitivity combos (17,496 CAISO). Track 2 (newbuild) + Track 3 (cost-to-replace). Merit-order tranche pricing. Demand growth sweep with FOAK→NOAK learning curves. Output: `data/step3-cost-opt-parquets/`. | When cost assumptions, LCOE tables, or sensitivity toggles change. |
-| **Step 4** | `step4_gas_ccs_adjustement.py` | **Gas/CCS Adjustments** — NEISO winter gas pipeline constraint (+$13.13/MWh CCS adder), 45Q correction ($27.5/MWh), gas capacity backup & resource adequacy (15% RA margin), CCS vs LDES crossover. Output: `data/step4-gas-ccs-parquets/`. | When Step 3 outputs change. |
+| **Step 0** | `step0_*.py` (8 scripts) | **Data Acquisition** — EIA hourly profiles (multi-year 2021–2025), eGRID emissions, actual LMP data, offshore wind (NREL NOW-23), UTC fixes, MISO/SPP consolidation. Annual cadence. | When source data updates. |
+| **Step 1** | `step1_pfs_generator.py` (monolithic) or 1A+1B+1C (modular) | **Physics Feasible Space** — 4D/5D adaptive grid search × procurement × storage. Output: `data/step1-pfs-parquets/` + `data/step1d-storage-parquets/`. | Only if dispatch logic, generation profiles, or demand curves change. |
+| **Step 2** | `step2_efficient_frontier.py` | **Efficient Frontier** — Extracts non-dominated mixes from PFS. Reads both step1 and step1d parquets. Output: `data/step2-ef-parquets/`. | Only if PFS or filtering criteria change. |
+| **Step 3** | `step3a_cost_optimization.py` + `step3b_track_nb_ctr.py` | **Cost Optimization** — 3A: Track 1 baseline (5,832 combos, 17,496 CAISO). 3B: Track 2 (NB) + Track 3 (CTR). Output: `data/step3-cost-opt-parquets/`. | When cost assumptions change. |
+| **Step 4** | `step4_build_dispatch_cache.py` | **Dispatch Cache** — 8,760-hour dispatch for all unique mixes. NPZ v2. | After Step 3. |
 
-### Step 1 Sub-Pipeline (Modular)
+### Step 1 Sub-Pipeline (Modular, for CI/CD)
 
-The monolithic `step1_pfs_generator.py` has been decomposed into modular scripts for CI/CD:
+| Sub-step | Script(s) | What It Does |
+|----------|-----------|-------------|
+| **1A: Generate+Score** | `step1a_generate_mixes.py` → `step1b_score_mixes.py` | Generates resource fraction combos (4D/5D grid), scores against hourly demand. |
+| **1B: Zone Search** | `step1b_zone_search.py` | Fine-zone targeted search per threshold. |
+| **1C: Storage Refinement** | `step1c_storage_refinement.py` | Fills storage gaps (near-miss + lean-mix strategies). Output: `data/step1d-storage-parquets/`. |
 
-| Script | What It Does |
-|--------|-------------|
-| `step1a_generate_mixes.py` | Generates all resource fraction combos (4D/5D grid). |
-| `step1b_score_mixes.py` | Scores mixes against hourly demand profiles → `coarse_cache.parquet`. |
-| `step1c_build_pfs.py` | Mines Physics Feasible Space from scored DB per threshold. |
-| `step1d_storage_refinement.py` | Fills storage exploration gaps — intermediate battery/LDES levels that 1c's coarse grid missed. Output: `data/step1d-storage-parquets/`. |
+Utilities: `step1_pfs_generator.py` (monolithic), `step1_prior_windows.py` (search windows from prior EF).
 
-### Step 5: Dispatch Cache + Independent Analysis
+### Steps 5–9: Analysis & Dashboard
 
-| Script | What It Does | Cache Dependency |
-|--------|-------------|-----------------|
-| `step4_build_dispatch_cache.py` | **Run first.** Pre-computes 8,760-hour dispatch for all unique mixes. Versioned NPZ cache (v2) with per-resource matched/surplus + charge profiles. | Creates cache |
-| `step5_export_track_results.py` | Exports track parquets (NB + CTR) to `track_results.json` for dashboard. | None |
-| `step5_analyze_tracks.py` | Track result analysis: cost envelopes (P10/P50/P90), resource mix differentials. | None |
+#### Step 5: Core Analysis (6 scripts, all parallel after Step 4)
 
-### Step 6: Dispatch-Cache-Dependent Analysis
+| Script | What It Does | Dependencies |
+|--------|-------------|-------------|
+| `step5a_compute_co2.py` | CO₂ dispatch-stack model. Merit-order fuel retirement. | Step 4. **Run before Step 6A.** |
+| `step5b_compute_lmp_prices.py` | Synthetic hourly LMP from merit-order fossil stack. All 7 ISOs. | Step 4 |
+| `step5c_compress_day_profiles.py` | 24-hour representative day profiles. | Step 4 |
+| `step5d_deployment_queue.py` | Cross-regional consequential deployment path. | Step 4 |
+| `step5e_export_tracks.py` | Track export (NB + CTR) to `track_results.json`. | Step 3 |
+| `step5f_analyze_storage.py` | Battery/LDES utilization, dispatch patterns, capacity factors. | Step 4 + Step 3 |
 
-All Step 6 scripts read from the Step 5 dispatch cache. They can run in parallel after the cache is built.
+#### Step 6: Derived Analytics (3 scripts)
 
-| Script | What It Does |
-|--------|-------------|
-| `step5_compute_co2.py` | **CO₂ dispatch-stack model.** Merit-order fuel retirement (coal → oil → gas). Coal/oil capped at 2025 TWh. Demand-growth-aware. |
-| `step5_compute_mac_stats.py` | **MAC statistics.** 6 metrics: average fan (P10/P50/P90), stepwise marginal, monotonic envelope, path-constrained. ANOVA sensitivity decomposition. Crossover vs DAC/SCC/ETS. |
-| `step5_compute_lmp_prices.py` | **Synthetic LMP.** 8,760-hour dispatch reconstruction; hourly LMP from merit-order fossil stack. All 7 ISOs with calibrated price models. |
-| `step5_compute_optimal_targets.py` | **Optimal CFE targets.** Marginal MAC × DAC crossover via PCHIP spline. 3×3 grid-cost × DAC-scenario matrix. No-regrets resource analysis. |
-| `step5_compress_day_profiles.py` | **Compressed day profiles.** 24-hour representative day from dispatch cache. Falls back to live compute on cache miss. |
-| `step5_consequential_deployment_queue.py` | **Consequential queue.** Cross-regional deployment path under consequential accounting. Hourly emission accounting via dispatch cache. |
-| `step5_scenario_a_consequential.py` | **Scenario A.** Forward-stepping consequential procurement with per-resource floor ratchets. PFS fallback on filter exhaustion. |
-| `step5_scenario_b_hourly.py` | **Scenario B.** Hourly matching procurement strategy comparison. |
-| `step5_scenario_comparison.py` | **Scenario comparison.** Consequential vs. hourly matching — cost, emissions, resource mix differentials. |
-| `step5_analyze_storage.py` | **Storage analysis.** Battery/LDES utilization, dispatch patterns, capacity factor analysis. |
+| Script | What It Does | Dependencies |
+|--------|-------------|-------------|
+| `step6a_compute_mac_stats.py` | MAC statistics, ANOVA decomposition, DAC/SCC/ETS crossover. | Step 5A |
+| `step6b_compute_optimal_targets.py` | Optimal CFE targets via MAC × DAC crossover. No-regrets analysis. | Step 3 |
+| `step6c_analyze_tracks.py` | Track cost envelopes (P10/P50/P90), resource mix differentials. | Step 5E |
 
-### Step 6.5: Corporate Procurement Strategy Simulation
+#### Step 7: Scenario Comparison (3 scripts)
 
-| Script | What It Does |
-|--------|-------------|
-| `step5_5_procurement_utils.py` | **Shared utilities.** SSS allocation, EAC pricing, LMP feedback, PPA premiums, learning curves, 25-year timeline. |
-| `step5_5_strategy1_consequential.py` | **Strategy 1 (A/B/C).** Cross-regional consequential netting under 3 emission baselines (grid-avg, fossil-avg, marginal). |
-| `step5_5_strategy2_hourly.py` | **Strategy 2 (A/B/C).** Hourly matching same-ISO with existing clean credit variants. |
-| `step5_5_strategy3_annual.py` | **Strategy 3 (A/B/C/D).** Annual matching 2×2 matrix (new-only vs all-clean × additionality). |
+| Script | What It Does | Dependencies |
+|--------|-------------|-------------|
+| `step7a_scenario_consequential.py` | Consequential procurement with per-resource floor ratchets. | Step 2 |
+| `step7b_scenario_hourly.py` | Hourly matching procurement strategy. | Step 6B |
+| `step7c_scenario_comparison.py` | Consequential vs. hourly — cost, emissions, resource mix. | Steps 7A + 7B |
 
-### Step 7: Dashboard Data Generation
+#### Step 8: Procurement Strategies (4 scripts + 1 utility)
 
-| Script | What It Does |
-|--------|-------------|
-| `step6_generate_shared_data.py` | **Main export.** Extracts all results into `dashboard/js/shared-data.js`. SBTi milestone mapping, DAC trajectory projections, LCOE/transmission tables for client-side repricing. Aggregates all Step 5/6 outputs. Runs last. |
-| `step6_extract_no_regrets.py` | **No-regrets analysis.** Extracts optimal targets and no-regrets resource investments from crossover analysis. |
+| Script | What It Does | Dependencies |
+|--------|-------------|-------------|
+| `procurement_utils.py` | Shared utilities: SSS, EAC, LMP feedback, PPA, learning curves. | — |
+| `step8a_strategy_consequential.py` | Strategy 1 (A/B/C): cross-regional consequential netting. | Step 5D |
+| `step8b_strategy_hourly.py` | Strategy 2 (A/B/C): hourly matching same-ISO. | — |
+| `step8c_strategy_annual.py` | Strategy 3 (A/B/C/D): annual matching 2×2 matrix. | — |
+| `step8d_wrights_law_curves.py` | Wright's Law learning curves & critical mass threshold. | — |
+
+#### Step 9: Dashboard Data Generation
+
+| Script | What It Does | Dependencies |
+|--------|-------------|-------------|
+| `step9a_generate_shared_data.py` | All results → `dashboard/js/shared-data.js`. **Runs last.** | All upstream |
+| `step9b_extract_no_regrets.py` | No-regrets resource investments from crossover analysis. | Step 6B |
 
 ### Shared Utilities
 
 | Script | What It Does |
 |--------|-------------|
-| `dispatch_utils.py` | **Dispatch engine.** Single source of truth for dispatch reconstruction, supply profiles, fossil retirement, cache I/O. |
-| `scenario_common.py` | **Scenario utilities.** Shared logic for Scenario A/B: cost tables, demand growth, learning curves, EF/PFS loading. |
-| `eia_data_io.py` | **EIA data I/O.** Standardized loading of multi-year EIA generation/demand profiles. |
-| `calibrate_lmp_model.py` | **LMP calibration.** Validates synthetic LMP model against actual ISO data (2024 SOM reports). |
+| `pipeline_config.py` | Single source of truth for all shared constants. |
+| `dispatch_utils.py` | Dispatch reconstruction, supply profiles, fossil retirement, cache I/O. |
+| `scenario_common.py` | Shared Scenario A/B logic: cost tables, demand growth, EF/PFS loading. |
+| `eia_data_io.py` | Standardized multi-year EIA generation/demand profile loading. |
+| `calibrate_lmp_model.py` | Validates synthetic LMP against actual ISO data. |
 
 ### Pipeline Execution Order
 
 ```
-Step 0 (data fetch, optional)
-  → Step 1a → 1b → 1c → 1d (PFS generation)
+Step 0 (data acquisition, annual)
+  → Step 1A (generate+score) → 1B (zone search) → 1C (storage refinement)
     → Step 2 (efficient frontier)
       → Step 3 (cost optimization)
-        → Step 4 (gas/CCS adjustments)
-          → Step 5 (dispatch cache first, then track export/analysis in parallel)
-            → Step 6.0 (CO₂ recompute — run before 6.1)
-              → Steps 6.1-6.6 (all cache-dependent analytics, can run in parallel)
-                → Step 7 (dashboard data export)
+        → Step 4 (dispatch cache)
+          → Step 5 (5A–5F core analysis, all parallel)
+            → Step 6 (derived analytics)
+              → Step 7 (scenario comparison) + Step 8 (procurement strategies)
+                → Step 9 (dashboard data export)
 ```
 
-**Key principle**: Step 1 is expensive (hours). Steps 2–4 are cheap (seconds to minutes). Changing cost assumptions only requires Steps 3–4 + post-processing. Changing methodology for a single analysis page only requires the relevant Step 6 script + Step 7.
+**Key principle**: Step 1 is expensive (hours). Steps 2–9 are cheap. Changing cost assumptions → Steps 3 + downstream. Changing a single analysis → relevant step + Step 9.
 
 ### GitHub Actions Workflows
 
-All workflows are triggered manually via `workflow_dispatch`. Each creates a fresh branch, commits results, and opens a PR.
+All workflows: `workflow_dispatch`, ISO selectors. See `.github/workflows/README.md` for full docs.
 
-| # | Workflow | What It Does |
-|---|----------|-------------|
-| 0 | `step0-fetch-lmp-data.yml` | Fetch actual DA hourly LMP from ISO APIs |
-| 1a | `step1a-scored-database.yml` | Generate + score resource fraction combos |
-| 1b | `step1b-build-pfs.yml` | Mine PFS from scored database per threshold |
-| 1d | `step1d-storage-refinement.yml` | Fill storage exploration gaps |
-| 2 | `step2-efficient-frontier.yml` | EF filter + optional EF expansion for Scenario A |
-| 2.5 | `step2.5-expand-ef.yml` | Standalone EF expansion for floor constraints |
-| 3 | `step3-cost-optimization.yml` | Vectorized cost optimization (3 tracks) |
-| 4 | `step4-gas-ccs.yml` | NEISO gas constraint, 45Q, resource adequacy |
-| 5 | `step4-dispatch-cache.yml` | Dispatch cache build + track export/analysis |
-| 5.2 | `step4.2-track-analysis.yml` | Track cost envelope analysis |
-| 6.0 | `step5.0-compute-co2.yml` | Dispatch-stack CO₂ (shared, run before 6.1) |
-| 6.1 | `step5.1-update-mac-page.yml` | MAC stats → Optimal targets → Shared data |
-| 6.2 | `step5.2-update-lmp-page.yml` | Compute synthetic LMP → Extract dashboard JS |
-| 6.3 | `step5.3-update-scenarios-page.yml` | Scenario A → B → Compare |
-| 6.4 | `step5.4-procurement-strategies.yml` | 10 strategy variants → combined dashboard JS |
-| 6.5 | `step5.5-supplemental-analytics.yml` | Compressed day + consequential queue |
-| 6.6 | `step5.6-update-optimizer-dashboard.yml` | Compressed day + shared-data.js for dashboard |
-| 7 | `step6-generate-shared-data.yml` | Consolidate all results into shared-data.js |
+| Step | Workflow | What It Does |
+|------|----------|-------------|
+| 0 | `step0-fetch-lmp-data.yml` | Fetch actual DA hourly LMP |
+| 0 | `step0-fetch-offshore-wind.yml` | Fetch NREL NOW-23 offshore wind profiles |
+| 1A | `step1a-scored-database.yml` | Generate + score resource combos |
+| 1B | `step1b-zone-search.yml` | Zone-specific fine search |
+| 1C | `step1c-storage-refinement.yml` | Fill storage exploration gaps |
+| 2 | `step2-efficient-frontier.yml` | EF extraction |
+| 3 | `step3-cost-optimization.yml` | Cost optimization (3 tracks) |
+| 4 | `step4-dispatch-cache.yml` | Dispatch cache build |
+| 5A | `step5a-compute-co2.yml` | CO₂ dispatch model |
+| 5B | `step5b-compute-lmp.yml` | Synthetic LMP |
+| 5C+D | `step5cd-supplemental.yml` | Day profiles + deployment queue |
+| 5E | `step5e-track-analysis.yml` | Track export + analysis |
+| 5F | `step5f-storage-analysis.yml` | Storage dispatch analysis |
+| 6 | `step6-derived-analytics.yml` | MAC stats + optimal targets |
+| 7 | `step7-scenario-comparison.yml` | Scenarios A → B → comparison |
+| 8 | `step8-procurement-strategies.yml` | All procurement strategies |
+| 9 | `step9-generate-shared-data.yml` | Dashboard data export |
 
 **Common workflow patterns:**
-- Update Optimizer Dashboard: `Step 6.6`
-- Update Abatement page: `Step 6.0` (if CO₂ stale) → `Step 6.1`
-- Update LMP page: `Step 6.2`
-- Cost assumptions changed: `Step 3 → 4 → 5 → 6.0 → 6.1+6.2+6.3+6.6 (parallel) → 7`
-- Full pipeline: `Step 0 → 1a → 1b → 1d → 2 → 3 → 4 → 5 → 6.0 → 6.1-6.6 → 7`
+- Update Optimizer Dashboard: `Step 5C` (day profiles) → `Step 9`
+- Update Abatement page: `Step 5A` (if CO₂ stale) → `Step 6`
+- Update LMP page: `Step 5B`
+- Cost assumptions changed: `Step 3 → 4 → 5 (parallel) → 6 → 7+8 (parallel) → 9`
+- Full pipeline: `Step 0 → 1A → 1B → 1C → 2 → 3 → 4 → 5 → 6 → 7+8 → 9`
 
 ## Project Structure
 
 ```
 hourly-cfe-optimizer/
 ├── scripts/
-│   ├── step0_*.py (8 scripts)              # Data fetch/prep
-│   ├── step1_pfs_generator.py              # Monolithic PFS generator (legacy)
-│   ├── step1a_generate_mixes.py            # Modular: generate resource combos
-│   ├── step1b_score_mixes.py               # Modular: score mixes vs demand
-│   ├── step1c_build_pfs.py                 # Modular: build PFS per threshold
-│   ├── step1d_storage_refinement.py        # Modular: fill storage gaps
-│   ├── step2_efficient_frontier.py         # Efficient frontier extraction
-│   ├── step2_5_expand_ef_for_floors.py     # EF expansion for scenario floors
-│   ├── step3_cost_optimization.py          # Cost optimization (5,832 combos)
-│   ├── step3_track_nb_ctr.py              # Track 2 (NB) + Track 3 (CTR)
-│   ├── step4_gas_ccs_adjustement.py        # Gas/CCS post-processing
-│   ├── step4_build_dispatch_cache.py       # Dispatch cache (NPZ v2)
-│   ├── step5_export_track_results.py       # Track result export
-│   ├── step5_analyze_tracks.py             # Track cost envelope analysis
-│   ├── step5_compute_co2.py              # CO₂ dispatch model
-│   ├── step5_compute_mac_stats.py          # MAC statistics + ANOVA
-│   ├── step5_compute_lmp_prices.py         # Synthetic LMP (7 ISOs)
-│   ├── step5_compute_optimal_targets.py    # Optimal CFE targets
-│   ├── step5_compress_day_profiles.py             # 24-hr representative profiles
-│   ├── step5_consequential_deployment_queue.py        # Cross-regional deployment queue
-│   ├── step5_scenario_a_consequential.py                 # Scenario A (consequential)
-│   ├── step5_scenario_b_hourly.py                 # Scenario B (hourly matching)
-│   ├── step5_scenario_comparison.py           # A vs B comparison
-│   ├── step5_analyze_storage.py            # Storage dispatch analysis
-│   ├── step5_5_procurement_utils.py        # Procurement strategy utilities
-│   ├── step5_5_strategy1_consequential.py  # Strategy 1: cross-regional netting
-│   ├── step5_5_strategy2_hourly.py         # Strategy 2: hourly matching
-│   ├── step5_5_strategy3_annual.py         # Strategy 3: annual matching
-│   ├── step6_generate_shared_data.py       # Dashboard data export
-│   ├── step6_extract_no_regrets.py         # No-regrets analysis
-│   ├── dispatch_utils.py                   # Shared dispatch engine
-│   ├── scenario_common.py                  # Shared scenario utilities
+│   ├── step0_*.py (8 scripts)              # Data acquisition (annual cadence)
+│   ├── step1_pfs_generator.py              # Monolithic PFS generator
+│   ├── step1_prior_windows.py              # Search window computation
+│   ├── step1a_generate_mixes.py            # Step 1A: generate resource combos
+│   ├── step1b_score_mixes.py               # Step 1A: score mixes vs demand
+│   ├── step1b_zone_search.py               # Step 1B: zone-specific fine search
+│   ├── step1c_storage_refinement.py        # Step 1C: fill storage gaps
+│   ├── step2_efficient_frontier.py         # Step 2: efficient frontier
+│   ├── step3a_cost_optimization.py         # Step 3A: baseline cost optimization
+│   ├── step3b_track_nb_ctr.py              # Step 3B: NB + CTR tracks
+│   ├── step4_build_dispatch_cache.py       # Step 4: dispatch cache (NPZ v2)
+│   ├── step5a_compute_co2.py               # Step 5A: CO₂ dispatch model
+│   ├── step5b_compute_lmp_prices.py        # Step 5B: synthetic LMP (7 ISOs)
+│   ├── step5c_compress_day_profiles.py     # Step 5C: 24-hr representative profiles
+│   ├── step5d_deployment_queue.py          # Step 5D: cross-regional deployment
+│   ├── step5e_export_tracks.py             # Step 5E: track result export
+│   ├── step5f_analyze_storage.py           # Step 5F: storage dispatch analysis
+│   ├── step6a_compute_mac_stats.py         # Step 6A: MAC statistics + ANOVA
+│   ├── step6b_compute_optimal_targets.py   # Step 6B: optimal CFE targets
+│   ├── step6c_analyze_tracks.py            # Step 6C: track cost envelopes
+│   ├── step7a_scenario_consequential.py    # Step 7A: Scenario A
+│   ├── step7b_scenario_hourly.py           # Step 7B: Scenario B
+│   ├── step7c_scenario_comparison.py       # Step 7C: A vs B comparison
+│   ├── procurement_utils.py               # Step 8 shared utilities
+│   ├── step8a_strategy_consequential.py    # Step 8A: cross-regional netting
+│   ├── step8b_strategy_hourly.py           # Step 8B: hourly matching
+│   ├── step8c_strategy_annual.py           # Step 8C: annual matching
+│   ├── step8d_wrights_law_curves.py        # Step 8D: Wright's Law curves
+│   ├── step9a_generate_shared_data.py      # Step 9A: dashboard data export
+│   ├── step9b_extract_no_regrets.py        # Step 9B: no-regrets analysis
+│   ├── pipeline_config.py                  # Shared constants (LCOE, fuel, storage)
+│   ├── dispatch_utils.py                   # Dispatch engine
+│   ├── scenario_common.py                  # Scenario A/B shared logic
 │   ├── eia_data_io.py                      # EIA data I/O
 │   ├── calibrate_lmp_model.py              # LMP model calibration
 │   └── ...                                 # Additional utilities
 ├── data/
-│   ├── step1-pfs-parquets/                 # PFS per-ISO/threshold (Step 1 output)
-│   ├── step1d-storage-parquets/            # Storage refinement (Step 1d output)
-│   ├── step2-ef-parquets/                  # Efficient frontier (Step 2 output)
-│   ├── step3-cost-opt-parquets/            # Cost optimization (Step 3 output)
-│   ├── step4-gas-ccs-parquets/             # Corrected results (Step 4 output)
+│   ├── step1-pfs-parquets/                 # PFS per-ISO/threshold (Step 1)
+│   ├── step1d-storage-parquets/            # Storage refinement (Step 1C)
+│   ├── step2-ef-parquets/                  # Efficient frontier (Step 2)
+│   ├── step3-cost-opt-parquets/            # Cost optimization (Step 3)
 │   ├── step5-post-processing/              # All post-processing outputs
-│   │   ├── dispatch_cache/                 # Per-ISO NPZ dispatch cache
-│   │   ├── co2_results/                    # CO₂ recomputation results
-│   │   ├── lmp/                            # Synthetic LMP data
-│   │   ├── mac_stats.json                  # MAC statistics
-│   │   ├── optimal_targets.json            # Optimal CFE targets
-│   │   ├── scenario_comparison.json        # A vs B comparison
-│   │   ├── track_results.json              # Track export
+│   │   ├── dispatch_cache/                 # Per-ISO NPZ dispatch cache (Step 4)
+│   │   ├── co2_results/                    # CO₂ results (Step 5A)
+│   │   ├── lmp/                            # Synthetic LMP (Step 5B)
+│   │   ├── mac_stats.json                  # MAC statistics (Step 6A)
+│   │   ├── optimal_targets.json            # Optimal targets (Step 6B)
+│   │   ├── scenario_comparison.json        # A vs B (Step 7C)
+│   │   ├── track_results.json              # Track export (Step 5E)
 │   │   └── ...
 │   ├── eia-930/                            # Source EIA hourly profiles
 │   └── ...                                 # Additional data files
@@ -217,9 +221,9 @@ hourly-cfe-optimizer/
 │   ├── optimizer_methodology.html          # Technical methodology
 │   ├── pipeline.html                       # Pipeline architecture
 │   ├── about.html                          # About the project
-│   ├── js/shared-data.js                   # Dashboard data (Step 7 output)
+│   ├── js/shared-data.js                   # Dashboard data (Step 9 output)
 │   └── ...                                 # Additional pages
-├── .github/workflows/                      # CI/CD (22 workflow files)
+├── .github/workflows/                      # CI/CD (~22 workflow files)
 ├── SPEC.md                                 # Complete specification document
 ├── CLAUDE.md                               # Claude Code session instructions
 └── README.md

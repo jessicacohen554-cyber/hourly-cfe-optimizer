@@ -383,7 +383,7 @@ def cross_validate_cost_function(results, isos, thresholds):
     print("="*70)
 
     try:
-        from step3_cost_optimization import (
+        from step3a_cost_optimization import (
             price_mix_batch, REGIONAL_DEMAND_TWH as S3_DEMAND,
             GRID_MIX_SHARES as S3_GRID,
         )
@@ -620,7 +620,7 @@ def validate_constants_consistency(results):
     print("="*70)
 
     try:
-        from step3_cost_optimization import (
+        from step3a_cost_optimization import (
             REGIONAL_DEMAND_TWH as S3_DEMAND,
             GRID_MIX_SHARES as S3_GRID,
             WHOLESALE_PRICES as S3_WS,

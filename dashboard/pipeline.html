@@ -414,14 +414,14 @@ body { background: var(--bg-page-white); }
                     <span class="flow-tag flow-tag-minutes">~20 min</span>
                 </div>
                 <p>
-                    <code>scripts/step3_cost_optimization.py</code> &mdash; Vectorized cross-evaluation of EF mixes
+                    <code>scripts/step3a_cost_optimization.py</code> &mdash; Vectorized cross-evaluation of EF mixes
                     under 5,832 cost sensitivity combos per region (17,496 for CAISO with geothermal toggle).
                     Pre-computed coefficient matrix &times; scenario price vector via Numba-accelerated dot product.
                     Merit-order tranche pricing for clean firm: uprate &rarr; geothermal &rarr; min(nuclear, CCS).
                     Demand growth sweep across 25 years &times; 3 growth rates.
                 </p>
                 <p style="font-size:0.82rem; color:#6B7280;">
-                    Also: <code>scripts/step3_track_nb_ctr.py</code> &mdash; Track 2 (New-Build) + Track 3 (Cost-to-Replace) optimization with alternate resource constraints.
+                    Also: <code>scripts/step3b_track_nb_ctr.py</code> &mdash; Track 2 (New-Build) + Track 3 (Cost-to-Replace) optimization with alternate resource constraints.
                 </p>
                 <div class="flow-files">
                     <div class="flow-file">
@@ -526,9 +526,9 @@ body { background: var(--bg-page-white); }
                             <span class="flow-tag flow-tag-seconds">~5 sec</span>
                         </div>
                         <p>
-                            <code>scripts/step5_export_track_results.py</code> &mdash; Exports track parquets (NB + CTR) to
+                            <code>scripts/step5e_export_tracks.py</code> &mdash; Exports track parquets (NB + CTR) to
                             <code>track_results.json</code>. Pre-computes P10/P50/P90 percentiles server-side.<br>
-                            <code>scripts/step5_analyze_tracks.py</code> &mdash; Cost envelopes, mix differentials, replacement premium analysis.
+                            <code>scripts/step6c_analyze_tracks.py</code> &mdash; Cost envelopes, mix differentials, replacement premium analysis.
                         </p>
                         <div class="flow-files">
                             <div class="flow-file">
@@ -561,7 +561,7 @@ body { background: var(--bg-page-white); }
                             <span class="flow-tag flow-tag-cache">runs first</span>
                         </div>
                         <p>
-                            <code>scripts/step5_compute_co2.py</code> &mdash; Dispatch-stack emission model.
+                            <code>scripts/step5a_compute_co2.py</code> &mdash; Dispatch-stack emission model.
                             Merit-order retirement: coal first, then oil, then gas. Computes weighted average rate
                             of <em>displaced</em> fossil (not remaining fleet). Demand-growth-aware. Fast path from
                             <code>hourly_match_score</code> (~1000x speedup).
@@ -580,7 +580,7 @@ body { background: var(--bg-page-white); }
                             <span class="flow-tag flow-tag-seconds">~10 sec</span>
                         </div>
                         <p>
-                            <code>scripts/step5_compress_day_profiles.py</code> &mdash; Generates 24-hour representative day profiles
+                            <code>scripts/step5c_compress_day_profiles.py</code> &mdash; Generates 24-hour representative day profiles
                             from 8,760-hour dispatch. Hour-of-day summing with per-resource matched/surplus breakdowns.
                             Reads from dispatch cache; falls back to live compute on cache miss.
                         </p>
@@ -598,7 +598,7 @@ body { background: var(--bg-page-white); }
                             <span class="flow-tag flow-tag-seconds">~30 sec</span>
                         </div>
                         <p>
-                            <code>scripts/step5_compute_mac_stats.py</code> &mdash; 6 MAC metrics: average fan (P10/P50/P90),
+                            <code>scripts/step6a_compute_mac_stats.py</code> &mdash; 6 MAC metrics: average fan (P10/P50/P90),
                             stepwise marginal, monotonic envelope, path-constrained. ANOVA sensitivity decomposition
                             across 6 toggle groups. Crossover analysis vs DAC/SCC/ETS benchmarks.
                         </p>
@@ -616,7 +616,7 @@ body { background: var(--bg-page-white); }
                             <span class="flow-tag flow-tag-seconds">~10 sec</span>
                         </div>
                         <p>
-                            <code>scripts/step5_compute_lmp_prices.py</code> &mdash; Synthetic hourly LMP from merit-order
+                            <code>scripts/step5b_compute_lmp_prices.py</code> &mdash; Synthetic hourly LMP from merit-order
                             fossil stack. Cost-based offer formula (PJM Manual 15), load-dependent heat rate ramp,
                             demand-quantile pricing (congestion, scarcity, negative pricing). ISO-specific price formation.
                         </p>
@@ -634,7 +634,7 @@ body { background: var(--bg-page-white); }
                             <span class="flow-tag flow-tag-seconds">~15 sec</span>
                         </div>
                         <p>
-                            <code>scripts/step5_consequential_deployment_queue.py</code> &mdash; Cross-regional deployment path under
+                            <code>scripts/step5d_deployment_queue.py</code> &mdash; Cross-regional deployment path under
                             consequential accounting. Uses dispatch cache for hourly emission accounting via
                             <code>compute_co2_from_dispatch()</code>.
                         </p>
@@ -652,7 +652,7 @@ body { background: var(--bg-page-white); }
                             <span class="flow-tag flow-tag-seconds">~10 sec</span>
                         </div>
                         <p>
-                            <code>scripts/step6_scenario_comparison.py</code> &mdash; Pure Consequential (Scenario A) vs
+                            <code>scripts/step7c_scenario_comparison.py</code> &mdash; Pure Consequential (Scenario A) vs
                             Hourly Matching (Scenario B) strategy comparison. Both use dispatch-cache-based
                             emission accounting.
                         </p>
@@ -678,7 +678,7 @@ body { background: var(--bg-page-white); }
                     <span class="flow-tag flow-tag-seconds">~5 sec</span>
                 </div>
                 <p>
-                    <code>scripts/step6_generate_shared_data.py</code> &mdash; Final pipeline step. Aggregates all results into
+                    <code>scripts/step9a_generate_shared_data.py</code> &mdash; Final pipeline step. Aggregates all results into
                     <code>shared-data.js</code> for the interactive dashboard. SBTi milestone mapping, DAC trajectory projections,
                     LCOE/transmission tables for client-side repricing. Embeds cost tables, MAC stats, resource mixes,
                     compressed day profiles, and benchmark data as JavaScript constants.
@@ -727,7 +727,7 @@ body { background: var(--bg-page-white); }
                 <li>Existing clean TWh constant; share declines with demand growth</li>
                 <li>5,832 cost scenarios per ISO/threshold (17,496 for CAISO)</li>
                 <li>LMP module runs on this track</li>
-                <li>Script: <code style="font-family:var(--font-mono); font-size:0.75rem; color:#4B5563;">scripts/step3_cost_optimization.py</code></li>
+                <li>Script: <code style="font-family:var(--font-mono); font-size:0.75rem; color:#4B5563;">scripts/step3a_cost_optimization.py</code></li>
             </ul>
         </div>
 
@@ -740,7 +740,7 @@ body { background: var(--bg-page-white); }
                 <li>Nuclear uprates ON (cheapest new-build option, part of greenfield procurement)</li>
                 <li>All other resources at new-build LCOE pricing</li>
                 <li>Shows the &ldquo;pure market signal&rdquo; &mdash; what hourly mandates would build</li>
-                <li>Script: <code style="font-family:var(--font-mono); font-size:0.75rem; color:#4B5563;">scripts/step3_track_nb_ctr.py --track nb</code></li>
+                <li>Script: <code style="font-family:var(--font-mono); font-size:0.75rem; color:#4B5563;">scripts/step3b_track_nb_ctr.py --track nb</code></li>
             </ul>
         </div>
 
@@ -753,7 +753,7 @@ body { background: var(--bg-page-white); }
                 <li>Hydro at existing regional capacity (existing-only)</li>
                 <li>Answers &ldquo;what&rsquo;s the cost if we lose this plant?&rdquo;</li>
                 <li>Shows asset stranding risk and replacement premium</li>
-                <li>Script: <code style="font-family:var(--font-mono); font-size:0.75rem; color:#4B5563;">scripts/step3_track_nb_ctr.py --track ctr</code></li>
+                <li>Script: <code style="font-family:var(--font-mono); font-size:0.75rem; color:#4B5563;">scripts/step3b_track_nb_ctr.py --track ctr</code></li>
             </ul>
         </div>
     </div>
@@ -943,7 +943,7 @@ body { background: var(--bg-page-white); }
                     <td><code>data/step2-ef-parquets/step2_ef_{ISO}.parquet</code></td>
                     <td>Parquet</td>
                     <td>Step 2</td>
-                    <td>Step 3, step3_track_nb_ctr.py</td>
+                    <td>Step 3, step3b_track_nb_ctr.py</td>
                     <td>~1.8M Efficient Frontier mixes after Pareto-optimal procurement selection (7 files)</td>
                 </tr>
                 <tr>
@@ -977,42 +977,42 @@ body { background: var(--bg-page-white); }
                 <tr>
                     <td><code>dashboard/track_results.json</code></td>
                     <td>JSON</td>
-                    <td>step5_export_track_results.py</td>
+                    <td>step5e_export_tracks.py</td>
                     <td>cost_to_replace.html, new_build_analysis.html, Step 7</td>
                     <td>NB and CTR track cost optimization results with P10/P50/P90 percentiles</td>
                 </tr>
                 <tr>
                     <td><code>dashboard/compressed_day_profiles.json</code></td>
                     <td>JSON</td>
-                    <td>step5_compress_day_profiles.py</td>
+                    <td>step5c_compress_day_profiles.py</td>
                     <td>dashboard.html</td>
                     <td>24-hour representative dispatch profiles for all ISO/threshold/mix combos</td>
                 </tr>
                 <tr>
                     <td><code>dashboard/js/mac-stats-data.js</code></td>
                     <td>JS module</td>
-                    <td>step5_compute_mac_stats.py</td>
+                    <td>step6a_compute_mac_stats.py</td>
                     <td>index.html, abatement_dashboard.html, research_paper.html</td>
                     <td>MAC curve statistics: fans, envelopes, ANOVA decomposition, crossover analysis</td>
                 </tr>
                 <tr>
                     <td><code>dashboard/js/consequential-queue-data.js</code></td>
                     <td>JS module</td>
-                    <td>step5_consequential_deployment_queue.py</td>
+                    <td>step5d_deployment_queue.py</td>
                     <td>scenario_comparison.html</td>
                     <td>Cross-regional deployment data for scenario comparison</td>
                 </tr>
                 <tr>
                     <td><code>data/step5-post-processing/lmp/{ISO}_lmp.parquet</code></td>
                     <td>Parquet</td>
-                    <td>step5_compute_lmp_prices.py</td>
+                    <td>step5b_compute_lmp_prices.py</td>
                     <td>lmp_trends.html (future), calibrate_lmp_model.py</td>
                     <td>Synthetic 8760-hour LMP from merit-order fossil stack; wholesale price distributions</td>
                 </tr>
                 <tr>
                     <td><code>dashboard/js/shared-data.js</code></td>
                     <td>JS module</td>
-                    <td>step6_generate_shared_data.py</td>
+                    <td>step9a_generate_shared_data.py</td>
                     <td>All dashboard pages</td>
                     <td>Master data file: SBTi milestones, LCOE tables, all extracted results, benchmarks, colors</td>
                 </tr>
@@ -1386,7 +1386,7 @@ where storage keys = round(dispatch_pct &times; 20) to convert 0.05% steps to in
     <!-- STEP 3 -->
     <div class="appendix-step">
         <h3><span class="step-dot" style="background:#F59E0B;">3</span> Cost Optimization</h3>
-        <div class="step-subtitle">scripts/step3_cost_optimization.py &mdash; ~20 minutes (Numba-accelerated)</div>
+        <div class="step-subtitle">scripts/step3a_cost_optimization.py &mdash; ~20 minutes (Numba-accelerated)</div>
 
         <h4>Sensitivity Toggle Dimensions</h4>
         <table class="param-table">
@@ -1570,7 +1570,7 @@ ELCC credits: nuclear=1.0, solar=0.30, wind=0.10, CCS/gas=0.90, battery/LDES=0.9
         <h3><span class="step-dot" style="background:#0EA5E9;">6</span> Dispatch-Dependent Analytics</h3>
         <div class="step-subtitle">6 scripts, all reading from the Step 5 dispatch cache</div>
 
-        <h4>6a. CO&#8322; Recompute (step5_compute_co2.py)</h4>
+        <h4>6a. CO&#8322; Recompute (step5a_compute_co2.py)</h4>
         <p><strong>Merit-order fuel retirement</strong>: Coal retires first, then oil, then gas.</p>
         <div class="formula-box">Tier 1 (clean &lt; baseline):   All coal, oil, gas in current proportions
 Tier 2 (50% &lt; clean &lt; 70%):  Coal retires first (capped at COAL_CAP_TWH), then oil (OIL_CAP_TWH)
@@ -1584,7 +1584,7 @@ CO&#8322; abated = fossil_displaced_mwh &times; displaced_rate - CCS_supply &tim
             <strong>Dispatch path</strong>: Falls back to full hourly reconstruction via dispatch cache when match score is unavailable.
         </p>
 
-        <h4>6b. Compressed Day Profiles (step5_compress_day_profiles.py)</h4>
+        <h4>6b. Compressed Day Profiles (step5c_compress_day_profiles.py)</h4>
         <p>
             Compresses 8,760-hour dispatch to 24-hour representative day profiles by summing each hour-of-day across all 365 days:
         </p>
@@ -1593,7 +1593,7 @@ CO&#8322; abated = fossil_displaced_mwh &times; displaced_rate - CCS_supply &tim
 Applied to: demand, matched_{resource}, surplus_{resource}, battery_charge, ldes_charge, gap
 Output keyed by: ISO / threshold / mix_key (e.g., "20_30_15_0_5_100_50_10")</div>
 
-        <h4>6c. MAC Statistics (step5_compute_mac_stats.py)</h4>
+        <h4>6c. MAC Statistics (step6a_compute_mac_stats.py)</h4>
         <p>6 MAC (Marginal Abatement Cost) metrics computed per ISO:</p>
         <ul>
             <li><strong>Fan chart (P10/P25/P50/P75/P90)</strong>: Percentiles of MAC = effective_cost &times; demand_mwh / co2_abated across all scenarios per threshold.</li>
@@ -1604,7 +1604,7 @@ Output keyed by: ISO / threshold / mix_key (e.g., "20_30_15_0_5_100_50_10")</div
             <li><strong>Benchmark crossover</strong>: Threshold where MAC crosses EPA SCC ($190/ton), EU ETS ($88/ton), DAC ($400&ndash;600/ton).</li>
         </ul>
 
-        <h4>6d. LMP Pricing (step5_compute_lmp_prices.py)</h4>
+        <h4>6d. LMP Pricing (step5b_compute_lmp_prices.py)</h4>
         <p>Three-layer synthetic LMP model calibrated to PJM SOM 2024:</p>
         <ul>
             <li><strong>Layer 1 &mdash; Merit-order dispatch</strong>: Cost-based offer formula (PJM Manual 15): <code>MC = (HR &times; fuel + VOM + CO&#8322; &times; CO&#8322;_price) &times; 1.10</code>. Heat rates: coal 10.0, CCGT 7.0, CT 10.5 MMBtu/MWh. Stack walk via <code>np.searchsorted</code>.</li>
@@ -1612,14 +1612,14 @@ Output keyed by: ISO / threshold / mix_key (e.g., "20_30_15_0_5_100_50_10")</div
             <li><strong>Layer 3 &mdash; Demand-quantile pricing</strong>: High-demand (&gt;80th pct) congestion adder up to $60/MWh. Scarcity tail (&gt;97th pct) exponential up to $500/MWh. Low-demand (&lt;15th pct) negative pricing floor at -$25/MWh.</li>
         </ul>
 
-        <h4>6e. Consequential Queue (step5_consequential_deployment_queue.py)</h4>
+        <h4>6e. Consequential Queue (step5d_deployment_queue.py)</h4>
         <p>
             Cross-regional deployment path that minimizes marginal $/tCO&#8322; at each step.
             Zones: 50&rarr;75% (cheap renewables), 75&rarr;90% (firm power needed), 90&rarr;99% (last-mile premium).
             Uses dispatch cache for hourly emission accounting via <code>compute_co2_from_dispatch()</code>.
         </p>
 
-        <h4>6f. Scenario Comparison (step6_scenario_comparison.py)</h4>
+        <h4>6f. Scenario Comparison (step7c_scenario_comparison.py)</h4>
         <p>
             Dual-scenario comparison: Scenario A (pure consequential &mdash; chase cheapest $/tCO&#8322; sequentially) vs
             Scenario B (hourly matching &mdash; co-optimize full mix at target threshold). Both use dispatch-cache-based emission accounting to ensure consistent CO&#8322; methodology.
@@ -1629,13 +1629,13 @@ Output keyed by: ISO / threshold / mix_key (e.g., "20_30_15_0_5_100_50_10")</div
     <!-- STEP 7 -->
     <div class="appendix-step">
         <h3><span class="step-dot" style="background:#22C55E;">7</span> Dashboard Data Generation</h3>
-        <div class="step-subtitle">scripts/step6_generate_shared_data.py &mdash; ~5 seconds</div>
+        <div class="step-subtitle">scripts/step9a_generate_shared_data.py &mdash; ~5 seconds</div>
 
         <h4>What shared-data.js Contains</h4>
         <p>
             A single JavaScript module exporting all constants needed by the dashboard. Generated by reading
             <code>overprocure_results.json</code>, <code>mac_stats.json</code>, <code>track_results.json</code>,
-            and importing cost tables from <code>step3_cost_optimization.py</code>.
+            and importing cost tables from <code>step3a_cost_optimization.py</code>.
         </p>
         <table class="param-table">
             <thead><tr><th>Constant</th><th>Source</th><th>Description</th></tr></thead>
