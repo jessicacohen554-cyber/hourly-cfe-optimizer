@@ -215,6 +215,76 @@ STORAGE_MAX = {
     'h2': 25.0,         # 25.0% of demand
 }
 
+# Step 1D.2: Research-informed 2050 storage caps (% of demand)
+# Sources: NREL Storage Futures (200 GW / 1,200 GWh ref case),
+#          DOE LDES Liftoff (225-460 GW LDES for net-zero),
+#          Princeton Net Zero America (1,300 GWh by 2050)
+STORAGE_MAX_V2 = {
+    'battery': 5.0,     # 5.0% of demand — NREL: 200 GW 4hr daily @ 85% RTE ≈ 6%
+    'battery8': 10.0,   # 10.0% of demand — 8hr key for deep decarb overnight coverage
+    'ldes': 25.0,       # 25.0% of demand — DOE: 225-460 GW iron-air @ 100hr weekly
+    'h2': 25.0,         # 25.0% of demand — unchanged, seasonal storage already generous
+}
+
+# ============================================================================
+# STORAGE ECONOMICS (Step 1D.2 Economic Assessment)
+# ============================================================================
+
+# Capacity market prices ($/kW-yr) — from 2024 auction results
+# ERCOT and SPP have energy-only markets (no capacity payment)
+CAPACITY_MARKET_PRICES = {
+    'CAISO': 75,    # RA program, system-wide avg
+    'ERCOT': 0,     # No capacity market (energy-only)
+    'PJM': 50,      # RPM 2025/2026 BRA clearing price
+    'NYISO': 85,    # ICAP monthly spot, annualized
+    'NEISO': 55,    # FCM FCA-19 clearing price
+    'MISO': 25,     # PRA Zone 1-7 average
+    'SPP': 0,       # No capacity market (energy-only)
+}
+
+# Ancillary service rates ($/MW-hr) by product × ISO
+# Battery eligible for regulation (fast response); LDES for spinning only
+ANCILLARY_SERVICE_RATES = {
+    'regulation': {
+        'CAISO': 12, 'ERCOT': 15, 'PJM': 18, 'NYISO': 14,
+        'NEISO': 10, 'MISO': 8, 'SPP': 6,
+    },
+    'spinning': {
+        'CAISO': 5, 'ERCOT': 8, 'PJM': 6, 'NYISO': 5,
+        'NEISO': 4, 'MISO': 3, 'SPP': 3,
+    },
+}
+
+# Ancillary service availability (hours/year available for service)
+ANCILLARY_HOURS = {
+    'regulation': 2000,  # ~23% of year — battery available when not cycling
+    'spinning': 4000,    # ~46% of year — can provide while partially charged
+}
+
+# Battery degradation parameters
+BATTERY_DEGRADATION = {
+    'battery': {
+        'cycles_per_year': 365,      # Daily cycling
+        'cycle_life_80pct': 5000,    # Cycles to 80% capacity (Li-ion NMC/LFP)
+        'replacement_fraction': 0.40, # Augmentation cost as fraction of original CAPEX
+    },
+    'battery8': {
+        'cycles_per_year': 365,
+        'cycle_life_80pct': 4000,    # Deeper discharge → faster degradation
+        'replacement_fraction': 0.45,
+    },
+    'ldes': {
+        'cycles_per_year': 52,       # Weekly cycling
+        'cycle_life_80pct': 20000,   # Iron-air: minimal degradation
+        'replacement_fraction': 0.15,
+    },
+    'h2': {
+        'cycles_per_year': 12,       # Monthly/seasonal cycling
+        'cycle_life_80pct': 50000,   # Electrolysis stack replacement is main cost
+        'replacement_fraction': 0.25,
+    },
+}
+
 # ============================================================================
 # RESOURCE ADEQUACY
 # ============================================================================
