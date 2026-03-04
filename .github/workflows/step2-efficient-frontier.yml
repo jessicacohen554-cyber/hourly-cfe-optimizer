@@ -148,6 +148,10 @@ jobs:
             echo "ERROR: PFS parquets not found for ${{ matrix.iso }}. Run Step 1 first."
             exit 1
           fi
+          if ! ls data/step3-cost-opt-parquets/step3_feasible_${{ matrix.iso }}.parquet >/dev/null 2>&1; then
+            echo "ERROR: Step 3 feasible parquet not found for ${{ matrix.iso }}. Run Step 3 first."
+            exit 1
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@v5
