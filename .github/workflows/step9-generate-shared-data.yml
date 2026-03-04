@@ -1,11 +1,11 @@
-name: "Step 6: Update Home Page / Shared Data"
+name: "Step 9: Generate Shared Data"
 
 # Consolidates all pipeline results into dashboard/js/shared-data.js.
 # This is the data file that powers the Home Page (index.html) and Dashboard.
 # Run this when you want to refresh the home page after upstream data changes.
 #
 # Includes: SBTi milestone mapping, DAC trajectory projections, LCOE/transmission
-# tables, and aggregated Step 5/6 outputs (mac_stats, etc.).
+# tables, and aggregated Step 5-8 outputs (mac_stats, etc.).
 #
 # Prerequisite: Steps 4-5 should have produced their respective outputs.
 # Output: dashboard/js/shared-data.js, data/step5-post-processing/shared_data.json
@@ -20,7 +20,7 @@ on:
         type: string
 
 env:
-  BRANCH_PREFIX: step6-shared-data
+  BRANCH_PREFIX: step9-shared-data
 
 jobs:
   generate-shared-data:
@@ -87,7 +87,7 @@ jobs:
             exit 0
           fi
 
-          git commit -m "Step 7 Shared Data — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git commit -m "Step 9 Shared Data — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
           MAX_RETRIES=4
           for i in $(seq 1 $MAX_RETRIES); do
