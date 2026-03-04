@@ -1,0 +1,122 @@
+name: "Step 3: Economic Assessment (Storage Revenue)"
+
+# Runs the storage revenue stacking model on Step 3 cost outputs.
+# Adds capacity market, arbitrage, ancillary services, and degradation
+# columns to the cost parquets.
+#
+# Prerequisites: Step 3 (cost optimization) + Step 5 LMP (for arbitrage).
+# Output: data/step3-economic-parquets/{ISO}_economic.parquet
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO region(s) to run'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      branch:
+        description: 'Source branch to checkout code from'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  economic-assessment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.branch || 'master' }}
+        lfs: false
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        pip install numpy numba pyarrow pandas
+        python -c "from numba import njit; print('Numba OK')"
+
+    - name: Verify Step 3 data exists
+      run: |
+        ISO="${{ inputs.iso }}"
+        if [ "$ISO" = "ALL" ]; then
+          for I in CAISO ERCOT PJM NYISO NEISO MISO SPP; do
+            F="data/step3-cost-opt-parquets/step3_co_${I}.parquet"
+            if [ -f "$F" ]; then
+              echo "OK: $I"
+            else
+              echo "WARNING: Missing $F"
+            fi
+          done
+        else
+          F="data/step3-cost-opt-parquets/step3_co_${ISO}.parquet"
+          if [ ! -f "$F" ]; then
+            echo "ERROR: Missing $F"
+            exit 1
+          fi
+          echo "OK: $ISO"
+        fi
+
+    - name: Run Economic Assessment
+      run: |
+        python scripts/step3_economic_assessment.py --iso "${{ inputs.iso }}"
+
+    - name: Create output branch and commit
+      run: |
+        TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+        ISO_LOWER=$(echo "${{ inputs.iso }}" | tr '[:upper:]' '[:lower:]')
+        TARGET_BRANCH="auto/${TIMESTAMP}-step3-economic-${ISO_LOWER}"
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git checkout -b "$TARGET_BRANCH"
+
+        git add data/step3-economic-parquets/*.parquet
+        if ! git diff --cached --quiet; then
+          COUNT=$(git diff --cached --name-only | wc -l)
+          git commit -m "Step 3 economic assessment: ${{ inputs.iso }} — ${COUNT} files — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        else
+          echo "No changes to commit."
+          exit 0
+        fi
+
+        PUSH_OK=false
+        for i in 1 2 3 4; do
+          if git push -u origin "$TARGET_BRANCH"; then
+            PUSH_OK=true
+            break
+          fi
+          echo "Push attempt $i failed, retrying in $((2**i))s..."
+          sleep $((2**i))
+        done
+
+        if [ "$PUSH_OK" != "true" ]; then
+          echo "ERROR: Push failed after 4 attempts."
+          exit 1
+        fi
+
+        echo "════════════════════════════════════════════════════"
+        echo "  ECONOMIC ASSESSMENT RESULTS PUSHED"
+        echo "  Branch: $TARGET_BRANCH"
+        echo "════════════════════════════════════════════════════"

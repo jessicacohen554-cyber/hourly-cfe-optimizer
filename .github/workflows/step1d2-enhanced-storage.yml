@@ -1,0 +1,251 @@
+name: "Step 1D.2: Enhanced Storage (2050 Caps)"
+
+# Matrix strategy: ISO × threshold band — up to 21 parallel jobs.
+#
+# Uses 2050-oriented storage caps (bat4=5%, bat8=10%, LDES=25%)
+# while reusing the same near-miss cache and dispatch kernels as Step 1D.
+#
+# Prerequisite: Step 1c (Zone Search) must have run first.
+# Output: data/step1d2-storage-parquets/{ISO}_t{XX}_storage.parquet
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO region(s) to run'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      threshold_band:
+        description: 'Threshold band(s) to run (ignored if custom_thresholds set)'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - LOW
+          - MID
+          - HIGH
+      custom_thresholds:
+        description: 'Custom thresholds (e.g. "90,95,99"). Overrides threshold_band.'
+        required: false
+        default: ''
+        type: string
+      branch:
+        description: 'Source branch to checkout code from'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  PYTHONUNBUFFERED: "1"
+  THRESHOLDS_LOW:  "50,55,60,65,70,75,80"
+  THRESHOLDS_MID:  "85,87.5,90,92.5,95"
+  THRESHOLDS_HIGH: "97.5,99,99.5,99.9,99.99"
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.build.outputs.matrix }}
+    steps:
+      - name: Build matrix
+        id: build
+        run: |
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            ISOS='["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]'
+          else
+            ISOS='["${{ inputs.iso }}"]'
+          fi
+
+          CUSTOM="${{ inputs.custom_thresholds }}"
+          if [ -n "$CUSTOM" ]; then
+            BANDS='["CUSTOM"]'
+          elif [ "${{ inputs.threshold_band }}" = "ALL" ]; then
+            BANDS='["LOW","MID","HIGH"]'
+          else
+            BANDS='["${{ inputs.threshold_band }}"]'
+          fi
+
+          echo "matrix={\"iso\":${ISOS},\"band\":${BANDS}}" >> "$GITHUB_OUTPUT"
+          echo "Matrix: iso=${ISOS} × band=${BANDS}"
+
+  enhanced-storage:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+
+    strategy:
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
+      max-parallel: 7
+
+    permissions:
+      contents: read
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.branch || 'master' }}
+        lfs: false
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        pip install numpy numba pyarrow pandas
+        python -c "from numba import njit; print('Numba OK')"
+
+    - name: Verify near-miss data exists
+      run: |
+        ISO="${{ matrix.iso }}"
+        NM="data/step1-pfs-parquets/${ISO}_near_miss.parquet"
+        if [ ! -f "$NM" ]; then
+          echo "ERROR: Missing near-miss data for $ISO"
+          echo "  Run Step 1c (Zone Search) first."
+          exit 1
+        fi
+        ROWS=$(python3 -c "import pyarrow.parquet as pq; t=pq.read_table('$NM'); print(t.num_rows)")
+        echo "OK: $ISO near-miss ($ROWS rows)"
+
+    - name: Ensure output directory
+      run: mkdir -p data/step1d2-storage-parquets
+
+    - name: Resolve thresholds for this band
+      id: resolve
+      run: |
+        BAND="${{ matrix.band }}"
+        CUSTOM="${{ inputs.custom_thresholds }}"
+        if [ "$BAND" = "CUSTOM" ]; then
+          echo "thresholds=$CUSTOM" >> "$GITHUB_OUTPUT"
+        elif [ "$BAND" = "LOW" ]; then
+          echo "thresholds=$THRESHOLDS_LOW" >> "$GITHUB_OUTPUT"
+        elif [ "$BAND" = "MID" ]; then
+          echo "thresholds=$THRESHOLDS_MID" >> "$GITHUB_OUTPUT"
+        elif [ "$BAND" = "HIGH" ]; then
+          echo "thresholds=$THRESHOLDS_HIGH" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: "Run Step 1D.2 — ${{ matrix.iso }} / ${{ matrix.band }}"
+      timeout-minutes: 200
+      run: |
+        echo "═══════════════════════════════════════════════════════════"
+        echo "  Step 1D.2 Enhanced Storage (2050 caps)"
+        echo "  ISO: ${{ matrix.iso }}  |  Band: ${{ matrix.band }}"
+        echo "  Thresholds: ${{ steps.resolve.outputs.thresholds }}"
+        echo "  Caps: bat4=5%, bat8=10%, LDES=25%, H2=25%"
+        echo "═══════════════════════════════════════════════════════════"
+        python scripts/step1d2_enhanced_storage.py \
+          --iso "${{ matrix.iso }}" \
+          --thresholds "${{ steps.resolve.outputs.thresholds }}"
+
+    - name: Upload results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: step1d2-${{ matrix.iso }}-${{ matrix.band }}
+        path: |
+          data/step1d2-storage-parquets/${{ matrix.iso }}_*.parquet
+          data/step1d2-storage-parquets/${{ matrix.iso }}_*.json
+        retention-days: 7
+        if-no-files-found: error
+
+  commit-results:
+    needs: [prepare, enhanced-storage]
+    if: always() && needs.enhanced-storage.result != 'cancelled'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.branch || 'master' }}
+        fetch-depth: 1
+        lfs: false
+
+    - name: Create output branch
+      run: |
+        TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+        ISO_LOWER=$(echo "${{ inputs.iso }}" | tr '[:upper:]' '[:lower:]')
+        BAND="${{ inputs.threshold_band }}"
+        CUSTOM="${{ inputs.custom_thresholds }}"
+        [ -n "$CUSTOM" ] && BAND="custom"
+        TARGET_BRANCH="auto/${TIMESTAMP}-step1d2-enhanced-${ISO_LOWER}-${BAND,,}"
+        echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git config http.postBuffer 524288000
+        git checkout -b "$TARGET_BRANCH"
+
+    - name: Ensure output directory
+      run: mkdir -p data/step1d2-storage-parquets
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        pattern: step1d2-*
+        path: data/step1d2-storage-parquets/
+        merge-multiple: true
+
+    - name: Validate downloaded files
+      run: |
+        echo "Downloaded results:"
+        find data/step1d2-storage-parquets/ -name "*.parquet" | sort
+        COUNT=$(find data/step1d2-storage-parquets/ -name "*.parquet" | wc -l)
+        echo "Total parquet files: $COUNT"
+        if [ "$COUNT" -eq 0 ]; then
+          echo "ERROR: No parquet files found."
+          exit 1
+        fi
+
+    - name: Commit and push
+      run: |
+        find data/step1d2-storage-parquets/ -name "*.parquet" -exec git add {} +
+        find data/step1d2-storage-parquets/ -name "*.json" -exec git add {} +
+
+        if ! git diff --cached --quiet; then
+          ISO="${{ inputs.iso }}"
+          BAND="${{ inputs.threshold_band }}"
+          CUSTOM="${{ inputs.custom_thresholds }}"
+          [ -n "$CUSTOM" ] && BAND="custom($CUSTOM)"
+          COUNT=$(git diff --cached --name-only | wc -l)
+          git commit -m "Step 1D.2 enhanced storage: ${ISO} × ${BAND} — ${COUNT} files — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        else
+          echo "No new results to commit."
+          exit 0
+        fi
+
+        PUSH_OK=false
+        for i in 1 2 3 4; do
+          if git push -u origin "$TARGET_BRANCH"; then
+            PUSH_OK=true
+            break
+          fi
+          echo "Push attempt $i failed, retrying in $((2**i))s..."
+          sleep $((2**i))
+        done
+
+        if [ "$PUSH_OK" != "true" ]; then
+          echo "ERROR: Push failed after 4 attempts."
+          exit 1
+        fi
+
+        echo "════════════════════════════════════════════════════"
+        echo "  STEP 1D.2 RESULTS PUSHED"
+        echo "  Branch: $TARGET_BRANCH"
+        echo "════════════════════════════════════════════════════"
