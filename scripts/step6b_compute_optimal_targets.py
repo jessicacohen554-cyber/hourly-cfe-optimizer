@@ -66,6 +66,7 @@ from pathlib import Path
 # Ensure pipeline_config is importable
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from pipeline_config import (
+    ACTIVE_THRESHOLDS,
     DEMAND_GROWTH_RATES as _DEMAND_GROWTH_RATES_PC,
     THRESHOLD_TARGET_YEARS as _THRESHOLD_TARGET_YEARS_PC,
     REGIONAL_DEMAND_TWH as _REGIONAL_DEMAND_TWH_PC,
@@ -103,7 +104,8 @@ except ImportError:
 # CONSTANTS
 # ============================================================================
 
-THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
+# Single source of truth: pipeline_config
+THRESHOLDS = ACTIVE_THRESHOLDS
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes', 'h2']
 

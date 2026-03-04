@@ -190,6 +190,7 @@ RESOURCE_CAPS = {
 TOTAL_PROCUREMENT_CAP = 350
 
 # 21 thresholds (10-40 added for Track 2/3 greenfield analysis)
+# Step 1 explores physics feasible space — exempt from pipeline_config dependency
 THRESHOLDS = [10, 20, 30, 40, 50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
 
 # Nuclear seasonal derate — CAISO now pure nuclear (geothermal is separate 5th dim)

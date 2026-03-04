@@ -27,8 +27,12 @@ DG_DIR = ROOT / "data" / "step3-cost-opt-parquets"
 OT_PATH = ROOT / "data" / "step5-post-processing" / "optimal_targets.json"
 OUT_PATH = ROOT / "dashboard" / "js" / "resource-density-data.js"
 
+sys.path.insert(0, str(ROOT / "scripts"))
+from pipeline_config import ACTIVE_THRESHOLDS, THRESHOLD_TARGET_YEARS
+
 ISOS = ["CAISO", "ERCOT", "PJM", "NYISO", "NEISO", "MISO", "SPP"]
-ALL_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
+# Single source of truth: pipeline_config
+ALL_THRESHOLDS = ACTIVE_THRESHOLDS
 
 # Existing clean resources as % of demand (2025 baseline)
 EXISTING_PCT = {

@@ -209,14 +209,16 @@ for iso in ISOS:
 # ============================================================================
 # EXTRACT MARGINAL_MAC_DATA (6-zone stepwise — medium/low/high)
 # ============================================================================
-# With 15 thresholds [50,55,60,65,70,75,80,85,87.5,90,92.5,95,97.5,99,≥99.99]:
+# With 17 active thresholds [50,55,60,65,70,75,80,85,87.5,90,92.5,95,97.5,99,99.5,99.9,≥99.99]:
 #   stepwise_envelope indices: 0=None, 1=50→55, 2=55→60, 3=60→65,
 #     4=65→70, 5=70→75, 6=75→80, 7=80→85, 8=85→87.5, 9=87.5→90,
-#     10=90→92.5, 11=92.5→95, 12=95→97.5, 13=97.5→99, 14=99→≥99.99
+#     10=90→92.5, 11=92.5→95, 12=95→97.5, 13=97.5→99, 14=99→99.5,
+#     15=99.5→99.9, 16=99.9→≥99.99
 # Zones:
 #   Zone 0: 50→75%  (aggregate steps 1-5)
 #   Zone 1: 75→90%  (aggregate steps 6-9)
 #   Zone 2-5: 90→92.5, 92.5→95, 95→97.5, 97.5→99 (steps 10-13)
+#   Zone 6-8: 99→99.5, 99.5→99.9, 99.9→≥99.99 (steps 14-16, last-mile)
 
 print("\nExtracting MARGINAL_MAC_DATA...")
 marginal_mac_data = {'medium': {}, 'low': {}, 'high': {}}
@@ -235,8 +237,8 @@ for iso in ISOS:
     zone_entry = aggregate_zone(sw_env, 1, 6)   # 50→75% (steps 1-5)
     zone_backbone = aggregate_zone(sw_env, 6, 10)  # 75→90% (steps 6-9)
     zones = [zone_entry, zone_backbone]
-    # Zones 2-5: granular steps 90→92.5, 92.5→95, 95→97.5, 97.5→99
-    for step_idx in range(10, 14):
+    # Zones 2-8: granular steps 90→92.5, 92.5→95, 95→97.5, 97.5→99, 99→99.5, 99.5→99.9, 99.9→≥99.99
+    for step_idx in range(10, 17):
         v = sw_env[step_idx] if step_idx < len(sw_env) else None
         zones.append(min(round(v), MAC_CAP) if v is not None else None)
     marginal_mac_data['medium'][iso] = zones
@@ -244,7 +246,7 @@ for iso in ISOS:
     # Low: use stepwise_fan P10
     sw_lo = mac_stats['stepwise_fan'][iso]['p10']
     lo_zones = [aggregate_zone(sw_lo, 1, 6), aggregate_zone(sw_lo, 6, 10)]
-    for step_idx in range(10, 14):
+    for step_idx in range(10, 17):
         v = sw_lo[step_idx] if step_idx < len(sw_lo) else None
         lo_zones.append(min(round(v), MAC_CAP) if v is not None else None)
     marginal_mac_data['low'][iso] = lo_zones
@@ -252,7 +254,7 @@ for iso in ISOS:
     # High: use stepwise_fan P90
     sw_hi = mac_stats['stepwise_fan'][iso]['p90']
     hi_zones = [aggregate_zone(sw_hi, 1, 6), aggregate_zone(sw_hi, 6, 10)]
-    for step_idx in range(10, 14):
+    for step_idx in range(10, 17):
         v = sw_hi[step_idx] if step_idx < len(sw_hi) else None
         hi_zones.append(min(round(v), MAC_CAP) if v is not None else None)
     marginal_mac_data['high'][iso] = hi_zones
@@ -844,12 +846,13 @@ lines.append('];')
 lines.append('')
 
 # MARGINAL_MAC_LABELS + MARGINAL_MAC_DATA
-lines.append("// --- Six-Zone Marginal MAC ($/ton CO2) ---")
+lines.append("// --- Nine-Zone Marginal MAC ($/ton CO2) ---")
 lines.append("// Zone 0 (50→75%): entry-level aggregate MAC")
 lines.append("// Zone 1 (75→90%): backbone aggregate MAC")
 lines.append("// Zones 2-5 (90→99%): granular steps with monotonicity enforcement")
+lines.append("// Zones 6-8 (99→99.99%): last-mile steps")
 lines.append("// Cap: $1000/ton (NREL literature max)")
-lines.append("const MARGINAL_MAC_LABELS = ['50→75%', '75→90%', '90→92.5%', '92.5→95%', '95→97.5%', '97.5→99%'];")
+lines.append("const MARGINAL_MAC_LABELS = ['50→75%', '75→90%', '90→92.5%', '92.5→95%', '95→97.5%', '97.5→99%', '99→99.5%', '99.5→99.9%', '99.9→99.99%'];")
 lines.append('')
 lines.append('const MARGINAL_MAC_DATA = {')
 for sens in ['medium', 'low', 'high']:
@@ -930,14 +933,14 @@ lines.append('    }')
 lines.append("    return '>99';")
 lines.append('}')
 lines.append('')
-lines.append('const MARGINAL_THRESHOLDS = [50, 75, 90, 92.5, 95, 97.5];')
+lines.append('const MARGINAL_THRESHOLDS = [50, 75, 90, 92.5, 95, 97.5, 99, 99.5, 99.9];')
 lines.append('function findMarginalCrossover(regionMarginals, costLevel) {')
 lines.append('    for (let i = 0; i < regionMarginals.length; i++) {')
 lines.append('        if (regionMarginals[i] !== null && regionMarginals[i] > costLevel) {')
 lines.append('            return MARGINAL_THRESHOLDS[i];')
 lines.append('        }')
 lines.append('    }')
-lines.append("    return '>99';")
+lines.append("    return '>99.99';")
 lines.append('}')
 lines.append('')
 lines.append('function cellClass(val) {')
@@ -1365,8 +1368,8 @@ for ms in SBTI_MILESTONES:
 lines.append('];')
 lines.append('')
 
-# Full threshold → year mapping (all 15 thresholds, SBTi-interpolated)
-lines.append('// Full threshold-year mapping: each of 15 thresholds paired with its target year')
+# Full threshold → year mapping (all 17 active thresholds, SBTi-interpolated)
+lines.append('// Full threshold-year mapping: each of 17 active thresholds paired with its target year')
 lines.append('// Interpolated between SBTi anchors (50%→2030, 70%→2035, 90%→2040, 95%→2045, ≥99.99%→2050)')
 lines.append('const THRESHOLD_TARGET_YEARS = {')
 for t in THRESHOLDS_NUM:
