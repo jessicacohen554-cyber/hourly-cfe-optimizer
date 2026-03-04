@@ -43,14 +43,6 @@ on:
         required: false
         default: ''
         type: string
-      storage_source:
-        description: 'Which storage-refined parquets to use'
-        required: true
-        default: 'step1d2'
-        type: choice
-        options:
-          - step1d2
-          - step1d
       branch:
         description: 'Branch to checkout'
         required: false
@@ -135,7 +127,7 @@ jobs:
       - name: "Run Efficient Frontier filter (${{ matrix.iso }})"
         timeout-minutes: 90
         run: |
-          ARGS="--iso ${{ matrix.iso }} --clear --storage-source ${{ inputs.storage_source }}"
+          ARGS="--iso ${{ matrix.iso }} --clear"
           THRESHOLDS="${{ inputs.thresholds }}"
           if [ -n "$THRESHOLDS" ]; then
             ARGS="$ARGS --thresholds $THRESHOLDS"
@@ -212,15 +204,12 @@ jobs:
           echo "Found PFS parquets for ${{ matrix.iso }}:"
           ls -lh data/step1-pfs-parquets/${{ matrix.iso }}_t* | wc -l
           echo "files"
-          STORAGE_DIR="data/step1d2-storage-parquets"
-          if [ "${{ inputs.storage_source }}" = "step1d" ]; then
-            STORAGE_DIR="data/step1d-storage-parquets"
-          fi
-          if [ -d "$STORAGE_DIR" ]; then
-            echo "Storage parquets (${{ inputs.storage_source }}):"
-            ls "$STORAGE_DIR"/${{ matrix.iso }}_* 2>/dev/null | wc -l
-            echo "files"
-          fi
+          for SDIR in data/step1d-storage-parquets data/step1d2-storage-parquets; do
+            if [ -d "$SDIR" ]; then
+              COUNT=$(ls "$SDIR"/${{ matrix.iso }}_* 2>/dev/null | wc -l)
+              echo "$(basename $SDIR): $COUNT files"
+            fi
+          done
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -240,7 +229,7 @@ jobs:
         run: |
           python scripts/step2_efficient_frontier.py \
             --iso ${{ matrix.iso }} --clear \
-            --storage-source ${{ inputs.storage_source }} \
+            \
             --thresholds "${{ inputs.thresholds }}"
 
       - name: "Commit custom thresholds (${{ matrix.iso }})"
@@ -260,7 +249,7 @@ jobs:
       - name: "Batch LOW: thresholds 10-75% (${{ matrix.iso }})"
         if: ${{ inputs.thresholds == '' }}
         timeout-minutes: 30
-        run: python scripts/step2_efficient_frontier.py --iso ${{ matrix.iso }} --clear --storage-source ${{ inputs.storage_source }} --batch low
+        run: python scripts/step2_efficient_frontier.py --iso ${{ matrix.iso }} --clear --batch low
 
       - name: "Commit batch LOW (${{ matrix.iso }})"
         if: ${{ inputs.thresholds == '' }}
@@ -279,7 +268,7 @@ jobs:
       - name: "Batch MID: thresholds 80-95% (${{ matrix.iso }})"
         if: ${{ inputs.thresholds == '' }}
         timeout-minutes: 30
-        run: python scripts/step2_efficient_frontier.py --iso ${{ matrix.iso }} --storage-source ${{ inputs.storage_source }} --batch mid
+        run: python scripts/step2_efficient_frontier.py --iso ${{ matrix.iso }} --batch mid
 
       - name: "Commit batch MID (${{ matrix.iso }})"
         if: ${{ inputs.thresholds == '' }}
@@ -298,7 +287,7 @@ jobs:
       - name: "Batch HIGH: thresholds 97.5-99.99% (${{ matrix.iso }})"
         if: ${{ inputs.thresholds == '' }}
         timeout-minutes: 45
-        run: python scripts/step2_efficient_frontier.py --iso ${{ matrix.iso }} --storage-source ${{ inputs.storage_source }} --batch high
+        run: python scripts/step2_efficient_frontier.py --iso ${{ matrix.iso }} --batch high
 
       - name: "Commit batch HIGH (${{ matrix.iso }})"
         if: ${{ inputs.thresholds == '' }}
@@ -317,7 +306,7 @@ jobs:
       - name: "Merge batches into final EF (${{ matrix.iso }})"
         if: ${{ inputs.thresholds == '' }}
         timeout-minutes: 30
-        run: python scripts/step2_efficient_frontier.py --iso ${{ matrix.iso }} --storage-source ${{ inputs.storage_source }} --merge
+        run: python scripts/step2_efficient_frontier.py --iso ${{ matrix.iso }} --merge
 
       - name: "Commit final EF and push (${{ matrix.iso }})"
         run: |
