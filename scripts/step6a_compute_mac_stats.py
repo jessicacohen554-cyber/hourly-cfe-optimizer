@@ -218,16 +218,19 @@ def add_mac_column(df):
     scenario emissions (at threshold level). Uses dispatch-stack merit-order
     retirement model (coal → oil → gas).
 
-    MAC = new_resource_cost_$M / co2_reduced_Mt = $/tCO₂
+    MAC = clean_resource_LCOE × demand_MWh / CO₂_reduced_tons = $/tCO₂
+
+    Clean resources: solar, wind, nuclear, CCS-CCGT, geothermal, offshore wind,
+    battery (4hr/8hr), LDES, Green H₂. Gas RA and wholesale prices excluded.
     """
-    # ── 1. Cost of NEW resources only (per MWh of demand) ──
-    # Step 3 already excludes existing resources (they're at $0 LCOE).
-    # cost_total_cost = LCOE of new-build clean + storage + transmission.
+    # ── 1. Cost of NEW clean resources only (per MWh of demand) ──
+    # Step 3 total_cost includes gas RA; subtract it to isolate clean resource LCOE.
+    # Existing resources are at $0 (sunk fleet).
     cost_total = (df['cost_total_cost'] if 'cost_total_cost' in df.columns
                   else df['cost_effective_cost'])
     new_cost = cost_total.copy()
 
-    # Subtract gas backup cost (system reliability, not abatement)
+    # Subtract gas backup cost (gas RA is system reliability, not clean abatement)
     if 'gas_gas_cost_per_mwh' in df.columns:
         new_cost = new_cost - df['gas_gas_cost_per_mwh'].fillna(0)
     new_cost = new_cost.clip(lower=0)
