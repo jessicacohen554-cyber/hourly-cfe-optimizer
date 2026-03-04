@@ -2265,10 +2265,10 @@ function initNarrativeCostChart() {
         'CAISO': 'rgba(245,158,11,0.4)',
         'ERCOT': 'rgba(34,197,94,0.4)',
         'PJM':   'rgba(14,165,233,0.4)',
-        'NYISO': 'rgba(239,68,68,0.4)',
-        'NEISO': 'rgba(138,129,120,0.4)',
+        'NYISO': 'rgba(233,30,99,0.4)',
+        'NEISO': 'rgba(156,39,176,0.4)',
         'MISO':  'rgba(6,182,212,0.4)',
-        'SPP':   'rgba(239,68,68,0.4)',
+        'SPP':   'rgba(168,85,247,0.4)',
     };
 
     for (const iso of isos) isoData[iso] = [];
@@ -2657,10 +2657,10 @@ function buildStepChartData() {
         'CAISO': 'rgba(245,158,11,0.4)',
         'ERCOT': 'rgba(34,197,94,0.4)',
         'PJM':   'rgba(14,165,233,0.4)',
-        'NYISO': 'rgba(239,68,68,0.4)',
-        'NEISO': 'rgba(138,129,120,0.4)',
+        'NYISO': 'rgba(233,30,99,0.4)',
+        'NEISO': 'rgba(156,39,176,0.4)',
         'MISO':  'rgba(6,182,212,0.4)',
-        'SPP':   'rgba(239,68,68,0.4)',
+        'SPP':   'rgba(168,85,247,0.4)',
     };
     for (const iso of isos) isoData[iso] = [];
     for (let ti = 0; ti < thresholdKeys.length; ti++) {
@@ -2893,13 +2893,13 @@ function initHomepage90CostChart() {
     if (!canvas || !DATA) return;
 
     const REGION_COLORS = {
-        CAISO: { fill: 'rgba(14,165,233,0.50)', border: '#0EA5E9' },
-        ERCOT: { fill: 'rgba(245,158,11,0.50)', border: '#F59E0B' },
-        PJM:   { fill: 'rgba(30,58,95,0.50)', border: '#1E3A5F' },
-        NYISO: { fill: 'rgba(34,197,94,0.50)', border: '#22C55E' },
-        NEISO: { fill: 'rgba(99,102,241,0.50)', border: '#6366F1' },
+        CAISO: { fill: 'rgba(245,158,11,0.50)', border: '#F59E0B' },
+        ERCOT: { fill: 'rgba(34,197,94,0.50)', border: '#22C55E' },
+        PJM:   { fill: 'rgba(14,165,233,0.50)', border: '#0EA5E9' },
+        NYISO: { fill: 'rgba(233,30,99,0.50)', border: '#E91E63' },
+        NEISO: { fill: 'rgba(156,39,176,0.50)', border: '#9C27B0' },
         MISO: { fill: 'rgba(6,182,212,0.50)', border: '#06B6D4' },
-        SPP:  { fill: 'rgba(239,68,68,0.50)', border: '#EF4444' }
+        SPP:  { fill: 'rgba(168,85,247,0.50)', border: '#A855F7' }
     };
 
     const isos = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP'];
@@ -3077,9 +3077,9 @@ function initCostCurveChart(iso) {
 
     // Region color
     const regionColors = typeof REGION_COLORS !== 'undefined' ? REGION_COLORS : {
-        CAISO: '#F59E0B', ERCOT: '#22C55E', PJM: '#4a90d9', NYISO: '#E91E63', NEISO: '#9C27B0', MISO: '#06B6D4', SPP: '#EF4444'
+        CAISO: '#F59E0B', ERCOT: '#22C55E', PJM: '#0EA5E9', NYISO: '#E91E63', NEISO: '#9C27B0', MISO: '#06B6D4', SPP: '#A855F7'
     };
-    const c = regionColors[iso] || '#4a90d9';
+    const c = regionColors[iso] || '#0EA5E9';
 
     if (costCurveChartInstance) costCurveChartInstance.destroy();
     const ctx = canvas.getContext('2d');

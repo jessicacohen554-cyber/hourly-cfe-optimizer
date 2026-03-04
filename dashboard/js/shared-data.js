@@ -46,11 +46,11 @@ const MAC_DATA = {
 const REGION_COLORS = {
     CAISO: '#F59E0B',
     ERCOT: '#22C55E',
-    PJM:   '#4a90d9',
+    PJM:   '#0EA5E9',
     NYISO: '#E91E63',
     NEISO: '#9C27B0',
     MISO:  '#06B6D4',
-    SPP:   '#EF4444'
+    SPP:   '#A855F7'
 };
 
 // --- Resource Colors & Labels (used by dashboard, index, region_deepdive) ---

@@ -442,13 +442,13 @@ var saturationChart = null;
 
 // Modeled displacement curves by ISO — marginal CO2 rate (lb/MWh) vs cumulative renewable penetration (%)
 var SATURATION_DATA = {
-    SPP:   { coal: 52, oil: 1,   startRate: 2200, midRate: 1400, endRate: 880, color: '#EF4444' },
-    MISO:  { coal: 42, oil: 0.5, startRate: 2100, midRate: 1300, endRate: 860, color: '#F59E0B' },
-    PJM:   { coal: 24, oil: 1.5, startRate: 1800, midRate: 1100, endRate: 840, color: '#A855F7' },
+    SPP:   { coal: 52, oil: 1,   startRate: 2200, midRate: 1400, endRate: 880, color: '#A855F7' },
+    MISO:  { coal: 42, oil: 0.5, startRate: 2100, midRate: 1300, endRate: 860, color: '#06B6D4' },
+    PJM:   { coal: 24, oil: 1.5, startRate: 1800, midRate: 1100, endRate: 840, color: '#0EA5E9' },
     ERCOT: { coal: 23, oil: 0.3, startRate: 1700, midRate: 1050, endRate: 830, color: '#22C55E' },
-    NEISO: { coal: 0,  oil: 0.4, startRate: 920,  midRate: 870,  endRate: 820, color: '#0EA5E9' },
-    NYISO: { coal: 0,  oil: 0.5, startRate: 950,  midRate: 890,  endRate: 810, color: '#6366F1' },
-    CAISO: { coal: 0,  oil: 0.3, startRate: 900,  midRate: 860,  endRate: 800, color: '#EC4899' }
+    NEISO: { coal: 0,  oil: 0.4, startRate: 920,  midRate: 870,  endRate: 820, color: '#9C27B0' },
+    NYISO: { coal: 0,  oil: 0.5, startRate: 950,  midRate: 890,  endRate: 810, color: '#E91E63' },
+    CAISO: { coal: 0,  oil: 0.3, startRate: 900,  midRate: 860,  endRate: 800, color: '#F59E0B' }
 };
 
 var penetrationPcts = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50];

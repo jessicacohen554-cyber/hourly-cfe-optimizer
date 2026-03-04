@@ -78,18 +78,32 @@ function destroyCharts() {
     chartInstances = {};
 }
 
+// ===== ISO ACCENT COLOR HELPER =====
+function isoAccent(iso) {
+    return (typeof ISO_COLORS !== 'undefined' && ISO_COLORS[iso]) || BLUE;
+}
+
+// Convert hex to rgba string
+function hexToRgba(hex, alpha) {
+    var r = parseInt(hex.slice(1,3), 16);
+    var g = parseInt(hex.slice(3,5), 16);
+    var b = parseInt(hex.slice(5,7), 16);
+    return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+}
+
 // ===== 1. HERO ENVELOPE CHART =====
-function buildHeroChart(D) {
+function buildHeroChart(D, accent) {
+    var c = accent || BLUE;
     var ctx = document.getElementById('heroEnvelopeChart').getContext('2d');
     var T = D.thresholds, E = D.envelope;
     chartInstances.hero = new Chart(ctx, {
         type: 'line',
         data: { datasets: [
-            { label: 'P90', data: pts(T, E.p90), borderColor: 'transparent', backgroundColor: BLUE + '18', borderWidth: 0, pointRadius: 0, fill: '+3', tension: 0.35, order: 12, _type: 'band' },
-            { label: 'P75', data: pts(T, E.p75), borderColor: 'transparent', backgroundColor: BLUE + '22', borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0.35, order: 11, _type: 'band' },
-            { label: 'Median (P50)', data: pts(T, E.p50), borderColor: BLUE, backgroundColor: BLUE + '20', borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: BLUE, fill: false, tension: 0.35, order: 5 },
+            { label: 'P90', data: pts(T, E.p90), borderColor: 'transparent', backgroundColor: hexToRgba(c, 0.09), borderWidth: 0, pointRadius: 0, fill: '+3', tension: 0.35, order: 12, _type: 'band' },
+            { label: 'P75', data: pts(T, E.p75), borderColor: 'transparent', backgroundColor: hexToRgba(c, 0.13), borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0.35, order: 11, _type: 'band' },
+            { label: 'Median (P50)', data: pts(T, E.p50), borderColor: c, backgroundColor: hexToRgba(c, 0.12), borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: c, fill: false, tension: 0.35, order: 5 },
             { label: 'P25', data: pts(T, E.p25), borderColor: 'transparent', backgroundColor: 'transparent', borderWidth: 0, pointRadius: 0, fill: false, tension: 0.35, order: 11, _type: 'band' },
-            { label: 'P10', data: pts(T, E.p10), borderColor: BLUE + '50', borderDash: [4, 3], backgroundColor: 'transparent', borderWidth: 1, pointRadius: 0, fill: false, tension: 0.35, order: 10, _type: 'band' }
+            { label: 'P10', data: pts(T, E.p10), borderColor: hexToRgba(c, 0.31), borderDash: [4, 3], backgroundColor: 'transparent', borderWidth: 1, pointRadius: 0, fill: false, tension: 0.35, order: 10, _type: 'band' }
         ] },
         options: {
             responsive: true, maintainAspectRatio: false,
@@ -99,6 +113,16 @@ function buildHeroChart(D) {
                 annotation: { annotations: Object.assign({ zeroLine: { type: 'line', yMin: 0, yMax: 0, borderColor: 'rgba(0,0,0,0.12)', borderWidth: 1, borderDash: [6, 4] } }, sbtiAnnotations()) } }
         }
     });
+
+    // Update hero chart legend swatches to match ISO color
+    var legendEl = document.querySelector('.hero-chart-block .chart-legend');
+    if (legendEl) {
+        legendEl.innerHTML =
+            '<span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:' + c + ';"></span>Median (P50)</span>' +
+            '<span class="chart-legend-divider"></span>' +
+            '<span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:' + hexToRgba(c, 0.35) + ';"></span>P25\u2013P75</span>' +
+            '<span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:' + hexToRgba(c, 0.18) + ';"></span>P10\u2013P90</span>';
+    }
 }
 
 // ===== 2. FUEL ENVELOPE CHART =====
@@ -245,9 +269,9 @@ function buildNuclearZeroChart(D) {
 }
 
 // ===== BUILD ALL CHARTS =====
-function buildAllCharts(D) {
+function buildAllCharts(D, accent) {
     destroyCharts();
-    buildHeroChart(D);
+    buildHeroChart(D, accent);
     buildFuelChart(D);
     buildRegimeChart(D);
     buildPeakChart(D);
@@ -327,14 +351,34 @@ function observeScrollElements() {
     }, 100);
 }
 
+// ===== ISO ACCENT THEMING =====
+function applyISOAccent(iso) {
+    var c = isoAccent(iso);
+
+    // Update kicker color
+    var kicker = document.getElementById('heroKicker');
+    if (kicker) kicker.style.color = c;
+
+    // Update accent spans in hero title
+    document.querySelectorAll('.hero-text .accent').forEach(function(el) {
+        el.style.color = c;
+    });
+
+    // Update header subtitle accent
+    var subtitle = document.getElementById('headerSubtitle');
+    if (subtitle) subtitle.style.color = c;
+}
+
 // ===== REGION SWITCHING =====
 var currentISO = 'PJM';
 
 function switchRegion(iso) {
     if (iso === currentISO) return;
     currentISO = iso;
-    buildAllCharts(LMP_ALL[iso]);
+    var c = isoAccent(iso);
+    buildAllCharts(LMP_ALL[iso], c);
     updateContent(iso);
+    applyISOAccent(iso);
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -348,5 +392,7 @@ document.querySelectorAll('.region-pill').forEach(function(pill) {
 });
 
 // ===== INIT =====
-buildAllCharts(LMP_ALL.PJM);
+var initAccent = isoAccent('PJM');
+buildAllCharts(LMP_ALL.PJM, initAccent);
+applyISOAccent('PJM');
 observeScrollElements();
