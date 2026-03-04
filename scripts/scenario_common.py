@@ -27,6 +27,16 @@ from pipeline_config import (
     WHOLESALE_PRICES, FUEL_ADJUSTMENTS,
     NEISO_CCS_GAS_ADDER, NEISO_WHOLESALE_ADDER,
     H, STORAGE_REVENUE_CREDITS,
+    # Cost tables (unified source of truth)
+    LCOE_TABLES, TX_TABLES, get_tx, UPRATE_LCOE,
+    NUCLEAR_NEWBUILD_LCOE, GEOTHERMAL_LCOE, GEO_CAP_TWH,
+    CCS_LCOE_45Q_ON, LEVEL_NAME,
+    EXISTING_NUCLEAR_GW, UPRATE_CAP_TWH,
+    PEAK_DEMAND_MW, EXISTING_GAS_CAPACITY_MW,
+    NEW_CCGT_COST_KW_YR, EXISTING_GAS_FOM_KW_YR,
+    PEAK_CAPACITY_CREDITS, GAS_AVAILABILITY_FACTOR,
+    RESOURCE_ADEQUACY_MARGIN,
+    THRESHOLD_TARGET_YEARS, OUTPUT_THRESHOLDS,
 )
 
 # Import dispatch utilities
@@ -42,7 +52,7 @@ from dispatch_utils import (
 # CONSTANTS
 # ============================================================================
 
-from step3_cost_optimization import OUTPUT_THRESHOLDS as THRESHOLDS
+THRESHOLDS = OUTPUT_THRESHOLDS  # Alias for backward compat
 
 RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']
 
@@ -52,112 +62,7 @@ BASE_DEMAND_TWH = REGIONAL_DEMAND_TWH
 HYDRO_CAP_TWH = {iso: GRID_MIX_SHARES[iso].get('hydro', 0) / 100.0 * REGIONAL_DEMAND_TWH[iso]
                  for iso in ISOS}
 
-LCOE_TABLES = {
-    'solar': {
-        'Low':    {'CAISO': 45, 'ERCOT': 40, 'PJM': 50, 'NYISO': 70, 'NEISO': 62, 'MISO': 48, 'SPP': 43},
-        'Medium': {'CAISO': 60, 'ERCOT': 54, 'PJM': 65, 'NYISO': 92, 'NEISO': 82, 'MISO': 62, 'SPP': 57},
-        'High':   {'CAISO': 78, 'ERCOT': 70, 'PJM': 85, 'NYISO': 120, 'NEISO': 107, 'MISO': 82, 'SPP': 74},
-    },
-    'wind': {
-        'Low':    {'CAISO': 55, 'ERCOT': 30, 'PJM': 47, 'NYISO': 61, 'NEISO': 55, 'MISO': 33, 'SPP': 28},
-        'Medium': {'CAISO': 73, 'ERCOT': 40, 'PJM': 62, 'NYISO': 81, 'NEISO': 73, 'MISO': 43, 'SPP': 37},
-        'High':   {'CAISO': 95, 'ERCOT': 52, 'PJM': 81, 'NYISO': 105, 'NEISO': 95, 'MISO': 56, 'SPP': 48},
-    },
-    'offshore_wind': {
-        'Low':    {'CAISO': 110, 'ERCOT': 0, 'PJM': 65, 'NYISO': 72, 'NEISO': 68, 'MISO': 0, 'SPP': 0},
-        'Medium': {'CAISO': 150, 'ERCOT': 0, 'PJM': 85, 'NYISO': 95, 'NEISO': 90, 'MISO': 0, 'SPP': 0},
-        'High':   {'CAISO': 200, 'ERCOT': 0, 'PJM': 112, 'NYISO': 125, 'NEISO': 118, 'MISO': 0, 'SPP': 0},
-    },
-    # Storage: annualized capacity cost per % of annual demand, NOT LCOS.
-    # NREL ATB 2024 component model: Energy($/kWh) + Power($/kW)/Duration.
-    # Formula: CAPEX_kWh × (CRF + FOM_rate) × 1000 × regional_mult.
-    # 4hr→8hr ~14% cheaper (power spread over 2× energy). Regional variation baked in; TX=0.
-    'battery': {
-        'Low':    {'CAISO': 33813.60, 'ERCOT': 30484.80, 'PJM': 32412.00, 'NYISO': 35740.80, 'NEISO': 34777.20, 'MISO': 31711.20, 'SPP': 30835.20},
-        'Medium': {'CAISO': 41610.00, 'ERCOT': 37405.20, 'PJM': 39858.00, 'NYISO': 43975.20, 'NEISO': 42661.20, 'MISO': 39069.60, 'SPP': 37930.80},
-        'High':   {'CAISO': 52822.80, 'ERCOT': 47566.80, 'PJM': 50632.80, 'NYISO': 55888.80, 'NEISO': 54312.00, 'MISO': 49581.60, 'SPP': 48180.00},
-    },
-    'battery8': {
-        'Low':    {'CAISO': 28908.00, 'ERCOT': 26017.20, 'PJM': 27681.60, 'NYISO': 30572.40, 'NEISO': 29696.40, 'MISO': 27156.00, 'SPP': 26367.60},
-        'Medium': {'CAISO': 35565.60, 'ERCOT': 32061.60, 'PJM': 34076.40, 'NYISO': 37668.00, 'NEISO': 36529.20, 'MISO': 33375.60, 'SPP': 32412.00},
-        'High':   {'CAISO': 45464.40, 'ERCOT': 40909.20, 'PJM': 43537.20, 'NYISO': 48092.40, 'NEISO': 46690.80, 'MISO': 42661.20, 'SPP': 41434.80},
-    },
-    'ldes': {
-        'Low':    {'CAISO': 3328.80, 'ERCOT': 2890.80, 'PJM': 3153.60, 'NYISO': 3679.20, 'NEISO': 3504.00, 'MISO': 2978.40, 'SPP': 2890.80},
-        'Medium': {'CAISO': 5518.80, 'ERCOT': 4730.40, 'PJM': 5168.40, 'NYISO': 6132.00, 'NEISO': 5781.60, 'MISO': 4905.60, 'SPP': 4818.00},
-        'High':   {'CAISO': 8760.00, 'ERCOT': 7533.60, 'PJM': 8234.40, 'NYISO': 9723.60, 'NEISO': 9285.60, 'MISO': 7884.00, 'SPP': 7708.80},
-    },
-}
-
-TX_TABLES = {
-    'wind':       {'None': 0, 'Low': {'CAISO': 4, 'ERCOT': 3, 'PJM': 5, 'NYISO': 7, 'NEISO': 6, 'MISO': 5, 'SPP': 4},
-                   'Medium': {'CAISO': 8, 'ERCOT': 6, 'PJM': 10, 'NYISO': 14, 'NEISO': 12, 'MISO': 9, 'SPP': 7},
-                   'High': {'CAISO': 14, 'ERCOT': 10, 'PJM': 18, 'NYISO': 22, 'NEISO': 20, 'MISO': 16, 'SPP': 12}},
-    'solar':      {'None': 0, 'Low': {'CAISO': 1, 'ERCOT': 1, 'PJM': 2, 'NYISO': 3, 'NEISO': 3, 'MISO': 2, 'SPP': 1},
-                   'Medium': {'CAISO': 3, 'ERCOT': 3, 'PJM': 5, 'NYISO': 7, 'NEISO': 6, 'MISO': 4, 'SPP': 3},
-                   'High': {'CAISO': 6, 'ERCOT': 5, 'PJM': 9, 'NYISO': 12, 'NEISO': 10, 'MISO': 8, 'SPP': 6}},
-    'clean_firm': {'None': 0, 'Low': {'CAISO': 1, 'ERCOT': 1, 'PJM': 1, 'NYISO': 2, 'NEISO': 2, 'MISO': 1, 'SPP': 1},
-                   'Medium': {'CAISO': 3, 'ERCOT': 2, 'PJM': 3, 'NYISO': 5, 'NEISO': 4, 'MISO': 3, 'SPP': 2},
-                   'High': {'CAISO': 6, 'ERCOT': 4, 'PJM': 6, 'NYISO': 9, 'NEISO': 7, 'MISO': 5, 'SPP': 4}},
-    'ccs_ccgt':   {'None': 0, 'Low': {'CAISO': 1, 'ERCOT': 1, 'PJM': 1, 'NYISO': 2, 'NEISO': 2, 'MISO': 1, 'SPP': 1},
-                   'Medium': {'CAISO': 2, 'ERCOT': 2, 'PJM': 3, 'NYISO': 4, 'NEISO': 3, 'MISO': 2, 'SPP': 2},
-                   'High': {'CAISO': 4, 'ERCOT': 3, 'PJM': 5, 'NYISO': 7, 'NEISO': 6, 'MISO': 4, 'SPP': 3}},
-    'offshore_wind': {'None': 0, 'Low': {'CAISO': 10, 'ERCOT': 0, 'PJM': 6, 'NYISO': 8, 'NEISO': 7, 'MISO': 0, 'SPP': 0},
-                      'Medium': {'CAISO': 20, 'ERCOT': 0, 'PJM': 11, 'NYISO': 15, 'NEISO': 13, 'MISO': 0, 'SPP': 0},
-                      'High': {'CAISO': 35, 'ERCOT': 0, 'PJM': 18, 'NYISO': 25, 'NEISO': 22, 'MISO': 0, 'SPP': 0}},
-    # Storage TX = 0: regional variation baked into annualized capacity costs
-    'battery':    {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
-    'battery8':   {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
-    'ldes':       {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
-    'hydro':      {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
-}
-
-UPRATE_LCOE = {'L': 15, 'M': 25, 'H': 40}
-NUCLEAR_NEWBUILD_LCOE = {
-    'L': {'CAISO': 70, 'ERCOT': 68, 'PJM': 72, 'NYISO': 75, 'NEISO': 73, 'MISO': 70, 'SPP': 68},
-    'M': {'CAISO': 95, 'ERCOT': 90, 'PJM': 105, 'NYISO': 110, 'NEISO': 108, 'MISO': 100, 'SPP': 92},
-    'H': {'CAISO': 140, 'ERCOT': 135, 'PJM': 160, 'NYISO': 170, 'NEISO': 165, 'MISO': 155, 'SPP': 140},
-}
-GEOTHERMAL_LCOE = {'L': 63, 'M': 88, 'H': 110}
-GEO_CAP_TWH = 39.0
-CCS_LCOE_45Q_ON = {
-    'L': {'CAISO': 59.5, 'ERCOT': 53.5, 'PJM': 63.5, 'NYISO': 79.5, 'NEISO': 76.5, 'MISO': 56.5, 'SPP': 51.5},
-    'M': {'CAISO': 87.5, 'ERCOT': 72.5, 'PJM': 80.5, 'NYISO': 100.5, 'NEISO': 97.5, 'MISO': 75.5, 'SPP': 69.5},
-    'H': {'CAISO': 116.5, 'ERCOT': 93.5, 'PJM': 103.5, 'NYISO': 129.5, 'NEISO': 123.5, 'MISO': 97.5, 'SPP': 89.5},
-}
-
-NEISO_CCS_GAS_ADDER = 13.13  # $/MWh — winter gas pipeline constraint (Algonquin Citygates)
-
-EXISTING_NUCLEAR_GW = {'CAISO': 2.3, 'ERCOT': 2.7, 'PJM': 32.0, 'NYISO': 3.4, 'NEISO': 3.5, 'MISO': 12.0, 'SPP': 1.2}
-UPRATE_CAP_TWH = {iso: round(gw * 0.08 * 0.90 * 8760 / 1e3, 3)
-                  for iso, gw in EXISTING_NUCLEAR_GW.items()}
-
-PEAK_DEMAND_MW = {'CAISO': 43860, 'ERCOT': 83597, 'PJM': 160560, 'NYISO': 31857, 'NEISO': 25898, 'MISO': 127125, 'SPP': 54368}
-EXISTING_GAS_CAPACITY_MW = {'CAISO': 37000, 'ERCOT': 55000, 'PJM': 75000, 'NYISO': 18000, 'NEISO': 14000, 'MISO': 68000, 'SPP': 32000}
-NEW_CCGT_COST_KW_YR = {'CAISO': 112, 'ERCOT': 89, 'PJM': 99, 'NYISO': 114, 'NEISO': 105, 'MISO': 95, 'SPP': 88}
-EXISTING_GAS_FOM_KW_YR = {'CAISO': 16, 'ERCOT': 13, 'PJM': 14, 'NYISO': 17, 'NEISO': 15, 'MISO': 14, 'SPP': 13}
-PEAK_CAPACITY_CREDITS = {
-    'clean_firm': 1.0, 'solar': 0.30, 'wind': 0.10, 'offshore_wind': 0.25,
-    'ccs_ccgt': 0.90, 'hydro': 0.50, 'battery': 0.95, 'battery8': 0.95, 'ldes': 0.90,
-}
-GAS_AVAILABILITY_FACTOR = {
-    'CAISO': 0.88, 'ERCOT': 0.83, 'PJM': 0.82, 'NYISO': 0.82, 'NEISO': 0.85,
-    'MISO': 0.84, 'SPP': 0.84,
-}
-RESOURCE_ADEQUACY_MARGIN = 0.15
-
-LEVEL_NAME = {'L': 'Low', 'M': 'Medium', 'H': 'High'}
-
-# SBTi timeline mapping
-try:
-    from step3_cost_optimization import THRESHOLD_TARGET_YEARS
-    SBTI_YEAR_MAP = THRESHOLD_TARGET_YEARS
-except ImportError:
-    SBTI_YEAR_MAP = {
-        50: 2030, 55: 2031, 60: 2033, 65: 2034, 70: 2035, 75: 2036, 80: 2037,
-        85: 2038, 87.5: 2039, 90: 2040, 92.5: 2043,
-        95: 2045, 97.5: 2048, 99: 2049, 99.5: 2049, 99.9: 2050, 100: 2050,
-    }
+SBTI_YEAR_MAP = THRESHOLD_TARGET_YEARS  # Backward compat alias
 
 DEMAND_GROWTH_RATES = {
     'CAISO': 0.019, 'ERCOT': 0.035, 'PJM': 0.024,
@@ -344,12 +249,6 @@ def parse_feasible_mixes(js_path='dashboard/js/shared-data.js'):
 # ============================================================================
 # COST FUNCTIONS
 # ============================================================================
-
-def get_tx(rtype, tx_level, iso):
-    val = TX_TABLES[rtype][tx_level]
-    if isinstance(val, dict):
-        return val[iso]
-    return val
 
 
 def _resource_new_build_lcoe(res, sens, iso):

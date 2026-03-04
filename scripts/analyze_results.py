@@ -24,9 +24,9 @@ OUTPUT_PATH = os.path.join(ROOT_DIR, 'data', 'analysis_results.json')
 
 # Import constants from step3
 sys.path.insert(0, SCRIPT_DIR)
-from step3_cost_optimization import REGIONAL_DEMAND_TWH
+from pipeline_config import REGIONAL_DEMAND_TWH
 
-from step3_cost_optimization import OUTPUT_THRESHOLDS as THRESHOLDS
+from pipeline_config import OUTPUT_THRESHOLDS as THRESHOLDS
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
 
 

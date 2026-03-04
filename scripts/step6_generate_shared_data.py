@@ -17,9 +17,9 @@ import os
 import sys
 from datetime import datetime
 
-# Import cost tables directly from Step 3 (single source of truth)
+# Import cost tables from pipeline_config (single source of truth)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from step3_cost_optimization import (
+from pipeline_config import (
     OUTPUT_THRESHOLDS as _OUTPUT_THRESHOLDS,
     GRID_MIX_SHARES as _GRID_MIX_SHARES,
     WHOLESALE_PRICES as _WHOLESALE_PRICES,
@@ -1322,7 +1322,7 @@ print("\nGenerating SBTi timeline + DAC trajectory data...")
 try:
     import sys as _sys
     _sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__))))
-    from step3_cost_optimization import THRESHOLD_TARGET_YEARS
+    from pipeline_config import THRESHOLD_TARGET_YEARS
 except ImportError:
     THRESHOLD_TARGET_YEARS = {
         50: 2030, 55: 2031, 60: 2033, 65: 2034, 70: 2035, 75: 2036, 80: 2037,
