@@ -244,13 +244,53 @@ body {
                 </div>
 
                 <p>
-                    <strong>Short-duration storage alone won&rsquo;t close the gap.</strong> In this analysis (4-hour
-                    Li-ion, 85% round-trip efficiency<sup style="font-size:0.7em;color:#6B7280;">[2]</sup>), battery deployment remains near zero below 95% matching. Four-hour storage can shift
-                    solar surplus to evenings but struggles with multi-day wind droughts and long winter nights.
-                    Longer-duration storage technologies (iron-air<sup style="font-size:0.7em;color:#6B7280;">[12]</sup>, compressed air, hydrogen) may expand
-                    storage&rsquo;s role significantly &mdash; but firm, dispatchable generation will remain essential
-                    for the hardest hours regardless.
+                    <strong>Storage plays a supporting role &mdash; not a leading one.</strong> Four-hour Li-ion
+                    batteries<sup style="font-size:0.7em;color:#6B7280;">[2]</sup> appear in cost-optimal mixes from as low as 10% CFE in solar-heavy
+                    ISOs (CAISO, PJM) &mdash; but at less than 0.1% of demand, they shift a few hours of solar
+                    surplus to evenings rather than materially changing the resource portfolio. Long-duration storage
+                    (100-hour iron-air<sup style="font-size:0.7em;color:#6B7280;">[12]</sup>) never enters cost-optimal mixes below 99% in any region,
+                    and green hydrogen (35% round-trip efficiency) is priced out entirely. Storage is a fine-tuning
+                    optimization, not a portfolio driver &mdash; firm, dispatchable generation remains essential
+                    for multi-day wind droughts and seasonal deficits that no battery duration can economically bridge.
                 </p>
+
+                <!-- Storage Scale Comparison: generation vs storage at 95% CFE -->
+                <div style="margin:1.5rem 0;display:grid;grid-template-columns:1fr 1fr;gap:1rem;max-width:600px;">
+                    <div style="background:#F0FDF4;border-radius:10px;padding:1rem;text-align:center;">
+                        <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:#6B7280;margin-bottom:0.5rem;">Generation Resources</div>
+                        <div style="font-size:2rem;font-weight:700;color:#166534;">~100%</div>
+                        <div style="font-size:0.82rem;color:#374151;">of demand served by<br>solar, wind, clean firm, hydro</div>
+                    </div>
+                    <div style="background:#EFF6FF;border-radius:10px;padding:1rem;text-align:center;">
+                        <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.05em;color:#6B7280;margin-bottom:0.5rem;">Storage Dispatch</div>
+                        <div style="font-size:2rem;font-weight:700;color:#1D4ED8;">&lt;0.1%</div>
+                        <div style="font-size:0.82rem;color:#374151;">of demand shifted by<br>battery storage (timing only)</div>
+                    </div>
+                </div>
+                <p style="font-size:0.82rem;color:#6B7280;margin-top:-0.5rem;margin-bottom:1.5rem;">
+                    At 95% CFE, medium cost scenario. Storage shifts <em>when</em> clean energy is delivered, not <em>how much</em>.
+                </p>
+
+                <!-- What Storage Can't Do: temporal gap visualization -->
+                <div style="background:#FFF7ED;border-left:4px solid #F59E0B;border-radius:0 10px 10px 0;padding:1.2rem 1.4rem;margin:1rem 0 1.5rem 0;">
+                    <div style="font-weight:700;color:#92400E;font-size:0.95rem;margin-bottom:0.5rem;">Why batteries can&rsquo;t replace firm generation</div>
+                    <div style="display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap;">
+                        <div style="text-align:center;flex:1;min-width:120px;">
+                            <div style="font-size:1.8rem;font-weight:700;color:var(--battery);">4 hrs</div>
+                            <div style="font-size:0.8rem;color:#6B7280;">Li-ion battery<br>discharge duration</div>
+                        </div>
+                        <div style="font-size:1.5rem;color:#D97706;font-weight:300;">vs</div>
+                        <div style="text-align:center;flex:1;min-width:120px;">
+                            <div style="font-size:1.8rem;font-weight:700;color:var(--clean-firm);">72+ hrs</div>
+                            <div style="font-size:0.8rem;color:#6B7280;">multi-day wind drought<br>requiring firm power</div>
+                        </div>
+                    </div>
+                    <p style="font-size:0.82rem;color:#78716C;margin:0.75rem 0 0 0;line-height:1.5;">
+                        The hardest hours aren&rsquo;t daily cycling &mdash; they&rsquo;re 3&ndash;7 day weather events where
+                        solar and wind output drops to near-zero simultaneously. A 4-hour battery covers one evening;
+                        a winter polar vortex requires 72+ hours of continuous firm generation.
+                    </p>
+                </div>
 
                 <p>
                     <strong>Existing nuclear is irreplaceable at any cost.</strong> PJM (32% nuclear), NEISO (24%),
@@ -441,8 +481,10 @@ body {
                     </div>
                     <div style="background:#FEF9C3;border-radius:10px;padding:1rem 1.1rem;">
                         <div style="font-weight:700;color:#854D0E;font-size:0.9rem;margin-bottom:0.3rem;">85%&ndash;95%: The Inflection Zone</div>
-                        <div style="font-size:0.85rem;color:#374151;line-height:1.5;">Firm generation and storage enter the mix to cover nights and low-wind periods.
-                            System cost per MWh begins to climb as the resource mix shifts toward costlier options.</div>
+                        <div style="font-size:0.85rem;color:#374151;line-height:1.5;">Clean firm generation enters the mix as the dominant new resource to cover nights
+                            and low-wind periods. Short-duration battery storage plays a supporting role &mdash;
+                            shifting solar surplus to evening hours &mdash; but at less than 0.1% of demand.
+                            System cost per MWh begins to climb as the portfolio shifts toward costlier firm capacity.</div>
                     </div>
                     <div style="background:#FEF2F2;border-radius:10px;padding:1rem 1.1rem;">
                         <div style="font-weight:700;color:#991B1B;font-size:0.9rem;margin-bottom:0.3rem;">95%&ndash;&ge;99.99%: The Last Mile</div>
@@ -496,6 +538,8 @@ body {
                 Solar has <em>no</em> guaranteed new-build floor anywhere &mdash; its role is entirely
                 contingent on relative cost assumptions. The firm generation cost toggle alone
                 explains <strong>48%</strong> of total cost variation.
+                <strong>Storage does not appear as a &ldquo;no regrets&rdquo; investment</strong> in any region &mdash;
+                its role and quantity are entirely threshold- and cost-scenario-dependent.
             </p>
         </div>
     </section>
