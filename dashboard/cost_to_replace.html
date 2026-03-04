@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The 8,760 Problem — Nuclear Retirement Premium</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/article.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+<script src="js/scroll-observer.js"></script>
+<style>
+/* Page-specific overrides only — shared styles in article.css */
+body { background: var(--bg-page); }
+
+/* Hero overview (dark navy) */
+.hero-overview {
+    background: linear-gradient(180deg, var(--navy-dark) 0%, var(--navy) 60%, var(--navy-mid) 100%);
+}
+.hero-overview::before {
+    background: radial-gradient(ellipse at 30% 20%, rgba(14,165,233,0.06) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 80%, rgba(245,158,11,0.04) 0%, transparent 60%);
+}
+.hero-text-block {
+    z-index: 2;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.hero-text-block.visible { opacity: 1; transform: translateY(0); }
+.hero-text-block h2 {
+    font-family: var(--font-heading);
+    font-size: 2rem;
+    font-weight: 800;
+    color: #ffffff;
+    margin-bottom: 16px;
+    line-height: 1.2;
+    letter-spacing: -0.5px;
+}
+.hero-text-block p {
+    font-size: 0.95rem;
+    color: rgba(255,255,255,0.7);
+    line-height: 1.75;
+    margin-bottom: 16px;
+}
+.hero-text-block .lead-text {
+    font-size: 1rem;
+    color: rgba(255,255,255,0.8);
+    line-height: 1.75;
+    margin-bottom: 20px;
+}
+.key-finding-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-data);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: rgba(56,189,248,0.12);
+    border: 1px solid rgba(56,189,248,0.3);
+    color: #38bdf8;
+    margin-bottom: 14px;
+}
+.hero-callout {
+    margin-top: 24px;
+    padding: 20px 24px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px;
+    text-align: center;
+}
+.hero-callout .counter-value {
+    font-family: var(--font-data);
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #fbbf24;
+    display: block;
+    line-height: 1.1;
+}
+.hero-callout .counter-label {
+    font-size: 0.82rem;
+    color: rgba(255,255,255,0.5);
+    margin-top: 6px;
+    display: block;
+}
+
+/* Hero chart panel */
+.chart-panel { border-color: rgba(74,144,217,0.12); }
+.chart-panel-overview {
+    background: rgba(255,255,255,0.98);
+    border-color: rgba(74,144,217,0.12);
+    min-height: 400px;
+}
+.chart-panel-overview .chart-container { position: relative; width: 100%; min-height: 350px; }
+.hero-chart-title {
+    font-family: var(--font-heading);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: rgba(15,23,42,0.85);
+    text-align: center;
+    margin-bottom: 10px;
+    letter-spacing: 0.02em;
+}
+.hero-chart-subtitle {
+    font-family: var(--font-data);
+    font-size: 0.72rem;
+    color: rgba(15,23,42,0.4);
+    text-align: center;
+    margin-top: 6px;
+}
+
+/* Key findings panel */
+.key-findings-panel {
+    max-width: var(--max-content);
+    margin: 0 auto;
+    padding: var(--space-xl) var(--pad-page) var(--space-lg);
+}
+.key-findings-panel h2 {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    letter-spacing: -0.3px;
+}
+.key-findings-panel .section-subtitle {
+    font-size: 0.92rem;
+    color: var(--text-dim);
+    max-width: 780px;
+    margin-bottom: var(--space-lg);
+    line-height: 1.7;
+}
+.key-findings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--space-md);
+}
+.key-finding-tile {
+    background: rgba(255,255,255,0.95);
+    border: 1px solid rgba(74,144,217,0.10);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    text-align: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.key-finding-tile:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.key-finding-tile .kf-value {
+    font-family: var(--font-heading);
+    font-size: 1.6rem;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 6px;
+}
+.key-finding-tile .kf-label {
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    line-height: 1.45;
+}
+
+/* ISO-switchable content area */
+.iso-content-area {
+    max-width: var(--max-content);
+    margin: 0 auto;
+    padding: var(--space-xl) var(--pad-page);
+}
+
+/* Retirement premium section */
+.retirement-premium-section {
+    margin-bottom: var(--space-xl);
+}
+.retirement-premium-section .section-header {
+    margin-bottom: var(--space-lg);
+}
+.retirement-premium-section .section-header h3 {
+    font-family: var(--font-heading);
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+.retirement-premium-section .section-header p {
+    font-size: 0.9rem;
+    color: var(--text-dim);
+    line-height: 1.7;
+}
+
+/* Two-column chart + narrative layout */
+.chart-narrative-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: var(--space-xl);
+    align-items: start;
+    margin-bottom: var(--space-xl);
+}
+.chart-col .chart-panel { position: sticky; top: 80px; }
+
+/* Nuclear economics section within ISO view */
+.nuclear-section-header { margin-bottom: 40px; }
+.nuclear-section-header h3 {
+    font-family: var(--font-heading);
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    line-height: 1.2;
+    letter-spacing: -0.3px;
+}
+.nuclear-section-header p {
+    font-size: 0.92rem;
+    color: var(--text-dim);
+    line-height: 1.7;
+    max-width: 780px;
+}
+.nuclear-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: var(--space-xl);
+    align-items: start;
+}
+.nuclear-chart-col .chart-panel { position: sticky; top: 80px; }
+.nuclear-narrative-col {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+}
+.nuclear-metric-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-md);
+    margin-top: var(--space-lg);
+}
+.nuclear-metric {
+    background: rgba(255,255,255,0.95);
+    border: 1px solid rgba(74,144,217,0.10);
+    border-radius: 10px;
+    padding: var(--space-md);
+    text-align: center;
+}
+.nuclear-metric-value {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1.1;
+}
+.nuclear-metric-label {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    margin-top: 6px;
+    line-height: 1.35;
+}
+.nuclear-paradox {
+    background: rgba(255,255,255,0.95);
+    border: 1px solid rgba(245,158,11,0.18);
+    border-radius: 14px;
+    padding: 28px 24px;
+    margin-top: 12px;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.nuclear-paradox.visible { opacity: 1; transform: translateY(0); }
+.nuclear-paradox h3 {
+    font-family: var(--font-heading);
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--amber-warn);
+    margin-bottom: 12px;
+}
+.nuclear-paradox p {
+    font-size: 0.88rem;
+    color: rgba(15,23,42,0.68);
+    line-height: 1.75;
+    margin-bottom: 12px;
+}
+.nuclear-paradox p:last-child { margin-bottom: 0; }
+
+/* Keep vs Replace chart section */
+.keep-vs-replace-section {
+    margin-top: var(--space-xl);
+    padding-top: var(--space-xl);
+    border-top: 1px solid rgba(0,0,0,0.05);
+}
+.keep-vs-replace-section h3 {
+    font-family: var(--font-heading);
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+.keep-vs-replace-section > p {
+    font-size: 0.9rem;
+    color: var(--text-dim);
+    line-height: 1.7;
+    margin-bottom: var(--space-lg);
+    max-width: 780px;
+}
+
+/* Synthesis overrides */
+.synthesis-section-title {
+    font-family: var(--font-heading);
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: #ffffff;
+    text-align: center;
+    margin-bottom: 40px;
+    letter-spacing: -0.3px;
+}
+.synthesis-inner {
+    max-width: var(--max-content);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+}
+.synthesis-card h3 { font-size: 1.3rem; }
+.synthesis-card p { font-size: 0.92rem; }
+
+/* Chart legend overrides */
+.chart-legend { justify-content: center; padding: 8px 12px 2px; margin-top: 4px; }
+.chart-legend-item { font-family: var(--font-data); color: rgba(15,23,42,0.55); gap: 6px; }
+
+/* Region tag for ISO-specific content */
+.region-tag {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-family: var(--font-data);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .chart-narrative-grid { grid-template-columns: 1fr; }
+    .chart-col .chart-panel { position: relative; top: 0; }
+    .nuclear-grid { grid-template-columns: 1fr; }
+    .nuclear-chart-col .chart-panel { position: relative; top: 0; }
+    .nuclear-metric-row { grid-template-columns: repeat(2, 1fr); }
+    .synthesis-inner { grid-template-columns: 1fr; gap: 20px; }
+    .key-findings-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+    .hero-text-block h2 { font-size: 1.5rem; }
+    .hero-text-block p { font-size: 0.85rem; }
+    .hero-callout .counter-value { font-size: 2rem; }
+    .iso-content-area { padding: var(--space-lg) 16px; }
+    .key-findings-panel { padding: var(--space-lg) 16px var(--space-md); }
+    .key-findings-panel h2 { font-size: 1.25rem; }
+    .key-findings-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .key-finding-tile { padding: 14px 12px; }
+    .key-finding-tile .kf-value { font-size: 1.3rem; }
+    .nuclear-metric-row { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .nuclear-metric { padding: 12px 8px; }
+    .nuclear-metric-value { font-size: 1.2rem; }
+}
+@media (max-width: 480px) {
+    .hero-text-block h2 { font-size: 1.3rem; }
+    .hero-callout .counter-value { font-size: 1.7rem; }
+    .hero-callout .counter-label { font-size: 0.75rem; }
+    .key-findings-grid { grid-template-columns: 1fr; }
+    .nuclear-metric-row { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+
+<!-- HEADER BANNER -->
+<header class="header">
+    <div class="header-accent"></div>
+    <h1>The Nuclear Retirement Premium</h1>
+    <p class="subtitle">Why existing nuclear is irreplaceable &mdash; and what it would cost to try</p>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- HERO: THE REPLACEMENT COST PARADOX                                    -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section class="hero-overview section-light">
+    <div class="hero-overview-inner">
+        <div class="hero-text-block">
+            <span class="key-finding-badge">The Central Paradox</span>
+            <h2>The Grid Can't Afford to Lose Nuclear &mdash; But the Market Won't Pay to Keep It</h2>
+            <p class="lead-text">Wholesale prices collapse below nuclear viability at ~70% clean energy (~2033). But replacing retired nuclear with new-build clean firm costs <strong>3&ndash;5&times; the wholesale price</strong> that caused the retirement. This isn't just about keeping plants afloat &mdash; nuclear needs enough earnings to reinvest in uprates, relicensing, and capacity expansion.</p>
+            <p>Many existing nuclear sites are <strong>already permitted for additional reactors</strong>, making them the best candidates to jumpstart Wright's learning curve for new nuclear. But that requires economic stability and profit for the existing fleet &mdash; not bare-minimum survival at operating cost. The market design that depresses wholesale prices is simultaneously undermining the fastest path to affordable new nuclear.</p>
+            <div class="hero-callout">
+                <span class="counter-value" id="heroCounter" data-target="0" data-prefix="+$" data-suffix="/MWh">+$--/MWh</span>
+                <span class="counter-label">Average nuclear retirement premium across all ISOs at 90% clean</span>
+            </div>
+        </div>
+        <div class="hero-chart-block">
+            <div class="chart-panel chart-panel-overview">
+                <div class="hero-chart-title">Nuclear Retirement Premium by Region at 90% Clean Energy</div>
+                <div class="chart-container">
+                    <canvas id="heroOverviewChart"></canvas>
+                </div>
+                <div class="chart-legend">
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:var(--navy-dark);opacity:0.35;"></span>Additional $/MWh if nuclear retires</span>
+                </div>
+                <div class="hero-chart-subtitle">Premium = (cost without nuclear) &minus; (cost with nuclear) &middot; Medium sensitivities</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="energy-spectrum-bar"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- KEY FINDINGS PANEL                                                     -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section class="key-findings-panel section-light">
+    <h2>The Economic Case for Existing Nuclear</h2>
+    <p class="section-subtitle">Structural market design undermines nuclear viability across all ISOs. The paradox: letting nuclear retire because wholesale prices are too low guarantees paying far more to replace it &mdash; or losing the clean firm capacity entirely.</p>
+    <div class="key-findings-grid">
+        <div class="key-finding-tile">
+            <div class="kf-value" style="color:#dc2626;">3&ndash;5&times;</div>
+            <div class="kf-label">Replacement cost vs. wholesale price that caused retirement &mdash; the paradox at its starkest</div>
+        </div>
+        <div class="key-finding-tile">
+            <div class="kf-value" style="color:#d97706;">$38&ndash;44/MWh</div>
+            <div class="kf-label">Nuclear viability threshold &mdash; all-in sustaining cost + 10% margin for reinvestment</div>
+        </div>
+        <div class="key-finding-tile">
+            <div class="kf-value" style="color:#0284c7;">~70% clean</div>
+            <div class="kf-label">Threshold where even high-fuel wholesale falls below nuclear viability in every ISO</div>
+        </div>
+        <div class="key-finding-tile">
+            <div class="kf-value" style="color:#16a34a;" id="kfAnnualCost">$--B/yr</div>
+            <div class="kf-label">Annual cost of nuclear retirement across all ISOs at 90% clean &mdash; pure deadweight loss</div>
+        </div>
+    </div>
+</section>
+
+<!-- REGION SELECTOR PILLS -->
+<div class="region-pills-bar">
+    <div class="region-pills-inner">
+        <button class="region-pill active" data-iso="PJM">PJM</button>
+        <button class="region-pill" data-iso="CAISO">CAISO</button>
+        <button class="region-pill" data-iso="ERCOT">ERCOT</button>
+        <button class="region-pill" data-iso="MISO">MISO</button>
+        <button class="region-pill" data-iso="NEISO">ISO-NE</button>
+        <button class="region-pill" data-iso="NYISO">NYISO</button>
+        <button class="region-pill" data-iso="SPP">SPP</button>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- ISO-SWITCHABLE CONTENT AREA                                            -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="iso-content-area section-light">
+
+    <!-- PART 1: Retirement Premium Chart + Narrative -->
+    <div class="retirement-premium-section">
+        <div class="section-header" id="retirementHeader">
+            <span class="region-tag" id="retirementTag" style="background:rgba(14,165,233,0.10);color:#0EA5E9;">PJM</span>
+            <h3 id="retirementTitle">PJM: 32.1% nuclear means the highest retirement premium</h3>
+            <p id="retirementNarrative">PJM has the largest nuclear fleet of any ISO at 32.1% of clean generation. These plants dispatch at wholesale rates (~$34/MWh), but new nuclear construction costs $75&ndash;120/MWh. If this fleet retires, the cost premium is the steepest in the country.</p>
+        </div>
+        <div class="chart-narrative-grid">
+            <div class="chart-col">
+                <div class="chart-panel" style="position:relative;top:0;">
+                    <div class="hero-chart-title" id="retirementChartTitle">PJM &mdash; With Nuclear vs. Nuclear Retired</div>
+                    <div class="chart-container" style="min-height:350px;">
+                        <canvas id="retirementChart"></canvas>
+                    </div>
+                    <div class="chart-legend" id="retirementLegend">
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#0EA5E9;"></span>With Nuclear</span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#0EA5E9;"></span>Nuclear Retired</span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:currentColor;opacity:0.15;"></span>Nuclear Retirement Premium</span>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <div class="insight-box insight-danger" style="margin-bottom:var(--space-md);">
+                    <strong id="retirementStat">Premium at 90%: loading...</strong>
+                </div>
+                <div id="retirementAnnualCost" style="padding:12px 16px;background:rgba(14,165,233,0.06);border:1px solid rgba(14,165,233,0.15);border-radius:10px;font-size:0.85rem;color:rgba(15,23,42,0.65);line-height:1.6;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PART 2: Nuclear Economics Deep-Dive (from LMP page) -->
+    <div id="nuclearEconSection" style="border-top:1px solid rgba(239,68,68,0.1);padding-top:var(--space-xl);">
+        <div class="nuclear-section-header" id="nuclearSectionHeader">
+            <span class="section-tag" style="background:rgba(239,68,68,0.06);color:#f87171;" id="nuclearTag">PJM Nuclear Economics</span>
+            <h3 id="nuclearHeaderTitle">The Clean Energy Paradox: Decarbonization Destroys the Price Signal That Keeps Nuclear Alive</h3>
+            <p id="nuclearHeaderBody">PJM's 32 GW existing nuclear fleet is the cheapest firm clean energy on the grid at $34/MWh wholesale. But the very renewable buildout needed to decarbonize the grid collapses wholesale prices below nuclear's all-in costs.</p>
+        </div>
+
+        <div class="nuclear-grid">
+            <div class="nuclear-chart-col">
+                <div class="chart-panel">
+                    <div class="chart-title" id="nuclearChartTitle1">PJM Wholesale Price vs. Nuclear Operating Cost &mdash; By Clean Energy %</div>
+                    <div class="chart-container">
+                        <canvas id="nuclearEconChart"></canvas>
+                    </div>
+                    <div class="chart-legend">
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#EF4444;"></span>High fuel LMP</span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#F59E0B;"></span>Medium fuel LMP</span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#22C55E;"></span>Low fuel LMP</span>
+                        <span class="chart-legend-divider"></span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(239,68,68,0.35);border-color:rgba(239,68,68,0.5);"></span>Cash ops ($25&ndash;30)</span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(239,68,68,0.18);border-color:rgba(239,68,68,0.35);"></span>All-in sustaining ($35&ndash;40)</span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.4);"></span>Viable w/ 10% margin ($38&ndash;44)</span>
+                        <span class="chart-legend-divider"></span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:rgba(96,165,250,0.7);"></span>45U effective floor ($40, thru 2032)</span>
+                    </div>
+                </div>
+
+                <div class="chart-panel" style="margin-top: 24px;">
+                    <div class="chart-title" id="nuclearChartTitle2">PJM Hours Per Year at Zero or Negative Price &mdash; Nuclear Revenue Erosion</div>
+                    <div class="chart-container" style="min-height: 260px;">
+                        <canvas id="nuclearZeroHoursChart"></canvas>
+                    </div>
+                    <div class="chart-legend">
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#9C27B0;"></span>Off-peak avg LMP</span>
+                        <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#0EA5E9;"></span>Zero/negative hours (right axis)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="nuclear-narrative-col" id="nuclearNarrative">
+                <!-- Populated by JS from REGION_META -->
+            </div>
+        </div>
+    </div>
+
+    <!-- PART 3: Keep vs Replace Comparison Chart -->
+    <div class="keep-vs-replace-section">
+        <h3>The Math: Viability Premium vs. Replacement Cost</h3>
+        <p>Paying a small premium above wholesale to keep nuclear viable ($5&ndash;20/MWh depending on threshold) costs a fraction of building replacement clean firm capacity ($90&ndash;170/MWh). The viability premium isn't charity &mdash; it's an investment in uprate capacity, relicensing, and Wright's learning curve for new nuclear at already-permitted sites.</p>
+        <div class="chart-panel">
+            <div class="chart-title" id="keepVsReplaceTitle">PJM &mdash; Cost to Keep Existing Nuclear vs. Cost to Replace</div>
+            <div class="chart-container" style="min-height:350px;">
+                <canvas id="keepVsReplaceChart"></canvas>
+            </div>
+            <div class="chart-legend">
+                <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(34,197,94,0.25);"></span>Viability premium (gap to $41/MWh)</span>
+                <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#0EA5E9;"></span>Wholesale LMP (P50)</span>
+                <span class="chart-legend-divider"></span>
+                <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#7C3AED;"></span>New nuclear LCOE (NOAK)</span>
+                <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#0891B2;"></span>CCS-CCGT LCOE (NOAK)</span>
+            </div>
+        </div>
+        <div class="insight-box insight-success" style="margin-top:var(--space-md);" id="keepVsReplaceInsight">
+            <p><strong>The investment case:</strong> At 90% clean energy, the viability premium for PJM's existing nuclear fleet is ~$21/MWh above wholesale. New nuclear would cost $105/MWh &mdash; 5&times; more. Existing sites with permits for additional reactors are the cheapest path to scaling new nuclear through Wright's learning curve. But that requires economic stability and earnings for the existing fleet, not just bare-minimum survival.</p>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SYNTHESIS                                                              -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="gradient-transition"></div>
+<section class="section-dark">
+<div class="section-dark-inner">
+    <h2 class="synthesis-section-title">The Structural Market Failure</h2>
+    <div class="synthesis-inner">
+        <div class="synthesis-card">
+            <h3>The Price Signal Is Broken</h3>
+            <p>Wholesale prices collapse as clean energy grows &mdash; that's the intended outcome. But the same price signal that makes renewables competitive <strong>destroys the revenue base for existing nuclear</strong>. By ~70% clean, no fuel price scenario supports nuclear viability without out-of-market payments. The market design that accelerates decarbonization simultaneously undermines the cheapest firm clean energy source on the grid.</p>
+            <p>This isn't a temporary dip. The wholesale price decline is <strong>structural, not cyclical</strong>. Each increment of clean energy permanently displaces the marginal fossil unit that set the price. Nuclear, which runs regardless of price, sees its revenue collapse with no mechanism for recovery.</p>
+        </div>
+        <div class="synthesis-card">
+            <h3>The Investment Case: Beyond Survival</h3>
+            <p>Nuclear doesn't just need enough revenue to cover operating costs ($25&ndash;30/MWh). It needs enough to:</p>
+            <p><strong>1. Reinvest in uprates</strong> &mdash; existing sites can expand capacity 5&ndash;20% through power uprates, adding GWs of firm clean energy at a fraction of greenfield cost.</p>
+            <p><strong>2. Fund relicensing</strong> &mdash; 20-year license extensions require billions in safety upgrades, inspections, and capital improvements. These investments need revenue certainty.</p>
+            <p><strong>3. Jumpstart Wright's learning curve</strong> &mdash; many existing nuclear sites are already permitted for additional reactors. Economic stability at these sites is the prerequisite for deploying next-generation designs that drive costs down through learning-by-doing.</p>
+            <p>The viable price ($38&ndash;44/MWh) isn't a luxury &mdash; it's the minimum for a fleet that can grow, not just survive.</p>
+        </div>
+    </div>
+</div>
+</section>
+<div class="gradient-transition"></div>
+
+<!-- SOURCES -->
+<div style="max-width:1320px;margin:0 auto;padding:24px 24px 24px;">
+    <details style="background:rgba(0,0,0,0.025);border:1px solid rgba(0,0,0,0.08);border-radius:10px;padding:16px 20px;">
+        <summary style="font-family:var(--font-heading);font-size:0.9rem;font-weight:600;color:rgba(15,23,42,0.85);cursor:pointer;min-height:44px;display:flex;align-items:center;">Sources &amp; References</summary>
+        <ol style="font-size:0.8rem;color:rgba(15,23,42,0.5);line-height:1.8;padding-left:20px;margin-top:12px;">
+            <li>NREL Annual Technology Baseline (ATB) 2024 &mdash; technology costs for wind, solar, storage, nuclear, CCS, geothermal.</li>
+            <li>Lazard Levelized Cost of Energy Analysis v17.0 (2024) &mdash; generation technology cost benchmarks.</li>
+            <li>EIA Hourly Electric Grid Monitor &mdash; hourly generation data by fuel type and balancing authority.</li>
+            <li>EPA eGRID 2022 &mdash; regional emission rates, fuel mix, and generator-level data.</li>
+            <li>NEI Nuclear Costs in Context (2023) &mdash; operating cost breakdowns and total generating cost data.</li>
+            <li>EIA Wholesale Electricity Market Data &mdash; regional hub prices for existing resource valuation.</li>
+        </ol>
+    </details>
+</div>
+
+<!-- ============ RELATED ANALYSES ============ -->
+<div class="related-analyses">
+    <div class="related-analyses-title">Related Analyses</div>
+    <div class="related-analyses-grid">
+        <a href="lmp_trends.html" class="related-card">
+            <div class="related-card-tag">Markets</div>
+            <div class="related-card-title">Wholesale Price Trends</div>
+            <div class="related-card-desc">How clean energy procurement reshapes wholesale electricity prices across 7 ISOs.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="clean_firm_case.html" class="related-card">
+            <div class="related-card-tag">Economics</div>
+            <div class="related-card-title">The Clean Firm Case</div>
+            <div class="related-card-desc">The technical and economic case for always-on clean power as the foundation of decarbonization.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="abatement_dashboard.html" class="related-card">
+            <div class="related-card-tag">Carbon</div>
+            <div class="related-card-title">CO&#8322; Abatement</div>
+            <div class="related-card-desc">Marginal abatement costs &mdash; where does each dollar deliver the most decarbonization?</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+    </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="dashboard.html">Grid Simulation</a>
+        <a href="abatement_dashboard.html">CO&#8322; Abatement</a>
+        <a href="research_paper.html">Research Paper</a>
+        <a href="about.html">About</a>
+    </div>
+    <div class="footer-note">The 8,760 Problem &mdash; 2025 Snapshot Model</div>
+</footer>
+<div class="bottom-banner"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- DATA & CHART SCRIPTS                                                   -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<script src="js/shared-data.js"></script>
+<script src="js/lmp-data.js"></script>
+<script src="js/lmp-charts.js"></script>
+<script>
+// ============================================================================
+// CTR PAGE — CONSTANTS & STATE
+// ============================================================================
+var REGIONS = ['PJM', 'ERCOT', 'CAISO', 'NYISO', 'NEISO', 'MISO', 'SPP'];
+var REGION_CLR = { ERCOT: '#22C55E', PJM: '#0EA5E9', CAISO: '#F59E0B', NYISO: '#E91E63', NEISO: '#9C27B0', MISO: '#06B6D4', SPP: '#A855F7' };
+var REGION_DISPLAY = { PJM: 'PJM (Mid-Atlantic)', ERCOT: 'ERCOT (Texas)', CAISO: 'CAISO (California)', NYISO: 'NYISO (New York)', NEISO: 'NEISO (New England)', MISO: 'MISO (Midwest)', SPP: 'SPP (Great Plains)' };
+var THR = typeof THRESHOLDS !== 'undefined' ? THRESHOLDS : [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.99];
+
+var trackData = null;
+var heroChart = null;
+var retirementChart = null;
+var nucEconChart = null;
+var nucZeroChart = null;
+var keepVsReplaceChartInst = null;
+var currentISO = 'PJM';
+
+var BASELINE = typeof EFFECTIVE_COST_DATA !== 'undefined' ? EFFECTIVE_COST_DATA : {};
+var DEMAND_TWH = typeof REGIONAL_DEMAND_TWH !== 'undefined' ? REGIONAL_DEMAND_TWH : {};
+
+// Nuclear capacity (GW) from pipeline_config.py
+var NUCLEAR_GW = { PJM: 32.0, CAISO: 4.3, ERCOT: 2.4, MISO: 22.0, NEISO: 3.3, NYISO: 3.3, SPP: 1.2 };
+
+// New-build cost data (NOAK, Medium sensitivities) from pipeline_config.py
+var NEWBUILD_NUCLEAR = { CAISO: 95, ERCOT: 90, PJM: 105, NYISO: 110, NEISO: 108, MISO: 100, SPP: 92 };
+var NEWBUILD_CCS = { CAISO: 72, ERCOT: 68, PJM: 79, NYISO: 82, NEISO: 81, MISO: 79, SPP: 68 };
+
+// Retirement premium narrative per ISO
+var RETIREMENT_NARRATIVE = {
+    PJM: { tag: 'PJM', tagBg: 'rgba(14,165,233,0.10)', tagColor: '#0EA5E9',
+        title: 'PJM: 32.1% nuclear means the highest retirement premium',
+        body: 'PJM has the largest nuclear fleet of any ISO at 32.1% of clean generation (Limerick, Peach Bottom, Susquehanna, and 15+ other plants). These plants dispatch at wholesale rates (~$34/MWh), but new nuclear construction costs $75\u2013120/MWh. If this fleet retires, the cost premium is the steepest in the country \u2014 existing solar (2.9%) and wind (3.8%) continue operating, but they can\'t replace firm dispatchable capacity.' },
+    ERCOT: { tag: 'ERCOT', tagBg: 'rgba(34,197,94,0.1)', tagColor: '#22C55E',
+        title: 'ERCOT: Small nuclear fleet means a modest retirement premium',
+        body: 'With only 8.6% nuclear capacity (South Texas Project, Comanche Peak), ERCOT has the least nuclear exposure of any ISO. If these plants retire, the cost increase is modest because the region\'s existing wind and solar fleet already supplies most clean energy.' },
+    CAISO: { tag: 'CAISO', tagBg: 'rgba(245,158,11,0.1)', tagColor: '#F59E0B',
+        title: 'CAISO: Diablo Canyon retirement would widen the cost gap',
+        body: 'California\'s 5.3% nuclear share (Diablo Canyon, since relicensed) provides firm baseload at wholesale rates. If it retires, the optimizer must replace that dispatchable capacity with new-build clean firm \u2014 at 2\u20134\u00d7 the cost.' },
+    NYISO: { tag: 'NYISO', tagBg: 'rgba(233,30,99,0.15)', tagColor: '#E91E63',
+        title: 'NYISO: 18.4% nuclear makes retirement a high-stakes bet',
+        body: 'New York\'s 18.4% nuclear fleet (Nine Mile Point, FitzPatrick, Ginna) provides firm dispatchable power at wholesale rates. Replacing that 18.4% with new-build clean firm at $75\u2013120/MWh drives a significant premium.' },
+    NEISO: { tag: 'NEISO', tagBg: 'rgba(156,39,176,0.1)', tagColor: '#9C27B0',
+        title: 'NEISO: Millstone anchors the fleet \u2014 losing it would be catastrophic',
+        body: 'New England runs 23.8% of its clean energy from nuclear (Millstone, Seabrook). These plants provide baseload capacity through harsh winters when gas pipeline constraints already spike energy costs. The winter gas constraint means CCS-CCGT replacement carries an additional $13/MWh adder.' },
+    MISO: { tag: 'MISO', tagBg: 'rgba(6,182,212,0.10)', tagColor: '#06B6D4',
+        title: 'MISO: 13.1% nuclear retirement hits harder than it looks',
+        body: 'MISO\'s 13.1% nuclear fleet (Braidwood, Byron, Prairie Island, and others) provides firm baseload that complements the region\'s massive 14.5% wind fleet. The loss of dispatchable firm capacity forces expensive new-build replacements at higher thresholds.' },
+    SPP: { tag: 'SPP', tagBg: 'rgba(168,85,247,0.10)', tagColor: '#A855F7',
+        title: 'SPP: Minimal nuclear means minimal retirement risk',
+        body: 'SPP\'s 5.2% nuclear share (Wolf Creek) is the smallest of any ISO. The region\'s dominant 37.1% wind fleet continues operating at wholesale regardless of nuclear retirement.' }
+};
+
+// ============================================================================
+// DATA EXTRACTION (same as original CTR page)
+// ============================================================================
+function getReplaceEffectiveCost(iso) {
+    if (!trackData) return null;
+    var root = trackData.results || trackData;
+    var isoData = root[iso];
+    if (!isoData) return null;
+    var ctr = isoData.cost_to_replace || isoData.thresholds;
+    if (!ctr) return null;
+    return THR.map(function(t) {
+        var thrKey = String(t % 1 === 0 ? Math.floor(t) : t);
+        var thrData = ctr[thrKey];
+        if (!thrData || !thrData.scenarios) return null;
+        var keys = Object.keys(thrData.scenarios);
+        for (var i = 0; i < keys.length; i++) {
+            var s = thrData.scenarios[keys[i]];
+            if (s && s.costs && s.costs.effective_cost != null) return s.costs.effective_cost;
+        }
+        return null;
+    });
+}
+
+function getReplaceSweepData(iso) {
+    if (!trackData) return null;
+    var root = trackData.results || trackData;
+    var isoData = root[iso];
+    if (!isoData) return null;
+    var ctr = isoData.cost_to_replace || isoData.thresholds;
+    if (!ctr) return null;
+    var p10 = [], p50 = [], p90 = [];
+    var hasSweep = false;
+    THR.forEach(function(t) {
+        var thrKey = String(t % 1 === 0 ? Math.floor(t) : t);
+        var thrData = ctr[thrKey];
+        if (!thrData) { p10.push(null); p50.push(null); p90.push(null); return; }
+        if (thrData.sweep) {
+            hasSweep = true;
+            p10.push(thrData.sweep.p10 ? thrData.sweep.p10.effective_cost : null);
+            p50.push(thrData.sweep.p50 ? thrData.sweep.p50.effective_cost : null);
+            p90.push(thrData.sweep.p90 ? thrData.sweep.p90.effective_cost : null);
+        } else if (thrData.scenarios) {
+            var keys = Object.keys(thrData.scenarios);
+            if (keys.length >= 1) {
+                var c = thrData.scenarios[keys[0]].costs.effective_cost;
+                p10.push(c); p50.push(c); p90.push(c);
+            } else { p10.push(null); p50.push(null); p90.push(null); }
+        } else { p10.push(null); p50.push(null); p90.push(null); }
+    });
+    if (hasSweep) return { p10: p10, p50: p50, p90: p90 };
+    return null;
+}
+
+// ============================================================================
+// BUILD HERO OVERVIEW CHART (all regions bar chart at 90%)
+// ============================================================================
+function buildHeroOverviewChart() {
+    var ctx = document.getElementById('heroOverviewChart');
+    if (!ctx) return;
+    ctx = ctx.getContext('2d');
+    var idx90 = THR.indexOf(90);
+    if (idx90 === -1) return;
+
+    var regionData = [];
+    REGIONS.forEach(function(iso) {
+        var bl = BASELINE[iso];
+        var rp = getReplaceEffectiveCost(iso);
+        if (!bl || !rp || bl[idx90] == null || rp[idx90] == null) return;
+        regionData.push({ iso: iso, premium: rp[idx90] - bl[idx90] });
+    });
+    regionData.sort(function(a, b) { return b.premium - a.premium; });
+
+    var labels = regionData.map(function(d) { return d.iso; });
+    var premiums = regionData.map(function(d) { return d.premium; });
+    var colors = regionData.map(function(d) { return REGION_CLR[d.iso] + '88'; });
+    var borderColors = regionData.map(function(d) { return REGION_CLR[d.iso]; });
+
+    var avgPremium = premiums.length > 0 ? premiums.reduce(function(a, b) { return a + b; }, 0) / premiums.length : 0;
+    var heroCounter = document.getElementById('heroCounter');
+    if (heroCounter) heroCounter.setAttribute('data-target', avgPremium.toFixed(1));
+
+    // Also update annual cost key finding
+    var totalAnnual = 0;
+    regionData.forEach(function(d) {
+        var demand = DEMAND_TWH[d.iso];
+        if (demand) totalAnnual += d.premium * demand / 1000;
+    });
+    var kfEl = document.getElementById('kfAnnualCost');
+    if (kfEl && totalAnnual > 0) kfEl.textContent = '$' + totalAnnual.toFixed(0) + 'B/yr';
+
+    var yMax = Math.ceil(Math.max.apply(null, premiums.length ? premiums : [10]) / 5) * 5 + 5;
+
+    heroChart = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: labels, datasets: [{ label: 'Nuclear Retirement Premium', data: premiums, backgroundColor: colors, borderColor: borderColors, borderWidth: 2, borderRadius: 6, barPercentage: 0.7 }] },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            animation: { duration: 1200, easing: 'easeOutQuart', delay: function(c) { return c.type === 'data' ? c.dataIndex * 120 : 0; } },
+            scales: {
+                x: { ticks: { font: { size: 11, weight: 600 }, color: 'rgba(15,23,42,0.7)' }, grid: { display: false }, border: { display: true, color: 'rgba(0,0,0,0.1)' } },
+                y: { min: 0, max: yMax, ticks: { callback: function(v) { return '+$' + v; }, font: { size: 9 }, color: 'rgba(15,23,42,0.45)' }, grid: { color: 'rgba(0,0,0,0.025)' }, border: { display: true, color: 'rgba(0,0,0,0.1)' }, title: { display: true, text: 'Premium ($/MWh)', color: 'rgba(15,23,42,0.35)', font: { size: 9 } } }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: true, backgroundColor: 'rgba(255,255,255,0.97)', titleColor: '#1E293B', bodyColor: '#374151', borderColor: 'rgba(0,0,0,0.1)', borderWidth: 1, cornerRadius: 8, padding: 12,
+                    callbacks: { title: function(i) { return i[0] ? i[0].label + ' at 90% Clean Energy' : ''; }, label: function(i) { return 'Nuclear Retirement Premium: +$' + i.raw.toFixed(1) + '/MWh'; } } },
+                datalabels: { display: true, anchor: 'end', align: 'end', formatter: function(v) { return '+$' + v.toFixed(1); }, color: 'rgba(15,23,42,0.6)', font: { size: 10, weight: 600 } }
+            }
+        }
+    });
+}
+
+// ============================================================================
+// BUILD RETIREMENT PREMIUM CHART (per-ISO, baseline vs replace)
+// ============================================================================
+function buildRetirementChart(iso) {
+    if (retirementChart) { retirementChart.destroy(); retirementChart = null; }
+    var ctx = document.getElementById('retirementChart');
+    if (!ctx) return;
+    ctx = ctx.getContext('2d');
+
+    var c = REGION_CLR[iso];
+    var bl = BASELINE[iso];
+    var rp = getReplaceEffectiveCost(iso);
+    var sweep = getReplaceSweepData(iso);
+    if (!bl) return;
+
+    var datasets = [];
+    var blPts = THR.map(function(t, i) { return bl[i] != null ? { x: t, y: bl[i] } : null; }).filter(Boolean);
+    datasets.push({ label: 'With Nuclear', data: blPts, borderColor: c, backgroundColor: c + '10', borderWidth: 3, pointRadius: 3, pointBackgroundColor: c, fill: false, tension: 0.3, order: 1 });
+
+    if (rp) {
+        var rpPts = THR.map(function(t, i) {
+            var val = (sweep && sweep.p50 && sweep.p50[i] != null) ? sweep.p50[i] : rp[i];
+            return val != null ? { x: t, y: val } : null;
+        }).filter(Boolean);
+        datasets.push({ label: 'Nuclear Retired', data: rpPts, borderColor: c, backgroundColor: c + '20', borderWidth: 2.5, borderDash: [8, 5], pointRadius: 3, pointBackgroundColor: c, pointStyle: 'rectRot', fill: { target: 0, above: c + '20', below: 'transparent' }, tension: 0.3, order: 2 });
+    }
+
+    var yMax = 0;
+    datasets.forEach(function(ds) { ds.data.forEach(function(pt) { if (pt && pt.y > yMax) yMax = pt.y; }); });
+    yMax = Math.ceil(yMax / 20) * 20 + 20;
+    if (yMax < 80) yMax = 160;
+
+    retirementChart = new Chart(ctx, {
+        type: 'line', data: { datasets: datasets },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'nearest', axis: 'x', intersect: false },
+            animation: { duration: 1200, easing: 'easeOutQuart' },
+            scales: {
+                x: { type: 'linear', min: 48, max: 99.99, afterBuildTicks: function(a) { a.ticks = [50,60,70,80,90,95,99.99].map(function(v) { return {value:v}; }); }, ticks: { callback: function(v) { return v === 99.99 ? '\u226599.99%' : v + '%'; }, font: { size: 9 }, color: 'rgba(15,23,42,0.5)' }, grid: { color: 'rgba(0,0,0,0.07)' }, title: { display: true, text: 'Clean Energy Target', color: 'rgba(15,23,42,0.35)', font: { size: 9 } } },
+                y: { min: 0, max: yMax, ticks: { callback: function(v) { return '$' + v; }, font: { size: 9 }, color: 'rgba(15,23,42,0.5)' }, grid: { color: 'rgba(0,0,0,0.07)' }, title: { display: true, text: 'Effective $/MWh', color: 'rgba(15,23,42,0.35)', font: { size: 9 } } }
+            },
+            plugins: { legend: { display: false }, datalabels: { display: false },
+                tooltip: { enabled: true, backgroundColor: 'rgba(255,255,255,0.97)', titleColor: '#1E293B', bodyColor: '#374151', borderColor: 'rgba(0,0,0,0.1)', borderWidth: 1, cornerRadius: 8, padding: 12,
+                    callbacks: { title: function(i) { return i[0] ? i[0].raw.x + '% Clean Energy Target' : ''; }, label: function(i) { return i.dataset.label + ': $' + i.raw.y.toFixed(1) + '/MWh'; } } } }
+        }
+    });
+
+    // Update legend colors
+    var legend = document.getElementById('retirementLegend');
+    if (legend) {
+        legend.innerHTML = '<span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:' + c + ';"></span>With Nuclear</span>' +
+            '<span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:' + c + ';"></span>Nuclear Retired</span>' +
+            '<span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:currentColor;opacity:0.15;"></span>Nuclear Retirement Premium</span>';
+    }
+
+    // Update stat badge
+    var idx90 = THR.indexOf(90);
+    var statEl = document.getElementById('retirementStat');
+    var annualEl = document.getElementById('retirementAnnualCost');
+    if (statEl && bl && rp && idx90 !== -1 && bl[idx90] != null && rp[idx90] != null) {
+        var premium = rp[idx90] - bl[idx90];
+        var pct = ((premium / bl[idx90]) * 100).toFixed(0);
+        statEl.textContent = 'Premium at 90%: +$' + premium.toFixed(1) + '/MWh (+' + pct + '%)';
+        if (annualEl) {
+            var demand = DEMAND_TWH[iso];
+            if (demand) {
+                annualEl.innerHTML = '<strong>At 90% clean:</strong> With nuclear: <strong>$' + (bl[idx90] * demand / 1000).toFixed(1) + 'B/yr</strong> \u00b7 Nuclear retired: <strong>$' + (rp[idx90] * demand / 1000).toFixed(1) + 'B/yr</strong> \u00b7 Retirement premium: <strong style="color:#EF4444;">+$' + (premium * demand / 1000).toFixed(1) + 'B/yr</strong>';
+            }
+        }
+    } else if (statEl) {
+        statEl.textContent = 'Retirement data pending \u2014 run Step 3B pipeline';
+        if (annualEl) annualEl.textContent = '';
+    }
+}
+
+// ============================================================================
+// BUILD NUCLEAR ECONOMICS CHARTS (from lmp-charts.js builders)
+// ============================================================================
+function buildNuclearCharts(iso) {
+    // Destroy existing
+    if (nucEconChart) { nucEconChart.destroy(); nucEconChart = null; }
+    if (nucZeroChart) { nucZeroChart.destroy(); nucZeroChart = null; }
+
+    var D = LMP_ALL[iso];
+    if (!D) return;
+
+    // Build nuclear econ chart using the shared builder
+    buildNuclearEconChart(D);
+    nucEconChart = chartInstances.nucEcon;
+
+    // Build nuclear zero hours chart
+    buildNuclearZeroChart(D);
+    nucZeroChart = chartInstances.nucZero;
+
+    // Update nuclear section content from REGION_META
+    var m = REGION_META[iso];
+    if (!m) return;
+    var el;
+    el = document.getElementById('nuclearTag'); if (el) el.textContent = m.nuclearHeaderTag;
+    el = document.getElementById('nuclearHeaderTitle'); if (el) el.textContent = m.nuclearHeaderTitle;
+    el = document.getElementById('nuclearHeaderBody'); if (el) el.textContent = m.nuclearHeaderBody;
+    el = document.getElementById('nuclearChartTitle1'); if (el) el.textContent = m.nuclearChartTitle1;
+    el = document.getElementById('nuclearChartTitle2'); if (el) el.textContent = m.nuclearChartTitle2;
+    el = document.getElementById('nuclearNarrative'); if (el) el.innerHTML = m.nuclearNarrativeHTML;
+}
+
+// ============================================================================
+// BUILD KEEP VS REPLACE CHART
+// ============================================================================
+function buildKeepVsReplaceChart(iso) {
+    if (keepVsReplaceChartInst) { keepVsReplaceChartInst.destroy(); keepVsReplaceChartInst = null; }
+    var ctx = document.getElementById('keepVsReplaceChart');
+    if (!ctx) return;
+    ctx = ctx.getContext('2d');
+
+    var D = LMP_ALL[iso];
+    if (!D) return;
+
+    var T = D.thresholds;
+    var lmpP50 = D.envelope.p50;
+    var viableMid = 41; // midpoint of $38-44
+    var nucLCOE = NEWBUILD_NUCLEAR[iso] || 100;
+    var ccsLCOE = NEWBUILD_CCS[iso] || 75;
+
+    // Viability premium = max(0, viableMid - lmp)
+    var viabilityPremium = lmpP50.map(function(lmp) { return Math.max(0, viableMid - lmp); });
+
+    // Viable ceiling line (constant at $41)
+    var viableLine = T.map(function() { return viableMid; });
+
+    function pts(xArr, yArr) { return xArr.map(function(x, i) { return { x: x, y: yArr[i] }; }); }
+
+    var BLUE = '#0EA5E9', GREEN = '#22C55E', PURPLE = '#7C3AED', CYAN = '#0891B2';
+
+    keepVsReplaceChartInst = new Chart(ctx, {
+        type: 'line',
+        data: { datasets: [
+            // Viable floor (fills up to LMP)
+            { label: 'Viability premium', data: pts(T, viableLine), borderColor: 'rgba(34,197,94,0.4)', backgroundColor: 'rgba(34,197,94,0.15)', borderWidth: 1.5, borderDash: [4,3], pointRadius: 0, fill: '+1', tension: 0.35, order: 10, _type: 'band' },
+            // Wholesale LMP
+            { label: 'Wholesale LMP (P50)', data: pts(T, lmpP50), borderColor: BLUE, backgroundColor: BLUE + '18', borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: BLUE, fill: false, tension: 0.35, order: 2 },
+            // New nuclear LCOE (horizontal)
+            { label: 'New Nuclear LCOE (NOAK)', data: pts(T, T.map(function() { return nucLCOE; })), borderColor: PURPLE, backgroundColor: 'transparent', borderWidth: 2, borderDash: [10, 5], pointRadius: 0, fill: false, tension: 0, order: 3 },
+            // CCS-CCGT LCOE (horizontal)
+            { label: 'CCS-CCGT LCOE (NOAK)', data: pts(T, T.map(function() { return ccsLCOE; })), borderColor: CYAN, backgroundColor: 'transparent', borderWidth: 2, borderDash: [6, 4], pointRadius: 0, fill: false, tension: 0, order: 4 }
+        ] },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            animation: { duration: 1200, easing: 'easeOutQuart' },
+            scales: {
+                x: { type: 'linear', min: 48, max: 100.5, title: { display: true, text: 'Clean Energy Threshold (%)', color: 'rgba(15,23,42,0.45)', font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.025)' }, ticks: { callback: function(v) { return v === 99.99 ? '\u226599.99%' : v + '%'; }, color: 'rgba(15,23,42,0.4)', font: { size: 10 } }, afterBuildTicks: function(a) { a.ticks = [50,60,70,80,90,95,99.99].map(function(v) { return {value:v}; }); } },
+                y: { title: { display: true, text: '$/MWh', color: 'rgba(15,23,42,0.45)', font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.025)' }, ticks: { color: 'rgba(15,23,42,0.4)', font: { size: 10 }, callback: function(v) { return '$' + v; } }, min: -15, max: Math.max(nucLCOE, ccsLCOE) + 20 }
+            },
+            plugins: {
+                legend: { display: false },
+                datalabels: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(255,255,255,0.97)', titleColor: '#1E293B', bodyColor: 'rgba(15,23,42,0.7)', borderColor: 'rgba(0,0,0,0.1)', borderWidth: 1, padding: 12, cornerRadius: 8,
+                    filter: function(item) { return item.dataset._type !== 'band'; },
+                    callbacks: {
+                        title: function(i) { return i[0] ? i[0].raw.x + '% Clean Energy' : ''; },
+                        label: function(i) {
+                            if (i.dataset._type === 'band') return null;
+                            return i.dataset.label + ': $' + i.raw.y.toFixed(1) + '/MWh';
+                        },
+                        afterBody: function(items) {
+                            if (!items || !items[0]) return [];
+                            var idx = T.indexOf(items[0].raw.x);
+                            if (idx === -1) return [];
+                            var gap = viabilityPremium[idx];
+                            return ['', 'Viability premium: $' + gap.toFixed(1) + '/MWh', 'vs. New nuclear: $' + nucLCOE + '/MWh (' + (nucLCOE / Math.max(gap, 0.1)).toFixed(0) + '\u00d7 more)'];
+                        }
+                    }
+                },
+                annotation: {
+                    annotations: {
+                        zeroLine: { type: 'line', yMin: 0, yMax: 0, borderColor: 'rgba(0,0,0,0.12)', borderWidth: 1, borderDash: [6, 4] },
+                        nucLabel: { type: 'label', xValue: 99, yValue: nucLCOE + 4, content: 'New Nuclear $' + nucLCOE, color: PURPLE + 'CC', font: { size: 9, weight: '600' } },
+                        ccsLabel: { type: 'label', xValue: 99, yValue: ccsLCOE + 4, content: 'CCS $' + ccsLCOE, color: CYAN + 'CC', font: { size: 9, weight: '600' } },
+                        viableLabel: { type: 'label', xValue: 52, yValue: viableMid + 3, content: 'Nuclear viable $' + viableMid, color: 'rgba(34,197,94,0.7)', font: { size: 9, weight: '600' } }
+                    }
+                }
+            }
+        }
+    });
+
+    // Update title
+    var titleEl = document.getElementById('keepVsReplaceTitle');
+    if (titleEl) titleEl.textContent = (REGION_DISPLAY[iso] || iso) + ' \u2014 Cost to Keep Existing Nuclear vs. Cost to Replace';
+
+    // Update insight
+    var insightEl = document.getElementById('keepVsReplaceInsight');
+    if (insightEl) {
+        var idx90 = T.indexOf(90);
+        var gap90 = idx90 >= 0 ? viabilityPremium[idx90] : 20;
+        var nucGW = NUCLEAR_GW[iso] || 0;
+        insightEl.innerHTML = '<p><strong>The investment case:</strong> At 90% clean, the viability premium for ' + iso + '\'s ' + nucGW + ' GW nuclear fleet is ~$' + gap90.toFixed(0) + '/MWh above wholesale. New nuclear would cost $' + nucLCOE + '/MWh \u2014 ' + Math.round(nucLCOE / Math.max(gap90, 1)) + '\u00d7 more. Existing sites with permits for additional reactors are the cheapest path to scaling new nuclear through Wright\'s learning curve. But that requires economic stability and earnings for the existing fleet, not just bare-minimum survival.</p>';
+    }
+}
+
+// ============================================================================
+// SWITCH ISO (rebuilds all per-ISO content)
+// ============================================================================
+function switchISO(iso) {
+    if (iso === currentISO) return;
+    currentISO = iso;
+
+    // Update retirement premium section
+    var n = RETIREMENT_NARRATIVE[iso] || {};
+    var tagEl = document.getElementById('retirementTag');
+    if (tagEl) { tagEl.textContent = n.tag || iso; tagEl.style.background = n.tagBg || ''; tagEl.style.color = n.tagColor || ''; }
+    var titleEl = document.getElementById('retirementTitle');
+    if (titleEl) titleEl.textContent = n.title || iso;
+    var bodyEl = document.getElementById('retirementNarrative');
+    if (bodyEl) bodyEl.textContent = n.body || '';
+    var chartTitleEl = document.getElementById('retirementChartTitle');
+    if (chartTitleEl) chartTitleEl.textContent = (REGION_DISPLAY[iso] || iso) + ' \u2014 With Nuclear vs. Nuclear Retired';
+
+    // Rebuild charts
+    buildRetirementChart(iso);
+    buildNuclearCharts(iso);
+    buildKeepVsReplaceChart(iso);
+
+    // Re-observe scroll animations
+    observeScrollElements();
+}
+
+function observeScrollElements() {
+    var obs = new IntersectionObserver(function(entries) {
+        entries.forEach(function(e) { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
+    document.querySelectorAll('.narrative-card, .synthesis-card, .nuclear-paradox, .hero-text-block').forEach(function(el) {
+        el.classList.remove('visible');
+        obs.observe(el);
+    });
+    setTimeout(function() {
+        document.querySelectorAll('.narrative-card, .synthesis-card, .nuclear-paradox, .hero-text-block').forEach(function(el) {
+            var r = el.getBoundingClientRect();
+            if (r.top < window.innerHeight && r.bottom > 0) el.classList.add('visible');
+        });
+    }, 100);
+}
+
+// ============================================================================
+// ANIMATED COUNTERS
+// ============================================================================
+function animateCounters() {
+    document.querySelectorAll('.counter-value[data-target]').forEach(function(el) {
+        var observer = new IntersectionObserver(function(entries) {
+            if (entries[0].isIntersecting) {
+                var target = parseFloat(el.getAttribute('data-target'));
+                var suffix = el.getAttribute('data-suffix') || '';
+                var prefix = el.getAttribute('data-prefix') || '';
+                if (isNaN(target) || target === 0) { el.textContent = prefix + '--' + suffix; observer.disconnect(); return; }
+                var start = performance.now();
+                function step(ts) {
+                    var p = Math.min((ts - start) / 1500, 1);
+                    var eased = 1 - Math.pow(1 - p, 3);
+                    el.textContent = prefix + (target * eased).toFixed(1) + suffix;
+                    if (p < 1) requestAnimationFrame(step);
+                }
+                requestAnimationFrame(step);
+                observer.disconnect();
+            }
+        }, { threshold: 0.5 });
+        observer.observe(el);
+    });
+}
+
+// ============================================================================
+// ISO PILL HANDLER
+// ============================================================================
+document.querySelectorAll('.region-pill').forEach(function(pill) {
+    pill.addEventListener('click', function() {
+        var active = document.querySelector('.region-pill.active');
+        if (active) active.classList.remove('active');
+        this.classList.add('active');
+        switchISO(this.dataset.iso);
+    });
+});
+
+// ============================================================================
+// INIT
+// ============================================================================
+function initPage() {
+    buildHeroOverviewChart();
+    buildRetirementChart('PJM');
+    buildNuclearCharts('PJM');
+    buildKeepVsReplaceChart('PJM');
+    observeScrollElements();
+    animateCounters();
+}
+
+// Load track data then init
+fetch('track_results.json')
+    .then(function(r) { return r.json(); })
+    .then(function(d) { trackData = d; initPage(); })
+    .catch(function(err) { console.warn('track_results.json not found:', err); initPage(); });
+</script>
+</body>
+</html>
