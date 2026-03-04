@@ -631,13 +631,9 @@ STEP3_CO_SCHEMA = {
 }
 
 STEP4_ADDITIONAL_COLS = {
-    'ra': ['ra_peak_demand_mw', 'ra_ra_peak_mw', 'ra_clean_peak_capacity_mw',
-           'ra_gas_backup_needed_mw', 'ra_existing_gas_used_mw',
-           'ra_new_gas_build_mw', 'ra_existing_gas_cost_per_mwh',
-           'ra_new_gas_cost_per_mwh', 'ra_gas_backup_cost_per_mwh',
-           'ra_total_system_cost_per_mwh', 'ra_incremental_with_new_gas',
-           'ra_clean_coverage_pct', 'ra_resource_adequacy_margin',
-           'ra_gas_availability_factor'],
+    'ra': ['gas_gas_backup_needed_mw', 'gas_existing_gas_used_mw',
+           'gas_new_gas_build_mw', 'gas_gas_cost_per_mwh',
+           'gas_clean_peak_capacity_mw', 'gas_ra_peak_mw'],
     'no45q': ['no45q_total_cost', 'no45q_effective_cost',
               'no45q_incremental', 'no45q_wholesale',
               'no45q_crossover_cf', 'no45q_ccs_no45q_baseload', 'no45q_ldes_cost'],

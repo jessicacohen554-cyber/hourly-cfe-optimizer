@@ -1387,10 +1387,10 @@ def _get_gas_cost_per_mwh(data, iso):
 
     Supports multiple key names across data sources:
       - 'gas_cost' (scenario results, deployment queue)
-      - 'ra_gas_backup_cost_per_mwh' (step3 parquet columns)
+      - 'gas_gas_cost_per_mwh' (step3 parquet columns)
     Falls back to deriving from gas MW + constants if missing.
     """
-    for key in ('gas_cost', 'ra_gas_backup_cost_per_mwh'):
+    for key in ('gas_cost', 'gas_gas_cost_per_mwh', 'ra_gas_backup_cost_per_mwh'):
         if key in data:
             return data[key]
     # Derive from gas MW values + constants

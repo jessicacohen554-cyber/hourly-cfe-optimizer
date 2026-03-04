@@ -228,10 +228,8 @@ def add_mac_column(df):
     new_cost = cost_total.copy()
 
     # Subtract gas backup cost (system reliability, not abatement)
-    for gas_col in ['ra_gas_backup_cost_per_mwh', 'gas_gas_cost_per_mwh']:
-        if gas_col in df.columns:
-            new_cost = new_cost - df[gas_col].fillna(0)
-            break
+    if 'gas_gas_cost_per_mwh' in df.columns:
+        new_cost = new_cost - df['gas_gas_cost_per_mwh'].fillna(0)
     new_cost = new_cost.clip(lower=0)
 
     # Store new-resource-only cost for use by other functions (stepwise, envelope)
@@ -783,10 +781,8 @@ def compute_dg_mac(input_dir, isos):
         cost_total = (dg_df['cost_total_cost'] if 'cost_total_cost' in dg_df.columns
                       else dg_df['cost_effective_cost'])
         new_cost = cost_total.copy()
-        for gas_col in ['ra_gas_backup_cost_per_mwh', 'gas_gas_cost_per_mwh']:
-            if gas_col in dg_df.columns:
-                new_cost = new_cost - dg_df[gas_col].fillna(0)
-                break
+        if 'gas_gas_cost_per_mwh' in dg_df.columns:
+            new_cost = new_cost - dg_df['gas_gas_cost_per_mwh'].fillna(0)
         new_cost = new_cost.clip(lower=0)
 
         # ── CO₂ reduced: baseline (existing clean diluted by growth) vs scenario ──
