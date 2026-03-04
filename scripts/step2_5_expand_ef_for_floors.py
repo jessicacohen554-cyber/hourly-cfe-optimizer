@@ -14,7 +14,6 @@ to the EF parquets. This way step5_scenario_a_consequential.py never needs PFS f
 Inputs:
   - data/step1-pfs-parquets/{ISO}_t{threshold}_raw_pfs.parquet (PFS mixes)
   - data/step3-cost-opt-parquets/step3_feasible_{ISO}.parquet (current EF)
-  - dashboard/js/shared-data.js (current EF, alternative source)
 
 Output:
   - data/step3-cost-opt-parquets/step3_feasible_{ISO}.parquet (augmented)
@@ -40,7 +39,9 @@ from scenario_common import (
     get_demand_growth_factor,
     compute_mix_cost, _mix_resource_twh,
     _load_pfs_mixes, _filter_mixes_by_floor,
-    parse_feasible_mixes, _load_feasible_from_parquet,
+    _load_feasible_from_parquet,
+    _to_mix_array, _precompute_cost_params,
+    batch_compute_total_costs, batch_filter_floor,
 )
 
 
@@ -84,27 +85,30 @@ def simulate_floor_progression(feasible_mixes, iso, scenario_toggles):
         # Record the floor BEFORE this threshold
         floors_by_threshold[t] = dict(floor_twh)
 
-        # Find cheapest EF mix that passes floor
+        # Filter EF mixes by floor (vectorized, matching Scenario A logic)
         ef_mixes = feasible_mixes.get(iso, {}).get(t_str, [])
-        filtered = _filter_mixes_by_floor(ef_mixes, floor_twh, demand_twh, iso)
-
-        if not filtered:
-            # Floor blocks all EF mixes — this is where we need expansion
+        if not ef_mixes:
             continue
 
-        # Pick cheapest (using compute_mix_cost)
-        best_cost = float('inf')
-        best_mix = None
-        for mix in filtered:
-            result = compute_mix_cost(mix, sens, iso, demand_twh, growth_factor=gf)
-            if result['effective_cost'] < best_cost:
-                best_cost = result['effective_cost']
-                best_mix = mix
+        ef_arr = _to_mix_array(ef_mixes)
+        floor_mask = batch_filter_floor(ef_arr, floor_twh, demand_twh, iso)
+        filtered_arr = ef_arr[floor_mask]
 
-        if best_mix:
-            deployed = _mix_resource_twh(best_mix, demand_twh, iso)
-            for res in floor_twh:
-                floor_twh[res] = max(floor_twh[res], deployed.get(res, 0))
+        # Relaxed fallback: if floor eliminates all EF mixes, use all
+        # (matches Scenario A _forward_step_optimization lines 148-154)
+        if filtered_arr.shape[0] == 0:
+            filtered_arr = ef_arr
+
+        # Vectorized cost evaluation to find cheapest
+        params = _precompute_cost_params(sens, iso, demand_twh, {}, gf)
+        costs = batch_compute_total_costs(filtered_arr, params)
+        best_idx = int(np.argmin(costs))
+        best_mix = filtered_arr[best_idx].tolist()
+
+        # Update floor from deployed resources
+        deployed = _mix_resource_twh(best_mix, demand_twh, iso)
+        for res in floor_twh:
+            floor_twh[res] = max(floor_twh[res], deployed.get(res, 0))
 
     return floors_by_threshold
 
@@ -126,8 +130,16 @@ def find_floor_compatible_pfs(iso, threshold, floor_twh, demand_twh,
         indices = rng.choice(len(pfs_mixes), max_scan, replace=False)
         pfs_mixes = pfs_mixes[indices]
 
-    # Filter by floor
-    filtered = _filter_mixes_by_floor(pfs_mixes, floor_twh, demand_twh, iso)
+    # Filter by floor — only check PFS grid INPUT dimensions.
+    # PFS grid varies: clean_firm, solar, wind, hydro (+ offshore_wind, geothermal).
+    # CCS, battery, LDES are not PFS inputs — CCS is a cost-layer resource (step3),
+    # and storage dispatch is a physics OUTPUT computed from the resource mix.
+    # Requiring PFS to match storage/CCS floors produces 0 results.
+    pfs_floor_twh = dict(floor_twh)
+    pfs_floor_twh['ccs_ccgt'] = 0   # PFS doesn't model CCS
+    pfs_floor_twh['battery'] = 0    # Storage dispatch is a physics output, not a grid input
+    pfs_floor_twh['ldes'] = 0       # LDES dispatch is a physics output, not a grid input
+    filtered = _filter_mixes_by_floor(pfs_mixes, pfs_floor_twh, demand_twh, iso)
 
     if not filtered:
         return []
@@ -288,9 +300,17 @@ def main():
     print(f"  Dry run: {args.dry_run}")
     print("=" * 60)
 
-    # Load current EF mixes
-    print("\nLoading current EF mixes...")
-    feasible_mixes = parse_feasible_mixes()
+    # Load current EF mixes directly from step3 parquets (no shared-data.js dependency)
+    print("\nLoading current EF mixes from step3 parquets...")
+    feasible_mixes = {}
+    for iso in isos_to_run:
+        parquet_mixes = _load_feasible_from_parquet(iso)
+        if parquet_mixes:
+            feasible_mixes[iso] = parquet_mixes
+            total = sum(len(v) for v in parquet_mixes.values())
+            print(f"  {iso}: {total} feasible mixes from step3 parquet")
+        else:
+            print(f"  WARNING: No step3 feasible parquet for {iso}")
 
     log = {'isos': {}, 'total_added': 0}
 
