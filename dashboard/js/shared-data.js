@@ -4387,7 +4387,9 @@ const DEMAND_GROWTH_RATES = {
     ERCOT:  { Low: 0.020, Medium: 0.035, High: 0.055, label: 'TX data centers + population' },
     PJM:    { Low: 0.015, Medium: 0.024, High: 0.036, label: 'Data center corridor' },
     NYISO:  { Low: 0.013, Medium: 0.020, High: 0.044, label: 'CLCPA mandate-driven' },
-    NEISO:  { Low: 0.009, Medium: 0.018, High: 0.029, label: 'Heating electrification' }
+    NEISO:  { Low: 0.009, Medium: 0.018, High: 0.029, label: 'Heating electrification' },
+    MISO:   { Low: 0.012, Medium: 0.022, High: 0.038, label: 'Industrial + data center growth' },
+    SPP:    { Low: 0.010, Medium: 0.018, High: 0.030, label: 'Wind corridor + industrial' }
 };
 
 // --- Clean Firm Energy Split (nuclear vs geothermal) ---
