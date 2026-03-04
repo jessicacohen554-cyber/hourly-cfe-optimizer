@@ -27,158 +27,117 @@
 .synthesis-card h3 { color: var(--text-secondary); }
 .synthesis-card p { color: rgba(15,23,42,0.68); }
 
-/* Nuclear callout (dark-bg alert box) */
-.nuclear-callout {
-    max-width: var(--max-content);
-    margin: 0 auto;
-    padding: 0;
-}
-.nuclear-callout-inner {
-    background: rgba(239,68,68,0.10);
-    border: 1px solid rgba(239,68,68,0.25);
-    border-left: 4px solid var(--red);
-    border-radius: 14px;
-    padding: 24px 28px;
-    display: flex;
-    gap: 20px;
-    align-items: flex-start;
-}
-.nuclear-callout-icon {
-    font-size: 1.6rem;
-    line-height: 1;
-    flex-shrink: 0;
-    margin-top: 2px;
-}
-.nuclear-callout-text h4 {
-    font-family: var(--font-heading);
-    font-size: 0.95rem;
-    font-weight: 800;
-    color: #f87171;
-    margin-bottom: 6px;
-    letter-spacing: -0.2px;
-}
-.nuclear-callout-text p {
-    font-size: 0.85rem;
-    color: rgba(255,255,255,0.68);
-    line-height: 1.65;
-    margin: 0;
-}
-.nuclear-callout-text strong { color: var(--amber-warn); }
+/* Hero section padding override */
+.hero-section { padding: 56px var(--pad-page) 48px; }
 
-/* Nuclear deep-dive section */
-.nuclear-section {
+/* Hero stat tiles — equal width */
+.hero-stats-row .hero-stat { flex: 1 1 0; min-width: 0; }
+
+/* Key findings hero panel */
+.key-findings-panel {
     max-width: var(--max-content);
     margin: 0 auto;
-    padding: var(--space-3xl) var(--pad-page);
-    border-top: 1px solid rgba(239,68,68,0.1);
+    padding: var(--space-xl) var(--pad-page) var(--space-lg);
 }
-.nuclear-section-header { margin-bottom: 40px; }
-.nuclear-section-header h2 {
-    font-family: var(--font-heading);
-    font-size: 1.7rem;
-    font-weight: 800;
-    color: var(--text-secondary);
-    margin-bottom: 12px;
-    line-height: 1.2;
-    letter-spacing: -0.5px;
-}
-.nuclear-section-header p {
-    font-size: 0.92rem;
-    color: var(--text-dim);
-    line-height: 1.7;
-    max-width: 780px;
-}
-.nuclear-grid {
-    display: grid;
-    grid-template-columns: 1.2fr 1fr;
-    gap: var(--space-xl);
-    align-items: start;
-}
-.nuclear-chart-col .chart-panel { position: sticky; top: 80px; }
-.nuclear-narrative-col {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-lg);
-}
-.nuclear-metric-row {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: var(--space-md);
-    margin-top: var(--space-lg);
-}
-.nuclear-metric {
-    background: rgba(255,255,255,0.95);
-    border: 1px solid rgba(74,144,217,0.10);
-    border-radius: 10px;
-    padding: var(--space-md);
-    text-align: center;
-}
-.nuclear-metric-value {
+.key-findings-panel h2 {
     font-family: var(--font-heading);
     font-size: 1.5rem;
     font-weight: 800;
-    line-height: 1.1;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    letter-spacing: -0.3px;
 }
-.nuclear-metric-label {
-    font-size: 0.7rem;
+.key-findings-panel .section-subtitle {
+    font-size: 0.92rem;
     color: var(--text-dim);
-    margin-top: 6px;
-    line-height: 1.35;
+    max-width: 780px;
+    margin-bottom: var(--space-lg);
+    line-height: 1.7;
 }
-.nuclear-paradox {
+.key-findings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--space-md);
+}
+.key-finding-tile {
     background: rgba(255,255,255,0.95);
-    border: 1px solid rgba(245,158,11,0.18);
-    border-radius: 14px;
-    padding: 28px 24px;
-    margin-top: 12px;
-    opacity: 0;
-    transform: translateY(30px);
-    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
-                transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(74,144,217,0.10);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    text-align: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-.nuclear-paradox.visible { opacity: 1; transform: translateY(0); }
-.nuclear-paradox h3 {
+.key-finding-tile:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+.key-finding-tile .kf-value {
     font-family: var(--font-heading);
-    font-size: 1.15rem;
+    font-size: 1.6rem;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 6px;
+}
+.key-finding-tile .kf-label {
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    line-height: 1.45;
+}
+
+/* Paradox callout */
+.paradox-callout {
+    max-width: var(--max-content);
+    margin: 0 auto;
+    padding: 0 var(--pad-page) var(--space-lg);
+}
+.paradox-callout .insight-box {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+}
+.paradox-callout .insight-box h4 {
+    font-family: var(--font-heading);
+    font-size: 1rem;
     font-weight: 800;
     color: var(--amber-warn);
-    margin-bottom: 12px;
+    margin-bottom: 8px;
 }
-.nuclear-paradox p {
+.paradox-callout .insight-box p {
     font-size: 0.88rem;
     color: rgba(15,23,42,0.68);
-    line-height: 1.75;
-    margin-bottom: 12px;
+    line-height: 1.7;
+    margin-bottom: 8px;
 }
-.nuclear-paradox p:last-child { margin-bottom: 0; }
-
-/* Hero section padding override */
-.hero-section { padding: 56px var(--pad-page) 48px; }
+.paradox-callout .insight-box p:last-child { margin-bottom: 0; }
+.paradox-callout .insight-box a {
+    color: var(--accent-cyan);
+    text-decoration: underline;
+    font-weight: 600;
+}
 
 /* Responsive */
 @media (max-width: 900px) {
     .hero-text h1 { font-size: 1.7rem; }
-    .nuclear-grid { grid-template-columns: 1fr; }
-    .nuclear-chart-col .chart-panel { position: relative; top: 0; }
-    .nuclear-callout-inner { flex-direction: column; gap: 12px; }
+    .key-findings-grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 600px) {
     .hero-section { padding: 40px 16px 36px; }
     .hero-text h1 { font-size: 1.45rem; }
     .hero-stats-row { gap: 12px; }
-    .hero-stat { min-width: 110px; padding: 12px 14px; }
+    .hero-stat { padding: 12px 14px; }
     .hero-stat-value { font-size: 1.3rem; }
-    .nuclear-section { padding: 40px 16px; }
-    .nuclear-section-header h2 { font-size: 1.35rem; }
-    .nuclear-metric-row { grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-    .nuclear-metric { padding: 12px 8px; }
-    .nuclear-metric-value { font-size: 1.2rem; }
-    .nuclear-callout { padding: 0 16px; }
-    .nuclear-callout-inner { padding: 18px 16px; }
+    .key-findings-panel { padding: var(--space-lg) 16px var(--space-md); }
+    .key-findings-panel h2 { font-size: 1.25rem; }
+    .key-findings-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .key-finding-tile { padding: 14px 12px; }
+    .key-finding-tile .kf-value { font-size: 1.3rem; }
+    .key-finding-tile .kf-label { font-size: 0.72rem; }
+    .paradox-callout { padding: 0 16px var(--space-md); }
 }
 @media (max-width: 480px) {
     .hero-stats-row { flex-direction: column; }
     .hero-stat { min-width: unset; }
+    .key-findings-grid { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -192,6 +151,43 @@
     <p class="subtitle" id="headerSubtitle">How clean energy procurement reshapes wholesale electricity prices &mdash; 7 U.S. electricity markets</p>
     <div class="header-accent"></div>
 </header>
+
+<!-- ================================================================ -->
+<!-- KEY FINDINGS HERO PANEL (Static — cross-ISO summary)             -->
+<!-- ================================================================ -->
+<section class="key-findings-panel section-light">
+    <h2>Key Findings: Wholesale Price Degradation Across U.S. ISOs</h2>
+    <p class="section-subtitle">Our synthetic LMP model simulates 150,000+ scenarios per ISO to project how wholesale electricity prices evolve as clean energy penetration increases from 50% to &ge;99.99%. The results are structurally consistent across all 7 ISOs.</p>
+    <div class="key-findings-grid">
+        <div class="key-finding-tile">
+            <div class="kf-value" style="color:#16a34a;">&minus;44% to &minus;56%</div>
+            <div class="kf-label">Median wholesale price decline from 50% to 95% clean &mdash; consistent across all 7 ISOs</div>
+        </div>
+        <div class="key-finding-tile">
+            <div class="kf-value" style="color:#d97706;">4&ndash;8&times;</div>
+            <div class="kf-label">Increase in zero/negative price hours as clean energy grows &mdash; up to 91% of all hours at &ge;99.99%</div>
+        </div>
+        <div class="key-finding-tile">
+            <div class="kf-value" style="color:#0284c7;">$25&ndash;35/MWh</div>
+            <div class="kf-label">Peak uncertainty band (P10&ndash;P90) at 75&ndash;80% clean &mdash; exactly where most buyers are planning</div>
+        </div>
+        <div class="key-finding-tile">
+            <div class="kf-value" style="color:#dc2626;">~65&ndash;75%</div>
+            <div class="kf-label">Clean energy threshold where wholesale falls below nuclear viability ($38&ndash;44/MWh) in every ISO</div>
+        </div>
+    </div>
+</section>
+
+<!-- REPLACEMENT COST PARADOX CALLOUT -->
+<div class="paradox-callout">
+    <div class="insight-box insight-warn">
+        <div>
+            <h4>The Replacement Cost Paradox</h4>
+            <p>Wholesale price degradation threatens existing nuclear viability across all 7 ISOs &mdash; but replacing retired nuclear with new-build clean firm costs 3&ndash;5&times; the wholesale price that caused the retirement ($105&ndash;163/MWh new nuclear vs. $20&ndash;34/MWh wholesale at 90% clean). Nuclear doesn't just need enough revenue to survive &mdash; it needs profit to reinvest in uprates, relicensing, and capacity expansion at already-permitted sites.</p>
+            <p><a href="cost_to_replace.html">Explore the full nuclear economics &amp; replacement cost analysis &rarr;</a></p>
+        </div>
+    </div>
+</div>
 
 <!-- REGION SELECTOR PILLS -->
 <div class="region-pills-bar">
@@ -226,8 +222,8 @@
                     <div class="hero-stat-label">Peak uncertainty band (P10&ndash;P90) at 75&ndash;80% clean</div>
                 </div>
                 <div class="hero-stat">
-                    <div class="hero-stat-value red">~2038</div>
-                    <div class="hero-stat-label">Year LMP falls below nuclear operating cost (~85% clean)</div>
+                    <div class="hero-stat-value red">~2033</div>
+                    <div class="hero-stat-label">Year LMP falls below nuclear viability threshold (~70% clean)</div>
                 </div>
             </div>
         </div>
@@ -247,23 +243,6 @@
         </div>
     </div>
 </section>
-
-<!-- NUCLEAR RETIREMENT CALLOUT -->
-<div class="gradient-transition"></div>
-<section class="section-dark" style="padding-top: var(--space-xl); padding-bottom: var(--space-xl);">
-<div class="section-dark-inner">
-    <div class="nuclear-callout">
-        <div class="nuclear-callout-inner">
-            <div class="nuclear-callout-icon">&#9762;</div>
-            <div class="nuclear-callout-text" id="nuclearCalloutContent">
-                <h4>Existing Nuclear at Risk: Wholesale prices cross below operating cost by ~2038 (85% clean)</h4>
-                <p>PJM's 32 GW nuclear fleet needs <strong>$25&ndash;30/MWh</strong> to cover operating costs. Our LMP model shows median wholesale prices fall through this floor between the SBTi ~2038 (85%) and 2040 (90%) milestones &mdash; and off-peak prices collapse even earlier. By the SBTi 2045 target (95%), nearly half the year prices at zero or below. <a href="#nuclear-deepdive" style="color:var(--accent-cyan);text-decoration:underline;">Jump to full analysis &darr;</a></p>
-            </div>
-        </div>
-    </div>
-</div>
-</section>
-<div class="gradient-transition"></div>
 
 <!-- ================================================================ -->
 <!-- SECTION 1: Fuel Prices Dominate                                   -->
@@ -378,103 +357,6 @@
 </div>
 
 <!-- ================================================================ -->
-<!-- SECTION 4: Nuclear Economics Deep-Dive                            -->
-<!-- ================================================================ -->
-<section class="nuclear-section section-light" id="nuclear-deepdive">
-    <div class="nuclear-section-header" id="nuclearSectionHeader">
-        <span class="section-tag" style="background:rgba(239,68,68,0.06);color:#f87171;">PJM Nuclear Economics</span>
-        <h2>The Clean Energy Paradox: Decarbonization Destroys the Price Signal That Keeps Nuclear Alive</h2>
-        <p>PJM's 32 GW existing nuclear fleet is the cheapest firm clean energy on the grid at $34/MWh wholesale. But the very renewable buildout needed to decarbonize the grid collapses wholesale prices below nuclear's all-in costs &mdash; not just cash operating costs, but the capital expenditures, decommissioning reserves, and profit margin needed to justify continued investment over 40&ndash;60 year license periods.</p>
-    </div>
-
-    <div class="nuclear-grid">
-        <div class="nuclear-chart-col">
-            <div class="chart-panel">
-                <div class="chart-title" id="nuclearChartTitle1">PJM Wholesale Price vs. Nuclear Operating Cost — By Clean Energy %</div>
-                <div class="chart-container">
-                    <canvas id="nuclearEconChart"></canvas>
-                </div>
-                <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#EF4444;"></span>High fuel LMP</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#F59E0B;"></span>Medium fuel LMP</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#22C55E;"></span>Low fuel LMP</span>
-                    <span class="chart-legend-divider"></span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(239,68,68,0.35);border-color:rgba(239,68,68,0.5);"></span>Cash ops ($25&ndash;30)</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(239,68,68,0.18);border-color:rgba(239,68,68,0.35);"></span>All-in sustaining ($35&ndash;40)</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.4);"></span>Viable w/ 10% margin ($38&ndash;44)</span>
-                    <span class="chart-legend-divider"></span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:rgba(96,165,250,0.7);"></span>45U effective floor ($40, thru 2032)</span>
-                </div>
-            </div>
-
-            <div class="chart-panel" style="margin-top: 24px;">
-                <div class="chart-title" id="nuclearChartTitle2">PJM Hours Per Year at Zero or Negative Price — Nuclear Revenue Erosion</div>
-                <div class="chart-container" style="min-height: 260px;">
-                    <canvas id="nuclearZeroHoursChart"></canvas>
-                </div>
-                <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#9C27B0;"></span>Off-peak avg LMP</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#0EA5E9;"></span>Zero/negative hours (right axis)</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="nuclear-narrative-col" id="nuclearNarrative">
-            <div class="narrative-card">
-                <span class="section-tag" style="background:rgba(239,68,68,0.06);color:#f87171;">Viable Operation Threshold</span>
-                <h3>The real line isn't breakeven &mdash; it's viability (~70% clean, ~2033)</h3>
-                <p>Cash operating costs ($25&ndash;30/MWh) are only part of the picture. NEI's own "total generating cost" is $31.76/MWh (multi-unit avg), including $7/MWh in capital additions. But NEI explicitly excludes property taxes ($1&ndash;1.50/MWh), insurance ($1&ndash;3), decommissioning fund ($1&ndash;2), and spent fuel storage ($1&ndash;1.50). All-in sustaining cost: <strong>$35&ndash;40/MWh</strong>. Single-unit plants: $46&ndash;50/MWh.</p>
-                <p>And break-even doesn't justify continued investment. Regulated utilities earn 9&ndash;11% ROE on nuclear assets. A 10% margin pushes the viable price to <strong>$38&ndash;44/MWh</strong>. Medium-fuel wholesale LMP is already below this at 50% clean ($34.80). Even under <strong>high fuel prices</strong>, wholesale crosses below $38 at <strong>~68% clean</strong>. Above that threshold, no fuel price scenario supports viable nuclear without out-of-market revenue.</p>
-                <span class="stat-badge stat-badge-red">Viable operation requires $38&ndash;44/MWh &middot; Even high fuel LMP crosses below at ~68% clean</span>
-            </div>
-
-            <div class="narrative-card">
-                <span class="section-tag" style="background:rgba(239,68,68,0.06);color:#f87171;">Historic Precedent</span>
-                <h3>We've seen this movie before: TMI-1, Byron, Clinton</h3>
-                <p><strong>Three Mile Island Unit 1 (2019)</strong>: Exelon shut down its 837 MW reactor when PJM wholesale prices collapsed to ~$25&ndash;27/MWh (2019 avg). As a single-unit plant, all-in costs were ~$40&ndash;42/MWh (NEI single-unit avg: $41.62). Exelon reported $300M in losses over five years. The plant also failed to clear PJM's capacity auction four consecutive years. Pennsylvania declined to pass a ZEC subsidy.</p>
-                <p><strong>Illinois (2016)</strong>: Clinton and Quad Cities faced the same squeeze at ~$29&ndash;31/MWh wholesale. The Future Energy Jobs Act created Zero Emission Credits at <strong>$16.50/MWh</strong> (pegged to social cost of carbon). In 2021, CEJA extended subsidies to Byron and Dresden via Carbon Mitigation Credits at ~$30&ndash;33/MWh (contract-for-differences structure).</p>
-                <p><strong>New York (2017)</strong>: ZECs at <strong>$17.48/MWh</strong> for Ginna, Nine Mile Point, FitzPatrick. Program extended through 2049. <strong>New Jersey (2019)</strong>: ZECs at ~<strong>$10/MWh</strong> for Hope Creek and Salem. All programs responding to the same structural problem: wholesale prices below all-in nuclear costs.</p>
-                <span class="stat-badge stat-badge-amber">TMI-1: $27 wholesale vs. $42 all-in &middot; IL ZEC $16.50 &middot; NY ZEC $17.48 &middot; NJ ZEC $10</span>
-            </div>
-
-            <div class="narrative-card">
-                <h3>45U buys time &mdash; but how much?</h3>
-                <p>The IRA's Section 45U provides <strong>$15/MWh</strong> (with prevailing wage, 5&times; the $3 base credit) for existing nuclear through 2032. It phases out at 80&cent; per dollar above $25/MWh gross receipts, reaching $0 at <strong>$43.75/MWh</strong>. When wholesale is &le;$25, total revenue = $40/MWh. The credit functions as a contract-for-differences: maximum support when prices are lowest. At current PJM wholesale ($30&ndash;$45/MWh), most plants receive a partial credit of $5&ndash;15/MWh, landing total revenue at <strong>$40&ndash;45/MWh</strong> &mdash; right in the viable zone.</p>
-                <p>But 45U expires in 2032. At the SBTi 2040 target (90% clean), medium-fuel LMP is <strong>$20/MWh</strong>. Without 45U, nuclear loses $15&ndash;24 on every MWh sold against viable costs. The gap between 45U expiration and the point where wholesale prices become unviable (~68% clean) is razor-thin &mdash; and by 2032, clean energy penetration may already be past that threshold.</p>
-                <p>Under <strong>low fuel prices</strong>: LMP drops to $16/MWh at 90% clean. Nuclear loses $22&ndash;28/MWh against viable costs. No realistic extension of 45U fills that hole without structural market redesign (capacity reform, clean energy credits, or long-term PPAs).</p>
-                <span class="stat-badge stat-badge-blue">45U: $15/MWh credit, effective floor $40, phases out at $43.75 &middot; Expires 2032</span>
-            </div>
-
-            <div class="nuclear-metric-row">
-                <div class="nuclear-metric">
-                    <div class="nuclear-metric-value" style="color:#4ade80;">$34</div>
-                    <div class="nuclear-metric-label">Today (2025)<br>PJM wholesale $/MWh</div>
-                </div>
-                <div class="nuclear-metric">
-                    <div class="nuclear-metric-value" style="color:#f87171;">$38&ndash;44</div>
-                    <div class="nuclear-metric-label">Viable nuclear<br>All-in + 10% margin</div>
-                </div>
-                <div class="nuclear-metric">
-                    <div class="nuclear-metric-value" style="color:#fbbf24;">$20</div>
-                    <div class="nuclear-metric-label">SBTi 2040 (90%)<br>Median LMP $/MWh</div>
-                </div>
-                <div class="nuclear-metric">
-                    <div class="nuclear-metric-value" style="color:#60a5fa;">$40</div>
-                    <div class="nuclear-metric-label">45U floor<br>Through 2032</div>
-                </div>
-            </div>
-
-            <div class="nuclear-paradox">
-                <h3>The Replacement Cost Paradox</h3>
-                <p>If nuclear retires due to price depression, replacing its firm generation capacity costs <strong>$105&ndash;163/MWh</strong> for new nuclear or <strong>$79&ndash;131/MWh</strong> for CCS-CCGT &mdash; 3&ndash;5&times; the wholesale price that caused the retirement.</p>
-                <p>This is the central tension: the grid needs nuclear at SBTi 2040&ndash;2050 targets (90&ndash;&ge;99.99%), but the market doesn't pay enough to keep it running. Without capacity payments, clean energy standards, or nuclear production credits, the economic signal and the system need diverge completely &mdash; potentially as early as the late 2030s.</p>
-                <p>High demand growth (PJM: up to 3.6%/yr) provides some price support by absorbing renewable output &mdash; but the LMP data shows it's insufficient. The wholesale price collapse is structural, not cyclical.</p>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- ================================================================ -->
 <!-- SYNTHESIS                                                         -->
 <!-- ================================================================ -->
 <div class="gradient-transition"></div>
@@ -501,10 +383,10 @@
 <div class="related-analyses">
     <div class="related-analyses-title">Related Analyses</div>
     <div class="related-analyses-grid">
-        <a href="fossil_fuel_deepdive.html" class="related-card">
-            <div class="related-card-tag">Grid</div>
-            <div class="related-card-title">Fossil Fuel Deep Dive</div>
-            <div class="related-card-desc">Detailed analysis of fossil fleet composition and displacement mechanics.</div>
+        <a href="cost_to_replace.html" class="related-card">
+            <div class="related-card-tag">Nuclear Economics</div>
+            <div class="related-card-title">Nuclear Retirement Premium</div>
+            <div class="related-card-desc">What happens when wholesale prices push nuclear past viability? The full economic case for existing nuclear.</div>
             <div class="related-card-arrow">Explore &rarr;</div>
         </a>
         <a href="storage_analysis.html" class="related-card">

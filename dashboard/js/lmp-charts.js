@@ -268,15 +268,13 @@ function buildNuclearZeroChart(D) {
     });
 }
 
-// ===== BUILD ALL CHARTS =====
+// ===== BUILD ALL LMP CHARTS (no nuclear — those live on cost_to_replace.html) =====
 function buildAllCharts(D, accent) {
     destroyCharts();
     buildHeroChart(D, accent);
     buildFuelChart(D);
     buildRegimeChart(D);
     buildPeakChart(D);
-    buildNuclearEconChart(D);
-    buildNuclearZeroChart(D);
 }
 
 // ===== CONTENT UPDATER =====
@@ -299,25 +297,19 @@ function updateContent(iso) {
         }).join('');
     }
 
-    // Nuclear callout
-    el = document.getElementById('nuclearCalloutContent');
-    if (el) el.innerHTML = '<h4>' + m.nuclearCalloutH4 + '</h4><p>' + m.nuclearCalloutP + '</p>';
-
     // Scroll sections
     el = document.getElementById('sect1Narrative'); if (el) el.innerHTML = m.sect1HTML;
     el = document.getElementById('sect2Narrative'); if (el) el.innerHTML = m.sect2HTML;
     el = document.getElementById('sect3Narrative'); if (el) el.innerHTML = m.sect3HTML;
 
-    // Nuclear section header
+    // Nuclear section elements (on cost_to_replace.html — safe to call, elements may not exist)
+    el = document.getElementById('nuclearCalloutContent');
+    if (el) el.innerHTML = '<h4>' + m.nuclearCalloutH4 + '</h4><p>' + m.nuclearCalloutP + '</p>';
     el = document.getElementById('nuclearSectionHeader');
     if (el) el.innerHTML = '<span class="section-tag" style="background:rgba(239,68,68,0.06);color:#f87171;">' + m.nuclearHeaderTag + '</span>' +
         '<h2>' + m.nuclearHeaderTitle + '</h2><p>' + m.nuclearHeaderBody + '</p>';
-
-    // Nuclear chart titles
     el = document.getElementById('nuclearChartTitle1'); if (el) el.textContent = m.nuclearChartTitle1;
     el = document.getElementById('nuclearChartTitle2'); if (el) el.textContent = m.nuclearChartTitle2;
-
-    // Nuclear narrative
     el = document.getElementById('nuclearNarrative'); if (el) el.innerHTML = m.nuclearNarrativeHTML;
 
     // Synthesis
@@ -338,13 +330,13 @@ var fadeObs = new IntersectionObserver(function(entries) {
 }, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
 
 function observeScrollElements() {
-    document.querySelectorAll('.narrative-card, .synthesis-card, .nuclear-paradox').forEach(function(el) {
+    document.querySelectorAll('.narrative-card, .synthesis-card').forEach(function(el) {
         el.classList.remove('visible');
         fadeObs.observe(el);
     });
     // Check if any are already visible in viewport
     setTimeout(function() {
-        document.querySelectorAll('.narrative-card, .synthesis-card, .nuclear-paradox').forEach(function(el) {
+        document.querySelectorAll('.narrative-card, .synthesis-card').forEach(function(el) {
             var r = el.getBoundingClientRect();
             if (r.top < window.innerHeight && r.bottom > 0) el.classList.add('visible');
         });
@@ -382,17 +374,20 @@ function switchRegion(iso) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ===== PILLS HANDLER =====
-document.querySelectorAll('.region-pill').forEach(function(pill) {
-    pill.addEventListener('click', function() {
-        document.querySelector('.region-pill.active').classList.remove('active');
-        this.classList.add('active');
-        switchRegion(this.dataset.iso);
+// ===== PILLS HANDLER (LMP page only) =====
+if (document.getElementById('heroEnvelopeChart')) {
+    document.querySelectorAll('.region-pill').forEach(function(pill) {
+        pill.addEventListener('click', function() {
+            var active = document.querySelector('.region-pill.active');
+            if (active) active.classList.remove('active');
+            this.classList.add('active');
+            switchRegion(this.dataset.iso);
+        });
     });
-});
 
-// ===== INIT =====
-var initAccent = isoAccent('PJM');
-buildAllCharts(LMP_ALL.PJM, initAccent);
-applyISOAccent('PJM');
-observeScrollElements();
+    // ===== INIT (LMP page only) =====
+    var initAccent = isoAccent('PJM');
+    buildAllCharts(LMP_ALL.PJM, initAccent);
+    applyISOAccent('PJM');
+    observeScrollElements();
+}
