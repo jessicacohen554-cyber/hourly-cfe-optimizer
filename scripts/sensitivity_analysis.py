@@ -21,10 +21,7 @@ CO2_DIR = os.path.join(SCRIPT_DIR, '..', 'data', 'step5-post-processing', 'co2_r
 
 # Import constants from step3
 sys.path.insert(0, SCRIPT_DIR)
-from step3_cost_optimization import (
-    GRID_MIX_SHARES,
-    REGIONAL_DEMAND_TWH,
-)
+from pipeline_config import GRID_MIX_SHARES, REGIONAL_DEMAND_TWH
 
 REGIONS = ["CAISO", "ERCOT", "PJM", "NYISO", "NEISO"]
 RESOURCES = ["clean_firm", "solar", "wind", "ccs_ccgt", "hydro"]

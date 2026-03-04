@@ -33,21 +33,14 @@ from dispatch_utils import (
     NUCLEAR_MONTHLY_CF, get_demand_profile, get_supply_profiles,
     load_common_data,
 )
-from step3_cost_optimization import (
+from pipeline_config import (
     LCOE_TABLES, TX_TABLES, UPRATE_LCOE,
     NUCLEAR_NEWBUILD_LCOE, CCS_LCOE_45Q_ON, CCS_LCOE_45Q_OFF,
     GEOTHERMAL_LCOE, EXISTING_NUCLEAR_GW, UPRATE_CAP_TWH,
     DEMAND_GROWTH_RATES, THRESHOLD_TARGET_YEARS,
 )
-# Inline learning curve logic from step6_scenario_comparison.py
-# to avoid dragging in pandas + heavy dispatch imports.
-# Original source: step6_scenario_comparison.py lines 155-310
 
-SBTI_YEAR_MAP = {
-    50: 2030, 55: 2031, 60: 2033, 65: 2034, 70: 2035, 75: 2036, 80: 2037,
-    85: 2038, 87.5: 2039, 90: 2040, 92.5: 2043,
-    95: 2045, 97.5: 2048, 99: 2049, 99.5: 2049, 99.9: 2050, 100: 2050,
-}
+SBTI_YEAR_MAP = THRESHOLD_TARGET_YEARS  # Backward compat alias
 
 
 def learning_fraction(threshold, scenario='B'):
