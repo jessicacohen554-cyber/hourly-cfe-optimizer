@@ -28,6 +28,7 @@ import argparse
 import numpy as np
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(SCRIPT_DIR)
 sys.path.insert(0, SCRIPT_DIR)
 
 from step5_5_procurement_utils import (
@@ -47,6 +48,43 @@ from step5_5_procurement_utils import (
 )
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# LOAD CONSEQUENTIAL QUEUE (SINGLE SOURCE OF TRUTH FOR DEPLOYMENT ORDERING)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_QUEUE_CACHE = None
+
+QUEUE_JSON_PATH = os.path.join(BASE_DIR, 'data', 'step5-post-processing', 'consequential_queue.json')
+
+# Map queue resource names → PPA resource names
+_RESOURCE_TO_PPA = {
+    'solar': 'solar',
+    'wind': 'wind',
+    'clean_firm': 'nuclear_newbuild',
+    'ccs_ccgt': 'ccs_45q_on',
+    'offshore_wind': 'wind',
+    'hydro': None,         # Existing-only, no PPA
+    'battery': None,       # Storage, no generation PPA
+    'ldes': None,          # Storage, no generation PPA
+}
+
+
+def _load_queue():
+    """Load the consequential deployment queue from JSON (cached)."""
+    global _QUEUE_CACHE
+    if _QUEUE_CACHE is not None:
+        return _QUEUE_CACHE
+    if not os.path.exists(QUEUE_JSON_PATH):
+        print(f"  WARNING: Queue file not found at {QUEUE_JSON_PATH} — "
+              f"falling back to price-based ordering")
+        _QUEUE_CACHE = []
+        return _QUEUE_CACHE
+    with open(QUEUE_JSON_PATH) as f:
+        data = json.load(f)
+    _QUEUE_CACHE = data.get('queue', data.get('deployment_queue', []))
+    print(f"  Loaded consequential queue: {len(_QUEUE_CACHE)} steps")
+    return _QUEUE_CACHE
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # CROSS-REGIONAL CHEAPEST $/tCO₂ PROCUREMENT
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -55,41 +93,71 @@ from step5_5_procurement_utils import (
 
 
 def find_cheapest_clean_sources(threshold, scenario='A', level='Medium', ppa_level='Medium'):
-    """Find the cheapest $/MWh clean energy sources across all ISOs.
+    """Find clean energy sources in deployment queue order (cheapest $/tCO2 first).
 
-    Returns list of (iso, resource, $/MWh, available_twh) sorted by price.
+    Uses the consequential deployment queue as single source of truth for
+    deployment ordering. Falls back to price-based ordering if queue unavailable.
+
+    Returns list of (iso, resource, $/MWh_ppa, available_twh) in queue order.
     Cross-regional: no boundary constraint.
     """
-    sources = []
+    queue = _load_queue()
 
+    if not queue:
+        # Fallback: original price-based ordering when queue not available
+        return _find_sources_by_price(threshold, scenario, level, ppa_level)
+
+    # Walk queue steps in order (already sorted by marginal_mac).
+    # For each step, extract the resource deltas and create source entries
+    # with PPA-based pricing (buyer perspective) but queue-based ordering.
+    sources = []
+    for step in queue:
+        iso = step['iso']
+        delta_res = step.get('delta_resources', {})
+
+        for resource, delta_twh in delta_res.items():
+            if delta_twh < 0.5:
+                continue
+            ppa_resource = _RESOURCE_TO_PPA.get(resource)
+            if ppa_resource is None:
+                continue  # Storage, hydro — no generation PPA
+
+            # PPA price for this resource in this ISO (buyer's cost)
+            ppa_price = get_learning_adjusted_ppa(
+                ppa_resource, iso, threshold, scenario, level, ppa_level)
+            sources.append((iso, ppa_resource, ppa_price, delta_twh))
+
+    # If queue didn't provide enough sources, supplement with price-based fallback
+    if len(sources) < 5:
+        sources.extend(_find_sources_by_price(threshold, scenario, level, ppa_level))
+
+    return sources
+
+
+def _find_sources_by_price(threshold, scenario='A', level='Medium', ppa_level='Medium'):
+    """Fallback: find sources sorted by $/MWh PPA price (original approach)."""
+    sources = []
     for iso in ISOS:
-        # New-build solar
         solar_ppa = get_learning_adjusted_ppa('solar', iso, threshold, scenario, level, ppa_level)
-        solar_cap = BASE_DEMAND_TWH[iso] * 0.30  # Practical cap
+        solar_cap = BASE_DEMAND_TWH[iso] * 0.30
         sources.append((iso, 'solar', solar_ppa, solar_cap))
 
-        # New-build wind
         wind_ppa = get_learning_adjusted_ppa('wind', iso, threshold, scenario, level, ppa_level)
         wind_cap = BASE_DEMAND_TWH[iso] * 0.25
         sources.append((iso, 'wind', wind_ppa, wind_cap))
 
-        # Nuclear uprates (limited supply)
         uprate_twh = UPRATE_CAP_TWH.get(iso, 0)
         if uprate_twh > 0:
             uprate_ppa = get_learning_adjusted_ppa('uprate', iso, threshold, scenario, level, ppa_level)
             sources.append((iso, 'uprate', uprate_ppa, uprate_twh))
 
-        # New-build clean firm (at high thresholds when VRE saturates)
         firm_ppa = get_learning_adjusted_ppa('nuclear_newbuild', iso, threshold, scenario, level, ppa_level)
         firm_cap = BASE_DEMAND_TWH[iso] * 0.15
         sources.append((iso, 'nuclear_newbuild', firm_ppa, firm_cap))
 
-        # CCS
         ccs_ppa = get_learning_adjusted_ppa('ccs_45q_on', iso, threshold, scenario, level, ppa_level)
         ccs_cap = BASE_DEMAND_TWH[iso] * 0.10
         sources.append((iso, 'ccs', ccs_ppa, ccs_cap))
-
-    # Sort by price (cheapest first)
     sources.sort(key=lambda s: s[2])
     return sources
 
@@ -149,7 +217,9 @@ def compute_consequential_cost(buyer_iso, year, threshold, participation_pct,
 
     # Cost metrics
     cost_per_mwh = total_cost / total_procured if total_procured > 0 else 0
+    # CO2 abated: use queue dispatch-based emission rate if available
     co2_abated = total_procured * emission_rate / 1e3  # TWh × tCO₂/MWh / 1000 = MtCO₂
+    # MAC = total PPA cost ($M) / CO2 abated (Mt) → $/tCO₂
     mac_per_ton = (total_cost * 1e6) / (co2_abated * 1e6) if co2_abated > 0 else None  # $/tCO₂
 
     # Wholesale price impact (for the buyer's ISO)
