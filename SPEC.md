@@ -1596,7 +1596,7 @@ The optimizer runs as a 7-step pipeline. Step 1 is expensive (hours). Steps 2–
 | **Step 1** | `step1_pfs_generator.py` (monolithic) or 1A+1B+1C (modular) | **Physics Feasible Space** — 4D/5D adaptive grid search × procurement × storage. Output: `data/step1-pfs-parquets/` + `data/step1d-storage-parquets/`. | Only if dispatch logic, generation profiles, or demand curves change. |
 | **Step 2** | `step2_efficient_frontier.py` | **Efficient Frontier** — Extracts non-dominated mixes from PFS. Reads both step1 and step1d parquets. Filters existing gen utilization, procurement minimization, strict dominance removal. Output: `data/step2-ef-parquets/`. | Only if PFS or filtering criteria change. |
 | **Step 3** | `step3a_cost_optimization.py` + `step3b_track_nb_ctr.py` | **Cost Optimization** — 3A: Track 1 baseline (5,832 sensitivity combos, 17,496 CAISO). 3B: Track 2 (NB) + Track 3 (CTR). Merit-order tranche pricing. Demand growth with FOAK→NOAK learning curves. Output: `data/step3-cost-opt-parquets/`. | When cost assumptions, LCOE tables, or toggles change. |
-| **Step 4** | `step4_build_dispatch_cache.py` | **Dispatch Cache** — Pre-computes 8,760-hour dispatch for all unique mixes. Versioned NPZ cache (v2). Output: `data/step5-post-processing/dispatch_cache/`. | After Step 3 outputs change. |
+| **Step 4** | `step4_build_dispatch_cache.py` | **Dispatch Cache** — Pre-computes 8,760-hour dispatch for all unique mixes. Versioned NPZ cache (v2). Output: `data/step4-dispatch-cache/`. | After Step 3 outputs change. |
 
 #### Step 1 Sub-Pipeline (Modular, for CI/CD)
 
@@ -2140,7 +2140,7 @@ dispatch_utils.py (shared)
 step4_build_dispatch_cache.py (runs first — Step 5)
 ├── extract_unique_mixes(iso, input_dir)              ← reads step4/step3 parquets
 ├── build_cache_for_iso(iso, mixes, ...)              ← detailed=True for all mixes
-└── Output: data/step5-post-processing/dispatch_cache/{ISO}_dispatch_cache.npz (v2)
+└── Output: data/step4-dispatch-cache/{ISO}_dispatch_cache.npz (v2)
 
 step5_compress_day_profiles.py (Step 6 — reads from dispatch cache)
 ├── dispatch_from_cache(iso, mix, ...)                ← cache lookup → result format

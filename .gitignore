@@ -62,7 +62,7 @@ data/step5-post-processing/strategy2_hourly.json
 data/step5-post-processing/strategy3_annual.json
 
 # Dispatch cache temp files (real .npz is kept, .tmp.npz is not)
-data/step5-post-processing/dispatch_cache/*.tmp.npz
+data/step4-dispatch-cache/*.tmp.npz
 
 # LMP archetypes — write-only intermediate output of step5b_compute_lmp_prices.py
 # No downstream consumer; the _lmp.parquet files are the consumed artifacts.

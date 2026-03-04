@@ -64,7 +64,7 @@ jobs:
 
       - name: Verify dispatch cache exists
         run: |
-          if [ -d "data/step5-post-processing/dispatch_cache" ] && ls data/step5-post-processing/dispatch_cache/*.npz >/dev/null 2>&1; then
+          if [ -d "data/step4-dispatch-cache" ] && ls data/step4-dispatch-cache/*.npz >/dev/null 2>&1; then
             echo "Dispatch cache found"
           else
             echo "WARNING: No dispatch cache found. Script will compute dispatch live (slower)."

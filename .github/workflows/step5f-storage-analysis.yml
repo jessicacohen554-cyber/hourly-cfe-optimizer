@@ -38,7 +38,7 @@ jobs:
             echo "ERROR: No step-3 parquets found."
             exit 1
           fi
-          if [ ! -d "data/step5-post-processing/dispatch_cache" ]; then
+          if [ ! -d "data/step4-dispatch-cache" ]; then
             echo "WARNING: No dispatch cache found — script will compute dispatch on the fly"
           fi
 

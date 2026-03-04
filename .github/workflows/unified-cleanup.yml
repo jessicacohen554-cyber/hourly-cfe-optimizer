@@ -35,7 +35,7 @@ on:
         default: false
         type: boolean
       clear_step5_dispatch:
-        description: 'Clear data/step5-post-processing/dispatch_cache/'
+        description: 'Clear data/step4-dispatch-cache/ (dispatch cache)'
         default: false
         type: boolean
       clear_step5_lmp:
@@ -188,7 +188,7 @@ jobs:
 
           # ── Step 4: dispatch cache ──
           if [ "${{ inputs.clear_step5_dispatch }}" = "true" ]; then
-            DIR="data/step5-post-processing/dispatch_cache"
+            DIR="data/step4-dispatch-cache"
             if [ "$ISO" = "ALL" ]; then
               add_files "$DIR" 1 "*.parquet" "*.npz"
             else
@@ -236,9 +236,8 @@ jobs:
           # Group by directory
           for dir in data/step1-pfs-parquets data/step1d-storage-parquets \
                      data/step2-ef-parquets data/step3-cost-opt-parquets \
-                     data/step5-post-processing \
+                     data/step4-dispatch-cache data/step5-post-processing \
                      data/step5-post-processing/co2_results \
-                     data/step5-post-processing/dispatch_cache \
                      data/step5-post-processing/lmp data/step8-wrights-law; do
             matched=$(grep "^${dir}/" "$FILES" 2>/dev/null || true)
             if [ -n "$matched" ]; then
@@ -286,7 +285,7 @@ jobs:
           # Stage deletions — git add -u on each affected directory
           for dir in data/step1-pfs-parquets data/step1d-storage-parquets \
                      data/step2-ef-parquets data/step3-cost-opt-parquets \
-                     data/step5-post-processing \
+                     data/step4-dispatch-cache data/step5-post-processing \
                      data/step8-wrights-law; do
             git add -u "$dir/" 2>/dev/null || true
           done
@@ -347,7 +346,7 @@ jobs:
           [ "${{ inputs.clear_step3 }}" = "true" ]          && echo "    ✓ data/step3-cost-opt-parquets/"
           [ "${{ inputs.clear_step5 }}" = "true" ]          && echo "    ✓ data/step5-post-processing/ (top-level)"
           [ "${{ inputs.clear_step5_co2 }}" = "true" ]      && echo "    ✓ data/step5-post-processing/co2_results/"
-          [ "${{ inputs.clear_step5_dispatch }}" = "true" ]  && echo "    ✓ data/step5-post-processing/dispatch_cache/"
+          [ "${{ inputs.clear_step5_dispatch }}" = "true" ]  && echo "    ✓ data/step4-dispatch-cache/ (dispatch cache)"
           [ "${{ inputs.clear_step5_lmp }}" = "true" ]      && echo "    ✓ data/step5-post-processing/lmp/"
           [ "${{ inputs.clear_step8 }}" = "true" ]          && echo "    ✓ data/step8-wrights-law/"
           echo ""
