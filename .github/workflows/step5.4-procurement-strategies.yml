@@ -156,14 +156,53 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: procurement-*
-          path: data/step5-post-processing/
-          merge-multiple: true
+          path: artifacts/
 
       - name: Set up Python
-        if: inputs.generate_js == true
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
+      - name: "Merge per-ISO results"
+        run: |
+          python3 -c "
+          import json, os, glob
+
+          artifact_dirs = sorted(glob.glob('artifacts/procurement-*'))
+          pp_dir = 'data/step5-post-processing'
+          os.makedirs(pp_dir, exist_ok=True)
+
+          strategy_files = [
+              'strategy1_consequential.json',
+              'strategy2_hourly.json',
+              'strategy3_annual.json',
+          ]
+
+          for sf in strategy_files:
+              combined = {}
+              loaded_from = []
+              for ad in artifact_dirs:
+                  path = os.path.join(ad, sf)
+                  if not os.path.exists(path):
+                      continue
+                  with open(path) as fh:
+                      data = json.load(fh)
+                  iso_name = os.path.basename(ad).replace('procurement-', '')
+                  loaded_from.append(iso_name)
+                  # Deep merge: strategy variant -> ISO data
+                  for strategy_key, iso_dict in data.items():
+                      if strategy_key not in combined:
+                          combined[strategy_key] = {}
+                      if isinstance(iso_dict, dict):
+                          combined[strategy_key].update(iso_dict)
+              if combined:
+                  out_path = os.path.join(pp_dir, sf)
+                  with open(out_path, 'w') as fh:
+                      json.dump(combined, fh, indent=2, default=str)
+                  print(f'  Merged {sf}: {len(combined)} strategies from {loaded_from}')
+              else:
+                  print(f'  No data found for {sf}')
+          "
 
       - name: "Combine results into dashboard JS"
         if: inputs.generate_js == true
