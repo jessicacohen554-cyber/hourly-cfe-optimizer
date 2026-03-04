@@ -26,7 +26,7 @@ from pipeline_config import (
     GRID_MIX_SHARES, REGIONAL_DEMAND_TWH,
     WHOLESALE_PRICES, FUEL_ADJUSTMENTS,
     NEISO_CCS_GAS_ADDER, NEISO_WHOLESALE_ADDER,
-    H,
+    H, STORAGE_REVENUE_CREDITS,
 )
 
 # Import dispatch utilities
@@ -379,9 +379,9 @@ def _resource_new_build_lcoe(res, sens, iso):
     elif res == 'hydro':
         return 0
     elif res == 'battery':
-        return LCOE_TABLES['battery'][batt_name][iso] + get_tx('battery', tx_name, iso)
+        return max(0, LCOE_TABLES['battery'][batt_name][iso] + get_tx('battery', tx_name, iso) - STORAGE_REVENUE_CREDITS['battery'][iso])
     elif res == 'ldes':
-        return LCOE_TABLES['ldes'][ldes_name][iso] + get_tx('ldes', tx_name, iso)
+        return max(0, LCOE_TABLES['ldes'][ldes_name][iso] + get_tx('ldes', tx_name, iso) - STORAGE_REVENUE_CREDITS['ldes'][iso])
     return 0
 
 
@@ -503,9 +503,9 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
         uprate_twh / demand_twh * uprate_price +
         geo_twh / demand_twh * geo_price +
         remaining_after_geo / demand_twh * remaining_price +
-        bat4_pct / 100.0 * (LCOE_TABLES['battery'][batt_name][iso] + get_tx('battery', tx_name, iso)) +
-        bat8_pct / 100.0 * (LCOE_TABLES['battery8'][batt_name][iso] + get_tx('battery8', tx_name, iso)) +
-        ldes_pct / 100.0 * ldes_price +
+        bat4_pct / 100.0 * max(0, LCOE_TABLES['battery'][batt_name][iso] + get_tx('battery', tx_name, iso) - STORAGE_REVENUE_CREDITS['battery'][iso]) +
+        bat8_pct / 100.0 * max(0, LCOE_TABLES['battery8'][batt_name][iso] + get_tx('battery8', tx_name, iso) - STORAGE_REVENUE_CREDITS['battery8'][iso]) +
+        ldes_pct / 100.0 * max(0, ldes_price - STORAGE_REVENUE_CREDITS['ldes'][iso]) +
         gas_cost
     )
     new_build_per_mwh = total_cost - gas_cost
@@ -648,7 +648,7 @@ def _get_excess_lcoe(res, sens, iso, overrides):
         if overrides and 'ldes_lcoe' in overrides:
             return overrides['ldes_lcoe'] + get_tx('ldes', tx_name, iso)
         ldes_name = LEVEL_NAME[sens['ldes_lvl']]
-        return LCOE_TABLES['ldes'][ldes_name][iso] + get_tx('ldes', tx_name, iso)
+        return max(0, LCOE_TABLES['ldes'][ldes_name][iso] + get_tx('ldes', tx_name, iso) - STORAGE_REVENUE_CREDITS['ldes'][iso])
     elif res == 'solar':
         ren_name = LEVEL_NAME[sens['ren']]
         return LCOE_TABLES['solar'][ren_name][iso] + get_tx('solar', tx_name, iso)
@@ -657,7 +657,7 @@ def _get_excess_lcoe(res, sens, iso, overrides):
         return LCOE_TABLES['wind'][ren_name][iso] + get_tx('wind', tx_name, iso)
     elif res == 'battery':
         batt_name = LEVEL_NAME[sens['batt']]
-        return LCOE_TABLES['battery'][batt_name][iso] + get_tx('battery', tx_name, iso)
+        return max(0, LCOE_TABLES['battery'][batt_name][iso] + get_tx('battery', tx_name, iso) - STORAGE_REVENUE_CREDITS['battery'][iso])
     elif res == 'hydro':
         return 0
     return 0
@@ -792,9 +792,9 @@ def _precompute_cost_params(sens, iso, demand_twh, overrides=None, growth_factor
         geo_cap,                             # 11
         geo_price,                           # 12
         remaining_price,                     # 13
-        LCOE_TABLES['battery'][batt_name][iso] + get_tx('battery', tx_name, iso),   # 14: bat4_price
-        LCOE_TABLES['battery8'][batt_name][iso] + get_tx('battery8', tx_name, iso), # 15: bat8_price
-        ldes_price,                          # 16
+        max(0, LCOE_TABLES['battery'][batt_name][iso] + get_tx('battery', tx_name, iso) - STORAGE_REVENUE_CREDITS['battery'][iso]),   # 14: bat4_price (net of revenue)
+        max(0, LCOE_TABLES['battery8'][batt_name][iso] + get_tx('battery8', tx_name, iso) - STORAGE_REVENUE_CREDITS['battery8'][iso]), # 15: bat8_price (net of revenue)
+        max(0, ldes_price - STORAGE_REVENUE_CREDITS['ldes'][iso]),  # 16: ldes_price (net of revenue)
         demand_mwh,                          # 17
         avg_demand_mw,                       # 18
         ra_peak_mw,                          # 19
