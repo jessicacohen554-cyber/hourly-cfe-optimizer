@@ -1465,14 +1465,16 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
         ldes_levels = storage_levels['ldes']
         h2_levels = storage_levels.get('h2', [0])
     elif threshold >= 95:
-        batt_levels = [0, 1, 3, 5]
-        batt8_levels = [0, 2, 4, 6]
-        ldes_levels = [0, 5, 10, 20]
-        h2_levels = [0, 5, 10, 20]
+        # Storage levels in % of annual demand (energy capacity as fraction of annual demand).
+        # Physical reference: CAISO 224 TWh → 0.01% = 22,400 MWh / 5,600 MW (4hr).
+        batt_levels = [0, 0.005, 0.01, 0.02, 0.04, 0.06]
+        batt8_levels = [0, 0.01, 0.02, 0.04, 0.06, 0.08]
+        ldes_levels = [0, 0.05, 0.1, 0.2, 0.3, 0.5]
+        h2_levels = [0, 0.3, 0.5, 1.0, 2.0]
     else:
-        batt_levels = [0, 1, 3]
-        batt8_levels = [0, 2, 4]
-        ldes_levels = [0, 5, 10]
+        batt_levels = [0, 0.005, 0.01, 0.02, 0.04]
+        batt8_levels = [0, 0.01, 0.02, 0.04]
+        ldes_levels = [0, 0.05, 0.1, 0.2]
         h2_levels = [0]
 
     MIN_SURPLUS_DAYS_FOR_BATTERY = 150
@@ -2046,14 +2048,15 @@ def build_fine_storage_levels(max_bat4, max_bat8, max_ldes, max_h2):
             v += step
         return levels
 
-    # bat4: 0.5 steps, up to max+0.5 (cap 6)
-    fine_bat4 = _range(0.5, min(max_bat4 + 0.5, 6.0)) if max_bat4 > 0 else [0]
-    # bat8: 1.0 steps, up to max+1 (cap 8)
-    fine_bat8 = _range(1.0, min(max_bat8 + 1.0, 8.0)) if max_bat8 > 0 else [0]
-    # LDES: 1.0 steps, up to max+1 (cap 25)
-    fine_ldes = _range(1.0, min(max_ldes + 1.0, 25.0)) if max_ldes > 0 else [0]
-    # H2: 2.0 steps, up to max+2 (cap 25)
-    fine_h2 = _range(2.0, min(max_h2 + 2.0, 25.0)) if max_h2 > 0 else [0]
+    # Storage fine grids in % of annual demand.
+    # bat4: 0.002 steps, up to max+0.005 (cap 0.06)
+    fine_bat4 = _range(0.002, min(max_bat4 + 0.005, 0.06)) if max_bat4 > 0 else [0]
+    # bat8: 0.005 steps, up to max+0.005 (cap 0.08)
+    fine_bat8 = _range(0.005, min(max_bat8 + 0.005, 0.08)) if max_bat8 > 0 else [0]
+    # LDES: 0.02 steps, up to max+0.02 (cap 0.5)
+    fine_ldes = _range(0.02, min(max_ldes + 0.02, 0.5)) if max_ldes > 0 else [0]
+    # H2: 0.2 steps, up to max+0.2 (cap 2.0)
+    fine_h2 = _range(0.2, min(max_h2 + 0.2, 2.0)) if max_h2 > 0 else [0]
 
     return {'bat4': fine_bat4, 'bat8': fine_bat8, 'ldes': fine_ldes, 'h2': fine_h2}
 
