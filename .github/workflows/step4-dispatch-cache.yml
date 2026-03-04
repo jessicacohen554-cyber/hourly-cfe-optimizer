@@ -68,14 +68,8 @@ jobs:
 
       - name: Verify upstream data
         run: |
-          HAS_DATA=false
-          for dir in data/step4-gas-ccs-parquets data/step3-cost-opt-parquets; do
-            if [ -d "$dir" ] && ls "$dir"/*.parquet >/dev/null 2>&1; then
-              HAS_DATA=true
-            fi
-          done
-          if [ "$HAS_DATA" = "false" ]; then
-            echo "ERROR: No step-3 or step-4 parquets found."
+          if [ ! -d "data/step3-cost-opt-parquets" ] || ! ls data/step3-cost-opt-parquets/*.parquet >/dev/null 2>&1; then
+            echo "ERROR: No step-3 parquets found."
             exit 1
           fi
 

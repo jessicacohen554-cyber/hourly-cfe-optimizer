@@ -1,0 +1,114 @@
+name: "Step 5E: Track Analysis"
+
+# Exports track parquets to JSON and runs track cost envelope / mix
+# differential analysis. Independent of dispatch cache — reads from
+# step3/step4 parquets directly.
+#
+# Scripts:
+#   - step5e_export_tracks.py — exports track parquets to dashboard JSON
+#   - step6c_analyze_tracks.py — track cost envelopes (P10/P50/P90), mix differentials
+#
+# Prerequisite: Step 3 parquets must exist.
+# Output: dashboard/track_results.json, data/step5-post-processing/
+
+on:
+  workflow_dispatch:
+    inputs:
+      script:
+        description: 'Which scripts to run'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - export-tracks-only
+          - analyze-tracks-only
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  BRANCH_PREFIX: step4-tracks
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Create output branch
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${{ inputs.script }}"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$TARGET_BRANCH"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy numba pyarrow pandas
+
+      - name: "Export & Analyze Tracks"
+        if: ${{ inputs.script == 'ALL' }}
+        run: |
+          echo "=== Launching track scripts in parallel ==="
+          python scripts/step5e_export_tracks.py &
+          PID_EXPORT=$!
+          python scripts/step6c_analyze_tracks.py &
+          PID_ANALYZE=$!
+
+          FAILED=0
+          wait $PID_EXPORT  || { echo "FAILED: Export Track Results"; FAILED=1; }
+          wait $PID_ANALYZE || { echo "FAILED: Analyze Tracks"; FAILED=1; }
+          if [ "$FAILED" -ne 0 ]; then exit 1; fi
+
+      - name: "Export Track Results"
+        if: ${{ inputs.script == 'export-tracks-only' }}
+        run: python scripts/step5e_export_tracks.py
+
+      - name: "Analyze Tracks"
+        if: ${{ inputs.script == 'analyze-tracks-only' }}
+        run: python scripts/step6c_analyze_tracks.py
+
+      - name: Commit and push
+        run: |
+          git config http.postBuffer 524288000
+
+          git add -f data/step5-post-processing/ 2>/dev/null || true
+          git add -f dashboard/track_results.json 2>/dev/null || true
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "Step 5.2: tracks ${{ inputs.script }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i/$MAX_RETRIES..."
+            git push -u origin "$TARGET_BRANCH" 2>&1 && break
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "ERROR: Push failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done

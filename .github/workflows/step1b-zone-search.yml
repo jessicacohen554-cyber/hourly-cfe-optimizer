@@ -1,0 +1,186 @@
+name: "Step 1B: Zone-Based Fine Search"
+
+# Score-band zone search: generates fine 1% mixes per score zone, scores each
+# mix ONCE, assigns to thresholds. Replaces old per-threshold PFS build.
+#
+# What's new vs. legacy:
+#   - Parallel per-ISO jobs (matrix strategy, each on its own runner)
+#   - Each job creates its own auto/* branch and commits there (never master)
+#   - Intermittent auto-commits after every zone AND after near-miss save
+#   - Threshold and zone filtering: run only the subset you need
+#   - Grid size cap prevents hang/OOM on wide 5D CAISO bounds
+#   - Near-miss parquet saved incrementally so step1d can start immediately
+#
+# Prerequisite: Step 1a/1b (Scored Database) must have run first.
+# Output: data/step1-pfs-parquets/{ISO}_t{XX}_raw_pfs.parquet (per threshold)
+#         data/step1-pfs-parquets/{ISO}_near_miss.parquet (for step1d)
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO region to run'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      thresholds:
+        description: 'Comma-separated thresholds (e.g. "90,95,99"). Leave blank for all 21.'
+        required: false
+        default: ''
+        type: string
+      zones:
+        description: 'Zones to run: A (50-75%), B (75-90%), C (90-99.99%). Comma-separated or blank for all.'
+        required: false
+        default: ''
+        type: string
+      branch:
+        description: 'Source branch to checkout code from'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  BRANCH_PREFIX: step1c-zone-search
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  # ════════════════════════════════════════════════════════════════════════
+  # Build the ISO matrix: single ISO or fan out to all 7
+  # ════════════════════════════════════════════════════════════════════════
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Build ISO matrix
+        id: set-matrix
+        run: |
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            echo 'matrix={"iso":["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]}' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix={"iso":["${{ inputs.iso }}"]}' >> "$GITHUB_OUTPUT"
+          fi
+
+  # ════════════════════════════════════════════════════════════════════════
+  # Per-ISO job: runs on its own runner in parallel
+  # ════════════════════════════════════════════════════════════════════════
+  zone-search:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    strategy:
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false   # don't cancel other ISOs if one fails
+
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.branch || 'master' }}
+        fetch-depth: 0
+
+    - name: Create output branch
+      run: |
+        TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+        ISO_LOWER=$(echo "${{ matrix.iso }}" | tr '[:upper:]' '[:lower:]')
+        TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${ISO_LOWER}"
+        echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git config http.postBuffer 524288000
+        git checkout -b "$TARGET_BRANCH"
+        echo "Working on branch: $TARGET_BRANCH"
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        pip install numpy numba pyarrow pandas
+        python -c "from numba import njit; print('Numba OK')"
+
+    - name: Verify scored database exists
+      run: |
+        ISO="${{ matrix.iso }}"
+        CACHE="data/step1-pfs-parquets/${ISO}_coarse_cache.parquet"
+        if [ ! -f "$CACHE" ]; then
+          echo "ERROR: Missing scored database for $ISO"
+          echo "  Expected: $CACHE"
+          echo "  Run Step 1a/1b (Scored Database) first."
+          exit 1
+        fi
+        SIZE=$(du -h "$CACHE" | cut -f1)
+        echo "OK: $ISO scored database ($SIZE)"
+
+    - name: "Compute prior windows (optional)"
+      continue-on-error: true
+      run: |
+        python scripts/step1_prior_windows.py --iso "${{ matrix.iso }}"
+
+    - name: "Run zone search — ${{ matrix.iso }}"
+      run: |
+        ISO="${{ matrix.iso }}"
+        ARGS="--iso $ISO --auto-commit"
+
+        THRESHOLDS="${{ inputs.thresholds }}"
+        if [ -n "$THRESHOLDS" ]; then
+          ARGS="$ARGS --thresholds \"$THRESHOLDS\""
+          echo "Threshold filter: $THRESHOLDS"
+        fi
+
+        ZONES="${{ inputs.zones }}"
+        if [ -n "$ZONES" ]; then
+          ARGS="$ARGS --zones \"$ZONES\""
+          echo "Zone filter: $ZONES"
+        fi
+
+        echo "=== Zone search for $ISO ==="
+        echo "Command: python scripts/step1b_zone_search.py $ARGS"
+        eval python scripts/step1b_zone_search.py $ARGS
+
+    - name: Final commit and push
+      if: always()
+      run: |
+        # Commit all remaining PFS + near-miss files not yet pushed.
+        # Must use -f: data/step1-pfs-parquets/ is gitignored, normal add skips it.
+        # Scope to THIS ISO's files only (e.g. CAISO_*.parquet) so parallel ISO jobs
+        # never write conflicting changes when squash-merged later.
+        ISO="${{ matrix.iso }}"
+        mkdir -p data/step1-pfs-parquets
+        # Only add parquets — zone_manifest.json is a run-time checkpoint (gitignored)
+        # and causes add/add conflicts when squash-merging parallel ISO branches.
+        git add -f data/step1-pfs-parquets/"${ISO}"_*.parquet 2>/dev/null || true
+        if ! git diff --cached --quiet; then
+          THRESHOLDS="${{ inputs.thresholds }}"
+          ZONES="${{ inputs.zones }}"
+          LABEL="${{ matrix.iso }}"
+          [ -n "$THRESHOLDS" ] && LABEL="$LABEL thresholds=$THRESHOLDS"
+          [ -n "$ZONES" ] && LABEL="$LABEL zones=$ZONES"
+          git commit -m "Step 1c Zone Search: $LABEL — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        else
+          echo "No remaining changes to commit"
+        fi
+
+        # Push with retry
+        for i in 1 2 3 4; do
+          git push -u origin "$TARGET_BRANCH" && break
+          echo "Push attempt $i failed, retrying in $((2**i))s..."
+          sleep $((2**i))
+        done
+        echo "Branch: $TARGET_BRANCH"
+        echo "Merge this branch into master to bank the PFS results."

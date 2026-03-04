@@ -1,0 +1,346 @@
+name: "Step 7: Scenario Comparison"
+
+# Runs scenario scripts to populate the Scenarios comparison page:
+#   1. step7a_scenario_consequential.py — Consequential scenario (per-ISO parallel)
+#   2. step7b_scenario_hourly.py — Hourly matching scenario (per-ISO parallel)
+#   3. step7c_scenario_comparison.py — Merges A+B per-ISO results into comparison data
+#
+# Three-phase architecture:
+#   Phase 1 (compute-a): Matrix fans out ISOs for Scenario A (parallel)
+#   Phase 2 (compute-b): Matrix fans out ISOs for Scenario B (parallel)
+#   Phase 3 (compare):   Gathers per-ISO artifacts, runs comparison on ALL
+#
+# Each scenario script saves per-ISO JSON files (scenario_a_CAISO.json, etc.)
+# so parallel matrix jobs don't clobber each other.
+#
+# Prerequisite: Step 5.0 (CO2) should have run first.
+# Output: data/step5-post-processing/scenario_*.json, dashboard/js/scenario-comparison-data.js
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO region to process (ALL = parallel)'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      script:
+        description: 'Which phase to run'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - scenario-a
+          - scenario-b
+          - scenario-compare
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  BRANCH_PREFIX: step5-3-scenarios
+
+jobs:
+  # ====================================================================
+  # PREPARE: Build ISO matrix
+  # ====================================================================
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      iso_list: ${{ steps.set-matrix.outputs.iso_list }}
+    steps:
+      - id: set-matrix
+        run: |
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            echo 'matrix=["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]' >> "$GITHUB_OUTPUT"
+            echo 'iso_list=CAISO ERCOT PJM NYISO NEISO MISO SPP' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix=["${{ inputs.iso }}"]' >> "$GITHUB_OUTPUT"
+            echo 'iso_list=${{ inputs.iso }}' >> "$GITHUB_OUTPUT"
+          fi
+
+  # ====================================================================
+  # PHASE 1: Scenario A — per-ISO parallel compute
+  # ====================================================================
+  compute-a:
+    if: inputs.script == 'ALL' || inputs.script == 'scenario-a'
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      matrix:
+        iso: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+
+      - name: Verify upstream data exists
+        run: |
+          if [ ! -d "data/step3-cost-opt-parquets" ] || ! ls data/step3-cost-opt-parquets/*.parquet >/dev/null 2>&1; then
+            echo "ERROR: No step-3 parquets found."
+            exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy numba pyarrow pandas scipy
+
+      - name: Ensure output directories
+        run: mkdir -p data/step5-post-processing
+
+      - name: "Scenario A (Consequential) — ${{ matrix.iso }}"
+        run: python scripts/step7a_scenario_consequential.py --iso ${{ matrix.iso }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: scenario-a-${{ matrix.iso }}
+          path: data/step5-post-processing/scenario_a_${{ matrix.iso }}.json
+          retention-days: 1
+
+  # ====================================================================
+  # PHASE 2: Scenario B — per-ISO parallel compute
+  # ====================================================================
+  compute-b:
+    if: inputs.script == 'ALL' || inputs.script == 'scenario-b'
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      matrix:
+        iso: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+
+      - name: Verify upstream data exists
+        run: |
+          if [ ! -d "data/step3-cost-opt-parquets" ] || ! ls data/step3-cost-opt-parquets/*.parquet >/dev/null 2>&1; then
+            echo "ERROR: No step-3 parquets found."
+            exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy numba pyarrow pandas scipy
+
+      - name: Ensure output directories
+        run: mkdir -p data/step5-post-processing
+
+      - name: "Scenario B (Hourly Matching) — ${{ matrix.iso }}"
+        run: python scripts/step7b_scenario_hourly.py --iso ${{ matrix.iso }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: scenario-b-${{ matrix.iso }}
+          path: data/step5-post-processing/scenario_b_${{ matrix.iso }}.json
+          retention-days: 1
+
+  # ====================================================================
+  # PHASE 3: Compare — gather all per-ISO A+B results, run comparison
+  # ====================================================================
+  compare:
+    if: inputs.script == 'ALL' || inputs.script == 'scenario-compare'
+    needs: [prepare, compute-a, compute-b]
+    # When running compare-only, skip waiting on compute phases
+    # (they'll be skipped too, and their artifacts should already exist)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy numba pyarrow pandas scipy
+
+      - name: Ensure output directories
+        run: |
+          mkdir -p data/step5-post-processing
+          mkdir -p dashboard/js
+
+      - name: Download Scenario A artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: scenario-a-*
+          path: data/step5-post-processing/
+          merge-multiple: true
+
+      - name: Download Scenario B artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: scenario-b-*
+          path: data/step5-post-processing/
+          merge-multiple: true
+
+      - name: List gathered results
+        run: |
+          echo "Per-ISO result files:"
+          ls -la data/step5-post-processing/scenario_*.json 2>/dev/null || echo "  (none found)"
+
+      - name: "Scenario Comparison — all ISOs"
+        run: |
+          ISO_LIST="${{ needs.prepare.outputs.iso_list }}"
+          python scripts/step7c_scenario_comparison.py --iso $ISO_LIST
+
+      - name: Upload comparison artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: scenario-comparison
+          path: |
+            data/step5-post-processing/scenario_comparison.json
+            dashboard/js/scenario-comparison-data.js
+          retention-days: 1
+
+  # ====================================================================
+  # MERGE: Commit all results to a branch
+  # ====================================================================
+  merge:
+    needs: [prepare, compare]
+    if: always() && (needs.compare.result == 'success' || inputs.script != 'ALL')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Create output branch
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${{ inputs.script }}-${{ inputs.iso }}"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$TARGET_BRANCH"
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: scenario-*
+          path: ./artifact-tmp/
+          merge-multiple: true
+
+      - name: Place artifacts
+        run: |
+          # Per-ISO result JSONs land directly in artifact-tmp/
+          cp -f artifact-tmp/scenario_*.json data/step5-post-processing/ 2>/dev/null || true
+          # Comparison outputs
+          cp -f artifact-tmp/scenario_comparison.json data/step5-post-processing/ 2>/dev/null || true
+          cp -f artifact-tmp/scenario-comparison-data.js dashboard/js/ 2>/dev/null || true
+          echo "Files staged:"
+          ls -la data/step5-post-processing/scenario_*.json 2>/dev/null || true
+
+      - name: Batched commit and push (per-ISO)
+        run: |
+          git config http.postBuffer 524288000
+
+          push_with_retry() {
+            local label="$1"
+            local MAX_RETRIES=4
+            for i in $(seq 1 $MAX_RETRIES); do
+              echo "  Push attempt $i/$MAX_RETRIES for ${label}..."
+              git push -u origin "$TARGET_BRANCH" 2>&1 && return 0
+              if [ "$i" -eq "$MAX_RETRIES" ]; then
+                echo "  ERROR: Push failed for ${label} after $MAX_RETRIES attempts"
+                return 1
+              fi
+              BACKOFF=$((2 ** i))
+              echo "  Retrying in ${BACKOFF}s..."
+              sleep "$BACKOFF"
+            done
+          }
+
+          PUSHED=false
+
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            ISOS="CAISO ERCOT PJM NYISO NEISO MISO SPP"
+          else
+            ISOS="${{ inputs.iso }}"
+          fi
+
+          for iso in $ISOS; do
+            echo "--- Batching commit for $iso ---"
+            FILES=$(find data/step5-post-processing/ -name "*${iso}*" -type f 2>/dev/null || true)
+            if [ -z "$FILES" ]; then
+              echo "  No files for $iso — skipping"
+              continue
+            fi
+            git add -f $FILES
+            if git diff --cached --quiet; then
+              echo "  No changes for $iso — skipping"
+              continue
+            fi
+            BATCH_MB=$(du -cm $FILES | tail -1 | cut -f1)
+            echo "  Staging ~${BATCH_MB} MB for $iso"
+            git commit -m "Step 6.3 Scenarios: ${iso} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            if push_with_retry "$iso"; then
+              PUSHED=true
+            else
+              echo "  Per-ISO push failed for $iso — falling back to per-file"
+              git reset HEAD~1
+              for f in $FILES; do
+                FNAME=$(basename "$f")
+                git add -f "$f"
+                if git diff --cached --quiet; then continue; fi
+                git commit -m "Step 6.3 Scenarios: ${iso} ${FNAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                if push_with_retry "$FNAME"; then PUSHED=true; else git reset HEAD~1; fi
+              done
+            fi
+          done
+
+          # Remaining post-processing + dashboard JS
+          git add -f data/step5-post-processing/ 2>/dev/null || true
+          git add -f dashboard/js/scenario-comparison-data.js 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            echo "--- Staging remaining files + dashboard JS ---"
+            git commit -m "Step 6.3 Scenarios: dashboard JS — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            if push_with_retry "dashboard-js"; then PUSHED=true; else git reset HEAD~1; fi
+          fi
+
+          if [ "$PUSHED" = "false" ]; then
+            echo "No changes were pushed"
+          fi
