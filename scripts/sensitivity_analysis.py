@@ -21,11 +21,12 @@ CO2_DIR = os.path.join(SCRIPT_DIR, '..', 'data', 'step5-post-processing', 'co2_r
 
 # Import constants from step3
 sys.path.insert(0, SCRIPT_DIR)
-from pipeline_config import GRID_MIX_SHARES, REGIONAL_DEMAND_TWH
+from pipeline_config import GRID_MIX_SHARES, REGIONAL_DEMAND_TWH, ACTIVE_THRESHOLDS, THRESHOLD_TARGET_YEARS
 
 REGIONS = ["CAISO", "ERCOT", "PJM", "NYISO", "NEISO"]
 RESOURCES = ["clean_firm", "solar", "wind", "ccs_ccgt", "hydro"]
-KEY_THRESHOLDS = ["50", "55", "60", "65", "70", "75", "80", "85", "87.5", "90", "92.5", "95", "97.5", "99", "99.5", "99.9", "99.99"]
+# Single source of truth: pipeline_config
+KEY_THRESHOLDS = [str(int(t)) if t == int(t) else str(t) for t in ACTIVE_THRESHOLDS]
 
 TOGGLE_NAMES = ["Renewable Gen", "Nuclear", "Storage", "Fossil Fuel", "Transmission"]
 
