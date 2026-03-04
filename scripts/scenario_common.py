@@ -68,23 +68,24 @@ LCOE_TABLES = {
         'Medium': {'CAISO': 150, 'ERCOT': 0, 'PJM': 85, 'NYISO': 95, 'NEISO': 90, 'MISO': 0, 'SPP': 0},
         'High':   {'CAISO': 200, 'ERCOT': 0, 'PJM': 112, 'NYISO': 125, 'NEISO': 118, 'MISO': 0, 'SPP': 0},
     },
-    # Storage: annualized capacity cost ($/MWh-cap), NOT LCOS.
+    # Storage: annualized capacity cost per % of annual demand, NOT LCOS.
     # NREL ATB 2024 component model: Energy($/kWh) + Power($/kW)/Duration.
+    # Formula: CAPEX_kWh × (CRF + FOM_rate) × 1000 × regional_mult.
     # 4hr→8hr ~14% cheaper (power spread over 2× energy). Regional variation baked in; TX=0.
     'battery': {
-        'Low':    {'CAISO': 3.86, 'ERCOT': 3.48, 'PJM': 3.70, 'NYISO': 4.08, 'NEISO': 3.97, 'MISO': 3.62, 'SPP': 3.52},
-        'Medium': {'CAISO': 4.75, 'ERCOT': 4.27, 'PJM': 4.55, 'NYISO': 5.02, 'NEISO': 4.87, 'MISO': 4.46, 'SPP': 4.33},
-        'High':   {'CAISO': 6.03, 'ERCOT': 5.43, 'PJM': 5.78, 'NYISO': 6.38, 'NEISO': 6.20, 'MISO': 5.66, 'SPP': 5.50},
+        'Low':    {'CAISO': 33813.60, 'ERCOT': 30484.80, 'PJM': 32412.00, 'NYISO': 35740.80, 'NEISO': 34777.20, 'MISO': 31711.20, 'SPP': 30835.20},
+        'Medium': {'CAISO': 41610.00, 'ERCOT': 37405.20, 'PJM': 39858.00, 'NYISO': 43975.20, 'NEISO': 42661.20, 'MISO': 39069.60, 'SPP': 37930.80},
+        'High':   {'CAISO': 52822.80, 'ERCOT': 47566.80, 'PJM': 50632.80, 'NYISO': 55888.80, 'NEISO': 54312.00, 'MISO': 49581.60, 'SPP': 48180.00},
     },
     'battery8': {
-        'Low':    {'CAISO': 3.30, 'ERCOT': 2.97, 'PJM': 3.16, 'NYISO': 3.49, 'NEISO': 3.39, 'MISO': 3.10, 'SPP': 3.01},
-        'Medium': {'CAISO': 4.06, 'ERCOT': 3.66, 'PJM': 3.89, 'NYISO': 4.30, 'NEISO': 4.17, 'MISO': 3.81, 'SPP': 3.70},
-        'High':   {'CAISO': 5.19, 'ERCOT': 4.67, 'PJM': 4.97, 'NYISO': 5.49, 'NEISO': 5.33, 'MISO': 4.87, 'SPP': 4.73},
+        'Low':    {'CAISO': 28908.00, 'ERCOT': 26017.20, 'PJM': 27681.60, 'NYISO': 30572.40, 'NEISO': 29696.40, 'MISO': 27156.00, 'SPP': 26367.60},
+        'Medium': {'CAISO': 35565.60, 'ERCOT': 32061.60, 'PJM': 34076.40, 'NYISO': 37668.00, 'NEISO': 36529.20, 'MISO': 33375.60, 'SPP': 32412.00},
+        'High':   {'CAISO': 45464.40, 'ERCOT': 40909.20, 'PJM': 43537.20, 'NYISO': 48092.40, 'NEISO': 46690.80, 'MISO': 42661.20, 'SPP': 41434.80},
     },
     'ldes': {
-        'Low':    {'CAISO': 0.38, 'ERCOT': 0.33, 'PJM': 0.36, 'NYISO': 0.42, 'NEISO': 0.40, 'MISO': 0.34, 'SPP': 0.33},
-        'Medium': {'CAISO': 0.63, 'ERCOT': 0.54, 'PJM': 0.59, 'NYISO': 0.70, 'NEISO': 0.66, 'MISO': 0.56, 'SPP': 0.55},
-        'High':   {'CAISO': 1.00, 'ERCOT': 0.86, 'PJM': 0.94, 'NYISO': 1.11, 'NEISO': 1.06, 'MISO': 0.90, 'SPP': 0.88},
+        'Low':    {'CAISO': 3328.80, 'ERCOT': 2890.80, 'PJM': 3153.60, 'NYISO': 3679.20, 'NEISO': 3504.00, 'MISO': 2978.40, 'SPP': 2890.80},
+        'Medium': {'CAISO': 5518.80, 'ERCOT': 4730.40, 'PJM': 5168.40, 'NYISO': 6132.00, 'NEISO': 5781.60, 'MISO': 4905.60, 'SPP': 4818.00},
+        'High':   {'CAISO': 8760.00, 'ERCOT': 7533.60, 'PJM': 8234.40, 'NYISO': 9723.60, 'NEISO': 9285.60, 'MISO': 7884.00, 'SPP': 7708.80},
     },
 }
 
@@ -473,9 +474,9 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
         osw_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['offshore_wind'] +
         ccs_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ccs_ccgt'] +
         hydro_avg_mw * PEAK_CAPACITY_CREDITS['hydro'] +
-        bat4_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery'] +
-        bat8_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery8'] +
-        ldes_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes']
+        bat4_pct / 100 * demand_mwh / 4.0 * PEAK_CAPACITY_CREDITS['battery'] +
+        bat8_pct / 100 * demand_mwh / 8.0 * PEAK_CAPACITY_CREDITS['battery8'] +
+        ldes_pct / 100 * demand_mwh / 100.0 * PEAK_CAPACITY_CREDITS['ldes']
     )
     gaf = GAS_AVAILABILITY_FACTOR[iso]
     gas_needed_mw = max(0, ra_peak_mw - clean_peak_mw) / gaf
@@ -865,9 +866,9 @@ def _batch_costs_numpy(mixes, params):
         osw  / 100.0 * p[18] * p[35] +
         ccs  / 100.0 * p[18] * p[23] +
         hydro_avg_mw * p[24] +
-        bat4 / 100.0 * p[18] * p[25] +
-        bat8 / 100.0 * p[18] * p[26] +
-        ldes / 100.0 * p[18] * p[27]
+        bat4 / 100.0 * p[17] / 4.0 * p[25] +
+        bat8 / 100.0 * p[17] / 8.0 * p[26] +
+        ldes / 100.0 * p[17] / 100.0 * p[27]
     )
 
     gas_needed_mw = np.maximum(0.0, p[19] - clean_peak_mw) / p[28]
@@ -935,9 +936,9 @@ def _make_numba_kernel():
                 osw  / 100.0 * params[18] * params[35] +
                 ccs  / 100.0 * params[18] * params[23] +
                 hyd_avg_mw * params[24] +
-                bat4 / 100.0 * params[18] * params[25] +
-                bat8 / 100.0 * params[18] * params[26] +
-                ld   / 100.0 * params[18] * params[27]
+                bat4 / 100.0 * params[17] / 4.0 * params[25] +
+                bat8 / 100.0 * params[17] / 8.0 * params[26] +
+                ld   / 100.0 * params[17] / 100.0 * params[27]
             )
 
             gas_needed = max(0.0, params[19] - clean_peak) / params[28]

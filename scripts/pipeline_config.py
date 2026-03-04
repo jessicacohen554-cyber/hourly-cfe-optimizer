@@ -204,26 +204,27 @@ H2_DURATION_HOURS = 1000
 H2_WINDOW_DAYS = 30
 H2_MIN_THRESHOLD = 95.0  # Only available at ≥95% thresholds
 
-# Storage dispatch grid resolution
-STORAGE_FINE_RESOLUTION = 0.05  # 0.05% dispatch resolution
+# Storage dispatch grid resolution (% of annual demand)
+STORAGE_FINE_RESOLUTION = 0.001  # 0.001% of annual demand resolution
 
-# Storage dispatch maxima (% of demand)
+# Storage dispatch maxima (% of annual demand — energy capacity as fraction of annual demand)
+# Physical reference: CAISO 224 TWh → 0.01% = 22,400 MWh / 5,600 MW (4hr)
 STORAGE_MAX = {
-    'battery': 0.5,     # 0.5% of demand
-    'battery8': 1.0,    # 1.0% of demand
-    'ldes': 5.0,        # 5.0% of demand
-    'h2': 25.0,         # 25.0% of demand
+    'battery': 0.06,    # 0.06% of annual demand — CAISO: ~134 GWh / 33.6 GW
+    'battery8': 0.08,   # 0.08% of annual demand
+    'ldes': 0.5,        # 0.5% of annual demand
+    'h2': 2.0,          # 2.0% of annual demand
 }
 
-# Step 1D.2: Research-informed 2050 storage caps (% of demand)
+# Step 1D.2: Research-informed 2050 storage caps (% of annual demand)
 # Sources: NREL Storage Futures (200 GW / 1,200 GWh ref case),
 #          DOE LDES Liftoff (225-460 GW LDES for net-zero),
 #          Princeton Net Zero America (1,300 GWh by 2050)
 STORAGE_MAX_V2 = {
-    'battery': 5.0,     # 5.0% of demand — NREL: 200 GW 4hr daily @ 85% RTE ≈ 6%
-    'battery8': 10.0,   # 10.0% of demand — 8hr key for deep decarb overnight coverage
-    'ldes': 25.0,       # 25.0% of demand — DOE: 225-460 GW iron-air @ 100hr weekly
-    'h2': 25.0,         # 25.0% of demand — unchanged, seasonal storage already generous
+    'battery': 0.10,    # 0.10% of annual demand — CAISO: ~224 GWh / 56 GW
+    'battery8': 0.15,   # 0.15% of annual demand
+    'ldes': 1.0,        # 1.0% of annual demand
+    'h2': 3.0,          # 3.0% of annual demand
 }
 
 # ============================================================================
