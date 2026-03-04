@@ -33,6 +33,8 @@ from pipeline_config import (
     GEOTHERMAL_LCOE as _GEOTHERMAL_LCOE,
     GEO_CAP_TWH as _GEO_CAP_TWH,
     REGIONAL_DEMAND_TWH as _REGIONAL_DEMAND_TWH,
+    DEMAND_GROWTH_RATES as _DEMAND_GROWTH_RATES,
+    THRESHOLD_TARGET_YEARS as _THRESHOLD_TARGET_YEARS,
 )
 
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
@@ -405,6 +407,7 @@ for iso in ISOS:
 
     geo = 'M' if iso == 'CAISO' else 'X'
     med_scenario_key = f'MMMM_M_M_M1_{geo}'
+    base_twh = _REGIONAL_DEMAND_TWH.get(iso, 100)
 
     for t_idx, t in enumerate(THRESHOLDS):
         t_num = THRESHOLDS_NUM[t_idx]
@@ -431,7 +434,6 @@ for iso in ISOS:
             iso_data['battery8'].append(round(float(dg_row.get('battery8_dispatch_pct', 0)), 4))
             iso_data['ldes'].append(round(float(dg_row.get('ldes_dispatch_pct', 0)), 4))
             iso_data['h2'].append(round(float(dg_row.get('h2_dispatch_pct', 0)), 4))
-            iso_demand_twh.append(round(dg_row['annual_demand_mwh'] / 1e6, 2))
             iso_match_scores.append(round(float(dg_row.get('hourly_match_score', t_num)), 2))
         else:
             # Fallback to base results (no demand growth)
@@ -451,12 +453,18 @@ for iso in ISOS:
                 iso_data['battery8'].append(0)
                 iso_data['ldes'].append(0)
                 iso_data['h2'].append(0)
-            # Use base demand
-            base_twh = _REGIONAL_DEMAND_TWH.get(iso, 100)
-            iso_demand_twh.append(round(base_twh, 2))
             # Fallback: use threshold as score (conservative estimate)
             fallback_score = float(sc.get('hourly_match_score', t_num)) if sc else float(t_num)
             iso_match_scores.append(round(fallback_score, 2))
+
+        # ALWAYS compute demand analytically from THRESHOLD_TARGET_YEARS + Medium growth rate.
+        # This ensures smooth, monotonically increasing demand regardless of DG parquet availability.
+        # Formula: base_twh * (1 + medium_rate)^(target_year - 2025)
+        target_year = _THRESHOLD_TARGET_YEARS.get(t_num, 2050)
+        years_from_base = max(0, target_year - 2025)
+        medium_rate = _DEMAND_GROWTH_RATES.get(iso, {}).get('Medium', 0.02)
+        gf = (1 + medium_rate) ** years_from_base
+        iso_demand_twh.append(round(base_twh * gf, 2))
 
     resource_mix_data[iso] = iso_data
     demand_twh_by_threshold[iso] = iso_demand_twh
@@ -1317,18 +1325,8 @@ lines.append('')
 
 print("\nGenerating SBTi timeline + DAC trajectory data...")
 
-# Canonical threshold → target year mapping (SBTi-interpolated, from Step 3)
-# Each of 15 thresholds maps to the year when it's expected to be achieved
-try:
-    import sys as _sys
-    _sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__))))
-    from pipeline_config import THRESHOLD_TARGET_YEARS
-except ImportError:
-    THRESHOLD_TARGET_YEARS = {
-        50: 2030, 55: 2031, 60: 2033, 65: 2034, 70: 2035, 75: 2036, 80: 2037,
-        85: 2038, 87.5: 2039, 90: 2040, 92.5: 2043,
-        95: 2045, 97.5: 2048, 99: 2049, 99.99: 2050,
-    }
+# Use canonical threshold → target year mapping from pipeline_config (already imported as _THRESHOLD_TARGET_YEARS)
+THRESHOLD_TARGET_YEARS = _THRESHOLD_TARGET_YEARS
 
 # SBTi milestone anchors (sparse, for dashboard display)
 SBTI_MILESTONES = [
@@ -1427,33 +1425,20 @@ lines.append('')
 
 print("\nComputing demand growth counterfactual MAC...")
 
-# Regional demand (TWh) and growth rates (from step3)
-REGIONAL_DEMAND_TWH_PY = {
-    'CAISO': 224.039, 'ERCOT': 488.020, 'PJM': 843.331,
-    'NYISO': 151.599, 'NEISO': 115.336, 'MISO': 660.0, 'SPP': 296.0,
-}
-DEMAND_GROWTH_RATES_PY = {
-    'CAISO':  {'Low': 0.014, 'Medium': 0.019, 'High': 0.025},
-    'ERCOT':  {'Low': 0.020, 'Medium': 0.035, 'High': 0.055},
-    'PJM':    {'Low': 0.015, 'Medium': 0.024, 'High': 0.036},
-    'NYISO':  {'Low': 0.013, 'Medium': 0.020, 'High': 0.044},
-    'NEISO':  {'Low': 0.009, 'Medium': 0.018, 'High': 0.029},
-    'MISO':   {'Low': 0.012, 'Medium': 0.022, 'High': 0.038},
-    'SPP':    {'Low': 0.010, 'Medium': 0.018, 'High': 0.030},
-}
+# Use canonical constants from pipeline_config (single source of truth)
 NEW_GAS_EMISSION_RATE = 0.35  # tCO₂/MWh (new CCGT counterfactual)
 
 # For each threshold/target-year pair, compute growth MWh and counterfactual emissions
-# This replaces the sparse SBTi-only calculation with all 15 thresholds
+# Uses THRESHOLD_TARGET_YEARS + DEMAND_GROWTH_RATES from pipeline_config for consistency
 growth_counterfactual = {}
 for iso in ISOS:
     iso_cf = {}
-    base_twh = REGIONAL_DEMAND_TWH_PY.get(iso, 0)
+    base_twh = _REGIONAL_DEMAND_TWH.get(iso, 0)
     for t in THRESHOLDS_NUM:
         year = THRESHOLD_TARGET_YEARS.get(t, 2050)
         level_data = {}
         for level in ['Low', 'Medium', 'High']:
-            rate = DEMAND_GROWTH_RATES_PY.get(iso, {}).get(level, 0.02)
+            rate = _DEMAND_GROWTH_RATES.get(iso, {}).get(level, 0.02)
             years_from_base = year - 2025
             if years_from_base <= 0:
                 growth_twh = 0
