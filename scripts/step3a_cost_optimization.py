@@ -1174,15 +1174,20 @@ def preextract_winner_data(arrays, extras, unique_indices, iso, demand_twh):
     sol_vals = arrays['solar'][idx_arr]
     wnd_vals = arrays['wind'][idx_arr]
     hyd_vals = arrays['hydro'][idx_arr]
+    osw_arr = arrays.get('offshore_wind')
+    osw_vals = osw_arr[idx_arr] if osw_arr is not None else np.zeros(n, dtype=np.float64)
     match_vals = arrays['hourly_match_score'][idx_arr]
     bat_vals = arrays['battery_dispatch_pct'][idx_arr]
     bat8_arr = arrays.get('battery8_dispatch_pct')
     bat8_vals = bat8_arr[idx_arr] if bat8_arr is not None else np.zeros(n)
     ldes_vals = arrays['ldes_dispatch_pct'][idx_arr]
+    h2_arr = arrays.get('h2_dispatch_pct')
+    h2_vals = h2_arr[idx_arr] if h2_arr is not None else np.zeros(n)
 
     # CCS = 100 - sum of other resources (int arithmetic for consistency)
     ccs_vals = np.maximum(0, 100 - (cf_vals.astype(np.int64) + sol_vals.astype(np.int64) +
-                                     wnd_vals.astype(np.int64) + hyd_vals.astype(np.int64)))
+                                     wnd_vals.astype(np.int64) + hyd_vals.astype(np.int64) +
+                                     osw_vals.astype(np.int64)))
 
     # Batch extract from extras
     match_frac_vals = extras['match_frac'][idx_arr]
@@ -1208,13 +1213,13 @@ def preextract_winner_data(arrays, extras, unique_indices, iso, demand_twh):
     # Tuple layout: [0]resource_mix, [1]match_score, [2]bat4, [3]bat8,
     #   [4]ldes, [5]match_frac, [6]cf_ex_twh, [7]uprate_twh, [8]geo_twh,
     #   [9]remaining_twh, [10]new_cf_twh, [11]gas_needed_mw, [12]ex_gas_used_mw,
-    #   [13]new_gas_mw, [14]gas_cost_mwh, [15]clean_peak_mw, [16]ra_peak_mw
+    #   [13]new_gas_mw, [14]gas_cost_mwh, [15]clean_peak_mw, [16]ra_peak_mw, [17]h2
     winner_data = {}
     for pos in range(n):
         winner_data[int(idx_arr[pos])] = (
             {'clean_firm': int(cf_vals[pos]), 'solar': int(sol_vals[pos]),
-             'wind': int(wnd_vals[pos]), 'ccs_ccgt': int(ccs_vals[pos]),
-             'hydro': int(hyd_vals[pos])},
+             'wind': int(wnd_vals[pos]), 'offshore_wind': int(osw_vals[pos]),
+             'ccs_ccgt': int(ccs_vals[pos]), 'hydro': int(hyd_vals[pos])},
             round(float(match_vals[pos]), 4),
             round(float(bat_vals[pos]), 4),
             round(float(bat8_vals[pos]), 4),
@@ -1231,6 +1236,7 @@ def preextract_winner_data(arrays, extras, unique_indices, iso, demand_twh):
             round(float(gas_cost_per_mwh_vals[pos]), 2),
             round(float(clean_peak_mw_vals[pos])),
             round(ra_peak_mw),
+            round(float(h2_vals[pos]), 4),
         )
 
     return winner_data
@@ -1255,6 +1261,7 @@ def build_winner_scenario_from_cache(winner_cache, best_idx, tc_val, wholesale,
         'battery_dispatch_pct': w[2],
         'battery8_dispatch_pct': w[3],
         'ldes_dispatch_pct': w[4],
+        'h2_dispatch_pct': w[17],
         'costs': {
             'total_cost': round(tc_val, 2),
             'effective_cost': round(ec_val, 2),
@@ -1961,13 +1968,16 @@ def main():
             _sol_i = arrays['solar'][idx_arr].astype(np.int64)
             _wnd_i = arrays['wind'][idx_arr].astype(np.int64)
             _hyd_i = arrays['hydro'][idx_arr].astype(np.int64)
-            ccs_pct = np.maximum(0, 100 - (_cf_i + _sol_i + _wnd_i + _hyd_i))
+            _osw_arr = arrays.get('offshore_wind', np.zeros(N, dtype=np.float64))
+            _osw_i = _osw_arr[idx_arr].astype(np.int64)
+            ccs_pct = np.maximum(0, 100 - (_cf_i + _sol_i + _wnd_i + _hyd_i + _osw_i))
             bat8 = arrays.get('battery8_dispatch_pct', np.zeros(N, dtype=np.float64))
             h2 = arrays.get('h2_dispatch_pct', np.zeros(N, dtype=np.float64))
             thr_data[thr]['feasible_mixes'] = {
                 'clean_firm': _cf_i.tolist(),
                 'solar': _sol_i.tolist(),
                 'wind': _wnd_i.tolist(),
+                'offshore_wind': _osw_i.tolist(),
                 'ccs_ccgt': ccs_pct.tolist(),
                 'hydro': _hyd_i.tolist(),
                 'hourly_match_score': np.round(arrays['hourly_match_score'][idx_arr], 4).tolist(),
@@ -2680,10 +2690,13 @@ def main():
                         sol = int(arrs_['solar'][mix_idx])
                         wnd = int(arrs_['wind'][mix_idx])
                         hyd = int(arrs_['hydro'][mix_idx])
+                        _osw_a = arrs_.get('offshore_wind')
+                        osw = int(_osw_a[mix_idx]) if _osw_a is not None else 0
                         row['mix_clean_firm'] = cf
                         row['mix_solar'] = sol
                         row['mix_wind'] = wnd
-                        row['mix_ccs_ccgt'] = max(0, 100 - (cf + sol + wnd + hyd))
+                        row['mix_offshore_wind'] = osw
+                        row['mix_ccs_ccgt'] = max(0, 100 - (cf + sol + wnd + hyd + osw))
                         row['mix_hydro'] = hyd
                         row['hourly_match_score'] = float(
                             arrs_['hourly_match_score'][mix_idx])
