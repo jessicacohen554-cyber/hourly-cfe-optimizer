@@ -32,13 +32,13 @@ Each workflow is organized by **which dashboard page it updates**. Every multi-s
 | # | Workflow | Display Name | What It Does | Scripts (sequential) |
 |---|----------|-------------|--------------|---------------------|
 | 5.0 | `step5.0-compute-co2.yml` | **Step 5.0: Compute CO₂ (Shared)** | Shared utility — dispatch-stack CO₂ emissions. **Run before 5.1.** | `step5_compute_co2.py` |
-| 5.1 | `step5.1-update-mac-page.yml` | **Step 5.1: Update Abatement Page** | MAC stats → Optimal targets → Shared data. | **script**: mac-stats / optimal-targets / shared-data |
+| 5.1 | `step5.1-update-mac-page.yml` | **Step 5.1: Update Abatement Page** | MAC stats → Optimal targets. | **script**: mac-stats / optimal-targets |
 | 5.2 | `step5.2-update-lmp-page.yml` | **Step 5.2: Update LMP Page** | Compute synthetic LMP → Extract dashboard JS. | **script**: compute-lmp / extract-dashboard |
 | 5.3 | `step5.3-update-scenarios-page.yml` | **Step 5.3: Update Scenarios Page** | Scenario A → B → Compare. | **script**: scenario-a / scenario-b / scenario-compare |
 | 5.4 | `step5.4-procurement-strategies.yml` | **Step 5.4: Update Procurement Page** | 10 strategy variants → combined dashboard JS. | **strategy**: strategy1 / strategy2 / strategy3 |
 | 5.5 | `step5.5-supplemental-analytics.yml` | **Step 5.5: Supplemental Analytics** | Compressed day + consequential queue (parallel). | **script**: compressed-day / consequential-queue |
-| 5.6 | `step5.6-update-optimizer-dashboard.yml` | **Step 5.6: Update Optimizer Dashboard** | Compressed day profiles + shared-data.js for dashboard.html. | **script**: compressed-day / shared-data |
-| 6 | `step6-generate-shared-data.yml` | **Step 6: Update Home Page / Shared Data** | Consolidates all results into `shared-data.js`. | (single script) |
+| 5.6 | `step5.6-update-optimizer-dashboard.yml` | **Step 5.6: Compress Day Profiles** | 24-hour representative day profiles per unique mix. | ISO selector |
+| 6 | `step6-generate-shared-data.yml` | **Step 6: Generate Shared Data & Deploy** | Consolidates all results into `shared-data.js`. **Run this last** after any Step 5 changes. | (single script) |
 
 ## Utilities
 
@@ -67,20 +67,20 @@ Additional inputs on specific workflows:
 
 ### "I just want to update the Optimizer Dashboard"
 ```
-Step 5.6
+Step 5.6 → Step 6
 ```
 
 ### "I just want to update the Abatement page"
 ```
-Step 5.0 (if CO₂ needs refresh) → Step 5.1
+Step 5.0 (if CO₂ needs refresh) → Step 5.1 → Step 6
 ```
 
 ### "I just want to update the LMP page"
 ```
-Step 5.2
+Step 5.2 → Step 6
 ```
 
-### "I just want to update the Home Page"
+### "I just want to regenerate shared-data.js and deploy"
 ```
 Step 6
 ```
