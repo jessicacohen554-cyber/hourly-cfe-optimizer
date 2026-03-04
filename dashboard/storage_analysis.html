@@ -430,6 +430,90 @@ body { background: var(--bg-page-white); }
 </section>
 <div class="gradient-transition"></div>
 
+<!-- ========== STORAGE ONSET HEATMAP ========== -->
+<section class="full-width-section section-light">
+<div class="section-inner">
+    <div class="section-header">
+        <h3>Storage Onset: When Each Technology First Appears</h3>
+        <p>The threshold at which each storage technology first enters a cost-optimal mix, across all cost scenarios.
+           Green = early entry (&lt;85%), yellow = mid-range (85&ndash;95%), red = last-mile (&ge;99%), gray = never appears.</p>
+    </div>
+
+    <div style="overflow-x:auto;margin-bottom:2rem;">
+        <table class="data-table" id="storageOnsetTable" style="min-width:500px;">
+            <thead>
+                <tr>
+                    <th>ISO</th>
+                    <th>Battery 4hr</th>
+                    <th>Battery 8hr</th>
+                    <th>LDES 100hr</th>
+                    <th>Green H<sub>2</sub></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="font-weight:600;">CAISO</td>
+                    <td style="background:#DCFCE7;color:#166534;font-weight:600;text-align:center;">10%</td>
+                    <td style="background:#FEF9C3;color:#854D0E;font-weight:600;text-align:center;">99.5%</td>
+                    <td style="background:#E5E7EB;color:#6B7280;text-align:center;">Never</td>
+                    <td style="background:#E5E7EB;color:#6B7280;text-align:center;">Never</td>
+                </tr>
+                <tr>
+                    <td style="font-weight:600;">ERCOT</td>
+                    <td style="background:#FEF9C3;color:#854D0E;font-weight:600;text-align:center;">97.5%</td>
+                    <td style="background:#E5E7EB;color:#6B7280;text-align:center;">Never</td>
+                    <td style="background:#FEF2F2;color:#991B1B;font-weight:600;text-align:center;">&ge;99.99%</td>
+                    <td style="background:#E5E7EB;color:#6B7280;text-align:center;">Never</td>
+                </tr>
+                <tr>
+                    <td style="font-weight:600;">PJM</td>
+                    <td style="background:#DCFCE7;color:#166534;font-weight:600;text-align:center;">10%</td>
+                    <td style="background:#E5E7EB;color:#6B7280;text-align:center;">Never</td>
+                    <td style="background:#E5E7EB;color:#6B7280;text-align:center;">Never</td>
+                    <td style="background:#E5E7EB;color:#6B7280;text-align:center;">Never</td>
+                </tr>
+                <tr>
+                    <td style="font-weight:600;">NYISO</td>
+                    <td style="background:#DCFCE7;color:#166534;font-weight:600;text-align:center;">10%</td>
+                    <td style="background:#E5E7EB;color:#6B7280;text-align:center;">Never</td>
+                    <td style="background:#E5E7EB;color:#6B7280;text-align:center;">Never</td>
+                    <td style="background:#E5E7EB;color:#6B7280;text-align:center;">Never</td>
+                </tr>
+                <tr>
+                    <td style="font-weight:600;">NEISO</td>
+                    <td style="background:#FEF9C3;color:#854D0E;font-weight:600;text-align:center;">87.5%</td>
+                    <td style="background:#E5E7EB;color:#6B7280;text-align:center;">Never</td>
+                    <td style="background:#FEF2F2;color:#991B1B;font-weight:600;text-align:center;">&ge;99%</td>
+                    <td style="background:#E5E7EB;color:#6B7280;text-align:center;">Never</td>
+                </tr>
+                <tr>
+                    <td style="font-weight:600;">MISO</td>
+                    <td style="background:#FEF2F2;color:#991B1B;font-weight:600;text-align:center;">99%</td>
+                    <td style="background:#FEF2F2;color:#991B1B;font-weight:600;text-align:center;">&ge;99.99%</td>
+                    <td style="background:#FEF2F2;color:#991B1B;font-weight:600;text-align:center;">99.9%</td>
+                    <td style="background:#E5E7EB;color:#6B7280;text-align:center;">Never</td>
+                </tr>
+                <tr>
+                    <td style="font-weight:600;">SPP</td>
+                    <td style="background:#FEF2F2;color:#991B1B;font-weight:600;text-align:center;">99.9%</td>
+                    <td style="background:#FEF2F2;color:#991B1B;font-weight:600;text-align:center;">&ge;99.99%</td>
+                    <td style="background:#FEF2F2;color:#991B1B;font-weight:600;text-align:center;">99.9%</td>
+                    <td style="background:#E5E7EB;color:#6B7280;text-align:center;">Never</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="insight-box">
+        <p><strong>Pattern:</strong> Solar-heavy ISOs (CAISO, PJM, NYISO) deploy battery earliest &mdash; daily solar
+           cycling creates immediate value for 4-hour shifting. Wind-heavy ISOs (ERCOT, MISO, SPP) delay storage
+           to the last mile because wind variability operates on multi-day timescales that batteries can&rsquo;t bridge.
+           Green H<sub>2</sub> is never cost-optimal in any region at any threshold.</p>
+    </div>
+</div>
+</section>
+<div class="gradient-transition"></div>
+
 <!-- ========== CROSS-ISO STORAGE PENETRATION ========== -->
 <section class="full-width-section section-light">
 <div class="section-inner">
