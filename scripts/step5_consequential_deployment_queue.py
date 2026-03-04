@@ -50,6 +50,13 @@ from dispatch_utils import (
     _archetype_key, load_dispatch_cache, get_or_compute_dispatch,
 )
 
+# Import shared utilities from scenario_common (single source of truth)
+from scenario_common import (
+    build_zones as _build_zones,
+    build_consequential_queue,
+    EXISTING_GAS_FOM_KW_YR, EXISTING_GAS_CAPACITY_MW, NEW_CCGT_COST_KW_YR,
+)
+
 # ========== PATHS ==========
 STEP4_PARQUET_DIR = os.path.join(BASE_DIR, 'data', 'step4-gas-ccs-parquets')
 STEP3_PARQUET_DIR = os.path.join(BASE_DIR, 'data', 'step3-cost-opt-parquets')
@@ -73,10 +80,9 @@ MEDIUM_KEYS = {
     'SPP': 'MMMM_M_M_M1_X',
 }
 
-# Build consecutive threshold pair zones from THRESHOLDS (5% intervals)
-# e.g., 50→55, 55→60, 60→65, ..., 99.9→99.99
-ZONES = []
+# Default zones starting at 50% (backward compat). ISO-aware zones built per-ISO in compute_zone_metrics.
 _zone_thresholds = [t for t in THRESHOLDS if t >= 50]
+ZONES = []
 for _i in range(len(_zone_thresholds) - 1):
     _ts = _zone_thresholds[_i]
     _te = _zone_thresholds[_i + 1]
@@ -442,9 +448,25 @@ def compute_zone_metrics(med_data, egrid, fossil_mix, demand_data, gen_profiles)
         # Baseline CO₂ at existing clean floor (analytical: full fossil dispatch)
         baseline_co2_mt = compute_baseline_co2_mt(iso, egrid)
 
+        # ---- Build ISO-aware zones (includes 30→40, 40→50 for ISOs with low existing clean) ----
+        iso_zones_built = _build_zones(iso=iso, thresholds=_ALL_THRESHOLDS)
+        # Convert to deployment queue zone format
+        iso_specific_zones = []
+        for z in iso_zones_built:
+            iso_specific_zones.append({
+                'label': z['label'],
+                'start_thresh': z['start'],
+                'end_thresh': z['end'],
+            })
+
         # ---- Get dispatch-based CO₂ at each threshold ----
+        # Collect all thresholds needed for this ISO's zones
+        iso_thresholds = sorted(set(
+            [z['start_thresh'] for z in iso_specific_zones] +
+            [z['end_thresh'] for z in iso_specific_zones]
+        ))
         co2_at_threshold = {}
-        for t in _zone_thresholds:
+        for t in iso_thresholds:
             t_float = float(t)
             if t_float not in iso_data:
                 continue
@@ -456,13 +478,13 @@ def compute_zone_metrics(med_data, egrid, fossil_mix, demand_data, gen_profiles)
                 co2_at_threshold[t_float] = baseline_co2_mt
 
         # ---- Build all zones for this ISO and classify them ----
-        threshold_list = [float(t) for t in _zone_thresholds if float(t) in iso_data]
+        threshold_list = [float(t) for t in iso_thresholds if float(t) in iso_data]
         if len(threshold_list) < 2:
             continue
 
         # For each zone, check if the optimizer result changed between start and end
         iso_zones = []
-        for zone_idx, zone in enumerate(ZONES):
+        for zone_idx, zone in enumerate(iso_specific_zones):
             zt_start = float(zone['start_thresh'])
             zt_end = float(zone['end_thresh'])
             if zt_start not in iso_data or zt_end not in iso_data:
@@ -523,7 +545,8 @@ def compute_zone_metrics(med_data, egrid, fossil_mix, demand_data, gen_profiles)
                 d = first_z['data_start']
                 start_res = _res_dict(d)
                 start_co2 = co2_at_threshold.get(first_z['t_start'], baseline_co2_mt)
-                start_cost_per_mwh = d['incremental_cost'] - d['gas_cost']
+                # MAC formula: LCOE of new clean = total_cost - gas_cost (no wholesale)
+                start_cost_per_mwh = d['total_cost'] - d['gas_cost']
                 start_gas_cost = d['gas_cost']
                 start_gas_mw = d['new_gas_mw']
                 start_match = d['match_score']
@@ -532,7 +555,8 @@ def compute_zone_metrics(med_data, egrid, fossil_mix, demand_data, gen_profiles)
             d_end = last_z['data_end']
             end_res = _res_dict(d_end)
             end_co2 = co2_at_threshold.get(last_z['t_end'], baseline_co2_mt)
-            end_cost_per_mwh = d_end['incremental_cost'] - d_end['gas_cost']
+            # MAC formula: LCOE of new clean = total_cost - gas_cost (no wholesale)
+            end_cost_per_mwh = d_end['total_cost'] - d_end['gas_cost']
             end_gas_cost = d_end['gas_cost']
             end_gas_mw = d_end['new_gas_mw']
             end_match = d_end['match_score']
