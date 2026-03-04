@@ -90,11 +90,27 @@ MAC = (total_cost - gas_backup_cost) × demand_mwh / CO2_displaced_tons  ($/tCO2
 - `scripts/step5_consequential_deployment_queue.py` — Fixed MAC to use `total_cost - gas_cost`, ISO-aware zones via `_build_zones(iso=iso)`
 - `scripts/step5_5_strategy1_consequential.py` — Queue consumption via `_load_queue()`, falls back to price-based
 
+**Queue filtering (Mar 4, 2026 update):**
+- Zones entirely below each ISO's existing clean floor (`t_end <= existing_pct`) are now excluded — no new procurement needed, zero cost and CO₂ deltas.
+- Zones with both `delta_cost ≈ 0` and `delta_co2 ≈ 0` are also excluded (redundant entries).
+- Applied in both `step5d_deployment_queue.py::compute_zone_metrics()` and `scenario_common.py::build_consequential_queue()`.
+
+**MAC formula definition (canonical):**
+```
+MAC = clean_resource_LCOE × demand_MWh / CO₂_displaced_tons  ($/tCO₂)
+```
+- `clean_resource_LCOE` = `total_cost - gas_cost` (Step 3 `total_cost` includes gas RA; subtract to isolate clean resources)
+- Clean resources: solar, wind, offshore wind, nuclear, CCS-CCGT, geothermal, battery (4hr/8hr), LDES, Green H₂
+- Hydro: existing-only at $0 (sunk cost), contributes nothing to MAC numerator
+- Gas RA: excluded (system reliability cost, not clean abatement investment)
+- Wholesale prices: not subtracted (Step 3 already prices existing resources at $0)
+
 **Next steps:**
-- [ ] Run `step5_consequential_deployment_queue.py` to regenerate queue JSON with corrected MACs
-- [ ] Run `step5_scenario_comparison.py` to regenerate scenario comparison with corrected MACs
-- [ ] Run `step5_5_strategy1_consequential.py` to verify queue consumption
-- [ ] Verify MAC values are in reasonable range ($30-$500/tCO2 for most zones)
+- [ ] Run `step5d_deployment_queue.py` to regenerate queue JSON with corrected MACs and filtered zones
+- [ ] Run `step7c_scenario_comparison.py` to regenerate scenario comparison with corrected MACs
+- [ ] Run `step8a_strategy_consequential.py` to verify queue consumption
+- [ ] Verify MAC values are in reasonable range ($30-$500/tCO₂ for most zones)
+- [ ] Verify no zero-delta zones appear in queue output
 
 ---
 
