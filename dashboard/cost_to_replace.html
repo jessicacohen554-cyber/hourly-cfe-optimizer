@@ -344,7 +344,7 @@ body { background: var(--bg-page); }
                     <canvas id="heroOverviewChart"></canvas>
                 </div>
                 <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#4a90d9;"></span>Track 1 Baseline</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#0EA5E9;"></span>Track 1 Baseline</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#F59E0B;"></span>Track 2 Replacement</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(239,68,68,0.18);"></span>Cost to Replace Premium</span>
                 </div>
@@ -370,19 +370,19 @@ body { background: var(--bg-page); }
                     <canvas id="regionChart_PJM"></canvas>
                 </div>
                 <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#4a90d9;"></span>Track 1 Baseline</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#4a90d9;"></span>Track 2 Replacement</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#0EA5E9;"></span>Track 1 Baseline</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#0EA5E9;"></span>Track 2 Replacement</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(239,68,68,0.18);"></span>Cost to Replace Premium</span>
                 </div>
             </div>
         </div>
         <div class="region-narrative-col">
             <div class="region-step-card">
-                <span class="region-tag" style="background:rgba(74,144,217,0.10);color:#4a90d9;">PJM</span>
+                <span class="region-tag" style="background:rgba(14,165,233,0.10);color:#0EA5E9;">PJM</span>
                 <h3>PJM: Nuclear dominance means the highest replacement cost</h3>
                 <p>PJM's grid is anchored by 32.1% existing clean firm generation &mdash; overwhelmingly nuclear. These plants dispatch at wholesale rates (~$30/MWh), but new nuclear construction costs $75&ndash;120/MWh. Replacing this fleet from scratch roughly doubles the effective cost at moderate thresholds and pushes higher targets into prohibitively expensive territory. PJM illustrates why preserving existing nuclear capacity is among the most cost-effective decarbonization strategies available.</p>
                 <span class="step-stat step-stat-red" id="statPJM">Premium at 90%: loading...</span>
-                <div class="annual-cost-callout" id="annualPJM" style="margin-top:12px;padding:10px 14px;background:rgba(74,144,217,0.06);border:1px solid rgba(74,144,217,0.15);border-radius:8px;font-size:0.82rem;color:rgba(15,23,42,0.65);line-height:1.5;"></div>
+                <div class="annual-cost-callout" id="annualPJM" style="margin-top:12px;padding:10px 14px;background:rgba(14,165,233,0.06);border:1px solid rgba(14,165,233,0.15);border-radius:8px;font-size:0.82rem;color:rgba(15,23,42,0.65);line-height:1.5;"></div>
             </div>
         </div>
     </div>
@@ -591,7 +591,7 @@ body { background: var(--bg-page); }
 // CONSTANTS & STATE
 // ============================================================================
 const REGIONS = ['PJM', 'ERCOT', 'CAISO', 'NYISO', 'NEISO'];
-const REGION_CLR = { ERCOT: '#22C55E', PJM: '#4a90d9', CAISO: '#F59E0B', NYISO: '#E91E63', NEISO: '#9C27B0' };
+const REGION_CLR = { ERCOT: '#22C55E', PJM: '#0EA5E9', CAISO: '#F59E0B', NYISO: '#E91E63', NEISO: '#9C27B0' };
 const REGION_NAMES = { PJM: 'PJM', ERCOT: 'ERCOT', CAISO: 'CAISO', NYISO: 'NYISO', NEISO: 'NEISO' };
 const THR = typeof THRESHOLDS !== 'undefined' ? THRESHOLDS : [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.99];
 
