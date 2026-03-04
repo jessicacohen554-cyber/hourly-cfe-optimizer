@@ -36,6 +36,7 @@ from pipeline_config import (
     PEAK_CAPACITY_CREDITS, GAS_AVAILABILITY_FACTOR,
     RESOURCE_ADEQUACY_MARGIN,
     THRESHOLD_TARGET_YEARS, OUTPUT_THRESHOLDS,
+    DEMAND_GROWTH_RATES as _DEMAND_GROWTH_RATES_LMH,
 )
 
 # Import dispatch utilities
@@ -63,11 +64,8 @@ HYDRO_CAP_TWH = {iso: GRID_MIX_SHARES[iso].get('hydro', 0) / 100.0 * REGIONAL_DE
 
 SBTI_YEAR_MAP = THRESHOLD_TARGET_YEARS  # Backward compat alias
 
-DEMAND_GROWTH_RATES = {
-    'CAISO': 0.019, 'ERCOT': 0.035, 'PJM': 0.024,
-    'NYISO': 0.020, 'NEISO': 0.018,
-    'MISO': 0.022, 'SPP': 0.018,
-}
+# Medium demand growth rates (derived from pipeline_config's L/M/H dict)
+DEMAND_GROWTH_RATES = {iso: _DEMAND_GROWTH_RATES_LMH[iso]['Medium'] for iso in ISOS}
 BASE_YEAR = 2025
 
 def build_zones(iso=None, thresholds=None, min_threshold=None):
