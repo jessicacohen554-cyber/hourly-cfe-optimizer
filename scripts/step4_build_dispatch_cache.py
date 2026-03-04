@@ -3,12 +3,12 @@
 Step 5: Build Dispatch Cache
 =============================
 Pre-computes full 8760-hour dispatch for every unique resource mix across all
-ISOs and thresholds. Downstream modules (step5_compress_day_profiles, step5_compute_co2,
-step5_compute_lmp_prices) read from cache instead of recomputing independently.
+ISOs and thresholds. Downstream modules (step5c_compress_day_profiles, step5a_compute_co2,
+step5b_compute_lmp_prices) read from cache instead of recomputing independently.
 
 Uses dispatch_utils.reconstruct_hourly_dispatch(detailed=True) to produce
 per-resource matched/surplus breakdowns and storage charge profiles needed
-by step5_compress_day_profiles's compressed day profiles.
+by step5c_compress_day_profiles's compressed day profiles.
 
 Pipeline position:
   Step 1 (PFS) → Step 2 (EF) → Step 3 (Cost) → Step 4 (Gas/CCS)
@@ -21,7 +21,7 @@ Pipeline position:
                                   |        |          |          |
                               step6_cd  step6_sc  step6_co2  step6_lmp
 
-Input:  data/step4-gas-ccs-parquets/ (or step3 fallback)
+Input:  data/step3-cost-opt-parquets/
 Output: data/step5-post-processing/dispatch_cache/{ISO}_dispatch_cache.parquet
 
 Usage:

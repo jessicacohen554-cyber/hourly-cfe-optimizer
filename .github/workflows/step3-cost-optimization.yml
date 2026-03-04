@@ -115,20 +115,20 @@ jobs:
         if: ${{ inputs.track == 'track1-baseline' || inputs.track == 'ALL' }}
         run: |
           echo "=== Track 1: Baseline ==="
-          python scripts/step3_cost_optimization.py --track baseline --iso ${{ matrix.iso }}
+          python scripts/step3a_cost_optimization.py --track baseline --iso ${{ matrix.iso }}
 
       - name: "Track 2: New-Build — ${{ matrix.iso }}"
         if: ${{ inputs.track == 'track2-newbuild' || inputs.track == 'track2-and-3' || inputs.track == 'ALL' }}
         run: |
           echo "=== Track 2: New-Build ==="
-          python scripts/step3_track_nb_ctr.py --fresh --track nb \
+          python scripts/step3b_track_nb_ctr.py --fresh --track nb \
             --iso ${{ matrix.iso }} ${{ steps.build-args.outputs.sens_flags }}
 
       - name: "Track 3: Cost-to-Replace — ${{ matrix.iso }}"
         if: ${{ inputs.track == 'track3-cost-to-replace' || inputs.track == 'track2-and-3' || inputs.track == 'ALL' }}
         run: |
           echo "=== Track 3: Cost-to-Replace ==="
-          python scripts/step3_track_nb_ctr.py --fresh --track ctr \
+          python scripts/step3b_track_nb_ctr.py --fresh --track ctr \
             --iso ${{ matrix.iso }} ${{ steps.build-args.outputs.sens_flags }}
 
       - name: Upload artifact

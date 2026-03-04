@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The 8,760 Problem &mdash; Pipeline Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/reference.css">
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
+<style>
+body { background: var(--bg-page-white); margin: 0; }
+/* Footer and bottom-banner use shared.css .page-footer, .footer-links, .bottom-banner */
+
+/* ========== HERO ========== */
+.hero-section {
+    background: linear-gradient(180deg, #F7F8FC 0%, #EEF1F8 100%);
+    position: relative;
+    overflow: hidden;
+    padding: 56px 24px 48px;
+}
+.hero-inner { max-width: 1100px; margin: 0 auto; }
+.hero-kicker {
+    font-family: var(--font-heading);
+    font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--hydro); margin-bottom: 8px;
+}
+.hero-inner h1 {
+    font-family: var(--font-heading);
+    font-size: 2rem; font-weight: 800; color: var(--navy);
+    letter-spacing: -0.5px; margin: 0 0 14px;
+}
+.hero-inner h1 .accent { color: var(--hydro); }
+.hero-desc {
+    font-size: 0.95rem; color: var(--text-secondary); line-height: 1.75;
+    max-width: 820px; margin-bottom: 16px;
+}
+.hero-legend {
+    display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 16px;
+}
+.legend-item {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.75rem; color: var(--text-muted); font-weight: 500;
+}
+.legend-dot {
+    width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+}
+
+/* ========== INTERACTIVE MAP ========== */
+.map-section {
+    background: #FFFFFF;
+    padding: 40px 24px 56px;
+}
+.map-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    position: relative;
+}
+.section-heading {
+    font-family: var(--font-heading);
+    font-size: 1.6rem; font-weight: 800; color: var(--navy);
+    letter-spacing: -0.3px; margin: 0 0 8px;
+}
+.section-subheading {
+    font-size: 0.88rem; color: var(--text-muted); line-height: 1.7;
+    max-width: 820px; margin-bottom: 32px;
+}
+
+/* SVG canvas for connection lines */
+.map-svg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+}
+.map-svg path {
+    fill: none;
+    stroke: #D1D5DB;
+    stroke-width: 1.5;
+    stroke-dasharray: 4 3;
+    opacity: 0.6;
+}
+.map-svg path.active {
+    stroke: #0EA5E9;
+    stroke-width: 2;
+    opacity: 1;
+    stroke-dasharray: none;
+}
+
+/* Grid layout for the pipeline */
+.pipeline-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    position: relative;
+    z-index: 1;
+}
+
+/* Step row: step card + output files */
+.step-row {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 16px;
+    align-items: start;
+}
+
+/* Step card */
+.step-card {
+    background: var(--bg-card);
+    border: 1.5px solid var(--border-light);
+    border-radius: 14px;
+    padding: 20px 22px;
+    cursor: pointer;
+    transition: border-color 0.3s, box-shadow 0.3s, transform 0.15s;
+    position: relative;
+}
+.step-card:hover {
+    border-color: rgba(14,165,233,0.4);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+}
+.step-card.expanded {
+    border-color: var(--hydro);
+    box-shadow: 0 4px 20px rgba(14,165,233,0.15);
+}
+.step-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+}
+.step-badge {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-heading);
+    font-size: 0.82rem; font-weight: 800; color: #fff; flex-shrink: 0;
+}
+.step-badge.s0 { background: #6B7280; }
+.step-badge.s1 { background: #3B82F6; }
+.step-badge.s2 { background: #8B5CF6; }
+.step-badge.s3 { background: #F59E0B; }
+.step-badge.s4 { background: #EF4444; }
+.step-badge.s5 { background: #14B8A6; }
+.step-badge.s6 { background: #0EA5E9; }
+.step-badge.s7 { background: #22C55E; }
+.step-title {
+    font-family: var(--font-heading);
+    font-size: 1rem; font-weight: 700; color: var(--navy); margin: 0;
+}
+.step-time {
+    font-family: var(--font-heading);
+    font-size: 0.65rem; font-weight: 700; padding: 2px 8px;
+    border-radius: 9999px; letter-spacing: 0.03em; margin-left: auto;
+}
+.step-time.hours { background: rgba(239,68,68,0.1); color: #DC2626; }
+.step-time.minutes { background: rgba(245,158,11,0.1); color: #D97706; }
+.step-time.seconds { background: rgba(34,197,94,0.1); color: #16A34A; }
+.step-desc {
+    font-size: 0.82rem; color: var(--text-secondary); line-height: 1.65; margin: 0;
+}
+
+/* Script list within expanded step card */
+.script-list {
+    margin-top: 12px; padding-top: 10px;
+    border-top: 1px solid #F3F4F6;
+    display: none;
+}
+.step-card.expanded .script-list { display: block; }
+.script-item {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 5px 0; font-size: 0.78rem;
+    position: relative;
+}
+.script-item:hover { background: rgba(14,165,233,0.04); border-radius: 6px; }
+.script-name {
+    font-family: var(--font-mono);
+    font-size: 0.72rem; color: #0284C7; font-weight: 600;
+    white-space: nowrap;
+}
+.script-what {
+    font-size: 0.75rem; color: #6B7280; line-height: 1.4;
+}
+
+/* Output files panel */
+.output-panel {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    align-content: flex-start;
+}
+
+/* Output file chip */
+.output-chip {
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    max-width: 340px;
+    position: relative;
+}
+.output-chip:hover {
+    border-color: #0EA5E9;
+    background: rgba(14,165,233,0.04);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.output-chip.expanded {
+    border-color: #0EA5E9;
+    background: #F0F9FF;
+    max-width: 100%;
+    flex-basis: 100%;
+}
+.output-chip-header {
+    display: flex; align-items: center; gap: 6px;
+}
+.output-icon {
+    font-size: 0.7rem; flex-shrink: 0;
+}
+.output-icon.parquet { color: #8B5CF6; }
+.output-icon.json { color: #F59E0B; }
+.output-icon.js { color: #22C55E; }
+.output-icon.npz { color: #14B8A6; }
+.output-filename {
+    font-family: var(--font-mono);
+    font-size: 0.72rem; color: #334155; font-weight: 600;
+    word-break: break-all;
+}
+.output-brief {
+    font-size: 0.7rem; color: #9CA3AF; margin-top: 3px; line-height: 1.4;
+}
+
+/* Drilldown: columns/fields table */
+.output-drilldown {
+    display: none; margin-top: 10px;
+    border-top: 1px solid #E2E8F0; padding-top: 8px;
+}
+.output-chip.expanded .output-drilldown { display: block; }
+.field-table {
+    width: 100%; border-collapse: collapse; font-size: 0.75rem;
+}
+.field-table th {
+    text-align: left; padding: 5px 8px;
+    font-family: var(--font-heading);
+    font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.04em; color: #6B7280;
+    border-bottom: 1.5px solid #E2E8F0;
+    background: rgba(0,0,0,0.02);
+}
+.field-table td {
+    padding: 4px 8px; border-bottom: 1px solid #F3F4F6;
+    color: #374151; vertical-align: top; line-height: 1.4;
+}
+.field-table td:first-child {
+    font-family: var(--font-mono);
+    font-size: 0.7rem; color: #4B5563;
+    white-space: nowrap; font-weight: 600;
+}
+.field-table tr:last-child td { border-bottom: none; }
+.field-table tr:hover td { background: rgba(14,165,233,0.03); }
+
+/* Dashboard page badges */
+.page-consumers {
+    display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;
+}
+.page-badge {
+    display: inline-block;
+    font-family: var(--font-heading);
+    font-size: 0.58rem; font-weight: 700; padding: 2px 6px;
+    border-radius: 4px; letter-spacing: 0.03em; white-space: nowrap;
+}
+.page-badge-dash { background: rgba(59,130,246,0.1); color: #2563EB; }
+.page-badge-home { background: rgba(34,197,94,0.1); color: #16A34A; }
+.page-badge-abate { background: rgba(139,92,246,0.1); color: #7C3AED; }
+.page-badge-paper { background: rgba(245,158,11,0.1); color: #D97706; }
+.page-badge-consq { background: rgba(239,68,68,0.1); color: #DC2626; }
+.page-badge-lmp { background: rgba(14,165,233,0.1); color: #0284C7; }
+.page-badge-track { background: rgba(20,184,166,0.1); color: #0D9488; }
+.page-badge-procure { background: rgba(168,85,247,0.1); color: #9333EA; }
+.page-badge-all { background: rgba(26,39,68,0.08); color: var(--navy); }
+
+/* Arrow connectors between step rows */
+.step-connector {
+    display: flex; justify-content: flex-start; padding-left: 170px;
+}
+.connector-arrow {
+    width: 2px; height: 20px; background: #D1D5DB; position: relative;
+}
+.connector-arrow::after {
+    content: '';
+    position: absolute; bottom: -4px; left: -3px;
+    width: 0; height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid #D1D5DB;
+}
+
+/* Parallel branch indicator */
+.parallel-label {
+    font-family: var(--font-heading);
+    font-size: 0.65rem; font-weight: 700; color: #9CA3AF;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    padding: 4px 12px; margin-bottom: 4px;
+}
+
+/* Sub-step rows (for parallel scripts within a step) */
+.sub-step-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+/* Tooltip */
+.map-tooltip {
+    position: fixed;
+    background: var(--navy);
+    color: #ffffff;
+    font-size: 0.78rem;
+    line-height: 1.5;
+    padding: 10px 14px;
+    border-radius: 8px;
+    max-width: 320px;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+.map-tooltip.visible { opacity: 1; }
+.map-tooltip .tt-title {
+    font-family: var(--font-heading);
+    font-weight: 700; font-size: 0.82rem; margin-bottom: 4px; color: #38bdf8;
+}
+.map-tooltip .tt-uses {
+    font-size: 0.72rem; color: rgba(255,255,255,0.6);
+    margin-top: 6px; padding-top: 6px;
+    border-top: 1px solid rgba(255,255,255,0.15);
+}
+
+/* ========== DASHBOARD PAGES SECTION ========== */
+.pages-section {
+    /* background and padding handled by .section-dark */
+}
+.pages-inner { max-width: 1100px; margin: 0 auto; }
+.pages-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+}
+.page-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    padding: 18px 20px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    cursor: default;
+}
+.page-card:hover {
+    border-color: rgba(14,165,233,0.3);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+}
+.page-card-title {
+    font-family: var(--font-heading);
+    font-size: 0.9rem; font-weight: 700; color: var(--navy); margin: 0 0 4px;
+}
+.page-card-file {
+    font-family: var(--font-mono);
+    font-size: 0.68rem; color: #9CA3AF; margin-bottom: 8px;
+}
+.page-card-deps {
+    font-size: 0.72rem; color: var(--text-muted); line-height: 1.5;
+}
+.page-card-deps code {
+    font-family: var(--font-mono);
+    font-size: 0.68rem; background: rgba(0,0,0,0.04);
+    padding: 1px 4px; border-radius: 3px; color: #4B5563;
+}
+
+@media (max-width: 900px) {
+    .step-row { grid-template-columns: 1fr; }
+    .sub-step-grid { grid-template-columns: 1fr; }
+    .step-connector { padding-left: 40px; }
+    .hero-inner h1 { font-size: 1.4rem; }
+}
+@media (max-width: 600px) {
+    .hero-section { padding: 40px 16px 32px; }
+    .map-section { padding: 24px 16px 40px; }
+    .pages-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- Nav injected by nav.js -->
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+
+<header class="header">
+    <h1>Pipeline Map</h1>
+    <p class="subtitle">Interactive map of scripts, output files, and dashboard data dependencies</p>
+    <div class="header-accent"></div>
+</header>
+
+<!-- ========== HERO ========== -->
+<section class="hero-section">
+<div class="hero-inner">
+    <div class="hero-kicker">About the Model</div>
+    <h1>Pipeline <span class="accent">Map</span></h1>
+    <p class="hero-desc">
+        Interactive map of every script, output file, and dashboard page in the 8,760 optimizer pipeline.
+        <strong>Hover</strong> over any element to see what it does and what it depends on.
+        <strong>Click</strong> output files to drill down into their fields and columns.
+    </p>
+    <div class="hero-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#6B7280"></div>Step 0: Data Fetch</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#3B82F6"></div>Step 1: Physics</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#8B5CF6"></div>Step 2: Frontier</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#F59E0B"></div>Step 3: Cost Opt</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#EF4444"></div>Step 4: Gas/CCS Adj</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#14B8A6"></div>Step 5: Cache + PP</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#0EA5E9"></div>Step 6: Analytics</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#22C55E"></div>Step 7: Dashboard</div>
+    </div>
+</div>
+</section>
+
+<!-- ========== PIPELINE MAP ========== -->
+<section class="map-section">
+<div class="map-inner">
+    <h2 class="section-heading">Scripts &amp; Output Files</h2>
+    <p class="section-subheading">
+        Each row shows a pipeline step with its scripts (left) and output files (right).
+        Click a step card to expand its scripts. Click an output file to see its columns/fields.
+    </p>
+
+    <div class="pipeline-grid" id="pipelineGrid">
+    <!-- Rendered by JS below -->
+    </div>
+</div>
+</section>
+
+<!-- ========== DASHBOARD PAGES ========== -->
+<section class="pages-section section-dark">
+<div class="pages-inner section-dark-inner">
+    <h2 class="section-heading">Dashboard Pages &amp; Data Dependencies</h2>
+    <p class="section-subheading">
+        Each page consumes one or more JS data files generated by the pipeline. Hover for details.
+    </p>
+    <div class="pages-grid" id="pagesGrid">
+    <!-- Rendered by JS -->
+    </div>
+</div>
+</section>
+
+<!-- ========== FOOTER ========== -->
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="dashboard.html">Grid Simulation</a>
+        <a href="pipeline.html">About the Model</a>
+        <a href="research_paper.html">Research Paper</a>
+    </div>
+    <div class="footer-note">The 8,760 Problem &copy; 2025&ndash;2026</div>
+</footer>
+<div class="bottom-banner"></div>
+
+<!-- Tooltip element -->
+<div class="map-tooltip" id="mapTooltip"></div>
+
+<script>
+(function() {
+'use strict';
+
+// ============================================================================
+// PIPELINE DATA MODEL
+// ============================================================================
+
+const PIPELINE = [
+    {
+        step: 0,
+        title: 'Data Fetch & Preparation',
+        badge: 's0',
+        time: '~5 min',
+        timeClass: 'minutes',
+        desc: 'Fetches 2021-2025 hourly generation and demand from EIA API v2 for 7 ISOs. Multi-year averaging, eGRID emission rates, DST/UTC corrections.',
+        tooltip: 'Pulls raw EIA 930 hourly data, eGRID plant-level emissions, and gridstatus LMP. Processes timezone corrections (DST/UTC) and consolidates multi-year MISO/SPP data into averaged profiles.',
+        uses: 'EIA API v2, EPA eGRID, gridstatus',
+        scripts: [
+            { name: 'step0_fetch_eia_master.py', what: 'Master fetcher: 2021-2025 hourly gen/demand for all ISOs via EIA API v2' },
+            { name: 'step0_fetch_all_data.py', what: 'Batch download of all required EIA and eGRID datasets' },
+            { name: 'step0_fetch_egrid.py', what: 'Downloads EPA eGRID plant-level emission factors and heat rates' },
+            { name: 'step0_fetch_eia_multiyear.py', what: 'Multi-year EIA 930 data fetch with annual total scaling' },
+            { name: 'step0_fetch_lmp_2025.py', what: 'Downloads 2025 historical LMP (locational marginal price) data' },
+            { name: 'step0_fix_dst_profiles.py', what: 'Corrects DST-shifted hours in generation profiles' },
+            { name: 'step0_fix_utc_profiles.py', what: 'Converts UTC timestamps to local ISO time zones' }
+        ],
+        outputs: [
+            {
+                file: 'data/eia-930/eia_generation_profiles.json',
+                type: 'json',
+                brief: 'Hourly generation profiles by fuel type per ISO (8760h)',
+                consumers: ['All steps'],
+                consumerBadges: ['all'],
+                fields: [
+                    ['iso', 'Region identifier (CAISO, ERCOT, etc.)'],
+                    ['solar', '8760 hourly solar generation (MW)'],
+                    ['wind', '8760 hourly wind generation (MW)'],
+                    ['nuclear', '8760 hourly nuclear generation (MW)'],
+                    ['hydro', '8760 hourly hydro generation (MW)'],
+                    ['coal', '8760 hourly coal generation (MW)'],
+                    ['gas', '8760 hourly gas generation (MW)'],
+                    ['other', '8760 hourly other fuel generation (MW)']
+                ]
+            },
+            {
+                file: 'data/eia-930/eia_demand_profiles.json',
+                type: 'json',
+                brief: 'Hourly demand profiles per ISO (8760h)',
+                consumers: ['All steps'],
+                consumerBadges: ['all'],
+                fields: [
+                    ['iso', 'Region identifier'],
+                    ['demand', '8760 hourly demand values (MW)'],
+                    ['annual_total_mwh', 'Annual total demand (MWh)']
+                ]
+            },
+            {
+                file: 'data/eia-930/eia_fossil_mix.json',
+                type: 'json',
+                brief: 'Regional fossil fuel mix shares and emission rates',
+                consumers: ['Step 3', 'Step 6'],
+                consumerBadges: ['dash', 'consq'],
+                fields: [
+                    ['iso', 'Region identifier'],
+                    ['coal_share', 'Coal fraction of fossil generation'],
+                    ['gas_ccgt_share', 'Gas CCGT fraction of fossil generation'],
+                    ['gas_ct_share', 'Gas CT (peaker) fraction'],
+                    ['oil_share', 'Oil-fired fraction'],
+                    ['co2_rate_*', 'CO2 emission rate per fuel type (tCO2/MWh)']
+                ]
+            }
+        ]
+    },
+    {
+        step: 1,
+        title: 'Physics Feasible Space (PFS)',
+        badge: 's1',
+        time: '~3-6 hrs',
+        timeClass: 'hours',
+        desc: '4D adaptive grid search over clean_firm, solar, wind, hydro with procurement sweep. Battery 4hr (85% RTE) and LDES 100hr (50% RTE) dispatch. Produces physics-validated resource mixes across 21 thresholds x 7 ISOs.',
+        tooltip: 'The most compute-intensive step. Searches the entire resource mix space to find all physically feasible portfolios that meet each CFE threshold. 4D grid: clean_firm (0-120%), solar (0-250%), wind (0-250%), hydro (capped). Battery and LDES dispatch algorithms simulate 8760-hour storage cycling.',
+        uses: 'Step 0 generation/demand profiles',
+        scripts: [
+            { name: 'step1_pfs_generator.py', what: 'Main PFS generator: 4D adaptive grid search with Numba-accelerated dispatch' }
+        ],
+        outputs: [
+            {
+                file: 'data/step1-pfs-parquets/{ISO}_t{XX}_raw_pfs.parquet',
+                type: 'parquet',
+                brief: '~21.4M raw physics solutions per ISO/threshold',
+                consumers: ['Step 2'],
+                consumerBadges: ['dash'],
+                fields: [
+                    ['iso', 'Region identifier (CAISO, ERCOT, etc.)'],
+                    ['threshold', 'CFE target threshold (50-99.99%)'],
+                    ['clean_firm', 'Clean firm allocation (% of demand, 0-120)'],
+                    ['solar', 'Solar allocation (% of demand, 0-250)'],
+                    ['wind', 'Wind allocation (% of demand, 0-250)'],
+                    ['hydro', 'Hydro allocation (% of demand, region-capped)'],
+                    ['geothermal', '[CAISO only] Geothermal allocation (0-20%)'],
+                    ['battery_dispatch_pct', 'Battery 4hr dispatch activation (%)'],
+                    ['battery8_dispatch_pct', 'Battery 8hr dispatch activation (%)'],
+                    ['ldes_dispatch_pct', 'LDES 100hr dispatch activation (%)'],
+                    ['h2_dispatch_pct', 'H2 1000hr dispatch activation (%)'],
+                    ['hourly_match_score', 'Hourly CFE match score (0-100%)'],
+                    ['pareto_type', 'Pareto classification flag']
+                ]
+            }
+        ]
+    },
+    {
+        step: 2,
+        title: 'Efficient Frontier',
+        badge: 's2',
+        time: '~30 sec',
+        timeClass: 'seconds',
+        desc: 'Extracts the efficient frontier from PFS. Filters existing gen utilization, procurement minimization, strict dominance removal. 21.4M rows reduced to ~1.8M unique resource mixes.',
+        tooltip: 'Takes the raw PFS and applies three filters: (1) existing generation utilization — uses what already exists before building new, (2) procurement minimization — finds lowest-cost path to each threshold, (3) strict dominance — removes mixes dominated on all dimensions. Result: the efficient frontier of physics-feasible mixes.',
+        uses: 'Step 1 PFS parquets',
+        scripts: [
+            { name: 'step2_efficient_frontier.py', what: 'Dominance filtering, dedup, EF extraction from raw PFS' }
+        ],
+        outputs: [
+            {
+                file: 'data/step2-ef-parquets/step2_ef_{ISO}.parquet',
+                type: 'parquet',
+                brief: '~1.8M unique efficient frontier mixes per ISO',
+                consumers: ['Step 3'],
+                consumerBadges: ['dash'],
+                fields: [
+                    ['iso', 'Region identifier'],
+                    ['threshold', 'CFE threshold (float)'],
+                    ['clean_firm', 'Clean firm fraction (int16, 0-120)'],
+                    ['solar', 'Solar fraction (int16, 0-250)'],
+                    ['wind', 'Wind fraction (int16, 0-250)'],
+                    ['hydro', 'Hydro fraction (int16, region-capped)'],
+                    ['geothermal', '[CAISO only] Geothermal (int16, 0-20)'],
+                    ['battery_dispatch_pct', 'Battery 4hr dispatch % (int16)'],
+                    ['battery8_dispatch_pct', 'Battery 8hr dispatch % (int16)'],
+                    ['ldes_dispatch_pct', 'LDES dispatch % (int16)'],
+                    ['h2_dispatch_pct', 'H2 dispatch % (int16)'],
+                    ['hourly_match_score', 'Score (float64, 0-100)'],
+                    ['pareto_type', 'Pareto type string']
+                ]
+            }
+        ]
+    },
+    {
+        step: 3,
+        title: 'Cost Optimization',
+        badge: 's3',
+        time: '~15-60 min',
+        timeClass: 'minutes',
+        desc: 'Vectorized cross-evaluation of EF mixes under 5,832 sensitivity combos (17,496 for CAISO). Merit-order tranche pricing. Demand growth sweep: 25 years x 3 growth rates.',
+        tooltip: 'The core cost optimization engine. Evaluates every efficient frontier mix under every cost scenario combination: 5 paired toggles (Renewable Gen, Firm Gen, Storage, Fossil Fuel, Transmission) x CCS L/M/H x 45Q On/Off x Geothermal L/M/H. Uses Numba JIT for vectorized cost calculation. Also produces Track 2 (newbuild) and Track 3 (cost-to-replace) results.',
+        uses: 'Step 2 EF parquets, LCOE cost tables',
+        scripts: [
+            { name: 'step3a_cost_optimization.py', what: 'Main cost optimizer: 5,832 scenario combos, merit-order tranche pricing, Numba JIT' },
+            { name: 'step3b_track_nb_ctr.py', what: 'Track 2 (newbuild) + Track 3 (cost-to-replace) analysis' }
+        ],
+        outputs: [
+            {
+                file: 'data/step3-cost-opt-parquets/step3_co_{ISO}.parquet',
+                type: 'parquet',
+                brief: 'Cost-optimized mixes across all scenario combos',
+                consumers: ['Step 4', 'Dashboard'],
+                consumerBadges: ['dash', 'home'],
+                fields: [
+                    ['iso', 'Region identifier'],
+                    ['threshold', 'CFE threshold (%)'],
+                    ['scenario', 'Sensitivity key (e.g. MMMM_M_M_M1_X)'],
+                    ['annual_demand_mwh', 'Regional annual demand (MWh)'],
+                    ['mix_clean_firm', 'Winning mix: clean firm % of demand'],
+                    ['mix_solar', 'Winning mix: solar % of demand'],
+                    ['mix_wind', 'Winning mix: wind % of demand'],
+                    ['mix_ccs_ccgt', 'Winning mix: CCS-CCGT % of demand'],
+                    ['mix_hydro', 'Winning mix: hydro % of demand'],
+                    ['hourly_match_score', 'Score of winning mix'],
+                    ['battery_dispatch_pct', 'Battery 4hr dispatch % of winning mix'],
+                    ['ldes_dispatch_pct', 'LDES dispatch % of winning mix'],
+                    ['cost_total_cost', 'Total system cost ($/MWh incl. gas backup)'],
+                    ['cost_effective_cost', 'Effective cost ($/MWh excl. gas backup)'],
+                    ['cost_incremental', 'Incremental cost vs existing ($/MWh)'],
+                    ['gas_backup_cost_per_mwh', 'Gas backup reliability cost ($/MWh)'],
+                    ['gas_backup_needed_mw', 'Firm gap requiring gas backup (MW)'],
+                    ['ra_gas_backup_cost_per_mwh', 'RA-adjusted gas backup cost ($/MWh)']
+                ]
+            },
+            {
+                file: 'data/step3-cost-opt-parquets/step3_tracks_{ISO}.parquet',
+                type: 'parquet',
+                brief: 'Track 2 (newbuild) + Track 3 (cost-to-replace) variants',
+                consumers: ['Step 5 export'],
+                consumerBadges: ['track'],
+                fields: [
+                    ['track', 'Track type (newbuild, ctr)'],
+                    ['iso', 'Region identifier'],
+                    ['threshold', 'CFE threshold'],
+                    ['scenario', 'Sensitivity key'],
+                    ['mix_*', 'Resource mix percentages (same as step3_co)'],
+                    ['cost_*', 'Cost metrics per track methodology']
+                ]
+            },
+            {
+                file: 'data/step3-cost-opt-parquets/step3_dg_{ISO}_t{t}.parquet',
+                type: 'parquet',
+                brief: 'Demand growth projections: 25 years x 3 growth rates',
+                consumers: ['Step 6 scripts'],
+                consumerBadges: ['consq', 'abate'],
+                fields: [
+                    ['year', 'Projection year (2025-2050)'],
+                    ['growth_level', 'Growth scenario (Low/Medium/High)'],
+                    ['growth_factor', 'Demand multiplier vs 2025 baseline'],
+                    ['existing_*_twh_available', 'Existing resource capacity at year (TWh)'],
+                    ['mix_*', 'Resource mix percentages'],
+                    ['cost_*', 'Cost metrics at projected demand']
+                ]
+            }
+        ]
+    },
+    {
+        step: 4,
+        title: 'Gas & CCS Adjustment',
+        badge: 's4',
+        time: '~10 sec',
+        timeClass: 'seconds',
+        desc: 'NEISO winter gas pipeline constraint (+$13.13/MWh CCS adder), 45Q correction ($27.5/MWh), gas capacity backup with 15% RA margin, CCS vs LDES crossover analysis.',
+        tooltip: 'Post-processing corrections for real-world constraints: (1) NEISO winter gas pipeline premium, (2) 45Q tax credit application to CCS-CCGT LCOE, (3) resource adequacy margin requiring 15% firm backup, (4) crossover analysis determining when LDES becomes cheaper than CCS at each threshold.',
+        uses: 'Step 3 cost-opt parquets',
+        scripts: [
+            { name: 'step4_gas_ccs_adjustement.py', what: 'Gas pipeline constraints, 45Q correction, RA margin, CCS/LDES crossover' }
+        ],
+        outputs: [
+            {
+                file: 'data/step4-gas-ccs-parquets/step4_{ISO}.parquet',
+                type: 'parquet',
+                brief: 'Post-processed costs with gas/CCS corrections + RA overlays',
+                consumers: ['Step 5', 'Step 6', 'Dashboard'],
+                consumerBadges: ['dash', 'home', 'abate'],
+                fields: [
+                    ['[all step3 columns]', 'Inherited from step3_co with corrections applied'],
+                    ['neiso_ccs_adder', 'NEISO winter gas pipeline premium ($/MWh)'],
+                    ['ccs_45q_offset', '45Q tax credit offset applied ($/MWh)'],
+                    ['ra_margin_pct', 'Resource adequacy margin applied (15%)'],
+                    ['ccs_ldes_crossover', 'Flag: LDES cheaper than CCS at this threshold']
+                ]
+            }
+        ]
+    },
+    {
+        step: 5,
+        title: 'Dispatch Cache & Post-Processing',
+        badge: 's5',
+        time: '~30-90 min',
+        timeClass: 'minutes',
+        desc: 'Builds 8760-hour dispatch cache for all unique mixes across ISOs. Also runs cache-independent analytics: EAC scarcity, track exports, track analysis.',
+        tooltip: 'The dispatch cache pre-computes hourly supply/demand/storage profiles for every unique resource mix. This avoids redundant computation in Step 6 scripts. Cache-independent scripts (EAC, track analysis) run in parallel.',
+        uses: 'Step 4 parquets, Step 0 profiles',
+        scripts: [
+            { name: 'step4_build_dispatch_cache.py', what: 'Pre-computes 8760h dispatch for all unique mixes; populates dispatch_cache/*.npz' },
+            { name: 'step5_compute_eac_scarcity.py', what: 'EAC supply scarcity under RPS + voluntary demand (cache-independent)' },
+            { name: 'step5e_export_tracks.py', what: 'Exports track parquets to track_results.json for dashboard (cache-independent)' },
+            { name: 'step6c_analyze_tracks.py', what: 'Track cost envelopes (P10/P50/P90), resource mix differentials (cache-independent)' }
+        ],
+        outputs: [
+            {
+                file: 'data/step5-post-processing/dispatch_cache/{ISO}_dispatch_cache.npz',
+                type: 'npz',
+                brief: '8760-hour dispatch arrays for all unique resource mixes',
+                consumers: ['Step 6 scripts'],
+                consumerBadges: ['consq', 'lmp', 'abate'],
+                fields: [
+                    ['k_{key}_matched_supplied', 'Matched supply per hour per resource (MWh)'],
+                    ['k_{key}_surplus', 'Curtailed/surplus per hour per resource (MWh)'],
+                    ['k_{key}_battery_charge', 'Battery 4hr charging profile (8760h)'],
+                    ['k_{key}_battery8_charge', 'Battery 8hr charging profile (8760h)'],
+                    ['k_{key}_ldes_charge', 'LDES 100hr charging profile (8760h)'],
+                    ['k_{key}_fossil_displaced', 'Hourly fossil displacement for CO2 accounting'],
+                    ['k_{key}_ccs_supply', 'CCS supply contribution per hour (MWh)'],
+                    ['_meta_version', 'Cache format version (int32)']
+                ]
+            },
+            {
+                file: 'data/step5-post-processing/track_results.json',
+                type: 'json',
+                brief: 'Exported track analysis for dashboard consumption',
+                consumers: ['Track pages'],
+                consumerBadges: ['track'],
+                fields: [
+                    ['iso', 'Region identifier'],
+                    ['track', 'Track type (baseline, newbuild, ctr)'],
+                    ['threshold', 'CFE threshold (%)'],
+                    ['cost_envelope', 'P10/P50/P90 cost range'],
+                    ['resource_mix', 'Optimal resource mix at each percentile']
+                ]
+            },
+            {
+                file: 'data/step5-post-processing/eac_scarcity.json',
+                type: 'json',
+                brief: 'EAC supply/demand balance under RPS + voluntary procurement',
+                consumers: ['Dashboard'],
+                consumerBadges: ['dash'],
+                fields: [
+                    ['iso', 'Region identifier'],
+                    ['year', 'Projection year'],
+                    ['rps_demand_twh', 'RPS-mandated clean energy demand (TWh)'],
+                    ['voluntary_demand_twh', 'Voluntary procurement demand (TWh)'],
+                    ['total_supply_twh', 'Available EAC supply (TWh)'],
+                    ['scarcity_ratio', 'Demand/supply ratio (>1 = scarcity)']
+                ]
+            }
+        ]
+    },
+    {
+        step: 6,
+        title: 'Dispatch-Dependent Analytics',
+        badge: 's6',
+        time: '~30-180 min',
+        timeClass: 'minutes',
+        desc: 'Parallel analytics using dispatch cache: compressed day profiles, consequential queue, scenario comparison, CO2 recompute, MAC stats, LMP prices, optimal targets.',
+        tooltip: 'All Step 6 scripts read from the dispatch cache built in Step 5. They run independently and in parallel. Each produces analysis-specific JSON or JS output consumed by one or more dashboard pages.',
+        uses: 'Step 5 dispatch cache, Step 4 parquets',
+        scripts: [
+            { name: 'step5c_compress_day_profiles.py', what: '24-hour representative day profiles per unique mix from dispatch cache' },
+            { name: 'step5d_deployment_queue.py', what: 'Cross-regional deployment path: cheapest $/tCO2 ordering across 7 ISOs x 9 zones' },
+            { name: 'step7c_scenario_comparison.py', what: 'Consequential vs hourly matching strategy comparison using dispatch emissions' },
+            { name: 'step5a_compute_co2.py', what: 'Dispatch-stack emission model: merit-order retirement (coal > oil > gas), demand-aware' },
+            { name: 'step6a_compute_mac_stats.py', what: '6 MAC metrics: fan (P10/P50/P90), stepwise, envelope, path-constrained + ANOVA' },
+            { name: 'step5b_compute_lmp_prices.py', what: 'Synthetic hourly LMP from merit-order fossil stack reconstruction' },
+            { name: 'step6b_compute_optimal_targets.py', what: 'Optimal CFE target per ISO via PCHIP spline MAC x DAC crossover' }
+        ],
+        outputs: [
+            {
+                file: 'data/step5-post-processing/mac_stats.json',
+                type: 'json',
+                brief: 'MAC fan, envelopes, stepwise, ANOVA decomposition',
+                consumers: ['Dashboard', 'Abatement'],
+                consumerBadges: ['dash', 'abate'],
+                fields: [
+                    ['{iso}.fan.p10/p25/p50/p75/p90', 'MAC percentile values per threshold ($/tCO2)'],
+                    ['{iso}.envelope.monotonic', 'Isotonic-smoothed monotonic MAC envelope'],
+                    ['{iso}.envelope.stepwise', 'Marginal MAC between threshold pairs'],
+                    ['{iso}.stepwise_fan.p10/p50/p90', 'Stepwise marginal MAC percentiles'],
+                    ['anova.{iso}.toggle_variance', 'Fraction of MAC variance per toggle group'],
+                    ['anova.{iso}.toggle_names', 'Toggle group names for ANOVA labels']
+                ]
+            },
+            {
+                file: 'data/step5-post-processing/optimal_targets.json',
+                type: 'json',
+                brief: 'Optimal CFE target via cost-MAC x DAC crossover',
+                consumers: ['Dashboard', 'Abatement'],
+                consumerBadges: ['dash', 'abate'],
+                fields: [
+                    ['{iso}.crossover_range', '[min, max] threshold where grid < DAC cost'],
+                    ['{iso}.crossover_central', 'Central estimate crossover threshold'],
+                    ['{iso}.crossovers', '3x3 grid: clean cost L/M/H x DAC L/M/H'],
+                    ['{iso}.smooth_marginal_mac', 'PCHIP spline-interpolated MAC curve'],
+                    ['{iso}.no_regrets.floor', 'Min resource % across all crossover thresholds'],
+                    ['{iso}.no_regrets.consensus', 'Resources present at every threshold in range'],
+                    ['{iso}.no_regrets_by_growth', 'Absolute TWh by resource under L/M/H demand']
+                ]
+            },
+            {
+                file: 'data/step5-post-processing/consequential_queue.json',
+                type: 'json',
+                brief: 'Cross-regional deployment queue ordered by $/tCO2',
+                consumers: ['Consequential pages'],
+                consumerBadges: ['consq'],
+                fields: [
+                    ['{iso}.queue', 'Deployment order across zones (50->75%, 75->90%, etc.)'],
+                    ['{iso}.zone_costs', 'Marginal cost to reach next threshold per zone'],
+                    ['{iso}.zone_co2', 'CO2 displaced per zone (MtCO2)'],
+                    ['{iso}.zone_mac', 'Marginal $/tCO2 per zone'],
+                    ['consequential.cumulative', 'Running total: cost + tCO2 from 50% forward'],
+                    ['stranding_risk', 'Assets at risk if deployment stops early']
+                ]
+            },
+            {
+                file: 'data/step5-post-processing/lmp/{ISO}_lmp.parquet',
+                type: 'parquet',
+                brief: 'Synthetic hourly LMP from fossil merit-order stack',
+                consumers: ['LMP Trends'],
+                consumerBadges: ['lmp'],
+                fields: [
+                    ['threshold', 'CFE threshold (%)'],
+                    ['scenario', 'Sensitivity scenario key'],
+                    ['hour', 'Hour of year (0-8759)'],
+                    ['demand_mwh', 'Demand at hour (MWh)'],
+                    ['lmp', 'Synthetic LMP ($/MWh)'],
+                    ['marginal_unit', 'Fossil unit at margin (coal, gas_ccgt, gas_ct, oil_ct)'],
+                    ['co2_rate', 'CO2 rate of marginal unit (tCO2/MWh)'],
+                    ['marginal_cost', 'VOM + fuel cost of marginal unit ($/MWh)']
+                ]
+            },
+            {
+                file: 'dashboard/js/optimal-target-data.js',
+                type: 'js',
+                brief: 'JS export of optimal targets for dashboard',
+                consumers: ['Dashboard'],
+                consumerBadges: ['dash', 'abate'],
+                fields: [
+                    ['OPTIMAL_TARGET_DATA', 'Same structure as optimal_targets.json']
+                ]
+            },
+            {
+                file: 'dashboard/js/consequential-queue-data.js',
+                type: 'js',
+                brief: 'JS export of consequential queue for dashboard',
+                consumers: ['Consequential pages'],
+                consumerBadges: ['consq'],
+                fields: [
+                    ['CONSEQUENTIAL_QUEUE_DATA', 'Same structure as consequential_queue.json']
+                ]
+            }
+        ]
+    },
+    {
+        step: 7,
+        title: 'Dashboard Data Generation',
+        badge: 's7',
+        time: '~1 min',
+        timeClass: 'minutes',
+        desc: 'Aggregates all pipeline results into dashboard/js/shared-data.js. SBTi milestone mapping, DAC trajectory projections, LCOE/transmission tables for client-side repricing.',
+        tooltip: 'The final aggregation step. Reads Step 4 parquets + all Step 5/6 JSON outputs and packages everything into a single JS file consumed by the interactive dashboard. Includes LCOE cost tables, demand growth rates, grid mix shares, and all precomputed analytics.',
+        uses: 'Step 4 parquets, Step 5/6 JSON outputs',
+        scripts: [
+            { name: 'step9a_generate_shared_data.py', what: 'Master aggregator: extracts all results into shared-data.js for dashboard' }
+        ],
+        outputs: [
+            {
+                file: 'dashboard/js/shared-data.js',
+                type: 'js',
+                brief: 'Complete optimizer results + metadata for interactive dashboard (~5MB)',
+                consumers: ['All dashboard pages'],
+                consumerBadges: ['all'],
+                fields: [
+                    ['THRESHOLDS', 'Array of 21 CFE thresholds [10, 20, 30, 40, 50, 55, ..., 99.5, 99.9, 99.99]'],
+                    ['ISOS', "Array of 7 ISO names ['CAISO', ...]"],
+                    ['RESOURCE_MIX_DATA', '{iso: {threshold: {resource: %}}} — optimal mix per scenario'],
+                    ['EFFECTIVE_COST_DATA', '{iso: [costs per threshold]} — clean energy cost'],
+                    ['SYSTEM_COST_DATA', '{scenario: {iso: [costs]}} — L/M/H sensitivity'],
+                    ['CLEAN_COST_DATA', '{scenario: {iso: [costs]}} — P10/P50/P90 range'],
+                    ['MARGINAL_MAC_DATA', '{scenario: {iso: [mac per zone]}} — marginal abatement'],
+                    ['MAC_FAN_DATA', '{iso: {percentile: [mac per threshold]}} — MAC fan chart'],
+                    ['MAC_ENVELOPE_DATA', '{iso: {monotonic, stepwise}} — smoothed envelopes'],
+                    ['MAC_ANOVA', '{iso: {toggle: variance_frac}} — ANOVA decomposition'],
+                    ['MAC_CROSSOVERS', 'DAC crossover thresholds per ISO'],
+                    ['COST_TABLES', 'LCOE, transmission, battery, LDES, CCS, nuclear costs'],
+                    ['DEMAND_GROWTH_RATES', 'Annual growth % by ISO (L/M/H)'],
+                    ['GRID_MIX_SHARES', 'Existing clean generation % by ISO'],
+                    ['REGIONAL_DEMAND_TWH', '2025 annual demand per ISO (TWh)']
+                ]
+            }
+        ]
+    }
+];
+
+// Utility scripts (shown separately)
+const UTILITY_SCRIPTS = [
+    { name: 'dispatch_utils.py', what: 'Shared dispatch reconstruction, CO2 modeling, cache I/O. Numba JIT for battery/LDES inner loops.' },
+    { name: 'calibrate_lmp_model.py', what: 'Calibrates synthetic LMP model parameters against historical data.' },
+    { name: 'anthropic_image_utils.py', what: 'Image generation utilities for charts and figures.' },
+    { name: 'extract_shared_data.py', what: 'Standalone extractor for shared-data.js subsets.' },
+    { name: 'sensitivity_analysis.py', what: 'Sensitivity analysis utilities for toggle combinations.' }
+];
+
+// Dashboard pages and their data dependencies
+const DASHBOARD_PAGES = [
+    { title: 'Home (Scrollytell)', file: 'index.html', deps: ['shared-data.js'], desc: 'Landing page with scrollytelling narrative and key findings' },
+    { title: 'Grid Simulation', file: 'dashboard.html', deps: ['shared-data.js'], desc: 'Interactive cost optimizer with all 5 sensitivity toggles' },
+    { title: 'CO2 Abatement', file: 'abatement_dashboard.html', deps: ['shared-data.js', 'optimal-target-data.js'], desc: 'CO2 abatement analysis with MAC curves and DAC crossovers' },
+    { title: 'Clean Firm Case', file: 'clean_firm_case.html', deps: ['shared-data.js'], desc: 'Clean firm energy deep dive: nuclear, geothermal, CCS' },
+    { title: 'Cost to Replace', file: 'cost_to_replace.html', deps: ['shared-data.js'], desc: 'Cost-to-replace analysis: what does it cost to retire fossil?' },
+    { title: 'New Build Analysis', file: 'new_build_analysis.html', deps: ['shared-data.js'], desc: 'New-build resource analysis and capacity expansion paths' },
+    { title: 'Wholesale Price Trends', file: 'lmp_trends.html', deps: ['shared-data.js'], desc: 'LMP wholesale price trend analysis by ISO and threshold' },
+    { title: 'Fossil Fuel Deep Dive', file: 'fossil_fuel_deepdive.html', deps: ['shared-data.js'], desc: 'Fossil fuel fleet analysis: retirement pathways, fuel switching' },
+    { title: 'Storage Analysis', file: 'storage_analysis.html', deps: ['shared-data.js'], desc: 'Battery and LDES storage economics, dispatch profiles, cycling' },
+    { title: 'Consequential Overview', file: 'consequential_accounting.html', deps: ['shared-data.js', 'consequential-queue-data.js'], desc: 'Consequential emission accounting overview and deployment queue' },
+    { title: 'Failure Modes at Scale', file: 'consequential_vacuum.html', deps: ['shared-data.js', 'consequential-queue-data.js'], desc: 'What happens when clean energy deployment creates vacuum effects' },
+    { title: 'Scenario Comparison', file: 'scenario_comparison.html', deps: ['shared-data.js'], desc: 'Consequential vs hourly matching strategy side-by-side' },
+    { title: 'Procurement Strategies', file: 'procurement_strategies.html', deps: ['procurement-strategy-data.js'], desc: '10 strategy variants across 3 families with 25-year trajectories' },
+    { title: 'Fleet Survival', file: 'fleet_survival.html', deps: ['shared-data.js'], desc: 'Generator fleet survival analysis under decarbonization pathways' },
+    { title: 'Research Paper', file: 'research_paper.html', deps: ['shared-data.js'], desc: 'Full standalone academic paper with regional deep-dives' },
+    { title: 'Methodology', file: 'optimizer_methodology.html', deps: [], desc: 'Technical methodology documentation' },
+    { title: 'About the Model', file: 'pipeline.html', deps: [], desc: 'Pipeline architecture overview and model comparison' },
+    { title: 'Policy Context', file: 'policy_context.html', deps: [], desc: 'Policy landscape and regulatory context' },
+    { title: 'Reference', file: 'reference.html', deps: [], desc: 'Data sources, methodology references, bibliography' }
+];
+
+// ============================================================================
+// RENDERING
+// ============================================================================
+
+function getTypeIcon(type) {
+    switch(type) {
+        case 'parquet': return '<span class="output-icon parquet" title="Parquet">&#9646;</span>';
+        case 'json': return '<span class="output-icon json" title="JSON">&#123;&#125;</span>';
+        case 'js': return '<span class="output-icon js" title="JavaScript">JS</span>';
+        case 'npz': return '<span class="output-icon npz" title="NumPy NPZ">&#8943;</span>';
+        default: return '';
+    }
+}
+
+function renderFieldTable(fields) {
+    if (!fields || !fields.length) return '';
+    let html = '<table class="field-table"><thead><tr><th>Field / Column</th><th>Description</th></tr></thead><tbody>';
+    for (const [name, desc] of fields) {
+        html += `<tr><td>${name}</td><td>${desc}</td></tr>`;
+    }
+    html += '</tbody></table>';
+    return html;
+}
+
+function renderConsumerBadges(badges) {
+    if (!badges || !badges.length) return '';
+    const badgeMap = {
+        'all': ['ALL PAGES', 'page-badge-all'],
+        'dash': ['Dashboard', 'page-badge-dash'],
+        'home': ['Homepage', 'page-badge-home'],
+        'abate': ['Abatement', 'page-badge-abate'],
+        'paper': ['Research', 'page-badge-paper'],
+        'consq': ['Consequential', 'page-badge-consq'],
+        'lmp': ['LMP Trends', 'page-badge-lmp'],
+        'track': ['Tracks', 'page-badge-track'],
+        'procure': ['Procurement', 'page-badge-procure']
+    };
+    let html = '<div class="page-consumers">';
+    for (const b of badges) {
+        const [label, cls] = badgeMap[b] || [b, 'page-badge-all'];
+        html += `<span class="page-badge ${cls}">${label}</span>`;
+    }
+    html += '</div>';
+    return html;
+}
+
+function renderOutputChip(output, idx) {
+    const icon = getTypeIcon(output.type);
+    const filename = output.file.split('/').pop();
+    const drilldown = renderFieldTable(output.fields);
+    const badges = renderConsumerBadges(output.consumerBadges);
+
+    return `<div class="output-chip" data-output-idx="${idx}" onclick="toggleOutput(this)">
+        <div class="output-chip-header">
+            ${icon}
+            <span class="output-filename">${filename}</span>
+        </div>
+        <div class="output-brief">${output.brief}</div>
+        ${badges}
+        <div class="output-drilldown">
+            <div style="font-size:0.68rem;color:#9CA3AF;margin-bottom:6px;font-family:var(--font-mono);">${output.file}</div>
+            ${drilldown}
+        </div>
+    </div>`;
+}
+
+function renderStepCard(step) {
+    const scriptsHtml = step.scripts.map(s =>
+        `<div class="script-item" data-tooltip-title="${s.name}" data-tooltip-desc="${s.what}" data-tooltip-uses="">
+            <span class="script-name">${s.name}</span>
+            <span class="script-what">${s.what}</span>
+        </div>`
+    ).join('');
+
+    const outputsHtml = step.outputs.map((o, i) => renderOutputChip(o, i)).join('');
+
+    return `<div class="step-row">
+        <div class="step-card" onclick="toggleStep(this)"
+             data-tooltip-title="Step ${step.step}: ${step.title}"
+             data-tooltip-desc="${step.tooltip}"
+             data-tooltip-uses="Uses: ${step.uses}">
+            <div class="step-header">
+                <div class="step-badge ${step.badge}">${step.step}</div>
+                <h3 class="step-title">${step.title}</h3>
+                <span class="step-time ${step.timeClass}">${step.time}</span>
+            </div>
+            <p class="step-desc">${step.desc}</p>
+            <div class="script-list">
+                ${scriptsHtml}
+            </div>
+        </div>
+        <div class="output-panel">
+            ${outputsHtml}
+        </div>
+    </div>`;
+}
+
+function renderPipeline() {
+    const grid = document.getElementById('pipelineGrid');
+    let html = '';
+    for (let i = 0; i < PIPELINE.length; i++) {
+        html += renderStepCard(PIPELINE[i]);
+        if (i < PIPELINE.length - 1) {
+            html += '<div class="step-connector"><div class="connector-arrow"></div></div>';
+        }
+    }
+
+    // Utility scripts section
+    html += `<div style="margin-top:32px;padding-top:24px;border-top:2px solid #E5E7EB;">
+        <div class="parallel-label">Shared Utilities</div>
+        <div class="output-panel" style="gap:10px;">
+            ${UTILITY_SCRIPTS.map(s => `
+                <div class="output-chip" style="cursor:default;"
+                     data-tooltip-title="${s.name}"
+                     data-tooltip-desc="${s.what}"
+                     data-tooltip-uses="">
+                    <div class="output-chip-header">
+                        <span class="output-icon js" style="color:#6B7280;">PY</span>
+                        <span class="output-filename">${s.name}</span>
+                    </div>
+                    <div class="output-brief">${s.what}</div>
+                </div>
+            `).join('')}
+        </div>
+    </div>`;
+
+    grid.innerHTML = html;
+}
+
+function renderPages() {
+    const grid = document.getElementById('pagesGrid');
+    let html = '';
+    for (const page of DASHBOARD_PAGES) {
+        const depsHtml = page.deps.length
+            ? page.deps.map(d => `<code>${d}</code>`).join(', ')
+            : '<span style="color:#9CA3AF;">No data dependencies</span>';
+        html += `<div class="page-card"
+                      data-tooltip-title="${page.title}"
+                      data-tooltip-desc="${page.desc}"
+                      data-tooltip-uses="Data: ${page.deps.join(', ') || 'none'}">
+            <div class="page-card-title">${page.title}</div>
+            <div class="page-card-file">${page.file}</div>
+            <div class="page-card-deps">${depsHtml}</div>
+        </div>`;
+    }
+    grid.innerHTML = html;
+}
+
+// ============================================================================
+// INTERACTIONS
+// ============================================================================
+
+window.toggleStep = function(el) {
+    el.classList.toggle('expanded');
+};
+
+window.toggleOutput = function(el) {
+    // Close other expanded outputs in the same panel
+    const panel = el.parentElement;
+    panel.querySelectorAll('.output-chip.expanded').forEach(function(chip) {
+        if (chip !== el) chip.classList.remove('expanded');
+    });
+    el.classList.toggle('expanded');
+};
+
+// Tooltip
+const tooltip = document.getElementById('mapTooltip');
+let tooltipTimeout;
+
+function showTooltip(e, title, desc, uses) {
+    clearTimeout(tooltipTimeout);
+    let html = '';
+    if (title) html += `<div class="tt-title">${title}</div>`;
+    if (desc) html += `<div>${desc}</div>`;
+    if (uses) html += `<div class="tt-uses">${uses}</div>`;
+    tooltip.innerHTML = html;
+
+    // Position
+    const x = e.clientX + 16;
+    const y = e.clientY + 12;
+    const maxX = window.innerWidth - 340;
+    const maxY = window.innerHeight - 200;
+    tooltip.style.left = Math.min(x, maxX) + 'px';
+    tooltip.style.top = Math.min(y, maxY) + 'px';
+    tooltip.classList.add('visible');
+}
+
+function hideTooltip() {
+    tooltipTimeout = setTimeout(function() {
+        tooltip.classList.remove('visible');
+    }, 100);
+}
+
+function wireTooltips() {
+    document.querySelectorAll('[data-tooltip-title]').forEach(function(el) {
+        el.addEventListener('mouseenter', function(e) {
+            showTooltip(e,
+                this.dataset.tooltipTitle,
+                this.dataset.tooltipDesc,
+                this.dataset.tooltipUses
+            );
+        });
+        el.addEventListener('mousemove', function(e) {
+            const x = e.clientX + 16;
+            const y = e.clientY + 12;
+            const maxX = window.innerWidth - 340;
+            const maxY = window.innerHeight - 200;
+            tooltip.style.left = Math.min(x, maxX) + 'px';
+            tooltip.style.top = Math.min(y, maxY) + 'px';
+        });
+        el.addEventListener('mouseleave', hideTooltip);
+    });
+}
+
+// ============================================================================
+// INIT
+// ============================================================================
+renderPipeline();
+renderPages();
+wireTooltips();
+
+})();
+</script>
+
+</body>
+</html>
