@@ -1,0 +1,145 @@
+name: "Step 5.7: Storage Analysis"
+
+# Runs step5_analyze_storage.py to generate storage-analysis-data.js
+# for the storage analysis dashboard page.
+#
+# Reads from:
+#   - dashboard/js/shared-data.js (FEASIBLE_MIXES)
+#   - data/step3-cost-opt-parquets/step3_co_{ISO}.parquet
+#   - dashboard/compressed_day_profiles.json
+#
+# Output: dashboard/js/storage-analysis-data.js
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  BRANCH_PREFIX: step5-7-storage-analysis
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Verify input data exists
+        run: |
+          echo "--- Checking shared-data.js ---"
+          if [ -f "dashboard/js/shared-data.js" ]; then
+            echo "shared-data.js found"
+          else
+            echo "ERROR: dashboard/js/shared-data.js not found"
+            exit 1
+          fi
+
+          echo "--- Checking step3 CO parquets ---"
+          COUNT=$(ls data/step3-cost-opt-parquets/step3_co_*.parquet 2>/dev/null | wc -l)
+          echo "Found $COUNT step3 CO parquet files"
+          if [ "$COUNT" -eq 0 ]; then
+            echo "WARNING: No step3 CO parquets found — parquet_stats section will be empty"
+          fi
+
+          echo "--- Checking compressed day profiles ---"
+          if [ -f "dashboard/compressed_day_profiles.json" ]; then
+            echo "compressed_day_profiles.json found"
+          else
+            echo "WARNING: compressed_day_profiles.json not found — compressed_day_storage section will be empty"
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy numba pyarrow pandas
+
+      - name: Run storage analysis
+        run: python scripts/step5_analyze_storage.py
+
+      - name: Verify output
+        run: |
+          if [ -f "dashboard/js/storage-analysis-data.js" ]; then
+            SIZE=$(stat -c%s "dashboard/js/storage-analysis-data.js")
+            echo "storage-analysis-data.js generated: ${SIZE} bytes"
+            if [ "$SIZE" -lt 500 ]; then
+              echo "WARNING: Output file suspiciously small ($SIZE bytes)"
+            fi
+          else
+            echo "ERROR: storage-analysis-data.js was not generated"
+            exit 1
+          fi
+
+      - name: Create branch, commit, and push
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$TARGET_BRANCH"
+
+          git add -f dashboard/js/storage-analysis-data.js
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "Step 5.7: Regenerate storage-analysis-data.js — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          push_with_retry() {
+            local MAX_RETRIES=4
+            for i in $(seq 1 $MAX_RETRIES); do
+              echo "  Push attempt $i/$MAX_RETRIES..."
+              git push -u origin "$TARGET_BRANCH" 2>&1 && return 0
+              if [ "$i" -eq "$MAX_RETRIES" ]; then
+                echo "  ERROR: Push failed after $MAX_RETRIES attempts"
+                return 1
+              fi
+              BACKOFF=$((2 ** i))
+              echo "  Retrying in ${BACKOFF}s..."
+              sleep "$BACKOFF"
+            done
+          }
+
+          push_with_retry
+
+      - name: Create PR
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr create \
+            --title "Step 5.7: Storage Analysis Data" \
+            --body "Auto-generated storage analysis data for the storage dashboard page.
+
+          **Script**: \`scripts/step5_analyze_storage.py\`
+          **Output**: \`dashboard/js/storage-analysis-data.js\`
+
+          Sections generated:
+          - storage_metrics (battery/LDES/H2 dispatch by threshold)
+          - compressed_day_storage (24hr dispatch profiles)
+          - h2_feasibility (technology comparison)
+          - storage_value (gap-filling analysis)
+          - regional_drivers (ISO storage archetypes)
+          - parquet_stats (onset thresholds from step3 CO)
+          - storage_params (efficiency/duration specs)" \
+            --base "${{ inputs.branch || 'master' }}" \
+            --head "$TARGET_BRANCH" || echo "PR creation failed or no changes"
