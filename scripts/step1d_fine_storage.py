@@ -88,30 +88,29 @@ STEP1D_OUTPUT_DIR = os.path.join(DATA_DIR, 'step1d-storage-parquets')
 STORAGE_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5,
                       90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
 
-# Pass 0: Maximum storage levels (ceiling screen)
-MAX_BAT4 = np.array([0.5], dtype=np.float64)
-MAX_BAT8 = np.array([1.0], dtype=np.float64)
-MAX_LDES = np.array([5.0], dtype=np.float64)
-MAX_H2 = np.array([25.0], dtype=np.float64)
+# Pass 0: Maximum storage levels (ceiling screen) — % of annual demand
+# Physical reference: CAISO 224 TWh → 0.01% = 22,400 MWh / 5,600 MW (4hr)
+MAX_BAT4 = np.array([0.06], dtype=np.float64)
+MAX_BAT8 = np.array([0.08], dtype=np.float64)
+MAX_LDES = np.array([0.5], dtype=np.float64)
+MAX_H2 = np.array([2.0], dtype=np.float64)
 NO_H2 = np.array([0.0], dtype=np.float64)
 
-# Pass 1: Log-spaced coarse grids (fine low-end where cost-meaningful sizing lives)
-# Old integer grids [0,1,2,...6] missed the 0.05-0.50 range entirely — bat4=1.0
-# was 5-20× oversized for most mixes. These grids match the refined-file range
-# (bat4: 0.05-0.20, bat8: 0.10-0.40, LDES: 0.25-1.50 for typical thresholds).
-FULL_BAT4 = np.array([0, 0.05, 0.1, 0.2, 0.5], dtype=np.float64)
-FULL_BAT8 = np.array([0, 0.1, 0.2, 0.5, 1.0], dtype=np.float64)
-FULL_LDES = np.array([0, 0.25, 0.5, 1.0, 2.0, 5.0], dtype=np.float64)
-FULL_H2 = np.array([0, 5, 10, 15, 20, 25], dtype=np.float64)
+# Pass 1: Coarse grids in % of annual demand (energy capacity as fraction of annual demand).
+# CAISO: 0.01% = 22.4 GWh / 5.6 GW (comparable to real 10 GW / 40 GWh fleet).
+FULL_BAT4 = np.array([0, 0.002, 0.005, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06], dtype=np.float64)
+FULL_BAT8 = np.array([0, 0.005, 0.01, 0.02, 0.03, 0.04, 0.06, 0.08], dtype=np.float64)
+FULL_LDES = np.array([0, 0.02, 0.05, 0.1, 0.2, 0.3, 0.5], dtype=np.float64)
+FULL_H2 = np.array([0, 0.1, 0.3, 0.5, 1.0, 2.0], dtype=np.float64)
 
 # Gap bucket boundaries (in percentage points).
 # Mixes are grouped by how far their base score is from the threshold.
 # Each bucket gets a grid capped at ~3× its max gap (storage efficiency headroom).
 GAP_BUCKET_PP = [5, 10, 20, 50]  # bucket edges: 0-5pp, 5-10pp, 10-20pp, 20-50pp
 
-# Pass 2: Fine storage resolution
-FINE_STEP = 0.05         # 0.05 percentage points
-FINE_HALF_WIDTH = 0.5    # ±0.5pp around coarse winner
+# Pass 2: Fine storage resolution (% of annual demand)
+FINE_STEP = 0.001        # 0.001 percentage points of annual demand
+FINE_HALF_WIDTH = 0.005  # ±0.005pp around coarse winner
 BOUNDARY_MARGIN_LOW = 2  # 2pp below threshold for boundary identification
 BOUNDARY_MARGIN_HIGH = 1 # 1pp above threshold
 
@@ -290,22 +289,24 @@ def _build_bucket_grid(max_gap_pp, include_h2):
     """Build storage grid sized to the gap bucket.
 
     Returns (bat4_arr, bat8_arr, ldes_arr, h2_arr) numpy arrays.
-    With the log-spaced fine grid (bat4 up to 0.5, bat8 up to 1.0,
-    LDES up to 5.0), the full grid is only 150 combos — always used
-    in full. The gap-bucket cap is kept for future-proofing but rarely
-    filters at current grid sizes.
+    Grid values are in % of annual demand (bat4 up to 0.06, bat8 up to 0.08,
+    LDES up to 0.5). The full grid is compact — always used in full.
+    The gap-bucket cap (in pp) is kept for future-proofing but always
+    exceeds grid maxes at current scale, so all points are selected.
     """
     cap = max_gap_pp * 3.0
 
-    bat4 = FULL_BAT4[FULL_BAT4 <= max(cap, 0.5)]
+    # Floor values match grid maxes to ensure full grid is always used.
+    # cap (in pp) >> grid max (% of annual demand), so floor dominates.
+    bat4 = FULL_BAT4[FULL_BAT4 <= max(cap, 0.06)]
     if len(bat4) < 2:
         bat4 = FULL_BAT4[:2]
 
-    bat8 = FULL_BAT8[FULL_BAT8 <= max(cap, 1.0)]
+    bat8 = FULL_BAT8[FULL_BAT8 <= max(cap, 0.08)]
     if len(bat8) < 2:
         bat8 = FULL_BAT8[:2]
 
-    ldes = FULL_LDES[FULL_LDES <= max(cap, 2.0)]
+    ldes = FULL_LDES[FULL_LDES <= max(cap, 0.5)]
     if len(ldes) < 2:
         ldes = FULL_LDES[:2]
 

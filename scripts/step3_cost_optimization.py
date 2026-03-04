@@ -143,11 +143,11 @@ LCOE_TABLES = {
         'Medium': {'CAISO': 150, 'ERCOT': 0, 'PJM': 85, 'NYISO': 95, 'NEISO': 90, 'MISO': 0, 'SPP': 0},
         'High':   {'CAISO': 200, 'ERCOT': 0, 'PJM': 112, 'NYISO': 125, 'NEISO': 118, 'MISO': 0, 'SPP': 0},
     },
-    # ---- Storage: annualized capacity cost ($/MWh-cap) ----
+    # ---- Storage: annualized capacity cost per % of annual demand ----
     # NOT LCOS. These are annualized fixed costs of storage capacity, normalized to
     # the coefficient model where coeff = bat_pct/100 (energy capacity as fraction
-    # of avg hourly demand). Formula:
-    #   price = CAPEX_kWh × (CRF + FOM_rate) / 8760 × 1000 × regional_mult
+    # of annual demand — same unit as all other resources). Formula:
+    #   price = CAPEX_kWh × (CRF + FOM_rate) × 1000 × regional_mult
     # where CRF=0.1019 (8%, 20yr), FOM_rate=2.5% of CAPEX($/kW) per NREL ATB.
     # Regional variation baked in (no separate TX adder for storage).
     #
@@ -158,28 +158,32 @@ LCOE_TABLES = {
     #   8hr is ~14% cheaper per kWh (power component spread over 2× energy).
     # LCOS cross-check: 4hr Med @ 365 cycles, 85% RTE = $121/MWh.
     # Financial: WACC=8%, Bat life=20yr. FOM=2.5% of CAPEX($/kW) per NREL (incl augmentation).
+    #
+    # Verification: 0.01% bat4 at CAISO (224 TWh) = 22,400 MWh.
+    #   Cost = 0.0001 × 41610 = $4.16/MWh. Physical: 22.4M kWh × $295/kWh × 0.127 × 1.11
+    #   = $924M/yr ÷ 224 TWh = $4.13/MWh. ✓
     'battery': {
-        'Low':    {'CAISO': 3.86, 'ERCOT': 3.48, 'PJM': 3.70, 'NYISO': 4.08, 'NEISO': 3.97, 'MISO': 3.62, 'SPP': 3.52},
-        'Medium': {'CAISO': 4.75, 'ERCOT': 4.27, 'PJM': 4.55, 'NYISO': 5.02, 'NEISO': 4.87, 'MISO': 4.46, 'SPP': 4.33},
-        'High':   {'CAISO': 6.03, 'ERCOT': 5.43, 'PJM': 5.78, 'NYISO': 6.38, 'NEISO': 6.20, 'MISO': 5.66, 'SPP': 5.50},
+        'Low':    {'CAISO': 33813.60, 'ERCOT': 30484.80, 'PJM': 32412.00, 'NYISO': 35740.80, 'NEISO': 34777.20, 'MISO': 31711.20, 'SPP': 30835.20},
+        'Medium': {'CAISO': 41610.00, 'ERCOT': 37405.20, 'PJM': 39858.00, 'NYISO': 43975.20, 'NEISO': 42661.20, 'MISO': 39069.60, 'SPP': 37930.80},
+        'High':   {'CAISO': 52822.80, 'ERCOT': 47566.80, 'PJM': 50632.80, 'NYISO': 55888.80, 'NEISO': 54312.00, 'MISO': 49581.60, 'SPP': 48180.00},
     },
     'battery8': {
-        'Low':    {'CAISO': 3.30, 'ERCOT': 2.97, 'PJM': 3.16, 'NYISO': 3.49, 'NEISO': 3.39, 'MISO': 3.10, 'SPP': 3.01},
-        'Medium': {'CAISO': 4.06, 'ERCOT': 3.66, 'PJM': 3.89, 'NYISO': 4.30, 'NEISO': 4.17, 'MISO': 3.81, 'SPP': 3.70},
-        'High':   {'CAISO': 5.19, 'ERCOT': 4.67, 'PJM': 4.97, 'NYISO': 5.49, 'NEISO': 5.33, 'MISO': 4.87, 'SPP': 4.73},
+        'Low':    {'CAISO': 28908.00, 'ERCOT': 26017.20, 'PJM': 27681.60, 'NYISO': 30572.40, 'NEISO': 29696.40, 'MISO': 27156.00, 'SPP': 26367.60},
+        'Medium': {'CAISO': 35565.60, 'ERCOT': 32061.60, 'PJM': 34076.40, 'NYISO': 37668.00, 'NEISO': 36529.20, 'MISO': 33375.60, 'SPP': 32412.00},
+        'High':   {'CAISO': 45464.40, 'ERCOT': 40909.20, 'PJM': 43537.20, 'NYISO': 48092.40, 'NEISO': 46690.80, 'MISO': 42661.20, 'SPP': 41434.80},
     },
     'ldes': {
-        'Low':    {'CAISO': 0.38, 'ERCOT': 0.33, 'PJM': 0.36, 'NYISO': 0.42, 'NEISO': 0.40, 'MISO': 0.34, 'SPP': 0.33},
-        'Medium': {'CAISO': 0.63, 'ERCOT': 0.54, 'PJM': 0.59, 'NYISO': 0.70, 'NEISO': 0.66, 'MISO': 0.56, 'SPP': 0.55},
-        'High':   {'CAISO': 1.00, 'ERCOT': 0.86, 'PJM': 0.94, 'NYISO': 1.11, 'NEISO': 1.06, 'MISO': 0.90, 'SPP': 0.88},
+        'Low':    {'CAISO': 3328.80, 'ERCOT': 2890.80, 'PJM': 3153.60, 'NYISO': 3679.20, 'NEISO': 3504.00, 'MISO': 2978.40, 'SPP': 2890.80},
+        'Medium': {'CAISO': 5518.80, 'ERCOT': 4730.40, 'PJM': 5168.40, 'NYISO': 6132.00, 'NEISO': 5781.60, 'MISO': 4905.60, 'SPP': 4818.00},
+        'High':   {'CAISO': 8760.00, 'ERCOT': 7533.60, 'PJM': 8234.40, 'NYISO': 9723.60, 'NEISO': 9285.60, 'MISO': 7884.00, 'SPP': 7708.80},
     },
     # Green H2: electrolysis + salt cavern + H2 turbine. 35% RTE.
     # CAPEX/kWh: L=$150, M=$220, H=$310. Duration=168hr, FOM=$8/kW-yr.
     # Shares 'ldes_lvl' sensitivity toggle (both long-duration storage).
     'h2': {
-        'Low':    {'CAISO': 1.98, 'ERCOT': 1.75, 'PJM': 1.88, 'NYISO': 2.18, 'NEISO': 2.08, 'MISO': 1.80, 'SPP': 1.72},
-        'Medium': {'CAISO': 2.90, 'ERCOT': 2.56, 'PJM': 2.76, 'NYISO': 3.19, 'NEISO': 3.05, 'MISO': 2.63, 'SPP': 2.52},
-        'High':   {'CAISO': 4.09, 'ERCOT': 3.61, 'PJM': 3.88, 'NYISO': 4.50, 'NEISO': 4.29, 'MISO': 3.71, 'SPP': 3.54},
+        'Low':    {'CAISO': 17344.80, 'ERCOT': 15330.00, 'PJM': 16468.80, 'NYISO': 19096.80, 'NEISO': 18220.80, 'MISO': 15768.00, 'SPP': 15067.20},
+        'Medium': {'CAISO': 25404.00, 'ERCOT': 22425.60, 'PJM': 24177.60, 'NYISO': 27944.40, 'NEISO': 26718.00, 'MISO': 23038.80, 'SPP': 22075.20},
+        'High':   {'CAISO': 35828.40, 'ERCOT': 31623.60, 'PJM': 33988.80, 'NYISO': 39420.00, 'NEISO': 37580.40, 'MISO': 32499.60, 'SPP': 31010.40},
     },
 }
 
@@ -309,12 +313,12 @@ FOAK_OFFSHORE_WIND = {
 # Battery FOAK not needed — Wright's Law goes LCOE_TABLES → NOAK_BATTERY (decline over time).
 # LDES: 1.40× High (Form Energy pre-commercial). H2: 1.30× High (first commercial H2 turbines).
 FOAK_LDES = {
-    'CAISO': 1.40, 'ERCOT': 1.20, 'PJM': 1.32, 'NYISO': 1.55,
-    'NEISO': 1.48, 'MISO': 1.26, 'SPP': 1.23,
+    'CAISO': 12264.00, 'ERCOT': 10512.00, 'PJM': 11563.20, 'NYISO': 13578.00,
+    'NEISO': 12964.80, 'MISO': 11037.60, 'SPP': 10774.80,
 }
 FOAK_H2 = {
-    'CAISO': 5.32, 'ERCOT': 4.69, 'PJM': 5.04, 'NYISO': 5.85,
-    'NEISO': 5.58, 'MISO': 4.82, 'SPP': 4.60,
+    'CAISO': 46603.20, 'ERCOT': 41084.40, 'PJM': 44150.40, 'NYISO': 51246.00,
+    'NEISO': 48880.80, 'MISO': 42223.20, 'SPP': 40296.00,
 }
 
 # ============================================================================
@@ -328,9 +332,9 @@ FOAK_H2 = {
 # Calibrated to NREL 2050 projections: L=50%, M=56%, H=80% of 2025 starting cost.
 # Sources: NREL ATB 2024 + Cost Projections for Utility-Scale Battery Storage 2025 Update.
 NOAK_BATTERY = {
-    'Low':    {'CAISO': 1.93, 'ERCOT': 1.74, 'PJM': 1.85, 'NYISO': 2.04, 'NEISO': 1.98, 'MISO': 1.81, 'SPP': 1.76},
-    'Medium': {'CAISO': 2.65, 'ERCOT': 2.39, 'PJM': 2.54, 'NYISO': 2.81, 'NEISO': 2.73, 'MISO': 2.49, 'SPP': 2.42},
-    'High':   {'CAISO': 4.83, 'ERCOT': 4.34, 'PJM': 4.62, 'NYISO': 5.10, 'NEISO': 4.96, 'MISO': 4.53, 'SPP': 4.40},
+    'Low':    {'CAISO': 16906.80, 'ERCOT': 15242.40, 'PJM': 16206.00, 'NYISO': 17870.40, 'NEISO': 17344.80, 'MISO': 15855.60, 'SPP': 15417.60},
+    'Medium': {'CAISO': 23214.00, 'ERCOT': 20936.40, 'PJM': 22250.40, 'NYISO': 24615.60, 'NEISO': 23914.80, 'MISO': 21812.40, 'SPP': 21199.20},
+    'High':   {'CAISO': 42310.80, 'ERCOT': 38018.40, 'PJM': 40471.20, 'NYISO': 44676.00, 'NEISO': 43449.60, 'MISO': 39682.80, 'SPP': 38544.00},
 }
 # ============================================================================
 # WRIGHT'S LAW NOAK TERMINAL COSTS — Offshore wind long-term floor
@@ -347,9 +351,9 @@ NOAK_OFFSHORE_WIND = {
 }
 
 NOAK_BATTERY8 = {
-    'Low':    {'CAISO': 1.64, 'ERCOT': 1.48, 'PJM': 1.57, 'NYISO': 1.74, 'NEISO': 1.69, 'MISO': 1.54, 'SPP': 1.50},
-    'Medium': {'CAISO': 2.27, 'ERCOT': 2.04, 'PJM': 2.17, 'NYISO': 2.40, 'NEISO': 2.33, 'MISO': 2.13, 'SPP': 2.07},
-    'High':   {'CAISO': 4.15, 'ERCOT': 3.74, 'PJM': 3.98, 'NYISO': 4.39, 'NEISO': 4.26, 'MISO': 3.90, 'SPP': 3.78},
+    'Low':    {'CAISO': 14366.40, 'ERCOT': 12964.80, 'PJM': 13753.20, 'NYISO': 15242.40, 'NEISO': 14804.40, 'MISO': 13490.40, 'SPP': 13140.00},
+    'Medium': {'CAISO': 19885.20, 'ERCOT': 17870.40, 'PJM': 19009.20, 'NYISO': 21024.00, 'NEISO': 20410.80, 'MISO': 18658.80, 'SPP': 18133.20},
+    'High':   {'CAISO': 36354.00, 'ERCOT': 32762.40, 'PJM': 34864.80, 'NYISO': 38456.40, 'NEISO': 37317.60, 'MISO': 34164.00, 'SPP': 33112.80},
 }
 
 # ============================================================================
@@ -729,8 +733,8 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     total_cost += cf_cost_per_demand  # existing CF = $0
 
     # --- Storage (annualized capacity costs; TX=0, baked into regional CAPEX) ---
-    # coeff = bat_pct/100 is energy capacity as fraction of avg hourly demand.
-    # price = annualized fixed cost of that capacity, normalized to demand.
+    # coeff = bat_pct/100 is energy capacity as fraction of annual demand.
+    # price = annualized fixed cost per % of annual demand.
     bat4_price = LCOE_TABLES['battery'][batt_name][iso]
     bat8_price = LCOE_TABLES['battery8'][batt_name][iso]
     ldes_price = LCOE_TABLES['ldes'][ldes_name][iso]
@@ -765,12 +769,13 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
         _new_installed = _new_avg_mw / _cf_r
         new_clean_peak_mw += _new_installed * _cc_r
 
-    # Storage provides additional peak capacity (keep existing formula for storage)
+    # Storage peak capacity: convert energy fraction (% of annual demand) → MW via duration.
+    # energy_MWh = pct/100 * demand_mwh; power_MW = energy_MWh / duration_hr; peak = power * cc
     new_clean_peak_mw += (
-        bat_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery'] +
-        bat8_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery8'] +
-        ldes_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes'] +
-        h2_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['h2']
+        bat_pct / 100.0 * demand_mwh / 4.0 * PEAK_CAPACITY_CREDITS['battery'] +
+        bat8_pct / 100.0 * demand_mwh / 8.0 * PEAK_CAPACITY_CREDITS['battery8'] +
+        ldes_pct / 100.0 * demand_mwh / 100.0 * PEAK_CAPACITY_CREDITS['ldes'] +
+        h2_pct / 100.0 * demand_mwh / 1000.0 * PEAK_CAPACITY_CREDITS['h2']
     )
 
     # Total system clean peak = existing (constant) + new-build
@@ -1016,12 +1021,12 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
         _new_installed = _new_avg_mw / _cf_r
         new_clean_peak_mw += _new_installed * _cc_r
 
-    # Storage peak capacity (keep existing formula for storage)
+    # Storage peak capacity: energy fraction (% annual demand) → MW via duration
     new_clean_peak_mw += (
-        bat_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery'] +
-        bat8_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery8'] +
-        ldes_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes'] +
-        h2_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['h2']
+        bat_pct / 100.0 * demand_mwh / 4.0 * PEAK_CAPACITY_CREDITS['battery'] +
+        bat8_pct / 100.0 * demand_mwh / 8.0 * PEAK_CAPACITY_CREDITS['battery8'] +
+        ldes_pct / 100.0 * demand_mwh / 100.0 * PEAK_CAPACITY_CREDITS['ldes'] +
+        h2_pct / 100.0 * demand_mwh / 1000.0 * PEAK_CAPACITY_CREDITS['h2']
     )
 
     # Total system clean peak = existing (constant) + new-build
