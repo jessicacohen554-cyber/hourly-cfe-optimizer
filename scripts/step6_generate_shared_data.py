@@ -1290,7 +1290,9 @@ lines.append("    CAISO:  { Low: 0.014, Medium: 0.019, High: 0.025, label: 'CA e
 lines.append("    ERCOT:  { Low: 0.020, Medium: 0.035, High: 0.055, label: 'TX data centers + population' },")
 lines.append("    PJM:    { Low: 0.015, Medium: 0.024, High: 0.036, label: 'Data center corridor' },")
 lines.append("    NYISO:  { Low: 0.013, Medium: 0.020, High: 0.044, label: 'CLCPA mandate-driven' },")
-lines.append("    NEISO:  { Low: 0.009, Medium: 0.018, High: 0.029, label: 'Heating electrification' }")
+lines.append("    NEISO:  { Low: 0.009, Medium: 0.018, High: 0.029, label: 'Heating electrification' },")
+lines.append("    MISO:   { Low: 0.012, Medium: 0.022, High: 0.038, label: 'Industrial + data center growth' },")
+lines.append("    SPP:    { Low: 0.010, Medium: 0.018, High: 0.030, label: 'Wind corridor + industrial' }")
 lines.append('};')
 lines.append('')
 
@@ -1428,7 +1430,7 @@ print("\nComputing demand growth counterfactual MAC...")
 # Regional demand (TWh) and growth rates (from step3)
 REGIONAL_DEMAND_TWH_PY = {
     'CAISO': 224.039, 'ERCOT': 488.020, 'PJM': 843.331,
-    'NYISO': 151.599, 'NEISO': 115.336,
+    'NYISO': 151.599, 'NEISO': 115.336, 'MISO': 660.0, 'SPP': 296.0,
 }
 DEMAND_GROWTH_RATES_PY = {
     'CAISO':  {'Low': 0.014, 'Medium': 0.019, 'High': 0.025},
@@ -1436,6 +1438,8 @@ DEMAND_GROWTH_RATES_PY = {
     'PJM':    {'Low': 0.015, 'Medium': 0.024, 'High': 0.036},
     'NYISO':  {'Low': 0.013, 'Medium': 0.020, 'High': 0.044},
     'NEISO':  {'Low': 0.009, 'Medium': 0.018, 'High': 0.029},
+    'MISO':   {'Low': 0.012, 'Medium': 0.022, 'High': 0.038},
+    'SPP':    {'Low': 0.010, 'Medium': 0.018, 'High': 0.030},
 }
 NEW_GAS_EMISSION_RATE = 0.35  # tCO₂/MWh (new CCGT counterfactual)
 
