@@ -330,7 +330,7 @@ let DATA = null;
 
 async function loadData() {
     try {
-        const resp = await fetch('../data/step8-wrights-law/wrights_law_curves.json');
+        const resp = await fetch('js/wrights_law_data.json');
         DATA = await resp.json();
     } catch(e) {
         console.warn('Failed to fetch JSON, using embedded fallback');
