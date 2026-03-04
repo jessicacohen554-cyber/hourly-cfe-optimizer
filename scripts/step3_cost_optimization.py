@@ -51,6 +51,7 @@ import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.parquet as pq
+from pipeline_config import STORAGE_REVENUE_CREDITS
 from pathlib import Path
 from itertools import chain, product
 from functools import lru_cache
@@ -732,13 +733,14 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     cf_cost_per_demand = cf_total_new_cost / demand
     total_cost += cf_cost_per_demand  # existing CF = $0
 
-    # --- Storage (annualized capacity costs; TX=0, baked into regional CAPEX) ---
+    # --- Storage (annualized capacity costs net of revenue credits) ---
     # coeff = bat_pct/100 is energy capacity as fraction of annual demand.
-    # price = annualized fixed cost per % of annual demand.
-    bat4_price = LCOE_TABLES['battery'][batt_name][iso]
-    bat8_price = LCOE_TABLES['battery8'][batt_name][iso]
-    ldes_price = LCOE_TABLES['ldes'][ldes_name][iso]
-    h2_price = LCOE_TABLES['h2'][ldes_name][iso]
+    # price = annualized fixed cost per % of annual demand, minus revenue credit
+    # (capacity market + arbitrage + ancillary, capped so net ≥ 0).
+    bat4_price = max(0, LCOE_TABLES['battery'][batt_name][iso] - STORAGE_REVENUE_CREDITS['battery'][iso])
+    bat8_price = max(0, LCOE_TABLES['battery8'][batt_name][iso] - STORAGE_REVENUE_CREDITS['battery8'][iso])
+    ldes_price = max(0, LCOE_TABLES['ldes'][ldes_name][iso] - STORAGE_REVENUE_CREDITS['ldes'][iso])
+    h2_price = max(0, LCOE_TABLES['h2'][ldes_name][iso] - STORAGE_REVENUE_CREDITS['h2'][iso])
     total_cost += (bat_pct / 100.0 * bat4_price +
                    bat8_pct / 100.0 * bat8_price +
                    ldes_pct / 100.0 * ldes_price +
@@ -1131,10 +1133,10 @@ def get_scenario_prices(iso, sens):
         UPRATE_LCOE[firm_lev],
         geo_price,
         remaining_price,
-        LCOE_TABLES['battery'][batt_name][iso] + get_tx('battery', tx_name, iso),
-        LCOE_TABLES['battery8'][batt_name][iso] + get_tx('battery8', tx_name, iso),
-        LCOE_TABLES['ldes'][ldes_name][iso] + get_tx('ldes', tx_name, iso),
-        LCOE_TABLES['h2'][ldes_name][iso] + get_tx('h2', tx_name, iso),
+        max(0, LCOE_TABLES['battery'][batt_name][iso] + get_tx('battery', tx_name, iso) - STORAGE_REVENUE_CREDITS['battery'][iso]),
+        max(0, LCOE_TABLES['battery8'][batt_name][iso] + get_tx('battery8', tx_name, iso) - STORAGE_REVENUE_CREDITS['battery8'][iso]),
+        max(0, LCOE_TABLES['ldes'][ldes_name][iso] + get_tx('ldes', tx_name, iso) - STORAGE_REVENUE_CREDITS['ldes'][iso]),
+        max(0, LCOE_TABLES['h2'][ldes_name][iso] + get_tx('h2', tx_name, iso) - STORAGE_REVENUE_CREDITS['h2'][iso]),
     ], dtype=np.float64)
 
     return prices, wholesale, nuclear_price, ccs_price
@@ -1429,14 +1431,19 @@ def precompute_all_prices(iso, all_combos, target_year=None):
         price_matrix[j, _COL_REMAINING] = remaining_price
         # Battery prices: year-adjusted if learning curves active, else static.
         # TX is always 0 for storage (baked into regional capacity costs).
+        # Revenue credits subtracted (capacity market + arbitrage + ancillary), floored at 0.
+        _rc_bat4 = STORAGE_REVENUE_CREDITS['battery'][iso]
+        _rc_bat8 = STORAGE_REVENUE_CREDITS['battery8'][iso]
+        _rc_ldes = STORAGE_REVENUE_CREDITS['ldes'][iso]
+        _rc_h2 = STORAGE_REVENUE_CREDITS['h2'][iso]
         if _use_learning:
-            price_matrix[j, _COL_BAT4] = _bat4_yr[batt_name]
-            price_matrix[j, _COL_BAT8] = _bat8_yr[batt_name]
+            price_matrix[j, _COL_BAT4] = max(0, _bat4_yr[batt_name] - _rc_bat4)
+            price_matrix[j, _COL_BAT8] = max(0, _bat8_yr[batt_name] - _rc_bat8)
         else:
-            price_matrix[j, _COL_BAT4] = _bat_lcoe_iso[batt_name]
-            price_matrix[j, _COL_BAT8] = _bat8_lcoe_iso[batt_name]
-        price_matrix[j, _COL_LDES] = ldes_price
-        price_matrix[j, _COL_H2] = h2_price
+            price_matrix[j, _COL_BAT4] = max(0, _bat_lcoe_iso[batt_name] - _rc_bat4)
+            price_matrix[j, _COL_BAT8] = max(0, _bat8_lcoe_iso[batt_name] - _rc_bat8)
+        price_matrix[j, _COL_LDES] = max(0, ldes_price - _rc_ldes)
+        price_matrix[j, _COL_H2] = max(0, h2_price - _rc_h2)
         wholesale_arr[j] = wholesale
         nuclear_arr[j] = nuclear_price
         ccs_arr[j] = ccs_price
