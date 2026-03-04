@@ -1002,6 +1002,16 @@ p {
     border-radius: 3px;
     flex-shrink: 0;
 }
+
+/* ---- Swatch types for chart legends (shared across all pages) ---- */
+.chart-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; justify-content: center; padding: 8px 0; }
+.chart-legend-item { display: inline-flex; align-items: center; gap: 5px; font-size: 0.72rem; color: rgba(0,0,0,0.75); white-space: nowrap; }
+.swatch-line { width: 18px; height: 3px; border-radius: 1.5px; flex-shrink: 0; }
+.swatch-band { width: 18px; height: 10px; border-radius: 2px; border: 1px solid rgba(0,0,0,0.1); flex-shrink: 0; }
+.swatch-dashed { width: 18px; height: 0; border-top: 2px dashed; flex-shrink: 0; }
+.swatch-dot-line { width: 18px; height: 3px; border-radius: 1.5px; position: relative; flex-shrink: 0; }
+.swatch-dot-line::after { content: ''; position: absolute; width: 5px; height: 5px; border-radius: 50%; top: -1px; left: 6px; background: inherit; }
+.swatch-hatch { width: 18px; height: 10px; border-radius: 2px; flex-shrink: 0; background: repeating-linear-gradient(45deg, transparent, transparent 2px, currentColor 2px, currentColor 3px); opacity: 0.5; }
 .legend-label {
     font-weight: 600;
 }

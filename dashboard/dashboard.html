@@ -576,23 +576,7 @@ body {
         </div>
     </div>
 
-    <!-- COST BREAKDOWN -->
-    <div class="charts-row" style="grid-template-columns:1fr;">
-        <div class="cost-panel" id="costPanel">
-            <h3>What You Pay: Cost Breakdown by Resource</h3>
-            <div id="costContent"></div>
-        </div>
-    </div>
-
-    <!-- PEAK CAPACITY ROW -->
-    <div class="peak-cost-row" style="grid-template-columns:1fr;">
-        <div class="peak-capacity-panel" id="peakCapacityPanel">
-            <h3>Peak Hour: How Much Backup Capacity is Needed</h3>
-            <div class="peak-capacity-visual" id="peakCapacityVisual">
-                <!-- Populated by JS -->
-            </div>
-        </div>
-    </div>
+    <!-- Cost table and peak capacity panels removed — data shown in metric tiles -->
 </div>
 
 <!-- ════════════════════════════════════════════════════════════════════
@@ -870,7 +854,9 @@ let currentTargetMode = 'interim'; // 'interim' or 'longterm'
 // ---- Helpers ----
 function formatNum(n, decimals = 0) {
     if (n == null || isNaN(n)) return '--';
-    return Number(n).toFixed(decimals);
+    // Round to avoid float32 precision artifacts (e.g. 97.50000762939453 → 97.5)
+    const factor = Math.pow(10, decimals);
+    return (Math.round(Number(n) * factor) / factor).toFixed(decimals);
 }
 
 function formatPct(n, decimals = 0) {
@@ -879,7 +865,7 @@ function formatPct(n, decimals = 0) {
 
 function formatCommas(n) {
     if (n == null) return '--';
-    return Number(n).toLocaleString('en-US');
+    return Math.round(Number(n)).toLocaleString('en-US');
 }
 
 // Create a striped canvas pattern for surplus
@@ -1786,11 +1772,11 @@ function updateRegionContext(region) {
 // ---- Metrics ----
 function updateMetrics(region, entry) {
     const iso = document.getElementById('regionSelect').value;
-    document.getElementById('metricMatch').textContent = formatPct(entry.hourly_match_score);
-    document.getElementById('metricMatchSub').textContent = 'of hours matched';
+    document.getElementById('metricMatch').textContent = formatPct(entry.hourly_match_score, 1);
+    document.getElementById('metricMatchSub').textContent = 'hourly demand coverage';
 
-    document.getElementById('metricProcure').textContent = entry.procurement_pct + '%';
-    const overAmt = entry.procurement_pct - 100;
+    document.getElementById('metricProcure').textContent = formatPct(Math.round(entry.procurement_pct));
+    const overAmt = Math.round(entry.procurement_pct - 100);
     document.getElementById('metricProcureSub').textContent =
         overAmt > 0 ? `+${overAmt}% above demand` : 'at demand level';
 
@@ -2231,20 +2217,54 @@ function updateCompressedDay(entry, region, iso) {
         });
     }
 
-    // Total Generation line — shows total clean energy output (before curtailment)
-    // This is the sum of all primary resource generation (matched + surplus, pre-storage).
-    // Curtailment (net of storage charging) is shown as a separate hatched layer above.
-    const primaryMatchedTotal = hours.map((_, i) =>
-        matchedNuclear[i] + (hasGeo ? matchedGeothermal[i] : 0) + matchedCCS[i] +
-        matchedHydro[i] + matchedWind[i] + matchedSolar[i]
-    );
-    const totalGenLine = primaryMatchedTotal.map((pm, i) => pm + grossSurplusPerHour[i]);
-    // Keep actual demand for gap/tooltip calculations (gap = unmet demand, not generation)
+    // Demand line — actual electricity demand (navy dashed)
     const demandLocal = rotateToLocal(cd.demand).map(v => toMWh(v));
+
+    // Fossil fill: split gap (demand - matched) into coal / oil / gas layers
+    // using remaining fossil fleet proportions from CO2 dispatch model
+    const fossilGap = hours.map((_, i) => Math.max(0, demandLocal[i] - matchedTotal[i]));
+    let coalFrac = 0, oilFrac = 0, gasFrac = 1;
+    if (typeof CO2_DISPATCH_DATA !== 'undefined' && CO2_DISPATCH_DATA[iso] && cdThreshIdx >= 0) {
+        const co2e = CO2_DISPATCH_DATA[iso][cdThreshIdx];
+        if (co2e) {
+            const totalRem = (co2e.coal_rem || 0) + (co2e.oil_rem || 0) + (co2e.gas_rem || 0);
+            if (totalRem > 0) {
+                coalFrac = co2e.coal_rem / totalRem;
+                oilFrac = co2e.oil_rem / totalRem;
+                gasFrac = co2e.gas_rem / totalRem;
+            }
+        }
+    }
+    const hasGapFill = fossilGap.some(v => v > 100);
+    if (hasGapFill) {
+        const coalStack = matchedTotal.map((m, i) => m + fossilGap[i] * coalFrac);
+        const oilStack = coalStack.map((c, i) => c + fossilGap[i] * oilFrac);
+        const gasStack = oilStack.map((o, i) => o + fossilGap[i] * gasFrac);
+        if (coalFrac > 0.001) {
+            datasets.push({
+                ...dsBase, label: 'Coal', data: coalStack,
+                backgroundColor: 'rgba(55,65,81,0.50)', borderColor: '#374151',
+                fill: '-1', order: 4, _fossilFuel: true
+            });
+        }
+        if (oilFrac > 0.001) {
+            datasets.push({
+                ...dsBase, label: 'Oil', data: oilStack,
+                backgroundColor: 'rgba(120,113,108,0.45)', borderColor: '#78716C',
+                fill: '-1', order: 3.5, _fossilFuel: true
+            });
+        }
+        datasets.push({
+            ...dsBase, label: 'Gas', data: gasStack,
+            backgroundColor: 'rgba(107,114,128,0.35)', borderColor: '#6B7280',
+            fill: '-1', order: 3, _fossilFuel: true
+        });
+    }
+
     const demandDsIdx = datasets.length;
     datasets.push({
-        label: 'Total Generation',
-        data: totalGenLine,
+        label: 'Demand',
+        data: demandLocal,
         backgroundColor: 'transparent',
         borderColor: '#1A2744',
         borderWidth: 2.5,
@@ -2378,9 +2398,22 @@ function updateCompressedDay(entry, region, iso) {
                             boxWidth: 10,
                             boxHeight: 10,
                             filter: function(item) {
-                                // Hide gap, charging, and curtailed from legend to keep it compact
+                                // Hide gap, charging, and curtailed from legend
                                 const t = item.text;
                                 return t !== 'Unmatched (Gap)' && !t.includes('Charge') && !t.includes('Curtailed');
+                            },
+                            generateLabels: function(chart) {
+                                const labels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                                return labels.map(l => {
+                                    // Show demand as a dashed line in legend
+                                    if (l.text === 'Demand') {
+                                        l.pointStyle = 'line';
+                                        l.lineDash = [4, 3];
+                                        l.strokeStyle = '#1A2744';
+                                        l.fillStyle = 'transparent';
+                                    }
+                                    return l;
+                                });
                             }
                         }
                     },
@@ -2409,6 +2442,16 @@ function updateCompressedDay(entry, region, iso) {
                                     return ` Demand: ${fmtMWh(context.parsed.y)}`;
                                 }
                                 if (ds.label === 'Unmatched (Gap)') return null;
+                                // Fossil fuel tooltip: show individual contribution
+                                if (ds._fossilFuel) {
+                                    const idx = context.dataIndex;
+                                    const dsIdx = context.datasetIndex;
+                                    const val = context.parsed.y;
+                                    const prev = dsIdx > 0 ? compressedDayChart.data.datasets[dsIdx - 1].data[idx] : 0;
+                                    const contrib = val - prev;
+                                    if (contrib < 1) return null;
+                                    return ` ${ds.label}: ${fmtMWh(contrib)}`;
+                                }
                                 // Storage charge (negative) — show specific label
                                 if (ds._isCharge) {
                                     const idx = context.dataIndex;
@@ -4284,16 +4327,20 @@ function updateHeatmapTiles(region, entry, iso) {
     // CO2 abated: higher = green
     applyHeatmap('tileCO2', getCO2Abated(entry, iso), minCO2, maxCO2, false);
 
-    // Abatement cost tile
+    // Abatement cost tile — MAC = total incremental cost / CO2 abated
     const co2Tons = getCO2Abated(entry, iso);
     const abateCostEl = document.getElementById('metricAbateCost');
     const abateCostSub = document.getElementById('metricAbateCostSub');
     if (abateCostEl && co2Tons > 0 && adj.newIncremental != null) {
+        // Total incremental spend = $/useful_MWh × matched clean MWh
+        const matchScore = entry.hourly_match_score || 0;
         const annDemandMWh = region.annual_demand_mwh || 1;
-        const avgAbateCost = (adj.newIncremental * annDemandMWh) / co2Tons;
-        abateCostEl.innerHTML = '$' + formatNum(avgAbateCost) + '/mtCO<sub>2</sub>';
+        const matchedMWh = (matchScore / 100) * annDemandMWh;
+        const totalIncrCost = adj.newIncremental * matchedMWh;
+        const avgAbateCost = totalIncrCost / co2Tons;
+        abateCostEl.innerHTML = '$' + formatNum(avgAbateCost) + '/tCO<sub>2</sub>';
 
-        // Marginal abatement cost: approximate from neighboring threshold
+        // Marginal abatement cost: delta from neighboring threshold
         const currentThresh = parseFloat(findClosestThreshold(region, document.getElementById('thresholdSelect').value));
         const sortedThresholds = Object.keys(region.thresholds).map(Number).sort((a, b) => a - b);
         const idx = sortedThresholds.indexOf(currentThresh);
@@ -4303,8 +4350,10 @@ function updateHeatmapTiles(region, entry, iso) {
             const prevEntry = resolveEntry(region, String(prevThresh));
             if (prevEntry) {
                 const prevAdj = cfAdjust(prevEntry, iso);
+                const prevMatchScore = prevEntry.hourly_match_score || 0;
+                const prevMatchedMWh = (prevMatchScore / 100) * annDemandMWh;
                 const prevCO2 = getCO2Abated(prevEntry, iso);
-                const deltaCost = (adj.newIncremental - prevAdj.newIncremental) * annDemandMWh;
+                const deltaCost = (adj.newIncremental * matchedMWh) - (prevAdj.newIncremental * prevMatchedMWh);
                 const deltaCO2 = co2Tons - prevCO2;
                 if (deltaCO2 > 0) {
                     marginalCost = deltaCost / deltaCO2;
@@ -4312,15 +4361,15 @@ function updateHeatmapTiles(region, entry, iso) {
             }
         }
         if (marginalCost != null) {
-            abateCostSub.innerHTML = `$${formatNum(marginalCost)}/mtCO<sub>2</sub> marginal`;
+            abateCostSub.innerHTML = `$${formatNum(marginalCost)}/tCO<sub>2</sub> marginal`;
         } else {
-            abateCostSub.innerHTML = 'avg MAC ($/mtCO<sub>2</sub>)';
+            abateCostSub.innerHTML = 'avg $/tCO<sub>2</sub>';
         }
 
         applyHeatmap('tileAbateCost', avgAbateCost, minAbateCost, maxAbateCost, true);
     } else {
         if (abateCostEl) abateCostEl.textContent = '--';
-        if (abateCostSub) abateCostSub.innerHTML = '$/mtCO<sub>2</sub>';
+        if (abateCostSub) abateCostSub.innerHTML = '$/tCO<sub>2</sub>';
         const tile = document.getElementById('tileAbateCost');
         if (tile) { tile.classList.remove(...heatmapClasses, 'tile-negative'); }
     }
@@ -4495,24 +4544,38 @@ function getUnifiedCosts(entry) {
     };
 }
 
-// CCGT emission rate: 350 kg CO2/MWh = 0.350 metric tons CO2/MWh
-// Assumes all displaced generation would have been gas CCGT
+// Fallback CCGT emission rate (used only when dispatch CO2 data unavailable)
 const CCGT_CO2_RATE = 0.350; // metric tons CO2 per MWh
 
-// Calculate CO2 abated (metric tons): matched clean MWh × CCGT emission rate
-// co2_abated_mt = (match_score/100 × annual_demand_mwh) × 0.350
-function computeCO2Abated(entry, iso) {
-    if (!entry) return 0;
+// Get CO2 abated in metric tons — uses dispatch model data when available
+function getCO2Abated(entry, iso) {
+    if (!entry || !iso) return 0;
+    // Try CO2_DISPATCH_DATA first (from step5_compute_co2.py dispatch-stack model)
+    if (typeof CO2_DISPATCH_DATA !== 'undefined' && CO2_DISPATCH_DATA[iso]) {
+        const threshVal = parseFloat(findClosestThreshold(
+            DATA?.results?.[iso], document.getElementById('thresholdSelect')?.value));
+        const idx = (typeof THRESHOLDS !== 'undefined') ? THRESHOLDS.indexOf(threshVal) : -1;
+        if (idx >= 0 && CO2_DISPATCH_DATA[iso][idx]) {
+            return CO2_DISPATCH_DATA[iso][idx].abated_mt * 1e6; // Mt → tons
+        }
+    }
+    // Fallback: match score × CCGT emission rate
     const matchScore = entry.hourly_match_score || 0;
     const annualDemand = (typeof REGIONAL_DEMAND_TWH !== 'undefined' ? REGIONAL_DEMAND_TWH[iso] : 0) * 1e6;
     return (matchScore / 100) * annualDemand * CCGT_CO2_RATE;
 }
 
-// Get CO2 abated in metric tons — always recalculate from match score × CCGT rate
-function getCO2Abated(entry, iso) {
-    if (!entry) return 0;
-    if (iso) return computeCO2Abated(entry, iso);
-    return 0;
+// Get CO2 emission rate (tCO2/MWh) for current threshold — dispatch model or fallback
+function getCO2Rate(iso) {
+    if (typeof CO2_DISPATCH_DATA !== 'undefined' && CO2_DISPATCH_DATA[iso]) {
+        const threshVal = parseFloat(findClosestThreshold(
+            DATA?.results?.[iso], document.getElementById('thresholdSelect')?.value));
+        const idx = (typeof THRESHOLDS !== 'undefined') ? THRESHOLDS.indexOf(threshVal) : -1;
+        if (idx >= 0 && CO2_DISPATCH_DATA[iso][idx]) {
+            return CO2_DISPATCH_DATA[iso][idx].rate;
+        }
+    }
+    return CCGT_CO2_RATE;
 }
 
 // Resolve scenario from threshold data using current sensitivity toggles
