@@ -34,7 +34,7 @@ Steps 6–8 depend on Step 5 outputs. Step 9 runs last.
 | 5A | `step5a-compute-co2.yml` | **Step 5A: Compute CO₂** | Dispatch-stack CO₂ emissions. **Run before Step 6.** | `step5a_compute_co2.py` |
 | 5B | `step5b-compute-lmp.yml` | **Step 5B: Compute LMP** | Synthetic 8760-hour LMP per ISO × threshold × fuel level. | `step5b_compute_lmp_prices.py` |
 | 5C | `step5c-dashboard-update.yml` | **Step 5C: Dashboard Day Profiles** | 24-hour representative day profiles per unique mix. | `step5c_compress_day_profiles.py` |
-| 5CD | `step5cd-supplemental.yml` | **Step 5C+D: Supplemental Analytics** | Compressed day + consequential queue (parallel). | `step5c_compress_day_profiles.py`, `step5d_deployment_queue.py` |
+| 5D | `step5d-consequential-queue.yml` | **Step 5D: Consequential Deployment Queue** | Cross-regional deployment path under consequential accounting. | `step5d_deployment_queue.py` |
 | 5E | `step5e-track-analysis.yml` | **Step 5E: Track Analysis** | Export tracks + track cost envelopes (P10/P50/P90). | `step5e_export_tracks.py`, `step6c_analyze_tracks.py` |
 | 5F | `step5f-storage-analysis.yml` | **Step 5F: Storage Analysis** | Battery/LDES utilization, dispatch patterns, capacity factors. | `step5f_analyze_storage.py` |
 | 6 | `step6-derived-analytics.yml` | **Step 6: Derived Analytics** | MAC stats + Optimal targets. | `step6a_compute_mac_stats.py`, `step6b_compute_optimal_targets.py` |
