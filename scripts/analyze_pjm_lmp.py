@@ -20,7 +20,7 @@ INPUT_PATH = "/home/user/hourly-cfe-optimizer/data/step5-post-processing/lmp/PJM
 OUTPUT_PATH = "/home/user/hourly-cfe-optimizer/data/step5-post-processing/lmp/pjm_lmp_trends.json"
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from step3_cost_optimization import OUTPUT_THRESHOLDS as THRESHOLDS
+from pipeline_config import OUTPUT_THRESHOLDS as THRESHOLDS
 
 TOGGLE_NAMES = {
     "renewable_gen": "Renewable Generation Cost",

@@ -45,7 +45,7 @@ SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, SCRIPT_DIR)
 sys.path.insert(0, os.path.join(SCRIPT_DIR, 'scripts'))
 
-from step3_cost_optimization import OUTPUT_THRESHOLDS as _ALL_THRESHOLDS
+from pipeline_config import OUTPUT_THRESHOLDS as _ALL_THRESHOLDS
 
 from dispatch_utils import (
     H, ISOS, RESOURCE_TYPES, CCS_RESIDUAL_EMISSION_RATE,
