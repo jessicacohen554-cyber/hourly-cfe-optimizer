@@ -226,6 +226,7 @@
                     items: [
                         { label: 'Wholesale Prices', href: 'lmp_trends.html', desc: 'Synthetic LMP analysis' },
                         { label: 'Fossil Fuel Analysis', href: 'fossil_fuel_deepdive.html', desc: 'Gas, coal & oil dynamics' },
+                        { label: 'Building Blocks', href: 'building_blocks.html', desc: 'Resource shapes & supply curves' },
                         { label: 'Storage Analysis', href: 'storage_analysis.html', desc: 'Battery & LDES dispatch' },
                         { label: 'Fleet Survival', href: 'fleet_survival.html', desc: 'Generator fleet transitions' }
                     ]
