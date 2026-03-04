@@ -252,18 +252,20 @@ print("\n" + "=" * 70)
 print("4. COST COMPARISON (Low VRE / Low TX / Low Battery / High Firm)")
 print("=" * 70)
 
-# Import updated LCOE tables
+# Import updated LCOE tables + revenue credits
 from step3_cost_optimization import LCOE_TABLES, WHOLESALE_PRICES, FUEL_ADJUSTMENTS
+from pipeline_config import STORAGE_REVENUE_CREDITS
 
 iso = 'CAISO'
 # Low VRE, Low TX, Low Battery, High Clean Firm
 sol_price = LCOE_TABLES['solar']['Low'][iso] + 1  # Low TX solar
 wnd_price = LCOE_TABLES['wind']['Low'][iso] + 4   # Low TX wind
 osw_price = LCOE_TABLES['offshore_wind']['Low'][iso] + 10  # Low TX OSW
-bat4_price = LCOE_TABLES['battery']['Low'][iso]
-bat8_price = LCOE_TABLES['battery8']['Low'][iso]
-ldes_price = LCOE_TABLES['ldes']['Low'][iso]
-h2_price = 17344.80  # Low H2
+# Net storage prices: gross LCOE minus revenue credit, floored at 0
+bat4_price = max(0, LCOE_TABLES['battery']['Low'][iso] - STORAGE_REVENUE_CREDITS['battery'][iso])
+bat8_price = max(0, LCOE_TABLES['battery8']['Low'][iso] - STORAGE_REVENUE_CREDITS['battery8'][iso])
+ldes_price = max(0, LCOE_TABLES['ldes']['Low'][iso] - STORAGE_REVENUE_CREDITS['ldes'][iso])
+h2_price = max(0, 17344.80 - STORAGE_REVENUE_CREDITS['h2'][iso])  # Low H2
 
 # High clean firm = expensive nuclear/CCS
 uprate_price = 40  # High uprate

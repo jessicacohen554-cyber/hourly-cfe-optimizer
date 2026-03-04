@@ -4643,53 +4643,59 @@ Step 1D.2 addresses gap (1) with research-informed 2050 capacity caps. The Econo
 **Dispatch Cache**:
 - Separate cache for 1D.2 mixes (higher storage penetration = different dispatch profiles)
 
-### §16.5 Economic Assessment Model
+### §16.5 Storage Revenue Credit (Implemented)
 
-**Script**: `scripts/step3_economic_assessment.py`
-- Post-processing on Step 3 output (reads cost parquets + LMP summary stats)
-- Applies to ALL tracks (1, 2, 3) — not a separate track
-- Summary-stat approximation (V1); endogenous pricing (V2, see §16.9)
+**Approach**: Simple revenue credit subtracted from gross storage LCOE in all cost evaluation paths. Not a separate script — directly embedded in `step3_cost_optimization.py` and `scenario_common.py` cost functions.
 
-**Revenue streams (per storage type, per mix, per threshold × ISO):**
+**Decision**: Chose Option 1 (simple credit) over Option 2 (LMP feedback loop) for directional correctness with minimal complexity. Revenue credit captures the key economic reality that storage earns capacity, arbitrage, and ancillary revenue that offsets gross LCOE.
 
-1. **Capacity market revenue**: `capacity_MW × capacity_credit × capacity_price_per_kW_yr × 1000`
-   - `capacity_MW` = `dispatch_energy / (cycles_per_year × duration × RTE)`
-   - `capacity_credit` from `PEAK_CAPACITY_CREDITS` (battery=0.95, LDES=0.90, H2=0.85)
-   - `capacity_price_per_kW_yr` per ISO (PJM=$50, NYISO=$85, ERCOT/SPP=$0)
+**Formula**:
+```
+net_storage_cost = max(0, gross_LCOE - revenue_credit)
 
-2. **Energy arbitrage revenue**: `cycles × duration × MW × max(peak − offpeak/RTE, 0)`
-   - Correct formula accounts for round-trip energy losses in charging cost
-   - Uses peak/offpeak LMP from `step5_compute_lmp_prices.py`
-   - LDES: 50% capture rate (weekly cycles, less price predictability)
-   - H2: 30% capture rate (seasonal, minimal arbitrage value)
-   - Clamped to zero — negative profit means don't cycle
+revenue_credit = capacity_payment + (arbitrage + ancillary) × stacking_factor
+credit_in_lcoe_units = 1000 × revenue_$/kW-yr ÷ duration_hr
+```
 
-3. **Ancillary services revenue**: `MW × rate × available_hours`
-   - Available hours = `max(8760 − cycling_hours, 0)` — prevents double-counting with arbitrage
-   - Regulation allocated first (30% of available, cap 2000 hrs), spinning fills remainder (cap 4000 hrs)
-   - Battery: regulation + spinning. LDES: spinning only. H2: 50% availability.
+**Parameters**:
+- **Revenue stacking factor**: 0.70 — battery can't simultaneously do arbitrage and ancillary in the same hour; capacity is always earned (availability-based)
+- **Net LCOE floor**: `max(0, ...)` prevents negative storage costs
+- **Ancillary product eligibility**: Battery → regulation (fast response); LDES/H2 → spinning reserve
+- **Ancillary hours**: Regulation 2,000 hrs/yr (~23%); Spinning 4,000 hrs/yr (~46%)
 
-4. **Degradation cost**: `(cycles/yr ÷ cycle_life) × replacement_fraction × LCOE × energy`
-   - Battery 4hr: 365 cycles/yr, 5000 cycle life, 40% replacement
-   - Battery 8hr: 365 cycles/yr, 4000 cycle life, 45% replacement
-   - LDES: 52 cycles/yr, 20000 cycle life, 15% replacement
-   - H2: 12 cycles/yr, 50000 cycle life, 25% replacement (electrolyzer stack)
+**Revenue sources ($/kW-yr) by ISO**:
+
+| Source | CAISO | ERCOT | PJM | NYISO | NEISO | MISO | SPP |
+|--------|-------|-------|-----|-------|-------|------|-----|
+| Capacity market | 75 | 0 | 120 | 85 | 55 | 25 | 0 |
+| Battery 4hr arbitrage | 50 | 50 | 45 | 55 | 35 | 30 | 25 |
+| Battery 8hr arbitrage | 43 | 43 | 38 | 47 | 30 | 26 | 21 |
+| LDES arbitrage | 15 | 20 | 12 | 14 | 10 | 8 | 7 |
+| H2 arbitrage | 5 | 6 | 4 | 5 | 3 | 3 | 2 |
+| Regulation rate ($/MW-hr) | 12 | 15 | 18 | 14 | 10 | 8 | 6 |
+| Spinning rate ($/MW-hr) | 5 | 8 | 6 | 5 | 4 | 3 | 3 |
+
+**Sources**: CAISO/ERCOT arbitrage compressed vs. 2022-23 peaks — 2024-25 data shows $30-55/MWh avg spread (CAISO duck curve moderated by 10GW+ installed storage). PJM capacity from RPM 2025-2028 BRA clearing ($98-269/MW-day). Ancillary rates from ISO tariff schedules.
+
+**Pre-computed credits** (LCOE-equivalent units, same as LCOE_TABLES storage):
+- `STORAGE_REVENUE_CREDITS` dict in `pipeline_config.py`, computed by `compute_storage_revenue_credit()`
+- Pre-computed at import time for all 4 storage types × 7 ISOs
+
+**Impact on cost evaluation** (example — Medium battery, CAISO):
+- Gross LCOE: 41,610 → Net LCOE: ~9,910 (76% reduction)
+- PJM net battery cost goes to $0 (high capacity payments exceed gross LCOE at Low costs)
+- LDES: 8-18% reduction. H2: <1% reduction (seasonal cycling, minimal revenue streams)
+
+**Files modified**:
+- `pipeline_config.py`: Added `STORAGE_ARBITRAGE_REVENUE`, `REVENUE_STACKING_FACTOR`, `STORAGE_ANCILLARY_PRODUCT`, `compute_storage_revenue_credit()`, `STORAGE_REVENUE_CREDITS`
+- `step3_cost_optimization.py`: Revenue credit subtracted in 3 code paths — `compute_costs_vectorized`, `get_scenario_prices`, and demand growth sweep price matrix
+- `scenario_common.py`: Revenue credit subtracted in 4 code paths — helper function, `compute_mix_cost`, `_get_excess_lcoe`, and `_precompute_cost_params`
 
 **Known limitations (V1)**:
-- Revenue streams computed independently, not co-optimized hour-by-hour
-- Storage deployment doesn't affect prices (no spread compression feedback)
-- Capacity market prices are static (no ELCC saturation with penetration)
-- References: NREL Turan & Cole (2024), Lazard LCOS v10.0, EPRI StorageVET
-
-**Output**: `data/step3-economic-parquets/` — augments Step 3 results with:
-- `storage_capacity_rev_per_mwh` — capacity market offset
-- `storage_arbitrage_rev_per_mwh` — energy arbitrage offset
-- `storage_ancillary_rev_per_mwh` — ancillary services offset
-- `storage_degradation_cost_per_mwh` — degradation/replacement adder
-- `storage_net_revenue_per_mwh` — net of all above
-- `economic_effective_cost` — `effective_cost - storage_net_revenue_per_mwh`
-- `economic_total_cost` — `total_cost - storage_net_revenue × demand`
-- `storage_battery4_mw`, `storage_battery8_mw`, `storage_ldes_mw`, `storage_h2_mw`
+- Revenue streams are static per ISO (no spread compression with storage deployment)
+- No hour-by-hour co-optimization of arbitrage vs. ancillary
+- Capacity market prices don't decline with ELCC saturation at high penetration
+- Stacking factor is a flat 70% (real co-optimization efficiency varies by ISO and penetration)
 
 ### §16.6 New Constants (pipeline_config.py)
 
@@ -4702,11 +4708,11 @@ STORAGE_MAX_V2 = {
     'h2': 25.0,         # 25.0% of demand (unchanged)
 }
 
-# Capacity market prices ($/kW-yr) — from 2024 auction results
+# Capacity market prices ($/kW-yr) — from 2024-2025 auction results
 CAPACITY_MARKET_PRICES = {
     'CAISO': 75,    # RA program, system-wide avg
     'ERCOT': 0,     # No capacity market (energy-only)
-    'PJM': 50,      # RPM 2025/2026 BRA clearing price
+    'PJM': 120,     # RPM 2025/2026-2027/2028 BRA clearing ($98-269/MW-day)
     'NYISO': 85,    # ICAP monthly spot, annualized
     'NEISO': 55,    # FCM FCA-19 clearing price
     'MISO': 25,     # PRA Zone 1-7 average
