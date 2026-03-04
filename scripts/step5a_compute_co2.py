@@ -248,11 +248,11 @@ def recompute_all_co2(results_data, demand_data, gen_profiles, emission_rates, f
         baseline_clean = sum(GRID_MIX_SHARES.get(iso, {}).values())
         print(f"\n  {iso} (baseline clean: {baseline_clean:.1f}%):")
         print(f"    Dispatch-stack emission rates (tCO₂/MWh):")
-        for t_pct in [50, 60, 70, 80, 90, 95, 99.99]:
+        for t_pct in [50.0, 55.0, 60.0, 65.0, 70.0, 75.0, 80.0, 85.0, 87.5, 90.0, 92.5, 95.0, 97.5, 99.0, 99.5, 99.9, 99.99]:
             rate, info = rate_cache[(iso, str(t_pct))]
             gas_only = info.get('forced_gas_only', False)
             label = " [gas-only]" if gas_only else ""
-            print(f"      {t_pct:>3}% clean → {rate:.4f} tCO₂/MWh{label}")
+            print(f"      {t_pct:>6}% clean → {rate:.4f} tCO₂/MWh{label}")
 
         # --- Recompute sweep results ---
         if 'sweep' in iso_data:
