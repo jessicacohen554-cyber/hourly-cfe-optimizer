@@ -564,9 +564,7 @@ def load_parquet_costs():
         # New resource cost: Step 3 already prices existing at $0 (sunk fleet).
         # cost_total_cost = LCOE of new-build clean only. No wholesale offset.
         new_cost = df['cost_total_cost'].copy()
-        if 'ra_gas_backup_cost_per_mwh' in df.columns:
-            new_cost = new_cost - df['ra_gas_backup_cost_per_mwh'].fillna(0)
-        elif 'gas_gas_cost_per_mwh' in df.columns:
+        if 'gas_gas_cost_per_mwh' in df.columns:
             new_cost = new_cost - df['gas_gas_cost_per_mwh'].fillna(0)
         new_cost = new_cost.clip(lower=0)
 
