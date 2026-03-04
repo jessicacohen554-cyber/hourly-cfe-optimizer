@@ -145,8 +145,29 @@ def _forward_step_optimization(feasible_mixes, sens, get_overrides_fn, label,
             else:
                 filtered_arr = np.empty((0, 10), dtype=np.float64)
 
-            # --- Step 2: If no EF mixes survive, use all EF (relaxed floor) ---
+            # --- Step 2: If no EF mixes survive, try PFS with generation-only floors ---
             source = 'EF'
+            if filtered_arr.shape[0] == 0:
+                # PFS fallback: search raw PFS with generation-only floor filter
+                # (exclude CCS/battery/LDES — these aren't PFS grid inputs)
+                pfs_gen_floor = dict(floor_twh)
+                pfs_gen_floor['ccs_ccgt'] = 0
+                pfs_gen_floor['battery'] = 0
+                pfs_gen_floor['ldes'] = 0
+                pfs_raw = _load_pfs_mixes(iso, t)
+                if len(pfs_raw) > 0:
+                    pfs_passed = _filter_mixes_by_floor(
+                        pfs_raw, pfs_gen_floor, demand_twh, iso)
+                    if pfs_passed:
+                        pfs_passed = _rank_and_cap_pfs(
+                            pfs_passed, pfs_gen_floor, demand_twh, iso,
+                            max_eval=max_pfs_eval)
+                        filtered_arr = _to_mix_array(pfs_passed)
+                        source = 'PFS-floor'
+                        print(f"  -> {iso} {t}% [{label}]: EF exhausted, "
+                              f"PFS fallback found {len(pfs_passed)} floor-compatible mixes")
+
+            # If PFS also failed, fall back to all EF mixes (relaxed floor)
             if filtered_arr.shape[0] == 0 and ef_mixes:
                 filtered_arr = _to_mix_array(ef_mixes)
                 source = 'EF-relaxed'
