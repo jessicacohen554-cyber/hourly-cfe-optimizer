@@ -1023,7 +1023,16 @@
             var stack = CQ_DATA.dispatch_stacks && CQ_DATA.dispatch_stacks[iso];
             if (!stack || !stack.fuels) return;
             var proj = CQ_DATA.demand_growth_projections && CQ_DATA.demand_growth_projections[iso];
-            var demand_2045 = (proj && proj['2045']) ? proj['2045'].demand_twh : BASE_DEMAND_TWH[iso] * 1.43;
+            // Compute 2045 demand analytically from DEMAND_GROWTH_RATES if CQ_DATA unavailable
+            var demand_2045;
+            if (proj && proj['2045']) {
+                demand_2045 = proj['2045'].demand_twh;
+            } else if (typeof DEMAND_GROWTH_RATES !== 'undefined' && DEMAND_GROWTH_RATES[iso]) {
+                var rate = DEMAND_GROWTH_RATES[iso].Medium || DEMAND_GROWTH_RATES[iso].medium || 0.02;
+                demand_2045 = BASE_DEMAND_TWH[iso] * Math.pow(1 + rate, 20);
+            } else {
+                demand_2045 = BASE_DEMAND_TWH[iso] * 1.5; // conservative fallback
+            }
             var ecf = CQ_DATA.existing_clean_floor[iso];
             var existing_clean_twh = ecf ? ecf.total_twh : 0;
             var fossil_twh_total = Math.max(0, demand_2045 - existing_clean_twh);

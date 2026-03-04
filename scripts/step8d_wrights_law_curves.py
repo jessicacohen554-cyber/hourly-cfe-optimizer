@@ -36,24 +36,19 @@ PP_DIR = os.path.join(DATA_DIR, 'step5-post-processing')
 OUT_DIR = os.path.join(DATA_DIR, 'step8-wrights-law')
 os.makedirs(OUT_DIR, exist_ok=True)
 
+# Import canonical constants from pipeline_config (single source of truth)
+from pipeline_config import (
+    ISOS, REGIONAL_DEMAND_TWH, THRESHOLD_TARGET_YEARS,
+    DEMAND_GROWTH_RATES as _DEMAND_GROWTH_RATES_PC,
+    OFFSHORE_ISOS, ACTIVE_THRESHOLDS,
+)
+
 # ═══════════════════════════════════════════════════════════════════════════════
-# CONSTANTS (from existing pipeline — single source of truth)
+# CONSTANTS (derived from pipeline_config)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
-OFFSHORE_ISOS = ['NYISO', 'NEISO', 'PJM', 'CAISO']  # ISOs with offshore wind resource
-
-BASE_DEMAND_TWH = {
-    'CAISO': 224.0, 'ERCOT': 488.0, 'PJM': 843.3, 'NYISO': 151.6,
-    'NEISO': 115.3, 'MISO': 660.0, 'SPP': 296.0,
-}
-
-# SBTi threshold → target year mapping
-SBTI_YEAR_MAP = {
-    50: 2030, 55: 2031, 60: 2033, 65: 2034, 70: 2035, 75: 2036, 80: 2037,
-    85: 2038, 87.5: 2039, 90: 2040, 92.5: 2043,
-    95: 2045, 97.5: 2048, 99: 2049, 99.5: 2049, 99.9: 2050, 100: 2050,
-}
+BASE_DEMAND_TWH = REGIONAL_DEMAND_TWH
+SBTI_YEAR_MAP = THRESHOLD_TARGET_YEARS
 
 THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
 
@@ -124,11 +119,8 @@ WHOLESALE_PRICES = {
     'NEISO': 50.0, 'MISO': 34.0, 'SPP': 30.0,
 }
 
-# Demand growth rates (Medium)
-DEMAND_GROWTH_RATES = {
-    'CAISO': 0.019, 'ERCOT': 0.035, 'PJM': 0.016, 'NYISO': 0.011,
-    'NEISO': 0.010, 'MISO': 0.018, 'SPP': 0.020,
-}
+# Demand growth rates (Medium) — derived from pipeline_config
+DEMAND_GROWTH_RATES = {iso: _DEMAND_GROWTH_RATES_PC[iso]['Medium'] for iso in ISOS}
 
 # Existing clean shares by ISO (% of demand served by existing clean in 2025)
 # Used to estimate how much of each participation slice goes to existing vs new-build

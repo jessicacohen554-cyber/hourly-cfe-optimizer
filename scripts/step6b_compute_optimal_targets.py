@@ -63,6 +63,14 @@ import sys
 import numpy as np
 from pathlib import Path
 
+# Ensure pipeline_config is importable
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from pipeline_config import (
+    DEMAND_GROWTH_RATES as _DEMAND_GROWTH_RATES_PC,
+    THRESHOLD_TARGET_YEARS as _THRESHOLD_TARGET_YEARS_PC,
+    REGIONAL_DEMAND_TWH as _REGIONAL_DEMAND_TWH_PC,
+)
+
 # Add scripts/ to path for dispatch_utils import
 SCRIPTS_DIR = Path(__file__).parent
 if str(SCRIPTS_DIR) not in sys.path:
@@ -109,17 +117,11 @@ DEMAND_TWH = {
     'NEISO': 115.336, 'MISO': 660.0, 'SPP': 296.0,
 }
 
-# Annual demand growth rates per ISO × L/M/H
-# Sources: EIA AEO 2024, regional IRP filings, data center projections
-# MISO/SPP: uniform 2.0% across tiers (no differentiated forecasts available)
+# Annual demand growth rates per ISO × L/M/H — from pipeline_config (single source of truth)
+# Lowercase keys used here for backward compat with this script's access patterns
 DEMAND_GROWTH_RATES = {
-    'CAISO':  {'low': 0.014, 'medium': 0.019, 'high': 0.025},
-    'ERCOT':  {'low': 0.020, 'medium': 0.035, 'high': 0.055},
-    'PJM':    {'low': 0.015, 'medium': 0.024, 'high': 0.036},
-    'NYISO':  {'low': 0.013, 'medium': 0.020, 'high': 0.044},
-    'NEISO':  {'low': 0.009, 'medium': 0.018, 'high': 0.029},
-    'MISO':   {'low': 0.020, 'medium': 0.020, 'high': 0.020},
-    'SPP':    {'low': 0.020, 'medium': 0.020, 'high': 0.020},
+    iso: {k.lower(): v for k, v in rates.items()}
+    for iso, rates in _DEMAND_GROWTH_RATES_PC.items()
 }
 
 # Baseline clean energy shares (% of demand, 2025)

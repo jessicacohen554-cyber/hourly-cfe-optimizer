@@ -662,6 +662,18 @@ function splitCleanFirm(iso, totalCfTwh, existingCfTwh) {
 const GRID_MIX = DATA.metadata.grid_mix_shares;
 const DEMAND_TWH = DATA.metadata.base_demand_twh;
 
+// Compute demand at a threshold's SBTi target year using analytical formula
+// Falls back to base demand if DEMAND_GROWTH_RATES or THRESHOLD_TARGET_YEARS unavailable
+function getDemandAtThreshold(iso, threshold) {
+    if (typeof DEMAND_GROWTH_RATES !== 'undefined' && typeof THRESHOLD_TARGET_YEARS !== 'undefined' &&
+        DEMAND_GROWTH_RATES[iso] && DEMAND_TWH[iso]) {
+        const year = THRESHOLD_TARGET_YEARS[threshold] || 2050;
+        const rate = DEMAND_GROWTH_RATES[iso].Medium || DEMAND_GROWTH_RATES[iso].medium || 0.02;
+        return DEMAND_TWH[iso] * Math.pow(1 + rate, Math.max(0, year - 2025));
+    }
+    return DEMAND_TWH[iso] || 200;
+}
+
 const CHART_DEFAULTS = {
     responsive: true, maintainAspectRatio: false,
     plugins: { legend: { onClick: () => {}, labels: {
@@ -703,8 +715,8 @@ function buildHeroStats() {
         const aT = trajA.find(d => d.threshold === t);
         const bT = trajB.find(d => d.threshold === t);
         if (aT && bT) {
-            costA += aT.effective_cost * (aT.demand_twh || DEMAND_TWH[iso]);
-            costB += bT.effective_cost * (bT.demand_twh || DEMAND_TWH[iso]);
+            costA += aT.effective_cost * (aT.demand_twh || getDemandAtThreshold(iso, t));
+            costB += bT.effective_cost * (bT.demand_twh || getDemandAtThreshold(iso, t));
             gasA += (aT.new_gas_mw || 0);
             gasB += (bT.new_gas_mw || 0);
         }
@@ -741,8 +753,8 @@ function buildMetricTiles() {
     }
     if (!aT || !bT) { container.innerHTML = ''; return; }
 
-    const demA = aT.demand_twh || DEMAND_TWH[iso];
-    const demB = bT.demand_twh || DEMAND_TWH[iso];
+    const demA = aT.demand_twh || getDemandAtThreshold(iso, t);
+    const demB = bT.demand_twh || getDemandAtThreshold(iso, t);
     const annuity = (1 - Math.pow(1.05, -25)) / 0.05;
 
     const mult = bT.effective_cost > 0 ? (aT.effective_cost / bT.effective_cost) : 1;
@@ -1179,7 +1191,7 @@ function renderMixCharts(iso) {
         const curtailData = traj.map((d, idx) => {
             // Generation resources only — battery/ldes are storage, not curtailable gen
             const totalProcured = Object.values(d.resource_twh).reduce((s, v) => s + v, 0);
-            const demandTwh = d.demand_twh || baseDemandTwh;
+            const demandTwh = d.demand_twh || getDemandAtThreshold(iso, d.threshold);
             // Structural curtailment: clean gen procured beyond what total demand can absorb
             const totalCurtailed = Math.max(0, totalProcured - demandTwh);
 
@@ -1257,7 +1269,7 @@ function renderMixCharts(iso) {
         // battery_dispatch_pct in the source is 0–1%, so correct value ≈ 1% of demand max.
         // The 20% cap guards against a data bug in older JSON where battery_twh = demand_twh.
         const battData = traj.map(d => {
-            const dem = d.demand_twh || baseDemandTwh;
+            const dem = d.demand_twh || getDemandAtThreshold(iso, d.threshold);
             const bat = Math.min(d.battery_twh || 0, 0.20 * dem);
             return Math.round(bat);
         });
@@ -1354,7 +1366,7 @@ function renderMixCharts(iso) {
         let maxV = 0;
         traj.forEach(d => {
             const genTwh = Object.values(d.resource_twh).reduce((s, v) => s + v, 0);
-            const dem = d.demand_twh || baseDemandTwh;
+            const dem = d.demand_twh || getDemandAtThreshold(iso, d.threshold);
             // Cap battery at 20% of demand to guard against stale data
             const bat = Math.min(d.battery_twh || 0, 0.20 * dem);
             maxV = Math.max(maxV, genTwh + bat, dem);
@@ -1581,8 +1593,8 @@ function buildSequentialQueue() {
         }
         const pctGain = Math.max(0, 50 - existingCleanPct);
         const wholCost = WHOLESALE_EST[iso] || 35;
-        const costDelta0 = Math.max(0, first.effective_cost - wholCost) * (first.demand_twh || baseDem);
-        const co2Delta0 = pctGain / 100 * (first.demand_twh || baseDem) * EMISSION_EST;
+        const costDelta0 = Math.max(0, first.effective_cost - wholCost) * (first.demand_twh || getDemandAtThreshold(iso, first.threshold || 50));
+        const co2Delta0 = pctGain / 100 * (first.demand_twh || getDemandAtThreshold(iso, first.threshold || 50)) * EMISSION_EST;
         const mac0 = co2Delta0 > 0.01 ? costDelta0 / co2Delta0 : 0;
 
         steps.push({
