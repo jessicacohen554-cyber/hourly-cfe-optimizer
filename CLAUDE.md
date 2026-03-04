@@ -171,7 +171,7 @@
 
 **GitHub Actions** (~22 workflows, all `workflow_dispatch`):
 - Core pipeline: `step1a-scored-database.yml` → `step1b-zone-search.yml` → `step1c-storage-refinement.yml` → `step2-efficient-frontier.yml` → `step3-cost-optimization.yml` → `step4-dispatch-cache.yml`
-- Core analysis: `step5a-compute-co2.yml`, `step5b-compute-lmp.yml`, `step5cd-supplemental.yml`, `step5e-track-analysis.yml`, `step5f-storage-analysis.yml`
+- Core analysis: `step5a-compute-co2.yml`, `step5b-compute-lmp.yml`, `step5c-dashboard-update.yml`, `step5d-consequential-queue.yml`, `step5e-track-analysis.yml`, `step5f-storage-analysis.yml`
 - Derived analytics: `step6-derived-analytics.yml`, `step7-scenario-comparison.yml`, `step8-procurement-strategies.yml`
 - Final: `step9-generate-shared-data.yml`
 - See `.github/workflows/README.md` for full docs and common patterns.
