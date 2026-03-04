@@ -71,8 +71,7 @@ body { background: var(--bg-page-white); }
 }
 .tech-table td { padding: 10px 12px; border-bottom: 1px solid var(--bg-alt); }
 .tech-table tr:hover td { background: var(--bg-alt); }
-.tech-table tr.ldes-active { background: var(--red-light); }
-.tech-table tr.ldes-active td:nth-child(6) { font-weight: 700; color: var(--red-dark); }
+.tech-table tr.ldes-active { background: rgba(233,30,99,0.06); }
 .tech-table .zero { color: var(--text-muted); }
 
 .insight-box.purple { border-left-color: var(--battery); background: linear-gradient(135deg, rgba(139,92,246,0.06), rgba(236,72,153,0.04)); }
@@ -84,6 +83,38 @@ body { background: var(--bg-page-white); }
     font-size: 0.78rem; color: var(--text-muted); line-height: 1.6;
     border-top: 1px solid var(--border-light);
 }
+
+.track-toggle {
+    display: flex; gap: 2px; background: var(--bg-alt); border-radius: var(--radius-md);
+    padding: 3px; margin-bottom: var(--space-lg); width: fit-content;
+}
+.track-toggle button {
+    padding: 8px 20px; border: none; background: transparent; cursor: pointer;
+    font-family: var(--font-heading); font-size: 0.82rem; font-weight: 600;
+    color: var(--text-muted); border-radius: var(--radius-sm); transition: all 0.2s;
+    min-height: 44px;
+}
+.track-toggle button.active {
+    background: white; color: var(--navy); box-shadow: var(--shadow-sm);
+}
+.track-toggle button:hover:not(.active) { color: var(--text-primary); }
+
+.stacked-area-chart { height: 420px; }
+@media (max-width: 768px) { .stacked-area-chart { height: 340px; } }
+
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-lg); }
+@media (max-width: 1024px) { .grid-3 { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 768px) { .grid-3 { grid-template-columns: 1fr; } }
+
+.kpi-card {
+    background: white; border: 1px solid var(--border-light); border-radius: var(--radius-md);
+    padding: var(--space-lg); text-align: center;
+}
+.kpi-card .kpi-val {
+    font-family: var(--font-data, var(--font-mono)); font-size: 2rem; font-weight: 700; line-height: 1.2;
+}
+.kpi-card .kpi-lbl { font-size: 0.82rem; color: var(--text-muted); margin-top: 4px; }
+.kpi-card .kpi-sub { font-size: 0.75rem; color: var(--text-dim); margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -91,39 +122,61 @@ body { background: var(--bg-page-white); }
 
 <div class="header" id="pageHeader">
     <h1>Storage Analysis</h1>
-    <div class="subtitle">Battery and long-duration storage in the optimal mix across 7 ISOs</div>
+    <div class="subtitle">How battery and long-duration storage reshape the decarbonization path under demand growth</div>
     <div class="header-accent"></div>
 </div>
 
-<!-- ========== HERO ========== -->
+<!-- ========== HERO STATS ========== -->
 <section class="content-section">
     <p style="font-size:0.95rem; color:var(--text-dim); line-height:1.75; max-width:var(--max-prose);">
-        4-hour Li-ion is the default storage workhorse, appearing from moderate thresholds onward
-        in solar-heavy ISOs. LDES (100hr iron-air) enters only at &ge;99% in wind-heavy regions.
-        8-hour batteries play a marginal niche role. Green hydrogen is never cost-optimal.
+        Storage plays two fundamentally different roles depending on the grid's starting point.
+        In solar-heavy ISOs like CAISO and NYISO, 4-hour batteries appear early &mdash; daily cycling to shift midday surplus into evening peaks.
+        In wind-heavy ISOs (ERCOT, MISO, SPP), storage barely registers until &ge;95% because wind overbuild is cheaper than storing energy.
+        Long-duration storage (100hr iron-air) only enters in the last mile (&ge;99%) for multi-day weather gaps.
+        This page compares Track 1 baseline (existing grid + procurement) and Track 2 demand growth scenarios.
     </p>
 
     <div class="counter-row" style="margin-top: var(--space-lg);">
         <div class="counter-card">
-            <div class="counter-val purple">10%</div>
+            <div class="counter-val purple" id="heroBat4Max">10%</div>
             <div class="counter-lbl">Max Bat4 Dispatch</div>
-            <div class="counter-sub">PJM at &ge;99.9%</div>
+            <div class="counter-sub" id="heroBat4Sub">PJM at &ge;99.9%</div>
         </div>
         <div class="counter-card">
-            <div class="counter-val" style="color:var(--red);">76&ndash;100%</div>
-            <div class="counter-lbl">Last-Mile Bat4</div>
-            <div class="counter-sub">% of &ge;99% scenarios</div>
+            <div class="counter-val" style="color:var(--ldes, #E91E63);" id="heroLdesMax">8%</div>
+            <div class="counter-lbl">Max LDES Dispatch</div>
+            <div class="counter-sub" id="heroLdesSub">NEISO at &ge;99.99%</div>
         </div>
         <div class="counter-card">
-            <div class="counter-val green">5</div>
+            <div class="counter-val green" id="heroStorageISOs">5</div>
             <div class="counter-lbl">ISOs Need LDES</div>
-            <div class="counter-sub">at &ge;99% (not PJM/NYISO)</div>
+            <div class="counter-sub">at &ge;99% thresholds</div>
         </div>
         <div class="counter-card">
             <div class="counter-val" style="color:var(--text-muted);">0%</div>
             <div class="counter-lbl">Green H<sub>2</sub></div>
             <div class="counter-sub">Never cost-optimal</div>
         </div>
+    </div>
+</section>
+
+<!-- ========== TRACK TOGGLE + TOTAL STORAGE ========== -->
+<section class="content-section" style="padding-top: 0;">
+    <div class="section-header">
+        <h3>Total Storage Contribution by Threshold</h3>
+        <p>How much of annual demand is served by storage at each CFE target.
+           Toggle between Track 1 (baseline existing grid) and Track 2 (demand growth scenarios).</p>
+    </div>
+
+    <div class="track-toggle" id="trackToggle">
+        <button class="active" data-track="baseline">Track 1: Baseline</button>
+        <button data-track="dg">Track 2: Demand Growth</button>
+    </div>
+
+    <div class="chart-panel">
+        <h4 id="stackedTitle">Total Storage Dispatch — All ISOs (Baseline)</h4>
+        <div class="chart-subtitle">Battery 4hr + Battery 8hr + LDES as % of demand</div>
+        <div class="stacked-area-chart"><canvas id="totalStorageChart"></canvas></div>
     </div>
 </section>
 
@@ -136,7 +189,7 @@ body { background: var(--bg-page-white); }
     </div>
 
     <div class="chart-panel" style="overflow-x:auto;">
-        <table class="onset-table">
+        <table class="onset-table" id="onsetTable">
             <thead>
                 <tr>
                     <th>ISO</th>
@@ -144,59 +197,10 @@ body { background: var(--bg-page-white); }
                     <th>Battery 8hr</th>
                     <th>LDES 100hr</th>
                     <th>Green H<sub>2</sub></th>
+                    <th>Max Total Storage</th>
                 </tr>
             </thead>
-            <tbody>
-                <tr>
-                    <td style="font-weight:600;">CAISO</td>
-                    <td style="background:#DCFCE7;color:#166534;font-weight:600;text-align:center;">10%</td>
-                    <td style="background:#FEF9C3;color:#854D0E;font-weight:600;text-align:center;">99.5%</td>
-                    <td style="background:#E5E7EB;color:#6B7280;text-align:center;">Never</td>
-                    <td style="background:#E5E7EB;color:#6B7280;text-align:center;">Never</td>
-                </tr>
-                <tr>
-                    <td style="font-weight:600;">PJM</td>
-                    <td style="background:#DCFCE7;color:#166534;font-weight:600;text-align:center;">10%</td>
-                    <td style="background:#E5E7EB;color:#6B7280;text-align:center;">Never</td>
-                    <td style="background:#E5E7EB;color:#6B7280;text-align:center;">Never</td>
-                    <td style="background:#E5E7EB;color:#6B7280;text-align:center;">Never</td>
-                </tr>
-                <tr>
-                    <td style="font-weight:600;">NYISO</td>
-                    <td style="background:#DCFCE7;color:#166534;font-weight:600;text-align:center;">10%</td>
-                    <td style="background:#E5E7EB;color:#6B7280;text-align:center;">Never</td>
-                    <td style="background:#E5E7EB;color:#6B7280;text-align:center;">Never</td>
-                    <td style="background:#E5E7EB;color:#6B7280;text-align:center;">Never</td>
-                </tr>
-                <tr>
-                    <td style="font-weight:600;">NEISO</td>
-                    <td style="background:#FEF9C3;color:#854D0E;font-weight:600;text-align:center;">87.5%</td>
-                    <td style="background:#E5E7EB;color:#6B7280;text-align:center;">Never</td>
-                    <td style="background:#FEF2F2;color:#991B1B;font-weight:600;text-align:center;">&ge;99%</td>
-                    <td style="background:#E5E7EB;color:#6B7280;text-align:center;">Never</td>
-                </tr>
-                <tr>
-                    <td style="font-weight:600;">ERCOT</td>
-                    <td style="background:#FEF9C3;color:#854D0E;font-weight:600;text-align:center;">97.5%</td>
-                    <td style="background:#E5E7EB;color:#6B7280;text-align:center;">Never</td>
-                    <td style="background:#FEF2F2;color:#991B1B;font-weight:600;text-align:center;">&ge;99.99%</td>
-                    <td style="background:#E5E7EB;color:#6B7280;text-align:center;">Never</td>
-                </tr>
-                <tr>
-                    <td style="font-weight:600;">MISO</td>
-                    <td style="background:#FEF2F2;color:#991B1B;font-weight:600;text-align:center;">99%</td>
-                    <td style="background:#FEF2F2;color:#991B1B;font-weight:600;text-align:center;">&ge;99.99%</td>
-                    <td style="background:#FEF2F2;color:#991B1B;font-weight:600;text-align:center;">99.9%</td>
-                    <td style="background:#E5E7EB;color:#6B7280;text-align:center;">Never</td>
-                </tr>
-                <tr>
-                    <td style="font-weight:600;">SPP</td>
-                    <td style="background:#FEF2F2;color:#991B1B;font-weight:600;text-align:center;">99.9%</td>
-                    <td style="background:#FEF2F2;color:#991B1B;font-weight:600;text-align:center;">&ge;99.99%</td>
-                    <td style="background:#FEF2F2;color:#991B1B;font-weight:600;text-align:center;">99.9%</td>
-                    <td style="background:#E5E7EB;color:#6B7280;text-align:center;">Never</td>
-                </tr>
-            </tbody>
+            <tbody id="onsetTableBody"></tbody>
         </table>
     </div>
 </section>
@@ -204,32 +208,57 @@ body { background: var(--bg-page-white); }
 <!-- ========== CROSS-ISO CHARTS ========== -->
 <section class="content-section" style="padding-top: 0;">
     <div class="section-header">
-        <h3>Storage Across Thresholds</h3>
+        <h3>Storage Penetration Across Thresholds</h3>
     </div>
 
     <div class="grid-2">
         <div class="chart-panel">
-            <h4>Bat4 Scenario Penetration</h4>
-            <div class="chart-subtitle">% of cost scenarios where Bat4 appears</div>
+            <h4>Battery 4hr Dispatch</h4>
+            <div class="chart-subtitle">Mean % of demand served by Bat4</div>
             <div class="chart-container"><canvas id="crossIsoBat4"></canvas></div>
         </div>
         <div class="chart-panel">
-            <h4>LDES Scenario Penetration</h4>
-            <div class="chart-subtitle">% of cost scenarios where LDES appears</div>
-            <div class="chart-container"><canvas id="crossIsoPenetration"></canvas></div>
+            <h4>Battery 8hr Dispatch</h4>
+            <div class="chart-subtitle">Mean % of demand served by Bat8</div>
+            <div class="chart-container"><canvas id="crossIsoBat8"></canvas></div>
         </div>
     </div>
 
     <div class="grid-2" style="margin-top: var(--space-lg);">
         <div class="chart-panel">
-            <h4>Bat4 Dispatch in Optimal Mix</h4>
-            <div class="chart-subtitle">% of demand served by Bat4 in cheapest mix</div>
-            <div class="chart-container"><canvas id="bat4DispatchChart"></canvas></div>
+            <h4>LDES 100hr Dispatch</h4>
+            <div class="chart-subtitle">Mean % of demand served by LDES</div>
+            <div class="chart-container"><canvas id="crossIsoLdes"></canvas></div>
         </div>
         <div class="chart-panel">
-            <h4>LDES Dispatch in Optimal Mix</h4>
-            <div class="chart-subtitle">% of demand served by LDES in cheapest mix</div>
-            <div class="chart-container"><canvas id="ldesDispatchChart"></canvas></div>
+            <h4>Total Storage by ISO</h4>
+            <div class="chart-subtitle">Combined Bat4 + Bat8 + LDES</div>
+            <div class="chart-container"><canvas id="totalByIsoChart"></canvas></div>
+        </div>
+    </div>
+</section>
+
+<!-- ========== DEMAND GROWTH IMPACT ========== -->
+<section class="content-section">
+    <div class="section-header">
+        <h3>Demand Growth Changes Everything</h3>
+        <p>Under Track 2 demand growth scenarios, storage requirements shift significantly.
+           Growing demand means more hours where variable renewables can't meet load &mdash;
+           batteries and LDES absorb the gap.</p>
+    </div>
+
+    <div class="grid-3" id="dgKpiCards"></div>
+
+    <div class="grid-2" style="margin-top: var(--space-lg);">
+        <div class="chart-panel">
+            <h4>Bat4: Baseline vs. Demand Growth</h4>
+            <div class="chart-subtitle">Solid = DG, dashed = baseline</div>
+            <div class="chart-container"><canvas id="dgBat4CompareChart"></canvas></div>
+        </div>
+        <div class="chart-panel">
+            <h4>LDES: Baseline vs. Demand Growth</h4>
+            <div class="chart-subtitle">Solid = DG, dashed = baseline</div>
+            <div class="chart-container"><canvas id="dgLdesCompareChart"></canvas></div>
         </div>
     </div>
 </section>
@@ -238,7 +267,8 @@ body { background: var(--bg-page-white); }
 <section class="content-section">
     <div class="section-header">
         <h3>Regional Deep Dives</h3>
-        <p>Resource mix progression and cost trajectory per ISO under Medium cost assumptions.</p>
+        <p>Resource mix progression, storage deployment, and cost trajectory per ISO.
+           Includes offshore wind where applicable.</p>
     </div>
 
     <div class="iso-tabs" id="isoTabs" role="tablist"></div>
@@ -247,13 +277,13 @@ body { background: var(--bg-page-white); }
         <div class="grid-2">
             <div class="chart-panel">
                 <h4 id="mixChartTitle">Resource Mix Progression</h4>
-                <div class="chart-subtitle" id="mixChartSubtitle">Medium cost scenario</div>
+                <div class="chart-subtitle" id="mixChartSubtitle">Average resource GW by threshold</div>
                 <div class="chart-container"><canvas id="mixProgressionChart"></canvas></div>
             </div>
             <div class="chart-panel">
-                <h4 id="costChartTitle">System Cost Trajectory</h4>
-                <div class="chart-subtitle" id="costChartSubtitle">Total $/MWh by CFE threshold</div>
-                <div class="chart-container"><canvas id="costTrajectoryChart"></canvas></div>
+                <h4 id="storBreakdownTitle">Storage Breakdown</h4>
+                <div class="chart-subtitle">Bat4 + Bat8 + LDES dispatch % by threshold</div>
+                <div class="chart-container"><canvas id="storageBreakdownChart"></canvas></div>
             </div>
         </div>
 
@@ -266,14 +296,13 @@ body { background: var(--bg-page-white); }
                         <th>Clean Firm</th>
                         <th>Solar</th>
                         <th>Wind</th>
+                        <th>OSW</th>
                         <th>CCS</th>
                         <th>Hydro</th>
                         <th>Bat4</th>
                         <th>Bat8</th>
                         <th>LDES</th>
-                        <th>H<sub>2</sub></th>
                         <th>Cost</th>
-                        <th>Match</th>
                     </tr>
                 </thead>
                 <tbody id="mixTableBody"></tbody>
@@ -290,18 +319,18 @@ body { background: var(--bg-page-white); }
         <h3>System Cost Across All ISOs</h3>
     </div>
     <div class="chart-panel">
-        <h4>Total System Cost by CFE Threshold (Medium Scenario)</h4>
-        <div class="chart-subtitle">$/MWh at each threshold, all 7 ISOs</div>
+        <h4>Total System Cost by CFE Threshold</h4>
+        <div class="chart-subtitle">$/MWh — enlarged points where storage is active</div>
         <div class="chart-container" style="height: 420px;"><canvas id="allIsoCostChart"></canvas></div>
     </div>
 </section>
 
 <div class="storage-footer-note">
     <strong>Data:</strong> Step 3 cost optimization. 7 ISOs &times; 21 thresholds &times; 5,832&ndash;17,496
-    cost scenarios per region.
+    cost scenarios per region (baseline). Demand growth: 25 years &times; 3 growth rates &times; 5,832&ndash;17,496 scenarios.
     <strong>Technologies:</strong> 4hr Li-ion (85% RTE), 8hr Li-ion (85% RTE), 100hr iron-air LDES (50% RTE),
     1000hr green H<sub>2</sub> (35% RTE, &ge;95% only).
-    <strong>Note:</strong> Intermediate durations (12hr, 24hr) not modeled.
+    <strong>Note:</strong> Offshore wind modeled for CAISO, PJM, NYISO, NEISO.
 </div>
 
 <script src="js/storage-analysis-data.js"></script>
@@ -309,32 +338,32 @@ body { background: var(--bg-page-white); }
 <script>
 (function() {
     'use strict';
+    if (window.ChartDataLabels) Chart.unregister(ChartDataLabels);
 
-    // Disable datalabels plugin globally for this page
-    if (window.ChartDataLabels) {
-        Chart.unregister(ChartDataLabels);
-    }
+    const BL = STORAGE_BASELINE_DATA;
+    const DG = STORAGE_DG_DATA;
+    const ISOS = ['CAISO','ERCOT','PJM','NYISO','NEISO','MISO','SPP'];
+    const ISO_CLR = {};
+    ISOS.forEach(iso => { ISO_CLR[iso] = ISO_COLORS[iso]; });
 
-    const D = STORAGE_ANALYSIS;
-    const SM = D.storage_metrics;
-    const ISOS = ['CAISO', 'ERCOT', 'MISO', 'NYISO', 'NEISO', 'PJM', 'SPP'];
-    const THRESHOLDS = SM.CAISO.thresholds;
-    const THRESH_LABELS = THRESHOLDS.map(t => t >= 99.99 ? '≥99.99%' : t + '%');
-
-    const ISO_CLR = {
-        CAISO: ISO_COLORS.CAISO, ERCOT: ISO_COLORS.ERCOT, MISO: ISO_COLORS.MISO,
-        NYISO: ISO_COLORS.NYISO, NEISO: ISO_COLORS.NEISO, PJM: ISO_COLORS.PJM, SPP: ISO_COLORS.SPP
-    };
     const RES_CLR = {
         clean_firm: RESOURCE_COLORS.cleanFirm, solar: RESOURCE_COLORS.solar,
-        wind: RESOURCE_COLORS.wind, ccs_ccgt: RESOURCE_COLORS.ccs,
-        hydro: RESOURCE_COLORS.hydro
+        wind: RESOURCE_COLORS.wind, offshore_wind: RESOURCE_COLORS.offshoreWind || '#009688',
+        ccs_ccgt: RESOURCE_COLORS.ccs, hydro: RESOURCE_COLORS.hydro
+    };
+    const STOR_CLR = {
+        battery4: RESOURCE_COLORS.battery || '#8B5CF6',
+        battery8: '#A78BFA',
+        ldes: RESOURCE_COLORS.ldes || '#E91E63',
+        h2: RESOURCE_COLORS.greenH2 || '#10B981'
     };
 
+    let currentTrack = 'baseline';
+    const getData = () => currentTrack === 'baseline' ? BL : DG;
     const safe = arr => (arr || []).map(v => v == null ? undefined : v);
+    const fmtT = t => t >= 99.99 ? '≥99.99%' : t + '%';
 
-    // Shared chart defaults
-    const lineDefaults = (yLabel, yMax) => ({
+    const lineOpts = (yLbl, yMax) => ({
         responsive: true, maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
         plugins: {
@@ -343,83 +372,185 @@ body { background: var(--bg-page-white); }
         },
         scales: {
             x: { ticks: { maxRotation: 45, font: { size: 10 } } },
-            y: { title: { display: true, text: yLabel, font: { size: 11 } }, min: 0, max: yMax, ticks: { font: { size: 10 } } }
+            y: { title: { display: true, text: yLbl, font: { size: 11 } }, min: 0, max: yMax, ticks: { font: { size: 10 } } }
         }
     });
 
-    function isoLineDatasets(field, suffix) {
-        return ISOS.map(iso => ({
-            label: iso,
-            data: safe(SM[iso][field]),
-            borderColor: ISO_CLR[iso],
-            backgroundColor: ISO_CLR[iso] + '20',
+    const pctTip = { callbacks: { label: ctx => ctx.dataset.label + ': ' + (ctx.parsed.y != null ? ctx.parsed.y.toFixed(2) : '—') + '%' } };
+
+    // ======== Hero Stats ========
+    function updateHero() {
+        const D = getData();
+        let mxB4 = 0, mxB4iso = '', mxB4t = '', mxLD = 0, mxLDiso = '', mxLDt = '';
+        ISOS.forEach(iso => {
+            const d = D[iso];
+            d.battery4.mean_pct.forEach((v,i) => { if(v>mxB4){mxB4=v; mxB4iso=iso; mxB4t=fmtT(d.thresholds[i]);} });
+            d.ldes.mean_pct.forEach((v,i) => { if(v>mxLD){mxLD=v; mxLDiso=iso; mxLDt=fmtT(d.thresholds[i]);} });
+        });
+        document.getElementById('heroBat4Max').textContent = mxB4.toFixed(1) + '%';
+        document.getElementById('heroBat4Sub').textContent = mxB4iso + ' at ' + mxB4t;
+        document.getElementById('heroLdesMax').textContent = mxLD.toFixed(1) + '%';
+        document.getElementById('heroLdesSub').textContent = mxLDiso + ' at ' + mxLDt;
+    }
+
+    // ======== Total Storage Chart ========
+    let totalChart = null;
+    function renderTotalStorage() {
+        const D = getData();
+        const labels = D.CAISO.thresholds.map(fmtT);
+        if (totalChart) totalChart.destroy();
+        document.getElementById('stackedTitle').textContent =
+            'Total Storage Dispatch — All ISOs (' + (currentTrack === 'baseline' ? 'Baseline' : 'Demand Growth') + ')';
+
+        totalChart = new Chart(document.getElementById('totalStorageChart'), {
+            type: 'line',
+            data: { labels, datasets: ISOS.map(iso => ({
+                label: iso, data: safe(D[iso].total_storage_mean),
+                borderColor: ISO_CLR[iso], backgroundColor: ISO_CLR[iso] + '15',
+                borderWidth: 2.5, pointRadius: 2, pointHoverRadius: 5,
+                tension: 0.3, fill: true, spanGaps: true
+            }))},
+            options: { ...lineOpts('Total Storage % of Demand'), plugins: { ...lineOpts('').plugins, tooltip: pctTip } }
+        });
+    }
+
+    // ======== Track Toggle ========
+    document.getElementById('trackToggle').addEventListener('click', e => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        currentTrack = btn.dataset.track;
+        document.querySelectorAll('#trackToggle button').forEach(b => b.classList.toggle('active', b === btn));
+        updateHero(); renderTotalStorage(); renderOnsetTable(); renderCrossIso(); renderDeepDive(activeISO);
+    });
+
+    // ======== Onset Table ========
+    function renderOnsetTable() {
+        const D = getData();
+        const tbody = document.getElementById('onsetTableBody');
+        tbody.innerHTML = '';
+        ISOS.forEach(iso => {
+            const d = D[iso];
+            const findOnset = arr => {
+                for (let i = 0; i < arr.length; i++) if (arr[i] > 0.05) return fmtT(d.thresholds[i]);
+                return 'Never';
+            };
+            const bat4O = findOnset(d.battery4.mean_pct);
+            const bat8O = findOnset(d.battery8.mean_pct);
+            const ldesO = findOnset(d.ldes.mean_pct);
+            const h2O = findOnset(d.h2.mean_pct);
+            const mxTot = Math.max(...d.total_storage_mean).toFixed(1);
+
+            const cs = v => {
+                if (v === 'Never') return 'background:#E5E7EB;color:#6B7280;text-align:center;';
+                const n = parseFloat(v);
+                if (n <= 50) return 'background:#DCFCE7;color:#166534;font-weight:600;text-align:center;';
+                if (n <= 90) return 'background:#FEF9C3;color:#854D0E;font-weight:600;text-align:center;';
+                return 'background:#FEF2F2;color:#991B1B;font-weight:600;text-align:center;';
+            };
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td style="font-weight:600;">${iso}</td>
+                <td style="${cs(bat4O)}">${bat4O}</td><td style="${cs(bat8O)}">${bat8O}</td>
+                <td style="${cs(ldesO)}">${ldesO}</td><td style="${cs(h2O)}">${h2O}</td>
+                <td style="text-align:center;font-weight:600;color:var(--navy);">${mxTot}%</td>`;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // ======== Cross-ISO Charts ========
+    let cBat4, cBat8, cLdes, cTotal;
+    function renderCrossIso() {
+        const D = getData();
+        const labels = D.CAISO.thresholds.map(fmtT);
+        const mkDs = field => ISOS.map(iso => ({
+            label: iso, data: safe(D[iso][field].mean_pct),
+            borderColor: ISO_CLR[iso], backgroundColor: ISO_CLR[iso] + '20',
             borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 5,
             tension: 0.3, fill: false, spanGaps: true
         }));
+        const mkTotalDs = () => ISOS.map(iso => ({
+            label: iso, data: safe(D[iso].total_storage_mean),
+            borderColor: ISO_CLR[iso], backgroundColor: ISO_CLR[iso] + '20',
+            borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 5,
+            tension: 0.3, fill: false, spanGaps: true
+        }));
+
+        if (cBat4) cBat4.destroy();
+        cBat4 = new Chart(document.getElementById('crossIsoBat4'), {
+            type:'line', data:{labels, datasets: mkDs('battery4')},
+            options:{...lineOpts('Bat4 % of Demand'), plugins:{...lineOpts('').plugins, tooltip: pctTip}}
+        });
+        if (cBat8) cBat8.destroy();
+        cBat8 = new Chart(document.getElementById('crossIsoBat8'), {
+            type:'line', data:{labels, datasets: mkDs('battery8')},
+            options:{...lineOpts('Bat8 % of Demand'), plugins:{...lineOpts('').plugins, tooltip: pctTip}}
+        });
+        if (cLdes) cLdes.destroy();
+        cLdes = new Chart(document.getElementById('crossIsoLdes'), {
+            type:'line', data:{labels, datasets: mkDs('ldes')},
+            options:{...lineOpts('LDES % of Demand'), plugins:{...lineOpts('').plugins, tooltip: pctTip}}
+        });
+        if (cTotal) cTotal.destroy();
+        cTotal = new Chart(document.getElementById('totalByIsoChart'), {
+            type:'line', data:{labels, datasets: mkTotalDs()},
+            options:{...lineOpts('Total Storage %'), plugins:{...lineOpts('').plugins, tooltip: pctTip}}
+        });
     }
 
-    // 1. Bat4 Scenario Penetration
-    new Chart(document.getElementById('crossIsoBat4'), {
-        type: 'line',
-        data: { labels: THRESH_LABELS, datasets: isoLineDatasets('bat4_scenario_penetration') },
-        options: {
-            ...lineDefaults('% of Scenarios with Bat4', 100),
-            plugins: {
-                ...lineDefaults('', 100).plugins,
-                tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + (ctx.parsed.y != null ? ctx.parsed.y.toFixed(1) : '—') + '%' } }
-            }
-        }
-    });
+    // ======== DG KPIs ========
+    function renderDGKpis() {
+        const el = document.getElementById('dgKpiCards'); el.innerHTML = '';
+        const deltas = ISOS.map(iso => {
+            const blMax = Math.max(...BL[iso].total_storage_mean);
+            const dgMax = Math.max(...DG[iso].total_storage_mean);
+            return { iso, bl: blMax, dg: dgMax, delta: dgMax - blMax };
+        }).sort((a,b) => b.delta - a.delta);
 
-    // 2. LDES Scenario Penetration
-    new Chart(document.getElementById('crossIsoPenetration'), {
-        type: 'line',
-        data: { labels: THRESH_LABELS, datasets: isoLineDatasets('ldes_scenario_penetration') },
-        options: {
-            ...lineDefaults('% of Scenarios with LDES', 100),
-            plugins: {
-                ...lineDefaults('', 100).plugins,
-                tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + (ctx.parsed.y != null ? ctx.parsed.y.toFixed(1) : '—') + '%' } }
-            }
-        }
-    });
+        deltas.slice(0,3).forEach(d => {
+            const card = document.createElement('div');
+            card.className = 'kpi-card scroll-reveal';
+            const sign = d.delta > 0 ? '+' : '';
+            card.innerHTML = `<div class="kpi-val" style="color:${ISO_CLR[d.iso]}">${d.dg.toFixed(1)}%</div>
+                <div class="kpi-lbl">${d.iso} Peak Storage (DG)</div>
+                <div class="kpi-sub">${sign}${d.delta.toFixed(1)}pp vs baseline (${d.bl.toFixed(1)}%)</div>`;
+            el.appendChild(card);
+        });
+    }
 
-    // 3. Bat4 Dispatch in Optimal Mix
-    new Chart(document.getElementById('bat4DispatchChart'), {
-        type: 'line',
-        data: { labels: THRESH_LABELS, datasets: isoLineDatasets('battery4_pct') },
-        options: {
-            ...lineDefaults('Bat4 % of Demand'),
-            plugins: {
-                ...lineDefaults('').plugins,
-                tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + (ctx.parsed.y != null ? ctx.parsed.y.toFixed(1) : '—') + '% dispatch' } }
-            }
-        }
-    });
+    // ======== DG Comparison Charts ========
+    let dgB4C, dgLdC;
+    function renderDGCompare() {
+        const labels = BL.CAISO.thresholds.map(fmtT);
+        const keyISOs = ['CAISO','PJM','NEISO','ERCOT'];
+        const mkPair = (iso, field) => [
+            { label: iso + ' Base', data: safe(BL[iso][field].mean_pct),
+              borderColor: ISO_CLR[iso], backgroundColor: 'transparent',
+              borderWidth: 2, borderDash: [6,3], pointRadius: 0, tension: 0.3, spanGaps: true },
+            { label: iso + ' DG', data: safe(DG[iso][field].mean_pct),
+              borderColor: ISO_CLR[iso], backgroundColor: ISO_CLR[iso]+'15',
+              borderWidth: 2.5, pointRadius: 0, tension: 0.3, fill: false, spanGaps: true }
+        ];
+        if (dgB4C) dgB4C.destroy();
+        dgB4C = new Chart(document.getElementById('dgBat4CompareChart'), {
+            type:'line', data:{labels, datasets: keyISOs.flatMap(iso => mkPair(iso,'battery4'))},
+            options:{...lineOpts('Bat4 % of Demand'), plugins:{
+                legend:{position:'top',labels:{usePointStyle:true,padding:8,font:{size:9}}}, datalabels:false, tooltip:pctTip}}
+        });
+        if (dgLdC) dgLdC.destroy();
+        dgLdC = new Chart(document.getElementById('dgLdesCompareChart'), {
+            type:'line', data:{labels, datasets: keyISOs.flatMap(iso => mkPair(iso,'ldes'))},
+            options:{...lineOpts('LDES % of Demand'), plugins:{
+                legend:{position:'top',labels:{usePointStyle:true,padding:8,font:{size:9}}}, datalabels:false, tooltip:pctTip}}
+        });
+    }
 
-    // 4. LDES Dispatch in Optimal Mix
-    new Chart(document.getElementById('ldesDispatchChart'), {
-        type: 'line',
-        data: { labels: THRESH_LABELS, datasets: isoLineDatasets('ldes_pct') },
-        options: {
-            ...lineDefaults('LDES % of Demand'),
-            plugins: {
-                ...lineDefaults('').plugins,
-                tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + (ctx.parsed.y != null ? ctx.parsed.y.toFixed(2) : '—') + '% dispatch' } }
-            }
-        }
-    });
-
-    // 5. ISO Deep Dive Tabs
+    // ======== ISO Deep Dive ========
     const tabContainer = document.getElementById('isoTabs');
-    let activeISO = 'CAISO';
-    let mixChart = null, costChart = null;
+    let activeISO = 'CAISO', mixChart = null, storBrkChart = null;
 
     ISOS.forEach(iso => {
         const btn = document.createElement('button');
         btn.className = 'iso-tab' + (iso === activeISO ? ' active' : '');
-        btn.textContent = iso;
-        btn.setAttribute('role', 'tab');
+        btn.textContent = iso; btn.setAttribute('role','tab');
         btn.addEventListener('click', () => selectISO(iso));
         tabContainer.appendChild(btn);
     });
@@ -431,211 +562,125 @@ body { background: var(--bg-page-white); }
     }
 
     function renderDeepDive(iso) {
-        const m = SM[iso];
-        const thresholds = m.thresholds;
-        const labels = thresholds.map(t => t >= 99.99 ? '≥99.99%' : t + '%');
-        const bat4Onset = m.bat4_onset;
-        const ldesOnset = m.ldes_onset;
+        const D = getData(), d = D[iso];
+        const thresholds = d.thresholds, labels = thresholds.map(fmtT);
 
-        // Mix progression stacked bar
+        // Mix stacked bar
         if (mixChart) mixChart.destroy();
         document.getElementById('mixChartTitle').textContent = iso + ' — Resource Mix';
-
+        const ds = [
+            {label:'Clean Firm', data:safe(d.resource_mix.clean_firm), backgroundColor:RES_CLR.clean_firm, stack:'s'},
+            {label:'Solar', data:safe(d.resource_mix.solar), backgroundColor:RES_CLR.solar, stack:'s'},
+            {label:'Wind', data:safe(d.resource_mix.wind), backgroundColor:RES_CLR.wind, stack:'s'},
+        ];
+        const osw = d.resource_mix.offshore_wind;
+        if (osw && osw.some(v => v > 0))
+            ds.push({label:'Offshore Wind', data:safe(osw), backgroundColor:RES_CLR.offshore_wind, stack:'s'});
+        ds.push(
+            {label:'CCS-CCGT', data:safe(d.resource_mix.ccs_ccgt), backgroundColor:RES_CLR.ccs_ccgt, stack:'s'},
+            {label:'Hydro', data:safe(d.resource_mix.hydro), backgroundColor:RES_CLR.hydro, stack:'s'}
+        );
         mixChart = new Chart(document.getElementById('mixProgressionChart'), {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [
-                    { label: 'Clean Firm', data: safe(m.resource_mix.clean_firm), backgroundColor: RES_CLR.clean_firm, stack: 's' },
-                    { label: 'Solar', data: safe(m.resource_mix.solar), backgroundColor: RES_CLR.solar, stack: 's' },
-                    { label: 'Wind', data: safe(m.resource_mix.wind), backgroundColor: RES_CLR.wind, stack: 's' },
-                    { label: 'CCS-CCGT', data: safe(m.resource_mix.ccs_ccgt), backgroundColor: RES_CLR.ccs_ccgt, stack: 's' },
-                    { label: 'Hydro', data: safe(m.resource_mix.hydro), backgroundColor: RES_CLR.hydro, stack: 's' }
-                ]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'top', labels: { usePointStyle: true, padding: 10, font: { size: 10 } } },
-                    tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y + ' GW' } },
-                    datalabels: false,
-                    annotation: {
-                        annotations: Object.assign(
-                            bat4Onset ? {
-                                bat4: {
-                                    type: 'line', xMin: thresholds.indexOf(bat4Onset), xMax: thresholds.indexOf(bat4Onset),
-                                    borderColor: RESOURCE_COLORS.battery, borderWidth: 2, borderDash: [6, 4],
-                                    label: { display: true, content: 'Bat4 onset', position: 'start', backgroundColor: RESOURCE_COLORS.battery + '20', color: RESOURCE_COLORS.battery, font: { size: 10, weight: 'bold' } }
-                                }
-                            } : {},
-                            ldesOnset ? {
-                                ldes: {
-                                    type: 'line', xMin: thresholds.indexOf(ldesOnset), xMax: thresholds.indexOf(ldesOnset),
-                                    borderColor: RESOURCE_COLORS.ldes, borderWidth: 2, borderDash: [6, 4],
-                                    label: { display: true, content: 'LDES onset', position: 'end', backgroundColor: RESOURCE_COLORS.ldes + '20', color: RESOURCE_COLORS.ldes, font: { size: 10, weight: 'bold' } }
-                                }
-                            } : {}
-                        )
-                    }
-                },
-                scales: {
-                    x: { stacked: true, ticks: { maxRotation: 45, font: { size: 9 } } },
-                    y: { stacked: true, title: { display: true, text: 'GW', font: { size: 11 } }, ticks: { font: { size: 10 } } }
-                }
-            }
+            type:'bar', data:{labels, datasets:ds},
+            options:{responsive:true, maintainAspectRatio:false,
+                plugins:{legend:{position:'top',labels:{usePointStyle:true,padding:10,font:{size:10}}},
+                    tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+(ctx.parsed.y||0).toFixed(2)+' GW'}}, datalabels:false},
+                scales:{x:{stacked:true,ticks:{maxRotation:45,font:{size:9}}},
+                    y:{stacked:true,title:{display:true,text:'GW',font:{size:11}},ticks:{font:{size:10}}}}}
         });
 
-        // Cost trajectory
-        if (costChart) costChart.destroy();
-        document.getElementById('costChartTitle').textContent = iso + ' — System Cost';
-
-        const costData = safe(m.cost_total);
-        const hasStorage = m.battery4_pct.map((b4, i) =>
-            (b4 > 0) || ((m.battery8_pct[i] || 0) > 0) || ((m.ldes_pct[i] || 0) > 0)
-        );
-
-        costChart = new Chart(document.getElementById('costTrajectoryChart'), {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Total Cost', data: costData,
-                    borderColor: ISO_CLR[iso], backgroundColor: ISO_CLR[iso] + '30',
-                    borderWidth: 2.5, fill: true,
-                    pointRadius: costData.map((_, i) => hasStorage[i] ? 6 : 3),
-                    pointBackgroundColor: costData.map((_, i) => hasStorage[i] ? RESOURCE_COLORS.battery : ISO_CLR[iso]),
-                    pointBorderColor: costData.map((_, i) => hasStorage[i] ? RESOURCE_COLORS.battery : ISO_CLR[iso]),
-                    tension: 0.3
-                }]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    datalabels: false,
-                    tooltip: {
-                        callbacks: {
-                            label: ctx => {
-                                const i = ctx.dataIndex;
-                                if (ctx.parsed.y == null) return '';
-                                let lbl = '$' + ctx.parsed.y.toFixed(2) + '/MWh';
-                                if (m.battery4_pct[i] > 0) lbl += ' | Bat4: ' + m.battery4_pct[i] + '%';
-                                if ((m.battery8_pct[i] || 0) > 0) lbl += ' | Bat8: ' + m.battery8_pct[i] + '%';
-                                if ((m.ldes_pct[i] || 0) > 0) lbl += ' | LDES: ' + m.ldes_pct[i] + '%';
-                                return lbl;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: { ticks: { maxRotation: 45, font: { size: 9 } } },
-                    y: { title: { display: true, text: '$/MWh', font: { size: 11 } }, ticks: { font: { size: 10 } } }
-                }
-            }
+        // Storage breakdown
+        if (storBrkChart) storBrkChart.destroy();
+        document.getElementById('storBreakdownTitle').textContent = iso + ' — Storage Breakdown';
+        storBrkChart = new Chart(document.getElementById('storageBreakdownChart'), {
+            type:'line', data:{labels, datasets:[
+                {label:'Battery 4hr', data:safe(d.battery4.mean_pct), borderColor:STOR_CLR.battery4,
+                 backgroundColor:STOR_CLR.battery4+'40', borderWidth:2, fill:true, tension:0.3, pointRadius:2, order:3},
+                {label:'Battery 8hr', data:safe(d.battery8.mean_pct), borderColor:STOR_CLR.battery8,
+                 backgroundColor:STOR_CLR.battery8+'40', borderWidth:2, fill:true, tension:0.3, pointRadius:2, order:2},
+                {label:'LDES 100hr', data:safe(d.ldes.mean_pct), borderColor:STOR_CLR.ldes,
+                 backgroundColor:STOR_CLR.ldes+'40', borderWidth:2, fill:true, tension:0.3, pointRadius:2, order:1}
+            ]},
+            options:{responsive:true, maintainAspectRatio:false,
+                interaction:{mode:'index',intersect:false},
+                plugins:{legend:{position:'top',labels:{usePointStyle:true,padding:10,font:{size:10}}},
+                    datalabels:false, tooltip:pctTip},
+                scales:{x:{ticks:{maxRotation:45,font:{size:9}}},
+                    y:{title:{display:true,text:'% of Demand',font:{size:11}},min:0}}}
         });
 
         // Table
-        document.getElementById('tableTitle').textContent = iso + ' — Lowest-Cost Mix Detail';
-        const tbody = document.getElementById('mixTableBody');
-        tbody.innerHTML = '';
-
-        const showThresholds = [50, 75, 85, 90, 95, 97.5, 99, 99.5, 99.9, 99.99];
-        showThresholds.forEach(t => {
+        document.getElementById('tableTitle').textContent = iso + ' — Mix Detail (' + (currentTrack==='baseline'?'Baseline':'Demand Growth') + ')';
+        const tbody = document.getElementById('mixTableBody'); tbody.innerHTML = '';
+        const showT = [50,75,85,90,95,97.5,99,99.5,99.9,99.99];
+        showT.forEach(t => {
             const idx = thresholds.indexOf(t);
             if (idx === -1) return;
-            if (m.cost_total[idx] == null) return;
-            const hasLDES = (m.ldes_pct[idx] || 0) > 0;
-            const hasBat4 = m.battery4_pct[idx] > 0;
+            const hasLD = d.ldes.mean_pct[idx] > 0.05;
             const tr = document.createElement('tr');
-            if (hasLDES) tr.className = 'ldes-active';
-
-            const fmt = v => (v === 0 || v == null) ? '<span class="zero">0</span>' : v;
-            const fmtPct = v => (!v || v === 0) ? '<span class="zero">&mdash;</span>' : v + '%';
-            const tLabel = t >= 99.99 ? '≥99.99%' : t + '%';
-
-            tr.innerHTML = `
-                <td>${tLabel}</td>
-                <td>${m.resource_mix.clean_firm[idx]} GW</td>
-                <td>${fmt(m.resource_mix.solar[idx])} GW</td>
-                <td>${m.resource_mix.wind[idx]} GW</td>
-                <td>${fmt(m.resource_mix.ccs_ccgt[idx])} GW</td>
-                <td>${fmt(m.resource_mix.hydro[idx])} GW</td>
-                <td>${hasBat4 ? '<strong>' + m.battery4_pct[idx] + '%</strong>' : fmtPct(0)}</td>
-                <td>${fmtPct(m.battery8_pct[idx])}</td>
-                <td>${hasLDES ? '<strong>' + m.ldes_pct[idx] + '%</strong>' : fmtPct(0)}</td>
-                <td>${fmtPct(m.h2_pct[idx])}</td>
-                <td>$${m.cost_total[idx].toFixed(2)}</td>
-                <td>${m.match_score[idx].toFixed(1)}%</td>
-            `;
+            if (hasLD) tr.className = 'ldes-active';
+            const f = v => (!v || v === 0) ? '<span class="zero">0</span>' : v.toFixed(2);
+            const fp = v => (!v || v < 0.01) ? '<span class="zero">&mdash;</span>' : '<strong>' + v.toFixed(2) + '%</strong>';
+            tr.innerHTML = `<td>${fmtT(t)}</td>
+                <td>${f(d.resource_mix.clean_firm[idx])}</td><td>${f(d.resource_mix.solar[idx])}</td>
+                <td>${f(d.resource_mix.wind[idx])}</td><td>${f(d.resource_mix.offshore_wind[idx])}</td>
+                <td>${f(d.resource_mix.ccs_ccgt[idx])}</td><td>${f(d.resource_mix.hydro[idx])}</td>
+                <td>${fp(d.battery4.mean_pct[idx])}</td><td>${fp(d.battery8.mean_pct[idx])}</td>
+                <td>${fp(d.ldes.mean_pct[idx])}</td><td>$${d.cost_median[idx].toFixed(2)}</td>`;
             tbody.appendChild(tr);
         });
-
         renderInsight(iso);
     }
 
     const insights = {
-        CAISO: {
-            title: 'CAISO: Bat4 from 10%, Bat8 at the last mile',
-            text: 'Bat4 runs 2–7% dispatch through the full range (daily solar cycling). Bat8 enters at 99.5% — the only ISO where 8hr batteries make the optimal cut below ≥99.99%. LDES never appears. Cost: $24–$51/MWh.'
-        },
-        ERCOT: {
-            title: 'ERCOT: wind-powered, late storage',
-            text: 'Zero storage through 95% — massive wind overbuild covers most hours. Bat4 enters at 97.5% (2%). LDES appears at ≥99.99% (5%) for multi-day wind lulls. Classic wind pattern.'
-        },
-        PJM: {
-            title: 'PJM: 100% Bat4, zero LDES',
-            text: 'Bat4 from 10%, present in 100% of ≥99% scenarios — highest penetration of any storage type in any ISO. Reaches 10% dispatch at ≥99.9%. LDES and Bat8 never appear. Diversified VRE + clean firm eliminates multi-day gaps.'
-        },
-        NYISO: {
-            title: 'NYISO: steady 5% Bat4, no long-duration',
-            text: 'Maintains 5% Bat4 across all 21 thresholds — the most consistent storage deployment. Nuclear + hydro provides a massive clean foundation. No LDES or Bat8 needed. Cost: $37–$69/MWh.'
-        },
-        NEISO: {
-            title: 'NEISO: late Bat4, LDES in the scenario space',
-            text: 'Bat4 doesn\'t enter until 87.5% (2%). Below that, offshore wind + clean firm cover all hours. LDES appears in 26% of last-mile scenarios with up to 100% dispatch intensity — driven by winter gas constraints.'
-        },
-        MISO: {
-            title: 'MISO: minimal storage, wind + firm dominates',
-            text: 'Reaches 99.5% with just 2% Bat4. LDES enters at 99.9% (5%) for multi-day gaps. Bat8 at ≥99.99% (0.5%). Cheap onshore wind minimizes storage need even at extreme thresholds.'
-        },
-        SPP: {
-            title: 'SPP: latest Bat4 onset of any ISO',
-            text: 'Bat4 doesn\'t appear until 99.9% — extraordinary wind resource ($16–$27/MWh through 97.5%) covers nearly all hours without storage. LDES enters at 99.9% (5%). Bat8 at ≥99.99% (2%) — highest Bat8 penetration of any ISO.'
-        }
+        CAISO: { title:'CAISO: Solar-driven Bat4 workhorse',
+            text:'Bat4 appears from the lowest thresholds, running 1.6–5% dispatch — classic daily solar cycling. At ≥99.5%, Bat8 enters for extended evening coverage. LDES stays marginal. Geothermal availability means less long-duration storage needed.' },
+        ERCOT: { title:'ERCOT: Wind-powered, late storage',
+            text:'Zero storage through 90% — massive wind overbuild covers most hours. Bat4 enters at 95% under demand growth. LDES appears at ≥99.99% (3.5% in DG) for multi-day wind lulls. The wind resource is so dominant that storage is a last resort.' },
+        PJM: { title:'PJM: Bat4 from day one, highest penetration',
+            text:'Bat4 starts at 10% and reaches 6.3% dispatch at ≥99%. Offshore wind (2–4 GW) provides nighttime generation that reduces LDES need. No Bat8 or LDES in any scenario — diversified mix eliminates multi-day gaps.' },
+        NYISO: { title:'NYISO: Steady Bat4, nuclear + hydro foundation',
+            text:'Bat4 maintains 1.4–4.1% across all thresholds — remarkably consistent. Nuclear + hydro provides massive clean baseload. Offshore wind (up to 25 GW) fills gaps. No LDES or Bat8 needed — the cleanest existing grid.' },
+        NEISO: { title:'NEISO: Winter gas constraint drives LDES',
+            text:'The only ISO where LDES reaches 8% dispatch (at ≥99.99% baseline). Winter gas pipeline constraints create multi-day deficits. Demand growth pushes LDES to 4.1%. The CCS adder (+$13.13/MWh) further elevates storage value.' },
+        MISO: { title:'MISO: Cheap wind minimizes storage',
+            text:'Storage doesn\'t register until 95%. Bat4 reaches 2.6% at ≥99%. LDES emerges at 99% (1.4%) and grows to 4.7% at ≥99.99% — second-highest LDES after NEISO. Cheap onshore wind covers most hours.' },
+        SPP: { title:'SPP: Latest onset, highest Bat8',
+            text:'The windiest ISO delays all storage to the last mile. Bat4 appears at 99.9% baseline. At ≥99.99%, Bat8 reaches 1.3% (highest of any ISO) and LDES hits 3.4%. Exceptional wind pushes storage onset past 99%.' }
     };
 
     function renderInsight(iso) {
         const info = insights[iso];
         document.getElementById('isoInsight').innerHTML = `
             <div class="insight-box purple" style="margin-top: var(--space-lg);">
-                <h5>${info.title}</h5>
-                <p>${info.text}</p>
-            </div>
-        `;
+                <h5>${info.title}</h5><p>${info.text}</p>
+            </div>`;
     }
 
-    // 6. All-ISO Cost Chart
-    new Chart(document.getElementById('allIsoCostChart'), {
-        type: 'line',
-        data: { labels: THRESH_LABELS, datasets: isoLineDatasets('cost_total') },
-        options: {
-            ...lineDefaults('$/MWh'),
-            plugins: {
-                ...lineDefaults('').plugins,
-                tooltip: {
-                    callbacks: {
-                        label: ctx => {
-                            if (ctx.parsed.y == null) return '';
-                            return ctx.dataset.label + ': $' + ctx.parsed.y.toFixed(2) + '/MWh';
-                        }
-                    }
-                }
-            }
-        }
-    });
+    // ======== All-ISO Cost Chart ========
+    function renderAllIsoCost() {
+        const D = getData(), labels = D.CAISO.thresholds.map(fmtT);
+        new Chart(document.getElementById('allIsoCostChart'), {
+            type:'line', data:{labels, datasets: ISOS.map(iso => {
+                const costs = safe(D[iso].cost_median), stor = D[iso].total_storage_mean;
+                return { label:iso, data:costs, borderColor:ISO_CLR[iso], backgroundColor:ISO_CLR[iso]+'20',
+                    borderWidth:2.5, tension:0.3, fill:false, spanGaps:true,
+                    pointRadius: costs.map((_,i) => (stor[i]||0) > 1 ? 5 : 2),
+                    pointBackgroundColor: costs.map((_,i) => (stor[i]||0) > 1 ? STOR_CLR.battery4 : ISO_CLR[iso]) };
+            })},
+            options:{...lineOpts('$/MWh'), plugins:{...lineOpts('').plugins,
+                tooltip:{callbacks:{label:ctx => {
+                    if(ctx.parsed.y==null) return '';
+                    const iso=ctx.dataset.label, i=ctx.dataIndex, D2=getData(), s=D2[iso].total_storage_mean[i]||0;
+                    let l=iso+': $'+ctx.parsed.y.toFixed(2)+'/MWh';
+                    if(s>0.01) l+=' | Storage: '+s.toFixed(2)+'%'; return l;
+                }}}}}
+        });
+    }
 
-    // Initial render
-    selectISO('CAISO');
+    // ======== Init ========
+    updateHero(); renderTotalStorage(); renderOnsetTable(); renderCrossIso();
+    renderDGKpis(); renderDGCompare(); renderAllIsoCost(); selectISO('CAISO');
 })();
 </script>
 
@@ -643,16 +688,16 @@ body { background: var(--bg-page-white); }
 <div class="related-analyses">
     <div class="related-analyses-title">Related Analyses</div>
     <div class="related-analyses-grid">
-        <a href="lmp_trends.html" class="related-card">
-            <div class="related-card-tag">Markets</div>
-            <div class="related-card-title">LMP Trends</div>
-            <div class="related-card-desc">How wholesale prices respond to storage deployment and clean energy growth.</div>
+        <a href="building_blocks.html" class="related-card">
+            <div class="related-card-tag">Grid</div>
+            <div class="related-card-title">Building Blocks</div>
+            <div class="related-card-desc">How each resource shapes the supply curve and fits together to meet demand.</div>
             <div class="related-card-arrow">Explore &rarr;</div>
         </a>
-        <a href="scenario_comparison.html" class="related-card">
-            <div class="related-card-tag">Strategy</div>
-            <div class="related-card-title">Scenario Comparison</div>
-            <div class="related-card-desc">How storage fits into consequential vs. hourly matching procurement strategies.</div>
+        <a href="lmp_trends.html" class="related-card">
+            <div class="related-card-tag">Markets</div>
+            <div class="related-card-title">Wholesale Prices</div>
+            <div class="related-card-desc">How storage deployment reshapes wholesale electricity price dynamics.</div>
             <div class="related-card-arrow">Explore &rarr;</div>
         </a>
         <a href="abatement_dashboard.html" class="related-card">
