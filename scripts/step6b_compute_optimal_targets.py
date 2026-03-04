@@ -526,14 +526,14 @@ def get_resource_mix(iso):
 
 
 def load_parquet_costs():
-    """Load NEW-resource-only cost per demand MWh from parquets.
+    """Load clean-resource-only cost per demand MWh from parquets.
 
     Computes P10/P25/P50/P75/P90 across all cost scenarios at each threshold.
-    Cost = cost_total_cost - existing_wholesale_cost - gas_backup_cost
+    Cost = cost_total_cost - gas_backup_cost (clean resource LCOE only).
 
-    Step 3 prices existing resources at wholesale. We subtract that to get
-    only the LCOE cost of new clean energy investment. Gas backup is excluded
-    (system reliability cost, not abatement cost).
+    Step 3 total_cost includes gas RA; we subtract it to isolate clean resource
+    investment cost. Existing resources are at $0 (sunk fleet). No wholesale
+    offset applied.
 
     Falls back to CLEAN_COST if parquets unavailable.
     """
@@ -563,8 +563,8 @@ def load_parquet_costs():
             print(f"  WARNING: No parquet found for {iso} — using CLEAN_COST fallback")
             continue
 
-        # New resource cost: Step 3 already prices existing at $0 (sunk fleet).
-        # cost_total_cost = LCOE of new-build clean only. No wholesale offset.
+        # Clean resource cost: total_cost includes gas RA; subtract to get clean-only.
+        # Existing resources at $0 (sunk fleet). No wholesale offset.
         new_cost = df['cost_total_cost'].copy()
         if 'gas_gas_cost_per_mwh' in df.columns:
             new_cost = new_cost - df['gas_gas_cost_per_mwh'].fillna(0)
@@ -764,10 +764,10 @@ def compute_marginal_mac_curve(iso, cost_tier='medium', growth_tier='medium'):
     inflection spikes (NYISO 78%), and staircase artifacts from isotonic on
     dense points.
 
-    Cost basis: NEW-resource-only LCOE per MWh of demand from parquets
-    (P10/P25/P50/P75/P90 across sensitivity scenarios). Existing clean
-    resources' wholesale cost is subtracted, gas backup excluded. Falls
-    back to CLEAN_COST if parquet data unavailable.
+    Cost basis: clean-resource-only LCOE per MWh of demand from parquets
+    (P10/P25/P50/P75/P90 across sensitivity scenarios). Gas RA subtracted
+    from total_cost; existing resources at $0 (sunk). No wholesale offset.
+    Falls back to CLEAN_COST if parquet data unavailable.
 
     CO₂ basis: baseline emissions (existing clean at 2025 TWh, diluted by
     demand growth) minus scenario emissions (at threshold, grown demand).
@@ -1238,7 +1238,7 @@ def main():
         print(f"  {iso}: existing={pct:.1f}%  base_emit={base_emit:.1f}Mt"
               f"  @2035(diluted={pct_diluted:.1f}%)={grown_emit:.1f}Mt")
 
-    # Load NEW-resource-only cost from parquets (existing wholesale subtracted)
+    # Load clean-resource-only cost from parquets (gas RA subtracted from total_cost)
     print("\nLoading new-resource cost tiers from parquets (P10/P25/P50/P75/P90)...")
     parquet_costs = load_parquet_costs()
     if _PARQUET_COSTS:
