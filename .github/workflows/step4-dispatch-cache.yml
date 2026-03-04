@@ -3,7 +3,7 @@ name: "Step 4: Build Dispatch Cache"
 # Pre-computes 8760-hour dispatch for all unique mixes per ISO.
 # Fans out parallel matrix jobs (one per ISO), merges artifacts, commits.
 #
-# Prerequisite: Step 4 (or Step 3) must have produced parquets.
+# Prerequisite: Step 3 must have produced parquets.
 # Output: data/step5-post-processing/dispatch_cache/{ISO}_dispatch_cache.parquet
 
 on:
@@ -139,7 +139,7 @@ jobs:
             exit 0
           fi
 
-          git commit -m "Step 5.1: dispatch cache ${{ inputs.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git commit -m "Step 4 Dispatch Cache: ${{ inputs.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
           MAX_RETRIES=4
           for i in $(seq 1 $MAX_RETRIES); do
