@@ -38,6 +38,7 @@ from pipeline_config import (
     NUCLEAR_NEWBUILD_LCOE, CCS_LCOE_45Q_ON, CCS_LCOE_45Q_OFF,
     GEOTHERMAL_LCOE, EXISTING_NUCLEAR_GW, UPRATE_CAP_TWH,
     DEMAND_GROWTH_RATES, THRESHOLD_TARGET_YEARS,
+    THRESHOLDS as ALL_THRESHOLDS, ACTIVE_THRESHOLDS,
 )
 
 SBTI_YEAR_MAP = THRESHOLD_TARGET_YEARS  # Backward compat alias
@@ -84,8 +85,8 @@ SBTI_MILESTONES = [
     {'year': 2050, 'threshold': 99.99, 'label': 'Net-zero'},
 ]
 
-# 17 thresholds used by the optimizer (must match step3)
-THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
+# Single source of truth: pipeline_config
+THRESHOLDS = ACTIVE_THRESHOLDS
 
 BASE_YEAR = 2025
 TIMELINE_YEARS = list(range(2025, 2051))  # 26 years
@@ -174,7 +175,7 @@ def get_threshold_for_year(year):
     Linearly interpolates between defined milestone thresholds.
     """
     # Build year→threshold mapping from THRESHOLD_TARGET_YEARS
-    # Only use the 15 thresholds we care about
+    # Use all active thresholds from pipeline_config
     year_to_threshold = {}
     for thr in THRESHOLDS:
         yr = THRESHOLD_TARGET_YEARS.get(thr)

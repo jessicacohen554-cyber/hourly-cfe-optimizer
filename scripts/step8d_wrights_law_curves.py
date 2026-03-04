@@ -50,7 +50,8 @@ from pipeline_config import (
 BASE_DEMAND_TWH = REGIONAL_DEMAND_TWH
 SBTI_YEAR_MAP = THRESHOLD_TARGET_YEARS
 
-THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
+# Single source of truth: pipeline_config
+THRESHOLDS = ACTIVE_THRESHOLDS
 
 # Participation levels to evaluate (% of C&I demand)
 PARTICIPATION_PCTS = np.array([0.02, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30,

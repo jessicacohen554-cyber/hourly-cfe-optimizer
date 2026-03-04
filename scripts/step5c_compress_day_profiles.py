@@ -39,6 +39,7 @@ DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__
 sys.path.insert(0, os.path.dirname(DATA_DIR))
 from parquet_io import load_from_parquets, find_input_dir
 
+from pipeline_config import ACTIVE_THRESHOLDS, THRESHOLD_TARGET_YEARS
 from dispatch_utils import (
     H, ISOS, RESOURCE_TYPES, CACHE_VERSION, DISPATCH_ORDER,
     load_common_data, get_supply_profiles, get_demand_profile,
@@ -220,8 +221,8 @@ def main():
         print("ERROR: No parquets or overprocure_results.json found")
         sys.exit(1)
 
-    # Dashboard thresholds (same as shared-data.js FEASIBLE_MIXES)
-    DASHBOARD_THRESHOLDS = ['50', '55', '60', '65', '70', '75', '80', '85', '87.5', '90', '92.5', '95', '97.5', '99', '99.5', '99.9', '99.99']
+    # Dashboard thresholds — derived from pipeline_config (single source of truth)
+    DASHBOARD_THRESHOLDS = [str(int(t)) if t == int(t) else str(t) for t in ACTIVE_THRESHOLDS]
 
     output = {}
     total_mixes = 0
