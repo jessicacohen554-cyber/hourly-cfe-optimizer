@@ -104,7 +104,7 @@ jobs:
           echo "--- Protected data/ files by directory ---"
           for dir in data/eia-930 data/step1-pfs-parquets data/step1d-storage-parquets \
                      data/step2-ef-parquets data/step3-cost-opt-parquets \
-                     data/step4-gas-ccs-parquets data/step5-post-processing; do
+                     data/step5-post-processing; do
             count=$(grep -c "^.* ${dir}/" "$PROTECTED_DATA" 2>/dev/null || echo 0)
             [ "$count" -gt 0 ] && echo "  ${dir}/  →  ${count} live files"
           done
@@ -206,7 +206,7 @@ jobs:
             echo "--- Protected by directory ---"
             for dir in data/eia-930 data/step1-pfs-parquets data/step1d-storage-parquets \
                        data/step2-ef-parquets data/step3-cost-opt-parquets \
-                       data/step4-gas-ccs-parquets data/step5-post-processing \
+                       data/step5-post-processing \
                        data/step5-post-processing/lmp data/step5-post-processing/co2_results \
                        dashboard dashboard/js; do
               matched=$(grep " ${dir}/" "$KEPT" || true)
@@ -243,7 +243,7 @@ jobs:
             echo "--- Removable by directory ---"
             for dir in data/eia-930 data/step1-pfs-parquets data/step1d-storage-parquets \
                        data/step2-ef-parquets data/step3-cost-opt-parquets \
-                       data/step4-gas-ccs-parquets data/step5-post-processing \
+                       data/step5-post-processing \
                        data/step5-post-processing/lmp data/step5-post-processing/co2_results \
                        data/checkpoints data/checkpoints_v4 \
                        dashboard dashboard/js; do

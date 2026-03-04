@@ -1,5 +1,5 @@
 """
-Unit tests for cost optimization model (step3_cost_optimization.py).
+Unit tests for cost optimization model (step3a_cost_optimization.py).
 
 Tests cover:
   - Existing fleet priced at $0 (sunk cost)
@@ -28,10 +28,10 @@ from pipeline_config import (
 def _import_cost_function():
     """Import the cost evaluation function from step3. Returns None if unavailable."""
     try:
-        from step3_cost_optimization import evaluate_cost_vectorized, _table_to_arrays
+        from step3a_cost_optimization import evaluate_cost_vectorized, _table_to_arrays
         return evaluate_cost_vectorized, _table_to_arrays
     except ImportError:
-        pytest.skip("step3_cost_optimization.py not importable (missing dependencies)")
+        pytest.skip("step3a_cost_optimization.py not importable (missing dependencies)")
     except Exception as e:
         pytest.skip(f"step3 import failed: {e}")
 
@@ -39,7 +39,7 @@ def _import_cost_function():
 def _import_lcoe_tables():
     """Import LCOE tables from step3."""
     try:
-        from step3_cost_optimization import (
+        from step3a_cost_optimization import (
             LCOE_TABLES, CCS_LCOE_45Q_ON, CCS_LCOE_45Q_OFF,
             NUCLEAR_NEWBUILD_LCOE, UPRATE_LCOE,
             TRANSMISSION_COSTS, GEOTHERMAL_LCOE,

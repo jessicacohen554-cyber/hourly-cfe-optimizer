@@ -2,7 +2,7 @@
 """
 LMP Model Calibration — Validate synthetic LMP against PJM actual data
 ========================================================================
-Compares step5_compute_lmp_prices.py output against published PJM market statistics
+Compares step5b_compute_lmp_prices.py output against published PJM market statistics
 from the Independent Market Monitor (Monitoring Analytics) State of the Market
 reports and EIA wholesale data.
 
@@ -38,7 +38,7 @@ from dispatch_utils import (
     load_common_data, get_demand_profile, get_supply_profiles,
     reconstruct_hourly_dispatch,
 )
-from step5_compute_lmp_prices import (
+from step5b_compute_lmp_prices import (
     build_merit_order_stack, get_price_model,
     compute_hourly_lmp_vectorized, compute_lmp_stats,
     load_scenarios,
@@ -416,7 +416,7 @@ def run_qa_actual(iso='PJM', year=2025, fuel_level='Medium'):
     Computes actual clean %, actual fossil dispatch, then runs LMP engine on
     the actual residual demand. Cross-references model constants against EIA actuals.
     """
-    from step5_compute_lmp_prices import (
+    from step5b_compute_lmp_prices import (
         INSTALLED_FOSSIL_MW, FOSSIL_CAPACITY_SHARES, PEAK_DEMAND_MW,
         RESOURCE_ADEQUACY_MARGIN, GAS_AVAILABILITY_FACTOR,
     )

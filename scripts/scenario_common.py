@@ -3,10 +3,9 @@
 Shared constants, cost functions, and utilities for scenario comparison scripts.
 
 Used by:
-  - step5_scenario_a_consequential.py (Scenario A: Pure Consequential)
-  - step5_scenario_b_hourly.py (Scenario B: Hourly Matching)
-  - step5_scenario_comparison.py (comparison and output)
-  - step2_5_expand_ef_for_floors.py (EF expansion)
+  - step7a_scenario_consequential.py (Scenario A: Pure Consequential)
+  - step7b_scenario_hourly.py (Scenario B: Hourly Matching)
+  - step7c_scenario_comparison.py (comparison and output)
 """
 
 import json

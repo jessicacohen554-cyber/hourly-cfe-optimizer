@@ -1,0 +1,200 @@
+name: "Step 5A: Compute CO2"
+
+# Shared utility — computes dispatch-stack CO2 emissions for all ISOs.
+# Must run BEFORE Step 6.1 (MAC depends on CO2 output).
+# Merit-order retirement: coal → oil → gas. Demand-growth-aware.
+#
+# iso=ALL fans out parallel matrix jobs, then merges into one branch + PR.
+# Output: data/step5-post-processing/co2_*.json
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO region to process (ALL = parallel)'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  BRANCH_PREFIX: step5-0-co2
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            echo 'matrix=["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix=["${{ inputs.iso }}"]' >> "$GITHUB_OUTPUT"
+          fi
+
+  process:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      matrix:
+        iso: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+
+      - name: Verify upstream data exists
+        run: |
+          if [ ! -d "data/step3-cost-opt-parquets" ] || ! ls data/step3-cost-opt-parquets/*.parquet >/dev/null 2>&1; then
+            echo "ERROR: No step-3 parquets found."
+            exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy numba pyarrow pandas scipy
+
+      - name: Ensure output directories
+        run: mkdir -p data/step5-post-processing
+
+      - name: "Compute CO2 — ${{ matrix.iso }}"
+        run: |
+          echo "=== Step 6.0: Compute CO2 for ${{ matrix.iso }} ==="
+          python scripts/step5a_compute_co2.py --iso ${{ matrix.iso }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: co2-${{ matrix.iso }}
+          path: data/step5-post-processing/
+          retention-days: 1
+
+  merge:
+    needs: [prepare, process]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Create output branch
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${{ inputs.iso }}"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$TARGET_BRANCH"
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: co2-*
+          path: data/step5-post-processing/
+          merge-multiple: true
+
+      - name: Batched commit and push (per-ISO)
+        run: |
+          git config http.postBuffer 524288000
+
+          push_with_retry() {
+            local label="$1"
+            local MAX_RETRIES=4
+            for i in $(seq 1 $MAX_RETRIES); do
+              echo "  Push attempt $i/$MAX_RETRIES for ${label}..."
+              git push -u origin "$TARGET_BRANCH" 2>&1 && return 0
+              if [ "$i" -eq "$MAX_RETRIES" ]; then
+                echo "  ERROR: Push failed for ${label} after $MAX_RETRIES attempts"
+                return 1
+              fi
+              BACKOFF=$((2 ** i))
+              echo "  Retrying in ${BACKOFF}s..."
+              sleep "$BACKOFF"
+            done
+          }
+
+          PUSHED=false
+
+          # Determine ISOs to batch
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            ISOS="CAISO ERCOT PJM NYISO NEISO MISO SPP"
+          else
+            ISOS="${{ inputs.iso }}"
+          fi
+
+          for iso in $ISOS; do
+            echo "--- Batching commit for $iso ---"
+
+            # Collect all files for this ISO (co2_results/ parquets + step4 enriched parquets)
+            FILES=$(find data/step5-post-processing/ -name "*${iso}*" -type f 2>/dev/null || true)
+            if [ -z "$FILES" ]; then
+              echo "  No output files for $iso — skipping"
+              continue
+            fi
+
+            git add -f $FILES
+            if git diff --cached --quiet; then
+              echo "  No changes for $iso — skipping"
+              continue
+            fi
+
+            BATCH_MB=$(du -cm $FILES | tail -1 | cut -f1)
+            echo "  Staging ~${BATCH_MB} MB for $iso"
+            git commit -m "Step 6.0 CO2: ${iso} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+            if push_with_retry "$iso"; then
+              PUSHED=true
+            else
+              echo "  Per-ISO push failed for $iso — falling back to per-file batching"
+              git reset HEAD~1
+
+              for f in $FILES; do
+                FNAME=$(basename "$f")
+                git add -f "$f"
+                if git diff --cached --quiet; then continue; fi
+                FILE_MB=$(du -m "$f" | cut -f1)
+                echo "  Staging file: $FNAME (~${FILE_MB} MB)"
+                git commit -m "Step 6.0 CO2: ${iso} ${FNAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                if push_with_retry "$FNAME"; then
+                  PUSHED=true
+                else
+                  echo "  WARNING: Could not push $FNAME — resetting commit"
+                  git reset HEAD~1
+                fi
+              done
+            fi
+          done
+
+          if [ "$PUSHED" = "false" ]; then
+            echo "No changes were pushed"
+          fi
