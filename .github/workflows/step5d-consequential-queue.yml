@@ -1,11 +1,9 @@
-name: "Step 5CD: Supplemental Analytics"
+name: "Step 5D: Consequential Deployment Queue"
 
-# Runs supplemental dispatch-cache-dependent analytics that don't belong
-# to a specific dashboard page:
-#   - step5c_compress_day_profiles.py — 24-hour representative day profiles
-#   - step5d_deployment_queue.py — cross-regional deployment path
+# Runs step5d_deployment_queue.py — cross-regional deployment path under
+# consequential accounting.  Uses dispatch cache for hourly emission
+# accounting.
 #
-# These scripts use dispatch cache but are independent of each other.
 # iso=ALL fans out parallel matrix jobs, then merges into one branch + PR.
 # Output: data/step5-post-processing/
 
@@ -26,15 +24,6 @@ on:
           - NEISO
           - MISO
           - SPP
-      script:
-        description: 'Which analytics to run'
-        required: true
-        default: 'ALL'
-        type: choice
-        options:
-          - ALL
-          - compressed-day
-          - consequential-queue
       branch:
         description: 'Branch to checkout'
         required: false
@@ -42,7 +31,7 @@ on:
         type: string
 
 env:
-  BRANCH_PREFIX: step5cd-supplemental
+  BRANCH_PREFIX: step5d-consequential-queue
 
 jobs:
   prepare:
@@ -78,7 +67,7 @@ jobs:
           if [ -d "data/step5-post-processing/dispatch_cache" ] && ls data/step5-post-processing/dispatch_cache/*.npz >/dev/null 2>&1; then
             echo "Dispatch cache found"
           else
-            echo "WARNING: No dispatch cache found. Scripts will compute dispatch live (slower)."
+            echo "WARNING: No dispatch cache found. Script will compute dispatch live (slower)."
           fi
 
       - name: Set up Python
@@ -92,34 +81,15 @@ jobs:
       - name: Ensure output directories
         run: mkdir -p data/step5-post-processing
 
-      - name: "Run analytics (parallel) — ${{ matrix.iso }}"
-        if: ${{ inputs.script == 'ALL' }}
-        run: |
-          python scripts/step5c_compress_day_profiles.py --iso ${{ matrix.iso }} &
-          PID_CD=$!
-          python scripts/step5d_deployment_queue.py --iso ${{ matrix.iso }} &
-          PID_CQ=$!
-
-          FAILED=0
-          wait $PID_CD || { echo "FAILED: Compressed Day"; FAILED=1; }
-          wait $PID_CQ || { echo "FAILED: Consequential Queue"; FAILED=1; }
-          if [ "$FAILED" -ne 0 ]; then exit 1; fi
-
-      - name: "Compressed Day — ${{ matrix.iso }}"
-        if: ${{ inputs.script == 'compressed-day' }}
-        run: python scripts/step5c_compress_day_profiles.py --iso ${{ matrix.iso }}
-
       - name: "Consequential Queue — ${{ matrix.iso }}"
-        if: ${{ inputs.script == 'consequential-queue' }}
         run: python scripts/step5d_deployment_queue.py --iso ${{ matrix.iso }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: supplemental-${{ matrix.iso }}
+          name: consequential-queue-${{ matrix.iso }}
           path: |
             data/step5-post-processing/
-            dashboard/compressed_day_profiles.json
             dashboard/js/consequential-queue-data.js
           retention-days: 1
 
@@ -142,7 +112,7 @@ jobs:
       - name: Create output branch
         run: |
           TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
-          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${{ inputs.script }}-${{ inputs.iso }}"
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${{ inputs.iso }}"
           echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -151,14 +121,13 @@ jobs:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: supplemental-*
+          pattern: consequential-queue-*
           path: ./artifact-tmp/
           merge-multiple: true
 
       - name: Place artifacts
         run: |
           cp -rf artifact-tmp/data/step5-post-processing/* data/step5-post-processing/ 2>/dev/null || true
-          cp -f artifact-tmp/dashboard/compressed_day_profiles.json dashboard/ 2>/dev/null || true
           cp -f artifact-tmp/dashboard/js/consequential-queue-data.js dashboard/js/ 2>/dev/null || true
 
       - name: Batched commit and push (per-ISO)
@@ -203,7 +172,7 @@ jobs:
             fi
             BATCH_MB=$(du -cm $FILES | tail -1 | cut -f1)
             echo "  Staging ~${BATCH_MB} MB for $iso"
-            git commit -m "Step 5CD Supplemental: ${iso} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git commit -m "Step 5D Consequential Queue: ${iso} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             if push_with_retry "$iso"; then
               PUSHED=true
             else
@@ -213,23 +182,21 @@ jobs:
                 FNAME=$(basename "$f")
                 git add -f "$f"
                 if git diff --cached --quiet; then continue; fi
-                git commit -m "Step 5CD Supplemental: ${iso} ${FNAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                git commit -m "Step 5D Consequential Queue: ${iso} ${FNAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
                 if push_with_retry "$FNAME"; then PUSHED=true; else git reset HEAD~1; fi
               done
             fi
           done
 
-          # Remaining post-processing + dashboard files
+          # Remaining dashboard files
           git add -f data/step5-post-processing/ 2>/dev/null || true
-          git add -f dashboard/compressed_day_profiles.json 2>/dev/null || true
           git add -f dashboard/js/consequential-queue-data.js 2>/dev/null || true
           if ! git diff --cached --quiet; then
             echo "--- Staging remaining files + dashboard data ---"
-            git commit -m "Step 5CD Supplemental: dashboard data — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git commit -m "Step 5D Consequential Queue: dashboard data — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             if push_with_retry "dashboard-data"; then PUSHED=true; else git reset HEAD~1; fi
           fi
 
           if [ "$PUSHED" = "false" ]; then
             echo "No changes were pushed"
           fi
-
