@@ -104,12 +104,12 @@ const CQ_DATA = {
         },
         {
           "type": "gas",
-          "cap_twh": 114.76,
+          "cap_twh": 114.78,
           "emission_rate": 0.3911
         }
       ],
       "baseline_clean_pct": 48.5,
-      "demand_twh": 224.0,
+      "demand_twh": 224.039,
       "coal_oil_retirement_threshold": 70.0
     },
     "ERCOT": {
@@ -121,12 +121,12 @@ const CQ_DATA = {
         },
         {
           "type": "gas",
-          "cap_twh": 195.45,
+          "cap_twh": 195.46,
           "emission_rate": 0.3934
         }
       ],
       "baseline_clean_pct": 46.1,
-      "demand_twh": 488.0,
+      "demand_twh": 488.02,
       "coal_oil_retirement_threshold": 70.0
     },
     "PJM": {
@@ -143,12 +143,12 @@ const CQ_DATA = {
         },
         {
           "type": "gas",
-          "cap_twh": 357.24,
+          "cap_twh": 357.26,
           "emission_rate": 0.3933
         }
       ],
       "baseline_clean_pct": 40.6,
-      "demand_twh": 843.3,
+      "demand_twh": 843.331,
       "coal_oil_retirement_threshold": 70.0
     },
     "NYISO": {
@@ -165,7 +165,7 @@ const CQ_DATA = {
         }
       ],
       "baseline_clean_pct": 39.0,
-      "demand_twh": 151.6,
+      "demand_twh": 151.599,
       "coal_oil_retirement_threshold": 70.0
     },
     "NEISO": {
@@ -182,12 +182,12 @@ const CQ_DATA = {
         },
         {
           "type": "gas",
-          "cap_twh": 75.07,
+          "cap_twh": 75.1,
           "emission_rate": 0.3827
         }
       ],
       "baseline_clean_pct": 33.5,
-      "demand_twh": 115.3,
+      "demand_twh": 115.336,
       "coal_oil_retirement_threshold": 70.0
     },
     "MISO": {
@@ -1193,7 +1193,7 @@ const CQ_DATA = {
       "demand_twh": 843.331,
       "growth_factor": 1.181,
       "growth_adjusted_demand_twh": 995.6,
-      "growth_adjusted_co2_mt": 67.13,
+      "growth_adjusted_co2_mt": 67.14,
       "queue_position": 16
     },
     {
@@ -3533,7 +3533,7 @@ const CQ_DATA = {
       "demand_twh": 115.336,
       "growth_factor": 1.088,
       "growth_adjusted_demand_twh": 125.5,
-      "growth_adjusted_co2_mt": 6.6,
+      "growth_adjusted_co2_mt": 6.61,
       "queue_position": 55
     },
     {
@@ -3964,11 +3964,11 @@ const CQ_DATA = {
       "threshold_end": 65.0,
       "year_start": 2033,
       "year_end": 2034,
-      "marginal_mac": 77.3,
-      "marginal_mac_display": 77.3,
+      "marginal_mac": 76.6,
+      "marginal_mac_display": 76.6,
       "newbuild_lcoe_per_cfe": 41.6,
       "endpoint_emission_rate": 0.3932,
-      "co2_displaced_mt": 0.84,
+      "co2_displaced_mt": 0.85,
       "displaced_emission_rate": 0.3932,
       "displacement_detail": {
         "marginal_coal_twh": 0.0,
@@ -4013,7 +4013,7 @@ const CQ_DATA = {
       "demand_twh": 224.039,
       "growth_factor": 1.164,
       "growth_adjusted_demand_twh": 260.7,
-      "growth_adjusted_co2_mt": 0.98,
+      "growth_adjusted_co2_mt": 0.99,
       "queue_position": 63
     },
     {
@@ -8574,8 +8574,8 @@ const CQ_DATA = {
       "queue_position": 63,
       "iso": "CAISO",
       "zone_label": "60\u219265%",
-      "marginal_mac": 77.3,
-      "cumulative_co2_mt": 847.67,
+      "marginal_mac": 76.6,
+      "cumulative_co2_mt": 847.68,
       "cumulative_cost_bn": 10.94,
       "cumulative_twh": {
         "clean_firm": 284.9,
@@ -8601,7 +8601,7 @@ const CQ_DATA = {
       "iso": "CAISO",
       "zone_label": "50\u219255%",
       "marginal_mac": 77.4,
-      "cumulative_co2_mt": 869.94,
+      "cumulative_co2_mt": 869.95,
       "cumulative_cost_bn": 12.66,
       "cumulative_twh": {
         "clean_firm": 287.3,
@@ -8627,7 +8627,7 @@ const CQ_DATA = {
       "iso": "CAISO",
       "zone_label": "55\u219260%",
       "marginal_mac": 77.4,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 14.38,
       "cumulative_twh": {
         "clean_firm": 289.7,
@@ -8653,7 +8653,7 @@ const CQ_DATA = {
       "iso": "MISO",
       "zone_label": "92.5\u219295%",
       "marginal_mac": 83.7,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 19.88,
       "cumulative_twh": {
         "clean_firm": 454.7,
@@ -8679,7 +8679,7 @@ const CQ_DATA = {
       "iso": "PJM",
       "zone_label": "90\u219292.5%",
       "marginal_mac": 84.7,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 23.14,
       "cumulative_twh": {
         "clean_firm": 623.4,
@@ -8705,7 +8705,7 @@ const CQ_DATA = {
       "iso": "CAISO",
       "zone_label": "85\u219287.5%",
       "marginal_mac": 92.4,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 23.1,
       "cumulative_twh": {
         "clean_firm": 623.4,
@@ -8731,7 +8731,7 @@ const CQ_DATA = {
       "iso": "CAISO",
       "zone_label": "80\u219285%",
       "marginal_mac": 92.5,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 22.86,
       "cumulative_twh": {
         "clean_firm": 623.4,
@@ -8757,7 +8757,7 @@ const CQ_DATA = {
       "iso": "CAISO",
       "zone_label": "75\u219280%",
       "marginal_mac": 93.9,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 22.65,
       "cumulative_twh": {
         "clean_firm": 623.4,
@@ -8783,7 +8783,7 @@ const CQ_DATA = {
       "iso": "PJM",
       "zone_label": "92.5\u219295%",
       "marginal_mac": 94.1,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 26.14,
       "cumulative_twh": {
         "clean_firm": 716.2,
@@ -8809,7 +8809,7 @@ const CQ_DATA = {
       "iso": "CAISO",
       "zone_label": "70\u219275%",
       "marginal_mac": 95.5,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 25.57,
       "cumulative_twh": {
         "clean_firm": 727.4,
@@ -8835,7 +8835,7 @@ const CQ_DATA = {
       "iso": "CAISO",
       "zone_label": "87.5\u219290%",
       "marginal_mac": 96.3,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 25.86,
       "cumulative_twh": {
         "clean_firm": 745.3,
@@ -8861,7 +8861,7 @@ const CQ_DATA = {
       "iso": "CAISO",
       "zone_label": "90\u219292.5%",
       "marginal_mac": 97.8,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 25.95,
       "cumulative_twh": {
         "clean_firm": 754.3,
@@ -8887,7 +8887,7 @@ const CQ_DATA = {
       "iso": "CAISO",
       "zone_label": "65\u219270%",
       "marginal_mac": 99.6,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 25.22,
       "cumulative_twh": {
         "clean_firm": 758.8,
@@ -8913,7 +8913,7 @@ const CQ_DATA = {
       "iso": "MISO",
       "zone_label": "95\u219297.5%",
       "marginal_mac": 105.1,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 31.91,
       "cumulative_twh": {
         "clean_firm": 963.4,
@@ -8939,7 +8939,7 @@ const CQ_DATA = {
       "iso": "PJM",
       "zone_label": "95\u219297.5%",
       "marginal_mac": 106.5,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 36.73,
       "cumulative_twh": {
         "clean_firm": 1030.9,
@@ -8965,7 +8965,7 @@ const CQ_DATA = {
       "iso": "NYISO",
       "zone_label": "87.5\u219290%",
       "marginal_mac": 115.4,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 36.5,
       "cumulative_twh": {
         "clean_firm": 1026.4,
@@ -8991,7 +8991,7 @@ const CQ_DATA = {
       "iso": "CAISO",
       "zone_label": "92.5\u219295%",
       "marginal_mac": 117.6,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 38.19,
       "cumulative_twh": {
         "clean_firm": 1033.1,
@@ -9017,7 +9017,7 @@ const CQ_DATA = {
       "iso": "NYISO",
       "zone_label": "85\u219287.5%",
       "marginal_mac": 117.9,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 38.07,
       "cumulative_twh": {
         "clean_firm": 1037.6,
@@ -9043,7 +9043,7 @@ const CQ_DATA = {
       "iso": "NYISO",
       "zone_label": "80\u219285%",
       "marginal_mac": 118.3,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 38.04,
       "cumulative_twh": {
         "clean_firm": 1037.6,
@@ -9069,7 +9069,7 @@ const CQ_DATA = {
       "iso": "NEISO",
       "zone_label": "85\u219287.5%",
       "marginal_mac": 121.3,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 37.9,
       "cumulative_twh": {
         "clean_firm": 1036.4,
@@ -9095,7 +9095,7 @@ const CQ_DATA = {
       "iso": "PJM",
       "zone_label": "97.5\u219299%",
       "marginal_mac": 121.9,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 44.14,
       "cumulative_twh": {
         "clean_firm": 1095.4,
@@ -9121,7 +9121,7 @@ const CQ_DATA = {
       "iso": "NEISO",
       "zone_label": "80\u219285%",
       "marginal_mac": 123.1,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 43.58,
       "cumulative_twh": {
         "clean_firm": 1095.4,
@@ -9147,7 +9147,7 @@ const CQ_DATA = {
       "iso": "NYISO",
       "zone_label": "90\u219292.5%",
       "marginal_mac": 125.2,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 44.12,
       "cumulative_twh": {
         "clean_firm": 1095.4,
@@ -9173,7 +9173,7 @@ const CQ_DATA = {
       "iso": "MISO",
       "zone_label": "97.5\u219299%",
       "marginal_mac": 125.2,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 50.65,
       "cumulative_twh": {
         "clean_firm": 1253.8,
@@ -9199,7 +9199,7 @@ const CQ_DATA = {
       "iso": "NEISO",
       "zone_label": "87.5\u219290%",
       "marginal_mac": 127.2,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 50.83,
       "cumulative_twh": {
         "clean_firm": 1276.9,
@@ -9225,7 +9225,7 @@ const CQ_DATA = {
       "iso": "NEISO",
       "zone_label": "75\u219280%",
       "marginal_mac": 132.6,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 50.24,
       "cumulative_twh": {
         "clean_firm": 1276.9,
@@ -9251,7 +9251,7 @@ const CQ_DATA = {
       "iso": "PJM",
       "zone_label": "99\u219299.5%",
       "marginal_mac": 132.9,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 54.74,
       "cumulative_twh": {
         "clean_firm": 1352.8,
@@ -9277,7 +9277,7 @@ const CQ_DATA = {
       "iso": "CAISO",
       "zone_label": "95\u219297.5%",
       "marginal_mac": 134.5,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 56.19,
       "cumulative_twh": {
         "clean_firm": 1408.8,
@@ -9303,7 +9303,7 @@ const CQ_DATA = {
       "iso": "NYISO",
       "zone_label": "92.5\u219295%",
       "marginal_mac": 135.1,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 56.75,
       "cumulative_twh": {
         "clean_firm": 1408.8,
@@ -9329,7 +9329,7 @@ const CQ_DATA = {
       "iso": "NEISO",
       "zone_label": "92.5\u219295%",
       "marginal_mac": 135.5,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 56.46,
       "cumulative_twh": {
         "clean_firm": 1385.7,
@@ -9355,7 +9355,7 @@ const CQ_DATA = {
       "iso": "MISO",
       "zone_label": "99\u219299.5%",
       "marginal_mac": 136.3,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 60.13,
       "cumulative_twh": {
         "clean_firm": 1438.5,
@@ -9381,7 +9381,7 @@ const CQ_DATA = {
       "iso": "NEISO",
       "zone_label": "90\u219292.5%",
       "marginal_mac": 141.3,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 60.71,
       "cumulative_twh": {
         "clean_firm": 1444.3,
@@ -9407,7 +9407,7 @@ const CQ_DATA = {
       "iso": "NEISO",
       "zone_label": "95\u219297.5%",
       "marginal_mac": 146.6,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 61.16,
       "cumulative_twh": {
         "clean_firm": 1450.1,
@@ -9433,7 +9433,7 @@ const CQ_DATA = {
       "iso": "NYISO",
       "zone_label": "95\u219297.5%",
       "marginal_mac": 151.0,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 62.08,
       "cumulative_twh": {
         "clean_firm": 1510.7,
@@ -9459,7 +9459,7 @@ const CQ_DATA = {
       "iso": "MISO",
       "zone_label": "99.5\u219299.9%",
       "marginal_mac": 152.5,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 67.48,
       "cumulative_twh": {
         "clean_firm": 1596.5,
@@ -9485,7 +9485,7 @@ const CQ_DATA = {
       "iso": "CAISO",
       "zone_label": "97.5\u219299%",
       "marginal_mac": 154.2,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 69.2,
       "cumulative_twh": {
         "clean_firm": 1607.7,
@@ -9511,7 +9511,7 @@ const CQ_DATA = {
       "iso": "NYISO",
       "zone_label": "97.5\u219299%",
       "marginal_mac": 155.0,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 69.43,
       "cumulative_twh": {
         "clean_firm": 1592.5,
@@ -9537,7 +9537,7 @@ const CQ_DATA = {
       "iso": "PJM",
       "zone_label": "99.5\u219299.9%",
       "marginal_mac": 155.2,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 78.68,
       "cumulative_twh": {
         "clean_firm": 1626.2,
@@ -9563,7 +9563,7 @@ const CQ_DATA = {
       "iso": "NEISO",
       "zone_label": "97.5\u219299%",
       "marginal_mac": 158.8,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 79.19,
       "cumulative_twh": {
         "clean_firm": 1620.4,
@@ -9589,7 +9589,7 @@ const CQ_DATA = {
       "iso": "NYISO",
       "zone_label": "99\u219299.5%",
       "marginal_mac": 159.6,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 79.47,
       "cumulative_twh": {
         "clean_firm": 1635.6,
@@ -9615,7 +9615,7 @@ const CQ_DATA = {
       "iso": "NEISO",
       "zone_label": "99\u219299.5%",
       "marginal_mac": 161.2,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 79.57,
       "cumulative_twh": {
         "clean_firm": 1641.4,
@@ -9641,7 +9641,7 @@ const CQ_DATA = {
       "iso": "MISO",
       "zone_label": "99.9\u219299.99%",
       "marginal_mac": 162.8,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 83.03,
       "cumulative_twh": {
         "clean_firm": 1667.8,
@@ -9667,7 +9667,7 @@ const CQ_DATA = {
       "iso": "NEISO",
       "zone_label": "99.9\u219299.99%",
       "marginal_mac": 163.3,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 82.93,
       "cumulative_twh": {
         "clean_firm": 1673.6,
@@ -9693,7 +9693,7 @@ const CQ_DATA = {
       "iso": "NYISO",
       "zone_label": "99.5\u219299.9%",
       "marginal_mac": 164.3,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 83.22,
       "cumulative_twh": {
         "clean_firm": 1688.8,
@@ -9719,7 +9719,7 @@ const CQ_DATA = {
       "iso": "NYISO",
       "zone_label": "99.9\u219299.99%",
       "marginal_mac": 164.3,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 83.22,
       "cumulative_twh": {
         "clean_firm": 1688.8,
@@ -9745,7 +9745,7 @@ const CQ_DATA = {
       "iso": "CAISO",
       "zone_label": "99\u219299.5%",
       "marginal_mac": 165.6,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 84.22,
       "cumulative_twh": {
         "clean_firm": 1711.2,
@@ -9771,7 +9771,7 @@ const CQ_DATA = {
       "iso": "NEISO",
       "zone_label": "99.5\u219299.9%",
       "marginal_mac": 165.9,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 84.42,
       "cumulative_twh": {
         "clean_firm": 1722.7,
@@ -9797,7 +9797,7 @@ const CQ_DATA = {
       "iso": "PJM",
       "zone_label": "99.9\u219299.99%",
       "marginal_mac": 183.1,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 96.13,
       "cumulative_twh": {
         "clean_firm": 1722.7,
@@ -9823,7 +9823,7 @@ const CQ_DATA = {
       "iso": "CAISO",
       "zone_label": "99.5\u219299.9%",
       "marginal_mac": 188.4,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 98.13,
       "cumulative_twh": {
         "clean_firm": 1756.3,
@@ -9849,7 +9849,7 @@ const CQ_DATA = {
       "iso": "CAISO",
       "zone_label": "99.9\u219299.99%",
       "marginal_mac": 219.2,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 100.84,
       "cumulative_twh": {
         "clean_firm": 1785.4,
@@ -11488,8 +11488,8 @@ const CQ_DATA = {
       "queue_position": 63,
       "iso": "CAISO",
       "zone_label": "60\u219265%",
-      "marginal_mac": 77.3,
-      "cumulative_co2_mt": 847.67,
+      "marginal_mac": 76.6,
+      "cumulative_co2_mt": 847.68,
       "cumulative_cost_bn": 10.94,
       "cumulative_twh": {
         "clean_firm": 284.9,
@@ -11515,7 +11515,7 @@ const CQ_DATA = {
       "iso": "CAISO",
       "zone_label": "50\u219255%",
       "marginal_mac": 77.4,
-      "cumulative_co2_mt": 869.94,
+      "cumulative_co2_mt": 869.95,
       "cumulative_cost_bn": 12.66,
       "cumulative_twh": {
         "clean_firm": 287.3,
@@ -11541,7 +11541,7 @@ const CQ_DATA = {
       "iso": "CAISO",
       "zone_label": "55\u219260%",
       "marginal_mac": 77.4,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 14.38,
       "cumulative_twh": {
         "clean_firm": 289.7,
@@ -11567,7 +11567,7 @@ const CQ_DATA = {
       "iso": "MISO",
       "zone_label": "92.5\u219295%",
       "marginal_mac": 83.7,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 19.88,
       "cumulative_twh": {
         "clean_firm": 454.7,
@@ -11593,7 +11593,7 @@ const CQ_DATA = {
       "iso": "PJM",
       "zone_label": "90\u219292.5%",
       "marginal_mac": 84.7,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 23.14,
       "cumulative_twh": {
         "clean_firm": 623.4,
@@ -11619,7 +11619,7 @@ const CQ_DATA = {
       "iso": "CAISO",
       "zone_label": "85\u219287.5%",
       "marginal_mac": 92.4,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 23.1,
       "cumulative_twh": {
         "clean_firm": 623.4,
@@ -11645,7 +11645,7 @@ const CQ_DATA = {
       "iso": "CAISO",
       "zone_label": "80\u219285%",
       "marginal_mac": 92.5,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 22.86,
       "cumulative_twh": {
         "clean_firm": 623.4,
@@ -11671,7 +11671,7 @@ const CQ_DATA = {
       "iso": "CAISO",
       "zone_label": "75\u219280%",
       "marginal_mac": 93.9,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 22.65,
       "cumulative_twh": {
         "clean_firm": 623.4,
@@ -11697,7 +11697,7 @@ const CQ_DATA = {
       "iso": "PJM",
       "zone_label": "92.5\u219295%",
       "marginal_mac": 94.1,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 26.14,
       "cumulative_twh": {
         "clean_firm": 716.2,
@@ -11723,7 +11723,7 @@ const CQ_DATA = {
       "iso": "CAISO",
       "zone_label": "70\u219275%",
       "marginal_mac": 95.5,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 25.57,
       "cumulative_twh": {
         "clean_firm": 727.4,
@@ -11749,7 +11749,7 @@ const CQ_DATA = {
       "iso": "CAISO",
       "zone_label": "87.5\u219290%",
       "marginal_mac": 96.3,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 25.86,
       "cumulative_twh": {
         "clean_firm": 745.3,
@@ -11775,7 +11775,7 @@ const CQ_DATA = {
       "iso": "CAISO",
       "zone_label": "90\u219292.5%",
       "marginal_mac": 97.8,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 25.95,
       "cumulative_twh": {
         "clean_firm": 754.3,
@@ -11801,7 +11801,7 @@ const CQ_DATA = {
       "iso": "CAISO",
       "zone_label": "65\u219270%",
       "marginal_mac": 99.6,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 25.22,
       "cumulative_twh": {
         "clean_firm": 758.8,
@@ -11827,7 +11827,7 @@ const CQ_DATA = {
       "iso": "MISO",
       "zone_label": "95\u219297.5%",
       "marginal_mac": 105.1,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 31.91,
       "cumulative_twh": {
         "clean_firm": 963.4,
@@ -11853,7 +11853,7 @@ const CQ_DATA = {
       "iso": "PJM",
       "zone_label": "95\u219297.5%",
       "marginal_mac": 106.5,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 36.73,
       "cumulative_twh": {
         "clean_firm": 1030.9,
@@ -11879,7 +11879,7 @@ const CQ_DATA = {
       "iso": "NYISO",
       "zone_label": "87.5\u219290%",
       "marginal_mac": 115.4,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 36.5,
       "cumulative_twh": {
         "clean_firm": 1026.4,
@@ -11905,7 +11905,7 @@ const CQ_DATA = {
       "iso": "CAISO",
       "zone_label": "92.5\u219295%",
       "marginal_mac": 117.6,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 38.19,
       "cumulative_twh": {
         "clean_firm": 1033.1,
@@ -11931,7 +11931,7 @@ const CQ_DATA = {
       "iso": "NYISO",
       "zone_label": "85\u219287.5%",
       "marginal_mac": 117.9,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 38.07,
       "cumulative_twh": {
         "clean_firm": 1037.6,
@@ -11957,7 +11957,7 @@ const CQ_DATA = {
       "iso": "NYISO",
       "zone_label": "80\u219285%",
       "marginal_mac": 118.3,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 38.04,
       "cumulative_twh": {
         "clean_firm": 1037.6,
@@ -11983,7 +11983,7 @@ const CQ_DATA = {
       "iso": "NEISO",
       "zone_label": "85\u219287.5%",
       "marginal_mac": 121.3,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 37.9,
       "cumulative_twh": {
         "clean_firm": 1036.4,
@@ -12009,7 +12009,7 @@ const CQ_DATA = {
       "iso": "PJM",
       "zone_label": "97.5\u219299%",
       "marginal_mac": 121.9,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 44.14,
       "cumulative_twh": {
         "clean_firm": 1095.4,
@@ -12035,7 +12035,7 @@ const CQ_DATA = {
       "iso": "NEISO",
       "zone_label": "80\u219285%",
       "marginal_mac": 123.1,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 43.58,
       "cumulative_twh": {
         "clean_firm": 1095.4,
@@ -12061,7 +12061,7 @@ const CQ_DATA = {
       "iso": "NYISO",
       "zone_label": "90\u219292.5%",
       "marginal_mac": 125.2,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 44.12,
       "cumulative_twh": {
         "clean_firm": 1095.4,
@@ -12087,7 +12087,7 @@ const CQ_DATA = {
       "iso": "MISO",
       "zone_label": "97.5\u219299%",
       "marginal_mac": 125.2,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 50.65,
       "cumulative_twh": {
         "clean_firm": 1253.8,
@@ -12113,7 +12113,7 @@ const CQ_DATA = {
       "iso": "NEISO",
       "zone_label": "87.5\u219290%",
       "marginal_mac": 127.2,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 50.83,
       "cumulative_twh": {
         "clean_firm": 1276.9,
@@ -12139,7 +12139,7 @@ const CQ_DATA = {
       "iso": "NEISO",
       "zone_label": "75\u219280%",
       "marginal_mac": 132.6,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 50.24,
       "cumulative_twh": {
         "clean_firm": 1276.9,
@@ -12165,7 +12165,7 @@ const CQ_DATA = {
       "iso": "PJM",
       "zone_label": "99\u219299.5%",
       "marginal_mac": 132.9,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 54.74,
       "cumulative_twh": {
         "clean_firm": 1352.8,
@@ -12191,7 +12191,7 @@ const CQ_DATA = {
       "iso": "CAISO",
       "zone_label": "95\u219297.5%",
       "marginal_mac": 134.5,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 56.19,
       "cumulative_twh": {
         "clean_firm": 1408.8,
@@ -12217,7 +12217,7 @@ const CQ_DATA = {
       "iso": "NYISO",
       "zone_label": "92.5\u219295%",
       "marginal_mac": 135.1,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 56.75,
       "cumulative_twh": {
         "clean_firm": 1408.8,
@@ -12243,7 +12243,7 @@ const CQ_DATA = {
       "iso": "NEISO",
       "zone_label": "92.5\u219295%",
       "marginal_mac": 135.5,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 56.46,
       "cumulative_twh": {
         "clean_firm": 1385.7,
@@ -12269,7 +12269,7 @@ const CQ_DATA = {
       "iso": "MISO",
       "zone_label": "99\u219299.5%",
       "marginal_mac": 136.3,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 60.13,
       "cumulative_twh": {
         "clean_firm": 1438.5,
@@ -12295,7 +12295,7 @@ const CQ_DATA = {
       "iso": "NEISO",
       "zone_label": "90\u219292.5%",
       "marginal_mac": 141.3,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 60.71,
       "cumulative_twh": {
         "clean_firm": 1444.3,
@@ -12321,7 +12321,7 @@ const CQ_DATA = {
       "iso": "NEISO",
       "zone_label": "95\u219297.5%",
       "marginal_mac": 146.6,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 61.16,
       "cumulative_twh": {
         "clean_firm": 1450.1,
@@ -12347,7 +12347,7 @@ const CQ_DATA = {
       "iso": "NYISO",
       "zone_label": "95\u219297.5%",
       "marginal_mac": 151.0,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 62.08,
       "cumulative_twh": {
         "clean_firm": 1510.7,
@@ -12373,7 +12373,7 @@ const CQ_DATA = {
       "iso": "MISO",
       "zone_label": "99.5\u219299.9%",
       "marginal_mac": 152.5,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 67.48,
       "cumulative_twh": {
         "clean_firm": 1596.5,
@@ -12399,7 +12399,7 @@ const CQ_DATA = {
       "iso": "CAISO",
       "zone_label": "97.5\u219299%",
       "marginal_mac": 154.2,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 69.2,
       "cumulative_twh": {
         "clean_firm": 1607.7,
@@ -12425,7 +12425,7 @@ const CQ_DATA = {
       "iso": "NYISO",
       "zone_label": "97.5\u219299%",
       "marginal_mac": 155.0,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 69.43,
       "cumulative_twh": {
         "clean_firm": 1592.5,
@@ -12451,7 +12451,7 @@ const CQ_DATA = {
       "iso": "PJM",
       "zone_label": "99.5\u219299.9%",
       "marginal_mac": 155.2,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 78.68,
       "cumulative_twh": {
         "clean_firm": 1626.2,
@@ -12477,7 +12477,7 @@ const CQ_DATA = {
       "iso": "NEISO",
       "zone_label": "97.5\u219299%",
       "marginal_mac": 158.8,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 79.19,
       "cumulative_twh": {
         "clean_firm": 1620.4,
@@ -12503,7 +12503,7 @@ const CQ_DATA = {
       "iso": "NYISO",
       "zone_label": "99\u219299.5%",
       "marginal_mac": 159.6,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 79.47,
       "cumulative_twh": {
         "clean_firm": 1635.6,
@@ -12529,7 +12529,7 @@ const CQ_DATA = {
       "iso": "NEISO",
       "zone_label": "99\u219299.5%",
       "marginal_mac": 161.2,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 79.57,
       "cumulative_twh": {
         "clean_firm": 1641.4,
@@ -12555,7 +12555,7 @@ const CQ_DATA = {
       "iso": "MISO",
       "zone_label": "99.9\u219299.99%",
       "marginal_mac": 162.8,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 83.03,
       "cumulative_twh": {
         "clean_firm": 1667.8,
@@ -12581,7 +12581,7 @@ const CQ_DATA = {
       "iso": "NEISO",
       "zone_label": "99.9\u219299.99%",
       "marginal_mac": 163.3,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 82.93,
       "cumulative_twh": {
         "clean_firm": 1673.6,
@@ -12607,7 +12607,7 @@ const CQ_DATA = {
       "iso": "NYISO",
       "zone_label": "99.5\u219299.9%",
       "marginal_mac": 164.3,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 83.22,
       "cumulative_twh": {
         "clean_firm": 1688.8,
@@ -12633,7 +12633,7 @@ const CQ_DATA = {
       "iso": "NYISO",
       "zone_label": "99.9\u219299.99%",
       "marginal_mac": 164.3,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 83.22,
       "cumulative_twh": {
         "clean_firm": 1688.8,
@@ -12659,7 +12659,7 @@ const CQ_DATA = {
       "iso": "CAISO",
       "zone_label": "99\u219299.5%",
       "marginal_mac": 165.6,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 84.22,
       "cumulative_twh": {
         "clean_firm": 1711.2,
@@ -12685,7 +12685,7 @@ const CQ_DATA = {
       "iso": "NEISO",
       "zone_label": "99.5\u219299.9%",
       "marginal_mac": 165.9,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 84.42,
       "cumulative_twh": {
         "clean_firm": 1722.7,
@@ -12711,7 +12711,7 @@ const CQ_DATA = {
       "iso": "PJM",
       "zone_label": "99.9\u219299.99%",
       "marginal_mac": 183.1,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 96.13,
       "cumulative_twh": {
         "clean_firm": 1722.7,
@@ -12737,7 +12737,7 @@ const CQ_DATA = {
       "iso": "CAISO",
       "zone_label": "99.5\u219299.9%",
       "marginal_mac": 188.4,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 98.13,
       "cumulative_twh": {
         "clean_firm": 1756.3,
@@ -12763,7 +12763,7 @@ const CQ_DATA = {
       "iso": "CAISO",
       "zone_label": "99.9\u219299.99%",
       "marginal_mac": 219.2,
-      "cumulative_co2_mt": 892.21,
+      "cumulative_co2_mt": 892.22,
       "cumulative_cost_bn": 100.84,
       "cumulative_twh": {
         "clean_firm": 1785.4,
@@ -12886,7 +12886,7 @@ const CQ_DATA = {
       "coal_twh": 191.7,
       "oil_twh": 0.0,
       "gas_twh": 554.4,
-      "fossil_co2_mt": 420.25
+      "fossil_co2_mt": 420.24
     },
     "PJM": {
       "demand_2045_twh": 1355.2,
@@ -12894,7 +12894,7 @@ const CQ_DATA = {
       "coal_twh": 281.2,
       "oil_twh": 9.3,
       "gas_twh": 722.3,
-      "fossil_co2_mt": 574.9
+      "fossil_co2_mt": 574.89
     },
     "NYISO": {
       "demand_2045_twh": 192.4,
