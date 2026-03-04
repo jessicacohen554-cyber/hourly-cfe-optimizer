@@ -185,6 +185,26 @@ html, body {
 </section>
 
 <!-- ================================================================== -->
+<!-- RESOURCE INVESTMENT DEEP DIVE — Density Strip Plots                  -->
+<!-- ================================================================== -->
+<section class="content-section density-deep-dive-section" id="densityDeepDive">
+    <div class="density-header">
+        <h2 class="section-title">Resource Investment Deep Dive</h2>
+        <p class="section-subtitle" id="densitySubtitle">Distribution of new-build capacity across cost scenarios in the optimal target range</p>
+    </div>
+    <div class="density-reading-guide">
+        <div class="nr-reading-guide-title">How to Read This Chart</div>
+        <div class="nr-reading-guide-text">
+            Each dot represents a single cost scenario's investment in that resource. Denser clusters reveal the most likely buildout levels.
+            The shaded band shows the P25&ndash;P75 range. Resources that appear in fewer scenarios are more sensitive to cost assumptions.
+        </div>
+    </div>
+    <div id="densityStrips">
+        <!-- Populated by JS: one row per resource -->
+    </div>
+</section>
+
+<!-- ================================================================== -->
 <!-- METHODOLOGY & SOURCES                                               -->
 <!-- ================================================================== -->
 <div class="gradient-transition"></div>
@@ -286,6 +306,7 @@ html, body {
 <script src="js/mac-stats-data.js"></script>
 <script src="js/no-regrets-data.js"></script>
 <script src="js/optimal-target-data.js"></script>
+<script src="js/resource-density-data.js"></script>
 <script>
 // ============================================================================
 // CONSTANTS & STATE
@@ -296,27 +317,87 @@ const ISO_LABELS = {
     NYISO: 'New York', NEISO: 'New England', MISO: 'Midwest', SPP: 'Central'
 };
 const RESOURCE_DISPLAY = [
-    { key: 'solar',      label: 'Solar',          color: '#F59E0B' },
-    { key: 'wind',       label: 'Wind',           color: '#3B82F6' },
-    { key: 'clean_firm', label: 'Nuclear / Firm',  color: '#1E3A5F' },
-    { key: 'ccs_ccgt',   label: 'CCS-CCGT',       color: '#0D9488' },
-    { key: 'hydro',      label: 'Hydro',          color: '#0EA5E9' },
-    { key: 'battery',    label: 'Battery (4hr)',   color: '#8B5CF6' },
-    { key: 'ldes',       label: 'LDES (100hr)',    color: '#EC4899' }
+    { key: 'solar',         label: 'Solar',          color: '#F59E0B' },
+    { key: 'wind',          label: 'Onshore Wind',   color: '#22C55E' },
+    { key: 'offshore_wind', label: 'Offshore Wind',  color: '#009688' },
+    { key: 'nuclear',       label: 'Nuclear',        color: '#1E3A5F' },
+    { key: 'geothermal',    label: 'Geothermal',     color: '#B45309' },
+    { key: 'ccs_ccgt',      label: 'CCS-CCGT',       color: '#64748B' },
+    { key: 'hydro',         label: 'Hydro',          color: '#0EA5E9' },
+    { key: 'battery',       label: 'Battery (4hr)',  color: '#8B5CF6' },
+    { key: 'battery8',      label: 'Battery (8hr)',  color: '#A78BFA' },
+    { key: 'ldes',          label: 'LDES (100hr)',   color: '#E91E63' }
 ];
 
-// New-build only: exclude hydro (always existing, never new-build)
+// Map clean_firm data from no-regrets-data.js to nuclear + geothermal
+// CAISO: geothermal split based on tranche_geo_twh ratio; others: 100% nuclear
+const CLEAN_FIRM_GEO_RATIO = {
+    CAISO: 0.34, ERCOT: 0, PJM: 0, NYISO: 0, NEISO: 0, MISO: 0, SPP: 0
+};
+function splitCleanFirmAnalysis(iso, cfAnalysis) {
+    if (!cfAnalysis) return { nuclear: null, geothermal: null };
+    var geoRatio = CLEAN_FIRM_GEO_RATIO[iso] || 0;
+    var nucRatio = 1 - geoRatio;
+    function scaleAnalysis(a, ratio) {
+        if (!a || ratio <= 0) return { presenceRate: 0, floor: 0, average: 0, ceiling: 0, isNoRegrets: false, isConsensus: false };
+        return {
+            presenceRate: ratio > 0 ? a.presenceRate : 0,
+            floor: (a.floor || 0) * ratio,
+            average: (a.average || 0) * ratio,
+            ceiling: (a.ceiling || 0) * ratio,
+            p25: (a.p25 || 0) * ratio,
+            p75: (a.p75 || 0) * ratio,
+            isNoRegrets: ratio > 0.1 ? a.isNoRegrets : false,
+            isConsensus: ratio > 0.1 ? a.isConsensus : false,
+            totalCombos: a.totalCombos,
+            nonZeroCount: ratio > 0 ? a.nonZeroCount : 0,
+            twh_by_growth: a.twh_by_growth ? scaleTwhByGrowth(a.twh_by_growth, ratio) : null
+        };
+    }
+    function scaleTwhByGrowth(tbg, ratio) {
+        var out = {};
+        Object.keys(tbg).forEach(function(k) {
+            out[k] = {
+                floor_twh: (tbg[k].floor_twh || 0) * ratio,
+                avg_twh: (tbg[k].avg_twh || 0) * ratio,
+                max_twh: (tbg[k].max_twh || 0) * ratio
+            };
+        });
+        return out;
+    }
+    return {
+        nuclear: scaleAnalysis(cfAnalysis, nucRatio),
+        geothermal: scaleAnalysis(cfAnalysis, geoRatio)
+    };
+}
+
+// Resolve analysis for split resources — maps clean_firm → nuclear + geothermal
+function resolveAnalysis(iso, analysisObj) {
+    if (!analysisObj) return analysisObj;
+    var resolved = {};
+    Object.keys(analysisObj).forEach(function(k) { resolved[k] = analysisObj[k]; });
+    // Split clean_firm into nuclear + geothermal
+    if (resolved.clean_firm) {
+        var split = splitCleanFirmAnalysis(iso, resolved.clean_firm);
+        resolved.nuclear = split.nuclear;
+        resolved.geothermal = split.geothermal;
+    }
+    return resolved;
+}
+
+/// New-build only: exclude hydro (always existing, never new-build)
 const NR_RESOURCE_DISPLAY = RESOURCE_DISPLAY.filter(function(r) { return r.key !== 'hydro'; });
 
 // Existing clean resources as % of demand (2025 baseline) — subtracted for new-build chart
+// nuclear = existing clean_firm (all existing firm is nuclear), geothermal = 0 (no existing geothermal fleet)
 const EXISTING_CLEAN_PCT = {
-    CAISO:  { clean_firm: 7.9, solar: 22.3, wind: 8.8, offshore_wind: 0, ccs_ccgt: 0, hydro: 9.5, battery: 0, ldes: 0 },
-    ERCOT:  { clean_firm: 8.6, solar: 13.8, wind: 23.6, offshore_wind: 0, ccs_ccgt: 0, hydro: 0.1, battery: 0, ldes: 0 },
-    PJM:    { clean_firm: 32.1, solar: 2.9, wind: 3.8, offshore_wind: 0, ccs_ccgt: 0, hydro: 1.8, battery: 0, ldes: 0 },
-    NYISO:  { clean_firm: 18.4, solar: 0.0, wind: 4.7, offshore_wind: 0, ccs_ccgt: 0, hydro: 15.9, battery: 0, ldes: 0 },
-    NEISO:  { clean_firm: 23.8, solar: 1.4, wind: 3.9, offshore_wind: 0, ccs_ccgt: 0, hydro: 4.4, battery: 0, ldes: 0 },
-    MISO:   { clean_firm: 13.1, solar: 2.1, wind: 14.5, offshore_wind: 0, ccs_ccgt: 0, hydro: 1.6, battery: 0, ldes: 0 },
-    SPP:    { clean_firm: 5.2, solar: 0.4, wind: 37.1, offshore_wind: 0, ccs_ccgt: 0, hydro: 4.3, battery: 0, ldes: 0 }
+    CAISO:  { nuclear: 7.9, geothermal: 0, solar: 22.3, wind: 8.8, offshore_wind: 0, ccs_ccgt: 0, hydro: 9.5, battery: 0, battery8: 0, ldes: 0 },
+    ERCOT:  { nuclear: 8.6, geothermal: 0, solar: 13.8, wind: 23.6, offshore_wind: 0, ccs_ccgt: 0, hydro: 0.1, battery: 0, battery8: 0, ldes: 0 },
+    PJM:    { nuclear: 32.1, geothermal: 0, solar: 2.9, wind: 3.8, offshore_wind: 0, ccs_ccgt: 0, hydro: 1.8, battery: 0, battery8: 0, ldes: 0 },
+    NYISO:  { nuclear: 18.4, geothermal: 0, solar: 0.0, wind: 4.7, offshore_wind: 0, ccs_ccgt: 0, hydro: 15.9, battery: 0, battery8: 0, ldes: 0 },
+    NEISO:  { nuclear: 23.8, geothermal: 0, solar: 1.4, wind: 3.9, offshore_wind: 0, ccs_ccgt: 0, hydro: 4.4, battery: 0, battery8: 0, ldes: 0 },
+    MISO:   { nuclear: 13.1, geothermal: 0, solar: 2.1, wind: 14.5, offshore_wind: 0, ccs_ccgt: 0, hydro: 1.6, battery: 0, battery8: 0, ldes: 0 },
+    SPP:    { nuclear: 5.2, geothermal: 0, solar: 0.4, wind: 37.1, offshore_wind: 0, ccs_ccgt: 0, hydro: 4.3, battery: 0, battery8: 0, ldes: 0 }
 };
 
 const BASELINE_DEMAND_TWH = {
@@ -497,11 +578,12 @@ function getNoRegretsFromMixData(iso, crossover) {
     var rangeThresholds = THRESHOLDS.filter(function(t) { return t >= lower && t <= upper; });
     if (rangeThresholds.length === 0) rangeThresholds = THRESHOLDS.slice(-3);
 
-    var resources = RESOURCE_DISPLAY.map(function(r) { return r.key; });
+    // Use base resource keys that exist in RESOURCE_MIX_DATA (clean_firm, not nuclear/geothermal split)
+    var baseResources = ['solar', 'wind', 'offshore_wind', 'clean_firm', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes'];
     var analysis = {};
 
-    for (var ri = 0; ri < resources.length; ri++) {
-        var res = resources[ri];
+    for (var ri = 0; ri < baseResources.length; ri++) {
+        var res = baseResources[ri];
         var values = [];
         for (var ti = 0; ti < rangeThresholds.length; ti++) {
             var t = String(rangeThresholds[ti]);
@@ -510,6 +592,7 @@ function getNoRegretsFromMixData(iso, crossover) {
 
             var val = 0;
             if (res === 'battery') val = mix.battery_dispatch_pct || mix.battery || 0;
+            else if (res === 'battery8') val = mix.battery8_dispatch_pct || mix.battery8 || 0;
             else if (res === 'ldes') val = mix.ldes_dispatch_pct || mix.ldes || 0;
             else val = mix[res] || mix['mix_' + res] || 0;
 
@@ -582,9 +665,10 @@ function populateTiles() {
         // Find top no-regrets new-build resources (exclude hydro + subtract existing)
         var nrFindings = [];
         if (nr && nr.analysis) {
+            var resolvedTile = resolveAnalysis(iso, nr.analysis);
             var existPctTile = EXISTING_CLEAN_PCT[iso] || {};
             NR_RESOURCE_DISPLAY.forEach(function(r) {
-                var a = nr.analysis[r.key];
+                var a = resolvedTile[r.key];
                 var existP = existPctTile[r.key] || 0;
                 var newBuildAvg = a ? Math.max(0, (a.average || 0) - existP) : 0;
                 if (a && a.isNoRegrets && newBuildAvg > 0.5) {
@@ -1021,6 +1105,9 @@ function renderNoRegrets(iso) {
         return;
     }
 
+    // Resolve clean_firm → nuclear + geothermal split
+    nr = { analysis: resolveAnalysis(iso, nr.analysis), source: nr.source };
+
     // Existing clean percentages for this ISO (for subtracting to get new-build only)
     var existingPct = EXISTING_CLEAN_PCT[iso] || {};
     var baseDemand = BASELINE_DEMAND_TWH[iso] || 300;
@@ -1035,8 +1122,6 @@ function renderNoRegrets(iso) {
     // Build new-build adjusted data for each resource (excluding hydro)
     var nbData = [];
     var maxVal = 0;
-    var totalFloorTwh = 0;
-    var totalAvgTwh = 0;
     NR_RESOURCE_DISPLAY.forEach(function(r) {
         var a = nr.analysis[r.key];
         var existPct = existingPct[r.key] || 0;
@@ -1063,8 +1148,6 @@ function renderNoRegrets(iso) {
         var isNR = a && a.isNoRegrets && !isZero;
 
         if (avgVal > maxVal) maxVal = avgVal;
-        if (floorTwh != null && floorTwh > 0) totalFloorTwh += floorTwh;
-        if (avgTwh != null && avgTwh > 0) totalAvgTwh += avgTwh;
 
         nbData.push({
             r: r,
@@ -1090,25 +1173,8 @@ function renderNoRegrets(iso) {
             '</div>';
     }
 
-    // Render column headers with total TWh
-    if (colHeaders) {
-        var floorTwhLabel = totalFloorTwh > 0 ? Math.round(totalFloorTwh) + ' TWh' : '\u2014';
-        var avgTwhLabel = totalAvgTwh > 0 ? Math.round(totalAvgTwh) + ' TWh' : '\u2014';
-        colHeaders.innerHTML =
-            '<div class="nr-column-headers">' +
-                '<div class="nr-col-header" style="flex:0 0 auto;">' +
-                    '<div class="nr-col-header-label" style="color:#16a34a;">No-Regrets New Build</div>' +
-                    '<div class="nr-col-header-twh" style="color:#16a34a;">' + floorTwhLabel + '</div>' +
-                    '<div class="nr-col-header-desc">Minimum under every cost scenario</div>' +
-                '</div>' +
-                '<div style="flex:0 0 1px;height:36px;background:rgba(0,0,0,0.08);margin:0 8px;"></div>' +
-                '<div class="nr-col-header" style="flex:0 0 auto;">' +
-                    '<div class="nr-col-header-label" style="color:#2563EB;">Expected Buildout</div>' +
-                    '<div class="nr-col-header-twh" style="color:#2563EB;">' + avgTwhLabel + '</div>' +
-                    '<div class="nr-col-header-desc">Average across cost scenarios &mdash; a smart hedge</div>' +
-                '</div>' +
-            '</div>';
-    }
+    // Column headers removed — per-resource breakdown is what matters
+    if (colHeaders) colHeaders.innerHTML = '';
 
     // Render resource bars
     var html = '';
@@ -1267,9 +1333,10 @@ function updateNarrative(iso) {
         });
     }
     if (nr && nr.analysis) {
+        var resolvedNarr = resolveAnalysis(iso, nr.analysis);
         var existingPct = EXISTING_CLEAN_PCT[iso] || {};
         NR_RESOURCE_DISPLAY.forEach(function(r) {
-            var a = nr.analysis[r.key];
+            var a = resolvedNarr[r.key];
             var existPct = existingPct[r.key] || 0;
             var newBuildAvg = a ? Math.max(0, (a.average || 0) - existPct) : 0;
             if (a && a.isNoRegrets && newBuildAvg > 0.5) {
@@ -1311,6 +1378,119 @@ function updateNarrative(iso) {
 // ============================================================================
 // ISO SWITCHING
 // ============================================================================
+// ============================================================================
+// RESOURCE DENSITY STRIP PLOT
+// ============================================================================
+var DENSITY_RESOURCE_ORDER = [
+    { key: 'solar',      label: 'Solar',         color: '#F59E0B' },
+    { key: 'wind',       label: 'Onshore Wind',  color: '#22C55E' },
+    { key: 'nuclear',    label: 'Nuclear',        color: '#1E3A5F' },
+    { key: 'geothermal', label: 'Geothermal',     color: '#B45309' },
+    { key: 'ccs_ccgt',   label: 'CCS-CCGT',       color: '#64748B' },
+    { key: 'battery',    label: 'Battery (4hr)',  color: '#8B5CF6' },
+    { key: 'battery8',   label: 'Battery (8hr)',  color: '#A78BFA' },
+    { key: 'ldes',       label: 'LDES (100hr)',   color: '#E91E63' }
+];
+
+function renderDensityStrips(iso) {
+    var container = document.getElementById('densityStrips');
+    var subtitle = document.getElementById('densitySubtitle');
+    if (!container) return;
+
+    var densityData = typeof RESOURCE_DENSITY_DATA !== 'undefined' ? RESOURCE_DENSITY_DATA : null;
+    if (!densityData || !densityData[iso]) {
+        container.innerHTML = '<p style="color:rgba(15,23,42,0.35);font-size:0.85rem;">Resource density data not available for ' + iso + '. Run step9d to generate.</p>';
+        return;
+    }
+
+    var isoData = densityData[iso];
+    var resources = isoData.resources;
+
+    if (subtitle) {
+        subtitle.textContent = 'Distribution of new-build capacity across ' +
+            isoData.totalScenarios.toLocaleString() + ' cost scenarios in the ' +
+            iso + ' optimal target range (' + isoData.thresholds[0] + '\u2013' +
+            isoData.thresholds[isoData.thresholds.length - 1] + '%)';
+    }
+
+    // Find global max TWh for shared x-axis scale
+    var globalMax = 0;
+    DENSITY_RESOURCE_ORDER.forEach(function(r) {
+        var rd = resources[r.key];
+        if (rd && rd.stats && rd.stats.max > globalMax) globalMax = rd.stats.max;
+    });
+    if (globalMax < 1) globalMax = 10;
+    globalMax = Math.ceil(globalMax * 1.1); // 10% padding
+
+    var html = '';
+
+    DENSITY_RESOURCE_ORDER.forEach(function(r) {
+        var rd = resources[r.key];
+        if (!rd || rd.presenceRate <= 0) return; // Skip absent resources
+
+        var stats = rd.stats;
+        var points = rd.points;
+        var presencePct = Math.round(rd.presenceRate * 100);
+
+        // Build strip row
+        html += '<div class="density-row">';
+
+        // Left: resource label + presence badge
+        html += '<div class="density-row-label">' +
+            '<span class="density-swatch" style="background:' + r.color + ';"></span>' +
+            '<span class="density-resource-name">' + r.label + '</span>' +
+            '<span class="density-presence-badge" style="background:' + r.color + '18;color:' + r.color + ';">' + presencePct + '% of scenarios</span>' +
+        '</div>';
+
+        // Center: strip plot
+        html += '<div class="density-strip-wrap">';
+
+        // P25-P75 band
+        var p25Left = (stats.p25 / globalMax) * 100;
+        var p75Left = (stats.p75 / globalMax) * 100;
+        html += '<div class="density-band" style="left:' + p25Left + '%;width:' + Math.max(0.5, p75Left - p25Left) + '%;background:' + r.color + '20;border:1px solid ' + r.color + '30;"></div>';
+
+        // Median line
+        var medianLeft = (stats.median / globalMax) * 100;
+        html += '<div class="density-median" style="left:' + medianLeft + '%;background:' + r.color + ';"></div>';
+
+        // Data points (dots)
+        for (var i = 0; i < points.length; i++) {
+            var x = (points[i] / globalMax) * 100;
+            if (x > 100) x = 100;
+            html += '<div class="density-dot" style="left:' + x.toFixed(1) + '%;background:' + r.color + ';"></div>';
+        }
+
+        html += '</div>';
+
+        // Right: stats callout
+        html += '<div class="density-stats">' +
+            '<div class="density-stat-line"><span class="density-stat-label">Median</span><span class="density-stat-value">' + stats.median.toFixed(1) + ' TWh</span></div>' +
+            '<div class="density-stat-line"><span class="density-stat-label">P25\u2013P75</span><span class="density-stat-value">' + stats.p25.toFixed(1) + '\u2013' + stats.p75.toFixed(1) + '</span></div>' +
+            '<div class="density-stat-line"><span class="density-stat-label">Range</span><span class="density-stat-value">' + stats.min.toFixed(1) + '\u2013' + stats.max.toFixed(1) + '</span></div>' +
+        '</div>';
+
+        html += '</div>'; // close density-row
+
+        // Driver description
+        html += '<div class="density-driver" style="border-left-color:' + r.color + ';">' + rd.driver + '</div>';
+    });
+
+    // X-axis labels
+    html += '<div class="density-axis">';
+    var ticks = [0];
+    var step = Math.ceil(globalMax / 5);
+    for (var t = step; t < globalMax; t += step) ticks.push(t);
+    ticks.push(globalMax);
+    ticks.forEach(function(t) {
+        html += '<span class="density-axis-tick" style="left:' + ((t / globalMax) * 100).toFixed(1) + '%;">' + t + '</span>';
+    });
+    html += '<span class="density-axis-label">TWh New Build</span>';
+    html += '</div>';
+
+    container.innerHTML = html;
+}
+
 function switchISO(iso) {
     activeISO = iso;
     var c = REGION_COLORS[iso];
@@ -1331,6 +1511,7 @@ function switchISO(iso) {
     buildDeepDiveChart(iso);
     renderNoRegrets(iso);
     updateNarrative(iso);
+    renderDensityStrips(iso);
 }
 
 // ============================================================================
@@ -1352,7 +1533,7 @@ function initObservers() {
 document.addEventListener('DOMContentLoaded', function() {
     populateTiles();
     buildHeroChart();
-    switchISO('ERCOT');
+    switchISO('ERCOT');  // This also calls renderDensityStrips
     initObservers();
 });
 </script>
