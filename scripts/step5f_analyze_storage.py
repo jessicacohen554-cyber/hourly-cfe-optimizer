@@ -34,6 +34,10 @@ DASHBOARD_DIR = os.path.join(ROOT_DIR, 'dashboard')
 
 sys.path.insert(0, ROOT_DIR)
 
+from scripts.pipeline_config import (
+    ACTIVE_THRESHOLDS, THRESHOLDS as ALL_THRESHOLDS,
+    THRESHOLD_TARGET_YEARS,
+)
 from scripts.dispatch_utils import (
     ISOS, H, RESOURCE_TYPES,
     BATTERY_EFFICIENCY, BATTERY_DURATION_HOURS,
@@ -43,11 +47,12 @@ from scripts.dispatch_utils import (
     BASE_DEMAND_TWH,
 )
 
-THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
-THRESHOLD_LABELS = ['50', '55', '60', '65', '70', '75', '80', '85', '87.5', '90', '92.5', '95', '97.5', '99', '99.5', '99.9', '≥99.99']
+# Single source of truth: pipeline_config
+THRESHOLDS = ACTIVE_THRESHOLDS
+THRESHOLD_LABELS = [str(int(t)) if t == int(t) else str(t) for t in THRESHOLDS[:-1]] + ['≥99.99']
 
 # Shared-data.js threshold array (superset — includes sub-50 thresholds)
-SD_THRESHOLDS = [10, 20, 30, 40, 50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
+SD_THRESHOLDS = ALL_THRESHOLDS
 
 # Storage cost assumptions (NREL ATB 2024 aligned)
 STORAGE_COSTS = {

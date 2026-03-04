@@ -19,8 +19,11 @@ ROOT_DIR = os.path.dirname(SCRIPT_DIR)
 CO2_DIR = os.path.join(ROOT_DIR, 'data', 'step5-post-processing', 'co2_results')
 OUTPUT_PATH = os.path.join(ROOT_DIR, 'dashboard', 'js', 'shared-data-new-block.js')
 
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
-THRESHOLDS = ['50', '55', '60', '65', '70', '75', '80', '85', '87.5', '90', '92.5', '95', '97.5', '99', '99.5', '99.9', '99.99']
+sys.path.insert(0, SCRIPT_DIR)
+from pipeline_config import ACTIVE_THRESHOLDS, ISOS, THRESHOLD_TARGET_YEARS
+
+# String-formatted thresholds from pipeline_config (single source of truth)
+THRESHOLDS = [str(int(t)) if t == int(t) else str(t) for t in ACTIVE_THRESHOLDS]
 RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']
 MATCHED_RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes', 'h2']
 

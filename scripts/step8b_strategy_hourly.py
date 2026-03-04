@@ -58,6 +58,7 @@ from procurement_utils import (
 OVER_PROCUREMENT_RATIO = {
     # threshold: ratio (procured TWh / matched TWh)
     # Represents the physics penalty of hourly matching vs annual
+    # All 17 active thresholds from pipeline_config
     50:    1.05,   # Minimal — mostly baseload hours
     55:    1.07,
     60:    1.10,
@@ -72,6 +73,8 @@ OVER_PROCUREMENT_RATIO = {
     95:    1.70,   # Very steep — every hour matters
     97.5:  1.90,
     99:    2.20,   # Extreme — last few % require massive overbuild
+    99.5:  2.50,   # Last-mile: exponential capacity growth
+    99.9:  2.80,   # Near-physical limit
     99.99: 3.00,   # Physical limit — need 3× capacity to cover every hour
 }
 
@@ -108,6 +111,8 @@ HOURLY_MIX_TEMPLATE = {
     90:    {'solar': 0.22, 'wind': 0.22, 'firm': 0.28, 'storage': 0.23, 'uprate': 0.05},
     95:    {'solar': 0.18, 'wind': 0.18, 'firm': 0.32, 'storage': 0.27, 'uprate': 0.05},
     99:    {'solar': 0.15, 'wind': 0.15, 'firm': 0.35, 'storage': 0.30, 'uprate': 0.05},
+    99.5:  {'solar': 0.14, 'wind': 0.14, 'firm': 0.36, 'storage': 0.31, 'uprate': 0.05},
+    99.9:  {'solar': 0.13, 'wind': 0.13, 'firm': 0.37, 'storage': 0.32, 'uprate': 0.05},
     99.99: {'solar': 0.12, 'wind': 0.12, 'firm': 0.38, 'storage': 0.33, 'uprate': 0.05},
 }
 
