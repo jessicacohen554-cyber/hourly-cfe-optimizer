@@ -58,7 +58,7 @@ from step3a_cost_optimization import (
 
 # Additional constants needed for DG coefficient computation
 from step3a_cost_optimization import (
-    UPRATE_CAP_TWH, GEO_CAP_TWH,
+    UPRATE_CAP_TWH, GEO_CAP_TWH, EXISTING_GEOTHERMAL_PCT,
     PEAK_DEMAND_MW, RESOURCE_ADEQUACY_MARGIN, PEAK_CAPACITY_CREDITS,
     GAS_AVAILABILITY_FACTOR, EXISTING_GAS_CAPACITY_MW,
     EXISTING_GAS_FOM_KW_YR, NEW_CCGT_COST_KW_YR,
@@ -188,6 +188,7 @@ def flatten_dg_rows(iso, track_name, dg_dict, arrays=None):
         arr_wnd = arrays['wind']
         arr_hyd = arrays['hydro']
         arr_osw = arrays.get('offshore_wind', np.zeros(len(arr_cf), dtype=np.int64))
+        arr_geo = arrays.get('geothermal', np.zeros(len(arr_cf), dtype=np.int64))
         arr_score = arrays['hourly_match_score']
         arr_bat = arrays.get('battery_dispatch_pct', np.zeros(1))
         arr_bat8 = arrays.get('battery8_dispatch_pct', np.zeros(1))
@@ -211,6 +212,7 @@ def flatten_dg_rows(iso, track_name, dg_dict, arrays=None):
                     wnd_batch = arr_wnd[idxs].astype(int)
                     hyd_batch = arr_hyd[idxs].astype(int)
                     osw_batch = arr_osw[idxs].astype(int)
+                    geo_batch = arr_geo[idxs].astype(int)
                     score_batch = arr_score[idxs]
                     bat_batch = np.round(arr_bat[idxs].astype(np.float64), 4)
                     bat8_batch = np.round(arr_bat8[idxs].astype(np.float64), 4)
@@ -218,9 +220,10 @@ def flatten_dg_rows(iso, track_name, dg_dict, arrays=None):
                     h2_batch = np.round(arr_h2[idxs].astype(np.float64), 4)
 
                     for i, (g_level, vals) in enumerate(zip(g_levels, g_vals)):
-                        cf, sol, wnd, hyd, osw = (
+                        cf, sol, wnd, hyd, osw, geo = (
                             int(cf_batch[i]), int(sol_batch[i]),
-                            int(wnd_batch[i]), int(hyd_batch[i]), int(osw_batch[i]))
+                            int(wnd_batch[i]), int(hyd_batch[i]), int(osw_batch[i]),
+                            int(geo_batch[i]))
                         rows.append({
                             'iso': iso, 'track': track_name,
                             'threshold': thr_float, 'scenario': sc_key,
@@ -232,7 +235,8 @@ def flatten_dg_rows(iso, track_name, dg_dict, arrays=None):
                             'cost_incremental': vals[3],
                             'mix_clean_firm': cf, 'mix_solar': sol,
                             'mix_wind': wnd, 'mix_offshore_wind': osw,
-                            'mix_ccs_ccgt': max(0, 100 - (cf + sol + wnd + hyd + osw)),
+                            'mix_geothermal': geo,
+                            'mix_ccs_ccgt': max(0, 100 - (cf + sol + wnd + hyd + osw + geo)),
                             'mix_hydro': hyd,
                             'hourly_match_score': float(score_batch[i]),
                             'battery_dispatch_pct': float(bat_batch[i]),
@@ -259,11 +263,13 @@ def flatten_dg_rows(iso, track_name, dg_dict, arrays=None):
                             wnd = int(arr_wnd[mix_idx])
                             hyd = int(arr_hyd[mix_idx])
                             osw = int(arr_osw[mix_idx])
+                            geo = int(arr_geo[mix_idx])
                             row['mix_clean_firm'] = cf
                             row['mix_solar'] = sol
                             row['mix_wind'] = wnd
                             row['mix_offshore_wind'] = osw
-                            row['mix_ccs_ccgt'] = max(0, 100 - (cf + sol + wnd + hyd + osw))
+                            row['mix_geothermal'] = geo
+                            row['mix_ccs_ccgt'] = max(0, 100 - (cf + sol + wnd + hyd + osw + geo))
                             row['mix_hydro'] = hyd
                             row['hourly_match_score'] = float(arr_score[mix_idx])
                             row['battery_dispatch_pct'] = round(float(arr_bat[mix_idx]), 4)
@@ -677,7 +683,8 @@ def _precompute_dg_coefficients(iso, arch_arrays, demand_twh,
     wnd_pct = arch_arrays['wind']
     hyd_pct = arch_arrays['hydro']
     osw_pct = arch_arrays.get('offshore_wind', np.zeros(N, dtype=np.float64))
-    ccs_pct = np.maximum(0.0, 100.0 - (cf_pct + sol_pct + wnd_pct + hyd_pct + osw_pct))
+    geo_pct = arch_arrays.get('geothermal', np.zeros(N, dtype=np.float64))
+    ccs_pct = np.maximum(0.0, 100.0 - (cf_pct + sol_pct + wnd_pct + hyd_pct + osw_pct + geo_pct))
     bat_pct = arch_arrays['battery_dispatch_pct']
     bat8_pct = arch_arrays.get('battery8_dispatch_pct', np.zeros(N, dtype=np.float64))
     ldes_pct = arch_arrays['ldes_dispatch_pct']
@@ -760,11 +767,21 @@ def _precompute_dg_coefficients(iso, arch_arrays, demand_twh,
             uprate_twh = np.minimum(new_cf_twh, uprate_cap)
             remaining_after_uprate = np.maximum(0, new_cf_twh - uprate_twh)
 
+            # Geothermal from physics mix (CAISO only): new-build portion
+            geo_new_from_physics_twh = np.zeros(N, dtype=np.float64)
             if is_caiso:
-                geo_twh = np.minimum(remaining_after_uprate, GEO_CAP_TWH)
-                remaining_after_geo = np.maximum(0, remaining_after_uprate - geo_twh)
+                geo_new_from_physics_pct = np.maximum(0, geo_pct - EXISTING_GEOTHERMAL_PCT * existing_scale)
+                geo_new_from_physics_twh = geo_new_from_physics_pct / 100.0 * demand_grown
+
+            # Tranche 2: capped at headroom after physics geo (prevents double-counting)
+            if is_caiso:
+                geo_headroom = np.maximum(0, GEO_CAP_TWH - geo_new_from_physics_twh)
+                geo_tranche_twh = np.minimum(remaining_after_uprate, geo_headroom)
+                remaining_after_geo = np.maximum(0, remaining_after_uprate - geo_tranche_twh)
+                total_new_geo_twh = geo_new_from_physics_twh + geo_tranche_twh
             else:
-                geo_twh = np.zeros(N)
+                geo_tranche_twh = np.zeros(N)
+                total_new_geo_twh = np.zeros(N)
                 remaining_after_geo = remaining_after_uprate
 
             # Gas backup: clean_peak_mw = peak_coeff * avg_demand_mw
@@ -790,7 +807,7 @@ def _precompute_dg_coefficients(iso, arch_arrays, demand_twh,
             coeff_matrix[:, _COL_OSW_NEW] = osw_coeff  # all new-build, growth-invariant
             coeff_matrix[:, _COL_CCS_NEW] = ccs_new_pct / 100.0
             coeff_matrix[:, _COL_UPRATE] = uprate_twh / demand_grown
-            coeff_matrix[:, _COL_GEO] = geo_twh / demand_grown
+            coeff_matrix[:, _COL_GEO] = total_new_geo_twh / demand_grown
             coeff_matrix[:, _COL_REMAINING] = remaining_after_geo / demand_grown
             coeff_matrix[:, _COL_BAT4] = bat4_coeff
             coeff_matrix[:, _COL_BAT8] = bat8_coeff

@@ -55,7 +55,7 @@ from pipeline_config import (
     ISOS, REGIONAL_DEMAND_TWH, GRID_MIX_SHARES,
     WHOLESALE_PRICES, FUEL_ADJUSTMENTS, LMH, LEVEL_NAME,
     LCOE_TABLES, TX_TABLES, get_tx, UPRATE_LCOE,
-    NUCLEAR_NEWBUILD_LCOE, GEOTHERMAL_LCOE, GEO_CAP_TWH,
+    NUCLEAR_NEWBUILD_LCOE, GEOTHERMAL_LCOE, GEO_CAP_TWH, EXISTING_GEOTHERMAL_PCT,
     CCS_LCOE_45Q_ON, CCS_LCOE_45Q_OFF,
     CCS_CAP_TWH, OFFSHORE_ISOS,
     NEISO_CCS_GAS_ADDER, NEISO_WHOLESALE_ADDER,
@@ -206,13 +206,14 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
 
     total_cost = np.zeros(N, dtype=np.float64)
 
-    # CCS pct = 100 - (cf + sol + wnd + hyd + osw) -- implicit residual resource
+    # CCS pct = 100 - (cf + sol + wnd + hyd + osw + geo) -- implicit residual resource
     cf_pct = arrays['clean_firm']
     sol_pct = arrays['solar']
     wnd_pct = arrays['wind']
     hyd_pct = arrays['hydro']
     osw_pct = arrays.get('offshore_wind', np.zeros(N, dtype=np.float64))
-    ccs_pct = 100.0 - (cf_pct + sol_pct + wnd_pct + hyd_pct + osw_pct)
+    geo_pct = arrays.get('geothermal', np.zeros(N, dtype=np.float64))
+    ccs_pct = 100.0 - (cf_pct + sol_pct + wnd_pct + hyd_pct + osw_pct + geo_pct)
     ccs_pct = np.maximum(ccs_pct, 0.0)
 
     # CCS regional cap: limit CCS deployment to geologically feasible TWh.
@@ -254,6 +255,17 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     # --- Hydro (always existing, $0 cost — sunk fleet) ---
     # No cost added for hydro (existing fleet, $0 price)
 
+    # --- Geothermal from physics mix (CAISO only) ---
+    # The geothermal column from Step 1 is separate from clean_firm. Price it here:
+    # existing geo (≤2.37% of demand) at $0, new-build geo at geothermal LCOE.
+    geo_physics_new_twh = np.zeros(N, dtype=np.float64)
+    if iso == 'CAISO' and geo_lev:
+        geo_existing_pct_cap = min(EXISTING_GEOTHERMAL_PCT * existing_scale, geo_pct.max() + 1)
+        geo_physics_new_pct = np.maximum(0, geo_pct - EXISTING_GEOTHERMAL_PCT * existing_scale)
+        geo_physics_new_twh = geo_physics_new_pct / 100.0 * demand
+        geo_physics_price = GEOTHERMAL_LCOE[geo_lev] + get_tx('clean_firm', tx_name, iso)
+        total_cost += geo_physics_new_pct / 100.0 * geo_physics_price
+
     # --- CCS-CCGT (existing = $0, only new-build costs money; capped at regional TWh limit) ---
     ccs_existing = min(existing.get('ccs_ccgt', 0) * existing_scale, 100.0)
     ccs_existing_pct = np.minimum(ccs_capped_pct, ccs_existing)
@@ -289,11 +301,13 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     uprate_cost = uprate_twh * UPRATE_LCOE[firm_lev]
     remaining = np.maximum(0, new_cf_twh - uprate_twh)
 
-    # Tranche 2: Geothermal (CAISO only, capped)
+    # Tranche 2: Geothermal (CAISO only, capped at headroom after physics geo)
     geo_cost = np.zeros(N)
     if iso == 'CAISO' and geo_lev:
         geo_price = GEOTHERMAL_LCOE[geo_lev] + tx_cf
-        geo_twh = np.minimum(remaining, GEO_CAP_TWH)
+        # Reduce cap by new geothermal already in physics mix to prevent double-counting
+        geo_headroom = np.maximum(0, GEO_CAP_TWH - geo_physics_new_twh)
+        geo_twh = np.minimum(remaining, geo_headroom)
         geo_cost = geo_twh * geo_price
         remaining = np.maximum(0, remaining - geo_twh)
 
@@ -549,7 +563,8 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
     wnd_pct = arrays['wind']
     hyd_pct = arrays['hydro']
     osw_pct = arrays.get('offshore_wind', np.zeros(N, dtype=np.float64))
-    ccs_pct = np.maximum(0.0, 100.0 - (cf_pct + sol_pct + wnd_pct + hyd_pct + osw_pct))
+    geo_pct = arrays.get('geothermal', np.zeros(N, dtype=np.float64))
+    ccs_pct = np.maximum(0.0, 100.0 - (cf_pct + sol_pct + wnd_pct + hyd_pct + osw_pct + geo_pct))
 
     bat_pct = arrays['battery_dispatch_pct']
     bat8_pct = arrays.get('battery8_dispatch_pct', np.zeros(N, dtype=np.float64))
@@ -575,17 +590,25 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
     cf_existing_pct = np.minimum(cf_pct, existing['clean_firm'])
     cf_new_pct = np.maximum(0, cf_pct - existing['clean_firm'])
 
+    # Geothermal from physics mix (CAISO only): existing ($0) vs new-build (priced)
+    geo_new_from_physics_twh = np.zeros(N, dtype=np.float64)
+    if iso == 'CAISO':
+        geo_new_from_physics_pct = np.maximum(0, geo_pct - EXISTING_GEOTHERMAL_PCT)
+        geo_new_from_physics_twh = geo_new_from_physics_pct / 100.0 * demand_twh
+
     # Clean firm tranche allocation (scenario-invariant quantities)
     new_cf_twh = cf_new_pct / 100.0 * demand_twh
     uprate_cap = UPRATE_CAP_TWH[iso] if uprate_cap_override is None else uprate_cap_override
     uprate_twh = np.minimum(new_cf_twh, uprate_cap)
     remaining_after_uprate = np.maximum(0, new_cf_twh - uprate_twh)
 
-    geo_twh = np.zeros(N)
+    # Tranche 2: Geothermal — capped at headroom after physics geo (prevents double-counting)
+    geo_tranche_twh = np.zeros(N)
     remaining_after_geo = remaining_after_uprate
     if iso == 'CAISO':
-        geo_twh = np.minimum(remaining_after_uprate, GEO_CAP_TWH)
-        remaining_after_geo = np.maximum(0, remaining_after_uprate - geo_twh)
+        geo_headroom = np.maximum(0, GEO_CAP_TWH - geo_new_from_physics_twh)
+        geo_tranche_twh = np.minimum(remaining_after_uprate, geo_headroom)
+        remaining_after_geo = np.maximum(0, remaining_after_uprate - geo_tranche_twh)
 
     # --- Gas backup (delta RA approach, scenario-invariant) ---
     # Infer growth factor from demand: gf = demand_twh / base_demand
@@ -646,7 +669,8 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
     coeff_matrix[:, _COL_OSW_NEW] = osw_new_pct / 100.0  # all new-build, no existing
     coeff_matrix[:, _COL_CCS_NEW] = ccs_new_pct / 100.0
     coeff_matrix[:, _COL_UPRATE] = uprate_twh / demand_twh
-    coeff_matrix[:, _COL_GEO] = geo_twh / demand_twh
+    # Total new geothermal = physics new-build + tranche allocation (both at geo LCOE)
+    coeff_matrix[:, _COL_GEO] = (geo_new_from_physics_twh + geo_tranche_twh) / demand_twh
     coeff_matrix[:, _COL_REMAINING] = remaining_after_geo / demand_twh
     coeff_matrix[:, _COL_BAT4] = bat_pct / 100.0
     coeff_matrix[:, _COL_BAT8] = bat8_pct / 100.0
@@ -660,7 +684,8 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
         'cf_existing_twh': cf_existing_pct / 100.0 * demand_twh,
         'new_cf_twh': new_cf_twh,
         'uprate_twh': uprate_twh,
-        'geo_twh': geo_twh,
+        'geo_twh': geo_new_from_physics_twh + geo_tranche_twh,
+        'geo_physics_twh': geo_new_from_physics_twh,
         'remaining_twh': remaining_after_geo,
         'gas_needed_mw': gas_needed_mw,
         'existing_gas_used_mw': existing_gas_used_mw,
@@ -1184,10 +1209,12 @@ def preextract_winner_data(arrays, extras, unique_indices, iso, demand_twh):
     h2_arr = arrays.get('h2_dispatch_pct')
     h2_vals = h2_arr[idx_arr] if h2_arr is not None else np.zeros(n)
 
-    # CCS = 100 - sum of other resources (int arithmetic for consistency)
+    # CCS = 100 - sum of other resources including geothermal (int arithmetic for consistency)
+    geo_arr = arrays.get('geothermal')
+    geo_vals = geo_arr[idx_arr].astype(np.int64) if geo_arr is not None else np.zeros(n, dtype=np.int64)
     ccs_vals = np.maximum(0, 100 - (cf_vals.astype(np.int64) + sol_vals.astype(np.int64) +
                                      wnd_vals.astype(np.int64) + hyd_vals.astype(np.int64) +
-                                     osw_vals.astype(np.int64)))
+                                     osw_vals.astype(np.int64) + geo_vals))
 
     # Batch extract from extras
     match_frac_vals = extras['match_frac'][idx_arr]
@@ -1219,6 +1246,7 @@ def preextract_winner_data(arrays, extras, unique_indices, iso, demand_twh):
         winner_data[int(idx_arr[pos])] = (
             {'clean_firm': int(cf_vals[pos]), 'solar': int(sol_vals[pos]),
              'wind': int(wnd_vals[pos]), 'offshore_wind': int(osw_vals[pos]),
+             'geothermal': int(geo_vals[pos]),
              'ccs_ccgt': int(ccs_vals[pos]), 'hydro': int(hyd_vals[pos])},
             round(float(match_vals[pos]), 4),
             round(float(bat_vals[pos]), 4),
@@ -1310,7 +1338,9 @@ def build_winner_scenario(arrays, extras, best_idx, sens, iso, demand_twh,
     hyd = int(arrays['hydro'][best_idx])
     osw_arr = arrays.get('offshore_wind')
     osw = int(osw_arr[best_idx]) if osw_arr is not None else 0
-    ccs_alloc = max(0, 100 - (cf + sol + wnd + hyd + osw))
+    geo_arr = arrays.get('geothermal')
+    geo_mix = int(geo_arr[best_idx]) if geo_arr is not None else 0
+    ccs_alloc = max(0, 100 - (cf + sol + wnd + hyd + osw + geo_mix))
     bat8_arr = arrays.get('battery8_dispatch_pct')
     h2_arr = arrays.get('h2_dispatch_pct')
 
@@ -1333,6 +1363,7 @@ def build_winner_scenario(arrays, extras, best_idx, sens, iso, demand_twh,
             'solar': sol,
             'wind': wnd,
             'offshore_wind': osw,
+            'geothermal': geo_mix,
             'ccs_ccgt': ccs_alloc,
             'hydro': hyd,
         },
@@ -1683,8 +1714,10 @@ def arrays_to_mix_dict(arrays, idx):
     """Extract a single mix from arrays as a dict."""
     osw_arr = arrays.get('offshore_wind')
     osw = int(osw_arr[idx]) if osw_arr is not None else 0
+    geo_arr = arrays.get('geothermal')
+    geo_val = int(geo_arr[idx]) if geo_arr is not None else 0
     ccs_pct = max(0, 100 - (int(arrays['clean_firm'][idx]) + int(arrays['solar'][idx]) +
-                             int(arrays['wind'][idx]) + int(arrays['hydro'][idx]) + osw))
+                             int(arrays['wind'][idx]) + int(arrays['hydro'][idx]) + osw + geo_val))
     bat8 = arrays.get('battery8_dispatch_pct')
     h2 = arrays.get('h2_dispatch_pct')
     return {
@@ -1693,6 +1726,7 @@ def arrays_to_mix_dict(arrays, idx):
             'solar': int(arrays['solar'][idx]),
             'wind': int(arrays['wind'][idx]),
             'offshore_wind': osw,
+            'geothermal': geo_val,
             'ccs_ccgt': ccs_pct,
             'hydro': int(arrays['hydro'][idx]),
         },
@@ -1970,7 +2004,9 @@ def main():
             _hyd_i = arrays['hydro'][idx_arr].astype(np.int64)
             _osw_arr = arrays.get('offshore_wind', np.zeros(N, dtype=np.float64))
             _osw_i = _osw_arr[idx_arr].astype(np.int64)
-            ccs_pct = np.maximum(0, 100 - (_cf_i + _sol_i + _wnd_i + _hyd_i + _osw_i))
+            _geo_arr = arrays.get('geothermal', np.zeros(N, dtype=np.float64))
+            _geo_i = _geo_arr[idx_arr].astype(np.int64)
+            ccs_pct = np.maximum(0, 100 - (_cf_i + _sol_i + _wnd_i + _hyd_i + _osw_i + _geo_i))
             bat8 = arrays.get('battery8_dispatch_pct', np.zeros(N, dtype=np.float64))
             h2 = arrays.get('h2_dispatch_pct', np.zeros(N, dtype=np.float64))
             thr_data[thr]['feasible_mixes'] = {
@@ -1978,6 +2014,7 @@ def main():
                 'solar': _sol_i.tolist(),
                 'wind': _wnd_i.tolist(),
                 'offshore_wind': _osw_i.tolist(),
+                'geothermal': _geo_i.tolist(),
                 'ccs_ccgt': ccs_pct.tolist(),
                 'hydro': _hyd_i.tolist(),
                 'hourly_match_score': np.round(arrays['hourly_match_score'][idx_arr], 4).tolist(),
@@ -2692,11 +2729,14 @@ def main():
                         hyd = int(arrs_['hydro'][mix_idx])
                         _osw_a = arrs_.get('offshore_wind')
                         osw = int(_osw_a[mix_idx]) if _osw_a is not None else 0
+                        _geo_a = arrs_.get('geothermal')
+                        geo_mix = int(_geo_a[mix_idx]) if _geo_a is not None else 0
                         row['mix_clean_firm'] = cf
                         row['mix_solar'] = sol
                         row['mix_wind'] = wnd
                         row['mix_offshore_wind'] = osw
-                        row['mix_ccs_ccgt'] = max(0, 100 - (cf + sol + wnd + hyd + osw))
+                        row['mix_geothermal'] = geo_mix
+                        row['mix_ccs_ccgt'] = max(0, 100 - (cf + sol + wnd + hyd + osw + geo_mix))
                         row['mix_hydro'] = hyd
                         row['hourly_match_score'] = float(
                             arrs_['hourly_match_score'][mix_idx])
