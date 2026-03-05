@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Storage Analysis — Hourly CFE Optimizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/article.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+<script src="js/scroll-observer.js"></script>
+<style>
+body { background: var(--bg-page-white); }
+
+.counter-card { padding: 20px 14px; min-width: 120px; border-color: var(--border-light); }
+.counter-val.purple { color: var(--battery); }
+.counter-val.green { color: var(--green-pos); }
+.counter-sub { font-size: 0.78rem; color: var(--text-muted); margin-top: 6px; }
+
+.section-header { margin-bottom: var(--space-xl); }
+.section-header h3 {
+    font-family: var(--font-heading); font-size: 1.5rem; font-weight: 700;
+    color: var(--navy); margin-bottom: var(--space-sm);
+}
+.section-header p { font-size: 0.9rem; color: var(--text-dim); line-height: 1.6; max-width: 800px; }
+
+.chart-panel h4 {
+    font-family: var(--font-heading); font-size: 1.05rem; font-weight: 700;
+    color: var(--navy); margin-bottom: 4px;
+}
+.chart-container { height: 340px; }
+@media (min-width: 769px) { .chart-container { height: 380px; } }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-lg); }
+@media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.onset-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin: var(--space-md) 0; }
+.onset-table th {
+    background: var(--bg-alt); font-weight: 700; text-align: left; padding: 12px 16px;
+    border-bottom: 2px solid var(--border-light); font-size: 0.72rem;
+    text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim);
+}
+.onset-table td { padding: 12px 16px; border-bottom: 1px solid var(--bg-alt); }
+.onset-table tr:hover td { background: var(--bg-alt); }
+
+.iso-tabs {
+    display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: var(--space-lg);
+    border-bottom: 2px solid var(--border-light); padding-bottom: 0;
+}
+.iso-tab {
+    padding: 10px 18px; background: none; border: none;
+    font-family: var(--font-heading); font-size: 0.85rem; font-weight: 600;
+    color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent;
+    margin-bottom: -2px; transition: color 0.2s, border-color 0.2s;
+    min-width: 44px; min-height: 44px;
+}
+.iso-tab:hover { color: var(--text-primary); }
+.iso-tab.active { color: var(--red); border-bottom-color: var(--red); }
+
+.tech-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin: var(--space-md) 0; }
+.tech-table th {
+    background: var(--bg-alt); font-weight: 700; text-align: left; padding: 10px 12px;
+    border-bottom: 2px solid var(--border-light); font-size: 0.7rem;
+    text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim);
+}
+.tech-table td { padding: 10px 12px; border-bottom: 1px solid var(--bg-alt); }
+.tech-table tr:hover td { background: var(--bg-alt); }
+.tech-table tr.ldes-active { background: rgba(233,30,99,0.06); }
+.tech-table .zero { color: var(--text-muted); }
+
+.insight-box.purple { border-left-color: var(--battery); background: linear-gradient(135deg, rgba(139,92,246,0.06), rgba(236,72,153,0.04)); }
+.insight-box h5 { font-family: var(--font-heading); font-weight: 700; font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm); }
+.insight-box p { font-size: 0.88rem; color: var(--text-secondary); line-height: 1.6; margin: 0; }
+
+.storage-footer-note {
+    max-width: var(--max-content); margin: 0 auto; padding: var(--space-lg);
+    font-size: 0.78rem; color: var(--text-muted); line-height: 1.6;
+    border-top: 1px solid var(--border-light);
+}
+
+.track-toggle {
+    display: flex; gap: 2px; background: var(--bg-alt); border-radius: var(--radius-md);
+    padding: 3px; margin-bottom: var(--space-lg); width: fit-content;
+}
+.track-toggle button {
+    padding: 8px 20px; border: none; background: transparent; cursor: pointer;
+    font-family: var(--font-heading); font-size: 0.82rem; font-weight: 600;
+    color: var(--text-muted); border-radius: var(--radius-sm); transition: all 0.2s;
+    min-height: 44px;
+}
+.track-toggle button.active {
+    background: white; color: var(--navy); box-shadow: var(--shadow-sm);
+}
+.track-toggle button:hover:not(.active) { color: var(--text-primary); }
+
+.stacked-area-chart { height: 420px; }
+@media (max-width: 768px) { .stacked-area-chart { height: 340px; } }
+
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-lg); }
+@media (max-width: 1024px) { .grid-3 { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 768px) { .grid-3 { grid-template-columns: 1fr; } }
+
+.kpi-card {
+    background: white; border: 1px solid var(--border-light); border-radius: var(--radius-md);
+    padding: var(--space-lg); text-align: center;
+}
+.kpi-card .kpi-val {
+    font-family: var(--font-data, var(--font-mono)); font-size: 2rem; font-weight: 700; line-height: 1.2;
+}
+.kpi-card .kpi-lbl { font-size: 0.82rem; color: var(--text-muted); margin-top: 4px; }
+.kpi-card .kpi-sub { font-size: 0.75rem; color: var(--text-dim); margin-top: 4px; }
+</style>
+</head>
+<body>
+<nav id="topNav"></nav>
+
+<div class="header" id="pageHeader">
+    <h1>Storage Analysis</h1>
+    <div class="subtitle">How battery and long-duration storage reshape the decarbonization path under demand growth</div>
+    <div class="header-accent"></div>
+</div>
+
+<!-- ========== HERO STATS ========== -->
+<section class="content-section">
+    <p style="font-size:0.95rem; color:var(--text-dim); line-height:1.75; max-width:var(--max-prose);">
+        Storage plays two fundamentally different roles depending on the grid's starting point.
+        In solar-heavy ISOs like CAISO and NYISO, 4-hour batteries appear early &mdash; daily cycling to shift midday surplus into evening peaks.
+        In wind-heavy ISOs (ERCOT, MISO, SPP), storage barely registers until &ge;95% because wind overbuild is cheaper than storing energy.
+        Long-duration storage (100hr iron-air) only enters in the last mile (&ge;99%) for multi-day weather gaps.
+        This page compares Track 1 baseline (existing grid + procurement) and Track 2 demand growth scenarios.
+    </p>
+
+    <div class="counter-row" style="margin-top: var(--space-lg);">
+        <div class="counter-card">
+            <div class="counter-val purple" id="heroBat4Max">10%</div>
+            <div class="counter-lbl">Max Bat4 Dispatch</div>
+            <div class="counter-sub" id="heroBat4Sub">PJM at &ge;99.9%</div>
+        </div>
+        <div class="counter-card">
+            <div class="counter-val" style="color:var(--ldes, #E91E63);" id="heroLdesMax">8%</div>
+            <div class="counter-lbl">Max LDES Dispatch</div>
+            <div class="counter-sub" id="heroLdesSub">NEISO at &ge;99.99%</div>
+        </div>
+        <div class="counter-card">
+            <div class="counter-val green" id="heroStorageISOs">5</div>
+            <div class="counter-lbl">ISOs Need LDES</div>
+            <div class="counter-sub">at &ge;99% thresholds</div>
+        </div>
+        <div class="counter-card">
+            <div class="counter-val" style="color:var(--text-muted);">0%</div>
+            <div class="counter-lbl">Green H<sub>2</sub></div>
+            <div class="counter-sub">Never cost-optimal</div>
+        </div>
+    </div>
+</section>
+
+<!-- ========== TRACK TOGGLE + TOTAL STORAGE ========== -->
+<section class="content-section" style="padding-top: 0;">
+    <div class="section-header">
+        <h3>Total Storage Contribution by Threshold</h3>
+        <p>How much of annual demand is served by storage at each CFE target.
+           Toggle between Track 1 (baseline existing grid) and Track 2 (demand growth scenarios).</p>
+    </div>
+
+    <div class="track-toggle" id="trackToggle">
+        <button class="active" data-track="baseline">Track 1: Baseline</button>
+        <button data-track="dg">Track 2: Demand Growth</button>
+    </div>
+
+    <div class="chart-panel">
+        <h4 id="stackedTitle">Total Storage Dispatch — All ISOs (Baseline)</h4>
+        <div class="chart-subtitle">Battery 4hr + Battery 8hr + LDES as % of demand</div>
+        <div class="stacked-area-chart"><canvas id="totalStorageChart"></canvas></div>
+    </div>
+</section>
+
+<!-- ========== STORAGE ONSET TABLE ========== -->
+<section class="content-section" style="padding-top: 0;">
+    <div class="section-header">
+        <h3>Storage Onset by ISO</h3>
+        <p>When each technology first enters a cost-optimal mix. Solar-heavy ISOs deploy battery earliest;
+           wind-heavy ISOs delay storage to the last mile.</p>
+    </div>
+
+    <div class="chart-panel" style="overflow-x:auto;">
+        <table class="onset-table" id="onsetTable">
+            <thead>
+                <tr>
+                    <th>ISO</th>
+                    <th>Battery 4hr</th>
+                    <th>Battery 8hr</th>
+                    <th>LDES 100hr</th>
+                    <th>Green H<sub>2</sub></th>
+                    <th>Max Total Storage</th>
+                </tr>
+            </thead>
+            <tbody id="onsetTableBody"></tbody>
+        </table>
+    </div>
+</section>
+
+<!-- ========== CROSS-ISO CHARTS ========== -->
+<section class="content-section" style="padding-top: 0;">
+    <div class="section-header">
+        <h3>Storage Penetration Across Thresholds</h3>
+    </div>
+
+    <div class="grid-2">
+        <div class="chart-panel">
+            <h4>Battery 4hr Dispatch</h4>
+            <div class="chart-subtitle">Mean % of demand served by Bat4</div>
+            <div class="chart-container"><canvas id="crossIsoBat4"></canvas></div>
+        </div>
+        <div class="chart-panel">
+            <h4>Battery 8hr Dispatch</h4>
+            <div class="chart-subtitle">Mean % of demand served by Bat8</div>
+            <div class="chart-container"><canvas id="crossIsoBat8"></canvas></div>
+        </div>
+    </div>
+
+    <div class="grid-2" style="margin-top: var(--space-lg);">
+        <div class="chart-panel">
+            <h4>LDES 100hr Dispatch</h4>
+            <div class="chart-subtitle">Mean % of demand served by LDES</div>
+            <div class="chart-container"><canvas id="crossIsoLdes"></canvas></div>
+        </div>
+        <div class="chart-panel">
+            <h4>Total Storage by ISO</h4>
+            <div class="chart-subtitle">Combined Bat4 + Bat8 + LDES</div>
+            <div class="chart-container"><canvas id="totalByIsoChart"></canvas></div>
+        </div>
+    </div>
+</section>
+
+<!-- ========== DEMAND GROWTH IMPACT ========== -->
+<section class="content-section">
+    <div class="section-header">
+        <h3>Demand Growth Changes Everything</h3>
+        <p>Under Track 2 demand growth scenarios, storage requirements shift significantly.
+           Growing demand means more hours where variable renewables can't meet load &mdash;
+           batteries and LDES absorb the gap.</p>
+    </div>
+
+    <div class="grid-3" id="dgKpiCards"></div>
+
+    <div class="grid-2" style="margin-top: var(--space-lg);">
+        <div class="chart-panel">
+            <h4>Bat4: Baseline vs. Demand Growth</h4>
+            <div class="chart-subtitle">Solid = DG, dashed = baseline</div>
+            <div class="chart-container"><canvas id="dgBat4CompareChart"></canvas></div>
+        </div>
+        <div class="chart-panel">
+            <h4>LDES: Baseline vs. Demand Growth</h4>
+            <div class="chart-subtitle">Solid = DG, dashed = baseline</div>
+            <div class="chart-container"><canvas id="dgLdesCompareChart"></canvas></div>
+        </div>
+    </div>
+</section>
+
+<!-- ========== ISO DEEP DIVES ========== -->
+<section class="content-section">
+    <div class="section-header">
+        <h3>Regional Deep Dives</h3>
+        <p>Resource mix progression, storage deployment, and cost trajectory per ISO.
+           Includes offshore wind where applicable.</p>
+    </div>
+
+    <div class="iso-tabs" id="isoTabs" role="tablist"></div>
+
+    <div id="isoDeepDive">
+        <div class="grid-2">
+            <div class="chart-panel">
+                <h4 id="mixChartTitle">Resource Mix Progression</h4>
+                <div class="chart-subtitle" id="mixChartSubtitle">Average resource GW by threshold</div>
+                <div class="chart-container"><canvas id="mixProgressionChart"></canvas></div>
+            </div>
+            <div class="chart-panel">
+                <h4 id="storBreakdownTitle">Storage Breakdown</h4>
+                <div class="chart-subtitle">Bat4 + Bat8 + LDES dispatch % by threshold</div>
+                <div class="chart-container"><canvas id="storageBreakdownChart"></canvas></div>
+            </div>
+        </div>
+
+        <div class="chart-panel" style="overflow-x: auto; margin-top: var(--space-lg);">
+            <h4 id="tableTitle">Optimal Mix Detail</h4>
+            <table class="tech-table">
+                <thead>
+                    <tr>
+                        <th>CFE Target</th>
+                        <th>Clean Firm</th>
+                        <th>Solar</th>
+                        <th>Wind</th>
+                        <th>OSW</th>
+                        <th>CCS</th>
+                        <th>Hydro</th>
+                        <th>Bat4</th>
+                        <th>Bat8</th>
+                        <th>LDES</th>
+                        <th>Cost</th>
+                    </tr>
+                </thead>
+                <tbody id="mixTableBody"></tbody>
+            </table>
+        </div>
+
+        <div id="isoInsight"></div>
+    </div>
+</section>
+
+<!-- ========== CROSS-ISO COST ========== -->
+<section class="content-section">
+    <div class="section-header">
+        <h3>System Cost Across All ISOs</h3>
+    </div>
+    <div class="chart-panel">
+        <h4>Total System Cost by CFE Threshold</h4>
+        <div class="chart-subtitle">$/MWh — enlarged points where storage is active</div>
+        <div class="chart-container" style="height: 420px;"><canvas id="allIsoCostChart"></canvas></div>
+    </div>
+</section>
+
+<div class="storage-footer-note">
+    <strong>Data:</strong> Step 3 cost optimization. 7 ISOs &times; 21 thresholds &times; 5,832&ndash;17,496
+    cost scenarios per region (baseline). Demand growth: 25 years &times; 3 growth rates &times; 5,832&ndash;17,496 scenarios.
+    <strong>Technologies:</strong> 4hr Li-ion (85% RTE), 8hr Li-ion (85% RTE), 100hr iron-air LDES (50% RTE),
+    1000hr green H<sub>2</sub> (35% RTE, &ge;95% only).
+    <strong>Note:</strong> Offshore wind modeled for CAISO, PJM, NYISO, NEISO.
+</div>
+
+<script src="js/storage-analysis-data.js"></script>
+<script src="js/building-blocks-data.js"></script>
+<script src="js/nav.js"></script>
+<script>
+(function() {
+    'use strict';
+    if (window.ChartDataLabels) Chart.unregister(ChartDataLabels);
+
+    // Adapt STORAGE_ANALYSIS + BUILDING_BLOCKS data into the expected BL/DG format
+    const ALL_ISOS = ['CAISO','ERCOT','PJM','NYISO','NEISO','MISO','SPP'];
+    function buildStorageView(saMetrics, bbData) {
+        const result = {};
+        ALL_ISOS.forEach(iso => {
+            const metrics = saMetrics[iso];
+            const bb = bbData ? bbData[iso] : null;
+            if (!metrics && !bb) return;
+            const thresholds = metrics ? metrics.thresholds : (bb ? bb.thresholds : []);
+            const n = thresholds.length;
+            const zeros = new Array(n).fill(0);
+            result[iso] = {
+                thresholds: thresholds,
+                battery4: { mean_pct: metrics ? metrics.battery4_pct : zeros },
+                battery8: { mean_pct: metrics ? metrics.battery8_pct : zeros },
+                ldes: { mean_pct: metrics ? metrics.ldes_pct : zeros },
+                h2: { mean_pct: metrics ? metrics.h2_pct : zeros },
+                total_storage_mean: metrics ? metrics.total_storage_pct : zeros,
+                resource_mix: { clean_firm: [], solar: [], wind: [], offshore_wind: [], ccs_ccgt: [], hydro: [] },
+                cost_median: []
+            };
+            thresholds.forEach(t => {
+                const bbIdx = bb ? bb.thresholds.indexOf(t) : -1;
+                const mix = bbIdx >= 0 ? bb.mixes[bbIdx] : null;
+                result[iso].resource_mix.clean_firm.push(mix ? mix.clean_firm : 0);
+                result[iso].resource_mix.solar.push(mix ? mix.solar : 0);
+                result[iso].resource_mix.wind.push(mix ? mix.wind : 0);
+                result[iso].resource_mix.offshore_wind.push(mix ? (mix.offshore_wind || 0) : 0);
+                result[iso].resource_mix.ccs_ccgt.push(mix ? mix.ccs_ccgt : 0);
+                result[iso].resource_mix.hydro.push(mix ? mix.hydro : 0);
+                result[iso].cost_median.push(mix ? mix.cost : 0);
+            });
+        });
+        return result;
+    }
+
+    const sa = typeof STORAGE_ANALYSIS !== 'undefined' ? STORAGE_ANALYSIS : {};
+    const saMetrics = sa.storage_metrics || {};
+    const bbBL = typeof BUILDING_BLOCKS_BASELINE !== 'undefined' ? BUILDING_BLOCKS_BASELINE : {};
+    const bbDG = typeof BUILDING_BLOCKS_DG !== 'undefined' ? BUILDING_BLOCKS_DG : {};
+    const BL = buildStorageView(saMetrics, bbBL);
+    const DG = buildStorageView(saMetrics, bbDG);
+
+    const ISOS = ALL_ISOS.filter(iso => BL[iso]);
+    const ISO_CLR = {};
+    ISOS.forEach(iso => { ISO_CLR[iso] = ISO_COLORS[iso]; });
+
+    const RES_CLR = {
+        clean_firm: RESOURCE_COLORS.cleanFirm, solar: RESOURCE_COLORS.solar,
+        wind: RESOURCE_COLORS.wind, offshore_wind: RESOURCE_COLORS.offshoreWind || '#009688',
+        ccs_ccgt: RESOURCE_COLORS.ccs, hydro: RESOURCE_COLORS.hydro
+    };
+    const STOR_CLR = {
+        battery4: RESOURCE_COLORS.battery || '#8B5CF6',
+        battery8: '#A78BFA',
+        ldes: RESOURCE_COLORS.ldes || '#E91E63',
+        h2: RESOURCE_COLORS.greenH2 || '#10B981'
+    };
+
+    let currentTrack = 'baseline';
+    const getData = () => currentTrack === 'baseline' ? BL : DG;
+    const safe = arr => (arr || []).map(v => v == null ? undefined : v);
+    const fmtT = t => t >= 99.99 ? '≥99.99%' : t + '%';
+
+    const lineOpts = (yLbl, yMax) => ({
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+            legend: { position: 'top', labels: { usePointStyle: true, padding: 12, font: { size: 11 } } },
+            datalabels: false
+        },
+        scales: {
+            x: { ticks: { maxRotation: 45, font: { size: 10 } } },
+            y: { title: { display: true, text: yLbl, font: { size: 11 } }, min: 0, max: yMax, ticks: { font: { size: 10 } } }
+        }
+    });
+
+    const pctTip = { callbacks: { label: ctx => ctx.dataset.label + ': ' + (ctx.parsed.y != null ? ctx.parsed.y.toFixed(2) : '—') + '%' } };
+
+    // ======== Hero Stats ========
+    function updateHero() {
+        const D = getData();
+        let mxB4 = 0, mxB4iso = '', mxB4t = '', mxLD = 0, mxLDiso = '', mxLDt = '';
+        ISOS.forEach(iso => {
+            const d = D[iso];
+            d.battery4.mean_pct.forEach((v,i) => { if(v>mxB4){mxB4=v; mxB4iso=iso; mxB4t=fmtT(d.thresholds[i]);} });
+            d.ldes.mean_pct.forEach((v,i) => { if(v>mxLD){mxLD=v; mxLDiso=iso; mxLDt=fmtT(d.thresholds[i]);} });
+        });
+        document.getElementById('heroBat4Max').textContent = mxB4.toFixed(1) + '%';
+        document.getElementById('heroBat4Sub').textContent = mxB4iso + ' at ' + mxB4t;
+        document.getElementById('heroLdesMax').textContent = mxLD.toFixed(1) + '%';
+        document.getElementById('heroLdesSub').textContent = mxLDiso + ' at ' + mxLDt;
+    }
+
+    // ======== Total Storage Chart ========
+    let totalChart = null;
+    function renderTotalStorage() {
+        const D = getData();
+        const labels = D.CAISO.thresholds.map(fmtT);
+        if (totalChart) totalChart.destroy();
+        document.getElementById('stackedTitle').textContent =
+            'Total Storage Dispatch — All ISOs (' + (currentTrack === 'baseline' ? 'Baseline' : 'Demand Growth') + ')';
+
+        totalChart = new Chart(document.getElementById('totalStorageChart'), {
+            type: 'line',
+            data: { labels, datasets: ISOS.map(iso => ({
+                label: iso, data: safe(D[iso].total_storage_mean),
+                borderColor: ISO_CLR[iso], backgroundColor: ISO_CLR[iso] + '15',
+                borderWidth: 2.5, pointRadius: 2, pointHoverRadius: 5,
+                tension: 0.3, fill: true, spanGaps: true
+            }))},
+            options: { ...lineOpts('Total Storage % of Demand'), plugins: { ...lineOpts('').plugins, tooltip: pctTip } }
+        });
+    }
+
+    // ======== Track Toggle ========
+    document.getElementById('trackToggle').addEventListener('click', e => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        currentTrack = btn.dataset.track;
+        document.querySelectorAll('#trackToggle button').forEach(b => b.classList.toggle('active', b === btn));
+        updateHero(); renderTotalStorage(); renderOnsetTable(); renderCrossIso(); renderDeepDive(activeISO);
+    });
+
+    // ======== Onset Table ========
+    function renderOnsetTable() {
+        const D = getData();
+        const tbody = document.getElementById('onsetTableBody');
+        tbody.innerHTML = '';
+        ISOS.forEach(iso => {
+            const d = D[iso];
+            const findOnset = arr => {
+                for (let i = 0; i < arr.length; i++) if (arr[i] > 0.05) return fmtT(d.thresholds[i]);
+                return 'Never';
+            };
+            const bat4O = findOnset(d.battery4.mean_pct);
+            const bat8O = findOnset(d.battery8.mean_pct);
+            const ldesO = findOnset(d.ldes.mean_pct);
+            const h2O = findOnset(d.h2.mean_pct);
+            const mxTot = Math.max(...d.total_storage_mean).toFixed(1);
+
+            const cs = v => {
+                if (v === 'Never') return 'background:#E5E7EB;color:#6B7280;text-align:center;';
+                const n = parseFloat(v);
+                if (n <= 50) return 'background:#DCFCE7;color:#166534;font-weight:600;text-align:center;';
+                if (n <= 90) return 'background:#FEF9C3;color:#854D0E;font-weight:600;text-align:center;';
+                return 'background:#FEF2F2;color:#991B1B;font-weight:600;text-align:center;';
+            };
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td style="font-weight:600;">${iso}</td>
+                <td style="${cs(bat4O)}">${bat4O}</td><td style="${cs(bat8O)}">${bat8O}</td>
+                <td style="${cs(ldesO)}">${ldesO}</td><td style="${cs(h2O)}">${h2O}</td>
+                <td style="text-align:center;font-weight:600;color:var(--navy);">${mxTot}%</td>`;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // ======== Cross-ISO Charts ========
+    let cBat4, cBat8, cLdes, cTotal;
+    function renderCrossIso() {
+        const D = getData();
+        const labels = D.CAISO.thresholds.map(fmtT);
+        const mkDs = field => ISOS.map(iso => ({
+            label: iso, data: safe(D[iso][field].mean_pct),
+            borderColor: ISO_CLR[iso], backgroundColor: ISO_CLR[iso] + '20',
+            borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 5,
+            tension: 0.3, fill: false, spanGaps: true
+        }));
+        const mkTotalDs = () => ISOS.map(iso => ({
+            label: iso, data: safe(D[iso].total_storage_mean),
+            borderColor: ISO_CLR[iso], backgroundColor: ISO_CLR[iso] + '20',
+            borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 5,
+            tension: 0.3, fill: false, spanGaps: true
+        }));
+
+        if (cBat4) cBat4.destroy();
+        cBat4 = new Chart(document.getElementById('crossIsoBat4'), {
+            type:'line', data:{labels, datasets: mkDs('battery4')},
+            options:{...lineOpts('Bat4 % of Demand'), plugins:{...lineOpts('').plugins, tooltip: pctTip}}
+        });
+        if (cBat8) cBat8.destroy();
+        cBat8 = new Chart(document.getElementById('crossIsoBat8'), {
+            type:'line', data:{labels, datasets: mkDs('battery8')},
+            options:{...lineOpts('Bat8 % of Demand'), plugins:{...lineOpts('').plugins, tooltip: pctTip}}
+        });
+        if (cLdes) cLdes.destroy();
+        cLdes = new Chart(document.getElementById('crossIsoLdes'), {
+            type:'line', data:{labels, datasets: mkDs('ldes')},
+            options:{...lineOpts('LDES % of Demand'), plugins:{...lineOpts('').plugins, tooltip: pctTip}}
+        });
+        if (cTotal) cTotal.destroy();
+        cTotal = new Chart(document.getElementById('totalByIsoChart'), {
+            type:'line', data:{labels, datasets: mkTotalDs()},
+            options:{...lineOpts('Total Storage %'), plugins:{...lineOpts('').plugins, tooltip: pctTip}}
+        });
+    }
+
+    // ======== DG KPIs ========
+    function renderDGKpis() {
+        const el = document.getElementById('dgKpiCards'); el.innerHTML = '';
+        const deltas = ISOS.map(iso => {
+            const blMax = Math.max(...BL[iso].total_storage_mean);
+            const dgMax = Math.max(...DG[iso].total_storage_mean);
+            return { iso, bl: blMax, dg: dgMax, delta: dgMax - blMax };
+        }).sort((a,b) => b.delta - a.delta);
+
+        deltas.slice(0,3).forEach(d => {
+            const card = document.createElement('div');
+            card.className = 'kpi-card scroll-reveal';
+            const sign = d.delta > 0 ? '+' : '';
+            card.innerHTML = `<div class="kpi-val" style="color:${ISO_CLR[d.iso]}">${d.dg.toFixed(1)}%</div>
+                <div class="kpi-lbl">${d.iso} Peak Storage (DG)</div>
+                <div class="kpi-sub">${sign}${d.delta.toFixed(1)}pp vs baseline (${d.bl.toFixed(1)}%)</div>`;
+            el.appendChild(card);
+        });
+    }
+
+    // ======== DG Comparison Charts ========
+    let dgB4C, dgLdC;
+    function renderDGCompare() {
+        const labels = BL.CAISO.thresholds.map(fmtT);
+        const keyISOs = ['CAISO','PJM','NEISO','ERCOT'];
+        const mkPair = (iso, field) => [
+            { label: iso + ' Base', data: safe(BL[iso][field].mean_pct),
+              borderColor: ISO_CLR[iso], backgroundColor: 'transparent',
+              borderWidth: 2, borderDash: [6,3], pointRadius: 0, tension: 0.3, spanGaps: true },
+            { label: iso + ' DG', data: safe(DG[iso][field].mean_pct),
+              borderColor: ISO_CLR[iso], backgroundColor: ISO_CLR[iso]+'15',
+              borderWidth: 2.5, pointRadius: 0, tension: 0.3, fill: false, spanGaps: true }
+        ];
+        if (dgB4C) dgB4C.destroy();
+        dgB4C = new Chart(document.getElementById('dgBat4CompareChart'), {
+            type:'line', data:{labels, datasets: keyISOs.flatMap(iso => mkPair(iso,'battery4'))},
+            options:{...lineOpts('Bat4 % of Demand'), plugins:{
+                legend:{position:'top',labels:{usePointStyle:true,padding:8,font:{size:9}}}, datalabels:false, tooltip:pctTip}}
+        });
+        if (dgLdC) dgLdC.destroy();
+        dgLdC = new Chart(document.getElementById('dgLdesCompareChart'), {
+            type:'line', data:{labels, datasets: keyISOs.flatMap(iso => mkPair(iso,'ldes'))},
+            options:{...lineOpts('LDES % of Demand'), plugins:{
+                legend:{position:'top',labels:{usePointStyle:true,padding:8,font:{size:9}}}, datalabels:false, tooltip:pctTip}}
+        });
+    }
+
+    // ======== ISO Deep Dive ========
+    const tabContainer = document.getElementById('isoTabs');
+    let activeISO = 'CAISO', mixChart = null, storBrkChart = null;
+
+    ISOS.forEach(iso => {
+        const btn = document.createElement('button');
+        btn.className = 'iso-tab' + (iso === activeISO ? ' active' : '');
+        btn.textContent = iso; btn.setAttribute('role','tab');
+        btn.addEventListener('click', () => selectISO(iso));
+        tabContainer.appendChild(btn);
+    });
+
+    function selectISO(iso) {
+        activeISO = iso;
+        document.querySelectorAll('.iso-tab').forEach(t => t.classList.toggle('active', t.textContent === iso));
+        renderDeepDive(iso);
+    }
+
+    function renderDeepDive(iso) {
+        const D = getData(), d = D[iso];
+        const thresholds = d.thresholds, labels = thresholds.map(fmtT);
+
+        // Mix stacked bar
+        if (mixChart) mixChart.destroy();
+        document.getElementById('mixChartTitle').textContent = iso + ' — Resource Mix';
+        const ds = [
+            {label:'Clean Firm', data:safe(d.resource_mix.clean_firm), backgroundColor:RES_CLR.clean_firm, stack:'s'},
+            {label:'Solar', data:safe(d.resource_mix.solar), backgroundColor:RES_CLR.solar, stack:'s'},
+            {label:'Wind', data:safe(d.resource_mix.wind), backgroundColor:RES_CLR.wind, stack:'s'},
+        ];
+        const osw = d.resource_mix.offshore_wind;
+        if (osw && osw.some(v => v > 0))
+            ds.push({label:'Offshore Wind', data:safe(osw), backgroundColor:RES_CLR.offshore_wind, stack:'s'});
+        ds.push(
+            {label:'CCS-CCGT', data:safe(d.resource_mix.ccs_ccgt), backgroundColor:RES_CLR.ccs_ccgt, stack:'s'},
+            {label:'Hydro', data:safe(d.resource_mix.hydro), backgroundColor:RES_CLR.hydro, stack:'s'}
+        );
+        mixChart = new Chart(document.getElementById('mixProgressionChart'), {
+            type:'bar', data:{labels, datasets:ds},
+            options:{responsive:true, maintainAspectRatio:false,
+                plugins:{legend:{position:'top',labels:{usePointStyle:true,padding:10,font:{size:10}}},
+                    tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+(ctx.parsed.y||0).toFixed(2)+' GW'}}, datalabels:false},
+                scales:{x:{stacked:true,ticks:{maxRotation:45,font:{size:9}}},
+                    y:{stacked:true,title:{display:true,text:'GW',font:{size:11}},ticks:{font:{size:10}}}}}
+        });
+
+        // Storage breakdown
+        if (storBrkChart) storBrkChart.destroy();
+        document.getElementById('storBreakdownTitle').textContent = iso + ' — Storage Breakdown';
+        storBrkChart = new Chart(document.getElementById('storageBreakdownChart'), {
+            type:'line', data:{labels, datasets:[
+                {label:'Battery 4hr', data:safe(d.battery4.mean_pct), borderColor:STOR_CLR.battery4,
+                 backgroundColor:STOR_CLR.battery4+'40', borderWidth:2, fill:true, tension:0.3, pointRadius:2, order:3},
+                {label:'Battery 8hr', data:safe(d.battery8.mean_pct), borderColor:STOR_CLR.battery8,
+                 backgroundColor:STOR_CLR.battery8+'40', borderWidth:2, fill:true, tension:0.3, pointRadius:2, order:2},
+                {label:'LDES 100hr', data:safe(d.ldes.mean_pct), borderColor:STOR_CLR.ldes,
+                 backgroundColor:STOR_CLR.ldes+'40', borderWidth:2, fill:true, tension:0.3, pointRadius:2, order:1}
+            ]},
+            options:{responsive:true, maintainAspectRatio:false,
+                interaction:{mode:'index',intersect:false},
+                plugins:{legend:{position:'top',labels:{usePointStyle:true,padding:10,font:{size:10}}},
+                    datalabels:false, tooltip:pctTip},
+                scales:{x:{ticks:{maxRotation:45,font:{size:9}}},
+                    y:{title:{display:true,text:'% of Demand',font:{size:11}},min:0}}}
+        });
+
+        // Table
+        document.getElementById('tableTitle').textContent = iso + ' — Mix Detail (' + (currentTrack==='baseline'?'Baseline':'Demand Growth') + ')';
+        const tbody = document.getElementById('mixTableBody'); tbody.innerHTML = '';
+        const showT = [50,75,85,90,95,97.5,99,99.5,99.9,99.99];
+        showT.forEach(t => {
+            const idx = thresholds.indexOf(t);
+            if (idx === -1) return;
+            const hasLD = d.ldes.mean_pct[idx] > 0.05;
+            const tr = document.createElement('tr');
+            if (hasLD) tr.className = 'ldes-active';
+            const f = v => (!v || v === 0) ? '<span class="zero">0</span>' : v.toFixed(2);
+            const fp = v => (!v || v < 0.01) ? '<span class="zero">&mdash;</span>' : '<strong>' + v.toFixed(2) + '%</strong>';
+            tr.innerHTML = `<td>${fmtT(t)}</td>
+                <td>${f(d.resource_mix.clean_firm[idx])}</td><td>${f(d.resource_mix.solar[idx])}</td>
+                <td>${f(d.resource_mix.wind[idx])}</td><td>${f(d.resource_mix.offshore_wind[idx])}</td>
+                <td>${f(d.resource_mix.ccs_ccgt[idx])}</td><td>${f(d.resource_mix.hydro[idx])}</td>
+                <td>${fp(d.battery4.mean_pct[idx])}</td><td>${fp(d.battery8.mean_pct[idx])}</td>
+                <td>${fp(d.ldes.mean_pct[idx])}</td><td>$${d.cost_median[idx].toFixed(2)}</td>`;
+            tbody.appendChild(tr);
+        });
+        renderInsight(iso);
+    }
+
+    const insights = {
+        CAISO: { title:'CAISO: Solar-driven Bat4 workhorse',
+            text:'Bat4 appears from the lowest thresholds, running 1.6–5% dispatch — classic daily solar cycling. At ≥99.5%, Bat8 enters for extended evening coverage. LDES stays marginal. Geothermal availability means less long-duration storage needed.' },
+        ERCOT: { title:'ERCOT: Wind-powered, late storage',
+            text:'Zero storage through 90% — massive wind overbuild covers most hours. Bat4 enters at 95% under demand growth. LDES appears at ≥99.99% (3.5% in DG) for multi-day wind lulls. The wind resource is so dominant that storage is a last resort.' },
+        PJM: { title:'PJM: Bat4 from day one, highest penetration',
+            text:'Bat4 starts at 10% and reaches 6.3% dispatch at ≥99%. Offshore wind (2–4 GW) provides nighttime generation that reduces LDES need. No Bat8 or LDES in any scenario — diversified mix eliminates multi-day gaps.' },
+        NYISO: { title:'NYISO: Steady Bat4, nuclear + hydro foundation',
+            text:'Bat4 maintains 1.4–4.1% across all thresholds — remarkably consistent. Nuclear + hydro provides massive clean baseload. Offshore wind (up to 25 GW) fills gaps. No LDES or Bat8 needed — the cleanest existing grid.' },
+        NEISO: { title:'NEISO: Winter gas constraint drives LDES',
+            text:'The only ISO where LDES reaches 8% dispatch (at ≥99.99% baseline). Winter gas pipeline constraints create multi-day deficits. Demand growth pushes LDES to 4.1%. The CCS adder (+$13.13/MWh) further elevates storage value.' },
+        MISO: { title:'MISO: Cheap wind minimizes storage',
+            text:'Storage doesn\'t register until 95%. Bat4 reaches 2.6% at ≥99%. LDES emerges at 99% (1.4%) and grows to 4.7% at ≥99.99% — second-highest LDES after NEISO. Cheap onshore wind covers most hours.' },
+        SPP: { title:'SPP: Latest onset, highest Bat8',
+            text:'The windiest ISO delays all storage to the last mile. Bat4 appears at 99.9% baseline. At ≥99.99%, Bat8 reaches 1.3% (highest of any ISO) and LDES hits 3.4%. Exceptional wind pushes storage onset past 99%.' }
+    };
+
+    function renderInsight(iso) {
+        const info = insights[iso];
+        document.getElementById('isoInsight').innerHTML = `
+            <div class="insight-box purple" style="margin-top: var(--space-lg);">
+                <h5>${info.title}</h5><p>${info.text}</p>
+            </div>`;
+    }
+
+    // ======== All-ISO Cost Chart ========
+    function renderAllIsoCost() {
+        const D = getData(), labels = D.CAISO.thresholds.map(fmtT);
+        new Chart(document.getElementById('allIsoCostChart'), {
+            type:'line', data:{labels, datasets: ISOS.map(iso => {
+                const costs = safe(D[iso].cost_median), stor = D[iso].total_storage_mean;
+                return { label:iso, data:costs, borderColor:ISO_CLR[iso], backgroundColor:ISO_CLR[iso]+'20',
+                    borderWidth:2.5, tension:0.3, fill:false, spanGaps:true,
+                    pointRadius: costs.map((_,i) => (stor[i]||0) > 1 ? 5 : 2),
+                    pointBackgroundColor: costs.map((_,i) => (stor[i]||0) > 1 ? STOR_CLR.battery4 : ISO_CLR[iso]) };
+            })},
+            options:{...lineOpts('$/MWh'), plugins:{...lineOpts('').plugins,
+                tooltip:{callbacks:{label:ctx => {
+                    if(ctx.parsed.y==null) return '';
+                    const iso=ctx.dataset.label, i=ctx.dataIndex, D2=getData(), s=D2[iso].total_storage_mean[i]||0;
+                    let l=iso+': $'+ctx.parsed.y.toFixed(2)+'/MWh';
+                    if(s>0.01) l+=' | Storage: '+s.toFixed(2)+'%'; return l;
+                }}}}}
+        });
+    }
+
+    // ======== Init ========
+    updateHero(); renderTotalStorage(); renderOnsetTable(); renderCrossIso();
+    renderDGKpis(); renderDGCompare(); renderAllIsoCost(); selectISO('CAISO');
+})();
+</script>
+
+<!-- ============ RELATED ANALYSES ============ -->
+<div class="related-analyses">
+    <div class="related-analyses-title">Related Analyses</div>
+    <div class="related-analyses-grid">
+        <a href="building_blocks.html" class="related-card">
+            <div class="related-card-tag">Grid</div>
+            <div class="related-card-title">Building Blocks</div>
+            <div class="related-card-desc">How each resource shapes the supply curve and fits together to meet demand.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="lmp_trends.html" class="related-card">
+            <div class="related-card-tag">Markets</div>
+            <div class="related-card-title">Wholesale Prices</div>
+            <div class="related-card-desc">How storage deployment reshapes wholesale electricity price dynamics.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="abatement_dashboard.html" class="related-card">
+            <div class="related-card-tag">Carbon</div>
+            <div class="related-card-title">CO&#8322; Abatement</div>
+            <div class="related-card-desc">Where storage-backed clean energy delivers the most decarbonization impact.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+    </div>
+</div>
+
+</body>
+</html>
