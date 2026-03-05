@@ -449,7 +449,7 @@ def main():
         results_a, _meta_a = load_scenario_results('A', isos=requested_isos)
     if results_a is None:
         print("ERROR: Scenario A results not found.")
-        print("  Run step5d_mac_queue.py first to produce intermediate results.")
+        print("  Run step5d_deployment_queue.py first to produce intermediate results.")
         print("  Expected: data/step5-post-processing/mac_queue/scenario_a_{ISO}.json per ISO")
         sys.exit(1)
 
