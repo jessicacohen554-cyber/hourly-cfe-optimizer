@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Building Blocks — Hourly CFE Optimizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/scrollytell.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+<script src="js/scroll-observer.js"></script>
+<style>
+body { background: var(--bg-page-white); }
+
+.bb-intro {
+    max-width: var(--max-prose); margin: 0 auto; padding: 0 var(--pad-page);
+    font-size: 0.95rem; color: var(--text-dim); line-height: 1.75;
+}
+
+.section-header { margin-bottom: var(--space-xl); }
+.section-header h3 {
+    font-family: var(--font-heading); font-size: 1.5rem; font-weight: 700;
+    color: var(--navy); margin-bottom: var(--space-sm);
+}
+.section-header p { font-size: 0.9rem; color: var(--text-dim); line-height: 1.6; max-width: 800px; }
+
+.controls-bar {
+    display: flex; flex-wrap: wrap; gap: var(--space-md); align-items: center;
+    margin-bottom: var(--space-lg); padding: var(--space-md);
+    background: var(--bg-alt); border-radius: var(--radius-md);
+}
+.controls-bar label {
+    font-family: var(--font-heading); font-size: 0.8rem; font-weight: 600;
+    color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+.iso-pills {
+    display: flex; gap: 4px; flex-wrap: wrap;
+}
+.iso-pill {
+    padding: 6px 14px; border: 2px solid var(--border-light); border-radius: var(--radius-pill);
+    background: white; cursor: pointer; font-family: var(--font-heading);
+    font-size: 0.8rem; font-weight: 600; color: var(--text-muted);
+    transition: all 0.2s; min-height: 44px; display: flex; align-items: center;
+}
+.iso-pill:hover { border-color: var(--navy); color: var(--navy); }
+.iso-pill.active { background: var(--navy); color: white; border-color: var(--navy); }
+
+.track-pills {
+    display: flex; gap: 2px; background: var(--bg-alt); border-radius: var(--radius-md);
+    padding: 3px;
+}
+.track-pill {
+    padding: 6px 16px; border: none; background: transparent; cursor: pointer;
+    font-family: var(--font-heading); font-size: 0.8rem; font-weight: 600;
+    color: var(--text-muted); border-radius: var(--radius-sm); transition: all 0.2s;
+    min-height: 44px;
+}
+.track-pill.active { background: white; color: var(--navy); box-shadow: var(--shadow-sm); }
+
+.threshold-slider-wrap {
+    display: flex; align-items: center; gap: var(--space-sm);
+}
+.threshold-slider-wrap input[type="range"] {
+    width: 200px; accent-color: var(--navy);
+}
+.threshold-val {
+    font-family: var(--font-data, var(--font-mono)); font-size: 0.9rem;
+    font-weight: 700; color: var(--navy); min-width: 70px;
+}
+
+.chart-panel h4 {
+    font-family: var(--font-heading); font-size: 1.05rem; font-weight: 700;
+    color: var(--navy); margin-bottom: 4px;
+}
+
+.bb-area-chart { height: 450px; position: relative; }
+@media (max-width: 768px) { .bb-area-chart { height: 340px; } }
+@media (min-width: 1024px) { .bb-area-chart { height: 500px; } }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-lg); }
+@media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-lg); }
+@media (max-width: 1024px) { .grid-3 { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 768px) { .grid-3 { grid-template-columns: 1fr; } }
+
+.resource-card {
+    background: white; border: 1px solid var(--border-light); border-radius: var(--radius-md);
+    padding: var(--space-md); position: relative; overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.resource-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.resource-card .rc-color {
+    position: absolute; top: 0; left: 0; right: 0; height: 4px;
+}
+.resource-card .rc-name {
+    font-family: var(--font-heading); font-size: 0.95rem; font-weight: 700;
+    color: var(--navy); margin-bottom: 4px; margin-top: 8px;
+}
+.resource-card .rc-shape {
+    font-size: 0.78rem; color: var(--text-muted); margin-bottom: var(--space-sm);
+}
+.resource-card .rc-chart { height: 120px; }
+.resource-card .rc-stats {
+    display: flex; gap: var(--space-md); margin-top: var(--space-sm);
+    font-size: 0.75rem; color: var(--text-dim);
+}
+.resource-card .rc-stats strong {
+    font-family: var(--font-data, var(--font-mono)); color: var(--navy);
+}
+
+.insight-box h5 {
+    font-family: var(--font-heading); font-weight: 700; font-size: 0.95rem;
+    color: var(--navy); margin-bottom: var(--space-sm);
+}
+.insight-box p { font-size: 0.88rem; color: var(--text-secondary); line-height: 1.6; margin: 0; }
+
+.mix-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin: var(--space-md) 0; }
+.mix-table th {
+    background: var(--bg-alt); font-weight: 700; text-align: left; padding: 10px 12px;
+    border-bottom: 2px solid var(--border-light); font-size: 0.7rem;
+    text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim);
+}
+.mix-table td { padding: 10px 12px; border-bottom: 1px solid var(--bg-alt); }
+.mix-table tr:hover td { background: var(--bg-alt); }
+.mix-table .zero { color: var(--text-muted); }
+
+.bb-footer {
+    max-width: var(--max-content); margin: 0 auto; padding: var(--space-lg);
+    font-size: 0.78rem; color: var(--text-muted); line-height: 1.6;
+    border-top: 1px solid var(--border-light);
+}
+
+.comparison-wrap {
+    display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-lg);
+    margin-top: var(--space-lg);
+}
+@media (max-width: 768px) { .comparison-wrap { grid-template-columns: 1fr; } }
+.comparison-wrap .chart-panel { min-height: 380px; }
+.comparison-wrap canvas { height: 340px !important; }
+</style>
+</head>
+<body>
+<nav id="topNav"></nav>
+
+<div class="header" id="pageHeader">
+    <h1>Building Blocks</h1>
+    <div class="subtitle">How each resource shapes the supply curve — and why your starting point determines your path</div>
+    <div class="header-accent"></div>
+</div>
+
+<!-- ========== INTRO ========== -->
+<section class="content-section">
+    <div class="bb-intro">
+        <p>
+            Every grid is a puzzle. The shape of demand &mdash; when it peaks, when it dips &mdash; determines
+            which resources "fit" the gaps. Solar fills midday. Wind fills nights and winters. Nuclear and hydro
+            run around the clock. Storage shifts surplus to deficit hours. But the <strong>existing clean fleet</strong>
+            changes everything: a grid with 30% nuclear already running needs a fundamentally different build plan
+            than one starting from scratch.
+        </p>
+        <p style="margin-top: var(--space-md);">
+            This page breaks down each resource's hourly shape, shows how they stack up against demand,
+            and illustrates why the path from 50% to 99.99% clean looks radically different across regions.
+            <strong>Track 1 (baseline)</strong> starts from the existing fleet.
+            <strong>Track 2 (greenfield)</strong> builds from zero under demand growth.
+        </p>
+    </div>
+</section>
+
+<!-- ========== RESOURCE SHAPE GALLERY ========== -->
+<section class="content-section">
+    <div class="section-header">
+        <h3>Resource Shape Gallery</h3>
+        <p>The daily generation profile of each resource determines when it can serve demand.
+           These shapes are why resource selection is a geometry problem, not just a cost problem.</p>
+    </div>
+
+    <div class="controls-bar">
+        <label>Region:</label>
+        <div class="iso-pills" id="galleryIsoPills"></div>
+    </div>
+
+    <div class="grid-3" id="resourceGallery"></div>
+</section>
+
+<!-- ========== STACKED SUPPLY vs DEMAND ========== -->
+<section class="content-section">
+    <div class="section-header">
+        <h3>Stacking the Puzzle Pieces</h3>
+        <p>How the optimal resource mix stacks up against demand at different CFE targets.
+           Watch how the composition shifts as ambition rises &mdash; and how it differs between
+           building on existing clean (Track 1) versus starting from scratch (Track 2).</p>
+    </div>
+
+    <div class="controls-bar" id="stackControls">
+        <label>Region:</label>
+        <div class="iso-pills" id="stackIsoPills"></div>
+        <label style="margin-left: var(--space-md);">Track:</label>
+        <div class="track-pills" id="stackTrackPills">
+            <button class="track-pill active" data-track="baseline">Track 1: Baseline</button>
+            <button class="track-pill" data-track="dg">Track 2: Demand Growth</button>
+        </div>
+    </div>
+
+    <div class="chart-panel">
+        <h4 id="stackTitle">CAISO — Resource Mix by Threshold (Baseline)</h4>
+        <div class="chart-subtitle" id="stackSubtitle">Stacked GW by resource at each CFE target</div>
+        <div class="bb-area-chart"><canvas id="stackChart"></canvas></div>
+    </div>
+
+    <div class="insight-box" id="stackInsight" style="margin-top: var(--space-lg);"></div>
+</section>
+
+<!-- ========== THRESHOLD DEEP DIVE: 24-HOUR VIEW ========== -->
+<section class="content-section">
+    <div class="section-header">
+        <h3>24-Hour Supply Stack</h3>
+        <p>A representative day showing how each resource contributes hour-by-hour.
+           This is the "puzzle" view &mdash; solar fills midday, wind fills night, baseload runs flat,
+           and storage bridges the gaps. Slide the threshold to see how the stack evolves.</p>
+    </div>
+
+    <div class="controls-bar">
+        <label>Region:</label>
+        <div class="iso-pills" id="dayIsoPills"></div>
+        <div class="threshold-slider-wrap" style="margin-left: var(--space-md);">
+            <label>CFE Target:</label>
+            <input type="range" id="thresholdSlider" min="0" max="20" value="13" step="1">
+            <span class="threshold-val" id="thresholdLabel">90%</span>
+        </div>
+    </div>
+
+    <div class="chart-panel">
+        <h4 id="dayTitle">CAISO — Representative Day at 90% CFE</h4>
+        <div class="bb-area-chart"><canvas id="dayChart"></canvas></div>
+    </div>
+</section>
+
+<!-- ========== TRACK 1 vs TRACK 2 COMPARISON ========== -->
+<section class="content-section">
+    <div class="section-header">
+        <h3>Why Your Starting Point Can't Be Ignored</h3>
+        <p>The same region at the same CFE target requires completely different resource portfolios
+           depending on whether you're building on existing clean infrastructure (Track 1) or starting
+           greenfield (Track 2). Existing nuclear, hydro, and clean firm resources aren't just "free" &mdash;
+           they change the <em>shape</em> of what you need to build.</p>
+    </div>
+
+    <div class="controls-bar">
+        <label>Region:</label>
+        <div class="iso-pills" id="compareIsoPills"></div>
+    </div>
+
+    <div class="comparison-wrap">
+        <div class="chart-panel">
+            <h4 id="cmpBaseTitle">Track 1: Baseline — CAISO</h4>
+            <div class="chart-subtitle">Building on existing clean fleet</div>
+            <canvas id="cmpBaseChart"></canvas>
+        </div>
+        <div class="chart-panel">
+            <h4 id="cmpDgTitle">Track 2: Demand Growth — CAISO</h4>
+            <div class="chart-subtitle">Greenfield + demand growth</div>
+            <canvas id="cmpDgChart"></canvas>
+        </div>
+    </div>
+
+    <div class="chart-panel" style="overflow-x: auto; margin-top: var(--space-lg);">
+        <h4 id="cmpTableTitle">Side-by-Side Mix Comparison</h4>
+        <table class="mix-table" id="cmpTable">
+            <thead><tr>
+                <th>Threshold</th>
+                <th colspan="6">Track 1: Baseline</th>
+                <th colspan="6">Track 2: Demand Growth</th>
+            </tr>
+            <tr>
+                <th></th>
+                <th>CF</th><th>Solar</th><th>Wind</th><th>OSW</th><th>Bat4</th><th>Cost</th>
+                <th>CF</th><th>Solar</th><th>Wind</th><th>OSW</th><th>Bat4</th><th>Cost</th>
+            </tr></thead>
+            <tbody id="cmpTableBody"></tbody>
+        </table>
+    </div>
+</section>
+
+<!-- ========== REGIONAL MIX FINGERPRINTS ========== -->
+<section class="content-section">
+    <div class="section-header">
+        <h3>Regional Fingerprints at 90% CFE</h3>
+        <p>Every region's optimal mix looks different. These "fingerprints" show the resource composition
+           that the optimizer selects at 90% hourly matching under medium cost assumptions.</p>
+    </div>
+
+    <div class="grid-2" id="fingerprintGrid"></div>
+</section>
+
+<div class="bb-footer">
+    <strong>Data:</strong> Step 3 cost optimization parquets (Track 1 baseline + Track 2 demand growth).
+    <strong>Profiles:</strong> EIA-930 multi-year average hourly generation &amp; demand (2021&ndash;2024).
+    Offshore wind: synthetic profiles from NREL.
+    <strong>Storage shapes:</strong> Illustrative daily dispatch patterns (actual dispatch varies by day/season).
+</div>
+
+<script src="js/building-blocks-data.js"></script>
+<script src="js/nav.js"></script>
+<script>
+(function() {
+    'use strict';
+    if (window.ChartDataLabels) Chart.unregister(ChartDataLabels);
+
+    const BB_BL = BUILDING_BLOCKS_BASELINE;
+    const BB_DG = BUILDING_BLOCKS_DG;
+    const HP = HOURLY_PROFILES;
+    const SP = SEASONAL_PROFILES;
+    const ISOS = ['CAISO','ERCOT','PJM','NYISO','NEISO','MISO','SPP'];
+    const THRESHOLDS = [10,20,30,40,50,55,60,65,70,75,80,85,87.5,90,92.5,95,97.5,99,99.5,99.9,99.99];
+
+    const ISO_CLR = {}; ISOS.forEach(iso => { ISO_CLR[iso] = ISO_COLORS[iso]; });
+    const RES_CLR = {
+        clean_firm: RESOURCE_COLORS.cleanFirm, solar: RESOURCE_COLORS.solar,
+        wind: RESOURCE_COLORS.wind, offshore_wind: RESOURCE_COLORS.offshoreWind || '#009688',
+        ccs_ccgt: RESOURCE_COLORS.ccs, hydro: RESOURCE_COLORS.hydro,
+        nuclear: RESOURCE_COLORS.nuclear || '#6366F1',
+        geothermal: RESOURCE_COLORS.geothermal || '#B45309',
+        battery4: RESOURCE_COLORS.battery || '#8B5CF6', battery8: '#A78BFA',
+        ldes: RESOURCE_COLORS.ldes || '#E91E63', h2: RESOURCE_COLORS.greenH2 || '#10B981'
+    };
+
+    const fmtT = t => t >= 99.99 ? '≥99.99%' : t + '%';
+    const safe = arr => (arr || []).map(v => v == null ? undefined : v);
+    const HOURS = Array.from({length:24}, (_,i) => i + ':00');
+
+    // ======== RESOURCE DESCRIPTIONS ========
+    const RES_INFO = {
+        solar: { name: 'Solar', shape: 'Bell curve — peak at noon, zero at night', color: RES_CLR.solar,
+            desc: 'Produces only during daylight. Creates midday surplus, evening deficit. Defines storage need.' },
+        wind: { name: 'Onshore Wind', shape: 'Inverse solar — stronger at night, seasonal', color: RES_CLR.wind,
+            desc: 'Complements solar with nighttime generation. Multi-day lulls drive LDES need at high thresholds.' },
+        offshore_wind: { name: 'Offshore Wind', shape: 'Steadier than onshore — less diurnal variation', color: RES_CLR.offshore_wind,
+            desc: 'Higher capacity factor, steadier output. Available in CAISO, PJM, NYISO, NEISO only.' },
+        nuclear: { name: 'Nuclear', shape: 'Flat baseload — nearly constant 24/7', color: RES_CLR.nuclear,
+            desc: 'The ultimate baseload. Existing nuclear is the cheapest clean resource. Reduces need for everything else.' },
+        hydro: { name: 'Hydro', shape: 'Slightly higher during day, seasonal variation', color: RES_CLR.hydro,
+            desc: 'Dispatchable within constraints. Existing-only in our model. Free but limited by geography.' },
+        geothermal: { name: 'Geothermal', shape: 'Flat baseload — 24/7 year-round', color: RES_CLR.geothermal,
+            desc: 'CAISO only. Flat year-round generation up to 39 TWh cap. Reduces storage and overbuild need.' },
+        ccs_ccgt: { name: 'CCS-CCGT', shape: 'Flat baseload — dispatchable clean firm', color: RES_CLR.ccs_ccgt,
+            desc: 'Gas turbine with carbon capture. Flat output, includes 45Q tax credit offset. Clean firm backstop.' },
+        battery4: { name: 'Battery 4hr', shape: 'Charge midday (solar), discharge evening peak', color: RES_CLR.battery4,
+            desc: 'Daily cycling workhorse. Shifts solar surplus to evening peak. 85% round-trip efficiency.' },
+        battery8: { name: 'Battery 8hr', shape: 'Wider charge/discharge — extended evening', color: RES_CLR.battery8,
+            desc: 'Covers longer evening deficits. Enters only in last-mile scenarios. 85% RTE.' },
+        ldes: { name: 'LDES (Iron-Air)', shape: 'Multi-day charge/discharge — weather gap bridge', color: RES_CLR.ldes,
+            desc: '100-hour duration. Bridges multi-day wind lulls and winter gaps. 50% RTE. Only at ≥99%.' }
+    };
+
+    // ======== ISO PILL BUILDERS ========
+    function buildPills(containerId, callback, defaultISO) {
+        const el = document.getElementById(containerId);
+        ISOS.forEach(iso => {
+            const btn = document.createElement('button');
+            btn.className = 'iso-pill' + (iso === (defaultISO || 'CAISO') ? ' active' : '');
+            btn.textContent = iso;
+            btn.addEventListener('click', () => {
+                el.querySelectorAll('.iso-pill').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                callback(iso);
+            });
+            el.appendChild(btn);
+        });
+    }
+
+    // ======== RESOURCE GALLERY ========
+    let galleryISO = 'CAISO';
+    function renderGallery(iso) {
+        galleryISO = iso;
+        const el = document.getElementById('resourceGallery');
+        el.innerHTML = '';
+        const profiles = HP[iso];
+        if (!profiles) return;
+
+        const resources = ['solar','wind','nuclear','hydro','ccs_ccgt','battery4','battery8','ldes'];
+        if (profiles.offshore_wind) resources.splice(2, 0, 'offshore_wind');
+        if (profiles.geothermal) resources.splice(resources.indexOf('ccs_ccgt'), 0, 'geothermal');
+
+        resources.forEach(res => {
+            const info = RES_INFO[res];
+            if (!info) return;
+            const profile = res === 'battery4' ? profiles.battery4_shape :
+                           res === 'battery8' ? profiles.battery8_shape :
+                           res === 'ldes' ? profiles.ldes_shape : profiles[res];
+            if (!profile) return;
+
+            const card = document.createElement('div');
+            card.className = 'resource-card scroll-reveal';
+            card.innerHTML = `
+                <div class="rc-color" style="background:${info.color}"></div>
+                <div class="rc-name">${info.name}</div>
+                <div class="rc-shape">${info.shape}</div>
+                <div class="rc-chart"><canvas id="rc_${res}"></canvas></div>
+                <p style="font-size:0.78rem;color:var(--text-dim);line-height:1.5;margin:var(--space-sm) 0 0;">${info.desc}</p>
+            `;
+            el.appendChild(card);
+
+            // Mini chart
+            const isStorage = ['battery4','battery8','ldes'].includes(res);
+            const isBaseload = ['nuclear','geothermal','ccs_ccgt'].includes(res);
+            const chartData = profile;
+            const bgColor = isStorage ?
+                chartData.map(v => v >= 0 ? info.color + '60' : '#EF444440') :
+                info.color + '40';
+
+            new Chart(document.getElementById('rc_' + res), {
+                type: isStorage ? 'bar' : 'line',
+                data: {
+                    labels: HOURS,
+                    datasets: [{
+                        data: chartData,
+                        borderColor: info.color,
+                        backgroundColor: bgColor,
+                        borderWidth: isStorage ? 0 : 2,
+                        fill: !isStorage,
+                        tension: 0.3,
+                        pointRadius: 0,
+                        barPercentage: 1.0,
+                        categoryPercentage: 1.0
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, datalabels: false,
+                        tooltip: { enabled: false } },
+                    scales: {
+                        x: { display: false },
+                        y: { display: false, min: isBaseload ? 0 : undefined, max: isBaseload ? 1.2 : undefined }
+                    },
+                    animation: { duration: 400 }
+                }
+            });
+        });
+    }
+    buildPills('galleryIsoPills', renderGallery, 'CAISO');
+    renderGallery('CAISO');
+
+    // ======== STACKED MIX BY THRESHOLD ========
+    let stackISO = 'CAISO', stackTrack = 'baseline', stackChart = null;
+
+    function renderStack() {
+        const data = stackTrack === 'baseline' ? BB_BL : BB_DG;
+        const d = data[stackISO];
+        if (!d) return;
+        const labels = d.thresholds.map(fmtT);
+
+        if (stackChart) stackChart.destroy();
+        document.getElementById('stackTitle').textContent =
+            stackISO + ' — Resource Mix by Threshold (' + (stackTrack === 'baseline' ? 'Baseline' : 'Demand Growth') + ')';
+
+        const fields = [
+            {key:'clean_firm', label:'Clean Firm', color: RES_CLR.clean_firm},
+            {key:'solar', label:'Solar', color: RES_CLR.solar},
+            {key:'wind', label:'Wind', color: RES_CLR.wind},
+        ];
+        if (d.mixes.some(m => m.offshore_wind > 0))
+            fields.push({key:'offshore_wind', label:'Offshore Wind', color: RES_CLR.offshore_wind});
+        fields.push(
+            {key:'ccs_ccgt', label:'CCS-CCGT', color: RES_CLR.ccs_ccgt},
+            {key:'hydro', label:'Hydro', color: RES_CLR.hydro}
+        );
+
+        stackChart = new Chart(document.getElementById('stackChart'), {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: fields.map(f => ({
+                    label: f.label,
+                    data: d.mixes.map(m => m[f.key] || 0),
+                    backgroundColor: f.color,
+                    stack: 's'
+                }))
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', labels: { usePointStyle: true, padding: 12, font: { size: 11 } } },
+                    datalabels: false,
+                    tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + (ctx.parsed.y||0).toFixed(2) + ' GW' } }
+                },
+                scales: {
+                    x: { stacked: true, ticks: { maxRotation: 45, font: { size: 9 } } },
+                    y: { stacked: true, title: { display: true, text: 'GW', font: { size: 11 } } }
+                }
+            }
+        });
+
+        // Insight
+        const t90idx = d.thresholds.indexOf(90);
+        const t99idx = d.thresholds.indexOf(99);
+        if (t90idx >= 0 && t99idx >= 0) {
+            const m90 = d.mixes[t90idx], m99 = d.mixes[t99idx];
+            const totalGW90 = m90.clean_firm + m90.solar + m90.wind + (m90.offshore_wind||0) + m90.ccs_ccgt + m90.hydro;
+            const totalGW99 = m99.clean_firm + m99.solar + m99.wind + (m99.offshore_wind||0) + m99.ccs_ccgt + m99.hydro;
+            const pctInc = ((totalGW99/totalGW90 - 1)*100).toFixed(0);
+            document.getElementById('stackInsight').innerHTML = `
+                <h5>${stackISO}: 90% → 99% requires ${pctInc}% more capacity</h5>
+                <p>At 90%, the optimal mix totals ${totalGW90.toFixed(1)} GW. Pushing to 99% requires ${totalGW99.toFixed(1)} GW —
+                   a ${pctInc}% increase in total installed capacity. Storage dispatch goes from
+                   ${m90.battery4_pct.toFixed(1)}% to ${m99.battery4_pct.toFixed(1)}% (Bat4) and
+                   ${m90.ldes_pct.toFixed(1)}% to ${m99.ldes_pct.toFixed(1)}% (LDES).</p>`;
+        }
+    }
+
+    buildPills('stackIsoPills', iso => { stackISO = iso; renderStack(); }, 'CAISO');
+    document.getElementById('stackTrackPills').addEventListener('click', e => {
+        const btn = e.target.closest('.track-pill');
+        if (!btn) return;
+        stackTrack = btn.dataset.track;
+        document.querySelectorAll('#stackTrackPills .track-pill').forEach(b => b.classList.toggle('active', b === btn));
+        renderStack();
+    });
+    renderStack();
+
+    // ======== 24-HOUR DAY VIEW ========
+    let dayISO = 'CAISO', dayChart = null;
+    const slider = document.getElementById('thresholdSlider');
+    const threshLabel = document.getElementById('thresholdLabel');
+
+    function renderDayView() {
+        const tidx = parseInt(slider.value);
+        const threshold = THRESHOLDS[tidx];
+        threshLabel.textContent = fmtT(threshold);
+        document.getElementById('dayTitle').textContent =
+            dayISO + ' — Representative Day at ' + fmtT(threshold) + ' CFE';
+
+        const profiles = HP[dayISO];
+        if (!profiles) return;
+
+        // Get the mix at this threshold from baseline
+        const data = BB_BL[dayISO];
+        const mixIdx = data.thresholds.indexOf(threshold);
+        const mix = mixIdx >= 0 ? data.mixes[mixIdx] : null;
+
+        if (dayChart) dayChart.destroy();
+
+        // Build scaled profiles: resource GW × normalized hourly shape
+        const datasets = [];
+        const demand = profiles.demand;
+
+        function addResource(name, profileKey, gwKey, color) {
+            const profile = profiles[profileKey];
+            if (!profile || !mix) return;
+            const gw = mix[gwKey] || 0;
+            if (gw <= 0) return;
+            datasets.push({
+                label: name, data: profile.map(v => v * gw),
+                backgroundColor: color + '80', borderColor: color,
+                borderWidth: 1, fill: true, tension: 0.3, pointRadius: 0, order: 10 - datasets.length
+            });
+        }
+
+        addResource('Nuclear/Clean Firm', 'nuclear', 'clean_firm', RES_CLR.nuclear);
+        addResource('Hydro', 'hydro', 'hydro', RES_CLR.hydro);
+        if (profiles.geothermal) {
+            const geoGW = mix ? (mix.clean_firm * 0.3) : 0; // approx geothermal portion
+            if (geoGW > 0) datasets.push({
+                label: 'Geothermal', data: profiles.geothermal.map(v => v * geoGW),
+                backgroundColor: RES_CLR.geothermal + '80', borderColor: RES_CLR.geothermal,
+                borderWidth: 1, fill: true, tension: 0.3, pointRadius: 0, order: 8
+            });
+        }
+        addResource('CCS-CCGT', 'ccs_ccgt', 'ccs_ccgt', RES_CLR.ccs_ccgt);
+        addResource('Solar', 'solar', 'solar', RES_CLR.solar);
+        addResource('Wind', 'wind', 'wind', RES_CLR.wind);
+        if (profiles.offshore_wind)
+            addResource('Offshore Wind', 'offshore_wind', 'offshore_wind', RES_CLR.offshore_wind);
+
+        // Demand line
+        if (mix) {
+            const totalGW = mix.clean_firm + mix.solar + mix.wind + (mix.offshore_wind||0) + mix.ccs_ccgt + mix.hydro;
+            const demandScale = totalGW / (threshold / 100);
+            datasets.push({
+                label: 'Demand', data: demand.map(v => v * demandScale * 0.042),
+                borderColor: '#1A2744', backgroundColor: 'transparent',
+                borderWidth: 2.5, borderDash: [6,3], fill: false,
+                tension: 0.3, pointRadius: 0, order: 0
+            });
+        }
+
+        dayChart = new Chart(document.getElementById('dayChart'), {
+            type: 'line',
+            data: { labels: HOURS, datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { position: 'top', labels: { usePointStyle: true, padding: 10, font: { size: 10 } } },
+                    datalabels: false,
+                    tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + (ctx.parsed.y||0).toFixed(2) + ' GW' } }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Hour of Day', font: { size: 11 } }, ticks: { font: { size: 9 } } },
+                    y: { title: { display: true, text: 'GW', font: { size: 11 } }, min: 0, stacked: true }
+                }
+            }
+        });
+    }
+
+    buildPills('dayIsoPills', iso => { dayISO = iso; renderDayView(); }, 'CAISO');
+    slider.addEventListener('input', renderDayView);
+    renderDayView();
+
+    // ======== TRACK 1 vs TRACK 2 COMPARISON ========
+    let cmpISO = 'CAISO', cmpBaseChart = null, cmpDgChart = null;
+
+    function renderComparison() {
+        const blD = BB_BL[cmpISO], dgD = BB_DG[cmpISO];
+        if (!blD || !dgD) return;
+
+        document.getElementById('cmpBaseTitle').textContent = 'Track 1: Baseline — ' + cmpISO;
+        document.getElementById('cmpDgTitle').textContent = 'Track 2: Demand Growth — ' + cmpISO;
+
+        function makeStackedBar(canvasId, data, existingChart) {
+            if (existingChart) existingChart.destroy();
+            const labels = data.thresholds.filter(t => t >= 50).map(fmtT);
+            const mixes = data.mixes.filter((m,i) => data.thresholds[i] >= 50);
+
+            const fields = [
+                {key:'clean_firm', label:'Clean Firm', color: RES_CLR.clean_firm},
+                {key:'solar', label:'Solar', color: RES_CLR.solar},
+                {key:'wind', label:'Wind', color: RES_CLR.wind},
+            ];
+            if (mixes.some(m => m.offshore_wind > 0))
+                fields.push({key:'offshore_wind', label:'OSW', color: RES_CLR.offshore_wind});
+            fields.push(
+                {key:'ccs_ccgt', label:'CCS', color: RES_CLR.ccs_ccgt},
+                {key:'hydro', label:'Hydro', color: RES_CLR.hydro}
+            );
+
+            return new Chart(document.getElementById(canvasId), {
+                type:'bar', data:{labels, datasets: fields.map(f => ({
+                    label: f.label, data: mixes.map(m => m[f.key]||0),
+                    backgroundColor: f.color, stack:'s'
+                }))},
+                options:{responsive:true, maintainAspectRatio:false,
+                    plugins:{legend:{position:'top',labels:{usePointStyle:true,padding:8,font:{size:9}}},
+                        datalabels:false, tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+(ctx.parsed.y||0).toFixed(2)+' GW'}}},
+                    scales:{x:{stacked:true,ticks:{maxRotation:45,font:{size:8}}},
+                        y:{stacked:true,title:{display:true,text:'GW',font:{size:10}}}}}
+            });
+        }
+
+        cmpBaseChart = makeStackedBar('cmpBaseChart', blD, cmpBaseChart);
+        cmpDgChart = makeStackedBar('cmpDgChart', dgD, cmpDgChart);
+
+        // Comparison table
+        const tbody = document.getElementById('cmpTableBody');
+        tbody.innerHTML = '';
+        const showT = [50,75,90,95,99,99.99];
+        showT.forEach(t => {
+            const blIdx = blD.thresholds.indexOf(t);
+            const dgIdx = dgD.thresholds.indexOf(t);
+            if (blIdx === -1 && dgIdx === -1) return;
+            const bl = blIdx >= 0 ? blD.mixes[blIdx] : null;
+            const dg = dgIdx >= 0 ? dgD.mixes[dgIdx] : null;
+            const f = (m,k) => m ? (m[k]||0).toFixed(1) : '—';
+            const fp = (m,k) => m ? (m[k]||0).toFixed(1)+'%' : '—';
+            const fc = m => m ? '$'+m.cost.toFixed(0) : '—';
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td style="font-weight:600">${fmtT(t)}</td>
+                <td>${f(bl,'clean_firm')}</td><td>${f(bl,'solar')}</td><td>${f(bl,'wind')}</td>
+                <td>${f(bl,'offshore_wind')}</td><td>${fp(bl,'battery4_pct')}</td><td>${fc(bl)}</td>
+                <td>${f(dg,'clean_firm')}</td><td>${f(dg,'solar')}</td><td>${f(dg,'wind')}</td>
+                <td>${f(dg,'offshore_wind')}</td><td>${fp(dg,'battery4_pct')}</td><td>${fc(dg)}</td>`;
+            tbody.appendChild(tr);
+        });
+    }
+
+    buildPills('compareIsoPills', iso => { cmpISO = iso; renderComparison(); }, 'CAISO');
+    renderComparison();
+
+    // ======== REGIONAL FINGERPRINTS AT 90% ========
+    function renderFingerprints() {
+        const el = document.getElementById('fingerprintGrid');
+        el.innerHTML = '';
+
+        ISOS.forEach(iso => {
+            const data = BB_BL[iso];
+            const idx = data.thresholds.indexOf(90);
+            if (idx === -1) return;
+            const mix = data.mixes[idx];
+
+            const card = document.createElement('div');
+            card.className = 'chart-panel scroll-reveal';
+            card.innerHTML = `
+                <h4 style="margin-bottom:2px;">${iso} at 90% CFE</h4>
+                <div class="chart-subtitle">$${mix.cost.toFixed(0)}/MWh | Bat4: ${mix.battery4_pct}%</div>
+                <div style="height:200px;"><canvas id="fp_${iso}"></canvas></div>
+            `;
+            el.appendChild(card);
+
+            const resources = [
+                {label:'Clean Firm', val: mix.clean_firm, color: RES_CLR.clean_firm},
+                {label:'Solar', val: mix.solar, color: RES_CLR.solar},
+                {label:'Wind', val: mix.wind, color: RES_CLR.wind},
+                {label:'OSW', val: mix.offshore_wind, color: RES_CLR.offshore_wind},
+                {label:'CCS', val: mix.ccs_ccgt, color: RES_CLR.ccs_ccgt},
+                {label:'Hydro', val: mix.hydro, color: RES_CLR.hydro}
+            ].filter(r => r.val > 0);
+
+            new Chart(document.getElementById('fp_' + iso), {
+                type: 'doughnut',
+                data: {
+                    labels: resources.map(r => r.label),
+                    datasets: [{
+                        data: resources.map(r => r.val),
+                        backgroundColor: resources.map(r => r.color),
+                        borderWidth: 1, borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right', labels: { font: { size: 10 }, padding: 6, usePointStyle: true } },
+                        datalabels: false,
+                        tooltip: { callbacks: { label: ctx => ctx.label + ': ' + ctx.parsed.toFixed(2) + ' GW' } }
+                    }
+                }
+            });
+        });
+    }
+    renderFingerprints();
+
+})();
+</script>
+
+<!-- ============ RELATED ANALYSES ============ -->
+<div class="related-analyses">
+    <div class="related-analyses-title">Related Analyses</div>
+    <div class="related-analyses-grid">
+        <a href="storage_analysis.html" class="related-card">
+            <div class="related-card-tag">Storage</div>
+            <div class="related-card-title">Storage Analysis</div>
+            <div class="related-card-desc">Deep dive into battery and LDES dispatch patterns across ISOs and thresholds.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="dashboard.html" class="related-card">
+            <div class="related-card-tag">Interactive</div>
+            <div class="related-card-title">The Grid</div>
+            <div class="related-card-desc">Full interactive optimizer with all sensitivity toggles and compressed day view.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="clean_firm_case.html" class="related-card">
+            <div class="related-card-tag">Economics</div>
+            <div class="related-card-title">Clean Firm Case</div>
+            <div class="related-card-desc">Why firm clean power is the foundation of cost-effective decarbonization.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+    </div>
+</div>
+
+</body>
+</html>

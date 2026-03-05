@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """Step 9C: Generate building-blocks-data.js for the building blocks dashboard page.
 
+DEPRECATED: This script only generates HOURLY_PROFILES and SEASONAL_PROFILES.
+Use step6d_extract_building_blocks.py instead — it generates all 4 constants
+(HOURLY_PROFILES, SEASONAL_PROFILES, BUILDING_BLOCKS_BASELINE, BUILDING_BLOCKS_DG)
+and is the canonical path run by the step6-derived-analytics workflow.
+
 Reads EIA hourly profiles from parquet and creates 24-hour representative day
 shapes for each resource type per ISO. Nuclear, geothermal, and CCS-CCGT use
 the modeled flat-baseload profiles (matching Step 1 PFS assumptions), not raw
