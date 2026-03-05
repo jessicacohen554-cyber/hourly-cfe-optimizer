@@ -4,8 +4,8 @@ name: "Cleanup: Unified Data Directory Cleanup"
 # independently, optionally filter by ISO, and preview with dry_run before
 # committing deletions. Directory folders are preserved — only files are removed.
 #
-# Replaces the individual clear-step1d-storage, clear-step2-ef,
-# cleanup-old-step1d-files, and cleanup-step1c-branches workflows.
+# Replaces the individual clear-step1c-storage, clear-step2-ef,
+# cleanup-old-step1c-files and cleanup-step1c-branches workflows.
 
 on:
   workflow_dispatch:
@@ -14,8 +14,8 @@ on:
         description: 'Clear data/step1-pfs-parquets/ (PFS mixes, coarse cache, near-miss)'
         default: false
         type: boolean
-      clear_step1d:
-        description: 'Clear data/step1d-storage-parquets/ (storage refinement)'
+      clear_step1c_storage:
+        description: 'Clear storage files from data/step1-pfs-parquets/ (*_storage*.parquet)'
         default: false
         type: boolean
       clear_step2:
@@ -81,7 +81,7 @@ jobs:
         run: |
           # At least one directory must be selected
           ANY_SELECTED="false"
-          for toggle in "${{ inputs.clear_step1 }}" "${{ inputs.clear_step1d }}" \
+          for toggle in "${{ inputs.clear_step1 }}" "${{ inputs.clear_step1c_storage }}" \
                         "${{ inputs.clear_step2 }}" "${{ inputs.clear_step3 }}" \
                         "${{ inputs.clear_step4 }}" "${{ inputs.clear_step5 }}" \
                         "${{ inputs.clear_step5_co2 }}" "${{ inputs.clear_step5_dispatch }}" \
@@ -135,13 +135,13 @@ jobs:
             fi
           fi
 
-          # ── Step 1C: storage parquets ──
-          if [ "${{ inputs.clear_step1d }}" = "true" ]; then
-            DIR="data/step1d-storage-parquets"
+          # ── Step 1C: storage parquets (in step1-pfs-parquets/) ──
+          if [ "${{ inputs.clear_step1c_storage }}" = "true" ]; then
+            DIR="data/step1-pfs-parquets"
             if [ "$ISO" = "ALL" ]; then
-              add_files "$DIR" 1 "*.parquet" "*.json"
+              add_files "$DIR" 1 "*_storage*.parquet" "*_storage_manifest.json"
             else
-              add_files "$DIR" 1 "${ISO}_*.parquet" "${ISO}_*.json"
+              add_files "$DIR" 1 "${ISO}_*_storage*.parquet" "${ISO}_storage_manifest.json"
             fi
           fi
 
@@ -234,7 +234,7 @@ jobs:
           echo ""
 
           # Group by directory
-          for dir in data/step1-pfs-parquets data/step1d-storage-parquets \
+          for dir in data/step1-pfs-parquets data/step1-pfs-parquets \
                      data/step2-ef-parquets data/step3-cost-opt-parquets \
                      data/step4-dispatch-cache data/step5-post-processing \
                      data/step5-post-processing/co2_results \
@@ -283,7 +283,7 @@ jobs:
           done < "$FILES"
 
           # Stage deletions — git add -u on each affected directory
-          for dir in data/step1-pfs-parquets data/step1d-storage-parquets \
+          for dir in data/step1-pfs-parquets data/step1-pfs-parquets \
                      data/step2-ef-parquets data/step3-cost-opt-parquets \
                      data/step4-dispatch-cache data/step5-post-processing \
                      data/step8-wrights-law; do
@@ -300,7 +300,7 @@ jobs:
           # Build directory list for commit message
           DIRS=""
           [ "${{ inputs.clear_step1 }}" = "true" ] && DIRS="${DIRS} step1-pfs"
-          [ "${{ inputs.clear_step1d }}" = "true" ] && DIRS="${DIRS} step1d-storage"
+          [ "${{ inputs.clear_step1c_storage }}" = "true" ] && DIRS="${DIRS} step1c-storage"
           [ "${{ inputs.clear_step2 }}" = "true" ] && DIRS="${DIRS} step2-ef"
           [ "${{ inputs.clear_step3 }}" = "true" ] && DIRS="${DIRS} step3-cost"
           [ "${{ inputs.clear_step5 }}" = "true" ] && DIRS="${DIRS} step5-top"
@@ -341,7 +341,7 @@ jobs:
           echo ""
           echo "  Directories selected:"
           [ "${{ inputs.clear_step1 }}" = "true" ]          && echo "    ✓ data/step1-pfs-parquets/"
-          [ "${{ inputs.clear_step1d }}" = "true" ]         && echo "    ✓ data/step1d-storage-parquets/"
+          [ "${{ inputs.clear_step1c_storage }}" = "true" ]         && echo "    ✓ data/step1-pfs-parquets/"
           [ "${{ inputs.clear_step2 }}" = "true" ]          && echo "    ✓ data/step2-ef-parquets/"
           [ "${{ inputs.clear_step3 }}" = "true" ]          && echo "    ✓ data/step3-cost-opt-parquets/"
           [ "${{ inputs.clear_step5 }}" = "true" ]          && echo "    ✓ data/step5-post-processing/ (top-level)"

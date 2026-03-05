@@ -28,8 +28,8 @@ V2 storage caps (--v2-caps):
   compared to the default V1 caps. Use when exploring future deep-decarbonization
   scenarios.
 
-Output: data/step1d-storage-parquets/{ISO}_t{XX}_storage.parquet
-        data/step1d-storage-parquets/{ISO}_t{XX}_storage_b{N}.parquet  (auto-batched)
+Output: data/step1-pfs-parquets/{ISO}_t{XX}_storage.parquet
+        data/step1-pfs-parquets/{ISO}_t{XX}_storage_b{N}.parquet  (auto-batched)
 
 Usage:
   python scripts/step1c_storage_refinement.py --iso CAISO
@@ -81,7 +81,7 @@ except ImportError:
 # ══════════════════════════════════════════════════════════════════════════════
 
 DATA_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), 'data')
-STEP1D_OUTPUT_DIR = os.path.join(DATA_DIR, 'step1d-storage-parquets')
+STEP1D_OUTPUT_DIR = os.path.join(DATA_DIR, 'step1-pfs-parquets')
 
 # Thresholds for storage refinement
 STORAGE_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5,
@@ -153,7 +153,7 @@ V2_FULL_LDES = np.array([0, 0.02, 0.05, 0.1, 0.2, 0.3, 0.5, 0.7, 1.0],
                          dtype=np.float64)
 V2_FULL_H2 = np.array([0, 0.2, 0.5, 1.0, 1.5, 2.0, 3.0], dtype=np.float64)
 V2_GAP_BUCKET_PP = [5, 10, 25, 50]
-V2_OUTPUT_DIR = os.path.join(DATA_DIR, 'step1d2-storage-parquets')
+V2_OUTPUT_DIR = os.path.join(DATA_DIR, 'step1-pfs-parquets')
 
 # ══════════════════════════════════════════════════════════════════════════════
 # LEAN-MIX AUGMENTATION (activated via --lean-mixes)
@@ -1611,7 +1611,7 @@ def main():
                              "Exposes lean+storage frontier.")
     parser.add_argument("--v2-caps", action="store_true",
                         help="Use V2 (2050-oriented) storage capacity caps. "
-                             "Wider grids for battery/LDES. Output to step1d2-storage-parquets/.")
+                             "Wider grids for battery/LDES. Output to step1-pfs-parquets/.")
     args = parser.parse_args()
 
     isos = list(s1.ISOS) if args.iso.upper() == 'ALL' else [args.iso.upper()]
