@@ -65,6 +65,7 @@ def dispatch_from_cache(iso, mix, battery_pct, battery8_pct,
         'clean_firm': mix.get('clean_firm', 0),
         'solar': mix.get('solar', 0),
         'wind': mix.get('wind', 0),
+        'offshore_wind': mix.get('offshore_wind', 0),
         'ccs_ccgt': mix.get('ccs_ccgt', 0),
         'hydro': mix.get('hydro', 0),
     }
@@ -89,8 +90,12 @@ def dispatch_from_cache(iso, mix, battery_pct, battery8_pct,
             'surplus': surplus,
             'battery_matched': cached.get('battery4_profile', np.zeros(H, dtype=np.float64)),
             'battery_charge': cached.get('battery4_charge', np.zeros(H, dtype=np.float64)),
+            'battery8_matched': cached.get('battery8_profile', np.zeros(H, dtype=np.float64)),
+            'battery8_charge': cached.get('battery8_charge', np.zeros(H, dtype=np.float64)),
             'ldes_matched': cached.get('ldes_profile', np.zeros(H, dtype=np.float64)),
             'ldes_charge': cached.get('ldes_charge', np.zeros(H, dtype=np.float64)),
+            'h2_matched': cached.get('h2_profile', np.zeros(H, dtype=np.float64)),
+            'h2_charge': cached.get('h2_charge', np.zeros(H, dtype=np.float64)),
             'gap': cached.get('residual_demand', np.zeros(H, dtype=np.float64)),
         }
 
@@ -115,8 +120,12 @@ def dispatch_from_cache(iso, mix, battery_pct, battery8_pct,
         'surplus': surplus,
         'battery_matched': result['battery4_profile'],
         'battery_charge': result['battery4_charge'],
+        'battery8_matched': result.get('battery8_profile', np.zeros(H, dtype=np.float64)),
+        'battery8_charge': result.get('battery8_charge', np.zeros(H, dtype=np.float64)),
         'ldes_matched': result['ldes_profile'],
         'ldes_charge': result['ldes_charge'],
+        'h2_matched': result.get('h2_profile', np.zeros(H, dtype=np.float64)),
+        'h2_charge': result.get('h2_charge', np.zeros(H, dtype=np.float64)),
         'gap': result['residual_demand'],
     }
 
@@ -142,17 +151,21 @@ def compress_to_24h(result):
         'matched': {},
         'surplus': {},
         'battery_charge': sum_by_hod(result['battery_charge']),
+        'battery8_charge': sum_by_hod(result.get('battery8_charge', np.zeros(H, dtype=np.float64))),
         'ldes_charge': sum_by_hod(result['ldes_charge']),
+        'h2_charge': sum_by_hod(result.get('h2_charge', np.zeros(H, dtype=np.float64))),
         'gap': sum_by_hod(result['gap']),
     }
 
-    for r in ['clean_firm', 'ccs_ccgt', 'solar', 'wind', 'hydro']:
+    for r in ['clean_firm', 'ccs_ccgt', 'solar', 'wind', 'offshore_wind', 'hydro']:
         compressed['matched'][r] = sum_by_hod(result['matched'][r])
         compressed['surplus'][r] = sum_by_hod(result['surplus'][r])
 
-    # Battery and LDES as matched resources
+    # Battery (4hr, 8hr), LDES, and H2 as matched resources
     compressed['matched']['battery'] = sum_by_hod(result['battery_matched'])
+    compressed['matched']['battery8'] = sum_by_hod(result.get('battery8_matched', np.zeros(H, dtype=np.float64)))
     compressed['matched']['ldes'] = sum_by_hod(result['ldes_matched'])
+    compressed['matched']['h2'] = sum_by_hod(result.get('h2_matched', np.zeros(H, dtype=np.float64)))
 
     return compressed
 
@@ -168,7 +181,9 @@ def round_arrays(compressed, decimals=5):
         'matched': {k: r(v) for k, v in compressed['matched'].items()},
         'surplus': {k: r(v) for k, v in compressed['surplus'].items()},
         'battery_charge': r(compressed['battery_charge']),
+        'battery8_charge': r(compressed.get('battery8_charge', [0]*24)),
         'ldes_charge': r(compressed['ldes_charge']),
+        'h2_charge': r(compressed.get('h2_charge', [0]*24)),
         'gap': r(compressed['gap']),
     }
     return out
