@@ -1032,3 +1032,144 @@ DG_UNIQUE_YEARS = sorted(_DG_YEAR_TO_THRESHOLDS.keys())
 
 # Backward compat alias for OUTPUT_THRESHOLDS
 OUTPUT_THRESHOLDS = THRESHOLDS
+
+
+# ============================================================================
+# SHARED CLEAN FIRM TRANCHE UTILITY
+# ============================================================================
+# Single source of truth for merit-order clean firm tranching:
+#   Tranche 1: Nuclear uprates (existing fleet, cheapest, capped per ISO)
+#   Tranche 2: Geothermal (CAISO only, capped at 39 TWh MINUS physics geo)
+#   Tranche 3: Min(nuclear new-build, CCS) — CCS capped per ISO
+#
+# Works with both numpy arrays (step3a vectorized) and Python scalars (step5d).
+# Import np at function level to avoid circular deps.
+
+def compute_clean_firm_tranches(
+    new_cf_twh,
+    iso,
+    firm_lev,
+    ccs_lev,
+    q45,
+    tx_name,
+    geo_lev=None,
+    geo_physics_new_twh=0.0,
+    uprate_cap_override=None,
+    ccs_used_twh=0.0,
+    uprate_used_twh=0.0,
+    geo_used_twh=0.0,
+    learning_curve_fn=None,
+    target_year=2050,
+):
+    """Compute merit-order clean firm tranche allocation and costs.
+
+    Args:
+        new_cf_twh: New clean firm TWh needed (scalar or numpy array).
+        iso: ISO region string.
+        firm_lev: Firm cost level ('L'/'M'/'H').
+        ccs_lev: CCS cost level ('L'/'M'/'H').
+        q45: 45Q toggle ('0' or '1').
+        tx_name: Transmission level name ('None'/'Low'/'Medium'/'High').
+        geo_lev: Geothermal cost level (None for non-CAISO).
+        geo_physics_new_twh: TWh of geothermal already consumed by physics dimension
+            (CAISO only; reduces the 39 TWh cap for tranche 2).
+        uprate_cap_override: Override uprate cap (TWh); defaults to UPRATE_CAP_TWH[iso].
+        ccs_used_twh: Cumulative CCS TWh already used (for step5d sequential mode).
+        uprate_used_twh: Cumulative uprate TWh already used.
+        geo_used_twh: Cumulative geothermal TWh already used.
+        learning_curve_fn: Optional fn(base, foak, noak, tech, level, year) → adjusted LCOE.
+            If None, uses static LCOE tables (step3a Phase 1 behavior).
+        target_year: Target year for learning curve (only used if learning_curve_fn provided).
+
+    Returns:
+        dict with keys:
+            uprate_twh, uprate_cost, uprate_lcoe,
+            geo_twh, geo_cost, geo_lcoe,
+            nuclear_twh, nuclear_cost, nuclear_lcoe,
+            ccs_tranche_twh, ccs_tranche_cost, ccs_lcoe,
+            total_cost, remaining (should be 0 if all tranches work)
+    """
+    import numpy as np
+
+    _max = np.maximum if hasattr(new_cf_twh, '__len__') else max
+    _min = np.minimum if hasattr(new_cf_twh, '__len__') else min
+
+    remaining = new_cf_twh
+    tx_cf = get_tx('clean_firm', tx_name, iso)
+    tx_ccs = get_tx('ccs_ccgt', tx_name, iso)
+
+    # ── Tranche 1: Nuclear uprates ──
+    uprate_cap = (UPRATE_CAP_TWH[iso] if uprate_cap_override is None
+                  else uprate_cap_override)
+    uprate_avail = _max(0, uprate_cap - uprate_used_twh)
+    uprate_twh = _min(remaining, uprate_avail)
+    uprate_lcoe = UPRATE_LCOE[firm_lev]  # No TX (grid-connected)
+    uprate_cost = uprate_twh * uprate_lcoe  # in $/MWh × TWh → need ×1e6 by caller if needed
+    remaining = _max(0, remaining - uprate_twh)
+
+    # ── Tranche 2: Geothermal (CAISO only) ──
+    geo_twh_val = 0.0 if not hasattr(new_cf_twh, '__len__') else np.zeros_like(new_cf_twh)
+    geo_cost_val = 0.0 if not hasattr(new_cf_twh, '__len__') else np.zeros_like(new_cf_twh)
+    geo_lcoe_val = 0.0
+    if iso == 'CAISO' and geo_lev:
+        # Reduce cap by physics geothermal to prevent double-counting
+        geo_cap = _max(0, GEOTHERMAL_CAP_TWH - geo_physics_new_twh)
+        geo_avail = _max(0, geo_cap - geo_used_twh)
+        geo_twh_val = _min(remaining, geo_avail)
+
+        geo_lcoe_val = GEOTHERMAL_LCOE[geo_lev]
+        if learning_curve_fn:
+            geo_lcoe_val = learning_curve_fn(
+                geo_lcoe_val, FOAK_GEOTHERMAL, GEOTHERMAL_LCOE['L'],
+                'geo', firm_lev, target_year)
+        geo_lcoe_val += tx_cf
+        geo_cost_val = geo_twh_val * geo_lcoe_val
+        remaining = _max(0, remaining - geo_twh_val)
+
+    # ── Tranche 3: Cheapest of nuclear new-build vs CCS ──
+    nuclear_lcoe = NUCLEAR_NEWBUILD_LCOE[firm_lev][iso]
+    if learning_curve_fn:
+        nuclear_lcoe = learning_curve_fn(
+            nuclear_lcoe, FOAK_NUCLEAR_NEWBUILD[iso], NUCLEAR_NEWBUILD_LCOE['L'][iso],
+            'nuclear', firm_lev, target_year)
+    nuclear_lcoe += tx_cf
+
+    ccs_table = CCS_LCOE_45Q_ON if q45 == '1' else CCS_LCOE_45Q_OFF
+    ccs_lcoe = ccs_table[ccs_lev][iso]
+    if learning_curve_fn:
+        foak_table = FOAK_CCS_45Q_ON if q45 == '1' else FOAK_CCS_45Q_OFF
+        ccs_lcoe = learning_curve_fn(
+            ccs_lcoe, foak_table[iso], ccs_table['L'][iso],
+            'ccs', ccs_lev, target_year)
+    if iso == 'NEISO':
+        ccs_lcoe += NEISO_CCS_GAS_ADDER
+    ccs_lcoe += tx_ccs
+
+    ccs_cap = CCS_CAP_TWH.get(iso, 9999.0)
+    ccs_avail = _max(0, ccs_cap - ccs_used_twh)
+
+    if nuclear_lcoe <= ccs_lcoe or (isinstance(ccs_avail, (int, float)) and ccs_avail <= 0):
+        nuclear_twh = remaining
+        ccs_tranche_twh = 0.0 if not hasattr(new_cf_twh, '__len__') else np.zeros_like(new_cf_twh)
+        tranche3_cost = remaining * nuclear_lcoe
+    else:
+        ccs_tranche_twh = _min(remaining, ccs_avail)
+        nuclear_twh = _max(0, remaining - ccs_tranche_twh)
+        tranche3_cost = ccs_tranche_twh * ccs_lcoe + nuclear_twh * nuclear_lcoe
+
+    return {
+        'uprate_twh': uprate_twh,
+        'uprate_cost': uprate_cost,
+        'uprate_lcoe': uprate_lcoe,
+        'geo_twh': geo_twh_val,
+        'geo_cost': geo_cost_val,
+        'geo_lcoe': geo_lcoe_val,
+        'nuclear_twh': nuclear_twh,
+        'nuclear_cost': nuclear_twh * nuclear_lcoe,
+        'nuclear_lcoe': nuclear_lcoe,
+        'ccs_tranche_twh': ccs_tranche_twh,
+        'ccs_tranche_cost': ccs_tranche_twh * ccs_lcoe,
+        'ccs_lcoe': ccs_lcoe,
+        'total_cost': uprate_cost + geo_cost_val + tranche3_cost,
+    }
+
