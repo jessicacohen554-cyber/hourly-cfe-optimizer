@@ -38,6 +38,7 @@ import time
 
 import numpy as np
 import pandas as pd
+import pyarrow.parquet as pq
 
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, SCRIPT_DIR)
@@ -73,7 +74,7 @@ def extract_unique_mixes(iso, input_dir):
         return []
 
     # Read available columns (h2_dispatch_pct may be absent in older parquets)
-    avail_cols = pd.read_parquet(path, columns=[]).columns.tolist()
+    avail_cols = pq.read_schema(path).names
     read_cols = [c for c in MIX_COLUMNS if c in avail_cols]
     df = pd.read_parquet(path, columns=read_cols)
     # Fill missing columns with 0
@@ -249,7 +250,10 @@ def enrich_parquets_with_dispatch_shares(iso, input_dir, cache):
     # Also enrich the feasible parquet (used by FEASIBLE_MIXES in shared-data.js)
     feas_path = os.path.join(input_dir, f'step3_feasible_{iso}.parquet')
     if os.path.exists(feas_path):
-        _enrich_single_parquet(feas_path, iso, cache)
+        try:
+            _enrich_single_parquet(feas_path, iso, cache)
+        except Exception as e:
+            print(f"    WARNING: Could not enrich {os.path.basename(feas_path)}: {e}")
 
     return hits
 
