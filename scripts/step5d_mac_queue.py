@@ -1856,8 +1856,9 @@ def _export_scenario_a(all_results, isos_processed, sensitivity='high_firm_low_v
               f"${iso_data[t_max]['effective_cost']:.0f}/MWh @ {t_max}%")
 
     if results_by_iso:
-        save_scenario_results(results_by_iso, 'A', list(results_by_iso.keys()))
-        print(f"\n  Scenario A export complete: {len(results_by_iso)} ISOs")
+        save_scenario_results(results_by_iso, 'A', list(results_by_iso.keys()),
+                              out_dir=OUTPUT_DIR)
+        print(f"\n  Scenario A export complete: {len(results_by_iso)} ISOs → {OUTPUT_DIR}")
 
 
 def main():
@@ -1915,8 +1916,7 @@ def main():
     # Uses 'all_med' sensitivity + 'Medium' growth as the canonical pathway.
     if all_results:
         queue = _build_consequential_queue(all_results)
-        queue_path = os.path.join(
-            PROJECT_ROOT, 'data', 'step5-post-processing', 'consequential_queue.json')
+        queue_path = os.path.join(args.output_dir, 'consequential_queue.json')
         with open(queue_path, 'w') as f:
             json.dump({'queue': queue, 'generated': time.strftime('%Y-%m-%d %H:%M:%S'),
                        'source': 'step5d_mac_queue.py'}, f, indent=2, default=str)

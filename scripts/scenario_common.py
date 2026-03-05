@@ -1744,13 +1744,14 @@ def _serialize_result_entry(d):
     return entry
 
 
-def save_scenario_results(results, scenario_label, isos_processed):
+def save_scenario_results(results, scenario_label, isos_processed, out_dir=None):
     """Save scenario results as per-ISO JSON files for parallel-safe operation.
 
     Each ISO gets its own file: scenario_{label}_{iso}.json
     This allows parallel matrix jobs (one per ISO) to write without clobbering.
     """
-    out_dir = 'data/step5-post-processing'
+    if out_dir is None:
+        out_dir = 'data/step5-post-processing'
     os.makedirs(out_dir, exist_ok=True)
 
     for iso in isos_processed:
@@ -1774,16 +1775,18 @@ def save_scenario_results(results, scenario_label, isos_processed):
         print(f"  Saved {scenario_label} {iso}: {out_path} ({os.path.getsize(out_path) / 1024:.0f} KB)")
 
 
-def load_scenario_results(scenario_label, isos=None):
+def load_scenario_results(scenario_label, isos=None, out_dir=None):
     """Load scenario results from per-ISO JSON files. Merges all available ISOs.
 
     Args:
         scenario_label: 'A' or 'B'
         isos: optional list of ISOs to load (defaults to all found files)
+        out_dir: optional output directory (defaults to data/step5-post-processing)
 
     Returns: (results_dict, metadata) or (None, None) if no files found.
     """
-    out_dir = 'data/step5-post-processing'
+    if out_dir is None:
+        out_dir = 'data/step5-post-processing'
     label_lower = scenario_label.lower()
     pattern = f'scenario_{label_lower}_'
 
