@@ -171,6 +171,10 @@ OFFSHORE_WIND_CAP_TWH = {
 # Source: USGS assessment + Fervo EGS potential
 GEOTHERMAL_CAP_TWH = 39.0
 
+# Existing CAISO geothermal as % of demand (5.31 TWh / 224.039 TWh = 2.37%)
+# Used in Step 3 to split physics geothermal into existing ($0) vs new-build (priced)
+EXISTING_GEOTHERMAL_PCT = 2.37
+
 # Hydro caps: existing only, region-dependent
 HYDRO_CAP_PCT = {
     'CAISO': 10.5, 'ERCOT': 0.5, 'PJM': 2.0,
