@@ -103,6 +103,33 @@ MIX_COLS = RESOURCE_COLS + STORAGE_COLS + ['hourly_match_score']
 # Active thresholds for the MAC queue (50%+ only — coarse thresholds excluded)
 MAC_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
 
+# Hydro cap in TWh (existing only, derived from HYDRO_CAP_PCT × base demand)
+HYDRO_CAP_TWH = {iso: HYDRO_CAP_PCT[iso] / 100.0 * REGIONAL_DEMAND_TWH[iso]
+                 for iso in ISOS}
+
+
+def cap_hydro_in_mix(mix_pct, iso):
+    """Cap hydro at physical maximum and adjust match score accordingly.
+
+    Hydro is existing-only and priced at $0. If a PFS mix has hydro above the
+    physical cap, the excess is phantom generation that inflates both the match
+    score (making CO2 displacement look too high) and the cost (by substituting
+    $0 hydro for priced resources). This function caps hydro and reduces the
+    match score by the excess percentage.
+
+    Modifies mix_pct in place and returns the excess hydro percentage.
+    """
+    hydro_cap_pct = HYDRO_CAP_PCT.get(iso, 50.0)
+    hydro_pct = mix_pct.get('hydro', 0)
+    if hydro_pct > hydro_cap_pct:
+        excess = hydro_pct - hydro_cap_pct
+        mix_pct['hydro'] = hydro_cap_pct
+        # Reduce match score by excess hydro — this generation doesn't exist
+        if 'hourly_match_score' in mix_pct:
+            mix_pct['hourly_match_score'] = max(0, mix_pct['hourly_match_score'] - excess)
+        return excess
+    return 0.0
+
 # 5 price sensitivities
 PRICE_SENSITIVITIES = {
     'all_low': {
@@ -313,6 +340,10 @@ def compute_new_build_cost(iso, mix_pct, floor_twh, demand_twh, sens, target_yea
     mix_twh = {}
     for res in RESOURCE_COLS:
         mix_twh[res] = mix_pct.get(res, 0.0) / 100.0 * demand_twh
+
+    # Cap hydro at physical limit (existing only, no new-build possible)
+    hydro_cap_twh = HYDRO_CAP_TWH.get(iso, mix_twh.get('hydro', 0))
+    mix_twh['hydro'] = min(mix_twh.get('hydro', 0), hydro_cap_twh)
 
     # --- Solar (existing = $0, new build = LCOE + TX) ---
     existing_solar_twh = floor_twh.get('solar', 0.0)
@@ -1078,11 +1109,17 @@ def optimize_threshold(iso, threshold, floor_twh, deployed_twh, cumulative_caps,
         demand_total_mwh = demand_twh * 1e6
         co2_result = compute_co2_from_dispatch(iso, dispatch_result, emission_rates, demand_total_mwh)
 
-        # CO2 avoided = baseline_co2 - (baseline fossil CO2 - abated)
-        # The dispatch model gives total CO2 abated by clean energy
-        co2_abated_mt = co2_result['total_co2_abated_tons'] / 1e6  # Convert tons → Mt
-        co2_after_mt = max(0, baseline_co2_mt - co2_abated_mt)
-        co2_avoided_mt = co2_abated_mt
+        # Marginal CO2: baseline_co2 (at prev threshold) minus remaining fossil CO2
+        # at this mix's clean percentage. Use scalar fossil retirement model for
+        # the "remaining fossil CO2" — same approach as _score_mix_scalar for consistency.
+        candidate_clean_pct_d = min(mix_pct.get('hourly_match_score', 0), 99.99)
+        _, cand_info_d = compute_fossil_retirement(
+            iso, candidate_clean_pct_d, emission_rates, {},
+            demand_growth_factor=growth_factor)
+        cand_remaining_rate_d = cand_info_d.get('remaining_rate_tco2_mwh', 0.3911)
+        fossil_twh_after_d = max(0, demand_twh * (100.0 - candidate_clean_pct_d) / 100.0)
+        co2_after_mt = fossil_twh_after_d * 1e6 * cand_remaining_rate_d / 1e6
+        co2_avoided_mt = baseline_co2_mt - co2_after_mt
 
         if co2_avoided_mt <= 0.001:
             return None
@@ -1097,6 +1134,7 @@ def optimize_threshold(iso, threshold, floor_twh, deployed_twh, cumulative_caps,
     for idx in range(len(filtered)):
         row = filtered.iloc[idx]
         mix_pct = mix_row_to_pct(row)
+        cap_hydro_in_mix(mix_pct, iso)  # Cap hydro at physical limit before scoring
 
         scored = _score_mix_scalar(mix_pct)
         if scored is None:
@@ -1125,6 +1163,7 @@ def optimize_threshold(iso, threshold, floor_twh, deployed_twh, cumulative_caps,
             for idx in range(len(phase2_df)):
                 row = phase2_df.iloc[idx]
                 mix_pct = mix_row_to_pct(row)
+                cap_hydro_in_mix(mix_pct, iso)  # Cap hydro at physical limit
 
                 scored = _score_mix_scalar(mix_pct)
                 if scored is None:
