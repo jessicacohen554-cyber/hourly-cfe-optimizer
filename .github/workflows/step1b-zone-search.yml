@@ -1,23 +1,29 @@
-name: "Step 1B: Zone-Based Fine Search"
+name: "Step 1B: Zone Search + Floor/Fine PFS"
 
-# Score-band zone search: generates fine 1% mixes per score zone, scores each
-# mix ONCE, assigns to thresholds. Replaces old per-threshold PFS build.
+# Unified workflow for all Step 1B scripts:
+#   - Zone Search (1B): Score-band zone search, fine 1% mixes per zone
+#   - Floor-Aware (1B2): Floor-aware PFS for 50-70% thresholds (2% step)
+#   - Fine-Grid (1B3): Fine-grid PFS for 40-70% thresholds (1% step)
 #
-# What's new vs. legacy:
-#   - Parallel per-ISO jobs (matrix strategy, each on its own runner)
-#   - Each job creates its own auto/* branch and commits there (never master)
-#   - Intermittent auto-commits after every zone AND after near-miss save
-#   - Threshold and zone filtering: run only the subset you need
-#   - Grid size cap prevents hang/OOM on wide 5D CAISO bounds
-#   - Near-miss parquet saved incrementally so step1c can start immediately
+# Use the "script" dropdown to run one script, or "All" to run all three
+# sequentially per ISO.
 #
-# Prerequisite: Step 1A (Scored Database) must have run first.
-# Output: data/step1-pfs-parquets/{ISO}_t{XX}_raw_pfs.parquet (per threshold)
-#         data/step1-pfs-parquets/{ISO}_near_miss.parquet (for step1c)
+# Each ISO runs on its own runner in parallel and commits to its own auto/* branch.
+# Output: data/step1-pfs-parquets/{ISO}_*.parquet
 
 on:
   workflow_dispatch:
     inputs:
+      script:
+        description: 'Which Step 1B script(s) to run'
+        required: true
+        default: 'All'
+        type: choice
+        options:
+          - All
+          - Zone Search (1B)
+          - Floor-Aware (1B2)
+          - Fine-Grid (1B3)
       iso:
         description: 'ISO region to run'
         required: true
@@ -33,12 +39,12 @@ on:
           - MISO
           - SPP
       thresholds:
-        description: 'Comma-separated thresholds (e.g. "90,95,99"). Leave blank for all 21.'
+        description: 'Comma-separated thresholds (e.g. "90,95,99"). Zone Search only. Leave blank for all.'
         required: false
         default: ''
         type: string
       zones:
-        description: 'Zones to run: A (50-75%), B (75-90%), C (90-99.99%). Comma-separated or blank for all.'
+        description: 'Zones to run: A (50-75%), B (75-90%), C (90-99.99%). Zone Search only. Blank for all.'
         required: false
         default: ''
         type: string
@@ -49,7 +55,6 @@ on:
         type: string
 
 env:
-  BRANCH_PREFIX: step1b-zone-search
   PYTHONUNBUFFERED: "1"
 
 jobs:
@@ -60,6 +65,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
+      timeout: ${{ steps.set-timeout.outputs.timeout }}
     steps:
       - name: Build ISO matrix
         id: set-matrix
@@ -70,17 +76,36 @@ jobs:
             echo 'matrix={"iso":["${{ inputs.iso }}"]}' >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Set timeout based on script selection
+        id: set-timeout
+        run: |
+          SCRIPT="${{ inputs.script }}"
+          case "$SCRIPT" in
+            "All"|"Zone Search (1B)")
+              echo "timeout=360" >> "$GITHUB_OUTPUT"
+              ;;
+            "Fine-Grid (1B3)")
+              echo "timeout=180" >> "$GITHUB_OUTPUT"
+              ;;
+            "Floor-Aware (1B2)")
+              echo "timeout=120" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "timeout=360" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+
   # ════════════════════════════════════════════════════════════════════════
   # Per-ISO job: runs on its own runner in parallel
   # ════════════════════════════════════════════════════════════════════════
-  zone-search:
+  step1b:
     needs: prepare
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    timeout-minutes: ${{ fromJson(needs.prepare.outputs.timeout) }}
 
     strategy:
       matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
-      fail-fast: false   # don't cancel other ISOs if one fails
+      fail-fast: false
 
     permissions:
       contents: write
@@ -96,7 +121,16 @@ jobs:
       run: |
         TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
         ISO_LOWER=$(echo "${{ matrix.iso }}" | tr '[:upper:]' '[:lower:]')
-        TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${ISO_LOWER}"
+        # Short label for branch name
+        SCRIPT="${{ inputs.script }}"
+        case "$SCRIPT" in
+          "All")                LABEL="step1b-all" ;;
+          "Zone Search (1B)")   LABEL="step1b-zone-search" ;;
+          "Floor-Aware (1B2)")  LABEL="step1b2-floor-pfs" ;;
+          "Fine-Grid (1B3)")    LABEL="step1b3-fine-grid" ;;
+          *)                    LABEL="step1b" ;;
+        esac
+        TARGET_BRANCH="auto/${TIMESTAMP}-${LABEL}-${ISO_LOWER}"
         echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -114,7 +148,12 @@ jobs:
         pip install numpy numba pyarrow pandas
         python -c "from numba import njit; print('Numba OK')"
 
-    - name: Verify scored database exists
+    - name: Ensure output directory
+      run: mkdir -p data/step1-pfs-parquets
+
+    # ── Zone Search (1B) ──────────────────────────────────────────────
+    - name: Verify scored database (Zone Search)
+      if: inputs.script == 'All' || inputs.script == 'Zone Search (1B)'
       run: |
         ISO="${{ matrix.iso }}"
         CACHE="data/step1-pfs-parquets/${ISO}_coarse_cache.parquet"
@@ -127,12 +166,14 @@ jobs:
         SIZE=$(du -h "$CACHE" | cut -f1)
         echo "OK: $ISO scored database ($SIZE)"
 
-    - name: "Compute prior windows (optional)"
+    - name: "Compute prior windows (Zone Search)"
+      if: inputs.script == 'All' || inputs.script == 'Zone Search (1B)'
       continue-on-error: true
       run: |
         python scripts/step1_prior_windows.py --iso "${{ matrix.iso }}"
 
-    - name: "Run zone search — ${{ matrix.iso }}"
+    - name: "Run Zone Search — ${{ matrix.iso }}"
+      if: inputs.script == 'All' || inputs.script == 'Zone Search (1B)'
       run: |
         ISO="${{ matrix.iso }}"
         ARGS="--iso $ISO --auto-commit"
@@ -153,29 +194,57 @@ jobs:
         echo "Command: python scripts/step1b_zone_search.py $ARGS"
         eval python scripts/step1b_zone_search.py $ARGS
 
-    - name: Final commit and push
-      if: always()
+    - name: "Commit Zone Search results"
+      if: (inputs.script == 'All' || inputs.script == 'Zone Search (1B)') && always()
       run: |
-        # Commit all remaining PFS + near-miss files not yet pushed.
-        # Must use -f: data/step1-pfs-parquets/ is gitignored, normal add skips it.
-        # Scope to THIS ISO's files only (e.g. CAISO_*.parquet) so parallel ISO jobs
-        # never write conflicting changes when squash-merged later.
         ISO="${{ matrix.iso }}"
-        mkdir -p data/step1-pfs-parquets
-        # Only add parquets — zone_manifest.json is a run-time checkpoint (gitignored)
-        # and causes add/add conflicts when squash-merging parallel ISO branches.
         git add -f data/step1-pfs-parquets/"${ISO}"_*.parquet 2>/dev/null || true
         if ! git diff --cached --quiet; then
-          THRESHOLDS="${{ inputs.thresholds }}"
-          ZONES="${{ inputs.zones }}"
-          LABEL="${{ matrix.iso }}"
-          [ -n "$THRESHOLDS" ] && LABEL="$LABEL thresholds=$THRESHOLDS"
-          [ -n "$ZONES" ] && LABEL="$LABEL zones=$ZONES"
-          git commit -m "Step 1B Zone Search: $LABEL — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-        else
-          echo "No remaining changes to commit"
+          git commit -m "Step 1B Zone Search: ${ISO} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
         fi
 
+    # ── Floor-Aware PFS (1B2) ─────────────────────────────────────────
+    - name: "Run Floor-Aware PFS — ${{ matrix.iso }}"
+      if: inputs.script == 'All' || inputs.script == 'Floor-Aware (1B2)'
+      timeout-minutes: 90
+      run: |
+        echo "═══════════════════════════════════════════════════════════"
+        echo "  ISO: ${{ matrix.iso }}  |  Floor-Aware PFS (50-70%)"
+        echo "═══════════════════════════════════════════════════════════"
+        python scripts/step1b2_floor_aware_pfs.py --iso ${{ matrix.iso }}
+
+    - name: "Commit Floor-Aware results"
+      if: (inputs.script == 'All' || inputs.script == 'Floor-Aware (1B2)') && always()
+      run: |
+        ISO="${{ matrix.iso }}"
+        git add -f data/step1-pfs-parquets/"${ISO}"_*.parquet 2>/dev/null || true
+        if ! git diff --cached --quiet; then
+          git commit -m "Step 1B2 Floor-Aware PFS: ${ISO} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        fi
+
+    # ── Fine-Grid PFS (1B3) ───────────────────────────────────────────
+    - name: "Run Fine-Grid PFS — ${{ matrix.iso }}"
+      if: inputs.script == 'All' || inputs.script == 'Fine-Grid (1B3)'
+      timeout-minutes: 150
+      run: |
+        echo "═══════════════════════════════════════════════════════════"
+        echo "  ISO: ${{ matrix.iso }}  |  Fine-Grid PFS (40-70%, 1% step)"
+        echo "═══════════════════════════════════════════════════════════"
+        python scripts/step1b3_fine_grid_pfs.py --iso ${{ matrix.iso }}
+
+    - name: "Commit Fine-Grid results"
+      if: (inputs.script == 'All' || inputs.script == 'Fine-Grid (1B3)') && always()
+      run: |
+        ISO="${{ matrix.iso }}"
+        git add -f data/step1-pfs-parquets/"${ISO}"_*.parquet 2>/dev/null || true
+        if ! git diff --cached --quiet; then
+          git commit -m "Step 1B3 Fine-Grid PFS: ${ISO} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        fi
+
+    # ── Final push ────────────────────────────────────────────────────
+    - name: Push results
+      if: always()
+      run: |
         # Push with retry
         for i in 1 2 3 4; do
           git push -u origin "$TARGET_BRANCH" && break

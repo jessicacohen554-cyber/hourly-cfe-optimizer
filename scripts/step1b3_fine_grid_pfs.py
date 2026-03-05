@@ -82,6 +82,9 @@ OUTPUT_DIR = os.path.join(PROJECT_ROOT, 'data', 'step1-pfs-parquets')
 FINE_THRESHOLDS = [40, 45, 50, 55, 60, 65, 70]
 NEAR_MISS_THRESHOLDS = [75]  # Also capture mixes that nearly reach 75%
 
+# Near-miss cache constants (matching step1b_zone_search conventions)
+MAX_NEAR_MISS = 100_000  # Max near-miss mixes per ISO
+
 # Grid parameters — 1% step for main resources
 RESOURCE_STEP = 1     # 1% step for solar/wind
 FIRM_STEP = 1         # 1% step for clean firm
@@ -290,6 +293,102 @@ def assign_and_save(iso, scores, raw_components, output_dir):
     return saved_count
 
 
+def save_near_miss_cache(iso, scores, raw_components):
+    """Append fine-grid near-miss mixes to the shared near-miss cache.
+
+    Near-miss mixes fall below a threshold but are close enough that storage
+    dispatch might push them into feasibility. Fine-grid mixes at 1% resolution
+    provide dense near-miss coverage that improves step1c storage refinement.
+
+    Schema matches step1b_zone_search: resource columns + base_score.
+    """
+    if not HAS_PYARROW:
+        print("  Near-miss cache: pyarrow not available, skipping")
+        return
+
+    # Collect near-miss: score < threshold but >= threshold - width
+    all_thresholds = FINE_THRESHOLDS + NEAR_MISS_THRESHOLDS
+    nm_mask = np.zeros(len(scores), dtype=bool)
+    scores_frac = scores / 100.0  # Convert to 0-1 scale
+
+    for threshold in all_thresholds:
+        t_frac = threshold / 100.0
+        # Width: 0.25 for <85%, 0.20 for >=85% (matching zone search)
+        width = 0.25 if threshold < 85 else 0.20
+        lower = t_frac - width
+        # Near-miss = below threshold but within width
+        nm_mask |= (scores_frac >= lower) & (scores_frac < t_frac)
+
+    nm_indices = np.where(nm_mask)[0]
+    if len(nm_indices) == 0:
+        print("  Near-miss cache: 0 mixes in near-miss range")
+        return
+
+    # Build near-miss data in zone-search schema
+    rtypes = s1.get_resource_types(iso)
+    data = {}
+    for rt in rtypes:
+        if rt in raw_components:
+            data[rt] = raw_components[rt][nm_indices].astype(np.float64)
+        else:
+            data[rt] = np.zeros(len(nm_indices), dtype=np.float64)
+    data['base_score'] = scores_frac[nm_indices]  # Store as 0-1 fraction
+
+    # Load existing near-miss and append
+    out_path = os.path.join(OUTPUT_DIR, f'{iso}_near_miss.parquet')
+    new_table = pa.table(data)
+
+    if os.path.exists(out_path):
+        existing = pq.read_table(out_path)
+        # Align columns: new table may have different columns than existing
+        aligned_arrays = {}
+        for col in existing.column_names:
+            if col in new_table.column_names:
+                aligned_arrays[col] = pa.concat_arrays(
+                    [existing.column(col), new_table.column(col)])
+            else:
+                aligned_arrays[col] = pa.concat_arrays(
+                    [existing.column(col),
+                     pa.array(np.zeros(len(nm_indices), dtype=np.float64))])
+        n_existing = len(existing)
+        for col in new_table.column_names:
+            if col not in aligned_arrays:
+                aligned_arrays[col] = pa.concat_arrays(
+                    [pa.array(np.zeros(n_existing, dtype=np.float64)),
+                     new_table.column(col)])
+        combined = pa.table(aligned_arrays)
+        print(f"  Near-miss cache: {len(nm_indices):,} new + {n_existing:,} existing")
+    else:
+        combined = new_table
+        print(f"  Near-miss cache: {len(nm_indices):,} new mixes (no existing cache)")
+
+    # Deduplicate by resource columns
+    res_cols = [c for c in combined.column_names if c != 'base_score']
+    if len(combined) > 0:
+        res_data = np.column_stack([combined.column(c).to_numpy() for c in res_cols])
+        rounded = np.round(res_data).astype(np.int64)
+        n_res = rounded.shape[1]
+        multipliers = np.array([301**i for i in range(n_res)], dtype=np.int64)
+        keys = (rounded * multipliers).sum(axis=1)
+        _, unique_idx = np.unique(keys, return_index=True)
+        unique_idx.sort()
+
+        if len(unique_idx) < len(combined):
+            combined = combined.take(unique_idx)
+            print(f"  Near-miss cache: deduplicated to {len(combined):,} mixes")
+
+    # Cap at MAX_NEAR_MISS
+    if len(combined) > MAX_NEAR_MISS:
+        base_scores = combined.column('base_score').to_numpy()
+        top_idx = np.argsort(base_scores)[-MAX_NEAR_MISS:]
+        combined = combined.take(top_idx)
+        print(f"  Near-miss cache: capped at {MAX_NEAR_MISS:,}")
+
+    pq.write_table(combined, out_path, compression='snappy')
+    size_mb = os.path.getsize(out_path) / (1024 * 1024)
+    print(f"  Near-miss cache: {len(combined):,} total → {out_path} ({size_mb:.1f} MB)")
+
+
 # ============================================================================
 # MAIN
 # ============================================================================
@@ -325,9 +424,12 @@ def process_iso(iso, demand_data, gen_profiles):
         in_range = ((scores >= t - 0.5) & (scores <= t + 5.0)).sum()
         print(f"    t{t:g}: {in_range:,} feasible")
 
-    # Assign to thresholds and save
+    # Assign to thresholds and save PFS parquets
     saved = assign_and_save(iso, scores, raw_components, OUTPUT_DIR)
     print(f"  Total saved: {saved:,} mixes")
+
+    # Write near-miss mixes to shared cache for step1c
+    save_near_miss_cache(iso, scores, raw_components)
 
     gc.collect()
     return saved
