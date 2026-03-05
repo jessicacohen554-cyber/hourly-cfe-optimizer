@@ -1422,6 +1422,8 @@ function getMixDataForRegion(region) {
     MIX_RESOURCES.forEach(r => { existingData[r] = []; newData[r] = []; });
     const curtailmentData = [];
     const procurementData = [];
+    const chargeData = { battery: [], battery8: [] };
+    const BATT_RTE = 0.85;
 
     for (const tk of thresholdKeys) {
         const ti = typeof THRESHOLDS !== 'undefined' ? THRESHOLDS.indexOf(parseFloat(tk)) : -1;
@@ -1442,7 +1444,7 @@ function getMixDataForRegion(region) {
             if (!mixData || !gridMix) continue;
 
             MIX_RESOURCES.forEach(r => {
-                if (r === 'battery' || r === 'battery8' || r === 'ldes') {
+                if (r === 'battery' || r === 'battery8' || r === 'ldes' || r === 'h2') {
                     avgNew[r] += (mixData[r]?.[ti] || 0);
                 } else {
                     const totalPct = (mixData[r]?.[ti] || 0);
@@ -1468,9 +1470,14 @@ function getMixDataForRegion(region) {
             });
             curtailmentData.push(Math.round(avgCurtailment / count * 10) / 10);
             procurementData.push(Math.round(avgProcurement / count * 10) / 10);
+            // Battery charge = dispatch % / RTE (shown as negative)
+            const avgBatt = avgNew['battery'] / count;
+            const avgBatt8 = avgNew['battery8'] / count;
+            chargeData.battery.push(-Math.round(avgBatt / BATT_RTE * 10) / 10);
+            chargeData.battery8.push(-Math.round(avgBatt8 / BATT_RTE * 10) / 10);
         }
     }
-    return { labels, existingData, newData, curtailmentData, procurementData };
+    return { labels, existingData, newData, curtailmentData, procurementData, chargeData };
 }
 
 // Crosshatch curtailment overlay plugin
@@ -1563,7 +1570,7 @@ const existingBoundaryPlugin = {
 };
 
 function buildMixDatasets(data) {
-    const { existingData, newData } = data;
+    const { existingData, newData, chargeData } = data;
     const EXISTING_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar'];
     const NEW_ORDER = ['solar', 'wind', 'hydro', 'battery', 'battery8', 'ldes', 'ccs_ccgt', 'clean_firm'];
 
@@ -1602,6 +1609,37 @@ function buildMixDatasets(data) {
             _isExisting: false,
         });
     }
+
+    // Battery charge (negative bars below x-axis) — charge = dispatch / RTE
+    if (chargeData) {
+        const battColor = MIX_COLORS.battery;
+        const batt8Color = MIX_COLORS.battery8;
+        if (battColor && chargeData.battery && chargeData.battery.some(v => v < -0.1)) {
+            datasets.push({
+                label: 'Battery 4hr Charge',
+                data: chargeData.battery,
+                backgroundColor: battColor.fill.replace(/[\d.]+\)$/, '0.25)'),
+                borderColor: battColor.border,
+                borderWidth: 1,
+                borderRadius: 6,
+                stack: 'charge',
+                _isCharge: true,
+            });
+        }
+        if (batt8Color && chargeData.battery8 && chargeData.battery8.some(v => v < -0.1)) {
+            datasets.push({
+                label: 'Battery 8hr Charge',
+                data: chargeData.battery8,
+                backgroundColor: batt8Color.fill.replace(/[\d.]+\)$/, '0.25)'),
+                borderColor: batt8Color.border,
+                borderWidth: 1,
+                borderRadius: 6,
+                stack: 'charge',
+                _isCharge: true,
+            });
+        }
+    }
+
     return datasets;
 }
 
@@ -1656,6 +1694,15 @@ function initNarrativeMixChart() {
                                     pointStyle: 'rectRounded',
                                 };
                             });
+                            // Add charge legend entry
+                            items.push({
+                                text: 'Storage Charge',
+                                fillStyle: 'rgba(139,92,246,0.25)',
+                                strokeStyle: '#8B5CF6',
+                                lineWidth: 2,
+                                hidden: false,
+                                pointStyle: 'rectRounded',
+                            });
                             // Add curtailment legend entry
                             items.push({
                                 text: 'Curtailment',
@@ -1678,7 +1725,7 @@ function initNarrativeMixChart() {
                     padding: 12,
                     cornerRadius: 8,
                     filter: function(tooltipItem) {
-                        return tooltipItem.parsed.y > 0;
+                        return tooltipItem.parsed.y !== 0;
                     },
                     callbacks: {
                         title: function(items) {
@@ -1689,12 +1736,17 @@ function initNarrativeMixChart() {
                             return items[0].label + '  (procure ' + Math.round(proc) + '% of demand, curtail ' + Math.round(curtail) + '%)';
                         },
                         label: function(context) {
-                            return ` ${context.dataset.label}: ${context.parsed.y.toFixed(1)}% of demand`;
+                            const v = context.parsed.y;
+                            if (context.dataset._isCharge) {
+                                return ` ${context.dataset.label}: ${Math.abs(v).toFixed(1)}% of demand`;
+                            }
+                            return ` ${context.dataset.label}: ${v.toFixed(1)}% of demand`;
                         }
                     }
                 },
                 datalabels: {
                     display: function(context) {
+                        if (context.dataset._isCharge) return false;
                         return context.dataset.data[context.dataIndex] >= 6;
                     },
                     color: function(context) {
@@ -1793,10 +1845,7 @@ function updateMixChartRegion(region) {
     const data = getMixDataForRegion(region);
     narrativeMixChart.data.labels = data.labels;
 
-    const newDatasets = buildMixDatasets(data);
-    newDatasets.forEach((ds, i) => {
-        narrativeMixChart.data.datasets[i].data = ds.data;
-    });
+    narrativeMixChart.data.datasets = buildMixDatasets(data);
 
     // Update plugin data
     narrativeMixChart._curtailmentData = data.curtailmentData;
@@ -1945,12 +1994,22 @@ function getIncrementalData(region) {
         gapData.push(Math.round(Math.max(0, demandTWh - utilizedTotal) * 10) / 10);
     }
 
+    // Compute battery charge TWh (negative) = dispatch TWh / RTE
+    const BATT_RTE_INC = 0.85;
+    const incChargeData = { battery: [], battery8: [] };
+    for (let i = 0; i < utilizedNewData.battery.length; i++) {
+        const bat4Twh = utilizedNewData.battery[i] || 0;
+        const bat8Twh = utilizedNewData.battery8[i] || 0;
+        incChargeData.battery.push(bat4Twh > 0 ? -Math.round(bat4Twh / BATT_RTE_INC * 10) / 10 : 0);
+        incChargeData.battery8.push(bat8Twh > 0 ? -Math.round(bat8Twh / BATT_RTE_INC * 10) / 10 : 0);
+    }
+
     return { labels, utilizedExistingData, utilizedNewData, curtailedData, gapData,
-             demandTrajectory, demandTWhPerBar, baseDemandTWh };
+             demandTrajectory, demandTWhPerBar, baseDemandTWh, chargeData: incChargeData };
 }
 
 function buildIncrementalDatasets(data) {
-    const { utilizedExistingData, utilizedNewData, curtailedData, gapData, demandTrajectory } = data;
+    const { utilizedExistingData, utilizedNewData, curtailedData, gapData, demandTrajectory, chargeData } = data;
     // Stack order (bottom to top): existing utilized, new utilized, gap spacer, curtailed
     const EXISTING_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar'];
     const NEW_ORDER = ['solar', 'wind', 'hydro', 'battery', 'battery8', 'ldes', 'ccs_ccgt', 'clean_firm', 'h2'];
@@ -2022,6 +2081,36 @@ function buildIncrementalDatasets(data) {
             _resourceKey: r,
             _isCurtailed: true,
         });
+    }
+
+    // Battery charge (negative bars below x-axis) — charge = dispatch TWh / RTE
+    if (chargeData) {
+        const battColor = MIX_COLORS.battery;
+        const batt8Color = MIX_COLORS.battery8;
+        if (battColor && chargeData.battery && chargeData.battery.some(v => v < -0.05)) {
+            datasets.push({
+                label: 'Battery 4hr Charge',
+                data: chargeData.battery,
+                backgroundColor: battColor.fill.replace(/[\d.]+\)$/, '0.25)'),
+                borderColor: battColor.border,
+                borderWidth: 1,
+                borderRadius: 6,
+                stack: 'charge',
+                _isCharge: true,
+            });
+        }
+        if (batt8Color && chargeData.battery8 && chargeData.battery8.some(v => v < -0.05)) {
+            datasets.push({
+                label: 'Battery 8hr Charge',
+                data: chargeData.battery8,
+                backgroundColor: batt8Color.fill.replace(/[\d.]+\)$/, '0.25)'),
+                borderColor: batt8Color.border,
+                borderWidth: 1,
+                borderRadius: 6,
+                stack: 'charge',
+                _isCharge: true,
+            });
+        }
     }
 
     // Demand trajectory — staircase dashed line
@@ -2129,6 +2218,13 @@ function initIncrementalMixChart() {
                                 pointStyle: 'rectRounded',
                             });
                             items.push({
+                                text: 'Storage Charge',
+                                fillStyle: 'rgba(139,92,246,0.25)',
+                                strokeStyle: '#8B5CF6',
+                                lineWidth: 2,
+                                pointStyle: 'rectRounded',
+                            });
+                            items.push({
                                 text: 'Demand',
                                 fillStyle: 'transparent',
                                 strokeStyle: 'rgba(220, 38, 38, 0.55)',
@@ -2149,7 +2245,7 @@ function initIncrementalMixChart() {
                     cornerRadius: 8,
                     filter: function(tooltipItem) {
                         if (tooltipItem.dataset._isGap || tooltipItem.dataset._isDemandLine) return false;
-                        return tooltipItem.parsed.y > 0;
+                        return tooltipItem.parsed.y !== 0;
                     },
                     callbacks: {
                         title: function(items) {
@@ -2165,13 +2261,17 @@ function initIncrementalMixChart() {
                             return title;
                         },
                         label: function(context) {
-                            return ` ${context.dataset.label}: ${context.parsed.y.toFixed(1)} TWh`;
+                            const v = context.parsed.y;
+                            if (context.dataset._isCharge) {
+                                return ` ${context.dataset.label}: ${Math.abs(v).toFixed(1)} TWh`;
+                            }
+                            return ` ${context.dataset.label}: ${v.toFixed(1)} TWh`;
                         }
                     }
                 },
                 datalabels: {
                     display: function(context) {
-                        if (context.dataset._isDemandLine || context.dataset._isGap) return false;
+                        if (context.dataset._isDemandLine || context.dataset._isGap || context.dataset._isCharge) return false;
                         const demTWh = context.chart._baseDemandTWh || 100;
                         return context.dataset.data[context.dataIndex] >= demTWh * 0.04;
                     },

@@ -1297,8 +1297,13 @@ def build_augmented_result(best_result, best_mix, floor_twh, deployed,
 
     # Augmented resource TWh
     aug['resource_twh'] = {res: augmented.get(res, 0) for res in RESOURCES}
-    aug['battery_twh'] = augmented.get('battery', 0)
-    aug['battery8_twh'] = 0
+    # Split battery TWh into 4hr and 8hr from dispatch percentages
+    if len(best_mix) >= 11:
+        bat4_pct, bat8_pct = float(best_mix[7]), float(best_mix[8])
+    else:
+        bat4_pct, bat8_pct = float(best_mix[6]), float(best_mix[7])
+    aug['battery_twh'] = bat4_pct / 100.0 * demand_twh
+    aug['battery8_twh'] = bat8_pct / 100.0 * demand_twh
     aug['ldes_twh'] = augmented.get('ldes', 0)
     aug['demand_twh'] = demand_twh
     aug['mix_raw'] = list(best_mix)

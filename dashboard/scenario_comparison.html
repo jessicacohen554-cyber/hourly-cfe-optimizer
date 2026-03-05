@@ -623,13 +623,17 @@ const COLORS = {
     gas: '#DC2626',
 };
 const RES_RGB = {
-    nuclear: '30,58,95', geothermal: '139,92,246', solar: '245,158,11', wind: '34,197,94',
-    ccs_ccgt: '13,148,136', hydro: '14,165,233', battery: '139,92,246', ldes: '236,72,153',
+    nuclear: '30,58,95', geothermal: '139,92,246', solar: '245,158,11',
+    wind: '34,197,94', offshore_wind: '0,150,136',
+    ccs_ccgt: '13,148,136', hydro: '14,165,233',
+    battery: '139,92,246', battery8: '167,139,250', ldes: '236,72,153',
     gas: '220,38,38',
 };
 const RES_LABELS = {
-    nuclear: 'Nuclear', geothermal: 'Geothermal', ccs_ccgt: 'CCS-CCGT', solar: 'Solar', wind: 'Wind',
-    hydro: 'Hydro', battery: 'Battery', ldes: 'LDES', gas: 'Gas Backup',
+    nuclear: 'Nuclear', geothermal: 'Geothermal', ccs_ccgt: 'CCS-CCGT',
+    solar: 'Solar', wind: 'Onshore Wind', offshore_wind: 'Offshore Wind',
+    hydro: 'Hydro', battery: 'Battery (4hr)', battery8: 'Battery (8hr)',
+    ldes: 'LDES', gas: 'Gas Backup',
 };
 
 // Clean firm tranche breakdown constants (from Step 3 cost optimization)
@@ -1145,9 +1149,9 @@ function createStripePattern(ctx, rgb) {
 }
 
 // Resources that have existing grid share (for "existing" bars)
-const EXISTING_RES = ['ccs_ccgt', 'hydro', 'wind', 'solar']; // nuclear existing handled by splitCleanFirm
+const EXISTING_RES = ['ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar']; // nuclear existing handled by splitCleanFirm
 // New-build resources (stacking order, bottom → top)
-const NEWBUILD_RES = ['solar', 'wind', 'hydro', 'battery', 'ldes', 'ccs_ccgt'];
+const NEWBUILD_RES = ['solar', 'wind', 'offshore_wind', 'hydro', 'ldes', 'ccs_ccgt'];
 // Nuclear/geothermal are built from the clean_firm breakdown, rendered separately
 
 let mixChartA, mixChartB;
@@ -1200,6 +1204,7 @@ function renderMixCharts(iso) {
             const newBuildTwh = {
                 solar: Math.max(0, (d.resource_twh.solar || 0) - (existingTwh.solar || 0)),
                 wind: Math.max(0, (d.resource_twh.wind || 0) - (existingTwh.wind || 0)),
+                offshore_wind: Math.max(0, (d.resource_twh.offshore_wind || 0) - (existingTwh.offshore_wind || 0)),
                 hydro: Math.max(0, (d.resource_twh.hydro || 0) - (existingTwh.hydro || 0)),
                 ccs_ccgt: Math.max(0, (d.resource_twh.ccs_ccgt || 0) - (existingTwh.ccs_ccgt || 0)),
                 nuclear_uprate: cf.nuclear_uprate,
@@ -1265,21 +1270,56 @@ function renderMixCharts(iso) {
             });
         }
 
-        // Battery storage (shown separately from generation — cap stale data at 20% of demand)
-        // battery_dispatch_pct in the source is 0–1%, so correct value ≈ 1% of demand max.
-        // The 20% cap guards against a data bug in older JSON where battery_twh = demand_twh.
-        const battData = traj.map(d => {
+        // Battery 4hr storage (from dispatch percentage × demand)
+        const BATT_RTE = 0.85;
+        const batt4Data = traj.map(d => {
             const dem = d.demand_twh || getDemandAtThreshold(iso, d.threshold);
-            const bat = Math.min(d.battery_twh || 0, 0.20 * dem);
-            return Math.round(bat);
+            return Math.round((d.battery_dispatch_pct || 0) / 100 * dem);
         });
-        if (battData.some(v => v > 0)) {
+        if (batt4Data.some(v => v > 0)) {
             datasets.push({
-                label: 'Battery Storage (new)',
-                data: battData,
+                label: 'Battery 4hr (new)',
+                data: batt4Data,
                 backgroundColor: 'rgba(' + RES_RGB.battery + ',0.55)',
                 borderColor: 'rgba(' + RES_RGB.battery + ',1)',
                 borderWidth: 1.5, borderRadius: 6, borderSkipped: 'start', stack: 'mix',
+            });
+        }
+
+        // Battery 8hr storage
+        const batt8Data = traj.map(d => {
+            const dem = d.demand_twh || getDemandAtThreshold(iso, d.threshold);
+            return Math.round((d.battery8_dispatch_pct || 0) / 100 * dem);
+        });
+        if (batt8Data.some(v => v > 0)) {
+            datasets.push({
+                label: 'Battery 8hr (new)',
+                data: batt8Data,
+                backgroundColor: 'rgba(' + RES_RGB.battery8 + ',0.55)',
+                borderColor: 'rgba(' + RES_RGB.battery8 + ',1)',
+                borderWidth: 1.5, borderRadius: 6, borderSkipped: 'start', stack: 'mix',
+            });
+        }
+
+        // Battery charge (negative bars below x-axis) — charge = dispatch / RTE
+        const batt4Charge = batt4Data.map(v => v > 0 ? -Math.round(v / BATT_RTE) : 0);
+        const batt8Charge = batt8Data.map(v => v > 0 ? -Math.round(v / BATT_RTE) : 0);
+        if (batt4Charge.some(v => v < 0)) {
+            datasets.push({
+                label: 'Battery 4hr Charge',
+                data: batt4Charge,
+                backgroundColor: 'rgba(' + RES_RGB.battery + ',0.25)',
+                borderColor: 'rgba(' + RES_RGB.battery + ',0.6)',
+                borderWidth: 1, borderRadius: 6, stack: 'charge',
+            });
+        }
+        if (batt8Charge.some(v => v < 0)) {
+            datasets.push({
+                label: 'Battery 8hr Charge',
+                data: batt8Charge,
+                backgroundColor: 'rgba(' + RES_RGB.battery8 + ',0.25)',
+                borderColor: 'rgba(' + RES_RGB.battery8 + ',0.6)',
+                borderWidth: 1, borderRadius: 6, stack: 'charge',
             });
         }
 
@@ -1314,7 +1354,8 @@ function renderMixCharts(iso) {
         // Battery and LDES are storage, not generation — excluded from curtailment.
         const curtailResources = [
             { key: 'solar', label: 'Solar', rgb: RES_RGB.solar },
-            { key: 'wind', label: 'Wind', rgb: RES_RGB.wind },
+            { key: 'wind', label: 'Onshore Wind', rgb: RES_RGB.wind },
+            { key: 'offshore_wind', label: 'Offshore Wind', rgb: RES_RGB.offshore_wind },
             { key: 'hydro', label: 'Hydro', rgb: RES_RGB.hydro },
             { key: 'nuclear_uprate', label: 'Nuclear', rgb: RES_RGB.nuclear, combineWith: 'nuclear_new' },
             { key: 'ccs_ccgt', label: 'CCS', rgb: RES_RGB.ccs_ccgt },
@@ -1367,13 +1408,24 @@ function renderMixCharts(iso) {
         traj.forEach(d => {
             const genTwh = Object.values(d.resource_twh).reduce((s, v) => s + v, 0);
             const dem = d.demand_twh || getDemandAtThreshold(iso, d.threshold);
-            // Cap battery at 20% of demand to guard against stale data
-            const bat = Math.min(d.battery_twh || 0, 0.20 * dem);
-            maxV = Math.max(maxV, genTwh + bat, dem);
+            const bat4 = (d.battery_dispatch_pct || 0) / 100 * dem;
+            const bat8 = (d.battery8_dispatch_pct || 0) / 100 * dem;
+            maxV = Math.max(maxV, genTwh + bat4 + bat8, dem);
         });
         return maxV;
     }
+    function computeMinStack(traj) {
+        let minV = 0;
+        traj.forEach(d => {
+            const dem = d.demand_twh || getDemandAtThreshold(iso, d.threshold);
+            const bat4Charge = (d.battery_dispatch_pct || 0) / 100 * dem / 0.85;
+            const bat8Charge = (d.battery8_dispatch_pct || 0) / 100 * dem / 0.85;
+            minV = Math.min(minV, -(bat4Charge + bat8Charge));
+        });
+        return minV;
+    }
     const sharedYMax = Math.ceil(Math.max(computeMaxStack(trajA), computeMaxStack(trajB)) / 50) * 50;
+    const sharedYMin = Math.floor(Math.min(computeMinStack(trajA), computeMinStack(trajB)) / 10) * 10;
 
     const opts = {
         responsive: true, maintainAspectRatio: false,
@@ -1413,7 +1465,7 @@ function renderMixCharts(iso) {
         },
         scales: {
             x: { stacked: true, ticks: { color: 'rgba(0,0,0,0.5)', font: { size: 9 }, maxRotation: 55 }, grid: { color: 'rgba(0,0,0,0.06)' } },
-            y: { stacked: true, max: sharedYMax, ticks: { color: 'rgba(0,0,0,0.5)' }, grid: { color: 'rgba(0,0,0,0.08)' }, title: { display: true, text: 'TWh', color: 'rgba(0,0,0,0.5)' } },
+            y: { stacked: true, min: sharedYMin, max: sharedYMax, ticks: { color: 'rgba(0,0,0,0.5)' }, grid: { color: 'rgba(0,0,0,0.08)' }, title: { display: true, text: 'TWh', color: 'rgba(0,0,0,0.5)' } },
         }
     };
 
