@@ -38,6 +38,8 @@ from pipeline_config import (
     OUTPUT_THRESHOLDS as _ALL_THRESHOLDS,
     DEMAND_GROWTH_RATES as _DEMAND_GROWTH_RATES_PC,
     THRESHOLD_TARGET_YEARS as _THRESHOLD_TARGET_YEARS_PC,
+    LCOE_TABLES, NUCLEAR_NEWBUILD_LCOE, CCS_LCOE_45Q_ON, UPRATE_LCOE,
+    GEOTHERMAL_LCOE, TX_TABLES,
 )
 
 # Consequential queue only operates at >= 50% (below 50% is pre-SBTi baseline)
@@ -465,8 +467,8 @@ def compute_zone_metrics(med_data, egrid, fossil_mix, demand_data, gen_profiles)
             zt_end = float(zone['end_thresh'])
             if zt_start not in iso_data or zt_end not in iso_data:
                 continue
-            # Skip zones entirely below existing clean floor (no new procurement)
-            if zt_end <= existing_pct:
+            # Skip zones at or below existing clean floor (no new procurement needed)
+            if zt_start < existing_pct:
                 continue
             d_start = iso_data[zt_start]
             d_end = iso_data[zt_end]
@@ -505,6 +507,19 @@ def compute_zone_metrics(med_data, egrid, fossil_mix, demand_data, gen_profiles)
             r['ldes'] = d['ldes_twh']
             return r
 
+        # ---- Per-resource LCOE lookup (Medium sensitivity) for MAC calculation ----
+        # MAC = (LCOE × new TWh) / CO2_displaced — uses actual resource cost, not system delta
+        resource_lcoes = {
+            'solar': LCOE_TABLES['solar']['Medium'][iso] + TX_TABLES['solar']['Medium'][iso],
+            'wind': LCOE_TABLES['wind']['Medium'][iso] + TX_TABLES['wind']['Medium'][iso],
+            'offshore_wind': LCOE_TABLES['offshore_wind']['Medium'].get(iso, 0) + TX_TABLES.get('offshore_wind', {}).get('Medium', {}).get(iso, 0),
+            'clean_firm': NUCLEAR_NEWBUILD_LCOE['M'][iso] + TX_TABLES['clean_firm']['Medium'][iso],
+            'ccs_ccgt': CCS_LCOE_45Q_ON['M'][iso] + TX_TABLES['ccs_ccgt']['Medium'][iso],
+            'hydro': 0,  # existing-only, $0
+            'battery': LCOE_TABLES['battery']['Medium'][iso],  # per-coeff cost, handled below
+            'ldes': LCOE_TABLES['ldes']['Medium'][iso],  # per-coeff cost, handled below
+        }
+
         # ---- Process each run ----
         for run_idx, (run_type, run_zones) in enumerate(runs):
             first_z = run_zones[0]
@@ -515,7 +530,6 @@ def compute_zone_metrics(med_data, egrid, fossil_mix, demand_data, gen_profiles)
                 # First run is distributed: start from EXISTING CLEAN FLOOR ($0 cost)
                 start_res = dict(existing_twh)
                 start_co2 = baseline_co2_mt
-                start_cost_per_mwh = 0  # existing = $0
                 start_gas_cost = iso_data[first_z['t_start']]['gas_cost']
                 start_gas_mw = iso_data[first_z['t_start']]['new_gas_mw']
                 start_match = existing_pct
@@ -524,9 +538,6 @@ def compute_zone_metrics(med_data, egrid, fossil_mix, demand_data, gen_profiles)
                 d = first_z['data_start']
                 start_res = _res_dict(d)
                 start_co2 = co2_at_threshold.get(first_z['t_start'], baseline_co2_mt)
-                # MAC numerator: clean-only LCOE = total_cost - gas_cost
-                # (Step 3 total_cost includes gas RA; subtract to isolate clean resource cost)
-                start_cost_per_mwh = d['total_cost'] - d['gas_cost']
                 start_gas_cost = d['gas_cost']
                 start_gas_mw = d['new_gas_mw']
                 start_match = d['match_score']
@@ -535,9 +546,6 @@ def compute_zone_metrics(med_data, egrid, fossil_mix, demand_data, gen_profiles)
             d_end = last_z['data_end']
             end_res = _res_dict(d_end)
             end_co2 = co2_at_threshold.get(last_z['t_end'], baseline_co2_mt)
-            # MAC numerator: clean-only LCOE = total_cost - gas_cost
-            # (Step 3 total_cost includes gas RA; subtract to isolate clean resource cost)
-            end_cost_per_mwh = d_end['total_cost'] - d_end['gas_cost']
             end_gas_cost = d_end['gas_cost']
             end_gas_mw = d_end['new_gas_mw']
             end_match = d_end['match_score']
@@ -548,9 +556,32 @@ def compute_zone_metrics(med_data, egrid, fossil_mix, demand_data, gen_profiles)
                 total_delta_res[res] = end_res.get(res, 0) - start_res.get(res, 0)
 
             total_delta_co2 = max(0, start_co2 - end_co2)
+            total_delta_clean_twh = sum(max(0, v) for v in total_delta_res.values())
+
+            # MAC numerator: sum(LCOE × delta_TWh) for each NEW resource added
+            # This correctly prices the marginal resources, not the system-average delta
+            mac_cost_total = 0.0
+            for res, delta_twh in total_delta_res.items():
+                if delta_twh > 0.01 and res != 'hydro':
+                    if res in ('battery', 'ldes'):
+                        # Storage costs are per-coefficient (bat_pct/100 × price).
+                        # delta_twh for storage = delta in (pct/100 * demand_twh)
+                        # Total cost = delta_pct/100 * price * demand_twh = delta_twh / demand_twh * price * demand_twh = delta_twh * price
+                        # But price is in $/MWh-demand units (per 1% of demand), so:
+                        # actual cost = delta_twh * resource_lcoes[res] (this gives $/MWh × TWh-demand = $ total / 1e6 scaling)
+                        mac_cost_total += delta_twh * resource_lcoes[res] * 1e6  # $
+                    else:
+                        mac_cost_total += delta_twh * resource_lcoes[res] * 1e6  # TWh * $/MWh * 1e6 MWh/TWh = $
+
+            # Also compute system-average delta for backward compat fields
+            if run_idx == 0 and run_type == 'distribute':
+                start_cost_per_mwh = 0
+            else:
+                d = first_z['data_start']
+                start_cost_per_mwh = d['total_cost'] - d['gas_cost']
+            end_cost_per_mwh = d_end['total_cost'] - d_end['gas_cost']
             total_delta_cost_per_mwh = end_cost_per_mwh - start_cost_per_mwh
             total_delta_cost_bn = total_delta_cost_per_mwh * demand_mwh / 1e9
-            total_delta_clean_twh = sum(max(0, v) for v in total_delta_res.values())
 
             # Get dispatch-based emission info
             _, _, displacement = compute_marginal_displaced_rate_dispatch(
@@ -562,13 +593,16 @@ def compute_zone_metrics(med_data, egrid, fossil_mix, demand_data, gen_profiles)
                 regional = egrid.get(iso, {})
                 ep_rate = regional.get('gas_co2_lb_per_mwh', 0.0) / 2204.62
 
-            # Clean-only LCOE at run endpoint (total_cost includes gas RA; subtract it)
+            # Clean-only LCOE at run endpoint
             newbuild_lcoe = d_end['total_cost'] - d_end['gas_cost']
             match_frac = end_match / 100.0
             lcoe_per_cfe = newbuild_lcoe / match_frac if match_frac > 0.01 else float('inf')
 
-            # MAC for the run
-            if total_delta_co2 > 0.001:
+            # MAC for the run: (LCOE × new TWh) / CO2 displaced
+            if total_delta_co2 > 0.001 and mac_cost_total > 0:
+                run_mac = (mac_cost_total / 1e6) / total_delta_co2  # $/tCO₂ (cost in $M, CO2 in Mt)
+            elif total_delta_co2 > 0.001:
+                # Fallback: use system-average delta if no new resources but CO2 displaced
                 run_mac = abs(total_delta_cost_bn * 1e3) / total_delta_co2  # $/tCO₂
             elif ep_rate > 0.0001:
                 run_mac = lcoe_per_cfe / ep_rate
@@ -596,8 +630,9 @@ def compute_zone_metrics(med_data, egrid, fossil_mix, demand_data, gen_profiles)
                 midpoint_year = (year_start + year_end) / 2
                 growth_factor = (1 + GROWTH_RATES[iso] / 100) ** (midpoint_year - 2025)
 
-                # Skip zones with no meaningful change (below existing clean floor)
-                if abs(zone_cost_per_mwh) < 0.01 and zone_co2 < 0.001:
+                # Skip zones with no meaningful resource change or CO2 displacement
+                zone_mac_cost = mac_cost_total * frac
+                if zone_mac_cost < 1 and zone_co2 < 0.001:
                     continue
 
                 # Interpolated match at zone end

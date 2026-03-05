@@ -562,7 +562,7 @@ def main():
     trajectories['pure_consequential'] = _build_trajectory(
         results_a, egrid, fossil_mix, demand_data, gen_profiles,
         dispatch_caches, cfr_cached, _traj_co2_cache, isos,
-        enforce_monotonic=True)
+        enforce_monotonic=False)  # Floor ratchet in _forward_step_optimization already handles monotonicity
     trajectories['hourly_matching'] = _build_trajectory(
         results_b, egrid, fossil_mix, demand_data, gen_profiles,
         dispatch_caches, cfr_cached, _traj_co2_cache, isos,
