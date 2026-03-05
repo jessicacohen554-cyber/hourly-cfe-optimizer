@@ -11,7 +11,7 @@ Algorithm:
     2. At each threshold T (SBTi year mapping):
        a. Compute demand at year Y with growth
        b. Dispatch floor resources → compute CO2 baseline (path-dependent)
-       c. Sample archetypes from PFS + step1d + step1d2 that respect floor
+       c. Sample archetypes from PFS (raw, fine, floor, storage) that respect floor
        d. Score: new_build_cost / CO2_avoided  ($/mtCO2)
        e. Winner = argmin(MAC) with overshoot ≤ 1%
        f. Phase 2: refine around best archetypes
@@ -30,7 +30,7 @@ CO2 model: Merit-order fossil retirement (coal → oil → gas).
   - Path-dependent baseline: CO2 after prior threshold procurement
   - Hourly dispatch reconstruction for shape-accurate fossil displacement
 
-Input:  data/step1-pfs-parquets/, data/step1d-storage-parquets/, data/step1d2-storage-parquets/
+Input:  data/step1-pfs-parquets/ (raw_pfs, fine_pfs, floor_pfs, storage)
 Output: data/step5-post-processing/mac_queue/mac_queue_{ISO}.parquet + mac_queue_summary.json
 """
 
@@ -106,8 +106,6 @@ OUTPUT_DIR = os.path.join(PROJECT_ROOT, 'data', 'step5-post-processing', 'mac_qu
 
 PFS_DIRS = [
     os.path.join(PROJECT_ROOT, 'data', 'step1-pfs-parquets'),
-    os.path.join(PROJECT_ROOT, 'data', 'step1d-storage-parquets'),
-    os.path.join(PROJECT_ROOT, 'data', 'step1d2-storage-parquets'),
 ]
 
 RESOURCE_COLS = ['clean_firm', 'solar', 'wind', 'hydro', 'offshore_wind', 'geothermal']

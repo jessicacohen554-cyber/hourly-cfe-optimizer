@@ -1761,10 +1761,10 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
               f"(curtailment: {n_with_curtailment:,}, gated: {n_gated:,} insufficient surplus)")
 
         # Identify force_1d candidates: mixes with curtailment & surplus headroom
-        # that are outside step1d's normal near-miss window. These get flagged so
-        # step1d includes them even if they'd normally be excluded.
+        # that are outside step1c's normal near-miss window. These get flagged so
+        # step1c includes them even if they'd normally be excluded.
         # force_1d = has curtailment AND can bridge AND score < (target - 2×nm_width)
-        # (i.e., outside 2× the tiered near-miss window that step1d uses)
+        # (i.e., outside 2× the tiered near-miss window that step1c uses)
         force_1d_width = nm_width * 2.0
         force_1d_mask = (has_curtailment & can_bridge &
                          (nm_scores < (target - force_1d_width)))
@@ -1848,7 +1848,7 @@ def optimize_threshold(iso, threshold, demand_arr, supply_matrix,
               f"({len(nm_valid):,} curtailing / {n_combined_nm:,} near-miss)")
         _maybe_flush()
         # Write force_1d candidates: mixes with surplus headroom but outside
-        # step1d's normal near-miss window. Step1d can read this to expand its pool.
+        # step1c's normal near-miss window. Step1d can read this to expand its pool.
         if len(force_1d_indices) > 0:
             _write_force_1d_candidates(
                 iso, threshold, combined_nm, force_1d_indices,
@@ -2245,10 +2245,10 @@ def _force_1d_path(iso):
 
 def _write_force_1d_candidates(iso, threshold, combined_nm, force_indices,
                                 nm_scores, total_surplus, max_lift, score_gap, rtypes):
-    """Write force_1d candidate mixes to a parquet file for step1d to pick up.
+    """Write force_1d candidate mixes to a parquet file for step1c to pick up.
 
     These are mixes that have sufficient curtailment surplus to theoretically
-    bridge the gap but are outside step1d's normal near-miss window. Step1d
+    bridge the gap but are outside step1c's normal near-miss window. Step1d
     can read this file and include them in its candidate pool.
 
     Appends to existing file (across thresholds within an ISO).

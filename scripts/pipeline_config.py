@@ -71,7 +71,7 @@ def get_resource_cols(iso):
 
 # All 21 thresholds used across the pipeline
 THRESHOLDS = [
-    10.0, 20.0, 30.0, 40.0,          # Coarse range (no step1d, no fine zone)
+    10.0, 20.0, 30.0, 40.0,          # Coarse range (no step1c, no fine zone)
     50.0, 55.0, 60.0, 65.0,          # Mid range (5% steps)
     70.0, 75.0, 80.0,                # Upper-mid range
     85.0, 87.5, 90.0, 92.5,          # Inflection zone (2.5% steps)
@@ -79,10 +79,10 @@ THRESHOLDS = [
     99.0, 99.5, 99.9, 99.99,         # Last mile
 ]
 
-# Active thresholds (full pipeline coverage with step1d storage refinement)
+# Active thresholds (full pipeline coverage with step1c storage refinement)
 ACTIVE_THRESHOLDS = [t for t in THRESHOLDS if t >= 50.0]  # 17 thresholds
 
-# Coarse-only thresholds (no step1d, no fine zone search)
+# Coarse-only thresholds (no step1c, no fine zone search)
 COARSE_THRESHOLDS = [t for t in THRESHOLDS if t < 50.0]   # 4 thresholds
 
 THRESHOLD_SET = set(THRESHOLDS)
@@ -527,7 +527,7 @@ PATHS = {
     'project_root':     _PROJECT_ROOT,
     'data':             os.path.join(_PROJECT_ROOT, 'data'),
     'step1_pfs':        os.path.join(_PROJECT_ROOT, 'data', 'step1-pfs-parquets'),
-    'step1d_storage':   os.path.join(_PROJECT_ROOT, 'data', 'step1d-storage-parquets'),
+    'step1_storage':    os.path.join(_PROJECT_ROOT, 'data', 'step1-pfs-parquets'),  # storage files live alongside PFS
     'step2_ef':         os.path.join(_PROJECT_ROOT, 'data', 'step2-ef-parquets'),
     'step3_cost':       os.path.join(_PROJECT_ROOT, 'data', 'step3-cost-opt-parquets'),
     'step4_post':       os.path.join(_PROJECT_ROOT, 'data', 'step5-post-processing'),  # legacy dir name
@@ -548,7 +548,7 @@ PATHS = {
 #
 # Examples:
 #   step1_pfs_CAISO_t90.parquet      (Step 1 PFS)
-#   step1d_storage_PJM_t65.parquet   (Step 1d storage refinement)
+#   PJM_t65_storage.parquet          (Step 1C storage refinement, in step1-pfs-parquets/)
 #   step2_ef_CAISO_t90.parquet       (Step 2 efficient frontier)
 #   step3_co_CAISO.parquet           (Step 3 cost optimization, all thresholds)
 #   step4_CAISO.parquet              (Step 4 gas/CCS, all thresholds)
@@ -561,8 +561,8 @@ def step1_pfs_filename(iso, threshold):
     t_str = f'{threshold:g}'
     return f'{iso}_t{t_str}_raw_pfs.parquet'
 
-def step1d_storage_filename(iso, threshold, batch=None):
-    """Step 1d storage filename: {ISO}_t{T}_storage.parquet or _b{N}.parquet"""
+def step1c_storage_filename(iso, threshold, batch=None):
+    """Step 1C storage filename: {ISO}_t{T}_storage.parquet or _b{N}.parquet (in step1-pfs-parquets/)"""
     t_str = f'{threshold:g}'
     if batch is not None:
         return f'{iso}_t{t_str}_storage_b{batch}.parquet'

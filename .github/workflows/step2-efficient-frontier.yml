@@ -204,12 +204,8 @@ jobs:
           echo "Found PFS parquets for ${{ matrix.iso }}:"
           ls -lh data/step1-pfs-parquets/${{ matrix.iso }}_t* | wc -l
           echo "files"
-          for SDIR in data/step1d-storage-parquets data/step1d2-storage-parquets; do
-            if [ -d "$SDIR" ]; then
-              COUNT=$(ls "$SDIR"/${{ matrix.iso }}_* 2>/dev/null | wc -l)
-              echo "$(basename $SDIR): $COUNT files"
-            fi
-          done
+          STORAGE_COUNT=$(ls data/step1-pfs-parquets/${{ matrix.iso }}_*_storage*.parquet 2>/dev/null | wc -l)
+          echo "Storage files: $STORAGE_COUNT"
 
       - name: Set up Python
         uses: actions/setup-python@v5

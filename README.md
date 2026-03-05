@@ -31,8 +31,8 @@ The optimizer runs as a 10-step pipeline (Steps 0–9). Step 1 is expensive (hou
 | Step | Script(s) | What It Does | When to Re-run |
 |------|-----------|-------------|---------------|
 | **Step 0** | `step0_*.py` (8 scripts) | **Data Acquisition** — EIA hourly profiles (multi-year 2021–2025), eGRID emissions, actual LMP data, offshore wind (NREL NOW-23), UTC fixes, MISO/SPP consolidation. Annual cadence. | When source data updates. |
-| **Step 1** | `step1_pfs_generator.py` (monolithic) or 1A+1B+1C (modular) | **Physics Feasible Space** — 4D/5D adaptive grid search × procurement × storage. Output: `data/step1-pfs-parquets/` + `data/step1d-storage-parquets/`. | Only if dispatch logic, generation profiles, or demand curves change. |
-| **Step 2** | `step2_efficient_frontier.py` | **Efficient Frontier** — Extracts non-dominated mixes from PFS. Reads both step1 and step1d parquets. Output: `data/step2-ef-parquets/`. | Only if PFS or filtering criteria change. |
+| **Step 1** | `step1_pfs_generator.py` (monolithic) or 1A+1B+1C (modular) | **Physics Feasible Space** — 4D/5D adaptive grid search × procurement × storage. Output: `data/step1-pfs-parquets/` (raw, fine, floor, storage all in one dir). | Only if dispatch logic, generation profiles, or demand curves change. |
+| **Step 2** | `step2_efficient_frontier.py` | **Efficient Frontier** — Extracts non-dominated mixes from PFS. Reads all file types from `data/step1-pfs-parquets/`. Output: `data/step2-ef-parquets/`. | Only if PFS or filtering criteria change. |
 | **Step 3** | `step3a_cost_optimization.py` + `step3b_track_nb_ctr.py` | **Cost Optimization** — 3A: Track 1 baseline (5,832 combos, 17,496 CAISO). 3B: Track 2 (NB) + Track 3 (CTR). Output: `data/step3-cost-opt-parquets/`. | When cost assumptions change. |
 | **Step 4** | `step4_build_dispatch_cache.py` | **Dispatch Cache** — 8,760-hour dispatch for all unique mixes. NPZ v2. | After Step 3. |
 
@@ -42,7 +42,7 @@ The optimizer runs as a 10-step pipeline (Steps 0–9). Step 1 is expensive (hou
 |----------|-----------|-------------|
 | **1A: Generate+Score** | `step1a_generate_mixes.py` → `step1b_score_mixes.py` | Generates resource fraction combos (4D/5D grid), scores against hourly demand. |
 | **1B: Zone Search** | `step1b_zone_search.py` | Fine-zone targeted search per threshold. |
-| **1C: Storage Refinement** | `step1c_storage_refinement.py` | Fills storage gaps (near-miss + lean-mix strategies). Output: `data/step1d-storage-parquets/`. |
+| **1C: Storage Refinement** | `step1c_storage_refinement.py` | Fills storage gaps (near-miss + lean-mix strategies). Output: `data/step1-pfs-parquets/` (*_storage*.parquet). |
 
 Utilities: `step1_pfs_generator.py` (monolithic), `step1_prior_windows.py` (search windows from prior EF).
 
@@ -191,8 +191,7 @@ hourly-cfe-optimizer/
 │   ├── calibrate_lmp_model.py              # LMP model calibration
 │   └── ...                                 # Additional utilities
 ├── data/
-│   ├── step1-pfs-parquets/                 # PFS per-ISO/threshold (Step 1)
-│   ├── step1d-storage-parquets/            # Storage refinement (Step 1C)
+│   ├── step1-pfs-parquets/                 # PFS + storage per-ISO/threshold (Steps 1A-1C)
 │   ├── step2-ef-parquets/                  # Efficient frontier (Step 2)
 │   ├── step3-cost-opt-parquets/            # Cost optimization (Step 3)
 │   ├── step5-post-processing/              # All post-processing outputs
