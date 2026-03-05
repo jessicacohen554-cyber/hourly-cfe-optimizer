@@ -41,6 +41,8 @@ ISO_TIMEZONES = {
     'PJM':   ZoneInfo('America/New_York'),      # UTC-5 (EST) / UTC-4 (EDT)
     'NYISO': ZoneInfo('America/New_York'),      # UTC-5 (EST) / UTC-4 (EDT)
     'NEISO': ZoneInfo('America/New_York'),      # UTC-5 (EST) / UTC-4 (EDT)
+    'MISO':  ZoneInfo('America/Chicago'),       # UTC-6 (CST) / UTC-5 (CDT)
+    'SPP':   ZoneInfo('America/Chicago'),       # UTC-6 (CST) / UTC-5 (CDT)
 }
 
 # Standard (winter) UTC offsets in hours
@@ -50,6 +52,8 @@ STD_OFFSETS = {
     'PJM':   -5,
     'NYISO': -5,
     'NEISO': -5,
+    'MISO':  -6,
+    'SPP':   -6,
 }
 
 
