@@ -130,7 +130,7 @@
 
 **Step 4: Dispatch Cache** (`step4_build_dispatch_cache.py`):
 - Pre-computes 8,760-hour dispatch for all unique mixes. Versioned NPZ cache (v2) with per-resource matched/surplus + charge profiles.
-- Output: `data/step5-post-processing/dispatch_cache/`. **Run after Step 3.**
+- Output: `data/step4-dispatch-cache/`. **Run after Step 3.**
 
 **Step 5: Core Analysis** (6 scripts, all parallel after Step 4, output to `data/step5-post-processing/`):
 - `step5a_compute_co2.py` — CO₂ dispatch-stack model. Merit-order retirement (coal → oil → gas). Coal/oil capped at 2025 TWh. **Run before Step 6A (MAC stats).**
