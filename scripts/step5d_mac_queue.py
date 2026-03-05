@@ -152,14 +152,14 @@ def _load_pfs_files(iso, threshold):
         for pat in patterns:
             if os.path.isfile(pat):
                 try:
-                    df = pd.read_parquet(pat, columns=MIX_COLS)
+                    df = pd.read_parquet(pat)
                     dfs.append(df)
                 except Exception:
                     pass
 
         for bf in batch_files:
             try:
-                df = pd.read_parquet(bf, columns=MIX_COLS)
+                df = pd.read_parquet(bf)
                 dfs.append(df)
             except Exception:
                 pass
