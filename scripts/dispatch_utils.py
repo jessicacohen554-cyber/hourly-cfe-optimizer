@@ -254,68 +254,53 @@ _DISPATCH_ORDER_INDICES = np.array([RESOURCE_TYPES.index(r) for r in DISPATCH_OR
                                     dtype=np.int64)
 
 # Cache version — bump when dispatch algorithm or field set changes
-CACHE_VERSION = 3  # v3 = offshore wind added (6 resource types)
+CACHE_VERSION = 4  # v4 = sequential dispatch aligned with step1_pfs_generator
 
 
 @njit(cache=True)
 def _battery_loop(residual_surplus, residual_gap, dispatch_profile,
-                  num_days, daily_target, power_rating, efficiency):
-    """Inner loop for daily battery dispatch — Numba-compiled."""
-    for day in range(num_days):
-        ds = day * 24
-        de = ds + 24
-        day_surplus = residual_surplus[ds:de].copy()
-        day_gap = residual_gap[ds:de].copy()
+                  capacity, power_rating, efficiency, window_hours, total_hours):
+    """Inner loop for battery dispatch — sequential hour-by-hour, matching step1_pfs_generator.
 
-        max_from_charge = 0.0
-        gap_sum = 0.0
-        for i in range(24):
-            if day_surplus[i] > 0:
-                max_from_charge += day_surplus[i]
-            if day_gap[i] > 0:
-                gap_sum += day_gap[i]
-        max_from_charge *= efficiency
-
-        actual_dispatch = daily_target
-        if max_from_charge < actual_dispatch:
-            actual_dispatch = max_from_charge
-        if gap_sum < actual_dispatch:
-            actual_dispatch = gap_sum
-        if actual_dispatch <= 0:
-            continue
-
-        required_charge = actual_dispatch / efficiency
-
-        # Charge from largest surpluses
-        sorted_idx = np.argsort(-day_surplus)
-        remaining_charge = required_charge
-        for j in range(24):
-            idx = sorted_idx[j]
-            if remaining_charge <= 0 or day_surplus[idx] <= 0:
-                break
-            amt = day_surplus[idx]
-            if power_rating < amt:
-                amt = power_rating
-            if remaining_charge < amt:
-                amt = remaining_charge
-            residual_surplus[ds + idx] -= amt
-            remaining_charge -= amt
-
-        # Discharge to largest gaps
-        sorted_gap = np.argsort(-day_gap)
-        remaining_dispatch = actual_dispatch
-        for j in range(24):
-            idx = sorted_gap[j]
-            if remaining_dispatch <= 0 or day_gap[idx] <= 0:
-                break
-            amt = day_gap[idx]
-            if power_rating < amt:
-                amt = power_rating
-            if remaining_dispatch < amt:
-                amt = remaining_dispatch
-            dispatch_profile[ds + idx] = amt
-            residual_gap[ds + idx] -= amt
-            remaining_dispatch -= amt
+    Args:
+        capacity: energy capacity as fraction of annual demand
+        power_rating: max charge/discharge power per hour (capacity / duration_hours)
+        efficiency: round-trip efficiency
+        window_hours: 24 for 4hr battery, 48 for 8hr battery
+        total_hours: 8760
+    """
+    n_windows = (total_hours + window_hours - 1) // window_hours
+    for w in range(n_windows):
+        ws = w * window_hours
+        we = ws + window_hours
+        if we > total_hours:
+            we = total_hours
+        # Charge pass: sequential hour-by-hour
+        stored = 0.0
+        for h in range(ws, we):
+            s = residual_surplus[h]
+            if s > 0.0 and stored < capacity:
+                charge = s
+                if charge > power_rating:
+                    charge = power_rating
+                remaining = capacity - stored
+                if charge > remaining:
+                    charge = remaining
+                stored += charge
+                residual_surplus[h] -= charge
+        # Discharge pass: sequential hour-by-hour
+        available = stored * efficiency
+        for h in range(ws, we):
+            g = residual_gap[h]
+            if g > 0.0 and available > 0.0:
+                discharge = g
+                if discharge > power_rating:
+                    discharge = power_rating
+                if discharge > available:
+                    discharge = available
+                dispatch_profile[h] = discharge
+                residual_gap[h] -= discharge
+                available -= discharge
     return dispatch_profile
 
 
@@ -323,7 +308,12 @@ def _battery_loop(residual_surplus, residual_gap, dispatch_profile,
 def _ldes_loop(residual_surplus, residual_gap, dispatch_profile,
                energy_capacity, power_rating, ldes_efficiency,
                window_hours, total_hours):
-    """Inner loop for LDES multi-day dispatch — Numba-compiled."""
+    """Inner loop for LDES/H2 multi-day dispatch — sequential hour-by-hour, matching step1.
+
+    Note: charge phase does NOT subtract from residual_surplus, matching step1_pfs_generator
+    behavior (lines 742-751). Discharge phase DOES subtract from residual_gap so downstream
+    storage (H2) sees post-LDES gaps. SOC carries over between windows.
+    """
     state_of_charge = 0.0
     num_windows = (total_hours + window_hours - 1) // window_hours
 
@@ -332,111 +322,75 @@ def _ldes_loop(residual_surplus, residual_gap, dispatch_profile,
         w_end = w_start + window_hours
         if w_end > total_hours:
             w_end = total_hours
-        w_len = w_end - w_start
 
-        w_surplus = residual_surplus[w_start:w_end].copy()
-        w_gap = residual_gap[w_start:w_end].copy()
-
-        # Charge from surplus
-        surplus_indices = np.argsort(-w_surplus)
-        for j in range(w_len):
-            idx = surplus_indices[j]
-            if w_surplus[idx] <= 0:
-                break
-            space = energy_capacity - state_of_charge
-            if space <= 0:
-                break
-            charge_amt = w_surplus[idx]
-            if power_rating < charge_amt:
-                charge_amt = power_rating
-            if space < charge_amt:
-                charge_amt = space
-            if charge_amt > 0:
+        # Charge pass: sequential hour-by-hour
+        for h in range(w_start, w_end):
+            s = residual_surplus[h]
+            if s > 0.0 and state_of_charge < energy_capacity:
+                charge_amt = s
+                if charge_amt > power_rating:
+                    charge_amt = power_rating
+                space = energy_capacity - state_of_charge
+                if charge_amt > space:
+                    charge_amt = space
                 state_of_charge += charge_amt
+                # Note: NOT subtracting from residual_surplus — matches step1
 
-        # Discharge to gaps
-        gap_indices = np.argsort(-w_gap)
-        for j in range(w_len):
-            idx = gap_indices[j]
-            if w_gap[idx] <= 0:
-                break
-            avail = state_of_charge * ldes_efficiency
-            if avail <= 0:
-                break
-            dispatch_amt = w_gap[idx]
-            if power_rating < dispatch_amt:
-                dispatch_amt = power_rating
-            if avail < dispatch_amt:
-                dispatch_amt = avail
-            if dispatch_amt > 0:
-                dispatch_profile[w_start + idx] = dispatch_amt
+        # Discharge pass: sequential hour-by-hour
+        for h in range(w_start, w_end):
+            g = residual_gap[h]
+            if g > 0.0 and state_of_charge > 0.0:
+                avail = state_of_charge * ldes_efficiency
+                dispatch_amt = g
+                if dispatch_amt > power_rating:
+                    dispatch_amt = power_rating
+                if dispatch_amt > avail:
+                    dispatch_amt = avail
+                dispatch_profile[h] = dispatch_amt
                 state_of_charge -= dispatch_amt / ldes_efficiency
-                residual_gap[w_start + idx] -= dispatch_amt
+                residual_gap[h] -= dispatch_amt
 
     return dispatch_profile
 
 
 @njit(cache=True)
 def _battery_loop_detailed(residual_surplus, residual_gap, dispatch_profile,
-                           charge_profile, num_days, daily_target, power_rating,
-                           efficiency):
-    """Inner loop for daily battery dispatch with charge tracking — Numba-compiled."""
-    for day in range(num_days):
-        ds = day * 24
-        de = ds + 24
-        day_surplus = residual_surplus[ds:de].copy()
-        day_gap = residual_gap[ds:de].copy()
-
-        max_from_charge = 0.0
-        gap_sum = 0.0
-        for i in range(24):
-            if day_surplus[i] > 0:
-                max_from_charge += day_surplus[i]
-            if day_gap[i] > 0:
-                gap_sum += day_gap[i]
-        max_from_charge *= efficiency
-
-        actual_dispatch = daily_target
-        if max_from_charge < actual_dispatch:
-            actual_dispatch = max_from_charge
-        if gap_sum < actual_dispatch:
-            actual_dispatch = gap_sum
-        if actual_dispatch <= 0:
-            continue
-
-        required_charge = actual_dispatch / efficiency
-
-        # Charge from largest surpluses
-        sorted_idx = np.argsort(-day_surplus)
-        remaining_charge = required_charge
-        for j in range(24):
-            idx = sorted_idx[j]
-            if remaining_charge <= 0 or day_surplus[idx] <= 0:
-                break
-            amt = day_surplus[idx]
-            if power_rating < amt:
-                amt = power_rating
-            if remaining_charge < amt:
-                amt = remaining_charge
-            residual_surplus[ds + idx] -= amt
-            charge_profile[ds + idx] += amt
-            remaining_charge -= amt
-
-        # Discharge to largest gaps
-        sorted_gap = np.argsort(-day_gap)
-        remaining_dispatch = actual_dispatch
-        for j in range(24):
-            idx = sorted_gap[j]
-            if remaining_dispatch <= 0 or day_gap[idx] <= 0:
-                break
-            amt = day_gap[idx]
-            if power_rating < amt:
-                amt = power_rating
-            if remaining_dispatch < amt:
-                amt = remaining_dispatch
-            dispatch_profile[ds + idx] = amt
-            residual_gap[ds + idx] -= amt
-            remaining_dispatch -= amt
+                           charge_profile, capacity, power_rating, efficiency,
+                           window_hours, total_hours):
+    """Battery dispatch with charge tracking — sequential hour-by-hour, matching step1."""
+    n_windows = (total_hours + window_hours - 1) // window_hours
+    for w in range(n_windows):
+        ws = w * window_hours
+        we = ws + window_hours
+        if we > total_hours:
+            we = total_hours
+        # Charge pass: sequential hour-by-hour
+        stored = 0.0
+        for h in range(ws, we):
+            s = residual_surplus[h]
+            if s > 0.0 and stored < capacity:
+                charge = s
+                if charge > power_rating:
+                    charge = power_rating
+                remaining = capacity - stored
+                if charge > remaining:
+                    charge = remaining
+                stored += charge
+                residual_surplus[h] -= charge
+                charge_profile[h] += charge
+        # Discharge pass: sequential hour-by-hour
+        available = stored * efficiency
+        for h in range(ws, we):
+            g = residual_gap[h]
+            if g > 0.0 and available > 0.0:
+                discharge = g
+                if discharge > power_rating:
+                    discharge = power_rating
+                if discharge > available:
+                    discharge = available
+                dispatch_profile[h] = discharge
+                residual_gap[h] -= discharge
+                available -= discharge
     return dispatch_profile, charge_profile
 
 
@@ -444,7 +398,7 @@ def _battery_loop_detailed(residual_surplus, residual_gap, dispatch_profile,
 def _ldes_loop_detailed(residual_surplus, residual_gap, dispatch_profile,
                         charge_profile, energy_capacity, power_rating,
                         ldes_efficiency, window_hours, total_hours):
-    """Inner loop for LDES multi-day dispatch with charge tracking — Numba-compiled."""
+    """LDES/H2 dispatch with charge tracking — sequential hour-by-hour, matching step1."""
     state_of_charge = 0.0
     num_windows = (total_hours + window_hours - 1) // window_hours
 
@@ -453,68 +407,56 @@ def _ldes_loop_detailed(residual_surplus, residual_gap, dispatch_profile,
         w_end = w_start + window_hours
         if w_end > total_hours:
             w_end = total_hours
-        w_len = w_end - w_start
 
-        w_surplus = residual_surplus[w_start:w_end].copy()
-        w_gap = residual_gap[w_start:w_end].copy()
-
-        # Charge from surplus
-        surplus_indices = np.argsort(-w_surplus)
-        for j in range(w_len):
-            idx = surplus_indices[j]
-            if w_surplus[idx] <= 0:
-                break
-            space = energy_capacity - state_of_charge
-            if space <= 0:
-                break
-            charge_amt = w_surplus[idx]
-            if power_rating < charge_amt:
-                charge_amt = power_rating
-            if space < charge_amt:
-                charge_amt = space
-            if charge_amt > 0:
+        # Charge pass: sequential hour-by-hour
+        for h in range(w_start, w_end):
+            s = residual_surplus[h]
+            if s > 0.0 and state_of_charge < energy_capacity:
+                charge_amt = s
+                if charge_amt > power_rating:
+                    charge_amt = power_rating
+                space = energy_capacity - state_of_charge
+                if charge_amt > space:
+                    charge_amt = space
                 state_of_charge += charge_amt
-                charge_profile[w_start + idx] += charge_amt
+                charge_profile[h] += charge_amt
+                # Note: NOT subtracting from residual_surplus — matches step1
 
-        # Discharge to gaps
-        gap_indices = np.argsort(-w_gap)
-        for j in range(w_len):
-            idx = gap_indices[j]
-            if w_gap[idx] <= 0:
-                break
-            avail = state_of_charge * ldes_efficiency
-            if avail <= 0:
-                break
-            dispatch_amt = w_gap[idx]
-            if power_rating < dispatch_amt:
-                dispatch_amt = power_rating
-            if avail < dispatch_amt:
-                dispatch_amt = avail
-            if dispatch_amt > 0:
-                dispatch_profile[w_start + idx] = dispatch_amt
+        # Discharge pass: sequential hour-by-hour
+        for h in range(w_start, w_end):
+            g = residual_gap[h]
+            if g > 0.0 and state_of_charge > 0.0:
+                avail = state_of_charge * ldes_efficiency
+                dispatch_amt = g
+                if dispatch_amt > power_rating:
+                    dispatch_amt = power_rating
+                if dispatch_amt > avail:
+                    dispatch_amt = avail
+                dispatch_profile[h] = dispatch_amt
                 state_of_charge -= dispatch_amt / ldes_efficiency
-                residual_gap[w_start + idx] -= dispatch_amt
+                residual_gap[h] -= dispatch_amt
 
     return dispatch_profile, charge_profile
 
 
 def _dispatch_battery_detailed(residual_surplus, residual_gap, dispatch_pct,
-                                duration_hours, efficiency):
-    """Daily-cycle battery dispatch with charge tracking. Modifies residual arrays in-place."""
+                                duration_hours, efficiency, window_hours=24):
+    """Battery dispatch with charge tracking. Modifies residual arrays in-place.
+
+    Args:
+        window_hours: 24 for 4hr battery (daily), 48 for 8hr battery (2-day)
+    """
     dispatch_profile = np.zeros(H, dtype=np.float64)
     charge_profile = np.zeros(H, dtype=np.float64)
     if dispatch_pct <= 0:
         return dispatch_profile, charge_profile
 
-    # dispatch_pct is battery energy capacity as % of annual demand (matching Step 1)
-    # e.g. dispatch_pct=0.01 → capacity = 0.0001 of annual demand energy
-    daily_target = dispatch_pct / 100.0
-    num_days = H // 24
-    power_rating = daily_target / duration_hours
+    capacity = dispatch_pct / 100.0
+    power_rating = capacity / duration_hours
 
     return _battery_loop_detailed(residual_surplus, residual_gap, dispatch_profile,
-                                   charge_profile, num_days, daily_target,
-                                   power_rating, efficiency)
+                                   charge_profile, capacity, power_rating,
+                                   efficiency, window_hours, H)
 
 
 def _dispatch_ldes_detailed(residual_surplus, residual_gap, dispatch_pct, demand_arr):
@@ -637,20 +579,21 @@ def _compute_per_resource_dispatch(demand_arr, supply_profiles, resource_pcts,
 
 
 def _dispatch_battery(residual_surplus, residual_gap, dispatch_pct, duration_hours,
-                      efficiency):
-    """Daily-cycle battery dispatch (4hr or 8hr). Modifies residual arrays in-place."""
+                      efficiency, window_hours=24):
+    """Battery dispatch (4hr or 8hr). Modifies residual arrays in-place.
+
+    Args:
+        window_hours: 24 for 4hr battery (daily), 48 for 8hr battery (2-day)
+    """
     dispatch_profile = np.zeros(H, dtype=np.float64)
     if dispatch_pct <= 0:
         return dispatch_profile
 
-    # dispatch_pct is battery energy capacity as % of annual demand (matching Step 1)
-    # e.g. dispatch_pct=0.01 → capacity = 0.0001 of annual demand energy
-    daily_target = dispatch_pct / 100.0
-    num_days = H // 24
-    power_rating = daily_target / duration_hours
+    capacity = dispatch_pct / 100.0
+    power_rating = capacity / duration_hours
 
     return _battery_loop(residual_surplus, residual_gap, dispatch_profile,
-                         num_days, daily_target, power_rating, efficiency)
+                         capacity, power_rating, efficiency, window_hours, H)
 
 
 def _dispatch_ldes(residual_surplus, residual_gap, dispatch_pct, demand_arr):
@@ -754,7 +697,8 @@ def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
             battery_dispatch_pct, BATTERY_DURATION_HOURS, BATTERY_EFFICIENCY)
         battery8_profile, battery8_charge = _dispatch_battery_detailed(
             residual_surplus, residual_gap,
-            battery8_dispatch_pct, BATTERY8_DURATION_HOURS, BATTERY8_EFFICIENCY)
+            battery8_dispatch_pct, BATTERY8_DURATION_HOURS, BATTERY8_EFFICIENCY,
+            window_hours=48)
         ldes_profile, ldes_charge = _dispatch_ldes_detailed(
             residual_surplus, residual_gap,
             ldes_dispatch_pct, demand_arr)
@@ -767,7 +711,8 @@ def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
             battery_dispatch_pct, BATTERY_DURATION_HOURS, BATTERY_EFFICIENCY)
         battery8_profile = _dispatch_battery(
             residual_surplus, residual_gap,
-            battery8_dispatch_pct, BATTERY8_DURATION_HOURS, BATTERY8_EFFICIENCY)
+            battery8_dispatch_pct, BATTERY8_DURATION_HOURS, BATTERY8_EFFICIENCY,
+            window_hours=48)
         ldes_profile = _dispatch_ldes(
             residual_surplus, residual_gap,
             ldes_dispatch_pct, demand_arr)
