@@ -2620,15 +2620,17 @@ def main():
             return len(chunk)
 
         buf = []
-        for row in row_iter:
-            buf.append(row)
-            if len(buf) >= chunk_size:
+        try:
+            for row in row_iter:
+                buf.append(row)
+                if len(buf) >= chunk_size:
+                    total += _flush(buf)
+                    buf = []
+            if buf:
                 total += _flush(buf)
-                buf = []
-        if buf:
-            total += _flush(buf)
-        if writer is not None:
-            writer.close()
+        finally:
+            if writer is not None:
+                writer.close()
         return total
 
     # Collect lightweight summary data BEFORE the save loop deletes results.
