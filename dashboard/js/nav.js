@@ -196,14 +196,13 @@
     // --- Navigation Structure ---
     // Top-level: 4 items (Home, The Grid, Explore mega-menu, Research dropdown)
     //
-    // "Explore" is a mega-menu with 3 columns:
-    //   Economics | Markets & Grid | Procurement & Strategy
+    // "Explore" is a mega-menu with 4 columns:
+    //   Economics | Markets & Grid | Generator Analysis | Procurement & Strategy
     //
     // "Research" is a standard dropdown.
     //
     // Pages archived: procurement_comparison.html (Legacy — superseded)
     // Pages merged: pipeline_map.html folded into pipeline.html
-    // Fleet Survival moved into Markets & Grid column
     const NAV_ITEMS = [
         { label: 'Home', href: 'index.html' },
         { label: 'The Grid', href: 'dashboard.html' },
@@ -224,11 +223,17 @@
                 {
                     header: 'Markets & Grid',
                     items: [
-                        { label: 'Wholesale Prices', href: 'lmp_trends.html', desc: 'Synthetic LMP analysis' },
+                        { label: 'Wholesale Prices', href: 'lmp_trends.html', desc: 'Synthetic LMP analysis' }
+                    ]
+                },
+                {
+                    header: 'Generator Analysis',
+                    items: [
+                        { label: 'Generator Analysis', href: 'generator_analysis.html', desc: 'Fleet & dispatch overview' },
+                        { label: 'Fleet Survival', href: 'fleet_survival.html', desc: 'Company fleet transitions' },
                         { label: 'Fossil Fuel Analysis', href: 'fossil_fuel_deepdive.html', desc: 'Gas, coal & oil dynamics' },
                         { label: 'Building Blocks', href: 'building_blocks.html', desc: 'Resource shapes & supply curves' },
-                        { label: 'Storage Analysis', href: 'storage_analysis.html', desc: 'Battery & LDES dispatch' },
-                        { label: 'Fleet Survival', href: 'fleet_survival.html', desc: 'Generator fleet transitions' }
+                        { label: 'Storage Analysis', href: 'storage_analysis.html', desc: 'Battery & LDES dispatch' }
                     ]
                 },
                 {

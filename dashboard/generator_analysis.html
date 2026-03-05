@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generator Analysis — The 8,760 Problem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/scrollytell.css">
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+<script src="js/scroll-observer.js"></script>
+<style>
+body { background: var(--bg-page-white); }
+
+.ga-intro {
+    max-width: var(--max-prose); margin: 0 auto; padding: var(--space-2xl) var(--pad-page) var(--space-xl);
+    font-size: 0.95rem; color: var(--text-dim); line-height: 1.75;
+}
+.ga-intro p { margin-bottom: var(--space-md); }
+.ga-intro .lead {
+    font-size: 1.15rem; color: var(--navy); font-weight: 500; line-height: 1.65;
+}
+
+/* Card grid */
+.ga-grid {
+    max-width: var(--max-content); margin: 0 auto;
+    padding: 0 var(--pad-page) var(--space-3xl);
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: var(--space-lg);
+}
+
+.ga-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: var(--space-xl) var(--space-lg);
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.2s, transform 0.2s;
+    text-decoration: none; color: inherit; display: flex; flex-direction: column;
+}
+.ga-card:hover {
+    box-shadow: var(--shadow-md); transform: translateY(-2px);
+    text-decoration: none; color: inherit;
+}
+
+.ga-card-icon {
+    width: 48px; height: 48px; border-radius: var(--radius-md);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: var(--space-md); font-size: 1.5rem;
+}
+.ga-card-icon.fleet { background: rgba(14,165,233,0.1); color: var(--hydro); }
+.ga-card-icon.fossil { background: rgba(107,114,128,0.1); color: var(--fossil-gas); }
+.ga-card-icon.blocks { background: rgba(34,197,94,0.1); color: var(--wind); }
+.ga-card-icon.storage { background: rgba(139,92,246,0.1); color: var(--battery); }
+
+.ga-card h3 {
+    font-family: var(--font-heading); font-size: 1.15rem; font-weight: 700;
+    color: var(--navy); margin-bottom: var(--space-xs);
+}
+.ga-card p {
+    font-size: 0.88rem; color: var(--text-muted); line-height: 1.65; flex: 1;
+    margin-bottom: var(--space-md);
+}
+.ga-card .ga-link {
+    font-size: 0.82rem; font-weight: 600; color: var(--hydro);
+    font-family: var(--font-heading); letter-spacing: 0.02em;
+}
+.ga-card:hover .ga-link { text-decoration: underline; }
+
+/* Key stats row */
+.ga-stats {
+    max-width: var(--max-content); margin: 0 auto;
+    padding: 0 var(--pad-page) var(--space-2xl);
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-md);
+}
+.ga-stat {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: var(--space-lg) var(--space-md);
+    text-align: center; box-shadow: var(--shadow-sm);
+}
+.ga-stat .val {
+    font-family: var(--font-data); font-size: 1.8rem; font-weight: 700;
+    color: var(--navy); display: block;
+}
+.ga-stat .lbl {
+    font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: 0.05em; margin-top: var(--space-xs);
+}
+
+/* Narrative section */
+.ga-narrative {
+    max-width: var(--max-prose); margin: 0 auto;
+    padding: 0 var(--pad-page) var(--space-3xl);
+}
+.ga-narrative h2 {
+    font-family: var(--font-heading); font-size: 1.4rem; font-weight: 700;
+    color: var(--navy); margin-bottom: var(--space-md);
+}
+.ga-narrative p {
+    font-size: 0.92rem; color: var(--text-dim); line-height: 1.75;
+    margin-bottom: var(--space-md);
+}
+
+@media (max-width: 768px) {
+    .ga-grid { grid-template-columns: 1fr; }
+    .ga-stats { grid-template-columns: 1fr 1fr; }
+    .ga-intro .lead { font-size: 1.05rem; }
+}
+@media (max-width: 480px) {
+    .ga-stats { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+
+<div class="header" id="pageHeader">
+    <h1>Generator Analysis</h1>
+    <div class="subtitle">How America's power fleet evolves as clean energy scales along the SBTi trajectory</div>
+    <div class="header-accent"></div>
+</div>
+
+<div class="ga-intro">
+    <p class="lead">The U.S. power grid runs on 1.2 million MW of generation capacity spread across seven wholesale markets. As corporate buyers push hourly clean energy matching from 50% toward 100%, the economics of every generator on the grid shift — some thrive, some survive, some strand.</p>
+    <p>This section brings together four analysis tracks that examine the grid's generation fleet from different angles: company-level fleet survival, fossil fuel dispatch dynamics, resource building blocks, and storage dispatch patterns. Each page uses the optimizer's 8,760-hour dispatch model to project how generation portfolios evolve under rising clean energy procurement.</p>
+</div>
+
+<div class="ga-stats">
+    <div class="ga-stat">
+        <span class="val">7</span>
+        <span class="lbl">ISO Regions</span>
+    </div>
+    <div class="ga-stat">
+        <span class="val">1.2M</span>
+        <span class="lbl">MW Total Capacity</span>
+    </div>
+    <div class="ga-stat">
+        <span class="val">21</span>
+        <span class="lbl">CFE Thresholds</span>
+    </div>
+    <div class="ga-stat">
+        <span class="val">8,760</span>
+        <span class="lbl">Hours Modeled</span>
+    </div>
+</div>
+
+<div class="ga-grid">
+    <a href="fleet_survival.html" class="ga-card">
+        <div class="ga-card-icon fleet">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <h3>Fleet Survival & Capacity Dispatch</h3>
+        <p>Company-level analysis of major competitive power suppliers. Track how Vistra, Constellation, NRG, Talen, PSEG, NextEra, and AES portfolios evolve as clean energy scales along the SBTi trajectory — coal retires, gas dispatch declines, nuclear endures.</p>
+        <span class="ga-link">Explore fleet analysis &rarr;</span>
+    </a>
+
+    <a href="fossil_fuel_deepdive.html" class="ga-card">
+        <div class="ga-card-icon fossil">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="10"/></svg>
+        </div>
+        <h3>Fossil Fuel Deep Dive</h3>
+        <p>Gas, coal, and oil dispatch dynamics across all seven ISOs. Merit-order retirement modeling, fuel-switching elasticity, and the economic tipping points where fossil generators become unviable under rising clean energy penetration.</p>
+        <span class="ga-link">Explore fossil dynamics &rarr;</span>
+    </a>
+
+    <a href="building_blocks.html" class="ga-card">
+        <div class="ga-card-icon blocks">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        </div>
+        <h3>Building Blocks</h3>
+        <p>The fundamental resource shapes that compose every clean energy portfolio. Hourly generation profiles for solar, wind, hydro, nuclear, CCS, battery, and LDES — how each resource contributes to 8,760-hour matching across regions.</p>
+        <span class="ga-link">Explore resource shapes &rarr;</span>
+    </a>
+
+    <a href="storage_analysis.html" class="ga-card">
+        <div class="ga-card-icon storage">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="1" y="6" width="22" height="12" rx="2"/><line x1="6" y1="6" x2="6" y2="18"/><path d="M23 10v4"/></svg>
+        </div>
+        <h3>Storage Analysis</h3>
+        <p>Battery and long-duration energy storage dispatch patterns. 4hr/8hr Li-ion daily cycling, 100hr iron-air LDES weekly dispatch, capacity factors, and utilization rates across thresholds and regions.</p>
+        <span class="ga-link">Explore storage dispatch &rarr;</span>
+    </a>
+</div>
+
+<div class="ga-narrative">
+    <h2>Why Generator Analysis Matters</h2>
+    <p>Corporate clean energy procurement doesn't happen in a vacuum. Every MWh of clean energy that displaces fossil generation changes the economics of the entire fleet. Coal plants retire first — they're the highest-cost, highest-emission generators. Gas CCGTs follow as their capacity factors erode below economic viability (~15% CF threshold). The sequence and timing of these transitions vary dramatically by region.</p>
+    <p>ERCOT's wind-rich grid displaces gas faster than PJM's nuclear-heavy grid. CAISO's solar dominance creates unique storage requirements. NEISO's winter gas dependence adds pipeline constraints that affect CCS economics. Understanding these regional dynamics is essential for corporate buyers evaluating where and how to procure clean energy.</p>
+    <p>The pages in this section connect the optimizer's physics-based dispatch model to real-world generator portfolios, giving procurement teams the fleet-level context they need to make informed decisions.</p>
+</div>
+
+<footer class="page-footer">
+    <div class="footer-inner">
+        <div class="footer-links">
+            <a href="index.html">Home</a>
+            <a href="dashboard.html">The Grid</a>
+            <a href="research_paper.html">Research Paper</a>
+            <a href="optimizer_methodology.html">Methodology</a>
+            <a href="about.html">About</a>
+        </div>
+        <div class="footer-copy">&copy; 2025 Hourly CFE Optimizer. Built with 8,760 hours of data per ISO.</div>
+    </div>
+</footer>
+<div class="bottom-banner"></div>
+
+</body>
+</html>
