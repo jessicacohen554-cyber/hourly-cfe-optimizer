@@ -23,6 +23,14 @@ Lean-mix augmentation (--lean-mixes):
   that have lower base scores but high storage potential, exposing the
   lean+storage frontier where 60-95pp of overbuilding can be eliminated.
 
+Floor/fine mix augmentation (--floor-fine-mixes):
+  Loads floor_pfs (step1b2) and fine_pfs (step1b3) parquets — generation-only
+  mixes built from existing clean resource floors with incremental additions.
+  Filters to mixes within the near-miss window for active thresholds,
+  deduplicates against the existing pool, and runs storage sweep on them.
+  Exposes lean floor+storage combinations that the standard near-miss
+  pool (which is biased toward high-procurement mixes) would miss.
+
 V2 storage caps (--v2-caps):
   2050-oriented storage capacity limits (battery 4hr: 5%, 8hr: 10%, LDES: 25%)
   compared to the default V1 caps. Use when exploring future deep-decarbonization
@@ -38,6 +46,7 @@ Usage:
   python scripts/step1c_storage_refinement.py --iso ERCOT --batch-info
   python scripts/step1c_storage_refinement.py --iso ERCOT --thresholds "70,75,95,99" --auto-commit
   python scripts/step1c_storage_refinement.py --iso CAISO --lean-mixes --v2-caps
+  python scripts/step1c_storage_refinement.py --iso CAISO --floor-fine-mixes
 """
 
 import argparse
@@ -320,6 +329,116 @@ def _augment_with_lean_mixes(original_load_fn):
               f"{len(combined_combos):,} total mixes")
 
         # Force Pass 0 re-run (lean mixes don't have max_storage_scores)
+        return combined_combos, combined_scores, None
+
+    return augmented_loader
+
+
+def _load_floor_fine_mixes(iso):
+    """Load floor_pfs and fine_pfs parquets for an ISO.
+
+    Returns (combos, scores) numpy arrays, or (None, None) if no files found.
+    Extracts resource columns matching near-miss schema and uses
+    hourly_match_score as the base score.
+    """
+    rtypes = s1.get_resource_types(iso)
+    all_combos = []
+    all_scores = []
+
+    for suffix in ('floor_pfs', 'fine_pfs'):
+        pattern = os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR,
+                               f'{iso}_t*_{suffix}.parquet')
+        import glob as _glob
+        files = sorted(_glob.glob(pattern))
+        for fpath in files:
+            table = pq.read_table(fpath)
+            if table.num_rows == 0:
+                continue
+            combos = np.column_stack(
+                [table.column(rt).to_numpy() for rt in rtypes])
+            scores = table.column('hourly_match_score').to_numpy()
+            all_combos.append(combos)
+            all_scores.append(scores)
+
+    if not all_combos:
+        return None, None
+
+    combos = np.vstack(all_combos)
+    scores = np.concatenate(all_scores)
+
+    # Deduplicate within floor/fine pool (same mix can appear at multiple thresholds)
+    keys = _mix_keys(combos)
+    _, unique_idx = np.unique(keys, return_index=True)
+    combos = combos[unique_idx]
+    scores = scores[unique_idx]
+
+    return combos, scores
+
+
+def _augment_with_floor_fine(original_load_fn):
+    """Wrap loader to inject floor/fine PFS mixes into the near-miss pool.
+
+    Loads floor_pfs and fine_pfs parquets, filters to mixes within the
+    near-miss window for active thresholds, deduplicates against existing
+    pool, and returns the combined pool. Forces Pass 0 re-run since
+    floor/fine mixes don't have max_storage_scores.
+    """
+    def augmented_loader(iso, active_thresholds):
+        nm_combos, nm_scores, nm_max_scores = original_load_fn(iso, active_thresholds)
+        if nm_combos is None:
+            return None, None, None
+
+        n_original = len(nm_combos)
+
+        ff_combos, ff_scores = _load_floor_fine_mixes(iso)
+        if ff_combos is None or len(ff_combos) == 0:
+            print(f"  Floor/fine augmentation: no files found for {iso}")
+            return nm_combos, nm_scores, nm_max_scores
+
+        n_loaded = len(ff_combos)
+
+        # Filter to mixes in the near-miss window for at least one active threshold
+        eligible = np.zeros(len(ff_combos), dtype=bool)
+        for t in active_thresholds:
+            target = t / 100.0
+            nm_width = get_near_miss_width(t)
+            nm_floor = max(target - nm_width, STORAGE_SWEEP_FLOOR)
+            t_mask = (ff_scores < target) & (ff_scores >= nm_floor)
+            eligible |= t_mask
+
+        ff_combos = ff_combos[eligible]
+        ff_scores = ff_scores[eligible]
+
+        if len(ff_combos) == 0:
+            print(f"  Floor/fine augmentation: {n_loaded:,} loaded, "
+                  f"0 in near-miss window")
+            return nm_combos, nm_scores, nm_max_scores
+
+        # Deduplicate against existing near-miss pool
+        n_cols = min(nm_combos.shape[1], len(_MIX_HASH_BASES))
+        nm_keys = nm_combos.astype(np.int64)[:, :n_cols] @ _MIX_HASH_BASES[:n_cols]
+        ff_keys = ff_combos.astype(np.int64)[:, :n_cols] @ _MIX_HASH_BASES[:n_cols]
+        nm_key_set = set(nm_keys.tolist())
+        new_mask = np.array([k not in nm_key_set for k in ff_keys.tolist()],
+                            dtype=bool)
+        ff_combos = ff_combos[new_mask]
+        ff_scores = ff_scores[new_mask]
+        n_new = len(ff_combos)
+
+        if n_new == 0:
+            print(f"  Floor/fine augmentation: {n_loaded:,} loaded, "
+                  f"all duplicates of existing pool")
+            return nm_combos, nm_scores, nm_max_scores
+
+        combined_combos = np.vstack([nm_combos, ff_combos])
+        combined_scores = np.concatenate([nm_scores, ff_scores])
+        print(f"  Floor/fine augmentation: {n_loaded:,} loaded → "
+              f"{int(eligible.sum()):,} in near-miss window → "
+              f"{n_new:,} new unique mixes")
+        print(f"  Combined pool: {n_original:,} original + {n_new:,} floor/fine = "
+              f"{len(combined_combos):,} total")
+
+        # Force Pass 0 re-run (floor/fine mixes don't have max_storage_scores)
         return combined_combos, combined_scores, None
 
     return augmented_loader
@@ -1609,6 +1728,10 @@ def main():
                         help="Augment near-miss pool with lean mixes "
                              "(scaled-down archetypes at 80-135%% procurement). "
                              "Exposes lean+storage frontier.")
+    parser.add_argument("--floor-fine-mixes", action="store_true",
+                        help="Augment near-miss pool with floor/fine PFS mixes "
+                             "(from step1b2/1b3). Filters to near-miss window, "
+                             "deduplicates, then runs storage sweep on them.")
     parser.add_argument("--v2-caps", action="store_true",
                         help="Use V2 (2050-oriented) storage capacity caps. "
                              "Wider grids for battery/LDES. Output to step1-pfs-parquets/.")
@@ -1625,13 +1748,18 @@ def main():
     if args.v2_caps:
         _apply_v2_caps()
 
-    # Enable lean-mix augmentation if requested
+    # Enable mix augmentation if requested (lean and/or floor/fine can stack)
+    global load_mixes_with_coarse_fallback
     if args.lean_mixes:
-        global load_mixes_with_coarse_fallback
         load_mixes_with_coarse_fallback = _augment_with_lean_mixes(
             load_mixes_with_coarse_fallback)
         print(f"  Lean-mix augmentation enabled: {N_ARCHETYPES} archetypes, "
               f"{len(LEAN_SCALE_TARGETS)} scale targets")
+
+    if args.floor_fine_mixes:
+        load_mixes_with_coarse_fallback = _augment_with_floor_fine(
+            load_mixes_with_coarse_fallback)
+        print(f"  Floor/fine mix augmentation enabled")
 
     # Batch info mode
     if args.batch_info:
