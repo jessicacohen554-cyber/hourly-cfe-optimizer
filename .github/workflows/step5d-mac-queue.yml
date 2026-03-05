@@ -143,28 +143,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: mac-queue-*
-          path: ./artifact-tmp/
+          path: data/step5-post-processing/mac_queue/
           merge-multiple: true
 
-      - name: Place artifacts
+      - name: Verify artifacts
         run: |
-          echo "=== Artifact download contents ==="
-          find ./artifact-tmp/ -type f 2>/dev/null | head -50 || echo "  (no files found in artifact-tmp/)"
-
-          mkdir -p data/step5-post-processing/mac_queue
-
-          # Copy all mac_queue files (parquets, scenario_a JSONs, summary)
-          if [ -d "artifact-tmp/data/step5-post-processing/mac_queue" ]; then
-            cp -rf artifact-tmp/data/step5-post-processing/mac_queue/* data/step5-post-processing/mac_queue/
-            echo "Copied mac_queue files from nested structure"
-          else
-            # Some download-artifact versions flatten structure — find all relevant files
-            find artifact-tmp/ \( -name "mac_queue_*.parquet" -o -name "mac_queue_summary.json" -o -name "scenario_a_*.json" \) -exec cp -f {} data/step5-post-processing/mac_queue/ \;
-            echo "Searched for mac_queue files in flattened artifact structure"
-          fi
-
-          echo "=== Final output contents ==="
-          find data/step5-post-processing/mac_queue/ -type f 2>/dev/null | head -30 || echo "  (no mac_queue files)"
+          echo "=== Downloaded artifacts ==="
+          find data/step5-post-processing/mac_queue/ -type f 2>/dev/null | head -50 || echo "  (no files found)"
 
       - name: Batched commit and push (per-ISO)
         run: |
