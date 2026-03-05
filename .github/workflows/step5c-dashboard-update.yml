@@ -84,6 +84,10 @@ jobs:
       - name: "Compressed Day — ${{ matrix.iso }}"
         run: python scripts/step5c_compress_day_profiles.py --iso ${{ matrix.iso }}
 
+      - name: Scope output to current ISO only
+        run: |
+          find data/step5-post-processing/ -name "*.parquet" -o -name "*.json" | grep -v "${{ matrix.iso }}" | xargs rm -f 2>/dev/null || true
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
