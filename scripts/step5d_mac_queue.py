@@ -58,7 +58,7 @@ from pipeline_config import (
     UPRATE_LCOE, UPRATE_CAP_TWH,
     NUCLEAR_NEWBUILD_LCOE, GEOTHERMAL_LCOE, GEOTHERMAL_CAP_TWH,
     CCS_LCOE_45Q_ON, CCS_LCOE_45Q_OFF, CCS_CAP_TWH,
-    NEISO_CCS_GAS_ADDER,
+    NEISO_CCS_GAS_ADDER, EXISTING_GEOTHERMAL_PCT,
     FOAK_NUCLEAR_NEWBUILD, FOAK_CCS_45Q_ON, FOAK_CCS_45Q_OFF,
     FOAK_GEOTHERMAL, FOAK_OFFSHORE_WIND, FOAK_LDES, FOAK_H2,
     NOAK_BATTERY, NOAK_BATTERY8, NOAK_OFFSHORE_WIND,
@@ -68,6 +68,7 @@ from pipeline_config import (
     HYDRO_CAP_PCT,
     LEVEL_NAME, LMH,
     PATHS, H,
+    compute_clean_firm_tranches,
 )
 from dispatch_utils import (
     load_common_data,
@@ -130,7 +131,7 @@ DEMAND_GROWTH_LEVELS = ['Low', 'Medium', 'High']
 
 MAX_ARCHETYPES = 5000
 PHASE2_PERTURBATIONS = 2000
-MAX_OVERSHOOT = 1.0  # percentage points
+MAX_OVERSHOOT = 0.5  # percentage points — tight target adherence
 
 
 # ============================================================================
@@ -350,88 +351,67 @@ def compute_new_build_cost(iso, mix_pct, floor_twh, demand_twh, sens, target_yea
         total_cost += osw_cost
         breakdown['offshore_wind'] = {'new_twh': osw_new_twh, 'lcoe': osw_lcoe, 'cost': osw_cost}
 
-    # --- Clean Firm (tranched: uprate → geothermal → min(nuclear, CCS)) ---
+    # --- Physics Geothermal (CAISO only, priced separately from clean firm) ---
+    # Geothermal from the Step 1 physics dimension: existing (≤2.37%) at $0,
+    # new-build above existing at geothermal LCOE. Tracks against the shared
+    # 39 TWh cap to prevent double-counting with the clean firm tranche.
+    geo_physics_new_twh = 0.0
+    if iso == 'CAISO' and geo_lev:
+        geo_pct = mix_pct.get('geothermal', 0.0)
+        existing_geo_pct = EXISTING_GEOTHERMAL_PCT
+        geo_new_pct = max(0, geo_pct - existing_geo_pct)
+        geo_physics_new_twh = geo_new_pct / 100.0 * demand_twh
+        if geo_physics_new_twh > 0:
+            geo_base = GEOTHERMAL_LCOE[geo_lev]
+            foak_geo = FOAK_GEOTHERMAL
+            noak_geo = GEOTHERMAL_LCOE['L']
+            geo_lcoe = _apply_learning_curve(geo_base, foak_geo, noak_geo, 'geo', firm_lev, target_year)
+            geo_lcoe += get_tx('clean_firm', tx_name, iso)
+            geo_physics_cost = geo_physics_new_twh * 1e6 * geo_lcoe
+            total_cost += geo_physics_cost
+            breakdown['geothermal_physics'] = {
+                'new_twh': geo_physics_new_twh, 'lcoe': geo_lcoe, 'cost': geo_physics_cost}
+
+    # --- Clean Firm (tranched via shared utility: uprate → geo → min(nuclear, CCS)) ---
     existing_cf_twh = floor_twh.get('clean_firm', 0.0)
     cf_new_twh = max(0, mix_twh['clean_firm'] - existing_cf_twh)
     if cf_new_twh > 0:
-        remaining = cf_new_twh
-        cf_tx = get_tx('clean_firm', tx_name, iso)
-        ccs_tx = get_tx('ccs_ccgt', tx_name, iso)
+        tranches = compute_clean_firm_tranches(
+            new_cf_twh=cf_new_twh,
+            iso=iso,
+            firm_lev=firm_lev,
+            ccs_lev=ccs_lev,
+            q45=q45,
+            tx_name=tx_name,
+            geo_lev=geo_lev,
+            geo_physics_new_twh=geo_physics_new_twh,
+            ccs_used_twh=cumulative_caps.get('ccs_twh', 0.0),
+            uprate_used_twh=cumulative_caps.get('uprate_twh', 0.0),
+            geo_used_twh=cumulative_caps.get('geo_twh', 0.0),
+            learning_curve_fn=_apply_learning_curve,
+            target_year=target_year,
+        )
+        # Scale costs from $/MWh×TWh to $ (shared utility returns in TWh×$/MWh units)
+        total_cost += tranches['total_cost'] * 1e6
 
-        # Tranche 1: Nuclear uprates (cumulative cap)
-        uprate_cap = UPRATE_CAP_TWH[iso]
-        uprate_used = cumulative_caps.get('uprate_twh', 0.0)
-        uprate_avail = max(0, uprate_cap - uprate_used)
-        uprate_twh = min(remaining, uprate_avail)
-        uprate_price = UPRATE_LCOE[firm_lev]  # No TX for uprates (grid-connected)
-        uprate_cost = uprate_twh * 1e6 * uprate_price
-        total_cost += uprate_cost
-        cumulative_caps['uprate_twh'] = uprate_used + uprate_twh
-        remaining -= uprate_twh
-        breakdown['uprate'] = {'new_twh': uprate_twh, 'lcoe': uprate_price, 'cost': uprate_cost}
+        # Update cumulative caps
+        cumulative_caps['uprate_twh'] = cumulative_caps.get('uprate_twh', 0.0) + tranches['uprate_twh']
+        cumulative_caps['geo_twh'] = cumulative_caps.get('geo_twh', 0.0) + tranches['geo_twh']
+        cumulative_caps['ccs_twh'] = cumulative_caps.get('ccs_twh', 0.0) + tranches['ccs_tranche_twh']
 
-        # Tranche 2: Geothermal (CAISO only, cumulative cap)
-        geo_cost = 0.0
-        geo_twh = 0.0
-        if iso == 'CAISO' and geo_lev and remaining > 0:
-            geo_cap = GEOTHERMAL_CAP_TWH
-            geo_used = cumulative_caps.get('geo_twh', 0.0)
-            geo_avail = max(0, geo_cap - geo_used)
-            geo_twh = min(remaining, geo_avail)
-            if geo_twh > 0:
-                geo_base = GEOTHERMAL_LCOE[geo_lev]
-                foak_geo = FOAK_GEOTHERMAL
-                noak_geo = GEOTHERMAL_LCOE['L']  # NOAK = Low cost floor
-                geo_lcoe = _apply_learning_curve(geo_base, foak_geo, noak_geo, 'geo', firm_lev, target_year)
-                geo_lcoe += cf_tx
-                geo_cost = geo_twh * 1e6 * geo_lcoe
-                total_cost += geo_cost
-                cumulative_caps['geo_twh'] = geo_used + geo_twh
-                remaining -= geo_twh
-                breakdown['geothermal'] = {'new_twh': geo_twh, 'lcoe': geo_lcoe, 'cost': geo_cost}
-
-        # Tranche 3: Cheapest of nuclear new-build vs CCS (cumulative CCS cap)
-        if remaining > 0:
-            # Nuclear new-build with learning curve
-            nuc_base = NUCLEAR_NEWBUILD_LCOE[firm_lev][iso]
-            nuc_foak = FOAK_NUCLEAR_NEWBUILD[iso]
-            nuc_noak = NUCLEAR_NEWBUILD_LCOE['L'][iso]  # NOAK = Low cost
-            nuc_price = _apply_learning_curve(nuc_base, nuc_foak, nuc_noak, 'nuclear', firm_lev, target_year)
-            nuc_price += cf_tx
-
-            # CCS with learning curve
-            ccs_table = CCS_LCOE_45Q_ON if q45 == '1' else CCS_LCOE_45Q_OFF
-            ccs_base = ccs_table[ccs_lev][iso]
-            ccs_foak_table = FOAK_CCS_45Q_ON if q45 == '1' else FOAK_CCS_45Q_OFF
-            ccs_foak = ccs_foak_table[iso]
-            ccs_noak = ccs_table['L'][iso]
-            ccs_price = _apply_learning_curve(ccs_base, ccs_foak, ccs_noak, 'ccs', ccs_lev, target_year)
-            if iso == 'NEISO':
-                ccs_price += NEISO_CCS_GAS_ADDER
-            ccs_price += ccs_tx
-
-            # CCS cumulative cap
-            ccs_cap = CCS_CAP_TWH.get(iso, 9999.0)
-            ccs_used = cumulative_caps.get('ccs_twh', 0.0)
-            ccs_avail = max(0, ccs_cap - ccs_used)
-
-            if nuc_price <= ccs_price or ccs_avail <= 0:
-                # Nuclear for everything
-                nuc_twh = remaining
-                ccs_tranche_twh = 0.0
-                tranche3_cost = nuc_twh * 1e6 * nuc_price
-            else:
-                # CCS gets min(remaining, headroom), nuclear gets overflow
-                ccs_tranche_twh = min(remaining, ccs_avail)
-                nuc_twh = remaining - ccs_tranche_twh
-                tranche3_cost = (ccs_tranche_twh * 1e6 * ccs_price +
-                                 nuc_twh * 1e6 * nuc_price)
-                cumulative_caps['ccs_twh'] = ccs_used + ccs_tranche_twh
-
-            total_cost += tranche3_cost
-            breakdown['nuclear_newbuild'] = {'new_twh': nuc_twh, 'lcoe': nuc_price}
-            breakdown['ccs_tranche'] = {'new_twh': ccs_tranche_twh, 'lcoe': ccs_price}
-            breakdown['tranche3_cost'] = tranche3_cost
+        # Breakdown
+        breakdown['uprate'] = {'new_twh': tranches['uprate_twh'],
+                               'lcoe': tranches['uprate_lcoe'],
+                               'cost': tranches['uprate_cost'] * 1e6}
+        if tranches['geo_twh'] > 0:
+            breakdown['geothermal_tranche'] = {'new_twh': tranches['geo_twh'],
+                                                'lcoe': tranches['geo_lcoe'],
+                                                'cost': tranches['geo_cost'] * 1e6}
+        breakdown['nuclear_newbuild'] = {'new_twh': tranches['nuclear_twh'],
+                                         'lcoe': tranches['nuclear_lcoe']}
+        breakdown['ccs_tranche'] = {'new_twh': tranches['ccs_tranche_twh'],
+                                     'lcoe': tranches['ccs_lcoe']}
+        breakdown['tranche3_cost'] = (tranches['nuclear_cost'] + tranches['ccs_tranche_cost']) * 1e6
 
     # --- CCS-CCGT implicit residual ---
     # The CCS residual (100% - explicit resources) represents remaining fossil
@@ -616,6 +596,11 @@ def ratchet_deployed(deployed_twh, winner_pct, demand_twh):
 
     Tracks actual physical capacity deployed so far. Used for cost calculations
     to avoid double-charging for capacity that already exists.
+
+    NOTE: deployed_twh is NOT scaled with demand growth — it represents physical
+    capacity already built. When demand grows, the winner's TWh (= pct × new demand)
+    may exceed previously deployed TWh, requiring new build. This is correct:
+    demand growth requires additional physical capacity to maintain the same %.
     """
     new_deployed = dict(deployed_twh)
     for res in RESOURCE_COLS:
@@ -657,9 +642,11 @@ def filter_and_sample(df, floor_pct, threshold, max_samples=MAX_ARCHETYPES):
         if floor_val > 0.01:
             mask &= (df[col].values >= floor_val - 0.1)
 
-    # Overshoot filter: match score within [threshold - 0.5, threshold + MAX_OVERSHOOT]
+    # Overshoot filter: match score within [threshold, threshold + MAX_OVERSHOOT]
+    # Strict lower bound: mixes must MEET the target, not just come close.
+    # This prevents picking "free" mixes that barely miss and cost $0.
     scores = df['hourly_match_score'].values
-    mask &= (scores >= threshold - 0.5)
+    mask &= (scores >= threshold)
     mask &= (scores <= threshold + MAX_OVERSHOOT)
 
     filtered = df.loc[mask].copy()
@@ -675,8 +662,8 @@ def filter_and_sample(df, floor_pct, threshold, max_samples=MAX_ARCHETYPES):
             floor_val = floor_pct.get(col, 0.0)
             if floor_val > 0.01:
                 mask2 &= (df[col].values >= floor_val - 0.5)
-        mask2 &= (scores >= threshold - 1.0)
-        mask2 &= (scores <= threshold + 2.0)
+        mask2 &= (scores >= threshold - 0.25)
+        mask2 &= (scores <= threshold + 1.0)
         filtered = df.loc[mask2].copy()
 
     if len(filtered) <= max_samples:
@@ -1019,7 +1006,7 @@ def optimize_threshold(iso, threshold, floor_twh, deployed_twh, cumulative_caps,
             # On-the-fly mixes already respect floor by construction.
             # Only apply score range filter (wider for estimated storage scores).
             scores = otf_df['hourly_match_score'].values
-            score_mask = (scores >= threshold - 3.0) & (scores <= threshold + 5.0)
+            score_mask = (scores >= threshold) & (scores <= threshold + MAX_OVERSHOOT + 0.5)
             otf_filtered = otf_df.loc[score_mask].copy()
 
             if not otf_filtered.empty:
@@ -1368,6 +1355,76 @@ def run_iso(iso, demand_data, gen_profiles, emission_rates):
     return all_results
 
 
+def _build_consequential_queue(all_results):
+    """Convert MAC queue results to consequential_queue.json format for step8a.
+
+    Uses the 'all_med' sensitivity + 'Medium' growth canonical pathway.
+    Builds zone-step entries sorted by marginal_mac with delta_resources.
+    Falls back to any available sensitivity if all_med is missing.
+    """
+    # Filter to canonical pathway
+    canonical = [r for r in all_results
+                 if r.get('price_sensitivity') == 'all_med'
+                 and r.get('demand_growth') == 'Medium']
+    if not canonical:
+        # Fallback: use whatever sensitivity/growth is available
+        canonical = all_results
+
+    # Group by ISO, sort by threshold
+    from collections import defaultdict
+    iso_results = defaultdict(list)
+    for r in canonical:
+        iso_results[r['iso']].append(r)
+    for iso in iso_results:
+        iso_results[iso].sort(key=lambda x: x['threshold'])
+
+    queue = []
+    for iso, results in iso_results.items():
+        prev = None
+        for r in results:
+            # Compute delta resources vs previous threshold
+            delta_resources = {}
+            res_keys = ['solar', 'wind', 'clean_firm', 'hydro', 'offshore_wind', 'geothermal']
+            for res in res_keys:
+                twh_key = f'winner_{res}_twh'
+                curr_twh = r.get(twh_key, 0)
+                prev_twh = prev.get(twh_key, 0) if prev else 0
+                delta = curr_twh - prev_twh
+                if abs(delta) > 0.5:
+                    delta_resources[res] = round(delta, 2)
+
+            # Storage deltas
+            for stor_key, out_key in [('winner_battery_4h', 'battery'),
+                                       ('winner_battery_8h', 'battery8'),
+                                       ('winner_ldes_100h', 'ldes')]:
+                curr = r.get(stor_key, 0)
+                prev_val = prev.get(stor_key, 0) if prev else 0
+                delta = curr - prev_val
+                if abs(delta) > 0.01:
+                    delta_resources[out_key] = round(delta, 3)
+
+            queue.append({
+                'iso': iso,
+                'zone_label': f"{prev['threshold'] if prev else 'existing'}→{r['threshold']}%",
+                'threshold_start': prev['threshold'] if prev else 0,
+                'threshold_end': r['threshold'],
+                'marginal_mac': r.get('mac_this_step', 9999),
+                'co2_displaced_mt': r.get('co2_avoided_mt', 0),
+                'delta_cost_per_mwh': round(r.get('new_build_cost_per_mwh_nb', 0), 2),
+                'delta_resources': delta_resources,
+                'demand_twh': r.get('demand_twh', 0),
+                'target_year': r.get('target_year', 2050),
+            })
+            prev = r
+
+    # Sort by marginal MAC (cheapest first) for cross-ISO merit order
+    queue.sort(key=lambda x: (x['marginal_mac'], -x['co2_displaced_mt']))
+    for i, step in enumerate(queue):
+        step['queue_position'] = i + 1
+
+    return queue
+
+
 def main():
     parser = argparse.ArgumentParser(description='MAC-Optimized Consequential Queue')
     parser.add_argument('--iso', type=str, default=None,
@@ -1416,6 +1473,19 @@ def main():
         with open(summary_path, 'w') as f:
             json.dump(summary, f, indent=2, default=str)
         print(f"\nSaved summary: {summary_path}")
+
+    # ── Export consequential_queue.json for step8a compatibility ──
+    # Step 8A reads this file and walks the queue sorted by marginal_mac.
+    # Format: list of zone-step dicts with iso, delta_resources, marginal_mac.
+    # Uses 'all_med' sensitivity + 'Medium' growth as the canonical pathway.
+    if all_results:
+        queue = _build_consequential_queue(all_results)
+        queue_path = os.path.join(
+            PROJECT_ROOT, 'data', 'step5-post-processing', 'consequential_queue.json')
+        with open(queue_path, 'w') as f:
+            json.dump({'queue': queue, 'generated': time.strftime('%Y-%m-%d %H:%M:%S'),
+                       'source': 'step5d_mac_queue.py'}, f, indent=2, default=str)
+        print(f"Saved consequential queue: {queue_path} ({len(queue)} steps)")
 
     elapsed = time.time() - t0
     print(f"\nDone. {len(all_results)} results in {elapsed:.1f}s")
