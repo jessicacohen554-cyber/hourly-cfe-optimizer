@@ -188,6 +188,13 @@ def process_iso(iso, ot_data):
     wind_exist = exist.get("wind", 0) / 100 * demand_twh
     resources["wind"] = np.maximum(0, wind_total - wind_exist)
 
+    # Offshore Wind (all new-build — no existing offshore wind in 2025)
+    if "mix_offshore_wind" in df.columns:
+        osw_total = df["mix_offshore_wind"] / 100 * demand_twh
+        resources["offshore_wind"] = np.maximum(0, osw_total)
+    else:
+        resources["offshore_wind"] = pd.Series(np.zeros(len(df)), index=df.index)
+
     # Nuclear (from tranche data)
     resources["nuclear"] = np.maximum(0,
         df["tranche_nuclear_newbuild_twh"].fillna(0) + df["tranche_uprate_twh"].fillna(0))
