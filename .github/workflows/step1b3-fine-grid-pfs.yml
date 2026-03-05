@@ -1,4 +1,4 @@
-name: "Step 1C3: Fine-Grid PFS Generator"
+name: "Step 1B3: Fine-Grid PFS Generator"
 
 # Generates fine-grid PFS mixes (40-70% thresholds) with 1% step incremental
 # additions above existing clean floor. Produces dense coverage for MAC
@@ -91,19 +91,19 @@ jobs:
     - name: Ensure output directory
       run: mkdir -p data/step1-pfs-parquets
 
-    - name: "Run Step 1C3 — ${{ matrix.iso }}"
+    - name: "Run Step 1B3 — ${{ matrix.iso }}"
       timeout-minutes: 150
       run: |
         echo "═══════════════════════════════════════════════════════════"
         echo "  ISO: ${{ matrix.iso }}  |  Fine-Grid PFS (40-70%, 1% step)"
         echo "═══════════════════════════════════════════════════════════"
-        python scripts/step1c3_fine_grid_pfs.py --iso ${{ matrix.iso }}
+        python scripts/step1b3_fine_grid_pfs.py --iso ${{ matrix.iso }}
 
     - name: Upload results
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: step1c3-${{ matrix.iso }}
+        name: step1b3-${{ matrix.iso }}
         path: data/step1-pfs-parquets/${{ matrix.iso }}_*_fine_pfs.parquet
         retention-days: 7
         if-no-files-found: warn
@@ -130,7 +130,7 @@ jobs:
       run: |
         TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
         ISO_LOWER=$(echo "${{ inputs.iso }}" | tr '[:upper:]' '[:lower:]')
-        TARGET_BRANCH="auto/${TIMESTAMP}-step1c3-fine-grid-pfs-${ISO_LOWER}"
+        TARGET_BRANCH="auto/${TIMESTAMP}-step1b3-fine-grid-pfs-${ISO_LOWER}"
         echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -144,7 +144,7 @@ jobs:
     - name: Download all artifacts
       uses: actions/download-artifact@v4
       with:
-        pattern: step1c3-*
+        pattern: step1b3-*
         path: data/step1-pfs-parquets/
         merge-multiple: true
 
@@ -166,7 +166,7 @@ jobs:
         if ! git diff --cached --quiet; then
           ISO="${{ inputs.iso }}"
           COUNT=$(git diff --cached --name-only | wc -l)
-          git commit -m "Step 1C3 Fine-Grid PFS: ${ISO} — ${COUNT} files — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git commit -m "Step 1B3 Fine-Grid PFS: ${ISO} — ${COUNT} files — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
         else
           echo "No new results to commit."
           exit 0
