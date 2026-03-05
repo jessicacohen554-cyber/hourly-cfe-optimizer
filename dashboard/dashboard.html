@@ -746,7 +746,7 @@ const RESOURCE_LABELS = {
     geothermal: 'Geothermal',
     ccs_ccgt: 'CCS-CCGT',
     solar: 'Solar',
-    wind: 'Wind',
+    wind: 'Onshore Wind',
     offshore_wind: 'Offshore Wind',
     hydro: 'Hydro',
     battery: 'Battery (4hr)',
@@ -2061,6 +2061,7 @@ function updateCompressedDay(entry, region, iso) {
     const matchedCCS = r(cd.matched.ccs_ccgt || z24);
     const matchedSolar = r(cd.matched.solar || z24);
     const matchedWind = r(cd.matched.wind || z24);
+    const matchedOffshoreWind = r(cd.matched.offshore_wind || z24);
     const matchedHydro = r(cd.matched.hydro || z24);
     const matchedBattery = r(cd.matched.battery || cd.matched.storage || z24);
     const matchedBattery8 = r(cd.matched.battery8 || z24);
@@ -2076,6 +2077,7 @@ function updateCompressedDay(entry, region, iso) {
     // Per-resource surplus (curtailed) — in MWh, local time
     const surplusSolarRaw = rRaw(cd.surplus?.solar || z24);
     const surplusWindRaw = rRaw(cd.surplus?.wind || z24);
+    const surplusOffshoreWindRaw = rRaw(cd.surplus?.offshore_wind || z24);
     const surplusHydroRaw = rRaw(cd.surplus?.hydro || z24);
     const surplusCleanFirmRaw = rRaw(cd.surplus?.clean_firm || z24);
     const surplusNuclearRaw = surplusCleanFirmRaw.map(v => v * (1 - cfGeoFrac));
@@ -2086,8 +2088,8 @@ function updateCompressedDay(entry, region, iso) {
     // but charging is also shown as negative bars. Net out charging from surplus
     // so the same energy isn't shown twice (once as curtailment, once as charge).
     const grossSurplusPerHour = hours.map((_, i) =>
-        Math.abs(surplusSolarRaw[i]) + Math.abs(surplusWindRaw[i]) + Math.abs(surplusHydroRaw[i]) +
-        Math.abs(surplusCCSRaw[i]) + Math.abs(surplusNuclearRaw[i]) +
+        Math.abs(surplusSolarRaw[i]) + Math.abs(surplusWindRaw[i]) + Math.abs(surplusOffshoreWindRaw[i]) +
+        Math.abs(surplusHydroRaw[i]) + Math.abs(surplusCCSRaw[i]) + Math.abs(surplusNuclearRaw[i]) +
         (hasGeo ? Math.abs(surplusGeothermalRaw[i]) : 0)
     );
     const totalChargingPerHour = hours.map((_, i) =>
@@ -2100,6 +2102,7 @@ function updateCompressedDay(entry, region, iso) {
     // Apply net factor to each resource's surplus
     const surplusSolar = surplusSolarRaw.map((v, i) => v * netCurtailFactor[i]);
     const surplusWind = surplusWindRaw.map((v, i) => v * netCurtailFactor[i]);
+    const surplusOffshoreWind = surplusOffshoreWindRaw.map((v, i) => v * netCurtailFactor[i]);
     const surplusHydro = surplusHydroRaw.map((v, i) => v * netCurtailFactor[i]);
     const surplusNuclear = surplusNuclearRaw.map((v, i) => v * netCurtailFactor[i]);
     const surplusGeothermal = surplusGeothermalRaw.map((v, i) => v * netCurtailFactor[i]);
@@ -2117,6 +2120,7 @@ function updateCompressedDay(entry, region, iso) {
     const surplusPatterns = {
         solar: createStripePattern(ctx, COLORS.solar.base, 'rgba(245,158,11,0.18)'),
         wind: createStripePattern(ctx, COLORS.wind.base, 'rgba(34,197,94,0.18)'),
+        offshore_wind: createStripePattern(ctx, COLORS.offshore_wind.base, 'rgba(0,150,136,0.18)'),
         hydro: createStripePattern(ctx, COLORS.hydro.base, 'rgba(14,165,233,0.18)'),
         nuclear: createStripePattern(ctx, COLORS.nuclear.base, 'rgba(26,39,68,0.18)'),
         geothermal: createStripePattern(ctx, COLORS.geothermal.base, 'rgba(180,83,9,0.18)'),
@@ -2124,12 +2128,13 @@ function updateCompressedDay(entry, region, iso) {
     };
 
     // Build cumulative stacking arrays (bottom to top)
-    // nuclear → geothermal → ccs_ccgt → hydro → wind → solar → battery → battery8 → ldes → h2
+    // nuclear → geothermal → ccs_ccgt → hydro → offshore_wind → wind → solar → battery → battery8 → ldes → h2
     const stack0 = matchedNuclear;
     const stack0b = hasGeo ? stack0.map((v, i) => v + matchedGeothermal[i]) : stack0;
     const stack1 = stack0b.map((v, i) => v + matchedCCS[i]);
     const stack2 = stack1.map((v, i) => v + matchedHydro[i]);
-    const stack3 = stack2.map((v, i) => v + matchedWind[i]);
+    const stack2b = stack2.map((v, i) => v + matchedOffshoreWind[i]);
+    const stack3 = stack2b.map((v, i) => v + matchedWind[i]);
     const stack4 = stack3.map((v, i) => v + matchedSolar[i]);
     const stack5 = stack4.map((v, i) => v + matchedBattery[i]);
     const stack5b = stack5.map((v, i) => v + matchedBattery8[i]);
@@ -2147,10 +2152,11 @@ function updateCompressedDay(entry, region, iso) {
         );
     }
     datasets.push(
-        { ...dsBase, label: RESOURCE_LABELS.ccs_ccgt,   data: stack1,  backgroundColor: COLORS.ccs_ccgt.alpha,   fill: '-1',     order: 11 },
-        { ...dsBase, label: RESOURCE_LABELS.hydro,      data: stack2,  backgroundColor: COLORS.hydro.alpha,      fill: '-1',     order: 10 },
-        { ...dsBase, label: RESOURCE_LABELS.wind,       data: stack3,  backgroundColor: COLORS.wind.alpha,       fill: '-1',     order: 9 },
-        { ...dsBase, label: RESOURCE_LABELS.solar,      data: stack4,  backgroundColor: COLORS.solar.alpha,      fill: '-1',     order: 8 },
+        { ...dsBase, label: RESOURCE_LABELS.ccs_ccgt,        data: stack1,  backgroundColor: COLORS.ccs_ccgt.alpha,        fill: '-1',     order: 11 },
+        { ...dsBase, label: RESOURCE_LABELS.hydro,           data: stack2,  backgroundColor: COLORS.hydro.alpha,           fill: '-1',     order: 10 },
+        { ...dsBase, label: RESOURCE_LABELS.offshore_wind,   data: stack2b, backgroundColor: COLORS.offshore_wind.alpha,   fill: '-1',     order: 9.5 },
+        { ...dsBase, label: RESOURCE_LABELS.wind,            data: stack3,  backgroundColor: COLORS.wind.alpha,            fill: '-1',     order: 9 },
+        { ...dsBase, label: RESOURCE_LABELS.solar,           data: stack4,  backgroundColor: COLORS.solar.alpha,           fill: '-1',     order: 8 },
         { ...dsBase, label: RESOURCE_LABELS.battery,    data: stack5,  backgroundColor: COLORS.battery.alpha,    fill: '-1',     order: 7 },
         { ...dsBase, label: RESOURCE_LABELS.battery8,   data: stack5b, backgroundColor: COLORS.battery8.alpha,   fill: '-1',     order: 6 },
         { ...dsBase, label: RESOURCE_LABELS.ldes,       data: stack6,  backgroundColor: COLORS.ldes.alpha,       fill: '-1',     order: 5 },
@@ -2284,9 +2290,9 @@ function updateCompressedDay(entry, region, iso) {
     // area between matchedTotal and demand = unmatched gap. This keeps curtailment visually
     // contiguous with the generation stack it belongs to.
     const curtailOrder = hasGeo
-        ? ['solar', 'wind', 'hydro', 'ccs_ccgt', 'nuclear', 'geothermal']
-        : ['solar', 'wind', 'hydro', 'ccs_ccgt', 'nuclear'];
-    const surplusArrays = { solar: surplusSolar, wind: surplusWind, hydro: surplusHydro, ccs_ccgt: surplusCCS, nuclear: surplusNuclear, geothermal: surplusGeothermal };
+        ? ['solar', 'wind', 'offshore_wind', 'hydro', 'ccs_ccgt', 'nuclear', 'geothermal']
+        : ['solar', 'wind', 'offshore_wind', 'hydro', 'ccs_ccgt', 'nuclear'];
+    const surplusArrays = { solar: surplusSolar, wind: surplusWind, offshore_wind: surplusOffshoreWind, hydro: surplusHydro, ccs_ccgt: surplusCCS, nuclear: surplusNuclear, geothermal: surplusGeothermal };
     // Start curtailment cumulative from the top of matched stack (flush against generation)
     let curtailCumulative = matchedTotal.slice();
     let prevCurtailIdx = topMatchedIdx;

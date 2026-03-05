@@ -1382,14 +1382,15 @@ function updateNarrative(iso) {
 // RESOURCE DENSITY STRIP PLOT
 // ============================================================================
 var DENSITY_RESOURCE_ORDER = [
-    { key: 'solar',      label: 'Solar',         color: '#F59E0B' },
-    { key: 'wind',       label: 'Onshore Wind',  color: '#22C55E' },
-    { key: 'nuclear',    label: 'Nuclear',        color: '#1E3A5F' },
-    { key: 'geothermal', label: 'Geothermal',     color: '#B45309' },
-    { key: 'ccs_ccgt',   label: 'CCS-CCGT',       color: '#64748B' },
-    { key: 'battery',    label: 'Battery (4hr)',  color: '#8B5CF6' },
-    { key: 'battery8',   label: 'Battery (8hr)',  color: '#A78BFA' },
-    { key: 'ldes',       label: 'LDES (100hr)',   color: '#E91E63' }
+    { key: 'solar',         label: 'Solar',          color: '#F59E0B' },
+    { key: 'wind',          label: 'Onshore Wind',   color: '#22C55E' },
+    { key: 'offshore_wind', label: 'Offshore Wind',  color: '#009688' },
+    { key: 'nuclear',       label: 'Nuclear',        color: '#1E3A5F' },
+    { key: 'geothermal',    label: 'Geothermal',     color: '#B45309' },
+    { key: 'ccs_ccgt',      label: 'CCS-CCGT',       color: '#64748B' },
+    { key: 'battery',       label: 'Battery (4hr)',  color: '#8B5CF6' },
+    { key: 'battery8',      label: 'Battery (8hr)',  color: '#A78BFA' },
+    { key: 'ldes',          label: 'LDES (100hr)',   color: '#E91E63' }
 ];
 
 function renderDensityStrips(iso) {
