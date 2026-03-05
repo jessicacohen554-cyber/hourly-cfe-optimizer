@@ -10,8 +10,7 @@ name: "Squash Pipeline Branches"
 #
 # Branch naming conventions produced by each step:
 #   Step 1B:  auto/{TS}-step1b-zone-search-{iso}          (PFS parquets — gitignored, force-added)
-#   Step 1C:  auto/{TS}-step1c-storage-{iso}-{band}       (storage parquets — tracked normally)
-#             auto/{TS}-step1d-fine-storage-{iso}-{mode}   (legacy naming, still matched)
+#   Step 1C:  auto/{TS}-step1c-storage-{iso}-{band}       (storage parquets in step1-pfs-parquets/)
 #   Others:   auto/{TS}-{step}-{iso}
 #
 # branch_pattern examples:
@@ -32,7 +31,7 @@ name: "Squash Pipeline Branches"
 #   1. Finds all remote auto/* branches not yet merged to master
 #   2. Creates a temp branch from master
 #   3. Sequentially merges each branch (skip on conflict)
-#   4. Force-adds gitignored data dirs (step1c PFS, step1d storage)
+#   4. Force-adds gitignored data dirs (step1-pfs-parquets/)
 #   5. Squashes all merged changes into a single commit (git reset --soft)
 #   6. Pushes and opens a PR
 #   7. Optionally closes old PRs and deletes merged branches
@@ -46,17 +45,16 @@ on:
         type: choice
         options:
           - 'auto/'
-          - 'auto/.*step1d'
-          - 'auto/.*step1d.*low'
-          - 'auto/.*step1d.*mid'
-          - 'auto/.*step1d.*high'
           - 'auto/.*step1c'
-          - 'auto/.*step1[cd]'
-          - 'auto/.*step1[cd].*caiso'
+          - 'auto/.*step1c.*storage'
+          - 'auto/.*step1c.*low'
+          - 'auto/.*step1c.*mid'
+          - 'auto/.*step1c.*high'
+          - 'auto/.*step1c.*caiso'
           - 'auto/.*step2'
           - 'auto/.*step3'
       custom_pattern:
-        description: 'Custom regex pattern (overrides branch_pattern if set). E.g. "auto/.*step1d.*ercot"'
+        description: 'Custom regex pattern (overrides branch_pattern if set). E.g. "auto/.*step1c.*ercot"'
         required: false
         default: ''
         type: string
@@ -215,12 +213,11 @@ jobs:
           # ── Squash: collapse all merge commits into one ──
           git reset --soft master
 
-          # Force-add gitignored data directories that step1c/step1d committed
+          # Force-add gitignored data directories that step1b/step1c committed
           # via "git add -f" on their branches. After git reset --soft master,
           # those files are in the working tree but gitignore would block a plain
           # "git add". Re-force-add so they're included in the squash commit.
           git add -f data/step1-pfs-parquets/ 2>/dev/null || true
-          git add    data/step1d-storage-parquets/ 2>/dev/null || true
 
           # Build commit message
           CUSTOM_MSG="${{ inputs.commit_message }}"

@@ -22,7 +22,7 @@ Pipeline position: Step 2 of 4
   Step 3 — Cost optimization (step3a_cost_optimization.py)
   Step 4 — Post-processing (step4_postprocess.py)
 
-Input:  data/step1-pfs-parquets/{ISO}_t{XX}_raw_pfs.parquet (from Step 1)
+Input:  data/step1-pfs-parquets/{ISO}_t{XX}_*.parquet (raw_pfs, fine_pfs, floor_pfs, storage)
 Output: data/step2-ef-parquets/step2_ef_{ISO}_t{XX}.parquet (per-ISO per-threshold band)
 
 After dedup, mixes are partitioned into non-overlapping threshold bands based
@@ -48,10 +48,7 @@ import pyarrow.compute as pc
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PFS_DIR = os.path.join(SCRIPT_DIR, 'data')
 STEP1_RAW_DIR = os.path.join(PFS_DIR, 'step1-pfs-parquets')
-STEP1D_DIR = os.path.join(PFS_DIR, 'step1d-storage-parquets')
-STEP1D2_DIR = os.path.join(PFS_DIR, 'step1d2-storage-parquets')
 STEP2_EF_OUTPUT_DIR = os.path.join(PFS_DIR, 'step2-ef-parquets')
-STEP2_EF_V2_OUTPUT_DIR = os.path.join(PFS_DIR, 'step2-ef-v2-parquets')
 
 # Target thresholds — 10-40 added for Track 2/3 greenfield, 50-100 for all tracks
 # Must match Step 1 THRESHOLDS and Step 3 OUTPUT_THRESHOLDS
@@ -150,22 +147,19 @@ def normalize_table(t, iso):
 
 def _extract_threshold_from_filename(fname):
     """Extract threshold value from a PFS filename. Returns float or None."""
-    # Handles: {ISO}_t{XX}_raw_pfs.parquet, {ISO}_t{XX}_raw_pfs_b{N}.parquet
-    # Also handles 1d/ and 1d2/ prefixed files: 1d/{ISO}_t{XX}_storage.parquet
-    if fname.startswith('1d2/'):
-        base = fname[4:]
-    elif fname.startswith('1d/'):
-        base = fname[3:]
-    else:
-        base = fname
-    m = re.match(r'^[A-Z]+_t([\d.]+)_', base)
+    # Handles: {ISO}_t{XX}_raw_pfs.parquet, {ISO}_t{XX}_fine_pfs.parquet,
+    # {ISO}_t{XX}_floor_pfs.parquet, {ISO}_t{XX}_storage.parquet,
+    # {ISO}_t{XX}_storage_b{N}.parquet, etc.
+    m = re.match(r'^[A-Z]+_t([\d.]+)_', fname)
     return float(m.group(1)) if m else None
 
 
-def scan_iso_files(target_isos=None, threshold_filter=None, storage_source='both'):
+def scan_iso_files(target_isos=None, threshold_filter=None):
     """Scan Step 1 parquet directory and return {iso: [filenames]} mapping.
 
-    Groups files by ISO prefix, handles canonical vs batch file dedup.
+    All file types (raw_pfs, fine_pfs, floor_pfs, storage) live in
+    data/step1-pfs-parquets/. Groups files by ISO prefix, handles
+    canonical vs batch file dedup.
     Does NOT load any data — just discovers and validates file paths.
 
     Args:
@@ -174,7 +168,6 @@ def scan_iso_files(target_isos=None, threshold_filter=None, storage_source='both
             include PFS files whose filename threshold is in this set. This
             pre-filters at the file level for batched threshold processing,
             avoiding loading large files that won't pass the threshold gate.
-        storage_source: 'both' (default, reads 1d + 1d2), 'step1d', or 'step1d2'.
 
     Returns dict keyed by ISO name with lists of filenames to process.
     """
@@ -231,33 +224,11 @@ def scan_iso_files(target_isos=None, threshold_filter=None, storage_source='both
                 filtered.append(f)
             files_by_iso[iso] = filtered
 
-    # Scan Step 1D and/or 1D.2 storage refinement parquets
-    storage_sources = []
-    if storage_source in ('both', 'step1d'):
-        storage_sources.append(('1d/', STEP1D_DIR, 'Step 1D'))
-    if storage_source in ('both', 'step1d2'):
-        storage_sources.append(('1d2/', STEP1D2_DIR, 'Step 1D.2'))
-
-    for s_prefix, s_dir, s_label in storage_sources:
-        if os.path.isdir(s_dir):
-            s_files = sorted(
-                f for f in os.listdir(s_dir) if f.endswith('.parquet')
-            )
-            if s_files:
-                n_1d = 0
-                for fname in s_files:
-                    iso_prefix = fname.split('_')[0] if '_' in fname else None
-                    if iso_prefix and iso_prefix in iso_filter:
-                        if threshold_filter is not None:
-                            file_thr = _extract_threshold_from_filename(fname)
-                            if file_thr is not None and file_thr not in threshold_filter:
-                                continue
-                        # Tag with directory prefix so load_and_process_iso knows
-                        # which directory to read from
-                        files_by_iso.setdefault(iso_prefix, []).append(f'{s_prefix}{fname}')
-                        n_1d += 1
-                if n_1d > 0:
-                    print(f"  Found {n_1d} {s_label} storage-refined parquets")
+    # Count storage files for reporting
+    for iso, flist in files_by_iso.items():
+        n_storage = sum(1 for f in flist if '_storage' in f)
+        if n_storage > 0:
+            print(f"  {iso}: {n_storage} storage-refined parquets found")
 
     missing = [iso for iso in iso_filter if iso not in files_by_iso]
     if missing:
@@ -266,16 +237,19 @@ def scan_iso_files(target_isos=None, threshold_filter=None, storage_source='both
     return files_by_iso
 
 
-# Active thresholds (50+) that require Step 1D storage refinement data
-STEP1D_REQUIRED_THRESHOLDS = [t for t in TARGET_THRESHOLDS if t >= 50.0]
+# Active thresholds (50+) that require storage refinement data
+STORAGE_REQUIRED_THRESHOLDS = [t for t in TARGET_THRESHOLDS if t >= 50.0]
 
 
-def validate_step1d_coverage(files_by_iso, target_isos, threshold_filter=None):
-    """Validate that Step 1D storage-refined parquets exist for active thresholds.
+def validate_storage_coverage(files_by_iso, target_isos, threshold_filter=None):
+    """Validate that storage-refined parquets exist for active thresholds.
 
-    Step 1D fills storage dispatch gaps from Step 1C's coarse grid. Without
-    these files, the EF will miss high-quality storage-optimized mixes,
-    leading to suboptimal results at thresholds >= 50%.
+    Storage refinement (Step 1C) fills storage dispatch gaps from the coarse
+    grid. Without these files, the EF will miss high-quality storage-optimized
+    mixes, leading to suboptimal results at thresholds >= 50%.
+
+    All storage files live in data/step1-pfs-parquets/ alongside raw/fine/floor
+    PFS files, identified by the '_storage' filename pattern.
 
     Args:
         files_by_iso: Dict from scan_iso_files()
@@ -283,48 +257,38 @@ def validate_step1d_coverage(files_by_iso, target_isos, threshold_filter=None):
         threshold_filter: Optional threshold filter set
 
     Returns:
-        True if all required 1D files are present, False if any are missing.
+        True if all required storage files are present, False if any are missing.
         Always prints warnings for missing coverage.
     """
-    required_thresholds = STEP1D_REQUIRED_THRESHOLDS
+    required_thresholds = STORAGE_REQUIRED_THRESHOLDS
     if threshold_filter is not None:
         required_thresholds = [t for t in required_thresholds if t in threshold_filter]
 
     if not required_thresholds:
-        return True  # No active thresholds need 1D data
-
-    if not os.path.isdir(STEP1D_DIR):
-        print(f"\n  WARNING: Step 1D directory missing: {STEP1D_DIR}")
-        print(f"  Run step1d_storage_refinement.py to generate storage-refined parquets.")
-        print(f"  Proceeding without 1D data — results may have suboptimal storage dispatch.\n")
-        return False
+        return True  # No active thresholds need storage data
 
     all_ok = True
     for iso in target_isos:
         fnames = files_by_iso.get(iso, [])
-        # Extract thresholds covered by 1D or 1D.2 files
-        step1d_thresholds = set()
+        # Extract thresholds covered by storage files
+        storage_thresholds = set()
         for f in fnames:
-            if f.startswith('1d2/'):
-                thr = _extract_threshold_from_filename(f[4:])
+            if '_storage' in f:
+                thr = _extract_threshold_from_filename(f)
                 if thr is not None:
-                    step1d_thresholds.add(thr)
-            elif f.startswith('1d/'):
-                thr = _extract_threshold_from_filename(f[3:])
-                if thr is not None:
-                    step1d_thresholds.add(thr)
+                    storage_thresholds.add(thr)
 
-        missing = [t for t in required_thresholds if t not in step1d_thresholds]
+        missing = [t for t in required_thresholds if t not in storage_thresholds]
         if missing:
             all_ok = False
-            print(f"  WARNING: {iso} missing Step 1D data for thresholds: "
+            print(f"  WARNING: {iso} missing storage data for thresholds: "
                   f"{', '.join(f'{t}%' for t in missing)}")
 
     if not all_ok:
-        print(f"  Run step1d_storage_refinement.py to fill gaps.")
+        print(f"  Run step1c_storage_refinement.py to fill gaps.")
         print(f"  Proceeding with available data — storage dispatch may be suboptimal.\n")
     else:
-        print(f"  Step 1D validation: all {len(target_isos)} ISOs have "
+        print(f"  Storage validation: all {len(target_isos)} ISOs have "
               f"storage-refined data for {len(required_thresholds)} active thresholds")
 
     return all_ok
@@ -368,13 +332,7 @@ def load_and_process_iso(iso, fnames):
     rows_since_last_dedup = 0  # Track new rows added since last dedup pass
 
     for fname in fnames:
-        # Step 1D/1D.2 files are prefixed with '1d/' or '1d2/' for directory routing
-        if fname.startswith('1d2/'):
-            path = os.path.join(STEP1D2_DIR, fname[4:])
-        elif fname.startswith('1d/'):
-            path = os.path.join(STEP1D_DIR, fname[3:])
-        else:
-            path = os.path.join(STEP1_RAW_DIR, fname)
+        path = os.path.join(STEP1_RAW_DIR, fname)
 
         pf = pq.ParquetFile(path)
         file_meta = pf.metadata
@@ -819,28 +777,11 @@ def parse_args():
     parser.add_argument('--clear', action='store_true',
                         help='Clear existing step2-ef-parquets for the target ISO(s) '
                              'before running. Removes stale EF files from previous runs.')
-    parser.add_argument('--storage-source', type=str, default='both',
-                        choices=['both', 'step1d', 'step1d2'],
-                        help='Which storage-refined parquets to use. '
-                             'both = union of 1d + 1d2 (default), '
-                             'step1d = legacy caps only, '
-                             'step1d2 = enhanced caps only.')
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
-
-    # Determine storage source and output directory
-    storage_source = getattr(args, 'storage_source', 'both')
-    global STEP2_EF_OUTPUT_DIR
-    if storage_source == 'step1d2':
-        STEP2_EF_OUTPUT_DIR = STEP2_EF_V2_OUTPUT_DIR
-        print(f"  Storage source: Step 1D.2 only")
-        print(f"  Output: {STEP2_EF_OUTPUT_DIR}")
-    elif storage_source == 'both':
-        print(f"  Storage source: Step 1D + Step 1D.2 (union)")
-        print(f"  Output: {STEP2_EF_OUTPUT_DIR}")
 
     # Determine which ISOs to process
     if args.iso:
@@ -924,9 +865,8 @@ def main():
         TARGET_THRESHOLD_SET = threshold_filter
 
     # Scan files (no data loaded yet) — with threshold pre-filter
-    print(f"\nScanning Step 1 raw parquets in {STEP1_RAW_DIR} + {STEP1D_DIR}")
-    files_by_iso = scan_iso_files(target_isos, threshold_filter=threshold_filter,
-                                   storage_source=storage_source)
+    print(f"\nScanning Step 1 parquets in {STEP1_RAW_DIR}")
+    files_by_iso = scan_iso_files(target_isos, threshold_filter=threshold_filter)
 
     found = sorted(files_by_iso.keys())
     print(f"Found {len(found)} ISOs: {', '.join(found)}")
@@ -934,8 +874,8 @@ def main():
         n_files = len(files_by_iso[iso])
         print(f"  {iso}: {n_files} files to process")
 
-    # Validate Step 1D coverage for active thresholds (50%+)
-    validate_step1d_coverage(files_by_iso, target_isos, threshold_filter=threshold_filter)
+    # Validate storage coverage for active thresholds (50%+)
+    validate_storage_coverage(files_by_iso, target_isos, threshold_filter=threshold_filter)
 
     # Process each ISO incrementally: load → gate → dedup per file
     print("\nStep 2: Threshold gate + deduplication (threshold-free)")

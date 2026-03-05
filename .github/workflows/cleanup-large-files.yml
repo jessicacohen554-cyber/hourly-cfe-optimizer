@@ -102,7 +102,7 @@ jobs:
           echo ""
 
           echo "--- Protected data/ files by directory ---"
-          for dir in data/eia-930 data/step1-pfs-parquets data/step1d-storage-parquets \
+          for dir in data/eia-930 data/step1-pfs-parquets data/step1-pfs-parquets \
                      data/step2-ef-parquets data/step3-cost-opt-parquets \
                      data/step5-post-processing; do
             count=$(grep -c "^.* ${dir}/" "$PROTECTED_DATA" 2>/dev/null || echo 0)
@@ -204,7 +204,7 @@ jobs:
             done
             echo ""
             echo "--- Protected by directory ---"
-            for dir in data/eia-930 data/step1-pfs-parquets data/step1d-storage-parquets \
+            for dir in data/eia-930 data/step1-pfs-parquets data/step1-pfs-parquets \
                        data/step2-ef-parquets data/step3-cost-opt-parquets \
                        data/step5-post-processing \
                        data/step5-post-processing/lmp data/step5-post-processing/co2_results \
@@ -241,7 +241,7 @@ jobs:
             done
             echo ""
             echo "--- Removable by directory ---"
-            for dir in data/eia-930 data/step1-pfs-parquets data/step1d-storage-parquets \
+            for dir in data/eia-930 data/step1-pfs-parquets data/step1-pfs-parquets \
                        data/step2-ef-parquets data/step3-cost-opt-parquets \
                        data/step5-post-processing \
                        data/step5-post-processing/lmp data/step5-post-processing/co2_results \

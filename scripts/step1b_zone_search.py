@@ -15,7 +15,7 @@ Architecture:
      e. Score all new mixes ONCE via vectorized batch_hourly_scores
      f. Assign each scored mix to relevant thresholds
   3. Per-threshold: dominance filter + save PFS parquet
-  4. Save union near-miss list for step1d storage sweep
+  4. Save union near-miss list for step1c storage sweep
 
 Output:
   data/step1-pfs-parquets/{ISO}_t{XX}_raw_pfs.parquet  (per-threshold feasible)
@@ -512,20 +512,20 @@ def _has_curtailment_mask(combos, demand_arr, supply_matrix, chunk_size=10000):
 
 
 def _compute_max_storage_scores(combos, demand_arr, supply_matrix, chunk_size=500):
-    """Max-storage ceiling score for each mix (same kernel as step1d Pass 0).
+    """Max-storage ceiling score for each mix (same kernel as step1c Pass 0).
 
     Returns float64 array (N,) — best score achievable with maximum storage.
     Mixes with max_score >= 0.50 necessarily have curtailment
     (subsumes the curtailment check). Uses same constants and Numba kernel
-    as step1d, so the math is identical.
+    as step1c, so the math is identical.
 
-    Always includes H2 (MAX_H2=[25.0]) for a conservative ceiling — step1d
+    Always includes H2 (MAX_H2=[25.0]) for a conservative ceiling — step1c
     still gates H2 by threshold in its Pass 1 sweep.
     """
     n = len(combos)
     max_scores = np.empty(n, dtype=np.float64)
 
-    # Storage constants (same as step1d._get_storage_constants)
+    # Storage constants (same as step1c._get_storage_constants)
     batt_eff = s1.BATTERY_EFFICIENCY
     batt8_eff = s1.BATTERY8_EFFICIENCY
     ldes_eff = s1.LDES_EFFICIENCY
@@ -538,7 +538,7 @@ def _compute_max_storage_scores(combos, demand_arr, supply_matrix, chunk_size=50
     h2_dur = float(s1.H2_DURATION_HOURS)
     h2_window = s1.H2_WINDOW_DAYS * 24
 
-    # Max storage arrays (same as step1d Pass 0)
+    # Max storage arrays (same as step1c Pass 0)
     MAX_BAT4 = np.array([0.5], dtype=np.float64)
     MAX_BAT8 = np.array([1.0], dtype=np.float64)
     MAX_LDES = np.array([5.0], dtype=np.float64)
@@ -609,7 +609,7 @@ def _stratified_sample(combos, scores, max_storage_scores, rtypes, max_n):
 def save_near_miss(iso, combos, scores, rtypes,
                    demand_arr=None, supply_matrix=None,
                    full_filter=False):
-    """Save union near-miss mixes for step1d storage sweep.
+    """Save union near-miss mixes for step1c storage sweep.
 
     Args:
         full_filter: If True (final save), compute max-storage scores,
@@ -665,7 +665,7 @@ def save_near_miss(iso, combos, scores, rtypes,
         print(f"  Near-miss union: 0 mixes after filter (skipped)")
         return
 
-    # Save WITHOUT max_storage_score column (step1d computes its own Pass 0)
+    # Save WITHOUT max_storage_score column (step1c computes its own Pass 0)
     os.makedirs(s1.STEP1_RAW_PFS_PARQUET_DIR, exist_ok=True)
     data = {}
     for i, rt in enumerate(rtypes):
@@ -687,7 +687,7 @@ def save_near_miss_interim(iso, all_combos_lists, all_scores_lists, rtypes,
                            supply_matrix=None):
     """Compute and save near-miss parquet from accumulated scored mixes so far.
 
-    Called after each zone so step1d has a valid near-miss file even if the
+    Called after each zone so step1c has a valid near-miss file even if the
     job times out before all zones complete.
     """
     if not all_combos_lists:
@@ -1010,7 +1010,7 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None, zones_filter=Non
         zones_done.add(zone_name)
         _save_manifest(iso, code_hash, zones_done, thresholds_done)
 
-        # Save incremental near-miss so step1d has valid input even if
+        # Save incremental near-miss so step1c has valid input even if
         # this job times out before all zones complete.
         print(f"    Saving interim near-miss parquet...")
         save_near_miss_interim(iso, all_combos_list, all_scores_list,
@@ -1037,7 +1037,7 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None, zones_filter=Non
     feasible_idx, near_miss_idx = assign_to_thresholds_vectorized(
         all_combos, all_scores, active_thresholds)
 
-    # Collect union of near-miss mixes (unique, for step1d) — final authoritative save
+    # Collect union of near-miss mixes (unique, for step1c) — final authoritative save
     all_nm_indices = set()
     for t in active_thresholds:
         all_nm_indices.update(near_miss_idx[t].tolist())
@@ -1045,7 +1045,7 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None, zones_filter=Non
 
     # Save near-miss union (final authoritative version overwrites interim)
     # full_filter=True: compute max-storage scores and persist as column,
-    # so step1d can skip its Pass 0 recomputation.
+    # so step1c can skip its Pass 0 recomputation.
     if len(all_nm_indices) > 0:
         save_near_miss(iso, all_combos[all_nm_indices],
                        all_scores[all_nm_indices], rtypes,
@@ -1093,7 +1093,7 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None, zones_filter=Non
     iso_elapsed = time.time() - iso_start
     print(f"\n{'=' * 70}")
     print(f"  {iso} COMPLETE — {len(all_combos):,} total scored mixes, "
-          f"{len(all_nm_indices):,} near-miss for step1d")
+          f"{len(all_nm_indices):,} near-miss for step1c")
     print(f"  Elapsed: {iso_elapsed:.1f}s")
     print(f"{'=' * 70}")
 

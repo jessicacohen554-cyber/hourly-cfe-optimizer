@@ -9,11 +9,11 @@ name: "Step 1B: Zone-Based Fine Search"
 #   - Intermittent auto-commits after every zone AND after near-miss save
 #   - Threshold and zone filtering: run only the subset you need
 #   - Grid size cap prevents hang/OOM on wide 5D CAISO bounds
-#   - Near-miss parquet saved incrementally so step1d can start immediately
+#   - Near-miss parquet saved incrementally so step1c can start immediately
 #
 # Prerequisite: Step 1A (Scored Database) must have run first.
 # Output: data/step1-pfs-parquets/{ISO}_t{XX}_raw_pfs.parquet (per threshold)
-#         data/step1-pfs-parquets/{ISO}_near_miss.parquet (for step1d)
+#         data/step1-pfs-parquets/{ISO}_near_miss.parquet (for step1c)
 
 on:
   workflow_dispatch:
