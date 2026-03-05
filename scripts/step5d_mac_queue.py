@@ -78,7 +78,9 @@ from dispatch_utils import (
     compute_co2_from_dispatch,
     compute_fossil_retirement,
     COAL_CAP_TWH, OIL_CAP_TWH,
+    RESOURCE_TYPES,
 )
+import step1_pfs_generator as s1
 
 # ============================================================================
 # CONSTANTS
@@ -707,6 +709,219 @@ def phase2_refine(top_mixes, floor_pct, threshold, num_perturbations=PHASE2_PERT
 
 
 # ============================================================================
+# ON-THE-FLY FLOOR-AWARE MIX GENERATION
+# ============================================================================
+
+MIN_FILTERED_MIXES = 1000  # Generate on-the-fly if fewer than this diverse mixes pass floor filter
+
+def generate_floor_mixes(iso, floor_pct, threshold, demand_norm, supply_matrix,
+                         step_resource=2, step_storage=1, max_add_resource=40, max_add_storage=15):
+    """Generate mixes on-the-fly starting from the current ratcheted floor.
+
+    When pre-computed PFS has too few mixes passing the floor filter at high
+    thresholds, this generates a dense grid of incremental additions above
+    the floor, scores them with batch_hourly_scores, and returns mixes in
+    the target score range.
+
+    Args:
+        iso: ISO region
+        floor_pct: dict of minimum resource allocations (% of demand)
+        threshold: target threshold %
+        demand_norm: normalized demand array (8760,)
+        supply_matrix: (n_resources, 8760) supply profiles
+        step_resource: grid step for solar/wind/CF additions (%)
+        step_storage: grid step for storage additions (%)
+        max_add_resource: max addition above floor for solar/wind (%)
+        max_add_storage: max addition above floor for storage (%)
+
+    Returns:
+        DataFrame of scored mixes matching MIX_COLS schema
+    """
+    floor_cf = floor_pct.get('clean_firm', 0)
+    floor_sol = floor_pct.get('solar', 0)
+    floor_wnd = floor_pct.get('wind', 0)
+    floor_hyd = floor_pct.get('hydro', 0)
+    floor_osw = floor_pct.get('offshore_wind', 0)
+
+    # Additions above floor
+    cf_adds = np.arange(0, max_add_resource // 2 + step_resource, step_resource, dtype=np.float64)
+    sol_adds = np.arange(0, max_add_resource + step_resource, step_resource, dtype=np.float64)
+    wnd_adds = np.arange(0, max_add_resource + step_resource, step_resource, dtype=np.float64)
+
+    # Offshore wind additions (only for offshore ISOs)
+    if iso in OFFSHORE_ISOS and floor_osw < 30:
+        osw_adds = np.arange(0, min(20, max_add_resource) + step_resource, step_resource, dtype=np.float64)
+    else:
+        osw_adds = np.array([0.0])
+
+    # Storage additions (battery 4hr, battery 8hr, LDES)
+    batt_adds = np.arange(0, max_add_storage + step_storage, step_storage, dtype=np.float64)
+    batt8_adds = np.arange(0, max_add_storage + step_storage, step_storage * 2, dtype=np.float64)
+    ldes_adds = np.arange(0, min(10, max_add_storage) + step_storage, step_storage * 2, dtype=np.float64)
+
+    # For very high thresholds (>95%), use finer grid but smaller range
+    if threshold >= 95:
+        step_resource = max(1, step_resource)
+        cf_adds = np.arange(0, 15 + step_resource, step_resource, dtype=np.float64)
+        sol_adds = np.arange(0, 25 + step_resource, step_resource, dtype=np.float64)
+        wnd_adds = np.arange(0, 25 + step_resource, step_resource, dtype=np.float64)
+        batt_adds = np.arange(0, 20 + 1, 1, dtype=np.float64)
+        batt8_adds = np.arange(0, 15 + 1, 1, dtype=np.float64)
+        ldes_adds = np.arange(0, 10 + 1, 1, dtype=np.float64)
+
+    n_resource_combos = len(cf_adds) * len(sol_adds) * len(wnd_adds) * len(osw_adds)
+    n_storage_combos = len(batt_adds) * len(batt8_adds) * len(ldes_adds)
+
+    # Cap total combos to avoid OOM — reduce grid if needed
+    MAX_COMBOS = 5_000_000
+    total_combos = n_resource_combos * n_storage_combos
+    if total_combos > MAX_COMBOS:
+        # Coarsen resource grid
+        cf_adds = cf_adds[::2]
+        sol_adds = sol_adds[::2]
+        wnd_adds = wnd_adds[::2]
+        n_resource_combos = len(cf_adds) * len(sol_adds) * len(wnd_adds) * len(osw_adds)
+        total_combos = n_resource_combos * n_storage_combos
+    if total_combos > MAX_COMBOS:
+        # Coarsen storage grid too
+        batt_adds = batt_adds[::2]
+        batt8_adds = batt8_adds[::2]
+        ldes_adds = ldes_adds[::2]
+        n_storage_combos = len(batt_adds) * len(batt8_adds) * len(ldes_adds)
+        total_combos = n_resource_combos * n_storage_combos
+
+    print(f"      On-the-fly generation: {total_combos:,} combos "
+          f"({len(cf_adds)}cf × {len(sol_adds)}sol × {len(wnd_adds)}wnd × "
+          f"{len(osw_adds)}osw × {len(batt_adds)}b4 × {len(batt8_adds)}b8 × {len(ldes_adds)}ldes)")
+
+    # Step 1: Generate resource grid (without storage first) and score
+    grids_r = np.meshgrid(cf_adds, sol_adds, wnd_adds, osw_adds, indexing='ij')
+    flat_r = [g.ravel() for g in grids_r]
+    N_r = len(flat_r[0])
+
+    cf_vals = floor_cf + flat_r[0]
+    sol_vals = floor_sol + flat_r[1]
+    wnd_vals = floor_wnd + flat_r[2]
+    osw_vals = floor_osw + flat_r[3]
+    hyd_vals = np.full(N_r, floor_hyd)
+
+    # CCS residual
+    explicit_sum = cf_vals + sol_vals + wnd_vals + hyd_vals + osw_vals
+    ccs_vals = np.maximum(0, 100.0 - explicit_sum)
+
+    # Build mix_batch for resource-only scoring (RESOURCE_TYPES order)
+    # ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']
+    mix_batch = np.zeros((N_r, supply_matrix.shape[0]), dtype=np.float64)
+    mix_batch[:, 0] = cf_vals
+    mix_batch[:, 1] = sol_vals
+    mix_batch[:, 2] = wnd_vals
+    mix_batch[:, 3] = osw_vals
+    mix_batch[:, 4] = ccs_vals
+    mix_batch[:, 5] = hyd_vals
+
+    # Score resource-only mixes
+    scores_r = s1.batch_hourly_scores(demand_norm, supply_matrix, mix_batch, chunk_size=20000)
+    total_demand = demand_norm.sum()
+    if total_demand > 0:
+        scores_r = scores_r / total_demand * 100.0
+
+    # Filter to mixes near target (within reasonable range that storage can push up)
+    # Storage can add ~5-15% to hourly match, so include mixes below threshold
+    storage_headroom = max(5, min(20, max_add_storage))
+    resource_mask = (scores_r >= threshold - storage_headroom) & (scores_r <= threshold + 5.0)
+
+    # For mixes already at/above threshold, they don't need storage
+    at_target = (scores_r >= threshold - 0.5) & (scores_r <= threshold + 1.0)
+
+    # Collect resource-only mixes that hit threshold
+    at_target_indices = np.where(at_target)[0]
+    near_target_indices = np.where(resource_mask & ~at_target)[0]
+
+    results = []
+
+    # Add resource-only mixes that already hit threshold (no storage needed)
+    if len(at_target_indices) > 0:
+        for idx in at_target_indices[:2000]:  # Cap at 2000
+            results.append({
+                'clean_firm': cf_vals[idx],
+                'solar': sol_vals[idx],
+                'wind': wnd_vals[idx],
+                'hydro': hyd_vals[idx],
+                'offshore_wind': osw_vals[idx],
+                'geothermal': 0.0,
+                'battery_dispatch_pct': 0.0,
+                'battery8_dispatch_pct': 0.0,
+                'ldes_dispatch_pct': 0.0,
+                'h2_dispatch_pct': 0.0,
+                'hourly_match_score': scores_r[idx],
+            })
+
+    # Step 2: For near-target mixes, add storage combos
+    # Sample up to 500 near-target resource mixes to pair with storage
+    if len(near_target_indices) > 500:
+        rng = np.random.RandomState(42)
+        near_target_indices = rng.choice(near_target_indices, 500, replace=False)
+
+    if len(near_target_indices) > 0 and n_storage_combos > 1:
+        # Generate storage grid
+        grids_s = np.meshgrid(batt_adds, batt8_adds, ldes_adds, indexing='ij')
+        flat_s = [g.ravel() for g in grids_s]
+        N_s = len(flat_s[0])
+
+        # For each sampled resource mix, test storage combos
+        # Use batch scoring: build combined resource+storage mixes
+        for r_idx in near_target_indices:
+            base_cf = cf_vals[r_idx]
+            base_sol = sol_vals[r_idx]
+            base_wnd = wnd_vals[r_idx]
+            base_osw = osw_vals[r_idx]
+            base_hyd = hyd_vals[r_idx]
+            base_score = scores_r[r_idx]
+
+            # Estimate storage contribution (heuristic: each % of battery adds ~0.5-1% match)
+            # Only build full dispatch for promising combos
+            for s_idx in range(N_s):
+                b4 = floor_pct.get('battery_dispatch_pct', 0) + flat_s[0][s_idx]
+                b8 = floor_pct.get('battery8_dispatch_pct', 0) + flat_s[1][s_idx]
+                ld = floor_pct.get('ldes_dispatch_pct', 0) + flat_s[2][s_idx]
+
+                # Rough estimate: storage adds ~0.5% per 1% dispatch
+                est_boost = (b4 + b8 + ld) * 0.5
+                est_score = base_score + est_boost
+
+                if est_score >= threshold - 2.0 and est_score <= threshold + 5.0:
+                    results.append({
+                        'clean_firm': base_cf,
+                        'solar': base_sol,
+                        'wind': base_wnd,
+                        'hydro': base_hyd,
+                        'offshore_wind': base_osw,
+                        'geothermal': 0.0,
+                        'battery_dispatch_pct': b4,
+                        'battery8_dispatch_pct': b8,
+                        'ldes_dispatch_pct': ld,
+                        'h2_dispatch_pct': 0.0,
+                        'hourly_match_score': est_score,  # Approximate — will be refined
+                    })
+
+    if not results:
+        print(f"      On-the-fly: 0 mixes generated in target range")
+        return pd.DataFrame(columns=MIX_COLS)
+
+    df = pd.DataFrame(results)
+
+    # Ensure all MIX_COLS present
+    for col in MIX_COLS:
+        if col not in df.columns:
+            df[col] = 0.0
+
+    print(f"      On-the-fly: {len(df):,} mixes generated ({len(at_target_indices)} resource-only + "
+          f"{len(results) - min(len(at_target_indices), 2000)} with storage)")
+
+    return df
+
+
+# ============================================================================
 # SINGLE THRESHOLD OPTIMIZER
 # ============================================================================
 
@@ -753,15 +968,37 @@ def optimize_threshold(iso, threshold, floor_twh, cumulative_caps,
     # 2. Load PFS archetypes
     pfs_df = load_pfs_for_threshold(iso, threshold)
 
-    if pfs_df.empty:
-        print(f"    WARNING: No PFS data for {iso} t{threshold:g}")
-        return None, floor_twh, cumulative_caps
+    if not pfs_df.empty:
+        # 3. Filter and sample
+        filtered = filter_and_sample(pfs_df, floor_pct, threshold)
+    else:
+        filtered = pd.DataFrame(columns=MIX_COLS)
 
-    # 3. Filter and sample
-    filtered = filter_and_sample(pfs_df, floor_pct, threshold)
+    # 3b. On-the-fly enhancement if too few mixes pass floor filter
+    if len(filtered) < MIN_FILTERED_MIXES:
+        otf_df = generate_floor_mixes(iso, floor_pct, threshold,
+                                       demand_norm, supply_matrix)
+        if not otf_df.empty:
+            # On-the-fly mixes already respect floor by construction.
+            # Only apply score range filter (wider for estimated storage scores).
+            scores = otf_df['hourly_match_score'].values
+            score_mask = (scores >= threshold - 3.0) & (scores <= threshold + 5.0)
+            otf_filtered = otf_df.loc[score_mask].copy()
+
+            if not otf_filtered.empty:
+                if len(otf_filtered) > MAX_ARCHETYPES:
+                    otf_filtered = otf_filtered.sample(n=MAX_ARCHETYPES, random_state=42)
+                filtered = pd.concat([filtered, otf_filtered], ignore_index=True)
+                # Deduplicate
+                dedup_cols = RESOURCE_COLS + STORAGE_COLS
+                filtered_rounded = filtered.copy()
+                for c in dedup_cols:
+                    if c in filtered_rounded.columns:
+                        filtered_rounded[c] = filtered_rounded[c].round(2)
+                filtered = filtered.loc[filtered_rounded.drop_duplicates(subset=dedup_cols).index].reset_index(drop=True)
 
     if filtered.empty:
-        print(f"    WARNING: No mixes pass floor filter for {iso} t{threshold:g}")
+        print(f"    WARNING: No mixes pass floor filter for {iso} t{threshold:g} (even with on-the-fly generation)")
         return None, floor_twh, cumulative_caps
 
     print(f"    {iso} t{threshold:g}: {len(pfs_df)} PFS mixes → {len(filtered)} after filtering")
