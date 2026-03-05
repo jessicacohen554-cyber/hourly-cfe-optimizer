@@ -114,6 +114,7 @@ jobs:
           name: mac-queue-${{ matrix.iso }}
           path: |
             data/step5-post-processing/mac_queue/
+            data/step5-post-processing/scenario_a_${{ matrix.iso }}.json
           retention-days: 1
 
   merge:
@@ -151,6 +152,8 @@ jobs:
         run: |
           mkdir -p data/step5-post-processing/mac_queue
           cp -rf artifact-tmp/data/step5-post-processing/mac_queue/* data/step5-post-processing/mac_queue/ 2>/dev/null || true
+          # Also copy scenario_a_*.json files (step7c input)
+          cp -f artifact-tmp/data/step5-post-processing/scenario_a_*.json data/step5-post-processing/ 2>/dev/null || true
 
       - name: Batched commit and push (per-ISO)
         run: |
@@ -210,11 +213,13 @@ jobs:
             fi
           done
 
-          # Summary JSON
+          # Summary JSON + scenario_a files
           git add -f data/step5-post-processing/mac_queue/ 2>/dev/null || true
+          git add -f data/step5-post-processing/scenario_a_*.json 2>/dev/null || true
+          git add -f data/step5-post-processing/consequential_queue.json 2>/dev/null || true
           if ! git diff --cached --quiet; then
             echo "--- Staging remaining files ---"
-            git commit -m "Step 5D MAC Queue: summary — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git commit -m "Step 5D MAC Queue: summary + scenario A export — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             if push_with_retry "summary"; then PUSHED=true; else git reset HEAD~1; fi
           fi
 
