@@ -441,11 +441,16 @@ def main():
     # Load pre-computed scenario results from intermediate JSON files
     # ------------------------------------------------------------------
     print("\nLoading Scenario A results...")
-    results_a, _meta_a = load_scenario_results('A', isos=requested_isos)
+    # Try mac_queue subdirectory first (step5d output), fall back to step5 root
+    mac_queue_dir = 'data/step5-post-processing/mac_queue'
+    results_a, _meta_a = load_scenario_results('A', isos=requested_isos, out_dir=mac_queue_dir)
+    if results_a is None:
+        # Fallback: legacy location in step5 root
+        results_a, _meta_a = load_scenario_results('A', isos=requested_isos)
     if results_a is None:
         print("ERROR: Scenario A results not found.")
-        print("  Run the Scenario A script first to produce intermediate results.")
-        print("  Expected: data/step5-post-processing/scenario_a_{ISO}.json per ISO")
+        print("  Run step5d_mac_queue.py first to produce intermediate results.")
+        print("  Expected: data/step5-post-processing/mac_queue/scenario_a_{ISO}.json per ISO")
         sys.exit(1)
 
     print(f"  Loaded A: {sorted(results_a.keys())}")
