@@ -219,13 +219,11 @@ def _augment_with_floor_fine(original_load_fn):
                   f"0 in near-miss window")
             return nm_combos, nm_scores, nm_max_scores
 
-        # Deduplicate against existing near-miss pool
+        # Deduplicate against existing near-miss pool (vectorized np.isin)
         n_cols = min(nm_combos.shape[1], len(_MIX_HASH_BASES))
         nm_keys = nm_combos.astype(np.int64)[:, :n_cols] @ _MIX_HASH_BASES[:n_cols]
         ff_keys = ff_combos.astype(np.int64)[:, :n_cols] @ _MIX_HASH_BASES[:n_cols]
-        nm_key_set = set(nm_keys.tolist())
-        new_mask = np.array([k not in nm_key_set for k in ff_keys.tolist()],
-                            dtype=bool)
+        new_mask = ~np.isin(ff_keys, nm_keys)
         ff_combos = ff_combos[new_mask]
         ff_scores = ff_scores[new_mask]
         n_new = len(ff_combos)
@@ -344,10 +342,10 @@ def load_mixes_with_coarse_fallback(iso, active_thresholds):
         return nm_combos, nm_scores, nm_max_scores
 
     # Only add coarse mixes that are in the near-miss window for any threshold
-    # and aren't already in the near-miss file
-    nm_keys = set(_mix_keys(nm_combos).tolist())
+    # and aren't already in the near-miss file (vectorized np.isin)
+    nm_keys = _mix_keys(nm_combos)
     cc_keys = _mix_keys(cc_combos)
-    new_mask = np.array([k not in nm_keys for k in cc_keys.tolist()], dtype=bool)
+    new_mask = ~np.isin(cc_keys, nm_keys)
 
     # Filter to mixes in the near-miss window for at least one active threshold
     nm_eligible = np.zeros(len(cc_combos), dtype=bool)
@@ -544,33 +542,28 @@ def run_adaptive_coarse(iso, nm_combos, nm_base_scores, max_scores,
               f"{n_combos:,} combos "
               f"(b4={n_b4} b8={n_b8} ldes={n_l} h2={n_h2})")
 
-        # Pre-sort combo indices by total storage (ascending).
-        sorted_combos = []
-        for b4i in range(n_b4):
-            for b8i in range(n_b8):
-                for li in range(n_l):
-                    for h2i in range(n_h2):
-                        bp = b4_grid[b4i]
-                        b8p = b8_grid[b8i]
-                        lp = ldes_grid[li]
-                        h2p = h2_grid[h2i]
-                        if bp == 0 and b8p == 0 and lp == 0 and h2p == 0:
-                            continue
-                        flat_idx = (b4i * n_b8 * n_l * n_h2 +
-                                    b8i * n_l * n_h2 +
-                                    li * n_h2 + h2i)
-                        total_s = bp + b8p + lp + h2p
-                        sorted_combos.append(
-                            (total_s, flat_idx, bp, b8p, lp, h2p))
-        sorted_combos.sort()  # ascending by total storage
+        # Pre-sort combo indices by total storage (ascending) — vectorized meshgrid.
+        mg_b4i, mg_b8i, mg_li, mg_h2i = np.meshgrid(
+            np.arange(n_b4), np.arange(n_b8), np.arange(n_l), np.arange(n_h2),
+            indexing='ij')
+        all_bp = b4_grid[mg_b4i.ravel()]
+        all_b8p = b8_grid[mg_b8i.ravel()]
+        all_lp = ldes_grid[mg_li.ravel()]
+        all_h2p = h2_grid[mg_h2i.ravel()]
+        all_flat = (mg_b4i.ravel() * n_b8 * n_l * n_h2 +
+                    mg_b8i.ravel() * n_l * n_h2 +
+                    mg_li.ravel() * n_h2 + mg_h2i.ravel())
+        all_total = all_bp + all_b8p + all_lp + all_h2p
 
-        # Convert to numpy arrays for vectorized access
-        n_sorted = len(sorted_combos)
-        sc_flat_idx = np.array([c[1] for c in sorted_combos], dtype=np.intp)
-        sc_bp = np.array([c[2] for c in sorted_combos], dtype=np.float64)
-        sc_b8p = np.array([c[3] for c in sorted_combos], dtype=np.float64)
-        sc_lp = np.array([c[4] for c in sorted_combos], dtype=np.float64)
-        sc_h2p = np.array([c[5] for c in sorted_combos], dtype=np.float64)
+        # Filter out all-zero combo, sort by total storage
+        nonzero = all_total > 0
+        sort_idx = np.argsort(all_total[nonzero])
+        n_sorted = int(nonzero.sum())
+        sc_flat_idx = all_flat[nonzero][sort_idx].astype(np.intp)
+        sc_bp = all_bp[nonzero][sort_idx]
+        sc_b8p = all_b8p[nonzero][sort_idx]
+        sc_lp = all_lp[nonzero][sort_idx]
+        sc_h2p = all_h2p[nonzero][sort_idx]
 
         sc_has_battery = (sc_bp > 0) | (sc_b8p > 0)
 
@@ -653,7 +646,7 @@ def run_adaptive_coarse(iso, nm_combos, nm_base_scores, max_scores,
                     if not hits.any():
                         continue
 
-                    # Record results for all hit mixes
+                    # Record results for all hit mixes (bulk vectorized)
                     hit_idx = np.where(hits)[0]
                     bp = float(sc_bp[ci])
                     b8p = float(sc_b8p[ci])
@@ -661,14 +654,16 @@ def run_adaptive_coarse(iso, nm_combos, nm_base_scores, max_scores,
                     h2p = float(sc_h2p[ci])
                     score_pcts = np.round(scores_col[hit_idx] * 100, 2)
 
-                    for k in range(len(hit_idx)):
-                        local_mi = int(b_idx[hit_idx[k]])
-                        mi = (int(global_idx_map[local_mi])
-                              if global_idx_map is not None
-                              else local_mi)
-                        results[t].append(
-                            (mi, bp, b8p, lp, h2p,
-                             float(score_pcts[k])))
+                    # Vectorized index mapping — no per-element Python loop
+                    local_mis = b_idx[hit_idx]
+                    if global_idx_map is not None:
+                        mis = global_idx_map[local_mis]
+                    else:
+                        mis = local_mis
+                    results[t].extend(
+                        [(int(mis[k]), bp, b8p, lp, h2p,
+                          float(score_pcts[k]))
+                         for k in range(len(hit_idx))])
                     total_feasible += len(hit_idx)
 
                     # Block dominated combos for hit mixes (vectorized)
@@ -701,12 +696,57 @@ def _fine_range(center, step, half_width, cap_lo, cap_hi):
     return np.array(vals, dtype=np.float64)
 
 
+def _vectorized_dominance_filter(b4_vals, b8_vals, l_vals, h2_vals, scores,
+                                  target, n_keep):
+    """Vectorized dominance filter for feasible storage combos.
+
+    Returns list of (b4, b8, ldes, h2, score) tuples — non-dominated,
+    sorted by ascending total storage, capped at n_keep.
+    """
+    # Filter to feasible
+    feasible_mask = (scores >= 0) & (scores >= target)
+    if not feasible_mask.any():
+        return []
+
+    fb4 = b4_vals[feasible_mask]
+    fb8 = b8_vals[feasible_mask]
+    fl = l_vals[feasible_mask]
+    fh2 = h2_vals[feasible_mask]
+    fsc = scores[feasible_mask]
+    total_s = fb4 + fb8 + fl + fh2
+
+    # Sort ascending by total storage
+    sort_idx = np.argsort(total_s)
+    fb4, fb8, fl, fh2, fsc = (fb4[sort_idx], fb8[sort_idx],
+                               fl[sort_idx], fh2[sort_idx], fsc[sort_idx])
+
+    # Greedy dominance filter (small N after feasibility filter, fast enough)
+    recorded = []
+    results = []
+    for i in range(len(fb4)):
+        b4v, b8v, lv, h2v = fb4[i], fb8[i], fl[i], fh2[i]
+        dominated = False
+        for rb4, rb8, rld, rh2 in recorded:
+            if rb4 <= b4v and rb8 <= b8v and rld <= lv and rh2 <= h2v:
+                dominated = True
+                break
+        if dominated:
+            continue
+        recorded.append((b4v, b8v, lv, h2v))
+        results.append((float(b4v), float(b8v), float(lv), float(h2v),
+                        float(fsc[i])))
+        if len(recorded) >= n_keep:
+            break
+    return results
+
+
 def run_fine_storage(iso, threshold, nm_combos, coarse_results,
                      demand_arr, supply_matrix):
     """Fine 0.05% storage refinement for one threshold's boundary mixes.
 
-    Identifies mixes near the threshold boundary from coarse results,
-    refines storage around the coarse winner at 0.05% resolution.
+    Groups boundary mixes by coarse winner to batch Numba kernel calls,
+    enabling prange parallelism across mixes within each group.
+    Vectorized combo extraction replaces 4-deep nested loops.
 
     Returns list of (mix_idx, bat4, bat8, ldes, h2, score).
     """
@@ -714,17 +754,7 @@ def run_fine_storage(iso, threshold, nm_combos, coarse_results,
     batch_size = CAISO_MIX_BATCH if iso == 'CAISO' else MAX_MIX_BATCH
 
     # Storage constants
-    batt_eff = s1.BATTERY_EFFICIENCY
-    batt8_eff = s1.BATTERY8_EFFICIENCY
-    ldes_eff = s1.LDES_EFFICIENCY
-    batt4_dur = s1.BATTERY_DURATION_HOURS
-    batt8_dur = s1.BATTERY8_DURATION_HOURS
-    ldes_dur = s1.LDES_DURATION_HOURS
-    ldes_window = s1.LDES_WINDOW_DAYS * 24
-    batt8_window = 48
-    h2_eff = s1.H2_EFFICIENCY
-    h2_dur = float(s1.H2_DURATION_HOURS)
-    h2_window = s1.H2_WINDOW_DAYS * 24
+    sc = _get_storage_constants()
 
     if not coarse_results:
         return []
@@ -742,99 +772,87 @@ def run_fine_storage(iso, threshold, nm_combos, coarse_results,
     if not boundary_mixes:
         return []
 
+    # ── Group boundary mixes by coarse winner → batch kernel calls ──
+    # Mixes with the same coarse winner get the same fine grid, so they
+    # can share a single kernel call with N>1 (enabling Numba prange).
+    winner_groups = {}  # (best_b4, best_b8, best_l, best_h2) → [mix_idx, ...]
+    for mi, (best_b4, best_b8, best_l, best_h2, _) in boundary_mixes.items():
+        key = (best_b4, best_b8, best_l, best_h2)
+        if key not in winner_groups:
+            winner_groups[key] = []
+        winner_groups[key].append(mi)
+
     fine_results = []
-    n_boundary = len(boundary_mixes)
-    processed = 0
 
-    # Process boundary mixes in batches
-    boundary_items = list(boundary_mixes.items())
+    for (best_b4, best_b8, best_l, best_h2), mix_indices in winner_groups.items():
+        # Generate fine ranges around this coarse winner
+        fine_b4 = _fine_range(best_b4, FINE_STEP, FINE_HALF_WIDTH,
+                              0, float(FULL_BAT4[-1]))
+        fine_b8 = _fine_range(best_b8, FINE_STEP, FINE_HALF_WIDTH,
+                              0, float(FULL_BAT8[-1]))
+        fine_l = _fine_range(best_l, FINE_STEP, FINE_HALF_WIDTH,
+                             0, float(FULL_LDES[-1]))
 
-    for batch_start in range(0, len(boundary_items), batch_size):
-        batch_end = min(batch_start + batch_size, len(boundary_items))
-        batch = boundary_items[batch_start:batch_end]
+        if threshold >= 95 and best_h2 > 0:
+            fine_h2 = _fine_range(best_h2, FINE_STEP * 10,
+                                  FINE_HALF_WIDTH * 5, 0, 25)
+        else:
+            fine_h2 = np.array([0.0], dtype=np.float64)
 
-        for mi, (best_b4, best_b8, best_l, best_h2, best_score) in batch:
-            # Generate fine ranges around the coarse winner
-            fine_b4 = _fine_range(best_b4, FINE_STEP, FINE_HALF_WIDTH,
-                                  0, float(FULL_BAT4[-1]))
-            fine_b8 = _fine_range(best_b8, FINE_STEP, FINE_HALF_WIDTH,
-                                  0, float(FULL_BAT8[-1]))
-            fine_l = _fine_range(best_l, FINE_STEP, FINE_HALF_WIDTH,
-                                 0, float(FULL_LDES[-1]))
-
-            if threshold >= 95 and best_h2 > 0:
-                fine_h2 = _fine_range(best_h2, FINE_STEP * 10, FINE_HALF_WIDTH * 5, 0, 25)
-            else:
-                fine_h2 = np.array([0.0], dtype=np.float64)
-
-            # Check if cross-product exceeds limit
+        # Check if cross-product exceeds limit
+        n_combos = len(fine_b4) * len(fine_b8) * len(fine_l) * len(fine_h2)
+        if n_combos > MAX_FINE_COMBOS:
+            fine_b8 = np.array([best_b8], dtype=np.float64)
+            fine_h2 = np.array([best_h2 if best_h2 > 0 else 0.0],
+                               dtype=np.float64)
             n_combos = len(fine_b4) * len(fine_b8) * len(fine_l) * len(fine_h2)
-            if n_combos > MAX_FINE_COMBOS:
-                # Importance sampling: fix least-important dims at winner,
-                # sweep the 2 most-important (most variation in coarse results)
-                # Default: sweep b4 and ldes (usually highest impact)
-                fine_b8 = np.array([best_b8], dtype=np.float64)
-                fine_h2 = np.array([best_h2 if best_h2 > 0 else 0.0],
-                                   dtype=np.float64)
-                n_combos = len(fine_b4) * len(fine_b8) * len(fine_l) * len(fine_h2)
 
-            # Build supply for this mix
-            mix_fracs = nm_combos[mi].astype(np.float64) / 100.0
-            mix_supply = (mix_fracs @ supply_matrix).reshape(1, -1)
+        n_b4 = len(fine_b4)
+        n_b8 = len(fine_b8)
+        n_l = len(fine_l)
+        n_h2 = len(fine_h2)
 
-            # Run Numba storage screen on single mix
-            mix_scores = s1._batch_mixes_storage_screen(
-                demand_arr, mix_supply, 1.0, 1,
+        # Pre-compute combo value arrays (vectorized meshgrid)
+        mg_b4, mg_b8, mg_l, mg_h2 = np.meshgrid(
+            fine_b4, fine_b8, fine_l, fine_h2, indexing='ij')
+        combo_b4 = mg_b4.ravel()
+        combo_b8 = mg_b8.ravel()
+        combo_l = mg_l.ravel()
+        combo_h2 = mg_h2.ravel()
+
+        # Process in batches to limit memory
+        for bs in range(0, len(mix_indices), batch_size):
+            be = min(bs + batch_size, len(mix_indices))
+            batch_mis = mix_indices[bs:be]
+            n_batch = len(batch_mis)
+
+            # Build batched supply profiles → (n_batch, 8760)
+            batch_fracs = nm_combos[batch_mis].astype(np.float64) / 100.0
+            batch_supply = batch_fracs @ supply_matrix
+
+            # Single batched kernel call — Numba prange across n_batch mixes
+            batch_scores = s1._batch_mixes_storage_screen(
+                demand_arr, batch_supply, 1.0, n_batch,
                 fine_b4, fine_b8, fine_l,
-                len(fine_b4), len(fine_b8), len(fine_l),
-                batt_eff, batt8_eff, ldes_eff,
-                batt4_dur, batt8_dur, ldes_dur,
-                ldes_window, batt8_window,
-                fine_h2, len(fine_h2), h2_eff, h2_dur, h2_window)
+                n_b4, n_b8, n_l,
+                sc['batt_eff'], sc['batt8_eff'], sc['ldes_eff'],
+                sc['batt4_dur'], sc['batt8_dur'], sc['ldes_dur'],
+                sc['ldes_window'], sc['batt8_window'],
+                fine_h2, n_h2, sc['h2_eff'], sc['h2_dur'], sc['h2_window'])
 
-            scores_flat = mix_scores[0]  # (n_combos,)
+            # Extract results per mix (vectorized combo extraction + dominance)
+            for local_i in range(n_batch):
+                mi = batch_mis[local_i]
+                scores_flat = batch_scores[local_i]  # (n_combos,)
 
-            # Collect feasible combos, sort by total storage, dominance-filter
-            n_b4, n_b8, n_l, n_h2 = (len(fine_b4), len(fine_b8),
-                                      len(fine_l), len(fine_h2))
-            feasible = []
-            for b4i in range(n_b4):
-                for b8i in range(n_b8):
-                    for li in range(n_l):
-                        for h2i in range(n_h2):
-                            idx = (b4i * n_b8 * n_l * n_h2 +
-                                   b8i * n_l * n_h2 +
-                                   li * n_h2 + h2i)
-                            score = scores_flat[idx]
-                            if score >= 0 and score >= target:
-                                b4v = fine_b4[b4i]
-                                b8v = fine_b8[b8i]
-                                lv = fine_l[li]
-                                h2v = fine_h2[h2i]
-                                feasible.append(
-                                    (b4v + b8v + lv + h2v,
-                                     b4v, b8v, lv, h2v, score))
+                non_dom = _vectorized_dominance_filter(
+                    combo_b4, combo_b8, combo_l, combo_h2,
+                    scores_flat, target, N_KEEP)
 
-            # Sort ascending by total storage, then dominance filter
-            feasible.sort()
-            recorded = []
-            for _, b4v, b8v, lv, h2v, score in feasible:
-                dominated = False
-                for rb4, rb8, rld, rh2 in recorded:
-                    if rb4 <= b4v and rb8 <= b8v and rld <= lv and rh2 <= h2v:
-                        dominated = True
-                        break
-                if dominated:
-                    continue
-                recorded.append((b4v, b8v, lv, h2v))
-                fine_results.append(
-                    (int(mi), float(b4v), float(b8v),
-                     float(lv), float(h2v),
-                     round(score * 100, 2)))
-                if len(recorded) >= N_KEEP:
-                    break
-
-            processed += 1
+                for b4v, b8v, lv, h2v, sc_val in non_dom:
+                    fine_results.append(
+                        (int(mi), b4v, b8v, lv, h2v,
+                         round(sc_val * 100, 2)))
 
     return fine_results
 
@@ -856,23 +874,21 @@ def save_storage_results(iso, threshold, nm_combos, results, rtypes,
     os.makedirs(STEP1D_OUTPUT_DIR, exist_ok=True)
 
     n = len(results)
+    # Convert results to structured numpy array for vectorized column extraction
+    result_arr = np.array(results, dtype=np.float64)  # (N, 6)
+    result_indices = result_arr[:, 0].astype(np.intp)
+
     data = {
         'iso': [iso] * n,
         'threshold': [float(threshold)] * n,
     }
     for j, rt in enumerate(rtypes):
-        data[rt] = np.array([nm_combos[r[0]][j] for r in results],
-                            dtype=np.float64)
-    data['battery_dispatch_pct'] = np.array([r[1] for r in results],
-                                            dtype=np.float64)
-    data['battery8_dispatch_pct'] = np.array([r[2] for r in results],
-                                             dtype=np.float64)
-    data['ldes_dispatch_pct'] = np.array([r[3] for r in results],
-                                         dtype=np.float64)
-    data['h2_dispatch_pct'] = np.array([r[4] for r in results],
-                                       dtype=np.float64)
-    data['hourly_match_score'] = np.array([r[5] for r in results],
-                                          dtype=np.float64)
+        data[rt] = nm_combos[result_indices, j].astype(np.float64)
+    data['battery_dispatch_pct'] = result_arr[:, 1]
+    data['battery8_dispatch_pct'] = result_arr[:, 2]
+    data['ldes_dispatch_pct'] = result_arr[:, 3]
+    data['h2_dispatch_pct'] = result_arr[:, 4]
+    data['hourly_match_score'] = result_arr[:, 5]
 
     table = pa.table(data)
     t_str = s1._normalize_threshold_str(threshold)
@@ -1254,8 +1270,10 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
     # files from previous runs.
     if pass1_cached:
         import glob as globmod
-        nm_key_to_idx = {k: i for i, k in
-                         enumerate(_mix_keys(nm_combos).tolist())}
+        # Vectorized key→index lookup via sorted search
+        nm_keys_arr = _mix_keys(nm_combos)
+        sort_order = np.argsort(nm_keys_arr)
+        sorted_keys = nm_keys_arr[sort_order]
 
         for t in pass1_cached:
             t_str = s1._normalize_threshold_str(t)
@@ -1276,19 +1294,26 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
                 table = pq.read_table(t_path)
                 mix_mat = np.column_stack(
                     [table.column(rt).to_numpy() for rt in rtypes])
-                row_keys = _mix_keys(mix_mat).tolist()
+                row_keys = _mix_keys(mix_mat)
                 bat4 = table.column('battery_dispatch_pct').to_numpy()
                 bat8 = table.column('battery8_dispatch_pct').to_numpy()
                 ldes = table.column('ldes_dispatch_pct').to_numpy()
                 h2_col = table.column('h2_dispatch_pct').to_numpy()
                 score = table.column('hourly_match_score').to_numpy()
-                for i, key in enumerate(row_keys):
-                    mi = nm_key_to_idx.get(key, -1)
-                    if mi == -1:
-                        continue
-                    coarse_results[t].append(
-                        (mi, float(bat4[i]), float(bat8[i]),
-                         float(ldes[i]), float(h2_col[i]), float(score[i])))
+
+                # Vectorized key lookup via searchsorted
+                insert_pos = np.searchsorted(sorted_keys, row_keys)
+                insert_pos = np.clip(insert_pos, 0, len(sorted_keys) - 1)
+                matched = sorted_keys[insert_pos] == row_keys
+                mis = sort_order[insert_pos]
+
+                # Bulk collect matched rows
+                valid_idx = np.where(matched)[0]
+                if len(valid_idx) > 0:
+                    coarse_results[t].extend(
+                        [(int(mis[i]), float(bat4[i]), float(bat8[i]),
+                          float(ldes[i]), float(h2_col[i]), float(score[i]))
+                         for i in valid_idx])
             # Also populate pass2_coarse for cached thresholds
             pass2_coarse[t] = coarse_results[t]
 
