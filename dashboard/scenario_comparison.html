@@ -1151,7 +1151,8 @@ function createStripePattern(ctx, rgb) {
 // Resources that have existing grid share (for "existing" bars)
 const EXISTING_RES = ['ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar']; // nuclear existing handled by splitCleanFirm
 // New-build resources (stacking order, bottom → top)
-const NEWBUILD_RES = ['solar', 'wind', 'offshore_wind', 'hydro', 'ldes', 'ccs_ccgt'];
+const NEWBUILD_RES = ['solar', 'wind', 'offshore_wind', 'hydro', 'ccs_ccgt'];
+// LDES rendered separately (like battery) — stored as d.ldes_twh, not in d.resource_twh
 // Nuclear/geothermal are built from the clean_firm breakdown, rendered separately
 
 let mixChartA, mixChartB;
@@ -1323,6 +1324,18 @@ function renderMixCharts(iso) {
             });
         }
 
+        // LDES (100-hour iron-air storage) — stored as d.ldes_twh, not in resource_twh
+        const ldesData = traj.map(d => Math.round(d.ldes_twh || 0));
+        if (ldesData.some(v => v > 0)) {
+            datasets.push({
+                label: 'LDES (new)',
+                data: ldesData,
+                backgroundColor: 'rgba(' + RES_RGB.ldes + ',0.55)',
+                borderColor: 'rgba(' + RES_RGB.ldes + ',1)',
+                borderWidth: 1.5, borderRadius: 6, borderSkipped: 'start', stack: 'mix',
+            });
+        }
+
         // Nuclear uprate + new build (combined as "Nuclear (new)") — subtract curtailment
         datasets.push({
             label: 'Nuclear (new)',
@@ -1385,17 +1398,6 @@ function renderMixCharts(iso) {
             borderColor: 'rgba(0,0,0,0.7)', borderWidth: 2, borderDash: [6, 3],
             pointRadius: 0, pointHoverRadius: 4, pointBackgroundColor: 'rgba(0,0,0,0.7)',
             fill: false, tension: 0, yAxisID: 'y', order: -2,
-        });
-
-        // === 5) EXISTING CLEAN GEN REFERENCE LINE ===
-        const existingCleanTwh = Object.values(existingTwh).reduce((s, v) => s + v, 0) + existingNuclearTwh;
-        datasets.push({
-            label: 'Existing Clean',
-            data: traj.map(() => Math.round(existingCleanTwh)),
-            type: 'line',
-            borderColor: 'rgba(14,165,233,0.5)', borderWidth: 1.5, borderDash: [4, 4],
-            pointRadius: 0, pointHoverRadius: 3, pointBackgroundColor: 'rgba(14,165,233,0.5)',
-            fill: false, tension: 0, yAxisID: 'y', order: -1,
         });
 
         return datasets;
