@@ -89,6 +89,10 @@ jobs:
           FORCE_FLAG="${{ inputs.force == true && '--force' || '' }}"
           python scripts/step4_build_dispatch_cache.py $FORCE_FLAG --iso ${{ matrix.iso }}
 
+      - name: Scope output to current ISO only
+        run: |
+          find data/step4-dispatch-cache/ -name "*.parquet" -o -name "*.npz" | grep -v "${{ matrix.iso }}" | xargs rm -f 2>/dev/null || true
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
