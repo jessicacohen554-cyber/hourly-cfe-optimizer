@@ -396,7 +396,7 @@ def build_lcoe_at_year(iso, scenario, year):
     return lcoe
 
 
-def vectorized_cost(pool, lcoe, iso, demand_twh):
+def vectorized_cost(pool, lcoe, iso, demand_twh, existing_effective=None):
     """Compute total annualized cost ($B) for each mix in the pool.
 
     Replicates step 3a's cost function:
@@ -404,9 +404,14 @@ def vectorized_cost(pool, lcoe, iso, demand_twh):
     - Existing resources: $0 (sunk fleet)
     - Clean firm: tranche pricing (uprate → geothermal → CCS → nuclear newbuild)
     - Storage: coeff × price / 100
+
+    Args:
+        existing_effective: dict of effective existing resource %s at current demand.
+            If None, uses GRID_MIX_SHARES at 2025 basis (no demand adjustment).
+            With demand growth, pass adjusted values so new-build is correctly computed.
     """
     N = pool.shape[0]
-    existing = GRID_MIX_SHARES.get(iso, {})
+    existing = existing_effective or GRID_MIX_SHARES.get(iso, {})
 
     # Solar: only new-build costs
     sol_existing = existing.get('solar', 0)
@@ -566,51 +571,81 @@ def optimize_iso(iso, pool, egrid_rates, scenarios=None):
         print(f"    {scenario}...", end='', flush=True)
         t0 = time.time()
 
-        floor = np.array([
-            existing.get('clean_firm', 0),
-            existing.get('solar', 0),
-            existing.get('wind', 0),
-            existing.get('hydro', 0),
-            existing.get('offshore_wind', 0),
-            0, 0, 0, 0, 0,
+        # ============================================================
+        # ABSOLUTE TWh LOCK-IN MODEL
+        # Resources are locked in absolute generation TWh, not percentages.
+        # When demand grows, the same TWh represents a smaller % of demand.
+        # Example: 50 TWh wind at 100 TWh demand = 50%, at 150 TWh = 33%.
+        #
+        # floor_twh tracks committed resources in absolute TWh.
+        # At each threshold, floor_twh is converted to effective % at
+        # current demand. Baseline CO2 uses this effective %, so more
+        # CO2 needs abating as demand grows (even with same resources).
+        # ============================================================
+
+        # Initialize floor in absolute TWh (existing fleet at 2025 demand)
+        floor_twh = np.array([
+            existing.get('clean_firm', 0) / 100.0 * demand_twh_2025,
+            existing.get('solar', 0) / 100.0 * demand_twh_2025,
+            existing.get('wind', 0) / 100.0 * demand_twh_2025,
+            existing.get('hydro', 0) / 100.0 * demand_twh_2025,
+            existing.get('offshore_wind', 0) / 100.0 * demand_twh_2025,
+            0, 0, 0, 0, 0,  # geothermal + storage start at 0
         ], dtype=np.float64)
 
         trajectory = []
-        prev_resources = floor.copy()
-        prev_score = existing_clean_pct  # effective clean % at previous step
         prev_mac = 0.0  # monotonic MAC envelope
-        stranded_assets = {}  # {resource_idx: (stranded_pct, lcoe_$/MWh, build_year)}
+        stranded_assets = {}  # {resource_idx: (stranded_twh, lcoe_$/MWh, build_year)}
 
         for t_idx, threshold in enumerate(CONSQ_THRESHOLDS):
             year = SBTI_YEAR_MAP.get(threshold, 2050)
             years_out = max(0, year - 2025)
             demand_twh = demand_twh_2025 * (1 + growth_rate) ** years_out
 
-            lcoe = build_lcoe_at_year(iso, scenario, year)
-            pool_cost = vectorized_cost(pool, lcoe, iso, demand_twh)
+            # Convert floor TWh to effective % at current demand
+            # As demand grows, same TWh → smaller percentage
+            floor_pct = floor_twh / demand_twh * 100.0
+            floor_clean_pct = float(np.sum(floor_pct[:6]))  # gen resources only
 
-            # CO2 at this threshold's demand level (demand grows over time)
+            # Effective existing shares at current demand (for cost subtraction)
+            # Existing fleet TWh is fixed; its % share shrinks with demand growth
+            existing_eff = {
+                'clean_firm': existing.get('clean_firm', 0) * demand_twh_2025 / demand_twh,
+                'solar': existing.get('solar', 0) * demand_twh_2025 / demand_twh,
+                'wind': existing.get('wind', 0) * demand_twh_2025 / demand_twh,
+                'hydro': existing.get('hydro', 0) * demand_twh_2025 / demand_twh,
+                'offshore_wind': existing.get('offshore_wind', 0) * demand_twh_2025 / demand_twh,
+            }
+
+            lcoe = build_lcoe_at_year(iso, scenario, year)
+            pool_cost = vectorized_cost(pool, lcoe, iso, demand_twh, existing_eff)
+
+            # CO2 dispatch at this threshold's demand level
+            # Pool scores are PFS percentages (demand-independent targets)
             pool_co2 = merit_order_co2(
                 pool[:, I_SCORE], demand_twh, coal_cap, oil_cap,
                 coal_rate, oil_rate, gas_rate)
+
+            # Baseline CO2: dispatch from FLOOR's effective clean %
+            # (not original existing — floor ratchets up, but demand growth
+            # means the floor's effective % may still be lower than expected)
             baseline_co2 = merit_order_co2(
-                np.array([existing_clean_pct]), demand_twh, coal_cap, oil_cap,
+                np.array([floor_clean_pct]), demand_twh, coal_cap, oil_cap,
                 coal_rate, oil_rate, gas_rate)[0]
             lcoe_vec = resource_lcoe_vector(lcoe, iso)
 
-            # Hydro is existing-only, never grows. The load-time filter caps at
-            # ceil(existing_hydro%). Per-threshold: just enforce the same cap.
-            # Don't shrink with demand growth — PFS scores use 2025 demand basis.
+            # Hydro is existing-only, never grows
             hydro_mask = pool[:, I_HYD] <= hydro_cap_pct + 0.5
-            # But hydro floor must not ratchet up beyond existing
-            floor[I_HYD] = min(floor[I_HYD], hydro_cap_pct)
+            # Hydro floor cap: don't let ratchet push above existing
+            floor_pct[I_HYD] = min(floor_pct[I_HYD], hydro_cap_pct)
+            floor_twh[I_HYD] = floor_pct[I_HYD] / 100.0 * demand_twh
+
             score_mask = pool[:, I_SCORE] >= threshold
             next_t = CONSQ_THRESHOLDS[t_idx + 1] if t_idx + 1 < len(CONSQ_THRESHOLDS) else 101.0
 
-            # Stage 1: Full ratchet, search up to next threshold
-            # Wide ceiling: captures fine-grained mixes from adjacent zone searches
-            # that might have much better MAC despite slightly overshooting
-            ratchet_ok = ratchet_mask(pool, floor)
+            # Stage 1: Full ratchet (compare pool % against floor's effective %)
+            # Floor_pct shrinks with demand growth → ratchet is EASIER to pass
+            ratchet_ok = ratchet_mask(pool, floor_pct)
             candidate_idx = np.array([], dtype=int)
             used_relaxed = False
 
@@ -623,16 +658,16 @@ def optimize_iso(iso, pool, egrid_rates, scenarios=None):
             # Stage 2: Relaxed ratchet (allow stranding)
             if len(candidate_idx) == 0:
                 used_relaxed = True
-                relaxed_floor = np.maximum(0, floor - 5.0)
-                relaxed_floor[6:] = np.maximum(0, floor[6:] - 0.05)
+                relaxed_floor = np.maximum(0, floor_pct - 5.0)
+                relaxed_floor[6:] = np.maximum(0, floor_pct[6:] - 0.05)
                 mask = ratchet_mask(pool, relaxed_floor) & hydro_mask & score_mask & (pool[:, I_SCORE] < score_ceil)
                 candidate_idx = np.where(mask)[0]
 
             # Stage 3: Very relaxed ratchet + no ceiling
             if len(candidate_idx) == 0:
                 used_relaxed = True
-                very_relaxed = np.maximum(0, floor - 15.0)
-                very_relaxed[6:] = np.maximum(0, floor[6:] - 0.1)
+                very_relaxed = np.maximum(0, floor_pct - 15.0)
+                very_relaxed[6:] = np.maximum(0, floor_pct[6:] - 0.1)
                 mask = ratchet_mask(pool, very_relaxed) & hydro_mask & score_mask
                 candidate_idx = np.where(mask)[0]
 
@@ -646,101 +681,79 @@ def optimize_iso(iso, pool, egrid_rates, scenarios=None):
                 continue
 
             # ============================================================
-            # STEPWISE MARGINAL MAC
-            # MAC = cost_of_MWh_ADDED_this_step / CO2_displaced_this_step
-            # Each step fresh: uses THIS threshold's LCOE (no cross-year)
-            # Uses vectorized_cost difference for correct tranche pricing
+            # FRESH PER-THRESHOLD MAC
+            # 1. Baseline CO2 = dispatch at FLOOR's effective clean % with
+            #    THIS year's demand (floor shrinks as demand grows)
+            # 2. Scenario cost = new-build cost at THIS year's LCOE
+            #    (existing fleet subtracted in demand-adjusted %)
+            # 3. Scenario CO2 = dispatch at mix's clean % with THIS demand
+            # 4. MAC = scenario_cost × 1e3 / (baseline_co2 - scenario_co2)
             # ============================================================
 
-            # Cost of candidates' full portfolio at this year's LCOE
             cand_cost = pool_cost[candidate_idx]
 
-            # Cost of PREVIOUS step's mix at THIS year's LCOE
-            # (same year → fresh per-threshold, no cross-year comparison)
-            prev_mix_arr = np.tile(prev_resources, (1, 1))
-            prev_mix_full = np.zeros((1, pool.shape[1]))
-            prev_mix_full[0, :10] = prev_resources
-            prev_mix_full[0, I_SCORE] = prev_score
-            prev_cost_at_year = vectorized_cost(prev_mix_full, lcoe, iso, demand_twh)[0]
-
-            # Step cost = cost of THIS mix - cost of PREVIOUS mix, both at this year's LCOE
-            step_cost = cand_cost - prev_cost_at_year
-
-            # Stranding cost: resources below floor
+            # Stranding cost: resources below floor from prior ratcheting
             cand_resources = pool[candidate_idx, :10]
             strand_cost = np.zeros(len(candidate_idx))
             for r in range(10):
-                stranded_pct = np.maximum(0, floor[r] - cand_resources[:, r])
+                stranded_pct = np.maximum(0, floor_pct[r] - cand_resources[:, r])
                 strand_cost += stranded_pct / 100.0 * lcoe_vec[r] * demand_twh / 1e3
-
-            # Add carryover stranding from prior thresholds
             if stranded_assets:
                 strand_cost += compute_stranding_cost(
-                    cand_resources, floor, stranded_assets, demand_twh)
+                    cand_resources, floor_pct, stranded_assets, demand_twh)
 
-            effective_step_cost = np.maximum(0, step_cost) + strand_cost
+            scenario_cost = cand_cost + strand_cost
 
-            # CO2 displaced THIS step: from previous score to this candidate
-            prev_co2 = merit_order_co2(
-                np.array([prev_score]), demand_twh, coal_cap, oil_cap,
-                coal_rate, oil_rate, gas_rate)[0]
-            cand_co2 = merit_order_co2(
-                pool[candidate_idx, I_SCORE], demand_twh, coal_cap, oil_cap,
-                coal_rate, oil_rate, gas_rate)
-            step_abatement = prev_co2 - cand_co2
+            # CO2 abated: floor baseline → candidate
+            cand_co2 = pool_co2[candidate_idx]
+            cand_abated = baseline_co2 - cand_co2
 
-            # Handle overshoot: if previous step already exceeded this threshold,
-            # step_abatement ≈ 0. Pick cheapest candidate, carry forward prev_mac.
-            valid = step_abatement > 0.01
+            # Select: minimize MAC = scenario_cost / scenario_abated
+            valid = cand_abated > 0.01
             if not np.any(valid):
-                # Already past this threshold — pick cheapest total cost
-                best_local = np.argmin(cand_cost)
+                best_local = np.argmin(scenario_cost)
                 best_idx = candidate_idx[best_local]
-                is_zero_step = True
             else:
                 mac_vals = np.full(len(candidate_idx), np.inf)
-                mac_vals[valid] = effective_step_cost[valid] * 1e3 / step_abatement[valid]
+                mac_vals[valid] = scenario_cost[valid] * 1e3 / cand_abated[valid]
                 best_local = np.argmin(mac_vals)
                 best_idx = candidate_idx[best_local]
-                is_zero_step = False
 
             winner = pool[best_idx]
-            winner_cost = pool_cost[best_idx]  # total portfolio cost (for reporting)
+            winner_cost = pool_cost[best_idx]
             winner_co2 = pool_co2[best_idx]
-            winner_co2_abated = baseline_co2 - winner_co2  # total vs existing
-            winner_step_cost = effective_step_cost[best_local]
-            winner_step_abatement = step_abatement[best_local]
+            winner_co2_abated = baseline_co2 - winner_co2
             winner_strand = strand_cost[best_local]
+            winner_scenario_cost = scenario_cost[best_local]
 
-            if is_zero_step:
-                mac_val = prev_mac  # carry forward, don't inflate
-            elif winner_step_abatement > 0.001:
-                mac_val = winner_step_cost * 1e3 / winner_step_abatement
-            else:
-                mac_val = float('inf')
-
-            # Enforce monotonic MAC: marginal cost should increase at each step
+            mac_val = (
+                winner_scenario_cost * 1e3 / winner_co2_abated
+                if winner_co2_abated > 0.001 else float('inf')
+            )
+            # Enforce monotonic MAC
             mac_val = max(mac_val, prev_mac)
             prev_mac = mac_val
 
-            # Update stranding tracker
-            floor_before = floor.copy()
+            # Update stranding tracker (in TWh terms)
+            floor_pct_before = floor_pct.copy()
             for r in range(10):
-                if winner[r] < floor_before[r] - 0.5:
-                    s_pct = floor_before[r] - winner[r]
+                if winner[r] < floor_pct_before[r] - 0.5:
+                    s_pct = floor_pct_before[r] - winner[r]
                     stranded_assets[r] = (s_pct, lcoe_vec[r], year)
-                elif r in stranded_assets and winner[r] >= floor_before[r] - 0.5:
+                elif r in stranded_assets and winner[r] >= floor_pct_before[r] - 0.5:
                     del stranded_assets[r]
 
-            # Update floor ratchet
-            floor = np.maximum(floor, winner[:10])
+            # Lock in winner's resources as absolute TWh at current demand
+            winner_twh = winner[:10] / 100.0 * demand_twh
+            floor_twh = np.maximum(floor_twh, winner_twh)
 
-            delta_resources = winner[:10] - prev_resources
+            # Delta resources (vs previous floor effective %)
+            delta_resources = winner[:10] - floor_pct_before
 
             fossil = compute_fossil_breakdown(
                 winner[I_SCORE], demand_twh, coal_cap, oil_cap)
             baseline_fossil = compute_fossil_breakdown(
-                existing_clean_pct, demand_twh, coal_cap, oil_cap)
+                floor_clean_pct, demand_twh, coal_cap, oil_cap)
             coal_delta = baseline_fossil['coal_twh'] - fossil['coal_twh']
             oil_delta = baseline_fossil['oil_twh'] - fossil['oil_twh']
             gas_delta = baseline_fossil['gas_twh'] - fossil['gas_twh']
@@ -766,16 +779,16 @@ def optimize_iso(iso, pool, egrid_rates, scenarios=None):
                 },
                 'year_adjusted_lcoe': {k: round(v, 1) for k, v in lcoe.items()},
                 'total_cost_bn': round(float(winner_cost), 3),
-                'step_cost_bn': round(float(winner_step_cost), 3),
+                'scenario_cost_bn': round(float(winner_scenario_cost), 3),
                 'stranded_cost_bn': round(float(winner_strand), 3),
                 'co2_remaining_mt': round(float(winner_co2), 2),
                 'co2_abated_mt': round(float(winner_co2_abated), 2),
-                'step_co2_abated_mt': round(float(winner_step_abatement), 2),
                 'mac': round(float(min(mac_val, 9999)), 1),
                 'demand_twh': round(float(demand_twh), 1),
                 'fossil_dispatch': fossil,
                 'primary_fuel_displaced': primary_fuel,
                 'effective_clean_pct': round(float(winner[I_SCORE]), 2),
+                'floor_effective_clean_pct': round(floor_clean_pct, 2),
                 'used_relaxed_ratchet': used_relaxed,
                 'new_resources_this_zone': {
                     'clean_firm': round(float(delta_resources[0]), 1),
@@ -791,8 +804,6 @@ def optimize_iso(iso, pool, egrid_rates, scenarios=None):
                 },
             }
             trajectory.append(entry)
-            prev_resources = winner[:10].copy()
-            prev_score = float(winner[I_SCORE])
 
         elapsed = time.time() - t0
         print(f" {len(trajectory)} thresholds, {elapsed:.1f}s")
