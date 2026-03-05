@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Step 1c: Zone-based fine search with global deduplication.
+"""Step 1b: Zone-based fine search with global deduplication.
 
 Replaces per-threshold fine refinement with score-band zones that eliminate
 redundant scoring across thresholds. Each mix is scored exactly ONCE and
 assigned to all thresholds where it's feasible or near-miss.
 
 Architecture:
-  1. Load scored coarse cache from step1b
+  1. Load scored coarse cache from step1a
   2. For each score-band zone (A/B/C):
      a. Identify coarse boundary mixes in zone's score range
      b. Compute zone-specific resource windows (from prior EF or coarse data)
@@ -111,26 +111,13 @@ def get_near_miss_width(threshold):
     return 0.25        # 25pp — high-solar + storage mixes need wider window
 
 
-def _row_keys(combos):
-    """Vectorized collision-free integer key per row for dedup.
-
-    Resource values are integers 0-300, so base-301 polynomial
-    hash is collision-free and fits in int64 for up to 7 dimensions
-    (301^7 ≈ 2.2e17 < 2^63 ≈ 9.2e18).
-    """
-    int_arr = np.round(combos).astype(np.int64)
-    n_res = int_arr.shape[1]
-    multipliers = np.array([301**i for i in range(n_res)], dtype=np.int64)
-    return int_arr @ multipliers
-
-
 # ══════════════════════════════════════════════════════════════════════════════
 # VECTORIZED HASH / DEDUP UTILITIES
 # ══════════════════════════════════════════════════════════════════════════════
 
 # Collision-free hashing: base-351 positional encoding.
 # Each resource dimension ∈ [0, 350], so 351^i gives unique int64 per mix.
-# Max 7 dims × 9 bits = 63 bits → fits int64 with no collisions.
+# 351^7 ≈ 8.0e17 < 2^63 ≈ 9.2e18 — fits int64 with no collisions.
 _HASH_BASES = np.array([351**i for i in range(7)], dtype=np.int64)
 
 
@@ -364,35 +351,6 @@ def generate_archetype_fine_grid(iso, boundary_mixes, n_res):
 # THRESHOLD ASSIGNMENT
 # ══════════════════════════════════════════════════════════════════════════════
 
-def assign_to_thresholds(combos, scores, thresholds):
-    """Assign scored mixes to thresholds: feasible and near-miss lists.
-
-    Returns:
-        feasible: dict[threshold] → list of (mix_array, score) tuples
-        near_miss: dict[threshold] → list of (mix_array, score) tuples
-    """
-    feasible = {t: [] for t in thresholds}
-    near_miss = {t: [] for t in thresholds}
-
-    for t in thresholds:
-        target = t / 100.0
-        nm_width = get_near_miss_width(t)
-        nm_floor = max(target - nm_width, 0.50)
-
-        feas_mask = scores >= target
-        nm_mask = (~feas_mask) & (scores >= nm_floor)
-
-        feas_idx = np.where(feas_mask)[0]
-        nm_idx = np.where(nm_mask)[0]
-
-        for idx in feas_idx:
-            feasible[t].append((combos[idx], scores[idx]))
-        for idx in nm_idx:
-            near_miss[t].append((combos[idx], scores[idx]))
-
-    return feasible, near_miss
-
-
 def assign_to_thresholds_vectorized(combos, scores, thresholds):
     """Vectorized threshold assignment — returns index arrays per threshold.
 
@@ -511,6 +469,27 @@ def _has_curtailment_mask(combos, demand_arr, supply_matrix, chunk_size=10000):
     return mask
 
 
+def _get_storage_constants():
+    """Extract storage dispatch constants from step1_pfs_generator.
+
+    Returns a dict of scalar parameters used by _batch_mixes_storage_screen.
+    Centralized here to avoid duplicating extraction across step1b and step1c.
+    """
+    return {
+        'batt_eff': s1.BATTERY_EFFICIENCY,
+        'batt8_eff': s1.BATTERY8_EFFICIENCY,
+        'ldes_eff': s1.LDES_EFFICIENCY,
+        'batt4_dur': s1.BATTERY_DURATION_HOURS,
+        'batt8_dur': s1.BATTERY8_DURATION_HOURS,
+        'ldes_dur': s1.LDES_DURATION_HOURS,
+        'ldes_window': s1.LDES_WINDOW_DAYS * 24,
+        'batt8_window': 48,
+        'h2_eff': s1.H2_EFFICIENCY,
+        'h2_dur': float(s1.H2_DURATION_HOURS),
+        'h2_window': s1.H2_WINDOW_DAYS * 24,
+    }
+
+
 def _compute_max_storage_scores(combos, demand_arr, supply_matrix, chunk_size=500):
     """Max-storage ceiling score for each mix (same kernel as step1c Pass 0).
 
@@ -525,18 +504,7 @@ def _compute_max_storage_scores(combos, demand_arr, supply_matrix, chunk_size=50
     n = len(combos)
     max_scores = np.empty(n, dtype=np.float64)
 
-    # Storage constants (same as step1c._get_storage_constants)
-    batt_eff = s1.BATTERY_EFFICIENCY
-    batt8_eff = s1.BATTERY8_EFFICIENCY
-    ldes_eff = s1.LDES_EFFICIENCY
-    batt4_dur = s1.BATTERY_DURATION_HOURS
-    batt8_dur = s1.BATTERY8_DURATION_HOURS
-    ldes_dur = s1.LDES_DURATION_HOURS
-    ldes_window = s1.LDES_WINDOW_DAYS * 24
-    batt8_window = 48
-    h2_eff = s1.H2_EFFICIENCY
-    h2_dur = float(s1.H2_DURATION_HOURS)
-    h2_window = s1.H2_WINDOW_DAYS * 24
+    sc = _get_storage_constants()
 
     # Max storage arrays (same as step1c Pass 0)
     MAX_BAT4 = np.array([0.5], dtype=np.float64)
@@ -555,10 +523,10 @@ def _compute_max_storage_scores(combos, demand_arr, supply_matrix, chunk_size=50
             demand_arr, supply, 1.0, n_batch,
             MAX_BAT4, MAX_BAT8, MAX_LDES,
             1, 1, 1,
-            batt_eff, batt8_eff, ldes_eff,
-            batt4_dur, batt8_dur, ldes_dur,
-            ldes_window, batt8_window,
-            MAX_H2, 1, h2_eff, h2_dur, h2_window)
+            sc['batt_eff'], sc['batt8_eff'], sc['ldes_eff'],
+            sc['batt4_dur'], sc['batt8_dur'], sc['ldes_dur'],
+            sc['ldes_window'], sc['batt8_window'],
+            MAX_H2, 1, sc['h2_eff'], sc['h2_dur'], sc['h2_window'])
 
         max_scores[cs:ce] = result[:, 0]
 
@@ -682,57 +650,57 @@ def save_near_miss(iso, combos, scores, rtypes,
     return out_path
 
 
+def _collect_near_miss_indices(combos, scores, thresholds):
+    """Return sorted unique near-miss index array across all thresholds."""
+    _, nm_idx_dict = assign_to_thresholds_vectorized(combos, scores, thresholds)
+    all_nm = set()
+    for t in thresholds:
+        all_nm.update(nm_idx_dict[t].tolist())
+    if not all_nm:
+        return np.empty(0, dtype=np.int64)
+    return np.array(sorted(all_nm), dtype=np.int64)
+
+
 def save_near_miss_interim(iso, all_combos_lists, all_scores_lists, rtypes,
-                           thresholds_to_use, demand_arr=None,
-                           supply_matrix=None):
-    """Compute and save near-miss parquet from accumulated scored mixes so far.
+                           thresholds_to_use):
+    """Save near-miss parquet from accumulated scored mixes so far.
 
     Called after each zone so step1c has a valid near-miss file even if the
-    job times out before all zones complete.
+    job times out before all zones complete. Skips the curtailment filter —
+    it's wasted work since the final save applies a stricter max-storage
+    filter that subsumes it.
     """
     if not all_combos_lists:
         return
     interim_combos = np.vstack(all_combos_lists)
     interim_scores = np.concatenate(all_scores_lists)
 
-    _, nm_idx_dict = assign_to_thresholds_vectorized(
+    nm_arr = _collect_near_miss_indices(
         interim_combos, interim_scores, thresholds_to_use)
 
-    all_nm = set()
-    for t in thresholds_to_use:
-        all_nm.update(nm_idx_dict[t].tolist())
-
-    if not all_nm:
+    if len(nm_arr) == 0:
         return
 
-    nm_arr = np.array(sorted(all_nm), dtype=np.int64)
-    save_near_miss(iso, interim_combos[nm_arr], interim_scores[nm_arr], rtypes,
-                   demand_arr=demand_arr, supply_matrix=supply_matrix)
+    save_near_miss(iso, interim_combos[nm_arr], interim_scores[nm_arr], rtypes)
 
 
-def git_commit_threshold_pfs(iso, threshold, auto_commit):
-    """Commit a single threshold's PFS parquet after it's saved."""
-    if not auto_commit:
-        return
+def _git_stage_commit_push(stage_fn, commit_msg, success_msg):
+    """Stage files, commit, and push with exponential-backoff retry.
+
+    Args:
+        stage_fn: callable that stages the desired files (git add).
+        commit_msg: commit message string.
+        success_msg: printed on successful push.
+    """
     try:
-        pfs_dir = s1.STEP1_RAW_PFS_PARQUET_DIR
-        t_str = s1._normalize_threshold_str(threshold)
-        pfs_path = os.path.join(pfs_dir, f'{iso}_t{t_str}_raw_pfs.parquet')
-        nm_path = os.path.join(pfs_dir, f'{iso}_near_miss.parquet')
-
-        # Stage the threshold parquet + updated near-miss
-        for path in [pfs_path, nm_path]:
-            if os.path.exists(path):
-                subprocess.run(['git', 'add', '-f', path],
-                               capture_output=True, text=True)
+        stage_fn()
 
         result = subprocess.run(['git', 'diff', '--cached', '--quiet'],
                                 capture_output=True)
         if result.returncode == 0:
             return  # nothing staged
 
-        msg = f"PFS 1c: {iso} {threshold}% — auto-commit"
-        subprocess.run(['git', 'commit', '-m', msg],
+        subprocess.run(['git', 'commit', '-m', commit_msg],
                        check=True, capture_output=True, text=True)
 
         for attempt in range(1, 5):
@@ -740,58 +708,54 @@ def git_commit_threshold_pfs(iso, threshold, auto_commit):
                 ['git', 'push', '-u', 'origin', 'HEAD'],
                 capture_output=True, text=True)
             if result.returncode == 0:
-                print(f"      [auto-commit] {iso} t{threshold}% pushed")
+                print(f"    {success_msg}")
                 return
             if attempt < 4:
                 time.sleep(2 ** attempt)
 
-        print(f"      [auto-commit] Push failed — committed locally")
+        print(f"    [auto-commit] Push failed — committed locally")
     except subprocess.CalledProcessError as e:
-        print(f"      [auto-commit] Git error: {e}")
+        print(f"    [auto-commit] Git error: {e}")
+
+
+def git_commit_threshold_pfs(iso, threshold, auto_commit):
+    """Commit a single threshold's PFS parquet after it's saved."""
+    if not auto_commit:
+        return
+    pfs_dir = s1.STEP1_RAW_PFS_PARQUET_DIR
+    t_str = s1._normalize_threshold_str(threshold)
+    pfs_path = os.path.join(pfs_dir, f'{iso}_t{t_str}_raw_pfs.parquet')
+    nm_path = os.path.join(pfs_dir, f'{iso}_near_miss.parquet')
+
+    def stage():
+        for path in [pfs_path, nm_path]:
+            if os.path.exists(path):
+                subprocess.run(['git', 'add', '-f', path],
+                               capture_output=True, text=True)
+
+    _git_stage_commit_push(
+        stage,
+        f"PFS 1b: {iso} {threshold}% — auto-commit",
+        f"[auto-commit] {iso} t{threshold}% pushed")
 
 
 def git_commit_iso_progress(iso, zone_name, n_thresholds, auto_commit):
     """Commit current ISO progress after a zone completes."""
     if not auto_commit:
         return
+    pfs_dir = s1.STEP1_RAW_PFS_PARQUET_DIR
 
-    try:
-        # Must use -f: data/step1-pfs-parquets/ is gitignored, normal add skips it.
-        # Only add parquets — zone_manifest.json is a run-time checkpoint (gitignored)
-        # and causes add/add conflicts when squash-merging parallel ISO branches.
-        pfs_dir = s1.STEP1_RAW_PFS_PARQUET_DIR
+    def stage():
+        # Must use -f: data/step1-pfs-parquets/ may be gitignored.
+        # Only add parquets — zone_manifest.json is a run-time checkpoint.
         subprocess.run(
             f'git add -f "{pfs_dir}"/*.parquet 2>/dev/null; true',
             shell=True, capture_output=True)
 
-
-        # Check for changes
-        result = subprocess.run(['git', 'diff', '--cached', '--quiet'],
-                                capture_output=True)
-        if result.returncode == 0:
-            return  # nothing to commit
-
-        msg = (f"PFS zone {zone_name}: {iso} ({n_thresholds} thresholds) — "
-               f"auto-commit")
-        subprocess.run(['git', 'commit', '-m', msg],
-                       check=True, capture_output=True, text=True)
-
-        # Push with retry
-        for attempt in range(1, 5):
-            result = subprocess.run(
-                ['git', 'push', '-u', 'origin', 'HEAD'],
-                capture_output=True, text=True)
-            if result.returncode == 0:
-                print(f"    [auto-commit] Zone {zone_name} committed & pushed")
-                return
-            if attempt < 4:
-                wait = 2 ** attempt
-                time.sleep(wait)
-
-        print(f"    [auto-commit] Push failed — committed locally")
-
-    except subprocess.CalledProcessError as e:
-        print(f"    [auto-commit] Git error: {e}")
+    _git_stage_commit_push(
+        stage,
+        f"PFS zone {zone_name}: {iso} ({n_thresholds} thresholds) — auto-commit",
+        f"[auto-commit] Zone {zone_name} committed & pushed")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -861,7 +825,7 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None, zones_filter=Non
     n_res = len(rtypes)
 
     print(f"\n{'=' * 70}")
-    print(f"  Step 1c Zone Search — {iso}")
+    print(f"  Step 1b Zone Search — {iso}")
     print(f"  Resources: {n_res}D ({', '.join(rtypes)})")
     print(f"  Numba: {'enabled' if s1.HAS_NUMBA else 'disabled'}")
     print(f"{'=' * 70}")
@@ -923,7 +887,7 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None, zones_filter=Non
 
     # ── Global tracking ──
     # Vectorized dedup keys (collision-free int64 hash per row)
-    global_scored_keys = _row_keys(coarse_combos)
+    global_scored_keys = _hash_mixes(coarse_combos)
 
     # Accumulate ALL scored mixes (coarse + fine) with their scores
     all_combos_list = [coarse_combos]
@@ -983,7 +947,7 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None, zones_filter=Non
 
         # 3. Dedup against global keys (vectorized — no Python loop)
         if len(fine_combos) > 0:
-            fine_keys = _row_keys(fine_combos)
+            fine_keys = _hash_mixes(fine_combos)
             new_mask = ~np.isin(fine_keys, global_scored_keys)
             fine_combos = fine_combos[new_mask]
             if np.any(new_mask):
@@ -1014,9 +978,7 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None, zones_filter=Non
         # this job times out before all zones complete.
         print(f"    Saving interim near-miss parquet...")
         save_near_miss_interim(iso, all_combos_list, all_scores_list,
-                               rtypes, active_thresholds,
-                               demand_arr=demand_arr,
-                               supply_matrix=supply_matrix)
+                               rtypes, active_thresholds)
 
         # Auto-commit after each zone (near-miss + any PFS written so far)
         git_commit_iso_progress(iso, zone_name, len(z_thresholds), auto_commit)
@@ -1038,10 +1000,8 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None, zones_filter=Non
         all_combos, all_scores, active_thresholds)
 
     # Collect union of near-miss mixes (unique, for step1c) — final authoritative save
-    all_nm_indices = set()
-    for t in active_thresholds:
-        all_nm_indices.update(near_miss_idx[t].tolist())
-    all_nm_indices = np.array(sorted(all_nm_indices), dtype=np.int64)
+    all_nm_indices = _collect_near_miss_indices(
+        all_combos, all_scores, active_thresholds)
 
     # Save near-miss union (final authoritative version overwrites interim)
     # full_filter=True: compute max-storage scores and persist as column,
@@ -1127,7 +1087,7 @@ def _parse_zones(raw):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 1c: Zone-based fine search with global dedup.")
+        description="Step 1b: Zone-based fine search with global dedup.")
     parser.add_argument("--iso", required=True,
                         help="ISO name or 'ALL'")
     parser.add_argument("--auto-commit", action="store_true",
