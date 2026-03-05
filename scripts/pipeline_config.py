@@ -527,7 +527,7 @@ PATHS = {
     'step2_ef':         os.path.join(_PROJECT_ROOT, 'data', 'step2-ef-parquets'),
     'step3_cost':       os.path.join(_PROJECT_ROOT, 'data', 'step3-cost-opt-parquets'),
     'step4_post':       os.path.join(_PROJECT_ROOT, 'data', 'step5-post-processing'),  # legacy dir name
-    'dispatch_cache':   os.path.join(_PROJECT_ROOT, 'data', 'step5-post-processing', 'dispatch_cache'),
+    'dispatch_cache':   os.path.join(_PROJECT_ROOT, 'data', 'step4-dispatch-cache'),
     'co2_results':      os.path.join(_PROJECT_ROOT, 'data', 'step5-post-processing', 'co2_results'),
     'lmp':              os.path.join(_PROJECT_ROOT, 'data', 'step5-post-processing', 'lmp'),
     'dashboard':        os.path.join(_PROJECT_ROOT, 'dashboard'),

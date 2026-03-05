@@ -14,7 +14,7 @@ Analyzes:
   - Regional variation in storage need (solar-dominant vs wind-dominant ISOs)
 
 Input:
-  - data/step5-post-processing/dispatch_cache/{ISO}_dispatch_cache.parquet
+  - data/step4-dispatch-cache/{ISO}_dispatch_cache.parquet
   - data/step3-cost-opt-parquets/ (Medium scenario optimal mixes)
   - dashboard/compressed_day_profiles.json (24hr compressed profiles)
 

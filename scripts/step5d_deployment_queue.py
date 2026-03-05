@@ -17,7 +17,7 @@ clean-firm-heavy).
 
 Reads: data/step3-cost-opt-parquets/step3_co_*.parquet,
        data/egrid_emission_rates.json, data/eia-930/eia_fossil_mix.json
-       data/step5-post-processing/dispatch_cache/{ISO}_dispatch_cache.parquet
+       data/step4-dispatch-cache/{ISO}_dispatch_cache.parquet
 Writes: data/step5-post-processing/consequential_queue.json,
         dashboard/js/consequential-queue-data.js
 """
