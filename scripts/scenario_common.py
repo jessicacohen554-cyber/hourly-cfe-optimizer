@@ -195,51 +195,84 @@ def _load_feasible_from_parquet(iso, step3_dir='data/step3-cost-opt-parquets'):
 
 
 def parse_feasible_mixes(js_path='dashboard/js/shared-data.js'):
-    """Parse FEASIBLE_MIXES from shared-data.js, with parquet fallback."""
-    with open(js_path) as f:
-        content = f.read()
-    start = content.find('const FEASIBLE_MIXES = {')
-    if start < 0:
-        raise ValueError("FEASIBLE_MIXES not found in shared-data.js")
-    brace_count = 0
-    i = content.index('{', start)
-    for j in range(i, len(content)):
-        if content[j] == '{':
-            brace_count += 1
-        elif content[j] == '}':
-            brace_count -= 1
-            if brace_count == 0:
-                end = j + 1
-                break
-    block = content[i:end]
-    block = re.sub(r'(\b[A-Z]+\b)\s*:', r'"\1":', block)
-    block = re.sub(r',\s*([}\]])', r'\1', block)
-    mixes = json.loads(block)
+    """Load feasible mixes, preferring parquets over shared-data.js.
+
+    Priority order (breaks circular dependency on step9a):
+    1. Step 3 parquets (always available after step3 runs)
+    2. shared-data.js (fallback if parquets missing for some ISOs)
+    """
+    mixes = {}
     expected_thresholds = {str(int(t)) if t == int(t) else str(t) for t in THRESHOLDS}
+
+    # Try parquets first — no step9a dependency
+    missing_isos = []
+    for iso in ISOS:
+        parquet_mixes = _load_feasible_from_parquet(iso)
+        if parquet_mixes:
+            mixes[iso] = parquet_mixes
+            total = sum(len(v) for v in parquet_mixes.values())
+            print(f"  Loaded {iso} feasible mixes from parquet: {total} mixes")
+        else:
+            missing_isos.append(iso)
+
+    # Fallback: parse shared-data.js for any ISOs missing from parquets
+    if missing_isos and os.path.exists(js_path):
+        try:
+            with open(js_path) as f:
+                content = f.read()
+            start = content.find('const FEASIBLE_MIXES = {')
+            if start >= 0:
+                brace_count = 0
+                i = content.index('{', start)
+                for j in range(i, len(content)):
+                    if content[j] == '{':
+                        brace_count += 1
+                    elif content[j] == '}':
+                        brace_count -= 1
+                        if brace_count == 0:
+                            end = j + 1
+                            break
+                block = content[i:end]
+                block = re.sub(r'(\b[A-Z]+\b)\s*:', r'"\1":', block)
+                block = re.sub(r',\s*([}\]])', r'\1', block)
+                js_mixes = json.loads(block)
+                for iso in missing_isos:
+                    iso_data = js_mixes.get(iso, {})
+                    if iso_data and any(len(v) > 0 for v in iso_data.values()):
+                        mixes[iso] = iso_data
+                        total = sum(len(v) for v in iso_data.values())
+                        print(f"  Loaded {iso} feasible mixes from shared-data.js fallback: {total} mixes")
+                    else:
+                        print(f"  WARNING: No feasible mixes for {iso} in parquets or shared-data.js")
+        except Exception as e:
+            print(f"  WARNING: Could not parse shared-data.js fallback: {e}")
+            for iso in missing_isos:
+                print(f"  WARNING: No feasible mixes for {iso}")
+    elif missing_isos:
+        for iso in missing_isos:
+            print(f"  WARNING: No feasible mixes for {iso} (no parquets, no shared-data.js)")
+
+    # Backfill any missing thresholds from parquets for ISOs loaded from JS
     for iso in ISOS:
         iso_data = mixes.get(iso, {})
-        has_mixes = any(len(v) > 0 for v in iso_data.values()) if iso_data else False
-        if not has_mixes:
+        if not iso_data:
+            continue
+        present = set(iso_data.keys())
+        missing = expected_thresholds - present
+        if missing and iso not in missing_isos:
+            # Already loaded from parquet — no gaps expected
+            continue
+        if missing:
             parquet_mixes = _load_feasible_from_parquet(iso)
             if parquet_mixes:
-                mixes[iso] = parquet_mixes
-                total = sum(len(v) for v in parquet_mixes.values())
-                print(f"  Loaded {iso} feasible mixes from parquet fallback: {total} mixes")
-            else:
-                print(f"  WARNING: No feasible mixes for {iso} in shared-data.js or parquets")
-        else:
-            present_thresholds = set(iso_data.keys())
-            missing = expected_thresholds - present_thresholds
-            if missing:
-                parquet_mixes = _load_feasible_from_parquet(iso)
-                if parquet_mixes:
-                    filled = []
-                    for t_str in sorted(missing):
-                        if t_str in parquet_mixes and parquet_mixes[t_str]:
-                            mixes[iso][t_str] = parquet_mixes[t_str]
-                            filled.append(t_str)
-                    if filled:
-                        print(f"  Backfilled {iso} thresholds from parquet: {', '.join(filled)}")
+                filled = []
+                for t_str in sorted(missing):
+                    if t_str in parquet_mixes and parquet_mixes[t_str]:
+                        mixes[iso][t_str] = parquet_mixes[t_str]
+                        filled.append(t_str)
+                if filled:
+                    print(f"  Backfilled {iso} thresholds from parquet: {', '.join(filled)}")
+
     return mixes
 
 
