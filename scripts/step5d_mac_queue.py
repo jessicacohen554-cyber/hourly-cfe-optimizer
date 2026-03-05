@@ -145,6 +145,7 @@ def _load_pfs_files(iso, threshold):
             continue
         patterns = [
             os.path.join(pfs_dir, f'{iso}_t{t_str}_raw_pfs.parquet'),
+            os.path.join(pfs_dir, f'{iso}_t{t_str}_floor_pfs.parquet'),
             os.path.join(pfs_dir, f'{iso}_t{t_str}_storage.parquet'),
         ]
         batch_files = globmod.glob(os.path.join(pfs_dir, f'{iso}_t{t_str}_storage_b*.parquet'))
