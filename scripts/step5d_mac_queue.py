@@ -586,14 +586,44 @@ def mix_row_to_pct(row):
 
 
 def ratchet_floor(floor_twh, winner_pct, demand_twh):
-    """Update floor with winner's resources (max of current floor and winner)."""
+    """Update FILTER floor — only ratchets when winner deploys a higher SHARE.
+
+    The floor is stored in absolute TWh but only increases when the winner's
+    percentage of a resource exceeds the floor's implicit percentage at the
+    current demand level. This ensures the floor diminishes as a share of
+    demand when demand grows (e.g., 50 TWh at 100 TWh demand = 50%, but at
+    103 TWh demand = 48.5%), widening the search space for cheaper mixes.
+
+    Demand-growth "maintenance" builds (same % × higher demand) do NOT raise
+    the floor — they are costed but don't constrain the next threshold's search.
+    """
     new_floor = dict(floor_twh)
     for res in RESOURCE_COLS:
-        winner_res_twh = winner_pct.get(res, 0.0) / 100.0 * demand_twh
-        new_floor[res] = max(floor_twh.get(res, 0.0), winner_res_twh)
+        # Current floor as % of current demand
+        floor_pct_res = (floor_twh.get(res, 0.0) / demand_twh * 100.0) if demand_twh > 0 else 0.0
+        winner_pct_res = winner_pct.get(res, 0.0)
+        if winner_pct_res > floor_pct_res + 0.01:  # Tolerance for float comparison
+            # Winner deployed a HIGHER SHARE → ratchet floor to winner's absolute TWh
+            new_floor[res] = winner_pct_res / 100.0 * demand_twh
+        # else: keep floor at old absolute TWh (diminishes as % of growing demand)
     for col in STORAGE_COLS:
         new_floor[col] = max(floor_twh.get(col, 0.0), winner_pct.get(col, 0.0))
     return new_floor
+
+
+def ratchet_deployed(deployed_twh, winner_pct, demand_twh):
+    """Update COST floor — always takes max of old deployed and winner's TWh.
+
+    Tracks actual physical capacity deployed so far. Used for cost calculations
+    to avoid double-charging for capacity that already exists.
+    """
+    new_deployed = dict(deployed_twh)
+    for res in RESOURCE_COLS:
+        winner_res_twh = winner_pct.get(res, 0.0) / 100.0 * demand_twh
+        new_deployed[res] = max(deployed_twh.get(res, 0.0), winner_res_twh)
+    for col in STORAGE_COLS:
+        new_deployed[col] = max(deployed_twh.get(col, 0.0), winner_pct.get(col, 0.0))
+    return new_deployed
 
 
 # ============================================================================
@@ -925,16 +955,23 @@ def generate_floor_mixes(iso, floor_pct, threshold, demand_norm, supply_matrix,
 # SINGLE THRESHOLD OPTIMIZER
 # ============================================================================
 
-def optimize_threshold(iso, threshold, floor_twh, cumulative_caps,
+def optimize_threshold(iso, threshold, floor_twh, deployed_twh, cumulative_caps,
                        sens, demand_twh, target_year,
                        demand_norm, supply_profiles, supply_matrix, emission_rates,
                        existing_clean_twh, prev_threshold=None,
                        existing_clean_hourly_pct=None):
     """Optimize a single threshold step.
 
+    Args:
+        floor_twh: Filter floor (absolute TWh, only ratchets on % increase).
+                   Used for filtering mixes — diminishes as demand grows.
+        deployed_twh: Cost floor (absolute TWh, always max). Tracks actual
+                      physical capacity deployed. Used for cost calculations.
+
     Returns:
         result dict with winner, costs, CO2, MAC
-        updated floor_twh
+        updated floor_twh (filter floor)
+        updated deployed_twh (cost floor)
         updated cumulative_caps
     """
     # Convert floor to %
@@ -999,22 +1036,22 @@ def optimize_threshold(iso, threshold, floor_twh, cumulative_caps,
 
     if filtered.empty:
         print(f"    WARNING: No mixes pass floor filter for {iso} t{threshold:g} (even with on-the-fly generation)")
-        return None, floor_twh, cumulative_caps
+        return None, floor_twh, deployed_twh, cumulative_caps
 
     print(f"    {iso} t{threshold:g}: {len(pfs_df)} PFS mixes → {len(filtered)} after filtering")
 
-    # 4. Score each archetype
+    # 4. Score each archetype (Phase 1: scalar CO2 for fast ranking)
     best_mac = float('inf')
     best_mix = None
     best_cost = 0
     best_co2_avoided = 0
     best_co2_after = 0
     best_breakdown = {}
-    top_archetypes = []
+    top_candidates = []  # Top 10 for 8760-hour rescore
+    TOP_N_DISPATCH = 10
 
-    def _score_mix(mix_pct):
-        """Score a single mix: returns (mac, co2_avoided_mt, co2_after_mt, nb_cost, breakdown) or None."""
-        # Use hourly_match_score as the effective clean % (accounts for curtailment)
+    def _score_mix_scalar(mix_pct):
+        """Score a single mix with scalar CO2 model (fast). For initial ranking."""
         candidate_clean_pct = min(mix_pct.get('hourly_match_score', 0), 99.99)
         _, cand_info = compute_fossil_retirement(
             iso, candidate_clean_pct, emission_rates, {},
@@ -1024,31 +1061,66 @@ def optimize_threshold(iso, threshold, floor_twh, cumulative_caps,
         co2_after_mt = fossil_twh_after * 1e6 * cand_remaining_rate / 1e6
 
         co2_avoided_mt = baseline_co2_mt - co2_after_mt
-        if co2_avoided_mt <= 0.001:  # At least 1000 tons avoided
+        if co2_avoided_mt <= 0.001:
             return None
 
         caps_copy = dict(cumulative_caps)
         nb_cost, nb_breakdown, _ = compute_new_build_cost(
-            iso, mix_pct, floor_twh, demand_twh, sens, target_year, caps_copy)
+            iso, mix_pct, deployed_twh, demand_twh, sens, target_year, caps_copy)
 
-        # $0 new-build cost is valid (floor already covers this threshold)
-        mac = nb_cost / (co2_avoided_mt * 1e6) if co2_avoided_mt > 0.001 else 0.0  # $/tCO2
+        mac = nb_cost / (co2_avoided_mt * 1e6) if co2_avoided_mt > 0.001 else 0.0
         return mac, co2_avoided_mt, co2_after_mt, nb_cost, nb_breakdown
+
+    def _score_mix_dispatch(mix_pct):
+        """Rescore a mix with 8760-hour dispatch for precise CO2 (slow).
+
+        Uses reconstruct_hourly_dispatch + compute_co2_from_dispatch for
+        hour-by-hour fossil displacement. Captures hourly fuel switching and
+        temporal shape effects that the scalar model misses.
+        """
+        resource_pcts = {res: mix_pct.get(res, 0) for res in RESOURCE_COLS}
+        dispatch_result = reconstruct_hourly_dispatch(
+            demand_norm, supply_profiles, resource_pcts,
+            procurement_pct=100,
+            battery_dispatch_pct=mix_pct.get('battery_4h', 0),
+            battery8_dispatch_pct=mix_pct.get('battery_8h', 0),
+            ldes_dispatch_pct=mix_pct.get('ldes_100h', 0),
+            supply_matrix=supply_matrix,
+            h2_dispatch_pct=mix_pct.get('green_h2_1000h', 0),
+        )
+        demand_total_mwh = demand_twh * 1e6
+        co2_result = compute_co2_from_dispatch(iso, dispatch_result, emission_rates, demand_total_mwh)
+
+        # CO2 avoided = baseline_co2 - (baseline fossil CO2 - abated)
+        # The dispatch model gives total CO2 abated by clean energy
+        co2_abated_mt = co2_result['total_co2_abated_tons'] / 1e6  # Convert tons → Mt
+        co2_after_mt = max(0, baseline_co2_mt - co2_abated_mt)
+        co2_avoided_mt = co2_abated_mt
+
+        if co2_avoided_mt <= 0.001:
+            return None
+
+        caps_copy = dict(cumulative_caps)
+        nb_cost, nb_breakdown, _ = compute_new_build_cost(
+            iso, mix_pct, deployed_twh, demand_twh, sens, target_year, caps_copy)
+
+        mac = nb_cost / (co2_avoided_mt * 1e6) if co2_avoided_mt > 0.001 else 0.0
+        return mac, co2_avoided_mt, co2_after_mt, nb_cost, nb_breakdown, co2_result
 
     for idx in range(len(filtered)):
         row = filtered.iloc[idx]
         mix_pct = mix_row_to_pct(row)
 
-        scored = _score_mix(mix_pct)
+        scored = _score_mix_scalar(mix_pct)
         if scored is None:
             continue
         mac, co2_avoided_mt, co2_after_mt, nb_cost, nb_breakdown = scored
 
-        # Track top 5 for phase 2
-        if len(top_archetypes) < 5 or mac < top_archetypes[-1][1]:
-            top_archetypes.append((mix_pct, mac))
-            top_archetypes.sort(key=lambda x: x[1])
-            top_archetypes = top_archetypes[:5]
+        # Track top 10 for dispatch rescore + phase 2 refinement
+        if len(top_candidates) < TOP_N_DISPATCH or mac < top_candidates[-1][1]:
+            top_candidates.append((mix_pct, mac, nb_cost, nb_breakdown))
+            top_candidates.sort(key=lambda x: x[1])
+            top_candidates = top_candidates[:TOP_N_DISPATCH]
 
         if mac < best_mac:
             best_mac = mac
@@ -1058,7 +1130,8 @@ def optimize_threshold(iso, threshold, floor_twh, cumulative_caps,
             best_co2_after = co2_after_mt
             best_breakdown = nb_breakdown
 
-    # 5. Phase 2: Refined search around top archetypes
+    # 5. Phase 2: Refined search around top archetypes (still scalar CO2)
+    top_archetypes = [(m, s) for m, s, _, _ in top_candidates[:5]]
     if top_archetypes and len(filtered) > 10:
         phase2_df = phase2_refine(top_archetypes, floor_pct, threshold)
         if not phase2_df.empty:
@@ -1066,10 +1139,16 @@ def optimize_threshold(iso, threshold, floor_twh, cumulative_caps,
                 row = phase2_df.iloc[idx]
                 mix_pct = mix_row_to_pct(row)
 
-                scored = _score_mix(mix_pct)
+                scored = _score_mix_scalar(mix_pct)
                 if scored is None:
                     continue
                 mac, co2_avoided_mt, co2_after_mt, nb_cost, nb_breakdown = scored
+
+                # Update top candidates list with phase 2 results
+                if len(top_candidates) < TOP_N_DISPATCH or mac < top_candidates[-1][1]:
+                    top_candidates.append((mix_pct, mac, nb_cost, nb_breakdown))
+                    top_candidates.sort(key=lambda x: x[1])
+                    top_candidates = top_candidates[:TOP_N_DISPATCH]
 
                 if mac < best_mac:
                     best_mac = mac
@@ -1079,24 +1158,64 @@ def optimize_threshold(iso, threshold, floor_twh, cumulative_caps,
                     best_co2_after = co2_after_mt
                     best_breakdown = nb_breakdown
 
+    # 6. Phase 3: 8760-hour dispatch rescore on top candidates
+    # Re-rank using precise hourly CO2 displacement instead of scalar model
+    if top_candidates:
+        dispatch_best_mac = float('inf')
+        dispatch_best_mix = None
+        dispatch_best_cost = 0
+        dispatch_best_co2_avoided = 0
+        dispatch_best_co2_after = 0
+        dispatch_best_breakdown = {}
+        dispatch_best_co2_detail = {}
+
+        for mix_pct, scalar_mac, _, _ in top_candidates:
+            d_scored = _score_mix_dispatch(mix_pct)
+            if d_scored is None:
+                continue
+            d_mac, d_co2_avoided, d_co2_after, d_cost, d_breakdown, d_co2_result = d_scored
+
+            if d_mac < dispatch_best_mac:
+                dispatch_best_mac = d_mac
+                dispatch_best_mix = mix_pct
+                dispatch_best_cost = d_cost
+                dispatch_best_co2_avoided = d_co2_avoided
+                dispatch_best_co2_after = d_co2_after
+                dispatch_best_breakdown = d_breakdown
+                dispatch_best_co2_detail = d_co2_result
+
+        if dispatch_best_mix is not None:
+            best_mac = dispatch_best_mac
+            best_mix = dispatch_best_mix
+            best_cost = dispatch_best_cost
+            best_co2_avoided = dispatch_best_co2_avoided
+            best_co2_after = dispatch_best_co2_after
+            best_breakdown = dispatch_best_breakdown
+            print(f"      Dispatch rescore: MAC ${dispatch_best_mac:.1f}/tCO2 "
+                  f"(coal {dispatch_best_co2_detail.get('coal_displaced_twh', 0):.1f} TWh, "
+                  f"gas {dispatch_best_co2_detail.get('gas_displaced_twh', 0):.1f} TWh)")
+
     if best_mix is None:
         print(f"    WARNING: No valid MAC found for {iso} t{threshold:g}")
-        return None, floor_twh, cumulative_caps
+        return None, floor_twh, deployed_twh, cumulative_caps
 
-    # 6. Update cumulative caps with winner
+    # 7. Update cumulative caps with winner (uses deployed_twh for accurate costing)
     _, _, updated_caps = compute_new_build_cost(
-        iso, best_mix, floor_twh, demand_twh, sens, target_year, dict(cumulative_caps))
+        iso, best_mix, deployed_twh, demand_twh, sens, target_year, dict(cumulative_caps))
 
-    # 7. Ratchet floor
+    # 8. Ratchet floors
+    # Filter floor: only ratchets when winner % > floor % (widens search at next threshold)
     new_floor = ratchet_floor(floor_twh, best_mix, demand_twh)
+    # Deployed floor: always takes max (tracks actual physical capacity for costing)
+    new_deployed = ratchet_deployed(deployed_twh, best_mix, demand_twh)
 
-    # Compute new-build MWh for $/MWh reference
+    # Compute new-build MWh for $/MWh reference (uses deployed_twh for accuracy)
     total_new_build_twh = 0.0
     for res in RESOURCE_COLS:
-        nb_twh = max(0, best_mix.get(res, 0) / 100.0 * demand_twh - floor_twh.get(res, 0))
+        nb_twh = max(0, best_mix.get(res, 0) / 100.0 * demand_twh - deployed_twh.get(res, 0))
         total_new_build_twh += nb_twh
 
-    # 8. Build result
+    # 9. Build result
     result = {
         'iso': iso,
         'threshold': threshold,
@@ -1120,24 +1239,26 @@ def optimize_threshold(iso, threshold, floor_twh, cumulative_caps,
     for col in STORAGE_COLS:
         result[f'winner_{col}'] = round(best_mix.get(col, 0), 3)
 
-    # New build incremental
+    # New build incremental (uses deployed_twh for accurate costing)
     for res in RESOURCE_COLS:
-        nb_twh = max(0, best_mix.get(res, 0) / 100.0 * demand_twh - floor_twh.get(res, 0))
+        nb_twh = max(0, best_mix.get(res, 0) / 100.0 * demand_twh - deployed_twh.get(res, 0))
         result[f'new_build_{res}_twh'] = round(nb_twh, 3)
     for col in STORAGE_COLS:
-        nb_pct = max(0, best_mix.get(col, 0) - floor_twh.get(col, 0))
+        nb_pct = max(0, best_mix.get(col, 0) - deployed_twh.get(col, 0))
         result[f'new_build_{col}'] = round(nb_pct, 3)
 
-    # Floor state
+    # Floor state (record both filter floor and deployed floor)
     for res in RESOURCE_COLS:
         result[f'floor_{res}_twh'] = round(new_floor.get(res, 0), 3)
+        result[f'deployed_{res}_twh'] = round(new_deployed.get(res, 0), 3)
     for col in STORAGE_COLS:
         result[f'floor_{col}'] = round(new_floor.get(col, 0), 3)
+        result[f'deployed_{col}'] = round(new_deployed.get(col, 0), 3)
 
     print(f"    → MAC: ${best_mac:.1f}/tCO2 | CO2 avoided: {best_co2_avoided:.3f} Mt "
           f"| NB cost: ${best_cost/1e6:.1f}M")
 
-    return result, new_floor, updated_caps
+    return result, new_floor, new_deployed, updated_caps
 
 
 # ============================================================================
@@ -1151,8 +1272,11 @@ def run_pathway(iso, price_sens_name, growth_level, demand_norm, supply_profiles
     growth_rate = DEMAND_GROWTH_RATES[iso][growth_level]
     base_demand = REGIONAL_DEMAND_TWH[iso]
 
-    # Initialize floor from existing clean
+    # Initialize floors from existing clean
+    # filter floor: only ratchets on % increase → diminishes as demand grows
+    # deployed floor: always max → tracks actual physical capacity for costing
     floor_twh = init_floor(iso)
+    deployed_twh = dict(floor_twh)  # Starts identical to filter floor
     existing_clean_twh = dict(floor_twh)
     cumulative_caps = {'uprate_twh': 0.0, 'geo_twh': 0.0, 'ccs_twh': 0.0}
     cumulative_cost = 0.0
@@ -1189,8 +1313,8 @@ def run_pathway(iso, price_sens_name, growth_level, demand_norm, supply_profiles
         years = max(0, target_year - 2025)
         demand_twh = base_demand * (1 + growth_rate) ** years
 
-        result, floor_twh, cumulative_caps = optimize_threshold(
-            iso, threshold, floor_twh, cumulative_caps,
+        result, floor_twh, deployed_twh, cumulative_caps = optimize_threshold(
+            iso, threshold, floor_twh, deployed_twh, cumulative_caps,
             sens, demand_twh, target_year,
             demand_norm, supply_profiles, supply_matrix, emission_rates,
             existing_clean_twh, prev_threshold=prev_threshold,
