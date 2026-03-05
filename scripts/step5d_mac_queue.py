@@ -83,6 +83,20 @@ from dispatch_utils import (
 )
 import step1_pfs_generator as s1
 
+from scenario_common import (
+    SCENARIO_A, THRESHOLDS as SCENARIO_THRESHOLDS,
+    RESOURCES, WHOLESALE_PRICES, FUEL_ADJUSTMENTS,
+    BASE_DEMAND_TWH, HYDRO_CAP_TWH as SC_HYDRO_CAP_TWH,
+    PEAK_DEMAND_MW, EXISTING_GAS_CAPACITY_MW, EXISTING_GAS_FOM_KW_YR,
+    NEW_CCGT_COST_KW_YR, PEAK_CAPACITY_CREDITS, GAS_AVAILABILITY_FACTOR,
+    RESOURCE_ADEQUACY_MARGIN, SBTI_YEAR_MAP,
+    UPRATE_CAP_TWH as SC_UPRATE_CAP_TWH,
+    GEO_CAP_TWH, LEVEL_NAME as SC_LEVEL_NAME,
+    compute_mix_cost, save_scenario_results,
+    get_demand_growth_factor,
+    _build_existing_only_entry, _existing_match_pct,
+)
+
 # ============================================================================
 # CONSTANTS
 # ============================================================================
@@ -1464,6 +1478,127 @@ def _build_consequential_queue(all_results):
     return queue
 
 
+def _export_scenario_a(all_results, isos_processed, sensitivity='high_firm_low_vre',
+                       growth='Medium'):
+    """Export step5d MAC queue results as scenario_a_{ISO}.json for step7c compatibility.
+
+    Converts winner mixes from the specified sensitivity+growth pathway into
+    the scenario_common format (compute_mix_cost re-pricing under SCENARIO_A toggles).
+    This lets step7c read these results as Scenario A without running step7a.
+
+    The canonical pathway for Scenario A is high_firm_low_vre + Medium growth,
+    which represents the "chase cheap carbon" strategy with expensive firm costs.
+    """
+    sens_toggles = SCENARIO_A['toggles']
+
+    # Filter to target sensitivity + growth
+    canonical = [r for r in all_results
+                 if r.get('price_sensitivity') == sensitivity
+                 and r.get('demand_growth') == growth]
+
+    if not canonical:
+        print(f"  WARNING: No results for {sensitivity}/{growth} — skipping scenario A export")
+        return
+
+    # Group by ISO
+    from collections import defaultdict
+    iso_groups = defaultdict(list)
+    for r in canonical:
+        iso_groups[r['iso']].append(r)
+
+    results_by_iso = {}
+    for iso in isos_processed:
+        iso_results = sorted(iso_groups.get(iso, []), key=lambda x: x['threshold'])
+        if not iso_results:
+            print(f"  {iso}: No canonical results — skipping")
+            continue
+
+        iso_data = {}
+
+        # Inject pre-50% existing-only entries (same as step7a)
+        exist_match = _existing_match_pct(iso)
+        for t_pre in [t for t in SCENARIO_THRESHOLDS if t < 50]:
+            if t_pre <= exist_match:
+                gf_pre = get_demand_growth_factor(iso, t_pre)
+                demand_pre = BASE_DEMAND_TWH[iso] * gf_pre
+                existing_twh = {
+                    res: GRID_MIX_SHARES[iso].get(res, 0) / 100.0 * BASE_DEMAND_TWH[iso]
+                    for res in ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
+                }
+                existing_twh.update({'battery': 0, 'ldes': 0})
+                iso_data[t_pre] = _build_existing_only_entry(
+                    iso, t_pre, demand_pre, gf_pre, existing_twh, sens_toggles)
+
+        # Convert each threshold winner to scenario_common format
+        for r in iso_results:
+            t = r['threshold']
+            demand_twh = r['demand_twh']
+
+            # Reconstruct 11-element mix vector from winner columns:
+            # [cf, sol, wnd, osw, ccs, hyd, score, bat4, bat8, ldes, h2]
+            mix = [
+                r.get('winner_clean_firm_pct', 0),
+                r.get('winner_solar_pct', 0),
+                r.get('winner_wind_pct', 0),
+                r.get('winner_offshore_wind_pct', 0),
+                0.0,  # CCS — step5d tracks clean_firm tranches separately
+                r.get('winner_hydro_pct', 0),
+                r.get('winner_match_score', r.get('winner_match_score', 0)),
+                r.get('winner_battery_dispatch_pct', 0),
+                r.get('winner_battery8_dispatch_pct', 0),
+                r.get('winner_ldes_dispatch_pct', 0),
+                r.get('winner_h2_dispatch_pct', 0),
+            ]
+
+            # Growth factor for this threshold
+            gf = demand_twh / BASE_DEMAND_TWH[iso] if BASE_DEMAND_TWH[iso] > 0 else 1.0
+
+            # Re-price through compute_mix_cost with SCENARIO_A toggles
+            result = compute_mix_cost(mix, sens_toggles, iso, demand_twh,
+                                       overrides={'uprate_lcoe': UPRATE_LCOE.get('M', 25)},
+                                       growth_factor=gf)
+
+            # Override new_build_cost_total with step5d's actual MAC-based cost
+            # (compute_mix_cost calculates system cost; step5d tracks NB cost separately)
+            result['new_build_cost_total'] = r.get('new_build_cost_total', 0)
+            result['new_gen_twh'] = r.get('new_build_twh_total', result.get('new_gen_twh', 0))
+
+            # Add step5d-specific fields for downstream analysis
+            result['demand_twh'] = demand_twh
+            result['demand_mwh'] = demand_twh * 1e6
+            result['mix_raw'] = mix
+            result['mix_source'] = 'MAC-queue'
+
+            # MAC and CO2 fields from step5d
+            result['mac_this_step'] = r.get('mac_this_step', 0)
+            result['co2_avoided_mt'] = r.get('co2_avoided_mt', 0)
+            result['co2_after_mt'] = r.get('co2_after_mt', 0)
+            result['baseline_co2_mt'] = r.get('baseline_co2_mt', 0)
+            result['cumulative_new_build_cost'] = r.get('cumulative_new_build_cost', 0)
+            result['cumulative_co2_avoided_mt'] = r.get('cumulative_co2_avoided_mt', 0)
+            result['cumulative_mac'] = r.get('cumulative_mac', 0)
+            result['target_year'] = r.get('target_year', 2050)
+
+            # Dispatch percentages for dispatch cache lookups
+            result['battery_dispatch_pct'] = mix[7]
+            result['battery8_dispatch_pct'] = mix[8]
+            result['ldes_dispatch_pct'] = mix[9]
+            result['h2_dispatch_pct'] = mix[10]
+
+            iso_data[t] = result
+
+        results_by_iso[iso] = iso_data
+        t_min = min(iso_data.keys())
+        t_max = max(iso_data.keys())
+        print(f"  {iso}: {len(iso_data)} thresholds, "
+              f"${iso_data[t_min]['effective_cost']:.0f}/MWh @ {t_min}% -> "
+              f"${iso_data[t_max]['effective_cost']:.0f}/MWh @ {t_max}%")
+
+    if results_by_iso:
+        save_scenario_results(results_by_iso, 'A', list(results_by_iso.keys()))
+        print(f"\n  Scenario A export complete: {len(results_by_iso)} ISOs")
+
+
 def main():
     parser = argparse.ArgumentParser(description='MAC-Optimized Consequential Queue')
     parser.add_argument('--iso', type=str, default=None,
@@ -1525,6 +1660,17 @@ def main():
             json.dump({'queue': queue, 'generated': time.strftime('%Y-%m-%d %H:%M:%S'),
                        'source': 'step5d_mac_queue.py'}, f, indent=2, default=str)
         print(f"Saved consequential queue: {queue_path} ({len(queue)} steps)")
+
+    # ── Export scenario_a_{ISO}.json for step7c compatibility ──
+    # Re-prices MAC queue winners under SCENARIO_A toggles (Low VRE, High firm)
+    # so step7c can read them as Scenario A for comparison with Scenario B.
+    if all_results:
+        print("\n" + "=" * 60)
+        print("EXPORTING SCENARIO A (for step7c scenario comparison)")
+        print("  Sensitivity: high_firm_low_vre | Growth: Medium")
+        print("=" * 60)
+        _export_scenario_a(all_results, isos, sensitivity='high_firm_low_vre',
+                           growth='Medium')
 
     elapsed = time.time() - t0
     print(f"\nDone. {len(all_results)} results in {elapsed:.1f}s")
