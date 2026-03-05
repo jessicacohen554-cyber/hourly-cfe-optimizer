@@ -143,69 +143,97 @@ def load_egrid():
     return rates
 
 
-def load_pfs_pool(iso):
-    """Load ALL PFS mixes for an ISO (raw + storage-refined) into numpy arrays.
+STORAGE_DIR2 = os.path.join(BASE_DIR, 'data', 'step1d2-storage-parquets')
 
-    Returns dict with numpy arrays for each column + metadata.
+
+def _load_parquet_rows(path, n_cols):
+    """Load a single parquet file into an (N, n_cols) array."""
+    table = pq.read_table(path)
+    cols = table.column_names
+    n = table.num_rows
+    if n == 0:
+        return None
+
+    row = np.zeros((n, n_cols), dtype=np.float64)
+    for i, col in enumerate(GEN_COLS):
+        if col in cols:
+            row[:, i] = table.column(col).to_numpy().astype(np.float64)
+    if GEO_COL in cols:
+        row[:, 5] = table.column(GEO_COL).to_numpy().astype(np.float64)
+    for j, col in enumerate(STORAGE_COLS):
+        if col in cols:
+            row[:, 6 + j] = table.column(col).to_numpy().astype(np.float64)
+
+    # Score column: 'hourly_match_score', 'score', or 'base_score'
+    score_col = None
+    for sc in [SCORE_COL, 'score', 'base_score']:
+        if sc in cols:
+            score_col = sc
+            break
+    if score_col:
+        scores = table.column(score_col).to_numpy().astype(np.float64)
+        # Convert fraction (0-1) to percentage if needed
+        if scores.max() <= 1.0 and scores.max() > 0:
+            scores *= 100.0
+        row[:, 10] = scores
+    return row
+
+
+def load_pfs_pool(iso):
+    """Load ALL PFS mixes for an ISO into numpy arrays.
+
+    Sources (all loaded):
+      1. Raw PFS parquets (step1 zone search) — 1% grid, per-threshold
+      2. Storage-refined parquets (step1d) — storage dispatch variants
+      3. Storage-refined v2 parquets (step1d2) — additional storage variants
+      4. Coarse cache — 5% grid, full resource space with scores
+      5. Near-miss parquets — high-scoring mixes near feasibility boundary
     """
     all_rows = []
-
-    # Column order: clean_firm, solar, wind, hydro, offshore_wind, geothermal,
-    #               bat4_pct, bat8_pct, ldes_pct, h2_pct, match_score
     n_cols = 11
+    counts = {}
 
-    # Load raw PFS parquets (step1)
+    # 1. Raw PFS parquets (step1 zone search)
     for fname in sorted(os.listdir(PFS_DIR)):
         if not fname.startswith(f'{iso}_t') or not fname.endswith('_raw_pfs.parquet'):
             continue
-        path = os.path.join(PFS_DIR, fname)
-        table = pq.read_table(path)
-        cols = table.column_names
-        n = table.num_rows
-        if n == 0:
+        row = _load_parquet_rows(os.path.join(PFS_DIR, fname), n_cols)
+        if row is not None:
+            all_rows.append(row)
+            counts['raw_pfs'] = counts.get('raw_pfs', 0) + row.shape[0]
+
+    # 2. Storage-refined parquets (step1d)
+    for sdir in [STORAGE_DIR, STORAGE_DIR2]:
+        if not os.path.isdir(sdir):
             continue
-
-        row = np.zeros((n, n_cols), dtype=np.float64)
-        for i, col in enumerate(GEN_COLS):
-            if col in cols:
-                row[:, i] = table.column(col).to_numpy().astype(np.float64)
-        if GEO_COL in cols:
-            row[:, 5] = table.column(GEO_COL).to_numpy().astype(np.float64)
-        for j, col in enumerate(STORAGE_COLS):
-            if col in cols:
-                row[:, 6 + j] = table.column(col).to_numpy().astype(np.float64)
-        if SCORE_COL in cols:
-            row[:, 10] = table.column(SCORE_COL).to_numpy().astype(np.float64)
-        elif 'score' in cols:
-            row[:, 10] = table.column('score').to_numpy().astype(np.float64)
-        all_rows.append(row)
-
-    # Load storage-refined parquets (step1d)
-    if os.path.isdir(STORAGE_DIR):
-        for fname in sorted(os.listdir(STORAGE_DIR)):
+        label = 'step1d' if sdir == STORAGE_DIR else 'step1d2'
+        for fname in sorted(os.listdir(sdir)):
             if not fname.startswith(f'{iso}_t') or '_storage' not in fname:
                 continue
             if not fname.endswith('.parquet'):
                 continue
-            path = os.path.join(STORAGE_DIR, fname)
-            table = pq.read_table(path)
-            cols = table.column_names
-            n = table.num_rows
-            if n == 0:
-                continue
+            row = _load_parquet_rows(os.path.join(sdir, fname), n_cols)
+            if row is not None:
+                all_rows.append(row)
+                counts[label] = counts.get(label, 0) + row.shape[0]
 
-            row = np.zeros((n, n_cols), dtype=np.float64)
-            for i, col in enumerate(GEN_COLS):
-                if col in cols:
-                    row[:, i] = table.column(col).to_numpy().astype(np.float64)
-            if GEO_COL in cols:
-                row[:, 5] = table.column(GEO_COL).to_numpy().astype(np.float64)
-            for j, col in enumerate(STORAGE_COLS):
-                if col in cols:
-                    row[:, 6 + j] = table.column(col).to_numpy().astype(np.float64)
-            if SCORE_COL in cols:
-                row[:, 10] = table.column(SCORE_COL).to_numpy().astype(np.float64)
+    # 3. Coarse cache — full resource space at 5% grid
+    coarse_path = os.path.join(PFS_DIR, f'{iso}_coarse_cache.parquet')
+    if os.path.exists(coarse_path):
+        row = _load_parquet_rows(coarse_path, n_cols)
+        if row is not None:
             all_rows.append(row)
+            counts['coarse'] = row.shape[0]
+
+    # 4. Near-miss parquets — high-scoring mixes near boundary
+    near_miss_path = os.path.join(PFS_DIR, f'{iso}_near_miss.parquet')
+    if os.path.exists(near_miss_path):
+        row = _load_parquet_rows(near_miss_path, n_cols)
+        if row is not None:
+            all_rows.append(row)
+            counts['near_miss'] = row.shape[0]
+
+    source_str = ', '.join(f'{k}={v:,}' for k, v in counts.items())
 
     if not all_rows:
         return None
@@ -232,7 +260,8 @@ def load_pfs_pool(iso):
     pool = pool[np.sort(unique_idx)]
 
     print(f"  {iso}: loaded {pool.shape[0]:,} unique mixes "
-          f"(score range: {pool[:, 10].min():.1f}-{pool[:, 10].max():.1f}%)")
+          f"(score range: {pool[:, 10].min():.1f}-{pool[:, 10].max():.1f}%) "
+          f"[{source_str}]")
     return pool
 
 
@@ -406,13 +435,8 @@ def vectorized_cost(pool, lcoe, iso, demand_twh):
     cf_cost = uprate_twh * lcoe['uprate']
     remaining = np.maximum(0, cf_new_twh - uprate_twh)
 
-    # Tranche 2: Geothermal (CAISO only)
-    if iso == 'CAISO' and lcoe['geothermal'] > 0:
-        geo_twh = np.minimum(remaining, GEO_CAP_TWH)
-        cf_cost += geo_twh * lcoe['geothermal']
-        remaining = np.maximum(0, remaining - geo_twh)
-
-    # Tranche 3: Cheapest of CCS vs nuclear newbuild
+    # Geothermal is a SEPARATE PFS column for CAISO (costed below, not here)
+    # Tranche 2: Cheapest of CCS vs nuclear newbuild
     ccs_cap = CCS_CAP_TWH.get(iso, 0)
     if ccs_cap > 0 and lcoe['ccs'] < lcoe['nuclear']:
         # CCS cheaper: fill CCS first, nuclear overflow
@@ -425,10 +449,10 @@ def vectorized_cost(pool, lcoe, iso, demand_twh):
 
     cost += cf_cost / 1e3  # TWh × $/MWh / 1e3 = $B
 
-    # Geothermal (separate column for CAISO — in addition to clean_firm tranche)
-    # Note: geothermal in the PFS is part of the clean_firm tranche, not a separate column
-    # unless the PFS explicitly has it. The `pool[:, I_GEO]` is the geo-specific allocation.
-    # For non-CAISO, this is 0.
+    # Geothermal (CAISO only): separate resource dimension in PFS.
+    # NOT part of clean_firm column — must be costed independently.
+    if iso == 'CAISO' and lcoe.get('geothermal', 0) > 0:
+        cost += pool[:, I_GEO] / 100.0 * lcoe['geothermal'] * demand_twh / 1e3
 
     # Storage: coefficient × price / 100 × demand_TWh / 1e3
     cost += pool[:, I_BAT4] * lcoe['battery4'] / 100.0 * demand_twh / 1e3
@@ -526,7 +550,8 @@ def optimize_iso(iso, pool, egrid_rates, scenarios=None):
     existing = GRID_MIX_SHARES.get(iso, {})
     existing_clean_pct = sum(existing.values())
 
-    existing_hydro_twh = existing.get('hydro', 0) / 100.0 * demand_twh_2025
+    import math
+    hydro_cap_pct = math.ceil(existing.get('hydro', 0))  # PFS grid cap
     growth_rate = DEMAND_GROWTH_RATES.get(iso, {}).get('Medium', 0.02)
 
     coal_rate = egrid_rates[iso]['coal']
@@ -534,13 +559,6 @@ def optimize_iso(iso, pool, egrid_rates, scenarios=None):
     gas_rate = egrid_rates[iso]['gas']
     coal_cap = COAL_CAP_TWH.get(iso, 0)
     oil_cap = OIL_CAP_TWH.get(iso, 0)
-
-    pool_co2 = merit_order_co2(
-        pool[:, I_SCORE], demand_twh_2025, coal_cap, oil_cap,
-        coal_rate, oil_rate, gas_rate)
-    baseline_co2 = merit_order_co2(
-        np.array([existing_clean_pct]), demand_twh_2025, coal_cap, oil_cap,
-        coal_rate, oil_rate, gas_rate)[0]
 
     results = {}
 
@@ -559,50 +577,56 @@ def optimize_iso(iso, pool, egrid_rates, scenarios=None):
 
         trajectory = []
         prev_resources = floor.copy()
+        prev_score = existing_clean_pct  # effective clean % at previous step
+        prev_mac = 0.0  # monotonic MAC envelope
         stranded_assets = {}  # {resource_idx: (stranded_pct, lcoe_$/MWh, build_year)}
 
         for t_idx, threshold in enumerate(CONSQ_THRESHOLDS):
             year = SBTI_YEAR_MAP.get(threshold, 2050)
             years_out = max(0, year - 2025)
             demand_twh = demand_twh_2025 * (1 + growth_rate) ** years_out
-            hydro_cap_pct = (existing_hydro_twh / demand_twh) * 100.0
 
             lcoe = build_lcoe_at_year(iso, scenario, year)
             pool_cost = vectorized_cost(pool, lcoe, iso, demand_twh)
+
+            # CO2 at this threshold's demand level (demand grows over time)
+            pool_co2 = merit_order_co2(
+                pool[:, I_SCORE], demand_twh, coal_cap, oil_cap,
+                coal_rate, oil_rate, gas_rate)
+            baseline_co2 = merit_order_co2(
+                np.array([existing_clean_pct]), demand_twh, coal_cap, oil_cap,
+                coal_rate, oil_rate, gas_rate)[0]
             lcoe_vec = resource_lcoe_vector(lcoe, iso)
 
+            # Hydro is existing-only, never grows. The load-time filter caps at
+            # ceil(existing_hydro%). Per-threshold: just enforce the same cap.
+            # Don't shrink with demand growth — PFS scores use 2025 demand basis.
             hydro_mask = pool[:, I_HYD] <= hydro_cap_pct + 0.5
+            # But hydro floor must not ratchet up beyond existing
+            floor[I_HYD] = min(floor[I_HYD], hydro_cap_pct)
             score_mask = pool[:, I_SCORE] >= threshold
             next_t = CONSQ_THRESHOLDS[t_idx + 1] if t_idx + 1 < len(CONSQ_THRESHOLDS) else 101.0
 
-            # Stage 1: Full ratchet + progressive score ceiling
+            # Stage 1: Full ratchet, search up to next threshold
+            # Wide ceiling: captures fine-grained mixes from adjacent zone searches
+            # that might have much better MAC despite slightly overshooting
             ratchet_ok = ratchet_mask(pool, floor)
             candidate_idx = np.array([], dtype=int)
             used_relaxed = False
 
-            for ceil_margin in [1.0, 2.0, 3.0, 5.0, next_t - threshold + 1.0]:
-                score_ceil = min(threshold + ceil_margin, next_t + 1.0)
-                if t_idx + 1 >= len(CONSQ_THRESHOLDS):
-                    score_ceil = 101.0
-                mask = ratchet_ok & hydro_mask & score_mask & (pool[:, I_SCORE] < score_ceil)
-                candidate_idx = np.where(mask)[0]
-                if len(candidate_idx) > 0:
-                    break
+            score_ceil = next_t + 1.0
+            if t_idx + 1 >= len(CONSQ_THRESHOLDS):
+                score_ceil = 101.0
+            mask = ratchet_ok & hydro_mask & score_mask & (pool[:, I_SCORE] < score_ceil)
+            candidate_idx = np.where(mask)[0]
 
-            # Stage 2: Relaxed ratchet (allow stranding) + progressive ceiling
+            # Stage 2: Relaxed ratchet (allow stranding)
             if len(candidate_idx) == 0:
                 used_relaxed = True
                 relaxed_floor = np.maximum(0, floor - 5.0)
                 relaxed_floor[6:] = np.maximum(0, floor[6:] - 0.05)
-                ratchet_relaxed = ratchet_mask(pool, relaxed_floor)
-                for ceil_margin in [1.0, 2.0, 3.0, 5.0, next_t - threshold + 1.0]:
-                    score_ceil = min(threshold + ceil_margin, next_t + 1.0)
-                    if t_idx + 1 >= len(CONSQ_THRESHOLDS):
-                        score_ceil = 101.0
-                    mask = ratchet_relaxed & hydro_mask & score_mask & (pool[:, I_SCORE] < score_ceil)
-                    candidate_idx = np.where(mask)[0]
-                    if len(candidate_idx) > 0:
-                        break
+                mask = ratchet_mask(pool, relaxed_floor) & hydro_mask & score_mask & (pool[:, I_SCORE] < score_ceil)
+                candidate_idx = np.where(mask)[0]
 
             # Stage 3: Very relaxed ratchet + no ceiling
             if len(candidate_idx) == 0:
@@ -622,48 +646,82 @@ def optimize_iso(iso, pool, egrid_rates, scenarios=None):
                 continue
 
             # ============================================================
-            # FRESH MAC with stranding costs
-            # MAC = (new_resource_cost + stranding_cost) × 1e3 / CO2_abated
+            # STEPWISE MARGINAL MAC
+            # MAC = cost_of_MWh_ADDED_this_step / CO2_displaced_this_step
+            # Each step fresh: uses THIS threshold's LCOE (no cross-year)
+            # Uses vectorized_cost difference for correct tranche pricing
             # ============================================================
+
+            # Cost of candidates' full portfolio at this year's LCOE
             cand_cost = pool_cost[candidate_idx]
-            cand_co2_abated = baseline_co2 - pool_co2[candidate_idx]
 
-            # Compute stranding cost for each candidate
-            if used_relaxed and stranded_assets:
-                strand_cost = compute_stranding_cost(
-                    pool[candidate_idx, :10], floor, stranded_assets, demand_twh)
-            else:
-                strand_cost = np.zeros(len(candidate_idx))
+            # Cost of PREVIOUS step's mix at THIS year's LCOE
+            # (same year → fresh per-threshold, no cross-year comparison)
+            prev_mix_arr = np.tile(prev_resources, (1, 1))
+            prev_mix_full = np.zeros((1, pool.shape[1]))
+            prev_mix_full[0, :10] = prev_resources
+            prev_mix_full[0, I_SCORE] = prev_score
+            prev_cost_at_year = vectorized_cost(prev_mix_full, lcoe, iso, demand_twh)[0]
 
-            # Also compute NEW stranding from this step
-            new_strand_cost = np.zeros(len(candidate_idx))
+            # Step cost = cost of THIS mix - cost of PREVIOUS mix, both at this year's LCOE
+            step_cost = cand_cost - prev_cost_at_year
+
+            # Stranding cost: resources below floor
+            cand_resources = pool[candidate_idx, :10]
+            strand_cost = np.zeros(len(candidate_idx))
             for r in range(10):
-                shortfall = np.maximum(0, floor[r] - pool[candidate_idx, r])
-                new_strand_cost += shortfall / 100.0 * lcoe_vec[r] * demand_twh / 1e3
+                stranded_pct = np.maximum(0, floor[r] - cand_resources[:, r])
+                strand_cost += stranded_pct / 100.0 * lcoe_vec[r] * demand_twh / 1e3
 
-            effective_cost = cand_cost + strand_cost + new_strand_cost
+            # Add carryover stranding from prior thresholds
+            if stranded_assets:
+                strand_cost += compute_stranding_cost(
+                    cand_resources, floor, stranded_assets, demand_twh)
 
-            valid = cand_co2_abated > 0.01
+            effective_step_cost = np.maximum(0, step_cost) + strand_cost
+
+            # CO2 displaced THIS step: from previous score to this candidate
+            prev_co2 = merit_order_co2(
+                np.array([prev_score]), demand_twh, coal_cap, oil_cap,
+                coal_rate, oil_rate, gas_rate)[0]
+            cand_co2 = merit_order_co2(
+                pool[candidate_idx, I_SCORE], demand_twh, coal_cap, oil_cap,
+                coal_rate, oil_rate, gas_rate)
+            step_abatement = prev_co2 - cand_co2
+
+            # Handle overshoot: if previous step already exceeded this threshold,
+            # step_abatement ≈ 0. Pick cheapest candidate, carry forward prev_mac.
+            valid = step_abatement > 0.01
             if not np.any(valid):
-                best_local = np.argmin(effective_cost)
+                # Already past this threshold — pick cheapest total cost
+                best_local = np.argmin(cand_cost)
                 best_idx = candidate_idx[best_local]
+                is_zero_step = True
             else:
                 mac_vals = np.full(len(candidate_idx), np.inf)
-                mac_vals[valid] = effective_cost[valid] * 1e3 / cand_co2_abated[valid]
+                mac_vals[valid] = effective_step_cost[valid] * 1e3 / step_abatement[valid]
                 best_local = np.argmin(mac_vals)
                 best_idx = candidate_idx[best_local]
+                is_zero_step = False
 
             winner = pool[best_idx]
-            winner_cost = pool_cost[best_idx]
+            winner_cost = pool_cost[best_idx]  # total portfolio cost (for reporting)
             winner_co2 = pool_co2[best_idx]
-            winner_co2_abated = baseline_co2 - winner_co2
-            winner_strand = strand_cost[best_local] + new_strand_cost[best_local]
-            winner_effective = effective_cost[best_local]
+            winner_co2_abated = baseline_co2 - winner_co2  # total vs existing
+            winner_step_cost = effective_step_cost[best_local]
+            winner_step_abatement = step_abatement[best_local]
+            winner_strand = strand_cost[best_local]
 
-            mac_val = (
-                winner_effective * 1e3 / winner_co2_abated
-                if winner_co2_abated > 0.001 else float('inf')
-            )
+            if is_zero_step:
+                mac_val = prev_mac  # carry forward, don't inflate
+            elif winner_step_abatement > 0.001:
+                mac_val = winner_step_cost * 1e3 / winner_step_abatement
+            else:
+                mac_val = float('inf')
+
+            # Enforce monotonic MAC: marginal cost should increase at each step
+            mac_val = max(mac_val, prev_mac)
+            prev_mac = mac_val
 
             # Update stranding tracker
             floor_before = floor.copy()
@@ -708,11 +766,13 @@ def optimize_iso(iso, pool, egrid_rates, scenarios=None):
                 },
                 'year_adjusted_lcoe': {k: round(v, 1) for k, v in lcoe.items()},
                 'total_cost_bn': round(float(winner_cost), 3),
+                'step_cost_bn': round(float(winner_step_cost), 3),
                 'stranded_cost_bn': round(float(winner_strand), 3),
-                'effective_cost_bn': round(float(winner_effective), 3),
                 'co2_remaining_mt': round(float(winner_co2), 2),
                 'co2_abated_mt': round(float(winner_co2_abated), 2),
+                'step_co2_abated_mt': round(float(winner_step_abatement), 2),
                 'mac': round(float(min(mac_val, 9999)), 1),
+                'demand_twh': round(float(demand_twh), 1),
                 'fossil_dispatch': fossil,
                 'primary_fuel_displaced': primary_fuel,
                 'effective_clean_pct': round(float(winner[I_SCORE]), 2),
@@ -732,6 +792,7 @@ def optimize_iso(iso, pool, egrid_rates, scenarios=None):
             }
             trajectory.append(entry)
             prev_resources = winner[:10].copy()
+            prev_score = float(winner[I_SCORE])
 
         elapsed = time.time() - t0
         print(f" {len(trajectory)} thresholds, {elapsed:.1f}s")
