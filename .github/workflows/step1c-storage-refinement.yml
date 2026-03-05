@@ -10,9 +10,8 @@ name: "Step 1C: Storage Refinement"
 #   MID  — 85, 87.5, 90, 92.5, 95
 #   HIGH — 97.5, 99, 99.5, 99.9, 99.99
 #
-# Optional: --lean-mixes augments pool with scaled-down archetypes (80-135% procurement).
-# Optional: --floor-fine-mixes augments pool with floor/fine PFS mixes (from step1b2/1b3).
-# Optional: --v2-caps uses 2050-oriented storage capacity limits.
+# Storage grids are the union of V1 (near-term) and V2 (2050-oriented) caps.
+# Floor/fine mix augmentation is always on.
 #
 # Prerequisite: Step 1B (Zone Search) must have run first.
 # Output: data/step1-pfs-parquets/{ISO}_t{XX}_storage.parquet
@@ -54,21 +53,6 @@ on:
         required: false
         default: 'master'
         type: string
-      lean_mixes:
-        description: 'Enable lean-mix augmentation (scaled-down archetypes)'
-        required: false
-        default: false
-        type: boolean
-      floor_fine_mixes:
-        description: 'Augment with floor/fine PFS mixes (from step1b2/1b3)'
-        required: false
-        default: false
-        type: boolean
-      v2_caps:
-        description: 'Use V2 (2050-oriented) storage caps'
-        required: false
-        default: false
-        type: boolean
 
 env:
   PYTHONUNBUFFERED: "1"
@@ -203,15 +187,6 @@ jobs:
         echo "  Thresholds: ${{ steps.resolve.outputs.thresholds }}"
         echo "═══════════════════════════════════════════════════════════"
         ARGS="--iso ${{ matrix.iso }} --thresholds ${{ steps.resolve.outputs.thresholds }}"
-        if [ "${{ inputs.lean_mixes }}" = "true" ]; then
-          ARGS="$ARGS --lean-mixes"
-        fi
-        if [ "${{ inputs.floor_fine_mixes }}" = "true" ]; then
-          ARGS="$ARGS --floor-fine-mixes"
-        fi
-        if [ "${{ inputs.v2_caps }}" = "true" ]; then
-          ARGS="$ARGS --v2-caps"
-        fi
         echo "Running: python scripts/step1c_storage_refinement.py $ARGS"
         eval python scripts/step1c_storage_refinement.py $ARGS
 
