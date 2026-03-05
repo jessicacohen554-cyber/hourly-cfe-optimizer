@@ -40,8 +40,9 @@ os.makedirs(OUT_DIR, exist_ok=True)
 from pipeline_config import (
     ISOS, REGIONAL_DEMAND_TWH, THRESHOLD_TARGET_YEARS,
     DEMAND_GROWTH_RATES as _DEMAND_GROWTH_RATES_PC,
-    OFFSHORE_ISOS, ACTIVE_THRESHOLDS,
+    OFFSHORE_ISOS, ACTIVE_THRESHOLDS, OUTPUT_THRESHOLDS,
 )
+sys.path.insert(0, os.path.dirname(SCRIPT_DIR))  # repo root for parquet_io
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # CONSTANTS (derived from pipeline_config)
@@ -180,11 +181,96 @@ def year_adjusted_cost_vec(foak_costs, noak_costs, fractions):
 # LOAD EXISTING PIPELINE DATA
 # ═══════════════════════════════════════════════════════════════════════════════
 
+def _medium_key(iso):
+    """All-Medium scenario key (matches step9a format)."""
+    geo = 'M' if iso == 'CAISO' else 'X'
+    return f'MMMM_M_M_M1_{geo}'
+
+
+def _get_scenario(iso_data, threshold, iso):
+    """Get medium scenario with backward-compat fallback for legacy key formats."""
+    scenarios = iso_data.get('thresholds', {}).get(threshold, {}).get('scenarios', {})
+    mk = _medium_key(iso)
+    return (scenarios.get(mk) or
+            scenarios.get('MMM_M_M_M1_M') or scenarios.get('MMM_M_M_M1_X') or  # 8-dim legacy
+            scenarios.get('MMM_M_M'))  # 5-dim legacy
+
+
+def _extract_cf_tranche_from_parquets():
+    """Extract cf_tranche_data directly from step3/CO2 parquets (no step9a dependency).
+
+    Replicates step9a lines 564-581: reads tranche_costs from the medium-cost scenario
+    for each ISO/threshold and returns the same dict structure as shared_data.json.
+    """
+    from parquet_io import load_from_parquets
+
+    co2_dir = os.path.join(DATA_DIR, 'step5-post-processing', 'co2_results')
+    step3_dir = os.path.join(DATA_DIR, 'step3-cost-opt-parquets')
+
+    data = None
+    if os.path.isdir(co2_dir):
+        data = load_from_parquets(co2_dir, ISOS)
+        if not data.get('results'):
+            data = None
+
+    if data is None and os.path.isdir(step3_dir):
+        data = load_from_parquets(step3_dir, ISOS)
+
+    if data is None or not data.get('results'):
+        return None
+
+    thresholds_str = [str(int(t)) if t == int(t) else str(t) for t in OUTPUT_THRESHOLDS]
+
+    cf_tranche_data = {}
+    for iso in ISOS:
+        iso_results = data['results'].get(iso)
+        if not iso_results:
+            continue
+        iso_tr = {k: [] for k in ['new_cf_twh', 'cf_existing_twh', 'uprate_twh',
+                                   'geo_twh', 'nuclear_newbuild_twh', 'ccs_tranche_twh',
+                                   'uprate_price', 'newbuild_price', 'effective_cf_lcoe']}
+        for t in thresholds_str:
+            sc = _get_scenario(iso_results, t, iso)
+            tc = sc.get('tranche_costs', {}) if sc else {}
+            iso_tr['new_cf_twh'].append(round(tc.get('new_cf_twh', 0), 3))
+            iso_tr['cf_existing_twh'].append(round(tc.get('cf_existing_twh', 0), 3))
+            iso_tr['uprate_twh'].append(round(tc.get('uprate_twh', 0), 4))
+            iso_tr['geo_twh'].append(round(tc.get('geo_twh', 0), 3))
+            iso_tr['nuclear_newbuild_twh'].append(round(tc.get('nuclear_newbuild_twh', 0), 3))
+            iso_tr['ccs_tranche_twh'].append(round(tc.get('ccs_tranche_twh', 0), 3))
+            iso_tr['uprate_price'].append(tc.get('uprate_price', 0))
+            iso_tr['newbuild_price'].append(round(tc.get('newbuild_price', 0), 1))
+            iso_tr['effective_cf_lcoe'].append(round(tc.get('effective_new_cf_lcoe', 0), 1))
+        cf_tranche_data[iso] = iso_tr
+
+    return {
+        'thresholds': OUTPUT_THRESHOLDS,
+        'cf_tranche_data': cf_tranche_data,
+    }
+
+
 def load_shared_data():
-    """Load shared_data.json for resource mixes and tranche data."""
+    """Load cf_tranche_data, preferring shared_data.json, falling back to parquets.
+
+    Breaks the circular dependency: step8d no longer requires step9a to have run first.
+    """
+    # Fast path: use shared_data.json if step9a already ran
     path = os.path.join(PP_DIR, 'shared_data.json')
-    with open(path) as f:
-        return json.load(f)
+    if os.path.exists(path):
+        print(f"  Loading from {path}")
+        with open(path) as f:
+            return json.load(f)
+
+    # Fallback: extract directly from parquets
+    print("  shared_data.json not found — extracting cf_tranche_data from parquets...")
+    result = _extract_cf_tranche_from_parquets()
+    if result is None:
+        raise FileNotFoundError(
+            f"Cannot load tranche data. Need either:\n"
+            f"  {path}\n"
+            f"  data/step5-post-processing/co2_results/ (parquets)\n"
+            f"  data/step3-cost-opt-parquets/ (parquets)")
+    return result
 
 
 def load_strategy_data():
