@@ -334,15 +334,57 @@ body { background: var(--bg-page-white); }
 </div>
 
 <script src="js/storage-analysis-data.js"></script>
+<script src="js/building-blocks-data.js"></script>
 <script src="js/nav.js"></script>
 <script>
 (function() {
     'use strict';
     if (window.ChartDataLabels) Chart.unregister(ChartDataLabels);
 
-    const BL = STORAGE_BASELINE_DATA;
-    const DG = STORAGE_DG_DATA;
-    const ISOS = ['CAISO','ERCOT','PJM','NYISO','NEISO','MISO','SPP'];
+    // Adapt STORAGE_ANALYSIS + BUILDING_BLOCKS data into the expected BL/DG format
+    const ALL_ISOS = ['CAISO','ERCOT','PJM','NYISO','NEISO','MISO','SPP'];
+    function buildStorageView(saMetrics, bbData) {
+        const result = {};
+        ALL_ISOS.forEach(iso => {
+            const metrics = saMetrics[iso];
+            const bb = bbData ? bbData[iso] : null;
+            if (!metrics && !bb) return;
+            const thresholds = metrics ? metrics.thresholds : (bb ? bb.thresholds : []);
+            const n = thresholds.length;
+            const zeros = new Array(n).fill(0);
+            result[iso] = {
+                thresholds: thresholds,
+                battery4: { mean_pct: metrics ? metrics.battery4_pct : zeros },
+                battery8: { mean_pct: metrics ? metrics.battery8_pct : zeros },
+                ldes: { mean_pct: metrics ? metrics.ldes_pct : zeros },
+                h2: { mean_pct: metrics ? metrics.h2_pct : zeros },
+                total_storage_mean: metrics ? metrics.total_storage_pct : zeros,
+                resource_mix: { clean_firm: [], solar: [], wind: [], offshore_wind: [], ccs_ccgt: [], hydro: [] },
+                cost_median: []
+            };
+            thresholds.forEach(t => {
+                const bbIdx = bb ? bb.thresholds.indexOf(t) : -1;
+                const mix = bbIdx >= 0 ? bb.mixes[bbIdx] : null;
+                result[iso].resource_mix.clean_firm.push(mix ? mix.clean_firm : 0);
+                result[iso].resource_mix.solar.push(mix ? mix.solar : 0);
+                result[iso].resource_mix.wind.push(mix ? mix.wind : 0);
+                result[iso].resource_mix.offshore_wind.push(mix ? (mix.offshore_wind || 0) : 0);
+                result[iso].resource_mix.ccs_ccgt.push(mix ? mix.ccs_ccgt : 0);
+                result[iso].resource_mix.hydro.push(mix ? mix.hydro : 0);
+                result[iso].cost_median.push(mix ? mix.cost : 0);
+            });
+        });
+        return result;
+    }
+
+    const sa = typeof STORAGE_ANALYSIS !== 'undefined' ? STORAGE_ANALYSIS : {};
+    const saMetrics = sa.storage_metrics || {};
+    const bbBL = typeof BUILDING_BLOCKS_BASELINE !== 'undefined' ? BUILDING_BLOCKS_BASELINE : {};
+    const bbDG = typeof BUILDING_BLOCKS_DG !== 'undefined' ? BUILDING_BLOCKS_DG : {};
+    const BL = buildStorageView(saMetrics, bbBL);
+    const DG = buildStorageView(saMetrics, bbDG);
+
+    const ISOS = ALL_ISOS.filter(iso => BL[iso]);
     const ISO_CLR = {};
     ISOS.forEach(iso => { ISO_CLR[iso] = ISO_COLORS[iso]; });
 
