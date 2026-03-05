@@ -77,8 +77,8 @@ jobs:
 
       - name: "Extract Resource Density Data"
         run: |
-          echo "=== Extracting resource density data (step9d) ==="
-          python scripts/step9d_extract_resource_density.py || echo "WARNING: step9d failed (non-fatal)"
+          echo "=== Extracting resource density data (step6e) ==="
+          python scripts/step6e_extract_resource_density.py || echo "WARNING: step6e failed (non-fatal)"
 
       - name: Commit and push
         run: |
