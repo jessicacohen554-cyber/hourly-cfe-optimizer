@@ -1,41 +1,40 @@
 #!/usr/bin/env python3
 """
-Step 1C2: Floor-Aware PFS Generator for 50-70% Threshold Range
+Step 1B3: Fine-Grid PFS Generator for 40-70% Threshold Range
 ================================================================
-Generates physics-feasible mixes that start from the EXISTING clean resource
-floor, adding INCREMENTAL resources to reach target thresholds. This produces
-mixes with minimal new-build above existing clean, which is critical for
-accurate marginal abatement cost (MAC) calculations.
+Generates physics-feasible mixes on a 1% fine grid for mid-range thresholds
+(40-70%). This fills the gap in the standard PFS which was originally designed
+for 70%+ and has coarse coverage in the 40-70% range.
 
-The standard PFS (Step 1B) generates mixes from a neutral starting point,
-producing full portfolios that often include large resource allocations
-unrelated to the existing grid. For MAC optimization, we need mixes that
-represent the cheapest DELTA from what already exists.
+Uses a floor-aware approach: starts from existing clean resources and adds
+incremental new-build. The finer 1% grid produces more diverse mixes than
+step1b2's 2% grid, improving MAC optimization at lower thresholds.
 
 Algorithm:
   For each ISO:
     1. Load existing clean floor from GRID_MIX_SHARES
-    2. Generate a fine grid (2% step) of resource ADDITIONS above the floor
-    3. Score each floor + addition combo using batch_hourly_scores
-    4. Assign scored mixes to thresholds 50-70% (with near-miss for higher)
-    5. Save to PFS parquet directory for MAC queue consumption
+    2. Generate a 1% fine grid of resource ADDITIONS above the floor
+    3. Score each combo using batch_hourly_scores
+    4. Assign scored mixes to thresholds 40-70% (with near-miss for 75%)
+    5. Save to PFS parquet directory
 
 Grid generation:
-  - Solar additions: 0 to 80% above existing (2% step)
-  - Wind additions: 0 to 80% above existing (2% step)
-  - Clean firm additions: 0 to 40% above existing (2% step)
+  - Solar additions: 0 to 60% above existing (1% step)
+  - Wind additions: 0 to 60% above existing (1% step)
+  - Clean firm additions: 0 to 30% above existing (1% step)
   - Hydro: fixed at existing (capped, $0)
-  - Offshore wind additions: 0 to 30% (5% step, only for offshore ISOs)
-  - Geothermal additions: 0 to 20% (5% step, CAISO only)
+  - Offshore wind additions: 0 to 20% (2% step, only for offshore ISOs)
+  - Geothermal additions: 0 to 15% (3% step, CAISO only)
 
 No storage at this level — just resource dispatch shapes.
+Storage is handled by step1c at 50%+ thresholds.
 
 Input:  EIA-930 demand/generation profiles
-Output: data/step1-pfs-parquets/{ISO}_t{T}_floor_pfs.parquet (per threshold)
+Output: data/step1-pfs-parquets/{ISO}_t{T}_fine_pfs.parquet (per threshold)
 
 Usage:
-  python scripts/step1c2_floor_aware_pfs.py --iso CAISO
-  python scripts/step1c2_floor_aware_pfs.py --iso ALL
+  python scripts/step1b3_fine_grid_pfs.py --iso CAISO
+  python scripts/step1b3_fine_grid_pfs.py --iso ALL
 """
 
 import argparse
@@ -79,22 +78,22 @@ except ImportError:
 PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
 OUTPUT_DIR = os.path.join(PROJECT_ROOT, 'data', 'step1-pfs-parquets')
 
-# Target thresholds for floor-aware search (50-70% + near-miss into 75-80%)
-FLOOR_THRESHOLDS = [50, 55, 60, 65, 70]
-NEAR_MISS_THRESHOLDS = [75, 80]  # Also capture mixes that nearly reach these
+# Target thresholds for fine-grid search
+FINE_THRESHOLDS = [40, 45, 50, 55, 60, 65, 70]
+NEAR_MISS_THRESHOLDS = [75]  # Also capture mixes that nearly reach 75%
 
-# Grid parameters
-RESOURCE_STEP = 2     # 2% step for main resources
-FIRM_STEP = 2         # 2% step for clean firm
-OSW_STEP = 5          # 5% step for offshore wind
-GEO_STEP = 5          # 5% step for geothermal
+# Grid parameters — 1% step for main resources
+RESOURCE_STEP = 1     # 1% step for solar/wind
+FIRM_STEP = 1         # 1% step for clean firm
+OSW_STEP = 2          # 2% step for offshore wind
+GEO_STEP = 3          # 3% step for geothermal
 
 # Max additions above existing (% of demand)
-MAX_SOLAR_ADD = 80
-MAX_WIND_ADD = 80
-MAX_CF_ADD = 40
-MAX_OSW_ADD = 30
-MAX_GEO_ADD = 20
+MAX_SOLAR_ADD = 60
+MAX_WIND_ADD = 60
+MAX_CF_ADD = 30
+MAX_OSW_ADD = 20
+MAX_GEO_ADD = 15
 
 # Scoring
 CHUNK_SIZE = 20000    # Batch size for hourly scoring
@@ -104,12 +103,13 @@ CHUNK_SIZE = 20000    # Batch size for hourly scoring
 # GRID GENERATION
 # ============================================================================
 
-def generate_floor_aware_grid(iso):
-    """Generate resource mixes starting from existing clean floor.
+def generate_fine_grid(iso):
+    """Generate resource mixes on 1% fine grid starting from existing clean floor.
 
     Returns:
         mix_batch: numpy array (N, n_resources) of resource allocations (% of demand)
         resource_names: list of resource name strings matching columns
+        raw_components: dict of numpy arrays for each resource's original values
     """
     existing = GRID_MIX_SHARES[iso]
 
@@ -144,16 +144,27 @@ def generate_floor_aware_grid(iso):
         geo_additions = np.array([0.0])
 
     # Count combos
-    n_combos = len(cf_additions) * len(sol_additions) * len(wnd_additions) * len(osw_additions) * len(geo_additions)
-    print(f"  {iso}: {n_combos:,} floor-aware combos "
+    n_combos = (len(cf_additions) * len(sol_additions) * len(wnd_additions) *
+                len(osw_additions) * len(geo_additions))
+    print(f"  {iso}: {n_combos:,} fine-grid combos "
           f"({len(cf_additions)} CF × {len(sol_additions)} sol × {len(wnd_additions)} wnd "
           f"× {len(osw_additions)} osw × {len(geo_additions)} geo)")
 
-    # Build resource names matching the supply_matrix order
-    # RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']
-    resource_names = list(RESOURCE_TYPES)  # ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']
+    # Check if too many combos — if so, batch the generation
+    MAX_BATCH = 50_000_000  # 50M max at once to avoid OOM
+    if n_combos > MAX_BATCH:
+        print(f"  WARNING: {n_combos:,} combos exceeds {MAX_BATCH:,} limit. "
+              f"Increasing step size for this ISO.")
+        # Fall back to 2% grid for this ISO
+        sol_additions = np.arange(0, MAX_SOLAR_ADD + 2, 2, dtype=np.float64)
+        wnd_additions = np.arange(0, MAX_WIND_ADD + 2, 2, dtype=np.float64)
+        cf_additions = np.arange(0, MAX_CF_ADD + 2, 2, dtype=np.float64)
+        n_combos = (len(cf_additions) * len(sol_additions) * len(wnd_additions) *
+                    len(osw_additions) * len(geo_additions))
+        print(f"  → Reduced to {n_combos:,} combos with 2% step")
 
-    # Add geothermal dimension if applicable
+    resource_names = list(RESOURCE_TYPES)
+
     has_geo = iso in GEOTHERMAL_ISOS
 
     # Generate grid via meshgrid
@@ -167,7 +178,6 @@ def generate_floor_aware_grid(iso):
     geo_vals = flat[4]  # geothermal is all new-build
 
     # CCS residual: implicit (100 - sum of explicit resources)
-    # For scoring purposes, CCS = max(0, 100 - cf - sol - wnd - hyd - osw - geo)
     explicit_sum = cf_vals + sol_vals + wnd_vals + hydro_val + osw_vals + geo_vals
     ccs_vals = np.maximum(0, 100.0 - explicit_sum)
 
@@ -197,14 +207,9 @@ def generate_floor_aware_grid(iso):
     mix_batch[:, 4] = ccs_vals      # ccs_ccgt (implicit residual)
     mix_batch[:, 5] = hydro_val     # hydro (constant)
 
-    # For geothermal: need to pass as additional resource in supply matrix
-    # Since geothermal is part of clean_firm in the supply profiles,
-    # we handle it by adding geo to clean_firm for scoring purposes
+    # For geothermal: add to clean_firm for scoring (both flat baseload profiles)
     if has_geo and geo_vals.max() > 0:
-        # Geothermal adds to the clean_firm profile (flat baseload)
-        # In step1, geothermal is treated as a separate flat baseload
-        # For scoring, we add it to clean_firm
-        mix_batch[:, 0] = cf_vals + geo_vals  # clean_firm includes geothermal for scoring
+        mix_batch[:, 0] = cf_vals + geo_vals
 
     # Store original component values for output
     raw_cf = cf_vals.copy()
@@ -228,8 +233,6 @@ def generate_floor_aware_grid(iso):
 def score_mixes(mix_batch, demand_arr, supply_matrix):
     """Score all mixes using batch_hourly_scores from step1_pfs_generator."""
     scores = s1.batch_hourly_scores(demand_arr, supply_matrix, mix_batch, CHUNK_SIZE)
-    # Normalize: scores are sum(matched) / sum(demand) but returned as raw sums
-    # Need to divide by total demand
     total_demand = demand_arr.sum()
     if total_demand > 0:
         scores = scores / total_demand
@@ -239,14 +242,12 @@ def score_mixes(mix_batch, demand_arr, supply_matrix):
 def assign_and_save(iso, scores, raw_components, output_dir):
     """Assign scored mixes to thresholds and save parquets."""
     N = len(scores)
-    all_thresholds = FLOOR_THRESHOLDS + NEAR_MISS_THRESHOLDS
+    all_thresholds = FINE_THRESHOLDS + NEAR_MISS_THRESHOLDS
 
     saved_count = 0
     for threshold in all_thresholds:
-        # Feasible: score >= threshold (with small tolerance)
-        # Near-miss: score >= threshold - 2
-        if threshold in FLOOR_THRESHOLDS:
-            # Strict: within [threshold - 0.5, threshold + 5]
+        # Feasible: within [threshold - 0.5, threshold + 5]
+        if threshold in FINE_THRESHOLDS:
             mask = (scores >= threshold - 0.5) & (scores <= threshold + 5.0)
         else:
             # Near-miss for higher thresholds
@@ -256,7 +257,7 @@ def assign_and_save(iso, scores, raw_components, output_dir):
         if len(indices) == 0:
             continue
 
-        # Build output DataFrame-like structure
+        # Build output structure
         rows = {
             'iso': [iso] * len(indices),
             'threshold': [float(threshold)] * len(indices),
@@ -279,7 +280,7 @@ def assign_and_save(iso, scores, raw_components, output_dir):
         if HAS_PYARROW:
             arrays = {k: pa.array(v) for k, v in rows.items()}
             table = pa.table(arrays)
-            out_path = os.path.join(output_dir, f'{iso}_t{threshold:g}_floor_pfs.parquet')
+            out_path = os.path.join(output_dir, f'{iso}_t{threshold:g}_fine_pfs.parquet')
             pq.write_table(table, out_path)
             print(f"    t{threshold:g}: {len(indices):,} mixes → {out_path}")
             saved_count += len(indices)
@@ -294,9 +295,9 @@ def assign_and_save(iso, scores, raw_components, output_dir):
 # ============================================================================
 
 def process_iso(iso, demand_data, gen_profiles):
-    """Run floor-aware PFS generation for a single ISO."""
+    """Run fine-grid PFS generation for a single ISO."""
     print(f"\n{'='*60}")
-    print(f"  {iso}: Floor-aware PFS (50-70%)")
+    print(f"  {iso}: Fine-grid PFS (40-70%)")
     print(f"{'='*60}")
 
     # Load profiles
@@ -304,12 +305,11 @@ def process_iso(iso, demand_data, gen_profiles):
     supply_profiles = get_supply_profiles(iso, gen_profiles)
     supply_matrix = build_supply_matrix(supply_profiles)
 
-    # Convert demand to matching format
-    demand_arr = demand_norm  # Already normalized
+    demand_arr = demand_norm
 
-    # Generate floor-aware grid
+    # Generate fine grid
     t0 = time.time()
-    mix_batch, resource_names, raw_components = generate_floor_aware_grid(iso)
+    mix_batch, resource_names, raw_components = generate_fine_grid(iso)
 
     # Score all mixes
     print(f"  Scoring {len(mix_batch):,} mixes...")
@@ -321,7 +321,7 @@ def process_iso(iso, demand_data, gen_profiles):
     print(f"  Score mean: {scores.mean():.1f}%, median: {np.median(scores):.1f}%")
 
     # Distribution across thresholds
-    for t in FLOOR_THRESHOLDS:
+    for t in FINE_THRESHOLDS:
         in_range = ((scores >= t - 0.5) & (scores <= t + 5.0)).sum()
         print(f"    t{t:g}: {in_range:,} feasible")
 
@@ -334,7 +334,7 @@ def process_iso(iso, demand_data, gen_profiles):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Floor-Aware PFS Generator (50-70%)')
+    parser = argparse.ArgumentParser(description='Fine-Grid PFS Generator (40-70%)')
     parser.add_argument('--iso', type=str, default='ALL',
                         help='ISO to process (default: ALL)')
     args = parser.parse_args()
