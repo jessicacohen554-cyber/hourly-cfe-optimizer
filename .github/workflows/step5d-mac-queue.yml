@@ -111,9 +111,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: mac-queue-${{ matrix.iso }}
-          path: |
-            data/step5-post-processing/mac_queue/
-            data/step5-post-processing/scenario_a_${{ matrix.iso }}.json
+          path: data/step5-post-processing/mac_queue/
           retention-days: 1
 
   merge:
@@ -155,23 +153,18 @@ jobs:
 
           mkdir -p data/step5-post-processing/mac_queue
 
-          # Copy mac_queue files (parquets, etc.)
+          # Copy all mac_queue files (parquets, scenario_a JSONs, summary)
           if [ -d "artifact-tmp/data/step5-post-processing/mac_queue" ]; then
             cp -rf artifact-tmp/data/step5-post-processing/mac_queue/* data/step5-post-processing/mac_queue/
-            echo "Copied mac_queue files"
+            echo "Copied mac_queue files from nested structure"
           else
-            # Some download-artifact versions flatten structure — check root
-            find artifact-tmp/ -name "mac_queue_*.parquet" -exec cp -f {} data/step5-post-processing/mac_queue/ \;
-            find artifact-tmp/ -name "mac_queue_summary.json" -exec cp -f {} data/step5-post-processing/mac_queue/ \;
+            # Some download-artifact versions flatten structure — find all relevant files
+            find artifact-tmp/ \( -name "mac_queue_*.parquet" -o -name "mac_queue_summary.json" -o -name "scenario_a_*.json" \) -exec cp -f {} data/step5-post-processing/mac_queue/ \;
             echo "Searched for mac_queue files in flattened artifact structure"
           fi
 
-          # Copy scenario_a_*.json files (step7c input)
-          find artifact-tmp/ -name "scenario_a_*.json" -exec cp -f {} data/step5-post-processing/ \;
-
           echo "=== Final output contents ==="
           find data/step5-post-processing/mac_queue/ -type f 2>/dev/null | head -30 || echo "  (no mac_queue files)"
-          ls -la data/step5-post-processing/scenario_a_*.json 2>/dev/null || echo "  (no scenario_a files)"
 
       - name: Batched commit and push (per-ISO)
         run: |
@@ -204,10 +197,6 @@ jobs:
           for iso in $ISOS; do
             echo "--- Batching commit for $iso ---"
             FILES=$(find data/step5-post-processing/mac_queue/ -name "*${iso}*" -type f 2>/dev/null || true)
-            SCENARIO_FILE="data/step5-post-processing/scenario_a_${iso}.json"
-            if [ -f "$SCENARIO_FILE" ]; then
-              FILES="$FILES $SCENARIO_FILE"
-            fi
             if [ -z "$FILES" ]; then
               echo "  No files for $iso — skipping"
               continue
@@ -235,10 +224,8 @@ jobs:
             fi
           done
 
-          # Summary JSON + scenario_a files
+          # Summary JSON + remaining mac_queue files
           git add -f data/step5-post-processing/mac_queue/ 2>/dev/null || true
-          git add -f data/step5-post-processing/scenario_a_*.json 2>/dev/null || true
-          git add -f data/step5-post-processing/consequential_queue.json 2>/dev/null || true
           if ! git diff --cached --quiet; then
             echo "--- Staging remaining files ---"
             git commit -m "Step 5D MAC Queue: summary + scenario A export — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
