@@ -27,7 +27,7 @@ Grid generation:
   - Geothermal additions: 0 to 15% (3% step, CAISO only)
 
 No storage at this level — just resource dispatch shapes.
-Storage is handled by step1d at 50%+ thresholds.
+Storage is handled by step1c at 50%+ thresholds.
 
 Input:  EIA-930 demand/generation profiles
 Output: data/step1-pfs-parquets/{ISO}_t{T}_fine_pfs.parquet (per threshold)

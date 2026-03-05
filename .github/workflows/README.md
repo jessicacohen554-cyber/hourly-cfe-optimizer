@@ -111,7 +111,7 @@ Unified Data Directory Cleanup (dry_run=true first to preview, then dry_run=fals
 ```
 Squash Pipeline Branches (dry_run=true first to preview, then dry_run=false)
 ```
-- **`branch_pattern`** — Filter branches: `auto/` (all), `auto/.*step1d` (step 1d only)
+- **`branch_pattern`** — Filter branches: `auto/` (all), `auto/.*step1c` (step 1c only)
 - **`merge_direct`** — `true` to merge straight to master, `false` (default) to open a PR
 - **`delete_branches`** — Cleans up merged remote branches (default: true)
 - **`close_prs`** — Auto-closes superseded PRs (default: true)

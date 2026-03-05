@@ -2,8 +2,8 @@ name: "Step 1C: Storage Refinement"
 
 # Matrix strategy: ISO × threshold band — up to 21 parallel jobs (7 ISOs × 3 bands).
 #
-# Each (ISO, band) cell runs on its own runner, uploads results as artifacts.
-# A final commit job downloads all artifacts and pushes to a single output branch.
+# Each (ISO, band) cell runs on its own runner and commits+pushes its own branch
+# (matching the inline-commit pattern used by Step 1B and Step 2).
 #
 # Threshold bands:
 #   LOW  — 50, 55, 60, 65, 70, 75, 80
@@ -14,7 +14,7 @@ name: "Step 1C: Storage Refinement"
 # Optional: --v2-caps uses 2050-oriented storage capacity limits.
 #
 # Prerequisite: Step 1B (Zone Search) must have run first.
-# Output: data/step1d-storage-parquets/{ISO}_t{XX}_storage.parquet
+# Output: data/step1-pfs-parquets/{ISO}_t{XX}_storage.parquet
 
 on:
   workflow_dispatch:
@@ -104,7 +104,7 @@ jobs:
           echo "Matrix: iso=${ISOS} × band=${BANDS}"
 
   # ════════════════════════════════════════════════════════════════════════
-  # Per (ISO, band) job — runs on its own runner in parallel
+  # Per (ISO, band) job — runs on its own runner, commits + pushes inline
   # ════════════════════════════════════════════════════════════════════════
   fine-storage:
     needs: prepare
@@ -114,10 +114,10 @@ jobs:
     strategy:
       matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
       fail-fast: false   # don't cancel other cells if one fails
-      max-parallel: 7    # limit concurrent clones (matches step1c)
+      max-parallel: 7    # limit concurrent clones
 
     permissions:
-      contents: read     # explicit read for checkout (safe against restrictive repo defaults)
+      contents: write    # needed for commit + push
 
     steps:
     - name: Checkout repo
@@ -125,6 +125,19 @@ jobs:
       with:
         ref: ${{ inputs.branch || 'master' }}
         lfs: false
+
+    - name: Create output branch
+      run: |
+        TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+        ISO_LOWER=$(echo "${{ matrix.iso }}" | tr '[:upper:]' '[:lower:]')
+        BAND_LOWER=$(echo "${{ matrix.band }}" | tr '[:upper:]' '[:lower:]')
+        TARGET_BRANCH="auto/${TIMESTAMP}-step1c-storage-${ISO_LOWER}-${BAND_LOWER}"
+        echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git config http.postBuffer 524288000
+        git checkout -b "$TARGET_BRANCH"
+        echo "Working on branch: $TARGET_BRANCH"
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -155,7 +168,7 @@ jobs:
         fi
 
     - name: Ensure output directory
-      run: mkdir -p data/step1d-storage-parquets
+      run: mkdir -p data/step1-pfs-parquets
 
     - name: Resolve thresholds for this band
       id: resolve
@@ -193,91 +206,27 @@ jobs:
         echo "Running: python scripts/step1c_storage_refinement.py $ARGS"
         eval python scripts/step1c_storage_refinement.py $ARGS
 
-    - name: Upload results
+    - name: Commit and push results
       if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: step1d-${{ matrix.iso }}-${{ matrix.band }}
-        path: |
-          data/step1d-storage-parquets/${{ matrix.iso }}_*.parquet
-          data/step1d-storage-parquets/${{ matrix.iso }}_*.json
-        retention-days: 7
-        if-no-files-found: error
-
-  # ════════════════════════════════════════════════════════════════════════
-  # Download all artifacts and commit to a single output branch
-  # ════════════════════════════════════════════════════════════════════════
-  commit-results:
-    needs: [prepare, fine-storage]
-    if: always() && needs.fine-storage.result != 'cancelled'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-    - name: Checkout repo
-      uses: actions/checkout@v4
-      with:
-        ref: ${{ inputs.branch || 'master' }}
-        fetch-depth: 1    # shallow clone — full history not needed for branching
-        lfs: false
-
-    - name: Create output branch
       run: |
-        TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
-        ISO_LOWER=$(echo "${{ inputs.iso }}" | tr '[:upper:]' '[:lower:]')
-        BAND="${{ inputs.threshold_band }}"
+        ISO="${{ matrix.iso }}"
+        BAND="${{ matrix.band }}"
         CUSTOM="${{ inputs.custom_thresholds }}"
-        [ -n "$CUSTOM" ] && BAND="custom"
-        TARGET_BRANCH="auto/${TIMESTAMP}-step1d-storage-${ISO_LOWER}-${BAND,,}"
-        echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-        git config http.postBuffer 524288000
-        git checkout -b "$TARGET_BRANCH"
-        echo "Output branch: $TARGET_BRANCH"
+        [ -n "$CUSTOM" ] && BAND="custom($CUSTOM)"
 
-    - name: Ensure output directory
-      run: mkdir -p data/step1d-storage-parquets
-
-    - name: Download all artifacts
-      uses: actions/download-artifact@v4
-      with:
-        pattern: step1d-*
-        path: data/step1d-storage-parquets/
-        merge-multiple: true
-
-    - name: Validate downloaded files
-      run: |
-        echo "Downloaded results:"
-        find data/step1d-storage-parquets/ -name "*.parquet" -o -name "*.json" | sort
-        COUNT=$(find data/step1d-storage-parquets/ -name "*.parquet" | wc -l)
-        echo "Total parquet files: $COUNT"
-        if [ "$COUNT" -eq 0 ]; then
-          echo "ERROR: No parquet files found after artifact download."
-          echo "All fine-storage jobs may have failed. Check individual job logs."
-          exit 1
-        fi
-
-    - name: Commit and push
-      run: |
-        # Stage all downloaded parquet and json files
-        find data/step1d-storage-parquets/ -name "*.parquet" -exec git add {} +
-        find data/step1d-storage-parquets/ -name "*.json" -exec git add {} +
+        # Stage storage parquet + manifest files for this ISO only.
+        # Must use -f: data/step1-pfs-parquets/ is gitignored, normal add skips it.
+        git add -f data/step1-pfs-parquets/"${ISO}"_*_storage*.parquet 2>/dev/null || true
+        git add -f data/step1-pfs-parquets/"${ISO}"_storage_manifest.json 2>/dev/null || true
 
         if ! git diff --cached --quiet; then
-          ISO="${{ inputs.iso }}"
-          BAND="${{ inputs.threshold_band }}"
-          CUSTOM="${{ inputs.custom_thresholds }}"
-          [ -n "$CUSTOM" ] && BAND="custom($CUSTOM)"
           COUNT=$(git diff --cached --name-only | wc -l)
           git commit -m "Step 1C Storage Refinement: ${ISO} × ${BAND} — ${COUNT} files — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
         else
           echo "No new results to commit (files already match HEAD)."
-          exit 0
         fi
 
-        # Push with retry (exponential backoff) — fail loudly if all retries exhausted
+        # Push with retry (exponential backoff)
         PUSH_OK=false
         for i in 1 2 3 4; do
           if git push -u origin "$TARGET_BRANCH"; then
