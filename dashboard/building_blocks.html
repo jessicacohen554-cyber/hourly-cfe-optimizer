@@ -414,6 +414,7 @@ body { background: var(--bg-page-white); }
 
             // Mini chart
             const isStorage = ['battery4','battery8','ldes'].includes(res);
+            const isBaseload = ['nuclear','geothermal','ccs_ccgt'].includes(res);
             const chartData = profile;
             const bgColor = isStorage ?
                 chartData.map(v => v >= 0 ? info.color + '60' : '#EF444440') :
@@ -441,7 +442,7 @@ body { background: var(--bg-page-white); }
                         tooltip: { enabled: false } },
                     scales: {
                         x: { display: false },
-                        y: { display: false }
+                        y: { display: false, min: isBaseload ? 0 : undefined, max: isBaseload ? 1.2 : undefined }
                     },
                     animation: { duration: 400 }
                 }
