@@ -1,19 +1,30 @@
 #!/usr/bin/env python3
 """Step 6D — Extract building blocks data for the Building Blocks dashboard page.
 
-Reads Step 3 cost-optimization parquets (both baseline and DG) and EIA hourly
-generation profiles to produce:
+Uses Step 1's EXACT generation profiles (via step1_pfs_generator.load_data +
+get_supply_profiles) to ensure the 24-hour shapes shown on the dashboard match
+the profiles used in the physics feasible space optimizer. This includes:
+  - Nuclear monthly capacity factor derate
+  - Solar DST-aware nighttime zeroing
+  - Multi-year averaging (2021-2025)
+  - Geothermal flat baseload (CAISO only)
+
+Reads Step 3 cost-optimization parquets for resource mix data.
+
+Outputs:
   1. HOURLY_PROFILES — normalized 24-hour generation shapes per ISO per resource
-  2. SEASONAL_PROFILES — monthly capacity factor patterns per ISO per resource
+  2. SEASONAL_PROFILES — summer/winter 24-hour profiles per ISO
   3. BUILDING_BLOCKS_BASELINE — resource mix & storage at each threshold (Track 1)
   4. BUILDING_BLOCKS_DG — resource mix & storage at each threshold (Track 2)
 
-Output: dashboard/js/building-blocks-data.js
+Output file: dashboard/js/building-blocks-data.js
 
 Dependencies:
+  - step1_pfs_generator.py (load_data, get_supply_profiles)
+  - data/eia-930/eia_generation_profiles.parquet
+  - data/eia-930/eia_demand_profiles.parquet
   - data/step3-cost-opt-parquets/step3_co_{ISO}.parquet (baseline)
   - data/step3-cost-opt-parquets/step3_dg_{ISO}_t{T}.parquet (demand growth)
-  - EIA hourly generation profiles in data/ (for hourly shapes)
 """
 
 import json
@@ -34,11 +45,15 @@ STEP3_DIR = DATA_DIR / "step3-cost-opt-parquets"
 OUT_DIR = DATA_DIR / "step6-derived-analytics" / "building-blocks"
 JS_PATH = ROOT / "dashboard" / "js" / "building-blocks-data.js"
 
-sys.path.insert(0, str(ROOT))
+# Add scripts dir to sys.path for Step 1 imports
+SCRIPTS_DIR = ROOT / "scripts"
+sys.path.insert(0, str(SCRIPTS_DIR))
 
 ISOS = ["CAISO", "ERCOT", "PJM", "NYISO", "NEISO", "MISO", "SPP"]
 ALL_THRESHOLDS = [10, 20, 30, 40, 50, 55, 60, 65, 70, 75, 80, 85, 87.5,
                   90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
+
+H = 8760  # hours in a standard year
 
 # Resources and column mapping
 RESOURCE_COLS = {
@@ -57,150 +72,145 @@ STORAGE_COLS = {
 }
 
 # Base demand for GW conversion (TWh → GW = TWh / 8.76)
-# These are approximate 2025 annual demands from pipeline_config
 BASE_DEMAND_TWH = {
     "CAISO": 224.0, "ERCOT": 405.0, "PJM": 732.0,
     "NYISO": 149.0, "NEISO": 112.0, "MISO": 571.0, "SPP": 245.0,
 }
 
+# Synthetic storage dispatch shapes (same across all ISOs, in local time)
+BATTERY4_SHAPE = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    -1.5, -1.5, -1.5, -1.5, -1.5,
+    0, 0,
+    1.8, 1.8, 1.8, 1.8,
+    0, 0, 0
+]
+BATTERY8_SHAPE = [
+    0, 0, 0, 0, 0, 0, 0, 0, 0,
+    -0.8, -0.8, -0.8, -0.8, -0.8, -0.8, -0.8,
+    0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7, 0.7
+]
+LDES_SHAPE = [
+    0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3, 0.3,
+    -0.8, -0.8, -0.8, -0.8, -0.8,
+    0.3, 0.3,
+    0.8, 0.8, 0.8, 0.8, 0.8,
+    0.3, 0.3
+]
 
-def load_eia_profiles():
-    """Load EIA hourly generation profiles and compute 24-hour average shapes.
 
-    Returns: {ISO: {resource: [24 values normalized around 1.0]}}
+# ---------------------------------------------------------------------------
+# Profile helpers — uses EXACT Step 1 profiles (nuclear derate, solar DST, etc.)
+# ---------------------------------------------------------------------------
+
+def round_list(arr, decimals=4):
+    """Round array values for compact JSON output."""
+    return [round(float(v), decimals) for v in arr]
+
+
+def profile_to_24h(arr_8760):
+    """Collapse an 8760-hour profile into a 24-hour representative day.
+    Returns normalized array where mean = 1.0. All values clamped >= 0."""
+    arr = np.array(arr_8760[:H], dtype=np.float64)
+    np.maximum(arr, 0.0, out=arr)
+    hours = np.arange(H) % 24
+    avg = np.array([arr[hours == h].mean() for h in range(24)])
+    mean = avg.mean()
+    if mean > 0:
+        avg = avg / mean
+    return avg
+
+
+def profile_to_seasonal(arr_8760):
+    """Collapse an 8760-hour profile into summer/winter 24-hour profiles.
+    Returns (summer_24h, winter_24h) both normalized to mean=1.0."""
+    arr = np.array(arr_8760[:H], dtype=np.float64)
+    np.maximum(arr, 0.0, out=arr)
+    hours = np.arange(H)
+    hod = hours % 24
+    doy = hours // 24
+    summer_mask = (doy >= 152) & (doy < 244)
+    winter_mask = (doy < 59) | (doy >= 335)
+
+    def avg_by_hour(mask):
+        h = hod[mask]
+        v = arr[mask]
+        a = np.array([v[h == hr].mean() if np.any(h == hr) else 0.0
+                       for hr in range(24)])
+        m = a.mean()
+        return a / m if m > 0 else a
+
+    return avg_by_hour(summer_mask), avg_by_hour(winter_mask)
+
+
+def load_step1_profiles():
+    """Load profiles using Step 1's exact functions (load_data + get_supply_profiles).
+
+    Returns: (hourly_profiles, seasonal_profiles)
+      hourly_profiles: {ISO: {resource: [24 values]}}
+      seasonal_profiles: {ISO: {demand_summer: [24], ...}}
     """
-    profiles = {}
-    eia_dir = DATA_DIR / "eia-hourly"
+    from step1_pfs_generator import load_data, get_supply_profiles
+
+    print("  Loading Step 1 data (multi-year averaged EIA profiles)...")
+    demand_data, gen_profiles, _, _ = load_data()
+
+    hourly_profiles = {}
+    seasonal_profiles = {}
 
     for iso in ISOS:
-        iso_profiles = {}
+        print(f"  {iso}: computing 24-hour shapes from Step 1 profiles...")
+        supply = get_supply_profiles(iso, gen_profiles)
+        demand_norm = demand_data[iso]["normalized"]
 
-        # Try loading from EIA multi-year parquet files
-        for resource, filename_pattern in [
-            ("demand", f"{iso}_demand"),
-            ("solar", f"{iso}_solar"),
-            ("wind", f"{iso}_wind"),
-            ("nuclear", f"{iso}_nuclear"),
-            ("hydro", f"{iso}_hydro"),
-        ]:
-            found = False
-            for ext in [".parquet", ".csv"]:
-                fpath = eia_dir / f"{filename_pattern}{ext}"
-                if fpath.exists():
-                    try:
-                        if ext == ".parquet":
-                            df = pd.read_parquet(fpath)
-                        else:
-                            df = pd.read_csv(fpath)
-                        # Expect column with hourly values; compute 24-hour average
-                        val_col = [c for c in df.columns if c not in ("datetime", "timestamp", "hour", "date")]
-                        if val_col:
-                            vals = df[val_col[0]].values
-                            if len(vals) >= 8760:
-                                hourly_avg = np.zeros(24)
-                                for h in range(24):
-                                    hourly_avg[h] = np.mean(vals[h::24])
-                                # Normalize around 1.0
-                                mean_val = np.mean(hourly_avg)
-                                if mean_val > 0:
-                                    iso_profiles[resource] = (hourly_avg / mean_val).tolist()
-                                    found = True
-                    except Exception as e:
-                        print(f"  WARNING: Could not load {fpath}: {e}")
-                if found:
-                    break
-
-        # Offshore wind (CAISO, PJM, NYISO, NEISO only)
-        if iso in ["CAISO", "PJM", "NYISO", "NEISO"]:
-            osw_path = DATA_DIR / "offshore-wind" / f"{iso}_offshore_wind.parquet"
-            if not osw_path.exists():
-                osw_path = DATA_DIR / "offshore-wind" / f"{iso}_offshore_wind.csv"
-            if osw_path.exists():
-                try:
-                    df = pd.read_parquet(osw_path) if str(osw_path).endswith(".parquet") else pd.read_csv(osw_path)
-                    val_col = [c for c in df.columns if c not in ("datetime", "timestamp", "hour", "date")]
-                    if val_col:
-                        vals = df[val_col[0]].values
-                        if len(vals) >= 8760:
-                            hourly_avg = np.zeros(24)
-                            for h in range(24):
-                                hourly_avg[h] = np.mean(vals[h::24])
-                            mean_val = np.mean(hourly_avg)
-                            if mean_val > 0:
-                                iso_profiles["offshore_wind"] = (hourly_avg / mean_val).tolist()
-                except Exception:
-                    pass
-
-        # Geothermal (CAISO only) — flat profile
-        if iso == "CAISO":
-            iso_profiles["geothermal"] = [1.0] * 24
-
-        # CCS-CCGT — flat baseload
-        iso_profiles["ccs_ccgt"] = [1.0] * 24
-
-        # Storage shapes (illustrative daily patterns)
-        # Battery 4hr: charge midday (solar peak), discharge evening
-        bat4 = [0]*6 + [-0.3,-0.5,-0.8,-1.0,-0.8,-0.5,  # charge 6-11
-                -0.2,0.0,0.0,0.0, 0.3,0.6,0.9,1.0,0.8,0.5,0.2,0.0]
-        iso_profiles["battery4_shape"] = bat4
-
-        # Battery 8hr: wider charge/discharge
-        bat8 = [0]*5 + [-0.2,-0.4,-0.6,-0.8,-1.0,-0.8,-0.6,
-                -0.3,0.0,0.1,0.3,0.5,0.7,0.9,1.0,0.8,0.5,0.2,0.0]
-        iso_profiles["battery8_shape"] = bat8
-
-        # LDES: multi-day (show as broader charge/discharge pattern)
-        ldes = [-0.3,-0.3,-0.2,-0.2,-0.1,-0.1,
-                -0.4,-0.5,-0.7,-0.8,-0.6,-0.4,
-                -0.2,0.1,0.2,0.3,0.5,0.7,0.9,1.0,0.8,0.5,0.2,0.0]
-        iso_profiles["ldes_shape"] = ldes
-
-        profiles[iso] = iso_profiles
-
-    return profiles
-
-
-def load_seasonal_profiles():
-    """Compute monthly capacity factor patterns from EIA data.
-
-    Returns: {ISO: {resource: [12 monthly values normalized around 1.0]}}
-    """
-    seasonal = {}
-    eia_dir = DATA_DIR / "eia-hourly"
-
-    for iso in ISOS:
+        iso_data = {}
         iso_seasonal = {}
 
-        for resource, filename_pattern in [
-            ("demand", f"{iso}_demand"),
-            ("solar", f"{iso}_solar"),
-            ("wind", f"{iso}_wind"),
-        ]:
-            for ext in [".parquet", ".csv"]:
-                fpath = eia_dir / f"{filename_pattern}{ext}"
-                if fpath.exists():
-                    try:
-                        df = pd.read_parquet(fpath) if ext == ".parquet" else pd.read_csv(fpath)
-                        val_col = [c for c in df.columns if c not in ("datetime", "timestamp", "hour", "date")]
-                        if val_col and len(df) >= 8760:
-                            vals = df[val_col[0]].values[:8760]
-                            # Group by month (assuming 8760 hours, standard year)
-                            hours_per_month = [744, 672, 744, 720, 744, 720, 744, 744, 720, 744, 720, 744]
-                            monthly = []
-                            offset = 0
-                            for hrs in hours_per_month:
-                                monthly.append(np.mean(vals[offset:offset+hrs]))
-                                offset += hrs
-                            mean_val = np.mean(monthly)
-                            if mean_val > 0:
-                                iso_seasonal[resource] = [round(v / mean_val, 4) for v in monthly]
-                    except Exception:
-                        pass
-                    break
+        # Demand (from Step 1's multi-year averaged, normalized demand)
+        iso_data["demand"] = round_list(profile_to_24h(demand_norm))
+        d_summer, d_winter = profile_to_seasonal(demand_norm)
+        iso_seasonal["demand_summer"] = round_list(d_summer)
+        iso_seasonal["demand_winter"] = round_list(d_winter)
 
-        seasonal[iso] = iso_seasonal
+        # Solar (Step 1 applies DST-aware nighttime zeroing)
+        if "solar" in supply:
+            iso_data["solar"] = round_list(profile_to_24h(supply["solar"]))
+            s_summer, s_winter = profile_to_seasonal(supply["solar"])
+            iso_seasonal["solar_summer"] = round_list(s_summer)
+            iso_seasonal["solar_winter"] = round_list(s_winter)
 
-    return seasonal
+        # Wind
+        if "wind" in supply:
+            iso_data["wind"] = round_list(profile_to_24h(supply["wind"]))
+
+        # Clean firm / Nuclear (Step 1 applies monthly capacity factor derate)
+        if "clean_firm" in supply:
+            iso_data["nuclear"] = round_list(profile_to_24h(supply["clean_firm"]))
+
+        # Hydro
+        if "hydro" in supply:
+            iso_data["hydro"] = round_list(profile_to_24h(supply["hydro"]))
+
+        # Geothermal (CAISO only — flat baseload, no negatives)
+        if "geothermal" in supply:
+            iso_data["geothermal"] = [1.0] * 24
+
+        # Offshore wind
+        if "offshore_wind" in supply:
+            iso_data["offshore_wind"] = round_list(profile_to_24h(supply["offshore_wind"]))
+
+        # CCS-CCGT — flat baseload
+        iso_data["ccs_ccgt"] = [1.0] * 24
+
+        # Storage shapes (synthetic, same for all ISOs)
+        iso_data["battery4_shape"] = list(BATTERY4_SHAPE)
+        iso_data["battery8_shape"] = list(BATTERY8_SHAPE)
+        iso_data["ldes_shape"] = list(LDES_SHAPE)
+
+        hourly_profiles[iso] = iso_data
+        seasonal_profiles[iso] = iso_seasonal
+
+    return hourly_profiles, seasonal_profiles
 
 
 def extract_mix_data(track="baseline"):
@@ -292,19 +302,15 @@ def main():
     print("Step 6D: Extracting building blocks data")
     print("=" * 60)
 
-    # 1. Hourly profiles
-    print("\n1. Loading hourly generation profiles...")
-    hourly = load_eia_profiles()
+    # 1-2. Load hourly + seasonal profiles from Step 1's exact generation shapes
+    print("\n1-2. Loading profiles from Step 1 (nuclear derate, solar DST, multi-year avg)...")
+    hourly, seasonal = load_step1_profiles()
     for iso in ISOS:
-        resources = list(hourly.get(iso, {}).keys())
+        resources = [k for k in hourly.get(iso, {}).keys()
+                     if k not in ("battery4_shape", "battery8_shape", "ldes_shape")]
         print(f"  {iso}: {len(resources)} profiles — {resources}")
-
-    # 2. Seasonal profiles
-    print("\n2. Loading seasonal profiles...")
-    seasonal = load_seasonal_profiles()
-    for iso in ISOS:
-        resources = list(seasonal.get(iso, {}).keys())
-        print(f"  {iso}: {len(resources)} monthly profiles")
+        s_keys = list(seasonal.get(iso, {}).keys())
+        print(f"  {iso}: {len(s_keys)} seasonal profiles")
 
     # 3. Baseline mix data (Track 1)
     print("\n3. Extracting baseline mix data (Track 1)...")

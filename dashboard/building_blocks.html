@@ -308,7 +308,6 @@ body { background: var(--bg-page-white); }
     <strong>Storage shapes:</strong> Illustrative daily dispatch patterns (actual dispatch varies by day/season).
 </div>
 
-<script src="js/storage-analysis-data.js"></script>
 <script src="js/building-blocks-data.js"></script>
 <script src="js/nav.js"></script>
 <script>
@@ -316,8 +315,6 @@ body { background: var(--bg-page-white); }
     'use strict';
     if (window.ChartDataLabels) Chart.unregister(ChartDataLabels);
 
-    const BL = STORAGE_BASELINE_DATA;
-    const DG = STORAGE_DG_DATA;
     const BB_BL = BUILDING_BLOCKS_BASELINE;
     const BB_DG = BUILDING_BLOCKS_DG;
     const HP = HOURLY_PROFILES;
