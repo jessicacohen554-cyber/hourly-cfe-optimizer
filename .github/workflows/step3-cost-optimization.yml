@@ -131,6 +131,11 @@ jobs:
           python scripts/step3b_track_nb_ctr.py --fresh --track ctr \
             --iso ${{ matrix.iso }} ${{ steps.build-args.outputs.sens_flags }}
 
+      - name: Scope output to current ISO only
+        run: |
+          # Remove parquets from other ISOs to prevent merge-multiple corruption
+          find data/step3-cost-opt-parquets/ -name "*.parquet" ! -name "*${{ matrix.iso }}*" -delete 2>/dev/null || true
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:

@@ -85,6 +85,10 @@ jobs:
           echo "=== Step 5A: Compute CO2 for ${{ matrix.iso }} ==="
           python scripts/step5a_compute_co2.py --iso ${{ matrix.iso }}
 
+      - name: Scope output to current ISO only
+        run: |
+          find data/step5-post-processing/ -name "*.parquet" -o -name "*.json" | grep -v "${{ matrix.iso }}" | xargs rm -f 2>/dev/null || true
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
