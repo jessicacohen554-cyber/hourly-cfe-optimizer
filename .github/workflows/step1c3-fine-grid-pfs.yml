@@ -161,7 +161,7 @@ jobs:
 
     - name: Commit and push
       run: |
-        find data/step1-pfs-parquets/ -name "*_fine_pfs.parquet" -exec git add {} +
+        find data/step1-pfs-parquets/ -name "*_fine_pfs.parquet" -exec git add -f {} +
 
         if ! git diff --cached --quiet; then
           ISO="${{ inputs.iso }}"
