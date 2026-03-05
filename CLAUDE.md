@@ -112,7 +112,7 @@
 **Step 1: Physics Feasible Space** — Two execution paths:
 - **Monolithic**: `step1_pfs_generator.py` — runs full PFS generation in one process.
 - **Modular (CI/CD)**: `step1a_generate_mixes.py` + `step1b_score_mixes.py` (Step 1A: Generate+Score) → `step1b_zone_search.py` (Step 1B: Zone Search) → `step1b2_floor_aware_pfs.py` (Step 1B2: Floor-Aware PFS, 50-80%) → `step1b3_fine_grid_pfs.py` (Step 1B3: Fine-Grid PFS, 40-75%) → `step1c_storage_refinement.py` (Step 1C: Storage Refinement).
-- Step 1C flags: `--lean-mixes` (scaled-down archetypes), `--floor-fine-mixes` (augment with 1B2/1B3 floor/fine mixes for storage sweep), `--v2-caps` (wider storage grids).
+- Step 1C storage grids are the union of V1 (near-term) and V2 (2050-oriented) caps — full coverage in a single run. Floor/fine mix augmentation (1B2/1B3) is always on.
 - Utilities: `step1_prior_windows.py` (search window computation from prior EF results).
 - 4D adaptive grid search (clean_firm, solar, wind, hydro) + procurement sweep + battery dispatch (4hr 85% RTE, 8hr 85% RTE) + LDES dispatch (100hr 50% RTE) + Green H2 (1000hr 35% RTE, ≥95% only). CAISO uses 5D (adds geothermal).
 - Output: `data/step1-pfs-parquets/` + `data/step1d-storage-parquets/`. **Only re-run if dispatch logic, generation profiles, or demand curves change.**

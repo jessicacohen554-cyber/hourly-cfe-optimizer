@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Step 1C: Three-pass adaptive storage sweep with lean-mix augmentation.
+"""Step 1C: Three-pass adaptive storage sweep with floor/fine augmentation.
 
 Reads the union near-miss mixes from step1b and runs storage dispatch using
 an adaptive funnel that minimizes compute while preserving accuracy.
@@ -15,15 +15,7 @@ Architecture:
   Pass 2 — Fine targeted: for mixes near each threshold's storage-enhanced
            boundary, refine storage at 0.05% resolution.
 
-Lean-mix augmentation (--lean-mixes):
-  Step 1B's near-miss cache only contains mixes with high base scores (≥90%),
-  which requires ≥139% total procurement. This creates a "fat mix" bias —
-  storage refinement only sees overbuilt scenarios. Lean-mix mode augments
-  the pool with systematically scaled-down mixes (80-135% total procurement)
-  that have lower base scores but high storage potential, exposing the
-  lean+storage frontier where 60-95pp of overbuilding can be eliminated.
-
-Floor/fine mix augmentation (--floor-fine-mixes):
+Floor/fine mix augmentation (always on):
   Loads floor_pfs (step1b2) and fine_pfs (step1b3) parquets — generation-only
   mixes built from existing clean resource floors with incremental additions.
   Filters to mixes within the near-miss window for active thresholds,
@@ -31,10 +23,8 @@ Floor/fine mix augmentation (--floor-fine-mixes):
   Exposes lean floor+storage combinations that the standard near-miss
   pool (which is biased toward high-procurement mixes) would miss.
 
-V2 storage caps (--v2-caps):
-  2050-oriented storage capacity limits (battery 4hr: 5%, 8hr: 10%, LDES: 25%)
-  compared to the default V1 caps. Use when exploring future deep-decarbonization
-  scenarios.
+Storage grids are the union of V1 (near-term) and V2 (2050-oriented) caps,
+giving full coverage across both ranges in a single run.
 
 Output: data/step1-pfs-parquets/{ISO}_t{XX}_storage.parquet
         data/step1-pfs-parquets/{ISO}_t{XX}_storage_b{N}.parquet  (auto-batched)
@@ -45,8 +35,6 @@ Usage:
   python scripts/step1c_storage_refinement.py --iso ALL
   python scripts/step1c_storage_refinement.py --iso ERCOT --batch-info
   python scripts/step1c_storage_refinement.py --iso ERCOT --thresholds "70,75,95,99" --auto-commit
-  python scripts/step1c_storage_refinement.py --iso CAISO --lean-mixes --v2-caps
-  python scripts/step1c_storage_refinement.py --iso CAISO --floor-fine-mixes
 """
 
 import argparse
@@ -98,23 +86,25 @@ STORAGE_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5,
 
 # Pass 0: Maximum storage levels (ceiling screen) — % of annual demand
 # Physical reference: CAISO 224 TWh → 0.01% = 22,400 MWh / 5,600 MW (4hr)
-MAX_BAT4 = np.array([0.06], dtype=np.float64)
-MAX_BAT8 = np.array([0.08], dtype=np.float64)
-MAX_LDES = np.array([0.5], dtype=np.float64)
-MAX_H2 = np.array([2.0], dtype=np.float64)
+# Union of V1 (near-term) and V2 (2050-oriented) caps — covers full range.
+MAX_BAT4 = np.array([0.10], dtype=np.float64)
+MAX_BAT8 = np.array([0.15], dtype=np.float64)
+MAX_LDES = np.array([1.0], dtype=np.float64)
+MAX_H2 = np.array([3.0], dtype=np.float64)
 NO_H2 = np.array([0.0], dtype=np.float64)
 
 # Pass 1: Coarse grids in % of annual demand (energy capacity as fraction of annual demand).
 # CAISO: 0.01% = 22.4 GWh / 5.6 GW (comparable to real 10 GW / 40 GWh fleet).
-FULL_BAT4 = np.array([0, 0.002, 0.005, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06], dtype=np.float64)
-FULL_BAT8 = np.array([0, 0.005, 0.01, 0.02, 0.03, 0.04, 0.06, 0.08], dtype=np.float64)
-FULL_LDES = np.array([0, 0.02, 0.05, 0.1, 0.2, 0.3, 0.5], dtype=np.float64)
-FULL_H2 = np.array([0, 0.1, 0.3, 0.5, 1.0, 2.0], dtype=np.float64)
+# Union of V1 and V2 grid points — sorted, deduplicated.
+FULL_BAT4 = np.array([0, 0.002, 0.005, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.10], dtype=np.float64)
+FULL_BAT8 = np.array([0, 0.005, 0.01, 0.02, 0.03, 0.04, 0.06, 0.08, 0.10, 0.15], dtype=np.float64)
+FULL_LDES = np.array([0, 0.02, 0.05, 0.1, 0.2, 0.3, 0.5, 0.7, 1.0], dtype=np.float64)
+FULL_H2 = np.array([0, 0.1, 0.2, 0.3, 0.5, 1.0, 1.5, 2.0, 3.0], dtype=np.float64)
 
 # Gap bucket boundaries (in percentage points).
 # Mixes are grouped by how far their base score is from the threshold.
 # Each bucket gets a grid capped at ~3× its max gap (storage efficiency headroom).
-GAP_BUCKET_PP = [5, 10, 20, 50]  # bucket edges: 0-5pp, 5-10pp, 10-20pp, 20-50pp
+GAP_BUCKET_PP = [5, 10, 25, 50]  # bucket edges: 0-5pp, 5-10pp, 10-25pp, 25-50pp
 
 # Pass 2: Fine storage resolution (% of annual demand)
 FINE_STEP = 0.001        # 0.001 percentage points of annual demand
@@ -147,191 +137,6 @@ PROGRESS_INTERVAL = 25   # save every N batches
 # Only triggers for thresholds with large eligible mix counts.
 BATCH_FLUSH_SIZE = 500_000
 
-# ══════════════════════════════════════════════════════════════════════════════
-# V2 STORAGE CAPS — 2050-oriented (activated via --v2-caps)
-# ══════════════════════════════════════════════════════════════════════════════
-V2_MAX_BAT4 = np.array([0.10], dtype=np.float64)
-V2_MAX_BAT8 = np.array([0.15], dtype=np.float64)
-V2_MAX_LDES = np.array([1.0], dtype=np.float64)
-V2_MAX_H2 = np.array([3.0], dtype=np.float64)
-V2_FULL_BAT4 = np.array([0, 0.002, 0.005, 0.01, 0.02, 0.03, 0.05, 0.07, 0.10],
-                         dtype=np.float64)
-V2_FULL_BAT8 = np.array([0, 0.005, 0.01, 0.02, 0.04, 0.06, 0.08, 0.10, 0.15],
-                         dtype=np.float64)
-V2_FULL_LDES = np.array([0, 0.02, 0.05, 0.1, 0.2, 0.3, 0.5, 0.7, 1.0],
-                         dtype=np.float64)
-V2_FULL_H2 = np.array([0, 0.2, 0.5, 1.0, 1.5, 2.0, 3.0], dtype=np.float64)
-V2_GAP_BUCKET_PP = [5, 10, 25, 50]
-V2_OUTPUT_DIR = os.path.join(DATA_DIR, 'step1-pfs-parquets')
-
-# ══════════════════════════════════════════════════════════════════════════════
-# LEAN-MIX AUGMENTATION (activated via --lean-mixes)
-# ══════════════════════════════════════════════════════════════════════════════
-# Scale factors for creating lean mixes from near-miss archetypes.
-# 80-100%: lean mixes where storage does the heavy lifting
-# 100-135%: moderate overbuild where storage eliminates the expensive tail
-LEAN_SCALE_TARGETS = np.array([80, 85, 90, 95, 100, 105, 110, 115, 120, 125, 130, 135],
-                               dtype=np.float64)
-N_ARCHETYPES = 200       # diverse archetypes per ISO via farthest-point sampling
-LEAN_MIN_BASE_SCORE = 0.50  # below 50%, even max storage can't bridge the gap
-
-
-def _extract_archetypes(combos, n_archetypes):
-    """Extract diverse resource archetypes via farthest-point sampling on simplex.
-
-    Vectorized: inner distance computation is O(N) numpy broadcasting per step,
-    O(n_archetypes) steps total.
-    """
-    n = len(combos)
-    if n <= n_archetypes:
-        return np.arange(n)
-
-    # Normalize to resource ratios (unit simplex)
-    totals = combos.sum(axis=1, keepdims=True)
-    ratios = combos / np.maximum(totals, 1e-10)
-
-    # Farthest-point sampling: greedy, O(n_archetypes × N)
-    np.random.seed(42)
-    selected = np.empty(n_archetypes, dtype=np.intp)
-    selected[0] = np.random.randint(n)
-    min_dists = np.full(n, np.inf, dtype=np.float64)
-
-    for k in range(1, n_archetypes):
-        # Vectorized distance from last selected point to all points
-        diff = ratios - ratios[selected[k - 1]]
-        dists = np.einsum('ij,ij->i', diff, diff)  # faster than sum(diff**2, axis=1)
-        np.minimum(min_dists, dists, out=min_dists)
-        min_dists[selected[:k]] = -1.0  # exclude already-selected
-        selected[k] = np.argmax(min_dists)
-
-    return selected
-
-
-def _generate_lean_mixes(iso, nm_combos, demand_arr, supply_matrix):
-    """Generate lean mixes by scaling near-miss archetypes to lower procurement.
-
-    Fully vectorized: scales all archetypes × all targets in one broadcast op,
-    then batch-scores in a single call. No Python loops over individual mixes.
-
-    Returns (lean_combos, lean_scores) — numpy arrays.
-    """
-    n_res = nm_combos.shape[1]
-
-    # Extract diverse archetypes
-    arch_idx = _extract_archetypes(nm_combos, N_ARCHETYPES)
-    archetypes = nm_combos[arch_idx]
-    n_arch = len(archetypes)
-    print(f"  Lean-mix augmentation: {n_arch} archetypes extracted")
-
-    # Vectorized scaling: broadcast (n_arch, n_res) × (n_scales, 1) / (n_arch, 1)
-    arch_totals = archetypes.sum(axis=1)  # (n_arch,)
-    valid_mask = arch_totals >= 1.0
-    archetypes = archetypes[valid_mask]
-    arch_totals = arch_totals[valid_mask]
-    n_arch = len(archetypes)
-
-    n_scales = len(LEAN_SCALE_TARGETS)
-    # scale_factors[s, a] = LEAN_SCALE_TARGETS[s] / arch_totals[a]
-    scale_factors = LEAN_SCALE_TARGETS[:, None] / arch_totals[None, :]  # (n_scales, n_arch)
-
-    # Broadcast: (n_scales, n_arch, 1) * (1, n_arch, n_res) → (n_scales, n_arch, n_res)
-    scaled = np.round(archetypes[None, :, :] * scale_factors[:, :, None])
-    scaled = np.maximum(scaled, 0)  # clamp negatives
-    scaled = scaled.reshape(-1, n_res)  # (n_scales * n_arch, n_res)
-
-    # Filter: total >= 50
-    totals = scaled.sum(axis=1)
-    keep_mask = totals >= 50
-    scaled = scaled[keep_mask]
-
-    if len(scaled) == 0:
-        print(f"  Lean-mix augmentation: 0 mixes generated")
-        return np.empty((0, n_res), dtype=np.float64), np.empty(0, dtype=np.float64)
-
-    # Deduplicate using int64 hash keys (vectorized, same as _mix_keys)
-    int_combos = scaled.astype(np.int64)
-    n_cols = min(int_combos.shape[1], len(_MIX_HASH_BASES))
-    keys = int_combos[:, :n_cols] @ _MIX_HASH_BASES[:n_cols]
-    _, unique_idx = np.unique(keys, return_index=True)
-    lean_combos = scaled[unique_idx]
-
-    print(f"  Lean-mix augmentation: {len(lean_combos):,} unique mixes "
-          f"({n_scales} scales × {n_arch} archetypes, deduped from {len(scaled):,})")
-
-    # Batch-score without storage (single vectorized call)
-    lean_scores = s1.batch_hourly_scores(demand_arr, supply_matrix, lean_combos)
-
-    # Filter: base score >= threshold
-    score_mask = lean_scores >= LEAN_MIN_BASE_SCORE
-    lean_combos = lean_combos[score_mask]
-    lean_scores = lean_scores[score_mask]
-    print(f"  Lean-mix augmentation: {len(lean_combos):,} mixes with "
-          f"base score ≥ {LEAN_MIN_BASE_SCORE*100:.0f}%")
-
-    if len(lean_scores) > 0:
-        totals = lean_combos.sum(axis=1)
-        print(f"    Procurement range: [{totals.min():.0f}%, {totals.max():.0f}%] "
-              f"mean={totals.mean():.0f}%")
-        print(f"    Base scores: [{lean_scores.min()*100:.1f}%, "
-              f"{lean_scores.max()*100:.1f}%] mean={lean_scores.mean()*100:.1f}%")
-
-    return lean_combos, lean_scores
-
-
-def _augment_with_lean_mixes(original_load_fn):
-    """Wrap load_mixes_with_coarse_fallback to inject lean mixes into the pool.
-
-    The wrapper:
-    1. Calls the original loader (fat near-miss + coarse fallback)
-    2. Generates lean mixes by scaling archetypes to lower procurement
-    3. Deduplicates lean mixes against existing pool (vectorized hash keys)
-    4. Returns combined pool with max_storage_scores=None (forces Pass 0 re-run)
-    """
-    def augmented_loader(iso, active_thresholds):
-        nm_combos, nm_scores, nm_max_scores = original_load_fn(iso, active_thresholds)
-        if nm_combos is None:
-            return None, None, None
-
-        n_original = len(nm_combos)
-
-        # Load EIA profiles for scoring lean mixes
-        demand_data, gen_profiles, _, _ = s1.load_data()
-        demand_norm = demand_data[iso]['normalized']
-        supply_profiles = s1.get_supply_profiles(iso, gen_profiles)
-        demand_arr, supply_matrix = s1.prepare_numpy_profiles(
-            iso, demand_norm, supply_profiles)
-
-        # Generate lean mixes
-        lean_combos, lean_scores = _generate_lean_mixes(
-            iso, nm_combos, demand_arr, supply_matrix)
-
-        if len(lean_combos) == 0:
-            return nm_combos, nm_scores, nm_max_scores
-
-        # Deduplicate against existing near-miss (vectorized hash comparison)
-        n_cols = min(nm_combos.shape[1], len(_MIX_HASH_BASES))
-        nm_keys = nm_combos.astype(np.int64)[:, :n_cols] @ _MIX_HASH_BASES[:n_cols]
-        lean_keys = lean_combos.astype(np.int64)[:, :n_cols] @ _MIX_HASH_BASES[:n_cols]
-        nm_key_set = set(nm_keys.tolist())
-        new_mask = np.array([k not in nm_key_set for k in lean_keys.tolist()], dtype=bool)
-        lean_combos = lean_combos[new_mask]
-        lean_scores = lean_scores[new_mask]
-        n_lean = len(lean_combos)
-
-        if n_lean == 0:
-            print(f"  Lean-mix augmentation: all duplicates of existing near-miss")
-            return nm_combos, nm_scores, nm_max_scores
-
-        # Combine
-        combined_combos = np.vstack([nm_combos, lean_combos])
-        combined_scores = np.concatenate([nm_scores, lean_scores])
-        print(f"  Combined pool: {n_original:,} original + {n_lean:,} lean = "
-              f"{len(combined_combos):,} total mixes")
-
-        # Force Pass 0 re-run (lean mixes don't have max_storage_scores)
-        return combined_combos, combined_scores, None
-
-    return augmented_loader
 
 
 def _load_floor_fine_mixes(iso):
@@ -442,28 +247,6 @@ def _augment_with_floor_fine(original_load_fn):
         return combined_combos, combined_scores, None
 
     return augmented_loader
-
-
-def _apply_v2_caps():
-    """Override module-level storage cap constants with V2 (2050-oriented) values."""
-    global MAX_BAT4, MAX_BAT8, MAX_LDES, MAX_H2
-    global FULL_BAT4, FULL_BAT8, FULL_LDES, FULL_H2
-    global GAP_BUCKET_PP, STEP1D_OUTPUT_DIR
-    MAX_BAT4 = V2_MAX_BAT4
-    MAX_BAT8 = V2_MAX_BAT8
-    MAX_LDES = V2_MAX_LDES
-    MAX_H2 = V2_MAX_H2
-    FULL_BAT4 = V2_FULL_BAT4
-    FULL_BAT8 = V2_FULL_BAT8
-    FULL_LDES = V2_FULL_LDES
-    FULL_H2 = V2_FULL_H2
-    GAP_BUCKET_PP = V2_GAP_BUCKET_PP
-    STEP1D_OUTPUT_DIR = V2_OUTPUT_DIR
-    os.makedirs(STEP1D_OUTPUT_DIR, exist_ok=True)
-    print(f"  V2 storage caps enabled:")
-    print(f"    Battery 4hr max: {V2_MAX_BAT4[0]}  Battery 8hr max: {V2_MAX_BAT8[0]}")
-    print(f"    LDES max: {V2_MAX_LDES[0]}  H2 max: {V2_MAX_H2[0]}")
-    print(f"    Output: {STEP1D_OUTPUT_DIR}")
 
 
 def get_near_miss_width(threshold):
@@ -1724,17 +1507,6 @@ def main():
     parser.add_argument("--target-minutes", type=float, default=10,
                         help="Target minutes per auto-batch for --batch-info "
                              "(default: 10).")
-    parser.add_argument("--lean-mixes", action="store_true",
-                        help="Augment near-miss pool with lean mixes "
-                             "(scaled-down archetypes at 80-135%% procurement). "
-                             "Exposes lean+storage frontier.")
-    parser.add_argument("--floor-fine-mixes", action="store_true",
-                        help="Augment near-miss pool with floor/fine PFS mixes "
-                             "(from step1b2/1b3). Filters to near-miss window, "
-                             "deduplicates, then runs storage sweep on them.")
-    parser.add_argument("--v2-caps", action="store_true",
-                        help="Use V2 (2050-oriented) storage capacity caps. "
-                             "Wider grids for battery/LDES. Output to step1-pfs-parquets/.")
     args = parser.parse_args()
 
     isos = list(s1.ISOS) if args.iso.upper() == 'ALL' else [args.iso.upper()]
@@ -1744,22 +1516,12 @@ def main():
             print(f"ERROR: Unknown ISO '{iso}'")
             sys.exit(1)
 
-    # Apply V2 caps if requested
-    if args.v2_caps:
-        _apply_v2_caps()
-
-    # Enable mix augmentation if requested (lean and/or floor/fine can stack)
+    # Floor/fine augmentation is always on — augment near-miss pool with
+    # floor_pfs (step1b2) and fine_pfs (step1b3) mixes automatically.
     global load_mixes_with_coarse_fallback
-    if args.lean_mixes:
-        load_mixes_with_coarse_fallback = _augment_with_lean_mixes(
-            load_mixes_with_coarse_fallback)
-        print(f"  Lean-mix augmentation enabled: {N_ARCHETYPES} archetypes, "
-              f"{len(LEAN_SCALE_TARGETS)} scale targets")
-
-    if args.floor_fine_mixes:
-        load_mixes_with_coarse_fallback = _augment_with_floor_fine(
-            load_mixes_with_coarse_fallback)
-        print(f"  Floor/fine mix augmentation enabled")
+    load_mixes_with_coarse_fallback = _augment_with_floor_fine(
+        load_mixes_with_coarse_fallback)
+    print(f"  Floor/fine mix augmentation enabled (always on)")
 
     # Batch info mode
     if args.batch_info:
