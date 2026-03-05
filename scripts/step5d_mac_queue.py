@@ -146,6 +146,7 @@ def _load_pfs_files(iso, threshold):
         patterns = [
             os.path.join(pfs_dir, f'{iso}_t{t_str}_raw_pfs.parquet'),
             os.path.join(pfs_dir, f'{iso}_t{t_str}_floor_pfs.parquet'),
+            os.path.join(pfs_dir, f'{iso}_t{t_str}_fine_pfs.parquet'),
             os.path.join(pfs_dir, f'{iso}_t{t_str}_storage.parquet'),
         ]
         batch_files = globmod.glob(os.path.join(pfs_dir, f'{iso}_t{t_str}_storage_b*.parquet'))
@@ -430,48 +431,17 @@ def compute_new_build_cost(iso, mix_pct, floor_twh, demand_twh, sens, target_yea
             breakdown['ccs_tranche'] = {'new_twh': ccs_tranche_twh, 'lcoe': ccs_price}
             breakdown['tranche3_cost'] = tranche3_cost
 
-    # --- CCS-CCGT (implicit residual: 100 - cf - sol - wnd - hyd - osw) ---
-    # In the PFS, CCS-CCGT is the implicit residual. Calculate its new-build cost.
+    # --- CCS-CCGT implicit residual ---
+    # The CCS residual (100% - explicit resources) represents remaining fossil
+    # generation, NOT CCS infrastructure being built. CCS new-build is already
+    # handled through the clean_firm tranche (uprate → geo → min(nuclear, CCS)).
+    # Do NOT charge for the implicit residual — it's just the grid continuing to
+    # run fossil while clean resources displace what they can hourly.
     ccs_pct = 100.0 - (mix_pct.get('clean_firm', 0) + mix_pct.get('solar', 0) +
                         mix_pct.get('wind', 0) + mix_pct.get('hydro', 0) +
                         mix_pct.get('offshore_wind', 0) + mix_pct.get('geothermal', 0))
     ccs_pct = max(0, ccs_pct)
-    ccs_twh = ccs_pct / 100.0 * demand_twh
-    existing_ccs_twh = floor_twh.get('ccs_ccgt', 0.0)
-    ccs_new_twh = max(0, ccs_twh - existing_ccs_twh)
-
-    if ccs_new_twh > 0:
-        ccs_table = CCS_LCOE_45Q_ON if q45 == '1' else CCS_LCOE_45Q_OFF
-        ccs_foak_table = FOAK_CCS_45Q_ON if q45 == '1' else FOAK_CCS_45Q_OFF
-        ccs_base = ccs_table[ccs_lev][iso]
-        ccs_foak = ccs_foak_table[iso]
-        ccs_noak = ccs_table['L'][iso]
-        ccs_lcoe = _apply_learning_curve(ccs_base, ccs_foak, ccs_noak, 'ccs', ccs_lev, target_year)
-        if iso == 'NEISO':
-            ccs_lcoe += NEISO_CCS_GAS_ADDER
-        ccs_lcoe += get_tx('ccs_ccgt', tx_name, iso)
-
-        # CCS regional cap check
-        ccs_cap = CCS_CAP_TWH.get(iso, 9999.0)
-        ccs_used_total = cumulative_caps.get('ccs_twh', 0.0)
-        ccs_avail = max(0, ccs_cap - ccs_used_total)
-        ccs_capped_twh = min(ccs_new_twh, ccs_avail)
-        ccs_overflow_twh = ccs_new_twh - ccs_capped_twh
-
-        ccs_cost = ccs_capped_twh * 1e6 * ccs_lcoe
-        # Overflow → nuclear new-build
-        if ccs_overflow_twh > 0:
-            nuc_base = NUCLEAR_NEWBUILD_LCOE[firm_lev][iso]
-            nuc_foak = FOAK_NUCLEAR_NEWBUILD[iso]
-            nuc_noak = NUCLEAR_NEWBUILD_LCOE['L'][iso]
-            nuc_price = _apply_learning_curve(nuc_base, nuc_foak, nuc_noak, 'nuclear', firm_lev, target_year)
-            nuc_price += get_tx('clean_firm', tx_name, iso)
-            ccs_cost += ccs_overflow_twh * 1e6 * nuc_price
-
-        total_cost += ccs_cost
-        cumulative_caps['ccs_twh'] = ccs_used_total + ccs_capped_twh
-        breakdown['ccs_implicit'] = {'new_twh': ccs_new_twh, 'capped_twh': ccs_capped_twh,
-                                     'overflow_twh': ccs_overflow_twh, 'cost': ccs_cost}
+    breakdown['ccs_residual_pct'] = ccs_pct  # Track for diagnostics only
 
     # --- Storage (annualized capacity cost - revenue credits) ---
     storage_map = {
@@ -743,7 +713,8 @@ def phase2_refine(top_mixes, floor_pct, threshold, num_perturbations=PHASE2_PERT
 def optimize_threshold(iso, threshold, floor_twh, cumulative_caps,
                        sens, demand_twh, target_year,
                        demand_norm, supply_profiles, supply_matrix, emission_rates,
-                       existing_clean_twh, prev_threshold=None):
+                       existing_clean_twh, prev_threshold=None,
+                       existing_clean_hourly_pct=None):
     """Optimize a single threshold step.
 
     Returns:
@@ -762,8 +733,9 @@ def optimize_threshold(iso, threshold, floor_twh, cumulative_caps,
     if prev_threshold is not None:
         baseline_effective_clean_pct = prev_threshold
     else:
-        # First threshold: use existing clean %
-        baseline_effective_clean_pct = sum(GRID_MIX_SHARES[iso].values())
+        # First threshold: use existing clean HOURLY match (not annual share!)
+        # This accounts for solar curtailment gap
+        baseline_effective_clean_pct = existing_clean_hourly_pct if existing_clean_hourly_pct else sum(GRID_MIX_SHARES[iso].values())
 
     # Cap at 100% for safety
     baseline_effective_clean_pct = min(baseline_effective_clean_pct, 99.99)
@@ -822,10 +794,8 @@ def optimize_threshold(iso, threshold, floor_twh, cumulative_caps,
         nb_cost, nb_breakdown, _ = compute_new_build_cost(
             iso, mix_pct, floor_twh, demand_twh, sens, target_year, caps_copy)
 
-        if nb_cost <= 0:
-            return None
-
-        mac = nb_cost / (co2_avoided_mt * 1e6)  # $/tCO2
+        # $0 new-build cost is valid (floor already covers this threshold)
+        mac = nb_cost / (co2_avoided_mt * 1e6) if co2_avoided_mt > 0.001 else 0.0  # $/tCO2
         return mac, co2_avoided_mt, co2_after_mt, nb_cost, nb_breakdown
 
     for idx in range(len(filtered)):
@@ -951,14 +921,31 @@ def run_pathway(iso, price_sens_name, growth_level, demand_norm, supply_profiles
     cumulative_cost = 0.0
     cumulative_co2_avoided = 0.0
 
-    # Determine starting threshold (first above existing clean %)
-    existing_clean_pct = sum(GRID_MIX_SHARES[iso].values())
+    # Compute existing clean HOURLY match score (not annual energy share!)
+    # This accounts for solar curtailment — CAISO annual ~48% but hourly ~39.6%
+    existing_mix = np.zeros((1, supply_matrix.shape[0]))
+    shares = GRID_MIX_SHARES[iso]
+    from dispatch_utils import RESOURCE_TYPES
+    for i, rtype in enumerate(RESOURCE_TYPES):
+        existing_mix[0, i] = shares.get(rtype, 0.0)
+    # CCS residual: the existing fossil fleet (not clean, don't include)
+    # Zero out CCS column — only explicit clean resources count
+    ccs_idx = RESOURCE_TYPES.index('ccs_ccgt') if 'ccs_ccgt' in RESOURCE_TYPES else -1
+    if ccs_idx >= 0:
+        existing_mix[0, ccs_idx] = 0.0
+    supply_existing = (existing_mix / 100.0) @ supply_matrix
+    matched = np.minimum(demand_norm, supply_existing)
+    existing_clean_hourly_pct = (matched.sum() / demand_norm.sum()) * 100.0
+    # Annual energy share for reference
+    existing_clean_annual_pct = sum(shares.values())
+    print(f"    {iso} existing clean: {existing_clean_hourly_pct:.1f}% hourly match "
+          f"(vs {existing_clean_annual_pct:.1f}% annual share)")
 
     results = []
     prev_threshold = None  # Track previous threshold for path-dependent CO2 baseline
 
     for threshold in MAC_THRESHOLDS:
-        if threshold <= existing_clean_pct:
+        if threshold <= existing_clean_hourly_pct:
             continue
 
         target_year = THRESHOLD_TARGET_YEARS.get(threshold, 2050)
@@ -969,7 +956,8 @@ def run_pathway(iso, price_sens_name, growth_level, demand_norm, supply_profiles
             iso, threshold, floor_twh, cumulative_caps,
             sens, demand_twh, target_year,
             demand_norm, supply_profiles, supply_matrix, emission_rates,
-            existing_clean_twh, prev_threshold=prev_threshold)
+            existing_clean_twh, prev_threshold=prev_threshold,
+            existing_clean_hourly_pct=existing_clean_hourly_pct)
 
         if result is None:
             continue
