@@ -114,7 +114,12 @@ def normalize_table(t, iso):
     for name in resource_cols:
         if name in t.column_names:
             col = t.column(name)
-            cols[name] = col if col.type == pa.int16() else pc.cast(col, pa.int16())
+            if col.type == pa.int16():
+                cols[name] = col
+            elif pa.types.is_floating(col.type):
+                cols[name] = pc.cast(pc.round(col, 0), pa.int16())
+            else:
+                cols[name] = pc.cast(col, pa.int16())
         elif name in ('geothermal', 'offshore_wind'):
             cols[name] = pa.array(np.zeros(t.num_rows, dtype=np.int16))
         else:
