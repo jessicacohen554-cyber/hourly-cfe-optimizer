@@ -984,6 +984,273 @@ def generate_floor_mixes(iso, floor_pct, threshold, demand_norm, supply_matrix,
 
 
 # ============================================================================
+# VECTORIZED BATCH SCORING
+# ============================================================================
+
+def _vectorized_remaining_co2_rate(clean_pcts, iso, emission_rates, growth_factor):
+    """Vectorized merit-order fossil retirement: returns remaining CO2 rate per MWh.
+
+    Same logic as dispatch_utils.compute_fossil_retirement but operates on arrays.
+    coal → oil → gas merit order. Returns remaining_rate_tco2_mwh for each clean_pct.
+    """
+    regional_data = emission_rates.get(iso, {})
+    coal_rate = regional_data.get('coal_co2_lb_per_mwh', 0.0) / 2204.62
+    gas_rate = regional_data.get('gas_co2_lb_per_mwh', 0.0) / 2204.62
+    oil_rate = regional_data.get('oil_co2_lb_per_mwh', 0.0) / 2204.62
+
+    base_demand_twh = REGIONAL_DEMAND_TWH.get(iso, 0)
+    grown_demand_twh = base_demand_twh * growth_factor
+    baseline_clean = sum(GRID_MIX_SHARES.get(iso, {}).values())
+
+    coal_cap = COAL_CAP_TWH.get(iso, 0)
+    oil_cap = OIL_CAP_TWH.get(iso, 0)
+
+    N = len(clean_pcts)
+    remaining_rates = np.full(N, gas_rate, dtype=np.float64)
+
+    fossil_pct = (100.0 - clean_pcts) / 100.0
+    fossil_twh = grown_demand_twh * fossil_pct
+
+    # Merit-order: coal fills first, then oil, then gas
+    coal_twh = np.minimum(coal_cap, fossil_twh)
+    oil_twh = np.minimum(oil_cap, np.maximum(0, fossil_twh - coal_twh))
+    gas_twh = np.maximum(0, fossil_twh - coal_twh - oil_twh)
+
+    # Additional clean TWh displaces coal → oil → gas
+    additional_clean_twh = np.maximum(0, (clean_pcts - baseline_clean) / 100.0 * grown_demand_twh)
+
+    # For clean_pct >= 70 (COAL_OIL_RETIREMENT_THRESHOLD), all coal+oil is displaced
+    from dispatch_utils import COAL_OIL_RETIREMENT_THRESHOLD
+    high_mask = clean_pcts >= COAL_OIL_RETIREMENT_THRESHOLD
+
+    # Low clean (< 70%): merit-order displacement
+    coal_displaced = np.minimum(additional_clean_twh, coal_twh)
+    remaining = additional_clean_twh - coal_displaced
+    oil_displaced = np.minimum(remaining, oil_twh)
+    remaining = remaining - oil_displaced
+    gas_displaced = np.minimum(remaining, gas_twh)
+
+    coal_remaining = coal_twh - coal_displaced
+    oil_remaining = oil_twh - oil_displaced
+    gas_remaining = gas_twh - gas_displaced
+    fossil_remaining = coal_remaining + oil_remaining + gas_remaining
+
+    # Remaining rate = weighted avg of remaining fossil
+    valid = fossil_remaining > 0.01
+    remaining_rates[valid] = (
+        coal_remaining[valid] * coal_rate +
+        oil_remaining[valid] * oil_rate +
+        gas_remaining[valid] * gas_rate
+    ) / fossil_remaining[valid]
+
+    # High clean (>= 70%): all coal+oil retired, only gas remains
+    remaining_rates[high_mask] = gas_rate
+
+    # Fully clean: 0
+    remaining_rates[fossil_twh <= 0.01] = 0.0
+
+    return remaining_rates
+
+
+def _precompute_nb_cost_params(iso, sens, target_year):
+    """Precompute LCOE + TX parameters for vectorized new-build cost.
+
+    Returns a dict of flat scalars that can be used in numpy operations.
+    """
+    ren_name = sens['ren']
+    firm_lev = sens['firm']
+    batt_name = sens['batt']
+    ldes_name = sens['ldes_lvl']
+    ccs_lev = sens['ccs']
+    q45 = sens['q45']
+    tx_name = sens['tx']
+    geo_lev = sens.get('geo')
+
+    params = {
+        'sol_lcoe': LCOE_TABLES['solar'][ren_name][iso] + get_tx('solar', tx_name, iso),
+        'wnd_lcoe': LCOE_TABLES['wind'][ren_name][iso] + get_tx('wind', tx_name, iso),
+    }
+
+    # Offshore wind
+    if iso in OFFSHORE_ISOS:
+        osw_base = LCOE_TABLES['offshore_wind'][ren_name][iso]
+        osw_tx = get_tx('offshore_wind', tx_name, iso)
+        foak = FOAK_OFFSHORE_WIND.get(iso)
+        noak = NOAK_OFFSHORE_WIND.get(ren_name, {}).get(iso)
+        tech_key = 'offshore_wind_float' if iso == 'CAISO' else 'offshore_wind_fixed'
+        if foak and noak:
+            osw_lcoe = _apply_learning_curve(osw_base, foak, noak, tech_key, firm_lev, target_year)
+        else:
+            osw_lcoe = osw_base
+        params['osw_lcoe'] = osw_lcoe + osw_tx
+    else:
+        params['osw_lcoe'] = 0.0
+
+    # Storage (net of revenue credits, with learning curves)
+    for col, stype, slevel in [
+        ('bat4', 'battery', batt_name), ('bat8', 'battery8', batt_name),
+        ('ldes', 'ldes', ldes_name), ('h2', 'h2', ldes_name),
+    ]:
+        base_price = LCOE_TABLES[stype][slevel][iso]
+        rev_credit = STORAGE_REVENUE_CREDITS[stype][iso]
+
+        # Learning curve
+        if stype == 'battery':
+            foak_s, noak_s, tech_key_s = base_price, NOAK_BATTERY.get(slevel, {}).get(iso, base_price), 'bat4'
+        elif stype == 'battery8':
+            foak_s, noak_s, tech_key_s = base_price, NOAK_BATTERY8.get(slevel, {}).get(iso, base_price), 'bat8'
+        elif stype == 'ldes':
+            foak_s, noak_s, tech_key_s = FOAK_LDES.get(iso, base_price), LCOE_TABLES['ldes']['Low'][iso], 'ldes'
+        elif stype == 'h2':
+            foak_s, noak_s, tech_key_s = FOAK_H2.get(iso, base_price), LCOE_TABLES['h2']['Low'][iso], 'h2'
+        else:
+            foak_s, noak_s, tech_key_s = None, None, None
+
+        if foak_s is not None and noak_s is not None:
+            adj_price = _apply_learning_curve(base_price, foak_s, noak_s, tech_key_s,
+                                               firm_lev, target_year)
+            price = max(0, adj_price - rev_credit)
+        else:
+            price = max(0, base_price - rev_credit)
+        params[f'{col}_price'] = price
+
+    # Clean firm: use a blended estimate (cheapest of nuclear vs CCS at this LCOE level)
+    # This is approximate — the full tranche model is applied on top-N candidates later.
+    nuc_lcoe = NUCLEAR_NEWBUILD_LCOE[firm_lev][iso] + get_tx('clean_firm', tx_name, iso)
+    foak_nuc = FOAK_NUCLEAR_NEWBUILD.get(iso)
+    noak_nuc = NUCLEAR_NEWBUILD_LCOE['L'][iso]
+    if foak_nuc and noak_nuc:
+        nuc_lcoe_adj = _apply_learning_curve(NUCLEAR_NEWBUILD_LCOE[firm_lev][iso],
+                                              foak_nuc, noak_nuc, 'nuclear', firm_lev, target_year)
+        nuc_lcoe = nuc_lcoe_adj + get_tx('clean_firm', tx_name, iso)
+
+    ccs_table = CCS_LCOE_45Q_ON if q45 == '1' else CCS_LCOE_45Q_OFF
+    ccs_lcoe = ccs_table[ccs_lev][iso]
+    if iso == 'NEISO':
+        ccs_lcoe += NEISO_CCS_GAS_ADDER
+    ccs_lcoe += get_tx('ccs_ccgt', tx_name, iso)
+    foak_ccs = (FOAK_CCS_45Q_ON if q45 == '1' else FOAK_CCS_45Q_OFF).get(iso)
+    noak_ccs = (CCS_LCOE_45Q_ON if q45 == '1' else CCS_LCOE_45Q_OFF)['L'][iso]
+    if foak_ccs and noak_ccs:
+        ccs_lcoe_adj = _apply_learning_curve(ccs_table[ccs_lev][iso],
+                                              foak_ccs, noak_ccs, 'ccs', firm_lev, target_year)
+        ccs_lcoe = ccs_lcoe_adj + get_tx('ccs_ccgt', tx_name, iso)
+        if iso == 'NEISO':
+            ccs_lcoe += NEISO_CCS_GAS_ADDER
+
+    # Blended firm price: min(nuclear, CCS) as estimate for vectorized pass
+    # The full tranche (uprate → geo → min) is applied in scalar refinement
+    params['cf_lcoe_approx'] = min(nuc_lcoe, ccs_lcoe)
+
+    # Geothermal (CAISO only)
+    if iso == 'CAISO' and geo_lev:
+        geo_base = GEOTHERMAL_LCOE[geo_lev]
+        foak_geo = FOAK_GEOTHERMAL
+        noak_geo = GEOTHERMAL_LCOE['L']
+        geo_lcoe = _apply_learning_curve(geo_base, foak_geo, noak_geo, 'geo', firm_lev, target_year)
+        geo_lcoe += get_tx('clean_firm', tx_name, iso)
+        params['geo_lcoe'] = geo_lcoe
+    else:
+        params['geo_lcoe'] = 0.0
+
+    return params
+
+
+def batch_score_mixes(filtered_df, iso, sens, demand_twh, target_year,
+                      deployed_twh, emission_rates, growth_factor,
+                      baseline_co2_mt, baseline_effective_clean_pct):
+    """Vectorized Phase 1 scoring: returns (mac_array, co2_avoided_array, nb_cost_array).
+
+    Computes approximate new-build cost and CO2 avoided for all mixes simultaneously.
+    Clean firm uses a blended LCOE estimate (no tranching) — top candidates get
+    full scalar refinement in Phase 2.
+
+    Returns arrays of shape (N,) or None if no valid mixes.
+    """
+    N = len(filtered_df)
+    if N == 0:
+        return None, None, None
+
+    # Extract resource percentages as arrays
+    cf_pct = filtered_df['clean_firm'].values.astype(np.float64)
+    sol_pct = filtered_df['solar'].values.astype(np.float64)
+    wnd_pct = filtered_df['wind'].values.astype(np.float64)
+    hyd_pct = filtered_df['hydro'].values.astype(np.float64)
+    osw_pct = filtered_df['offshore_wind'].values.astype(np.float64)
+    geo_pct = filtered_df['geothermal'].values.astype(np.float64) if 'geothermal' in filtered_df.columns else np.zeros(N)
+    bat4_pct = filtered_df['battery_dispatch_pct'].values.astype(np.float64)
+    bat8_pct = filtered_df['battery8_dispatch_pct'].values.astype(np.float64)
+    ldes_pct = filtered_df['ldes_dispatch_pct'].values.astype(np.float64)
+    h2_pct = filtered_df['h2_dispatch_pct'].values.astype(np.float64) if 'h2_dispatch_pct' in filtered_df.columns else np.zeros(N)
+    scores = filtered_df['hourly_match_score'].values.astype(np.float64)
+
+    # Cap hydro at physical limit
+    hydro_cap_pct = HYDRO_CAP_PCT.get(iso, 50.0)
+    hydro_excess = np.maximum(0, hyd_pct - hydro_cap_pct)
+    hyd_pct = np.minimum(hyd_pct, hydro_cap_pct)
+    scores = np.maximum(0, scores - hydro_excess)
+
+    # --- CO2 avoided (vectorized) ---
+    cand_clean_pct = np.minimum(scores, 99.99)
+    remaining_rates = _vectorized_remaining_co2_rate(
+        cand_clean_pct, iso, emission_rates, growth_factor)
+    fossil_twh_after = np.maximum(0, demand_twh * (100.0 - cand_clean_pct) / 100.0)
+    co2_after_mt = fossil_twh_after * 1e6 * remaining_rates / 1e6
+    co2_avoided_mt = baseline_co2_mt - co2_after_mt
+
+    # --- New-build cost (vectorized, approximate for clean firm) ---
+    params = _precompute_nb_cost_params(iso, sens, target_year)
+
+    # Existing resources (floor = deployed_twh for cost purposes)
+    existing_sol_twh = deployed_twh.get('solar', 0.0)
+    existing_wnd_twh = deployed_twh.get('wind', 0.0)
+    existing_osw_twh = deployed_twh.get('offshore_wind', 0.0)
+    existing_cf_twh = deployed_twh.get('clean_firm', 0.0)
+    existing_geo_twh = EXISTING_GEOTHERMAL_PCT / 100.0 * demand_twh if iso == 'CAISO' else 0.0
+    floor_bat4 = deployed_twh.get('battery_dispatch_pct', 0.0)
+    floor_bat8 = deployed_twh.get('battery8_dispatch_pct', 0.0)
+    floor_ldes = deployed_twh.get('ldes_dispatch_pct', 0.0)
+    floor_h2 = deployed_twh.get('h2_dispatch_pct', 0.0)
+
+    # New-build TWh = max(0, mix_twh - existing_twh)
+    sol_new_twh = np.maximum(0, sol_pct / 100.0 * demand_twh - existing_sol_twh)
+    wnd_new_twh = np.maximum(0, wnd_pct / 100.0 * demand_twh - existing_wnd_twh)
+    osw_new_twh = np.maximum(0, osw_pct / 100.0 * demand_twh - existing_osw_twh)
+    cf_new_twh = np.maximum(0, cf_pct / 100.0 * demand_twh - existing_cf_twh)
+
+    # New storage = max(0, pct - floor_pct)
+    bat4_new = np.maximum(0, bat4_pct - floor_bat4)
+    bat8_new = np.maximum(0, bat8_pct - floor_bat8)
+    ldes_new = np.maximum(0, ldes_pct - floor_ldes)
+    h2_new = np.maximum(0, h2_pct - floor_h2)
+
+    # Geothermal new-build (CAISO only, physics dimension)
+    geo_new_twh = np.zeros(N)
+    if iso == 'CAISO' and params['geo_lcoe'] > 0:
+        geo_new_twh = np.maximum(0, geo_pct / 100.0 * demand_twh - existing_geo_twh)
+
+    # Total new-build cost ($)
+    nb_cost = (
+        sol_new_twh * 1e6 * params['sol_lcoe'] +
+        wnd_new_twh * 1e6 * params['wnd_lcoe'] +
+        osw_new_twh * 1e6 * params['osw_lcoe'] +
+        cf_new_twh * 1e6 * params['cf_lcoe_approx'] +
+        geo_new_twh * 1e6 * params['geo_lcoe'] +
+        bat4_new / 100.0 * params['bat4_price'] * demand_twh * 1e6 +
+        bat8_new / 100.0 * params['bat8_price'] * demand_twh * 1e6 +
+        ldes_new / 100.0 * params['ldes_price'] * demand_twh * 1e6 +
+        h2_new / 100.0 * params['h2_price'] * demand_twh * 1e6
+    )
+
+    # MAC = nb_cost / (co2_avoided * 1e6)
+    valid = co2_avoided_mt > 0.001
+    mac = np.full(N, np.inf)
+    mac[valid] = nb_cost[valid] / (co2_avoided_mt[valid] * 1e6)
+
+    return mac, co2_avoided_mt, nb_cost
+
+
+# ============================================================================
 # SINGLE THRESHOLD OPTIMIZER
 # ============================================================================
 
@@ -994,62 +1261,49 @@ def optimize_threshold(iso, threshold, floor_twh, deployed_twh, cumulative_caps,
                        existing_clean_hourly_pct=None):
     """Optimize a single threshold step.
 
+    Two-pass architecture:
+      Phase 1 (vectorized): Score ALL mixes with numpy — approximate clean firm
+              cost (blended LCOE, no tranching). Selects top 50 candidates.
+      Phase 2 (scalar): Re-score top candidates with full tranche model
+              (uprate → geo → min(nuclear, CCS)) for accurate cost ranking.
+      Phase 3 (dispatch): 8760-hour CO2 rescore on top 10 for final selection.
+
     Args:
         floor_twh: Filter floor (absolute TWh, only ratchets on % increase).
-                   Used for filtering mixes — diminishes as demand grows.
-        deployed_twh: Cost floor (absolute TWh, always max). Tracks actual
-                      physical capacity deployed. Used for cost calculations.
-
-    Returns:
-        result dict with winner, costs, CO2, MAC
-        updated floor_twh (filter floor)
-        updated deployed_twh (cost floor)
-        updated cumulative_caps
+        deployed_twh: Cost floor (absolute TWh, always max).
     """
     # Convert floor to %
     floor_pct = floor_to_pct(floor_twh, demand_twh)
 
     # 1. Compute CO2 baseline (path-dependent)
-    # The effective clean % at baseline is the PREVIOUS threshold achieved
-    # (not the raw sum of resource allocations, which can exceed 100% due to curtailment)
     growth_factor = demand_twh / REGIONAL_DEMAND_TWH[iso]
 
     if prev_threshold is not None:
         baseline_effective_clean_pct = prev_threshold
     else:
-        # First threshold: use existing clean HOURLY match (not annual share!)
-        # This accounts for solar curtailment gap
         baseline_effective_clean_pct = existing_clean_hourly_pct if existing_clean_hourly_pct else sum(GRID_MIX_SHARES[iso].values())
-
-    # Cap at 100% for safety
     baseline_effective_clean_pct = min(baseline_effective_clean_pct, 99.99)
 
     _, retirement_info = compute_fossil_retirement(
         iso, baseline_effective_clean_pct, emission_rates, {},
         demand_growth_factor=growth_factor)
-
-    # Total fossil CO2 at baseline = remaining fossil TWh × remaining emission rate
-    # (NOT displaced_rate, which is the rate of fuels pushed out by clean energy)
     remaining_rate = retirement_info.get('remaining_rate_tco2_mwh', 0.3911)
     fossil_twh_baseline = max(0, demand_twh * (100.0 - baseline_effective_clean_pct) / 100.0)
-    baseline_co2_mt = fossil_twh_baseline * 1e6 * remaining_rate / 1e6  # million tons
+    baseline_co2_mt = fossil_twh_baseline * 1e6 * remaining_rate / 1e6
 
     # 2. Load PFS archetypes
     pfs_df = load_pfs_for_threshold(iso, threshold)
 
     if not pfs_df.empty:
-        # 3. Filter and sample
         filtered = filter_and_sample(pfs_df, floor_pct, threshold)
     else:
         filtered = pd.DataFrame(columns=MIX_COLS)
 
-    # 3b. On-the-fly enhancement if too few mixes pass floor filter
+    # 2b. On-the-fly enhancement if too few mixes pass floor filter
     if len(filtered) < MIN_FILTERED_MIXES:
         otf_df = generate_floor_mixes(iso, floor_pct, threshold,
                                        demand_norm, supply_matrix)
         if not otf_df.empty:
-            # On-the-fly mixes already respect floor by construction.
-            # Only apply score range filter (wider for estimated storage scores).
             scores = otf_df['hourly_match_score'].values
             score_mask = (scores >= threshold) & (scores <= threshold + MAX_OVERSHOOT + 0.5)
             otf_filtered = otf_df.loc[score_mask].copy()
@@ -1058,7 +1312,6 @@ def optimize_threshold(iso, threshold, floor_twh, deployed_twh, cumulative_caps,
                 if len(otf_filtered) > MAX_ARCHETYPES:
                     otf_filtered = otf_filtered.sample(n=MAX_ARCHETYPES, random_state=42)
                 filtered = pd.concat([filtered, otf_filtered], ignore_index=True)
-                # Deduplicate
                 dedup_cols = RESOURCE_COLS + STORAGE_COLS
                 filtered_rounded = filtered.copy()
                 for c in dedup_cols:
@@ -1067,23 +1320,47 @@ def optimize_threshold(iso, threshold, floor_twh, deployed_twh, cumulative_caps,
                 filtered = filtered.loc[filtered_rounded.drop_duplicates(subset=dedup_cols).index].reset_index(drop=True)
 
     if filtered.empty:
-        print(f"    WARNING: No mixes pass floor filter for {iso} t{threshold:g} (even with on-the-fly generation)")
+        print(f"    WARNING: No mixes pass floor filter for {iso} t{threshold:g}")
         return None, floor_twh, deployed_twh, cumulative_caps
 
     print(f"    {iso} t{threshold:g}: {len(pfs_df)} PFS mixes → {len(filtered)} after filtering")
 
-    # 4. Score each archetype (Phase 1: scalar CO2 for fast ranking)
+    # ── Phase 1: Vectorized batch scoring (approximate clean firm cost) ──
+    mac_arr, co2_avoided_arr, nb_cost_arr = batch_score_mixes(
+        filtered, iso, sens, demand_twh, target_year,
+        deployed_twh, emission_rates, growth_factor,
+        baseline_co2_mt, baseline_effective_clean_pct)
+
+    if mac_arr is None or not np.any(np.isfinite(mac_arr)):
+        print(f"    WARNING: No valid MAC found for {iso} t{threshold:g} (batch)")
+        return None, floor_twh, deployed_twh, cumulative_caps
+
+    # Select top 50 candidates for scalar refinement
+    TOP_N_REFINE = 50
+    TOP_N_DISPATCH = 10
+    finite_mask = np.isfinite(mac_arr)
+    n_finite = int(np.sum(finite_mask))
+    if n_finite <= TOP_N_REFINE:
+        top_indices = np.where(finite_mask)[0]
+    else:
+        # Partial sort: get indices of the TOP_N_REFINE smallest MACs
+        top_indices = np.argpartition(mac_arr, TOP_N_REFINE)[:TOP_N_REFINE]
+
+    # ── Phase 2: Scalar refinement with full tranche model on top candidates ──
     best_mac = float('inf')
     best_mix = None
     best_cost = 0
     best_co2_avoided = 0
     best_co2_after = 0
     best_breakdown = {}
-    top_candidates = []  # Top 10 for 8760-hour rescore
-    TOP_N_DISPATCH = 10
+    top_candidates = []
 
-    def _score_mix_scalar(mix_pct):
-        """Score a single mix with scalar CO2 model (fast). For initial ranking."""
+    for idx in top_indices:
+        row = filtered.iloc[idx]
+        mix_pct = mix_row_to_pct(row)
+        cap_hydro_in_mix(mix_pct, iso)
+
+        # Full scalar cost with tranching
         candidate_clean_pct = min(mix_pct.get('hourly_match_score', 0), 99.99)
         _, cand_info = compute_fossil_retirement(
             iso, candidate_clean_pct, emission_rates, {},
@@ -1091,71 +1368,15 @@ def optimize_threshold(iso, threshold, floor_twh, deployed_twh, cumulative_caps,
         cand_remaining_rate = cand_info.get('remaining_rate_tco2_mwh', 0.3911)
         fossil_twh_after = max(0, demand_twh * (100.0 - candidate_clean_pct) / 100.0)
         co2_after_mt = fossil_twh_after * 1e6 * cand_remaining_rate / 1e6
-
         co2_avoided_mt = baseline_co2_mt - co2_after_mt
         if co2_avoided_mt <= 0.001:
-            return None
-
-        caps_copy = dict(cumulative_caps)
-        nb_cost, nb_breakdown, _ = compute_new_build_cost(
-            iso, mix_pct, deployed_twh, demand_twh, sens, target_year, caps_copy)
-
-        mac = nb_cost / (co2_avoided_mt * 1e6) if co2_avoided_mt > 0.001 else 0.0
-        return mac, co2_avoided_mt, co2_after_mt, nb_cost, nb_breakdown
-
-    def _score_mix_dispatch(mix_pct):
-        """Rescore a mix with 8760-hour dispatch for precise CO2 (slow).
-
-        Uses reconstruct_hourly_dispatch + compute_co2_from_dispatch for
-        hour-by-hour fossil displacement. Captures hourly fuel switching and
-        temporal shape effects that the scalar model misses.
-        """
-        resource_pcts = {res: mix_pct.get(res, 0) for res in RESOURCE_COLS}
-        dispatch_result = reconstruct_hourly_dispatch(
-            demand_norm, supply_profiles, resource_pcts,
-            procurement_pct=100,
-            battery_dispatch_pct=mix_pct.get('battery_4h', 0),
-            battery8_dispatch_pct=mix_pct.get('battery_8h', 0),
-            ldes_dispatch_pct=mix_pct.get('ldes_100h', 0),
-            supply_matrix=supply_matrix,
-            h2_dispatch_pct=mix_pct.get('green_h2_1000h', 0),
-        )
-        demand_total_mwh = demand_twh * 1e6
-        co2_result = compute_co2_from_dispatch(iso, dispatch_result, emission_rates, demand_total_mwh)
-
-        # Marginal CO2: baseline_co2 (at prev threshold) minus remaining fossil CO2
-        # at this mix's clean percentage. Use scalar fossil retirement model for
-        # the "remaining fossil CO2" — same approach as _score_mix_scalar for consistency.
-        candidate_clean_pct_d = min(mix_pct.get('hourly_match_score', 0), 99.99)
-        _, cand_info_d = compute_fossil_retirement(
-            iso, candidate_clean_pct_d, emission_rates, {},
-            demand_growth_factor=growth_factor)
-        cand_remaining_rate_d = cand_info_d.get('remaining_rate_tco2_mwh', 0.3911)
-        fossil_twh_after_d = max(0, demand_twh * (100.0 - candidate_clean_pct_d) / 100.0)
-        co2_after_mt = fossil_twh_after_d * 1e6 * cand_remaining_rate_d / 1e6
-        co2_avoided_mt = baseline_co2_mt - co2_after_mt
-
-        if co2_avoided_mt <= 0.001:
-            return None
-
-        caps_copy = dict(cumulative_caps)
-        nb_cost, nb_breakdown, _ = compute_new_build_cost(
-            iso, mix_pct, deployed_twh, demand_twh, sens, target_year, caps_copy)
-
-        mac = nb_cost / (co2_avoided_mt * 1e6) if co2_avoided_mt > 0.001 else 0.0
-        return mac, co2_avoided_mt, co2_after_mt, nb_cost, nb_breakdown, co2_result
-
-    for idx in range(len(filtered)):
-        row = filtered.iloc[idx]
-        mix_pct = mix_row_to_pct(row)
-        cap_hydro_in_mix(mix_pct, iso)  # Cap hydro at physical limit before scoring
-
-        scored = _score_mix_scalar(mix_pct)
-        if scored is None:
             continue
-        mac, co2_avoided_mt, co2_after_mt, nb_cost, nb_breakdown = scored
 
-        # Track top 10 for dispatch rescore + phase 2 refinement
+        caps_copy = dict(cumulative_caps)
+        nb_cost, nb_breakdown, _ = compute_new_build_cost(
+            iso, mix_pct, deployed_twh, demand_twh, sens, target_year, caps_copy)
+        mac = nb_cost / (co2_avoided_mt * 1e6)
+
         if len(top_candidates) < TOP_N_DISPATCH or mac < top_candidates[-1][1]:
             top_candidates.append((mix_pct, mac, nb_cost, nb_breakdown))
             top_candidates.sort(key=lambda x: x[1])
@@ -1169,37 +1390,52 @@ def optimize_threshold(iso, threshold, floor_twh, deployed_twh, cumulative_caps,
             best_co2_after = co2_after_mt
             best_breakdown = nb_breakdown
 
-    # 5. Phase 2: Refined search around top archetypes (still scalar CO2)
+    # Also refine Phase 2 perturbations around top archetypes
     top_archetypes = [(m, s) for m, s, _, _ in top_candidates[:5]]
     if top_archetypes and len(filtered) > 10:
         phase2_df = phase2_refine(top_archetypes, floor_pct, threshold)
         if not phase2_df.empty:
-            for idx in range(len(phase2_df)):
-                row = phase2_df.iloc[idx]
-                mix_pct = mix_row_to_pct(row)
-                cap_hydro_in_mix(mix_pct, iso)  # Cap hydro at physical limit
+            # Batch-score perturbations first, then refine top
+            p2_mac, p2_co2, p2_cost = batch_score_mixes(
+                phase2_df, iso, sens, demand_twh, target_year,
+                deployed_twh, emission_rates, growth_factor,
+                baseline_co2_mt, baseline_effective_clean_pct)
+            if p2_mac is not None:
+                p2_finite = np.isfinite(p2_mac)
+                n_p2 = int(np.sum(p2_finite))
+                if n_p2 > 0:
+                    p2_top_n = min(20, n_p2)
+                    if n_p2 <= p2_top_n:
+                        p2_top_idx = np.where(p2_finite)[0]
+                    else:
+                        p2_top_idx = np.argpartition(p2_mac, p2_top_n)[:p2_top_n]
+                    for pidx in p2_top_idx:
+                        row = phase2_df.iloc[pidx]
+                        mix_pct = mix_row_to_pct(row)
+                        cap_hydro_in_mix(mix_pct, iso)
+                        ccp = min(mix_pct.get('hourly_match_score', 0), 99.99)
+                        _, ci = compute_fossil_retirement(
+                            iso, ccp, emission_rates, {}, demand_growth_factor=growth_factor)
+                        crr = ci.get('remaining_rate_tco2_mwh', 0.3911)
+                        fta = max(0, demand_twh * (100.0 - ccp) / 100.0)
+                        ca_mt = fta * 1e6 * crr / 1e6
+                        ca_avoided = baseline_co2_mt - ca_mt
+                        if ca_avoided <= 0.001:
+                            continue
+                        caps_copy = dict(cumulative_caps)
+                        nbc, nbb, _ = compute_new_build_cost(
+                            iso, mix_pct, deployed_twh, demand_twh, sens, target_year, caps_copy)
+                        m = nbc / (ca_avoided * 1e6)
+                        if len(top_candidates) < TOP_N_DISPATCH or m < top_candidates[-1][1]:
+                            top_candidates.append((mix_pct, m, nbc, nbb))
+                            top_candidates.sort(key=lambda x: x[1])
+                            top_candidates = top_candidates[:TOP_N_DISPATCH]
+                        if m < best_mac:
+                            best_mac, best_mix, best_cost = m, mix_pct, nbc
+                            best_co2_avoided, best_co2_after = ca_avoided, ca_mt
+                            best_breakdown = nbb
 
-                scored = _score_mix_scalar(mix_pct)
-                if scored is None:
-                    continue
-                mac, co2_avoided_mt, co2_after_mt, nb_cost, nb_breakdown = scored
-
-                # Update top candidates list with phase 2 results
-                if len(top_candidates) < TOP_N_DISPATCH or mac < top_candidates[-1][1]:
-                    top_candidates.append((mix_pct, mac, nb_cost, nb_breakdown))
-                    top_candidates.sort(key=lambda x: x[1])
-                    top_candidates = top_candidates[:TOP_N_DISPATCH]
-
-                if mac < best_mac:
-                    best_mac = mac
-                    best_mix = mix_pct
-                    best_cost = nb_cost
-                    best_co2_avoided = co2_avoided_mt
-                    best_co2_after = co2_after_mt
-                    best_breakdown = nb_breakdown
-
-    # 6. Phase 3: 8760-hour dispatch rescore on top candidates
-    # Re-rank using precise hourly CO2 displacement instead of scalar model
+    # ── Phase 3: 8760-hour dispatch rescore on top candidates ──
     if top_candidates:
         dispatch_best_mac = float('inf')
         dispatch_best_mix = None
@@ -1210,19 +1446,44 @@ def optimize_threshold(iso, threshold, floor_twh, deployed_twh, cumulative_caps,
         dispatch_best_co2_detail = {}
 
         for mix_pct, scalar_mac, _, _ in top_candidates:
-            d_scored = _score_mix_dispatch(mix_pct)
-            if d_scored is None:
+            resource_pcts = {res: mix_pct.get(res, 0) for res in RESOURCE_COLS}
+            dispatch_result = reconstruct_hourly_dispatch(
+                demand_norm, supply_profiles, resource_pcts,
+                procurement_pct=100,
+                battery_dispatch_pct=mix_pct.get('battery_dispatch_pct', 0),
+                battery8_dispatch_pct=mix_pct.get('battery8_dispatch_pct', 0),
+                ldes_dispatch_pct=mix_pct.get('ldes_dispatch_pct', 0),
+                supply_matrix=supply_matrix,
+                h2_dispatch_pct=mix_pct.get('h2_dispatch_pct', 0),
+            )
+            co2_result = compute_co2_from_dispatch(
+                iso, dispatch_result, emission_rates, demand_twh * 1e6)
+
+            # Marginal CO2 via scalar retirement (consistent with Phase 2)
+            ccp_d = min(mix_pct.get('hourly_match_score', 0), 99.99)
+            _, ci_d = compute_fossil_retirement(
+                iso, ccp_d, emission_rates, {}, demand_growth_factor=growth_factor)
+            crr_d = ci_d.get('remaining_rate_tco2_mwh', 0.3911)
+            fta_d = max(0, demand_twh * (100.0 - ccp_d) / 100.0)
+            co2_after_mt = fta_d * 1e6 * crr_d / 1e6
+            co2_avoided_mt = baseline_co2_mt - co2_after_mt
+
+            if co2_avoided_mt <= 0.001:
                 continue
-            d_mac, d_co2_avoided, d_co2_after, d_cost, d_breakdown, d_co2_result = d_scored
+
+            caps_copy = dict(cumulative_caps)
+            nb_cost, nb_breakdown, _ = compute_new_build_cost(
+                iso, mix_pct, deployed_twh, demand_twh, sens, target_year, caps_copy)
+            d_mac = nb_cost / (co2_avoided_mt * 1e6)
 
             if d_mac < dispatch_best_mac:
                 dispatch_best_mac = d_mac
                 dispatch_best_mix = mix_pct
-                dispatch_best_cost = d_cost
-                dispatch_best_co2_avoided = d_co2_avoided
-                dispatch_best_co2_after = d_co2_after
-                dispatch_best_breakdown = d_breakdown
-                dispatch_best_co2_detail = d_co2_result
+                dispatch_best_cost = nb_cost
+                dispatch_best_co2_avoided = co2_avoided_mt
+                dispatch_best_co2_after = co2_after_mt
+                dispatch_best_breakdown = nb_breakdown
+                dispatch_best_co2_detail = co2_result
 
         if dispatch_best_mix is not None:
             best_mac = dispatch_best_mac
