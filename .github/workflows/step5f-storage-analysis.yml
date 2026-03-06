@@ -23,6 +23,7 @@ jobs:
     timeout-minutes: 60
     permissions:
       contents: write
+      workflows: write   # needed when source branch has workflow file changes
       pull-requests: write
 
     steps:
