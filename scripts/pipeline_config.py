@@ -217,7 +217,7 @@ STORAGE_MAX = {
     'battery': 0.06,    # 0.06% of annual demand — CAISO: ~134 GWh / 33.6 GW
     'battery8': 0.08,   # 0.08% of annual demand
     'ldes': 0.5,        # 0.5% of annual demand
-    'h2': 2.0,          # 2.0% of annual demand
+    'h2': 1.0,          # 1.0% of annual demand (small probe — 3 levels)
 }
 
 # Step 1D.2: Research-informed 2050 storage caps (% of annual demand)
@@ -228,7 +228,7 @@ STORAGE_MAX_V2 = {
     'battery': 0.10,    # 0.10% of annual demand — CAISO: ~224 GWh / 56 GW
     'battery8': 0.15,   # 0.15% of annual demand
     'ldes': 1.0,        # 1.0% of annual demand
-    'h2': 3.0,          # 3.0% of annual demand
+    'h2': 1.0,          # 1.0% of annual demand (small probe — 3 levels)
 }
 
 # ============================================================================

@@ -2378,7 +2378,7 @@ data/step5-post-processing/lmp/                      # Output directory
 - **Green H2 seasonal storage** (added Feb 2026):
   - **Parameters**: 35% round-trip efficiency (electrolysis 70% × storage 95% × turbine 55%), 1000hr duration (~42 days at full power), 30-day rolling dispatch window
   - **Physics**: Dispatches as Phase 4 after battery4 → battery8 → LDES on post-LDES residual surplus/gap. Same window-based charge/discharge as LDES but with longer window and lower RTE.
-  - **Sweep levels**: Only evaluated at ≥95% thresholds (too expensive for lower). Levels: [0, 1, 2, 5, 10, 20] % of demand.
+  - **Sweep levels**: Only evaluated at ≥95% thresholds (too expensive for lower). Levels: [0, 0.3, 1.0] % of demand (reduced March 2026 from 9 levels — H2 never won on cost, and the 9-level grid added a 9× multiplier to Step 1C combo counts causing high-threshold cells to stall).
   - **Cost**: LCOS-based, shares `ldes_lvl` sensitivity toggle. L=$185-230, M=$260-330, H=$365-460 $/MWh by ISO. Transmission adders: L=$2-3, M=$3-6, H=$5-10.
   - **Peak capacity credit**: 0.85 (dispatchable but slower ramp than gas/battery)
   - **Merit order rationale**: Battery → LDES → H2 is economically robust because (1) higher RTE storage should fill short gaps first to minimize surplus waste, (2) battery $/kW is lower than LDES for 4hr needs, (3) H2's only advantage is very cheap $/kWh (salt caverns) at multi-week timescales where LDES is prohibitively expensive.
