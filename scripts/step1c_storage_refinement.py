@@ -321,8 +321,7 @@ def _augment_with_floor_fine(original_load_fn):
         eligible = np.zeros(len(ff_combos), dtype=bool)
         for t in active_thresholds:
             target = t / 100.0
-            nm_width = get_near_miss_width(t)
-            nm_floor = max(target - nm_width, STORAGE_SWEEP_FLOOR)
+            nm_floor = get_near_miss_floor(t)
             t_mask = (ff_scores < target) & (ff_scores >= nm_floor)
             eligible |= t_mask
 
@@ -376,6 +375,22 @@ def get_near_miss_width(threshold):
     elif threshold >= 85:
         return 0.20   # 20pp
     return 0.25        # 25pp — high-solar + storage mixes need wider window
+
+
+def get_near_miss_floor(threshold):
+    """Compute the actual near-miss floor for a threshold.
+
+    Returns the minimum base score a mix must have to be a storage candidate.
+    STORAGE_SWEEP_FLOOR (50%) is only applied when the threshold is above it —
+    for threshold <= 50%, the floor is purely width-based to avoid the
+    impossible filter (scores < target AND scores >= target).
+    """
+    target = threshold / 100.0
+    nm_width = get_near_miss_width(threshold)
+    width_floor = target - nm_width
+    if threshold <= STORAGE_SWEEP_FLOOR * 100:
+        return max(width_floor, 0.0)
+    return max(width_floor, STORAGE_SWEEP_FLOOR)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -466,8 +481,7 @@ def load_mixes_with_coarse_fallback(iso, active_thresholds):
     nm_eligible = np.zeros(len(cc_combos), dtype=bool)
     for t in active_thresholds:
         target = t / 100.0
-        nm_width = get_near_miss_width(t)
-        nm_floor = max(target - nm_width, STORAGE_SWEEP_FLOOR)
+        nm_floor = get_near_miss_floor(t)
         t_mask = (cc_scores < target) & (cc_scores >= nm_floor)
         nm_eligible |= t_mask
 
