@@ -202,17 +202,30 @@ The AT trajectory measures absolute CO₂ reductions from a **2023 baseline year
 
 **Processing**: `scripts/step0_extract_egrid_baselines.py` — reads the plant-level sheet, sums `PLCO2AN` by BA code, converts to metric tons. Output: `data/egrid_2023_baseline_emissions.json` with per-ISO totals and AT trajectory caps.
 
-**To populate**: Download `egrid2023_data.xlsx` from [EPA Detailed Data](https://www.epa.gov/egrid/detailed-data), save to `data/raw/egrid2023_data.xlsx`, run `python scripts/step0_extract_egrid_baselines.py`.
+**Data file**: `data/egrid_2023_baseline_emissions.json` (extracted from `data/egrid2023_data_rev2 2.xlsx`, BA23 sheet, column `BACO2AN`).
 
-| ISO | 2023 Baseline CO₂ (million metric tons) | Source |
-|-----|----------------------------------------|--------|
-| CAISO | TBD | eGRID 2023 PLNT23 |
-| ERCOT | TBD | eGRID 2023 PLNT23 |
-| PJM | TBD | eGRID 2023 PLNT23 |
-| NYISO | TBD | eGRID 2023 PLNT23 |
-| NEISO | TBD | eGRID 2023 PLNT23 |
-| MISO | TBD | eGRID 2023 PLNT23 |
-| SPP | TBD | eGRID 2023 PLNT23 |
+| ISO | 2023 Baseline CO₂ (M metric tons) | 2023 Gen (TWh) | Source |
+|-----|-----------------------------------:|---------------:|--------|
+| CAISO | 31.38 | 187.3 | eGRID 2023 BA23 |
+| ERCOT | 157.46 | 472.9 | eGRID 2023 BA23 |
+| PJM | 267.32 | 823.0 | eGRID 2023 BA23 |
+| NYISO | 28.19 | 129.7 | eGRID 2023 BA23 |
+| NEISO | 25.08 | 102.1 | eGRID 2023 BA23 |
+| MISO | 290.40 | 652.0 | eGRID 2023 BA23 |
+| SPP | 110.51 | 279.5 | eGRID 2023 BA23 |
+| **TOTAL** | **910.34** | **2,646.5** | |
+
+**AT Trajectory Emission Caps (M metric tons)**:
+
+| ISO | 2030 (−57%) | 2035 (−82%) | 2040 (−88%) | 2045 (−94%) | 2050 (−100%) |
+|-----|------------:|------------:|------------:|------------:|-------------:|
+| CAISO | 13.49 | 5.65 | 3.77 | 1.88 | 0 |
+| ERCOT | 67.71 | 28.34 | 18.90 | 9.45 | 0 |
+| PJM | 114.95 | 48.12 | 32.08 | 16.04 | 0 |
+| NYISO | 12.12 | 5.07 | 3.38 | 1.69 | 0 |
+| NEISO | 10.78 | 4.51 | 3.01 | 1.50 | 0 |
+| MISO | 124.87 | 52.27 | 34.85 | 17.42 | 0 |
+| SPP | 47.52 | 19.89 | 13.26 | 6.63 | 0 |
 
 **Note**: Our model uses 2025 generation profiles for physics simulation, but the emissions baseline for AT trajectory measurement is 2023. This is intentional — targets are measured against a fixed historical baseline, not a moving one.
 
