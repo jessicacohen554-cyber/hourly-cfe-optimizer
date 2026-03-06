@@ -95,6 +95,7 @@ from scenario_common import (
     compute_mix_cost, save_scenario_results,
     get_demand_growth_factor,
     _build_existing_only_entry, _existing_match_pct,
+    learning_fraction as scenario_learning_fraction,
 )
 
 # ============================================================================
@@ -1756,10 +1757,10 @@ def _compute_baseline_net_peak(iso, demand_norm, supply_profiles, supply_matrix)
         ldes_dispatch_pct=0, h2_dispatch_pct=0,
         supply_matrix=supply_matrix,
     )
-    # residual_demand is normalized; convert to MW
+    # residual_demand is in fraction-of-annual-energy units; multiply by
+    # total annual MWh to get MW (since each value = 1 hour)
     demand_mwh = BASE_DEMAND_TWH[iso] * 1e6
-    avg_demand_mw = demand_mwh / 8760.0
-    baseline_net_peak = float(np.max(result['residual_demand'])) * avg_demand_mw
+    baseline_net_peak = float(np.max(result['residual_demand'])) * demand_mwh
     _BASELINE_NET_PEAK_CACHE[iso] = baseline_net_peak
     return baseline_net_peak
 
@@ -1775,7 +1776,6 @@ def _compute_gas_backup(iso, mix_pcts, demand_twh, growth_factor,
     Returns (gas_backup_mw, new_gas_mw, existing_gas_used_mw, net_peak_mw, gas_cost_per_mwh).
     """
     demand_mwh = demand_twh * 1e6
-    avg_demand_mw = demand_mwh / 8760.0
 
     # Build resource_pcts dict for dispatch (generation resources only)
     resource_pcts = {
@@ -1803,9 +1803,10 @@ def _compute_gas_backup(iso, mix_pcts, demand_twh, growth_factor,
         supply_matrix=supply_matrix,
     )
 
-    # residual_demand is in normalized units; scale to MW
+    # residual_demand is in fraction-of-annual-energy units; multiply by
+    # total annual MWh to get MW (since each value = 1 hour)
     net_peak_norm = float(np.max(result['residual_demand']))
-    net_peak_mw = net_peak_norm * avg_demand_mw
+    net_peak_mw = net_peak_norm * demand_mwh
 
     # Apply RA margin and GAF
     gaf = GAS_AVAILABILITY_FACTOR[iso]
@@ -1967,8 +1968,8 @@ def _export_scenario_a(all_results, isos_processed, demand_data, gen_profiles,
                 first_cf_deployment_year = SBTI_YEAR_MAP.get(t, 2050)
 
             # Apply learning discount to new-build cost if clean firm deployed
-            learning_frac = learning_fraction(t, scenario='A',
-                                              first_deployment_year=first_cf_deployment_year)
+            learning_frac = scenario_learning_fraction(
+                t, scenario='A', first_deployment_year=first_cf_deployment_year)
             if learning_frac > 0 and new_cf_twh > 0:
                 # Discount = fraction of H→L savings applied to new clean firm cost
                 nuc_h = NUCLEAR_NEWBUILD_LCOE['H'][iso]

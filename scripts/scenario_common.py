@@ -426,8 +426,10 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
             ldes_dispatch_pct=ldes_pct, h2_dispatch_pct=h2_pct,
             supply_matrix=supply_matrix,
         )
+        # residual_demand is in fraction-of-annual-energy units;
+        # multiply by total annual MWh to get MW (each value = 1 hour)
         net_peak_norm = float(np.max(disp['residual_demand']))
-        net_peak_mw = net_peak_norm * avg_demand_mw
+        net_peak_mw = net_peak_norm * demand_mwh
         gas_raw = net_peak_mw * (1 + RESOURCE_ADEQUACY_MARGIN) / gaf
 
         # Baseline dispatch for delta calibration
@@ -436,7 +438,7 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
             demand_norm, supply_profiles, baseline_pcts,
             procurement_pct=100, supply_matrix=supply_matrix,
         )
-        baseline_peak = float(np.max(disp_base['residual_demand'])) * (BASE_DEMAND_TWH[iso] * 1e6 / 8760)
+        baseline_peak = float(np.max(disp_base['residual_demand'])) * (BASE_DEMAND_TWH[iso] * 1e6)
         baseline_gas_raw = baseline_peak * (1 + RESOURCE_ADEQUACY_MARGIN) / gaf
         gas_delta = gas_raw - baseline_gas_raw
 
