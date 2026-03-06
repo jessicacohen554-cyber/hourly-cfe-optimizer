@@ -223,14 +223,7 @@
                 {
                     header: 'Markets & Grid',
                     items: [
-                        { label: 'Wholesale Prices', href: 'lmp_trends.html', desc: 'Synthetic LMP analysis' }
-                    ]
-                },
-                {
-                    header: 'Generator Analysis',
-                    items: [
-                        { label: 'Generator Analysis', href: 'generator_analysis.html', desc: 'Fleet & dispatch overview' },
-                        { label: 'Fleet Survival', href: 'fleet_survival.html', desc: 'Company fleet transitions' },
+                        { label: 'Wholesale Prices', href: 'lmp_trends.html', desc: 'Synthetic LMP analysis' },
                         { label: 'Fossil Fuel Analysis', href: 'fossil_fuel_deepdive.html', desc: 'Gas, coal & oil dynamics' },
                         { label: 'Building Blocks', href: 'building_blocks.html', desc: 'Resource shapes & supply curves' },
                         { label: 'Storage Analysis', href: 'storage_analysis.html', desc: 'Battery & LDES dispatch' }
@@ -245,6 +238,18 @@
                         { label: 'Failure Modes', href: 'consequential_vacuum.html', desc: 'Scaling failure analysis' }
                     ]
                 }
+            ]
+        },
+        {
+            label: 'Generator Analysis',
+            children: [
+                { label: 'Overview', href: 'pg_overview.html' },
+                { label: 'Company Dashboard', href: 'pg_company_dashboard.html' },
+                { label: 'Fleet Analysis', href: 'pg_fleet_analysis.html' },
+                { label: 'Fleet Survival', href: 'fleet_survival.html' },
+                { label: 'Targets & Feasibility', href: 'pg_targets.html' },
+                { label: 'Policy & Conditions', href: 'pg_policy.html' },
+                { label: 'Methodology', href: 'pg_methodology.html' }
             ]
         },
         {
