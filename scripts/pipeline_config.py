@@ -1000,6 +1000,12 @@ def year_adjusted_cost(foak_cost, noak_cost, year, foak_start, noak_year):
 
 # ============================================================================
 # DEMAND GROWTH PARAMETERS
+# Sources: EIA AEO 2025 (Reference + High/Low Economic Growth cases),
+#   NERC 2024 LTRA, ERCOT 2025 LTLF, PJM 2025 Load Forecast,
+#   Grid Strategies 2025 National Load Growth Report.
+# Low = baseline economic/population growth (no incremental data center/electrification).
+# Medium = confirmed large-load requests + moderate electrification (EIA Reference regionalized).
+# High = full data center/AI load growth + accelerated electrification (economy-wide NZ pathway).
 # ============================================================================
 
 DEMAND_GROWTH_RATES = {
