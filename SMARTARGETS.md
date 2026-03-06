@@ -326,6 +326,83 @@ For each step in the simulation:
   5. Recompute LMPs with updated fleet → next step
 ```
 
+## Endogenous Wright's Law Learning Curves (Decided)
+
+### Core Principle: New Technology Frontier, Not Legacy Fleet
+
+Learning curves for nuclear start from the **new nuclear frontier** — SMRs, advanced reactors, new AP1000s — NOT from the ~440 GW of legacy reactors built last century. These are fundamentally different technologies with different supply chains, manufacturing processes, and cost structures. The legacy fleet's cumulative experience doesn't transfer to SMR learning.
+
+**Starting cumulative GW baselines** (the denominator for doubling calculations):
+
+| Technology | 2025 Cumulative GW | Rationale | First Doubling At |
+|-----------|-------------------|-----------|-------------------|
+| **New nuclear** (SMR/advanced/AP1000) | ~2 GW | Vogtle 3&4 (2.2 GW) — only modern US nuclear. Global: Barakah, Olkiluoto, Hinkley = ~10 GW but different designs. Use US-only as conservative start. | ~4 GW |
+| **CCS-CCGT** | ~0.3 GW | Boundary Dam, Petra Nova (both partial). Near-zero at power-sector scale. Effectively greenfield. | ~0.6 GW |
+| **LDES (iron-air)** | ~0.01 GW | Form Energy pilot scale only. Pre-commercial. | ~0.02 GW |
+| **Green H2** | ~0.1 GW | Electrolysis at scale barely exists. | ~0.2 GW |
+| **Geothermal (enhanced)** | ~0.05 GW | Fervo pilot. Next-gen EGS is new frontier. | ~0.1 GW |
+| **Battery (Li-ion)** | ~50 GW (US grid) | Already at manufacturing scale — learning curve is shallow/mature. | ~100 GW |
+| **Solar** | ~150 GW (US) | Mature. Static cost in model. | N/A |
+| **Wind (onshore)** | ~150 GW (US) | Mature. Static cost in model. | N/A |
+
+### The 7-ISO Scope Problem (Decided)
+
+We model 7 ISOs (~65% of US generation), not the whole country or world. This creates a learning curve attribution challenge:
+
+**Problem**: If PJM builds 2 GW of new nuclear and ERCOT builds 1 GW, that's 3 GW within our model. But in reality, global deployment (Korea, France, UK, Canada, rest-of-US) also contributes to learning. Our 7 ISOs aren't the whole market.
+
+**Solution — Exogenous background learning + endogenous model learning**:
+
+```
+effective_cumulative_gw = model_deployed_gw + background_learning_gw(year)
+```
+
+- **`model_deployed_gw`**: Endogenous — cumulative GW built within the 7 ISOs during the simulation. This is what the model controls.
+- **`background_learning_gw(year)`**: Exogenous — assumed rest-of-world/rest-of-US deployment trajectory. A scenario parameter (Fast/Medium/Slow global adoption) that adds learning from outside our model boundary.
+- **Effect**: Even if our 7 ISOs build zero new nuclear, costs still decline (slowly) from global deployment. But our ISOs' own deployment accelerates the decline.
+
+**Background learning scenarios**:
+
+| Scenario | Global new nuclear by 2035 | Global new nuclear by 2050 | Notes |
+|----------|--------------------------|--------------------------|-------|
+| **Slow** | +5 GW | +20 GW | Only committed projects (Sizewell C, a few SMR demos) |
+| **Medium** | +15 GW | +60 GW | IEA NZE-aligned, moderate SMR ramp |
+| **Fast** | +30 GW | +150 GW | Aggressive SMR/advanced nuclear buildout (US + global) |
+
+Same pattern applies to CCS, LDES, etc. — each technology has its own background trajectory.
+
+**Why this works**: The model's endogenous deployment *adds to* the global background. An ISO that builds early gets the double benefit: (1) it directly contributes to learning, AND (2) it locks in capacity at today's costs before global learning makes it cheaper (first-mover advantage on dispatch, not cost). An ISO that waits still benefits from global cost decline but has to compete for supply chain capacity.
+
+### Wright's Law Formula
+
+Classic experience curve, not time-based:
+
+```python
+cost(cumulative_gw) = FOAK × (cumulative_gw / reference_gw) ^ (-learning_exponent)
+# Capped at NOAK floor: cost = max(NOAK, computed_cost)
+```
+
+**Learning rates** (cost reduction per doubling of cumulative capacity):
+
+| Technology | Learning Rate | Source | Implied Exponent |
+|-----------|--------------|--------|-----------------|
+| **New nuclear** | 10-15% | Conservative — historical nuclear was ~0%, but SMR modular manufacturing should unlock learning. NuScale/X-energy/Kairos projections. | 0.15-0.23 |
+| **CCS-CCGT** | 10-12% | GCCSI literature. Carbon capture is the learning component; CCGT is mature. | 0.15-0.18 |
+| **LDES (iron-air)** | 15-20% | Analogous to early battery learning. Manufacturing-dominated cost. | 0.23-0.32 |
+| **Green H2** | 12-18% | Electrolyzer learning. IRENA projections. | 0.18-0.29 |
+| **Geothermal (EGS)** | 15-20% | Drilling cost learning. Fervo/Quaise projections. | 0.23-0.32 |
+| **Battery** | 18-20% | Well-established. BloombergNEF, NREL. Already reflected in shallow cost decline from current levels. | 0.29-0.32 |
+
+`learning_exponent = -log2(1 - learning_rate)`. E.g., 15% learning rate → exponent = 0.234.
+
+**NOAK floor**: Each technology's Low LCOE from existing tables = the NOAK floor. Learning can't reduce cost below the most optimistic long-run estimate.
+
+### Supersedes Time-Based Learning
+
+This endogenous formulation **supersedes** the time-based `learning_fraction(year, foak_start, noak_year)` approach used in Step 3's demand growth sweep and the procurement strategy comparison. Those used calendar-year-based concave ramps. SMARTargets uses deployment-based Wright's Law — costs fall because capacity was built, not because the calendar advanced.
+
+The existing Step 3 time-based curves remain valid for their original purpose (SBTi milestone pricing under assumed deployment schedules). SMARTargets just uses a different, more fundamental mechanism.
+
 ## Scenario Axes (TBD — User to Define)
 
 Each scenario represents a different set of **market conditions** — not a different target. The question each scenario answers: *"How clean does the grid get when the market looks like this?"*
