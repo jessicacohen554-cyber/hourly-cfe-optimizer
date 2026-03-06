@@ -326,10 +326,10 @@ SCENARIOS = {
     # ─── Quick Transition ────────────────────────────────────────────────
     # Parametric sweep: 19 emission reduction targets (5%, 10%, ..., 95%)
     # by 2050. Each target follows the AT temporal shape scaled to that
-    # final reduction level. QT1/QT2 use power NZ shape, QT3/QT4 economy NZ.
+    # final reduction level. QT1/QT2 use medium demand, QT3/QT4 high demand.
     # The 'qt_reduction_grid' flag triggers the sweep in run_market_simulation.
     'QT1': {
-        'name': 'QT Power NZ: Facilitating',
+        'name': 'QT Medium Demand: Facilitating',
         'demand_growth': 'Medium',
         'lcoe_level': 'Low',
         'learning_speed': 'Fast',
@@ -342,7 +342,7 @@ SCENARIOS = {
         'qt_reduction_grid': True,
     },
     'QT2': {
-        'name': 'QT Power NZ: Challenging',
+        'name': 'QT Medium Demand: Challenging',
         'demand_growth': 'Medium',
         'lcoe_level': 'High',
         'learning_speed': 'Slow',
@@ -355,7 +355,7 @@ SCENARIOS = {
         'qt_reduction_grid': True,
     },
     'QT3': {
-        'name': 'QT Economy NZ: Facilitating',
+        'name': 'QT High Demand: Facilitating',
         'demand_growth': 'High',
         'lcoe_level': 'Low',
         'learning_speed': 'Fast',
@@ -368,7 +368,7 @@ SCENARIOS = {
         'qt_reduction_grid': True,
     },
     'QT4': {
-        'name': 'QT Economy NZ: Challenging',
+        'name': 'QT High Demand: Challenging',
         'demand_growth': 'High',
         'lcoe_level': 'High',
         'learning_speed': 'Slow',
