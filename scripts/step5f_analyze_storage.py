@@ -197,8 +197,9 @@ def compute_storage_metrics(storage_by_threshold):
         # Vectorized computations
         total_storage = bat4_arr + bat8_arr + ldes_arr + h2_arr
         total_clean = sum(res_arrs[r] for r in res_types)
-        denom = total_clean + total_storage
-        storage_share = np.where(denom > 0, np.divide(total_storage, denom, where=denom > 0, out=np.zeros_like(denom)) * 100, 0)
+        # Storage dispatch as % of total annual demand (not % of clean mix)
+        # All _pct values are already % of demand from the parquet
+        storage_share = np.copy(total_storage)  # already in % of demand
 
         bat_twh = bat4_arr * demand_twh / 100.0
         ldes_twh = ldes_arr * demand_twh / 100.0
@@ -211,7 +212,7 @@ def compute_storage_metrics(storage_by_threshold):
             'ldes_pct': np.round(ldes_arr, 2).tolist(),
             'h2_pct': np.round(h2_arr, 2).tolist(),
             'total_storage_pct': np.round(total_storage, 2).tolist(),
-            'storage_share_of_clean': np.round(storage_share, 1).tolist(),
+            'storage_share_of_demand': np.round(storage_share, 1).tolist(),
             'battery_twh': np.round(bat_twh, 2).tolist(),
             'ldes_twh': np.round(ldes_twh, 2).tolist(),
             'h2_twh': np.round(h2_twh, 2).tolist(),
