@@ -1076,6 +1076,13 @@ for iso_idx, iso in enumerate(ISOS):
     for i, arr in enumerate(cd['ldes_charge']):
         comma = ',' if i < len(cd['ldes_charge']) - 1 else ''
         lines.append(f'            {fmt_24h_array(arr)}{comma}')
+    lines.append('        ],')
+
+    # h2_charge
+    lines.append('        h2_charge: [')
+    for i, arr in enumerate(cd['h2_charge']):
+        comma = ',' if i < len(cd['h2_charge']) - 1 else ''
+        lines.append(f'            {fmt_24h_array(arr)}{comma}')
     lines.append('        ]')
 
     iso_comma = ',' if iso_idx < len(ISOS) - 1 else ''
