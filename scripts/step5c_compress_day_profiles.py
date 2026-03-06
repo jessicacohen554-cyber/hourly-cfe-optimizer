@@ -99,35 +99,9 @@ def dispatch_from_cache(iso, mix, battery_pct, battery8_pct,
             'gap': cached.get('residual_demand', np.zeros(H, dtype=np.float64)),
         }
 
-    # Cache miss — compute live
-    supply_profiles = get_supply_profiles(iso, gen_profiles)
-    supply_matrix = build_supply_matrix(supply_profiles)
-    result = reconstruct_hourly_dispatch(
-        demand_norm, supply_profiles, resource_pcts, 100,
-        battery_pct, battery8_pct, ldes_pct,
-        supply_matrix=supply_matrix, detailed=True,
-        h2_dispatch_pct=h2_pct)
-
-    matched = {}
-    surplus = {}
-    for rtype in RESOURCE_TYPES:
-        matched[rtype] = result[f'matched_{rtype}']
-        surplus[rtype] = result[f'surplus_{rtype}']
-
-    return {
-        'demand': demand_arr,
-        'matched': matched,
-        'surplus': surplus,
-        'battery_matched': result['battery4_profile'],
-        'battery_charge': result['battery4_charge'],
-        'battery8_matched': result.get('battery8_profile', np.zeros(H, dtype=np.float64)),
-        'battery8_charge': result.get('battery8_charge', np.zeros(H, dtype=np.float64)),
-        'ldes_matched': result['ldes_profile'],
-        'ldes_charge': result['ldes_charge'],
-        'h2_matched': result.get('h2_profile', np.zeros(H, dtype=np.float64)),
-        'h2_charge': result.get('h2_charge', np.zeros(H, dtype=np.float64)),
-        'gap': result['residual_demand'],
-    }
+    # Cache miss — Step 4 dispatch cache is required. No fallback.
+    print(f"    WARNING: Cache miss for {iso} key {key}. Run Step 4 first.")
+    return None
 
 
 def compress_to_24h(result):

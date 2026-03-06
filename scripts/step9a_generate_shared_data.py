@@ -387,6 +387,7 @@ for iso in ISOS:
 
 print("\nExtracting RESOURCE_MIX_DATA from DG parquets (Medium growth × Medium sensitivity)...")
 DG_PARQUET_DIR = os.path.join(SCRIPT_DIR, '..', 'data', 'step3-cost-opt-parquets')
+DISPATCH_CACHE_DIR = os.path.join(SCRIPT_DIR, '..', 'data', 'step4-dispatch-cache')
 
 try:
     import pandas as _pd
@@ -394,19 +395,41 @@ except ImportError:
     print("  WARNING: pandas not available — falling back to base results (no demand growth)")
     _pd = None
 
+# Load annual manifests from Step 4 (single source of truth for dispatch values)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from dispatch_utils import _archetype_key
+
+annual_manifests = {}  # {iso: DataFrame}
+if _pd is not None:
+    for iso in ISOS:
+        manifest_path = os.path.join(DISPATCH_CACHE_DIR, f'{iso}_annual_manifest.parquet')
+        if os.path.exists(manifest_path):
+            mdf = _pd.read_parquet(manifest_path)
+            # Index by archetype_key for fast lookup
+            annual_manifests[iso] = mdf.set_index('archetype_key')
+    print(f"  Loaded annual manifests for: {list(annual_manifests.keys())}")
+    if not annual_manifests:
+        print("  WARNING: No annual manifests found. Run Step 4 first.")
+        print("           Storage dispatch values will fall back to capacity (WRONG).")
+
 resource_mix_data = {}
 demand_twh_by_threshold = {}  # {iso: [twh_at_threshold_0, twh_at_threshold_1, ...]}
 hourly_match_scores = {}  # {iso: [score_at_threshold_0, score_at_threshold_1, ...]}
 
 for iso in ISOS:
     iso_data = {r: [] for r in RESOURCES}
-    iso_data['battery'] = []
+    iso_data['battery'] = []         # ACTUAL dispatch % (from manifest)
     iso_data['battery8'] = []
     iso_data['ldes'] = []
     iso_data['h2'] = []
+    iso_data['battery_cap'] = []     # CAPACITY % (for cost calculations)
+    iso_data['battery8_cap'] = []
+    iso_data['ldes_cap'] = []
+    iso_data['h2_cap'] = []
     iso_demand_twh = []
     iso_match_scores = []
 
+    manifest = annual_manifests.get(iso)
     geo = 'M' if iso == 'CAISO' else 'X'
     med_scenario_key = f'MMMM_M_M_M1_{geo}'
     base_twh = _REGIONAL_DEMAND_TWH.get(iso, 100)
@@ -432,11 +455,40 @@ for iso in ISOS:
             iso_data['offshore_wind'].append(int(dg_row.get('mix_offshore_wind', 0)))
             iso_data['ccs_ccgt'].append(int(dg_row['mix_ccs_ccgt']))
             iso_data['hydro'].append(int(dg_row['mix_hydro']))
-            # Prefer actual dispatch shares (from step4 enrichment) over capacity parameters
-            iso_data['battery'].append(round(float(dg_row.get('battery_dispatch_share', dg_row.get('battery_dispatch_pct', 0))), 4))
-            iso_data['battery8'].append(round(float(dg_row.get('battery8_dispatch_share', dg_row.get('battery8_dispatch_pct', 0))), 4))
-            iso_data['ldes'].append(round(float(dg_row.get('ldes_dispatch_share', dg_row.get('ldes_dispatch_pct', 0))), 4))
-            iso_data['h2'].append(round(float(dg_row.get('h2_dispatch_share', dg_row.get('h2_dispatch_pct', 0))), 4))
+
+            # Storage: capacity values (for cost calculations in dashboard)
+            bat_cap = float(dg_row.get('battery_dispatch_pct', 0))
+            bat8_cap = float(dg_row.get('battery8_dispatch_pct', 0))
+            ldes_cap = float(dg_row.get('ldes_dispatch_pct', 0))
+            h2_cap = float(dg_row.get('h2_dispatch_pct', 0))
+            iso_data['battery_cap'].append(round(bat_cap, 4))
+            iso_data['battery8_cap'].append(round(bat8_cap, 4))
+            iso_data['ldes_cap'].append(round(ldes_cap, 4))
+            iso_data['h2_cap'].append(round(h2_cap, 4))
+
+            # Storage: ACTUAL dispatch values from Step 4 annual manifest
+            bat_disp = bat8_disp = ldes_disp = h2_disp = 0.0
+            if manifest is not None:
+                rp = {
+                    'clean_firm': float(dg_row['mix_clean_firm']),
+                    'solar': float(dg_row['mix_solar']),
+                    'wind': float(dg_row['mix_wind']),
+                    'offshore_wind': float(dg_row.get('mix_offshore_wind', 0)),
+                    'ccs_ccgt': float(dg_row['mix_ccs_ccgt']),
+                    'hydro': float(dg_row['mix_hydro']),
+                }
+                akey = _archetype_key(iso, rp, 100, bat_cap, bat8_cap, ldes_cap)
+                if akey in manifest.index:
+                    mrow = manifest.loc[akey]
+                    bat_disp = float(mrow.get('battery_dispatch_pct', 0))
+                    bat8_disp = float(mrow.get('battery8_dispatch_pct', 0))
+                    ldes_disp = float(mrow.get('ldes_dispatch_pct', 0))
+                    h2_disp = float(mrow.get('h2_dispatch_pct', 0))
+
+            iso_data['battery'].append(round(bat_disp, 2))
+            iso_data['battery8'].append(round(bat8_disp, 2))
+            iso_data['ldes'].append(round(ldes_disp, 2))
+            iso_data['h2'].append(round(h2_disp, 2))
             iso_match_scores.append(round(float(dg_row.get('hourly_match_score', t_num)), 2))
         else:
             # Fallback to base results (no demand growth)
@@ -445,10 +497,32 @@ for iso in ISOS:
                 rm = sc.get('resource_mix', {})
                 for res in RESOURCES:
                     iso_data[res].append(rm.get(res, 0))
-                iso_data['battery'].append(sc.get('battery_dispatch_share', sc.get('battery_dispatch_pct', 0)))
-                iso_data['battery8'].append(sc.get('battery8_dispatch_share', sc.get('battery8_dispatch_pct', 0)))
-                iso_data['ldes'].append(sc.get('ldes_dispatch_share', sc.get('ldes_dispatch_pct', 0)))
-                iso_data['h2'].append(sc.get('h2_dispatch_share', sc.get('h2_dispatch_pct', 0)))
+
+                # Storage: capacity (for cost) and dispatch (from manifest)
+                bat_cap = sc.get('battery_dispatch_pct', 0)
+                bat8_cap = sc.get('battery8_dispatch_pct', 0)
+                ldes_cap = sc.get('ldes_dispatch_pct', 0)
+                h2_cap = sc.get('h2_dispatch_pct', 0)
+                iso_data['battery_cap'].append(bat_cap)
+                iso_data['battery8_cap'].append(bat8_cap)
+                iso_data['ldes_cap'].append(ldes_cap)
+                iso_data['h2_cap'].append(h2_cap)
+
+                bat_disp = bat8_disp = ldes_disp = h2_disp = 0.0
+                if manifest is not None:
+                    rp = {k: rm.get(k, 0) for k in ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']}
+                    akey = _archetype_key(iso, rp, 100, bat_cap, bat8_cap, ldes_cap)
+                    if akey in manifest.index:
+                        mrow = manifest.loc[akey]
+                        bat_disp = float(mrow.get('battery_dispatch_pct', 0))
+                        bat8_disp = float(mrow.get('battery8_dispatch_pct', 0))
+                        ldes_disp = float(mrow.get('ldes_dispatch_pct', 0))
+                        h2_disp = float(mrow.get('h2_dispatch_pct', 0))
+
+                iso_data['battery'].append(round(bat_disp, 2))
+                iso_data['battery8'].append(round(bat8_disp, 2))
+                iso_data['ldes'].append(round(ldes_disp, 2))
+                iso_data['h2'].append(round(h2_disp, 2))
             else:
                 for res in RESOURCES:
                     iso_data[res].append(0)
@@ -456,6 +530,10 @@ for iso in ISOS:
                 iso_data['battery8'].append(0)
                 iso_data['ldes'].append(0)
                 iso_data['h2'].append(0)
+                iso_data['battery_cap'].append(0)
+                iso_data['battery8_cap'].append(0)
+                iso_data['ldes_cap'].append(0)
+                iso_data['h2_cap'].append(0)
             # Fallback: use threshold as score (conservative estimate)
             fallback_score = float(sc.get('hourly_match_score', t_num)) if sc else float(t_num)
             iso_match_scores.append(round(fallback_score, 2))
@@ -971,14 +1049,16 @@ lines.append('// --- Resource Mix (% of demand) — Medium sensitivity × Medium
 lines.append('// Source: Step 3 demand-growth parquets (step3_dg_{ISO}_t{threshold}.parquet)')
 lines.append('// Each threshold maps to an SBTi year; demand grows at Medium rate to that year.')
 lines.append(f'// Indices match THRESHOLDS array: [{thresh_str}]')
-lines.append('// battery/battery8/ldes/h2 = dispatch % of demand')
+lines.append('// battery/battery8/ldes/h2 = ACTUAL dispatch % of demand (from Step 4 annual manifest)')
+lines.append('// battery_cap/battery8_cap/ldes_cap/h2_cap = CAPACITY % of demand (for cost calculations)')
 lines.append('const RESOURCE_MIX_DATA = {')
 for iso_idx, iso in enumerate(ISOS):
     d = resource_mix_data[iso]
     lines.append(f'    {iso}: {{')
-    for key in RESOURCES + ['battery', 'battery8', 'ldes', 'h2']:
-        comma = ',' if key != 'h2' else ''
-        padding = ' ' * max(0, 12 - len(key))
+    all_keys = RESOURCES + ['battery', 'battery8', 'ldes', 'h2', 'battery_cap', 'battery8_cap', 'ldes_cap', 'h2_cap']
+    for ki, key in enumerate(all_keys):
+        comma = ',' if ki < len(all_keys) - 1 else ''
+        padding = ' ' * max(0, 14 - len(key))
         lines.append(f'        {key}:{padding}{fmt_array(d[key])}{comma}')
     comma = ',' if iso_idx < len(ISOS) - 1 else ''
     lines.append(f'    }}{comma}')
