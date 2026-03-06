@@ -48,6 +48,27 @@ from scenario_common import (
 
 
 # ============================================================================
+# STEP5D QUEUE LOADER
+# ============================================================================
+
+def _load_step5d_queue(filename='consequential_queue_scenario_a.json',
+                       mac_queue_dir=None):
+    """Load pre-computed consequential queue from step5d output.
+
+    Returns list of queue step dicts, or None if file not found.
+    """
+    if mac_queue_dir is None:
+        project_root = Path(__file__).parent.parent
+        mac_queue_dir = project_root / 'data' / 'step5-post-processing' / 'mac_queue'
+    queue_path = os.path.join(mac_queue_dir, filename)
+    if not os.path.exists(queue_path):
+        return None
+    with open(queue_path) as f:
+        data = json.load(f)
+    return data.get('queue', [])
+
+
+# ============================================================================
 # TRAJECTORY BUILDER (step5d pass-through or incremental dispatch-based MAC)
 # ============================================================================
 
@@ -499,10 +520,19 @@ def main():
     # ------------------------------------------------------------------
     # Build consequential queues (dispatch-cache emission accounting)
     # ------------------------------------------------------------------
-    print("\nBuilding consequential queues (dispatch-cache emission accounting)...")
-    queue_a = build_consequential_queue(results_a, egrid, fossil_mix, cfr_fn=cfr_cached,
-                                         demand_data=demand_data, gen_profiles=gen_profiles,
-                                         dispatch_caches=dispatch_caches)
+    print("\nLoading consequential queue A from step5d...")
+    queue_a = _load_step5d_queue('consequential_queue_scenario_a.json')
+    if queue_a is not None:
+        # Filter to requested ISOs and re-number
+        queue_a = [step for step in queue_a if step['iso'] in isos]
+        for i, step in enumerate(queue_a):
+            step['queue_position'] = i + 1
+        print(f"  Loaded {len(queue_a)} queue steps from step5d (high_firm_low_vre)")
+    else:
+        print("  WARNING: consequential_queue_scenario_a.json not found, computing from scratch...")
+        queue_a = build_consequential_queue(results_a, egrid, fossil_mix, cfr_fn=cfr_cached,
+                                             demand_data=demand_data, gen_profiles=gen_profiles,
+                                             dispatch_caches=dispatch_caches)
     queue_b = build_consequential_queue(results_b, egrid, fossil_mix, cfr_fn=cfr_cached,
                                          demand_data=demand_data, gen_profiles=gen_profiles,
                                          dispatch_caches=dispatch_caches)

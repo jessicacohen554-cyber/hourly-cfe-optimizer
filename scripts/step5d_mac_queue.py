@@ -1669,17 +1669,24 @@ def run_iso(iso, demand_data, gen_profiles, emission_rates):
     return all_results
 
 
-def _build_consequential_queue(all_results):
+def _build_consequential_queue(all_results, demand_data=None, gen_profiles=None,
+                                sensitivity='all_med', growth='Medium'):
     """Convert MAC queue results to consequential_queue.json format for step8a.
 
-    Uses the 'all_med' sensitivity + 'Medium' growth canonical pathway.
     Builds zone-step entries sorted by marginal_mac with delta_resources.
-    Falls back to any available sensitivity if all_med is missing.
+    Includes existing→50% baseline entries per ISO and gas backup tracking.
+
+    Parameters:
+        all_results: list of MAC queue result dicts from run_iso()
+        demand_data: demand profiles dict (for gas backup computation)
+        gen_profiles: generation profiles dict (for gas backup computation)
+        sensitivity: price sensitivity key (default 'all_med')
+        growth: demand growth level (default 'Medium')
     """
-    # Filter to canonical pathway
+    # Filter to target pathway
     canonical = [r for r in all_results
-                 if r.get('price_sensitivity') == 'all_med'
-                 and r.get('demand_growth') == 'Medium']
+                 if r.get('price_sensitivity') == sensitivity
+                 and r.get('demand_growth') == growth]
     if not canonical:
         # Fallback: use whatever sensitivity/growth is available
         canonical = all_results
@@ -1694,7 +1701,64 @@ def _build_consequential_queue(all_results):
 
     queue = []
     for iso, results in iso_results.items():
-        prev = None
+        # ── Load dispatch data for gas backup computation ──
+        has_dispatch = demand_data is not None and gen_profiles is not None
+        demand_norm = supply_profiles = supply_matrix = None
+        if has_dispatch:
+            try:
+                demand_norm, _ = get_demand_profile(iso, demand_data)
+                supply_profiles = get_supply_profiles(iso, gen_profiles)
+                supply_matrix = build_supply_matrix(supply_profiles)
+            except Exception as e:
+                print(f"  WARNING: Could not load dispatch data for {iso}: {e}")
+                has_dispatch = False
+
+        # ── Build existing baseline as initial prev ──
+        exist_match = _existing_match_pct(iso)
+        base_demand = BASE_DEMAND_TWH[iso]
+
+        # Create synthetic existing entry with winner_* field schema
+        existing_entry = {'threshold': exist_match, 'iso': iso}
+        for res in ['clean_firm', 'solar', 'wind', 'hydro', 'offshore_wind', 'geothermal']:
+            share_pct = GRID_MIX_SHARES[iso].get(res, 0)
+            twh = share_pct / 100.0 * base_demand
+            if res == 'hydro':
+                twh = min(twh, HYDRO_CAP_TWH[iso])
+            existing_entry[f'winner_{res}_twh'] = twh
+            existing_entry[f'winner_{res}_pct'] = share_pct
+        for stor in ['winner_battery_4h', 'winner_battery_8h', 'winner_ldes_100h']:
+            existing_entry[stor] = 0
+        for stor_pct in ['winner_battery_dispatch_pct', 'winner_battery8_dispatch_pct',
+                         'winner_ldes_dispatch_pct', 'winner_h2_dispatch_pct']:
+            existing_entry[stor_pct] = 0
+        existing_entry['demand_twh'] = base_demand
+        existing_entry['mac_this_step'] = 0
+        existing_entry['co2_avoided_mt'] = 0
+        existing_entry['new_build_cost_per_mwh_nb'] = 0
+
+        # Compute gas backup for existing baseline
+        prev_gas = 0
+        prev_new_gas = 0
+        if has_dispatch:
+            try:
+                exist_mix_pcts = {
+                    'clean_firm': GRID_MIX_SHARES[iso].get('clean_firm', 0),
+                    'solar': GRID_MIX_SHARES[iso].get('solar', 0),
+                    'wind': GRID_MIX_SHARES[iso].get('wind', 0),
+                    'offshore_wind': GRID_MIX_SHARES[iso].get('offshore_wind', 0),
+                    'ccs_ccgt': GRID_MIX_SHARES[iso].get('ccs_ccgt', 0),
+                    'hydro': GRID_MIX_SHARES[iso].get('hydro', 0),
+                }
+                gas_needed, new_gas, _, _, _ = _compute_gas_backup(
+                    iso, exist_mix_pcts, base_demand, 1.0,
+                    demand_norm, supply_profiles, supply_matrix)
+                prev_gas = gas_needed
+                prev_new_gas = new_gas
+            except Exception:
+                pass
+
+        prev = existing_entry
+
         for r in results:
             # Compute delta resources vs previous threshold
             delta_resources = {}
@@ -1717,6 +1781,35 @@ def _build_consequential_queue(all_results):
                 if abs(delta) > 0.01:
                     delta_resources[out_key] = round(delta, 3)
 
+            # ── Gas backup tracking ──
+            gas_end = 0
+            new_gas_end = 0
+            delta_gas = 0
+            if has_dispatch:
+                try:
+                    mix_pcts = {
+                        'clean_firm': r.get('winner_clean_firm_pct', 0),
+                        'solar': r.get('winner_solar_pct', 0),
+                        'wind': r.get('winner_wind_pct', 0),
+                        'offshore_wind': r.get('winner_offshore_wind_pct', 0),
+                        'ccs_ccgt': r.get('winner_ccs_ccgt_pct', 0),
+                        'hydro': r.get('winner_hydro_pct', 0),
+                        'battery_dispatch_pct': r.get('winner_battery_dispatch_pct', 0),
+                        'battery8_dispatch_pct': r.get('winner_battery8_dispatch_pct', 0),
+                        'ldes_dispatch_pct': r.get('winner_ldes_dispatch_pct', 0),
+                        'h2_dispatch_pct': r.get('winner_h2_dispatch_pct', 0),
+                    }
+                    demand_twh = r.get('demand_twh', base_demand)
+                    gf = demand_twh / base_demand if base_demand > 0 else 1.0
+                    gas_needed, new_gas, _, _, _ = _compute_gas_backup(
+                        iso, mix_pcts, demand_twh, gf,
+                        demand_norm, supply_profiles, supply_matrix)
+                    gas_end = gas_needed
+                    new_gas_end = new_gas
+                    delta_gas = gas_end - prev_gas
+                except Exception:
+                    pass
+
             queue.append({
                 'iso': iso,
                 'zone_label': f"{prev['threshold'] if prev else 'existing'}→{r['threshold']}%",
@@ -1728,7 +1821,12 @@ def _build_consequential_queue(all_results):
                 'delta_resources': delta_resources,
                 'demand_twh': r.get('demand_twh', 0),
                 'target_year': r.get('target_year', 2050),
+                'gas_backup_mw_end': gas_end,
+                'delta_gas_mw': delta_gas,
+                'new_gas_mw_end': new_gas_end,
             })
+            prev_gas = gas_end
+            prev_new_gas = new_gas_end
             prev = r
 
     # Sort by marginal MAC (cheapest first) for cross-ISO merit order
@@ -2080,13 +2178,35 @@ def main():
     # Step 8A reads this file and walks the queue sorted by marginal_mac.
     # Format: list of zone-step dicts with iso, delta_resources, marginal_mac.
     # Uses 'all_med' sensitivity + 'Medium' growth as the canonical pathway.
+    # Includes existing→50% baseline entries and gas backup tracking.
     if all_results:
-        queue = _build_consequential_queue(all_results)
+        queue = _build_consequential_queue(all_results,
+                                            demand_data=demand_data,
+                                            gen_profiles=gen_profiles,
+                                            sensitivity='all_med',
+                                            growth='Medium')
         queue_path = os.path.join(args.output_dir, 'consequential_queue.json')
         with open(queue_path, 'w') as f:
             json.dump({'queue': queue, 'generated': time.strftime('%Y-%m-%d %H:%M:%S'),
-                       'source': 'step5d_mac_queue.py'}, f, indent=2, default=str)
+                       'source': 'step5d_mac_queue.py',
+                       'sensitivity': 'all_med'}, f, indent=2, default=str)
         print(f"Saved consequential queue: {queue_path} ({len(queue)} steps)")
+
+    # ── Export consequential_queue_scenario_a.json for step7c ──
+    # Same queue format but using high_firm_low_vre sensitivity (Scenario A toggles).
+    # Step7c reads this for its queue_a to ensure exact sensitivity match.
+    if all_results:
+        queue_a = _build_consequential_queue(all_results,
+                                              demand_data=demand_data,
+                                              gen_profiles=gen_profiles,
+                                              sensitivity='high_firm_low_vre',
+                                              growth='Medium')
+        queue_a_path = os.path.join(args.output_dir, 'consequential_queue_scenario_a.json')
+        with open(queue_a_path, 'w') as f:
+            json.dump({'queue': queue_a, 'generated': time.strftime('%Y-%m-%d %H:%M:%S'),
+                       'source': 'step5d_mac_queue.py',
+                       'sensitivity': 'high_firm_low_vre'}, f, indent=2, default=str)
+        print(f"Saved scenario A queue: {queue_a_path} ({len(queue_a)} steps)")
 
     # ── Export scenario_a_{ISO}.json for step7c compatibility ──
     # Re-prices MAC queue winners under SCENARIO_A toggles (Low VRE, High firm)
