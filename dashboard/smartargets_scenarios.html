@@ -161,7 +161,7 @@
     <p>Each scenario represents a different set of <strong>market conditions</strong> &mdash; not a different target. The question each scenario answers: <em>"How clean does the grid get when the market looks like this?"</em></p>
     <p>The framework is built on <strong>three uncertainty dimensions</strong>:</p>
     <ol>
-        <li><strong>Decarbonization Incentive</strong> &mdash; None (reference), power sector net-zero by 2050 (aspirational), or partial clean targets at 70/80/90% (qualified). This determines whether there's a forcing mechanism pushing the grid toward decarbonization.</li>
+        <li><strong>Decarbonization Incentive</strong> &mdash; None (reference/qualified) or power sector net-zero by 2050 (aspirational). Reference and Qualified scenarios use current policy only &mdash; no forcing mechanism. Aspirational scenarios apply a carbon price or equivalent constraint. The Qualified Target level emerges from each company's cost tolerance threshold under reference conditions.</li>
         <li><strong>Decarbonization Technology Options</strong> &mdash; Fuller vs. More Limited technology portfolios. Fuller includes DAC, CCS, new nuclear (SMR/advanced), LDES, and Green H&#8322;. More Limited restricts to renewables, batteries, and existing nuclear only &mdash; nuclear stalls, CCS fails, LDES stays pre-commercial.</li>
         <li><strong>Market Conditions</strong> &mdash; Facilitating vs. Challenging. Facilitating means low clean LCOE, reformed interconnection queues (~5-8 GW/yr/ISO), fast learning curves, and moderate demand growth. Challenging means high clean costs, constrained queues (~2-4 GW/yr/ISO, status quo), slow learning, and high demand growth from AI/data centers.</li>
     </ol>
@@ -460,13 +460,21 @@
     <p><strong>State of the world:</strong> Identical to R1 &mdash; current policy, no carbon price, no new mandates. The difference is the <em>question being asked</em>. R1 asks "what does the market do?" Q1 asks "what can the <em>company</em> commit to shareholders, based on what the market will do?"</p>
     <p><strong>QTs are NOT partial ATs with a weaker forcing mechanism.</strong> They represent the best a company can achieve under current/realistic conditions <em>without</em> new enabling conditions. No new carbon price, no new CES, no new mandates beyond what exists today. The QT level emerges from the same market simulation as R1 &mdash; it's the market equilibrium formalized as a corporate commitment.</p>
 
-    <p><strong>How the QT is determined:</strong></p>
+    <p><strong>How the QT is determined:</strong> Emissions reduction ranges are tested at <strong>5% intervals</strong> (50%, 55%, 60%, ... 95%) to identify the precise crossover point where further reductions become uneconomic.</p>
     <ol>
-        <li>Run the market simulation under R1 facilitating conditions</li>
-        <li>The model produces an emergent clean level per ISO (e.g., R1 might produce 55-70% clean)</li>
-        <li>The company sets its QT at or slightly below this level &mdash; "the market will get us here anyway, we can credibly commit to it"</li>
+        <li>Run the market simulation under R1 facilitating conditions, forcing each 5% reduction target</li>
+        <li>The model outputs how wholesale prices, capacity needs, and retirement schedules must shift to meet each target</li>
+        <li>The company identifies the strictest target its fleet can align with while remaining profitable and competitive</li>
         <li>The <strong>gap between QT and AT (S1/S2 NZ target)</strong> is the key output &mdash; it defines the enabling conditions the company must report</li>
     </ol>
+
+    <p><strong>Utility vs. IPP framing:</strong> For a <strong>vertically integrated utility</strong>, the QT balances reductions against consumer rates &mdash; "how far can we push without unacceptable rate increases?" For an <strong>IPP</strong>, the premise shifts to competitive market survival:</p>
+    <ul>
+        <li><strong>Regional view:</strong> Without a captive rate base, forcing emission targets simulates the entire regional wholesale market's least-cost response</li>
+        <li><strong>Market viability:</strong> The model reveals how wholesale prices and capacity needs shift at each 5% step</li>
+        <li><strong>Portfolio scaling:</strong> The IPP scales macro-level market shifts down to evaluate its own asset viability</li>
+        <li><strong>Setting the target:</strong> The QT is the strictest reduction where the fleet remains profitable &mdash; balancing reductions against <em>asset stranding and merchant risk</em></li>
+    </ul>
 
     <div class="sc-inputs">
         <h5>Scenario Inputs (Same as R1)</h5>
@@ -490,7 +498,7 @@
     </div>
     <p><em>"What can we commit to when the market works against us?"</em></p>
     <p><strong>State of the world:</strong> Identical to R2 &mdash; current policy, no carbon price, challenging conditions. Nuclear stalls, LDES stays pre-commercial, CCS is limited but 45Q remains. High demand growth compounds with constrained queues and slow learning.</p>
-    <p>Q2 defines the <strong>QT floor</strong> &mdash; the minimum credible commitment even when everything's hard. The range between Q1 and Q2 results defines the company's <strong>"ambition range"</strong>: what they can commit to at best vs. worst under current policy.</p>
+    <p>Q2 defines the <strong>QT floor</strong> &mdash; the minimum credible commitment even when everything's hard. Same 5% interval testing (50%, 55%, ... 95%) but under adverse conditions, the crossover hits earlier &mdash; higher costs per reduction increment push the viable threshold lower. The range between Q1 and Q2 results defines the company's <strong>"ambition range"</strong>: what they can commit to at best vs. worst under current policy.</p>
     <p><strong>The AT-QT gap under challenging conditions is larger</strong> &mdash; meaning more enabling conditions are needed to close it. This is the risk signal: "If conditions deteriorate, we need even more help to reach NZ."</p>
     <div class="sc-inputs">
         <h5>Scenario Inputs (Same as R2)</h5>

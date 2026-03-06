@@ -566,14 +566,26 @@ Same economy-wide mechanisms as S3, but under challenging conditions:
 - QTs use the **same policy environment as R1/R2** — current policy only. No additional forcing mechanism.
 - The QT level is determined by the model: run the market simulation under current-policy conditions and find the maximum clean level where deployment is still economically rational (profitable or cost-effective to commit to)
 - The **gap between QT and AT** is the key output — it defines the "enabling conditions gap" the company must report: "We can commit to X% (QT). To reach NZ (AT), we would need: interconnection reform, CCS viability, carbon pricing, nuclear pathway, etc."
-- **For IPPs**: Q scenarios answer "what can we commit to shareholders TODAY?" — not "what happens under hypothetical future policy." This is the near-term business plan.
+- **QT emissions reduction ranges are tested at 5% intervals** (e.g., 50%, 55%, 60%, ..., 95%) to identify the precise crossover point where further reductions become uneconomic.
 
-**How QTs are determined:**
+**QT Determination for Vertically Integrated Utilities:**
 1. Run market simulation under Q1 (facilitating) and Q2 (challenging) conditions
 2. The model produces an emergent clean level per ISO — same as R1/R2, but now the company asks: "Can I credibly commit to this level?"
 3. The QT is typically at or slightly below the R1/R2 market equilibrium — it's what the market would do anyway, formalized as a corporate commitment
 4. If R1 produces 65% clean and R2 produces 45% clean, the QT range is 45-65% depending on risk appetite
-5. The company then reports: "Our QT is X%. To reach the AT (NZ by 2050), we need [specific enabling conditions]."
+5. The company balances emissions reductions against **consumer rates** — the QT is the strictest target achievable without unacceptable rate increases
+6. The company then reports: "Our QT is X%. To reach the AT (NZ by 2050), we need [specific enabling conditions]."
+
+**QT Determination for Independent Power Producers (IPPs):**
+
+For an IPP, the logical premise shifts from system-wide ratepayer impact to **competitive market survival**:
+
+1. **Regional view**: Because an IPP lacks a captive rate base, forcing the model to hit a strict emissions constraint simulates the entire regional wholesale market's least-cost response, not just the utility's internal system.
+2. **Testing market viability**: The model outputs how wholesale electricity prices, new capacity needs, and retirement schedules must shift across the grid to meet that forced target.
+3. **Scaling to the portfolio**: The IPP scales these regional, macro-level market shifts down to evaluate the viability of its own specific assets.
+4. **Setting the target**: The IPP's QT becomes the strictest reduction threshold their specific fleet can align with while remaining profitable and competitive in that future wholesale market.
+
+Instead of balancing reductions against consumer rates, the IPP balances reductions against **asset stranding and merchant risk**. The QT is the point where further reductions would strand existing assets or make the portfolio uncompetitive.
 
 - **Demand**: Medium growth (same as R1)
 - **Interconnection**: Reformed queues (same as R1)
