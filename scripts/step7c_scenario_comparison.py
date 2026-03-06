@@ -5,7 +5,7 @@ Reads intermediate JSON files produced by the Scenario A and Scenario B scripts,
 then performs:
   1. Consequential queue construction (dispatch-cache CO2 accounting)
   2. Stranding analysis
-  3. PCHIP-smoothed marginal MAC trajectories
+  3. MAC trajectories (Scenario A: step5d pass-through, Scenario B: incremental dispatch-based)
   4. Side-by-side comparison tables + domino sequence
   5. Final JSON + JS output for the dashboard
 
@@ -25,8 +25,6 @@ import functools
 import argparse
 import numpy as np
 from pathlib import Path
-from scipy.interpolate import PchipInterpolator
-from scipy.optimize import isotonic_regression
 
 # Ensure scripts/ is on the path
 sys.path.insert(0, str(Path(__file__).parent))
@@ -50,22 +48,21 @@ from scenario_common import (
 
 
 # ============================================================================
-# TRAJECTORY BUILDER (PCHIP + isotonic MAC smoothing)
+# TRAJECTORY BUILDER (step5d pass-through or incremental dispatch-based MAC)
 # ============================================================================
 
 def _build_trajectory(results, egrid, fossil_mix, demand_data, gen_profiles,
                       dispatch_caches, cfr_cached, _traj_co2_cache,
-                      isos, enforce_monotonic=False):
+                      isos, enforce_monotonic=False, mac_source='step5d'):
     """Build trajectory dicts from optimization results.
 
-    MAC smoothing uses a two-pass approach:
-      Pass 1: Collect cumulative (CO2_abated, new_build_cost) at each threshold.
-      Pass 2: Fit a PCHIP monotone spline to the cumulative supply curve,
-              take its derivative to get marginal MAC, then apply isotonic
-              regression to enforce non-decreasing marginal cost.
-
-    This eliminates noisy spikes from independent per-threshold optimization
-    while preserving the expected hockey-stick shape at high decarbonization.
+    MAC sourcing:
+      mac_source='step5d': Pass through mac_this_step from step5d results
+        (authoritative for Scenario A — step5d computes MAC as incremental
+        new-build cost / incremental CO2 displaced).
+      mac_source='incremental': Compute incremental MAC from dispatch-based
+        CO2 and new-build costs (for Scenario B — same formula as step5d:
+        delta_new_build_cost / delta_CO2_displaced between thresholds).
     """
     results_id = id(results)
     traj = {}
@@ -73,7 +70,7 @@ def _build_trajectory(results, egrid, fossil_mix, demand_data, gen_profiles,
         iso_traj = []
         base_demand_twh = BASE_DEMAND_TWH[iso]
 
-        # --- Pass 1: collect raw cumulative data points ---
+        # --- Collect raw data points ---
         raw_entries = []  # list of (threshold, d, demand_twh)
         for t in THRESHOLDS:
             d = results.get(iso, {}).get(t, {})
@@ -82,75 +79,50 @@ def _build_trajectory(results, egrid, fossil_mix, demand_data, gen_profiles,
             demand_twh = get_demand_twh(iso, t)
             raw_entries.append((t, d, demand_twh))
 
-        # Collect cumulative CO2 abated and new-build cost at each threshold
-        cum_co2_points = []   # cumulative CO2 abated (tons)
-        cum_cost_points = []  # cumulative new-build cost ($)
-        valid_thresholds = [] # thresholds with valid CO2 data
+        # --- Compute MAC based on source ---
+        computed_mac = {}  # threshold -> MAC value
 
-        for t, d, _ in raw_entries:
-            co2_data = _traj_co2_cache.get((iso, t, results_id))
-            if co2_data:
-                cum_co2 = co2_data['total_co2_abated_tons']
-            else:
-                # Fallback: estimate from emission rate x new generation
-                new_gen_twh = d.get('new_gen_twh', 0)
-                rate, _ = cfr_cached(iso, t, egrid, fossil_mix)
-                cum_co2 = new_gen_twh * 1e6 * rate if rate > 0 else 0
+        if mac_source == 'step5d':
+            # Direct pass-through from step5d's mac_this_step
+            for t, d, _ in raw_entries:
+                mac_val = d.get('mac_this_step')
+                if mac_val is not None and mac_val > 0:
+                    computed_mac[t] = round(mac_val, 1)
 
-            cum_cost = d.get('new_build_cost_total', 0)
-            cum_co2_points.append(cum_co2)
-            cum_cost_points.append(cum_cost)
-            valid_thresholds.append(t)
+        elif mac_source == 'incremental':
+            # Incremental MAC: delta_new_build_cost / delta_CO2_displaced
+            # Same formula as step5d uses for Scenario A
+            prev_co2 = 0
+            prev_cost = 0
+            for t, d, _ in raw_entries:
+                # Get CO2 displaced at this threshold
+                co2_data = _traj_co2_cache.get((iso, t, results_id))
+                if co2_data:
+                    co2_displaced = co2_data['total_co2_abated_tons']
+                else:
+                    # Fallback: estimate from emission rate x new generation
+                    new_gen_twh = d.get('new_gen_twh', 0)
+                    rate, _ = cfr_cached(iso, t, egrid, fossil_mix)
+                    co2_displaced = new_gen_twh * 1e6 * rate if rate > 0 else 0
 
-        # --- Pass 2: PCHIP spline + isotonic regression for smooth MAC ---
-        smoothed_mac = {}  # threshold -> smoothed MAC value
+                # Cumulative new-build cost
+                cum_cost = d.get('new_build_cost_total', 0)
 
-        if len(cum_co2_points) >= 3:
-            co2_arr = np.array(cum_co2_points, dtype=np.float64)
-            cost_arr = np.array(cum_cost_points, dtype=np.float64)
+                # Incremental MAC = delta_cost / delta_CO2
+                delta_co2 = co2_displaced - prev_co2
+                delta_cost = cum_cost - prev_cost
+                if delta_co2 > 1000:  # minimum 1000 tons CO2 to avoid noise
+                    mac_val = delta_cost / delta_co2
+                    computed_mac[t] = round(min(max(mac_val, 0), 9999), 1)
 
-            # Ensure cumulative CO2 is strictly increasing for PCHIP
-            # (monotone interpolant requires strictly increasing x)
-            # Vectorized: diff > 0 ensures strictly increasing (removes equal AND decreasing)
-            diffs = np.diff(co2_arr)
-            strictly_increasing = diffs > 0
-            mask = np.concatenate([[True], strictly_increasing])
-            # Also need cumulative max enforcement: if a later value is <= any prior max,
-            # it must be removed. np.maximum.accumulate handles this.
-            co2_cummax = np.maximum.accumulate(co2_arr)
-            # A point is valid if it equals its cumulative max AND is the first occurrence
-            mask[1:] = mask[1:] & (co2_arr[1:] > co2_cummax[:-1])
-            co2_mono = co2_arr[mask]
-            cost_mono = cost_arr[mask]
-            thresholds_mono = np.array(valid_thresholds)[mask].tolist()
+                prev_co2 = co2_displaced
+                prev_cost = cum_cost
 
-            if len(co2_mono) >= 3:
-                # Fit PCHIP spline: cost = f(co2)
-                # PCHIP preserves monotonicity and avoids overshoot
-                pchip = PchipInterpolator(co2_mono, cost_mono)
-
-                # Derivative at each data point = marginal MAC ($/ton)
-                raw_mac = pchip.derivative()(co2_mono)
-
-                # Clamp any negative derivatives to a small positive value
-                raw_mac = np.maximum(raw_mac, 0.01)
-
-                # Apply isotonic regression to enforce non-decreasing MAC
-                # This is the key: as decarbonization deepens, marginal
-                # cost should never decrease (hockey stick, not zigzag)
-                iso_result = isotonic_regression(raw_mac)
-                smoothed_vals = iso_result.x if hasattr(iso_result, 'x') else iso_result
-
-                for i, t in enumerate(thresholds_mono):
-                    val = float(smoothed_vals[i])
-                    # Cap extreme values at 9999
-                    smoothed_mac[t] = round(min(val, 9999), 1)
-
-        # --- Build trajectory entries with smoothed MAC ---
-        for t, d, demand_twh in raw_entries:
-            stepwise_mac = smoothed_mac.get(t, None)
+        # --- Build trajectory entries ---
+        for idx, (t, d, demand_twh) in enumerate(raw_entries):
+            stepwise_mac = computed_mac.get(t, None)
             # First threshold has no MAC (no prior to diff against)
-            if t == raw_entries[0][0]:
+            if idx == 0:
                 stepwise_mac = None
 
             cf_twh = d['resource_twh'].get('clean_firm', 0)
@@ -354,7 +326,7 @@ def print_comparison(results_a, results_b, queue_a, queue_b, stranding_a, strand
 # OUTPUT WRITING
 # ============================================================================
 
-def write_output(trajectories, trajectories_b_by_target, queue_a, queue_b,
+def write_output(trajectories, queue_a, queue_b,
                  stranding_a, stranding_b, isos):
     """Write JSON + JS output files for the dashboard."""
 
@@ -381,13 +353,12 @@ def write_output(trajectories, trajectories_b_by_target, queue_a, queue_b,
                 'toggles': SCENARIO_B['toggles'],
                 'method': 'endpoint_backward_learning',
                 'method_description': (
-                    'Forward-looking endpoint-optimal deployment: finds NOAK-optimal mix at 95% '
-                    '(all costs Low, CCS at Medium+45Q), then works backward with S-curve '
-                    'deployment pacing. Nuclear/LDES: H->L learning curve. CCS: H->M learning '
-                    'curve with 45Q. At each threshold, selects from feasible mixes those meeting '
-                    'firm/CCS/LDES pacing targets. Produces fundamentally different mixes from '
-                    'Scenario A -- balanced firm/storage from early thresholds rather than '
-                    'renewable-heavy.'
+                    'Forward-looking endpoint-optimal deployment: finds NOAK-optimal mix at '
+                    'target threshold (all costs Low + Medium TX), then deploys with S-curve '
+                    'pacing. All resources: H->L learning curve. Uprates deploy immediately. '
+                    'At each threshold, selects from feasible mixes meeting firm/CCS/LDES '
+                    'pacing targets with match score ceiling (no overbuild). Produces '
+                    'balanced firm/storage from early thresholds.'
                 ),
             },
             'sbti_year_map': {str(k): v for k, v in SBTI_YEAR_MAP.items()},
@@ -401,7 +372,6 @@ def write_output(trajectories, trajectories_b_by_target, queue_a, queue_b,
         'queue_a': queue_a,
         'queue_b': queue_b,
         'trajectories': trajectories,
-        'trajectories_b_by_target': trajectories_b_by_target,
         'stranding_a': stranding_a,
         'stranding_b': stranding_b,
     }
@@ -567,19 +537,11 @@ def main():
     trajectories['pure_consequential'] = _build_trajectory(
         results_a, egrid, fossil_mix, demand_data, gen_profiles,
         dispatch_caches, cfr_cached, _traj_co2_cache, isos,
-        enforce_monotonic=False)  # Floor ratchet in _forward_step_optimization already handles monotonicity
+        enforce_monotonic=False, mac_source='step5d')
     trajectories['hourly_matching'] = _build_trajectory(
         results_b, egrid, fossil_mix, demand_data, gen_profiles,
         dispatch_caches, cfr_cached, _traj_co2_cache, isos,
-        enforce_monotonic=False)
-
-    # Build per-target Scenario B trajectories for dashboard slider compatibility
-    # With step3-mining approach, all targets produce the same trajectory
-    hourly_traj = trajectories['hourly_matching']
-    trajectories_b_by_target = {}
-    for target_t in THRESHOLDS:
-        t_key = str(int(target_t)) if target_t == int(target_t) else str(target_t)
-        trajectories_b_by_target[t_key] = hourly_traj
+        enforce_monotonic=False, mac_source='incremental')
 
     # ------------------------------------------------------------------
     # Print comparison tables
@@ -590,7 +552,7 @@ def main():
     # ------------------------------------------------------------------
     # Write output files
     # ------------------------------------------------------------------
-    write_output(trajectories, trajectories_b_by_target, queue_a, queue_b,
+    write_output(trajectories, queue_a, queue_b,
                  stranding_a, stranding_b, isos)
 
     print("\nDone.")
