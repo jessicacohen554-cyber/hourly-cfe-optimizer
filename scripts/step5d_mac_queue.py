@@ -1737,18 +1737,73 @@ def _build_consequential_queue(all_results):
     return queue
 
 
+def _compute_gas_backup(iso, mix_pcts, demand_twh, growth_factor):
+    """Compute gas backup capacity and cost from a mix's resource percentages.
+
+    Standalone gas backup calculation extracted from compute_mix_cost.
+    Returns (gas_backup_mw, new_gas_mw, existing_gas_used_mw, clean_peak_mw, gas_cost_per_mwh).
+    """
+    from scenario_common import (
+        PEAK_DEMAND_MW, EXISTING_GAS_CAPACITY_MW, EXISTING_GAS_FOM_KW_YR,
+        NEW_CCGT_COST_KW_YR, PEAK_CAPACITY_CREDITS, GAS_AVAILABILITY_FACTOR,
+        RESOURCE_ADEQUACY_MARGIN, HYDRO_CAP_TWH as SC_HYDRO_CAP_TWH,
+    )
+    demand_mwh = demand_twh * 1e6
+    avg_demand_mw = demand_mwh / 8760.0
+    peak_mw = PEAK_DEMAND_MW[iso] * growth_factor
+    ra_peak_mw = peak_mw * (1 + RESOURCE_ADEQUACY_MARGIN)
+
+    cf_pct = mix_pcts.get('clean_firm', 0)
+    sol_pct = mix_pcts.get('solar', 0)
+    wnd_pct = mix_pcts.get('wind', 0)
+    osw_pct = mix_pcts.get('offshore_wind', 0)
+    ccs_pct = mix_pcts.get('ccs_ccgt', 0)
+    hyd_pct = mix_pcts.get('hydro', 0)
+    bat4_pct = mix_pcts.get('battery_dispatch_pct', 0)
+    bat8_pct = mix_pcts.get('battery8_dispatch_pct', 0)
+    ldes_pct = mix_pcts.get('ldes_dispatch_pct', 0)
+
+    hydro_twh_capped = min(hyd_pct / 100.0 * demand_twh, SC_HYDRO_CAP_TWH[iso])
+    hydro_avg_mw = hydro_twh_capped * 1e6 / 8760.0
+    pcc = PEAK_CAPACITY_CREDITS
+
+    clean_peak_mw = (
+        cf_pct / 100 * avg_demand_mw * pcc.get('clean_firm', 0) +
+        sol_pct / 100 * avg_demand_mw * pcc.get('solar', 0) +
+        wnd_pct / 100 * avg_demand_mw * pcc.get('wind', 0) +
+        osw_pct / 100 * avg_demand_mw * pcc.get('offshore_wind', 0) +
+        ccs_pct / 100 * avg_demand_mw * pcc.get('ccs_ccgt', 0) +
+        hydro_avg_mw * pcc.get('hydro', 0) +
+        bat4_pct / 100 * demand_mwh / 4.0 * pcc.get('battery', 0) +
+        bat8_pct / 100 * demand_mwh / 8.0 * pcc.get('battery8', 0) +
+        ldes_pct / 100 * demand_mwh / 100.0 * pcc.get('ldes', 0)
+    )
+    gaf = GAS_AVAILABILITY_FACTOR[iso]
+    gas_needed_mw = max(0, ra_peak_mw - clean_peak_mw) / gaf
+    existing_gas_mw = EXISTING_GAS_CAPACITY_MW[iso]
+    existing_gas_used_mw = min(gas_needed_mw, existing_gas_mw)
+    new_gas_mw = max(0, gas_needed_mw - existing_gas_used_mw)
+    gas_cost = (
+        existing_gas_used_mw * EXISTING_GAS_FOM_KW_YR[iso] * 1000 +
+        new_gas_mw * NEW_CCGT_COST_KW_YR[iso] * 1000
+    ) / demand_mwh
+
+    return round(gas_needed_mw), round(new_gas_mw), round(existing_gas_used_mw), round(clean_peak_mw), gas_cost
+
+
 def _export_scenario_a(all_results, isos_processed, sensitivity='high_firm_low_vre',
                        growth='Medium'):
     """Export step5d MAC queue results as scenario_a_{ISO}.json for step7c compatibility.
 
-    Converts winner mixes from the specified sensitivity+growth pathway into
-    the scenario_common format (compute_mix_cost re-pricing under SCENARIO_A toggles).
-    This lets step7c read these results as Scenario A without running step7a.
+    Uses step5d's own cost model directly (new-build LCOE + gas backup), NOT
+    compute_mix_cost. This avoids the storage pricing mismatch that caused
+    wildly inflated costs when re-pricing through a different cost model.
 
-    The canonical pathway for Scenario A is high_firm_low_vre + Medium growth,
-    which represents the "chase cheap carbon" strategy with expensive firm costs.
+    System cost = step5d new-build cost (per MWh demand) + gas backup cost.
+    Effective cost = system cost / match fraction.
+    MAC = step5d's own mac_this_step (authoritative, pass-through).
     """
-    sens_toggles = SCENARIO_A['toggles']
+    from scenario_common import WHOLESALE_PRICES, FUEL_ADJUSTMENTS
 
     # Filter to target sensitivity + growth
     canonical = [r for r in all_results
@@ -1774,7 +1829,8 @@ def _export_scenario_a(all_results, isos_processed, sensitivity='high_firm_low_v
 
         iso_data = {}
 
-        # Inject pre-50% existing-only entries (same as step7a)
+        # Inject pre-50% existing-only entries
+        sens_toggles = SCENARIO_A['toggles']
         exist_match = _existing_match_pct(iso)
         for t_pre in [t for t in SCENARIO_THRESHOLDS if t < 50]:
             if t_pre <= exist_match:
@@ -1788,61 +1844,126 @@ def _export_scenario_a(all_results, isos_processed, sensitivity='high_firm_low_v
                 iso_data[t_pre] = _build_existing_only_entry(
                     iso, t_pre, demand_pre, gf_pre, existing_twh, sens_toggles)
 
-        # Convert each threshold winner to scenario_common format
+        # Convert each threshold winner using step5d's own costs
         for r in iso_results:
             t = r['threshold']
             demand_twh = r['demand_twh']
-
-            # Reconstruct 11-element mix vector from winner columns:
-            # [cf, sol, wnd, osw, ccs, hyd, score, bat4, bat8, ldes, h2]
-            mix = [
-                r.get('winner_clean_firm_pct', 0),
-                r.get('winner_solar_pct', 0),
-                r.get('winner_wind_pct', 0),
-                r.get('winner_offshore_wind_pct', 0),
-                0.0,  # CCS — step5d tracks clean_firm tranches separately
-                r.get('winner_hydro_pct', 0),
-                r.get('winner_match_score', r.get('winner_match_score', 0)),
-                r.get('winner_battery_dispatch_pct', 0),
-                r.get('winner_battery8_dispatch_pct', 0),
-                r.get('winner_ldes_dispatch_pct', 0),
-                r.get('winner_h2_dispatch_pct', 0),
-            ]
-
-            # Growth factor for this threshold
+            demand_mwh = demand_twh * 1e6
             gf = demand_twh / BASE_DEMAND_TWH[iso] if BASE_DEMAND_TWH[iso] > 0 else 1.0
 
-            # Re-price through compute_mix_cost with SCENARIO_A toggles
-            result = compute_mix_cost(mix, sens_toggles, iso, demand_twh,
-                                       overrides={'uprate_lcoe': UPRATE_LCOE.get('M', 25)},
-                                       growth_factor=gf)
+            # --- Resource TWh (use step5d's winner values directly) ---
+            cf_pct = r.get('winner_clean_firm_pct', 0)
+            sol_pct = r.get('winner_solar_pct', 0)
+            wnd_pct = r.get('winner_wind_pct', 0)
+            osw_pct = r.get('winner_offshore_wind_pct', 0)
+            hyd_pct = r.get('winner_hydro_pct', 0)
+            geo_pct = r.get('winner_geothermal_pct', 0)
+            match_score = r.get('winner_match_score', 0)
+            match_frac = match_score / 100.0
 
-            # Override new_build_cost_total with step5d's actual MAC-based cost
-            # (compute_mix_cost calculates system cost; step5d tracks NB cost separately)
-            result['new_build_cost_total'] = r.get('new_build_cost_total', 0)
-            result['new_gen_twh'] = r.get('new_build_twh_total', result.get('new_gen_twh', 0))
+            bat4_pct = r.get('winner_battery_dispatch_pct', 0)
+            bat8_pct = r.get('winner_battery8_dispatch_pct', 0)
+            ldes_pct = r.get('winner_ldes_dispatch_pct', 0)
+            h2_pct = r.get('winner_h2_dispatch_pct', 0)
 
-            # Add step5d-specific fields for downstream analysis
-            result['demand_twh'] = demand_twh
-            result['demand_mwh'] = demand_twh * 1e6
-            result['mix_raw'] = mix
-            result['mix_source'] = 'MAC-queue'
+            hydro_cap = HYDRO_CAP_TWH.get(iso, hyd_pct / 100.0 * demand_twh)
+            hydro_twh = min(hyd_pct / 100.0 * demand_twh, hydro_cap)
 
-            # MAC and CO2 fields from step5d
-            result['mac_this_step'] = r.get('mac_this_step', 0)
-            result['co2_avoided_mt'] = r.get('co2_avoided_mt', 0)
-            result['co2_after_mt'] = r.get('co2_after_mt', 0)
-            result['baseline_co2_mt'] = r.get('baseline_co2_mt', 0)
-            result['cumulative_new_build_cost'] = r.get('cumulative_new_build_cost', 0)
-            result['cumulative_co2_avoided_mt'] = r.get('cumulative_co2_avoided_mt', 0)
-            result['cumulative_mac'] = r.get('cumulative_mac', 0)
-            result['target_year'] = r.get('target_year', 2050)
+            # Split clean_firm into nuclear vs CCS using compute_clean_firm_tranches
+            existing_cf_twh = GRID_MIX_SHARES[iso].get('clean_firm', 0) / 100.0 * BASE_DEMAND_TWH[iso]
+            total_cf_twh = cf_pct / 100.0 * demand_twh
+            new_cf_twh = max(0, total_cf_twh - existing_cf_twh)
+            geo_physics_twh = geo_pct / 100.0 * demand_twh if iso == 'CAISO' else 0
 
-            # Dispatch percentages for dispatch cache lookups
-            result['battery_dispatch_pct'] = mix[7]
-            result['battery8_dispatch_pct'] = mix[8]
-            result['ldes_dispatch_pct'] = mix[9]
-            result['h2_dispatch_pct'] = mix[10]
+            # Use pipeline_config's tranche splitter for CCS/nuclear breakdown
+            if new_cf_twh > 0:
+                tranches = compute_clean_firm_tranches(
+                    new_cf_twh=new_cf_twh, iso=iso,
+                    firm_lev='H', ccs_lev='H', q45='1', tx_name='Medium',
+                    geo_lev='H' if iso == 'CAISO' else None,
+                    geo_physics_new_twh=geo_physics_twh,
+                )
+                ccs_twh = tranches.get('ccs_tranche_twh', 0)
+            else:
+                ccs_twh = 0
+
+            resource_twh = {
+                'clean_firm': total_cf_twh,
+                'solar': sol_pct / 100.0 * demand_twh,
+                'wind': wnd_pct / 100.0 * demand_twh,
+                'offshore_wind': osw_pct / 100.0 * demand_twh,
+                'ccs_ccgt': ccs_twh,
+                'hydro': hydro_twh,
+            }
+
+            # --- System cost: step5d CUMULATIVE new-build cost + gas backup ---
+            # Use cumulative_new_build_cost (total from 50% through this threshold),
+            # not per-step new_build_cost_total, to match compute_mix_cost semantics
+            # where total_cost = all new resources vs 2025 baseline.
+            cum_nb_cost = r.get('cumulative_new_build_cost', 0)
+            nb_cost_per_mwh = cum_nb_cost / demand_mwh if demand_mwh > 0 else 0
+
+            # Gas backup
+            mix_pcts = {
+                'clean_firm': cf_pct, 'solar': sol_pct, 'wind': wnd_pct,
+                'offshore_wind': osw_pct, 'ccs_ccgt': 0, 'hydro': hyd_pct,
+                'battery_dispatch_pct': bat4_pct, 'battery8_dispatch_pct': bat8_pct,
+                'ldes_dispatch_pct': ldes_pct,
+            }
+            gas_mw, new_gas_mw, exist_gas_mw, clean_peak_mw, gas_cost = \
+                _compute_gas_backup(iso, mix_pcts, demand_twh, gf)
+
+            total_cost = round(nb_cost_per_mwh + gas_cost, 2)
+            effective_cost = round(total_cost / match_frac if match_frac > 0 else 0, 2)
+            wholesale = max(5, WHOLESALE_PRICES[iso] + FUEL_ADJUSTMENTS[iso].get('Medium', 0))
+            incremental = round(effective_cost - wholesale, 2)
+
+            new_gen_twh = r.get('new_build_twh_total', 0)
+            blended_new_lcoe = round(cum_nb_cost / (new_gen_twh * 1e6), 2) if new_gen_twh > 0.001 else 0
+
+            result = {
+                'total_cost': total_cost,
+                'effective_cost': effective_cost,
+                'incremental': incremental,
+                'wholesale': wholesale,
+                'gas_cost': round(gas_cost, 4),
+                'resource_twh': resource_twh,
+                'resource_pct': {
+                    'clean_firm': cf_pct, 'solar': sol_pct, 'wind': wnd_pct,
+                    'offshore_wind': osw_pct, 'ccs_ccgt': 0, 'hydro': hyd_pct,
+                },
+                'match_score': match_score,
+                'battery_twh': bat4_pct / 100.0 * demand_twh,
+                'battery8_twh': bat8_pct / 100.0 * demand_twh,
+                'ldes_twh': ldes_pct / 100.0 * demand_twh,
+                'h2_twh': h2_pct / 100.0 * demand_twh,
+                'gas_backup_mw': gas_mw,
+                'new_gas_mw': new_gas_mw,
+                'existing_gas_used_mw': exist_gas_mw,
+                'clean_peak_mw': clean_peak_mw,
+                'new_build_cost_total': cum_nb_cost,
+                'new_gen_twh': round(new_gen_twh, 3),
+                'blended_new_lcoe': blended_new_lcoe,
+                'demand_twh': demand_twh,
+                'demand_mwh': demand_mwh,
+                'mix_raw': [cf_pct, sol_pct, wnd_pct, osw_pct, 0.0, hyd_pct,
+                            match_score, bat4_pct, bat8_pct, ldes_pct, h2_pct],
+                'mix_source': 'MAC-queue',
+                # Step5d MAC and CO2 (authoritative, pass-through)
+                'mac_this_step': r.get('mac_this_step', 0),
+                'co2_avoided_mt': r.get('co2_avoided_mt', 0),
+                'co2_after_mt': r.get('co2_after_mt', 0),
+                'baseline_co2_mt': r.get('baseline_co2_mt', 0),
+                'cumulative_new_build_cost': r.get('cumulative_new_build_cost', 0),
+                'cumulative_co2_avoided_mt': r.get('cumulative_co2_avoided_mt', 0),
+                'cumulative_mac': r.get('cumulative_mac', 0),
+                'target_year': r.get('target_year', 2050),
+                # Dispatch percentages for dispatch cache lookups
+                'battery_dispatch_pct': bat4_pct,
+                'battery8_dispatch_pct': bat8_pct,
+                'ldes_dispatch_pct': ldes_pct,
+                'h2_dispatch_pct': h2_pct,
+            }
 
             iso_data[t] = result
 
