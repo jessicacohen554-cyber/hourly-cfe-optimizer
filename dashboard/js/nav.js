@@ -248,6 +248,7 @@
                 { label: 'Fleet Analysis', href: 'pg_fleet_analysis.html' },
                 { label: 'Fleet Survival', href: 'fleet_survival.html' },
                 { label: 'SMARTargets Scenarios', href: 'smartargets_scenarios.html' },
+                { label: 'SMARTargets Dashboard', href: 'smartargets_dashboard.html' },
                 { label: 'Targets & Feasibility', href: 'pg_targets.html' },
                 { label: 'Policy & Conditions', href: 'pg_policy.html' },
                 { label: 'Methodology', href: 'pg_methodology.html' }
