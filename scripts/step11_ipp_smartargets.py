@@ -653,10 +653,25 @@ def find_qt_breakeven(company, step10_data, qt_scenario):
             fan_bands['min'].append(round(float(arr.min()), 2))
             fan_bands['max'].append(round(float(arr.max()), 2))
 
+    # Profit fan bands
+    profit_fan_bands = {'p5': [], 'p25': [], 'p50': [], 'p75': [], 'p95': [], 'min': [], 'max': []}
+    for yi in range(len(SIM_YEARS)):
+        vals = [fan_profit[f'{t:.2f}'][yi] for t in targets if f'{t:.2f}' in fan_profit]
+        if vals:
+            arr = np.array(vals)
+            profit_fan_bands['p5'].append(round(float(np.percentile(arr, 5)), 1))
+            profit_fan_bands['p25'].append(round(float(np.percentile(arr, 25)), 1))
+            profit_fan_bands['p50'].append(round(float(np.percentile(arr, 50)), 1))
+            profit_fan_bands['p75'].append(round(float(np.percentile(arr, 75)), 1))
+            profit_fan_bands['p95'].append(round(float(np.percentile(arr, 95)), 1))
+            profit_fan_bands['min'].append(round(float(arr.min()), 1))
+            profit_fan_bands['max'].append(round(float(arr.max()), 1))
+
     return {
         'reduction_targets': [round(t, 2) for t in targets],
         'breakeven_qt': round(breakeven_qt, 2),
         'fan': fan_bands,
+        'profit_fan': profit_fan_bands,
         'emissions_by_target': fan_emissions,
         'profit_by_target': fan_profit,
     }
@@ -770,10 +785,25 @@ def simulate_active_qt(company, step10_data, qt_scenario):
             fan_bands['min'].append(round(float(arr.min()), 2))
             fan_bands['max'].append(round(float(arr.max()), 2))
 
+    # Profit fan bands
+    profit_fan_bands = {'p5': [], 'p25': [], 'p50': [], 'p75': [], 'p95': [], 'min': [], 'max': []}
+    for yi in range(len(SIM_YEARS)):
+        vals = [fan_profit[f'{t:.2f}'][yi] for t in targets if f'{t:.2f}' in fan_profit]
+        if vals:
+            arr = np.array(vals)
+            profit_fan_bands['p5'].append(round(float(np.percentile(arr, 5)), 1))
+            profit_fan_bands['p25'].append(round(float(np.percentile(arr, 25)), 1))
+            profit_fan_bands['p50'].append(round(float(np.percentile(arr, 50)), 1))
+            profit_fan_bands['p75'].append(round(float(np.percentile(arr, 75)), 1))
+            profit_fan_bands['p95'].append(round(float(np.percentile(arr, 95)), 1))
+            profit_fan_bands['min'].append(round(float(arr.min()), 1))
+            profit_fan_bands['max'].append(round(float(arr.max()), 1))
+
     return {
         'reduction_targets': [round(t, 2) for t in targets],
         'breakeven_qt': round(breakeven_qt, 2),
         'fan': fan_bands,
+        'profit_fan': profit_fan_bands,
         'emissions_by_target': fan_emissions,
         'profit_by_target': fan_profit,
         'deployment_timeline': deployment_timeline,
@@ -904,6 +934,7 @@ def main():
                     'breakeven_qt': qt_res['breakeven_qt'],
                     'reduction_targets': qt_res['reduction_targets'],
                     'fan': qt_res['fan'],
+                    'profit_fan': qt_res['profit_fan'],
                     'emissions_at_targets': {
                         k: v for k, v in qt_res['emissions_by_target'].items()
                         if float(k) in (0.05, 0.25, 0.50, 0.75, 0.95)
@@ -927,6 +958,7 @@ def main():
                     'breakeven_qt': aqt_res['breakeven_qt'],
                     'reduction_targets': aqt_res['reduction_targets'],
                     'fan': aqt_res['fan'],
+                    'profit_fan': aqt_res['profit_fan'],
                     'emissions_at_targets': {
                         k: v for k, v in aqt_res['emissions_by_target'].items()
                         if float(k) in (0.05, 0.25, 0.50, 0.75, 0.95)

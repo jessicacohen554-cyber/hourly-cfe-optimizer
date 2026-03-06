@@ -499,17 +499,17 @@ function updateFanCharts() {
         const af = activeData.fan;
         // Active fan bands (green tones)
         datasets.push({
-            label: 'Active P75', data: af.p75, borderColor: 'rgba(34,197,94,0.3)', backgroundColor: 'rgba(34,197,94,0.1)',
+            label: 'Active P75', data: af.p75, borderColor: 'rgba(5,150,105,0.3)', backgroundColor: 'rgba(5,150,105,0.1)',
             fill: '+1', pointRadius: 0, borderWidth: 1, order: 5
         });
         datasets.push({
-            label: 'Active P25', data: af.p25, borderColor: 'rgba(34,197,94,0.3)', backgroundColor: 'transparent',
+            label: 'Active P25', data: af.p25, borderColor: 'rgba(5,150,105,0.3)', backgroundColor: 'transparent',
             fill: false, pointRadius: 0, borderWidth: 1, order: 5
         });
         // Active median
         datasets.push({
             label: 'Active Median', data: af.p50,
-            borderColor: '#22C55E', backgroundColor: 'transparent',
+            borderColor: '#059669', backgroundColor: 'transparent',
             fill: false, pointRadius: 4, borderWidth: 2.5, order: 1, pointStyle: 'rectRot'
         });
     }
@@ -523,7 +523,7 @@ function updateFanCharts() {
         const atEmissions = atRemaining.map(r => Math.max(0, co2_base * r));
         datasets.push({
             label: 'AT Trajectory', data: atEmissions,
-            borderColor: '#EF4444', backgroundColor: 'transparent',
+            borderColor: '#06B6D4', backgroundColor: 'transparent',
             fill: false, pointRadius: 4, borderWidth: 2, borderDash: [8, 4], order: 0,
             pointStyle: 'triangle'
         });
@@ -557,7 +557,9 @@ function updateFanCharts() {
                     font: { family: 'Space Grotesk', size: 10 }, padding: 12,
                     filter: item => !item.text.includes('P95') && !item.text.includes('P75') && !item.text.includes('P25') && !item.text.includes('P5') && !item.text.includes('Max') && !item.text.includes('Min')
                 }},
-                tooltip: { mode: 'index', intersect: false }
+                tooltip: { mode: 'index', intersect: false,
+                    filter: item => !/P[0-9]|Max|Min/.test(item.dataset.label)
+                }
             },
             interaction: { mode: 'index', intersect: false }
         }
@@ -578,16 +580,74 @@ function updateProfitChart() {
     const years = [2023, 2030, 2035, 2040, 2045, 2050];
     const datasets = [];
 
-    // Show all base scenarios
-    SCENARIOS.forEach(s => {
-        const sd = co.scenarios[s];
-        if (!sd) return;
+    // Get QT profit fan data (if available from updated step11)
+    const passiveQt = co.qt_analysis[activeQT];
+    const activeQt = co.active_qt_analysis ? co.active_qt_analysis[activeQT] : null;
+
+    if (passiveQt && passiveQt.profit_fan) {
+        const pf = passiveQt.profit_fan;
+        // Passive P25-P75 band
         datasets.push({
-            label: SCENARIO_LABELS[s], data: sd.fleet_profit_m,
-            borderColor: SCENARIO_COLORS[s], backgroundColor: SCENARIO_COLORS[s] + '20',
-            fill: false, pointRadius: 3, borderWidth: 2
+            label: 'Passive P75', data: pf.p75,
+            borderColor: 'rgba(99,102,241,0.35)', backgroundColor: 'rgba(99,102,241,0.12)',
+            fill: '+1', pointRadius: 0, borderWidth: 1, order: 6
         });
-    });
+        datasets.push({
+            label: 'Passive P25', data: pf.p25,
+            borderColor: 'rgba(99,102,241,0.35)', backgroundColor: 'transparent',
+            fill: false, pointRadius: 0, borderWidth: 1, order: 6
+        });
+        // Passive median
+        datasets.push({
+            label: 'Passive Median', data: pf.p50,
+            borderColor: '#6366F1', backgroundColor: 'transparent',
+            fill: false, pointRadius: 3, borderWidth: 2.5, order: 2
+        });
+
+        // Active profit fan (when toggled)
+        if (showActiveQT && activeQt && activeQt.profit_fan) {
+            const af = activeQt.profit_fan;
+            datasets.push({
+                label: 'Active P75', data: af.p75,
+                borderColor: 'rgba(5,150,105,0.3)', backgroundColor: 'rgba(5,150,105,0.1)',
+                fill: '+1', pointRadius: 0, borderWidth: 1, order: 5
+            });
+            datasets.push({
+                label: 'Active P25', data: af.p25,
+                borderColor: 'rgba(5,150,105,0.3)', backgroundColor: 'transparent',
+                fill: false, pointRadius: 0, borderWidth: 1, order: 5
+            });
+            datasets.push({
+                label: 'Active Median', data: af.p50,
+                borderColor: '#059669', backgroundColor: 'transparent',
+                fill: false, pointRadius: 4, borderWidth: 2.5, order: 1, pointStyle: 'rectRot'
+            });
+        }
+    } else {
+        // Fallback: show all base scenario lines (pre-profit_fan data)
+        SCENARIOS.forEach(s => {
+            const sd = co.scenarios[s];
+            if (!sd) return;
+            datasets.push({
+                label: SCENARIO_LABELS[s], data: sd.fleet_profit_m,
+                borderColor: SCENARIO_COLORS[s], backgroundColor: SCENARIO_COLORS[s] + '20',
+                fill: false, pointRadius: 3, borderWidth: 2
+            });
+        });
+    }
+
+    // R1/R2 reference overlays (always shown)
+    if (passiveQt && passiveQt.profit_fan) {
+        ['R1', 'R2'].forEach(s => {
+            const sd = co.scenarios[s];
+            if (!sd) return;
+            datasets.push({
+                label: SCENARIO_LABELS[s], data: sd.fleet_profit_m,
+                borderColor: SCENARIO_COLORS[s], backgroundColor: 'transparent',
+                fill: false, pointRadius: 2, borderWidth: 1.5, borderDash: [6, 3], order: 3
+            });
+        });
+    }
 
     if (profitChart) profitChart.destroy();
     profitChart = new Chart(document.getElementById('profitChart'), {
@@ -601,8 +661,14 @@ function updateProfitChart() {
                      ticks: { font: { family: 'Space Mono', size: 11 }, callback: v => '$' + v.toLocaleString() } }
             },
             plugins: {
-                legend: { display: true, position: 'bottom', labels: { font: { family: 'Space Grotesk', size: 10 }, padding: 8 } },
-                tooltip: { mode: 'index', intersect: false, callbacks: { label: ctx => `${ctx.dataset.label}: $${ctx.parsed.y.toLocaleString()}M` } }
+                legend: { display: true, position: 'bottom', labels: {
+                    font: { family: 'Space Grotesk', size: 10 }, padding: 8,
+                    filter: item => !/P[0-9]|Max|Min/.test(item.text)
+                }},
+                tooltip: { mode: 'index', intersect: false,
+                    filter: item => !/P[0-9]|Max|Min/.test(item.dataset.label),
+                    callbacks: { label: ctx => `${ctx.dataset.label}: $${ctx.parsed.y.toLocaleString()}M` }
+                }
             },
             interaction: { mode: 'index', intersect: false }
         }
@@ -628,7 +694,7 @@ function updateFanNarrative() {
         const aFan = activeQt.fan;
         const aBqt = activeQt.breakeven_qt;
         const aP50 = aFan.p50[aFan.p50.length - 1];
-        const aReduction = ((co2_2024 - aP50) / co2_2024 * 100).toFixed(0);
+        const aReduction = ((co2_base - aP50) / co2_base * 100).toFixed(0);
 
         text += `<br><br><strong>Active QT</strong>: With new clean deployment (solar + wind + battery), emissions drop to `;
         text += `<strong>${aP50.toFixed(1)} Mt</strong> by 2050 (<strong>${aReduction}% reduction</strong>). `;
