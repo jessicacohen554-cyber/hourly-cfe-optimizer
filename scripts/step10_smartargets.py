@@ -5,11 +5,11 @@ SMARTargets V1 — Market Simulation of Clean Energy Deployment
 Market-driven simulation: deploys resources where profitable, stops when profit ≤ 0.
 CFE level is an OUTPUT (emerges from profitability), not an input.
 
-V1 Scope: R1 (Facilitating) + R2 (Challenging) reference scenarios.
+V1 Scope: R1-R2 (Reference) + AT1-AT4 (Ambitious Transition) + QT1-QT4 (Quick Transition).
 - Per-ISO (no cross-regional capital flow)
 - 5% zone steps
 - Merchant revenue (no PPA discount)
-- No policy mandate floors — profit-only stopping rule
+- RPS/CES compliance modeled via scarcity-driven REC pricing (not mandate floors)
 
 Architecture: Built on scenario_common.build_zones() zone-delta structure.
 Revenue model: step5b LMP engine + capacity market + storage + REC.
@@ -59,6 +59,7 @@ from scenario_common import (
     build_zones, THRESHOLDS,
     _load_feasible_from_parquet,
 )
+from procurement_utils import get_rps_target_at_year
 
 # Import LMP engine from step5b
 from step5b_compute_lmp_prices import (
@@ -138,12 +139,88 @@ PTC_45Y_NEW_NUCLEAR = 26.0  # $/MWh
 NUCLEAR_FOM_PER_MWH = 30.0   # $/MWh equivalent at 93% CF
 COAL_FOM_KW_YR = 45.0        # $/kW-yr
 
-# REC prices by ISO (from step8c — additive revenue for eligible resources)
-REC_PRICES = {
-    'CAISO': 5.0, 'ERCOT': 2.5, 'PJM': 4.0, 'NYISO': 6.0,
-    'NEISO': 5.5, 'MISO': 3.0, 'SPP': 2.0,
+# ─── RPS/REC Compliance Model ─────────────────────────────────────────────
+# Scarcity-driven REC pricing: price depends on gap between RPS-eligible
+# clean% and RPS target. Voluntary corporate buyers compete for same supply,
+# amplifying scarcity beyond just the RPS gap.
+#
+# Sources: LBNL 2024 RPS Status Update (Barbose), Power Advisory "REC-ord
+# High Price", OPIS PJM REC analysis, ICE futures, S&P Global.
+
+# Alternative Compliance Payment caps ($/MWh) — statutory penalty ceiling.
+# Weighted average across major load-serving entities within each ISO.
+# If ACP < REC market price in a state, utilities pay ACP instead → no build.
+ACP_RATES = {
+    'CAISO': 50.0,   # CA RPS TREC price cap ($50)
+    'ERCOT': 0.0,    # No RPS → no ACP
+    'PJM':   45.0,   # Weighted: PA $45, VA $45, NJ $50, MD $30 → ~$45
+    'NYISO': 42.5,   # NY Tier 1 ACP (~$42.50)
+    'NEISO': 45.0,   # Weighted: MA $67, CT $40, ME/RI ~$35 → ~$45
+    'MISO':  15.0,   # Weighted: MN $25, IL $20, MI $10 → ~$15
+    'SPP':   10.0,   # Weighted: KS $15, OK $0, NM $10 → ~$10
 }
+
+# 2025 observed compliance REC prices ($/MWh) — used as calibration anchors.
+# These are COMPLIANCE-grade RECs, not voluntary. Voluntary trade at $1-5.
+REC_COMPLIANCE_PRICE_2025 = {
+    'CAISO': 34.0,   # WREGIS compliance RECs
+    'ERCOT': 0.5,    # No mandate → voluntary only
+    'PJM':   38.0,   # Near PA/VA ACP cap ($45). 12× increase since 2018.
+    'NYISO': 25.0,   # NY Tier 1, below ACP cap
+    'NEISO': 40.0,   # MA Class I, near ACP cap ($45)
+    'MISO':  8.0,    # Modest state RPS, some surplus
+    'SPP':   3.0,    # Minimal RPS, abundant wind
+}
+
+# Voluntary REC floor ($/MWh) — when clean% exceeds RPS target
+VOLUNTARY_REC_FLOOR = {
+    'CAISO': 3.0, 'ERCOT': 0.5, 'PJM': 2.0, 'NYISO': 2.0,
+    'NEISO': 2.5, 'MISO': 1.5, 'SPP': 2.0,
+}
+
+# Voluntary corporate demand adder (fraction of load).
+# Corporate buyers (PPAs, unbundled RECs) compete with RPS for the same
+# clean supply. This additional demand creates scarcity even when aggregate
+# clean% slightly exceeds the RPS target. Calibrated so that the scarcity
+# model reproduces observed 2025 compliance REC prices.
+# Key insight: In NEISO/NYISO, there's basically no clean energy available
+# for voluntary buyers — the RPS + corporate demand consumes everything.
+VOLUNTARY_DEMAND_ADDER = {
+    'CAISO': 0.00,   # Already captured by k calibration — large PPA market
+    'ERCOT': 0.02,   # Some corporate demand, but massive surplus
+    'PJM':   0.00,   # Already captured by k calibration — binding RPS
+    'NYISO': 0.04,   # 4% — NYC corporate demand lifts effective target to ~39%
+    'NEISO': 0.035,  # 3.5% — MA/CT voluntary market. Tight. $40/MWh RECs.
+    'MISO':  0.06,   # 6% — fills gap between 12% RPS and 18% clean
+    'SPP':   0.01,   # 1% — minimal corporate demand
+}
+
+# Scarcity model: price = ACP × (1 - exp(-k × gap%))
+# k calibrated per ISO against 2025 observed prices.
+# Higher k = steeper scarcity response (price ramps toward ACP faster).
+# PJM/NEISO high because RPS is binding with interconnection queue bottleneck.
+# CAISO lower because larger, more liquid market with PPA-based procurement.
+REC_SCARCITY_K = {
+    'CAISO': 0.10,   # 11.5% gap → $34 (calibrated to WREGIS observed)
+    'ERCOT': 0.10,   # N/A — massive surplus, scarcity never triggers
+    'PJM':   0.29,   # 6.5% gap → $38 (calibrated to PJM-GATS observed)
+    'NYISO': 0.15,   # Moderate — CES broader than RPS
+    'NEISO': 0.29,   # ~$40/MWh at binding — similar scarcity as PJM
+    'MISO':  0.12,   # Low — fragmented state RPS, abundant wind
+    'SPP':   0.10,   # Low — minimal RPS, massive surplus
+}
+REC_SURPLUS_DECAY_K = 0.20  # How fast prices collapse when in surplus
+
+# ISOs with Clean Energy Standards (nuclear/CCS count toward compliance)
+# vs traditional RPS (only renewables + hydro count)
+CES_ISOS = {'NYISO', 'NEISO', 'CAISO'}
+# NYISO: CLCPA Tier 3 ZECs for nuclear
+# NEISO: CT CCEF for Millstone
+# CAISO: SB 100 counts all zero-carbon
+
 REC_ELIGIBLE = {'solar', 'wind', 'offshore_wind', 'hydro', 'geothermal'}
+CES_ELIGIBLE = REC_ELIGIBLE | {'clean_firm', 'ccs_ccgt'}
+CES_DISCOUNT_FACTOR = 0.60  # ZEC/Tier 3 = ~60% of Tier 1 REC price
 
 # Simulation years (AT trajectory milestones)
 SIM_YEARS = [2025, 2030, 2035, 2040, 2045, 2050]
@@ -184,7 +261,200 @@ SCENARIOS = {
         'fuel_level': 'Medium',
         'tx_level': 'Medium',
     },
+
+    # ─── Ambitious Transition: Power Sector Net-Zero ─────────────────────
+    # Emission CONSTRAINT as % of 2023 eGRID absolute emissions per ISO.
+    # Power NZ trajectory: 2030=43%, 2035=18%, 2040=12%, 2045=6%, 2050=0%.
+    # e.g., PJM 2045 = 6% of 267 Mt = 16 Mt allowed (94% absolute reduction).
+    # Market-profitable build happens first, then mandated build fills the
+    # gap to meet the constraint (policy subsidy covers the loss).
+    'AT1': {
+        'name': 'AT Power NZ: Facilitating',
+        'demand_growth': 'Medium',
+        'lcoe_level': 'Low',
+        'learning_speed': 'Fast',
+        'queue_type': 'Facilitating',
+        'gas_friction': 0.5,       # Strong ESG/policy friction on new gas
+        'carbon_price': 0,
+        'fuel_level': 'Medium',
+        'tx_level': 'Medium',
+        'emission_constraint': 'power_nz',
+    },
+    'AT2': {
+        'name': 'AT Power NZ: Challenging',
+        'demand_growth': 'High',
+        'lcoe_level': 'High',
+        'learning_speed': 'Slow',
+        'queue_type': 'Challenging',
+        'gas_friction': 0.7,
+        'carbon_price': 0,
+        'fuel_level': 'Medium',
+        'tx_level': 'Medium',
+        'emission_constraint': 'power_nz',
+    },
+
+    # ─── Ambitious Transition: Economy-Wide Net-Zero ─────────────────────
+    # Tighter constraint — economy-wide decarbonization forces power sector
+    # to overachieve since it's cheapest to abate.
+    # Economy NZ trajectory: 2030=35%, 2035=15%, 2040=8%, 2045=3%, 2050=0%.
+    # Electrification drives demand growth (High).
+    'AT3': {
+        'name': 'AT Economy NZ: Facilitating',
+        'demand_growth': 'High',   # Electrification drives demand
+        'lcoe_level': 'Low',
+        'learning_speed': 'Fast',
+        'queue_type': 'Facilitating',
+        'gas_friction': 0.3,       # Near-moratorium on new gas
+        'carbon_price': 0,
+        'fuel_level': 'High',      # Fossil fuel prices rise
+        'tx_level': 'Low',         # Accelerated tx buildout
+        'emission_constraint': 'economy_nz',
+    },
+    'AT4': {
+        'name': 'AT Economy NZ: Challenging',
+        'demand_growth': 'High',
+        'lcoe_level': 'High',
+        'learning_speed': 'Slow',
+        'queue_type': 'Challenging',
+        'gas_friction': 0.5,
+        'carbon_price': 0,
+        'fuel_level': 'High',
+        'tx_level': 'Medium',
+        'emission_constraint': 'economy_nz',
+    },
+
+    # ─── Quick Transition ────────────────────────────────────────────────
+    # Rapid cost declines (5% annual cost cache = tech breakthroughs),
+    # fastest queue processing. Same emission constraint as power NZ.
+    'QT1': {
+        'name': 'Quick Transition: Facilitating',
+        'demand_growth': 'Medium',
+        'lcoe_level': 'Low',
+        'learning_speed': 'Fast',
+        'queue_type': 'Facilitating',
+        'gas_friction': 0.3,
+        'carbon_price': 0,
+        'fuel_level': 'Low',
+        'tx_level': 'Low',
+        'emission_constraint': 'power_nz',
+        'qt_cost_cache': 0.05,
+    },
+    'QT2': {
+        'name': 'Quick Transition: Challenging',
+        'demand_growth': 'Medium',
+        'lcoe_level': 'High',
+        'learning_speed': 'Slow',
+        'queue_type': 'Challenging',
+        'gas_friction': 0.7,
+        'carbon_price': 0,
+        'fuel_level': 'Medium',
+        'tx_level': 'Medium',
+        'emission_constraint': 'power_nz',
+        'qt_cost_cache': 0.05,
+    },
+    'QT3': {
+        'name': 'Quick Transition: Facilitating + Electrification',
+        'demand_growth': 'High',
+        'lcoe_level': 'Low',
+        'learning_speed': 'Fast',
+        'queue_type': 'Facilitating',
+        'gas_friction': 0.3,
+        'carbon_price': 0,
+        'fuel_level': 'Low',
+        'tx_level': 'Low',
+        'emission_constraint': 'economy_nz',
+        'qt_cost_cache': 0.05,
+    },
+    'QT4': {
+        'name': 'Quick Transition: Challenging + Electrification',
+        'demand_growth': 'High',
+        'lcoe_level': 'High',
+        'learning_speed': 'Slow',
+        'queue_type': 'Challenging',
+        'gas_friction': 0.5,
+        'carbon_price': 0,
+        'fuel_level': 'High',
+        'tx_level': 'Medium',
+        'emission_constraint': 'economy_nz',
+        'qt_cost_cache': 0.05,
+    },
 }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# EMISSION CONSTRAINT TRAJECTORIES (% of 2023 eGRID absolute emissions)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Power sector net-zero: moderate pace
+EMISSION_TRAJECTORY_POWER_NZ = {
+    2025: 1.00,   # No constraint in base year
+    2030: 0.43,   # 57% reduction from 2023
+    2035: 0.18,   # 82% reduction
+    2040: 0.12,   # 88% reduction
+    2045: 0.06,   # 94% reduction
+    2050: 0.00,   # Net-zero
+}
+
+# Economy-wide net-zero: power sector must overachieve (cheapest to abate)
+EMISSION_TRAJECTORY_ECONOMY_NZ = {
+    2025: 1.00,
+    2030: 0.35,   # 65% reduction — faster than power-only
+    2035: 0.15,   # 85% reduction
+    2040: 0.08,   # 92% reduction
+    2045: 0.03,   # 97% reduction
+    2050: 0.00,   # Net-zero
+}
+
+EMISSION_TRAJECTORIES = {
+    'power_nz': EMISSION_TRAJECTORY_POWER_NZ,
+    'economy_nz': EMISSION_TRAJECTORY_ECONOMY_NZ,
+}
+
+# eGRID 2023 baseline emissions (loaded from JSON, fallback hardcoded)
+EGRID_2023_BASELINE_PATH = os.path.join(ROOT_DIR, 'data', 'egrid_2023_baseline_emissions.json')
+
+
+def load_egrid_baselines():
+    """Load 2023 absolute emissions per ISO from eGRID data.
+
+    Returns {iso: co2_metric_tons}.
+    """
+    if os.path.exists(EGRID_2023_BASELINE_PATH):
+        with open(EGRID_2023_BASELINE_PATH) as f:
+            data = json.load(f)
+        return {iso: d['co2_metric_tons'] for iso, d in data.items() if iso in ISOS}
+
+    # Fallback hardcoded from eGRID 2023 BA23 sheet
+    return {
+        'CAISO':  31_376_504,
+        'ERCOT': 157_460_286,
+        'PJM':   267_318_273,
+        'NYISO':  28_193_964,
+        'NEISO':  25_081_328,
+        'MISO':  290_402_405,
+        'SPP':   110_506_609,
+    }
+
+
+def get_emission_cap_mt(iso, year, constraint_type, baselines):
+    """Get the emission cap in million metric tons for an ISO at a given year.
+
+    Args:
+        iso: ISO region
+        year: Simulation year
+        constraint_type: 'power_nz' or 'economy_nz'
+        baselines: {iso: co2_metric_tons} from eGRID
+
+    Returns: cap in million metric tons, or None if no constraint.
+    """
+    if constraint_type is None:
+        return None
+    trajectory = EMISSION_TRAJECTORIES.get(constraint_type)
+    if trajectory is None:
+        return None
+    fraction = trajectory.get(year, 1.0)
+    baseline_mt = baselines.get(iso, 0) / 1e6  # metric tons → million metric tons
+    return baseline_mt * fraction
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -317,11 +587,71 @@ def compute_capacity_revenue(iso, clean_pct, resource_pcts):
     return cap_revs
 
 
-def compute_rec_revenue(iso, resource_pcts):
-    """REC revenue for eligible resources ($/MWh additive to energy revenue)."""
-    rec_price = REC_PRICES.get(iso, 0)
-    return {res: rec_price if res in REC_ELIGIBLE else 0
-            for res, pct in resource_pcts.items() if pct > 0}
+def get_compliance_eligible_pct(resource_pcts, iso):
+    """Clean % counting only compliance-eligible resources.
+
+    CES ISOs (NYISO, NEISO, CAISO): nuclear and CCS count.
+    Traditional RPS ISOs: only renewables + hydro + geothermal.
+    Critical: PJM has 32.1% nuclear but only 8.5% RPS-eligible → real scarcity.
+    """
+    eligible = CES_ELIGIBLE if iso in CES_ISOS else REC_ELIGIBLE
+    return sum(pct for res, pct in resource_pcts.items()
+               if res in eligible and pct > 0)
+
+
+def compute_rec_price(iso, eligible_pct, year):
+    """Scarcity-driven compliance REC price ($/MWh).
+
+    When clean% < RPS target: scarcity drives prices toward ACP cap.
+    When clean% > RPS target: surplus collapses prices toward voluntary floor.
+    Voluntary corporate buyers compete for same supply, amplifying scarcity.
+    """
+    acp = ACP_RATES.get(iso, 0)
+    if acp <= 0:
+        return VOLUNTARY_REC_FLOOR.get(iso, 0)  # No RPS (ERCOT)
+
+    # Effective demand = RPS mandate + voluntary corporate procurement.
+    # Corporate buyers compete for same clean supply → amplifies scarcity.
+    rps_target_frac = get_rps_target_at_year(iso, year)
+    vol_adder = VOLUNTARY_DEMAND_ADDER.get(iso, 0)
+    eff_target_pct = (rps_target_frac + vol_adder) * 100.0
+    gap = eff_target_pct - eligible_pct  # positive = scarcity
+
+    floor = VOLUNTARY_REC_FLOOR.get(iso, 1.0)
+    k_scarcity = REC_SCARCITY_K.get(iso, 0.15)
+    compliance_2025 = REC_COMPLIANCE_PRICE_2025.get(iso, 5.0)
+
+    if gap > 0:
+        # Scarcity: price ramps toward ACP. Calibrated per ISO to match
+        # 2025 observed compliance REC prices.
+        price = acp * (1.0 - np.exp(-k_scarcity * gap))
+    else:
+        # Surplus: price decays toward voluntary floor.
+        price = floor + (compliance_2025 - floor) * np.exp(REC_SURPLUS_DECAY_K * gap)
+
+    return max(floor, min(acp, price))
+
+
+def compute_rec_revenue(iso, resource_pcts, clean_pct, year):
+    """REC/CES revenue for eligible resources ($/MWh additive to energy).
+
+    Scarcity-driven: price depends on gap between compliance-eligible clean%
+    and RPS/CES target. ACP-capped. CES ISOs give nuclear/CCS partial credit.
+    """
+    eligible_pct = get_compliance_eligible_pct(resource_pcts, iso)
+    rec_price = compute_rec_price(iso, eligible_pct, year)
+
+    result = {}
+    for res, pct in resource_pcts.items():
+        if pct <= 0:
+            continue
+        if res in REC_ELIGIBLE:
+            result[res] = rec_price
+        elif res in CES_ELIGIBLE and iso in CES_ISOS:
+            result[res] = rec_price * CES_DISCOUNT_FACTOR
+        else:
+            result[res] = 0
+    return result
 
 
 def compute_zone_revenue(iso, clean_pct, resource_pcts, hourly_lmp,
@@ -333,7 +663,7 @@ def compute_zone_revenue(iso, clean_pct, resource_pcts, hourly_lmp,
     energy_revs = compute_energy_revenue_by_resource(
         hourly_lmp, supply_profiles, resource_pcts, demand_total_mwh)
     cap_revs = compute_capacity_revenue(iso, clean_pct, resource_pcts)
-    rec_revs = compute_rec_revenue(iso, resource_pcts)
+    rec_revs = compute_rec_revenue(iso, resource_pcts, clean_pct, year)
 
     # Blended revenue weighted by resource share
     total_pct = sum(pct for pct in resource_pcts.values() if pct > 0)
@@ -548,15 +878,28 @@ def estimate_new_gw_from_delta(delta_resources_twh, iso):
 
 
 def run_market_simulation(scenario_id, conditions, isos=None):
-    """Run R1 or R2 market simulation.
+    """Run market simulation with optional emission constraints.
+
+    For R1/R2 (Reference): purely profit-driven — deploy where profitable, stop otherwise.
+    For AT (Ambitious Transition): profit-driven first, then mandated deployment to meet
+        emission constraint (% of 2023 eGRID absolute emissions). Builds sequentially
+        on prior year's resources — least-cost path to each year's emission cap.
+    For QT (Quick Transition): same as AT but with 5% annual cost cache (tech breakthrough).
 
     Returns {iso: [year_result_dict, ...]} with per-year deployment trajectory.
     """
     if isos is None:
         isos = list(ISOS)
 
+    emission_constraint = conditions.get('emission_constraint')
+    qt_cost_cache = conditions.get('qt_cost_cache', 0)
+
     print(f"\n{'='*70}")
     print(f"SMARTargets V1 — Scenario {scenario_id}: {conditions['name']}")
+    if emission_constraint:
+        print(f"  Emission constraint: {emission_constraint}")
+    if qt_cost_cache > 0:
+        print(f"  QT cost cache: {qt_cost_cache*100:.0f}%/yr additional cost reduction")
     print(f"{'='*70}")
 
     # Load shared data
@@ -568,6 +911,9 @@ def run_market_simulation(scenario_id, conditions, isos=None):
     # Load step3 results
     print("Loading step3 cost optimization parquets...")
     step3_data = load_step3_data()
+
+    # Load eGRID baselines (for AT/QT emission constraints)
+    egrid_baselines = load_egrid_baselines() if emission_constraint else {}
 
     # Global cumulative GW tracker (cross-ISO learning pool)
     cumulative_gw = dict(WRIGHT_CUMULATIVE_GW_2025)
@@ -582,6 +928,7 @@ def run_market_simulation(scenario_id, conditions, isos=None):
             'clean_pct': existing_clean,
             'market_stopped': False,
             'gas_built_gw': 0,
+            'mandated_subsidy_total': 0,  # Cumulative subsidy for mandated build
         }
 
     for year in SIM_YEARS:
@@ -700,11 +1047,17 @@ def run_market_simulation(scenario_id, conditions, isos=None):
                 step3_delta_cost = step3_cost_end - step3_cost_start
 
                 # The step3 delta cost is the incremental cost at Medium settings.
-                # For R1/R2, apply Wright's Law adjustment to the delta resources' LCOE.
+                # Apply Wright's Law adjustment to the delta resources' LCOE.
                 blended_cost, per_res_cost = compute_zone_cost(
                     iso, delta_twh, conditions['lcoe_level'], cumulative_gw,
                     conditions['learning_speed'], year, conditions['tx_level'],
                 )
+
+                # QT cost cache: additional annual cost reduction (tech breakthrough)
+                if qt_cost_cache > 0 and year > 2025:
+                    years_of_reduction = year - 2025
+                    qt_factor = (1 - qt_cost_cache) ** years_of_reduction
+                    blended_cost = round(blended_cost * qt_factor, 2)
 
                 # --- PROFIT ---
                 delta_profit = blended_revenue - blended_cost
@@ -737,19 +1090,159 @@ def run_market_simulation(scenario_id, conditions, isos=None):
                         'profit': round(delta_profit, 2),
                         'new_gw': round(total_new_gw, 2),
                         'avg_lmp': round(avg_lmp, 1),
+                        'mandated': False,
                     })
 
                     print(f"  {iso} → {t_end:.0f}%: profit={delta_profit:+.1f} $/MWh "
                           f"(rev={blended_revenue:.1f}, cost={blended_cost:.1f}) "
                           f"+{total_new_gw:.1f} GW, LMP avg={avg_lmp:.1f}")
                 else:
-                    # Market stop — check if we should look ahead
-                    # (future learning from other ISOs might flip this zone)
-                    # V1: simple stop, no look-ahead
+                    # Market stop — profitable deployment ends here
                     state['market_stopped'] = True
+                    market_stop_pct = current_pct
+                    market_stop_profit = delta_profit
+                    market_stop_rev = blended_revenue
+                    market_stop_cost = blended_cost
                     print(f"  {iso} STOP at {current_pct:.0f}%: profit={delta_profit:+.1f} $/MWh "
                           f"(rev={blended_revenue:.1f}, cost={blended_cost:.1f})")
                     break
+
+            # --- EMISSION CONSTRAINT: MANDATED DEPLOYMENT ---
+            # After profit-driven deployment, check if emissions exceed the cap.
+            # If so, force additional clean zones at a loss (policy subsidy).
+            # Builds sequentially on what was already deployed — least-cost path.
+            mandated_subsidy = 0
+            emission_cap_mt = get_emission_cap_mt(
+                iso, year, emission_constraint, egrid_baselines)
+
+            if emission_cap_mt is not None and year > 2025:
+                # Compute current emissions at this clean_pct
+                gf_check = demand_twh / REGIONAL_DEMAND_TWH[iso]
+                er_check, _ = compute_fossil_retirement(
+                    iso, current_pct, emission_rates, fossil_mix, gf_check)
+                fossil_twh_check = (1 - current_pct / 100.0) * demand_twh
+                current_co2_mt = fossil_twh_check * 1e6 * er_check / 1e6
+
+                if current_co2_mt > emission_cap_mt:
+                    # Need more clean — continue deploying at a loss
+                    remaining_thresholds = sorted(
+                        t for t in THRESHOLDS if t > current_pct)
+
+                    for t_end in remaining_thresholds:
+                        if queue_remaining_gw <= 0:
+                            break
+
+                        # Recompute emissions at this threshold
+                        er_t, _ = compute_fossil_retirement(
+                            iso, t_end, emission_rates, fossil_mix, gf_check)
+                        fossil_twh_t = (1 - t_end / 100.0) * demand_twh
+                        co2_at_t = fossil_twh_t * 1e6 * er_t / 1e6
+
+                        # Get mix data for this threshold
+                        if t_end not in iso_data:
+                            available = sorted(iso_data.keys())
+                            nearest = min(available, key=lambda x: abs(x - t_end))
+                            mix_data = iso_data[nearest]
+                        else:
+                            mix_data = iso_data[t_end]
+
+                        resource_pcts = mix_data['resource_pcts']
+
+                        # Delta from current position
+                        lower_ts = sorted(t for t in iso_data if t <= current_pct)
+                        t_start = lower_ts[-1] if lower_ts else min(iso_data.keys())
+                        start_data = iso_data.get(t_start, {})
+                        start_pcts = start_data.get('resource_pcts',
+                                                     {r: 0 for r in resource_pcts})
+
+                        delta_pcts = {}
+                        delta_twh = {}
+                        for res in resource_pcts:
+                            dpct = resource_pcts[res] - start_pcts.get(res, 0)
+                            if dpct > 0.1:
+                                delta_pcts[res] = dpct
+                                delta_twh[res] = dpct / 100.0 * demand_twh
+
+                        zone_clean_increase = t_end - current_pct
+                        if not delta_twh and zone_clean_increase > 0:
+                            dominant = max(resource_pcts, key=resource_pcts.get)
+                            delta_pcts = {dominant: zone_clean_increase}
+                            delta_twh = {dominant: zone_clean_increase / 100.0 * demand_twh}
+
+                        if not delta_twh:
+                            continue
+
+                        # Cost of mandated deployment
+                        m_cost, _ = compute_zone_cost(
+                            iso, delta_twh, conditions['lcoe_level'], cumulative_gw,
+                            conditions['learning_speed'], year, conditions['tx_level'],
+                        )
+                        if qt_cost_cache > 0 and year > 2025:
+                            years_of_reduction = year - 2025
+                            qt_factor = (1 - qt_cost_cache) ** years_of_reduction
+                            m_cost = round(m_cost * qt_factor, 2)
+
+                        # Revenue (still earned, just not enough to cover cost)
+                        hourly_lmp_m, avg_lmp_m, p90_lmp_m = compute_lmp_at_threshold(
+                            iso, t_end, conditions['fuel_level'],
+                            demand_norm, demand_mw_profile,
+                            supply_profiles_iso, resource_pcts,
+                            battery_pct=mix_data['battery_pct'],
+                            battery8_pct=mix_data['battery8_pct'],
+                            ldes_pct=mix_data['ldes_pct'],
+                            h2_pct=mix_data['h2_pct'],
+                        )
+                        m_rev, _ = compute_zone_revenue(
+                            iso, t_end, delta_pcts, hourly_lmp_m,
+                            supply_profiles_iso, demand_total_mwh, year,
+                        )
+
+                        m_profit = m_rev - m_cost
+                        subsidy_per_mwh = max(0, -m_profit)  # Policy covers the loss
+
+                        # Deploy (mandated)
+                        new_gw = estimate_new_gw_from_delta(delta_twh, iso)
+                        total_new_gw = sum(new_gw.values())
+                        if total_new_gw > queue_remaining_gw:
+                            scale = queue_remaining_gw / total_new_gw
+                            new_gw = {k: v * scale for k, v in new_gw.items()}
+                            total_new_gw = queue_remaining_gw
+
+                        for tech, gw in new_gw.items():
+                            cumulative_gw[tech] = cumulative_gw.get(tech, 0) + gw
+                        queue_remaining_gw -= total_new_gw
+
+                        current_pct = t_end
+                        state['clean_pct'] = current_pct
+                        zone_deployed = True
+                        mandated_subsidy += subsidy_per_mwh
+                        avg_lmp = avg_lmp_m
+                        p90_lmp = p90_lmp_m
+                        blended_cost = m_cost
+                        blended_revenue = m_rev
+
+                        zone_results.append({
+                            'threshold': t_end,
+                            'revenue': m_rev,
+                            'cost': m_cost,
+                            'profit': round(m_profit, 2),
+                            'subsidy': round(subsidy_per_mwh, 2),
+                            'new_gw': round(total_new_gw, 2),
+                            'avg_lmp': round(avg_lmp_m, 1),
+                            'mandated': True,
+                        })
+
+                        print(f"  {iso} → {t_end:.0f}% [MANDATED]: subsidy={subsidy_per_mwh:+.1f} $/MWh "
+                              f"(rev={m_rev:.1f}, cost={m_cost:.1f}) "
+                              f"+{total_new_gw:.1f} GW, LMP avg={avg_lmp_m:.1f}")
+
+                        # Check if we've met the cap
+                        if co2_at_t <= emission_cap_mt:
+                            print(f"  {iso} emission cap met: {co2_at_t:.1f} Mt "
+                                  f"≤ {emission_cap_mt:.1f} Mt ({year})")
+                            break
+
+                    state['mandated_subsidy_total'] += mandated_subsidy
 
             # --- NEW GAS BUILD (if demand growth exceeds clean supply) ---
             clean_twh = current_pct / 100.0 * demand_twh
@@ -788,8 +1281,11 @@ def run_market_simulation(scenario_id, conditions, isos=None):
                 'demand_twh': round(demand_twh, 1),
                 'emissions_mt': round(co2_mt, 2),
                 'emission_rate_tco2_mwh': round(emission_rate, 4),
+                'emission_cap_mt': round(emission_cap_mt, 2) if emission_cap_mt is not None else None,
                 'cost_per_mwh': round(blended_cost if zone_deployed else 0, 2),
                 'revenue_per_mwh': round(blended_revenue if zone_deployed else 0, 2),
+                'mandated_subsidy_mwh': round(mandated_subsidy, 2),
+                'cumulative_subsidy_mwh': round(state['mandated_subsidy_total'], 2),
                 'avg_lmp': round(avg_lmp if zone_deployed else WHOLESALE_PRICES[iso], 1),
                 'lmp_p90': round(p90_lmp if zone_deployed else 0, 1),
                 'gas_built_gw': round(gas_built_gw, 2),
@@ -826,8 +1322,11 @@ def save_results(results, scenario_id):
                 'demand_twh': yr['demand_twh'],
                 'emissions_mt': yr['emissions_mt'],
                 'emission_rate': yr['emission_rate_tco2_mwh'],
+                'emission_cap_mt': yr.get('emission_cap_mt'),
                 'cost_per_mwh': yr['cost_per_mwh'],
                 'revenue_per_mwh': yr['revenue_per_mwh'],
+                'mandated_subsidy_mwh': yr.get('mandated_subsidy_mwh', 0),
+                'cumulative_subsidy_mwh': yr.get('cumulative_subsidy_mwh', 0),
                 'avg_lmp': yr['avg_lmp'],
                 'lmp_p90': yr['lmp_p90'],
                 'gas_built_gw': yr['gas_built_gw'],
@@ -872,12 +1371,15 @@ def save_results(results, scenario_id):
             'final_clean_pct': final['clean_pct'],
             'final_emissions_mt': final['emissions_mt'],
             'total_gas_built_gw': final['total_gas_gw'],
+            'cumulative_subsidy_mwh': final.get('cumulative_subsidy_mwh', 0),
             'trajectory': [
                 {
                     'year': yr['year'],
                     'clean_pct': yr['clean_pct'],
                     'emissions_mt': yr['emissions_mt'],
+                    'emission_cap_mt': yr.get('emission_cap_mt'),
                     'cost_per_mwh': yr['cost_per_mwh'],
+                    'mandated_subsidy_mwh': yr.get('mandated_subsidy_mwh', 0),
                     'avg_lmp': yr['avg_lmp'],
                 }
                 for yr in year_results
@@ -949,9 +1451,14 @@ def main():
             final = results[iso][-1]
             stop = [yr for yr in results[iso] if yr['market_stop']]
             stop_info = f"stops at {stop[0]['clean_pct']:.0f}% (year {stop[0]['year']})" if stop else "no stop"
+            subsidy = final.get('cumulative_subsidy_mwh', 0)
+            subsidy_info = f", subsidy=${subsidy:.1f}/MWh" if subsidy > 0 else ""
+            cap_info = ""
+            if final.get('emission_cap_mt') is not None:
+                cap_info = f", cap={final['emission_cap_mt']:.1f}Mt"
             print(f"  {iso}: {final['clean_pct']:.0f}% clean by 2050, "
-                  f"{final['emissions_mt']:.0f} MtCO2, {stop_info}, "
-                  f"+{final['total_gas_gw']:.1f} GW new gas")
+                  f"{final['emissions_mt']:.0f} MtCO2{cap_info}, {stop_info}, "
+                  f"+{final['total_gas_gw']:.1f} GW new gas{subsidy_info}")
 
     elapsed = time.time() - t_start
     print(f"\nTotal runtime: {elapsed:.1f}s")

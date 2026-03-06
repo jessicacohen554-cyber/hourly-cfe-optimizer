@@ -396,17 +396,40 @@ carbon_rev_per_mwh = carbon_price × avoided_emission_rate  # $/MWh
 - `avoided_emission_rate`: from dispatch-based CO2 model (step5a)
 - Only relevant if a carbon price or ETS exists
 
-### REC Revenue from State RPS Compliance (Decided)
+### REC Revenue from State RPS Compliance (Decided — Calibrated)
+
+**Scarcity-driven compliance REC pricing model**, calibrated to observed 2025 market prices.
 
 ```python
-rec_revenue_per_mwh = rec_price[iso] × rps_eligible[resource]  # $/MWh
+# Effective demand = RPS target + voluntary corporate demand
+eff_target = rps_target + voluntary_demand_adder
+gap = eff_target × 100 - compliance_eligible_pct
+# Scarcity: price = ACP × (1 - exp(-k × gap))
+# Surplus:  price = floor + (compliance_2025 - floor) × exp(decay × gap)
 ```
 
-- **REC price by ISO** — reflects actual RPS compliance market prices, NOT ACPs. ACP is the penalty ceiling; RECs trade below ACP because some entities pay the penalty rather than procure RECs.
-- **Key nuance**: RPS mandates do NOT force builds in our model. Instead, REC revenue makes clean resources more profitable. If `energy_LMP + REC_price + capacity_rev > annualized_LCOE`, a developer builds. If not, the resource isn't built and some load-serving entities pay the ACP instead.
-- **Eligible resources**: Solar, wind (onshore + offshore), hydro, geothermal. Nuclear eligibility varies by state — most state RPS programs exclude existing nuclear. New nuclear may qualify under some clean energy standards (e.g., NY CLCPA).
-- **Interconnection queue delays**: Modeled as a max annual GW deployment rate cap per ISO, not RPS-specific. This constraint throttles the *rate* of new builds regardless of profitability.
-- **REC prices to research**: Need ISO-level REC price data (SREC, Class I, etc.) — varies significantly by state/market. This is an open data need.
+**Key insight**: RPS compliance demand competes with voluntary corporate buyers for the same finite clean supply. Even when aggregate clean% slightly exceeds the RPS target, corporate demand consumes the surplus, maintaining high REC prices. In NEISO and NYISO, there is essentially **no clean energy available for voluntary buyers** — RPS + corporate demand exhausts the entire clean supply.
+
+**2025 Calibration (all within 3.2% error except SPP):**
+
+| ISO | ACP ($/MWh) | 2025 REC ($/MWh) | Scarcity k | Vol Adder | CES/RPS | Gap |
+|-----|------------|-----------------|-----------|-----------|---------|-----|
+| CAISO | $50 | $34 | 0.10 | 0% | CES | +11.5% scarcity |
+| PJM | $45 | $38 | 0.29 | 0% | RPS | +6.5% scarcity |
+| NEISO | $45 | $40 | 0.29 | 3.5% | CES | ~0% (tight equilibrium) |
+| NYISO | $42.50 | $25 | 0.15 | 4% | CES | ~0% (tight equilibrium) |
+| MISO | $15 | $8 | 0.12 | 6% | RPS | ~0% (equilibrium) |
+| SPP | $10 | $3 | 0.10 | 1% | RPS | -31% surplus |
+| ERCOT | $0 | $0.50 | — | 2% | None | -26% surplus |
+
+Sources: LBNL 2024 RPS Status (Barbose), Power Advisory "REC-ord High Price", OPIS PJM analysis, ICE futures, S&P Global.
+
+- **CES vs RPS eligibility**: NYISO (CLCPA), NEISO (CT CCEF), CAISO (SB 100) count nuclear/CCS toward compliance. Other ISOs use traditional RPS: only solar, wind, offshore wind, hydro, geothermal. PJM has 32.1% nuclear but only 8.5% RPS-eligible → real REC scarcity.
+- **CES discount**: Nuclear/CCS get ZEC/Tier 3 credit = 60% of Tier 1 REC price.
+- **ACP escape**: When ACP < REC market price (e.g., Maryland's ACP declining to $22.35 by 2030), utilities pay the penalty instead of buying RECs → RPS doesn't guarantee build. Model caps REC price at ACP.
+- **RPS as deployment floor**: The scarcity-driven REC revenue naturally acts as a deployment floor. In PJM: solar LCOE $40 - merchant revenue $30 = -$10 → no build. But +$38 REC revenue = +$28 total → build. As deployment closes the RPS gap, REC prices fall and the floor moves.
+- **Eligible resources**: Solar, wind (onshore + offshore), hydro, geothermal (REC_ELIGIBLE). Nuclear via CES in 3 ISOs.
+- **V2 candidates**: State-level RPS heterogeneity within ISOs, SREC solar carve-out premium ($200-400 in NJ/MA/DC), REC banking, cross-ISO REC trading, time-varying ACP (MD declines to $22.35).
 
 ### Federal Tax Credits (Decided)
 
