@@ -301,16 +301,28 @@ R1/R2 are NOT "freeze existing clean + add demand." They are **full market simul
 | **New builds** | Whatever's profitable at market LMPs | More capacity needed → more new builds |
 | **Key question** | What does the market do on its own? | Does demand growth extend fossil life or pull in clean? |
 
+### Cost Baseline: Track 1 (ECF) Across All Scenarios (Decided)
+
+**All SMARTargets scenarios use Track 1 (Existing Clean Floor) as the cost baseline.** This is actual market modeling — the real world starts with an existing fleet that has sunk capital costs.
+
+- **Existing assets**: Judged on fixed O&M economics (sunk capital), not greenfield LCOE. An existing nuclear plant doesn't need to recover its construction cost — it needs `revenue ≥ fixed_O&M` to stay online.
+- **New builds**: Evaluated at full annualized LCOE (greenfield economics). A developer builds when `revenue > annualized_LCOE_newbuild`.
+- **Track 2 (NB) is NOT the right baseline** — it assumes everything is built from scratch, which doesn't reflect actual market conditions. Track 2 answers "what would an ideal greenfield system look like?" which is a planning question, not a market question.
+- **Track 3 (CTR)** could be a sensitivity scenario (what if nuclear retires?) but is not the reference case.
+- **Source data**: Step 3A (Track 1 baseline) parquets provide the cost curves. Step 3B (Track 2/3) results are used only if modeling a "nuclear retirement" scenario axis.
+
 ### Reference Case Logic (Per Step)
 ```
 For each step in the simulation:
   1. Compute LMPs from current fleet (merit-order dispatch)
-  2. For each EXISTING unit:
+  2. For each EXISTING unit (Track 1 economics):
      - Compute annual revenue (dispatch hours × LMP)
+     - Add 45U credit (nuclear only, through 2032)
      - If revenue < fixed_O&M → RETIRE
   3. For each potential NEW BUILD (gas CCGT, gas CT, solar, wind, battery, etc.):
      - Compute expected revenue at current LMPs
-     - If revenue > annualized LCOE → BUILD (developer would invest)
+     - Add REC revenue if RPS-eligible
+     - If revenue > annualized LCOE (after 45Y/45Q credits) → BUILD
   4. Update fleet composition (retirements + new builds)
   5. Recompute LMPs with updated fleet → next step
 ```
