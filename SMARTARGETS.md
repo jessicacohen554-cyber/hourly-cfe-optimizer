@@ -307,9 +307,8 @@ R1/R2 are NOT "freeze existing clean + add demand." They are **full market simul
 
 - **Existing assets**: Judged on fixed O&M economics (sunk capital), not greenfield LCOE. An existing nuclear plant doesn't need to recover its construction cost — it needs `revenue ≥ fixed_O&M` to stay online.
 - **New builds**: Evaluated at full annualized LCOE (greenfield economics). A developer builds when `revenue > annualized_LCOE_newbuild`.
-- **Track 2 (NB) is NOT the right baseline** — it assumes everything is built from scratch, which doesn't reflect actual market conditions. Track 2 answers "what would an ideal greenfield system look like?" which is a planning question, not a market question.
-- **Track 3 (CTR)** could be a sensitivity scenario (what if nuclear retires?) but is not the reference case.
-- **Source data**: Step 3A (Track 1 baseline) parquets provide the cost curves. Step 3B (Track 2/3) results are used only if modeling a "nuclear retirement" scenario axis.
+- **Track 2 (NB) and Track 3 (CTR) have NO role here.** Track 2 simulates building a new grid from scratch (greenfield) — purely theoretical. Track 3 is a nuclear-retirement counterfactual — also purely theoretical. Neither reflects actual market conditions. They exist in the pipeline as analytical exercises but are irrelevant to market simulation.
+- **Source data**: Step 3A (Track 1 baseline) parquets only. Step 3B outputs are not used by SMARTargets.
 
 ### Reference Case Logic (Per Step)
 ```
