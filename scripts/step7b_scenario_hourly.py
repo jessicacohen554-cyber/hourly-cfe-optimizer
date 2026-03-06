@@ -57,6 +57,10 @@ from scenario_common import (
     batch_compute_total_costs, batch_effective_costs,
     batch_filter_floor, batch_floor_excess, precompute_excess_lcoes,
 )
+from dispatch_utils import (
+    load_common_data, get_demand_profile, get_supply_profiles,
+    build_supply_matrix,
+)
 
 
 # ============================================================================
@@ -234,6 +238,10 @@ def find_scenario_b_mixes(feasible_mixes, isos=None):
 
     results = {}
 
+    # Load dispatch data for dispatch-based gas backup
+    print("\n  Loading dispatch data for gas backup calculation...")
+    demand_data, gen_profiles, _, _ = load_common_data()
+
     # Load per-ISO optimal target thresholds from MAC/DAC crossover
     print("\n  Loading per-ISO optimal targets from MAC/DAC crossover analysis...")
     iso_targets = _load_optimal_targets()
@@ -256,6 +264,11 @@ def find_scenario_b_mixes(feasible_mixes, isos=None):
 
         base_demand = BASE_DEMAND_TWH[iso]
         existing = GRID_MIX_SHARES[iso]
+
+        # Load dispatch profiles for this ISO (for dispatch-based gas backup)
+        iso_demand_norm, _ = get_demand_profile(iso, demand_data)
+        iso_supply_profiles = get_supply_profiles(iso, gen_profiles)
+        iso_supply_matrix = build_supply_matrix(iso_supply_profiles)
 
         # Per-ISO target threshold from MAC/DAC crossover
         target_t = iso_targets.get(iso, DEFAULT_TARGET_THRESHOLD)
@@ -450,8 +463,12 @@ def find_scenario_b_mixes(feasible_mixes, isos=None):
             sel_mix = mixes_arr[best_idx].tolist()
 
             # Build full result dict only for the winner (scalar call)
+            # Pass dispatch data for dispatch-based gas backup
             sel_result = compute_mix_cost(sel_mix, iso_sens, iso, demand_twh,
-                                          overrides=overrides, growth_factor=gf)
+                                          overrides=overrides, growth_factor=gf,
+                                          demand_norm=iso_demand_norm,
+                                          supply_profiles=iso_supply_profiles,
+                                          supply_matrix=iso_supply_matrix)
             sel_deployed = _mix_resource_twh(sel_mix, demand_twh, iso)
 
             # Build augmented result with floor ratchet

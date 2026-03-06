@@ -1737,62 +1737,101 @@ def _build_consequential_queue(all_results):
     return queue
 
 
-def _compute_gas_backup(iso, mix_pcts, demand_twh, growth_factor):
-    """Compute gas backup capacity and cost from a mix's resource percentages.
+_BASELINE_NET_PEAK_CACHE = {}
 
-    Standalone gas backup calculation extracted from compute_mix_cost.
-    Returns (gas_backup_mw, new_gas_mw, existing_gas_used_mw, clean_peak_mw, gas_cost_per_mwh).
+
+def _compute_baseline_net_peak(iso, demand_norm, supply_profiles, supply_matrix):
+    """Compute 2025 baseline net peak (MW) from existing mix dispatch.
+
+    Used for delta calibration: at 2025 baseline, gas = EXISTING_GAS_CAPACITY_MW.
     """
-    from scenario_common import (
-        PEAK_DEMAND_MW, EXISTING_GAS_CAPACITY_MW, EXISTING_GAS_FOM_KW_YR,
-        NEW_CCGT_COST_KW_YR, PEAK_CAPACITY_CREDITS, GAS_AVAILABILITY_FACTOR,
-        RESOURCE_ADEQUACY_MARGIN, HYDRO_CAP_TWH as SC_HYDRO_CAP_TWH,
+    if iso in _BASELINE_NET_PEAK_CACHE:
+        return _BASELINE_NET_PEAK_CACHE[iso]
+
+    baseline_pcts = {k: v for k, v in GRID_MIX_SHARES[iso].items()}
+    result = reconstruct_hourly_dispatch(
+        demand_norm, supply_profiles, baseline_pcts,
+        procurement_pct=100,
+        battery_dispatch_pct=0, battery8_dispatch_pct=0,
+        ldes_dispatch_pct=0, h2_dispatch_pct=0,
+        supply_matrix=supply_matrix,
     )
+    # residual_demand is normalized; convert to MW
+    demand_mwh = BASE_DEMAND_TWH[iso] * 1e6
+    avg_demand_mw = demand_mwh / 8760.0
+    baseline_net_peak = float(np.max(result['residual_demand'])) * avg_demand_mw
+    _BASELINE_NET_PEAK_CACHE[iso] = baseline_net_peak
+    return baseline_net_peak
+
+
+def _compute_gas_backup(iso, mix_pcts, demand_twh, growth_factor,
+                        demand_norm, supply_profiles, supply_matrix):
+    """Compute gas backup capacity and cost using dispatch-based net peak hour.
+
+    Uses reconstruct_hourly_dispatch() to find the actual worst-coverage hour,
+    then applies RA margin and GAF. Delta-calibrated to 2025 baseline so that
+    at baseline, total gas = EXISTING_GAS_CAPACITY_MW.
+
+    Returns (gas_backup_mw, new_gas_mw, existing_gas_used_mw, net_peak_mw, gas_cost_per_mwh).
+    """
     demand_mwh = demand_twh * 1e6
     avg_demand_mw = demand_mwh / 8760.0
-    peak_mw = PEAK_DEMAND_MW[iso] * growth_factor
-    ra_peak_mw = peak_mw * (1 + RESOURCE_ADEQUACY_MARGIN)
 
-    cf_pct = mix_pcts.get('clean_firm', 0)
-    sol_pct = mix_pcts.get('solar', 0)
-    wnd_pct = mix_pcts.get('wind', 0)
-    osw_pct = mix_pcts.get('offshore_wind', 0)
-    ccs_pct = mix_pcts.get('ccs_ccgt', 0)
-    hyd_pct = mix_pcts.get('hydro', 0)
+    # Build resource_pcts dict for dispatch (generation resources only)
+    resource_pcts = {
+        'clean_firm': mix_pcts.get('clean_firm', 0),
+        'solar': mix_pcts.get('solar', 0),
+        'wind': mix_pcts.get('wind', 0),
+        'offshore_wind': mix_pcts.get('offshore_wind', 0),
+        'ccs_ccgt': mix_pcts.get('ccs_ccgt', 0),
+        'hydro': mix_pcts.get('hydro', 0),
+    }
+
     bat4_pct = mix_pcts.get('battery_dispatch_pct', 0)
     bat8_pct = mix_pcts.get('battery8_dispatch_pct', 0)
     ldes_pct = mix_pcts.get('ldes_dispatch_pct', 0)
+    h2_pct = mix_pcts.get('h2_dispatch_pct', 0)
 
-    hydro_twh_capped = min(hyd_pct / 100.0 * demand_twh, SC_HYDRO_CAP_TWH[iso])
-    hydro_avg_mw = hydro_twh_capped * 1e6 / 8760.0
-    pcc = PEAK_CAPACITY_CREDITS
-
-    clean_peak_mw = (
-        cf_pct / 100 * avg_demand_mw * pcc.get('clean_firm', 0) +
-        sol_pct / 100 * avg_demand_mw * pcc.get('solar', 0) +
-        wnd_pct / 100 * avg_demand_mw * pcc.get('wind', 0) +
-        osw_pct / 100 * avg_demand_mw * pcc.get('offshore_wind', 0) +
-        ccs_pct / 100 * avg_demand_mw * pcc.get('ccs_ccgt', 0) +
-        hydro_avg_mw * pcc.get('hydro', 0) +
-        bat4_pct / 100 * demand_mwh / 4.0 * pcc.get('battery', 0) +
-        bat8_pct / 100 * demand_mwh / 8.0 * pcc.get('battery8', 0) +
-        ldes_pct / 100 * demand_mwh / 100.0 * pcc.get('ldes', 0)
+    # Run 8760-hour dispatch to find actual net peak residual
+    result = reconstruct_hourly_dispatch(
+        demand_norm, supply_profiles, resource_pcts,
+        procurement_pct=100,
+        battery_dispatch_pct=bat4_pct,
+        battery8_dispatch_pct=bat8_pct,
+        ldes_dispatch_pct=ldes_pct,
+        h2_dispatch_pct=h2_pct,
+        supply_matrix=supply_matrix,
     )
+
+    # residual_demand is in normalized units; scale to MW
+    net_peak_norm = float(np.max(result['residual_demand']))
+    net_peak_mw = net_peak_norm * avg_demand_mw
+
+    # Apply RA margin and GAF
     gaf = GAS_AVAILABILITY_FACTOR[iso]
-    gas_needed_mw = max(0, ra_peak_mw - clean_peak_mw) / gaf
+    gas_raw = net_peak_mw * (1 + RESOURCE_ADEQUACY_MARGIN) / gaf
+
+    # Delta calibration: anchor to 2025 baseline
+    baseline_net_peak = _compute_baseline_net_peak(
+        iso, demand_norm, supply_profiles, supply_matrix)
+    baseline_gas_raw = baseline_net_peak * (1 + RESOURCE_ADEQUACY_MARGIN) / gaf
+    gas_delta = gas_raw - baseline_gas_raw
+
     existing_gas_mw = EXISTING_GAS_CAPACITY_MW[iso]
+    gas_needed_mw = max(0, existing_gas_mw + gas_delta)
     existing_gas_used_mw = min(gas_needed_mw, existing_gas_mw)
     new_gas_mw = max(0, gas_needed_mw - existing_gas_used_mw)
+
     gas_cost = (
         existing_gas_used_mw * EXISTING_GAS_FOM_KW_YR[iso] * 1000 +
         new_gas_mw * NEW_CCGT_COST_KW_YR[iso] * 1000
     ) / demand_mwh
 
-    return round(gas_needed_mw), round(new_gas_mw), round(existing_gas_used_mw), round(clean_peak_mw), gas_cost
+    return round(gas_needed_mw), round(new_gas_mw), round(existing_gas_used_mw), round(net_peak_mw), gas_cost
 
 
-def _export_scenario_a(all_results, isos_processed, sensitivity='high_firm_low_vre',
-                       growth='Medium'):
+def _export_scenario_a(all_results, isos_processed, demand_data, gen_profiles,
+                       sensitivity='high_firm_low_vre', growth='Medium'):
     """Export step5d MAC queue results as scenario_a_{ISO}.json for step7c compatibility.
 
     Uses step5d's own cost model directly (new-build LCOE + gas backup), NOT
@@ -1828,6 +1867,15 @@ def _export_scenario_a(all_results, isos_processed, sensitivity='high_firm_low_v
             continue
 
         iso_data = {}
+
+        # Load dispatch data for this ISO
+        demand_norm, _ = get_demand_profile(iso, demand_data)
+        supply_profiles = get_supply_profiles(iso, gen_profiles)
+        supply_matrix = build_supply_matrix(supply_profiles)
+
+        # Track first clean firm deployment year for deployment-gated learning
+        first_cf_deployment_year = None
+        existing_cf_pct = GRID_MIX_SHARES[iso].get('clean_firm', 0)
 
         # Inject pre-50% existing-only entries
         sens_toggles = SCENARIO_A['toggles']
@@ -1910,8 +1958,25 @@ def _export_scenario_a(all_results, isos_processed, sensitivity='high_firm_low_v
                 'battery_dispatch_pct': bat4_pct, 'battery8_dispatch_pct': bat8_pct,
                 'ldes_dispatch_pct': ldes_pct,
             }
-            gas_mw, new_gas_mw, exist_gas_mw, clean_peak_mw, gas_cost = \
-                _compute_gas_backup(iso, mix_pcts, demand_twh, gf)
+            gas_mw, new_gas_mw, exist_gas_mw, net_peak_mw, gas_cost = \
+                _compute_gas_backup(iso, mix_pcts, demand_twh, gf,
+                                    demand_norm, supply_profiles, supply_matrix)
+
+            # Deployment-gated learning: detect first clean firm deployment
+            if first_cf_deployment_year is None and cf_pct > existing_cf_pct + 0.1:
+                first_cf_deployment_year = SBTI_YEAR_MAP.get(t, 2050)
+
+            # Apply learning discount to new-build cost if clean firm deployed
+            learning_frac = learning_fraction(t, scenario='A',
+                                              first_deployment_year=first_cf_deployment_year)
+            if learning_frac > 0 and new_cf_twh > 0:
+                # Discount = fraction of H→L savings applied to new clean firm cost
+                nuc_h = NUCLEAR_NEWBUILD_LCOE['H'][iso]
+                nuc_l = NUCLEAR_NEWBUILD_LCOE['L'][iso]
+                nuc_savings_per_mwh = (nuc_h - nuc_l) * learning_frac
+                # Apply savings proportional to new CF TWh share of demand
+                learning_discount = nuc_savings_per_mwh * new_cf_twh / demand_twh
+                nb_cost_per_mwh = max(0, nb_cost_per_mwh - learning_discount)
 
             total_cost = round(nb_cost_per_mwh + gas_cost, 2)
             effective_cost = round(total_cost / match_frac if match_frac > 0 else 0, 2)
@@ -1940,7 +2005,10 @@ def _export_scenario_a(all_results, isos_processed, sensitivity='high_firm_low_v
                 'gas_backup_mw': gas_mw,
                 'new_gas_mw': new_gas_mw,
                 'existing_gas_used_mw': exist_gas_mw,
-                'clean_peak_mw': clean_peak_mw,
+                'clean_peak_mw': net_peak_mw,
+                'net_peak_residual_mw': net_peak_mw,
+                'learning_fraction': round(learning_frac, 3),
+                'first_cf_deployment_year': first_cf_deployment_year,
                 'new_build_cost_total': cum_nb_cost,
                 'new_gen_twh': round(new_gen_twh, 3),
                 'blended_new_lcoe': blended_new_lcoe,
@@ -2049,8 +2117,8 @@ def main():
         print("EXPORTING SCENARIO A (for step7c scenario comparison)")
         print("  Sensitivity: high_firm_low_vre | Growth: Medium")
         print("=" * 60)
-        _export_scenario_a(all_results, isos, sensitivity='high_firm_low_vre',
-                           growth='Medium')
+        _export_scenario_a(all_results, isos, demand_data, gen_profiles,
+                           sensitivity='high_firm_low_vre', growth='Medium')
 
     elapsed = time.time() - t0
     print(f"\nDone. {len(all_results)} results in {elapsed:.1f}s")

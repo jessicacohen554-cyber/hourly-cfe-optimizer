@@ -150,11 +150,21 @@ def get_demand_growth_factor(iso, threshold):
     return (1 + rate) ** years
 
 
-def learning_fraction(threshold, scenario='B'):
-    """Map CFE threshold to FOAK→NOAK learning curve fraction [0, 1]."""
+def learning_fraction(threshold, scenario='B', first_deployment_year=None):
+    """Map CFE threshold to FOAK→NOAK learning curve fraction [0, 1].
+
+    Scenario B: time-based, starts at 2030 (planned procurement).
+    Scenario A: deployment-gated — FOAK until first clean firm is deployed,
+                then learning starts from that threshold's year.
+    """
     year = SBTI_YEAR_MAP.get(threshold, 2050)
     if scenario == 'B':
         foak_start, noak_year = 2030, 2040
+    elif scenario == 'A':
+        if first_deployment_year is None:
+            return 0.0  # No clean firm deployed yet → FOAK
+        foak_start = first_deployment_year
+        noak_year = first_deployment_year + 10
     else:
         foak_start, noak_year = 2036, 2048
     if year < foak_start:
@@ -314,11 +324,15 @@ def _resource_new_build_lcoe(res, sens, iso):
     return 0
 
 
-def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1.0):
+def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1.0,
+                     demand_norm=None, supply_profiles=None, supply_matrix=None):
     """Compute total system cost per MWh for a single mix under a sensitivity scenario.
 
     Mix format: [cf, sol, wnd, osw, ccs, hyd, score, bat4, bat8, ldes, h2] (11 elements)
     Backward compat: 10-element mixes treated as [cf, sol, wnd, ccs, hyd, score, bat4, bat8, ldes, h2]
+
+    When demand_norm/supply_profiles/supply_matrix are provided, uses dispatch-based
+    gas backup (actual net peak hour from 8760 dispatch) instead of static ELCCs.
     """
     if len(mix) >= 11:
         cf_pct, sol_pct, wnd_pct, osw_pct = mix[0], mix[1], mix[2], mix[3]
@@ -393,25 +407,63 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
         remaining_after_geo = max(0, remaining_after_uprate - geo_twh)
     demand_mwh = demand_twh * 1e6
     avg_demand_mw = demand_mwh / 8760
-    peak_mw = PEAK_DEMAND_MW[iso] * growth_factor
-    ra_peak_mw = peak_mw * (1 + RESOURCE_ADEQUACY_MARGIN)
-    hydro_avg_mw = hydro_twh_capped * 1e6 / 8760
-    clean_peak_mw = (
-        cf_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['clean_firm'] +
-        sol_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['solar'] +
-        wnd_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['wind'] +
-        osw_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['offshore_wind'] +
-        ccs_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ccs_ccgt'] +
-        hydro_avg_mw * PEAK_CAPACITY_CREDITS['hydro'] +
-        bat4_pct / 100 * demand_mwh / 4.0 * PEAK_CAPACITY_CREDITS['battery'] +
-        bat8_pct / 100 * demand_mwh / 8.0 * PEAK_CAPACITY_CREDITS['battery8'] +
-        ldes_pct / 100 * demand_mwh / 100.0 * PEAK_CAPACITY_CREDITS['ldes']
-    )
     gaf = GAS_AVAILABILITY_FACTOR[iso]
-    gas_needed_mw = max(0, ra_peak_mw - clean_peak_mw) / gaf
     existing_gas_mw = EXISTING_GAS_CAPACITY_MW[iso]
-    existing_gas_used_mw = min(gas_needed_mw, existing_gas_mw)
-    new_gas_mw = max(0, gas_needed_mw - existing_gas_used_mw)
+
+    if demand_norm is not None and supply_profiles is not None:
+        # Dispatch-based gas backup: actual net peak hour from 8760 dispatch
+        from dispatch_utils import reconstruct_hourly_dispatch, build_supply_matrix as _bsm
+        if supply_matrix is None:
+            supply_matrix = _bsm(supply_profiles)
+        resource_pcts = {
+            'clean_firm': cf_pct, 'solar': sol_pct, 'wind': wnd_pct,
+            'offshore_wind': osw_pct, 'ccs_ccgt': ccs_pct, 'hydro': hyd_pct,
+        }
+        disp = reconstruct_hourly_dispatch(
+            demand_norm, supply_profiles, resource_pcts,
+            procurement_pct=100,
+            battery_dispatch_pct=bat4_pct, battery8_dispatch_pct=bat8_pct,
+            ldes_dispatch_pct=ldes_pct, h2_dispatch_pct=h2_pct,
+            supply_matrix=supply_matrix,
+        )
+        net_peak_norm = float(np.max(disp['residual_demand']))
+        net_peak_mw = net_peak_norm * avg_demand_mw
+        gas_raw = net_peak_mw * (1 + RESOURCE_ADEQUACY_MARGIN) / gaf
+
+        # Baseline dispatch for delta calibration
+        baseline_pcts = {k: v for k, v in GRID_MIX_SHARES[iso].items()}
+        disp_base = reconstruct_hourly_dispatch(
+            demand_norm, supply_profiles, baseline_pcts,
+            procurement_pct=100, supply_matrix=supply_matrix,
+        )
+        baseline_peak = float(np.max(disp_base['residual_demand'])) * (BASE_DEMAND_TWH[iso] * 1e6 / 8760)
+        baseline_gas_raw = baseline_peak * (1 + RESOURCE_ADEQUACY_MARGIN) / gaf
+        gas_delta = gas_raw - baseline_gas_raw
+
+        gas_needed_mw = max(0, existing_gas_mw + gas_delta)
+        existing_gas_used_mw = min(gas_needed_mw, existing_gas_mw)
+        new_gas_mw = max(0, gas_needed_mw - existing_gas_used_mw)
+        clean_peak_mw = round(net_peak_mw)
+    else:
+        # Fallback: static ELCC-based gas backup (backward compat)
+        peak_mw = PEAK_DEMAND_MW[iso] * growth_factor
+        ra_peak_mw = peak_mw * (1 + RESOURCE_ADEQUACY_MARGIN)
+        hydro_avg_mw = hydro_twh_capped * 1e6 / 8760
+        clean_peak_mw = (
+            cf_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['clean_firm'] +
+            sol_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['solar'] +
+            wnd_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['wind'] +
+            osw_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['offshore_wind'] +
+            ccs_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ccs_ccgt'] +
+            hydro_avg_mw * PEAK_CAPACITY_CREDITS['hydro'] +
+            bat4_pct / 100 * demand_mwh / 4.0 * PEAK_CAPACITY_CREDITS['battery'] +
+            bat8_pct / 100 * demand_mwh / 8.0 * PEAK_CAPACITY_CREDITS['battery8'] +
+            ldes_pct / 100 * demand_mwh / 100.0 * PEAK_CAPACITY_CREDITS['ldes']
+        )
+        gas_needed_mw = max(0, ra_peak_mw - clean_peak_mw) / gaf
+        existing_gas_used_mw = min(gas_needed_mw, existing_gas_mw)
+        new_gas_mw = max(0, gas_needed_mw - existing_gas_used_mw)
+
     gas_cost = (
         existing_gas_used_mw * EXISTING_GAS_FOM_KW_YR[iso] * 1000 +
         new_gas_mw * NEW_CCGT_COST_KW_YR[iso] * 1000
