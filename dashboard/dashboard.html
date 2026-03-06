@@ -903,28 +903,28 @@ function priceMix(iso, mixArr, baseDemandTwh, targetYear, growthRate) {
     const batLcoe = ((LCOE_TABLES.battery || {})[battCostName] || {})[iso] || 102;
     const batTx = ((TX_TABLES.battery || {})[tx] || {})[iso] || 0;
     const batCost = (batPct / 100.0) * (batLcoe + batTx);
-    resourceCosts.battery = { dispatch_pct: batPct, cost_per_demand_mwh: batCost };
+    resourceCosts.battery = { capacity_pct: batPct, dispatch_pct: batPct, cost_per_demand_mwh: batCost };
     totalCost += batCost;
 
     // Battery 8hr — uses same storage toggle level as 4hr battery
     const bat8Lcoe = ((LCOE_TABLES.battery8 || {})[battCostName] || {})[iso] || 130;
     const bat8Tx = ((TX_TABLES.battery8 || {})[tx] || {})[iso] || 0;
     const bat8Cost = (bat8Pct / 100.0) * (bat8Lcoe + bat8Tx);
-    resourceCosts.battery8 = { dispatch_pct: bat8Pct, cost_per_demand_mwh: bat8Cost };
+    resourceCosts.battery8 = { capacity_pct: bat8Pct, dispatch_pct: bat8Pct, cost_per_demand_mwh: bat8Cost };
     totalCost += bat8Cost;
 
     const ldesCostName = { L: 'Low', M: 'Medium', H: 'High' }[ldesLevel] || 'Medium';
     const ldesLcoe = ((LCOE_TABLES.ldes || {})[ldesCostName] || {})[iso] || 180;
     const ldesTx = ((TX_TABLES.ldes || {})[tx] || {})[iso] || 0;
     const ldesCost = (ldesPct / 100.0) * (ldesLcoe + ldesTx);
-    resourceCosts.ldes = { dispatch_pct: ldesPct, cost_per_demand_mwh: ldesCost };
+    resourceCosts.ldes = { capacity_pct: ldesPct, dispatch_pct: ldesPct, cost_per_demand_mwh: ldesCost };
     totalCost += ldesCost;
 
     // Green H₂ storage cost
     const h2Lcoe = ((LCOE_TABLES.h2 || {})[battCostName] || {})[iso] || 200;
     const h2Tx = ((TX_TABLES.h2 || {})[tx] || {})[iso] || 0;
     const h2Cost = (h2Pct / 100.0) * (h2Lcoe + h2Tx);
-    resourceCosts.h2 = { dispatch_pct: h2Pct, cost_per_demand_mwh: h2Cost };
+    resourceCosts.h2 = { capacity_pct: h2Pct, dispatch_pct: h2Pct, cost_per_demand_mwh: h2Cost };
     totalCost += h2Cost;
 
     // ---- Gas Backup Capacity Cost (mirrors step 3 objective) ----
@@ -3506,6 +3506,7 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
     if (!interimRC) {
         return;
     }
+    injectStorageDispatch(interimRC, interimThreshold);
 
     // Long-term target — resolve with longtermYear's demand
     const longtermVal = document.getElementById('longtermTarget').value;
@@ -3525,6 +3526,7 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
                 || longtermEntry?.costs?.resource_costs;
             longtermGasBackup = longtermEntry?.gas_backup || null;
         }
+        if (longtermRC) injectStorageDispatch(longtermRC, longtermThreshold);
         longtermTWh = annualDemandTWh * longtermGrowthFactor;
     }
 
@@ -3537,6 +3539,23 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
     const hydroCapTWh = hydroCapPct / 100 * todayTWh;
     const gridMix = (typeof GRID_MIX_SHARES !== 'undefined') ? (GRID_MIX_SHARES[iso] || {}) : {};
 
+    // Inject actual dispatch values from RESOURCE_MIX_DATA (Step 4 annual manifest)
+    // into resource_costs objects. Cost uses capacity_pct; display uses dispatch_pct.
+    function injectStorageDispatch(rc, thresholdKey) {
+        if (typeof RESOURCE_MIX_DATA === 'undefined' || !RESOURCE_MIX_DATA[iso]) return;
+        const mixData = RESOURCE_MIX_DATA[iso];
+        const tIdx = (typeof THRESHOLDS !== 'undefined') ? THRESHOLDS.indexOf(String(thresholdKey)) : -1;
+        if (tIdx < 0) return;
+        for (const st of ['battery', 'battery8', 'ldes', 'h2']) {
+            if (rc[st]) {
+                const actualDispatch = (mixData[st] || [])[tIdx];
+                if (actualDispatch != null && actualDispatch > 0) {
+                    rc[st].dispatch_pct = actualDispatch;
+                }
+            }
+        }
+    }
+
     function getResourceTWh(rc, targetDemandTWh) {
         const existing = {};
         const newBuild = {};
@@ -3544,7 +3563,7 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
             const rd = rc[r];
             if (!rd) { existing[r] = 0; newBuild[r] = 0; return; }
             if (r === 'battery' || r === 'battery8' || r === 'ldes' || r === 'h2') {
-                // Storage resources: dispatch_pct only (all new build)
+                // Storage resources: use ACTUAL dispatch_pct (from Step 4 manifest)
                 existing[r] = 0;
                 newBuild[r] = (rd.dispatch_pct || rd.d || 0) / 100 * targetDemandTWh;
             } else if (r === 'hydro') {

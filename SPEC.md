@@ -3,7 +3,55 @@
 > **Authoritative reference for all design decisions.** If a future session needs context, read this file first.
 > Last updated: 2026-03-04.
 
-## Current Status (Mar 4, 2026)
+## Current Status (Mar 6, 2026)
+
+### Battery/LDES Pipeline Architecture Fix (In Progress — Mar 6, 2026)
+
+**Branch:** `claude/fix-dashboard-charts-w0urc`
+
+**Bug**: `battery_dispatch_pct` throughout the pipeline represents storage **CAPACITY** (energy capacity as % of annual demand), not actual dispatch. A 4hr battery at 0.06% capacity cycles ~54-162×/year, producing far more dispatched energy than the capacity number. Every downstream step that reads `battery_dispatch_pct` as if it were annual dispatch massively understates storage's contribution.
+
+**Root cause**: Step 1 PFS physics correctly simulates cycling. `dispatch_utils.reconstruct_hourly_dispatch()` correctly treats the percentage as capacity. But Step 9A falls back to `battery_dispatch_pct` (capacity) when `battery_dispatch_share` is missing in DG/CO parquets, and the dashboard displays this capacity value as if it were dispatch.
+
+**Additional bug found**: `enrich_parquets_with_dispatch_shares()` had a normalization error — dividing by H (8760) when demand sums to 1.0 (not 8760). This made enrichment values 8760× too small.
+
+**Architecture fix — Step 4 Annual Manifest as single source of truth:**
+
+| Change | Status | Description |
+|--------|--------|-------------|
+| Step 4 `build_annual_manifest()` | ✅ Done | New function sums 8760h profiles into annual dispatch %. One row per archetype with capacity vs dispatch clearly separated. QA/QC: energy balance, RTE checks, dispatch sanity. |
+| Step 4 normalization fix | ✅ Done | Fixed `enrich_parquets_with_dispatch_shares()`: `sum(profile) * 100` not `/ H * 100`. |
+| Step 5AB merged module | ✅ Done | New `step5ab_fossil_dispatch.py` computes both CO2 and LMP from single merit-order dispatch pass. Reads from Step 4 cache. Imports stack logic from step5b. |
+| Step 5C no fallback | ✅ Done | Removed live-compute fallback on cache miss. Step 4 cache required. |
+| Step 9A manifest reader | ✅ Done | Loads annual manifests, looks up archetype keys, writes both `battery` (dispatch) and `battery_cap` (capacity) arrays to shared-data.js. |
+| Dashboard capacity vs dispatch | ✅ Done | `priceMix()` returns both `capacity_pct` and `dispatch_pct`. `injectStorageDispatch()` reads actual dispatch from RESOURCE_MIX_DATA. Cost uses capacity; display uses dispatch. |
+| Step 5D | NOT TOUCHED | Intentionally designed to not use dispatch cache. |
+| Column rename (future) | Deferred | Rename `battery_dispatch_pct` → `battery_capacity_pct` in Steps 1-3 parquets. |
+
+**Manifest schema**: `data/step4-dispatch-cache/{ISO}_annual_manifest.parquet`
+- Key: `archetype_key` (MD5 hash of mix params)
+- Capacity columns: `battery_capacity_pct`, `battery8_capacity_pct`, `ldes_capacity_pct`, `h2_capacity_pct`
+- Dispatch columns: `battery_dispatch_pct`, `battery8_dispatch_pct`, etc. (actual cycling dispatch)
+- Per-resource: `{resource}_dispatch_pct`, `{resource}_surplus_pct`
+- Aggregates: `hourly_match_score`, `total_clean_dispatch_pct`, `total_curtailment_pct`, `gap_pct`
+
+**Dispatch/capacity ratios by ISO:**
+| ISO | Avg ratio | Meaning |
+|-----|-----------|---------|
+| CAISO | 162x | Battery dispatches 162× its capacity over the year |
+| ERCOT | 77x | |
+| PJM | 54x | |
+| NYISO | 111x | |
+| NEISO | 118x | |
+| MISO | 64x | |
+| SPP | 82x | |
+
+**Next steps (deferred to future session):**
+- Run Step 9A to regenerate shared-data.js with correct dispatch values
+- Dashboard UI fixes: demand lines, gas chart, delete sections, compressed day
+- Full pipeline rerun via GitHub Actions to populate all downstream outputs
+
+---
 
 ### Storage Unit Standardization (Completed — Mar 4, 2026)
 
