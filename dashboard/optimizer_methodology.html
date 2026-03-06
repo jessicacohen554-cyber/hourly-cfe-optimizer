@@ -667,6 +667,39 @@
         Transparency about model boundaries is essential for proper interpretation of results.
     </p>
 
+    <h3>Demand Growth Projections (Tracks 2 &amp; 3)</h3>
+    <p style="font-size:0.92rem;color:var(--text-secondary);line-height:1.8;">
+        The new-build (Track 2) and cost-to-replace (Track 3) analyses model demand growth over a
+        25-year horizon (2026&ndash;2050), with each CFE threshold mapped to a target year via SBTi milestones.
+        Demand compounds annually as <code>(1 + rate)<sup>years</sup></code>, where <code>years = target_year &minus; 2025</code>.
+        Existing clean generation remains constant in absolute TWh; its share of total generation declines as demand grows.
+    </p>
+    <p style="font-size:0.92rem;color:var(--text-secondary);line-height:1.8;">
+        Growth rates are ISO-specific and set at three levels (Low / Medium / High), calibrated from
+        EIA AEO 2025 reference and side cases, NERC 2024 LTRA, and ISO/RTO planning forecasts:
+    </p>
+    <table class="data-table" style="font-size:0.85rem; max-width:600px; margin-bottom:16px;">
+        <thead>
+            <tr><th>ISO</th><th>Low (%/yr)</th><th>Medium (%/yr)</th><th>High (%/yr)</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>CAISO</td><td>1.4</td><td>1.9</td><td>2.5</td></tr>
+            <tr><td>ERCOT</td><td>2.0</td><td>3.5</td><td>5.5</td></tr>
+            <tr><td>PJM</td><td>1.5</td><td>2.4</td><td>3.6</td></tr>
+            <tr><td>NYISO</td><td>1.3</td><td>2.0</td><td>4.4</td></tr>
+            <tr><td>NEISO</td><td>0.9</td><td>1.8</td><td>2.9</td></tr>
+            <tr><td>MISO</td><td>1.2</td><td>2.2</td><td>3.8</td></tr>
+            <tr><td>SPP</td><td>1.0</td><td>1.8</td><td>3.0</td></tr>
+        </tbody>
+    </table>
+    <p style="font-size:0.85rem;color:var(--text-muted);line-height:1.7;">
+        <strong>Low</strong> reflects baseline economic/population growth (EIA Low Economic Growth case, ~1.2% GDP CAGR).
+        <strong>Medium</strong> incorporates confirmed large-load requests (data centers, industrial reshoring) anchored to the
+        EIA AEO 2025 Reference Case (~1.6% national electricity CAGR), regionalized using ISO planning data.
+        <strong>High</strong> assumes full realization of data center/AI load growth plus accelerated electrification
+        (economy-wide net-zero pathway); ERCOT's 5.5% aligns with recent ERCOT board projections of near-term demand doubling.
+    </p>
+
     <h3>Key Assumptions</h3>
     <ul style="font-size:0.92rem;color:var(--text-secondary);line-height:1.8;">
         <li><strong>2025 snapshot model</strong> &mdash; generation profiles and grid mix reflect
@@ -755,6 +788,15 @@
         <li><strong>NREL ATB Storage Module</strong> &mdash; Li-ion battery and long-duration storage cost projections</li>
         <li><strong>Form Energy / ESS Inc. Published Specifications</strong> &mdash; Iron-air LDES technology parameters</li>
         <li><strong>DOE Long Duration Energy Storage Shot</strong> &mdash; LDES cost targets and technology roadmap</li>
+    </ul>
+
+    <h3>Demand Growth Projections</h3>
+    <ul class="source-list">
+        <li><strong>EIA Annual Energy Outlook 2025</strong> &mdash; Reference, High/Low Economic Growth cases for national electricity demand trajectories</li>
+        <li><strong>NERC 2024 Long-Term Reliability Assessment</strong> &mdash; 10-year peak demand growth by assessment area; regional risk classifications</li>
+        <li><strong>ERCOT 2025 Long-Term Load Forecast Report</strong> &mdash; ISO-specific demand projections incorporating large-load interconnection requests</li>
+        <li><strong>PJM 2025 Long-Term Load Forecast</strong> &mdash; 20-year summer/winter peak and energy growth projections</li>
+        <li><strong>Grid Strategies, <em>Power Demand Forecasts Revised Up for Third Year Running</em> (2025)</strong> &mdash; National load growth aggregation across planning entities</li>
     </ul>
 
     <p style="margin-top:40px;padding-top:20px;border-top:1px solid var(--border-light);font-size:0.82rem;color:var(--text-muted);text-align:center;">
