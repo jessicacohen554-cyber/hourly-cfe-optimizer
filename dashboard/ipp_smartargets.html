@@ -382,12 +382,12 @@ function updateOverview() {
     const statsEl = document.getElementById('fleetStats');
     const totalCap = co.cap_gw;
     const totalGen = co.gen_twh;
-    const totalCO2 = co.co2_2024_mt;
+    const totalCO2 = co.co2_2023_mt || co.co2_2024_mt;
     const intensity = co.intensity_kg;
     statsEl.innerHTML = `
         <div class="fleet-stat"><div class="val">${totalCap.toFixed(1)} GW</div><div class="lbl">Total Capacity</div></div>
         <div class="fleet-stat"><div class="val">${totalGen.toFixed(1)} TWh</div><div class="lbl">Annual Generation</div></div>
-        <div class="fleet-stat"><div class="val">${totalCO2.toFixed(1)} Mt</div><div class="lbl">2024 CO₂ Emissions</div></div>
+        <div class="fleet-stat"><div class="val">${totalCO2.toFixed(1)} Mt</div><div class="lbl">2023 CO₂ Baseline</div></div>
         <div class="fleet-stat"><div class="val">${intensity.toFixed(0)} kg/MWh</div><div class="lbl">Emission Intensity</div></div>
         <div class="fleet-stat"><div class="val">${Object.keys(co.fleet_summary).length}</div><div class="lbl">ISOs</div></div>
     `;
@@ -453,7 +453,7 @@ function updateFanCharts() {
     const passiveData = co.qt_analysis[activeQT];
     const activeData = co.active_qt_analysis ? co.active_qt_analysis[activeQT] : null;
     const fanData = passiveData.fan;
-    const years = [2025, 2030, 2035, 2040, 2045, 2050];
+    const years = [2023, 2030, 2035, 2040, 2045, 2050];
 
     const modeLabel = showActiveQT ? 'Active' : 'Passive';
     document.getElementById('fanChartTitle').textContent = `Emissions Fan (${modeLabel}) — ${QT_LABELS[activeQT]}`;
@@ -514,11 +514,13 @@ function updateFanCharts() {
         });
     }
 
-    // AT trajectory overlay
+    // AT trajectory overlay (from 2023 baseline)
     if (co.target) {
-        const co2_2024 = co.co2_2024_mt;
-        const atReductions = [0, 0.57, 0.82, 0.88, 0.94, 1.0];
-        const atEmissions = atReductions.map(r => Math.max(0, co2_2024 * (1 - r)));
+        const co2_base = co.co2_2023_mt || co.co2_2024_mt;
+        // Years: 2023, 2030, 2035, 2040, 2045, 2050
+        // Remaining: 100%, 43%, 18%, 12%, 6%, 0%
+        const atRemaining = [1.0, 0.43, 0.18, 0.12, 0.06, 0.0];
+        const atEmissions = atRemaining.map(r => Math.max(0, co2_base * r));
         datasets.push({
             label: 'AT Trajectory', data: atEmissions,
             borderColor: '#EF4444', backgroundColor: 'transparent',
@@ -573,7 +575,7 @@ function updateFanCharts() {
 
 function updateProfitChart() {
     const co = DATA.companies[activeCompany];
-    const years = [2025, 2030, 2035, 2040, 2045, 2050];
+    const years = [2023, 2030, 2035, 2040, 2045, 2050];
     const datasets = [];
 
     // Show all base scenarios
@@ -611,15 +613,15 @@ function updateFanNarrative() {
     const co = DATA.companies[activeCompany];
     const passiveQt = co.qt_analysis[activeQT];
     const activeQt = co.active_qt_analysis ? co.active_qt_analysis[activeQT] : null;
-    const co2_2024 = co.co2_2024_mt;
+    const co2_base = co.co2_2023_mt || co.co2_2024_mt;
 
     const pFan = passiveQt.fan;
     const pBqt = passiveQt.breakeven_qt;
     const pP50 = pFan.p50[pFan.p50.length - 1];
-    const pReduction = ((co2_2024 - pP50) / co2_2024 * 100).toFixed(0);
+    const pReduction = ((co2_base - pP50) / co2_base * 100).toFixed(0);
 
     let text = `<strong>Passive QT</strong>: Under <strong>${QT_LABELS[activeQT]}</strong>, ${co.name}'s existing fleet achieves `;
-    text += `<strong>${pReduction}% emission reduction</strong> by 2050 (${co2_2024.toFixed(1)} → ${pP50.toFixed(1)} Mt). `;
+    text += `<strong>${pReduction}% emission reduction</strong> by 2050 (from ${co2_base.toFixed(1)} Mt in 2023 → ${pP50.toFixed(1)} Mt). `;
     text += `Breakeven QT: <strong>${(pBqt * 100).toFixed(0)}%</strong>.`;
 
     if (activeQt) {
