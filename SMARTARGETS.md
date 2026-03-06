@@ -292,14 +292,18 @@ R1/R2 are NOT "freeze existing clean + add demand." They are **full market simul
 
 ### R1 vs R2
 
-| | R1: Current Market | R2: Current Market + Demand Growth |
+See full scenario matrix below (§ Scenario Matrix). R1/R2 are both "no carbon constraint" reference cases differing on whether market conditions facilitate or challenge clean deployment.
+
+| | R1: Facilitating | R2: Challenging |
 |---|---|---|
 | **Starting fleet** | 2025 existing (all resources) | 2025 existing (all resources) |
-| **Demand** | Flat (2025 levels) | Growth trajectory (TBD rate) |
+| **Demand growth** | Medium (~1-1.5%/yr) | High (~2-3%/yr, AI/electrification) |
 | **Carbon price** | $0 | $0 |
-| **Policy** | Current: 45Y (new build PTC, incl. nuclear uprates), 45U (existing nuclear PTC through 2032), 45Q (CCS), REC revenue from state RPS | Current |
-| **New builds** | Whatever's profitable at market LMPs | More capacity needed → more new builds |
-| **Key question** | What does the market do on its own? | Does demand growth extend fossil life or pull in clean? |
+| **Policy** | Current (45Y/45U/45Q + REC revenue) | Current (same — 45Q stays intact) |
+| **Interconnection queues** | Reformed (~5-8 GW/yr/ISO) | Constrained (~2-4 GW/yr/ISO) |
+| **Learning curves** | Fast (high learning rate per doubling) | Slow (low learning rate per doubling) |
+| **Starting LCOE** | Low (optimistic 2025 costs) | High (pessimistic 2025 costs) |
+| **Key question** | How clean does the grid get when everything goes right but there's no carbon price? | How clean does the grid get when it's an uphill battle? |
 
 ### Cost Baseline: Track 1 (ECF) Across All Scenarios (Decided)
 
@@ -432,62 +436,213 @@ This endogenous formulation **supersedes** the time-based `learning_fraction(yea
 
 The existing Step 3 time-based curves remain valid for their original purpose (SBTi milestone pricing under assumed deployment schedules). SMARTargets just uses a different, more fundamental mechanism.
 
-## Scenario Axes (TBD — User to Define)
+## Scenario Matrix
 
 Each scenario represents a different set of **market conditions** — not a different target. The question each scenario answers: *"How clean does the grid get when the market looks like this?"*
 
-R1/R2 are the reference cases (described above). R3+ layer on policy/price interventions:
+### Scenario Condition Definitions
 
-Candidate axes (not finalized):
+Before the matrix, here's what each condition column means:
 
-| Axis | Options | What It Changes |
-|------|---------|-----------------|
-| **Carbon price** | $0 (R1/R2) / $50 / $100 / $185 | Raises fossil marginal cost → raises LMP → improves clean revenue. Direct: makes every clean MWh worth `carbon_price × displaced_rate` more. |
-| **Learning speed** | Fast / Medium / Slow | How quickly early deployment drives FOAK→NOAK cost reduction. Fast learning = early deployment unlocks cascade. |
-| **Starting LCOE** | Low / Medium / High | Where technology costs begin (2025 starting point). Low = some resources already profitable at t=0. |
-| **Participation level** | TBD | How many corporate buyers / utilities participate. Affects cumulative GW → learning curve speed. |
-| **Policy regime** | Current (45Y/45U/45Q + REC revenue) vs No-credit counterfactual | 45Y lowers new-build LCOE (solar, wind, nuclear uprates). 45U keeps existing nuclear viable through 2032. 45Q makes CCS competitive. REC revenue adds $/MWh for RPS-eligible resources. RPS mandates expressed via REC revenue signal, NOT as hard deployment floors (ACP < REC means some entities pay penalty instead of building). |
-| **Interconnection queue friction** | TBD (see below) | Constrains the RATE of new deployment. Even profitable projects can't connect if the queue is clogged. |
-| **Capacity market reform** | TBD | ELCC-based vs flat capacity payments. Affects dispatchable premium. |
+| Condition | Facilitating | Challenging |
+|-----------|-------------|-------------|
+| **Demand growth** | Medium (~1-1.5%/yr) | High (~2-3%/yr, AI + electrification) |
+| **Interconnection queues** | Reformed (~5-8 GW/yr/ISO) — FERC Order 2023 reforms, cluster studies, faster processing | Constrained (~2-4 GW/yr/ISO) — status quo, ~80% dropout, 5-yr avg wait |
+| **Learning curves** | Fast — high learning rate per doubling, strong manufacturing scale-up | Slow — low learning rate, supply chain bottlenecks, regulatory friction |
+| **Starting LCOE** | Low — optimistic 2025 cost starting point across all clean resources | High — pessimistic 2025 costs, supply chain premiums, tariff exposure |
+| **New gas buildability** | Moderate friction — siting opposition, ESG lending constraints slow new gas | Low friction — gas builds freely where profitable |
 
-**Not yet decided**: Which axes beyond carbon price, how many levels, which combinations. R1/R2 reference case design is locked. R3+ scenario design determines what story the dashboard tells.
+| Condition | Fuller Technology Options | More Limited Technology Options |
+|-----------|--------------------------|-------------------------------|
+| **DAC availability** | Available at scenario cost (L/M/H) — grid can lean on DAC at crossover | Not available / very expensive ($600+/ton) — grid must decarbonize further before offsets |
+| **CCS viability** | CCS-CCGT viable, 45Q intact, CO₂ transport infrastructure builds out | CCS limited — storage site constraints, public opposition, 45Q expires |
+| **Storage breadth** | Full suite: 4hr/8hr Li-ion, LDES (iron-air), Green H₂ | Battery only (4hr/8hr). LDES/H₂ remain pre-commercial |
+| **Nuclear pathway** | SMR/advanced reactors reach commercial scale. NRC streamlines licensing | Nuclear stalls — cost overruns, regulatory delays, public opposition |
 
-### Interconnection Queue Constraint (Concept — Scenario Placement TBD)
+### Full Scenario Matrix
 
-Real-world deployment is throttled by interconnection queues. A project can be fully financed and profitable but sit in queue for 5+ years. This is one of the most binding constraints on the clean energy transition today.
+| ID | Target Type | Decarbonization Incentive | Economy-Wide NZ? | Decarb Technology Options | Conditions | Carbon Price | Policy Regime |
+|----|------------|--------------------------|-------------------|--------------------------|------------|-------------|---------------|
+| **R1** | Reference | No CO₂ constraint | No | N/A | Facilitating | $0 | Current (45Y/45U/45Q + REC) |
+| **R2** | Reference | No CO₂ constraint | No | N/A | Challenging | $0 | Current (45Q intact) |
+| **S1** | Aspirational (AT) | Power sector NZ CO₂ by 2050 | No | Fuller | Facilitating | Yes (carbon price or equivalent forcing) | Current + carbon pricing mechanism |
+| **S2** | Aspirational (AT) | Power sector NZ CO₂ by 2050 | No | More Limited | Challenging | Yes (same mechanism) | Current + carbon pricing mechanism |
+| **S3** | Aspirational (AT) | Power sector NZ CO₂ by 2050 | Yes | Fuller | Facilitating | Yes | Current + economy-wide carbon pricing |
+| **S4** | Aspirational (AT) | Power sector NZ CO₂ by 2050 | Yes | More Limited | Challenging | Yes | Current + economy-wide carbon pricing |
+| **Q1** | Qualified (QT) | No new constraint (emergent from market) | No | Fuller | Facilitating | $0 | Current (same as R1) |
+| **Q2** | Qualified (QT) | No new constraint (emergent from market) | No | More Limited | Challenging | $0 | Current (same as R2) |
 
-**The constraint**: Max annual GW deployment rate per ISO, reflecting queue throughput — not just economics. Even if 20 GW of solar is profitable in ERCOT, the grid can only interconnect ~3-5 GW/year.
+### Detailed Scenario Conditions
 
-**What it affects**:
-- Slows the pace of clean deployment even when economics are favorable
-- Creates a gap between "what the market wants to build" and "what can actually connect"
-- Extends fossil plant lifetimes — if clean can't connect fast enough, gas stays online longer
-- Potentially the most important real-world friction missing from a pure-economics model
+#### R1 — Reference: Facilitating (No Carbon Constraint)
+*"Everything goes right, but no one's pushing for decarbonization."*
 
-**Modeling approach** (draft):
+- **Demand**: Medium growth (~1-1.5%/yr)
+- **Interconnection**: Reformed queues (~5-8 GW/yr/ISO)
+- **Learning**: Fast (high rates per doubling)
+- **Starting LCOE**: Low across all clean resources
+- **Policy**: Current — 45Y (new-build PTC), 45U (existing nuclear through 2032), 45Q (CCS), REC revenue
+- **Carbon price**: $0
+- **New gas**: Moderate friction (ESG lending, siting opposition slow new gas)
+- **Key question**: How clean does the grid get on economics alone when the wind is at your back?
+
+#### R2 — Reference: Challenging (No Carbon Constraint)
+*"Everything's an uphill battle, and no one's pushing either."*
+
+- **Demand**: High growth (~2-3%/yr — AI, data centers, electrification pressure)
+- **Interconnection**: Constrained queues (~2-4 GW/yr/ISO, status quo)
+- **Learning**: Slow (low rates, bottlenecks)
+- **Starting LCOE**: High across clean resources (tariffs, supply chain premiums)
+- **Policy**: Current (45Q stays intact — CCS still gets its credit)
+- **Carbon price**: $0
+- **New gas**: Low friction (gas builds freely where profitable)
+- **Key question**: Does high demand + slow clean deployment = extended fossil dominance?
+
+#### S1 — Aspirational: Power Sector NZ, Fuller Options, Facilitating
+*"Full commitment to power sector net-zero with every tool available."*
+
+- **Demand**: Medium growth (~1-1.5%/yr)
+- **Interconnection**: Reformed queues
+- **Learning**: Fast
+- **Starting LCOE**: Low
+- **DAC**: Available — leveraged at the crossover point (from optimal target exercise). Grid pushes clean until marginal MAC > DAC cost, then DAC handles residual.
+- **CCS**: Viable, 45Q intact, CO₂ infrastructure builds out
+- **Nuclear**: SMR/advanced pathway open
+- **Carbon price or equivalent forcing**: The mechanism that makes NZ happen. Could be carbon price ($50-100 range), cap-and-trade, or CES mandate. Effect: makes clean deployment more profitable AND fossil generation more expensive.
+- **Key question**: With full toolkit and tailwinds, what does the optimal NZ grid look like? Where does the DAC crossover land?
+
+#### S2 — Aspirational: Power Sector NZ, Limited Options, Challenging
+*"Same NZ mandate, but the toolkit is constrained and the headwinds are real."*
+
+- **Demand**: High growth (~2-3%/yr)
+- **Interconnection**: Constrained queues (status quo)
+- **Learning**: Slow
+- **Starting LCOE**: High
+- **DAC**: Not available (or prohibitively expensive, $600+/ton) — grid must decarbonize deeper because offsets aren't an option
+- **CCS**: Limited — storage site constraints, pipeline opposition, 45Q at risk
+- **Nuclear**: Stalls — cost overruns, NRC delays
+- **Carbon price or equivalent forcing**: Same mechanism as S1, but biting harder because it has to push through headwinds
+- **Key question**: How much more expensive is NZ when you can't lean on DAC, nuclear stalls, and deployment is slow? This is the "hard mode" scenario — NZ is required but the path is brutal.
+
+#### S3 — Aspirational: Economy-Wide NZ, Fuller Options, Facilitating
+*"The whole economy goes net-zero. The grid is the backbone."*
+
+**How S3 differs from S1 — three mechanisms, not just more demand:**
+
+1. **Demand growth is mandatory and higher** (~2-3%/yr even in "facilitating" conditions) — economy-wide NZ requires electrifying transport (EVs), buildings (heat pumps), and industry (electric furnaces). This isn't optional growth — it's policy-mandated electrification. Both S3 and S4 use high demand regardless of facilitating/challenging.
+
+2. **DAC budget is shared across the whole economy** — In S1, the grid uses DAC for its residual emissions and that's it. In S3, industry (steel, cement), transport (aviation, shipping), and agriculture also need DAC/removals for *their* residual emissions. The grid's "share" of available DAC capacity shrinks. Effect: the grid may need to push to a *higher* clean % before the portfolio stop binds, because the DAC that would otherwise cover grid residuals is allocated to harder-to-abate sectors.
+
+3. **Green H₂ production load** — Economy-wide NZ requires green hydrogen for steel, chemicals, shipping fuel. H₂ electrolysis consumes clean electricity. This adds ~20-30% electricity demand on top of direct electrification. The grid has to be bigger AND cleaner.
+
+- **Demand**: High (~2-3%/yr — mandatory electrification even under facilitating conditions)
+- **Interconnection**: Reformed queues
+- **Learning**: Fast (economy-wide deployment accelerates learning across sectors)
+- **Starting LCOE**: Low
+- **DAC**: Available, but shared — grid gets a fraction of total DAC capacity
+- **H₂ load**: Significant — electrolysis demand on top of direct load
+- **Carbon price**: Economy-wide carbon price (higher signal than power-only)
+- **Key question**: When the grid has to power everything AND compete for DAC, how much harder is decarbonization?
+
+#### S4 — Aspirational: Economy-Wide NZ, Limited Options, Challenging
+*"The hardest scenario. Everything electrifies, nothing's easy."*
+
+Same economy-wide mechanisms as S3, but under challenging conditions:
+
+- **Demand**: Very high (~3-4%/yr — aggressive electrification + AI + H₂ under constrained grid)
+- **Interconnection**: Constrained queues (the worst combo — massive demand + can't build fast enough)
+- **Learning**: Slow
+- **Starting LCOE**: High
+- **DAC**: Not available — grid must go nearly all the way without offsets
+- **H₂ load**: Same or higher (no alternative to green H₂ when economy-wide NZ is mandated)
+- **CCS/Nuclear**: Limited
+- **Key question**: Is this even feasible? What's the cost premium vs S3? This scenario tests whether economy-wide NZ is physically achievable under adverse conditions, or if something has to give.
+
+#### Q1 — Qualified Target: Best Achievable Without New Enabling Conditions, Facilitating
+*"What can we credibly commit to today, without waiting for new policy?"*
+
+**What QTs actually mean (per SMARTargets methodology):**
+- QTs represent the **best a company can achieve given current/realistic conditions WITHOUT new enabling conditions** (no new carbon price, no new CES, no new mandates beyond what exists today)
+- QTs use the **same policy environment as R1/R2** — current policy only. No additional forcing mechanism.
+- The QT level is determined by the model: run the market simulation under current-policy conditions and find the maximum clean level where deployment is still economically rational (profitable or cost-effective to commit to)
+- The **gap between QT and AT** is the key output — it defines the "enabling conditions gap" the company must report: "We can commit to X% (QT). To reach NZ (AT), we would need: interconnection reform, CCS viability, carbon pricing, nuclear pathway, etc."
+- **QT emissions reduction ranges are tested at 5% intervals** (e.g., 50%, 55%, 60%, ..., 95%) to identify the precise crossover point where further reductions become uneconomic.
+
+**QT Determination for Vertically Integrated Utilities:**
+1. Run market simulation under Q1 (facilitating) and Q2 (challenging) conditions
+2. The model produces an emergent clean level per ISO — same as R1/R2, but now the company asks: "Can I credibly commit to this level?"
+3. The QT is typically at or slightly below the R1/R2 market equilibrium — it's what the market would do anyway, formalized as a corporate commitment
+4. If R1 produces 65% clean and R2 produces 45% clean, the QT range is 45-65% depending on risk appetite
+5. The company balances emissions reductions against **consumer rates** — the QT is the strictest target achievable without unacceptable rate increases
+6. The company then reports: "Our QT is X%. To reach the AT (NZ by 2050), we need [specific enabling conditions]."
+
+**QT Determination for Independent Power Producers (IPPs):**
+
+For an IPP, the logical premise shifts from system-wide ratepayer impact to **competitive market survival**:
+
+1. **Regional view**: Because an IPP lacks a captive rate base, forcing the model to hit a strict emissions constraint simulates the entire regional wholesale market's least-cost response, not just the utility's internal system.
+2. **Testing market viability**: The model outputs how wholesale electricity prices, new capacity needs, and retirement schedules must shift across the grid to meet that forced target.
+3. **Scaling to the portfolio**: The IPP scales these regional, macro-level market shifts down to evaluate the viability of its own specific assets.
+4. **Setting the target**: The IPP's QT becomes the strictest reduction threshold their specific fleet can align with while remaining profitable and competitive in that future wholesale market.
+
+Instead of balancing reductions against consumer rates, the IPP balances reductions against **asset stranding and merchant risk**. The QT is the point where further reductions would strand existing assets or make the portfolio uncompetitive.
+
+- **Demand**: Medium growth (same as R1)
+- **Interconnection**: Reformed queues (same as R1)
+- **Learning**: Fast (same as R1)
+- **Starting LCOE**: Low (same as R1)
+- **Carbon price**: $0 (same as R1 — no new forcing mechanism)
+- **Policy**: Current only (45Y/45U/45Q + REC revenue — same as R1)
+- **All technology options available** but no policy mandate to deploy them
+- **Key question**: Under best-case market conditions with NO new policy, what's the highest clean level a company can credibly commit to? This IS the QT under facilitating conditions.
+
+#### Q2 — Qualified Target: Best Achievable Without New Enabling Conditions, Challenging
+*"What can we commit to when the market works against us?"*
+
+- **Demand**: High growth (same as R2)
+- **Interconnection**: Constrained queues (same as R2)
+- **Learning**: Slow (same as R2)
+- **Starting LCOE**: High (same as R2)
+- **Carbon price**: $0 (same as R2)
+- **Policy**: Current only (same as R2)
+- **Technology**: Limited (same technology constraints as R2 challenging conditions — nuclear stalls, LDES pre-commercial, CCS limited)
+- **Key question**: Under worst-case market conditions with NO new policy, what's the best a company can commit to? This is the QT floor — the minimum credible commitment even when everything's hard.
+
+**The QT range (Q1-Q2) vs the AT-QT gap:**
+- **Q1 result** = upper bound of credible commitment (best conditions, no new policy)
+- **Q2 result** = lower bound of credible commitment (worst conditions, no new policy)
+- **AT (S1/S2)** = what the company WOULD achieve if NZ policy existed
+- **AT minus QT** = the enabling conditions gap. This gap is what the company reports alongside its target: "We need X, Y, Z conditions to close this gap."
+
+### Scenario Comparison: Key Differentiators
+
+| Dimension | R1/R2 | S1/S2 | S3/S4 | Q1/Q2 |
+|-----------|-------|-------|-------|-------|
+| **CO₂ target** | None (emergent) | Power sector NZ | Power sector NZ (within economy-wide NZ) | None (emergent — same as R) |
+| **Carbon price** | $0 | Yes | Yes (economy-wide, likely higher) | $0 (same as R) |
+| **Demand driver** | Market-driven | Market-driven | **Mandatory electrification** | Market-driven |
+| **DAC role** | N/A | Grid residuals only | **Shared with industry/transport** | Minimal (MAC < DAC) |
+| **H₂ load** | Negligible | Small | **Large (industry demand)** | Negligible |
+| **Gas end-state** | Whatever's profitable | Near-zero | Near-zero | Whatever's profitable (same as R) |
+| **Last-mile resources** | Only if profitable | Required (LDES, nuclear) | Required + more of them | Only if profitable (same as R) |
+| **IPP relevance** | What the market does | Long-term strategic | Strategic + electrification | **What we can commit to today** |
+
+### Interconnection Queue Constraint (Decided — Bundled with Facilitating/Challenging)
+
+Interconnection queue friction is now **bundled into the Facilitating vs Challenging condition axis** rather than being a separate scenario dimension. This keeps the scenario count manageable while capturing the key dynamic:
+
+- **Facilitating** = Reformed queues (~5-8 GW/yr/ISO). FERC Order 2023 reforms, cluster studies, faster processing.
+- **Challenging** = Constrained queues (~2-4 GW/yr/ISO). Status quo — ~80% dropout, 5-year avg wait (LBNL data).
+
+**Modeling approach**:
 ```
 For each ISO, each simulation step:
   desired_new_build_gw = sum of all profitable projects
   actual_new_build_gw = min(desired_new_build_gw, max_annual_gw[iso])
-  # Queue prioritization: which projects get built first when constrained?
-  # Options: by profit margin (highest-profit first), by queue position
-  #          (FIFO), by resource type (firm gets priority)
+  # Queue prioritization: highest-profit-margin projects connect first
 ```
 
-**Possible parameterization**:
-| Queue Scenario | Max Annual GW/ISO | Rationale |
-|---------------|-------------------|-----------|
-| **Constrained** (status quo) | ~2-4 GW | Current LBNL data: ~80% dropout, 5-year avg wait. Reflects today's broken queue process. |
-| **Reformed** | ~5-8 GW | FERC Order 2023 reforms, cluster studies, faster processing. Optimistic but plausible. |
-| **Unconstrained** | No cap | Theoretical — what would happen if interconnection wasn't a bottleneck? Pure economics benchmark. |
-
-**Open question**: Which scenario axis does this live on? Options:
-1. **Its own axis** — Queue friction × Carbon price × Learning speed = 3×4×3 = 36 scenarios
-2. **Bundled with a "policy reform" axis** — "Current policy" includes constrained queues; "Reformed" includes faster queues + other policy changes
-3. **Applied to R1/R2 only** — Reference case uses constrained queues (reality); R3+ scenarios test what happens with reform
-4. **Sensitivity overlay** — Run the full model with and without queue constraints to isolate the friction's impact
-
-User to decide where this fits in the scenario structure.
+This means every Challenging scenario (R2, S2, S4, Q2) faces queue constraints while every Facilitating scenario (R1, S1, S3, Q1) benefits from reform. The queue constraint compounds with high demand and slow learning to make Challenging scenarios meaningfully harder.
 
 ## Compute Budget
 
