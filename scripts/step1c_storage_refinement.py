@@ -137,6 +137,13 @@ PROGRESS_INTERVAL = 25   # save every N batches
 # Only triggers for thresholds with large eligible mix counts.
 BATCH_FLUSH_SIZE = 500_000
 
+# High thresholds (>=97.5%) get more aggressive auto-save/commit to protect
+# against CI timeouts — these are the hardest thresholds and most likely to
+# time out. Smaller batch flush means more frequent saves; auto-commit is
+# forced on regardless of --auto-commit flag.
+HIGH_THRESHOLD_FLOOR = 97.5
+HIGH_BATCH_FLUSH_SIZE = 100_000
+
 
 
 def _load_floor_fine_mixes(iso):
@@ -1141,18 +1148,25 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
     pass2_coarse = {t: [] for t in active_thresholds}
 
     def _auto_flush(results, thresholds):
-        """Flush accumulated results to batch files when they exceed threshold."""
+        """Flush accumulated results to batch files when they exceed threshold.
+
+        High thresholds (>=97.5%) use a smaller flush size and always auto-commit
+        to protect against CI timeouts on expensive last-mile computations.
+        """
         for t in thresholds:
-            if len(results[t]) >= BATCH_FLUSH_SIZE:
+            flush_size = HIGH_BATCH_FLUSH_SIZE if t >= HIGH_THRESHOLD_FLOOR else BATCH_FLUSH_SIZE
+            if len(results[t]) >= flush_size:
                 batch_nums[t] = batch_nums.get(t, 0) + 1
                 bn = batch_nums[t]
                 n_flush = len(results[t])
                 # Keep for Pass 2 boundary detection
                 pass2_coarse[t].extend(results[t])
-                # Save batch file and commit
+                # Save batch file and commit.
+                # High thresholds always auto-commit regardless of flag.
                 save_storage_results(iso, t, nm_combos, results[t], rtypes,
                                      batch_num=bn)
-                git_commit_threshold(iso, t, f"Pass1-b{bn}", auto_commit,
+                should_commit = auto_commit or t >= HIGH_THRESHOLD_FLOOR
+                git_commit_threshold(iso, t, f"Pass1-b{bn}", should_commit,
                                      batch_num=bn)
                 print(f"    Auto-flush {iso} t{t}%: {n_flush:,} results → "
                       f"b{bn}")
@@ -1233,6 +1247,8 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
                     remaining = group_coarse.get(t, [])
                     if remaining:
                         pass2_coarse[t].extend(remaining)
+                    # High thresholds always auto-commit
+                    t_commit = auto_commit or t >= HIGH_THRESHOLD_FLOOR
                     if t in batch_nums:
                         # Threshold was auto-batched — save remainder as
                         # next batch file (even if small)
@@ -1242,7 +1258,7 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
                             save_storage_results(iso, t, nm_combos, remaining,
                                                  rtypes, batch_num=bn)
                             git_commit_threshold(iso, t, f"Pass1-b{bn}",
-                                                 auto_commit, batch_num=bn)
+                                                 t_commit, batch_num=bn)
                             print(f"    Final flush {iso} t{t}%: "
                                   f"{len(remaining):,} results → b{bn}")
                         n_total = len(pass2_coarse[t])
@@ -1256,7 +1272,7 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
                                                  rtypes)
                             print(f"    {iso} t{t}%: {len(remaining):,} "
                                   f"storage-feasible (coarse)")
-                        git_commit_threshold(iso, t, "Pass1", auto_commit)
+                        git_commit_threshold(iso, t, "Pass1", t_commit)
 
             # Mark all thresholds as Pass 1 done (including 0-eligible ones)
             for t in pass1_needed:
@@ -1339,6 +1355,9 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
         n_coarse = len(coarse_for_t)
         n_fine = len(fine_results)
 
+        # High thresholds always auto-commit
+        t_commit = auto_commit or t >= HIGH_THRESHOLD_FLOOR
+
         if t in batch_nums:
             # Batched threshold — save fine results as next batch file.
             # Step 2 loads all batch files and deduplicates natively.
@@ -1347,7 +1366,7 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
                 bn = batch_nums[t]
                 save_storage_results(iso, t, nm_combos, fine_results, rtypes,
                                      batch_num=bn)
-                git_commit_threshold(iso, t, f"Pass2-b{bn}", auto_commit,
+                git_commit_threshold(iso, t, f"Pass2-b{bn}", t_commit,
                                      batch_num=bn)
             print(f"    {iso} t{t}%: {n_fine:,} fine + {n_coarse:,} coarse "
                   f"({batch_nums[t]} batch files, {t_elapsed:.1f}s)")
@@ -1370,7 +1389,7 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
             n_total = len(deduped)
             print(f"    {iso} t{t}%: {n_fine:,} fine + {n_coarse:,} coarse "
                   f"= {n_total:,} total ({t_elapsed:.1f}s)")
-            git_commit_threshold(iso, t, "Pass2", auto_commit)
+            git_commit_threshold(iso, t, "Pass2", t_commit)
 
         pass2_done.add(t)
         _save_manifest(iso, code_hash, pass1_thresholds, pass2_done)

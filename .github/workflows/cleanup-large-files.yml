@@ -35,6 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      workflows: write   # needed when source branch has workflow file changes
     steps:
       - name: Validate confirmation
         if: ${{ inputs.dry_run == false && inputs.confirm != 'REWRITE-HISTORY' }}
