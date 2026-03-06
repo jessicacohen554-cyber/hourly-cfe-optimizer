@@ -54,7 +54,7 @@ RESOURCE_COLS_BASE = ['clean_firm', 'solar', 'wind', 'hydro']
 RESOURCE_COLS_OFFSHORE = ['clean_firm', 'solar', 'wind', 'hydro', 'offshore_wind']
 RESOURCE_COLS_CAISO = ['clean_firm', 'solar', 'wind', 'hydro', 'offshore_wind', 'geothermal']
 
-STORAGE_COLS = ['battery_dispatch_pct', 'battery8_dispatch_pct', 'ldes_dispatch_pct']
+STORAGE_COLS = ['battery_dispatch_pct', 'battery8_dispatch_pct', 'ldes_dispatch_pct', 'h2_dispatch_pct']
 
 def get_resource_cols(iso):
     """Return resource column names for the given ISO."""
@@ -202,6 +202,12 @@ LDES_EFFICIENCY = 0.50
 LDES_DURATION_HOURS = 100
 LDES_WINDOW_DAYS = 7
 
+# Green H2 (1000-hour electrolysis + salt cavern + H2 turbine)
+H2_EFFICIENCY = 0.35
+H2_DURATION_HOURS = 1000
+H2_WINDOW_DAYS = 30
+H2_MIN_THRESHOLD = 95.0  # Only available at ≥95% thresholds
+
 # Storage dispatch grid resolution (% of annual demand)
 STORAGE_FINE_RESOLUTION = 0.001  # 0.001% of annual demand resolution
 
@@ -211,6 +217,7 @@ STORAGE_MAX = {
     'battery': 0.06,    # 0.06% of annual demand — CAISO: ~134 GWh / 33.6 GW
     'battery8': 0.08,   # 0.08% of annual demand
     'ldes': 0.5,        # 0.5% of annual demand
+    'h2': 2.0,          # 2.0% of annual demand
 }
 
 # Step 1D.2: Research-informed 2050 storage caps (% of annual demand)
@@ -221,6 +228,7 @@ STORAGE_MAX_V2 = {
     'battery': 0.10,    # 0.10% of annual demand — CAISO: ~224 GWh / 56 GW
     'battery8': 0.15,   # 0.15% of annual demand
     'ldes': 1.0,        # 1.0% of annual demand
+    'h2': 3.0,          # 3.0% of annual demand
 }
 
 # ============================================================================
@@ -261,6 +269,7 @@ ANCILLARY_HOURS = {
 # Storage arbitrage revenue ($/kW-yr) — from ISO LMP price spreads
 # Battery: daily cycling captures peak-to-trough spread (duck curve, evening ramp)
 # LDES: weekly cycling captures workday/weekend and multi-day weather patterns
+# H2: seasonal cycling, minimal arbitrage value
 # Sources: LBNL Utility-Scale Solar/Storage 2024, Lazard LCOS v9, ISO market reports
 STORAGE_ARBITRAGE_REVENUE = {
     'battery': {
@@ -290,6 +299,15 @@ STORAGE_ARBITRAGE_REVENUE = {
         'MISO':   8,
         'SPP':    7,
     },
+    'h2': {  # Seasonal cycling — minimal arbitrage
+        'CAISO': 5,
+        'ERCOT': 6,
+        'PJM':   4,
+        'NYISO': 5,
+        'NEISO': 3,
+        'MISO':  3,
+        'SPP':   2,
+    },
 }
 
 # Revenue stacking factor — can't simultaneously do arbitrage + ancillary in same hour
@@ -303,6 +321,7 @@ STORAGE_ANCILLARY_PRODUCT = {
     'battery': 'regulation',
     'battery8': 'regulation',
     'ldes': 'spinning',
+    'h2': 'spinning',  # H2 too slow for regulation, marginal spinning value
 }
 
 
@@ -314,7 +333,7 @@ def compute_storage_revenue_credit(storage_type, iso):
 
     Returns the credit value to SUBTRACT from gross LCOE.
     """
-    durations = {'battery': 4, 'battery8': 8, 'ldes': 100}
+    durations = {'battery': 4, 'battery8': 8, 'ldes': 100, 'h2': 1000}
 
     capacity = CAPACITY_MARKET_PRICES.get(iso, 0)
 
@@ -339,7 +358,7 @@ def compute_storage_revenue_credit(storage_type, iso):
 
 # Pre-compute revenue credits for all types × ISOs
 STORAGE_REVENUE_CREDITS = {}
-for _stype in ['battery', 'battery8', 'ldes']:
+for _stype in ['battery', 'battery8', 'ldes', 'h2']:
     STORAGE_REVENUE_CREDITS[_stype] = {}
     for _iso in ISOS:
         STORAGE_REVENUE_CREDITS[_stype][_iso] = compute_storage_revenue_credit(_stype, _iso)
@@ -360,6 +379,11 @@ BATTERY_DEGRADATION = {
         'cycles_per_year': 52,       # Weekly cycling
         'cycle_life_80pct': 20000,   # Iron-air: minimal degradation
         'replacement_fraction': 0.15,
+    },
+    'h2': {
+        'cycles_per_year': 12,       # Monthly/seasonal cycling
+        'cycle_life_80pct': 50000,   # Electrolysis stack replacement is main cost
+        'replacement_fraction': 0.25,
     },
 }
 
@@ -387,7 +411,7 @@ GAS_AVAILABILITY_FACTOR = {
 PEAK_CAPACITY_CREDITS = {
     'clean_firm': 1.0, 'solar': 0.30, 'wind': 0.10,
     'ccs_ccgt': 0.90, 'hydro': 0.50, 'battery': 0.95,
-    'battery8': 0.95, 'ldes': 0.90,
+    'battery8': 0.95, 'ldes': 0.90, 'h2': 0.85,
     'offshore_wind': 0.25,
 }
 
@@ -580,17 +604,17 @@ def co2_results_filename(iso):
 STEP1_PFS_SCHEMA = {
     'required': ['iso', 'threshold', 'clean_firm', 'solar', 'wind', 'hydro',
                  'battery_dispatch_pct', 'battery8_dispatch_pct',
-                 'ldes_dispatch_pct',
+                 'ldes_dispatch_pct', 'h2_dispatch_pct',
                  'hourly_match_score'],
-    'optional': ['offshore_wind', 'geothermal', 'h2_dispatch_pct'],
+    'optional': ['offshore_wind', 'geothermal'],
 }
 
 STEP2_EF_SCHEMA = {
     'required': ['iso', 'clean_firm', 'solar', 'wind', 'hydro',
                  'battery_dispatch_pct', 'battery8_dispatch_pct',
-                 'ldes_dispatch_pct',
+                 'ldes_dispatch_pct', 'h2_dispatch_pct',
                  'hourly_match_score', 'pareto_type'],
-    'optional': ['offshore_wind', 'geothermal', 'h2_dispatch_pct'],
+    'optional': ['offshore_wind', 'geothermal'],
 }
 
 STEP3_CO_SCHEMA = {
@@ -598,7 +622,7 @@ STEP3_CO_SCHEMA = {
                  'mix_clean_firm', 'mix_solar', 'mix_wind', 'mix_ccs_ccgt', 'mix_hydro',
                  'hourly_match_score',
                  'battery_dispatch_pct', 'battery8_dispatch_pct',
-                 'ldes_dispatch_pct',
+                 'ldes_dispatch_pct', 'h2_dispatch_pct',
                  'cost_total_cost', 'cost_effective_cost',
                  'cost_incremental', 'cost_wholesale',
                  'tranche_cf_existing_twh', 'tranche_uprate_twh',
@@ -637,6 +661,7 @@ VALID_RANGES = {
     'battery_dispatch_pct': (0.0, 50.0),    # % of demand
     'battery8_dispatch_pct': (0.0, 50.0),
     'ldes_dispatch_pct': (0.0, 50.0),
+    'h2_dispatch_pct': (0.0, 50.0),
     'clean_firm': (0, 100),                 # % of demand
     'solar': (0, 100),
     'wind': (0, 100),
@@ -749,6 +774,14 @@ LCOE_TABLES = {
         'Medium': {'CAISO': 5518.80, 'ERCOT': 4730.40, 'PJM': 5168.40, 'NYISO': 6132.00, 'NEISO': 5781.60, 'MISO': 4905.60, 'SPP': 4818.00},
         'High':   {'CAISO': 8760.00, 'ERCOT': 7533.60, 'PJM': 8234.40, 'NYISO': 9723.60, 'NEISO': 9285.60, 'MISO': 7884.00, 'SPP': 7708.80},
     },
+    # Green H2: electrolysis + salt cavern + H2 turbine. 35% RTE.
+    # CAPEX/kWh: L=$150, M=$220, H=$310. Duration=168hr, FOM=$8/kW-yr.
+    # Shares 'ldes_lvl' sensitivity toggle (both long-duration storage).
+    'h2': {
+        'Low':    {'CAISO': 17344.80, 'ERCOT': 15330.00, 'PJM': 16468.80, 'NYISO': 19096.80, 'NEISO': 18220.80, 'MISO': 15768.00, 'SPP': 15067.20},
+        'Medium': {'CAISO': 25404.00, 'ERCOT': 22425.60, 'PJM': 24177.60, 'NYISO': 27944.40, 'NEISO': 26718.00, 'MISO': 23038.80, 'SPP': 22075.20},
+        'High':   {'CAISO': 35828.40, 'ERCOT': 31623.60, 'PJM': 33988.80, 'NYISO': 39420.00, 'NEISO': 37580.40, 'MISO': 32499.60, 'SPP': 31010.40},
+    },
 }
 
 # Transmission adders ($/MWh) by resource × tx level × ISO
@@ -776,6 +809,7 @@ TX_TABLES = {
     'battery':    {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
     'battery8':   {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
     'ldes':       {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
+    'h2':         {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
     'hydro':      {'None': 0, 'Low': 0, 'Medium': 0, 'High': 0},
 }
 
@@ -843,7 +877,7 @@ EXISTING_GAS_FOM_KW_YR = {
 #
 # Sources: Nuclear FOAK ~1.25× High (Vogtle-era), CCS ~1.20× High (Boundary Dam),
 #   Geothermal ~1.35× High (Fervo EGS), LDES ~1.40× High (Form Energy pre-commercial),
-#
+#   H2 ~1.30× High (electrolysis + H2 turbine FOAK).
 
 FOAK_NUCLEAR_NEWBUILD = {
     'CAISO': 175, 'ERCOT': 169, 'PJM': 200, 'NYISO': 212,
@@ -874,10 +908,14 @@ FOAK_OFFSHORE_WIND = {
 
 # Storage FOAK: annualized capacity cost ($/MWh-cap), same units as LCOE_TABLES storage.
 # Battery FOAK not needed — Wright's Law goes LCOE_TABLES → NOAK_BATTERY (decline over time).
-# LDES: 1.40× High (Form Energy pre-commercial).
+# LDES: 1.40× High (Form Energy pre-commercial). H2: 1.30× High (first commercial H2 turbines).
 FOAK_LDES = {
     'CAISO': 12264.00, 'ERCOT': 10512.00, 'PJM': 11563.20, 'NYISO': 13578.00,
     'NEISO': 12964.80, 'MISO': 11037.60, 'SPP': 10774.80,
+}
+FOAK_H2 = {
+    'CAISO': 46603.20, 'ERCOT': 41084.40, 'PJM': 44150.40, 'NYISO': 51246.00,
+    'NEISO': 48880.80, 'MISO': 42223.20, 'SPP': 40296.00,
 }
 
 # ============================================================================
@@ -924,6 +962,7 @@ LEARNING_PARAMS = {
     'ccs':     {'L': (2028, 2036), 'M': (2030, 2040), 'H': (2036, 2048)},
     'geo':     {'L': (2028, 2036), 'M': (2030, 2040), 'H': (2036, 2048)},
     'ldes':    {'L': (2028, 2036), 'M': (2030, 2040), 'H': (2036, 2048)},
+    'h2':      {'L': (2028, 2036), 'M': (2030, 2040), 'H': (2036, 2048)},
     # Battery: Wright's Law from 2025 starting cost → NOAK terminal floor.
     # Slower decline — on the mature part of the curve, not FOAK steep drops.
     'bat4':    {'L': (2025, 2042), 'M': (2025, 2048), 'H': (2025, 2050)},
