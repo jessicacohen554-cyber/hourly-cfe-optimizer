@@ -9,7 +9,7 @@ V1 Scope: R1 (Facilitating) + R2 (Challenging) reference scenarios.
 - Per-ISO (no cross-regional capital flow)
 - 5% zone steps
 - Merchant revenue (no PPA discount)
-- No policy mandate floors — profit-only stopping rule
+- RPS/CES compliance modeled via scarcity-driven REC pricing (not mandate floors)
 
 Architecture: Built on scenario_common.build_zones() zone-delta structure.
 Revenue model: step5b LMP engine + capacity market + storage + REC.
@@ -59,6 +59,7 @@ from scenario_common import (
     build_zones, THRESHOLDS,
     _load_feasible_from_parquet,
 )
+from procurement_utils import get_rps_target_at_year
 
 # Import LMP engine from step5b
 from step5b_compute_lmp_prices import (
@@ -138,12 +139,88 @@ PTC_45Y_NEW_NUCLEAR = 26.0  # $/MWh
 NUCLEAR_FOM_PER_MWH = 30.0   # $/MWh equivalent at 93% CF
 COAL_FOM_KW_YR = 45.0        # $/kW-yr
 
-# REC prices by ISO (from step8c — additive revenue for eligible resources)
-REC_PRICES = {
-    'CAISO': 5.0, 'ERCOT': 2.5, 'PJM': 4.0, 'NYISO': 6.0,
-    'NEISO': 5.5, 'MISO': 3.0, 'SPP': 2.0,
+# ─── RPS/REC Compliance Model ─────────────────────────────────────────────
+# Scarcity-driven REC pricing: price depends on gap between RPS-eligible
+# clean% and RPS target. Voluntary corporate buyers compete for same supply,
+# amplifying scarcity beyond just the RPS gap.
+#
+# Sources: LBNL 2024 RPS Status Update (Barbose), Power Advisory "REC-ord
+# High Price", OPIS PJM REC analysis, ICE futures, S&P Global.
+
+# Alternative Compliance Payment caps ($/MWh) — statutory penalty ceiling.
+# Weighted average across major load-serving entities within each ISO.
+# If ACP < REC market price in a state, utilities pay ACP instead → no build.
+ACP_RATES = {
+    'CAISO': 50.0,   # CA RPS TREC price cap ($50)
+    'ERCOT': 0.0,    # No RPS → no ACP
+    'PJM':   45.0,   # Weighted: PA $45, VA $45, NJ $50, MD $30 → ~$45
+    'NYISO': 42.5,   # NY Tier 1 ACP (~$42.50)
+    'NEISO': 45.0,   # Weighted: MA $67, CT $40, ME/RI ~$35 → ~$45
+    'MISO':  15.0,   # Weighted: MN $25, IL $20, MI $10 → ~$15
+    'SPP':   10.0,   # Weighted: KS $15, OK $0, NM $10 → ~$10
 }
+
+# 2025 observed compliance REC prices ($/MWh) — used as calibration anchors.
+# These are COMPLIANCE-grade RECs, not voluntary. Voluntary trade at $1-5.
+REC_COMPLIANCE_PRICE_2025 = {
+    'CAISO': 34.0,   # WREGIS compliance RECs
+    'ERCOT': 0.5,    # No mandate → voluntary only
+    'PJM':   38.0,   # Near PA/VA ACP cap ($45). 12× increase since 2018.
+    'NYISO': 25.0,   # NY Tier 1, below ACP cap
+    'NEISO': 40.0,   # MA Class I, near ACP cap ($45)
+    'MISO':  8.0,    # Modest state RPS, some surplus
+    'SPP':   3.0,    # Minimal RPS, abundant wind
+}
+
+# Voluntary REC floor ($/MWh) — when clean% exceeds RPS target
+VOLUNTARY_REC_FLOOR = {
+    'CAISO': 3.0, 'ERCOT': 0.5, 'PJM': 2.0, 'NYISO': 2.0,
+    'NEISO': 2.5, 'MISO': 1.5, 'SPP': 2.0,
+}
+
+# Voluntary corporate demand adder (fraction of load).
+# Corporate buyers (PPAs, unbundled RECs) compete with RPS for the same
+# clean supply. This additional demand creates scarcity even when aggregate
+# clean% slightly exceeds the RPS target. Calibrated so that the scarcity
+# model reproduces observed 2025 compliance REC prices.
+# Key insight: In NEISO/NYISO, there's basically no clean energy available
+# for voluntary buyers — the RPS + corporate demand consumes everything.
+VOLUNTARY_DEMAND_ADDER = {
+    'CAISO': 0.00,   # Already captured by k calibration — large PPA market
+    'ERCOT': 0.02,   # Some corporate demand, but massive surplus
+    'PJM':   0.00,   # Already captured by k calibration — binding RPS
+    'NYISO': 0.04,   # 4% — NYC corporate demand lifts effective target to ~39%
+    'NEISO': 0.035,  # 3.5% — MA/CT voluntary market. Tight. $40/MWh RECs.
+    'MISO':  0.06,   # 6% — fills gap between 12% RPS and 18% clean
+    'SPP':   0.01,   # 1% — minimal corporate demand
+}
+
+# Scarcity model: price = ACP × (1 - exp(-k × gap%))
+# k calibrated per ISO against 2025 observed prices.
+# Higher k = steeper scarcity response (price ramps toward ACP faster).
+# PJM/NEISO high because RPS is binding with interconnection queue bottleneck.
+# CAISO lower because larger, more liquid market with PPA-based procurement.
+REC_SCARCITY_K = {
+    'CAISO': 0.10,   # 11.5% gap → $34 (calibrated to WREGIS observed)
+    'ERCOT': 0.10,   # N/A — massive surplus, scarcity never triggers
+    'PJM':   0.29,   # 6.5% gap → $38 (calibrated to PJM-GATS observed)
+    'NYISO': 0.15,   # Moderate — CES broader than RPS
+    'NEISO': 0.29,   # ~$40/MWh at binding — similar scarcity as PJM
+    'MISO':  0.12,   # Low — fragmented state RPS, abundant wind
+    'SPP':   0.10,   # Low — minimal RPS, massive surplus
+}
+REC_SURPLUS_DECAY_K = 0.20  # How fast prices collapse when in surplus
+
+# ISOs with Clean Energy Standards (nuclear/CCS count toward compliance)
+# vs traditional RPS (only renewables + hydro count)
+CES_ISOS = {'NYISO', 'NEISO', 'CAISO'}
+# NYISO: CLCPA Tier 3 ZECs for nuclear
+# NEISO: CT CCEF for Millstone
+# CAISO: SB 100 counts all zero-carbon
+
 REC_ELIGIBLE = {'solar', 'wind', 'offshore_wind', 'hydro', 'geothermal'}
+CES_ELIGIBLE = REC_ELIGIBLE | {'clean_firm', 'ccs_ccgt'}
+CES_DISCOUNT_FACTOR = 0.60  # ZEC/Tier 3 = ~60% of Tier 1 REC price
 
 # Simulation years (AT trajectory milestones)
 SIM_YEARS = [2025, 2030, 2035, 2040, 2045, 2050]
@@ -317,11 +394,71 @@ def compute_capacity_revenue(iso, clean_pct, resource_pcts):
     return cap_revs
 
 
-def compute_rec_revenue(iso, resource_pcts):
-    """REC revenue for eligible resources ($/MWh additive to energy revenue)."""
-    rec_price = REC_PRICES.get(iso, 0)
-    return {res: rec_price if res in REC_ELIGIBLE else 0
-            for res, pct in resource_pcts.items() if pct > 0}
+def get_compliance_eligible_pct(resource_pcts, iso):
+    """Clean % counting only compliance-eligible resources.
+
+    CES ISOs (NYISO, NEISO, CAISO): nuclear and CCS count.
+    Traditional RPS ISOs: only renewables + hydro + geothermal.
+    Critical: PJM has 32.1% nuclear but only 8.5% RPS-eligible → real scarcity.
+    """
+    eligible = CES_ELIGIBLE if iso in CES_ISOS else REC_ELIGIBLE
+    return sum(pct for res, pct in resource_pcts.items()
+               if res in eligible and pct > 0)
+
+
+def compute_rec_price(iso, eligible_pct, year):
+    """Scarcity-driven compliance REC price ($/MWh).
+
+    When clean% < RPS target: scarcity drives prices toward ACP cap.
+    When clean% > RPS target: surplus collapses prices toward voluntary floor.
+    Voluntary corporate buyers compete for same supply, amplifying scarcity.
+    """
+    acp = ACP_RATES.get(iso, 0)
+    if acp <= 0:
+        return VOLUNTARY_REC_FLOOR.get(iso, 0)  # No RPS (ERCOT)
+
+    # Effective demand = RPS mandate + voluntary corporate procurement.
+    # Corporate buyers compete for same clean supply → amplifies scarcity.
+    rps_target_frac = get_rps_target_at_year(iso, year)
+    vol_adder = VOLUNTARY_DEMAND_ADDER.get(iso, 0)
+    eff_target_pct = (rps_target_frac + vol_adder) * 100.0
+    gap = eff_target_pct - eligible_pct  # positive = scarcity
+
+    floor = VOLUNTARY_REC_FLOOR.get(iso, 1.0)
+    k_scarcity = REC_SCARCITY_K.get(iso, 0.15)
+    compliance_2025 = REC_COMPLIANCE_PRICE_2025.get(iso, 5.0)
+
+    if gap > 0:
+        # Scarcity: price ramps toward ACP. Calibrated per ISO to match
+        # 2025 observed compliance REC prices.
+        price = acp * (1.0 - np.exp(-k_scarcity * gap))
+    else:
+        # Surplus: price decays toward voluntary floor.
+        price = floor + (compliance_2025 - floor) * np.exp(REC_SURPLUS_DECAY_K * gap)
+
+    return max(floor, min(acp, price))
+
+
+def compute_rec_revenue(iso, resource_pcts, clean_pct, year):
+    """REC/CES revenue for eligible resources ($/MWh additive to energy).
+
+    Scarcity-driven: price depends on gap between compliance-eligible clean%
+    and RPS/CES target. ACP-capped. CES ISOs give nuclear/CCS partial credit.
+    """
+    eligible_pct = get_compliance_eligible_pct(resource_pcts, iso)
+    rec_price = compute_rec_price(iso, eligible_pct, year)
+
+    result = {}
+    for res, pct in resource_pcts.items():
+        if pct <= 0:
+            continue
+        if res in REC_ELIGIBLE:
+            result[res] = rec_price
+        elif res in CES_ELIGIBLE and iso in CES_ISOS:
+            result[res] = rec_price * CES_DISCOUNT_FACTOR
+        else:
+            result[res] = 0
+    return result
 
 
 def compute_zone_revenue(iso, clean_pct, resource_pcts, hourly_lmp,
@@ -333,7 +470,7 @@ def compute_zone_revenue(iso, clean_pct, resource_pcts, hourly_lmp,
     energy_revs = compute_energy_revenue_by_resource(
         hourly_lmp, supply_profiles, resource_pcts, demand_total_mwh)
     cap_revs = compute_capacity_revenue(iso, clean_pct, resource_pcts)
-    rec_revs = compute_rec_revenue(iso, resource_pcts)
+    rec_revs = compute_rec_revenue(iso, resource_pcts, clean_pct, year)
 
     # Blended revenue weighted by resource share
     total_pct = sum(pct for pct in resource_pcts.values() if pct > 0)
