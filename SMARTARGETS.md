@@ -332,6 +332,8 @@ For each step in the simulation:
 
 Learning curves for nuclear start from the **new nuclear frontier** — SMRs, advanced reactors, new AP1000s — NOT from the ~440 GW of legacy reactors built last century. These are fundamentally different technologies with different supply chains, manufacturing processes, and cost structures. The legacy fleet's cumulative experience doesn't transfer to SMR learning.
 
+**One learning pool per technology class (Decided).** All new nuclear designs (BWRX-300, NuScale, AP1000, Natrium, Xe-100) contribute to a single "new nuclear" learning pool. Supply chain, regulatory, construction management, and workforce learnings are shared across designs even if reactor architectures differ. Same principle applies to all other technology classes — one pool each for CCS, LDES, etc. Keep it simple.
+
 **Starting cumulative GW baselines** (the denominator for doubling calculations):
 
 | Technology | 2025 Cumulative GW | Rationale | First Doubling At |
