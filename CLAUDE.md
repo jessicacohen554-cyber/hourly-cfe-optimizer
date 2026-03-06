@@ -115,11 +115,10 @@
 - Step 1C storage grids are the union of V1 (near-term) and V2 (2050-oriented) caps — full coverage in a single run. Floor/fine mix augmentation (1B2/1B3) is always on.
 - Utilities: `step1_prior_windows.py` (search window computation from prior EF results).
 - 4D adaptive grid search (clean_firm, solar, wind, hydro) + procurement sweep + battery dispatch (4hr 85% RTE, 8hr 85% RTE) + LDES dispatch (100hr 50% RTE) + Green H2 (1000hr 35% RTE, ≥95% only). CAISO uses 5D (adds geothermal).
-- Output: `data/step1-pfs-parquets/` + `data/step1d-storage-parquets/`. **Only re-run if dispatch logic, generation profiles, or demand curves change.**
+- Output: `data/step1-pfs-parquets/`. **Only re-run if dispatch logic, generation profiles, or demand curves change.**
 
 **Step 2: Efficient Frontier** (`step2_efficient_frontier.py`):
-- Extracts non-dominated mixes from PFS. Reads both step1 and step1d parquets.
-- Validates step1d coverage for all active thresholds (50%+) before processing.
+- Extracts non-dominated mixes from PFS. Reads step1 parquets.
 - Filters existing gen utilization, procurement minimization, strict dominance removal.
 - Output: `data/step2-ef-parquets/`. **Only re-run if PFS or filtering criteria change.**
 
@@ -268,7 +267,7 @@
 - All new features layered on top of existing — never remove existing visuals or controls
 - **COST DRIVES RESOURCE MIX** — cost and resource mix are co-optimized for every scenario. Different cost assumptions produce different optimal resource mixes. This is the core scientific contribution of the project. Never decouple cost from mix optimization or treat cost as a secondary overlay.
 - **8 toggle groups**: 5 paired (Renewable Gen, Firm Gen, Storage, Fossil Fuel, Transmission) + CCS (L/M/H) + 45Q (On/Off) + Geothermal (CAISO-only, L/M/H)
-- **21 thresholds** (10, 20, 30, 40 [coarse only], 50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, ≥99.99) — 10% steps in coarse low range, 5% in mid range, 2.5% in inflection zone, 0.5%/0.1% in the last mile. Top threshold is ≥99.99% (not 100%) — true 100% hourly matching is physically unreachable. Thresholds 10–40 are coarse-grid only (no fine zone search, no step1d storage). Thresholds 50–≥99.99 are the 17 active thresholds with full pipeline coverage.
+- **21 thresholds** (10, 20, 30, 40 [coarse only], 50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, ≥99.99) — 10% steps in coarse low range, 5% in mid range, 2.5% in inflection zone, 0.5%/0.1% in the last mile. Top threshold is ≥99.99% (not 100%) — true 100% hourly matching is physically unreachable. Thresholds 10–40 are coarse-grid only (no fine zone search, no storage refinement). Thresholds 50–≥99.99 are the 17 active thresholds with full pipeline coverage.
 - **5,832 cost scenarios per region/threshold** (3×3×3×3×2×3×4 = non-CAISO; 17,496 for CAISO with geothermal toggle)
 - Resource mix optimization at Medium costs; sensitivity toggles recalculate costs on cached physics
 - Hydro is always existing-only, wholesale-priced, $0 transmission
@@ -455,9 +454,9 @@ Each color has transparent variants: CSS `--iso-caiso-t` (12% opacity) / JS `ISO
 - **Social cost of carbon references**: EPA $51/ton + Rennert et al. $185/ton + EU ETS $60-100/ton range — all three shown on charts
 
 ### Data Persistence (Critical — Never Lose Compute Results)
-- **NEVER gitignore compute-intensive outputs** — `data/step1-pfs-parquets/`, `data/step1d-storage-parquets/`, `data/step2-ef-parquets/`, and downstream parquets must be committed to git. Previous loss of 21M PFS solutions was caused by gitignoring cache files.
+- **NEVER gitignore compute-intensive outputs** — `data/step1-pfs-parquets/`, `data/step2-ef-parquets/`, and downstream parquets must be committed to git. Previous loss of 21M PFS solutions was caused by gitignoring cache files.
 - **Commit parquet caches immediately after optimizer runs** — the moment Step 1 completes, commit and push before doing anything else. This is higher priority than any code changes.
-- **After any Step 1 run**: `git add data/step1-pfs-parquets/ data/step1d-storage-parquets/ && git commit -m "Bank PFS cache" && git push`
+- **After any Step 1 run**: `git add data/step1-pfs-parquets/ && git commit -m "Bank PFS cache" && git push`
 - **Checkpoint directories (`data/checkpoints/`, `data/checkpoints_v4/`)** are gitignored and removed from the repo — they're crash-recovery artifacts not used downstream. The main parquet outputs are sacred.
 
 ### Build Process
