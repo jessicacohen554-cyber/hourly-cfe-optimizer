@@ -371,7 +371,34 @@ effective_cumulative_gw = model_deployed_gw + background_learning_gw(year)
 
 Same pattern applies to CCS, LDES, etc. — each technology has its own background trajectory.
 
-**Why this works**: The model's endogenous deployment *adds to* the global background. An ISO that builds early gets the double benefit: (1) it directly contributes to learning, AND (2) it locks in capacity at today's costs before global learning makes it cheaper (first-mover advantage on dispatch, not cost). An ISO that waits still benefits from global cost decline but has to compete for supply chain capacity.
+**Why this works**: The model's endogenous deployment *adds to* the global background. Even if our 7 ISOs are slow to add new nuclear, the background learning from TVA/non-ISO/global deployment still drives costs down. An ISO that waits still benefits from external cost decline — it just doesn't contribute to accelerating it.
+
+### US New Nuclear Pipeline — ISO vs Non-ISO (Research, Jan 2026)
+
+The near-term US new nuclear pipeline is roughly **40/60 in-model vs out-of-model**:
+
+**Within our 7 ISOs (~5-6 GW):**
+| Project | ISO | Capacity | Timeline |
+|---------|-----|----------|----------|
+| Fermi AP1000s (×4) | ERCOT (Carson County, TX) | 4.4 GW | 2032-2036 |
+| X-energy Xe-100 | ERCOT (Calhoun County, TX) | 320 MW | Mid-2030s |
+| Holtec SMR-300 (×2) | MISO (Palisades, MI) | 600 MW | Mid-2030s |
+| Meta uprates (Perry, Davis-Besse, Beaver Valley) | PJM | ~500 MW uprate | Near-term |
+
+**Outside our model boundary (~7+ GW):**
+| Project | Territory | Capacity | Timeline |
+|---------|-----------|----------|----------|
+| TVA BWRX-300 | Non-ISO (TVA, TN) | 300 MW+ | 2030s |
+| ENTRA1/NuScale | Non-ISO (TVA 7-state region) | Up to 6 GW | 2030s-2040s |
+| Kairos Hermes 2 | Non-ISO (TVA, TN) | ~100 MW | Late 2020s |
+| TerraPower Natrium | Non-ISO (Wyoming) | 345 MW | ~2030 |
+| TerraPower/Meta (×8) | TBD | ~2.8 GW | 2032+ |
+
+**Key insight**: TVA territory (non-ISO Southeast) is the epicenter of US SMR deployment. The ENTRA1/NuScale 6 GW pipeline alone exceeds total in-model new nuclear. This learning spillover — TVA builds drive costs down for ERCOT/MISO/PJM — is exactly why background learning matters. Even if our modeled ISOs are slow to build nuclear, the TVA pipeline provides a substantial learning tailwind.
+
+**ERCOT dominates in-model nuclear**: Fermi's 4× AP1000 project (4.4 GW) is the single largest new nuclear project in any ISO. Texas's pro-nuclear policy environment (TANEO, streamlined siting) makes ERCOT the likely first-mover within our model boundary.
+
+*Sources: [DOE SMR Selections](https://www.energy.gov/articles/energy-department-selects-tva-and-holtec-advance-deployment-us-small-modular-reactors), [NRC Advanced Reactor Highlights 2025](https://www.nrc.gov/reactors/new-reactors/advanced/highlights/2025), [World Nuclear Association — USA](https://world-nuclear.org/information-library/country-profiles/countries-t-z/usa-nuclear-power), [Spencer Fane Nuclear Overview](https://www.spencerfane.com/insight/nuclear-power-in-the-u-s-part-2-technologies-and-projects-that-are-shaping-the-industry/)*
 
 ### Wright's Law Formula
 
