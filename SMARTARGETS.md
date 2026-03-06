@@ -104,13 +104,23 @@ For each scenario (15-20 market condition combos):
        e. Carbon credit revenue (if carbon price > $0)               [step5d CO2 data]
 
     3. PROFIT: delta_profit = delta_revenue - delta_cost             [NEW]
-       - If delta_profit > 0: DEPLOY THIS ZONE
-         → Lock in resources, advance to next zone for this ISO
-       - If delta_profit ≤ 0: SKIP / STOP
-         → This zone is unprofitable under current conditions
+       - If delta_profit > 0: DEPLOY — but check portfolio stop first
+       - If delta_profit ≤ 0: SKIP / STOP (market stop)
          → But check: might LATER zones be profitable?
            (e.g., learning from other ISOs lowers cost, or
             further fossil retirement raises scarcity value)
+
+    3b. PORTFOLIO STOP (DAC crossover):                              [step6b pattern]
+       - marginal_mac = delta_cost / delta_co2_avoided              [$/tCO2]
+       - If marginal_mac > dac_cost_per_ton: STOP — buy DAC instead
+         → Grid decarbonization beyond this point is more expensive
+           per ton than direct air capture. Rational economy-wide
+           portfolio uses DAC/removals for remaining emissions.
+       - DAC cost is a scenario axis (Low/Medium/High from step6b)
+       - This is the KEY INSIGHT: 99.99% clean grids may not make
+         economic sense when DAC can offset remaining fossil cheaper.
+       - The optimal grid clean level is WHERE marginal MAC = DAC cost
+         (already computed in step6b as the PCHIP crossover point)
 
     4. LEARN (if deployed):                                          [step8d pattern]
        cumulative_gw[resource] += new_capacity_gw
@@ -122,12 +132,33 @@ For each scenario (15-20 market condition combos):
        - Cannibalization shifts → changes VRE revenue
 
   Terminate when:
-    - All remaining zones across all ISOs have delta_profit ≤ 0
-    - AND no learning-driven cost reduction could flip any zone positive
-    - Record per-ISO clean level as "market equilibrium outcome"
+    - MARKET STOP: All remaining zones have delta_profit ≤ 0
+      AND no learning could flip any zone positive, OR
+    - PORTFOLIO STOP: marginal MAC exceeds DAC cost for all remaining
+      zones — cheaper to remove residual emissions via DAC than to
+      clean the grid further
+    - Whichever binds first determines the market-equilibrium clean level
+    - Record per-ISO: clean level, residual emissions, DAC needed for net-zero
 ```
 
 **The stopping point IS the result.** Each scenario produces a different market-equilibrium clean level per ISO. The dashboard shows how market conditions determine where deployment stalls or accelerates.
+
+### Economy-Wide Portfolio Framing (Decided)
+
+Grid decarbonization doesn't happen in a vacuum. The right question isn't "how do we get the grid to 100% clean?" — it's "how clean should the grid get before economy-wide portfolio optimization says to spend the next dollar elsewhere?"
+
+**The existing pipeline already answers this.** Step 6B computes the optimal CFE target per ISO as the point where marginal MAC crosses DAC cost (PCHIP spline interpolation). The 3×3 grid-cost × DAC-scenario matrix gives 9 crossover points per ISO. This is exactly the "fuller option" model.
+
+**How it connects to SMARTargets:**
+- The **market stop** tells you where deployment stalls without policy intervention
+- The **portfolio stop** tells you where a rational net-zero strategy switches from grid clean to DAC/removals
+- The gap between them is the policy design space: how much policy intervention is needed to push the market from its natural equilibrium to the portfolio-optimal clean level?
+- If market stop > portfolio stop: the market naturally overshoots — no intervention needed (unlikely but possible with very low clean LCOE + high carbon price)
+- If market stop < portfolio stop: policy needed to close the gap (likely the common case)
+
+**Net-zero pathways always include DAC for residual emissions.** A 90% clean grid + DAC for the remaining 10% may be cheaper than a 99.99% clean grid. The model shows exactly where that crossover lives per ISO, per scenario.
+
+**DAC cost as scenario axis**: Low ($150/ton) / Medium ($250/ton) / High ($400/ton) — same levels as Step 6B. As DAC costs fall (learning), the optimal grid clean level *decreases* — you don't need to push the grid as far when removals are cheap.
 
 **Key difference from step 5d**: Step 5d ranks zones by MAC ($/tCO2) — this ranks by profit ($/MWh). Same zone structure, different objective. Step 5d asks "where's abatement cheapest?" — SMARTargets asks "where do developers make money?"
 
