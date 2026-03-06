@@ -192,33 +192,6 @@ body { background: var(--bg-page-white); }
 </section>
 
 <!-- ========== STACKED SUPPLY vs DEMAND ========== -->
-<section class="content-section">
-    <div class="section-header">
-        <h3>Stacking the Puzzle Pieces</h3>
-        <p>How the optimal resource mix stacks up against demand at different CFE targets.
-           Watch how the composition shifts as ambition rises &mdash; and how it differs between
-           building on existing clean (Track 1) versus starting from scratch (Track 2).</p>
-    </div>
-
-    <div class="controls-bar" id="stackControls">
-        <label>Region:</label>
-        <div class="iso-pills" id="stackIsoPills"></div>
-        <label style="margin-left: var(--space-md);">Track:</label>
-        <div class="track-pills" id="stackTrackPills">
-            <button class="track-pill active" data-track="baseline">Track 1: Baseline</button>
-            <button class="track-pill" data-track="dg">Track 2: Demand Growth</button>
-        </div>
-    </div>
-
-    <div class="chart-panel">
-        <h4 id="stackTitle">CAISO — Resource Mix by Threshold (Baseline)</h4>
-        <div class="chart-subtitle" id="stackSubtitle">Stacked GW by resource at each CFE target</div>
-        <div class="bb-area-chart"><canvas id="stackChart"></canvas></div>
-    </div>
-
-    <div class="insight-box" id="stackInsight" style="margin-top: var(--space-lg);"></div>
-</section>
-
 <!-- ========== THRESHOLD DEEP DIVE: 24-HOUR VIEW ========== -->
 <section class="content-section">
     <div class="section-header">
@@ -244,65 +217,8 @@ body { background: var(--bg-page-white); }
     </div>
 </section>
 
-<!-- ========== TRACK 1 vs TRACK 2 COMPARISON ========== -->
-<section class="content-section">
-    <div class="section-header">
-        <h3>Why Your Starting Point Can't Be Ignored</h3>
-        <p>The same region at the same CFE target requires completely different resource portfolios
-           depending on whether you're building on existing clean infrastructure (Track 1) or starting
-           greenfield (Track 2). Existing nuclear, hydro, and clean firm resources aren't just "free" &mdash;
-           they change the <em>shape</em> of what you need to build.</p>
-    </div>
-
-    <div class="controls-bar">
-        <label>Region:</label>
-        <div class="iso-pills" id="compareIsoPills"></div>
-    </div>
-
-    <div class="comparison-wrap">
-        <div class="chart-panel">
-            <h4 id="cmpBaseTitle">Track 1: Baseline — CAISO</h4>
-            <div class="chart-subtitle">Building on existing clean fleet</div>
-            <canvas id="cmpBaseChart"></canvas>
-        </div>
-        <div class="chart-panel">
-            <h4 id="cmpDgTitle">Track 2: Demand Growth — CAISO</h4>
-            <div class="chart-subtitle">Greenfield + demand growth</div>
-            <canvas id="cmpDgChart"></canvas>
-        </div>
-    </div>
-
-    <div class="chart-panel" style="overflow-x: auto; margin-top: var(--space-lg);">
-        <h4 id="cmpTableTitle">Side-by-Side Mix Comparison</h4>
-        <table class="mix-table" id="cmpTable">
-            <thead><tr>
-                <th>Threshold</th>
-                <th colspan="6">Track 1: Baseline</th>
-                <th colspan="6">Track 2: Demand Growth</th>
-            </tr>
-            <tr>
-                <th></th>
-                <th>CF</th><th>Solar</th><th>Wind</th><th>OSW</th><th>Bat4</th><th>Cost</th>
-                <th>CF</th><th>Solar</th><th>Wind</th><th>OSW</th><th>Bat4</th><th>Cost</th>
-            </tr></thead>
-            <tbody id="cmpTableBody"></tbody>
-        </table>
-    </div>
-</section>
-
-<!-- ========== REGIONAL MIX FINGERPRINTS ========== -->
-<section class="content-section">
-    <div class="section-header">
-        <h3>Regional Fingerprints at 90% CFE</h3>
-        <p>Every region's optimal mix looks different. These "fingerprints" show the resource composition
-           that the optimizer selects at 90% hourly matching under medium cost assumptions.</p>
-    </div>
-
-    <div class="grid-2" id="fingerprintGrid"></div>
-</section>
 
 <div class="bb-footer">
-    <strong>Data:</strong> Step 3 cost optimization parquets (Track 1 baseline + Track 2 demand growth).
     <strong>Profiles:</strong> EIA-930 multi-year average hourly generation &amp; demand (2021&ndash;2024).
     Offshore wind: synthetic profiles from NREL.
     <strong>Storage shapes:</strong> Illustrative daily dispatch patterns (actual dispatch varies by day/season).
@@ -328,8 +244,8 @@ body { background: var(--bg-page-white); }
         wind: RESOURCE_COLORS.wind, offshore_wind: RESOURCE_COLORS.offshoreWind || '#009688',
         ccs_ccgt: RESOURCE_COLORS.ccs, hydro: RESOURCE_COLORS.hydro,
         nuclear: RESOURCE_COLORS.nuclear || '#6366F1',
-        geothermal: RESOURCE_COLORS.geothermal || '#B45309',
-        battery4: RESOURCE_COLORS.battery || '#8B5CF6', battery8: '#A78BFA',
+        geothermal: RESOURCE_COLORS.geothermal || '#D97706',
+        battery4: RESOURCE_COLORS.battery || '#C4B5FD', battery8: '#8B5CF6',
         ldes: RESOURCE_COLORS.ldes || '#E91E63', h2: RESOURCE_COLORS.greenH2 || '#10B981'
     };
 
@@ -449,82 +365,7 @@ body { background: var(--bg-page-white); }
     buildPills('galleryIsoPills', renderGallery, 'CAISO');
     renderGallery('CAISO');
 
-    // ======== STACKED MIX BY THRESHOLD ========
-    let stackISO = 'CAISO', stackTrack = 'baseline', stackChart = null;
-
-    function renderStack() {
-        const data = stackTrack === 'baseline' ? BB_BL : BB_DG;
-        const d = data[stackISO];
-        if (!d) return;
-        const labels = d.thresholds.map(fmtT);
-
-        if (stackChart) stackChart.destroy();
-        document.getElementById('stackTitle').textContent =
-            stackISO + ' — Resource Mix by Threshold (' + (stackTrack === 'baseline' ? 'Baseline' : 'Demand Growth') + ')';
-
-        const fields = [
-            {key:'clean_firm', label:'Clean Firm', color: RES_CLR.clean_firm},
-            {key:'solar', label:'Solar', color: RES_CLR.solar},
-            {key:'wind', label:'Wind', color: RES_CLR.wind},
-        ];
-        if (d.mixes.some(m => m.offshore_wind > 0))
-            fields.push({key:'offshore_wind', label:'Offshore Wind', color: RES_CLR.offshore_wind});
-        fields.push(
-            {key:'ccs_ccgt', label:'CCS-CCGT', color: RES_CLR.ccs_ccgt},
-            {key:'hydro', label:'Hydro', color: RES_CLR.hydro}
-        );
-
-        stackChart = new Chart(document.getElementById('stackChart'), {
-            type: 'bar',
-            data: {
-                labels,
-                datasets: fields.map(f => ({
-                    label: f.label,
-                    data: d.mixes.map(m => m[f.key] || 0),
-                    backgroundColor: f.color,
-                    stack: 's'
-                }))
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'top', labels: { usePointStyle: true, padding: 12, font: { size: 11 } } },
-                    datalabels: false,
-                    tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + (ctx.parsed.y||0).toFixed(2) + ' GW' } }
-                },
-                scales: {
-                    x: { stacked: true, ticks: { maxRotation: 45, font: { size: 9 } } },
-                    y: { stacked: true, title: { display: true, text: 'GW', font: { size: 11 } } }
-                }
-            }
-        });
-
-        // Insight
-        const t90idx = d.thresholds.indexOf(90);
-        const t99idx = d.thresholds.indexOf(99);
-        if (t90idx >= 0 && t99idx >= 0) {
-            const m90 = d.mixes[t90idx], m99 = d.mixes[t99idx];
-            const totalGW90 = m90.clean_firm + m90.solar + m90.wind + (m90.offshore_wind||0) + m90.ccs_ccgt + m90.hydro;
-            const totalGW99 = m99.clean_firm + m99.solar + m99.wind + (m99.offshore_wind||0) + m99.ccs_ccgt + m99.hydro;
-            const pctInc = ((totalGW99/totalGW90 - 1)*100).toFixed(0);
-            document.getElementById('stackInsight').innerHTML = `
-                <h5>${stackISO}: 90% → 99% requires ${pctInc}% more capacity</h5>
-                <p>At 90%, the optimal mix totals ${totalGW90.toFixed(1)} GW. Pushing to 99% requires ${totalGW99.toFixed(1)} GW —
-                   a ${pctInc}% increase in total installed capacity. Storage dispatch goes from
-                   ${m90.battery4_pct.toFixed(1)}% to ${m99.battery4_pct.toFixed(1)}% (Bat4) and
-                   ${m90.ldes_pct.toFixed(1)}% to ${m99.ldes_pct.toFixed(1)}% (LDES).</p>`;
-        }
-    }
-
-    buildPills('stackIsoPills', iso => { stackISO = iso; renderStack(); }, 'CAISO');
-    document.getElementById('stackTrackPills').addEventListener('click', e => {
-        const btn = e.target.closest('.track-pill');
-        if (!btn) return;
-        stackTrack = btn.dataset.track;
-        document.querySelectorAll('#stackTrackPills .track-pill').forEach(b => b.classList.toggle('active', b === btn));
-        renderStack();
-    });
-    renderStack();
+    // (Stacked mix by threshold section removed)
 
     // ======== 24-HOUR DAY VIEW ========
     let dayISO = 'CAISO', dayChart = null;
@@ -548,48 +389,127 @@ body { background: var(--bg-page-white); }
 
         if (dayChart) dayChart.destroy();
 
-        // Build scaled profiles: resource GW × normalized hourly shape
+        // Build cumulative stacked area: nuclear (bottom) → geo → CCS → hydro → offshore → onshore → solar → bat4 → bat8 → LDES → H₂
         const datasets = [];
         const demand = profiles.demand;
+        if (!mix) return;
 
-        function addResource(name, profileKey, gwKey, color) {
-            const profile = profiles[profileKey];
-            if (!profile || !mix) return;
-            const gw = mix[gwKey] || 0;
-            if (gw <= 0) return;
+        // Resource generation stack order (bottom to top)
+        const STACK_ORDER = [
+            { key: 'nuclear',       profileKey: 'nuclear',       label: 'Nuclear',        color: RES_CLR.nuclear },
+            { key: 'geothermal',    profileKey: 'geothermal',    label: 'Geothermal',     color: RES_CLR.geothermal },
+            { key: 'ccs_ccgt',      profileKey: 'ccs_ccgt',      label: 'CCS-CCGT',       color: RES_CLR.ccs_ccgt },
+            { key: 'hydro',         profileKey: 'hydro',         label: 'Hydro',          color: RES_CLR.hydro },
+            { key: 'offshore_wind', profileKey: 'offshore_wind', label: 'Offshore Wind',  color: RES_CLR.offshore_wind },
+            { key: 'wind',          profileKey: 'wind',          label: 'Onshore Wind',   color: RES_CLR.wind },
+            { key: 'solar',         profileKey: 'solar',         label: 'Solar',          color: RES_CLR.solar },
+            { key: 'battery4',      profileKey: 'battery',       label: 'Battery (4hr)',  color: RES_CLR.battery4 },
+            { key: 'battery8',      profileKey: 'battery8',      label: 'Battery (8hr)',  color: RES_CLR.battery8 },
+            { key: 'ldes',          profileKey: 'ldes',          label: 'LDES (100hr)',   color: RES_CLR.ldes },
+            { key: 'h2',            profileKey: 'h2',            label: 'Green H₂',      color: RES_CLR.h2 },
+        ];
+
+        // For clean_firm, split into nuclear + geothermal using ISO-specific ratio
+        const geoSplit = dayISO === 'CAISO' ? 0.3 : 0;
+        const nucGW = (mix.clean_firm || 0) * (1 - geoSplit);
+        const geoGW = (mix.clean_firm || 0) * geoSplit;
+
+        // Per-resource GW values (override clean_firm into nuclear+geo)
+        const gwMap = {
+            nuclear: nucGW, geothermal: geoGW,
+            ccs_ccgt: mix.ccs_ccgt || 0, hydro: mix.hydro || 0,
+            offshore_wind: mix.offshore_wind || 0, wind: mix.wind || 0,
+            solar: mix.solar || 0,
+            battery4: mix.battery4 || mix.battery || 0, battery8: mix.battery8 || 0,
+            ldes: mix.ldes || 0, h2: mix.h2 || 0
+        };
+
+        // Build cumulative stacked arrays
+        const cumulative = new Array(24).fill(0);
+        const dsBase = { borderWidth: 1, pointRadius: 0, pointHoverRadius: 0, tension: 0.3 };
+        let orderIdx = STACK_ORDER.length + 2;
+
+        for (const res of STACK_ORDER) {
+            const gw = gwMap[res.key] || 0;
+            if (gw <= 0) continue;
+            const profile = profiles[res.profileKey];
+            if (!profile) continue;
+            const prevData = cumulative.slice();
+            const newData = cumulative.map((v, i) => {
+                const val = v + (profile[i] || 0) * gw;
+                cumulative[i] = val;
+                return val;
+            });
             datasets.push({
-                label: name, data: profile.map(v => v * gw),
-                backgroundColor: color + '80', borderColor: color,
-                borderWidth: 1, fill: true, tension: 0.3, pointRadius: 0, order: 10 - datasets.length
+                ...dsBase, label: res.label, data: newData,
+                backgroundColor: res.color + '80', borderColor: res.color,
+                fill: datasets.length === 0 ? 'origin' : '-1',
+                order: orderIdx--
             });
         }
 
-        addResource('Nuclear/Clean Firm', 'nuclear', 'clean_firm', RES_CLR.nuclear);
-        addResource('Hydro', 'hydro', 'hydro', RES_CLR.hydro);
-        if (profiles.geothermal) {
-            const geoGW = mix ? (mix.clean_firm * 0.3) : 0; // approx geothermal portion
-            if (geoGW > 0) datasets.push({
-                label: 'Geothermal', data: profiles.geothermal.map(v => v * geoGW),
-                backgroundColor: RES_CLR.geothermal + '80', borderColor: RES_CLR.geothermal,
-                borderWidth: 1, fill: true, tension: 0.3, pointRadius: 0, order: 8
-            });
-        }
-        addResource('CCS-CCGT', 'ccs_ccgt', 'ccs_ccgt', RES_CLR.ccs_ccgt);
-        addResource('Solar', 'solar', 'solar', RES_CLR.solar);
-        addResource('Wind', 'wind', 'wind', RES_CLR.wind);
-        if (profiles.offshore_wind)
-            addResource('Offshore Wind', 'offshore_wind', 'offshore_wind', RES_CLR.offshore_wind);
+        // Demand line from actual shaped EIA profile
+        const totalGW = Object.values(gwMap).reduce((s,v) => s + v, 0);
+        const demandScale = totalGW > 0 ? totalGW / (threshold / 100) : 1;
+        const demandData = demand.map(v => v * demandScale);
+        // Normalize demand shape so peak matches demandScale
+        const demandMax = Math.max(...demandData);
+        const demandNorm = demandMax > 0 ? demandData.map(v => v * demandScale / demandMax) : demandData;
 
-        // Demand line
-        if (mix) {
-            const totalGW = mix.clean_firm + mix.solar + mix.wind + (mix.offshore_wind||0) + mix.ccs_ccgt + mix.hydro;
-            const demandScale = totalGW / (threshold / 100);
-            datasets.push({
-                label: 'Demand', data: demand.map(v => v * demandScale * 0.042),
-                borderColor: '#1A2744', backgroundColor: 'transparent',
-                borderWidth: 2.5, borderDash: [6,3], fill: false,
-                tension: 0.3, pointRadius: 0, order: 0
-            });
+        datasets.push({
+            label: 'Demand', data: demandNorm,
+            borderColor: '#1A2744', backgroundColor: 'transparent',
+            borderWidth: 2.5, borderDash: [6,3], fill: false,
+            tension: 0.3, pointRadius: 0, order: 0
+        });
+
+        // Illustrative curtailment: generation above demand, stacked with cross-hatch
+        // Curtailment order bottom→top: solar, onshore, offshore, hydro, CCS, geothermal, nuclear
+        const CURTAIL_ORDER = ['solar', 'wind', 'offshore_wind', 'hydro', 'ccs_ccgt', 'geothermal', 'nuclear'];
+        const genPerResource = {};
+        for (const res of STACK_ORDER) {
+            const gw = gwMap[res.key] || 0;
+            const profile = profiles[res.profileKey];
+            if (gw > 0 && profile) {
+                genPerResource[res.key] = profile.map(v => (v || 0) * gw);
+            }
+        }
+        const totalGenPerHour = cumulative;
+        const excessPerHour = HOURS.map((_, i) => Math.max(0, totalGenPerHour[i] - demandNorm[i]));
+        const hasCurtailment = excessPerHour.some(v => v > 0.01);
+
+        if (hasCurtailment) {
+            let curtBase = demandNorm.slice();
+            for (const rt of CURTAIL_ORDER) {
+                const gen = genPerResource[rt];
+                if (!gen || !gen.some(v => v > 0)) continue;
+                const curtData = HOURS.map((_, i) => {
+                    if (excessPerHour[i] <= 0) return curtBase[i];
+                    const totalG = totalGenPerHour[i];
+                    const share = totalG > 0 ? Math.min(gen[i], excessPerHour[i] * (gen[i] / totalG)) : 0;
+                    const val = curtBase[i] + share;
+                    return val;
+                });
+                const clr = RES_CLR[rt] || '#888';
+                // Create hatch pattern
+                const patCanvas = document.createElement('canvas');
+                patCanvas.width = 8; patCanvas.height = 8;
+                const patCtx = patCanvas.getContext('2d');
+                patCtx.fillStyle = clr + '30';
+                patCtx.fillRect(0, 0, 8, 8);
+                patCtx.strokeStyle = clr + '90';
+                patCtx.lineWidth = 1;
+                patCtx.beginPath(); patCtx.moveTo(0, 8); patCtx.lineTo(8, 0); patCtx.stroke();
+                const hatchPat = document.getElementById('dayChart').getContext('2d').createPattern(patCanvas, 'repeat');
+                datasets.push({
+                    ...dsBase, label: (CURTAIL_ORDER.indexOf(rt) >= 0 ? STACK_ORDER.find(s => s.key === rt)?.label || rt : rt) + ' (Curtailed)',
+                    data: curtData,
+                    backgroundColor: hatchPat, borderColor: clr, borderWidth: 0.5, borderDash: [3,3],
+                    fill: { target: datasets.length - (CURTAIL_ORDER.indexOf(rt) === 0 ? 1 : 1), above: hatchPat },
+                    order: -1 - CURTAIL_ORDER.indexOf(rt)
+                });
+                curtBase = curtData.slice();
+            }
         }
 
         dayChart = new Chart(document.getElementById('dayChart'), {
@@ -605,7 +525,7 @@ body { background: var(--bg-page-white); }
                 },
                 scales: {
                     x: { title: { display: true, text: 'Hour of Day', font: { size: 11 } }, ticks: { font: { size: 9 } } },
-                    y: { title: { display: true, text: 'GW', font: { size: 11 } }, min: 0, stacked: true }
+                    y: { title: { display: true, text: 'GW', font: { size: 11 } }, min: 0 }
                 }
             }
         });
@@ -615,7 +535,8 @@ body { background: var(--bg-page-white); }
     slider.addEventListener('input', renderDayView);
     renderDayView();
 
-    // ======== TRACK 1 vs TRACK 2 COMPARISON ========
+    // (Track comparison, fingerprints, and related analyses sections removed)
+    if (false) { // dead code — deleted sections
     let cmpISO = 'CAISO', cmpBaseChart = null, cmpDgChart = null;
 
     function renderComparison() {
@@ -735,34 +656,10 @@ body { background: var(--bg-page-white); }
         });
     }
     renderFingerprints();
+    } // end dead code block
 
 })();
 </script>
-
-<!-- ============ RELATED ANALYSES ============ -->
-<div class="related-analyses">
-    <div class="related-analyses-title">Related Analyses</div>
-    <div class="related-analyses-grid">
-        <a href="storage_analysis.html" class="related-card">
-            <div class="related-card-tag">Storage</div>
-            <div class="related-card-title">Storage Analysis</div>
-            <div class="related-card-desc">Deep dive into battery and LDES dispatch patterns across ISOs and thresholds.</div>
-            <div class="related-card-arrow">Explore &rarr;</div>
-        </a>
-        <a href="dashboard.html" class="related-card">
-            <div class="related-card-tag">Interactive</div>
-            <div class="related-card-title">The Grid</div>
-            <div class="related-card-desc">Full interactive optimizer with all sensitivity toggles and compressed day view.</div>
-            <div class="related-card-arrow">Explore &rarr;</div>
-        </a>
-        <a href="clean_firm_case.html" class="related-card">
-            <div class="related-card-tag">Economics</div>
-            <div class="related-card-title">Clean Firm Case</div>
-            <div class="related-card-desc">Why firm clean power is the foundation of cost-effective decarbonization.</div>
-            <div class="related-card-arrow">Explore &rarr;</div>
-        </a>
-    </div>
-</div>
 
 </body>
 </html>

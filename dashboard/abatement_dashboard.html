@@ -76,8 +76,8 @@ html, body {
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#F59E0B;"></span>CAISO</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#E91E63;"></span>NYISO</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#9C27B0;"></span>NEISO</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#06B6D4;"></span>MISO</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#A855F7;"></span>SPP</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#F97316;"></span>MISO</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#14B8A6;"></span>SPP</span>
                     <span class="chart-legend-divider"></span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(0,0,0,0.08);"></span>P10&ndash;P90 band</span>
                     <span class="chart-legend-divider"></span>
@@ -119,10 +119,10 @@ html, body {
             <span class="tab-dot" style="background:#9C27B0;"></span>NEISO
         </button>
         <button class="iso-tab" data-iso="MISO" onclick="switchISO('MISO')">
-            <span class="tab-dot" style="background:#06B6D4;"></span>MISO
+            <span class="tab-dot" style="background:#F97316;"></span>MISO
         </button>
         <button class="iso-tab" data-iso="SPP" onclick="switchISO('SPP')">
-            <span class="tab-dot" style="background:#A855F7;"></span>SPP
+            <span class="tab-dot" style="background:#14B8A6;"></span>SPP
         </button>
     </div>
 
@@ -321,10 +321,10 @@ const RESOURCE_DISPLAY = [
     { key: 'wind',          label: 'Onshore Wind',   color: '#22C55E' },
     { key: 'offshore_wind', label: 'Offshore Wind',  color: '#009688' },
     { key: 'nuclear',       label: 'Nuclear',        color: '#1E3A5F' },
-    { key: 'geothermal',    label: 'Geothermal',     color: '#B45309' },
+    { key: 'geothermal',    label: 'Geothermal',     color: '#D97706' },
     { key: 'ccs_ccgt',      label: 'CCS-CCGT',       color: '#64748B' },
     { key: 'hydro',         label: 'Hydro',          color: '#0EA5E9' },
-    { key: 'battery',       label: 'Battery (4hr)',  color: '#8B5CF6' },
+    { key: 'battery',       label: 'Battery (4hr)',  color: '#C4B5FD' },
     { key: 'battery8',      label: 'Battery (8hr)',  color: '#A78BFA' },
     { key: 'ldes',          label: 'LDES (100hr)',   color: '#E91E63' }
 ];
@@ -579,7 +579,7 @@ function getNoRegretsFromMixData(iso, crossover) {
     if (rangeThresholds.length === 0) rangeThresholds = THRESHOLDS.slice(-3);
 
     // Use base resource keys that exist in RESOURCE_MIX_DATA (clean_firm, not nuclear/geothermal split)
-    var baseResources = ['solar', 'wind', 'offshore_wind', 'clean_firm', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes'];
+    var baseResources = ['clean_firm', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar', 'battery', 'battery8', 'ldes'];
     var analysis = {};
 
     for (var ri = 0; ri < baseResources.length; ri++) {
@@ -1386,9 +1386,9 @@ var DENSITY_RESOURCE_ORDER = [
     { key: 'wind',          label: 'Onshore Wind',   color: '#22C55E' },
     { key: 'offshore_wind', label: 'Offshore Wind',  color: '#009688' },
     { key: 'nuclear',       label: 'Nuclear',        color: '#1E3A5F' },
-    { key: 'geothermal',    label: 'Geothermal',     color: '#B45309' },
+    { key: 'geothermal',    label: 'Geothermal',     color: '#D97706' },
     { key: 'ccs_ccgt',      label: 'CCS-CCGT',       color: '#64748B' },
-    { key: 'battery',       label: 'Battery (4hr)',  color: '#8B5CF6' },
+    { key: 'battery',       label: 'Battery (4hr)',  color: '#C4B5FD' },
     { key: 'battery8',      label: 'Battery (8hr)',  color: '#A78BFA' },
     { key: 'ldes',          label: 'LDES (100hr)',   color: '#E91E63' }
 ];

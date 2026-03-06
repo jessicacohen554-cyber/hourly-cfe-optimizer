@@ -652,7 +652,7 @@ var T2_BY_THR = {
 };
 
 var RESOURCES = ['clean_firm','solar','wind','hydro','ccs_ccgt','battery','ldes'];
-var RES_COLORS = {clean_firm:'#1E3A5F', solar:'#F59E0B', wind:'#22C55E', hydro:'#0EA5E9', ccs_ccgt:'#0D9488', battery:'#9333EA', ldes:'#EC4899'};
+var RES_COLORS = {clean_firm:'#1E3A5F', solar:'#F59E0B', wind:'#22C55E', hydro:'#0EA5E9', ccs_ccgt:'#64748B', battery:'#C4B5FD', ldes:'#EC4899'};
 var RES_LABELS = {clean_firm:'Nuclear (existing)', solar:'Solar', wind:'Wind', hydro:'Hydro', ccs_ccgt:'CCS-CCGT', battery:'Battery', ldes:'LDES'};
 var RES_LABELS_NB = {clean_firm:'Nuclear (new build)', solar:'Solar (new)', wind:'Wind (new)', hydro:'Hydro', ccs_ccgt:'CCS-CCGT', battery:'Battery', ldes:'LDES'};
 
@@ -1282,8 +1282,8 @@ function buildMixCompareChart(region) {
     var data = getMixCompareData(region);
     if (data.labels.length === 0) return;
 
-    var EXISTING_ORDER = ['clean_firm', 'hydro', 'wind', 'solar', 'ccs_ccgt'];
-    var NEW_ORDER = ['clean_firm', 'hydro', 'wind', 'solar', 'ccs_ccgt', 'battery', 'ldes'];
+    var EXISTING_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar'];
+    var NEW_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar', 'battery', 'battery8', 'ldes', 'h2'];
     var existingAlpha = 0.85;
     var newAlpha = 0.40;
 

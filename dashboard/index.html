@@ -771,10 +771,10 @@ var HOMEPAGE_COLORS = {
     'Wind': '#22C55E',
     'New Nuclear': '#1E3A5F',
     'Hydro': '#0EA5E9',
-    'Battery': '#8B5CF6',
+    'Battery': '#C4B5FD',
     'Battery (8hr)': '#A78BFA',
     'LDES': '#EC4899',
-    'CCS-CCGT': '#0D9488',
+    'CCS-CCGT': '#64748B',
     'Curtailment': '#D1D5DB',
     'Gap': '#D1D5DB'
 };
@@ -1572,7 +1572,7 @@ const existingBoundaryPlugin = {
 function buildMixDatasets(data) {
     const { existingData, newData, chargeData } = data;
     const EXISTING_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar'];
-    const NEW_ORDER = ['solar', 'wind', 'hydro', 'battery', 'battery8', 'ldes', 'ccs_ccgt', 'clean_firm'];
+    const NEW_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar', 'battery', 'battery8', 'ldes', 'h2'];
 
     const existingAlpha = 0.75;
     const newAlpha = 0.45;
@@ -1697,8 +1697,8 @@ function initNarrativeMixChart() {
                             // Add charge legend entry
                             items.push({
                                 text: 'Storage Charge',
-                                fillStyle: 'rgba(139,92,246,0.25)',
-                                strokeStyle: '#8B5CF6',
+                                fillStyle: 'rgba(196,181,253,0.25)',
+                                strokeStyle: '#C4B5FD',
                                 lineWidth: 2,
                                 hidden: false,
                                 pointStyle: 'rectRounded',
@@ -2012,8 +2012,8 @@ function buildIncrementalDatasets(data) {
     const { utilizedExistingData, utilizedNewData, curtailedData, gapData, demandTrajectory, chargeData } = data;
     // Stack order (bottom to top): existing utilized, new utilized, gap spacer, curtailed
     const EXISTING_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar'];
-    const NEW_ORDER = ['solar', 'wind', 'hydro', 'battery', 'battery8', 'ldes', 'ccs_ccgt', 'clean_firm', 'h2'];
-    const CURTAIL_ORDER = ['solar', 'wind', 'hydro', 'clean_firm', 'ccs_ccgt', 'h2'];
+    const NEW_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar', 'battery', 'battery8', 'ldes', 'h2'];
+    const CURTAIL_ORDER = ['solar', 'wind', 'offshore_wind', 'hydro', 'ccs_ccgt', 'clean_firm'];
     const existingAlpha = 0.75;
     const newAlpha = 0.40;
     const curtailAlpha = 0.22;
@@ -2219,8 +2219,8 @@ function initIncrementalMixChart() {
                             });
                             items.push({
                                 text: 'Storage Charge',
-                                fillStyle: 'rgba(139,92,246,0.25)',
-                                strokeStyle: '#8B5CF6',
+                                fillStyle: 'rgba(196,181,253,0.25)',
+                                strokeStyle: '#C4B5FD',
                                 lineWidth: 2,
                                 pointStyle: 'rectRounded',
                             });
@@ -2411,8 +2411,8 @@ function initNarrativeCostChart() {
         'PJM':   'rgba(14,165,233,0.4)',
         'NYISO': 'rgba(233,30,99,0.4)',
         'NEISO': 'rgba(156,39,176,0.4)',
-        'MISO':  'rgba(6,182,212,0.4)',
-        'SPP':   'rgba(168,85,247,0.4)',
+        'MISO':  'rgba(249,115,22,0.4)',
+        'SPP':   'rgba(20,184,166,0.4)',
     };
 
     for (const iso of isos) isoData[iso] = [];
@@ -2803,8 +2803,8 @@ function buildStepChartData() {
         'PJM':   'rgba(14,165,233,0.4)',
         'NYISO': 'rgba(233,30,99,0.4)',
         'NEISO': 'rgba(156,39,176,0.4)',
-        'MISO':  'rgba(6,182,212,0.4)',
-        'SPP':   'rgba(168,85,247,0.4)',
+        'MISO':  'rgba(249,115,22,0.4)',
+        'SPP':   'rgba(20,184,166,0.4)',
     };
     for (const iso of isos) isoData[iso] = [];
     for (let ti = 0; ti < thresholdKeys.length; ti++) {
@@ -3042,8 +3042,8 @@ function initHomepage90CostChart() {
         PJM:   { fill: 'rgba(14,165,233,0.50)', border: '#0EA5E9' },
         NYISO: { fill: 'rgba(233,30,99,0.50)', border: '#E91E63' },
         NEISO: { fill: 'rgba(156,39,176,0.50)', border: '#9C27B0' },
-        MISO: { fill: 'rgba(6,182,212,0.50)', border: '#06B6D4' },
-        SPP:  { fill: 'rgba(168,85,247,0.50)', border: '#A855F7' }
+        MISO: { fill: 'rgba(249,115,22,0.50)', border: '#F97316' },
+        SPP:  { fill: 'rgba(20,184,166,0.50)', border: '#14B8A6' }
     };
 
     const isos = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP'];
@@ -3221,7 +3221,7 @@ function initCostCurveChart(iso) {
 
     // Region color
     const regionColors = typeof REGION_COLORS !== 'undefined' ? REGION_COLORS : {
-        CAISO: '#F59E0B', ERCOT: '#22C55E', PJM: '#0EA5E9', NYISO: '#E91E63', NEISO: '#9C27B0', MISO: '#06B6D4', SPP: '#A855F7'
+        CAISO: '#F59E0B', ERCOT: '#22C55E', PJM: '#0EA5E9', NYISO: '#E91E63', NEISO: '#9C27B0', MISO: '#F97316', SPP: '#14B8A6'
     };
     const c = regionColors[iso] || '#0EA5E9';
 

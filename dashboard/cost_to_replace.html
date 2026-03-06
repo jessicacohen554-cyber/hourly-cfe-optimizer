@@ -555,7 +555,7 @@ body { background: var(--bg-page); }
                 <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#0EA5E9;"></span>Wholesale LMP (P50)</span>
                 <span class="chart-legend-divider"></span>
                 <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#7C3AED;"></span>New nuclear LCOE (NOAK)</span>
-                <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#0891B2;"></span>CCS-CCGT LCOE (NOAK)</span>
+                <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#64748B;"></span>CCS-CCGT LCOE (NOAK)</span>
             </div>
         </div>
         <div class="insight-box insight-success" style="margin-top:var(--space-md);" id="keepVsReplaceInsight">
@@ -654,7 +654,7 @@ body { background: var(--bg-page); }
 // CTR PAGE — CONSTANTS & STATE
 // ============================================================================
 var REGIONS = ['PJM', 'ERCOT', 'CAISO', 'NYISO', 'NEISO', 'MISO', 'SPP'];
-var REGION_CLR = { ERCOT: '#22C55E', PJM: '#0EA5E9', CAISO: '#F59E0B', NYISO: '#E91E63', NEISO: '#9C27B0', MISO: '#06B6D4', SPP: '#A855F7' };
+var REGION_CLR = { ERCOT: '#22C55E', PJM: '#0EA5E9', CAISO: '#F59E0B', NYISO: '#E91E63', NEISO: '#9C27B0', MISO: '#F97316', SPP: '#14B8A6' };
 var REGION_DISPLAY = { PJM: 'PJM (Mid-Atlantic)', ERCOT: 'ERCOT (Texas)', CAISO: 'CAISO (California)', NYISO: 'NYISO (New York)', NEISO: 'NEISO (New England)', MISO: 'MISO (Midwest)', SPP: 'SPP (Great Plains)' };
 var THR = typeof THRESHOLDS !== 'undefined' ? THRESHOLDS : [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.99];
 
@@ -693,10 +693,10 @@ var RETIREMENT_NARRATIVE = {
     NEISO: { tag: 'NEISO', tagBg: 'rgba(156,39,176,0.1)', tagColor: '#9C27B0',
         title: 'NEISO: Millstone anchors the fleet \u2014 losing it would be catastrophic',
         body: 'New England runs 23.8% of its clean energy from nuclear (Millstone, Seabrook). These plants provide baseload capacity through harsh winters when gas pipeline constraints already spike energy costs. The winter gas constraint means CCS-CCGT replacement carries an additional $13/MWh adder.' },
-    MISO: { tag: 'MISO', tagBg: 'rgba(6,182,212,0.10)', tagColor: '#06B6D4',
+    MISO: { tag: 'MISO', tagBg: 'rgba(249,115,22,0.10)', tagColor: '#F97316',
         title: 'MISO: 13.1% nuclear retirement hits harder than it looks',
         body: 'MISO\'s 13.1% nuclear fleet (Braidwood, Byron, Prairie Island, and others) provides firm baseload that complements the region\'s massive 14.5% wind fleet. The loss of dispatchable firm capacity forces expensive new-build replacements at higher thresholds.' },
-    SPP: { tag: 'SPP', tagBg: 'rgba(168,85,247,0.10)', tagColor: '#A855F7',
+    SPP: { tag: 'SPP', tagBg: 'rgba(20,184,166,0.10)', tagColor: '#14B8A6',
         title: 'SPP: Minimal nuclear means minimal retirement risk',
         body: 'SPP\'s 5.2% nuclear share (Wolf Creek) is the smallest of any ISO. The region\'s dominant 37.1% wind fleet continues operating at wholesale regardless of nuclear retirement.' }
 };
@@ -946,7 +946,7 @@ function buildKeepVsReplaceChart(iso) {
 
     function pts(xArr, yArr) { return xArr.map(function(x, i) { return { x: x, y: yArr[i] }; }); }
 
-    var BLUE = '#0EA5E9', GREEN = '#22C55E', PURPLE = '#7C3AED', CYAN = '#0891B2';
+    var BLUE = '#0EA5E9', GREEN = '#22C55E', PURPLE = '#7C3AED', CYAN = '#64748B';
 
     keepVsReplaceChartInst = new Chart(ctx, {
         type: 'line',
