@@ -868,6 +868,13 @@ EXISTING_GAS_FOM_KW_YR = {
     'MISO': 14, 'SPP': 13,
 }
 
+# New-build gas LCOE ($/MWh, annualized all-in including capital recovery)
+# Sources: Lazard v17-18, EIA AEO 2024, NREL ATB 2024.
+# CCGT: baseload combined cycle, 85% CF. CT: peaker combustion turbine, 15-25% CF.
+# Used by SMARTargets market simulation (step10) for new gas profitability.
+NEW_GAS_CCGT_LCOE = {'Low': 45, 'Medium': 55, 'High': 65}
+NEW_GAS_CT_LCOE = {'Low': 65, 'Medium': 80, 'High': 100}
+
 # ============================================================================
 # FOAK COST TABLES — First-of-a-kind costs before any learning curve
 # ============================================================================
