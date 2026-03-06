@@ -102,6 +102,32 @@ For each scenario (15-20 market condition combos):
        c. Capacity market payment for new capacity (degrading)
        d. Ancillary service revenue
        e. Carbon credit revenue (if carbon price > $0)               [step5d CO2 data]
+       f. REC revenue from state RPS compliance                      [NEW — Decided]
+          - Resources in RPS states earn REC $/MWh on eligible generation
+          - REC price != ACP — ACPs are the penalty cap, RECs trade below
+          - REC revenue is additive to energy revenue for eligible resources
+          - NOTE: RPS mandates do NOT force builds directly in the model;
+            REC revenue makes resources more profitable, which may trigger
+            builds via the standard profit criterion. ACP < REC means
+            some obligated entities pay the penalty rather than build,
+            so RPS doesn't guarantee full compliance.
+          - Interconnection queue delays throttle the RATE of new builds
+            (modeled as max annual GW deployment cap per ISO, not RPS-specific)
+       g. Federal tax credits (Decided — included in effective LCOE):
+          - **45Y (Clean Electricity PTC)**: Technology-neutral PTC for
+            NEW builds — solar, wind, AND nuclear uprates. $26/MWh (2024$),
+            inflation-adjusted. Applies to projects placed in service after
+            2024. Replaces 45/48 for new projects.
+          - **45U (Nuclear PTC)**: Existing nuclear production credit,
+            $15/MWh, through 2032. Keeps existing nuclear competitive
+            when market LMPs are low. Critical for nuclear retirement
+            calculations — without 45U, some existing nuclear may be
+            uneconomic pre-2032 but viable with the credit.
+          - **45Q (CCS credit)**: Already modeled — $85/ton for power
+            sector CCS. Reflected as LCOE offset in CCS-CCGT cost.
+          - Implementation: Credits reduce effective LCOE (cost side),
+            not modeled as revenue. Net effect is the same for profit
+            calculation, but conceptually cleaner.
 
     3. PROFIT: delta_profit = delta_revenue - delta_cost             [NEW]
        - If delta_profit > 0: DEPLOY — but check portfolio stop first
@@ -204,6 +230,30 @@ carbon_rev_per_mwh = carbon_price × avoided_emission_rate  # $/MWh
 - `avoided_emission_rate`: from dispatch-based CO2 model (step5a)
 - Only relevant if a carbon price or ETS exists
 
+### REC Revenue from State RPS Compliance (Decided)
+
+```python
+rec_revenue_per_mwh = rec_price[iso] × rps_eligible[resource]  # $/MWh
+```
+
+- **REC price by ISO** — reflects actual RPS compliance market prices, NOT ACPs. ACP is the penalty ceiling; RECs trade below ACP because some entities pay the penalty rather than procure RECs.
+- **Key nuance**: RPS mandates do NOT force builds in our model. Instead, REC revenue makes clean resources more profitable. If `energy_LMP + REC_price + capacity_rev > annualized_LCOE`, a developer builds. If not, the resource isn't built and some load-serving entities pay the ACP instead.
+- **Eligible resources**: Solar, wind (onshore + offshore), hydro, geothermal. Nuclear eligibility varies by state — most state RPS programs exclude existing nuclear. New nuclear may qualify under some clean energy standards (e.g., NY CLCPA).
+- **Interconnection queue delays**: Modeled as a max annual GW deployment rate cap per ISO, not RPS-specific. This constraint throttles the *rate* of new builds regardless of profitability.
+- **REC prices to research**: Need ISO-level REC price data (SREC, Class I, etc.) — varies significantly by state/market. This is an open data need.
+
+### Federal Tax Credits (Decided)
+
+| Credit | Type | Rate | Applies To | Duration | Effect |
+|--------|------|------|------------|----------|--------|
+| **45Y** | New-build PTC | ~$26/MWh (2024$) | Solar, wind, **nuclear uprates**, other zero-emission | Post-2024 projects | Reduces effective LCOE for ALL new clean builds |
+| **45U** | Existing nuclear PTC | $15/MWh | Existing nuclear plants | Through 2032 | Keeps existing nuclear competitive when LMPs are low |
+| **45Q** | CCS credit | $85/ton | Power sector CCS | Already modeled | LCOE offset for CCS-CCGT |
+
+**Implementation**: All credits modeled as LCOE reductions (cost side), not as revenue. For the profit calculation `revenue - cost`, reducing cost by $X is equivalent to increasing revenue by $X. Conceptually cleaner to keep credits on the cost side.
+
+**45U sunset (2032) is important**: After 2032, existing nuclear loses $15/MWh of support. In ISOs where nuclear is marginally economic, this could trigger retirements post-2032. The model should handle this as a time-dependent LCOE adjustment — 45U applies in simulation years ≤2032, then drops off.
+
 ## Price Feedback Mechanism
 
 The feedback is **implicit and free** — no iterative equilibrium solver needed:
@@ -247,7 +297,7 @@ R1/R2 are NOT "freeze existing clean + add demand." They are **full market simul
 | **Starting fleet** | 2025 existing (all resources) | 2025 existing (all resources) |
 | **Demand** | Flat (2025 levels) | Growth trajectory (TBD rate) |
 | **Carbon price** | $0 | $0 |
-| **Policy** | Current (existing ITC/PTC, 45Q) | Current |
+| **Policy** | Current: 45Y (new build PTC, incl. nuclear uprates), 45U (existing nuclear PTC through 2032), 45Q (CCS), REC revenue from state RPS | Current |
 | **New builds** | Whatever's profitable at market LMPs | More capacity needed → more new builds |
 | **Key question** | What does the market do on its own? | Does demand growth extend fossil life or pull in clean? |
 
@@ -279,7 +329,7 @@ Candidate axes (not finalized):
 | **Learning speed** | Fast / Medium / Slow | How quickly early deployment drives FOAK→NOAK cost reduction. Fast learning = early deployment unlocks cascade. |
 | **Starting LCOE** | Low / Medium / High | Where technology costs begin (2025 starting point). Low = some resources already profitable at t=0. |
 | **Participation level** | TBD | How many corporate buyers / utilities participate. Affects cumulative GW → learning curve speed. |
-| **Policy regime** | TBD | ITC/PTC, 45Q, state RPS mandates. Changes effective cost floor. |
+| **Policy regime** | Current (45Y/45U/45Q + REC revenue) vs No-credit counterfactual | 45Y lowers new-build LCOE (solar, wind, nuclear uprates). 45U keeps existing nuclear viable through 2032. 45Q makes CCS competitive. REC revenue adds $/MWh for RPS-eligible resources. RPS mandates expressed via REC revenue signal, NOT as hard deployment floors (ACP < REC means some entities pay penalty instead of building). |
 | **Capacity market reform** | TBD | ELCC-based vs flat capacity payments. Affects dispatchable premium. |
 
 **Not yet decided**: Which axes beyond carbon price, how many levels, which combinations. R1/R2 reference case design is locked. R3+ scenario design determines what story the dashboard tells.
@@ -327,7 +377,7 @@ No upstream changes needed. All inputs already exist.
 4. **Within-threshold cannibalization** — the LMP engine captures *between-threshold* cannibalization (each step sees updated fossil stack). But within a single threshold, adding 10 GW of solar suppresses solar-hour prices more than adding 1 GW. Should we model this, or is the 5% step size granular enough?
 5. **PPA vs merchant revenue** — current design assumes merchant (spot LMP). Real developers sign PPAs at a discount to expected spot. Does this matter for the simulation, or is merchant a reasonable proxy?
 6. ~~**Existing asset economics**~~ — **RESOLVED**: Yes, model existing clean viability. Retire if revenue < fixed O&M. Wind/solar effectively never retire (near-zero O&M). Nuclear is the key risk case.
-7. **Stopping rule nuance** — when profit goes negative, is that truly "stop"? Or might developers accept marginal losses if mandated (RPS), subsidized (PTC), or pursuing portfolio strategy? The model as designed is pure-market — no policy mandates forcing unprofitable deployment.
+7. **Stopping rule nuance** — **PARTIALLY RESOLVED**: RPS mandates don't force builds directly — REC revenue makes resources more profitable, which may trigger builds via the standard profit criterion. ACP payments (penalty < REC price) mean some entities pay the compliance penalty rather than build, so RPS doesn't guarantee full compliance. Federal credits (45Y/45U/45Q) are modeled as LCOE reductions, not mandates. Remaining question: should there be a "policy mandate" scenario axis where RPS IS a hard floor (forcing builds even at a loss)?
 8. **What is the relationship between SMARTargets and the existing SBTi/procurement strategy pages?** SMARTargets answers "what would the market do" — the existing pages answer "what should a buyer do." How do they connect on the dashboard?
 9. **Fixed O&M data source** — need $/kW-yr fixed O&M by resource type and vintage for retirement calculations. EIA AEO or NREL ATB?
 10. **New gas build constraints** — are there siting/permitting constraints on new gas, or do we assume unlimited new gas can be built if profitable? (Affects how quickly gas fills demand growth in R2.)
