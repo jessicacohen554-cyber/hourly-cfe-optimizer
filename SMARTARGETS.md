@@ -186,22 +186,72 @@ This happens naturally because `build_merit_order_stack()` takes `clean_pct` as 
 
 **The sequential structure IS the feedback loop.** No iteration needed.
 
+## Reference Case Design (Decided)
+
+### Core Principle: Market-Driven Build-Out
+
+R1/R2 are NOT "freeze existing clean + add demand." They are **full market simulations** — developers build whatever is profitable (clean OR fossil), and existing units retire when they can't cover costs. The reference case answers: *"What does the market build on its own, without clean energy policy?"*
+
+### New-Build Options
+- **Fossil**: Gas CCGT (baseload) and gas CT (peakers) only. **No new coal** — new coal LCOE ($65-90/MWh) is not competitive with new gas CCGT ($45-65/MWh) regardless of political environment. Economically unrealistic in any 2025+ scenario.
+- **Clean**: Solar, onshore wind, offshore wind, battery (4hr/8hr), nuclear, CCS-CCGT, LDES, Green H2, geothermal (CAISO only). Same resource set as existing pipeline.
+- **Build criterion**: Resource is built when `annual_revenue > annualized_LCOE` (positive profit at market prices).
+
+### Retirement Logic
+- **Economic retirement**: Existing unit retires when `annual_revenue < fixed_O&M`. Revenue based on dispatch hours × LMP at those hours.
+- **Natural retirement order**: Coal first (highest fixed costs, displaced by cheaper gas in merit order), then older/less efficient gas as clean penetration suppresses prices.
+- **Wind/solar effectively never retire** — near-zero marginal cost AND near-zero fixed O&M means they always run when available regardless of price. They're always merit-order competitive.
+- **Nuclear is the interesting case** — fixed O&M ~$30/MWh means it needs decent capacity factors and prices. If LMPs crash from solar oversupply, a nuclear plant could theoretically become uneconomic and retire.
+- **Hydro** — existing only (no new-build), very low O&M, effectively never retires.
+
+### Existing Clean Viability
+- The model validates that existing 2025 clean resources remain economically viable under reference case pricing.
+- If an existing clean resource can't cover fixed O&M, it retires — this is a real risk for nuclear under high-solar scenarios.
+- This validation is important: it confirms the "starting fleet" is stable before layering on policy scenarios.
+
+### R1 vs R2
+
+| | R1: Current Market | R2: Current Market + Demand Growth |
+|---|---|---|
+| **Starting fleet** | 2025 existing (all resources) | 2025 existing (all resources) |
+| **Demand** | Flat (2025 levels) | Growth trajectory (TBD rate) |
+| **Carbon price** | $0 | $0 |
+| **Policy** | Current (existing ITC/PTC, 45Q) | Current |
+| **New builds** | Whatever's profitable at market LMPs | More capacity needed → more new builds |
+| **Key question** | What does the market do on its own? | Does demand growth extend fossil life or pull in clean? |
+
+### Reference Case Logic (Per Step)
+```
+For each step in the simulation:
+  1. Compute LMPs from current fleet (merit-order dispatch)
+  2. For each EXISTING unit:
+     - Compute annual revenue (dispatch hours × LMP)
+     - If revenue < fixed_O&M → RETIRE
+  3. For each potential NEW BUILD (gas CCGT, gas CT, solar, wind, battery, etc.):
+     - Compute expected revenue at current LMPs
+     - If revenue > annualized LCOE → BUILD (developer would invest)
+  4. Update fleet composition (retirements + new builds)
+  5. Recompute LMPs with updated fleet → next step
+```
+
 ## Scenario Axes (TBD — User to Define)
 
 Each scenario represents a different set of **market conditions** — not a different target. The question each scenario answers: *"How clean does the grid get when the market looks like this?"*
+
+R1/R2 are the reference cases (described above). R3+ layer on policy/price interventions:
 
 Candidate axes (not finalized):
 
 | Axis | Options | What It Changes |
 |------|---------|-----------------|
-| **Carbon price** | $0 / $50 / $100 / $185 | Raises fossil marginal cost → raises LMP → improves clean revenue. Direct: makes every clean MWh worth `carbon_price × displaced_rate` more. |
+| **Carbon price** | $0 (R1/R2) / $50 / $100 / $185 | Raises fossil marginal cost → raises LMP → improves clean revenue. Direct: makes every clean MWh worth `carbon_price × displaced_rate` more. |
 | **Learning speed** | Fast / Medium / Slow | How quickly early deployment drives FOAK→NOAK cost reduction. Fast learning = early deployment unlocks cascade. |
 | **Starting LCOE** | Low / Medium / High | Where technology costs begin (2025 starting point). Low = some resources already profitable at t=0. |
 | **Participation level** | TBD | How many corporate buyers / utilities participate. Affects cumulative GW → learning curve speed. |
 | **Policy regime** | TBD | ITC/PTC, 45Q, state RPS mandates. Changes effective cost floor. |
 | **Capacity market reform** | TBD | ELCC-based vs flat capacity payments. Affects dispatchable premium. |
 
-**Not yet decided**: Which axes, how many levels, which combinations. The scenario design determines what story the dashboard tells. Need to think through what the SMARTargets page should show before committing to axes.
+**Not yet decided**: Which axes beyond carbon price, how many levels, which combinations. R1/R2 reference case design is locked. R3+ scenario design determines what story the dashboard tells.
 
 ## Compute Budget
 
@@ -240,11 +290,13 @@ No upstream changes needed. All inputs already exist.
 
 ## Open Questions
 
-1. **Scenario axis definitions** — what are the 15-20 scenarios? What story should the SMARTargets dashboard page tell? This is the critical design question.
+1. **Scenario axis definitions** — what are the 15-20 scenarios? What story should the SMARTargets dashboard page tell? R1/R2 reference case is designed. R3+ scenarios (carbon price, policy, learning) still TBD.
 2. **Cross-regional capital flow** — V1 is per-ISO. Should V2 allow developers to deploy wherever profit is highest across ISOs? (Global merit order by profit, not MAC.)
-3. **Demand growth** — existing model ties demand growth to SBTi timeline (threshold = year). In SMARTargets, the threshold is an *output* not a year. How should demand grow? Calendar-based? Or tied to deployment pace?
+3. **Demand growth rate for R2** — what growth trajectory? EIA AEO reference case (~1%/yr)? AI/electrification-driven (~2-3%/yr)? Multiple rates as sub-scenarios?
 4. **Within-threshold cannibalization** — the LMP engine captures *between-threshold* cannibalization (each step sees updated fossil stack). But within a single threshold, adding 10 GW of solar suppresses solar-hour prices more than adding 1 GW. Should we model this, or is the 5% step size granular enough?
 5. **PPA vs merchant revenue** — current design assumes merchant (spot LMP). Real developers sign PPAs at a discount to expected spot. Does this matter for the simulation, or is merchant a reasonable proxy?
-6. **Existing asset economics** — do 2025 existing clean resources earn revenue (validating they'd "survive" in the new market), or do we only track incremental new-build profitability?
+6. ~~**Existing asset economics**~~ — **RESOLVED**: Yes, model existing clean viability. Retire if revenue < fixed O&M. Wind/solar effectively never retire (near-zero O&M). Nuclear is the key risk case.
 7. **Stopping rule nuance** — when profit goes negative, is that truly "stop"? Or might developers accept marginal losses if mandated (RPS), subsidized (PTC), or pursuing portfolio strategy? The model as designed is pure-market — no policy mandates forcing unprofitable deployment.
 8. **What is the relationship between SMARTargets and the existing SBTi/procurement strategy pages?** SMARTargets answers "what would the market do" — the existing pages answer "what should a buyer do." How do they connect on the dashboard?
+9. **Fixed O&M data source** — need $/kW-yr fixed O&M by resource type and vintage for retirement calculations. EIA AEO or NREL ATB?
+10. **New gas build constraints** — are there siting/permitting constraints on new gas, or do we assume unlimited new gas can be built if profitable? (Affects how quickly gas fills demand growth in R2.)
