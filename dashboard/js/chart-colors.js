@@ -17,10 +17,12 @@ var RESOURCE_COLORS = {
     nuclear:      '#6366F1',
     ccs:          '#64748B',
     cleanFirm:    '#6366F1',
-    battery:      '#8B5CF6',
+    battery:      '#C4B5FD',   // Battery 4hr — light lavender
+    battery4:     '#C4B5FD',   // Battery 4hr alias
+    battery8:     '#8B5CF6',   // Battery 8hr — medium purple
     ldes:         '#E91E63',
     greenH2:      '#10B981',
-    geothermal:   '#B45309',
+    geothermal:   '#D97706',
     storage:      '#EF4444',
     gap:          '#D1D5DB',
     fossilGas:    '#6B7280',
@@ -35,10 +37,12 @@ var RESOURCE_COLORS = {
     nuclearT:      'rgba(99, 102, 241, 0.55)',
     ccsT:          'rgba(100, 116, 139, 0.55)',
     cleanFirmT:    'rgba(99, 102, 241, 0.55)',
-    batteryT:      'rgba(139, 92, 246, 0.55)',
+    batteryT:      'rgba(196, 181, 253, 0.55)',   // Battery 4hr
+    battery4T:     'rgba(196, 181, 253, 0.55)',   // Battery 4hr alias
+    battery8T:     'rgba(139, 92, 246, 0.55)',    // Battery 8hr
     ldesT:         'rgba(233, 30, 99, 0.55)',
     greenH2T:      'rgba(16, 185, 129, 0.55)',
-    geothermalT:   'rgba(180, 83, 9, 0.55)',
+    geothermalT:   'rgba(217, 119, 6, 0.55)',
     storageT:      'rgba(239, 68, 68, 0.55)',
     gapT:          'rgba(209, 213, 219, 0.55)',
 
@@ -49,7 +53,9 @@ var RESOURCE_COLORS = {
     hydroBg:        'rgba(14, 165, 233, 0.08)',
     nuclearBg:      'rgba(99, 102, 241, 0.08)',
     ccsBg:          'rgba(100, 116, 139, 0.08)',
-    batteryBg:      'rgba(139, 92, 246, 0.08)',
+    batteryBg:      'rgba(196, 181, 253, 0.08)',   // Battery 4hr
+    battery4Bg:     'rgba(196, 181, 253, 0.08)',
+    battery8Bg:     'rgba(139, 92, 246, 0.08)',
     ldesBg:         'rgba(233, 30, 99, 0.08)',
     storageBg:      'rgba(239, 68, 68, 0.08)'
 };
@@ -61,8 +67,8 @@ var ISO_COLORS = {
     PJM:   '#0EA5E9',
     NYISO: '#E91E63',
     NEISO: '#9C27B0',
-    MISO:  '#06B6D4',
-    SPP:   '#A855F7',
+    MISO:  '#F97316',
+    SPP:   '#14B8A6',
 
     // Transparent fills (12% opacity)
     CAISO_T: 'rgba(245, 158, 11, 0.12)',
@@ -70,17 +76,17 @@ var ISO_COLORS = {
     PJM_T:   'rgba(14, 165, 233, 0.12)',
     NYISO_T: 'rgba(233, 30, 99, 0.12)',
     NEISO_T: 'rgba(156, 39, 176, 0.12)',
-    MISO_T:  'rgba(6, 182, 212, 0.12)',
-    SPP_T:   'rgba(168, 85, 247, 0.12)',
+    MISO_T:  'rgba(249, 115, 22, 0.12)',
+    SPP_T:   'rgba(20, 184, 166, 0.12)',
 
     // Ordered list (for iteration)
     list: ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP'],
-    colors: ['#F59E0B', '#22C55E', '#0EA5E9', '#E91E63', '#9C27B0', '#06B6D4', '#A855F7'],
+    colors: ['#F59E0B', '#22C55E', '#0EA5E9', '#E91E63', '#9C27B0', '#F97316', '#14B8A6'],
     fills:  [
         'rgba(245, 158, 11, 0.12)', 'rgba(34, 197, 94, 0.12)',
         'rgba(14, 165, 233, 0.12)', 'rgba(233, 30, 99, 0.12)',
-        'rgba(156, 39, 176, 0.12)', 'rgba(6, 182, 212, 0.12)',
-        'rgba(168, 85, 247, 0.12)'
+        'rgba(156, 39, 176, 0.12)', 'rgba(249, 115, 22, 0.12)',
+        'rgba(20, 184, 166, 0.12)'
     ]
 };
 
@@ -94,8 +100,11 @@ var SEMANTIC_COLORS = {
     muted:    '#6B7280'
 };
 
-// Resource stack order (for stacked charts — bottom to top)
-var RESOURCE_STACK_ORDER = ['solar', 'wind', 'offshoreWind', 'hydro', 'nuclear', 'ccs', 'battery', 'ldes', 'greenH2', 'geothermal', 'gap'];
+// Resource generation stack order (bottom to top for stacked charts)
+var RESOURCE_STACK_ORDER = ['nuclear', 'geothermal', 'ccs', 'hydro', 'offshoreWind', 'wind', 'solar', 'battery', 'battery8', 'ldes', 'greenH2'];
+
+// Curtailment stack order (bottom to top — reverse of generation: solar curtailed first, nuclear last)
+var CURTAILMENT_STACK_ORDER = ['solar', 'wind', 'offshoreWind', 'hydro', 'ccs', 'geothermal', 'nuclear'];
 
 // ============================================================================
 // SHARED LEGEND UTILITY — buildLegend()

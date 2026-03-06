@@ -618,15 +618,15 @@ const COLORS = {
     A85: 'rgba(79,70,229,0.85)', B85: 'rgba(8,145,178,0.85)',
     A_fill: 'rgba(79,70,229,0.08)', B_fill: 'rgba(8,145,178,0.08)',
     A_area: 'rgba(79,70,229,0.12)', B_area: 'rgba(8,145,178,0.12)',
-    nuclear: '#1E3A5F', geothermal: '#8B5CF6', solar: '#D97706', wind: '#16A34A',
-    ccs: '#0D9488', hydro: '#0284C7', battery: '#7C3AED', ldes: '#DB2777',
+    nuclear: '#1E3A5F', geothermal: '#D97706', solar: '#F59E0B', wind: '#16A34A',
+    ccs: '#64748B', hydro: '#0284C7', battery: '#C4B5FD', ldes: '#DB2777',
     gas: '#DC2626',
 };
 const RES_RGB = {
-    nuclear: '30,58,95', geothermal: '139,92,246', solar: '245,158,11',
+    nuclear: '30,58,95', geothermal: '217,119,6', solar: '245,158,11',
     wind: '34,197,94', offshore_wind: '0,150,136',
-    ccs_ccgt: '13,148,136', hydro: '14,165,233',
-    battery: '139,92,246', battery8: '167,139,250', ldes: '236,72,153',
+    ccs_ccgt: '100,116,139', hydro: '14,165,233',
+    battery: '196,181,253', battery8: '139,92,246', ldes: '236,72,153',
     gas: '220,38,38',
 };
 const RES_LABELS = {
@@ -1151,7 +1151,7 @@ function createStripePattern(ctx, rgb) {
 // Resources that have existing grid share (for "existing" bars)
 const EXISTING_RES = ['ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar']; // nuclear existing handled by splitCleanFirm
 // New-build resources (stacking order, bottom → top)
-const NEWBUILD_RES = ['solar', 'wind', 'offshore_wind', 'hydro', 'ccs_ccgt'];
+const NEWBUILD_RES = ['ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar'];
 // LDES rendered separately (like battery) — stored as d.ldes_twh, not in d.resource_twh
 // Nuclear/geothermal are built from the clean_firm breakdown, rendered separately
 

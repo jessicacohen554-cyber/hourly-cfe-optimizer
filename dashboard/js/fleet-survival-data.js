@@ -411,7 +411,7 @@ const FUEL_COLORS = {
     nuclear: '#7C3AED',
     solar: '#F59E0B',
     wind: '#22C55E',
-    battery: '#8B5CF6',
+    battery: '#C4B5FD',
     hydro: '#0EA5E9',
     geothermal: '#10B981',
 };

@@ -346,17 +346,22 @@ The SVG waveform overlay (energy curves + heartbeat/EKG lines) is auto-injected 
 | Resource | CSS Variable | Hex | Chart.js Constant |
 |----------|-------------|-----|-------------------|
 | Solar | `--solar` | `#F59E0B` | `RESOURCE_COLORS.solar` |
-| Wind | `--wind` | `#22C55E` | `RESOURCE_COLORS.wind` |
+| Wind (Onshore) | `--wind` | `#22C55E` | `RESOURCE_COLORS.wind` |
+| Offshore Wind | `--offshore-wind` | `#009688` | `RESOURCE_COLORS.offshoreWind` |
 | Hydro | `--hydro` | `#0EA5E9` | `RESOURCE_COLORS.hydro` |
-| Nuclear | `--nuclear` | `#7C3AED` | `RESOURCE_COLORS.nuclear` |
-| CCS-CCGT | `--ccs` | `#0891B2` | `RESOURCE_COLORS.ccs` |
-| Clean Firm | `--clean-firm` | `#1E3A5F` | `RESOURCE_COLORS.cleanFirm` |
-| Battery | `--battery` | `#8B5CF6` | `RESOURCE_COLORS.battery` |
+| Nuclear | `--nuclear` | `#6366F1` | `RESOURCE_COLORS.nuclear` |
+| CCS-CCGT | `--ccs` | `#64748B` | `RESOURCE_COLORS.ccs` |
+| Clean Firm | `--clean-firm` | `#6366F1` | `RESOURCE_COLORS.cleanFirm` |
+| Battery 4hr | `--battery` / `--battery4` | `#C4B5FD` | `RESOURCE_COLORS.battery` / `.battery4` |
+| Battery 8hr | `--battery8` | `#8B5CF6` | `RESOURCE_COLORS.battery8` |
 | LDES | `--ldes` | `#E91E63` | `RESOURCE_COLORS.ldes` |
 | Green H₂ | `--green-h2` | `#10B981` | `RESOURCE_COLORS.greenH2` |
-| Geothermal | `--geothermal` | `#10B981` | `RESOURCE_COLORS.geothermal` |
+| Geothermal | `--geothermal` | `#D97706` | `RESOURCE_COLORS.geothermal` |
+| Storage | `--storage` | `#EF4444` | `RESOURCE_COLORS.storage` |
+| Gap | `--gap` | `#D1D5DB` | `RESOURCE_COLORS.gap` |
 | Fossil Gas | `--fossil-gas` | `#6B7280` | `RESOURCE_COLORS.fossilGas` |
 | Fossil Coal | `--fossil-coal` | `#374151` | `RESOURCE_COLORS.fossilCoal` |
+| Fossil Oil | `--fossil-oil` | `#92400E` | `RESOURCE_COLORS.fossilOil` |
 
 #### Canonical ISO Colors
 | ISO | CSS Variable | Hex | Chart.js Constant |
@@ -366,8 +371,8 @@ The SVG waveform overlay (energy curves + heartbeat/EKG lines) is auto-injected 
 | PJM | `--iso-pjm` | `#0EA5E9` | `ISO_COLORS.PJM` |
 | NYISO | `--iso-nyiso` | `#E91E63` | `ISO_COLORS.NYISO` |
 | NEISO | `--iso-neiso` | `#9C27B0` | `ISO_COLORS.NEISO` |
-| MISO | `--iso-miso` | `#06B6D4` | `ISO_COLORS.MISO` |
-| SPP | `--iso-spp` | `#A855F7` | `ISO_COLORS.SPP` |
+| MISO | `--iso-miso` | `#F97316` | `ISO_COLORS.MISO` |
+| SPP | `--iso-spp` | `#14B8A6` | `ISO_COLORS.SPP` |
 
 Each color has transparent variants: CSS `--iso-caiso-t` (12% opacity) / JS `ISO_COLORS.CAISO_T`.
 

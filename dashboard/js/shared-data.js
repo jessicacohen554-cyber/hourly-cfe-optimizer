@@ -49,8 +49,8 @@ const REGION_COLORS = {
     PJM:   '#0EA5E9',
     NYISO: '#E91E63',
     NEISO: '#9C27B0',
-    MISO:  '#06B6D4',
-    SPP:   '#A855F7'
+    MISO:  '#F97316',
+    SPP:   '#14B8A6'
 };
 
 // --- Resource Colors & Labels (used by dashboard, index, region_deepdive) ---
@@ -72,14 +72,14 @@ const MIX_LABELS_MAP = {
 
 const MIX_COLORS = {
     clean_firm:    { fill: 'rgba(99,102,241,0.50)',  border: '#6366F1' },
-    geothermal:    { fill: 'rgba(180,83,9,0.50)',    border: '#B45309' },
+    geothermal:    { fill: 'rgba(217,119,6,0.50)',    border: '#D97706' },
     hydro:         { fill: 'rgba(14,165,233,0.50)',  border: '#0EA5E9' },
     ccs_ccgt:      { fill: 'rgba(100,116,139,0.50)', border: '#64748B' },
     offshore_wind: { fill: 'rgba(0,150,136,0.50)',   border: '#009688' },
     wind:          { fill: 'rgba(34,197,94,0.50)',   border: '#22C55E' },
     solar:         { fill: 'rgba(245,158,11,0.50)',  border: '#F59E0B' },
-    battery:       { fill: 'rgba(139,92,246,0.50)',  border: '#8B5CF6' },
-    battery8:      { fill: 'rgba(167,139,250,0.50)', border: '#A78BFA' },
+    battery:       { fill: 'rgba(196,181,253,0.50)',  border: '#C4B5FD' },
+    battery8:      { fill: 'rgba(139,92,246,0.50)',  border: '#8B5CF6' },
     ldes:          { fill: 'rgba(236,72,153,0.50)',  border: '#EC4899' },
     h2:            { fill: 'rgba(16,185,129,0.50)',  border: '#10B981' }
 };
