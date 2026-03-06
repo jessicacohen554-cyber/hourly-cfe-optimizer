@@ -200,7 +200,9 @@ The AT trajectory measures absolute CO₂ reductions from a **2023 baseline year
 
 **Purpose**: Used as the denominator for S1–S4 AT trajectory constraints. The emission cap for each year is a percentage of this baseline.
 
-**Processing**: Extend `step0_fetch_egrid.py` to aggregate total CO₂ by ISO (currently only computes emission rates per MWh, not absolute totals). Output: add `total_co2_metric_tons` field to `data/egrid_emission_rates.json` per ISO.
+**Processing**: `scripts/step0_extract_egrid_baselines.py` — reads the plant-level sheet, sums `PLCO2AN` by BA code, converts to metric tons. Output: `data/egrid_2023_baseline_emissions.json` with per-ISO totals and AT trajectory caps.
+
+**To populate**: Download `egrid2023_data.xlsx` from [EPA Detailed Data](https://www.epa.gov/egrid/detailed-data), save to `data/raw/egrid2023_data.xlsx`, run `python scripts/step0_extract_egrid_baselines.py`.
 
 | ISO | 2023 Baseline CO₂ (million metric tons) | Source |
 |-----|----------------------------------------|--------|
@@ -837,6 +839,164 @@ step5b LMP engine ───────────┘
 
 No upstream changes needed. All inputs already exist.
 
+## Data Tables (From pipeline_config.py — Single Source of Truth)
+
+These values already exist in `scripts/pipeline_config.py` and are referenced here for completeness. A fresh session building SMARTargets should import from `pipeline_config`, not hardcode.
+
+### Regional Demand (2025 Baseline, TWh)
+
+| ISO | Demand (TWh) | Source |
+|-----|-------------|--------|
+| CAISO | 224.0 | EIA-930, 2024 annualized + 2025 growth |
+| ERCOT | 488.0 | EIA-930 |
+| PJM | 843.3 | EIA-930 |
+| NYISO | 151.6 | EIA-930 |
+| NEISO | 115.3 | EIA-930 |
+| MISO | 660.0 | EIA-930 |
+| SPP | 296.0 | EIA-930 |
+
+**Source**: `pipeline_config.py::REGIONAL_DEMAND_TWH` (line 96)
+
+### Demand Growth Rates (Annual %)
+
+| ISO | Low | Medium | High |
+|-----|-----|--------|------|
+| CAISO | 1.4% | 1.9% | 2.5% |
+| ERCOT | 2.0% | 3.5% | 5.5% |
+| PJM | 1.5% | 2.4% | 3.6% |
+| NYISO | 1.3% | 2.0% | 4.4% |
+| NEISO | 0.9% | 1.8% | 2.9% |
+| MISO | 1.2% | 2.2% | 3.8% |
+| SPP | 1.0% | 1.8% | 3.0% |
+
+**Scenario mapping**: R1/S1/Q1 (Facilitating) = Medium growth. R2/S2/Q2 (Challenging) = High growth. S3 (Economy-wide, Facilitating) = High (mandatory electrification). S4 (Economy-wide, Challenging) = High+ (~3-4%/yr).
+
+**Source**: `pipeline_config.py::DEMAND_GROWTH_RATES` (line 1005)
+
+### Capacity Market Prices ($/kW-yr)
+
+| ISO | Price | Notes |
+|-----|-------|-------|
+| CAISO | $75 | RA program, system-wide avg |
+| ERCOT | **$0** | Energy-only market |
+| PJM | $120 | RPM BRA clearing |
+| NYISO | $85 | ICAP monthly spot, annualized |
+| NEISO | $55 | FCM FCA-19 clearing |
+| MISO | $25 | PRA Zone 1-7 avg |
+| SPP | **$0** | Energy-only market |
+
+**Source**: `pipeline_config.py::CAPACITY_MARKET_PRICES` (line 240)
+
+### Peak Capacity Credits (ELCC, % of Nameplate)
+
+| Resource | Credit | Notes |
+|----------|--------|-------|
+| Clean firm (nuclear) | 100% | Baseload, always available |
+| Solar | 30% | Daytime only, no evening peak |
+| Wind (onshore) | 10% | Intermittent, low correlation with peak |
+| Offshore wind | 25% | More consistent than onshore |
+| CCS-CCGT | 90% | Near-baseload with some capture downtime |
+| Hydro | 50% | Seasonal/constrained |
+| Battery (4hr/8hr) | 95% | Dispatchable during peak |
+| LDES (iron-air) | 90% | Long-duration dispatch |
+| Green H₂ | 85% | Dispatchable |
+
+**Source**: `pipeline_config.py::PEAK_CAPACITY_CREDITS` (line 411)
+
+### Fixed O&M Costs ($/kW-yr) — For Retirement Economics
+
+| Resource | Fixed O&M ($/kW-yr) | Source | Notes |
+|----------|-------------------:|--------|-------|
+| **Existing nuclear** | ~$30/MWh (~$26/kW-yr at 93% CF) | NREL ATB 2024 | Key retirement threshold — needs revenue > FOM to stay online |
+| **Existing gas CCGT** | $13-17/kW-yr (varies by ISO) | `pipeline_config.py` line 866 | CAISO $16, ERCOT $13, PJM $14, NYISO $17, NEISO $15, MISO $14, SPP $13 |
+| **Existing coal** | $40-50/kW-yr | EIA AEO 2023 | High FOM → first to retire when revenue drops |
+| **Solar/wind** | $8-15/kW-yr | NREL ATB 2024 | Near-zero marginal cost → effectively never retire |
+| **Hydro** | $15-20/kW-yr | NREL ATB 2024 | Low FOM → effectively never retire |
+
+**Retirement criterion**: `annual_revenue < fixed_O&M × capacity_kw` → unit retires.
+
+**Note**: Nuclear FOM is the critical value — it determines the LMP threshold below which existing nuclear retires. At $26/kW-yr and 93% CF, nuclear needs ~$30/MWh average revenue. With 45U credit ($15/MWh through 2032), the effective threshold drops to ~$15/MWh. Post-2032, the full $30/MWh threshold applies.
+
+### Wholesale Prices ($/MWh, 2024 Weighted Avg DA LMP)
+
+| ISO | Price |
+|-----|------:|
+| CAISO | $30 |
+| ERCOT | $27 |
+| PJM | $34 |
+| NYISO | $42 |
+| NEISO | $41 |
+| MISO | $30 |
+| SPP | $25 |
+
+**Source**: `pipeline_config.py::WHOLESALE_PRICES` (line 127)
+
+## Emissions Fan Output Specification
+
+### What the Dashboard Shows
+
+The **emissions fan** visualizes how the 8 scenarios produce different emission trajectories over 2025-2050, creating a fan-shaped uncertainty range:
+
+```
+CO₂ Emissions (M metric tons)
+│
+│  ████████ ← 2023 Baseline (100%)
+│  ████████
+│   ██████  ← R2 (worst case — high demand, no constraint)
+│    █████  ← R1 (market only — facilitating)
+│     ████  ← Q2 (qualified target floor)
+│      ███  ← Q1 (qualified target ceiling)
+│       ██  ← S2/S4 (AT trajectory — challenging)
+│        █  ← S1/S3 (AT trajectory — facilitating)
+│        ·  ← 0 (100% reduction by 2050)
+├───┬───┬───┬───┬───┬───→ Year
+  2023 2030 2035 2040 2045 2050
+```
+
+### Per-ISO Output Data Structure
+
+```json
+{
+  "iso": "ERCOT",
+  "baseline_2023_mt": 162500000,
+  "scenarios": {
+    "R1": {
+      "trajectory": {
+        "2025": {"emissions_mt": 158000000, "clean_pct": 48.5, "cost_per_mwh": 42.1},
+        "2030": {"emissions_mt": 120000000, "clean_pct": 58.3, "cost_per_mwh": 39.8},
+        "2035": {"emissions_mt": 95000000, "clean_pct": 65.1, "cost_per_mwh": 38.2},
+        "2040": {"emissions_mt": 78000000, "clean_pct": 70.4, "cost_per_mwh": 37.5},
+        "2045": {"emissions_mt": 65000000, "clean_pct": 74.2, "cost_per_mwh": 37.1},
+        "2050": {"emissions_mt": 55000000, "clean_pct": 77.8, "cost_per_mwh": 36.8}
+      },
+      "resource_mix_2050": {"solar_twh": 180, "wind_twh": 150, "nuclear_twh": 85, ...},
+      "market_stop_pct": 77.8,
+      "shadow_carbon_price": null
+    },
+    "S1": {
+      "trajectory": {
+        "2025": {"emissions_mt": 158000000, "clean_pct": 48.5, "cost_per_mwh": 42.1},
+        "2030": {"emissions_mt": 69875000, "clean_pct": 72.1, "cost_per_mwh": 48.3, "cap_mt": 69875000},
+        "2035": {"emissions_mt": 29250000, "clean_pct": 89.5, "cost_per_mwh": 55.7, "cap_mt": 29250000},
+        "2040": {"emissions_mt": 19500000, "clean_pct": 93.8, "cost_per_mwh": 52.1, "cap_mt": 19500000},
+        "2045": {"emissions_mt": 9750000, "clean_pct": 97.1, "cost_per_mwh": 58.4, "cap_mt": 9750000},
+        "2050": {"emissions_mt": 0, "clean_pct": 100.0, "cost_per_mwh": 65.2, "cap_mt": 0}
+      },
+      "resource_mix_2050": {"solar_twh": 250, "wind_twh": 200, "nuclear_twh": 120, ...},
+      "shadow_carbon_price": {"2030": 45, "2035": 85, "2040": 110, "2045": 180, "2050": 320}
+    }
+  }
+}
+```
+
+### Dashboard Visualization Components
+
+1. **Emissions Fan Chart** (primary) — All 8 scenarios × 7 ISOs, with AT trajectory milestones as constraint markers. Shaded bands between S1-S2 and Q1-Q2.
+2. **Shadow Carbon Price Chart** — S1-S4 implied carbon price at each milestone. Shows policy cost gap.
+3. **Resource Mix Evolution** — Stacked area showing resource mix change over 2025-2050 per scenario.
+4. **QT-AT Gap Table** — Per-ISO: QT range (Q1-Q2), AT trajectory, enabling conditions needed.
+5. **Cost Comparison** — $/MWh cost at each milestone across scenarios. S2 vs S1 spread = cost of adverse conditions.
+
 ## Open Questions
 
 1. **Scenario axis definitions** — what are the 15-20 scenarios? What story should the SMARTargets dashboard page tell? R1/R2 reference case is designed. R3+ scenarios (carbon price, policy, learning) still TBD.
@@ -847,5 +1007,5 @@ No upstream changes needed. All inputs already exist.
 6. ~~**Existing asset economics**~~ — **RESOLVED**: Yes, model existing clean viability. Retire if revenue < fixed O&M. Wind/solar effectively never retire (near-zero O&M). Nuclear is the key risk case.
 7. **Stopping rule nuance** — **PARTIALLY RESOLVED**: RPS mandates don't force builds directly — REC revenue makes resources more profitable, which may trigger builds via the standard profit criterion. ACP payments (penalty < REC price) mean some entities pay the compliance penalty rather than build, so RPS doesn't guarantee full compliance. Federal credits (45Y/45U/45Q) are modeled as LCOE reductions, not mandates. Remaining question: should there be a "policy mandate" scenario axis where RPS IS a hard floor (forcing builds even at a loss)?
 8. **What is the relationship between SMARTargets and the existing SBTi/procurement strategy pages?** SMARTargets answers "what would the market do" — the existing pages answer "what should a buyer do." How do they connect on the dashboard?
-9. **Fixed O&M data source** — need $/kW-yr fixed O&M by resource type and vintage for retirement calculations. EIA AEO or NREL ATB?
+9. ~~**Fixed O&M data source**~~ — **RESOLVED**: See Data Tables section above. Gas CCGT FOM from `pipeline_config.py` (varies by ISO, $13-17/kW-yr). Nuclear ~$26/kW-yr (NREL ATB 2024). Coal $40-50/kW-yr (EIA AEO). Solar/wind/hydro near-zero — effectively never retire.
 10. **New gas build constraints** — are there siting/permitting constraints on new gas, or do we assume unlimited new gas can be built if profitable? (Affects how quickly gas fills demand growth in R2.)
