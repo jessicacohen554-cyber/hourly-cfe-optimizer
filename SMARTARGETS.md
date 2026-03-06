@@ -1,7 +1,7 @@
 # SMARTargets Module — Market Simulation of Clean Energy Deployment
 
 > **Status**: Design phase — not yet implemented.
-> **Last updated**: 2026-03-06.
+> **Last updated**: 2026-03-06 (added AT trajectory, 2023 baseline emissions, constraint-based optimization).
 
 ## Core Concept
 
@@ -187,6 +187,157 @@ Grid decarbonization doesn't happen in a vacuum. The right question isn't "how d
 **DAC cost as scenario axis**: Low ($150/ton) / Medium ($250/ton) / High ($400/ton) — same levels as Step 6B. As DAC costs fall (learning), the optimal grid clean level *decreases* — you don't need to push the grid as far when removals are cheap.
 
 **Key difference from step 5d**: Step 5d ranks zones by MAC ($/tCO2) — this ranks by profit ($/MWh). Same zone structure, different objective. Step 5d asks "where's abatement cheapest?" — SMARTargets asks "where do developers make money?"
+
+## 2023 Baseline Emissions
+
+The AT trajectory measures absolute CO₂ reductions from a **2023 baseline year**. Two separate data sources serve two different modeling purposes:
+
+### ISO-Level Baseline (eGRID — for Regional AT Modeling)
+
+**Source**: EPA eGRID 2023 detailed data download, plant-level sheet (PLNT23).
+
+**Method**: Sum `PLCO2AN` (annual CO₂ emissions, short tons) for all plants mapped to each ISO via BA code (`BACODE`). Convert short tons → metric tons (÷ 1.10231). This gives total annual power sector CO₂ emissions per ISO in metric tons.
+
+**Purpose**: Used as the denominator for S1–S4 AT trajectory constraints. The emission cap for each year is a percentage of this baseline.
+
+**Processing**: Extend `step0_fetch_egrid.py` to aggregate total CO₂ by ISO (currently only computes emission rates per MWh, not absolute totals). Output: add `total_co2_metric_tons` field to `data/egrid_emission_rates.json` per ISO.
+
+| ISO | 2023 Baseline CO₂ (million metric tons) | Source |
+|-----|----------------------------------------|--------|
+| CAISO | TBD | eGRID 2023 PLNT23 |
+| ERCOT | TBD | eGRID 2023 PLNT23 |
+| PJM | TBD | eGRID 2023 PLNT23 |
+| NYISO | TBD | eGRID 2023 PLNT23 |
+| NEISO | TBD | eGRID 2023 PLNT23 |
+| MISO | TBD | eGRID 2023 PLNT23 |
+| SPP | TBD | eGRID 2023 PLNT23 |
+
+**Note**: Our model uses 2025 generation profiles for physics simulation, but the emissions baseline for AT trajectory measurement is 2023. This is intentional — targets are measured against a fixed historical baseline, not a moving one.
+
+### Company-Level Baseline (Sustainability/CDP/10-K — for IPP QT Modeling)
+
+**Source**: Company self-reported data, NOT eGRID plant-to-parent mapping (which is unreliable for complex corporate structures).
+
+**Data sources** (in order of preference):
+1. **CDP Climate disclosures** — CO₂ from power generation specifically (Scope 1, category-level)
+2. **Sustainability reports** — 2023 Scope 1 emissions from electricity generation
+3. **10-K filings (SEC)** — generation by fuel type, capacity by region/ISO, emissions reporting
+4. **S&P Global** — fleet capacity and generation data mapped to ISOs
+5. **Company websites** — investor relations, fleet composition pages
+
+**Purpose**: Establishes each IPP's 2023 CO₂ baseline for QT target-setting. The IPP's QT is tested as a percentage reduction from this company-specific baseline.
+
+**Constellation special case**: Constellation acquired Calpine in January 2026. The pro-forma 2023 baseline for the combined entity is:
+```
+Constellation 2023 baseline = Constellation 2023 Scope 1 + Calpine 2023 Scope 1
+                              - plants divested as acquisition condition
+```
+Research needed: identify which plants Constellation is being forced to divest and their 2023 CO₂ contribution.
+
+**Fleet-to-ISO mapping**: Use 10-K and S&P data to map each company's generation assets to ISOs. This enables scaling regional AT constraints to company-level: "If ERCOT must reduce CO₂ by 57% by 2030, what does that imply for an IPP with X% of ERCOT generation?"
+
+## AT Reduction Trajectory (Decided)
+
+The Aspirational Target trajectory defines **absolute CO₂ metric ton caps** on power sector emissions, measured against the 2023 baseline:
+
+| Year | Reduction from 2023 | Remaining Emissions | Cap Formula |
+|------|---------------------|---------------------|-------------|
+| 2023 | 0% (baseline) | 100% | `baseline_2023` |
+| 2030 | **−57%** | 43% | `baseline_2023 × 0.43` |
+| 2035 | **−82%** | 18% | `baseline_2023 × 0.18` |
+| 2040 | **−88%** | 12% | `baseline_2023 × 0.12` |
+| 2045 | **−94%** | 6% | `baseline_2023 × 0.06` |
+| 2050 | **−100%** | 0% | `0` |
+
+### These Are Constraints, Not Goals
+
+The emission cap is a **hard constraint** — the system cannot exceed it. The optimization question becomes: *"What is the least-cost resource mix that keeps emissions at or below the cap in each year?"*
+
+This is fundamentally different from "minimize cost to reach X% clean energy." The constraint is on CO₂ tons, not clean percentage. The required clean % is an output that depends on:
+- The cap (from the trajectory above)
+- Projected demand (which grows over time)
+- The emission intensity of the remaining fossil fleet (which shifts as coal → gas retirement occurs)
+
+### Demand Growth Makes Later Targets Harder
+
+Because the caps are **absolute** (metric tons, not intensity), demand growth directly increases the difficulty:
+
+```
+Example — ISO with 100M tCO2 baseline, 2% annual demand growth:
+
+2030: Cap = 43M tCO2. Demand grew ~15%. Need ~50% clean to hit cap.
+2035: Cap = 18M tCO2. Demand grew ~26%. Need ~78% clean to hit cap.
+2040: Cap = 12M tCO2. Demand grew ~37%. Need ~88% clean to hit cap.
+
+Achieving -57% in 2030 does NOT scale forward — if demand grew 10% between
+2030 and 2035 and you added no new clean, emissions would INCREASE (more
+demand served by same fossil fleet). The 2035 target requires additional
+new-build clean capacity on top of what was deployed for 2030.
+```
+
+This creates an accelerating buildout requirement: each milestone demands not just maintaining the prior clean level, but adding enough new clean capacity to (a) serve demand growth AND (b) further reduce the fossil share.
+
+### Same Trajectory for All AT Scenarios
+
+S1, S2, S3, and S4 all use the same −57/−82/−88/−94/−100% trajectory. The scenarios differ in **how hard and expensive** it is to meet the trajectory, not in the trajectory itself:
+- **S1/S3** (Facilitating): Lower LCOE, faster learning, reformed queues → cheaper path to the same caps
+- **S2/S4** (Challenging): Higher LCOE, slower learning, constrained queues → more expensive path
+- **S3/S4** (Economy-wide): Higher demand from mandatory electrification → higher required clean % for the same absolute cap
+
+## Constraint-Based Optimization Approach (Decided)
+
+### No Carbon Price Iteration Needed
+
+The existing pipeline can handle emission caps directly — no need to build a carbon price in and iterate to find equilibrium. The approach:
+
+```
+For each year in the trajectory (2030, 2035, 2040, 2045, 2050):
+
+  1. COMPUTE EMISSION CAP
+     cap_tCO2 = baseline_2023_tCO2[iso] × (1 - reduction_pct[year])
+
+  2. COMPUTE PROJECTED DEMAND
+     demand_TWh = demand_2023_TWh[iso] × (1 + growth_rate) ^ (year - 2023)
+
+  3. INVERT CO₂ MODEL → REQUIRED CLEAN %
+     The merit-order retirement model (step5a) maps clean% → CO₂.
+     Invert: find minimum clean% where fossil_CO₂ ≤ cap_tCO2.
+     This accounts for coal→gas fuel switching as clean% rises.
+
+  4. FIND LEAST-COST MIX AT REQUIRED CLEAN %
+     Use existing Steps 1-3 pipeline: PFS → EF → cost optimization
+     at the required clean% threshold. This gives the cheapest resource
+     mix that satisfies the emission constraint.
+
+  5. APPLY LEARNING CURVES (Year-Over-Year)
+     Costs in 2035 reflect cumulative deployment through 2030.
+     Wright's Law: cost(year) = f(cumulative_GW_deployed_through_prior_years)
+     Earlier deployment → lower costs for later milestones.
+
+  6. RATCHET CONSTRAINT
+     Capacity built for 2030 doesn't retire — it carries forward.
+     2035 only needs INCREMENTAL clean capacity above the 2030 fleet.
+     But demand growth means the increment may be substantial.
+```
+
+### Shadow Carbon Price as Output
+
+After finding the least-cost constrained solution, the **marginal cost of the last unit of abatement** is the implied carbon price — what a carbon price would need to be to make the market naturally hit this target. This is reported as an insight:
+
+```
+shadow_carbon_price[year] = marginal_MAC at the required clean%
+                          = (incremental_cost / incremental_CO₂_avoided)
+                          at the emission cap boundary
+```
+
+This answers the S1-S4 question "what carbon price or equivalent forcing is needed?" without requiring an iterative solver. The shadow price falls out naturally from the constrained optimization.
+
+### Why This Works Without Iteration
+
+The key insight: our model already parameterizes by clean %, and step5a already maps clean % → CO₂. The emission constraint just adds one step — converting the CO₂ cap to a required clean % — before feeding into the existing least-cost optimization. No equilibrium search needed because:
+- The CO₂-to-clean% mapping is monotonic (higher clean% = lower CO₂)
+- The cost optimization at a given clean% is already solved (Steps 1-3)
+- The only new computation is the inversion step, which is a simple 1D search
 
 ## Revenue Model Detail
 
@@ -465,10 +616,10 @@ Before the matrix, here's what each condition column means:
 |----|------------|--------------------------|-------------------|--------------------------|------------|-------------|---------------|
 | **R1** | Reference | No CO₂ constraint | No | N/A | Facilitating | $0 | Current (45Y/45U/45Q + REC) |
 | **R2** | Reference | No CO₂ constraint | No | N/A | Challenging | $0 | Current (45Q intact) |
-| **S1** | Aspirational (AT) | Power sector NZ CO₂ by 2050 | No | Fuller | Facilitating | Yes (carbon price or equivalent forcing) | Current + carbon pricing mechanism |
-| **S2** | Aspirational (AT) | Power sector NZ CO₂ by 2050 | No | More Limited | Challenging | Yes (same mechanism) | Current + carbon pricing mechanism |
-| **S3** | Aspirational (AT) | Power sector NZ CO₂ by 2050 | Yes | Fuller | Facilitating | Yes | Current + economy-wide carbon pricing |
-| **S4** | Aspirational (AT) | Power sector NZ CO₂ by 2050 | Yes | More Limited | Challenging | Yes | Current + economy-wide carbon pricing |
+| **S1** | Aspirational (AT) | −57/−82/−88/−94/−100% trajectory (2023 baseline) | No | Fuller | Facilitating | Yes (shadow price emerges from constraint) | Current + emission cap mechanism |
+| **S2** | Aspirational (AT) | −57/−82/−88/−94/−100% trajectory (2023 baseline) | No | More Limited | Challenging | Yes (same mechanism) | Current + emission cap mechanism |
+| **S3** | Aspirational (AT) | −57/−82/−88/−94/−100% trajectory (2023 baseline) | Yes | Fuller | Facilitating | Yes | Current + economy-wide emission caps |
+| **S4** | Aspirational (AT) | −57/−82/−88/−94/−100% trajectory (2023 baseline) | Yes | More Limited | Challenging | Yes | Current + economy-wide emission caps |
 | **Q1** | Qualified (QT) | No new constraint (emergent from market) | No | Fuller | Facilitating | $0 | Current (same as R1) |
 | **Q2** | Qualified (QT) | No new constraint (emergent from market) | No | More Limited | Challenging | $0 | Current (same as R2) |
 
@@ -498,9 +649,10 @@ Before the matrix, here's what each condition column means:
 - **New gas**: Low friction (gas builds freely where profitable)
 - **Key question**: Does high demand + slow clean deployment = extended fossil dominance?
 
-#### S1 — Aspirational: Power Sector NZ, Fuller Options, Facilitating
-*"Full commitment to power sector net-zero with every tool available."*
+#### S1 — Aspirational: Emission-Capped Trajectory, Fuller Options, Facilitating
+*"Full commitment to the AT trajectory with every tool available."*
 
+- **Emission constraint**: −57% by 2030, −82% by 2035, −88% by 2040, −94% by 2045, −100% by 2050 (absolute CO₂ metric tons vs 2023 eGRID baseline)
 - **Demand**: Medium growth (~1-1.5%/yr)
 - **Interconnection**: Reformed queues
 - **Learning**: Fast
@@ -508,47 +660,50 @@ Before the matrix, here's what each condition column means:
 - **DAC**: Available — leveraged at the crossover point (from optimal target exercise). Grid pushes clean until marginal MAC > DAC cost, then DAC handles residual.
 - **CCS**: Viable, 45Q intact, CO₂ infrastructure builds out
 - **Nuclear**: SMR/advanced pathway open
-- **Carbon price or equivalent forcing**: The mechanism that makes NZ happen. Could be carbon price ($50-100 range), cap-and-trade, or CES mandate. Effect: makes clean deployment more profitable AND fossil generation more expensive.
-- **Key question**: With full toolkit and tailwinds, what does the optimal NZ grid look like? Where does the DAC crossover land?
+- **Shadow carbon price**: Emerges from the constrained optimization — the marginal cost of the last unit of abatement at each milestone IS the implied carbon price needed to make the market hit the target.
+- **Key question**: With full toolkit and tailwinds, what's the least-cost path to the AT trajectory? What shadow carbon price does each milestone imply?
 
-#### S2 — Aspirational: Power Sector NZ, Limited Options, Challenging
-*"Same NZ mandate, but the toolkit is constrained and the headwinds are real."*
+#### S2 — Aspirational: Emission-Capped Trajectory, Limited Options, Challenging
+*"Same trajectory mandate, but the toolkit is constrained and the headwinds are real."*
 
-- **Demand**: High growth (~2-3%/yr)
+- **Emission constraint**: Same −57/−82/−88/−94/−100% trajectory as S1
+- **Demand**: High growth (~2-3%/yr) — makes absolute caps harder to meet (more demand, same cap)
 - **Interconnection**: Constrained queues (status quo)
 - **Learning**: Slow
 - **Starting LCOE**: High
 - **DAC**: Not available (or prohibitively expensive, $600+/ton) — grid must decarbonize deeper because offsets aren't an option
 - **CCS**: Limited — storage site constraints, pipeline opposition, 45Q at risk
 - **Nuclear**: Stalls — cost overruns, NRC delays
-- **Carbon price or equivalent forcing**: Same mechanism as S1, but biting harder because it has to push through headwinds
-- **Key question**: How much more expensive is NZ when you can't lean on DAC, nuclear stalls, and deployment is slow? This is the "hard mode" scenario — NZ is required but the path is brutal.
+- **Shadow carbon price**: Higher than S1 — headwinds mean each milestone costs more per ton
+- **Key question**: How much more expensive is the AT trajectory when you can't lean on DAC, nuclear stalls, and deployment is slow? The shadow carbon price gap between S1 and S2 IS the cost of adverse conditions.
 
 #### S3 — Aspirational: Economy-Wide NZ, Fuller Options, Facilitating
 *"The whole economy goes net-zero. The grid is the backbone."*
 
-**How S3 differs from S1 — three mechanisms, not just more demand:**
+**Same AT trajectory** (−57/−82/−88/−94/−100%) for the power sector. The additional difficulty comes from three mechanisms, not a stricter cap:
 
-1. **Demand growth is mandatory and higher** (~2-3%/yr even in "facilitating" conditions) — economy-wide NZ requires electrifying transport (EVs), buildings (heat pumps), and industry (electric furnaces). This isn't optional growth — it's policy-mandated electrification. Both S3 and S4 use high demand regardless of facilitating/challenging.
+1. **Demand growth is mandatory and higher** (~2-3%/yr even in "facilitating" conditions) — economy-wide NZ requires electrifying transport (EVs), buildings (heat pumps), and industry (electric furnaces). This isn't optional growth — it's policy-mandated electrification. Both S3 and S4 use high demand regardless of facilitating/challenging. Higher demand + same absolute cap = higher required clean %.
 
 2. **DAC budget is shared across the whole economy** — In S1, the grid uses DAC for its residual emissions and that's it. In S3, industry (steel, cement), transport (aviation, shipping), and agriculture also need DAC/removals for *their* residual emissions. The grid's "share" of available DAC capacity shrinks. Effect: the grid may need to push to a *higher* clean % before the portfolio stop binds, because the DAC that would otherwise cover grid residuals is allocated to harder-to-abate sectors.
 
 3. **Green H₂ production load** — Economy-wide NZ requires green hydrogen for steel, chemicals, shipping fuel. H₂ electrolysis consumes clean electricity. This adds ~20-30% electricity demand on top of direct electrification. The grid has to be bigger AND cleaner.
 
+- **Emission constraint**: Same −57/−82/−88/−94/−100% trajectory
 - **Demand**: High (~2-3%/yr — mandatory electrification even under facilitating conditions)
 - **Interconnection**: Reformed queues
 - **Learning**: Fast (economy-wide deployment accelerates learning across sectors)
 - **Starting LCOE**: Low
 - **DAC**: Available, but shared — grid gets a fraction of total DAC capacity
 - **H₂ load**: Significant — electrolysis demand on top of direct load
-- **Carbon price**: Economy-wide carbon price (higher signal than power-only)
-- **Key question**: When the grid has to power everything AND compete for DAC, how much harder is decarbonization?
+- **Carbon price**: Economy-wide carbon price (shadow price likely higher than S1 due to demand)
+- **Key question**: When the grid has to power everything AND compete for DAC, how much more does each milestone cost vs S1?
 
 #### S4 — Aspirational: Economy-Wide NZ, Limited Options, Challenging
 *"The hardest scenario. Everything electrifies, nothing's easy."*
 
-Same economy-wide mechanisms as S3, but under challenging conditions:
+Same AT trajectory (−57/−82/−88/−94/−100%) and economy-wide mechanisms as S3, but under challenging conditions:
 
+- **Emission constraint**: Same −57/−82/−88/−94/−100% trajectory
 - **Demand**: Very high (~3-4%/yr — aggressive electrification + AI + H₂ under constrained grid)
 - **Interconnection**: Constrained queues (the worst combo — massive demand + can't build fast enough)
 - **Learning**: Slow
@@ -556,7 +711,7 @@ Same economy-wide mechanisms as S3, but under challenging conditions:
 - **DAC**: Not available — grid must go nearly all the way without offsets
 - **H₂ load**: Same or higher (no alternative to green H₂ when economy-wide NZ is mandated)
 - **CCS/Nuclear**: Limited
-- **Key question**: Is this even feasible? What's the cost premium vs S3? This scenario tests whether economy-wide NZ is physically achievable under adverse conditions, or if something has to give.
+- **Key question**: Is the trajectory even feasible? At what milestone does cost become prohibitive? The shadow carbon price at each milestone reveals where the constraint binds hardest.
 
 #### Q1 — Qualified Target: Best Achievable Without New Enabling Conditions, Facilitating
 *"What can we credibly commit to today, without waiting for new policy?"*
@@ -580,12 +735,15 @@ Same economy-wide mechanisms as S3, but under challenging conditions:
 
 For an IPP, the logical premise shifts from system-wide ratepayer impact to **competitive market survival**:
 
-1. **Regional view**: Because an IPP lacks a captive rate base, forcing the model to hit a strict emissions constraint simulates the entire regional wholesale market's least-cost response, not just the utility's internal system.
-2. **Testing market viability**: The model outputs how wholesale electricity prices, new capacity needs, and retirement schedules must shift across the grid to meet that forced target.
-3. **Scaling to the portfolio**: The IPP scales these regional, macro-level market shifts down to evaluate the viability of its own specific assets.
-4. **Setting the target**: The IPP's QT becomes the strictest reduction threshold their specific fleet can align with while remaining profitable and competitive in that future wholesale market.
+1. **Company-level baseline**: Use 2023 Scope 1 emissions from sustainability reports / CDP disclosures (NOT eGRID plant mapping). For Constellation: pro-forma = Constellation 2023 + Calpine 2023 − acquisition divestitures. Fleet-to-ISO mapping from 10-K filings, S&P Global, and company investor relations.
+2. **Regional view**: Because an IPP lacks a captive rate base, forcing the model to hit a strict emissions constraint simulates the entire regional wholesale market's least-cost response, not just the utility's internal system.
+3. **Testing market viability**: The model outputs how wholesale electricity prices, new capacity needs, and retirement schedules must shift across the grid to meet that forced target.
+4. **Scaling to the portfolio**: The IPP scales these regional, macro-level market shifts down to evaluate the viability of its own specific assets.
+5. **Setting the target**: The IPP's QT becomes the strictest reduction threshold their specific fleet can align with while remaining profitable and competitive in that future wholesale market.
 
 Instead of balancing reductions against consumer rates, the IPP balances reductions against **asset stranding and merchant risk**. The QT is the point where further reductions would strand existing assets or make the portfolio uncompetitive.
+
+**QT-to-AT gap reporting**: The IPP's QT (e.g., −40% by 2030) vs the AT trajectory (−57% by 2030) defines the enabling conditions gap. The company reports: "We can commit to −40%. To reach −57%, we need: [carbon pricing at $X/ton, interconnection reform, CCS viability, etc.]" The shadow carbon price from S1/S2 quantifies exactly what policy signal is needed to close the gap.
 
 - **Demand**: Medium growth (same as R1)
 - **Interconnection**: Reformed queues (same as R1)
@@ -618,7 +776,7 @@ Instead of balancing reductions against consumer rates, the IPP balances reducti
 
 | Dimension | R1/R2 | S1/S2 | S3/S4 | Q1/Q2 |
 |-----------|-------|-------|-------|-------|
-| **CO₂ target** | None (emergent) | Power sector NZ | Power sector NZ (within economy-wide NZ) | None (emergent — same as R) |
+| **CO₂ target** | None (emergent) | −57/−82/−88/−94/−100% caps (2023 baseline) | Same caps (within economy-wide NZ) | None (emergent — same as R) |
 | **Carbon price** | $0 | Yes | Yes (economy-wide, likely higher) | $0 (same as R) |
 | **Demand driver** | Market-driven | Market-driven | **Mandatory electrification** | Market-driven |
 | **DAC role** | N/A | Grid residuals only | **Shared with industry/transport** | Minimal (MAC < DAC) |
