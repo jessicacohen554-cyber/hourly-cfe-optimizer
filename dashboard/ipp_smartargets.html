@@ -171,19 +171,33 @@ body { background: var(--bg-alt-warm); }
     <h2>Emissions Trajectories</h2>
     <p class="section-desc">Fleet-level CO₂ emissions under different reduction targets. The fan shows the range of outcomes across the QT parametric sweep (5&ndash;95% reduction). AT trajectory marks the science-based ambition path.</p>
 
-    <div class="qt-selector" id="qtSelector"></div>
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
+        <div class="qt-selector" id="qtSelector"></div>
+        <div class="bar-divider" style="height:24px;"></div>
+        <div style="display:flex;gap:4px;">
+            <button class="qt-btn active" id="passiveBtn" onclick="setQTMode(false)">Passive (Fleet Only)</button>
+            <button class="qt-btn" id="activeBtn" onclick="setQTMode(true)">Active (+ New Clean)</button>
+        </div>
+    </div>
 
     <div class="fan-grid">
         <div class="fan-card">
             <h3 id="fanChartTitle">Emissions Fan — QT Sweep</h3>
-            <div class="chart-note">Shaded bands: P5–P95 range across 19 reduction targets</div>
+            <div class="chart-note">Shaded bands: P5–P95 range across 19 reduction targets. Purple = passive, green = active.</div>
             <div class="fan-chart-container"><canvas id="emissionsFanChart"></canvas></div>
         </div>
         <div class="fan-card">
             <h3>Fleet Economics</h3>
-            <div class="chart-note">Cumulative fleet profit across the projection period</div>
+            <div class="chart-note">Fleet profit per scenario across the projection period</div>
             <div class="fan-chart-container"><canvas id="profitChart"></canvas></div>
         </div>
+    </div>
+
+    <!-- Active QT deployment timeline -->
+    <div id="deploySection" class="fan-card" style="display:none;margin-bottom:24px;">
+        <h3>Active Deployment Timeline</h3>
+        <div class="chart-note">Cumulative new clean capacity deployed under the active QT strategy (solar + wind + battery)</div>
+        <div style="position:relative;height:300px;"><canvas id="deployChart"></canvas></div>
     </div>
 
     <div id="fanNarrative" class="narrative-box">
@@ -266,7 +280,7 @@ body { background: var(--bg-alt-warm); }
 // IPP SMARTargets Dashboard — Main JS
 // ============================================================================
 
-const DATA = IPP_SMARTARGETS_DATA;
+const DATA = (typeof IPP_SMARTARGETS_DATA !== 'undefined') ? IPP_SMARTARGETS_DATA : IPP_SMARTARGETS;
 const COMPANIES = Object.keys(DATA.companies);
 const SCENARIOS = ['R1', 'R2', 'AT1', 'AT2', 'AT3', 'AT4'];
 const QT_SCENARIOS = ['QT1', 'QT2', 'QT3', 'QT4'];
@@ -296,6 +310,7 @@ const FUEL_COLORS = {
 let activeCompany = COMPANIES[0];
 let activeScenario = 'R1';
 let activeQT = 'QT1';
+let showActiveQT = false; // Toggle: passive vs active QT view
 
 // Charts
 let fleetPieChart = null;
@@ -303,6 +318,7 @@ let emissionsFanChart = null;
 let profitChart = null;
 let gapChart = null;
 let statusStackChart = null;
+let deployChart = null;
 
 // ─── COMPANY TABS ──────────────────────────────────────────────
 function initCompanyTabs() {
@@ -421,62 +437,87 @@ function updateFleetPie(co) {
     });
 }
 
+// ─── PASSIVE/ACTIVE TOGGLE ─────────────────────────────────────
+function setQTMode(active) {
+    showActiveQT = active;
+    document.getElementById('passiveBtn').className = 'qt-btn' + (!active ? ' active' : '');
+    document.getElementById('activeBtn').className = 'qt-btn' + (active ? ' active' : '');
+    document.getElementById('deploySection').style.display = active ? 'block' : 'none';
+    updateFanCharts();
+    updateGapAnalysis();
+}
+
 // ─── EMISSIONS FAN CHART ───────────────────────────────────────
 function updateFanCharts() {
     const co = DATA.companies[activeCompany];
-    const qtData = co.qt_analysis[activeQT];
-    const fanData = qtData.fan;
+    const passiveData = co.qt_analysis[activeQT];
+    const activeData = co.active_qt_analysis ? co.active_qt_analysis[activeQT] : null;
+    const fanData = passiveData.fan;
     const years = [2025, 2030, 2035, 2040, 2045, 2050];
 
-    document.getElementById('fanChartTitle').textContent = `Emissions Fan — ${QT_LABELS[activeQT]}`;
+    const modeLabel = showActiveQT ? 'Active' : 'Passive';
+    document.getElementById('fanChartTitle').textContent = `Emissions Fan (${modeLabel}) — ${QT_LABELS[activeQT]}`;
 
-    // Build fan datasets (P95 → P75 → P50 → P25 → P5 fill between)
     const datasets = [];
 
-    // Min-Max range (lightest)
+    // Show primary fan (passive always, active overlaid when toggled)
+    // Passive fan bands
     datasets.push({
-        label: 'Max', data: fanData.max, borderColor: 'transparent', backgroundColor: 'rgba(99,102,241,0.06)',
-        fill: '+1', pointRadius: 0, borderWidth: 0, order: 6
+        label: 'Passive Max', data: fanData.max, borderColor: 'transparent', backgroundColor: 'rgba(99,102,241,0.06)',
+        fill: '+1', pointRadius: 0, borderWidth: 0, order: 8
     });
     datasets.push({
-        label: 'Min', data: fanData.min, borderColor: 'transparent', backgroundColor: 'transparent',
-        fill: false, pointRadius: 0, borderWidth: 0, order: 6
-    });
-
-    // P95-P5 range
-    datasets.push({
-        label: 'P95', data: fanData.p95, borderColor: 'rgba(99,102,241,0.3)', backgroundColor: 'rgba(99,102,241,0.1)',
-        fill: '+3', pointRadius: 0, borderWidth: 1, borderDash: [4, 4], order: 5
-    });
-
-    // P75-P25 range
-    datasets.push({
-        label: 'P75', data: fanData.p75, borderColor: 'rgba(99,102,241,0.4)', backgroundColor: 'rgba(99,102,241,0.15)',
-        fill: '+1', pointRadius: 0, borderWidth: 1, order: 4
+        label: 'Passive Min', data: fanData.min, borderColor: 'transparent', backgroundColor: 'transparent',
+        fill: false, pointRadius: 0, borderWidth: 0, order: 8
     });
     datasets.push({
-        label: 'P25', data: fanData.p25, borderColor: 'rgba(99,102,241,0.4)', backgroundColor: 'transparent',
-        fill: false, pointRadius: 0, borderWidth: 1, order: 4
+        label: 'Passive P95', data: fanData.p95, borderColor: 'rgba(99,102,241,0.25)', backgroundColor: 'rgba(99,102,241,0.08)',
+        fill: '+3', pointRadius: 0, borderWidth: 1, borderDash: [4, 4], order: 7
     });
-
-    // P5
     datasets.push({
-        label: 'P5', data: fanData.p5, borderColor: 'rgba(99,102,241,0.3)', backgroundColor: 'transparent',
-        fill: false, pointRadius: 0, borderWidth: 1, borderDash: [4, 4], order: 5
+        label: 'Passive P75', data: fanData.p75, borderColor: 'rgba(99,102,241,0.35)', backgroundColor: 'rgba(99,102,241,0.12)',
+        fill: '+1', pointRadius: 0, borderWidth: 1, order: 6
+    });
+    datasets.push({
+        label: 'Passive P25', data: fanData.p25, borderColor: 'rgba(99,102,241,0.35)', backgroundColor: 'transparent',
+        fill: false, pointRadius: 0, borderWidth: 1, order: 6
+    });
+    datasets.push({
+        label: 'Passive P5', data: fanData.p5, borderColor: 'rgba(99,102,241,0.25)', backgroundColor: 'transparent',
+        fill: false, pointRadius: 0, borderWidth: 1, borderDash: [4, 4], order: 7
     });
 
-    // Median line
+    // Passive median
     datasets.push({
-        label: 'Median (P50)', data: fanData.p50,
+        label: 'Passive Median', data: fanData.p50,
         borderColor: '#6366F1', backgroundColor: 'transparent',
-        fill: false, pointRadius: 3, borderWidth: 2.5, order: 1
+        fill: false, pointRadius: 3, borderWidth: 2.5, order: 2
     });
+
+    // Active overlay
+    if (showActiveQT && activeData) {
+        const af = activeData.fan;
+        // Active fan bands (green tones)
+        datasets.push({
+            label: 'Active P75', data: af.p75, borderColor: 'rgba(34,197,94,0.3)', backgroundColor: 'rgba(34,197,94,0.1)',
+            fill: '+1', pointRadius: 0, borderWidth: 1, order: 5
+        });
+        datasets.push({
+            label: 'Active P25', data: af.p25, borderColor: 'rgba(34,197,94,0.3)', backgroundColor: 'transparent',
+            fill: false, pointRadius: 0, borderWidth: 1, order: 5
+        });
+        // Active median
+        datasets.push({
+            label: 'Active Median', data: af.p50,
+            borderColor: '#22C55E', backgroundColor: 'transparent',
+            fill: false, pointRadius: 4, borderWidth: 2.5, order: 1, pointStyle: 'rectRot'
+        });
+    }
 
     // AT trajectory overlay
-    const atTarget = co.target;
-    if (atTarget) {
+    if (co.target) {
         const co2_2024 = co.co2_2024_mt;
-        const atReductions = [0, 0.57, 0.82, 0.88, 0.94, 1.0]; // AT milestones
+        const atReductions = [0, 0.57, 0.82, 0.88, 0.94, 1.0];
         const atEmissions = atReductions.map(r => Math.max(0, co2_2024 * (1 - r)));
         datasets.push({
             label: 'AT Trajectory', data: atEmissions,
@@ -486,14 +527,14 @@ function updateFanCharts() {
         });
     }
 
-    // Scenario overlays (R1, R2)
+    // R1/R2 overlays
     ['R1', 'R2'].forEach(s => {
         const sd = co.scenarios[s];
         if (sd) {
             datasets.push({
                 label: SCENARIO_LABELS[s], data: sd.fleet_emissions_mt,
                 borderColor: SCENARIO_COLORS[s], backgroundColor: 'transparent',
-                fill: false, pointRadius: 2, borderWidth: 1.5, borderDash: [6, 3], order: 2
+                fill: false, pointRadius: 2, borderWidth: 1.5, borderDash: [6, 3], order: 3
             });
         }
     });
@@ -512,7 +553,7 @@ function updateFanCharts() {
             plugins: {
                 legend: { display: true, position: 'bottom', labels: {
                     font: { family: 'Space Grotesk', size: 10 }, padding: 12,
-                    filter: item => !['Max', 'Min', 'P95', 'P75', 'P25', 'P5'].includes(item.text)
+                    filter: item => !item.text.includes('P95') && !item.text.includes('P75') && !item.text.includes('P25') && !item.text.includes('P5') && !item.text.includes('Max') && !item.text.includes('Min')
                 }},
                 tooltip: { mode: 'index', intersect: false }
             },
@@ -522,6 +563,9 @@ function updateFanCharts() {
 
     // Profit chart
     updateProfitChart();
+
+    // Deployment chart (active only)
+    if (showActiveQT) updateDeployChart();
 
     // Update narrative
     updateFanNarrative();
@@ -565,22 +609,82 @@ function updateProfitChart() {
 
 function updateFanNarrative() {
     const co = DATA.companies[activeCompany];
-    const qtData = co.qt_analysis[activeQT];
-    const fan = qtData.fan;
-    const bqt = qtData.breakeven_qt;
-
-    const p50_2050 = fan.p50[fan.p50.length - 1];
-    const p5_2050 = fan.p5[fan.p5.length - 1];
-    const p95_2050 = fan.p95[fan.p95.length - 1];
+    const passiveQt = co.qt_analysis[activeQT];
+    const activeQt = co.active_qt_analysis ? co.active_qt_analysis[activeQT] : null;
     const co2_2024 = co.co2_2024_mt;
-    const reduction = ((co2_2024 - p50_2050) / co2_2024 * 100).toFixed(0);
 
-    let text = `Under <strong>${QT_LABELS[activeQT]}</strong>, ${co.name}'s fleet achieves a median `;
-    text += `<strong>${reduction}% emission reduction</strong> by 2050 (from ${co2_2024.toFixed(1)} to ${p50_2050.toFixed(1)} Mt). `;
-    text += `The range spans ${p5_2050.toFixed(1)}–${p95_2050.toFixed(1)} Mt (P5–P95). `;
-    text += `The breakeven Qualified Target is <strong>${(bqt * 100).toFixed(0)}%</strong> — the strictest reduction where the fleet remains profitable.`;
+    const pFan = passiveQt.fan;
+    const pBqt = passiveQt.breakeven_qt;
+    const pP50 = pFan.p50[pFan.p50.length - 1];
+    const pReduction = ((co2_2024 - pP50) / co2_2024 * 100).toFixed(0);
+
+    let text = `<strong>Passive QT</strong>: Under <strong>${QT_LABELS[activeQT]}</strong>, ${co.name}'s existing fleet achieves `;
+    text += `<strong>${pReduction}% emission reduction</strong> by 2050 (${co2_2024.toFixed(1)} → ${pP50.toFixed(1)} Mt). `;
+    text += `Breakeven QT: <strong>${(pBqt * 100).toFixed(0)}%</strong>.`;
+
+    if (activeQt) {
+        const aFan = activeQt.fan;
+        const aBqt = activeQt.breakeven_qt;
+        const aP50 = aFan.p50[aFan.p50.length - 1];
+        const aReduction = ((co2_2024 - aP50) / co2_2024 * 100).toFixed(0);
+
+        text += `<br><br><strong>Active QT</strong>: With new clean deployment (solar + wind + battery), emissions drop to `;
+        text += `<strong>${aP50.toFixed(1)} Mt</strong> by 2050 (<strong>${aReduction}% reduction</strong>). `;
+        text += `Active breakeven QT: <strong>${(aBqt * 100).toFixed(0)}%</strong>. `;
+
+        if (aBqt < pBqt) {
+            text += `The lower active QT (${(aBqt * 100).toFixed(0)}% vs ${(pBqt * 100).toFixed(0)}% passive) reflects the cost of new clean investment — `;
+            text += `the fleet is more decarbonized but the investment cost shifts the economic breakeven.`;
+        } else {
+            text += `Active deployment maintains the same breakeven while delivering deeper emission cuts.`;
+        }
+    }
 
     document.getElementById('fanNarrativeText').innerHTML = text;
+}
+
+function updateDeployChart() {
+    const co = DATA.companies[activeCompany];
+    const activeQt = co.active_qt_analysis ? co.active_qt_analysis[activeQT] : null;
+    if (!activeQt || !activeQt.deployment_timeline) return;
+
+    const timeline = activeQt.deployment_timeline;
+    const years = Object.keys(timeline).sort().map(Number);
+    const solarMW = years.map(y => (timeline[String(y)].deployment.solar || 0));
+    const windMW = years.map(y => (timeline[String(y)].deployment.wind || 0));
+    const batteryMW = years.map(y => (timeline[String(y)].deployment.battery || 0));
+
+    if (deployChart) deployChart.destroy();
+    deployChart = new Chart(document.getElementById('deployChart'), {
+        type: 'bar',
+        data: {
+            labels: years,
+            datasets: [
+                { label: 'Solar', data: solarMW, backgroundColor: RESOURCE_COLORS.solar, stack: 'stack0' },
+                { label: 'Wind', data: windMW, backgroundColor: RESOURCE_COLORS.wind, stack: 'stack0' },
+                { label: 'Battery', data: batteryMW, backgroundColor: RESOURCE_COLORS.battery, stack: 'stack0' },
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            scales: {
+                x: { stacked: true, grid: { display: false }, ticks: { font: { family: 'Space Mono', size: 11 } } },
+                y: { stacked: true, title: { display: true, text: 'Cumulative New Capacity (MW)', font: { family: 'Space Grotesk', size: 12 } },
+                     ticks: { font: { family: 'Space Mono', size: 11 }, callback: v => v.toLocaleString() } }
+            },
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { family: 'Space Grotesk', size: 11 }, padding: 12 } },
+                tooltip: { callbacks: {
+                    afterBody: (items) => {
+                        const yr = String(items[0].label);
+                        const d = timeline[yr];
+                        if (!d) return '';
+                        return `\nNew gen: ${d.new_gen_twh} TWh\nDeploy cost: $${d.deploy_cost_m}M\nNew revenue: $${d.new_revenue_m}M\nEmission reduction: ${d.em_reduction_mt} Mt`;
+                    }
+                }}
+            }
+        }
+    });
 }
 
 // ─── AT-QT GAP ─────────────────────────────────────────────────
@@ -599,40 +703,60 @@ function updateGapAnalysis() {
     const years = Object.keys(milestones).sort();
     years.forEach(year => {
         const m = milestones[year];
-        const hasGap = m.gap_mt > 0;
+        const passiveGap = m.passive_gap_mt;
+        const activeGap = m.active_gap_mt;
         const card = document.createElement('div');
         card.className = 'gap-card';
-        card.innerHTML = `
-            <div class="gap-scenario">${year}</div>
-            <div class="gap-val ${hasGap ? 'gap-open' : 'gap-closed'}">${hasGap ? m.gap_mt.toFixed(1) + ' Mt' : 'Closed'}</div>
-            <div class="gap-label">AT: ${m.at_target_mt.toFixed(1)} Mt → QT: ${m.qt_achievable_mt.toFixed(1)} Mt</div>
-        `;
+
+        let gapHtml;
+        if (showActiveQT) {
+            const activeClass = activeGap > 0 ? 'gap-open' : 'gap-closed';
+            gapHtml = `<div class="gap-val ${activeClass}">${activeGap > 0 ? activeGap.toFixed(1) + ' Mt' : 'Closed'}</div>`;
+            if (passiveGap > 0 && activeGap < passiveGap) {
+                gapHtml += `<div style="font-size:0.68rem;color:var(--green);margin-top:2px;">↓ ${(passiveGap - activeGap).toFixed(1)} Mt from passive</div>`;
+            }
+            gapHtml += `<div class="gap-label">AT: ${m.at_target_mt.toFixed(1)} → Active: ${m.active_qt_mt.toFixed(1)} Mt</div>`;
+        } else {
+            const passiveClass = passiveGap > 0 ? 'gap-open' : 'gap-closed';
+            gapHtml = `<div class="gap-val ${passiveClass}">${passiveGap > 0 ? passiveGap.toFixed(1) + ' Mt' : 'Closed'}</div>`;
+            gapHtml += `<div class="gap-label">AT: ${m.at_target_mt.toFixed(1)} → Passive: ${m.passive_qt_mt.toFixed(1)} Mt</div>`;
+        }
+
+        card.innerHTML = `<div class="gap-scenario">${year}</div>${gapHtml}`;
         grid.appendChild(card);
     });
 
-    // Gap chart
+    // Gap chart — show AT, passive QT, and (optionally) active QT
     const gapYears = years.map(Number);
     const atLine = years.map(y => milestones[y].at_target_mt);
-    const qtLine = years.map(y => milestones[y].qt_achievable_mt);
+    const passiveLine = years.map(y => milestones[y].passive_qt_mt);
+    const activeLine = years.map(y => milestones[y].active_qt_mt);
+
+    const datasets = [
+        {
+            label: 'AT Target', data: atLine,
+            borderColor: '#EF4444', backgroundColor: 'rgba(239,68,68,0.08)',
+            fill: '+1', pointRadius: 4, borderWidth: 2.5, borderDash: [8, 4], pointStyle: 'triangle'
+        },
+        {
+            label: 'Passive QT', data: passiveLine,
+            borderColor: '#6366F1', backgroundColor: 'transparent',
+            fill: false, pointRadius: 4, borderWidth: 2.5
+        }
+    ];
+
+    if (showActiveQT) {
+        datasets.push({
+            label: 'Active QT', data: activeLine,
+            borderColor: '#22C55E', backgroundColor: 'transparent',
+            fill: false, pointRadius: 5, borderWidth: 2.5, pointStyle: 'rectRot'
+        });
+    }
 
     if (gapChart) gapChart.destroy();
     gapChart = new Chart(document.getElementById('gapChart'), {
         type: 'line',
-        data: {
-            labels: gapYears,
-            datasets: [
-                {
-                    label: 'AT Target', data: atLine,
-                    borderColor: '#EF4444', backgroundColor: 'rgba(239,68,68,0.1)',
-                    fill: '+1', pointRadius: 4, borderWidth: 2.5, borderDash: [8, 4], pointStyle: 'triangle'
-                },
-                {
-                    label: 'QT Achievable', data: qtLine,
-                    borderColor: '#6366F1', backgroundColor: 'transparent',
-                    fill: false, pointRadius: 4, borderWidth: 2.5
-                }
-            ]
-        },
+        data: { labels: gapYears, datasets },
         options: {
             responsive: true, maintainAspectRatio: false,
             scales: {
@@ -643,27 +767,26 @@ function updateGapAnalysis() {
             plugins: {
                 legend: { display: true, position: 'bottom', labels: { font: { family: 'Space Grotesk', size: 11 }, padding: 12 } },
                 tooltip: { mode: 'index', intersect: false },
-                annotation: {
-                    annotations: buildGapAnnotations(years, milestones)
-                }
+                annotation: { annotations: buildGapAnnotations(years, milestones) }
             },
             interaction: { mode: 'index', intersect: false }
         }
     });
 
-    // Gap narrative
     updateGapNarrative(co, gapData, milestones);
 }
 
 function buildGapAnnotations(years, milestones) {
     const annotations = {};
+    const gapKey = showActiveQT ? 'active_gap_mt' : 'passive_gap_mt';
+    const qtKey = showActiveQT ? 'active_qt_mt' : 'passive_qt_mt';
     years.forEach((year, i) => {
         const m = milestones[year];
-        if (m.gap_mt > 0) {
+        if (m[gapKey] > 0) {
             annotations['gap' + i] = {
                 type: 'box', xMin: i - 0.15, xMax: i + 0.15,
-                yMin: Math.min(m.at_target_mt, m.qt_achievable_mt),
-                yMax: Math.max(m.at_target_mt, m.qt_achievable_mt),
+                yMin: Math.min(m.at_target_mt, m[qtKey]),
+                yMax: Math.max(m.at_target_mt, m[qtKey]),
                 backgroundColor: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.3)', borderWidth: 1
             };
         }
@@ -673,25 +796,40 @@ function buildGapAnnotations(years, milestones) {
 
 function updateGapNarrative(co, gapData, milestones) {
     const years = Object.keys(milestones).sort();
-    const gapYears = years.filter(y => milestones[y].gap_mt > 0);
-    const maxGap = Math.max(...years.map(y => milestones[y].gap_mt));
-    const maxGapYear = years.find(y => milestones[y].gap_mt === maxGap);
+    const gapKey = showActiveQT ? 'active_gap_mt' : 'passive_gap_mt';
+    const gapYears = years.filter(y => milestones[y][gapKey] > 0);
+    const maxGap = Math.max(...years.map(y => milestones[y][gapKey]));
+    const maxGapYear = years.find(y => milestones[y][gapKey] === maxGap);
+
+    const passiveGapYears = years.filter(y => milestones[y].passive_gap_mt > 0);
+    const activeGapYears = years.filter(y => milestones[y].active_gap_mt > 0);
 
     let text = '';
     if (gapYears.length === 0) {
-        text = `<strong>${co.name}'s fleet meets or exceeds all AT milestones</strong> under this scenario. `;
-        text += `The Qualified Target (${(gapData.breakeven_qt_pct).toFixed(0)}%) is sufficient to stay on the science-based pathway. `;
-        text += `No additional enabling conditions are needed beyond market forces.`;
+        const qtPct = showActiveQT ? gapData.active_qt_pct : gapData.passive_qt_pct;
+        const mode = showActiveQT ? 'active' : 'passive';
+        text = `<strong>${co.name}'s fleet meets or exceeds all AT milestones</strong> under the ${mode} strategy. `;
+        text += `QT breakeven: <strong>${qtPct.toFixed(0)}%</strong>. `;
+        if (showActiveQT && passiveGapYears.length > 0) {
+            text += `Active clean deployment closes the gap that exists under passive-only (gap years: ${passiveGapYears.join(', ')}).`;
+        } else {
+            text += `No additional enabling conditions needed beyond market forces.`;
+        }
     } else {
         text = `The AT-QT gap opens from <strong>${gapYears[0]}</strong>, peaking at <strong>${maxGap.toFixed(1)} Mt</strong> in ${maxGapYear}. `;
-        text += `To close this gap, the following enabling conditions could help:`;
+
+        if (showActiveQT && passiveGapYears.length > gapYears.length) {
+            text += `Active deployment partially closes the gap (${passiveGapYears.length} → ${gapYears.length} gap years). `;
+        }
+
+        text += `To close the remaining gap:`;
         text += `<ul>`;
-        text += `<li><strong>Policy support</strong>: Extended production tax credits, carbon pricing, or emission performance standards</li>`;
-        text += `<li><strong>Technology acceleration</strong>: Faster learning curves for CCS, LDES, or advanced nuclear deployment</li>`;
-        text += `<li><strong>Corporate procurement</strong>: Voluntary PPA demand from large buyers (not yet assessed in this model)</li>`;
-        text += `<li><strong>Market reform</strong>: Capacity market redesign that values clean firm attributes</li>`;
+        text += `<li><strong>Policy</strong>: Extended PTCs, carbon pricing, emission performance standards</li>`;
+        text += `<li><strong>Technology</strong>: Faster CCS/LDES/advanced nuclear learning curves</li>`;
+        text += `<li><strong>Corporate procurement</strong>: Voluntary PPA demand (not yet modeled)</li>`;
+        text += `<li><strong>Market reform</strong>: Capacity markets valuing clean firm attributes</li>`;
         text += `</ul>`;
-        text += `<em>Note: Corporate CCS demand and voluntary PPA procurement have not been modeled but would help bridge the AT-QT gap.</em>`;
+        text += `<em>Note: Corporate CCS demand and voluntary PPAs would further narrow the gap.</em>`;
     }
 
     document.getElementById('gapNarrativeText').innerHTML = text;
