@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IPP SMARTargets — Fleet-Level Decarbonization Analysis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/dashboard-ui.css">
+<script src="js/nav.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+<script src="js/scroll-observer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="js/ipp-smartargets-data.js"></script>
+<style>
+body { background: var(--bg-alt-warm); }
+
+/* Company selector tabs */
+.company-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.company-tab { padding: 8px 18px; border-radius: var(--radius-pill); font-size: 0.82rem; font-weight: 700; border: 2px solid rgba(0,0,0,0.12); background: transparent; color: var(--text-dim); cursor: pointer; transition: all 0.2s; font-family: var(--font-heading); }
+.company-tab:hover { background: rgba(0,0,0,0.04); }
+.company-tab.active { background: var(--navy); color: #fff; border-color: var(--navy); }
+
+/* Sticky control bar */
+.global-controls { background: rgba(255,255,255,0.97); border-bottom: 1px solid rgba(0,0,0,0.08); padding: 14px var(--pad-page); position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; box-shadow: var(--shadow-sm); }
+.global-controls .bar-label { font-family: var(--font-heading); font-size: 0.82rem; color: var(--navy); font-weight: 700; white-space: nowrap; }
+.bar-divider { width: 1px; height: 28px; background: rgba(0,0,0,0.12); flex-shrink: 0; }
+
+/* Overview panel */
+.overview-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 32px; }
+.overview-card { background: rgba(255,255,255,0.92); border: 1px solid rgba(0,0,0,0.08); border-radius: var(--radius-lg); padding: var(--pad-card); box-shadow: var(--shadow-sm); }
+.overview-card h3 { font-family: var(--font-heading); font-size: 1rem; color: var(--navy); margin-bottom: 12px; font-weight: 700; }
+
+/* Fleet summary stats */
+.fleet-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.fleet-stat { text-align: center; }
+.fleet-stat .val { font-family: var(--font-data); font-size: 1.6rem; font-weight: 800; color: var(--navy); }
+.fleet-stat .lbl { font-size: 0.7rem; color: var(--text-dim); margin-top: 2px; }
+
+/* Fleet breakdown table */
+.fleet-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+.fleet-table th { font-family: var(--font-heading); font-weight: 700; color: var(--navy); text-align: left; padding: 6px 8px; border-bottom: 2px solid var(--navy); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.fleet-table td { padding: 5px 8px; border-bottom: 1px solid rgba(0,0,0,0.06); font-family: var(--font-data); }
+.fleet-table tr:hover { background: rgba(0,0,0,0.02); }
+
+/* Section containers */
+.dashboard-section { max-width: var(--max-content); margin: 0 auto; padding: 32px var(--pad-page); }
+.dashboard-section h2 { font-family: var(--font-heading); font-size: 1.5rem; font-weight: 800; color: var(--navy); margin-bottom: 8px; }
+.dashboard-section .section-desc { color: var(--text-dim); font-size: 0.88rem; margin-bottom: 24px; line-height: 1.7; }
+
+/* Fan chart area */
+.fan-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 32px; }
+.fan-card { background: rgba(255,255,255,0.92); border: 1px solid rgba(0,0,0,0.08); border-radius: var(--radius-lg); padding: var(--pad-card); box-shadow: var(--shadow-sm); }
+.fan-card h3 { font-family: var(--font-heading); font-size: 0.92rem; color: var(--navy); margin-bottom: 4px; }
+.fan-card .chart-note { font-size: 0.72rem; color: var(--text-dim); margin-bottom: 12px; }
+.fan-chart-container { position: relative; height: 340px; }
+
+/* Scenario selector for QT */
+.qt-selector { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 16px; }
+.qt-btn { padding: 5px 12px; border-radius: var(--radius-pill); font-size: 0.72rem; font-weight: 600; border: 1px solid rgba(0,0,0,0.12); background: transparent; color: var(--text-dim); cursor: pointer; transition: all 0.2s; font-family: var(--font-heading); }
+.qt-btn:hover { background: rgba(0,0,0,0.04); }
+.qt-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* AT-QT Gap panel */
+.gap-panel { background: rgba(255,255,255,0.92); border: 1px solid rgba(0,0,0,0.08); border-radius: var(--radius-lg); padding: var(--pad-card); box-shadow: var(--shadow-sm); margin-bottom: 24px; }
+.gap-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 16px; }
+.gap-card { background: var(--bg-page); border-radius: var(--radius-md); padding: 16px; text-align: center; }
+.gap-card .gap-scenario { font-family: var(--font-heading); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; color: var(--navy); }
+.gap-card .gap-val { font-family: var(--font-data); font-size: 1.5rem; font-weight: 800; }
+.gap-card .gap-label { font-size: 0.7rem; color: var(--text-dim); margin-top: 2px; }
+.gap-closed { color: var(--green); }
+.gap-open { color: var(--red); }
+.gap-chart-container { position: relative; height: 340px; margin-top: 16px; }
+
+/* Plant status table */
+.plant-table-wrap { max-height: 500px; overflow-y: auto; border: 1px solid rgba(0,0,0,0.08); border-radius: var(--radius-md); }
+.plant-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+.plant-table th { font-family: var(--font-heading); font-weight: 700; color: var(--navy); text-align: left; padding: 8px; border-bottom: 2px solid var(--navy); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; position: sticky; top: 0; background: #fff; z-index: 2; }
+.plant-table td { padding: 6px 8px; border-bottom: 1px solid rgba(0,0,0,0.05); font-family: var(--font-data); }
+.plant-table tr:hover { background: rgba(0,0,0,0.02); }
+.status-operating { color: var(--green); font-weight: 700; }
+.status-stranded { color: #F59E0B; font-weight: 700; }
+.status-retired { color: var(--red); font-weight: 700; }
+.status-marginal { color: #F97316; font-weight: 700; }
+
+/* Comparison section */
+.comparison-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.cmp-company { background: rgba(255,255,255,0.92); border: 1px solid rgba(0,0,0,0.08); border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow-sm); }
+.cmp-company h3 { font-family: var(--font-heading); font-size: 0.95rem; color: var(--navy); margin-bottom: 12px; font-weight: 700; }
+.cmp-metric { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.05); font-size: 0.8rem; }
+.cmp-metric .label { color: var(--text-dim); }
+.cmp-metric .value { font-family: var(--font-data); font-weight: 700; color: var(--navy); }
+
+/* Narrative insight boxes */
+.narrative-box { background: linear-gradient(135deg, rgba(99,102,241,0.06), rgba(14,165,233,0.06)); border-left: 4px solid var(--accent); border-radius: var(--radius-md); padding: 16px 20px; margin: 20px 0; }
+.narrative-box h4 { font-family: var(--font-heading); font-size: 0.88rem; color: var(--navy); margin-bottom: 8px; font-weight: 700; }
+.narrative-box p { font-size: 0.82rem; color: var(--text-body); line-height: 1.7; margin: 0; }
+.narrative-box ul { font-size: 0.82rem; color: var(--text-body); line-height: 1.7; margin: 8px 0 0; padding-left: 20px; }
+
+/* Mobile */
+@media (max-width: 768px) {
+    .overview-panel { grid-template-columns: 1fr; }
+    .fan-grid { grid-template-columns: 1fr; }
+    .fan-chart-container { height: 280px; }
+    .gap-chart-container { height: 280px; }
+    .global-controls { gap: 10px; padding: 10px var(--pad-page); }
+    .fleet-stats { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+<nav id="topNav"></nav>
+
+<!-- HEADER BANNER -->
+<header class="header">
+    <h1>IPP SMARTargets</h1>
+    <p class="subtitle">Fleet-level decarbonization pathways for independent power producers</p>
+    <div class="header-accent"></div>
+</header>
+
+<!-- HERO -->
+<section class="hero" style="background: linear-gradient(180deg, var(--navy-dark) 0%, var(--navy) 60%, var(--navy-mid) 100%); padding: 48px var(--pad-page) 40px; text-align: center;">
+    <h1 style="font-family: var(--font-heading); font-size: 2.2rem; font-weight: 800; color: #fff; margin-bottom: 12px;">What Do Regional Targets Mean for Your Fleet?</h1>
+    <p style="font-size: 1.05rem; color: rgba(255,255,255,0.7); max-width: 860px; margin: 0 auto; line-height: 1.7;">
+        Regional market simulations reveal how emission constraints reshape wholesale markets. This analysis maps those macro shifts
+        onto individual IPP fleets &mdash; plant by plant &mdash; to identify which assets survive, which strand, and where the gap
+        between science-based ambition and market-achievable targets lies.
+    </p>
+</section>
+
+<div class="gradient-transition"></div>
+
+<!-- STICKY CONTROLS -->
+<div class="global-controls">
+    <span class="bar-label">Company:</span>
+    <div class="company-tabs" id="companyTabs"></div>
+    <div class="bar-divider"></div>
+    <span class="bar-label">Scenario:</span>
+    <select id="scenarioSelect" style="font-family: var(--font-body); font-size: 0.82rem; padding: 6px 12px; border: 1px solid rgba(0,0,0,0.15); border-radius: var(--radius-md); background: #fff; color: var(--navy); cursor: pointer;"></select>
+</div>
+
+<!-- SECTION 1: COMPANY OVERVIEW -->
+<div class="dashboard-section" id="overviewSection">
+    <h2 id="companyTitle">Fleet Overview</h2>
+    <p class="section-desc" id="companyDesc">Fleet composition and baseline emissions profile.</p>
+
+    <div class="fleet-stats" id="fleetStats"></div>
+
+    <div class="overview-panel">
+        <div class="overview-card">
+            <h3>Fleet by Region</h3>
+            <table class="fleet-table" id="fleetRegionTable">
+                <thead><tr><th>ISO</th><th>Fuel</th><th>Capacity (MW)</th><th>Gen (TWh)</th><th>CO₂ (Mt)</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div class="overview-card">
+            <h3>Fleet Composition</h3>
+            <div style="position:relative;height:280px;"><canvas id="fleetPieChart"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<!-- SECTION 2: EMISSIONS FAN CHART -->
+<div class="dashboard-section" id="fanSection">
+    <h2>Emissions Trajectories</h2>
+    <p class="section-desc">Fleet-level CO₂ emissions under different reduction targets. The fan shows the range of outcomes across the QT parametric sweep (5&ndash;95% reduction). AT trajectory marks the science-based ambition path.</p>
+
+    <div class="qt-selector" id="qtSelector"></div>
+
+    <div class="fan-grid">
+        <div class="fan-card">
+            <h3 id="fanChartTitle">Emissions Fan — QT Sweep</h3>
+            <div class="chart-note">Shaded bands: P5–P95 range across 19 reduction targets</div>
+            <div class="fan-chart-container"><canvas id="emissionsFanChart"></canvas></div>
+        </div>
+        <div class="fan-card">
+            <h3>Fleet Economics</h3>
+            <div class="chart-note">Cumulative fleet profit across the projection period</div>
+            <div class="fan-chart-container"><canvas id="profitChart"></canvas></div>
+        </div>
+    </div>
+
+    <div id="fanNarrative" class="narrative-box">
+        <h4>Key Insight</h4>
+        <p id="fanNarrativeText">Select a company to see fleet-specific analysis.</p>
+    </div>
+</div>
+
+<!-- SECTION 3: AT-QT GAP ANALYSIS -->
+<div class="dashboard-section" id="gapSection">
+    <h2>AT-QT Gap Analysis</h2>
+    <p class="section-desc">The gap between what science demands (Aspirational Targets) and what the market can deliver (Qualified Targets). Where the gap is open, enabling conditions &mdash; policy, technology, or market reform &mdash; are needed to bridge it.</p>
+
+    <div class="gap-panel">
+        <h3 style="font-family: var(--font-heading); font-size: 1rem; color: var(--navy); font-weight: 700;">AT vs QT Milestones</h3>
+        <div class="gap-grid" id="gapGrid"></div>
+        <div class="gap-chart-container"><canvas id="gapChart"></canvas></div>
+    </div>
+
+    <div id="gapNarrative" class="narrative-box">
+        <h4>Enabling Conditions Needed</h4>
+        <p id="gapNarrativeText">Analysis of what conditions could help close the AT-QT gap.</p>
+    </div>
+</div>
+
+<!-- SECTION 4: PLANT-LEVEL DETAIL -->
+<div class="dashboard-section" id="plantSection">
+    <h2>Plant-Level Status</h2>
+    <p class="section-desc">Individual plant economics under the selected scenario. Shows which plants continue operating, which become stranded (uneconomic but not yet retired), and which retire.</p>
+
+    <div class="overview-card" style="margin-bottom: 24px;">
+        <h3>Fleet Status Timeline</h3>
+        <div style="position:relative;height:320px;"><canvas id="statusStackChart"></canvas></div>
+    </div>
+
+    <div class="overview-card">
+        <h3 id="plantTableTitle">Plant Economics (2050)</h3>
+        <div class="plant-table-wrap">
+            <table class="plant-table" id="plantTable">
+                <thead><tr>
+                    <th>Plant</th><th>ISO</th><th>Fuel</th><th>Cap (MW)</th>
+                    <th>Status</th><th>CF (%)</th><th>Gen (TWh)</th>
+                    <th>CO₂ (Mt)</th><th>Profit ($M)</th><th>Reason</th>
+                </tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- SECTION 5: CROSS-COMPANY COMPARISON -->
+<div class="dashboard-section" id="compareSection">
+    <h2>Cross-Company Comparison</h2>
+    <p class="section-desc">How do the four IPPs compare under the same scenario? Key metrics at 2050 across all companies.</p>
+
+    <div class="comparison-cards" id="compareGrid"></div>
+
+    <div id="compareNarrative" class="narrative-box" style="margin-top:24px;">
+        <h4>What This Means</h4>
+        <p id="compareNarrativeText">Comparison insights across IPP fleets.</p>
+    </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="page-footer">
+    <div class="footer-inner">
+        <div class="footer-links">
+            <a href="index.html">Home</a>
+            <a href="dashboard.html">Cost Optimizer</a>
+            <a href="smartargets_dashboard.html">SMARTargets Dashboard</a>
+            <a href="optimizer_methodology.html">Methodology</a>
+        </div>
+        <p class="footer-note">Hourly CFE Optimizer &mdash; 2025 snapshot model. Data: EIA, eGRID, NREL ATB.</p>
+    </div>
+</footer>
+<div class="bottom-banner"></div>
+
+<script>
+// ============================================================================
+// IPP SMARTargets Dashboard — Main JS
+// ============================================================================
+
+const DATA = IPP_SMARTARGETS_DATA;
+const COMPANIES = Object.keys(DATA.companies);
+const SCENARIOS = ['R1', 'R2', 'AT1', 'AT2', 'AT3', 'AT4'];
+const QT_SCENARIOS = ['QT1', 'QT2', 'QT3', 'QT4'];
+
+const SCENARIO_LABELS = {
+    R1: 'Reference: Facilitating', R2: 'Reference: Challenging',
+    AT1: 'Power NZ: Facilitating', AT2: 'Power NZ: Challenging',
+    AT3: 'Economy NZ: Facilitating', AT4: 'Economy NZ: Challenging',
+};
+const QT_LABELS = {
+    QT1: 'QT Medium Demand: Facilitating', QT2: 'QT Medium Demand: Challenging',
+    QT3: 'QT High Demand: Facilitating', QT4: 'QT High Demand: Challenging',
+};
+const SCENARIO_COLORS = {
+    R1: '#22C55E', R2: '#EF4444', AT1: '#6366F1', AT2: '#EC4899',
+    AT3: '#0EA5E9', AT4: '#F97316',
+};
+const QT_COLORS = { QT1: '#22C55E', QT2: '#EF4444', QT3: '#6366F1', QT4: '#F97316' };
+
+const FUEL_COLORS = {
+    coal: '#374151', gas_ccgt: '#6B7280', gas_peaker: '#9CA3AF',
+    nuclear: RESOURCE_COLORS.cleanFirm, solar: RESOURCE_COLORS.solar,
+    wind: RESOURCE_COLORS.wind, battery: RESOURCE_COLORS.battery,
+    hydro: RESOURCE_COLORS.hydro,
+};
+
+let activeCompany = COMPANIES[0];
+let activeScenario = 'R1';
+let activeQT = 'QT1';
+
+// Charts
+let fleetPieChart = null;
+let emissionsFanChart = null;
+let profitChart = null;
+let gapChart = null;
+let statusStackChart = null;
+
+// ─── COMPANY TABS ──────────────────────────────────────────────
+function initCompanyTabs() {
+    const container = document.getElementById('companyTabs');
+    COMPANIES.forEach(key => {
+        const co = DATA.companies[key];
+        const btn = document.createElement('button');
+        btn.className = 'company-tab' + (key === activeCompany ? ' active' : '');
+        btn.textContent = co.shortName || co.name;
+        btn.dataset.company = key;
+        btn.addEventListener('click', () => {
+            container.querySelectorAll('.company-tab').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            activeCompany = key;
+            updateAll();
+        });
+        container.appendChild(btn);
+    });
+}
+
+// ─── SCENARIO SELECT ───────────────────────────────────────────
+function initScenarioSelect() {
+    const sel = document.getElementById('scenarioSelect');
+    SCENARIOS.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = SCENARIO_LABELS[s];
+        sel.appendChild(opt);
+    });
+    sel.addEventListener('change', () => {
+        activeScenario = sel.value;
+        updateAll();
+    });
+}
+
+// ─── QT SELECTOR ───────────────────────────────────────────────
+function initQTSelector() {
+    const container = document.getElementById('qtSelector');
+    QT_SCENARIOS.forEach(qt => {
+        const btn = document.createElement('button');
+        btn.className = 'qt-btn' + (qt === activeQT ? ' active' : '');
+        btn.textContent = QT_LABELS[qt];
+        btn.addEventListener('click', () => {
+            container.querySelectorAll('.qt-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            activeQT = qt;
+            updateFanCharts();
+            updateGapAnalysis();
+        });
+        container.appendChild(btn);
+    });
+}
+
+// ─── FLEET OVERVIEW ────────────────────────────────────────────
+function updateOverview() {
+    const co = DATA.companies[activeCompany];
+    document.getElementById('companyTitle').textContent = co.name + ' — Fleet Overview';
+    document.getElementById('companyDesc').textContent = `${co.name} fleet composition and baseline emissions profile.`;
+
+    // Stats
+    const statsEl = document.getElementById('fleetStats');
+    const totalCap = co.cap_gw;
+    const totalGen = co.gen_twh;
+    const totalCO2 = co.co2_2024_mt;
+    const intensity = co.intensity_kg;
+    statsEl.innerHTML = `
+        <div class="fleet-stat"><div class="val">${totalCap.toFixed(1)} GW</div><div class="lbl">Total Capacity</div></div>
+        <div class="fleet-stat"><div class="val">${totalGen.toFixed(1)} TWh</div><div class="lbl">Annual Generation</div></div>
+        <div class="fleet-stat"><div class="val">${totalCO2.toFixed(1)} Mt</div><div class="lbl">2024 CO₂ Emissions</div></div>
+        <div class="fleet-stat"><div class="val">${intensity.toFixed(0)} kg/MWh</div><div class="lbl">Emission Intensity</div></div>
+        <div class="fleet-stat"><div class="val">${Object.keys(co.fleet_summary).length}</div><div class="lbl">ISOs</div></div>
+    `;
+
+    // Region table
+    const tbody = document.querySelector('#fleetRegionTable tbody');
+    tbody.innerHTML = '';
+    for (const [iso, fuels] of Object.entries(co.fleet_summary)) {
+        for (const [fuel, info] of Object.entries(fuels)) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${iso}</td><td>${fuelLabel(fuel)}</td><td>${info.cap_mw.toLocaleString()}</td><td>${info.gen_twh.toFixed(1)}</td><td>${info.co2_mt.toFixed(1)}</td>`;
+            tbody.appendChild(tr);
+        }
+    }
+
+    // Pie chart
+    updateFleetPie(co);
+}
+
+function fuelLabel(fuel) {
+    const labels = { coal: 'Coal', gas_ccgt: 'Gas CCGT', gas_peaker: 'Gas Peaker', nuclear: 'Nuclear', solar: 'Solar', wind: 'Wind', battery: 'Battery', hydro: 'Hydro' };
+    return labels[fuel] || fuel;
+}
+
+function updateFleetPie(co) {
+    const fuelTotals = {};
+    for (const fuels of Object.values(co.fleet_summary)) {
+        for (const [fuel, info] of Object.entries(fuels)) {
+            fuelTotals[fuel] = (fuelTotals[fuel] || 0) + info.cap_mw;
+        }
+    }
+    const labels = Object.keys(fuelTotals).map(fuelLabel);
+    const values = Object.values(fuelTotals);
+    const colors = Object.keys(fuelTotals).map(f => FUEL_COLORS[f] || '#999');
+
+    if (fleetPieChart) fleetPieChart.destroy();
+    fleetPieChart = new Chart(document.getElementById('fleetPieChart'), {
+        type: 'doughnut',
+        data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }] },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'right', labels: { font: { family: 'Space Grotesk', size: 11 }, padding: 8 } },
+                tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.parsed.toLocaleString()} MW (${(ctx.parsed / values.reduce((a,b)=>a+b,0) * 100).toFixed(1)}%)` } }
+            }
+        }
+    });
+}
+
+// ─── EMISSIONS FAN CHART ───────────────────────────────────────
+function updateFanCharts() {
+    const co = DATA.companies[activeCompany];
+    const qtData = co.qt_analysis[activeQT];
+    const fanData = qtData.fan;
+    const years = [2025, 2030, 2035, 2040, 2045, 2050];
+
+    document.getElementById('fanChartTitle').textContent = `Emissions Fan — ${QT_LABELS[activeQT]}`;
+
+    // Build fan datasets (P95 → P75 → P50 → P25 → P5 fill between)
+    const datasets = [];
+
+    // Min-Max range (lightest)
+    datasets.push({
+        label: 'Max', data: fanData.max, borderColor: 'transparent', backgroundColor: 'rgba(99,102,241,0.06)',
+        fill: '+1', pointRadius: 0, borderWidth: 0, order: 6
+    });
+    datasets.push({
+        label: 'Min', data: fanData.min, borderColor: 'transparent', backgroundColor: 'transparent',
+        fill: false, pointRadius: 0, borderWidth: 0, order: 6
+    });
+
+    // P95-P5 range
+    datasets.push({
+        label: 'P95', data: fanData.p95, borderColor: 'rgba(99,102,241,0.3)', backgroundColor: 'rgba(99,102,241,0.1)',
+        fill: '+3', pointRadius: 0, borderWidth: 1, borderDash: [4, 4], order: 5
+    });
+
+    // P75-P25 range
+    datasets.push({
+        label: 'P75', data: fanData.p75, borderColor: 'rgba(99,102,241,0.4)', backgroundColor: 'rgba(99,102,241,0.15)',
+        fill: '+1', pointRadius: 0, borderWidth: 1, order: 4
+    });
+    datasets.push({
+        label: 'P25', data: fanData.p25, borderColor: 'rgba(99,102,241,0.4)', backgroundColor: 'transparent',
+        fill: false, pointRadius: 0, borderWidth: 1, order: 4
+    });
+
+    // P5
+    datasets.push({
+        label: 'P5', data: fanData.p5, borderColor: 'rgba(99,102,241,0.3)', backgroundColor: 'transparent',
+        fill: false, pointRadius: 0, borderWidth: 1, borderDash: [4, 4], order: 5
+    });
+
+    // Median line
+    datasets.push({
+        label: 'Median (P50)', data: fanData.p50,
+        borderColor: '#6366F1', backgroundColor: 'transparent',
+        fill: false, pointRadius: 3, borderWidth: 2.5, order: 1
+    });
+
+    // AT trajectory overlay
+    const atTarget = co.target;
+    if (atTarget) {
+        const co2_2024 = co.co2_2024_mt;
+        const atReductions = [0, 0.57, 0.82, 0.88, 0.94, 1.0]; // AT milestones
+        const atEmissions = atReductions.map(r => Math.max(0, co2_2024 * (1 - r)));
+        datasets.push({
+            label: 'AT Trajectory', data: atEmissions,
+            borderColor: '#EF4444', backgroundColor: 'transparent',
+            fill: false, pointRadius: 4, borderWidth: 2, borderDash: [8, 4], order: 0,
+            pointStyle: 'triangle'
+        });
+    }
+
+    // Scenario overlays (R1, R2)
+    ['R1', 'R2'].forEach(s => {
+        const sd = co.scenarios[s];
+        if (sd) {
+            datasets.push({
+                label: SCENARIO_LABELS[s], data: sd.fleet_emissions_mt,
+                borderColor: SCENARIO_COLORS[s], backgroundColor: 'transparent',
+                fill: false, pointRadius: 2, borderWidth: 1.5, borderDash: [6, 3], order: 2
+            });
+        }
+    });
+
+    if (emissionsFanChart) emissionsFanChart.destroy();
+    emissionsFanChart = new Chart(document.getElementById('emissionsFanChart'), {
+        type: 'line',
+        data: { labels: years, datasets },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            scales: {
+                x: { grid: { display: false }, ticks: { font: { family: 'Space Mono', size: 11 } } },
+                y: { title: { display: true, text: 'CO₂ Emissions (Mt)', font: { family: 'Space Grotesk', size: 12 } },
+                     beginAtZero: true, ticks: { font: { family: 'Space Mono', size: 11 } } }
+            },
+            plugins: {
+                legend: { display: true, position: 'bottom', labels: {
+                    font: { family: 'Space Grotesk', size: 10 }, padding: 12,
+                    filter: item => !['Max', 'Min', 'P95', 'P75', 'P25', 'P5'].includes(item.text)
+                }},
+                tooltip: { mode: 'index', intersect: false }
+            },
+            interaction: { mode: 'index', intersect: false }
+        }
+    });
+
+    // Profit chart
+    updateProfitChart();
+
+    // Update narrative
+    updateFanNarrative();
+}
+
+function updateProfitChart() {
+    const co = DATA.companies[activeCompany];
+    const years = [2025, 2030, 2035, 2040, 2045, 2050];
+    const datasets = [];
+
+    // Show all base scenarios
+    SCENARIOS.forEach(s => {
+        const sd = co.scenarios[s];
+        if (!sd) return;
+        datasets.push({
+            label: SCENARIO_LABELS[s], data: sd.fleet_profit_m,
+            borderColor: SCENARIO_COLORS[s], backgroundColor: SCENARIO_COLORS[s] + '20',
+            fill: false, pointRadius: 3, borderWidth: 2
+        });
+    });
+
+    if (profitChart) profitChart.destroy();
+    profitChart = new Chart(document.getElementById('profitChart'), {
+        type: 'line',
+        data: { labels: years, datasets },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            scales: {
+                x: { grid: { display: false }, ticks: { font: { family: 'Space Mono', size: 11 } } },
+                y: { title: { display: true, text: 'Fleet Profit ($M/yr)', font: { family: 'Space Grotesk', size: 12 } },
+                     ticks: { font: { family: 'Space Mono', size: 11 }, callback: v => '$' + v.toLocaleString() } }
+            },
+            plugins: {
+                legend: { display: true, position: 'bottom', labels: { font: { family: 'Space Grotesk', size: 10 }, padding: 8 } },
+                tooltip: { mode: 'index', intersect: false, callbacks: { label: ctx => `${ctx.dataset.label}: $${ctx.parsed.y.toLocaleString()}M` } }
+            },
+            interaction: { mode: 'index', intersect: false }
+        }
+    });
+}
+
+function updateFanNarrative() {
+    const co = DATA.companies[activeCompany];
+    const qtData = co.qt_analysis[activeQT];
+    const fan = qtData.fan;
+    const bqt = qtData.breakeven_qt;
+
+    const p50_2050 = fan.p50[fan.p50.length - 1];
+    const p5_2050 = fan.p5[fan.p5.length - 1];
+    const p95_2050 = fan.p95[fan.p95.length - 1];
+    const co2_2024 = co.co2_2024_mt;
+    const reduction = ((co2_2024 - p50_2050) / co2_2024 * 100).toFixed(0);
+
+    let text = `Under <strong>${QT_LABELS[activeQT]}</strong>, ${co.name}'s fleet achieves a median `;
+    text += `<strong>${reduction}% emission reduction</strong> by 2050 (from ${co2_2024.toFixed(1)} to ${p50_2050.toFixed(1)} Mt). `;
+    text += `The range spans ${p5_2050.toFixed(1)}–${p95_2050.toFixed(1)} Mt (P5–P95). `;
+    text += `The breakeven Qualified Target is <strong>${(bqt * 100).toFixed(0)}%</strong> — the strictest reduction where the fleet remains profitable.`;
+
+    document.getElementById('fanNarrativeText').innerHTML = text;
+}
+
+// ─── AT-QT GAP ─────────────────────────────────────────────────
+function updateGapAnalysis() {
+    const co = DATA.companies[activeCompany];
+    const gapData = co.at_qt_gap[activeQT];
+    if (!gapData) {
+        document.getElementById('gapGrid').innerHTML = '<p>No gap data available for this scenario.</p>';
+        return;
+    }
+
+    const milestones = gapData.milestones;
+    const grid = document.getElementById('gapGrid');
+    grid.innerHTML = '';
+
+    const years = Object.keys(milestones).sort();
+    years.forEach(year => {
+        const m = milestones[year];
+        const hasGap = m.gap_mt > 0;
+        const card = document.createElement('div');
+        card.className = 'gap-card';
+        card.innerHTML = `
+            <div class="gap-scenario">${year}</div>
+            <div class="gap-val ${hasGap ? 'gap-open' : 'gap-closed'}">${hasGap ? m.gap_mt.toFixed(1) + ' Mt' : 'Closed'}</div>
+            <div class="gap-label">AT: ${m.at_target_mt.toFixed(1)} Mt → QT: ${m.qt_achievable_mt.toFixed(1)} Mt</div>
+        `;
+        grid.appendChild(card);
+    });
+
+    // Gap chart
+    const gapYears = years.map(Number);
+    const atLine = years.map(y => milestones[y].at_target_mt);
+    const qtLine = years.map(y => milestones[y].qt_achievable_mt);
+
+    if (gapChart) gapChart.destroy();
+    gapChart = new Chart(document.getElementById('gapChart'), {
+        type: 'line',
+        data: {
+            labels: gapYears,
+            datasets: [
+                {
+                    label: 'AT Target', data: atLine,
+                    borderColor: '#EF4444', backgroundColor: 'rgba(239,68,68,0.1)',
+                    fill: '+1', pointRadius: 4, borderWidth: 2.5, borderDash: [8, 4], pointStyle: 'triangle'
+                },
+                {
+                    label: 'QT Achievable', data: qtLine,
+                    borderColor: '#6366F1', backgroundColor: 'transparent',
+                    fill: false, pointRadius: 4, borderWidth: 2.5
+                }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            scales: {
+                x: { grid: { display: false }, ticks: { font: { family: 'Space Mono', size: 11 } } },
+                y: { title: { display: true, text: 'CO₂ Emissions (Mt)', font: { family: 'Space Grotesk', size: 12 } },
+                     beginAtZero: true, ticks: { font: { family: 'Space Mono', size: 11 } } }
+            },
+            plugins: {
+                legend: { display: true, position: 'bottom', labels: { font: { family: 'Space Grotesk', size: 11 }, padding: 12 } },
+                tooltip: { mode: 'index', intersect: false },
+                annotation: {
+                    annotations: buildGapAnnotations(years, milestones)
+                }
+            },
+            interaction: { mode: 'index', intersect: false }
+        }
+    });
+
+    // Gap narrative
+    updateGapNarrative(co, gapData, milestones);
+}
+
+function buildGapAnnotations(years, milestones) {
+    const annotations = {};
+    years.forEach((year, i) => {
+        const m = milestones[year];
+        if (m.gap_mt > 0) {
+            annotations['gap' + i] = {
+                type: 'box', xMin: i - 0.15, xMax: i + 0.15,
+                yMin: Math.min(m.at_target_mt, m.qt_achievable_mt),
+                yMax: Math.max(m.at_target_mt, m.qt_achievable_mt),
+                backgroundColor: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.3)', borderWidth: 1
+            };
+        }
+    });
+    return annotations;
+}
+
+function updateGapNarrative(co, gapData, milestones) {
+    const years = Object.keys(milestones).sort();
+    const gapYears = years.filter(y => milestones[y].gap_mt > 0);
+    const maxGap = Math.max(...years.map(y => milestones[y].gap_mt));
+    const maxGapYear = years.find(y => milestones[y].gap_mt === maxGap);
+
+    let text = '';
+    if (gapYears.length === 0) {
+        text = `<strong>${co.name}'s fleet meets or exceeds all AT milestones</strong> under this scenario. `;
+        text += `The Qualified Target (${(gapData.breakeven_qt_pct).toFixed(0)}%) is sufficient to stay on the science-based pathway. `;
+        text += `No additional enabling conditions are needed beyond market forces.`;
+    } else {
+        text = `The AT-QT gap opens from <strong>${gapYears[0]}</strong>, peaking at <strong>${maxGap.toFixed(1)} Mt</strong> in ${maxGapYear}. `;
+        text += `To close this gap, the following enabling conditions could help:`;
+        text += `<ul>`;
+        text += `<li><strong>Policy support</strong>: Extended production tax credits, carbon pricing, or emission performance standards</li>`;
+        text += `<li><strong>Technology acceleration</strong>: Faster learning curves for CCS, LDES, or advanced nuclear deployment</li>`;
+        text += `<li><strong>Corporate procurement</strong>: Voluntary PPA demand from large buyers (not yet assessed in this model)</li>`;
+        text += `<li><strong>Market reform</strong>: Capacity market redesign that values clean firm attributes</li>`;
+        text += `</ul>`;
+        text += `<em>Note: Corporate CCS demand and voluntary PPA procurement have not been modeled but would help bridge the AT-QT gap.</em>`;
+    }
+
+    document.getElementById('gapNarrativeText').innerHTML = text;
+}
+
+// ─── PLANT-LEVEL DETAIL ────────────────────────────────────────
+function updatePlantDetail() {
+    const co = DATA.companies[activeCompany];
+    const scenario = co.scenarios[activeScenario];
+    if (!scenario) return;
+
+    const years = scenario.years;
+    const lastIdx = years.length - 1;
+
+    document.getElementById('plantTableTitle').textContent = `Plant Economics (${years[lastIdx]}) — ${SCENARIO_LABELS[activeScenario]}`;
+
+    // Status stack chart
+    const operating = scenario.operating_mw;
+    const stranded = scenario.stranded_mw;
+    const retired = scenario.retired_mw;
+
+    if (statusStackChart) statusStackChart.destroy();
+    statusStackChart = new Chart(document.getElementById('statusStackChart'), {
+        type: 'bar',
+        data: {
+            labels: years,
+            datasets: [
+                { label: 'Operating', data: operating, backgroundColor: '#22C55E', stack: 'stack0' },
+                { label: 'Stranded', data: stranded, backgroundColor: '#F59E0B', stack: 'stack0' },
+                { label: 'Retired', data: retired, backgroundColor: '#EF4444', stack: 'stack0' },
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            scales: {
+                x: { stacked: true, grid: { display: false }, ticks: { font: { family: 'Space Mono', size: 11 } } },
+                y: { stacked: true, title: { display: true, text: 'Capacity (MW)', font: { family: 'Space Grotesk', size: 12 } },
+                     ticks: { font: { family: 'Space Mono', size: 11 }, callback: v => v.toLocaleString() } }
+            },
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { family: 'Space Grotesk', size: 11 }, padding: 12 } },
+                tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()} MW` } }
+            }
+        }
+    });
+
+    // Plant table
+    const tbody = document.querySelector('#plantTable tbody');
+    tbody.innerHTML = '';
+
+    const plants = scenario.plants;
+    const sorted = Object.entries(plants).sort((a, b) => {
+        const order = { operating: 0, marginal: 1, stranded: 2, retired: 3 };
+        return (order[a[1].status[lastIdx]] || 3) - (order[b[1].status[lastIdx]] || 3);
+    });
+
+    sorted.forEach(([name, plant]) => {
+        const tr = document.createElement('tr');
+        const status = plant.status[lastIdx];
+        const statusClass = `status-${status}`;
+        const cf = plant.cf[lastIdx];
+        const gen = plant.gen_twh[lastIdx];
+        const co2 = plant.co2_mt[lastIdx];
+        const profit = plant.profit_m[lastIdx];
+        const reason = plant.reason ? plant.reason[lastIdx] : '';
+
+        tr.innerHTML = `
+            <td style="font-weight:600;">${name}</td>
+            <td>${plant.iso}</td>
+            <td>${fuelLabel(plant.fuel)}</td>
+            <td>${plant.cap_mw.toLocaleString()}</td>
+            <td class="${statusClass}">${status.charAt(0).toUpperCase() + status.slice(1)}</td>
+            <td>${(cf * 100).toFixed(1)}</td>
+            <td>${gen.toFixed(2)}</td>
+            <td>${co2.toFixed(2)}</td>
+            <td style="color:${profit >= 0 ? 'var(--green)' : 'var(--red)'}">$${profit.toFixed(1)}</td>
+            <td style="font-size:0.68rem;color:var(--text-dim);max-width:200px;">${reason || '—'}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// ─── CROSS-COMPANY COMPARISON ──────────────────────────────────
+function updateComparison() {
+    const grid = document.getElementById('compareGrid');
+    grid.innerHTML = '';
+
+    COMPANIES.forEach(key => {
+        const co = DATA.companies[key];
+        const sd = co.scenarios[activeScenario];
+        if (!sd) return;
+
+        const lastIdx = sd.years.length - 1;
+        const emissions2050 = sd.fleet_emissions_mt[lastIdx];
+        const profit2050 = sd.fleet_profit_m[lastIdx];
+        const operating2050 = sd.operating_mw[lastIdx];
+        const retired2050 = sd.retired_mw[lastIdx];
+        const co2_baseline = co.co2_2024_mt;
+        const reduction = ((co2_baseline - emissions2050) / co2_baseline * 100).toFixed(0);
+
+        const card = document.createElement('div');
+        card.className = 'cmp-company';
+        if (key === activeCompany) card.style.borderColor = 'var(--accent)';
+        card.innerHTML = `
+            <h3>${co.shortName || co.name}</h3>
+            <div class="cmp-metric"><span class="label">2050 Emissions</span><span class="value">${emissions2050.toFixed(1)} Mt</span></div>
+            <div class="cmp-metric"><span class="label">Reduction from 2024</span><span class="value">${reduction}%</span></div>
+            <div class="cmp-metric"><span class="label">2050 Fleet Profit</span><span class="value" style="color:${profit2050 >= 0 ? 'var(--green)' : 'var(--red)'}">$${profit2050.toLocaleString()}M</span></div>
+            <div class="cmp-metric"><span class="label">Operating Capacity</span><span class="value">${(operating2050/1000).toFixed(1)} GW</span></div>
+            <div class="cmp-metric"><span class="label">Retired Capacity</span><span class="value" style="color:var(--red)">${(retired2050/1000).toFixed(1)} GW</span></div>
+        `;
+        grid.appendChild(card);
+    });
+
+    updateCompareNarrative();
+}
+
+function updateCompareNarrative() {
+    const results = COMPANIES.map(key => {
+        const co = DATA.companies[key];
+        const sd = co.scenarios[activeScenario];
+        const lastIdx = sd.years.length - 1;
+        return {
+            name: co.shortName || co.name,
+            emissions: sd.fleet_emissions_mt[lastIdx],
+            profit: sd.fleet_profit_m[lastIdx],
+            baseline: co.co2_2024_mt,
+            reduction: (co.co2_2024_mt - sd.fleet_emissions_mt[lastIdx]) / co.co2_2024_mt * 100
+        };
+    });
+
+    const bestReducer = results.reduce((a, b) => a.reduction > b.reduction ? a : b);
+    const mostProfitable = results.reduce((a, b) => a.profit > b.profit ? a : b);
+
+    let text = `Under <strong>${SCENARIO_LABELS[activeScenario]}</strong>: `;
+    text += `<strong>${bestReducer.name}</strong> achieves the deepest emission reduction (${bestReducer.reduction.toFixed(0)}%), `;
+    text += `while <strong>${mostProfitable.name}</strong> maintains the highest fleet profitability ($${mostProfitable.profit.toLocaleString()}M). `;
+
+    const nuclearHeavy = results.find(r => {
+        const co = DATA.companies[COMPANIES.find(k => (DATA.companies[k].shortName || DATA.companies[k].name) === r.name)];
+        return co && co.fleet_summary && Object.values(co.fleet_summary).some(fuels => fuels.nuclear && fuels.nuclear.cap_mw > 5000);
+    });
+    if (nuclearHeavy) {
+        text += `Companies with large nuclear fleets have a structural advantage in emission reduction without stranding risk.`;
+    }
+
+    document.getElementById('compareNarrativeText').innerHTML = text;
+}
+
+// ─── UPDATE ALL ────────────────────────────────────────────────
+function updateAll() {
+    updateOverview();
+    updateFanCharts();
+    updateGapAnalysis();
+    updatePlantDetail();
+    updateComparison();
+}
+
+// ─── INIT ──────────────────────────────────────────────────────
+function init() {
+    initCompanyTabs();
+    initScenarioSelect();
+    initQTSelector();
+    updateAll();
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
