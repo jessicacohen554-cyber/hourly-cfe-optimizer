@@ -22,7 +22,7 @@ STEP10_DIR = os.path.join(ROOT, 'data', 'step10-smartargets')
 OUT_JS = os.path.join(ROOT, 'dashboard', 'js', 'ipp-smartargets-data.js')
 
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
-SIM_YEARS = [2025, 2030, 2035, 2040, 2045, 2050]
+SIM_YEARS = [2023, 2030, 2035, 2040, 2045, 2050]
 BASE_SCENARIOS = ['R1', 'R2', 'AT1', 'AT2', 'AT3', 'AT4']
 QT_SCENARIOS = ['QT1', 'QT2', 'QT3', 'QT4']
 
@@ -88,7 +88,7 @@ CLEAN_CF = {
 COMPANIES = [
     {
         'id': 'vistra', 'name': 'Vistra Energy', 'shortName': 'Vistra',
-        'co2_2024_mt': 68, 'intensity_kg': 485, 'gen_twh': 154, 'cap_gw': 44,
+        'co2_2023_mt': 73, 'co2_2024_mt': 68, 'intensity_kg': 485, 'gen_twh': 154, 'cap_gw': 44,
         'target': 'Net-zero by 2050',
         'plants': [
             {'name': 'Martin Lake Coal (TX)', 'iso': 'ERCOT', 'fuel': 'coal', 'cap_mw': 2250, 'gen_twh': 11.0, 'co2_mt': 11.6, 'hr': 10200, 'retire_by': 2027},
@@ -116,7 +116,7 @@ COMPANIES = [
     },
     {
         'id': 'constellation', 'name': 'Constellation Energy', 'shortName': 'Constellation',
-        'co2_2024_mt': 55, 'intensity_kg': 177, 'gen_twh': 310, 'cap_gw': 55,
+        'co2_2023_mt': 57, 'co2_2024_mt': 55, 'intensity_kg': 177, 'gen_twh': 310, 'cap_gw': 55,
         'target': '100% carbon-free by 2040',
         'plants': [
             {'name': 'Limerick Nuclear (PA)', 'iso': 'PJM', 'fuel': 'nuclear', 'cap_mw': 2317, 'gen_twh': 19.5, 'co2_mt': 0},
@@ -153,7 +153,7 @@ COMPANIES = [
     },
     {
         'id': 'nrg', 'name': 'NRG Energy', 'shortName': 'NRG',
-        'co2_2024_mt': 42, 'intensity_kg': 520, 'gen_twh': 80, 'cap_gw': 25,
+        'co2_2023_mt': 46, 'co2_2024_mt': 42, 'intensity_kg': 520, 'gen_twh': 80, 'cap_gw': 25,
         'target': 'Net-zero by 2050',
         'plants': [
             {'name': 'W.A. Parish Coal (TX)', 'iso': 'ERCOT', 'fuel': 'coal', 'cap_mw': 2697, 'gen_twh': 13.0, 'co2_mt': 13.7, 'hr': 10500},
@@ -174,7 +174,7 @@ COMPANIES = [
     },
     {
         'id': 'talen', 'name': 'Talen Energy', 'shortName': 'Talen',
-        'co2_2024_mt': 14, 'intensity_kg': 340, 'gen_twh': 42, 'cap_gw': 10.7,
+        'co2_2023_mt': 16, 'co2_2024_mt': 14, 'intensity_kg': 340, 'gen_twh': 42, 'cap_gw': 10.7,
         'target': 'No formal net-zero target',
         'plants': [
             {'name': 'Susquehanna Nuclear (PA, 90%)', 'iso': 'PJM', 'fuel': 'nuclear', 'cap_mw': 2228, 'gen_twh': 18.8, 'co2_mt': 0},
@@ -537,6 +537,36 @@ def simulate_company_scenario(company, step10_data, scenario, reduction_target=N
         }
 
     for year in SIM_YEARS:
+        # 2023 baseline: use actual reported emissions, all plants at baseline
+        if year == 2023:
+            baseline_em = company['co2_2023_mt']
+            # Compute baseline revenue/cost from plant data at face value
+            fleet_rev = 0
+            fleet_cost = 0
+            total_cap = sum(p['cap_mw'] for p in company['plants'])
+            for plant in company['plants']:
+                # At baseline, all plants operational at reported values
+                gen_mwh = plant['gen_twh'] * 1e6
+                fleet_rev += gen_mwh * 35 / 1e6  # ~$35/MWh avg 2023 LMP
+                fleet_cost += plant['cap_mw'] * FIXED_OM.get(plant['fuel'], 20) / 1e3
+                pd_entry = results['plant_detail'][plant['name']]
+                base_cf = plant['gen_twh'] / (plant['cap_mw'] * 8.760 / 1000) if plant['cap_mw'] > 0 else 0.5
+                pd_entry['status'].append('operating')
+                pd_entry['cf'].append(round(base_cf, 3))
+                pd_entry['profit_m'].append(0)  # placeholder
+                pd_entry['co2_mt'].append(round(plant['co2_mt'], 2))
+                pd_entry['gen_twh'].append(round(plant['gen_twh'], 2))
+                pd_entry['reason'].append('2023 baseline (actual)')
+
+            results['fleet_emissions_mt'].append(round(baseline_em, 2))
+            results['fleet_revenue_m'].append(round(fleet_rev, 1))
+            results['fleet_cost_m'].append(round(fleet_cost, 1))
+            results['fleet_profit_m'].append(round(fleet_rev - fleet_cost, 1))
+            results['operating_mw'].append(round(total_cap))
+            results['stranded_mw'].append(0)
+            results['retired_mw'].append(0)
+            continue
+
         fleet_em = 0
         fleet_rev = 0
         fleet_cost = 0
@@ -667,6 +697,12 @@ def simulate_active_qt(company, step10_data, qt_scenario):
             passive_em = passive_res['fleet_emissions_mt'][yi]
             passive_prof = passive_res['fleet_profit_m'][yi]
 
+            # 2023 baseline: no deployment yet, active = passive
+            if year == 2023:
+                active_emissions.append(passive_em)
+                active_profit.append(passive_prof)
+                continue
+
             # Get deployment for this year
             deployment, deploy_cost_m = compute_active_deployment(company, year)
 
@@ -746,8 +782,9 @@ def simulate_active_qt(company, step10_data, qt_scenario):
 
 def compute_at_qt_gap(company, step10_data, passive_qt_results, active_qt_results):
     """Compute the AT-QT gap for each QT scenario, both passive and active."""
-    baseline_mt = company['co2_2024_mt']
-    at_trajectory = {2025: 1.0, 2030: 0.43, 2035: 0.18, 2040: 0.12, 2045: 0.06, 2050: 0.0}
+    baseline_mt = company['co2_2023_mt']
+    # AT trajectory: fraction of 2023 baseline remaining at each milestone
+    at_trajectory = {2023: 1.0, 2030: 0.43, 2035: 0.18, 2040: 0.12, 2045: 0.06, 2050: 0.0}
 
     gaps = {}
     for qt_name in QT_SCENARIOS:
@@ -800,6 +837,7 @@ def main():
         co_output = {
             'name': cname,
             'shortName': company['shortName'],
+            'co2_2023_mt': company['co2_2023_mt'],
             'co2_2024_mt': company['co2_2024_mt'],
             'intensity_kg': company['intensity_kg'],
             'gen_twh': company['gen_twh'],
