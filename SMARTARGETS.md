@@ -232,7 +232,7 @@ R1/R2 are NOT "freeze existing clean + add demand." They are **full market simul
 - **Economic retirement**: Existing unit retires when `annual_revenue < fixed_O&M`. Revenue based on dispatch hours × LMP at those hours.
 - **Natural retirement order**: Coal first (highest fixed costs, displaced by cheaper gas in merit order), then older/less efficient gas as clean penetration suppresses prices.
 - **Wind/solar effectively never retire** — near-zero marginal cost AND near-zero fixed O&M means they always run when available regardless of price. They're always merit-order competitive.
-- **Nuclear is the interesting case** — fixed O&M ~$30/MWh means it needs decent capacity factors and prices. If LMPs crash from solar oversupply, a nuclear plant could theoretically become uneconomic and retire.
+- **Nuclear is the interesting case** — fixed O&M ~$30/MWh means it needs decent capacity factors and prices. If LMPs crash from solar oversupply, a nuclear plant could theoretically become uneconomic and retire. **Exception: CAISO/Diablo Canyon** — California's Clean Energy Standard effectively mandates Diablo Canyon stays online indefinitely regardless of market economics. In the reference case (current policy), Diablo Canyon is policy-protected from retirement. Other ISOs' nuclear fleets face market retirement risk.
 - **Hydro** — existing only (no new-build), very low O&M, effectively never retires.
 
 ### Existing Clean Viability
