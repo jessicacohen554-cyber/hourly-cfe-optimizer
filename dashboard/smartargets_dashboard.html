@@ -41,6 +41,13 @@ body { background: var(--bg-alt-warm); }
 .dashboard-section h2 { font-family: var(--font-heading); font-size: 1.5rem; font-weight: 800; color: var(--navy); margin-bottom: 8px; }
 .dashboard-section .section-desc { color: var(--text-dim); font-size: 0.88rem; margin-bottom: 24px; line-height: 1.7; }
 
+/* ISO trajectory grid */
+.iso-traj-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 20px; }
+.iso-traj-card { background: rgba(255,255,255,0.92); border: 1px solid rgba(0,0,0,0.08); border-radius: var(--radius-lg); padding: var(--pad-card); box-shadow: var(--shadow-sm); }
+.iso-traj-card h3 { font-family: var(--font-heading); font-size: 0.92rem; color: var(--navy); margin-bottom: 4px; }
+.iso-traj-card .chart-note { font-size: 0.72rem; color: var(--text-dim); margin-bottom: 10px; }
+.iso-traj-chart { position: relative; height: 300px; }
+
 /* Fan chart grid */
 .fan-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 32px; }
 .fan-card { background: rgba(255,255,255,0.92); border: 1px solid rgba(0,0,0,0.08); border-radius: var(--radius-lg); padding: var(--pad-card); box-shadow: var(--shadow-sm); }
@@ -145,6 +152,19 @@ body { background: var(--bg-alt-warm); }
     </div>
 </div>
 
+<!-- SECTION 4: ISO EMISSION TRAJECTORIES -->
+<div class="dashboard-section" id="isoTrajSection">
+    <h2>ISO Emission Trajectories — All Scenarios</h2>
+    <p class="section-desc">Regional CO₂ emission pathways under all scenarios. Each ISO starts at 2023 eGRID actual emissions. Shaded bands show the QT uncertainty range (P10–P90); solid lines show individual reference and ambition scenarios.</p>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+        <span class="bar-label" style="align-self:center;">QT Fan:</span>
+        <div class="scenario-tabs" id="isoTrajQTSelector"></div>
+    </div>
+
+    <div class="iso-traj-grid" id="isoTrajGrid"></div>
+</div>
+
 <!-- FOOTER -->
 <footer class="page-footer">
     <div class="footer-inner">
@@ -189,10 +209,25 @@ const MIX_COLOR_MAP = {
     ldes:       { bg: RESOURCE_COLORS.ldes, fill: RESOURCE_COLORS.ldesT },
 };
 
+const SCENARIO_LABELS = {
+    R1: 'Ref: Facilitating', R2: 'Ref: Challenging',
+    AT1: 'Power NZ: Fac.', AT2: 'Power NZ: Chal.',
+    AT3: 'Econ NZ: Fac.', AT4: 'Econ NZ: Chal.',
+};
+const SCENARIO_COLORS = {
+    R1: '#22C55E', R2: '#EF4444',
+    AT1: '#6366F1', AT2: '#EC4899',
+    AT3: '#0EA5E9', AT4: '#F97316',
+};
+const QT_NAMES = ['QT1', 'QT2', 'QT3', 'QT4'];
+const QT_LABELS = { QT1: 'Med Demand / Fac.', QT2: 'Med Demand / Chal.', QT3: 'High Demand / Fac.', QT4: 'High Demand / Chal.' };
+
 let globalIso = 'CAISO';
 let globalGroup = 'reference';
 let fanCharts = {};
 let mixChart = null;
+let isoTrajCharts = {};
+let isoTrajQT = 'QT1';
 
 // ─── ISO SELECTOR ───────────────────────────────────────────────
 function initIsoSelector() {
@@ -842,18 +877,132 @@ function buildComparisonTable() {
     });
 }
 
+// ─── ISO EMISSION TRAJECTORY CHARTS ─────────────────────────────
+function initISOTrajQTSelector() {
+    const container = document.getElementById('isoTrajQTSelector');
+    if (!container) return;
+    QT_NAMES.forEach(qt => {
+        const btn = document.createElement('button');
+        btn.className = 'scenario-tab' + (qt === isoTrajQT ? ' active' : '');
+        btn.textContent = QT_LABELS[qt];
+        btn.addEventListener('click', () => {
+            container.querySelectorAll('.scenario-tab').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            isoTrajQT = qt;
+            buildISOTrajCharts();
+        });
+        container.appendChild(btn);
+    });
+}
+
+function buildISOTrajCharts() {
+    const traj = DATA.iso_trajectories;
+    if (!traj) return;
+
+    const grid = document.getElementById('isoTrajGrid');
+
+    // Only create cards on first call
+    if (!grid.children.length) {
+        ISOS.forEach(iso => {
+            const card = document.createElement('div');
+            card.className = 'iso-traj-card';
+            card.innerHTML = `
+                <h3>${iso} — Emission Trajectories</h3>
+                <div class="chart-note">All scenarios from 2023 eGRID baseline. Shaded = QT uncertainty range.</div>
+                <div class="iso-traj-chart"><canvas id="isoTrajChart_${iso}"></canvas></div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    ISOS.forEach(iso => {
+        const isoData = traj[iso];
+        if (!isoData) return;
+
+        const years = isoData.years || [2023, 2030, 2035, 2040, 2045, 2050];
+        const datasets = [];
+
+        // QT fan band (shaded)
+        const qtFan = isoData.qt_fans[isoTrajQT];
+        if (qtFan) {
+            datasets.push({
+                label: 'QT P90', data: qtFan.p90,
+                borderColor: 'rgba(99,102,241,0.2)', backgroundColor: 'rgba(99,102,241,0.08)',
+                fill: '+2', pointRadius: 0, borderWidth: 1, borderDash: [3, 3], order: 10
+            });
+            datasets.push({
+                label: 'QT P50', data: qtFan.p50,
+                borderColor: 'rgba(99,102,241,0.4)', backgroundColor: 'rgba(99,102,241,0.12)',
+                fill: '+1', pointRadius: 0, borderWidth: 1.5, order: 9
+            });
+            datasets.push({
+                label: 'QT P10', data: qtFan.p10,
+                borderColor: 'rgba(99,102,241,0.2)', backgroundColor: 'transparent',
+                fill: false, pointRadius: 0, borderWidth: 1, borderDash: [3, 3], order: 10
+            });
+        }
+
+        // Base scenarios (R1, R2, AT1-4) as colored lines
+        const scenarioOrder = ['R1', 'R2', 'AT1', 'AT2', 'AT3', 'AT4'];
+        scenarioOrder.forEach((scn, i) => {
+            const sd = isoData.scenarios[scn];
+            if (!sd) return;
+            const isRef = scn.startsWith('R');
+            datasets.push({
+                label: SCENARIO_LABELS[scn], data: sd.emissions_mt,
+                borderColor: SCENARIO_COLORS[scn],
+                backgroundColor: 'transparent',
+                fill: false,
+                pointRadius: 3, borderWidth: isRef ? 2 : 1.8,
+                borderDash: isRef ? [] : [6, 3],
+                order: i
+            });
+        });
+
+        if (isoTrajCharts[iso]) isoTrajCharts[iso].destroy();
+        isoTrajCharts[iso] = new Chart(document.getElementById(`isoTrajChart_${iso}`), {
+            type: 'line',
+            data: { labels: years, datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    x: { grid: { display: false }, ticks: { font: { family: 'Space Mono', size: 10 } } },
+                    y: {
+                        title: { display: true, text: 'CO₂ (Mt)', font: { family: 'Space Grotesk', size: 11 } },
+                        beginAtZero: true,
+                        ticks: { font: { family: 'Space Mono', size: 10 } }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true, position: 'bottom',
+                        labels: {
+                            font: { family: 'Space Grotesk', size: 9 }, padding: 6, boxWidth: 14,
+                            filter: item => !item.text.includes('QT P90') && !item.text.includes('QT P10')
+                        }
+                    },
+                    tooltip: { mode: 'index', intersect: false }
+                },
+                interaction: { mode: 'index', intersect: false }
+            }
+        });
+    });
+}
+
 // ─── UPDATE ALL ─────────────────────────────────────────────────
 function updateAll() {
     buildFanCharts();
     populateMixScenarioSelect();
     updateMixChart();
     buildComparisonTable();
+    buildISOTrajCharts();
 }
 
 // ─── INIT ───────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     initIsoSelector();
     initScenarioTabs();
+    initISOTrajQTSelector();
     // Wire mix controls
     document.getElementById('mixScenarioSelect').addEventListener('change', updateMixChart);
     document.getElementById('mixTargetSelect').addEventListener('change', updateMixChart);

@@ -147,6 +147,56 @@ def extract_qt_scenario(name):
     return result
 
 
+def extract_iso_trajectories(base_data, qt_data):
+    """Build per-ISO emission trajectories with all scenarios + QT fan bands for overlay charts."""
+    result = {}
+    years = [2023, 2030, 2035, 2040, 2045, 2050]
+    for iso in ISOS:
+        iso_traj = {'years': years, 'scenarios': {}, 'qt_fans': {}}
+
+        # Base scenarios (R1, R2, AT1-4) — extract emissions_mt and clean_pct per year
+        for scn_name in BASE_SCENARIOS:
+            scn_data = base_data.get(scn_name, {})
+            iso_data = scn_data.get(iso)
+            if iso_data:
+                iso_traj['scenarios'][scn_name] = {
+                    'emissions_mt': iso_data['emissions_mt'],
+                    'clean_pct': iso_data['clean_pct'],
+                }
+
+        # QT fan bands — percentiles across reduction targets per year
+        for qt_name in QT_SCENARIOS:
+            qt_iso = qt_data.get(qt_name, {}).get(iso)
+            if not qt_iso:
+                continue
+            qt_years = qt_iso['years']
+            targets = qt_iso['reduction_targets']
+            fan = {'p10': [], 'p25': [], 'p50': [], 'p75': [], 'p90': [], 'min': [], 'max': []}
+            for yi in range(len(qt_years)):
+                vals = []
+                for t in targets:
+                    tkey = f'{t:.2f}'
+                    em = qt_iso['emissions'].get(tkey, [])
+                    if yi < len(em):
+                        vals.append(em[yi])
+                if vals:
+                    arr = np.array(vals)
+                    fan['p10'].append(round(float(np.percentile(arr, 10)), 2))
+                    fan['p25'].append(round(float(np.percentile(arr, 25)), 2))
+                    fan['p50'].append(round(float(np.percentile(arr, 50)), 2))
+                    fan['p75'].append(round(float(np.percentile(arr, 75)), 2))
+                    fan['p90'].append(round(float(np.percentile(arr, 90)), 2))
+                    fan['min'].append(round(float(arr.min()), 2))
+                    fan['max'].append(round(float(arr.max()), 2))
+            iso_traj['qt_fans'][qt_name] = fan
+
+        result[iso] = iso_traj
+        n_scn = len(iso_traj['scenarios'])
+        n_qt = len(iso_traj['qt_fans'])
+        print(f'    {iso}: {n_scn} scenarios + {n_qt} QT fans')
+    return result
+
+
 def main():
     print('Extracting Step 10 SMARTargets data for dashboard...')
     output = {
@@ -164,6 +214,10 @@ def main():
     for name in QT_SCENARIOS:
         print(f'  Extracting {name}...')
         output['qt_scenarios'][name] = extract_qt_scenario(name)
+
+    # Per-ISO emission trajectories (all scenarios on one chart per ISO)
+    print('  Building per-ISO emission trajectories...')
+    output['iso_trajectories'] = extract_iso_trajectories(output['scenarios'], output['qt_scenarios'])
 
     # Write JS file
     json_str = json.dumps(output, separators=(',', ':'))
