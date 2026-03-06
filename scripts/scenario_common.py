@@ -534,16 +534,16 @@ def _build_learning_overrides(iso, frac):
 
 
 def _build_learning_overrides_b(iso, frac):
-    """Build LCOE overrides for Scenario B with differentiated learning curves.
-    Nuclear/LDES: H→L. CCS: H→M (starts lower, structural cost floor)."""
+    """Build LCOE overrides for Scenario B with learning curves.
+    Nuclear/LDES/CCS: all H→L (full Wright's Law learning)."""
     overrides = {}
     nuc_h = NUCLEAR_NEWBUILD_LCOE['H'][iso]
     nuc_l = NUCLEAR_NEWBUILD_LCOE['L'][iso]
     overrides['nuclear_lcoe'] = nuc_h + frac * (nuc_l - nuc_h)
     overrides['uprate_lcoe'] = UPRATE_LCOE['M']
     ccs_h = CCS_LCOE_45Q_ON['H'][iso]
-    ccs_m = CCS_LCOE_45Q_ON['M'][iso]
-    overrides['ccs_lcoe'] = ccs_h + frac * (ccs_m - ccs_h)
+    ccs_l = CCS_LCOE_45Q_ON['L'][iso]
+    overrides['ccs_lcoe'] = ccs_h + frac * (ccs_l - ccs_h)
     if iso == 'CAISO':
         geo_h = GEOTHERMAL_LCOE['H']
         geo_l = GEOTHERMAL_LCOE['L']

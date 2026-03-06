@@ -9,12 +9,11 @@ Strategy:
      medium_grid__central_dac crossover (where medium DAC cost crosses
      the medium grid cost curve). Defaults to 95% if no crossover exists.
   2. Find the NOAK-optimal mix at the target threshold with all costs Low
-     (CCS at Medium+45Q as NOAK endpoint — CCS learning curve is H→M, not H→L).
-     This is the "north star" — what the grid looks like in 2045.
+     + Medium TX (CCS also learns to Low). This is the "north star" — what
+     the grid looks like in 2045.
   3. At each threshold, deploy resources toward this target using an S-curve
      ramp that frontloads firm/storage investment.
-  4. Nuclear/LDES: accelerated FOAK(H)→NOAK(L) learning curve.
-     CCS: FOAK(H)→NOAK(M) learning curve with 45Q.
+  4. Nuclear/LDES/CCS: accelerated FOAK(H)→NOAK(L) learning curve with 45Q.
   5. Select from feasible mixes those best matching the deployment target
      at learning-curve-adjusted prices. Strict pacing enforcement.
   6. Floor ratchet prevents un-deploying committed resources.
@@ -239,11 +238,11 @@ def find_scenario_b_mixes(feasible_mixes, isos=None):
     print("\n  Loading per-ISO optimal targets from MAC/DAC crossover analysis...")
     iso_targets = _load_optimal_targets()
 
-    # NOAK target sensitivities: all at Low except CCS at Medium+45Q
-    # (CCS NOAK endpoint is Medium, not Low — structural cost floor)
+    # NOAK target sensitivities: all at Low + Medium TX
+    # CCS learns to Low (not Medium) — same as nuclear/LDES
     NOAK_SENS = {
         'ren': 'L', 'firm': 'L', 'batt': 'L', 'ldes_lvl': 'L',
-        'fuel': 'M', 'tx': 'M', 'ccs': 'M', 'q45': '1', 'geo': 'L',
+        'fuel': 'M', 'tx': 'M', 'ccs': 'L', 'q45': '1', 'geo': 'L',
     }
 
     for iso in isos:
@@ -264,7 +263,7 @@ def find_scenario_b_mixes(feasible_mixes, isos=None):
 
         # ==================================================================
         # Step 1: Find NOAK-optimal mix at target threshold — the "north star"
-        # All costs Low, CCS at Medium+45Q (its NOAK endpoint).
+        # All costs Low + Medium TX. CCS also Low (full learning).
         # This is what the grid looks like in 2045 when learning investments
         # have paid off — the endpoint we're building toward.
         # ==================================================================
@@ -329,6 +328,10 @@ def find_scenario_b_mixes(feasible_mixes, isos=None):
         }
         floor = dict(existing_twh_b)
 
+        # Uprate carve-out: uprates deploy immediately (cheap at ~$25/MWh),
+        # not gated by S-curve pacing. Compute uprate cap in TWh.
+        uprate_cap_twh = UPRATE_CAP_TWH.get(iso, 0)
+
         exist_match = _existing_match_pct(iso)
         iso_results = {}
 
@@ -348,7 +351,7 @@ def find_scenario_b_mixes(feasible_mixes, isos=None):
             if not mixes:
                 continue
 
-            # Learning-curve overrides: nuclear/LDES H→L, CCS H→M
+            # Learning-curve overrides: nuclear/LDES/CCS all H→L
             frac = learning_fraction(t, scenario='B')
             overrides = _build_learning_overrides_b(iso, frac)
 
@@ -370,6 +373,9 @@ def find_scenario_b_mixes(feasible_mixes, isos=None):
             demand_ratio = demand_twh / demand_target if demand_target > 0 else 1.0
             paced_cf_twh = existing_cf_twh + deploy_frac * (
                 target_cf_twh * demand_ratio - existing_cf_twh)
+            # Uprate floor: uprates deploy immediately regardless of S-curve
+            uprate_floor_twh = existing_cf_twh + uprate_cap_twh
+            paced_cf_twh = max(paced_cf_twh, uprate_floor_twh)
             paced_ccs_twh = existing_ccs_twh + deploy_frac * (
                 target_ccs_twh * demand_ratio - existing_ccs_twh)
             paced_firm_twh = paced_cf_twh + paced_ccs_twh
@@ -383,8 +389,21 @@ def find_scenario_b_mixes(feasible_mixes, isos=None):
             #   Tier 2: Relaxed — firm >= 50% of pace
             #   Tier 3: Any feasible mix (fallback)
             # Within each tier, pick cheapest at learning-curve prices.
+            # Match score ceiling: reject mixes that over-deliver by >2pts
+            # (prevents 100% match at 90% threshold = massive overbuild).
             # ==================================================================
             mixes_arr = _to_mix_array(mixes)
+
+            # Match score ceiling filter: score <= threshold + 2
+            # mix column 5 = match_score (or column index depends on format)
+            # In the mix array: [cf, sol, wnd, osw, ccs, hyd, score, bat4, bat8, ldes, h2]
+            scores = mixes_arr[:, 6]  # match_score is index 6
+            score_ceiling = min(t + 2.0, 100.0)
+            score_ok = scores <= score_ceiling
+            if np.any(score_ok):
+                mixes_arr = mixes_arr[score_ok]
+            # If ALL mixes exceed ceiling, keep them all as fallback
+
             params = _precompute_cost_params(iso_sens, iso, demand_twh,
                                              overrides, gf)
             costs = batch_compute_total_costs(mixes_arr, params)
