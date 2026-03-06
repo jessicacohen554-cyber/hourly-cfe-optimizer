@@ -633,23 +633,28 @@ var T1_MIX = (typeof RESOURCE_MIX_DATA !== 'undefined' && RESOURCE_MIX_DATA.PJM)
     ldes:       [ 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0]
 };
 
-// Track 2 data (inline — from optimizer newbuild track results)
-var T2_BY_THR = {
-    '50':   {cost:110.31, mix:{clean_firm:72,solar:28,wind:0,hydro:0,ccs_ccgt:0,battery:0,ldes:0}},
-    '55':   {cost:106.53, mix:{clean_firm:79,solar:21,wind:0,hydro:0,ccs_ccgt:0,battery:0,ldes:0}},
-    '60':   {cost:103.48, mix:{clean_firm:84,solar:16,wind:0,hydro:0,ccs_ccgt:0,battery:0,ldes:0}},
-    '65':   {cost:100.82, mix:{clean_firm:89,solar:11,wind:0,hydro:0,ccs_ccgt:0,battery:0,ldes:0}},
-    '70':   {cost:98.59,  mix:{clean_firm:93,solar:7,wind:0,hydro:0,ccs_ccgt:0,battery:0,ldes:0}},
-    '75':   {cost:96.63,  mix:{clean_firm:97,solar:3,wind:0,hydro:0,ccs_ccgt:0,battery:0,ldes:0}},
-    '80':   {cost:95.0,   mix:{clean_firm:100,solar:0,wind:0,hydro:0,ccs_ccgt:0,battery:0,ldes:0}},
-    '85':   {cost:97.02,  mix:{clean_firm:86,solar:14,wind:0,hydro:0,ccs_ccgt:0,battery:0,ldes:0}},
-    '87.5': {cost:94.17,  mix:{clean_firm:93,solar:7,wind:0,hydro:0,ccs_ccgt:0,battery:0,ldes:0}},
-    '90':   {cost:93.37,  mix:{clean_firm:97,solar:3,wind:0,hydro:0,ccs_ccgt:0,battery:0,ldes:0}},
-    '92.5': {cost:94.70,  mix:{clean_firm:86,solar:7,wind:7,hydro:0,ccs_ccgt:0,battery:0,ldes:0}},
-    '95':   {cost:97.2,   mix:{clean_firm:88,solar:6,wind:6,hydro:0,ccs_ccgt:0,battery:0,ldes:0}},
-    '97.5': {cost:103.5,  mix:{clean_firm:84,solar:9,wind:7,hydro:0,ccs_ccgt:0,battery:0,ldes:0}},
-    '99':   {cost:112.0,  mix:{clean_firm:82,solar:12,wind:6,hydro:0,ccs_ccgt:0,battery:0,ldes:0}}
-};
+// Track 2 data — loaded dynamically from track_results.json via trackResultsData
+// Builds T2_BY_THR from newbuild track for the current region
+function buildT2FromTrackResults(region) {
+    var result = {};
+    if (!trackResultsData || !trackResultsData.results) return result;
+    var isoData = trackResultsData.results[region];
+    if (!isoData || !isoData.newbuild) return result;
+    var nb = isoData.newbuild;
+    Object.keys(nb).forEach(function(tk) {
+        var entry = nb[tk];
+        if (!entry || !entry.scenarios) return;
+        var keys = Object.keys(entry.scenarios);
+        if (keys.length === 0) return;
+        var sc = entry.scenarios[keys[0]];
+        result[tk] = {
+            cost: sc.costs ? sc.costs.effective_cost : 0,
+            mix: sc.resource_mix || {}
+        };
+    });
+    return result;
+}
+var T2_BY_THR = {}; // populated after track_results.json loads
 
 var RESOURCES = ['clean_firm','solar','wind','hydro','ccs_ccgt','battery','ldes'];
 var RES_COLORS = {clean_firm:'#1E3A5F', solar:'#F59E0B', wind:'#22C55E', hydro:'#0EA5E9', ccs_ccgt:'#64748B', battery:'#C4B5FD', ldes:'#EC4899'};
@@ -738,6 +743,8 @@ function doInit() {
 }
 
 function initPage() {
+    // Populate T2_BY_THR from track_results.json for the default region (PJM)
+    T2_BY_THR = buildT2FromTrackResults('PJM');
     initTargetSlider();
     initMixComparePills();
     updateAll(9); // Default: 90% (index 9)
