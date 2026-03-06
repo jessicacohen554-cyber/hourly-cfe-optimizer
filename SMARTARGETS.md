@@ -447,9 +447,47 @@ Candidate axes (not finalized):
 | **Starting LCOE** | Low / Medium / High | Where technology costs begin (2025 starting point). Low = some resources already profitable at t=0. |
 | **Participation level** | TBD | How many corporate buyers / utilities participate. Affects cumulative GW → learning curve speed. |
 | **Policy regime** | Current (45Y/45U/45Q + REC revenue) vs No-credit counterfactual | 45Y lowers new-build LCOE (solar, wind, nuclear uprates). 45U keeps existing nuclear viable through 2032. 45Q makes CCS competitive. REC revenue adds $/MWh for RPS-eligible resources. RPS mandates expressed via REC revenue signal, NOT as hard deployment floors (ACP < REC means some entities pay penalty instead of building). |
+| **Interconnection queue friction** | TBD (see below) | Constrains the RATE of new deployment. Even profitable projects can't connect if the queue is clogged. |
 | **Capacity market reform** | TBD | ELCC-based vs flat capacity payments. Affects dispatchable premium. |
 
 **Not yet decided**: Which axes beyond carbon price, how many levels, which combinations. R1/R2 reference case design is locked. R3+ scenario design determines what story the dashboard tells.
+
+### Interconnection Queue Constraint (Concept — Scenario Placement TBD)
+
+Real-world deployment is throttled by interconnection queues. A project can be fully financed and profitable but sit in queue for 5+ years. This is one of the most binding constraints on the clean energy transition today.
+
+**The constraint**: Max annual GW deployment rate per ISO, reflecting queue throughput — not just economics. Even if 20 GW of solar is profitable in ERCOT, the grid can only interconnect ~3-5 GW/year.
+
+**What it affects**:
+- Slows the pace of clean deployment even when economics are favorable
+- Creates a gap between "what the market wants to build" and "what can actually connect"
+- Extends fossil plant lifetimes — if clean can't connect fast enough, gas stays online longer
+- Potentially the most important real-world friction missing from a pure-economics model
+
+**Modeling approach** (draft):
+```
+For each ISO, each simulation step:
+  desired_new_build_gw = sum of all profitable projects
+  actual_new_build_gw = min(desired_new_build_gw, max_annual_gw[iso])
+  # Queue prioritization: which projects get built first when constrained?
+  # Options: by profit margin (highest-profit first), by queue position
+  #          (FIFO), by resource type (firm gets priority)
+```
+
+**Possible parameterization**:
+| Queue Scenario | Max Annual GW/ISO | Rationale |
+|---------------|-------------------|-----------|
+| **Constrained** (status quo) | ~2-4 GW | Current LBNL data: ~80% dropout, 5-year avg wait. Reflects today's broken queue process. |
+| **Reformed** | ~5-8 GW | FERC Order 2023 reforms, cluster studies, faster processing. Optimistic but plausible. |
+| **Unconstrained** | No cap | Theoretical — what would happen if interconnection wasn't a bottleneck? Pure economics benchmark. |
+
+**Open question**: Which scenario axis does this live on? Options:
+1. **Its own axis** — Queue friction × Carbon price × Learning speed = 3×4×3 = 36 scenarios
+2. **Bundled with a "policy reform" axis** — "Current policy" includes constrained queues; "Reformed" includes faster queues + other policy changes
+3. **Applied to R1/R2 only** — Reference case uses constrained queues (reality); R3+ scenarios test what happens with reform
+4. **Sensitivity overlay** — Run the full model with and without queue constraints to isolate the friction's impact
+
+User to decide where this fits in the scenario structure.
 
 ## Compute Budget
 
