@@ -1,256 +1,288 @@
 {
   "queue": [
     {
-      "iso": "NYISO",
-      "zone_label": "85\u219287.5%",
-      "threshold_start": 85,
-      "threshold_end": 87.5,
-      "marginal_mac": 145.71,
-      "co2_displaced_mt": 2.857,
-      "delta_cost_per_mwh": 88.39,
+      "iso": "PJM",
+      "zone_label": "50\u219255%",
+      "threshold_start": 50,
+      "threshold_end": 55,
+      "marginal_mac": 83.17,
+      "co2_displaced_mt": 42.3648,
+      "delta_cost_per_mwh": 62.79,
       "delta_resources": {
-        "clean_firm": 4.71
+        "wind": 46.47,
+        "clean_firm": 4.8,
+        "hydro": 4.27
       },
-      "demand_twh": 200.032,
-      "target_year": 2039,
+      "demand_twh": 972.294,
+      "target_year": 2031,
       "queue_position": 1
     },
     {
-      "iso": "NYISO",
-      "zone_label": "87.5\u219290%",
-      "threshold_start": 87.5,
-      "threshold_end": 90,
-      "marginal_mac": 147.15,
-      "co2_displaced_mt": 2.6116,
-      "delta_cost_per_mwh": 80.0,
+      "iso": "PJM",
+      "zone_label": "existing\u219250%",
+      "threshold_start": 0,
+      "threshold_end": 50,
+      "marginal_mac": 99.72,
+      "co2_displaced_mt": 85.2967,
+      "delta_cost_per_mwh": 74.42,
       "delta_resources": {
-        "clean_firm": 4.8
+        "solar": 29.57,
+        "wind": 111.17,
+        "clean_firm": 281.77,
+        "hydro": 15.18,
+        "offshore_wind": 18.99
       },
-      "demand_twh": 204.032,
-      "target_year": 2040,
+      "demand_twh": 949.506,
+      "target_year": 2030,
       "queue_position": 2
     },
     {
-      "iso": "NYISO",
-      "zone_label": "75\u219280%",
-      "threshold_start": 75,
-      "threshold_end": 80,
-      "marginal_mac": 170.32,
-      "co2_displaced_mt": 3.7869,
-      "delta_cost_per_mwh": 66.71,
+      "iso": "PJM",
+      "zone_label": "95\u219297.5%",
+      "threshold_start": 95,
+      "threshold_end": 97.5,
+      "marginal_mac": 120.68,
+      "co2_displaced_mt": 19.5446,
+      "delta_cost_per_mwh": 75.0,
       "delta_resources": {
-        "wind": 1.37,
-        "clean_firm": 1.26,
-        "hydro": 3.49,
-        "offshore_wind": 6.07
+        "clean_firm": 31.45
       },
-      "demand_twh": 192.264,
-      "target_year": 2037,
+      "demand_twh": 1455.114,
+      "target_year": 2048,
       "queue_position": 3
     },
     {
-      "iso": "NYISO",
+      "iso": "PJM",
       "zone_label": "80\u219285%",
       "threshold_start": 80,
       "threshold_end": 85,
-      "marginal_mac": 176.99,
-      "co2_displaced_mt": 4.3077,
-      "delta_cost_per_mwh": 89.28,
+      "marginal_mac": 133.09,
+      "co2_displaced_mt": 26.9417,
+      "delta_cost_per_mwh": 72.46,
       "delta_resources": {
-        "clean_firm": 4.62,
-        "offshore_wind": 3.92
+        "wind": 26.52,
+        "offshore_wind": 22.96
       },
-      "demand_twh": 196.109,
+      "demand_twh": 1147.883,
       "target_year": 2038,
       "queue_position": 4
     },
     {
-      "iso": "NYISO",
-      "zone_label": "existing\u219255%",
-      "threshold_start": 0,
-      "threshold_end": 55,
-      "marginal_mac": 199.32,
-      "co2_displaced_mt": 10.9886,
-      "delta_cost_per_mwh": 80.67,
+      "iso": "PJM",
+      "zone_label": "85\u219287.5%",
+      "threshold_start": 85,
+      "threshold_end": 87.5,
+      "marginal_mac": 169.95,
+      "co2_displaced_mt": 12.291,
+      "delta_cost_per_mwh": 75.48,
       "delta_resources": {
-        "solar": 19.12,
-        "wind": 10.26,
-        "clean_firm": 27.89,
-        "hydro": 29.01
+        "clean_firm": 27.67
       },
-      "demand_twh": 170.725,
-      "target_year": 2031,
+      "demand_twh": 1175.432,
+      "target_year": 2039,
       "queue_position": 5
     },
     {
-      "iso": "NYISO",
-      "zone_label": "92.5\u219295%",
-      "threshold_start": 92.5,
-      "threshold_end": 95,
-      "marginal_mac": 218.38,
-      "co2_displaced_mt": 2.8634,
-      "delta_cost_per_mwh": 82.71,
-      "delta_resources": {
-        "solar": 5.61,
-        "hydro": 1.96
-      },
-      "demand_twh": 225.268,
-      "target_year": 2045,
-      "queue_position": 6
-    },
-    {
-      "iso": "NYISO",
-      "zone_label": "60\u219265%",
-      "threshold_start": 60,
-      "threshold_end": 65,
-      "marginal_mac": 328.76,
-      "co2_displaced_mt": 3.9981,
-      "delta_cost_per_mwh": 94.75,
-      "delta_resources": {
-        "wind": 9.18,
-        "clean_firm": 0.53,
-        "offshore_wind": 3.66
-      },
-      "demand_twh": 181.175,
-      "target_year": 2034,
-      "queue_position": 7
-    },
-    {
-      "iso": "NYISO",
-      "zone_label": "55\u219260%",
-      "threshold_start": 55,
-      "threshold_end": 60,
-      "marginal_mac": 392.66,
-      "co2_displaced_mt": 3.706,
-      "delta_cost_per_mwh": 84.47,
-      "delta_resources": {
-        "solar": 4.0,
-        "wind": 7.79,
-        "clean_firm": 2.65,
-        "hydro": 1.02,
-        "offshore_wind": 1.78
-      },
-      "demand_twh": 177.622,
-      "target_year": 2033,
-      "queue_position": 8
-    },
-    {
-      "iso": "NYISO",
-      "zone_label": "65\u219270%",
-      "threshold_start": 65,
-      "threshold_end": 70,
-      "marginal_mac": 437.47,
-      "co2_displaced_mt": 4.101,
-      "delta_cost_per_mwh": 92.59,
-      "delta_resources": {
-        "solar": 6.45,
-        "wind": 4.18,
-        "hydro": 0.89,
-        "offshore_wind": 7.5
-      },
-      "demand_twh": 184.798,
-      "target_year": 2035,
-      "queue_position": 9
-    },
-    {
-      "iso": "NYISO",
-      "zone_label": "95\u219297.5%",
-      "threshold_start": 95,
-      "threshold_end": 97.5,
-      "marginal_mac": 460.88,
-      "co2_displaced_mt": 2.6368,
-      "delta_cost_per_mwh": 80.0,
-      "delta_resources": {
-        "clean_firm": 15.19
-      },
-      "demand_twh": 239.056,
-      "target_year": 2048,
-      "queue_position": 10
-    },
-    {
-      "iso": "NYISO",
-      "zone_label": "90\u219292.5%",
-      "threshold_start": 90,
-      "threshold_end": 92.5,
-      "marginal_mac": 492.26,
-      "co2_displaced_mt": 2.6004,
-      "delta_cost_per_mwh": 76.09,
-      "delta_resources": {
-        "wind": 5.11,
-        "clean_firm": 5.61,
-        "hydro": 1.78,
-        "offshore_wind": 4.33
-      },
-      "demand_twh": 216.521,
-      "target_year": 2043,
-      "queue_position": 11
-    },
-    {
-      "iso": "NYISO",
+      "iso": "PJM",
       "zone_label": "97.5\u219299%",
       "threshold_start": 97.5,
       "threshold_end": 99,
-      "marginal_mac": 589.7,
-      "co2_displaced_mt": 2.102,
-      "delta_cost_per_mwh": 80.0,
+      "marginal_mac": 204.44,
+      "co2_displaced_mt": 12.3514,
+      "delta_cost_per_mwh": 75.0,
       "delta_resources": {
-        "clean_firm": 5.74,
-        "offshore_wind": 9.75
+        "clean_firm": 33.67
       },
-      "demand_twh": 243.837,
+      "demand_twh": 1490.037,
       "target_year": 2049,
-      "queue_position": 12
+      "queue_position": 6
     },
     {
-      "iso": "NYISO",
+      "iso": "PJM",
+      "zone_label": "65\u219270%",
+      "threshold_start": 65,
+      "threshold_end": 70,
+      "marginal_mac": 235.12,
+      "co2_displaced_mt": 22.074,
+      "delta_cost_per_mwh": 74.91,
+      "delta_resources": {
+        "solar": 46.36,
+        "wind": 2.46,
+        "clean_firm": 19.96,
+        "offshore_wind": 0.5
+      },
+      "demand_twh": 1069.049,
+      "target_year": 2035,
+      "queue_position": 7
+    },
+    {
+      "iso": "PJM",
+      "zone_label": "87.5\u219290%",
+      "threshold_start": 87.5,
+      "threshold_end": 90,
+      "marginal_mac": 236.39,
+      "co2_displaced_mt": 15.9045,
+      "delta_cost_per_mwh": 72.46,
+      "delta_resources": {
+        "wind": 27.81,
+        "offshore_wind": 24.07
+      },
+      "demand_twh": 1203.642,
+      "target_year": 2040,
+      "queue_position": 8
+    },
+    {
+      "iso": "PJM",
       "zone_label": "70\u219275%",
       "threshold_start": 70,
       "threshold_end": 75,
-      "marginal_mac": 667.45,
-      "co2_displaced_mt": 4.0892,
-      "delta_cost_per_mwh": 97.94,
+      "marginal_mac": 248.91,
+      "co2_displaced_mt": 23.7662,
+      "delta_cost_per_mwh": 77.97,
       "delta_resources": {
-        "solar": 23.21,
-        "wind": 2.51,
-        "clean_firm": -1.26,
-        "hydro": -1.26,
-        "offshore_wind": 2.14
+        "wind": 29.07,
+        "clean_firm": 24.39,
+        "offshore_wind": 22.41
       },
-      "demand_twh": 188.494,
+      "demand_twh": 1094.706,
       "target_year": 2036,
+      "queue_position": 9
+    },
+    {
+      "iso": "PJM",
+      "zone_label": "60\u219265%",
+      "threshold_start": 60,
+      "threshold_end": 65,
+      "marginal_mac": 291.55,
+      "co2_displaced_mt": 23.3633,
+      "delta_cost_per_mwh": 71.25,
+      "delta_resources": {
+        "wind": 92.76,
+        "clean_firm": 0.97,
+        "hydro": 1.38
+      },
+      "demand_twh": 1043.993,
+      "target_year": 2034,
+      "queue_position": 10
+    },
+    {
+      "iso": "PJM",
+      "zone_label": "92.5\u219295%",
+      "threshold_start": 92.5,
+      "threshold_end": 95,
+      "marginal_mac": 310.6,
+      "co2_displaced_mt": 14.9617,
+      "delta_cost_per_mwh": 71.02,
+      "delta_resources": {
+        "wind": 28.19,
+        "clean_firm": 34.9,
+        "hydro": 2.35
+      },
+      "demand_twh": 1355.181,
+      "target_year": 2045,
+      "queue_position": 11
+    },
+    {
+      "iso": "PJM",
+      "zone_label": "90\u219292.5%",
+      "threshold_start": 90,
+      "threshold_end": 92.5,
+      "marginal_mac": 335.96,
+      "co2_displaced_mt": 16.2496,
+      "delta_cost_per_mwh": 68.05,
+      "delta_resources": {
+        "solar": 77.99,
+        "hydro": 2.24
+      },
+      "demand_twh": 1292.401,
+      "target_year": 2043,
+      "queue_position": 12
+    },
+    {
+      "iso": "PJM",
+      "zone_label": "75\u219280%",
+      "threshold_start": 75,
+      "threshold_end": 80,
+      "marginal_mac": 342.98,
+      "co2_displaced_mt": 22.4849,
+      "delta_cost_per_mwh": 73.15,
+      "delta_resources": {
+        "solar": 48.53,
+        "wind": 18.94,
+        "clean_firm": 36.9,
+        "offshore_wind": 1.05
+      },
+      "demand_twh": 1120.979,
+      "target_year": 2037,
       "queue_position": 13
     },
     {
-      "iso": "NYISO",
-      "zone_label": "99\u219299.5%",
-      "threshold_start": 99,
-      "threshold_end": 99.5,
-      "marginal_mac": 3490.45,
-      "co2_displaced_mt": 0.8299,
-      "delta_cost_per_mwh": 99.0,
+      "iso": "PJM",
+      "zone_label": "55\u219260%",
+      "threshold_start": 55,
+      "threshold_end": 60,
+      "marginal_mac": 357.89,
+      "co2_displaced_mt": 17.5228,
+      "delta_cost_per_mwh": 83.14,
       "delta_resources": {
-        "solar": 29.26
+        "wind": 43.36,
+        "clean_firm": 31.12,
+        "offshore_wind": 0.94
       },
-      "demand_twh": 243.837,
-      "target_year": 2049,
+      "demand_twh": 1019.525,
+      "target_year": 2033,
       "queue_position": 14
     },
     {
-      "iso": "NYISO",
+      "iso": "PJM",
+      "zone_label": "99\u219299.5%",
+      "threshold_start": 99,
+      "threshold_end": 99.5,
+      "marginal_mac": 1536.62,
+      "co2_displaced_mt": 3.128,
+      "delta_cost_per_mwh": 74.08,
+      "delta_resources": {
+        "clean_firm": 35.08,
+        "offshore_wind": 29.8
+      },
+      "demand_twh": 1490.037,
+      "target_year": 2049,
+      "queue_position": 15
+    },
+    {
+      "iso": "PJM",
       "zone_label": "99.5\u219299.9%",
       "threshold_start": 99.5,
       "threshold_end": 99.9,
-      "marginal_mac": 5844.96,
-      "co2_displaced_mt": 0.5055,
-      "delta_cost_per_mwh": 99.0,
+      "marginal_mac": 1597.18,
+      "co2_displaced_mt": 2.9405,
+      "delta_cost_per_mwh": 68.53,
       "delta_resources": {
-        "solar": 29.84
+        "clean_firm": 32.92,
+        "hydro": 5.1,
+        "offshore_wind": 30.52
       },
-      "demand_twh": 248.714,
+      "demand_twh": 1525.798,
       "target_year": 2050,
-      "queue_position": 15
+      "queue_position": 16
+    },
+    {
+      "iso": "PJM",
+      "zone_label": "99.9\u219299.99%",
+      "threshold_start": 99.9,
+      "threshold_end": 99.99,
+      "marginal_mac": 23956.83,
+      "co2_displaced_mt": 0.5401,
+      "delta_cost_per_mwh": 70.67,
+      "delta_resources": {
+        "solar": 122.06,
+        "wind": 61.03
+      },
+      "demand_twh": 1525.798,
+      "target_year": 2050,
+      "queue_position": 17
     }
   ],
-  "generated": "2026-03-06 10:41:57",
+  "generated": "2026-03-06 16:24:34",
   "source": "step5d_mac_queue.py"
 }
