@@ -887,13 +887,8 @@ function createIsoSelector(containerId, defaultIso, onChange) {
     });
 }
 
-// ===== Helper: get Scenario B trajectory for current target =====
+// ===== Helper: get Scenario B trajectory for current ISO =====
 function getScenarioB(iso) {
-    // Parametric: if multi-target data exists, use it; otherwise fall back to single trajectory
-    const tKey = String(targetThreshold);
-    if (DATA.trajectories_b_by_target && DATA.trajectories_b_by_target[tKey]) {
-        return DATA.trajectories_b_by_target[tKey][iso] || [];
-    }
     return DATA.trajectories.hourly_matching[iso] || [];
 }
 
