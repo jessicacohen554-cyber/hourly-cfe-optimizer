@@ -222,8 +222,21 @@ REC_ELIGIBLE = {'solar', 'wind', 'offshore_wind', 'hydro', 'geothermal'}
 CES_ELIGIBLE = REC_ELIGIBLE | {'clean_firm', 'ccs_ccgt'}
 CES_DISCOUNT_FACTOR = 0.60  # ZEC/Tier 3 = ~60% of Tier 1 REC price
 
-# Simulation years (AT trajectory milestones)
-SIM_YEARS = [2025, 2030, 2035, 2040, 2045, 2050]
+# Simulation years — 2023 is the actual eGRID baseline (identical for all scenarios)
+SIM_YEARS = [2023, 2030, 2035, 2040, 2045, 2050]
+
+# 2023 eGRID actual clean energy share (%) per ISO — all scenarios start here
+# Source: eGRID 2023, includes nuclear + hydro + wind + solar + geothermal
+EGRID_2023_CLEAN_PCT = {
+    'CAISO': 48.5, 'ERCOT': 40.2, 'PJM': 36.8, 'NYISO': 33.0,
+    'NEISO': 29.5, 'MISO': 25.8, 'SPP': 42.0,
+}
+
+# 2023 actual wholesale LMP ($/MWh) per ISO — Platts/ICE settlement data
+EGRID_2023_LMP = {
+    'CAISO': 36.0, 'ERCOT': 28.5, 'PJM': 33.0, 'NYISO': 38.0,
+    'NEISO': 42.0, 'MISO': 27.0, 'SPP': 24.0,
+}
 
 # Map resources in zone delta_resources to tech categories for Wright's Law
 RESOURCE_TO_TECH = {
@@ -392,7 +405,7 @@ QT_REDUCTION_TARGETS = [i / 100.0 for i in range(5, 100, 5)]  # 0.05, 0.10, ...,
 
 # Power sector net-zero: moderate pace
 EMISSION_TRAJECTORY_POWER_NZ = {
-    2025: 1.00,   # No constraint in base year
+    2023: 1.00,   # Baseline year — 2023 eGRID actual
     2030: 0.43,   # 57% reduction from 2023
     2035: 0.18,   # 82% reduction
     2040: 0.12,   # 88% reduction
@@ -402,7 +415,7 @@ EMISSION_TRAJECTORY_POWER_NZ = {
 
 # Economy-wide net-zero: power sector must overachieve (cheapest to abate)
 EMISSION_TRAJECTORY_ECONOMY_NZ = {
-    2025: 1.00,
+    2023: 1.00,   # Baseline year — 2023 eGRID actual
     2030: 0.35,   # 65% reduction — faster than power-only
     2035: 0.15,   # 85% reduction
     2040: 0.08,   # 92% reduction
@@ -868,10 +881,10 @@ def load_step3_data():
 
 
 def get_demand_at_year(iso, year, growth_level):
-    """Project demand TWh at a future year."""
+    """Project demand TWh at a future year from 2023 baseline."""
     base = REGIONAL_DEMAND_TWH[iso]
     rate = DEMAND_GROWTH_RATES[iso][growth_level]
-    return base * (1 + rate) ** (year - 2025)
+    return base * (1 + rate) ** (year - 2023)
 
 
 def twh_from_resource_pcts(resource_pcts, demand_twh):
@@ -953,8 +966,52 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
             'mandated_subsidy_total': 0,  # Cumulative subsidy for mandated build
         }
 
+    # Always load eGRID baselines for 2023 baseline row
+    if not egrid_baselines:
+        egrid_baselines = load_egrid_baselines()
+
     for year in SIM_YEARS:
         print(f"\n--- Year {year} ---")
+
+        # 2023 baseline: inject actual eGRID data — identical for all scenarios
+        if year == 2023:
+            for iso in isos:
+                baseline_co2_tons = egrid_baselines.get(iso, 100_000_000)
+                baseline_co2_mt = baseline_co2_tons / 1e6
+                baseline_demand = REGIONAL_DEMAND_TWH[iso]
+                baseline_clean = EGRID_2023_CLEAN_PCT.get(iso, 40.0)
+                baseline_lmp = EGRID_2023_LMP.get(iso, 30.0)
+                fossil_twh = (1 - baseline_clean / 100.0) * baseline_demand
+                baseline_er = baseline_co2_tons / (fossil_twh * 1e6) if fossil_twh > 0 else 0.5
+
+                year_result = {
+                    'iso': iso,
+                    'scenario': scenario_id,
+                    'reduction_target': reduction_target,
+                    'year': 2023,
+                    'clean_pct': round(baseline_clean, 1),
+                    'demand_twh': round(baseline_demand, 1),
+                    'emissions_mt': round(baseline_co2_mt, 2),
+                    'emission_rate_tco2_mwh': round(baseline_er, 4),
+                    'emission_cap_mt': None,
+                    'cost_per_mwh': 0,
+                    'revenue_per_mwh': 0,
+                    'mandated_subsidy_mwh': 0,
+                    'cumulative_subsidy_mwh': 0,
+                    'avg_lmp': round(baseline_lmp, 1),
+                    'lmp_p90': round(baseline_lmp * 1.5, 1),
+                    'gas_built_gw': 0,
+                    'total_gas_gw': 0,
+                    'market_stop': False,
+                    'resource_mix_twh': {},
+                    'cumulative_gw': dict(WRIGHT_CUMULATIVE_GW_2025),
+                    'queue_used_gw': 0,
+                    'zones_deployed': [],
+                }
+                results[iso].append(year_result)
+                print(f"  {iso}: 2023 eGRID baseline — {baseline_co2_mt:.1f} Mt, "
+                      f"{baseline_clean:.1f}% clean, LMP=${baseline_lmp:.0f}")
+            continue
 
         for iso in isos:
             if iso not in step3_data:
@@ -962,7 +1019,7 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
 
             state = iso_state[iso]
             # Reset market_stopped each year — learning curves may unlock new zones
-            if state['market_stopped'] and year > 2025:
+            if state['market_stopped'] and year > 2023:
                 state['market_stopped'] = False
 
             demand_twh = get_demand_at_year(iso, year, conditions['demand_growth'])
@@ -988,10 +1045,11 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
 
             # Annual queue budget
             queue_budget_gw = QUEUE_CAP_GW[conditions['queue_type']][iso]
-            # Scale to zone step years (5 years per milestone period)
-            years_in_period = 5
-            if year == 2025:
-                years_in_period = 5  # 2025-2030
+            # Scale to zone step years (years per milestone period)
+            if year == 2030:
+                years_in_period = 7  # 2023-2030 (first period is 7 years)
+            else:
+                years_in_period = 5  # 2030-2035, 2035-2040, etc.
             queue_remaining_gw = queue_budget_gw * years_in_period
 
             zone_deployed = False
@@ -1132,7 +1190,7 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                 iso, year, emission_constraint, egrid_baselines,
                 reduction_target=reduction_target)
 
-            if emission_cap_mt is not None and year > 2025:
+            if emission_cap_mt is not None and year > 2023:
                 # Compute current emissions at this clean_pct
                 gf_check = demand_twh / REGIONAL_DEMAND_TWH[iso]
                 er_check, _ = compute_fossil_retirement(
