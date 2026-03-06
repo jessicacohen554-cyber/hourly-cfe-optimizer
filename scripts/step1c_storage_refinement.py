@@ -104,7 +104,7 @@ STORAGE_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5,
 MAX_BAT4 = np.array([0.10], dtype=np.float64)
 MAX_BAT8 = np.array([0.15], dtype=np.float64)
 MAX_LDES = np.array([1.0], dtype=np.float64)
-MAX_H2 = np.array([3.0], dtype=np.float64)
+MAX_H2 = np.array([1.0], dtype=np.float64)
 NO_H2 = np.array([0.0], dtype=np.float64)
 
 # Pass 1: Coarse grids in % of annual demand (energy capacity as fraction of annual demand).
@@ -113,7 +113,7 @@ NO_H2 = np.array([0.0], dtype=np.float64)
 FULL_BAT4 = np.array([0, 0.002, 0.005, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.10], dtype=np.float64)
 FULL_BAT8 = np.array([0, 0.005, 0.01, 0.02, 0.03, 0.04, 0.06, 0.08, 0.10, 0.15], dtype=np.float64)
 FULL_LDES = np.array([0, 0.02, 0.05, 0.1, 0.2, 0.3, 0.5, 0.7, 1.0], dtype=np.float64)
-FULL_H2 = np.array([0, 0.1, 0.2, 0.3, 0.5, 1.0, 1.5, 2.0, 3.0], dtype=np.float64)
+FULL_H2 = np.array([0, 0.3, 1.0], dtype=np.float64)
 
 # Gap bucket boundaries (in percentage points).
 # Mixes are grouped by how far their base score is from the threshold.
