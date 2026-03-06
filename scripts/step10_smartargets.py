@@ -324,10 +324,12 @@ SCENARIOS = {
     },
 
     # ─── Quick Transition ────────────────────────────────────────────────
-    # Rapid cost declines (5% annual cost cache = tech breakthroughs),
-    # fastest queue processing. Same emission constraint as power NZ.
+    # Parametric sweep: 19 emission reduction targets (5%, 10%, ..., 95%)
+    # by 2050. Each target follows the AT temporal shape scaled to that
+    # final reduction level. QT1/QT2 use medium demand, QT3/QT4 high demand.
+    # The 'qt_reduction_grid' flag triggers the sweep in run_market_simulation.
     'QT1': {
-        'name': 'Quick Transition: Facilitating',
+        'name': 'QT Medium Demand: Facilitating',
         'demand_growth': 'Medium',
         'lcoe_level': 'Low',
         'learning_speed': 'Fast',
@@ -337,10 +339,10 @@ SCENARIOS = {
         'fuel_level': 'Low',
         'tx_level': 'Low',
         'emission_constraint': 'power_nz',
-        'qt_cost_cache': 0.05,
+        'qt_reduction_grid': True,
     },
     'QT2': {
-        'name': 'Quick Transition: Challenging',
+        'name': 'QT Medium Demand: Challenging',
         'demand_growth': 'Medium',
         'lcoe_level': 'High',
         'learning_speed': 'Slow',
@@ -350,10 +352,10 @@ SCENARIOS = {
         'fuel_level': 'Medium',
         'tx_level': 'Medium',
         'emission_constraint': 'power_nz',
-        'qt_cost_cache': 0.05,
+        'qt_reduction_grid': True,
     },
     'QT3': {
-        'name': 'Quick Transition: Facilitating + Electrification',
+        'name': 'QT High Demand: Facilitating',
         'demand_growth': 'High',
         'lcoe_level': 'Low',
         'learning_speed': 'Fast',
@@ -363,10 +365,10 @@ SCENARIOS = {
         'fuel_level': 'Low',
         'tx_level': 'Low',
         'emission_constraint': 'economy_nz',
-        'qt_cost_cache': 0.05,
+        'qt_reduction_grid': True,
     },
     'QT4': {
-        'name': 'Quick Transition: Challenging + Electrification',
+        'name': 'QT High Demand: Challenging',
         'demand_growth': 'High',
         'lcoe_level': 'High',
         'learning_speed': 'Slow',
@@ -376,9 +378,12 @@ SCENARIOS = {
         'fuel_level': 'High',
         'tx_level': 'Medium',
         'emission_constraint': 'economy_nz',
-        'qt_cost_cache': 0.05,
+        'qt_reduction_grid': True,
     },
 }
+
+# QT reduction targets: 5% to 95% in 5% intervals
+QT_REDUCTION_TARGETS = [i / 100.0 for i in range(5, 100, 5)]  # 0.05, 0.10, ..., 0.95
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -436,7 +441,7 @@ def load_egrid_baselines():
     }
 
 
-def get_emission_cap_mt(iso, year, constraint_type, baselines):
+def get_emission_cap_mt(iso, year, constraint_type, baselines, reduction_target=1.0):
     """Get the emission cap in million metric tons for an ISO at a given year.
 
     Args:
@@ -444,6 +449,9 @@ def get_emission_cap_mt(iso, year, constraint_type, baselines):
         year: Simulation year
         constraint_type: 'power_nz' or 'economy_nz'
         baselines: {iso: co2_metric_tons} from eGRID
+        reduction_target: Final reduction fraction by 2050 (default 1.0 = 100% = net-zero).
+            For QT sweep: 0.05 = 5% reduction, 0.50 = 50%, 0.95 = 95%.
+            The AT trajectory shape is scaled proportionally to this target.
 
     Returns: cap in million metric tons, or None if no constraint.
     """
@@ -452,9 +460,18 @@ def get_emission_cap_mt(iso, year, constraint_type, baselines):
     trajectory = EMISSION_TRAJECTORIES.get(constraint_type)
     if trajectory is None:
         return None
-    fraction = trajectory.get(year, 1.0)
+
+    # AT trajectory gives fraction REMAINING at each year (1.0 = no reduction, 0.0 = net-zero)
+    # Scale the reduction proportionally: if AT reduces by X% at year Y,
+    # QT at target T reduces by X*T% at year Y.
+    # fraction_remaining = 1.0 - (1.0 - at_fraction) * reduction_target
+    at_fraction = trajectory.get(year, 1.0)
+    at_reduction = 1.0 - at_fraction  # How much AT reduces at this year
+    scaled_reduction = at_reduction * reduction_target
+    fraction_remaining = 1.0 - scaled_reduction
+
     baseline_mt = baselines.get(iso, 0) / 1e6  # metric tons → million metric tons
-    return baseline_mt * fraction
+    return baseline_mt * fraction_remaining
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -877,14 +894,19 @@ def estimate_new_gw_from_delta(delta_resources_twh, iso):
     return gw
 
 
-def run_market_simulation(scenario_id, conditions, isos=None):
+def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1.0):
     """Run market simulation with optional emission constraints.
 
     For R1/R2 (Reference): purely profit-driven — deploy where profitable, stop otherwise.
     For AT (Ambitious Transition): profit-driven first, then mandated deployment to meet
         emission constraint (% of 2023 eGRID absolute emissions). Builds sequentially
         on prior year's resources — least-cost path to each year's emission cap.
-    For QT (Quick Transition): same as AT but with 5% annual cost cache (tech breakthrough).
+    For QT (Quick Transition): parametric sweep of reduction targets (5-95% in 5% steps).
+        Each target scales the AT trajectory proportionally.
+
+    Args:
+        reduction_target: Final emission reduction fraction by 2050 (default 1.0 = 100%).
+            Used by QT to scale the AT trajectory shape.
 
     Returns {iso: [year_result_dict, ...]} with per-year deployment trajectory.
     """
@@ -892,14 +914,14 @@ def run_market_simulation(scenario_id, conditions, isos=None):
         isos = list(ISOS)
 
     emission_constraint = conditions.get('emission_constraint')
-    qt_cost_cache = conditions.get('qt_cost_cache', 0)
 
     print(f"\n{'='*70}")
-    print(f"SMARTargets V1 — Scenario {scenario_id}: {conditions['name']}")
+    label = f"SMARTargets V1 — Scenario {scenario_id}: {conditions['name']}"
+    if reduction_target < 1.0:
+        label += f" [{reduction_target*100:.0f}% reduction]"
+    print(label)
     if emission_constraint:
-        print(f"  Emission constraint: {emission_constraint}")
-    if qt_cost_cache > 0:
-        print(f"  QT cost cache: {qt_cost_cache*100:.0f}%/yr additional cost reduction")
+        print(f"  Emission constraint: {emission_constraint}, target={reduction_target*100:.0f}%")
     print(f"{'='*70}")
 
     # Load shared data
@@ -1053,12 +1075,6 @@ def run_market_simulation(scenario_id, conditions, isos=None):
                     conditions['learning_speed'], year, conditions['tx_level'],
                 )
 
-                # QT cost cache: additional annual cost reduction (tech breakthrough)
-                if qt_cost_cache > 0 and year > 2025:
-                    years_of_reduction = year - 2025
-                    qt_factor = (1 - qt_cost_cache) ** years_of_reduction
-                    blended_cost = round(blended_cost * qt_factor, 2)
-
                 # --- PROFIT ---
                 delta_profit = blended_revenue - blended_cost
 
@@ -1113,7 +1129,8 @@ def run_market_simulation(scenario_id, conditions, isos=None):
             # Builds sequentially on what was already deployed — least-cost path.
             mandated_subsidy = 0
             emission_cap_mt = get_emission_cap_mt(
-                iso, year, emission_constraint, egrid_baselines)
+                iso, year, emission_constraint, egrid_baselines,
+                reduction_target=reduction_target)
 
             if emission_cap_mt is not None and year > 2025:
                 # Compute current emissions at this clean_pct
@@ -1177,10 +1194,6 @@ def run_market_simulation(scenario_id, conditions, isos=None):
                             iso, delta_twh, conditions['lcoe_level'], cumulative_gw,
                             conditions['learning_speed'], year, conditions['tx_level'],
                         )
-                        if qt_cost_cache > 0 and year > 2025:
-                            years_of_reduction = year - 2025
-                            qt_factor = (1 - qt_cost_cache) ** years_of_reduction
-                            m_cost = round(m_cost * qt_factor, 2)
 
                         # Revenue (still earned, just not enough to cover cost)
                         hourly_lmp_m, avg_lmp_m, p90_lmp_m = compute_lmp_at_threshold(
@@ -1276,6 +1289,7 @@ def run_market_simulation(scenario_id, conditions, isos=None):
             year_result = {
                 'iso': iso,
                 'scenario': scenario_id,
+                'reduction_target': reduction_target,
                 'year': year,
                 'clean_pct': round(current_pct, 1),
                 'demand_twh': round(demand_twh, 1),
@@ -1317,6 +1331,7 @@ def save_results(results, scenario_id):
             row = {
                 'iso': yr['iso'],
                 'scenario': yr['scenario'],
+                'reduction_target': yr.get('reduction_target', 1.0),
                 'year': yr['year'],
                 'clean_pct': yr['clean_pct'],
                 'demand_twh': yr['demand_twh'],
@@ -1438,27 +1453,75 @@ def main():
     t_start = time.time()
 
     for scenario_id in args.scenarios:
-        results = run_market_simulation(scenario_id, SCENARIOS[scenario_id], isos)
-        save_results(results, scenario_id)
+        conditions = SCENARIOS[scenario_id]
+        is_qt = conditions.get('qt_reduction_grid', False)
 
-        # Print summary
-        print(f"\n{'='*50}")
-        print(f"SUMMARY — {scenario_id}: {SCENARIOS[scenario_id]['name']}")
-        print(f"{'='*50}")
-        for iso in isos:
-            if iso not in results or not results[iso]:
-                continue
-            final = results[iso][-1]
-            stop = [yr for yr in results[iso] if yr['market_stop']]
-            stop_info = f"stops at {stop[0]['clean_pct']:.0f}% (year {stop[0]['year']})" if stop else "no stop"
-            subsidy = final.get('cumulative_subsidy_mwh', 0)
-            subsidy_info = f", subsidy=${subsidy:.1f}/MWh" if subsidy > 0 else ""
-            cap_info = ""
-            if final.get('emission_cap_mt') is not None:
-                cap_info = f", cap={final['emission_cap_mt']:.1f}Mt"
-            print(f"  {iso}: {final['clean_pct']:.0f}% clean by 2050, "
-                  f"{final['emissions_mt']:.0f} MtCO2{cap_info}, {stop_info}, "
-                  f"+{final['total_gas_gw']:.1f} GW new gas{subsidy_info}")
+        if is_qt:
+            # QT: parametric sweep over 19 reduction targets (5% to 95%)
+            all_qt_results = {iso_name: [] for iso_name in isos}
+
+            for target in QT_REDUCTION_TARGETS:
+                pct_label = int(target * 100)
+                results = run_market_simulation(
+                    scenario_id, conditions, isos, reduction_target=target)
+
+                # Accumulate results across all targets
+                for iso_name in isos:
+                    if iso_name in results:
+                        all_qt_results[iso_name].extend(results[iso_name])
+
+            # Save combined results for this QT scenario
+            save_results(all_qt_results, scenario_id)
+
+            # Print summary: one line per ISO showing range of outcomes
+            print(f"\n{'='*50}")
+            print(f"SUMMARY — {scenario_id}: {conditions['name']} (19 targets)")
+            print(f"{'='*50}")
+            for iso_name in isos:
+                iso_results = all_qt_results.get(iso_name, [])
+                if not iso_results:
+                    continue
+                # Group by reduction target — show 2050 outcome per target
+                targets_2050 = {}
+                for yr in iso_results:
+                    t = yr.get('reduction_target', 1.0)
+                    if yr['year'] == 2050:
+                        targets_2050[t] = yr
+                if not targets_2050:
+                    continue
+                # Find where market stops needing subsidy
+                market_viable = [t for t, yr in sorted(targets_2050.items())
+                                 if yr.get('mandated_subsidy_mwh', 0) == 0
+                                 and yr.get('cumulative_subsidy_mwh', 0) == 0]
+                max_viable = max(market_viable) * 100 if market_viable else 0
+                min_target = min(targets_2050.keys()) * 100
+                max_target = max(targets_2050.keys()) * 100
+                print(f"  {iso_name}: targets {min_target:.0f}%-{max_target:.0f}%, "
+                      f"market-viable up to {max_viable:.0f}% reduction")
+
+        else:
+            # R1/R2/AT: single simulation
+            results = run_market_simulation(scenario_id, conditions, isos)
+            save_results(results, scenario_id)
+
+            # Print summary
+            print(f"\n{'='*50}")
+            print(f"SUMMARY — {scenario_id}: {conditions['name']}")
+            print(f"{'='*50}")
+            for iso_name in isos:
+                if iso_name not in results or not results[iso_name]:
+                    continue
+                final = results[iso_name][-1]
+                stop = [yr for yr in results[iso_name] if yr['market_stop']]
+                stop_info = f"stops at {stop[0]['clean_pct']:.0f}% (year {stop[0]['year']})" if stop else "no stop"
+                subsidy = final.get('cumulative_subsidy_mwh', 0)
+                subsidy_info = f", subsidy=${subsidy:.1f}/MWh" if subsidy > 0 else ""
+                cap_info = ""
+                if final.get('emission_cap_mt') is not None:
+                    cap_info = f", cap={final['emission_cap_mt']:.1f}Mt"
+                print(f"  {iso_name}: {final['clean_pct']:.0f}% clean by 2050, "
+                      f"{final['emissions_mt']:.0f} MtCO2{cap_info}, {stop_info}, "
+                      f"+{final['total_gas_gw']:.1f} GW new gas{subsidy_info}")
 
     elapsed = time.time() - t_start
     print(f"\nTotal runtime: {elapsed:.1f}s")
