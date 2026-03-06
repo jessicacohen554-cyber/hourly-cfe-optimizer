@@ -1,19 +1,19 @@
 name: "Step 7: Scenario Comparison"
 
 # Runs scenario scripts to populate the Scenarios comparison page:
-#   1. step7a_scenario_consequential.py — Consequential scenario (per-ISO parallel)
+#   1. Scenario A: READ from step5d MAC queue (data/step5-post-processing/mac_queue/scenario_a_*.json)
+#      — produced by step5d_mac_queue.py, NOT computed here.
 #   2. step7b_scenario_hourly.py — Hourly matching scenario (per-ISO parallel)
 #   3. step7c_scenario_comparison.py — Merges A+B per-ISO results into comparison data
 #
-# Three-phase architecture:
-#   Phase 1 (compute-a): Matrix fans out ISOs for Scenario A (parallel)
-#   Phase 2 (compute-b): Matrix fans out ISOs for Scenario B (parallel)
-#   Phase 3 (compare):   Gathers per-ISO artifacts, runs comparison on ALL
+# Two-phase architecture:
+#   Phase 1 (compute-b): Matrix fans out ISOs for Scenario B (parallel)
+#   Phase 2 (compare):   Reads Scenario A from mac_queue, gathers B artifacts, runs comparison
 #
-# Each scenario script saves per-ISO JSON files (scenario_a_CAISO.json, etc.)
-# so parallel matrix jobs don't clobber each other.
+# Scenario A comes from step5d_mac_queue.py output (run separately via step5d-mac-queue.yml).
+# step7c reads scenario_a_*.json from mac_queue/ directory first (already committed to repo).
 #
-# Prerequisite: Step 5A (CO2) should have run first.
+# Prerequisite: Step 5D MAC Queue must have run first.
 # Output: data/step5-post-processing/scenario_*.json, dashboard/js/scenario-comparison-data.js
 
 on:
@@ -40,7 +40,6 @@ on:
         type: choice
         options:
           - ALL
-          - scenario-a
           - scenario-b
           - scenario-compare
       branch:
@@ -73,54 +72,8 @@ jobs:
           fi
 
   # ====================================================================
-  # PHASE 1: Scenario A — per-ISO parallel compute
-  # ====================================================================
-  compute-a:
-    if: inputs.script == 'ALL' || inputs.script == 'scenario-a'
-    needs: prepare
-    runs-on: ubuntu-latest
-    timeout-minutes: 120
-    strategy:
-      matrix:
-        iso: ${{ fromJson(needs.prepare.outputs.matrix) }}
-      fail-fast: false
-
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.branch || 'master' }}
-
-      - name: Verify upstream data exists
-        run: |
-          if [ ! -d "data/step3-cost-opt-parquets" ] || ! ls data/step3-cost-opt-parquets/*.parquet >/dev/null 2>&1; then
-            echo "ERROR: No step-3 parquets found."
-            exit 1
-          fi
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: pip install numpy numba pyarrow pandas scipy
-
-      - name: Ensure output directories
-        run: mkdir -p data/step5-post-processing
-
-      - name: "Scenario A (Consequential) — ${{ matrix.iso }}"
-        run: python scripts/step7a_scenario_consequential.py --iso ${{ matrix.iso }}
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: scenario-a-${{ matrix.iso }}
-          path: data/step5-post-processing/scenario_a_${{ matrix.iso }}.json
-          retention-days: 1
-
-  # ====================================================================
-  # PHASE 2: Scenario B — per-ISO parallel compute
+  # Scenario B — per-ISO parallel compute
+  # (Scenario A is pre-computed by step5d_mac_queue.py and committed to repo)
   # ====================================================================
   compute-b:
     if: inputs.script == 'ALL' || inputs.script == 'scenario-b'
@@ -171,9 +124,7 @@ jobs:
   # ====================================================================
   compare:
     if: inputs.script == 'ALL' || inputs.script == 'scenario-compare'
-    needs: [prepare, compute-a, compute-b]
-    # When running compare-only, skip waiting on compute phases
-    # (they'll be skipped too, and their artifacts should already exist)
+    needs: [prepare, compute-b]
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -193,15 +144,17 @@ jobs:
 
       - name: Ensure output directories
         run: |
-          mkdir -p data/step5-post-processing
+          mkdir -p data/step5-post-processing/mac_queue
           mkdir -p dashboard/js
 
-      - name: Download Scenario A artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: scenario-a-*
-          path: data/step5-post-processing/
-          merge-multiple: true
+      - name: Verify Scenario A from MAC queue
+        run: |
+          echo "Scenario A results (from step5d MAC queue, committed to repo):"
+          ls -la data/step5-post-processing/mac_queue/scenario_a_*.json 2>/dev/null || {
+            echo "ERROR: No Scenario A files found in mac_queue/."
+            echo "Run step5d-mac-queue.yml first to generate Scenario A results."
+            exit 1
+          }
 
       - name: Download Scenario B artifacts
         uses: actions/download-artifact@v4
@@ -234,7 +187,7 @@ jobs:
   # ====================================================================
   merge:
     needs: [prepare, compare]
-    if: always() && (needs.compare.result == 'success' || inputs.script != 'ALL')
+    if: always() && needs.compare.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 

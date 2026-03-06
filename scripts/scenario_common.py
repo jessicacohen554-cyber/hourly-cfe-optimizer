@@ -3,7 +3,7 @@
 Shared constants, cost functions, and utilities for scenario comparison scripts.
 
 Used by:
-  - step7a_scenario_consequential.py (Scenario A: Pure Consequential)
+  - step5d_mac_queue.py (Scenario A: MAC-optimized consequential queue)
   - step7b_scenario_hourly.py (Scenario B: Hourly Matching)
   - step7c_scenario_comparison.py (comparison and output)
 """

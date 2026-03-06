@@ -1629,13 +1629,13 @@ All output to `data/step5-post-processing/`.
 | `step6b_compute_optimal_targets.py` | **Optimal CFE targets.** Marginal MAC × DAC crossover (PCHIP spline). 3×3 matrix. No-regrets analysis. Reads step3 parquets directly. | Step 3 |
 | `step6c_analyze_tracks.py` | **Track analysis.** Cost envelopes (P10/P50/P90), resource mix differentials. | Step 5E |
 
-#### Step 7: Scenario Comparison (3 scripts)
+#### Step 7: Scenario Comparison (2 scripts)
 
 | Script | What It Does | Dependencies |
 |--------|-------------|-------------|
-| `step7a_scenario_consequential.py` | **Scenario A.** Forward-stepping consequential procurement with per-resource floor ratchets. PFS fallback. | Step 2 EF |
+| Scenario A | **READ from MAC queue** (`mac_queue/scenario_a_*.json`), produced by `step5d_mac_queue.py`. No separate step7a. | Step 5D MAC Queue |
 | `step7b_scenario_hourly.py` | **Scenario B.** Hourly matching procurement strategy. | Step 6B (optimal targets) |
-| `step7c_scenario_comparison.py` | **Scenario comparison.** Consequential vs. hourly — cost, emissions, resource mix differentials. | Steps 7A + 7B |
+| `step7c_scenario_comparison.py` | **Scenario comparison.** Consequential vs. hourly — cost, emissions, resource mix differentials. | Step 5D MAC Queue + 7B |
 
 #### Step 8: Procurement Strategies (4 scripts + 1 utility)
 
