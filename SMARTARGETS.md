@@ -194,9 +194,9 @@ The AT trajectory measures absolute CO₂ reductions from a **2023 baseline year
 
 ### ISO-Level Baseline (eGRID — for Regional AT Modeling)
 
-**Source**: EPA eGRID 2023 detailed data download, plant-level sheet (PLNT23).
+**Source**: EPA eGRID 2023 rev2 data download, BA-level sheet (BA23).
 
-**Method**: Sum `PLCO2AN` (annual CO₂ emissions, short tons) for all plants mapped to each ISO via BA code (`BACODE`). Convert short tons → metric tons (÷ 1.10231). This gives total annual power sector CO₂ emissions per ISO in metric tons.
+**Method**: Read `BACO2AN` (annual CO₂ emissions, short tons) per balancing authority. Convert short tons → metric tons (÷ 1.10231). All downstream values are **metric tons only** — no short tons in outputs to avoid unit confusion.
 
 **Purpose**: Used as the denominator for S1–S4 AT trajectory constraints. The emission cap for each year is a percentage of this baseline.
 
