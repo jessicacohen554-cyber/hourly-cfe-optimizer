@@ -2375,13 +2375,7 @@ data/step5-post-processing/lmp/                      # Output directory
 - **Dashboard impact**: Results still report the nuclear/CCS sub-split for transparency.
 
 ### Key resource decisions:
-- **Green H2 seasonal storage** (added Feb 2026):
-  - **Parameters**: 35% round-trip efficiency (electrolysis 70% × storage 95% × turbine 55%), 1000hr duration (~42 days at full power), 30-day rolling dispatch window
-  - **Physics**: Dispatches as Phase 4 after battery4 → battery8 → LDES on post-LDES residual surplus/gap. Same window-based charge/discharge as LDES but with longer window and lower RTE.
-  - **Sweep levels**: Only evaluated at ≥95% thresholds (too expensive for lower). Levels: [0, 1, 2, 5, 10, 20] % of demand.
-  - **Cost**: LCOS-based, shares `ldes_lvl` sensitivity toggle. L=$185-230, M=$260-330, H=$365-460 $/MWh by ISO. Transmission adders: L=$2-3, M=$3-6, H=$5-10.
-  - **Peak capacity credit**: 0.85 (dispatchable but slower ramp than gas/battery)
-  - **Merit order rationale**: Battery → LDES → H2 is economically robust because (1) higher RTE storage should fill short gaps first to minimize surplus waste, (2) battery $/kW is lower than LDES for 4hr needs, (3) H2's only advantage is very cheap $/kWh (salt caverns) at multi-week timescales where LDES is prohibitively expensive.
+- **Green H2 seasonal storage** — **REMOVED (March 2026)**: Originally modeled as 1000hr/35% RTE/30-day rolling window storage, evaluated at ≥95% thresholds. Removed because: (1) H2 never won on cost in any ISO/threshold combination — LDES + overbuilding always dominated, (2) the H2 dimension added a 9× multiplier to storage refinement combo counts (from 990 to 8,910 per mix), causing Step 1C to stall on high-threshold cells. The compute cost was not justified by zero analytical value.
 - **CAISO geothermal as 5th physics dimension** (added Feb 2026):
   - CAISO uses 5D grid search: [clean_firm (nuclear/CCS only), solar, wind, hydro, geothermal] — each as independent % of demand (no sum constraint).
   - **Geothermal profile**: Flat year-round (1/8760 per hour). No seasonal derate — geothermal has no refueling outages.
