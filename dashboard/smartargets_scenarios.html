@@ -756,7 +756,7 @@
     </div>
     <div class="mm-card">
         <h5>Demand Growth Scenarios</h5>
-        <p><span class="partial">Partial match.</span> Our Track 2/3 (newbuild/cost-to-replace) model 25-year demand growth at 3 rates (0.5%, 1.0%, 2.0%/yr). We don't model electrification-driven demand (the economy-wide scenarios), but we can proxy it with high growth rates.</p>
+        <p><span class="match">Strong match.</span> Our Track 2/3 (newbuild/cost-to-replace) model 25-year demand growth at 3 ISO-specific rates (Low/Medium/High) calibrated from EIA AEO 2025, NERC 2024 LTRA, and ISO/RTO planning forecasts. Rates range from 0.9%/yr (NEISO Low) to 5.5%/yr (ERCOT High). High scenarios incorporate data center and AI load growth projections; Low scenarios reflect baseline population/economic growth only. This maps directly to EPRI's Facilitating (reference load) vs. Challenging (faster load growth) dimension.</p>
     </div>
     <div class="mm-card">
         <h5>Economy-Wide Interactions</h5>
@@ -779,27 +779,27 @@
         <tbody>
             <tr>
                 <td><strong>R1/R2</strong> (Reference)</td>
-                <td>Step 5A CO&#8322; dispatch model at current policy baseline. R1 = P50 demand growth; R2 = P90 demand growth. No procurement beyond current clean capacity.</td>
+                <td>Step 5A CO&#8322; dispatch model at current policy baseline. R1 = Low demand growth (baseline economic/population); R2 = High demand growth (data center + electrification driven). No procurement beyond current clean capacity.</td>
                 <td class="facilitating">High</td>
             </tr>
             <tr>
                 <td><strong>S1</strong> (Power NZ / Fuller / Facilitating)</td>
-                <td>Step 3 cost optimization at 99.99% threshold with Low renewable + Low firm costs (cheapest path). Fuller = include CCS toggle ON, 45Q ON. Use P50 demand growth.</td>
+                <td>Step 3 cost optimization at 99.99% threshold with Low renewable + Low firm costs (cheapest path). Fuller = include CCS toggle ON, 45Q ON. Low demand growth (1.0&ndash;2.0%/yr depending on ISO).</td>
                 <td class="facilitating">High</td>
             </tr>
             <tr>
                 <td><strong>S2</strong> (Power NZ / Limited / Challenging)</td>
-                <td>Step 3 at 99.99% with High renewable + High firm costs. More Limited = CCS toggle OFF. P90 demand growth. Transmission = None/Low.</td>
+                <td>Step 3 at 99.99% with High renewable + High firm costs. More Limited = CCS toggle OFF. High demand growth (2.5&ndash;5.5%/yr; data center + AI load driven). Transmission = None/Low.</td>
                 <td class="facilitating">High</td>
             </tr>
             <tr>
                 <td><strong>S3</strong> (Economy NZ / Fuller / Facilitating)</td>
-                <td>S1 settings but with P90 demand growth (proxying electrification-driven demand increase). Add newbuild Track 2 analysis at 2.0%/yr growth rate.</td>
+                <td>S1 settings but with High demand growth (proxying electrification + data center driven demand increase). Track 2 newbuild analysis at ISO-specific High rates (e.g., ERCOT 5.5%/yr, PJM 3.6%/yr).</td>
                 <td class="challenging">Medium</td>
             </tr>
             <tr>
                 <td><strong>S4</strong> (Economy NZ / Limited / Challenging)</td>
-                <td>S2 settings but with maximum demand growth. Track 2 at 2.0%/yr, no CCS, high costs. This is our "stress test" scenario.</td>
+                <td>S2 settings but with maximum demand growth (ISO-specific High rates). Track 2 newbuild with no CCS, high costs. This is the "stress test" &mdash; e.g., ERCOT at 5.5%/yr doubles demand by 2038.</td>
                 <td class="challenging">Medium</td>
             </tr>
             <tr>
@@ -809,7 +809,7 @@
             </tr>
             <tr>
                 <td><strong>S5-S8</strong> (Recommended cross-combos)</td>
-                <td>Mix and match from above: S5 = Fuller + P90 growth; S6 = Limited + P50 growth; etc.</td>
+                <td>Mix and match from above: S5 = Fuller + High growth; S6 = Limited + Low growth; etc. Medium growth rates (1.8&ndash;3.5%/yr) serve as the central estimate.</td>
                 <td class="facilitating">High</td>
             </tr>
         </tbody>
@@ -835,6 +835,65 @@
         <li>Capacity expansion optimization with transmission topology (our model uses ISO-level aggregation)</li>
         <li>Endogenous technology learning curves (our costs are exogenous L/M/H assumptions)</li>
     </ul>
+
+    <h4>Demand Growth Projections: Sourcing &amp; Methodology</h4>
+    <p>
+        Our demand growth rates are <strong>ISO-specific and calibrated from three primary sources</strong>:
+        EIA Annual Energy Outlook 2025 reference/side cases, the NERC 2024 Long-Term Reliability Assessment (LTRA),
+        and individual ISO/RTO planning forecasts (ERCOT 2025 Long-Term Load Forecast, PJM 2025 Load Forecast Report,
+        Grid Strategies 2025 National Load Growth Report).
+    </p>
+
+    <table class="cond-table" style="font-size:0.82rem;">
+        <thead>
+            <tr>
+                <th>ISO</th>
+                <th class="facilitating">Low (%/yr)</th>
+                <th>Medium (%/yr)</th>
+                <th class="challenging">High (%/yr)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td><strong>CAISO</strong></td><td>1.4%</td><td>1.9%</td><td>2.5%</td></tr>
+            <tr><td><strong>ERCOT</strong></td><td>2.0%</td><td>3.5%</td><td>5.5%</td></tr>
+            <tr><td><strong>PJM</strong></td><td>1.5%</td><td>2.4%</td><td>3.6%</td></tr>
+            <tr><td><strong>NYISO</strong></td><td>1.3%</td><td>2.0%</td><td>4.4%</td></tr>
+            <tr><td><strong>NEISO</strong></td><td>0.9%</td><td>1.8%</td><td>2.9%</td></tr>
+            <tr><td><strong>MISO</strong></td><td>1.2%</td><td>2.2%</td><td>3.8%</td></tr>
+            <tr><td><strong>SPP</strong></td><td>1.0%</td><td>1.8%</td><td>3.0%</td></tr>
+        </tbody>
+    </table>
+
+    <p><strong>What each level represents:</strong></p>
+    <ul>
+        <li><strong>Low</strong> &mdash; Baseline economic and population growth only. Reflects EIA AEO 2025 Low Economic Growth case
+            assumptions (~1.2% GDP CAGR) and historical load trends pre-2023. No incremental data center or electrification load
+            beyond current commitments. Maps to EPRI's <em>Facilitating / reference load growth</em> condition.</li>
+        <li><strong>Medium</strong> &mdash; Central estimate incorporating confirmed large-load interconnection requests (data centers, industrial reshoring)
+            plus moderate EV and heat pump adoption. Anchored to EIA AEO 2025 Reference Case (~1.6% national electricity CAGR) but
+            regionalized using ISO-specific planning data. ERCOT's 3.5% reflects the outsized data center pipeline in Texas;
+            PJM's 2.4% reflects the mid-Atlantic data center corridor (Northern Virginia, Columbus OH).</li>
+        <li><strong>High</strong> &mdash; Full realization of data center / AI load growth projections plus accelerated electrification
+            (economy-wide net-zero pathway). ERCOT's 5.5% is consistent with recent ERCOT board forecasts showing peak demand potentially
+            doubling by the early 2030s. PJM's 3.6% reflects their 2025 forecast of 2.0% annualized summer peak growth plus incremental
+            electrification load. NYISO's 4.4% captures aggressive downstate data center growth combined with New York's CLCPA
+            electrification mandates. Maps to EPRI's <em>Challenging / faster load growth</em> condition
+            (+12% by 2030 from data centers, AI, and EVs).</li>
+    </ul>
+
+    <div class="insight-box">
+        <strong>Key context:</strong> National electricity demand forecasts have been revised upward for three consecutive years.
+        The Grid Strategies 2025 report projects 166 GW of peak load growth nationally by 2030 &mdash; a six-fold increase over
+        the "flat growth" assumption that prevailed through 2022. Roughly 90 GW of this is attributable to data centers and AI workloads.
+        Our High scenarios capture this structural break; our Low scenarios represent the pre-2023 baseline where demand was essentially flat.
+    </div>
+
+    <p style="font-size:0.82rem; color: var(--text-muted);">
+        <strong>Sources:</strong> EIA Annual Energy Outlook 2025 (Reference, High/Low Economic Growth cases);
+        NERC 2024 Long-Term Reliability Assessment; ERCOT 2025 Long-Term Load Forecast Report;
+        PJM 2025 Long-Term Load Forecast; Grid Strategies, <em>Power Demand Forecasts Revised Up for Third Year Running</em> (2025);
+        EIA <em>Today in Energy</em>, "We expect rapid electricity demand growth in Texas and the mid-Atlantic" (Jan 2025).
+    </p>
 </div>
 
 <!-- ================================================================== -->
