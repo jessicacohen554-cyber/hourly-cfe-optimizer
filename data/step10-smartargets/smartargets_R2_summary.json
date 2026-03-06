@@ -1,0 +1,119 @@
+{
+  "scenario": "R2",
+  "name": "Reference: Challenging",
+  "conditions": {
+    "name": "Reference: Challenging",
+    "demand_growth": "High",
+    "lcoe_level": "High",
+    "learning_speed": "Slow",
+    "queue_type": "Challenging",
+    "gas_friction": 1.0,
+    "carbon_price": 0,
+    "fuel_level": "Medium",
+    "tx_level": "Medium"
+  },
+  "results": {
+    "ERCOT": {
+      "market_stop_year": 2025,
+      "market_stop_pct": 46.1,
+      "final_clean_pct": 75.0,
+      "final_emissions_mt": 221.7,
+      "total_gas_built_gw": 132.96,
+      "trajectory": [
+        {
+          "year": 2025,
+          "clean_pct": 46.1,
+          "emissions_mt": 148.17,
+          "cost_per_mwh": 0,
+          "avg_lmp": 27
+        },
+        {
+          "year": 2030,
+          "clean_pct": 46.1,
+          "emissions_mt": 179.94,
+          "cost_per_mwh": 0,
+          "avg_lmp": 27
+        },
+        {
+          "year": 2035,
+          "clean_pct": 55.0,
+          "emissions_mt": 373.48,
+          "cost_per_mwh": 55.75,
+          "avg_lmp": 91.1
+        },
+        {
+          "year": 2040,
+          "clean_pct": 65.0,
+          "emissions_mt": 232.76,
+          "cost_per_mwh": 55.04,
+          "avg_lmp": 222.1
+        },
+        {
+          "year": 2045,
+          "clean_pct": 70.0,
+          "emissions_mt": 224.15,
+          "cost_per_mwh": 54.58,
+          "avg_lmp": 462.9
+        },
+        {
+          "year": 2050,
+          "clean_pct": 75.0,
+          "emissions_mt": 221.7,
+          "cost_per_mwh": 54.16,
+          "avg_lmp": 662.4
+        }
+      ]
+    },
+    "CAISO": {
+      "market_stop_year": 2025,
+      "market_stop_pct": 48.5,
+      "final_clean_pct": 48.5,
+      "final_emissions_mt": 83.91,
+      "total_gas_built_gw": 0,
+      "trajectory": [
+        {
+          "year": 2025,
+          "clean_pct": 48.5,
+          "emissions_mt": 45.38,
+          "cost_per_mwh": 0,
+          "avg_lmp": 30
+        },
+        {
+          "year": 2030,
+          "clean_pct": 48.5,
+          "emissions_mt": 51.31,
+          "cost_per_mwh": 0,
+          "avg_lmp": 30
+        },
+        {
+          "year": 2035,
+          "clean_pct": 48.5,
+          "emissions_mt": 58.02,
+          "cost_per_mwh": 0,
+          "avg_lmp": 30
+        },
+        {
+          "year": 2040,
+          "clean_pct": 48.5,
+          "emissions_mt": 65.61,
+          "cost_per_mwh": 0,
+          "avg_lmp": 30
+        },
+        {
+          "year": 2045,
+          "clean_pct": 48.5,
+          "emissions_mt": 74.2,
+          "cost_per_mwh": 0,
+          "avg_lmp": 30
+        },
+        {
+          "year": 2050,
+          "clean_pct": 48.5,
+          "emissions_mt": 83.91,
+          "cost_per_mwh": 0,
+          "avg_lmp": 30
+        }
+      ]
+    }
+  }
+}
