@@ -469,8 +469,8 @@ Before the matrix, here's what each condition column means:
 | **S2** | Aspirational (AT) | Power sector NZ CO₂ by 2050 | No | More Limited | Challenging | Yes (same mechanism) | Current + carbon pricing mechanism |
 | **S3** | Aspirational (AT) | Power sector NZ CO₂ by 2050 | Yes | Fuller | Facilitating | Yes | Current + economy-wide carbon pricing |
 | **S4** | Aspirational (AT) | Power sector NZ CO₂ by 2050 | Yes | More Limited | Challenging | Yes | Current + economy-wide carbon pricing |
-| **Q1** | Qualified (QT) | Power sector 70/80/90% by 2050 | No | Fuller | Facilitating | Moderate (or CES mandate) | Current + clean energy standard |
-| **Q2** | Qualified (QT) | Power sector 70/80/90% by 2050 | No | More Limited | Challenging | Moderate (or CES mandate) | Current + clean energy standard |
+| **Q1** | Qualified (QT) | No new constraint (emergent from market) | No | Fuller | Facilitating | $0 | Current (same as R1) |
+| **Q2** | Qualified (QT) | No new constraint (emergent from market) | No | More Limited | Challenging | $0 | Current (same as R2) |
 
 ### Detailed Scenario Conditions
 
@@ -558,51 +558,62 @@ Same economy-wide mechanisms as S3, but under challenging conditions:
 - **CCS/Nuclear**: Limited
 - **Key question**: Is this even feasible? What's the cost premium vs S3? This scenario tests whether economy-wide NZ is physically achievable under adverse conditions, or if something has to give.
 
-#### Q1 — Qualified Target: Partial Decarbonization, Fuller Options, Facilitating
-*"Realistic near-term policy — hit 70/80/90% clean, not 100%."*
+#### Q1 — Qualified Target: Best Achievable Without New Enabling Conditions, Facilitating
+*"What can we credibly commit to today, without waiting for new policy?"*
 
-**What QTs mean vs ATs:**
-- The forcing mechanism (CES, RPS expansion, moderate carbon price) targets a specific clean %, not full NZ
-- Gas retains a permanent ~10-30% role — no forced retirement of the entire fossil fleet
-- The expensive last-mile resources (LDES, green H₂, potentially nuclear) may not be needed
-- Marginal MAC stays well below DAC cost — the portfolio stop doesn't bind because you're not pushing that far
-- **For IPPs**: Q scenarios are the realistic business case. What gets built under plausible 2025-2035 policy? Solar, wind, batteries dominate. Some firm clean if targets are aggressive (90%+).
+**What QTs actually mean (per SMARTargets methodology):**
+- QTs represent the **best a company can achieve given current/realistic conditions WITHOUT new enabling conditions** (no new carbon price, no new CES, no new mandates beyond what exists today)
+- QTs use the **same policy environment as R1/R2** — current policy only. No additional forcing mechanism.
+- The QT level is determined by the model: run the market simulation under current-policy conditions and find the maximum clean level where deployment is still economically rational (profitable or cost-effective to commit to)
+- The **gap between QT and AT** is the key output — it defines the "enabling conditions gap" the company must report: "We can commit to X% (QT). To reach NZ (AT), we would need: interconnection reform, CCS viability, carbon pricing, nuclear pathway, etc."
+- **For IPPs**: Q scenarios answer "what can we commit to shareholders TODAY?" — not "what happens under hypothetical future policy." This is the near-term business plan.
 
-Run at three target levels to bracket existing state CES/RPS standards:
-- **70%** — below most ambitious state targets, tests minimum viable policy
-- **80%** — matches many state 2040 targets (CA, NY, NJ, VA, etc.)
-- **90%** — stretches toward but doesn't require last-mile heroics
+**How QTs are determined:**
+1. Run market simulation under Q1 (facilitating) and Q2 (challenging) conditions
+2. The model produces an emergent clean level per ISO — same as R1/R2, but now the company asks: "Can I credibly commit to this level?"
+3. The QT is typically at or slightly below the R1/R2 market equilibrium — it's what the market would do anyway, formalized as a corporate commitment
+4. If R1 produces 65% clean and R2 produces 45% clean, the QT range is 45-65% depending on risk appetite
+5. The company then reports: "Our QT is X%. To reach the AT (NZ by 2050), we need [specific enabling conditions]."
 
-- **Demand**: Medium growth
-- **Interconnection**: Reformed queues
-- **Learning**: Fast
-- **Starting LCOE**: Low
-- **All technology options available** but most extreme ones (LDES, H₂) may not be economically selected
-- **Moderate carbon price or CES mandate**: The forcing mechanism is gentler — enough to reach 70/80/90% but not 100%
-- **Key question**: What's the cost-effective resource mix at realistic policy targets? Which resources are "no-regrets" across all three target levels?
+- **Demand**: Medium growth (same as R1)
+- **Interconnection**: Reformed queues (same as R1)
+- **Learning**: Fast (same as R1)
+- **Starting LCOE**: Low (same as R1)
+- **Carbon price**: $0 (same as R1 — no new forcing mechanism)
+- **Policy**: Current only (45Y/45U/45Q + REC revenue — same as R1)
+- **All technology options available** but no policy mandate to deploy them
+- **Key question**: Under best-case market conditions with NO new policy, what's the highest clean level a company can credibly commit to? This IS the QT under facilitating conditions.
 
-#### Q2 — Qualified Target: Partial Decarbonization, Limited Options, Challenging
-*"Same realistic targets, harder path."*
+#### Q2 — Qualified Target: Best Achievable Without New Enabling Conditions, Challenging
+*"What can we commit to when the market works against us?"*
 
-- **Demand**: High growth
-- **Interconnection**: Constrained queues
-- **Learning**: Slow
-- **Starting LCOE**: High
-- **Technology**: Battery-centric (nuclear stalls, LDES pre-commercial, CCS limited)
-- **Key question**: Can you even hit 80% under challenging conditions? Or does the cost become prohibitive? This tests whether QTs are achievable under adversity or if they require facilitating conditions too.
+- **Demand**: High growth (same as R2)
+- **Interconnection**: Constrained queues (same as R2)
+- **Learning**: Slow (same as R2)
+- **Starting LCOE**: High (same as R2)
+- **Carbon price**: $0 (same as R2)
+- **Policy**: Current only (same as R2)
+- **Technology**: Limited (same technology constraints as R2 challenging conditions — nuclear stalls, LDES pre-commercial, CCS limited)
+- **Key question**: Under worst-case market conditions with NO new policy, what's the best a company can commit to? This is the QT floor — the minimum credible commitment even when everything's hard.
+
+**The QT range (Q1-Q2) vs the AT-QT gap:**
+- **Q1 result** = upper bound of credible commitment (best conditions, no new policy)
+- **Q2 result** = lower bound of credible commitment (worst conditions, no new policy)
+- **AT (S1/S2)** = what the company WOULD achieve if NZ policy existed
+- **AT minus QT** = the enabling conditions gap. This gap is what the company reports alongside its target: "We need X, Y, Z conditions to close this gap."
 
 ### Scenario Comparison: Key Differentiators
 
 | Dimension | R1/R2 | S1/S2 | S3/S4 | Q1/Q2 |
 |-----------|-------|-------|-------|-------|
-| **CO₂ target** | None (emergent) | Power sector NZ | Power sector NZ (within economy-wide NZ) | Power sector 70/80/90% |
-| **Carbon price** | $0 | Yes | Yes (economy-wide, likely higher) | Moderate / CES |
+| **CO₂ target** | None (emergent) | Power sector NZ | Power sector NZ (within economy-wide NZ) | None (emergent — same as R) |
+| **Carbon price** | $0 | Yes | Yes (economy-wide, likely higher) | $0 (same as R) |
 | **Demand driver** | Market-driven | Market-driven | **Mandatory electrification** | Market-driven |
 | **DAC role** | N/A | Grid residuals only | **Shared with industry/transport** | Minimal (MAC < DAC) |
 | **H₂ load** | Negligible | Small | **Large (industry demand)** | Negligible |
-| **Gas end-state** | Whatever's profitable | Near-zero | Near-zero | 10-30% permanent |
-| **Last-mile resources** | Only if profitable | Required (LDES, nuclear) | Required + more of them | Likely not needed |
-| **IPP relevance** | Base case economics | Long-term strategic | Strategic + electrification | **Near-term business plan** |
+| **Gas end-state** | Whatever's profitable | Near-zero | Near-zero | Whatever's profitable (same as R) |
+| **Last-mile resources** | Only if profitable | Required (LDES, nuclear) | Required + more of them | Only if profitable (same as R) |
+| **IPP relevance** | What the market does | Long-term strategic | Strategic + electrification | **What we can commit to today** |
 
 ### Interconnection Queue Constraint (Decided — Bundled with Facilitating/Challenging)
 
