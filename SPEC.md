@@ -1593,8 +1593,8 @@ The optimizer runs as a 7-step pipeline. Step 1 is expensive (hours). Steps 2–
 | Step | Script(s) | What It Does | When to Re-run |
 |------|-----------|-------------|---------------|
 | **Step 0** | `step0_*.py` (8 scripts) | **Data Acquisition** — EIA hourly profiles (multi-year 2021–2025), eGRID emissions, actual LMP data, offshore wind (NREL NOW-23), UTC fixes, MISO/SPP consolidation. Annual cadence. | When source data updates. |
-| **Step 1** | `step1_pfs_generator.py` (monolithic) or 1A+1B+1C (modular) | **Physics Feasible Space** — 4D/5D adaptive grid search × procurement × storage. Output: `data/step1-pfs-parquets/` + `data/step1d-storage-parquets/`. | Only if dispatch logic, generation profiles, or demand curves change. |
-| **Step 2** | `step2_efficient_frontier.py` | **Efficient Frontier** — Extracts non-dominated mixes from PFS. Reads both step1 and step1d parquets. Filters existing gen utilization, procurement minimization, strict dominance removal. Output: `data/step2-ef-parquets/`. | Only if PFS or filtering criteria change. |
+| **Step 1** | `step1_pfs_generator.py` (monolithic) or 1A+1B+1C (modular) | **Physics Feasible Space** — 4D/5D adaptive grid search × procurement × storage. Output: `data/step1-pfs-parquets/`. | Only if dispatch logic, generation profiles, or demand curves change. |
+| **Step 2** | `step2_efficient_frontier.py` | **Efficient Frontier** — Extracts non-dominated mixes from PFS. Filters existing gen utilization, procurement minimization, strict dominance removal. Output: `data/step2-ef-parquets/`. | Only if PFS or filtering criteria change. |
 | **Step 3** | `step3a_cost_optimization.py` + `step3b_track_nb_ctr.py` | **Cost Optimization** — 3A: Track 1 baseline (5,832 sensitivity combos, 17,496 CAISO). 3B: Track 2 (NB) + Track 3 (CTR). Merit-order tranche pricing. Demand growth with FOAK→NOAK learning curves. Output: `data/step3-cost-opt-parquets/`. | When cost assumptions, LCOE tables, or toggles change. |
 | **Step 4** | `step4_build_dispatch_cache.py` | **Dispatch Cache** — Pre-computes 8,760-hour dispatch for all unique mixes. Versioned NPZ cache (v2). Output: `data/step4-dispatch-cache/`. | After Step 3 outputs change. |
 
@@ -1604,7 +1604,7 @@ The optimizer runs as a 7-step pipeline. Step 1 is expensive (hours). Steps 2–
 |----------|-----------|-------------|
 | **1A: Generate+Score** | `step1a_generate_mixes.py` → `step1b_score_mixes.py` | Generates all resource fraction combos (4D/5D grid), scores against hourly demand → `coarse_cache.parquet`. |
 | **1B: Zone Search** | `step1b_zone_search.py` | Mines PFS from scored DB per threshold. Fine-zone targeted search. |
-| **1C: Storage Refinement** | `step1c_storage_refinement.py` | Fills storage exploration gaps (bat4, bat8, LDES). Near-miss + lean-mix strategies. Output: `data/step1d-storage-parquets/`. |
+| **1C: Storage Refinement** | `step1c_storage_refinement.py` | Fills storage exploration gaps (bat4, bat8, LDES). Near-miss + lean-mix strategies. Output: `data/step1-pfs-parquets/`. |
 
 Utilities: `step1_prior_windows.py` (computes search windows from prior EF results).
 
@@ -2981,9 +2981,9 @@ H2:    [0, 5, 10, 20]         # same as 1C
 6. Curtailment filter: batteries need ≥150 surplus days (same as 1C §6.4.4)
 7. Output feasible solutions (score ≥ target AND at least one storage > 0) to new parquets
 
-**Output**: `data/step1d-storage-parquets/{ISO}_t{XX}_storage_refined.parquet` — same schema as Step 1C PFS parquets, `pareto_type = 'storage_refined'`.
+**Output**: `data/step1-pfs-parquets/{ISO}_t{XX}_storage_refined.parquet` — same schema as Step 1C PFS parquets, `pareto_type = 'storage_refined'`.
 
-**Step 2 integration**: `step2_efficient_frontier.py` scans both `data/step1-pfs-parquets/` and `data/step1d-storage-parquets/`. Deduplication handles any overlap between 1C and 1D results (keeps max score per unique resource + storage key).
+**Step 2 integration**: `step2_efficient_frontier.py` scans `data/step1-pfs-parquets/`. Deduplication handles any overlap between 1C and 1D results (keeps max score per unique resource + storage key).
 
 **Test results** (ERCOT t75): 3,303,625 new storage-enabled solutions found in 78s (vs 0 from Step 1C). Cap ranges confirmed: bat4=[0.00%, 0.34%, 0.80%], LDES=[0.00%, 2.10%, 5.15%].
 
@@ -4660,7 +4660,7 @@ Step 1D.2 addresses gap (1) with research-informed 2050 capacity caps. The Econo
 1. Reads `STORAGE_MAX_V2` instead of `STORAGE_MAX`
 2. Coarser initial grid (wider range → need 0.5% coarse step instead of 0.25%)
 3. Same fine resolution (0.05%) on frontier boundary mixes
-4. Output directory: `data/step1d2-storage-parquets/` (parallel to `data/step1d-storage-parquets/`)
+4. Output directory: `data/step1-pfs-parquets/` (consolidated storage output)
 
 ### §16.4 Pipeline Integration
 
