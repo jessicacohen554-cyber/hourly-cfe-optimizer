@@ -96,6 +96,7 @@ from scenario_common import (
     get_demand_growth_factor,
     _build_existing_only_entry, _existing_match_pct,
     learning_fraction as scenario_learning_fraction,
+    _build_learning_overrides,
 )
 
 # ============================================================================
@@ -1835,16 +1836,15 @@ def _export_scenario_a(all_results, isos_processed, demand_data, gen_profiles,
                        sensitivity='high_firm_low_vre', growth='Medium'):
     """Export step5d MAC queue results as scenario_a_{ISO}.json for step7c compatibility.
 
-    Uses step5d's own cost model directly (new-build LCOE + gas backup), NOT
-    compute_mix_cost. This avoids the storage pricing mismatch that caused
-    wildly inflated costs when re-pricing through a different cost model.
+    Step5d picks the winning mix at each threshold (MAC queue optimization).
+    System cost is computed via compute_mix_cost() — the SAME cost function
+    Scenario B uses — ensuring apples-to-apples comparison.
 
-    System cost = step5d new-build cost (per MWh demand) + gas backup cost.
-    Effective cost = system cost / match fraction.
+    Deployment-gated learning: FOAK pricing until first clean firm deployment
+    in the MAC queue, then Wright's Law ramp from deployment year.
+
     MAC = step5d's own mac_this_step (authoritative, pass-through).
     """
-    from scenario_common import WHOLESALE_PRICES, FUEL_ADJUSTMENTS
-
     # Filter to target sensitivity + growth
     canonical = [r for r in all_results
                  if r.get('price_sensitivity') == sensitivity
@@ -1945,78 +1945,56 @@ def _export_scenario_a(all_results, isos_processed, demand_data, gen_profiles,
                 'hydro': hydro_twh,
             }
 
-            # --- System cost: step5d CUMULATIVE new-build cost + gas backup ---
-            # Use cumulative_new_build_cost (total from 50% through this threshold),
-            # not per-step new_build_cost_total, to match compute_mix_cost semantics
-            # where total_cost = all new resources vs 2025 baseline.
-            cum_nb_cost = r.get('cumulative_new_build_cost', 0)
-            nb_cost_per_mwh = cum_nb_cost / demand_mwh if demand_mwh > 0 else 0
-
-            # Gas backup
-            mix_pcts = {
-                'clean_firm': cf_pct, 'solar': sol_pct, 'wind': wnd_pct,
-                'offshore_wind': osw_pct, 'ccs_ccgt': 0, 'hydro': hyd_pct,
-                'battery_dispatch_pct': bat4_pct, 'battery8_dispatch_pct': bat8_pct,
-                'ldes_dispatch_pct': ldes_pct,
-            }
-            gas_mw, new_gas_mw, exist_gas_mw, net_peak_mw, gas_cost = \
-                _compute_gas_backup(iso, mix_pcts, demand_twh, gf,
-                                    demand_norm, supply_profiles, supply_matrix)
-
-            # Deployment-gated learning: detect first clean firm deployment
+            # --- Deployment-gated learning: detect first clean firm deployment ---
             if first_cf_deployment_year is None and cf_pct > existing_cf_pct + 0.1:
                 first_cf_deployment_year = SBTI_YEAR_MAP.get(t, 2050)
 
-            # Apply learning discount to new-build cost if clean firm deployed
             learning_frac = scenario_learning_fraction(
                 t, scenario='A', first_deployment_year=first_cf_deployment_year)
-            if learning_frac > 0 and new_cf_twh > 0:
-                # Discount = fraction of H→L savings applied to new clean firm cost
-                nuc_h = NUCLEAR_NEWBUILD_LCOE['H'][iso]
-                nuc_l = NUCLEAR_NEWBUILD_LCOE['L'][iso]
-                nuc_savings_per_mwh = (nuc_h - nuc_l) * learning_frac
-                # Apply savings proportional to new CF TWh share of demand
-                learning_discount = nuc_savings_per_mwh * new_cf_twh / demand_twh
-                nb_cost_per_mwh = max(0, nb_cost_per_mwh - learning_discount)
 
-            total_cost = round(nb_cost_per_mwh + gas_cost, 2)
-            effective_cost = round(total_cost / match_frac if match_frac > 0 else 0, 2)
-            wholesale = max(5, WHOLESALE_PRICES[iso] + FUEL_ADJUSTMENTS[iso].get('Medium', 0))
-            incremental = round(effective_cost - wholesale, 2)
+            # Build learning-curve overrides for compute_mix_cost
+            overrides = _build_learning_overrides(iso, learning_frac) if learning_frac > 0 else {}
 
-            new_gen_twh = r.get('new_build_twh_total', 0)
-            blended_new_lcoe = round(cum_nb_cost / (new_gen_twh * 1e6), 2) if new_gen_twh > 0.001 else 0
+            # --- System cost via compute_mix_cost (same model as Scenario B) ---
+            mix_array = [cf_pct, sol_pct, wnd_pct, osw_pct, 0.0, hyd_pct,
+                         match_score, bat4_pct, bat8_pct, ldes_pct, h2_pct]
+            sens = SCENARIO_A['toggles']
+
+            cost_result = compute_mix_cost(
+                mix_array, sens, iso, demand_twh,
+                overrides=overrides, growth_factor=gf,
+                demand_norm=demand_norm,
+                supply_profiles=supply_profiles,
+                supply_matrix=supply_matrix,
+            )
 
             result = {
-                'total_cost': total_cost,
-                'effective_cost': effective_cost,
-                'incremental': incremental,
-                'wholesale': wholesale,
-                'gas_cost': round(gas_cost, 4),
+                # System cost fields from compute_mix_cost (unified with Scenario B)
+                'total_cost': cost_result['total_cost'],
+                'effective_cost': cost_result['effective_cost'],
+                'incremental': cost_result['incremental'],
+                'wholesale': cost_result['wholesale'],
+                'gas_cost': cost_result['gas_cost'],
                 'resource_twh': resource_twh,
-                'resource_pct': {
-                    'clean_firm': cf_pct, 'solar': sol_pct, 'wind': wnd_pct,
-                    'offshore_wind': osw_pct, 'ccs_ccgt': 0, 'hydro': hyd_pct,
-                },
+                'resource_pct': cost_result['resource_pct'],
                 'match_score': match_score,
-                'battery_twh': bat4_pct / 100.0 * demand_twh,
-                'battery8_twh': bat8_pct / 100.0 * demand_twh,
-                'ldes_twh': ldes_pct / 100.0 * demand_twh,
-                'h2_twh': h2_pct / 100.0 * demand_twh,
-                'gas_backup_mw': gas_mw,
-                'new_gas_mw': new_gas_mw,
-                'existing_gas_used_mw': exist_gas_mw,
-                'clean_peak_mw': net_peak_mw,
-                'net_peak_residual_mw': net_peak_mw,
+                'battery_twh': cost_result['battery_twh'],
+                'battery8_twh': cost_result['battery8_twh'],
+                'ldes_twh': cost_result['ldes_twh'],
+                'h2_twh': cost_result['h2_twh'],
+                'gas_backup_mw': cost_result['gas_backup_mw'],
+                'new_gas_mw': cost_result['new_gas_mw'],
+                'existing_gas_used_mw': cost_result['existing_gas_used_mw'],
+                'clean_peak_mw': cost_result['clean_peak_mw'],
+                'net_peak_residual_mw': cost_result['clean_peak_mw'],
                 'learning_fraction': round(learning_frac, 3),
                 'first_cf_deployment_year': first_cf_deployment_year,
-                'new_build_cost_total': cum_nb_cost,
-                'new_gen_twh': round(new_gen_twh, 3),
-                'blended_new_lcoe': blended_new_lcoe,
+                'new_build_cost_total': cost_result['new_build_cost_total'],
+                'new_gen_twh': cost_result['new_gen_twh'],
+                'blended_new_lcoe': cost_result['blended_new_lcoe'],
                 'demand_twh': demand_twh,
                 'demand_mwh': demand_mwh,
-                'mix_raw': [cf_pct, sol_pct, wnd_pct, osw_pct, 0.0, hyd_pct,
-                            match_score, bat4_pct, bat8_pct, ldes_pct, h2_pct],
+                'mix_raw': mix_array,
                 'mix_source': 'MAC-queue',
                 # Step5d MAC and CO2 (authoritative, pass-through)
                 'mac_this_step': r.get('mac_this_step', 0),
