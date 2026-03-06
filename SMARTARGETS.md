@@ -30,36 +30,44 @@ The CFE target is an **output**, not an input. The model deploys whatever's prof
 
 ### What We Borrow (Existing Modules)
 
+**Primary architecture: Step 5D's zone-delta structure** — not Step 7A's full-mix optimizer.
+
+Step 5D (`compute_zone_metrics` / `build_consequential_queue`) works in *incremental zone transitions* (50→55%, 55→60%, etc.), computing delta cost and delta CO2 per zone. This is the right foundation because SMARTargets asks "is the *next increment* profitable?" — an inherently incremental question.
+
+Step 7A (`_forward_step_optimization`) selects the best *absolute mix* at each threshold — it answers "what's cheapest to reach X%?" which is a different question entirely. Step 7A is not obsolete (it's still needed for procurement strategy pages) but it's not the right architecture for a market simulation.
+
 | Component | Source | What We Use |
 |-----------|--------|-------------|
-| **Floor ratchet** | `step7a` / `scenario_common.py` | Sequential deployment with per-resource TWh floors. Once deployed, capacity can't be removed. |
-| **Sequential threshold stepping** | `step7a::_forward_step_optimization()` | Process thresholds 50% → 99.99% in order, each step constrained by prior. |
-| **EF/PFS mix filtering** | `scenario_common.py::batch_filter_floor()` | Vectorized floor-compatible mix selection from efficient frontier. |
+| **Zone-delta structure** | `step5d::compute_zone_metrics()` | Incremental cost/resource/CO2 deltas per zone transition. Add revenue delta for profit calculation. |
+| **Sequential zone stepping** | `step5d` / `scenario_common::build_consequential_queue()` | Process zones in order, each step building on prior. Already supports `per_iso_sequential` and `global_merit_order` sequencing. |
+| **Dispatch-based CO2 per zone** | `step5d::get_dispatch_co2()` | 8,760-hour CO2 accounting at each threshold boundary — needed for carbon price revenue. |
+| **Cross-regional sequencing** | `scenario_common::build_consequential_queue(sequencing='global_merit_order')` | Capital flows to highest-profit zone across ISOs (re-rank by profit instead of MAC). |
 | **8,760-hour dispatch** | `dispatch_utils.py` / Step 4 cache | Hourly supply-demand matching for LMP computation. |
 | **LMP merit-order engine** | `step5b::build_merit_order_stack()` + `PriceModel` subclasses | Synthetic hourly LMP from fossil stack composition at each threshold. |
 | **Scarcity pricing** | `step5b` ISO-specific models | Reserve-based exponential adder (ERCOT ORDC, PJM RPM-calibrated). |
 | **Wright's Law learning curves** | `step8d` + `procurement_utils.py` | FOAK→NOAK cost reduction as global cumulative GW deployed increases. |
 | **Capacity market revenue** | `pipeline_config.py::CAPACITY_MARKET_PRICES` | $/kW-yr by ISO (zero for energy-only markets: ERCOT, SPP). |
 | **Storage revenue stacking** | `pipeline_config.py::compute_storage_revenue_credit()` | Arbitrage + capacity + ancillary with 70% co-optimization efficiency. |
-| **Gas backup recomputation** | `scenario_common.py` | RA-aware gas MW recalculation after floor augmentation. |
+| **Gas backup tracking** | `step5d` zone metrics | Already tracks `gas_backup_mw_start/end` and `delta_gas_mw` per zone. |
 
 ### What We Do NOT Borrow
 
 | Component | Source | Why Not |
 |-----------|--------|---------|
-| **MAC optimization** | `step5d`, `step6a` | SMARTargets optimizes profit, not $/tCO2. MAC is irrelevant to the objective function. |
-| **Consequential queue ordering** | `step5d::build_consequential_queue()` | Queue ranks by cheapest abatement. We rank by highest profit. |
-| **Cross-regional netting** | `step5d` | May add later, but V1 is per-ISO. |
+| **MAC ranking** | `step5d::build_consequential_queue()` | Queue ranks by cheapest $/tCO2. We re-rank by highest profit. Same structure, different sort key. |
+| **Step 7A full-mix optimizer** | `step7a::_forward_step_optimization()` | Selects best absolute mix per threshold. Wrong framing — we need incremental profitability, not system-optimal mix. Step 7A answers "what should a planner build?" — we answer "what would the market build?" |
+| **Step 7A EF/PFS filtering** | `scenario_common::batch_filter_floor()` | Not needed — step 5d's zone structure already handles monotonicity via zone ordering. |
 
 ### What's New (~30-50 Lines of Glue Code)
 
 | Component | Description |
 |-----------|-------------|
-| **Revenue calculator** | For each candidate mix at each threshold: compute hourly LMP revenue from the existing `step5b` engine, add capacity market payments, add storage revenue credits. ~20 lines. |
-| **Profit objective** | `profit = revenue_per_mwh - lcoe_per_mwh` for each resource in the mix. Replace `np.argmin(costs)` with `np.argmax(profit)` in the selection step. ~10 lines. |
-| **Price feedback loop** | After selecting a mix, recompute LMP for the *new* fossil stack (since clean deployment changes the merit order). Feed updated prices into revenue calc for next threshold step. Natural sequential feedback — no iterative equilibrium needed. |
+| **Revenue calculator** | For each zone transition: compute hourly LMP revenue from `step5b` engine, add capacity market payments, add storage revenue credits. Extends `zone_metrics` with `delta_revenue_per_mwh`. ~20 lines. |
+| **Profit metric** | `delta_profit = delta_revenue - delta_cost` per zone. Replace MAC sort key with profit sort key in `build_consequential_queue`. ~10 lines. |
+| **Stopping rule** | When `delta_profit < 0` for all remaining zones across all ISOs, stop. Record current clean level as market equilibrium. ~5 lines. |
+| **Price feedback** | After selecting a zone, recompute LMP for the new fossil stack. Natural sequential feedback — already how step 5d processes zones. |
 | **Capacity price degradation** | `capacity_price(t) = base_price × max(0, 1 - α × clean_share(t))`. α calibrated per ISO. ~5 lines. |
-| **Carbon price lever** | Expose `co2_level` parameter from existing `compute_marginal_costs()` as a scenario axis. Already implemented in step5b — just needs to be threaded through. |
+| **Carbon price lever** | Expose `co2_level` parameter from existing `compute_marginal_costs()` as a scenario axis. Already in step5b — just thread through. |
 
 ## Sequential Algorithm
 
@@ -68,54 +76,60 @@ The model steps through increasing clean percentages — but these aren't *targe
 ```
 For each scenario (15-20 market condition combos):
   Initialize:
-    floor_twh = 2025 existing clean by resource (from GRID_MIX_SHARES)
     cumulative_gw = {resource: global_installed_2025}  # for learning curves
-    current_clean_pct = existing_clean_floor  # ~30-48% depending on ISO
+    deployed_state = {iso: existing_clean_floor}       # per-ISO current state
 
-  For each threshold step t (50%, 55%, ... 99.99%):
+  Build zone list:
+    - ISO-aware zones from step5d (e.g., MISO gets 30→40, 40→50, 50→55, ...)
+    - Each zone = one threshold increment with delta_cost, delta_resources, delta_co2
 
-    1. FILTER: Get feasible mixes at this clean level        [scenario_common.batch_filter_floor]
-       - Must meet floor ratchet (can't un-deploy)           [step7a pattern]
-       - If EF exhausted, PFS fallback with floor window     [scenario_common._filter_pfs_by_floor_window]
+  For each zone (sequenced by profit, per-ISO or global):
 
-    2. COST: Compute all-in LCOE for each candidate mix      [scenario_common.batch_compute_total_costs]
-       - Apply Wright's Law cost reduction from cumulative_gw [procurement_utils.learning_fraction]
+    1. COST DELTA: Incremental LCOE for new resources in this zone  [step5d pattern]
+       - delta_cost = zone_end_cost - zone_start_cost               [already computed]
+       - Apply Wright's Law reduction based on cumulative_gw         [procurement_utils]
        - Global cumulative: all ISO deployments pool together
 
-    3. REVENUE: For each candidate mix, compute market revenue [NEW]
-       a. LMP engine on fossil stack at this clean level      [step5b.build_merit_order_stack + PriceModel]
-          - Fossil stack naturally shrinks as clean rises
+    2. REVENUE DELTA: Market revenue earned by new resources         [NEW]
+       a. LMP at this clean level from fossil stack                  [step5b.build_merit_order_stack]
+          - Fossil stack shrinks as clean rises → prices change
           - Scarcity pricing kicks in when reserves thin
-       b. Hourly energy revenue = generation_profile · lmp    [dot product, vectorized]
-          - Solar earns daytime LMP (suppressed by own output)
-          - Wind earns wind-hour LMP
-          - Clean firm earns baseload (all-hours) LMP
+       b. Hourly energy revenue for incremental resources            [dot product, vectorized]
+          - Revenue depends on WHICH resources are added (solar vs firm)
+          - Solar earns daytime LMP (suppressed by cannibalization)
+          - Clean firm earns baseload LMP (premium during scarcity)
           - Storage earns arbitrage spread
-       c. Capacity market payment (degrading with clean share)
+       c. Capacity market payment for new capacity (degrading)
        d. Ancillary service revenue
-       e. Carbon credit revenue (if carbon price > $0)
+       e. Carbon credit revenue (if carbon price > $0)               [step5d CO2 data]
 
-    4. PROFIT: profit_per_mwh = revenue_per_mwh - lcoe_per_mwh  [NEW]
-       - If best mix is profitable (profit > 0): DEPLOY IT
-         → Lock in resources, advance to next step
-       - If NO mix is profitable (all profit < 0): STOP
-         → This is the market equilibrium clean level for this scenario
-         → Record current_clean_pct as the "market outcome"
+    3. PROFIT: delta_profit = delta_revenue - delta_cost             [NEW]
+       - If delta_profit > 0: DEPLOY THIS ZONE
+         → Lock in resources, advance to next zone for this ISO
+       - If delta_profit ≤ 0: SKIP / STOP
+         → This zone is unprofitable under current conditions
+         → But check: might LATER zones be profitable?
+           (e.g., learning from other ISOs lowers cost, or
+            further fossil retirement raises scarcity value)
 
-    5. LOCK IN (if deployed):                                 [step7a pattern]
-       floor_twh[resource] = max(floor_twh[resource], deployed_twh[resource])
-
-    6. LEARN (if deployed):                                   [step8d pattern]
+    4. LEARN (if deployed):                                          [step8d pattern]
        cumulative_gw[resource] += new_capacity_gw
-       # Deployment lowers future costs → may unlock next step
+       # Deployment lowers future costs for ALL ISOs (global learning)
 
-    7. PRICE UPDATE (automatic):
-       - Next step's LMP reflects smaller fossil stack
-       - Scarcity value rises → dispatchable resources more attractive
-       - But cannibalization also rises → VRE revenue falls
+    5. PRICE UPDATE (automatic):
+       - Next zone's LMP reflects updated fossil stack
+       - Scarcity value shifts → changes which resources are profitable
+       - Cannibalization shifts → changes VRE revenue
+
+  Terminate when:
+    - All remaining zones across all ISOs have delta_profit ≤ 0
+    - AND no learning-driven cost reduction could flip any zone positive
+    - Record per-ISO clean level as "market equilibrium outcome"
 ```
 
-**The stopping point IS the result.** Each scenario produces a different market-equilibrium clean level. The dashboard shows how market conditions determine where deployment stalls or accelerates.
+**The stopping point IS the result.** Each scenario produces a different market-equilibrium clean level per ISO. The dashboard shows how market conditions determine where deployment stalls or accelerates.
+
+**Key difference from step 5d**: Step 5d ranks zones by MAC ($/tCO2) — this ranks by profit ($/MWh). Same zone structure, different objective. Step 5d asks "where's abatement cheapest?" — SMARTargets asks "where do developers make money?"
 
 ## Revenue Model Detail
 
@@ -215,10 +229,11 @@ Each scenario result contains, per ISO × threshold:
 ## Dependencies
 
 ```
-Step 2 (EF parquets) ──┐
-Step 4 (dispatch cache) ├── SMARTargets module ──→ smartargets output
-pipeline_config.py ─────┤
-step5b LMP engine ──────┘
+Step 3 (cost-opt parquets) ──┐
+Step 4 (dispatch cache) ─────┤
+Step 5d (zone metrics) ──────├── SMARTargets module ──→ smartargets output
+pipeline_config.py ──────────┤
+step5b LMP engine ───────────┘
 ```
 
 No upstream changes needed. All inputs already exist.
