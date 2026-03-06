@@ -145,10 +145,10 @@
 - `step6b_compute_optimal_targets.py` — Optimal CFE target per ISO via marginal MAC × DAC crossover (PCHIP spline). 3×3 grid-cost × DAC-scenario matrix. No-regrets resource analysis. Reads step3 parquets directly. Output: `optimal_targets.json` + `dashboard/js/optimal-target-data.js`.
 - `step6c_analyze_tracks.py` — Track cost envelopes (P10/P50/P90), resource mix differentials.
 
-**Step 7: Scenario Comparison** (3 scripts, output to `data/step5-post-processing/`):
-- `step7a_scenario_consequential.py` — Forward-stepping consequential procurement with per-resource floor ratchets. PFS fallback on filter exhaustion.
+**Step 7: Scenario Comparison** (2 scripts, output to `data/step5-post-processing/`):
+- Scenario A: **READ from MAC queue** (`data/step5-post-processing/mac_queue/scenario_a_*.json`), produced by `step5d_mac_queue.py`. No separate step7a script.
 - `step7b_scenario_hourly.py` — Hourly matching procurement strategy. **Needs Step 6B (optimal targets).**
-- `step7c_scenario_comparison.py` — Consequential vs. hourly matching comparison. **Needs Steps 7A + 7B.**
+- `step7c_scenario_comparison.py` — Consequential vs. hourly matching comparison. **Needs Step 5D MAC Queue + 7B.**
 
 **Step 8: Procurement Strategies** (4 scripts + 1 utility, output to `data/step5-post-processing/`):
 - `procurement_utils.py` — Shared utilities (SSS allocation, EAC pricing, LMP feedback, PPA premiums, learning curves, 25-year timeline).

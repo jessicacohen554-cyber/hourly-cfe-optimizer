@@ -67,13 +67,13 @@ Utilities: `step1_pfs_generator.py` (monolithic), `step1_prior_windows.py` (sear
 | `step6b_compute_optimal_targets.py` | Optimal CFE targets via MAC × DAC crossover. No-regrets analysis. | Step 3 |
 | `step6c_analyze_tracks.py` | Track cost envelopes (P10/P50/P90), resource mix differentials. | Step 5E |
 
-#### Step 7: Scenario Comparison (3 scripts)
+#### Step 7: Scenario Comparison (2 scripts)
 
 | Script | What It Does | Dependencies |
 |--------|-------------|-------------|
-| `step7a_scenario_consequential.py` | Consequential procurement with per-resource floor ratchets. | Step 2 |
+| Scenario A | READ from MAC queue (`mac_queue/scenario_a_*.json`), produced by `step5d_mac_queue.py`. | Step 5D MAC Queue |
 | `step7b_scenario_hourly.py` | Hourly matching procurement strategy. | Step 6B |
-| `step7c_scenario_comparison.py` | Consequential vs. hourly — cost, emissions, resource mix. | Steps 7A + 7B |
+| `step7c_scenario_comparison.py` | Consequential vs. hourly — cost, emissions, resource mix. | Step 5D MAC Queue + 7B |
 
 #### Step 8: Procurement Strategies (4 scripts + 1 utility)
 
@@ -174,7 +174,7 @@ hourly-cfe-optimizer/
 │   ├── step6a_compute_mac_stats.py         # Step 6A: MAC statistics + ANOVA
 │   ├── step6b_compute_optimal_targets.py   # Step 6B: optimal CFE targets
 │   ├── step6c_analyze_tracks.py            # Step 6C: track cost envelopes
-│   ├── step7a_scenario_consequential.py    # Step 7A: Scenario A
+│   ├── step5d_mac_queue.py                 # Step 5D: MAC queue (produces Scenario A)
 │   ├── step7b_scenario_hourly.py           # Step 7B: Scenario B
 │   ├── step7c_scenario_comparison.py       # Step 7C: A vs B comparison
 │   ├── procurement_utils.py               # Step 8 shared utilities

@@ -38,7 +38,8 @@ Steps 6–8 depend on Step 5 outputs. Step 9 runs last.
 | 5E | `step5e-track-analysis.yml` | **Step 5E: Track Analysis** | Export tracks + track cost envelopes (P10/P50/P90). | `step5e_export_tracks.py`, `step6c_analyze_tracks.py` |
 | 5F | `step5f-storage-analysis.yml` | **Step 5F: Storage Analysis** | Battery/LDES utilization, dispatch patterns, capacity factors. | `step5f_analyze_storage.py` |
 | 6 | `step6-derived-analytics.yml` | **Step 6: Derived Analytics** | MAC stats + Optimal targets. | `step6a_compute_mac_stats.py`, `step6b_compute_optimal_targets.py` |
-| 7 | `step7-scenario-comparison.yml` | **Step 7: Scenario Comparison** | Scenario A → B → Compare. | `step7a_scenario_consequential.py`, `step7b_scenario_hourly.py`, `step7c_scenario_comparison.py` |
+| 5D-MAC | `step5d-mac-queue.yml` | **Step 5D: MAC Queue** | MAC-optimized consequential queue + Scenario A export. | `step5d_mac_queue.py` |
+| 7 | `step7-scenario-comparison.yml` | **Step 7: Scenario Comparison** | Scenario B + Compare (Scenario A from MAC queue). | `step7b_scenario_hourly.py`, `step7c_scenario_comparison.py` |
 | 8 | `step8-procurement-strategies.yml` | **Step 8: Procurement Strategies** | 10 strategy variants → combined dashboard JS. | `step8a_strategy_consequential.py`, `step8b_strategy_hourly.py`, `step8c_strategy_annual.py` |
 | 8D | `step8d-wrights-law.yml` | **Step 8D: Wright's Law Curves** | FOAK→NOAK learning curve projections. | `step8d_wrights_law_curves.py` |
 | 9 | `step9-generate-shared-data.yml` | **Step 9: Generate Shared Data** | Consolidates all results into `shared-data.js`. **Run this last.** | `step9a_generate_shared_data.py` |
