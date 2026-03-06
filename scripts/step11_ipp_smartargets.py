@@ -194,6 +194,127 @@ COMPANIES = [
 FOSSIL_FUELS = {'coal', 'gas_ccgt', 'gas_peaker', 'oil'}
 CLEAN_FUELS = {'nuclear', 'solar', 'wind', 'battery', 'hydro', 'geothermal'}
 
+# ─── ACTIVE QT: NEW CLEAN DEPLOYMENT ─────────────────────────────
+# LCOE for new-build clean resources ($/MWh, Medium cost assumptions)
+# From pipeline_config LCOE_TABLES — we use a blended average across ISOs
+NEW_LCOE_2025 = {
+    'solar': 60,   # $/MWh, Medium national avg
+    'wind': 50,    # $/MWh, Medium national avg
+    'battery': 10,  # $/MWh revenue credit (not cost — modeled as capacity value offset)
+}
+
+# Wright's Law learning rates (cost reduction per doubling of cumulative deployment)
+LEARNING_RATE = {'solar': 0.24, 'wind': 0.15, 'battery': 0.18}
+
+# National cumulative deployment (GW) in 2025 — for Wright's Law baseline
+CUMULATIVE_GW_2025 = {'solar': 180, 'wind': 160, 'battery': 35}
+
+# Annual new deployment growth (GW/yr nationally) — for learning curve
+NATIONAL_DEPLOY_GW_YR = {'solar': 40, 'wind': 15, 'battery': 12}
+
+# IPP deployment scaling: fraction of cap_gw that can be deployed per 5-year period
+# Represents capital allocation, interconnection queue, and execution capacity
+DEPLOY_RATE_PER_5YR = {
+    'solar': 0.08,   # 8% of total fleet capacity per 5-year period
+    'wind': 0.04,    # 4% of fleet capacity per 5-year period
+    'battery': 0.03, # 3% of fleet capacity per 5-year period
+}
+
+# Carbon intensity of displaced fossil generation (tCO2/MWh)
+FOSSIL_EMISSION_RATE = {
+    'coal': 0.95,     # tCO2/MWh
+    'gas_ccgt': 0.40,  # tCO2/MWh
+    'gas_peaker': 0.65, # tCO2/MWh
+    'oil': 0.75,       # tCO2/MWh
+}
+
+
+def compute_lcoe(tech, year):
+    """Compute LCOE with Wright's Law learning curve."""
+    base_lcoe = NEW_LCOE_2025[tech]
+    base_cum = CUMULATIVE_GW_2025[tech]
+    annual_deploy = NATIONAL_DEPLOY_GW_YR[tech]
+    lr = LEARNING_RATE[tech]
+
+    years_elapsed = year - 2025
+    cum_gw = base_cum + annual_deploy * years_elapsed
+    # Wright's Law: cost = base_cost * (cum / cum_base) ^ log2(1 - lr)
+    exponent = math.log2(1 - lr)
+    return base_lcoe * (cum_gw / base_cum) ** exponent
+
+
+def compute_active_deployment(company, year):
+    """
+    Compute cumulative new clean capacity (MW) deployed by the IPP by a given year.
+    Returns dict of {tech: cumulative_mw} and annualized cost ($M/yr).
+    """
+    cap_gw = company['cap_gw']
+    periods_elapsed = (year - 2025) / 5.0  # fractional 5-year periods
+
+    deployment = {}
+    annual_cost_m = 0
+
+    for tech in ['solar', 'wind', 'battery']:
+        rate = DEPLOY_RATE_PER_5YR[tech]
+        cum_gw = cap_gw * rate * periods_elapsed
+        cum_mw = cum_gw * 1000
+
+        # Compute annual generation from new capacity
+        # Use average CF across the company's ISOs
+        isos = list(set(p['iso'] for p in company['plants']))
+        if tech == 'battery':
+            cf = 0.10
+        elif tech == 'solar':
+            cfs = [CLEAN_CF['solar'].get(iso, 0.22) for iso in isos]
+            cf = sum(cfs) / len(cfs) if cfs else 0.22
+        else:  # wind
+            cfs = [CLEAN_CF['wind'].get(iso, 0.32) for iso in isos]
+            cf = sum(cfs) / len(cfs) if cfs else 0.32
+
+        gen_twh = cum_mw * cf * 8.760 / 1000
+        lcoe = compute_lcoe(tech, year)
+        cost_m = gen_twh * lcoe  # $M/yr (LCOE × generation)
+
+        deployment[tech] = {
+            'cum_mw': round(cum_mw),
+            'gen_twh': round(gen_twh, 2),
+            'lcoe': round(lcoe, 1),
+            'cost_m': round(cost_m, 1),
+            'cf': round(cf, 3),
+        }
+        annual_cost_m += cost_m
+
+    return deployment, round(annual_cost_m, 1)
+
+
+def compute_active_emission_reduction(company, deployment, passive_emissions_mt):
+    """
+    Compute emission reduction from new clean generation displacing fossil.
+    New clean generation displaces the highest-emitting fossil plants first.
+
+    Returns: additional emission reduction in Mt.
+    """
+    # Total new clean generation
+    new_clean_twh = sum(d['gen_twh'] for d in deployment.values())
+
+    # Get fossil plants sorted by emission intensity (worst first)
+    fossil_plants = [p for p in company['plants'] if p['fuel'] in FOSSIL_FUELS]
+    fossil_plants.sort(key=lambda p: FOSSIL_EMISSION_RATE.get(p['fuel'], 0.5), reverse=True)
+
+    displaced_co2 = 0
+    remaining_twh = new_clean_twh
+
+    for plant in fossil_plants:
+        if remaining_twh <= 0:
+            break
+        plant_gen = plant['gen_twh']
+        displace = min(remaining_twh, plant_gen)
+        emission_rate = FOSSIL_EMISSION_RATE.get(plant['fuel'], 0.5)
+        displaced_co2 += displace * emission_rate  # Mt (since gen is TWh, rate is t/MWh = Mt/TWh)
+        remaining_twh -= displace
+
+    return round(displaced_co2, 2)
+
 
 # ─── PLANT-LEVEL ECONOMICS ───────────────────────────────────────
 
@@ -511,37 +632,150 @@ def find_qt_breakeven(company, step10_data, qt_scenario):
     }
 
 
-def compute_at_qt_gap(company, step10_data):
-    """Compute the AT-QT gap for each AT scenario."""
-    # Company's 2024 CO2 baseline
+def simulate_active_qt(company, step10_data, qt_scenario):
+    """
+    Simulate active QT: company deploys new clean resources alongside passive fleet.
+
+    For each reduction target in the QT sweep:
+    1. Run passive fleet simulation (same as find_qt_breakeven)
+    2. Layer on new clean deployment (solar/wind/battery)
+    3. New clean displaces highest-emitting fossil → reduces fleet emissions
+    4. Net profit = passive profit + new clean revenue - new clean cost
+
+    Returns same structure as find_qt_breakeven but with active deployment data.
+    """
+    df = step10_data['qt'].get(qt_scenario)
+    if df is None:
+        return None
+
+    targets = sorted(df['reduction_target'].unique())
+    fan_emissions = {}
+    fan_profit = {}
+    breakeven_qt = 0.0
+    deployment_timeline = {}  # year → deployment details
+
+    for t in targets:
+        tkey = f'{t:.2f}'
+        # Passive simulation
+        passive_res = simulate_company_scenario(company, step10_data, qt_scenario, reduction_target=t)
+
+        # Active layer: new clean reduces emissions, changes economics
+        active_emissions = []
+        active_profit = []
+
+        for yi, year in enumerate(SIM_YEARS):
+            passive_em = passive_res['fleet_emissions_mt'][yi]
+            passive_prof = passive_res['fleet_profit_m'][yi]
+
+            # Get deployment for this year
+            deployment, deploy_cost_m = compute_active_deployment(company, year)
+
+            # Emission reduction from new clean displacing fossil
+            em_reduction = compute_active_emission_reduction(company, deployment, passive_em)
+            active_em = max(0, passive_em - em_reduction)
+
+            # Revenue from new clean: energy revenue at regional LMP
+            # Use average conditions across the company's ISOs
+            isos = list(set(p['iso'] for p in company['plants']))
+            avg_lmp = 0
+            lmp_count = 0
+            for iso in isos:
+                cond = get_iso_conditions(step10_data, qt_scenario, iso, year, reduction_target=t)
+                if cond:
+                    avg_lmp += cond['avg_lmp']
+                    lmp_count += 1
+            avg_lmp = avg_lmp / lmp_count if lmp_count > 0 else 30
+
+            new_gen_twh = sum(d['gen_twh'] for d in deployment.values())
+            new_energy_rev_m = new_gen_twh * avg_lmp  # $M (TWh × $/MWh)
+
+            # Capacity revenue from new clean
+            new_cap_rev_m = 0
+            for tech, d in deployment.items():
+                elcc = ELCC.get(tech, 0.2)
+                avg_cap_price = sum(CAP_PRICES.get(iso, 0) for iso in isos) / len(isos)
+                new_cap_rev_m += d['cum_mw'] * elcc * avg_cap_price / 1e3
+
+            # Net profit impact: energy rev + capacity rev - LCOE cost
+            net_clean_profit = new_energy_rev_m + new_cap_rev_m - deploy_cost_m
+            active_prof = passive_prof + net_clean_profit
+
+            active_emissions.append(round(active_em, 2))
+            active_profit.append(round(active_prof, 1))
+
+            # Store deployment timeline (only once per year)
+            if tkey == f'{targets[len(targets)//2]:.2f}':  # middle target
+                deployment_timeline[str(year)] = {
+                    'deployment': {tech: d['cum_mw'] for tech, d in deployment.items()},
+                    'new_gen_twh': round(new_gen_twh, 2),
+                    'deploy_cost_m': deploy_cost_m,
+                    'new_revenue_m': round(new_energy_rev_m + new_cap_rev_m, 1),
+                    'em_reduction_mt': em_reduction,
+                }
+
+        fan_emissions[tkey] = active_emissions
+        fan_profit[tkey] = active_profit
+
+        # Active QT breakeven: fleet still profitable at 2050
+        if active_profit[-1] >= 0:
+            breakeven_qt = max(breakeven_qt, t)
+
+    # Fan bands
+    fan_bands = {'p5': [], 'p25': [], 'p50': [], 'p75': [], 'p95': [], 'min': [], 'max': []}
+    for yi in range(len(SIM_YEARS)):
+        vals = [fan_emissions[f'{t:.2f}'][yi] for t in targets if f'{t:.2f}' in fan_emissions]
+        if vals:
+            arr = np.array(vals)
+            fan_bands['p5'].append(round(float(np.percentile(arr, 5)), 2))
+            fan_bands['p25'].append(round(float(np.percentile(arr, 25)), 2))
+            fan_bands['p50'].append(round(float(np.percentile(arr, 50)), 2))
+            fan_bands['p75'].append(round(float(np.percentile(arr, 75)), 2))
+            fan_bands['p95'].append(round(float(np.percentile(arr, 95)), 2))
+            fan_bands['min'].append(round(float(arr.min()), 2))
+            fan_bands['max'].append(round(float(arr.max()), 2))
+
+    return {
+        'reduction_targets': [round(t, 2) for t in targets],
+        'breakeven_qt': round(breakeven_qt, 2),
+        'fan': fan_bands,
+        'emissions_by_target': fan_emissions,
+        'profit_by_target': fan_profit,
+        'deployment_timeline': deployment_timeline,
+    }
+
+
+def compute_at_qt_gap(company, step10_data, passive_qt_results, active_qt_results):
+    """Compute the AT-QT gap for each QT scenario, both passive and active."""
     baseline_mt = company['co2_2024_mt']
-    # AT trajectory: % remaining at each milestone
-    at_trajectory = {2030: 0.43, 2035: 0.18, 2040: 0.12, 2045: 0.06, 2050: 0.0}
+    at_trajectory = {2025: 1.0, 2030: 0.43, 2035: 0.18, 2040: 0.12, 2045: 0.06, 2050: 0.0}
 
     gaps = {}
     for qt_name in QT_SCENARIOS:
-        qt_result = find_qt_breakeven(company, step10_data, qt_name)
-        if not qt_result:
+        passive = passive_qt_results.get(qt_name)
+        active = active_qt_results.get(qt_name)
+        if not passive:
             continue
-        qt_pct = qt_result['breakeven_qt']
 
-        # AT emission targets at each milestone (% reduction from baseline)
-        # QT achievable reduction
-        gap_data = {}
+        milestones = {}
         for yi, year in enumerate(SIM_YEARS):
             at_remaining = at_trajectory.get(year, 1.0)
             at_target_mt = baseline_mt * at_remaining
-            # QT achievable: use median emissions at breakeven QT
-            median_em = qt_result['fan']['p50'][yi] if yi < len(qt_result['fan']['p50']) else baseline_mt
-            gap_data[str(year)] = {
+
+            passive_em = passive['fan']['p50'][yi] if yi < len(passive['fan']['p50']) else baseline_mt
+            active_em = active['fan']['p50'][yi] if active and yi < len(active['fan']['p50']) else passive_em
+
+            milestones[str(year)] = {
                 'at_target_mt': round(at_target_mt, 2),
-                'qt_achievable_mt': round(median_em, 2),
-                'gap_mt': round(max(0, median_em - at_target_mt), 2),
+                'passive_qt_mt': round(passive_em, 2),
+                'active_qt_mt': round(active_em, 2),
+                'passive_gap_mt': round(max(0, passive_em - at_target_mt), 2),
+                'active_gap_mt': round(max(0, active_em - at_target_mt), 2),
             }
 
         gaps[qt_name] = {
-            'breakeven_qt_pct': round(qt_pct * 100, 0),
-            'milestones': gap_data,
+            'passive_qt_pct': round(passive['breakeven_qt'] * 100, 0),
+            'active_qt_pct': round(active['breakeven_qt'] * 100, 0) if active else round(passive['breakeven_qt'] * 100, 0),
+            'milestones': milestones,
         }
 
     return gaps
@@ -619,36 +853,61 @@ def main():
             }
             print(f'em={res["fleet_emissions_mt"][-1]:.1f}Mt, profit=${res["fleet_profit_m"][-1]:.0f}M')
 
-        # QT analysis (parametric sweep + breakeven QT)
+        # QT analysis — passive (existing fleet only)
+        passive_qt = {}
         for qt_name in QT_SCENARIOS:
             if qt_name not in step10_data['qt']:
                 continue
-            print(f'    {qt_name} sweep...', end=' ', flush=True)
+            print(f'    {qt_name} passive sweep...', end=' ', flush=True)
             qt_res = find_qt_breakeven(company, step10_data, qt_name)
             if qt_res:
+                passive_qt[qt_name] = qt_res
                 co_output['qt_analysis'][qt_name] = {
                     'breakeven_qt': qt_res['breakeven_qt'],
                     'reduction_targets': qt_res['reduction_targets'],
                     'fan': qt_res['fan'],
-                    # Only include select targets to keep JS file size manageable
                     'emissions_at_targets': {
                         k: v for k, v in qt_res['emissions_by_target'].items()
                         if float(k) in (0.05, 0.25, 0.50, 0.75, 0.95)
                     },
                 }
-                print(f'QT={qt_res["breakeven_qt"]:.0%}')
+                print(f'passive QT={qt_res["breakeven_qt"]:.0%}')
             else:
                 print('no data')
 
-        # AT-QT gap
+        # QT analysis — active (deploy new clean resources)
+        co_output['active_qt_analysis'] = {}
+        active_qt = {}
+        for qt_name in QT_SCENARIOS:
+            if qt_name not in step10_data['qt']:
+                continue
+            print(f'    {qt_name} active sweep...', end=' ', flush=True)
+            aqt_res = simulate_active_qt(company, step10_data, qt_name)
+            if aqt_res:
+                active_qt[qt_name] = aqt_res
+                co_output['active_qt_analysis'][qt_name] = {
+                    'breakeven_qt': aqt_res['breakeven_qt'],
+                    'reduction_targets': aqt_res['reduction_targets'],
+                    'fan': aqt_res['fan'],
+                    'emissions_at_targets': {
+                        k: v for k, v in aqt_res['emissions_by_target'].items()
+                        if float(k) in (0.05, 0.25, 0.50, 0.75, 0.95)
+                    },
+                    'deployment_timeline': aqt_res['deployment_timeline'],
+                }
+                print(f'active QT={aqt_res["breakeven_qt"]:.0%}')
+            else:
+                print('no data')
+
+        # AT-QT gap (both passive and active)
         print(f'    Computing AT-QT gap...')
-        co_output['at_qt_gap'] = compute_at_qt_gap(company, step10_data)
+        co_output['at_qt_gap'] = compute_at_qt_gap(company, step10_data, passive_qt, active_qt)
 
         output['companies'][cid] = co_output
 
     # Write JS file
     json_str = json.dumps(output, separators=(',', ':'))
-    js_content = f'// Auto-generated by step11_ipp_smartargets.py — do not edit manually\nconst IPP_SMARTARGETS = {json_str};\n'
+    js_content = f'// Auto-generated by step11_ipp_smartargets.py — do not edit manually\nconst IPP_SMARTARGETS_DATA = {json_str};\n'
 
     os.makedirs(os.path.dirname(OUT_JS), exist_ok=True)
     with open(OUT_JS, 'w') as f:
