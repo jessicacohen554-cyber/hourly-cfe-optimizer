@@ -152,19 +152,20 @@
 <!-- SECTION 2: THE SCENARIO FRAMEWORK -->
 <!-- ================================================================== -->
 <div class="section-divider">
-    <h2>The 12-Scenario Framework</h2>
-    <p>A 3-dimensional matrix of decarbonization incentives, technology options, and external conditions</p>
+    <h2>The 8-Scenario Framework</h2>
+    <p>Four scenario families &times; two condition sets: Facilitating vs. Challenging</p>
 </div>
 
 <div class="narrative">
-    <h3>Scenario Design Concept: The 2&times;2 Matrix</h3>
-    <p>SMARTargets uses a parsimonious scenario design built on <strong>three uncertainty dimensions</strong>:</p>
+    <h3>Scenario Design: Three Uncertainty Dimensions</h3>
+    <p>Each scenario represents a different set of <strong>market conditions</strong> &mdash; not a different target. The question each scenario answers: <em>"How clean does the grid get when the market looks like this?"</em></p>
+    <p>The framework is built on <strong>three uncertainty dimensions</strong>:</p>
     <ol>
-        <li><strong>Decarbonization Incentive Scope</strong> &mdash; Power sector only vs. economy-wide net-zero by 2050. This determines whether electrification creates new demand for clean power (economy-wide) or the power sector decarbonizes in isolation.</li>
-        <li><strong>Decarbonization Options</strong> &mdash; Fuller vs. More Limited technology portfolios. Fuller includes CCS, new nuclear, CDR (DAC + BECCS), hydrogen, fossil capacity reserves. More Limited restricts to renewables, storage, existing nuclear, and electrolytic hydrogen only.</li>
-        <li><strong>Other Conditions</strong> &mdash; Facilitating vs. Challenging external factors. Facilitating means lower costs, easier permitting, reference load growth. Challenging means higher costs, constrained builds, data-center-driven load growth (+12% by 2030).</li>
+        <li><strong>Decarbonization Incentive</strong> &mdash; None (reference), power sector net-zero by 2050 (aspirational), or partial clean targets at 70/80/90% (qualified). This determines whether there's a forcing mechanism pushing the grid toward decarbonization.</li>
+        <li><strong>Decarbonization Technology Options</strong> &mdash; Fuller vs. More Limited technology portfolios. Fuller includes DAC, CCS, new nuclear (SMR/advanced), LDES, and Green H&#8322;. More Limited restricts to renewables, batteries, and existing nuclear only &mdash; nuclear stalls, CCS fails, LDES stays pre-commercial.</li>
+        <li><strong>Market Conditions</strong> &mdash; Facilitating vs. Challenging. Facilitating means low clean LCOE, reformed interconnection queues (~5-8 GW/yr/ISO), fast learning curves, and moderate demand growth. Challenging means high clean costs, constrained queues (~2-4 GW/yr/ISO, status quo), slow learning, and high demand growth from AI/data centers.</li>
     </ol>
-    <p>The required scenarios pair <strong>"best case" conditions</strong> (Fuller + Facilitating) with <strong>"worst case" conditions</strong> (More Limited + Challenging) for each incentive scope, plus reference scenarios without emissions constraints. The recommended scenarios fill in the cross-combinations.</p>
+    <p>Each scenario pairs a <strong>technology portfolio</strong> with a <strong>condition set</strong>: Fuller options always get Facilitating conditions (best case) and More Limited always gets Challenging (worst case). This bounds the decision space between "what's achievable at best" and "what you're limited to at worst."</p>
 </div>
 
 <!-- THE SCENARIO MATRIX TABLE -->
@@ -172,122 +173,86 @@
     <thead>
         <tr>
             <th>#</th>
-            <th>Status</th>
             <th>Target Type</th>
             <th>Decarbonization Incentive</th>
             <th>Economy-Wide NZ?</th>
-            <th>Options</th>
-            <th>Other Conditions</th>
+            <th>Decarb Technology Options</th>
+            <th>Market Conditions</th>
+            <th>Carbon Price</th>
         </tr>
     </thead>
     <tbody>
         <tr class="required">
             <td class="scenario-id">R1</td>
-            <td><span class="tag tag-req">Required</span></td>
             <td>Reference</td>
             <td>No CO&#8322; constraint</td>
             <td>No</td>
             <td>N/A</td>
             <td>Facilitating</td>
+            <td>$0</td>
         </tr>
         <tr class="required">
             <td class="scenario-id">R2</td>
-            <td><span class="tag tag-req">Required</span></td>
             <td>Reference</td>
             <td>No CO&#8322; constraint</td>
             <td>No</td>
             <td>N/A</td>
             <td>Challenging</td>
+            <td>$0</td>
         </tr>
         <tr class="required">
             <td class="scenario-id">S1</td>
-            <td><span class="tag tag-req">Required</span></td>
             <td>Aspirational (AT)</td>
             <td>Power sector NZ CO&#8322; by 2050</td>
             <td>No</td>
             <td>Fuller</td>
             <td>Facilitating</td>
+            <td>Yes (carbon price or equivalent)</td>
         </tr>
         <tr class="required">
             <td class="scenario-id">S2</td>
-            <td><span class="tag tag-req">Required</span></td>
             <td>Aspirational (AT)</td>
             <td>Power sector NZ CO&#8322; by 2050</td>
             <td>No</td>
             <td>More Limited</td>
             <td>Challenging</td>
+            <td>Yes (same mechanism)</td>
         </tr>
         <tr class="required">
             <td class="scenario-id">S3</td>
-            <td><span class="tag tag-req">Required</span></td>
             <td>Aspirational (AT)</td>
             <td>Power sector NZ CO&#8322; by 2050</td>
             <td>Yes</td>
             <td>Fuller</td>
             <td>Facilitating</td>
+            <td>Economy-wide carbon price</td>
         </tr>
         <tr class="required">
             <td class="scenario-id">S4</td>
-            <td><span class="tag tag-req">Required</span></td>
             <td>Aspirational (AT)</td>
             <td>Power sector NZ CO&#8322; by 2050</td>
             <td>Yes</td>
             <td>More Limited</td>
             <td>Challenging</td>
+            <td>Economy-wide carbon price</td>
         </tr>
         <tr class="required">
             <td class="scenario-id">Q1</td>
-            <td><span class="tag tag-qt">Required (QT)</span></td>
-            <td>Qualified Target</td>
-            <td>Power sector X, Y, Z% by 2050</td>
+            <td><span class="tag tag-qt">Qualified (QT)</span></td>
+            <td>Power sector 70 / 80 / 90% by 2050</td>
             <td>No</td>
             <td>Fuller</td>
             <td>Facilitating</td>
+            <td>Moderate (or CES mandate)</td>
         </tr>
         <tr class="required">
             <td class="scenario-id">Q2</td>
-            <td><span class="tag tag-qt">Required (QT)</span></td>
-            <td>Qualified Target</td>
-            <td>Power sector X, Y, Z% by 2050</td>
+            <td><span class="tag tag-qt">Qualified (QT)</span></td>
+            <td>Power sector 70 / 80 / 90% by 2050</td>
             <td>No</td>
             <td>More Limited</td>
             <td>Challenging</td>
-        </tr>
-        <tr class="recommended">
-            <td class="scenario-id">S5</td>
-            <td><span class="tag tag-rec">Recommended</span></td>
-            <td>Aspirational (AT)</td>
-            <td>Power sector NZ CO&#8322; by 2050</td>
-            <td>No</td>
-            <td>Fuller</td>
-            <td>Challenging</td>
-        </tr>
-        <tr class="recommended">
-            <td class="scenario-id">S6</td>
-            <td><span class="tag tag-rec">Recommended</span></td>
-            <td>Aspirational (AT)</td>
-            <td>Power sector NZ CO&#8322; by 2050</td>
-            <td>No</td>
-            <td>More Limited</td>
-            <td>Facilitating</td>
-        </tr>
-        <tr class="recommended">
-            <td class="scenario-id">S7</td>
-            <td><span class="tag tag-rec">Recommended</span></td>
-            <td>Aspirational (AT)</td>
-            <td>Power sector NZ CO&#8322; by 2050</td>
-            <td>Yes</td>
-            <td>Fuller</td>
-            <td>Challenging</td>
-        </tr>
-        <tr class="recommended">
-            <td class="scenario-id">S8</td>
-            <td><span class="tag tag-rec">Recommended</span></td>
-            <td>Aspirational (AT)</td>
-            <td>Power sector NZ CO&#8322; by 2050</td>
-            <td>Yes</td>
-            <td>More Limited</td>
-            <td>Facilitating</td>
+            <td>Moderate (or CES mandate)</td>
         </tr>
     </tbody>
 </table>
@@ -298,48 +263,46 @@
 <div class="narrative">
     <h3>Defining the Conditions</h3>
 
-    <h4>Decarbonization Options: Fuller vs. More Limited</h4>
+    <h4>Decarbonization Technology Options: Fuller vs. More Limited</h4>
     <table class="cond-table">
         <thead>
             <tr><th>Category</th><th class="fuller">Fuller Options</th><th class="limited">More Limited Options</th></tr>
         </thead>
         <tbody>
-            <tr><td>Renewables</td><td>Wind, solar, bio, hydro</td><td>Wind, solar, bio, hydro</td></tr>
-            <tr><td>Nuclear</td><td>Extensions + <strong>new advanced nuclear</strong></td><td>Extensions only (no new builds)</td></tr>
-            <tr><td>Fossil</td><td>Gas + coal (declining), <strong>fossil w/ CCS</strong></td><td>No new fossil, no CCS</td></tr>
-            <tr><td>Carbon Removal</td><td><strong>BECCS + DAC</strong></td><td>Not available</td></tr>
-            <tr><td>Storage</td><td>Li-ion, LDES, hydrogen</td><td>Li-ion, LDES, electrolytic H&#8322; only</td></tr>
-            <tr><td>Other</td><td>Low-carbon imports, biopower carbon neutrality</td><td>Renewable fuels only</td></tr>
-            <tr><td>Capacity Reserves</td><td>Fossil reserves permitted (within emissions cap)</td><td>Fossil reserve eligibility declines to zero by 2050</td></tr>
+            <tr><td>DAC Availability</td><td>Available at scenario cost (Low $150 / Med $250 / High $400 per ton) &mdash; grid can lean on DAC at the marginal abatement cost crossover point</td><td>Not available or prohibitively expensive ($600+/ton) &mdash; grid must decarbonize further without offsets</td></tr>
+            <tr><td>CCS Viability</td><td>CCS-CCGT viable, 45Q credit intact ($85/ton), CO&#8322; transport infrastructure builds out</td><td>CCS limited &mdash; storage site constraints, public opposition, 45Q expires or is repealed</td></tr>
+            <tr><td>Nuclear Pathway</td><td>SMR/advanced reactors reach commercial scale (BWRX-300, Xe-100, AP1000). NRC streamlines licensing. Nuclear uprates via 45Y.</td><td>Nuclear stalls &mdash; cost overruns, regulatory delays, public opposition. Extensions only, no new builds.</td></tr>
+            <tr><td>Storage Breadth</td><td>Full suite: 4hr/8hr Li-ion batteries, LDES (100hr iron-air, 50% RTE), Green H&#8322; (1000hr, 35% RTE, &ge;95% thresholds)</td><td>Battery only (4hr/8hr Li-ion). LDES and Green H&#8322; remain pre-commercial, not deployable at scale.</td></tr>
+            <tr><td>Renewables</td><td>Solar, onshore wind, offshore wind, hydro (existing only), geothermal (CAISO EGS expansion)</td><td>Same set, but no geothermal expansion, offshore wind faces permitting delays</td></tr>
         </tbody>
     </table>
 
-    <h4>Other Conditions: Facilitating vs. Challenging</h4>
+    <h4>Market Conditions: Facilitating vs. Challenging</h4>
     <table class="cond-table">
         <thead>
             <tr><th>Factor</th><th class="facilitating">Facilitating</th><th class="challenging">Challenging</th></tr>
         </thead>
         <tbody>
-            <tr><td>Electricity Load Growth</td><td>Reference (population + economic baseline)</td><td>Faster (+12% by 2030 from data centers, AI, EVs)</td></tr>
-            <tr><td>Generation Technology Costs</td><td>Faster cost improvements (default learning curves)</td><td>Slower cost improvements (higher projections)</td></tr>
-            <tr><td>New Capacity Additions</td><td>Economic (all viable capacity can be built)</td><td>Constrained to historical build rates</td></tr>
-            <tr><td>Transmission</td><td>Economic (all viable interregional TX can be built)</td><td>Constrained to historical build rates</td></tr>
-            <tr><td>Fossil Fuel Prices</td><td>Lower (equilibrium supply/demand)</td><td>Higher (supply constraints, pipeline limits)</td></tr>
-            <tr><td>End-Use Technology</td><td>Faster EV/heat pump adoption, lower costs</td><td>Slower adoption, higher costs, range anxiety</td></tr>
+            <tr><td>Demand Growth</td><td>Medium (~1-1.5%/yr from population + GDP baseline)</td><td>High (~2-3%/yr from AI data centers, electrification pressure, crypto mining)</td></tr>
+            <tr><td>Interconnection Queues</td><td>Reformed (~5-8 GW/yr/ISO) &mdash; FERC Order 2023 reforms, cluster studies, faster processing</td><td>Constrained (~2-4 GW/yr/ISO) &mdash; status quo broken process, ~80% project dropout, 5-year average wait (LBNL data)</td></tr>
+            <tr><td>Learning Curves</td><td>Fast &mdash; high learning rate per capacity doubling, strong manufacturing scale-up, global supply chains mature</td><td>Slow &mdash; low learning rate, supply chain bottlenecks, regulatory friction, tariff exposure</td></tr>
+            <tr><td>Starting LCOE (2025)</td><td>Low &mdash; optimistic cost starting point across all clean resources (NREL ATB low projections)</td><td>High &mdash; pessimistic costs, supply chain premiums, trade policy uncertainty</td></tr>
+            <tr><td>New Gas Buildability</td><td>Moderate friction &mdash; ESG lending constraints, siting opposition slow new gas builds</td><td>Low friction &mdash; gas builds freely where profitable, no ESG constraints on financing</td></tr>
+            <tr><td>Transmission</td><td>Low transmission costs, new interregional lines built economically</td><td>High transmission costs, NIMBY opposition, constrained to historical build rates</td></tr>
         </tbody>
     </table>
 
     <div class="callout-warn">
-        <strong>These are intentionally extreme but plausible conditions.</strong> The goal is not to predict the most likely future but to bound the decision space &mdash; identifying what a company <em>could</em> achieve under best-case conditions and what they'd be limited to under worst-case. Real outcomes will fall somewhere between.
+        <strong>These are intentionally extreme but plausible conditions.</strong> The goal is not to predict the most likely future but to bound the decision space &mdash; identifying what a company <em>could</em> achieve under best-case conditions and what they'd be limited to under worst-case. Real outcomes will fall somewhere between. Every Facilitating scenario gets Fuller technology options; every Challenging scenario gets More Limited options.
     </div>
 </div>
 
 <!-- ================================================================== -->
-<!-- SECTION 4: ALL 12 SCENARIO NARRATIVES -->
+<!-- SECTION 4: ALL 8 SCENARIO NARRATIVES -->
 <!-- ================================================================== -->
 <div class="section-divider">
-    <h2>The 12 Scenarios: Detailed Narratives</h2>
-    <p>What each scenario represents as a "state of the world" and what REGEN modeling inputs would look like</p>
+    <h2>The 8 Scenarios: Detailed Narratives</h2>
+    <p>What each scenario represents as a "state of the world" and what our market simulation models</p>
 </div>
 
 <!-- REFERENCE SCENARIOS -->
@@ -347,19 +310,20 @@
     <div class="sc-header">
         <span class="sc-num">R1</span>
         <span class="sc-title">Reference &mdash; Facilitating Conditions</span>
-        <div class="sc-tags"><span class="tag tag-req">Required</span></div>
     </div>
-    <p><strong>State of the world:</strong> No new emissions policy beyond what's already enacted. Current IRA incentives, state RPS mandates, and EPA regulations remain in place but nothing new is added. Technology costs fall faster than expected, permitting is streamlined, and load grows at historical rates. This is the "everything goes right but nobody mandates deeper cuts" future.</p>
-    <p>This scenario establishes the <strong>lower bound of what happens without policy intervention</strong>. REGEN results typically show 25-40% emissions reductions by 2050 from market forces alone &mdash; coal retirement driven by economics, gas CCGT expansion, and continued renewable buildout under IRA credits.</p>
+    <p><em>"Everything goes right, but no one's pushing for decarbonization."</em></p>
+    <p><strong>State of the world:</strong> No new emissions policy beyond what's already enacted. Current IRA incentives (45Y new-build PTC, 45U existing nuclear PTC through 2032, 45Q CCS credit), state RPS mandates, and REC revenue all remain in place. Technology costs start low and fall fast via aggressive learning curves. Interconnection queues are reformed (FERC Order 2023 takes effect), allowing ~5-8 GW/yr/ISO of new capacity. Demand grows at a moderate pace. ESG lending constraints and siting opposition create moderate friction for new gas builds.</p>
+    <p>This scenario establishes the <strong>upper bound of what the market does on its own</strong> &mdash; economics alone, no carbon price. Developers build whatever's profitable at market LMPs. The question is: how clean does the grid get when the wind is at your back but nobody's mandating deeper cuts?</p>
     <div class="sc-inputs">
-        <h5>REGEN Modeling Inputs</h5>
+        <h5>Scenario Inputs</h5>
         <ul>
-            <li>No CO&#8322; emissions constraint imposed</li>
-            <li>Current federal + state policies only (IRA PTCs/ITCs, state RPS)</li>
-            <li>Reference load growth (~1% annually from population/GDP)</li>
-            <li>Default technology cost projections with reference learning curves</li>
-            <li>No constraints on economic capacity or transmission additions</li>
-            <li>Equilibrium fossil fuel prices (no supply disruptions)</li>
+            <li><strong>Carbon price:</strong> $0</li>
+            <li><strong>Policy:</strong> Current &mdash; 45Y (new-build PTC ~$26/MWh), 45U (existing nuclear $15/MWh through 2032), 45Q ($85/ton CCS), state RPS + REC revenue</li>
+            <li><strong>Demand growth:</strong> Medium (region-specific: ~1.4% CAISO, ~1.9% ERCOT, ~2.4% PJM)</li>
+            <li><strong>Interconnection:</strong> Reformed queues (~5-8 GW/yr/ISO)</li>
+            <li><strong>Learning curves:</strong> Fast (high learning rate per capacity doubling)</li>
+            <li><strong>Starting LCOE:</strong> Low (NREL ATB optimistic projections)</li>
+            <li><strong>New gas:</strong> Moderate friction (ESG lending, siting opposition)</li>
         </ul>
     </div>
 </div>
@@ -368,20 +332,20 @@
     <div class="sc-header">
         <span class="sc-num">R2</span>
         <span class="sc-title">Reference &mdash; Challenging Conditions</span>
-        <div class="sc-tags"><span class="tag tag-req">Required</span></div>
     </div>
-    <p><strong>State of the world:</strong> Same as R1 (no new emissions policy) but the external environment is hostile to the energy transition. Data center / AI demand surges electricity consumption. Supply chain constraints slow renewable deployment. Permitting reform stalls. Fossil fuel prices spike from geopolitical disruptions. This is the "headwinds but no mandates" future.</p>
-    <p>Establishes the <strong>reference emissions floor under adverse conditions</strong>. May show modest reductions (15-25%) or even emissions increases if load growth outpaces renewable deployment.</p>
+    <p><em>"Everything's an uphill battle, and no one's pushing either."</em></p>
+    <p><strong>State of the world:</strong> Same current policies as R1, but the external environment is hostile to the transition. AI/data center demand surges electricity consumption. Interconnection queues remain broken (~80% project dropout, 5-year average wait). Supply chain constraints and tariffs keep clean LCOE high. Learning curves are slow. Gas builds freely where profitable &mdash; no ESG or permitting friction. 45Q stays intact, keeping CCS an option at the margin.</p>
+    <p>This is the <strong>"headwinds without mandates"</strong> scenario. High demand + constrained queues + slow learning could mean extended fossil dominance. The question: does high demand growth pull in clean energy (because there's more to build) or extend fossil plant lifetimes (because clean can't connect fast enough)?</p>
     <div class="sc-inputs">
-        <h5>REGEN Modeling Inputs</h5>
+        <h5>Scenario Inputs</h5>
         <ul>
-            <li>No CO&#8322; emissions constraint imposed</li>
-            <li>Current federal + state policies only</li>
-            <li>Faster load growth (+12% by 2030 from data centers; ~2% annually thereafter)</li>
-            <li>Higher technology cost projections; slower battery learning curves</li>
-            <li>Capacity additions constrained to historical build rates</li>
-            <li>Transmission additions constrained to historical build rates</li>
-            <li>Higher fossil fuel prices (supply constraints, pipeline limits)</li>
+            <li><strong>Carbon price:</strong> $0</li>
+            <li><strong>Policy:</strong> Current (45Q stays intact &mdash; CCS still gets its credit)</li>
+            <li><strong>Demand growth:</strong> High (region-specific: ~2.5% CAISO, ~5.5% ERCOT, ~3.6% PJM, ~4.4% NYISO)</li>
+            <li><strong>Interconnection:</strong> Constrained queues (~2-4 GW/yr/ISO, status quo)</li>
+            <li><strong>Learning curves:</strong> Slow (supply chain bottlenecks, regulatory friction)</li>
+            <li><strong>Starting LCOE:</strong> High (tariffs, supply chain premiums)</li>
+            <li><strong>New gas:</strong> Low friction (builds freely where profitable)</li>
         </ul>
     </div>
 </div>
@@ -391,18 +355,22 @@
     <div class="sc-header">
         <span class="sc-num">S1</span>
         <span class="sc-title">Power Sector NZ 2050 / Fuller Options / Facilitating</span>
-        <div class="sc-tags"><span class="tag tag-req">Required</span></div>
     </div>
-    <p><strong>State of the world:</strong> The <em>best-case decarbonization scenario for power-sector-only policy</em>. A federal or regional clean electricity standard mandates net-zero power by 2050, but other sectors (transport, industry, buildings) are not directly constrained. All technologies are available: CCS gets permitted, new nuclear clears NRC review, DAC scales commercially. Costs fall fast, permitting is reformed, and load stays manageable.</p>
-    <p>This represents the <strong>upper bound of what a power company can achieve with sector-specific policy and full technology access</strong>. REGEN typically shows a smooth transition: coal exits by ~2030, gas declines steadily, wind/solar/storage dominate, with CCS and nuclear providing firm clean power. System costs increase modestly (NPV ~$260-280B for a Midwest region).</p>
+    <p><em>"Full commitment to power sector net-zero with every tool available."</em></p>
+    <p><strong>State of the world:</strong> A carbon price or equivalent forcing mechanism (federal CES, cap-and-trade) mandates power sector net-zero CO&#8322; by 2050 &mdash; but other sectors (transport, industry, buildings) are not directly constrained. All technologies are available: CCS-CCGT is viable with 45Q intact, SMR/advanced nuclear clears NRC review, LDES (iron-air) and Green H&#8322; reach commercial scale. DAC is available and should be leveraged at the crossover point from our optimal target exercise &mdash; the grid pushes clean until marginal abatement cost exceeds DAC cost, then DAC handles residual emissions.</p>
+    <p>This represents the <strong>upper bound of what's achievable with sector-specific policy and full technology access</strong>. The transition is smooth: coal exits by economics, gas declines via carbon pricing, wind/solar/storage dominate mid-range thresholds, CCS and nuclear provide firm clean power for the last mile.</p>
     <div class="sc-inputs">
-        <h5>REGEN Modeling Inputs</h5>
+        <h5>Scenario Inputs</h5>
         <ul>
-            <li>Power sector net CO&#8322; emissions must reach zero by 2050 (linear or cost-optimal glide path)</li>
-            <li>No economy-wide carbon price or cross-sector incentive</li>
-            <li>Full technology portfolio: renewables, new nuclear, gas w/ CCS, BECCS, DAC, H&#8322;, fossil capacity reserves</li>
-            <li>Reference load growth, faster cost improvements, economic build rates</li>
-            <li>Lower fossil fuel prices</li>
+            <li><strong>Carbon price:</strong> Yes ($50-100 range, or equivalent CES mandate)</li>
+            <li><strong>Policy:</strong> Current + carbon pricing mechanism</li>
+            <li><strong>Demand growth:</strong> Medium (region-specific Low/Medium rates)</li>
+            <li><strong>Interconnection:</strong> Reformed queues</li>
+            <li><strong>Learning curves:</strong> Fast</li>
+            <li><strong>Starting LCOE:</strong> Low</li>
+            <li><strong>DAC:</strong> Available at scenario cost (Low $150 / Med $250 / High $400 per ton) &mdash; used at marginal MAC crossover</li>
+            <li><strong>CCS:</strong> Viable, 45Q intact, CO&#8322; infrastructure builds out</li>
+            <li><strong>Nuclear:</strong> SMR/advanced pathway open</li>
         </ul>
     </div>
 </div>
@@ -411,18 +379,21 @@
     <div class="sc-header">
         <span class="sc-num">S2</span>
         <span class="sc-title">Power Sector NZ 2050 / More Limited Options / Challenging</span>
-        <div class="sc-tags"><span class="tag tag-req">Required</span></div>
     </div>
-    <p><strong>State of the world:</strong> The <em>worst-case decarbonization scenario for power-sector-only policy</em>. The same net-zero-by-2050 mandate exists but CCS fails to scale commercially, new nuclear is blocked by permitting and cost overruns, and CDR remains too expensive. Meanwhile, AI-driven load growth surges, supply chains are constrained, and transmission buildout hits NIMBY opposition. The power sector must decarbonize using mostly renewables and storage while serving rapidly growing demand.</p>
-    <p>This is the <strong>"stress test" scenario</strong> &mdash; what happens when the ambition is high but the tools and conditions are limited. REGEN shows massive solar/wind/storage buildout (potentially 5&times; current capacity), steep electricity price increases (potentially +370% by 2035), and significant reliability challenges from high variable renewable penetration.</p>
+    <p><em>"Same NZ mandate, but the toolkit is constrained and the headwinds are real."</em></p>
+    <p><strong>State of the world:</strong> The same net-zero-by-2050 forcing mechanism exists, but CCS fails to scale commercially (storage site constraints, pipeline opposition, 45Q expires). New nuclear is blocked by cost overruns and NRC delays. DAC is not available or prohibitively expensive ($600+/ton) &mdash; the grid must decarbonize deeper without offset options. Meanwhile, AI-driven demand growth surges, interconnection queues remain broken, and supply chains keep costs high.</p>
+    <p>This is the <strong>"stress test"</strong> &mdash; what happens when NZ is mandated but the tools are limited and conditions are hostile. The grid must get there on renewables, batteries, and existing nuclear alone. The cost premium over S1 quantifies the value of keeping technology options open.</p>
     <div class="sc-inputs">
-        <h5>REGEN Modeling Inputs</h5>
+        <h5>Scenario Inputs</h5>
         <ul>
-            <li>Power sector net CO&#8322; emissions must reach zero by 2050</li>
-            <li>No economy-wide carbon price</li>
-            <li>Limited technology: renewables, existing nuclear extensions, storage, electrolytic H&#8322; only</li>
-            <li>No CCS, no CDR, no new nuclear, fossil capacity reserves decline to zero by 2050</li>
-            <li>Faster load growth, slower cost improvements, constrained build rates, higher fuel prices</li>
+            <li><strong>Carbon price:</strong> Yes (same mechanism as S1, biting harder through headwinds)</li>
+            <li><strong>Demand growth:</strong> High (region-specific High rates)</li>
+            <li><strong>Interconnection:</strong> Constrained queues (status quo)</li>
+            <li><strong>Learning curves:</strong> Slow</li>
+            <li><strong>Starting LCOE:</strong> High</li>
+            <li><strong>DAC:</strong> Not available ($600+/ton &mdash; grid must decarbonize without offsets)</li>
+            <li><strong>CCS:</strong> Limited (storage constraints, 45Q at risk)</li>
+            <li><strong>Nuclear:</strong> Stalls (cost overruns, NRC delays)</li>
         </ul>
     </div>
 </div>
@@ -432,18 +403,25 @@
     <div class="sc-header">
         <span class="sc-num">S3</span>
         <span class="sc-title">Economy-Wide NZ 2050 / Fuller Options / Facilitating</span>
-        <div class="sc-tags"><span class="tag tag-req">Required</span></div>
     </div>
-    <p><strong>State of the world:</strong> The <em>most aggressive decarbonization future</em>. An economy-wide carbon price or equivalent policy drives all sectors toward net-zero by 2050. Buildings electrify. Transport shifts to EVs. Industry adopts clean hydrogen and CCS. This creates <strong>massive new demand for clean electricity</strong>, pulling investment into the power sector and accelerating its decarbonization &mdash; potentially reaching net-zero power by ~2035, well ahead of the 2050 target.</p>
-    <p>This is the most impactful scenario for power companies because <strong>economy-wide policy creates the revenue stream that finances the transition</strong>. New clean electricity demand from electrification drives capacity additions of 280-380 GW regionally. System costs are highest ($350-376B NPV) but offset by revenue from serving growing clean power demand.</p>
+    <p><em>"The whole economy goes net-zero. The grid is the backbone."</em></p>
+    <p><strong>State of the world:</strong> An economy-wide carbon price drives all sectors toward net-zero by 2050. Buildings electrify (heat pumps). Transport shifts to EVs. Industry adopts clean hydrogen and CCS. This creates <strong>massive new demand for clean electricity</strong> that's not optional &mdash; it's policy-mandated electrification.</p>
+    <p><strong>S3 differs from S1 in three specific ways, not just "more demand":</strong></p>
+    <ol>
+        <li><strong>Demand growth is mandatory and high</strong> even under facilitating conditions (~High region-specific rates) &mdash; economy-wide NZ requires electrifying everything. This isn't "maybe demand grows" &mdash; it's policy-required.</li>
+        <li><strong>DAC budget is shared across the whole economy</strong> &mdash; in S1, the grid uses DAC for its residual emissions and that's it. In S3, industry (steel, cement), transport (aviation, shipping), and agriculture also need DAC for <em>their</em> residual emissions. The grid's "share" of available DAC capacity shrinks, meaning the grid may need to push to a <em>higher</em> clean percentage.</li>
+        <li><strong>Green H&#8322; production load</strong> &mdash; economy-wide NZ requires green hydrogen for steel, chemicals, and shipping fuel. H&#8322; electrolysis consumes clean electricity, adding ~20-30% demand on top of direct electrification.</li>
+    </ol>
     <div class="sc-inputs">
-        <h5>REGEN Modeling Inputs</h5>
+        <h5>Scenario Inputs</h5>
         <ul>
-            <li>Economy-wide net CO&#8322; emissions must reach zero by 2050</li>
-            <li>Cross-sector carbon price or equivalent policy applied to all sectors</li>
-            <li>Full technology portfolio including CCS, new nuclear, CDR, hydrogen</li>
-            <li>End-use electrification driven by carbon price (EVs, heat pumps, industrial electrification)</li>
-            <li>Reference load growth, faster cost improvements, economic build rates</li>
+            <li><strong>Carbon price:</strong> Economy-wide (higher signal than power-only)</li>
+            <li><strong>Demand growth:</strong> High (~High region-specific rates &mdash; mandatory electrification)</li>
+            <li><strong>H&#8322; load:</strong> Significant &mdash; electrolysis demand on top of direct electricity load</li>
+            <li><strong>Interconnection:</strong> Reformed queues (economy-wide urgency accelerates reform)</li>
+            <li><strong>Learning curves:</strong> Fast (economy-wide deployment accelerates learning across sectors)</li>
+            <li><strong>Starting LCOE:</strong> Low</li>
+            <li><strong>DAC:</strong> Available, but shared &mdash; grid gets a fraction of total DAC capacity</li>
         </ul>
     </div>
 </div>
@@ -452,18 +430,21 @@
     <div class="sc-header">
         <span class="sc-num">S4</span>
         <span class="sc-title">Economy-Wide NZ 2050 / More Limited Options / Challenging</span>
-        <div class="sc-tags"><span class="tag tag-req">Required</span></div>
     </div>
-    <p><strong>State of the world:</strong> Economy-wide net-zero mandate exists, but the transition is painful. CCS and new nuclear are blocked. DAC remains uneconomic. Load growth is extreme (data centers + electrification). Supply chains are constrained. This is the <strong>"hardest possible path to net-zero"</strong> &mdash; maximum ambition meets maximum friction.</p>
-    <p>REGEN results show the most extreme buildout requirements: potentially 5-7&times; current renewable capacity, 600+ GW of storage, wholesale electricity price increases of 300-400% by 2035. This scenario identifies the <strong>upper bound of transition cost and risk</strong> and highlights the value of having more technology options available.</p>
+    <p><em>"The hardest scenario. Everything electrifies, nothing's easy."</em></p>
+    <p><strong>State of the world:</strong> Economy-wide NZ mandate exists, but the transition is painful. CCS and new nuclear are blocked. DAC is not available &mdash; the grid must go nearly all the way without offsets. Demand growth is extreme (data centers + mandatory electrification + H&#8322; production compounding under constrained grid). Supply chains are constrained. Interconnection queues remain broken &mdash; the worst combination: massive demand + can't build fast enough.</p>
+    <p>This scenario tests whether economy-wide NZ is even <strong>physically achievable</strong> under adverse conditions, or if something has to give. The cost premium over S3 reveals the value of technology optionality and enabling conditions.</p>
     <div class="sc-inputs">
-        <h5>REGEN Modeling Inputs</h5>
+        <h5>Scenario Inputs</h5>
         <ul>
-            <li>Economy-wide net CO&#8322; emissions must reach zero by 2050</li>
-            <li>Cross-sector carbon price, but no CCS, no new nuclear, no CDR</li>
-            <li>Renewables, existing nuclear, storage, electrolytic H&#8322; only</li>
-            <li>Faster load growth (data centers + electrification compounding)</li>
-            <li>Slower cost improvements, constrained build rates, higher fuel prices</li>
+            <li><strong>Carbon price:</strong> Economy-wide</li>
+            <li><strong>Demand growth:</strong> Very high (~High region-specific rates + H&#8322; + aggressive electrification)</li>
+            <li><strong>Interconnection:</strong> Constrained queues (massive demand, can't build fast enough)</li>
+            <li><strong>Learning curves:</strong> Slow</li>
+            <li><strong>Starting LCOE:</strong> High</li>
+            <li><strong>DAC:</strong> Not available &mdash; grid must decarbonize without offsets</li>
+            <li><strong>CCS/Nuclear:</strong> Limited / stalled</li>
+            <li><strong>H&#8322; load:</strong> Same or higher (no alternative to green H&#8322; under economy-wide NZ)</li>
         </ul>
     </div>
 </div>
@@ -472,19 +453,28 @@
 <div class="scenario-detail">
     <div class="sc-header">
         <span class="sc-num">Q1</span>
-        <span class="sc-title">Qualified Targets (X, Y, Z%) / Fuller Options / Facilitating</span>
-        <div class="sc-tags"><span class="tag tag-qt">Required (QT)</span></div>
+        <span class="sc-title">Qualified Targets (70/80/90%) / Fuller Options / Facilitating</span>
+        <div class="sc-tags"><span class="tag tag-qt">Qualified Target</span></div>
     </div>
-    <p><strong>State of the world:</strong> Same favorable conditions as S1, but instead of mandating net-zero, the company evaluates <em>incremental reduction levels</em> (e.g., 30%, 50%, 80% below 2015 by 2050) to understand the marginal cost and system implications of increasing ambition. These results let the company identify the <strong>highest reduction level they can commit to without enabling conditions</strong>.</p>
-    <p>By plotting incremental costs, prices, and capacity needs against reduction levels, the company constructs a <strong>marginal abatement curve for their own system</strong>. The QT is typically set where marginal costs begin to accelerate sharply &mdash; often around 60-80% reduction under Fuller/Facilitating conditions.</p>
+    <p><em>"Realistic near-term policy &mdash; hit 70/80/90% clean, not 100%."</em></p>
+    <p><strong>State of the world:</strong> A moderate forcing mechanism (expanded CES, RPS tightening, moderate carbon price) targets a <em>specific</em> clean energy percentage, not full NZ. Gas retains a permanent ~10-30% role. The expensive last-mile resources (LDES, Green H&#8322;, potentially new nuclear) may not be needed &mdash; the forcing mechanism stops before the cost curve steepens.</p>
+    <p><strong>For IPPs, Q scenarios are the realistic near-term business case.</strong> Most state clean energy standards target 80-100% by 2040-2050. These scenarios tell IPPs: what gets built under plausible 2025-2035 policy? Solar, wind, and batteries dominate. Some firm clean enters at aggressive targets (90%+). Marginal abatement cost stays well below DAC cost, so the portfolio stop doesn't bind.</p>
+    <p>Run at <strong>three target levels</strong> to bracket existing state CES/RPS standards:</p>
+    <ul>
+        <li><strong>70%</strong> &mdash; below most ambitious state targets, tests minimum viable policy</li>
+        <li><strong>80%</strong> &mdash; matches many state 2040 targets (CA, NY, NJ, VA)</li>
+        <li><strong>90%</strong> &mdash; stretches toward but doesn't require last-mile heroics</li>
+    </ul>
     <div class="sc-inputs">
-        <h5>REGEN Modeling Inputs</h5>
+        <h5>Scenario Inputs</h5>
         <ul>
-            <li>Multiple runs at power sector CO&#8322; reduction targets: 30%, 50%, 80% from 2015 levels by 2050</li>
-            <li>No economy-wide policy (power sector only)</li>
-            <li>Full technology portfolio available</li>
-            <li>Reference load, faster costs, economic builds</li>
-            <li>Results compared to Reference (R1) and AT (S1) to construct incremental implication curves</li>
+            <li><strong>Carbon price:</strong> Moderate (or CES mandate)</li>
+            <li><strong>Demand growth:</strong> Medium (region-specific)</li>
+            <li><strong>Interconnection:</strong> Reformed queues</li>
+            <li><strong>Learning curves:</strong> Fast</li>
+            <li><strong>Starting LCOE:</strong> Low</li>
+            <li><strong>All technology available</strong> but extreme options (LDES, H&#8322;) may not be economically selected</li>
+            <li><strong>Key output:</strong> Which resources are "no-regrets" across all three target levels?</li>
         </ul>
     </div>
 </div>
@@ -492,90 +482,21 @@
 <div class="scenario-detail">
     <div class="sc-header">
         <span class="sc-num">Q2</span>
-        <span class="sc-title">Qualified Targets (X, Y, Z%) / More Limited / Challenging</span>
-        <div class="sc-tags"><span class="tag tag-qt">Required (QT)</span></div>
+        <span class="sc-title">Qualified Targets (70/80/90%) / More Limited / Challenging</span>
+        <div class="sc-tags"><span class="tag tag-qt">Qualified Target</span></div>
     </div>
-    <p><strong>State of the world:</strong> Same incremental reduction analysis as Q1 but under worst-case conditions. This identifies what the company can achieve when <em>nothing goes right</em> &mdash; limited technology, hostile external conditions, but the company still wants to reduce emissions as much as prudently possible.</p>
-    <p>The QT under challenging conditions is typically lower than under facilitating conditions (e.g., 40-60% vs. 60-80%). The <strong>gap between the Fuller/Facilitating QT and the More Limited/Challenging QT defines the company's "ambition range"</strong> &mdash; the zone between what's achievable at best and worst.</p>
+    <p><em>"Same realistic targets, harder path."</em></p>
+    <p><strong>State of the world:</strong> Same incremental reduction targets as Q1 but under worst-case conditions. Nuclear stalls, LDES stays pre-commercial, CCS is limited. High demand growth compounds with constrained queues and slow learning. The technology portfolio is battery-centric.</p>
+    <p>This scenario tests whether realistic QTs (70/80/90%) are even <strong>achievable under adversity</strong> or if they require facilitating conditions too. The gap between the Q1 and Q2 outcomes defines the company's <strong>"ambition range"</strong> &mdash; the zone between what's achievable at best vs. worst. The QT under challenging conditions is typically lower (e.g., 60-75% vs. 80-90% under facilitating).</p>
     <div class="sc-inputs">
-        <h5>REGEN Modeling Inputs</h5>
+        <h5>Scenario Inputs</h5>
         <ul>
-            <li>Multiple runs at power sector CO&#8322; reduction targets: 30%, 50%, 80% from 2015 levels by 2050</li>
-            <li>No economy-wide policy</li>
-            <li>Limited technology: renewables, existing nuclear, storage only</li>
-            <li>Faster load growth, slower costs, constrained builds, higher fuel prices</li>
-            <li>Results compared to Reference (R2) and AT (S2)</li>
-        </ul>
-    </div>
-</div>
-
-<!-- RECOMMENDED SCENARIOS -->
-<div class="scenario-detail">
-    <div class="sc-header">
-        <span class="sc-num">S5</span>
-        <span class="sc-title">Power Sector NZ 2050 / Fuller Options / Challenging</span>
-        <div class="sc-tags"><span class="tag tag-rec">Recommended</span></div>
-    </div>
-    <p><strong>State of the world:</strong> Net-zero mandate with full technology access, but the external environment is difficult. CCS and nuclear are <em>available</em> but face headwinds: high costs, slow permitting, constrained supply chains. Load grows fast. This tests whether <strong>having the right tools matters even when conditions are hostile</strong>.</p>
-    <p>Results typically show that Fuller options significantly reduce transition costs even under Challenging conditions &mdash; highlighting the risk management value of keeping technology options open.</p>
-    <div class="sc-inputs">
-        <h5>REGEN Modeling Inputs</h5>
-        <ul>
-            <li>Power sector net-zero by 2050</li>
-            <li>Full technology portfolio</li>
-            <li>Faster load growth, slower cost improvements, constrained builds, higher fuel prices</li>
-        </ul>
-    </div>
-</div>
-
-<div class="scenario-detail">
-    <div class="sc-header">
-        <span class="sc-num">S6</span>
-        <span class="sc-title">Power Sector NZ 2050 / More Limited Options / Facilitating</span>
-        <div class="sc-tags"><span class="tag tag-rec">Recommended</span></div>
-    </div>
-    <p><strong>State of the world:</strong> Net-zero mandate without CCS or new nuclear, but conditions are favorable &mdash; costs fall fast, builds are unconstrained, load is manageable. This tests whether <strong>favorable conditions can compensate for limited technology</strong>.</p>
-    <p>Results show that even with favorable conditions, removing CCS/nuclear/CDR significantly increases system costs compared to S1, though the transition is more manageable than S2.</p>
-    <div class="sc-inputs">
-        <h5>REGEN Modeling Inputs</h5>
-        <ul>
-            <li>Power sector net-zero by 2050</li>
-            <li>Limited technology (no CCS, no new nuclear, no CDR)</li>
-            <li>Reference load, faster costs, economic builds, lower fuel prices</li>
-        </ul>
-    </div>
-</div>
-
-<div class="scenario-detail">
-    <div class="sc-header">
-        <span class="sc-num">S7</span>
-        <span class="sc-title">Economy-Wide NZ 2050 / Fuller Options / Challenging</span>
-        <div class="sc-tags"><span class="tag tag-rec">Recommended</span></div>
-    </div>
-    <p><strong>State of the world:</strong> Maximum policy ambition (economy-wide NZ) with full technology but hostile conditions. This is the "ambitious policy meets real-world friction" scenario. Load growth is extreme because electrification + data centers compound. But CCS and nuclear help manage the transition.</p>
-    <div class="sc-inputs">
-        <h5>REGEN Modeling Inputs</h5>
-        <ul>
-            <li>Economy-wide net-zero by 2050; cross-sector carbon price</li>
-            <li>Full technology portfolio</li>
-            <li>Faster load growth, slower cost improvements, constrained builds</li>
-        </ul>
-    </div>
-</div>
-
-<div class="scenario-detail">
-    <div class="sc-header">
-        <span class="sc-num">S8</span>
-        <span class="sc-title">Economy-Wide NZ 2050 / More Limited Options / Facilitating</span>
-        <div class="sc-tags"><span class="tag tag-rec">Recommended</span></div>
-    </div>
-    <p><strong>State of the world:</strong> Maximum policy ambition but without CCS/nuclear, offset by favorable conditions. Tests whether an economy-wide transition is feasible on renewables and storage alone when everything else goes right.</p>
-    <div class="sc-inputs">
-        <h5>REGEN Modeling Inputs</h5>
-        <ul>
-            <li>Economy-wide net-zero by 2050; cross-sector carbon price</li>
-            <li>Limited technology (renewables, storage, existing nuclear only)</li>
-            <li>Reference load, faster costs, economic builds</li>
+            <li><strong>Carbon price:</strong> Moderate (or CES mandate)</li>
+            <li><strong>Demand growth:</strong> High (region-specific)</li>
+            <li><strong>Interconnection:</strong> Constrained queues</li>
+            <li><strong>Learning curves:</strong> Slow</li>
+            <li><strong>Starting LCOE:</strong> High</li>
+            <li><strong>Technology:</strong> Battery-centric (nuclear stalls, LDES pre-commercial, CCS limited)</li>
         </ul>
     </div>
 </div>
@@ -585,7 +506,7 @@
 <!-- ================================================================== -->
 <div class="section-divider">
     <h2>Applying SMARTargets to IPP Fleets</h2>
-    <p>How conditions differ for Vistra, Constellation, NRG, and other merchant generators</p>
+    <p>How conditions differ for Vistra, Constellation, NRG, and other merchant generators under our 8-scenario framework</p>
 </div>
 
 <div class="narrative">
@@ -721,111 +642,127 @@
 </div>
 
 <!-- ================================================================== -->
-<!-- SECTION 7: CAN OUR MODEL APPROXIMATE REGEN? -->
+<!-- SECTION 7: OUR MODEL vs REGEN -->
 <!-- ================================================================== -->
 <div class="section-divider">
-    <h2>Can Our Model Approximate REGEN Outcomes?</h2>
-    <p>Mapping the hourly CFE optimizer's capabilities to SMARTargets scenario requirements</p>
+    <h2>Our Market Simulation vs. REGEN</h2>
+    <p>How our hourly dispatch model maps to the SMARTargets methodology &mdash; and where it extends beyond REGEN</p>
 </div>
 
 <div class="narrative">
-    <h3>What REGEN Does That We Can Approximate</h3>
-    <p>US-REGEN is a full economy-wide capacity expansion model with endogenous technology choice, fuel markets, and cross-sector interactions. Our hourly CFE optimizer is a <strong>physics-based dispatch and procurement model</strong>. They solve different problems, but there are meaningful overlaps:</p>
+    <h3>EPRI Recommends US-REGEN &mdash; We Build Something Complementary</h3>
+    <p>EPRI's SMARTargets methodology recommends using <strong>US-REGEN</strong>, a full economy-wide capacity expansion model that combines electricity dispatch, end-use technology choice, fuel markets, and emissions constraints. Our model is a <strong>market simulation built on hourly physics-based dispatch</strong> across 7 ISOs with 8,760-hour granularity. They ask different questions but produce comparable outputs for the power sector scenarios.</p>
+
+    <p><strong>Where REGEN results are available</strong>, they provide useful calibration benchmarks. REGEN typically shows:</p>
+    <ul>
+        <li><strong>R1/R2 (Reference):</strong> 25-40% emissions reductions by 2050 from market forces alone &mdash; coal retirement driven by economics, gas CCGT expansion, continued renewable buildout under IRA credits. Under challenging conditions (R2), potentially only 15-25% reductions if load growth outpaces clean deployment.</li>
+        <li><strong>S1 (Fuller/Facilitating NZ):</strong> Smooth transition &mdash; coal exits by ~2030, gas declines steadily, CCS and nuclear provide firm clean power. System costs increase modestly.</li>
+        <li><strong>S2 (Limited/Challenging NZ):</strong> Massive solar/wind/storage buildout (potentially 5&times; current capacity), steep electricity price increases (potentially +370% by 2035), significant reliability challenges from high VRE penetration.</li>
+        <li><strong>S3 (Economy-wide Fuller):</strong> Power sector potentially reaches NZ by ~2035 (ahead of 2050 target) because economy-wide carbon price creates the revenue stream that finances the transition. Capacity additions of 280-380 GW regionally.</li>
+        <li><strong>S4 (Economy-wide Limited):</strong> Most extreme buildout: 5-7&times; current renewable capacity, 600+ GW of storage, wholesale prices up 300-400% by 2035. Tests whether NZ is even physically achievable.</li>
+    </ul>
 </div>
 
 <div class="model-map">
     <div class="mm-card">
         <h5>Merit-Order Fossil Dispatch</h5>
-        <p><span class="match">Strong match.</span> Our Step 5A CO&#8322; model uses the same merit-order retirement logic as REGEN: coal retires first, then oil, then gas. We model dispatch decline curves across all 7 ISOs with 8,760-hour granularity.</p>
+        <p><span class="match">Strong match.</span> Our Step 5A CO&#8322; model uses the same merit-order retirement logic: coal retires first, then oil, then gas. 8,760-hour dispatch across all 7 ISOs. Comparable to REGEN's power sector dispatch module.</p>
     </div>
     <div class="mm-card">
         <h5>Technology Portfolio Variation</h5>
-        <p><span class="match">Strong match.</span> Our 5,832-scenario sensitivity framework already varies renewable costs (L/M/H), firm generation costs, storage costs, and CCS availability. This maps directly to the Fuller/More Limited dimension.</p>
+        <p><span class="match">Strong match.</span> Our 5,832-scenario sensitivity framework (17,496 for CAISO) varies renewable costs, firm gen costs, storage, CCS, and transmission across L/M/H. Maps directly to Fuller/More Limited dimension.</p>
     </div>
     <div class="mm-card">
         <h5>Regional Heterogeneity</h5>
-        <p><span class="match">Strong match.</span> We model all 7 ISOs independently with regional generation profiles, emission factors, and resource mixes. This captures the regional variation REGEN models at the state/NERC level.</p>
-    </div>
-    <div class="mm-card">
-        <h5>Emissions Reduction Pathways</h5>
-        <p><span class="match">Strong match.</span> Our 21 CFE thresholds (10% to &ge;99.99%) directly map to emissions reduction levels. Each threshold produces a specific emissions intensity reduction and total CO&#8322; abatement.</p>
+        <p><span class="match">Strong match.</span> 7 ISOs modeled independently with regional generation profiles, emission factors, resource mixes, and region-specific demand growth rates. Captures regional variation REGEN models at state/NERC level.</p>
     </div>
     <div class="mm-card">
         <h5>Cost-Optimal Resource Mix</h5>
-        <p><span class="match">Strong match.</span> Our Step 3 co-optimization finds the minimum-cost resource mix for each threshold &times; scenario combination. This is analogous to REGEN's capacity expansion optimization.</p>
+        <p><span class="match">Strong match.</span> Step 3 co-optimization finds minimum-cost resource mix for each threshold &times; scenario. Analogous to REGEN's capacity expansion, with the advantage of 21 clean energy thresholds (10% to &ge;99.99%).</p>
     </div>
     <div class="mm-card">
-        <h5>Demand Growth Scenarios</h5>
-        <p><span class="partial">Partial match.</span> Our Track 2/3 (newbuild/cost-to-replace) model 25-year demand growth at 3 rates (0.5%, 1.0%, 2.0%/yr). We don't model electrification-driven demand (the economy-wide scenarios), but we can proxy it with high growth rates.</p>
+        <h5>Demand Growth &amp; Learning Curves</h5>
+        <p><span class="match">Strong match.</span> Region-specific demand growth rates (e.g., ERCOT High = 5.5%/yr, PJM High = 3.6%/yr) already calibrated to AI/electrification scenarios. Endogenous Wright's Law learning curves (deployment-based, not time-based) for nuclear, CCS, LDES, H&#8322;.</p>
+    </div>
+    <div class="mm-card">
+        <h5>Interconnection Queue Constraints</h5>
+        <p><span class="match">New capability.</span> REGEN uses "constrained to historical build rates" as a proxy. Our model explicitly models max GW/yr/ISO queue throughput with project prioritization by profit margin. More granular than REGEN's approach.</p>
+    </div>
+    <div class="mm-card">
+        <h5>LMP &amp; Revenue Feedback</h5>
+        <p><span class="partial">Partial match.</span> Step 5B synthetic LMP from merit-order fossil stack captures price formation and revenue cannibalization. REGEN additionally endogenizes capacity market clearing prices and cross-sector fuel market equilibrium.</p>
     </div>
     <div class="mm-card">
         <h5>Economy-Wide Interactions</h5>
-        <p><span class="gap">Gap.</span> We don't model cross-sector interactions (transport electrification driving power demand, industrial hydrogen demand, building electrification). REGEN's economy-wide scenarios (S3/S4/S7/S8) capture effects we can only approximate through demand growth assumptions.</p>
-    </div>
-    <div class="mm-card">
-        <h5>Wholesale Price Projections</h5>
-        <p><span class="partial">Partial match.</span> Our Step 5B synthetic LMP model captures merit-order price formation, but doesn't model capacity market revenues, scarcity pricing dynamics, or carbon price pass-through that REGEN endogenizes.</p>
+        <p><span class="gap">Gap.</span> We don't model cross-sector feedback loops (transport electrification &rarr; power demand, industrial H&#8322; demand, building electrification &rarr; load shape changes). S3/S4 economy-wide effects are proxied through high demand growth rates + H&#8322; load adders.</p>
     </div>
 </div>
 
 <div class="narrative">
-    <h3>Proposed Approach: Mapping Our Model to SMARTargets Scenarios</h3>
-    <p>We can construct <strong>reasonable approximations</strong> of each scenario using our existing pipeline outputs:</p>
+    <h3>Our Approach: Market Simulation with Profit-Driven Deployment</h3>
+    <p>Unlike REGEN's central planner optimization, our SMARTargets module uses a <strong>market simulation</strong> where developers deploy resources based on profitability. The grid gets as clean as the market incentives allow:</p>
 
     <table class="cond-table">
         <thead>
-            <tr><th>SMARTargets Scenario</th><th>Our Model Mapping</th><th>Fidelity</th></tr>
+            <tr><th>SMARTargets Scenario</th><th>Our Model Configuration</th><th>Fidelity vs. REGEN</th></tr>
         </thead>
         <tbody>
             <tr>
-                <td><strong>R1/R2</strong> (Reference)</td>
-                <td>Step 5A CO&#8322; dispatch model at current policy baseline. R1 = P50 demand growth; R2 = P90 demand growth. No procurement beyond current clean capacity.</td>
+                <td><strong>R1</strong> (Reference / Facilitating)</td>
+                <td>Market simulation with $0 carbon price, current policy (45Y/45U/45Q + REC), Low LCOE, fast learning, reformed queues (~5-8 GW/yr/ISO), Medium demand growth. Deploy whatever's profitable at market LMPs.</td>
+                <td class="facilitating">High</td>
+            </tr>
+            <tr>
+                <td><strong>R2</strong> (Reference / Challenging)</td>
+                <td>$0 carbon price, current policy (45Q intact), High LCOE, slow learning, constrained queues (~2-4 GW/yr/ISO), High demand growth. Gas builds freely. Tests extended fossil dominance.</td>
                 <td class="facilitating">High</td>
             </tr>
             <tr>
                 <td><strong>S1</strong> (Power NZ / Fuller / Facilitating)</td>
-                <td>Step 3 cost optimization at 99.99% threshold with Low renewable + Low firm costs (cheapest path). Fuller = include CCS toggle ON, 45Q ON. Use P50 demand growth.</td>
+                <td>Carbon price forcing + Low LCOE + fast learning + reformed queues + Medium demand. Full toolkit (CCS, nuclear, DAC at crossover). DAC leveraged at marginal MAC crossover point from optimal target exercise.</td>
                 <td class="facilitating">High</td>
             </tr>
             <tr>
                 <td><strong>S2</strong> (Power NZ / Limited / Challenging)</td>
-                <td>Step 3 at 99.99% with High renewable + High firm costs. More Limited = CCS toggle OFF. P90 demand growth. Transmission = None/Low.</td>
+                <td>Carbon price forcing + High LCOE + slow learning + constrained queues + High demand. No DAC, limited CCS, nuclear stalls. Battery-centric. Stress test.</td>
                 <td class="facilitating">High</td>
             </tr>
             <tr>
                 <td><strong>S3</strong> (Economy NZ / Fuller / Facilitating)</td>
-                <td>S1 settings but with P90 demand growth (proxying electrification-driven demand increase). Add newbuild Track 2 analysis at 2.0%/yr growth rate.</td>
-                <td class="challenging">Medium</td>
+                <td>Economy-wide carbon price + High demand (mandatory electrification) + H&#8322; load adder + shared DAC budget + Low LCOE + fast learning + reformed queues. Economy-wide effects proxied through demand + H&#8322;.</td>
+                <td class="challenging">Medium &mdash; economy-wide feedback loops not captured</td>
             </tr>
             <tr>
                 <td><strong>S4</strong> (Economy NZ / Limited / Challenging)</td>
-                <td>S2 settings but with maximum demand growth. Track 2 at 2.0%/yr, no CCS, high costs. This is our "stress test" scenario.</td>
-                <td class="challenging">Medium</td>
+                <td>Economy-wide carbon price + very high demand + H&#8322; load + no DAC + High LCOE + slow learning + constrained queues. The feasibility stress test.</td>
+                <td class="challenging">Medium &mdash; same economy-wide gap</td>
             </tr>
             <tr>
-                <td><strong>Q1/Q2</strong> (Qualified Targets)</td>
-                <td>Run Step 3 at thresholds 50%, 65%, 80%, 90%, 95% and plot incremental cost/capacity curves. Q1 = Low costs; Q2 = High costs. The "elbow" identifies the QT.</td>
+                <td><strong>Q1</strong> (70/80/90% / Fuller / Facilitating)</td>
+                <td>Moderate forcing to specific thresholds (70%, 80%, 90%). Low LCOE, fast learning, reformed queues, Medium demand. Identify "no-regrets" resources across all three levels. Construct marginal cost curve to find QT "elbow."</td>
                 <td class="facilitating">High</td>
             </tr>
             <tr>
-                <td><strong>S5-S8</strong> (Recommended cross-combos)</td>
-                <td>Mix and match from above: S5 = Fuller + P90 growth; S6 = Limited + P50 growth; etc.</td>
+                <td><strong>Q2</strong> (70/80/90% / Limited / Challenging)</td>
+                <td>Same targets, High LCOE, slow learning, constrained queues, High demand. Battery-centric. Tests whether QTs are achievable under adversity.</td>
                 <td class="facilitating">High</td>
             </tr>
         </tbody>
     </table>
 
     <div class="callout-green">
-        <strong>Key insight:</strong> Our model's primary advantage over generic REGEN runs is <strong>company-level granularity</strong>. REGEN models regional markets; we can apply those regional outcomes to each company's specific plant portfolio using our fleet survival data. For each scenario, we can calculate: (1) which plants survive dispatch merit-order changes, (2) what the company's emissions trajectory looks like, and (3) what the cost of transition is at each reduction level.
+        <strong>Key advantage over REGEN:</strong> Our model's primary strength is <strong>company-level granularity at hourly resolution</strong>. REGEN models regional aggregate markets; we can apply regional outcomes to each company's specific plant portfolio. For each scenario, we calculate: (1) which plants survive dispatch merit-order changes, (2) what the company's emissions trajectory looks like, (3) cost at each reduction level, and (4) fleet stranding risk. Additionally, our endogenous Wright's Law learning curves and explicit interconnection queue modeling add dynamics that REGEN handles with simpler assumptions.
     </div>
 
     <h4>What We Can Produce for Each Company</h4>
     <ul>
-        <li><strong>Emissions uncertainty fans</strong> (P10/P50/P90) across all 12 scenarios, from 2025 to 2050</li>
+        <li><strong>Emissions uncertainty fans</strong> (P10/P50/P90) across all 8 scenarios, from 2025 to 2050</li>
         <li><strong>Fleet composition projections</strong> showing which plants retire/convert/strand under each scenario</li>
         <li><strong>Incremental cost curves</strong> (marginal $/tCO&#8322;) at each reduction level to identify the QT "elbow"</li>
         <li><strong>Stranded asset exposure</strong> (MW at risk of uneconomic dispatch) under Challenging vs. Facilitating</li>
-        <li><strong>Enabling conditions gap analysis</strong> &mdash; what would need to change for each company to move from their QT to the AT</li>
+        <li><strong>Enabling conditions gap analysis</strong> &mdash; what would need to change to move from QT to AT</li>
+        <li><strong>Market equilibrium clean level</strong> per ISO &mdash; where deployment stalls without further policy (R1/R2)</li>
+        <li><strong>DAC crossover analysis</strong> &mdash; where marginal MAC exceeds DAC cost, identifying portfolio-optimal clean level</li>
     </ul>
 
     <h4>What We Cannot Do (Requires REGEN)</h4>
@@ -833,7 +770,7 @@
         <li>Endogenous electricity demand response to carbon pricing (economy-wide feedback loops)</li>
         <li>Cross-sector fuel market equilibrium (gas price impacts from reduced industrial gas demand)</li>
         <li>Capacity expansion optimization with transmission topology (our model uses ISO-level aggregation)</li>
-        <li>Endogenous technology learning curves (our costs are exogenous L/M/H assumptions)</li>
+        <li>End-use technology choice modeling (EV adoption curves, heat pump diffusion, industrial process switching)</li>
     </ul>
 </div>
 
@@ -848,15 +785,17 @@
 <div class="narrative">
     <h3>Implementation Roadmap</h3>
     <ol>
-        <li><strong>Map fleet data to scenario inputs.</strong> For each company, identify which plants fall into each ISO's dispatch merit order and how their CFs change under each threshold/scenario combination.</li>
-        <li><strong>Define company-specific QT reduction levels.</strong> Using our Step 3 marginal cost curves, identify the "elbow" point where costs accelerate for each company under Fuller/Facilitating and More Limited/Challenging conditions.</li>
-        <li><strong>Generate emissions trajectory fans.</strong> For each of the 12 scenarios, compute year-by-year emissions using our SBTi timeline mapping (thresholds &rarr; years) and P10/P50/P90 dispatch decline curves.</li>
-        <li><strong>Identify enabling conditions.</strong> For each company, compute the gap between their QT and the AT and express it in terms of specific enabling conditions: CCS availability, capacity market reform, transmission investment, etc.</li>
-        <li><strong>Produce the visualization.</strong> Fan charts showing emissions uncertainty bands, marginal cost curves for QT identification, fleet composition waterfall charts showing the transition pathway under each scenario.</li>
+        <li><strong>Build the market simulation module.</strong> ~30-50 lines of glue code on top of existing Step 5D zone-delta structure. Revenue calculator, profit metric, stopping rule, price feedback, learning curve integration. All existing infrastructure &mdash; we're re-ranking by profit instead of MAC.</li>
+        <li><strong>Map fleet data to scenario inputs.</strong> For each company, identify which plants fall into each ISO's dispatch merit order and how their CFs change under each scenario's market conditions.</li>
+        <li><strong>Run all 8 scenarios.</strong> Each produces per-ISO: market equilibrium clean level, resource mix, cost breakdown, revenue decomposition, cumulative GW deployed. ~60 seconds total compute.</li>
+        <li><strong>Define company-specific QT reduction levels.</strong> Using marginal cost curves from Q1/Q2, identify the "elbow" where costs accelerate under Fuller/Facilitating vs. More Limited/Challenging.</li>
+        <li><strong>Generate emissions trajectory fans.</strong> For each of the 8 scenarios, compute year-by-year emissions using SBTi timeline mapping (thresholds &rarr; years) and P10/P50/P90 dispatch decline curves.</li>
+        <li><strong>Identify enabling conditions.</strong> For each company, compute the gap between their QT and the AT. Express in terms of specific enabling conditions: interconnection queue reform, CCS availability, nuclear pathway, learning curve acceleration.</li>
+        <li><strong>Produce the visualization.</strong> Fan charts, marginal cost curves for QT identification, fleet composition waterfalls, market equilibrium comparison across scenarios.</li>
     </ol>
 
     <div class="callout">
-        <strong>Scope estimate:</strong> This analysis leverages existing pipeline outputs (Steps 3-5) and fleet survival data. The primary new work is the scenario mapping logic and visualization. No new optimizer runs are needed &mdash; we're reinterpreting existing results through the SMARTargets lens.
+        <strong>Scope estimate:</strong> The market simulation module is lightweight (~30-50 lines of new code) built on top of existing Step 5D zone metrics, Step 5B LMP engine, and Step 8D learning curves. All 8 scenarios run in ~60 seconds total. No new optimizer runs needed for the core physics &mdash; we're adding a revenue/profit layer on top of existing dispatch and cost infrastructure.
     </div>
 </div>
 
