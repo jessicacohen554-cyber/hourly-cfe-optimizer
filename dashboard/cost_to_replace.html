@@ -648,6 +648,7 @@ body { background: var(--bg-page); }
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 <script src="js/shared-data.js"></script>
 <script src="js/lmp-data.js"></script>
+<script src="js/lmp-capacity-data.js"></script>
 <script src="js/lmp-charts.js"></script>
 <script>
 // ============================================================================
@@ -938,28 +939,49 @@ function buildKeepVsReplaceChart(iso) {
     var nucLCOE = NEWBUILD_NUCLEAR[iso] || 100;
     var ccsLCOE = NEWBUILD_CCS[iso] || 75;
 
-    // Viability premium = max(0, viableMid - lmp)
-    var viabilityPremium = lmpP50.map(function(lmp) { return Math.max(0, viableMid - lmp); });
+    // Total market revenue (energy + capacity) from capacity data
+    var capData = (typeof LMP_CAPACITY !== 'undefined') ? LMP_CAPACITY[iso] : null;
+    var totalRevP50 = capData && capData.total_rev_clean_firm_mwh ? capData.total_rev_clean_firm_mwh.p50 : null;
+    var hasCapacity = totalRevP50 && totalRevP50.some(function(v) { return v > 0; });
+
+    // Viability premium based on total market revenue if available, else LMP only
+    var effectiveRev = hasCapacity ? totalRevP50 : lmpP50;
+    var viabilityPremium = effectiveRev.map(function(rev) { return Math.max(0, viableMid - rev); });
 
     // Viable ceiling line (constant at $41)
     var viableLine = T.map(function() { return viableMid; });
 
     function pts(xArr, yArr) { return xArr.map(function(x, i) { return { x: x, y: yArr[i] }; }); }
 
-    var BLUE = '#0EA5E9', GREEN = '#22C55E', PURPLE = '#7C3AED', CYAN = '#64748B';
+    var BLUE = '#0EA5E9', GREEN = '#22C55E', PURPLE = '#7C3AED', CYAN = '#64748B', INDIGO = '#6366F1';
+
+    var datasets = [
+        // Viable floor (fills up to effective revenue)
+        { label: 'Viability premium', data: pts(T, viableLine), borderColor: 'rgba(34,197,94,0.4)', backgroundColor: 'rgba(34,197,94,0.15)', borderWidth: 1.5, borderDash: [4,3], pointRadius: 0, fill: '+1', tension: 0.35, order: 10, _type: 'band' },
+        // Wholesale LMP (energy only)
+        { label: 'Energy-Only LMP (P50)', data: pts(T, lmpP50), borderColor: BLUE, backgroundColor: 'transparent', borderWidth: 1.5, borderDash: [5,3], pointRadius: 2, pointBackgroundColor: BLUE, fill: false, tension: 0.35, order: 3 }
+    ];
+
+    // Add total market revenue line if capacity data exists
+    if (hasCapacity) {
+        datasets.splice(1, 0, {
+            label: 'Total Market Revenue (Energy + Capacity)',
+            data: pts(T, totalRevP50),
+            borderColor: INDIGO, backgroundColor: INDIGO + '18',
+            borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: INDIGO,
+            fill: false, tension: 0.35, order: 2
+        });
+    }
+
+    // New nuclear / CCS LCOE lines
+    datasets.push(
+        { label: 'New Nuclear LCOE (NOAK)', data: pts(T, T.map(function() { return nucLCOE; })), borderColor: PURPLE, backgroundColor: 'transparent', borderWidth: 2, borderDash: [10, 5], pointRadius: 0, fill: false, tension: 0, order: 4 },
+        { label: 'CCS-CCGT LCOE (NOAK)', data: pts(T, T.map(function() { return ccsLCOE; })), borderColor: CYAN, backgroundColor: 'transparent', borderWidth: 2, borderDash: [6, 4], pointRadius: 0, fill: false, tension: 0, order: 5 }
+    );
 
     keepVsReplaceChartInst = new Chart(ctx, {
         type: 'line',
-        data: { datasets: [
-            // Viable floor (fills up to LMP)
-            { label: 'Viability premium', data: pts(T, viableLine), borderColor: 'rgba(34,197,94,0.4)', backgroundColor: 'rgba(34,197,94,0.15)', borderWidth: 1.5, borderDash: [4,3], pointRadius: 0, fill: '+1', tension: 0.35, order: 10, _type: 'band' },
-            // Wholesale LMP
-            { label: 'Wholesale LMP (P50)', data: pts(T, lmpP50), borderColor: BLUE, backgroundColor: BLUE + '18', borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: BLUE, fill: false, tension: 0.35, order: 2 },
-            // New nuclear LCOE (horizontal)
-            { label: 'New Nuclear LCOE (NOAK)', data: pts(T, T.map(function() { return nucLCOE; })), borderColor: PURPLE, backgroundColor: 'transparent', borderWidth: 2, borderDash: [10, 5], pointRadius: 0, fill: false, tension: 0, order: 3 },
-            // CCS-CCGT LCOE (horizontal)
-            { label: 'CCS-CCGT LCOE (NOAK)', data: pts(T, T.map(function() { return ccsLCOE; })), borderColor: CYAN, backgroundColor: 'transparent', borderWidth: 2, borderDash: [6, 4], pointRadius: 0, fill: false, tension: 0, order: 4 }
-        ] },
+        data: { datasets: datasets },
         options: {
             responsive: true, maintainAspectRatio: false,
             animation: { duration: 1200, easing: 'easeOutQuart' },
