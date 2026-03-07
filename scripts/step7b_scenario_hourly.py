@@ -1,22 +1,31 @@
 #!/usr/bin/env python3
-"""Scenario B: Hourly Matching — forward-looking endpoint-optimal deployment with S-curve pacing.
+"""Scenario B: GHG Protocol Hourly Matching — Four-Pool Incentive-Driven Grid Buildout.
 
-Extracted from step6_scenario_comparison.py for standalone execution.
+Models the systemic incentive structure created by hourly Scope 2 accounting
+with Standard Supply Service (SSS) as proposed by GHG Protocol revisions.
 
-Strategy:
-  1. Load the MAC/DAC crossover target per ISO from optimal_targets.json.
-     The target threshold is the nearest analyzed threshold to the
-     medium_grid__central_dac crossover (where medium DAC cost crosses
-     the medium grid cost curve). Defaults to 95% if no crossover exists.
-  2. Find the NOAK-optimal mix at the target threshold with all costs Low
-     + Medium TX (CCS also learns to Low). This is the "north star" — what
-     the grid looks like in 2045.
-  3. At each threshold, deploy resources toward this target using an S-curve
-     ramp that frontloads firm/storage investment.
-  4. Nuclear/LDES/CCS: accelerated FOAK(H)→NOAK(L) learning curve with 45Q.
-  5. Select from feasible mixes those best matching the deployment target
-     at learning-curve-adjusted prices. Strict pacing enforcement.
-  6. Floor ratchet prevents un-deploying committed resources.
+Four supply pools:
+  Pool 1 (SSS): Policy-supported clean (nuclear ZECs, public hydro, RPS mandates).
+                 Free to all ratepayers — embedded in utility rates.
+  Pool 2 (Contracted): Nuclear locked via hyperscaler PPAs (Susquehanna→Amazon,
+                        Clinton/Duane Arnold→Meta). Unavailable for voluntary market.
+  Pool 3 (Existing Merchant): Merchant nuclear, existing solar/wind on grid.
+                               Available via EAC procurement at $3-5/MWh premium.
+  Pool 4 (New-Build): What hourly matching incentivizes above Pools 1-3.
+                       Hourly constraint forces firm clean + storage for night/winter.
+                       Learning curves (FOAK→NOAK, 2030-2040) apply here.
+
+Algorithm:
+  For each ISO × threshold (mapped to SBTi year):
+  1. Compute SSS (Pool 1) TWh + 8760 hourly shape at that year
+  2. Subtract contracted (Pool 2) — unavailable
+  3. Compute merchant clean (Pool 3) = total existing - SSS - contracted
+  4. Compute hourly coverage from Pools 1+3
+  5. Compute residual hourly gap = target% × demand - available (per hour)
+  6. Evaluate EF mixes: feasibility from cached physics, pool-aware cost metric
+  7. Apply learning curves (2030-2040) to Pool 4 (new-build) costs
+  8. Select cheapest mix by pool-aware incremental cost
+  9. Floor ratchet — committed resources don't un-deploy
 
 Usage:
   python step7b_scenario_hourly.py             # Run all ISOs
@@ -59,98 +68,14 @@ from scenario_common import (
 )
 from dispatch_utils import (
     load_common_data, get_demand_profile, get_supply_profiles,
-    build_supply_matrix,
+    build_supply_matrix, H,
 )
-
-
-# ============================================================================
-# COST ADJUSTMENT WITH LEARNING CURVE
-# ============================================================================
-
-def _adjust_costs_with_learning(results, scenario):
-    """Scenario B: Apply learning curve — FOAK starts 2029, NOAK by 2038.
-
-    At each threshold, compute learning_fraction(scenario='B') → interpolate:
-      Nuclear/LDES: H→L (FOAK→NOAK), CCS: H→M (FOAK→Medium NOAK) with 45Q.
-    Step 3 costs were computed at full FOAK (firm='H', ldes='H', ccs='H').
-    We compute the cost delta from FOAK to the learning-curve-adjusted price
-    for each resource tranche and apply it.
-
-    10-year learning period (2030-2040), concave ramp (exponent 0.6).
-    Sources: INL SOAK data, NEA learning ranges, DOE Liftoff.
-    """
-    for iso in results:
-        for t in results[iso]:
-            r = results[iso][t]
-            demand_twh = r['demand_twh']
-            if demand_twh <= 0:
-                continue
-
-            frac = learning_fraction(t, scenario='B')
-            overrides = _build_learning_overrides_b(iso, frac)
-
-            total_delta = 0.0
-
-            # 1. Uprate: step3 used H ($40), target is M ($25)
-            uprate_twh = r.get('tranche_uprate_twh', 0)
-            if uprate_twh > 0:
-                uprate_delta = UPRATE_LCOE['M'] - UPRATE_LCOE['H']
-                total_delta += uprate_delta * uprate_twh / demand_twh
-
-            # 2. Nuclear newbuild: step3 used H, learning curve gives interpolated
-            nuc_twh = r.get('tranche_nuclear_newbuild_twh', 0)
-            if nuc_twh > 0:
-                nuc_h = NUCLEAR_NEWBUILD_LCOE['H'][iso]
-                nuc_delta = overrides['nuclear_lcoe'] - nuc_h
-                total_delta += nuc_delta * nuc_twh / demand_twh
-
-            # 3. CCS new-build
-            # CCS TWh from mix minus existing
-            existing_ccs_frac = GRID_MIX_SHARES[iso].get('ccs_ccgt', 0) / 100.0
-            gf = demand_twh / BASE_DEMAND_TWH[iso]
-            existing_ccs_twh = existing_ccs_frac * BASE_DEMAND_TWH[iso]
-            # v5.0: procurement baked into resource percentages
-            total_ccs_twh = r['resource_twh'].get('ccs_ccgt', 0)
-            ccs_new_twh = max(0, total_ccs_twh - existing_ccs_twh)
-            if ccs_new_twh > 0:
-                ccs_h = CCS_LCOE_45Q_ON['H'][iso]
-                ccs_delta = overrides['ccs_lcoe'] - ccs_h
-                total_delta += ccs_delta * ccs_new_twh / demand_twh
-
-            # 4. Geothermal (CAISO only)
-            if iso == 'CAISO' and 'geo_lcoe' in overrides:
-                geo_twh = r.get('tranche_geo_twh', 0)
-                if geo_twh > 0:
-                    geo_h = GEOTHERMAL_LCOE['H']
-                    geo_delta = overrides['geo_lcoe'] - geo_h
-                    total_delta += geo_delta * geo_twh / demand_twh
-
-            # 5. LDES (all new-build)
-            ldes_twh = r.get('ldes_twh', 0)
-            if ldes_twh > 0:
-                ldes_h = LCOE_TABLES['ldes']['High'][iso]
-                ldes_delta = overrides['ldes_lcoe'] - ldes_h
-                total_delta += ldes_delta * ldes_twh / demand_twh
-
-            # Apply total delta
-            if abs(total_delta) > 0.001:
-                r['total_cost'] = round(r['total_cost'] + total_delta, 2)
-                match_frac = r['match_score'] / 100
-                r['effective_cost'] = round(
-                    r['total_cost'] / match_frac if match_frac > 0 else 0, 2)
-                r['incremental'] = round(
-                    r['effective_cost'] - r.get('wholesale', WHOLESALE_PRICES[iso]), 2)
-                # Update new-build cost tracking
-                r['new_build_cost_total'] = r.get('new_build_cost_total', 0) + \
-                    total_delta * demand_twh * 1e6
-
-            # Store learning curve metadata
-            r['learning_fraction'] = round(frac, 3)
-            r['learning_nuclear_lcoe'] = round(overrides['nuclear_lcoe'], 1)
-            r['learning_ccs_lcoe'] = round(overrides['ccs_lcoe'], 1)
-            r['learning_ldes_lcoe'] = round(overrides['ldes_lcoe'], 1)
-
-    return results
+from procurement_utils import (
+    get_sss_twh, get_sss_hourly_shape, get_merchant_clean_twh,
+    get_merchant_hourly_shape, get_existing_clean_twh,
+    get_contracted_clean_twh, CONTRACTED_CLEAN_TWH,
+    SSS_FIXED_FLEET_TWH, EXISTING_EAC_PRICE,
+)
 
 
 # ============================================================================
@@ -160,15 +85,7 @@ def _adjust_costs_with_learning(results, scenario):
 DEFAULT_TARGET_THRESHOLD = 95.0
 
 def _load_optimal_targets():
-    """Load per-ISO optimal target thresholds from MAC/DAC crossover analysis.
-
-    Reads optimal_targets.json and extracts the medium_grid__central_dac
-    crossover threshold for each ISO, then snaps to the nearest analyzed
-    threshold in THRESHOLDS.
-
-    Returns:
-        dict[str, float]: {iso: target_threshold}
-    """
+    """Load per-ISO optimal target thresholds from MAC/DAC crossover analysis."""
     targets_path = Path(__file__).parent.parent / 'data' / 'step5-post-processing' / 'optimal_targets.json'
     if not targets_path.exists():
         print(f"  WARNING: {targets_path} not found, using default {DEFAULT_TARGET_THRESHOLD}% for all ISOs")
@@ -185,11 +102,9 @@ def _load_optimal_targets():
         raw_threshold = central.get('threshold')
 
         if raw_threshold is None:
-            # No crossover (grid always cheaper than DAC) — default to 95%
             targets[iso] = DEFAULT_TARGET_THRESHOLD
             print(f"  {iso}: No MAC/DAC crossover, using default {DEFAULT_TARGET_THRESHOLD}%")
         else:
-            # Snap to nearest analyzed threshold
             nearest = min(THRESHOLDS, key=lambda t: abs(t - raw_threshold))
             targets[iso] = nearest
             print(f"  {iso}: MAC/DAC crossover at {raw_threshold}% -> target {nearest}%")
@@ -198,36 +113,215 @@ def _load_optimal_targets():
 
 
 # ============================================================================
-# SCENARIO B: ENDPOINT-OPTIMAL DEPLOYMENT WITH S-CURVE PACING
+# FOUR-POOL SUPPLY MODEL HELPERS
+# ============================================================================
+
+def _compute_pool_coverage(iso, year, demand_twh, demand_norm, gen_profiles,
+                           growth_level='Medium'):
+    """Compute 8760 hourly coverage from Pools 1 (SSS) + 3 (Merchant).
+
+    Returns:
+        dict with:
+          sss_twh: Total SSS clean TWh at year
+          contracted_twh: Locked corporate-contracted TWh
+          merchant_twh: Available merchant clean TWh
+          sss_8760_mwh: 8760 array of SSS MWh per hour
+          merchant_8760_mwh: 8760 array of merchant clean MWh per hour
+          available_8760_mwh: SSS + merchant combined
+          demand_8760_mwh: Demand MWh per hour
+          coverage_frac: Per-hour coverage fraction (capped at 1.0)
+          avg_coverage_pct: Average hourly coverage %
+          min_coverage_pct: Minimum hourly coverage (worst hour)
+          max_coverage_pct: Maximum hourly coverage (best hour)
+    """
+    # Pool 1: SSS
+    sss_twh = get_sss_twh(iso, year, growth_level)
+    sss_shape = get_sss_hourly_shape(iso, gen_profiles)
+    sss_8760_mwh = sss_shape * sss_twh * 1e6
+
+    # Pool 2: Contracted (locked — excluded)
+    contracted_twh = get_contracted_clean_twh(iso)
+
+    # Pool 3: Merchant clean
+    merchant_twh = get_merchant_clean_twh(iso, year, growth_level)
+    merchant_shape = get_merchant_hourly_shape(iso, gen_profiles)
+    merchant_8760_mwh = merchant_shape * merchant_twh * 1e6
+
+    # Combined available (Pools 1+3, Pool 2 excluded)
+    available_8760_mwh = sss_8760_mwh + merchant_8760_mwh
+
+    # Demand 8760
+    demand_8760_mwh = demand_norm * demand_twh * 1e6
+
+    # Coverage fraction per hour (cap at 1.0)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        coverage_frac = np.where(
+            demand_8760_mwh > 0,
+            np.minimum(available_8760_mwh / demand_8760_mwh, 1.0),
+            1.0
+        )
+
+    avg_pct = float(np.mean(coverage_frac) * 100)
+    min_pct = float(np.min(coverage_frac) * 100)
+    max_pct = float(np.max(coverage_frac) * 100)
+
+    return {
+        'sss_twh': sss_twh,
+        'contracted_twh': contracted_twh,
+        'merchant_twh': merchant_twh,
+        'sss_8760_mwh': sss_8760_mwh,
+        'merchant_8760_mwh': merchant_8760_mwh,
+        'available_8760_mwh': available_8760_mwh,
+        'demand_8760_mwh': demand_8760_mwh,
+        'coverage_frac': coverage_frac,
+        'avg_coverage_pct': avg_pct,
+        'min_coverage_pct': min_pct,
+        'max_coverage_pct': max_pct,
+    }
+
+
+def _compute_residual_gap(demand_8760_mwh, available_8760_mwh, target_frac):
+    """Compute the residual hourly gap that Pool 4 (new-build) must fill.
+
+    Args:
+        demand_8760_mwh: 8760 demand profile in MWh
+        available_8760_mwh: SSS + merchant combined hourly MWh
+        target_frac: Target hourly CFE fraction (e.g. 0.90 for 90%)
+
+    Returns:
+        dict with gap characterization metrics
+    """
+    # Gap at each hour: what target requires minus what's available
+    target_8760_mwh = demand_8760_mwh * target_frac
+    gap_8760_mwh = np.maximum(target_8760_mwh - available_8760_mwh, 0.0)
+
+    residual_gap_twh = float(np.sum(gap_8760_mwh) / 1e6)
+    gap_hours = int(np.sum(gap_8760_mwh > 0))
+
+    # Characterize gap by time of day to identify firm/storage needs
+    # Night hours (20:00-06:00): indices where solar is zero → firm/storage needed
+    night_mask = np.zeros(H, dtype=bool)
+    for h in range(H):
+        hour_of_day = h % 24
+        if hour_of_day >= 20 or hour_of_day < 6:
+            night_mask[h] = True
+
+    night_gap_mwh = gap_8760_mwh[night_mask]
+    firm_demand_hours = int(np.sum(night_gap_mwh > 0))  # Hours needing firm/storage
+
+    # Storage opportunity: hours where available > target (surplus for charging)
+    surplus_8760_mwh = np.maximum(available_8760_mwh - target_8760_mwh, 0.0)
+    storage_opportunity_hours = int(np.sum(surplus_8760_mwh > 0))
+    surplus_twh = float(np.sum(surplus_8760_mwh) / 1e6)
+
+    return {
+        'gap_8760_mwh': gap_8760_mwh,
+        'residual_gap_twh': residual_gap_twh,
+        'gap_hours': gap_hours,
+        'firm_demand_hours': firm_demand_hours,
+        'storage_opportunity_hours': storage_opportunity_hours,
+        'surplus_twh': surplus_twh,
+    }
+
+
+def _compute_pool_aware_cost(mix_total_cost, mix_resource_twh, demand_twh,
+                              sss_twh, merchant_twh, eac_price=4.0):
+    """Compute pool-aware incremental cost for a mix.
+
+    Pool 1 (SSS): $0 incremental — embedded in utility rates.
+    Pool 3 (Merchant): EAC premium price (typically $3-5/MWh).
+    Pool 4 (New-Build): Full LCOE cost (captured in mix_total_cost).
+
+    The mix_total_cost from the optimizer prices everything at LCOE.
+    We adjust by crediting SSS resources at $0 and merchant at EAC.
+    """
+    if demand_twh <= 0:
+        return mix_total_cost
+
+    # Total clean TWh in this mix
+    total_clean = sum(mix_resource_twh.get(r, 0) for r in
+                      ['clean_firm', 'solar', 'wind', 'offshore_wind',
+                       'hydro', 'ccs_ccgt'])
+
+    if total_clean <= 0:
+        return mix_total_cost
+
+    # SSS covers up to sss_twh of the mix's clean_firm + hydro at $0
+    # (SSS is nuclear+hydro, so it offsets the most expensive baseload resources)
+    sss_covered = min(sss_twh, total_clean)
+
+    # Merchant covers the next tranche at EAC premium
+    remaining_after_sss = total_clean - sss_covered
+    merchant_covered = min(merchant_twh, remaining_after_sss)
+
+    # Pool 4 (new-build) = total_clean - sss_covered - merchant_covered
+    # This portion pays full LCOE (already in mix_total_cost)
+
+    # Cost adjustment: SSS portion is priced at wholesale (already accounted
+    # for in the base cost). The key insight is that SSS resources reduce
+    # the incremental $/MWh the buyer pays.
+    # Merchant EAC cost replaces LCOE for existing merchant resources.
+    # We compute the blended incremental cost.
+
+    # The mix_total_cost is $/MWh of total demand. We adjust it:
+    # 1. SSS portion: reduce cost by (LCOE - 0) * sss_twh / demand_twh
+    #    But SSS covers nuclear+hydro which are wholesale-priced in the optimizer
+    #    So the adjustment is smaller — SSS resources are already cheap.
+    #    The key value of SSS is they're "free" (no procurement cost).
+    # 2. Merchant EAC: flat EAC premium replaces LCOE for merchant portion
+
+    # For simplicity and accuracy: the pool-aware cost is
+    # (total_mix_cost * demand_twh - sss_savings - merchant_savings) / demand_twh
+
+    # SSS savings: the optimizer prices SSS nuclear at wholesale cost.
+    # Under pool model, SSS is $0 incremental, so savings = wholesale * sss_covered
+    wholesale_avg = 32.0  # Rough average across ISOs
+    sss_savings_per_mwh = wholesale_avg * sss_covered / demand_twh
+
+    # Merchant savings: optimizer prices at LCOE, but merchant is just EAC premium
+    # The savings = (avg_merchant_lcoe - eac_price) * merchant_covered / demand_twh
+    # Approximate merchant LCOE from solar/wind at ~$35/MWh average
+    avg_merchant_lcoe = 35.0
+    merchant_savings_per_mwh = max(0, avg_merchant_lcoe - eac_price) * merchant_covered / demand_twh
+
+    adjusted_cost = mix_total_cost - sss_savings_per_mwh - merchant_savings_per_mwh
+    return max(0.0, adjusted_cost)
+
+
+# ============================================================================
+# CFE ZONE CLASSIFICATION
+# ============================================================================
+
+def _classify_zone(threshold):
+    """Classify threshold into CFE curve zone for comparison framework."""
+    if threshold <= 65:
+        return 'early'
+    elif threshold <= 90:
+        return 'inflection'
+    else:
+        return 'last_mile'
+
+
+# ============================================================================
+# SCENARIO B: FOUR-POOL HOURLY MATCHING GRID BUILDOUT
 # ============================================================================
 
 def find_scenario_b_mixes(feasible_mixes, isos=None):
-    """Scenario B: Forward-looking endpoint-optimal deployment.
+    """Scenario B: GHG Protocol hourly matching incentive-driven grid buildout.
 
-    Fundamentally different from Scenario A's greedy sequential approach.
+    Models the systemic incentive structure created by hourly Scope 2 accounting
+    with Standard Supply Service (SSS):
 
-    Strategy:
-      1. Load per-ISO optimal target threshold from MAC/DAC crossover analysis
-         (medium_grid__central_dac from optimal_targets.json, snapped to
-         nearest analyzed threshold). Defaults to 95% if no crossover.
-      2. Find the NOAK-optimal mix at the target threshold with all costs Low
-         (CCS at Medium+45Q as NOAK endpoint — CCS learning curve is H→M,
-         not H→L). This is the "north star" — what the grid looks like in 2045.
-      3. At each threshold, deploy resources toward this target using an S-curve
-         ramp that frontloads firm/storage investment.
-      4. Nuclear/LDES: accelerated FOAK(H)→NOAK(L) learning curve.
-         CCS: FOAK(H)→NOAK(M) learning curve with 45Q.
-      5. Select from feasible mixes those best matching the deployment target
-         at learning-curve-adjusted prices. Strict pacing enforcement.
-      6. Floor ratchet prevents un-deploying committed resources.
+    1. SSS layer (Pool 1): Policy-driven clean (nuclear ZECs, public hydro, RPS
+       mandates) grows per state trajectories. All consumers get this at $0.
+    2. Contracted layer (Pool 2): Nuclear locked via hyperscaler PPAs — excluded.
+    3. Merchant layer (Pool 3): Existing solar/wind/merchant nuclear available
+       at EAC premium. Huge in ERCOT/SPP, small in PJM/NYISO.
+    4. New-build layer (Pool 4): What hourly matching incentivizes above Pools 1-3.
+       Hourly constraint forces firm clean + storage for night/winter coverage.
 
-    This produces drastically different trajectories from Scenario A because:
-      - A chases cheap carbon greedily → renewable-heavy early, FOAK cliff at 90%+
-      - B works backward from optimal 2045 endpoint → balanced deployment from
-        the start, with firm/CCS/storage allocated from early thresholds
-      - CCS starts on a learning curve from H→M (not stuck at FOAK forever)
-      - By 80-90%, B has driven nuclear/LDES toward NOAK via cumulative deployment
-      - At 95%+, B benefits from NOAK firm and learned CCS; A faces cost cliff
+    At each threshold, finds the optimal resource mix to fill the temporal gap
+    between Pools 1+3 hourly coverage and the hourly matching target.
 
     Args:
         feasible_mixes: Dict of {iso: {threshold_str: [mixes]}} from parse_feasible_mixes.
@@ -238,112 +332,53 @@ def find_scenario_b_mixes(feasible_mixes, isos=None):
 
     results = {}
 
-    # Load dispatch data for dispatch-based gas backup
-    print("\n  Loading dispatch data for gas backup calculation...")
+    # Load dispatch data for profiles and gas backup
+    print("\n  Loading dispatch data for pool coverage calculation...")
     demand_data, gen_profiles, _, _ = load_common_data()
 
     # Load per-ISO optimal target thresholds from MAC/DAC crossover
     print("\n  Loading per-ISO optimal targets from MAC/DAC crossover analysis...")
     iso_targets = _load_optimal_targets()
 
-    # NOAK target sensitivities: all at Low + Medium TX
-    # CCS learns to Low (not Medium) — same as nuclear/LDES
-    NOAK_SENS = {
-        'ren': 'L', 'firm': 'L', 'batt': 'L', 'ldes_lvl': 'L',
-        'fuel': 'M', 'tx': 'M', 'ccs': 'L', 'q45': '1', 'geo': 'L',
-    }
-
     for iso in isos:
         iso_sens = dict(SCENARIO_B['toggles'])
         if iso != 'CAISO':
             iso_sens['geo'] = None
 
-        noak_sens = dict(NOAK_SENS)
-        if iso != 'CAISO':
-            noak_sens['geo'] = None
-
         base_demand = BASE_DEMAND_TWH[iso]
         existing = GRID_MIX_SHARES[iso]
 
-        # Load dispatch profiles for this ISO (for dispatch-based gas backup)
+        # Load dispatch profiles for this ISO
         iso_demand_norm, _ = get_demand_profile(iso, demand_data)
         iso_supply_profiles = get_supply_profiles(iso, gen_profiles)
         iso_supply_matrix = build_supply_matrix(iso_supply_profiles)
 
         # Per-ISO target threshold from MAC/DAC crossover
         target_t = iso_targets.get(iso, DEFAULT_TARGET_THRESHOLD)
-        target_t_str = str(int(target_t)) if target_t == int(target_t) else str(target_t)
 
-        # ==================================================================
-        # Step 1: Find NOAK-optimal mix at target threshold — the "north star"
-        # All costs Low + Medium TX. CCS also Low (full learning).
-        # This is what the grid looks like in 2045 when learning investments
-        # have paid off — the endpoint we're building toward.
-        # ==================================================================
-        gf_target = get_demand_growth_factor(iso, target_t)
-        demand_target = base_demand * gf_target
-        mixes_target = feasible_mixes.get(iso, {}).get(target_t_str, [])
+        # Print pool overview for this ISO
+        existing_clean = get_existing_clean_twh(iso)
+        sss_2025 = get_sss_twh(iso, 2025)
+        contracted = get_contracted_clean_twh(iso)
+        merchant = get_merchant_clean_twh(iso, 2025)
 
-        # Use full NOAK overrides for target finding
-        noak_overrides = _build_learning_overrides_b(iso, 1.0)  # frac=1 = full NOAK
+        print(f"\n  {iso} Four-Pool Supply Model (2025 baseline):")
+        print(f"    Total existing clean: {existing_clean:.1f} TWh")
+        print(f"    Pool 1 (SSS):         {sss_2025:.1f} TWh")
+        print(f"    Pool 2 (Contracted):  {contracted:.1f} TWh")
+        print(f"    Pool 3 (Merchant):    {merchant:.1f} TWh")
+        print(f"    Target threshold:     {target_t}%")
 
-        # Vectorized: find cheapest effective_cost at target threshold
-        if mixes_target:
-            arr_target = _to_mix_array(mixes_target)
-            params_target = _precompute_cost_params(noak_sens, iso, demand_target,
-                                                     noak_overrides, gf_target)
-            eff_target = batch_effective_costs(arr_target, params_target)
-            best_idx_target = int(np.argmin(eff_target))
-            best_cost_target = float(eff_target[best_idx_target])
-            best_mix_target = arr_target[best_idx_target].tolist()
-        else:
-            best_mix_target = None
-
-        if not best_mix_target:
-            print(f"  WARNING {iso}: No feasible mixes at target {target_t}%, skipping")
-            results[iso] = {}
-            continue
-
-        target_deployed = _mix_resource_twh(best_mix_target, demand_target, iso)
-
-        # Target resource levels at NOAK target threshold
-        target_cf_twh = target_deployed.get('clean_firm', 0)
-        target_ccs_twh = target_deployed.get('ccs_ccgt', 0)
-        target_firm_twh = target_cf_twh + target_ccs_twh
-        target_ldes_twh = target_deployed.get('ldes', 0)
-        target_batt_twh = (best_mix_target[6] + best_mix_target[7]) / 100.0 * demand_target
-        target_sol_twh = target_deployed.get('solar', 0)
-        target_wnd_twh = target_deployed.get('wind', 0)
-
-        # Existing levels (2025 baseline)
-        existing_cf_twh = existing.get('clean_firm', 0) / 100.0 * base_demand
-        existing_ccs_twh = existing.get('ccs_ccgt', 0) / 100.0 * base_demand
-        existing_firm_twh = existing_cf_twh + existing_ccs_twh
-        existing_sol_twh = existing.get('solar', 0) / 100.0 * base_demand
-        existing_wnd_twh = existing.get('wind', 0) / 100.0 * base_demand
-
-        print(f"\n  {iso} {target_t}% NOAK target: firm={target_firm_twh:.0f} TWh "
-              f"(CF={target_cf_twh:.0f}, CCS={target_ccs_twh:.0f}), "
-              f"LDES={target_ldes_twh:.0f} TWh, Batt={target_batt_twh:.0f} TWh, "
-              f"Sol={target_sol_twh:.0f}, Wnd={target_wnd_twh:.0f}, "
-              f"existing firm={existing_firm_twh:.0f} TWh")
-
-        # ==================================================================
-        # Step 2: Backward-from-endpoint deployment with S-curve pacing
-        # ==================================================================
+        # Setup for floor ratcheting
         existing_twh_b = {
-            'clean_firm': existing_cf_twh,
-            'solar': existing_sol_twh,
-            'wind': existing_wnd_twh,
-            'ccs_ccgt': existing_ccs_twh,
+            'clean_firm': existing.get('clean_firm', 0) / 100.0 * base_demand,
+            'solar': existing.get('solar', 0) / 100.0 * base_demand,
+            'wind': existing.get('wind', 0) / 100.0 * base_demand,
+            'ccs_ccgt': existing.get('ccs_ccgt', 0) / 100.0 * base_demand,
             'hydro': existing.get('hydro', 0) / 100.0 * base_demand,
             'battery': 0, 'ldes': 0,
         }
         floor = dict(existing_twh_b)
-
-        # Uprate carve-out: uprates deploy immediately (cheap at ~$25/MWh),
-        # not gated by S-curve pacing. Compute uprate cap in TWh.
-        uprate_cap_twh = UPRATE_CAP_TWH.get(iso, 0)
 
         exist_match = _existing_match_pct(iso)
         iso_results = {}
@@ -351,11 +386,28 @@ def find_scenario_b_mixes(feasible_mixes, isos=None):
         for t in THRESHOLDS:
             gf = get_demand_growth_factor(iso, t)
             demand_twh = base_demand * gf
-            demand_mwh = demand_twh * 1e6
+
+            # Map threshold to SBTi year for SSS/demand growth calc
+            year = SBTI_YEAR_MAP.get(t, 2025)
+            if year is None:
+                year = 2025
 
             if t <= exist_match:
-                iso_results[t] = _build_existing_only_entry(
+                entry = _build_existing_only_entry(
                     iso, t, demand_twh, gf, existing_twh_b, iso_sens)
+                # Add pool metadata even for existing-only entries
+                pool = _compute_pool_coverage(iso, year, demand_twh,
+                                              iso_demand_norm, gen_profiles)
+                entry['pool1_sss_twh'] = round(pool['sss_twh'], 1)
+                entry['pool2_contracted_twh'] = round(pool['contracted_twh'], 1)
+                entry['pool3_merchant_twh'] = round(pool['merchant_twh'], 1)
+                entry['pool4_newbuild_twh'] = 0.0
+                entry['available_hourly_avg_pct'] = round(pool['avg_coverage_pct'], 1)
+                entry['sss_hourly_min_coverage_pct'] = round(pool['min_coverage_pct'], 1)
+                entry['residual_gap_twh'] = 0.0
+                entry['firm_demand_hours'] = 0
+                entry['zone'] = _classify_zone(t)
+                iso_results[t] = entry
                 floor = dict(existing_twh_b)
                 continue
 
@@ -364,58 +416,30 @@ def find_scenario_b_mixes(feasible_mixes, isos=None):
             if not mixes:
                 continue
 
-            # Learning-curve overrides: nuclear/LDES/CCS all H→L
+            # ── Pool coverage at this threshold/year ──
+            pool = _compute_pool_coverage(iso, year, demand_twh,
+                                          iso_demand_norm, gen_profiles)
+            target_frac = t / 100.0
+            gap = _compute_residual_gap(pool['demand_8760_mwh'],
+                                        pool['available_8760_mwh'],
+                                        target_frac)
+
+            # ── Learning-curve overrides ──
             frac = learning_fraction(t, scenario='B')
             overrides = _build_learning_overrides_b(iso, frac)
 
-            # S-curve deployment fraction toward target threshold.
-            # Sigmoid frontloads firm investment vs linear:
-            #   T=50%: ~5%, T=target: 100%
-            if t <= 50:
-                deploy_frac = 0.05
-            elif t >= target_t:
-                deploy_frac = 1.0
-            else:
-                x = (t - 50) / (target_t - 50)  # 0→1
-                raw = 1.0 / (1.0 + math.exp(-6 * (x - 0.4)))
-                f0 = 1.0 / (1.0 + math.exp(-6 * (0 - 0.4)))
-                f1 = 1.0 / (1.0 + math.exp(-6 * (1 - 0.4)))
-                deploy_frac = 0.05 + 0.95 * (raw - f0) / (f1 - f0)
+            # ── EAC price for merchant clean (Pool 3) ──
+            eac_price = EXISTING_EAC_PRICE.get('Medium', 4.0)
 
-            # Paced targets for firm, CCS, LDES at this threshold
-            demand_ratio = demand_twh / demand_target if demand_target > 0 else 1.0
-            paced_cf_twh = existing_cf_twh + deploy_frac * (
-                target_cf_twh * demand_ratio - existing_cf_twh)
-            # Uprate floor: uprates deploy immediately regardless of S-curve
-            uprate_floor_twh = existing_cf_twh + uprate_cap_twh
-            paced_cf_twh = max(paced_cf_twh, uprate_floor_twh)
-            paced_ccs_twh = existing_ccs_twh + deploy_frac * (
-                target_ccs_twh * demand_ratio - existing_ccs_twh)
-            paced_firm_twh = paced_cf_twh + paced_ccs_twh
-            paced_ldes_twh = deploy_frac * target_ldes_twh * demand_ratio
-            paced_batt_twh = deploy_frac * target_batt_twh * demand_ratio
-
-            # ==================================================================
-            # Step 3: Vectorized cost + tier categorization
-            # Three-tier selection:
-            #   Tier 1: Strict — firm >= 85% of pace, CCS >= 85%, LDES >= 50%
-            #   Tier 2: Relaxed — firm >= 50% of pace
-            #   Tier 3: Any feasible mix (fallback)
-            # Within each tier, pick cheapest at learning-curve prices.
-            # Match score ceiling: reject mixes that over-deliver by >2pts
-            # (prevents 100% match at 90% threshold = massive overbuild).
-            # ==================================================================
+            # ── Vectorized mix evaluation ──
             mixes_arr = _to_mix_array(mixes)
 
             # Match score ceiling filter: score <= threshold + 2
-            # mix column 5 = match_score (or column index depends on format)
-            # In the mix array: [cf, sol, wnd, osw, ccs, hyd, score, bat4, bat8, ldes, h2]
-            scores = mixes_arr[:, 6]  # match_score is index 6
+            scores = mixes_arr[:, 6]
             score_ceiling = min(t + 2.0, 100.0)
             score_ok = scores <= score_ceiling
             if np.any(score_ok):
                 mixes_arr = mixes_arr[score_ok]
-            # If ALL mixes exceed ceiling, keep them all as fallback
 
             params = _precompute_cost_params(iso_sens, iso, demand_twh,
                                              overrides, gf)
@@ -425,45 +449,79 @@ def find_scenario_b_mixes(feasible_mixes, isos=None):
             excess_lcoes = precompute_excess_lcoes(iso_sens, iso, overrides)
             excess = batch_floor_excess(mixes_arr, floor, existing_twh_b,
                                         demand_twh, iso, excess_lcoes)
-            total_aug = costs + excess
 
-            # Compute deployed TWh for tier classification (vectorized)
-            hydro_cap = HYDRO_CAP_TWH[iso]
-            cf_twh = mixes_arr[:, 0] / 100.0 * demand_twh
-            ccs_twh = mixes_arr[:, 3] / 100.0 * demand_twh
-            firm_twh = cf_twh + ccs_twh
+            # ── Pool-aware cost adjustment (vectorized) ──
+            # Compute SSS and merchant savings for each mix
+            # SSS covers baseload (clean_firm + hydro) at $0
+            # Merchant covers existing VRE at EAC premium
+            pool_sss_twh = pool['sss_twh']
+            pool_merchant_twh = pool['merchant_twh']
+
+            # Per-mix clean TWh columns: cf(0), sol(1), wnd(2), osw(3), ccs(4), hyd(5)
+            cf_pct = mixes_arr[:, 0]
+            sol_pct = mixes_arr[:, 1]
+            wnd_pct = mixes_arr[:, 2]
+            osw_pct = mixes_arr[:, 3]
+            ccs_pct = mixes_arr[:, 4]
+            hyd_pct = mixes_arr[:, 5]
+            total_clean_pct = cf_pct + sol_pct + wnd_pct + osw_pct + ccs_pct + hyd_pct
+            total_clean_twh = total_clean_pct / 100.0 * demand_twh
+
+            # SSS covers nuclear+hydro first (cheapest/baseload)
+            sss_covered = np.minimum(pool_sss_twh, total_clean_twh)
+            remaining = total_clean_twh - sss_covered
+
+            # Merchant covers next tranche
+            merchant_covered = np.minimum(pool_merchant_twh, np.maximum(remaining, 0))
+
+            # Pool 4 = remainder
+            pool4_twh = np.maximum(total_clean_twh - sss_covered - merchant_covered, 0)
+
+            # SSS savings: SSS resources are free (vs wholesale-priced in optimizer)
+            wholesale = WHOLESALE_PRICES.get(iso, 32)
+            sss_savings = wholesale * sss_covered / demand_twh
+
+            # Merchant savings: EAC premium replaces LCOE
+            avg_merchant_lcoe = 35.0  # Blended solar/wind LCOE
+            merchant_savings = np.maximum(avg_merchant_lcoe - eac_price, 0) * merchant_covered / demand_twh
+
+            # Pool-aware total cost
+            pool_adjusted_costs = costs - sss_savings - merchant_savings
+            pool_adjusted_costs = np.maximum(pool_adjusted_costs, 0)
+
+            total_aug = pool_adjusted_costs + excess
+
+            # ── Tier classification for firm/storage pacing ──
+            # Under hourly matching, firm investment is driven by the gap analysis
+            # rather than S-curve pacing. Use gap characterization to set firm targets.
+            gap_firm_signal = gap['residual_gap_twh']
+
+            # Firm TWh deployed
+            firm_twh = (cf_pct + ccs_pct) / 100.0 * demand_twh
             ldes_twh = mixes_arr[:, 8] / 100.0 * demand_twh
 
-            # Tier masks (vectorized boolean)
-            firm_ok_strict = (firm_twh >= paced_firm_twh * 0.85) | (paced_firm_twh < 1)
-            ccs_ok = (ccs_twh >= paced_ccs_twh * 0.85) | (paced_ccs_twh < 1)
-            ldes_ok = (ldes_twh >= paced_ldes_twh * 0.50) | (paced_ldes_twh < 1)
-            tier1_mask = firm_ok_strict & ccs_ok & ldes_ok
+            # At inflection/last-mile, prefer mixes with firm clean matching the gap
+            if t >= 80 and gap_firm_signal > 0:
+                # Boost mixes that have adequate firm for night/winter coverage
+                # Firm demand ≈ firm_demand_hours / 8760 * gap_TWh
+                min_firm_twh = gap['firm_demand_hours'] / 8760 * gap_firm_signal * 0.5
+                firm_adequate = firm_twh >= min_firm_twh
+                if np.any(firm_adequate):
+                    # Penalty for insufficient firm
+                    firm_penalty = np.where(firm_adequate, 0.0, 5.0)  # $/MWh penalty
+                    total_aug = total_aug + firm_penalty
 
-            firm_ok_relaxed = (firm_twh >= paced_firm_twh * 0.50) | (paced_firm_twh < 1)
-            tier2_mask = firm_ok_relaxed
-
-            # Select from best available tier
-            if np.any(tier1_mask):
-                tier_costs = np.where(tier1_mask, total_aug, np.inf)
-                source_flag = ''
-            elif np.any(tier2_mask):
-                tier_costs = np.where(tier2_mask, total_aug, np.inf)
-                source_flag = ' (relaxed pace)'
-            else:
-                tier_costs = total_aug
-                source_flag = ' (no pace-compliant mix)'
-
-            best_idx = int(np.argmin(tier_costs))
-            if tier_costs[best_idx] == np.inf:
+            # Select cheapest
+            best_idx = int(np.argmin(total_aug))
+            if total_aug[best_idx] == np.inf:
                 continue
 
             sel_cost_aug = float(total_aug[best_idx])
             sel_excess = float(excess[best_idx])
             sel_mix = mixes_arr[best_idx].tolist()
+            sel_pool4_twh = float(pool4_twh[best_idx])
 
             # Build full result dict only for the winner (scalar call)
-            # Pass dispatch data for dispatch-based gas backup
             sel_result = compute_mix_cost(sel_mix, iso_sens, iso, demand_twh,
                                           overrides=overrides, growth_factor=gf,
                                           demand_norm=iso_demand_norm,
@@ -471,16 +529,32 @@ def find_scenario_b_mixes(feasible_mixes, isos=None):
                                           supply_matrix=iso_supply_matrix)
             sel_deployed = _mix_resource_twh(sel_mix, demand_twh, iso)
 
-            # Build augmented result with floor ratchet
+            # ── Build augmented result with floor ratchet ──
             extra = {
                 'learning_fraction': round(frac, 3),
                 'learning_nuclear_lcoe': round(overrides['nuclear_lcoe'], 1),
                 'learning_ccs_lcoe': round(overrides['ccs_lcoe'], 1),
                 'learning_ldes_lcoe': round(overrides['ldes_lcoe'], 1),
-                'paced_firm_target_twh': round(paced_firm_twh, 1),
-                'paced_ccs_target_twh': round(paced_ccs_twh, 1),
-                'deploy_fraction': round(deploy_frac, 3),
                 'target_threshold': target_t,
+                # Four-pool metadata
+                'pool1_sss_twh': round(pool['sss_twh'], 1),
+                'pool2_contracted_twh': round(pool['contracted_twh'], 1),
+                'pool3_merchant_twh': round(pool['merchant_twh'], 1),
+                'pool4_newbuild_twh': round(sel_pool4_twh, 1),
+                'sss_hourly_min_coverage_pct': round(pool['min_coverage_pct'], 1),
+                'sss_hourly_max_coverage_pct': round(pool['max_coverage_pct'], 1),
+                'available_hourly_avg_pct': round(pool['avg_coverage_pct'], 1),
+                'residual_gap_twh': round(gap['residual_gap_twh'], 1),
+                'firm_demand_hours': gap['firm_demand_hours'],
+                'storage_opportunity_hours': gap['storage_opportunity_hours'],
+                'surplus_twh': round(gap['surplus_twh'], 1),
+                'gap_hours': gap['gap_hours'],
+                'zone': _classify_zone(t),
+                # Pool-aware cost breakdown
+                'pool_adjusted_cost': round(float(pool_adjusted_costs[best_idx]), 2),
+                'sss_savings_per_mwh': round(float(sss_savings[best_idx]), 2),
+                'merchant_savings_per_mwh': round(float(merchant_savings[best_idx]), 2),
+                'eac_price': eac_price,
             }
             aug, augmented, excess_twh, total_excess = build_augmented_result(
                 sel_result, sel_mix, floor, sel_deployed,
@@ -488,8 +562,9 @@ def find_scenario_b_mixes(feasible_mixes, isos=None):
                 iso, demand_twh, gf, source='EF', extra_fields=extra)
 
             if total_excess > 1.0:
-                print(f"  ↗ {iso} {t}% [B]: {total_excess:.0f} TWh excess "
-                      f"(+${sel_excess:.1f}/MWh){source_flag}")
+                zone = _classify_zone(t)
+                print(f"  ↗ {iso} {t}% [B-{zone}]: {total_excess:.0f} TWh excess "
+                      f"(+${sel_excess:.1f}/MWh)")
 
             iso_results[t] = aug
 
@@ -497,18 +572,23 @@ def find_scenario_b_mixes(feasible_mixes, isos=None):
             for res in floor:
                 floor[res] = max(floor[res], augmented.get(res, 0))
 
-        # Print trajectory summary
+        # Print trajectory summary with pool breakdown
+        print(f"\n  {iso} Scenario B Trajectory (Four-Pool Model):")
+        print(f"    {'Thr':>5s}  {'Zone':>10s}  {'SSS':>5s}  {'Mrch':>5s}  {'P4':>5s}  "
+              f"{'Gap':>5s}  {'FirmH':>5s}  {'LF':>4s}  {'$/MWh':>6s}")
         for t in sorted(iso_results.keys()):
             r = iso_results[t]
             rt = r['resource_twh']
+            zone = r.get('zone', '?')
+            p1 = r.get('pool1_sss_twh', 0)
+            p3 = r.get('pool3_merchant_twh', 0)
+            p4 = r.get('pool4_newbuild_twh', 0)
+            gap_twh = r.get('residual_gap_twh', 0)
+            firm_hrs = r.get('firm_demand_hours', 0)
             lf = r.get('learning_fraction', 0)
-            paced = r.get('paced_firm_target_twh', 0)
-            actual_firm = rt.get('clean_firm', 0) + rt.get('ccs_ccgt', 0)
-            df = r.get('deploy_fraction', 0)
-            print(f"    {t:5.1f}%: CF={rt['clean_firm']:7.0f} Sol={rt['solar']:6.0f} "
-                  f"Wnd={rt['wind']:6.0f} CCS={rt.get('ccs_ccgt', 0):6.0f} "
-                  f"Firm={actual_firm:6.0f}/{paced:5.0f} pace "
-                  f"DF={df:.2f} LF={lf:.2f} ${r['effective_cost']:.0f}/MWh [B]")
+            cost = r.get('effective_cost', 0)
+            print(f"    {t:5.1f}%  {zone:>10s}  {p1:5.0f}  {p3:5.0f}  {p4:5.0f}  "
+                  f"{gap_twh:5.0f}  {firm_hrs:5d}  {lf:.2f}  ${cost:5.0f}")
 
         results[iso] = iso_results
 
@@ -521,10 +601,12 @@ def find_scenario_b_mixes(feasible_mixes, isos=None):
 
 def main():
     print("=" * 80)
-    print("SCENARIO B: HOURLY MATCHING — ENDPOINT-OPTIMAL DEPLOYMENT")
-    print("  Forward-looking endpoint-optimal deployment with S-curve pacing")
-    print("  Nuclear/LDES: FOAK(H)→NOAK(L) learning curve")
-    print("  CCS: FOAK(H)→NOAK(M) learning curve with 45Q")
+    print("SCENARIO B: GHG PROTOCOL HOURLY MATCHING — FOUR-POOL GRID BUILDOUT")
+    print("  Pool 1 (SSS): Policy-supported clean at $0")
+    print("  Pool 2 (Contracted): Locked via hyperscaler PPAs")
+    print("  Pool 3 (Merchant): Existing clean at EAC premium")
+    print("  Pool 4 (New-Build): Hourly matching investment signal")
+    print("  Learning curve: FOAK(H)→NOAK(L), 2030-2040")
     print("=" * 80)
 
     # Parse ISO arguments
@@ -545,8 +627,7 @@ def main():
           f"{len(feasible_mixes)} ISOs")
 
     # Run Scenario B
-    print("\nRunning Scenario B (Hourly Matching): "
-          "Endpoint-optimal, backward from per-ISO MAC/DAC crossover target...")
+    print("\nRunning Scenario B (GHG Protocol Four-Pool Hourly Matching)...")
     results_b = find_scenario_b_mixes(feasible_mixes, isos=isos_to_run)
 
     # Save results
@@ -556,7 +637,7 @@ def main():
 
     # Print summary
     print("\n" + "=" * 80)
-    print("SCENARIO B SUMMARY")
+    print("SCENARIO B SUMMARY — FOUR-POOL MODEL")
     print("=" * 80)
     for iso in isos_processed:
         iso_results = results_b[iso]
@@ -568,9 +649,21 @@ def main():
         max_t = max(thresholds_done)
         min_cost = iso_results[min_t].get('effective_cost', 0)
         max_cost = iso_results[max_t].get('effective_cost', 0)
+
+        # Pool summary at highest threshold
+        top = iso_results[max_t]
+        p1 = top.get('pool1_sss_twh', 0)
+        p3 = top.get('pool3_merchant_twh', 0)
+        p4 = top.get('pool4_newbuild_twh', 0)
+        gap = top.get('residual_gap_twh', 0)
+        firm_hrs = top.get('firm_demand_hours', 0)
+
         print(f"  {iso}: {len(thresholds_done)} thresholds "
               f"({min_t}%-{max_t}%), "
               f"cost ${min_cost:.0f}-${max_cost:.0f}/MWh")
+        print(f"    At {max_t}%: SSS={p1:.0f} Merchant={p3:.0f} "
+              f"NewBuild={p4:.0f} TWh, Gap={gap:.0f} TWh, "
+              f"FirmHours={firm_hrs}")
 
     print(f"\nScenario B complete: {len(isos_processed)} ISOs processed.")
 

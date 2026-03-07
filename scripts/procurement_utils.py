@@ -137,6 +137,26 @@ RPS_TARGETS = {
 SSS_NEW_BUILD_FRACTION = 0.40  # 40% of new RPS build goes to SSS, 60% to merchant
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# CORPORATE-CONTRACTED CLEAN ENERGY (Pool 2 — Locked/Unavailable)
+# ═══════════════════════════════════════════════════════════════════════════════
+# Nuclear PPAs already locked to hyperscalers via long-term contracts.
+# These are NOT available as SSS or for voluntary EAC procurement.
+# Source: Public PPA announcements, SEC filings, NRC transfer applications.
+
+CONTRACTED_CLEAN_TWH = {
+    'CAISO': 0.0,     # No major nuclear PPAs announced
+    'ERCOT': 0.0,     # No nuclear in ERCOT
+    'PJM':   18.8,    # Susquehanna → Amazon/Talen Energy (~2.5 GW, ~18.8 TWh)
+    'NYISO': 0.0,     # ZEC plants remain under NY state programs, not corporate PPAs
+    'NEISO': 0.0,     # Millstone under CT CCEF (SSS), not corporate
+    'MISO':  18.0,    # Clinton (~10 TWh) + Duane Arnold (~5 TWh) → Meta; ~3 TWh additional
+    'SPP':   0.0,     # Wolf Creek — no announced corporate PPA
+}
+# Note: Meta also contracted Ohio nuclear (Davis-Besse area, PJM zone).
+# These values are approximate — validate against latest public filings.
+# Contracted capacity is modeled as flat baseload (nuclear shape).
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # PPA PREMIUM MODEL (§15.14.4)
 # ═══════════════════════════════════════════════════════════════════════════════
 # PPA_price = LCOE × (1 + premium_pct)
@@ -268,6 +288,116 @@ def get_existing_clean_twh(iso):
     gm = GRID_MIX_SHARES[iso]
     existing_pct = sum(gm[r] for r in ['clean_firm', 'solar', 'wind', 'offshore_wind', 'hydro']) / 100.0
     return existing_pct * BASE_DEMAND_TWH[iso]
+
+
+def get_contracted_clean_twh(iso):
+    """Get corporate-contracted clean TWh locked via long-term PPAs (unavailable)."""
+    return CONTRACTED_CLEAN_TWH.get(iso, 0.0)
+
+
+def get_merchant_clean_twh(iso, year=2025, growth_level='Medium'):
+    """Get existing merchant clean TWh available for voluntary EAC procurement.
+
+    Merchant clean = total existing clean - SSS (policy-supported) - contracted (locked).
+    This is Pool 3 in the four-pool supply model.
+
+    In ERCOT: ~183 TWh (essentially all existing solar+wind, no SSS, no contracts).
+    In PJM: smaller pool after subtracting 95 TWh SSS + 18.8 TWh contracted.
+    """
+    total_existing = get_existing_clean_twh(iso)
+    sss = get_sss_twh(iso, year, growth_level)
+    contracted = get_contracted_clean_twh(iso)
+    merchant = total_existing - sss - contracted
+    return max(0.0, merchant)
+
+
+def get_merchant_hourly_shape(iso, gen_profiles):
+    """Get 8760 hourly shape for merchant clean energy (Pool 3).
+
+    Merchant clean follows actual generation profiles for existing solar, wind,
+    and merchant nuclear. Unlike SSS (which is nuclear-heavy baseload), merchant
+    clean is often VRE-dominated (especially in ERCOT and SPP).
+
+    Returns normalized 8760 profile (sums to 1.0).
+    """
+    profiles = get_supply_profiles(iso, gen_profiles)
+    gm = GRID_MIX_SHARES[iso]
+    base = BASE_DEMAND_TWH[iso]
+
+    # Resource TWh in the merchant pool (existing minus SSS minus contracted)
+    sss_fixed = SSS_FIXED_FLEET_TWH[iso]
+    contracted = CONTRACTED_CLEAN_TWH.get(iso, 0.0)
+
+    # Existing clean_firm TWh (nuclear + some hydro)
+    existing_cf_twh = gm.get('clean_firm', 0) / 100.0 * base
+    # SSS + contracted consume from clean_firm first
+    merchant_cf_twh = max(0.0, existing_cf_twh - sss_fixed - contracted)
+
+    # Existing VRE TWh (fully merchant — SSS doesn't claim existing VRE)
+    merchant_solar_twh = gm.get('solar', 0) / 100.0 * base
+    merchant_wind_twh = gm.get('wind', 0) / 100.0 * base
+    merchant_offshore_twh = gm.get('offshore_wind', 0) / 100.0 * base
+    merchant_hydro_twh = gm.get('hydro', 0) / 100.0 * base
+
+    # Subtract any hydro in SSS fixed fleet (rough: 20% of SSS fixed is hydro)
+    sss_hydro_twh = sss_fixed * 0.20
+    merchant_hydro_twh = max(0.0, merchant_hydro_twh - sss_hydro_twh)
+
+    total = (merchant_cf_twh + merchant_solar_twh + merchant_wind_twh
+             + merchant_offshore_twh + merchant_hydro_twh)
+    if total <= 0:
+        return np.ones(H) / H
+
+    # Weight each resource profile by its merchant TWh share
+    components = []
+    weights = []
+
+    if merchant_cf_twh > 0:
+        p = np.array(profiles.get('clean_firm', [1.0/H]*H)[:H], dtype=np.float64)
+        p_sum = p.sum()
+        if p_sum > 0:
+            p = p / p_sum
+        components.append(p)
+        weights.append(merchant_cf_twh / total)
+
+    if merchant_solar_twh > 0:
+        p = np.array(profiles.get('solar', [1.0/H]*H)[:H], dtype=np.float64)
+        p_sum = p.sum()
+        if p_sum > 0:
+            p = p / p_sum
+        components.append(p)
+        weights.append(merchant_solar_twh / total)
+
+    if merchant_wind_twh > 0:
+        p = np.array(profiles.get('wind', [1.0/H]*H)[:H], dtype=np.float64)
+        p_sum = p.sum()
+        if p_sum > 0:
+            p = p / p_sum
+        components.append(p)
+        weights.append(merchant_wind_twh / total)
+
+    if merchant_hydro_twh > 0:
+        # Use hydro profile from gen_profiles
+        hydro_raw = gen_profiles.get(iso, {}).get('2025', gen_profiles.get(iso, {}))
+        if isinstance(hydro_raw, dict):
+            hydro_vals = hydro_raw.get('hydro', [1.0/H]*H)
+        else:
+            hydro_vals = [1.0/H]*H
+        p = np.array(hydro_vals[:H], dtype=np.float64)
+        p_sum = p.sum()
+        if p_sum > 0:
+            p = p / p_sum
+        components.append(p)
+        weights.append(merchant_hydro_twh / total)
+
+    if not components:
+        return np.ones(H) / H
+
+    blended = sum(w * c for w, c in zip(weights, components))
+    blended_sum = blended.sum()
+    if blended_sum > 0:
+        blended = blended / blended_sum
+    return blended
 
 
 def get_sss_hourly_shape(iso, gen_profiles):
