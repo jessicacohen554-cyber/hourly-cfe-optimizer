@@ -395,29 +395,29 @@
 </div>
 
 <!-- ================================================================ -->
-<!-- SECTION 5: Reference Case Market Price Fan                        -->
+<!-- SECTION 5: Step 5B vs Step 10 Pure Power Market Comparison        -->
 <!-- ================================================================ -->
 <div class="scroll-section section-light">
     <div class="scroll-section-inner">
         <div class="chart-panel" id="refCasePanel">
             <div class="chart-header">
-                <h3 class="chart-title" id="refCaseTitle">Reference Case: Where Markets Go Without Climate Policy</h3>
-                <p class="chart-subtitle" id="refCaseSubtitle">P10/P50/P90 wholesale price fan under 270 market scenarios (2023–2050)</p>
+                <h3 class="chart-title" id="refCaseTitle">Pure Power Markets: Policy-Driven (5B) vs Market-Driven (Step 10)</h3>
+                <p class="chart-subtitle" id="refCaseSubtitle">Energy + capacity revenue only — no REC revenue included</p>
             </div>
             <div class="chart-container-lg"><canvas id="refCaseChart"></canvas></div>
         </div>
         <div class="grid-2col" style="margin-top:var(--space-lg);">
             <div class="narrative-card">
-                <span class="section-tag" style="background:rgba(14,165,233,0.08);color:#38bdf8;">Market Dynamics</span>
-                <h3>Market-driven deployment reaches 50–75% clean by 2050</h3>
-                <p>Under reference conditions (no emission constraint), profitable clean energy deployment typically reaches <strong>50–75% clean</strong> by 2050 depending on cost assumptions. After this point, the market stops — the next increment of clean energy costs more than its revenue.</p>
-                <p>The key variable: where the market stops determines the wholesale price floor. In facilitating conditions, markets reach higher clean% with lower prices. In challenging conditions, less clean energy deploys but prices stay higher.</p>
+                <span class="section-tag" style="background:rgba(14,165,233,0.08);color:#38bdf8;">Apples-to-Apples</span>
+                <h3>Same metric, different models</h3>
+                <p>Both curves show <strong>pure power market revenue</strong> — energy payments + capacity payments only. REC revenue is excluded from Step 10 to ensure a fair comparison with Step 5B's wholesale LMP model.</p>
+                <p>Step 5B models wholesale prices under a policy-driven decarbonization pathway (SBTi milestones). Step 10 models what markets deliver without emission constraints. The comparison reveals where policy and markets agree on power prices — and where they structurally diverge.</p>
             </div>
             <div class="narrative-card">
-                <span class="section-tag" style="background:rgba(34,197,94,0.08);color:#4ade80;">Comparison</span>
-                <h3>Net-zero pathway prices vs. reference case</h3>
-                <p>The SBTi net-zero pathway (Step 5B) assumes grid decarbonization reaches 95%+ clean by 2050. The reference case (Step 10) shows what markets deliver without policy. The gap between these trajectories represents the <strong>policy intervention premium</strong> — the additional cost of mandating decarbonization beyond what markets would deliver voluntarily.</p>
-                <p>Where these trajectories converge (50–65% clean), the market and policy are aligned. Where they diverge (>75% clean), policy must overcome market resistance.</p>
+                <span class="section-tag" style="background:rgba(34,197,94,0.08);color:#4ade80;">Convergence Zone</span>
+                <h3>Models converge below ~65% clean</h3>
+                <p>At lower clean energy penetrations (50–65%), both models produce similar wholesale prices — the grid is still fossil-dominated and the merit order functions the same way regardless of whether clean energy was mandated or market-driven.</p>
+                <p>Above 75% clean, the models diverge: Step 5B's policy pathway forces deployment past the market equilibrium, pushing wholesale prices lower than what Step 10's market-only pathway would produce at the same clean%. The <strong>capacity market premium</strong> (purple dashed line) partially offsets this decline.</p>
             </div>
         </div>
     </div>

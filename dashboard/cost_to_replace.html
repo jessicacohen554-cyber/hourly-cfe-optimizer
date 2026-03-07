@@ -506,7 +506,7 @@ body { background: var(--bg-page); }
         <div class="nuclear-grid">
             <div class="nuclear-chart-col">
                 <div class="chart-panel">
-                    <div class="chart-title" id="nuclearChartTitle1">PJM Wholesale Price vs. Nuclear Operating Cost &mdash; By Clean Energy %</div>
+                    <div class="chart-title" id="nuclearChartTitle1">PJM Nuclear Revenue (Energy + Capacity) vs. Operating Cost &mdash; By Clean Energy %</div>
                     <div class="chart-container">
                         <canvas id="nuclearEconChart"></canvas>
                     </div>
@@ -901,8 +901,9 @@ function buildNuclearCharts(iso) {
     var D = LMP_ALL[iso];
     if (!D) return;
 
-    // Build nuclear econ chart using the shared builder
-    buildNuclearEconChart(D);
+    // Build nuclear econ chart with capacity market revenue overlay
+    var capData = (typeof LMP_CAPACITY !== 'undefined') ? LMP_CAPACITY[iso] : null;
+    buildNuclearEconChart(D, capData);
     nucEconChart = chartInstances.nucEcon;
 
     // Build nuclear zero hours chart
