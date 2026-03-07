@@ -913,16 +913,16 @@ def _archetype_key(iso, resource_pcts, procurement_pct=100, battery_dispatch_pct
     """Deterministic hash key for a unique dispatch archetype."""
     parts = [
         iso,
-        str(resource_pcts.get('clean_firm', 0)),
-        str(resource_pcts.get('solar', 0)),
-        str(resource_pcts.get('wind', 0)),
-        str(resource_pcts.get('offshore_wind', 0)),
-        str(resource_pcts.get('ccs_ccgt', 0)),
-        str(resource_pcts.get('hydro', 0)),
-        str(procurement_pct),
-        str(battery_dispatch_pct),
-        str(battery8_dispatch_pct),
-        str(ldes_dispatch_pct),
+        str(float(resource_pcts.get('clean_firm', 0))),
+        str(float(resource_pcts.get('solar', 0))),
+        str(float(resource_pcts.get('wind', 0))),
+        str(float(resource_pcts.get('offshore_wind', 0))),
+        str(float(resource_pcts.get('ccs_ccgt', 0))),
+        str(float(resource_pcts.get('hydro', 0))),
+        str(float(procurement_pct)),
+        str(float(battery_dispatch_pct)),
+        str(float(battery8_dispatch_pct)),
+        str(float(ldes_dispatch_pct)),
     ]
     key_str = '|'.join(parts)
     return hashlib.md5(key_str.encode()).hexdigest()[:16]
