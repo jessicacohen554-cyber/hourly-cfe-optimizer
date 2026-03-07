@@ -1876,21 +1876,32 @@ def save_results(results, scenario_id):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def save_sweep_results(all_rows, sweep_type='reference'):
-    """Save parametric sweep results as a single parquet + JSON summary.
+    """Save parametric sweep results as per-ISO parquets + combined summary.
 
     all_rows: list of flat dicts (one per scenario × ISO × year).
+    Outputs:
+      - data/step10-smartargets/sweep_{type}_{ISO}.parquet  (per-ISO, for parallelism)
+      - data/step10-smartargets/smartargets_sweep_{type}_summary.json
     """
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     df = pd.DataFrame(all_rows)
-    parquet_path = os.path.join(OUTPUT_DIR, f'smartargets_sweep_{sweep_type}.parquet')
-    df.to_parquet(parquet_path, index=False)
-    print(f"\nSaved sweep: {parquet_path} ({len(df)} rows)")
+
+    # Per-ISO parquets — enables independent parallel runs per ISO
+    total_rows = 0
+    for iso in sorted(df['iso'].unique()):
+        iso_df = df[df['iso'] == iso]
+        iso_path = os.path.join(OUTPUT_DIR, f'sweep_{sweep_type}_{iso}.parquet')
+        iso_df.to_parquet(iso_path, index=False)
+        total_rows += len(iso_df)
+        print(f"  Saved: {iso_path} ({len(iso_df)} rows)")
+
+    print(f"\nTotal: {total_rows} rows across {df['iso'].nunique()} ISOs")
 
     # Summary JSON: per-ISO P10/P50/P90 of key metrics at 2050
     summary = {'sweep_type': sweep_type, 'n_scenarios': len(df['scenario'].unique()), 'isos': {}}
     df_2050 = df[df['year'] == 2050]
-    for iso in df_2050['iso'].unique():
+    for iso in sorted(df_2050['iso'].unique()):
         iso_df = df_2050[df_2050['iso'] == iso]
         summary['isos'][iso] = {
             'n_scenarios': len(iso_df),
