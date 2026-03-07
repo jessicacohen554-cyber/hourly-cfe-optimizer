@@ -59,15 +59,38 @@
             });
         }, OPTIONS);
 
-        // Observe all matching elements
-        document.querySelectorAll(SELECTORS).forEach(function(el) {
-            // Skip elements that are already visible (e.g., above the fold)
-            if (el.getBoundingClientRect().top < window.innerHeight * 0.85) {
-                el.classList.add('visible');
-            } else {
-                observer.observe(el);
-            }
-        });
+        function observeElements(root) {
+            (root || document).querySelectorAll(SELECTORS).forEach(function(el) {
+                if (el.classList.contains('visible')) return;
+                if (el.getBoundingClientRect().top < window.innerHeight * 0.85) {
+                    el.classList.add('visible');
+                } else {
+                    observer.observe(el);
+                }
+            });
+        }
+
+        // Observe all existing elements
+        observeElements();
+
+        // Watch for dynamically added elements (e.g., JS-rendered cards)
+        if (typeof MutationObserver !== 'undefined') {
+            var mutObs = new MutationObserver(function(mutations) {
+                for (var i = 0; i < mutations.length; i++) {
+                    var added = mutations[i].addedNodes;
+                    for (var j = 0; j < added.length; j++) {
+                        if (added[j].nodeType === 1) {
+                            if (added[j].matches && added[j].matches(SELECTORS)) {
+                                observeElements(added[j].parentNode);
+                            } else if (added[j].querySelectorAll) {
+                                observeElements(added[j]);
+                            }
+                        }
+                    }
+                }
+            });
+            mutObs.observe(document.body, { childList: true, subtree: true });
+        }
     }
 
     // Initialize when DOM is ready
