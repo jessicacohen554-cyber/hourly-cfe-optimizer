@@ -44,7 +44,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from scenario_common import (
     ISOS, RESOURCES, THRESHOLDS, SCENARIO_A, SCENARIO_B,
-    HYDRO_CAP_TWH, WHOLESALE_PRICES, FUEL_ADJUSTMENTS,
+    HYDRO_CAP_TWH, WHOLESALE_PRICES, FUEL_ADJUSTMENTS, CCS_CAP_TWH,
     GRID_MIX_SHARES, BASE_DEMAND_TWH, SBTI_YEAR_MAP,
     PEAK_DEMAND_MW, EXISTING_GAS_CAPACITY_MW, EXISTING_GAS_FOM_KW_YR,
     NEW_CCGT_COST_KW_YR, PEAK_CAPACITY_CREDITS, GAS_AVAILABILITY_FACTOR,
@@ -433,6 +433,14 @@ def find_scenario_b_mixes(feasible_mixes, isos=None):
 
             # ── Vectorized mix evaluation ──
             mixes_arr = _to_mix_array(mixes)
+
+            # CCS cap filter: exclude mixes exceeding ISO's geologic storage cap
+            ccs_cap = CCS_CAP_TWH.get(iso, 9999.0)
+            if ccs_cap < 9999.0:
+                ccs_twh = mixes_arr[:, 4] / 100.0 * demand_twh
+                ccs_ok = ccs_twh <= ccs_cap + 0.01  # small tolerance
+                if np.any(ccs_ok):
+                    mixes_arr = mixes_arr[ccs_ok]
 
             # Match score ceiling filter: score <= threshold + 2
             scores = mixes_arr[:, 6]
