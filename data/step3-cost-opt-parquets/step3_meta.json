@@ -2,24 +2,24 @@
   "config": {
     "data_year": 2025,
     "thresholds": [
-      10,
-      20,
-      30,
-      40,
-      50,
-      55,
-      60,
-      65,
-      70,
-      75,
-      80,
-      85,
+      10.0,
+      20.0,
+      30.0,
+      40.0,
+      50.0,
+      55.0,
+      60.0,
+      65.0,
+      70.0,
+      75.0,
+      80.0,
+      85.0,
       87.5,
-      90,
+      90.0,
       92.5,
-      95,
+      95.0,
       97.5,
-      99,
+      99.0,
       99.5,
       99.9,
       99.99
@@ -28,6 +28,7 @@
       "clean_firm",
       "solar",
       "wind",
+      "offshore_wind",
       "ccs_ccgt",
       "hydro"
     ],
@@ -45,6 +46,7 @@
         "clean_firm": 7.9,
         "solar": 22.3,
         "wind": 8.8,
+        "offshore_wind": 0,
         "ccs_ccgt": 0,
         "hydro": 9.5
       },
@@ -52,6 +54,7 @@
         "clean_firm": 8.6,
         "solar": 13.8,
         "wind": 23.6,
+        "offshore_wind": 0,
         "ccs_ccgt": 0,
         "hydro": 0.1
       },
@@ -59,6 +62,7 @@
         "clean_firm": 32.1,
         "solar": 2.9,
         "wind": 3.8,
+        "offshore_wind": 0,
         "ccs_ccgt": 0,
         "hydro": 1.8
       },
@@ -66,6 +70,7 @@
         "clean_firm": 18.4,
         "solar": 0.0,
         "wind": 4.7,
+        "offshore_wind": 0,
         "ccs_ccgt": 0,
         "hydro": 15.9
       },
@@ -73,6 +78,7 @@
         "clean_firm": 23.8,
         "solar": 1.4,
         "wind": 3.9,
+        "offshore_wind": 0,
         "ccs_ccgt": 0,
         "hydro": 4.4
       },
@@ -80,6 +86,7 @@
         "clean_firm": 13.1,
         "solar": 2.1,
         "wind": 14.5,
+        "offshore_wind": 0,
         "ccs_ccgt": 0,
         "hydro": 1.6
       },
@@ -87,6 +94,7 @@
         "clean_firm": 5.2,
         "solar": 0.4,
         "wind": 37.1,
+        "offshore_wind": 0,
         "ccs_ccgt": 0,
         "hydro": 4.3
       }
@@ -150,120 +158,149 @@
           "SPP": 48
         }
       },
-      "battery": {
+      "offshore_wind": {
         "Low": {
-          "CAISO": 2.27,
-          "ERCOT": 2.05,
-          "PJM": 2.18,
-          "NYISO": 2.41,
-          "NEISO": 2.34,
-          "MISO": 2.14,
-          "SPP": 2.07
+          "CAISO": 110,
+          "ERCOT": 0,
+          "PJM": 65,
+          "NYISO": 72,
+          "NEISO": 68,
+          "MISO": 0,
+          "SPP": 0
         },
         "Medium": {
-          "CAISO": 2.6,
-          "ERCOT": 2.34,
-          "PJM": 2.49,
-          "NYISO": 2.75,
-          "NEISO": 2.67,
-          "MISO": 2.44,
-          "SPP": 2.37
+          "CAISO": 150,
+          "ERCOT": 0,
+          "PJM": 85,
+          "NYISO": 95,
+          "NEISO": 90,
+          "MISO": 0,
+          "SPP": 0
         },
         "High": {
-          "CAISO": 2.92,
-          "ERCOT": 2.63,
-          "PJM": 2.8,
-          "NYISO": 3.09,
-          "NEISO": 3.0,
-          "MISO": 2.75,
-          "SPP": 2.66
+          "CAISO": 200,
+          "ERCOT": 0,
+          "PJM": 112,
+          "NYISO": 125,
+          "NEISO": 118,
+          "MISO": 0,
+          "SPP": 0
+        }
+      },
+      "battery": {
+        "Low": {
+          "CAISO": 33813.6,
+          "ERCOT": 30484.8,
+          "PJM": 32412.0,
+          "NYISO": 35740.8,
+          "NEISO": 34777.2,
+          "MISO": 31711.2,
+          "SPP": 30835.2
+        },
+        "Medium": {
+          "CAISO": 41610.0,
+          "ERCOT": 37405.2,
+          "PJM": 39858.0,
+          "NYISO": 43975.2,
+          "NEISO": 42661.2,
+          "MISO": 39069.6,
+          "SPP": 37930.8
+        },
+        "High": {
+          "CAISO": 52822.8,
+          "ERCOT": 47566.8,
+          "PJM": 50632.8,
+          "NYISO": 55888.8,
+          "NEISO": 54312.0,
+          "MISO": 49581.6,
+          "SPP": 48180.0
         }
       },
       "battery8": {
         "Low": {
-          "CAISO": 1.62,
-          "ERCOT": 1.46,
-          "PJM": 1.55,
-          "NYISO": 1.71,
-          "NEISO": 1.67,
-          "MISO": 1.51,
-          "SPP": 1.49
+          "CAISO": 28908.0,
+          "ERCOT": 26017.2,
+          "PJM": 27681.6,
+          "NYISO": 30572.4,
+          "NEISO": 29696.4,
+          "MISO": 27156.0,
+          "SPP": 26367.6
         },
         "Medium": {
-          "CAISO": 1.94,
-          "ERCOT": 1.75,
-          "PJM": 1.86,
-          "NYISO": 2.05,
-          "NEISO": 2.0,
-          "MISO": 1.81,
-          "SPP": 1.78
+          "CAISO": 35565.6,
+          "ERCOT": 32061.6,
+          "PJM": 34076.4,
+          "NYISO": 37668.0,
+          "NEISO": 36529.2,
+          "MISO": 33375.6,
+          "SPP": 32412.0
         },
         "High": {
-          "CAISO": 2.26,
-          "ERCOT": 2.04,
-          "PJM": 2.17,
-          "NYISO": 2.39,
-          "NEISO": 2.33,
-          "MISO": 2.11,
-          "SPP": 2.08
+          "CAISO": 45464.4,
+          "ERCOT": 40909.2,
+          "PJM": 43537.2,
+          "NYISO": 48092.4,
+          "NEISO": 46690.8,
+          "MISO": 42661.2,
+          "SPP": 41434.8
         }
       },
       "ldes": {
         "Low": {
-          "CAISO": 0.38,
-          "ERCOT": 0.33,
-          "PJM": 0.36,
-          "NYISO": 0.42,
-          "NEISO": 0.4,
-          "MISO": 0.34,
-          "SPP": 0.33
+          "CAISO": 3328.8,
+          "ERCOT": 2890.8,
+          "PJM": 3153.6,
+          "NYISO": 3679.2,
+          "NEISO": 3504.0,
+          "MISO": 2978.4,
+          "SPP": 2890.8
         },
         "Medium": {
-          "CAISO": 0.63,
-          "ERCOT": 0.54,
-          "PJM": 0.59,
-          "NYISO": 0.7,
-          "NEISO": 0.66,
-          "MISO": 0.56,
-          "SPP": 0.55
+          "CAISO": 5518.8,
+          "ERCOT": 4730.4,
+          "PJM": 5168.4,
+          "NYISO": 6132.0,
+          "NEISO": 5781.6,
+          "MISO": 4905.6,
+          "SPP": 4818.0
         },
         "High": {
-          "CAISO": 1.0,
-          "ERCOT": 0.86,
-          "PJM": 0.94,
-          "NYISO": 1.11,
-          "NEISO": 1.06,
-          "MISO": 0.9,
-          "SPP": 0.88
+          "CAISO": 8760.0,
+          "ERCOT": 7533.6,
+          "PJM": 8234.4,
+          "NYISO": 9723.6,
+          "NEISO": 9285.6,
+          "MISO": 7884.0,
+          "SPP": 7708.8
         }
       },
       "h2": {
         "Low": {
-          "CAISO": 1.98,
-          "ERCOT": 1.75,
-          "PJM": 1.88,
-          "NYISO": 2.18,
-          "NEISO": 2.08,
-          "MISO": 1.8,
-          "SPP": 1.72
+          "CAISO": 17344.8,
+          "ERCOT": 15330.0,
+          "PJM": 16468.8,
+          "NYISO": 19096.8,
+          "NEISO": 18220.8,
+          "MISO": 15768.0,
+          "SPP": 15067.2
         },
         "Medium": {
-          "CAISO": 2.9,
-          "ERCOT": 2.56,
-          "PJM": 2.76,
-          "NYISO": 3.19,
-          "NEISO": 3.05,
-          "MISO": 2.63,
-          "SPP": 2.52
+          "CAISO": 25404.0,
+          "ERCOT": 22425.6,
+          "PJM": 24177.6,
+          "NYISO": 27944.4,
+          "NEISO": 26718.0,
+          "MISO": 23038.8,
+          "SPP": 22075.2
         },
         "High": {
-          "CAISO": 4.09,
-          "ERCOT": 3.61,
-          "PJM": 3.88,
-          "NYISO": 4.5,
-          "NEISO": 4.29,
-          "MISO": 3.71,
-          "SPP": 3.54
+          "CAISO": 35828.4,
+          "ERCOT": 31623.6,
+          "PJM": 33988.8,
+          "NYISO": 39420.0,
+          "NEISO": 37580.4,
+          "MISO": 32499.6,
+          "SPP": 31010.4
         }
       }
     },
@@ -386,6 +423,36 @@
           "NEISO": 6,
           "MISO": 4,
           "SPP": 3
+        }
+      },
+      "offshore_wind": {
+        "None": 0,
+        "Low": {
+          "CAISO": 10,
+          "ERCOT": 0,
+          "PJM": 6,
+          "NYISO": 8,
+          "NEISO": 7,
+          "MISO": 0,
+          "SPP": 0
+        },
+        "Medium": {
+          "CAISO": 20,
+          "ERCOT": 0,
+          "PJM": 11,
+          "NYISO": 15,
+          "NEISO": 13,
+          "MISO": 0,
+          "SPP": 0
+        },
+        "High": {
+          "CAISO": 35,
+          "ERCOT": 0,
+          "PJM": 18,
+          "NYISO": 25,
+          "NEISO": 22,
+          "MISO": 0,
+          "SPP": 0
         }
       },
       "battery": {
@@ -514,31 +581,31 @@
       "geothermal_cap_twh": 39.0,
       "ccs_lcoe_45q_on": {
         "L": {
-          "CAISO": 58,
-          "ERCOT": 52,
-          "PJM": 62,
-          "NYISO": 78,
-          "NEISO": 75,
-          "MISO": 55,
-          "SPP": 50
+          "CAISO": 59.5,
+          "ERCOT": 53.5,
+          "PJM": 63.5,
+          "NYISO": 79.5,
+          "NEISO": 76.5,
+          "MISO": 56.5,
+          "SPP": 51.5
         },
         "M": {
-          "CAISO": 86,
-          "ERCOT": 71,
-          "PJM": 79,
-          "NYISO": 99,
-          "NEISO": 96,
-          "MISO": 74,
-          "SPP": 68
+          "CAISO": 87.5,
+          "ERCOT": 72.5,
+          "PJM": 80.5,
+          "NYISO": 100.5,
+          "NEISO": 97.5,
+          "MISO": 75.5,
+          "SPP": 69.5
         },
         "H": {
-          "CAISO": 115,
-          "ERCOT": 92,
-          "PJM": 102,
-          "NYISO": 128,
-          "NEISO": 122,
-          "MISO": 96,
-          "SPP": 88
+          "CAISO": 116.5,
+          "ERCOT": 93.5,
+          "PJM": 103.5,
+          "NYISO": 129.5,
+          "NEISO": 123.5,
+          "MISO": 97.5,
+          "SPP": 89.5
         }
       },
       "ccs_lcoe_45q_off": {
