@@ -42,7 +42,7 @@ SCENARIO_META = {
 
 
 def round_list(arr, decimals=2):
-    return [round(float(x), decimals) for x in arr]
+    return [round(float(x), decimals) if x is not None and not (isinstance(x, float) and np.isnan(x)) else None for x in arr]
 
 
 def extract_base_scenario(name):
@@ -60,10 +60,20 @@ def extract_base_scenario(name):
         entry = {
             'years': sub['year'].tolist(),
             'emissions_mt': round_list(sub['emissions_mt']),
+            'gross_emissions_mt': round_list(sub['gross_emissions_mt']) if 'gross_emissions_mt' in sub.columns else round_list(sub['emissions_mt']),
             'clean_pct': round_list(sub['clean_pct']),
             'cost_per_mwh': round_list(sub['cost_per_mwh']),
             'demand_twh': round_list(sub['demand_twh']),
             'emission_rate': round_list(sub.get('emission_rate', pd.Series([0]*len(sub)))),
+            'emission_cap_mt': [round(float(x), 2) if pd.notna(x) else None for x in sub['emission_cap_mt']] if 'emission_cap_mt' in sub.columns else [None]*len(sub),
+            'dac_offset_mt': round_list(sub['dac_offset_mt']) if 'dac_offset_mt' in sub.columns else [0]*len(sub),
+            'dac_cost_million': round_list(sub['dac_cost_million']) if 'dac_cost_million' in sub.columns else [0]*len(sub),
+            'dac_cost_per_ton': round_list(sub['dac_cost_per_ton']) if 'dac_cost_per_ton' in sub.columns else [0]*len(sub),
+            'carbon_shadow_price': round_list(sub['carbon_shadow_price']) if 'carbon_shadow_price' in sub.columns else [0]*len(sub),
+            'mandated_subsidy_mwh': round_list(sub['mandated_subsidy_mwh']) if 'mandated_subsidy_mwh' in sub.columns else [0]*len(sub),
+            'avg_lmp': round_list(sub['avg_lmp']) if 'avg_lmp' in sub.columns else [0]*len(sub),
+            'gas_built_gw': round_list(sub['gas_built_gw']) if 'gas_built_gw' in sub.columns else [0]*len(sub),
+            'total_gas_gw': round_list(sub['total_gas_gw']) if 'total_gas_gw' in sub.columns else [0]*len(sub),
             'mix': {},
         }
         for col, key in zip(MIX_COLS, MIX_KEYS):
@@ -101,9 +111,13 @@ def extract_qt_scenario(name):
             'reduction_targets': round_list(targets),
             'years': [int(y) for y in years],
             'emissions': {},
+            'gross_emissions': {},
             'clean_pct': {},
             'cost_per_mwh': {},
             'demand_twh': {},
+            'dac_offset_mt': {},
+            'carbon_shadow_price': {},
+            'mandated_subsidy_mwh': {},
             'mix': {},
             'curtailment_twh': {},
         }
@@ -111,9 +125,13 @@ def extract_qt_scenario(name):
             tkey = f'{t:.2f}'
             tsub = sub[sub.reduction_target == t].sort_values('year')
             entry['emissions'][tkey] = round_list(tsub['emissions_mt'])
+            entry['gross_emissions'][tkey] = round_list(tsub['gross_emissions_mt']) if 'gross_emissions_mt' in tsub.columns else round_list(tsub['emissions_mt'])
             entry['clean_pct'][tkey] = round_list(tsub['clean_pct'])
             entry['cost_per_mwh'][tkey] = round_list(tsub['cost_per_mwh'])
             entry['demand_twh'][tkey] = round_list(tsub['demand_twh'])
+            entry['dac_offset_mt'][tkey] = round_list(tsub['dac_offset_mt']) if 'dac_offset_mt' in tsub.columns else [0]*len(tsub)
+            entry['carbon_shadow_price'][tkey] = round_list(tsub['carbon_shadow_price']) if 'carbon_shadow_price' in tsub.columns else [0]*len(tsub)
+            entry['mandated_subsidy_mwh'][tkey] = round_list(tsub['mandated_subsidy_mwh']) if 'mandated_subsidy_mwh' in tsub.columns else [0]*len(tsub)
             mix_dict = {}
             total_mix = np.zeros(len(tsub))
             for col, key in zip(MIX_COLS, MIX_KEYS):

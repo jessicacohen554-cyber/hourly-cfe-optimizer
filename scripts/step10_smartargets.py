@@ -222,6 +222,22 @@ REC_ELIGIBLE = {'solar', 'wind', 'offshore_wind', 'hydro', 'geothermal'}
 CES_ELIGIBLE = REC_ELIGIBLE | {'clean_firm', 'ccs_ccgt'}
 CES_DISCOUNT_FACTOR = 0.60  # ZEC/Tier 3 = ~60% of Tier 1 REC price
 
+# DAC (Direct Air Capture) backstop cost — used when physical deployment can't
+# meet emission cap. Learning-curve decline from FOAK to NOAK over time.
+# Sources: IEA 2024 DAC report, Rhodium Group, Climeworks/Orca published costs.
+DAC_COST_PER_TON = {
+    # Facilitating: aggressive learning (Climeworks Gen3, Heirloom, etc.)
+    'Low': {2030: 400, 2035: 250, 2040: 180, 2045: 130, 2050: 100},
+    # Medium: moderate learning
+    'Medium': {2030: 600, 2035: 400, 2040: 300, 2045: 220, 2050: 150},
+    # Challenging: slow learning, limited deployment
+    'High': {2030: 800, 2035: 600, 2040: 450, 2045: 350, 2050: 250},
+}
+
+# Queue overshoot premium — mandated build beyond queue cap costs extra ($/MWh adder)
+# Reflects expedited permitting, emergency grid upgrades, etc.
+QUEUE_OVERSHOOT_PREMIUM = 8.0  # $/MWh adder for each GW beyond queue cap
+
 # Simulation years — 2023 is the actual eGRID baseline (identical for all scenarios)
 SIM_YEARS = [2023, 2030, 2035, 2040, 2045, 2050]
 
@@ -292,6 +308,7 @@ SCENARIOS = {
         'fuel_level': 'Medium',
         'tx_level': 'Medium',
         'emission_constraint': 'power_nz',
+        'dac_available': True,     # DAC backstop available under facilitating conditions
     },
     'AT2': {
         'name': 'AT Power NZ: Challenging',
@@ -304,6 +321,7 @@ SCENARIOS = {
         'fuel_level': 'Medium',
         'tx_level': 'Medium',
         'emission_constraint': 'power_nz',
+        'dac_available': False,    # No DAC under challenging — must overbuild grid
     },
 
     # ─── Ambitious Transition: Economy-Wide Net-Zero ─────────────────────
@@ -322,6 +340,7 @@ SCENARIOS = {
         'fuel_level': 'High',      # Fossil fuel prices rise
         'tx_level': 'Low',         # Accelerated tx buildout
         'emission_constraint': 'economy_nz',
+        'dac_available': True,     # DAC backstop available under facilitating conditions
     },
     'AT4': {
         'name': 'AT Economy NZ: Challenging',
@@ -334,6 +353,7 @@ SCENARIOS = {
         'fuel_level': 'High',
         'tx_level': 'Medium',
         'emission_constraint': 'economy_nz',
+        'dac_available': False,    # No DAC under challenging — must overbuild grid
     },
 
     # ─── Quick Transition ────────────────────────────────────────────────
@@ -353,6 +373,7 @@ SCENARIOS = {
         'tx_level': 'Low',
         'emission_constraint': 'power_nz',
         'qt_reduction_grid': True,
+        'dac_available': True,
     },
     'QT2': {
         'name': 'QT Medium Demand: Challenging',
@@ -366,6 +387,7 @@ SCENARIOS = {
         'tx_level': 'Medium',
         'emission_constraint': 'power_nz',
         'qt_reduction_grid': True,
+        'dac_available': False,
     },
     'QT3': {
         'name': 'QT High Demand: Facilitating',
@@ -379,6 +401,7 @@ SCENARIOS = {
         'tx_level': 'Low',
         'emission_constraint': 'economy_nz',
         'qt_reduction_grid': True,
+        'dac_available': True,
     },
     'QT4': {
         'name': 'QT High Demand: Challenging',
@@ -392,6 +415,7 @@ SCENARIOS = {
         'tx_level': 'Medium',
         'emission_constraint': 'economy_nz',
         'qt_reduction_grid': True,
+        'dac_available': False,
     },
 }
 
@@ -485,6 +509,29 @@ def get_emission_cap_mt(iso, year, constraint_type, baselines, reduction_target=
 
     baseline_mt = baselines.get(iso, 0) / 1e6  # metric tons → million metric tons
     return baseline_mt * fraction_remaining
+
+
+def get_dac_cost_per_ton(year, lcoe_level):
+    """Get DAC cost per metric ton CO₂ at a given year and cost scenario.
+
+    Maps LCOE level to DAC cost trajectory:
+    - Low LCOE → Low DAC cost (facilitating: fast learning)
+    - High LCOE → High DAC cost (challenging: slow learning)
+    - Medium LCOE → Medium DAC cost
+    """
+    dac_level = lcoe_level  # Same mapping: Low/Medium/High
+    trajectory = DAC_COST_PER_TON[dac_level]
+    years = sorted(trajectory.keys())
+    if year <= years[0]:
+        return trajectory[years[0]]
+    if year >= years[-1]:
+        return trajectory[years[-1]]
+    # Linear interpolation between known years
+    for i in range(len(years) - 1):
+        if years[i] <= year <= years[i + 1]:
+            frac = (year - years[i]) / (years[i + 1] - years[i])
+            return trajectory[years[i]] * (1 - frac) + trajectory[years[i + 1]] * frac
+    return trajectory[years[-1]]
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -992,8 +1039,12 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                     'clean_pct': round(baseline_clean, 1),
                     'demand_twh': round(baseline_demand, 1),
                     'emissions_mt': round(baseline_co2_mt, 2),
+                    'gross_emissions_mt': round(baseline_co2_mt, 2),
                     'emission_rate_tco2_mwh': round(baseline_er, 4),
                     'emission_cap_mt': None,
+                    'dac_offset_mt': 0,
+                    'dac_cost_million': 0,
+                    'dac_cost_per_ton': 0,
                     'cost_per_mwh': 0,
                     'revenue_per_mwh': 0,
                     'mandated_subsidy_mwh': 0,
@@ -1181,14 +1232,30 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                           f"(rev={blended_revenue:.1f}, cost={blended_cost:.1f})")
                     break
 
-            # --- EMISSION CONSTRAINT: MANDATED DEPLOYMENT ---
-            # After profit-driven deployment, check if emissions exceed the cap.
-            # If so, force additional clean zones at a loss (policy subsidy).
-            # Builds sequentially on what was already deployed — least-cost path.
+            # --- EMISSION CONSTRAINT: MANDATED DEPLOYMENT + DAC/OVERSHOOT ---
+            # After profit-driven deployment, enforce emission cap as a HARD CEILING.
+            #
+            # Scenario-dependent mechanisms:
+            # ┌─────────────────┬──────────────────────────────────────────────────┐
+            # │ Facilitating    │ 1. Mandated grid build at a loss (subsidy)       │
+            # │ (dac_available) │ 2. When marginal grid MAC > DAC cost → switch    │
+            # │                 │    to DAC for the remaining gap                  │
+            # ├─────────────────┼──────────────────────────────────────────────────┤
+            # │ Challenging     │ 1. Mandated grid build at a loss (subsidy)       │
+            # │ (no DAC)        │ 2. Queue overshoot with premium (accelerated     │
+            # │                 │    interconnection) — forced grid build           │
+            # │                 │ 3. If all thresholds exhausted → overshoot       │
+            # │                 │    premium on last-mile grid expansion            │
+            # └─────────────────┴──────────────────────────────────────────────────┘
             mandated_subsidy = 0
+            dac_offset_mt = 0
+            dac_cost_total = 0
+            carbon_shadow_price = 0  # Implied $/ton carbon price for this year
             emission_cap_mt = get_emission_cap_mt(
                 iso, year, emission_constraint, egrid_baselines,
                 reduction_target=reduction_target)
+
+            dac_available = conditions.get('dac_available', False)
 
             if emission_cap_mt is not None and year > 2023:
                 # Compute current emissions at this clean_pct
@@ -1203,8 +1270,12 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                     remaining_thresholds = sorted(
                         t for t in THRESHOLDS if t > current_pct)
 
+                    # DAC cost threshold for MAC crossover check
+                    dac_per_ton_year = get_dac_cost_per_ton(year, conditions['lcoe_level'])
+                    switched_to_dac = False
+
                     for t_end in remaining_thresholds:
-                        if queue_remaining_gw <= 0:
+                        if switched_to_dac:
                             break
 
                         # Recompute emissions at this threshold
@@ -1253,6 +1324,12 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                             conditions['learning_speed'], year, conditions['tx_level'],
                         )
 
+                        # Queue overshoot premium — if beyond queue cap, add premium
+                        queue_overshoot_adder = 0
+                        if queue_remaining_gw <= 0:
+                            queue_overshoot_adder = QUEUE_OVERSHOOT_PREMIUM
+                            m_cost += queue_overshoot_adder
+
                         # Revenue (still earned, just not enough to cover cost)
                         hourly_lmp_m, avg_lmp_m, p90_lmp_m = compute_lmp_at_threshold(
                             iso, t_end, conditions['fuel_level'],
@@ -1269,53 +1346,125 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                         )
 
                         m_profit = m_rev - m_cost
-                        subsidy_per_mwh = max(0, -m_profit)  # Policy covers the loss
+                        subsidy_per_mwh = max(0, -m_profit)
 
-                        # Deploy (mandated)
+                        # --- Compute marginal abatement cost (MAC) for this zone ---
+                        # MAC = net cost of abating 1 ton via this grid zone
+                        # Recompute current CO2 to get the delta tons this zone removes
+                        er_prev, _ = compute_fossil_retirement(
+                            iso, current_pct, emission_rates, fossil_mix, gf_check)
+                        fossil_twh_prev = (1 - current_pct / 100.0) * demand_twh
+                        co2_prev_mt = fossil_twh_prev * 1e6 * er_prev / 1e6
+                        co2_reduced_mt = co2_prev_mt - co2_at_t
+                        if co2_reduced_mt > 0:
+                            zone_total_twh = sum(delta_twh.values())
+                            zone_net_cost = subsidy_per_mwh * zone_total_twh * 1e6  # $ total
+                            zone_mac_per_ton = zone_net_cost / (co2_reduced_mt * 1e6)
+                        else:
+                            zone_mac_per_ton = float('inf')
+
+                        # --- MAC vs DAC crossover (facilitating only) ---
+                        if dac_available and zone_mac_per_ton > dac_per_ton_year:
+                            # Grid MAC exceeds DAC cost — switch to DAC for remaining gap
+                            switched_to_dac = True
+                            print(f"  {iso} MAC/DAC crossover at {current_pct:.0f}%: "
+                                  f"grid MAC=${zone_mac_per_ton:.0f}/ton > "
+                                  f"DAC=${dac_per_ton_year:.0f}/ton → switching to DAC")
+                            break  # Don't deploy this zone; DAC handles the rest
+
+                        # Deploy (mandated) — queue overshoot allowed with premium
                         new_gw = estimate_new_gw_from_delta(delta_twh, iso)
                         total_new_gw = sum(new_gw.values())
-                        if total_new_gw > queue_remaining_gw:
-                            scale = queue_remaining_gw / total_new_gw
-                            new_gw = {k: v * scale for k, v in new_gw.items()}
-                            total_new_gw = queue_remaining_gw
+                        queue_remaining_gw -= total_new_gw  # Can go negative (overshoot)
 
                         for tech, gw in new_gw.items():
                             cumulative_gw[tech] = cumulative_gw.get(tech, 0) + gw
-                        queue_remaining_gw -= total_new_gw
 
                         current_pct = t_end
                         state['clean_pct'] = current_pct
                         zone_deployed = True
                         mandated_subsidy += subsidy_per_mwh
+                        carbon_shadow_price = max(carbon_shadow_price, zone_mac_per_ton)
                         avg_lmp = avg_lmp_m
                         p90_lmp = p90_lmp_m
                         blended_cost = m_cost
                         blended_revenue = m_rev
 
+                        overshoot_label = " [OVERSHOOT]" if queue_overshoot_adder > 0 else ""
                         zone_results.append({
                             'threshold': t_end,
                             'revenue': m_rev,
                             'cost': m_cost,
                             'profit': round(m_profit, 2),
                             'subsidy': round(subsidy_per_mwh, 2),
+                            'mac_per_ton': round(zone_mac_per_ton, 1),
                             'new_gw': round(total_new_gw, 2),
                             'avg_lmp': round(avg_lmp_m, 1),
                             'mandated': True,
+                            'queue_overshoot': queue_overshoot_adder > 0,
                         })
 
-                        print(f"  {iso} → {t_end:.0f}% [MANDATED]: subsidy={subsidy_per_mwh:+.1f} $/MWh "
+                        print(f"  {iso} → {t_end:.0f}% [MANDATED{overshoot_label}]: "
+                              f"subsidy={subsidy_per_mwh:+.1f} $/MWh, "
+                              f"MAC=${zone_mac_per_ton:.0f}/ton "
                               f"(rev={m_rev:.1f}, cost={m_cost:.1f}) "
                               f"+{total_new_gw:.1f} GW, LMP avg={avg_lmp_m:.1f}")
 
                         # Check if we've met the cap
                         if co2_at_t <= emission_cap_mt:
-                            print(f"  {iso} emission cap met: {co2_at_t:.1f} Mt "
+                            print(f"  {iso} emission cap met via deployment: {co2_at_t:.1f} Mt "
                                   f"≤ {emission_cap_mt:.1f} Mt ({year})")
                             break
+
+                    # --- POST-DEPLOYMENT: DAC OR FORCED GRID ---
+                    # Check if emissions still exceed cap after mandated deployment.
+                    gf_post = demand_twh / REGIONAL_DEMAND_TWH[iso]
+                    er_post, _ = compute_fossil_retirement(
+                        iso, current_pct, emission_rates, fossil_mix, gf_post)
+                    fossil_twh_post = (1 - current_pct / 100.0) * demand_twh
+                    post_deploy_co2_mt = fossil_twh_post * 1e6 * er_post / 1e6
+
+                    if post_deploy_co2_mt > emission_cap_mt:
+                        gap_mt = post_deploy_co2_mt - emission_cap_mt
+
+                        if dac_available:
+                            # --- DAC BACKSTOP (facilitating) ---
+                            # Use DAC to offset remaining emissions gap
+                            dac_offset_mt = gap_mt
+                            dac_per_ton = get_dac_cost_per_ton(year, conditions['lcoe_level'])
+                            dac_cost_total = dac_offset_mt * 1e6 * dac_per_ton / 1e6  # $M
+                            dac_cost_per_mwh = (dac_offset_mt * 1e6 * dac_per_ton) / (demand_twh * 1e6)
+                            mandated_subsidy += dac_cost_per_mwh
+                            carbon_shadow_price = max(carbon_shadow_price, dac_per_ton)
+                            state['dac_offset_cumulative_mt'] = state.get('dac_offset_cumulative_mt', 0) + dac_offset_mt
+
+                            print(f"  {iso} DAC backstop: {dac_offset_mt:.1f} Mt offset @ "
+                                  f"${dac_per_ton:.0f}/ton = ${dac_cost_total:.0f}M "
+                                  f"(+${dac_cost_per_mwh:.1f}/MWh)")
+                        else:
+                            # --- FORCED GRID BUILD (challenging) ---
+                            # No DAC available. System must reach cap via grid alone.
+                            # Apply escalating overshoot premium for forced infrastructure.
+                            # This represents emergency policy measures: eminent domain for
+                            # transmission, expedited permitting, penalty carbon pricing.
+                            forced_cost_per_ton = QUEUE_OVERSHOOT_PREMIUM * 1e6 / (demand_twh * 1e6 / gap_mt) if gap_mt > 0 else 0
+                            # The carbon shadow price needed to force this reduction
+                            carbon_shadow_price = max(carbon_shadow_price, forced_cost_per_ton)
+                            # Record the gap — it's closed by policy but at high cost
+                            dac_offset_mt = 0  # No DAC
+                            forced_subsidy = gap_mt * 1e6 * carbon_shadow_price / (demand_twh * 1e6)
+                            mandated_subsidy += forced_subsidy
+                            state['forced_grid_gap_mt'] = state.get('forced_grid_gap_mt', 0) + gap_mt
+
+                            print(f"  {iso} FORCED grid closure: {gap_mt:.1f} Mt gap, "
+                                  f"shadow carbon price=${carbon_shadow_price:.0f}/ton, "
+                                  f"+${forced_subsidy:.1f}/MWh")
 
                     state['mandated_subsidy_total'] += mandated_subsidy
 
             # --- NEW GAS BUILD (if demand growth exceeds clean supply) ---
+            # Under emission constraints, new gas is limited by the cap —
+            # gas emissions count toward the cap, so less room for new gas.
             clean_twh = current_pct / 100.0 * demand_twh
             existing_gas_twh = (1 - current_pct / 100.0) * REGIONAL_DEMAND_TWH[iso]
             unserved = demand_twh - clean_twh - existing_gas_twh
@@ -1331,12 +1480,17 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                     print(f"  {iso} new gas: {gas_built_gw:.1f} GW CCGT "
                           f"(rev={gas_revenue:.0f} > cost={gas_lcoe})")
 
-            # --- CO2 EMISSIONS ---
+            # --- CO2 EMISSIONS (NET = physical - DAC offsets) ---
             gf = demand_twh / REGIONAL_DEMAND_TWH[iso]
             emission_rate, _ = compute_fossil_retirement(
                 iso, current_pct, emission_rates, fossil_mix, gf)
             fossil_twh = (1 - current_pct / 100.0) * demand_twh
-            co2_mt = fossil_twh * 1e6 * emission_rate / 1e6  # million metric tons
+            gross_co2_mt = fossil_twh * 1e6 * emission_rate / 1e6  # million metric tons
+            # Net emissions = physical emissions minus DAC offsets
+            co2_mt = max(0, gross_co2_mt - dac_offset_mt)
+            # For constrained scenarios, enforce the cap as a hard ceiling
+            if emission_cap_mt is not None and year > 2023:
+                co2_mt = min(co2_mt, emission_cap_mt)
 
             # Record year result
             mix_at_pct = iso_data.get(current_pct, iso_data.get(
@@ -1352,8 +1506,13 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                 'clean_pct': round(current_pct, 1),
                 'demand_twh': round(demand_twh, 1),
                 'emissions_mt': round(co2_mt, 2),
+                'gross_emissions_mt': round(gross_co2_mt, 2),
                 'emission_rate_tco2_mwh': round(emission_rate, 4),
                 'emission_cap_mt': round(emission_cap_mt, 2) if emission_cap_mt is not None else None,
+                'dac_offset_mt': round(dac_offset_mt, 2),
+                'dac_cost_million': round(dac_cost_total, 1),
+                'dac_cost_per_ton': round(get_dac_cost_per_ton(year, conditions['lcoe_level']), 0) if emission_cap_mt is not None else 0,
+                'carbon_shadow_price': round(carbon_shadow_price, 1),
                 'cost_per_mwh': round(blended_cost if zone_deployed else 0, 2),
                 'revenue_per_mwh': round(blended_revenue if zone_deployed else 0, 2),
                 'mandated_subsidy_mwh': round(mandated_subsidy, 2),
@@ -1394,8 +1553,13 @@ def save_results(results, scenario_id):
                 'clean_pct': yr['clean_pct'],
                 'demand_twh': yr['demand_twh'],
                 'emissions_mt': yr['emissions_mt'],
+                'gross_emissions_mt': yr.get('gross_emissions_mt', yr['emissions_mt']),
                 'emission_rate': yr['emission_rate_tco2_mwh'],
                 'emission_cap_mt': yr.get('emission_cap_mt'),
+                'dac_offset_mt': yr.get('dac_offset_mt', 0),
+                'dac_cost_million': yr.get('dac_cost_million', 0),
+                'dac_cost_per_ton': yr.get('dac_cost_per_ton', 0),
+                'carbon_shadow_price': yr.get('carbon_shadow_price', 0),
                 'cost_per_mwh': yr['cost_per_mwh'],
                 'revenue_per_mwh': yr['revenue_per_mwh'],
                 'mandated_subsidy_mwh': yr.get('mandated_subsidy_mwh', 0),
@@ -1443,14 +1607,22 @@ def save_results(results, scenario_id):
             'market_stop_pct': stop_pct,
             'final_clean_pct': final['clean_pct'],
             'final_emissions_mt': final['emissions_mt'],
+            'final_gross_emissions_mt': final.get('gross_emissions_mt', final['emissions_mt']),
             'total_gas_built_gw': final['total_gas_gw'],
             'cumulative_subsidy_mwh': final.get('cumulative_subsidy_mwh', 0),
+            'total_dac_offset_mt': sum(yr.get('dac_offset_mt', 0) for yr in year_results),
+            'total_dac_cost_million': sum(yr.get('dac_cost_million', 0) for yr in year_results),
+            'dac_available': SCENARIOS[scenario_id].get('dac_available', False),
             'trajectory': [
                 {
                     'year': yr['year'],
                     'clean_pct': yr['clean_pct'],
                     'emissions_mt': yr['emissions_mt'],
+                    'gross_emissions_mt': yr.get('gross_emissions_mt', yr['emissions_mt']),
                     'emission_cap_mt': yr.get('emission_cap_mt'),
+                    'dac_offset_mt': yr.get('dac_offset_mt', 0),
+                    'dac_cost_million': yr.get('dac_cost_million', 0),
+                    'carbon_shadow_price': yr.get('carbon_shadow_price', 0),
                     'cost_per_mwh': yr['cost_per_mwh'],
                     'mandated_subsidy_mwh': yr.get('mandated_subsidy_mwh', 0),
                     'avg_lmp': yr['avg_lmp'],
