@@ -12,7 +12,17 @@
 
     const YEARS = [2023, 2030, 2035, 2040, 2045, 2050];
     const YEAR_LABELS = ['2023', '2030', '2035', '2040', '2045', '2050'];
-    const SBTi_ANNUAL_RATE = 0.07;
+
+    // SBTi Power Sector v2: Net zero by 2040
+    const SBTI_POWER_V2_REMAINING = { 2023: 1.00, 2030: 0.412, 2035: 0.118, 2040: 0.0, 2045: 0.0, 2050: 0.0 };
+    // SMARTargets AT trajectory
+    const AT_TRAJECTORY_REMAINING = { 2023: 1.00, 2030: 0.43, 2035: 0.18, 2040: 0.12, 2045: 0.06, 2050: 0.00 };
+
+    function pctFromBaseline(value, baseline) {
+        if (!baseline || baseline === 0) return '';
+        const pct = ((value - baseline) / baseline * 100);
+        return ` (${pct >= 0 ? '+' : ''}${pct.toFixed(1)}% vs 2023)`;
+    }
 
     const FUEL_LABELS = {
         nuclear: 'Nuclear', hydro: 'Hydro', geothermal: 'Geothermal',
@@ -40,10 +50,38 @@
     const companyIds = Object.keys(data.companies);
     const companies = companyIds.map(id => ({ id, ...data.companies[id] }));
 
+    const FUEL_ORDER = ['nuclear', 'hydro', 'geothermal', 'wind', 'solar', 'battery', 'gas_ccgt', 'gas_peaker', 'coal', 'oil'];
+
     function fmt(n, d) {
         if (n === undefined || n === null) return '—';
         if (d === undefined) d = Math.abs(n) >= 100 ? 0 : 1;
         return n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+    }
+
+    function computeRadarScores(co) {
+        const summary = co.fleet_summary;
+        const byFuel = {};
+        for (const iso of Object.keys(summary)) {
+            for (const fuel of Object.keys(summary[iso])) {
+                if (!byFuel[fuel]) byFuel[fuel] = { cap_mw: 0, gen_twh: 0, co2_mt: 0 };
+                byFuel[fuel].cap_mw += summary[iso][fuel].cap_mw || 0;
+                byFuel[fuel].gen_twh += summary[iso][fuel].gen_twh || 0;
+                byFuel[fuel].co2_mt += summary[iso][fuel].co2_mt || 0;
+            }
+        }
+        const totalGen = co.gen_twh || 1;
+        const nuclearGen = byFuel.nuclear ? byFuel.nuclear.gen_twh : 0;
+        const nuclearScore = Math.min(100, (nuclearGen / totalGen) * 200);
+        const isoCount = Object.keys(summary).length;
+        const diversityScore = Math.min(100, isoCount * 25);
+        const coalGen = byFuel.coal ? byFuel.coal.gen_twh : 0;
+        const coalExitScore = totalGen > 0 ? (100 - Math.min(100, (coalGen / totalGen) * 200)) : 100;
+        const peakerGen = byFuel.gas_peaker ? byFuel.gas_peaker.gen_twh : 0;
+        const ccgtGen = byFuel.gas_ccgt ? byFuel.gas_ccgt.gen_twh : 0;
+        const gasFlexScore = ccgtGen > 0 ? Math.min(100, (ccgtGen / (ccgtGen + peakerGen)) * 100) : 50;
+        const cleanNewGen = ['solar', 'wind', 'battery'].reduce((s, f) => s + (byFuel[f] ? byFuel[f].gen_twh : 0), 0);
+        const cleanPipelineScore = Math.min(100, (cleanNewGen / totalGen) * 300);
+        return [nuclearScore, diversityScore, coalExitScore, gasFlexScore, cleanPipelineScore];
     }
 
     // ─── Hero Stats ──────────────────────────────────────────
@@ -96,20 +134,26 @@
             // P50 emission reduction by 2050
             const fb = co.fan_bands.all.emissions;
             const reduction = fb.p50[0] > 0 ? ((fb.p50[0] - fb.p50[5]) / fb.p50[0] * 100).toFixed(0) : '—';
+            const companyColor = COMPANY_COLORS[idx % COMPANY_COLORS.length];
 
             return `
-                <div class="company-card scroll-reveal">
+                <div class="company-card scroll-reveal" style="border-top: 3px solid ${companyColor}">
                     <div class="company-card-header">
                         <div>
                             <h3>${co.name}</h3>
                             <div class="company-card-target">${co.target}</div>
                         </div>
                     </div>
-                    <div class="company-card-stats">
-                        <div class="company-card-stat"><div class="val">${fmt(co.gen_twh, 0)}</div><div class="lbl">TWh Generation</div></div>
-                        <div class="company-card-stat"><div class="val">${fmt(co.gen_twh, 0)}</div><div class="lbl">TWh/yr</div></div>
-                        <div class="company-card-stat"><div class="val">${fmt(co.co2_2024_mt, 0)}</div><div class="lbl">Mt CO₂</div></div>
-                        <div class="company-card-stat"><div class="val">${reduction}%</div><div class="lbl">2050 Reduction</div></div>
+                    <div class="company-card-body" style="display:flex;gap:var(--space-md);align-items:center">
+                        <div class="company-card-radar" style="flex:0 0 130px;height:130px">
+                            <canvas id="radarCard_${co.id}" width="130" height="130"></canvas>
+                        </div>
+                        <div class="company-card-stats" style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:4px">
+                            <div class="company-card-stat"><div class="val" style="font-size:1rem">${fmt(co.gen_twh, 0)}</div><div class="lbl" style="font-size:0.7rem">TWh/yr</div></div>
+                            <div class="company-card-stat"><div class="val" style="font-size:1rem">${fmt(co.co2_2024_mt, 0)}</div><div class="lbl" style="font-size:0.7rem">Mt CO₂</div></div>
+                            <div class="company-card-stat"><div class="val" style="font-size:1rem">${reduction}%</div><div class="lbl" style="font-size:0.7rem">2050 Reduction</div></div>
+                            <div class="company-card-stat"><div class="val" style="font-size:1rem">${fmt(co.intensity_kg, 0)}</div><div class="lbl" style="font-size:0.7rem">kg/MWh</div></div>
+                        </div>
                     </div>
                     <div class="fuel-bar">${fuelBar}</div>
                     <div class="iso-badges">${isoBadges}</div>
@@ -117,6 +161,43 @@
                 </div>
             `;
         }).join('');
+
+        // Render mini radar charts for each card
+        sorted.forEach((co, idx) => {
+            const canvasId = `radarCard_${co.id}`;
+            const ctx = document.getElementById(canvasId);
+            if (!ctx) return;
+            const scores = computeRadarScores(co);
+            const companyColor = COMPANY_COLORS[idx % COMPANY_COLORS.length];
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Nuclear', 'Diversity', 'Coal Exit', 'Gas Flex', 'Clean Build'],
+                    datasets: [{
+                        data: scores,
+                        borderColor: companyColor,
+                        backgroundColor: companyColor + '25',
+                        borderWidth: 2,
+                        pointRadius: 2,
+                        pointBackgroundColor: companyColor
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        r: {
+                            min: 0, max: 100,
+                            ticks: { display: false },
+                            pointLabels: { font: { size: 8 }, color: '#6B7280' },
+                            grid: { color: 'rgba(0,0,0,0.06)' }
+                        }
+                    },
+                    plugins: { legend: { display: false } },
+                    animation: { duration: 800 }
+                }
+            });
+        });
     }
 
     // ─── Key Insights ────────────────────────────────────────
@@ -233,19 +314,35 @@
                             filter: item => !item.text.includes('P10') && !item.text.includes('P10-P90')
                         }
                     },
-                    tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmt(ctx.raw, 1)} Mt` } }
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => {
+                                const coId = companyIds.find(id => data.companies[id].shortName === ctx.dataset.label);
+                                const bl = coId ? data.companies[coId].co2_2024_mt : null;
+                                return `${ctx.dataset.label}: ${fmt(ctx.raw, 1)} Mt${bl ? pctFromBaseline(ctx.raw, bl) : ''}`;
+                            }
+                        }
+                    }
                 }
             }
         });
     }
 
     function renderProfitResilience() {
-        // Horizontal bar: P10/P50/P90 profit at 2050
+        // Horizontal bar: P10/P50/P90 profit margin % growth at 2050 vs 2023
         const sorted = [...companies].sort((a, b) => {
             const pa = a.fan_bands.all.profit ? a.fan_bands.all.profit.p50[5] : 0;
             const pb = b.fan_bands.all.profit ? b.fan_bands.all.profit.p50[5] : 0;
             return pb - pa;
         });
+
+        function toPctGrowth(co, percentile) {
+            const fb = co.fan_bands.all.profit;
+            if (!fb) return 0;
+            const base = fb.p50[0] || 1;
+            const val = fb[percentile][5];
+            return ((val - base) / Math.abs(base)) * 100;
+        }
 
         new Chart(document.getElementById('profitResilienceChart'), {
             type: 'bar',
@@ -254,17 +351,17 @@
                 datasets: [
                     {
                         label: 'P10 (worst)',
-                        data: sorted.map(c => c.fan_bands.all.profit ? c.fan_bands.all.profit.p10[5] : 0),
+                        data: sorted.map(c => toPctGrowth(c, 'p10')),
                         backgroundColor: 'rgba(239,68,68,0.6)'
                     },
                     {
                         label: 'P50 (median)',
-                        data: sorted.map(c => c.fan_bands.all.profit ? c.fan_bands.all.profit.p50[5] : 0),
+                        data: sorted.map(c => toPctGrowth(c, 'p50')),
                         backgroundColor: 'rgba(99,102,241,0.7)'
                     },
                     {
                         label: 'P90 (best)',
-                        data: sorted.map(c => c.fan_bands.all.profit ? c.fan_bands.all.profit.p90[5] : 0),
+                        data: sorted.map(c => toPctGrowth(c, 'p90')),
                         backgroundColor: 'rgba(34,197,94,0.6)'
                     }
                 ]
@@ -273,10 +370,22 @@
                 indexAxis: 'y',
                 responsive: true,
                 maintainAspectRatio: false,
-                scales: { x: { title: { display: true, text: '2050 Annual Profit ($M)' } } },
+                scales: {
+                    x: {
+                        title: { display: true, text: '% Change in Fleet Profit vs 2023 Baseline' },
+                        ticks: { callback: v => v + '%' }
+                    }
+                },
                 plugins: {
                     legend: { position: 'bottom', labels: { font: { size: 11 } } },
-                    tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: $${fmt(ctx.raw)}M` } }
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => {
+                                const pct = ctx.raw;
+                                return `${ctx.dataset.label}: ${pct >= 0 ? '+' : ''}${fmt(pct, 1)}%`;
+                            }
+                        }
+                    }
                 }
             }
         });
@@ -336,16 +445,18 @@
 
         let html = `<table class="data-table">
             <thead><tr>
-                <th>Company</th><th>Baseline (Mt)</th><th>2030</th><th>2035</th><th>2040</th><th>2050</th><th>1.5°C Gap (2050)</th>
+                <th>Company</th><th>Baseline (Mt)</th><th>2030</th><th>2035</th><th>2040</th><th>2050</th><th>Gap to NZ 2040</th><th>Gap to AT 2050</th>
             </tr></thead><tbody>`;
 
         sorted.forEach(co => {
             const fb = (co.fan_bands.reference || co.fan_bands.all).emissions;
             const baseline = fb.p50[0];
-            const sbti2050 = baseline * Math.pow(1 - SBTi_ANNUAL_RATE, 27);
+            const psV2_2040 = baseline * (SBTI_POWER_V2_REMAINING[2040] || 0);
+            const at_2050 = baseline * (AT_TRAJECTORY_REMAINING[2050] || 0);
 
             const pcts = fb.p50.map(v => baseline > 0 ? ((baseline - v) / baseline * 100).toFixed(0) + '%' : '—');
-            const gap = fb.p50[5] - sbti2050;
+            const gapPS = fb.p50[3] - psV2_2040;
+            const gapAT = fb.p50[5] - at_2050;
 
             html += `<tr>
                 <td><a href="ipp_${co.id}.html" style="color:var(--accent);font-weight:600">${co.shortName}</a></td>
@@ -354,7 +465,8 @@
                 <td>${pcts[2]}</td>
                 <td>${pcts[3]}</td>
                 <td>${pcts[5]}</td>
-                <td style="color:${gap > 1 ? '#dc2626' : gap > 0 ? '#b45309' : '#15803d'}">${gap > 0 ? '+' : ''}${fmt(gap, 1)} Mt</td>
+                <td style="color:${gapPS > 1 ? '#dc2626' : gapPS > 0 ? '#b45309' : '#15803d'}">${gapPS > 0 ? '+' : ''}${fmt(gapPS, 1)} Mt</td>
+                <td style="color:${gapAT > 1 ? '#dc2626' : gapAT > 0 ? '#b45309' : '#15803d'}">${gapAT > 0 ? '+' : ''}${fmt(gapAT, 1)} Mt</td>
             </tr>`;
         });
 

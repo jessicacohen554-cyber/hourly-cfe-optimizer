@@ -15,7 +15,12 @@
     // ─── Constants ───────────────────────────────────────────
     const YEARS = [2023, 2030, 2035, 2040, 2045, 2050];
     const YEAR_LABELS = ['2023', '2030', '2035', '2040', '2045', '2050'];
-    const SBTi_ANNUAL_RATE = 0.07; // 7% per year power sector
+
+    // SBTi Power Sector v2: Net zero by 2040 (linear decline 2023→2040)
+    const SBTI_POWER_V2_REMAINING = { 2023: 1.00, 2030: 0.412, 2035: 0.118, 2040: 0.0, 2045: 0.0, 2050: 0.0 };
+
+    // EPRI Aspirational Target (AT): −57/−82/−88/−94/−100% from 2023
+    const AT_TRAJECTORY_REMAINING = { 2023: 1.00, 2030: 0.43, 2035: 0.18, 2040: 0.12, 2045: 0.06, 2050: 0.00 };
 
     const FUEL_ORDER = ['nuclear', 'hydro', 'geothermal', 'wind', 'solar', 'battery', 'gas_ccgt', 'gas_peaker', 'coal', 'oil'];
     const FUEL_LABELS = {
@@ -82,12 +87,18 @@
         return 'Highly Divergent';
     }
 
-    function sbtiTrajectory(baseline) {
-        return YEARS.map((y, i) => {
-            if (i === 0) return baseline;
-            const yearsFromBase = y - 2023;
-            return baseline * Math.pow(1 - SBTi_ANNUAL_RATE, yearsFromBase);
-        });
+    function powerSectorV2Trajectory(baseline) {
+        return YEARS.map(y => baseline * (SBTI_POWER_V2_REMAINING[y] || 0));
+    }
+
+    function atTrajectory(baseline) {
+        return YEARS.map(y => baseline * (AT_TRAJECTORY_REMAINING[y] || 0));
+    }
+
+    function pctFromBaseline(value, baseline) {
+        if (!baseline || baseline === 0) return '';
+        const pct = ((value - baseline) / baseline * 100);
+        return ` (${pct >= 0 ? '+' : ''}${pct.toFixed(1)}% vs 2023)`;
     }
 
     function makeChart(canvasId, config) {
@@ -347,7 +358,10 @@
                     legend: { position: 'bottom', labels: { font: { size: 11 }, filter: item => item.text !== 'Max' && item.text !== 'Min' } },
                     tooltip: {
                         callbacks: {
-                            label: ctx => `${ctx.dataset.label}: ${fmt(ctx.raw, 1)} Mt`
+                            label: ctx => {
+                                const bl = co.co2_2024_mt || co.co2_2023_mt;
+                                return `${ctx.dataset.label}: ${fmt(ctx.raw, 1)} Mt${pctFromBaseline(ctx.raw, bl)}`;
+                            }
                         }
                     }
                 }
@@ -478,8 +492,11 @@
     function renderRiskOpportunity() {
         const fb = co.fan_bands.all;
 
-        // Profit fan band
+        // Profit fan band — % growth in fleet profit margin vs 2023 baseline
         if (fb.profit) {
+            const profitBaseline = fb.profit.p50[0] || 1; // 2023 baseline
+            const toPctGrowth = arr => arr.map(v => ((v - profitBaseline) / Math.abs(profitBaseline)) * 100);
+
             makeChart('profitFanChart', {
                 type: 'line',
                 data: {
@@ -487,7 +504,7 @@
                     datasets: [
                         {
                             label: 'P90 (upside)',
-                            data: fb.profit.p90,
+                            data: toPctGrowth(fb.profit.p90),
                             borderColor: 'rgba(34,197,94,0.6)',
                             backgroundColor: 'rgba(34,197,94,0.1)',
                             fill: '+1',
@@ -497,7 +514,7 @@
                         },
                         {
                             label: 'P50 (median)',
-                            data: fb.profit.p50,
+                            data: toPctGrowth(fb.profit.p50),
                             borderColor: '#0F172A',
                             backgroundColor: 'rgba(99,102,241,0.08)',
                             fill: '+1',
@@ -507,7 +524,7 @@
                         },
                         {
                             label: 'P10 (downside)',
-                            data: fb.profit.p10,
+                            data: toPctGrowth(fb.profit.p10),
                             borderColor: 'rgba(239,68,68,0.6)',
                             fill: false,
                             borderWidth: 1.5,
@@ -520,11 +537,22 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        y: { title: { display: true, text: 'Annual Profit ($M)' } }
+                        y: {
+                            title: { display: true, text: '% Change in Fleet Profit Margin vs 2023' },
+                            ticks: { callback: v => v + '%' }
+                        }
                     },
                     plugins: {
                         legend: { position: 'bottom' },
-                        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: $${fmt(ctx.raw)}M` } }
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => {
+                                    const pct = ctx.raw;
+                                    const absVal = profitBaseline * (1 + pct / 100);
+                                    return `${ctx.dataset.label}: ${pct >= 0 ? '+' : ''}${fmt(pct, 1)}% ($${fmt(absVal)}M)`;
+                                }
+                            }
+                        }
                     }
                 }
             });
@@ -607,9 +635,13 @@
         if (!el) return;
 
         const fb = co.fan_bands.all;
+        const profitBase = fb.profit ? fb.profit.p50[0] : 1;
         const profit2050_p10 = fb.profit ? fb.profit.p10[5] : 0;
         const profit2050_p50 = fb.profit ? fb.profit.p50[5] : 0;
         const profit2050_p90 = fb.profit ? fb.profit.p90[5] : 0;
+        const pctGrowth_p10 = ((profit2050_p10 - profitBase) / Math.abs(profitBase) * 100);
+        const pctGrowth_p50 = ((profit2050_p50 - profitBase) / Math.abs(profitBase) * 100);
+        const pctGrowth_p90 = ((profit2050_p90 - profitBase) / Math.abs(profitBase) * 100);
         const stranded2050 = fb.stranded_mw ? fb.stranded_mw.p50[5] : 0;
         const operating2050 = fb.operating_mw ? fb.operating_mw.p50[5] : 0;
 
@@ -622,7 +654,7 @@
         if (profit2050_p10 < 0) riskItems.push(`<strong>Downside scenario loss:</strong> In the P10 (worst-case) scenario, annual profit falls to $${fmt(profit2050_p10)}M by 2050 — the fleet loses money under adverse conditions.`);
         if (profit2050_p10 > 0) riskItems.push(`<strong>Profit resilience:</strong> Even in the P10 (worst-case) scenario, the fleet maintains $${fmt(profit2050_p10)}M annual profit by 2050 — no money-losing scenarios.`);
 
-        riskItems.push(`<strong>Profit range:</strong> 2050 annual profit ranges from $${fmt(profit2050_p10)}M (P10) to $${fmt(profit2050_p90)}M (P90), with a median of $${fmt(profit2050_p50)}M.`);
+        riskItems.push(`<strong>Profit margin trajectory:</strong> 2050 fleet profit margin ranges from ${pctGrowth_p10 >= 0 ? '+' : ''}${fmt(pctGrowth_p10, 0)}% (P10) to ${pctGrowth_p90 >= 0 ? '+' : ''}${fmt(pctGrowth_p90, 0)}% (P90) vs 2023 baseline, with a median of ${pctGrowth_p50 >= 0 ? '+' : ''}${fmt(pctGrowth_p50, 0)}% ($${fmt(profit2050_p50)}M).`);
 
         // Retail hedge analysis
         const gasGen = (byFuel.gas_ccgt ? byFuel.gas_ccgt.gen_twh : 0) + (byFuel.gas_peaker ? byFuel.gas_peaker.gen_twh : 0);
@@ -641,7 +673,8 @@
 
         // Compute qualified targets (P50 reference trajectory)
         const qualifiedPcts = emissions.p50.map(v => ((baseline - v) / baseline) * 100);
-        const sbti = sbtiTrajectory(baseline);
+        const psV2 = powerSectorV2Trajectory(baseline);
+        const at = atTrajectory(baseline);
 
         // Target chart
         makeChart('targetChart', {
@@ -679,11 +712,20 @@
                         pointRadius: 0
                     },
                     {
-                        label: '1.5°C SBTi Trajectory',
-                        data: sbti,
+                        label: 'SBTi Power Sector v2 (NZ 2040)',
+                        data: psV2,
                         borderColor: '#E91E63',
                         borderWidth: 2,
                         borderDash: [8, 4],
+                        pointRadius: 0,
+                        fill: false
+                    },
+                    {
+                        label: 'SMARTargets AT (−57/−82/−100%)',
+                        data: at,
+                        borderColor: '#9C27B0',
+                        borderWidth: 2,
+                        borderDash: [4, 6],
                         pointRadius: 0,
                         fill: false
                     }
@@ -697,7 +739,7 @@
                 },
                 plugins: {
                     legend: { position: 'bottom', labels: { font: { size: 11 } } },
-                    tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmt(ctx.raw, 1)} Mt` } }
+                    tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmt(ctx.raw, 1)} Mt${pctFromBaseline(ctx.raw, baseline)}` } }
                 }
             }
         });
@@ -714,31 +756,39 @@
             statsEl.innerHTML = milestones.map(m => {
                 const pct = qualifiedPcts[m.idx];
                 const mt = emissions.p50[m.idx];
-                const sbtiMt = sbti[m.idx];
-                const gap = mt - sbtiMt;
+                const psV2Mt = psV2[m.idx];
+                const atMt = at[m.idx];
+                const gapPS = mt - psV2Mt;
+                const gapAT = mt - atMt;
                 return `<div class="stat-card">
                     <div class="stat-value">${fmt(pct, 0)}%</div>
                     <div class="stat-label">${m.year} reduction</div>
                     <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px">
-                        ${fmt(mt, 1)} Mt (gap to 1.5°C: ${gap > 0 ? '+' : ''}${fmt(gap, 1)} Mt)
+                        ${fmt(mt, 1)} Mt<br>
+                        <span style="color:${gapPS > 0.5 ? '#dc2626' : '#15803d'}">Gap to NZ 2040: ${gapPS > 0 ? '+' : ''}${fmt(gapPS, 1)} Mt</span><br>
+                        <span style="color:${gapAT > 0.5 ? '#dc2626' : '#15803d'}">Gap to AT: ${gapAT > 0 ? '+' : ''}${fmt(gapAT, 1)} Mt</span>
                     </div>
                 </div>`;
             }).join('');
         }
 
         // Target justification narrative
-        renderTargetNarrative(emissions, qualifiedPcts, sbti);
+        renderTargetNarrative(emissions, qualifiedPcts);
     }
 
-    function renderTargetNarrative(emissions, qualifiedPcts, sbti) {
+    function renderTargetNarrative(emissions, qualifiedPcts) {
         const el = document.getElementById('targetNarrative');
         if (!el) return;
 
         const baseline = emissions.p50[0];
         const target2030 = emissions.p50[1];
         const target2035 = emissions.p50[2];
+        const target2040 = emissions.p50[3];
         const target2050 = emissions.p50[5];
-        const gap2050 = target2050 - sbti[5];
+        const psV2_local = powerSectorV2Trajectory(baseline);
+        const at_local = atTrajectory(baseline);
+        const gap2040_ps = target2040 - psV2_local[3]; // gap to NZ 2040
+        const gap2050_at = target2050 - at_local[5]; // gap to AT 2050
 
         const byFuel = getFleetByFuel();
         const hasCoal = byFuel.coal && byFuel.coal.gen_twh > 0;
@@ -757,9 +807,13 @@
             ${hasNuclear ? 'Nuclear fleet continues at high capacity factors, providing stable zero-carbon baseload.' : ''}
             Gas CCGT dispatch declines moderately as renewable generation increases across ${co.shortName}'s operating ISOs.</p>
 
+            <p><strong>2040 target: ${fmt(qualifiedPcts[3], 0)}% reduction</strong> (${fmt(target2040, 1)} Mt).
+            ${gap2040_ps > 0.5 ? `This leaves a ${fmt(gap2040_ps, 1)} Mt gap to the SBTi Power Sector v2 net-zero-by-2040 trajectory.` :
+            'This meets or exceeds the SBTi Power Sector v2 net-zero-by-2040 trajectory.'}</p>
+
             <p><strong>2050 target: ${fmt(qualifiedPcts[5], 0)}% reduction</strong> (${fmt(target2050, 1)} Mt).
-            ${gap2050 > 0 ? `This leaves a ${fmt(gap2050, 1)} Mt gap to the 1.5°C SBTi trajectory — bridging this gap requires the enabling conditions described in Section 6.` :
-            'This meets or exceeds the 1.5°C SBTi trajectory — no additional enabling conditions required.'}</p>
+            ${gap2050_at > 0.5 ? `This leaves a ${fmt(gap2050_at, 1)} Mt gap to the SMARTargets AT trajectory — bridging this gap requires the enabling conditions described in Section 6.` :
+            'This meets or exceeds the SMARTargets AT trajectory — no additional enabling conditions required.'}</p>
 
             <div class="insight-box" style="margin-top:var(--space-md)">
                 <strong>Why this target is achievable:</strong>
@@ -786,11 +840,15 @@
         const fossilTWh = FUEL_ORDER.filter(f => ['coal', 'gas_ccgt', 'gas_peaker', 'oil'].includes(f))
             .reduce((s, f) => s + (byFuel[f] ? byFuel[f].gen_twh : 0), 0);
 
-        // Investment gap chart — generation-framed
+        // Investment gap chart — based on total fossil displacement target
+        // Target: displace enough fossil to achieve ~50% emission reduction by 2035
         const coalGen = byFuel.coal ? byFuel.coal.gen_twh : 0;
-        const solarNeeded = coalGen * 1.2; // Replace coal energy with solar (higher CF solar)
-        const batteryNeeded = coalGen * 0.3; // Storage to firm solar
-        const firmCleanNeeded = Math.max(0, fossilTWh * 0.1); // 10% firm clean target
+        const gasGen = (byFuel.gas_ccgt ? byFuel.gas_ccgt.gen_twh : 0) + (byFuel.gas_peaker ? byFuel.gas_peaker.gen_twh : 0);
+        const targetDisplaceTWh = fossilTWh * 0.5; // displace half of fossil by 2035
+        const solarNeeded = Math.max(coalGen * 1.2, targetDisplaceTWh * 0.5);
+        const windNeeded = targetDisplaceTWh * 0.3;
+        const batteryNeeded = Math.max(coalGen * 0.3, targetDisplaceTWh * 0.15);
+        const firmCleanNeeded = Math.max(0, fossilTWh * 0.1);
 
         makeChart('investmentGapChart', {
             type: 'bar',
@@ -798,7 +856,7 @@
                 labels: ['Current Clean', 'Current Fossil', 'Solar Target', 'Wind Target', 'Battery Target', 'Firm Clean Target'],
                 datasets: [{
                     label: 'Generation (TWh)',
-                    data: [cleanTWh, -fossilTWh, solarNeeded, solarNeeded * 0.6, batteryNeeded, firmCleanNeeded],
+                    data: [cleanTWh, -fossilTWh, solarNeeded, windNeeded, batteryNeeded, firmCleanNeeded],
                     backgroundColor: [
                         'rgba(34,197,94,0.7)', 'rgba(107,114,128,0.7)',
                         RESOURCE_COLORS.solar, RESOURCE_COLORS.wind,
@@ -848,10 +906,10 @@
         });
 
         // Investment narrative
-        renderInvestmentNarrative(byFuel, byISO, cleanTWh, fossilTWh, solarNeeded, batteryNeeded, firmCleanNeeded);
+        renderInvestmentNarrative(byFuel, byISO, cleanTWh, fossilTWh, solarNeeded, windNeeded, batteryNeeded, firmCleanNeeded);
     }
 
-    function renderInvestmentNarrative(byFuel, byISO, cleanTWh, fossilTWh, solarNeeded, batteryNeeded, firmCleanNeeded) {
+    function renderInvestmentNarrative(byFuel, byISO, cleanTWh, fossilTWh, solarNeeded, windNeeded, batteryNeeded, firmCleanNeeded) {
         const el = document.getElementById('investmentNarrative');
         if (!el) return;
 
@@ -892,7 +950,7 @@
             <strong>Recommended Investment Targets (by 2035)</strong>
             <ul style="margin:8px 0 0 16px">
                 <li><strong>Solar:</strong> ${fmt(solarNeeded, 1)} TWh new utility-scale solar generation${coalGen > 0 ? ' (includes coal site repowering)' : ''}</li>
-                <li><strong>Wind:</strong> ${fmt(solarNeeded * 0.6, 1)} TWh onshore wind (complementary generation profile)</li>
+                <li><strong>Wind:</strong> ${fmt(windNeeded, 1)} TWh onshore wind (complementary generation profile)</li>
                 <li><strong>Battery:</strong> ${fmt(batteryNeeded, 1)} TWh storage dispatch (peak shaving + ancillary services)</li>
                 <li><strong>Firm clean:</strong> ${fmt(firmCleanNeeded, 1)} TWh ${hasNuclear ? 'nuclear uprates + potential SMR' : 'CCS-CCGT or contracted nuclear PPA'}</li>
             </ul>
@@ -901,14 +959,15 @@
         el.innerHTML = sections.join('');
     }
 
-    // ─── SECTION 6: Enabling Conditions for 1.5°C ───────────
+    // ─── SECTION 6: Enabling Conditions ──────────────────────
     function renderEnablingConditions() {
         const refBands = co.fan_bands.reference || co.fan_bands.all;
         const emissions = refBands.emissions;
         const baseline = emissions.p50[0];
-        const sbti = sbtiTrajectory(baseline);
+        const psV2_local = powerSectorV2Trajectory(baseline);
+        const at_local = atTrajectory(baseline);
 
-        // Gap area chart
+        // Gap area chart — show both trajectories
         makeChart('gapChart', {
             type: 'line',
             data: {
@@ -918,18 +977,27 @@
                         label: 'Qualified Target (P50)',
                         data: emissions.p50,
                         borderColor: '#6366F1',
-                        backgroundColor: 'rgba(239,68,68,0.12)',
+                        backgroundColor: 'rgba(239,68,68,0.08)',
                         fill: '+1',
                         borderWidth: 2.5,
                         pointRadius: 4
                     },
                     {
-                        label: '1.5°C SBTi Trajectory',
-                        data: sbti,
+                        label: 'SBTi Power Sector v2 (NZ 2040)',
+                        data: psV2_local,
                         borderColor: '#E91E63',
                         fill: false,
                         borderWidth: 2,
                         borderDash: [8, 4],
+                        pointRadius: 0
+                    },
+                    {
+                        label: 'SMARTargets AT (−57/−82/−100%)',
+                        data: at_local,
+                        borderColor: '#9C27B0',
+                        fill: false,
+                        borderWidth: 2,
+                        borderDash: [4, 6],
                         pointRadius: 0
                     }
                 ]
@@ -940,95 +1008,128 @@
                 scales: { y: { title: { display: true, text: 'CO₂ Emissions (Mt)' }, beginAtZero: true } },
                 plugins: {
                     legend: { position: 'bottom' },
-                    tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmt(ctx.raw, 1)} Mt` } }
+                    tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmt(ctx.raw, 1)} Mt${pctFromBaseline(ctx.raw, baseline)}` } }
                 }
             }
         });
 
-        // Enabling conditions cards
-        renderConditionsCards();
+        // Enabling conditions — split into EPRI AT and SBTi NZ 2040
+        renderConditionsCards(baseline, psV2_local, at_local, emissions);
     }
 
-    function renderConditionsCards() {
+    function renderConditionsCards(baseline, psV2_local, at_local, emissions) {
         const el = document.getElementById('conditionsCards');
         if (!el) return;
 
         const dims = co.dimension_fans;
-        if (!dims) return;
 
-        const conditions = [];
+        // Helper to build condition card HTML
+        function condCard(title, impact, desc, variant) {
+            const tag = variant === 'at' ? 'convergence-tag convergent' : 'convergence-tag moderate';
+            return `<div class="card" style="padding:var(--space-lg)">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+                    <h4 style="margin:0;color:var(--navy);font-size:1rem">${title}</h4>
+                    <span class="${tag}">${impact}</span>
+                </div>
+                <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.6;margin:0">${desc}</p>
+            </div>`;
+        }
 
-        // Carbon pricing
-        if (dims.conditions) {
-            const vals = Object.keys(dims.conditions);
-            if (vals.length >= 2) {
-                const emissionsF = dims.conditions.F ? dims.conditions.F.emissions.p50[5] : null;
-                const emissionsC = dims.conditions.C ? dims.conditions.C.emissions.p50[5] : null;
-                if (emissionsF !== null && emissionsC !== null) {
-                    const impact = Math.abs(emissionsC - emissionsF);
-                    conditions.push({
-                        title: 'Interconnection & Permitting Reform',
-                        impact: `${fmt(impact, 1)} Mt difference`,
-                        description: `Shifting from challenging to facilitating market conditions reduces ${co.shortName}'s 2050 emissions by ${fmt(impact, 1)} Mt.
-                            This includes faster interconnection queues, streamlined permitting, and supportive state policies.
-                            Facilitating conditions: ${fmt(emissionsF, 1)} Mt vs. Challenging: ${fmt(emissionsC, 1)} Mt.`
-                    });
+        // Compute gap to AT at each milestone
+        const p50 = emissions.p50;
+        const gap2030_at = p50[1] - at_local[1];
+        const gap2035_at = p50[2] - at_local[2];
+        const gap2040_at = p50[3] - at_local[3];
+        const gap2040_ps = p50[3] - psV2_local[3];
+
+        let html = '';
+
+        // ── Section A: Enabling Conditions for EPRI Aspirational Targets ──
+        html += `<h3 style="font-size:1.05rem;color:var(--navy);margin:var(--space-lg) 0 var(--space-md)">
+            Enabling Conditions to Hit SMARTargets AT Trajectory</h3>
+            <p style="font-size:0.88rem;color:var(--text-secondary);margin-bottom:var(--space-md)">
+                AT trajectory: −57% by 2030, −82% by 2035, −88% by 2040, −100% by 2050.
+                ${gap2030_at > 0.5 ? `${co.shortName} has a ${fmt(gap2030_at, 1)} Mt gap at 2030.` : `${co.shortName} is on track for the 2030 milestone.`}
+            </p>`;
+
+        // AT-specific conditions
+        let atConditions = [];
+        if (gap2030_at > 0.5) {
+            atConditions.push(condCard('Near-Term Coal/Gas Retirement Acceleration', `${fmt(gap2030_at, 1)} Mt gap by 2030`,
+                `Closing the ${fmt(gap2030_at, 1)} Mt gap to the AT trajectory by 2030 (−57%) requires accelerated fossil retirement beyond current market-driven pace. This means either mandated coal exit, carbon pricing that makes high-heat-rate gas uneconomic, or dramatically faster clean interconnection.`, 'at'));
+        }
+        if (gap2035_at > 0.5) {
+            atConditions.push(condCard('Mid-Term Clean Deployment at Scale', `${fmt(gap2035_at, 1)} Mt gap by 2035`,
+                `The −82% target by 2035 requires aggressive clean deployment: utility-scale solar+storage, wind, and potentially nuclear uprates or SMR deployment. ${co.shortName} would need to roughly triple clean build rates vs. market trajectory.`, 'at'));
+        }
+        if (gap2040_at > 0.1) {
+            atConditions.push(condCard('Firm Clean & CCS for Residual Emissions', `${fmt(gap2040_at, 1)} Mt gap by 2040`,
+                `Reaching −88% by 2040 means near-total elimination of gas CCGT dispatch. Requires firm clean alternatives (CCS-CCGT, advanced nuclear, LDES) to replace gas for grid reliability.`, 'at'));
+        }
+
+        // Dimension-based conditions (applicable to AT)
+        if (dims) {
+            if (dims.conditions) {
+                const emF = dims.conditions.F ? dims.conditions.F.emissions.p50[3] : null;
+                const emC = dims.conditions.C ? dims.conditions.C.emissions.p50[3] : null;
+                if (emF !== null && emC !== null) {
+                    atConditions.push(condCard('Interconnection & Permitting Reform', `${fmt(Math.abs(emC - emF), 1)} Mt by 2040`,
+                        `Facilitating conditions (faster queues, streamlined permitting): ${fmt(emF, 1)} Mt vs. Challenging: ${fmt(emC, 1)} Mt by 2040. The AT trajectory requires facilitating conditions at minimum.`, 'at'));
+                }
+            }
+            if (dims.price_sens) {
+                const low = dims.price_sens.Low ? dims.price_sens.Low.emissions.p50[3] : null;
+                const high = dims.price_sens.High ? dims.price_sens.High.emissions.p50[3] : null;
+                if (low !== null && high !== null) {
+                    atConditions.push(condCard('Aggressive LCOE Reduction', `${fmt(Math.abs(high - low), 1)} Mt range`,
+                        `Low LCOE (Wright's Law outperformance): ${fmt(low, 1)} Mt vs. High LCOE: ${fmt(high, 1)} Mt by 2040. AT compliance requires LCOE trajectories at or below the low case.`, 'at'));
                 }
             }
         }
 
-        // Demand growth
-        if (dims.demand_growth) {
-            const low = dims.demand_growth.Low ? dims.demand_growth.Low.emissions.p50[5] : null;
-            const high = dims.demand_growth.High ? dims.demand_growth.High.emissions.p50[5] : null;
-            if (low !== null && high !== null) {
-                conditions.push({
-                    title: 'Demand Growth Trajectory',
-                    impact: `${fmt(Math.abs(high - low), 1)} Mt range`,
-                    description: `Higher electricity demand drives more new clean build (displacing fossil), but also requires more total generation.
-                        Low demand: ${fmt(low, 1)} Mt vs. High demand: ${fmt(high, 1)} Mt by 2050.
-                        ${high > low ? 'Higher demand increases total emissions despite higher clean build rates.' : 'Higher demand accelerates clean deployment, reducing per-MWh intensity faster.'}`
-                });
+        html += atConditions.join('');
+
+        // ── Section B: Enabling Conditions for SBTi NZ 2040 Competitively ──
+        html += `<h3 style="font-size:1.05rem;color:var(--navy);margin:var(--space-xl) 0 var(--space-md)">
+            Enabling Conditions to Hit SBTi Net Zero by 2040 Competitively</h3>
+            <p style="font-size:0.88rem;color:var(--text-secondary);margin-bottom:var(--space-md)">
+                SBTi Power Sector v2 requires net-zero emissions by 2040.
+                ${gap2040_ps > 0.5 ? `${co.shortName} has a ${fmt(gap2040_ps, 1)} Mt gap at 2040 under market conditions.` : `${co.shortName}'s market trajectory aligns with net-zero by 2040.`}
+                Achieving this <em>competitively</em> — without destroying shareholder value — requires specific enabling conditions.
+            </p>`;
+
+        let nzConditions = [];
+        if (gap2040_ps > 0.5) {
+            nzConditions.push(condCard('Carbon Pricing Signal', `Critical for NZ 2040`,
+                `Net-zero by 2040 requires eliminating all remaining gas generation revenue within 14 years. A carbon price of $50-100/tCO₂ would internalize the externality and make gas CCGT uneconomic relative to clean firm alternatives. Without it, retiring profitable gas assets destroys ~$${fmt(gap2040_ps * 150, 0)}M in annual revenue.`, 'nz'));
+        }
+        nzConditions.push(condCard('Clean Firm Technology at Scale', 'Required by 2035',
+            `Net-zero by 2040 requires firm clean generation to replace gas CCGT for grid reliability. This means commercially available advanced nuclear (SMR), CCS at scale, or LDES (iron-air) by 2035 — five years before the deadline — to allow buildout.`, 'nz'));
+
+        if (dims && dims.ppa_level) {
+            const lowP = dims.ppa_level.Low ? dims.ppa_level.Low.emissions.p50[3] : null;
+            const highP = dims.ppa_level.High ? dims.ppa_level.High.emissions.p50[3] : null;
+            if (lowP !== null && highP !== null) {
+                nzConditions.push(condCard('Deep Corporate PPA Market', `${fmt(Math.abs(highP - lowP), 1)} Mt range at 2040`,
+                    `High PPA commitment (corporate buyers willing to pay premium for 24/7 clean): ${fmt(highP, 1)} Mt vs. Low PPA: ${fmt(lowP, 1)} Mt. NZ 2040 requires high PPA market depth to finance new clean investment at acceptable returns.`, 'nz'));
             }
         }
 
-        // LCOE sensitivity
-        if (dims.price_sens) {
-            const low = dims.price_sens.Low ? dims.price_sens.Low.emissions.p50[5] : null;
-            const high = dims.price_sens.High ? dims.price_sens.High.emissions.p50[5] : null;
+        if (dims && dims.demand_growth) {
+            const low = dims.demand_growth.Low ? dims.demand_growth.Low.emissions.p50[3] : null;
+            const high = dims.demand_growth.High ? dims.demand_growth.High.emissions.p50[3] : null;
             if (low !== null && high !== null) {
-                conditions.push({
-                    title: 'Clean Energy Cost Reduction',
-                    impact: `${fmt(Math.abs(high - low), 1)} Mt range`,
-                    description: `Faster LCOE reductions (learning curves, manufacturing scale) accelerate fossil displacement.
-                        Low LCOE (optimistic): ${fmt(low, 1)} Mt vs. High LCOE (conservative): ${fmt(high, 1)} Mt by 2050.`
-                });
+                nzConditions.push(condCard('Demand Growth Management', `${fmt(Math.abs(high - low), 1)} Mt range`,
+                    `Under high demand growth (AI/data centers), total generation increases, requiring even more clean build to hit zero. Low demand: ${fmt(low, 1)} Mt vs. High demand: ${fmt(high, 1)} Mt by 2040.`, 'nz'));
             }
         }
 
-        // PPA level
-        if (dims.ppa_level) {
-            const low = dims.ppa_level.Low ? dims.ppa_level.Low.emissions.p50[5] : null;
-            const high = dims.ppa_level.High ? dims.ppa_level.High.emissions.p50[5] : null;
-            if (low !== null && high !== null) {
-                conditions.push({
-                    title: 'PPA Market Depth',
-                    impact: `${fmt(Math.abs(high - low), 1)} Mt range`,
-                    description: `Deeper PPA markets (more corporate buyers, higher willingness-to-pay) pull forward clean investment.
-                        High PPA: ${fmt(high, 1)} Mt vs. Low PPA: ${fmt(low, 1)} Mt by 2050.`
-                });
-            }
-        }
+        nzConditions.push(condCard('Stranded Asset Compensation', 'Shareholder protection',
+            `Accelerating gas retirement to meet NZ 2040 strands assets with remaining economic life. Competitive transition requires either regulated asset recovery mechanisms, capacity market reform to value clean firm, or carbon credit revenue to offset lost gas dispatch revenue.`, 'nz'));
 
-        el.innerHTML = conditions.map(c => `
-            <div class="card" style="padding:var(--space-lg)">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-                    <h4 style="margin:0;color:var(--navy);font-size:1rem">${c.title}</h4>
-                    <span class="convergence-tag moderate">${c.impact}</span>
-                </div>
-                <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.6;margin:0">${c.description}</p>
-            </div>
-        `).join('');
+        html += nzConditions.join('');
+
+        el.innerHTML = html;
     }
 
     // ─── SECTION 7: Strategic Positioning ────────────────────
