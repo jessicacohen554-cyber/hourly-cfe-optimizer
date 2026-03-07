@@ -38,6 +38,7 @@
                 <li><a href="#clean-investment">Clean Generation Investment Case</a></li>
                 <li><a href="#enabling-conditions">Enabling Conditions for 1.5°C</a></li>
                 <li><a href="#strategic">Strategic Positioning</a></li>
+                <li><a href="#gas-development">Gas Development Analysis</a></li>
             </ol>
         </aside>
 
@@ -201,6 +202,36 @@
                 <div class="narrative-block" id="strategicNarrative"></div>
             </section>
 
+            <!-- Section 8: Gas Development Analysis -->
+            <section class="report-section scroll-reveal" id="gas-development">
+                <div class="report-section-header">
+                    <span class="report-section-number">08</span>
+                    <h2>Gas Development Analysis</h2>
+                </div>
+
+                <div class="card" style="padding: var(--space-lg); margin-bottom: var(--space-xl)">
+                    <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">New Gas Generation: Conditions & Impact</h3>
+                    <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: var(--space-md)">
+                        Under what market conditions would this company develop new gas-fired generation, where would it be sited,
+                        and what impact would that have on the decarbonization trajectory?
+                    </p>
+                    <div class="chart-container-lg"><canvas id="gasImpactChart"></canvas></div>
+                </div>
+
+                <div class="grid-2col" style="margin-bottom: var(--space-xl)">
+                    <div class="card" style="padding: var(--space-lg)">
+                        <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Gas Development Scenarios by ISO</h3>
+                        <div class="chart-container"><canvas id="gasLocationChart"></canvas></div>
+                    </div>
+                    <div class="card" style="padding: var(--space-lg)">
+                        <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Trajectory Impact: With vs. Without New Gas</h3>
+                        <div class="chart-container"><canvas id="gasTrajectoryDelta"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="narrative-block" id="gasNarrative"></div>
+            </section>
+
             <!-- Company Navigation -->
             <div class="company-nav">
                 <a href="ipp_nrg.html">← NRG Energy</a>
@@ -212,8 +243,13 @@
 
     <footer class="page-footer">
         <div class="footer-links">
-            <a href="ipp_climate_transition.html">IPP Climate Transition Analysis</a>
+            <a href="index.html">Home</a>
             <a href="dashboard.html">Cost Optimizer</a>
+            <a href="gen_market_overview.html">Market Overview</a>
+            <a href="gen_policy_conditions.html">Policy &amp; Market</a>
+            <a href="gen_target_setting.html">Target Setting</a>
+            <a href="gen_regional_pathways.html">Regional Pathways</a>
+            <a href="ipp_climate_transition.html">IPP Deep Dives</a>
             <a href="research_paper.html">Research Paper</a>
         </div>
         <p>&copy; 2026 Hourly CFE Optimizer</p>

@@ -243,17 +243,11 @@
         {
             label: 'Generator Analysis',
             children: [
-                { label: 'IPP Climate Transition', href: 'ipp_climate_transition.html' },
-                { label: 'Overview', href: 'pg_overview.html' },
-                { label: 'Company Dashboard', href: 'pg_company_dashboard.html' },
-                { label: 'Fleet Analysis', href: 'pg_fleet_analysis.html' },
-                { label: 'Fleet Survival', href: 'fleet_survival.html' },
-                { label: 'SMARTargets Scenarios', href: 'smartargets_scenarios.html' },
-                { label: 'SMARTargets Dashboard', href: 'smartargets_dashboard.html' },
-                { label: 'Decarbonization Pathways', href: 'regional_decarbonization_pathways.html' },
-                { label: 'Targets & Feasibility', href: 'pg_targets.html' },
-                { label: 'Policy & Conditions', href: 'pg_policy.html' },
-                { label: 'Methodology', href: 'pg_methodology.html' }
+                { label: 'US Power Market', href: 'gen_market_overview.html' },
+                { label: 'Policy & Market Outlook', href: 'gen_policy_conditions.html' },
+                { label: 'Target Setting', href: 'gen_target_setting.html' },
+                { label: 'Regional Pathways', href: 'gen_regional_pathways.html' },
+                { label: 'IPP Deep Dives', href: 'ipp_climate_transition.html' }
             ]
         },
         {
