@@ -265,6 +265,12 @@
                 { label: 'About', href: 'about.html' },
                 { label: 'Reference', href: 'reference.html' }
             ]
+        },
+        {
+            label: 'Troubleshooting',
+            children: [
+                { label: 'Step 3 vs 5D Analysis', href: 'troubleshooting_step3_vs_5d.html' }
+            ]
         }
     ];
 
