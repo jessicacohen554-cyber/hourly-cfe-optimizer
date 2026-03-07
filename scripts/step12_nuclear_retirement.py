@@ -56,6 +56,11 @@ NUCLEAR_FOM_KW_YR = 120      # $/kW-yr fixed O&M
 NUCLEAR_ELCC = 0.95           # Effective load carrying capacity
 NUCLEAR_CF = 0.90             # Baseline capacity factor
 
+# Viability band: all-in revenue per MWh needed for nuclear to be viable
+# This is an across-the-board number, not plant-specific
+VIABLE_BAND_LOW = 38.0        # $/MWh — below this, market conditions are insufficient
+VIABLE_BAND_HIGH = 44.0       # $/MWh — above this, market conditions are clearly viable
+
 CAPACITY_MARKET_PRICES = {
     'CAISO': 75, 'ERCOT': 0, 'PJM': 120, 'NYISO': 85,
     'NEISO': 55, 'MISO': 25, 'SPP': 0,
@@ -200,6 +205,14 @@ def compute_plant_economics_vectorized(plants, scenario_rows, model_tag):
         is_stranded_merchant = licensed & (merchant_profit_m < -5)
         saved_by_cfd = licensed & (merchant_profit_m < 0) & (profit_m >= 0)
 
+        # Viability band classification: $38-44/MWh across-the-board
+        # Uses energy_price (the actual LMP or PPA price) as the market signal
+        viability = np.where(
+            ~licensed, 'retired',
+            np.where(energy_price < VIABLE_BAND_LOW, 'below_viable',
+            np.where(energy_price < VIABLE_BAND_HIGH, 'marginal_viable', 'above_viable'))
+        )
+
         for i in range(N):
             row = {
                 'plant': plants[i]['name'],
@@ -212,6 +225,7 @@ def compute_plant_economics_vectorized(plants, scenario_rows, model_tag):
                 'year': year,
                 'avg_lmp': avg_lmp[i],
                 'clean_pct': clean_pct[i],
+                'energy_price_mwh': energy_price[i],
                 'energy_rev_m': energy_rev_m[i] if licensed[i] else np.nan,
                 'capacity_rev_m': capacity_rev_m[i] if licensed[i] else np.nan,
                 'base_rev_per_mwh': base_rev_per_mwh[i] if licensed[i] else np.nan,
@@ -222,6 +236,7 @@ def compute_plant_economics_vectorized(plants, scenario_rows, model_tag):
                 'profit_m': profit_m[i] if licensed[i] else np.nan,
                 'merchant_profit_m': merchant_profit_m[i] if licensed[i] else np.nan,
                 'status': status[i],
+                'viability': viability[i],
                 'ppa_active': bool(ppa_active[i]),
                 'cfd_active': bool(applicable_floor[i] > 0),
                 'saved_by_cfd': bool(saved_by_cfd[i]),
@@ -391,7 +406,9 @@ def load_model_c_scenarios():
                         yr_clean = threshold
 
                     # LMP adjusts with clean penetration (price suppression)
-                    lmp_adj = lmp_val * (1.0 - 0.003 * max(0, yr_clean - 40))
+                    # Step 3A prices already reflect the threshold's clean level,
+                    # so only apply modest temporal suppression for growth beyond snapshot
+                    lmp_adj = lmp_val * (1.0 - 0.001 * max(0, yr_clean - threshold * 0.5))
 
                     yr_iso_data = {iso: {'avg_lmp': lmp_adj, 'clean_pct': yr_clean}}
 
@@ -452,6 +469,12 @@ def compute_model_comparison(df, plants):
             strand_rate = (ydf['status'] == 'stranded').mean()
             merchant_strand = (ydf['merchant_profit_m'] < -5).mean()
             avg_profit = ydf['profit_m'].mean()
+            # Viability band stats
+            below_viable = (ydf['viability'] == 'below_viable').mean()
+            marginal_viable = (ydf['viability'] == 'marginal_viable').mean()
+            above_viable = (ydf['viability'] == 'above_viable').mean()
+            avg_energy_price = ydf['energy_price_mwh'].mean()
+
             by_year[str(year)] = {
                 'n_scenarios': int(n_scenarios),
                 'strand_rate': round(float(strand_rate), 3),
@@ -460,6 +483,10 @@ def compute_model_comparison(df, plants):
                 'mw_stranded_p50': round(float(
                     ydf[ydf['status'] == 'stranded'].groupby('scenario')['cap_mw'].sum().median()
                 ), 0) if (ydf['status'] == 'stranded').any() else 0,
+                'below_viable_rate': round(float(below_viable), 3),
+                'marginal_viable_rate': round(float(marginal_viable), 3),
+                'above_viable_rate': round(float(above_viable), 3),
+                'avg_energy_price_mwh': round(float(avg_energy_price), 1),
             }
         comparison[model] = by_year
     return comparison
@@ -585,8 +612,10 @@ def compute_step3_capacity_impact(df):
                 continue
             by_threshold[str(int(t))] = {
                 'strand_rate': round(float((tdf['status'] == 'stranded').mean()), 3),
+                'below_viable_rate': round(float((tdf['viability'] == 'below_viable').mean()), 3),
                 'avg_profit_m': round(float(tdf['profit_m'].mean()), 1),
                 'avg_lmp': round(float(tdf['avg_lmp'].mean()), 1),
+                'avg_energy_price': round(float(tdf['energy_price_mwh'].mean()), 1),
             }
 
         # Group by price case
@@ -651,6 +680,9 @@ def build_per_model_probs(df, plants):
                     'merchant': round(float((ydf['merchant_profit_m'] < -5).mean()), 3),
                     'with_cfd': round(float((ydf['status'] == 'stranded').mean()), 3),
                     'avg_profit': round(float(ydf['profit_m'].mean()), 1),
+                    'below_viable': round(float((ydf['viability'] == 'below_viable').mean()), 3),
+                    'marginal_viable': round(float((ydf['viability'] == 'marginal_viable').mean()), 3),
+                    'avg_energy_price': round(float(ydf['energy_price_mwh'].mean()), 1),
                 }
             if pdata:
                 model_data[p['name']] = pdata
@@ -785,6 +817,11 @@ def generate_js_output(plants, full_df, probs_all, model_comparison,
     robust_risk_mw = sum(p['cap_mw'] for p in robust_findings.get('robust_at_risk', []))
     model_dep_mw = sum(p['cap_mw'] for p in robust_findings.get('model_dependent', []))
 
+    # Viability band stats at 2040 across all models
+    df_2040_licensed = full_df[(full_df['year'] == 2040) & (full_df['status'] != 'retired')]
+    below_viable_2040 = (df_2040_licensed['viability'] == 'below_viable').mean() if len(df_2040_licensed) else 0
+    avg_energy_price_2040 = df_2040_licensed['energy_price_mwh'].mean() if len(df_2040_licensed) else 0
+
     headline = {
         'total_nuclear_mw': total_nuc_mw,
         'total_nuclear_gw': round(total_nuc_mw / 1000, 1),
@@ -800,6 +837,10 @@ def generate_js_output(plants, full_df, probs_all, model_comparison,
         'robust_risk_gw': round(robust_risk_mw / 1000, 1),
         'model_dependent_gw': round(model_dep_mw / 1000, 1),
         'agreement_2040': robust_findings.get('agreement_by_year', {}).get('2040', {}).get('agreement_rate', 0),
+        'viable_band_low': VIABLE_BAND_LOW,
+        'viable_band_high': VIABLE_BAND_HIGH,
+        'below_viable_rate_2040': round(float(below_viable_2040), 3),
+        'avg_energy_price_2040': round(float(avg_energy_price_2040), 1),
     }
 
     js_data = {
