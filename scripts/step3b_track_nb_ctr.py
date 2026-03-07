@@ -73,9 +73,10 @@ _THR_STR = {thr: str(thr) for thr in OUTPUT_THRESHOLDS}
 _YEAR_STR = {yr: str(yr) for yr in DG_UNIQUE_YEARS}
 
 # Pareto pruning price bounds (module-level constant, avoid per-call allocation)
-# Cols: wholesale, sol_new, wnd_new, osw_new, ccs_new, uprate, geo, remaining, bat4, bat8, ldes, h2
-_PARETO_MIN_PRICES = np.array([20, 40, 30, 0, 52, 15, 0, 52, 69, 77, 116, 182], dtype=np.float64)
-_PARETO_MAX_PRICES = np.array([50, 82, 83, 235, 164, 15, 116, 84, 144, 179, 267, 470], dtype=np.float64)
+# Cols: wholesale, sol_new, wnd_new, osw_new, ccs_new, uprate, geo, remaining, remaining_nuc, bat4, bat8, ldes, h2
+# Values derived from actual price matrix ranges across all ISOs (precompute_all_prices output)
+_PARETO_MIN_PRICES = np.array([25, 45, 47, 0, 59, 15, 0, 59, 70, 0, 6200, 1700, 16300], dtype=np.float64)
+_PARETO_MAX_PRICES = np.array([45, 94, 109, 235, 148, 40, 116, 146, 166, 21200, 30300, 7800, 35800], dtype=np.float64)
 
 # Per-ISO EF parquet directory (Step 2 output)
 EF_ISO_DIR = os.path.join(SCRIPT_DIR, 'data', 'step2-ef-parquets')
@@ -592,7 +593,7 @@ _CHUNK_THRESHOLD = 15_000_000
 
 def _run_track_chunked(track_name, iso, arrays, demand_twh, combos,
                         uprate_cap_override=None, existing_override=None,
-                        chunk_size=8_000_000):
+                        chunk_size=8_000_000, apply_dominance_filter=True):
     """Tournament-style chunked run_track for arrays too large for runner RAM.
 
     Splits N mixes into chunks of chunk_size, finds per-chunk winners via
@@ -621,7 +622,7 @@ def _run_track_chunked(track_name, iso, arrays, demand_twh, combos,
             track_name, iso, chunk_arrays, demand_twh, combos,
             uprate_cap_override=uprate_cap_override,
             existing_override=existing_override,
-            apply_dominance_filter=True)
+            apply_dominance_filter=apply_dominance_filter)
 
         # Map chunk-local winner indices back to full-array indices
         for idx in chunk_arch:
@@ -1047,7 +1048,8 @@ def main():
 
                 nb_data, nb_arch = run_track(
                     'newbuild', iso, nb_arrays, demand_twh, combos,
-                    existing_override=greenfield_all)
+                    existing_override=greenfield_all,
+                    apply_dominance_filter=(len(combos) > 1))
 
                 # Save to parquet immediately
                 sc_rows = flatten_track_rows(iso, 'newbuild', nb_data)
@@ -1100,13 +1102,15 @@ def main():
             if N_ctr > _CHUNK_THRESHOLD:
                 ctr_data, ctr_arch, ctr_eval = _run_track_chunked(
                     'cost_to_replace', iso, ctr_arrays, demand_twh, combos,
-                    uprate_cap_override=0, existing_override=nuclear_retirement)
+                    uprate_cap_override=0, existing_override=nuclear_retirement,
+                    apply_dominance_filter=(len(combos) > 1))
                 del ctr_arrays
                 gc.collect()
             else:
                 ctr_data, ctr_arch = run_track(
                     'cost_to_replace', iso, ctr_arrays, demand_twh, combos,
-                    uprate_cap_override=0, existing_override=nuclear_retirement)
+                    uprate_cap_override=0, existing_override=nuclear_retirement,
+                    apply_dominance_filter=(len(combos) > 1))
                 ctr_eval = ctr_arrays
 
             # Save to parquet immediately
