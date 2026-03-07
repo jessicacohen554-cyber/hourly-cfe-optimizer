@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced IPP SMARTargets Framework</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/reference.css">
+    <style>
+        html { font-size: 16px; }
+        .content { max-width: 900px; margin: 0 auto; padding: 40px 48px; }
+        .dim-table { width: 100%; border-collapse: collapse; margin: 24px 0; }
+        .dim-table th, .dim-table td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+        .dim-table th { background: var(--navy-dark); color: #fff; font-family: var(--font-heading); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        .dim-table td { font-size: 0.9rem; }
+        .dim-table tr:nth-child(even) td { background: var(--bg-alt-cool); }
+        .dim-table .mono { font-family: var(--font-mono); font-size: 0.82rem; }
+        .axis-card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 24px; margin: 20px 0; }
+        .axis-card h4 { margin: 0 0 8px 0; font-family: var(--font-heading); color: var(--navy-dark); }
+        .axis-card .axis-meta { display: flex; gap: 16px; margin-bottom: 12px; font-size: 0.82rem; color: var(--text-muted); }
+        .axis-card .axis-meta span { background: var(--bg-alt-cool); padding: 2px 8px; border-radius: var(--radius-sm); }
+        .formula { background: var(--bg-alt-cool); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 16px 0; font-family: var(--font-mono); font-size: 0.88rem; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+        .ppa-grid { display: grid; grid-template-columns: auto repeat(7, 1fr); gap: 0; margin: 16px 0; font-size: 0.82rem; }
+        .ppa-grid > div { padding: 6px 8px; border-bottom: 1px solid var(--border); }
+        .ppa-grid > div:nth-child(-n+8) { font-weight: 600; background: var(--navy-dark); color: #fff; }
+        .section-num { color: var(--accent); font-family: var(--font-mono); font-weight: 700; margin-right: 8px; }
+        .toc { background: #fff; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 24px 32px; margin: 24px 0; }
+        .toc h2 { margin-top: 0; font-size: 1.1rem; }
+        .toc ol { margin: 0; padding-left: 20px; }
+        .toc li { margin: 6px 0; }
+        .toc a { color: var(--navy-dark); text-decoration: none; border-bottom: 1px solid var(--border); }
+        .toc a:hover { color: var(--accent); border-color: var(--accent); }
+        @media (max-width: 768px) {
+            .content { padding: 24px 20px; }
+            .ppa-grid { font-size: 0.72rem; }
+        }
+    </style>
+    <script src="js/chart-colors.js"></script>
+    <script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
+</head>
+<body>
+
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+
+<header class="header" id="pageHeader">
+    <h1>Enhanced IPP SMARTargets Framework</h1>
+    <div class="subtitle">Parametric sweep methodology &mdash; 270 scenarios across 5 dimension axes with regional PPA differentiation</div>
+    <div class="header-accent"></div>
+</header>
+
+<div class="content section-light">
+
+    <div class="toc">
+        <h2>Contents</h2>
+        <ol>
+            <li><a href="#overview">Framework Overview</a></li>
+            <li><a href="#dimensions">Dimension Key Architecture</a></li>
+            <li><a href="#conditions">Axis 1: Conditions Bundle</a></li>
+            <li><a href="#demand">Axis 2: Demand Growth</a></li>
+            <li><a href="#price">Axis 3: Price Sensitivity</a></li>
+            <li><a href="#ppa">Axis 4: PPA Market Depth</a></li>
+            <li><a href="#gas">Axis 5: Gas Friction</a></li>
+            <li><a href="#ratchet">Ratcheting Floor Mechanism</a></li>
+            <li><a href="#cost-model">Cost Model &amp; PPA Integration</a></li>
+            <li><a href="#revenue">Revenue Model</a></li>
+            <li><a href="#wrights">Wright&rsquo;s Law Learning Curves</a></li>
+            <li><a href="#output">Output Structure &amp; Statistics</a></li>
+            <li><a href="#ipp">IPP Fleet Integration</a></li>
+            <li><a href="#sources">Data Sources &amp; Calibration</a></li>
+        </ol>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+
+    <h2 id="overview"><span class="section-num">1</span>Framework Overview</h2>
+
+    <p>The Enhanced IPP SMARTargets framework extends the base SMARTargets V1 market simulation with a <strong>full parametric sweep</strong> across 5 independent dimension axes. Instead of 8 hand-crafted scenarios (R1/R2, AT1&ndash;AT4, QT1&ndash;QT4), the sweep generates <strong>270 scenarios per sweep type</strong> from the Cartesian product of shared data sources already used throughout the pipeline.</p>
+
+    <div class="insight-box">
+        The core insight: rather than picking &ldquo;Facilitating&rdquo; vs &ldquo;Challenging&rdquo; as binary bundles, decompose the uncertainty space into its independent axes and sweep all combinations. The P10/P50/P90 fan bands that emerge capture the true uncertainty envelope &mdash; including scenarios that are facilitating on one axis but challenging on another.
+    </div>
+
+    <p>Three sweep types are available, each producing 270 scenarios:</p>
+    <ul>
+        <li><strong>Reference</strong> &mdash; No emission constraint. Pure profit-driven deployment.</li>
+        <li><strong>Power Net-Zero</strong> &mdash; Power sector net-zero by 2050 (AT trajectory).</li>
+        <li><strong>Economy Net-Zero</strong> &mdash; Economy-wide net-zero (tighter AT trajectory).</li>
+    </ul>
+    <p>Total: <strong>810 scenarios</strong> across all sweep types, each simulated across 7 ISOs &times; 6 time steps (2023&ndash;2050).</p>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+
+    <h2 id="dimensions"><span class="section-num">2</span>Dimension Key Architecture</h2>
+
+    <p>Each scenario is uniquely identified by a 5-axis key:</p>
+
+    <table class="dim-table">
+        <thead>
+            <tr>
+                <th>Axis</th>
+                <th>Key</th>
+                <th>Levels</th>
+                <th>Count</th>
+                <th>Source</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Conditions</td>
+                <td class="mono">conditions</td>
+                <td>Facilitating / Challenging</td>
+                <td>2</td>
+                <td>Step 10 bundle</td>
+            </tr>
+            <tr>
+                <td>Demand Growth</td>
+                <td class="mono">demand_growth</td>
+                <td>Low / Medium / High</td>
+                <td>3</td>
+                <td>pipeline_config</td>
+            </tr>
+            <tr>
+                <td>Price Sensitivity</td>
+                <td class="mono">price_sens</td>
+                <td>5 named keys</td>
+                <td>5</td>
+                <td>Step 5D</td>
+            </tr>
+            <tr>
+                <td>PPA Level</td>
+                <td class="mono">ppa_level</td>
+                <td>Low / Medium / High</td>
+                <td>3</td>
+                <td>procurement_utils</td>
+            </tr>
+            <tr>
+                <td>Gas Friction</td>
+                <td class="mono">gas_friction</td>
+                <td>Low / Medium / High</td>
+                <td>3</td>
+                <td>Step 10</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="formula">
+        Total = 2 &times; 3 &times; 5 &times; 3 &times; 3 = <strong>270 scenarios</strong> per sweep type
+    </div>
+
+    <p>Scenario ID format: <code>S_{C}_{D}_{price_name}_{P}_{G}</code></p>
+    <p>Example: <code>S_F_M_all_med_H_M</code> = Facilitating, Medium demand, all-Medium prices, High PPA, Medium gas friction.</p>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+
+    <h2 id="conditions"><span class="section-num">3</span>Axis 1: Conditions Bundle</h2>
+
+    <div class="axis-card">
+        <h4>Facilitating</h4>
+        <div class="axis-meta">
+            <span>Learning: Fast</span>
+            <span>Queue: Facilitating</span>
+            <span>DAC: Available</span>
+        </div>
+        <p>Represents a world with supportive policy, streamlined permitting, fast technology learning, and accessible direct air capture as a backstop. Interconnection queues process at higher capacity (5&ndash;8 GW/yr per ISO).</p>
+    </div>
+
+    <div class="axis-card">
+        <h4>Challenging</h4>
+        <div class="axis-meta">
+            <span>Learning: Slow</span>
+            <span>Queue: Challenging</span>
+            <span>DAC: Unavailable</span>
+        </div>
+        <p>Represents a world with policy headwinds, permitting delays, slow cost declines, and no DAC backstop. Interconnection queues are constrained (2&ndash;4 GW/yr per ISO), forcing grid overbuild when emission caps bind.</p>
+    </div>
+
+    <table class="dim-table">
+        <thead>
+            <tr><th>Parameter</th><th>Facilitating</th><th>Challenging</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Learning speed</td><td>Fast</td><td>Slow</td></tr>
+            <tr><td>Queue type</td><td>Facilitating (5&ndash;8 GW/yr)</td><td>Challenging (2&ndash;4 GW/yr)</td></tr>
+            <tr><td>DAC available</td><td>Yes</td><td>No</td></tr>
+            <tr><td>Queue cap (ERCOT)</td><td>8 GW/yr</td><td>4 GW/yr</td></tr>
+            <tr><td>Queue cap (CAISO)</td><td>6 GW/yr</td><td>3 GW/yr</td></tr>
+            <tr><td>Queue cap (PJM)</td><td>7 GW/yr</td><td>3 GW/yr</td></tr>
+        </tbody>
+    </table>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+
+    <h2 id="demand"><span class="section-num">4</span>Axis 2: Demand Growth</h2>
+
+    <p>Annual compound growth rates from <code>pipeline_config.DEMAND_GROWTH_RATES</code>, applied from 2023 baseline. Demand growth is the primary driver of unserved load that triggers new gas build.</p>
+
+    <table class="dim-table">
+        <thead>
+            <tr><th>ISO</th><th>Low</th><th>Medium</th><th>High</th><th>2050 TWh (Med)</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>CAISO</td><td>1.4%</td><td>1.9%</td><td>2.5%</td><td>~375</td></tr>
+            <tr><td>ERCOT</td><td>2.0%</td><td>3.5%</td><td>5.5%</td><td>~725</td></tr>
+            <tr><td>PJM</td><td>1.5%</td><td>2.4%</td><td>3.6%</td><td>~1,530</td></tr>
+            <tr><td>NYISO</td><td>1.3%</td><td>2.0%</td><td>4.4%</td><td>~230</td></tr>
+            <tr><td>NEISO</td><td>0.9%</td><td>1.8%</td><td>2.9%</td><td>~175</td></tr>
+            <tr><td>MISO</td><td>1.2%</td><td>2.2%</td><td>3.8%</td><td>~1,000</td></tr>
+            <tr><td>SPP</td><td>1.0%</td><td>1.8%</td><td>3.0%</td><td>~425</td></tr>
+        </tbody>
+    </table>
+
+    <p>High demand scenarios (ERCOT 5.5%, NYISO 4.4%) reflect aggressive electrification plus data center load growth. These are the scenarios where gas friction matters most &mdash; high demand with low clean deployment creates a large unserved gap that either gas or mandated clean build must fill.</p>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+
+    <h2 id="price"><span class="section-num">5</span>Axis 3: Price Sensitivity</h2>
+
+    <p>Five named price sensitivity keys from the Step 5D deployment queue, each mapping to the full 9-dimension cost toggle structure used in Step 3 cost optimization. These keys control LCOE tables, fuel prices, transmission costs, CCS costs, and 45Q status simultaneously.</p>
+
+    <table class="dim-table">
+        <thead>
+            <tr><th>Key</th><th>VRE</th><th>Firm</th><th>Battery</th><th>LDES</th><th>Fuel</th><th>Tx</th><th>CCS</th><th>45Q</th></tr>
+        </thead>
+        <tbody>
+            <tr><td class="mono">all_low</td><td>Low</td><td>Low</td><td>Low</td><td>Low</td><td>Low</td><td>Low</td><td>Low</td><td>On</td></tr>
+            <tr><td class="mono">all_med</td><td>Med</td><td>Med</td><td>Med</td><td>Med</td><td>Med</td><td>Med</td><td>Med</td><td>On</td></tr>
+            <tr><td class="mono">all_high</td><td>High</td><td>High</td><td>High</td><td>High</td><td>High</td><td>High</td><td>High</td><td>On</td></tr>
+            <tr><td class="mono">high_vre_low_firm</td><td>High</td><td>Low</td><td>High</td><td>High</td><td>Med</td><td>Med</td><td>Low</td><td>On</td></tr>
+            <tr><td class="mono">high_firm_low_vre</td><td>Low</td><td>High</td><td>Low</td><td>Low</td><td>Med</td><td>Med</td><td>High</td><td>On</td></tr>
+        </tbody>
+    </table>
+
+    <div class="insight-box">
+        The asymmetric keys (<code>high_vre_low_firm</code> and <code>high_firm_low_vre</code>) capture structural cost divergence: a world where VRE costs stall while firm generation gets cheap (favorable for nuclear/CCS), or vice versa. These produce the most divergent resource mixes and are critical for identifying which deployment pathways are robust across cost futures.
+    </div>
+
+    <p>The price sensitivity maps to the existing step10 cost model via:</p>
+    <ul>
+        <li><code>firm</code> key &rarr; <code>lcoe_level</code> (drives nuclear, CCS, geothermal LCOE)</li>
+        <li><code>fuel</code> key &rarr; <code>fuel_level</code> (drives wholesale LMP via fossil merit-order)</li>
+        <li><code>tx</code> key &rarr; <code>tx_level</code> (transmission adder on VRE and clean firm)</li>
+    </ul>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+
+    <h2 id="ppa"><span class="section-num">6</span>Axis 4: PPA Market Depth</h2>
+
+    <p>Power Purchase Agreements de-risk revenue for developers, allowing them to accept lower returns and reducing effective LCOE. The PPA level interacts with <strong>regional market depth</strong> &mdash; the same &ldquo;High PPA&rdquo; scenario produces very different cost reductions depending on regional liquidity.</p>
+
+    <h3>Base PPA Premiums (from procurement_utils)</h3>
+    <table class="dim-table">
+        <thead>
+            <tr><th>Category</th><th>Low</th><th>Medium</th><th>High</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>VRE (Solar, Wind, Offshore, Battery)</td><td>5%</td><td>12%</td><td>22%</td></tr>
+            <tr><td>Firm (Nuclear, CCS, Geothermal, LDES, H₂)</td><td>12%</td><td>22%</td><td>38%</td></tr>
+        </tbody>
+    </table>
+
+    <h3>Regional Market Depth Multiplier</h3>
+    <p>The base PPA discount is scaled by an ISO-specific market depth factor reflecting PPA contract liquidity, corporate buyer concentration, and permitting environment:</p>
+
+    <table class="dim-table">
+        <thead>
+            <tr><th>ISO</th><th>Depth</th><th>Rationale</th><th>VRE @ High</th><th>Firm @ High</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>ERCOT</td><td>1.00</td><td>Deepest corporate PPA market (Amazon, Meta, Google)</td><td>22.0%</td><td>38.0%</td></tr>
+            <tr><td>CAISO</td><td>0.95</td><td>Large market, CPUC regulatory complexity</td><td>20.9%</td><td>36.1%</td></tr>
+            <tr><td>PJM</td><td>0.90</td><td>Large footprint, active VA/PA/NJ PPA market</td><td>19.8%</td><td>34.2%</td></tr>
+            <tr><td>NYISO</td><td>0.75</td><td>NYC load center, limited greenfield sites</td><td>16.5%</td><td>28.5%</td></tr>
+            <tr><td>NEISO</td><td>0.65</td><td>Tight market, permitting constraints</td><td>14.3%</td><td>24.7%</td></tr>
+            <tr><td>MISO</td><td>0.60</td><td>Fragmented across states, fewer corporate buyers</td><td>13.2%</td><td>22.8%</td></tr>
+            <tr><td>SPP</td><td>0.50</td><td>Thinnest market, rural load, minimal corporate demand</td><td>11.0%</td><td>19.0%</td></tr>
+        </tbody>
+    </table>
+
+    <div class="formula">
+        Effective discount = PPA_PREMIUMS[category][level] &times; PPA_MARKET_DEPTH[iso]<br>
+        Effective LCOE = base LCOE &times; (1 &minus; effective discount)
+    </div>
+
+    <div class="insight-box insight-warn">
+        A &ldquo;High PPA&rdquo; scenario in SPP provides only 11% VRE cost reduction vs 22% in ERCOT. This regional asymmetry means PPA policy has twice the impact in liquid markets &mdash; which is where most corporate procurement already concentrates.
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+
+    <h2 id="gas"><span class="section-num">7</span>Axis 5: Gas Friction</h2>
+
+    <p>Controls how freely new gas-fired generation can be built when demand exceeds clean supply. Represents the aggregate effect of ESG pressure, permitting delays, policy moratoriums, and siting opposition.</p>
+
+    <table class="dim-table">
+        <thead>
+            <tr><th>Level</th><th>Friction Factor</th><th>Interpretation</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Low</td><td>0.3</td><td>Near-moratorium. Strong ESG + policy barriers. Only 30% of economically justified gas gets built.</td></tr>
+            <tr><td>Medium</td><td>0.7</td><td>Moderate friction. ESG/siting delays reduce pipeline by 30%.</td></tr>
+            <tr><td>High</td><td>1.0</td><td>No friction. Gas builds freely wherever profitable.</td></tr>
+        </tbody>
+    </table>
+
+    <div class="formula">
+        gas_built_gw = (unserved_twh / (8.760 &times; 0.85)) &times; gas_friction<br>
+        where 0.85 = assumed CCGT capacity factor
+    </div>
+
+    <p>Gas friction interacts strongly with demand growth: high demand + low gas friction creates the widest gap between load and supply, forcing either mandated clean build (under emission constraints) or load curtailment.</p>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+
+    <h2 id="ratchet"><span class="section-num">8</span>Ratcheting Floor Mechanism</h2>
+
+    <p>Deployment is <strong>irreversible</strong>. The simulation enforces a strict ratcheting floor on clean energy share:</p>
+
+    <ul>
+        <li><strong>Clean percentage only increases</strong> &mdash; <code>state[&lsquo;clean_pct&rsquo;]</code> is set to each deployed zone&rsquo;s threshold and never decremented.</li>
+        <li><strong>Candidate thresholds filter upward</strong> &mdash; each year only considers zones above the current clean% floor.</li>
+        <li><strong>Cumulative GW ratchets</strong> &mdash; the Wright&rsquo;s Law tracker only adds capacity, never subtracts. Earlier deployment permanently reduces future costs.</li>
+        <li><strong>Physics floor from Step 3</strong> &mdash; resource mixes at each threshold come from pre-computed PFS results that encode the minimum physical requirement to serve that clean% of demand.</li>
+    </ul>
+
+    <div class="insight-box">
+        This creates <strong>path dependency</strong>: a scenario that reaches 70% clean by 2035 has a fundamentally different cost trajectory than one that reaches 70% by 2045, because the earlier deployer benefits from more Wright&rsquo;s Law learning and a higher cumulative GW baseline.
+    </div>
+
+    <p>The sequential stepping loop processes zones in order for each year:</p>
+    <ol>
+        <li>Start from previous year&rsquo;s ending clean% (the floor)</li>
+        <li>Evaluate profitability of the next zone (revenue &minus; cost)</li>
+        <li>If profitable: deploy, advance floor, update cumulative GW, reduce queue budget</li>
+        <li>If unprofitable: market stop &mdash; no further deployment this year</li>
+        <li>Under emission constraints: mandated deployment fills gap between market stop and cap</li>
+    </ol>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+
+    <h2 id="cost-model"><span class="section-num">9</span>Cost Model &amp; PPA Integration</h2>
+
+    <p>The cost model computes blended LCOE ($/MWh) for incremental resources in each zone, with three layers:</p>
+
+    <ol>
+        <li><strong>Base LCOE</strong> &mdash; from pipeline_config LCOE tables, indexed by <code>lcoe_level</code> and ISO. Includes Wright&rsquo;s Law learning applied via deployment-based cumulative GW.</li>
+        <li><strong>Transmission adder</strong> &mdash; from TX_TABLES indexed by <code>tx_level</code> and ISO. Applied to VRE, clean firm, and offshore wind.</li>
+        <li><strong>PPA discount</strong> &mdash; reduces effective LCOE by the region-scaled PPA premium. Applied to all clean energy resources.</li>
+    </ol>
+
+    <div class="formula">
+        effective_lcoe[res] = (base_lcoe[res] + tx_adder[res]) &times; (1 &minus; ppa_discount[res, iso])
+    </div>
+
+    <p>The blended zone cost is the TWh-weighted average across all incremental resources in the zone.</p>
+
+    <h3>Resource &rarr; PPA Category Mapping</h3>
+    <table class="dim-table">
+        <thead>
+            <tr><th>PPA Category</th><th>Resources</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>VRE</td><td>Solar, Wind, Offshore Wind, Battery (4hr/8hr)</td></tr>
+            <tr><td>Firm</td><td>Nuclear (new-build), CCS-CCGT, Geothermal, LDES, Green H₂</td></tr>
+        </tbody>
+    </table>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+
+    <h2 id="revenue"><span class="section-num">10</span>Revenue Model</h2>
+
+    <p>Revenue combines three streams, computed from 8,760-hour dispatch profiles:</p>
+
+    <table class="dim-table">
+        <thead>
+            <tr><th>Stream</th><th>Method</th><th>Key Parameters</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Energy (LMP)</td>
+                <td>Hourly generation &times; hourly LMP, then generation-weighted average</td>
+                <td>Fossil merit-order stack from Step 5B; fuel_level sensitivity</td>
+            </tr>
+            <tr>
+                <td>Capacity</td>
+                <td>ELCC &times; degraded capacity price &divide; (CF &times; 8,760)</td>
+                <td>Capacity price degrades with clean share (alpha = 0.35&ndash;0.40); ERCOT/MISO/SPP = $0</td>
+            </tr>
+            <tr>
+                <td>REC</td>
+                <td>Scarcity-driven compliance: ACP &times; (1 &minus; exp(&minus;k &times; gap%))</td>
+                <td>Per-ISO calibrated against 2025 observed REC prices; CES ISOs give nuclear/CCS 60% of Tier 1</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p>Blended revenue is the resource-share-weighted sum of all three streams. The profit test is:</p>
+    <div class="formula">
+        profit = blended_revenue &minus; blended_cost<br>
+        If profit &gt; 0: deploy zone. If profit &le; 0: market stop.
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+
+    <h2 id="wrights"><span class="section-num">11</span>Wright&rsquo;s Law Learning Curves</h2>
+
+    <p>Technology costs decline with cumulative deployment via Wright&rsquo;s Law:</p>
+
+    <div class="formula">
+        cost(GW) = FOAK &times; (cumulative_GW / reference_GW)<sup>&minus;log₂(1/(1&minus;lr))</sup><br>
+        Floored at NOAK cost (Low LCOE from tables)
+    </div>
+
+    <p>Cumulative GW = 2025 baseline + model-deployed + background (exogenous rest-of-world).</p>
+
+    <table class="dim-table">
+        <thead>
+            <tr><th>Technology</th><th>2025 GW</th><th>LR (Fast)</th><th>LR (Slow)</th><th>Background 2050 (Fast)</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Nuclear</td><td>2.0</td><td>15%</td><td>10%</td><td>150 GW</td></tr>
+            <tr><td>CCS-CCGT</td><td>0.3</td><td>12%</td><td>10%</td><td>50 GW</td></tr>
+            <tr><td>LDES (100hr)</td><td>0.01</td><td>20%</td><td>15%</td><td>30 GW</td></tr>
+            <tr><td>Green H₂</td><td>0.1</td><td>18%</td><td>12%</td><td>20 GW</td></tr>
+            <tr><td>Geothermal</td><td>0.05</td><td>20%</td><td>15%</td><td>15 GW</td></tr>
+            <tr><td>Battery (4/8hr)</td><td>50.0</td><td>20%</td><td>18%</td><td>800 GW</td></tr>
+            <tr><td>Solar</td><td>150.0</td><td>0%</td><td>0%</td><td>2,000 GW</td></tr>
+            <tr><td>Wind</td><td>150.0</td><td>0%</td><td>0%</td><td>1,200 GW</td></tr>
+            <tr><td>Offshore Wind</td><td>5.0</td><td>12%</td><td>8%</td><td>150 GW</td></tr>
+        </tbody>
+    </table>
+
+    <p>Solar and wind learning rates are 0% (mature technologies at floor cost). The learning rate differential between Fast and Slow primarily affects firm generation and storage &mdash; technologies where early deployment decisions have the largest cost impact on later scenarios.</p>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+
+    <h2 id="output"><span class="section-num">12</span>Output Structure &amp; Statistics</h2>
+
+    <p>The sweep produces a single parquet file per sweep type with one row per scenario &times; ISO &times; year (270 &times; 7 &times; 6 = 11,340 rows for reference). Each row contains:</p>
+
+    <ul>
+        <li><strong>Dimension keys</strong>: scenario ID, conditions code (F/C), demand_growth, price_sens, ppa_level, gas_friction</li>
+        <li><strong>Market outcomes</strong>: clean_pct, avg_lmp, lmp_p90, cost_per_mwh, revenue_per_mwh</li>
+        <li><strong>Emissions</strong>: emissions_mt, gross_emissions_mt, emission_rate, emission_cap_mt</li>
+        <li><strong>Deployment</strong>: gas_built_gw, total_gas_gw, queue_used_gw, market_stop flag</li>
+        <li><strong>Policy cost</strong>: mandated_subsidy_mwh, cumulative_subsidy_mwh, dac_offset_mt, carbon_shadow_price</li>
+        <li><strong>Resource mix</strong>: mix_{resource}_twh for each of 8 resource types</li>
+    </ul>
+
+    <p>A companion JSON summary provides per-ISO P10/P50/P90 statistics at 2050 for key metrics (clean_pct, emissions_mt, avg_lmp).</p>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+
+    <h2 id="ipp"><span class="section-num">13</span>IPP Fleet Integration</h2>
+
+    <p>Step 11 (<code>step11_ipp_smartargets.py</code>) consumes the sweep parquets to evaluate four IPP fleets under all 270 scenarios:</p>
+
+    <table class="dim-table">
+        <thead>
+            <tr><th>Company</th><th>Capacity</th><th>Generation</th><th>CO₂ (2023)</th><th>Key ISOs</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Vistra Energy</td><td>44 GW</td><td>154 TWh</td><td>73 Mt</td><td>ERCOT, PJM, CAISO, NEISO</td></tr>
+            <tr><td>Constellation Energy</td><td>55 GW</td><td>310 TWh</td><td>57 Mt</td><td>PJM, ERCOT, CAISO, NYISO, NEISO</td></tr>
+            <tr><td>NRG Energy</td><td>25 GW</td><td>80 TWh</td><td>46 Mt</td><td>ERCOT, PJM, NYISO, NEISO</td></tr>
+            <tr><td>Talen Energy</td><td>10.7 GW</td><td>42 TWh</td><td>16 Mt</td><td>PJM</td></tr>
+        </tbody>
+    </table>
+
+    <p>Each plant&rsquo;s economics are evaluated under the ISO-specific market conditions (LMP, clean%, capacity prices) produced by the sweep. Merit-order dispatch determines which fossil plants remain profitable and which become stranded assets.</p>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+
+    <h2 id="sources"><span class="section-num">14</span>Data Sources &amp; Calibration</h2>
+
+    <table class="dim-table">
+        <thead>
+            <tr><th>Data</th><th>Source</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>LCOE tables</td><td>NREL ATB 2024, Lazard LCOE v17</td></tr>
+            <tr><td>Transmission costs</td><td>LBNL Transmission Planning, MISO/PJM RTEP</td></tr>
+            <tr><td>Demand growth rates</td><td>EIA AEO 2024, FERC 914, utility IRPs</td></tr>
+            <tr><td>Capacity market prices</td><td>PJM RPM, NYISO ICAP, NEISO FCA (2023&ndash;2024)</td></tr>
+            <tr><td>REC prices (calibration)</td><td>LBNL 2024 RPS Status, OPIS, ICE futures, S&amp;P Global</td></tr>
+            <tr><td>PPA premiums</td><td>LBNL 2024 Utility-Scale Solar/Wind, LevelTen PPA Price Index</td></tr>
+            <tr><td>PPA market depth</td><td>LevelTen PPA Index, REBA Deal Tracker, AES Clean Energy</td></tr>
+            <tr><td>Wright&rsquo;s Law parameters</td><td>Way et al. (2022), IRENA Learning Curves, IEA ETP</td></tr>
+            <tr><td>DAC costs</td><td>IEA 2024 DAC Report, Rhodium Group, Climeworks published</td></tr>
+            <tr><td>eGRID baseline</td><td>EPA eGRID 2023</td></tr>
+            <tr><td>IPP fleet data</td><td>SEC 10-K filings, EIA-860, company sustainability reports</td></tr>
+            <tr><td>CCS capacity caps</td><td>DOE CarbonSAFE, EPA Class VI permits, USGS saline formation assessments</td></tr>
+        </tbody>
+    </table>
+
+</div>
+
+<div class="accent-bar"></div>
+
+</body>
+</html>
