@@ -59,7 +59,8 @@ from parquet_io import (
     find_input_dir, find_parquet, ALL_ISOS,
 )
 
-# Import LMP functions from step5b (reuse, don't duplicate)
+# Import LMP functions from archived step5b (merged into this script)
+sys.path.insert(0, os.path.join(SCRIPT_DIR, 'scripts', 'archive'))
 from step5b_compute_lmp_prices import (
     build_merit_order_stack,
     compute_hourly_lmp_vectorized,
