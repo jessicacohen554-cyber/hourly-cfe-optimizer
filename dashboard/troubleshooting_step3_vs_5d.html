@@ -94,6 +94,9 @@
     <div class="insight-box">
         <strong>Data Sources:</strong> Step 3 CO parquets (cost optimization winners) + Step 4 annual manifests (dispatch TWh) + Step 5A CO2 parquets (emissions) vs Step 5D MAC queue parquets (sequential deployment). Scenario B excluded.
     </div>
+    <div class="insight-box insight-warn">
+        <strong>Normalization:</strong> Step 3 uses fixed 2025 demand; Step 5D uses growing demand per target year. Costs and generation are shown as reported by each step — "Normalized" rows extrapolate apples-to-apples metrics (new build capital cost in $B, LCOE of new build only, CO₂ remaining on system) using each step's own dispatch data without re-running any calculations.
+    </div>
 
     <div class="diag-controls">
         <label>ISO:</label>
@@ -375,17 +378,33 @@
             const hdr = document.createElement('div');
             hdr.className = 'thr-card-header';
             const thrLabel = thr >= 99.99 ? '≥99.99%' : thr + '%';
-            hdr.innerHTML = '<span>' + thrLabel + ' CFE Target</span>' +
-                '<span style="font-size:0.7rem;opacity:0.8">S3 score: ' + (s3 ? fmt(s3.match_score) : '—') +
-                ' | 5D score: ' + (s5d ? fmt(s5d.match_score) : '—') + '</span>';
+            const s3Demand = s3 ? fmt(s3.demand_twh, 0) : '—';
+            const s5dDemand = s5d ? fmt(s5d.demand_twh, 0) : '—';
+            hdr.innerHTML = '<span>' + thrLabel + ' CFE</span>' +
+                '<span style="font-size:0.65rem;opacity:0.8">S3: ' + (s3 ? fmt(s3.match_score) + '% / ' + s3Demand + ' TWh' : '—') +
+                ' | 5D: ' + (s5d ? fmt(s5d.match_score) + '% / ' + s5dDemand + ' TWh' : '—') + '</span>';
             card.appendChild(hdr);
 
             const body = document.createElement('div');
             body.className = 'thr-card-body';
 
             // Column 1: Resource Mix Charts (side by side)
+            // Compute total clean gen for each
+            const s3Disp = s3 ? s3.dispatch : null;
+            const s5dDisp = s5d ? s5d.dispatch : null;
+            const s3TotalClean = s3Disp ? (
+                (s3Disp.nuclear_existing||0) + (s3Disp.nuclear_new||0) + (s3Disp.geothermal||0) +
+                (s3Disp.ccs||0) + (s3Disp.ccs_dispatch||0) + (s3Disp.solar_dispatch||0) + (s3Disp.wind_dispatch||0) +
+                (s3Disp.offshore_wind_dispatch||0) + (s3Disp.hydro_dispatch||0)
+            ) : 0;
+            const s5dTotalClean = s5dDisp ? (
+                (s5dDisp.nuclear_existing||0) + (s5dDisp.nuclear_new||0) + (s5dDisp.geothermal||0) +
+                (s5dDisp.ccs||0) + (s5dDisp.ccs_dispatch||0) + (s5dDisp.solar_dispatch||0) + (s5dDisp.wind_dispatch||0) +
+                (s5dDisp.offshore_wind_dispatch||0) + (s5dDisp.hydro_dispatch||0)
+            ) : 0;
             const chartLabel = document.createElement('div');
-            chartLabel.innerHTML = '<strong style="font-size:0.75rem;">Resource Mix (TWh)</strong>';
+            chartLabel.innerHTML = '<strong style="font-size:0.75rem;">Resource Mix (TWh)</strong>' +
+                '<span style="font-size:0.65rem;color:var(--text-muted);margin-left:8px;">S3 clean: ' + fmt(s3TotalClean,0) + ' | 5D clean: ' + fmt(s5dTotalClean,0) + '</span>';
             body.appendChild(chartLabel);
 
             const chartDiv = document.createElement('div');
@@ -402,20 +421,27 @@
             gasDiv.className = 'thr-card-row';
             const s3Gas = s3 ? s3.gas : null;
             const s5dGas = s5d ? s5d.gas : null;
+            // Extrapolate gas gen TWh: gap_pct × demand for s3; (100 - match_score)/100 × demand for s5d
+            const s3GapTwh = s3 ? ((100 - s3.match_score) / 100 * s3.demand_twh) : 0;
+            const s5dGapTwh = s5d ? ((100 - s5d.match_score) / 100 * s5d.demand_twh) : 0;
             gasDiv.innerHTML = `
                 <div class="source-s3">
                     <div class="source-label">Step 3 — Gas</div>
-                    <div class="metric-row"><span class="metric-label">Backup MW</span><span class="metric-val">${s3Gas ? fmtK(s3Gas.backup_needed_mw) : '—'}</span></div>
+                    <div class="metric-row"><span class="metric-label">Total Capacity MW</span><span class="metric-val">${s3Gas ? fmtK(s3Gas.backup_needed_mw) : '—'}</span></div>
                     <div class="metric-row"><span class="metric-label">Existing MW</span><span class="metric-val">${s3Gas ? fmtK(s3Gas.existing_used_mw) : '—'}</span></div>
                     <div class="metric-row"><span class="metric-label">New Build MW</span><span class="metric-val">${s3Gas ? fmtK(s3Gas.new_build_mw) : '—'}</span></div>
                     <div class="metric-row"><span class="metric-label">Gas $/MWh</span><span class="metric-val">${s3Gas ? fmt(s3Gas.cost_per_mwh, 2) : '—'}</span></div>
+                    <div class="metric-row" style="border-top:1px dashed #ccc;margin-top:2px;padding-top:2px;">
+                        <span class="metric-label">≈ Gap Gen TWh</span><span class="metric-val">${fmt(s3GapTwh)}</span></div>
                 </div>
                 <div class="source-5d">
                     <div class="source-label">Step 5D — Gas</div>
-                    <div class="metric-row"><span class="metric-label">Backup MW</span><span class="metric-val">${s5dGas ? fmtK(s5dGas.backup_needed_mw) : '—'}</span></div>
+                    <div class="metric-row"><span class="metric-label">Total Capacity MW</span><span class="metric-val">${s5dGas ? fmtK(s5dGas.backup_needed_mw) : '—'}</span></div>
                     <div class="metric-row"><span class="metric-label">Existing MW</span><span class="metric-val">${s5dGas ? fmtK(s5dGas.existing_used_mw) : '—'}</span></div>
                     <div class="metric-row"><span class="metric-label">New Build MW</span><span class="metric-val">${s5dGas ? fmtK(s5dGas.new_build_mw) : '—'}</span></div>
                     <div class="metric-row"><span class="metric-label">Gas $/MWh</span><span class="metric-val">${s5dGas ? fmt(s5dGas.cost_per_mwh, 2) : '—'}</span></div>
+                    <div class="metric-row" style="border-top:1px dashed #ccc;margin-top:2px;padding-top:2px;">
+                        <span class="metric-label">≈ Gap Gen TWh</span><span class="metric-val">${fmt(s5dGapTwh)}</span></div>
                 </div>
             `;
             body.appendChild(gasDiv);
@@ -425,26 +451,38 @@
             costDiv.className = 'thr-card-row';
             const s3C = s3 ? s3.cost : null;
             const s5dC = s5d ? s5d.cost : null;
-            // New build capital cost
-            const s3NewCost = s3C ? (s3C.new_build_cf_twh > 0 ? (s3C.incremental * s3C.new_build_cf_twh * 1e6) : 0) : 0;
-            const s5dNewCost = s5dC ? s5dC.new_build_cost_total : 0;
-            // Incremental LCOE = cost per MWh of NEW build generation only
-            const s3IncrLcoe = s3C ? s3C.incremental : 0;
-            const s5dIncrLcoe = s5dC ? s5dC.blended_new_lcoe : 0;
+
+            // Extrapolated apples-to-apples: new build capital cost ($B)
+            // Step 3: incremental $/MWh × demand TWh × 1e6 → total $ (proxy for NB cost)
+            // This is the total incremental spend above wholesale for all new clean
+            const s3NbCostB = s3C && s3.demand_twh ? (s3C.incremental * s3.demand_twh * 1e6 / 1e9) : 0;
+            const s5dNbCostB = s5dC ? (s5dC.cumulative_cost || s5dC.new_build_cost_total) / 1e9 : 0;
+            // New build LCOE: Step 3 uses incremental as proxy; Step 5D has blended_new_lcoe
+            // For Step 3: derive from total new build cost / new generation TWh
+            const s3NewGenTwh = s3C ? s3C.new_build_cf_twh : 0;
+            const s3NbLcoe = s3NewGenTwh > 0 ? (s3NbCostB * 1e9 / (s3NewGenTwh * 1e6)) : 0;
+            // Step 5D new build TWh
+            const s5dNewGenTwh = s5dC ? s5dC.new_build_twh : 0;
+            const s5dNbLcoe = s5dC ? s5dC.blended_new_lcoe : 0;
+
             costDiv.innerHTML = `
                 <div class="source-s3">
-                    <div class="source-label">Step 3 — Cost</div>
-                    <div class="metric-row"><span class="metric-label">Total $/MWh</span><span class="metric-val">${s3C ? fmt(s3C.total_cost) : '—'}</span></div>
-                    <div class="metric-row"><span class="metric-label">Effective $/MWh</span><span class="metric-val">${s3C ? fmt(s3C.effective_cost) : '—'}</span></div>
+                    <div class="source-label">Step 3 — Cost (as reported)</div>
+                    <div class="metric-row"><span class="metric-label">Eff. $/MWh (all gen)</span><span class="metric-val">${s3C ? fmt(s3C.effective_cost) : '—'}</span></div>
                     <div class="metric-row"><span class="metric-label">Incr. $/MWh</span><span class="metric-val">${s3C ? fmt(s3C.incremental) : '—'}</span></div>
-                    <div class="metric-row"><span class="metric-label">New CF TWh</span><span class="metric-val">${s3C ? fmt(s3C.new_build_cf_twh) : '—'}</span></div>
+                    <div class="metric-row"><span class="metric-label">New Build TWh</span><span class="metric-val">${fmt(s3NewGenTwh)}</span></div>
+                    <div class="metric-row" style="border-top:1px dashed #ccc;margin-top:2px;padding-top:2px;">
+                        <span class="metric-label">≈ NB Capital $B</span><span class="metric-val">${fmt(s3NbCostB)}</span></div>
+                    <div class="metric-row"><span class="metric-label">≈ NB LCOE $/MWh</span><span class="metric-val">${s3NbLcoe > 0 ? fmt(s3NbLcoe) : '—'}</span></div>
                 </div>
                 <div class="source-5d">
-                    <div class="source-label">Step 5D — Cost</div>
-                    <div class="metric-row"><span class="metric-label">Total $/MWh</span><span class="metric-val">${s5dC ? fmt(s5dC.total_cost) : '—'}</span></div>
-                    <div class="metric-row"><span class="metric-label">Effective $/MWh</span><span class="metric-val">${s5dC ? fmt(s5dC.effective_cost) : '—'}</span></div>
-                    <div class="metric-row"><span class="metric-label">NB Cost $B</span><span class="metric-val">${s5dC ? fmt(s5dC.new_build_cost_total/1e9) : '—'}</span></div>
-                    <div class="metric-row"><span class="metric-label">NB LCOE $/MWh</span><span class="metric-val">${s5dC ? fmt(s5dC.blended_new_lcoe) : '—'}</span></div>
+                    <div class="source-label">Step 5D — Cost (as reported)</div>
+                    <div class="metric-row"><span class="metric-label">Eff. $/MWh (all gen)</span><span class="metric-val">${s5dC && s5dC.effective_cost ? fmt(s5dC.effective_cost) : '—'}</span></div>
+                    <div class="metric-row"><span class="metric-label">This-step NB $/MWh</span><span class="metric-val">${s5dC ? fmt(s5dC.new_build_lcoe) : '—'}</span></div>
+                    <div class="metric-row"><span class="metric-label">New Build TWh (step)</span><span class="metric-val">${fmt(s5dNewGenTwh)}</span></div>
+                    <div class="metric-row" style="border-top:1px dashed #ccc;margin-top:2px;padding-top:2px;">
+                        <span class="metric-label">Cumul. NB $B</span><span class="metric-val">${s5dC ? fmt(s5dC.cumulative_cost/1e9) : '—'}</span></div>
+                    <div class="metric-row"><span class="metric-label">Blended NB LCOE</span><span class="metric-val">${s5dNbLcoe ? fmt(s5dNbLcoe) : '—'}</span></div>
                 </div>
             `;
             body.appendChild(costDiv);
