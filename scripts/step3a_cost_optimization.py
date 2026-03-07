@@ -206,7 +206,12 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
 
     total_cost = np.zeros(N, dtype=np.float64)
 
-    # CCS pct = 100 - (cf + sol + wnd + hyd + osw + geo) -- implicit residual resource
+    # CCS residual (100% - sum of explicit resources) — tracked for output but NOT priced.
+    # Cost optimization selects on new-build capital cost only. CCS is handled within
+    # the clean_firm tranche system (Tranche 3) when CCS is cheaper than nuclear.
+    # The implicit residual is NOT a real resource — it's just unmatched demand served
+    # by the existing grid. Pricing it at CCS LCOE made low-threshold mixes artificially
+    # expensive and caused the optimizer to select overbuilt mixes at low thresholds.
     cf_pct = arrays['clean_firm']
     sol_pct = arrays['solar']
     wnd_pct = arrays['wind']
@@ -216,14 +221,9 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     ccs_pct = 100.0 - (cf_pct + sol_pct + wnd_pct + hyd_pct + osw_pct + geo_pct)
     ccs_pct = np.maximum(ccs_pct, 0.0)
 
-    # CCS regional cap: limit CCS deployment to geologically feasible TWh.
-    # Excess CCS above cap → priced as nuclear new-build instead.
-    # For NYISO/NEISO (cap=0), ALL implicit CCS → nuclear new-build.
+    # CCS regional cap — only relevant for clean_firm tranche (Tranche 3) headroom.
+    # Full cap available since CCS residual is not built.
     ccs_cap = CCS_CAP_TWH.get(iso, 9999.0)
-    ccs_total_twh = ccs_pct / 100.0 * demand
-    ccs_capped_twh = np.minimum(ccs_total_twh, ccs_cap)
-    ccs_overflow_twh = np.maximum(0, ccs_total_twh - ccs_capped_twh)
-    ccs_capped_pct = np.where(demand > 0, ccs_capped_twh / demand * 100.0, 0.0)
 
     bat_pct = arrays['battery_dispatch_pct']
     bat8_pct = arrays.get('battery8_dispatch_pct', np.zeros(N, dtype=np.float64))
@@ -266,22 +266,16 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
         geo_physics_price = GEOTHERMAL_LCOE[geo_lev] + get_tx('clean_firm', tx_name, iso)
         total_cost += geo_physics_new_pct / 100.0 * geo_physics_price
 
-    # --- CCS-CCGT (existing = $0, only new-build costs money; capped at regional TWh limit) ---
+    # --- CCS-CCGT residual — NOT priced in cost optimization ---
+    # CCS residual (100% - sum of explicit resources) is tracked for output only.
+    # CCS as a technology is still priced within clean_firm Tranche 3 below.
     ccs_existing = min(existing.get('ccs_ccgt', 0) * existing_scale, 100.0)
-    ccs_existing_pct = np.minimum(ccs_capped_pct, ccs_existing)
-    ccs_new_pct = np.maximum(0, ccs_capped_pct - ccs_existing)
     ccs_table = CCS_LCOE_45Q_ON if q45 == '1' else CCS_LCOE_45Q_OFF
     ccs_lcoe = ccs_table[ccs_lev][iso]
-    # NEISO winter gas pipeline constraint — CCS fuel cost adder
     if iso == 'NEISO':
         ccs_lcoe += NEISO_CCS_GAS_ADDER
     ccs_tx = get_tx('ccs_ccgt', tx_name, iso)
-    total_cost += ccs_new_pct / 100.0 * (ccs_lcoe + ccs_tx)
-
-    # CCS overflow → nuclear new-build (CCS exceeding regional geologic cap)
-    # This capacity is physically needed but can't be CCS, so it's nuclear.
-    nuclear_overflow_price = NUCLEAR_NEWBUILD_LCOE[firm_lev][iso] + get_tx('clean_firm', tx_name, iso)
-    total_cost += np.where(demand > 0, ccs_overflow_twh / demand * nuclear_overflow_price, 0.0)
+    # (No cost added — CCS residual is not a real build decision)
 
     # --- Clean Firm (existing = $0, new = merit-order tranche pricing) ---
     cf_existing = min(existing['clean_firm'] * existing_scale, 100.0)
@@ -317,8 +311,8 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     if iso == 'NEISO':
         ccs_tranche_price += NEISO_CCS_GAS_ADDER
 
-    # CCS headroom: cap minus what's already used by implicit CCS residual
-    ccs_headroom_twh = np.maximum(0, ccs_cap - ccs_capped_twh)
+    # CCS headroom: full cap available (CCS residual is not built, so no headroom reduction)
+    ccs_headroom_twh = np.full(N, ccs_cap) if isinstance(ccs_cap, (int, float)) else ccs_cap
 
     if nuclear_price <= ccs_tranche_price:
         # Nuclear cheaper → all remaining goes to nuclear
@@ -349,9 +343,10 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
                    ldes_pct / 100.0 * ldes_price +
                    h2_pct / 100.0 * h2_price)
 
-    # --- Gas Capacity Backup (delta RA approach) ---
-    # Calibrated to 2025 reality: gas = EXISTING_GAS at base year.
-    # Compute incremental gas from demand growth net of new clean peak capacity.
+    # --- Gas Capacity Backup (computed post-hoc, NOT included in optimization cost) ---
+    # Gas backup is a consequence of not planning ahead — it shows what happens if you
+    # don't invest in clean firm early. Computed here for output but excluded from
+    # total_cost so the optimizer selects on new-build capital cost only.
     demand_mwh = demand * 1e6  # TWh → MWh
     avg_demand_mw = demand_mwh / 8760
     gaf = GAS_AVAILABILITY_FACTOR[iso]
@@ -365,9 +360,10 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     new_clean_peak_mw = np.zeros(N, dtype=np.float64)
     # Offshore wind is all new-build (no existing fleet)
     _osw_new_pct = osw_pct if iso in OFFSHORE_ISOS else np.zeros(N, dtype=np.float64)
+    # Note: ccs_new_pct for peak capacity uses clean_firm tranche CCS only, not residual
+    ccs_tranche_peak_pct = np.zeros(N, dtype=np.float64)  # will be set after tranche calc
     for _res, _new_pct in [('clean_firm', cf_new_pct), ('solar', sol_new_pct),
-                           ('wind', wnd_new_pct), ('offshore_wind', _osw_new_pct),
-                           ('ccs_ccgt', ccs_new_pct)]:
+                           ('wind', wnd_new_pct), ('offshore_wind', _osw_new_pct)]:
         _cf_r = RESOURCE_CAPACITY_FACTORS[_res][iso]
         _cc_r = PEAK_CAPACITY_CREDITS[_res]
         _new_avg_mw = _new_pct / 100.0 * avg_demand_mw
@@ -375,13 +371,19 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
         new_clean_peak_mw += _new_installed * _cc_r
 
     # Storage peak capacity: convert energy fraction (% of annual demand) → MW via duration.
-    # energy_MWh = pct/100 * demand_mwh; power_MW = energy_MWh / duration_hr; peak = power * cc
     new_clean_peak_mw += (
         bat_pct / 100.0 * demand_mwh / 4.0 * PEAK_CAPACITY_CREDITS['battery'] +
         bat8_pct / 100.0 * demand_mwh / 8.0 * PEAK_CAPACITY_CREDITS['battery8'] +
         ldes_pct / 100.0 * demand_mwh / 100.0 * PEAK_CAPACITY_CREDITS['ldes'] +
         h2_pct / 100.0 * demand_mwh / 1000.0 * PEAK_CAPACITY_CREDITS['h2']
     )
+
+    # Add CCS tranche peak contribution (from clean_firm Tranche 3, not residual)
+    # ccs_tranche_twh is set by Tranche 3 above
+    _ccs_tranche_pct = np.where(demand > 0, ccs_tranche_twh / demand * 100.0, 0.0)
+    _ccs_cf_r = RESOURCE_CAPACITY_FACTORS['ccs_ccgt'][iso]
+    _ccs_cc_r = PEAK_CAPACITY_CREDITS['ccs_ccgt']
+    new_clean_peak_mw += (_ccs_tranche_pct / 100.0 * avg_demand_mw / _ccs_cf_r) * _ccs_cc_r
 
     # Total system clean peak = existing (constant) + new-build
     total_clean_peak = EXISTING_CLEAN_PEAK_MW[iso] + new_clean_peak_mw
@@ -395,13 +397,11 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     existing_gas_used_mw = np.minimum(gas_needed_mw, existing_gas_mw)
     new_gas_mw = np.maximum(0, gas_needed_mw - existing_gas_mw)
 
-    # Annualized capacity cost: existing gas FOM + new CCGT full cost ($/yr)
+    # Gas cost computed for post-hoc output only — NOT added to total_cost
     gas_cost_per_mwh = (
         existing_gas_used_mw * EXISTING_GAS_FOM_KW_YR[iso] * 1000 +
         new_gas_mw * NEW_CCGT_COST_KW_YR[iso] * 1000
     ) / demand_mwh
-
-    total_cost += gas_cost_per_mwh
 
     # Effective cost (total cost ÷ match fraction)
     effective_cost = np.where(match_frac > 0, total_cost / match_frac, 0)
@@ -564,6 +564,7 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
     hyd_pct = arrays['hydro']
     osw_pct = arrays.get('offshore_wind', np.zeros(N, dtype=np.float64))
     geo_pct = arrays.get('geothermal', np.zeros(N, dtype=np.float64))
+    # CCS residual tracked for output only — NOT priced (see price_mix_batch comments)
     ccs_pct = np.maximum(0.0, 100.0 - (cf_pct + sol_pct + wnd_pct + hyd_pct + osw_pct + geo_pct))
 
     bat_pct = arrays['battery_dispatch_pct']
@@ -610,32 +611,27 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
         geo_tranche_twh = np.minimum(remaining_after_uprate, geo_headroom)
         remaining_after_geo = np.maximum(0, remaining_after_uprate - geo_tranche_twh)
 
-    # --- Gas backup (delta RA approach, scenario-invariant) ---
-    # Infer growth factor from demand: gf = demand_twh / base_demand
+    # --- Gas backup (computed post-hoc, NOT in optimization cost) ---
     _base_demand = REGIONAL_DEMAND_TWH[iso]
     _gf = demand_twh / _base_demand if _base_demand > 0 else 1.0
     demand_mwh = demand_twh * 1e6
     avg_demand_mw = demand_mwh / 8760
     gaf = GAS_AVAILABILITY_FACTOR[iso]
 
-    # Peak scales with demand growth
     peak_grown = PEAK_DEMAND_MW[iso] * _gf
     ra_peak_grown = peak_grown * (1 + RESOURCE_ADEQUACY_MARGIN)
 
-    # New-build clean peak capacity: energy → installed MW → peak MW
+    # New-build clean peak capacity (for gas backup computation only)
     new_clean_peak_mw = np.zeros(N, dtype=np.float64)
-    # Offshore wind is all new-build (no existing fleet)
     _osw_new_pct = osw_pct if iso in OFFSHORE_ISOS else np.zeros(N, dtype=np.float64)
     for _res, _new_pct in [('clean_firm', cf_new_pct), ('solar', sol_new_pct),
-                           ('wind', wnd_new_pct), ('offshore_wind', _osw_new_pct),
-                           ('ccs_ccgt', ccs_new_pct)]:
+                           ('wind', wnd_new_pct), ('offshore_wind', _osw_new_pct)]:
         _cf_r = RESOURCE_CAPACITY_FACTORS[_res][iso]
         _cc_r = PEAK_CAPACITY_CREDITS[_res]
         _new_avg_mw = _new_pct / 100.0 * avg_demand_mw
         _new_installed = _new_avg_mw / _cf_r
         new_clean_peak_mw += _new_installed * _cc_r
 
-    # Storage peak capacity: energy fraction (% annual demand) → MW via duration
     new_clean_peak_mw += (
         bat_pct / 100.0 * demand_mwh / 4.0 * PEAK_CAPACITY_CREDITS['battery'] +
         bat8_pct / 100.0 * demand_mwh / 8.0 * PEAK_CAPACITY_CREDITS['battery8'] +
@@ -643,10 +639,8 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
         h2_pct / 100.0 * demand_mwh / 1000.0 * PEAK_CAPACITY_CREDITS['h2']
     )
 
-    # Total system clean peak = existing (constant) + new-build
     total_clean_peak = EXISTING_CLEAN_PEAK_MW[iso] + new_clean_peak_mw
 
-    # Gas raw for this scenario vs 2025 baseline (delta approach)
     gas_raw = np.maximum(0, ra_peak_grown - total_clean_peak) / gaf
     gas_delta = gas_raw - GAS_RAW_2025[iso]
     gas_needed_mw = np.maximum(0, EXISTING_GAS_CAPACITY_MW[iso] + gas_delta)
@@ -655,19 +649,23 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
     existing_gas_used_mw = np.minimum(gas_needed_mw, existing_gas_mw)
     new_gas_mw = np.maximum(0, gas_needed_mw - existing_gas_mw)
 
-    constant = (
+    # Gas backup cost — post-hoc metric only, NOT in constant term
+    gas_cost_per_mwh = (
         existing_gas_used_mw * EXISTING_GAS_FOM_KW_YR[iso] * 1000 +
         new_gas_mw * NEW_CCGT_COST_KW_YR[iso] * 1000
     ) / demand_mwh
 
+    # Constant term = 0 (gas backup excluded from optimization)
+    constant = np.zeros(N, dtype=np.float64)
+
     # Build coefficient matrix (N, 12)
     coeff_matrix = np.empty((N, _N_COEFFS), dtype=np.float64)
-    # Existing clean resources = $0 (sunk fleet, no cost to buyer)
     coeff_matrix[:, _COL_WHOLESALE] = 0.0
     coeff_matrix[:, _COL_SOL_NEW] = sol_new_pct / 100.0
     coeff_matrix[:, _COL_WND_NEW] = wnd_new_pct / 100.0
-    coeff_matrix[:, _COL_OSW_NEW] = osw_new_pct / 100.0  # all new-build, no existing
-    coeff_matrix[:, _COL_CCS_NEW] = ccs_new_pct / 100.0
+    coeff_matrix[:, _COL_OSW_NEW] = osw_new_pct / 100.0
+    # CCS residual coefficient = 0 (NOT priced — only clean_firm tranche CCS is priced)
+    coeff_matrix[:, _COL_CCS_NEW] = 0.0
     coeff_matrix[:, _COL_UPRATE] = uprate_twh / demand_twh
     # Total new geothermal = physics new-build + tranche allocation (both at geo LCOE)
     coeff_matrix[:, _COL_GEO] = (geo_new_from_physics_twh + geo_tranche_twh) / demand_twh
@@ -690,9 +688,9 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
         'gas_needed_mw': gas_needed_mw,
         'existing_gas_used_mw': existing_gas_used_mw,
         'new_gas_mw': new_gas_mw,
+        'gas_cost_per_mwh': gas_cost_per_mwh,  # post-hoc, not in optimization
         'clean_peak_mw': total_clean_peak,
         'ra_peak_mw': ra_peak_mw,
-        # Constant existing TWh available (does NOT depend on mix or demand growth)
         'existing_cf_twh_available': EXISTING_CLEAN_TWH[iso]['clean_firm'],
         'existing_solar_twh_available': EXISTING_CLEAN_TWH[iso]['solar'],
         'existing_wind_twh_available': EXISTING_CLEAN_TWH[iso]['wind'],
@@ -1348,10 +1346,13 @@ def build_winner_scenario(arrays, extras, best_idx, sens, iso, demand_twh,
     tranche3_is_nuclear = nuclear_price <= ccs_price
     remaining_twh = float(extras['remaining_twh'][best_idx])
 
-    # Gas backup cost (use pre-computed constants if provided)
+    # Gas backup cost (post-hoc metric, not in tc_val)
     ex_gas = float(extras['existing_gas_used_mw'][best_idx])
     new_gas = float(extras['new_gas_mw'][best_idx])
-    if gas_fom is not None:
+    gas_cost_arr = extras.get('gas_cost_per_mwh')
+    if gas_cost_arr is not None:
+        gas_cost = float(gas_cost_arr[best_idx])
+    elif gas_fom is not None:
         gas_cost = (ex_gas * gas_fom + new_gas * gas_ccgt) * demand_mwh_inv
     else:
         gas_cost = (ex_gas * EXISTING_GAS_FOM_KW_YR[iso] * 1000 +
