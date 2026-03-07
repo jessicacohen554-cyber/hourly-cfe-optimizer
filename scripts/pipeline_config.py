@@ -247,6 +247,14 @@ CAPACITY_MARKET_PRICES = {
     'SPP': 0,       # No capacity market (energy-only)
 }
 
+# Capacity market price degradation (alpha) — price falls as clean share rises
+# cap_price(t) = base_price × max(0, 1 - alpha × clean_share)
+# Energy-only markets (ERCOT, SPP, MISO) already $0, alpha irrelevant
+CAPACITY_DEGRADATION_ALPHA = {
+    'CAISO': 0.40, 'ERCOT': 0.0, 'PJM': 0.35, 'NYISO': 0.40,
+    'NEISO': 0.35, 'MISO': 0.0, 'SPP': 0.0,
+}
+
 # Ancillary service rates ($/MW-hr) by product × ISO
 # Battery eligible for regulation (fast response); LDES for spinning only
 ANCILLARY_SERVICE_RATES = {

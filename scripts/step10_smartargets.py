@@ -35,11 +35,13 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(SCRIPT_DIR)
 sys.path.insert(0, SCRIPT_DIR)
 sys.path.insert(0, ROOT_DIR)
+sys.path.insert(0, os.path.join(SCRIPT_DIR, 'archive'))
 
 from pipeline_config import (
     ISOS, REGIONAL_DEMAND_TWH, DEMAND_GROWTH_RATES,
     GRID_MIX_SHARES, WHOLESALE_PRICES,
-    CAPACITY_MARKET_PRICES, PEAK_CAPACITY_CREDITS, RESOURCE_CAPACITY_FACTORS,
+    CAPACITY_MARKET_PRICES, CAPACITY_DEGRADATION_ALPHA,
+    PEAK_CAPACITY_CREDITS, RESOURCE_CAPACITY_FACTORS,
     LCOE_TABLES, TX_TABLES, get_tx,
     NUCLEAR_NEWBUILD_LCOE, CCS_LCOE_45Q_ON, GEOTHERMAL_LCOE,
     FOAK_NUCLEAR_NEWBUILD, FOAK_CCS_45Q_ON, FOAK_GEOTHERMAL,
@@ -72,13 +74,7 @@ OUTPUT_DIR = os.path.join(ROOT_DIR, 'data', 'step10-smartargets')
 # SMARTARGETS-SPECIFIC CONSTANTS
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# Capacity market price degradation (alpha) — price falls as clean share rises
-# cap_price(t) = base_price × max(0, 1 - alpha × clean_share)
-# Energy-only markets (ERCOT, SPP, MISO) already $0, alpha irrelevant
-CAPACITY_DEGRADATION_ALPHA = {
-    'CAISO': 0.40, 'ERCOT': 0.0, 'PJM': 0.35, 'NYISO': 0.40,
-    'NEISO': 0.35, 'MISO': 0.0, 'SPP': 0.0,
-}
+# CAPACITY_DEGRADATION_ALPHA imported from pipeline_config
 
 # Interconnection queue caps (GW/yr new build per ISO)
 QUEUE_CAP_GW = {
@@ -866,6 +862,11 @@ def compute_zone_revenue(iso, clean_pct, resource_pcts, hourly_lmp,
     """Total blended revenue ($/MWh) for resources at this zone.
 
     Combines energy (LMP) + capacity + REC. Storage revenue handled separately.
+
+    Returns:
+        blended_total: Weighted total revenue ($/MWh)
+        per_resource_rev: Dict of per-resource total revenue
+        revenue_breakdown: Dict with blended energy, capacity, REC components
     """
     energy_revs = compute_energy_revenue_by_resource(
         hourly_lmp, supply_profiles, resource_pcts, demand_total_mwh)
@@ -875,20 +876,34 @@ def compute_zone_revenue(iso, clean_pct, resource_pcts, hourly_lmp,
     # Blended revenue weighted by resource share
     total_pct = sum(pct for pct in resource_pcts.values() if pct > 0)
     if total_pct <= 0:
-        return 0, {}
+        return 0, {}, {'energy_rev_mwh': 0, 'capacity_rev_mwh': 0, 'rec_rev_mwh': 0}
 
     per_resource_rev = {}
     blended = 0
+    blended_energy = 0
+    blended_cap = 0
+    blended_rec = 0
     for res, pct in resource_pcts.items():
         if pct <= 0:
             continue
-        rev = (energy_revs.get(res, 0)
-               + cap_revs.get(res, 0)
-               + rec_revs.get(res, 0))
+        e_rev = energy_revs.get(res, 0)
+        c_rev = cap_revs.get(res, 0)
+        r_rev = rec_revs.get(res, 0)
+        rev = e_rev + c_rev + r_rev
         per_resource_rev[res] = round(rev, 2)
-        blended += rev * (pct / total_pct)
+        weight = pct / total_pct
+        blended += rev * weight
+        blended_energy += e_rev * weight
+        blended_cap += c_rev * weight
+        blended_rec += r_rev * weight
 
-    return round(blended, 2), per_resource_rev
+    breakdown = {
+        'energy_rev_mwh': round(blended_energy, 2),
+        'capacity_rev_mwh': round(blended_cap, 2),
+        'rec_rev_mwh': round(blended_rec, 2),
+    }
+
+    return round(blended, 2), per_resource_rev, breakdown
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1262,6 +1277,9 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                     'dac_cost_per_ton': 0,
                     'cost_per_mwh': 0,
                     'revenue_per_mwh': 0,
+                    'energy_rev_mwh': 0,
+                    'capacity_rev_mwh': 0,
+                    'rec_rev_mwh': 0,
                     'mandated_subsidy_mwh': 0,
                     'cumulative_subsidy_mwh': 0,
                     'avg_lmp': round(baseline_lmp, 1),
@@ -1324,6 +1342,7 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
             p90_lmp = avg_lmp * 1.5
             blended_revenue = 0
             blended_cost = 0
+            rev_breakdown = {'energy_rev_mwh': 0, 'capacity_rev_mwh': 0, 'rec_rev_mwh': 0}
 
             for t_end in candidate_thresholds:
                 if queue_remaining_gw <= 0:
@@ -1390,7 +1409,7 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                         _lmp_cache[_lmp_key] = (hourly_lmp, avg_lmp, p90_lmp)
 
                 # Revenue for the DELTA resources at this LMP
-                blended_revenue, per_res_rev = compute_zone_revenue(
+                blended_revenue, per_res_rev, rev_breakdown = compute_zone_revenue(
                     iso, t_end, delta_pcts, hourly_lmp,
                     supply_profiles_iso, demand_total_mwh, year,
                 )
@@ -1441,6 +1460,7 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                         'new_gw': round(total_new_gw, 2),
                         'avg_lmp': round(avg_lmp, 1),
                         'mandated': False,
+                        **rev_breakdown,
                     })
 
                     _log(f"  {iso} → {t_end:.0f}%: profit={delta_profit:+.1f} $/MWh "
@@ -1572,7 +1592,7 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                             )
                             if _lmp_cache is not None:
                                 _lmp_cache[_lmp_key_m] = (hourly_lmp_m, avg_lmp_m, p90_lmp_m)
-                        m_rev, _ = compute_zone_revenue(
+                        m_rev, _, _ = compute_zone_revenue(
                             iso, t_end, delta_pcts, hourly_lmp_m,
                             supply_profiles_iso, demand_total_mwh, year,
                         )
@@ -1747,6 +1767,9 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                 'carbon_shadow_price': round(carbon_shadow_price, 1),
                 'cost_per_mwh': round(blended_cost if zone_deployed else 0, 2),
                 'revenue_per_mwh': round(blended_revenue if zone_deployed else 0, 2),
+                'energy_rev_mwh': round(rev_breakdown.get('energy_rev_mwh', 0) if zone_deployed else 0, 2),
+                'capacity_rev_mwh': round(rev_breakdown.get('capacity_rev_mwh', 0) if zone_deployed else 0, 2),
+                'rec_rev_mwh': round(rev_breakdown.get('rec_rev_mwh', 0) if zone_deployed else 0, 2),
                 'mandated_subsidy_mwh': round(mandated_subsidy, 2),
                 'cumulative_subsidy_mwh': round(state['mandated_subsidy_total'], 2),
                 'avg_lmp': round(avg_lmp if zone_deployed else WHOLESALE_PRICES[iso], 1),
@@ -1794,6 +1817,9 @@ def save_results(results, scenario_id):
                 'carbon_shadow_price': yr.get('carbon_shadow_price', 0),
                 'cost_per_mwh': yr['cost_per_mwh'],
                 'revenue_per_mwh': yr['revenue_per_mwh'],
+                'energy_rev_mwh': yr.get('energy_rev_mwh', 0),
+                'capacity_rev_mwh': yr.get('capacity_rev_mwh', 0),
+                'rec_rev_mwh': yr.get('rec_rev_mwh', 0),
                 'mandated_subsidy_mwh': yr.get('mandated_subsidy_mwh', 0),
                 'cumulative_subsidy_mwh': yr.get('cumulative_subsidy_mwh', 0),
                 'avg_lmp': yr['avg_lmp'],
@@ -2053,6 +2079,9 @@ def main():
                         'carbon_shadow_price': yr.get('carbon_shadow_price', 0),
                         'cost_per_mwh': yr['cost_per_mwh'],
                         'revenue_per_mwh': yr['revenue_per_mwh'],
+                        'energy_rev_mwh': yr.get('energy_rev_mwh', 0),
+                        'capacity_rev_mwh': yr.get('capacity_rev_mwh', 0),
+                        'rec_rev_mwh': yr.get('rec_rev_mwh', 0),
                         'mandated_subsidy_mwh': yr.get('mandated_subsidy_mwh', 0),
                         'cumulative_subsidy_mwh': yr.get('cumulative_subsidy_mwh', 0),
                         'avg_lmp': yr['avg_lmp'],

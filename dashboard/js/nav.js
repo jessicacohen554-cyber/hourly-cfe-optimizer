@@ -270,7 +270,8 @@
         {
             label: 'Troubleshooting',
             children: [
-                { label: 'Step 3 vs 5D Analysis', href: 'troubleshooting_step3_vs_5d.html' }
+                { label: 'Step 3 vs 5D Analysis', href: 'troubleshooting_step3_vs_5d.html' },
+                { label: 'Model Convergence (5B vs 10)', href: 'market_convergence.html' }
             ]
         }
     ];

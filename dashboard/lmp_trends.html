@@ -357,6 +357,73 @@
 </div>
 
 <!-- ================================================================ -->
+<!-- SECTION 4: Capacity Market Revenue                                -->
+<!-- ================================================================ -->
+<div class="scroll-section section-light">
+    <div class="scroll-section-inner">
+        <div class="chart-panel" id="capRevPanel">
+            <div class="chart-header">
+                <h3 class="chart-title" id="capRevTitle">Total Wholesale Market Revenue: Energy + Capacity</h3>
+                <p class="chart-subtitle" id="capRevSubtitle">Capacity markets add $5–12/MWh in PJM, NYISO, CAISO — $0 in energy-only markets (ERCOT, SPP)</p>
+            </div>
+            <div class="chart-container-lg"><canvas id="capRevChart"></canvas></div>
+        </div>
+        <div class="grid-2col" style="margin-top:var(--space-lg);">
+            <div class="narrative-card">
+                <span class="section-tag" style="background:rgba(99,102,241,0.08);color:#818cf8;">Revenue Streams</span>
+                <h3>Capacity payments cushion the price decline — but only where markets exist</h3>
+                <p>ISOs with capacity markets (PJM, NYISO, CAISO, NEISO, MISO) provide generators with additional revenue beyond the energy spot market. For nuclear plants, capacity revenue adds <strong id="nucCapRevPJM">$12/MWh</strong> in PJM at 50% clean — enough to delay the retirement threshold by ~10 percentage points.</p>
+                <p>In energy-only markets (ERCOT, SPP), generators must survive on energy revenue alone. This amplifies retirement risk as clean energy depresses wholesale prices.</p>
+            </div>
+            <div class="narrative-card">
+                <span class="section-tag" style="background:rgba(239,68,68,0.08);color:#f87171;">Nuclear Viability</span>
+                <h3>Nuclear retirement risk shifts with total market revenue</h3>
+                <p>When capacity payments are included, nuclear viability extends further into the clean energy transition. In PJM, the total market revenue (energy + capacity) crosses below nuclear's all-in cost of <strong>$38–44/MWh</strong> at approximately <strong id="nucViableCapPct">78%</strong> clean — compared to ~68% under energy-only pricing.</p>
+                <p>The 45U PTC ($15/MWh) combined with capacity payments creates a stronger floor, potentially extending nuclear viability to ~85% clean.</p>
+            </div>
+        </div>
+
+        <!-- Nuclear by resource category -->
+        <div class="chart-panel" style="margin-top:var(--space-lg);">
+            <div class="chart-header">
+                <h3 class="chart-title" id="nucRevTitle">Nuclear Total Market Revenue by Fuel Price Scenario</h3>
+                <p class="chart-subtitle" id="nucRevSubtitle">Energy LMP + capacity payments vs. nuclear cost thresholds (operating, all-in, viability)</p>
+            </div>
+            <div class="chart-container-lg"><canvas id="nucRevChart"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- SECTION 5: Reference Case Market Price Fan                        -->
+<!-- ================================================================ -->
+<div class="scroll-section section-light">
+    <div class="scroll-section-inner">
+        <div class="chart-panel" id="refCasePanel">
+            <div class="chart-header">
+                <h3 class="chart-title" id="refCaseTitle">Reference Case: Where Markets Go Without Climate Policy</h3>
+                <p class="chart-subtitle" id="refCaseSubtitle">P10/P50/P90 wholesale price fan under 270 market scenarios (2023–2050)</p>
+            </div>
+            <div class="chart-container-lg"><canvas id="refCaseChart"></canvas></div>
+        </div>
+        <div class="grid-2col" style="margin-top:var(--space-lg);">
+            <div class="narrative-card">
+                <span class="section-tag" style="background:rgba(14,165,233,0.08);color:#38bdf8;">Market Dynamics</span>
+                <h3>Market-driven deployment reaches 50–75% clean by 2050</h3>
+                <p>Under reference conditions (no emission constraint), profitable clean energy deployment typically reaches <strong>50–75% clean</strong> by 2050 depending on cost assumptions. After this point, the market stops — the next increment of clean energy costs more than its revenue.</p>
+                <p>The key variable: where the market stops determines the wholesale price floor. In facilitating conditions, markets reach higher clean% with lower prices. In challenging conditions, less clean energy deploys but prices stay higher.</p>
+            </div>
+            <div class="narrative-card">
+                <span class="section-tag" style="background:rgba(34,197,94,0.08);color:#4ade80;">Comparison</span>
+                <h3>Net-zero pathway prices vs. reference case</h3>
+                <p>The SBTi net-zero pathway (Step 5B) assumes grid decarbonization reaches 95%+ clean by 2050. The reference case (Step 10) shows what markets deliver without policy. The gap between these trajectories represents the <strong>policy intervention premium</strong> — the additional cost of mandating decarbonization beyond what markets would deliver voluntarily.</p>
+                <p>Where these trajectories converge (50–65% clean), the market and policy are aligned. Where they diverge (>75% clean), policy must overcome market resistance.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================================ -->
 <!-- SYNTHESIS                                                         -->
 <!-- ================================================================ -->
 <div class="gradient-transition"></div>
@@ -420,6 +487,7 @@
 
 <!-- DATA + CHARTS + REGION SWITCHING -->
 <script src="js/lmp-data.js"></script>
+<script src="js/lmp-capacity-data.js"></script>
 <script src="js/lmp-charts.js"></script>
 <script src="js/nav.js"></script>
 
