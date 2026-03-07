@@ -971,14 +971,37 @@ def get_resource_lcoe(res, iso, lcoe_level, cumulative_gw, learning_speed, year)
         return 50  # Fallback
 
 
-def _get_ppa_discount(res, ppa_level):
-    """Get PPA-driven cost reduction for a resource.
+# Regional PPA market depth multiplier — scales the base PPA discount by
+# regional liquidity. Deep PPA markets (ERCOT, CAISO, PJM) realize the full
+# discount; thin markets (SPP, MISO) only realize a fraction.
+#
+# Calibration:
+#   - ERCOT: Deepest corporate PPA market (Amazon, Meta, Google HQs). 1.0
+#   - CAISO: Large PPA market but regulatory complexity (CPUC approval). 0.95
+#   - PJM: Large footprint, active PPA market (VA, PA, NJ). 0.90
+#   - NYISO: Moderate — NYC load center demand, but limited greenfield. 0.75
+#   - NEISO: Tight market, permitting constraints, thin PPA pipeline. 0.65
+#   - MISO: Fragmented across states, fewer corporate buyers. 0.60
+#   - SPP: Thinnest market, rural load, limited corporate demand. 0.50
+#
+# Sources: LBNL 2024 Utility-Scale Solar/Wind, LevelTen PPA Price Index,
+# AES Clean Energy PPA tracker, REBA Deal Tracker.
+PPA_MARKET_DEPTH = {
+    'CAISO': 0.95, 'ERCOT': 1.00, 'PJM': 0.90, 'NYISO': 0.75,
+    'NEISO': 0.65, 'MISO': 0.60, 'SPP': 0.50,
+}
+
+
+def _get_ppa_discount(res, ppa_level, iso=None):
+    """Get PPA-driven cost reduction for a resource, scaled by regional market depth.
 
     PPA contracts de-risk revenue for developers, allowing them to accept
-    lower returns → lower effective LCOE. The discount is the INVERSE of
-    the PPA premium from procurement_utils: a High PPA market means LOW
-    premiums for buyers but HIGH cost reduction for developers (deep market).
-    Low PPA market = merchant risk = no discount.
+    lower returns → lower effective LCOE. The discount is the base premium
+    from procurement_utils.PPA_PREMIUMS, scaled by ISO-specific market depth.
+
+    Deep PPA markets (ERCOT=1.0) realize the full discount; thin markets
+    (SPP=0.50) realize half. This reflects real-world PPA availability:
+    a "High PPA" scenario in ERCOT means very different liquidity than in SPP.
 
     Returns discount fraction [0, 1] to multiply against LCOE.
     E.g., 0.12 means effective LCOE = LCOE × (1 - 0.12) = 88% of merchant.
@@ -996,10 +1019,12 @@ def _get_ppa_discount(res, ppa_level):
     else:
         return 0.0
 
-    # Invert the level: Low PPA market = no discount, High = deep discount
-    # PPA_PREMIUMS stores buyer premiums; we interpret as developer cost reduction
-    premium = PPA_PREMIUMS.get(category, {}).get(ppa_level, 0)
-    return premium
+    # Base discount from procurement_utils PPA premium tables
+    base_discount = PPA_PREMIUMS.get(category, {}).get(ppa_level, 0)
+
+    # Scale by regional PPA market depth
+    depth = PPA_MARKET_DEPTH.get(iso, 0.75) if iso else 1.0
+    return base_discount * depth
 
 
 def compute_zone_cost(iso, delta_resources, lcoe_level, cumulative_gw,
@@ -1008,7 +1033,8 @@ def compute_zone_cost(iso, delta_resources, lcoe_level, cumulative_gw,
 
     Args:
         ppa_level: 'Low'/'Medium'/'High' or None. PPA availability reduces
-            effective LCOE via risk premium reduction (de-risked revenue).
+            effective LCOE via risk premium reduction, scaled by regional
+            PPA market depth (ERCOT=1.0 → SPP=0.50).
 
     Returns (blended_cost, per_resource_cost_dict).
     """
@@ -1027,9 +1053,9 @@ def compute_zone_cost(iso, delta_resources, lcoe_level, cumulative_gw,
             tx = get_tx(res if res != 'clean_firm' else 'clean_firm', tx_level, iso)
             lcoe += tx
 
-        # Apply PPA discount (reduces developer's required return)
+        # Apply PPA discount (reduces developer's required return), scaled by region
         if ppa_level is not None:
-            discount = _get_ppa_discount(res, ppa_level)
+            discount = _get_ppa_discount(res, ppa_level, iso)
             lcoe *= (1 - discount)
 
         per_resource_cost[res] = round(lcoe, 2)
