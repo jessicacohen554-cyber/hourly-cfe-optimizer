@@ -1150,7 +1150,8 @@ def estimate_new_gw_from_delta(delta_resources_twh, iso):
     return gw
 
 
-def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1.0):
+def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1.0,
+                          _preloaded=None, _lmp_cache=None, _quiet=False):
     """Run market simulation with optional emission constraints.
 
     For R1/R2 (Reference): purely profit-driven — deploy where profitable, stop otherwise.
@@ -1163,6 +1164,12 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
     Args:
         reduction_target: Final emission reduction fraction by 2050 (default 1.0 = 100%).
             Used by QT to scale the AT trajectory shape.
+        _preloaded: Optional dict with pre-loaded data to avoid re-reading from disk.
+            Keys: 'demand_data', 'gen_profiles', 'emission_rates', 'fossil_mix',
+                  'step3_data', 'egrid_baselines'. If None, loads from disk.
+        _lmp_cache: Optional dict for caching LMP results across scenarios.
+            Key: (iso, threshold, fuel_level). Shared across calls in sweep mode.
+        _quiet: If True, suppress per-zone print output (sweep mode).
 
     Returns {iso: [year_result_dict, ...]} with per-year deployment trajectory.
     """
@@ -1171,27 +1178,39 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
 
     emission_constraint = conditions.get('emission_constraint')
 
-    print(f"\n{'='*70}")
-    label = f"SMARTargets V1 — Scenario {scenario_id}: {conditions['name']}"
-    if reduction_target < 1.0:
-        label += f" [{reduction_target*100:.0f}% reduction]"
-    print(label)
-    if emission_constraint:
-        print(f"  Emission constraint: {emission_constraint}, target={reduction_target*100:.0f}%")
-    print(f"{'='*70}")
+    if not _quiet:
+        print(f"\n{'='*70}")
+        label = f"SMARTargets V1 — Scenario {scenario_id}: {conditions['name']}"
+        if reduction_target < 1.0:
+            label += f" [{reduction_target*100:.0f}% reduction]"
+        print(label)
+        if emission_constraint:
+            print(f"  Emission constraint: {emission_constraint}, target={reduction_target*100:.0f}%")
+        print(f"{'='*70}")
 
-    # Load shared data
-    t0 = time.time()
-    print("Loading common data...")
-    demand_data, gen_profiles, emission_rates, fossil_mix = load_common_data()
-    print(f"  Common data loaded in {time.time()-t0:.1f}s")
+    # Use preloaded data if available, otherwise load from disk
+    if _preloaded is not None:
+        demand_data = _preloaded['demand_data']
+        gen_profiles = _preloaded['gen_profiles']
+        emission_rates = _preloaded['emission_rates']
+        fossil_mix = _preloaded['fossil_mix']
+        step3_data = _preloaded['step3_data']
+        egrid_baselines = _preloaded['egrid_baselines']
+    else:
+        t0 = time.time()
+        if not _quiet:
+            print("Loading common data...")
+        demand_data, gen_profiles, emission_rates, fossil_mix = load_common_data()
+        if not _quiet:
+            print(f"  Common data loaded in {time.time()-t0:.1f}s")
+            print("Loading step3 cost optimization parquets...")
+        step3_data = load_step3_data()
+        egrid_baselines = load_egrid_baselines() if emission_constraint else {}
+        if not egrid_baselines:
+            egrid_baselines = load_egrid_baselines()
 
-    # Load step3 results
-    print("Loading step3 cost optimization parquets...")
-    step3_data = load_step3_data()
-
-    # Load eGRID baselines (for AT/QT emission constraints)
-    egrid_baselines = load_egrid_baselines() if emission_constraint else {}
+    # Logging helper — suppresses output in sweep mode
+    _log = (lambda *a, **kw: None) if _quiet else print
 
     # Global cumulative GW tracker (cross-ISO learning pool)
     cumulative_gw = dict(WRIGHT_CUMULATIVE_GW_2025)
@@ -1214,7 +1233,7 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
         egrid_baselines = load_egrid_baselines()
 
     for year in SIM_YEARS:
-        print(f"\n--- Year {year} ---")
+        _log(f"\n--- Year {year} ---")
 
         # 2023 baseline: inject actual eGRID data — identical for all scenarios
         if year == 2023:
@@ -1256,8 +1275,8 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                     'zones_deployed': [],
                 }
                 results[iso].append(year_result)
-                print(f"  {iso}: 2023 eGRID baseline — {baseline_co2_mt:.1f} Mt, "
-                      f"{baseline_clean:.1f}% clean, LMP=${baseline_lmp:.0f}")
+                _log(f"  {iso}: 2023 eGRID baseline — {baseline_co2_mt:.1f} Mt, "
+                     f"{baseline_clean:.1f}% clean, LMP=${baseline_lmp:.0f}")
             continue
 
         for iso in isos:
@@ -1352,15 +1371,24 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
 
                 # --- REVENUE ---
                 # LMP at the END threshold (reflects fossil stack at this clean %)
-                hourly_lmp, avg_lmp, p90_lmp = compute_lmp_at_threshold(
-                    iso, t_end, conditions['fuel_level'],
-                    demand_norm, demand_mw_profile,
-                    supply_profiles_iso, resource_pcts,
-                    battery_pct=mix_data['battery_pct'],
-                    battery8_pct=mix_data['battery8_pct'],
-                    ldes_pct=mix_data['ldes_pct'],
-                    h2_pct=mix_data['h2_pct'],
-                )
+                # Cache key: LMP depends on ISO, threshold, fuel level, and demand growth
+                # (resource_pcts are deterministic from step3 at a given threshold)
+                _lmp_key = (iso, t_end, conditions['fuel_level'], conditions['demand_growth'], year)
+                if _lmp_cache is not None and _lmp_key in _lmp_cache:
+                    hourly_lmp, avg_lmp, p90_lmp = _lmp_cache[_lmp_key]
+                else:
+                    hourly_lmp, avg_lmp, p90_lmp = compute_lmp_at_threshold(
+                        iso, t_end, conditions['fuel_level'],
+                        demand_norm, demand_mw_profile,
+                        supply_profiles_iso, resource_pcts,
+                        battery_pct=mix_data['battery_pct'],
+                        battery8_pct=mix_data['battery8_pct'],
+                        ldes_pct=mix_data['ldes_pct'],
+                        h2_pct=mix_data['h2_pct'],
+                    )
+                    if _lmp_cache is not None:
+                        _lmp_cache[_lmp_key] = (hourly_lmp, avg_lmp, p90_lmp)
+
                 # Revenue for the DELTA resources at this LMP
                 blended_revenue, per_res_rev = compute_zone_revenue(
                     iso, t_end, delta_pcts, hourly_lmp,
@@ -1415,9 +1443,9 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                         'mandated': False,
                     })
 
-                    print(f"  {iso} → {t_end:.0f}%: profit={delta_profit:+.1f} $/MWh "
-                          f"(rev={blended_revenue:.1f}, cost={blended_cost:.1f}) "
-                          f"+{total_new_gw:.1f} GW, LMP avg={avg_lmp:.1f}")
+                    _log(f"  {iso} → {t_end:.0f}%: profit={delta_profit:+.1f} $/MWh "
+                         f"(rev={blended_revenue:.1f}, cost={blended_cost:.1f}) "
+                         f"+{total_new_gw:.1f} GW, LMP avg={avg_lmp:.1f}")
                 else:
                     # Market stop — profitable deployment ends here
                     state['market_stopped'] = True
@@ -1425,8 +1453,8 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                     market_stop_profit = delta_profit
                     market_stop_rev = blended_revenue
                     market_stop_cost = blended_cost
-                    print(f"  {iso} STOP at {current_pct:.0f}%: profit={delta_profit:+.1f} $/MWh "
-                          f"(rev={blended_revenue:.1f}, cost={blended_cost:.1f})")
+                    _log(f"  {iso} STOP at {current_pct:.0f}%: profit={delta_profit:+.1f} $/MWh "
+                         f"(rev={blended_revenue:.1f}, cost={blended_cost:.1f})")
                     break
 
             # --- EMISSION CONSTRAINT: MANDATED DEPLOYMENT + DAC/OVERSHOOT ---
@@ -1529,15 +1557,21 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                             m_cost += queue_overshoot_adder
 
                         # Revenue (still earned, just not enough to cover cost)
-                        hourly_lmp_m, avg_lmp_m, p90_lmp_m = compute_lmp_at_threshold(
-                            iso, t_end, conditions['fuel_level'],
-                            demand_norm, demand_mw_profile,
-                            supply_profiles_iso, resource_pcts,
-                            battery_pct=mix_data['battery_pct'],
-                            battery8_pct=mix_data['battery8_pct'],
-                            ldes_pct=mix_data['ldes_pct'],
-                            h2_pct=mix_data['h2_pct'],
-                        )
+                        _lmp_key_m = (iso, t_end, conditions['fuel_level'], conditions['demand_growth'], year)
+                        if _lmp_cache is not None and _lmp_key_m in _lmp_cache:
+                            hourly_lmp_m, avg_lmp_m, p90_lmp_m = _lmp_cache[_lmp_key_m]
+                        else:
+                            hourly_lmp_m, avg_lmp_m, p90_lmp_m = compute_lmp_at_threshold(
+                                iso, t_end, conditions['fuel_level'],
+                                demand_norm, demand_mw_profile,
+                                supply_profiles_iso, resource_pcts,
+                                battery_pct=mix_data['battery_pct'],
+                                battery8_pct=mix_data['battery8_pct'],
+                                ldes_pct=mix_data['ldes_pct'],
+                                h2_pct=mix_data['h2_pct'],
+                            )
+                            if _lmp_cache is not None:
+                                _lmp_cache[_lmp_key_m] = (hourly_lmp_m, avg_lmp_m, p90_lmp_m)
                         m_rev, _ = compute_zone_revenue(
                             iso, t_end, delta_pcts, hourly_lmp_m,
                             supply_profiles_iso, demand_total_mwh, year,
@@ -1565,9 +1599,9 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                         if dac_available and zone_mac_per_ton > dac_per_ton_year:
                             # Grid MAC exceeds DAC cost — switch to DAC for remaining gap
                             switched_to_dac = True
-                            print(f"  {iso} MAC/DAC crossover at {current_pct:.0f}%: "
-                                  f"grid MAC=${zone_mac_per_ton:.0f}/ton > "
-                                  f"DAC=${dac_per_ton_year:.0f}/ton → switching to DAC")
+                            _log(f"  {iso} MAC/DAC crossover at {current_pct:.0f}%: "
+                                 f"grid MAC=${zone_mac_per_ton:.0f}/ton > "
+                                 f"DAC=${dac_per_ton_year:.0f}/ton → switching to DAC")
                             break  # Don't deploy this zone; DAC handles the rest
 
                         # Deploy (mandated) — queue overshoot allowed with premium
@@ -1602,16 +1636,16 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                             'queue_overshoot': queue_overshoot_adder > 0,
                         })
 
-                        print(f"  {iso} → {t_end:.0f}% [MANDATED{overshoot_label}]: "
-                              f"subsidy={subsidy_per_mwh:+.1f} $/MWh, "
-                              f"MAC=${zone_mac_per_ton:.0f}/ton "
-                              f"(rev={m_rev:.1f}, cost={m_cost:.1f}) "
-                              f"+{total_new_gw:.1f} GW, LMP avg={avg_lmp_m:.1f}")
+                        _log(f"  {iso} → {t_end:.0f}% [MANDATED{overshoot_label}]: "
+                             f"subsidy={subsidy_per_mwh:+.1f} $/MWh, "
+                             f"MAC=${zone_mac_per_ton:.0f}/ton "
+                             f"(rev={m_rev:.1f}, cost={m_cost:.1f}) "
+                             f"+{total_new_gw:.1f} GW, LMP avg={avg_lmp_m:.1f}")
 
                         # Check if we've met the cap
                         if co2_at_t <= emission_cap_mt:
-                            print(f"  {iso} emission cap met via deployment: {co2_at_t:.1f} Mt "
-                                  f"≤ {emission_cap_mt:.1f} Mt ({year})")
+                            _log(f"  {iso} emission cap met via deployment: {co2_at_t:.1f} Mt "
+                                 f"≤ {emission_cap_mt:.1f} Mt ({year})")
                             break
 
                     # --- POST-DEPLOYMENT: DAC OR FORCED GRID ---
@@ -1636,9 +1670,9 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                             carbon_shadow_price = max(carbon_shadow_price, dac_per_ton)
                             state['dac_offset_cumulative_mt'] = state.get('dac_offset_cumulative_mt', 0) + dac_offset_mt
 
-                            print(f"  {iso} DAC backstop: {dac_offset_mt:.1f} Mt offset @ "
-                                  f"${dac_per_ton:.0f}/ton = ${dac_cost_total:.0f}M "
-                                  f"(+${dac_cost_per_mwh:.1f}/MWh)")
+                            _log(f"  {iso} DAC backstop: {dac_offset_mt:.1f} Mt offset @ "
+                                 f"${dac_per_ton:.0f}/ton = ${dac_cost_total:.0f}M "
+                                 f"(+${dac_cost_per_mwh:.1f}/MWh)")
                         else:
                             # --- FORCED GRID BUILD (challenging) ---
                             # No DAC available. System must reach cap via grid alone.
@@ -1654,9 +1688,9 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                             mandated_subsidy += forced_subsidy
                             state['forced_grid_gap_mt'] = state.get('forced_grid_gap_mt', 0) + gap_mt
 
-                            print(f"  {iso} FORCED grid closure: {gap_mt:.1f} Mt gap, "
-                                  f"shadow carbon price=${carbon_shadow_price:.0f}/ton, "
-                                  f"+${forced_subsidy:.1f}/MWh")
+                            _log(f"  {iso} FORCED grid closure: {gap_mt:.1f} Mt gap, "
+                                 f"shadow carbon price=${carbon_shadow_price:.0f}/ton, "
+                                 f"+${forced_subsidy:.1f}/MWh")
 
                     state['mandated_subsidy_total'] += mandated_subsidy
 
@@ -1675,8 +1709,8 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                     gas_built_gw = unserved / (8.760 * 0.85)  # GW at 85% CF
                     gas_built_gw *= conditions['gas_friction']
                     state['gas_built_gw'] += gas_built_gw
-                    print(f"  {iso} new gas: {gas_built_gw:.1f} GW CCGT "
-                          f"(rev={gas_revenue:.0f} > cost={gas_lcoe})")
+                    _log(f"  {iso} new gas: {gas_built_gw:.1f} GW CCGT "
+                         f"(rev={gas_revenue:.0f} > cost={gas_lcoe})")
 
             # --- CO2 EMISSIONS (NET = physical - DAC offsets) ---
             gf = demand_twh / REGIONAL_DEMAND_TWH[iso]
@@ -1950,16 +1984,40 @@ def main():
         n_total = len(combos)
         print(f"\n{'='*70}")
         print(f"PARAMETRIC SWEEP: {args.sweep} — {n_total} scenarios × {len(isos)} ISOs")
-        print(f"{'='*70}\n")
+        print(f"{'='*70}")
+
+        # ── Pre-load all shared data ONCE ──
+        print("Loading shared data (once)...")
+        t_load = time.time()
+        demand_data, gen_profiles, emission_rates, fossil_mix = load_common_data()
+        step3_data = load_step3_data()
+        egrid_baselines = load_egrid_baselines()
+        preloaded = {
+            'demand_data': demand_data,
+            'gen_profiles': gen_profiles,
+            'emission_rates': emission_rates,
+            'fossil_mix': fossil_mix,
+            'step3_data': step3_data,
+            'egrid_baselines': egrid_baselines,
+        }
+        print(f"  Loaded in {time.time()-t_load:.1f}s")
+
+        # ── LMP cache: shared across all scenarios ──
+        # Key: (iso, threshold, fuel_level, demand_growth, year)
+        # Avoids recomputing 8760-hour LMP when only cost/PPA/gas params differ.
+        lmp_cache = {}
+
+        print(f"  Running {n_total} scenarios...\n")
 
         all_rows = []
         for i, (scenario_id, conditions) in enumerate(combos, 1):
-            print(f"\n[{i}/{n_total}] {scenario_id}")
-
             # Register the scenario temporarily so save_results can find it
             SCENARIOS[scenario_id] = conditions
 
-            results = run_market_simulation(scenario_id, conditions, isos)
+            results = run_market_simulation(
+                scenario_id, conditions, isos,
+                _preloaded=preloaded, _lmp_cache=lmp_cache, _quiet=True,
+            )
 
             # Flatten results into rows
             for iso_name, year_results in results.items():

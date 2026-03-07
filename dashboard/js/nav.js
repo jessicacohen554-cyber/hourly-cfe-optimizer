@@ -250,6 +250,7 @@
                 { label: 'SMARTargets Scenarios', href: 'smartargets_scenarios.html' },
                 { label: 'SMARTargets Dashboard', href: 'smartargets_dashboard.html' },
                 { label: 'IPP SMARTargets', href: 'ipp_smartargets.html' },
+                { label: 'Enhanced Framework', href: 'enhanced_ipp_smartargets.html' },
                 { label: 'Targets & Feasibility', href: 'pg_targets.html' },
                 { label: 'Policy & Conditions', href: 'pg_policy.html' },
                 { label: 'Methodology', href: 'pg_methodology.html' }
