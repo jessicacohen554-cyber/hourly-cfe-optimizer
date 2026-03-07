@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Regional Decarbonization Pathways</title>
+<title>Regional Decarbonization Pathways | The 8,760 Problem</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -165,6 +165,40 @@ body { background: var(--bg-page); }
     <div class="iso-grid" id="isoGrid"></div>
 </section>
 
+<!-- TARGET PATHWAY COMPARISON -->
+<section class="story-panel scroll-reveal" id="pathwayComparison">
+    <h2>Two Pathways to Net-Zero: SMARTargets vs. SBTi</h2>
+    <p class="section-desc">
+        The regional analysis below models decarbonization against the <strong>EPRI SMARTargets aspirational targets</strong>
+        (net-zero by 2050) as the primary pathway. For comparison, we also show the <strong>SBTi Power Sector v2</strong>
+        trajectory, which requires net-zero by 2040 — a full decade earlier. The gap between these two pathways
+        represents the additional policy ambition and technology acceleration required by the more stringent SBTi framework.
+    </p>
+
+    <div class="chart-panel">
+        <h3>National Average: SMARTargets AT vs. SBTi Power Sector v2</h3>
+        <p class="chart-note">U.S. power sector CO₂ intensity reduction pathways. SMARTargets reflects EPRI's sector-specific modeling; SBTi reflects science-based 1.5°C carbon budget allocation.</p>
+        <div class="chart-wrap"><canvas id="dualPathwayChart"></canvas></div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px;">
+        <div class="narrative-box" style="border-left-color: #6366F1;">
+            <strong>SMARTargets Aspirational Targets</strong><br>
+            2030: −56% from baseline<br>
+            2035: −82% from baseline<br>
+            2050: Net-zero<br>
+            <em style="font-size: 0.8rem; color: var(--text-dim);">Company-specific qualified targets may differ based on fleet composition and market constraints.</em>
+        </div>
+        <div class="narrative-box" style="border-left-color: #E91E63;">
+            <strong>SBTi Power Sector v2</strong><br>
+            2030: ~118 kg CO₂/MWh<br>
+            2035: ~57 kg CO₂/MWh<br>
+            2040: Net-zero<br>
+            <em style="font-size: 0.8rem; color: var(--text-dim);">Uniform sector pathway based on 1.5°C carbon budget. No company-specific adjustment.</em>
+        </div>
+    </div>
+</section>
+
 <!-- CONTROLS: ISO + PATHWAY (scrolls away on mobile) -->
 <div class="global-controls" id="stickyControls">
     <span class="bar-label">Region:</span>
@@ -269,16 +303,126 @@ body { background: var(--bg-page); }
         <div class="footer-links">
             <a href="index.html">Home</a>
             <a href="dashboard.html">Cost Optimizer</a>
-            <a href="ipp_smartargets.html">IPP Analysis</a>
-            <a href="optimizer_methodology.html">Methodology</a>
+            <a href="gen_market_overview.html">Market Overview</a>
+            <a href="gen_policy_conditions.html">Policy & Market</a>
+            <a href="gen_target_setting.html">Target Setting</a>
+            <a href="gen_regional_pathways.html">Regional Pathways</a>
+            <a href="ipp_climate_transition.html">IPP Deep Dives</a>
+            <a href="research_paper.html">Research Paper</a>
         </div>
-        <p class="footer-note">Hourly CFE Optimizer &mdash; 2025 snapshot model. Data: EIA, eGRID, NREL ATB.</p>
+        <p class="footer-note">Analysis based on EPRI SMARTargets, SBTi Power Sector v2, EIA, eGRID, NREL ATB. © 2026</p>
     </div>
 </footer>
 <div class="bottom-banner"></div>
 
 <script>
 Chart.defaults.plugins.datalabels = { display: false };
+
+// ─── DUAL PATHWAY COMPARISON CHART ─────────────────────────────
+(function() {
+    const ctx = document.getElementById('dualPathwayChart');
+    if (!ctx) return;
+
+    const years = ['2020', '2025', '2030', '2035', '2040', '2045', '2050'];
+    // US avg ~380 kg/MWh in 2020
+    const baseline = 380;
+
+    // SMARTargets AT: -56% by 2030, -82% by 2035, ~net zero by 2050
+    const smartargets = [
+        baseline,                    // 2020
+        baseline * 0.78,             // 2025 (interpolated)
+        baseline * 0.44,             // 2030 (-56%)
+        baseline * 0.18,             // 2035 (-82%)
+        baseline * 0.08,             // 2040 (interpolated)
+        baseline * 0.03,             // 2045 (interpolated)
+        0                            // 2050 (net-zero)
+    ];
+
+    // SBTi Power v2: ~118 by 2030, ~57 by 2035, 0 by 2040
+    const sbti = [
+        baseline,                    // 2020
+        250,                         // 2025 (interpolated)
+        118,                         // 2030
+        57,                          // 2035
+        0,                           // 2040 (net-zero)
+        null,                        // 2045 (already at zero)
+        null                         // 2050
+    ];
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: years,
+            datasets: [
+                {
+                    label: 'SMARTargets AT (Net-Zero 2050)',
+                    data: smartargets,
+                    borderColor: '#6366F1',
+                    backgroundColor: 'rgba(99,102,241,0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 5,
+                    pointBackgroundColor: '#6366F1',
+                    borderWidth: 3
+                },
+                {
+                    label: 'SBTi Power v2 (Net-Zero 2040)',
+                    data: sbti,
+                    borderColor: '#E91E63',
+                    backgroundColor: 'rgba(233,30,99,0.08)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 5,
+                    pointBackgroundColor: '#E91E63',
+                    borderWidth: 3,
+                    borderDash: [8, 4],
+                    spanGaps: false
+                },
+                {
+                    label: 'Current US Average (~345 kg/MWh)',
+                    data: [null, 345, null, null, null, null, null],
+                    pointRadius: 8,
+                    pointBackgroundColor: '#EF4444',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    showLine: false
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { usePointStyle: true, padding: 14, font: { size: 12 } } },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            if (ctx.raw === null) return '';
+                            return ctx.dataset.label.split('(')[0].trim() + ': ' + Math.round(ctx.raw) + ' kg CO₂/MWh';
+                        }
+                    }
+                },
+                annotation: {
+                    annotations: {
+                        netZeroLine: {
+                            type: 'line', yMin: 0, yMax: 0,
+                            borderColor: '#22C55E', borderWidth: 2, borderDash: [4, 4],
+                            label: { display: true, content: 'Net-Zero', position: 'end', font: { size: 10 }, color: '#22C55E' }
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { title: { display: true, text: 'Year', font: { weight: 600 } }, grid: { display: false } },
+                y: {
+                    title: { display: true, text: 'CO₂ Intensity (kg/MWh)', font: { weight: 600 } },
+                    min: 0, max: 420,
+                    grid: { color: 'rgba(0,0,0,0.05)' }
+                }
+            }
+        }
+    });
+})();
 
 // ============================================================================
 // Regional Decarbonization Pathways

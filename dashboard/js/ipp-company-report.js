@@ -1198,6 +1198,228 @@
         });
     }
 
+    // ─── Section 8: Gas Development Analysis ───────────────
+    function renderGasDevelopment() {
+        const fb = co.fan_bands?.all;
+        if (!fb) return;
+
+        // Determine gas fleet characteristics
+        const fleet = co.fleet_summary || {};
+        const byFuel = {};
+        for (const iso of Object.keys(fleet)) {
+            for (const fuel of Object.keys(fleet[iso])) {
+                if (!byFuel[fuel]) byFuel[fuel] = { cap_mw: 0, gen_twh: 0, co2_mt: 0, isos: [] };
+                byFuel[fuel].cap_mw += fleet[iso][fuel].cap_mw || 0;
+                byFuel[fuel].gen_twh += fleet[iso][fuel].gen_twh || 0;
+                byFuel[fuel].co2_mt += fleet[iso][fuel].co2_mt || 0;
+                if (!byFuel[fuel].isos.includes(iso)) byFuel[fuel].isos.push(iso);
+            }
+        }
+
+        const gasGen = (byFuel.gas_ccgt?.gen_twh || 0) + (byFuel.gas_peaker?.gen_twh || 0);
+        const gasCap = (byFuel.gas_ccgt?.cap_mw || 0) + (byFuel.gas_peaker?.cap_mw || 0);
+        const gasCO2 = (byFuel.gas_ccgt?.co2_mt || 0) + (byFuel.gas_peaker?.co2_mt || 0);
+        const totalGen = co.gen_twh || 1;
+        const gasPct = (gasGen / totalGen * 100).toFixed(0);
+
+        // Identify ISOs where company has gas and where new gas is most likely
+        const gasISOs = {};
+        for (const iso of Object.keys(fleet)) {
+            const isoGas = (fleet[iso].gas_ccgt?.cap_mw || 0) + (fleet[iso].gas_peaker?.cap_mw || 0);
+            if (isoGas > 0) gasISOs[iso] = isoGas;
+        }
+
+        // Gas development drivers by ISO
+        const isoDrivers = {
+            ERCOT: { likelihood: 'High', reason: 'Energy-only market, data center demand, reliability premium after Winter Storm Uri', newMW: Math.round(gasCap * 0.15) },
+            PJM: { likelihood: 'Medium', reason: 'Capacity market revenue, coal retirement replacements, grid reliability mandates', newMW: Math.round(gasCap * 0.10) },
+            CAISO: { likelihood: 'Low', reason: 'Aggressive clean mandates (SB 100), but gas needed for evening ramp reliability', newMW: Math.round(gasCap * 0.05) },
+            NYISO: { likelihood: 'Low', reason: 'CLCPA constraints, peaker rule phase-out, limited new gas permitting', newMW: 0 },
+            NEISO: { likelihood: 'Medium', reason: 'Winter reliability concerns, pipeline constraints, gas peaker replacement cycle', newMW: Math.round(gasCap * 0.08) },
+            MISO: { likelihood: 'Medium', reason: 'Coal retirement gap, industrial load growth, capacity shortfall warnings', newMW: Math.round(gasCap * 0.10) },
+            SPP: { likelihood: 'Low', reason: 'Wind-rich region, limited gas fleet presence', newMW: 0 }
+        };
+
+        // Gas impact chart: emissions trajectory with and without new gas
+        const gasImpactCtx = document.getElementById('gasImpactChart');
+        if (gasImpactCtx) {
+            const p50Emissions = fb.emissions?.p50 || [co.co2_2024_mt, 30, 25, 20, 15, 10];
+            const totalNewGasMW = Object.values(gasISOs).reduce((s, mw) => {
+                const iso = Object.keys(gasISOs).find(k => gasISOs[k] === mw);
+                return s + (isoDrivers[iso]?.newMW || 0);
+            }, 0);
+            // New gas adds ~0.4 tCO2/MWh * CF ~50% * 8760h * newMW
+            const newGasAnnualCO2 = totalNewGasMW * 0.4 * 0.5 * 8.76 / 1000; // Mt
+
+            const withGas = p50Emissions.map((v, i) => {
+                if (i === 0) return v;
+                // New gas comes online by 2030, peaks mid-period, then dispatched down
+                const rampFactor = i <= 1 ? 1.0 : i <= 2 ? 0.9 : i <= 3 ? 0.7 : i <= 4 ? 0.5 : 0.3;
+                return v + newGasAnnualCO2 * rampFactor;
+            });
+
+            charts.gasImpact = new Chart(gasImpactCtx, {
+                type: 'line',
+                data: {
+                    labels: YEAR_LABELS,
+                    datasets: [
+                        {
+                            label: 'Baseline Trajectory (P50)',
+                            data: p50Emissions,
+                            borderColor: '#6366F1',
+                            backgroundColor: 'rgba(99,102,241,0.08)',
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 5,
+                            borderWidth: 3
+                        },
+                        {
+                            label: 'With New Gas Development',
+                            data: withGas,
+                            borderColor: '#EF4444',
+                            backgroundColor: 'rgba(239,68,68,0.08)',
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 5,
+                            borderWidth: 3,
+                            borderDash: [8, 4]
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { usePointStyle: true, padding: 12 } },
+                        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmt(ctx.raw)} Mt CO₂` } }
+                    },
+                    scales: {
+                        x: { title: { display: true, text: 'Year' }, grid: { display: false } },
+                        y: { title: { display: true, text: 'Annual CO₂ (Mt)' }, min: 0, grid: { color: 'rgba(0,0,0,0.05)' } }
+                    }
+                }
+            });
+        }
+
+        // Gas location chart: potential new gas by ISO
+        const gasLocCtx = document.getElementById('gasLocationChart');
+        if (gasLocCtx) {
+            const relevantISOs = Object.keys(gasISOs);
+            if (relevantISOs.length === 0) relevantISOs.push('None');
+
+            charts.gasLocation = new Chart(gasLocCtx, {
+                type: 'bar',
+                data: {
+                    labels: relevantISOs,
+                    datasets: [
+                        {
+                            label: 'Existing Gas (MW)',
+                            data: relevantISOs.map(iso => gasISOs[iso] || 0),
+                            backgroundColor: 'rgba(107,114,128,0.6)',
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'Potential New Gas (MW)',
+                            data: relevantISOs.map(iso => isoDrivers[iso]?.newMW || 0),
+                            backgroundColor: 'rgba(239,68,68,0.6)',
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 12 } } },
+                    scales: {
+                        x: { stacked: true, grid: { display: false } },
+                        y: { stacked: true, title: { display: true, text: 'Capacity (MW)' }, grid: { color: 'rgba(0,0,0,0.05)' } }
+                    }
+                }
+            });
+        }
+
+        // Gas trajectory delta chart
+        const gasDeltaCtx = document.getElementById('gasTrajectoryDelta');
+        if (gasDeltaCtx) {
+            const p50 = fb.emissions?.p50 || [];
+            const p90 = fb.emissions?.p90 || [];
+            charts.gasDelta = new Chart(gasDeltaCtx, {
+                type: 'bar',
+                data: {
+                    labels: YEAR_LABELS,
+                    datasets: [{
+                        label: 'Additional CO₂ from New Gas (Mt)',
+                        data: YEAR_LABELS.map((_, i) => {
+                            const totalNewGas = Object.keys(gasISOs).reduce((s, iso) => s + (isoDrivers[iso]?.newMW || 0), 0);
+                            const annualCO2 = totalNewGas * 0.4 * 0.5 * 8.76 / 1000;
+                            if (i === 0) return 0;
+                            const ramp = i <= 1 ? 1.0 : i <= 2 ? 0.9 : i <= 3 ? 0.7 : i <= 4 ? 0.5 : 0.3;
+                            return +(annualCO2 * ramp).toFixed(1);
+                        }),
+                        backgroundColor: 'rgba(239,68,68,0.5)',
+                        borderColor: '#EF4444',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { title: { display: true, text: 'Additional Mt CO₂/yr' }, min: 0, grid: { color: 'rgba(0,0,0,0.05)' } }
+                    }
+                }
+            });
+        }
+
+        // Gas narrative
+        const gasNarEl = document.getElementById('gasNarrative');
+        if (gasNarEl) {
+            const highLikelihood = Object.entries(gasISOs)
+                .filter(([iso]) => isoDrivers[iso]?.likelihood === 'High')
+                .map(([iso]) => iso);
+            const medLikelihood = Object.entries(gasISOs)
+                .filter(([iso]) => isoDrivers[iso]?.likelihood === 'Medium')
+                .map(([iso]) => iso);
+
+            let drivers = '';
+            if (highLikelihood.length > 0) {
+                drivers += `<p><strong>High likelihood regions (${highLikelihood.join(', ')}):</strong> ${highLikelihood.map(iso => isoDrivers[iso].reason).join('. ')}.</p>`;
+            }
+            if (medLikelihood.length > 0) {
+                drivers += `<p><strong>Moderate likelihood regions (${medLikelihood.join(', ')}):</strong> ${medLikelihood.map(iso => isoDrivers[iso].reason).join('. ')}.</p>`;
+            }
+
+            gasNarEl.innerHTML = `
+                <p><strong>${co.shortName}</strong> currently operates <strong>${fmt(gasCap, 0)} MW</strong> of gas generation
+                (${gasPct}% of fleet output), producing <strong>${fmt(gasCO2)} Mt CO₂</strong> annually across
+                ${Object.keys(gasISOs).length} ISOs.</p>
+
+                <div class="insight-box" style="margin: var(--space-lg) 0">
+                    <strong>Key Question:</strong> Would ${co.shortName} develop new gas-fired generation, and if so, where?
+                    The answer depends on three converging factors: (1) data center / industrial load growth creating demand for firm capacity,
+                    (2) wholesale market price signals and capacity market revenue adequacy, and
+                    (3) the pace at which clean firm alternatives (CCS, SMRs, LDES) become commercially available.
+                </div>
+
+                ${drivers}
+
+                <div class="insight-box insight-warn" style="margin: var(--space-lg) 0">
+                    <strong>Trajectory Impact:</strong> New gas development would slow decarbonization by extending the fossil generation tail.
+                    Each 1 GW of new CCGT operating at 50% capacity factor adds approximately ${fmt(0.4 * 0.5 * 8.76, 1)} Mt CO₂/year
+                    to the fleet's emissions — potentially widening the gap to 1.5°C alignment by ${fmt(0.4 * 0.5 * 8.76 / (co.co2_2024_mt || 55) * 100, 0)}%
+                    of current total emissions. However, if new gas displaces higher-emitting coal or older peakers in neighboring regions,
+                    the net system-wide impact may be partially offset through consequential accounting.
+                </div>
+
+                <p>The strategic tension: ${co.shortName} faces pressure to grow revenue through load-following capacity for data centers
+                and electrification. New gas generation offers quick-to-market, bankable returns. But each new gas plant extends the fossil
+                tail and creates stranded asset risk under accelerating decarbonization scenarios. The optimal strategy likely involves
+                developing gas with CCS-readiness, signing offtake agreements that include carbon pricing escalators, and positioning
+                new plants for eventual conversion to hydrogen or CCS retrofit.</p>
+            `;
+        }
+    }
+
     // ─── Initialize ──────────────────────────────────────────
     function init() {
         // Set page title
@@ -1215,6 +1437,7 @@
         renderCleanInvestment();
         renderEnablingConditions();
         renderStrategicPositioning();
+        renderGasDevelopment();
         initTocTracking();
     }
 
