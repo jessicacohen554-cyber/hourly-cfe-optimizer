@@ -60,33 +60,23 @@ body { background: var(--bg-alt-warm); }
 .fan-card .chart-note { font-size: 0.72rem; color: var(--text-dim); margin-bottom: 12px; }
 .fan-chart-container { position: relative; height: 340px; }
 
-/* Scenario selector for QT */
-.qt-selector { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 16px; }
-.qt-btn { padding: 5px 12px; border-radius: var(--radius-pill); font-size: 0.72rem; font-weight: 600; border: 1px solid rgba(0,0,0,0.12); background: transparent; color: var(--text-dim); cursor: pointer; transition: all 0.2s; font-family: var(--font-heading); }
-.qt-btn:hover { background: rgba(0,0,0,0.04); }
-.qt-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+/* Dimension filter pills */
+.dim-filter { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+.dim-filter-label { font-family: var(--font-heading); font-size: 0.72rem; font-weight: 700; color: var(--navy); text-transform: uppercase; letter-spacing: 0.04em; margin-right: 4px; }
+.dim-btn { padding: 4px 10px; border-radius: var(--radius-pill); font-size: 0.7rem; font-weight: 600; border: 1px solid rgba(0,0,0,0.12); background: transparent; color: var(--text-dim); cursor: pointer; transition: all 0.2s; font-family: var(--font-heading); }
+.dim-btn:hover { background: rgba(0,0,0,0.04); }
+.dim-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
-/* AT-QT Gap panel */
-.gap-panel { background: rgba(255,255,255,0.92); border: 1px solid rgba(0,0,0,0.08); border-radius: var(--radius-lg); padding: var(--pad-card); box-shadow: var(--shadow-sm); margin-bottom: 24px; }
-.gap-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 16px; }
-.gap-card { background: var(--bg-page); border-radius: var(--radius-md); padding: 16px; text-align: center; }
-.gap-card .gap-scenario { font-family: var(--font-heading); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; color: var(--navy); }
-.gap-card .gap-val { font-family: var(--font-data); font-size: 1.5rem; font-weight: 800; }
-.gap-card .gap-label { font-size: 0.7rem; color: var(--text-dim); margin-top: 2px; }
-.gap-closed { color: var(--green); }
-.gap-open { color: var(--red); }
-.gap-chart-container { position: relative; height: 340px; margin-top: 16px; }
-
-/* Plant status table */
-.plant-table-wrap { max-height: 500px; overflow-y: auto; border: 1px solid rgba(0,0,0,0.08); border-radius: var(--radius-md); }
-.plant-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
-.plant-table th { font-family: var(--font-heading); font-weight: 700; color: var(--navy); text-align: left; padding: 8px; border-bottom: 2px solid var(--navy); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; position: sticky; top: 0; background: #fff; z-index: 2; }
-.plant-table td { padding: 6px 8px; border-bottom: 1px solid rgba(0,0,0,0.05); font-family: var(--font-data); }
-.plant-table tr:hover { background: rgba(0,0,0,0.02); }
-.status-operating { color: var(--green); font-weight: 700; }
-.status-stranded { color: #F59E0B; font-weight: 700; }
-.status-retired { color: var(--red); font-weight: 700; }
-.status-marginal { color: #F97316; font-weight: 700; }
+/* Breakeven cards */
+.breakeven-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.breakeven-card { background: rgba(255,255,255,0.92); border: 1px solid rgba(0,0,0,0.08); border-radius: var(--radius-lg); padding: 16px; box-shadow: var(--shadow-sm); }
+.breakeven-card h4 { font-family: var(--font-heading); font-size: 0.82rem; color: var(--navy); margin-bottom: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+.breakeven-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid rgba(0,0,0,0.05); font-size: 0.78rem; }
+.breakeven-row .label { color: var(--text-dim); }
+.breakeven-row .value { font-family: var(--font-data); font-weight: 700; }
+.breakeven-profitable { color: var(--green); }
+.breakeven-mixed { color: #F59E0B; }
+.breakeven-unprofitable { color: var(--red); }
 
 /* Comparison section */
 .comparison-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
@@ -100,14 +90,12 @@ body { background: var(--bg-alt-warm); }
 .narrative-box { background: linear-gradient(135deg, rgba(99,102,241,0.06), rgba(14,165,233,0.06)); border-left: 4px solid var(--accent); border-radius: var(--radius-md); padding: 16px 20px; margin: 20px 0; }
 .narrative-box h4 { font-family: var(--font-heading); font-size: 0.88rem; color: var(--navy); margin-bottom: 8px; font-weight: 700; }
 .narrative-box p { font-size: 0.82rem; color: var(--text-body); line-height: 1.7; margin: 0; }
-.narrative-box ul { font-size: 0.82rem; color: var(--text-body); line-height: 1.7; margin: 8px 0 0; padding-left: 20px; }
 
 /* Mobile */
 @media (max-width: 768px) {
     .overview-panel { grid-template-columns: 1fr; }
     .fan-grid { grid-template-columns: 1fr; }
     .fan-chart-container { height: 280px; }
-    .gap-chart-container { height: 280px; }
     .global-controls { gap: 10px; padding: 10px var(--pad-page); }
     .fleet-stats { grid-template-columns: repeat(2, 1fr); }
 }
@@ -127,9 +115,9 @@ body { background: var(--bg-alt-warm); }
 <section class="hero" style="background: linear-gradient(180deg, var(--navy-dark) 0%, var(--navy) 60%, var(--navy-mid) 100%); padding: 48px var(--pad-page) 40px; text-align: center;">
     <h1 style="font-family: var(--font-heading); font-size: 2.2rem; font-weight: 800; color: #fff; margin-bottom: 12px;">What Do Regional Targets Mean for Your Fleet?</h1>
     <p style="font-size: 1.05rem; color: rgba(255,255,255,0.7); max-width: 860px; margin: 0 auto; line-height: 1.7;">
-        Regional market simulations reveal how emission constraints reshape wholesale markets. This analysis maps those macro shifts
-        onto individual IPP fleets &mdash; plant by plant &mdash; to identify which assets survive, which strand, and where the gap
-        between science-based ambition and market-achievable targets lies.
+        270 parametric scenarios reveal the range of outcomes for each IPP fleet. P10/P50/P90 fan bands show the
+        envelope of emissions, profitability, and stranding risk across market conditions, demand growth, price
+        sensitivity, PPA availability, and gas friction.
     </p>
 </section>
 
@@ -140,8 +128,32 @@ body { background: var(--bg-alt-warm); }
     <span class="bar-label">Company:</span>
     <div class="company-tabs" id="companyTabs"></div>
     <div class="bar-divider"></div>
-    <span class="bar-label">Scenario:</span>
-    <select id="scenarioSelect" style="font-family: var(--font-body); font-size: 0.82rem; padding: 6px 12px; border: 1px solid rgba(0,0,0,0.15); border-radius: var(--radius-md); background: #fff; color: var(--navy); cursor: pointer;"></select>
+    <span class="bar-label">Sweep:</span>
+    <select id="sweepSelect" style="font-family: var(--font-body); font-size: 0.82rem; padding: 6px 12px; border: 1px solid rgba(0,0,0,0.15); border-radius: var(--radius-md); background: #fff; color: var(--navy); cursor: pointer;"></select>
+    <div class="bar-divider"></div>
+    <span class="bar-label">Mode:</span>
+    <button class="dim-btn active" id="passiveBtn" onclick="setMode(false)">Passive</button>
+    <button class="dim-btn" id="activeBtn" onclick="setMode(true)">+ New Clean</button>
+</div>
+
+<!-- DIMENSION FILTERS -->
+<div style="max-width: var(--max-content); margin: 0 auto; padding: 12px var(--pad-page); display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+    <div class="dim-filter" id="filterConditions">
+        <span class="dim-filter-label">Conditions:</span>
+    </div>
+    <div class="dim-filter" id="filterDemand">
+        <span class="dim-filter-label">Demand:</span>
+    </div>
+    <div class="dim-filter" id="filterPriceSens">
+        <span class="dim-filter-label">Price:</span>
+    </div>
+    <div class="dim-filter" id="filterPPA">
+        <span class="dim-filter-label">PPA:</span>
+    </div>
+    <div class="dim-filter" id="filterGasFriction">
+        <span class="dim-filter-label">Gas Friction:</span>
+    </div>
+    <button class="dim-btn" onclick="resetFilters()" style="margin-left:auto;background:var(--bg-page);">Reset All</button>
 </div>
 
 <!-- SECTION 1: COMPANY OVERVIEW -->
@@ -155,7 +167,7 @@ body { background: var(--bg-alt-warm); }
         <div class="overview-card">
             <h3>Fleet by Region</h3>
             <table class="fleet-table" id="fleetRegionTable">
-                <thead><tr><th>ISO</th><th>Fuel</th><th>Capacity (MW)</th><th>Gen (TWh)</th><th>CO₂ (Mt)</th></tr></thead>
+                <thead><tr><th>ISO</th><th>Fuel</th><th>Capacity (MW)</th><th>Gen (TWh)</th><th>CO2 (Mt)</th></tr></thead>
                 <tbody></tbody>
             </table>
         </div>
@@ -166,38 +178,35 @@ body { background: var(--bg-alt-warm); }
     </div>
 </div>
 
-<!-- SECTION 2: EMISSIONS FAN CHART -->
+<!-- SECTION 2: FAN BAND CHARTS -->
 <div class="dashboard-section" id="fanSection">
-    <h2>Emissions Trajectories</h2>
-    <p class="section-desc">Fleet-level CO₂ emissions under different reduction targets. The fan shows the range of outcomes across the QT parametric sweep (5&ndash;95% reduction). AT trajectory marks the science-based ambition path.</p>
+    <h2>Outcome Envelope (270 Scenarios)</h2>
+    <p class="section-desc">P10/P50/P90 fan bands across all parametric scenarios. Purple = passive fleet, green = with new clean deployment. Use dimension filters above to isolate specific market conditions.</p>
 
-    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
-        <div class="qt-selector" id="qtSelector"></div>
-        <div class="bar-divider" style="height:24px;"></div>
-        <div style="display:flex;gap:4px;">
-            <button class="qt-btn active" id="passiveBtn" onclick="setQTMode(false)">Passive (Fleet Only)</button>
-            <button class="qt-btn" id="activeBtn" onclick="setQTMode(true)">Active (+ New Clean)</button>
+    <div class="fan-grid">
+        <div class="fan-card">
+            <h3 id="emFanTitle">Fleet Emissions</h3>
+            <div class="chart-note">Shaded: P10-P90 band. Line: P50 median trajectory.</div>
+            <div class="fan-chart-container"><canvas id="emissionsFanChart"></canvas></div>
+        </div>
+        <div class="fan-card">
+            <h3 id="profFanTitle">Fleet Profit</h3>
+            <div class="chart-note">Annual fleet profit across 270 scenario combinations.</div>
+            <div class="fan-chart-container"><canvas id="profitFanChart"></canvas></div>
         </div>
     </div>
 
     <div class="fan-grid">
         <div class="fan-card">
-            <h3 id="fanChartTitle">Emissions Fan — QT Sweep</h3>
-            <div class="chart-note">Shaded bands: P5–P95 range across 19 reduction targets. Purple = passive, green = active.</div>
-            <div class="fan-chart-container"><canvas id="emissionsFanChart"></canvas></div>
+            <h3>Operating Capacity</h3>
+            <div class="chart-note">MW of fleet capacity still economically operating.</div>
+            <div class="fan-chart-container"><canvas id="opMwChart"></canvas></div>
         </div>
         <div class="fan-card">
-            <h3>Fleet Economics</h3>
-            <div class="chart-note">Fleet profit per scenario across the projection period</div>
-            <div class="fan-chart-container"><canvas id="profitChart"></canvas></div>
+            <h3>Stranded Capacity</h3>
+            <div class="chart-note">MW of fleet capacity that is uneconomic but not yet retired.</div>
+            <div class="fan-chart-container"><canvas id="strandMwChart"></canvas></div>
         </div>
-    </div>
-
-    <!-- Active QT deployment timeline -->
-    <div id="deploySection" class="fan-card" style="display:none;margin-bottom:24px;">
-        <h3>Active Deployment Timeline</h3>
-        <div class="chart-note">Cumulative new clean capacity deployed under the active QT strategy (solar + wind + battery)</div>
-        <div style="position:relative;height:300px;"><canvas id="deployChart"></canvas></div>
     </div>
 
     <div id="fanNarrative" class="narrative-box">
@@ -206,52 +215,23 @@ body { background: var(--bg-alt-warm); }
     </div>
 </div>
 
-<!-- SECTION 3: AT-QT GAP ANALYSIS -->
-<div class="dashboard-section" id="gapSection">
-    <h2>AT-QT Gap Analysis</h2>
-    <p class="section-desc">The gap between what science demands (Aspirational Targets) and what the market can deliver (Qualified Targets). Where the gap is open, enabling conditions &mdash; policy, technology, or market reform &mdash; are needed to bridge it.</p>
+<!-- SECTION 3: BREAKEVEN ANALYSIS -->
+<div class="dashboard-section" id="breakevenSection">
+    <h2>Breakeven Conditions</h2>
+    <p class="section-desc">Which parametric dimensions produce profitable decarbonization vs stranded assets? Shows the % of scenarios where the fleet remains profitable at 2050, broken down by each dimension.</p>
 
-    <div class="gap-panel">
-        <h3 style="font-family: var(--font-heading); font-size: 1rem; color: var(--navy); font-weight: 700;">AT vs QT Milestones</h3>
-        <div class="gap-grid" id="gapGrid"></div>
-        <div class="gap-chart-container"><canvas id="gapChart"></canvas></div>
-    </div>
+    <div class="breakeven-grid" id="breakevenGrid"></div>
 
-    <div id="gapNarrative" class="narrative-box">
-        <h4>Enabling Conditions Needed</h4>
-        <p id="gapNarrativeText">Analysis of what conditions could help close the AT-QT gap.</p>
+    <div class="narrative-box">
+        <h4>What Drives Profitability?</h4>
+        <p id="breakevenNarrativeText">Breakeven insights will appear here.</p>
     </div>
 </div>
 
-<!-- SECTION 4: PLANT-LEVEL DETAIL -->
-<div class="dashboard-section" id="plantSection">
-    <h2>Plant-Level Status</h2>
-    <p class="section-desc">Individual plant economics under the selected scenario. Shows which plants continue operating, which become stranded (uneconomic but not yet retired), and which retire.</p>
-
-    <div class="overview-card" style="margin-bottom: 24px;">
-        <h3>Fleet Status Timeline</h3>
-        <div style="position:relative;height:320px;"><canvas id="statusStackChart"></canvas></div>
-    </div>
-
-    <div class="overview-card">
-        <h3 id="plantTableTitle">Plant Economics (2050)</h3>
-        <div class="plant-table-wrap">
-            <table class="plant-table" id="plantTable">
-                <thead><tr>
-                    <th>Plant</th><th>ISO</th><th>Fuel</th><th>Cap (MW)</th>
-                    <th>Status</th><th>CF (%)</th><th>Gen (TWh)</th>
-                    <th>CO₂ (Mt)</th><th>Profit ($M)</th><th>Reason</th>
-                </tr></thead>
-                <tbody></tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<!-- SECTION 5: CROSS-COMPANY COMPARISON -->
+<!-- SECTION 4: CROSS-COMPANY COMPARISON -->
 <div class="dashboard-section" id="compareSection">
     <h2>Cross-Company Comparison</h2>
-    <p class="section-desc">How do the four IPPs compare under the same scenario? Key metrics at 2050 across all companies.</p>
+    <p class="section-desc">P50 median outcomes at 2050 across all companies under the selected sweep type.</p>
 
     <div class="comparison-cards" id="compareGrid"></div>
 
@@ -277,50 +257,59 @@ body { background: var(--bg-alt-warm); }
 
 <script>
 // ============================================================================
-// IPP SMARTargets Dashboard — Main JS
+// IPP SMARTargets Dashboard — V2 (Parametric Sweep Fan Bands)
 // ============================================================================
 
-const DATA = (typeof IPP_SMARTARGETS_DATA !== 'undefined') ? IPP_SMARTARGETS_DATA : IPP_SMARTARGETS;
-const COMPANIES = Object.keys(DATA.companies);
-const SCENARIOS = ['R1', 'R2', 'AT1', 'AT2', 'AT3', 'AT4'];
-const QT_SCENARIOS = ['QT1', 'QT2', 'QT3', 'QT4'];
+const DATA = (typeof IPP_SMARTARGETS_DATA !== 'undefined') ? IPP_SMARTARGETS_DATA : null;
+if (!DATA) { document.body.innerHTML = '<p style="padding:40px;color:red;">Error: IPP_SMARTARGETS_DATA not loaded.</p>'; }
 
-const SCENARIO_LABELS = {
-    R1: 'Reference: Facilitating', R2: 'Reference: Challenging',
-    AT1: 'Power NZ: Facilitating', AT2: 'Power NZ: Challenging',
-    AT3: 'Economy NZ: Facilitating', AT4: 'Economy NZ: Challenging',
+const COMPANIES = Object.keys(DATA.companies);
+const SWEEP_TYPES = DATA.sweep_types || ['reference', 'power_nz', 'economy_nz'];
+const YEARS = DATA.years || [2023, 2030, 2035, 2040, 2045, 2050];
+
+const SWEEP_LABELS = {
+    all: 'All Scenarios',
+    reference: 'Reference',
+    power_nz: 'Power Net-Zero',
+    economy_nz: 'Economy Net-Zero',
 };
-const QT_LABELS = {
-    QT1: 'QT Medium Demand: Facilitating', QT2: 'QT Medium Demand: Challenging',
-    QT3: 'QT High Demand: Facilitating', QT4: 'QT High Demand: Challenging',
-};
-const SCENARIO_COLORS = {
-    R1: '#22C55E', R2: '#EF4444', AT1: '#6366F1', AT2: '#EC4899',
-    AT3: '#0EA5E9', AT4: '#F97316',
-};
-const QT_COLORS = { QT1: '#22C55E', QT2: '#EF4444', QT3: '#6366F1', QT4: '#F97316' };
 
 const FUEL_COLORS = {
     coal: '#374151', gas_ccgt: '#6B7280', gas_peaker: '#9CA3AF',
     nuclear: RESOURCE_COLORS.cleanFirm, solar: RESOURCE_COLORS.solar,
     wind: RESOURCE_COLORS.wind, battery: RESOURCE_COLORS.battery,
-    hydro: RESOURCE_COLORS.hydro,
+    hydro: RESOURCE_COLORS.hydro, geothermal: RESOURCE_COLORS.geothermal || '#D97706',
+    oil: '#92400E',
+};
+
+const DIM_LABELS = {
+    conditions: {F: 'Facilitating', C: 'Challenging'},
+    demand_growth: {Low: 'Low', Medium: 'Medium', High: 'High'},
+    price_sens: {all_low: 'All Low', all_med: 'All Med', all_high: 'All High', high_vre_low_firm: 'Hi VRE / Lo Firm', high_firm_low_vre: 'Hi Firm / Lo VRE'},
+    ppa_level: {Low: 'Low', Medium: 'Medium', High: 'High', None: 'None'},
+    gas_friction: {'0.3': 'Low (0.3)', '0.7': 'Med (0.7)', '1.0': 'High (1.0)'},
 };
 
 let activeCompany = COMPANIES[0];
-let activeScenario = 'R1';
-let activeQT = 'QT1';
-let showActiveQT = false; // Toggle: passive vs active QT view
+let activeSweep = 'all';
+let showActive = false;
+let dimFilters = {}; // {dimension: value} — only one value per dimension at a time
 
 // Charts
 let fleetPieChart = null;
-let emissionsFanChart = null;
-let profitChart = null;
-let gapChart = null;
-let statusStackChart = null;
-let deployChart = null;
+let emFanChart = null;
+let profFanChart = null;
+let opMwChart = null;
+let strandMwChart = null;
 
-// ─── COMPANY TABS ──────────────────────────────────────────────
+// ─── INIT ───────────────────────────────────────────────────────
+function init() {
+    initCompanyTabs();
+    initSweepSelect();
+    initDimFilters();
+    updateAll();
+}
+
 function initCompanyTabs() {
     const container = document.getElementById('companyTabs');
     COMPANIES.forEach(key => {
@@ -339,60 +328,121 @@ function initCompanyTabs() {
     });
 }
 
-// ─── SCENARIO SELECT ───────────────────────────────────────────
-function initScenarioSelect() {
-    const sel = document.getElementById('scenarioSelect');
-    SCENARIOS.forEach(s => {
+function initSweepSelect() {
+    const sel = document.getElementById('sweepSelect');
+    // "All" option first
+    const allOpt = document.createElement('option');
+    allOpt.value = 'all';
+    allOpt.textContent = SWEEP_LABELS.all;
+    sel.appendChild(allOpt);
+
+    SWEEP_TYPES.forEach(st => {
         const opt = document.createElement('option');
-        opt.value = s;
-        opt.textContent = SCENARIO_LABELS[s];
+        opt.value = st;
+        opt.textContent = SWEEP_LABELS[st] || st;
         sel.appendChild(opt);
     });
     sel.addEventListener('change', () => {
-        activeScenario = sel.value;
-        updateAll();
+        activeSweep = sel.value;
+        updateFanCharts();
+        updateComparison();
     });
 }
 
-// ─── QT SELECTOR ───────────────────────────────────────────────
-function initQTSelector() {
-    const container = document.getElementById('qtSelector');
-    QT_SCENARIOS.forEach(qt => {
-        const btn = document.createElement('button');
-        btn.className = 'qt-btn' + (qt === activeQT ? ' active' : '');
-        btn.textContent = QT_LABELS[qt];
-        btn.addEventListener('click', () => {
-            container.querySelectorAll('.qt-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            activeQT = qt;
+function initDimFilters() {
+    const co = DATA.companies[activeCompany];
+    const dims = co.dimension_fans || {};
+
+    const containers = {
+        conditions: document.getElementById('filterConditions'),
+        demand_growth: document.getElementById('filterDemand'),
+        price_sens: document.getElementById('filterPriceSens'),
+        ppa_level: document.getElementById('filterPPA'),
+        gas_friction: document.getElementById('filterGasFriction'),
+    };
+
+    for (const [dim, values] of Object.entries(dims)) {
+        const container = containers[dim];
+        if (!container) continue;
+        const labels = DIM_LABELS[dim] || {};
+
+        // "All" button
+        const allBtn = document.createElement('button');
+        allBtn.className = 'dim-btn active';
+        allBtn.textContent = 'All';
+        allBtn.addEventListener('click', () => {
+            delete dimFilters[dim];
+            container.querySelectorAll('.dim-btn').forEach(b => b.classList.remove('active'));
+            allBtn.classList.add('active');
             updateFanCharts();
-            updateGapAnalysis();
         });
-        container.appendChild(btn);
-    });
+        container.appendChild(allBtn);
+
+        Object.keys(values).sort().forEach(val => {
+            const btn = document.createElement('button');
+            btn.className = 'dim-btn';
+            btn.textContent = labels[val] || val;
+            btn.addEventListener('click', () => {
+                dimFilters[dim] = val;
+                container.querySelectorAll('.dim-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                updateFanCharts();
+            });
+            container.appendChild(btn);
+        });
+    }
 }
 
-// ─── FLEET OVERVIEW ────────────────────────────────────────────
+function resetFilters() {
+    dimFilters = {};
+    document.querySelectorAll('.dim-filter').forEach(container => {
+        container.querySelectorAll('.dim-btn').forEach((b, i) => {
+            b.classList.toggle('active', i === 0); // First button is "All"
+        });
+    });
+    updateFanCharts();
+}
+
+function setMode(active) {
+    showActive = active;
+    document.getElementById('passiveBtn').classList.toggle('active', !active);
+    document.getElementById('activeBtn').classList.toggle('active', active);
+    updateFanCharts();
+}
+
+// ─── GET ACTIVE FAN DATA ────────────────────────────────────────
+function getActiveFanData() {
+    const co = DATA.companies[activeCompany];
+
+    // Check if any dimension filter is active
+    const activeDimKeys = Object.keys(dimFilters);
+    if (activeDimKeys.length === 1) {
+        const dim = activeDimKeys[0];
+        const val = dimFilters[dim];
+        const dimFans = co.dimension_fans && co.dimension_fans[dim] && co.dimension_fans[dim][val];
+        if (dimFans) return dimFans;
+    }
+
+    // Otherwise use sweep-level or overall fan bands
+    const fans = co.fan_bands || {};
+    return fans[activeSweep] || fans['all'] || {};
+}
+
+// ─── FLEET OVERVIEW ─────────────────────────────────────────────
 function updateOverview() {
     const co = DATA.companies[activeCompany];
     document.getElementById('companyTitle').textContent = co.name + ' — Fleet Overview';
-    document.getElementById('companyDesc').textContent = `${co.name} fleet composition and baseline emissions profile.`;
+    document.getElementById('companyDesc').textContent = co.target || 'Fleet composition and baseline emissions profile.';
 
-    // Stats
     const statsEl = document.getElementById('fleetStats');
-    const totalCap = co.cap_gw;
-    const totalGen = co.gen_twh;
-    const totalCO2 = co.co2_2023_mt || co.co2_2024_mt;
-    const intensity = co.intensity_kg;
     statsEl.innerHTML = `
-        <div class="fleet-stat"><div class="val">${totalCap.toFixed(1)} GW</div><div class="lbl">Total Capacity</div></div>
-        <div class="fleet-stat"><div class="val">${totalGen.toFixed(1)} TWh</div><div class="lbl">Annual Generation</div></div>
-        <div class="fleet-stat"><div class="val">${totalCO2.toFixed(1)} Mt</div><div class="lbl">2023 CO₂ Baseline</div></div>
-        <div class="fleet-stat"><div class="val">${intensity.toFixed(0)} kg/MWh</div><div class="lbl">Emission Intensity</div></div>
+        <div class="fleet-stat"><div class="val">${co.cap_gw.toFixed(1)} GW</div><div class="lbl">Total Capacity</div></div>
+        <div class="fleet-stat"><div class="val">${co.gen_twh.toFixed(1)} TWh</div><div class="lbl">Annual Generation</div></div>
+        <div class="fleet-stat"><div class="val">${co.co2_2023_mt.toFixed(1)} Mt</div><div class="lbl">2023 CO2 Baseline</div></div>
+        <div class="fleet-stat"><div class="val">${co.intensity_kg.toFixed(0)} kg/MWh</div><div class="lbl">Emission Intensity</div></div>
         <div class="fleet-stat"><div class="val">${Object.keys(co.fleet_summary).length}</div><div class="lbl">ISOs</div></div>
     `;
 
-    // Region table
     const tbody = document.querySelector('#fleetRegionTable tbody');
     tbody.innerHTML = '';
     for (const [iso, fuels] of Object.entries(co.fleet_summary)) {
@@ -403,12 +453,11 @@ function updateOverview() {
         }
     }
 
-    // Pie chart
     updateFleetPie(co);
 }
 
 function fuelLabel(fuel) {
-    const labels = { coal: 'Coal', gas_ccgt: 'Gas CCGT', gas_peaker: 'Gas Peaker', nuclear: 'Nuclear', solar: 'Solar', wind: 'Wind', battery: 'Battery', hydro: 'Hydro' };
+    const labels = { coal: 'Coal', gas_ccgt: 'Gas CCGT', gas_peaker: 'Gas Peaker', nuclear: 'Nuclear', solar: 'Solar', wind: 'Wind', battery: 'Battery', hydro: 'Hydro', geothermal: 'Geothermal', oil: 'Oil' };
     return labels[fuel] || fuel;
 }
 
@@ -437,88 +486,92 @@ function updateFleetPie(co) {
     });
 }
 
-// ─── PASSIVE/ACTIVE TOGGLE ─────────────────────────────────────
-function setQTMode(active) {
-    showActiveQT = active;
-    document.getElementById('passiveBtn').className = 'qt-btn' + (!active ? ' active' : '');
-    document.getElementById('activeBtn').className = 'qt-btn' + (active ? ' active' : '');
-    document.getElementById('deploySection').style.display = active ? 'block' : 'none';
-    updateFanCharts();
-    updateGapAnalysis();
-}
-
-// ─── EMISSIONS FAN CHART ───────────────────────────────────────
-function updateFanCharts() {
-    const co = DATA.companies[activeCompany];
-    const passiveData = co.qt_analysis[activeQT];
-    const activeData = co.active_qt_analysis ? co.active_qt_analysis[activeQT] : null;
-    const fanData = passiveData.fan;
-    const years = [2023, 2030, 2035, 2040, 2045, 2050];
-
-    const modeLabel = showActiveQT ? 'Active' : 'Passive';
-    document.getElementById('fanChartTitle').textContent = `Emissions Fan (${modeLabel}) — ${QT_LABELS[activeQT]}`;
-
+// ─── FAN BAND CHARTS ────────────────────────────────────────────
+function buildFanDatasets(fanData, label, color, alphas) {
+    if (!fanData) return [];
+    const [r, g, b] = hexToRgb(color);
     const datasets = [];
 
-    // Show primary fan (passive always, active overlaid when toggled)
-    // Passive fan bands
+    // P10-P90 band (fill between)
     datasets.push({
-        label: 'Passive Max', data: fanData.max, borderColor: 'transparent', backgroundColor: 'rgba(99,102,241,0.06)',
-        fill: '+1', pointRadius: 0, borderWidth: 0, order: 8
+        label: `${label} P90`, data: fanData.p90,
+        borderColor: `rgba(${r},${g},${b},0.25)`, backgroundColor: `rgba(${r},${g},${b},0.08)`,
+        fill: '+2', pointRadius: 0, borderWidth: 1, borderDash: [4, 4], order: 8
     });
     datasets.push({
-        label: 'Passive Min', data: fanData.min, borderColor: 'transparent', backgroundColor: 'transparent',
-        fill: false, pointRadius: 0, borderWidth: 0, order: 8
-    });
-    datasets.push({
-        label: 'Passive P95', data: fanData.p95, borderColor: 'rgba(99,102,241,0.25)', backgroundColor: 'rgba(99,102,241,0.08)',
-        fill: '+3', pointRadius: 0, borderWidth: 1, borderDash: [4, 4], order: 7
-    });
-    datasets.push({
-        label: 'Passive P75', data: fanData.p75, borderColor: 'rgba(99,102,241,0.35)', backgroundColor: 'rgba(99,102,241,0.12)',
-        fill: '+1', pointRadius: 0, borderWidth: 1, order: 6
-    });
-    datasets.push({
-        label: 'Passive P25', data: fanData.p25, borderColor: 'rgba(99,102,241,0.35)', backgroundColor: 'transparent',
-        fill: false, pointRadius: 0, borderWidth: 1, order: 6
-    });
-    datasets.push({
-        label: 'Passive P5', data: fanData.p5, borderColor: 'rgba(99,102,241,0.25)', backgroundColor: 'transparent',
-        fill: false, pointRadius: 0, borderWidth: 1, borderDash: [4, 4], order: 7
-    });
-
-    // Passive median
-    datasets.push({
-        label: 'Passive Median', data: fanData.p50,
-        borderColor: '#6366F1', backgroundColor: 'transparent',
+        label: `${label} P50`, data: fanData.p50,
+        borderColor: color, backgroundColor: 'transparent',
         fill: false, pointRadius: 3, borderWidth: 2.5, order: 2
     });
+    datasets.push({
+        label: `${label} P10`, data: fanData.p10,
+        borderColor: `rgba(${r},${g},${b},0.25)`, backgroundColor: 'transparent',
+        fill: false, pointRadius: 0, borderWidth: 1, borderDash: [4, 4], order: 8
+    });
 
-    // Active overlay
-    if (showActiveQT && activeData) {
-        const af = activeData.fan;
-        // Active fan bands (green tones)
+    // Min/Max whiskers
+    if (fanData.min && fanData.max) {
         datasets.push({
-            label: 'Active P75', data: af.p75, borderColor: 'rgba(5,150,105,0.3)', backgroundColor: 'rgba(5,150,105,0.1)',
-            fill: '+1', pointRadius: 0, borderWidth: 1, order: 5
+            label: `${label} Max`, data: fanData.max,
+            borderColor: `rgba(${r},${g},${b},0.1)`, backgroundColor: 'transparent',
+            fill: false, pointRadius: 0, borderWidth: 0.5, borderDash: [2, 4], order: 9
         });
         datasets.push({
-            label: 'Active P25', data: af.p25, borderColor: 'rgba(5,150,105,0.3)', backgroundColor: 'transparent',
-            fill: false, pointRadius: 0, borderWidth: 1, order: 5
-        });
-        // Active median
-        datasets.push({
-            label: 'Active Median', data: af.p50,
-            borderColor: '#059669', backgroundColor: 'transparent',
-            fill: false, pointRadius: 4, borderWidth: 2.5, order: 1, pointStyle: 'rectRot'
+            label: `${label} Min`, data: fanData.min,
+            borderColor: `rgba(${r},${g},${b},0.1)`, backgroundColor: 'transparent',
+            fill: false, pointRadius: 0, borderWidth: 0.5, borderDash: [2, 4], order: 9
         });
     }
+    return datasets;
+}
 
-    // AT trajectory overlay (from 2023 baseline)
-    if (co.target) {
+function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)] : [99, 102, 241];
+}
+
+function updateFanCharts() {
+    const fanData = getActiveFanData();
+
+    // Emissions fan
+    updateSingleFanChart('emissionsFanChart', 'emFanChart', fanData,
+        'emissions', 'active_emissions', 'CO2 Emissions (Mt)', 'emFanTitle', 'Fleet Emissions');
+
+    // Profit fan
+    updateSingleFanChart('profitFanChart', 'profFanChart', fanData,
+        'profit', 'active_profit', 'Fleet Profit ($M/yr)', 'profFanTitle', 'Fleet Profit');
+
+    // Operating MW
+    updateSingleFanChart('opMwChart', 'opMwChart', fanData,
+        'operating_mw', null, 'Operating Capacity (MW)', null, null);
+
+    // Stranded MW
+    updateSingleFanChart('strandMwChart', 'strandMwChart', fanData,
+        'stranded_mw', null, 'Stranded Capacity (MW)', null, null);
+
+    updateFanNarrative(fanData);
+}
+
+function updateSingleFanChart(canvasId, chartVarName, fanData, passiveKey, activeKey, yLabel, titleElId, titleBase) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+
+    const passive = fanData[passiveKey];
+    const active = activeKey ? fanData[activeKey] : null;
+    const datasets = [];
+
+    if (passive) {
+        datasets.push(...buildFanDatasets(passive, 'Passive', '#6366F1'));
+    }
+
+    if (showActive && active) {
+        datasets.push(...buildFanDatasets(active, 'Active', '#059669'));
+    }
+
+    // AT trajectory overlay for emissions charts
+    if (passiveKey === 'emissions' || passiveKey === 'active_emissions') {
+        const co = DATA.companies[activeCompany];
         const co2_base = co.co2_2023_mt || co.co2_2024_mt;
-        // Years: 2023, 2030, 2035, 2040, 2045, 2050
-        // Remaining: 100%, 43%, 18%, 12%, 6%, 0%
         const atRemaining = [1.0, 0.43, 0.18, 0.12, 0.06, 0.0];
         const atEmissions = atRemaining.map(r => Math.max(0, co2_base * r));
         datasets.push({
@@ -529,145 +582,45 @@ function updateFanCharts() {
         });
     }
 
-    // R1/R2 overlays
-    ['R1', 'R2'].forEach(s => {
-        const sd = co.scenarios[s];
-        if (sd) {
-            datasets.push({
-                label: SCENARIO_LABELS[s], data: sd.fleet_emissions_mt,
-                borderColor: SCENARIO_COLORS[s], backgroundColor: 'transparent',
-                fill: false, pointRadius: 2, borderWidth: 1.5, borderDash: [6, 3], order: 3
-            });
-        }
-    });
+    if (titleElId) {
+        const mode = showActive ? ' (Passive + Active)' : ' (Passive)';
+        document.getElementById(titleElId).textContent = (titleBase || '') + mode;
+    }
 
-    if (emissionsFanChart) emissionsFanChart.destroy();
-    emissionsFanChart = new Chart(document.getElementById('emissionsFanChart'), {
+    // Destroy and recreate
+    const existingChart = Chart.getChart(canvas);
+    if (existingChart) existingChart.destroy();
+
+    new Chart(canvas, {
         type: 'line',
-        data: { labels: years, datasets },
+        data: { labels: YEARS, datasets },
         options: {
             responsive: true, maintainAspectRatio: false,
             scales: {
                 x: { grid: { display: false }, ticks: { font: { family: 'Space Mono', size: 11 } } },
-                y: { title: { display: true, text: 'CO₂ Emissions (Mt)', font: { family: 'Space Grotesk', size: 12 } },
-                     beginAtZero: true, ticks: { font: { family: 'Space Mono', size: 11 } } }
-            },
-            plugins: {
-                legend: { display: true, position: 'bottom', labels: {
-                    font: { family: 'Space Grotesk', size: 10 }, padding: 12,
-                    filter: item => !item.text.includes('P95') && !item.text.includes('P75') && !item.text.includes('P25') && !item.text.includes('P5') && !item.text.includes('Max') && !item.text.includes('Min')
-                }},
-                tooltip: { mode: 'index', intersect: false,
-                    filter: item => !/P[0-9]|Max|Min/.test(item.dataset.label)
+                y: {
+                    title: { display: true, text: yLabel, font: { family: 'Space Grotesk', size: 12 } },
+                    beginAtZero: passiveKey !== 'profit' && passiveKey !== 'active_profit',
+                    ticks: { font: { family: 'Space Mono', size: 11 },
+                        callback: v => passiveKey.includes('profit') ? '$' + v.toLocaleString() : v.toLocaleString()
+                    }
                 }
-            },
-            interaction: { mode: 'index', intersect: false }
-        }
-    });
-
-    // Profit chart
-    updateProfitChart();
-
-    // Deployment chart (active only)
-    if (showActiveQT) updateDeployChart();
-
-    // Update narrative
-    updateFanNarrative();
-}
-
-function updateProfitChart() {
-    const co = DATA.companies[activeCompany];
-    const years = [2023, 2030, 2035, 2040, 2045, 2050];
-    const datasets = [];
-
-    // Get QT profit fan data (if available from updated step11)
-    const passiveQt = co.qt_analysis[activeQT];
-    const activeQt = co.active_qt_analysis ? co.active_qt_analysis[activeQT] : null;
-
-    if (passiveQt && passiveQt.profit_fan) {
-        const pf = passiveQt.profit_fan;
-        // Passive P25-P75 band
-        datasets.push({
-            label: 'Passive P75', data: pf.p75,
-            borderColor: 'rgba(99,102,241,0.35)', backgroundColor: 'rgba(99,102,241,0.12)',
-            fill: '+1', pointRadius: 0, borderWidth: 1, order: 6
-        });
-        datasets.push({
-            label: 'Passive P25', data: pf.p25,
-            borderColor: 'rgba(99,102,241,0.35)', backgroundColor: 'transparent',
-            fill: false, pointRadius: 0, borderWidth: 1, order: 6
-        });
-        // Passive median
-        datasets.push({
-            label: 'Passive Median', data: pf.p50,
-            borderColor: '#6366F1', backgroundColor: 'transparent',
-            fill: false, pointRadius: 3, borderWidth: 2.5, order: 2
-        });
-
-        // Active profit fan (when toggled)
-        if (showActiveQT && activeQt && activeQt.profit_fan) {
-            const af = activeQt.profit_fan;
-            datasets.push({
-                label: 'Active P75', data: af.p75,
-                borderColor: 'rgba(5,150,105,0.3)', backgroundColor: 'rgba(5,150,105,0.1)',
-                fill: '+1', pointRadius: 0, borderWidth: 1, order: 5
-            });
-            datasets.push({
-                label: 'Active P25', data: af.p25,
-                borderColor: 'rgba(5,150,105,0.3)', backgroundColor: 'transparent',
-                fill: false, pointRadius: 0, borderWidth: 1, order: 5
-            });
-            datasets.push({
-                label: 'Active Median', data: af.p50,
-                borderColor: '#059669', backgroundColor: 'transparent',
-                fill: false, pointRadius: 4, borderWidth: 2.5, order: 1, pointStyle: 'rectRot'
-            });
-        }
-    } else {
-        // Fallback: show all base scenario lines (pre-profit_fan data)
-        SCENARIOS.forEach(s => {
-            const sd = co.scenarios[s];
-            if (!sd) return;
-            datasets.push({
-                label: SCENARIO_LABELS[s], data: sd.fleet_profit_m,
-                borderColor: SCENARIO_COLORS[s], backgroundColor: SCENARIO_COLORS[s] + '20',
-                fill: false, pointRadius: 3, borderWidth: 2
-            });
-        });
-    }
-
-    // R1/R2 reference overlays (always shown)
-    if (passiveQt && passiveQt.profit_fan) {
-        ['R1', 'R2'].forEach(s => {
-            const sd = co.scenarios[s];
-            if (!sd) return;
-            datasets.push({
-                label: SCENARIO_LABELS[s], data: sd.fleet_profit_m,
-                borderColor: SCENARIO_COLORS[s], backgroundColor: 'transparent',
-                fill: false, pointRadius: 2, borderWidth: 1.5, borderDash: [6, 3], order: 3
-            });
-        });
-    }
-
-    if (profitChart) profitChart.destroy();
-    profitChart = new Chart(document.getElementById('profitChart'), {
-        type: 'line',
-        data: { labels: years, datasets },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            scales: {
-                x: { grid: { display: false }, ticks: { font: { family: 'Space Mono', size: 11 } } },
-                y: { title: { display: true, text: 'Fleet Profit ($M/yr)', font: { family: 'Space Grotesk', size: 12 } },
-                     ticks: { font: { family: 'Space Mono', size: 11 }, callback: v => '$' + v.toLocaleString() } }
             },
             plugins: {
                 legend: { display: true, position: 'bottom', labels: {
                     font: { family: 'Space Grotesk', size: 10 }, padding: 8,
-                    filter: item => !/P[0-9]|Max|Min/.test(item.text)
+                    filter: item => item.text.includes('P50') || item.text === 'AT Trajectory'
                 }},
-                tooltip: { mode: 'index', intersect: false,
-                    filter: item => !/P[0-9]|Max|Min/.test(item.dataset.label),
-                    callbacks: { label: ctx => `${ctx.dataset.label}: $${ctx.parsed.y.toLocaleString()}M` }
+                tooltip: {
+                    mode: 'index', intersect: false,
+                    filter: item => item.dataset.label.includes('P50') || item.dataset.label === 'AT Trajectory',
+                    callbacks: {
+                        label: ctx => {
+                            const v = ctx.parsed.y;
+                            const formatted = passiveKey.includes('profit') ? `$${v.toLocaleString()}M` : `${v.toFixed(1)}`;
+                            return `${ctx.dataset.label}: ${formatted}`;
+                        }
+                    }
                 }
             },
             interaction: { mode: 'index', intersect: false }
@@ -675,339 +628,116 @@ function updateProfitChart() {
     });
 }
 
-function updateFanNarrative() {
+function updateFanNarrative(fanData) {
     const co = DATA.companies[activeCompany];
-    const passiveQt = co.qt_analysis[activeQT];
-    const activeQt = co.active_qt_analysis ? co.active_qt_analysis[activeQT] : null;
-    const co2_base = co.co2_2023_mt || co.co2_2024_mt;
+    const co2_base = co.co2_2023_mt;
 
-    const pFan = passiveQt.fan;
-    const pBqt = passiveQt.breakeven_qt;
-    const pP50 = pFan.p50[pFan.p50.length - 1];
-    const pReduction = ((co2_base - pP50) / co2_base * 100).toFixed(0);
+    const em = fanData.emissions;
+    if (!em || !em.p50 || em.p50.length === 0) {
+        document.getElementById('fanNarrativeText').innerHTML = 'No data available for this selection.';
+        return;
+    }
 
-    let text = `<strong>Passive QT</strong>: Under <strong>${QT_LABELS[activeQT]}</strong>, ${co.name}'s existing fleet achieves `;
-    text += `<strong>${pReduction}% emission reduction</strong> by 2050 (from ${co2_base.toFixed(1)} Mt in 2023 → ${pP50.toFixed(1)} Mt). `;
-    text += `Breakeven QT: <strong>${(pBqt * 100).toFixed(0)}%</strong>.`;
+    const p50_2050 = em.p50[em.p50.length - 1];
+    const p10_2050 = em.p10[em.p10.length - 1];
+    const p90_2050 = em.p90[em.p90.length - 1];
+    const reduction = ((co2_base - p50_2050) / co2_base * 100).toFixed(0);
 
-    if (activeQt) {
-        const aFan = activeQt.fan;
-        const aBqt = activeQt.breakeven_qt;
-        const aP50 = aFan.p50[aFan.p50.length - 1];
-        const aReduction = ((co2_base - aP50) / co2_base * 100).toFixed(0);
+    let text = `<strong>${co.name}</strong>: Across 270 scenarios, 2050 emissions range from `;
+    text += `<strong>${p10_2050.toFixed(1)} Mt</strong> (P10, best case) to `;
+    text += `<strong>${p90_2050.toFixed(1)} Mt</strong> (P90, worst case), `;
+    text += `with a median of <strong>${p50_2050.toFixed(1)} Mt</strong> (${reduction}% reduction from 2023 baseline).`;
 
-        text += `<br><br><strong>Active QT</strong>: With new clean deployment (solar + wind + battery), emissions drop to `;
-        text += `<strong>${aP50.toFixed(1)} Mt</strong> by 2050 (<strong>${aReduction}% reduction</strong>). `;
-        text += `Active breakeven QT: <strong>${(aBqt * 100).toFixed(0)}%</strong>. `;
+    if (showActive && fanData.active_emissions) {
+        const ae = fanData.active_emissions;
+        const ap50 = ae.p50[ae.p50.length - 1];
+        const activeReduction = ((co2_base - ap50) / co2_base * 100).toFixed(0);
+        text += `<br><br>With active clean deployment: median drops to <strong>${ap50.toFixed(1)} Mt</strong> (${activeReduction}% reduction).`;
+    }
 
-        if (aBqt < pBqt) {
-            text += `The lower active QT (${(aBqt * 100).toFixed(0)}% vs ${(pBqt * 100).toFixed(0)}% passive) reflects the cost of new clean investment — `;
-            text += `the fleet is more decarbonized but the investment cost shifts the economic breakeven.`;
-        } else {
-            text += `Active deployment maintains the same breakeven while delivering deeper emission cuts.`;
-        }
+    const activeFilterDesc = Object.entries(dimFilters).map(([dim, val]) => {
+        const labels = DIM_LABELS[dim] || {};
+        return `${dim.replace('_', ' ')}: ${labels[val] || val}`;
+    }).join(', ');
+    if (activeFilterDesc) {
+        text += `<br><em>Filtered by: ${activeFilterDesc}</em>`;
     }
 
     document.getElementById('fanNarrativeText').innerHTML = text;
 }
 
-function updateDeployChart() {
+// ─── BREAKEVEN ANALYSIS ─────────────────────────────────────────
+function updateBreakeven() {
     const co = DATA.companies[activeCompany];
-    const activeQt = co.active_qt_analysis ? co.active_qt_analysis[activeQT] : null;
-    if (!activeQt || !activeQt.deployment_timeline) return;
-
-    const timeline = activeQt.deployment_timeline;
-    const years = Object.keys(timeline).sort().map(Number);
-    const solarMW = years.map(y => (timeline[String(y)].deployment.solar || 0));
-    const windMW = years.map(y => (timeline[String(y)].deployment.wind || 0));
-    const batteryMW = years.map(y => (timeline[String(y)].deployment.battery || 0));
-
-    if (deployChart) deployChart.destroy();
-    deployChart = new Chart(document.getElementById('deployChart'), {
-        type: 'bar',
-        data: {
-            labels: years,
-            datasets: [
-                { label: 'Solar', data: solarMW, backgroundColor: RESOURCE_COLORS.solar, stack: 'stack0' },
-                { label: 'Wind', data: windMW, backgroundColor: RESOURCE_COLORS.wind, stack: 'stack0' },
-                { label: 'Battery', data: batteryMW, backgroundColor: RESOURCE_COLORS.battery, stack: 'stack0' },
-            ]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            scales: {
-                x: { stacked: true, grid: { display: false }, ticks: { font: { family: 'Space Mono', size: 11 } } },
-                y: { stacked: true, title: { display: true, text: 'Cumulative New Capacity (MW)', font: { family: 'Space Grotesk', size: 12 } },
-                     ticks: { font: { family: 'Space Mono', size: 11 }, callback: v => v.toLocaleString() } }
-            },
-            plugins: {
-                legend: { position: 'bottom', labels: { font: { family: 'Space Grotesk', size: 11 }, padding: 12 } },
-                tooltip: { callbacks: {
-                    afterBody: (items) => {
-                        const yr = String(items[0].label);
-                        const d = timeline[yr];
-                        if (!d) return '';
-                        return `\nNew gen: ${d.new_gen_twh} TWh\nDeploy cost: $${d.deploy_cost_m}M\nNew revenue: $${d.new_revenue_m}M\nEmission reduction: ${d.em_reduction_mt} Mt`;
-                    }
-                }}
-            }
-        }
-    });
-}
-
-// ─── AT-QT GAP ─────────────────────────────────────────────────
-function updateGapAnalysis() {
-    const co = DATA.companies[activeCompany];
-    const gapData = co.at_qt_gap[activeQT];
-    if (!gapData) {
-        document.getElementById('gapGrid').innerHTML = '<p>No gap data available for this scenario.</p>';
-        return;
-    }
-
-    const milestones = gapData.milestones;
-    const grid = document.getElementById('gapGrid');
+    const be = co.breakeven || {};
+    const grid = document.getElementById('breakevenGrid');
     grid.innerHTML = '';
 
-    const years = Object.keys(milestones).sort();
-    years.forEach(year => {
-        const m = milestones[year];
-        const passiveGap = m.passive_gap_mt;
-        const activeGap = m.active_gap_mt;
+    const dimNames = {
+        conditions: 'Market Conditions',
+        demand_growth: 'Demand Growth',
+        price_sens: 'Price Sensitivity',
+        ppa_level: 'PPA Level',
+        gas_friction: 'Gas Friction',
+    };
+
+    let bestDim = '', bestVal = '', bestPct = 0;
+    let worstDim = '', worstVal = '', worstPct = 100;
+
+    for (const [dim, values] of Object.entries(be)) {
         const card = document.createElement('div');
-        card.className = 'gap-card';
+        card.className = 'breakeven-card';
+        const labels = DIM_LABELS[dim] || {};
 
-        let gapHtml;
-        if (showActiveQT) {
-            const activeClass = activeGap > 0 ? 'gap-open' : 'gap-closed';
-            gapHtml = `<div class="gap-val ${activeClass}">${activeGap > 0 ? activeGap.toFixed(1) + ' Mt' : 'Closed'}</div>`;
-            if (passiveGap > 0 && activeGap < passiveGap) {
-                gapHtml += `<div style="font-size:0.68rem;color:var(--green);margin-top:2px;">↓ ${(passiveGap - activeGap).toFixed(1)} Mt from passive</div>`;
-            }
-            gapHtml += `<div class="gap-label">AT: ${m.at_target_mt.toFixed(1)} → Active: ${m.active_qt_mt.toFixed(1)} Mt</div>`;
-        } else {
-            const passiveClass = passiveGap > 0 ? 'gap-open' : 'gap-closed';
-            gapHtml = `<div class="gap-val ${passiveClass}">${passiveGap > 0 ? passiveGap.toFixed(1) + ' Mt' : 'Closed'}</div>`;
-            gapHtml += `<div class="gap-label">AT: ${m.at_target_mt.toFixed(1)} → Passive: ${m.passive_qt_mt.toFixed(1)} Mt</div>`;
+        let rows = '';
+        for (const [val, info] of Object.entries(values)) {
+            const pct = info.profitable_pct;
+            const colorClass = pct >= 80 ? 'breakeven-profitable' : pct >= 40 ? 'breakeven-mixed' : 'breakeven-unprofitable';
+            rows += `<div class="breakeven-row"><span class="label">${labels[val] || val}</span><span class="value ${colorClass}">${pct.toFixed(0)}% profitable</span></div>`;
+            rows += `<div class="breakeven-row" style="font-size:0.7rem;"><span class="label" style="padding-left:12px;">Avg profit $${info.avg_profit_2050.toFixed(0)}M | Emissions ${info.avg_emissions_2050.toFixed(1)} Mt</span></div>`;
+
+            if (pct > bestPct) { bestPct = pct; bestVal = labels[val] || val; bestDim = dimNames[dim] || dim; }
+            if (pct < worstPct) { worstPct = pct; worstVal = labels[val] || val; worstDim = dimNames[dim] || dim; }
         }
 
-        card.innerHTML = `<div class="gap-scenario">${year}</div>${gapHtml}`;
+        card.innerHTML = `<h4>${dimNames[dim] || dim}</h4>${rows}`;
         grid.appendChild(card);
-    });
-
-    // Gap chart — show AT, passive QT, and (optionally) active QT
-    const gapYears = years.map(Number);
-    const atLine = years.map(y => milestones[y].at_target_mt);
-    const passiveLine = years.map(y => milestones[y].passive_qt_mt);
-    const activeLine = years.map(y => milestones[y].active_qt_mt);
-
-    const datasets = [
-        {
-            label: 'AT Target', data: atLine,
-            borderColor: '#EF4444', backgroundColor: 'rgba(239,68,68,0.08)',
-            fill: '+1', pointRadius: 4, borderWidth: 2.5, borderDash: [8, 4], pointStyle: 'triangle'
-        },
-        {
-            label: 'Passive QT', data: passiveLine,
-            borderColor: '#6366F1', backgroundColor: 'transparent',
-            fill: false, pointRadius: 4, borderWidth: 2.5
-        }
-    ];
-
-    if (showActiveQT) {
-        datasets.push({
-            label: 'Active QT', data: activeLine,
-            borderColor: '#22C55E', backgroundColor: 'transparent',
-            fill: false, pointRadius: 5, borderWidth: 2.5, pointStyle: 'rectRot'
-        });
     }
 
-    if (gapChart) gapChart.destroy();
-    gapChart = new Chart(document.getElementById('gapChart'), {
-        type: 'line',
-        data: { labels: gapYears, datasets },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            scales: {
-                x: { grid: { display: false }, ticks: { font: { family: 'Space Mono', size: 11 } } },
-                y: { title: { display: true, text: 'CO₂ Emissions (Mt)', font: { family: 'Space Grotesk', size: 12 } },
-                     beginAtZero: true, ticks: { font: { family: 'Space Mono', size: 11 } } }
-            },
-            plugins: {
-                legend: { display: true, position: 'bottom', labels: { font: { family: 'Space Grotesk', size: 11 }, padding: 12 } },
-                tooltip: { mode: 'index', intersect: false },
-                annotation: { annotations: buildGapAnnotations(years, milestones) }
-            },
-            interaction: { mode: 'index', intersect: false }
-        }
-    });
-
-    updateGapNarrative(co, gapData, milestones);
+    // Narrative
+    let text = `The most favorable dimension is <strong>${bestDim}: ${bestVal}</strong> (${bestPct.toFixed(0)}% of scenarios profitable). `;
+    text += `The most challenging is <strong>${worstDim}: ${worstVal}</strong> (${worstPct.toFixed(0)}% profitable). `;
+    text += `This shows which market conditions are most critical for fleet survival vs. stranding risk.`;
+    document.getElementById('breakevenNarrativeText').innerHTML = text;
 }
 
-function buildGapAnnotations(years, milestones) {
-    const annotations = {};
-    const gapKey = showActiveQT ? 'active_gap_mt' : 'passive_gap_mt';
-    const qtKey = showActiveQT ? 'active_qt_mt' : 'passive_qt_mt';
-    years.forEach((year, i) => {
-        const m = milestones[year];
-        if (m[gapKey] > 0) {
-            annotations['gap' + i] = {
-                type: 'box', xMin: i - 0.15, xMax: i + 0.15,
-                yMin: Math.min(m.at_target_mt, m[qtKey]),
-                yMax: Math.max(m.at_target_mt, m[qtKey]),
-                backgroundColor: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.3)', borderWidth: 1
-            };
-        }
-    });
-    return annotations;
-}
-
-function updateGapNarrative(co, gapData, milestones) {
-    const years = Object.keys(milestones).sort();
-    const gapKey = showActiveQT ? 'active_gap_mt' : 'passive_gap_mt';
-    const gapYears = years.filter(y => milestones[y][gapKey] > 0);
-    const maxGap = Math.max(...years.map(y => milestones[y][gapKey]));
-    const maxGapYear = years.find(y => milestones[y][gapKey] === maxGap);
-
-    const passiveGapYears = years.filter(y => milestones[y].passive_gap_mt > 0);
-    const activeGapYears = years.filter(y => milestones[y].active_gap_mt > 0);
-
-    let text = '';
-    if (gapYears.length === 0) {
-        const qtPct = showActiveQT ? gapData.active_qt_pct : gapData.passive_qt_pct;
-        const mode = showActiveQT ? 'active' : 'passive';
-        text = `<strong>${co.name}'s fleet meets or exceeds all AT milestones</strong> under the ${mode} strategy. `;
-        text += `QT breakeven: <strong>${qtPct.toFixed(0)}%</strong>. `;
-        if (showActiveQT && passiveGapYears.length > 0) {
-            text += `Active clean deployment closes the gap that exists under passive-only (gap years: ${passiveGapYears.join(', ')}).`;
-        } else {
-            text += `No additional enabling conditions needed beyond market forces.`;
-        }
-    } else {
-        text = `The AT-QT gap opens from <strong>${gapYears[0]}</strong>, peaking at <strong>${maxGap.toFixed(1)} Mt</strong> in ${maxGapYear}. `;
-
-        if (showActiveQT && passiveGapYears.length > gapYears.length) {
-            text += `Active deployment partially closes the gap (${passiveGapYears.length} → ${gapYears.length} gap years). `;
-        }
-
-        text += `To close the remaining gap:`;
-        text += `<ul>`;
-        text += `<li><strong>Policy</strong>: Extended PTCs, carbon pricing, emission performance standards</li>`;
-        text += `<li><strong>Technology</strong>: Faster CCS/LDES/advanced nuclear learning curves</li>`;
-        text += `<li><strong>Corporate procurement</strong>: Voluntary PPA demand (not yet modeled)</li>`;
-        text += `<li><strong>Market reform</strong>: Capacity markets valuing clean firm attributes</li>`;
-        text += `</ul>`;
-        text += `<em>Note: Corporate CCS demand and voluntary PPAs would further narrow the gap.</em>`;
-    }
-
-    document.getElementById('gapNarrativeText').innerHTML = text;
-}
-
-// ─── PLANT-LEVEL DETAIL ────────────────────────────────────────
-function updatePlantDetail() {
-    const co = DATA.companies[activeCompany];
-    const scenario = co.scenarios[activeScenario];
-    if (!scenario) return;
-
-    const years = scenario.years;
-    const lastIdx = years.length - 1;
-
-    document.getElementById('plantTableTitle').textContent = `Plant Economics (${years[lastIdx]}) — ${SCENARIO_LABELS[activeScenario]}`;
-
-    // Status stack chart
-    const operating = scenario.operating_mw;
-    const stranded = scenario.stranded_mw;
-    const retired = scenario.retired_mw;
-
-    if (statusStackChart) statusStackChart.destroy();
-    statusStackChart = new Chart(document.getElementById('statusStackChart'), {
-        type: 'bar',
-        data: {
-            labels: years,
-            datasets: [
-                { label: 'Operating', data: operating, backgroundColor: '#22C55E', stack: 'stack0' },
-                { label: 'Stranded', data: stranded, backgroundColor: '#F59E0B', stack: 'stack0' },
-                { label: 'Retired', data: retired, backgroundColor: '#EF4444', stack: 'stack0' },
-            ]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            scales: {
-                x: { stacked: true, grid: { display: false }, ticks: { font: { family: 'Space Mono', size: 11 } } },
-                y: { stacked: true, title: { display: true, text: 'Capacity (MW)', font: { family: 'Space Grotesk', size: 12 } },
-                     ticks: { font: { family: 'Space Mono', size: 11 }, callback: v => v.toLocaleString() } }
-            },
-            plugins: {
-                legend: { position: 'bottom', labels: { font: { family: 'Space Grotesk', size: 11 }, padding: 12 } },
-                tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()} MW` } }
-            }
-        }
-    });
-
-    // Plant table
-    const tbody = document.querySelector('#plantTable tbody');
-    tbody.innerHTML = '';
-
-    const plants = scenario.plants;
-    const sorted = Object.entries(plants).sort((a, b) => {
-        const order = { operating: 0, marginal: 1, stranded: 2, retired: 3 };
-        return (order[a[1].status[lastIdx]] || 3) - (order[b[1].status[lastIdx]] || 3);
-    });
-
-    sorted.forEach(([name, plant]) => {
-        const tr = document.createElement('tr');
-        const status = plant.status[lastIdx];
-        const statusClass = `status-${status}`;
-        const cf = plant.cf[lastIdx];
-        const gen = plant.gen_twh[lastIdx];
-        const co2 = plant.co2_mt[lastIdx];
-        const profit = plant.profit_m[lastIdx];
-        const reason = plant.reason ? plant.reason[lastIdx] : '';
-
-        tr.innerHTML = `
-            <td style="font-weight:600;">${name}</td>
-            <td>${plant.iso}</td>
-            <td>${fuelLabel(plant.fuel)}</td>
-            <td>${plant.cap_mw.toLocaleString()}</td>
-            <td class="${statusClass}">${status.charAt(0).toUpperCase() + status.slice(1)}</td>
-            <td>${(cf * 100).toFixed(1)}</td>
-            <td>${gen.toFixed(2)}</td>
-            <td>${co2.toFixed(2)}</td>
-            <td style="color:${profit >= 0 ? 'var(--green)' : 'var(--red)'}">$${profit.toFixed(1)}</td>
-            <td style="font-size:0.68rem;color:var(--text-dim);max-width:200px;">${reason || '—'}</td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
-// ─── CROSS-COMPANY COMPARISON ──────────────────────────────────
+// ─── CROSS-COMPANY COMPARISON ───────────────────────────────────
 function updateComparison() {
     const grid = document.getElementById('compareGrid');
     grid.innerHTML = '';
 
     COMPANIES.forEach(key => {
         const co = DATA.companies[key];
-        const sd = co.scenarios[activeScenario];
-        if (!sd) return;
+        const fans = co.fan_bands || {};
+        const fb = fans[activeSweep] || fans['all'] || {};
+        const em = fb.emissions || {};
+        const pr = fb.profit || {};
 
-        const lastIdx = sd.years.length - 1;
-        const emissions2050 = sd.fleet_emissions_mt[lastIdx];
-        const profit2050 = sd.fleet_profit_m[lastIdx];
-        const operating2050 = sd.operating_mw[lastIdx];
-        const retired2050 = sd.retired_mw[lastIdx];
-        const co2_baseline = co.co2_2024_mt;
-        const reduction = ((co2_baseline - emissions2050) / co2_baseline * 100).toFixed(0);
+        const p50em = em.p50 ? em.p50[em.p50.length - 1] : '?';
+        const p50pr = pr.p50 ? pr.p50[pr.p50.length - 1] : '?';
+        const p10em = em.p10 ? em.p10[em.p10.length - 1] : '?';
+        const p90em = em.p90 ? em.p90[em.p90.length - 1] : '?';
+        const reduction = typeof p50em === 'number' ? ((co.co2_2023_mt - p50em) / co.co2_2023_mt * 100).toFixed(0) : '?';
 
         const card = document.createElement('div');
         card.className = 'cmp-company';
         if (key === activeCompany) card.style.borderColor = 'var(--accent)';
         card.innerHTML = `
             <h3>${co.shortName || co.name}</h3>
-            <div class="cmp-metric"><span class="label">2050 Emissions</span><span class="value">${emissions2050.toFixed(1)} Mt</span></div>
-            <div class="cmp-metric"><span class="label">Reduction from 2024</span><span class="value">${reduction}%</span></div>
-            <div class="cmp-metric"><span class="label">2050 Fleet Profit</span><span class="value" style="color:${profit2050 >= 0 ? 'var(--green)' : 'var(--red)'}">$${profit2050.toLocaleString()}M</span></div>
-            <div class="cmp-metric"><span class="label">Operating Capacity</span><span class="value">${(operating2050/1000).toFixed(1)} GW</span></div>
-            <div class="cmp-metric"><span class="label">Retired Capacity</span><span class="value" style="color:var(--red)">${(retired2050/1000).toFixed(1)} GW</span></div>
+            <div class="cmp-metric"><span class="label">2050 Emissions (P50)</span><span class="value">${typeof p50em === 'number' ? p50em.toFixed(1) + ' Mt' : p50em}</span></div>
+            <div class="cmp-metric"><span class="label">Emissions Range</span><span class="value">${typeof p10em === 'number' ? p10em.toFixed(1) : p10em} - ${typeof p90em === 'number' ? p90em.toFixed(1) : p90em} Mt</span></div>
+            <div class="cmp-metric"><span class="label">Reduction from 2023</span><span class="value">${reduction}%</span></div>
+            <div class="cmp-metric"><span class="label">2050 Profit (P50)</span><span class="value" style="color:${typeof p50pr === 'number' && p50pr >= 0 ? 'var(--green)' : 'var(--red)'}">$${typeof p50pr === 'number' ? p50pr.toLocaleString() : p50pr}M</span></div>
         `;
         grid.appendChild(card);
     });
@@ -1018,50 +748,32 @@ function updateComparison() {
 function updateCompareNarrative() {
     const results = COMPANIES.map(key => {
         const co = DATA.companies[key];
-        const sd = co.scenarios[activeScenario];
-        const lastIdx = sd.years.length - 1;
-        return {
-            name: co.shortName || co.name,
-            emissions: sd.fleet_emissions_mt[lastIdx],
-            profit: sd.fleet_profit_m[lastIdx],
-            baseline: co.co2_2024_mt,
-            reduction: (co.co2_2024_mt - sd.fleet_emissions_mt[lastIdx]) / co.co2_2024_mt * 100
-        };
+        const fans = co.fan_bands || {};
+        const fb = fans[activeSweep] || fans['all'] || {};
+        const em = fb.emissions || {};
+        const pr = fb.profit || {};
+        const p50em = em.p50 ? em.p50[em.p50.length - 1] : 999;
+        const p50pr = pr.p50 ? pr.p50[pr.p50.length - 1] : 0;
+        return { name: co.shortName || co.name, emissions: p50em, profit: p50pr, baseline: co.co2_2023_mt,
+                 reduction: (co.co2_2023_mt - p50em) / co.co2_2023_mt * 100 };
     });
 
     const bestReducer = results.reduce((a, b) => a.reduction > b.reduction ? a : b);
     const mostProfitable = results.reduce((a, b) => a.profit > b.profit ? a : b);
 
-    let text = `Under <strong>${SCENARIO_LABELS[activeScenario]}</strong>: `;
-    text += `<strong>${bestReducer.name}</strong> achieves the deepest emission reduction (${bestReducer.reduction.toFixed(0)}%), `;
-    text += `while <strong>${mostProfitable.name}</strong> maintains the highest fleet profitability ($${mostProfitable.profit.toLocaleString()}M). `;
-
-    const nuclearHeavy = results.find(r => {
-        const co = DATA.companies[COMPANIES.find(k => (DATA.companies[k].shortName || DATA.companies[k].name) === r.name)];
-        return co && co.fleet_summary && Object.values(co.fleet_summary).some(fuels => fuels.nuclear && fuels.nuclear.cap_mw > 5000);
-    });
-    if (nuclearHeavy) {
-        text += `Companies with large nuclear fleets have a structural advantage in emission reduction without stranding risk.`;
-    }
+    let text = `Under <strong>${SWEEP_LABELS[activeSweep] || activeSweep}</strong>: `;
+    text += `<strong>${bestReducer.name}</strong> achieves the deepest emission reduction (${bestReducer.reduction.toFixed(0)}% from 2023), `;
+    text += `while <strong>${mostProfitable.name}</strong> maintains the highest median fleet profitability ($${mostProfitable.profit.toLocaleString()}M).`;
 
     document.getElementById('compareNarrativeText').innerHTML = text;
 }
 
-// ─── UPDATE ALL ────────────────────────────────────────────────
+// ─── UPDATE ALL ─────────────────────────────────────────────────
 function updateAll() {
     updateOverview();
     updateFanCharts();
-    updateGapAnalysis();
-    updatePlantDetail();
+    updateBreakeven();
     updateComparison();
-}
-
-// ─── INIT ──────────────────────────────────────────────────────
-function init() {
-    initCompanyTabs();
-    initScenarioSelect();
-    initQTSelector();
-    updateAll();
 }
 
 document.addEventListener('DOMContentLoaded', init);
