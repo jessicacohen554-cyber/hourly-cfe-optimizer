@@ -525,12 +525,13 @@ _COL_OSW_NEW   = 3  # new offshore wind (LCOE + tx) — offshore ISOs only, 0 el
 _COL_CCS_NEW   = 4  # new CCS-CCGT standalone (LCOE + tx)
 _COL_UPRATE    = 5  # nuclear uprate tranche
 _COL_GEO       = 6  # geothermal tranche (CAISO only, 0 elsewhere)
-_COL_REMAINING = 7  # tranche 3: min(nuclear, CCS) new-build
-_COL_BAT4      = 8  # 4hr battery dispatch
-_COL_BAT8      = 9  # 8hr battery dispatch
-_COL_LDES      = 10 # LDES dispatch
-_COL_H2        = 11 # Green H2 seasonal storage dispatch
-_N_COEFFS = 12
+_COL_REMAINING = 7  # tranche 3: CCS-capped portion — min(nuclear, CCS) new-build
+_COL_REMAINING_NUC = 8  # tranche 3: nuclear overflow when remaining exceeds CCS cap
+_COL_BAT4      = 9  # 4hr battery dispatch
+_COL_BAT8      = 10 # 8hr battery dispatch
+_COL_LDES      = 11 # LDES dispatch
+_COL_H2        = 12 # Green H2 seasonal storage dispatch
+_N_COEFFS = 13
 
 
 def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_override=None,
@@ -549,7 +550,7 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
             keeps hydro at existing share, zeros everything else.
 
     Returns:
-        coeff_matrix: (N, 12) float64 — multiply by scenario prices
+        coeff_matrix: (N, 13) float64 — multiply by scenario prices
         constant: (N,) float64 — gas backup cost (scenario-invariant)
         extras: dict with per-element data needed for winner detail extraction
     """
@@ -670,7 +671,12 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
     coeff_matrix[:, _COL_UPRATE] = uprate_twh / demand_twh
     # Total new geothermal = physics new-build + tranche allocation (both at geo LCOE)
     coeff_matrix[:, _COL_GEO] = (geo_new_from_physics_twh + geo_tranche_twh) / demand_twh
-    coeff_matrix[:, _COL_REMAINING] = remaining_after_geo / demand_twh
+    # CCS cap enforcement: split remaining into CCS-eligible (capped) and nuclear overflow
+    ccs_cap = CCS_CAP_TWH.get(iso, 9999.0)
+    ccs_eligible_twh = np.minimum(remaining_after_geo, ccs_cap)
+    nuc_overflow_twh = np.maximum(0, remaining_after_geo - ccs_cap)
+    coeff_matrix[:, _COL_REMAINING] = ccs_eligible_twh / demand_twh
+    coeff_matrix[:, _COL_REMAINING_NUC] = nuc_overflow_twh / demand_twh
     coeff_matrix[:, _COL_BAT4] = bat_pct / 100.0
     coeff_matrix[:, _COL_BAT8] = bat8_pct / 100.0
     coeff_matrix[:, _COL_LDES] = ldes_pct / 100.0
@@ -686,6 +692,8 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
         'geo_twh': geo_new_from_physics_twh + geo_tranche_twh,
         'geo_physics_twh': geo_new_from_physics_twh,
         'remaining_twh': remaining_after_geo,
+        'ccs_eligible_twh': ccs_eligible_twh,
+        'nuc_overflow_twh': nuc_overflow_twh,
         'gas_needed_mw': gas_needed_mw,
         'existing_gas_used_mw': existing_gas_used_mw,
         'new_gas_mw': new_gas_mw,
@@ -702,10 +710,10 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
 
 
 def get_scenario_prices(iso, sens):
-    """Look up 11 scenario-dependent price scalars from sensitivity toggles.
+    """Look up 13 scenario-dependent price scalars from sensitivity toggles.
 
     Returns:
-        prices: (11,) float64 array matching coefficient column order
+        prices: (13,) float64 array matching coefficient column order
         wholesale: scalar for incremental cost calculation
         nuclear_price: scalar for tranche detail extraction
         ccs_tranche_price: scalar for tranche detail extraction
@@ -721,10 +729,16 @@ def get_scenario_prices(iso, sens):
     geo_lev = sens.get('geo')
 
     wholesale = max(5, WHOLESALE_PRICES[iso] + FUEL_ADJUSTMENTS[iso][fuel_name])
+    # NEISO winter gas pipeline constraint — wholesale adder
+    if iso == 'NEISO':
+        wholesale += NEISO_WHOLESALE_ADDER
     ccs_table = CCS_LCOE_45Q_ON if q45 == '1' else CCS_LCOE_45Q_OFF
     ccs_lcoe = ccs_table[ccs_lev][iso]
     ccs_tx = get_tx('ccs_ccgt', tx_name, iso)
     ccs_price = ccs_lcoe + ccs_tx
+    # NEISO winter gas pipeline constraint — CCS gas adder
+    if iso == 'NEISO':
+        ccs_price += NEISO_CCS_GAS_ADDER
 
     nuclear_price = NUCLEAR_NEWBUILD_LCOE[firm_lev][iso] + get_tx('clean_firm', tx_name, iso)
     remaining_price = min(nuclear_price, ccs_price)
@@ -746,6 +760,7 @@ def get_scenario_prices(iso, sens):
         UPRATE_LCOE[firm_lev],
         geo_price,
         remaining_price,
+        nuclear_price,  # _COL_REMAINING_NUC: overflow beyond CCS cap always at nuclear price
         max(0, LCOE_TABLES['battery'][batt_name][iso] + get_tx('battery', tx_name, iso) - STORAGE_REVENUE_CREDITS['battery'][iso]),
         max(0, LCOE_TABLES['battery8'][batt_name][iso] + get_tx('battery8', tx_name, iso) - STORAGE_REVENUE_CREDITS['battery8'][iso]),
         max(0, LCOE_TABLES['ldes'][ldes_name][iso] + get_tx('ldes', tx_name, iso) - STORAGE_REVENUE_CREDITS['ldes'][iso]),
@@ -878,7 +893,7 @@ def precompute_all_prices(iso, all_combos, target_year=None):
             uses static L/M/H costs from the LCOE tables.
 
     Returns:
-        price_matrix: (B, 12) float64 price vectors
+        price_matrix: (B, 13) float64 price vectors
         wholesale_arr: (B,) float64 wholesale prices
         nuclear_arr: (B,) float64 nuclear new-build prices
         ccs_arr: (B,) float64 CCS tranche prices
@@ -991,6 +1006,9 @@ def precompute_all_prices(iso, all_combos, target_year=None):
         geo_lev = sens.get('geo')
 
         wholesale = max(5, _ws_base + _fuel_adj[fuel_name])
+        # NEISO winter gas pipeline constraint — wholesale adder
+        if iso == 'NEISO':
+            wholesale += NEISO_WHOLESALE_ADDER
 
         # CCS price: year-adjusted if learning curves active, static otherwise
         if _use_learning:
@@ -999,6 +1017,9 @@ def precompute_all_prices(iso, all_combos, target_year=None):
             ccs_lcoe = _ccs_on_iso[ccs_lev] if q45 == '1' else _ccs_off_iso[ccs_lev]
         ccs_tx = _tx_cache[('ccs_ccgt', tx_name)]
         ccs_price = ccs_lcoe + ccs_tx
+        # NEISO winter gas pipeline constraint — CCS gas adder
+        if iso == 'NEISO':
+            ccs_price += NEISO_CCS_GAS_ADDER
 
         # Nuclear new-build price: year-adjusted if learning curves active
         tx_cf = _tx_cache[('clean_firm', tx_name)]
@@ -1042,6 +1063,7 @@ def precompute_all_prices(iso, all_combos, target_year=None):
         price_matrix[j, _COL_UPRATE] = UPRATE_LCOE[firm_lev]
         price_matrix[j, _COL_GEO] = geo_price
         price_matrix[j, _COL_REMAINING] = remaining_price
+        price_matrix[j, _COL_REMAINING_NUC] = nuclear_price  # overflow beyond CCS cap
         # Battery prices: year-adjusted if learning curves active, else static.
         # TX is always 0 for storage (baked into regional capacity costs).
         # Revenue credits subtracted (capacity market + arbitrage + ancillary), floored at 0.
@@ -1222,6 +1244,8 @@ def preextract_winner_data(arrays, extras, unique_indices, iso, demand_twh):
     uprate_twh_vals = extras['uprate_twh'][idx_arr]
     geo_twh_vals = extras['geo_twh'][idx_arr]
     remaining_twh_vals = extras['remaining_twh'][idx_arr]
+    ccs_eligible_twh_vals = extras['ccs_eligible_twh'][idx_arr]
+    nuc_overflow_twh_vals = extras['nuc_overflow_twh'][idx_arr]
     gas_needed_mw_vals = extras['gas_needed_mw'][idx_arr]
     existing_gas_used_mw_vals = extras['existing_gas_used_mw'][idx_arr]
     new_gas_mw_vals = extras['new_gas_mw'][idx_arr]
@@ -1239,7 +1263,8 @@ def preextract_winner_data(arrays, extras, unique_indices, iso, demand_twh):
     # Tuple layout: [0]resource_mix, [1]match_score, [2]bat4, [3]bat8,
     #   [4]ldes, [5]match_frac, [6]cf_ex_twh, [7]uprate_twh, [8]geo_twh,
     #   [9]remaining_twh, [10]new_cf_twh, [11]gas_needed_mw, [12]ex_gas_used_mw,
-    #   [13]new_gas_mw, [14]gas_cost_mwh, [15]clean_peak_mw, [16]ra_peak_mw, [17]h2
+    #   [13]new_gas_mw, [14]gas_cost_mwh, [15]clean_peak_mw, [16]ra_peak_mw, [17]h2,
+    #   [18]ccs_eligible_twh, [19]nuc_overflow_twh
     winner_data = {}
     for pos in range(n):
         winner_data[int(idx_arr[pos])] = (
@@ -1264,6 +1289,8 @@ def preextract_winner_data(arrays, extras, unique_indices, iso, demand_twh):
             round(float(clean_peak_mw_vals[pos])),
             round(ra_peak_mw),
             round(float(h2_vals[pos]), 4),
+            round(float(ccs_eligible_twh_vals[pos]), 3),
+            round(float(nuc_overflow_twh_vals[pos]), 3),
         )
 
     return winner_data
@@ -1280,7 +1307,17 @@ def build_winner_scenario_from_cache(winner_cache, best_idx, tc_val, wholesale,
     match_frac = w[5]
     ec_val = tc_val / match_frac if match_frac > 0 else 0.0
     tranche3_is_nuclear = nuclear_price <= ccs_price
-    remaining_twh = w[9]
+    ccs_eligible_twh = w[18]
+    nuc_overflow_twh = w[19]
+
+    # CCS cap-aware tranche split: CCS-eligible portion goes to cheaper of nuclear/CCS,
+    # overflow always goes to nuclear regardless of price comparison
+    if tranche3_is_nuclear:
+        nuclear_newbuild_twh = ccs_eligible_twh + nuc_overflow_twh
+        ccs_tranche_twh = 0.0
+    else:
+        ccs_tranche_twh = ccs_eligible_twh
+        nuclear_newbuild_twh = nuc_overflow_twh
 
     return {
         'resource_mix': w[0],
@@ -1299,8 +1336,8 @@ def build_winner_scenario_from_cache(winner_cache, best_idx, tc_val, wholesale,
             'cf_existing_twh': w[6],
             'uprate_twh': w[7],
             'geo_twh': w[8],
-            'nuclear_newbuild_twh': remaining_twh if tranche3_is_nuclear else 0.0,
-            'ccs_tranche_twh': 0.0 if tranche3_is_nuclear else remaining_twh,
+            'nuclear_newbuild_twh': nuclear_newbuild_twh,
+            'ccs_tranche_twh': ccs_tranche_twh,
             'new_cf_twh': w[10],
         },
         'gas_backup': {
@@ -1344,8 +1381,16 @@ def build_winner_scenario(arrays, extras, best_idx, sens, iso, demand_twh,
     h2_arr = arrays.get('h2_dispatch_pct')
 
     # Tranche detail (scenario-dependent: which is cheaper, nuclear or CCS?)
+    # CCS cap-aware: use pre-split ccs_eligible/nuc_overflow from extras
     tranche3_is_nuclear = nuclear_price <= ccs_price
-    remaining_twh = float(extras['remaining_twh'][best_idx])
+    ccs_eligible_twh = float(extras['ccs_eligible_twh'][best_idx])
+    nuc_overflow_twh = float(extras['nuc_overflow_twh'][best_idx])
+    if tranche3_is_nuclear:
+        nuclear_newbuild_twh = ccs_eligible_twh + nuc_overflow_twh
+        ccs_tranche_twh = 0.0
+    else:
+        ccs_tranche_twh = ccs_eligible_twh
+        nuclear_newbuild_twh = nuc_overflow_twh
 
     # Gas backup cost (post-hoc metric, not in tc_val)
     ex_gas = float(extras['existing_gas_used_mw'][best_idx])
@@ -1384,8 +1429,8 @@ def build_winner_scenario(arrays, extras, best_idx, sens, iso, demand_twh,
             'cf_existing_twh': round(float(extras['cf_existing_twh'][best_idx]), 3),
             'uprate_twh': round(float(extras['uprate_twh'][best_idx]), 3),
             'geo_twh': round(float(extras['geo_twh'][best_idx]), 3),
-            'nuclear_newbuild_twh': round(remaining_twh if tranche3_is_nuclear else 0.0, 3),
-            'ccs_tranche_twh': round(0.0 if tranche3_is_nuclear else remaining_twh, 3),
+            'nuclear_newbuild_twh': round(nuclear_newbuild_twh, 3),
+            'ccs_tranche_twh': round(ccs_tranche_twh, 3),
             'new_cf_twh': round(float(extras['new_cf_twh'][best_idx]), 3),
         },
         'gas_backup': {
@@ -1465,8 +1510,14 @@ def compute_tranche_for_mix(iso, cf_pct, demand_twh,
         ccs_tranche_price += NEISO_CCS_GAS_ADDER
     tranche3_is_nuclear = nuclear_price <= ccs_tranche_price
 
-    nuclear_newbuild_twh = remaining if tranche3_is_nuclear else 0.0
-    ccs_tranche_twh = 0.0 if tranche3_is_nuclear else remaining
+    # CCS cap enforcement
+    ccs_cap = CCS_CAP_TWH.get(iso, 9999.0)
+    if tranche3_is_nuclear:
+        nuclear_newbuild_twh = remaining
+        ccs_tranche_twh = 0.0
+    else:
+        ccs_tranche_twh = min(remaining, ccs_cap)
+        nuclear_newbuild_twh = max(0, remaining - ccs_cap)
 
     return {
         'cf_existing_twh': round(cf_existing_twh, 3),
@@ -2380,6 +2431,8 @@ def main():
                             'uprate_twh': float(dg_extras['uprate_twh'][best_local]),
                             'geo_twh': float(dg_extras['geo_twh'][best_local]),
                             'remaining_twh': float(dg_extras['remaining_twh'][best_local]),
+                            'ccs_eligible_twh': float(dg_extras['ccs_eligible_twh'][best_local]),
+                            'nuc_overflow_twh': float(dg_extras['nuc_overflow_twh'][best_local]),
                             'new_cf_twh': float(dg_extras['new_cf_twh'][best_local]),
                             'gas_needed_mw': float(dg_extras['gas_needed_mw'][best_local]),
                             'existing_gas_mw': float(dg_extras['existing_gas_used_mw'][best_local]),
@@ -2524,6 +2577,8 @@ def main():
                                 'uprate_twh': float(tk_extras['uprate_twh'][best_local]),
                                 'geo_twh': float(tk_extras['geo_twh'][best_local]),
                                 'remaining_twh': float(tk_extras['remaining_twh'][best_local]),
+                                'ccs_eligible_twh': float(tk_extras['ccs_eligible_twh'][best_local]),
+                                'nuc_overflow_twh': float(tk_extras['nuc_overflow_twh'][best_local]),
                                 'new_cf_twh': float(tk_extras['new_cf_twh'][best_local]),
                                 'gas_needed_mw': float(tk_extras['gas_needed_mw'][best_local]),
                                 'existing_gas_mw': float(tk_extras['existing_gas_used_mw'][best_local]),
@@ -2767,12 +2822,16 @@ def main():
                             row['tranche_uprate_twh'] = round(tranche['uprate_twh'], 3)
                             row['tranche_geo_twh'] = round(tranche['geo_twh'], 3)
                             row['tranche_new_cf_twh'] = round(tranche['new_cf_twh'], 3)
-                            remaining_twh = tranche['remaining_twh']
+                            # CCS cap-aware tranche split
                             t3_is_nuclear = t3_cache_.get(sc_key, False)
-                            row['tranche_nuclear_newbuild_twh'] = round(
-                                remaining_twh if t3_is_nuclear else 0.0, 3)
-                            row['tranche_ccs_tranche_twh'] = round(
-                                0.0 if t3_is_nuclear else remaining_twh, 3)
+                            ccs_elig = tranche.get('ccs_eligible_twh', tranche['remaining_twh'])
+                            nuc_over = tranche.get('nuc_overflow_twh', 0.0)
+                            if t3_is_nuclear:
+                                row['tranche_nuclear_newbuild_twh'] = round(ccs_elig + nuc_over, 3)
+                                row['tranche_ccs_tranche_twh'] = 0.0
+                            else:
+                                row['tranche_ccs_tranche_twh'] = round(ccs_elig, 3)
+                                row['tranche_nuclear_newbuild_twh'] = round(nuc_over, 3)
                             row['ra_gas_needed_mw'] = round(tranche['gas_needed_mw'])
                             row['ra_existing_gas_mw'] = round(tranche['existing_gas_mw'])
                             row['ra_new_gas_mw'] = round(tranche['new_gas_mw'])
