@@ -131,7 +131,9 @@ def build_cache_for_iso(iso, unique_mixes, demand_data, gen_profiles,
     supply_matrix = build_supply_matrix(supply_profiles)
     demand_norm, total_mwh = get_demand_profile(iso, demand_data)
 
-    cache = {} if force else (existing_cache or {})
+    # Always start fresh — never carry forward stale archetypes from prior runs.
+    # Downstream scripts must only see current winners.
+    cache = {}
     computed = 0
     skipped = 0
 
@@ -527,21 +529,13 @@ def main():
         total_mixes += len(unique_mixes)
         print(f"    {len(unique_mixes)} unique mixes from parquets")
 
-        # Load existing cache (check version)
-        if args.force:
-            existing = {}
-        else:
-            existing = load_dispatch_cache(iso, require_version=CACHE_VERSION)
-            if existing:
-                print(f"    Existing cache: {len(existing)} archetypes (v{CACHE_VERSION})")
-
-        # Build cache
+        # Build cache fresh (no accumulation from prior runs)
         iso_t0 = time.time()
         cache, computed, skipped = build_cache_for_iso(
             iso, unique_mixes, demand_data, gen_profiles,
-            existing_cache=existing, force=args.force)
+            force=True)
 
-        # Save
+        # Save (fresh cache, only current winners)
         save_dispatch_cache(iso, cache, version=CACHE_VERSION)
         iso_elapsed = time.time() - iso_t0
 
