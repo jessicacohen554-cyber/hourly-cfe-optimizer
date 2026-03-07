@@ -561,9 +561,14 @@ def load_parquet_costs():
             if df is not None:
                 break
 
-        if df is None:
-            print(f"  WARNING: No parquet found for {iso} — using CLEAN_COST fallback")
-            continue
+        if df is None or 'cost_total_cost' not in df.columns:
+            # co2 parquets don't have cost columns — try step3 directly
+            step3_path = base_dir / 'data' / 'step3-cost-opt-parquets' / f'step3_co_{iso}.parquet'
+            if step3_path.exists():
+                df = pd.read_parquet(step3_path)
+            if df is None or 'cost_total_cost' not in df.columns:
+                print(f"  WARNING: No parquet with cost data found for {iso} — using CLEAN_COST fallback")
+                continue
 
         # Clean resource cost: total_cost includes gas RA; subtract to get clean-only.
         # Existing resources at $0 (sunk fleet). No wholesale offset.
