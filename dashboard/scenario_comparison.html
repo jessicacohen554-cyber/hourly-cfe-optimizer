@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Scenario A vs Scenario B — Procurement Strategy Comparison</title>
+<title>Strategy 1B vs 2C — Procurement Strategy Comparison</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -178,7 +178,7 @@ body { background: var(--bg-alt-warm); }
 <!-- HEADER BANNER -->
 <header class="header">
     <h1>The 8,760 Problem</h1>
-    <p class="subtitle">Scenario A vs Scenario B &mdash; two procurement strategies, radically different outcomes</p>
+    <p class="subtitle">Strategy 1B (Consequential) vs Strategy 2C (Hourly Matching) &mdash; two procurement strategies, radically different grid outcomes by 2050</p>
     <div class="header-accent"></div>
 </header>
 
@@ -187,13 +187,14 @@ body { background: var(--bg-alt-warm); }
     <h1>The Learning Curve Dividend</h1>
     <p class="subtitle">
         Clean firm technologies start expensive (FOAK) but follow Wright's Law &mdash; costs decline
-        ~40% after 10&ndash;20 deployments. <strong>Scenario B</strong> invests early along this curve.
-        <strong>Scenario A</strong> defers firm commitment, locks in renewables, and faces a cost cliff
-        when firm generation is finally needed. Same physics &mdash; radically different outcomes.
+        ~40% after 10&ndash;20 deployments. <strong>Strategy 2C</strong> (hourly matching) invests early along this curve,
+        deploying across the grid to hit net zero by 2050.
+        <strong>Strategy 1B</strong> (consequential) defers firm commitment, locks in renewables, and faces a cost cliff
+        when firm generation is finally needed. Same physics &mdash; radically different grid outcomes.
     </p>
     <p class="subtitle" style="margin-top: 8px; font-size: 0.92rem; color: rgba(255,255,255,0.55); max-width: 920px;">
-        The choice between these scenarios isn't just about cost &mdash; it determines whether the grid
-        decarbonizes or locks in decades of gas infrastructure. Scenario A (consequential accounting) optimizes
+        The choice between these strategies isn't just about cost &mdash; it determines whether the grid
+        decarbonizes or locks in decades of gas infrastructure. Strategy 1B (consequential) optimizes
         each buyer's $/tCO&#8322; individually, but creates five systemic failure modes: <strong style="color:rgba(255,255,255,0.85);">marginal signal
         degradation</strong> as coal displacement saturates, <strong style="color:rgba(255,255,255,0.85);">fossil lock-in</strong>
         from deferred firm investment extending gas infrastructure 10&ndash;20 years,
@@ -201,13 +202,13 @@ body { background: var(--bg-alt-warm); }
         gas-dependent grids (NEISO, NYISO, CAISO) of firm clean power, <strong style="color:rgba(255,255,255,0.85);">saturation
         &amp; diminishing returns</strong> once cheap coal displacement is exhausted, and a
         <strong style="color:rgba(255,255,255,0.85);">collective action tragedy</strong> where individual
-        rationality undermines system-wide decarbonization. Scenario B &mdash; hourly matching &mdash; avoids
+        rationality undermines system-wide decarbonization. Strategy 2C avoids
         all five by requiring balanced, local portfolios that seed the clean firm learning curve from day one.
     </p>
 
     <div class="hero-chart-wrap">
-        <h3>Scenario A vs B: Clean Firm Cost Trajectory &amp; Gas Reference</h3>
-        <p class="chart-note"><span style="color:#4F46E5;font-weight:600;">Scenario A</span> (deferred firm) vs <span style="color:#0891B2;font-weight:600;">Scenario B</span> (early investment). <span style="color:#DC2626;">Red</span> = gas reference.</p>
+        <h3>Strategy 1B vs 2C: Clean Firm Cost Trajectory &amp; Gas Reference</h3>
+        <p class="chart-note"><span style="color:#4F46E5;font-weight:600;">Strategy 1B</span> (deferred firm) vs <span style="color:#0891B2;font-weight:600;">Strategy 2C</span> (early investment). <span style="color:#DC2626;">Red</span> = gas reference.</p>
         <div class="hero-chart-container"><canvas id="foakNOAKChart"></canvas></div>
     </div>
 
@@ -260,19 +261,21 @@ body { background: var(--bg-alt-warm); }
 <div class="section-dark-inner">
     <div class="scenario-cards">
         <div class="scenario-card">
-            <span class="scenario-tag tag-a">Scenario A &mdash; Pure Consequential</span>
-            <h3>Cheapest $/tCO&#8322; First</h3>
+            <span class="scenario-tag tag-a">Scenario A &mdash; Strategy 1B (Consequential)</span>
+            <h3>Cross-Regional Consequential Netting</h3>
             <div class="toggles">Ren: Low | Firm: Low (NOAK) | CCS: Low | LDES: Low | Geo: Low | Battery: Low | Fuel: Med | Tx: Med</div>
-            <p>Sequential optimization: at each threshold, buy cheapest resources first. Prior deployments locked in.
-            Low MAC early (cheap renewables), but overbuilding creates path dependency &mdash; cost cliff when firm is finally needed.</p>
+            <p>Strategy 1B deploys resources sequentially across ISOs, always buying the cheapest marginal $/tCO&#8322; first.
+            Prior deployments lock in as committed infrastructure. Low MAC early via cheap renewables, but path dependency
+            creates a cost cliff when firm clean generation is finally needed at high thresholds.</p>
         </div>
         <div class="scenario-card">
-            <span class="scenario-tag tag-b">Scenario B &mdash; GHG Protocol Hourly Matching</span>
-            <h3>Hourly CFE with Learning Curves</h3>
+            <span class="scenario-tag tag-b">Scenario B &mdash; Strategy 2C (Hourly Matching)</span>
+            <h3>Grid-Wide Hourly CFE for Net Zero by 2050</h3>
             <div class="toggles">SSS at $0 | Merchant at EAC | New-Build at LCOE | Learning: FOAK&rarr;NOAK 2030-2040</div>
-            <p>Hourly Scope 2 accounting with pool-aware pricing. Policy-supported clean is free baseline.
-            Existing merchant solar/wind available at EAC premium. Hourly matching forces new-build firm
-            clean + storage for night/winter gaps. Learning curve dividend makes the system cheaper by 2045.
+            <p>Strategy 2C deploys hourly matching across the entire grid to achieve net zero by 2050. Pool-aware pricing
+            with policy-supported clean as free baseline. Hourly matching forces early investment in firm clean +
+            storage for night/winter gaps, seeding Wright's Law learning curves. The learning curve dividend
+            makes the system cheaper than consequential by the mid-2030s.
             <a href="consequential_accounting.html#accordionHourly" style="color:rgba(14,165,233,0.8);">See Strategy 2C deep dive &rarr;</a></p>
         </div>
     </div>
@@ -283,7 +286,7 @@ body { background: var(--bg-alt-warm); }
 <section class="content-section story-section" style="padding-bottom: var(--space-xl);">
     <span class="story-badge story-badge-green">Three Zones of Divergence</span>
     <h2 class="section-title">How Accounting Rules Shape the Grid</h2>
-    <p class="section-subtitle">The two scenarios start similar at low thresholds but diverge dramatically
+    <p class="section-subtitle">The two strategies start similar at low thresholds but diverge dramatically
     as CFE targets increase &mdash; divergence driven by when and how firm clean power enters the mix.</p>
 
     <!-- Early Stage -->
@@ -291,12 +294,12 @@ body { background: var(--bg-alt-warm); }
         <span class="story-badge" style="background: rgba(34,197,94,0.1); color: #16A34A; border-color: rgba(34,197,94,0.3);">50&ndash;65% &bull; Early Stage</span>
         <h3 style="font-family: var(--font-heading); font-size: 1.1rem; color: var(--navy); margin: 12px 0 8px;">All Roads Look the Same</h3>
         <p style="font-size: 0.88rem; color: rgba(0,0,0,0.65); line-height: 1.7; margin-bottom: 16px;">
-            At 50&ndash;65% clean targets, strategies cluster &mdash; cheap VRE is abundant everywhere.
-            In ERCOT and SPP, existing merchant solar/wind (Pool 3) alone covers most of the target.
-            No firm clean or storage investment signal yet. Cost parity across all three approaches.</p>
+            At 50&ndash;65% clean targets, Strategy 1B and 2C cluster &mdash; cheap VRE is abundant everywhere.
+            In ERCOT and SPP, existing merchant solar/wind alone covers most of the target.
+            No firm clean or storage investment signal yet. Cost parity across both approaches.</p>
         <div class="grid-stats" id="earlyZoneStats">
-            <div class="stat-card"><div class="stat-value" id="earlyCostA" style="color: var(--indigo);">$--</div><div class="stat-label">Scenario A $/MWh</div></div>
-            <div class="stat-card"><div class="stat-value" id="earlyCostB" style="color: var(--ccs);">$--</div><div class="stat-label">Scenario B $/MWh</div></div>
+            <div class="stat-card"><div class="stat-value" id="earlyCostA" style="color: var(--indigo);">$--</div><div class="stat-label">1B $/MWh</div></div>
+            <div class="stat-card"><div class="stat-value" id="earlyCostB" style="color: var(--ccs);">$--</div><div class="stat-label">2C $/MWh</div></div>
             <div class="stat-card"><div class="stat-value" id="earlyGap">$--</div><div class="stat-label">Cost Gap</div></div>
         </div>
     </div>
@@ -306,10 +309,9 @@ body { background: var(--bg-alt-warm); }
         <span class="story-badge" style="background: rgba(245,158,11,0.1); color: #D97706; border-color: rgba(245,158,11,0.3);">80&ndash;90% &bull; The Inflection Point</span>
         <h3 style="font-family: var(--font-heading); font-size: 1.1rem; color: var(--navy); margin: 12px 0 8px;">Where Hourly Matching Changes Everything</h3>
         <p style="font-size: 0.88rem; color: rgba(0,0,0,0.65); line-height: 1.7; margin-bottom: 12px;">
-            Strategies diverge sharply. <strong>Hourly matching</strong> forces Pool 4 to include firm clean +
-            storage because night hours and low-wind winter days can't be covered by VRE alone.
-            <strong>Consequential</strong> still cherry-picks cross-regionally. <strong>Annual</strong> lets
-            VRE overbuild + RECs satisfy the target &mdash; no firm/storage signal.</p>
+            Strategies diverge sharply. <strong>Strategy 2C</strong> (hourly matching) forces firm clean +
+            storage investment because night hours and low-wind winter days can't be covered by VRE alone.
+            <strong>Strategy 1B</strong> (consequential) still cherry-picks cross-regionally, deferring firm investment.</p>
         <div class="insight-box insight-warn" style="margin: 12px 0;">
             <strong>The hourly gap becomes the cost driver.</strong> At 90% in PJM, over 4,000 hours
             require firm clean or storage &mdash; every night plus every low-wind winter day.
@@ -325,14 +327,14 @@ body { background: var(--bg-alt-warm); }
         <span class="story-badge story-badge-red">95&ndash;&#8805;99.99% &bull; The Last Mile</span>
         <h3 style="font-family: var(--font-heading); font-size: 1.1rem; color: var(--navy); margin: 12px 0 8px;">Maximum Divergence &mdash; The Learning Curve Payoff</h3>
         <p style="font-size: 0.88rem; color: rgba(0,0,0,0.65); line-height: 1.7; margin-bottom: 12px;">
-            This is the core argument for hourly matching. <strong>Scenario B</strong>'s early firm investment
-            has driven costs toward NOAK by this point (2040+ on SBTi timeline). <strong>Scenario A</strong>
+            This is the core argument for grid-wide hourly matching. <strong>Strategy 2C</strong>'s early firm investment
+            has driven costs toward NOAK by this point (2040+ on SBTi timeline). <strong>Strategy 1B</strong>
             faces a FOAK cost cliff &mdash; delayed firm investment now needed at scale, still paying first-of-a-kind
-            prices. <strong>Annual matching</strong> hits physical limits &mdash; massive VRE overbuild with
-            curtailment, but can't actually deliver &gt;95% hourly even if the annual MWh target is met.</p>
+            prices. The last mile reveals why deploying 2C across the grid is the only path to net zero by 2050
+            without massive cost overruns.</p>
         <div class="grid-stats" id="lastMileStats">
-            <div class="stat-card"><div class="stat-value" id="lmCostA" style="color: var(--indigo);">$--</div><div class="stat-label">Scenario A $/MWh</div></div>
-            <div class="stat-card"><div class="stat-value" id="lmCostB" style="color: var(--ccs);">$--</div><div class="stat-label">Scenario B $/MWh</div></div>
+            <div class="stat-card"><div class="stat-value" id="lmCostA" style="color: var(--indigo);">$--</div><div class="stat-label">1B $/MWh</div></div>
+            <div class="stat-card"><div class="stat-value" id="lmCostB" style="color: var(--ccs);">$--</div><div class="stat-label">2C $/MWh</div></div>
             <div class="stat-card"><div class="stat-value" id="lmFirmGap" style="color: var(--storage);">-- TWh</div><div class="stat-label">Firm Deployment Gap</div></div>
             <div class="stat-card"><div class="stat-value" id="lmLearning">--</div><div class="stat-label">B Learning Position</div></div>
         </div>
@@ -368,18 +370,18 @@ body { background: var(--bg-alt-warm); }
 <section class="content-section section-light" style="padding-top: 24px;">
 
 <!-- 1. What Gets Built — Resource Mix Side-by-Side -->
-<h2 class="section-title">What Gets Built: Scenario A vs Scenario B</h2>
+<h2 class="section-title">What Gets Built: Strategy 1B vs Strategy 2C</h2>
 <p class="section-subtitle">Resource mix in TWh at each threshold.
 <strong>Dashed line = CFE target</strong> &mdash; solid bars = utilized generation, hatched bars above = curtailed.</p>
 
 <div class="chart-pair">
     <div class="chart-box">
-        <span class="scenario-tag tag-a">Scenario A</span>
+        <span class="scenario-tag tag-a">Strategy 1B</span>
         <h3 id="mixTitleA">PJM &mdash; Resource Mix (TWh)</h3>
         <div class="chart-container"><canvas id="mixChartA"></canvas></div>
     </div>
     <div class="chart-box">
-        <span class="scenario-tag tag-b">Scenario B</span>
+        <span class="scenario-tag tag-b">Strategy 2C</span>
         <h3 id="mixTitleB">PJM &mdash; Resource Mix (TWh)</h3>
         <div class="chart-container"><canvas id="mixChartB"></canvas></div>
     </div>
@@ -392,12 +394,12 @@ body { background: var(--bg-alt-warm); }
 <div class="chart-pair">
     <div class="chart-box">
         <h3 id="costChartTitle">PJM &mdash; Effective System Cost ($/MWh)</h3>
-        <p class="chart-note">Red = A | Green = B. Shaded gap = learning curve savings.</p>
+        <p class="chart-note">Indigo = 1B | Teal = 2C. Shaded gap = learning curve savings.</p>
         <div class="chart-container"><canvas id="costChart"></canvas></div>
     </div>
     <div class="chart-box">
         <h3 id="macTimelineTitle">PJM &mdash; Marginal $/tCO&#8322; by SBTi Year</h3>
-        <p class="chart-note">Indigo = A | Teal = B. <span style="color:rgba(0,0,0,0.5);">&#9888; = no new CO&#8322; displaced at that step (cost increased but mix didn't add clean generation).</span></p>
+        <p class="chart-note">Indigo = 1B | Teal = 2C. <span style="color:rgba(0,0,0,0.5);">&#9888; = no new CO&#8322; displaced at that step (cost increased but mix didn't add clean generation).</span></p>
         <div class="chart-container"><canvas id="macTimelineChart"></canvas></div>
     </div>
 </div>
@@ -409,7 +411,7 @@ body { background: var(--bg-alt-warm); }
 <div class="chart-pair">
     <div class="chart-box">
         <h3 id="firmChartTitle">PJM &mdash; Clean Firm + CCS (TWh)</h3>
-        <p class="chart-note">Scenario B deploys firm 2&ndash;3&times; earlier, seeding the learning curve.</p>
+        <p class="chart-note">Strategy 2C deploys firm 2&ndash;3&times; earlier, seeding the learning curve.</p>
         <div class="chart-container"><canvas id="firmChart"></canvas></div>
     </div>
     <div class="chart-box">
@@ -421,11 +423,11 @@ body { background: var(--bg-alt-warm); }
 
 <!-- 5. Sequential Deployment Queue -->
 <h2 class="section-title" style="margin-top:32px;">Sequential Deployment Queue</h2>
-<p class="section-subtitle">Scenario A's build order, sorted by cheapest MAC first but constrained by sequential build reality &mdash;
+<p class="section-subtitle">Strategy 1B's build order, sorted by cheapest MAC first but constrained by sequential build reality &mdash;
 each ISO must complete prior threshold steps before advancing. First row per ISO = new build from existing grid mix to 50%.</p>
 
 <div class="chart-wide" style="overflow-x: auto;">
-    <span class="scenario-tag tag-a">Scenario A &mdash; Sequential Queue</span>
+    <span class="scenario-tag tag-a">Strategy 1B &mdash; Sequential Queue</span>
     <table class="data-table domino-table" id="dominoTableA"></table>
 </div>
 
@@ -448,8 +450,8 @@ each ISO must complete prior threshold steps before advancing. First row per ISO
     The physics are fixed — what changes between scenarios is the <em>procurement strategy</em>: sequential path-dependent
     optimization vs. targeting a single high threshold directly.</p>
 
-    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; margin: 24px 0 8px;">Scenario A: Pure Consequential</h3>
-    <p>The consequential scenario models a buyer who procures the cheapest resources at each threshold step,
+    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; margin: 24px 0 8px;">Scenario A &mdash; Strategy 1B: Cross-Regional Consequential</h3>
+    <p>Strategy 1B models a buyer who procures the cheapest resources at each threshold step,
     with <strong>prior deployments locked in as committed infrastructure</strong>:</p>
     <ol style="padding-left: 20px; margin: 8px 0;">
         <li>At 50% CFE: find the cheapest feasible mix from the existing grid floor. Deploy those resources.</li>
@@ -464,8 +466,8 @@ each ISO must complete prior threshold steps before advancing. First row per ISO
     each mix is scored by its total floor violation (TWh shortfall across all resources), and the cheapest mix with
     minimum violation is selected. The floor ratchets up using the element-wise maximum of the old floor and new deployment.</p>
 
-    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; margin: 24px 0 8px;">Scenario B: Hourly Matching</h3>
-    <p>The hourly matching scenario models <strong>graduated clean firm deployment along the FOAK&rarr;NOAK learning curve</strong>.
+    <h3 style="font-family: var(--font-heading); font-size: 1.05rem; margin: 24px 0 8px;">Scenario B &mdash; Strategy 2C: Hourly Matching Deployed Grid-Wide</h3>
+    <p>Strategy 2C models <strong>hourly matching deployed across the entire grid to reach net zero by 2050</strong>, with graduated clean firm deployment along the FOAK&rarr;NOAK learning curve.
     At each threshold, clean firm / CCS / LDES / geothermal costs are interpolated between High (FOAK) and Low (NOAK) based
     on the threshold's position on the SBTi timeline, using a convex ramp function: <code>frac = 0.05 + 0.95 &times; ((t&minus;50)/50)<sup>1.8</sup></code>.
     Mature technologies (solar, wind, battery) remain at Low cost throughout — they're already down their learning curves.</p>
@@ -482,8 +484,8 @@ each ISO must complete prior threshold steps before advancing. First row per ISO
         <thead>
             <tr style="border-bottom: 1px solid rgba(0,0,0,0.15);">
                 <th style="text-align:left; padding: 8px; color: rgba(0,0,0,0.45); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em;">Toggle</th>
-                <th style="text-align:center; padding: 8px; color: #4F46E5; font-size: 0.72rem; text-transform: uppercase;">Scenario A</th>
-                <th style="text-align:center; padding: 8px; color: #0891B2; font-size: 0.72rem; text-transform: uppercase;">Scenario B</th>
+                <th style="text-align:center; padding: 8px; color: #4F46E5; font-size: 0.72rem; text-transform: uppercase;">Strategy 1B</th>
+                <th style="text-align:center; padding: 8px; color: #0891B2; font-size: 0.72rem; text-transform: uppercase;">Strategy 2C</th>
             </tr>
         </thead>
         <tbody>
@@ -499,11 +501,11 @@ each ISO must complete prior threshold steps before advancing. First row per ISO
         </tbody>
     </table>
 
-    <p>In Scenario A, all technologies are at <strong>Low (NOAK) cost</strong> — the consequential buyer
-    gravitates to the cheapest available $/tCO₂, which means mature-market pricing for all resources.
-    In Scenario B, clean firm / CCS / LDES are at <strong>High (FOAK) cost</strong> — hourly matching
+    <p>In Strategy 1B, all technologies are at <strong>Low (NOAK) cost</strong> &mdash; the consequential buyer
+    gravitates to the cheapest available $/tCO&#8322;, which means mature-market pricing for all resources.
+    In Strategy 2C, clean firm / CCS / LDES are at <strong>High (FOAK) cost</strong> &mdash; hourly matching
     requires firm generation, and the buyer commits early at premium FOAK prices before the learning curve matures.
-    Mature tech (solar, wind, battery) remains at Low cost in both scenarios.</p>
+    Mature tech (solar, wind, battery) remains at Low cost in both strategies.</p>
 
     <h3 style="font-family: var(--font-heading); font-size: 1.05rem; margin: 24px 0 8px;">Cost Function (Both Scenarios)</h3>
     <p>Effective system cost = total procurement cost / hourly match fraction, including:</p>
@@ -772,6 +774,54 @@ function trajLabels(traj, existingCleanPct) {
     return traj.map(d => d.year + '\n' + (d.threshold >= 99.99 ? '≥99.99' : d.threshold) + '%');
 }
 
+// Align two trajectories to the UNION of their threshold sets.
+// Missing thresholds get a synthetic entry interpolated from neighbors (or null for non-interpolable fields).
+function alignTrajectories(trajA, trajB) {
+    const threshA = new Set(trajA.map(d => d.threshold));
+    const threshB = new Set(trajB.map(d => d.threshold));
+    const allThresholds = [...new Set([...threshA, ...threshB])].sort((a, b) => a - b);
+
+    function alignTo(traj, threshSet, allT) {
+        const byThresh = {};
+        traj.forEach(d => { byThresh[d.threshold] = d; });
+        return allT.map(t => {
+            if (byThresh[t]) return byThresh[t];
+            // Create a null placeholder for missing thresholds
+            // Find nearest neighbors for year estimation
+            const sorted = traj.slice().sort((a, b) => Math.abs(a.threshold - t) - Math.abs(b.threshold - t));
+            const nearest = sorted[0] || {};
+            const yearEst = YEAR_MAP[t] || (nearest.year || 2050);
+            return {
+                threshold: t, year: yearEst, zone: nearest.zone || 'last_mile',
+                demand_twh: nearest.demand_twh || 0,
+                effective_cost: null, total_cost: null, incremental: null,
+                annual_cost_billion: null, npv_25yr_billion: null,
+                resource_twh: { clean_firm: 0, solar: 0, wind: 0, offshore_wind: 0, ccs_ccgt: 0, hydro: 0 },
+                battery_twh: 0, ldes_twh: 0,
+                gas_backup_mw: null, new_gas_mw: null, existing_gas_used_mw: null,
+                clean_peak_mw: 0, firm_total_twh: null,
+                stepwise_mac: null, _placeholder: true,
+            };
+        });
+    }
+
+    return {
+        trajA: alignTo(trajA, threshA, allThresholds),
+        trajB: alignTo(trajB, threshB, allThresholds),
+        thresholds: allThresholds,
+    };
+}
+
+// Get aligned, filtered trajectories for an ISO (both >=50%)
+function getAlignedTrajectories(iso) {
+    const rawA = (DATA.trajectories.pure_consequential[iso] || []).filter(d => d.threshold >= 50);
+    const rawB = getScenarioB(iso).filter(d => d.threshold >= 50);
+    const isoShares = (GRID_MIX || {})[iso] || {};
+    const existingCleanPct = Object.values(isoShares).reduce((s, v) => s + v, 0);
+    const aligned = alignTrajectories(rawA, rawB);
+    return { ...aligned, existingCleanPct };
+}
+
 // ===== HERO STATS (all-region aggregates at 95%, static) =====
 function buildHeroStats() {
     const container = document.getElementById('heroStats');
@@ -796,10 +846,10 @@ function buildHeroStats() {
     const npv = Math.round(savB * annuity);
     const gasGW = Math.round((gasA - gasB) / 1000);
     container.innerHTML = `
-        <div class="hero-stat"><div class="stat-val" style="color:#FF6B6B;">${mult}&times;</div><div class="stat-label">Cost Multiple (All Regions, 95%)</div></div>
-        <div class="hero-stat"><div class="stat-val" style="color:#FCD34D;">$${savB}B/yr</div><div class="stat-label">Annual Savings</div></div>
+        <div class="hero-stat"><div class="stat-val" style="color:#FF6B6B;">${mult}&times;</div><div class="stat-label">1B/2C Cost Multiple (All Regions, 95%)</div></div>
+        <div class="hero-stat"><div class="stat-val" style="color:#FCD34D;">$${savB}B/yr</div><div class="stat-label">Annual Savings (2C vs 1B)</div></div>
         <div class="hero-stat"><div class="stat-val" style="color:#6EE7B7;">$${npv}B</div><div class="stat-label">25-Year NPV (5% WACC)</div></div>
-        <div class="hero-stat"><div class="stat-val" style="color:#93C5FD;">${gasGW} GW</div><div class="stat-label">New Gas Build Avoided</div></div>
+        <div class="hero-stat"><div class="stat-val" style="color:#93C5FD;">${gasGW} GW</div><div class="stat-label">Gas Build Avoided by 2C</div></div>
     `;
 }
 
@@ -866,8 +916,8 @@ function buildMetricTiles() {
                 <div class="conclusion-context">${conclusionCtx}</div>
             </div>
             <div class="tile-details">
-                <div class="tile-ab-compact ab-a"><span class="ab-tag">Scenario A</span><span class="ab-num">${aVal}</span><br>${aTag}</div>
-                <div class="tile-ab-compact ab-b"><span class="ab-tag">Scenario B</span><span class="ab-num">${bVal}</span><br>${bTag}</div>
+                <div class="tile-ab-compact ab-a"><span class="ab-tag">1B</span><span class="ab-num">${aVal}</span><br>${aTag}</div>
+                <div class="tile-ab-compact ab-b"><span class="ab-tag">2C</span><span class="ab-num">${bVal}</span><br>${bTag}</div>
             </div>
         </div>`;
     }
@@ -877,16 +927,16 @@ function buildMetricTiles() {
         ? `${mult.toFixed(2)}&times;`
         : mult < 0.99 ? `${(1/mult).toFixed(2)}&times;` : 'Parity';
     const costCtx = mult > 1.01
-        ? `more expensive under <strong>Scenario A</strong> at ${tLabel}`
-        : mult < 0.99 ? `more expensive under <strong>Scenario B</strong> at ${tLabel}` : `at ${tLabel} in ${iso}`;
+        ? `more expensive under <strong>Strategy 1B</strong> at ${tLabel}`
+        : mult < 0.99 ? `more expensive under <strong>Strategy 2C</strong> at ${tLabel}` : `at ${tLabel} in ${iso}`;
     const costHeat = mult > 1.01 ? heatClass(mult) : mult < 0.99 ? heatClass(1/mult) : 'heat-neutral';
 
     // 2. Annual savings
     const savAbs = Math.abs(parseFloat(annSaveB));
     const savConclusion = `$${savAbs.toFixed(1)}B/yr`;
     const savCtx = parseFloat(annSaveB) > 0
-        ? `saved by <strong>Scenario B</strong> in ${iso}`
-        : `saved by <strong>Scenario A</strong> in ${iso}`;
+        ? `saved by <strong>Strategy 2C</strong> in ${iso}`
+        : `saved by <strong>Strategy 1B</strong> in ${iso}`;
     const savHeat = savAbs > 5 ? 'heat-red' : savAbs > 1 ? 'heat-amber' : savAbs > 0.1 ? 'heat-green' : 'heat-neutral';
 
     // 3. 25yr NPV
@@ -901,8 +951,8 @@ function buildMetricTiles() {
     const gasAbsF = Math.abs(parseFloat(gasAvoided));
     const gasConclusion = `${gasAbsF.toFixed(1)} GW`;
     const gasCtx = parseFloat(gasAvoided) > 0
-        ? `gas capacity <strong>avoided</strong> by Scenario B`
-        : `<strong>additional</strong> gas in Scenario B`;
+        ? `gas capacity <strong>avoided</strong> by Strategy 2C`
+        : `<strong>additional</strong> gas in Strategy 2C`;
     const gasHeat = parseFloat(gasAvoided) > 0
         ? (gasAbsF > 20 ? 'heat-green' : gasAbsF > 5 ? 'heat-green' : 'heat-neutral')
         : (gasAbsF > 5 ? 'heat-red' : 'heat-neutral');
@@ -912,8 +962,8 @@ function buildMetricTiles() {
     const strandAbs = Math.abs(strandDelta);
     const strandConclusion = `${strandAbs} TWh`;
     const strandCtx = strandDelta > 0
-        ? `more clean energy <strong>wasted</strong> in Scenario A`
-        : `more clean energy <strong>wasted</strong> in Scenario B`;
+        ? `more clean energy <strong>wasted</strong> in Strategy 1B`
+        : `more clean energy <strong>wasted</strong> in Strategy 2C`;
     const strandHeat = strandAbs > 50 ? 'heat-amber' : strandAbs > 10 ? 'heat-green' : 'heat-neutral';
 
     // 6. Clean firm delta
@@ -921,8 +971,8 @@ function buildMetricTiles() {
     const firmAbs = Math.abs(firmDelta);
     const firmConclusion = `${firmAbs} TWh`;
     const firmCtx = firmDelta > 0
-        ? `more clean firm in <strong>Scenario B</strong> — seeds learning curve`
-        : `more clean firm in <strong>Scenario A</strong>`;
+        ? `more clean firm in <strong>Strategy 2C</strong> &mdash; seeds learning curve`
+        : `more clean firm in <strong>Strategy 1B</strong>`;
     const firmHeat = 'heat-blue';
 
     container.innerHTML = [
@@ -961,11 +1011,13 @@ function getScenarioB(iso) {
 let macTimelineChart;
 function renderMacTimeline(iso) {
     document.getElementById('macTimelineTitle').innerHTML = iso + ' &mdash; Marginal $/tCO<sub>2</sub> by SBTi Year';
-    const { traj: fullA, existingCleanPct } = filterTraj(iso, DATA.trajectories.pure_consequential[iso] || []);
-    const { traj: fullB } = filterTraj(iso, getScenarioB(iso));
-    // Filter to only points with stepwise_mac
-    const ptsA = fullA.filter(d => d.stepwise_mac !== null && d.stepwise_mac !== undefined);
-    const ptsB = fullB.filter(d => d.stepwise_mac !== null && d.stepwise_mac !== undefined);
+    const { trajA: fullA, trajB: fullB, existingCleanPct } = getAlignedTrajectories(iso);
+    // Filter to only points with stepwise_mac in EITHER trajectory
+    const macThresholds = new Set();
+    fullA.forEach(d => { if (d.stepwise_mac !== null && d.stepwise_mac !== undefined) macThresholds.add(d.threshold); });
+    fullB.forEach(d => { if (d.stepwise_mac !== null && d.stepwise_mac !== undefined) macThresholds.add(d.threshold); });
+    const ptsA = fullA.filter(d => macThresholds.has(d.threshold));
+    const ptsB = fullB.filter(d => macThresholds.has(d.threshold));
     const labels = trajLabels(ptsA, existingCleanPct);
 
     // Compute a reasonable y-axis max from finite values only
@@ -1027,7 +1079,7 @@ function renderMacTimeline(iso) {
             labels: labels,
             datasets: [
                 {
-                    label: 'Scenario A',
+                    label: 'Strategy 1B',
                     data: ptsA.map(d => d.stepwise_mac >= 9999 ? null : d.stepwise_mac),
                     backgroundColor: 'rgba(79,70,229,0.45)',
                     borderColor: COLORS.A,
@@ -1038,7 +1090,7 @@ function renderMacTimeline(iso) {
                     categoryPercentage: 0.85,
                 },
                 {
-                    label: 'Scenario B',
+                    label: 'Strategy 2C',
                     data: ptsB.map(d => d.stepwise_mac >= 9999 ? null : d.stepwise_mac),
                     backgroundColor: 'rgba(8,145,178,0.45)',
                     borderColor: COLORS.B,
@@ -1113,8 +1165,7 @@ function renderMacTimeline(iso) {
 let gasChart;
 function renderGasChart(iso) {
     document.getElementById('gasChartTitle').textContent = iso + ' \u2014 Gas Backup Capacity (MW)';
-    const { traj: trajA, existingCleanPct: gasPct } = filterTraj(iso, DATA.trajectories.pure_consequential[iso] || []);
-    const { traj: trajB } = filterTraj(iso, getScenarioB(iso));
+    const { trajA, trajB, existingCleanPct: gasPct } = getAlignedTrajectories(iso);
     const labels = trajLabels(trajA, gasPct);
 
     if (gasChart) gasChart.destroy();
@@ -1124,7 +1175,7 @@ function renderGasChart(iso) {
             labels: labels,
             datasets: [
                 {
-                    label: 'Scenario A',
+                    label: 'Strategy 1B',
                     data: trajA.map(d => d.gas_backup_mw),
                     borderColor: COLORS.A85,
                     backgroundColor: COLORS.A_area,
@@ -1135,7 +1186,7 @@ function renderGasChart(iso) {
                     borderWidth: 2.5,
                 },
                 {
-                    label: 'Scenario B',
+                    label: 'Strategy 2C',
                     data: trajB.map(d => d.gas_backup_mw),
                     borderColor: COLORS.B85,
                     backgroundColor: COLORS.B_fill,
@@ -1217,15 +1268,14 @@ const NEWBUILD_RES = ['ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar'];
 
 let mixChartA, mixChartB;
 function renderMixCharts(iso) {
-    document.getElementById('mixTitleA').textContent = iso + ' \u2014 Scenario A Resource Mix (TWh)';
-    document.getElementById('mixTitleB').textContent = iso + ' \u2014 Scenario B Resource Mix (TWh)';
+    document.getElementById('mixTitleA').textContent = iso + ' \u2014 Strategy 1B Resource Mix (TWh)';
+    document.getElementById('mixTitleB').textContent = iso + ' \u2014 Strategy 2C Resource Mix (TWh)';
 
     const baseDemandTwh = DEMAND_TWH[iso];
     const isoShares = (GRID_MIX || {})[iso] || {};
 
-    // Filter trajectory points to thresholds >= 50%
-    const trajA = (DATA.trajectories.pure_consequential[iso] || []).filter(d => d.threshold >= 50);
-    const trajB = getScenarioB(iso).filter(d => d.threshold >= 50);
+    // Align trajectories to common threshold set
+    const { trajA, trajB } = getAlignedTrajectories(iso);
 
     // Labels: "Year\nThreshold%"
     const labels = trajA.map(d => d.year + '\n' + (d.threshold >= 99.99 ? '≥99.99' : d.threshold) + '%');
@@ -1546,8 +1596,7 @@ function renderMixCharts(iso) {
 let costChart;
 function renderCostChart(iso) {
     document.getElementById('costChartTitle').textContent = iso + ' \u2014 Effective System Cost ($/MWh)';
-    const { traj: trajA, existingCleanPct: costPct } = filterTraj(iso, DATA.trajectories.pure_consequential[iso] || []);
-    const { traj: trajB } = filterTraj(iso, getScenarioB(iso));
+    const { trajA, trajB, existingCleanPct: costPct } = getAlignedTrajectories(iso);
     const labels = trajLabels(trajA, costPct);
 
     if (costChart) costChart.destroy();
@@ -1557,7 +1606,7 @@ function renderCostChart(iso) {
             labels: labels,
             datasets: [
                 {
-                    label: 'Scenario A',
+                    label: 'Strategy 1B',
                     data: trajA.map(d => d.effective_cost),
                     borderColor: COLORS.A85,
                     backgroundColor: COLORS.A_area,
@@ -1568,7 +1617,7 @@ function renderCostChart(iso) {
                     borderWidth: 2.5,
                 },
                 {
-                    label: 'Scenario B',
+                    label: 'Strategy 2C',
                     data: trajB.map(d => d.effective_cost),
                     borderColor: COLORS.B85,
                     backgroundColor: COLORS.B_fill,
@@ -1619,8 +1668,7 @@ function renderCostChart(iso) {
 let firmChart;
 function renderFirmChart(iso) {
     document.getElementById('firmChartTitle').textContent = iso + ' \u2014 New Clean Firm + CCS Deployment (TWh)';
-    const { traj: trajA, existingCleanPct: firmPct } = filterTraj(iso, DATA.trajectories.pure_consequential[iso] || []);
-    const { traj: trajB } = filterTraj(iso, getScenarioB(iso));
+    const { trajA, trajB, existingCleanPct: firmPct } = getAlignedTrajectories(iso);
     const labels = trajLabels(trajA, firmPct);
 
     if (firmChart) firmChart.destroy();
@@ -1630,7 +1678,7 @@ function renderFirmChart(iso) {
             labels: labels,
             datasets: [
                 {
-                    label: 'Scenario A',
+                    label: 'Strategy 1B',
                     data: trajA.map(d => d.firm_total_twh || (d.resource_twh.clean_firm + (d.resource_twh.ccs_ccgt || 0))),
                     borderColor: COLORS.A85,
                     backgroundColor: COLORS.A_fill,
@@ -1641,7 +1689,7 @@ function renderFirmChart(iso) {
                     borderWidth: 2.5,
                 },
                 {
-                    label: 'Scenario B',
+                    label: 'Strategy 2C',
                     data: trajB.map(d => d.firm_total_twh || (d.resource_twh.clean_firm + (d.resource_twh.ccs_ccgt || 0))),
                     borderColor: COLORS.B85,
                     backgroundColor: COLORS.B_fill,
@@ -1887,28 +1935,28 @@ function renderFoakNOAKChart() {
             datasets: [
                 // Scenario A band (conservative → central range, light indigo fill)
                 {
-                    label: 'Scenario A band',
+                    label: 'Strategy 1B band',
                     data: years.map((y, i) => ({ x: y, y: scenA[i] })),
                     borderColor: 'rgba(79,70,229,0.12)', borderWidth: 0, pointRadius: 0,
                     fill: '+1', backgroundColor: 'rgba(79,70,229,0.08)', tension: 0.35, order: 6
                 },
                 // Scenario A main line (indigo/purple)
                 {
-                    label: 'Scenario A (deferred firm)',
+                    label: 'Strategy 1B (deferred firm)',
                     data: years.map((y, i) => ({ x: y, y: scenA[i] })),
                     borderColor: COLORS.A, borderWidth: 3, pointRadius: 2,
                     pointBackgroundColor: COLORS.A, pointHoverRadius: 5, fill: false, tension: 0.35, order: 2
                 },
                 // Scenario B band (central → optimistic range, light blue fill)
                 {
-                    label: 'Scenario B band lower',
+                    label: 'Strategy 2C band lower',
                     data: years.map((y, i) => ({ x: y, y: scenB[i] })),
                     borderColor: 'rgba(8,145,178,0.12)', borderWidth: 0, pointRadius: 0,
                     fill: '+1', backgroundColor: 'rgba(8,145,178,0.08)', tension: 0.35, order: 6
                 },
                 // Scenario B main line (blue)
                 {
-                    label: 'Scenario B (early firm investment)',
+                    label: 'Strategy 2C (early firm investment)',
                     data: years.map((y, i) => ({ x: y, y: scenB[i] })),
                     borderColor: COLORS.B, borderWidth: 3, pointRadius: 2,
                     pointBackgroundColor: COLORS.B, pointHoverRadius: 5, fill: false, tension: 0.35, order: 1
@@ -2097,7 +2145,7 @@ function renderLastMileChart() {
             labels: labels,
             datasets: [
                 {
-                    label: 'Scenario A (Consequential)',
+                    label: 'Strategy 1B (Consequential)',
                     data: costsA,
                     borderColor: '#4F46E5',
                     backgroundColor: 'rgba(79,70,229,0.1)',
@@ -2108,7 +2156,7 @@ function renderLastMileChart() {
                     borderWidth: 2.5,
                 },
                 {
-                    label: 'Scenario B (Hourly Matching)',
+                    label: 'Strategy 2C (Hourly Matching)',
                     data: costsB,
                     borderColor: '#0891B2',
                     backgroundColor: 'rgba(8,145,178,0.1)',
