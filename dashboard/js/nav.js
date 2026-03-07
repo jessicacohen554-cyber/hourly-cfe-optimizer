@@ -247,7 +247,8 @@
                 { label: 'Policy & Market Outlook', href: 'gen_policy_conditions.html' },
                 { label: 'Target Setting', href: 'gen_target_setting.html' },
                 { label: 'Regional Pathways', href: 'gen_regional_pathways.html' },
-                { label: 'IPP Deep Dives', href: 'ipp_climate_transition.html' }
+                { label: 'IPP Deep Dives', href: 'ipp_climate_transition.html' },
+                { label: 'Nuclear Retirement Risk', href: 'nuclear_retirement.html' }
             ]
         },
         {

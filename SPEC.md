@@ -1,9 +1,48 @@
 # Advanced Sensitivity Model — Complete Specification
 
 > **Authoritative reference for all design decisions.** If a future session needs context, read this file first.
-> Last updated: 2026-03-04.
+> Last updated: 2026-03-07.
 
 ## Current Status (Mar 7, 2026)
+
+### Step 12: Nuclear Retirement & Stranding Analysis (Added — Mar 7, 2026)
+
+**Branch:** `claude/nuclear-retirement-analysis-e8kqS`
+
+**Purpose**: Assess which IPP-owned nuclear assets strand under which market conditions, incorporating state nuclear policy rolloffs, 45U PTC expiration, and the 270-scenario parametric market simulation from Steps 10/11.
+
+**Critical design decision — CfD-style policy modeling (NOT additive):**
+- State ZEC/CMC programs and 45U PTC are **contract-for-difference floors**, not additive subsidies
+- They guarantee a minimum revenue per MWh — if market revenue already exceeds the floor, no CfD payment is made
+- State programs and 45U do NOT stack — whichever provides the higher effective floor applies
+- Post-expiry, plant falls to next-highest floor (e.g., IL CMC expires 2027 → 45U $15/MWh through 2032 → fully merchant)
+- Revenue model: `total_rev = base_rev + max(0, applicable_floor - base_rev_per_mwh) × gen_mwh`
+
+**Nuclear fleet scope**: 25 plants across 6 IPP companies (Vistra, Constellation, Talen, PSEG, NextEra). Added Seabrook Nuclear (NextEra, NEISO, 1,244 MW) which was missing from fleet config.
+
+**Policy programs tracked:**
+| Program | Floor $/MWh | Expiry | Plants MW |
+|---------|-------------|--------|-----------|
+| IL CEJA CMC | $33.38 | 2027 | 11,782 MW (6 IL plants) |
+| NY ZEC | $17.48 | 2029 | 3,325 MW (3 NY plants) |
+| NJ ZEC | $10.00 | 2025 (expired) | 3,467 MW (3 NJ plants) |
+| 45U Federal PTC | $15.00 | 2032 | All existing nuclear |
+
+**New files:**
+- `data/nuclear_policy_data.json` — NRC license dates, SLR status, state policy metadata for all 25 plants
+- `scripts/step12_nuclear_retirement.py` — Recomputes nuclear economics from scratch using Step 10 sweep parquets
+- `dashboard/nuclear_retirement.html` — Interactive reference page with policy timeline, stranding heatmap, revenue waterfalls, ISO impact charts
+- `dashboard/js/nuclear-retirement-data.js` — Pre-computed JS data for dashboard
+- `data/step12-nuclear-retirement/` — Parquet outputs (stranding results + probabilities)
+
+**Key findings from initial run:**
+- Most PJM nuclear plants are profitable on merchant economics alone (strong $120/kW-yr capacity market)
+- Seabrook (NEISO, $55/kW-yr capacity market) shows first marginal stranding risk (~2.2% in 2040)
+- ERCOT energy-only market makes Comanche Peak/STP more price-sensitive but high TX LMPs compensate
+- IL CEJA CMC plants don't currently need the $33.38 floor — PJM market revenue exceeds it
+- The 45U PTC's $4.55B/yr fleet value is largely theoretical under current market conditions
+
+---
 
 ### Step 10 SMARTargets Net-Zero Convergence Fix (Completed — Mar 7, 2026)
 
