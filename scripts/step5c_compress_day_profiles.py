@@ -301,6 +301,9 @@ def main():
             result = dispatch_from_cache(
                 iso, mix_dict, batt, batt8, ldes, h2,
                 demand_norm, gen_profiles, dispatch_cache)
+            if result is None:
+                print(f"    WARNING: Cache miss for mix {mk[:16]}, skipping")
+                continue
             compressed = compress_to_24h(result)
             iso_profiles[mk] = round_arrays(compressed)
 
