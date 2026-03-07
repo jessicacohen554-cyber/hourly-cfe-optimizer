@@ -3,7 +3,44 @@
 > **Authoritative reference for all design decisions.** If a future session needs context, read this file first.
 > Last updated: 2026-03-04.
 
-## Current Status (Mar 6, 2026)
+## Current Status (Mar 7, 2026)
+
+### Step 10 SMARTargets Net-Zero Convergence Fix (Completed — Mar 7, 2026)
+
+**Branch:** `claude/fix-net-zero-convergence-ZS2TK`
+
+**Problem**: AT/QT scenarios were NOT converging to 0 emissions by 2050. AT2 (Challenging, PJM) showed 347.6 Mt at 2050 instead of 0. Root causes:
+1. Queue cap was a hard stop for mandated deployment — exhausting queue prevented building more clean energy
+2. No backstop mechanism for residual emissions after physical deployment was exhausted
+3. AT2 and AT4 were producing identical results (economy_nz vs power_nz distinction not applying)
+
+**Fix — Scenario-dependent convergence mechanisms:**
+
+| Scenario Type | Mechanism | How it works |
+|--------------|-----------|--------------|
+| Facilitating (AT1/AT3/QT1/QT3) | DAC backstop | Grid deploys until marginal MAC > DAC cost, then DAC offsets remainder. Cost-optimal switchover. |
+| Challenging (AT2/AT4/QT2/QT4) | Forced grid + queue overshoot | No DAC available. Grid forced to ~100% clean via queue overshoot premium ($8/MWh adder). Carbon shadow price tracks implied policy cost. |
+
+**DAC cost trajectory (facilitating scenarios):**
+| Year | Low (Fac.) | Medium | High (Chal.) |
+|------|-----------|--------|-------------|
+| 2030 | $400/ton | $600 | $800 |
+| 2035 | $250 | $400 | $600 |
+| 2040 | $180 | $300 | $450 |
+| 2045 | $130 | $220 | $350 |
+| 2050 | $100 | $150 | $250 |
+
+**Key results** (all 7 ISOs, all AT scenarios now converge to 0 Mt net CO₂ by 2050):
+- AT1 (Fac. Power NZ): Grid reaches 88-92% clean, DAC handles last mile at $100/ton
+- AT2 (Chal. Power NZ): Grid forced to ~100% clean, shadow prices $500-$58,000/ton
+- AT3 (Fac. Economy NZ): Grid reaches 92-98% clean, DAC offsets remainder
+- AT4 (Chal. Economy NZ): Grid forced to 100%, extreme policy costs
+
+**New output fields**: `gross_emissions_mt`, `dac_offset_mt`, `dac_cost_million`, `dac_cost_per_ton`, `carbon_shadow_price`
+
+**Dashboard redesign**: ISO selector → Pathway selector (Power NZ / Economy NZ / Reference). Shows emission trajectory with cap ceiling, side-by-side resource mix buildout, carbon shadow price vs DAC cost, system cost trajectories, and deep-dive narrative per region/pathway.
+
+---
 
 ### Battery/LDES Pipeline Architecture Fix (In Progress — Mar 6, 2026)
 
