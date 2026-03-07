@@ -59,7 +59,7 @@ from scenario_common import (
     build_zones, THRESHOLDS,
     _load_feasible_from_parquet,
 )
-from procurement_utils import get_rps_target_at_year
+from procurement_utils import get_rps_target_at_year, PPA_PREMIUMS
 
 # Import LMP engine from step5b
 from step5b_compute_lmp_prices import (
@@ -421,6 +421,136 @@ SCENARIOS = {
 
 # QT reduction targets: 5% to 95% in 5% intervals
 QT_REDUCTION_TARGETS = [i / 100.0 for i in range(5, 100, 5)]  # 0.05, 0.10, ..., 0.95
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PARAMETRIC SWEEP — SHARED DIMENSION AXES
+# ═══════════════════════════════════════════════════════════════════════════════
+# 5 price sensitivity keys from step5d — maps to the 9-dim step3 cost toggles.
+# Each key specifies the full set of cost toggles (ren, firm, batt, ldes, ccs,
+# q45, fuel, tx, geo). This replaces individual lcoe_level/fuel_level/tx_level.
+
+PRICE_SENSITIVITIES = {
+    'all_low': {
+        'ren': 'Low', 'firm': 'L', 'batt': 'Low', 'ldes_lvl': 'Low',
+        'ccs': 'L', 'q45': '1', 'fuel': 'Low', 'tx': 'Low', 'geo': 'L',
+    },
+    'all_med': {
+        'ren': 'Medium', 'firm': 'M', 'batt': 'Medium', 'ldes_lvl': 'Medium',
+        'ccs': 'M', 'q45': '1', 'fuel': 'Medium', 'tx': 'Medium', 'geo': 'M',
+    },
+    'all_high': {
+        'ren': 'High', 'firm': 'H', 'batt': 'High', 'ldes_lvl': 'High',
+        'ccs': 'H', 'q45': '1', 'fuel': 'High', 'tx': 'High', 'geo': 'H',
+    },
+    'high_vre_low_firm': {
+        'ren': 'High', 'firm': 'L', 'batt': 'High', 'ldes_lvl': 'High',
+        'ccs': 'L', 'q45': '1', 'fuel': 'Medium', 'tx': 'Medium', 'geo': 'L',
+    },
+    'high_firm_low_vre': {
+        'ren': 'Low', 'firm': 'H', 'batt': 'Low', 'ldes_lvl': 'Low',
+        'ccs': 'H', 'q45': '1', 'fuel': 'Medium', 'tx': 'Medium', 'geo': 'H',
+    },
+}
+
+# Gas friction: how freely new gas can be built (ESG/permitting/policy friction)
+GAS_FRICTION_LEVELS = {'Low': 0.3, 'Medium': 0.7, 'High': 1.0}
+
+# PPA level: maps to procurement_utils.PPA_PREMIUMS (VRE/Firm/Uprate)
+# Low = deep PPA market (low risk premium), High = merchant-only (high premium)
+PPA_LEVELS = ['Low', 'Medium', 'High']
+
+# Conditions bundle: Facilitating vs Challenging
+CONDITIONS_BUNDLE = {
+    'Facilitating': {
+        'learning_speed': 'Fast',
+        'queue_type': 'Facilitating',
+        'dac_available': True,
+    },
+    'Challenging': {
+        'learning_speed': 'Slow',
+        'queue_type': 'Challenging',
+        'dac_available': False,
+    },
+}
+
+DEMAND_GROWTH_LEVELS = ['Low', 'Medium', 'High']
+
+
+def _map_price_sens_to_lcoe_fuel_tx(sens):
+    """Map a step5d price sensitivity dict to the lcoe_level/fuel_level/tx_level
+    format consumed by the existing step10 cost and revenue models.
+
+    The 'firm' key (L/M/H) determines clean firm LCOE level.
+    The 'ren' key determines VRE LCOE level.
+    We use 'firm' as the primary lcoe_level since it drives the cost-dominant
+    resources (nuclear, CCS). VRE LCOEs are already cheap across all levels.
+    """
+    # Map short codes to full names
+    level_map = {'L': 'Low', 'M': 'Medium', 'H': 'High'}
+    return {
+        'lcoe_level': level_map.get(sens['firm'], sens['firm']),
+        'fuel_level': sens['fuel'],
+        'tx_level': sens['tx'],
+        # Store the full sensitivity for detailed cost lookups
+        '_price_sens': dict(sens),
+    }
+
+
+def build_sweep_scenarios(scenario_type='reference', emission_constraint=None):
+    """Generate all parametric sweep scenarios as a list of (scenario_id, conditions_dict).
+
+    Scenario types:
+      - 'reference': No emission constraint (R-series). 2 × 3 × 5 × 3 × 3 = 270
+      - 'power_nz': Power sector net-zero constraint (AT-series)
+      - 'economy_nz': Economy-wide net-zero constraint (AT-series)
+
+    Returns list of (scenario_id_str, conditions_dict).
+    """
+    from itertools import product as cartesian
+
+    combos = []
+    cond_keys = ['Facilitating', 'Challenging']
+    demand_keys = DEMAND_GROWTH_LEVELS
+    price_keys = list(PRICE_SENSITIVITIES.keys())
+    ppa_keys = PPA_LEVELS
+    gas_keys = list(GAS_FRICTION_LEVELS.keys())
+
+    for cond, demand, price_name, ppa, gas_name in cartesian(
+            cond_keys, demand_keys, price_keys, ppa_keys, gas_keys):
+
+        bundle = CONDITIONS_BUNDLE[cond]
+        price_mapping = _map_price_sens_to_lcoe_fuel_tx(PRICE_SENSITIVITIES[price_name])
+
+        # Build scenario ID: compact string for parquet grouping
+        cond_code = 'F' if cond == 'Facilitating' else 'C'
+        demand_code = demand[0]  # L, M, H
+        ppa_code = ppa[0]        # L, M, H
+        gas_code = gas_name[0]   # L, M, H
+        scenario_id = f"S_{cond_code}_{demand_code}_{price_name}_{ppa_code}_{gas_code}"
+
+        conditions = {
+            'name': f"{scenario_type.title()}: {cond} | {demand} demand | {price_name} | PPA={ppa} | Gas={gas_name}",
+            'demand_growth': demand,
+            'lcoe_level': price_mapping['lcoe_level'],
+            'learning_speed': bundle['learning_speed'],
+            'queue_type': bundle['queue_type'],
+            'gas_friction': GAS_FRICTION_LEVELS[gas_name],
+            'carbon_price': 0,
+            'fuel_level': price_mapping['fuel_level'],
+            'tx_level': price_mapping['tx_level'],
+            'ppa_level': ppa,
+            '_price_sens_name': price_name,
+            '_price_sens': price_mapping.get('_price_sens', {}),
+        }
+
+        if emission_constraint:
+            conditions['emission_constraint'] = emission_constraint
+            conditions['dac_available'] = bundle['dac_available']
+
+        combos.append((scenario_id, conditions))
+
+    return combos
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -841,9 +971,70 @@ def get_resource_lcoe(res, iso, lcoe_level, cumulative_gw, learning_speed, year)
         return 50  # Fallback
 
 
+# Regional PPA market depth multiplier — scales the base PPA discount by
+# regional liquidity. Deep PPA markets (ERCOT, CAISO, PJM) realize the full
+# discount; thin markets (SPP, MISO) only realize a fraction.
+#
+# Calibration:
+#   - ERCOT: Deepest corporate PPA market (Amazon, Meta, Google HQs). 1.0
+#   - CAISO: Large PPA market but regulatory complexity (CPUC approval). 0.95
+#   - PJM: Large footprint, active PPA market (VA, PA, NJ). 0.90
+#   - NYISO: Moderate — NYC load center demand, but limited greenfield. 0.75
+#   - NEISO: Tight market, permitting constraints, thin PPA pipeline. 0.65
+#   - MISO: Fragmented across states, fewer corporate buyers. 0.60
+#   - SPP: Thinnest market, rural load, limited corporate demand. 0.50
+#
+# Sources: LBNL 2024 Utility-Scale Solar/Wind, LevelTen PPA Price Index,
+# AES Clean Energy PPA tracker, REBA Deal Tracker.
+PPA_MARKET_DEPTH = {
+    'CAISO': 0.95, 'ERCOT': 1.00, 'PJM': 0.90, 'NYISO': 0.75,
+    'NEISO': 0.65, 'MISO': 0.60, 'SPP': 0.50,
+}
+
+
+def _get_ppa_discount(res, ppa_level, iso=None):
+    """Get PPA-driven cost reduction for a resource, scaled by regional market depth.
+
+    PPA contracts de-risk revenue for developers, allowing them to accept
+    lower returns → lower effective LCOE. The discount is the base premium
+    from procurement_utils.PPA_PREMIUMS, scaled by ISO-specific market depth.
+
+    Deep PPA markets (ERCOT=1.0) realize the full discount; thin markets
+    (SPP=0.50) realize half. This reflects real-world PPA availability:
+    a "High PPA" scenario in ERCOT means very different liquidity than in SPP.
+
+    Returns discount fraction [0, 1] to multiply against LCOE.
+    E.g., 0.12 means effective LCOE = LCOE × (1 - 0.12) = 88% of merchant.
+    """
+    if ppa_level is None:
+        return 0.0
+
+    # Map resource to PPA category
+    if res in ('solar', 'wind', 'offshore_wind'):
+        category = 'VRE'
+    elif res in ('clean_firm', 'ccs_ccgt', 'geothermal', 'ldes', 'h2'):
+        category = 'Firm'
+    elif res in ('battery', 'battery8'):
+        category = 'VRE'  # Battery PPAs priced like VRE
+    else:
+        return 0.0
+
+    # Base discount from procurement_utils PPA premium tables
+    base_discount = PPA_PREMIUMS.get(category, {}).get(ppa_level, 0)
+
+    # Scale by regional PPA market depth
+    depth = PPA_MARKET_DEPTH.get(iso, 0.75) if iso else 1.0
+    return base_discount * depth
+
+
 def compute_zone_cost(iso, delta_resources, lcoe_level, cumulative_gw,
-                       learning_speed, year, tx_level='Medium'):
+                       learning_speed, year, tx_level='Medium', ppa_level=None):
     """Compute blended LCOE ($/MWh) for incremental resources in a zone.
+
+    Args:
+        ppa_level: 'Low'/'Medium'/'High' or None. PPA availability reduces
+            effective LCOE via risk premium reduction, scaled by regional
+            PPA market depth (ERCOT=1.0 → SPP=0.50).
 
     Returns (blended_cost, per_resource_cost_dict).
     """
@@ -861,6 +1052,11 @@ def compute_zone_cost(iso, delta_resources, lcoe_level, cumulative_gw,
         if res in ('solar', 'wind', 'clean_firm', 'offshore_wind'):
             tx = get_tx(res if res != 'clean_firm' else 'clean_firm', tx_level, iso)
             lcoe += tx
+
+        # Apply PPA discount (reduces developer's required return), scaled by region
+        if ppa_level is not None:
+            discount = _get_ppa_discount(res, ppa_level, iso)
+            lcoe *= (1 - discount)
 
         per_resource_cost[res] = round(lcoe, 2)
         weighted_cost += lcoe * delta_twh
@@ -1182,6 +1378,7 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                 blended_cost, per_res_cost = compute_zone_cost(
                     iso, delta_twh, conditions['lcoe_level'], cumulative_gw,
                     conditions['learning_speed'], year, conditions['tx_level'],
+                    ppa_level=conditions.get('ppa_level'),
                 )
 
                 # --- PROFIT ---
@@ -1322,6 +1519,7 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                         m_cost, _ = compute_zone_cost(
                             iso, delta_twh, conditions['lcoe_level'], cumulative_gw,
                             conditions['learning_speed'], year, conditions['tx_level'],
+                            ppa_level=conditions.get('ppa_level'),
                         )
 
                         # Queue overshoot premium — if beyond queue cap, add premium
@@ -1643,6 +1841,49 @@ def save_results(results, scenario_id):
 # MAIN
 # ═══════════════════════════════════════════════════════════════════════════════
 
+def save_sweep_results(all_rows, sweep_type='reference'):
+    """Save parametric sweep results as a single parquet + JSON summary.
+
+    all_rows: list of flat dicts (one per scenario × ISO × year).
+    """
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+    df = pd.DataFrame(all_rows)
+    parquet_path = os.path.join(OUTPUT_DIR, f'smartargets_sweep_{sweep_type}.parquet')
+    df.to_parquet(parquet_path, index=False)
+    print(f"\nSaved sweep: {parquet_path} ({len(df)} rows)")
+
+    # Summary JSON: per-ISO P10/P50/P90 of key metrics at 2050
+    summary = {'sweep_type': sweep_type, 'n_scenarios': len(df['scenario'].unique()), 'isos': {}}
+    df_2050 = df[df['year'] == 2050]
+    for iso in df_2050['iso'].unique():
+        iso_df = df_2050[df_2050['iso'] == iso]
+        summary['isos'][iso] = {
+            'n_scenarios': len(iso_df),
+            'clean_pct': {
+                'p10': round(float(iso_df['clean_pct'].quantile(0.10)), 1),
+                'p50': round(float(iso_df['clean_pct'].quantile(0.50)), 1),
+                'p90': round(float(iso_df['clean_pct'].quantile(0.90)), 1),
+            },
+            'emissions_mt': {
+                'p10': round(float(iso_df['emissions_mt'].quantile(0.10)), 2),
+                'p50': round(float(iso_df['emissions_mt'].quantile(0.50)), 2),
+                'p90': round(float(iso_df['emissions_mt'].quantile(0.90)), 2),
+            },
+            'avg_lmp': {
+                'p10': round(float(iso_df['avg_lmp'].quantile(0.10)), 1),
+                'p50': round(float(iso_df['avg_lmp'].quantile(0.50)), 1),
+                'p90': round(float(iso_df['avg_lmp'].quantile(0.90)), 1),
+            },
+        }
+
+    json_path = os.path.join(OUTPUT_DIR, f'smartargets_sweep_{sweep_type}_summary.json')
+    with open(json_path, 'w') as f:
+        json.dump(summary, f, indent=2, default=str)
+    print(f"Saved: {json_path}")
+    return df
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='SMARTargets V1 — Market Simulation of Clean Energy Deployment')
@@ -1653,6 +1894,10 @@ def main():
                         help='ISOs to simulate (default: all 7)')
     parser.add_argument('--dry-run', action='store_true',
                         help='Load data and validate, but skip simulation')
+    parser.add_argument('--sweep', choices=['reference', 'power_nz', 'economy_nz'],
+                        help='Run parametric sweep (270 scenarios per type)')
+    parser.add_argument('--sweep-limit', type=int, default=0,
+                        help='Limit sweep to first N scenarios (for testing)')
     args = parser.parse_args()
 
     isos = args.isos or list(ISOS)
@@ -1677,10 +1922,96 @@ def main():
                       f"({thresholds[0]:.0f}% – {thresholds[-1]:.0f}%)")
             else:
                 print(f"  {iso}: NO DATA")
+        if args.sweep:
+            emission_c = args.sweep if args.sweep != 'reference' else None
+            combos = build_sweep_scenarios(args.sweep, emission_c)
+            limit_label = f" (limited to {args.sweep_limit})" if args.sweep_limit else ""
+            print(f"\nSweep '{args.sweep}': {len(combos)} total scenarios{limit_label}")
+            print(f"  Axes: conditions(2) × demand(3) × price_sens(5) × ppa(3) × gas_friction(3)")
+            # Show a sample
+            sample = combos[:3]
+            for sid, cond in sample:
+                print(f"  Sample: {sid}")
+                print(f"    lcoe={cond['lcoe_level']}, fuel={cond['fuel_level']}, "
+                      f"tx={cond['tx_level']}, ppa={cond.get('ppa_level','None')}, "
+                      f"gas_friction={cond['gas_friction']}")
         print("\nDry run complete — data validated.")
         return
 
     t_start = time.time()
+
+    # ─── PARAMETRIC SWEEP MODE ─────────────────────────────────────────
+    if args.sweep:
+        emission_c = args.sweep if args.sweep != 'reference' else None
+        combos = build_sweep_scenarios(args.sweep, emission_c)
+        if args.sweep_limit:
+            combos = combos[:args.sweep_limit]
+
+        n_total = len(combos)
+        print(f"\n{'='*70}")
+        print(f"PARAMETRIC SWEEP: {args.sweep} — {n_total} scenarios × {len(isos)} ISOs")
+        print(f"{'='*70}\n")
+
+        all_rows = []
+        for i, (scenario_id, conditions) in enumerate(combos, 1):
+            print(f"\n[{i}/{n_total}] {scenario_id}")
+
+            # Register the scenario temporarily so save_results can find it
+            SCENARIOS[scenario_id] = conditions
+
+            results = run_market_simulation(scenario_id, conditions, isos)
+
+            # Flatten results into rows
+            for iso_name, year_results in results.items():
+                for yr in year_results:
+                    row = {
+                        'scenario': scenario_id,
+                        'conditions': conditions.get('queue_type', 'Facilitating')[0],  # F or C
+                        'demand_growth': conditions['demand_growth'],
+                        'price_sens': conditions.get('_price_sens_name', 'all_med'),
+                        'ppa_level': conditions.get('ppa_level', 'None'),
+                        'gas_friction': conditions['gas_friction'],
+                        'iso': yr['iso'],
+                        'year': yr['year'],
+                        'clean_pct': yr['clean_pct'],
+                        'demand_twh': yr['demand_twh'],
+                        'emissions_mt': yr['emissions_mt'],
+                        'gross_emissions_mt': yr.get('gross_emissions_mt', yr['emissions_mt']),
+                        'emission_rate': yr['emission_rate_tco2_mwh'],
+                        'emission_cap_mt': yr.get('emission_cap_mt'),
+                        'dac_offset_mt': yr.get('dac_offset_mt', 0),
+                        'dac_cost_million': yr.get('dac_cost_million', 0),
+                        'carbon_shadow_price': yr.get('carbon_shadow_price', 0),
+                        'cost_per_mwh': yr['cost_per_mwh'],
+                        'revenue_per_mwh': yr['revenue_per_mwh'],
+                        'mandated_subsidy_mwh': yr.get('mandated_subsidy_mwh', 0),
+                        'cumulative_subsidy_mwh': yr.get('cumulative_subsidy_mwh', 0),
+                        'avg_lmp': yr['avg_lmp'],
+                        'lmp_p90': yr['lmp_p90'],
+                        'gas_built_gw': yr['gas_built_gw'],
+                        'total_gas_gw': yr['total_gas_gw'],
+                        'market_stop': yr['market_stop'],
+                        'queue_used_gw': yr['queue_used_gw'],
+                    }
+                    # Resource mix columns
+                    for res in ['clean_firm', 'solar', 'wind', 'offshore_wind',
+                                'ccs_ccgt', 'hydro', 'battery', 'ldes']:
+                        row[f'mix_{res}_twh'] = yr['resource_mix_twh'].get(res, 0)
+                    all_rows.append(row)
+
+            # Periodic checkpoint
+            if i % 50 == 0:
+                elapsed = time.time() - t_start
+                rate = elapsed / i
+                remaining = rate * (n_total - i)
+                print(f"\n  [{i}/{n_total}] elapsed={elapsed:.0f}s, "
+                      f"~{remaining:.0f}s remaining ({rate:.1f}s/scenario)")
+
+        save_sweep_results(all_rows, args.sweep)
+        elapsed = time.time() - t_start
+        print(f"\nSweep complete: {n_total} scenarios in {elapsed:.1f}s "
+              f"({elapsed/n_total:.1f}s/scenario)")
+        return
 
     for scenario_id in args.scenarios:
         conditions = SCENARIOS[scenario_id]
