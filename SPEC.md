@@ -958,7 +958,7 @@ Key results at 90% CFE:
 #### §15.5.3 Cross-References to Deep Dive Pages
 
 The procurement comparison page is a **hub**. At each failure mode inflection point, surface the relevant link:
-- **Wholesale erosion / stranding → [Cost to Replace]** (`cost_to_replace.html`) — full regional replacement premium analysis
+- **Wholesale erosion / stranding → [Nuclear Revenue Crossover]** (`lmp_trends.html#nuclear-crossover`) — full regional replacement premium analysis (merged from cost_to_replace.html)
 - **Wholesale erosion / stranding → [New Build Analysis]** (`new_build_analysis.html`) — supply ceiling, LMP feedback loop, 45U stranding threshold
 - **Geographic clustering / saturation → [Consequential Vacuum]** (`consequential_vacuum.html`) — 5 failure modes deep dive with dispatch-based evidence
 - **Learning curves / cost trajectory → [Scenario Comparison]** (`scenario_comparison.html`) — FOAK→NOAK dynamics, Scenario A vs B full trajectories
@@ -1207,7 +1207,7 @@ Charts on this page show *that* something is happening at a participation thresh
 #### PAGE FOOTER
 
 Cross-reference links to deep-dive pages:
-- Cost to Replace → `cost_to_replace.html`
+- Nuclear Revenue Crossover → `lmp_trends.html#nuclear-crossover` (merged from cost_to_replace.html)
 - New Build Analysis → `new_build_analysis.html`
 - Consequential Vacuum → `consequential_vacuum.html`
 - Scenario Comparison → `scenario_comparison.html`
@@ -1563,7 +1563,7 @@ Each dashboard page uses a specific track (or combination) for its data and visu
 **Track 2 (NB) + Track 3 (CTR) compared against Track 1 (ECF):**
 | Page | File | Notes |
 |---|---|---|
-| Cost to Replace | `cost_to_replace.html` | CTR vs ECF — replacement cost of dispatchable clean |
+| Nuclear Revenue Crossover | `lmp_trends.html#nuclear-crossover` | CTR vs ECF — replacement cost of dispatchable clean (merged from cost_to_replace.html) |
 | New Build Analysis | `new_build_analysis.html` | NB vs ECF — procurement strategy, EAC scarcity scaling, LMP feedback loop (**PJM only**) |
 
 #### Decision 5e: New Build Analysis Page Design (Feb 25, 2026)

@@ -140,12 +140,72 @@ body { background: var(--bg-page-white); }
     <div class="header-accent"></div>
 </header>
 
+<!-- Troubleshooting button -->
+<div style="max-width:1100px;margin:0 auto;padding:24px 24px 0;text-align:right;">
+    <div style="display:inline-flex;gap:12px;">
+        <a href="troubleshooting_step3_vs_5d.html" style="font-family:var(--font-heading);font-size:0.78rem;font-weight:600;color:var(--text-dim);text-decoration:none;padding:8px 16px;border:1px solid var(--border-light);border-radius:var(--radius-pill);transition:all 0.2s;display:inline-flex;align-items:center;gap:6px;min-height:44px;" onmouseover="this.style.borderColor='rgba(14,165,233,0.5)';this.style.color='var(--hydro)'" onmouseout="this.style.borderColor='';this.style.color=''">&#128295; Step 3 vs 5D</a>
+        <a href="market_convergence.html" style="font-family:var(--font-heading);font-size:0.78rem;font-weight:600;color:var(--text-dim);text-decoration:none;padding:8px 16px;border:1px solid var(--border-light);border-radius:var(--radius-pill);transition:all 0.2s;display:inline-flex;align-items:center;gap:6px;min-height:44px;" onmouseover="this.style.borderColor='rgba(14,165,233,0.5)';this.style.color='var(--hydro)'" onmouseout="this.style.borderColor='';this.style.color=''">&#128295; Model Convergence (5B vs 10)</a>
+    </div>
+</div>
+
 <section class="ref-intro section-light">
-    <h2>How Electricity Markets Actually Work</h2>
-    <p>A curated collection of questions and answers exploring the mechanics of power markets, resource economics, and grid decarbonization. Each entry tackles one question with clear illustrations and concise analysis.</p>
+    <h2>Tools, Deep Dives &amp; Market Mechanics</h2>
+    <p>Interactive tools, technical references, and curated explorations of electricity market design, grid physics, and decarbonization economics.</p>
 </section>
 
+<!-- ===== Core Tools ===== -->
 <section class="ref-grid section-light">
+    <a href="dashboard.html" class="ref-card">
+        <span class="ref-card-tag">Interactive Tool</span>
+        <h3>The Grid (Optimizer)</h3>
+        <p>Interactive cost optimizer with all sensitivity toggles. Explore resource mixes, costs, and tradeoffs across 7 ISOs and 5,832 scenarios per region.</p>
+        <div class="ref-card-arrow">Launch <span>&rarr;</span></div>
+    </a>
+
+    <a href="consequential_vacuum.html" class="ref-card">
+        <span class="ref-card-tag">Analysis</span>
+        <h3>Five Failure Modes</h3>
+        <p>How procurement strategies can fail at scale &mdash; from duck curve amplification to nuclear retirement cascades to cross-regional leakage.</p>
+        <div class="ref-card-arrow">Read <span>&rarr;</span></div>
+    </a>
+
+    <a href="building_blocks.html" class="ref-card">
+        <span class="ref-card-tag">Grid Physics</span>
+        <h3>Building Blocks</h3>
+        <p>Resource shapes, supply curves, and the hourly generation profiles that drive the optimization. Solar, wind, nuclear, hydro, storage &mdash; how each resource behaves.</p>
+        <div class="ref-card-arrow">Explore <span>&rarr;</span></div>
+    </a>
+
+    <a href="research_paper.html" class="ref-card">
+        <span class="ref-card-tag">Academic</span>
+        <h3>Literature Review</h3>
+        <p>Academic foundations: hourly accounting, cost benchmarks, firm power, storage economics, curtailment, EAC scarcity, and relationship to capacity expansion models.</p>
+        <div class="ref-card-arrow">Read <span>&rarr;</span></div>
+    </a>
+
+    <a href="optimizer_methodology.html" class="ref-card">
+        <span class="ref-card-tag">Technical</span>
+        <h3>Methodology</h3>
+        <p>Detailed technical specification of the 10-step optimization pipeline, dispatch models, cost functions, and sensitivity analysis framework.</p>
+        <div class="ref-card-arrow">Read <span>&rarr;</span></div>
+    </a>
+
+    <a href="policy_context.html" class="ref-card">
+        <span class="ref-card-tag">Policy</span>
+        <h3>Policy Context</h3>
+        <p>How IRA tax credits, RPS mandates, Scope 2 revisions, SBTi pathways, and capacity market designs shape the economics of clean energy procurement.</p>
+        <div class="ref-card-arrow">Read <span>&rarr;</span></div>
+    </a>
+
+</section>
+
+<!-- ===== Market Mechanics Q&A ===== -->
+<div class="gradient-transition"></div>
+<section style="max-width:1100px;margin:0 auto;padding:0 24px;">
+    <h2 style="font-family:var(--font-heading);font-size:1.4rem;font-weight:700;color:var(--navy);margin-bottom:8px;">Market Mechanics</h2>
+    <p style="color:var(--text-secondary);font-size:0.92rem;margin-bottom:24px;">Curated Q&amp;A entries exploring how electricity markets actually work.</p>
+</section>
+<section class="ref-grid section-light" style="padding-top:0;">
     <a href="ref-lmp-ccs-nuclear.html" class="ref-card">
         <span class="ref-card-tag">Market Design</span>
         <h3>How Would Dispatchable CCS or Nuclear Change Wholesale Prices?</h3>
@@ -156,7 +216,7 @@ body { background: var(--bg-page-white); }
     <a href="ref-market-design-low-carbon.html" class="ref-card">
         <span class="ref-card-tag">Market Design</span>
         <h3>If Nobody Burns Fuel, How Do You Build a Market?</h3>
-        <p>Current wholesale markets price at marginal fuel cost. When the grid runs on nuclear, wind, and solar with near-zero fuel costs, the entire capital recovery mechanism breaks. What are the proposals for a post-fossil market design?</p>
+        <p>Current wholesale markets price at marginal fuel cost. When the grid runs on nuclear, wind, and solar with near-zero fuel costs, the entire capital recovery mechanism breaks.</p>
         <div class="ref-card-arrow">Read <span>&rarr;</span></div>
     </a>
 
@@ -180,8 +240,6 @@ body { background: var(--bg-page-white); }
         <p>Three models bracket merchant nuclear risk: a probability fan from current market dynamics, a net-zero emissions ceiling with feedback loops, and forced clean penetration via CapEx optimization. Cross-model agreement reveals which conclusions are robust vs. assumption-dependent.</p>
         <div class="ref-card-arrow">Read <span>&rarr;</span></div>
     </a>
-
-    <!-- Future entries: add more <a class="ref-card"> blocks here -->
 </section>
 
 <div class="gradient-transition"></div>
@@ -205,14 +263,13 @@ body { background: var(--bg-page-white); }
 
 <div class="gradient-transition"></div>
 
-<p class="ref-coming-soon">More entries coming soon.</p>
 
 <footer class="page-footer">
     <div class="footer-links">
-        <a href="index.html">Home</a>
+        <a href="about.html">About</a>
         <a href="dashboard.html">Grid Simulation</a>
         <a href="abatement_dashboard.html">CO&#8322; Abatement</a>
-        <a href="research_paper.html">Research Paper</a>
+        <a href="research_paper.html">Literature Review</a>
     </div>
     <p class="footer-note">The 8,760 Problem &mdash; Reference Library</p>
 </footer>

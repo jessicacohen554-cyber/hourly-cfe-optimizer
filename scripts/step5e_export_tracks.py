@@ -38,7 +38,7 @@ Output JSON structure:
     }
   }
 
-The frontend code in cost_to_replace.html and newbuild_requirement.html
+The frontend code in lmp_trends.html (nuclear crossover sections) and newbuild_requirement.html
 handles both formats: per-scenario iteration AND precomputed sweep percentiles.
 """
 
