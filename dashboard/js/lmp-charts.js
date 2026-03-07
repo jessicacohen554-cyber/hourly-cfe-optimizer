@@ -340,7 +340,7 @@ function buildCapRevChart(iso, accent) {
         });
     }
 
-    allCharts.push(new Chart(ctx, {
+    chartInstances.capRev = new Chart(ctx, {
         type: 'line',
         data: { datasets: datasets },
         options: {
@@ -356,7 +356,7 @@ function buildCapRevChart(iso, accent) {
             },
             scales: baseScales('Wholesale Revenue ($/MWh)', undefined, undefined)
         }
-    }));
+    });
 
     // Update narrative
     var el = document.getElementById('nucCapRevPJM');
@@ -370,15 +370,6 @@ function buildCapRevChart(iso, accent) {
         var capAt50 = sys.p50[0].toFixed(1);
         sub.textContent = iso + ': Capacity market adds $' + capAt50 + '/MWh at 50% clean to energy-only LMP';
     }
-}
-
-function hexToRgba(hex, alpha) {
-    if (!hex) return 'rgba(14,165,233,' + alpha + ')';
-    hex = hex.replace('#', '');
-    var r = parseInt(hex.substring(0, 2), 16);
-    var g = parseInt(hex.substring(2, 4), 16);
-    var b = parseInt(hex.substring(4, 6), 16);
-    return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
 }
 
 // ===== NUCLEAR TOTAL MARKET REVENUE CHART =====
@@ -440,7 +431,7 @@ function buildNucRevChart(iso) {
         }
     });
 
-    allCharts.push(new Chart(ctx, {
+    chartInstances.nucRev = new Chart(ctx, {
         type: 'line',
         data: { datasets: datasets },
         options: {
@@ -456,7 +447,7 @@ function buildNucRevChart(iso) {
             },
             scales: baseScales('Nuclear Total Market Revenue ($/MWh)', 0, 65)
         }
-    }));
+    });
 
     // Update viability threshold text
     var el = document.getElementById('nucViableCapPct');
@@ -524,7 +515,7 @@ function buildRefCaseChart(iso, accent) {
         });
     }
 
-    allCharts.push(new Chart(ctx, {
+    chartInstances.refCase = new Chart(ctx, {
         type: 'line',
         data: { datasets: datasets },
         options: {
