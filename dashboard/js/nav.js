@@ -243,14 +243,14 @@
         {
             label: 'Generator Analysis',
             children: [
+                { label: 'IPP Climate Transition', href: 'ipp_climate_transition.html' },
                 { label: 'Overview', href: 'pg_overview.html' },
                 { label: 'Company Dashboard', href: 'pg_company_dashboard.html' },
                 { label: 'Fleet Analysis', href: 'pg_fleet_analysis.html' },
                 { label: 'Fleet Survival', href: 'fleet_survival.html' },
                 { label: 'SMARTargets Scenarios', href: 'smartargets_scenarios.html' },
+                { label: 'SMARTargets Dashboard', href: 'smartargets_dashboard.html' },
                 { label: 'Decarbonization Pathways', href: 'regional_decarbonization_pathways.html' },
-                { label: 'IPP SMARTargets', href: 'ipp_smartargets.html' },
-                { label: 'Enhanced Framework', href: 'enhanced_ipp_smartargets.html' },
                 { label: 'Targets & Feasibility', href: 'pg_targets.html' },
                 { label: 'Policy & Conditions', href: 'pg_policy.html' },
                 { label: 'Methodology', href: 'pg_methodology.html' }
