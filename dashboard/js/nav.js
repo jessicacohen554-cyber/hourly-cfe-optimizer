@@ -204,44 +204,9 @@
     // Pages archived: procurement_comparison.html (Legacy — superseded)
     // Pages merged: pipeline_map.html folded into pipeline.html
     const NAV_ITEMS = [
-        { label: 'Home', href: 'index.html' },
-        { label: 'The Grid', href: 'dashboard.html' },
+        { label: 'About', href: 'about.html' },
         {
-            label: 'Explore',
-            mega: true,
-            columns: [
-                {
-                    header: 'Economics',
-                    items: [
-                        { label: 'CO\u2082 Abatement', href: 'abatement_dashboard.html', desc: 'Marginal abatement cost curves' },
-                        { label: 'Clean Firm Case', href: 'clean_firm_case.html', desc: 'The role of firm clean power' },
-                        { label: 'Cost to Replace', href: 'cost_to_replace.html', desc: 'Replacement cost analysis' },
-                        { label: 'New Build Analysis', href: 'new_build_analysis.html', desc: 'Greenfield resource economics' },
-                        { label: 'Wright\u2019s Law', href: 'wrights_law.html', desc: 'Learning curves & cost trajectories' }
-                    ]
-                },
-                {
-                    header: 'Markets & Grid',
-                    items: [
-                        { label: 'Wholesale Prices', href: 'lmp_trends.html', desc: 'Synthetic LMP analysis' },
-                        { label: 'Fossil Fuel Analysis', href: 'fossil_fuel_deepdive.html', desc: 'Gas, coal & oil dynamics' },
-                        { label: 'Building Blocks', href: 'building_blocks.html', desc: 'Resource shapes & supply curves' },
-                        { label: 'Storage Analysis', href: 'storage_analysis.html', desc: 'Battery & LDES dispatch' }
-                    ]
-                },
-                {
-                    header: 'Procurement & Strategy',
-                    items: [
-                        { label: 'Carbon Accounting', href: 'consequential_accounting.html', desc: 'Frameworks & strategy deep dives' },
-                        { label: 'Scenario Comparison', href: 'scenario_comparison.html', desc: 'Consequential vs. hourly pathways' },
-                        { label: 'Procurement Strategies', href: 'procurement_strategies.html', desc: 'Corporate strategy comparison' },
-                        { label: 'Failure Modes', href: 'consequential_vacuum.html', desc: 'Scaling failure analysis' }
-                    ]
-                }
-            ]
-        },
-        {
-            label: 'Generator Analysis',
+            label: 'Supply Side',
             children: [
                 { label: 'US Power Market', href: 'gen_market_overview.html' },
                 { label: 'Policy & Market Outlook', href: 'gen_policy_conditions.html' },
@@ -251,23 +216,21 @@
             ]
         },
         {
-            label: 'Research',
+            label: 'Demand Side',
             children: [
-                { label: 'Research Paper', href: 'research_paper.html' },
-                { label: 'About This Model', href: 'optimizer_methodology.html' },
-                { label: 'Policy Context', href: 'policy_context.html' },
-                { label: 'About the Model', href: 'pipeline.html' },
-                { label: 'About', href: 'about.html' },
-                { label: 'Reference', href: 'reference.html' }
+                { label: 'Carbon Accounting', href: 'consequential_accounting.html' },
+                { label: 'Scenario Comparison', href: 'scenario_comparison.html' }
             ]
         },
         {
-            label: 'Troubleshooting',
+            label: 'Economic Analysis',
             children: [
-                { label: 'Step 3 vs 5D Analysis', href: 'troubleshooting_step3_vs_5d.html' },
-                { label: 'Model Convergence (5B vs 10)', href: 'market_convergence.html' }
+                { label: 'CO\u2082 Abatement', href: 'abatement_dashboard.html' },
+                { label: 'Clean Firm', href: 'clean_firm_case.html' },
+                { label: 'Clean Asset Value', href: 'lmp_trends.html' }
             ]
-        }
+        },
+        { label: 'Reference', href: 'reference.html' }
     ];
 
     const HAMBURGER_OPEN = '<svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>';

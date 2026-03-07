@@ -287,7 +287,7 @@ function buildNuclearZeroChart(D) {
     });
 }
 
-// ===== BUILD ALL LMP CHARTS (no nuclear — those live on cost_to_replace.html) =====
+// ===== BUILD ALL LMP CHARTS (nuclear crossover charts are in lmp_trends.html inline script) =====
 function buildAllCharts(D, accent) {
     destroyCharts();
     buildHeroChart(D, accent);
@@ -605,7 +605,7 @@ function updateContent(iso) {
     el = document.getElementById('sect2Narrative'); if (el) el.innerHTML = m.sect2HTML;
     el = document.getElementById('sect3Narrative'); if (el) el.innerHTML = m.sect3HTML;
 
-    // Nuclear section elements (on cost_to_replace.html — safe to call, elements may not exist)
+    // Nuclear section elements (on lmp_trends.html — safe to call, elements may not exist)
     el = document.getElementById('nuclearCalloutContent');
     if (el) el.innerHTML = '<h4>' + m.nuclearCalloutH4 + '</h4><p>' + m.nuclearCalloutP + '</p>';
     el = document.getElementById('nuclearSectionHeader');

@@ -211,9 +211,8 @@ hourly-cfe-optimizer/
 │   ├── abatement_dashboard.html            # CO₂ abatement analysis
 │   ├── scenario_comparison.html            # Consequential vs hourly matching
 │   ├── storage_analysis.html               # Storage dispatch analysis
-│   ├── lmp_trends.html                     # LMP trend analysis
+│   ├── lmp_trends.html                     # Clean Asset Value + Nuclear Revenue Crossover
 │   ├── new_build_analysis.html             # New-build track analysis
-│   ├── cost_to_replace.html                # Cost-to-replace analysis
 │   ├── consequential_accounting.html       # Consequential accounting deep-dive
 │   ├── procurement_strategies.html         # Procurement strategy comparison
 │   ├── research_paper.html                 # Standalone research paper

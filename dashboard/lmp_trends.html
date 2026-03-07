@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The 8,760 Problem — Wholesale Price Trends: All Regions</title>
+<title>The 8,760 Problem — Clean Asset Value</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="styles/article.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script src="js/chart-colors.js"></script>
 <script src="js/shared-header.js"></script>
     <script src="js/scroll-observer.js"></script>
@@ -139,6 +140,61 @@
     .hero-stat { min-width: unset; }
     .key-findings-grid { grid-template-columns: 1fr; }
 }
+
+/* CTR Section: Finding tiles (light theme) */
+.ctr-finding-tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--space-md);
+    margin-top: var(--space-lg);
+}
+.ctr-finding-tile {
+    background: rgba(255,255,255,0.95);
+    border: 1px solid rgba(74,144,217,0.10);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    text-align: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.ctr-finding-tile:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+.ctr-finding-tile .val {
+    font-family: var(--font-heading);
+    font-size: 1.6rem;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 6px;
+    color: var(--navy);
+}
+.ctr-finding-tile .lbl {
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    line-height: 1.45;
+}
+
+/* CTR: Heatmap table */
+.ctr-heatmap-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: var(--space-lg) 0; }
+.ctr-heatmap-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; min-width: 600px; }
+.ctr-heatmap-table th, .ctr-heatmap-table td { padding: 10px 14px; text-align: center; border: 1px solid rgba(0,0,0,0.06); }
+.ctr-heatmap-table th { background: var(--navy); color: #fff; font: 600 0.75rem var(--font-heading); letter-spacing: 0.5px; white-space: nowrap; }
+.ctr-heatmap-table td.iso-label { font-weight: 600; text-align: left; background: #F8FAFC; white-space: nowrap; }
+.ctr-heatmap-cell { border-radius: 4px; font: 600 0.78rem var(--font-mono); padding: 6px 8px; display: inline-block; min-width: 64px; }
+.ctr-heatmap-viable { background: rgba(34,197,94,0.12); color: #15803D; }
+.ctr-heatmap-marginal { background: rgba(245,158,11,0.12); color: #B45309; }
+.ctr-heatmap-unviable { background: rgba(239,68,68,0.12); color: #DC2626; }
+
+/* CTR: Responsive */
+@media (max-width: 600px) {
+    .ctr-finding-tiles { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .ctr-finding-tile { padding: 14px 12px; }
+    .ctr-finding-tile .val { font-size: 1.3rem; }
+    .ctr-finding-tile .lbl { font-size: 0.72rem; }
+}
+@media (max-width: 480px) {
+    .ctr-finding-tiles { grid-template-columns: 1fr; }
+}
 </style>
 </head>
 <body>
@@ -148,7 +204,7 @@
 <!-- HEADER BANNER -->
 <header class="header">
     <h1>The 8,760 Problem</h1>
-    <p class="subtitle" id="headerSubtitle">How clean energy procurement reshapes wholesale electricity prices &mdash; 7 U.S. electricity markets</p>
+    <p class="subtitle" id="headerSubtitle">How clean energy procurement reshapes asset values and market signals across 7 U.S. electricity markets</p>
     <div class="header-accent"></div>
 </header>
 
@@ -184,7 +240,7 @@
         <div>
             <h4>The Replacement Cost Paradox</h4>
             <p>Wholesale price degradation threatens existing nuclear viability across all 7 ISOs &mdash; but replacing retired nuclear with new-build clean firm costs 3&ndash;5&times; the wholesale price that caused the retirement ($105&ndash;163/MWh new nuclear vs. $20&ndash;34/MWh wholesale at 90% clean). Nuclear doesn't just need enough revenue to survive &mdash; it needs profit to reinvest in uprates, relicensing, and capacity expansion at already-permitted sites.</p>
-            <p><a href="cost_to_replace.html">Explore the full nuclear economics &amp; replacement cost analysis &rarr;</a></p>
+            <p><a href="#nuclear-crossover">See the full nuclear economics analysis below &rarr;</a></p>
         </div>
     </div>
 </div>
@@ -424,6 +480,189 @@
 </div>
 
 <!-- ================================================================ -->
+<!-- SECTION 6: Solar & Wind Cannibalization                           -->
+<!-- ================================================================ -->
+<div class="scroll-section section-light">
+    <div class="scroll-section-inner">
+        <div class="scroll-chart-col">
+            <div class="chart-panel">
+                <div class="chart-title">Price Cannibalization: How Clean Energy Erodes Its Own Revenue</div>
+                <div class="chart-container">
+                    <canvas id="cannibalizationChart"></canvas>
+                </div>
+                <div class="chart-legend">
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#0EA5E9;"></span>Avg wholesale LMP (P50)</span>
+                    <span class="chart-legend-divider"></span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(245,158,11,0.3);"></span>Zero/negative price hours</span>
+                </div>
+            </div>
+        </div>
+        <div class="scroll-narrative-col">
+            <div class="narrative-card">
+                <span class="section-tag" style="background:rgba(245,158,11,0.08);color:#fbbf24;">Cannibalization</span>
+                <h3>Every megawatt of solar and wind pushes wholesale prices lower &mdash; undermining its own revenue case</h3>
+                <p>As clean energy grows from 50% to 95%, average wholesale LMPs decline 44&ndash;56% across all 7 ISOs. Zero-price hours explode from ~200&ndash;600 at 50% clean to 4,000&ndash;6,000 at 95%. At &ge;99.99%, over 8,000 hours per year produce free or negative-priced electricity &mdash; 91% of the year.</p>
+                <p>This is the cannibalization paradox: renewables are victims of their own success. Each additional MW of solar or wind depresses the price during the hours when it generates, reducing the revenue available to finance the next project.</p>
+                <span class="stat-badge stat-badge-amber">200 &rarr; 8,000+ zero-price hours as clean energy scales</span>
+            </div>
+            <div class="narrative-card">
+                <h3>Fuel prices explain everything &mdash; until they don't</h3>
+                <p>At 50% clean, fuel costs explain <strong>100%</strong> of wholesale price variance. At 80%, still 88%. But at &ge;99.99%, no single factor exceeds 15% &mdash; variance fragments across renewable costs, transmission, policy, and CO&#8322; price. The market transitions from fuel-driven to structurally-driven pricing.</p>
+                <span class="stat-badge stat-badge-blue">Fuel variance: 100% at 50% &rarr; 14% at &ge;99.99%</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- SECTION 7: Storage & Arbitrage Signals                            -->
+<!-- ================================================================ -->
+<div class="scroll-section section-light">
+    <div class="scroll-section-inner">
+        <div class="scroll-chart-col">
+            <div class="chart-panel">
+                <div class="chart-title">Storage Deployment &amp; Arbitrage Opportunity by Clean Energy Threshold</div>
+                <div class="chart-container">
+                    <canvas id="storageArbitrageChart"></canvas>
+                </div>
+                <div class="chart-legend">
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#C4B5FD;"></span>Battery 4hr dispatch %</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#8B5CF6;"></span>Battery 8hr dispatch %</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#E91E63;"></span>LDES dispatch %</span>
+                    <span class="chart-legend-divider"></span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(245,158,11,0.25);"></span>Peak&ndash;offpeak spread</span>
+                </div>
+            </div>
+        </div>
+        <div class="scroll-narrative-col">
+            <div class="narrative-card">
+                <span class="section-tag" style="background:rgba(139,92,246,0.08);color:#a78bfa;">Storage Economics</span>
+                <h3>Storage deployment grows with CFE targets &mdash; and the arbitrage signal persists</h3>
+                <p>Battery dispatch grows from near-zero at 50% clean to 7&ndash;10% of annual demand at &ge;99.99%. Long-duration storage (LDES) only appears at 95%+ thresholds, where multi-day supply gaps become the binding constraint. Green H&#8322; enters at &ge;95% for seasonal balancing.</p>
+                <p>The peak-to-offpeak spread &mdash; the arbitrage signal for storage operators &mdash; actually <em>widens</em> through most of the transition before collapsing only at extreme penetrations. The economic case for time-shifting energy strengthens through 97.5% clean.</p>
+                <span class="stat-badge stat-badge-blue">Peak&ndash;offpeak spread: widens from 80% to 97.5% clean</span>
+            </div>
+            <div class="narrative-card">
+                <h3>LDES becomes economic when daily cycling can't bridge the gap</h3>
+                <p>At 95%+ clean, the remaining unmatched hours cluster into multi-day events &mdash; winter wind droughts, consecutive cloudy days, extreme cold snaps. 4-hour batteries can't bridge a 72-hour gap. That's where 100-hour iron-air (LDES) and eventually 1,000-hour green hydrogen fill the role, despite their lower round-trip efficiencies (50% and 35%, respectively).</p>
+                <span class="stat-badge stat-badge-green">LDES: 100hr iron-air, 50% RTE &middot; H&#8322;: 1000hr, 35% RTE</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- SECTION 8: Gas Capacity & Stranding Risk                          -->
+<!-- ================================================================ -->
+<div class="scroll-section section-light">
+    <div class="scroll-section-inner">
+        <div class="scroll-chart-col">
+            <div class="chart-panel">
+                <div class="chart-title">Gas Backup Capacity Required vs. 2025 Installed Fleet</div>
+                <div class="chart-container">
+                    <canvas id="gasStrandingChart"></canvas>
+                </div>
+                <div class="chart-legend">
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#6B7280;"></span>Gas capacity required (GW)</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:rgba(107,114,128,0.3);"></span>2025 installed gas fleet</span>
+                    <span class="chart-legend-divider"></span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(239,68,68,0.15);"></span>Stranded capacity</span>
+                </div>
+            </div>
+        </div>
+        <div class="scroll-narrative-col">
+            <div class="narrative-card">
+                <span class="section-tag" style="background:rgba(107,114,128,0.08);color:#9ca3af;">Gas Fleet Risk</span>
+                <h3>Gas plants face a utilization cliff &mdash; but capacity is still needed for reliability</h3>
+                <p>As clean energy scales, gas capacity utilization plummets &mdash; but the fleet can't simply retire. Resource adequacy requirements (15% reserve margin) mean gas backup remains necessary even at 95%+ clean, but it runs fewer and fewer hours per year. The result: gas plants that cost billions to maintain but generate almost no revenue.</p>
+                <p>CAISO and ERCOT face the earliest stranding signals, where abundant wind and solar displace gas capacity most rapidly. PJM's large nuclear fleet delays the transition. NEISO faces a unique constraint: winter gas pipeline bottlenecks add a $13.13/MWh CCS premium.</p>
+                <span class="stat-badge stat-badge-red">Gas utilization: &lt;5% of hours at 95%+ clean, but capacity still required</span>
+            </div>
+            <div class="narrative-card">
+                <h3>The stranding math varies dramatically by region</h3>
+                <p>Existing gas fleets range from 16 GW (NEISO) to 128 GW (PJM). The gap between "installed" and "needed" grows with each percentage point of clean energy &mdash; representing billions in potentially stranded assets. How this stranding is managed (early retirement, CCS retrofit, or capacity market support) will determine the political economy of the transition.</p>
+                <span class="stat-badge stat-badge-amber">CAISO: 47 GW installed &middot; ERCOT: 80 GW &middot; PJM: 128 GW</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- SECTION 9: Nuclear Revenue Crossover (overview)                   -->
+<!-- ================================================================ -->
+<div class="scroll-section section-light" id="nuclear-crossover">
+    <div class="scroll-section-inner">
+        <div class="narrative-card">
+            <span class="section-tag" style="background:rgba(239,68,68,0.08);color:#f87171;">Revenue Crossover</span>
+            <h2 class="section-title">The Nuclear Revenue Crossover</h2>
+            <p class="section-subtitle">As clean energy targets rise, wholesale energy prices and capacity market revenue shift. This analysis identifies where total market revenue falls below the $38&ndash;44/MWh threshold needed to sustain existing nuclear &mdash; and what replacement costs when it does.</p>
+        </div>
+
+        <!-- Crossover bar chart -->
+        <div class="chart-panel" style="margin-top:var(--space-lg);">
+            <div class="chart-header">
+                <h3 class="chart-title">Revenue Crossover Threshold by ISO</h3>
+                <p class="chart-subtitle">Clean energy % where nuclear revenue drops below $41/MWh</p>
+            </div>
+            <div class="chart-container-lg"><canvas id="ctrCrossoverBarChart"></canvas></div>
+        </div>
+
+        <!-- Finding tiles (light theme) -->
+        <div class="ctr-finding-tiles" id="ctrFindingTiles">
+            <div class="ctr-finding-tile"><div class="val" id="ctrTileCrossover">--</div><div class="lbl">Median crossover threshold across ISOs</div></div>
+            <div class="ctr-finding-tile"><div class="val" id="ctrTileReplaceCost">--</div><div class="lbl">Average replacement cost at 90% clean (CTR track)</div></div>
+            <div class="ctr-finding-tile"><div class="val" id="ctrTileNewbuild">--</div><div class="lbl">Average new-build cost at 90% clean</div></div>
+            <div class="ctr-finding-tile"><div class="val" id="ctrTilePremium">--</div><div class="lbl">Average replacement premium over nuclear sustaining cost</div></div>
+        </div>
+
+        <!-- Viability heatmap -->
+        <div style="margin-top:var(--space-xl);">
+            <div class="narrative-card">
+                <h3 class="section-title" style="font-size:1.15rem;">Nuclear Viability Heatmap</h3>
+                <p class="section-subtitle">Total market revenue (energy + capacity) vs. $41/MWh nuclear viability threshold across all ISOs and clean energy targets.</p>
+            </div>
+            <div class="ctr-heatmap-wrap" id="ctrHeatmapContainer"></div>
+            <div class="insight-box" style="margin-top:var(--space-md);">
+                <p><strong>Reading the heatmap:</strong> Green = total revenue exceeds $44/MWh (nuclear viable). Amber = revenue between $38&ndash;44/MWh (marginal). Red = revenue below $38/MWh (nuclear unviable without support).</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- SECTION 10: Revenue Decomposition & Replacement Cost              -->
+<!-- ================================================================ -->
+<div class="scroll-section section-light">
+    <div class="scroll-section-inner">
+        <!-- Revenue Decomposition -->
+        <div class="narrative-card">
+            <h2 class="section-title" id="ctrRevenueTitle">PJM &mdash; Revenue Decomposition</h2>
+            <p class="section-subtitle">Energy (LMP) and capacity market revenue at each clean energy threshold, with the $38&ndash;44/MWh nuclear viability band.</p>
+        </div>
+        <div class="chart-panel" style="margin-top:var(--space-lg);">
+            <div class="chart-container-lg"><canvas id="ctrRevenueDecompChart"></canvas></div>
+            <div class="chart-legend" id="ctrRevenueDecompLegend"></div>
+        </div>
+        <div class="insight-box narrative-card" id="ctrRevenueInsight" style="margin-top:var(--space-md);">
+            <p>Select an ISO above to view revenue decomposition.</p>
+        </div>
+
+        <!-- CTR Comparison -->
+        <div class="narrative-card" style="margin-top:var(--space-xl);">
+            <h3 class="section-title" id="ctrCompTitle" style="font-size:1.15rem;">PJM &mdash; Cost to Replace Nuclear</h3>
+            <p class="section-subtitle">Track 1 (baseline with nuclear), Track 2 (all new-build), and Track 3 (replace nuclear) &mdash; plus total market revenue for comparison.</p>
+        </div>
+        <div class="chart-panel" style="margin-top:var(--space-lg);">
+            <div class="chart-container-lg"><canvas id="ctrComparisonChart"></canvas></div>
+            <div class="chart-legend" id="ctrCompLegend"></div>
+        </div>
+        <div class="insight-box narrative-card" id="ctrCompInsight" style="margin-top:var(--space-md);">
+            <p>Loading track data...</p>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================================ -->
 <!-- SYNTHESIS                                                         -->
 <!-- ================================================================ -->
 <div class="gradient-transition"></div>
@@ -450,16 +689,10 @@
 <div class="related-analyses">
     <div class="related-analyses-title">Related Analyses</div>
     <div class="related-analyses-grid">
-        <a href="cost_to_replace.html" class="related-card">
-            <div class="related-card-tag">Nuclear Economics</div>
-            <div class="related-card-title">Nuclear Retirement Premium</div>
-            <div class="related-card-desc">What happens when wholesale prices push nuclear past viability? The full economic case for existing nuclear.</div>
-            <div class="related-card-arrow">Explore &rarr;</div>
-        </a>
-        <a href="storage_analysis.html" class="related-card">
-            <div class="related-card-tag">Technology</div>
-            <div class="related-card-title">Storage Analysis</div>
-            <div class="related-card-desc">How battery and long-duration storage affect grid operations and pricing.</div>
+        <a href="clean_firm_case.html" class="related-card">
+            <div class="related-card-tag">Clean Firm</div>
+            <div class="related-card-title">Clean Firm</div>
+            <div class="related-card-desc">The economic case for always-on clean power and Wright's Law learning curves</div>
             <div class="related-card-arrow">Explore &rarr;</div>
         </a>
         <a href="scenario_comparison.html" class="related-card">
@@ -474,7 +707,7 @@
 <!-- FOOTER -->
 <footer class="page-footer">
     <div class="footer-links">
-        <a href="index.html">Home</a>
+        <a href="about.html">About</a>
         <a href="dashboard.html">Grid Simulation</a>
         <a href="abatement_dashboard.html">CO&#8322; Abatement</a>
         <a href="research_paper.html">Research Paper</a>
@@ -486,11 +719,653 @@
 
 
 <!-- DATA + CHARTS + REGION SWITCHING -->
+<script src="js/shared-data.js"></script>
 <script src="js/lmp-data.js"></script>
 <script src="js/lmp-capacity-data.js"></script>
 <script src="js/lmp-charts.js"></script>
 <script src="js/nav.js"></script>
 
+<!-- Placeholder chart stubs for Sections 6–8 (will be wired to real data later) -->
+<script>
+(function() {
+    const noDataPlugin = {
+        id: 'noDataMessage',
+        afterDraw(chart) {
+            if (!chart.data.datasets || chart.data.datasets.length === 0 ||
+                chart.data.datasets.every(ds => !ds.data || ds.data.length === 0)) {
+                const ctx = chart.ctx;
+                const { width, height } = chart;
+                ctx.save();
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.font = '14px "DM Sans", sans-serif';
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.35)';
+                ctx.fillText('No data loaded — chart will be wired to pipeline data', width / 2, height / 2);
+                ctx.restore();
+            }
+        }
+    };
+
+    const sharedOpts = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false },
+            tooltip: { enabled: false }
+        },
+        scales: {
+            x: { display: false },
+            y: { display: false }
+        }
+    };
+
+    // Section 6: Cannibalization chart
+    const cannCtx = document.getElementById('cannibalizationChart');
+    if (cannCtx) {
+        new Chart(cannCtx, {
+            type: 'line',
+            data: { labels: [], datasets: [] },
+            options: sharedOpts,
+            plugins: [noDataPlugin]
+        });
+    }
+
+    // Section 7: Storage & Arbitrage chart
+    const storCtx = document.getElementById('storageArbitrageChart');
+    if (storCtx) {
+        new Chart(storCtx, {
+            type: 'line',
+            data: { labels: [], datasets: [] },
+            options: sharedOpts,
+            plugins: [noDataPlugin]
+        });
+    }
+
+    // Section 8: Gas Stranding chart
+    const gasCtx = document.getElementById('gasStrandingChart');
+    if (gasCtx) {
+        new Chart(gasCtx, {
+            type: 'line',
+            data: { labels: [], datasets: [] },
+            options: sharedOpts,
+            plugins: [noDataPlugin]
+        });
+    }
+})();
+</script>
+
+<!-- CTR (Nuclear Revenue Crossover) charts — merged from cost_to_replace.html -->
+<script>
+(function() {
+    // ============================================================================
+    // CTR GLOBALS
+    // ============================================================================
+    var ctrTrackData = null;
+    var ctrCharts = {};
+
+    var CTR_ISOS = ['CAISO','ERCOT','PJM','NYISO','NEISO','MISO','SPP'];
+    var CTR_ISO_DISPLAY = { CAISO:'CAISO', ERCOT:'ERCOT', PJM:'PJM', NYISO:'NYISO', NEISO:'ISO-NE', MISO:'MISO', SPP:'SPP' };
+    var NUCLEAR_VIABLE_MID = 41;
+    var NUCLEAR_VIABLE_LOW = 38;
+    var NUCLEAR_VIABLE_HIGH = 44;
+
+    // ============================================================================
+    // UTILITY: pts() for Chart.js {x,y} data
+    // ============================================================================
+    function ctrPts(xArr, yArr) {
+        return xArr.map(function(x, i) { return { x: x, y: yArr[i] }; });
+    }
+
+    // ============================================================================
+    // COMPUTE CROSSOVER THRESHOLD
+    // ============================================================================
+    function ctrComputeCrossoverThreshold(iso) {
+        var cap = (typeof LMP_CAPACITY !== 'undefined') ? LMP_CAPACITY[iso] : null;
+        if (!cap || !cap.total_rev_clean_firm_mwh || !cap.total_rev_clean_firm_mwh.p50) return null;
+        var T = cap.thresholds;
+        var rev = cap.total_rev_clean_firm_mwh.p50;
+
+        for (var i = 0; i < T.length - 1; i++) {
+            if (rev[i] >= NUCLEAR_VIABLE_MID && rev[i + 1] < NUCLEAR_VIABLE_MID) {
+                var frac = (NUCLEAR_VIABLE_MID - rev[i]) / (rev[i + 1] - rev[i]);
+                return T[i] + frac * (T[i + 1] - T[i]);
+            }
+        }
+        if (rev[0] < NUCLEAR_VIABLE_MID) return T[0];
+        return null;
+    }
+
+    // ============================================================================
+    // GET TRACK COST / MIX from track_results.json
+    // ============================================================================
+    function ctrGetTrackCost(iso, track, threshold) {
+        if (!ctrTrackData || !ctrTrackData.results || !ctrTrackData.results[iso]) return null;
+        var t = ctrTrackData.results[iso][track];
+        if (!t || !t[threshold] || !t[threshold].scenarios) return null;
+        var scenarios = t[threshold].scenarios;
+        var key = Object.keys(scenarios)[0];
+        if (!key) return null;
+        var s = scenarios[key];
+        if (s.costs && s.costs.effective_cost != null) return s.costs.effective_cost;
+        if (s.costs && s.costs.total_cost != null) return s.costs.total_cost;
+        return null;
+    }
+
+    // ============================================================================
+    // CROSSOVER BAR CHART — all ISOs
+    // ============================================================================
+    function ctrBuildCrossoverBar() {
+        if (ctrCharts.crossoverBar) { ctrCharts.crossoverBar.destroy(); }
+        var ctx = document.getElementById('ctrCrossoverBarChart');
+        if (!ctx) return;
+
+        var labels = [];
+        var values = [];
+        var colors = [];
+        var crossovers = {};
+
+        CTR_ISOS.forEach(function(iso) {
+            var cross = ctrComputeCrossoverThreshold(iso);
+            crossovers[iso] = cross;
+            labels.push(CTR_ISO_DISPLAY[iso] || iso);
+            values.push(cross != null ? cross : 100);
+            colors.push(ISO_COLORS[iso] || '#64748B');
+        });
+
+        ctrCharts.crossoverBar = new Chart(ctx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: colors.map(function(c) { return c + 'CC'; }),
+                    borderColor: colors,
+                    borderWidth: 1.5,
+                    borderRadius: 6,
+                    barPercentage: 0.65
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true, maintainAspectRatio: false,
+                animation: { duration: 1200, easing: 'easeOutQuart' },
+                scales: {
+                    x: {
+                        min: 40, max: 105,
+                        title: { display: true, text: 'Clean Energy Threshold (%)', color: 'rgba(15,23,42,0.45)', font: { size: 11 } },
+                        grid: { color: 'rgba(0,0,0,0.04)' },
+                        ticks: { color: 'rgba(15,23,42,0.5)', callback: function(v) { return v + '%'; } }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: 'rgba(15,23,42,0.7)', font: { size: 12, weight: '600', family: 'var(--font-heading)' } }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    datalabels: {
+                        anchor: 'end', align: 'right', offset: 6,
+                        color: 'rgba(15,23,42,0.6)',
+                        font: { size: 11, weight: '600', family: 'var(--font-mono)' },
+                        formatter: function(v) { return v >= 100 ? 'Always viable' : v.toFixed(0) + '%'; }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(255,255,255,0.97)', titleColor: '#1E293B', bodyColor: '#475569',
+                        borderColor: 'rgba(0,0,0,0.1)', borderWidth: 1, padding: 12, cornerRadius: 8,
+                        callbacks: {
+                            label: function(ctx) {
+                                return ctx.raw >= 100 ? 'Nuclear revenue always above $41/MWh' : 'Revenue drops below $41/MWh at ' + ctx.raw.toFixed(1) + '% clean';
+                            }
+                        }
+                    },
+                    annotation: {
+                        annotations: {
+                            sbti2030: { type: 'line', xMin: 50, xMax: 50, borderColor: 'rgba(0,0,0,0.08)', borderWidth: 1, borderDash: [4,4], label: { content: '2030', display: true, position: 'start', color: 'rgba(0,0,0,0.25)', font: { size: 9 }, backgroundColor: 'transparent' } },
+                            sbti2035: { type: 'line', xMin: 70, xMax: 70, borderColor: 'rgba(0,0,0,0.08)', borderWidth: 1, borderDash: [4,4], label: { content: '2035', display: true, position: 'start', color: 'rgba(0,0,0,0.25)', font: { size: 9 }, backgroundColor: 'transparent' } },
+                            sbti2040: { type: 'line', xMin: 90, xMax: 90, borderColor: 'rgba(0,0,0,0.08)', borderWidth: 1, borderDash: [4,4], label: { content: '2040', display: true, position: 'start', color: 'rgba(0,0,0,0.25)', font: { size: 9 }, backgroundColor: 'transparent' } }
+                        }
+                    }
+                }
+            }
+        });
+
+        ctrUpdateFindingTiles(crossovers);
+    }
+
+    // ============================================================================
+    // UPDATE FINDING TILES
+    // ============================================================================
+    function ctrUpdateFindingTiles(crossovers) {
+        var vals = [];
+        CTR_ISOS.forEach(function(iso) { if (crossovers[iso] != null && crossovers[iso] < 100) vals.push(crossovers[iso]); });
+        var median = '--';
+        if (vals.length > 0) {
+            vals.sort(function(a,b) { return a - b; });
+            median = vals[Math.floor(vals.length / 2)].toFixed(0) + '%';
+        }
+        var el = document.getElementById('ctrTileCrossover');
+        if (el) el.textContent = median;
+
+        if (ctrTrackData) {
+            var ctrCosts = [], nbCosts = [];
+            CTR_ISOS.forEach(function(iso) {
+                var ctr90 = ctrGetTrackCost(iso, 'cost_to_replace', '90');
+                var nb90 = ctrGetTrackCost(iso, 'newbuild', '90');
+                if (ctr90 != null) ctrCosts.push(ctr90);
+                if (nb90 != null) nbCosts.push(nb90);
+            });
+            el = document.getElementById('ctrTileReplaceCost');
+            if (el && ctrCosts.length > 0) el.textContent = '$' + (ctrCosts.reduce(function(a,b){return a+b;},0) / ctrCosts.length).toFixed(0) + '/MWh';
+
+            el = document.getElementById('ctrTileNewbuild');
+            if (el && nbCosts.length > 0) el.textContent = '$' + (nbCosts.reduce(function(a,b){return a+b;},0) / nbCosts.length).toFixed(0) + '/MWh';
+
+            el = document.getElementById('ctrTilePremium');
+            if (el && ctrCosts.length > 0) {
+                var avgPremium = (ctrCosts.reduce(function(a,b){return a+b;},0) / ctrCosts.length) - NUCLEAR_VIABLE_MID;
+                el.textContent = '+$' + avgPremium.toFixed(0) + '/MWh';
+            }
+        }
+    }
+
+    // ============================================================================
+    // VIABILITY HEATMAP — All ISOs x key thresholds
+    // ============================================================================
+    function ctrBuildViabilityHeatmap() {
+        var container = document.getElementById('ctrHeatmapContainer');
+        if (!container) return;
+
+        var keyThresholds = [50, 70, 80, 90, 95, 99.99];
+        var threshLabels = ['50%', '70%', '80%', '90%', '95%', '\u226599.99%'];
+
+        var html = '<table class="ctr-heatmap-table"><thead><tr><th>ISO</th>';
+        threshLabels.forEach(function(l) { html += '<th>' + l + '</th>'; });
+        html += '</tr></thead><tbody>';
+
+        CTR_ISOS.forEach(function(iso) {
+            var cap = (typeof LMP_CAPACITY !== 'undefined') ? LMP_CAPACITY[iso] : null;
+            html += '<tr><td class="iso-label">' + (CTR_ISO_DISPLAY[iso] || iso) + '</td>';
+
+            keyThresholds.forEach(function(t) {
+                var rev = null;
+                if (cap && cap.total_rev_clean_firm_mwh && cap.total_rev_clean_firm_mwh.p50) {
+                    var idx = cap.thresholds.indexOf(t);
+                    if (idx >= 0) rev = cap.total_rev_clean_firm_mwh.p50[idx];
+                }
+
+                if (rev == null) {
+                    html += '<td><span class="ctr-heatmap-cell" style="background:rgba(0,0,0,0.04); color:#94A3B8;">N/A</span></td>';
+                } else {
+                    var cls = rev >= NUCLEAR_VIABLE_HIGH ? 'ctr-heatmap-viable' : (rev >= NUCLEAR_VIABLE_LOW ? 'ctr-heatmap-marginal' : 'ctr-heatmap-unviable');
+                    html += '<td><span class="ctr-heatmap-cell ' + cls + '">$' + rev.toFixed(0) + '</span></td>';
+                }
+            });
+            html += '</tr>';
+        });
+
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    }
+
+    // ============================================================================
+    // REVENUE DECOMPOSITION CHART (per ISO)
+    // ============================================================================
+    function ctrBuildRevenueDecomp(iso) {
+        if (ctrCharts.revDecomp) { ctrCharts.revDecomp.destroy(); ctrCharts.revDecomp = null; }
+        var ctx = document.getElementById('ctrRevenueDecompChart');
+        if (!ctx) return;
+
+        var cap = (typeof LMP_CAPACITY !== 'undefined') ? LMP_CAPACITY[iso] : null;
+        var D = (typeof LMP_ALL !== 'undefined') ? LMP_ALL[iso] : null;
+        if (!cap || !D) return;
+
+        var T = cap.thresholds;
+        var energyP50 = D.envelope ? D.envelope.p50 : [];
+        var capRevP50 = cap.capacity_rev_clean_firm_mwh ? cap.capacity_rev_clean_firm_mwh.p50 : T.map(function() { return 0; });
+        var totalRevP50 = cap.total_rev_clean_firm_mwh ? cap.total_rev_clean_firm_mwh.p50 : [];
+        var totalRevP10 = cap.total_rev_clean_firm_mwh ? cap.total_rev_clean_firm_mwh.p10 : [];
+        var totalRevP90 = cap.total_rev_clean_firm_mwh ? cap.total_rev_clean_firm_mwh.p90 : [];
+
+        var BLUE = '#0EA5E9';
+        var INDIGO = RESOURCE_COLORS.nuclear;
+        var accent = ISO_COLORS[iso] || BLUE;
+
+        var datasets = [
+            {
+                label: 'Revenue P90',
+                data: ctrPts(T, totalRevP90),
+                borderColor: accent + '25', backgroundColor: accent + '08',
+                borderWidth: 1, borderDash: [3,3], pointRadius: 0,
+                fill: '+1', tension: 0.35, order: 8, _type: 'band'
+            },
+            {
+                label: 'Total Market Revenue (P50)',
+                data: ctrPts(T, totalRevP50),
+                borderColor: accent, backgroundColor: accent + '15',
+                borderWidth: 3, pointRadius: 3, pointBackgroundColor: accent,
+                fill: false, tension: 0.35, order: 1
+            },
+            {
+                label: 'Revenue P10',
+                data: ctrPts(T, totalRevP10),
+                borderColor: accent + '25', backgroundColor: 'transparent',
+                borderWidth: 1, borderDash: [3,3], pointRadius: 0,
+                fill: false, tension: 0.35, order: 9, _type: 'band'
+            },
+            {
+                label: 'Energy-Only LMP (P50)',
+                data: ctrPts(T, energyP50),
+                borderColor: BLUE + '80', backgroundColor: BLUE + '08',
+                borderWidth: 2, pointRadius: 2, pointBackgroundColor: BLUE + '80',
+                fill: 'origin', tension: 0.35, order: 3
+            },
+            {
+                label: 'Capacity Revenue',
+                data: ctrPts(T, capRevP50),
+                borderColor: INDIGO + '60', backgroundColor: INDIGO + '15',
+                borderWidth: 1.5, borderDash: [5,3], pointRadius: 0,
+                fill: false, tension: 0.35, order: 5
+            }
+        ];
+
+        ctrCharts.revDecomp = new Chart(ctx.getContext('2d'), {
+            type: 'line',
+            data: { datasets: datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                animation: { duration: 1000, easing: 'easeOutQuart' },
+                scales: {
+                    x: {
+                        type: 'linear', min: 48, max: 100.5,
+                        title: { display: true, text: 'Clean Energy Threshold (%)', color: 'rgba(15,23,42,0.45)', font: { size: 11 } },
+                        grid: { color: 'rgba(0,0,0,0.03)' },
+                        ticks: { color: 'rgba(15,23,42,0.4)', font: { size: 10 }, callback: function(v) { return v === 99.99 ? '\u226599.99%' : v + '%'; } },
+                        afterBuildTicks: function(a) { a.ticks = [50,60,70,80,90,95,99.99].map(function(v) { return {value:v}; }); }
+                    },
+                    y: {
+                        title: { display: true, text: '$/MWh', color: 'rgba(15,23,42,0.45)', font: { size: 11 } },
+                        grid: { color: 'rgba(0,0,0,0.03)' },
+                        ticks: { color: 'rgba(15,23,42,0.4)', font: { size: 10 }, callback: function(v) { return '$' + v; } },
+                        min: 0
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    datalabels: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(255,255,255,0.97)', titleColor: '#1E293B', bodyColor: '#475569',
+                        borderColor: 'rgba(0,0,0,0.1)', borderWidth: 1, padding: 12, cornerRadius: 8,
+                        filter: function(item) { return item.dataset._type !== 'band'; },
+                        callbacks: {
+                            title: function(i) { return i[0] ? i[0].raw.x + '% Clean Energy' : ''; },
+                            label: function(i) {
+                                if (i.dataset._type === 'band') return null;
+                                return i.dataset.label + ': $' + i.raw.y.toFixed(1) + '/MWh';
+                            }
+                        }
+                    },
+                    annotation: {
+                        annotations: {
+                            viableBandHigh: { type: 'box', yMin: NUCLEAR_VIABLE_LOW, yMax: NUCLEAR_VIABLE_HIGH, backgroundColor: 'rgba(239,68,68,0.06)', borderColor: 'rgba(239,68,68,0.15)', borderWidth: 1 },
+                            viableLine: { type: 'line', yMin: NUCLEAR_VIABLE_MID, yMax: NUCLEAR_VIABLE_MID, borderColor: 'rgba(239,68,68,0.5)', borderWidth: 1.5, borderDash: [6,4], label: { content: 'Nuclear Viability $41/MWh', display: true, position: 'start', color: 'rgba(239,68,68,0.6)', font: { size: 9, weight: '600' }, backgroundColor: 'transparent' } },
+                            sbti2030: { type: 'line', xMin: 50, xMax: 50, borderColor: 'rgba(0,0,0,0.08)', borderWidth: 1, borderDash: [3,3] },
+                            sbti2035: { type: 'line', xMin: 70, xMax: 70, borderColor: 'rgba(0,0,0,0.08)', borderWidth: 1, borderDash: [3,3] },
+                            sbti2040: { type: 'line', xMin: 90, xMax: 90, borderColor: 'rgba(0,0,0,0.08)', borderWidth: 1, borderDash: [3,3] }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Custom legend
+        var legendEl = document.getElementById('ctrRevenueDecompLegend');
+        if (legendEl) {
+            legendEl.innerHTML =
+                '<span class="chart-legend-item"><span class="chart-legend-swatch" style="background:' + accent + '"></span>Total Market Revenue (P50)</span>' +
+                '<span class="chart-legend-item"><span class="chart-legend-swatch" style="background:' + BLUE + '80"></span>Energy-Only LMP</span>' +
+                '<span class="chart-legend-item"><span class="chart-legend-swatch" style="background:' + INDIGO + '60"></span>Capacity Revenue</span>' +
+                '<span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:rgba(239,68,68,0.5)"></span>Nuclear Viability ($41/MWh)</span>';
+        }
+
+        ctrUpdateRevenueInsight(iso);
+    }
+
+    function ctrUpdateRevenueInsight(iso) {
+        var el = document.getElementById('ctrRevenueInsight');
+        if (!el) return;
+        var cross = ctrComputeCrossoverThreshold(iso);
+        var cap = (typeof LMP_CAPACITY !== 'undefined') ? LMP_CAPACITY[iso] : null;
+        var name = CTR_ISO_DISPLAY[iso] || iso;
+
+        if (cross != null && cross < 100) {
+            var rev70 = null, rev90 = null;
+            if (cap && cap.total_rev_clean_firm_mwh && cap.total_rev_clean_firm_mwh.p50) {
+                var idx70 = cap.thresholds.indexOf(70);
+                var idx90 = cap.thresholds.indexOf(90);
+                if (idx70 >= 0) rev70 = cap.total_rev_clean_firm_mwh.p50[idx70];
+                if (idx90 >= 0) rev90 = cap.total_rev_clean_firm_mwh.p50[idx90];
+            }
+            var html = '<p><strong>' + name + ' crossover at ' + cross.toFixed(0) + '% clean.</strong> ';
+            if (rev70 != null) html += 'At 70% clean (2035 SBTi), total revenue is $' + rev70.toFixed(1) + '/MWh. ';
+            if (rev90 != null) html += 'At 90% clean (2040), revenue drops to $' + rev90.toFixed(1) + '/MWh \u2014 ';
+            if (rev90 != null && rev90 < NUCLEAR_VIABLE_MID) html += '$' + (NUCLEAR_VIABLE_MID - rev90).toFixed(0) + '/MWh below the viability threshold.';
+            else if (rev90 != null) html += 'still above the viability floor.';
+            html += '</p>';
+            el.innerHTML = html;
+        } else if (cross == null) {
+            el.innerHTML = '<p><strong>' + name + ':</strong> Total market revenue remains above $41/MWh across all clean energy thresholds modeled. Nuclear is economically viable throughout the transition in this region.</p>';
+        } else {
+            el.innerHTML = '<p><strong>' + name + ':</strong> Nuclear revenue is already below the $41/MWh viability threshold at the lowest thresholds modeled.</p>';
+        }
+    }
+
+    // ============================================================================
+    // CTR COMPARISON CHART (per ISO) — Track 1/2/3 + Market Revenue
+    // ============================================================================
+    function ctrBuildCTRComparison(iso) {
+        if (ctrCharts.ctrComp) { ctrCharts.ctrComp.destroy(); ctrCharts.ctrComp = null; }
+        var ctx = document.getElementById('ctrComparisonChart');
+        if (!ctx) return;
+
+        var track1 = (typeof SYSTEM_COST_DATA !== 'undefined' && SYSTEM_COST_DATA.medium) ? SYSTEM_COST_DATA.medium[iso] : null;
+        var thresholds21 = (typeof THRESHOLDS !== 'undefined') ? THRESHOLDS : [];
+
+        var cap = (typeof LMP_CAPACITY !== 'undefined') ? LMP_CAPACITY[iso] : null;
+        var T15 = cap ? cap.thresholds : [];
+        var totalRevP50 = cap && cap.total_rev_clean_firm_mwh ? cap.total_rev_clean_firm_mwh.p50 : [];
+
+        var ctrPoints = [], nbPoints = [], track1Points = [];
+
+        T15.forEach(function(t) {
+            var tStr = String(t);
+            var ctrCost = ctrGetTrackCost(iso, 'cost_to_replace', tStr);
+            var nbCost = ctrGetTrackCost(iso, 'newbuild', tStr);
+            if (ctrCost != null) ctrPoints.push({ x: t, y: ctrCost });
+            if (nbCost != null) nbPoints.push({ x: t, y: nbCost });
+
+            if (track1 && thresholds21.length > 0) {
+                var idx21 = -1;
+                for (var i = 0; i < thresholds21.length; i++) {
+                    if (Math.abs(thresholds21[i] - t) < 0.01) { idx21 = i; break; }
+                }
+                if (idx21 >= 0 && track1[idx21] != null) track1Points.push({ x: t, y: track1[idx21] });
+            }
+        });
+
+        var accent = ISO_COLORS[iso] || '#0EA5E9';
+        var RED = SEMANTIC_COLORS.negative;
+        var GREEN = '#22C55E';
+        var PURPLE = '#7C3AED';
+        var INDIGO = RESOURCE_COLORS.nuclear;
+
+        var datasets = [];
+
+        if (totalRevP50 && totalRevP50.length > 0) {
+            datasets.push({
+                label: 'Total Market Revenue (P50)',
+                data: ctrPts(T15, totalRevP50),
+                borderColor: INDIGO, backgroundColor: INDIGO + '10',
+                borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: INDIGO,
+                fill: false, tension: 0.35, order: 1
+            });
+        }
+
+        datasets.push({
+            label: 'Nuclear Viability ($41/MWh)',
+            data: T15.map(function(t) { return { x: t, y: NUCLEAR_VIABLE_MID }; }),
+            borderColor: RED + '60', backgroundColor: 'transparent',
+            borderWidth: 1.5, borderDash: [6,4], pointRadius: 0,
+            fill: false, tension: 0, order: 10, _type: 'ref'
+        });
+
+        if (track1Points.length > 0) {
+            datasets.push({
+                label: 'Track 1 \u2014 Baseline (with nuclear)',
+                data: track1Points,
+                borderColor: GREEN, backgroundColor: GREEN + '10',
+                borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: GREEN,
+                fill: false, tension: 0.35, order: 2
+            });
+        }
+
+        if (ctrPoints.length > 0) {
+            datasets.push({
+                label: 'Track 3 \u2014 Replace Nuclear',
+                data: ctrPoints,
+                borderColor: RED, backgroundColor: RED + '10',
+                borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: RED,
+                fill: false, tension: 0.35, order: 3
+            });
+        }
+
+        if (nbPoints.length > 0) {
+            datasets.push({
+                label: 'Track 2 \u2014 All New-Build',
+                data: nbPoints,
+                borderColor: PURPLE, backgroundColor: PURPLE + '10',
+                borderWidth: 2, pointRadius: 2, pointBackgroundColor: PURPLE,
+                borderDash: [6,3], fill: false, tension: 0.35, order: 4
+            });
+        }
+
+        ctrCharts.ctrComp = new Chart(ctx.getContext('2d'), {
+            type: 'line',
+            data: { datasets: datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                animation: { duration: 1000, easing: 'easeOutQuart' },
+                scales: {
+                    x: {
+                        type: 'linear', min: 48, max: 100.5,
+                        title: { display: true, text: 'Clean Energy Threshold (%)', color: 'rgba(15,23,42,0.45)', font: { size: 11 } },
+                        grid: { color: 'rgba(0,0,0,0.03)' },
+                        ticks: { color: 'rgba(15,23,42,0.4)', font: { size: 10 }, callback: function(v) { return v === 99.99 ? '\u226599.99%' : v + '%'; } },
+                        afterBuildTicks: function(a) { a.ticks = [50,60,70,80,90,95,99.99].map(function(v) { return {value:v}; }); }
+                    },
+                    y: {
+                        title: { display: true, text: '$/MWh', color: 'rgba(15,23,42,0.45)', font: { size: 11 } },
+                        grid: { color: 'rgba(0,0,0,0.03)' },
+                        ticks: { color: 'rgba(15,23,42,0.4)', font: { size: 10 }, callback: function(v) { return '$' + v; } },
+                        min: 0
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    datalabels: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(255,255,255,0.97)', titleColor: '#1E293B', bodyColor: '#475569',
+                        borderColor: 'rgba(0,0,0,0.1)', borderWidth: 1, padding: 12, cornerRadius: 8,
+                        filter: function(item) { return item.dataset._type !== 'ref' && item.dataset._type !== 'band'; },
+                        callbacks: {
+                            title: function(i) { return i[0] ? i[0].raw.x + '% Clean Energy' : ''; },
+                            label: function(i) { return i.dataset.label + ': $' + i.raw.y.toFixed(1) + '/MWh'; }
+                        }
+                    },
+                    annotation: {
+                        annotations: {
+                            sbti2030: { type: 'line', xMin: 50, xMax: 50, borderColor: 'rgba(0,0,0,0.06)', borderWidth: 1, borderDash: [3,3], label: { content: 'SBTi 2030', display: true, position: 'start', color: 'rgba(0,0,0,0.25)', font: { size: 8 }, backgroundColor: 'transparent' } },
+                            sbti2035: { type: 'line', xMin: 70, xMax: 70, borderColor: 'rgba(0,0,0,0.06)', borderWidth: 1, borderDash: [3,3], label: { content: 'SBTi 2035', display: true, position: 'start', color: 'rgba(0,0,0,0.25)', font: { size: 8 }, backgroundColor: 'transparent' } },
+                            sbti2040: { type: 'line', xMin: 90, xMax: 90, borderColor: 'rgba(0,0,0,0.06)', borderWidth: 1, borderDash: [3,3], label: { content: 'SBTi 2040', display: true, position: 'start', color: 'rgba(0,0,0,0.25)', font: { size: 8 }, backgroundColor: 'transparent' } }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Legend
+        var legendEl = document.getElementById('ctrCompLegend');
+        if (legendEl) {
+            legendEl.innerHTML =
+                '<span class="chart-legend-item"><span class="chart-legend-swatch" style="background:' + INDIGO + '"></span>Total Market Revenue</span>' +
+                (track1Points.length > 0 ? '<span class="chart-legend-item"><span class="chart-legend-swatch" style="background:' + GREEN + '"></span>Track 1 (Baseline)</span>' : '') +
+                '<span class="chart-legend-item"><span class="chart-legend-swatch" style="background:' + RED + '"></span>Track 3 (Replace Nuclear)</span>' +
+                '<span class="chart-legend-item"><span class="chart-legend-swatch" style="background:' + PURPLE + '"></span>Track 2 (All New-Build)</span>' +
+                '<span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:' + RED + '60"></span>Nuclear Viability ($41)</span>';
+        }
+
+        ctrUpdateCTRInsight(iso);
+    }
+
+    function ctrUpdateCTRInsight(iso) {
+        var el = document.getElementById('ctrCompInsight');
+        if (!el) return;
+        var name = CTR_ISO_DISPLAY[iso] || iso;
+
+        var ctr90 = ctrGetTrackCost(iso, 'cost_to_replace', '90');
+        var nb90 = ctrGetTrackCost(iso, 'newbuild', '90');
+        var ctr70 = ctrGetTrackCost(iso, 'cost_to_replace', '70');
+
+        if (ctr90 != null) {
+            var premium = ctr90 - NUCLEAR_VIABLE_MID;
+            var html = '<p><strong>' + name + ' at 90% clean:</strong> Replacing nuclear costs $' + ctr90.toFixed(0) + '/MWh \u2014 ';
+            html += '$' + premium.toFixed(0) + '/MWh more than keeping it running. ';
+            if (nb90 != null) html += 'Building everything from scratch (Track 2) costs $' + nb90.toFixed(0) + '/MWh. ';
+            if (ctr70 != null) html += 'Even at 70% clean, replacement costs $' + ctr70.toFixed(0) + '/MWh.';
+            html += '</p>';
+            el.innerHTML = html;
+        } else {
+            el.innerHTML = '<p>Track data not available for ' + name + '. Run step3b + step5e pipeline.</p>';
+        }
+    }
+
+    // ============================================================================
+    // CTR ISO SWITCH — called when region pills change
+    // ============================================================================
+    function ctrSwitchISO(iso) {
+        var name = CTR_ISO_DISPLAY[iso] || iso;
+        var el;
+        el = document.getElementById('ctrRevenueTitle'); if (el) el.textContent = name + ' \u2014 Revenue Decomposition';
+        el = document.getElementById('ctrCompTitle'); if (el) el.textContent = name + ' \u2014 Cost to Replace Nuclear';
+        ctrBuildRevenueDecomp(iso);
+        ctrBuildCTRComparison(iso);
+    }
+
+    // ============================================================================
+    // HOOK INTO EXISTING REGION PILLS
+    // ============================================================================
+    document.querySelectorAll('.region-pill').forEach(function(pill) {
+        pill.addEventListener('click', function() {
+            ctrSwitchISO(this.dataset.iso);
+        });
+    });
+
+    // ============================================================================
+    // INIT CTR CHARTS
+    // ============================================================================
+    function ctrInit() {
+        ctrBuildCrossoverBar();
+        ctrBuildViabilityHeatmap();
+        ctrBuildRevenueDecomp('PJM');
+        ctrBuildCTRComparison('PJM');
+    }
+
+    // Load track data then init
+    fetch('track_results.json')
+        .then(function(r) { return r.json(); })
+        .then(function(d) { ctrTrackData = d; ctrInit(); })
+        .catch(function(err) { console.warn('track_results.json not found:', err); ctrInit(); });
+})();
+</script>
 
 </body>
 </html>
