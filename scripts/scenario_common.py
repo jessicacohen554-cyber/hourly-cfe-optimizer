@@ -113,9 +113,18 @@ SCENARIO_A = {
 }
 
 SCENARIO_B = {
-    'name': 'Hourly Matching',
-    'short': 'hourly_matching',
-    'description': 'Forward-looking: optimal 2045 endpoint defines deployment trajectory. Nuclear/LDES FOAK(H)→NOAK(L). CCS FOAK(H)→NOAK(M) with 45Q. Early firm investment yields lower long-term system cost.',
+    'name': 'Hourly Matching (GHG Protocol SSS)',
+    'short': 'hourly_matching_sss',
+    'method': 'four_pool_hourly_matching',
+    'description': (
+        'GHG Protocol hourly Scope 2 incentive-driven grid buildout. '
+        'Four supply pools: (1) SSS policy-supported clean at $0; '
+        '(2) Contracted locked via hyperscaler PPAs; '
+        '(3) Existing merchant at EAC premium; '
+        '(4) New-build investment signal from hourly matching gap. '
+        'Hourly constraint forces firm clean + storage for night/winter coverage. '
+        'Learning curve 2030-2040, FOAK(H)->NOAK(L).'
+    ),
     'toggles': {
         'ren': 'L', 'firm': 'H', 'batt': 'L', 'ldes_lvl': 'H',
         'fuel': 'M', 'tx': 'M', 'ccs': 'H', 'q45': '1', 'geo': 'H',

@@ -157,9 +157,18 @@ def _build_trajectory(results, egrid, fossil_mix, demand_data, gen_profiles,
             _r, _n = 0.05, 25
             annuity_factor = (1 - (1 + _r) ** -_n) / _r  # ~14.09
             npv_25yr_billion = annual_cost_billion * annuity_factor
-            iso_traj.append({
+            # Zone classification
+            if t <= 65:
+                zone = 'early'
+            elif t <= 90:
+                zone = 'inflection'
+            else:
+                zone = 'last_mile'
+
+            entry = {
                 'threshold': t,
                 'year': SBTI_YEAR_MAP.get(t, 2050),
+                'zone': zone,
                 'demand_twh': round(demand_twh, 1),
                 'effective_cost': d['effective_cost'],
                 'total_cost': d['total_cost'],
@@ -178,7 +187,24 @@ def _build_trajectory(results, egrid, fossil_mix, demand_data, gen_profiles,
                 'blended_new_lcoe': d.get('blended_new_lcoe', 0),
                 'new_gen_twh': d.get('new_gen_twh', 0),
                 'new_build_cost_total': d.get('new_build_cost_total', 0),
-            })
+            }
+
+            # Four-pool metadata (from Scenario B redesign)
+            pool_fields = [
+                'pool1_sss_twh', 'pool2_contracted_twh', 'pool3_merchant_twh',
+                'pool4_newbuild_twh', 'sss_hourly_min_coverage_pct',
+                'sss_hourly_max_coverage_pct', 'available_hourly_avg_pct',
+                'residual_gap_twh', 'firm_demand_hours',
+                'storage_opportunity_hours', 'surplus_twh', 'gap_hours',
+                'pool_adjusted_cost', 'sss_savings_per_mwh',
+                'merchant_savings_per_mwh', 'eac_price',
+                'learning_fraction',
+            ]
+            for field in pool_fields:
+                if field in d:
+                    entry[field] = d[field]
+
+            iso_traj.append(entry)
         traj[iso] = iso_traj
 
     if enforce_monotonic:
@@ -344,6 +370,90 @@ def print_comparison(results_a, results_b, queue_a, queue_b, stranding_a, strand
 
 
 # ============================================================================
+# ZONE-BASED COMPARISON (EARLY / INFLECTION / LAST MILE)
+# ============================================================================
+
+def _build_zone_comparison(trajectories, isos):
+    """Build per-zone comparison deltas between Scenario A and B.
+
+    Groups thresholds into three zones:
+      early (50-65%): Strategies should be similar
+      inflection (70-90%): Hourly matching diverges — firm/storage signal
+      last_mile (92.5-≥99.99%): Maximum divergence — learning curve payoff
+    """
+    traj_a = trajectories.get('pure_consequential', {})
+    traj_b = trajectories.get('hourly_matching', {})
+
+    comparison = {}
+    for iso in isos:
+        entries_a = {e['threshold']: e for e in traj_a.get(iso, [])}
+        entries_b = {e['threshold']: e for e in traj_b.get(iso, [])}
+
+        zone_data = {}
+        for zone, t_range in [('early', (50, 65)), ('inflection', (70, 90)), ('last_mile', (92.5, 100))]:
+            zone_thresholds = [t for t in sorted(set(entries_a.keys()) & set(entries_b.keys()))
+                               if t_range[0] <= t <= t_range[1]]
+            if not zone_thresholds:
+                continue
+
+            # Representative threshold for each zone (midpoint or highest)
+            rep_t = zone_thresholds[-1]  # Highest in zone
+            a = entries_a[rep_t]
+            b = entries_b[rep_t]
+
+            a_rt = a.get('resource_twh', {})
+            b_rt = b.get('resource_twh', {})
+            a_firm = a_rt.get('clean_firm', 0) + a_rt.get('ccs_ccgt', 0)
+            b_firm = b_rt.get('clean_firm', 0) + b_rt.get('ccs_ccgt', 0)
+
+            delta = {
+                'representative_threshold': rep_t,
+                'thresholds_in_zone': zone_thresholds,
+                'cost_a': a.get('effective_cost', 0),
+                'cost_b': b.get('effective_cost', 0),
+                'cost_gap_pct': round(
+                    (b.get('effective_cost', 0) - a.get('effective_cost', 0))
+                    / max(a.get('effective_cost', 1), 1) * 100, 1),
+                'firm_a_twh': round(a_firm, 1),
+                'firm_b_twh': round(b_firm, 1),
+                'firm_deployment_gap_twh': round(b_firm - a_firm, 1),
+                'storage_a_twh': round(a.get('battery_twh', 0) + a.get('ldes_twh', 0), 1),
+                'storage_b_twh': round(b.get('battery_twh', 0) + b.get('ldes_twh', 0), 1),
+                'gas_a_mw': a.get('gas_backup_mw', 0),
+                'gas_b_mw': b.get('gas_backup_mw', 0),
+            }
+
+            # Pool metadata from Scenario B (if available)
+            for field in ['pool1_sss_twh', 'pool3_merchant_twh', 'pool4_newbuild_twh',
+                          'residual_gap_twh', 'firm_demand_hours', 'available_hourly_avg_pct',
+                          'learning_fraction']:
+                if field in b:
+                    delta[f'b_{field}'] = b[field]
+
+            # Learning position labels
+            lf_a = a.get('learning_fraction', 0)
+            lf_b = b.get('learning_fraction', 0)
+            if lf_a < 0.1:
+                delta['learning_position_a'] = 'FOAK'
+            elif lf_a >= 0.9:
+                delta['learning_position_a'] = 'NOAK'
+            else:
+                delta['learning_position_a'] = f'NOAK_{lf_a:.1f}'
+            if lf_b < 0.1:
+                delta['learning_position_b'] = 'FOAK'
+            elif lf_b >= 0.9:
+                delta['learning_position_b'] = 'NOAK'
+            else:
+                delta['learning_position_b'] = f'NOAK_{lf_b:.1f}'
+
+            zone_data[zone] = delta
+
+        comparison[iso] = zone_data
+
+    return comparison
+
+
+# ============================================================================
 # OUTPUT WRITING
 # ============================================================================
 
@@ -351,7 +461,11 @@ def write_output(trajectories, queue_a, queue_b,
                  stranding_a, stranding_b, isos):
     """Write JSON + JS output files for the dashboard."""
 
+    # Build zone-based comparison deltas
+    zone_comparison = _build_zone_comparison(trajectories, isos)
+
     output = {
+        'zone_comparison': zone_comparison,
         'metadata': {
             'description': 'Dual-scenario comparison: Pure Consequential vs Hourly Matching',
             'scenario_a': {
@@ -372,15 +486,22 @@ def write_output(trajectories, queue_a, queue_b,
                 'name': SCENARIO_B['name'],
                 'description': SCENARIO_B['description'],
                 'toggles': SCENARIO_B['toggles'],
-                'method': 'endpoint_backward_learning',
+                'method': SCENARIO_B.get('method', 'four_pool_hourly_matching'),
                 'method_description': (
-                    'Forward-looking endpoint-optimal deployment: finds NOAK-optimal mix at '
-                    'target threshold (all costs Low + Medium TX), then deploys with S-curve '
-                    'pacing. All resources: H->L learning curve. Uprates deploy immediately. '
-                    'At each threshold, selects from feasible mixes meeting firm/CCS/LDES '
-                    'pacing targets with match score ceiling (no overbuild). Produces '
-                    'balanced firm/storage from early thresholds.'
+                    'GHG Protocol hourly Scope 2 incentive-driven grid buildout. '
+                    'Four supply pools: (1) SSS at $0 — policy-supported nuclear ZECs, '
+                    'public hydro, RPS mandates; (2) Contracted — locked via hyperscaler '
+                    'PPAs (excluded); (3) Existing merchant — solar/wind/merchant nuclear '
+                    'at EAC premium ($3-5/MWh); (4) New-build — investment signal from '
+                    'hourly matching gap. Hourly constraint forces firm clean + storage '
+                    'for night/winter coverage. Learning curve 2030-2040, FOAK(H)->NOAK(L).'
                 ),
+                'pool_model': {
+                    'pool1_description': 'SSS: policy-supported clean (nuclear ZECs, public hydro, RPS)',
+                    'pool2_description': 'Contracted: locked via hyperscaler PPAs (unavailable)',
+                    'pool3_description': 'Existing merchant: solar/wind/merchant nuclear at EAC premium',
+                    'pool4_description': 'New-build: hourly matching investment signal',
+                },
             },
             'sbti_year_map': {str(k): v for k, v in SBTI_YEAR_MAP.items()},
             'thresholds': THRESHOLDS,
