@@ -132,31 +132,30 @@
         const byISO = getFleetByISO();
         const isos = Object.keys(byISO);
 
-        // Stats
-        const totalCap = co.cap_gw;
+        // Stats — generation-based (TWh tells the real story, not nameplate MW)
         const totalGen = co.gen_twh;
         const totalCO2 = co.co2_2024_mt;
         const intensity = co.intensity_kg;
-        const cleanCap = FUEL_ORDER.filter(f => ['nuclear','hydro','geothermal','wind','solar','battery'].includes(f))
-            .reduce((s, f) => s + (byFuel[f] ? byFuel[f].cap_mw : 0), 0);
-        const cleanPct = ((cleanCap / (totalCap * 1000)) * 100).toFixed(0);
+        const cleanGen = FUEL_ORDER.filter(f => ['nuclear','hydro','geothermal','wind','solar','battery'].includes(f))
+            .reduce((s, f) => s + (byFuel[f] ? byFuel[f].gen_twh : 0), 0);
+        const cleanPct = totalGen > 0 ? ((cleanGen / totalGen) * 100).toFixed(0) : '0';
 
         // Inject stats
-        document.getElementById('statCapacity').textContent = fmt(totalCap, 1) + ' GW';
+        document.getElementById('statCapacity').textContent = fmt(totalGen, 0) + ' TWh';
         document.getElementById('statGeneration').textContent = fmt(totalGen, 0) + ' TWh';
         document.getElementById('statEmissions').textContent = fmt(totalCO2, 0) + ' Mt';
         document.getElementById('statIntensity').textContent = fmt(intensity, 0) + ' kg/MWh';
         document.getElementById('statISOs').textContent = isos.length;
         document.getElementById('statCleanPct').textContent = cleanPct + '%';
 
-        // Doughnut: capacity by fuel
-        const doughnutFuels = FUEL_ORDER.filter(f => byFuel[f] && byFuel[f].cap_mw > 0);
+        // Doughnut: generation by fuel (TWh)
+        const doughnutFuels = FUEL_ORDER.filter(f => byFuel[f] && byFuel[f].gen_twh > 0);
         makeChart('fleetDoughnutChart', {
             type: 'doughnut',
             data: {
                 labels: doughnutFuels.map(f => FUEL_LABELS[f]),
                 datasets: [{
-                    data: doughnutFuels.map(f => byFuel[f].cap_mw),
+                    data: doughnutFuels.map(f => byFuel[f].gen_twh),
                     backgroundColor: doughnutFuels.map(f => FUEL_COLORS[f]),
                     borderWidth: 2,
                     borderColor: '#fff'
@@ -169,17 +168,17 @@
                     legend: { position: 'right', labels: { font: { size: 11 }, padding: 8 } },
                     tooltip: {
                         callbacks: {
-                            label: (ctx) => `${ctx.label}: ${fmt(ctx.raw)} MW (${((ctx.raw / (totalCap * 1000)) * 100).toFixed(1)}%)`
+                            label: (ctx) => `${ctx.label}: ${fmt(ctx.raw, 1)} TWh (${(totalGen > 0 ? (ctx.raw / totalGen * 100) : 0).toFixed(1)}%)`
                         }
                     }
                 }
             }
         });
 
-        // Horizontal stacked bar: capacity by ISO
+        // Horizontal stacked bar: generation by ISO (TWh)
         const isoOrder = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP'].filter(i => byISO[i]);
         const isoFuels = FUEL_ORDER.filter(f => {
-            return isoOrder.some(iso => co.fleet_summary[iso] && co.fleet_summary[iso][f] && co.fleet_summary[iso][f].cap_mw > 0);
+            return isoOrder.some(iso => co.fleet_summary[iso] && co.fleet_summary[iso][f] && (co.fleet_summary[iso][f].gen_twh || 0) > 0);
         });
 
         makeChart('isoBarChart', {
@@ -188,7 +187,7 @@
                 labels: isoOrder,
                 datasets: isoFuels.map(f => ({
                     label: FUEL_LABELS[f],
-                    data: isoOrder.map(iso => (co.fleet_summary[iso] && co.fleet_summary[iso][f]) ? co.fleet_summary[iso][f].cap_mw : 0),
+                    data: isoOrder.map(iso => (co.fleet_summary[iso] && co.fleet_summary[iso][f]) ? (co.fleet_summary[iso][f].gen_twh || 0) : 0),
                     backgroundColor: FUEL_COLORS[f]
                 }))
             },
@@ -197,12 +196,12 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
-                    x: { stacked: true, title: { display: true, text: 'Capacity (MW)' } },
+                    x: { stacked: true, title: { display: true, text: 'Generation (TWh)' } },
                     y: { stacked: true }
                 },
                 plugins: {
                     legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 12 } },
-                    tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmt(ctx.raw)} MW` } }
+                    tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmt(ctx.raw, 1)} TWh` } }
                 }
             }
         });
@@ -216,43 +215,46 @@
         if (!el) return;
 
         const isos = Object.keys(byISO);
-        const hasCoal = byFuel.coal && byFuel.coal.cap_mw > 0;
-        const hasNuclear = byFuel.nuclear && byFuel.nuclear.cap_mw > 0;
-        const nuclearPct = hasNuclear ? ((byFuel.nuclear.cap_mw / (co.cap_gw * 1000)) * 100).toFixed(0) : 0;
-        const coalPct = hasCoal ? ((byFuel.coal.cap_mw / (co.cap_gw * 1000)) * 100).toFixed(0) : 0;
-        const gasCCGT = byFuel.gas_ccgt ? byFuel.gas_ccgt.cap_mw : 0;
-        const gasPeaker = byFuel.gas_peaker ? byFuel.gas_peaker.cap_mw : 0;
-        const renewCap = (byFuel.solar ? byFuel.solar.cap_mw : 0) + (byFuel.wind ? byFuel.wind.cap_mw : 0);
-        const batteryCap = byFuel.battery ? byFuel.battery.cap_mw : 0;
+        const totalGen = co.gen_twh;
+        const hasCoal = byFuel.coal && byFuel.coal.gen_twh > 0;
+        const hasNuclear = byFuel.nuclear && byFuel.nuclear.gen_twh > 0;
+        const nuclearGen = hasNuclear ? byFuel.nuclear.gen_twh : 0;
+        const nuclearPct = totalGen > 0 ? ((nuclearGen / totalGen) * 100).toFixed(0) : 0;
+        const coalGen = hasCoal ? byFuel.coal.gen_twh : 0;
+        const coalPct = totalGen > 0 ? ((coalGen / totalGen) * 100).toFixed(0) : 0;
+        const gasCCGTGen = byFuel.gas_ccgt ? byFuel.gas_ccgt.gen_twh : 0;
+        const gasPeakerGen = byFuel.gas_peaker ? byFuel.gas_peaker.gen_twh : 0;
+        const renewGen = (byFuel.solar ? byFuel.solar.gen_twh : 0) + (byFuel.wind ? byFuel.wind.gen_twh : 0);
+        const batteryGen = byFuel.battery ? byFuel.battery.gen_twh : 0;
 
         let strengths = [];
         let weaknesses = [];
         let opportunities = [];
 
         // Strengths
-        if (hasNuclear && nuclearPct > 20) strengths.push(`Nuclear baseload (${nuclearPct}% of capacity) provides zero-carbon firm generation and strong capacity market revenue.`);
+        if (hasNuclear && nuclearPct > 20) strengths.push(`Nuclear generation (${nuclearPct}% of output, ${fmt(nuclearGen, 1)} TWh) provides zero-carbon firm baseload and strong capacity market revenue.`);
         if (isos.length >= 3) strengths.push(`Geographic diversification across ${isos.length} ISOs (${isos.join(', ')}) hedges against regional regulatory and market risk.`);
-        if (renewCap > 2000) strengths.push(`Existing renewable portfolio (${fmt(renewCap)} MW solar+wind) provides foundation for scaling clean generation.`);
-        if (batteryCap > 500) strengths.push(`Battery storage capacity (${fmt(batteryCap)} MW) positions for flexible grid services and peak shaving.`);
-        if (gasCCGT > 3000) strengths.push(`Efficient gas CCGT fleet (${fmt(gasCCGT)} MW) provides reliable dispatchable capacity with moderate emissions intensity.`);
-        if (cleanPct > 50) strengths.push(`Already ${cleanPct}% clean capacity — ahead of most peers in decarbonization.`);
+        if (renewGen > 5) strengths.push(`Existing renewable generation (${fmt(renewGen, 1)} TWh solar+wind) provides foundation for scaling clean output.`);
+        if (batteryGen > 0.5) strengths.push(`Battery storage dispatch (${fmt(batteryGen, 1)} TWh) positions for flexible grid services and peak shaving.`);
+        if (gasCCGTGen > 10) strengths.push(`Efficient gas CCGT fleet (${fmt(gasCCGTGen, 1)} TWh) provides reliable dispatchable generation with moderate emissions intensity.`);
+        if (cleanPct > 50) strengths.push(`Already ${cleanPct}% clean by generation — ahead of most peers in decarbonization.`);
 
         // Weaknesses
-        if (hasCoal) weaknesses.push(`Coal exposure (${coalPct}% of capacity, ${fmt(byFuel.coal.co2_mt, 1)} Mt CO₂) represents the highest transition risk and stranded asset potential.`);
+        if (hasCoal) weaknesses.push(`Coal generation (${coalPct}% of output, ${fmt(coalGen, 1)} TWh, ${fmt(byFuel.coal.co2_mt, 1)} Mt CO₂) represents the highest transition risk and stranded asset potential.`);
         if (isos.length === 1) weaknesses.push(`Single-ISO concentration (${isos[0]}) creates regulatory and market concentration risk.`);
         if (co.intensity_kg > 400) weaknesses.push(`High fleet intensity (${co.intensity_kg} kg/MWh) — among the most carbon-intensive large generators.`);
-        if (gasPeaker > 2000) weaknesses.push(`Large peaker fleet (${fmt(gasPeaker)} MW) faces declining utilization as battery storage scales.`);
-        if (cleanPct < 20 && !hasNuclear) weaknesses.push(`Very low clean capacity share (${cleanPct}%) with no nuclear hedge.`);
+        if (gasPeakerGen > 3) weaknesses.push(`Gas peaker generation (${fmt(gasPeakerGen, 1)} TWh) faces declining utilization as battery storage scales.`);
+        if (cleanPct < 20 && !hasNuclear) weaknesses.push(`Very low clean generation share (${cleanPct}%) with no nuclear hedge.`);
 
         // Opportunities
         if (hasCoal) opportunities.push(`Coal retirement + site repowering with solar/battery co-location can leverage existing grid interconnection and land.`);
-        if (gasPeaker > 1000) opportunities.push(`Gas peaker → battery replacement at highest-heat-rate sites captures cost savings and emissions reduction.`);
+        if (gasPeakerGen > 1) opportunities.push(`Gas peaker → battery replacement at highest-heat-rate sites captures cost savings and emissions reduction.`);
         if (hasNuclear) opportunities.push(`Nuclear uprates and life extensions leverage highest-value zero-carbon asset under 45U PTC ($15/MWh).`);
-        if (renewCap < 1000) opportunities.push(`Significant greenfield renewable opportunity — current clean portfolio is undersized relative to fleet.`);
+        if (renewGen < 3) opportunities.push(`Significant greenfield renewable opportunity — current clean generation is undersized relative to fleet.`);
         if (isos.some(i => i === 'ERCOT')) opportunities.push(`ERCOT market exposure provides high-value solar+battery opportunity due to peak pricing dynamics.`);
         if (isos.some(i => i === 'PJM')) opportunities.push(`PJM capacity market provides revenue stability for new firm clean generation investments.`);
 
-        if (strengths.length === 0) strengths.push(`Fleet provides reliable dispatchable generation capacity.`);
+        if (strengths.length === 0) strengths.push(`Fleet provides reliable dispatchable generation.`);
         if (weaknesses.length === 0) weaknesses.push(`Limited near-term transition risk given fleet composition.`);
         if (opportunities.length === 0) opportunities.push(`Clean energy cost declines create attractive investment opportunities across the fleet's ISOs.`);
 
@@ -612,20 +614,20 @@
         const operating2050 = fb.operating_mw ? fb.operating_mw.p50[5] : 0;
 
         const byFuel = getFleetByFuel();
-        const hasCoal = byFuel.coal && byFuel.coal.cap_mw > 0;
-        const coalMW = hasCoal ? byFuel.coal.cap_mw : 0;
+        const hasCoal = byFuel.coal && byFuel.coal.gen_twh > 0;
+        const coalGen = hasCoal ? byFuel.coal.gen_twh : 0;
 
         let riskItems = [];
-        if (hasCoal) riskItems.push(`<strong>Coal stranding risk:</strong> ${fmt(coalMW)} MW of coal capacity faces retirement pressure. Under median scenarios, ${fmt(stranded2050)} MW total becomes stranded by 2050.`);
+        if (hasCoal) riskItems.push(`<strong>Coal stranding risk:</strong> ${fmt(coalGen, 1)} TWh of coal generation (${fmt(byFuel.coal.cap_mw)} MW nameplate) faces retirement pressure. Under median scenarios, ${fmt(stranded2050)} MW total becomes stranded by 2050.`);
         if (profit2050_p10 < 0) riskItems.push(`<strong>Downside scenario loss:</strong> In the P10 (worst-case) scenario, annual profit falls to $${fmt(profit2050_p10)}M by 2050 — the fleet loses money under adverse conditions.`);
         if (profit2050_p10 > 0) riskItems.push(`<strong>Profit resilience:</strong> Even in the P10 (worst-case) scenario, the fleet maintains $${fmt(profit2050_p10)}M annual profit by 2050 — no money-losing scenarios.`);
 
         riskItems.push(`<strong>Profit range:</strong> 2050 annual profit ranges from $${fmt(profit2050_p10)}M (P10) to $${fmt(profit2050_p90)}M (P90), with a median of $${fmt(profit2050_p50)}M.`);
 
         // Retail hedge analysis
-        const gasCap = (byFuel.gas_ccgt ? byFuel.gas_ccgt.cap_mw : 0) + (byFuel.gas_peaker ? byFuel.gas_peaker.cap_mw : 0);
-        if (gasCap > 1000) {
-            riskItems.push(`<strong>Retail hedge position:</strong> ${fmt(gasCap)} MW of gas capacity provides a natural hedge for retail power obligations — when wholesale prices spike (gas on the margin), generation revenue offsets retail exposure. This hedge value declines as gas dispatch falls under higher CFE thresholds.`);
+        const gasGen = (byFuel.gas_ccgt ? byFuel.gas_ccgt.gen_twh : 0) + (byFuel.gas_peaker ? byFuel.gas_peaker.gen_twh : 0);
+        if (gasGen > 5) {
+            riskItems.push(`<strong>Retail hedge position:</strong> ${fmt(gasGen, 1)} TWh of gas generation provides a natural hedge for retail power obligations — when wholesale prices spike (gas on the margin), generation revenue offsets retail exposure. This hedge value declines as gas dispatch falls under higher CFE thresholds.`);
         }
 
         el.innerHTML = riskItems.map(r => `<p>${r}</p>`).join('');
@@ -739,9 +741,9 @@
         const gap2050 = target2050 - sbti[5];
 
         const byFuel = getFleetByFuel();
-        const hasCoal = byFuel.coal && byFuel.coal.cap_mw > 0;
-        const hasNuclear = byFuel.nuclear && byFuel.nuclear.cap_mw > 0;
-        const gasCap = (byFuel.gas_ccgt ? byFuel.gas_ccgt.gen_twh : 0) + (byFuel.gas_peaker ? byFuel.gas_peaker.gen_twh : 0);
+        const hasCoal = byFuel.coal && byFuel.coal.gen_twh > 0;
+        const hasNuclear = byFuel.nuclear && byFuel.nuclear.gen_twh > 0;
+        const gasGen = (byFuel.gas_ccgt ? byFuel.gas_ccgt.gen_twh : 0) + (byFuel.gas_peaker ? byFuel.gas_peaker.gen_twh : 0);
 
         el.innerHTML = `
             <p>The proposed qualified target for <strong>${co.shortName}</strong> follows the P50 (median) emission trajectory across
@@ -749,11 +751,11 @@
             without additional mandates or subsidies.</p>
 
             <p><strong>2030 target: ${fmt(qualifiedPcts[1], 0)}% reduction</strong> (${fmt(target2030, 1)} Mt from ${fmt(baseline, 1)} Mt baseline).
-            ${hasCoal ? 'Primarily driven by announced coal retirements and declining coal dispatch economics.' : 'Driven by declining fossil dispatch as clean capacity enters the market.'}</p>
+            ${hasCoal ? 'Primarily driven by announced coal retirements and declining coal dispatch economics.' : 'Driven by declining fossil dispatch as clean generation enters the market.'}</p>
 
             <p><strong>2035 target: ${fmt(qualifiedPcts[2], 0)}% reduction</strong> (${fmt(target2035, 1)} Mt).
             ${hasNuclear ? 'Nuclear fleet continues at high capacity factors, providing stable zero-carbon baseload.' : ''}
-            Gas CCGT dispatch declines moderately as renewable penetration increases across ${co.shortName}'s operating ISOs.</p>
+            Gas CCGT dispatch declines moderately as renewable generation increases across ${co.shortName}'s operating ISOs.</p>
 
             <p><strong>2050 target: ${fmt(qualifiedPcts[5], 0)}% reduction</strong> (${fmt(target2050, 1)} Mt).
             ${gap2050 > 0 ? `This leaves a ${fmt(gap2050, 1)} Mt gap to the 1.5°C SBTi trajectory — bridging this gap requires the enabling conditions described in Section 6.` :
@@ -762,10 +764,10 @@
             <div class="insight-box" style="margin-top:var(--space-md)">
                 <strong>Why this target is achievable:</strong>
                 <ul style="margin:8px 0 0 16px">
-                    <li><strong>Reliability:</strong> Maintains sufficient firm dispatchable capacity (${fmt(gasCap, 0)} TWh gas generation) for grid adequacy</li>
+                    <li><strong>Reliability:</strong> Maintains sufficient firm dispatchable generation (${fmt(gasGen, 0)} TWh gas output) for grid adequacy</li>
                     <li><strong>Affordability:</strong> Follows market economics — no cross-subsidy or above-market procurement required</li>
                     <li><strong>Cost competitiveness:</strong> Aligned with market deployment curve; new clean investments at or below market clearing prices</li>
-                    ${gasCap > 5 ? `<li><strong>Retail hedge:</strong> Gas fleet provides wholesale price hedge for retail obligations — retiring too fast exposes retail book to unhedged spot prices</li>` : ''}
+                    ${gasGen > 5 ? `<li><strong>Retail hedge:</strong> Gas fleet provides wholesale price hedge for retail obligations — retiring too fast exposes retail book to unhedged spot prices</li>` : ''}
                 </ul>
             </div>
         `;
@@ -778,25 +780,25 @@
         const baseline = co.co2_2024_mt;
         const fb = co.fan_bands.all;
 
-        // Current clean vs fossil breakdown
-        const cleanMW = FUEL_ORDER.filter(f => ['nuclear', 'hydro', 'geothermal', 'wind', 'solar', 'battery'].includes(f))
-            .reduce((s, f) => s + (byFuel[f] ? byFuel[f].cap_mw : 0), 0);
-        const fossilMW = FUEL_ORDER.filter(f => ['coal', 'gas_ccgt', 'gas_peaker', 'oil'].includes(f))
-            .reduce((s, f) => s + (byFuel[f] ? byFuel[f].cap_mw : 0), 0);
+        // Current clean vs fossil breakdown (by generation TWh)
+        const cleanTWh = FUEL_ORDER.filter(f => ['nuclear', 'hydro', 'geothermal', 'wind', 'solar', 'battery'].includes(f))
+            .reduce((s, f) => s + (byFuel[f] ? byFuel[f].gen_twh : 0), 0);
+        const fossilTWh = FUEL_ORDER.filter(f => ['coal', 'gas_ccgt', 'gas_peaker', 'oil'].includes(f))
+            .reduce((s, f) => s + (byFuel[f] ? byFuel[f].gen_twh : 0), 0);
 
-        // Investment gap chart (simplified — shows clean vs fossil capacity evolution)
-        const coalRetiring = byFuel.coal ? byFuel.coal.cap_mw : 0;
-        const solarNeeded = coalRetiring * 2.5; // Rough: 2.5x solar to replace coal energy (CF difference)
-        const batteryNeeded = coalRetiring * 0.5; // 50% storage co-location
-        const firmCleanNeeded = Math.max(0, fossilMW * 0.1); // 10% firm clean target
+        // Investment gap chart — generation-framed
+        const coalGen = byFuel.coal ? byFuel.coal.gen_twh : 0;
+        const solarNeeded = coalGen * 1.2; // Replace coal energy with solar (higher CF solar)
+        const batteryNeeded = coalGen * 0.3; // Storage to firm solar
+        const firmCleanNeeded = Math.max(0, fossilTWh * 0.1); // 10% firm clean target
 
         makeChart('investmentGapChart', {
             type: 'bar',
             data: {
                 labels: ['Current Clean', 'Current Fossil', 'Solar Target', 'Wind Target', 'Battery Target', 'Firm Clean Target'],
                 datasets: [{
-                    label: 'Capacity (MW)',
-                    data: [cleanMW, -fossilMW, solarNeeded, solarNeeded * 0.6, batteryNeeded, firmCleanNeeded],
+                    label: 'Generation (TWh)',
+                    data: [cleanTWh, -fossilTWh, solarNeeded, solarNeeded * 0.6, batteryNeeded, firmCleanNeeded],
                     backgroundColor: [
                         'rgba(34,197,94,0.7)', 'rgba(107,114,128,0.7)',
                         RESOURCE_COLORS.solar, RESOURCE_COLORS.wind,
@@ -807,10 +809,10 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                scales: { y: { title: { display: true, text: 'Capacity (MW)' } } },
+                scales: { y: { title: { display: true, text: 'Generation (TWh)' } } },
                 plugins: {
                     legend: { display: false },
-                    tooltip: { callbacks: { label: ctx => `${ctx.label}: ${fmt(Math.abs(ctx.raw))} MW` } }
+                    tooltip: { callbacks: { label: ctx => `${ctx.label}: ${fmt(Math.abs(ctx.raw), 1)} TWh` } }
                 }
             }
         });
@@ -846,25 +848,27 @@
         });
 
         // Investment narrative
-        renderInvestmentNarrative(byFuel, byISO, cleanMW, fossilMW, solarNeeded, batteryNeeded, firmCleanNeeded);
+        renderInvestmentNarrative(byFuel, byISO, cleanTWh, fossilTWh, solarNeeded, batteryNeeded, firmCleanNeeded);
     }
 
-    function renderInvestmentNarrative(byFuel, byISO, cleanMW, fossilMW, solarNeeded, batteryNeeded, firmCleanNeeded) {
+    function renderInvestmentNarrative(byFuel, byISO, cleanTWh, fossilTWh, solarNeeded, batteryNeeded, firmCleanNeeded) {
         const el = document.getElementById('investmentNarrative');
         if (!el) return;
 
         const isos = Object.keys(byISO);
-        const coalMW = byFuel.coal ? byFuel.coal.cap_mw : 0;
-        const hasNuclear = byFuel.nuclear && byFuel.nuclear.cap_mw > 0;
+        const totalGen = co.gen_twh;
+        const cleanPct = totalGen > 0 ? ((cleanTWh / totalGen) * 100).toFixed(0) : 0;
+        const coalGen = byFuel.coal ? byFuel.coal.gen_twh : 0;
+        const hasNuclear = byFuel.nuclear && byFuel.nuclear.gen_twh > 0;
 
         let sections = [];
 
-        sections.push(`<p><strong>${co.shortName}</strong> currently operates ${fmt(cleanMW)} MW of clean capacity (${((cleanMW/(co.cap_gw*1000))*100).toFixed(0)}% of fleet)
-            and ${fmt(fossilMW)} MW of fossil capacity. The economic case for new clean generation is driven by three factors:</p>`);
+        sections.push(`<p><strong>${co.shortName}</strong> currently generates ${fmt(cleanTWh, 1)} TWh of clean energy (${cleanPct}% of output)
+            and ${fmt(fossilTWh, 1)} TWh from fossil sources. The economic case for new clean generation is driven by three factors:</p>`);
 
         sections.push(`<div class="insight-box insight-success" style="margin-bottom:var(--space-md)">
-            <strong>1. Declining fossil capacity factors</strong>
-            <p style="margin-top:6px">As grid-wide clean penetration increases, ${co.shortName}'s fossil plants face declining dispatch hours. Gas CCGT capacity factors fall from ~55% today to 25-40% by 2035 under median scenarios, reducing revenue per MW.</p>
+            <strong>1. Declining fossil dispatch</strong>
+            <p style="margin-top:6px">As grid-wide clean penetration increases, ${co.shortName}'s fossil plants face declining dispatch hours. Gas CCGT generation falls from current levels to 50-70% by 2035 under median scenarios, reducing revenue.</p>
         </div>`);
 
         sections.push(`<div class="insight-box insight-success" style="margin-bottom:var(--space-md)">
@@ -875,7 +879,7 @@
         if (hasNuclear) {
             sections.push(`<div class="insight-box insight-success" style="margin-bottom:var(--space-md)">
                 <strong>3. Nuclear uprate + life extension value</strong>
-                <p style="margin-top:6px">${co.shortName}'s nuclear fleet receives $15/MWh under the 45U PTC. Uprating existing reactors by 5-10% is the cheapest firm clean generation available — no new site permitting, existing grid connection, and immediate capacity market revenue.</p>
+                <p style="margin-top:6px">${co.shortName}'s nuclear fleet (${fmt(byFuel.nuclear.gen_twh, 1)} TWh) receives $15/MWh under the 45U PTC. Uprating existing reactors by 5-10% is the cheapest firm clean generation available — no new site permitting, existing grid connection, and immediate output increase.</p>
             </div>`);
         } else {
             sections.push(`<div class="insight-box insight-success" style="margin-bottom:var(--space-md)">
@@ -887,10 +891,10 @@
         sections.push(`<div class="insight-box" style="margin-top:var(--space-lg)">
             <strong>Recommended Investment Targets (by 2035)</strong>
             <ul style="margin:8px 0 0 16px">
-                <li><strong>Solar:</strong> ${fmt(solarNeeded)} MW new utility-scale solar${coalMW > 0 ? ' (includes coal site repowering)' : ''}</li>
-                <li><strong>Wind:</strong> ${fmt(solarNeeded * 0.6)} MW onshore wind (complementary generation profile)</li>
-                <li><strong>Battery:</strong> ${fmt(batteryNeeded)} MW 4-hour Li-ion storage (peak shaving + ancillary services)</li>
-                <li><strong>Firm clean:</strong> ${fmt(firmCleanNeeded)} MW ${hasNuclear ? 'nuclear uprates + potential SMR' : 'CCS-CCGT or contracted nuclear PPA'}</li>
+                <li><strong>Solar:</strong> ${fmt(solarNeeded, 1)} TWh new utility-scale solar generation${coalGen > 0 ? ' (includes coal site repowering)' : ''}</li>
+                <li><strong>Wind:</strong> ${fmt(solarNeeded * 0.6, 1)} TWh onshore wind (complementary generation profile)</li>
+                <li><strong>Battery:</strong> ${fmt(batteryNeeded, 1)} TWh storage dispatch (peak shaving + ancillary services)</li>
+                <li><strong>Firm clean:</strong> ${fmt(firmCleanNeeded, 1)} TWh ${hasNuclear ? 'nuclear uprates + potential SMR' : 'CCS-CCGT or contracted nuclear PPA'}</li>
             </ul>
         </div>`);
 
@@ -1033,18 +1037,19 @@
         const byISO = getFleetByISO();
         const fb = co.fan_bands.all;
 
-        // Robustness scores
-        const nuclearCap = byFuel.nuclear ? byFuel.nuclear.cap_mw : 0;
-        const nuclearScore = Math.min(100, (nuclearCap / (co.cap_gw * 1000)) * 200); // 50% nuclear = 100 score
+        // Robustness scores — based on generation share (TWh), not nameplate capacity
+        const totalGen = co.gen_twh;
+        const nuclearGen = byFuel.nuclear ? byFuel.nuclear.gen_twh : 0;
+        const nuclearScore = totalGen > 0 ? Math.min(100, (nuclearGen / totalGen) * 200) : 0; // 50% nuclear gen = 100 score
         const isoCount = Object.keys(byISO).length;
         const diversityScore = Math.min(100, isoCount * 25); // 4 ISOs = 100
-        const coalCap = byFuel.coal ? byFuel.coal.cap_mw : 0;
-        const coalExitScore = 100 - Math.min(100, (coalCap / (co.cap_gw * 1000)) * 200);
-        const peakerCap = byFuel.gas_peaker ? byFuel.gas_peaker.cap_mw : 0;
-        const ccgtCap = byFuel.gas_ccgt ? byFuel.gas_ccgt.cap_mw : 0;
-        const gasFlexScore = ccgtCap > 0 ? Math.min(100, (ccgtCap / (ccgtCap + peakerCap)) * 100) : 50;
-        const cleanCap = ['solar', 'wind', 'battery'].reduce((s, f) => s + (byFuel[f] ? byFuel[f].cap_mw : 0), 0);
-        const cleanPipelineScore = Math.min(100, (cleanCap / (co.cap_gw * 1000)) * 300);
+        const coalGen = byFuel.coal ? byFuel.coal.gen_twh : 0;
+        const coalExitScore = totalGen > 0 ? (100 - Math.min(100, (coalGen / totalGen) * 200)) : 100;
+        const peakerGen = byFuel.gas_peaker ? byFuel.gas_peaker.gen_twh : 0;
+        const ccgtGen = byFuel.gas_ccgt ? byFuel.gas_ccgt.gen_twh : 0;
+        const gasFlexScore = ccgtGen > 0 ? Math.min(100, (ccgtGen / (ccgtGen + peakerGen)) * 100) : 50;
+        const cleanNewGen = ['solar', 'wind', 'battery'].reduce((s, f) => s + (byFuel[f] ? byFuel[f].gen_twh : 0), 0);
+        const cleanPipelineScore = totalGen > 0 ? Math.min(100, (cleanNewGen / totalGen) * 300) : 0;
 
         // Radar chart
         makeChart('radarChart', {
@@ -1142,9 +1147,9 @@
         let recs = [];
         if (isos.includes('ERCOT')) recs.push('Leverage ERCOT\'s energy-only market for solar+battery deployment — high-value peak pricing creates strong returns.');
         if (isos.includes('PJM')) recs.push('Utilize PJM capacity market revenue to support firm clean generation investments (nuclear uprates, CCS).');
-        if (byFuel.coal && byFuel.coal.cap_mw > 500) recs.push('Accelerate coal retirement and site repowering — retiring coal sites have existing grid interconnection, land, and workforce.');
-        if (byFuel.nuclear && byFuel.nuclear.cap_mw > 2000) recs.push('Pursue nuclear uprates (5-10% capacity increase) — cheapest firm clean generation available at ~$10/MWh incremental cost.');
-        if (byFuel.gas_peaker && byFuel.gas_peaker.cap_mw > 2000) recs.push('Replace highest-heat-rate gas peakers with 4-hour battery storage at sites with declining capacity factors.');
+        if (byFuel.coal && byFuel.coal.gen_twh > 1) recs.push('Accelerate coal retirement and site repowering — retiring coal sites have existing grid interconnection, land, and workforce.');
+        if (byFuel.nuclear && byFuel.nuclear.gen_twh > 10) recs.push('Pursue nuclear uprates (5-10% output increase) — cheapest firm clean generation available at ~$10/MWh incremental cost.');
+        if (byFuel.gas_peaker && byFuel.gas_peaker.gen_twh > 3) recs.push('Replace highest-heat-rate gas peakers with 4-hour battery storage at sites with declining dispatch.');
         recs.push('Build out corporate PPA pipeline — voluntary procurement creates revenue certainty for new clean projects.');
 
         el.innerHTML = `

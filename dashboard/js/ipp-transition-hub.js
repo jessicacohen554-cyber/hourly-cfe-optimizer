@@ -48,13 +48,11 @@
 
     // ─── Hero Stats ──────────────────────────────────────────
     function renderHeroStats() {
-        const totalCap = companies.reduce((s, c) => s + c.cap_gw, 0);
         const totalGen = companies.reduce((s, c) => s + c.gen_twh, 0);
         const totalCO2 = companies.reduce((s, c) => s + c.co2_2024_mt, 0);
         const avgIntensity = Math.round(totalCO2 * 1e6 / (totalGen * 1e3)); // kg/MWh
 
-        document.getElementById('heroCapacity').textContent = fmt(totalCap, 0);
-        document.getElementById('heroGeneration').textContent = fmt(totalGen, 0);
+        document.getElementById('heroCapacity').textContent = fmt(totalGen, 0);
         document.getElementById('heroEmissions').textContent = fmt(totalCO2, 0);
         document.getElementById('heroScenarios').textContent = '270';
     }
@@ -70,23 +68,25 @@
         grid.innerHTML = sorted.map((co, idx) => {
             // Fleet summary for fuel bar
             const summary = co.fleet_summary;
-            const totalCap = co.cap_gw * 1000;
             const isos = Object.keys(summary);
 
-            // Fuel breakdown
-            const fuelCaps = {};
+            // Fuel breakdown by generation (TWh)
+            const fuelGen = {};
+            let totalFuelGen = 0;
             for (const iso of isos) {
                 for (const fuel of Object.keys(summary[iso])) {
-                    fuelCaps[fuel] = (fuelCaps[fuel] || 0) + summary[iso][fuel].cap_mw;
+                    const gen = summary[iso][fuel].gen_twh || 0;
+                    fuelGen[fuel] = (fuelGen[fuel] || 0) + gen;
+                    totalFuelGen += gen;
                 }
             }
 
-            // Fuel bar segments
+            // Fuel bar segments (by generation)
             const fuelOrder = ['nuclear', 'hydro', 'geothermal', 'wind', 'solar', 'battery', 'gas_ccgt', 'gas_peaker', 'coal', 'oil'];
-            const fuelBar = fuelOrder
-                .filter(f => fuelCaps[f] && fuelCaps[f] > 0)
-                .map(f => `<div class="fuel-bar-segment" style="width:${(fuelCaps[f]/totalCap*100).toFixed(1)}%;background:${FUEL_COLORS[f]}" title="${FUEL_LABELS[f]}: ${fmt(fuelCaps[f])} MW"></div>`)
-                .join('');
+            const fuelBar = totalFuelGen > 0 ? fuelOrder
+                .filter(f => fuelGen[f] && fuelGen[f] > 0)
+                .map(f => `<div class="fuel-bar-segment" style="width:${(fuelGen[f]/totalFuelGen*100).toFixed(1)}%;background:${FUEL_COLORS[f]}" title="${FUEL_LABELS[f]}: ${fmt(fuelGen[f], 1)} TWh"></div>`)
+                .join('') : '';
 
             // ISO badges
             const isoBadges = isos.map(iso =>
@@ -106,7 +106,7 @@
                         </div>
                     </div>
                     <div class="company-card-stats">
-                        <div class="company-card-stat"><div class="val">${fmt(co.cap_gw, 1)}</div><div class="lbl">GW Capacity</div></div>
+                        <div class="company-card-stat"><div class="val">${fmt(co.gen_twh, 0)}</div><div class="lbl">TWh Generation</div></div>
                         <div class="company-card-stat"><div class="val">${fmt(co.gen_twh, 0)}</div><div class="lbl">TWh/yr</div></div>
                         <div class="company-card-stat"><div class="val">${fmt(co.co2_2024_mt, 0)}</div><div class="lbl">Mt CO₂</div></div>
                         <div class="company-card-stat"><div class="val">${reduction}%</div><div class="lbl">2050 Reduction</div></div>
@@ -131,7 +131,7 @@
         // Check coal retirement — all companies with coal show declining coal dispatch
         const coalCompanies = companies.filter(c => {
             const summary = c.fleet_summary;
-            return Object.keys(summary).some(iso => summary[iso].coal && summary[iso].coal.cap_mw > 0);
+            return Object.keys(summary).some(iso => summary[iso].coal && summary[iso].coal.gen_twh > 0);
         });
         if (coalCompanies.length > 0) {
             consistent.push(`<strong>Coal exits:</strong> All ${coalCompanies.length} companies with coal (${coalCompanies.map(c => c.shortName).join(', ')}) show coal retirement by 2027-2030 across every scenario modeled.`);
@@ -140,7 +140,7 @@
         // Nuclear always profitable
         const nuclearCos = companies.filter(c => {
             const summary = c.fleet_summary;
-            return Object.keys(summary).some(iso => summary[iso].nuclear && summary[iso].nuclear.cap_mw > 0);
+            return Object.keys(summary).some(iso => summary[iso].nuclear && summary[iso].nuclear.gen_twh > 0);
         });
         if (nuclearCos.length > 0) {
             consistent.push(`<strong>Nuclear backbone:</strong> Nuclear generation remains the most profitable and resilient asset class across all scenarios for ${nuclearCos.map(c => c.shortName).join(', ')}.`);
@@ -284,12 +284,12 @@
 
     function renderFleetComposition() {
         const fuelOrder = ['nuclear', 'hydro', 'geothermal', 'wind', 'solar', 'battery', 'gas_ccgt', 'gas_peaker', 'coal', 'oil'];
-        const sorted = [...companies].sort((a, b) => b.cap_gw - a.cap_gw);
+        const sorted = [...companies].sort((a, b) => b.gen_twh - a.gen_twh);
 
         const datasets = fuelOrder.map(fuel => {
             const hasData = sorted.some(co => {
                 const summary = co.fleet_summary;
-                return Object.keys(summary).some(iso => summary[iso][fuel] && summary[iso][fuel].cap_mw > 0);
+                return Object.keys(summary).some(iso => summary[iso][fuel] && summary[iso][fuel].gen_twh > 0);
             });
             if (!hasData) return null;
 
@@ -299,7 +299,7 @@
                     const summary = co.fleet_summary;
                     let total = 0;
                     for (const iso of Object.keys(summary)) {
-                        if (summary[iso][fuel]) total += summary[iso][fuel].cap_mw;
+                        if (summary[iso][fuel]) total += summary[iso][fuel].gen_twh || 0;
                     }
                     return total;
                 }),
@@ -318,11 +318,11 @@
                 maintainAspectRatio: false,
                 scales: {
                     x: { stacked: true },
-                    y: { stacked: true, title: { display: true, text: 'Capacity (MW)' } }
+                    y: { stacked: true, title: { display: true, text: 'Generation (TWh)' } }
                 },
                 plugins: {
                     legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 12 } },
-                    tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmt(ctx.raw)} MW` } }
+                    tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmt(ctx.raw, 1)} TWh` } }
                 }
             }
         });
