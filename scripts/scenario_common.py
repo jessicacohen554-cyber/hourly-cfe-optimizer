@@ -368,6 +368,9 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
     geo_lev = sens.get('geo')
     existing = {k: v / growth_factor for k, v in GRID_MIX_SHARES[iso].items()}
     wholesale = max(5, WHOLESALE_PRICES[iso] + FUEL_ADJUSTMENTS[iso][fuel_name])
+    # NEISO winter gas pipeline constraint — match step3a parity
+    if iso == 'NEISO':
+        wholesale += NEISO_WHOLESALE_ADDER
     if overrides and 'ccs_lcoe' in overrides:
         ccs_lcoe = overrides['ccs_lcoe']
     else:
@@ -716,6 +719,9 @@ def _precompute_cost_params(sens, iso, demand_twh, overrides=None, growth_factor
 
     existing = {k: v / growth_factor for k, v in GRID_MIX_SHARES[iso].items()}
     wholesale = max(5, WHOLESALE_PRICES[iso] + FUEL_ADJUSTMENTS[iso][fuel_name])
+    # NEISO winter gas pipeline constraint — match step3a parity
+    if iso == 'NEISO':
+        wholesale += NEISO_WHOLESALE_ADDER
 
     # CCS price
     if overrides and 'ccs_lcoe' in overrides:
@@ -1292,6 +1298,9 @@ def _build_existing_only_entry(iso, threshold, demand_twh, gf, existing_twh, sen
     new_gas_mw = max(0, gas_needed_mw - existing_gas_mw)
     fuel_name = LEVEL_NAME[sens['fuel']]
     wholesale = max(5, WHOLESALE_PRICES[iso] + FUEL_ADJUSTMENTS[iso][fuel_name])
+    # NEISO winter gas pipeline constraint — match step3a parity
+    if iso == 'NEISO':
+        wholesale += NEISO_WHOLESALE_ADDER
     est_match = _existing_match_pct(iso)
     return {
         'threshold': threshold,

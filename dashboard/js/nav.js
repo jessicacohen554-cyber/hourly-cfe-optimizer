@@ -232,8 +232,8 @@
                 {
                     header: 'Procurement & Strategy',
                     items: [
-                        { label: 'Carbon Accounting', href: 'consequential_accounting.html', desc: 'Consequential vs. attributional' },
-                        { label: 'Scenario Comparison', href: 'scenario_comparison.html', desc: 'Procurement pathway analysis' },
+                        { label: 'Carbon Accounting', href: 'consequential_accounting.html', desc: 'Frameworks & strategy deep dives' },
+                        { label: 'Scenario Comparison', href: 'scenario_comparison.html', desc: 'Consequential vs. hourly pathways' },
                         { label: 'Procurement Strategies', href: 'procurement_strategies.html', desc: 'Corporate strategy comparison' },
                         { label: 'Failure Modes', href: 'consequential_vacuum.html', desc: 'Scaling failure analysis' }
                     ]

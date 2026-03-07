@@ -268,82 +268,23 @@ body { background: var(--bg-alt-warm); }
         </div>
         <div class="scenario-card">
             <span class="scenario-tag tag-b">Scenario B &mdash; GHG Protocol Hourly Matching</span>
-            <h3>Four-Pool Supply Model</h3>
+            <h3>Hourly CFE with Learning Curves</h3>
             <div class="toggles">SSS at $0 | Merchant at EAC | New-Build at LCOE | Learning: FOAK&rarr;NOAK 2030-2040</div>
-            <p>Hourly Scope 2 accounting with Standard Supply Service (SSS). Policy-supported clean (nuclear ZECs,
-            public hydro, RPS) is free baseline. Existing merchant solar/wind available at EAC premium. Hourly
-            matching forces new-build firm clean + storage for night/winter gaps. Learning curve dividend
-            makes the system cheaper by 2045.</p>
+            <p>Hourly Scope 2 accounting with pool-aware pricing. Policy-supported clean is free baseline.
+            Existing merchant solar/wind available at EAC premium. Hourly matching forces new-build firm
+            clean + storage for night/winter gaps. Learning curve dividend makes the system cheaper by 2045.
+            <a href="consequential_accounting.html#accordionHourly" style="color:rgba(14,165,233,0.8);">See Strategy 2C deep dive &rarr;</a></p>
         </div>
     </div>
 </div>
-</section>
-
-<!-- ===== FOUR-POOL SUPPLY MODEL SCROLLYTELL ===== -->
-<section class="content-section story-section" style="padding-top: var(--space-2xl); padding-bottom: var(--space-xl);">
-    <span class="story-badge">GHG Protocol Framework</span>
-    <h2 class="section-title">The Four-Pool Supply Model</h2>
-    <p class="section-subtitle">Under GHG Protocol's proposed hourly Scope 2 standard, the grid's clean energy
-    supply splits into four distinct pools &mdash; each with different pricing, availability, and incentive effects.</p>
-
-    <div class="insight-box" style="margin: 24px 0;">
-        <strong>What is Standard Supply Service (SSS)?</strong><br>
-        SSS is <em>not</em> just "existing grid clean." It's specifically: publicly owned, rate-based, or policy-supported
-        clean energy. Under GHG Protocol revisions, SSS is the clean energy all consumers automatically get credit for &mdash;
-        it's embedded in their utility supply. Corporate buyers wanting to claim <em>beyond</em> SSS must procure additional
-        clean energy hour-by-hour.
-    </div>
-
-    <div class="grid-2col" style="margin-top: 24px;">
-        <div class="card" style="border-left: 4px solid var(--nuclear);">
-            <h3 style="font-family: var(--font-heading); font-size: 0.95rem; color: var(--navy); margin-bottom: 8px;">
-                Pool 1: SSS (Policy-Supported)</h3>
-            <div class="stat-value" id="pool1Total" style="font-size: 1.6rem;">227 TWh</div>
-            <div class="stat-label">across all 7 ISOs &bull; $0 incremental</div>
-            <p style="font-size: 0.82rem; color: rgba(0,0,0,0.6); margin-top: 8px; line-height: 1.6;">
-                Nuclear ZEC/CMC programs (Dresden, Byron, Millstone), NYPA hydro, BPA contracts,
-                state-contracted large hydro, 40% of new RPS-mandated build. <strong>Not</strong> merchant nuclear
-                like LaSalle or Peach Bottom.</p>
-        </div>
-        <div class="card" style="border-left: 4px solid #94A3B8;">
-            <h3 style="font-family: var(--font-heading); font-size: 0.95rem; color: var(--navy); margin-bottom: 8px;">
-                Pool 2: Corporate-Contracted (Locked)</h3>
-            <div class="stat-value" id="pool2Total" style="font-size: 1.6rem;">36.8 TWh</div>
-            <div class="stat-label">unavailable to market</div>
-            <p style="font-size: 0.82rem; color: rgba(0,0,0,0.6); margin-top: 8px; line-height: 1.6;">
-                Nuclear locked via hyperscaler PPAs: Susquehanna &rarr; Amazon (18.8 TWh, PJM),
-                Clinton + Duane Arnold &rarr; Meta (18 TWh, MISO). These are neither SSS nor available
-                for voluntary procurement.</p>
-        </div>
-        <div class="card" style="border-left: 4px solid var(--solar);">
-            <h3 style="font-family: var(--font-heading); font-size: 0.95rem; color: var(--navy); margin-bottom: 8px;">
-                Pool 3: Existing Merchant Clean</h3>
-            <div class="stat-value" id="pool3Total" style="font-size: 1.6rem; color: var(--solar);">Varies by ISO</div>
-            <div class="stat-label">$3&ndash;5/MWh EAC premium</div>
-            <p style="font-size: 0.82rem; color: rgba(0,0,0,0.6); margin-top: 8px; line-height: 1.6;">
-                Merchant nuclear (LaSalle, Peach Bottom, South Texas), existing solar/wind on grid.
-                <strong>Massive in ERCOT</strong> (~183 TWh solar+wind) and SPP (~120 TWh wind).
-                Available for hourly matching via EAC procurement.</p>
-        </div>
-        <div class="card" style="border-left: 4px solid var(--storage);">
-            <h3 style="font-family: var(--font-heading); font-size: 0.95rem; color: var(--navy); margin-bottom: 8px;">
-                Pool 4: New-Build (Investment Signal)</h3>
-            <div class="stat-value" id="pool4Total" style="font-size: 1.6rem; color: var(--storage);">The Gap</div>
-            <div class="stat-label">LCOE + PPA premium &bull; learning curves apply</div>
-            <p style="font-size: 0.82rem; color: rgba(0,0,0,0.6); margin-top: 8px; line-height: 1.6;">
-                What hourly matching <em>incentivizes</em> above Pools 1&ndash;3. The hourly constraint forces
-                firm clean + storage for night/winter coverage &mdash; VRE-only can't fill these gaps.
-                This is where the investment signal lives.</p>
-        </div>
-    </div>
 </section>
 
 <!-- ===== ZONE-BASED COMPARISON: EARLY / INFLECTION / LAST MILE ===== -->
 <section class="content-section story-section" style="padding-bottom: var(--space-xl);">
     <span class="story-badge story-badge-green">Three Zones of Divergence</span>
     <h2 class="section-title">How Accounting Rules Shape the Grid</h2>
-    <p class="section-subtitle">The three scenarios &mdash; consequential, hourly matching, and annual &mdash;
-    start similar but diverge dramatically as targets increase.</p>
+    <p class="section-subtitle">The two scenarios start similar at low thresholds but diverge dramatically
+    as CFE targets increase &mdash; divergence driven by when and how firm clean power enters the mix.</p>
 
     <!-- Early Stage -->
     <div class="card" style="margin: 24px 0; padding: 24px;">
@@ -354,10 +295,9 @@ body { background: var(--bg-alt-warm); }
             In ERCOT and SPP, existing merchant solar/wind (Pool 3) alone covers most of the target.
             No firm clean or storage investment signal yet. Cost parity across all three approaches.</p>
         <div class="grid-stats" id="earlyZoneStats">
-            <div class="stat-card"><div class="stat-value" style="color: var(--indigo);">~$32</div><div class="stat-label">Scenario A $/MWh</div></div>
-            <div class="stat-card"><div class="stat-value" style="color: var(--ccs);">~$32</div><div class="stat-label">Scenario B $/MWh</div></div>
-            <div class="stat-card"><div class="stat-value" style="color: #16A34A;">~$30</div><div class="stat-label">Annual $/MWh</div></div>
-            <div class="stat-card"><div class="stat-value">~$0</div><div class="stat-label">Cost Gap</div></div>
+            <div class="stat-card"><div class="stat-value" id="earlyCostA" style="color: var(--indigo);">$--</div><div class="stat-label">Scenario A $/MWh</div></div>
+            <div class="stat-card"><div class="stat-value" id="earlyCostB" style="color: var(--ccs);">$--</div><div class="stat-label">Scenario B $/MWh</div></div>
+            <div class="stat-card"><div class="stat-value" id="earlyGap">$--</div><div class="stat-label">Cost Gap</div></div>
         </div>
     </div>
 
@@ -398,36 +338,6 @@ body { background: var(--bg-alt-warm); }
         </div>
         <div class="chart-container" style="height: 280px; margin-top: 16px;">
             <canvas id="lastMileChart"></canvas>
-        </div>
-    </div>
-</section>
-
-<!-- ===== REGIONAL SSS SPOTLIGHT ===== -->
-<section class="content-section story-section" style="padding-bottom: var(--space-2xl);">
-    <span class="story-badge">Regional Deep-Dives</span>
-    <h2 class="section-title">SSS Varies Dramatically by Region</h2>
-    <p class="section-subtitle">The four-pool breakdown reveals starkly different starting positions
-    across ISOs &mdash; which determines how much new-build hourly matching must incentivize.</p>
-
-    <div class="chart-container-lg">
-        <canvas id="poolStackChart"></canvas>
-    </div>
-
-    <div class="grid-3col" style="margin-top: 24px;">
-        <div class="insight-box insight-success">
-            <strong>ERCOT: Mostly Existing Supply</strong><br>
-            No SSS (fully deregulated), but ~183 TWh of merchant solar+wind means hourly matching
-            at 80% draws mostly from existing supply. New-build only needed for night/low-wind gaps.
-        </div>
-        <div class="insight-box insight-warn">
-            <strong>PJM: Large SSS, But Contracted Away</strong><br>
-            95 TWh SSS (Exelon ZEC fleet) sounds large &mdash; but 18.8 TWh is locked to Amazon (Susquehanna).
-            The real available pool is smaller than headline numbers suggest.
-        </div>
-        <div class="insight-box insight-danger">
-            <strong>NYISO: Zero Headroom</strong><br>
-            Aggressive CLCPA targets consume all buildable capacity for RPS (SSS).
-            Corporate buyers compete for a thin merchant pool. Beyond that, it's all new-build.
         </div>
     </div>
 </section>
@@ -2083,90 +1993,6 @@ buildHeroStats();
 // ===== FOUR-POOL CHARTS =====
 
 // Pool stacked bar chart: SSS / Contracted / Merchant / New-Build per ISO
-function renderPoolStackChart() {
-    const canvas = document.getElementById('poolStackChart');
-    if (!canvas) return;
-
-    // Static 2025 baseline data from procurement_utils.py constants
-    const poolData = {
-        'CAISO': { sss: 35, contracted: 0, merchant: 82, demand: 226 },
-        'ERCOT': { sss: 0, contracted: 0, merchant: 183, demand: 484 },
-        'PJM':   { sss: 95, contracted: 18.8, merchant: 217, demand: 822 },
-        'NYISO': { sss: 42, contracted: 0, merchant: 22, demand: 164 },
-        'NEISO': { sss: 20, contracted: 0, merchant: 15, demand: 118 },
-        'MISO':  { sss: 30, contracted: 18, merchant: 162, demand: 655 },
-        'SPP':   { sss: 5, contracted: 0, merchant: 134, demand: 291 }
-    };
-
-    const isos = Object.keys(poolData);
-    const sssVals = isos.map(iso => poolData[iso].sss);
-    const contractedVals = isos.map(iso => poolData[iso].contracted);
-    const merchantVals = isos.map(iso => poolData[iso].merchant);
-    const gapVals = isos.map(iso => {
-        const p = poolData[iso];
-        return Math.max(0, p.demand * 0.95 - p.sss - p.contracted - p.merchant);
-    });
-
-    if (canvas._chart) canvas._chart.destroy();
-    canvas._chart = new Chart(canvas, {
-        type: 'bar',
-        data: {
-            labels: isos,
-            datasets: [
-                {
-                    label: 'Pool 1: SSS (Policy)',
-                    data: sssVals,
-                    backgroundColor: RESOURCE_COLORS ? RESOURCE_COLORS.nuclear : '#6366F1',
-                    borderRadius: 2,
-                },
-                {
-                    label: 'Pool 2: Contracted (Locked)',
-                    data: contractedVals,
-                    backgroundColor: '#94A3B8',
-                    borderRadius: 2,
-                },
-                {
-                    label: 'Pool 3: Merchant Clean (EAC)',
-                    data: merchantVals,
-                    backgroundColor: RESOURCE_COLORS ? RESOURCE_COLORS.solar : '#F59E0B',
-                    borderRadius: 2,
-                },
-                {
-                    label: 'Pool 4: New-Build Gap (at 95%)',
-                    data: gapVals,
-                    backgroundColor: RESOURCE_COLORS ? RESOURCE_COLORS.storage : '#EF4444',
-                    borderRadius: 2,
-                },
-            ],
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Four-Pool Supply Decomposition by ISO (TWh, 2025 baseline → 95% target)',
-                    font: { size: 14, weight: '600' },
-                },
-                legend: { position: 'bottom' },
-                tooltip: {
-                    callbacks: {
-                        label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(0)} TWh`,
-                    },
-                },
-            },
-            scales: {
-                x: { stacked: true },
-                y: {
-                    stacked: true,
-                    title: { display: true, text: 'TWh' },
-                    beginAtZero: true,
-                },
-            },
-        },
-    });
-}
-
 // Inflection point chart: firm hours heatmap-style bar
 function renderInflectionChart() {
     const canvas = document.getElementById('inflectionChart');
@@ -2315,27 +2141,59 @@ function renderLastMileChart() {
     });
 }
 
-// Zone comparison stats from DATA.zone_comparison
+// Zone comparison stats from DATA — both from zone_comparison and trajectory data
 function populateZoneStats() {
-    if (!DATA.zone_comparison) return;
     const iso = globalIso;
-    const zc = DATA.zone_comparison[iso];
-    if (!zc) return;
 
-    // Last mile stats
-    const lm = zc.last_mile;
-    if (lm) {
-        document.getElementById('lmCostA').textContent = '$' + Math.round(lm.cost_a);
-        document.getElementById('lmCostB').textContent = '$' + Math.round(lm.cost_b);
-        const gap = lm.firm_deployment_gap_twh;
-        document.getElementById('lmFirmGap').textContent = (gap > 0 ? '+' : '') + Math.round(gap) + ' TWh';
-        document.getElementById('lmLearning').textContent = lm.learning_position_b || '--';
+    // Early zone stats (50-65%) — compute average from trajectories
+    const trajA = DATA.trajectories.pure_consequential[iso] || [];
+    const trajB = getScenarioB(iso);
+    const earlyThresholds = [50, 55, 60, 65];
+
+    function avgCostAtThresholds(traj, thresholds) {
+        let sum = 0, count = 0;
+        thresholds.forEach(t => {
+            const entry = traj.find(d => d.threshold === t);
+            if (entry && entry.effective_cost > 0) { sum += entry.effective_cost; count++; }
+        });
+        return count > 0 ? sum / count : null;
+    }
+
+    const earlyA = avgCostAtThresholds(trajA, earlyThresholds);
+    const earlyB = avgCostAtThresholds(trajB, earlyThresholds);
+    var el;
+    el = document.getElementById('earlyCostA');
+    if (el && earlyA !== null) el.textContent = '$' + earlyA.toFixed(0);
+    el = document.getElementById('earlyCostB');
+    if (el && earlyB !== null) el.textContent = '$' + earlyB.toFixed(0);
+    el = document.getElementById('earlyGap');
+    if (el && earlyA !== null && earlyB !== null) {
+        var gap = Math.abs(earlyA - earlyB);
+        el.textContent = gap < 1 ? '~$0' : '$' + gap.toFixed(0);
+    }
+
+    // Last mile stats from zone_comparison
+    if (DATA.zone_comparison) {
+        const zc = DATA.zone_comparison[iso];
+        if (zc) {
+            const lm = zc.last_mile;
+            if (lm) {
+                el = document.getElementById('lmCostA');
+                if (el) el.textContent = '$' + Math.round(lm.cost_a);
+                el = document.getElementById('lmCostB');
+                if (el) el.textContent = '$' + Math.round(lm.cost_b);
+                const fgap = lm.firm_deployment_gap_twh;
+                el = document.getElementById('lmFirmGap');
+                if (el) el.textContent = (fgap > 0 ? '+' : '') + Math.round(fgap) + ' TWh';
+                el = document.getElementById('lmLearning');
+                if (el) el.textContent = lm.learning_position_b || '--';
+            }
+        }
     }
 }
 
-// Render all four-pool charts
-function renderFourPoolCharts() {
-    try { renderPoolStackChart(); } catch(e) { console.warn('renderPoolStackChart error:', e); }
+// Render zone comparison charts and stats
+function renderZoneCharts() {
     try { renderInflectionChart(); } catch(e) { console.warn('renderInflectionChart error:', e); }
     try { renderLastMileChart(); } catch(e) { console.warn('renderLastMileChart error:', e); }
     try { populateZoneStats(); } catch(e) { console.warn('populateZoneStats error:', e); }
@@ -2345,12 +2203,12 @@ function renderFourPoolCharts() {
 const origRenderAll = renderAll;
 renderAll = function(iso) {
     origRenderAll(iso);
-    renderFourPoolCharts();
+    renderZoneCharts();
 };
 
 renderFoakNOAKChart();
 buildHeroStats();
-renderFourPoolCharts();
+renderZoneCharts();
 
 // ===== GLOBAL ISO SELECTOR — single toggle for ALL charts =====
 createIsoSelector('globalIsoSelector', 'PJM', iso => renderAll(iso));
