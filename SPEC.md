@@ -1212,6 +1212,7 @@ National C&I = ~62% of total US load (~2,400 of ~3,860 TWh). Range by ISO: 52-57
 - Added to Step 6 GitHub Actions workflow (parallel batch with MAC, LMP, compressed day, etc.)
 - Added scipy to workflow dependencies
 - **Gas cost separation (Feb 26)**: MAC uses `effective_cost` (clean procurement only), NOT `total_system_cost` (which includes gas backup). Gas backup is a system reliability cost, not an abatement cost. See §7.4.1.
+- **Step 3 cost function fix (Mar 7)**: Removed CCS residual pricing and gas backup from Step 3 optimization cost. Previously, `ccs_pct = 100% - sum(explicit resources)` was priced at CCS LCOE, forcing 100% procurement and making low-threshold mixes artificially expensive (e.g., ERCOT t=50% selected an 80.9% mix because 47% CCS residual at $72.5/MWh dominated the cost). Fix: CCS is ONLY priced within the clean_firm tranche system (Tranche 3). Gas backup computed post-hoc for output but excluded from optimization cost — it represents the consequence of not planning ahead, not the capital cost of decarbonization. Battery/storage revenue credits retained to drive correct battery selection.
 - Added `CLEAN_COST_DATA` extraction to step7 (P10/P50/P90 of effective_cost across scenarios)
 - Fixed step5_consequential_deployment_queue.py MAC to exclude gas backup cost
 
@@ -2803,10 +2804,10 @@ CCS_CAP_TWH = {
 - **ERCOT (200 TWh / 41%)**: Best CCS region in US. Gulf Coast has 20+ Gt depleted offshore fields, 100s Gt offshore saline formations. TX received Class VI primacy Dec 2025 (64 apps from EPA). Denbury CO₂ pipeline network (900+ mi) is densest in US. Multiple storage hubs under development.
 - **MISO (200 TWh / 30%)**: Mt. Simon Sandstone (12–172 Gt) is the most characterized formation in US with 2+ Mt successfully injected at ADM Decatur. ND has had primacy since 2018 with 3 active projects. Broadwing 400 MW CCS-CCGT (Google-backed, FID Q2 2026) would be first in US.
 
-**Implementation (Step 3, March 2026)**: CCS cap enforced in two places within `price_mix_batch`:
-1. **Implicit CCS residual** (`ccs_pct = 100 - sum(cf, sol, wnd, hyd)`): TWh capped at `CCS_CAP_TWH[iso]`. Excess priced as nuclear new-build at the firm gen toggle level.
-2. **Tranche 3 CCS** (clean_firm overflow after uprate + geothermal): CCS headroom = `cap - residual_ccs_twh`. If CCS is cheaper than nuclear but headroom exhausted, overflow goes to nuclear new-build.
-For NYISO/NEISO (cap=0), all CCS → nuclear automatically. Step 1 will filter `ccs_pct × demand_TWh ≤ CCS_CAP_TWH[iso]` in the next physics run (deferred to avoid re-running Step 1 this iteration).
+**Implementation (Step 3, March 2026)**: CCS cap enforced in Tranche 3 within `price_mix_batch`:
+1. **Implicit CCS residual** (`ccs_pct = 100 - sum(cf, sol, wnd, hyd)`): **NOT priced** — tracked for output only. The residual represents unmatched demand served by the existing grid, not a real CCS build decision. Previously this was priced at CCS LCOE which made low-threshold mixes artificially expensive.
+2. **Tranche 3 CCS** (clean_firm overflow after uprate + geothermal): CCS headroom = full `CCS_CAP_TWH[iso]` (not reduced by residual since residual isn't built). If CCS is cheaper than nuclear but headroom exhausted, overflow goes to nuclear new-build.
+For NYISO/NEISO (cap=0), all tranche 3 CCS → nuclear automatically.
 
 *Sources: USGS National Carbon Sequestration Database (NATCARB), NETL Carbon Storage Atlas V (2015), DOE CarbonSAFE program status (2024–2025), EPA Class VI well permit tracker, California SB 905 (2022), Princeton Net-Zero America (2021), Global CCS Institute Status Report (2024), IEEFA CCS deployment analysis (2024).*
 
