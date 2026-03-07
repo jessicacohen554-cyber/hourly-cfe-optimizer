@@ -129,6 +129,68 @@
         {"name": "Keystone (PA, 12%)", "iso": "PJM", "fuel": "coal", "cap_mw": 214, "gen_twh": 0.6, "co2_mt": 0.6, "hr": 10800},
         {"name": "H.A. Wagner (MD, oil/gas)", "iso": "PJM", "fuel": "gas_peaker", "cap_mw": 838, "gen_twh": 1.0, "co2_mt": 0.7, "hr": 10200, "retire_by": 2029}
       ]
+    },
+    {
+      "id": "pseg",
+      "name": "PSEG Power",
+      "shortName": "PSEG",
+      "co2_2023_mt": 1.2,
+      "co2_2024_mt": 1,
+      "intensity_kg": 22,
+      "gen_twh": 40,
+      "cap_gw": 3.8,
+      "target": "Net-zero operations by 2045",
+      "plants": [
+        {"name": "Hope Creek Nuclear (NJ)", "iso": "PJM", "fuel": "nuclear", "cap_mw": 1172, "gen_twh": 9.9, "co2_mt": 0},
+        {"name": "Salem Nuclear (NJ, 57%)", "iso": "PJM", "fuel": "nuclear", "cap_mw": 1308, "gen_twh": 11.0, "co2_mt": 0},
+        {"name": "Peach Bottom Nuclear (PA, 50%)", "iso": "PJM", "fuel": "nuclear", "cap_mw": 1275, "gen_twh": 10.7, "co2_mt": 0}
+      ]
+    },
+    {
+      "id": "nextera",
+      "name": "NextEra Energy Resources",
+      "shortName": "NextEra",
+      "co2_2023_mt": 20,
+      "co2_2024_mt": 18,
+      "intensity_kg": 180,
+      "gen_twh": 100,
+      "cap_gw": 33,
+      "target": "Real Zero emissions by 2045",
+      "plants": [
+        {"name": "Point Beach Nuclear (WI)", "iso": "PJM", "fuel": "nuclear", "cap_mw": 1200, "gen_twh": 10.1, "co2_mt": 0},
+        {"name": "ERCOT Wind Portfolio", "iso": "ERCOT", "fuel": "wind", "cap_mw": 8000, "gen_twh": 25.0, "co2_mt": 0},
+        {"name": "ERCOT Solar Portfolio", "iso": "ERCOT", "fuel": "solar", "cap_mw": 3500, "gen_twh": 7.7, "co2_mt": 0},
+        {"name": "ERCOT Battery Storage", "iso": "ERCOT", "fuel": "battery", "cap_mw": 2000, "gen_twh": 0, "co2_mt": 0},
+        {"name": "ERCOT Gas CCGT Fleet", "iso": "ERCOT", "fuel": "gas_ccgt", "cap_mw": 3200, "gen_twh": 16.8, "co2_mt": 6.7, "hr": 7000},
+        {"name": "PJM Wind Portfolio", "iso": "PJM", "fuel": "wind", "cap_mw": 2000, "gen_twh": 6.3, "co2_mt": 0},
+        {"name": "PJM Solar Portfolio", "iso": "PJM", "fuel": "solar", "cap_mw": 1500, "gen_twh": 3.3, "co2_mt": 0},
+        {"name": "CAISO Solar Portfolio", "iso": "CAISO", "fuel": "solar", "cap_mw": 2500, "gen_twh": 5.5, "co2_mt": 0},
+        {"name": "CAISO Battery Storage", "iso": "CAISO", "fuel": "battery", "cap_mw": 1500, "gen_twh": 0, "co2_mt": 0},
+        {"name": "CAISO Gas CCGT Fleet", "iso": "CAISO", "fuel": "gas_ccgt", "cap_mw": 1200, "gen_twh": 6.3, "co2_mt": 2.5, "hr": 7000},
+        {"name": "NEISO Wind Portfolio", "iso": "NEISO", "fuel": "wind", "cap_mw": 800, "gen_twh": 2.5, "co2_mt": 0}
+      ]
+    },
+    {
+      "id": "aes",
+      "name": "AES Corporation",
+      "shortName": "AES",
+      "co2_2023_mt": 30,
+      "co2_2024_mt": 28,
+      "intensity_kg": 372,
+      "gen_twh": 75,
+      "cap_gw": 35,
+      "target": "Carbon-neutral Scope 1&2 by 2040; SBTi validated 1.5C",
+      "plants": [
+        {"name": "Petersburg Coal (IN)", "iso": "PJM", "fuel": "coal", "cap_mw": 1700, "gen_twh": 5.3, "co2_mt": 5.3, "hr": 10700},
+        {"name": "PJM Gas CCGT Fleet", "iso": "PJM", "fuel": "gas_ccgt", "cap_mw": 1800, "gen_twh": 9.4, "co2_mt": 3.8, "hr": 7100},
+        {"name": "PJM Gas Peaker Fleet", "iso": "PJM", "fuel": "gas_peaker", "cap_mw": 1200, "gen_twh": 1.1, "co2_mt": 0.7, "hr": 9800},
+        {"name": "CAISO Solar Portfolio", "iso": "CAISO", "fuel": "solar", "cap_mw": 3000, "gen_twh": 6.6, "co2_mt": 0},
+        {"name": "CAISO Battery Storage", "iso": "CAISO", "fuel": "battery", "cap_mw": 2000, "gen_twh": 0, "co2_mt": 0},
+        {"name": "AES Alamitos CCGT (CA)", "iso": "CAISO", "fuel": "gas_ccgt", "cap_mw": 1960, "gen_twh": 10.3, "co2_mt": 4.1, "hr": 6900},
+        {"name": "AES Redondo/Huntington (CA)", "iso": "CAISO", "fuel": "gas_peaker", "cap_mw": 1500, "gen_twh": 1.3, "co2_mt": 0.8, "hr": 9800},
+        {"name": "Wind Portfolio (Multi-ISO)", "iso": "PJM", "fuel": "wind", "cap_mw": 2500, "gen_twh": 7.8, "co2_mt": 0},
+        {"name": "Solar Portfolio (Other)", "iso": "PJM", "fuel": "solar", "cap_mw": 2000, "gen_twh": 4.4, "co2_mt": 0}
+      ]
     }
   ]
 }
