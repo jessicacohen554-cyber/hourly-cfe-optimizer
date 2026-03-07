@@ -935,15 +935,28 @@ def main():
         print(f"  {iso}: existing clean={pct:.1f}%  baseline emissions={emit:.1f} Mt")
 
     print("\nLoading optimizer results from parquets...")
-    # Prefer co2-enriched parquets (step5 co2_results), fall back to step4/step3
-    co2_dir = os.path.join(STEP5_DIR, 'co2_results')
-    input_dir = co2_dir if os.path.isdir(co2_dir) and any(
-        f.endswith('.parquet') for f in os.listdir(co2_dir)
-    ) else find_input_dir(ISOS)
+    # Always load from step3 parquets (which have cost + mix columns)
+    input_dir = find_input_dir(ISOS)
     if not input_dir:
         raise FileNotFoundError("No parquet input directory found")
 
     df = load_combined_df(input_dir, ISOS)
+
+    # Merge dispatch-based CO₂ from step5ab if available
+    co2_dir = os.path.join(STEP5_DIR, 'co2_results')
+    if os.path.isdir(co2_dir) and any(f.endswith('.parquet') for f in os.listdir(co2_dir)):
+        co2_frames = []
+        for iso in ISOS:
+            co2_path = os.path.join(co2_dir, f'co2_{iso}.parquet')
+            if os.path.exists(co2_path):
+                co2_frames.append(pd.read_parquet(co2_path))
+        if co2_frames:
+            co2_df = pd.concat(co2_frames, ignore_index=True)
+            # Merge CO₂ columns on (iso, threshold, scenario)
+            merge_cols = [c for c in co2_df.columns if c not in ('iso', 'threshold', 'scenario')]
+            df = df.merge(co2_df[['iso', 'threshold', 'scenario'] + merge_cols],
+                          on=['iso', 'threshold', 'scenario'], how='left', suffixes=('', '_co2'))
+            print(f"  Merged dispatch-based CO₂ from {co2_dir} ({len(co2_frames)} ISOs)")
     n_isos = df['iso'].nunique()
     print(f"  Total: {len(df):,} rows across {n_isos} ISOs")
 
