@@ -275,6 +275,303 @@ function buildAllCharts(D, accent) {
     buildFuelChart(D);
     buildRegimeChart(D);
     buildPeakChart(D);
+    if (typeof LMP_CAPACITY !== 'undefined') {
+        buildCapRevChart(currentISO, accent);
+        buildNucRevChart(currentISO);
+    }
+    if (typeof REFERENCE_CASE !== 'undefined') {
+        buildRefCaseChart(currentISO, accent);
+    }
+}
+
+// ===== CAPACITY MARKET REVENUE CHART =====
+function buildCapRevChart(iso, accent) {
+    var cap = LMP_CAPACITY[iso];
+    if (!cap) return;
+    var ctx = document.getElementById('capRevChart');
+    if (!ctx) return;
+
+    var T = cap.thresholds;
+    var lmpP50 = cap.avg_lmp_p50;
+    var sys = cap.capacity_rev_system_mwh;
+    var total = cap.total_market_rev_mwh;
+
+    var datasets = [
+        {
+            label: 'Energy Only (LMP)',
+            data: pts(T, lmpP50),
+            borderColor: accent || BLUE,
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            borderDash: [5, 3],
+            pointRadius: 2,
+            order: 2
+        },
+        {
+            label: 'Total Market Revenue (Energy + Capacity)',
+            data: pts(T, total.p50),
+            borderColor: accent || BLUE,
+            backgroundColor: hexToRgba(accent || BLUE, 0.08),
+            borderWidth: 2.5,
+            pointRadius: 3,
+            fill: true,
+            order: 1
+        }
+    ];
+
+    // P10/P90 band for total market revenue
+    if (total.p10 && total.p90) {
+        datasets.push({
+            label: 'Total Rev P10',
+            data: pts(T, total.p10),
+            borderColor: 'transparent',
+            backgroundColor: 'transparent',
+            pointRadius: 0,
+            order: 3
+        });
+        datasets.push({
+            label: 'Total Rev P90',
+            data: pts(T, total.p90),
+            borderColor: 'transparent',
+            backgroundColor: hexToRgba(accent || BLUE, 0.05),
+            fill: '-1',
+            pointRadius: 0,
+            order: 3
+        });
+    }
+
+    allCharts.push(new Chart(ctx, {
+        type: 'line',
+        data: { datasets: datasets },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { display: true, position: 'top', labels: { usePointStyle: true, font: { size: 11 } } },
+                annotation: { annotations: sbtiAnnotations() },
+                tooltip: {
+                    callbacks: {
+                        label: function(c) { return c.dataset.label + ': $' + c.parsed.y.toFixed(1) + '/MWh'; }
+                    }
+                }
+            },
+            scales: baseScales('Wholesale Revenue ($/MWh)', undefined, undefined)
+        }
+    }));
+
+    // Update narrative
+    var el = document.getElementById('nucCapRevPJM');
+    if (el && cap.capacity_rev_clean_firm_mwh) {
+        el.textContent = '$' + cap.capacity_rev_clean_firm_mwh.p50[0].toFixed(0) + '/MWh';
+    }
+
+    // Update subtitle
+    var sub = document.getElementById('capRevSubtitle');
+    if (sub && sys) {
+        var capAt50 = sys.p50[0].toFixed(1);
+        sub.textContent = iso + ': Capacity market adds $' + capAt50 + '/MWh at 50% clean to energy-only LMP';
+    }
+}
+
+function hexToRgba(hex, alpha) {
+    if (!hex) return 'rgba(14,165,233,' + alpha + ')';
+    hex = hex.replace('#', '');
+    var r = parseInt(hex.substring(0, 2), 16);
+    var g = parseInt(hex.substring(2, 4), 16);
+    var b = parseInt(hex.substring(4, 6), 16);
+    return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+}
+
+// ===== NUCLEAR TOTAL MARKET REVENUE CHART =====
+function buildNucRevChart(iso) {
+    var cap = LMP_CAPACITY[iso];
+    if (!cap || !cap.nuclear_total_rev_by_fuel) return;
+    var ctx = document.getElementById('nucRevChart');
+    if (!ctx) return;
+
+    var T = cap.thresholds;
+    var nuc = cap.nuclear_total_rev_by_fuel;
+
+    var datasets = [
+        {
+            label: 'Low Fuel Prices',
+            data: pts(T, nuc.Low),
+            borderColor: '#22C55E', backgroundColor: 'transparent',
+            borderWidth: 1.5, borderDash: [4, 2], pointRadius: 2
+        },
+        {
+            label: 'Medium Fuel Prices',
+            data: pts(T, nuc.Medium),
+            borderColor: BLUE, backgroundColor: 'transparent',
+            borderWidth: 2.5, pointRadius: 3
+        },
+        {
+            label: 'High Fuel Prices',
+            data: pts(T, nuc.High),
+            borderColor: '#EF4444', backgroundColor: 'transparent',
+            borderWidth: 1.5, borderDash: [4, 2], pointRadius: 2
+        }
+    ];
+
+    // Nuclear cost thresholds as annotations
+    var nucAnnotations = Object.assign({}, sbtiAnnotations(), {
+        opCostLow: {
+            type: 'line', yMin: 25, yMax: 25,
+            borderColor: 'rgba(34,197,94,0.3)', borderWidth: 1, borderDash: [6, 3],
+            label: { display: true, content: 'Cash OpEx ($25)', position: 'start',
+                color: 'rgba(34,197,94,0.6)', font: { size: 9 }, backgroundColor: 'rgba(255,255,255,0.9)', padding: 2 }
+        },
+        allIn: {
+            type: 'line', yMin: 38, yMax: 38,
+            borderColor: 'rgba(245,158,11,0.4)', borderWidth: 1.5, borderDash: [6, 3],
+            label: { display: true, content: 'All-In Sustaining ($38)', position: 'start',
+                color: 'rgba(245,158,11,0.7)', font: { size: 9 }, backgroundColor: 'rgba(255,255,255,0.9)', padding: 2 }
+        },
+        viable: {
+            type: 'line', yMin: 44, yMax: 44,
+            borderColor: 'rgba(239,68,68,0.4)', borderWidth: 1.5, borderDash: [6, 3],
+            label: { display: true, content: 'Viability Threshold ($44)', position: 'start',
+                color: 'rgba(239,68,68,0.7)', font: { size: 9 }, backgroundColor: 'rgba(255,255,255,0.9)', padding: 2 }
+        },
+        ptc: {
+            type: 'box', yMin: 0, yMax: 15,
+            backgroundColor: 'rgba(99,102,241,0.04)', borderWidth: 0,
+            label: { display: true, content: '45U PTC floor ($15/MWh)', position: 'start',
+                color: 'rgba(99,102,241,0.4)', font: { size: 9 } }
+        }
+    });
+
+    allCharts.push(new Chart(ctx, {
+        type: 'line',
+        data: { datasets: datasets },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { display: true, position: 'top', labels: { usePointStyle: true, font: { size: 11 } } },
+                annotation: { annotations: nucAnnotations },
+                tooltip: {
+                    callbacks: {
+                        label: function(c) { return c.dataset.label + ': $' + c.parsed.y.toFixed(1) + '/MWh (energy + capacity)'; }
+                    }
+                }
+            },
+            scales: baseScales('Nuclear Total Market Revenue ($/MWh)', 0, 65)
+        }
+    }));
+
+    // Update viability threshold text
+    var el = document.getElementById('nucViableCapPct');
+    if (el && nuc.Medium) {
+        var t38 = T.find(function(t, i) { return nuc.Medium[i] < 38; });
+        if (t38) el.textContent = t38 + '%';
+    }
+}
+
+// ===== REFERENCE CASE PRICE FAN =====
+function buildRefCaseChart(iso, accent) {
+    var ref = REFERENCE_CASE[iso];
+    if (!ref || !ref.avg_lmp) return;
+    var ctx = document.getElementById('refCaseChart');
+    if (!ctx) return;
+
+    var years = ref.years;
+    var lmp = ref.avg_lmp;
+
+    var datasets = [
+        {
+            label: 'Wholesale Price P50',
+            data: pts(years, lmp.p50),
+            borderColor: accent || BLUE,
+            backgroundColor: 'transparent',
+            borderWidth: 2.5, pointRadius: 4
+        },
+        {
+            label: 'P10',
+            data: pts(years, lmp.p10),
+            borderColor: 'transparent', backgroundColor: 'transparent',
+            pointRadius: 0
+        },
+        {
+            label: 'P90',
+            data: pts(years, lmp.p90),
+            borderColor: 'transparent',
+            backgroundColor: hexToRgba(accent || BLUE, 0.1),
+            fill: '-1', pointRadius: 0
+        },
+        {
+            label: 'P25',
+            data: pts(years, lmp.p25),
+            borderColor: 'transparent', backgroundColor: 'transparent',
+            pointRadius: 0
+        },
+        {
+            label: 'P75',
+            data: pts(years, lmp.p75),
+            borderColor: 'transparent',
+            backgroundColor: hexToRgba(accent || BLUE, 0.08),
+            fill: '-1', pointRadius: 0
+        }
+    ];
+
+    // Add clean% on secondary axis if available
+    if (ref.clean_pct) {
+        datasets.push({
+            label: 'Clean Energy % (P50)',
+            data: pts(years, ref.clean_pct.p50),
+            borderColor: '#22C55E',
+            backgroundColor: 'transparent',
+            borderWidth: 2, borderDash: [5, 3],
+            pointRadius: 3, yAxisID: 'y2'
+        });
+    }
+
+    allCharts.push(new Chart(ctx, {
+        type: 'line',
+        data: { datasets: datasets },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { display: true, position: 'top', labels: { usePointStyle: true, font: { size: 11 },
+                    filter: function(item) { return item.text !== 'P10' && item.text !== 'P25'; }
+                } },
+                tooltip: {
+                    callbacks: {
+                        label: function(c) {
+                            if (c.dataset.yAxisID === 'y2') return c.dataset.label + ': ' + c.parsed.y.toFixed(0) + '%';
+                            return c.dataset.label + ': $' + c.parsed.y.toFixed(1) + '/MWh';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    type: 'linear', min: 2022, max: 2051,
+                    title: { display: true, text: 'Year', color: 'rgba(15,23,42,0.45)', font: { size: 11 } },
+                    grid: { color: 'rgba(0,0,0,0.025)' },
+                    ticks: { stepSize: 5, color: 'rgba(15,23,42,0.4)', font: { size: 10 } }
+                },
+                y: {
+                    title: { display: true, text: 'Wholesale Price ($/MWh)', color: 'rgba(15,23,42,0.45)', font: { size: 11 } },
+                    grid: { color: 'rgba(0,0,0,0.025)' },
+                    ticks: { color: 'rgba(15,23,42,0.4)', font: { size: 10 } }
+                },
+                y2: {
+                    position: 'right',
+                    title: { display: true, text: 'Clean Energy (%)', color: 'rgba(34,197,94,0.6)', font: { size: 11 } },
+                    grid: { display: false },
+                    ticks: { color: 'rgba(34,197,94,0.5)', font: { size: 10 } },
+                    min: 30, max: 100
+                }
+            }
+        }
+    }));
+
+    // Update subtitle
+    var sub = document.getElementById('refCaseSubtitle');
+    if (sub) {
+        var lmp2050 = lmp.p50[lmp.p50.length - 1];
+        var cp = ref.clean_pct ? ref.clean_pct.p50[ref.clean_pct.p50.length - 1] : '?';
+        sub.textContent = iso + ': Reference case reaches ' + cp + '% clean by 2050, LMP P50 = $' + lmp2050.toFixed(0) + '/MWh';
+    }
 }
 
 // ===== CONTENT UPDATER =====

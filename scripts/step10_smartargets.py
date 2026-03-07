@@ -35,6 +35,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(SCRIPT_DIR)
 sys.path.insert(0, SCRIPT_DIR)
 sys.path.insert(0, ROOT_DIR)
+sys.path.insert(0, os.path.join(SCRIPT_DIR, 'archive'))
 
 from pipeline_config import (
     ISOS, REGIONAL_DEMAND_TWH, DEMAND_GROWTH_RATES,
