@@ -951,8 +951,10 @@ def main():
     parser = argparse.ArgumentParser(description='Incremental track analysis')
     parser.add_argument('--full', action='store_true',
                         help='Run all sensitivity combos (hours). Default: Medium-only.')
-    parser.add_argument('--fresh', action='store_true',
-                        help='Ignore checkpoint and start from scratch.')
+    parser.add_argument('--fresh', action='store_true', default=True,
+                        help='Start from scratch (default). Use --resume to keep prior results.')
+    parser.add_argument('--resume', action='store_true',
+                        help='Resume from existing parquet checkpoint instead of starting fresh.')
     parser.add_argument('--iso', type=str, default=None,
                         help='Run only this ISO (e.g., PJM). Default: all ISOs.')
     parser.add_argument('--track', type=str, default='both',
@@ -970,16 +972,18 @@ def main():
     total_start = time.time()
 
     # Load completed tracks from parquet checkpoint
-    if args.fresh:
-        print("  --fresh flag: ignoring existing parquet checkpoint")
+    # Default is fresh (overwrite). Use --resume to keep prior results.
+    if args.resume:
+        print("  --resume flag: loading existing parquet checkpoint")
+        completed_tracks = load_completed_tracks(PQ_SCENARIOS_PATH)
+    else:
+        print("  Fresh run: clearing existing parquet checkpoint")
         completed_tracks = set()
         # Remove existing parquet files so append_to_parquet starts clean
         for _fp in (PQ_SCENARIOS_PATH, PQ_DG_PATH):
             if os.path.exists(_fp):
                 os.remove(_fp)
                 print(f"    Removed stale {_fp}")
-    else:
-        completed_tracks = load_completed_tracks(PQ_SCENARIOS_PATH)
 
     # Warm up Numba JIT (batched function)
     if HAS_NUMBA:
