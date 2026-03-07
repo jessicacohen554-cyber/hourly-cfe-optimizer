@@ -487,7 +487,8 @@ def apply_hydro_cap(arrays, iso):
     Track 2 (newbuild analysis) but must NOT enter Track 1 baseline costing,
     where hydro is existing-only at $0 wholesale.
 
-    Cap is ceil(GRID_MIX_SHARES[iso]['hydro']) since PFS uses integer %.
+    Cap is floor(GRID_MIX_SHARES[iso]['hydro']) since PFS uses integer %
+    and no new hydro can be built. E.g. ERCOT 0.1% → cap=0 (no hydro mixes).
 
     Args:
         arrays: dict of numpy arrays keyed by resource name + dispatch fields
@@ -498,7 +499,7 @@ def apply_hydro_cap(arrays, iso):
         n_removed: count of mixes removed
     """
     import math
-    hydro_cap = math.ceil(GRID_MIX_SHARES[iso].get('hydro', 0))
+    hydro_cap = math.floor(GRID_MIX_SHARES[iso].get('hydro', 0))
     N = len(arrays['clean_firm'])
     mask = arrays['hydro'] <= hydro_cap
     n_removed = N - int(mask.sum())
