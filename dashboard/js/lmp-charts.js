@@ -201,30 +201,49 @@ function buildPeakChart(D) {
 }
 
 // ===== 5. NUCLEAR ECONOMICS CHART =====
-function buildNuclearEconChart(D) {
+// D = LMP_ALL[iso], capData = LMP_CAPACITY[iso] (optional)
+function buildNuclearEconChart(D, capData) {
     var ctx = document.getElementById('nuclearEconChart').getContext('2d');
     var T = D.thresholds, N = D.nuclear;
     var viU = T.map(function() { return N.viableHigh; }), viL = T.map(function() { return N.viableLow; });
     var aiU = T.map(function() { return N.allInHigh; }), aiL = T.map(function() { return N.allInLow; });
     var coU = T.map(function() { return N.opCostHigh; }), coL = T.map(function() { return N.opCostLow; });
+
+    var datasets = [
+        { label: 'Viable ceiling', data: pts(T, viU), borderColor: 'transparent', backgroundColor: 'rgba(245,158,11,0.08)', borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0, order: 14, _type: 'band' },
+        { label: 'Viable floor', data: pts(T, viL), borderColor: 'rgba(245,158,11,0.35)', backgroundColor: 'transparent', borderWidth: 1, borderDash: [6,3], pointRadius: 0, fill: false, tension: 0, order: 14, _type: 'band' },
+        { label: 'All-in ceiling', data: pts(T, aiU), borderColor: 'transparent', backgroundColor: 'rgba(239,68,68,0.08)', borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0, order: 13, _type: 'band' },
+        { label: 'All-in floor', data: pts(T, aiL), borderColor: 'rgba(239,68,68,0.3)', backgroundColor: 'transparent', borderWidth: 1, borderDash: [4,3], pointRadius: 0, fill: false, tension: 0, order: 13, _type: 'band' },
+        { label: 'Cash ops ceiling', data: pts(T, coU), borderColor: 'transparent', backgroundColor: 'rgba(239,68,68,0.14)', borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0, order: 12, _type: 'band' },
+        { label: 'Cash ops floor', data: pts(T, coL), borderColor: RED + '60', backgroundColor: 'transparent', borderWidth: 1, borderDash: [4,3], pointRadius: 0, fill: false, tension: 0, order: 12, _type: 'band' },
+        { label: 'High fuel (energy only)', data: pts(T, N.fuelHigh), borderColor: RED, backgroundColor: 'transparent', borderWidth: 1.5, borderDash: [4, 2], pointRadius: 2, pointBackgroundColor: RED, fill: false, tension: 0.35, order: 5 },
+        { label: 'Medium fuel (energy only)', data: pts(T, N.fuelMedium), borderColor: AMBER, backgroundColor: 'transparent', borderWidth: 1.5, borderDash: [4, 2], pointRadius: 2, pointBackgroundColor: AMBER, fill: false, tension: 0.35, order: 4 },
+        { label: 'Low fuel (energy only)', data: pts(T, N.fuelLow), borderColor: GREEN, backgroundColor: 'transparent', borderWidth: 1.5, borderDash: [4, 2], pointRadius: 2, pointBackgroundColor: GREEN, fill: false, tension: 0.35, order: 3 }
+    ];
+
+    // Overlay total market revenue (energy + capacity) if capacity data available
+    var nuc = capData && capData.nuclear_total_rev_by_fuel;
+    if (nuc) {
+        var capT = capData.thresholds;
+        // Show each fuel scenario that has non-zero data
+        var hasLow = nuc.Low && nuc.Low.some(function(v) { return v !== 0; });
+        var hasMed = nuc.Medium && nuc.Medium.some(function(v) { return v !== 0; });
+        var hasHigh = nuc.High && nuc.High.some(function(v) { return v !== 0; });
+        if (hasHigh) datasets.push({ label: 'High fuel (energy + capacity)', data: pts(capT, nuc.High), borderColor: RED, backgroundColor: RED + '18', borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: RED, fill: false, tension: 0.35, order: 3 });
+        if (hasMed) datasets.push({ label: 'Medium fuel (energy + capacity)', data: pts(capT, nuc.Medium), borderColor: AMBER, backgroundColor: AMBER + '18', borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: AMBER, fill: false, tension: 0.35, order: 2 });
+        if (hasLow) datasets.push({ label: 'Low fuel (energy + capacity)', data: pts(capT, nuc.Low), borderColor: GREEN, backgroundColor: GREEN + '18', borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: GREEN, fill: false, tension: 0.35, order: 1 });
+    }
+
     chartInstances.nucEcon = new Chart(ctx, {
         type: 'line',
-        data: { datasets: [
-            { label: 'Viable ceiling', data: pts(T, viU), borderColor: 'transparent', backgroundColor: 'rgba(245,158,11,0.08)', borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0, order: 14, _type: 'band' },
-            { label: 'Viable floor', data: pts(T, viL), borderColor: 'rgba(245,158,11,0.35)', backgroundColor: 'transparent', borderWidth: 1, borderDash: [6,3], pointRadius: 0, fill: false, tension: 0, order: 14, _type: 'band' },
-            { label: 'All-in ceiling', data: pts(T, aiU), borderColor: 'transparent', backgroundColor: 'rgba(239,68,68,0.08)', borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0, order: 13, _type: 'band' },
-            { label: 'All-in floor', data: pts(T, aiL), borderColor: 'rgba(239,68,68,0.3)', backgroundColor: 'transparent', borderWidth: 1, borderDash: [4,3], pointRadius: 0, fill: false, tension: 0, order: 13, _type: 'band' },
-            { label: 'Cash ops ceiling', data: pts(T, coU), borderColor: 'transparent', backgroundColor: 'rgba(239,68,68,0.14)', borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0, order: 12, _type: 'band' },
-            { label: 'Cash ops floor', data: pts(T, coL), borderColor: RED + '60', backgroundColor: 'transparent', borderWidth: 1, borderDash: [4,3], pointRadius: 0, fill: false, tension: 0, order: 12, _type: 'band' },
-            { label: 'High fuel LMP', data: pts(T, N.fuelHigh), borderColor: RED, backgroundColor: RED + '18', borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: RED, fill: false, tension: 0.35, order: 3 },
-            { label: 'Medium fuel LMP', data: pts(T, N.fuelMedium), borderColor: AMBER, backgroundColor: AMBER + '18', borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: AMBER, fill: false, tension: 0.35, order: 2 },
-            { label: 'Low fuel LMP', data: pts(T, N.fuelLow), borderColor: GREEN, backgroundColor: GREEN + '18', borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: GREEN, fill: false, tension: 0.35, order: 1 }
-        ] },
+        data: { datasets: datasets },
         options: {
             responsive: true, maintainAspectRatio: false,
             animation: { duration: 1200, easing: 'easeOutQuart' },
-            scales: baseScales('Average Wholesale Price ($/MWh)', -12, 55),
-            plugins: { legend: { display: false }, tooltip: baseTooltip(),
+            scales: baseScales('Nuclear Revenue ($/MWh)', -12, 55),
+            plugins: { legend: { display: true, position: 'top', labels: { usePointStyle: true, font: { size: 10 },
+                filter: function(item) { return item.text.indexOf('ceiling') === -1 && item.text.indexOf('floor') === -1; }
+            } }, tooltip: baseTooltip(),
                 annotation: { annotations: Object.assign({
                     zeroLine: { type: 'line', yMin: 0, yMax: 0, borderColor: 'rgba(0,0,0,0.1)', borderWidth: 1, borderDash: [6, 4] },
                     cashLabel: { type: 'label', xValue: 100, yValue: 27.5, content: ['Cash ops', '$25\u201330'], color: 'rgba(239,68,68,0.65)', font: { size: 9, weight: '600' }, position: 'start' },
@@ -457,62 +476,76 @@ function buildNucRevChart(iso) {
     }
 }
 
-// ===== REFERENCE CASE PRICE FAN =====
+// ===== REFERENCE CASE vs STEP 5B: PURE POWER MARKET COMPARISON =====
 function buildRefCaseChart(iso, accent) {
     var ref = REFERENCE_CASE[iso];
-    if (!ref || !ref.avg_lmp) return;
+    var cap = (typeof LMP_CAPACITY !== 'undefined') ? LMP_CAPACITY[iso] : null;
+    var lmpAll = (typeof LMP_ALL !== 'undefined') ? LMP_ALL[iso] : null;
+    if (!lmpAll) return;
     var ctx = document.getElementById('refCaseChart');
     if (!ctx) return;
 
-    var years = ref.years;
-    var lmp = ref.avg_lmp;
+    var T = lmpAll.thresholds; // clean% thresholds (50, 55, 60, ..., 99.99)
 
-    var datasets = [
-        {
-            label: 'Wholesale Price P50',
-            data: pts(years, lmp.p50),
-            borderColor: accent || BLUE,
-            backgroundColor: 'transparent',
-            borderWidth: 2.5, pointRadius: 4
-        },
-        {
-            label: 'P10',
-            data: pts(years, lmp.p10),
-            borderColor: 'transparent', backgroundColor: 'transparent',
-            pointRadius: 0
-        },
-        {
-            label: 'P90',
-            data: pts(years, lmp.p90),
-            borderColor: 'transparent',
-            backgroundColor: hexToRgba(accent || BLUE, 0.1),
-            fill: '-1', pointRadius: 0
-        },
-        {
-            label: 'P25',
-            data: pts(years, lmp.p25),
-            borderColor: 'transparent', backgroundColor: 'transparent',
-            pointRadius: 0
-        },
-        {
-            label: 'P75',
-            data: pts(years, lmp.p75),
-            borderColor: 'transparent',
-            backgroundColor: hexToRgba(accent || BLUE, 0.08),
-            fill: '-1', pointRadius: 0
-        }
-    ];
+    var datasets = [];
 
-    // Add clean% on secondary axis if available
-    if (ref.clean_pct) {
+    // Step 5B: Energy-only wholesale LMP (P10/P50/P90 envelope)
+    datasets.push({
+        label: 'Step 5B Energy LMP (P50)',
+        data: pts(T, lmpAll.envelope.p50),
+        borderColor: accent || BLUE,
+        backgroundColor: 'transparent',
+        borderWidth: 2.5, pointRadius: 3, order: 1
+    });
+    // P10/P90 band
+    datasets.push({
+        label: 'Step 5B P10',
+        data: pts(T, lmpAll.envelope.p10),
+        borderColor: 'transparent', backgroundColor: 'transparent',
+        pointRadius: 0, order: 3, _type: 'band'
+    });
+    datasets.push({
+        label: 'Step 5B P90',
+        data: pts(T, lmpAll.envelope.p90),
+        borderColor: 'transparent',
+        backgroundColor: hexToRgba(accent || BLUE, 0.08),
+        fill: '-1', pointRadius: 0, order: 3, _type: 'band'
+    });
+
+    // Step 5B: Energy + Capacity (total market revenue, no RECs)
+    if (cap && cap.total_market_rev_mwh) {
         datasets.push({
-            label: 'Clean Energy % (P50)',
-            data: pts(years, ref.clean_pct.p50),
-            borderColor: '#22C55E',
+            label: 'Step 5B Power Market (Energy + Capacity)',
+            data: pts(cap.thresholds, cap.total_market_rev_mwh.p50),
+            borderColor: '#6366F1',
             backgroundColor: 'transparent',
-            borderWidth: 2, borderDash: [5, 3],
-            pointRadius: 3, yAxisID: 'y2'
+            borderWidth: 2, borderDash: [6, 3],
+            pointRadius: 3, order: 2
         });
+    }
+
+    // Step 10: Reference case power market revenue (energy + capacity, NO RECs)
+    if (ref && ref.clean_price_map_2050) {
+        var s10pts = [];
+        ref.clean_price_map_2050.forEach(function(pt) {
+            // Use power_market_p50 if available, fall back to avg_lmp_p50
+            var val = (pt.power_market_p50 !== undefined && pt.power_market_p50 !== 0)
+                ? pt.power_market_p50 : pt.avg_lmp_p50;
+            if (pt.n >= 3 && pt.clean_pct >= 50 && pt.clean_pct <= 100) {
+                s10pts.push({ x: pt.clean_pct, y: val });
+            }
+        });
+        if (s10pts.length > 0) {
+            datasets.push({
+                label: 'Step 10 Power Market @ 2050 (No RECs)',
+                data: s10pts,
+                borderColor: '#EF4444',
+                backgroundColor: hexToRgba('#EF4444', 0.15),
+                borderWidth: 2,
+                pointRadius: 5, pointStyle: 'triangle',
+                showLine: true, tension: 0.3, order: 1
+            });
+        }
     }
 
     chartInstances.refCase = new Chart(ctx, {
@@ -522,46 +555,28 @@ function buildRefCaseChart(iso, accent) {
             responsive: true, maintainAspectRatio: false,
             plugins: {
                 legend: { display: true, position: 'top', labels: { usePointStyle: true, font: { size: 11 },
-                    filter: function(item) { return item.text !== 'P10' && item.text !== 'P25'; }
+                    filter: function(item) { return item.text.indexOf('P10') === -1; }
                 } },
+                annotation: { annotations: sbtiAnnotations() },
                 tooltip: {
+                    filter: function(item) { return item.dataset._type !== 'band'; },
                     callbacks: {
+                        title: function(items) { return items[0] ? items[0].raw.x + '% Clean Energy' : ''; },
                         label: function(c) {
-                            if (c.dataset.yAxisID === 'y2') return c.dataset.label + ': ' + c.parsed.y.toFixed(0) + '%';
+                            if (c.dataset._type === 'band') return null;
                             return c.dataset.label + ': $' + c.parsed.y.toFixed(1) + '/MWh';
                         }
                     }
                 }
             },
-            scales: {
-                x: {
-                    type: 'linear', min: 2022, max: 2051,
-                    title: { display: true, text: 'Year', color: 'rgba(15,23,42,0.45)', font: { size: 11 } },
-                    grid: { color: 'rgba(0,0,0,0.025)' },
-                    ticks: { stepSize: 5, color: 'rgba(15,23,42,0.4)', font: { size: 10 } }
-                },
-                y: {
-                    title: { display: true, text: 'Wholesale Price ($/MWh)', color: 'rgba(15,23,42,0.45)', font: { size: 11 } },
-                    grid: { color: 'rgba(0,0,0,0.025)' },
-                    ticks: { color: 'rgba(15,23,42,0.4)', font: { size: 10 } }
-                },
-                y2: {
-                    position: 'right',
-                    title: { display: true, text: 'Clean Energy (%)', color: 'rgba(34,197,94,0.6)', font: { size: 11 } },
-                    grid: { display: false },
-                    ticks: { color: 'rgba(34,197,94,0.5)', font: { size: 10 } },
-                    min: 30, max: 100
-                }
-            }
+            scales: baseScales('Power Market Revenue ($/MWh)', undefined, undefined)
         }
-    }));
+    });
 
     // Update subtitle
     var sub = document.getElementById('refCaseSubtitle');
     if (sub) {
-        var lmp2050 = lmp.p50[lmp.p50.length - 1];
-        var cp = ref.clean_pct ? ref.clean_pct.p50[ref.clean_pct.p50.length - 1] : '?';
-        sub.textContent = iso + ': Reference case reaches ' + cp + '% clean by 2050, LMP P50 = $' + lmp2050.toFixed(0) + '/MWh';
+        sub.textContent = iso + ': Step 5B (policy-driven) vs Step 10 (market-driven) — pure power markets, no REC revenue';
     }
 }
 

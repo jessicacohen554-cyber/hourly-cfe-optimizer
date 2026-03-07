@@ -4689,43 +4689,50 @@ var REFERENCE_CASE = {
         "clean_pct": 55.0,
         "n": 3,
         "avg_lmp_p50": 34.3,
-        "revenue_p50": 75.8
+        "revenue_p50": 75.8,
+        "power_market_p50": 43.3
       },
       {
         "clean_pct": 60.0,
         "n": 12,
         "avg_lmp_p50": 30.0,
-        "revenue_p50": 0.0
+        "revenue_p50": 0.0,
+        "power_market_p50": 0.0
       },
       {
         "clean_pct": 65.0,
         "n": 15,
         "avg_lmp_p50": 34.6,
-        "revenue_p50": 83.5
+        "revenue_p50": 83.5,
+        "power_market_p50": 33.5
       },
       {
         "clean_pct": 70.0,
         "n": 12,
         "avg_lmp_p50": 43.7,
-        "revenue_p50": 81.1
+        "revenue_p50": 81.1,
+        "power_market_p50": 50.7
       },
       {
         "clean_pct": 80.0,
         "n": 114,
         "avg_lmp_p50": 30.0,
-        "revenue_p50": 0.0
+        "revenue_p50": 0.0,
+        "power_market_p50": 0.0
       },
       {
         "clean_pct": 85.0,
         "n": 21,
         "avg_lmp_p50": 36.4,
-        "revenue_p50": 79.0
+        "revenue_p50": 79.0,
+        "power_market_p50": 30.0
       },
       {
         "clean_pct": 90.0,
         "n": 93,
         "avg_lmp_p50": 30.0,
-        "revenue_p50": 0.0
+        "revenue_p50": 0.0,
+        "power_market_p50": 0.0
       }
     ]
   },
@@ -5079,49 +5086,57 @@ var REFERENCE_CASE = {
         "clean_pct": 45.0,
         "n": 6,
         "avg_lmp_p50": 27.0,
-        "revenue_p50": 0.0
+        "revenue_p50": 0.0,
+        "power_market_p50": 0.0
       },
       {
         "clean_pct": 50.0,
         "n": 12,
         "avg_lmp_p50": 59.0,
-        "revenue_p50": 50.6
+        "revenue_p50": 50.6,
+        "power_market_p50": 50.1
       },
       {
         "clean_pct": 60.0,
         "n": 33,
         "avg_lmp_p50": 53.2,
-        "revenue_p50": 46.3
+        "revenue_p50": 46.3,
+        "power_market_p50": 45.8
       },
       {
         "clean_pct": 65.0,
         "n": 15,
         "avg_lmp_p50": 49.4,
-        "revenue_p50": 42.1
+        "revenue_p50": 42.1,
+        "power_market_p50": 41.6
       },
       {
         "clean_pct": 70.0,
         "n": 27,
         "avg_lmp_p50": 65.1,
-        "revenue_p50": 69.8
+        "revenue_p50": 69.8,
+        "power_market_p50": 69.4
       },
       {
         "clean_pct": 80.0,
         "n": 6,
         "avg_lmp_p50": 27.0,
-        "revenue_p50": 0.0
+        "revenue_p50": 0.0,
+        "power_market_p50": 0.0
       },
       {
         "clean_pct": 85.0,
         "n": 114,
         "avg_lmp_p50": 178.1,
-        "revenue_p50": 73.4
+        "revenue_p50": 73.4,
+        "power_market_p50": 72.9
       },
       {
         "clean_pct": 90.0,
         "n": 57,
         "avg_lmp_p50": 458.4,
-        "revenue_p50": 315.6
+        "revenue_p50": 315.6,
+        "power_market_p50": 315.1
       }
     ]
   },
@@ -5475,55 +5490,64 @@ var REFERENCE_CASE = {
         "clean_pct": 40.0,
         "n": 6,
         "avg_lmp_p50": 34.0,
-        "revenue_p50": 0.0
+        "revenue_p50": 0.0,
+        "power_market_p50": 0.0
       },
       {
         "clean_pct": 50.0,
         "n": 39,
         "avg_lmp_p50": 34.0,
-        "revenue_p50": 0.0
+        "revenue_p50": 0.0,
+        "power_market_p50": 0.0
       },
       {
         "clean_pct": 55.0,
         "n": 24,
         "avg_lmp_p50": 120.0,
-        "revenue_p50": 136.2
+        "revenue_p50": 136.2,
+        "power_market_p50": 136.1
       },
       {
         "clean_pct": 60.0,
         "n": 39,
         "avg_lmp_p50": 120.2,
-        "revenue_p50": 107.3
+        "revenue_p50": 107.3,
+        "power_market_p50": 62.3
       },
       {
         "clean_pct": 65.0,
         "n": 45,
         "avg_lmp_p50": 319.0,
-        "revenue_p50": 221.4
+        "revenue_p50": 221.4,
+        "power_market_p50": 176.4
       },
       {
         "clean_pct": 70.0,
         "n": 24,
         "avg_lmp_p50": 40.2,
-        "revenue_p50": 51.9
+        "revenue_p50": 51.9,
+        "power_market_p50": 36.2
       },
       {
         "clean_pct": 75.0,
         "n": 27,
         "avg_lmp_p50": 88.5,
-        "revenue_p50": 82.9
+        "revenue_p50": 82.9,
+        "power_market_p50": 37.9
       },
       {
         "clean_pct": 80.0,
         "n": 57,
         "avg_lmp_p50": 194.9,
-        "revenue_p50": 248.2
+        "revenue_p50": 248.2,
+        "power_market_p50": 203.2
       },
       {
         "clean_pct": 85.0,
         "n": 9,
         "avg_lmp_p50": 81.2,
-        "revenue_p50": 75.5
+        "revenue_p50": 75.5,
+        "power_market_p50": 33.1
       }
     ]
   },
@@ -5877,49 +5901,57 @@ var REFERENCE_CASE = {
         "clean_pct": 40.0,
         "n": 48,
         "avg_lmp_p50": 42.0,
-        "revenue_p50": 0.0
+        "revenue_p50": 0.0,
+        "power_market_p50": 0.0
       },
       {
         "clean_pct": 50.0,
         "n": 12,
         "avg_lmp_p50": 82.6,
-        "revenue_p50": 109.6
+        "revenue_p50": 109.6,
+        "power_market_p50": 67.1
       },
       {
         "clean_pct": 55.0,
         "n": 27,
         "avg_lmp_p50": 42.0,
-        "revenue_p50": 75.5
+        "revenue_p50": 75.5,
+        "power_market_p50": 33.0
       },
       {
         "clean_pct": 65.0,
         "n": 12,
         "avg_lmp_p50": 179.8,
-        "revenue_p50": 186.0
+        "revenue_p50": 186.0,
+        "power_market_p50": 146.9
       },
       {
         "clean_pct": 70.0,
         "n": 15,
         "avg_lmp_p50": 42.0,
-        "revenue_p50": 0.0
+        "revenue_p50": 0.0,
+        "power_market_p50": 0.0
       },
       {
         "clean_pct": 75.0,
         "n": 69,
         "avg_lmp_p50": 42.0,
-        "revenue_p50": 81.8
+        "revenue_p50": 81.8,
+        "power_market_p50": 39.3
       },
       {
         "clean_pct": 85.0,
         "n": 57,
         "avg_lmp_p50": 42.0,
-        "revenue_p50": 0.0
+        "revenue_p50": 0.0,
+        "power_market_p50": 0.0
       },
       {
         "clean_pct": 90.0,
         "n": 30,
         "avg_lmp_p50": 176.4,
-        "revenue_p50": 95.5
+        "revenue_p50": 95.5,
+        "power_market_p50": 54.3
       }
     ]
   },
@@ -6273,55 +6305,64 @@ var REFERENCE_CASE = {
         "clean_pct": 50.0,
         "n": 18,
         "avg_lmp_p50": 41.0,
-        "revenue_p50": 0.0
+        "revenue_p50": 0.0,
+        "power_market_p50": 0.0
       },
       {
         "clean_pct": 55.0,
         "n": 3,
         "avg_lmp_p50": 67.1,
-        "revenue_p50": 97.3
+        "revenue_p50": 97.3,
+        "power_market_p50": 52.3
       },
       {
         "clean_pct": 60.0,
         "n": 6,
         "avg_lmp_p50": 41.0,
-        "revenue_p50": 36.6
+        "revenue_p50": 36.6,
+        "power_market_p50": 23.1
       },
       {
         "clean_pct": 65.0,
         "n": 6,
         "avg_lmp_p50": 38.6,
-        "revenue_p50": 34.2
+        "revenue_p50": 34.2,
+        "power_market_p50": 20.7
       },
       {
         "clean_pct": 75.0,
         "n": 12,
         "avg_lmp_p50": 41.0,
-        "revenue_p50": 36.3
+        "revenue_p50": 36.3,
+        "power_market_p50": 22.8
       },
       {
         "clean_pct": 80.0,
         "n": 66,
         "avg_lmp_p50": 41.0,
-        "revenue_p50": 0.0
+        "revenue_p50": 0.0,
+        "power_market_p50": 0.0
       },
       {
         "clean_pct": 85.0,
         "n": 27,
         "avg_lmp_p50": 64.6,
-        "revenue_p50": 75.6
+        "revenue_p50": 75.6,
+        "power_market_p50": 31.9
       },
       {
         "clean_pct": 90.0,
         "n": 81,
         "avg_lmp_p50": 41.0,
-        "revenue_p50": 77.3
+        "revenue_p50": 77.3,
+        "power_market_p50": 37.5
       },
       {
         "clean_pct": 95.0,
         "n": 51,
         "avg_lmp_p50": 41.0,
-        "revenue_p50": 48.6
+        "revenue_p50": 48.6,
+        "power_market_p50": 16.6
       }
     ]
   },
@@ -6675,61 +6716,71 @@ var REFERENCE_CASE = {
         "clean_pct": 30.0,
         "n": 30,
         "avg_lmp_p50": 30.0,
-        "revenue_p50": 0.0
+        "revenue_p50": 0.0,
+        "power_market_p50": 0.0
       },
       {
         "clean_pct": 40.0,
         "n": 6,
         "avg_lmp_p50": 51.6,
-        "revenue_p50": 59.1
+        "revenue_p50": 59.1,
+        "power_market_p50": 44.2
       },
       {
         "clean_pct": 50.0,
         "n": 42,
         "avg_lmp_p50": 51.6,
-        "revenue_p50": 59.1
+        "revenue_p50": 59.1,
+        "power_market_p50": 44.2
       },
       {
         "clean_pct": 55.0,
         "n": 9,
         "avg_lmp_p50": 30.0,
-        "revenue_p50": 0.0
+        "revenue_p50": 0.0,
+        "power_market_p50": 0.0
       },
       {
         "clean_pct": 60.0,
         "n": 42,
         "avg_lmp_p50": 96.6,
-        "revenue_p50": 76.3
+        "revenue_p50": 76.3,
+        "power_market_p50": 61.3
       },
       {
         "clean_pct": 65.0,
         "n": 48,
         "avg_lmp_p50": 367.0,
-        "revenue_p50": 228.4
+        "revenue_p50": 228.4,
+        "power_market_p50": 215.9
       },
       {
         "clean_pct": 70.0,
         "n": 12,
         "avg_lmp_p50": 220.1,
-        "revenue_p50": 126.7
+        "revenue_p50": 126.7,
+        "power_market_p50": 111.7
       },
       {
         "clean_pct": 75.0,
         "n": 72,
         "avg_lmp_p50": 181.8,
-        "revenue_p50": 175.1
+        "revenue_p50": 175.1,
+        "power_market_p50": 160.2
       },
       {
         "clean_pct": 80.0,
         "n": 6,
         "avg_lmp_p50": 303.7,
-        "revenue_p50": 157.2
+        "revenue_p50": 157.2,
+        "power_market_p50": 143.9
       },
       {
         "clean_pct": 85.0,
         "n": 3,
         "avg_lmp_p50": 281.6,
-        "revenue_p50": 247.6
+        "revenue_p50": 247.6,
+        "power_market_p50": 232.6
       }
     ]
   },
@@ -7083,43 +7134,50 @@ var REFERENCE_CASE = {
         "clean_pct": 45.0,
         "n": 174,
         "avg_lmp_p50": 25.0,
-        "revenue_p50": 0.0
+        "revenue_p50": 0.0,
+        "power_market_p50": 0.0
       },
       {
         "clean_pct": 60.0,
         "n": 3,
         "avg_lmp_p50": 88.2,
-        "revenue_p50": 70.5
+        "revenue_p50": 70.5,
+        "power_market_p50": 61.2
       },
       {
         "clean_pct": 65.0,
         "n": 6,
         "avg_lmp_p50": 64.2,
-        "revenue_p50": 61.6
+        "revenue_p50": 61.6,
+        "power_market_p50": 53.9
       },
       {
         "clean_pct": 70.0,
         "n": 42,
         "avg_lmp_p50": 71.1,
-        "revenue_p50": 58.7
+        "revenue_p50": 58.7,
+        "power_market_p50": 49.5
       },
       {
         "clean_pct": 75.0,
         "n": 3,
         "avg_lmp_p50": 53.0,
-        "revenue_p50": 54.0
+        "revenue_p50": 54.0,
+        "power_market_p50": 44.8
       },
       {
         "clean_pct": 80.0,
         "n": 27,
         "avg_lmp_p50": 72.7,
-        "revenue_p50": 46.6
+        "revenue_p50": 46.6,
+        "power_market_p50": 38.0
       },
       {
         "clean_pct": 85.0,
         "n": 15,
         "avg_lmp_p50": 63.4,
-        "revenue_p50": 37.2
+        "revenue_p50": 37.2,
+        "power_market_p50": 28.6
       }
     ]
   }

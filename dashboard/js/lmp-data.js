@@ -429,7 +429,7 @@ var REGION_META = {};
             nuclearHeaderTag: p.nucTag,
             nuclearHeaderTitle: p.nucTitle,
             nuclearHeaderBody: p.nucIntro,
-            nuclearChartTitle1: name + ' Wholesale Price vs. Nuclear Operating Cost \u2014 By Clean Energy %',
+            nuclearChartTitle1: name + ' Nuclear Revenue (Energy + Capacity) vs. Operating Cost \u2014 By Clean Energy %',
             nuclearChartTitle2: name + ' Hours Per Year at Zero or Negative Price \u2014 Nuclear Revenue Erosion',
             nuclearNarrativeHTML:
                 nc('Viable Operation Threshold', 'rgba(239,68,68,0.06)', '#f87171', p.nucCard1Title, p.nucCard1, 'stat-badge-red', '') +

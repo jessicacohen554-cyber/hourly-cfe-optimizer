@@ -147,13 +147,18 @@ def extract_reference_case_data():
             clean_price_map = []
             for b in bins:
                 subset = df_2050[df_2050['clean_bin'] == b]
-                clean_price_map.append({
+                entry = {
                     'clean_pct': round(float(b), 0),
                     'n': len(subset),
                     'avg_lmp_p50': round(float(subset['avg_lmp'].quantile(0.50)), 1),
                     'revenue_p50': round(float(subset['revenue_per_mwh'].quantile(0.50)), 1)
                         if 'revenue_per_mwh' in subset.columns else 0,
-                })
+                }
+                # Power market revenue = energy + capacity (no RECs)
+                if 'energy_rev_mwh' in subset.columns and 'capacity_rev_mwh' in subset.columns:
+                    pm = subset['energy_rev_mwh'] + subset['capacity_rev_mwh']
+                    entry['power_market_p50'] = round(float(pm.quantile(0.50)), 1)
+                clean_price_map.append(entry)
             iso_ref['clean_price_map_2050'] = clean_price_map
 
         ref_data[iso] = iso_ref
