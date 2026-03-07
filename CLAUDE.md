@@ -26,16 +26,11 @@
 - **Argmin/argmax**: Use `np.argmin(costs)` to find the best element, then call the scalar version only on the winner for the full result dict.
 - **This rule exists because**: Multiple sessions have produced scripts with `for mix in mixes: compute_cost(mix)` patterns that work fine on test data but time out on production-scale data (7–75M mixes). The fix is always the same: vectorize. Do it right the first time.
 
-### Compute Execution (Critical — Preserve Token Budget)
-- **NEVER run full pipeline scripts (Step 1–6) end-to-end locally in the session** unless explicitly directed by the user. Full pipeline runs burn significant token budget on compute that should happen via GitHub Actions.
-- **Iterative testing IS allowed**: Running scripts on a **subset of data** (e.g., 1–2 ISOs, single threshold, limited rows) for debugging, validation, and iterative development is permitted and encouraged. Quick targeted tests that complete in under 60 seconds are fine. This includes:
-  - Running a script on a single ISO to verify correctness after code changes
-  - Loading a subset of data to validate vectorization, filtering, or cost logic
-  - Benchmarking performance on a representative slice
-  - Syntax checks, import validation, unit tests
-- **Full dataset / all-ISO runs**: Create or update GitHub Actions workflows so the user can trigger full execution independently. Do not run all 7 ISOs × 21 thresholds locally unless the user explicitly asks.
-- **Session compute should be limited to**: syntax checks, quick verification reads (parquet schema, constants), targeted tests on subsets, and lightweight validation.
-- **This rule exists because**: Previous sessions burned significant token budget running multi-minute optimizer scripts locally when the same compute could have been done for free via GitHub Actions. The user's token budget is finite and expensive — but short iterative tests are essential for efficient debugging and should not require a full CI roundtrip.
+### Compute Execution
+- **Running scripts locally is allowed** — including full pipeline scripts. GitHub Actions minutes are limited, so local execution is preferred for most tasks.
+- **Heavy compute (Step 1 full runs, all-ISO sweeps, multi-hour jobs)**: Only launch when the user explicitly says to. Ask before starting anything that will take more than a few minutes.
+- **Everything else is fair game**: Single-ISO runs, subset tests, Steps 2–9, post-processing, validation, benchmarking — run freely without asking.
+- **Still applies**: Syntax checks, import validation, and quick verification reads remain the cheapest first step before any run.
 
 ### Git & Commits
 - **3-minute commit cadence** — commit work every 3 minutes during active development to avoid losing work. Don't wait for a feature to be "done" to commit — frequent incremental commits protect against session interruptions and token limits. Squash into a clean commit before pushing.
