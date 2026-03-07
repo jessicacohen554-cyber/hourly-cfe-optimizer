@@ -16,6 +16,7 @@
 <script src="js/scroll-observer.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 <script src="js/smartargets-data.js"></script>
 <style>
 body { background: var(--bg-alt-warm); }
@@ -104,6 +105,16 @@ body { background: var(--bg-alt-warm); }
     </div>
 </div>
 
+<!-- ISO SUMMARY: ALL SCENARIOS OVERVIEW -->
+<div class="dash-section" id="isoSummarySection">
+    <h2>Scenario Overview: <span id="isoSummaryName">California (CAISO)</span></h2>
+    <p class="section-desc">All modeled pathways for this region — from market-only reference to economy-wide net-zero — under both facilitating and challenging conditions.</p>
+    <div id="isoSummaryCallout" class="narrative-box"></div>
+    <div class="chart-panel">
+        <div class="chart-wrap"><canvas id="allScenariosChart"></canvas></div>
+    </div>
+</div>
+
 <!-- SECTION 1: HERO STATS -->
 <div class="dash-section" id="heroSection">
     <div id="narrativeIntro" class="narrative-box"></div>
@@ -122,7 +133,7 @@ body { background: var(--bg-alt-warm); }
 <!-- SECTION 3: GRID BUILDOUT -->
 <div class="dash-section">
     <h2>Grid Buildout Trajectory</h2>
-    <p class="section-desc">The resource mix needed to stay on the decarbonization trajectory. Stacked bars show generation by source. The demand line shows total load including electrification growth.</p>
+    <p class="section-desc">The resource mix needed to stay on the decarbonization trajectory. Saturated bars show existing generation; transparent bars show new build. Curtailed energy (diagonal hashing) appears above the demand line. Each step is labeled with hourly clean % and CO₂ reduction from 2023.</p>
     <div class="grid-2up" id="mixGridArea">
         <div class="chart-panel" id="mixPanelFac">
             <h3 id="mixFacTitle">Facilitating Conditions</h3>
@@ -183,6 +194,9 @@ body { background: var(--bg-alt-warm); }
 <div class="bottom-banner"></div>
 
 <script>
+// Disable datalabels globally — enable per-chart where needed
+Chart.defaults.plugins.datalabels = { display: false };
+
 // ============================================================================
 // SMARTargets Dashboard — Regional Decarbonization Analysis
 // ============================================================================
@@ -259,6 +273,162 @@ function getScenarioData(name, iso) {
 function fmt(v, d=1) { return v != null ? v.toFixed(d) : '—'; }
 function fmtPct(v) { return v != null ? v.toFixed(0) + '%' : '—'; }
 function fmtDollar(v) { return v != null ? '$' + v.toFixed(0) : '—'; }
+
+function hexToRgba(hex, alpha) {
+    const r = parseInt(hex.slice(1,3), 16);
+    const g = parseInt(hex.slice(3,5), 16);
+    const b = parseInt(hex.slice(5,7), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function createDiagonalPattern(hexColor, alpha) {
+    const size = 10;
+    const c = document.createElement('canvas');
+    c.width = size; c.height = size;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = hexToRgba(hexColor, alpha * 0.3);
+    ctx.fillRect(0, 0, size, size);
+    ctx.strokeStyle = hexToRgba(hexColor, alpha);
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(0, size); ctx.lineTo(size, 0);
+    ctx.moveTo(-2, 2); ctx.lineTo(2, -2);
+    ctx.moveTo(size - 2, size + 2); ctx.lineTo(size + 2, size - 2);
+    ctx.stroke();
+    return ctx.createPattern(c, 'repeat');
+}
+
+// All 6 core scenarios for the overview chart
+const ALL_SCENARIOS = [
+    { key: 'AT1', isFac: true,  isFullDecarb: true  },
+    { key: 'AT2', isFac: false, isFullDecarb: true  },
+    { key: 'AT3', isFac: true,  isFullDecarb: true  },
+    { key: 'AT4', isFac: false, isFullDecarb: true  },
+    { key: 'R1',  isFac: true,  isFullDecarb: false },
+    { key: 'R2',  isFac: false, isFullDecarb: false },
+];
+
+// ─── ISO SUMMARY ───────────────────────────────────────────────
+function buildIsoSummary() {
+    if (charts.allScenarios) charts.allScenarios.destroy();
+    const iso = globalIso;
+    document.getElementById('isoSummaryName').textContent = ISO_NAMES[iso];
+
+    const callout = document.getElementById('isoSummaryCallout');
+    const scenarioResults = [];
+
+    ALL_SCENARIOS.forEach(s => {
+        const d = getScenarioData(s.key, iso);
+        if (d) scenarioResults.push({ ...s, data: d });
+    });
+
+    if (scenarioResults.length === 0) {
+        callout.className = 'narrative-box warn';
+        callout.innerHTML = '<strong>No data available</strong> for this region.';
+        return;
+    }
+
+    // Compute summary stats
+    const baseline = scenarioResults[0].data.emissions_mt[0];
+    const lastIdx = scenarioResults[0].data.years.length - 1;
+    const emissions2050 = scenarioResults.map(s => s.data.emissions_mt[lastIdx]);
+    const minE = Math.min(...emissions2050);
+    const maxE = Math.max(...emissions2050);
+    const cleanPcts = scenarioResults.map(s => s.data.clean_pct[lastIdx]);
+    const minClean = Math.min(...cleanPcts);
+    const maxClean = Math.max(...cleanPcts);
+
+    // Find common ground
+    const e2030 = scenarioResults.map(s => s.data.emissions_mt[1]);
+    const minE2030 = Math.min(...e2030);
+    const maxE2030 = Math.max(...e2030);
+    const baselineReduction2030Min = ((baseline - maxE2030) / baseline * 100).toFixed(0);
+    const baselineReduction2030Max = ((baseline - minE2030) / baseline * 100).toFixed(0);
+
+    callout.className = 'narrative-box';
+    callout.innerHTML = `<strong>Uncertainty bounds for ${ISO_NAMES[iso]}:</strong> All scenarios start at ${fmt(baseline, 0)} Mt CO\u2082 in 2023. ` +
+        `By 2030, emissions fall ${baselineReduction2030Min}\u2013${baselineReduction2030Max}% across all pathways. ` +
+        `<strong>Where they diverge:</strong> 2050 emissions range from ${fmt(minE, 1)} Mt (net-zero pathways, facilitating) to ${fmt(maxE, 1)} Mt (reference, challenging). ` +
+        `Grid clean share spans ${fmtPct(minClean)}\u2013${fmtPct(maxClean)}. ` +
+        `Net-zero pathways all converge below 1 Mt by 2050; reference pathways plateau at 10\u201315 Mt regardless of conditions.`;
+
+    // Build all-scenarios chart
+    const years = scenarioResults[0].data.years;
+    const datasets = [];
+
+    scenarioResults.forEach(s => {
+        const meta = DATA.scenario_meta[s.key];
+        const color = meta?.color || '#888';
+        const lineAlpha = s.isFac ? 1.0 : 0.3;
+        const lineColor = s.isFac ? color : hexToRgba(color, 0.35);
+        const borderW = s.isFac ? 2.5 : 2;
+        // Full decarb = circle, limited decarb = diamond (rectRot)
+        const ptStyle = s.isFullDecarb ? 'circle' : 'rectRot';
+        const ptBg = s.isFac ? color : 'transparent';
+        const ptBorder = color;
+        const ptRadius = s.isFullDecarb ? 4 : 5;
+
+        datasets.push({
+            label: meta?.name || s.key,
+            data: [...s.data.emissions_mt],
+            borderColor: lineColor,
+            backgroundColor: 'transparent',
+            borderWidth: borderW,
+            pointStyle: ptStyle,
+            pointRadius: ptRadius,
+            pointBackgroundColor: ptBg,
+            pointBorderColor: ptBorder,
+            pointBorderWidth: s.isFac ? 0 : 2,
+            tension: 0.3,
+            fill: false,
+        });
+    });
+
+    const ctx = document.getElementById('allScenariosChart').getContext('2d');
+    charts.allScenarios = new Chart(ctx, {
+        type: 'line',
+        data: { labels: years, datasets },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            animation: { duration: 600 },
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: {
+                    display: true, position: 'bottom',
+                    labels: {
+                        usePointStyle: true,
+                        font: { size: 11, family: 'DM Sans' },
+                        padding: 12,
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(26,39,68,0.95)',
+                    titleFont: { family: 'Space Grotesk', weight: '700' },
+                    bodyFont: { family: 'DM Sans', size: 12 },
+                    callbacks: {
+                        label: ctx => {
+                            const v = ctx.parsed.y;
+                            if (v == null) return '';
+                            const baseline = ctx.dataset.data[0];
+                            const reduction = ((baseline - v) / baseline * 100);
+                            return `${ctx.dataset.label}: ${v.toFixed(1)} Mt CO\u2082 (${reduction >= 0 ? '-' : '+'}${Math.abs(reduction).toFixed(0)}%)`;
+                        }
+                    }
+                },
+                datalabels: { display: false }
+            },
+            scales: {
+                x: { grid: { display: false }, ticks: { font: { family: 'Space Mono', size: 11 } } },
+                y: {
+                    title: { display: true, text: 'CO\u2082 Emissions (Mt)', font: { family: 'DM Sans', size: 12, weight: '600' } },
+                    grid: { color: 'rgba(0,0,0,0.06)' },
+                    ticks: { font: { family: 'Space Mono', size: 11 } },
+                    beginAtZero: true,
+                }
+            }
+        }
+    });
+}
 
 // ─── HERO STATS ─────────────────────────────────────────────────
 function buildHeroStats() {
@@ -413,10 +583,14 @@ function buildTrajChart() {
         }
     }
 
+    // Compute baseline for % reduction labels
+    const baseline2023 = (fac || chal).emissions_mt[0];
+
     const ctx = document.getElementById('trajChart').getContext('2d');
     charts.traj = new Chart(ctx, {
         type: 'line',
         data: { labels: years, datasets },
+        plugins: [ChartDataLabels],
         options: {
             responsive: true, maintainAspectRatio: false,
             animation: { duration: 600 },
@@ -430,9 +604,34 @@ function buildTrajChart() {
                     callbacks: {
                         label: ctx => {
                             const v = ctx.parsed.y;
-                            return v != null ? `${ctx.dataset.label}: ${v.toFixed(1)} Mt CO\u2082` : '';
+                            if (v == null) return '';
+                            const b = ctx.dataset.data[0];
+                            const red = b > 0 ? ((b - v) / b * 100) : 0;
+                            const redStr = red >= 0 ? `-${Math.abs(red).toFixed(0)}%` : `+${Math.abs(red).toFixed(0)}%`;
+                            return `${ctx.dataset.label}: ${v.toFixed(1)} Mt CO\u2082 (${redStr} from 2023)`;
                         }
                     }
+                },
+                datalabels: {
+                    display: function(ctx) {
+                        // Only show on net emission lines (not gross/dashed, not ceiling)
+                        const lbl = ctx.dataset.label || '';
+                        if (lbl.includes('gross') || lbl.includes('Ceiling')) return false;
+                        return ctx.dataIndex > 0; // skip 2023 baseline
+                    },
+                    formatter: function(value, ctx) {
+                        const b = ctx.dataset.data[0];
+                        if (!b || b <= 0) return '';
+                        const red = ((b - value) / b * 100);
+                        return (red >= 0 ? '-' : '+') + Math.abs(red).toFixed(0) + '%';
+                    },
+                    anchor: 'end',
+                    align: 'top',
+                    offset: 4,
+                    font: { size: 10, weight: 700, family: 'Space Mono' },
+                    color: function(ctx) { return ctx.dataset.borderColor; },
+                    textStrokeColor: '#fff',
+                    textStrokeWidth: 2,
                 },
                 annotation: { annotations }
             },
@@ -449,7 +648,48 @@ function buildTrajChart() {
     });
 }
 
-// ─── RESOURCE MIX CHARTS ────────────────────────────────────────
+// ─── RESOURCE MIX CHARTS (WYN FORMAT) ──────────────────────────
+const EXISTING_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar'];
+const NEW_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar', 'battery', 'ldes'];
+const CURTAIL_ORDER = ['solar', 'wind', 'offshore_wind', 'hydro', 'ccs_ccgt', 'clean_firm'];
+const STORAGE_TYPES = ['battery', 'ldes'];
+const VARIABLE_TYPES = ['solar', 'wind', 'offshore_wind'];
+const EXISTING_ALPHA = 0.75;
+const NEW_ALPHA = 0.40;
+const CURTAIL_ALPHA = 0.55;
+
+// Custom plugin to draw per-bar labels (CFE % + CO₂ reduction)
+const wynBarLabelPlugin = {
+    id: 'wynBarLabels',
+    afterDraw(chart) {
+        if (!chart._wynMetrics) return;
+        const ctx = chart.ctx;
+        const meta = chart.getDatasetMeta(0);
+        if (!meta || !meta.data) return;
+        const xScale = chart.scales.x;
+
+        chart._wynMetrics.forEach((m, i) => {
+            if (!m || i === 0) return; // skip baseline year
+            const x = xScale.getPixelForValue(i);
+            const yTop = 28; // fixed position near top
+
+            ctx.save();
+            ctx.textAlign = 'center';
+            ctx.font = '600 9px "Space Mono", monospace';
+
+            // CFE % label
+            ctx.fillStyle = '#1A2744';
+            ctx.fillText(m.cfePct.toFixed(0) + '% clean', x, yTop);
+
+            // Emissions reduction label
+            ctx.fillStyle = m.co2Red >= 0 ? '#16A34A' : '#DC2626';
+            ctx.fillText((m.co2Red >= 0 ? '-' : '+') + Math.abs(m.co2Red).toFixed(0) + '% CO\u2082', x, yTop + 12);
+
+            ctx.restore();
+        });
+    }
+};
+
 function buildMixChart(canvasId, scenarioName) {
     const key = 'mix_' + canvasId;
     if (charts[key]) charts[key].destroy();
@@ -463,20 +703,134 @@ function buildMixChart(canvasId, scenarioName) {
     const years = d.years;
     const mix = d.mix || {};
     const demandTwh = d.demand_twh;
+    const curtailmentTwh = d.curtailment_twh || years.map(() => 0);
+    const cleanPct = d.clean_pct || years.map(() => 0);
+    const emissionsMt = d.emissions_mt || [];
     const datasets = [];
 
-    MIX_ORDER.forEach(r => {
-        const vals = mix[r] || years.map(() => 0);
+    // Baseline (2023) mix values
+    const baseline2023 = {};
+    MIX_ORDER.forEach(r => { baseline2023[r] = (mix[r]?.[0] || 0); });
+
+    // Pre-compute per-year data arrays
+    const existingData = {}, newData = {}, curtailedData = {};
+    MIX_ORDER.forEach(r => { existingData[r] = []; newData[r] = []; curtailedData[r] = []; });
+    const gapData = [];
+    const wynMetrics = [];
+
+    for (let yi = 0; yi < years.length; yi++) {
+        const demand = demandTwh[yi] || 0;
+        const totalCurtail = curtailmentTwh[yi] || 0;
+
+        // Total generation and variable generation for curtailment distribution
+        let totalGen = 0, variableGen = 0;
+        MIX_ORDER.forEach(r => { totalGen += (mix[r]?.[yi] || 0); });
+        VARIABLE_TYPES.forEach(r => { variableGen += (mix[r]?.[yi] || 0); });
+
+        // Distribute curtailment across variable resources proportionally
+        const curtailShare = {};
+        VARIABLE_TYPES.forEach(r => {
+            const gen = mix[r]?.[yi] || 0;
+            curtailShare[r] = variableGen > 0 ? (gen / variableGen) * totalCurtail : 0;
+        });
+
+        // For each resource: compute existing, new, utilized, curtailed
+        MIX_ORDER.forEach(r => {
+            const genTwh = mix[r]?.[yi] || 0;
+            const curtailed = curtailShare[r] || 0;
+            const utilized = Math.max(0, genTwh - curtailed);
+
+            if (STORAGE_TYPES.includes(r)) {
+                // Storage is always "new"
+                existingData[r].push(0);
+                newData[r].push(Math.round(utilized * 10) / 10);
+            } else {
+                const existCap = baseline2023[r] || 0;
+                const existUtil = Math.min(existCap, utilized);
+                const newUtil = Math.max(0, utilized - existCap);
+                existingData[r].push(Math.round(existUtil * 10) / 10);
+                newData[r].push(Math.round(newUtil * 10) / 10);
+            }
+            curtailedData[r].push(Math.round(curtailed * 10) / 10);
+        });
+
+        // Gap = demand - utilized total
+        const utilizedTotal = totalGen - totalCurtail;
+        gapData.push(Math.round(Math.max(0, demand - utilizedTotal) * 10) / 10);
+
+        // Per-bar metrics
+        const baselineE = emissionsMt[0] || 1;
+        wynMetrics.push({
+            cfePct: cleanPct[yi] || 0,
+            co2Red: baselineE > 0 ? ((baselineE - (emissionsMt[yi] || 0)) / baselineE * 100) : 0,
+        });
+    }
+
+    // Build datasets: existing utilized (saturated)
+    for (const r of EXISTING_ORDER) {
+        const hex = MIX_COLORS[r];
+        if (!hex) continue;
+        const hasData = existingData[r].some(v => v > 0);
+        if (!hasData) continue;
         datasets.push({
-            label: MIX_LABELS[r],
-            data: vals.map(v => Math.round(v * 10) / 10),
-            backgroundColor: MIX_COLORS_T[r],
-            borderColor: MIX_COLORS[r],
+            label: MIX_LABELS[r] + ' (existing)',
+            data: existingData[r],
+            backgroundColor: hexToRgba(hex, EXISTING_ALPHA),
+            borderColor: hex,
             borderWidth: 1.5,
             borderRadius: 4,
             stack: 'mix',
+            _resourceKey: r, _isExisting: true, _isCurtailed: false,
         });
+    }
+
+    // New utilized (transparent)
+    for (const r of NEW_ORDER) {
+        const hex = MIX_COLORS[r];
+        if (!hex) continue;
+        const hasData = newData[r].some(v => v > 0);
+        if (!hasData) continue;
+        datasets.push({
+            label: MIX_LABELS[r] + ' (new)',
+            data: newData[r],
+            backgroundColor: hexToRgba(hex, NEW_ALPHA),
+            borderColor: hex,
+            borderWidth: 1,
+            borderRadius: 4,
+            borderSkipped: 'start',
+            stack: 'mix',
+            _resourceKey: r, _isExisting: false, _isCurtailed: false,
+        });
+    }
+
+    // Gap spacer (transparent)
+    datasets.push({
+        label: '_gap',
+        data: gapData,
+        backgroundColor: 'transparent',
+        borderColor: 'transparent',
+        borderWidth: 0,
+        stack: 'mix',
+        _isGap: true,
     });
+
+    // Curtailed (diagonal hashing, above demand)
+    for (const r of CURTAIL_ORDER) {
+        const hex = MIX_COLORS[r];
+        if (!hex) continue;
+        const hasData = curtailedData[r].some(v => v > 0);
+        if (!hasData) continue;
+        datasets.push({
+            label: MIX_LABELS[r] + ' (curtailed)',
+            data: curtailedData[r],
+            backgroundColor: createDiagonalPattern(hex, CURTAIL_ALPHA),
+            borderColor: hex,
+            borderWidth: 1,
+            borderRadius: 2,
+            stack: 'mix',
+            _resourceKey: r, _isCurtailed: true,
+        });
+    }
 
     // Demand line
     datasets.push({
@@ -491,11 +845,17 @@ function buildMixChart(canvasId, scenarioName) {
         fill: false,
         stack: false,
         order: -1,
+        _isDemandLine: true,
     });
 
-    const maxVal = Math.max(...demandTwh, ...years.map((_, i) => {
-        let s = 0; MIX_ORDER.forEach(r => { s += (mix[r]?.[i] || 0); }); return s;
-    }));
+    // Compute y-axis max
+    const barTotals = years.map((_, i) => {
+        let total = 0;
+        MIX_ORDER.forEach(r => { total += (existingData[r][i] || 0) + (newData[r][i] || 0) + (curtailedData[r][i] || 0); });
+        total += (gapData[i] || 0);
+        return total;
+    });
+    const maxVal = Math.max(...barTotals, ...demandTwh);
     const step = maxVal > 500 ? 100 : maxVal > 100 ? 50 : 10;
     const yMax = Math.ceil(maxVal / step) * step + step;
 
@@ -503,12 +863,59 @@ function buildMixChart(canvasId, scenarioName) {
     charts[key] = new Chart(ctx, {
         type: 'bar',
         data: { labels: years, datasets },
+        plugins: [wynBarLabelPlugin],
         options: {
             responsive: true, maintainAspectRatio: false,
             animation: { duration: 600 },
+            layout: { padding: { top: 30 } },
             plugins: {
-                legend: { display: true, position: 'bottom', labels: { usePointStyle: true, font: { size: 10, family: 'DM Sans' }, padding: 8, filter: item => item.text !== 'Demand' || true } },
-                tooltip: { backgroundColor: 'rgba(26,39,68,0.95)', callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)} TWh` } }
+                legend: {
+                    display: true, position: 'bottom',
+                    labels: {
+                        usePointStyle: true, pointStyle: 'rectRounded',
+                        font: { size: 10, family: 'DM Sans' }, padding: 8,
+                        generateLabels: function(chart) {
+                            const items = MIX_ORDER.filter(r => {
+                                return chart.data.datasets.some(ds =>
+                                    ds._resourceKey === r && ds.data && ds.data.some(v => v > 0));
+                            }).map(r => ({
+                                text: MIX_LABELS[r],
+                                fillStyle: hexToRgba(MIX_COLORS[r], 0.7),
+                                strokeStyle: MIX_COLORS[r],
+                                lineWidth: 2,
+                                pointStyle: 'rectRounded',
+                            }));
+                            items.push({ text: 'Existing', fillStyle: 'rgba(100,100,100,0.7)', strokeStyle: '#666', lineWidth: 2, pointStyle: 'rectRounded' });
+                            items.push({ text: 'New Build', fillStyle: 'rgba(100,100,100,0.3)', strokeStyle: '#999', lineWidth: 2, pointStyle: 'rectRounded' });
+                            items.push({ text: 'Curtailed', fillStyle: 'rgba(100,100,100,0.15)', strokeStyle: 'rgba(100,100,100,0.4)', lineWidth: 2, pointStyle: 'rectRounded' });
+                            items.push({ text: 'Demand', fillStyle: 'transparent', strokeStyle: 'rgba(220,38,38,0.55)', lineWidth: 2, lineDash: [6, 4], pointStyle: 'line' });
+                            return items;
+                        }
+                    },
+                    onClick: () => {}
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(26,39,68,0.95)',
+                    titleFont: { family: 'Space Grotesk', weight: '700' },
+                    bodyFont: { family: 'DM Sans', size: 12 },
+                    filter: function(tooltipItem) {
+                        if (tooltipItem.dataset._isGap || tooltipItem.dataset._isDemandLine) return false;
+                        return tooltipItem.parsed.y > 0;
+                    },
+                    callbacks: {
+                        title: function(items) {
+                            if (!items.length) return '';
+                            const idx = items[0].dataIndex;
+                            const yr = items[0].chart.data.labels[idx];
+                            const m = items[0].chart._wynMetrics?.[idx];
+                            let title = String(yr);
+                            if (m) title += ` — ${m.cfePct.toFixed(0)}% clean, ${m.co2Red >= 0 ? '-' : '+'}${Math.abs(m.co2Red).toFixed(0)}% CO\u2082`;
+                            return title;
+                        },
+                        label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)} TWh`
+                    }
+                },
+                datalabels: { display: false }
             },
             scales: {
                 x: { grid: { display: false }, stacked: true, ticks: { font: { family: 'Space Mono', size: 10 } } },
@@ -516,6 +923,9 @@ function buildMixChart(canvasId, scenarioName) {
             }
         }
     });
+
+    // Attach metrics for the custom plugin
+    charts[key]._wynMetrics = wynMetrics;
 }
 
 // ─── CARBON PRICE & COST CHARTS ─────────────────────────────────
@@ -753,6 +1163,7 @@ function buildNarrative() {
 // ─── UPDATE ALL ─────────────────────────────────────────────────
 function updateAll() {
     const group = GROUPS[globalGroup];
+    buildIsoSummary();
     buildHeroStats();
     buildTrajChart();
     buildMixChart('mixChartFac', group.fac);
