@@ -44,7 +44,11 @@ SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, SCRIPT_DIR)
 sys.path.insert(0, os.path.join(SCRIPT_DIR, 'scripts'))
 
-from pipeline_config import OUTPUT_THRESHOLDS as ALL_THRESHOLDS
+from pipeline_config import (
+    OUTPUT_THRESHOLDS as ALL_THRESHOLDS,
+    CAPACITY_MARKET_PRICES, CAPACITY_DEGRADATION_ALPHA,
+    PEAK_CAPACITY_CREDITS, RESOURCE_CAPACITY_FACTORS,
+)
 
 from dispatch_utils import (
     H, ISOS, RESOURCE_TYPES, CCS_RESIDUAL_EMISSION_RATE,
@@ -73,6 +77,75 @@ DATA_DIR = os.path.join(SCRIPT_DIR, 'data')
 STEP5_DIR = os.path.join(DATA_DIR, 'step5-post-processing')
 CO2_DIR = os.path.join(STEP5_DIR, 'co2_results')
 LMP_DIR = os.path.join(STEP5_DIR, 'lmp')
+
+
+def compute_capacity_market_revenue(iso, threshold, resource_mix):
+    """Compute capacity market revenue by resource category.
+
+    Uses same formula as Step 10: (degraded_price × ELCC) / (CF × 8760).
+    Degraded price falls as clean share (threshold) increases.
+
+    Returns dict with per-category and system-level capacity revenue ($/MWh).
+    """
+    base_price = CAPACITY_MARKET_PRICES.get(iso, 0)
+    alpha = CAPACITY_DEGRADATION_ALPHA.get(iso, 0)
+    degraded_price = base_price * max(0, 1.0 - alpha * threshold / 100.0)
+
+    if degraded_price <= 0:
+        return {
+            'capacity_rev_system_mwh': 0.0,
+            'capacity_rev_clean_firm_mwh': 0.0,
+            'capacity_rev_vre_mwh': 0.0,
+            'capacity_rev_storage_mwh': 0.0,
+            'capacity_rev_ccs_mwh': 0.0,
+        }
+
+    # Per-resource capacity revenue ($/MWh of that resource's generation)
+    per_res = {}
+    for res in ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt',
+                'hydro', 'battery', 'battery8', 'ldes', 'h2', 'geothermal']:
+        elcc = PEAK_CAPACITY_CREDITS.get(res, 0)
+        cf = RESOURCE_CAPACITY_FACTORS.get(res, {}).get(iso, 0.30)
+        if cf > 0 and elcc > 0:
+            per_res[res] = degraded_price * elcc / (cf * 8.760)  # $/kW-yr → $/MWh
+        else:
+            per_res[res] = 0.0
+
+    # Category aggregation (weighted by resource share within category)
+    clean_firm_res = ['clean_firm', 'geothermal']
+    vre_res = ['solar', 'wind', 'offshore_wind']
+    storage_res = ['battery', 'battery8', 'ldes', 'h2']
+    ccs_res = ['ccs_ccgt']
+
+    def weighted_cat_rev(cat_resources):
+        """Weighted average capacity revenue for resources in a category."""
+        total_share = 0
+        weighted_rev = 0
+        for r in cat_resources:
+            share = resource_mix.get(r, resource_mix.get('mix_' + r, 0))
+            if share > 0:
+                weighted_rev += per_res.get(r, 0) * share
+                total_share += share
+        return weighted_rev / total_share if total_share > 0 else per_res.get(cat_resources[0], 0)
+
+    # System-wide: weighted across ALL resources (clean + fossil get capacity payments)
+    # For fossil, use hydro CF as proxy for dispatchable capacity value
+    all_shares = sum(resource_mix.get(k, 0) for k in resource_mix
+                     if k.startswith('mix_') or k in per_res)
+    system_rev = 0
+    if all_shares > 0:
+        for res, rev in per_res.items():
+            share = resource_mix.get(res, resource_mix.get('mix_' + res, 0))
+            system_rev += rev * share
+        system_rev /= max(all_shares, 1e-9)
+
+    return {
+        'capacity_rev_system_mwh': round(system_rev, 2),
+        'capacity_rev_clean_firm_mwh': round(weighted_cat_rev(clean_firm_res), 2),
+        'capacity_rev_vre_mwh': round(weighted_cat_rev(vre_res), 2),
+        'capacity_rev_storage_mwh': round(weighted_cat_rev(storage_res), 2),
+        'capacity_rev_ccs_mwh': round(weighted_cat_rev(ccs_res), 2),
+    }
 
 
 def compute_hourly_co2(dispatch_result, iso, threshold, emission_rates, fossil_mix,
@@ -226,6 +299,21 @@ def run_fossil_dispatch_for_iso(iso, demand_data, gen_profiles, emission_rates,
                 entry, demand_mw_profile, stack, price_model, iso)
 
             lmp_stats = compute_lmp_stats(hourly_lmp, hourly_mu, demand_mw_profile, entry)
+
+            # Capacity market revenue by resource category
+            cap_rev = compute_capacity_market_revenue(iso, threshold, rp)
+            lmp_stats.update(cap_rev)
+            lmp_stats['total_market_rev_mwh'] = round(
+                lmp_stats['avg_lmp'] + cap_rev['capacity_rev_system_mwh'], 2)
+            # Per-category total (energy + capacity)
+            lmp_stats['total_rev_clean_firm_mwh'] = round(
+                lmp_stats['avg_lmp'] + cap_rev['capacity_rev_clean_firm_mwh'], 2)
+            lmp_stats['total_rev_vre_mwh'] = round(
+                lmp_stats['avg_lmp'] + cap_rev['capacity_rev_vre_mwh'], 2)
+            lmp_stats['total_rev_storage_mwh'] = round(
+                lmp_stats['avg_lmp'] + cap_rev['capacity_rev_storage_mwh'], 2)
+            lmp_stats['total_rev_ccs_mwh'] = round(
+                lmp_stats['avg_lmp'] + cap_rev['capacity_rev_ccs_mwh'], 2)
 
             seen_archetypes[dedup_key] = (co2, lmp_stats)
 
