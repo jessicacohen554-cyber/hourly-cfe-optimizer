@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The 8,760 Problem — Nuclear Retirement Risk: Multi-Model Stress Test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/reference.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+body { background: var(--bg-page-white); }
+
+.breadcrumb {
+    max-width: 1100px; margin: 0 auto; padding: 20px 24px 0;
+    font-size: 0.82rem; font-family: var(--font-heading); letter-spacing: 0.03em;
+}
+.breadcrumb a { color: #0EA5E9; text-decoration: none; }
+.breadcrumb .sep { color: rgba(0,0,0,0.3); margin: 0 8px; }
+.breadcrumb .current { color: #374151; }
+
+.article-wrapper { max-width: 1100px; margin: 0 auto; padding: 32px 24px 80px; }
+
+/* ─── Hero Panel ──────────────────────────────────────────────────── */
+.hero-panel {
+    background: linear-gradient(135deg, #1A2744 0%, #2D3A5C 50%, #1A2744 100%);
+    border-radius: 16px; padding: 40px 36px; margin-bottom: 36px;
+    color: #fff; position: relative; overflow: hidden;
+}
+.hero-panel::before {
+    content: ''; position: absolute; top: -50%; right: -20%; width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%);
+    pointer-events: none;
+}
+.hero-panel::after {
+    content: ''; position: absolute; bottom: -30%; left: -10%; width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(239,68,68,0.1) 0%, transparent 70%);
+    pointer-events: none;
+}
+.hero-title {
+    font-family: var(--font-heading); font-size: 1.8rem; font-weight: 700;
+    margin-bottom: 16px; position: relative; line-height: 1.3;
+}
+.hero-subtitle {
+    font-family: var(--font-body); font-size: 1rem; color: rgba(255,255,255,0.75);
+    margin-bottom: 24px; max-width: 700px; line-height: 1.6; position: relative;
+}
+.hero-stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px; margin-bottom: 24px; position: relative;
+}
+.hero-stat {
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px; padding: 16px; text-align: center;
+}
+.hero-stat .val {
+    font-family: var(--font-data, var(--font-mono)); font-size: 1.6rem;
+    font-weight: 700; line-height: 1.2;
+}
+.hero-stat .val.safe { color: #22C55E; }
+.hero-stat .val.risk { color: #EF4444; }
+.hero-stat .val.warn { color: #F59E0B; }
+.hero-stat .val.neutral { color: #0EA5E9; }
+.hero-stat .lbl {
+    font-family: var(--font-body); font-size: 0.75rem; color: rgba(255,255,255,0.6);
+    margin-top: 4px;
+}
+.hero-insight {
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px; padding: 20px; position: relative;
+    font-family: var(--font-body); font-size: 0.9rem; color: rgba(255,255,255,0.85);
+    line-height: 1.65;
+}
+.hero-insight strong { color: #fff; }
+.hero-insight .insight-label {
+    display: inline-block; background: rgba(99,102,241,0.3); color: #C4B5FD;
+    font-size: 0.68rem; font-weight: 600; padding: 2px 8px; border-radius: 4px;
+    text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;
+    font-family: var(--font-heading);
+}
+
+/* ─── Accordion ───────────────────────────────────────────────────── */
+.accordion { margin-bottom: 16px; border: 1px solid #E5E7EB; border-radius: 12px; overflow: hidden; }
+.accordion-header {
+    display: flex; align-items: center; gap: 12px; padding: 18px 24px;
+    background: #fff; cursor: pointer; user-select: none;
+    transition: background 0.2s;
+}
+.accordion-header:hover { background: #F9FAFB; }
+.accordion-chevron {
+    width: 20px; height: 20px; transition: transform 0.3s;
+    color: #6B7280; flex-shrink: 0;
+}
+.accordion.open .accordion-chevron { transform: rotate(90deg); }
+.accordion-title {
+    font-family: var(--font-heading); font-size: 1.1rem; font-weight: 600;
+    color: #1A2744; flex: 1;
+}
+.accordion-badge {
+    font-family: var(--font-mono); font-size: 0.72rem; font-weight: 600;
+    padding: 3px 10px; border-radius: 20px; white-space: nowrap;
+}
+.accordion-badge.model-a { background: rgba(14,165,233,0.12); color: #0284C7; }
+.accordion-badge.model-b { background: rgba(99,102,241,0.12); color: #6366F1; }
+.accordion-badge.model-c { background: rgba(245,158,11,0.12); color: #D97706; }
+.accordion-badge.cross { background: rgba(34,197,94,0.12); color: #16A34A; }
+.accordion-body {
+    max-height: 0; overflow: hidden; transition: max-height 0.4s ease;
+    background: #FAFBFC;
+}
+.accordion.open .accordion-body { max-height: 5000px; }
+.accordion-content { padding: 24px; }
+
+/* ─── Section styles (reused inside accordions) ───────────────────── */
+.section-head {
+    font-family: var(--font-heading); font-size: 1.15rem; font-weight: 700;
+    color: #1A2744; margin-bottom: 8px;
+}
+.section-desc {
+    font-family: var(--font-body); font-size: 0.88rem; color: #6B7280;
+    margin-bottom: 16px; line-height: 1.5;
+}
+
+.chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.chart-panel {
+    background: #fff; border: 1px solid #E5E7EB; border-radius: 10px;
+    padding: 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+}
+.chart-panel h3 {
+    font-family: var(--font-heading); font-size: 0.92rem; font-weight: 600;
+    color: #1A2744; margin: 0 0 10px;
+}
+.chart-container { position: relative; min-height: 300px; }
+.chart-container-sm { position: relative; min-height: 240px; }
+.chart-container-lg { position: relative; min-height: 400px; }
+
+.insight-callout {
+    background: rgba(99,102,241,0.08); border-left: 4px solid #6366F1;
+    padding: 14px 18px; border-radius: 0 8px 8px 0; margin-bottom: 20px;
+    font-family: var(--font-body); font-size: 0.88rem; color: #1A2744; line-height: 1.5;
+}
+.insight-callout.warn { background: rgba(245,158,11,0.08); border-color: #F59E0B; }
+.insight-callout.danger { background: rgba(239,68,68,0.08); border-color: #EF4444; }
+.insight-callout.success { background: rgba(34,197,94,0.08); border-color: #22C55E; }
+
+/* ─── Model comparison table ──────────────────────────────────────── */
+.model-table {
+    width: 100%; border-collapse: collapse; font-family: var(--font-body);
+    font-size: 0.82rem; margin-bottom: 16px;
+}
+.model-table th {
+    padding: 10px 12px; text-align: left; font-weight: 600; color: #374151;
+    border-bottom: 2px solid #E5E7EB; font-family: var(--font-heading);
+    font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.04em;
+}
+.model-table td { padding: 8px 12px; border-bottom: 1px solid #F3F4F6; }
+.model-table .cell-safe { background: rgba(34,197,94,0.1); color: #16A34A; font-weight: 600; }
+.model-table .cell-warn { background: rgba(245,158,11,0.1); color: #D97706; font-weight: 600; }
+.model-table .cell-danger { background: rgba(239,68,68,0.1); color: #DC2626; font-weight: 600; }
+
+/* ─── Heatmap table ───────────────────────────────────────────────── */
+.heatmap-table {
+    width: 100%; border-collapse: collapse; font-family: var(--font-body);
+    font-size: 0.82rem; margin-bottom: 20px;
+}
+.heatmap-table th {
+    padding: 8px 10px; text-align: left; font-weight: 600; color: #374151;
+    border-bottom: 2px solid #E5E7EB; font-family: var(--font-heading);
+    font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em;
+}
+.heatmap-table td { padding: 6px 10px; border-bottom: 1px solid #F3F4F6; }
+.heatmap-table .plant-name { font-weight: 500; color: #1A2744; min-width: 160px; }
+
+/* ─── NZ pathway cards ────────────────────────────────────────────── */
+.pathway-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+.pathway-card {
+    background: #fff; border: 1px solid #E5E7EB; border-radius: 8px; padding: 14px;
+}
+.pathway-card .pw-title {
+    font-family: var(--font-heading); font-size: 0.85rem; font-weight: 600; color: #1A2744;
+    margin-bottom: 6px;
+}
+.pathway-card .pw-type {
+    font-family: var(--font-mono); font-size: 0.68rem; font-weight: 600;
+    padding: 2px 8px; border-radius: 4px; display: inline-block; margin-bottom: 8px;
+}
+.pw-type.power { background: rgba(99,102,241,0.12); color: #6366F1; }
+.pw-type.economy { background: rgba(239,68,68,0.12); color: #DC2626; }
+.pw-type.reference { background: rgba(107,114,128,0.12); color: #6B7280; }
+.pw-type.queue { background: rgba(245,158,11,0.12); color: #D97706; }
+.pathway-card .pw-stat {
+    font-family: var(--font-mono); font-size: 0.78rem; color: #374151;
+}
+
+/* ─── Plant cards ─────────────────────────────────────────────────── */
+.plant-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+.plant-card {
+    background: #fff; border: 1px solid #E5E7EB; border-radius: 8px; padding: 14px;
+}
+.plant-card .plant-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+.plant-card .plant-title { font-family: var(--font-heading); font-weight: 600; font-size: 0.85rem; color: #1A2744; }
+.plant-card .plant-iso {
+    font-family: var(--font-mono); font-size: 0.7rem; font-weight: 600;
+    padding: 2px 8px; border-radius: 4px; background: rgba(99,102,241,0.1); color: #6366F1;
+}
+.plant-card .plant-meta { font-size: 0.75rem; color: #6B7280; margin-bottom: 6px; }
+.plant-card .plant-meta span { margin-right: 10px; }
+.plant-card .mini-bar { height: 6px; border-radius: 3px; background: #F3F4F6; margin-top: 6px; overflow: hidden; }
+.plant-card .mini-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+.policy-badge {
+    display: inline-block; font-size: 0.65rem; font-weight: 600;
+    padding: 2px 6px; border-radius: 4px; margin-left: 4px;
+    font-family: var(--font-heading); text-transform: uppercase; letter-spacing: 0.04em;
+}
+.policy-badge.active { background: rgba(34,197,94,0.15); color: #16A34A; }
+.policy-badge.expired { background: rgba(239,68,68,0.15); color: #DC2626; }
+.policy-badge.ppa { background: rgba(14,165,233,0.15); color: #0284C7; }
+
+/* ─── ISO/year selectors ──────────────────────────────────────────── */
+.iso-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.iso-pill {
+    padding: 5px 12px; border-radius: 20px; border: 1.5px solid #E5E7EB;
+    background: #fff; font-family: var(--font-heading); font-size: 0.75rem;
+    font-weight: 600; cursor: pointer; transition: all 0.2s; color: #6B7280;
+}
+.iso-pill.active { background: #6366F1; color: #fff; border-color: #6366F1; }
+.iso-pill:hover:not(.active) { border-color: #6366F1; color: #6366F1; }
+
+.year-selector { display: flex; gap: 6px; margin-bottom: 12px; }
+.year-btn {
+    padding: 4px 10px; border-radius: 6px; border: 1px solid #E5E7EB;
+    background: #fff; font-family: var(--font-mono); font-size: 0.75rem;
+    cursor: pointer; transition: all 0.2s; color: #6B7280;
+}
+.year-btn.active { background: #1A2744; color: #fff; border-color: #1A2744; }
+
+/* ─── Policy timeline ─────────────────────────────────────────────── */
+.policy-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.policy-bar .policy-label {
+    font-family: var(--font-heading); font-size: 0.78rem; font-weight: 600;
+    color: #374151; min-width: 120px; text-align: right;
+}
+.policy-bar .bar-track { flex: 1; height: 26px; background: #F3F4F6; border-radius: 6px; position: relative; overflow: hidden; }
+.policy-bar .bar-fill {
+    position: absolute; top: 0; height: 100%; border-radius: 6px;
+    display: flex; align-items: center; padding: 0 8px;
+    font-family: var(--font-mono); font-size: 0.7rem; font-weight: 600; color: #fff;
+    white-space: nowrap;
+}
+.bar-fill.federal { background: #6366F1; }
+.bar-fill.il { background: #F59E0B; }
+.bar-fill.ny { background: #22C55E; }
+.bar-fill.nj { background: #EF4444; }
+
+@media (max-width: 768px) {
+    .chart-row { grid-template-columns: 1fr; }
+    .pathway-grid { grid-template-columns: 1fr; }
+    .hero-title { font-size: 1.4rem; }
+    .hero-panel { padding: 28px 20px; }
+    .hero-stats { grid-template-columns: repeat(2, 1fr); }
+    .accordion-header { padding: 14px 16px; }
+    .accordion-content { padding: 16px; }
+    .heatmap-table { font-size: 0.72rem; }
+}
+@media (max-width: 480px) {
+    .hero-stats { grid-template-columns: 1fr 1fr; }
+}
+</style>
+<script src="js/nav.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+<script src="js/nuclear-retirement-data.js"></script>
+</head>
+<body>
+
+<div class="breadcrumb">
+    <a href="index.html">Home</a>
+    <span class="sep">/</span>
+    <a href="research_paper.html">Research</a>
+    <span class="sep">/</span>
+    <span class="current">Nuclear Retirement Risk</span>
+</div>
+
+<div class="article-wrapper">
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     HERO PANEL — Key insights across all modeling approaches
+     ═══════════════════════════════════════════════════════════════════ -->
+<div class="hero-panel" id="heroPanel">
+    <div class="hero-title">Merchant Nuclear Stranding Risk in the Clean Energy Transition</div>
+    <div class="hero-subtitle" id="heroSubtitle">
+        Three independent modeling approaches — parametric market sweeps, structured net-zero pathways,
+        and cost-optimized baselines — stress-test the IPP nuclear fleet under hundreds of scenarios
+        to identify which risks are real, which are model artifacts, and which findings hold universally.
+    </div>
+
+    <div class="hero-stats" id="heroStats"></div>
+
+    <div class="hero-insight" id="heroInsight">
+        <div class="insight-label">Cross-Model Synthesis</div>
+        <div id="heroInsightText"></div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     ACCORDION 0: Cross-Model Overview
+     ═══════════════════════════════════════════════════════════════════ -->
+<div class="accordion open" id="accOverview">
+    <div class="accordion-header" onclick="toggleAccordion('accOverview')">
+        <svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        <span class="accordion-title">Cross-Model Comparison: Where Do the Models Agree?</span>
+        <span class="accordion-badge cross">Synthesis</span>
+    </div>
+    <div class="accordion-body">
+        <div class="accordion-content">
+            <p class="section-desc">
+                Each modeling approach captures different aspects of nuclear stranding risk.
+                Agreement across models signals a robust finding; disagreement reveals model-specific assumptions
+                that drive the result.
+            </p>
+
+            <div class="chart-row">
+                <div class="chart-panel">
+                    <h3>% Below $38/MWh Viability Floor by Model & Year</h3>
+                    <div class="chart-container">
+                        <canvas id="modelCompChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-panel">
+                    <h3>Model Agreement on Plant Outcomes (2040)</h3>
+                    <div class="chart-container">
+                        <canvas id="agreementChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div id="modelTable"></div>
+
+            <div class="insight-callout" id="overviewInsight"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     ACCORDION 1: Model A — Parametric Market Sweep
+     ═══════════════════════════════════════════════════════════════════ -->
+<div class="accordion" id="accModelA">
+    <div class="accordion-header" onclick="toggleAccordion('accModelA')">
+        <svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        <span class="accordion-title">Model A: Parametric Market Sweep (270 Scenarios)</span>
+        <span class="accordion-badge model-a">Step 10 Reference</span>
+    </div>
+    <div class="accordion-body">
+        <div class="accordion-content">
+            <p class="section-desc">
+                Stress tests nuclear economics under 270 parametric combinations:
+                2 market conditions &times; 3 demand growth rates &times; 5 price sensitivities
+                &times; 3 PPA levels &times; 3 gas friction levels.
+                LMP and clean penetration evolve endogenously per scenario.
+            </p>
+
+            <div class="iso-pills" id="isoFilterA"></div>
+
+            <div class="chart-panel" style="margin-bottom: 16px;">
+                <h3>% Scenarios Below $38/MWh Viability Floor by Plant (Model A)</h3>
+                <div class="chart-container-lg">
+                    <canvas id="heatmapA"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-row">
+                <div class="chart-panel">
+                    <h3>Stranding by Scenario Dimension (2040)</h3>
+                    <div class="chart-container">
+                        <canvas id="dimChartA"></canvas>
+                    </div>
+                </div>
+                <div class="chart-panel">
+                    <h3>ISO Nuclear MW at Risk — P10/P50/P90 (2040)</h3>
+                    <div class="chart-container">
+                        <canvas id="isoRiskA"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="insight-callout success" id="insightA"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     ACCORDION 2: Model B — Net-Zero Pathways
+     ═══════════════════════════════════════════════════════════════════ -->
+<div class="accordion" id="accModelB">
+    <div class="accordion-header" onclick="toggleAccordion('accModelB')">
+        <svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        <span class="accordion-title">Model B: Net-Zero Transition Pathways (10 Scenarios)</span>
+        <span class="accordion-badge model-b">Power Sector & Economy-Wide NZ</span>
+    </div>
+    <div class="accordion-body">
+        <div class="accordion-content">
+            <p class="section-desc">
+                Structured transition scenarios from Step 10 model four net-zero trajectories:
+                Power Sector NZ (AT1/AT2), Economy-Wide NZ (AT3/AT4), plus Queue-Driven (QT1-4)
+                and Reference (R1/R2) pathways. Each defines an ISO-level LMP and clean penetration
+                trajectory through 2050.
+            </p>
+
+            <div id="pathwayCards"></div>
+
+            <div class="chart-panel" style="margin-bottom: 16px;">
+                <h3>% Below $38/MWh Viability Floor Under NZ Pathways (2040)</h3>
+                <div class="chart-container-lg">
+                    <canvas id="nzProfitChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-row">
+                <div class="chart-panel">
+                    <h3>Power Sector NZ vs Economy-Wide NZ: LMP Impact</h3>
+                    <div class="chart-container">
+                        <canvas id="nzLmpChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-panel">
+                    <h3>Fleet Status by NZ Pathway (2040)</h3>
+                    <div class="chart-container">
+                        <canvas id="nzStatusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="insight-callout" id="insightB"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     ACCORDION 3: Model C — Step 3A Baseline + Capacity Adders
+     ═══════════════════════════════════════════════════════════════════ -->
+<div class="accordion" id="accModelC">
+    <div class="accordion-header" onclick="toggleAccordion('accModelC')">
+        <svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        <span class="accordion-title">Model C: Cost-Optimized Baseline + Capacity Adders (90 Scenarios)</span>
+        <span class="accordion-badge model-c">Step 3A Track 1</span>
+    </div>
+    <div class="accordion-body">
+        <div class="accordion-content">
+            <p class="section-desc">
+                Uses Step 3A's 5,832-scenario cost optimization to derive wholesale electricity prices
+                and capacity market signals at various clean penetration thresholds (50&ndash;99%).
+                This captures the "price cannibalization" effect: as clean energy grows, wholesale
+                prices fall, eroding nuclear merchant revenue.
+            </p>
+
+            <div class="chart-row">
+                <div class="chart-panel">
+                    <h3>Stranding Rate by Clean Penetration Threshold (2040)</h3>
+                    <div class="chart-container">
+                        <canvas id="thresholdChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-panel">
+                    <h3>Stranding Rate by Wholesale Price Case (2040)</h3>
+                    <div class="chart-container">
+                        <canvas id="priceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-panel" style="margin-bottom: 16px;">
+                <h3>% Below $38/MWh: Model C vs Model A (2040)</h3>
+                <div class="chart-container-lg">
+                    <canvas id="modelACChart"></canvas>
+                </div>
+            </div>
+
+            <div class="insight-callout warn" id="insightC"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     ACCORDION 4: Revenue Waterfall & Policy Support
+     ═══════════════════════════════════════════════════════════════════ -->
+<div class="accordion" id="accWaterfall">
+    <div class="accordion-header" onclick="toggleAccordion('accWaterfall')">
+        <svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        <span class="accordion-title">Revenue Waterfall & Policy Safety Net</span>
+        <span class="accordion-badge cross">All Models</span>
+    </div>
+    <div class="accordion-body">
+        <div class="accordion-content">
+            <p class="section-desc">
+                State CfD programs and the federal 45U PTC act as revenue floors: they fill the gap
+                between market revenue and a guaranteed minimum, but don't inflate profits for already-profitable
+                plants. Most state programs expire by 2029; 45U expires 2032.
+            </p>
+
+            <div class="chart-panel" style="margin-bottom: 16px;">
+                <h3>Policy Support Timeline</h3>
+                <div id="policyTimeline" style="padding: 16px 0;"></div>
+            </div>
+
+            <div class="year-selector" id="yearSelector"></div>
+
+            <div class="chart-panel" style="margin-bottom: 16px;">
+                <h3 id="waterfallTitle">Revenue Waterfall — 2030</h3>
+                <div class="chart-container-lg">
+                    <canvas id="waterfallChart"></canvas>
+                </div>
+            </div>
+
+            <div class="insight-callout warn" id="insightWF"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     ACCORDION 5: Plant-Level Risk Profiles
+     ═══════════════════════════════════════════════════════════════════ -->
+<div class="accordion" id="accPlants">
+    <div class="accordion-header" onclick="toggleAccordion('accPlants')">
+        <svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        <span class="accordion-title">Plant-Level Risk Profiles</span>
+        <span class="accordion-badge cross">25 Plants</span>
+    </div>
+    <div class="accordion-body">
+        <div class="accordion-content">
+            <p class="section-desc">
+                Per-plant stranding probability across all three models. Green = safe (&lt;10%),
+                amber = elevated (10-30%), red = at risk (&gt;30%). Risk bars show 2040 merchant stranding.
+            </p>
+            <div class="iso-pills" id="plantISOFilter"></div>
+            <div class="plant-grid" id="plantGrid"></div>
+        </div>
+    </div>
+</div>
+
+</div><!-- /article-wrapper -->
+
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="dashboard.html">The Grid</a>
+        <a href="research_paper.html">Research Paper</a>
+        <a href="reference.html">Reference</a>
+    </div>
+    <p style="margin-top:12px;font-size:0.75rem;color:rgba(255,255,255,0.5);">
+        Nuclear policy data sourced from NRC ADAMS, EIA-860, state PUC filings, and IRA legislative text.
+        Multi-model analysis framework: Step 10 market sweep, Step 10 NZ pathways, Step 3A cost optimization.
+    </p>
+</footer>
+<div class="bottom-banner"></div>
+
+<script>
+(function() {
+    const D = NUCLEAR_RETIREMENT_DATA;
+    const YEARS = D.years;
+    const PLANTS = D.plants;
+    const MC = D.model_comparison;
+    const RF = D.robust_findings;
+    const NZ = D.nz_pathways;
+    const S3 = D.step3_impact;
+    const PM = D.per_model_probs;
+    const h = D.headline;
+
+    const NUCLEAR = '#6366F1';
+    const RED = '#EF4444';
+    const GREEN = '#22C55E';
+    const AMBER = '#F59E0B';
+    const BLUE = '#0EA5E9';
+    const GRAY = '#6B7280';
+
+    const MODEL_COLORS = { model_a: BLUE, model_b: NUCLEAR, model_c: AMBER };
+    const MODEL_LABELS = { model_a: 'Market Sweep', model_b: 'NZ Pathways', model_c: 'Cost Baseline' };
+    const ISO_CLR = typeof ISO_COLORS !== 'undefined' ? ISO_COLORS : {
+        CAISO: '#F59E0B', ERCOT: '#22C55E', PJM: '#0EA5E9',
+        NYISO: '#E91E63', NEISO: '#9C27B0', MISO: '#F97316', SPP: '#14B8A6'
+    };
+
+    // ─── Accordion toggle ────────────────────────────────────────────
+    window.toggleAccordion = function(id) {
+        document.getElementById(id).classList.toggle('open');
+    };
+
+    // ─── HERO PANEL ──────────────────────────────────────────────────
+    const hs = document.getElementById('heroStats');
+    const viableLow = h.viable_band_low || 38;
+    const viableHigh = h.viable_band_high || 44;
+    const belowViableRate = (h.below_viable_rate_2040 || 0) * 100;
+
+    const heroStats = [
+        { val: `${h.total_nuclear_gw} GW`, lbl: 'IPP Nuclear Fleet', cls: 'neutral' },
+        { val: `${h.n_models} Models`, lbl: `${h.total_scenarios} Total Scenarios`, cls: 'neutral' },
+        { val: `$${viableLow}–${viableHigh}`, lbl: 'Viability Band ($/MWh)', cls: 'neutral' },
+        { val: `${belowViableRate.toFixed(0)}%`, lbl: 'Below Viable LMP (2040, All Models)', cls: belowViableRate > 40 ? 'risk' : belowViableRate > 20 ? 'warn' : 'safe' },
+        { val: `${h.model_dependent_gw} GW`, lbl: 'Model-Dependent Risk', cls: 'warn' },
+        { val: `$${h['45u_annual_value_b']}B`, lbl: '45U PTC Annual Value', cls: 'neutral' },
+    ];
+    heroStats.forEach(s => {
+        const d = document.createElement('div');
+        d.className = 'hero-stat';
+        d.innerHTML = `<div class="val ${s.cls}">${s.val}</div><div class="lbl">${s.lbl}</div>`;
+        hs.appendChild(d);
+    });
+
+    // Hero insight text — synthesize key finding
+    const heroText = document.getElementById('heroInsightText');
+    const modelARate = (MC.model_a?.['2040']?.merchant_strand_rate || 0) * 100;
+    const modelBRate = (MC.model_b?.['2040']?.merchant_strand_rate || 0) * 100;
+    const modelCRate = (MC.model_c?.['2040']?.merchant_strand_rate || 0) * 100;
+
+    // Viability band rates by model
+    const modelABelow = (MC.model_a?.['2040']?.below_viable_rate || 0) * 100;
+    const modelBBelow = (MC.model_b?.['2040']?.below_viable_rate || 0) * 100;
+    const modelCBelow = (MC.model_c?.['2040']?.below_viable_rate || 0) * 100;
+    const modelAPrice = MC.model_a?.['2040']?.avg_energy_price_mwh || 0;
+    const modelCPrice = MC.model_c?.['2040']?.avg_energy_price_mwh || 0;
+
+    let heroNarrative = '';
+    if (modelARate < 5 && modelBRate < 5 && modelCRate > 30) {
+        heroNarrative = `<strong>The central finding is a modeling divergence that reveals the true risk vector.</strong>
+        Nuclear plants need $${viableLow}–${viableHigh}/MWh in energy revenue to remain viable — this covers
+        not just FO&amp;M but CapEx maintenance, license renewals, and the cost of capital that no owner
+        will deploy into a breakeven asset.
+        Under current market projections (Model A: avg $${modelAPrice.toFixed(0)}/MWh, ${modelABelow.toFixed(0)}%
+        below viable), most plants clear this bar. But the cost-optimized baseline (Model C: avg $${modelCPrice.toFixed(0)}/MWh)
+        reveals a critical vulnerability: <strong>at high clean penetration, wholesale price cannibalization
+        pushes ${modelCBelow.toFixed(0)}% of plant-scenarios below the $${viableLow}/MWh viability floor.</strong>
+        The robust conclusion: stranding risk is almost entirely a function of how fast renewable deployment
+        suppresses wholesale prices. Plants in capacity-market ISOs (PJM, NYISO) have structural protection;
+        ERCOT and MISO plants face energy-only market exposure. The 45U PTC expiry in 2032 removes the last
+        federal safety net — after that, merchant exposure is fully unhedged.`;
+    } else if (modelARate < 5 && modelBRate < 5) {
+        heroNarrative = `Plants need $${viableLow}–${viableHigh}/MWh to remain viable (covering FO&amp;M, CapEx
+        maintenance, license renewals, and required returns). The fleet clears this under current market
+        trajectories (Model A: avg $${modelAPrice.toFixed(0)}/MWh) and NZ pathways, with PJM capacity markets
+        as the revenue anchor. Model C's ${modelCBelow.toFixed(0)}% below-viable rate at high clean penetration
+        flags the price cannibalization risk. Policy cliff: 45U (2032), IL CEJA (2027), NY ZEC (2029).`;
+    } else {
+        heroNarrative = `At the $${viableLow}–${viableHigh}/MWh viability floor (covering all-in operating costs
+        and required returns), ${belowViableRate.toFixed(0)}% of scenarios across all models show energy
+        revenue below viable levels by 2040. Model divergence — A: ${modelARate.toFixed(1)}%, B: ${modelBRate.toFixed(1)}%,
+        C: ${modelCRate.toFixed(1)}% stranding — indicates outcome depends heavily on deployment speed and
+        wholesale price dynamics.`;
+    }
+    heroText.innerHTML = heroNarrative;
+
+    // ─── ACCORDION 0: Cross-Model Comparison ────────────────────────
+    // Model comparison chart — stranding rate by model × year
+    const compCtx = document.getElementById('modelCompChart').getContext('2d');
+    const compYears = ['2030', '2035', '2040', '2045', '2050'];
+    const compDatasets = ['model_a', 'model_b', 'model_c'].map(m => ({
+        label: MODEL_LABELS[m],
+        data: compYears.map(y => (MC[m]?.[y]?.below_viable_rate || 0) * 100),
+        borderColor: MODEL_COLORS[m],
+        backgroundColor: MODEL_COLORS[m] + '20',
+        fill: false,
+        tension: 0.3,
+        pointRadius: 5,
+        borderWidth: 2.5,
+    }));
+
+    new Chart(compCtx, {
+        type: 'line',
+        data: { labels: compYears, datasets: compDatasets },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'top', labels: { font: { size: 11 } } } },
+            scales: {
+                y: { title: { display: true, text: `% Below $${viableLow}/MWh Viability Floor` }, beginAtZero: true, max: 100 },
+                x: { title: { display: true, text: 'Year' } }
+            }
+        }
+    });
+
+    // Agreement donut
+    const agCtx = document.getElementById('agreementChart').getContext('2d');
+    const nSafe = RF.robust_safe?.length || 0;
+    const nRisk = RF.robust_at_risk?.length || 0;
+    const nDep = RF.model_dependent?.length || 0;
+    const total = nSafe + nRisk + nDep || 1;
+
+    new Chart(agCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Robustly Safe', 'Robustly At Risk', 'Model-Dependent'],
+            datasets: [{
+                data: [nSafe, nRisk, nDep],
+                backgroundColor: [GREEN, RED, AMBER],
+                borderWidth: 2, borderColor: '#fff',
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { size: 11 } } },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => `${ctx.label}: ${ctx.raw} plants (${(ctx.raw / total * 100).toFixed(0)}%)`
+                    }
+                }
+            }
+        }
+    });
+
+    // Model comparison table
+    const mtDiv = document.getElementById('modelTable');
+    let tableHtml = `<table class="model-table">
+        <tr><th>Model</th><th>Scenarios</th><th>Avg $/MWh</th>`;
+    compYears.forEach(y => { tableHtml += `<th>Below $${viableLow} (${y})</th>`; });
+    tableHtml += '</tr>';
+    const modelNames = D.model_names || {};
+    ['model_a', 'model_b', 'model_c'].forEach(m => {
+        const avgPrice = MC[m]?.['2040']?.avg_energy_price_mwh || 0;
+        tableHtml += `<tr><td style="font-weight:600;color:${MODEL_COLORS[m]}">${MODEL_LABELS[m]}</td>`;
+        tableHtml += `<td>${MC[m]?.['2040']?.n_scenarios || '—'}</td>`;
+        tableHtml += `<td style="font-family:var(--font-mono);font-size:0.8rem">$${avgPrice}</td>`;
+        compYears.forEach(y => {
+            const rate = (MC[m]?.[y]?.below_viable_rate || 0) * 100;
+            const cls = rate < 20 ? 'cell-safe' : rate < 50 ? 'cell-warn' : 'cell-danger';
+            tableHtml += `<td class="${cls}" style="text-align:center;font-family:var(--font-mono);font-size:0.8rem">${rate.toFixed(0)}%</td>`;
+        });
+        tableHtml += '</tr>';
+    });
+    tableHtml += '</table>';
+    mtDiv.innerHTML = tableHtml;
+
+    // Overview insight
+    document.getElementById('overviewInsight').innerHTML =
+        `<strong>Key divergence on the $${viableLow}–${viableHigh}/MWh viability floor:</strong>
+        Nuclear plants need this revenue band to cover FO&amp;M, ongoing CapEx (maintenance, component
+        replacement), license renewals (SLR costs ~$600M per plant), and the cost of capital — no rational
+        owner invests in a breakeven asset. Models A and B show energy prices averaging $${modelAPrice.toFixed(0)}/MWh,
+        clearing the floor in most scenarios. Model C reveals that at high clean penetration (90%+),
+        wholesale price cannibalization pushes energy revenue to ~$${modelCPrice.toFixed(0)}/MWh — well below
+        viable levels. The truth depends on deployment speed: if clean energy grows fast enough to suppress
+        wholesale prices below $${viableLow}/MWh, nuclear becomes economically stranded regardless of
+        capacity market support.`;
+
+    // ─── ACCORDION 1: Model A ────────────────────────────────────────
+    let selectedISO_A = 'ALL';
+    let heatmapAChart = null;
+
+    function renderModelA() {
+        renderIsoPills('isoFilterA', () => renderModelA(), 'A');
+        const filtered = selectedISO_A === 'ALL' ? PLANTS : PLANTS.filter(p => p.iso === selectedISO_A);
+        const labels = filtered.map(p => p.name.replace(' Nuclear', '').replace(/\s*\([^)]*\)/g, ''));
+        const years = [2030, 2035, 2040, 2045, 2050];
+
+        const datasets = years.map((year, yi) => ({
+            label: String(year),
+            data: filtered.map(p => {
+                const mp = PM.model_a?.[p.name]?.[String(year)];
+                return mp ? (mp.below_viable * 100).toFixed(1) : 0;
+            }),
+            backgroundColor: [
+                'rgba(14,165,233,0.4)', 'rgba(99,102,241,0.5)',
+                'rgba(245,158,11,0.5)', 'rgba(239,68,68,0.4)', 'rgba(239,68,68,0.6)'
+            ][yi],
+            borderRadius: 3,
+        }));
+
+        if (heatmapAChart) heatmapAChart.destroy();
+        heatmapAChart = new Chart(document.getElementById('heatmapA').getContext('2d'), {
+            type: 'bar',
+            data: { labels, datasets },
+            options: {
+                indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top', labels: { font: { size: 11 } } },
+                    tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.raw}% below $${viableLow}/MWh` } }
+                },
+                scales: {
+                    x: { title: { display: true, text: `% Scenarios Below $${viableLow}/MWh` }, max: 100, beginAtZero: true },
+                    y: { ticks: { font: { size: 10 } } }
+                }
+            }
+        });
+    }
+
+    function renderIsoPills(containerId, callback, tag) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = '';
+        const isoVar = tag === 'A' ? 'selectedISO_A' : 'plantISOFilter';
+        const current = tag === 'A' ? selectedISO_A : plantISOFilter;
+        ['ALL', 'PJM', 'ERCOT', 'NYISO', 'NEISO', 'MISO'].forEach(iso => {
+            const btn = document.createElement('button');
+            btn.className = 'iso-pill' + (current === iso ? ' active' : '');
+            btn.textContent = iso === 'ALL' ? 'All ISOs' : iso;
+            btn.onclick = () => {
+                if (tag === 'A') selectedISO_A = iso;
+                else plantISOFilter = iso;
+                callback();
+            };
+            container.appendChild(btn);
+        });
+    }
+
+    renderModelA();
+
+    // Dimension sensitivity for Model A
+    const dimCtx = document.getElementById('dimChartA').getContext('2d');
+    const dimData = D.dim_sensitivity || {};
+    const dimLabels = [];
+    const dimValues = [];
+    const dimColors = [];
+
+    const condData = dimData.conditions || {};
+    Object.entries(condData).forEach(([k, v]) => {
+        const yr = v['2040'] || {};
+        dimLabels.push(`${k === 'F' ? 'Facilitating' : 'Challenging'}`);
+        dimValues.push((yr.merchant_strand_rate || 0) * 100);
+        dimColors.push(k === 'F' ? GREEN : RED);
+    });
+    const demandData = dimData.demand_growth || {};
+    Object.entries(demandData).forEach(([k, v]) => {
+        const yr = v['2040'] || {};
+        dimLabels.push(`Demand: ${k}`);
+        dimValues.push((yr.merchant_strand_rate || 0) * 100);
+        dimColors.push(BLUE);
+    });
+
+    new Chart(dimCtx, {
+        type: 'bar',
+        data: { labels: dimLabels, datasets: [{ data: dimValues, backgroundColor: dimColors, borderRadius: 4 }] },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { title: { display: true, text: 'Fleet Strand Rate (%) — 2040' }, beginAtZero: true } }
+        }
+    });
+
+    // ISO Risk
+    const isoBands = D.iso_bands || {};
+    const isoRiskCtx = document.getElementById('isoRiskA').getContext('2d');
+    const isoLabels = Object.keys(isoBands).filter(i => isoBands[i].years?.includes(2040)).sort();
+    const isoRiskData = isoLabels.map(iso => {
+        const band = isoBands[iso];
+        const idx = band.years.indexOf(2040);
+        return { iso, p10: band.stranded.p10[idx] || 0, p50: band.stranded.p50[idx] || 0, p90: band.stranded.p90[idx] || 0 };
+    });
+
+    new Chart(isoRiskCtx, {
+        type: 'bar',
+        data: {
+            labels: isoLabels,
+            datasets: [
+                { label: 'P10', data: isoRiskData.map(d => d.p10), backgroundColor: NUCLEAR + '40', borderRadius: 3 },
+                { label: 'P50', data: isoRiskData.map(d => d.p50), backgroundColor: NUCLEAR + '80', borderRadius: 3 },
+                { label: 'P90', data: isoRiskData.map(d => d.p90), backgroundColor: NUCLEAR, borderRadius: 3 },
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'top', labels: { font: { size: 11 } } } },
+            scales: { y: { title: { display: true, text: 'MW Stranded (2040)' }, beginAtZero: true } }
+        }
+    });
+
+    document.getElementById('insightA').innerHTML =
+        `<strong>Model A result:</strong> Under current market trajectory assumptions, energy prices average
+        $${modelAPrice.toFixed(0)}/MWh — above the $${viableLow}–${viableHigh}/MWh viability floor for most
+        plant-scenarios. However, ${modelABelow.toFixed(0)}% of scenarios still show prices below $${viableLow}/MWh,
+        concentrated in low-price/challenging conditions. PJM's capacity market provides supplemental revenue
+        but doesn't change the energy price signal that drives investment decisions. The primary risk factor
+        in this model is wholesale price level, not clean penetration rate.`;
+
+    // ─── ACCORDION 2: Model B — NZ Pathways ─────────────────────────
+    const pathCards = document.getElementById('pathwayCards');
+    const NZ_TYPE_CLS = { power_sector_nz: 'power', economy_wide_nz: 'economy', reference: 'reference', queue_driven: 'queue' };
+    const NZ_TYPE_LBL = { power_sector_nz: 'Power Sector NZ', economy_wide_nz: 'Economy-Wide NZ', reference: 'Reference', queue_driven: 'Queue-Driven' };
+
+    let pathHtml = '<div class="pathway-grid">';
+    Object.entries(NZ).forEach(([tag, pw]) => {
+        const yr40 = pw.years?.['2040'] || {};
+        const typeCls = NZ_TYPE_CLS[pw.type] || 'reference';
+        const typeLbl = NZ_TYPE_LBL[pw.type] || pw.type;
+        pathHtml += `<div class="pathway-card">
+            <div class="pw-title">${tag}: ${pw.name}</div>
+            <span class="pw-type ${typeCls}">${typeLbl}</span>
+            <div class="pw-stat">
+                2040: ${yr40.n_operating || 0} operating · ${yr40.n_stranded || 0} stranded · ${yr40.n_marginal || 0} marginal
+            </div>
+            <div class="pw-stat" style="color:#6B7280;font-size:0.72rem;margin-top:4px;">
+                Avg LMP: $${yr40.avg_lmp || '—'}/MWh · Clean: ${yr40.avg_clean_pct || '—'}%
+            </div>
+        </div>`;
+    });
+    pathHtml += '</div>';
+    pathCards.innerHTML = pathHtml;
+
+    // NZ profit chart — per-plant profit under each NZ pathway at 2040
+    const nzProfitCtx = document.getElementById('nzProfitChart').getContext('2d');
+    const nzTags = Object.keys(NZ).filter(t => NZ[t].years?.['2040']);
+    const nzPlantLabels = PLANTS.map(p => p.name.replace(' Nuclear', '').replace(/\s*\([^)]*\)/g, ''));
+
+    // Get profit by plant from per_model_probs model_b
+    const nzDatasets = nzTags.slice(0, 4).map((tag, ti) => ({
+        label: tag,
+        data: PLANTS.map(p => {
+            const mp = PM.model_b?.[p.name]?.['2040'];
+            return mp ? mp.avg_profit : 0;
+        }),
+        backgroundColor: [NUCLEAR, NUCLEAR + '80', RED + '80', RED + '60'][ti],
+        borderRadius: 3,
+    }));
+
+    new Chart(nzProfitCtx, {
+        type: 'bar',
+        data: {
+            labels: nzPlantLabels,
+            datasets: [{
+                label: `Below $${viableLow}/MWh (NZ Pathways)`,
+                data: PLANTS.map(p => {
+                    const mp = PM.model_b?.[p.name]?.['2040'];
+                    return mp ? (mp.below_viable * 100).toFixed(1) : 0;
+                }),
+                backgroundColor: PLANTS.map(p => {
+                    const mp = PM.model_b?.[p.name]?.['2040'];
+                    const rate = mp ? mp.below_viable : 0;
+                    return rate > 0.5 ? RED : rate > 0.2 ? AMBER : GREEN;
+                }),
+                borderRadius: 3,
+            }]
+        },
+        options: {
+            indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { title: { display: true, text: `% Below $${viableLow}/MWh` }, beginAtZero: true, max: 100 },
+                y: { ticks: { font: { size: 9 } } }
+            }
+        }
+    });
+
+    // NZ LMP comparison
+    const nzLmpCtx = document.getElementById('nzLmpChart').getContext('2d');
+    const powerNZ = ['AT1', 'AT2'].filter(t => NZ[t]);
+    const econNZ = ['AT3', 'AT4'].filter(t => NZ[t]);
+    const nzYears = ['2030', '2035', '2040', '2050'];
+    const lmpDatasets = [];
+
+    powerNZ.forEach(t => {
+        lmpDatasets.push({
+            label: `${t} (Power NZ)`,
+            data: nzYears.map(y => NZ[t]?.years?.[y]?.avg_lmp || null),
+            borderColor: NUCLEAR, backgroundColor: NUCLEAR + '20', fill: false,
+            borderDash: t === 'AT2' ? [5, 5] : [], tension: 0.3, pointRadius: 4,
+        });
+    });
+    econNZ.forEach(t => {
+        lmpDatasets.push({
+            label: `${t} (Economy NZ)`,
+            data: nzYears.map(y => NZ[t]?.years?.[y]?.avg_lmp || null),
+            borderColor: RED, backgroundColor: RED + '20', fill: false,
+            borderDash: t === 'AT4' ? [5, 5] : [], tension: 0.3, pointRadius: 4,
+        });
+    });
+
+    new Chart(nzLmpCtx, {
+        type: 'line',
+        data: { labels: nzYears, datasets: lmpDatasets },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'top', labels: { font: { size: 10 } } } },
+            scales: {
+                y: { title: { display: true, text: 'Avg LMP ($/MWh)' }, beginAtZero: true },
+            }
+        }
+    });
+
+    // NZ Status stacked bar
+    const nzStatusCtx = document.getElementById('nzStatusChart').getContext('2d');
+    const statusTags = Object.keys(NZ).filter(t => NZ[t].years?.['2040']);
+    new Chart(nzStatusCtx, {
+        type: 'bar',
+        data: {
+            labels: statusTags,
+            datasets: [
+                { label: 'Operating', data: statusTags.map(t => NZ[t].years['2040']?.n_operating || 0), backgroundColor: GREEN, borderRadius: 3 },
+                { label: 'Marginal', data: statusTags.map(t => NZ[t].years['2040']?.n_marginal || 0), backgroundColor: AMBER, borderRadius: 3 },
+                { label: 'Stranded', data: statusTags.map(t => NZ[t].years['2040']?.n_stranded || 0), backgroundColor: RED, borderRadius: 3 },
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'top', labels: { font: { size: 11 } } } },
+            scales: { x: { stacked: true }, y: { stacked: true, title: { display: true, text: 'Plants' } } }
+        }
+    });
+
+    document.getElementById('insightB').innerHTML =
+        `<strong>NZ pathway insights:</strong> Economy-wide net-zero (AT3/AT4) produces higher LMPs than
+        power-sector-only NZ (AT1/AT2) because economy-wide electrification drives demand growth that
+        partially offsets renewable price suppression. For nuclear, this means economy-wide NZ is
+        paradoxically <em>better</em> for plant economics — more demand = higher prices. The ERCOT plants
+        (Comanche Peak, South Texas Project) face the most NZ pathway risk due to ERCOT's energy-only
+        market structure.`;
+
+    // ─── ACCORDION 3: Model C ────────────────────────────────────────
+    // Threshold chart
+    const threshCtx = document.getElementById('thresholdChart').getContext('2d');
+    const yr2040 = S3['2040'] || {};
+    const thresholds = Object.keys(yr2040.by_threshold || {}).sort((a, b) => Number(a) - Number(b));
+    new Chart(threshCtx, {
+        type: 'bar',
+        data: {
+            labels: thresholds.map(t => t + '%'),
+            datasets: [{
+                label: `Below $${viableLow}/MWh`,
+                data: thresholds.map(t => ((yr2040.by_threshold[t]?.below_viable_rate || 0) * 100).toFixed(1)),
+                backgroundColor: thresholds.map(t => {
+                    const r = yr2040.by_threshold[t]?.below_viable_rate || 0;
+                    return r > 0.5 ? RED : r > 0.2 ? AMBER : GREEN;
+                }),
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { title: { display: true, text: `% Below $${viableLow}/MWh Viability Floor` }, beginAtZero: true, max: 100 },
+                x: { title: { display: true, text: 'Clean Penetration Threshold' } }
+            }
+        }
+    });
+
+    // Price case chart
+    const priceCtx = document.getElementById('priceChart').getContext('2d');
+    const priceCases = yr2040.by_price || {};
+    new Chart(priceCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Low (P10)', 'Mid (P50)', 'High (P90)'],
+            datasets: [{
+                data: ['low', 'mid', 'high'].map(c => ((priceCases[c]?.strand_rate || 0) * 100).toFixed(1)),
+                backgroundColor: [RED, AMBER, GREEN],
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { title: { display: true, text: 'Strand Rate (%)' }, beginAtZero: true, max: 100 },
+                x: { title: { display: true, text: 'Wholesale Price Case' } }
+            }
+        }
+    });
+
+    // Model A vs C comparison
+    const acCtx = document.getElementById('modelACChart').getContext('2d');
+    const acLabels = PLANTS.map(p => p.name.replace(' Nuclear', '').replace(/\s*\([^)]*\)/g, ''));
+    new Chart(acCtx, {
+        type: 'bar',
+        data: {
+            labels: acLabels,
+            datasets: [
+                {
+                    label: 'Model A (Market Sweep)',
+                    data: PLANTS.map(p => {
+                        const mp = PM.model_a?.[p.name]?.['2040'];
+                        return mp ? (mp.below_viable * 100).toFixed(1) : 0;
+                    }),
+                    backgroundColor: BLUE + '80', borderRadius: 3,
+                },
+                {
+                    label: 'Model C (Cost Baseline)',
+                    data: PLANTS.map(p => {
+                        const mp = PM.model_c?.[p.name]?.['2040'];
+                        return mp ? (mp.below_viable * 100).toFixed(1) : 0;
+                    }),
+                    backgroundColor: AMBER + '80', borderRadius: 3,
+                },
+            ]
+        },
+        options: {
+            indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'top', labels: { font: { size: 11 } } } },
+            scales: {
+                x: { title: { display: true, text: `% Below $${viableLow}/MWh — 2040` }, beginAtZero: true, max: 100 },
+                y: { ticks: { font: { size: 9 } } }
+            }
+        }
+    });
+
+    document.getElementById('insightC').innerHTML =
+        `<strong>Model C reveals the price cannibalization risk.</strong> At 90%+ clean penetration,
+        wholesale prices fall to $20–30/MWh across most ISOs — well below the $${viableLow}–${viableHigh}/MWh
+        viability floor that covers FO&amp;M, CapEx maintenance, and license renewals.
+        ${modelCBelow.toFixed(0)}% of Model C scenarios show energy revenue below $${viableLow}/MWh by 2040.
+        This is most severe in ERCOT (energy-only market) and MISO (low capacity prices), but even PJM
+        plants face merchant energy price risk at high clean penetration.
+        <strong>This model captures the core paradox</strong>: the same clean energy deployment that
+        nuclear advocates promote is the mechanism that destroys nuclear merchant revenue.`;
+
+    // ─── ACCORDION 4: Revenue Waterfall ──────────────────────────────
+    // Policy timeline
+    const tlDiv = document.getElementById('policyTimeline');
+    const timeline = D.policy_timeline;
+    const minYear = 2017; const maxYear = 2050;
+    const yearRange = maxYear - minYear;
+    function pctPos(year) { return ((year - minYear) / yearRange * 100).toFixed(1); }
+    function pctWidth(start, end) { return (((end - start) / yearRange) * 100).toFixed(1); }
+
+    let markerHtml = '<div style="display:flex;justify-content:space-between;padding-left:132px;margin-bottom:4px;">';
+    for (let y = 2020; y <= 2050; y += 5) {
+        markerHtml += `<span style="font-family:var(--font-mono);font-size:0.68rem;color:#9CA3AF;">${y}</span>`;
+    }
+    markerHtml += '</div>';
+    tlDiv.innerHTML = markerHtml;
+
+    [
+        { key: '45U_PTC', label: '45U PTC', cls: 'federal' },
+        { key: 'IL_CEJA_CMC', label: 'IL CEJA', cls: 'il' },
+        { key: 'NY_ZEC', label: 'NY ZEC', cls: 'ny' },
+        { key: 'NJ_ZEC', label: 'NJ ZEC', cls: 'nj' },
+    ].forEach(pol => {
+        const p = timeline[pol.key];
+        if (!p) return;
+        const left = pctPos(Math.max(p.start, minYear));
+        const width = pctWidth(Math.max(p.start, minYear), p.end);
+        const div = document.createElement('div');
+        div.className = 'policy-bar';
+        div.innerHTML = `<span class="policy-label">${pol.label}</span>
+            <div class="bar-track"><div class="bar-fill ${pol.cls}" style="left:${left}%;width:${width}%;">
+                $${p.floor}/MWh (${p.start}–${p.end})
+            </div></div>`;
+        tlDiv.appendChild(div);
+    });
+
+    // Waterfall
+    let selectedYear = 2030;
+    const yearSel = document.getElementById('yearSelector');
+    [2030, 2035, 2040, 2050].forEach(y => {
+        const btn = document.createElement('button');
+        btn.className = 'year-btn' + (y === selectedYear ? ' active' : '');
+        btn.textContent = y;
+        btn.onclick = () => { selectedYear = y; renderWaterfall(); updateYearBtns(); };
+        yearSel.appendChild(btn);
+    });
+    function updateYearBtns() {
+        yearSel.querySelectorAll('.year-btn').forEach(b => {
+            b.classList.toggle('active', parseInt(b.textContent) === selectedYear);
+        });
+    }
+
+    const wf = D.waterfalls;
+    function getWfVal(plant, year, field) {
+        if (wf[plant] && wf[plant][String(year)]) return wf[plant][String(year)][field] || 0;
+        return 0;
+    }
+
+    let wfChart = null;
+    function renderWaterfall() {
+        document.getElementById('waterfallTitle').textContent = `Revenue Waterfall — ${selectedYear}`;
+        const filtered = PLANTS.filter(p => wf[p.name] && wf[p.name][String(selectedYear)]);
+        const labels = filtered.map(p => p.name.replace(' Nuclear', '').replace(/\s*\([^)]*\)/g, ''));
+
+        if (wfChart) wfChart.destroy();
+        wfChart = new Chart(document.getElementById('waterfallChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    { label: 'Energy Revenue', data: filtered.map(p => getWfVal(p.name, selectedYear, 'energy_rev_p50')), backgroundColor: BLUE },
+                    { label: 'Capacity Revenue', data: filtered.map(p => getWfVal(p.name, selectedYear, 'capacity_rev_p50')), backgroundColor: GREEN },
+                    { label: 'CfD Payment', data: filtered.map(p => getWfVal(p.name, selectedYear, 'cfd_payment_p50')), backgroundColor: NUCLEAR },
+                    { label: 'Fixed O&M', data: filtered.map(p => -getWfVal(p.name, selectedYear, 'fixed_om')), backgroundColor: RED + '80' },
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'top', labels: { font: { size: 11 } } } },
+                scales: {
+                    x: { stacked: true, ticks: { font: { size: 8 }, maxRotation: 45 } },
+                    y: { stacked: true, title: { display: true, text: '$M/yr (P50)' } }
+                }
+            }
+        });
+    }
+    renderWaterfall();
+
+    document.getElementById('insightWF').innerHTML =
+        `<strong>The 45U cliff:</strong> The federal 45U PTC ($15/MWh floor) expires in 2032.
+        For most plants, this doesn't currently matter — market revenue already exceeds $15/MWh.
+        But in the low-price scenarios from Model C, the 45U floor would have provided a critical
+        safety net that vanishes just as wholesale prices may be falling. State programs expire
+        even sooner: IL CEJA (2027), NY ZEC (2029), NJ ZEC (already expired). By 2033, all
+        policy support will have lapsed and plants face pure merchant exposure.`;
+
+    // ─── ACCORDION 5: Plant Cards ────────────────────────────────────
+    let plantISOFilter = 'ALL';
+    function renderPlantCards() {
+        renderIsoPills('plantISOFilter', () => renderPlantCards(), 'P');
+        const grid = document.getElementById('plantGrid');
+        grid.innerHTML = '';
+        const filtered = plantISOFilter === 'ALL' ? PLANTS : PLANTS.filter(p => p.iso === plantISOFilter);
+
+        filtered.forEach(p => {
+            // Get viability data per model at 2040
+            const getBelow = (model) => {
+                const mp = PM[model]?.[p.name]?.['2040'];
+                return mp ? (mp.below_viable * 100).toFixed(0) : '—';
+            };
+            const getPrice = (model) => {
+                const mp = PM[model]?.[p.name]?.['2040'];
+                return mp ? `$${mp.avg_energy_price}` : '—';
+            };
+            const maxBelow = Math.max(
+                PM.model_a?.[p.name]?.['2040']?.below_viable || 0,
+                PM.model_b?.[p.name]?.['2040']?.below_viable || 0,
+                PM.model_c?.[p.name]?.['2040']?.below_viable || 0,
+            );
+            const barWidth = Math.max(2, maxBelow * 100);
+            const barColor = maxBelow > 0.5 ? RED : maxBelow > 0.2 ? AMBER : GREEN;
+
+            let policyBadge = '';
+            if (p.state_policy && p.policy_expiry) {
+                const isActive = p.policy_expiry >= 2026;
+                policyBadge = `<span class="policy-badge ${isActive ? 'active' : 'expired'}">${p.state_policy} → ${p.policy_expiry}</span>`;
+            }
+            if (p.hyperscaler_ppa) {
+                policyBadge += `<span class="policy-badge ppa">${p.hyperscaler_ppa} → ${p.ppa_expiry}</span>`;
+            }
+
+            const card = document.createElement('div');
+            card.className = 'plant-card';
+            card.innerHTML = `
+                <div class="plant-header">
+                    <div class="plant-title">${p.name}${policyBadge}</div>
+                    <div class="plant-iso">${p.iso}</div>
+                </div>
+                <div class="plant-meta">
+                    <span>${p.cap_mw.toLocaleString()} MW</span>
+                    <span>${p.owner}</span>
+                    <span>NRC: ${p.nrc_expiry || '—'}</span>
+                </div>
+                <div style="font-size:0.75rem;color:#374151;margin-top:6px;">
+                    2040 below $${viableLow}/MWh:
+                    <span style="color:${BLUE}">A:${getBelow('model_a')}%</span> ·
+                    <span style="color:${NUCLEAR}">B:${getBelow('model_b')}%</span> ·
+                    <span style="color:${AMBER}">C:${getBelow('model_c')}%</span>
+                </div>
+                <div style="font-size:0.72rem;color:#6B7280;margin-top:2px;">
+                    Avg energy price:
+                    <span style="color:${BLUE}">A:${getPrice('model_a')}</span> ·
+                    <span style="color:${NUCLEAR}">B:${getPrice('model_b')}</span> ·
+                    <span style="color:${AMBER}">C:${getPrice('model_c')}</span>
+                </div>
+                <div class="mini-bar">
+                    <div class="mini-bar-fill" style="width:${barWidth}%;background:${barColor};"></div>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+    renderPlantCards();
+
+})();
+</script>
+</body>
+</html>
