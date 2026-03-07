@@ -4,11 +4,12 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SMARTargets Dashboard — Regional Decarbonization Pathways</title>
+<title>Regional Decarbonization Pathways</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/scrollytell.css">
 <link rel="stylesheet" href="styles/dashboard-ui.css">
 <script src="js/nav.js"></script>
 <script src="js/chart-colors.js"></script>
@@ -19,23 +20,67 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 <script src="js/smartargets-data.js"></script>
 <style>
-body { background: var(--bg-alt-warm); }
+body { background: var(--bg-page); }
 
-/* Sticky control bar */
-.global-controls { background: rgba(255,255,255,0.97); border-bottom: 1px solid rgba(0,0,0,0.08); padding: 14px var(--pad-page); position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; box-shadow: var(--shadow-sm); }
+/* ─── Hero Grid: All 7 ISOs ─── */
+.hero-section { max-width: var(--max-content); margin: 0 auto; padding: 32px var(--pad-page) 16px; }
+.hero-intro { font-size: 0.92rem; color: var(--text-dim); line-height: 1.7; margin-bottom: 24px; max-width: 800px; }
+.iso-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.iso-card {
+    background: rgba(255,255,255,0.95);
+    border: 2px solid rgba(0,0,0,0.06);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.23,1,0.32,1);
+    position: relative;
+    overflow: hidden;
+}
+.iso-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: var(--card-accent, var(--accent));
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+.iso-card:hover { border-color: var(--card-accent, var(--accent)); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.iso-card.active { border-color: var(--card-accent, var(--accent)); box-shadow: 0 0 0 2px var(--card-accent, var(--accent)), var(--shadow-md); }
+.iso-card-name { font-family: var(--font-heading); font-size: 0.85rem; font-weight: 700; color: var(--navy); margin-bottom: 10px; }
+.iso-card-region { font-size: 0.72rem; color: var(--text-dim); font-weight: 400; margin-left: 4px; }
+.iso-card-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.iso-mini-stat { text-align: center; }
+.iso-mini-val { font-family: var(--font-data); font-size: 1.1rem; font-weight: 800; line-height: 1.2; }
+.iso-mini-lbl { font-size: 0.62rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.03em; font-family: var(--font-heading); font-weight: 600; }
+.iso-card-spark { height: 40px; margin-top: 8px; }
+
+/* ─── Sticky Controls ─── */
+.global-controls {
+    background: rgba(255,255,255,0.97);
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+    padding: 14px var(--pad-page);
+    position: sticky; top: 0; z-index: 50;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    box-shadow: var(--shadow-sm);
+}
 .global-controls .bar-label { font-family: var(--font-heading); font-size: 0.82rem; color: var(--navy); font-weight: 700; white-space: nowrap; }
 .bar-divider { width: 1px; height: 28px; background: rgba(0,0,0,0.12); flex-shrink: 0; }
-
-/* Scenario group tabs */
 .scenario-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
-.scenario-tab { padding: 6px 14px; border-radius: var(--radius-pill); font-size: 0.78rem; font-weight: 600; border: 1px solid rgba(0,0,0,0.12); background: transparent; color: var(--text-dim); cursor: pointer; transition: all 0.2s; font-family: var(--font-heading); }
+.scenario-tab {
+    padding: 6px 14px; border-radius: var(--radius-pill);
+    font-size: 0.78rem; font-weight: 600;
+    border: 1px solid rgba(0,0,0,0.12); background: transparent;
+    color: var(--text-dim); cursor: pointer; transition: all 0.2s;
+    font-family: var(--font-heading);
+}
 .scenario-tab:hover { background: rgba(0,0,0,0.04); }
 .scenario-tab.active { background: var(--navy); color: #fff; border-color: var(--navy); }
 
-/* Section containers */
-.dash-section { max-width: var(--max-content); margin: 0 auto; padding: 32px var(--pad-page); }
-.dash-section h2 { font-family: var(--font-heading); font-size: 1.4rem; font-weight: 800; color: var(--navy); margin-bottom: 6px; }
-.dash-section .section-desc { color: var(--text-dim); font-size: 0.86rem; margin-bottom: 20px; line-height: 1.7; }
+/* ─── Scrollytell Sections ─── */
+.story-panel { max-width: var(--max-content); margin: 0 auto; padding: 40px var(--pad-page) 24px; }
+.story-panel h2 { font-family: var(--font-heading); font-size: 1.4rem; font-weight: 800; color: var(--navy); margin-bottom: 6px; }
+.story-panel .section-desc { color: var(--text-dim); font-size: 0.86rem; margin-bottom: 20px; line-height: 1.7; }
 
 /* Hero stats row */
 .hero-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 28px; }
@@ -73,27 +118,42 @@ body { background: var(--bg-alt-warm); }
 
 /* Mobile */
 @media (max-width: 768px) {
+    .iso-grid { grid-template-columns: repeat(2, 1fr); }
     .grid-2up { grid-template-columns: 1fr; }
     .scenario-pair { grid-template-columns: 1fr; }
     .chart-wrap { height: 300px; }
     .chart-wrap-sm { height: 240px; }
     .global-controls { gap: 10px; padding: 10px var(--pad-page); }
     .hero-stats { grid-template-columns: repeat(2, 1fr); }
+    .story-panel { padding: 24px var(--pad-page) 16px; }
+}
+@media (max-width: 480px) {
+    .iso-grid { grid-template-columns: 1fr; }
 }
 </style>
 </head>
 <body>
 <nav id="topNav"></nav>
 
-<!-- HEADER BANNER -->
-<header class="header">
+<!-- HEADER -->
+<header class="header" id="pageHeader">
     <h1>Regional Decarbonization Pathways</h1>
-    <p class="subtitle">What does it take to reach net-zero in each region — and what happens if conditions are harder than expected?</p>
+    <p class="subtitle">Market-driven deployment meets emission constraints: what each region needs, what it costs, and where policy must intervene</p>
     <div class="header-accent"></div>
 </header>
 
+<!-- HERO: ALL 7 ISOs AT A GLANCE -->
+<section class="hero-section scroll-reveal">
+    <p class="hero-intro">
+        Each region starts from a different grid — different renewable resources, different existing clean energy, different fossil dependencies.
+        Under market-only conditions, clean energy deployment stalls once profitability runs out. Under net-zero constraints, the gap between
+        market outcomes and policy targets defines the cost of decarbonization. Select a region to explore its pathway.
+    </p>
+    <div class="iso-grid" id="isoGrid"></div>
+</section>
+
 <!-- STICKY CONTROLS -->
-<div class="global-controls">
+<div class="global-controls" id="stickyControls">
     <span class="bar-label">Region:</span>
     <div class="iso-selector" id="globalIsoSelector"></div>
     <div class="bar-divider"></div>
@@ -105,78 +165,83 @@ body { background: var(--bg-alt-warm); }
     </div>
 </div>
 
-<!-- ISO SUMMARY: ALL SCENARIOS OVERVIEW -->
-<div class="dash-section" id="isoSummarySection">
-    <h2>Scenario Overview: <span id="isoSummaryName">California (CAISO)</span></h2>
-    <p class="section-desc">All modeled pathways for this region — from market-only reference to economy-wide net-zero — under both facilitating and challenging conditions.</p>
-    <div id="isoSummaryCallout" class="narrative-box"></div>
-    <div class="chart-panel">
-        <div class="chart-wrap"><canvas id="allScenariosChart"></canvas></div>
-    </div>
-</div>
+<!-- REGIONAL DEEP DIVE (scrollytell) -->
+<div id="regionalContent">
 
-<!-- SECTION 1: HERO STATS -->
-<div class="dash-section" id="heroSection">
-    <div id="narrativeIntro" class="narrative-box"></div>
-    <div class="hero-stats" id="heroStats"></div>
-</div>
-
-<!-- SECTION 2: EMISSION TRAJECTORY -->
-<div class="dash-section">
-    <h2>Emission Trajectory</h2>
-    <p class="section-desc" id="trajDesc">How emissions decline from the 2023 baseline under facilitating vs. challenging conditions. The shaded area represents the aspirational target trajectory ceiling — the system must stay below it.</p>
-    <div class="chart-panel">
-        <div class="chart-wrap"><canvas id="trajChart"></canvas></div>
-    </div>
-</div>
-
-<!-- SECTION 3: GRID BUILDOUT -->
-<div class="dash-section">
-    <h2>Grid Buildout Trajectory</h2>
-    <p class="section-desc">The resource mix needed to stay on the decarbonization trajectory. Saturated bars show existing generation; transparent bars show new build. Curtailed energy (diagonal hashing) appears above the demand line. Each step is labeled with hourly clean % and CO₂ reduction from 2023.</p>
-    <div class="grid-2up" id="mixGridArea">
-        <div class="chart-panel" id="mixPanelFac">
-            <h3 id="mixFacTitle">Facilitating Conditions</h3>
-            <p class="chart-note">Low LCOE, fast learning, reformed queues</p>
-            <div class="chart-wrap"><canvas id="mixChartFac"></canvas></div>
-        </div>
-        <div class="chart-panel" id="mixPanelChal">
-            <h3 id="mixChalTitle">Challenging Conditions</h3>
-            <p class="chart-note">High LCOE, slow learning, constrained queues</p>
-            <div class="chart-wrap"><canvas id="mixChartChal"></canvas></div>
-        </div>
-    </div>
-</div>
-
-<!-- SECTION 4: COST & CARBON PRICE ANALYSIS -->
-<div class="dash-section">
-    <h2>System Costs & Carbon Shadow Price</h2>
-    <p class="section-desc">The implied carbon price needed to force deployment, DAC costs when grid MAC exceeds DAC thresholds, and total system subsidies. Under facilitating conditions, DAC provides a cost ceiling; under challenging conditions, the system must pay whatever it takes.</p>
-    <div class="grid-2up">
+    <!-- Section 1: Scenario Landscape -->
+    <section class="story-panel scroll-reveal" id="scenarioLandscapeSection">
+        <h2>Scenario Landscape: <span id="isoSummaryName">California (CAISO)</span></h2>
+        <p class="section-desc">All modeled pathways for this region — from market-only reference to economy-wide net-zero — under both facilitating and challenging conditions.</p>
+        <div id="isoSummaryCallout" class="narrative-box"></div>
         <div class="chart-panel">
-            <h3>Carbon Shadow Price & DAC Cost</h3>
-            <p class="chart-note">Implied $/ton needed to force grid deployment, vs. DAC backstop cost</p>
-            <div class="chart-wrap-sm"><canvas id="carbonPriceChart"></canvas></div>
+            <div class="chart-wrap"><canvas id="allScenariosChart"></canvas></div>
         </div>
+    </section>
+
+    <!-- Section 2: Hero Stats + Narrative -->
+    <section class="story-panel scroll-reveal" id="heroSection">
+        <div id="narrativeIntro" class="narrative-box"></div>
+        <div class="hero-stats" id="heroStats"></div>
+    </section>
+
+    <!-- Section 3: Emission Trajectory -->
+    <section class="story-panel scroll-reveal">
+        <h2>Emission Trajectory</h2>
+        <p class="section-desc" id="trajDesc">How emissions decline from the 2023 baseline under facilitating vs. challenging conditions. The shaded area represents the target trajectory ceiling.</p>
         <div class="chart-panel">
-            <h3>System Cost & Subsidy Trajectory</h3>
-            <p class="chart-note">Policy subsidy burden ($/MWh) required to stay on trajectory</p>
-            <div class="chart-wrap-sm"><canvas id="costChart"></canvas></div>
+            <div class="chart-wrap"><canvas id="trajChart"></canvas></div>
         </div>
-    </div>
-</div>
+    </section>
 
-<!-- SECTION 5: SCENARIO COMPARISON -->
-<div class="dash-section">
-    <h2>Facilitating vs. Challenging: Side by Side</h2>
-    <p class="section-desc">Key metrics at each milestone year showing the divergence between conditions. Under facilitating conditions, DAC handles the last mile cheaply. Under challenging conditions, the grid must reach near-100% clean at enormous cost.</p>
-    <div class="scenario-pair" id="scenarioComparison"></div>
-</div>
+    <!-- Section 4: Grid Buildout -->
+    <section class="story-panel scroll-reveal">
+        <h2>Grid Buildout Trajectory</h2>
+        <p class="section-desc">The resource mix needed to stay on the decarbonization trajectory. Saturated bars = existing generation; transparent = new build. Curtailed energy (diagonal hashing) appears above the demand line.</p>
+        <div class="grid-2up" id="mixGridArea">
+            <div class="chart-panel" id="mixPanelFac">
+                <h3 id="mixFacTitle">Facilitating Conditions</h3>
+                <p class="chart-note">Low LCOE, fast learning, reformed queues</p>
+                <div class="chart-wrap"><canvas id="mixChartFac"></canvas></div>
+            </div>
+            <div class="chart-panel" id="mixPanelChal">
+                <h3 id="mixChalTitle">Challenging Conditions</h3>
+                <p class="chart-note">High LCOE, slow learning, constrained queues</p>
+                <div class="chart-wrap"><canvas id="mixChartChal"></canvas></div>
+            </div>
+        </div>
+    </section>
 
-<!-- SECTION 6: DEEP DIVE NARRATIVE -->
-<div class="dash-section" id="deepDiveSection">
-    <h2 id="deepDiveTitle">What's Happening on the Grid</h2>
-    <div id="deepDiveNarrative"></div>
+    <!-- Section 5: Cost & Carbon Price -->
+    <section class="story-panel scroll-reveal">
+        <h2>The Cost of Decarbonization</h2>
+        <p class="section-desc">The implied carbon price needed to force deployment, DAC costs when grid MAC exceeds DAC thresholds, and total system subsidies.</p>
+        <div class="grid-2up">
+            <div class="chart-panel">
+                <h3>Carbon Shadow Price & DAC Cost</h3>
+                <p class="chart-note">Implied $/ton needed to force grid deployment, vs. DAC backstop cost</p>
+                <div class="chart-wrap-sm"><canvas id="carbonPriceChart"></canvas></div>
+            </div>
+            <div class="chart-panel">
+                <h3>Policy Subsidy Trajectory</h3>
+                <p class="chart-note">$/MWh subsidy burden required to stay on trajectory</p>
+                <div class="chart-wrap-sm"><canvas id="costChart"></canvas></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 6: Scenario Comparison -->
+    <section class="story-panel scroll-reveal">
+        <h2>Facilitating vs. Challenging: Side by Side</h2>
+        <p class="section-desc">Key 2050 metrics showing the divergence between conditions.</p>
+        <div class="scenario-pair" id="scenarioComparison"></div>
+    </section>
+
+    <!-- Section 7: Deep Dive Narrative -->
+    <section class="story-panel scroll-reveal" id="deepDiveSection">
+        <h2 id="deepDiveTitle">What's Happening on the Grid</h2>
+        <div id="deepDiveNarrative"></div>
+    </section>
+
 </div>
 
 <!-- FOOTER -->
@@ -198,11 +263,15 @@ body { background: var(--bg-alt-warm); }
 Chart.defaults.plugins.datalabels = { display: false };
 
 // ============================================================================
-// SMARTargets Dashboard — Regional Decarbonization Analysis
+// Regional Decarbonization Pathways — Dashboard Logic
 // ============================================================================
 const DATA = SMARTARGETS_DATA;
 const ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP'];
 const ISO_NAMES = {
+    CAISO: 'California', ERCOT: 'Texas', PJM: 'Mid-Atlantic',
+    NYISO: 'New York', NEISO: 'New England', MISO: 'Midwest', SPP: 'Central Plains'
+};
+const ISO_FULL = {
     CAISO: 'California (CAISO)', ERCOT: 'Texas (ERCOT)', PJM: 'Mid-Atlantic (PJM)',
     NYISO: 'New York (NYISO)', NEISO: 'New England (NEISO)', MISO: 'Midwest (MISO)', SPP: 'Central Plains (SPP)'
 };
@@ -210,7 +279,7 @@ const ISO_NAMES = {
 const GROUPS = {
     power_nz:   { fac: 'AT1', chal: 'AT2', qt_fac: 'QT1', qt_chal: 'QT2', label: 'Power Sector Net-Zero', desc: 'Power sector reaches net-zero by 2050. 57% reduction by 2030, 82% by 2035.' },
     economy_nz: { fac: 'AT3', chal: 'AT4', qt_fac: 'QT3', qt_chal: 'QT4', label: 'Economy-Wide Net-Zero', desc: 'Economy-wide net-zero forces power sector to overachieve (cheapest to abate). 65% reduction by 2030, 85% by 2035.' },
-    reference:  { fac: 'R1', chal: 'R2', label: 'Reference (Market-Only)', desc: 'No emission constraints. Market deploys clean energy where profitable and stops when it isn\'t. Shows where the grid ends up without policy.' },
+    reference:  { fac: 'R1', chal: 'R2', label: 'Reference (Market-Only)', desc: 'No emission constraints. Market deploys clean energy where profitable and stops when it isn\'t.' },
 };
 
 const MIX_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar', 'battery', 'ldes'];
@@ -224,12 +293,6 @@ const MIX_COLORS = {
     wind: RESOURCE_COLORS.wind, solar: RESOURCE_COLORS.solar,
     battery: RESOURCE_COLORS.battery, ldes: RESOURCE_COLORS.ldes,
 };
-const MIX_COLORS_T = {
-    clean_firm: RESOURCE_COLORS.cleanFirmT, ccs_ccgt: RESOURCE_COLORS.ccsT,
-    hydro: RESOURCE_COLORS.hydroT, offshore_wind: RESOURCE_COLORS.offshoreWindT,
-    wind: RESOURCE_COLORS.windT, solar: RESOURCE_COLORS.solarT,
-    battery: RESOURCE_COLORS.batteryT, ldes: RESOURCE_COLORS.ldesT,
-};
 
 const FAC_COLOR = '#6366F1';
 const CHAL_COLOR = '#EF4444';
@@ -237,42 +300,13 @@ const CHAL_COLOR = '#EF4444';
 let globalIso = 'CAISO';
 let globalGroup = 'power_nz';
 let charts = {};
-
-// ─── ISO SELECTOR ───────────────────────────────────────────────
-function initIsoSelector() {
-    const c = document.getElementById('globalIsoSelector');
-    ISOS.forEach(iso => {
-        const btn = document.createElement('button');
-        btn.className = 'iso-btn' + (iso === globalIso ? ' active' : '');
-        btn.textContent = iso;
-        btn.addEventListener('click', () => {
-            c.querySelectorAll('.iso-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            globalIso = iso;
-            updateAll();
-        });
-        c.appendChild(btn);
-    });
-}
-
-function initScenarioTabs() {
-    document.querySelectorAll('.scenario-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            document.querySelectorAll('.scenario-tab').forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            globalGroup = tab.dataset.group;
-            updateAll();
-        });
-    });
-}
+let sparkCharts = {};
 
 // ─── HELPERS ────────────────────────────────────────────────────
-function getScenarioData(name, iso) {
-    return DATA.scenarios[name]?.[iso] || null;
-}
-function fmt(v, d=1) { return v != null ? v.toFixed(d) : '—'; }
-function fmtPct(v) { return v != null ? v.toFixed(0) + '%' : '—'; }
-function fmtDollar(v) { return v != null ? '$' + v.toFixed(0) : '—'; }
+function getScenarioData(name, iso) { return DATA.scenarios[name]?.[iso] || null; }
+function fmt(v, d=1) { return v != null ? v.toFixed(d) : '\u2014'; }
+function fmtPct(v) { return v != null ? v.toFixed(0) + '%' : '\u2014'; }
+function fmtDollar(v) { return v != null ? '$' + v.toFixed(0) : '\u2014'; }
 
 function hexToRgba(hex, alpha) {
     const r = parseInt(hex.slice(1,3), 16);
@@ -298,7 +332,159 @@ function createDiagonalPattern(hexColor, alpha) {
     return ctx.createPattern(c, 'repeat');
 }
 
-// All 6 core scenarios for the overview chart
+const ISO_HEX = {
+    CAISO: '#F59E0B', ERCOT: '#22C55E', PJM: '#0EA5E9',
+    NYISO: '#E91E63', NEISO: '#9C27B0', MISO: '#F97316', SPP: '#14B8A6'
+};
+
+// ─── HERO: ISO CARDS ───────────────────────────────────────────
+function buildIsoGrid() {
+    const grid = document.getElementById('isoGrid');
+    grid.innerHTML = '';
+
+    ISOS.forEach(iso => {
+        const card = document.createElement('div');
+        card.className = 'iso-card' + (iso === globalIso ? ' active' : '');
+        card.style.setProperty('--card-accent', ISO_HEX[iso]);
+
+        // Compute summary stats across all scenarios
+        const r1 = getScenarioData('R1', iso);
+        const at1 = getScenarioData('AT1', iso);
+        const at2 = getScenarioData('AT2', iso);
+
+        const baseline = r1?.emissions_mt?.[0] || at1?.emissions_mt?.[0] || 0;
+        const lastIdx = r1 ? r1.years.length - 1 : (at1 ? at1.years.length - 1 : 0);
+        const marketClean = r1?.clean_pct?.[lastIdx];
+        const nzCost = at2?.carbon_shadow_price?.[lastIdx] || at1?.carbon_shadow_price?.[lastIdx] || 0;
+        const r1Final = r1?.emissions_mt?.[lastIdx] || 0;
+
+        card.innerHTML = `
+            <div class="iso-card-name">${iso}<span class="iso-card-region">${ISO_NAMES[iso]}</span></div>
+            <div class="iso-card-stats">
+                <div class="iso-mini-stat">
+                    <div class="iso-mini-val">${fmt(baseline, 0)}</div>
+                    <div class="iso-mini-lbl">2023 Mt CO\u2082</div>
+                </div>
+                <div class="iso-mini-stat">
+                    <div class="iso-mini-val" style="color:${ISO_HEX[iso]}">${marketClean != null ? fmtPct(marketClean) : '\u2014'}</div>
+                    <div class="iso-mini-lbl">Market Clean</div>
+                </div>
+                <div class="iso-mini-stat">
+                    <div class="iso-mini-val">${fmt(r1Final, 0)}</div>
+                    <div class="iso-mini-lbl">2050 Ref Mt</div>
+                </div>
+                <div class="iso-mini-stat">
+                    <div class="iso-mini-val">${nzCost > 0 ? fmtDollar(nzCost) : '$0'}</div>
+                    <div class="iso-mini-lbl">NZ Carbon $/ton</div>
+                </div>
+            </div>
+            <div class="iso-card-spark"><canvas id="spark_${iso}"></canvas></div>
+        `;
+
+        card.addEventListener('click', () => {
+            document.querySelectorAll('.iso-card').forEach(c => c.classList.remove('active'));
+            card.classList.add('active');
+            // Also sync the sticky ISO selector
+            document.querySelectorAll('#globalIsoSelector .iso-btn').forEach(b => {
+                b.classList.toggle('active', b.textContent === iso);
+            });
+            globalIso = iso;
+            updateRegionalContent();
+            // Scroll to regional content
+            document.getElementById('scenarioLandscapeSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+
+        grid.appendChild(card);
+    });
+
+    // Draw sparklines
+    ISOS.forEach(iso => buildSparkline(iso));
+}
+
+function buildSparkline(iso) {
+    const canvas = document.getElementById('spark_' + iso);
+    if (!canvas) return;
+    if (sparkCharts[iso]) sparkCharts[iso].destroy();
+
+    const r1 = getScenarioData('R1', iso);
+    const at1 = getScenarioData('AT1', iso);
+    if (!r1 && !at1) return;
+
+    const years = (r1 || at1).years;
+    const datasets = [];
+
+    if (at1) {
+        datasets.push({
+            data: at1.emissions_mt,
+            borderColor: ISO_HEX[iso],
+            borderWidth: 1.5,
+            pointRadius: 0,
+            tension: 0.4,
+            fill: false,
+        });
+    }
+    if (r1) {
+        datasets.push({
+            data: r1.emissions_mt,
+            borderColor: hexToRgba(ISO_HEX[iso], 0.3),
+            borderWidth: 1,
+            borderDash: [3, 2],
+            pointRadius: 0,
+            tension: 0.4,
+            fill: false,
+        });
+    }
+
+    sparkCharts[iso] = new Chart(canvas.getContext('2d'), {
+        type: 'line',
+        data: { labels: years, datasets },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            animation: false,
+            plugins: { legend: { display: false }, tooltip: { enabled: false }, datalabels: { display: false } },
+            scales: {
+                x: { display: false },
+                y: { display: false, beginAtZero: true }
+            },
+            layout: { padding: 0 },
+            elements: { line: { borderCapStyle: 'round' } }
+        }
+    });
+}
+
+// ─── ISO SELECTOR (sticky bar) ─────────────────────────────────
+function initIsoSelector() {
+    const c = document.getElementById('globalIsoSelector');
+    ISOS.forEach(iso => {
+        const btn = document.createElement('button');
+        btn.className = 'iso-btn' + (iso === globalIso ? ' active' : '');
+        btn.textContent = iso;
+        btn.addEventListener('click', () => {
+            c.querySelectorAll('.iso-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            // Sync hero cards
+            document.querySelectorAll('.iso-card').forEach(card => {
+                card.classList.toggle('active', card.querySelector('.iso-card-name')?.textContent?.startsWith(iso));
+            });
+            globalIso = iso;
+            updateRegionalContent();
+        });
+        c.appendChild(btn);
+    });
+}
+
+function initScenarioTabs() {
+    document.querySelectorAll('.scenario-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.scenario-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            globalGroup = tab.dataset.group;
+            updateRegionalContent();
+        });
+    });
+}
+
+// ─── ALL SCENARIOS OVERVIEW ────────────────────────────────────
 const ALL_SCENARIOS = [
     { key: 'AT1', isFac: true,  isFullDecarb: true  },
     { key: 'AT2', isFac: false, isFullDecarb: true  },
@@ -308,11 +494,10 @@ const ALL_SCENARIOS = [
     { key: 'R2',  isFac: false, isFullDecarb: false },
 ];
 
-// ─── ISO SUMMARY ───────────────────────────────────────────────
 function buildIsoSummary() {
     if (charts.allScenarios) charts.allScenarios.destroy();
     const iso = globalIso;
-    document.getElementById('isoSummaryName').textContent = ISO_NAMES[iso];
+    document.getElementById('isoSummaryName').textContent = ISO_FULL[iso];
 
     const callout = document.getElementById('isoSummaryCallout');
     const scenarioResults = [];
@@ -328,7 +513,6 @@ function buildIsoSummary() {
         return;
     }
 
-    // Compute summary stats
     const baseline = scenarioResults[0].data.emissions_mt[0];
     const lastIdx = scenarioResults[0].data.years.length - 1;
     const emissions2050 = scenarioResults.map(s => s.data.emissions_mt[lastIdx]);
@@ -338,7 +522,6 @@ function buildIsoSummary() {
     const minClean = Math.min(...cleanPcts);
     const maxClean = Math.max(...cleanPcts);
 
-    // Find common ground
     const e2030 = scenarioResults.map(s => s.data.emissions_mt[1]);
     const minE2030 = Math.min(...e2030);
     const maxE2030 = Math.max(...e2030);
@@ -346,26 +529,21 @@ function buildIsoSummary() {
     const baselineReduction2030Max = ((baseline - minE2030) / baseline * 100).toFixed(0);
 
     callout.className = 'narrative-box';
-    callout.innerHTML = `<strong>Uncertainty bounds for ${ISO_NAMES[iso]}:</strong> All scenarios start at ${fmt(baseline, 0)} Mt CO\u2082 in 2023. ` +
+    callout.innerHTML = `<strong>${ISO_FULL[iso]}:</strong> All scenarios start at ${fmt(baseline, 0)} Mt CO\u2082 in 2023. ` +
         `By 2030, emissions fall ${baselineReduction2030Min}\u2013${baselineReduction2030Max}% across all pathways. ` +
-        `<strong>Where they diverge:</strong> 2050 emissions range from ${fmt(minE, 1)} Mt (net-zero pathways, facilitating) to ${fmt(maxE, 1)} Mt (reference, challenging). ` +
-        `Grid clean share spans ${fmtPct(minClean)}\u2013${fmtPct(maxClean)}. ` +
-        `Net-zero pathways all converge below 1 Mt by 2050; reference pathways plateau at 10\u201315 Mt regardless of conditions.`;
+        `<strong>The divergence:</strong> 2050 emissions range from ${fmt(minE, 1)} Mt to ${fmt(maxE, 1)} Mt. ` +
+        `Grid clean share spans ${fmtPct(minClean)}\u2013${fmtPct(maxClean)}.`;
 
-    // Build all-scenarios chart
     const years = scenarioResults[0].data.years;
     const datasets = [];
 
     scenarioResults.forEach(s => {
         const meta = DATA.scenario_meta[s.key];
         const color = meta?.color || '#888';
-        const lineAlpha = s.isFac ? 1.0 : 0.3;
         const lineColor = s.isFac ? color : hexToRgba(color, 0.35);
         const borderW = s.isFac ? 2.5 : 2;
-        // Full decarb = circle, limited decarb = diamond (rectRot)
         const ptStyle = s.isFullDecarb ? 'circle' : 'rectRot';
         const ptBg = s.isFac ? color : 'transparent';
-        const ptBorder = color;
         const ptRadius = s.isFullDecarb ? 4 : 5;
 
         datasets.push({
@@ -377,7 +555,7 @@ function buildIsoSummary() {
             pointStyle: ptStyle,
             pointRadius: ptRadius,
             pointBackgroundColor: ptBg,
-            pointBorderColor: ptBorder,
+            pointBorderColor: color,
             pointBorderWidth: s.isFac ? 0 : 2,
             tension: 0.3,
             fill: false,
@@ -395,11 +573,7 @@ function buildIsoSummary() {
             plugins: {
                 legend: {
                     display: true, position: 'bottom',
-                    labels: {
-                        usePointStyle: true,
-                        font: { size: 11, family: 'DM Sans' },
-                        padding: 12,
-                    }
+                    labels: { usePointStyle: true, font: { size: 11, family: 'DM Sans' }, padding: 12 }
                 },
                 tooltip: {
                     backgroundColor: 'rgba(26,39,68,0.95)',
@@ -457,7 +631,7 @@ function buildHeroStats() {
         const facClean = fac ? fac.clean_pct[lastIdx] : null;
         const chalClean = chal ? chal.clean_pct[lastIdx] : null;
         introBox.className = 'narrative-box warn';
-        introBox.innerHTML = `<strong>${ISO_NAMES[iso]}</strong> — Without emission constraints, the market deploys clean energy where profitable and stops. Under facilitating conditions, the grid reaches ${fmtPct(facClean)} clean by 2050. Under challenging conditions, only ${fmtPct(chalClean)} clean. Neither pathway comes close to net-zero.`;
+        introBox.innerHTML = `<strong>${ISO_FULL[iso]}</strong> \u2014 Without emission constraints, the market deploys clean energy where profitable and stops. Under facilitating conditions, the grid reaches ${fmtPct(facClean)} clean by 2050. Under challenging conditions, only ${fmtPct(chalClean)}. Neither pathway comes close to net-zero.`;
         stats.innerHTML = `
             <div class="hero-stat"><div class="stat-val">${fmt(baseline, 0)}</div><div class="stat-label">2023 Baseline (Mt)</div></div>
             <div class="hero-stat"><div class="stat-val" style="color:${FAC_COLOR}">${fmt(facFinal, 0)}</div><div class="stat-label">2050 Facilitating (Mt)</div><div class="stat-sub">${fmtPct(facClean)} clean</div></div>
@@ -468,21 +642,19 @@ function buildHeroStats() {
         const chalDac = chal ? chal.dac_offset_mt?.[lastIdx] || 0 : 0;
         const facClean = fac ? fac.clean_pct[lastIdx] : null;
         const chalClean = chal ? chal.clean_pct[lastIdx] : null;
-        const facSubsidy = fac ? fac.mandated_subsidy_mwh?.[lastIdx] || 0 : 0;
-        const chalSubsidy = chal ? chal.mandated_subsidy_mwh?.[lastIdx] || 0 : 0;
         const facShadow = fac ? fac.carbon_shadow_price?.[lastIdx] || 0 : 0;
         const chalShadow = chal ? chal.carbon_shadow_price?.[lastIdx] || 0 : 0;
 
         introBox.className = 'narrative-box success';
-        introBox.innerHTML = `<strong>${ISO_NAMES[iso]}</strong> — Both facilitating and challenging conditions reach net-zero by 2050, but the path differs dramatically. ` +
+        introBox.innerHTML = `<strong>${ISO_FULL[iso]}</strong> \u2014 Both facilitating and challenging conditions reach net-zero by 2050, but the path differs dramatically. ` +
             (facDac > 0 ? `Under facilitating conditions, the grid reaches ${fmtPct(facClean)} clean and DAC offsets the remaining ${fmt(facDac)} Mt at ${fmtDollar(fac?.dac_cost_per_ton?.[lastIdx])}/ton. ` : `Under facilitating conditions, the grid reaches ${fmtPct(facClean)} clean. `) +
-            (chalClean >= 99 ? `Under challenging conditions, the grid is forced to ${fmtPct(chalClean)} clean without DAC — requiring ${fmtDollar(chalShadow)}/ton carbon shadow price.` : `Under challenging conditions, the grid reaches ${fmtPct(chalClean)} clean with significant policy intervention.`);
+            (chalClean >= 99 ? `Under challenging conditions, the grid is forced to ${fmtPct(chalClean)} clean without DAC \u2014 requiring ${fmtDollar(chalShadow)}/ton carbon shadow price.` : `Under challenging conditions, the grid reaches ${fmtPct(chalClean)} clean with significant policy intervention.`);
 
         stats.innerHTML = `
             <div class="hero-stat"><div class="stat-val">${fmt(baseline, 0)}</div><div class="stat-label">2023 Baseline (Mt)</div></div>
             <div class="hero-stat"><div class="stat-val" style="color:${FAC_COLOR}">${fmtPct(facClean)}</div><div class="stat-label">Fac. Grid Clean</div><div class="stat-sub">${facDac > 0 ? fmt(facDac,0) + ' Mt DAC' : 'No DAC needed'}</div></div>
             <div class="hero-stat"><div class="stat-val" style="color:${CHAL_COLOR}">${fmtPct(chalClean)}</div><div class="stat-label">Chal. Grid Clean</div><div class="stat-sub">${chalDac > 0 ? fmt(chalDac,0) + ' Mt DAC' : 'Grid only'}</div></div>
-            <div class="hero-stat"><div class="stat-val">${fmtDollar(Math.max(facShadow, chalShadow))}</div><div class="stat-label">Peak Carbon Price ($/ton)</div><div class="stat-sub">Implied policy cost</div></div>
+            <div class="hero-stat"><div class="stat-val">${fmtDollar(Math.max(facShadow, chalShadow))}</div><div class="stat-label">Peak Carbon Price</div><div class="stat-sub">$/ton implied policy cost</div></div>
         `;
     }
 }
@@ -534,7 +706,6 @@ function buildTrajChart() {
             fill: false,
             order: 1,
         });
-        // Gross emissions (if DAC is used, show the physical emissions as dashed)
         if (fac.gross_emissions_mt && fac.dac_offset_mt?.some(v => v > 0)) {
             datasets.push({
                 label: 'Facilitating (gross, before DAC)',
@@ -583,9 +754,6 @@ function buildTrajChart() {
         }
     }
 
-    // Compute baseline for % reduction labels
-    const baseline2023 = (fac || chal).emissions_mt[0];
-
     const ctx = document.getElementById('trajChart').getContext('2d');
     charts.traj = new Chart(ctx, {
         type: 'line',
@@ -614,10 +782,9 @@ function buildTrajChart() {
                 },
                 datalabels: {
                     display: function(ctx) {
-                        // Only show on net emission lines (not gross/dashed, not ceiling)
                         const lbl = ctx.dataset.label || '';
                         if (lbl.includes('gross') || lbl.includes('Ceiling')) return false;
-                        return ctx.dataIndex > 0; // skip 2023 baseline
+                        return ctx.dataIndex > 0;
                     },
                     formatter: function(value, ctx) {
                         const b = ctx.dataset.data[0];
@@ -648,7 +815,7 @@ function buildTrajChart() {
     });
 }
 
-// ─── RESOURCE MIX CHARTS (WYN FORMAT) ──────────────────────────
+// ─── RESOURCE MIX CHARTS ────────────────────────────────────────
 const EXISTING_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar'];
 const NEW_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar', 'battery', 'ldes'];
 const CURTAIL_ORDER = ['solar', 'wind', 'offshore_wind', 'hydro', 'ccs_ccgt', 'clean_firm'];
@@ -658,7 +825,6 @@ const EXISTING_ALPHA = 0.75;
 const NEW_ALPHA = 0.40;
 const CURTAIL_ALPHA = 0.55;
 
-// Custom plugin to draw per-bar labels (CFE % + CO₂ reduction)
 const wynBarLabelPlugin = {
     id: 'wynBarLabels',
     afterDraw(chart) {
@@ -669,19 +835,17 @@ const wynBarLabelPlugin = {
         const xScale = chart.scales.x;
 
         chart._wynMetrics.forEach((m, i) => {
-            if (!m || i === 0) return; // skip baseline year
+            if (!m || i === 0) return;
             const x = xScale.getPixelForValue(i);
-            const yTop = 28; // fixed position near top
+            const yTop = 28;
 
             ctx.save();
             ctx.textAlign = 'center';
             ctx.font = '600 9px "Space Mono", monospace';
 
-            // CFE % label
             ctx.fillStyle = '#1A2744';
             ctx.fillText(m.cfePct.toFixed(0) + '% clean', x, yTop);
 
-            // Emissions reduction label
             ctx.fillStyle = m.co2Red >= 0 ? '#16A34A' : '#DC2626';
             ctx.fillText((m.co2Red >= 0 ? '-' : '+') + Math.abs(m.co2Red).toFixed(0) + '% CO\u2082', x, yTop + 12);
 
@@ -695,10 +859,7 @@ function buildMixChart(canvasId, scenarioName) {
     if (charts[key]) charts[key].destroy();
 
     const d = getScenarioData(scenarioName, globalIso);
-    if (!d) {
-        charts[key] = null;
-        return;
-    }
+    if (!d) { charts[key] = null; return; }
 
     const years = d.years;
     const mix = d.mix || {};
@@ -708,11 +869,9 @@ function buildMixChart(canvasId, scenarioName) {
     const emissionsMt = d.emissions_mt || [];
     const datasets = [];
 
-    // Baseline (2023) mix values
     const baseline2023 = {};
     MIX_ORDER.forEach(r => { baseline2023[r] = (mix[r]?.[0] || 0); });
 
-    // Pre-compute per-year data arrays
     const existingData = {}, newData = {}, curtailedData = {};
     MIX_ORDER.forEach(r => { existingData[r] = []; newData[r] = []; curtailedData[r] = []; });
     const gapData = [];
@@ -722,26 +881,22 @@ function buildMixChart(canvasId, scenarioName) {
         const demand = demandTwh[yi] || 0;
         const totalCurtail = curtailmentTwh[yi] || 0;
 
-        // Total generation and variable generation for curtailment distribution
         let totalGen = 0, variableGen = 0;
         MIX_ORDER.forEach(r => { totalGen += (mix[r]?.[yi] || 0); });
         VARIABLE_TYPES.forEach(r => { variableGen += (mix[r]?.[yi] || 0); });
 
-        // Distribute curtailment across variable resources proportionally
         const curtailShare = {};
         VARIABLE_TYPES.forEach(r => {
             const gen = mix[r]?.[yi] || 0;
             curtailShare[r] = variableGen > 0 ? (gen / variableGen) * totalCurtail : 0;
         });
 
-        // For each resource: compute existing, new, utilized, curtailed
         MIX_ORDER.forEach(r => {
             const genTwh = mix[r]?.[yi] || 0;
             const curtailed = curtailShare[r] || 0;
             const utilized = Math.max(0, genTwh - curtailed);
 
             if (STORAGE_TYPES.includes(r)) {
-                // Storage is always "new"
                 existingData[r].push(0);
                 newData[r].push(Math.round(utilized * 10) / 10);
             } else {
@@ -754,11 +909,9 @@ function buildMixChart(canvasId, scenarioName) {
             curtailedData[r].push(Math.round(curtailed * 10) / 10);
         });
 
-        // Gap = demand - utilized total
         const utilizedTotal = totalGen - totalCurtail;
         gapData.push(Math.round(Math.max(0, demand - utilizedTotal) * 10) / 10);
 
-        // Per-bar metrics
         const baselineE = emissionsMt[0] || 1;
         wynMetrics.push({
             cfePct: cleanPct[yi] || 0,
@@ -766,89 +919,61 @@ function buildMixChart(canvasId, scenarioName) {
         });
     }
 
-    // Build datasets: existing utilized (saturated)
+    // Existing utilized
     for (const r of EXISTING_ORDER) {
         const hex = MIX_COLORS[r];
-        if (!hex) continue;
-        const hasData = existingData[r].some(v => v > 0);
-        if (!hasData) continue;
+        if (!hex || !existingData[r].some(v => v > 0)) continue;
         datasets.push({
             label: MIX_LABELS[r] + ' (existing)',
             data: existingData[r],
             backgroundColor: hexToRgba(hex, EXISTING_ALPHA),
-            borderColor: hex,
-            borderWidth: 1.5,
-            borderRadius: 4,
-            stack: 'mix',
-            _resourceKey: r, _isExisting: true, _isCurtailed: false,
+            borderColor: hex, borderWidth: 1.5, borderRadius: 4,
+            stack: 'mix', _resourceKey: r, _isExisting: true, _isCurtailed: false,
         });
     }
 
-    // New utilized (transparent)
+    // New build
     for (const r of NEW_ORDER) {
         const hex = MIX_COLORS[r];
-        if (!hex) continue;
-        const hasData = newData[r].some(v => v > 0);
-        if (!hasData) continue;
+        if (!hex || !newData[r].some(v => v > 0)) continue;
         datasets.push({
             label: MIX_LABELS[r] + ' (new)',
             data: newData[r],
             backgroundColor: hexToRgba(hex, NEW_ALPHA),
-            borderColor: hex,
-            borderWidth: 1,
-            borderRadius: 4,
-            borderSkipped: 'start',
-            stack: 'mix',
-            _resourceKey: r, _isExisting: false, _isCurtailed: false,
+            borderColor: hex, borderWidth: 1, borderRadius: 4, borderSkipped: 'start',
+            stack: 'mix', _resourceKey: r, _isExisting: false, _isCurtailed: false,
         });
     }
 
-    // Gap spacer (transparent)
+    // Gap
     datasets.push({
-        label: '_gap',
-        data: gapData,
-        backgroundColor: 'transparent',
-        borderColor: 'transparent',
-        borderWidth: 0,
-        stack: 'mix',
-        _isGap: true,
+        label: '_gap', data: gapData,
+        backgroundColor: 'transparent', borderColor: 'transparent', borderWidth: 0,
+        stack: 'mix', _isGap: true,
     });
 
-    // Curtailed (diagonal hashing, above demand)
+    // Curtailed
     for (const r of CURTAIL_ORDER) {
         const hex = MIX_COLORS[r];
-        if (!hex) continue;
-        const hasData = curtailedData[r].some(v => v > 0);
-        if (!hasData) continue;
+        if (!hex || !curtailedData[r].some(v => v > 0)) continue;
         datasets.push({
             label: MIX_LABELS[r] + ' (curtailed)',
             data: curtailedData[r],
             backgroundColor: createDiagonalPattern(hex, CURTAIL_ALPHA),
-            borderColor: hex,
-            borderWidth: 1,
-            borderRadius: 2,
-            stack: 'mix',
-            _resourceKey: r, _isCurtailed: true,
+            borderColor: hex, borderWidth: 1, borderRadius: 2,
+            stack: 'mix', _resourceKey: r, _isCurtailed: true,
         });
     }
 
     // Demand line
     datasets.push({
-        label: 'Demand',
-        type: 'line',
+        label: 'Demand', type: 'line',
         data: demandTwh.map(v => Math.round(v * 10) / 10),
-        borderColor: 'rgba(220, 38, 38, 0.55)',
-        borderWidth: 2,
-        borderDash: [6, 4],
-        stepped: 'middle',
-        pointRadius: 0,
-        fill: false,
-        stack: false,
-        order: -1,
+        borderColor: 'rgba(220, 38, 38, 0.55)', borderWidth: 2, borderDash: [6, 4],
+        stepped: 'middle', pointRadius: 0, fill: false, stack: false, order: -1,
         _isDemandLine: true,
     });
 
-    // Compute y-axis max
     const barTotals = years.map((_, i) => {
         let total = 0;
         MIX_ORDER.forEach(r => { total += (existingData[r][i] || 0) + (newData[r][i] || 0) + (curtailedData[r][i] || 0); });
@@ -875,15 +1000,13 @@ function buildMixChart(canvasId, scenarioName) {
                         usePointStyle: true, pointStyle: 'rectRounded',
                         font: { size: 10, family: 'DM Sans' }, padding: 8,
                         generateLabels: function(chart) {
-                            const items = MIX_ORDER.filter(r => {
-                                return chart.data.datasets.some(ds =>
-                                    ds._resourceKey === r && ds.data && ds.data.some(v => v > 0));
-                            }).map(r => ({
+                            const items = MIX_ORDER.filter(r =>
+                                chart.data.datasets.some(ds => ds._resourceKey === r && ds.data?.some(v => v > 0))
+                            ).map(r => ({
                                 text: MIX_LABELS[r],
                                 fillStyle: hexToRgba(MIX_COLORS[r], 0.7),
                                 strokeStyle: MIX_COLORS[r],
-                                lineWidth: 2,
-                                pointStyle: 'rectRounded',
+                                lineWidth: 2, pointStyle: 'rectRounded',
                             }));
                             items.push({ text: 'Existing', fillStyle: 'rgba(100,100,100,0.7)', strokeStyle: '#666', lineWidth: 2, pointStyle: 'rectRounded' });
                             items.push({ text: 'New Build', fillStyle: 'rgba(100,100,100,0.3)', strokeStyle: '#999', lineWidth: 2, pointStyle: 'rectRounded' });
@@ -909,7 +1032,7 @@ function buildMixChart(canvasId, scenarioName) {
                             const yr = items[0].chart.data.labels[idx];
                             const m = items[0].chart._wynMetrics?.[idx];
                             let title = String(yr);
-                            if (m) title += ` — ${m.cfePct.toFixed(0)}% clean, ${m.co2Red >= 0 ? '-' : '+'}${Math.abs(m.co2Red).toFixed(0)}% CO\u2082`;
+                            if (m) title += ` \u2014 ${m.cfePct.toFixed(0)}% clean, ${m.co2Red >= 0 ? '-' : '+'}${Math.abs(m.co2Red).toFixed(0)}% CO\u2082`;
                             return title;
                         },
                         label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)} TWh`
@@ -924,7 +1047,6 @@ function buildMixChart(canvasId, scenarioName) {
         }
     });
 
-    // Attach metrics for the custom plugin
     charts[key]._wynMetrics = wynMetrics;
 }
 
@@ -943,35 +1065,25 @@ function buildCarbonPriceChart() {
         datasets.push({
             label: 'Fac. Carbon Shadow Price',
             data: fac.carbon_shadow_price,
-            borderColor: FAC_COLOR,
-            backgroundColor: FAC_COLOR + '20',
-            borderWidth: 2,
-            pointRadius: 3,
-            tension: 0.3,
+            borderColor: FAC_COLOR, backgroundColor: FAC_COLOR + '20',
+            borderWidth: 2, pointRadius: 3, tension: 0.3,
         });
     }
     if (chal?.carbon_shadow_price) {
         datasets.push({
             label: 'Chal. Carbon Shadow Price',
             data: chal.carbon_shadow_price,
-            borderColor: CHAL_COLOR,
-            backgroundColor: CHAL_COLOR + '20',
-            borderWidth: 2,
-            pointRadius: 3,
-            tension: 0.3,
+            borderColor: CHAL_COLOR, backgroundColor: CHAL_COLOR + '20',
+            borderWidth: 2, pointRadius: 3, tension: 0.3,
         });
     }
     if (fac?.dac_cost_per_ton) {
         datasets.push({
             label: 'DAC Cost',
             data: fac.dac_cost_per_ton,
-            borderColor: '#10B981',
-            borderWidth: 2,
-            borderDash: [6, 3],
-            backgroundColor: 'transparent',
-            fill: false,
-            pointRadius: 2,
-            tension: 0.3,
+            borderColor: '#10B981', borderWidth: 2, borderDash: [6, 3],
+            backgroundColor: 'transparent', fill: false,
+            pointRadius: 2, tension: 0.3,
         });
     }
 
@@ -1007,8 +1119,7 @@ function buildCostChart() {
         datasets.push({
             label: 'Fac. Subsidy',
             data: fac.mandated_subsidy_mwh,
-            borderColor: FAC_COLOR,
-            backgroundColor: FAC_COLOR + '20',
+            borderColor: FAC_COLOR, backgroundColor: FAC_COLOR + '20',
             borderWidth: 2, pointRadius: 3, tension: 0.3, fill: true,
         });
     }
@@ -1016,8 +1127,7 @@ function buildCostChart() {
         datasets.push({
             label: 'Chal. Subsidy',
             data: chal.mandated_subsidy_mwh,
-            borderColor: CHAL_COLOR,
-            backgroundColor: CHAL_COLOR + '20',
+            borderColor: CHAL_COLOR, backgroundColor: CHAL_COLOR + '20',
             borderWidth: 2, pointRadius: 3, tension: 0.3, fill: true,
         });
     }
@@ -1078,7 +1188,7 @@ function buildNarrative() {
     const chal = getScenarioData(group.chal, iso);
     const container = document.getElementById('deepDiveNarrative');
     const title = document.getElementById('deepDiveTitle');
-    title.textContent = `What's Happening on the ${ISO_NAMES[iso]} Grid`;
+    title.textContent = `What's Happening on the ${ISO_FULL[iso]} Grid`;
 
     if (!fac && !chal) {
         container.innerHTML = '<div class="narrative-box">No scenario data available for this region.</div>';
@@ -1089,7 +1199,6 @@ function buildNarrative() {
     let html = '';
 
     if (isRef) {
-        const facStopPct = fac ? fac.clean_pct.find((v, i) => i > 0 && v === fac.clean_pct[Math.min(i+1, fac.clean_pct.length-1)]) || fac.clean_pct[fac.clean_pct.length-1] : null;
         html += `<div class="narrative-box warn">
             <strong>Market-Only Outcome:</strong> Without policy constraints, deployment stalls once clean energy is no longer profitable.
             Under facilitating conditions (low costs, fast learning), the market builds to ${fmtPct(fac?.clean_pct?.[fac.clean_pct.length-1])} clean.
@@ -1106,7 +1215,6 @@ function buildNarrative() {
             </div>`;
         }
     } else {
-        // NZ scenario narrative
         const facLast = fac ? fac.years.length - 1 : 0;
         const chalLast = chal ? chal.years.length - 1 : 0;
         const facDac2050 = fac?.dac_offset_mt?.[facLast] || 0;
@@ -1118,33 +1226,28 @@ function buildNarrative() {
             <strong>Both paths reach net-zero by 2050</strong>, but the cost and grid architecture differ dramatically.
         </div>`;
 
-        // Facilitating narrative
         if (fac) {
             html += `<div class="narrative-box">
                 <strong>Facilitating Conditions:</strong> The grid builds to ${fmtPct(facClean)} clean.
                 ${facDac2050 > 0
-                    ? `At that point, the marginal cost of additional grid decarbonization exceeds DAC cost, so the remaining ${fmt(facDac2050)} Mt is offset by direct air capture at ${fmtDollar(fac.dac_cost_per_ton?.[facLast])}/ton. This is the economically rational switchover — grid deployment handles the bulk, DAC handles the tail.`
+                    ? `At that point, the marginal cost of additional grid decarbonization exceeds DAC cost, so the remaining ${fmt(facDac2050)} Mt is offset by direct air capture at ${fmtDollar(fac.dac_cost_per_ton?.[facLast])}/ton. This is the economically rational switchover \u2014 grid deployment handles the bulk, DAC handles the tail.`
                     : `The grid achieves full decarbonization without needing DAC, reaching near-100% clean energy through aggressive but profitable deployment.`}
             </div>`;
         }
 
-        // Challenging narrative
         if (chal) {
             const chalShadow = chal.carbon_shadow_price?.[chalLast] || 0;
             html += `<div class="narrative-box danger">
                 <strong>Challenging Conditions:</strong> The grid is forced to ${fmtPct(chalClean)} clean
                 without DAC as a backstop. ${chalClean >= 99
-                    ? `This requires massive queue overshoot (building beyond interconnection capacity), resulting in an implied carbon shadow price of ${fmtDollar(chalShadow)}/ton — the policy cost needed to force this level of deployment. Renewable overbuild leads to significant curtailment, and backup gas capacity is needed for reliability during the transition.`
+                    ? `This requires massive queue overshoot (building beyond interconnection capacity), resulting in an implied carbon shadow price of ${fmtDollar(chalShadow)}/ton \u2014 the policy cost needed to force this level of deployment.`
                     : `Even with forced deployment and queue overshoot, reaching full decarbonization is extremely costly under these conditions.`}
             </div>`;
         }
 
-        // Year-by-year milestones
         if (fac && chal) {
             html += '<div class="narrative-box"><strong>Milestone Divergence:</strong><br>';
-            const milestones = [
-                [1, '2030'], [2, '2035'], [3, '2040'], [4, '2045'], [5, '2050']
-            ];
+            const milestones = [[1, '2030'], [2, '2035'], [3, '2040'], [4, '2045'], [5, '2050']];
             milestones.forEach(([i, yr]) => {
                 if (i >= fac.years.length || i >= chal.years.length) return;
                 const facE = fac.emissions_mt[i];
@@ -1160,8 +1263,8 @@ function buildNarrative() {
     container.innerHTML = html;
 }
 
-// ─── UPDATE ALL ─────────────────────────────────────────────────
-function updateAll() {
+// ─── UPDATE ALL REGIONAL CONTENT ────────────────────────────────
+function updateRegionalContent() {
     const group = GROUPS[globalGroup];
     buildIsoSummary();
     buildHeroStats();
@@ -1178,9 +1281,10 @@ function updateAll() {
 
 // ─── INIT ───────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+    buildIsoGrid();
     initIsoSelector();
     initScenarioTabs();
-    updateAll();
+    updateRegionalContent();
 });
 </script>
 </body>
