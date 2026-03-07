@@ -258,8 +258,7 @@
                 { label: 'Policy Context', href: 'policy_context.html' },
                 { label: 'About the Model', href: 'pipeline.html' },
                 { label: 'About', href: 'about.html' },
-                { label: 'Reference', href: 'reference.html' },
-                { label: 'Nuclear Retirement Risk', href: 'nuclear_retirement.html' }
+                { label: 'Reference', href: 'reference.html' }
             ]
         },
         {
