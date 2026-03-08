@@ -731,6 +731,100 @@ def main():
 
     save_results_json(results, 'strategy2_hourly.json')
 
+    # ── Dispatch-based 8760 hourly match scoring ──
+    # Post-processing: compute actual hourly match scores for Medium growth entries
+    print("\nComputing 8760 dispatch-based hourly match scores...")
+    try:
+        from dispatch_utils import (
+            load_common_data, get_demand_profile, get_supply_profiles,
+            reconstruct_hourly_dispatch, build_supply_matrix
+        )
+        common_data = load_common_data()
+        demand_data, gen_profiles = common_data[0], common_data[1]
+
+        # Map tranche source names → dispatch resource types
+        TRANCHE_TO_DISPATCH = {
+            'new_build_vre': 'solar',  # VRE split: treat as solar (conservative)
+            'new_build_firm': 'clean_firm',
+            'nuclear_uprate': 'clean_firm',
+            'existing_nuclear': 'clean_firm',
+            'existing_vre_hydro': 'solar',  # Mix of VRE/hydro
+            'new_build_solar': 'solar',
+            'new_build_wind': 'wind',
+            'new_build_uprate': 'clean_firm',
+        }
+
+        dispatch_count = 0
+        for variant in ['strategy2A', 'strategy2B', 'strategy2C']:
+            if variant not in results:
+                continue
+            for iso in isos:
+                growth_data = results[variant].get(iso, {}).get('Medium', {})
+                if not growth_data:
+                    continue
+
+                # Pre-build supply matrix for this ISO
+                demand_norm, total_mwh = get_demand_profile(iso, demand_data)
+                supply_profiles = get_supply_profiles(iso, gen_profiles)
+                supply_matrix = build_supply_matrix(supply_profiles)
+
+                for part_key, trajectory in growth_data.items():
+                    if not isinstance(trajectory, list):
+                        continue
+                    for entry in trajectory:
+                        rm = entry.get('resource_mix', {})
+                        if not rm:
+                            continue
+
+                        # Convert tranche TWh → resource_pcts (% of buyer demand)
+                        buyer_twh = entry.get('buyer_demand_twh', 0)
+                        if buyer_twh <= 0:
+                            continue
+
+                        resource_pcts = {}
+                        for source, info in rm.items():
+                            if not isinstance(info, dict):
+                                continue
+                            twh = info.get('twh', 0)
+                            if twh <= 0:
+                                continue
+                            # Skip free allocations (grid_mix, sss)
+                            cat = info.get('category', '')
+                            if cat in ('grid_mix', 'sss'):
+                                continue
+
+                            dispatch_type = TRANCHE_TO_DISPATCH.get(source, 'solar')
+                            pct = (twh / buyer_twh) * 100
+                            resource_pcts[dispatch_type] = resource_pcts.get(dispatch_type, 0) + pct
+
+                        if not resource_pcts:
+                            continue
+
+                        # Run dispatch (no storage for now — tranche model doesn't specify)
+                        try:
+                            result = reconstruct_hourly_dispatch(
+                                demand_norm, supply_profiles, resource_pcts,
+                                procurement_pct=100,
+                                battery_dispatch_pct=0,
+                                battery8_dispatch_pct=0,
+                                ldes_dispatch_pct=0,
+                                supply_matrix=supply_matrix,
+                            )
+                            matched = np.minimum(result['total_clean'], demand_norm[:8760])
+                            score = float(np.sum(matched) / np.sum(demand_norm[:8760]) * 100)
+                            entry.setdefault('metadata', {})['hourly_match_score'] = round(score, 2)
+                            dispatch_count += 1
+                        except Exception as e:
+                            pass  # Skip errors silently
+
+        print(f"  Computed {dispatch_count} dispatch scores")
+
+        # Re-save with dispatch scores
+        save_results_json(results, 'strategy2_hourly.json')
+    except Exception as e:
+        print(f"  WARNING: Dispatch scoring failed: {e}")
+        print("  (Continuing without dispatch scores)")
+
     # Summary
     print("\n" + "=" * 70)
     print("SUMMARY: Strategy 2 at 10% participation, Medium growth")

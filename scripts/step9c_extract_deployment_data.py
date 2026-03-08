@@ -346,6 +346,10 @@ def main():
                     if 'baseline_co2_mt' in meta:
                         record['bl'] = round(meta['baseline_co2_mt'], 3)
 
+                    # Dispatch-based hourly match score (if available)
+                    if 'hourly_match_score' in meta:
+                        record['hms'] = round(meta['hourly_match_score'], 1)
+
                     part_dict[thr_key] = record
                     total_entries += 1
 
