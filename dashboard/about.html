@@ -76,8 +76,245 @@ body {
 .site-footer a:hover { color: var(--navy); }
 .site-footer p { color: rgba(15,23,42,0.35); font-size: 0.78rem; margin: 0; }
 
+/* ========== THREE THESES SECTION ========== */
+.theses-section {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 48px 24px 16px;
+}
+.thesis-card {
+    position: relative;
+    overflow: hidden;
+    background: var(--bg-page-white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px 28px 28px;
+    margin-bottom: 20px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.thesis-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+.thesis-card-green { border-left: 5px solid var(--wind); }
+.thesis-card-red { border-left: 5px solid var(--storage); }
+.thesis-card-blue { border-left: 5px solid var(--hydro); }
+.thesis-num {
+    position: absolute;
+    top: -8px;
+    right: 16px;
+    font-family: var(--font-heading);
+    font-size: 4.5rem;
+    font-weight: 800;
+    opacity: 0.06;
+    line-height: 1;
+    color: var(--navy);
+    pointer-events: none;
+    user-select: none;
+}
+.thesis-text {
+    font-family: var(--font-heading);
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: var(--navy);
+    line-height: 1.65;
+    position: relative;
+    padding-bottom: 6px;
+}
+.thesis-text strong {
+    font-weight: 700;
+    color: var(--navy);
+}
+.thesis-card.visible .thesis-text::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 2px;
+    width: 100%;
+    background: linear-gradient(90deg, var(--hydro), var(--solar));
+    animation: underlineDraw 1.2s ease-out forwards;
+}
+@keyframes underlineDraw {
+    from { width: 0; }
+    to { width: 100%; }
+}
+.thesis-label {
+    font-family: var(--font-data);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 10px;
+    display: block;
+}
+.thesis-card-green .thesis-label { color: #15803D; }
+.thesis-card-red .thesis-label { color: #991B1B; }
+.thesis-card-blue .thesis-label { color: #0369A1; }
+
+/* ========== FEEDBACK LOOP DIAGRAMS ========== */
+.feedback-loops-wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+.loop-svg-container {
+    background: var(--bg-page-white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+}
+.loop-svg-container h4 {
+    font-family: var(--font-heading);
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+.loop-svg-container svg {
+    max-width: 100%;
+    height: auto;
+}
+.conditions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 24px;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.conditions-grid .callout-box ul {
+    margin: 8px 0 0 0;
+    padding-left: 18px;
+    font-size: 0.92rem;
+    color: var(--text-secondary);
+    line-height: 1.65;
+}
+
+/* ========== MIND MAP ENHANCEMENTS ========== */
+.mm-tooltip {
+    position: fixed;
+    max-width: 280px;
+    padding: 14px 18px;
+    background: var(--bg-page-white);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: var(--shadow-lg);
+    font-family: var(--font-body);
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.55;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 100;
+}
+.mm-tooltip.active { opacity: 1; }
+.mm-tooltip strong {
+    display: block;
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    color: var(--navy);
+    margin-bottom: 4px;
+}
+@keyframes concentricPulse {
+    0%, 100% { stroke-opacity: 0.05; }
+    50% { stroke-opacity: 0.10; }
+}
+.concentric-ring {
+    animation: concentricPulse 6s ease-in-out infinite;
+}
+
+/* ========== EXPLORE SECTION REDESIGN ========== */
+.explore-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 24px 40px;
+}
+.explore-card {
+    background: var(--bg-page-white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 24px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.explore-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+}
+.explore-card h4 {
+    font-family: var(--font-heading);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 8px;
+}
+.explore-card .explore-desc {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+    line-height: 1.55;
+}
+.explore-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.explore-card ul li {
+    margin-bottom: 8px;
+}
+.explore-card ul li a {
+    color: var(--hydro);
+    text-decoration: none;
+    font-size: 0.92rem;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+.explore-card ul li a:hover {
+    color: var(--navy);
+    text-decoration: underline;
+}
+.explore-card .explore-cta {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 10px 20px;
+    background: var(--navy);
+    color: #fff;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+.explore-card .explore-cta:hover {
+    background: var(--hydro);
+}
+.explore-card-accent-supply { border-top: 3px solid var(--wind); }
+.explore-card-accent-demand { border-top: 3px solid var(--solar); }
+.explore-card-accent-econ { border-top: 3px solid var(--hydro); }
+
+/* ========== REDUCED MOTION ========== */
+@media (prefers-reduced-motion: reduce) {
+    .thesis-card.visible .thesis-text::after { animation: none; width: 100%; }
+    .concentric-ring { animation: none; }
+    .mm-node, .thesis-card { transition: none; }
+}
+
+@media (max-width: 768px) {
+    .conditions-grid { grid-template-columns: 1fr; }
+    .explore-grid { grid-template-columns: 1fr; }
+    .thesis-num { font-size: 3.5rem; }
+    .thesis-text { font-size: 1.05rem; }
+}
 @media (max-width: 480px) {
     .story-section { padding: 36px 16px; }
+    .theses-section { padding: 32px 16px 8px; }
+    .thesis-card { padding: 24px 20px 20px; }
+    .thesis-text { font-size: 1rem; }
 }
 </style>
 <script src="js/chart-colors.js"></script>
@@ -94,15 +331,52 @@ body {
 <header class="header" id="pageHeader">
     <h1>The 8,760 Problem</h1>
     <div class="subtitle">
-        Procurement strategies must be grounded in grid physics, or they yield continued gas reliance
-        and perverse outcomes. Market design creates conflicting signals. Clean firm generation is
-        integral to an affordable transition. This project models why &mdash; and what to do about it.
+        Grid physics, cost uncertainty, and policy design shape what it actually takes to decarbonize
+        electricity &mdash; hour by hour, region by region. This project models why and what to do about it.
     </div>
     <div class="header-accent"></div>
 </header>
 
 <!-- ========== SCROLLYTELL CONTENT ========== -->
 <div class="content-wrap">
+
+<!-- THREE THESES -->
+<div class="theses-section">
+    <div class="thesis-card thesis-card-green story-section">
+        <span class="thesis-num">I</span>
+        <span class="thesis-label">Thesis One</span>
+        <div class="thesis-text">
+            <strong>Clean firm generation is the linchpin of affordable decarbonization.</strong>
+            Solar and wind get you to 70&ndash;80% clean. The last 20&ndash;30% &mdash; winter evenings,
+            multi-day low-wind periods, peak demand hours &mdash; requires dispatchable clean power:
+            nuclear, CCS, long-duration storage. Without it, the grid falls back to gas.
+        </div>
+    </div>
+    <div class="thesis-card thesis-card-red story-section">
+        <span class="thesis-num">II</span>
+        <span class="thesis-label">Thesis Two</span>
+        <div class="thesis-text">
+            <strong>Procurement strategies not grounded in grid physics yield continued gas reliance.</strong>
+            Annual REC matching hides hundreds of fossil-powered hours behind paper compliance. Hourly
+            matching exposes the gap &mdash; and creates demand for the firm clean resources that actually
+            displace gas. The accounting framework determines the outcome.
+        </div>
+    </div>
+    <div class="thesis-card thesis-card-blue story-section">
+        <span class="thesis-num">III</span>
+        <span class="thesis-label">Thesis Three</span>
+        <div class="thesis-text">
+            <strong>What you need depends on what you have and where you&rsquo;re going.</strong>
+            There is no universal clean energy portfolio. The optimal resource mix varies by region
+            (ERCOT&rsquo;s wind abundance vs. PJM&rsquo;s nuclear fleet), by cost assumptions (technology
+            learning curves shift the frontier), and by ambition level (90% vs. 99.9% hourly matching
+            requires fundamentally different strategies). Cost and resource mix are co-optimized &mdash;
+            that&rsquo;s the core scientific contribution of this project.
+        </div>
+    </div>
+</div>
+
+<hr class="section-divider">
 
 <!-- SECTION 1: THE BIG PICTURE -->
 <section class="story-section" id="sec-bigpicture">
@@ -256,127 +530,210 @@ body {
             <div class="mindmap-svg-wrap">
                 <svg id="mindmapSvg" viewBox="0 0 960 680" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Mind map showing how grid economics, corporate buyers, policy, accounting rules, and global goals interact to shape decarbonization outcomes">
                     <defs>
-                        <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
-                            <feGaussianBlur stdDeviation="3" result="blur"/>
+                        <!-- Enhanced glow for center node -->
+                        <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+                            <feGaussianBlur stdDeviation="6" result="blur"/>
+                            <feFlood flood-color="#0EA5E9" flood-opacity="0.15" result="color"/>
+                            <feComposite in="color" in2="blur" operator="in" result="colorBlur"/>
+                            <feComposite in="SourceGraphic" in2="colorBlur" operator="over"/>
+                        </filter>
+                        <!-- Subtle node hover glow -->
+                        <filter id="nodeGlow" x="-20%" y="-20%" width="140%" height="140%">
+                            <feGaussianBlur stdDeviation="4" result="blur"/>
                             <feComposite in="SourceGraphic" in2="blur" operator="over"/>
                         </filter>
+                        <!-- Radial gradients for nodes -->
+                        <radialGradient id="gradCenter" cx="50%" cy="40%" r="60%">
+                            <stop offset="0%" stop-color="#243B67"/>
+                            <stop offset="100%" stop-color="#1A2744"/>
+                        </radialGradient>
+                        <radialGradient id="gradGrid" cx="50%" cy="30%" r="70%">
+                            <stop offset="0%" stop-color="#FFFFFF"/>
+                            <stop offset="100%" stop-color="#EFF6FF"/>
+                        </radialGradient>
+                        <radialGradient id="gradGen" cx="50%" cy="30%" r="70%">
+                            <stop offset="0%" stop-color="#FFFFFF"/>
+                            <stop offset="100%" stop-color="#F0FDF4"/>
+                        </radialGradient>
+                        <radialGradient id="gradCorp" cx="50%" cy="30%" r="70%">
+                            <stop offset="0%" stop-color="#FFFFFF"/>
+                            <stop offset="100%" stop-color="#FFFBEB"/>
+                        </radialGradient>
+                        <radialGradient id="gradPolicy" cx="50%" cy="30%" r="70%">
+                            <stop offset="0%" stop-color="#FFFFFF"/>
+                            <stop offset="100%" stop-color="#F5F3FF"/>
+                        </radialGradient>
+                        <radialGradient id="gradAcct" cx="50%" cy="30%" r="70%">
+                            <stop offset="0%" stop-color="#FFFFFF"/>
+                            <stop offset="100%" stop-color="#FEF2F2"/>
+                        </radialGradient>
+                        <radialGradient id="gradGoals" cx="50%" cy="30%" r="70%">
+                            <stop offset="0%" stop-color="#FFFFFF"/>
+                            <stop offset="100%" stop-color="#F0FDFA"/>
+                        </radialGradient>
+                        <!-- Arrow markers -->
                         <marker id="arrowGreen" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-                            <path d="M0,0 L8,3 L0,6" fill="#22C55E" opacity="0.6"/>
+                            <path d="M0,0 L8,3 L0,6" fill="#22C55E" opacity="0.7"/>
                         </marker>
                         <marker id="arrowRed" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-                            <path d="M0,0 L8,3 L0,6" fill="#EF4444" opacity="0.6"/>
+                            <path d="M0,0 L8,3 L0,6" fill="#EF4444" opacity="0.7"/>
                         </marker>
                         <marker id="arrowBlue" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-                            <path d="M0,0 L8,3 L0,6" fill="#0EA5E9" opacity="0.6"/>
+                            <path d="M0,0 L8,3 L0,6" fill="#0EA5E9" opacity="0.7"/>
                         </marker>
                     </defs>
 
-                    <!-- LINKS (drawn first, behind nodes) -->
+                    <!-- CONCENTRIC RING BACKGROUND -->
+                    <circle cx="480" cy="340" r="180" fill="none" stroke="#94A3B8" stroke-width="1" stroke-dasharray="8,12" class="concentric-ring"/>
+                    <circle cx="480" cy="340" r="280" fill="none" stroke="#94A3B8" stroke-width="0.8" stroke-dasharray="4,16" class="concentric-ring" style="animation-delay: -3s;"/>
+
+                    <!-- LINKS — curved organic paths -->
                     <g class="mm-links">
-                        <!-- Center to ring nodes -->
-                        <line class="mm-link" x1="480" y1="340" x2="480" y2="120" stroke="#0EA5E9" stroke-width="2" stroke-opacity="0.35"/>
-                        <line class="mm-link" x1="480" y1="340" x2="200" y2="200" stroke="#22C55E" stroke-width="2" stroke-opacity="0.35"/>
-                        <line class="mm-link" x1="480" y1="340" x2="760" y2="200" stroke="#F59E0B" stroke-width="2" stroke-opacity="0.35"/>
-                        <line class="mm-link" x1="480" y1="340" x2="200" y2="480" stroke="#8B5CF6" stroke-width="2" stroke-opacity="0.35"/>
-                        <line class="mm-link" x1="480" y1="340" x2="760" y2="480" stroke="#EF4444" stroke-width="2" stroke-opacity="0.35"/>
-                        <line class="mm-link" x1="480" y1="340" x2="480" y2="580" stroke="#14B8A6" stroke-width="2" stroke-opacity="0.35"/>
+                        <!-- Center to ring: curved Bezier paths -->
+                        <path id="link-center-grid" d="M480,300 C480,240 480,180 480,155" stroke="#0EA5E9" stroke-width="2" stroke-opacity="0.3" fill="none" stroke-linecap="round"/>
+                        <path id="link-center-gen" d="M370,330 C310,300 250,260 200,235" stroke="#22C55E" stroke-width="2" stroke-opacity="0.3" fill="none" stroke-linecap="round"/>
+                        <path id="link-center-corp" d="M590,330 C650,300 710,260 760,235" stroke="#F59E0B" stroke-width="2" stroke-opacity="0.3" fill="none" stroke-linecap="round"/>
+                        <path id="link-center-policy" d="M370,360 C310,390 250,430 200,445" stroke="#8B5CF6" stroke-width="2" stroke-opacity="0.3" fill="none" stroke-linecap="round"/>
+                        <path id="link-center-acct" d="M590,360 C650,390 710,430 760,445" stroke="#EF4444" stroke-width="2" stroke-opacity="0.3" fill="none" stroke-linecap="round"/>
+                        <path id="link-center-goals" d="M480,380 C480,440 480,500 480,545" stroke="#14B8A6" stroke-width="2" stroke-opacity="0.3" fill="none" stroke-linecap="round"/>
 
-                        <!-- Inter-node catalytic links (green = positive) -->
-                        <path class="mm-link" d="M280,200 Q340,140 400,120" stroke="#22C55E" stroke-width="1.5" stroke-opacity="0.4" fill="none" stroke-dasharray="6,4" marker-end="url(#arrowGreen)"/>
-                        <path class="mm-link" d="M560,120 Q620,140 680,200" stroke="#22C55E" stroke-width="1.5" stroke-opacity="0.4" fill="none" stroke-dasharray="6,4" marker-end="url(#arrowGreen)"/>
-                        <path class="mm-link" d="M280,480 Q340,540 400,580" stroke="#22C55E" stroke-width="1.5" stroke-opacity="0.4" fill="none" stroke-dasharray="6,4" marker-end="url(#arrowGreen)"/>
+                        <!-- Inter-node catalytic links (green dashed) -->
+                        <path id="link-gen-grid" d="M290,185 C340,150 390,130 385,125" stroke="#22C55E" stroke-width="1.8" stroke-opacity="0.45" fill="none" stroke-dasharray="6,4" marker-end="url(#arrowGreen)"/>
+                        <path id="link-grid-corp" d="M575,125 C620,140 660,165 665,180" stroke="#22C55E" stroke-width="1.8" stroke-opacity="0.45" fill="none" stroke-dasharray="6,4" marker-end="url(#arrowGreen)"/>
+                        <path id="link-policy-goals" d="M290,495 C340,530 390,555 385,560" stroke="#22C55E" stroke-width="1.8" stroke-opacity="0.45" fill="none" stroke-dasharray="6,4" marker-end="url(#arrowGreen)"/>
 
-                        <!-- Perverse incentive links (red = negative/misaligned) -->
-                        <path class="mm-link" d="M680,200 Q780,340 680,480" stroke="#EF4444" stroke-width="1.5" stroke-opacity="0.4" fill="none" stroke-dasharray="4,6" marker-end="url(#arrowRed)"/>
-                        <path class="mm-link" d="M280,480 Q180,340 280,200" stroke="#EF4444" stroke-width="1.5" stroke-opacity="0.4" fill="none" stroke-dasharray="4,6" marker-end="url(#arrowRed)"/>
+                        <!-- Perverse incentive links (red dashed) -->
+                        <path id="link-corp-acct" d="M850,235 C870,340 860,430 850,445" stroke="#EF4444" stroke-width="1.8" stroke-opacity="0.45" fill="none" stroke-dasharray="4,6" marker-end="url(#arrowRed)"/>
+                        <path id="link-policy-gen" d="M110,445 C90,340 100,250 110,235" stroke="#EF4444" stroke-width="1.8" stroke-opacity="0.45" fill="none" stroke-dasharray="4,6" marker-end="url(#arrowRed)"/>
 
-                        <!-- Feedback loops (blue) -->
-                        <path class="mm-link" d="M560,580 Q680,560 680,480" stroke="#0EA5E9" stroke-width="1.5" stroke-opacity="0.3" fill="none" stroke-dasharray="3,5" marker-end="url(#arrowBlue)"/>
-                        <path class="mm-link" d="M280,200 Q180,120 400,120" stroke="#0EA5E9" stroke-width="1.5" stroke-opacity="0.3" fill="none" stroke-dasharray="3,5" marker-end="url(#arrowBlue)"/>
+                        <!-- Feedback loops (blue dashed) -->
+                        <path id="link-goals-acct" d="M575,570 C650,560 720,520 750,510" stroke="#0EA5E9" stroke-width="1.8" stroke-opacity="0.35" fill="none" stroke-dasharray="3,5" marker-end="url(#arrowBlue)"/>
+                        <path id="link-gen-econ" d="M120,185 C90,150 150,110 385,115" stroke="#0EA5E9" stroke-width="1.8" stroke-opacity="0.35" fill="none" stroke-dasharray="3,5" marker-end="url(#arrowBlue)"/>
                     </g>
 
-                    <!-- CENTER NODE: Affordable Decarbonization -->
-                    <g class="mm-node mm-center-node" filter="url(#glow)">
-                        <rect x="370" y="300" width="220" height="80" rx="40" fill="#1A2744" stroke="#0EA5E9" stroke-width="2"/>
-                        <text x="480" y="332" text-anchor="middle" fill="#ffffff" font-family="'Space Grotesk','Barlow Semi Condensed',sans-serif" font-size="13" font-weight="700">Affordable &amp;</text>
-                        <text x="480" y="352" text-anchor="middle" fill="#ffffff" font-family="'Space Grotesk','Barlow Semi Condensed',sans-serif" font-size="13" font-weight="700">Feasible Decarbonization</text>
+                    <!-- ANIMATED PARTICLES along paths -->
+                    <g class="mm-particles">
+                        <!-- Green particles on catalytic links -->
+                        <circle r="3.5" fill="#22C55E" opacity="0.8">
+                            <animateMotion dur="3.5s" repeatCount="indefinite"><mpath href="#link-gen-grid"/></animateMotion>
+                        </circle>
+                        <circle r="3" fill="#22C55E" opacity="0.65">
+                            <animateMotion dur="4s" repeatCount="indefinite" begin="1.5s"><mpath href="#link-grid-corp"/></animateMotion>
+                        </circle>
+                        <circle r="3" fill="#22C55E" opacity="0.65">
+                            <animateMotion dur="4.5s" repeatCount="indefinite" begin="0.8s"><mpath href="#link-policy-goals"/></animateMotion>
+                        </circle>
+                        <!-- Red particles on perverse links -->
+                        <circle r="3" fill="#EF4444" opacity="0.75">
+                            <animateMotion dur="5s" repeatCount="indefinite"><mpath href="#link-corp-acct"/></animateMotion>
+                        </circle>
+                        <circle r="3" fill="#EF4444" opacity="0.7">
+                            <animateMotion dur="5s" repeatCount="indefinite" begin="2s"><mpath href="#link-policy-gen"/></animateMotion>
+                        </circle>
+                        <!-- Blue particles on feedback loops -->
+                        <circle r="3" fill="#0EA5E9" opacity="0.7">
+                            <animateMotion dur="4s" repeatCount="indefinite"><mpath href="#link-goals-acct"/></animateMotion>
+                        </circle>
+                        <circle r="3" fill="#0EA5E9" opacity="0.65">
+                            <animateMotion dur="5s" repeatCount="indefinite" begin="1s"><mpath href="#link-gen-econ"/></animateMotion>
+                        </circle>
+                        <!-- Particles along center spokes -->
+                        <circle r="2.5" fill="#0EA5E9" opacity="0.5">
+                            <animateMotion dur="3s" repeatCount="indefinite"><mpath href="#link-center-grid"/></animateMotion>
+                        </circle>
+                        <circle r="2.5" fill="#22C55E" opacity="0.5">
+                            <animateMotion dur="3.5s" repeatCount="indefinite" begin="0.5s"><mpath href="#link-center-gen"/></animateMotion>
+                        </circle>
+                        <circle r="2.5" fill="#F59E0B" opacity="0.5">
+                            <animateMotion dur="3.2s" repeatCount="indefinite" begin="1s"><mpath href="#link-center-corp"/></animateMotion>
+                        </circle>
                     </g>
 
-                    <!-- NODE 1: Grid Economics (top center) -->
+                    <!-- CENTER NODE -->
+                    <g class="mm-node mm-center-node" data-mm="center" filter="url(#glow)">
+                        <rect x="365" y="295" width="230" height="90" rx="45" fill="url(#gradCenter)" stroke="#0EA5E9" stroke-width="2.5"/>
+                        <rect x="370" y="300" width="220" height="80" rx="40" fill="none" stroke="#fff" stroke-width="0.5" stroke-opacity="0.08"/>
+                        <text x="480" y="332" text-anchor="middle" fill="#ffffff" font-family="'Space Grotesk',sans-serif" font-size="14" font-weight="800">Affordable &amp;</text>
+                        <text x="480" y="354" text-anchor="middle" fill="#ffffff" font-family="'Space Grotesk',sans-serif" font-size="14" font-weight="800">Feasible Decarbonization</text>
+                    </g>
+
+                    <!-- NODE 1: Grid Economics -->
+                    <g class="mm-node" data-mm="grid">
+                        <rect x="378" y="83" width="204" height="74" rx="24" fill="url(#gradGrid)" stroke="#0EA5E9" stroke-width="1.8"/>
+                        <rect x="382" y="87" width="196" height="66" rx="20" fill="#0EA5E9" fill-opacity="0.03"/>
+                        <text x="480" y="114" text-anchor="middle" fill="#0369A1" font-family="'Space Grotesk',sans-serif" font-size="13" font-weight="800">Grid Economics</text>
+                        <text x="480" y="133" text-anchor="middle" fill="#4B5563" font-family="'DM Sans',sans-serif" font-size="10.5">Marginal dispatch, last-mile</text>
+                        <text x="480" y="147" text-anchor="middle" fill="#4B5563" font-family="'DM Sans',sans-serif" font-size="10.5">costs, hourly supply gaps</text>
+                    </g>
+
+                    <!-- NODE 2: Generators -->
+                    <g class="mm-node" data-mm="generators">
+                        <rect x="98" y="163" width="204" height="74" rx="24" fill="url(#gradGen)" stroke="#22C55E" stroke-width="1.8"/>
+                        <rect x="102" y="167" width="196" height="66" rx="20" fill="#22C55E" fill-opacity="0.03"/>
+                        <text x="200" y="194" text-anchor="middle" fill="#15803D" font-family="'Space Grotesk',sans-serif" font-size="13" font-weight="800">Power Generators</text>
+                        <text x="200" y="213" text-anchor="middle" fill="#4B5563" font-family="'DM Sans',sans-serif" font-size="10.5">Fleet transition, nuclear,</text>
+                        <text x="200" y="227" text-anchor="middle" fill="#4B5563" font-family="'DM Sans',sans-serif" font-size="10.5">CCS, renewables build-out</text>
+                    </g>
+
+                    <!-- NODE 3: Corporate Buyers -->
+                    <g class="mm-node" data-mm="buyers">
+                        <rect x="658" y="163" width="204" height="74" rx="24" fill="url(#gradCorp)" stroke="#F59E0B" stroke-width="1.8"/>
+                        <rect x="662" y="167" width="196" height="66" rx="20" fill="#F59E0B" fill-opacity="0.03"/>
+                        <text x="760" y="194" text-anchor="middle" fill="#B45309" font-family="'Space Grotesk',sans-serif" font-size="13" font-weight="800">Corporate Buyers</text>
+                        <text x="760" y="213" text-anchor="middle" fill="#4B5563" font-family="'DM Sans',sans-serif" font-size="10.5">PPAs, 24/7 CFE, hourly</text>
+                        <text x="760" y="227" text-anchor="middle" fill="#4B5563" font-family="'DM Sans',sans-serif" font-size="10.5">matching, EAC demand</text>
+                    </g>
+
+                    <!-- NODE 4: Policy -->
+                    <g class="mm-node" data-mm="policy">
+                        <rect x="98" y="443" width="204" height="74" rx="24" fill="url(#gradPolicy)" stroke="#8B5CF6" stroke-width="1.8"/>
+                        <rect x="102" y="447" width="196" height="66" rx="20" fill="#8B5CF6" fill-opacity="0.03"/>
+                        <text x="200" y="474" text-anchor="middle" fill="#6D28D9" font-family="'Space Grotesk',sans-serif" font-size="13" font-weight="800">Policy &amp; Regulation</text>
+                        <text x="200" y="493" text-anchor="middle" fill="#4B5563" font-family="'DM Sans',sans-serif" font-size="10.5">RPS, ITC/PTC, 45Q,</text>
+                        <text x="200" y="507" text-anchor="middle" fill="#4B5563" font-family="'DM Sans',sans-serif" font-size="10.5">capacity markets, mandates</text>
+                    </g>
+
+                    <!-- NODE 5: Accounting -->
+                    <g class="mm-node" data-mm="accounting">
+                        <rect x="658" y="443" width="204" height="74" rx="24" fill="url(#gradAcct)" stroke="#EF4444" stroke-width="1.8"/>
+                        <rect x="662" y="447" width="196" height="66" rx="20" fill="#EF4444" fill-opacity="0.03"/>
+                        <text x="760" y="474" text-anchor="middle" fill="#991B1B" font-family="'Space Grotesk',sans-serif" font-size="13" font-weight="800">Accounting Rules</text>
+                        <text x="760" y="493" text-anchor="middle" fill="#4B5563" font-family="'DM Sans',sans-serif" font-size="10.5">GHG Protocol Scope 2,</text>
+                        <text x="760" y="507" text-anchor="middle" fill="#4B5563" font-family="'DM Sans',sans-serif" font-size="10.5">SBTi, EPRI SMARTargets</text>
+                    </g>
+
+                    <!-- NODE 6: Global Goals -->
+                    <g class="mm-node" data-mm="goals">
+                        <rect x="378" y="543" width="204" height="74" rx="24" fill="url(#gradGoals)" stroke="#14B8A6" stroke-width="1.8"/>
+                        <rect x="382" y="547" width="196" height="66" rx="20" fill="#14B8A6" fill-opacity="0.03"/>
+                        <text x="480" y="574" text-anchor="middle" fill="#0F766E" font-family="'Space Grotesk',sans-serif" font-size="13" font-weight="800">Global Goals</text>
+                        <text x="480" y="593" text-anchor="middle" fill="#4B5563" font-family="'DM Sans',sans-serif" font-size="10.5">Paris, IEA NZE, US targets,</text>
+                        <text x="480" y="607" text-anchor="middle" fill="#4B5563" font-family="'DM Sans',sans-serif" font-size="10.5">EU climate law, NDCs</text>
+                    </g>
+
+                    <!-- ANNOTATIONS -->
                     <g class="mm-node">
-                        <rect x="380" y="85" width="200" height="70" rx="12" fill="#EFF6FF" stroke="#0EA5E9" stroke-width="1.5"/>
-                        <text x="480" y="114" text-anchor="middle" fill="#0369A1" font-family="'Space Grotesk','Barlow Semi Condensed',sans-serif" font-size="12.5" font-weight="700">Grid Economics</text>
-                        <text x="480" y="133" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">Marginal dispatch, last-mile</text>
-                        <text x="480" y="146" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">costs, hourly supply gaps</text>
+                        <rect x="30" y="80" width="160" height="50" rx="12" fill="#ECFDF5" stroke="#A7F3D0" stroke-width="1"/>
+                        <text x="110" y="100" text-anchor="middle" fill="#065F46" font-family="'DM Sans',sans-serif" font-size="9.5" font-weight="600">Generator investments</text>
+                        <text x="110" y="115" text-anchor="middle" fill="#065F46" font-family="'DM Sans',sans-serif" font-size="9.5" font-weight="600">&#8594; lower grid costs</text>
                     </g>
-
-                    <!-- NODE 2: Generators (top left) -->
                     <g class="mm-node">
-                        <rect x="100" y="165" width="200" height="70" rx="12" fill="#F0FDF4" stroke="#22C55E" stroke-width="1.5"/>
-                        <text x="200" y="194" text-anchor="middle" fill="#15803D" font-family="'Space Grotesk','Barlow Semi Condensed',sans-serif" font-size="12.5" font-weight="700">Power Generators</text>
-                        <text x="200" y="213" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">Fleet transition, nuclear,</text>
-                        <text x="200" y="226" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">CCS, renewables build-out</text>
-                    </g>
-
-                    <!-- NODE 3: Corporate Buyers (top right) -->
-                    <g class="mm-node">
-                        <rect x="660" y="165" width="200" height="70" rx="12" fill="#FFFBEB" stroke="#F59E0B" stroke-width="1.5"/>
-                        <text x="760" y="194" text-anchor="middle" fill="#B45309" font-family="'Space Grotesk','Barlow Semi Condensed',sans-serif" font-size="12.5" font-weight="700">Corporate Buyers</text>
-                        <text x="760" y="213" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">PPAs, 24/7 CFE, hourly</text>
-                        <text x="760" y="226" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">matching, EAC demand</text>
-                    </g>
-
-                    <!-- NODE 4: Policy (bottom left) -->
-                    <g class="mm-node">
-                        <rect x="100" y="445" width="200" height="70" rx="12" fill="#F5F3FF" stroke="#8B5CF6" stroke-width="1.5"/>
-                        <text x="200" y="474" text-anchor="middle" fill="#6D28D9" font-family="'Space Grotesk','Barlow Semi Condensed',sans-serif" font-size="12.5" font-weight="700">Policy &amp; Regulation</text>
-                        <text x="200" y="493" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">RPS, ITC/PTC, 45Q,</text>
-                        <text x="200" y="506" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">capacity markets, mandates</text>
-                    </g>
-
-                    <!-- NODE 5: Accounting (bottom right) -->
-                    <g class="mm-node">
-                        <rect x="660" y="445" width="200" height="70" rx="12" fill="#FEF2F2" stroke="#EF4444" stroke-width="1.5"/>
-                        <text x="760" y="474" text-anchor="middle" fill="#991B1B" font-family="'Space Grotesk','Barlow Semi Condensed',sans-serif" font-size="12.5" font-weight="700">Accounting Rules</text>
-                        <text x="760" y="493" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">GHG Protocol Scope 2,</text>
-                        <text x="760" y="506" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">SBTi, EPRI SMARTargets</text>
-                    </g>
-
-                    <!-- NODE 6: Global Goals (bottom center) -->
-                    <g class="mm-node">
-                        <rect x="380" y="545" width="200" height="70" rx="12" fill="#F0FDFA" stroke="#14B8A6" stroke-width="1.5"/>
-                        <text x="480" y="574" text-anchor="middle" fill="#0F766E" font-family="'Space Grotesk','Barlow Semi Condensed',sans-serif" font-size="12.5" font-weight="700">Global Goals</text>
-                        <text x="480" y="593" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">Paris, IEA NZE, US targets,</text>
-                        <text x="480" y="606" text-anchor="middle" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">EU climate law, NDCs</text>
-                    </g>
-
-                    <!-- LEGEND -->
-                    <g transform="translate(30, 620)">
-                        <line x1="0" y1="8" x2="24" y2="8" stroke="#22C55E" stroke-width="2" stroke-dasharray="6,4"/>
-                        <text x="30" y="12" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">Catalytic link</text>
-                        <line x1="140" y1="8" x2="164" y2="8" stroke="#EF4444" stroke-width="2" stroke-dasharray="4,6"/>
-                        <text x="170" y="12" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">Perverse incentive risk</text>
-                        <line x1="320" y1="8" x2="344" y2="8" stroke="#0EA5E9" stroke-width="2" stroke-dasharray="3,5"/>
-                        <text x="350" y="12" fill="#4B5563" font-family="'Plus Jakarta Sans',sans-serif" font-size="10">Feedback loop</text>
-                    </g>
-
-                    <!-- ANNOTATION: Catalytic example -->
-                    <g class="mm-node">
-                        <rect x="30" y="80" width="160" height="50" rx="8" fill="#ECFDF5" stroke="#A7F3D0" stroke-width="1"/>
-                        <text x="110" y="100" text-anchor="middle" fill="#065F46" font-family="'Plus Jakarta Sans',sans-serif" font-size="9.5" font-weight="600">Generator investments</text>
-                        <text x="110" y="115" text-anchor="middle" fill="#065F46" font-family="'Plus Jakarta Sans',sans-serif" font-size="9.5" font-weight="600">&#8594; lower grid costs</text>
-                    </g>
-
-                    <!-- ANNOTATION: Perverse incentive example -->
-                    <g class="mm-node">
-                        <rect x="770" y="310" width="170" height="60" rx="8" fill="#FEF2F2" stroke="#FECACA" stroke-width="1"/>
-                        <text x="855" y="330" text-anchor="middle" fill="#991B1B" font-family="'Plus Jakarta Sans',sans-serif" font-size="9.5" font-weight="600">Annual accounting</text>
-                        <text x="855" y="345" text-anchor="middle" fill="#991B1B" font-family="'Plus Jakarta Sans',sans-serif" font-size="9.5" font-weight="600">&#8594; paper compliance</text>
-                        <text x="855" y="360" text-anchor="middle" fill="#991B1B" font-family="'Plus Jakarta Sans',sans-serif" font-size="9.5" font-weight="600">without impact</text>
+                        <rect x="770" y="310" width="170" height="60" rx="12" fill="#FEF2F2" stroke="#FECACA" stroke-width="1"/>
+                        <text x="855" y="330" text-anchor="middle" fill="#991B1B" font-family="'DM Sans',sans-serif" font-size="9.5" font-weight="600">Annual accounting</text>
+                        <text x="855" y="345" text-anchor="middle" fill="#991B1B" font-family="'DM Sans',sans-serif" font-size="9.5" font-weight="600">&#8594; paper compliance</text>
+                        <text x="855" y="360" text-anchor="middle" fill="#991B1B" font-family="'DM Sans',sans-serif" font-size="9.5" font-weight="600">without impact</text>
                     </g>
                 </svg>
             </div>
+            <!-- HTML LEGEND (better mobile rendering) -->
+            <div class="legend" style="justify-content:center; margin-top:16px; gap:24px; flex-wrap:wrap; display:flex;">
+                <div class="legend-item"><span class="legend-dot" style="background:#22C55E;"></span> Catalytic link</div>
+                <div class="legend-item"><span class="legend-dot" style="background:#EF4444;"></span> Perverse incentive risk</div>
+                <div class="legend-item"><span class="legend-dot" style="background:#0EA5E9;"></span> Feedback loop</div>
+            </div>
         </div>
+        <!-- Tooltip container for mind map hover -->
+        <div class="mm-tooltip" id="mmTooltip"></div>
     </div>
 </section>
 
@@ -459,6 +816,146 @@ body {
 </section>
 
 <div class="gradient-transition"></div>
+
+<!-- FEEDBACK LOOPS VISUALIZATION -->
+<section class="story-section" id="sec-feedback">
+    <div class="story-content">
+        <span class="story-badge story-badge-purple">Feedback Dynamics</span>
+        <h2>Virtuous vs. Vicious Cycles</h2>
+        <p>
+            Procurement framework design doesn&rsquo;t just affect individual buyers &mdash; it creates
+            self-reinforcing cycles that either accelerate or undermine decarbonization at scale.
+        </p>
+    </div>
+</section>
+<div class="feedback-loops-wrap">
+    <div class="grid-2col" style="max-width:1000px; margin:0 auto;">
+        <!-- VIRTUOUS CYCLE -->
+        <div class="loop-svg-container">
+            <h4 style="color: #15803D;">Virtuous Cycle</h4>
+            <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Virtuous cycle: corporate demand drives clean firm investment and cost reductions">
+                <defs>
+                    <marker id="vArrow" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+                        <path d="M0,0 L7,2.5 L0,5" fill="#22C55E" opacity="0.8"/>
+                    </marker>
+                </defs>
+                <!-- Orbital ring -->
+                <circle cx="200" cy="200" r="140" fill="none" stroke="#22C55E" stroke-width="1.5" stroke-opacity="0.15" stroke-dasharray="6,4"/>
+                <circle cx="200" cy="200" r="142" fill="none" stroke="#22C55E" stroke-width="0.5" stroke-opacity="0.08"/>
+                <!-- Center label -->
+                <text x="200" y="195" text-anchor="middle" fill="#15803D" font-family="'Space Grotesk',sans-serif" font-size="11" font-weight="700" opacity="0.35">VIRTUOUS</text>
+                <text x="200" y="211" text-anchor="middle" fill="#15803D" font-family="'Space Grotesk',sans-serif" font-size="11" font-weight="700" opacity="0.35">CYCLE</text>
+                <!-- Nodes arranged clockwise -->
+                <!-- N1: Corporate PPA demand (top) -->
+                <rect x="135" y="30" width="130" height="44" rx="10" fill="#F0FDF4" stroke="#22C55E" stroke-width="1.2"/>
+                <text x="200" y="50" text-anchor="middle" fill="#15803D" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">Corporate PPA</text>
+                <text x="200" y="64" text-anchor="middle" fill="#15803D" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">demand</text>
+                <!-- N2: Clean firm investment (right) -->
+                <rect x="290" y="128" width="105" height="44" rx="10" fill="#F0FDF4" stroke="#22C55E" stroke-width="1.2"/>
+                <text x="342" y="148" text-anchor="middle" fill="#15803D" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">Clean firm</text>
+                <text x="342" y="162" text-anchor="middle" fill="#15803D" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">investment</text>
+                <!-- N3: Cost learning curves (bottom-right) -->
+                <rect x="270" y="270" width="115" height="44" rx="10" fill="#F0FDF4" stroke="#22C55E" stroke-width="1.2"/>
+                <text x="327" y="290" text-anchor="middle" fill="#15803D" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">Cost learning</text>
+                <text x="327" y="304" text-anchor="middle" fill="#15803D" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">curves</text>
+                <!-- N4: Lower procurement costs (bottom-left) -->
+                <rect x="15" y="270" width="125" height="44" rx="10" fill="#F0FDF4" stroke="#22C55E" stroke-width="1.2"/>
+                <text x="77" y="290" text-anchor="middle" fill="#15803D" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">Lower procurement</text>
+                <text x="77" y="304" text-anchor="middle" fill="#15803D" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">costs</text>
+                <!-- N5: More demand (left) -->
+                <rect x="5" y="128" width="105" height="44" rx="10" fill="#F0FDF4" stroke="#22C55E" stroke-width="1.2"/>
+                <text x="57" y="148" text-anchor="middle" fill="#15803D" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">More buyers</text>
+                <text x="57" y="162" text-anchor="middle" fill="#15803D" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">participate</text>
+                <!-- Connecting curved arrows (clockwise) -->
+                <path id="v-arc1" d="M265,60 C310,70 340,100 360,128" stroke="#22C55E" stroke-width="1.5" stroke-opacity="0.5" fill="none" marker-end="url(#vArrow)"/>
+                <path id="v-arc2" d="M370,172 C370,220 360,250 350,270" stroke="#22C55E" stroke-width="1.5" stroke-opacity="0.5" fill="none" marker-end="url(#vArrow)"/>
+                <path id="v-arc3" d="M270,300 C220,330 170,330 140,300" stroke="#22C55E" stroke-width="1.5" stroke-opacity="0.5" fill="none" marker-end="url(#vArrow)"/>
+                <path id="v-arc4" d="M30,270 C20,230 20,190 30,172" stroke="#22C55E" stroke-width="1.5" stroke-opacity="0.5" fill="none" marker-end="url(#vArrow)"/>
+                <path id="v-arc5" d="M60,128 C70,100 100,75 135,60" stroke="#22C55E" stroke-width="1.5" stroke-opacity="0.5" fill="none" marker-end="url(#vArrow)"/>
+                <!-- Animated particles -->
+                <circle r="3.5" fill="#22C55E" opacity="0.8"><animateMotion dur="3s" repeatCount="indefinite"><mpath href="#v-arc1"/></animateMotion></circle>
+                <circle r="3" fill="#22C55E" opacity="0.7"><animateMotion dur="3s" repeatCount="indefinite" begin="0.6s"><mpath href="#v-arc2"/></animateMotion></circle>
+                <circle r="3" fill="#22C55E" opacity="0.7"><animateMotion dur="3s" repeatCount="indefinite" begin="1.2s"><mpath href="#v-arc3"/></animateMotion></circle>
+                <circle r="3" fill="#22C55E" opacity="0.7"><animateMotion dur="3s" repeatCount="indefinite" begin="1.8s"><mpath href="#v-arc4"/></animateMotion></circle>
+                <circle r="3" fill="#22C55E" opacity="0.7"><animateMotion dur="3s" repeatCount="indefinite" begin="2.4s"><mpath href="#v-arc5"/></animateMotion></circle>
+            </svg>
+        </div>
+        <!-- VICIOUS CYCLE -->
+        <div class="loop-svg-container">
+            <h4 style="color: #991B1B;">Vicious Cycle</h4>
+            <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vicious cycle: annual RECs fail to signal firm clean power need, leading to gas lock-in">
+                <defs>
+                    <marker id="rArrow" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+                        <path d="M0,0 L7,2.5 L0,5" fill="#EF4444" opacity="0.8"/>
+                    </marker>
+                </defs>
+                <!-- Orbital ring -->
+                <circle cx="200" cy="200" r="140" fill="none" stroke="#EF4444" stroke-width="1.5" stroke-opacity="0.15" stroke-dasharray="6,4"/>
+                <circle cx="200" cy="200" r="142" fill="none" stroke="#EF4444" stroke-width="0.5" stroke-opacity="0.08"/>
+                <!-- Center label -->
+                <text x="200" y="195" text-anchor="middle" fill="#991B1B" font-family="'Space Grotesk',sans-serif" font-size="11" font-weight="700" opacity="0.35">VICIOUS</text>
+                <text x="200" y="211" text-anchor="middle" fill="#991B1B" font-family="'Space Grotesk',sans-serif" font-size="11" font-weight="700" opacity="0.35">CYCLE</text>
+                <!-- Nodes clockwise -->
+                <!-- N1: Annual RECs (top) -->
+                <rect x="140" y="30" width="120" height="44" rx="10" fill="#FEF2F2" stroke="#EF4444" stroke-width="1.2"/>
+                <text x="200" y="50" text-anchor="middle" fill="#991B1B" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">Annual REC</text>
+                <text x="200" y="64" text-anchor="middle" fill="#991B1B" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">compliance</text>
+                <!-- N2: No firm signal (right) -->
+                <rect x="290" y="115" width="105" height="44" rx="10" fill="#FEF2F2" stroke="#EF4444" stroke-width="1.2"/>
+                <text x="342" y="135" text-anchor="middle" fill="#991B1B" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">No firm clean</text>
+                <text x="342" y="149" text-anchor="middle" fill="#991B1B" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">demand signal</text>
+                <!-- N3: Gas build (bottom-right) -->
+                <rect x="275" y="250" width="120" height="44" rx="10" fill="#FEF2F2" stroke="#EF4444" stroke-width="1.2"/>
+                <text x="335" y="270" text-anchor="middle" fill="#991B1B" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">Gas build for</text>
+                <text x="335" y="284" text-anchor="middle" fill="#991B1B" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">reliability</text>
+                <!-- N4: Stranded assets (bottom) -->
+                <rect x="130" y="330" width="140" height="44" rx="10" fill="#FEF2F2" stroke="#EF4444" stroke-width="1.2"/>
+                <text x="200" y="350" text-anchor="middle" fill="#991B1B" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">Stranded asset risk</text>
+                <text x="200" y="364" text-anchor="middle" fill="#991B1B" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">&amp; higher system costs</text>
+                <!-- N5: Slower decarb (left) -->
+                <rect x="5" y="190" width="115" height="44" rx="10" fill="#FEF2F2" stroke="#EF4444" stroke-width="1.2"/>
+                <text x="62" y="210" text-anchor="middle" fill="#991B1B" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">Slower</text>
+                <text x="62" y="224" text-anchor="middle" fill="#991B1B" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">decarbonization</text>
+                <!-- Connecting curved arrows -->
+                <path id="r-arc1" d="M260,55 C310,70 340,95 355,115" stroke="#EF4444" stroke-width="1.5" stroke-opacity="0.5" fill="none" marker-end="url(#rArrow)"/>
+                <path id="r-arc2" d="M370,159 C375,200 370,230 365,250" stroke="#EF4444" stroke-width="1.5" stroke-opacity="0.5" fill="none" marker-end="url(#rArrow)"/>
+                <path id="r-arc3" d="M280,280 C250,310 230,325 240,330" stroke="#EF4444" stroke-width="1.5" stroke-opacity="0.5" fill="none" marker-end="url(#rArrow)"/>
+                <path id="r-arc4" d="M130,360 C90,340 50,290 35,234" stroke="#EF4444" stroke-width="1.5" stroke-opacity="0.5" fill="none" marker-end="url(#rArrow)"/>
+                <path id="r-arc5" d="M50,190 C55,140 80,95 140,65" stroke="#EF4444" stroke-width="1.5" stroke-opacity="0.5" fill="none" marker-end="url(#rArrow)"/>
+                <!-- Animated particles -->
+                <circle r="3.5" fill="#EF4444" opacity="0.8"><animateMotion dur="3.5s" repeatCount="indefinite"><mpath href="#r-arc1"/></animateMotion></circle>
+                <circle r="3" fill="#EF4444" opacity="0.7"><animateMotion dur="3.5s" repeatCount="indefinite" begin="0.7s"><mpath href="#r-arc2"/></animateMotion></circle>
+                <circle r="3" fill="#EF4444" opacity="0.7"><animateMotion dur="3.5s" repeatCount="indefinite" begin="1.4s"><mpath href="#r-arc3"/></animateMotion></circle>
+                <circle r="3" fill="#EF4444" opacity="0.7"><animateMotion dur="3.5s" repeatCount="indefinite" begin="2.1s"><mpath href="#r-arc4"/></animateMotion></circle>
+                <circle r="3" fill="#EF4444" opacity="0.7"><animateMotion dur="3.5s" repeatCount="indefinite" begin="2.8s"><mpath href="#r-arc5"/></animateMotion></circle>
+            </svg>
+        </div>
+    </div>
+
+    <!-- CONDITIONS PANEL -->
+    <div class="conditions-grid" style="padding: 0 24px;">
+        <div class="callout-box callout-success">
+            <h4>What Tips Toward Virtuous</h4>
+            <ul>
+                <li>Hourly matching mandates in corporate reporting</li>
+                <li>GHG Protocol Scope 2 revision with deliverability</li>
+                <li>SBTi hourly trajectories for ~8,000 companies</li>
+                <li>Regional deliverability requirements for EACs</li>
+                <li>Wright&rsquo;s Law cost reductions from deployment scale</li>
+            </ul>
+        </div>
+        <div class="callout-box callout-danger">
+            <h4>What Tips Toward Vicious</h4>
+            <ul>
+                <li>Annual REC compliance as default standard</li>
+                <li>Unbundled cross-border credit trading</li>
+                <li>45Q subsidies without capacity factor limits</li>
+                <li>Inadequate transmission planning for clean firm</li>
+                <li>Accounting rules that conflate paper credits with impact</li>
+            </ul>
+        </div>
+    </div>
+</div>
 
 <hr class="section-divider">
 
@@ -606,19 +1103,49 @@ body {
         <span class="story-badge">Explore</span>
         <h2>Dive Into the Analysis</h2>
         <p>
-            This project includes an interactive cost optimizer, regional deep-dives, CO&#8322; abatement analysis,
-            EAC scarcity modeling, and a full research paper. Each component builds on the core 8,760-hour
-            optimization model.
+            The three theses map directly to the project&rsquo;s structure: <strong>Supply Side</strong> illustrates
+            how generator fleets and clean firm resources shape the transition (Thesis I). <strong>Demand Side</strong>
+            shows how procurement frameworks and accounting rules determine real-world impact (Thesis II). And
+            <strong>Economic Analysis</strong> quantifies the cost landscape that makes &ldquo;what you need depends
+            on what you have&rdquo; concrete (Thesis III).
         </p>
     </div>
 </section>
 
-<!-- NAVIGATION BUTTONS -->
-<div class="nav-buttons">
-    <a href="dashboard.html" class="nav-btn nav-btn-primary">&#128202; Interactive Cost Optimizer</a>
-    <a href="abatement_dashboard.html" class="nav-btn nav-btn-secondary">CO&#8322; Abatement Analysis</a>
-    <a href="clean_firm_case.html" class="nav-btn nav-btn-secondary">Clean Firm Power</a>
-    <a href="reference.html" class="nav-btn nav-btn-secondary">&#128218; Reference Library</a>
+<!-- EXPLORE GRID -->
+<div class="explore-grid">
+    <div class="explore-card explore-card-accent-supply">
+        <h4>Supply Side: Power Generation</h4>
+        <p class="explore-desc">Market structure, fleet composition, IPP strategies, and regional pathways for the clean energy transition.</p>
+        <ul>
+            <li><a href="gen_market_overview.html">US Power Market Overview</a></li>
+            <li><a href="gen_policy_conditions.html">Policy &amp; Market Outlook</a></li>
+            <li><a href="gen_target_setting.html">Target Setting Framework</a></li>
+            <li><a href="gen_regional_pathways.html">Regional Pathways</a></li>
+            <li><a href="ipp_climate_transition.html">IPP Deep Dives</a></li>
+        </ul>
+    </div>
+    <div class="explore-card explore-card-accent-demand">
+        <h4>Demand Side: Corporate Procurement</h4>
+        <p class="explore-desc">Carbon accounting frameworks, procurement strategies, and the consequential vs. hourly matching comparison.</p>
+        <ul>
+            <li><a href="consequential_accounting.html">Carbon Accounting Frameworks</a></li>
+            <li><a href="scenario_comparison.html">Scenario Comparison</a></li>
+        </ul>
+        <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--border);">
+            <a href="reference.html" class="explore-cta" style="background:var(--text-secondary);">Reference Library</a>
+        </div>
+    </div>
+    <div class="explore-card explore-card-accent-econ">
+        <h4>Economics: Cost &amp; Abatement</h4>
+        <p class="explore-desc">CO&#8322; abatement costs, clean firm economics, asset value analysis, and the interactive cost optimizer.</p>
+        <ul>
+            <li><a href="abatement_dashboard.html">CO&#8322; Abatement Analysis</a></li>
+            <li><a href="clean_firm_case.html">Clean Firm Power Case</a></li>
+            <li><a href="lmp_trends.html">Clean Asset Value (LMP)</a></li>
+        </ul>
+        <a href="dashboard.html" class="explore-cta">Interactive Cost Optimizer</a>
+    </div>
 </div>
 
 </div><!-- /content-wrap -->
@@ -626,9 +1153,13 @@ body {
 <!-- FOOTER -->
 <footer class="site-footer">
     <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:16px;margin-bottom:12px;">
-        <a href="dashboard.html">Grid Optimizer</a>
+        <a href="dashboard.html">Cost Optimizer</a>
         <a href="abatement_dashboard.html">CO&#8322; Abatement</a>
         <a href="clean_firm_case.html">Clean Firm</a>
+        <a href="gen_market_overview.html">Power Market</a>
+        <a href="consequential_accounting.html">Carbon Accounting</a>
+        <a href="scenario_comparison.html">Scenarios</a>
+        <a href="lmp_trends.html">LMP Trends</a>
         <a href="reference.html">Reference</a>
     </div>
     <p>The 8,760 Problem &mdash; 2025 Snapshot Model</p>
@@ -703,6 +1234,67 @@ body {
         });
     }, { threshold: 0.2 });
     observer.observe(container);
+})();
+
+// ---- Thesis card visibility (triggers underline animation) ----
+(function() {
+    const cards = document.querySelectorAll('.thesis-card');
+    const observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+            }
+        });
+    }, { threshold: 0.3 });
+    cards.forEach(function(c) { observer.observe(c); });
+})();
+
+// ---- Mind map interactive tooltips ----
+(function() {
+    var tooltip = document.getElementById('mmTooltip');
+    if (!tooltip) return;
+
+    var descriptions = {
+        center: { title: 'Affordable & Feasible Decarbonization', text: 'The central goal: achieving clean electricity in every hour at a cost that enables broad adoption. All six forces either accelerate or impede progress toward this outcome.' },
+        grid: { title: 'Grid Economics', text: 'The physical grid dispatches generators by marginal cost. Renewables push fossil off the margin during sunny/windy hours, but evening and winter gaps create a steep "last-mile" cost curve that dominates procurement economics.' },
+        generators: { title: 'Power Generators', text: 'Utilities and IPPs decide which plants to retire, extend, or build. A region with 30 GW of nuclear (PJM) faces a fundamentally different transition than one dominated by gas (ERCOT) or hydro imports (NYISO).' },
+        buyers: { title: 'Corporate Buyers', text: 'Tech giants and Fortune 500 companies are the primary demand signal for new clean energy. Their procurement choices \u2014 virtual PPAs, 24/7 CFE targets \u2014 shape which resources get built, where, and at what price.' },
+        policy: { title: 'Policy & Regulation', text: 'RPS mandates, tax credits (ITC, PTC, 45Q), and capacity market designs set the floor for clean deployment. But policies designed for annual compliance create different incentives than those designed for hourly matching.' },
+        accounting: { title: 'Accounting Rules', text: 'The GHG Protocol Scope 2 revision will redefine what "counts" for corporate emissions reporting. SBTi\u2019s power sector pathways are moving toward hourly targets. These frameworks determine whether spending drives real reductions.' },
+        goals: { title: 'Global Goals', text: 'Paris Agreement, IEA Net Zero, US federal targets, and EU climate law set the destination. The gap between "net zero by 2050" and "here\u2019s how to match clean energy in every hour of 2025" is where this analysis operates.' }
+    };
+
+    var svg = document.getElementById('mindmapSvg');
+    if (!svg) return;
+
+    var nodes = svg.querySelectorAll('.mm-node[data-mm]');
+    nodes.forEach(function(node) {
+        node.style.cursor = 'pointer';
+        node.addEventListener('mouseenter', function(e) {
+            var key = node.getAttribute('data-mm');
+            var desc = descriptions[key];
+            if (!desc) return;
+            tooltip.innerHTML = '<strong>' + desc.title + '</strong>' + desc.text;
+            tooltip.classList.add('active');
+            positionTooltip(e);
+        });
+        node.addEventListener('mousemove', positionTooltip);
+        node.addEventListener('mouseleave', function() {
+            tooltip.classList.remove('active');
+        });
+    });
+
+    function positionTooltip(e) {
+        var x = e.clientX + 16;
+        var y = e.clientY - 10;
+        var w = tooltip.offsetWidth;
+        var h = tooltip.offsetHeight;
+        if (x + w > window.innerWidth - 16) x = e.clientX - w - 16;
+        if (y + h > window.innerHeight - 16) y = window.innerHeight - h - 16;
+        if (y < 8) y = 8;
+        tooltip.style.left = x + 'px';
+        tooltip.style.top = y + 'px';
+    }
 })();
 </script>
 
