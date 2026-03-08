@@ -732,9 +732,10 @@ def main():
     save_results_json(results, 'strategy2_hourly.json')
 
     # ── Dispatch-based 8760 hourly match scoring ──
-    # Post-processing: compute actual hourly match scores for Medium growth entries
+    # Post-processing: compute actual hourly match scores using EF storage params
     print("\nComputing 8760 dispatch-based hourly match scores...")
     try:
+        import pandas as pd
         from dispatch_utils import (
             load_common_data, get_demand_profile, get_supply_profiles,
             reconstruct_hourly_dispatch, build_supply_matrix
@@ -742,13 +743,54 @@ def main():
         common_data = load_common_data()
         demand_data, gen_profiles = common_data[0], common_data[1]
 
+        # Load storage dispatch params from Track 2 NB efficient frontier
+        track_parquet = os.path.join(os.path.dirname(SCRIPT_DIR), 'dashboard', 'track_scenarios.parquet')
+        ef_storage = {}  # {(iso, threshold): {battery, battery8, ldes, h2, resource_mix}}
+        if os.path.exists(track_parquet):
+            tdf = pd.read_parquet(track_parquet)
+            nb = tdf[tdf['track'] == 'newbuild']
+            for _, row in nb.iterrows():
+                key = (row['iso'], float(row['threshold']))
+                ef_storage[key] = {
+                    'battery_dispatch_pct': float(row.get('battery_dispatch_pct', 0) or 0),
+                    'battery8_dispatch_pct': float(row.get('battery8_dispatch_pct', 0) or 0),
+                    'ldes_dispatch_pct': float(row.get('ldes_dispatch_pct', 0) or 0),
+                    'h2_dispatch_pct': float(row.get('h2_dispatch_pct', 0) or 0),
+                    # EF resource mix (% of demand) for dispatch
+                    'mix_clean_firm': float(row.get('mix_clean_firm', 0) or 0),
+                    'mix_solar': float(row.get('mix_solar', 0) or 0),
+                    'mix_wind': float(row.get('mix_wind', 0) or 0),
+                    'mix_offshore_wind': float(row.get('mix_offshore_wind', 0) or 0),
+                    'mix_ccs_ccgt': float(row.get('mix_ccs_ccgt', 0) or 0),
+                    'mix_hydro': float(row.get('mix_hydro', 0) or 0),
+                    'hourly_match_score': float(row.get('hourly_match_score', 0) or 0),
+                }
+            print(f"  Loaded {len(ef_storage)} EF storage entries from track_scenarios.parquet")
+        else:
+            print(f"  WARNING: {track_parquet} not found — running without storage")
+
+        def _find_closest_ef(iso, threshold):
+            """Find closest EF entry for an ISO/threshold combo."""
+            exact = ef_storage.get((iso, threshold))
+            if exact:
+                return exact
+            # Find closest threshold
+            best_key, best_dist = None, float('inf')
+            for k in ef_storage:
+                if k[0] == iso:
+                    dist = abs(k[1] - threshold)
+                    if dist < best_dist:
+                        best_dist = dist
+                        best_key = k
+            return ef_storage.get(best_key) if best_key else None
+
         # Map tranche source names → dispatch resource types
         TRANCHE_TO_DISPATCH = {
-            'new_build_vre': 'solar',  # VRE split: treat as solar (conservative)
+            'new_build_vre': 'solar',
             'new_build_firm': 'clean_firm',
             'nuclear_uprate': 'clean_firm',
             'existing_nuclear': 'clean_firm',
-            'existing_vre_hydro': 'solar',  # Mix of VRE/hydro
+            'existing_vre_hydro': 'hydro',
             'new_build_solar': 'solar',
             'new_build_wind': 'wind',
             'new_build_uprate': 'clean_firm',
@@ -776,46 +818,85 @@ def main():
                         if not rm:
                             continue
 
-                        # Convert tranche TWh → resource_pcts (% of buyer demand)
+                        threshold = entry.get('threshold', 0)
                         buyer_twh = entry.get('buyer_demand_twh', 0)
-                        if buyer_twh <= 0:
+                        if buyer_twh <= 0 or threshold <= 0:
                             continue
 
-                        resource_pcts = {}
-                        for source, info in rm.items():
-                            if not isinstance(info, dict):
-                                continue
-                            twh = info.get('twh', 0)
-                            if twh <= 0:
-                                continue
-                            # Skip free allocations (grid_mix, sss)
-                            cat = info.get('category', '')
-                            if cat in ('grid_mix', 'sss'):
-                                continue
+                        # Get EF storage params for this ISO/threshold
+                        ef = _find_closest_ef(iso, threshold)
 
-                            dispatch_type = TRANCHE_TO_DISPATCH.get(source, 'solar')
-                            pct = (twh / buyer_twh) * 100
-                            resource_pcts[dispatch_type] = resource_pcts.get(dispatch_type, 0) + pct
+                        # Use EF resource mix directly for dispatch (it's the physics-optimal mix)
+                        # This gives the "what should the hourly score be" answer
+                        if ef:
+                            resource_pcts = {
+                                'clean_firm': ef['mix_clean_firm'],
+                                'solar': ef['mix_solar'],
+                                'wind': ef['mix_wind'],
+                                'offshore_wind': ef['mix_offshore_wind'],
+                                'ccs_ccgt': ef['mix_ccs_ccgt'],
+                                'hydro': ef['mix_hydro'],
+                            }
+                            batt_pct = ef['battery_dispatch_pct']
+                            batt8_pct = ef['battery8_dispatch_pct']
+                            ldes_pct = ef['ldes_dispatch_pct']
+                            h2_pct = ef['h2_dispatch_pct']
+                        else:
+                            # Fallback: convert tranche TWh → resource_pcts
+                            resource_pcts = {}
+                            for source, info in rm.items():
+                                if not isinstance(info, dict):
+                                    continue
+                                twh = info.get('twh', 0)
+                                if twh <= 0:
+                                    continue
+                                cat = info.get('category', '')
+                                if cat in ('grid_mix', 'sss'):
+                                    continue
+                                dispatch_type = TRANCHE_TO_DISPATCH.get(source, 'solar')
+                                pct = (twh / buyer_twh) * 100
+                                resource_pcts[dispatch_type] = resource_pcts.get(dispatch_type, 0) + pct
+                            batt_pct = batt8_pct = ldes_pct = h2_pct = 0
 
-                        if not resource_pcts:
+                        if not any(v > 0 for v in resource_pcts.values()):
                             continue
 
-                        # Run dispatch (no storage for now — tranche model doesn't specify)
+                        # For 2B/2C: add grid mix / SSS contribution to resource_pcts
+                        # Grid clean contributes to hourly matching in proportion to its share
+                        meta = entry.get('metadata', {})
+                        if variant in ('strategy2B', 'strategy2C'):
+                            grid_twh = 0
+                            for source, info in rm.items():
+                                if isinstance(info, dict) and info.get('category') in ('grid_mix', 'sss'):
+                                    grid_twh += info.get('twh', 0)
+                            if grid_twh > 0:
+                                # Add grid clean as a mix of the ISO's existing resources
+                                gm = GRID_MIX_SHARES[iso]
+                                total_existing_pct = sum(
+                                    gm.get(r, 0) for r in ['clean_firm', 'solar', 'wind', 'hydro']
+                                )
+                                if total_existing_pct > 0:
+                                    grid_pct_of_buyer = (grid_twh / buyer_twh) * 100
+                                    for r in ['clean_firm', 'solar', 'wind', 'hydro']:
+                                        share = gm.get(r, 0) / total_existing_pct
+                                        resource_pcts[r] = resource_pcts.get(r, 0) + grid_pct_of_buyer * share
+
                         try:
                             result = reconstruct_hourly_dispatch(
                                 demand_norm, supply_profiles, resource_pcts,
                                 procurement_pct=100,
-                                battery_dispatch_pct=0,
-                                battery8_dispatch_pct=0,
-                                ldes_dispatch_pct=0,
+                                battery_dispatch_pct=batt_pct,
+                                battery8_dispatch_pct=batt8_pct,
+                                ldes_dispatch_pct=ldes_pct,
                                 supply_matrix=supply_matrix,
+                                h2_dispatch_pct=h2_pct,
                             )
                             matched = np.minimum(result['total_clean'], demand_norm[:8760])
                             score = float(np.sum(matched) / np.sum(demand_norm[:8760]) * 100)
                             entry.setdefault('metadata', {})['hourly_match_score'] = round(score, 2)
                             dispatch_count += 1
-                        except Exception as e:
-                            pass  # Skip errors silently
+                        except Exception:
+                            pass
 
         print(f"  Computed {dispatch_count} dispatch scores")
 
@@ -823,6 +904,7 @@ def main():
         save_results_json(results, 'strategy2_hourly.json')
     except Exception as e:
         print(f"  WARNING: Dispatch scoring failed: {e}")
+        import traceback; traceback.print_exc()
         print("  (Continuing without dispatch scores)")
 
     # Summary
