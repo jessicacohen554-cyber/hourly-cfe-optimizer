@@ -295,7 +295,7 @@ def compute_consequential_cost(buyer_iso, year, threshold, participation_pct,
             total_procured += procure_twh
 
             key = f"{iso}_{ppa_resource}"
-            resource_mix[key] = resource_mix.get(key, 0) + round(procure_twh, 2)
+            resource_mix[key] = resource_mix.get(key, 0) + procure_twh
 
         co2_displaced += step_co2 * use_fraction
 
@@ -315,7 +315,7 @@ def compute_consequential_cost(buyer_iso, year, threshold, participation_pct,
             co2_displaced += procure * co2_per_twh
             remaining_co2 -= procure * co2_per_twh
             key = f"{src_iso}_{resource}"
-            resource_mix[key] = resource_mix.get(key, 0) + round(procure, 2)
+            resource_mix[key] = resource_mix.get(key, 0) + procure
 
     # Cost metrics
     cost_per_mwh = total_cost / total_procured if total_procured > 0 else 0
