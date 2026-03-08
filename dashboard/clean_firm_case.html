@@ -454,29 +454,29 @@ body { background: var(--bg-page-white); }
     <div class="hero-inner">
         <div class="hero-text">
             <h2>You're building gas plants today that become stranded assets tomorrow.</h2>
-            <p>At 90% clean energy, America's 5 major ISOs need <strong style="color:#f87171;">120 GW of new gas construction</strong> to maintain reliability. That's billions in capital that earns diminishing returns as decarbonization continues. Clean firm power &mdash; nuclear, enhanced geothermal, CCS &mdash; prevents this trap. The investment case holds across all 324 cost scenarios we tested.</p>
+            <p>At 90% clean energy, America's 7 ISOs still depend on <strong style="color:#f87171;">145 GW of gas backup capacity</strong> to maintain reliability. That's billions in incumbent capital that earns diminishing returns as decarbonization continues. Clean firm power &mdash; nuclear, enhanced geothermal, CCS &mdash; prevents this trap. The investment case holds across all 5,832 cost scenarios we tested.</p>
             <div class="counter-row">
                 <div class="counter-card">
-                    <div class="counter-val" id="ctrNewGas">120</div>
-                    <div class="counter-lbl">GW New Gas at Risk</div>
+                    <div class="counter-val" id="ctrNewGas">145</div>
+                    <div class="counter-lbl">GW Gas Backup at 90%</div>
                 </div>
                 <div class="counter-card">
-                    <div class="counter-val" id="ctrAnnualCost">$12B</div>
-                    <div class="counter-lbl">Annual Stranding Cost</div>
+                    <div class="counter-val" id="ctrAnnualCost">$2B</div>
+                    <div class="counter-lbl">Annual Gas Backup Cost</div>
                 </div>
                 <div class="counter-card">
-                    <div class="counter-val blue" id="ctrISOs">5</div>
+                    <div class="counter-val blue" id="ctrISOs">7</div>
                     <div class="counter-lbl">ISOs Analyzed</div>
                 </div>
                 <div class="counter-card">
-                    <div class="counter-val green" id="ctrScenarios">324</div>
+                    <div class="counter-val green" id="ctrScenarios">5832</div>
                     <div class="counter-lbl">Cost Scenarios</div>
                 </div>
             </div>
         </div>
         <div class="hero-chart-block">
             <div class="chart-panel">
-                <div class="chart-title">New Gas Construction Required at 90% Clean (GW)</div>
+                <div class="chart-title">Gas Backup Capacity at 90% Clean (GW)</div>
                 <div class="chart-container">
                     <canvas id="heroChart"></canvas>
                 </div>
@@ -576,8 +576,8 @@ body { background: var(--bg-page-white); }
     <div class="synthesis-inner">
         <div class="synthesis-card">
             <h3>The stranding risk is already here</h3>
-            <p>120 GW of new gas construction across 5 ISOs at 90% clean energy. This capital earns diminishing returns as clean targets rise. The stranding cost is $7&ndash;10/MWh — a permanent annual tax on every region's ratepayers. Without clean firm power, this cost is unavoidable.</p>
-            <span class="stat-callout stat-red">120 GW new gas &middot; $12B/yr stranding cost &middot; Permanent</span>
+            <p>145 GW of gas backup capacity across 7 ISOs at 90% clean energy. This incumbent fleet earns diminishing returns as clean targets rise. Without clean firm power, this gas dependency is unavoidable &mdash; a permanent annual cost on every region's ratepayers.</p>
+            <span class="stat-callout stat-red">145 GW gas backup &middot; Diminishing utilization &middot; Permanent cost</span>
         </div>
         <div class="synthesis-card">
             <h3>The FOAK premium is an investment, not a cost</h3>
@@ -594,7 +594,7 @@ body { background: var(--bg-page-white); }
     <details style="background:rgba(0,0,0,0.025);border:1px solid rgba(0,0,0,0.08);border-radius:10px;padding:16px 20px;">
         <summary style="font-family:var(--font-heading);font-size:0.85rem;font-weight:600;color:rgba(0,0,0,0.85);cursor:pointer;min-height:44px;display:flex;align-items:center;">Sources &amp; Methodology</summary>
         <div style="font-size:0.78rem;color:rgba(0,0,0,0.5);line-height:1.8;margin-top:12px;">
-            <p><strong>Data:</strong> Hourly CFE Optimizer (2025 snapshot, 5 ISOs, 21 thresholds, 324 sensitivity scenarios). Gas backup modeled with 15% reserve margin above ISO peak demand.</p>
+            <p><strong>Data:</strong> Hourly CFE Optimizer (2025 snapshot, 7 ISOs, 21 thresholds, 5,832 sensitivity scenarios per ISO). Gas backup modeled with 15% reserve margin above ISO peak demand.</p>
             <p><strong>Key sources:</strong> Sepulveda &amp; Jenkins (2018), <em>Joule</em> &mdash; 10&ndash;62% cost reduction from firm resources &bull;
             CATF (2025), &ldquo;Clean Firm Electricity Technologies&rdquo; &bull;
             DOE (Sept 2024), &ldquo;Pathways to Commercial Liftoff: Advanced Nuclear&rdquo; &mdash; FOAK $6,200/kW &rarr; NOAK $3,600/kW; ~$66/MWh with 48E ITC; 5&ndash;10 reactors per design &bull;
@@ -757,7 +757,9 @@ const _DEMAND = typeof REGIONAL_DEMAND_TWH !== 'undefined' ? REGIONAL_DEMAND_TWH
 const _NUC_LCOE = typeof NUCLEAR_NEWBUILD_LCOE !== 'undefined' ? NUCLEAR_NEWBUILD_LCOE : {L:{},M:{},H:{}};
 
 // Threshold indices for readable charts: 50,70,80,85,90,95,97.5,99
-const DISPLAY_IDXS = [0, 2, 4, 5, 7, 9, 10, 11];
+// THRESHOLDS = [10,20,30,40,50,55,60,65,70,75,80,85,87.5,90,92.5,95,97.5,99,99.5,99.9,99.99]
+//               0  1  2  3  4  5  6  7  8  9  10 11  12  13  14  15  16  17  18   19   20
+const DISPLAY_IDXS = [4, 8, 10, 11, 13, 15, 16, 17];
 const DISPLAY_LABELS = DISPLAY_IDXS.map(i => (_THR[i] || 0) + '%');
 
 // ============================================================================
@@ -767,22 +769,26 @@ function gd(iso) { return _GAS[iso] || null; }
 function gw(mw) { return (mw / 1000).toFixed(0); }
 function gwf(mw) { return (mw / 1000).toFixed(1); }
 
-// Per-ISO narrative data at 90% threshold (index 7)
+// Per-ISO narrative data at 90% threshold (index 13 in 21-element THRESHOLDS array)
+// THRESHOLDS[13] = 90.0
+var IDX_90 = 13;
+var IDX_LAST = _THR.length - 1;  // 20 = 99.99% threshold
+var IDX_50 = 4;  // THRESHOLDS[4] = 50.0
+
 function isoStats(iso) {
     var d = gd(iso);
     if (!d) return null;
     var demand = _DEMAND[iso] || 0;
     return {
-        newGW: gw(d.new_gas_build_mw ? d.new_gas_build_mw[7] : 0),
-        existGW: gw(d.existing_gas_used_mw ? d.existing_gas_used_mw[7] : 0),
-        totalGW: gw(d.gas_backup_mw ? d.gas_backup_mw[7] : 0),
-        newCost: d.new_gas_cost ? d.new_gas_cost[7].toFixed(1) : '0',
-        totalCost: d.gas_backup_cost ? d.gas_backup_cost[7].toFixed(1) : '0',
-        annualB: d.new_gas_cost ? (d.new_gas_cost[7] * demand / 1000).toFixed(1) : '0',
-        covStart: d.clean_coverage_pct ? d.clean_coverage_pct[0].toFixed(0) : '0',
-        cov90: d.clean_coverage_pct ? d.clean_coverage_pct[7].toFixed(0) : '0',
-        covEnd: d.clean_coverage_pct ? d.clean_coverage_pct[10].toFixed(0) : '0',
-        gasDisplaced: d.gas_backup_mw ? gw(d.gas_backup_mw[0] - d.gas_backup_mw[10]) : '0',
+        gasGW: gw(d.gas_backup_mw ? d.gas_backup_mw[IDX_90] : 0),
+        existGW: gw(d.existing_gas_used_mw ? d.existing_gas_used_mw[IDX_90] : 0),
+        totalGW: gw(d.gas_backup_mw ? d.gas_backup_mw[IDX_90] : 0),
+        totalCost: d.gas_backup_cost ? d.gas_backup_cost[IDX_90].toFixed(1) : '0',
+        annualB: d.gas_backup_cost ? (d.gas_backup_cost[IDX_90] * demand / 1000).toFixed(1) : '0',
+        covStart: d.clean_coverage_pct ? d.clean_coverage_pct[IDX_50].toFixed(0) : '0',
+        cov90: d.clean_coverage_pct ? d.clean_coverage_pct[IDX_90].toFixed(0) : '0',
+        covEnd: d.clean_coverage_pct ? d.clean_coverage_pct[IDX_LAST].toFixed(0) : '0',
+        gasDisplaced: d.gas_backup_mw ? gw(d.gas_backup_mw[IDX_50] - d.gas_backup_mw[IDX_LAST]) : '0',
         nucFOAK: _NUC_LCOE.H[iso] || 0,
         nucNOAK: _NUC_LCOE.L[iso] || 0,
         nucMed: _NUC_LCOE.M[iso] || 0
@@ -794,38 +800,38 @@ function isoStats(iso) {
 // ============================================================================
 var GAS_TRAP_TEXT = {
     PJM: {
-        headline: '{newGW} GW of new gas — the largest absolute build',
-        text: 'PJM needs {newGW} GW of new gas construction at 90% clean, on top of {existGW} GW existing. The Mid-Atlantic\'s moderate wind and solar resources leave a large shape gap that only dispatchable generation can fill. That\'s <strong>${annualB}B/yr</strong> in new gas capital at risk of stranding.',
+        headline: '{gasGW} GW gas backup — the largest absolute fleet',
+        text: 'PJM still relies on {gasGW} GW of gas backup at 90% clean. The Mid-Atlantic\'s moderate wind and solar resources leave a large shape gap that only dispatchable generation can fill. That gas fleet costs <strong>${totalCost}/MWh</strong> and <strong>${annualB}B/yr</strong> in backup expenditure at risk of stranding.',
         statClass: 'stat-red'
     },
     ERCOT: {
-        headline: '{newGW} GW of new gas — highest per-MWh cost',
-        text: 'Texas needs {newGW} GW of new gas at 90% clean, driven by extreme summer peaks. Despite leading in wind deployment, ERCOT\'s {totalGW} GW gas dependency costs <strong>${totalCost}/MWh</strong> across all generation — the highest rate of any ISO.',
+        headline: '{gasGW} GW gas backup — highest per-MWh cost',
+        text: 'Texas relies on {gasGW} GW of gas backup at 90% clean, driven by extreme summer peaks. Despite leading in wind deployment, ERCOT\'s gas dependency costs <strong>${totalCost}/MWh</strong> across all generation — the highest rate of any ISO.',
         statClass: 'stat-red'
     },
     CAISO: {
-        headline: '{newGW} GW of new gas despite leading in solar',
-        text: 'Even with America\'s deepest solar resources, California needs {newGW} GW of new gas at 90% clean. Solar overproduction during the day doesn\'t help at night. The evening ramp demands gas backup every single day.',
+        headline: '{gasGW} GW gas backup despite leading in solar',
+        text: 'Even with America\'s deepest solar resources, California needs {gasGW} GW of gas backup at 90% clean. Solar overproduction during the day doesn\'t help at night. The evening ramp demands gas backup every single day.',
         statClass: 'stat-amber'
     },
     NYISO: {
-        headline: '{newGW} GW of new gas — hydro delays but doesn\'t prevent',
-        text: 'New York\'s existing hydro and nuclear reduce the new gas need to {newGW} GW — relatively modest. But at <strong>${newCost}/MWh</strong> in new gas cost, the per-unit burden is substantial. CLCPA mandates require this gap to close.',
+        headline: '{gasGW} GW gas backup — hydro delays but doesn\'t prevent',
+        text: 'New York\'s existing hydro and nuclear reduce gas backup to {gasGW} GW at 90% clean — relatively modest. But at <strong>${totalCost}/MWh</strong> in gas backup cost, the per-unit burden is substantial. CLCPA mandates require this gap to close.',
         statClass: 'stat-red'
     },
     NEISO: {
-        headline: '{newGW} GW of new gas with winter vulnerability',
-        text: 'New England needs {newGW} GW of new gas at 90% clean. Winter gas pipeline constraints make this the most vulnerable region — when heating demand spikes, gas for power becomes scarce and prices spike. At <strong>${totalCost}/MWh</strong>, it\'s among the costliest per-MWh.',
+        headline: '{gasGW} GW gas backup with winter vulnerability',
+        text: 'New England needs {gasGW} GW of gas backup at 90% clean. Winter gas pipeline constraints make this the most vulnerable region — when heating demand spikes, gas for power becomes scarce and prices spike. At <strong>${totalCost}/MWh</strong>, it\'s among the costliest per-MWh.',
         statClass: 'stat-red'
     },
     MISO: {
-        headline: '{newGW} GW of new gas — coal retirement accelerates the need',
-        text: 'MISO\'s massive coal fleet (216.5 TWh) is retiring on a regulatory timeline, but replacement capacity defaults to gas. At 90% clean, MISO needs {newGW} GW of new gas on top of {existGW} GW existing — <strong>${annualB}B/yr</strong> in stranding risk. The Midwest\'s strong wind resources help but can\'t fill the baseload gap alone.',
+        headline: '{gasGW} GW gas backup — coal retirement accelerates the need',
+        text: 'MISO\'s massive coal fleet (216.5 TWh) is retiring on a regulatory timeline, but replacement capacity defaults to gas. At 90% clean, MISO still relies on {gasGW} GW of gas backup — <strong>${annualB}B/yr</strong> in stranding risk. The Midwest\'s strong wind resources help but can\'t fill the baseload gap alone.',
         statClass: 'stat-red'
     },
     SPP: {
-        headline: '{newGW} GW of new gas — wind-rich but firm-short',
-        text: 'SPP\'s deep wind resources (43.5% clean share) reduce but don\'t eliminate the gas backup need. At 90% clean, {newGW} GW of new gas is required at <strong>${totalCost}/MWh</strong>. Wind intermittency during summer peaks and calm winter nights drives the firm capacity requirement.',
+        headline: '{gasGW} GW gas backup — wind-rich but firm-short',
+        text: 'SPP\'s deep wind resources (43.5% clean share) reduce but don\'t eliminate the gas backup need. At 90% clean, {gasGW} GW of gas backup is required at <strong>${totalCost}/MWh</strong>. Wind intermittency during summer peaks and calm winter nights drives the firm capacity requirement.',
         statClass: 'stat-amber'
     }
 };
@@ -873,7 +879,7 @@ function renderNarrative(cardId, textObj, iso) {
     var t = textObj[iso];
     var headline = t.headline.replace(/\{(\w+)\}/g, function(_, k) { return s[k]; });
     var text = t.text.replace(/\{(\w+)\}/g, function(_, k) { return s[k]; });
-    var stat = iso + ': ' + s.newGW + ' GW new gas · $' + s.totalCost + '/MWh gas cost · $' + s.annualB + 'B/yr';
+    var stat = iso + ': ' + s.gasGW + ' GW gas backup · $' + s.totalCost + '/MWh gas cost · $' + s.annualB + 'B/yr';
     if (cardId === 'displacementCard') {
         stat = iso + ': ' + s.gasDisplaced + ' GW gas displaced · ' + s.covStart + '% → ' + s.covEnd + '% clean coverage';
     }
@@ -893,8 +899,8 @@ function buildHeroChart() {
     var ctx = document.getElementById('heroChart');
     if (!ctx) return;
 
-    var existData = ISOS.map(function(iso) { return gd(iso).existing_gas_used_mw[7] / 1000; });
-    var newData = ISOS.map(function(iso) { return gd(iso).new_gas_build_mw[7] / 1000; });
+    var existData = ISOS.map(function(iso) { return gd(iso).existing_gas_used_mw[IDX_90] / 1000; });
+    var newData = ISOS.map(function(iso) { return gd(iso).new_gas_build_mw[IDX_90] / 1000; });
 
     new Chart(ctx, {
         type: 'bar',
@@ -1092,8 +1098,8 @@ function buildInvestmentChart() {
     var ctx = document.getElementById('investmentChart');
     if (!ctx) return;
 
-    var gasTotal = ISOS.map(function(iso) { var d = gd(iso); return d && d.gas_backup_cost ? d.gas_backup_cost[7] : 0; });
-    var newGasCost = ISOS.map(function(iso) { var d = gd(iso); return d && d.new_gas_cost ? d.new_gas_cost[7] : 0; });
+    var gasTotal = ISOS.map(function(iso) { var d = gd(iso); return d && d.gas_backup_cost ? d.gas_backup_cost[IDX_90] : 0; });
+    var newGasCost = ISOS.map(function(iso) { var d = gd(iso); return d && d.new_gas_cost ? d.new_gas_cost[IDX_90] : 0; });
     var foakLCOE = ISOS.map(function(iso) { return _NUC_LCOE.H[iso] || 0; });
     var noakLCOE = ISOS.map(function(iso) { return _NUC_LCOE.L[iso] || 0; });
     var medLCOE = ISOS.map(function(iso) { return _NUC_LCOE.M[iso] || 0; });
@@ -1527,19 +1533,19 @@ function buildFoakNOAKChart() {
 // ============================================================================
 document.addEventListener('DOMContentLoaded', function() {
     // Compute hero counters from data
-    var totalNewGas = 0;
+    var totalGasBackup = 0;
     var totalAnnualCost = 0;
     ISOS.forEach(function(iso) {
         var d = gd(iso);
         if (!d) return;
-        totalNewGas += (d.new_gas_build_mw ? d.new_gas_build_mw[7] : 0);
-        totalAnnualCost += (d.new_gas_cost ? d.new_gas_cost[7] : 0) * (_DEMAND[iso] || 0);
+        totalGasBackup += (d.gas_backup_mw ? d.gas_backup_mw[IDX_90] : 0);
+        totalAnnualCost += (d.gas_backup_cost ? d.gas_backup_cost[IDX_90] : 0) * (_DEMAND[iso] || 0);
     });
-    var newGasGW = Math.round(totalNewGas / 1000);
+    var gasBackupGW = Math.round(totalGasBackup / 1000);
     var annualCostB = Math.round(totalAnnualCost / 1000);
 
     // Animate counters
-    animateCounter(document.getElementById('ctrNewGas'), newGasGW, '', '');
+    animateCounter(document.getElementById('ctrNewGas'), gasBackupGW, '', '');
     animateCounter(document.getElementById('ctrAnnualCost'), annualCostB, '$', 'B');
 
     // Build charts
