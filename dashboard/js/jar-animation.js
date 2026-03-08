@@ -281,25 +281,45 @@ class Jar {
         // === Build ball list ===
         const items = [];
 
-        // 1. Grid baseline balls (always present — solid fill)
+        // Build a map of existing claims (e) per resource for converting baseline→claimed
+        // e resources are SUBSETS of the grid baseline (SSS, merchant clean, grid_mix)
+        // — they don't add new capacity, they show which baseline resources the buyer claims
+        const claimedTwh = {};
+        if (dataRecord && dataRecord.e) {
+            for (const [res, twh] of Object.entries(dataRecord.e)) {
+                if (twh <= 0) continue;
+                // Map claimed resource names to grid baseline resource names
+                const mapped = this._mapClaimedResource(res);
+                claimedTwh[mapped] = (claimedTwh[mapped] || 0) + twh;
+            }
+        }
+
+        // 1. Grid baseline balls — split into baseline (solid) and claimed (transparent+outline)
         for (const [res, pct] of Object.entries(bl)) {
             if (res === 'totalPct' || pct <= 0) continue;
             const twh = pct / 100 * gridDemand;
-            const count = Math.max(1, Math.round(twh / ballTwh));
-            items.push({ resource: res, count, tier: 'baseline', glowIso: null, twh });
+            const totalCount = Math.max(1, Math.round(twh / ballTwh));
+
+            // How many of these baseline balls are claimed by the buyer?
+            const claimed = claimedTwh[res] || 0;
+            let claimedCount = 0;
+            if (claimed > 0) {
+                claimedCount = Math.min(totalCount, Math.max(1, Math.round(claimed / ballTwh)));
+                claimedTwh[res] = Math.max(0, claimed - claimedCount * ballTwh); // consume
+            }
+
+            const unclaimed = totalCount - claimedCount;
+
+            if (unclaimed > 0) {
+                items.push({ resource: res, count: unclaimed, tier: 'baseline', glowIso: null, twh: twh - claimed });
+            }
+            if (claimedCount > 0) {
+                items.push({ resource: res, count: claimedCount, tier: 'claimed', glowIso: null, twh: claimed });
+            }
         }
 
-        // 2. Procurement balls (from data record)
+        // 2. Procurement balls — ONLY new-build (n) adds physical capacity beyond baseline
         if (dataRecord) {
-            // Existing claimed
-            if (dataRecord.e) {
-                for (const [res, twh] of Object.entries(dataRecord.e)) {
-                    if (twh <= 0) continue;
-                    const count = Math.max(1, Math.round(twh / ballTwh));
-                    items.push({ resource: res, count, tier: 'claimed', glowIso: null, twh });
-                }
-            }
-            // New build
             if (dataRecord.n) {
                 for (const [res, twh] of Object.entries(dataRecord.n)) {
                     if (twh <= 0) continue;
@@ -310,7 +330,6 @@ class Jar {
             // Cross-ISO: balls appear in SOURCE jar, glowing with BUYER color
             // dataRecord.x has {srcIso: {resource: twh}} — these are purchases FROM srcIso
             // In the buyer's jar, we DON'T show cross-ISO balls (they're in the source jar)
-            // Instead, we need crossIsoFlows to know what THIS iso's resources serve externally
         }
 
         // 3. Cross-ISO glow: resources in THIS jar that serve external buyers
@@ -401,6 +420,22 @@ class Jar {
                 this.balls.push(ob);
             }
         }
+    }
+
+    _mapClaimedResource(res) {
+        // Map claimed resource names (from 'e' field) to grid baseline resource names
+        // e.g., SSS allocation is mostly nuclear → clean_firm, merchant VRE → solar/wind
+        const map = {
+            'grid_clean': 'clean_firm',  // 2B grid baseline → maps to clean_firm
+            'sss_allocation': 'clean_firm',  // SSS is mostly nuclear
+            'existing_nuclear': 'clean_firm',
+            'nuclear_uprate': 'clean_firm',
+            'existing_vre': 'solar',  // existing VRE
+            'existing_vre_hydro': 'hydro',
+            'ccs': 'ccs_ccgt',
+            'ccs_ccgt': 'ccs_ccgt',
+        };
+        return map[res] || res;
     }
 
     _packRows(ballR) {
@@ -681,12 +716,15 @@ class JarGrid {
         const availWidth = rect.width - this.rowHeaderWidth;
         const jarW = Math.max(55, Math.floor(availWidth / ISO_LIST.length));
         const jarH = isMobile ? 110 : (isTablet ? 130 : 160);
+        const rowGap = isMobile ? 20 : (isTablet ? 28 : 36); // space for curtailment overflow
 
         this.jarWidth = jarW;
         this.jarHeight = jarH;
+        this.rowGap = rowGap;
+        this.rowStride = jarH + rowGap;
 
         const totalWidth = this.rowHeaderWidth + jarW * ISO_LIST.length;
-        const totalHeight = this.colHeaderHeight + jarH * STRATEGIES.length;
+        const totalHeight = this.colHeaderHeight + this.rowStride * STRATEGIES.length;
 
         this.canvas.style.width = totalWidth + 'px';
         this.canvas.style.height = totalHeight + 'px';
@@ -703,7 +741,7 @@ class JarGrid {
         for (let row = 0; row < STRATEGIES.length; row++) {
             for (let col = 0; col < ISO_LIST.length; col++) {
                 const x = this.rowHeaderWidth + col * this.jarWidth;
-                const y = this.colHeaderHeight + row * this.jarHeight;
+                const y = this.colHeaderHeight + row * this.rowStride;
                 this.jars.push(new Jar(STRATEGIES[row], ISO_LIST[col], x, y, this.jarWidth, this.jarHeight));
             }
         }
@@ -870,7 +908,7 @@ class JarGrid {
 
         for (let row = 0; row < STRATEGIES.length; row++) {
             const strat = STRATEGIES[row];
-            const y = this.colHeaderHeight + row * this.jarHeight + this.jarHeight / 2;
+            const y = this.colHeaderHeight + row * this.rowStride + this.jarHeight / 2;
             const lines = (STRATEGY_LABELS[strat] || strat).split('\n');
             for (let li = 0; li < lines.length; li++) {
                 ctx.fillText(lines[li], this.rowHeaderWidth - 6, y + (li - (lines.length - 1) / 2) * (rowFS + 2));
@@ -883,7 +921,7 @@ class JarGrid {
         ctx.strokeStyle = '#E2E8F0';
         ctx.lineWidth = 0.5;
         for (let row = 0; row <= STRATEGIES.length; row++) {
-            const y = this.colHeaderHeight + row * this.jarHeight;
+            const y = this.colHeaderHeight + row * this.rowStride;
             ctx.beginPath(); ctx.moveTo(this.rowHeaderWidth, y); ctx.lineTo(w, y); ctx.stroke();
         }
         for (let col = 0; col <= ISO_LIST.length; col++) {

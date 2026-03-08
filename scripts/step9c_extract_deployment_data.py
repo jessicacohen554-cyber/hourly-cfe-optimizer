@@ -107,8 +107,13 @@ def extract_strategy2a(data):
 
 
 def extract_strategy2b(data):
-    """Strategy 2B: grid mix baseline + new-build tranches (category field)."""
-    existing = {}
+    """Strategy 2B: free rider — claims grid baseline clean for free, only procures new-build.
+
+    No existing procurement (e={}) because the buyer takes credit for existing
+    grid clean without paying for it. Only new-build tranches count as procurement.
+    The free-riding is reflected in the HMS: grid baseline clean contributes to
+    matching even though the buyer didn't procure it.
+    """
     new = {}
     for key, val in data.items():
         if not isinstance(val, dict):
@@ -117,13 +122,14 @@ def extract_strategy2b(data):
         if twh <= 0:
             continue
         category = val.get('category', 'new_build')
-        _, resource = normalize_resource(key)
 
+        # Skip grid_mix entries — buyer claims these for free, no procurement
         if category in ('grid_mix',) or key in ('existing_clean_free', 'grid_mix_allocation'):
-            existing['grid_clean'] = round(existing.get('grid_clean', 0) + twh, 3)
-        else:
-            new[resource] = round(new.get(resource, 0) + twh, 3)
-    return existing, new, {}
+            continue
+
+        _, resource = normalize_resource(key)
+        new[resource] = round(new.get(resource, 0) + twh, 3)
+    return {}, new, {}
 
 
 def extract_strategy2c(data):
