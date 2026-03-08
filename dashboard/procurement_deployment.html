@@ -324,19 +324,31 @@ body { background: var(--bg-page); }
 
 /* ===== MOBILE ===== */
 @media (max-width: 767px) {
-    .controls-inner { gap: 12px; }
-    .control-group { min-width: 150px; }
-    .stat-chips { gap: 6px; }
-    .stat-chip { padding: 4px 8px; font-size: 0.7rem; }
-    .stat-chip .chip-val { font-size: 0.82rem; }
-    .legend-bar { gap: 8px; font-size: 0.68rem; }
-    .matrix-section { padding: 0 8px 16px; }
-    .story-section h2 { font-size: 1.3rem; }
+    .controls-inner { gap: 10px; flex-direction: column; align-items: stretch; }
+    .control-group { min-width: 0; width: 100%; }
+    .stat-chips { gap: 6px; justify-content: center; }
+    .stat-chip { padding: 5px 10px; font-size: 0.72rem; }
+    .stat-chip .chip-val { font-size: 0.85rem; }
+    .legend-bar { gap: 6px; font-size: 0.65rem; padding: 8px 12px; flex-wrap: wrap; justify-content: center; }
+    .legend-group { gap: 4px; }
+    .legend-ball, .legend-ball-hollow { width: 10px; height: 10px; }
+    .matrix-section { padding: 0 4px 16px; }
+    .matrix-canvas-wrap { min-height: 300px; }
+    .story-section h2 { font-size: 1.25rem; }
+    .story-section p { font-size: 0.9rem; line-height: 1.65; }
     .agg-charts .grid-2col { grid-template-columns: 1fr; }
+    .agg-chart-card { padding: 14px; }
+    .agg-chart-card h3 { font-size: 0.85rem; }
+    .callout { padding: 12px 14px; font-size: 0.85rem; }
+    .story-chart-wrap { padding: 10px; }
+    .slider-row input[type="range"] { min-height: 44px; }
 }
 @media (max-width: 480px) {
-    .controls-bar { padding: 10px 12px; }
-    .control-group label { font-size: 0.7rem; }
+    .controls-bar { padding: 10px 10px; }
+    .control-group label { font-size: 0.68rem; }
+    .slider-value { font-size: 0.95rem; min-width: 45px; }
+    .legend-bar { gap: 4px; font-size: 0.6rem; }
+    .story-section { margin-bottom: 32px; }
 }
 </style>
 </head>
@@ -367,10 +379,8 @@ body { background: var(--bg-page); }
             </div>
         </div>
         <div class="stat-chips" id="statChips">
-            <div class="stat-chip">Buyer demand: <span class="chip-val" id="chipDemand">—</span></div>
-            <div class="stat-chip">Total cost: <span class="chip-val" id="chipCost">—</span></div>
+            <div class="stat-chip">Total paid procurement: <span class="chip-val" id="chipPaid">—</span></div>
             <div class="stat-chip">CO₂ reduced: <span class="chip-val" id="chipCO2">—</span></div>
-            <div class="stat-chip">Baseline CO₂: <span class="chip-val" id="chipBaseline">—</span></div>
         </div>
     </div>
 </div>
@@ -378,17 +388,18 @@ body { background: var(--bg-page); }
 <!-- Legend -->
 <div class="legend-bar">
     <div class="legend-group">
-        <span class="legend-ball" style="background:#6366F1"></span> Existing clean (saturated)
+        <span class="legend-ball" style="background:#6366F1"></span> Existing (paid)
     </div>
     <div class="legend-divider"></div>
     <div class="legend-group">
-        <span class="legend-ball-hollow" style="border-color:#6366F1"></span> New build (transparent fill)
+        <span class="legend-ball-hollow" style="border-color:#6366F1"></span> New build
     </div>
     <div class="legend-divider"></div>
     <div class="legend-group">
         <span class="legend-ball" style="background:#F59E0B"></span> Solar
         <span class="legend-ball" style="background:#22C55E"></span> Wind
         <span class="legend-ball" style="background:#6366F1"></span> Clean Firm
+        <span class="legend-ball" style="background:#818CF8"></span> Nuclear Uprate
         <span class="legend-ball" style="background:#0EA5E9"></span> Hydro
         <span class="legend-ball" style="background:#64748B"></span> CCS
         <span class="legend-ball" style="background:#E91E63"></span> LDES
@@ -396,8 +407,12 @@ body { background: var(--bg-page); }
     </div>
     <div class="legend-divider"></div>
     <div class="legend-group">
-        <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:rgba(245,158,11,0.25);border:2px solid #F59E0B;box-shadow:0 0 8px rgba(245,158,11,0.4)"></span>
-        Glowing jar = cross-ISO source
+        <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:rgba(249,115,22,0.15);border:2px solid #F97316;box-shadow:0 0 8px rgba(249,115,22,0.5)"></span>
+        Glow = cross-ISO source
+    </div>
+    <div class="legend-divider"></div>
+    <div class="legend-group" style="font-style:italic;color:var(--text-muted)">
+        Each ball ≈ equal share of deployment · Free credits (SSS, grid baseline) excluded
     </div>
 </div>
 
@@ -415,22 +430,12 @@ body { background: var(--bg-page); }
 <div class="agg-charts">
     <div class="grid-2col">
         <div class="agg-chart-card">
-            <h3>Total Procurement by Strategy (TWh)</h3>
+            <h3>Paid Procurement by Strategy (TWh)</h3>
             <div class="chart-container"><canvas id="chartProcurement"></canvas></div>
         </div>
         <div class="agg-chart-card">
-            <h3>Total Annual Cost by Strategy ($B)</h3>
-            <div class="chart-container"><canvas id="chartCost"></canvas></div>
-        </div>
-    </div>
-    <div class="grid-2col">
-        <div class="agg-chart-card">
             <h3>CO₂ Reduced by Strategy (ktCO₂)</h3>
             <div class="chart-container"><canvas id="chartCO2"></canvas></div>
-        </div>
-        <div class="agg-chart-card">
-            <h3>Marginal Abatement Cost by Strategy ($/tCO₂)</h3>
-            <div class="chart-container"><canvas id="chartMAC"></canvas></div>
         </div>
     </div>
 </div>
@@ -610,13 +615,8 @@ body { background: var(--bg-page); }
     const grid = new JarGrid('jarCanvas', 'jarTooltip');
 
     grid.onStatsUpdate = function(stats) {
-        document.getElementById('chipCost').textContent = '$' + stats.totalCostB.toFixed(1) + 'B';
+        document.getElementById('chipPaid').textContent = stats.totalPaidTwh.toFixed(0) + ' TWh';
         document.getElementById('chipCO2').textContent = (stats.totalCO2Mt * 1000).toFixed(0) + ' ktCO₂';
-        // Show baseline CO2 from deployment data (sum across ISOs for strategy 2A as reference)
-        const baselineEl = document.getElementById('chipBaseline');
-        if (baselineEl && stats.totalBaselineMt !== undefined) {
-            baselineEl.textContent = (stats.totalBaselineMt * 1000).toFixed(0) + ' ktCO₂';
-        }
     };
 
     if (typeof DEPLOYMENT_DATA !== 'undefined') {
@@ -743,9 +743,7 @@ body { background: var(--bg-page); }
     }
 
     const chartProcurement = makeStackedBarChart('chartProcurement');
-    const chartCost = makeBarChart('chartCost', 'Cost', '$B');
-    const chartCO2 = makeBarChart('chartCO2', 'CO₂ Abated', 'MtCO₂');
-    const chartMAC = makeBarChart('chartMAC', 'MAC', '$/tCO₂');
+    const chartCO2 = makeBarChart('chartCO2', 'CO₂ Abated', 'ktCO₂');
 
     function updateCharts() {
         const stats = grid.getAggregateStats();
@@ -758,28 +756,11 @@ body { background: var(--bg-page); }
             chartProcurement.data.datasets[1].data[i] = s.newTwh;
             chartProcurement.data.datasets[2].data[i] = s.crossTwh;
 
-            chartCost.data.datasets[0].data[i] = s.totalCostM / 1000;
             chartCO2.data.datasets[0].data[i] = s.totalCO2Mt * 1000;  // to ktCO₂
-            chartMAC.data.datasets[0].data[i] = s.mac;
         }
 
         chartProcurement.update();
-        chartCost.update();
         chartCO2.update();
-        chartMAC.update();
-
-        // Update demand chip
-        const firstStrat = stats['2A'];
-        if (firstStrat) {
-            // Buyer demand is per-ISO, sum across ISOs
-            let totalBuyerDemand = 0;
-            for (const jar of grid.jars) {
-                if (jar.strategy === '2A' && jar.data) {
-                    totalBuyerDemand += jar.data.bt || 0;
-                }
-            }
-            document.getElementById('chipDemand').textContent = totalBuyerDemand.toFixed(0) + ' TWh';
-        }
     }
 
     // Initial chart update
