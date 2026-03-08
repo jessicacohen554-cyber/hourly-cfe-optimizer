@@ -196,8 +196,8 @@ def compute_strategy_3a(iso, year, threshold, participation_pct,
     # Reduction = procured MWh × grid avg
     cost_per_mwh = total_cost / clean_needed if clean_needed > 0 else 0
     emission_rate = get_emission_rate(iso, 'grid_average')
-    baseline_co2_mt = buyer_demand * emission_rate / 1e3
-    co2_abated = buyer_demand * target_fraction * emission_rate / 1e3
+    baseline_co2_mt = buyer_demand * emission_rate
+    co2_abated = buyer_demand * target_fraction * emission_rate
     mac = (total_cost * 1e6) / (co2_abated * 1e6) if co2_abated > 0 else None
     co2_reduction_pct = (co2_abated / baseline_co2_mt * 100) if baseline_co2_mt > 0 else 0
 
@@ -273,8 +273,8 @@ def compute_strategy_3b(iso, year, threshold, participation_pct,
     # CO2 accounting: (total load - total procured) × grid avg
     cost_per_mwh = total_cost / total_procured if total_procured > 0 else 0
     emission_rate = get_emission_rate(iso, 'grid_average')
-    baseline_co2_mt = buyer_demand * emission_rate / 1e3
-    co2_abated = buyer_demand * target_fraction * emission_rate / 1e3
+    baseline_co2_mt = buyer_demand * emission_rate
+    co2_abated = buyer_demand * target_fraction * emission_rate
     mac = (total_cost * 1e6) / (co2_abated * 1e6) if co2_abated > 0 else None
     co2_reduction_pct = (co2_abated / baseline_co2_mt * 100) if baseline_co2_mt > 0 else 0
 
@@ -362,8 +362,8 @@ def compute_strategy_3c(iso, year, threshold, participation_pct,
     total_procured = recs_purchased + remaining
     cost_per_mwh = total_cost / total_procured if total_procured > 0 else 0
     emission_rate = get_emission_rate(iso, 'grid_average')
-    baseline_co2_mt = buyer_demand * emission_rate / 1e3
-    co2_abated = buyer_demand * target_fraction * emission_rate / 1e3
+    baseline_co2_mt = buyer_demand * emission_rate
+    co2_abated = buyer_demand * target_fraction * emission_rate
     mac = (total_cost * 1e6) / (co2_abated * 1e6) if co2_abated > 0 else None
     co2_reduction_pct = (co2_abated / baseline_co2_mt * 100) if baseline_co2_mt > 0 else 0
 
@@ -455,9 +455,9 @@ def compute_strategy_3d(iso, year, threshold, participation_pct,
     total_procured = clean_needed
     cost_per_mwh = total_cost / total_procured if total_procured > 0 else 0
     emission_rate = get_emission_rate(iso, 'grid_average')
-    baseline_co2_mt = buyer_demand * emission_rate / 1e3
+    baseline_co2_mt = buyer_demand * emission_rate
     additionality_discount = 0.15 if recs_purchased > 0 else 0.80
-    co2_abated = buyer_demand * target_fraction * emission_rate * additionality_discount / 1e3
+    co2_abated = buyer_demand * target_fraction * emission_rate * additionality_discount
     mac = (total_cost * 1e6) / (co2_abated * 1e6) if co2_abated > 0 else None
     co2_reduction_pct = (co2_abated / baseline_co2_mt * 100) if baseline_co2_mt > 0 else 0
 
