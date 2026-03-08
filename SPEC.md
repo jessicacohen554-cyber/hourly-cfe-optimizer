@@ -619,6 +619,29 @@ Without hourly matching, there is no price signal to invest in storage (battery 
 
 These effects should be modeled explicitly in the dashboard and presented as a key finding in the scrollytell narrative and research paper.
 
+### §15.11b CO2 Reduction Framing (Decided Mar 8, 2026)
+
+**Critical reframing:** The procurement dashboard primary axis is **buyer CO2 reduction %** (not CFE target %). Each strategy defines "reduction" via different emission accounting:
+
+**Strategy 1A (Consequential, grid-average baseline):**
+- Baseline emissions = participating corporate load × grid-average emission rate
+- Reduction = displacing fossil CO2 with cheapest $/mtCO2 clean energy purchases from anywhere
+- Queue must follow physical buildout order: within each ISO, steps are monotonic (can't access 75→80% in MISO until 31→75% is done). Sort globally by cheapest $/mtCO2, then by step. Exclude missing data intervals.
+
+**Strategy 1B (Consequential, fossil-average baseline):**
+- Baseline emissions = participating corporate load × fossil-average emission rate
+- Same queue-based reduction as 1A but higher baseline (fossil fleet only, no clean in denominator)
+
+**Strategy 2A/2B/2C (Hourly matching):**
+- Emissions = Σ(hourly MWh − hourly match) × fossil-average emission rate
+- Reduction comes from MWh matched hourly. Unmatched hours contribute to residual emissions.
+
+**Strategy 3A/3B (Annual matching):**
+- Emissions = (total MWh load − total MWh procured) × grid-average emission rate
+- Reduction comes from MWh matched annually.
+
+**Key insight:** The same "50% CO2 reduction" means different things under different strategies because they use different baselines and temporal granularity. This is the core comparative insight of the procurement analysis.
+
 ### §15.12 Supply Constraint Handling (Decided Feb 27)
 
 **Approach:** Show constraints explicitly. When a strategy hits a physical supply ceiling in an ISO, display it as "infeasible above X% participation" with a red/hatched band on the chart.

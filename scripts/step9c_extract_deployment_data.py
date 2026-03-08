@@ -84,10 +84,10 @@ def extract_strategy1(data, buyer_iso):
             # Cross-ISO flow
             if source_iso not in cross_iso:
                 cross_iso[source_iso] = {}
-            cross_iso[source_iso][resource] = round(cross_iso[source_iso].get(resource, 0) + twh, 3)
+            cross_iso[source_iso][resource] = cross_iso[source_iso].get(resource, 0) + twh
         else:
             # Same ISO, all new-build for strategy 1
-            new[resource] = round(new.get(resource, 0) + twh, 3)
+            new[resource] = new.get(resource, 0) + twh
 
     return existing, new, cross_iso
 
@@ -211,9 +211,9 @@ def load_json(filename):
         return json.load(f)
 
 
-def remove_zero_entries(d):
-    """Remove entries with 0 values to save space."""
-    return {k: v for k, v in d.items() if v and (isinstance(v, dict) or v > 0)}
+def remove_zero_entries(d, threshold=1e-6):
+    """Remove entries with negligible values to save space."""
+    return {k: v for k, v in d.items() if isinstance(v, dict) or (isinstance(v, (int, float)) and v > threshold)}
 
 
 def main():
@@ -310,10 +310,10 @@ def main():
                     new = remove_zero_entries(new)
                     cross_iso = {k: remove_zero_entries(v) for k, v in cross_iso.items() if v}
 
-                    # Round TWh values to 1 decimal to save space
-                    existing = {k: round(v, 1) for k, v in existing.items()}
-                    new = {k: round(v, 1) for k, v in new.items()}
-                    cross_iso = {k: {r: round(t, 1) for r, t in v.items()} for k, v in cross_iso.items()}
+                    # Round TWh values — 4 decimals to preserve small flows at low participation
+                    existing = {k: round(v, 4) for k, v in existing.items()}
+                    new = {k: round(v, 4) for k, v in new.items()}
+                    cross_iso = {k: {r: round(t, 4) for r, t in v.items()} for k, v in cross_iso.items()}
 
                     record = {}
                     if existing:
@@ -326,6 +326,18 @@ def main():
                     record['tc'] = round(entry.get('total_cost_m', 0), 0)
                     record['co2'] = round(entry.get('co2_abated_mmt', 0), 3)
                     record['bt'] = round(entry.get('buyer_demand_twh', 0), 1)
+
+                    # MAC ($/tCO2)
+                    mac = entry.get('mac_per_ton')
+                    if mac is not None and mac > 0:
+                        record['mac'] = round(mac, 0)
+
+                    # CO2 reduction framing: baseline + reduction %
+                    meta = entry.get('metadata', {})
+                    if 'co2_reduction_pct' in meta:
+                        record['co2r'] = round(meta['co2_reduction_pct'], 1)
+                    if 'baseline_co2_mt' in meta:
+                        record['bl'] = round(meta['baseline_co2_mt'], 3)
 
                     part_dict[thr_key] = record
                     total_entries += 1

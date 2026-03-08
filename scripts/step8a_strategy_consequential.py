@@ -71,8 +71,62 @@ _RESOURCE_TO_PPA = {
 }
 
 
+def _reorder_queue_with_iso_monotonicity(queue):
+    """Reorder queue: cheapest $/mtCO2 first, but within each ISO steps must
+    follow physical buildout order (ascending threshold_start).
+
+    Can't access 75→80% in MISO until 23→75% is built. Excludes entries
+    with no delta_resources (missing data intervals).
+    """
+    from collections import defaultdict
+
+    # Filter out entries with empty delta_resources (missing data)
+    valid = [e for e in queue if e.get('delta_resources')]
+
+    # Group by ISO, sort by threshold_start within each ISO
+    iso_steps = defaultdict(list)
+    for entry in valid:
+        iso_steps[entry['iso']].append(entry)
+    for iso in iso_steps:
+        iso_steps[iso].sort(key=lambda e: e['threshold_start'])
+
+    # Greedy: pick cheapest available entry where all ISO prerequisites are done
+    iso_idx = {iso: 0 for iso in iso_steps}
+    ordered = []
+    total = sum(len(v) for v in iso_steps.values())
+
+    while len(ordered) < total:
+        best = None
+        best_mac = float('inf')
+        best_iso = None
+
+        for iso, steps in iso_steps.items():
+            idx = iso_idx[iso]
+            if idx >= len(steps):
+                continue
+            entry = steps[idx]
+            mac = entry.get('marginal_mac', float('inf'))
+            if mac < best_mac:
+                best_mac = mac
+                best = entry
+                best_iso = iso
+
+        if best is None:
+            break
+
+        ordered.append(best)
+        iso_idx[best_iso] += 1
+
+    return ordered
+
+
 def _load_queue():
-    """Load the consequential deployment queue from JSON (cached)."""
+    """Load the consequential deployment queue from JSON (cached).
+
+    Applies within-ISO monotonic ordering: queue is sorted by cheapest
+    $/mtCO2 globally, but within each ISO steps must follow physical
+    buildout order (can't skip threshold intervals).
+    """
     global _QUEUE_CACHE
     if _QUEUE_CACHE is not None:
         return _QUEUE_CACHE
@@ -83,8 +137,10 @@ def _load_queue():
         return _QUEUE_CACHE
     with open(QUEUE_JSON_PATH) as f:
         data = json.load(f)
-    _QUEUE_CACHE = data.get('queue', data.get('deployment_queue', []))
-    print(f"  Loaded consequential queue: {len(_QUEUE_CACHE)} steps")
+    raw_queue = data.get('queue', data.get('deployment_queue', []))
+    _QUEUE_CACHE = _reorder_queue_with_iso_monotonicity(raw_queue)
+    print(f"  Loaded consequential queue: {len(raw_queue)} raw → "
+          f"{len(_QUEUE_CACHE)} valid steps (within-ISO monotonic)")
     return _QUEUE_CACHE
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -190,40 +246,84 @@ def compute_consequential_cost(buyer_iso, year, threshold, participation_pct,
             cost_per_mwh=0, total_cost_m=0, co2_abated_mmt=0, mac_per_ton=0,
         )
 
-    # Clean energy needed (TWh)
-    target_fraction = min(threshold / 100.0, 1.0)
-    clean_needed_twh = buyer_demand * target_fraction
-
     # Emission rate for this ISO/baseline type
     emission_rate = get_emission_rate(buyer_iso, baseline_type)
 
-    # Find cheapest cross-regional sources
-    sources = find_cheapest_clean_sources(threshold, scenario, level, ppa_level)
+    # Baseline emissions: corporate load × emission rate
+    baseline_co2_mt = buyer_demand * emission_rate / 1e3  # TWh × tCO₂/MWh / 1000 = MtCO₂
 
-    # Walk up the source stack until clean_needed is satisfied
+    # CO2 reduction target: threshold % of baseline emissions
+    target_fraction = min(threshold / 100.0, 1.0)
+    co2_target_mt = baseline_co2_mt * target_fraction
+
+    # Walk the consequential queue (cheapest $/mtCO2, within-ISO ordered)
+    # until cumulative CO2 displaced hits the reduction target
+    queue = _load_queue()
+
     total_cost = 0.0  # $M
     total_procured = 0.0  # TWh
+    co2_displaced = 0.0  # MtCO₂
     resource_mix = {}
 
-    for src_iso, resource, price_mwh, available_twh in sources:
-        if total_procured >= clean_needed_twh:
+    for step in queue:
+        if co2_displaced >= co2_target_mt:
             break
 
-        remaining = clean_needed_twh - total_procured
-        procure = min(remaining, available_twh)
+        iso = step['iso']
+        delta_res = step.get('delta_resources', {})
+        step_co2 = step.get('co2_displaced_mt', 0)
 
-        total_cost += procure * price_mwh * 1e6 / 1e6  # TWh × $/MWh = $M
-        total_procured += procure
+        if step_co2 <= 0:
+            continue
 
-        key = f"{src_iso}_{resource}"
-        resource_mix[key] = resource_mix.get(key, 0) + round(procure, 2)
+        # How much of this step do we need?
+        remaining_co2 = co2_target_mt - co2_displaced
+        use_fraction = min(1.0, remaining_co2 / step_co2)
+
+        for resource, delta_twh in delta_res.items():
+            if delta_twh < 0.5:
+                continue
+            ppa_resource = _RESOURCE_TO_PPA.get(resource)
+            if ppa_resource is None:
+                continue
+
+            procure_twh = delta_twh * use_fraction
+            ppa_price = get_learning_adjusted_ppa(
+                ppa_resource, iso, threshold, scenario, level, ppa_level)
+
+            total_cost += procure_twh * ppa_price  # TWh × $/MWh = $M
+            total_procured += procure_twh
+
+            key = f"{iso}_{ppa_resource}"
+            resource_mix[key] = resource_mix.get(key, 0) + procure_twh
+
+        co2_displaced += step_co2 * use_fraction
+
+    # If queue exhausted, supplement with price-based fallback
+    if co2_displaced < co2_target_mt * 0.99 and total_procured > 0:
+        fallback_sources = _find_sources_by_price(threshold, scenario, level, ppa_level)
+        remaining_co2 = co2_target_mt - co2_displaced
+        for src_iso, resource, price_mwh, available_twh in fallback_sources:
+            if remaining_co2 <= 0:
+                break
+            src_emission_rate = get_emission_rate(src_iso, 'fossil_average')
+            co2_per_twh = src_emission_rate / 1e3  # MtCO₂/TWh
+            twh_needed = remaining_co2 / co2_per_twh if co2_per_twh > 0 else 0
+            procure = min(twh_needed, available_twh)
+            total_cost += procure * price_mwh
+            total_procured += procure
+            co2_displaced += procure * co2_per_twh
+            remaining_co2 -= procure * co2_per_twh
+            key = f"{src_iso}_{resource}"
+            resource_mix[key] = resource_mix.get(key, 0) + procure
 
     # Cost metrics
     cost_per_mwh = total_cost / total_procured if total_procured > 0 else 0
-    # CO2 abated: use queue dispatch-based emission rate if available
-    co2_abated = total_procured * emission_rate / 1e3  # TWh × tCO₂/MWh / 1000 = MtCO₂
-    # MAC = total PPA cost ($M) / CO2 abated (Mt) → $/tCO₂
-    mac_per_ton = (total_cost * 1e6) / (co2_abated * 1e6) if co2_abated > 0 else None  # $/tCO₂
+    co2_abated = co2_displaced  # MtCO₂ displaced via queue
+    mac_per_ton = (total_cost * 1e6) / (co2_abated * 1e6) if co2_abated > 0 else None
+
+    # CO2 reduction % = co2 displaced / baseline
+    co2_reduction_pct = (co2_displaced / baseline_co2_mt * 100) if baseline_co2_mt > 0 else 0
 
     # Wholesale price impact (for the buyer's ISO)
     total_demand = get_demand_twh_at_year(buyer_iso, year, growth_level)
@@ -245,8 +345,9 @@ def compute_consequential_cost(buyer_iso, year, threshold, participation_pct,
         metadata={
             'baseline_type': baseline_type,
             'emission_rate': emission_rate,
+            'baseline_co2_mt': round(baseline_co2_mt, 4),
+            'co2_reduction_pct': round(co2_reduction_pct, 2),
             'clean_procured_twh': round(total_procured, 2),
-            'clean_needed_twh': round(clean_needed_twh, 2),
             'scenario': scenario,
             'lmp_impact': round(lmp_impact, 2),
         },

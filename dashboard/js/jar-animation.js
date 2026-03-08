@@ -529,6 +529,7 @@ class JarGrid {
         let totalProcured = 0;
         let totalCost = 0;
         let totalCO2 = 0;
+        let totalBaseline = 0;
 
         for (const jar of this.jars) {
             const stratData = this.data.data[jar.strategy];
@@ -554,6 +555,7 @@ class JarGrid {
             if (record) {
                 totalCost += record.tc || 0;
                 totalCO2 += record.co2 || 0;
+                totalBaseline += record.bl || 0;
             }
 
             // Track cross-ISO sources for glow
@@ -578,6 +580,7 @@ class JarGrid {
             this.onStatsUpdate({
                 totalCostB: totalCost / 1000,  // $M to $B
                 totalCO2Mt: totalCO2,
+                totalBaselineMt: totalBaseline,
             });
         }
     }
@@ -825,10 +828,12 @@ class JarGrid {
 
         html += '</div>';
 
-        // CO2 and MAC
+        // CO2 reduction
         if (data.co2 > 0) {
+            const reductionPct = data.co2r ? data.co2r.toFixed(0) + '%' : '';
+            const baselineInfo = data.bl ? ` of ${(data.bl * 1000).toFixed(0)} kt baseline` : '';
             html += `<div class="deployment-tooltip-footer">
-                CO₂ abated: ${(data.co2 * 1000).toFixed(1)} ktCO₂
+                CO₂ reduced: ${(data.co2 * 1000).toFixed(1)} ktCO₂ ${reductionPct ? `(${reductionPct}${baselineInfo})` : ''}
                 ${data.mac ? ` · MAC: $${Math.round(data.mac)}/tCO₂` : ''}
             </div>`;
         }
@@ -862,7 +867,7 @@ class JarGrid {
         const stats = {};
         for (const strat of STRATEGIES) {
             let totalExisting = 0, totalNew = 0, totalCross = 0;
-            let totalCost = 0, totalCO2 = 0;
+            let totalCost = 0, totalCO2 = 0, totalBaseline = 0;
             const resourceBreakdown = { existing: {}, new: {} };
 
             for (const jar of this.jars) {
@@ -890,6 +895,7 @@ class JarGrid {
                 }
                 totalCost += d.tc || 0;
                 totalCO2 += d.co2 || 0;
+                totalBaseline += d.bl || 0;
             }
 
             stats[strat] = {
@@ -899,6 +905,8 @@ class JarGrid {
                 totalTwh: totalExisting + totalNew + totalCross,
                 totalCostM: totalCost,
                 totalCO2Mt: totalCO2,
+                totalBaselineMt: totalBaseline,
+                co2ReductionPct: totalBaseline > 0 ? (totalCO2 / totalBaseline * 100) : 0,
                 mac: totalCO2 > 0 ? (totalCost * 1e6) / (totalCO2 * 1e6) : 0,
                 resourceBreakdown,
             };

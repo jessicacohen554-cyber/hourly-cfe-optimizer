@@ -192,16 +192,22 @@ def compute_strategy_3a(iso, year, threshold, participation_pct,
         total_cost += cost
         resource_breakdown[resource] = {'twh': round(twh, 2), 'price': round(price, 1), 'cost_m': round(cost, 2)}
 
+    # CO2 accounting: (total load - total procured) × grid avg emission rate
+    # Reduction = procured MWh × grid avg
     cost_per_mwh = total_cost / clean_needed if clean_needed > 0 else 0
-    emission_rate = get_emission_rate(iso, 'grid_average')  # Annual matching, grid-avg baseline
+    emission_rate = get_emission_rate(iso, 'grid_average')
+    baseline_co2_mt = buyer_demand * emission_rate / 1e3
     co2_abated = buyer_demand * target_fraction * emission_rate / 1e3
     mac = (total_cost * 1e6) / (co2_abated * 1e6) if co2_abated > 0 else None
+    co2_reduction_pct = (co2_abated / baseline_co2_mt * 100) if baseline_co2_mt > 0 else 0
 
     return make_strategy_result(
         '3A', iso, year, threshold, participation_pct,
         cost_per_mwh, total_cost, co2_abated, mac,
         resource_mix=resource_breakdown,
-        metadata={'annual_slack': round(slack, 3), 'scenario': scenario},
+        metadata={'annual_slack': round(slack, 3), 'scenario': scenario,
+                  'baseline_co2_mt': round(baseline_co2_mt, 4),
+                  'co2_reduction_pct': round(co2_reduction_pct, 2)},
     )
 
 
@@ -264,17 +270,22 @@ def compute_strategy_3b(iso, year, threshold, participation_pct,
         key = f"{src_iso}_{resource}"
         resource_breakdown[key] = {'twh': round(procure, 2), 'price': round(price, 1), 'cost_m': round(cost, 2)}
 
+    # CO2 accounting: (total load - total procured) × grid avg
     cost_per_mwh = total_cost / total_procured if total_procured > 0 else 0
     emission_rate = get_emission_rate(iso, 'grid_average')
+    baseline_co2_mt = buyer_demand * emission_rate / 1e3
     co2_abated = buyer_demand * target_fraction * emission_rate / 1e3
     mac = (total_cost * 1e6) / (co2_abated * 1e6) if co2_abated > 0 else None
+    co2_reduction_pct = (co2_abated / baseline_co2_mt * 100) if baseline_co2_mt > 0 else 0
 
     return make_strategy_result(
         '3B', iso, year, threshold, participation_pct,
         cost_per_mwh, total_cost, co2_abated, mac,
         resource_mix=resource_breakdown,
         metadata={'annual_slack': round(slack, 3), 'scenario': scenario,
-                  'cross_regional': True},
+                  'cross_regional': True,
+                  'baseline_co2_mt': round(baseline_co2_mt, 4),
+                  'co2_reduction_pct': round(co2_reduction_pct, 2)},
     )
 
 
@@ -347,18 +358,23 @@ def compute_strategy_3c(iso, year, threshold, participation_pct,
             'cost_m': round(cost, 2),
         }
 
+    # CO2 accounting: (total load - total procured) × grid avg
     total_procured = recs_purchased + remaining
     cost_per_mwh = total_cost / total_procured if total_procured > 0 else 0
     emission_rate = get_emission_rate(iso, 'grid_average')
+    baseline_co2_mt = buyer_demand * emission_rate / 1e3
     co2_abated = buyer_demand * target_fraction * emission_rate / 1e3
     mac = (total_cost * 1e6) / (co2_abated * 1e6) if co2_abated > 0 else None
+    co2_reduction_pct = (co2_abated / baseline_co2_mt * 100) if baseline_co2_mt > 0 else 0
 
     return make_strategy_result(
         '3C', iso, year, threshold, participation_pct,
         cost_per_mwh, total_cost, co2_abated, mac,
         resource_mix=resource_breakdown,
         metadata={'rec_price': round(rec_price, 2), 'scarcity_mult': round(rec_scarcity, 2),
-                  'scenario': scenario},
+                  'scenario': scenario,
+                  'baseline_co2_mt': round(baseline_co2_mt, 4),
+                  'co2_reduction_pct': round(co2_reduction_pct, 2)},
     )
 
 
@@ -434,16 +450,16 @@ def compute_strategy_3d(iso, year, threshold, participation_pct,
             'cost_m': round(cost, 2),
         }
 
+    # CO2 accounting: (total load - total procured) × grid avg
+    # For 3D (no additionality), apply discount since existing generators already running
     total_procured = clean_needed
     cost_per_mwh = total_cost / total_procured if total_procured > 0 else 0
-
-    # CO₂ abated is questionable for status quo (existing generators already running)
-    # Use reduced emission rate to reflect marginal impact
     emission_rate = get_emission_rate(iso, 'grid_average')
-    # Discount: only 10-30% of REC purchases lead to actual emission reduction
+    baseline_co2_mt = buyer_demand * emission_rate / 1e3
     additionality_discount = 0.15 if recs_purchased > 0 else 0.80
     co2_abated = buyer_demand * target_fraction * emission_rate * additionality_discount / 1e3
     mac = (total_cost * 1e6) / (co2_abated * 1e6) if co2_abated > 0 else None
+    co2_reduction_pct = (co2_abated / baseline_co2_mt * 100) if baseline_co2_mt > 0 else 0
 
     return make_strategy_result(
         '3D', iso, year, threshold, participation_pct,
@@ -455,6 +471,8 @@ def compute_strategy_3d(iso, year, threshold, participation_pct,
             'additionality_discount': additionality_discount,
             'cross_regional': True,
             'scenario': scenario,
+            'baseline_co2_mt': round(baseline_co2_mt, 4),
+            'co2_reduction_pct': round(co2_reduction_pct, 2),
         },
     )
 
