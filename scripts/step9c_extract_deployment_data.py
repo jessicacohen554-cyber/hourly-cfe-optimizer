@@ -327,6 +327,18 @@ def main():
                     record['co2'] = round(entry.get('co2_abated_mmt', 0), 3)
                     record['bt'] = round(entry.get('buyer_demand_twh', 0), 1)
 
+                    # MAC ($/tCO2)
+                    mac = entry.get('mac_per_ton')
+                    if mac is not None and mac > 0:
+                        record['mac'] = round(mac, 0)
+
+                    # CO2 reduction framing: baseline + reduction %
+                    meta = entry.get('metadata', {})
+                    if 'co2_reduction_pct' in meta:
+                        record['co2r'] = round(meta['co2_reduction_pct'], 1)
+                    if 'baseline_co2_mt' in meta:
+                        record['bl'] = round(meta['baseline_co2_mt'], 3)
+
                     part_dict[thr_key] = record
                     total_entries += 1
 

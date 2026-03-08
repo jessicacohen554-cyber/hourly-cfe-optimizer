@@ -345,7 +345,7 @@ body { background: var(--bg-page); }
 <!-- Header -->
 <div class="header" id="pageHeader">
     <h1>Procurement Deployment Matrix</h1>
-    <div class="subtitle">Where corporate clean energy dollars flow under each procurement strategy</div>
+    <div class="subtitle">How procurement strategy choice shapes CO₂ reduction, capital flows, and grid transformation</div>
     <div class="header-accent"></div>
 </div>
 
@@ -360,7 +360,7 @@ body { background: var(--bg-page); }
             </div>
         </div>
         <div class="control-group">
-            <label>Buyer CFE Target</label>
+            <label>CO₂ Reduction Target</label>
             <div class="slider-row">
                 <input type="range" id="thresholdSlider" min="0" max="13" step="1" value="5">
                 <span class="slider-value" id="thresholdValue">85%</span>
@@ -369,7 +369,8 @@ body { background: var(--bg-page); }
         <div class="stat-chips" id="statChips">
             <div class="stat-chip">Buyer demand: <span class="chip-val" id="chipDemand">—</span></div>
             <div class="stat-chip">Total cost: <span class="chip-val" id="chipCost">—</span></div>
-            <div class="stat-chip">CO₂ abated: <span class="chip-val" id="chipCO2">—</span></div>
+            <div class="stat-chip">CO₂ reduced: <span class="chip-val" id="chipCO2">—</span></div>
+            <div class="stat-chip">Baseline CO₂: <span class="chip-val" id="chipBaseline">—</span></div>
         </div>
     </div>
 </div>
@@ -424,7 +425,7 @@ body { background: var(--bg-page); }
     </div>
     <div class="grid-2col">
         <div class="agg-chart-card">
-            <h3>CO₂ Abated by Strategy (MtCO₂)</h3>
+            <h3>CO₂ Reduced by Strategy (ktCO₂)</h3>
             <div class="chart-container"><canvas id="chartCO2"></canvas></div>
         </div>
         <div class="agg-chart-card">
@@ -441,20 +442,21 @@ body { background: var(--bg-page); }
     <div class="story-section" data-observe>
         <span class="story-badge story-badge-blue">Overview</span>
         <h2>The Deployment Divergence</h2>
-        <p>Corporate buyers are rational economic actors. Under any procurement strategy, they optimize cost within the rules — chasing the cheapest available clean energy that qualifies. At low CFE targets (50–70%), this doesn't matter much: cheap VRE (solar and wind) dominates every strategy, every region. The strategies look nearly identical.</p>
-        <p>At higher targets — 85%, 90%, 95% and beyond — the strategies diverge dramatically. The rules of each strategy determine <strong>what gets built, where capital flows, and which resources receive bankable demand signals</strong>. This is the core insight: procurement strategy choice is market design. It shapes the aggregate capital allocation that determines whether the grid actually decarbonizes.</p>
-        <p>Use the sliders above to see this divergence in real-time. Start at 50% and slide to 95% — watch how the jars fill differently as the physics of high-reliability matching force different resource mixes.</p>
+        <p>Each procurement strategy defines "CO₂ reduction" differently — and those definitions determine <strong>what gets built, where capital flows, and what the grid looks like at the other end</strong>.</p>
+        <p>Consequential strategies (1A/1B) measure reduction against a buyer's load × emission rate, then displace CO₂ via the cheapest $/tCO₂ clean energy anywhere. Hourly strategies (2A–2C) reduce emissions hour-by-hour: unmatched hours × fossil-average emission rate. Annual strategies (3A/3B) use total load minus total procured × grid-average.</p>
+        <p>At low CO₂ reduction targets (50–70%), cheap VRE dominates every strategy. The strategies look nearly identical. At higher targets — 85%, 90%, 95% and beyond — they diverge dramatically because the emission accounting rules force different resource mixes.</p>
+        <p>Use the sliders above to see this divergence. Start at 50% and slide to 95% — watch how the jars fill differently as deeper CO₂ reduction forces firm clean and storage into the mix.</p>
         <div class="callout">
-            The benchmark: <strong>reliable, affordable, feasible, clean grids everywhere</strong> — to the extent that marginal abatement cost makes sense. At higher CFE targets, clean firm energy (nuclear, CCS, LDES) becomes MAC-justified because the rest of the economy needs a clean grid to decarbonize.
+            <strong>Same CO₂ reduction target, different real-world outcomes.</strong> A "90% CO₂ reduction" via consequential netting builds cheap VRE in 2–3 ISOs. The same target via hourly matching builds firm clean and storage everywhere. Both claim 90% — but only one transforms the grid.
         </div>
     </div>
 
     <!-- Section 2: Consequential's Cross-Border Arbitrage -->
     <div class="story-section" data-observe>
         <span class="story-badge story-badge-amber">Strategies 1A & 1B</span>
-        <h2>Consequential's Cross-Border Arbitrage</h2>
-        <p>Under consequential strategies (1A grid-average, 1B fossil-average), rational buyers chase the cheapest $/tCO₂ wherever it exists. Capital flows to SPP wind, ERCOT solar, and NYISO nuclear uprates — regardless of where the buyer sits. The buyer's local grid sees no new capacity.</p>
-        <p>In aggregate, this creates <strong>massive capital concentration</strong> in a few ISOs with the cheapest marginal sources. At low participation (2–5%), cheap cross-regional sources are abundant. But as participation climbs past 10–15%, those sources exhaust and buyers are forced up the cost curve — eventually matching or exceeding hourly matching costs, but without the same grid-transformative impact.</p>
+        <h2>Consequential: Cheapest $/tCO₂ First</h2>
+        <p>Consequential strategies compute baseline emissions as buyer load × emission rate (grid-average for 1A, fossil-average for 1B), then walk a deployment queue sorted by cheapest $/tCO₂. The queue follows physical buildout order within each ISO — you can't skip to high-threshold cheap hydro without building the wind/solar infrastructure below it.</p>
+        <p>Capital flows to wherever CO₂ displacement is cheapest: SPP wind, ERCOT solar, MISO wind farms. The buyer's local grid may see no new capacity. At low participation (2–5%), cheap cross-regional sources are abundant. As participation climbs past 10–15%, those sources exhaust and buyers are forced up the cost curve.</p>
 
         <div class="story-chart-wrap">
             <div class="chart-container"><canvas id="chartCrossFlow"></canvas></div>
@@ -466,9 +468,9 @@ body { background: var(--bg-page); }
     <!-- Section 3: Hourly Matching and the Firm Clean Signal -->
     <div class="story-section" data-observe>
         <span class="story-badge story-badge-green">Strategies 2A, 2B & 2C</span>
-        <h2>Hourly Matching: The Firm Clean Energy Signal</h2>
-        <p>Hourly matching is a physics constraint, not just an accounting choice. At 90%+ CFE, you <em>cannot</em> match demand hour-by-hour with VRE alone — solar doesn't generate at night, wind is intermittent. The hourly constraint forces procurement of firm clean energy: nuclear, CCS-CCGT, and long-duration storage.</p>
-        <p>This is the only strategy family that creates <strong>bankable, long-term demand signals</strong> for the firm clean resources the grid needs. An IPP considering a $10B nuclear investment needs 20+ years of contracted offtake. Hourly matching at scale provides exactly that signal.</p>
+        <h2>Hourly Matching: CO₂ Reduced Where It Matters</h2>
+        <p>Hourly strategies measure CO₂ reduction as: (hourly MWh − hourly match) × fossil-average emission rate. Every unmatched hour counts as residual emissions. This is a physics constraint — at 90%+ reduction, you <em>cannot</em> match demand hour-by-hour with VRE alone. Solar doesn't generate at night, wind is intermittent.</p>
+        <p>The hourly constraint forces procurement of firm clean energy: nuclear, CCS-CCGT, and long-duration storage. This is the only strategy family that creates <strong>bankable, long-term demand signals</strong> for the firm clean resources the grid needs.</p>
 
         <h3>How the three variants differ</h3>
         <p><strong>2A (New-Build Only)</strong> — Maximum additionality. Every MWh is new capacity. Expensive at low targets but creates the strongest deployment signal. No credit for existing clean.</p>
@@ -480,7 +482,7 @@ body { background: var(--bg-page); }
         </div>
 
         <div class="callout callout-green">
-            <strong>Key finding:</strong> At 90%+ CFE targets, hourly strategies procure 3–10× more firm clean energy than consequential or annual strategies. This is the demand signal that enables the firm clean investment pipeline the grid needs.
+            <strong>Key finding:</strong> At 90%+ CO₂ reduction targets, hourly strategies procure 3–10× more firm clean energy than consequential or annual strategies. This is the demand signal that enables the firm clean investment pipeline the grid needs.
         </div>
     </div>
 
@@ -532,7 +534,7 @@ body { background: var(--bg-page); }
         <p><strong>Strategy 2C (Hourly SSS + Tranches)</strong> creates the strongest aggregate signal for deep grid decarbonization:</p>
         <ul style="margin: 12px 0 20px 24px; line-height: 1.8; font-family: var(--font-body);">
             <li><strong>Preserves existing clean revenue</strong> — SSS allocation + premium tranches keep existing nuclear and hydro viable</li>
-            <li><strong>Forces firm clean investment</strong> — hourly physics constraint at 90%+ CFE demands nuclear, CCS, and LDES</li>
+            <li><strong>Forces firm clean investment</strong> — hourly physics constraint at 90%+ CO₂ reduction demands nuclear, CCS, and LDES</li>
             <li><strong>Triggers learning curves at scale</strong> — >10–15% participation unlocks Wright's Law cost reductions</li>
             <li><strong>MAC-justified at higher targets</strong> — clean firm costs are below DAC/SCC benchmarks when learning curves kick in</li>
             <li><strong>Builds local grid capacity</strong> — same-ISO matching means capital stays in the buyer's region</li>
@@ -596,7 +598,7 @@ body { background: var(--bg-page); }
     });
     thrSlider.addEventListener('input', () => {
         const t = getThreshold();
-        thrValue.textContent = t >= 99.99 ? '≥99.99%' : t + '%';
+        thrValue.textContent = t >= 99.99 ? '≥99.99%' : t + '% CO₂';
         grid.setThreshold(t);
         updateCharts();
     });
@@ -610,6 +612,11 @@ body { background: var(--bg-page); }
     grid.onStatsUpdate = function(stats) {
         document.getElementById('chipCost').textContent = '$' + stats.totalCostB.toFixed(1) + 'B';
         document.getElementById('chipCO2').textContent = (stats.totalCO2Mt * 1000).toFixed(0) + ' ktCO₂';
+        // Show baseline CO2 from deployment data (sum across ISOs for strategy 2A as reference)
+        const baselineEl = document.getElementById('chipBaseline');
+        if (baselineEl && stats.totalBaselineMt !== undefined) {
+            baselineEl.textContent = (stats.totalBaselineMt * 1000).toFixed(0) + ' ktCO₂';
+        }
     };
 
     if (typeof DEPLOYMENT_DATA !== 'undefined') {
@@ -617,7 +624,7 @@ body { background: var(--bg-page); }
         // Set initial slider display
         partValue.textContent = getParticipation() + '%';
         const t0 = getThreshold();
-        thrValue.textContent = t0 >= 99.99 ? '≥99.99%' : t0 + '%';
+        thrValue.textContent = t0 >= 99.99 ? '≥99.99%' : t0 + '% CO₂';
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -928,7 +935,7 @@ body { background: var(--bg-page); }
                     legend: { display: false },
                     title: {
                         display: true,
-                        text: 'Firm Clean Energy Procured at 90% CFE, 10% Participation',
+                        text: 'Firm Clean Energy Procured at 90% CO₂ Reduction, 10% Participation',
                         font: { family: "'Space Grotesk'", size: 13, weight: 600 }
                     }
                 }
@@ -1006,7 +1013,7 @@ body { background: var(--bg-page); }
                     legend: { display: true, position: 'top', labels: { font: { size: 11 } } },
                     title: {
                         display: true,
-                        text: 'Average Cost ($/MWh) at 90% CFE by Participation Level',
+                        text: 'Average Cost ($/MWh) at 90% CO₂ Reduction by Participation Level',
                         font: { family: "'Space Grotesk'", size: 13, weight: 600 }
                     }
                 },
