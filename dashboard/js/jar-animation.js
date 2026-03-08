@@ -101,10 +101,17 @@ function getIsoColor(iso) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class Ball {
-    constructor(resource, isExisting, sourceIso) {
+    /**
+     * @param {string} resource
+     * @param {boolean} isExisting  - true for existing/paid tranches (not SSS/free)
+     * @param {string|null} sourceIso - non-null for cross-ISO
+     * @param {boolean} isFree - true for SSS allocation / grid_clean (free credits)
+     */
+    constructor(resource, isExisting, sourceIso, isFree = false) {
         this.resource = resource;
         this.isExisting = isExisting;
         this.sourceIso = sourceIso;  // null for same-ISO
+        this.isFree = isFree;
         this.color = getResourceColor(resource);
         this.glowColor = sourceIso ? getIsoColor(sourceIso) : null;
 
@@ -155,17 +162,20 @@ class Ball {
             ctx.shadowBlur = 0;
         }
 
-        // Main ball
-        if (this.isExisting) {
-            // Solid fill for existing/paid resources
+        // Three visual tiers:
+        // 1. Free (SSS/grid_clean): solid fill, full saturation
+        // 2. Paid existing (non-SSS existing clean): transparent fill + saturated outline
+        // 3. New build: transparent fill only, no outline
+        if (this.isFree) {
+            // Tier 1: Solid fill — free existing clean
             ctx.globalAlpha = this.opacity;
             ctx.fillStyle = this.color;
             ctx.beginPath();
             ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
             ctx.fill();
-        } else {
-            // Semi-transparent fill + border for new-build
-            ctx.globalAlpha = this.opacity * 0.4;
+        } else if (this.isExisting) {
+            // Tier 2: Transparent fill + saturated outline — paid existing
+            ctx.globalAlpha = this.opacity * 0.25;
             ctx.fillStyle = this.color;
             ctx.beginPath();
             ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
@@ -173,8 +183,15 @@ class Ball {
 
             ctx.globalAlpha = this.opacity;
             ctx.strokeStyle = this.color;
-            ctx.lineWidth = 1.8;
+            ctx.lineWidth = 2.0;
             ctx.stroke();
+        } else {
+            // Tier 3: Transparent fill only — new build (no outline)
+            ctx.globalAlpha = this.opacity * 0.35;
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+            ctx.fill();
         }
 
         ctx.restore();
@@ -237,18 +254,20 @@ class Jar {
         const items = [];
         const strat = this.strategy;
 
+        // Include FREE resources (SSS/grid_clean) as solid balls at bottom
         if (dataRecord.e) {
             for (const [res, twh] of Object.entries(dataRecord.e)) {
-                if (isFreeResource(res, strat) || twh <= 0) continue;
+                if (twh <= 0) continue;
+                const free = isFreeResource(res, strat);
                 const count = Math.max(1, Math.round(twh / ballTwh));
-                items.push({ resource: res, count, isExisting: true, sourceIso: null, twh });
+                items.push({ resource: res, count, isExisting: true, isFree: free, sourceIso: null, twh });
             }
         }
         if (dataRecord.n) {
             for (const [res, twh] of Object.entries(dataRecord.n)) {
                 if (isFreeResource(res, strat) || twh <= 0) continue;
                 const count = Math.max(1, Math.round(twh / ballTwh));
-                items.push({ resource: res, count, isExisting: false, sourceIso: null, twh });
+                items.push({ resource: res, count, isExisting: false, isFree: false, sourceIso: null, twh });
             }
         }
         if (dataRecord.x) {
@@ -256,21 +275,23 @@ class Jar {
                 for (const [res, twh] of Object.entries(resources)) {
                     if (twh <= 0) continue;
                     const count = Math.max(1, Math.round(twh / ballTwh));
-                    items.push({ resource: res, count, isExisting: false, sourceIso: srcIso, twh });
+                    items.push({ resource: res, count, isExisting: false, isFree: false, sourceIso: srcIso, twh });
                 }
             }
         }
 
         if (items.length === 0) return;
 
+        // Sort: free at bottom (first), then paid existing, then new build
         items.sort((a, b) => {
+            if (a.isFree !== b.isFree) return a.isFree ? -1 : 1;
             if (a.isExisting !== b.isExisting) return a.isExisting ? -1 : 1;
             return b.count - a.count;
         });
 
         for (const item of items) {
             for (let i = 0; i < item.count; i++) {
-                this.balls.push(new Ball(item.resource, item.isExisting, item.sourceIso));
+                this.balls.push(new Ball(item.resource, item.isExisting, item.sourceIso, item.isFree));
             }
         }
 
@@ -293,6 +314,7 @@ class Jar {
             const match = oldBalls.find(ob =>
                 ob.resource === ball.resource &&
                 ob.isExisting === ball.isExisting &&
+                ob.isFree === ball.isFree &&
                 ob.sourceIso === ball.sourceIso &&
                 ob.opacity > 0.5
             );
@@ -421,18 +443,18 @@ class Jar {
         ctx.lineTo(reflectX, bottomY - 10);
         ctx.stroke();
 
-        // % label below jar
+        // % hourly matching score label below jar (existing + deployed / grid demand)
         if (this.data) {
-            const paidTwh = this._getPaidTwh();
+            const totalCleanTwh = this._getTotalCleanTwh();
             const gridDemand = GRID_DEMANDS[this.iso] || 300;
-            const pct = Math.min(paidTwh / gridDemand * 100, 999);
+            const pct = Math.min(totalCleanTwh / gridDemand * 100, 999);
             if (pct >= 0.5) {
-                ctx.globalAlpha = 0.55;
-                ctx.fillStyle = '#334155';
+                ctx.globalAlpha = 0.65;
+                ctx.fillStyle = '#1E293B';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'top';
                 const fs = Math.max(7, Math.min(10, this.width * 0.08));
-                ctx.font = `500 ${fs}px 'DM Sans', sans-serif`;
+                ctx.font = `600 ${fs}px 'DM Sans', sans-serif`;
                 ctx.fillText(pct < 10 ? pct.toFixed(1) + '%' : Math.round(pct) + '%', cx, bottomY + 2);
             }
         }
@@ -452,6 +474,30 @@ class Jar {
         if (this.data.n) {
             for (const [r, t] of Object.entries(this.data.n)) {
                 if (!isFreeResource(r, strat) && t > 0) total += t;
+            }
+        }
+        if (this.data.x) {
+            for (const resources of Object.values(this.data.x)) {
+                for (const t of Object.values(resources)) {
+                    if (t > 0) total += t;
+                }
+            }
+        }
+        return total;
+    }
+
+    _getTotalCleanTwh() {
+        // Total clean TWh: ALL existing (free + paid) + new + cross-ISO
+        if (!this.data) return 0;
+        let total = 0;
+        if (this.data.e) {
+            for (const t of Object.values(this.data.e)) {
+                if (t > 0) total += t;
+            }
+        }
+        if (this.data.n) {
+            for (const t of Object.values(this.data.n)) {
+                if (t > 0) total += t;
             }
         }
         if (this.data.x) {

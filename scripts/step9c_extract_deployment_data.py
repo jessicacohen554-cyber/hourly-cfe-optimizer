@@ -146,7 +146,8 @@ def extract_strategy2c(data):
 
 
 def extract_strategy3a(data):
-    """Strategy 3A: all new-build, same-ISO."""
+    """Strategy 3A: SSS + 4-pool tranches (same format as 2C with category field)."""
+    existing = {}
     new = {}
     for key, val in data.items():
         if not isinstance(val, dict):
@@ -154,9 +155,14 @@ def extract_strategy3a(data):
         twh = val.get('twh', 0)
         if twh <= 0:
             continue
+        category = val.get('category', 'new_build')
         _, resource = normalize_resource(key)
-        new[resource] = round(new.get(resource, 0) + twh, 3)
-    return {}, new, {}
+
+        if category in ('existing', 'sss', 'uprate'):
+            existing[resource] = round(existing.get(resource, 0) + twh, 3)
+        else:
+            new[resource] = round(new.get(resource, 0) + twh, 3)
+    return existing, new, {}
 
 
 def extract_strategy3b(data, buyer_iso):

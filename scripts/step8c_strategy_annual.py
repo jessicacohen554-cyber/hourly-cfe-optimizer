@@ -142,59 +142,87 @@ def get_rec_scarcity_mult(participation):
 def compute_strategy_3a(iso, year, threshold, participation_pct,
                          growth_level='Medium', scenario='A',
                          level='Medium', ppa_level='Medium', **kwargs):
-    """Strategy 3A: Annual matching, same-ISO, new build only.
+    """Strategy 3A: Annual matching, same-ISO, SSS + 4-pool tranches.
 
-    Annual version of 2A — same resource constraint but no hourly penalty.
-    Cheapest annual new-build: VRE-heavy at low thresholds (no temporal constraint
-    means solar/wind surplus isn't wasted).
+    Same tranche structure as 2C (SSS allocation → existing nuclear → uprates →
+    existing VRE/hydro → new-build) but with annual volumetric matching
+    (no hourly over-procurement penalty).
     """
+    from procurement_utils import (
+        get_demand_twh_at_year, build_procurement_tranches,
+        get_existing_nuclear_eac_price, GRID_MIX_SHARES,
+    )
+
     buyer_demand = get_buyer_demand_twh(iso, year, participation_pct, growth_level)
     if buyer_demand <= 0 or threshold <= 0:
         return make_strategy_result('3A', iso, year, threshold, participation_pct,
                                      0, 0, 0, 0)
 
+    total_demand = get_demand_twh_at_year(iso, year, growth_level)
     target_fraction = min(threshold / 100.0, 1.0)
-    slack = get_annual_slack(threshold)
-    clean_needed = buyer_demand * target_fraction * slack
 
-    # Annual matching is VRE-dominated (no hourly constraint makes VRE surplus useful)
-    # At higher thresholds, some firm is needed even annually (base coverage)
-    if threshold <= 70:
-        mix = {'solar': 0.50, 'wind': 0.45, 'uprate': 0.05}
-    elif threshold <= 90:
-        mix = {'solar': 0.40, 'wind': 0.35, 'firm': 0.15, 'uprate': 0.05, 'storage': 0.05}
-    else:
-        mix = {'solar': 0.30, 'wind': 0.28, 'firm': 0.22, 'uprate': 0.05, 'storage': 0.15}
+    # Layer 1: SSS allocation (free)
+    sss_twh = get_sss_twh(iso, year, growth_level)
+    buyer_sss_share = (buyer_demand / total_demand) * sss_twh if total_demand > 0 else 0
+
+    # Total clean needed
+    total_clean_needed = buyer_demand * target_fraction
+
+    # Remaining above SSS (annual = no over-procurement penalty, just slack)
+    remaining = max(0, total_clean_needed - buyer_sss_share)
+    slack = get_annual_slack(threshold)
+    procurement_twh = remaining * slack
+
+    if procurement_twh <= 0:
+        return make_strategy_result('3A', iso, year, threshold, participation_pct,
+                                     0, 0,
+                                     total_clean_needed * get_emission_rate(iso, 'fossil_average'),
+                                     0,
+                                     metadata={'sss_covers_target': True,
+                                              'sss_share_twh': round(buyer_sss_share, 2)})
+
+    # Use same 4-pool tranche merit order as 2C
+    tranches = build_procurement_tranches(
+        iso, threshold, year, scenario, level, ppa_level,
+        use_45u=True, use_ctr=False, ctr_value=None,
+        growth_level=growth_level,
+    )
 
     total_cost = 0.0
+    total_procured = 0.0
     resource_breakdown = {}
 
-    for resource, frac in mix.items():
-        twh = clean_needed * frac
+    # Walk tranches (cheapest first)
+    buyer_share_of_available = (buyer_demand / total_demand) if total_demand > 0 else 0.01
+    for tranche in tranches:
+        if total_procured >= procurement_twh:
+            break
+        remaining_need = procurement_twh - total_procured
+        available = tranche['available_twh'] * buyer_share_of_available
+        procure = min(remaining_need, available)
 
-        if resource == 'solar':
-            price = get_learning_adjusted_ppa('solar', iso, threshold, scenario, level, ppa_level)
-        elif resource == 'wind':
-            price = get_learning_adjusted_ppa('wind', iso, threshold, scenario, level, ppa_level)
-        elif resource == 'firm':
-            nuc = get_learning_adjusted_ppa('nuclear_newbuild', iso, threshold, scenario, level, ppa_level)
-            ccs = get_learning_adjusted_ppa('ccs_45q_on', iso, threshold, scenario, level, ppa_level)
-            price = min(nuc, ccs)
-        elif resource == 'storage':
-            price = get_ppa_price('battery', iso, level, ppa_level)
-        elif resource == 'uprate':
-            twh = min(twh, UPRATE_CAP_TWH.get(iso, 0))
-            price = get_learning_adjusted_ppa('uprate', iso, threshold, scenario, level, ppa_level)
-        else:
-            price = 50
-
-        cost = twh * price
+        cost = procure * tranche['price']
         total_cost += cost
-        resource_breakdown[resource] = {'twh': round(twh, 2), 'price': round(price, 1), 'cost_m': round(cost, 2)}
+        total_procured += procure
 
-    # CO2 accounting: (total load - total procured) × grid avg emission rate
-    # Reduction = procured MWh × grid avg
-    cost_per_mwh = total_cost / clean_needed if clean_needed > 0 else 0
+        resource_breakdown[tranche['source']] = {
+            'twh': round(procure, 2),
+            'price': round(tranche['price'], 1),
+            'cost_m': round(cost, 2),
+            'category': tranche['category'],
+        }
+
+    # SSS as zero-cost entry
+    resource_breakdown['sss_allocation'] = {
+        'twh': round(buyer_sss_share, 2),
+        'price': 0.0,
+        'cost_m': 0.0,
+        'category': 'sss',
+    }
+
+    # CO2 accounting
+    effective_procured = total_procured + buyer_sss_share
+    cost_per_mwh = total_cost / effective_procured if effective_procured > 0 else 0
     emission_rate = get_emission_rate(iso, 'grid_average')
     baseline_co2_mt = buyer_demand * emission_rate
     co2_abated = buyer_demand * target_fraction * emission_rate
@@ -206,6 +234,8 @@ def compute_strategy_3a(iso, year, threshold, participation_pct,
         cost_per_mwh, total_cost, co2_abated, mac,
         resource_mix=resource_breakdown,
         metadata={'annual_slack': round(slack, 3), 'scenario': scenario,
+                  'sss_share_twh': round(buyer_sss_share, 2),
+                  'procurement_twh': round(procurement_twh, 2),
                   'baseline_co2_mt': round(baseline_co2_mt, 4),
                   'co2_reduction_pct': round(co2_reduction_pct, 2)},
     )
@@ -219,11 +249,14 @@ def compute_strategy_3a(iso, year, threshold, participation_pct,
 def compute_strategy_3b(iso, year, threshold, participation_pct,
                          growth_level='Medium', scenario='A',
                          level='Medium', ppa_level='Medium', **kwargs):
-    """Strategy 3B: Annual matching, cross-regional, new build only.
+    """Strategy 3B: Annual matching, cross-regional, new build.
 
-    Like Strategy 1 (consequential) but annual volumetric rather than emission netting.
-    Can procure cheapest new-build VRE from any ISO (SPP wind, ERCOT solar).
+    Local cheap clean is consumed first (same-ISO resources at local prices),
+    then buyers procure the cheapest $/MWh from any other ISO. Resources that
+    are cheaply available locally stay in-ISO before going cross-regional.
     """
+    from procurement_utils import get_demand_twh_at_year
+
     buyer_demand = get_buyer_demand_twh(iso, year, participation_pct, growth_level)
     if buyer_demand <= 0 or threshold <= 0:
         return make_strategy_result('3B', iso, year, threshold, participation_pct,
@@ -233,44 +266,86 @@ def compute_strategy_3b(iso, year, threshold, participation_pct,
     slack = get_annual_slack(threshold)
     clean_needed = buyer_demand * target_fraction * slack
 
-    # Find cheapest new-build sources across all ISOs
-    sources = []
-    for src_iso in ISOS:
-        solar_ppa = get_learning_adjusted_ppa('solar', src_iso, threshold, scenario, level, ppa_level)
-        sources.append((src_iso, 'solar', solar_ppa, BASE_DEMAND_TWH[src_iso] * 0.30))
+    # --- Phase 1: Local (same-ISO) cheap resources consumed first ---
+    local_sources = []
+    total_demand = get_demand_twh_at_year(iso, year, growth_level)
+    buyer_share = (buyer_demand / total_demand) if total_demand > 0 else 0.01
 
-        wind_ppa = get_learning_adjusted_ppa('wind', src_iso, threshold, scenario, level, ppa_level)
-        sources.append((src_iso, 'wind', wind_ppa, BASE_DEMAND_TWH[src_iso] * 0.25))
+    solar_ppa = get_learning_adjusted_ppa('solar', iso, threshold, scenario, level, ppa_level)
+    local_sources.append((iso, 'solar', solar_ppa, BASE_DEMAND_TWH[iso] * 0.30 * buyer_share))
 
-        uprate_twh = UPRATE_CAP_TWH.get(src_iso, 0)
-        if uprate_twh > 0:
-            uprate_ppa = get_learning_adjusted_ppa('uprate', src_iso, threshold, scenario, level, ppa_level)
-            sources.append((src_iso, 'uprate', uprate_ppa, uprate_twh))
+    wind_ppa = get_learning_adjusted_ppa('wind', iso, threshold, scenario, level, ppa_level)
+    local_sources.append((iso, 'wind', wind_ppa, BASE_DEMAND_TWH[iso] * 0.25 * buyer_share))
 
-        if threshold >= 85:  # Only need firm at high thresholds
-            nuc = get_learning_adjusted_ppa('nuclear_newbuild', src_iso, threshold, scenario, level, ppa_level)
-            sources.append((src_iso, 'firm', nuc, BASE_DEMAND_TWH[src_iso] * 0.10))
+    uprate_twh = UPRATE_CAP_TWH.get(iso, 0)
+    if uprate_twh > 0:
+        uprate_ppa = get_learning_adjusted_ppa('uprate', iso, threshold, scenario, level, ppa_level)
+        local_sources.append((iso, 'uprate', uprate_ppa, uprate_twh * buyer_share))
 
-    sources.sort(key=lambda s: s[2])
+    if threshold >= 85:
+        nuc = get_learning_adjusted_ppa('nuclear_newbuild', iso, threshold, scenario, level, ppa_level)
+        local_sources.append((iso, 'firm', nuc, BASE_DEMAND_TWH[iso] * 0.10 * buyer_share))
+
+    local_sources.sort(key=lambda s: s[2])
 
     total_cost = 0.0
     total_procured = 0.0
     resource_breakdown = {}
 
-    for src_iso, resource, price, available in sources:
+    # Consume local first
+    for src_iso, resource, price, available in local_sources:
         if total_procured >= clean_needed:
             break
         remaining = clean_needed - total_procured
         procure = min(remaining, available)
-
         cost = procure * price
         total_cost += cost
         total_procured += procure
-
         key = f"{src_iso}_{resource}"
         resource_breakdown[key] = {'twh': round(procure, 2), 'price': round(price, 1), 'cost_m': round(cost, 2)}
 
-    # CO2 accounting: (total load - total procured) × grid avg
+    # --- Phase 2: Cross-ISO cheapest $/MWh for remainder ---
+    if total_procured < clean_needed:
+        cross_sources = []
+        for src_iso in ISOS:
+            if src_iso == iso:
+                continue  # Already consumed local
+            src_demand = get_demand_twh_at_year(src_iso, year, growth_level)
+            src_buyer_share = buyer_share  # buyer's proportional claim on remote pool
+
+            s_ppa = get_learning_adjusted_ppa('solar', src_iso, threshold, scenario, level, ppa_level)
+            cross_sources.append((src_iso, 'solar', s_ppa, BASE_DEMAND_TWH[src_iso] * 0.15 * src_buyer_share))
+
+            w_ppa = get_learning_adjusted_ppa('wind', src_iso, threshold, scenario, level, ppa_level)
+            cross_sources.append((src_iso, 'wind', w_ppa, BASE_DEMAND_TWH[src_iso] * 0.12 * src_buyer_share))
+
+            u_twh = UPRATE_CAP_TWH.get(src_iso, 0)
+            if u_twh > 0:
+                u_ppa = get_learning_adjusted_ppa('uprate', src_iso, threshold, scenario, level, ppa_level)
+                cross_sources.append((src_iso, 'uprate', u_ppa, u_twh * src_buyer_share))
+
+            if threshold >= 85:
+                n_ppa = get_learning_adjusted_ppa('nuclear_newbuild', src_iso, threshold, scenario, level, ppa_level)
+                cross_sources.append((src_iso, 'firm', n_ppa, BASE_DEMAND_TWH[src_iso] * 0.05 * src_buyer_share))
+
+        cross_sources.sort(key=lambda s: s[2])
+
+        for src_iso, resource, price, available in cross_sources:
+            if total_procured >= clean_needed:
+                break
+            remaining = clean_needed - total_procured
+            procure = min(remaining, available)
+            cost = procure * price
+            total_cost += cost
+            total_procured += procure
+            key = f"{src_iso}_{resource}"
+            if key in resource_breakdown:
+                resource_breakdown[key]['twh'] = round(resource_breakdown[key]['twh'] + procure, 2)
+                resource_breakdown[key]['cost_m'] = round(resource_breakdown[key]['cost_m'] + cost, 2)
+            else:
+                resource_breakdown[key] = {'twh': round(procure, 2), 'price': round(price, 1), 'cost_m': round(cost, 2)}
+
+    # CO2 accounting
     cost_per_mwh = total_cost / total_procured if total_procured > 0 else 0
     emission_rate = get_emission_rate(iso, 'grid_average')
     baseline_co2_mt = buyer_demand * emission_rate
