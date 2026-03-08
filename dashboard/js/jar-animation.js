@@ -189,7 +189,7 @@ class Ball {
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// JAR CLASS — Curved-bottom container with orderly ball rows
+// JAR CLASS — Flat-bottom rectangle; balls fill to rim = 100% of grid
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class Jar {
@@ -202,38 +202,29 @@ class Jar {
         this.height = height;
         this.balls = [];
         this.data = null;
-
-        // Jar geometry (computed once, updated on resize)
         this._computeGeometry();
     }
 
     _computeGeometry() {
         const w = this.width;
         const h = this.height;
-        const cx = this.x + w / 2;
-
-        this.cx = cx;
-        this.rimY = this.y + h * 0.10;
-        this.rimW = w * 0.80;
-        this.bodyW = w * 0.72;
-        this.curveStartY = this.y + h * 0.68;
+        this.cx = this.x + w / 2;
+        this.rimY = this.y + h * 0.08;
+        this.rimW = w * 0.82;
+        this.bodyW = w * 0.76;
         this.bottomY = this.y + h * 0.92;
-        this.curveDepth = this.bottomY - this.curveStartY;
+        this.innerH = this.bottomY - this.rimY;
     }
 
-    /**
-     * Get inner half-width at a given y position (for ball packing)
-     */
     getHalfWidthAt(y) {
+        // Slight flare near rim, then constant width rectangle
         if (y <= this.rimY) return this.rimW / 2;
-        if (y <= this.curveStartY) {
-            // Straight section: linear taper from rimW to bodyW
-            const frac = (y - this.rimY) / (this.curveStartY - this.rimY);
+        const rimZone = this.rimY + this.innerH * 0.04;
+        if (y <= rimZone) {
+            const frac = (y - this.rimY) / (rimZone - this.rimY);
             return (this.rimW + (this.bodyW - this.rimW) * frac) / 2;
         }
-        // Curved bottom section: cosine falloff
-        const frac = (y - this.curveStartY) / (this.bottomY - this.curveStartY);
-        return (this.bodyW / 2) * Math.cos(Math.min(frac, 1) * Math.PI / 2);
+        return this.bodyW / 2;
     }
 
     setBalls(dataRecord, ballTwh) {
@@ -243,11 +234,9 @@ class Jar {
 
         if (!dataRecord || ballTwh <= 0) return;
 
-        // Collect paid resources only (skip free credits)
-        const items = [];  // {resource, count, isExisting, sourceIso}
+        const items = [];
         const strat = this.strategy;
 
-        // Existing paid resources (e bucket)
         if (dataRecord.e) {
             for (const [res, twh] of Object.entries(dataRecord.e)) {
                 if (isFreeResource(res, strat) || twh <= 0) continue;
@@ -255,8 +244,6 @@ class Jar {
                 items.push({ resource: res, count, isExisting: true, sourceIso: null, twh });
             }
         }
-
-        // New-build resources (n bucket)
         if (dataRecord.n) {
             for (const [res, twh] of Object.entries(dataRecord.n)) {
                 if (isFreeResource(res, strat) || twh <= 0) continue;
@@ -264,8 +251,6 @@ class Jar {
                 items.push({ resource: res, count, isExisting: false, sourceIso: null, twh });
             }
         }
-
-        // Cross-ISO resources (x bucket)
         if (dataRecord.x) {
             for (const [srcIso, resources] of Object.entries(dataRecord.x)) {
                 for (const [res, twh] of Object.entries(resources)) {
@@ -278,39 +263,32 @@ class Jar {
 
         if (items.length === 0) return;
 
-        // Sort: existing first, then by count descending for nice visual stacking
         items.sort((a, b) => {
             if (a.isExisting !== b.isExisting) return a.isExisting ? -1 : 1;
             return b.count - a.count;
         });
 
-        // Create ball instances
         for (const item of items) {
             for (let i = 0; i < item.count; i++) {
                 this.balls.push(new Ball(item.resource, item.isExisting, item.sourceIso));
             }
         }
 
-        // Cap at max balls to avoid visual overload
-        const MAX_BALLS = 70;
-        if (this.balls.length > MAX_BALLS) {
-            this.balls.length = MAX_BALLS;
-        }
+        // 100 balls = 100% of grid (1 ball per 1%)
+        const MAX_BALLS = 100;
+        if (this.balls.length > MAX_BALLS) this.balls.length = MAX_BALLS;
 
-        // Compute ball radius: fit ~6-8 balls per row in widest section
-        const innerW = this.bodyW * 0.88;
+        // Ball radius: sized so 100 balls fill rim-to-bottom exactly
+        const innerW = this.bodyW * 0.90;
         const ballsPerRow = Math.max(4, Math.min(8, Math.ceil(Math.sqrt(this.balls.length * 1.5))));
         const ballDiameter = innerW / ballsPerRow;
         const ballRadius = Math.max(2.5, Math.min(ballDiameter / 2 - 1, 9));
 
-        for (const ball of this.balls) {
-            ball.radius = ballRadius;
-        }
+        for (const ball of this.balls) ball.radius = ballRadius;
 
-        // Pack balls in orderly rows from bottom up
         this._packRows(ballRadius);
 
-        // Animate: transfer from old balls or drop in
+        // Animate transitions
         for (const ball of this.balls) {
             const match = oldBalls.find(ob =>
                 ob.resource === ball.resource &&
@@ -322,7 +300,6 @@ class Jar {
                 ball.x = match.x;
                 ball.y = match.y;
                 ball.opacity = match.opacity;
-                // Remove from oldBalls so each only matches once
                 oldBalls.splice(oldBalls.indexOf(match), 1);
             } else {
                 ball.x = ball.targetX + (Math.random() - 0.5) * 10;
@@ -333,7 +310,6 @@ class Jar {
             ball.entered = true;
         }
 
-        // Fade out removed balls
         for (const ob of oldBalls) {
             if (ob.opacity > 0.05) {
                 ob.targetOpacity = 0;
@@ -345,28 +321,19 @@ class Jar {
 
     _packRows(ballR) {
         if (this.balls.length === 0) return;
-
         const diameter = ballR * 2;
         const padding = 1.5;
         const step = diameter + padding;
 
-        // Start packing from bottom of jar upward
         let currentY = this.bottomY - ballR - 2;
         let idx = 0;
 
         while (idx < this.balls.length && currentY > this.rimY + ballR) {
-            // How wide is the jar at this y?
             const halfW = this.getHalfWidthAt(currentY) - ballR - 2;
-            if (halfW < ballR) {
-                currentY -= step * 0.5;
-                continue;
-            }
+            if (halfW < ballR) { currentY -= step * 0.5; continue; }
 
-            // How many balls fit in this row?
             const rowCapacity = Math.max(1, Math.floor((halfW * 2) / step));
             const ballsThisRow = Math.min(rowCapacity, this.balls.length - idx);
-
-            // Center the row
             const rowWidth = ballsThisRow * step - padding;
             let startX = this.cx - rowWidth / 2 + ballR;
 
@@ -375,11 +342,9 @@ class Jar {
                 this.balls[idx].targetY = currentY;
                 idx++;
             }
-
             currentY -= step;
         }
 
-        // Any remaining balls that don't fit: stack at top
         while (idx < this.balls.length) {
             this.balls[idx].targetX = this.cx;
             this.balls[idx].targetY = this.rimY + ballR + 2;
@@ -392,22 +357,21 @@ class Jar {
         const rimY = this.rimY;
         const rimW = this.rimW;
         const bodyW = this.bodyW;
-        const curveStartY = this.curveStartY;
         const bottomY = this.bottomY;
         const lipExtra = 4;
 
-        // ---- Subtle fill gradient inside jar ----
+        // ---- Subtle fill gradient ----
         ctx.save();
         const fillGrad = ctx.createLinearGradient(cx, rimY, cx, bottomY);
         fillGrad.addColorStop(0, 'rgba(241, 245, 249, 0.3)');
         fillGrad.addColorStop(1, 'rgba(226, 232, 240, 0.15)');
         ctx.fillStyle = fillGrad;
 
+        // Flat-bottom rectangle (slight rim flare)
         ctx.beginPath();
         ctx.moveTo(cx - rimW / 2, rimY);
-        ctx.lineTo(cx - bodyW / 2, curveStartY);
-        ctx.quadraticCurveTo(cx - bodyW / 2, bottomY, cx, bottomY);
-        ctx.quadraticCurveTo(cx + bodyW / 2, bottomY, cx + bodyW / 2, curveStartY);
+        ctx.lineTo(cx - bodyW / 2, bottomY);
+        ctx.lineTo(cx + bodyW / 2, bottomY);
         ctx.lineTo(cx + rimW / 2, rimY);
         ctx.closePath();
         ctx.fill();
@@ -417,35 +381,29 @@ class Jar {
         ctx.save();
         ctx.beginPath();
         ctx.moveTo(cx - rimW / 2 + 2, rimY);
-        ctx.lineTo(cx - bodyW / 2 + 2, curveStartY);
-        ctx.quadraticCurveTo(cx - bodyW / 2 + 2, bottomY - 2, cx, bottomY - 2);
-        ctx.quadraticCurveTo(cx + bodyW / 2 - 2, bottomY - 2, cx + bodyW / 2 - 2, curveStartY);
+        ctx.lineTo(cx - bodyW / 2 + 2, bottomY);
+        ctx.lineTo(cx + bodyW / 2 - 2, bottomY);
         ctx.lineTo(cx + rimW / 2 - 2, rimY);
         ctx.closePath();
         ctx.clip();
 
-        // Draw balls
-        for (const ball of this.balls) {
-            ball.draw(ctx, time);
-        }
+        for (const ball of this.balls) ball.draw(ctx, time);
         ctx.restore();
 
-        // ---- Jar outline (drawn on top) ----
+        // ---- Jar outline ----
         ctx.save();
         ctx.strokeStyle = '#94A3B8';
         ctx.lineWidth = 1.5;
         ctx.globalAlpha = 0.7;
 
-        // Main jar body
         ctx.beginPath();
         ctx.moveTo(cx - rimW / 2, rimY);
-        ctx.lineTo(cx - bodyW / 2, curveStartY);
-        ctx.quadraticCurveTo(cx - bodyW / 2, bottomY, cx, bottomY);
-        ctx.quadraticCurveTo(cx + bodyW / 2, bottomY, cx + bodyW / 2, curveStartY);
+        ctx.lineTo(cx - bodyW / 2, bottomY);
+        ctx.lineTo(cx + bodyW / 2, bottomY);
         ctx.lineTo(cx + rimW / 2, rimY);
         ctx.stroke();
 
-        // Rim lip
+        // Rim lip (100% line)
         ctx.lineWidth = 2.5;
         ctx.globalAlpha = 0.55;
         ctx.beginPath();
@@ -453,17 +411,57 @@ class Jar {
         ctx.lineTo(cx + rimW / 2 + lipExtra, rimY);
         ctx.stroke();
 
-        // Glass reflection (subtle arc on left side)
+        // Glass reflection
         ctx.globalAlpha = 0.12;
         ctx.strokeStyle = '#FFFFFF';
         ctx.lineWidth = 2;
         const reflectX = cx - bodyW * 0.28;
         ctx.beginPath();
-        ctx.moveTo(reflectX, rimY + 8);
-        ctx.lineTo(reflectX - 2, curveStartY - 10);
+        ctx.moveTo(reflectX + 2, rimY + 8);
+        ctx.lineTo(reflectX, bottomY - 10);
         ctx.stroke();
 
+        // % label below jar
+        if (this.data) {
+            const paidTwh = this._getPaidTwh();
+            const gridDemand = GRID_DEMANDS[this.iso] || 300;
+            const pct = Math.min(paidTwh / gridDemand * 100, 999);
+            if (pct >= 0.5) {
+                ctx.globalAlpha = 0.55;
+                ctx.fillStyle = '#334155';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+                const fs = Math.max(7, Math.min(10, this.width * 0.08));
+                ctx.font = `500 ${fs}px 'DM Sans', sans-serif`;
+                ctx.fillText(pct < 10 ? pct.toFixed(1) + '%' : Math.round(pct) + '%', cx, bottomY + 2);
+            }
+        }
+
         ctx.restore();
+    }
+
+    _getPaidTwh() {
+        if (!this.data) return 0;
+        let total = 0;
+        const strat = this.strategy;
+        if (this.data.e) {
+            for (const [r, t] of Object.entries(this.data.e)) {
+                if (!isFreeResource(r, strat) && t > 0) total += t;
+            }
+        }
+        if (this.data.n) {
+            for (const [r, t] of Object.entries(this.data.n)) {
+                if (!isFreeResource(r, strat) && t > 0) total += t;
+            }
+        }
+        if (this.data.x) {
+            for (const resources of Object.values(this.data.x)) {
+                for (const t of Object.values(resources)) {
+                    if (t > 0) total += t;
+                }
+            }
+        }
+        return total;
     }
 
     hitTest(mx, my) {
