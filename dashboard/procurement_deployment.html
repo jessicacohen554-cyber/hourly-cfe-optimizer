@@ -248,77 +248,6 @@ body { background: var(--bg-page); }
     min-height: 260px;
 }
 
-/* ===== SCROLLYTELL ===== */
-.scrollytell { max-width: 900px; margin: 0 auto; padding: 0 var(--pad-page) 48px; }
-.story-section {
-    margin-bottom: 48px;
-    opacity: 0;
-    transform: translateY(24px);
-    transition: opacity 0.6s ease, transform 0.6s ease;
-}
-.story-section.visible {
-    opacity: 1;
-    transform: translateY(0);
-}
-.story-section h2 {
-    font-family: var(--font-heading);
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: var(--navy);
-    margin-bottom: 12px;
-    line-spacing: -0.3px;
-}
-.story-section h3 {
-    font-family: var(--font-heading);
-    font-size: 1.15rem;
-    font-weight: 600;
-    color: var(--navy);
-    margin: 20px 0 8px;
-}
-.story-section p {
-    font-family: var(--font-body);
-    font-size: 1rem;
-    line-height: 1.75;
-    color: var(--text-primary);
-    margin-bottom: 14px;
-}
-.story-badge {
-    display: inline-block;
-    padding: 3px 10px;
-    border-radius: 4px;
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    margin-bottom: 10px;
-}
-.story-badge-blue { background: rgba(79,70,229,0.1); color: var(--indigo); border: 1px solid rgba(79,70,229,0.25); }
-.story-badge-green { background: rgba(34,197,94,0.1); color: #16A34A; border: 1px solid rgba(34,197,94,0.25); }
-.story-badge-red { background: rgba(239,68,68,0.1); color: #DC2626; border: 1px solid rgba(239,68,68,0.25); }
-.story-badge-amber { background: rgba(245,158,11,0.1); color: #D97706; border: 1px solid rgba(245,158,11,0.25); }
-
-.story-chart-wrap {
-    background: white;
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border-light);
-    padding: 16px;
-    margin: 20px 0;
-    box-shadow: var(--shadow-sm);
-}
-.story-chart-wrap .chart-container { min-height: 280px; }
-
-.callout {
-    background: var(--bg-alt);
-    border-left: 4px solid var(--indigo);
-    border-radius: 0 var(--radius-md) var(--radius-md) 0;
-    padding: 16px 20px;
-    margin: 20px 0;
-    font-size: 0.92rem;
-    line-height: 1.7;
-}
-.callout-green { border-left-color: #22C55E; }
-.callout-red { border-left-color: #EF4444; }
-
 /* ===== MOBILE ===== */
 @media (max-width: 767px) {
     .controls-inner { gap: 10px; flex-direction: column; align-items: stretch; }
@@ -331,13 +260,9 @@ body { background: var(--bg-page); }
     .legend-ball, .legend-ball-hollow { width: 10px; height: 10px; }
     .matrix-section { padding: 0 4px 16px; }
     .matrix-canvas-wrap { min-height: 300px; }
-    .story-section h2 { font-size: 1.25rem; }
-    .story-section p { font-size: 0.9rem; line-height: 1.65; }
     .agg-charts .grid-2col { grid-template-columns: 1fr; }
     .agg-chart-card { padding: 14px; }
     .agg-chart-card h3 { font-size: 0.85rem; }
-    .callout { padding: 12px 14px; font-size: 0.85rem; }
-    .story-chart-wrap { padding: 10px; }
     .slider-row input[type="range"] { min-height: 44px; }
 }
 @media (max-width: 480px) {
@@ -345,7 +270,6 @@ body { background: var(--bg-page); }
     .control-group label { font-size: 0.68rem; }
     .slider-value { font-size: 0.95rem; min-width: 45px; }
     .legend-bar { gap: 4px; font-size: 0.6rem; }
-    .story-section { margin-bottom: 32px; }
 }
 </style>
 </head>
@@ -385,31 +309,38 @@ body { background: var(--bg-page); }
 <!-- Legend -->
 <div class="legend-bar">
     <div class="legend-group">
-        <span class="legend-ball" style="background:#6366F1"></span> Existing (paid)
+        <span class="legend-ball" style="background:#6366F1"></span> Grid baseline (solid)
     </div>
     <div class="legend-divider"></div>
     <div class="legend-group">
-        <span class="legend-ball-hollow" style="border-color:#6366F1"></span> New build
+        <span class="legend-ball" style="background:rgba(99,102,241,0.25);border:2px solid #6366F1"></span> Existing claimed
+    </div>
+    <div class="legend-divider"></div>
+    <div class="legend-group">
+        <span class="legend-ball-hollow" style="border-color:transparent;background:rgba(99,102,241,0.35)"></span> New build
     </div>
     <div class="legend-divider"></div>
     <div class="legend-group">
         <span class="legend-ball" style="background:#F59E0B"></span> Solar
         <span class="legend-ball" style="background:#22C55E"></span> Wind
         <span class="legend-ball" style="background:#6366F1"></span> Clean Firm
-        <span class="legend-ball" style="background:#818CF8"></span> Nuclear Uprate
         <span class="legend-ball" style="background:#0EA5E9"></span> Hydro
         <span class="legend-ball" style="background:#64748B"></span> CCS
         <span class="legend-ball" style="background:#E91E63"></span> LDES
-        <span class="legend-ball" style="background:#EF4444"></span> Storage
     </div>
     <div class="legend-divider"></div>
     <div class="legend-group">
         <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:rgba(249,115,22,0.15);border:2px solid #F97316;box-shadow:0 0 8px rgba(249,115,22,0.5)"></span>
-        Glow = cross-ISO source
+        Glow = serving external ISO buyers
+    </div>
+    <div class="legend-divider"></div>
+    <div class="legend-group">
+        <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:rgba(99,102,241,0.15);border:1.5px dashed #6366F1"></span>
+        Above rim = curtailed
     </div>
     <div class="legend-divider"></div>
     <div class="legend-group" style="font-style:italic;color:var(--text-muted)">
-        Each ball ≈ equal share of deployment · Free credits (SSS, grid baseline) excluded
+        Each ball = 1% of grid · Jar = ISO grid state under strategy
     </div>
 </div>
 
@@ -437,129 +368,6 @@ body { background: var(--bg-page); }
     </div>
 </div>
 
-<!-- Scrollytell Narrative -->
-<div class="scrollytell">
-
-    <!-- Section 1: The Deployment Divergence -->
-    <div class="story-section" data-observe>
-        <span class="story-badge story-badge-blue">Overview</span>
-        <h2>The Deployment Divergence</h2>
-        <p>Each procurement strategy defines "CO₂ reduction" differently — and those definitions determine <strong>what gets built, where capital flows, and what the grid looks like at the other end</strong>.</p>
-        <p>Consequential strategies (1A/1B) measure reduction against a buyer's load × emission rate, then displace CO₂ via the cheapest $/tCO₂ clean energy anywhere. Hourly strategies (2A–2C) reduce emissions hour-by-hour: unmatched hours × fossil-average emission rate. Annual strategies (3A/3B) use total load minus total procured × grid-average.</p>
-        <p>At low CO₂ reduction targets (50–70%), cheap VRE dominates every strategy. The strategies look nearly identical. At higher targets — 85%, 90%, 95% and beyond — they diverge dramatically because the emission accounting rules force different resource mixes.</p>
-        <p>Use the sliders above to see this divergence. Start at 50% and slide to 95% — watch how the jars fill differently as deeper CO₂ reduction forces firm clean and storage into the mix.</p>
-        <div class="callout">
-            <strong>Same CO₂ reduction target, different real-world outcomes.</strong> A "90% CO₂ reduction" via consequential netting builds cheap VRE in 2–3 ISOs. The same target via hourly matching builds firm clean and storage everywhere. Both claim 90% — but only one transforms the grid.
-        </div>
-    </div>
-
-    <!-- Section 2: Consequential's Cross-Border Arbitrage -->
-    <div class="story-section" data-observe>
-        <span class="story-badge story-badge-amber">Strategies 1A & 1B</span>
-        <h2>Consequential: Cheapest $/tCO₂ First</h2>
-        <p>Consequential strategies compute baseline emissions as buyer load × emission rate (grid-average for 1A, fossil-average for 1B), then walk a deployment queue sorted by cheapest $/tCO₂. The queue follows physical buildout order within each ISO — you can't skip to high-threshold cheap hydro without building the wind/solar infrastructure below it.</p>
-        <p>Capital flows to wherever CO₂ displacement is cheapest: SPP wind, ERCOT solar, MISO wind farms. The buyer's local grid may see no new capacity. At low participation (2–5%), cheap cross-regional sources are abundant. As participation climbs past 10–15%, those sources exhaust and buyers are forced up the cost curve.</p>
-
-        <div class="story-chart-wrap">
-            <div class="chart-container"><canvas id="chartCrossFlow"></canvas></div>
-        </div>
-
-        <p>The glow effect on the matrix above shows which ISOs are <em>sources</em> under cross-regional strategies. Notice how capital concentrates in 2–3 ISOs while other regions receive nothing. This is economically efficient in the narrow sense — but it doesn't build the clean grids that the rest of the economy needs to decarbonize.</p>
-    </div>
-
-    <!-- Section 3: Hourly Matching and the Firm Clean Signal -->
-    <div class="story-section" data-observe>
-        <span class="story-badge story-badge-green">Strategies 2A, 2B & 2C</span>
-        <h2>Hourly Matching: CO₂ Reduced Where It Matters</h2>
-        <p>Hourly strategies measure CO₂ reduction as: (hourly MWh − hourly match) × fossil-average emission rate. Every unmatched hour counts as residual emissions. This is a physics constraint — at 90%+ reduction, you <em>cannot</em> match demand hour-by-hour with VRE alone. Solar doesn't generate at night, wind is intermittent.</p>
-        <p>The hourly constraint forces procurement of firm clean energy: nuclear, CCS-CCGT, and long-duration storage. This is the only strategy family that creates <strong>bankable, long-term demand signals</strong> for the firm clean resources the grid needs.</p>
-
-        <h3>How the three variants differ</h3>
-        <p><strong>2A (New-Build Only)</strong> — Maximum additionality. Every MWh is new capacity. Expensive at low targets but creates the strongest deployment signal. No credit for existing clean.</p>
-        <p><strong>2B (Grid Baseline)</strong> — Buyers take free credit for existing clean on the grid. Cheapest hourly variant. But existing nuclear and hydro receive no revenue signal — creating stranding risk at scale.</p>
-        <p><strong>2C (SSS + Tranches)</strong> — Buyers first claim their pro-rata share of system supply, then walk up a merit-order tranche stack: existing nuclear (45U credits) → uprates → existing VRE/hydro (EAC) → new VRE → new firm. This reflects rational buyer behavior — cheapest first — while ensuring existing clean assets get real revenue.</p>
-
-        <div class="story-chart-wrap">
-            <div class="chart-container"><canvas id="chartFirmClean"></canvas></div>
-        </div>
-
-        <div class="callout callout-green">
-            <strong>Key finding:</strong> At 90%+ CO₂ reduction targets, hourly strategies procure 3–10× more firm clean energy than consequential or annual strategies. This is the demand signal that enables the firm clean investment pipeline the grid needs.
-        </div>
-    </div>
-
-    <!-- Section 4: Existing Asset Viability -->
-    <div class="story-section" data-observe>
-        <span class="story-badge story-badge-red">Asset Risk</span>
-        <h2>Existing Asset Viability</h2>
-        <p>The US grid already has substantial clean energy — existing nuclear, hydro, and increasingly wind/solar. How procurement strategies treat these assets determines whether they stay online.</p>
-
-        <h3>Strategy 2B: The free-rider problem</h3>
-        <p>Under 2B, existing clean gets "free" credit. Rational buyers love this — it's the cheapest hourly strategy. But in aggregate, existing nuclear plants receive <em>no incremental revenue</em> from corporate procurement. At scale, this accelerates merchant revenue erosion and raises stranding risk for the very assets keeping the grid clean today.</p>
-
-        <h3>Strategy 2C: Preserving existing clean</h3>
-        <p>Under 2C, existing nuclear and hydro are available as premium tranches — buyers pay a small premium (above wholesale but below new-build cost) to claim these EACs. This creates a sustainable revenue stream that keeps existing clean assets viable long-term.</p>
-
-        <h3>Strategies 3A/3B: New-build indifference</h3>
-        <p>Annual matching (3A/3B) with new-build-only rules ignores existing assets entirely. No revenue signal, no stranding protection, but also no free-riding. The capital all flows to new capacity.</p>
-
-        <div class="callout callout-red">
-            <strong>The stakes:</strong> ~800 TWh of existing US nuclear generation is at risk over the next two decades. If procurement strategies don't create revenue signals for these assets, replacing them with new clean capacity will cost $200B+ more than preserving them.
-        </div>
-    </div>
-
-    <!-- Section 5: The Market Signal IPPs Need -->
-    <div class="story-section" data-observe>
-        <span class="story-badge story-badge-blue">IPP Enabling Conditions</span>
-        <h2>The Market Signal IPPs Need</h2>
-        <p>Independent power producers making capital allocation decisions — AES, NextEra, Constellation, Vistra — need bankable demand signals to justify firm clean investment. A 20-year nuclear build or CCS retrofit requires contracted offtake, not speculative wholesale market exposure.</p>
-
-        <p>Hourly matching at scale (>10% C&I participation) triggers Wright's Law learning curves for firm clean energy. As aggregate demand for nuclear SMRs, advanced CCS, and LDES grows, manufacturing scales, supply chains mature, and costs bend down. This is the same dynamic that drove solar PV costs down 90% — but it requires sufficient aggregate demand to initiate.</p>
-
-        <div class="story-chart-wrap">
-            <div class="chart-container"><canvas id="chartLearning"></canvas></div>
-        </div>
-
-        <p>The critical mass threshold — the participation level at which learning curves bend costs enough to make firm clean MAC-justified against DAC/SCC benchmarks — varies by technology and strategy.</p>
-
-        <div class="story-chart-wrap">
-            <h4 style="text-align:center;font-family:var(--font-heading);color:var(--navy);margin-bottom:8px;">
-                When Do Strategies Hit Critical Mass?
-            </h4>
-            <p style="text-align:center;font-size:0.85rem;color:#64748B;margin-bottom:12px;">
-                Participation × CO₂ target combinations where aggregate firm clean demand crosses technology doubling thresholds
-            </p>
-            <div class="chart-container-lg"><canvas id="chartCriticalMass"></canvas></div>
-        </div>
-
-        <div class="callout">
-            <strong>The virtuous cycle:</strong> Enough buyers choosing hourly matching → enough firm clean demand → cost curves bend via Wright's Law → firm clean becomes competitive → MAC stays below DAC/SCC → deeper decarbonization becomes affordable → more buyers join. The question is whether enough corporate buyers choose the strategy that initiates this cycle.
-        </div>
-    </div>
-
-    <!-- Section 6: Synthesis -->
-    <div class="story-section" data-observe>
-        <span class="story-badge story-badge-green">Synthesis</span>
-        <h2>Which Strategy Builds Clean Grids?</h2>
-        <p>The aggregate market outcome depends on which strategy framework is adopted. Every strategy "works" in the narrow sense of matching buyer demand with clean energy certificates. But only some strategies build the clean, reliable, affordable grids that the rest of the economy needs to decarbonize.</p>
-
-        <p><strong>Strategy 2C (Hourly SSS + Tranches)</strong> creates the strongest aggregate signal for deep grid decarbonization:</p>
-        <ul style="margin: 12px 0 20px 24px; line-height: 1.8; font-family: var(--font-body);">
-            <li><strong>Preserves existing clean revenue</strong> — SSS allocation + premium tranches keep existing nuclear and hydro viable</li>
-            <li><strong>Forces firm clean investment</strong> — hourly physics constraint at 90%+ CO₂ reduction demands nuclear, CCS, and LDES</li>
-            <li><strong>Triggers learning curves at scale</strong> — >10–15% participation unlocks Wright's Law cost reductions</li>
-            <li><strong>MAC-justified at higher targets</strong> — clean firm costs are below DAC/SCC benchmarks when learning curves kick in</li>
-            <li><strong>Builds local grid capacity</strong> — same-ISO matching means capital stays in the buyer's region</li>
-        </ul>
-
-        <p>Consequential strategies (1A/1B) are cheaper at low targets but create cross-regional arbitrage that doesn't transform local grids. Annual strategies (3A/3B) lose the hourly constraint that forces firm clean investment. Strategy 2B is a tempting cost optimization that free-rides on existing assets.</p>
-
-        <div class="callout callout-green">
-            <strong>Bottom line:</strong> Strategy choice is market design. The procurement framework determines what the aggregate capital allocation looks like — and whether it builds the reliable, affordable, feasible, clean grids that the rest of the economy needs to decarbonize. Strategy 2C aligns rational buyer incentives with the grid's actual needs.
-        </div>
-    </div>
-
-</div>
 
 <!-- Footer -->
 <div class="page-footer">
@@ -642,13 +450,15 @@ body { background: var(--bg-page); }
         '1A': '#F59E0B', '1B': '#D97706',
         '2A': '#6366F1', '2B': '#818CF8', '2C': '#4F46E5',
         '3A': '#22C55E', '3B': '#16A34A',
+        '3C': '#10B981', '3D': '#059669',
     };
     const STRAT_LABELS = {
         '1A': '1A Conseq (Grid)', '1B': '1B Conseq (Fossil)',
         '2A': '2A Hourly (New)', '2B': '2B Hourly (Grid)', '2C': '2C Hourly (SSS)',
         '3A': '3A Annual (Same)', '3B': '3B Annual (Cross)',
+        '3C': '3C Annual (Same Exist)', '3D': '3D Annual (Cross Exist)',
     };
-    const STRATEGIES_LIST = ['1A', '1B', '2A', '2B', '2C', '3A', '3B'];
+    const STRATEGIES_LIST = ['1A', '1B', '2A', '2B', '2C', '3A', '3B', '3C', '3D'];
 
     const chartOpts = {
         responsive: true,
@@ -772,398 +582,6 @@ body { background: var(--bg-page); }
 
     // Initial chart update
     setTimeout(updateCharts, 300);
-
-    // ═════════════════════════════════════════════════════════════════════════
-    // SCROLLYTELL CHARTS (static narrative charts)
-    // ═════════════════════════════════════════════════════════════════════════
-
-    // Chart: Cross-ISO Capital Flow (Section 2)
-    function buildCrossFlowChart() {
-        const ctx = document.getElementById('chartCrossFlow');
-        if (!ctx) return;
-        new Chart(ctx.getContext('2d'), {
-            type: 'bar',
-            data: {
-                labels: ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP'],
-                datasets: [
-                    {
-                        label: 'Capital received (source)',
-                        data: [0, 0, 0, 0, 0, 0, 0],
-                        backgroundColor: '#F59E0B80',
-                        borderColor: '#F59E0B',
-                        borderWidth: 1,
-                    },
-                    {
-                        label: 'Capital deployed (buyer)',
-                        data: [0, 0, 0, 0, 0, 0, 0],
-                        backgroundColor: '#6366F180',
-                        borderColor: '#6366F1',
-                        borderWidth: 1,
-                    }
-                ]
-            },
-            options: {
-                ...chartOpts,
-                plugins: {
-                    legend: { display: true, position: 'top', labels: { font: { size: 11 } } },
-                    title: {
-                        display: true,
-                        text: 'Strategy 1A: Where Capital Flows vs. Where Buyers Are',
-                        font: { family: "'Space Grotesk'", size: 13, weight: 600 }
-                    }
-                }
-            }
-        });
-        updateCrossFlowChart();
-    }
-
-    function updateCrossFlowChart() {
-        // Populate from current data
-        const chart = Chart.getChart('chartCrossFlow');
-        if (!chart || !DEPLOYMENT_DATA) return;
-
-        const isos = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP'];
-        const received = new Array(7).fill(0);
-        const deployed = new Array(7).fill(0);
-
-        const s1a = DEPLOYMENT_DATA.data['1A'];
-        if (!s1a) return;
-
-        for (let i = 0; i < isos.length; i++) {
-            const iso = isos[i];
-            const isoData = s1a[iso];
-            if (!isoData) continue;
-
-            // Use 10% participation, 90% threshold
-            const partData = isoData['10'] || isoData['5'] || {};
-            const entry = partData['90'] || partData['85'] || {};
-
-            // Buyer demand deployed from this ISO
-            if (entry.n) {
-                for (const twh of Object.values(entry.n)) deployed[i] += twh;
-            }
-            if (entry.e) {
-                for (const twh of Object.values(entry.e)) deployed[i] += twh;
-            }
-
-            // Capital received as source from other ISOs
-            // Check all other ISOs' cross-ISO flows pointing to this ISO
-            for (let j = 0; j < isos.length; j++) {
-                if (j === i) continue;
-                const otherIso = isos[j];
-                const otherData = s1a[otherIso];
-                if (!otherData) continue;
-                const otherPart = otherData['10'] || otherData['5'] || {};
-                const otherEntry = otherPart['90'] || otherPart['85'] || {};
-                if (otherEntry.x && otherEntry.x[iso]) {
-                    for (const twh of Object.values(otherEntry.x[iso])) {
-                        received[i] += twh;
-                    }
-                }
-            }
-        }
-
-        chart.data.datasets[0].data = received.map(v => Math.round(v * 10) / 10);
-        chart.data.datasets[1].data = deployed.map(v => Math.round(v * 10) / 10);
-        chart.update();
-    }
-
-    // Chart: Firm Clean by Strategy (Section 3)
-    function buildFirmCleanChart() {
-        const ctx = document.getElementById('chartFirmClean');
-        if (!ctx) return;
-
-        const firmResources = ['clean_firm', 'nuclear_uprate', 'ccs', 'ldes', 'storage', 'existing_nuclear'];
-        const data = [];
-
-        for (const strat of STRATEGIES_LIST) {
-            let firmTwh = 0;
-            const stratData = DEPLOYMENT_DATA.data[strat];
-            if (!stratData) { data.push(0); continue; }
-
-            for (const iso of ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']) {
-                const isoData = stratData[iso];
-                if (!isoData) continue;
-                const partData = isoData['10'] || isoData['5'] || {};
-                const entry = partData['90'] || partData['85'] || {};
-
-                for (const bucket of ['e', 'n']) {
-                    if (!entry[bucket]) continue;
-                    for (const [res, twh] of Object.entries(entry[bucket])) {
-                        if (firmResources.includes(res)) firmTwh += twh;
-                    }
-                }
-                if (entry.x) {
-                    for (const resources of Object.values(entry.x)) {
-                        for (const [res, twh] of Object.entries(resources)) {
-                            if (firmResources.includes(res)) firmTwh += twh;
-                        }
-                    }
-                }
-            }
-            data.push(Math.round(firmTwh * 10) / 10);
-        }
-
-        new Chart(ctx.getContext('2d'), {
-            type: 'bar',
-            data: {
-                labels: STRATEGIES_LIST.map(s => STRAT_LABELS[s]),
-                datasets: [{
-                    label: 'Firm Clean TWh',
-                    data: data,
-                    backgroundColor: STRATEGIES_LIST.map(s => STRAT_COLORS[s] + 'CC'),
-                    borderColor: STRATEGIES_LIST.map(s => STRAT_COLORS[s]),
-                    borderWidth: 1,
-                    borderRadius: 4,
-                }]
-            },
-            options: {
-                ...chartOpts,
-                plugins: {
-                    legend: { display: false },
-                    title: {
-                        display: true,
-                        text: 'Firm Clean Energy Procured at 90% CO₂ Reduction, 10% Participation',
-                        font: { family: "'Space Grotesk'", size: 13, weight: 600 }
-                    }
-                }
-            }
-        });
-    }
-
-    // Chart: Learning Curve / Cost Trajectory (Section 5)
-    function buildLearningChart() {
-        const ctx = document.getElementById('chartLearning');
-        if (!ctx) return;
-
-        // Illustrative learning curve data — costs at increasing participation
-        const participationPcts = [2, 5, 10, 15, 20, 30, 40, 50];
-        const costByStrat = {};
-
-        for (const strat of ['2A', '2C', '1A']) {
-            costByStrat[strat] = [];
-            const stratData = DEPLOYMENT_DATA.data[strat];
-            if (!stratData) { costByStrat[strat] = participationPcts.map(() => 0); continue; }
-
-            for (const pct of participationPcts) {
-                let totalCost = 0;
-                let totalTwh = 0;
-                for (const iso of ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']) {
-                    const isoData = stratData[iso];
-                    if (!isoData) continue;
-                    const pk = String(pct);
-                    const partData = isoData[pk] || {};
-                    const entry = partData['90'] || {};
-                    totalCost += entry.tc || 0;
-                    totalTwh += entry.bt || 0;
-                }
-                costByStrat[strat].push(totalTwh > 0 ? Math.round(totalCost / totalTwh * 1e6 / 1e6 * 10) / 10 : 0);
-            }
-        }
-
-        new Chart(ctx.getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: participationPcts.map(p => p + '%'),
-                datasets: [
-                    {
-                        label: '2C Hourly (SSS)',
-                        data: costByStrat['2C'],
-                        borderColor: '#4F46E5',
-                        backgroundColor: '#4F46E520',
-                        fill: true,
-                        tension: 0.3,
-                        pointRadius: 4,
-                    },
-                    {
-                        label: '2A Hourly (New)',
-                        data: costByStrat['2A'],
-                        borderColor: '#6366F1',
-                        backgroundColor: 'transparent',
-                        borderDash: [6, 4],
-                        tension: 0.3,
-                        pointRadius: 4,
-                    },
-                    {
-                        label: '1A Consequential',
-                        data: costByStrat['1A'],
-                        borderColor: '#F59E0B',
-                        backgroundColor: 'transparent',
-                        borderDash: [2, 3],
-                        tension: 0.3,
-                        pointRadius: 4,
-                    },
-                ]
-            },
-            options: {
-                ...chartOpts,
-                plugins: {
-                    legend: { display: true, position: 'top', labels: { font: { size: 11 } } },
-                    title: {
-                        display: true,
-                        text: 'Average Cost ($/MWh) at 90% CO₂ Reduction by Participation Level',
-                        font: { family: "'Space Grotesk'", size: 13, weight: 600 }
-                    }
-                },
-                scales: {
-                    x: { ...chartOpts.scales.x, title: { display: true, text: 'C&I Participation', font: { size: 11 } } },
-                    y: { ...chartOpts.scales.y, title: { display: true, text: '$/MWh', font: { size: 11 } } }
-                }
-            }
-        });
-    }
-
-    // Chart: Critical Mass Contour — when does each strategy cross technology doubling thresholds?
-    function buildCriticalMassChart() {
-        const ctx = document.getElementById('chartCriticalMass');
-        if (!ctx) return;
-
-        // Wright's Law first-doubling thresholds (from step10_smartargets.py)
-        // Starting cumulative GW → need to ADD this many GW for first doubling
-        // nuclear: 2 GW base → 2 GW new = 15.8 TWh at 90% CF
-        // ccs: 0.3 GW base → 0.3 GW new = 2.2 TWh at 85% CF
-        // ldes: 0.01 GW base → 0.01 GW new = negligible
-        const DOUBLING_TWH = { nuclear: 15.8, ccs: 2.2 };
-
-        const firmResources = ['clean_firm', 'nuclear_uprate', 'ccs', 'ldes', 'storage', 'existing_nuclear'];
-        const participations = [2, 5, 10, 20, 30, 50, 80];
-        const thresholds = [50, 60, 70, 80, 85, 90, 95, 99];
-
-        // For each strategy, compute firm clean TWh at each participation × threshold
-        const strategyData = {};
-        for (const strat of ['1A', '2A', '2C', '3A']) {
-            strategyData[strat] = [];
-            const stratD = DEPLOYMENT_DATA.data[strat];
-            if (!stratD) continue;
-
-            for (const part of participations) {
-                let firmTwh = 0;
-                for (const iso of ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']) {
-                    const isoD = stratD[iso];
-                    if (!isoD) continue;
-                    // Find closest participation key
-                    const partKeys = Object.keys(isoD);
-                    let pk = partKeys.find(k => parseInt(k) === part) || partKeys[0];
-                    const partD = isoD[pk] || {};
-
-                    // Find closest threshold key
-                    const thrKeys = Object.keys(partD);
-                    let tk = thrKeys.find(k => parseFloat(k) === 90) || thrKeys[thrKeys.length - 1];
-                    const entry = partD[tk] || {};
-
-                    for (const bucket of ['e', 'n']) {
-                        if (!entry[bucket]) continue;
-                        for (const [res, twh] of Object.entries(entry[bucket])) {
-                            if (firmResources.includes(res) && !isFreeResource(res, strat)) firmTwh += twh;
-                        }
-                    }
-                    if (entry.x) {
-                        for (const resources of Object.values(entry.x)) {
-                            for (const [res, twh] of Object.entries(resources)) {
-                                if (firmResources.includes(res)) firmTwh += twh;
-                            }
-                        }
-                    }
-                }
-                strategyData[strat].push(Math.round(firmTwh * 10) / 10);
-            }
-        }
-
-        // Nuclear doubling line (horizontal reference)
-        const nuclearLine = participations.map(() => DOUBLING_TWH.nuclear);
-
-        const datasets = [
-            {
-                label: 'Hourly New-Build (2A)',
-                data: strategyData['2A'],
-                borderColor: STRAT_COLORS['2A'],
-                backgroundColor: STRAT_COLORS['2A'] + '20',
-                borderWidth: 2.5, fill: false, tension: 0.3, pointRadius: 4,
-            },
-            {
-                label: 'Hourly SSS+Tranches (2C)',
-                data: strategyData['2C'],
-                borderColor: STRAT_COLORS['2C'],
-                backgroundColor: STRAT_COLORS['2C'] + '20',
-                borderWidth: 2.5, fill: false, tension: 0.3, pointRadius: 4,
-            },
-            {
-                label: 'Consequential (1A)',
-                data: strategyData['1A'],
-                borderColor: STRAT_COLORS['1A'],
-                backgroundColor: STRAT_COLORS['1A'] + '20',
-                borderWidth: 2.5, fill: false, tension: 0.3, pointRadius: 4,
-            },
-            {
-                label: 'Annual (3A)',
-                data: strategyData['3A'],
-                borderColor: STRAT_COLORS['3A'],
-                backgroundColor: STRAT_COLORS['3A'] + '20',
-                borderWidth: 2.5, fill: false, tension: 0.3, pointRadius: 4,
-            },
-            {
-                label: 'Nuclear SMR 1st Doubling (2 GW)',
-                data: nuclearLine,
-                borderColor: '#6366F1',
-                borderWidth: 2, borderDash: [8, 4],
-                pointRadius: 0, fill: false,
-            },
-        ];
-
-        new Chart(ctx.getContext('2d'), {
-            type: 'line',
-            data: { labels: participations.map(p => p + '%'), datasets },
-            options: {
-                ...chartOpts,
-                plugins: {
-                    legend: { display: true, position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
-                    title: {
-                        display: true,
-                        text: 'Aggregate Firm Clean Demand at 90% CO₂ Target by Participation',
-                        font: { family: "'Space Grotesk'", size: 13, weight: 600 }
-                    },
-                    annotation: {
-                        annotations: {
-                            nuclearLabel: {
-                                type: 'label',
-                                xValue: participations.length - 1,
-                                yValue: DOUBLING_TWH.nuclear + 3,
-                                content: 'Nuclear 1st doubling',
-                                font: { size: 10, style: 'italic' },
-                                color: '#6366F1',
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: { ...chartOpts.scales.x, title: { display: true, text: 'C&I Participation', font: { size: 11 } } },
-                    y: { ...chartOpts.scales.y, title: { display: true, text: 'Aggregate Firm Clean TWh', font: { size: 11 } }, beginAtZero: true }
-                }
-            }
-        });
-    }
-
-    // Build narrative charts after data loads
-    setTimeout(() => {
-        buildCrossFlowChart();
-        buildFirmCleanChart();
-        buildLearningChart();
-        buildCriticalMassChart();
-    }, 500);
-
-    // ═════════════════════════════════════════════════════════════════════════
-    // SCROLL OBSERVER for narrative sections
-    // ═════════════════════════════════════════════════════════════════════════
-
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('visible');
-            }
-        });
-    }, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
-
-    document.querySelectorAll('.story-section').forEach(el => observer.observe(el));
 
 })();
 </script>

@@ -1,19 +1,25 @@
 /**
- * Jar Animation Engine v2 — Uniform ball grid visualization
+ * Jar Animation Engine v3 — Grid-level impact visualization
  *
- * Each ball = a fixed share of deployed resources. Balls are uniform size,
- * stacked in orderly rows inside curved-bottom jars. Cross-ISO balls get
- * a glow outline in the source ISO's color.
+ * Each jar shows what happens to an ISO's GRID under a procurement strategy.
+ * At 0% participation: baseline grid mix (solid balls).
+ * As participation increases: new procurement adds to baseline.
  *
- * Free credits (SSS allocation, grid baseline credit, existing_vre in 2B)
- * are excluded — only paid procurement is shown.
+ * Visual tiers:
+ * - Solid fill: grid baseline clean (always present)
+ * - Transparent fill + saturated outline: existing clean claimed by buyers
+ * - Transparent fill only: new-build procurement
+ * - Above rim with stripe: curtailed energy
+ *
+ * Glow semantics: in SOURCE ISO jar, balls serving external buyers glow
+ * with the BUYER ISO's color.
  */
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const STRATEGIES = ['1A', '1B', '2A', '2B', '2C', '3A', '3B'];
+const STRATEGIES = ['1A', '1B', '2A', '2B', '2C', '3A', '3B', '3C', '3D'];
 const ISO_LIST = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP'];
 const STRATEGY_LABELS = {
     '1A': 'Consequential\n(Grid Avg)',
@@ -23,16 +29,9 @@ const STRATEGY_LABELS = {
     '2C': 'Hourly\n(SSS + Tranches)',
     '3A': 'Annual\n(Same-ISO)',
     '3B': 'Annual\n(Cross-Regional)',
+    '3C': 'Annual\n(Same, Exist.)',
+    '3D': 'Annual\n(Cross, Exist.)',
 };
-
-// Strategy-aware free credit detection.
-// Only sss_allocation and grid_clean are truly free (no payment).
-// existing_nuclear, existing_vre, nuclear_uprate in 2C are PAID tranches above SSS.
-function isFreeResource(resource, strategy) {
-    if (resource === 'sss_allocation') return true;
-    if (resource === 'grid_clean') return true;
-    return false;
-}
 
 // Annual grid demand per ISO (TWh) from pipeline_config.py
 const GRID_DEMANDS = {
@@ -49,6 +48,8 @@ function getResourceColor(resource) {
         'ldes': '#E91E63', 'green_h2': '#10B981', 'geothermal': '#D97706',
         'new_vre': '#4ADE80', 'new_build_uprate': '#818CF8',
         'existing_vre': '#86EFAC', 'existing_nuclear': '#A5B4FC',
+        'existing_recs': '#86EFAC', 'cross_regional_recs': '#4ADE80',
+        'new_build_vre': '#4ADE80',
     };
     if (typeof RESOURCE_COLORS !== 'undefined') {
         const rc = RESOURCE_COLORS;
@@ -77,6 +78,8 @@ function getResourceLabel(key) {
         'ldes': 'LDES', 'green_h2': 'Green H₂', 'geothermal': 'Geothermal',
         'new_vre': 'New VRE', 'new_build_uprate': 'New Uprate',
         'existing_vre': 'Existing VRE/Hydro', 'existing_nuclear': 'Existing Nuclear',
+        'existing_recs': 'Existing RECs', 'cross_regional_recs': 'Cross-Regional RECs',
+        'new_build_vre': 'New Build VRE',
     };
     return names[key] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
@@ -92,30 +95,28 @@ function getIsoColor(iso) {
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// BALL CLASS — Uniform-size resource ball
+// BALL CLASS — Uniform-size resource ball with grid-level visual tiers
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class Ball {
     /**
-     * @param {string} resource
-     * @param {boolean} isExisting  - true for existing/paid tranches (not SSS/free)
-     * @param {string|null} sourceIso - non-null for cross-ISO
-     * @param {boolean} isFree - true for SSS allocation / grid_clean (free credits)
+     * @param {string} resource - resource type
+     * @param {string} tier - 'baseline'|'claimed'|'new'|'curtailed'
+     * @param {string|null} glowIso - ISO color for glow (buyer ISO for source jars)
      */
-    constructor(resource, isExisting, sourceIso, isFree = false) {
+    constructor(resource, tier, glowIso = null) {
         this.resource = resource;
-        this.isExisting = isExisting;
-        this.sourceIso = sourceIso;  // null for same-ISO
-        this.isFree = isFree;
+        this.tier = tier;  // 'baseline', 'claimed', 'new', 'curtailed'
+        this.glowIso = glowIso;
         this.color = getResourceColor(resource);
-        this.glowColor = sourceIso ? getIsoColor(sourceIso) : null;
+        this.glowColor = glowIso ? getIsoColor(glowIso) : null;
 
         // Position (set by jar packing)
         this.x = 0;
         this.y = 0;
         this.targetX = 0;
         this.targetY = 0;
-        this.radius = 0;  // Uniform, set by jar
+        this.radius = 0;
 
         // Animation
         this.opacity = 0;
@@ -157,19 +158,15 @@ class Ball {
             ctx.shadowBlur = 0;
         }
 
-        // Three visual tiers:
-        // 1. Free (SSS/grid_clean): solid fill, full saturation
-        // 2. Paid existing (non-SSS existing clean): transparent fill + saturated outline
-        // 3. New build: transparent fill only, no outline
-        if (this.isFree) {
-            // Tier 1: Solid fill — free existing clean
+        if (this.tier === 'baseline') {
+            // Solid fill — grid baseline clean
             ctx.globalAlpha = this.opacity;
             ctx.fillStyle = this.color;
             ctx.beginPath();
             ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
             ctx.fill();
-        } else if (this.isExisting) {
-            // Tier 2: Transparent fill + saturated outline — paid existing
+        } else if (this.tier === 'claimed') {
+            // Transparent fill + saturated outline — existing clean claimed by buyers
             ctx.globalAlpha = this.opacity * 0.25;
             ctx.fillStyle = this.color;
             ctx.beginPath();
@@ -180,8 +177,40 @@ class Ball {
             ctx.strokeStyle = this.color;
             ctx.lineWidth = 2.0;
             ctx.stroke();
+        } else if (this.tier === 'curtailed') {
+            // Curtailed — diagonal stripe pattern above rim
+            ctx.globalAlpha = this.opacity * 0.20;
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Diagonal stripes
+            ctx.globalAlpha = this.opacity * 0.5;
+            ctx.strokeStyle = this.color;
+            ctx.lineWidth = 1;
+            ctx.setLineDash([2, 2]);
+            ctx.beginPath();
+            ctx.moveTo(this.x - r * 0.7, this.y + r * 0.7);
+            ctx.lineTo(this.x + r * 0.7, this.y - r * 0.7);
+            ctx.moveTo(this.x - r * 0.3, this.y + r * 0.7);
+            ctx.lineTo(this.x + r * 0.7, this.y - r * 0.3);
+            ctx.moveTo(this.x - r * 0.7, this.y + r * 0.3);
+            ctx.lineTo(this.x + r * 0.3, this.y - r * 0.7);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Dashed outline
+            ctx.globalAlpha = this.opacity * 0.6;
+            ctx.strokeStyle = this.color;
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
         } else {
-            // Tier 3: Transparent fill only — new build (no outline)
+            // Tier 'new' — transparent fill only (new build)
             ctx.globalAlpha = this.opacity * 0.35;
             ctx.fillStyle = this.color;
             ctx.beginPath();
@@ -201,7 +230,7 @@ class Ball {
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// JAR CLASS — Flat-bottom rectangle; balls fill to rim = 100% of grid
+// JAR CLASS — Grid-level view with baseline + procurement + curtailment
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class Jar {
@@ -214,6 +243,7 @@ class Jar {
         this.height = height;
         this.balls = [];
         this.data = null;
+        this.gridBaseline = null;
         this._computeGeometry();
     }
 
@@ -229,7 +259,6 @@ class Jar {
     }
 
     getHalfWidthAt(y) {
-        // Slight flare near rim, then constant width rectangle
         if (y <= this.rimY) return this.rimW / 2;
         const rimZone = this.rimY + this.innerH * 0.04;
         if (y <= rimZone) {
@@ -239,62 +268,101 @@ class Jar {
         return this.bodyW / 2;
     }
 
-    setBalls(dataRecord, ballTwh) {
+    setBalls(dataRecord, ballTwh, gridBaseline, crossIsoFlows) {
         this.data = dataRecord;
+        this.gridBaseline = gridBaseline;
         const oldBalls = this.balls;
         this.balls = [];
 
-        if (!dataRecord || ballTwh <= 0) return;
+        const iso = this.iso;
+        const bl = gridBaseline || {};
+        const gridDemand = GRID_DEMANDS[iso] || 300;
 
+        // === Build ball list ===
         const items = [];
-        const strat = this.strategy;
 
-        // Include FREE resources (SSS/grid_clean) as solid balls at bottom
-        if (dataRecord.e) {
-            for (const [res, twh] of Object.entries(dataRecord.e)) {
-                if (twh <= 0) continue;
-                const free = isFreeResource(res, strat);
-                const count = Math.max(1, Math.round(twh / ballTwh));
-                items.push({ resource: res, count, isExisting: true, isFree: free, sourceIso: null, twh });
-            }
+        // 1. Grid baseline balls (always present — solid fill)
+        for (const [res, pct] of Object.entries(bl)) {
+            if (res === 'totalPct' || pct <= 0) continue;
+            const twh = pct / 100 * gridDemand;
+            const count = Math.max(1, Math.round(twh / ballTwh));
+            items.push({ resource: res, count, tier: 'baseline', glowIso: null, twh });
         }
-        if (dataRecord.n) {
-            for (const [res, twh] of Object.entries(dataRecord.n)) {
-                if (isFreeResource(res, strat) || twh <= 0) continue;
-                const count = Math.max(1, Math.round(twh / ballTwh));
-                items.push({ resource: res, count, isExisting: false, isFree: false, sourceIso: null, twh });
+
+        // 2. Procurement balls (from data record)
+        if (dataRecord) {
+            // Existing claimed
+            if (dataRecord.e) {
+                for (const [res, twh] of Object.entries(dataRecord.e)) {
+                    if (twh <= 0) continue;
+                    const count = Math.max(1, Math.round(twh / ballTwh));
+                    items.push({ resource: res, count, tier: 'claimed', glowIso: null, twh });
+                }
             }
+            // New build
+            if (dataRecord.n) {
+                for (const [res, twh] of Object.entries(dataRecord.n)) {
+                    if (twh <= 0) continue;
+                    const count = Math.max(1, Math.round(twh / ballTwh));
+                    items.push({ resource: res, count, tier: 'new', glowIso: null, twh });
+                }
+            }
+            // Cross-ISO: balls appear in SOURCE jar, glowing with BUYER color
+            // dataRecord.x has {srcIso: {resource: twh}} — these are purchases FROM srcIso
+            // In the buyer's jar, we DON'T show cross-ISO balls (they're in the source jar)
+            // Instead, we need crossIsoFlows to know what THIS iso's resources serve externally
         }
-        if (dataRecord.x) {
-            for (const [srcIso, resources] of Object.entries(dataRecord.x)) {
+
+        // 3. Cross-ISO glow: resources in THIS jar that serve external buyers
+        if (crossIsoFlows) {
+            for (const [buyerIso, resources] of Object.entries(crossIsoFlows)) {
                 for (const [res, twh] of Object.entries(resources)) {
                     if (twh <= 0) continue;
                     const count = Math.max(1, Math.round(twh / ballTwh));
-                    items.push({ resource: res, count, isExisting: false, isFree: false, sourceIso: srcIso, twh });
+                    items.push({ resource: res, count, tier: 'new', glowIso: buyerIso, twh });
                 }
+            }
+        }
+
+        // 4. Curtailment balls (above rim)
+        if (dataRecord && dataRecord.curtTwh > 0) {
+            const curtCount = Math.max(1, Math.round(dataRecord.curtTwh / ballTwh));
+            // Distribute curtailment across VRE resources proportionally
+            const vreResources = ['solar', 'wind'];
+            const curtPerRes = Math.ceil(curtCount / vreResources.length);
+            for (const res of vreResources) {
+                items.push({
+                    resource: res,
+                    count: curtPerRes,
+                    tier: 'curtailed',
+                    glowIso: null,
+                    twh: dataRecord.curtTwh / vreResources.length,
+                });
             }
         }
 
         if (items.length === 0) return;
 
-        // Sort: free at bottom (first), then paid existing, then new build
+        // Sort: baseline at bottom, then claimed, then new, curtailed last (on top)
+        const tierOrder = { 'baseline': 0, 'claimed': 1, 'new': 2, 'curtailed': 3 };
         items.sort((a, b) => {
-            if (a.isFree !== b.isFree) return a.isFree ? -1 : 1;
-            if (a.isExisting !== b.isExisting) return a.isExisting ? -1 : 1;
+            const ta = tierOrder[a.tier] || 0;
+            const tb = tierOrder[b.tier] || 0;
+            if (ta !== tb) return ta - tb;
             return b.count - a.count;
         });
 
         for (const item of items) {
             for (let i = 0; i < item.count; i++) {
-                this.balls.push(new Ball(item.resource, item.isExisting, item.sourceIso, item.isFree));
+                this.balls.push(new Ball(item.resource, item.tier, item.glowIso));
             }
         }
 
-        // 100 balls = 100% of grid (1 ball per 1%)
-        const MAX_BALLS = 100;
+        // Cap at 120 balls (100 = 100% grid + up to 20 curtailment)
+        const MAX_BALLS = 120;
         if (this.balls.length > MAX_BALLS) this.balls.length = MAX_BALLS;
 
-        // Ball radius: sized so 100 balls fill rim-to-bottom exactly
+        // Ball radius
         const innerW = this.bodyW * 0.90;
         const ballsPerRow = Math.max(4, Math.min(8, Math.ceil(Math.sqrt(this.balls.length * 1.5))));
         const ballDiameter = innerW / ballsPerRow;
@@ -308,9 +376,8 @@ class Jar {
         for (const ball of this.balls) {
             const match = oldBalls.find(ob =>
                 ob.resource === ball.resource &&
-                ob.isExisting === ball.isExisting &&
-                ob.isFree === ball.isFree &&
-                ob.sourceIso === ball.sourceIso &&
+                ob.tier === ball.tier &&
+                ob.glowIso === ball.glowIso &&
                 ob.opacity > 0.5
             );
             if (match) {
@@ -342,30 +409,56 @@ class Jar {
         const padding = 1.5;
         const step = diameter + padding;
 
+        // Separate curtailed balls from normal balls
+        const normalBalls = this.balls.filter(b => b.tier !== 'curtailed');
+        const curtailedBalls = this.balls.filter(b => b.tier === 'curtailed');
+
+        // Pack normal balls bottom-up inside jar
         let currentY = this.bottomY - ballR - 2;
         let idx = 0;
 
-        while (idx < this.balls.length && currentY > this.rimY + ballR) {
+        while (idx < normalBalls.length && currentY > this.rimY + ballR) {
             const halfW = this.getHalfWidthAt(currentY) - ballR - 2;
             if (halfW < ballR) { currentY -= step * 0.5; continue; }
 
             const rowCapacity = Math.max(1, Math.floor((halfW * 2) / step));
-            const ballsThisRow = Math.min(rowCapacity, this.balls.length - idx);
+            const ballsThisRow = Math.min(rowCapacity, normalBalls.length - idx);
             const rowWidth = ballsThisRow * step - padding;
             let startX = this.cx - rowWidth / 2 + ballR;
 
             for (let i = 0; i < ballsThisRow; i++) {
-                this.balls[idx].targetX = startX + i * step;
-                this.balls[idx].targetY = currentY;
+                normalBalls[idx].targetX = startX + i * step;
+                normalBalls[idx].targetY = currentY;
                 idx++;
             }
             currentY -= step;
         }
 
-        while (idx < this.balls.length) {
-            this.balls[idx].targetX = this.cx;
-            this.balls[idx].targetY = this.rimY + ballR + 2;
+        // Overflow normal balls at rim
+        while (idx < normalBalls.length) {
+            normalBalls[idx].targetX = this.cx;
+            normalBalls[idx].targetY = this.rimY + ballR + 2;
             idx++;
+        }
+
+        // Pack curtailed balls ABOVE rim (overflow area)
+        if (curtailedBalls.length > 0) {
+            let curtY = this.rimY - ballR - 2;
+            let ci = 0;
+            while (ci < curtailedBalls.length) {
+                const halfW = this.rimW / 2 - ballR - 2;
+                const rowCapacity = Math.max(1, Math.floor((halfW * 2) / step));
+                const ballsThisRow = Math.min(rowCapacity, curtailedBalls.length - ci);
+                const rowWidth = ballsThisRow * step - padding;
+                let startX = this.cx - rowWidth / 2 + ballR;
+
+                for (let i = 0; i < ballsThisRow; i++) {
+                    curtailedBalls[ci].targetX = startX + i * step;
+                    curtailedBalls[ci].targetY = curtY;
+                    ci++;
+                }
+                curtY -= step;
+            }
         }
     }
 
@@ -384,7 +477,6 @@ class Jar {
         fillGrad.addColorStop(1, 'rgba(226, 232, 240, 0.15)');
         ctx.fillStyle = fillGrad;
 
-        // Flat-bottom rectangle (slight rim flare)
         ctx.beginPath();
         ctx.moveTo(cx - rimW / 2, rimY);
         ctx.lineTo(cx - bodyW / 2, bottomY);
@@ -394,7 +486,11 @@ class Jar {
         ctx.fill();
         ctx.restore();
 
-        // ---- Clip region for balls ----
+        // ---- Draw balls (NO clipping for curtailed above rim) ----
+        ctx.save();
+
+        // Draw normal balls with jar clip
+        const normalBalls = this.balls.filter(b => b.tier !== 'curtailed');
         ctx.save();
         ctx.beginPath();
         ctx.moveTo(cx - rimW / 2 + 2, rimY);
@@ -403,8 +499,13 @@ class Jar {
         ctx.lineTo(cx + rimW / 2 - 2, rimY);
         ctx.closePath();
         ctx.clip();
+        for (const ball of normalBalls) ball.draw(ctx, time);
+        ctx.restore();
 
-        for (const ball of this.balls) ball.draw(ctx, time);
+        // Draw curtailed balls WITHOUT clipping (they overflow above rim)
+        const curtailedBalls = this.balls.filter(b => b.tier === 'curtailed');
+        for (const ball of curtailedBalls) ball.draw(ctx, time);
+
         ctx.restore();
 
         // ---- Jar outline ----
@@ -438,51 +539,38 @@ class Jar {
         ctx.lineTo(reflectX, bottomY - 10);
         ctx.stroke();
 
-        // % hourly matching score label below jar (existing + deployed / grid demand)
-        if (this.data) {
-            const totalCleanTwh = this._getTotalCleanTwh();
-            const gridDemand = GRID_DEMANDS[this.iso] || 300;
-            const pct = Math.min(totalCleanTwh / gridDemand * 100, 999);
-            if (pct >= 0.5) {
-                ctx.globalAlpha = 0.65;
-                ctx.fillStyle = '#1E293B';
+        // Hourly match score label below jar (or grid clean %)
+        const hms = this.data && this.data.hms;
+        const gridCleanPct = this.data && this.data.gridCleanPct;
+        const displayPct = hms != null ? hms : gridCleanPct;
+
+        if (displayPct != null && displayPct >= 0.5) {
+            ctx.globalAlpha = 0.65;
+            ctx.fillStyle = '#1E293B';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            const fs = Math.max(7, Math.min(10, this.width * 0.08));
+            ctx.font = `600 ${fs}px 'DM Sans', sans-serif`;
+            const label = hms != null ? `${Math.round(displayPct)}% HMS` : `${Math.round(displayPct)}%`;
+            ctx.fillText(label, cx, bottomY + 2);
+        } else if (this.gridBaseline) {
+            // Show baseline clean % when no data
+            const blPct = this.gridBaseline.totalPct || 0;
+            if (blPct > 0) {
+                ctx.globalAlpha = 0.45;
+                ctx.fillStyle = '#64748B';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'top';
                 const fs = Math.max(7, Math.min(10, this.width * 0.08));
                 ctx.font = `600 ${fs}px 'DM Sans', sans-serif`;
-                ctx.fillText(pct < 10 ? pct.toFixed(1) + '%' : Math.round(pct) + '%', cx, bottomY + 2);
+                ctx.fillText(`${Math.round(blPct)}%`, cx, bottomY + 2);
             }
         }
 
         ctx.restore();
     }
 
-    _getPaidTwh() {
-        if (!this.data) return 0;
-        let total = 0;
-        const strat = this.strategy;
-        if (this.data.e) {
-            for (const [r, t] of Object.entries(this.data.e)) {
-                if (!isFreeResource(r, strat) && t > 0) total += t;
-            }
-        }
-        if (this.data.n) {
-            for (const [r, t] of Object.entries(this.data.n)) {
-                if (!isFreeResource(r, strat) && t > 0) total += t;
-            }
-        }
-        if (this.data.x) {
-            for (const resources of Object.values(this.data.x)) {
-                for (const t of Object.values(resources)) {
-                    if (t > 0) total += t;
-                }
-            }
-        }
-        return total;
-    }
-
     _getTotalCleanTwh() {
-        // Total clean TWh: ALL existing (free + paid) + new + cross-ISO
         if (!this.data) return 0;
         let total = 0;
         if (this.data.e) {
@@ -506,8 +594,10 @@ class Jar {
     }
 
     hitTest(mx, my) {
+        // Extend hit area above rim for curtailed balls
+        const topY = Math.min(this.y, this.rimY - 30);
         if (mx < this.x || mx > this.x + this.width ||
-            my < this.y || my > this.y + this.height) return null;
+            my < topY || my > this.y + this.height) return null;
         for (const ball of this.balls) {
             if (ball.hitTest(mx, my)) return { jar: this, ball };
         }
@@ -529,6 +619,7 @@ class JarGrid {
         this.participation = 10;
         this.threshold = 90;
         this.data = null;
+        this.gridBaseline = null;
         this.jars = [];
         this.animating = false;
         this.lastTime = 0;
@@ -558,6 +649,7 @@ class JarGrid {
 
     init(deploymentData) {
         this.data = deploymentData;
+        this.gridBaseline = deploymentData.gridBaseline || {};
         this._buildJars();
         this._updateData();
         this._startAnimation();
@@ -627,76 +719,90 @@ class JarGrid {
     }
 
     /**
-     * Sum paid TWh from a data record (excluding free credits)
+     * Build cross-ISO flow map: for each source ISO, which buyer ISOs claim its resources.
+     * Returns {sourceIso: {buyerIso: {resource: twh}}}
      */
-    _sumPaidTwh(record, strategy) {
-        let total = 0;
-        if (record.e) {
-            for (const [res, twh] of Object.entries(record.e)) {
-                if (!isFreeResource(res, strategy) && twh > 0) total += twh;
-            }
-        }
-        if (record.n) {
-            for (const [res, twh] of Object.entries(record.n)) {
-                if (!isFreeResource(res, strategy) && twh > 0) total += twh;
-            }
-        }
-        if (record.x) {
-            for (const resources of Object.values(record.x)) {
-                for (const twh of Object.values(resources)) {
-                    if (twh > 0) total += twh;
+    _buildCrossIsoFlows(strategyId) {
+        if (!this.data || !this.data.data[strategyId]) return {};
+
+        const flows = {};  // sourceIso → {buyerIso → {resource → twh}}
+        const stratData = this.data.data[strategyId];
+
+        for (const buyerIso of ISO_LIST) {
+            const isoData = stratData[buyerIso];
+            if (!isoData) continue;
+
+            const pk = this._findClosestKey(Object.keys(isoData), this.participation);
+            if (!pk) continue;
+            const tk = this._findClosestKey(Object.keys(isoData[pk]), this.threshold);
+            if (!tk) continue;
+
+            const record = isoData[pk][tk];
+            if (!record || !record.x) continue;
+
+            // record.x = {sourceIso: {resource: twh}} — what buyerIso buys from sourceIso
+            for (const [srcIso, resources] of Object.entries(record.x)) {
+                if (!flows[srcIso]) flows[srcIso] = {};
+                if (!flows[srcIso][buyerIso]) flows[srcIso][buyerIso] = {};
+                for (const [res, twh] of Object.entries(resources)) {
+                    if (twh > 0) {
+                        flows[srcIso][buyerIso][res] = (flows[srcIso][buyerIso][res] || 0) + twh;
+                    }
                 }
             }
         }
-        return total;
+
+        return flows;
     }
 
     _updateData() {
         if (!this.data) return;
 
-        // First pass: find all records
-        const records = [];
-        for (const jar of this.jars) {
-            const stratData = this.data.data[jar.strategy];
-            if (!stratData) { records.push(null); continue; }
-            const isoData = stratData[jar.iso];
-            if (!isoData) { records.push(null); continue; }
-
-            const pk = this._findClosestKey(Object.keys(isoData), this.participation);
-            if (!pk) { records.push(null); continue; }
-            const tk = this._findClosestKey(Object.keys(isoData[pk]), this.threshold);
-            if (!tk) { records.push(null); continue; }
-
-            records.push(isoData[pk][tk]);
+        // Pre-compute cross-ISO flows per strategy for glow semantics
+        const crossFlowsByStrategy = {};
+        for (const strat of STRATEGIES) {
+            crossFlowsByStrategy[strat] = this._buildCrossIsoFlows(strat);
         }
 
-        // Ball sizing: 1 ball = 1% of the ISO's grid demand
-        // This makes cross-ISO comparison meaningful — 10 balls = 10% of grid
-        for (let i = 0; i < this.jars.length; i++) {
-            const jar = this.jars[i];
-            const record = records[i];
+        // Update each jar
+        for (const jar of this.jars) {
+            const stratData = this.data.data[jar.strategy];
+            let record = null;
+
+            if (stratData) {
+                const isoData = stratData[jar.iso];
+                if (isoData) {
+                    const pk = this._findClosestKey(Object.keys(isoData), this.participation);
+                    if (pk) {
+                        const tk = this._findClosestKey(Object.keys(isoData[pk]), this.threshold);
+                        if (tk) {
+                            record = isoData[pk][tk];
+                        }
+                    }
+                }
+            }
+
             const ballTwh = (GRID_DEMANDS[jar.iso] || 300) * 0.01;  // 1% of grid
-            jar.setBalls(record, ballTwh);
+            const bl = this.gridBaseline[jar.iso] || null;
+
+            // Cross-ISO flows for THIS jar's ISO as source
+            const crossFlows = crossFlowsByStrategy[jar.strategy][jar.iso] || null;
+
+            jar.setBalls(record, ballTwh, bl, crossFlows);
         }
 
         // Fire stats callback
         if (this.onStatsUpdate) {
             let totalPaidTwh = 0, totalCO2 = 0;
-            let totalRealCO2 = 0;  // Actual fossil displacement
-            for (let i = 0; i < this.jars.length; i++) {
-                const jar = this.jars[i];
-                const record = records[i];
-                if (!record) continue;
-                totalPaidTwh += this._sumPaidTwh(record, jar.strategy);
-                totalCO2 += record.co2 || 0;
-
-                // Use pipeline-computed CO₂ (accounts for actual displacement, not raw TWh)
-                totalRealCO2 += record.co2 || 0;
+            for (const jar of this.jars) {
+                if (!jar.data) continue;
+                totalPaidTwh += jar._getTotalCleanTwh();
+                totalCO2 += jar.data.co2 || 0;
             }
             this.onStatsUpdate({
                 totalPaidTwh,
                 totalCO2Mt: totalCO2,
-                totalRealCO2Mt: totalRealCO2,
+                totalRealCO2Mt: totalCO2,
             });
         }
     }
@@ -854,81 +960,92 @@ class JarGrid {
     }
 
     _showTooltip(px, py, jar, ball) {
-        if (!this.tooltipEl || !jar.data) return;
-        const data = jar.data;
+        if (!this.tooltipEl) return;
 
         let html = `<div class="deployment-tooltip-header">
             <strong>${STRATEGY_LABELS[jar.strategy].replace('\n', ' ')}</strong> —
             <span style="color:${getIsoColor(jar.iso)}">${jar.iso}</span>
         </div>`;
 
-        // Buyer demand
-        html += `<div class="deployment-tooltip-stats">
-            <span>Buyer demand: ${(data.bt || 0).toFixed(1)} TWh</span>
-            ${data.co2r ? `<span>CO₂ reduction: ${data.co2r}%</span>` : ''}
-        </div>`;
-
-        // Resource breakdown — paid resources only
-        html += '<div class="deployment-tooltip-breakdown">';
-
-        if (data.e) {
-            const paidExisting = Object.entries(data.e).filter(([r]) => !isFreeResource(r, jar.strategy));
-            if (paidExisting.length > 0) {
-                html += '<div class="tooltip-section-label">Existing Paid</div>';
-                for (const [res, twh] of paidExisting) {
-                    if (twh <= 0) continue;
-                    html += `<div class="tooltip-resource">
-                        <span class="tooltip-dot" style="background:${getResourceColor(res)}"></span>
-                        <span>${getResourceLabel(res)}</span>
-                        <span class="tooltip-twh">${twh.toFixed(1)} TWh</span>
-                    </div>`;
-                }
-            }
-        }
-
-        if (data.n) {
-            const paidNew = Object.entries(data.n).filter(([r]) => !isFreeResource(r, jar.strategy));
-            if (paidNew.length > 0) {
-                html += '<div class="tooltip-section-label">New Build</div>';
-                for (const [res, twh] of paidNew) {
-                    if (twh <= 0) continue;
-                    html += `<div class="tooltip-resource">
-                        <span class="tooltip-dot-hollow" style="border-color:${getResourceColor(res)}"></span>
-                        <span>${getResourceLabel(res)}</span>
-                        <span class="tooltip-twh">${twh.toFixed(1)} TWh</span>
-                    </div>`;
-                }
-            }
-        }
-
-        if (data.x && Object.keys(data.x).length > 0) {
-            html += '<div class="tooltip-section-label">Cross-ISO Procurement</div>';
-            for (const [srcIso, resources] of Object.entries(data.x)) {
-                for (const [res, twh] of Object.entries(resources)) {
-                    if (twh <= 0) continue;
-                    html += `<div class="tooltip-resource">
-                        <span class="tooltip-iso-badge" style="background:${getIsoColor(srcIso)}20;color:${getIsoColor(srcIso)}">${srcIso}</span>
-                        <span>${getResourceLabel(res)}</span>
-                        <span class="tooltip-twh">${twh.toFixed(1)} TWh</span>
-                    </div>`;
-                }
-            }
-        }
-
-        html += '</div>';
-
-        // CO2 info — co2 is in MtCO₂
-        if (data.co2 > 0) {
-            html += `<div class="deployment-tooltip-footer">
-                CO₂ reduced: ${data.co2.toFixed(1)} MtCO₂
-                ${data.co2r ? `(${data.co2r}% of baseline)` : ''}
+        // Grid baseline info
+        const bl = this.gridBaseline[jar.iso];
+        if (bl) {
+            html += `<div class="deployment-tooltip-stats">
+                <span>Grid baseline: ${bl.totalPct.toFixed(0)}% clean</span>
             </div>`;
+        }
+
+        if (jar.data) {
+            const data = jar.data;
+
+            // Dispatch metrics
+            html += '<div class="deployment-tooltip-stats">';
+            if (data.hms != null) html += `<span>Hourly match: ${data.hms}%</span>`;
+            if (data.gridCleanPct != null) html += `<span>Grid clean: ${data.gridCleanPct}%</span>`;
+            if (data.gasGw != null) html += `<span>Gas backup: ${data.gasGw} GW</span>`;
+            if (data.curtTwh != null && data.curtTwh > 0) html += `<span>Curtailed: ${data.curtTwh} TWh</span>`;
+            html += '</div>';
+
+            // Resource breakdown
+            html += '<div class="deployment-tooltip-breakdown">';
+
+            if (data.e) {
+                const entries = Object.entries(data.e).filter(([, t]) => t > 0);
+                if (entries.length > 0) {
+                    html += '<div class="tooltip-section-label">Existing Claimed</div>';
+                    for (const [res, twh] of entries) {
+                        html += `<div class="tooltip-resource">
+                            <span class="tooltip-dot" style="background:${getResourceColor(res)};opacity:0.4;border:2px solid ${getResourceColor(res)}"></span>
+                            <span>${getResourceLabel(res)}</span>
+                            <span class="tooltip-twh">${twh.toFixed(1)} TWh</span>
+                        </div>`;
+                    }
+                }
+            }
+
+            if (data.n) {
+                const entries = Object.entries(data.n).filter(([, t]) => t > 0);
+                if (entries.length > 0) {
+                    html += '<div class="tooltip-section-label">New Build</div>';
+                    for (const [res, twh] of entries) {
+                        html += `<div class="tooltip-resource">
+                            <span class="tooltip-dot-hollow" style="border-color:${getResourceColor(res)}"></span>
+                            <span>${getResourceLabel(res)}</span>
+                            <span class="tooltip-twh">${twh.toFixed(1)} TWh</span>
+                        </div>`;
+                    }
+                }
+            }
+
+            if (data.x && Object.keys(data.x).length > 0) {
+                html += '<div class="tooltip-section-label">Cross-ISO Procurement</div>';
+                for (const [srcIso, resources] of Object.entries(data.x)) {
+                    for (const [res, twh] of Object.entries(resources)) {
+                        if (twh <= 0) continue;
+                        html += `<div class="tooltip-resource">
+                            <span class="tooltip-iso-badge" style="background:${getIsoColor(srcIso)}20;color:${getIsoColor(srcIso)}">${srcIso}</span>
+                            <span>${getResourceLabel(res)}</span>
+                            <span class="tooltip-twh">${twh.toFixed(1)} TWh</span>
+                        </div>`;
+                    }
+                }
+            }
+
+            html += '</div>';
+
+            if (data.co2 > 0) {
+                html += `<div class="deployment-tooltip-footer">
+                    CO₂ reduced: ${data.co2.toFixed(1)} MtCO₂
+                    ${data.co2r ? `(${data.co2r}% of baseline)` : ''}
+                </div>`;
+            }
         }
 
         // Hovered ball detail
         if (ball && ball.opacity > 0.5) {
+            const tierLabel = { baseline: 'grid baseline', claimed: 'existing claimed', new: 'new build', curtailed: 'curtailed' };
             html += `<div class="deployment-tooltip-footer" style="margin-top:4px;font-style:italic">
-                ${getResourceLabel(ball.resource)}${ball.isExisting ? ' (existing)' : ' (new)'}${ball.sourceIso ? ` from ${ball.sourceIso}` : ''}
+                ${getResourceLabel(ball.resource)} (${tierLabel[ball.tier] || ball.tier})${ball.glowIso ? ` → serving ${ball.glowIso}` : ''}
             </div>`;
         }
 
@@ -951,8 +1068,8 @@ class JarGrid {
     getAggregateStats() {
         const stats = {};
         for (const strat of STRATEGIES) {
-            let totalPaid = 0, totalNew = 0, totalCross = 0, totalExisting = 0;
-            let totalCO2 = 0, totalBaseline = 0, totalRealCO2 = 0;
+            let totalNew = 0, totalCross = 0, totalExisting = 0;
+            let totalCO2 = 0, totalBaseline = 0;
             const resourceBreakdown = { existing: {}, new: {} };
 
             for (const jar of this.jars) {
@@ -961,14 +1078,14 @@ class JarGrid {
 
                 if (d.e) {
                     for (const [r, t] of Object.entries(d.e)) {
-                        if (isFreeResource(r, strat) || t <= 0) continue;
+                        if (t <= 0) continue;
                         totalExisting += t;
                         resourceBreakdown.existing[r] = (resourceBreakdown.existing[r] || 0) + t;
                     }
                 }
                 if (d.n) {
                     for (const [r, t] of Object.entries(d.n)) {
-                        if (isFreeResource(r, strat) || t <= 0) continue;
+                        if (t <= 0) continue;
                         totalNew += t;
                         resourceBreakdown.new[r] = (resourceBreakdown.new[r] || 0) + t;
                     }
@@ -985,12 +1102,9 @@ class JarGrid {
                 }
                 totalCO2 += d.co2 || 0;
                 totalBaseline += d.bl || 0;
-
-                // Use pipeline-computed CO₂ (actual displacement, not raw TWh)
-                totalRealCO2 += d.co2 || 0;
             }
 
-            totalPaid = totalExisting + totalNew + totalCross;
+            const totalPaid = totalExisting + totalNew + totalCross;
 
             stats[strat] = {
                 existingTwh: totalExisting,
@@ -998,7 +1112,7 @@ class JarGrid {
                 crossTwh: totalCross,
                 totalTwh: totalPaid,
                 totalCO2Mt: totalCO2,
-                totalRealCO2Mt: totalRealCO2,
+                totalRealCO2Mt: totalCO2,
                 totalBaselineMt: totalBaseline,
                 co2ReductionPct: totalBaseline > 0 ? (totalCO2 / totalBaseline * 100) : 0,
                 resourceBreakdown,
