@@ -250,7 +250,7 @@ def compute_consequential_cost(buyer_iso, year, threshold, participation_pct,
     emission_rate = get_emission_rate(buyer_iso, baseline_type)
 
     # Baseline emissions: corporate load × emission rate
-    baseline_co2_mt = buyer_demand * emission_rate / 1e3  # TWh × tCO₂/MWh / 1000 = MtCO₂
+    baseline_co2_mt = buyer_demand * emission_rate  # TWh(×1e6 MWh) × tCO₂/MWh ÷ 1e6 = MtCO₂
 
     # CO2 reduction target: threshold % of baseline emissions
     target_fraction = min(threshold / 100.0, 1.0)
@@ -307,7 +307,7 @@ def compute_consequential_cost(buyer_iso, year, threshold, participation_pct,
             if remaining_co2 <= 0:
                 break
             src_emission_rate = get_emission_rate(src_iso, 'fossil_average')
-            co2_per_twh = src_emission_rate / 1e3  # MtCO₂/TWh
+            co2_per_twh = src_emission_rate  # MtCO₂/TWh (1 TWh × tCO₂/MWh = MtCO₂)
             twh_needed = remaining_co2 / co2_per_twh if co2_per_twh > 0 else 0
             procure = min(twh_needed, available_twh)
             total_cost += procure * price_mwh

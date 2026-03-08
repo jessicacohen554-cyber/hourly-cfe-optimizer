@@ -808,7 +808,7 @@ def compute_co2_abated(iso, demand_twh, clean_pct, baseline_type='grid_average')
     """
     emission_rate = get_emission_rate(iso, baseline_type)
     clean_twh = demand_twh * clean_pct
-    return clean_twh * emission_rate / 1e6  # TWh × tCO₂/MWh = MtCO₂
+    return clean_twh * emission_rate  # TWh(×1e6 MWh) × tCO₂/MWh ÷ 1e6 = MtCO₂
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

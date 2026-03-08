@@ -204,8 +204,8 @@ def compute_strategy_2a(iso, year, threshold, participation_pct,
     # Reduction = hourly matched MWh × fossil avg emission rate
     cost_per_mwh = total_cost / clean_needed_twh if clean_needed_twh > 0 else 0
     emission_rate = get_emission_rate(iso, 'fossil_average')  # Hourly displaces fossil
-    baseline_co2_mt = buyer_demand * emission_rate / 1e3  # Full load × fossil avg
-    co2_abated = buyer_demand * target_fraction * emission_rate / 1e3  # Matched hours × fossil avg
+    baseline_co2_mt = buyer_demand * emission_rate  # Full load × fossil avg
+    co2_abated = buyer_demand * target_fraction * emission_rate  # Matched hours × fossil avg
     mac = (total_cost * 1e6) / (co2_abated * 1e6) if co2_abated > 0 else None
     co2_reduction_pct = (co2_abated / baseline_co2_mt * 100) if baseline_co2_mt > 0 else 0
 
@@ -264,7 +264,7 @@ def compute_strategy_2b(iso, year, threshold, participation_pct,
         # Existing clean is sufficient — no new procurement needed
         return make_strategy_result('2B', iso, year, threshold, participation_pct,
                                      0, 0,
-                                     buyer_demand * target_fraction * get_emission_rate(iso, 'fossil_average') / 1e3,
+                                     buyer_demand * target_fraction * get_emission_rate(iso, 'fossil_average'),
                                      0,
                                      metadata={'existing_covers_target': True})
 
@@ -315,8 +315,8 @@ def compute_strategy_2b(iso, year, threshold, participation_pct,
     effective_procured = new_build_twh + buyer_existing_clean_twh
     cost_per_mwh = total_cost / effective_procured if effective_procured > 0 else 0
     emission_rate = get_emission_rate(iso, 'fossil_average')
-    baseline_co2_mt = buyer_demand * emission_rate / 1e3
-    co2_abated = buyer_demand * target_fraction * emission_rate / 1e3
+    baseline_co2_mt = buyer_demand * emission_rate
+    co2_abated = buyer_demand * target_fraction * emission_rate
     mac = (total_cost * 1e6) / (co2_abated * 1e6) if co2_abated > 0 else None
     co2_reduction_pct = (co2_abated / baseline_co2_mt * 100) if baseline_co2_mt > 0 else 0
 
@@ -377,7 +377,7 @@ def compute_strategy_2c(iso, year, threshold, participation_pct,
     if procurement_twh <= 0:
         return make_strategy_result('2C', iso, year, threshold, participation_pct,
                                      0, 0,
-                                     total_clean_needed * get_emission_rate(iso, 'fossil_average') / 1e3,
+                                     total_clean_needed * get_emission_rate(iso, 'fossil_average'),
                                      0,
                                      metadata={'sss_covers_target': True,
                                               'sss_share_twh': round(buyer_sss_share, 2)})
@@ -461,8 +461,8 @@ def compute_strategy_2c(iso, year, threshold, participation_pct,
     effective_procured = total_procured + buyer_sss_share
     cost_per_mwh = total_cost / effective_procured if effective_procured > 0 else 0
     emission_rate = get_emission_rate(iso, 'fossil_average')
-    baseline_co2_mt = buyer_demand * emission_rate / 1e3
-    co2_abated = total_clean_needed * emission_rate / 1e3
+    baseline_co2_mt = buyer_demand * emission_rate
+    co2_abated = total_clean_needed * emission_rate
     mac = (total_cost * 1e6) / (co2_abated * 1e6) if co2_abated > 0 else None
     co2_reduction_pct = (co2_abated / baseline_co2_mt * 100) if baseline_co2_mt > 0 else 0
 
