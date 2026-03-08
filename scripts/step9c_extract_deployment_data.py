@@ -93,7 +93,7 @@ def extract_strategy1(data, buyer_iso):
 
 
 def extract_strategy2a(data):
-    """Strategy 2A: 100% new-build, same-ISO, no category field."""
+    """Strategy 2A: 100% new-build with category field (tranche architecture)."""
     new = {}
     for key, val in data.items():
         if not isinstance(val, dict):
@@ -107,7 +107,7 @@ def extract_strategy2a(data):
 
 
 def extract_strategy2b(data):
-    """Strategy 2B: existing_clean_free entry is existing, rest is new-build."""
+    """Strategy 2B: grid mix baseline + new-build tranches (category field)."""
     existing = {}
     new = {}
     for key, val in data.items():
@@ -116,10 +116,11 @@ def extract_strategy2b(data):
         twh = val.get('twh', 0)
         if twh <= 0:
             continue
+        category = val.get('category', 'new_build')
         _, resource = normalize_resource(key)
 
-        if key == 'existing_clean_free':
-            existing['grid_clean'] = round(twh, 3)
+        if category in ('grid_mix',) or key in ('existing_clean_free', 'grid_mix_allocation'):
+            existing['grid_clean'] = round(existing.get('grid_clean', 0) + twh, 3)
         else:
             new[resource] = round(new.get(resource, 0) + twh, 3)
     return existing, new, {}
@@ -344,6 +345,10 @@ def main():
                         record['co2r'] = round(meta['co2_reduction_pct'], 1)
                     if 'baseline_co2_mt' in meta:
                         record['bl'] = round(meta['baseline_co2_mt'], 3)
+
+                    # Dispatch-based hourly match score (if available)
+                    if 'hourly_match_score' in meta:
+                        record['hms'] = round(meta['hourly_match_score'], 1)
 
                     part_dict[thr_key] = record
                     total_entries += 1

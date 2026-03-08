@@ -42,7 +42,7 @@ from procurement_utils import (
     get_emission_rate, compute_co2_abated,
     get_existing_clean_twh, get_sss_twh,
     get_sss_hourly_shape, get_existing_clean_hourly_shape,
-    build_procurement_tranches,
+    build_procurement_tranches, build_newbuild_only_tranches,
     make_strategy_result, build_25yr_trajectory,
     save_results_json,
     UPRATE_CAP_TWH, EXISTING_EAC_PRICE,
@@ -148,64 +148,90 @@ def compute_strategy_2a(iso, year, threshold, participation_pct,
                          level='Medium', ppa_level='Medium', **kwargs):
     """Strategy 2A: 100% new-build hourly matching. No existing clean credit.
 
-    Maximum additionality. Equivalent to existing Track 2 NB analysis.
-    Most expensive but strongest signal for new clean investment.
+    Uses same tranche architecture as 2C but with ONLY new-build tranches
+    (nuclear uprate + new VRE + new firm). No SSS, no existing clean credit.
+    Maximum additionality — strongest signal for new clean investment.
     """
     buyer_demand = get_buyer_demand_twh(iso, year, participation_pct, growth_level)
     if buyer_demand <= 0 or threshold <= 0:
         return make_strategy_result('2A', iso, year, threshold, participation_pct,
                                      0, 0, 0, 0)
 
+    total_demand = get_demand_twh_at_year(iso, year, growth_level)
     target_fraction = min(threshold / 100.0, 1.0)
+
+    # No free baseline — all procurement is new-build
+    total_clean_needed = buyer_demand * target_fraction
     op_ratio = get_over_procurement_ratio(threshold)
-    clean_needed_twh = buyer_demand * target_fraction * op_ratio
+    procurement_twh = total_clean_needed * op_ratio
 
-    # Resource mix at this threshold
-    mix_fracs = get_resource_mix_fractions(threshold)
+    # Build new-build-only tranches and walk merit order
+    tranches = build_newbuild_only_tranches(
+        iso, threshold, year, scenario, level, ppa_level, growth_level,
+    )
 
-    # Price each resource
     total_cost = 0.0
+    total_procured = 0.0
     resource_breakdown = {}
 
-    for resource, frac in mix_fracs.items():
-        twh = clean_needed_twh * frac
+    for tranche in tranches:
+        if total_procured >= procurement_twh:
+            break
 
-        if resource == 'solar':
-            price = get_learning_adjusted_ppa('solar', iso, threshold, scenario, level, ppa_level)
-        elif resource == 'wind':
-            price = get_learning_adjusted_ppa('wind', iso, threshold, scenario, level, ppa_level)
-        elif resource == 'firm':
-            # Cheapest firm: nuclear newbuild or CCS
-            nuc = get_learning_adjusted_ppa('nuclear_newbuild', iso, threshold, scenario, level, ppa_level)
-            ccs = get_learning_adjusted_ppa('ccs_45q_on', iso, threshold, scenario, level, ppa_level)
-            price = min(nuc, ccs)
-        elif resource == 'storage':
-            # Weighted: 60% battery (4hr), 40% LDES (for high thresholds)
-            batt = get_ppa_price('battery', iso, level, ppa_level)
-            ldes = get_learning_adjusted_ppa('ldes', iso, threshold, scenario, level, ppa_level)
-            storage_ldes_frac = min(0.6, max(0.2, (threshold - 70) / 60))  # More LDES at higher thresholds
-            price = batt * (1 - storage_ldes_frac) + ldes * storage_ldes_frac
-        elif resource == 'uprate':
-            uprate_cap = UPRATE_CAP_TWH.get(iso, 0)
-            twh = min(twh, uprate_cap)
-            price = get_learning_adjusted_ppa('uprate', iso, threshold, scenario, level, ppa_level)
-        else:
-            price = 50  # Fallback
+        remaining_need = procurement_twh - total_procured
+        buyer_share_of_available = (buyer_demand / total_demand) if total_demand > 0 else 0.01
+        available = tranche['available_twh'] * buyer_share_of_available
+        procure = min(remaining_need, available)
 
-        cost = twh * price  # TWh × $/MWh = $M
+        cost = procure * tranche['price']
         total_cost += cost
-        resource_breakdown[resource] = {
-            'twh': round(twh, 2),
-            'price': round(price, 1),
+        total_procured += procure
+
+        resource_breakdown[tranche['source']] = {
+            'twh': round(procure, 2),
+            'price': round(tranche['price'], 1),
             'cost_m': round(cost, 2),
+            'category': tranche['category'],
         }
 
-    # CO2 accounting: (hourly MWh - hourly match) × fossil avg emission rate
-    # Reduction = hourly matched MWh × fossil avg emission rate
-    cost_per_mwh = total_cost / clean_needed_twh if clean_needed_twh > 0 else 0
-    emission_rate = get_emission_rate(iso, 'fossil_average')  # Hourly displaces fossil
-    baseline_co2_mt = buyer_demand * emission_rate  # Full load × fossil avg
-    co2_abated = buyer_demand * target_fraction * emission_rate  # Matched hours × fossil avg
+    # Fallback if tranches exhausted
+    if total_procured < procurement_twh:
+        shortfall = procurement_twh - total_procured
+        mix_fracs = get_resource_mix_fractions(threshold)
+        for resource, frac in mix_fracs.items():
+            twh = shortfall * frac
+            if resource == 'solar':
+                price = get_learning_adjusted_ppa('solar', iso, threshold, scenario, level, ppa_level)
+            elif resource == 'wind':
+                price = get_learning_adjusted_ppa('wind', iso, threshold, scenario, level, ppa_level)
+            elif resource == 'firm':
+                nuc = get_learning_adjusted_ppa('nuclear_newbuild', iso, threshold, scenario, level, ppa_level)
+                ccs = get_learning_adjusted_ppa('ccs_45q_on', iso, threshold, scenario, level, ppa_level)
+                price = min(nuc, ccs)
+            elif resource == 'storage':
+                batt = get_ppa_price('battery', iso, level, ppa_level)
+                ldes = get_learning_adjusted_ppa('ldes', iso, threshold, scenario, level, ppa_level)
+                price = batt * 0.5 + ldes * 0.5
+            else:
+                price = get_learning_adjusted_ppa('uprate', iso, threshold, scenario, level, ppa_level)
+                twh = min(twh, UPRATE_CAP_TWH.get(iso, 0))
+
+            cost = twh * price
+            total_cost += cost
+            total_procured += twh
+            key = f'new_build_{resource}'
+            resource_breakdown[key] = {
+                'twh': round(twh, 2),
+                'price': round(price, 1),
+                'cost_m': round(cost, 2),
+                'category': 'new_build',
+            }
+
+    # CO2 accounting
+    cost_per_mwh = total_cost / total_procured if total_procured > 0 else 0
+    emission_rate = get_emission_rate(iso, 'fossil_average')
+    baseline_co2_mt = buyer_demand * emission_rate
+    co2_abated = total_clean_needed * emission_rate
     mac = (total_cost * 1e6) / (co2_abated * 1e6) if co2_abated > 0 else None
     co2_reduction_pct = (co2_abated / baseline_co2_mt * 100) if baseline_co2_mt > 0 else 0
 
@@ -215,7 +241,7 @@ def compute_strategy_2a(iso, year, threshold, participation_pct,
         resource_mix=resource_breakdown,
         metadata={
             'over_procurement_ratio': round(op_ratio, 3),
-            'clean_procured_twh': round(clean_needed_twh, 2),
+            'procurement_twh': round(procurement_twh, 2),
             'scenario': scenario,
             'baseline_co2_mt': round(baseline_co2_mt, 4),
             'co2_reduction_pct': round(co2_reduction_pct, 2),
@@ -231,11 +257,13 @@ def compute_strategy_2a(iso, year, threshold, participation_pct,
 def compute_strategy_2b(iso, year, threshold, participation_pct,
                          growth_level='Medium', scenario='B',
                          level='Medium', ppa_level='Medium', **kwargs):
-    """Strategy 2B: Grid baseline — existing clean at 8760 shape is free.
+    """Strategy 2B: Grid mix clean baseline + new-build procurement.
 
-    Buyer takes credit for existing clean grid mix. Only procures new-build
-    above the existing baseline. Cheapest hourly variant but creates
-    stranding risk (no revenue signal for existing clean).
+    Uses same tranche architecture as 2C but with grid mix clean as the free
+    baseline (instead of SSS). Existing clean on the grid counts as "already
+    matched" — buyer only procures new-build above the grid mix baseline.
+    Only new-build tranches available (no existing nuclear/VRE tranches,
+    since those are already counted in grid mix).
     """
     buyer_demand = get_buyer_demand_twh(iso, year, participation_pct, growth_level)
     if buyer_demand <= 0 or threshold <= 0:
@@ -245,78 +273,103 @@ def compute_strategy_2b(iso, year, threshold, participation_pct,
     total_demand = get_demand_twh_at_year(iso, year, growth_level)
     target_fraction = min(threshold / 100.0, 1.0)
 
-    # Existing clean covers some of the target for free
+    # Layer 1: Grid mix clean (free — buyer's pro-rata share of all existing clean)
     existing_clean = get_existing_clean_twh(iso)
     existing_clean_pct = existing_clean / total_demand if total_demand > 0 else 0
+    buyer_grid_share = buyer_demand * existing_clean_pct
 
-    # Buyer's pro-rata share of existing clean (hourly shape is free)
-    buyer_existing_clean_twh = buyer_demand * existing_clean_pct
+    # Remaining above grid mix baseline
+    total_clean_needed = buyer_demand * target_fraction
+    remaining = max(0, total_clean_needed - buyer_grid_share)
 
-    # Remaining needed above existing baseline
-    needed_twh = buyer_demand * target_fraction - buyer_existing_clean_twh
-    needed_twh = max(0, needed_twh)
-
-    # Apply over-procurement ratio to the new-build portion
+    # Apply over-procurement ratio to remaining
     op_ratio = get_over_procurement_ratio(threshold)
-    new_build_twh = needed_twh * op_ratio
+    procurement_twh = remaining * op_ratio
 
-    if new_build_twh <= 0:
-        # Existing clean is sufficient — no new procurement needed
+    if procurement_twh <= 0:
         return make_strategy_result('2B', iso, year, threshold, participation_pct,
                                      0, 0,
-                                     buyer_demand * target_fraction * get_emission_rate(iso, 'fossil_average'),
+                                     total_clean_needed * get_emission_rate(iso, 'fossil_average'),
                                      0,
-                                     metadata={'existing_covers_target': True})
+                                     metadata={'grid_mix_covers_target': True,
+                                              'grid_mix_share_twh': round(buyer_grid_share, 2)})
 
-    # Price the new-build procurement (same mix logic as 2A)
-    mix_fracs = get_resource_mix_fractions(threshold)
+    # Build new-build-only tranches and walk merit order
+    tranches = build_newbuild_only_tranches(
+        iso, threshold, year, scenario, level, ppa_level, growth_level,
+    )
+
     total_cost = 0.0
+    total_procured = 0.0
     resource_breakdown = {}
 
-    for resource, frac in mix_fracs.items():
-        twh = new_build_twh * frac
+    for tranche in tranches:
+        if total_procured >= procurement_twh:
+            break
 
-        if resource == 'solar':
-            price = get_learning_adjusted_ppa('solar', iso, threshold, scenario, level, ppa_level)
-        elif resource == 'wind':
-            price = get_learning_adjusted_ppa('wind', iso, threshold, scenario, level, ppa_level)
-        elif resource == 'firm':
-            nuc = get_learning_adjusted_ppa('nuclear_newbuild', iso, threshold, scenario, level, ppa_level)
-            ccs = get_learning_adjusted_ppa('ccs_45q_on', iso, threshold, scenario, level, ppa_level)
-            price = min(nuc, ccs)
-        elif resource == 'storage':
-            batt = get_ppa_price('battery', iso, level, ppa_level)
-            ldes = get_learning_adjusted_ppa('ldes', iso, threshold, scenario, level, ppa_level)
-            storage_ldes_frac = min(0.6, max(0.2, (threshold - 70) / 60))
-            price = batt * (1 - storage_ldes_frac) + ldes * storage_ldes_frac
-        elif resource == 'uprate':
-            uprate_cap = UPRATE_CAP_TWH.get(iso, 0)
-            twh = min(twh, uprate_cap)
-            price = get_learning_adjusted_ppa('uprate', iso, threshold, scenario, level, ppa_level)
-        else:
-            price = 50
+        remaining_need = procurement_twh - total_procured
+        buyer_share_of_available = (buyer_demand / total_demand) if total_demand > 0 else 0.01
+        available = tranche['available_twh'] * buyer_share_of_available
+        procure = min(remaining_need, available)
 
-        cost = twh * price
+        cost = procure * tranche['price']
         total_cost += cost
-        resource_breakdown[resource] = {
-            'twh': round(twh, 2),
-            'price': round(price, 1),
+        total_procured += procure
+
+        resource_breakdown[tranche['source']] = {
+            'twh': round(procure, 2),
+            'price': round(tranche['price'], 1),
             'cost_m': round(cost, 2),
+            'category': tranche['category'],
         }
 
-    # Add existing clean as zero-cost entry
-    resource_breakdown['existing_clean_free'] = {
-        'twh': round(buyer_existing_clean_twh, 2),
+    # Fallback if tranches exhausted
+    if total_procured < procurement_twh:
+        shortfall = procurement_twh - total_procured
+        mix_fracs = get_resource_mix_fractions(threshold)
+        for resource, frac in mix_fracs.items():
+            twh = shortfall * frac
+            if resource == 'solar':
+                price = get_learning_adjusted_ppa('solar', iso, threshold, scenario, level, ppa_level)
+            elif resource == 'wind':
+                price = get_learning_adjusted_ppa('wind', iso, threshold, scenario, level, ppa_level)
+            elif resource == 'firm':
+                nuc = get_learning_adjusted_ppa('nuclear_newbuild', iso, threshold, scenario, level, ppa_level)
+                ccs = get_learning_adjusted_ppa('ccs_45q_on', iso, threshold, scenario, level, ppa_level)
+                price = min(nuc, ccs)
+            elif resource == 'storage':
+                batt = get_ppa_price('battery', iso, level, ppa_level)
+                ldes = get_learning_adjusted_ppa('ldes', iso, threshold, scenario, level, ppa_level)
+                price = batt * 0.5 + ldes * 0.5
+            else:
+                price = get_learning_adjusted_ppa('uprate', iso, threshold, scenario, level, ppa_level)
+                twh = min(twh, UPRATE_CAP_TWH.get(iso, 0))
+
+            cost = twh * price
+            total_cost += cost
+            total_procured += twh
+            key = f'new_build_{resource}'
+            resource_breakdown[key] = {
+                'twh': round(twh, 2),
+                'price': round(price, 1),
+                'cost_m': round(cost, 2),
+                'category': 'new_build',
+            }
+
+    # Grid mix as zero-cost entry
+    resource_breakdown['grid_mix_allocation'] = {
+        'twh': round(buyer_grid_share, 2),
         'price': 0.0,
         'cost_m': 0.0,
+        'category': 'grid_mix',
     }
 
-    # CO2 accounting: (hourly MWh - hourly match) × fossil avg
-    effective_procured = new_build_twh + buyer_existing_clean_twh
+    # CO2 accounting
+    effective_procured = total_procured + buyer_grid_share
     cost_per_mwh = total_cost / effective_procured if effective_procured > 0 else 0
     emission_rate = get_emission_rate(iso, 'fossil_average')
     baseline_co2_mt = buyer_demand * emission_rate
-    co2_abated = buyer_demand * target_fraction * emission_rate
+    co2_abated = total_clean_needed * emission_rate
     mac = (total_cost * 1e6) / (co2_abated * 1e6) if co2_abated > 0 else None
     co2_reduction_pct = (co2_abated / baseline_co2_mt * 100) if baseline_co2_mt > 0 else 0
 
@@ -325,8 +378,9 @@ def compute_strategy_2b(iso, year, threshold, participation_pct,
         cost_per_mwh, total_cost, co2_abated, mac,
         resource_mix=resource_breakdown,
         metadata={
+            'grid_mix_share_twh': round(buyer_grid_share, 2),
             'existing_clean_pct': round(existing_clean_pct * 100, 1),
-            'new_build_twh': round(new_build_twh, 2),
+            'procurement_twh': round(procurement_twh, 2),
             'over_procurement_ratio': round(op_ratio, 3),
             'scenario': scenario,
             'baseline_co2_mt': round(baseline_co2_mt, 4),
@@ -495,8 +549,69 @@ STRATEGY_2_FUNCS = {
 }
 
 
+def _apply_participation_ratchet(result, floor_twh):
+    """Enforce floor ratchet: each resource TWh >= floor from prior participation.
+
+    If any resource in the result's resource_mix dropped below the floor,
+    bump it up to the floor and add the extra cost. Returns updated result
+    and new floor_twh dict.
+    """
+    resource_mix = result.get('resource_mix', {})
+    if not resource_mix:
+        return result, floor_twh
+
+    new_floor = dict(floor_twh)
+    extra_cost = 0.0
+    extra_twh = 0.0
+
+    for source, entry in resource_mix.items():
+        if not isinstance(entry, dict):
+            continue
+        # Skip free allocations (SSS, grid_mix) — they scale with participation naturally
+        category = entry.get('category', '')
+        if category in ('sss', 'grid_mix'):
+            continue
+
+        twh = entry.get('twh', 0)
+        floor_val = floor_twh.get(source, 0)
+
+        if twh < floor_val and floor_val > 0:
+            # Bump up to floor
+            added = floor_val - twh
+            price = entry.get('price', 0)
+            added_cost = added * price
+            entry['twh'] = round(floor_val, 2)
+            entry['cost_m'] = round(entry.get('cost_m', 0) + added_cost, 2)
+            extra_cost += added_cost
+            extra_twh += added
+
+        # Update floor
+        new_floor[source] = max(new_floor.get(source, 0), entry.get('twh', 0))
+
+    # Update result totals if ratchet added resources
+    if extra_cost > 0:
+        result['total_cost_m'] = round(result.get('total_cost_m', 0) + extra_cost, 2)
+        total_twh = sum(
+            e.get('twh', 0) for e in resource_mix.values()
+            if isinstance(e, dict)
+        )
+        result['cost_per_mwh'] = round(
+            result['total_cost_m'] / total_twh if total_twh > 0 else 0, 2)
+        # Recompute MAC
+        co2 = result.get('co2_abated_mmt', 0)
+        if co2 > 0:
+            result['mac_per_ton'] = round(
+                (result['total_cost_m'] * 1e6) / (co2 * 1e6), 2)
+
+    return result, new_floor
+
+
 def run_full_sweep(isos=None, participation_levels=None, growth_levels=None):
     """Run Strategy 2 (all variants) for all ISOs × participation × growth.
+
+    For 2A and 2B, applies a participation-level floor ratchet: resources
+    deployed at lower participation levels are locked in at higher levels.
+    Participation levels are processed in ascending order.
 
     Returns dict:
     {
@@ -512,13 +627,17 @@ def run_full_sweep(isos=None, participation_levels=None, growth_levels=None):
     if growth_levels is None:
         growth_levels = ['Low', 'Medium', 'High']
 
+    # Sort participation levels ascending for ratchet
+    sorted_parts = sorted(participation_levels)
+
     all_results = {}
-    total = len(STRATEGY_2_FUNCS) * len(isos) * len(growth_levels) * len(participation_levels)
+    total = len(STRATEGY_2_FUNCS) * len(isos) * len(growth_levels) * len(sorted_parts)
     count = 0
 
     for variant_id, compute_fn in STRATEGY_2_FUNCS.items():
         strategy_key = f'strategy{variant_id}'
         all_results[strategy_key] = {}
+        use_ratchet = variant_id in ('2A', '2B', '2C')
 
         for iso in isos:
             all_results[strategy_key][iso] = {}
@@ -526,7 +645,11 @@ def run_full_sweep(isos=None, participation_levels=None, growth_levels=None):
             for growth in growth_levels:
                 all_results[strategy_key][iso][growth] = {}
 
-                for part in participation_levels:
+                # Per-year floor ratchet state (resets per ISO/growth)
+                # Maps year → {source: floor_twh}
+                year_floors = {}
+
+                for part in sorted_parts:
                     count += 1
                     if count % 50 == 0:
                         print(f"  [{count}/{total}] {variant_id} {iso} {growth} part={part*100:.0f}%")
@@ -543,6 +666,13 @@ def run_full_sweep(isos=None, participation_levels=None, growth_levels=None):
                             level='Medium',
                             ppa_level='Medium',
                         )
+
+                        # Apply participation ratchet for 2A/2B
+                        if use_ratchet:
+                            floor = year_floors.get(year, {})
+                            result, new_floor = _apply_participation_ratchet(result, floor)
+                            year_floors[year] = new_floor
+
                         result['year'] = year
                         result['demand_twh'] = round(get_demand_twh_at_year(iso, year, growth), 2)
                         result['buyer_demand_twh'] = round(get_buyer_demand_twh(iso, year, part, growth), 2)
@@ -600,6 +730,182 @@ def main():
     )
 
     save_results_json(results, 'strategy2_hourly.json')
+
+    # ── Dispatch-based 8760 hourly match scoring ──
+    # Post-processing: compute actual hourly match scores using EF storage params
+    print("\nComputing 8760 dispatch-based hourly match scores...")
+    try:
+        import pandas as pd
+        from dispatch_utils import (
+            load_common_data, get_demand_profile, get_supply_profiles,
+            reconstruct_hourly_dispatch, build_supply_matrix
+        )
+        common_data = load_common_data()
+        demand_data, gen_profiles = common_data[0], common_data[1]
+
+        # Load storage dispatch params from Track 2 NB efficient frontier
+        track_parquet = os.path.join(os.path.dirname(SCRIPT_DIR), 'dashboard', 'track_scenarios.parquet')
+        ef_storage = {}  # {(iso, threshold): {battery, battery8, ldes, h2, resource_mix}}
+        if os.path.exists(track_parquet):
+            tdf = pd.read_parquet(track_parquet)
+            nb = tdf[tdf['track'] == 'newbuild']
+            for _, row in nb.iterrows():
+                key = (row['iso'], float(row['threshold']))
+                ef_storage[key] = {
+                    'battery_dispatch_pct': float(row.get('battery_dispatch_pct', 0) or 0),
+                    'battery8_dispatch_pct': float(row.get('battery8_dispatch_pct', 0) or 0),
+                    'ldes_dispatch_pct': float(row.get('ldes_dispatch_pct', 0) or 0),
+                    'h2_dispatch_pct': float(row.get('h2_dispatch_pct', 0) or 0),
+                    # EF resource mix (% of demand) for dispatch
+                    'mix_clean_firm': float(row.get('mix_clean_firm', 0) or 0),
+                    'mix_solar': float(row.get('mix_solar', 0) or 0),
+                    'mix_wind': float(row.get('mix_wind', 0) or 0),
+                    'mix_offshore_wind': float(row.get('mix_offshore_wind', 0) or 0),
+                    'mix_ccs_ccgt': float(row.get('mix_ccs_ccgt', 0) or 0),
+                    'mix_hydro': float(row.get('mix_hydro', 0) or 0),
+                    'hourly_match_score': float(row.get('hourly_match_score', 0) or 0),
+                }
+            print(f"  Loaded {len(ef_storage)} EF storage entries from track_scenarios.parquet")
+        else:
+            print(f"  WARNING: {track_parquet} not found — running without storage")
+
+        def _find_closest_ef(iso, threshold):
+            """Find closest EF entry for an ISO/threshold combo."""
+            exact = ef_storage.get((iso, threshold))
+            if exact:
+                return exact
+            # Find closest threshold
+            best_key, best_dist = None, float('inf')
+            for k in ef_storage:
+                if k[0] == iso:
+                    dist = abs(k[1] - threshold)
+                    if dist < best_dist:
+                        best_dist = dist
+                        best_key = k
+            return ef_storage.get(best_key) if best_key else None
+
+        # Map tranche source names → dispatch resource types
+        TRANCHE_TO_DISPATCH = {
+            'new_build_vre': 'solar',
+            'new_build_firm': 'clean_firm',
+            'nuclear_uprate': 'clean_firm',
+            'existing_nuclear': 'clean_firm',
+            'existing_vre_hydro': 'hydro',
+            'new_build_solar': 'solar',
+            'new_build_wind': 'wind',
+            'new_build_uprate': 'clean_firm',
+        }
+
+        dispatch_count = 0
+        for variant in ['strategy2A', 'strategy2B', 'strategy2C']:
+            if variant not in results:
+                continue
+            for iso in isos:
+                growth_data = results[variant].get(iso, {}).get('Medium', {})
+                if not growth_data:
+                    continue
+
+                # Pre-build supply matrix for this ISO
+                demand_norm, total_mwh = get_demand_profile(iso, demand_data)
+                supply_profiles = get_supply_profiles(iso, gen_profiles)
+                supply_matrix = build_supply_matrix(supply_profiles)
+
+                for part_key, trajectory in growth_data.items():
+                    if not isinstance(trajectory, list):
+                        continue
+                    for entry in trajectory:
+                        rm = entry.get('resource_mix', {})
+                        if not rm:
+                            continue
+
+                        threshold = entry.get('threshold', 0)
+                        buyer_twh = entry.get('buyer_demand_twh', 0)
+                        if buyer_twh <= 0 or threshold <= 0:
+                            continue
+
+                        # Get EF storage params for this ISO/threshold
+                        ef = _find_closest_ef(iso, threshold)
+
+                        # Use EF resource mix directly for dispatch (it's the physics-optimal mix)
+                        # This gives the "what should the hourly score be" answer
+                        if ef:
+                            resource_pcts = {
+                                'clean_firm': ef['mix_clean_firm'],
+                                'solar': ef['mix_solar'],
+                                'wind': ef['mix_wind'],
+                                'offshore_wind': ef['mix_offshore_wind'],
+                                'ccs_ccgt': ef['mix_ccs_ccgt'],
+                                'hydro': ef['mix_hydro'],
+                            }
+                            batt_pct = ef['battery_dispatch_pct']
+                            batt8_pct = ef['battery8_dispatch_pct']
+                            ldes_pct = ef['ldes_dispatch_pct']
+                            h2_pct = ef['h2_dispatch_pct']
+                        else:
+                            # Fallback: convert tranche TWh → resource_pcts
+                            resource_pcts = {}
+                            for source, info in rm.items():
+                                if not isinstance(info, dict):
+                                    continue
+                                twh = info.get('twh', 0)
+                                if twh <= 0:
+                                    continue
+                                cat = info.get('category', '')
+                                if cat in ('grid_mix', 'sss'):
+                                    continue
+                                dispatch_type = TRANCHE_TO_DISPATCH.get(source, 'solar')
+                                pct = (twh / buyer_twh) * 100
+                                resource_pcts[dispatch_type] = resource_pcts.get(dispatch_type, 0) + pct
+                            batt_pct = batt8_pct = ldes_pct = h2_pct = 0
+
+                        if not any(v > 0 for v in resource_pcts.values()):
+                            continue
+
+                        # For 2B/2C: add grid mix / SSS contribution to resource_pcts
+                        # Grid clean contributes to hourly matching in proportion to its share
+                        meta = entry.get('metadata', {})
+                        if variant in ('strategy2B', 'strategy2C'):
+                            grid_twh = 0
+                            for source, info in rm.items():
+                                if isinstance(info, dict) and info.get('category') in ('grid_mix', 'sss'):
+                                    grid_twh += info.get('twh', 0)
+                            if grid_twh > 0:
+                                # Add grid clean as a mix of the ISO's existing resources
+                                gm = GRID_MIX_SHARES[iso]
+                                total_existing_pct = sum(
+                                    gm.get(r, 0) for r in ['clean_firm', 'solar', 'wind', 'hydro']
+                                )
+                                if total_existing_pct > 0:
+                                    grid_pct_of_buyer = (grid_twh / buyer_twh) * 100
+                                    for r in ['clean_firm', 'solar', 'wind', 'hydro']:
+                                        share = gm.get(r, 0) / total_existing_pct
+                                        resource_pcts[r] = resource_pcts.get(r, 0) + grid_pct_of_buyer * share
+
+                        try:
+                            result = reconstruct_hourly_dispatch(
+                                demand_norm, supply_profiles, resource_pcts,
+                                procurement_pct=100,
+                                battery_dispatch_pct=batt_pct,
+                                battery8_dispatch_pct=batt8_pct,
+                                ldes_dispatch_pct=ldes_pct,
+                                supply_matrix=supply_matrix,
+                                h2_dispatch_pct=h2_pct,
+                            )
+                            matched = np.minimum(result['total_clean'], demand_norm[:8760])
+                            score = float(np.sum(matched) / np.sum(demand_norm[:8760]) * 100)
+                            entry.setdefault('metadata', {})['hourly_match_score'] = round(score, 2)
+                            dispatch_count += 1
+                        except Exception:
+                            pass
+
+        print(f"  Computed {dispatch_count} dispatch scores")
+
+        # Re-save with dispatch scores
+        save_results_json(results, 'strategy2_hourly.json')
+    except Exception as e:
+        print(f"  WARNING: Dispatch scoring failed: {e}")
+        import traceback; traceback.print_exc()
+        print("  (Continuing without dispatch scores)")
 
     # Summary
     print("\n" + "=" * 70)

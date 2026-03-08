@@ -40,11 +40,6 @@ const GRID_DEMANDS = {
     'NYISO': 152, 'NEISO': 115, 'MISO': 660, 'SPP': 296,
 };
 
-// Fossil average emission rates (tCO₂/MWh) for computing real grid impact
-const FOSSIL_EMISSION_RATES = {
-    'CAISO': 0.43, 'ERCOT': 0.44, 'PJM': 0.53,
-    'NYISO': 0.38, 'NEISO': 0.38, 'MISO': 0.58, 'SPP': 0.53,
-};
 
 function getResourceColor(resource) {
     const map = {
@@ -695,9 +690,8 @@ class JarGrid {
                 totalPaidTwh += this._sumPaidTwh(record, jar.strategy);
                 totalCO2 += record.co2 || 0;
 
-                // Compute real CO₂ displacement: new-build TWh × fossil emission rate
-                const newTwh = this._sumNewBuildTwh(record, jar.strategy, jar.iso);
-                totalRealCO2 += newTwh * (FOSSIL_EMISSION_RATES[jar.iso] || 0.45);
+                // Use pipeline-computed CO₂ (accounts for actual displacement, not raw TWh)
+                totalRealCO2 += record.co2 || 0;
             }
             this.onStatsUpdate({
                 totalPaidTwh,
@@ -707,27 +701,6 @@ class JarGrid {
         }
     }
 
-    /**
-     * Sum new-build TWh only (for computing actual fossil displacement).
-     * Excludes free credits AND existing paid tranches (they don't displace new fossil).
-     * Cross-ISO resources are always new-build.
-     */
-    _sumNewBuildTwh(record, strategy, iso) {
-        let total = 0;
-        if (record.n) {
-            for (const [res, twh] of Object.entries(record.n)) {
-                if (!isFreeResource(res, strategy) && twh > 0) total += twh;
-            }
-        }
-        if (record.x) {
-            for (const [srcIso, resources] of Object.entries(record.x)) {
-                for (const twh of Object.values(resources)) {
-                    if (twh > 0) total += twh;
-                }
-            }
-        }
-        return total;
-    }
 
     _startAnimation() {
         if (this.animating) return;
@@ -1013,9 +986,8 @@ class JarGrid {
                 totalCO2 += d.co2 || 0;
                 totalBaseline += d.bl || 0;
 
-                // Real CO₂: new-build TWh × fossil emission rate (actual grid impact)
-                const newTwh = this._sumNewBuildTwh(d, strat, jar.iso);
-                totalRealCO2 += newTwh * (FOSSIL_EMISSION_RATES[jar.iso] || 0.45);
+                // Use pipeline-computed CO₂ (actual displacement, not raw TWh)
+                totalRealCO2 += d.co2 || 0;
             }
 
             totalPaid = totalExisting + totalNew + totalCross;

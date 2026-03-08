@@ -676,12 +676,11 @@ def build_procurement_tranches(iso, threshold, year, scenario='B',
         })
 
     # --- Tranche 4: New-build VRE ---
-    # Available capacity is large — use 10× current capacity as practical cap
     total_demand = get_demand_twh_at_year(iso, year, growth_level)
-    new_vre_cap = total_demand * 0.50  # Up to 50% of demand in new VRE
+    new_vre_cap = total_demand * 1.50  # Large cap to avoid fallback at high thresholds
     solar_ppa = get_learning_adjusted_ppa('solar', iso, threshold, scenario, level, ppa_level)
     wind_ppa = get_learning_adjusted_ppa('wind', iso, threshold, scenario, level, ppa_level)
-    avg_vre_ppa = min(solar_ppa, wind_ppa)  # Cheapest VRE
+    avg_vre_ppa = min(solar_ppa, wind_ppa)
     tranches.append({
         'source': 'new_build_vre',
         'price': avg_vre_ppa,
@@ -690,11 +689,10 @@ def build_procurement_tranches(iso, threshold, year, scenario='B',
     })
 
     # --- Tranche 5: New-build clean firm ---
-    # Nuclear new-build, CCS, geothermal — learning-adjusted
     nuc_ppa = get_learning_adjusted_ppa('nuclear_newbuild', iso, threshold, scenario, level, ppa_level)
     ccs_ppa = get_learning_adjusted_ppa('ccs_45q_on', iso, threshold, scenario, level, ppa_level)
     cheapest_firm = min(nuc_ppa, ccs_ppa)
-    firm_cap = total_demand * 0.30  # Up to 30% of demand in new firm
+    firm_cap = total_demand * 1.00  # Large cap to avoid fallback
     tranches.append({
         'source': 'new_build_firm',
         'price': cheapest_firm,
@@ -705,6 +703,63 @@ def build_procurement_tranches(iso, threshold, year, scenario='B',
     # Sort by price (cheapest first)
     tranches.sort(key=lambda t: t['price'])
 
+    return tranches
+
+
+def build_newbuild_only_tranches(iso, threshold, year, scenario='B',
+                                  level='Medium', ppa_level='Medium',
+                                  growth_level='Medium'):
+    """Build merit-order tranches with ONLY new-build resources (no existing).
+
+    Used by Strategy 2A (no existing credit) and 2B (grid mix covers existing).
+    Returns same format as build_procurement_tranches but without existing
+    nuclear and existing VRE/hydro tranches.
+
+    Tranches:
+    1. Nuclear uprates at PPA price
+    2. New-build VRE at PPA price
+    3. New-build clean firm at learning-adjusted PPA price
+    """
+    tranches = []
+    total_demand = get_demand_twh_at_year(iso, year, growth_level)
+
+    # --- Nuclear uprates ---
+    uprate_twh = UPRATE_CAP_TWH.get(iso, 0)
+    if uprate_twh > 0:
+        price = get_learning_adjusted_ppa('uprate', iso, threshold, scenario, level, ppa_level)
+        tranches.append({
+            'source': 'nuclear_uprate',
+            'price': price,
+            'available_twh': uprate_twh,
+            'category': 'new_build',
+        })
+
+    # --- New-build VRE ---
+    # Cap at 150% of demand to ensure no fallback at high thresholds with over-procurement
+    new_vre_cap = total_demand * 1.50
+    solar_ppa = get_learning_adjusted_ppa('solar', iso, threshold, scenario, level, ppa_level)
+    wind_ppa = get_learning_adjusted_ppa('wind', iso, threshold, scenario, level, ppa_level)
+    avg_vre_ppa = min(solar_ppa, wind_ppa)
+    tranches.append({
+        'source': 'new_build_vre',
+        'price': avg_vre_ppa,
+        'available_twh': new_vre_cap,
+        'category': 'new_build',
+    })
+
+    # --- New-build clean firm ---
+    nuc_ppa = get_learning_adjusted_ppa('nuclear_newbuild', iso, threshold, scenario, level, ppa_level)
+    ccs_ppa = get_learning_adjusted_ppa('ccs_45q_on', iso, threshold, scenario, level, ppa_level)
+    cheapest_firm = min(nuc_ppa, ccs_ppa)
+    firm_cap = total_demand * 1.00
+    tranches.append({
+        'source': 'new_build_firm',
+        'price': cheapest_firm,
+        'available_twh': firm_cap,
+        'category': 'new_build',
+    })
+
+    tranches.sort(key=lambda t: t['price'])
     return tranches
 
 
