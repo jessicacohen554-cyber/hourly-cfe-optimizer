@@ -310,7 +310,8 @@ def main():
     }
 
     # Key participation levels for the visualization (subset for compact output)
-    KEY_PARTICIPATION = {'2pct', '5pct', '10pct', '20pct', '30pct', '50pct', '80pct'}
+    KEY_PARTICIPATION = {'2pct', '5pct', '10pct', '15pct', '20pct', '30pct', '40pct', '50pct',
+                          '60pct', '80pct', '85pct', '90pct', '95pct', '100pct'}
     # Key thresholds — skip fine gradations to reduce size
     KEY_THRESHOLDS = {50, 60, 70, 75, 80, 85, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99}
 

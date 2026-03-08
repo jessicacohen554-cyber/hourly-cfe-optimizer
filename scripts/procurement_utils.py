@@ -103,7 +103,8 @@ DEFAULT_OTHER_CORP_PCT = 0.075    # 7.5% of C&I load
 HYPERSCALER_CI_FRACTION = 0.084   # Hyperscalers = 8.4% of C&I demand (BNEF 2025)
 
 # Participation range for sweep
-PARTICIPATION_LEVELS = [0.02, 0.05, 0.10, 0.15, 0.20, 0.30, 0.40, 0.50, 0.60, 0.80]
+PARTICIPATION_LEVELS = [0.02, 0.05, 0.10, 0.15, 0.20, 0.30, 0.40, 0.50, 0.60, 0.80,
+                        0.85, 0.90, 0.95, 1.00]
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SSS (STATE-SPONSORED/SUBSCRIBED) CLEAN ENERGY

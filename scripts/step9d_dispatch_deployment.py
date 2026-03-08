@@ -76,7 +76,8 @@ def compute_grid_baseline():
 
 
 def compute_dispatch_metrics(iso, resource_pcts, demand_norm, supply_profiles,
-                              supply_matrix, total_mwh):
+                              supply_matrix, total_mwh, strategy='',
+                              buyer_only_pcts=None):
     """Run dispatch and compute grid-level metrics for a resource mix.
 
     Args:
@@ -86,6 +87,9 @@ def compute_dispatch_metrics(iso, resource_pcts, demand_norm, supply_profiles,
         supply_profiles: dict of supply shape profiles
         supply_matrix: pre-built (N_RESOURCES, 8760) matrix
         total_mwh: annual demand in MWh
+        strategy: strategy ID (e.g., '2A', '2B') for buyer-perspective HMS
+        buyer_only_pcts: dict of buyer-claimed resources only (for strategies
+            where buyer HMS differs from grid-level clean %)
 
     Returns:
         dict with hms, curtTwh, gasGw, gridCleanPct
@@ -107,20 +111,43 @@ def compute_dispatch_metrics(iso, resource_pcts, demand_norm, supply_profiles,
     )
 
     total_clean = result['total_clean']  # (8760,) normalized
-
-    # Hourly match score: % of hours where clean >= demand
     demand_arr = np.array(demand_norm[:H], dtype=np.float64)
-    matched_hours = np.sum(total_clean >= demand_arr * 0.999)  # 0.1% tolerance
-    hms = matched_hours / H * 100
 
-    # Curtailment
-    curtailed = result.get('curtailed', np.zeros(H))
-    curt_twh = float(np.sum(curtailed) * total_mwh / 1e6)  # MWh → TWh
-
-    # Grid clean %
+    # Grid-level clean % (physical reality — always includes baseline)
     total_clean_energy = float(np.sum(total_clean))
     total_demand_energy = float(np.sum(demand_arr))
     grid_clean_pct = (total_clean_energy / total_demand_energy * 100) if total_demand_energy > 0 else 0
+
+    # Curtailment (physical — grid level)
+    curtailed = result.get('curtailed', np.zeros(H))
+    curt_twh = float(np.sum(curtailed) * total_mwh / 1e6)  # MWh → TWh
+
+    # === Buyer-perspective HMS ===
+    # Different strategies have different accounting rules for what the buyer claims
+    if strategy == '2A' and buyer_only_pcts:
+        # 2A: Buyer builds from scratch in a vacuum — only new-build counts
+        # Run a separate dispatch with ONLY buyer's new-build resources
+        buyer_pcts_copy = dict(buyer_only_pcts)
+        b_bat = buyer_pcts_copy.pop('battery', 0) + buyer_pcts_copy.pop('storage', 0)
+        b_ldes = buyer_pcts_copy.pop('ldes', 0)
+
+        buyer_result = reconstruct_hourly_dispatch(
+            demand_norm=demand_norm,
+            supply_profiles=supply_profiles,
+            resource_pcts=buyer_pcts_copy,
+            procurement_pct=100,
+            battery_dispatch_pct=b_bat,
+            ldes_dispatch_pct=b_ldes,
+            supply_matrix=supply_matrix,
+        )
+        buyer_clean = buyer_result['total_clean']
+        matched_hours = np.sum(buyer_clean >= demand_arr * 0.999)
+    else:
+        # All other strategies: buyer claims grid baseline + their procurement
+        # HMS = total clean (grid + new) matching hours
+        matched_hours = np.sum(total_clean >= demand_arr * 0.999)
+
+    hms = matched_hours / H * 100
 
     # Gas backup calculation
     peak_mw = PEAK_DEMAND_MW.get(iso, 50000)
@@ -169,6 +196,31 @@ def build_grid_resource_pcts(iso, record):
 
     # Only add NEW-BUILD procurement on top of grid baseline
     # record['e'] is NOT added — it's already in the grid baseline
+    if record.get('n'):
+        for res, twh in record['n'].items():
+            if twh > 0:
+                mapped = _map_resource(res)
+                pcts[mapped] = pcts.get(mapped, 0) + (twh / demand_twh * 100)
+
+    if record.get('x'):
+        for src_iso, resources in record['x'].items():
+            for res, twh in resources.items():
+                if twh > 0:
+                    mapped = _map_resource(res)
+                    pcts[mapped] = pcts.get(mapped, 0) + (twh / demand_twh * 100)
+
+    return pcts
+
+
+def build_buyer_only_pcts(iso, record):
+    """Build resource_pcts with ONLY the buyer's new-build resources (no grid baseline).
+
+    Used for 2A buyer-perspective HMS: the buyer builds from scratch in a vacuum,
+    so only their new-build procurement counts toward hourly matching.
+    """
+    demand_twh = REGIONAL_DEMAND_TWH.get(iso, 300)
+    pcts = {}
+
     if record.get('n'):
         for res, twh in record['n'].items():
             if twh > 0:
@@ -262,14 +314,21 @@ def main():
                     if not isinstance(record, dict):
                         continue
 
-                    # Build combined grid mix
+                    # Build combined grid mix (grid baseline + new-build)
                     resource_pcts = build_grid_resource_pcts(iso, record)
+
+                    # For 2A: buyer builds in vacuum, needs separate dispatch
+                    buyer_pcts = None
+                    if strat_id == '2A':
+                        buyer_pcts = build_buyer_only_pcts(iso, record)
 
                     try:
                         metrics = compute_dispatch_metrics(
                             iso, resource_pcts,
                             dd['demand_norm'], dd['supply_profiles'],
                             dd['supply_matrix'], dd['total_mwh'],
+                            strategy=strat_id,
+                            buyer_only_pcts=buyer_pcts,
                         )
                         record.update(metrics)
                         strat_count += 1
