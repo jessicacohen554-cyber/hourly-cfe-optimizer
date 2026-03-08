@@ -270,6 +270,7 @@
             <li><a href="#outputs">Analytical Outputs</a></li>
             <li><a href="#rigor">Methodological Rigor</a></li>
             <li><a href="#assumptions">Assumptions &amp; Limitations</a></li>
+            <li><a href="#enhancements">Future Enhancements</a></li>
             <li><a href="#bibliography">Data Sources</a></li>
         </ol>
     </div>
@@ -471,6 +472,21 @@
             patterns, and EAC market scarcity assessment. This phase synthesizes upstream results
             into actionable insights about procurement pathways&mdash;comparing consequential,
             hourly, and annual matching strategies under different market conditions.
+        </li>
+        <li>
+            <strong>Market Dynamics, Decarbonization Pathways &amp; Retirement Risk</strong>
+            Built on the SMARTargets methodology, this phase extends the model beyond static
+            optimization into probabilistic market simulation. An enhanced parametric design
+            evaluates 270+ market scenarios&mdash;spanning demand growth rates, fuel price
+            trajectories, PPA structures, and gas friction assumptions&mdash;alongside 10
+            structured net-zero transition pathways through 2050, including both facilitating
+            scenarios (with DAC backstop) and challenging scenarios (forced grid deployment only).
+            Corporate power sector target-setting implications are assessed against SBTi milestones,
+            while a multi-model nuclear stranding analysis stress-tests the economics of the
+            existing fleet under contract-for-difference policy structures (state ZEC/CMC programs,
+            federal 45U PTC) across all market scenarios. This probabilistic approach produces
+            confidence distributions rather than point estimates, capturing the full envelope of
+            plausible outcomes for procurement planning and retirement risk assessment.
         </li>
     </ol>
 
@@ -722,9 +738,26 @@
             responses. In reality, high EAC prices would stimulate new clean energy investment.</li>
         <li><strong>No cross-ISO interactions</strong> &mdash; each ISO is modeled independently.
             Scarcity in one region could drive inter-regional EAC trade or load migration.</li>
-        <li><strong>Weather year sensitivity</strong> &mdash; results are based on a single
-            representative year of generation profiles. Multi-year weather variability could
-            affect optimal mix composition.</li>
+        <li><strong>No intra-ISO transmission constraints</strong> &mdash; each ISO is modeled as a
+            single zone (copper plate). Transmission costs are flat $/MWh adders rather than
+            flow-constrained network optimization. Production models like GenX (DC optimal power flow)
+            and EPRI's US-REGEN (zonal pipe-and-bubble) capture congestion-driven price separation
+            within ISOs that can materially affect resource siting economics.</li>
+        <li><strong>No unit commitment constraints</strong> &mdash; perfect dispatch assumed with no
+            minimum up/down times, ramp rate limits, start-up costs, or minimum stable output for
+            thermal generators. This may understate the cost of integrating variable renewables
+            at high penetration levels.</li>
+        <li><strong>Reserve margin without hourly reserves</strong> &mdash; the model enforces a
+            resource adequacy requirement (reserve margin) in cost optimization, but does not model
+            spinning, non-spinning, or regulation reserves as hourly dispatch constraints.
+            This captures planning-level reliability but not real-time ancillary service costs.</li>
+        <li><strong>No demand-side flexibility</strong> &mdash; load is treated as perfectly inelastic.
+            No demand response, load shifting, or flexible consumption (EV charging, data center
+            workload scheduling) is modeled&mdash;understating the system's ability to absorb surplus
+            clean energy and reduce curtailment.</li>
+        <li><strong>Single-sector scope</strong> &mdash; electricity-only analysis. Cross-sector
+            interactions (transport electrification, building heating, industrial hydrogen demand)
+            that affect electricity prices and resource availability are not captured.</li>
         <li><strong>Policy evolution</strong> &mdash; state RPS targets, federal tax credits,
             and GHG Protocol requirements continue to evolve. Results reflect current policy
             as of early 2025.</li>
@@ -742,9 +775,127 @@
     </div>
 
     <!-- ================================================================ -->
-    <!-- SECTION 9: DATA SOURCES                                          -->
+    <!-- SECTION 9: FUTURE ENHANCEMENTS                                   -->
     <!-- ================================================================ -->
-    <h2 id="bibliography">9. Data Sources</h2>
+    <h2 id="enhancements">9. Future Enhancements</h2>
+
+    <p>
+        The following enhancements are informed by two open-source capacity expansion models:
+        EPRI's US-REGEN and MIT/Princeton's GenX.jl. They represent opportunities to increase
+        dispatch realism, transmission fidelity, and demand-side sophistication while preserving
+        the model's core strength of full 8,760-hour cost-mix co-optimization.
+    </p>
+
+    <h3>Tier 1 &mdash; High Impact, Feasible</h3>
+    <div class="capability-grid">
+        <div class="capability-card">
+            <h4>Zonal Transmission Modeling</h4>
+            <p>
+                Upgrade from flat $/MWh adders to a pipe-and-bubble inter-zone flow model with
+                congestion pricing. Define 2&ndash;5 transmission zones per ISO based on actual
+                constraint boundaries (e.g., PJM West/East, MISO North/South, CAISO SP15/NP15).
+                Captures locational cost signals that shift optimal resource siting and reveals
+                intra-ISO price separation masked by copper-plate assumptions. Informed by
+                EPRI US-REGEN's zonal architecture.
+            </p>
+        </div>
+        <div class="capability-card">
+            <h4>Operating Reserve &amp; Unit Commitment</h4>
+            <p>
+                Add spinning reserve requirements and thermal generator operational constraints
+                (ramp rates, minimum stable output, start-up costs). Increases dispatch realism
+                for fossil backup and CCS-CCGT, particularly at high CFE thresholds where firm
+                capacity margins tighten and cycling costs become material. Informed by GenX.jl's
+                unit commitment formulation.
+            </p>
+        </div>
+        <div class="capability-card">
+            <h4>Demand-Side Flexibility</h4>
+            <p>
+                Model flexible loads&mdash;EV charging, data center workload shifting, industrial
+                process scheduling&mdash;that can absorb surplus clean energy during high-generation
+                hours, reducing curtailment and storage requirements. Particularly impactful for
+                solar-heavy ISOs where midday surplus depresses value. Informed by REGEN's
+                buildings and transport demand response modules.
+            </p>
+        </div>
+    </div>
+
+    <h3>Tier 2 &mdash; Medium Impact, Moderate Effort</h3>
+    <div class="capability-grid">
+        <div class="capability-card">
+            <h4>Cross-ISO EAC Trade</h4>
+            <p>
+                Model inter-regional energy attribute certificate markets with deliverability
+                constraints and transaction costs. Enables cheaper cross-regional procurement
+                paths and captures how scarcity in one ISO drives price signals in others&mdash;a
+                dynamic increasingly relevant as corporate CFE demand scales.
+            </p>
+        </div>
+        <div class="capability-card">
+            <h4>Endogenous Capacity Retirement</h4>
+            <p>
+                Allow the optimization to retire gas generation capacity when clean energy
+                deployment makes plants uneconomic, rather than holding the fossil fleet static.
+                Captures the feedback between clean deployment, declining fossil utilization, and
+                eventual economic retirement&mdash;important for accurate CO&#8322; abatement
+                accounting. Informed by GenX's retirement module.
+            </p>
+        </div>
+        <div class="capability-card">
+            <h4>Flexible CCS Dispatch</h4>
+            <p>
+                Variable CO&#8322; capture rate that responds to electricity prices and carbon
+                costs, rather than a fixed 90% capture assumption. Allows CCS-CCGT to trade off
+                capture cost against generation flexibility&mdash;running at lower capture rates
+                during peak demand and higher rates during surplus hours. Informed by GenX's
+                flexible CCS resource model.
+            </p>
+        </div>
+    </div>
+
+    <h3>Tier 3 &mdash; Aspirational, High Effort</h3>
+    <div class="capability-grid">
+        <div class="capability-card">
+            <h4>DC Optimal Power Flow</h4>
+            <p>
+                Full angle-based power flow with Kirchhoff's law enforcement and transmission
+                loss modeling. Provides maximum fidelity for congestion and curtailment analysis
+                but requires nodal network topology data and significantly increases computational
+                complexity. Informed by GenX.jl's DCOPF transmission module.
+            </p>
+        </div>
+        <div class="capability-card">
+            <h4>Multi-Stage Pathway Optimization</h4>
+            <p>
+                Intertemporal investment sequencing using dynamic programming to optimize the
+                timing and ordering of capacity additions over a 25-year horizon. Complements
+                the existing parametric market simulation with endogenous buildout decisions
+                that account for path dependency and option value.
+            </p>
+        </div>
+        <div class="capability-card">
+            <h4>Multi-Sector Energy Integration</h4>
+            <p>
+                Extend the model to capture electricity&ndash;transport&ndash;buildings&ndash;industry
+                interactions, enabling holistic decarbonization pathway analysis where
+                electrification decisions in one sector affect resource requirements and prices
+                in others. Informed by REGEN's full energy-economy integration architecture.
+            </p>
+        </div>
+    </div>
+
+    <div class="insight-box">
+        <strong>Licensing note:</strong> Enhancement roadmap informed by EPRI's US-REGEN
+        (BSD-3-Clause&mdash;direct adaptation permitted with attribution) and MIT/Princeton's
+        GenX.jl (GPL-2.0&mdash;independent reimplementation of published algorithms required).
+        All implementations would be original code built on publicly documented methodologies.
+    </div>
+
+    <!-- ================================================================ -->
+    <!-- SECTION 10: DATA SOURCES                                         -->
+    <!-- ================================================================ -->
+    <h2 id="bibliography">10. Data Sources</h2>
 
     <p>
         The following public datasets and published research inform the model's inputs,
@@ -800,7 +951,7 @@
     </ul>
 
     <p style="margin-top:40px;padding-top:20px;border-top:1px solid var(--border-light);font-size:0.82rem;color:var(--text-muted);text-align:center;">
-        Hourly Clean Energy Cost Optimizer &mdash; About This Model v3.0
+        Hourly Clean Energy Cost Optimizer &mdash; About This Model v4.0
     </p>
 </div>
 
