@@ -63,7 +63,18 @@ body { background: var(--bg-alt-warm); }
 /* ===== PAGE-SPECIFIC: Domino table — extends shared .data-table ===== */
 .domino-table { white-space: nowrap; }
 .domino-table .num { font-family: var(--font-data); font-weight: 600; font-size: 0.82rem; }
-.mac-cheap { color: var(--ccs); } .mac-mid { color: var(--amber-warn); } .mac-exp { color: var(--red-dark); }
+.mac-cheap { color: var(--ccs); } .mac-mid { color: var(--amber-warn); } .mac-exp { color: var(--red-dark); } .mac-warn { color: rgba(0,0,0,0.4); font-style: italic; }
+
+/* ===== PAGE-SPECIFIC: MAC Queue Accordion ===== */
+.mac-accordion-item { margin-bottom: 8px; border: 1px solid rgba(0,0,0,0.08); border-radius: var(--radius-md); overflow: hidden; }
+.mac-accordion-header { width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: rgba(255,255,255,0.95); border: none; cursor: pointer; font-family: var(--font-body); font-size: 0.88rem; color: var(--navy); transition: background 0.15s; text-align: left; }
+.mac-accordion-header:hover { background: rgba(14,165,233,0.04); }
+.mac-acc-iso { font-family: var(--font-heading); font-weight: 700; font-size: 0.95rem; min-width: 60px; }
+.mac-acc-summary { flex: 1; font-size: 0.8rem; color: rgba(0,0,0,0.55); font-family: var(--font-data); }
+.mac-acc-chevron { font-size: 0.7rem; color: rgba(0,0,0,0.3); transition: transform 0.2s; }
+.mac-accordion-item.open .mac-acc-chevron { transform: rotate(180deg); }
+.mac-accordion-body { display: none; padding: 0 16px 12px; }
+.mac-accordion-item.open .mac-accordion-body { display: block; }
 
 /* ===== PAGE-SPECIFIC: Global ISO bar — uses .sticky-control-bar + .bar-label from dashboard-ui.css ===== */
 .global-iso-bar { background: rgba(255,255,255,0.97); border-bottom: 1px solid rgba(0,0,0,0.08); padding: 14px var(--pad-page); position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; box-shadow: var(--shadow-sm); }
@@ -306,16 +317,22 @@ body { background: var(--bg-alt-warm); }
 
     <!-- Inflection Point -->
     <div class="card" style="margin: 24px 0; padding: 24px; border-left: 4px solid #F59E0B;">
-        <span class="story-badge" style="background: rgba(245,158,11,0.1); color: #D97706; border-color: rgba(245,158,11,0.3);">80&ndash;90% &bull; The Inflection Point</span>
+        <span class="story-badge" style="background: rgba(245,158,11,0.1); color: #D97706; border-color: rgba(245,158,11,0.3);">75&ndash;90% &bull; The Inflection Point</span>
         <h3 style="font-family: var(--font-heading); font-size: 1.1rem; color: var(--navy); margin: 12px 0 8px;">Where Hourly Matching Changes Everything</h3>
         <p style="font-size: 0.88rem; color: rgba(0,0,0,0.65); line-height: 1.7; margin-bottom: 12px;">
             Strategies diverge sharply. <strong>Strategy 2C</strong> (hourly matching) forces firm clean +
             storage investment because night hours and low-wind winter days can't be covered by VRE alone.
             <strong>Strategy 1B</strong> (consequential) still cherry-picks cross-regionally, deferring firm investment.</p>
+        <div class="grid-stats" id="inflectionZoneStats">
+            <div class="stat-card"><div class="stat-value" id="inflCostA" style="color: var(--indigo);">$--</div><div class="stat-label">1B $/MWh</div></div>
+            <div class="stat-card"><div class="stat-value" id="inflCostB" style="color: var(--ccs);">$--</div><div class="stat-label">2C $/MWh</div></div>
+            <div class="stat-card"><div class="stat-value" id="inflGap">$--</div><div class="stat-label">Cost Gap</div></div>
+            <div class="stat-card"><div class="stat-value" id="inflFirmGap" style="color: var(--storage);">-- TWh</div><div class="stat-label">Firm Deployment Gap</div></div>
+        </div>
         <div class="insight-box insight-warn" style="margin: 12px 0;">
-            <strong>The hourly gap becomes the cost driver.</strong> At 90% in PJM, over 4,000 hours
+            <strong>The hourly gap becomes the cost driver.</strong> At 90%, thousands of hours
             require firm clean or storage &mdash; every night plus every low-wind winter day.
-            The hourly constraint forces 25+ TWh of firm clean that annual matching would never signal.
+            The hourly constraint forces significant firm clean that annual matching would never signal.
         </div>
         <div class="chart-container" style="height: 280px;">
             <canvas id="inflectionChart"></canvas>
@@ -423,12 +440,13 @@ body { background: var(--bg-alt-warm); }
 
 <!-- 5. Sequential Deployment Queue -->
 <h2 class="section-title" style="margin-top:32px;">Sequential Deployment Queue</h2>
-<p class="section-subtitle">Strategy 1B's build order, sorted by cheapest MAC first but constrained by sequential build reality &mdash;
-each ISO must complete prior threshold steps before advancing. First row per ISO = new build from existing grid mix to 50%.</p>
+<p class="section-subtitle">Cross-regional deployment order from Step 5D MAC queue, sorted by cheapest marginal abatement cost first
+with sequential build constraint per ISO. Expand each ISO to see its full deployment pathway.</p>
 
-<div class="chart-wide" style="overflow-x: auto;">
-    <span class="scenario-tag tag-a">Strategy 1B &mdash; Sequential Queue</span>
-    <table class="data-table domino-table" id="dominoTableA"></table>
+<div class="chart-wide" id="macQueueAccordion">
+    <span class="scenario-tag tag-a">Strategy 1B &mdash; Sequential Deployment Queue</span>
+    <div id="macQueueSummaryTable" style="margin-top: 12px;"></div>
+    <div id="macQueueAccordionContent" style="margin-top: 16px;"></div>
 </div>
 
 </section>
@@ -591,6 +609,7 @@ each ISO must complete prior threshold steps before advancing. First row per ISO
 <script src="js/nav.js"></script>
 <script src="js/shared-data.js"></script>
 <script src="js/scenario-comparison-data.js"></script>
+<script src="js/mac-queue-data.js"></script>
 <script>
 (function() {
 'use strict';
@@ -1381,11 +1400,14 @@ function renderMixCharts(iso) {
             });
         }
 
-        // Battery 4hr storage (from dispatch percentage × demand)
+        // Battery 4hr storage — use battery_dispatch_pct if available, fall back to battery_twh
         const BATT_RTE = 0.85;
         const batt4Data = traj.map(d => {
-            const dem = d.demand_twh || getDemandAtThreshold(iso, d.threshold);
-            return Math.round((d.battery_dispatch_pct || 0) / 100 * dem);
+            if (d.battery_dispatch_pct) {
+                const dem = d.demand_twh || getDemandAtThreshold(iso, d.threshold);
+                return Math.round(d.battery_dispatch_pct / 100 * dem);
+            }
+            return Math.round(d.battery_twh || 0);
         });
         if (batt4Data.some(v => v > 0)) {
             datasets.push({
@@ -1397,10 +1419,13 @@ function renderMixCharts(iso) {
             });
         }
 
-        // Battery 8hr storage
+        // Battery 8hr storage — use battery8_dispatch_pct if available, fall back to battery8_twh
         const batt8Data = traj.map(d => {
-            const dem = d.demand_twh || getDemandAtThreshold(iso, d.threshold);
-            return Math.round((d.battery8_dispatch_pct || 0) / 100 * dem);
+            if (d.battery8_dispatch_pct) {
+                const dem = d.demand_twh || getDemandAtThreshold(iso, d.threshold);
+                return Math.round(d.battery8_dispatch_pct / 100 * dem);
+            }
+            return Math.round(d.battery8_twh || 0);
         });
         if (batt8Data.some(v => v > 0)) {
             datasets.push({
@@ -1515,23 +1540,36 @@ function renderMixCharts(iso) {
 
     // Compute shared y-axis max across BOTH trajectories for equal scaling
     // Stack = generation TWh + capped battery storage (demand line needs headroom too)
+    function getBattTwh(d) {
+        if (d.battery_dispatch_pct) {
+            const dem = d.demand_twh || getDemandAtThreshold(iso, d.threshold);
+            return d.battery_dispatch_pct / 100 * dem;
+        }
+        return d.battery_twh || 0;
+    }
+    function getBatt8Twh(d) {
+        if (d.battery8_dispatch_pct) {
+            const dem = d.demand_twh || getDemandAtThreshold(iso, d.threshold);
+            return d.battery8_dispatch_pct / 100 * dem;
+        }
+        return d.battery8_twh || 0;
+    }
     function computeMaxStack(traj) {
         let maxV = 0;
         traj.forEach(d => {
             const genTwh = Object.values(d.resource_twh).reduce((s, v) => s + v, 0);
             const dem = d.demand_twh || getDemandAtThreshold(iso, d.threshold);
-            const bat4 = (d.battery_dispatch_pct || 0) / 100 * dem;
-            const bat8 = (d.battery8_dispatch_pct || 0) / 100 * dem;
-            maxV = Math.max(maxV, genTwh + bat4 + bat8, dem);
+            const bat4 = getBattTwh(d);
+            const bat8 = getBatt8Twh(d);
+            maxV = Math.max(maxV, genTwh + bat4 + bat8 + (d.ldes_twh || 0), dem);
         });
         return maxV;
     }
     function computeMinStack(traj) {
         let minV = 0;
         traj.forEach(d => {
-            const dem = d.demand_twh || getDemandAtThreshold(iso, d.threshold);
-            const bat4Charge = (d.battery_dispatch_pct || 0) / 100 * dem / 0.85;
-            const bat8Charge = (d.battery8_dispatch_pct || 0) / 100 * dem / 0.85;
+            const bat4Charge = getBattTwh(d) / 0.85;
+            const bat8Charge = getBatt8Twh(d) / 0.85;
             minV = Math.min(minV, -(bat4Charge + bat8Charge));
         });
         return minV;
@@ -1729,126 +1767,112 @@ function renderFirmChart(iso) {
 }
 // Firm init called from global renderAll()
 
-// ===== 7. SEQUENTIAL DEPLOYMENT QUEUE =====
-// Build queue from trajectory data with sequential constraint per ISO.
-// Each ISO must complete prior thresholds before advancing.
-// First step per ISO = existing grid mix → 50%.
-function buildSequentialQueue() {
-    const isoSteps = {};
-    const WHOLESALE_EST = { CAISO: 45, ERCOT: 30, PJM: 35, NYISO: 40, NEISO: 38, MISO: 32, SPP: 28 };
-    const EMISSION_EST = 0.45; // tCO2/MWh average displaced
+// ===== 7. SEQUENTIAL DEPLOYMENT QUEUE (live from Step 5D MAC queue) =====
+function renderMacQueueAccordion() {
+    const summaryEl = document.getElementById('macQueueSummaryTable');
+    const accordionEl = document.getElementById('macQueueAccordionContent');
+    if (!summaryEl || !accordionEl) return;
 
-    ISOS.forEach(iso => {
-        const traj = DATA.trajectories.pure_consequential[iso] || [];
-        if (traj.length < 2) return;
-        const steps = [];
-        const gridMix = GRID_MIX[iso] || {};
-        const existingCleanPct = Object.values(gridMix).reduce((s, v) => s + v, 0);
-        const baseDem = DEMAND_TWH[iso];
+    // Load from mac-queue-data.js (MAC_QUEUE_DATA global)
+    if (typeof MAC_QUEUE_DATA === 'undefined' || !MAC_QUEUE_DATA || !MAC_QUEUE_DATA.length) {
+        summaryEl.innerHTML = '<div class="insight-box insight-warn">MAC queue data not available. Run Step 5D pipeline to populate.</div>';
+        return;
+    }
 
-        // Step 0: existing → 50%
-        const first = traj[0];
-        const deltaRes0 = {};
-        for (const res of Object.keys(first.resource_twh)) {
-            const existing = (gridMix[res] || 0) / 100 * baseDem;
-            deltaRes0[res] = Math.max(0, (first.resource_twh[res] || 0) - existing);
-        }
-        const pctGain = Math.max(0, 50 - existingCleanPct);
-        const wholCost = WHOLESALE_EST[iso] || 35;
-        const costDelta0 = Math.max(0, first.effective_cost - wholCost) * (first.demand_twh || getDemandAtThreshold(iso, first.threshold || 50));
-        const co2Delta0 = pctGain / 100 * (first.demand_twh || getDemandAtThreshold(iso, first.threshold || 50)) * EMISSION_EST;
-        const mac0 = co2Delta0 > 0.01 ? costDelta0 / co2Delta0 : 0;
+    const queue = MAC_QUEUE_DATA;
 
-        steps.push({
-            iso: iso,
-            zone_label: Math.round(existingCleanPct) + '\u219250%',
-            marginal_mac: mac0,
-            delta_resources: deltaRes0,
-            delta_gas_mw: (first.gas_backup_mw || 0) - (first.gas_backup_mw || 0), // net 0 for base
-            is_base: true,
-        });
-
-        // Consecutive threshold steps
-        for (let i = 0; i < traj.length - 1; i++) {
-            const from = traj[i];
-            const to = traj[i + 1];
-            const dr = {};
-            for (const res of Object.keys(to.resource_twh)) {
-                dr[res] = (to.resource_twh[res] || 0) - (from.resource_twh[res] || 0);
-            }
-            steps.push({
-                iso: iso,
-                zone_label: from.threshold + '\u2192' + to.threshold + '%',
-                marginal_mac: to.stepwise_mac || 0,
-                delta_resources: dr,
-                delta_gas_mw: (to.gas_backup_mw || 0) - (from.gas_backup_mw || 0),
-            });
-        }
-        isoSteps[iso] = steps;
+    // Group by ISO
+    const byIso = {};
+    const isoOrder = [];
+    queue.forEach(step => {
+        if (!byIso[step.iso]) { byIso[step.iso] = []; isoOrder.push(step.iso); }
+        byIso[step.iso].push(step);
     });
 
-    // Merge with sequential constraint: greedy cheapest-MAC first, but each ISO's
-    // steps must be taken in order (can't do 55→60% before 50→55%).
-    const ptrs = {};
-    ISOS.forEach(iso => { ptrs[iso] = 0; });
-    const queue = [];
-    const maxRows = 45;
-    while (queue.length < maxRows) {
-        let bestStep = null, bestIso = null, bestMac = Infinity;
-        for (const iso of ISOS) {
-            const steps = isoSteps[iso];
-            if (!steps || ptrs[iso] >= steps.length) continue;
-            const step = steps[ptrs[iso]];
-            const mac = step.marginal_mac;
-            if (mac < bestMac || (mac === bestMac && !bestStep)) {
-                bestMac = mac;
-                bestStep = step;
-                bestIso = iso;
-            }
-        }
-        if (!bestStep) break;
-        queue.push(bestStep);
-        ptrs[bestIso]++;
-    }
-    return queue;
-}
-
-function renderDominoTable() {
-    const table = document.getElementById('dominoTableA');
-    if (!table) return;
-    const queue = buildSequentialQueue();
-    let html = '<thead><tr><th>#</th><th>ISO</th><th>Zone</th><th>MAC</th><th>Primary Resource</th><th>\u0394Gas</th></tr></thead><tbody>';
-    queue.forEach((step, i) => {
-        const mac = step.marginal_mac >= 9999 ? '\u26A0' : '$' + Math.round(step.marginal_mac).toLocaleString();
-        const macClass = step.marginal_mac >= 9999 ? '' : step.marginal_mac < 0 ? 'mac-cheap' : step.marginal_mac < 100 ? 'mac-cheap' : step.marginal_mac < 500 ? 'mac-mid' : 'mac-exp';
-
+    // Summary table: top 20 steps sorted by queue position (already sorted by MAC in the data)
+    const top20 = queue.slice(0, 20);
+    let summaryHtml = '<table class="data-table domino-table"><thead><tr><th>#</th><th>ISO</th><th>Zone</th><th>MAC ($/tCO\u2082)</th><th>CO\u2082 Displaced</th><th>Primary Resource</th><th>\u0394Gas</th></tr></thead><tbody>';
+    top20.forEach((step, i) => {
+        const mac = step.marginal_mac >= 9999 ? '\u26A0' : step.marginal_mac <= 0.01 ? '\u26A0 Data gap' : '$' + Math.round(step.marginal_mac).toLocaleString();
+        const macClass = step.marginal_mac >= 9999 || step.marginal_mac <= 0.01 ? 'mac-warn' : step.marginal_mac < 100 ? 'mac-cheap' : step.marginal_mac < 500 ? 'mac-mid' : 'mac-exp';
         const deltas = step.delta_resources || {};
         const sorted = Object.entries(deltas).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1]));
         let primaryParts = [];
         sorted.forEach(([res, val]) => {
-            if (Math.abs(val) < 1) return;
+            if (Math.abs(val) < 0.5) return;
             if (primaryParts.length >= 2) return;
-            const name = res.replace('clean_firm','CF').replace('ccs_ccgt','CCS');
+            const name = res.replace('clean_firm','CF').replace('ccs_ccgt','CCS').replace('offshore_wind','OSW');
             primaryParts.push(name + ' ' + (val > 0 ? '+' : '') + Math.round(val));
         });
-
+        const co2 = step.co2_displaced_mt ? step.co2_displaced_mt.toFixed(1) + ' Mt' : '—';
         const dg = step.delta_gas_mw || 0;
         const gasDir = dg > 500 ? 'positive' : dg < -500 ? 'negative' : '';
-        const baseTag = step.is_base ? ' style="background:rgba(14,165,233,0.04);"' : '';
-        html += `<tr${baseTag}>
-            <td class="num">${i+1}</td>
-            <td>${step.iso}</td>
-            <td>${step.zone_label}</td>
-            <td class="${macClass} num">${mac}</td>
-            <td>${primaryParts.join(', ')}</td>
-            <td class="${gasDir} num">${Math.abs(dg) < 500 ? '—' : (dg > 0 ? '+' : '') + (dg/1000).toFixed(1) + 'k'}</td>
-        </tr>`;
+        const isBase = step.zone_label.includes('\u2192' + '50%') || step.threshold_start < 50;
+        const baseTag = isBase ? ' style="background:rgba(14,165,233,0.04);"' : '';
+        const isoColor = (typeof ISO_COLORS !== 'undefined' && ISO_COLORS[step.iso]) ? ISO_COLORS[step.iso] : '#64748B';
+        summaryHtml += '<tr' + baseTag + '>' +
+            '<td class="num">' + (step.queue_position || i+1) + '</td>' +
+            '<td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + isoColor + ';margin-right:4px;"></span>' + step.iso + '</td>' +
+            '<td>' + step.zone_label + '</td>' +
+            '<td class="' + macClass + ' num">' + mac + '</td>' +
+            '<td class="num">' + co2 + '</td>' +
+            '<td>' + (primaryParts.join(', ') || '—') + '</td>' +
+            '<td class="' + gasDir + ' num">' + (Math.abs(dg) < 500 ? '—' : (dg > 0 ? '+' : '') + (dg/1000).toFixed(1) + 'k') + '</td>' +
+            '</tr>';
     });
-    html += '</tbody>';
-    table.innerHTML = html;
+    summaryHtml += '</tbody></table>';
+    if (queue.length > 20) {
+        summaryHtml += '<p style="font-size:0.82rem;color:rgba(0,0,0,0.5);margin-top:8px;">Showing top 20 of ' + queue.length + ' steps. Expand ISOs below for full pathways.</p>';
+    }
+    summaryEl.innerHTML = summaryHtml;
+
+    // Accordion: one section per ISO
+    let accordionHtml = '';
+    isoOrder.forEach(iso => {
+        const steps = byIso[iso];
+        const isoColor = (typeof ISO_COLORS !== 'undefined' && ISO_COLORS[iso]) ? ISO_COLORS[iso] : '#64748B';
+        const totalCo2 = steps.reduce((s, st) => s + (st.co2_displaced_mt || 0), 0);
+        const avgMac = steps.filter(s => s.marginal_mac > 0.01 && s.marginal_mac < 9999);
+        const avgMacVal = avgMac.length ? avgMac.reduce((s, st) => s + st.marginal_mac, 0) / avgMac.length : 0;
+
+        accordionHtml += '<div class="mac-accordion-item">';
+        accordionHtml += '<button class="mac-accordion-header" onclick="this.parentElement.classList.toggle(\'open\')" style="border-left: 4px solid ' + isoColor + ';">';
+        accordionHtml += '<span class="mac-acc-iso">' + iso + '</span>';
+        accordionHtml += '<span class="mac-acc-summary">' + steps.length + ' steps &bull; ' + totalCo2.toFixed(1) + ' MtCO\u2082 &bull; Avg MAC $' + Math.round(avgMacVal) + '/tCO\u2082</span>';
+        accordionHtml += '<span class="mac-acc-chevron">\u25BC</span>';
+        accordionHtml += '</button>';
+        accordionHtml += '<div class="mac-accordion-body">';
+        accordionHtml += '<table class="data-table domino-table"><thead><tr><th>Zone</th><th>MAC</th><th>CO\u2082</th><th>Resources</th><th>\u0394Gas</th></tr></thead><tbody>';
+        steps.forEach(step => {
+            const mac = step.marginal_mac >= 9999 ? '\u26A0' : step.marginal_mac <= 0.01 ? '\u26A0 Data gap' : '$' + Math.round(step.marginal_mac).toLocaleString();
+            const macClass = step.marginal_mac >= 9999 || step.marginal_mac <= 0.01 ? 'mac-warn' : step.marginal_mac < 100 ? 'mac-cheap' : step.marginal_mac < 500 ? 'mac-mid' : 'mac-exp';
+            const deltas = step.delta_resources || {};
+            const sorted = Object.entries(deltas).sort((a,b) => Math.abs(b[1]) - Math.abs(a[1]));
+            let primaryParts = [];
+            sorted.forEach(([res, val]) => {
+                if (Math.abs(val) < 0.5) return;
+                if (primaryParts.length >= 3) return;
+                const name = res.replace('clean_firm','CF').replace('ccs_ccgt','CCS').replace('offshore_wind','OSW');
+                primaryParts.push(name + ' ' + (val > 0 ? '+' : '') + Math.round(val));
+            });
+            const co2 = step.co2_displaced_mt ? step.co2_displaced_mt.toFixed(1) + ' Mt' : '—';
+            const dg = step.delta_gas_mw || 0;
+            const gasDir = dg > 500 ? 'positive' : dg < -500 ? 'negative' : '';
+            accordionHtml += '<tr>' +
+                '<td>' + step.zone_label + '</td>' +
+                '<td class="' + macClass + ' num">' + mac + '</td>' +
+                '<td class="num">' + co2 + '</td>' +
+                '<td>' + (primaryParts.join(', ') || '—') + '</td>' +
+                '<td class="' + gasDir + ' num">' + (Math.abs(dg) < 500 ? '—' : (dg > 0 ? '+' : '') + (dg/1000).toFixed(1) + 'k') + '</td>' +
+                '</tr>';
+        });
+        accordionHtml += '</tbody></table>';
+        accordionHtml += '</div></div>';
+    });
+    accordionEl.innerHTML = accordionHtml;
 }
 
-renderDominoTable();
+renderMacQueueAccordion();
 
 // ===== 8. FOAK → NOAK LEARNING CURVE CHART =====
 // Learning curve data derived from SPEC.md FOAK→NOAK decision (Feb 25, 2026)
@@ -2046,9 +2070,15 @@ function renderInflectionChart() {
     const canvas = document.getElementById('inflectionChart');
     if (!canvas) return;
 
-    // Illustrative firm-demand hours at 90% threshold by ISO
+    // Use actual firm-demand hours from zone_comparison if available, else fallback
     const isos = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP'];
-    const firmHours = [3200, 2800, 4380, 4100, 4500, 3600, 2400];
+    const fallbackHours = { CAISO: 3200, ERCOT: 2800, PJM: 4380, NYISO: 4100, NEISO: 4500, MISO: 3600, SPP: 2400 };
+    const firmHours = isos.map(iso => {
+        if (DATA.zone_comparison && DATA.zone_comparison[iso] && DATA.zone_comparison[iso].inflection) {
+            return DATA.zone_comparison[iso].inflection.b_firm_demand_hours || fallbackHours[iso];
+        }
+        return fallbackHours[iso];
+    });
     const totalHours = 8760;
 
     const colors = isos.map(iso => {
@@ -2192,11 +2222,8 @@ function renderLastMileChart() {
 // Zone comparison stats from DATA — both from zone_comparison and trajectory data
 function populateZoneStats() {
     const iso = globalIso;
-
-    // Early zone stats (50-65%) — compute average from trajectories
     const trajA = DATA.trajectories.pure_consequential[iso] || [];
     const trajB = getScenarioB(iso);
-    const earlyThresholds = [50, 55, 60, 65];
 
     function avgCostAtThresholds(traj, thresholds) {
         let sum = 0, count = 0;
@@ -2207,9 +2234,12 @@ function populateZoneStats() {
         return count > 0 ? sum / count : null;
     }
 
+    var el;
+
+    // Early zone stats (50-65%)
+    const earlyThresholds = [50, 55, 60, 65];
     const earlyA = avgCostAtThresholds(trajA, earlyThresholds);
     const earlyB = avgCostAtThresholds(trajB, earlyThresholds);
-    var el;
     el = document.getElementById('earlyCostA');
     if (el && earlyA !== null) el.textContent = '$' + earlyA.toFixed(0);
     el = document.getElementById('earlyCostB');
@@ -2218,6 +2248,50 @@ function populateZoneStats() {
     if (el && earlyA !== null && earlyB !== null) {
         var gap = Math.abs(earlyA - earlyB);
         el.textContent = gap < 1 ? '~$0' : '$' + gap.toFixed(0);
+    }
+
+    // Inflection zone stats (75-90%) — from zone_comparison or trajectories
+    const inflThresholds = [75, 80, 85, 87.5, 90];
+    if (DATA.zone_comparison && DATA.zone_comparison[iso] && DATA.zone_comparison[iso].inflection) {
+        const inf = DATA.zone_comparison[iso].inflection;
+        el = document.getElementById('inflCostA');
+        if (el) el.textContent = '$' + Math.round(inf.cost_a);
+        el = document.getElementById('inflCostB');
+        if (el) el.textContent = '$' + Math.round(inf.cost_b);
+        el = document.getElementById('inflGap');
+        if (el) {
+            const gapPct = inf.cost_gap_pct;
+            const gapAbs = Math.abs(Math.round(inf.cost_a - inf.cost_b));
+            el.textContent = '$' + gapAbs + ' (' + Math.abs(Math.round(gapPct)) + '%)';
+        }
+        el = document.getElementById('inflFirmGap');
+        if (el) {
+            const fg = inf.firm_deployment_gap_twh;
+            el.textContent = (fg > 0 ? '+' : '') + Math.round(fg) + ' TWh';
+        }
+    } else {
+        // Fallback: compute from trajectory data
+        const inflA = avgCostAtThresholds(trajA, inflThresholds);
+        const inflB = avgCostAtThresholds(trajB, inflThresholds);
+        el = document.getElementById('inflCostA');
+        if (el && inflA !== null) el.textContent = '$' + inflA.toFixed(0);
+        el = document.getElementById('inflCostB');
+        if (el && inflB !== null) el.textContent = '$' + inflB.toFixed(0);
+        el = document.getElementById('inflGap');
+        if (el && inflA !== null && inflB !== null) {
+            var inflGap = Math.abs(inflA - inflB);
+            el.textContent = inflGap < 1 ? '~$0' : '$' + inflGap.toFixed(0);
+        }
+        // Firm deployment gap from trajectories at 90%
+        const a90 = trajA.find(d => d.threshold === 90);
+        const b90 = trajB.find(d => d.threshold === 90);
+        el = document.getElementById('inflFirmGap');
+        if (el && a90 && b90) {
+            const firmA90 = a90.firm_total_twh || (a90.resource_twh.clean_firm + (a90.resource_twh.ccs_ccgt || 0));
+            const firmB90 = b90.firm_total_twh || (b90.resource_twh.clean_firm + (b90.resource_twh.ccs_ccgt || 0));
+            const fg = firmB90 - firmA90;
+            el.textContent = (fg > 0 ? '+' : '') + Math.round(fg) + ' TWh';
+        }
     }
 
     // Last mile stats from zone_comparison

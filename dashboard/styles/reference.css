@@ -725,6 +725,22 @@
     flex-shrink: 0;
 }
 
+/* Dark section overrides for flow-box, callout-box, insight-card */
+.section-dark .flow-box-policy { background: rgba(59,130,246,0.15); border-color: rgba(59,130,246,0.3); color: #93C5FD; }
+.section-dark .flow-box-action { background: rgba(34,197,94,0.12); border-color: rgba(34,197,94,0.25); color: #86EFAC; }
+.section-dark .flow-box-bad { background: rgba(239,68,68,0.12); border-color: rgba(239,68,68,0.25); color: #FCA5A5; }
+.section-dark .flow-box-good { background: rgba(16,185,129,0.12); border-color: rgba(16,185,129,0.25); color: #6EE7B7; }
+.section-dark .flow-arrow { color: rgba(255,255,255,0.35); }
+.section-dark .callout-box { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); }
+.section-dark .callout-box h4 { color: rgba(255,255,255,0.9); }
+.section-dark .callout-box p { color: rgba(255,255,255,0.65); }
+.section-dark .callout-box.callout-warning { background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.25); }
+.section-dark .callout-box.callout-warning h4 { color: #FCD34D; }
+.section-dark .insight-card { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.10); }
+.section-dark .insight-card h4 { color: rgba(255,255,255,0.9); }
+.section-dark .insight-card p { color: rgba(255,255,255,0.6); }
+.section-dark .insight-card .insight-num { color: rgba(255,255,255,0.85); }
+
 /* ========== RESEARCH PAPER HEADER ========== */
 .paper-badge {
     display: inline-block;

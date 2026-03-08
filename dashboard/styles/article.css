@@ -287,6 +287,13 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 .stat-badge-blue { background: rgba(14,165,233,0.08); border: 1px solid rgba(14,165,233,0.2); color: #0284c7; }
 .stat-badge-purple { background: rgba(139,92,246,0.08); border: 1px solid rgba(139,92,246,0.2); color: #7C3AED; }
 
+/* Dark section overrides for stat-badge */
+.section-dark .stat-badge-green { background: rgba(34,197,94,0.15); border-color: rgba(34,197,94,0.35); color: #6EE7B7; }
+.section-dark .stat-badge-amber { background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.35); color: #FCD34D; }
+.section-dark .stat-badge-red { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.35); color: #FCA5A5; }
+.section-dark .stat-badge-blue { background: rgba(14,165,233,0.15); border-color: rgba(14,165,233,0.35); color: #7DD3FC; }
+.section-dark .stat-badge-purple { background: rgba(139,92,246,0.15); border-color: rgba(139,92,246,0.35); color: #C4B5FD; }
+
 /* ========== SYNTHESIS (dark-bg summary cards) ========== */
 .synthesis-section {
     max-width: var(--max-content);
