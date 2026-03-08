@@ -103,8 +103,8 @@ DEFAULT_OTHER_CORP_PCT = 0.075    # 7.5% of C&I load
 HYPERSCALER_CI_FRACTION = 0.084   # Hyperscalers = 8.4% of C&I demand (BNEF 2025)
 
 # Participation range for sweep
-PARTICIPATION_LEVELS = [0.02, 0.05, 0.10, 0.15, 0.20, 0.30, 0.40, 0.50, 0.60, 0.80,
-                        0.85, 0.90, 0.95, 1.00]
+PARTICIPATION_LEVELS = [0.05, 0.10, 0.15, 0.20, 0.25,  # 5% intervals under 30%
+                        0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90, 1.00]  # 10% from 30%+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SSS (STATE-SPONSORED/SUBSCRIBED) CLEAN ENERGY
@@ -762,6 +762,86 @@ def build_newbuild_only_tranches(iso, threshold, year, scenario='B',
 
     tranches.sort(key=lambda t: t['price'])
     return tranches
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# EF-BASED RESOURCE MIX (Physics-Optimized Allocation)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_EF_CACHE = None
+
+def load_ef_resource_mix(iso, threshold):
+    """Load physics-optimized resource mix from EF newbuild track.
+
+    Returns dict of {resource: pct_of_demand} from track_scenarios.parquet.
+    These are the co-optimized mixes that actually achieve the target HMS
+    through 8760-hour dispatch physics — NOT price-ordered tranche walks.
+    """
+    global _EF_CACHE
+    if _EF_CACHE is None:
+        try:
+            import pandas as pd
+            path = os.path.join(os.path.dirname(SCRIPT_DIR), 'dashboard', 'track_scenarios.parquet')
+            _EF_CACHE = pd.read_parquet(path)
+        except Exception:
+            return None
+
+    nb = _EF_CACHE[(_EF_CACHE['track'] == 'newbuild') & (_EF_CACHE['iso'] == iso)]
+    if nb.empty:
+        return None
+
+    # Find closest threshold
+    thresholds = sorted(nb['threshold'].unique())
+    closest = min(thresholds, key=lambda t: abs(t - threshold))
+    row = nb[nb['threshold'] == closest].iloc[0]
+
+    mix = {}
+    # Generation resources (% of demand)
+    for col, key in [('mix_solar', 'solar'), ('mix_wind', 'wind'),
+                     ('mix_clean_firm', 'clean_firm'), ('mix_ccs_ccgt', 'ccs'),
+                     ('mix_hydro', 'hydro'), ('mix_offshore_wind', 'offshore_wind'),
+                     ('mix_geothermal', 'geothermal')]:
+        val = float(row.get(col, 0) or 0)
+        if val > 0:
+            mix[key] = val
+
+    # Storage resources (% of demand from dispatch)
+    for col, key in [('battery_dispatch_pct', 'battery'), ('battery8_dispatch_pct', 'battery8'),
+                     ('ldes_dispatch_pct', 'ldes'), ('h2_dispatch_pct', 'h2')]:
+        val = float(row.get(col, 0) or 0)
+        if val > 0:
+            mix[key] = val
+
+    return mix
+
+
+def get_resource_ppa_price(resource, iso, threshold, year, scenario='B',
+                           level='Medium', ppa_level='Medium'):
+    """Get PPA price for a specific resource type."""
+    if resource in ('solar', 'wind', 'offshore_wind'):
+        return get_learning_adjusted_ppa(resource, iso, threshold, scenario, level, ppa_level)
+    elif resource == 'clean_firm':
+        nuc = get_learning_adjusted_ppa('nuclear_newbuild', iso, threshold, scenario, level, ppa_level)
+        ccs = get_learning_adjusted_ppa('ccs_45q_on', iso, threshold, scenario, level, ppa_level)
+        return min(nuc, ccs)
+    elif resource == 'ccs':
+        return get_learning_adjusted_ppa('ccs_45q_on', iso, threshold, scenario, level, ppa_level)
+    elif resource == 'battery':
+        return get_ppa_price('battery', iso, level, ppa_level)
+    elif resource == 'battery8':
+        return get_ppa_price('battery', iso, level, ppa_level) * 1.6  # 8hr premium
+    elif resource == 'ldes':
+        return get_learning_adjusted_ppa('ldes', iso, threshold, scenario, level, ppa_level)
+    elif resource == 'h2':
+        return get_learning_adjusted_ppa('ldes', iso, threshold, scenario, level, ppa_level) * 1.2
+    elif resource == 'hydro':
+        return get_ppa_price('hydro', iso, level, ppa_level)
+    elif resource == 'geothermal':
+        return get_learning_adjusted_ppa('geothermal', iso, threshold, scenario, level, ppa_level)
+    elif resource == 'nuclear_uprate':
+        return get_learning_adjusted_ppa('uprate', iso, threshold, scenario, level, ppa_level)
+    else:
+        return get_learning_adjusted_ppa('solar', iso, threshold, scenario, level, ppa_level)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
