@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Procurement Deployment Matrix — Where Capital Flows Under Each Strategy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/dashboard-ui.css">
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+<script src="js/scroll-observer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<style>
+body { background: var(--bg-page); }
+
+/* ===== CONTROLS BAR ===== */
+.controls-bar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 16px var(--pad-page);
+}
+.controls-inner {
+    max-width: 1320px;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: flex-end;
+}
+.control-group { flex: 1; min-width: 200px; }
+.control-group label {
+    display: block;
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+}
+.slider-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.slider-row input[type="range"] {
+    flex: 1;
+    accent-color: var(--indigo);
+    height: 6px;
+}
+.slider-value {
+    font-family: var(--font-data);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--navy);
+    min-width: 55px;
+    text-align: right;
+}
+
+/* Stats chips */
+.stat-chips {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.stat-chip {
+    background: var(--bg-alt);
+    border-radius: var(--radius-md);
+    padding: 6px 14px;
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+.stat-chip .chip-val {
+    font-family: var(--font-data);
+    font-weight: 700;
+    color: var(--navy);
+    font-size: 0.95rem;
+}
+
+/* ===== LEGEND BAR ===== */
+.legend-bar {
+    max-width: 1320px;
+    margin: 16px auto;
+    padding: 0 var(--pad-page);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+}
+.legend-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.75rem;
+    font-family: var(--font-body);
+    color: var(--text-secondary);
+}
+.legend-ball {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    display: inline-block;
+    vertical-align: middle;
+}
+.legend-ball-hollow {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    display: inline-block;
+    vertical-align: middle;
+    background: transparent;
+    border: 2px solid;
+    opacity: 0.7;
+}
+.legend-divider {
+    width: 1px;
+    height: 18px;
+    background: var(--border);
+    margin: 0 4px;
+}
+
+/* ===== JAR MATRIX ===== */
+.matrix-section {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 0 var(--pad-page) 24px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.matrix-canvas-wrap {
+    position: relative;
+    min-height: 400px;
+}
+#jarCanvas {
+    display: block;
+}
+
+/* Tooltip */
+.deployment-tooltip {
+    position: fixed;
+    display: none;
+    z-index: 100;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    padding: 12px 16px;
+    max-width: 320px;
+    pointer-events: none;
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+}
+.deployment-tooltip-header {
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border-light);
+}
+.deployment-tooltip-stats {
+    display: flex;
+    gap: 16px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+.deployment-tooltip-breakdown { margin-bottom: 6px; }
+.tooltip-section-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin: 6px 0 3px;
+}
+.tooltip-resource {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 0;
+    font-size: 0.75rem;
+}
+.tooltip-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.tooltip-dot-hollow {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 2px solid;
+    background: transparent;
+    flex-shrink: 0;
+}
+.tooltip-twh {
+    margin-left: auto;
+    font-family: var(--font-data);
+    font-weight: 600;
+    color: var(--navy);
+}
+.tooltip-iso-badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+.deployment-tooltip-footer {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    padding-top: 6px;
+    border-top: 1px solid var(--border-light);
+}
+
+/* ===== AGGREGATE CHARTS ===== */
+.agg-charts {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 0 var(--pad-page) 32px;
+}
+.agg-charts .grid-2col {
+    gap: 20px;
+    margin-bottom: 20px;
+}
+.agg-chart-card {
+    background: white;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-light);
+    padding: 20px;
+    box-shadow: var(--shadow-sm);
+}
+.agg-chart-card h3 {
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    color: var(--navy);
+    margin-bottom: 12px;
+}
+.agg-chart-card .chart-container {
+    min-height: 260px;
+}
+
+/* ===== SCROLLYTELL ===== */
+.scrollytell { max-width: 900px; margin: 0 auto; padding: 0 var(--pad-page) 48px; }
+.story-section {
+    margin-bottom: 48px;
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.story-section.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.story-section h2 {
+    font-family: var(--font-heading);
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 12px;
+    line-spacing: -0.3px;
+}
+.story-section h3 {
+    font-family: var(--font-heading);
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--navy);
+    margin: 20px 0 8px;
+}
+.story-section p {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    line-height: 1.75;
+    color: var(--text-primary);
+    margin-bottom: 14px;
+}
+.story-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+.story-badge-blue { background: rgba(79,70,229,0.1); color: var(--indigo); border: 1px solid rgba(79,70,229,0.25); }
+.story-badge-green { background: rgba(34,197,94,0.1); color: #16A34A; border: 1px solid rgba(34,197,94,0.25); }
+.story-badge-red { background: rgba(239,68,68,0.1); color: #DC2626; border: 1px solid rgba(239,68,68,0.25); }
+.story-badge-amber { background: rgba(245,158,11,0.1); color: #D97706; border: 1px solid rgba(245,158,11,0.25); }
+
+.story-chart-wrap {
+    background: white;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-light);
+    padding: 16px;
+    margin: 20px 0;
+    box-shadow: var(--shadow-sm);
+}
+.story-chart-wrap .chart-container { min-height: 280px; }
+
+.callout {
+    background: var(--bg-alt);
+    border-left: 4px solid var(--indigo);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    padding: 16px 20px;
+    margin: 20px 0;
+    font-size: 0.92rem;
+    line-height: 1.7;
+}
+.callout-green { border-left-color: #22C55E; }
+.callout-red { border-left-color: #EF4444; }
+
+/* ===== MOBILE ===== */
+@media (max-width: 767px) {
+    .controls-inner { gap: 12px; }
+    .control-group { min-width: 150px; }
+    .stat-chips { gap: 6px; }
+    .stat-chip { padding: 4px 8px; font-size: 0.7rem; }
+    .stat-chip .chip-val { font-size: 0.82rem; }
+    .legend-bar { gap: 8px; font-size: 0.68rem; }
+    .matrix-section { padding: 0 8px 16px; }
+    .story-section h2 { font-size: 1.3rem; }
+    .agg-charts .grid-2col { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+    .controls-bar { padding: 10px 12px; }
+    .control-group label { font-size: 0.7rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header" id="pageHeader">
+    <h1>Procurement Deployment Matrix</h1>
+    <div class="subtitle">Where corporate clean energy dollars flow under each procurement strategy</div>
+    <div class="header-accent"></div>
+</div>
+
+<!-- Controls Bar -->
+<div class="controls-bar">
+    <div class="controls-inner">
+        <div class="control-group">
+            <label>Share of C&I Load Participating</label>
+            <div class="slider-row">
+                <input type="range" id="participationSlider" min="0" max="6" step="1" value="2">
+                <span class="slider-value" id="participationValue">10%</span>
+            </div>
+        </div>
+        <div class="control-group">
+            <label>Buyer CFE Target</label>
+            <div class="slider-row">
+                <input type="range" id="thresholdSlider" min="0" max="13" step="1" value="5">
+                <span class="slider-value" id="thresholdValue">85%</span>
+            </div>
+        </div>
+        <div class="stat-chips" id="statChips">
+            <div class="stat-chip">Buyer demand: <span class="chip-val" id="chipDemand">—</span></div>
+            <div class="stat-chip">Total cost: <span class="chip-val" id="chipCost">—</span></div>
+            <div class="stat-chip">CO₂ abated: <span class="chip-val" id="chipCO2">—</span></div>
+        </div>
+    </div>
+</div>
+
+<!-- Legend -->
+<div class="legend-bar">
+    <div class="legend-group">
+        <span class="legend-ball" style="background:#6366F1"></span> Existing clean (saturated)
+    </div>
+    <div class="legend-divider"></div>
+    <div class="legend-group">
+        <span class="legend-ball-hollow" style="border-color:#6366F1"></span> New build (transparent fill)
+    </div>
+    <div class="legend-divider"></div>
+    <div class="legend-group">
+        <span class="legend-ball" style="background:#F59E0B"></span> Solar
+        <span class="legend-ball" style="background:#22C55E"></span> Wind
+        <span class="legend-ball" style="background:#6366F1"></span> Clean Firm
+        <span class="legend-ball" style="background:#0EA5E9"></span> Hydro
+        <span class="legend-ball" style="background:#64748B"></span> CCS
+        <span class="legend-ball" style="background:#E91E63"></span> LDES
+        <span class="legend-ball" style="background:#EF4444"></span> Storage
+    </div>
+    <div class="legend-divider"></div>
+    <div class="legend-group">
+        <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:rgba(245,158,11,0.25);border:2px solid #F59E0B;box-shadow:0 0 8px rgba(245,158,11,0.4)"></span>
+        Glowing jar = cross-ISO source
+    </div>
+</div>
+
+<!-- Jar Matrix -->
+<div class="matrix-section">
+    <div class="matrix-canvas-wrap">
+        <canvas id="jarCanvas"></canvas>
+    </div>
+</div>
+
+<!-- Tooltip -->
+<div class="deployment-tooltip" id="jarTooltip"></div>
+
+<!-- Aggregate Charts -->
+<div class="agg-charts">
+    <div class="grid-2col">
+        <div class="agg-chart-card">
+            <h3>Total Procurement by Strategy (TWh)</h3>
+            <div class="chart-container"><canvas id="chartProcurement"></canvas></div>
+        </div>
+        <div class="agg-chart-card">
+            <h3>Total Annual Cost by Strategy ($B)</h3>
+            <div class="chart-container"><canvas id="chartCost"></canvas></div>
+        </div>
+    </div>
+    <div class="grid-2col">
+        <div class="agg-chart-card">
+            <h3>CO₂ Abated by Strategy (MtCO₂)</h3>
+            <div class="chart-container"><canvas id="chartCO2"></canvas></div>
+        </div>
+        <div class="agg-chart-card">
+            <h3>Marginal Abatement Cost by Strategy ($/tCO₂)</h3>
+            <div class="chart-container"><canvas id="chartMAC"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<!-- Scrollytell Narrative -->
+<div class="scrollytell">
+
+    <!-- Section 1: The Deployment Divergence -->
+    <div class="story-section" data-observe>
+        <span class="story-badge story-badge-blue">Overview</span>
+        <h2>The Deployment Divergence</h2>
+        <p>Corporate buyers are rational economic actors. Under any procurement strategy, they optimize cost within the rules — chasing the cheapest available clean energy that qualifies. At low CFE targets (50–70%), this doesn't matter much: cheap VRE (solar and wind) dominates every strategy, every region. The strategies look nearly identical.</p>
+        <p>At higher targets — 85%, 90%, 95% and beyond — the strategies diverge dramatically. The rules of each strategy determine <strong>what gets built, where capital flows, and which resources receive bankable demand signals</strong>. This is the core insight: procurement strategy choice is market design. It shapes the aggregate capital allocation that determines whether the grid actually decarbonizes.</p>
+        <p>Use the sliders above to see this divergence in real-time. Start at 50% and slide to 95% — watch how the jars fill differently as the physics of high-reliability matching force different resource mixes.</p>
+        <div class="callout">
+            The benchmark: <strong>reliable, affordable, feasible, clean grids everywhere</strong> — to the extent that marginal abatement cost makes sense. At higher CFE targets, clean firm energy (nuclear, CCS, LDES) becomes MAC-justified because the rest of the economy needs a clean grid to decarbonize.
+        </div>
+    </div>
+
+    <!-- Section 2: Consequential's Cross-Border Arbitrage -->
+    <div class="story-section" data-observe>
+        <span class="story-badge story-badge-amber">Strategies 1A & 1B</span>
+        <h2>Consequential's Cross-Border Arbitrage</h2>
+        <p>Under consequential strategies (1A grid-average, 1B fossil-average), rational buyers chase the cheapest $/tCO₂ wherever it exists. Capital flows to SPP wind, ERCOT solar, and NYISO nuclear uprates — regardless of where the buyer sits. The buyer's local grid sees no new capacity.</p>
+        <p>In aggregate, this creates <strong>massive capital concentration</strong> in a few ISOs with the cheapest marginal sources. At low participation (2–5%), cheap cross-regional sources are abundant. But as participation climbs past 10–15%, those sources exhaust and buyers are forced up the cost curve — eventually matching or exceeding hourly matching costs, but without the same grid-transformative impact.</p>
+
+        <div class="story-chart-wrap">
+            <div class="chart-container"><canvas id="chartCrossFlow"></canvas></div>
+        </div>
+
+        <p>The glow effect on the matrix above shows which ISOs are <em>sources</em> under cross-regional strategies. Notice how capital concentrates in 2–3 ISOs while other regions receive nothing. This is economically efficient in the narrow sense — but it doesn't build the clean grids that the rest of the economy needs to decarbonize.</p>
+    </div>
+
+    <!-- Section 3: Hourly Matching and the Firm Clean Signal -->
+    <div class="story-section" data-observe>
+        <span class="story-badge story-badge-green">Strategies 2A, 2B & 2C</span>
+        <h2>Hourly Matching: The Firm Clean Energy Signal</h2>
+        <p>Hourly matching is a physics constraint, not just an accounting choice. At 90%+ CFE, you <em>cannot</em> match demand hour-by-hour with VRE alone — solar doesn't generate at night, wind is intermittent. The hourly constraint forces procurement of firm clean energy: nuclear, CCS-CCGT, and long-duration storage.</p>
+        <p>This is the only strategy family that creates <strong>bankable, long-term demand signals</strong> for the firm clean resources the grid needs. An IPP considering a $10B nuclear investment needs 20+ years of contracted offtake. Hourly matching at scale provides exactly that signal.</p>
+
+        <h3>How the three variants differ</h3>
+        <p><strong>2A (New-Build Only)</strong> — Maximum additionality. Every MWh is new capacity. Expensive at low targets but creates the strongest deployment signal. No credit for existing clean.</p>
+        <p><strong>2B (Grid Baseline)</strong> — Buyers take free credit for existing clean on the grid. Cheapest hourly variant. But existing nuclear and hydro receive no revenue signal — creating stranding risk at scale.</p>
+        <p><strong>2C (SSS + Tranches)</strong> — Buyers first claim their pro-rata share of system supply, then walk up a merit-order tranche stack: existing nuclear (45U credits) → uprates → existing VRE/hydro (EAC) → new VRE → new firm. This reflects rational buyer behavior — cheapest first — while ensuring existing clean assets get real revenue.</p>
+
+        <div class="story-chart-wrap">
+            <div class="chart-container"><canvas id="chartFirmClean"></canvas></div>
+        </div>
+
+        <div class="callout callout-green">
+            <strong>Key finding:</strong> At 90%+ CFE targets, hourly strategies procure 3–10× more firm clean energy than consequential or annual strategies. This is the demand signal that enables the firm clean investment pipeline the grid needs.
+        </div>
+    </div>
+
+    <!-- Section 4: Existing Asset Viability -->
+    <div class="story-section" data-observe>
+        <span class="story-badge story-badge-red">Asset Risk</span>
+        <h2>Existing Asset Viability</h2>
+        <p>The US grid already has substantial clean energy — existing nuclear, hydro, and increasingly wind/solar. How procurement strategies treat these assets determines whether they stay online.</p>
+
+        <h3>Strategy 2B: The free-rider problem</h3>
+        <p>Under 2B, existing clean gets "free" credit. Rational buyers love this — it's the cheapest hourly strategy. But in aggregate, existing nuclear plants receive <em>no incremental revenue</em> from corporate procurement. At scale, this accelerates merchant revenue erosion and raises stranding risk for the very assets keeping the grid clean today.</p>
+
+        <h3>Strategy 2C: Preserving existing clean</h3>
+        <p>Under 2C, existing nuclear and hydro are available as premium tranches — buyers pay a small premium (above wholesale but below new-build cost) to claim these EACs. This creates a sustainable revenue stream that keeps existing clean assets viable long-term.</p>
+
+        <h3>Strategies 3A/3B: New-build indifference</h3>
+        <p>Annual matching (3A/3B) with new-build-only rules ignores existing assets entirely. No revenue signal, no stranding protection, but also no free-riding. The capital all flows to new capacity.</p>
+
+        <div class="callout callout-red">
+            <strong>The stakes:</strong> ~800 TWh of existing US nuclear generation is at risk over the next two decades. If procurement strategies don't create revenue signals for these assets, replacing them with new clean capacity will cost $200B+ more than preserving them.
+        </div>
+    </div>
+
+    <!-- Section 5: The Market Signal IPPs Need -->
+    <div class="story-section" data-observe>
+        <span class="story-badge story-badge-blue">IPP Enabling Conditions</span>
+        <h2>The Market Signal IPPs Need</h2>
+        <p>Independent power producers making capital allocation decisions — AES, NextEra, Constellation, Vistra — need bankable demand signals to justify firm clean investment. A 20-year nuclear build or CCS retrofit requires contracted offtake, not speculative wholesale market exposure.</p>
+
+        <p>Hourly matching at scale (>10% C&I participation) triggers Wright's Law learning curves for firm clean energy. As aggregate demand for nuclear SMRs, advanced CCS, and LDES grows, manufacturing scales, supply chains mature, and costs bend down. This is the same dynamic that drove solar PV costs down 90% — but it requires sufficient aggregate demand to initiate.</p>
+
+        <div class="story-chart-wrap">
+            <div class="chart-container"><canvas id="chartLearning"></canvas></div>
+        </div>
+
+        <p>The critical mass threshold — the participation level at which learning curves bend costs enough to make firm clean MAC-justified against DAC/SCC benchmarks — varies by technology. For nuclear SMRs, it's approximately 15–20% C&I participation at 90%+ targets. For advanced CCS, it's lower (~10%) due to existing industrial learning.</p>
+
+        <div class="callout">
+            <strong>The virtuous cycle:</strong> Enough buyers choosing hourly matching → enough firm clean demand → cost curves bend via Wright's Law → firm clean becomes competitive → MAC stays below DAC/SCC → deeper decarbonization becomes affordable → more buyers join. The question is whether enough corporate buyers choose the strategy that initiates this cycle.
+        </div>
+    </div>
+
+    <!-- Section 6: Synthesis -->
+    <div class="story-section" data-observe>
+        <span class="story-badge story-badge-green">Synthesis</span>
+        <h2>Which Strategy Builds Clean Grids?</h2>
+        <p>The aggregate market outcome depends on which strategy framework is adopted. Every strategy "works" in the narrow sense of matching buyer demand with clean energy certificates. But only some strategies build the clean, reliable, affordable grids that the rest of the economy needs to decarbonize.</p>
+
+        <p><strong>Strategy 2C (Hourly SSS + Tranches)</strong> creates the strongest aggregate signal for deep grid decarbonization:</p>
+        <ul style="margin: 12px 0 20px 24px; line-height: 1.8; font-family: var(--font-body);">
+            <li><strong>Preserves existing clean revenue</strong> — SSS allocation + premium tranches keep existing nuclear and hydro viable</li>
+            <li><strong>Forces firm clean investment</strong> — hourly physics constraint at 90%+ CFE demands nuclear, CCS, and LDES</li>
+            <li><strong>Triggers learning curves at scale</strong> — >10–15% participation unlocks Wright's Law cost reductions</li>
+            <li><strong>MAC-justified at higher targets</strong> — clean firm costs are below DAC/SCC benchmarks when learning curves kick in</li>
+            <li><strong>Builds local grid capacity</strong> — same-ISO matching means capital stays in the buyer's region</li>
+        </ul>
+
+        <p>Consequential strategies (1A/1B) are cheaper at low targets but create cross-regional arbitrage that doesn't transform local grids. Annual strategies (3A/3B) lose the hourly constraint that forces firm clean investment. Strategy 2B is a tempting cost optimization that free-rides on existing assets.</p>
+
+        <div class="callout callout-green">
+            <strong>Bottom line:</strong> Strategy choice is market design. The procurement framework determines what the aggregate capital allocation looks like — and whether it builds the reliable, affordable, feasible, clean grids that the rest of the economy needs to decarbonize. Strategy 2C aligns rational buyer incentives with the grid's actual needs.
+        </div>
+    </div>
+
+</div>
+
+<!-- Footer -->
+<div class="page-footer">
+    <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="dashboard.html">Cost Optimizer</a>
+        <a href="optimizer_methodology.html">Methodology</a>
+        <a href="research_paper.html">Research Paper</a>
+    </div>
+    <p style="margin-top:12px;font-size:0.75rem;color:rgba(255,255,255,0.4)">
+        Hourly CFE Optimizer &copy; 2025-2026. Data: EIA, eGRID, NREL ATB.
+    </p>
+</div>
+<div class="bottom-banner"></div>
+
+<!-- Data & Scripts -->
+<script src="js/deployment-data.js"></script>
+<script src="js/jar-animation.js"></script>
+<script src="js/nav.js"></script>
+<script>
+(function() {
+    'use strict';
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // SLIDER SETUP
+    // ═════════════════════════════════════════════════════════════════════════
+
+    const PARTICIPATION_LEVELS = [2, 5, 10, 20, 30, 50, 80];
+    const THRESHOLDS = [50, 60, 70, 75, 80, 85, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99];
+
+    const partSlider = document.getElementById('participationSlider');
+    const partValue = document.getElementById('participationValue');
+    const thrSlider = document.getElementById('thresholdSlider');
+    const thrValue = document.getElementById('thresholdValue');
+
+    function getParticipation() {
+        return PARTICIPATION_LEVELS[parseInt(partSlider.value)] || 10;
+    }
+    function getThreshold() {
+        return THRESHOLDS[parseInt(thrSlider.value)] || 85;
+    }
+
+    partSlider.addEventListener('input', () => {
+        const p = getParticipation();
+        partValue.textContent = p + '%';
+        grid.setParticipation(p);
+        updateCharts();
+    });
+    thrSlider.addEventListener('input', () => {
+        const t = getThreshold();
+        thrValue.textContent = t >= 99.99 ? '≥99.99%' : t + '%';
+        grid.setThreshold(t);
+        updateCharts();
+    });
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // JAR GRID INIT
+    // ═════════════════════════════════════════════════════════════════════════
+
+    const grid = new JarGrid('jarCanvas', 'jarTooltip');
+
+    grid.onStatsUpdate = function(stats) {
+        document.getElementById('chipCost').textContent = '$' + stats.totalCostB.toFixed(1) + 'B';
+        document.getElementById('chipCO2').textContent = (stats.totalCO2Mt * 1000).toFixed(0) + ' ktCO₂';
+    };
+
+    if (typeof DEPLOYMENT_DATA !== 'undefined') {
+        grid.init(DEPLOYMENT_DATA);
+        // Set initial slider display
+        partValue.textContent = getParticipation() + '%';
+        const t0 = getThreshold();
+        thrValue.textContent = t0 >= 99.99 ? '≥99.99%' : t0 + '%';
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // AGGREGATE CHARTS
+    // ═════════════════════════════════════════════════════════════════════════
+
+    const STRAT_COLORS = {
+        '1A': '#F59E0B', '1B': '#D97706',
+        '2A': '#6366F1', '2B': '#818CF8', '2C': '#4F46E5',
+        '3A': '#22C55E', '3B': '#16A34A',
+    };
+    const STRAT_LABELS = {
+        '1A': '1A Conseq (Grid)', '1B': '1B Conseq (Fossil)',
+        '2A': '2A Hourly (New)', '2B': '2B Hourly (Grid)', '2C': '2C Hourly (SSS)',
+        '3A': '3A Annual (Same)', '3B': '3B Annual (Cross)',
+    };
+    const STRATEGIES_LIST = ['1A', '1B', '2A', '2B', '2C', '3A', '3B'];
+
+    const chartOpts = {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 400 },
+        plugins: {
+            legend: { display: false },
+        },
+        scales: {
+            x: {
+                grid: { display: false },
+                ticks: { font: { family: "'DM Sans'", size: 11 } }
+            },
+            y: {
+                grid: { color: '#E2E8F0' },
+                ticks: { font: { family: "'Space Mono'", size: 10 } }
+            }
+        }
+    };
+
+    function makeBarChart(canvasId, label, unit) {
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        return new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: STRATEGIES_LIST.map(s => STRAT_LABELS[s]),
+                datasets: [{
+                    label: label,
+                    data: STRATEGIES_LIST.map(() => 0),
+                    backgroundColor: STRATEGIES_LIST.map(s => STRAT_COLORS[s] + 'CC'),
+                    borderColor: STRATEGIES_LIST.map(s => STRAT_COLORS[s]),
+                    borderWidth: 1,
+                    borderRadius: 4,
+                }]
+            },
+            options: {
+                ...chartOpts,
+                plugins: {
+                    ...chartOpts.plugins,
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => `${ctx.raw.toFixed(1)} ${unit}`
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function makeStackedBarChart(canvasId) {
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        return new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: STRATEGIES_LIST.map(s => STRAT_LABELS[s]),
+                datasets: [
+                    {
+                        label: 'Existing',
+                        data: STRATEGIES_LIST.map(() => 0),
+                        backgroundColor: '#6366F1CC',
+                        borderColor: '#6366F1',
+                        borderWidth: 1,
+                        borderRadius: 2,
+                    },
+                    {
+                        label: 'New Build',
+                        data: STRATEGIES_LIST.map(() => 0),
+                        backgroundColor: '#6366F140',
+                        borderColor: '#6366F1',
+                        borderWidth: 1,
+                        borderRadius: 2,
+                    },
+                    {
+                        label: 'Cross-ISO',
+                        data: STRATEGIES_LIST.map(() => 0),
+                        backgroundColor: '#F59E0B80',
+                        borderColor: '#F59E0B',
+                        borderWidth: 1,
+                        borderRadius: 2,
+                    },
+                ]
+            },
+            options: {
+                ...chartOpts,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: { font: { family: "'DM Sans'", size: 11 }, boxWidth: 12 }
+                    }
+                },
+                scales: {
+                    ...chartOpts.scales,
+                    x: { ...chartOpts.scales.x, stacked: true },
+                    y: { ...chartOpts.scales.y, stacked: true },
+                }
+            }
+        });
+    }
+
+    const chartProcurement = makeStackedBarChart('chartProcurement');
+    const chartCost = makeBarChart('chartCost', 'Cost', '$B');
+    const chartCO2 = makeBarChart('chartCO2', 'CO₂ Abated', 'MtCO₂');
+    const chartMAC = makeBarChart('chartMAC', 'MAC', '$/tCO₂');
+
+    function updateCharts() {
+        const stats = grid.getAggregateStats();
+
+        for (let i = 0; i < STRATEGIES_LIST.length; i++) {
+            const s = stats[STRATEGIES_LIST[i]];
+            if (!s) continue;
+
+            chartProcurement.data.datasets[0].data[i] = s.existingTwh;
+            chartProcurement.data.datasets[1].data[i] = s.newTwh;
+            chartProcurement.data.datasets[2].data[i] = s.crossTwh;
+
+            chartCost.data.datasets[0].data[i] = s.totalCostM / 1000;
+            chartCO2.data.datasets[0].data[i] = s.totalCO2Mt * 1000;  // to ktCO₂
+            chartMAC.data.datasets[0].data[i] = s.mac;
+        }
+
+        chartProcurement.update();
+        chartCost.update();
+        chartCO2.update();
+        chartMAC.update();
+
+        // Update demand chip
+        const firstStrat = stats['2A'];
+        if (firstStrat) {
+            // Buyer demand is per-ISO, sum across ISOs
+            let totalBuyerDemand = 0;
+            for (const jar of grid.jars) {
+                if (jar.strategy === '2A' && jar.data) {
+                    totalBuyerDemand += jar.data.bt || 0;
+                }
+            }
+            document.getElementById('chipDemand').textContent = totalBuyerDemand.toFixed(0) + ' TWh';
+        }
+    }
+
+    // Initial chart update
+    setTimeout(updateCharts, 300);
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // SCROLLYTELL CHARTS (static narrative charts)
+    // ═════════════════════════════════════════════════════════════════════════
+
+    // Chart: Cross-ISO Capital Flow (Section 2)
+    function buildCrossFlowChart() {
+        const ctx = document.getElementById('chartCrossFlow');
+        if (!ctx) return;
+        new Chart(ctx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP'],
+                datasets: [
+                    {
+                        label: 'Capital received (source)',
+                        data: [0, 0, 0, 0, 0, 0, 0],
+                        backgroundColor: '#F59E0B80',
+                        borderColor: '#F59E0B',
+                        borderWidth: 1,
+                    },
+                    {
+                        label: 'Capital deployed (buyer)',
+                        data: [0, 0, 0, 0, 0, 0, 0],
+                        backgroundColor: '#6366F180',
+                        borderColor: '#6366F1',
+                        borderWidth: 1,
+                    }
+                ]
+            },
+            options: {
+                ...chartOpts,
+                plugins: {
+                    legend: { display: true, position: 'top', labels: { font: { size: 11 } } },
+                    title: {
+                        display: true,
+                        text: 'Strategy 1A: Where Capital Flows vs. Where Buyers Are',
+                        font: { family: "'Space Grotesk'", size: 13, weight: 600 }
+                    }
+                }
+            }
+        });
+        updateCrossFlowChart();
+    }
+
+    function updateCrossFlowChart() {
+        // Populate from current data
+        const chart = Chart.getChart('chartCrossFlow');
+        if (!chart || !DEPLOYMENT_DATA) return;
+
+        const isos = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP'];
+        const received = new Array(7).fill(0);
+        const deployed = new Array(7).fill(0);
+
+        const s1a = DEPLOYMENT_DATA.data['1A'];
+        if (!s1a) return;
+
+        for (let i = 0; i < isos.length; i++) {
+            const iso = isos[i];
+            const isoData = s1a[iso];
+            if (!isoData) continue;
+
+            // Use 10% participation, 90% threshold
+            const partData = isoData['10'] || isoData['5'] || {};
+            const entry = partData['90'] || partData['85'] || {};
+
+            // Buyer demand deployed from this ISO
+            if (entry.n) {
+                for (const twh of Object.values(entry.n)) deployed[i] += twh;
+            }
+            if (entry.e) {
+                for (const twh of Object.values(entry.e)) deployed[i] += twh;
+            }
+
+            // Capital received as source from other ISOs
+            // Check all other ISOs' cross-ISO flows pointing to this ISO
+            for (let j = 0; j < isos.length; j++) {
+                if (j === i) continue;
+                const otherIso = isos[j];
+                const otherData = s1a[otherIso];
+                if (!otherData) continue;
+                const otherPart = otherData['10'] || otherData['5'] || {};
+                const otherEntry = otherPart['90'] || otherPart['85'] || {};
+                if (otherEntry.x && otherEntry.x[iso]) {
+                    for (const twh of Object.values(otherEntry.x[iso])) {
+                        received[i] += twh;
+                    }
+                }
+            }
+        }
+
+        chart.data.datasets[0].data = received.map(v => Math.round(v * 10) / 10);
+        chart.data.datasets[1].data = deployed.map(v => Math.round(v * 10) / 10);
+        chart.update();
+    }
+
+    // Chart: Firm Clean by Strategy (Section 3)
+    function buildFirmCleanChart() {
+        const ctx = document.getElementById('chartFirmClean');
+        if (!ctx) return;
+
+        const firmResources = ['clean_firm', 'nuclear_uprate', 'ccs', 'ldes', 'storage'];
+        const data = [];
+
+        for (const strat of STRATEGIES_LIST) {
+            let firmTwh = 0;
+            const stratData = DEPLOYMENT_DATA.data[strat];
+            if (!stratData) { data.push(0); continue; }
+
+            for (const iso of ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']) {
+                const isoData = stratData[iso];
+                if (!isoData) continue;
+                const partData = isoData['10'] || isoData['5'] || {};
+                const entry = partData['90'] || partData['85'] || {};
+
+                for (const bucket of ['e', 'n']) {
+                    if (!entry[bucket]) continue;
+                    for (const [res, twh] of Object.entries(entry[bucket])) {
+                        if (firmResources.includes(res)) firmTwh += twh;
+                    }
+                }
+                if (entry.x) {
+                    for (const resources of Object.values(entry.x)) {
+                        for (const [res, twh] of Object.entries(resources)) {
+                            if (firmResources.includes(res)) firmTwh += twh;
+                        }
+                    }
+                }
+            }
+            data.push(Math.round(firmTwh * 10) / 10);
+        }
+
+        new Chart(ctx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: STRATEGIES_LIST.map(s => STRAT_LABELS[s]),
+                datasets: [{
+                    label: 'Firm Clean TWh',
+                    data: data,
+                    backgroundColor: STRATEGIES_LIST.map(s => STRAT_COLORS[s] + 'CC'),
+                    borderColor: STRATEGIES_LIST.map(s => STRAT_COLORS[s]),
+                    borderWidth: 1,
+                    borderRadius: 4,
+                }]
+            },
+            options: {
+                ...chartOpts,
+                plugins: {
+                    legend: { display: false },
+                    title: {
+                        display: true,
+                        text: 'Firm Clean Energy Procured at 90% CFE, 10% Participation',
+                        font: { family: "'Space Grotesk'", size: 13, weight: 600 }
+                    }
+                }
+            }
+        });
+    }
+
+    // Chart: Learning Curve / Cost Trajectory (Section 5)
+    function buildLearningChart() {
+        const ctx = document.getElementById('chartLearning');
+        if (!ctx) return;
+
+        // Illustrative learning curve data — costs at increasing participation
+        const participationPcts = [2, 5, 10, 15, 20, 30, 40, 50];
+        const costByStrat = {};
+
+        for (const strat of ['2A', '2C', '1A']) {
+            costByStrat[strat] = [];
+            const stratData = DEPLOYMENT_DATA.data[strat];
+            if (!stratData) { costByStrat[strat] = participationPcts.map(() => 0); continue; }
+
+            for (const pct of participationPcts) {
+                let totalCost = 0;
+                let totalTwh = 0;
+                for (const iso of ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']) {
+                    const isoData = stratData[iso];
+                    if (!isoData) continue;
+                    const pk = String(pct);
+                    const partData = isoData[pk] || {};
+                    const entry = partData['90'] || {};
+                    totalCost += entry.tc || 0;
+                    totalTwh += entry.bt || 0;
+                }
+                costByStrat[strat].push(totalTwh > 0 ? Math.round(totalCost / totalTwh * 1e6 / 1e6 * 10) / 10 : 0);
+            }
+        }
+
+        new Chart(ctx.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: participationPcts.map(p => p + '%'),
+                datasets: [
+                    {
+                        label: '2C Hourly (SSS)',
+                        data: costByStrat['2C'],
+                        borderColor: '#4F46E5',
+                        backgroundColor: '#4F46E520',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 4,
+                    },
+                    {
+                        label: '2A Hourly (New)',
+                        data: costByStrat['2A'],
+                        borderColor: '#6366F1',
+                        backgroundColor: 'transparent',
+                        borderDash: [6, 4],
+                        tension: 0.3,
+                        pointRadius: 4,
+                    },
+                    {
+                        label: '1A Consequential',
+                        data: costByStrat['1A'],
+                        borderColor: '#F59E0B',
+                        backgroundColor: 'transparent',
+                        borderDash: [2, 3],
+                        tension: 0.3,
+                        pointRadius: 4,
+                    },
+                ]
+            },
+            options: {
+                ...chartOpts,
+                plugins: {
+                    legend: { display: true, position: 'top', labels: { font: { size: 11 } } },
+                    title: {
+                        display: true,
+                        text: 'Average Cost ($/MWh) at 90% CFE by Participation Level',
+                        font: { family: "'Space Grotesk'", size: 13, weight: 600 }
+                    }
+                },
+                scales: {
+                    x: { ...chartOpts.scales.x, title: { display: true, text: 'C&I Participation', font: { size: 11 } } },
+                    y: { ...chartOpts.scales.y, title: { display: true, text: '$/MWh', font: { size: 11 } } }
+                }
+            }
+        });
+    }
+
+    // Build narrative charts after data loads
+    setTimeout(() => {
+        buildCrossFlowChart();
+        buildFirmCleanChart();
+        buildLearningChart();
+    }, 500);
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // SCROLL OBSERVER for narrative sections
+    // ═════════════════════════════════════════════════════════════════════════
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+            }
+        });
+    }, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
+
+    document.querySelectorAll('.story-section').forEach(el => observer.observe(el));
+
+})();
+</script>
+</body>
+</html>
