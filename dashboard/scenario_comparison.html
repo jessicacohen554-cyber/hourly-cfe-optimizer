@@ -895,11 +895,13 @@ function buildMetricTiles() {
     const demB = bT.demand_twh || getDemandAtThreshold(iso, t);
     const annuity = (1 - Math.pow(1.05, -25)) / 0.05;
 
-    const mult = bT.effective_cost > 0 ? (aT.effective_cost / bT.effective_cost) : 1;
-    const annSave = (aT.effective_cost - bT.effective_cost) * demA;
+    const aCost = aT.effective_cost || 0;
+    const bCost = bT.effective_cost || 0;
+    const mult = bCost > 0 ? (aCost / bCost) : 1;
+    const annSave = (aCost - bCost) * demA;
     const annSaveB = (annSave / 1000).toFixed(1);
     const npvB = (annSave * annuity / 1000).toFixed(0);
-    const gap = (aT.effective_cost - bT.effective_cost).toFixed(1);
+    const gap = (aCost - bCost).toFixed(1);
 
     const gasA = aT.new_gas_mw || 0;
     const gasB = bT.new_gas_mw || 0;
@@ -907,15 +909,17 @@ function buildMetricTiles() {
     const totalGasB = bT.gas_backup_mw || 0;
     const gasAvoided = ((totalGasA - totalGasB) / 1000).toFixed(1);
 
-    const totalResA = Object.values(aT.resource_twh).reduce((s,v) => s + v, 0);
-    const totalResB = Object.values(bT.resource_twh).reduce((s,v) => s + v, 0);
+    const aRes = aT.resource_twh || {};
+    const bRes = bT.resource_twh || {};
+    const totalResA = Object.values(aRes).reduce((s,v) => s + v, 0);
+    const totalResB = Object.values(bRes).reduce((s,v) => s + v, 0);
     const matchedA = t / 100 * demA;
     const matchedB = t / 100 * demB;
     const strandCleanA = Math.max(0, totalResA - matchedA);
     const strandCleanB = Math.max(0, totalResB - matchedB);
 
-    const firmA = aT.firm_total_twh || (aT.resource_twh.clean_firm + (aT.resource_twh.ccs_ccgt || 0));
-    const firmB = bT.firm_total_twh || (bT.resource_twh.clean_firm + (bT.resource_twh.ccs_ccgt || 0));
+    const firmA = aT.firm_total_twh || ((aRes.clean_firm || 0) + (aRes.ccs_ccgt || 0));
+    const firmB = bT.firm_total_twh || ((bRes.clean_firm || 0) + (bRes.ccs_ccgt || 0));
 
     const bWins = mult > 1.01;
     const aWins = mult < 0.99;
@@ -995,8 +999,8 @@ function buildMetricTiles() {
     const firmHeat = 'heat-blue';
 
     container.innerHTML = [
-        heatTile(costConclusion, costCtx, costHeat, 'System cost', '$' + aT.effective_cost.toFixed(1) + '/MWh', 'System cost', '$' + bT.effective_cost.toFixed(1) + '/MWh'),
-        heatTile(savConclusion, savCtx, savHeat, 'Annual cost', '$' + (aT.annual_cost_billion || (aT.effective_cost * demA / 1000)).toFixed(1) + 'B', 'Annual cost', '$' + (bT.annual_cost_billion || (bT.effective_cost * demB / 1000)).toFixed(1) + 'B'),
+        heatTile(costConclusion, costCtx, costHeat, 'System cost', '$' + aCost.toFixed(1) + '/MWh', 'System cost', '$' + bCost.toFixed(1) + '/MWh'),
+        heatTile(savConclusion, savCtx, savHeat, 'Annual cost', '$' + (aT.annual_cost_billion || (aCost * demA / 1000)).toFixed(1) + 'B', 'Annual cost', '$' + (bT.annual_cost_billion || (bCost * demB / 1000)).toFixed(1) + 'B'),
         heatTile(npvConclusion, npvCtx, npvHeat, '25yr NPV', '$' + (aT.npv_25yr_billion || 0).toFixed(0) + 'B', '25yr NPV', '$' + (bT.npv_25yr_billion || 0).toFixed(0) + 'B'),
         heatTile(gasConclusion, gasCtx, gasHeat, 'Gas capacity', (totalGasA/1000).toFixed(0) + ' GW', 'Gas capacity', (totalGasB/1000).toFixed(0) + ' GW'),
         heatTile(strandConclusion, strandCtx, strandHeat, 'Curtailed', Math.round(strandCleanA) + ' TWh', 'Curtailed', Math.round(strandCleanB) + ' TWh'),
@@ -1195,7 +1199,7 @@ function renderGasChart(iso) {
             datasets: [
                 {
                     label: 'Strategy 1B',
-                    data: trajA.map(d => d.gas_backup_mw),
+                    data: trajA.map(d => d.gas_backup_mw ?? null),
                     borderColor: COLORS.A85,
                     backgroundColor: COLORS.A_area,
                     fill: '+1',
@@ -1206,7 +1210,7 @@ function renderGasChart(iso) {
                 },
                 {
                     label: 'Strategy 2C',
-                    data: trajB.map(d => d.gas_backup_mw),
+                    data: trajB.map(d => d.gas_backup_mw ?? null),
                     borderColor: COLORS.B85,
                     backgroundColor: COLORS.B_fill,
                     fill: 'origin',
@@ -1230,8 +1234,8 @@ function renderGasChart(iso) {
                         label: ctx => ctx.dataset.label + ': ' + Math.round(ctx.parsed.y).toLocaleString() + ' MW',
                         afterBody: ctx => {
                             const idx = ctx[0].dataIndex;
-                            const aVal = trajA[idx] ? trajA[idx].gas_backup_mw : 0;
-                            const bVal = trajB[idx] ? trajB[idx].gas_backup_mw : 0;
+                            const aVal = trajA[idx] ? (trajA[idx].gas_backup_mw || 0) : 0;
+                            const bVal = trajB[idx] ? (trajB[idx].gas_backup_mw || 0) : 0;
                             const gap = aVal - bVal;
                             return gap > 0 ? ['\u0394 Gap: ' + Math.round(gap).toLocaleString() + ' MW avoided'] : [];
                         }
@@ -1314,7 +1318,7 @@ function renderMixCharts(iso) {
 
         // Pre-compute clean_firm breakdown for each trajectory point
         const cfBreakdown = traj.map(d => {
-            const totalCf = d.resource_twh.clean_firm || 0;
+            const totalCf = (d.resource_twh || {}).clean_firm || 0;
             return splitCleanFirm(iso, totalCf, existingNuclearTwh);
         });
 
@@ -1324,7 +1328,8 @@ function renderMixCharts(iso) {
         // Demand line = total annual demand (d.demand_twh), not threshold% × demand.
         const curtailData = traj.map((d, idx) => {
             // Generation resources only — battery/ldes are storage, not curtailable gen
-            const totalProcured = Object.values(d.resource_twh).reduce((s, v) => s + v, 0);
+            const res = d.resource_twh || {};
+            const totalProcured = Object.values(res).reduce((s, v) => s + v, 0);
             const demandTwh = d.demand_twh || getDemandAtThreshold(iso, d.threshold);
             // Structural curtailment: clean gen procured beyond what total demand can absorb
             const totalCurtailed = Math.max(0, totalProcured - demandTwh);
@@ -1332,11 +1337,11 @@ function renderMixCharts(iso) {
             // Compute new-build TWh for each generation resource (excl. battery/ldes)
             const cf = cfBreakdown[idx];
             const newBuildTwh = {
-                solar: Math.max(0, (d.resource_twh.solar || 0) - (existingTwh.solar || 0)),
-                wind: Math.max(0, (d.resource_twh.wind || 0) - (existingTwh.wind || 0)),
-                offshore_wind: Math.max(0, (d.resource_twh.offshore_wind || 0) - (existingTwh.offshore_wind || 0)),
-                hydro: Math.max(0, (d.resource_twh.hydro || 0) - (existingTwh.hydro || 0)),
-                ccs_ccgt: Math.max(0, (d.resource_twh.ccs_ccgt || 0) - (existingTwh.ccs_ccgt || 0)),
+                solar: Math.max(0, (res.solar || 0) - (existingTwh.solar || 0)),
+                wind: Math.max(0, (res.wind || 0) - (existingTwh.wind || 0)),
+                offshore_wind: Math.max(0, (res.offshore_wind || 0) - (existingTwh.offshore_wind || 0)),
+                hydro: Math.max(0, (res.hydro || 0) - (existingTwh.hydro || 0)),
+                ccs_ccgt: Math.max(0, (res.ccs_ccgt || 0) - (existingTwh.ccs_ccgt || 0)),
                 nuclear_uprate: cf.nuclear_uprate,
                 nuclear_new: cf.nuclear_new,
                 geothermal: cf.geothermal,
@@ -1387,7 +1392,7 @@ function renderMixCharts(iso) {
             datasets.push({
                 label: (RES_LABELS[res] || res) + ' (new)',
                 data: traj.map((d, i) => {
-                    const total = d.resource_twh[res] || 0;
+                    const total = (d.resource_twh || {})[res] || 0;
                     const ex = existingTwh[res] || 0;
                     let newBuild = Math.max(0, total - ex);
                     // Subtract pro-rata curtailed portion
@@ -1557,7 +1562,7 @@ function renderMixCharts(iso) {
     function computeMaxStack(traj) {
         let maxV = 0;
         traj.forEach(d => {
-            const genTwh = Object.values(d.resource_twh).reduce((s, v) => s + v, 0);
+            const genTwh = Object.values(d.resource_twh || {}).reduce((s, v) => s + v, 0);
             const dem = d.demand_twh || getDemandAtThreshold(iso, d.threshold);
             const bat4 = getBattTwh(d);
             const bat8 = getBatt8Twh(d);
@@ -1645,7 +1650,7 @@ function renderCostChart(iso) {
             datasets: [
                 {
                     label: 'Strategy 1B',
-                    data: trajA.map(d => d.effective_cost),
+                    data: trajA.map(d => d.effective_cost ?? null),
                     borderColor: COLORS.A85,
                     backgroundColor: COLORS.A_area,
                     fill: '+1',
@@ -1656,7 +1661,7 @@ function renderCostChart(iso) {
                 },
                 {
                     label: 'Strategy 2C',
-                    data: trajB.map(d => d.effective_cost),
+                    data: trajB.map(d => d.effective_cost ?? null),
                     borderColor: COLORS.B85,
                     backgroundColor: COLORS.B_fill,
                     fill: 'origin',
@@ -1680,8 +1685,8 @@ function renderCostChart(iso) {
                         label: ctx => ctx.dataset.label + ': $' + ctx.parsed.y.toFixed(1) + '/MWh',
                         afterBody: ctx => {
                             const idx = ctx[0].dataIndex;
-                            const aVal = trajA[idx] ? trajA[idx].effective_cost : 0;
-                            const bVal = trajB[idx] ? trajB[idx].effective_cost : 0;
+                            const aVal = trajA[idx] ? (trajA[idx].effective_cost || 0) : 0;
+                            const bVal = trajB[idx] ? (trajB[idx].effective_cost || 0) : 0;
                             const gap = aVal - bVal;
                             return gap > 0 ? ['\u0394 Savings: $' + gap.toFixed(1) + '/MWh'] : [];
                         }
@@ -1717,7 +1722,7 @@ function renderFirmChart(iso) {
             datasets: [
                 {
                     label: 'Strategy 1B',
-                    data: trajA.map(d => d.firm_total_twh || (d.resource_twh.clean_firm + (d.resource_twh.ccs_ccgt || 0))),
+                    data: trajA.map(d => d.firm_total_twh ?? ((d.resource_twh || {}).clean_firm || 0) + ((d.resource_twh || {}).ccs_ccgt || 0)),
                     borderColor: COLORS.A85,
                     backgroundColor: COLORS.A_fill,
                     fill: true,
@@ -1728,7 +1733,7 @@ function renderFirmChart(iso) {
                 },
                 {
                     label: 'Strategy 2C',
-                    data: trajB.map(d => d.firm_total_twh || (d.resource_twh.clean_firm + (d.resource_twh.ccs_ccgt || 0))),
+                    data: trajB.map(d => d.firm_total_twh ?? ((d.resource_twh || {}).clean_firm || 0) + ((d.resource_twh || {}).ccs_ccgt || 0)),
                     borderColor: COLORS.B85,
                     backgroundColor: COLORS.B_fill,
                     fill: true,
@@ -1768,6 +1773,49 @@ function renderFirmChart(iso) {
 // Firm init called from global renderAll()
 
 // ===== 7. SEQUENTIAL DEPLOYMENT QUEUE (live from Step 5D MAC queue) =====
+
+// Reorder queue: enforce per-ISO sequential threshold ordering, interleave by cheapest next step.
+// Filter out data gaps (MAC=0, MAC>=9999, empty delta_resources).
+function reorderQueueSequential(rawQueue) {
+    // 1. Filter out data gaps
+    const filtered = rawQueue.filter(step =>
+        step.marginal_mac > 0.01 &&
+        step.marginal_mac < 9999 &&
+        Object.keys(step.delta_resources || {}).length > 0
+    );
+
+    // 2. Group by ISO, sort each ISO's steps by threshold_start ascending
+    const isoGroups = {};
+    filtered.forEach(step => {
+        if (!isoGroups[step.iso]) isoGroups[step.iso] = [];
+        isoGroups[step.iso].push(step);
+    });
+    for (const iso of Object.keys(isoGroups)) {
+        isoGroups[iso].sort((a, b) => a.threshold_start - b.threshold_start);
+    }
+
+    // 3. Greedy interleave: pick cheapest NEXT available step across all ISOs
+    const ptrs = {};
+    for (const iso of Object.keys(isoGroups)) ptrs[iso] = 0;
+    const result = [];
+    while (true) {
+        let bestStep = null, bestIso = null, bestMac = Infinity;
+        for (const iso of Object.keys(isoGroups)) {
+            if (ptrs[iso] >= isoGroups[iso].length) continue;
+            const step = isoGroups[iso][ptrs[iso]];
+            if (step.marginal_mac < bestMac) {
+                bestMac = step.marginal_mac;
+                bestStep = step;
+                bestIso = iso;
+            }
+        }
+        if (!bestStep) break;
+        result.push({ ...bestStep, queue_position: result.length + 1 });
+        ptrs[bestIso]++;
+    }
+    return result;
+}
+
 function renderMacQueueAccordion() {
     const summaryEl = document.getElementById('macQueueSummaryTable');
     const accordionEl = document.getElementById('macQueueAccordionContent');
@@ -1779,9 +1827,10 @@ function renderMacQueueAccordion() {
         return;
     }
 
-    const queue = MAC_QUEUE_DATA;
+    // Reorder: per-ISO sequential, interleave by cheapest next step, filter data gaps
+    const queue = reorderQueueSequential(MAC_QUEUE_DATA);
 
-    // Group by ISO
+    // Group by ISO (preserving sequential order within each)
     const byIso = {};
     const isoOrder = [];
     queue.forEach(step => {
@@ -1872,7 +1921,7 @@ function renderMacQueueAccordion() {
     accordionEl.innerHTML = accordionHtml;
 }
 
-renderMacQueueAccordion();
+try { renderMacQueueAccordion(); } catch(e) { console.error('renderMacQueueAccordion:', e); }
 
 // ===== 8. FOAK → NOAK LEARNING CURVE CHART =====
 // Learning curve data derived from SPEC.md FOAK→NOAK decision (Feb 25, 2026)
@@ -2059,8 +2108,7 @@ function renderFoakNOAKChart() {
         }
     });
 }
-renderFoakNOAKChart();
-buildHeroStats();
+// renderFoakNOAKChart + buildHeroStats called in final init block below
 
 // ===== FOUR-POOL CHARTS =====
 
@@ -2328,13 +2376,14 @@ renderAll = function(iso) {
     renderZoneCharts();
 };
 
-renderFoakNOAKChart();
-buildHeroStats();
-renderZoneCharts();
+// ===== FINAL INIT — each wrapped in try/catch to prevent cascading failures =====
+try { renderFoakNOAKChart(); } catch(e) { console.error('renderFoakNOAKChart:', e); }
+try { buildHeroStats(); } catch(e) { console.error('buildHeroStats:', e); }
+try { renderZoneCharts(); } catch(e) { console.error('renderZoneCharts:', e); }
 
 // ===== GLOBAL ISO SELECTOR — single toggle for ALL charts =====
-createIsoSelector('globalIsoSelector', 'PJM', iso => renderAll(iso));
-renderAll('PJM');
+try { createIsoSelector('globalIsoSelector', 'PJM', iso => renderAll(iso)); } catch(e) { console.error('createIsoSelector:', e); }
+try { renderAll('PJM'); } catch(e) { console.error('renderAll init:', e); }
 
 })();
 </script>
