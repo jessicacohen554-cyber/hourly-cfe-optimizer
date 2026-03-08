@@ -891,9 +891,48 @@ def main():
                                 supply_matrix=supply_matrix,
                                 h2_dispatch_pct=h2_pct,
                             )
-                            matched = np.minimum(result['total_clean'], demand_norm[:8760])
-                            score = float(np.sum(matched) / np.sum(demand_norm[:8760]) * 100)
-                            entry.setdefault('metadata', {})['hourly_match_score'] = round(score, 2)
+                            demand_arr = np.array(demand_norm[:8760])
+                            total_clean = result['total_clean']
+                            matched = np.minimum(total_clean, demand_arr)
+                            curtailed = result['curtailed']
+                            fossil_displaced = result['fossil_displaced']
+
+                            score = float(np.sum(matched) / np.sum(demand_arr) * 100)
+                            curtail_pct = float(np.sum(curtailed) / np.sum(total_clean) * 100) if np.sum(total_clean) > 0 else 0
+                            fossil_disp_twh = float(np.sum(fossil_displaced) / np.sum(demand_arr)) * buyer_twh
+
+                            # Consequential CO₂: only new-build displaces fossil
+                            # Grid mix / SSS were already running — no additional displacement
+                            new_twh = 0
+                            grid_twh_local = 0
+                            for source, info in rm.items():
+                                if not isinstance(info, dict):
+                                    continue
+                                twh_val = info.get('twh', 0)
+                                cat = info.get('category', '')
+                                if cat in ('grid_mix', 'sss'):
+                                    grid_twh_local += twh_val
+                                elif cat == 'new_build':
+                                    new_twh += twh_val
+
+                            total_procured = new_twh + grid_twh_local
+                            new_frac = new_twh / total_procured if total_procured > 0 else 1.0
+
+                            fossil_rate = get_emission_rate(iso, 'fossil_average')
+                            consequential_co2 = fossil_disp_twh * new_frac * fossil_rate
+
+                            md = entry.setdefault('metadata', {})
+                            md['hourly_match_score'] = round(score, 2)
+                            md['curtailment_pct'] = round(curtail_pct, 2)
+                            md['fossil_displaced_twh'] = round(fossil_disp_twh, 4)
+                            md['new_build_twh'] = round(new_twh, 2)
+                            md['grid_baseline_twh'] = round(grid_twh_local, 2)
+                            md['new_build_fraction'] = round(new_frac, 4)
+
+                            # Overwrite paper CO₂ with consequential CO₂
+                            entry['co2_abated_mmt'] = round(consequential_co2, 4)
+                            md['paper_co2_mmt'] = round(buyer_twh * (threshold / 100) * fossil_rate, 4)
+
                             dispatch_count += 1
                         except Exception:
                             pass
