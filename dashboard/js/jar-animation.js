@@ -25,15 +25,25 @@ const STRATEGY_LABELS = {
     '3B': 'Annual\n(Cross-Regional)',
 };
 
-// Resources that are "free credits" — not paid procurement
-const FREE_RESOURCES = new Set([
-    'sss_allocation', 'grid_clean', 'existing_vre', 'existing_nuclear'
-]);
+// Strategy-aware free credit detection.
+// Only sss_allocation and grid_clean are truly free (no payment).
+// existing_nuclear, existing_vre, nuclear_uprate in 2C are PAID tranches above SSS.
+function isFreeResource(resource, strategy) {
+    if (resource === 'sss_allocation') return true;
+    if (resource === 'grid_clean') return true;
+    return false;
+}
 
-// Approximate annual grid demand per ISO (TWh, 2023-2024)
+// Annual grid demand per ISO (TWh) from pipeline_config.py
 const GRID_DEMANDS = {
-    'CAISO': 280, 'ERCOT': 440, 'PJM': 800,
-    'NYISO': 165, 'NEISO': 125, 'MISO': 620, 'SPP': 260,
+    'CAISO': 224, 'ERCOT': 488, 'PJM': 843,
+    'NYISO': 152, 'NEISO': 115, 'MISO': 660, 'SPP': 296,
+};
+
+// Fossil average emission rates (tCO₂/MWh) for computing real grid impact
+const FOSSIL_EMISSION_RATES = {
+    'CAISO': 0.43, 'ERCOT': 0.44, 'PJM': 0.53,
+    'NYISO': 0.38, 'NEISO': 0.38, 'MISO': 0.58, 'SPP': 0.53,
 };
 
 function getResourceColor(resource) {
@@ -43,6 +53,7 @@ function getResourceColor(resource) {
         'ccs': '#64748B', 'battery': '#C4B5FD', 'storage': '#EF4444',
         'ldes': '#E91E63', 'green_h2': '#10B981', 'geothermal': '#D97706',
         'new_vre': '#4ADE80', 'new_build_uprate': '#818CF8',
+        'existing_vre': '#86EFAC', 'existing_nuclear': '#A5B4FC',
     };
     if (typeof RESOURCE_COLORS !== 'undefined') {
         const rc = RESOURCE_COLORS;
@@ -70,6 +81,7 @@ function getResourceLabel(key) {
         'ccs': 'CCS-CCGT', 'battery': 'Battery', 'storage': 'Storage',
         'ldes': 'LDES', 'green_h2': 'Green H₂', 'geothermal': 'Geothermal',
         'new_vre': 'New VRE', 'new_build_uprate': 'New Uprate',
+        'existing_vre': 'Existing VRE/Hydro', 'existing_nuclear': 'Existing Nuclear',
     };
     return names[key] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
@@ -233,11 +245,12 @@ class Jar {
 
         // Collect paid resources only (skip free credits)
         const items = [];  // {resource, count, isExisting, sourceIso}
+        const strat = this.strategy;
 
         // Existing paid resources (e bucket)
         if (dataRecord.e) {
             for (const [res, twh] of Object.entries(dataRecord.e)) {
-                if (FREE_RESOURCES.has(res) || twh <= 0) continue;
+                if (isFreeResource(res, strat) || twh <= 0) continue;
                 const count = Math.max(1, Math.round(twh / ballTwh));
                 items.push({ resource: res, count, isExisting: true, sourceIso: null, twh });
             }
@@ -246,7 +259,7 @@ class Jar {
         // New-build resources (n bucket)
         if (dataRecord.n) {
             for (const [res, twh] of Object.entries(dataRecord.n)) {
-                if (FREE_RESOURCES.has(res) || twh <= 0) continue;
+                if (isFreeResource(res, strat) || twh <= 0) continue;
                 const count = Math.max(1, Math.round(twh / ballTwh));
                 items.push({ resource: res, count, isExisting: false, sourceIso: null, twh });
             }
@@ -577,16 +590,16 @@ class JarGrid {
     /**
      * Sum paid TWh from a data record (excluding free credits)
      */
-    _sumPaidTwh(record) {
+    _sumPaidTwh(record, strategy) {
         let total = 0;
         if (record.e) {
             for (const [res, twh] of Object.entries(record.e)) {
-                if (!FREE_RESOURCES.has(res) && twh > 0) total += twh;
+                if (!isFreeResource(res, strategy) && twh > 0) total += twh;
             }
         }
         if (record.n) {
             for (const [res, twh] of Object.entries(record.n)) {
-                if (!FREE_RESOURCES.has(res) && twh > 0) total += twh;
+                if (!isFreeResource(res, strategy) && twh > 0) total += twh;
             }
         }
         if (record.x) {
@@ -602,10 +615,8 @@ class JarGrid {
     _updateData() {
         if (!this.data) return;
 
-        // First pass: find all records and compute max paid TWh for global ball sizing
+        // First pass: find all records
         const records = [];
-        let maxPaidTwh = 0;
-
         for (const jar of this.jars) {
             const stratData = this.data.data[jar.strategy];
             if (!stratData) { records.push(null); continue; }
@@ -617,47 +628,61 @@ class JarGrid {
             const tk = this._findClosestKey(Object.keys(isoData[pk]), this.threshold);
             if (!tk) { records.push(null); continue; }
 
-            const record = isoData[pk][tk];
-            records.push(record);
-
-            if (record) {
-                const paidTwh = this._sumPaidTwh(record);
-                if (paidTwh > maxPaidTwh) maxPaidTwh = paidTwh;
-            }
+            records.push(isoData[pk][tk]);
         }
 
-        // Compute ball TWh: target ~40 balls for the most-filled jar
-        const TARGET_MAX_BALLS = 45;
-        const ballTwh = maxPaidTwh > 0 ? maxPaidTwh / TARGET_MAX_BALLS : 1;
-
-        // Second pass: set balls on each jar
-        let totalCO2 = 0;
-        let totalBuyerDemand = 0;
-
+        // Ball sizing: 1 ball = 1% of the ISO's grid demand
+        // This makes cross-ISO comparison meaningful — 10 balls = 10% of grid
         for (let i = 0; i < this.jars.length; i++) {
             const jar = this.jars[i];
             const record = records[i];
+            const ballTwh = (GRID_DEMANDS[jar.iso] || 300) * 0.01;  // 1% of grid
             jar.setBalls(record, ballTwh);
-
-            if (record) {
-                totalCO2 += record.co2 || 0;
-                totalBuyerDemand += record.bt || 0;
-            }
         }
 
-        // Fire stats callback (deployment-focused, no cost)
+        // Fire stats callback
         if (this.onStatsUpdate) {
-            // Count total paid TWh across all jars for current strategy
-            let totalPaidTwh = 0;
-            for (let i = 0; i < records.length; i++) {
-                if (records[i]) totalPaidTwh += this._sumPaidTwh(records[i]);
+            let totalPaidTwh = 0, totalCO2 = 0;
+            let totalRealCO2 = 0;  // Actual fossil displacement
+            for (let i = 0; i < this.jars.length; i++) {
+                const jar = this.jars[i];
+                const record = records[i];
+                if (!record) continue;
+                totalPaidTwh += this._sumPaidTwh(record, jar.strategy);
+                totalCO2 += record.co2 || 0;
+
+                // Compute real CO₂ displacement: new-build TWh × fossil emission rate
+                const newTwh = this._sumNewBuildTwh(record, jar.strategy, jar.iso);
+                totalRealCO2 += newTwh * (FOSSIL_EMISSION_RATES[jar.iso] || 0.45);
             }
             this.onStatsUpdate({
                 totalPaidTwh,
                 totalCO2Mt: totalCO2,
-                ballTwh,
+                totalRealCO2Mt: totalRealCO2,
             });
         }
+    }
+
+    /**
+     * Sum new-build TWh only (for computing actual fossil displacement).
+     * Excludes free credits AND existing paid tranches (they don't displace new fossil).
+     * Cross-ISO resources are always new-build.
+     */
+    _sumNewBuildTwh(record, strategy, iso) {
+        let total = 0;
+        if (record.n) {
+            for (const [res, twh] of Object.entries(record.n)) {
+                if (!isFreeResource(res, strategy) && twh > 0) total += twh;
+            }
+        }
+        if (record.x) {
+            for (const [srcIso, resources] of Object.entries(record.x)) {
+                for (const twh of Object.values(resources)) {
+                    if (twh > 0) total += twh;
+                }
+            }
+        }
+        return total;
     }
 
     _startAnimation() {
@@ -830,7 +855,7 @@ class JarGrid {
         html += '<div class="deployment-tooltip-breakdown">';
 
         if (data.e) {
-            const paidExisting = Object.entries(data.e).filter(([r]) => !FREE_RESOURCES.has(r));
+            const paidExisting = Object.entries(data.e).filter(([r]) => !isFreeResource(r, jar.strategy));
             if (paidExisting.length > 0) {
                 html += '<div class="tooltip-section-label">Existing Paid</div>';
                 for (const [res, twh] of paidExisting) {
@@ -845,7 +870,7 @@ class JarGrid {
         }
 
         if (data.n) {
-            const paidNew = Object.entries(data.n).filter(([r]) => !FREE_RESOURCES.has(r));
+            const paidNew = Object.entries(data.n).filter(([r]) => !isFreeResource(r, jar.strategy));
             if (paidNew.length > 0) {
                 html += '<div class="tooltip-section-label">New Build</div>';
                 for (const [res, twh] of paidNew) {
@@ -875,10 +900,10 @@ class JarGrid {
 
         html += '</div>';
 
-        // CO2 info
+        // CO2 info — co2 is in MtCO₂
         if (data.co2 > 0) {
             html += `<div class="deployment-tooltip-footer">
-                CO₂ reduced: ${(data.co2 * 1000).toFixed(1)} ktCO₂
+                CO₂ reduced: ${data.co2.toFixed(1)} MtCO₂
                 ${data.co2r ? `(${data.co2r}% of baseline)` : ''}
             </div>`;
         }
@@ -910,7 +935,7 @@ class JarGrid {
         const stats = {};
         for (const strat of STRATEGIES) {
             let totalPaid = 0, totalNew = 0, totalCross = 0, totalExisting = 0;
-            let totalCO2 = 0, totalBaseline = 0;
+            let totalCO2 = 0, totalBaseline = 0, totalRealCO2 = 0;
             const resourceBreakdown = { existing: {}, new: {} };
 
             for (const jar of this.jars) {
@@ -919,27 +944,34 @@ class JarGrid {
 
                 if (d.e) {
                     for (const [r, t] of Object.entries(d.e)) {
-                        if (FREE_RESOURCES.has(r) || t <= 0) continue;
+                        if (isFreeResource(r, strat) || t <= 0) continue;
                         totalExisting += t;
                         resourceBreakdown.existing[r] = (resourceBreakdown.existing[r] || 0) + t;
                     }
                 }
                 if (d.n) {
                     for (const [r, t] of Object.entries(d.n)) {
-                        if (FREE_RESOURCES.has(r) || t <= 0) continue;
+                        if (isFreeResource(r, strat) || t <= 0) continue;
                         totalNew += t;
                         resourceBreakdown.new[r] = (resourceBreakdown.new[r] || 0) + t;
                     }
                 }
                 if (d.x) {
-                    for (const resources of Object.values(d.x)) {
-                        for (const t of Object.values(resources)) {
-                            if (t > 0) totalCross += t;
+                    for (const [srcIso, resources] of Object.entries(d.x)) {
+                        for (const [r, t] of Object.entries(resources)) {
+                            if (t > 0) {
+                                totalCross += t;
+                                resourceBreakdown.new[r] = (resourceBreakdown.new[r] || 0) + t;
+                            }
                         }
                     }
                 }
                 totalCO2 += d.co2 || 0;
                 totalBaseline += d.bl || 0;
+
+                // Real CO₂: new-build TWh × fossil emission rate (actual grid impact)
+                const newTwh = this._sumNewBuildTwh(d, strat, jar.iso);
+                totalRealCO2 += newTwh * (FOSSIL_EMISSION_RATES[jar.iso] || 0.45);
             }
 
             totalPaid = totalExisting + totalNew + totalCross;
@@ -950,6 +982,7 @@ class JarGrid {
                 crossTwh: totalCross,
                 totalTwh: totalPaid,
                 totalCO2Mt: totalCO2,
+                totalRealCO2Mt: totalRealCO2,
                 totalBaselineMt: totalBaseline,
                 co2ReductionPct: totalBaseline > 0 ? (totalCO2 / totalBaseline * 100) : 0,
                 resourceBreakdown,

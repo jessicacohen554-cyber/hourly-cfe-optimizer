@@ -434,7 +434,7 @@ body { background: var(--bg-page); }
             <div class="chart-container"><canvas id="chartProcurement"></canvas></div>
         </div>
         <div class="agg-chart-card">
-            <h3>CO₂ Reduced by Strategy (ktCO₂)</h3>
+            <h3>Fossil Generation Displaced (MtCO₂)</h3>
             <div class="chart-container"><canvas id="chartCO2"></canvas></div>
         </div>
     </div>
@@ -523,7 +523,17 @@ body { background: var(--bg-page); }
             <div class="chart-container"><canvas id="chartLearning"></canvas></div>
         </div>
 
-        <p>The critical mass threshold — the participation level at which learning curves bend costs enough to make firm clean MAC-justified against DAC/SCC benchmarks — varies by technology. For nuclear SMRs, it's approximately 15–20% C&I participation at 90%+ targets. For advanced CCS, it's lower (~10%) due to existing industrial learning.</p>
+        <p>The critical mass threshold — the participation level at which learning curves bend costs enough to make firm clean MAC-justified against DAC/SCC benchmarks — varies by technology and strategy.</p>
+
+        <div class="story-chart-wrap">
+            <h4 style="text-align:center;font-family:var(--font-heading);color:var(--navy);margin-bottom:8px;">
+                When Do Strategies Hit Critical Mass?
+            </h4>
+            <p style="text-align:center;font-size:0.85rem;color:#64748B;margin-bottom:12px;">
+                Participation × CO₂ target combinations where aggregate firm clean demand crosses technology doubling thresholds
+            </p>
+            <div class="chart-container-lg"><canvas id="chartCriticalMass"></canvas></div>
+        </div>
 
         <div class="callout">
             <strong>The virtuous cycle:</strong> Enough buyers choosing hourly matching → enough firm clean demand → cost curves bend via Wright's Law → firm clean becomes competitive → MAC stays below DAC/SCC → deeper decarbonization becomes affordable → more buyers join. The question is whether enough corporate buyers choose the strategy that initiates this cycle.
@@ -616,7 +626,7 @@ body { background: var(--bg-page); }
 
     grid.onStatsUpdate = function(stats) {
         document.getElementById('chipPaid').textContent = stats.totalPaidTwh.toFixed(0) + ' TWh';
-        document.getElementById('chipCO2').textContent = (stats.totalCO2Mt * 1000).toFixed(0) + ' ktCO₂';
+        document.getElementById('chipCO2').textContent = stats.totalRealCO2Mt.toFixed(1) + ' MtCO₂ displaced';
     };
 
     if (typeof DEPLOYMENT_DATA !== 'undefined') {
@@ -743,7 +753,7 @@ body { background: var(--bg-page); }
     }
 
     const chartProcurement = makeStackedBarChart('chartProcurement');
-    const chartCO2 = makeBarChart('chartCO2', 'CO₂ Abated', 'ktCO₂');
+    const chartCO2 = makeBarChart('chartCO2', 'Fossil Displaced', 'MtCO₂');
 
     function updateCharts() {
         const stats = grid.getAggregateStats();
@@ -756,7 +766,7 @@ body { background: var(--bg-page); }
             chartProcurement.data.datasets[1].data[i] = s.newTwh;
             chartProcurement.data.datasets[2].data[i] = s.crossTwh;
 
-            chartCO2.data.datasets[0].data[i] = s.totalCO2Mt * 1000;  // to ktCO₂
+            chartCO2.data.datasets[0].data[i] = Math.round(s.totalRealCO2Mt * 10) / 10;  // Actual fossil displaced (MtCO₂)
         }
 
         chartProcurement.update();
@@ -866,7 +876,7 @@ body { background: var(--bg-page); }
         const ctx = document.getElementById('chartFirmClean');
         if (!ctx) return;
 
-        const firmResources = ['clean_firm', 'nuclear_uprate', 'ccs', 'ldes', 'storage'];
+        const firmResources = ['clean_firm', 'nuclear_uprate', 'ccs', 'ldes', 'storage', 'existing_nuclear'];
         const data = [];
 
         for (const strat of STRATEGIES_LIST) {
@@ -1006,11 +1016,142 @@ body { background: var(--bg-page); }
         });
     }
 
+    // Chart: Critical Mass Contour — when does each strategy cross technology doubling thresholds?
+    function buildCriticalMassChart() {
+        const ctx = document.getElementById('chartCriticalMass');
+        if (!ctx) return;
+
+        // Wright's Law first-doubling thresholds (from step10_smartargets.py)
+        // Starting cumulative GW → need to ADD this many GW for first doubling
+        // nuclear: 2 GW base → 2 GW new = 15.8 TWh at 90% CF
+        // ccs: 0.3 GW base → 0.3 GW new = 2.2 TWh at 85% CF
+        // ldes: 0.01 GW base → 0.01 GW new = negligible
+        const DOUBLING_TWH = { nuclear: 15.8, ccs: 2.2 };
+
+        const firmResources = ['clean_firm', 'nuclear_uprate', 'ccs', 'ldes', 'storage', 'existing_nuclear'];
+        const participations = [2, 5, 10, 20, 30, 50, 80];
+        const thresholds = [50, 60, 70, 80, 85, 90, 95, 99];
+
+        // For each strategy, compute firm clean TWh at each participation × threshold
+        const strategyData = {};
+        for (const strat of ['1A', '2A', '2C', '3A']) {
+            strategyData[strat] = [];
+            const stratD = DEPLOYMENT_DATA.data[strat];
+            if (!stratD) continue;
+
+            for (const part of participations) {
+                let firmTwh = 0;
+                for (const iso of ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']) {
+                    const isoD = stratD[iso];
+                    if (!isoD) continue;
+                    // Find closest participation key
+                    const partKeys = Object.keys(isoD);
+                    let pk = partKeys.find(k => parseInt(k) === part) || partKeys[0];
+                    const partD = isoD[pk] || {};
+
+                    // Find closest threshold key
+                    const thrKeys = Object.keys(partD);
+                    let tk = thrKeys.find(k => parseFloat(k) === 90) || thrKeys[thrKeys.length - 1];
+                    const entry = partD[tk] || {};
+
+                    for (const bucket of ['e', 'n']) {
+                        if (!entry[bucket]) continue;
+                        for (const [res, twh] of Object.entries(entry[bucket])) {
+                            if (firmResources.includes(res) && !isFreeResource(res, strat)) firmTwh += twh;
+                        }
+                    }
+                    if (entry.x) {
+                        for (const resources of Object.values(entry.x)) {
+                            for (const [res, twh] of Object.entries(resources)) {
+                                if (firmResources.includes(res)) firmTwh += twh;
+                            }
+                        }
+                    }
+                }
+                strategyData[strat].push(Math.round(firmTwh * 10) / 10);
+            }
+        }
+
+        // Nuclear doubling line (horizontal reference)
+        const nuclearLine = participations.map(() => DOUBLING_TWH.nuclear);
+
+        const datasets = [
+            {
+                label: 'Hourly New-Build (2A)',
+                data: strategyData['2A'],
+                borderColor: STRAT_COLORS['2A'],
+                backgroundColor: STRAT_COLORS['2A'] + '20',
+                borderWidth: 2.5, fill: false, tension: 0.3, pointRadius: 4,
+            },
+            {
+                label: 'Hourly SSS+Tranches (2C)',
+                data: strategyData['2C'],
+                borderColor: STRAT_COLORS['2C'],
+                backgroundColor: STRAT_COLORS['2C'] + '20',
+                borderWidth: 2.5, fill: false, tension: 0.3, pointRadius: 4,
+            },
+            {
+                label: 'Consequential (1A)',
+                data: strategyData['1A'],
+                borderColor: STRAT_COLORS['1A'],
+                backgroundColor: STRAT_COLORS['1A'] + '20',
+                borderWidth: 2.5, fill: false, tension: 0.3, pointRadius: 4,
+            },
+            {
+                label: 'Annual (3A)',
+                data: strategyData['3A'],
+                borderColor: STRAT_COLORS['3A'],
+                backgroundColor: STRAT_COLORS['3A'] + '20',
+                borderWidth: 2.5, fill: false, tension: 0.3, pointRadius: 4,
+            },
+            {
+                label: 'Nuclear SMR 1st Doubling (2 GW)',
+                data: nuclearLine,
+                borderColor: '#6366F1',
+                borderWidth: 2, borderDash: [8, 4],
+                pointRadius: 0, fill: false,
+            },
+        ];
+
+        new Chart(ctx.getContext('2d'), {
+            type: 'line',
+            data: { labels: participations.map(p => p + '%'), datasets },
+            options: {
+                ...chartOpts,
+                plugins: {
+                    legend: { display: true, position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+                    title: {
+                        display: true,
+                        text: 'Aggregate Firm Clean Demand at 90% CO₂ Target by Participation',
+                        font: { family: "'Space Grotesk'", size: 13, weight: 600 }
+                    },
+                    annotation: {
+                        annotations: {
+                            nuclearLabel: {
+                                type: 'label',
+                                xValue: participations.length - 1,
+                                yValue: DOUBLING_TWH.nuclear + 3,
+                                content: 'Nuclear 1st doubling',
+                                font: { size: 10, style: 'italic' },
+                                color: '#6366F1',
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { ...chartOpts.scales.x, title: { display: true, text: 'C&I Participation', font: { size: 11 } } },
+                    y: { ...chartOpts.scales.y, title: { display: true, text: 'Aggregate Firm Clean TWh', font: { size: 11 } }, beginAtZero: true }
+                }
+            }
+        });
+    }
+
     // Build narrative charts after data loads
     setTimeout(() => {
         buildCrossFlowChart();
         buildFirmCleanChart();
         buildLearningChart();
+        buildCriticalMassChart();
     }, 500);
 
     // ═════════════════════════════════════════════════════════════════════════
