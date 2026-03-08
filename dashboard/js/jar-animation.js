@@ -668,6 +668,7 @@ class JarGrid {
         // Interaction
         this.hoveredJar = null;
         this.hoveredBall = null;
+        this.showCrossIsoGlow = false;  // Cross-ISO glow OFF by default
 
         this._boundMouseMove = this._onMouseMove.bind(this);
         this._boundMouseLeave = this._onMouseLeave.bind(this);
@@ -826,7 +827,7 @@ class JarGrid {
             // Cross-ISO flows for THIS jar's ISO as source
             const crossFlows = crossFlowsByStrategy[jar.strategy][jar.iso] || null;
 
-            jar.setBalls(record, ballTwh, bl, crossFlows);
+            jar.setBalls(record, ballTwh, bl, this.showCrossIsoGlow ? crossFlows : null);
         }
 
         // Fire stats callback
