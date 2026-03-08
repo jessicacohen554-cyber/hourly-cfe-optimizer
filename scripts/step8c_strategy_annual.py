@@ -38,7 +38,8 @@ from procurement_utils import (
     get_lcoe, get_ppa_price, get_learning_adjusted_lcoe, get_learning_adjusted_ppa,
     get_wholesale_price, estimate_lmp_at_clean_pct,
     get_emission_rate,
-    get_existing_clean_twh, get_sss_twh,
+    get_existing_clean_twh, get_sss_twh, get_merchant_clean_twh,
+    build_newbuild_only_tranches, get_resource_ppa_price,
     make_strategy_result, build_25yr_trajectory,
     save_results_json,
     UPRATE_CAP_TWH, EXISTING_EAC_PRICE,
@@ -142,17 +143,11 @@ def get_rec_scarcity_mult(participation):
 def compute_strategy_3a(iso, year, threshold, participation_pct,
                          growth_level='Medium', scenario='A',
                          level='Medium', ppa_level='Medium', **kwargs):
-    """Strategy 3A: Annual matching, same-ISO, SSS + 4-pool tranches.
+    """Strategy 3A: Annual matching, same-ISO, ALL NEW BUILD.
 
-    Same tranche structure as 2C (SSS allocation → existing nuclear → uprates →
-    existing VRE/hydro → new-build) but with annual volumetric matching
-    (no hourly over-procurement penalty).
+    No existing clean credit. Uses new-build-only tranches (uprate → VRE → firm)
+    with annual volumetric matching (no hourly over-procurement penalty).
     """
-    from procurement_utils import (
-        get_demand_twh_at_year, build_procurement_tranches,
-        get_existing_nuclear_eac_price, GRID_MIX_SHARES,
-    )
-
     buyer_demand = get_buyer_demand_twh(iso, year, participation_pct, growth_level)
     if buyer_demand <= 0 or threshold <= 0:
         return make_strategy_result('3A', iso, year, threshold, participation_pct,
@@ -161,44 +156,30 @@ def compute_strategy_3a(iso, year, threshold, participation_pct,
     total_demand = get_demand_twh_at_year(iso, year, growth_level)
     target_fraction = min(threshold / 100.0, 1.0)
 
-    # Layer 1: SSS allocation (free)
-    sss_twh = get_sss_twh(iso, year, growth_level)
-    buyer_sss_share = (buyer_demand / total_demand) * sss_twh if total_demand > 0 else 0
-
-    # Total clean needed
+    # No free baseline — all procurement is new-build
     total_clean_needed = buyer_demand * target_fraction
-
-    # Remaining above SSS (annual = no over-procurement penalty, just slack)
-    remaining = max(0, total_clean_needed - buyer_sss_share)
     slack = get_annual_slack(threshold)
-    procurement_twh = remaining * slack
+    procurement_twh = total_clean_needed * slack
 
     if procurement_twh <= 0:
         return make_strategy_result('3A', iso, year, threshold, participation_pct,
-                                     0, 0,
-                                     total_clean_needed * get_emission_rate(iso, 'fossil_average'),
-                                     0,
-                                     metadata={'sss_covers_target': True,
-                                              'sss_share_twh': round(buyer_sss_share, 2)})
+                                     0, 0, 0, 0)
 
-    # Use same 4-pool tranche merit order as 2C
-    tranches = build_procurement_tranches(
-        iso, threshold, year, scenario, level, ppa_level,
-        use_45u=True, use_ctr=False, ctr_value=None,
-        growth_level=growth_level,
+    # New-build-only tranches (no existing nuclear/VRE)
+    tranches = build_newbuild_only_tranches(
+        iso, threshold, year, scenario, level, ppa_level, growth_level,
     )
 
     total_cost = 0.0
     total_procured = 0.0
     resource_breakdown = {}
 
-    # Walk tranches (cheapest first)
-    buyer_share_of_available = (buyer_demand / total_demand) if total_demand > 0 else 0.01
+    buyer_share = (buyer_demand / total_demand) if total_demand > 0 else 0.01
     for tranche in tranches:
         if total_procured >= procurement_twh:
             break
         remaining_need = procurement_twh - total_procured
-        available = tranche['available_twh'] * buyer_share_of_available
+        available = tranche['available_twh'] * buyer_share
         procure = min(remaining_need, available)
 
         cost = procure * tranche['price']
@@ -209,20 +190,11 @@ def compute_strategy_3a(iso, year, threshold, participation_pct,
             'twh': round(procure, 2),
             'price': round(tranche['price'], 1),
             'cost_m': round(cost, 2),
-            'category': tranche['category'],
+            'category': 'new_build',
         }
 
-    # SSS as zero-cost entry
-    resource_breakdown['sss_allocation'] = {
-        'twh': round(buyer_sss_share, 2),
-        'price': 0.0,
-        'cost_m': 0.0,
-        'category': 'sss',
-    }
-
     # CO2 accounting
-    effective_procured = total_procured + buyer_sss_share
-    cost_per_mwh = total_cost / effective_procured if effective_procured > 0 else 0
+    cost_per_mwh = total_cost / total_procured if total_procured > 0 else 0
     emission_rate = get_emission_rate(iso, 'grid_average')
     baseline_co2_mt = buyer_demand * emission_rate
     co2_abated = buyer_demand * target_fraction * emission_rate
@@ -234,7 +206,6 @@ def compute_strategy_3a(iso, year, threshold, participation_pct,
         cost_per_mwh, total_cost, co2_abated, mac,
         resource_mix=resource_breakdown,
         metadata={'annual_slack': round(slack, 3), 'scenario': scenario,
-                  'sss_share_twh': round(buyer_sss_share, 2),
                   'procurement_twh': round(procurement_twh, 2),
                   'baseline_co2_mt': round(baseline_co2_mt, 4),
                   'co2_reduction_pct': round(co2_reduction_pct, 2)},
@@ -372,10 +343,12 @@ def compute_strategy_3b(iso, year, threshold, participation_pct,
 def compute_strategy_3c(iso, year, threshold, participation_pct,
                          growth_level='Medium', scenario='A',
                          level='Medium', ppa_level='Medium', **kwargs):
-    """Strategy 3C: Annual matching, same-ISO, no additionality.
+    """Strategy 3C: Annual matching, same-ISO, 4-pool model (same pools as 2C).
 
-    Existing clean counts. Can purchase unbundled RECs from same-ISO generators.
-    Cheapest same-ISO option but no environmental signal for new build.
+    Pool 1: SSS (free, pro-rata)
+    Pool 2: Non-SSS existing merchant clean (competitive exhaustion)
+    Pool 3: Nuclear uprate
+    Pool 4: New-build (tranche walk for remaining)
     """
     buyer_demand = get_buyer_demand_twh(iso, year, participation_pct, growth_level)
     if buyer_demand <= 0 or threshold <= 0:
@@ -384,58 +357,98 @@ def compute_strategy_3c(iso, year, threshold, participation_pct,
 
     total_demand = get_demand_twh_at_year(iso, year, growth_level)
     target_fraction = min(threshold / 100.0, 1.0)
-    clean_needed = buyer_demand * target_fraction
+    buyer_share = (buyer_demand / total_demand) if total_demand > 0 else 0.01
 
-    # Available existing clean for REC purchase (total existing minus SSS)
-    existing_clean = get_existing_clean_twh(iso)
+    # Pool 1: SSS (free)
     sss_twh = get_sss_twh(iso, year, growth_level)
-    available_existing_recs = max(0, existing_clean - sss_twh)
+    buyer_sss_share = sss_twh * buyer_share
 
-    # Buyer's share of available RECs
-    buyer_share = buyer_demand / total_demand if total_demand > 0 else 0
-    buyer_available_recs = available_existing_recs * buyer_share
+    total_clean_needed = buyer_demand * target_fraction
+    remaining_need = max(0, total_clean_needed - buyer_sss_share)
+    slack = get_annual_slack(threshold)
+    procurement_twh = remaining_need * slack
 
-    # REC pricing with scarcity
-    rec_base = UNBUNDLED_REC_PRICE['same_iso'][iso]
-    rec_scarcity = get_rec_scarcity_mult(participation_pct)
-    rec_price = rec_base * rec_scarcity
+    if procurement_twh <= 0:
+        return make_strategy_result('3C', iso, year, threshold, participation_pct,
+                                     0, 0,
+                                     total_clean_needed * get_emission_rate(iso, 'grid_average'),
+                                     0,
+                                     metadata={'sss_covers_target': True,
+                                              'sss_share_twh': round(buyer_sss_share, 2)})
 
     total_cost = 0.0
+    total_procured = 0.0
     resource_breakdown = {}
+    left = procurement_twh
 
-    # First: buy existing RECs (cheap)
-    recs_purchased = min(clean_needed, buyer_available_recs)
-    if recs_purchased > 0:
-        cost = recs_purchased * rec_price
+    # Pool 2: Non-SSS existing merchant clean (competitive exhaustion)
+    merchant_pool = get_merchant_clean_twh(iso, year, growth_level)
+    merchant_available = merchant_pool * buyer_share
+    merchant_procured = min(left, merchant_available)
+
+    if merchant_procured > 0:
+        eac_price = EXISTING_EAC_PRICE.get(level, 5.0)
+        cost = merchant_procured * eac_price
         total_cost += cost
-        resource_breakdown['existing_recs'] = {
-            'twh': round(recs_purchased, 2),
-            'price': round(rec_price, 1),
+        total_procured += merchant_procured
+        left -= merchant_procured
+        resource_breakdown['existing_merchant'] = {
+            'twh': round(merchant_procured, 2),
+            'price': round(eac_price, 1),
             'cost_m': round(cost, 2),
+            'category': 'existing',
         }
 
-    # Remaining: need new-build (even without additionality requirement,
-    # if existing RECs are exhausted, new build is needed)
-    remaining = max(0, clean_needed - recs_purchased)
-    if remaining > 0:
-        slack = get_annual_slack(threshold)
-        new_build_twh = remaining * slack
+    # Pool 3: Nuclear uprate
+    if left > 0:
+        uprate_twh = UPRATE_CAP_TWH.get(iso, 0) * buyer_share
+        uprate_procured = min(left, uprate_twh)
+        if uprate_procured > 0:
+            price = get_resource_ppa_price('nuclear_uprate', iso, threshold, year, scenario, level, ppa_level)
+            cost = uprate_procured * price
+            total_cost += cost
+            total_procured += uprate_procured
+            left -= uprate_procured
+            resource_breakdown['nuclear_uprate'] = {
+                'twh': round(uprate_procured, 2),
+                'price': round(price, 1),
+                'cost_m': round(cost, 2),
+                'category': 'new_build',
+            }
 
-        solar_ppa = get_learning_adjusted_ppa('solar', iso, threshold, scenario, level, ppa_level)
-        wind_ppa = get_learning_adjusted_ppa('wind', iso, threshold, scenario, level, ppa_level)
-        avg_vre = min(solar_ppa, wind_ppa)
+    # Pool 4: New-build (tranche walk — VRE + firm)
+    if left > 0:
+        tranches = build_newbuild_only_tranches(
+            iso, threshold, year, scenario, level, ppa_level, growth_level,
+        )
+        for tranche in tranches:
+            if total_procured >= procurement_twh:
+                break
+            remaining = procurement_twh - total_procured
+            available = tranche['available_twh'] * buyer_share
+            procure = min(remaining, available)
+            cost = procure * tranche['price']
+            total_cost += cost
+            total_procured += procure
 
-        cost = new_build_twh * avg_vre
-        total_cost += cost
-        resource_breakdown['new_build_vre'] = {
-            'twh': round(new_build_twh, 2),
-            'price': round(avg_vre, 1),
-            'cost_m': round(cost, 2),
-        }
+            resource_breakdown[tranche['source']] = {
+                'twh': round(procure, 2),
+                'price': round(tranche['price'], 1),
+                'cost_m': round(cost, 2),
+                'category': 'new_build',
+            }
 
-    # CO2 accounting: (total load - total procured) × grid avg
-    total_procured = recs_purchased + remaining
-    cost_per_mwh = total_cost / total_procured if total_procured > 0 else 0
+    # SSS as zero-cost entry (Pool 1)
+    resource_breakdown['sss_allocation'] = {
+        'twh': round(buyer_sss_share, 2),
+        'price': 0.0,
+        'cost_m': 0.0,
+        'category': 'sss',
+    }
+
+    # CO2 accounting
+    effective_procured = total_procured + buyer_sss_share
+    cost_per_mwh = total_cost / effective_procured if effective_procured > 0 else 0
     emission_rate = get_emission_rate(iso, 'grid_average')
     baseline_co2_mt = buyer_demand * emission_rate
     co2_abated = buyer_demand * target_fraction * emission_rate
@@ -446,7 +459,8 @@ def compute_strategy_3c(iso, year, threshold, participation_pct,
         '3C', iso, year, threshold, participation_pct,
         cost_per_mwh, total_cost, co2_abated, mac,
         resource_mix=resource_breakdown,
-        metadata={'rec_price': round(rec_price, 2), 'scarcity_mult': round(rec_scarcity, 2),
+        metadata={'sss_share_twh': round(buyer_sss_share, 2),
+                  'merchant_clean_twh': round(merchant_procured, 2),
                   'scenario': scenario,
                   'baseline_co2_mt': round(baseline_co2_mt, 4),
                   'co2_reduction_pct': round(co2_reduction_pct, 2)},
@@ -461,78 +475,148 @@ def compute_strategy_3c(iso, year, threshold, participation_pct,
 def compute_strategy_3d(iso, year, threshold, participation_pct,
                          growth_level='Medium', scenario='A',
                          level='Medium', ppa_level='Medium', **kwargs):
-    """Strategy 3D: Annual matching, cross-regional, no additionality.
+    """Strategy 3D: Annual matching, cross-regional, 4-pool model.
 
-    Cheapest option — unbundled RECs from anywhere in the US.
-    This is the current "status quo" for most corporate procurement.
-    Very cheap but near-zero environmental impact (existing generators
-    already running, no signal for new build).
+    Same 4-pool structure as 2C/3C but cross-regional:
+    Pool 1: SSS (same-ISO, free)
+    Pool 2: Cross-ISO merchant clean (competitive exhaustion, cheapest first)
+    Pool 3: Cross-ISO uprates
+    Pool 4: Cross-ISO new-build (cheapest $/MWh across regions)
     """
     buyer_demand = get_buyer_demand_twh(iso, year, participation_pct, growth_level)
     if buyer_demand <= 0 or threshold <= 0:
         return make_strategy_result('3D', iso, year, threshold, participation_pct,
                                      0, 0, 0, 0)
 
+    total_demand = get_demand_twh_at_year(iso, year, growth_level)
     target_fraction = min(threshold / 100.0, 1.0)
-    clean_needed = buyer_demand * target_fraction
+    buyer_share = (buyer_demand / total_demand) if total_demand > 0 else 0.01
 
-    # Cross-regional RECs at national floor price
-    rec_base = UNBUNDLED_REC_PRICE['cross_regional']
-    rec_scarcity = get_rec_scarcity_mult(participation_pct)
-    rec_price = rec_base * rec_scarcity
+    # Pool 1: SSS (same-ISO, free)
+    sss_twh = get_sss_twh(iso, year, growth_level)
+    buyer_sss_share = sss_twh * buyer_share
 
-    # Total available cross-regional RECs (all ISOs' existing clean minus SSS)
-    total_available_recs = 0
-    for src_iso in ISOS:
-        ec = get_existing_clean_twh(src_iso)
-        sss = get_sss_twh(src_iso, year, growth_level)
-        total_available_recs += max(0, ec - sss)
+    total_clean_needed = buyer_demand * target_fraction
+    remaining_need = max(0, total_clean_needed - buyer_sss_share)
+    slack = get_annual_slack(threshold)
+    procurement_twh = remaining_need * slack
 
-    # All buyers compete for same REC pool
-    # Simplified: assume buyer can get their share
+    if procurement_twh <= 0:
+        return make_strategy_result('3D', iso, year, threshold, participation_pct,
+                                     0, 0,
+                                     total_clean_needed * get_emission_rate(iso, 'grid_average'),
+                                     0,
+                                     metadata={'sss_covers_target': True,
+                                              'sss_share_twh': round(buyer_sss_share, 2)})
+
     total_cost = 0.0
+    total_procured = 0.0
     resource_breakdown = {}
+    left = procurement_twh
 
-    recs_purchased = min(clean_needed, total_available_recs * 0.05)  # Assume max 5% of pool
-    if recs_purchased > 0:
-        cost = recs_purchased * rec_price
+    # Pool 2: Cross-ISO merchant clean (cheapest across all ISOs)
+    merchant_sources = []
+    for src_iso in ISOS:
+        m_twh = get_merchant_clean_twh(src_iso, year, growth_level)
+        src_demand = get_demand_twh_at_year(src_iso, year, growth_level)
+        m_available = m_twh * buyer_share  # competitive share
+        eac_price = EXISTING_EAC_PRICE.get(level, 5.0)
+        if m_available > 0:
+            merchant_sources.append((src_iso, m_available, eac_price))
+
+    merchant_sources.sort(key=lambda s: s[2])  # cheapest first
+
+    for src_iso, available, price in merchant_sources:
+        if left <= 0:
+            break
+        procure = min(left, available)
+        cost = procure * price
         total_cost += cost
-        resource_breakdown['cross_regional_recs'] = {
-            'twh': round(recs_purchased, 2),
-            'price': round(rec_price, 1),
+        total_procured += procure
+        left -= procure
+
+        key = f'{src_iso}_existing_merchant'
+        resource_breakdown[key] = {
+            'twh': round(procure, 2),
+            'price': round(price, 1),
             'cost_m': round(cost, 2),
+            'category': 'existing',
         }
 
-    # If RECs exhausted, spillover to cheapest new-build anywhere
-    remaining = max(0, clean_needed - recs_purchased)
-    if remaining > 0:
-        # Cheapest cross-regional VRE (SPP wind is typically cheapest)
-        cheapest_price = float('inf')
-        cheapest_src = 'SPP'
+    # Pool 3: Cross-ISO uprates
+    if left > 0:
         for src_iso in ISOS:
-            wind = get_learning_adjusted_ppa('wind', src_iso, threshold, scenario, level, ppa_level)
+            if left <= 0:
+                break
+            uprate_twh = UPRATE_CAP_TWH.get(src_iso, 0) * buyer_share
+            if uprate_twh <= 0:
+                continue
+            procure = min(left, uprate_twh)
+            price = get_resource_ppa_price('nuclear_uprate', src_iso, threshold, year, scenario, level, ppa_level)
+            cost = procure * price
+            total_cost += cost
+            total_procured += procure
+            left -= procure
+
+            key = f'{src_iso}_nuclear_uprate'
+            resource_breakdown[key] = {
+                'twh': round(procure, 2),
+                'price': round(price, 1),
+                'cost_m': round(cost, 2),
+                'category': 'new_build',
+            }
+
+    # Pool 4: Cross-ISO new-build (cheapest $/MWh across regions)
+    if left > 0:
+        nb_sources = []
+        for src_iso in ISOS:
             solar = get_learning_adjusted_ppa('solar', src_iso, threshold, scenario, level, ppa_level)
-            p = min(wind, solar)
-            if p < cheapest_price:
-                cheapest_price = p
-                cheapest_src = src_iso
+            wind = get_learning_adjusted_ppa('wind', src_iso, threshold, scenario, level, ppa_level)
+            src_demand = BASE_DEMAND_TWH[src_iso]
+            nb_sources.append((src_iso, 'solar', solar, src_demand * 0.30 * buyer_share))
+            nb_sources.append((src_iso, 'wind', wind, src_demand * 0.25 * buyer_share))
 
-        cost = remaining * cheapest_price
-        total_cost += cost
-        resource_breakdown[f'{cheapest_src}_new_vre'] = {
-            'twh': round(remaining, 2),
-            'price': round(cheapest_price, 1),
-            'cost_m': round(cost, 2),
-        }
+            if threshold >= 85:
+                firm_price = get_resource_ppa_price('clean_firm', src_iso, threshold, year, scenario, level, ppa_level)
+                nb_sources.append((src_iso, 'clean_firm', firm_price, src_demand * 0.10 * buyer_share))
 
-    # CO2 accounting: (total load - total procured) × grid avg
-    # For 3D (no additionality), apply discount since existing generators already running
-    total_procured = clean_needed
-    cost_per_mwh = total_cost / total_procured if total_procured > 0 else 0
+        nb_sources.sort(key=lambda s: s[2])
+
+        for src_iso, resource, price, available in nb_sources:
+            if left <= 0:
+                break
+            procure = min(left, available)
+            cost = procure * price
+            total_cost += cost
+            total_procured += procure
+            left -= procure
+
+            key = f'{src_iso}_{resource}'
+            if key in resource_breakdown:
+                resource_breakdown[key]['twh'] = round(resource_breakdown[key]['twh'] + procure, 2)
+                resource_breakdown[key]['cost_m'] = round(resource_breakdown[key]['cost_m'] + cost, 2)
+            else:
+                resource_breakdown[key] = {
+                    'twh': round(procure, 2),
+                    'price': round(price, 1),
+                    'cost_m': round(cost, 2),
+                    'category': 'new_build',
+                }
+
+    # SSS as zero-cost entry (Pool 1)
+    resource_breakdown['sss_allocation'] = {
+        'twh': round(buyer_sss_share, 2),
+        'price': 0.0,
+        'cost_m': 0.0,
+        'category': 'sss',
+    }
+
+    # CO2 accounting
+    effective_procured = total_procured + buyer_sss_share
+    cost_per_mwh = total_cost / effective_procured if effective_procured > 0 else 0
     emission_rate = get_emission_rate(iso, 'grid_average')
     baseline_co2_mt = buyer_demand * emission_rate
-    additionality_discount = 0.15 if recs_purchased > 0 else 0.80
-    co2_abated = buyer_demand * target_fraction * emission_rate * additionality_discount
+    co2_abated = buyer_demand * target_fraction * emission_rate
     mac = (total_cost * 1e6) / (co2_abated * 1e6) if co2_abated > 0 else None
     co2_reduction_pct = (co2_abated / baseline_co2_mt * 100) if baseline_co2_mt > 0 else 0
 
@@ -541,9 +625,7 @@ def compute_strategy_3d(iso, year, threshold, participation_pct,
         cost_per_mwh, total_cost, co2_abated, mac,
         resource_mix=resource_breakdown,
         metadata={
-            'rec_price': round(rec_price, 2),
-            'scarcity_mult': round(rec_scarcity, 2),
-            'additionality_discount': additionality_discount,
+            'sss_share_twh': round(buyer_sss_share, 2),
             'cross_regional': True,
             'scenario': scenario,
             'baseline_co2_mt': round(baseline_co2_mt, 4),

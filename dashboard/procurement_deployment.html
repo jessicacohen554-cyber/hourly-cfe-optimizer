@@ -288,7 +288,7 @@ body { background: var(--bg-page); }
         <div class="control-group">
             <label>Share of C&I Load Participating</label>
             <div class="slider-row">
-                <input type="range" id="participationSlider" min="0" max="6" step="1" value="2">
+                <input type="range" id="participationSlider" min="0" max="12" step="1" value="1">
                 <span class="slider-value" id="participationValue">10%</span>
             </div>
         </div>
@@ -302,6 +302,9 @@ body { background: var(--bg-page); }
         <div class="stat-chips" id="statChips">
             <div class="stat-chip">Total paid procurement: <span class="chip-val" id="chipPaid">—</span></div>
             <div class="stat-chip">CO₂ reduced: <span class="chip-val" id="chipCO2">—</span></div>
+        </div>
+        <div class="control-group" style="margin-left:auto">
+            <button class="toggle-btn" id="crossIsoToggle" title="Show cross-ISO energy flows as glowing balls">Cross-ISO Flows</button>
         </div>
     </div>
 </div>
@@ -395,7 +398,7 @@ body { background: var(--bg-page); }
     // SLIDER SETUP
     // ═════════════════════════════════════════════════════════════════════════
 
-    const PARTICIPATION_LEVELS = [2, 5, 10, 20, 30, 50, 80];
+    const PARTICIPATION_LEVELS = [5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100];
     const THRESHOLDS = [50, 60, 70, 75, 80, 85, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99];
 
     const partSlider = document.getElementById('participationSlider');
@@ -441,6 +444,13 @@ body { background: var(--bg-page); }
         const t0 = getThreshold();
         thrValue.textContent = t0 >= 99.99 ? '≥99.99%' : t0 + '% CO₂';
     }
+
+    // Cross-ISO glow toggle
+    document.getElementById('crossIsoToggle').addEventListener('click', function() {
+        this.classList.toggle('active');
+        grid.showCrossIsoGlow = this.classList.contains('active');
+        grid._updateData();
+    });
 
     // ═════════════════════════════════════════════════════════════════════════
     // AGGREGATE CHARTS

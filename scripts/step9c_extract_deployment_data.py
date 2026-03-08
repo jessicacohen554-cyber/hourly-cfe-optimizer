@@ -46,11 +46,14 @@ RESOURCE_ALIASES = {
     'green_h2': 'green_h2',
     # 2C tranche names
     'existing_vre_hydro': 'existing_vre',
+    'existing_merchant': 'existing_merchant',
     'new_build_vre': 'new_vre',
     'new_build_solar': 'solar',
     'new_build_wind': 'wind',
     'new_build_firm': 'clean_firm',
     'new_build_storage': 'storage',
+    'battery8': 'battery',
+    'clean_firm': 'clean_firm',
 }
 
 
@@ -153,8 +156,7 @@ def extract_strategy2c(data):
 
 
 def extract_strategy3a(data):
-    """Strategy 3A: SSS + 4-pool tranches (same format as 2C with category field)."""
-    existing = {}
+    """Strategy 3A: All new-build (no existing clean credit)."""
     new = {}
     for key, val in data.items():
         if not isinstance(val, dict):
@@ -162,14 +164,9 @@ def extract_strategy3a(data):
         twh = val.get('twh', 0)
         if twh <= 0:
             continue
-        category = val.get('category', 'new_build')
         _, resource = normalize_resource(key)
-
-        if category in ('existing', 'sss', 'uprate'):
-            existing[resource] = round(existing.get(resource, 0) + twh, 3)
-        else:
-            new[resource] = round(new.get(resource, 0) + twh, 3)
-    return existing, new, {}
+        new[resource] = round(new.get(resource, 0) + twh, 3)
+    return {}, new, {}
 
 
 def extract_strategy3b(data, buyer_iso):
@@ -194,7 +191,7 @@ def extract_strategy3b(data, buyer_iso):
 
 
 def extract_strategy3c(data):
-    """Strategy 3C: same-ISO, no additionality — existing RECs + new build."""
+    """Strategy 3C: same-ISO, 4-pool model (SSS + merchant clean + uprate + new build)."""
     existing = {}
     new = {}
     for key, val in data.items():
@@ -203,9 +200,10 @@ def extract_strategy3c(data):
         twh = val.get('twh', 0)
         if twh <= 0:
             continue
+        category = val.get('category', 'new_build')
         _, resource = normalize_resource(key)
 
-        if 'existing' in key or 'recs' in key.lower():
+        if category in ('existing', 'sss', 'uprate'):
             existing[resource] = round(existing.get(resource, 0) + twh, 3)
         else:
             new[resource] = round(new.get(resource, 0) + twh, 3)
@@ -213,7 +211,7 @@ def extract_strategy3c(data):
 
 
 def extract_strategy3d(data, buyer_iso):
-    """Strategy 3D: cross-regional, no additionality — cheapest RECs from anywhere."""
+    """Strategy 3D: cross-regional, 4-pool model with category field."""
     existing = {}
     new = {}
     cross_iso = {}
@@ -223,24 +221,17 @@ def extract_strategy3d(data, buyer_iso):
         twh = val.get('twh', 0)
         if twh <= 0:
             continue
+        category = val.get('category', 'new_build')
         source_iso, resource = normalize_resource(key)
 
-        if 'recs' in key.lower() or 'existing' in key:
-            # Cross-regional RECs or existing
-            if source_iso and source_iso != buyer_iso:
-                if source_iso not in cross_iso:
-                    cross_iso[source_iso] = {}
-                cross_iso[source_iso][resource] = round(cross_iso[source_iso].get(resource, 0) + twh, 3)
-            else:
-                existing[resource] = round(existing.get(resource, 0) + twh, 3)
+        if source_iso and source_iso != buyer_iso:
+            if source_iso not in cross_iso:
+                cross_iso[source_iso] = {}
+            cross_iso[source_iso][resource] = round(cross_iso[source_iso].get(resource, 0) + twh, 3)
+        elif category in ('existing', 'sss'):
+            existing[resource] = round(existing.get(resource, 0) + twh, 3)
         else:
-            # New-build spillover
-            if source_iso and source_iso != buyer_iso:
-                if source_iso not in cross_iso:
-                    cross_iso[source_iso] = {}
-                cross_iso[source_iso][resource] = round(cross_iso[source_iso].get(resource, 0) + twh, 3)
-            else:
-                new[resource] = round(new.get(resource, 0) + twh, 3)
+            new[resource] = round(new.get(resource, 0) + twh, 3)
     return existing, new, cross_iso
 
 
@@ -310,8 +301,8 @@ def main():
     }
 
     # Key participation levels for the visualization (subset for compact output)
-    KEY_PARTICIPATION = {'2pct', '5pct', '10pct', '15pct', '20pct', '30pct', '40pct', '50pct',
-                          '60pct', '80pct', '85pct', '90pct', '95pct', '100pct'}
+    KEY_PARTICIPATION = {'5pct', '10pct', '15pct', '20pct', '25pct',
+                          '30pct', '40pct', '50pct', '60pct', '70pct', '80pct', '90pct', '100pct'}
     # Key thresholds — skip fine gradations to reduce size
     KEY_THRESHOLDS = {50, 60, 70, 75, 80, 85, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99}
 
