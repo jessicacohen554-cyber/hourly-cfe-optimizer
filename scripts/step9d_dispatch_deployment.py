@@ -152,23 +152,23 @@ def compute_dispatch_metrics(iso, resource_pcts, demand_norm, supply_profiles,
 
 
 def build_grid_resource_pcts(iso, record):
-    """Build resource_pcts dict from grid baseline + procurement record.
+    """Build resource_pcts dict from grid baseline + NEW procurement only.
 
-    Converts TWh procurement amounts to % of total grid demand,
-    layered on top of the existing grid mix shares.
+    Existing claims (record['e']) are already part of the grid baseline
+    (GRID_MIX_SHARES) — they represent accounting claims on existing capacity,
+    not new physical capacity. Only new-build ('n') and cross-ISO ('x')
+    resources add capacity beyond the baseline.
+
+    The 4 pools: SSS, Corporate-Contracted, Merchant Clean are all subsets
+    of existing grid clean. Only Pool 4 (New-Build) adds new capacity.
     """
     demand_twh = REGIONAL_DEMAND_TWH.get(iso, 300)
 
     # Start with grid baseline (existing clean as % of demand)
     pcts = dict(GRID_MIX_SHARES.get(iso, {}))
 
-    # Add procurement (existing claims + new build + cross-ISO)
-    if record.get('e'):
-        for res, twh in record['e'].items():
-            if twh > 0:
-                mapped = _map_resource(res)
-                pcts[mapped] = pcts.get(mapped, 0) + (twh / demand_twh * 100)
-
+    # Only add NEW-BUILD procurement on top of grid baseline
+    # record['e'] is NOT added — it's already in the grid baseline
     if record.get('n'):
         for res, twh in record['n'].items():
             if twh > 0:
