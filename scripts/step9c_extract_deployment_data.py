@@ -349,6 +349,10 @@ def main():
                     # Dispatch-based hourly match score (if available)
                     if 'hourly_match_score' in meta:
                         record['hms'] = round(meta['hourly_match_score'], 1)
+                    if 'curtailment_pct' in meta:
+                        record['curt'] = round(meta['curtailment_pct'], 1)
+                    if 'new_build_fraction' in meta:
+                        record['nbf'] = round(meta['new_build_fraction'], 3)
 
                     part_dict[thr_key] = record
                     total_entries += 1
