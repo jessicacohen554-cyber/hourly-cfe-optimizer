@@ -221,177 +221,181 @@ def _find_sources_by_price(threshold, scenario='A', level='Medium', ppa_level='M
     return sources
 
 
+def compute_all_isos_consequential(year, threshold, participation_pct,
+                                    baseline_type='grid_average',
+                                    growth_level='Medium', scenario='A',
+                                    level='Medium', ppa_level='Medium',
+                                    isos=None):
+    """Compute consequential procurement for ALL buyer ISOs simultaneously.
+
+    Shared queue depletion: all buyer ISOs walk the SAME queue. When a queue
+    step's capacity is consumed by one buyer, it's unavailable to others.
+    Allocation is pro-rata by demand share when multiple buyers need the same step.
+
+    Returns dict {iso: strategy_result_dict}.
+    """
+    if isos is None:
+        isos = ISOS
+
+    # Compute buyer demands and CO2 targets for each ISO
+    buyers = {}
+    for iso in isos:
+        demand = get_buyer_demand_twh(iso, year, participation_pct, growth_level)
+        if demand <= 0 or threshold <= 0:
+            buyers[iso] = {
+                'demand': 0, 'co2_target': 0, 'co2_displaced': 0,
+                'total_cost': 0, 'total_procured': 0, 'resource_mix': {},
+                'emission_rate': 0, 'baseline_co2_mt': 0,
+            }
+            continue
+        emission_rate = get_emission_rate(iso, baseline_type)
+        baseline_co2_mt = demand * emission_rate
+        target_fraction = min(threshold / 100.0, 1.0)
+        co2_target = baseline_co2_mt * target_fraction
+        buyers[iso] = {
+            'demand': demand, 'co2_target': co2_target,
+            'co2_displaced': 0.0, 'total_cost': 0.0, 'total_procured': 0.0,
+            'resource_mix': {}, 'emission_rate': emission_rate,
+            'baseline_co2_mt': baseline_co2_mt,
+        }
+
+    # Walk the shared queue — all ISOs compete for the same steps
+    queue = _load_queue()
+
+    for step in queue:
+        # Find buyers that still need CO2 abatement
+        active = {iso: b for iso, b in buyers.items()
+                  if b['co2_target'] > 0 and b['co2_displaced'] < b['co2_target']}
+        if not active:
+            break
+
+        src_iso = step['iso']
+        delta_res = step.get('delta_resources', {})
+        step_co2 = step.get('co2_displaced_mt', 0)
+        if step_co2 <= 0:
+            continue
+
+        # Total demand from active buyers → pro-rata allocation
+        total_active_demand = sum(b['demand'] for b in active.values())
+        if total_active_demand <= 0:
+            break
+
+        # Each buyer gets a share of this step proportional to their demand
+        for iso, b in active.items():
+            remaining_co2 = b['co2_target'] - b['co2_displaced']
+            # Pro-rata share of this step
+            demand_share = b['demand'] / total_active_demand
+            available_co2 = step_co2 * demand_share
+            use_fraction = min(1.0, remaining_co2 / available_co2) if available_co2 > 0 else 0
+            actual_fraction = demand_share * use_fraction  # fraction of total step this buyer consumes
+
+            for resource, delta_twh in delta_res.items():
+                if delta_twh < 0.5:
+                    continue
+                ppa_resource = _RESOURCE_TO_PPA.get(resource)
+                if ppa_resource is None:
+                    continue
+
+                procure_twh = delta_twh * actual_fraction
+                ppa_price = get_learning_adjusted_ppa(
+                    ppa_resource, src_iso, threshold, scenario, level, ppa_level)
+
+                b['total_cost'] += procure_twh * ppa_price
+                b['total_procured'] += procure_twh
+
+                key = f"{src_iso}_{ppa_resource}"
+                b['resource_mix'][key] = b['resource_mix'].get(key, 0) + procure_twh
+
+            b['co2_displaced'] += available_co2 * use_fraction
+
+    # Fallback for buyers that didn't reach their target
+    for iso, b in buyers.items():
+        if b['co2_target'] <= 0:
+            continue
+        if b['co2_displaced'] < b['co2_target'] * 0.99 and b['total_procured'] > 0:
+            fallback_sources = _find_sources_by_price(threshold, scenario, level, ppa_level)
+            remaining_co2 = b['co2_target'] - b['co2_displaced']
+            for src_iso, resource, price_mwh, available_twh in fallback_sources:
+                if remaining_co2 <= 0:
+                    break
+                src_emission_rate = get_emission_rate(src_iso, 'fossil_average')
+                co2_per_twh = src_emission_rate
+                twh_needed = remaining_co2 / co2_per_twh if co2_per_twh > 0 else 0
+                procure = min(twh_needed, available_twh)
+                b['total_cost'] += procure * price_mwh
+                b['total_procured'] += procure
+                b['co2_displaced'] += procure * co2_per_twh
+                remaining_co2 -= procure * co2_per_twh
+                key = f"{src_iso}_{resource}"
+                b['resource_mix'][key] = b['resource_mix'].get(key, 0) + procure
+
+    # Build result dicts
+    results = {}
+    for iso, b in buyers.items():
+        cost_per_mwh = b['total_cost'] / b['total_procured'] if b['total_procured'] > 0 else 0
+        co2_abated = b['co2_displaced']
+        mac_per_ton = (b['total_cost'] * 1e6) / (co2_abated * 1e6) if co2_abated > 0 else None
+        co2_reduction_pct = (b['co2_displaced'] / b['baseline_co2_mt'] * 100) if b['baseline_co2_mt'] > 0 else 0
+
+        total_demand = get_demand_twh_at_year(iso, year, growth_level)
+        existing_clean = get_existing_clean_twh(iso)
+        current_clean_pct = (existing_clean / total_demand * 100) if total_demand > 0 else 0
+        lmp_impact = estimate_lmp_at_clean_pct(iso, current_clean_pct + threshold * 0.3)
+
+        results[iso] = make_strategy_result(
+            strategy_id=f'1{_baseline_suffix(baseline_type)}',
+            iso=iso, year=year, threshold=threshold,
+            participation_pct=participation_pct,
+            cost_per_mwh=cost_per_mwh,
+            total_cost_m=b['total_cost'],
+            co2_abated_mmt=co2_abated,
+            mac_per_ton=mac_per_ton,
+            resource_mix=b['resource_mix'],
+            metadata={
+                'baseline_type': baseline_type,
+                'emission_rate': b['emission_rate'],
+                'baseline_co2_mt': round(b['baseline_co2_mt'], 4),
+                'co2_reduction_pct': round(co2_reduction_pct, 2),
+                'clean_procured_twh': round(b['total_procured'], 2),
+                'scenario': scenario,
+                'lmp_impact': round(lmp_impact, 2),
+            },
+        )
+
+    return results
+
+
 def compute_consequential_cost(buyer_iso, year, threshold, participation_pct,
                                 baseline_type='grid_average',
                                 growth_level='Medium', scenario='A',
                                 level='Medium', ppa_level='Medium'):
     """Compute procurement cost for a consequential strategy variant.
 
-    The buyer needs to NET their emissions by purchasing clean energy credits.
-    Total clean procurement needed = buyer_demand_twh × emission_rate × (threshold/100)
-    ... expressed as: buyer must cover (threshold%) of their load with clean energy,
-    where each MWh of clean energy "abates" emission_rate tCO₂.
-
-    For consequential, the accounting is: buyer procures cheapest $/tCO₂ from
-    any ISO to offset their emissions up to the CFE target.
+    Uses shared queue depletion via compute_all_isos_consequential() —
+    all buyer ISOs walk the SAME queue simultaneously, with pro-rata
+    allocation by demand share. This prevents the same queue step from
+    being consumed at full capacity by every buyer independently.
 
     Returns a strategy result dict.
     """
-    buyer_demand = get_buyer_demand_twh(buyer_iso, year, participation_pct, growth_level)
-    if buyer_demand <= 0 or threshold <= 0:
-        return make_strategy_result(
-            strategy_id=f'1{_baseline_suffix(baseline_type)}',
-            iso=buyer_iso, year=year, threshold=threshold,
-            participation_pct=participation_pct,
-            cost_per_mwh=0, total_cost_m=0, co2_abated_mmt=0, mac_per_ton=0,
-        )
-
-    # Emission rate for this ISO/baseline type
-    emission_rate = get_emission_rate(buyer_iso, baseline_type)
-
-    # Baseline emissions: corporate load × emission rate
-    baseline_co2_mt = buyer_demand * emission_rate  # TWh(×1e6 MWh) × tCO₂/MWh ÷ 1e6 = MtCO₂
-
-    # CO2 reduction target: threshold % of baseline emissions
-    target_fraction = min(threshold / 100.0, 1.0)
-    co2_target_mt = baseline_co2_mt * target_fraction
-
-    # Walk the consequential queue (cheapest $/mtCO2, within-ISO ordered)
-    # until cumulative CO2 displaced hits the reduction target
-    queue = _load_queue()
-
-    total_cost = 0.0  # $M
-    total_procured = 0.0  # TWh
-    co2_displaced = 0.0  # MtCO₂
-    resource_mix = {}
-
-    for step in queue:
-        if co2_displaced >= co2_target_mt:
-            break
-
-        iso = step['iso']
-        delta_res = step.get('delta_resources', {})
-        step_co2 = step.get('co2_displaced_mt', 0)
-
-        if step_co2 <= 0:
-            continue
-
-        # How much of this step do we need?
-        remaining_co2 = co2_target_mt - co2_displaced
-        use_fraction = min(1.0, remaining_co2 / step_co2)
-
-        for resource, delta_twh in delta_res.items():
-            if delta_twh < 0.5:
-                continue
-            ppa_resource = _RESOURCE_TO_PPA.get(resource)
-            if ppa_resource is None:
-                continue
-
-            procure_twh = delta_twh * use_fraction
-            ppa_price = get_learning_adjusted_ppa(
-                ppa_resource, iso, threshold, scenario, level, ppa_level)
-
-            total_cost += procure_twh * ppa_price  # TWh × $/MWh = $M
-            total_procured += procure_twh
-
-            key = f"{iso}_{ppa_resource}"
-            resource_mix[key] = resource_mix.get(key, 0) + procure_twh
-
-        co2_displaced += step_co2 * use_fraction
-
-    # If queue exhausted, supplement with price-based fallback
-    if co2_displaced < co2_target_mt * 0.99 and total_procured > 0:
-        fallback_sources = _find_sources_by_price(threshold, scenario, level, ppa_level)
-        remaining_co2 = co2_target_mt - co2_displaced
-        for src_iso, resource, price_mwh, available_twh in fallback_sources:
-            if remaining_co2 <= 0:
-                break
-            src_emission_rate = get_emission_rate(src_iso, 'fossil_average')
-            co2_per_twh = src_emission_rate  # MtCO₂/TWh (1 TWh × tCO₂/MWh = MtCO₂)
-            twh_needed = remaining_co2 / co2_per_twh if co2_per_twh > 0 else 0
-            procure = min(twh_needed, available_twh)
-            total_cost += procure * price_mwh
-            total_procured += procure
-            co2_displaced += procure * co2_per_twh
-            remaining_co2 -= procure * co2_per_twh
-            key = f"{src_iso}_{resource}"
-            resource_mix[key] = resource_mix.get(key, 0) + procure
-
-    # Cost metrics
-    cost_per_mwh = total_cost / total_procured if total_procured > 0 else 0
-    co2_abated = co2_displaced  # MtCO₂ displaced via queue
-    mac_per_ton = (total_cost * 1e6) / (co2_abated * 1e6) if co2_abated > 0 else None
-
-    # CO2 reduction % = co2 displaced / baseline
-    co2_reduction_pct = (co2_displaced / baseline_co2_mt * 100) if baseline_co2_mt > 0 else 0
-
-    # Wholesale price impact (for the buyer's ISO)
-    total_demand = get_demand_twh_at_year(buyer_iso, year, growth_level)
-    existing_clean = get_existing_clean_twh(buyer_iso)
-    current_clean_pct = (existing_clean / total_demand * 100) if total_demand > 0 else 0
-    lmp_impact = estimate_lmp_at_clean_pct(buyer_iso, current_clean_pct + threshold * 0.3)
-
-    return make_strategy_result(
-        strategy_id=f'1{_baseline_suffix(baseline_type)}',
-        iso=buyer_iso,
-        year=year,
-        threshold=threshold,
+    results = compute_all_isos_consequential(
+        year=year, threshold=threshold,
         participation_pct=participation_pct,
-        cost_per_mwh=cost_per_mwh,
-        total_cost_m=total_cost,
-        co2_abated_mmt=co2_abated,
-        mac_per_ton=mac_per_ton,
-        resource_mix=resource_mix,
-        metadata={
-            'baseline_type': baseline_type,
-            'emission_rate': emission_rate,
-            'baseline_co2_mt': round(baseline_co2_mt, 4),
-            'co2_reduction_pct': round(co2_reduction_pct, 2),
-            'clean_procured_twh': round(total_procured, 2),
-            'scenario': scenario,
-            'lmp_impact': round(lmp_impact, 2),
-        },
+        baseline_type=baseline_type,
+        growth_level=growth_level, scenario=scenario,
+        level=level, ppa_level=ppa_level,
     )
+    return results.get(buyer_iso, make_strategy_result(
+        strategy_id=f'1{_baseline_suffix(baseline_type)}',
+        iso=buyer_iso, year=year, threshold=threshold,
+        participation_pct=participation_pct,
+        cost_per_mwh=0, total_cost_m=0, co2_abated_mmt=0, mac_per_ton=0,
+    ))
 
 
 def _baseline_suffix(baseline_type):
     """Map baseline type to strategy variant suffix."""
     return {'grid_average': 'A', 'fossil_average': 'B', 'marginal': 'C'}.get(baseline_type, 'A')
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# 25-YEAR TRAJECTORY FOR STRATEGY 1
-# ═══════════════════════════════════════════════════════════════════════════════
-
-
-def compute_strategy1_trajectory(iso, participation_pct=0.10,
-                                  baseline_type='grid_average',
-                                  growth_level='Medium', scenario='A',
-                                  level='Medium', ppa_level='Medium'):
-    """Compute 25-year cost trajectory for Strategy 1 (consequential).
-
-    Returns list of annual results from 2025→2050.
-    """
-    def strategy_fn(iso, year, threshold, participation_pct, **kwargs):
-        return compute_consequential_cost(
-            buyer_iso=iso, year=year, threshold=threshold,
-            participation_pct=participation_pct,
-            baseline_type=baseline_type,
-            growth_level=kwargs.get('growth_level', 'Medium'),
-            scenario=scenario,
-            level=kwargs.get('level', 'Medium'),
-            ppa_level=kwargs.get('ppa_level', 'Medium'),
-        )
-
-    return build_25yr_trajectory(
-        iso=iso,
-        strategy_fn=strategy_fn,
-        participation_pct=participation_pct,
-        growth_level=growth_level,
-        scenario=scenario,
-        level=level,
-        ppa_level=ppa_level,
-    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -401,6 +405,9 @@ def compute_strategy1_trajectory(iso, participation_pct=0.10,
 
 def run_full_sweep(isos=None, participation_levels=None, growth_levels=None):
     """Run Strategy 1 for all ISOs × participation levels × baseline types × growth levels.
+
+    Uses shared queue depletion: all ISOs are computed simultaneously per
+    (year, threshold, participation) combo via compute_all_isos_consequential().
 
     Returns dict with structure:
     {
@@ -423,34 +430,41 @@ def run_full_sweep(isos=None, participation_levels=None, growth_levels=None):
     ]
 
     all_results = {}
-    total = len(baselines) * len(isos) * len(growth_levels) * len(participation_levels)
+    total = len(baselines) * len(growth_levels) * len(participation_levels)
     count = 0
 
     for baseline_type, strategy_id in baselines:
         strategy_key = f'strategy{strategy_id}'
         all_results[strategy_key] = {}
-
         for iso in isos:
             all_results[strategy_key][iso] = {}
-
             for growth in growth_levels:
                 all_results[strategy_key][iso][growth] = {}
 
-                for part in participation_levels:
-                    count += 1
-                    if count % 50 == 0:
-                        print(f"  [{count}/{total}] {strategy_id} {iso} {growth} part={part*100:.0f}%")
+    for baseline_type, strategy_id in baselines:
+        strategy_key = f'strategy{strategy_id}'
 
-                    trajectory = compute_strategy1_trajectory(
-                        iso=iso,
+        for growth in growth_levels:
+            for part in participation_levels:
+                count += 1
+                if count % 10 == 0:
+                    print(f"  [{count}/{total}] {strategy_id} {growth} part={part*100:.0f}%")
+
+                # Build trajectory for all ISOs simultaneously (shared queue)
+                for year in TIMELINE_YEARS:
+                    threshold = get_threshold_for_year(year)
+                    batch = compute_all_isos_consequential(
+                        year=year, threshold=threshold,
                         participation_pct=part,
                         baseline_type=baseline_type,
-                        growth_level=growth,
-                        scenario='A',  # Consequential always uses Scenario A (delayed learning)
+                        growth_level=growth, scenario='A',
+                        isos=isos,
                     )
-
-                    part_key = f'{part*100:.0f}pct'
-                    all_results[strategy_key][iso][growth][part_key] = trajectory
+                    for iso in isos:
+                        part_key = f'{part*100:.0f}pct'
+                        if part_key not in all_results[strategy_key][iso][growth]:
+                            all_results[strategy_key][iso][growth][part_key] = []
+                        all_results[strategy_key][iso][growth][part_key].append(batch[iso])
 
     return all_results
 

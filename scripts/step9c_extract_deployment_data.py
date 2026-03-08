@@ -187,6 +187,57 @@ def extract_strategy3b(data, buyer_iso):
     return {}, new, cross_iso
 
 
+def extract_strategy3c(data):
+    """Strategy 3C: same-ISO, no additionality — existing RECs + new build."""
+    existing = {}
+    new = {}
+    for key, val in data.items():
+        if not isinstance(val, dict):
+            continue
+        twh = val.get('twh', 0)
+        if twh <= 0:
+            continue
+        _, resource = normalize_resource(key)
+
+        if 'existing' in key or 'recs' in key.lower():
+            existing[resource] = round(existing.get(resource, 0) + twh, 3)
+        else:
+            new[resource] = round(new.get(resource, 0) + twh, 3)
+    return existing, new, {}
+
+
+def extract_strategy3d(data, buyer_iso):
+    """Strategy 3D: cross-regional, no additionality — cheapest RECs from anywhere."""
+    existing = {}
+    new = {}
+    cross_iso = {}
+    for key, val in data.items():
+        if not isinstance(val, dict):
+            continue
+        twh = val.get('twh', 0)
+        if twh <= 0:
+            continue
+        source_iso, resource = normalize_resource(key)
+
+        if 'recs' in key.lower() or 'existing' in key:
+            # Cross-regional RECs or existing
+            if source_iso and source_iso != buyer_iso:
+                if source_iso not in cross_iso:
+                    cross_iso[source_iso] = {}
+                cross_iso[source_iso][resource] = round(cross_iso[source_iso].get(resource, 0) + twh, 3)
+            else:
+                existing[resource] = round(existing.get(resource, 0) + twh, 3)
+        else:
+            # New-build spillover
+            if source_iso and source_iso != buyer_iso:
+                if source_iso not in cross_iso:
+                    cross_iso[source_iso] = {}
+                cross_iso[source_iso][resource] = round(cross_iso[source_iso].get(resource, 0) + twh, 3)
+            else:
+                new[resource] = round(new.get(resource, 0) + twh, 3)
+    return existing, new, cross_iso
+
+
 EXTRACTORS = {
     '1A': lambda rm, iso: extract_strategy1(rm, iso),
     '1B': lambda rm, iso: extract_strategy1(rm, iso),
@@ -195,6 +246,8 @@ EXTRACTORS = {
     '2C': lambda rm, iso: extract_strategy2c(rm),
     '3A': lambda rm, iso: extract_strategy3a(rm),
     '3B': lambda rm, iso: extract_strategy3b(rm, iso),
+    '3C': lambda rm, iso: extract_strategy3c(rm),
+    '3D': lambda rm, iso: extract_strategy3d(rm, iso),
 }
 
 # Map strategy IDs to their JSON files and keys
@@ -206,6 +259,8 @@ STRATEGY_SOURCES = {
     '2C': ('strategy2_hourly.json', 'strategy2C'),
     '3A': ('strategy3_annual.json', 'strategy3A'),
     '3B': ('strategy3_annual.json', 'strategy3B'),
+    '3C': ('strategy3_annual.json', 'strategy3C'),
+    '3D': ('strategy3_annual.json', 'strategy3D'),
 }
 
 
