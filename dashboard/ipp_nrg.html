@@ -167,24 +167,21 @@
                     <h2>Enabling Conditions for 1.5°C Alignment</h2>
                 </div>
 
-                <div class="card" style="padding: var(--space-lg); margin-bottom: var(--space-xl)">
-                    <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Gap Between Qualified Target and 1.5°C Trajectory</h3>
-                    <div class="chart-container-lg"><canvas id="gapChart"></canvas></div>
-                    <div class="target-gap-legend">
-                        <div class="target-gap-legend-item">
-                            <div class="target-gap-legend-swatch" style="background:#6366F1"></div> Qualified Target
-                        </div>
-                        <div class="target-gap-legend-item">
-                            <div class="target-gap-legend-swatch" style="background:#E91E63"></div> 1.5°C Trajectory
-                        </div>
-                        <div class="target-gap-legend-item">
-                            <div class="target-gap-legend-swatch" style="background:rgba(239,68,68,0.12);width:24px;height:12px"></div> Policy-Dependent Gap
-                        </div>
-                    </div>
+                <!-- 6.1 SMARTargets AT -->
+                <h3 style="font-size: 1.1rem; color: var(--navy); margin-bottom: var(--space-md)">6.1 &nbsp;SMARTargets AT Enabling Conditions</h3>
+                <div class="card" style="padding: var(--space-lg); margin-bottom: var(--space-lg)">
+                    <h4 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Gap: Qualified Target vs SMARTargets AT Trajectory</h4>
+                    <div class="chart-container-lg"><canvas id="gapChartAT"></canvas></div>
                 </div>
+                <div class="grid-2col" id="conditionsCardsAT" style="margin-bottom: var(--space-2xl)"></div>
 
-                <h3 style="font-size: 1rem; color: var(--navy); margin-bottom: var(--space-md)">Conditions Required to Close the Gap</h3>
-                <div class="grid-2col" id="conditionsCards"></div>
+                <!-- 6.2 SBTi Power Sector v2 -->
+                <h3 style="font-size: 1.1rem; color: var(--navy); margin-bottom: var(--space-md)">6.2 &nbsp;SBTi Power Sector v2 Enabling Conditions</h3>
+                <div class="card" style="padding: var(--space-lg); margin-bottom: var(--space-lg)">
+                    <h4 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Gap: Qualified Target vs SBTi Power Sector v2 Trajectory</h4>
+                    <div class="chart-container-lg"><canvas id="gapChartSBTi"></canvas></div>
+                </div>
+                <div class="grid-2col" id="conditionsCardsSBTi"></div>
             </section>
 
             <!-- Section 7: Strategic Positioning -->

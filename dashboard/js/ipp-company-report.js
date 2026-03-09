@@ -960,6 +960,152 @@
     }
 
     // ─── SECTION 6: Enabling Conditions ──────────────────────
+
+    // Custom Chart.js plugin to draw gap labels and % reduction annotations
+    const gapLabelPlugin = {
+        id: 'gapLabels',
+        afterDraw(chart) {
+            const meta = chart.options.plugins.gapLabels;
+            if (!meta || !meta.gaps) return;
+            const ctx = chart.ctx;
+            const xScale = chart.scales.x;
+            const yScale = chart.scales.y;
+
+            meta.gaps.forEach(function (g) {
+                const xPx = xScale.getPixelForValue(g.xIndex);
+                const yTopPx = yScale.getPixelForValue(g.yTop);
+                const yBotPx = yScale.getPixelForValue(g.yBot);
+                const midY = (yTopPx + yBotPx) / 2;
+
+                // Draw vertical bracket line
+                ctx.save();
+                ctx.strokeStyle = 'rgba(239,68,68,0.6)';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([4, 3]);
+                ctx.beginPath();
+                ctx.moveTo(xPx + 8, yTopPx);
+                ctx.lineTo(xPx + 8, yBotPx);
+                ctx.stroke();
+                // bracket caps
+                ctx.setLineDash([]);
+                ctx.beginPath();
+                ctx.moveTo(xPx + 4, yTopPx);
+                ctx.lineTo(xPx + 12, yTopPx);
+                ctx.moveTo(xPx + 4, yBotPx);
+                ctx.lineTo(xPx + 12, yBotPx);
+                ctx.stroke();
+                ctx.restore();
+
+                // Gap label (MMT CO₂)
+                ctx.save();
+                ctx.font = 'bold 11px "DM Sans", sans-serif';
+                ctx.fillStyle = '#DC2626';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(g.label, xPx + 16, midY);
+                ctx.restore();
+            });
+
+            // Draw % reduction labels on data points
+            if (meta.pctLabels) {
+                meta.pctLabels.forEach(function (p) {
+                    const xPx = xScale.getPixelForValue(p.xIndex);
+                    const yPx = yScale.getPixelForValue(p.y);
+                    ctx.save();
+                    ctx.font = '600 10px "DM Sans", sans-serif';
+                    ctx.fillStyle = p.color || '#374151';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = p.above ? 'bottom' : 'top';
+                    const offset = p.above ? -8 : 8;
+                    ctx.fillText(p.label, xPx, yPx + offset);
+                    ctx.restore();
+                });
+            }
+        }
+    };
+
+    function pctLabel(value, baseline) {
+        if (!baseline || baseline === 0) return '0%';
+        const pct = ((value - baseline) / baseline * 100);
+        return `${pct >= 0 ? '+' : ''}${Math.round(pct)}%`;
+    }
+
+    function buildGapChart(canvasId, p50, targetData, targetLabel, targetColor, baseline) {
+        // Compute gaps and % labels at key milestones (indices: 0=2023, 1=2030, 2=2035, 3=2040, 4=2045, 5=2050)
+        const gapAnnotations = [];
+        const pctLabels = [];
+        const milestones = [1, 2, 3]; // 2030, 2035, 2040
+
+        milestones.forEach(function (i) {
+            const gap = p50[i] - targetData[i];
+            if (gap > 0.01) {
+                gapAnnotations.push({
+                    xIndex: i,
+                    yTop: p50[i],
+                    yBot: targetData[i],
+                    label: fmt(gap, 1) + ' Mt'
+                });
+            }
+            // QT % reduction label
+            pctLabels.push({
+                xIndex: i, y: p50[i],
+                label: 'QT: ' + pctLabel(p50[i], baseline),
+                color: '#6366F1', above: true
+            });
+            // Target % reduction label
+            pctLabels.push({
+                xIndex: i, y: targetData[i],
+                label: targetLabel.split(' ')[0] + ': ' + pctLabel(targetData[i], baseline),
+                color: targetColor, above: false
+            });
+        });
+
+        makeChart(canvasId, {
+            type: 'line',
+            data: {
+                labels: YEAR_LABELS,
+                datasets: [
+                    {
+                        label: 'Qualified Target (P50)',
+                        data: p50,
+                        borderColor: '#6366F1',
+                        backgroundColor: 'rgba(239,68,68,0.08)',
+                        fill: '+1',
+                        borderWidth: 2.5,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#6366F1'
+                    },
+                    {
+                        label: targetLabel,
+                        data: targetData,
+                        borderColor: targetColor,
+                        backgroundColor: targetColor.replace(')', ',0.08)').replace('rgb', 'rgba'),
+                        fill: false,
+                        borderWidth: 2.5,
+                        borderDash: [8, 4],
+                        pointRadius: 4,
+                        pointBackgroundColor: targetColor
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: { padding: { right: 60, top: 20 } },
+                scales: {
+                    y: { title: { display: true, text: 'CO₂ Emissions (Mt)' }, beginAtZero: true },
+                    x: { grid: { display: false } }
+                },
+                plugins: {
+                    legend: { position: 'bottom', labels: { usePointStyle: true, padding: 16 } },
+                    tooltip: { callbacks: { label: function (ctx) { return ctx.dataset.label + ': ' + fmt(ctx.raw, 2) + ' Mt' + pctFromBaseline(ctx.raw, baseline); } } },
+                    gapLabels: { gaps: gapAnnotations, pctLabels: pctLabels }
+                }
+            },
+            plugins: [gapLabelPlugin]
+        });
+    }
+
     function renderEnablingConditions() {
         const refBands = co.fan_bands.reference || co.fan_bands.all;
         const emissions = refBands.emissions;
@@ -967,59 +1113,22 @@
         const psV2_local = powerSectorV2Trajectory(baseline);
         const at_local = atTrajectory(baseline);
 
-        // Gap area chart — show both trajectories
-        makeChart('gapChart', {
-            type: 'line',
-            data: {
-                labels: YEAR_LABELS,
-                datasets: [
-                    {
-                        label: 'Qualified Target (P50)',
-                        data: emissions.p50,
-                        borderColor: '#6366F1',
-                        backgroundColor: 'rgba(239,68,68,0.08)',
-                        fill: '+1',
-                        borderWidth: 2.5,
-                        pointRadius: 4
-                    },
-                    {
-                        label: 'SBTi Power Sector v2 (NZ 2040)',
-                        data: psV2_local,
-                        borderColor: '#E91E63',
-                        fill: false,
-                        borderWidth: 2,
-                        borderDash: [8, 4],
-                        pointRadius: 0
-                    },
-                    {
-                        label: 'SMARTargets AT (−57/−82/−100%)',
-                        data: at_local,
-                        borderColor: '#9C27B0',
-                        fill: false,
-                        borderWidth: 2,
-                        borderDash: [4, 6],
-                        pointRadius: 0
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { y: { title: { display: true, text: 'CO₂ Emissions (Mt)' }, beginAtZero: true } },
-                plugins: {
-                    legend: { position: 'bottom' },
-                    tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmt(ctx.raw, 1)} Mt${pctFromBaseline(ctx.raw, baseline)}` } }
-                }
-            }
-        });
+        // 6.1 — SMARTargets AT gap chart
+        buildGapChart('gapChartAT', emissions.p50, at_local,
+            'SMARTargets AT (−57/−82/−88/−100%)', '#9C27B0', baseline);
 
-        // Enabling conditions — split into EPRI AT and SBTi NZ 2040
+        // 6.2 — SBTi Power Sector v2 gap chart
+        buildGapChart('gapChartSBTi', emissions.p50, psV2_local,
+            'SBTi Power Sector v2 (NZ 2040)', '#E91E63', baseline);
+
+        // Enabling conditions cards — split into AT and SBTi
         renderConditionsCards(baseline, psV2_local, at_local, emissions);
     }
 
     function renderConditionsCards(baseline, psV2_local, at_local, emissions) {
-        const el = document.getElementById('conditionsCards');
-        if (!el) return;
+        const elAT = document.getElementById('conditionsCardsAT');
+        const elSBTi = document.getElementById('conditionsCardsSBTi');
+        if (!elAT && !elSBTi) return;
 
         const dims = co.dimension_fans;
 
@@ -1042,94 +1151,90 @@
         const gap2040_at = p50[3] - at_local[3];
         const gap2040_ps = p50[3] - psV2_local[3];
 
-        let html = '';
-
-        // ── Section A: Enabling Conditions for EPRI Aspirational Targets ──
-        html += `<h3 style="font-size:1.05rem;color:var(--navy);margin:var(--space-lg) 0 var(--space-md)">
-            Enabling Conditions to Hit SMARTargets AT Trajectory</h3>
-            <p style="font-size:0.88rem;color:var(--text-secondary);margin-bottom:var(--space-md)">
+        // ── 6.1: Enabling Conditions for SMARTargets AT ──
+        if (elAT) {
+            let html = '';
+            html += `<p style="font-size:0.88rem;color:var(--text-secondary);margin-bottom:var(--space-md);grid-column:1/-1">
                 AT trajectory: −57% by 2030, −82% by 2035, −88% by 2040, −100% by 2050.
                 ${gap2030_at > 0.5 ? `${co.shortName} has a ${fmt(gap2030_at, 1)} Mt gap at 2030.` : `${co.shortName} is on track for the 2030 milestone.`}
             </p>`;
 
-        // AT-specific conditions
-        let atConditions = [];
-        if (gap2030_at > 0.5) {
-            atConditions.push(condCard('Near-Term Coal/Gas Retirement Acceleration', `${fmt(gap2030_at, 1)} Mt gap by 2030`,
-                `Closing the ${fmt(gap2030_at, 1)} Mt gap to the AT trajectory by 2030 (−57%) requires accelerated fossil retirement beyond current market-driven pace. This means either mandated coal exit, carbon pricing that makes high-heat-rate gas uneconomic, or dramatically faster clean interconnection.`, 'at'));
-        }
-        if (gap2035_at > 0.5) {
-            atConditions.push(condCard('Mid-Term Clean Deployment at Scale', `${fmt(gap2035_at, 1)} Mt gap by 2035`,
-                `The −82% target by 2035 requires aggressive clean deployment: utility-scale solar+storage, wind, and potentially nuclear uprates or SMR deployment. ${co.shortName} would need to roughly triple clean build rates vs. market trajectory.`, 'at'));
-        }
-        if (gap2040_at > 0.1) {
-            atConditions.push(condCard('Firm Clean & CCS for Residual Emissions', `${fmt(gap2040_at, 1)} Mt gap by 2040`,
-                `Reaching −88% by 2040 means near-total elimination of gas CCGT dispatch. Requires firm clean alternatives (CCS-CCGT, advanced nuclear, LDES) to replace gas for grid reliability.`, 'at'));
-        }
-
-        // Dimension-based conditions (applicable to AT)
-        if (dims) {
-            if (dims.conditions) {
-                const emF = dims.conditions.F ? dims.conditions.F.emissions.p50[3] : null;
-                const emC = dims.conditions.C ? dims.conditions.C.emissions.p50[3] : null;
-                if (emF !== null && emC !== null) {
-                    atConditions.push(condCard('Interconnection & Permitting Reform', `${fmt(Math.abs(emC - emF), 1)} Mt by 2040`,
-                        `Facilitating conditions (faster queues, streamlined permitting): ${fmt(emF, 1)} Mt vs. Challenging: ${fmt(emC, 1)} Mt by 2040. The AT trajectory requires facilitating conditions at minimum.`, 'at'));
+            let atCards = [];
+            if (gap2030_at > 0.5) {
+                atCards.push(condCard('Near-Term Coal/Gas Retirement Acceleration', `${fmt(gap2030_at, 1)} Mt gap by 2030`,
+                    `Closing the ${fmt(gap2030_at, 1)} Mt gap to the AT trajectory by 2030 (−57%) requires accelerated fossil retirement beyond current market-driven pace. This means either mandated coal exit, carbon pricing that makes high-heat-rate gas uneconomic, or dramatically faster clean interconnection.`, 'at'));
+            }
+            if (gap2035_at > 0.5) {
+                atCards.push(condCard('Mid-Term Clean Deployment at Scale', `${fmt(gap2035_at, 1)} Mt gap by 2035`,
+                    `The −82% target by 2035 requires aggressive clean deployment: utility-scale solar+storage, wind, and potentially nuclear uprates or SMR deployment. ${co.shortName} would need to roughly triple clean build rates vs. market trajectory.`, 'at'));
+            }
+            if (gap2040_at > 0.1) {
+                atCards.push(condCard('Firm Clean & CCS for Residual Emissions', `${fmt(gap2040_at, 1)} Mt gap by 2040`,
+                    `Reaching −88% by 2040 means near-total elimination of gas CCGT dispatch. Requires firm clean alternatives (CCS-CCGT, advanced nuclear, LDES) to replace gas for grid reliability.`, 'at'));
+            }
+            if (dims) {
+                if (dims.conditions) {
+                    const emF = dims.conditions.F ? dims.conditions.F.emissions.p50[3] : null;
+                    const emC = dims.conditions.C ? dims.conditions.C.emissions.p50[3] : null;
+                    if (emF !== null && emC !== null) {
+                        atCards.push(condCard('Interconnection & Permitting Reform', `${fmt(Math.abs(emC - emF), 1)} Mt by 2040`,
+                            `Facilitating conditions (faster queues, streamlined permitting): ${fmt(emF, 1)} Mt vs. Challenging: ${fmt(emC, 1)} Mt by 2040. The AT trajectory requires facilitating conditions at minimum.`, 'at'));
+                    }
+                }
+                if (dims.price_sens) {
+                    const low = dims.price_sens.Low ? dims.price_sens.Low.emissions.p50[3] : null;
+                    const high = dims.price_sens.High ? dims.price_sens.High.emissions.p50[3] : null;
+                    if (low !== null && high !== null) {
+                        atCards.push(condCard('Aggressive LCOE Reduction', `${fmt(Math.abs(high - low), 1)} Mt range`,
+                            `Low LCOE (Wright's Law outperformance): ${fmt(low, 1)} Mt vs. High LCOE: ${fmt(high, 1)} Mt by 2040. AT compliance requires LCOE trajectories at or below the low case.`, 'at'));
+                    }
                 }
             }
-            if (dims.price_sens) {
-                const low = dims.price_sens.Low ? dims.price_sens.Low.emissions.p50[3] : null;
-                const high = dims.price_sens.High ? dims.price_sens.High.emissions.p50[3] : null;
-                if (low !== null && high !== null) {
-                    atConditions.push(condCard('Aggressive LCOE Reduction', `${fmt(Math.abs(high - low), 1)} Mt range`,
-                        `Low LCOE (Wright's Law outperformance): ${fmt(low, 1)} Mt vs. High LCOE: ${fmt(high, 1)} Mt by 2040. AT compliance requires LCOE trajectories at or below the low case.`, 'at'));
-                }
-            }
+            html += atCards.join('');
+            elAT.innerHTML = html;
         }
 
-        html += atConditions.join('');
-
-        // ── Section B: Enabling Conditions for SBTi NZ 2040 Competitively ──
-        html += `<h3 style="font-size:1.05rem;color:var(--navy);margin:var(--space-xl) 0 var(--space-md)">
-            Enabling Conditions to Hit SBTi Net Zero by 2040 Competitively</h3>
-            <p style="font-size:0.88rem;color:var(--text-secondary);margin-bottom:var(--space-md)">
+        // ── 6.2: Enabling Conditions for SBTi Power Sector v2 ──
+        if (elSBTi) {
+            let html = '';
+            html += `<p style="font-size:0.88rem;color:var(--text-secondary);margin-bottom:var(--space-md);grid-column:1/-1">
                 SBTi Power Sector v2 requires net-zero emissions by 2040.
                 ${gap2040_ps > 0.5 ? `${co.shortName} has a ${fmt(gap2040_ps, 1)} Mt gap at 2040 under market conditions.` : `${co.shortName}'s market trajectory aligns with net-zero by 2040.`}
                 Achieving this <em>competitively</em> — without destroying shareholder value — requires specific enabling conditions.
             </p>`;
 
-        let nzConditions = [];
-        if (gap2040_ps > 0.5) {
-            nzConditions.push(condCard('Carbon Pricing Signal', `Critical for NZ 2040`,
-                `Net-zero by 2040 requires eliminating all remaining gas generation revenue within 14 years. A carbon price of $50-100/tCO₂ would internalize the externality and make gas CCGT uneconomic relative to clean firm alternatives. Without it, retiring profitable gas assets destroys ~$${fmt(gap2040_ps * 150, 0)}M in annual revenue.`, 'nz'));
-        }
-        nzConditions.push(condCard('Clean Firm Technology at Scale', 'Required by 2035',
-            `Net-zero by 2040 requires firm clean generation to replace gas CCGT for grid reliability. This means commercially available advanced nuclear (SMR), CCS at scale, or LDES (iron-air) by 2035 — five years before the deadline — to allow buildout.`, 'nz'));
-
-        if (dims && dims.ppa_level) {
-            const lowP = dims.ppa_level.Low ? dims.ppa_level.Low.emissions.p50[3] : null;
-            const highP = dims.ppa_level.High ? dims.ppa_level.High.emissions.p50[3] : null;
-            if (lowP !== null && highP !== null) {
-                nzConditions.push(condCard('Deep Corporate PPA Market', `${fmt(Math.abs(highP - lowP), 1)} Mt range at 2040`,
-                    `High PPA commitment (corporate buyers willing to pay premium for 24/7 clean): ${fmt(highP, 1)} Mt vs. Low PPA: ${fmt(lowP, 1)} Mt. NZ 2040 requires high PPA market depth to finance new clean investment at acceptable returns.`, 'nz'));
+            let nzCards = [];
+            if (gap2040_ps > 0.5) {
+                nzCards.push(condCard('Carbon Pricing Signal', `Critical for NZ 2040`,
+                    `Net-zero by 2040 requires eliminating all remaining gas generation revenue within 14 years. A carbon price of $50-100/tCO₂ would internalize the externality and make gas CCGT uneconomic relative to clean firm alternatives. Without it, retiring profitable gas assets destroys ~$${fmt(gap2040_ps * 150, 0)}M in annual revenue.`, 'nz'));
             }
-        }
+            nzCards.push(condCard('Clean Firm Technology at Scale', 'Required by 2035',
+                `Net-zero by 2040 requires firm clean generation to replace gas CCGT for grid reliability. This means commercially available advanced nuclear (SMR), CCS at scale, or LDES (iron-air) by 2035 — five years before the deadline — to allow buildout.`, 'nz'));
 
-        if (dims && dims.demand_growth) {
-            const low = dims.demand_growth.Low ? dims.demand_growth.Low.emissions.p50[3] : null;
-            const high = dims.demand_growth.High ? dims.demand_growth.High.emissions.p50[3] : null;
-            if (low !== null && high !== null) {
-                nzConditions.push(condCard('Demand Growth Management', `${fmt(Math.abs(high - low), 1)} Mt range`,
-                    `Under high demand growth (AI/data centers), total generation increases, requiring even more clean build to hit zero. Low demand: ${fmt(low, 1)} Mt vs. High demand: ${fmt(high, 1)} Mt by 2040.`, 'nz'));
+            if (dims && dims.ppa_level) {
+                const lowP = dims.ppa_level.Low ? dims.ppa_level.Low.emissions.p50[3] : null;
+                const highP = dims.ppa_level.High ? dims.ppa_level.High.emissions.p50[3] : null;
+                if (lowP !== null && highP !== null) {
+                    nzCards.push(condCard('Deep Corporate PPA Market', `${fmt(Math.abs(highP - lowP), 1)} Mt range at 2040`,
+                        `High PPA commitment (corporate buyers willing to pay premium for 24/7 clean): ${fmt(highP, 1)} Mt vs. Low PPA: ${fmt(lowP, 1)} Mt. NZ 2040 requires high PPA market depth to finance new clean investment at acceptable returns.`, 'nz'));
+                }
             }
+
+            if (dims && dims.demand_growth) {
+                const low = dims.demand_growth.Low ? dims.demand_growth.Low.emissions.p50[3] : null;
+                const high = dims.demand_growth.High ? dims.demand_growth.High.emissions.p50[3] : null;
+                if (low !== null && high !== null) {
+                    nzCards.push(condCard('Demand Growth Management', `${fmt(Math.abs(high - low), 1)} Mt range`,
+                        `Under high demand growth (AI/data centers), total generation increases, requiring even more clean build to hit zero. Low demand: ${fmt(low, 1)} Mt vs. High demand: ${fmt(high, 1)} Mt by 2040.`, 'nz'));
+                }
+            }
+
+            nzCards.push(condCard('Stranded Asset Compensation', 'Shareholder protection',
+                `Accelerating gas retirement to meet NZ 2040 strands assets with remaining economic life. Competitive transition requires either regulated asset recovery mechanisms, capacity market reform to value clean firm, or carbon credit revenue to offset lost gas dispatch revenue.`, 'nz'));
+
+            html += nzCards.join('');
+            elSBTi.innerHTML = html;
         }
-
-        nzConditions.push(condCard('Stranded Asset Compensation', 'Shareholder protection',
-            `Accelerating gas retirement to meet NZ 2040 strands assets with remaining economic life. Competitive transition requires either regulated asset recovery mechanisms, capacity market reform to value clean firm, or carbon credit revenue to offset lost gas dispatch revenue.`, 'nz'));
-
-        html += nzConditions.join('');
-
-        el.innerHTML = html;
     }
 
     // ─── SECTION 7: Strategic Positioning ────────────────────
