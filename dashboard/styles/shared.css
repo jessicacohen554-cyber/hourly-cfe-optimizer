@@ -8,7 +8,7 @@
    ============================================================================ */
 
 /* ========== FONT FACE ========== */
-/* Observatory theme: Space Grotesk + DM Sans + Space Mono loaded via Google Fonts.
+/* Observatory theme: Plus Jakarta Sans + DM Sans + Space Mono loaded via Google Fonts.
    No @font-face declarations needed — fonts are loaded via <link> tags. */
 
 /* ========== RESET & BASE ========== */
@@ -143,8 +143,8 @@ body {
 
     /* ---- Typography stacks ---- */
     --font-body: 'DM Sans', 'Plus Jakarta Sans', 'Helvetica Neue', Arial, sans-serif;
-    --font-heading: 'Space Grotesk', 'Barlow Semi Condensed', 'Arial Narrow', sans-serif;
-    --font-heading-banner: 'Space Grotesk', 'Lexend', 'Rajdhani', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+    --font-heading: 'Plus Jakarta Sans', 'DM Sans', 'Helvetica Neue', Arial, sans-serif;
+    --font-heading-banner: 'Plus Jakarta Sans', 'DM Sans', 'Helvetica Neue', Arial, sans-serif;
     --font-mono: 'Space Mono', 'Consolas', 'Courier New', monospace;
     --font-data: 'Space Mono', 'Rajdhani', monospace;
 
@@ -331,9 +331,9 @@ p {
 }
 .header h1 {
     font-family: var(--font-heading-banner);
-    font-weight: 700;
+    font-weight: 800;
     font-size: 3.2rem;
-    letter-spacing: 0.5px;
+    letter-spacing: -0.8px;
     text-transform: none;
     margin-bottom: 14px;
     position: relative;
@@ -379,6 +379,7 @@ p {
     font-family: var(--font-heading);
     font-size: 1.5rem;
     font-weight: 700;
+    letter-spacing: -0.3px;
     color: var(--navy);
     margin-bottom: var(--space-sm);
 }
