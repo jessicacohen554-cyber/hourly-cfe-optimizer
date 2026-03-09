@@ -401,7 +401,7 @@ class JarGrid {
 
         // Row headers = ISO names (shorter), col headers = strategy IDs + gas GW sub-label
         this.rowHeaderWidth = isMobile ? 70 : (isTablet ? 90 : 115);
-        this.colHeaderHeight = isMobile ? 130 : 165;
+        this.colHeaderHeight = isMobile ? 110 : 140;
 
         const availWidth = rect.width - this.rowHeaderWidth;
         const jarW = Math.max(55, Math.floor(availWidth / numCols));
@@ -783,42 +783,33 @@ class JarGrid {
         ctx.textBaseline = 'middle';
         const metricFS = this.jarWidth < 70 ? 9 : (this.jarWidth < 100 ? 11 : 13);
         const metricLineH = metricFS + 3;
-        const metricBaseY = this.colHeaderHeight - 4 * metricLineH + metricLineH / 2;
+        const metricBaseY = this.colHeaderHeight - 3 * metricLineH + metricLineH / 2;
 
         for (let col = 0; col < numCols; col++) {
             const strat = this.activeStrategies[col];
             const x = this.rowHeaderWidth + col * this.jarWidth + this.jarWidth / 2;
 
-            // Line 1: Gas displaced — green (good = more displaced)
-            const gasDisplaced = this.strategyGasGw?.[strat] ?? 0;
-            ctx.font = `700 ${metricFS}px 'DM Sans', sans-serif`;
-            ctx.fillStyle = gasDisplaced > 0 ? '#16A34A' : '#9CA3AF';
-            ctx.fillText(gasDisplaced > 0 ? `−${Math.round(gasDisplaced)} GW gas` : '0 GW gas', x, metricBaseY);
-
-            // Line 2: New gas needed + cost — discrete gray
+            // Line 1: New gas GW — red if >0, gray if 0
             const newGasGw = this.strategyNewGasGw?.[strat] ?? 0;
-            const gasCostM = this.strategyGasCostM?.[strat] ?? 0;
-            ctx.font = `500 ${Math.max(7, metricFS - 2)}px 'DM Sans', sans-serif`;
-            ctx.fillStyle = '#9CA3AF';
-            const gasCostStr = gasCostM >= 1000 ? `$${(gasCostM / 1000).toFixed(1)}B` :
-                               gasCostM > 0 ? `$${Math.round(gasCostM)}M` : '$0';
-            ctx.fillText(newGasGw > 0 ? `+${Math.round(newGasGw)} GW new (${gasCostStr})` : '', x, metricBaseY + metricLineH);
+            ctx.font = `700 ${metricFS}px 'DM Sans', sans-serif`;
+            ctx.fillStyle = newGasGw > 0 ? '#EF4444' : '#9CA3AF';
+            ctx.fillText(newGasGw > 0 ? `+${Math.round(newGasGw)} GW gas` : '0 GW gas', x, metricBaseY);
 
-            // Line 3: Curtailed TWh — amber
+            // Line 2: Curtailed TWh — amber
             const curtTwh = this.strategyCurtTwh?.[strat] ?? 0;
             ctx.font = `600 ${metricFS}px 'DM Sans', sans-serif`;
             ctx.fillStyle = curtTwh > 1 ? '#F59E0B' : '#9CA3AF';
-            const curtLabel = curtTwh >= 1000 ? `${(curtTwh / 1000).toFixed(1)}k TWh curt.` :
-                              curtTwh >= 1 ? `${Math.round(curtTwh)} TWh curt.` : '0 TWh curt.';
-            ctx.fillText(curtLabel, x, metricBaseY + 2 * metricLineH);
+            const curtLabel = curtTwh >= 1000 ? `${(curtTwh / 1000).toFixed(1)}k TWh curtailed` :
+                              curtTwh >= 1 ? `${Math.round(curtTwh)} TWh curtailed` : '0 TWh curtailed';
+            ctx.fillText(curtLabel, x, metricBaseY + metricLineH);
 
-            // Line 4: Total system cost (clean + gas) — navy
+            // Line 3: Total system cost (clean + gas) — navy
             const costM = this.strategyCostM?.[strat] ?? 0;
             ctx.font = `600 ${metricFS}px 'DM Sans', sans-serif`;
             ctx.fillStyle = '#334155';
             const costLabel = costM >= 1000 ? `$${(costM / 1000).toFixed(1)}B total` :
                               costM > 0 ? `$${Math.round(costM)}M total` : '$0';
-            ctx.fillText(costLabel, x, metricBaseY + 3 * metricLineH);
+            ctx.fillText(costLabel, x, metricBaseY + 2 * metricLineH);
         }
         ctx.restore();
 
