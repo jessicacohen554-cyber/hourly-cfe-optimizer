@@ -1,8 +1,12 @@
 /* ============================================================
    CINEMATIC SCROLL BACKGROUND — Shared Visual Layer
-   Include on any page that wants the glassmorphic + parallax treatment.
+   Include on any page that wants the parallax background treatment.
    Requires: shared.css loaded first, GSAP + ScrollTrigger in <head>,
              cinematic-bg.js before </body>
+
+   DESIGN: Background image is visible in gaps/margins between content
+   sections. All panels and cards use SOLID opaque backgrounds so
+   text is always fully readable. No glassmorphism/backdrop-filter.
    ============================================================ */
 
 /* ========== DARK BODY FALLBACK ========== */
@@ -37,6 +41,7 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 }
 
 /* ========== TRANSPARENT CONTENT WRAPPER ========== */
+/* These outer wrappers stay transparent so bg image shows between sections */
 .content-wrap,
 .main-content {
     background: transparent !important;
@@ -73,22 +78,18 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 .section-dark .story-section h3 { color: #fff; }
 .section-dark .story-section p { color: rgba(255,255,255,0.92); }
 
-/* Dark section — no glass on story-content wrapper */
+/* Dark section — no panel on story-content wrapper */
 .section-dark .story-section > .story-content {
     background: transparent;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
     border: none;
     box-shadow: none;
     padding: 0;
 }
 
-/* Dark section component overrides — more opaque for readability */
+/* Dark section component overrides */
 .section-dark .insight-box,
 .section-dark .insight-card {
     background: rgba(255,255,255,0.12) !important;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
     border: 1px solid rgba(255,255,255,0.15) !important;
     color: rgba(255,255,255,0.9);
 }
@@ -164,11 +165,9 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
     display: none !important;
 }
 
-/* scrollytell.css region-pills-bar — glass instead of white */
+/* scrollytell.css region-pills-bar — solid white */
 .region-pills-bar {
-    background: rgba(255, 255, 255, 0.95) !important;
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    background: #FFFFFF !important;
 }
 
 /* ipp-transition.css wrappers */
@@ -176,9 +175,6 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 .ipp-transition-body {
     background: transparent !important;
 }
-
-/* Additional section-level wrappers from page-specific inline CSS
-   (these are large layout containers, not cards — make transparent) */
 
 /* Foak hero gradient → transparent */
 .foak-hero {
@@ -188,26 +184,24 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
     display: none !important;
 }
 
-/* ========== GLASSMORPHIC PANELS (light sections) ========== */
+/* ========== SOLID OPAQUE PANELS (light sections) ========== */
+/* All panels use solid white backgrounds — no transparency, no backdrop-filter.
+   Background image is only visible in gaps between sections/panels. */
 
-/* Story content wrapper — near-opaque for text readability */
+/* Story content wrapper — solid white panel */
 .story-section > .story-content {
-    background: rgba(255, 255, 255, 0.96);
-    backdrop-filter: blur(14px) saturate(180%);
-    -webkit-backdrop-filter: blur(14px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.55);
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
     border-radius: 16px;
     padding: 36px 32px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
-/* Generic glass panel class */
+/* Generic glass panel class (now solid) */
 .glass-panel {
-    background: rgba(255, 255, 255, 0.96);
-    backdrop-filter: blur(14px) saturate(180%);
-    -webkit-backdrop-filter: blur(14px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.55);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05), 0 2px 8px rgba(0, 0, 0, 0.03);
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
 /* Cards and panels — comprehensive list from all CSS files */
@@ -254,20 +248,16 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 .peak-capacity-panel,
 .target-mode-panel,
 .pathway-metric {
-    background: rgba(255, 255, 255, 0.96) !important;
-    backdrop-filter: blur(14px) saturate(180%);
-    -webkit-backdrop-filter: blur(14px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.55) !important;
+    background: #FFFFFF !important;
+    border: 1px solid #E5E7EB !important;
     border-radius: var(--radius-lg, 12px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05), 0 2px 8px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
-/* Slightly more opaque for callouts (text-heavy) */
+/* Callouts — solid white */
 .callout-box,
 .callout-box.callout-left-border {
-    background: rgba(255, 255, 255, 0.97) !important;
-    backdrop-filter: blur(14px) saturate(180%);
-    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    background: #FFFFFF !important;
 }
 
 /* Story panel (gen_regional_pathways) */
@@ -275,12 +265,10 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
     background: transparent;
 }
 
-/* Interactive controls — glass with higher z-index */
+/* Interactive controls — solid white bar */
 .global-controls {
-    background: rgba(255, 255, 255, 0.96) !important;
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.55) !important;
+    background: #FFFFFF !important;
+    border-bottom: 1px solid #E5E7EB !important;
     z-index: 50;
 }
 
@@ -289,42 +277,36 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 .scenario-card,
 .gap-card,
 .mechanism-card {
-    background: rgba(255, 255, 255, 0.96) !important;
-    backdrop-filter: blur(14px) saturate(180%);
-    -webkit-backdrop-filter: blur(14px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.55) !important;
+    background: #FFFFFF !important;
+    border: 1px solid #E5E7EB !important;
     border-radius: var(--radius-lg, 12px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05), 0 2px 8px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
-/* Hero sections — glass or transparent */
+/* Hero sections — transparent wrapper, solid stat tiles */
 .hero-overview,
 .hero-section {
     background: transparent !important;
 }
 .hero-overview .hero-stats-row .stat-tile,
 .hero-section .hero-stats-row .stat-tile {
-    background: rgba(255, 255, 255, 0.96) !important;
-    backdrop-filter: blur(14px) saturate(180%);
-    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    background: #FFFFFF !important;
 }
 
-/* Data tables on glass */
+/* Data tables — solid white */
 .data-table,
 .company-table,
 .delta-table {
-    background: rgba(255, 255, 255, 0.94);
+    background: #FFFFFF;
     border-radius: var(--radius-md);
 }
 .data-table th {
-    background: rgba(255, 255, 255, 0.7);
+    background: #F3F4F6;
 }
 
 /* Nav button secondary */
 .nav-btn-secondary {
-    background: rgba(255, 255, 255, 0.96) !important;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: #FFFFFF !important;
 }
 
 /* Section dividers on transparent bg */
@@ -339,43 +321,34 @@ hr.section-divider,
     background: transparent !important;
 }
 .hero-stat {
-    background: rgba(255, 255, 255, 0.96) !important;
-    backdrop-filter: blur(14px) saturate(180%);
-    -webkit-backdrop-filter: blur(14px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.55) !important;
+    background: #FFFFFF !important;
+    border: 1px solid #E5E7EB !important;
 }
 .report-layout {
     background: transparent !important;
 }
 .report-toc {
-    background: rgba(255, 255, 255, 0.96) !important;
-    backdrop-filter: blur(14px) saturate(180%);
-    -webkit-backdrop-filter: blur(14px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.55) !important;
+    background: #FFFFFF !important;
+    border: 1px solid #E5E7EB !important;
 }
 .report-section {
-    background: rgba(255, 255, 255, 0.96) !important;
-    backdrop-filter: blur(14px) saturate(180%);
-    -webkit-backdrop-filter: blur(14px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.55) !important;
+    background: #FFFFFF !important;
+    border: 1px solid #E5E7EB !important;
     border-radius: 12px;
     padding: 32px 28px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
 /* ========== SCENARIO COMPARISON COMPONENTS ========== */
 .scenario-legend {
-    background: rgba(255, 255, 255, 0.96) !important;
-    backdrop-filter: blur(14px) saturate(180%);
-    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    background: #FFFFFF !important;
 }
 .chart-wide {
-    background: rgba(255, 255, 255, 0.96) !important;
-    backdrop-filter: blur(14px) saturate(180%);
-    -webkit-backdrop-filter: blur(14px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.55) !important;
+    background: #FFFFFF !important;
+    border: 1px solid #E5E7EB !important;
 }
 .metric-tiles {
-    background: rgba(255, 255, 255, 0.94) !important;
+    background: #FFFFFF !important;
 }
 
 /* ========== CLEAN FIRM / ARTICLE COMPONENTS ========== */
@@ -384,10 +357,8 @@ hr.section-divider,
 }
 .concept-section .chart-panel,
 .concept-section .card {
-    background: rgba(255, 255, 255, 0.96) !important;
-    backdrop-filter: blur(14px) saturate(180%);
-    -webkit-backdrop-filter: blur(14px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.55) !important;
+    background: #FFFFFF !important;
+    border: 1px solid #E5E7EB !important;
 }
 
 /* ========== LMP / SCROLL SECTION COMPONENTS ========== */
@@ -395,18 +366,15 @@ hr.section-divider,
     background: transparent !important;
 }
 .scroll-section-inner {
-    background: rgba(255, 255, 255, 0.96);
-    backdrop-filter: blur(14px) saturate(180%);
-    -webkit-backdrop-filter: blur(14px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.55);
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
     border-radius: 16px;
     padding: 36px 32px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 .key-findings-panel {
-    background: rgba(255, 255, 255, 0.96) !important;
-    backdrop-filter: blur(14px) saturate(180%);
-    -webkit-backdrop-filter: blur(14px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.55) !important;
+    background: #FFFFFF !important;
+    border: 1px solid #E5E7EB !important;
 }
 
 /* ========== ABATEMENT COMPONENTS ========== */
@@ -420,10 +388,8 @@ hr.section-divider,
 .strategy-accordion,
 .accordion-header,
 .accordion-content {
-    background: rgba(255, 255, 255, 0.96) !important;
-    backdrop-filter: blur(14px) saturate(180%);
-    -webkit-backdrop-filter: blur(14px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.55) !important;
+    background: #FFFFFF !important;
+    border: 1px solid #E5E7EB !important;
 }
 
 /* Comparison boxes */
@@ -436,7 +402,7 @@ hr.section-divider,
     background: transparent !important;
 }
 
-/* ========== TEXT READABILITY ON GLASS ========== */
+/* ========== TEXT READABILITY — DARK TEXT ON WHITE PANELS ========== */
 .story-section p,
 .story-panel p,
 .report-section p,
@@ -462,7 +428,7 @@ hr.section-divider,
     color: #334155;
 }
 
-/* General text inside glass panels */
+/* General text inside panels */
 .card p, .card li,
 .chart-panel p,
 .insight-card p,
@@ -478,9 +444,7 @@ hr.section-divider,
 .panel-navy > .story-content,
 .panel-navy.story-content,
 section.panel-navy {
-    background: rgba(15, 23, 42, 0.88) !important;
-    backdrop-filter: blur(14px) saturate(180%);
-    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    background: #0F172A !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
     box-shadow: 0 8px 40px rgba(0, 0, 0, 0.2);
 }
@@ -594,7 +558,7 @@ section.panel-navy .stat-label {
 
 /* Report-section variant */
 section.report-section.panel-navy {
-    background: rgba(15, 23, 42, 0.88) !important;
+    background: #0F172A !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
     box-shadow: 0 8px 40px rgba(0, 0, 0, 0.2);
 }
@@ -614,16 +578,12 @@ section.report-section.panel-navy .report-section-number {
     color: rgba(255, 255, 255, 0.72);
 }
 
-/* ========== FOOTER GLASS ========== */
+/* ========== FOOTER — SOLID ========== */
 .site-footer {
-    background: rgba(248, 249, 252, 0.94) !important;
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    background: #F3F4F6 !important;
 }
 .page-footer {
-    background: rgba(15, 23, 42, 0.92) !important;
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    background: #0F172A !important;
 }
 
 /* ========== MOBILE RESPONSIVE ========== */
@@ -632,18 +592,6 @@ section.report-section.panel-navy .report-section-number {
         width: 180vw;
         height: 180vh;
         transform: translate(-20%, -20%) scale(1.0);
-    }
-    /* Reduce glass blur on mobile for performance */
-    .story-section > .story-content,
-    .card, .chart-panel, .chart-box,
-    .insight-box, .insight-card,
-    .callout, .callout-box, .narrative-box,
-    .stat-block, .stat-tile, .stat-card,
-    .iso-card, .scenario-card, .gap-card,
-    .report-section, .report-toc,
-    .hero-stat, .key-findings-panel {
-        backdrop-filter: blur(8px) saturate(160%);
-        -webkit-backdrop-filter: blur(8px) saturate(160%);
     }
     .section-dark {
         margin: var(--space-xl) var(--space-sm);
