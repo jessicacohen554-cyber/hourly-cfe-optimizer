@@ -948,6 +948,254 @@ def compute_co2_abated(iso, demand_twh, clean_pct, baseline_type='grid_average')
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# DISPATCH-BASED HOURLY MATCH SCORING
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+# Map tranche/resource source names → dispatch resource types
+_TRANCHE_TO_DISPATCH = {
+    'new_build_vre': 'solar',
+    'new_build_firm': 'clean_firm',
+    'nuclear_uprate': 'clean_firm',
+    'existing_nuclear': 'clean_firm',
+    'existing_vre_hydro': 'hydro',
+    'existing_merchant': 'hydro',
+    'new_build_solar': 'solar',
+    'new_build_wind': 'wind',
+    'new_build_uprate': 'clean_firm',
+    'solar': 'solar',
+    'wind': 'wind',
+    'clean_firm': 'clean_firm',
+    'ccs': 'ccs_ccgt',
+    'hydro': 'hydro',
+    'offshore_wind': 'offshore_wind',
+    'geothermal': 'geothermal',
+    'battery': 'solar',  # storage doesn't map to generation — handled separately
+    'battery8': 'solar',
+    'ldes': 'solar',
+    'h2': 'solar',
+    'firm': 'clean_firm',
+    'uprate': 'clean_firm',
+}
+
+
+def _load_ef_storage_cache():
+    """Load EF storage dispatch params from track_scenarios.parquet. Cached."""
+    global _EF_STORAGE_CACHE
+    if _EF_STORAGE_CACHE is not None:
+        return _EF_STORAGE_CACHE
+
+    import pandas as pd
+    track_parquet = os.path.join(os.path.dirname(SCRIPT_DIR), 'dashboard', 'track_scenarios.parquet')
+    ef_storage = {}
+    if os.path.exists(track_parquet):
+        tdf = pd.read_parquet(track_parquet)
+        nb = tdf[tdf['track'] == 'newbuild']
+        for _, row in nb.iterrows():
+            key = (row['iso'], float(row['threshold']))
+            ef_storage[key] = {
+                'battery_dispatch_pct': float(row.get('battery_dispatch_pct', 0) or 0),
+                'battery8_dispatch_pct': float(row.get('battery8_dispatch_pct', 0) or 0),
+                'ldes_dispatch_pct': float(row.get('ldes_dispatch_pct', 0) or 0),
+                'h2_dispatch_pct': float(row.get('h2_dispatch_pct', 0) or 0),
+                'mix_clean_firm': float(row.get('mix_clean_firm', 0) or 0),
+                'mix_solar': float(row.get('mix_solar', 0) or 0),
+                'mix_wind': float(row.get('mix_wind', 0) or 0),
+                'mix_offshore_wind': float(row.get('mix_offshore_wind', 0) or 0),
+                'mix_ccs_ccgt': float(row.get('mix_ccs_ccgt', 0) or 0),
+                'mix_hydro': float(row.get('mix_hydro', 0) or 0),
+                'hourly_match_score': float(row.get('hourly_match_score', 0) or 0),
+            }
+    _EF_STORAGE_CACHE = ef_storage
+    return ef_storage
+
+
+_EF_STORAGE_CACHE = None
+
+
+def _find_closest_ef(ef_storage, iso, threshold):
+    """Find closest EF entry for an ISO/threshold combo."""
+    exact = ef_storage.get((iso, threshold))
+    if exact:
+        return exact
+    best_key, best_dist = None, float('inf')
+    for k in ef_storage:
+        if k[0] == iso:
+            dist = abs(k[1] - threshold)
+            if dist < best_dist:
+                best_dist = dist
+                best_key = k
+    return ef_storage.get(best_key) if best_key else None
+
+
+def compute_dispatch_hms(results, variant_keys, isos):
+    """Post-process strategy results with 8760 dispatch-based hourly match scores.
+
+    For each entry in results[variant][iso][growth][part], computes:
+    - hourly_match_score: actual hour-by-hour matching %
+    - curtailment_pct, fossil_displaced_twh
+    - Consequential CO₂ (only new-build fraction displaces fossil)
+
+    Modifies results dict in-place. Overwrites co2_abated_mmt with dispatch-based value.
+    """
+    try:
+        from dispatch_utils import (
+            load_common_data, get_demand_profile, get_supply_profiles,
+            reconstruct_hourly_dispatch, build_supply_matrix
+        )
+    except ImportError:
+        print("  WARNING: dispatch_utils not available — skipping HMS scoring")
+        return
+
+    print("\nComputing 8760 dispatch-based hourly match scores...")
+    common_data = load_common_data()
+    demand_data, gen_profiles = common_data[0], common_data[1]
+
+    ef_storage = _load_ef_storage_cache()
+    print(f"  Loaded {len(ef_storage)} EF storage entries")
+
+    dispatch_count = 0
+    for variant in variant_keys:
+        if variant not in results:
+            continue
+        for iso in isos:
+            growth_data = results[variant].get(iso, {})
+            if not growth_data:
+                continue
+
+            # Pre-build supply matrix for this ISO
+            demand_norm, total_mwh = get_demand_profile(iso, demand_data)
+            supply_profiles = get_supply_profiles(iso, gen_profiles)
+            supply_matrix = build_supply_matrix(supply_profiles)
+
+            for growth_level, growth_entries in growth_data.items():
+                if not isinstance(growth_entries, dict):
+                    continue
+                for part_key, trajectory in growth_entries.items():
+                    if not isinstance(trajectory, list):
+                        continue
+                    for entry in trajectory:
+                        rm = entry.get('resource_mix', {})
+                        if not rm:
+                            continue
+
+                        threshold = entry.get('threshold', 0)
+                        buyer_twh = entry.get('buyer_demand_twh', 0)
+                        if buyer_twh <= 0 or threshold <= 0:
+                            continue
+
+                        # Get EF storage params for this ISO/threshold
+                        ef = _find_closest_ef(ef_storage, iso, threshold)
+
+                        # Use EF resource mix for dispatch (physics-optimal)
+                        if ef:
+                            resource_pcts = {
+                                'clean_firm': ef['mix_clean_firm'],
+                                'solar': ef['mix_solar'],
+                                'wind': ef['mix_wind'],
+                                'offshore_wind': ef['mix_offshore_wind'],
+                                'ccs_ccgt': ef['mix_ccs_ccgt'],
+                                'hydro': ef['mix_hydro'],
+                            }
+                            batt_pct = ef['battery_dispatch_pct']
+                            batt8_pct = ef['battery8_dispatch_pct']
+                            ldes_pct = ef['ldes_dispatch_pct']
+                            h2_pct = ef['h2_dispatch_pct']
+                        else:
+                            # Fallback: convert resource_breakdown TWh → resource_pcts
+                            resource_pcts = {}
+                            for source, info in rm.items():
+                                if not isinstance(info, dict):
+                                    continue
+                                twh = info.get('twh', 0)
+                                if twh <= 0:
+                                    continue
+                                cat = info.get('category', '')
+                                if cat in ('grid_mix', 'sss'):
+                                    continue
+                                dispatch_type = _TRANCHE_TO_DISPATCH.get(source, 'solar')
+                                pct = (twh / buyer_twh) * 100
+                                resource_pcts[dispatch_type] = resource_pcts.get(dispatch_type, 0) + pct
+                            batt_pct = batt8_pct = ldes_pct = h2_pct = 0
+
+                        if not any(v > 0 for v in resource_pcts.values()):
+                            continue
+
+                        # For strategies with grid mix / SSS, add to resource_pcts
+                        grid_twh = 0
+                        for source, info in rm.items():
+                            if isinstance(info, dict) and info.get('category') in ('grid_mix', 'sss'):
+                                grid_twh += info.get('twh', 0)
+                        if grid_twh > 0:
+                            gm = GRID_MIX_SHARES[iso]
+                            total_existing_pct = sum(
+                                gm.get(r, 0) for r in ['clean_firm', 'solar', 'wind', 'hydro']
+                            )
+                            if total_existing_pct > 0:
+                                grid_pct_of_buyer = (grid_twh / buyer_twh) * 100
+                                for r in ['clean_firm', 'solar', 'wind', 'hydro']:
+                                    share = gm.get(r, 0) / total_existing_pct
+                                    resource_pcts[r] = resource_pcts.get(r, 0) + grid_pct_of_buyer * share
+
+                        try:
+                            result = reconstruct_hourly_dispatch(
+                                demand_norm, supply_profiles, resource_pcts,
+                                procurement_pct=100,
+                                battery_dispatch_pct=batt_pct,
+                                battery8_dispatch_pct=batt8_pct,
+                                ldes_dispatch_pct=ldes_pct,
+                                supply_matrix=supply_matrix,
+                                h2_dispatch_pct=h2_pct,
+                            )
+                            demand_arr = np.array(demand_norm[:8760])
+                            total_clean = result['total_clean']
+                            matched = np.minimum(total_clean, demand_arr)
+                            curtailed = result['curtailed']
+                            fossil_displaced = result['fossil_displaced']
+
+                            score = float(np.sum(matched) / np.sum(demand_arr) * 100)
+                            curtail_pct = float(np.sum(curtailed) / np.sum(total_clean) * 100) if np.sum(total_clean) > 0 else 0
+                            fossil_disp_twh = float(np.sum(fossil_displaced) / np.sum(demand_arr)) * buyer_twh
+
+                            # Consequential CO₂: only new-build displaces fossil
+                            new_twh = 0
+                            grid_twh_local = 0
+                            for source, info in rm.items():
+                                if not isinstance(info, dict):
+                                    continue
+                                twh_val = info.get('twh', 0)
+                                cat = info.get('category', '')
+                                if cat in ('grid_mix', 'sss', 'existing'):
+                                    grid_twh_local += twh_val
+                                elif cat in ('new_build', 'uprate'):
+                                    new_twh += twh_val
+
+                            total_clean_twh = new_twh + grid_twh_local
+                            new_frac = new_twh / total_clean_twh if total_clean_twh > 0 else 1.0
+
+                            fossil_rate = get_emission_rate(iso, 'fossil_average')
+                            consequential_co2 = fossil_disp_twh * new_frac * fossil_rate
+
+                            md = entry.setdefault('metadata', {})
+                            md['hourly_match_score'] = round(score, 2)
+                            md['curtailment_pct'] = round(curtail_pct, 2)
+                            md['fossil_displaced_twh'] = round(fossil_disp_twh, 4)
+                            md['new_build_twh'] = round(new_twh, 2)
+                            md['grid_baseline_twh'] = round(grid_twh_local, 2)
+                            md['new_build_fraction'] = round(new_frac, 4)
+
+                            # Overwrite with consequential CO₂
+                            entry['co2_abated_mmt'] = round(consequential_co2, 4)
+                            md['paper_co2_mmt'] = round(buyer_twh * (threshold / 100) * fossil_rate, 4)
+
+                            dispatch_count += 1
+                        except Exception:
+                            pass
+
+    print(f"  Computed {dispatch_count} dispatch scores")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # 25-YEAR TIMELINE BUILDER
 # ═══════════════════════════════════════════════════════════════════════════════
 
