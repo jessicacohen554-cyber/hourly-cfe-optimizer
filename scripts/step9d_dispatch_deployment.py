@@ -26,6 +26,7 @@ sys.path.insert(0, SCRIPT_DIR)
 from dispatch_utils import (
     load_common_data, get_demand_profile, get_supply_profiles,
     build_supply_matrix, reconstruct_hourly_dispatch, H,
+    compute_co2_from_dispatch, COAL_CAP_TWH, OIL_CAP_TWH,
 )
 from pipeline_config import (
     GRID_MIX_SHARES, REGIONAL_DEMAND_TWH,
@@ -60,13 +61,17 @@ PEAK_CREDITS = {
 }
 
 
-def compute_grid_baseline():
-    """Compute grid baseline clean shares for each ISO."""
+def compute_grid_baseline(iso_dispatch=None, emission_rates=None):
+    """Compute grid baseline clean shares + dispatch HMS + CO2 for each ISO.
+
+    If iso_dispatch is provided, runs dispatch on baseline grid mix to get
+    the true hourly matching score and baseline fossil CO2.
+    """
     baseline = {}
     for iso in ISOS:
         shares = GRID_MIX_SHARES.get(iso, {})
         total_pct = sum(shares.values())
-        baseline[iso] = {
+        bl = {
             'solar': shares.get('solar', 0),
             'wind': shares.get('wind', 0),
             'offshore_wind': shares.get('offshore_wind', 0),
@@ -75,11 +80,62 @@ def compute_grid_baseline():
             'ccs_ccgt': shares.get('ccs_ccgt', 0),
             'totalPct': round(total_pct, 1),
         }
+
+        # Compute baseline HMS via dispatch (no procurement, just existing grid)
+        if iso_dispatch and iso in iso_dispatch:
+            dd = iso_dispatch[iso]
+            resource_pcts = dict(shares)  # copy
+            try:
+                metrics = compute_dispatch_metrics(
+                    iso, resource_pcts,
+                    dd['demand_norm'], dd['supply_profiles'],
+                    dd['supply_matrix'], dd['total_mwh'],
+                )
+                bl['baselineHms'] = metrics['hms']
+
+                # Compute baseline fossil CO2 (how much CO2 the grid emits today)
+                if emission_rates:
+                    # Residual demand = fossil generation
+                    baseline_pcts = dict(shares)
+                    result = reconstruct_hourly_dispatch(
+                        demand_norm=dd['demand_norm'],
+                        supply_profiles=dd['supply_profiles'],
+                        resource_pcts=baseline_pcts,
+                        procurement_pct=100,
+                        battery_dispatch_pct=0,
+                        ldes_dispatch_pct=0,
+                        supply_matrix=dd['supply_matrix'],
+                    )
+                    # Fossil CO2 = residual demand × emission rate
+                    residual = result.get('residual_demand', np.zeros(H))
+                    fossil_mwh = np.sum(np.maximum(0, residual)) * dd['total_mwh']
+                    regional = emission_rates.get(iso, {})
+                    # Use weighted fossil rate (gas dominates most grids)
+                    gas_rate = regional.get('gas_co2_lb_per_mwh', 800) / 2204.62
+                    coal_rate = regional.get('coal_co2_lb_per_mwh', 2000) / 2204.62
+                    oil_rate = regional.get('oil_co2_lb_per_mwh', 1600) / 2204.62
+                    # Simple weighted average based on typical fossil mix
+                    # COAL_CAP_TWH, OIL_CAP_TWH imported from dispatch_utils at top
+                    coal_cap = COAL_CAP_TWH.get(iso, 0) * 1e6
+                    oil_cap = OIL_CAP_TWH.get(iso, 0) * 1e6
+                    fossil_total = fossil_mwh
+                    coal_mwh = min(fossil_total, coal_cap)
+                    remaining = fossil_total - coal_mwh
+                    oil_mwh = min(remaining, oil_cap)
+                    gas_mwh = max(0, remaining - oil_mwh)
+                    baseline_co2_mt = (
+                        coal_mwh * coal_rate + oil_mwh * oil_rate + gas_mwh * gas_rate
+                    ) / 1e6  # tons → Mt
+                    bl['baselineCo2Mt'] = round(baseline_co2_mt, 1)
+            except Exception as e:
+                print(f"    WARNING: baseline dispatch failed for {iso}: {e}")
+
+        baseline[iso] = bl
     return baseline
 
 
 def compute_dispatch_metrics(iso, resource_pcts, demand_norm, supply_profiles,
-                              supply_matrix, total_mwh):
+                              supply_matrix, total_mwh, emission_rates=None):
     """Run dispatch and compute grid-level metrics for a resource mix.
 
     Args:
@@ -89,9 +145,10 @@ def compute_dispatch_metrics(iso, resource_pcts, demand_norm, supply_profiles,
         supply_profiles: dict of supply shape profiles
         supply_matrix: pre-built (N_RESOURCES, 8760) matrix
         total_mwh: annual demand in MWh
+        emission_rates: optional eGRID emission rates dict for fossil CO2 calc
 
     Returns:
-        dict with hms, curtTwh, gasGw, gridCleanPct
+        dict with hms, curtTwh, gasGw, gridCleanPct, and optionally fossilCo2Mt
     """
     # Extract storage from resource_pcts (separate from generation resources)
     battery_pct = resource_pcts.pop('battery', 0)
@@ -151,12 +208,31 @@ def compute_dispatch_metrics(iso, resource_pcts, demand_norm, supply_profiles,
 
     gas_needed_gw = max(0, (ra_peak - clean_peak_mw) / 1000)
 
-    return {
+    out = {
         'hms': round(hms, 1),
         'curtTwh': round(curt_twh, 2),
         'gasGw': round(gas_needed_gw, 1),
         'gridCleanPct': round(grid_clean_pct, 1),
     }
+
+    # Compute fossil CO2 from residual demand (actual grid emissions)
+    if emission_rates:
+        residual = result.get('residual_demand', np.zeros(H))
+        fossil_mwh_total = float(np.sum(np.maximum(0, residual))) * total_mwh
+        regional = emission_rates.get(iso, {})
+        coal_rate = regional.get('coal_co2_lb_per_mwh', 2000) / 2204.62
+        oil_rate = regional.get('oil_co2_lb_per_mwh', 1600) / 2204.62
+        gas_rate = regional.get('gas_co2_lb_per_mwh', 800) / 2204.62
+        coal_cap = COAL_CAP_TWH.get(iso, 0) * 1e6
+        oil_cap = OIL_CAP_TWH.get(iso, 0) * 1e6
+        coal_mwh = min(fossil_mwh_total, coal_cap)
+        remaining_mwh = fossil_mwh_total - coal_mwh
+        oil_mwh = min(remaining_mwh, oil_cap)
+        gas_mwh = max(0, remaining_mwh - oil_mwh)
+        fossil_co2_mt = (coal_mwh * coal_rate + oil_mwh * oil_rate + gas_mwh * gas_rate) / 1e6
+        out['fossilCo2Mt'] = round(fossil_co2_mt, 1)
+
+    return out
 
 
 def build_grid_resource_pcts(iso, record):
@@ -244,12 +320,14 @@ def main():
         }
         print(f"  {iso}: demand={total_mwh/1e6:.1f} TWh")
 
-    # Compute grid baseline
-    grid_baseline = compute_grid_baseline()
+    # Compute grid baseline (with dispatch HMS + CO2)
+    grid_baseline = compute_grid_baseline(iso_dispatch, emission_rates)
     deployment['gridBaseline'] = grid_baseline
     print(f"\nGrid baselines computed:")
     for iso, bl in grid_baseline.items():
-        print(f"  {iso}: {bl['totalPct']:.1f}% clean")
+        hms_str = f", HMS={bl['baselineHms']}%" if 'baselineHms' in bl else ''
+        co2_str = f", CO2={bl.get('baselineCo2Mt', '?')} Mt" if 'baselineCo2Mt' in bl else ''
+        print(f"  {iso}: {bl['totalPct']:.1f}% clean{hms_str}{co2_str}")
 
     # Process each strategy × ISO × participation × threshold
     total_processed = 0
@@ -278,7 +356,12 @@ def main():
                             iso, resource_pcts,
                             dd['demand_norm'], dd['supply_profiles'],
                             dd['supply_matrix'], dd['total_mwh'],
+                            emission_rates=emission_rates,
                         )
+                        # Compute dispatch-based CO2 reduction (baseline - with-procurement)
+                        bl_co2 = grid_baseline.get(iso, {}).get('baselineCo2Mt')
+                        if bl_co2 is not None and 'fossilCo2Mt' in metrics:
+                            metrics['dispCo2'] = round(bl_co2 - metrics['fossilCo2Mt'], 1)
                         record.update(metrics)
                         strat_count += 1
                     except Exception as e:
@@ -364,6 +447,7 @@ def main():
                         grid_iso, dict(agg_pcts),
                         dd['demand_norm'], dd['supply_profiles'],
                         dd['supply_matrix'], dd['total_mwh'],
+                        emission_rates=emission_rates,
                     )
 
                     # Store grid-centric HMS in the grid ISO's record
@@ -373,6 +457,10 @@ def main():
                         grid_record['gridCurtTwh'] = metrics['curtTwh']
                         grid_record['gridGasGw'] = metrics['gasGw']
                         grid_record['gridAggCleanPct'] = metrics['gridCleanPct']
+                        # Grid-centric dispatch CO2 reduction
+                        bl_co2 = grid_baseline.get(grid_iso, {}).get('baselineCo2Mt')
+                        if bl_co2 is not None and 'fossilCo2Mt' in metrics:
+                            grid_record['gridDispCo2'] = round(bl_co2 - metrics['fossilCo2Mt'], 1)
                         grid_hms_count += 1
                 except Exception:
                     pass
