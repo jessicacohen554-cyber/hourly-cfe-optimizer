@@ -242,6 +242,15 @@
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
 }
+.jar-matrix-panel {
+    background: var(--bg-card, #fff);
+    border: 1px solid var(--border-light, #E2E8F0);
+    border-radius: var(--radius-lg, 12px);
+    box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0,0,0,.1));
+    padding: 24px 16px;
+    margin: 0 auto;
+    overflow-x: auto;
+}
 .matrix-canvas-wrap {
     position: relative;
     min-height: 400px;
@@ -805,9 +814,11 @@
 
 <!-- Jar Matrix -->
 <div class="matrix-section">
-    <div class="matrix-canvas-wrap">
-        <canvas id="jarCanvas"></canvas>
-        <div id="jarOverlay"></div>
+    <div class="jar-matrix-panel">
+        <div class="matrix-canvas-wrap">
+            <canvas id="jarCanvas"></canvas>
+            <div id="jarOverlay"></div>
+        </div>
     </div>
 </div>
 

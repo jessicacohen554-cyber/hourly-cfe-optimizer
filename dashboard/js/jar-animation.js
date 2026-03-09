@@ -112,8 +112,16 @@ class Jar {
         this.el = null;       // DOM element (created on first render)
     }
 
-    setBalls(dataRecord, ballTwh, gridBaseline, crossIsoFlows, showGlow, targetBalls, maxCurtBalls) {
-        this.data = dataRecord;
+    /**
+     * Set ball data using absolute 100-ball scale (1 ball = 1% of grid demand).
+     *
+     * @param {object} gridRecord - Grid-centric aggregated record: {n: {res: twh}, buyerFlows: {iso: {res: twh}}}
+     * @param {object} gridBaseline - Grid baseline clean shares {res: pct, totalPct: N}
+     * @param {boolean} showGlow - Whether to show cross-ISO buyer glow
+     * @param {number} curtTwh - Curtailment TWh for this grid ISO under this strategy
+     */
+    setBalls(gridRecord, gridBaseline, showGlow, curtTwh) {
+        this.data = gridRecord;
         this.gridBaseline = gridBaseline;
 
         const iso = this.iso;
@@ -122,115 +130,85 @@ class Jar {
 
         const items = [];
 
-        // Build claimed resource map
-        const claimedTwh = {};
-        if (dataRecord && dataRecord.e) {
-            for (const [res, twh] of Object.entries(dataRecord.e)) {
-                if (twh <= 0) continue;
-                const mapped = this._mapClaimedResource(res);
-                claimedTwh[mapped] = (claimedTwh[mapped] || 0) + twh;
-            }
-        }
-
-        // 1. Grid baseline balls (TWh-based, will be normalized below)
+        // 1. Grid baseline balls — each ball = 1% of grid demand (saturated/solid)
         for (const [res, pct] of Object.entries(bl)) {
             if (res === 'totalPct' || pct <= 0) continue;
-            const twh = pct / 100 * gridDemand;
-
-            const claimed = claimedTwh[res] || 0;
-            let claimedTwhUsed = 0;
-            if (claimed > 0) {
-                claimedTwhUsed = Math.min(twh, claimed);
-                claimedTwh[res] = Math.max(0, claimed - claimedTwhUsed);
-            }
-
-            const unclaimedTwh = twh - claimedTwhUsed;
-            if (unclaimedTwh > 0) {
-                items.push({ resource: res, twh: unclaimedTwh, tier: 'baseline', glowIso: null });
-            }
-            if (claimedTwhUsed > 0) {
-                items.push({ resource: res, twh: claimedTwhUsed, tier: 'claimed', glowIso: null });
-            }
+            items.push({
+                resource: res,
+                count: Math.max(1, Math.round(pct)),  // 1 ball per % of demand
+                tier: 'baseline',
+                glowIso: null,
+            });
         }
 
-        // 2. New-build procurement
-        if (dataRecord && dataRecord.n) {
-            for (const [res, twh] of Object.entries(dataRecord.n)) {
+        // 2. New-build procurement balls — transparent/outline
+        //    gridRecord.n has {resource: twh} aggregated from all buyers targeting this grid
+        if (gridRecord && gridRecord.n) {
+            // Build per-resource ball counts, tracking buyer glow per ball
+            const buyerFlows = gridRecord.buyerFlows || {};
+
+            for (const [res, twh] of Object.entries(gridRecord.n)) {
                 if (twh <= 0) continue;
-                items.push({ resource: res, twh, tier: 'new', glowIso: null });
-            }
-        }
+                const pctOfDemand = twh / gridDemand * 100;
+                const ballCount = Math.max(1, Math.round(pctOfDemand));
 
-        // 3. Cross-ISO flows — always show balls, glow only when toggled
-        if (crossIsoFlows) {
-            for (const [buyerIso, resources] of Object.entries(crossIsoFlows)) {
-                for (const [res, twh] of Object.entries(resources)) {
-                    if (twh <= 0) continue;
-                    items.push({ resource: res, twh, tier: 'new', glowIso: showGlow ? buyerIso : null });
+                if (showGlow && Object.keys(buyerFlows).length > 0) {
+                    // Distribute balls across buyer ISOs proportionally
+                    let totalBuyerTwh = 0;
+                    const buyerTwhForRes = {};
+                    for (const [buyerIso, resources] of Object.entries(buyerFlows)) {
+                        const bt = (resources[res] || 0);
+                        if (bt > 0) {
+                            buyerTwhForRes[buyerIso] = bt;
+                            totalBuyerTwh += bt;
+                        }
+                    }
+
+                    if (totalBuyerTwh > 0) {
+                        let allocated = 0;
+                        const entries = Object.entries(buyerTwhForRes);
+                        for (let i = 0; i < entries.length; i++) {
+                            const [buyerIso, bt] = entries[i];
+                            const share = i < entries.length - 1
+                                ? Math.max(1, Math.round(bt / totalBuyerTwh * ballCount))
+                                : Math.max(1, ballCount - allocated);
+                            items.push({ resource: res, count: share, tier: 'new', glowIso: buyerIso });
+                            allocated += share;
+                        }
+                    } else {
+                        items.push({ resource: res, count: ballCount, tier: 'new', glowIso: null });
+                    }
+                } else {
+                    items.push({ resource: res, count: ballCount, tier: 'new', glowIso: null });
                 }
             }
         }
 
-        // 4. Curtailment items (separate — rendered above jar rim)
+        // 3. Curtailment balls — above the rim (1 ball per % of demand)
         const curtItems = [];
-        if (dataRecord && dataRecord.curtTwh > 0) {
+        const effectiveCurt = curtTwh || (gridRecord && gridRecord.curtTwh) || 0;
+        if (effectiveCurt > 0) {
+            const curtPct = effectiveCurt / gridDemand * 100;
+            const curtBalls = Math.max(1, Math.min(30, Math.round(curtPct)));  // cap at 30 for readability
             const vreResources = ['solar', 'wind'];
             for (const res of vreResources) {
                 curtItems.push({
                     resource: res,
-                    twh: dataRecord.curtTwh / vreResources.length,
+                    count: Math.max(1, Math.round(curtBalls / vreResources.length)),
                     tier: 'curtailed',
                     glowIso: null,
                 });
             }
         }
 
-        // Sort non-curtailed: baseline bottom, then claimed, new top
-        const tierOrder = { 'baseline': 0, 'claimed': 1, 'new': 2 };
+        // Sort non-curtailed: baseline bottom, new top
+        const tierOrder = { 'baseline': 0, 'new': 1 };
         items.sort((a, b) => {
             const ta = tierOrder[a.tier] || 0;
-            const tb = tierOrder[b.tier] || 0;
-            if (ta !== tb) return ta - tb;
-            return b.twh - a.twh;
+            const tb_order = tierOrder[b.tier] || 0;
+            if (ta !== tb_order) return ta - tb_order;
+            return (b.count || 0) - (a.count || 0);
         });
-
-        // ── Proportional normalization ──
-        // Non-curtailed balls fill exactly targetBalls (= jar capacity)
-        const totalNonCurtTwh = items.reduce((s, it) => s + it.twh, 0);
-        const tb = targetBalls || 70;
-
-        // Assign proportional ball counts — ensure each item gets at least 1 ball
-        let assigned = 0;
-        for (const item of items) {
-            if (totalNonCurtTwh > 0) {
-                item.count = Math.max(1, Math.round(item.twh / totalNonCurtTwh * tb));
-            } else {
-                item.count = 1;
-            }
-            assigned += item.count;
-        }
-        // Adjust for rounding — trim largest items if over budget
-        while (assigned > tb && items.length > 0) {
-            let maxIdx = 0;
-            for (let i = 1; i < items.length; i++) {
-                if (items[i].count > items[maxIdx].count) maxIdx = i;
-            }
-            if (items[maxIdx].count > 1) { items[maxIdx].count--; assigned--; }
-            else break;
-        }
-
-        // Curtailed balls — proportional to non-curtailed scale, capped at maxCurtBalls
-        const mcb = maxCurtBalls || 21;
-        const totalCurtTwh = curtItems.reduce((s, it) => s + it.twh, 0);
-        if (totalCurtTwh > 0 && totalNonCurtTwh > 0) {
-            const curtRawBalls = Math.round(totalCurtTwh / totalNonCurtTwh * tb);
-            const curtTarget = Math.min(curtRawBalls, mcb);
-            for (const item of curtItems) {
-                item.count = Math.max(1, Math.round(item.twh / totalCurtTwh * curtTarget));
-            }
-        } else if (totalCurtTwh > 0) {
-            for (const item of curtItems) { item.count = 1; }
-        }
 
         // Flatten to individual ball descriptors
         this.ballItems = [];
@@ -275,11 +253,13 @@ class Jar {
             this.el.dataset.iso = this.iso;
         }
 
-        // Set HMS gradient height
+        // Set HMS gradient height — use gridCleanPct (grid-centric) or fallback
         const hms = this.data && this.data.hms;
         const gridCleanPct = this.data && this.data.gridCleanPct;
+        const blPctFallback = this.gridBaseline ? (this.gridBaseline.totalPct || 0) : 0;
         const hmsPct = hms != null ? Math.min(100, Math.max(0, hms)) :
-                       (gridCleanPct != null ? Math.min(100, Math.max(0, gridCleanPct)) : 0);
+                       (gridCleanPct != null ? Math.min(100, Math.max(0, gridCleanPct)) :
+                       Math.min(100, Math.max(0, blPctFallback)));
         this.el.style.setProperty('--hms-pct', hmsPct + '%');
         this.el.style.setProperty('--ball-size', ballSize + 'px');
 
@@ -315,7 +295,7 @@ class Jar {
         // HMS label
         const displayPct = hms != null ? hms : (gridCleanPct != null ? gridCleanPct : null);
         if (displayPct != null && displayPct >= 0.5) {
-            const label = hms != null ? `${Math.round(displayPct)}% HMS` : `${Math.round(displayPct)}%`;
+            const label = hms != null ? `${Math.round(displayPct)}% Grid HMS` : `${Math.round(displayPct)}%`;
             html += `<div class="jar-hms-label">${label}</div>`;
         } else if (this.gridBaseline) {
             const blPct = this.gridBaseline.totalPct || 0;
@@ -339,13 +319,6 @@ class Jar {
         if (this.data.n) {
             for (const t of Object.values(this.data.n)) {
                 if (t > 0) total += t;
-            }
-        }
-        if (this.data.x) {
-            for (const resources of Object.values(this.data.x)) {
-                for (const t of Object.values(resources)) {
-                    if (t > 0) total += t;
-                }
             }
         }
         return total;
@@ -427,8 +400,8 @@ class JarGrid {
         const numCols = this.activeStrategies.length;
 
         // Row headers = ISO names (shorter), col headers = strategy IDs + gas GW sub-label
-        this.rowHeaderWidth = isMobile ? 55 : (isTablet ? 65 : 80);
-        this.colHeaderHeight = isMobile ? 105 : 128;
+        this.rowHeaderWidth = isMobile ? 70 : (isTablet ? 90 : 115);
+        this.colHeaderHeight = isMobile ? 130 : 165;
 
         const availWidth = rect.width - this.rowHeaderWidth;
         const jarW = Math.max(55, Math.floor(availWidth / numCols));
@@ -519,73 +492,131 @@ class JarGrid {
     _updateData() {
         if (!this.data) return;
 
-        const crossFlowsByStrategy = {};
-        for (const strat of this.activeStrategies) {
-            crossFlowsByStrategy[strat] = this._buildCrossIsoFlows(strat);
-        }
-
-        // Compute ball size based on jar dimensions
+        // Compute ball size — target ~10 balls per row to fit 100 inside jar
         const isMobile = window.innerWidth < 768;
         const jarInnerW = this.jarWidth * 0.76 * 0.90;
-        const ballsPerRow = isMobile ? 5 : 7;
-        const ballSize = Math.max(5, Math.min(Math.floor(jarInnerW / ballsPerRow) - 2, 12));
+        const ballsPerRow = isMobile ? 7 : 10;
+        const ballSize = Math.max(4, Math.min(Math.floor(jarInnerW / ballsPerRow) - 2, 10));
 
-        // Ball budget: jar fills exactly this many non-curtailed balls
-        const maxRows = isMobile ? 8 : 12;
-        const targetBalls = ballsPerRow * maxRows;       // 40 mobile, 84 desktop
-        const maxCurtBalls = ballsPerRow * 3;             // 15 mobile, 21 desktop
+        // ── Grid-centric aggregation ──
+        // For each strategy, aggregate all buyer records into grid-centric view:
+        // gridView[strat][gridIso] = {n: {res: totalTwh}, buyerFlows: {buyerIso: {res: twh}}, hms, curtTwh, ...}
+        const gridViews = {};
 
-        for (const jar of this.jars) {
-            const stratData = this.data.data[jar.strategy];
-            let record = null;
+        for (const strat of this.activeStrategies) {
+            const stratData = this.data.data[strat];
+            if (!stratData) { gridViews[strat] = {}; continue; }
 
-            if (stratData) {
-                const isoData = stratData[jar.iso];
-                if (isoData) {
-                    const pk = this._findClosestKey(Object.keys(isoData), this.participation);
-                    if (pk) {
-                        const tk = this._findClosestKey(Object.keys(isoData[pk]), this.threshold);
-                        if (tk) record = isoData[pk][tk];
-                    }
-                }
+            const view = {};
+            // Initialize each grid ISO
+            for (const iso of ISO_LIST) {
+                view[iso] = { n: {}, buyerFlows: {}, curtTwh: 0, hms: null, gridCleanPct: null, gasGw: null };
             }
 
-            const ballTwh = (GRID_DEMANDS[jar.iso] || 300) * 0.01;
-            const bl = this.gridBaseline[jar.iso] || null;
-            const crossFlows = crossFlowsByStrategy[jar.strategy][jar.iso] || null;
-
-            jar.setBalls(record, ballTwh, bl, crossFlows, this.showCrossIsoGlow, targetBalls, maxCurtBalls);
-            jar.renderDOM(ballSize);
-        }
-
-        this._positionDOMJars();
-        this._wireTooltips();
-
-        // Compute per-strategy metrics (gas GW, curtailed TWh, total cost) summed across ISOs
-        this.strategyGasGw = {};
-        this.strategyCurtTwh = {};
-        this.strategyCostM = {};
-        this.strategyGasCostM = {};
-        for (const strat of this.activeStrategies) {
-            let totalNewGas = 0, totalCurt = 0, totalCost = 0, totalGasCost = 0;
-            for (const iso of ISO_LIST) {
-                const stratData = this.data.data[strat];
-                if (!stratData) continue;
-                const isoData = stratData[iso];
+            // Walk all buyer ISOs and redistribute resources to destination grids
+            for (const buyerIso of ISO_LIST) {
+                const isoData = stratData[buyerIso];
                 if (!isoData) continue;
                 const pk = this._findClosestKey(Object.keys(isoData), this.participation);
                 if (!pk) continue;
                 const tk = this._findClosestKey(Object.keys(isoData[pk]), this.threshold);
                 if (!tk) continue;
                 const record = isoData[pk][tk];
-                if (record) {
-                    const newGasGw = record.gasGw != null ? Math.max(0, record.gasGw - (EXISTING_GAS_GW[iso] || 0)) : 0;
-                    totalNewGas += newGasGw;
-                    totalCurt += record.curtTwh || 0;
-                    totalCost += record.tc || 0;
-                    // Annualized cost of new gas capacity: GW × 1e6 kW/GW × $/kW-yr / 1e6 = $M/yr
-                    totalGasCost += newGasGw * (NEW_CCGT_COST_KW_YR[iso] || 100) * 1000;
+                if (!record) continue;
+
+                // Same-ISO new-build → goes to buyer's grid
+                if (record.n) {
+                    for (const [res, twh] of Object.entries(record.n)) {
+                        if (twh > 0) {
+                            view[buyerIso].n[res] = (view[buyerIso].n[res] || 0) + twh;
+                        }
+                    }
                 }
+
+                // Existing claims (e) — already in grid baseline, no new balls needed.
+                // But store for detail panel / metrics
+                if (record.e) {
+                    if (!view[buyerIso].e) view[buyerIso].e = {};
+                    for (const [res, twh] of Object.entries(record.e)) {
+                        if (twh > 0) {
+                            view[buyerIso].e[res] = (view[buyerIso].e[res] || 0) + twh;
+                        }
+                    }
+                }
+
+                // Cross-ISO flows → go to SOURCE grid, with buyer glow tracking
+                if (record.x) {
+                    for (const [srcIso, resources] of Object.entries(record.x)) {
+                        if (!view[srcIso]) continue;  // unknown ISO
+                        for (const [res, twh] of Object.entries(resources)) {
+                            if (twh > 0) {
+                                view[srcIso].n[res] = (view[srcIso].n[res] || 0) + twh;
+                                // Track buyer origin for glow
+                                if (!view[srcIso].buyerFlows[buyerIso]) {
+                                    view[srcIso].buyerFlows[buyerIso] = {};
+                                }
+                                view[srcIso].buyerFlows[buyerIso][res] =
+                                    (view[srcIso].buyerFlows[buyerIso][res] || 0) + twh;
+                            }
+                        }
+                    }
+                }
+
+                // Take dispatch metrics from the buyer record
+                // Prefer grid-centric fields (gridHms, gridCurtTwh, gridGasGw) when available
+                // Grid-centric curtailment only
+                if (record.gridCurtTwh > 0) {
+                    view[buyerIso].curtTwh = record.gridCurtTwh;
+                }
+                // Grid-centric metrics ONLY (no buyer-centric fallback)
+                if (record.gridHms != null) {
+                    view[buyerIso].hms = record.gridHms;
+                }
+                if (record.gridAggCleanPct != null) {
+                    view[buyerIso].gridCleanPct = record.gridAggCleanPct;
+                }
+                if (record.gridGasGw != null) {
+                    view[buyerIso].gasGw = record.gridGasGw;
+                }
+                // Preserve cost/co2 data
+                if (record.tc != null) view[buyerIso].tc = (view[buyerIso].tc || 0) + record.tc;
+                if (record.co2 != null) view[buyerIso].co2 = (view[buyerIso].co2 || 0) + record.co2;
+                if (record.bl != null) view[buyerIso].bl = (view[buyerIso].bl || 0) + record.bl;
+            }
+
+            gridViews[strat] = view;
+        }
+
+        for (const jar of this.jars) {
+            const gridView = gridViews[jar.strategy] || {};
+            const gridRecord = gridView[jar.iso] || null;
+            const bl = this.gridBaseline[jar.iso] || null;
+            const curtTwh = gridRecord ? gridRecord.curtTwh : 0;
+
+            jar.setBalls(gridRecord, bl, this.showCrossIsoGlow, curtTwh);
+            jar.renderDOM(ballSize);
+        }
+
+        this._positionDOMJars();
+        this._wireTooltips();
+
+        // Compute per-strategy metrics (gas GW, curtailed TWh, total cost) from grid views
+        this.strategyGasGw = {};
+        this.strategyCurtTwh = {};
+        this.strategyCostM = {};
+        this.strategyGasCostM = {};
+        for (const strat of this.activeStrategies) {
+            let totalNewGas = 0, totalCurt = 0, totalCost = 0, totalGasCost = 0;
+            const view = gridViews[strat] || {};
+            for (const iso of ISO_LIST) {
+                const gv = view[iso];
+                if (!gv) continue;
+                const gasGw = gv.gasGw != null ? gv.gasGw : 0;
+                const newGasGw = Math.max(0, gasGw - (EXISTING_GAS_GW[iso] || 0));
+                totalNewGas += newGasGw;
+                totalCurt += gv.curtTwh || 0;
+                totalCost += gv.tc || 0;
+                totalGasCost += newGasGw * (NEW_CCGT_COST_KW_YR[iso] || 100) * 1000;
             }
             this.strategyGasGw[strat] = totalNewGas;
             this.strategyCurtTwh[strat] = totalCurt;
@@ -713,7 +744,7 @@ class JarGrid {
         ctx.save();
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        const fontSize = this.jarWidth < 70 ? 8 : (this.jarWidth < 100 ? 10 : 12);
+        const fontSize = this.jarWidth < 70 ? 11 : (this.jarWidth < 100 ? 14 : 16);
         ctx.font = `600 ${fontSize}px 'Plus Jakarta Sans', sans-serif`;
         ctx.fillStyle = '#334155';
 
@@ -732,7 +763,7 @@ class JarGrid {
         ctx.save();
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        const metricFS = this.jarWidth < 70 ? 7 : (this.jarWidth < 100 ? 8.5 : 10);
+        const metricFS = this.jarWidth < 70 ? 9 : (this.jarWidth < 100 ? 11 : 13);
         const metricLineH = metricFS + 3;
         const metricBaseY = this.colHeaderHeight - 4 * metricLineH + metricLineH / 2;
 
@@ -776,7 +807,7 @@ class JarGrid {
         ctx.save();
         ctx.textAlign = 'right';
         ctx.textBaseline = 'middle';
-        const rowFS = this.rowHeaderWidth < 60 ? 9 : (this.rowHeaderWidth < 75 ? 11 : 13);
+        const rowFS = this.rowHeaderWidth < 75 ? 13 : (this.rowHeaderWidth < 95 ? 16 : 20);
         ctx.font = `600 ${rowFS}px 'Space Grotesk', sans-serif`;
 
         for (let row = 0; row < ISO_LIST.length; row++) {
@@ -807,7 +838,7 @@ class JarGrid {
         if (!this.tooltipEl) return;
         const stratLabel = (STRATEGY_LABELS[jar.strategy] || jar.strategy).replace('\n', ' ');
         const hms = jar.data && jar.data.hms != null ? jar.data.hms : (jar.data && jar.data.gridCleanPct != null ? jar.data.gridCleanPct : null);
-        const hmsText = hms != null ? ` · ${Math.round(hms)}% HMS` : '';
+        const hmsText = hms != null ? ` · ${Math.round(hms)}% Grid HMS` : '';
         this.tooltipEl.innerHTML = `<span style="color:${getIsoColor(jar.iso)};font-weight:700">${jar.iso}</span> — ${stratLabel}${hmsText} <span style="color:var(--text-muted);font-size:0.7rem">(click for details)</span>`;
         this.tooltipEl.style.display = 'block';
 
@@ -839,10 +870,10 @@ class JarGrid {
             const data = jar.data;
 
             html += '<div class="detail-panel-stats">';
-            if (data.hms != null) html += `<span>Hourly match: ${data.hms}%</span>`;
-            if (data.gridCleanPct != null) html += `<span>Grid clean: ${data.gridCleanPct}%</span>`;
-            if (data.gasGw != null) html += `<span>Gas: ${data.gasGw} GW</span>`;
-            if (data.curtTwh != null && data.curtTwh > 0) html += `<span>Curtailed: ${data.curtTwh} TWh</span>`;
+            if (data.hms != null) html += `<span>Grid Hourly Match: ${Math.round(data.hms)}%</span>`;
+            if (data.gridCleanPct != null) html += `<span>Grid Clean: ${Math.round(data.gridCleanPct)}%</span>`;
+            if (data.gasGw != null) html += `<span>Gas Backup: ${Math.round(data.gasGw)} GW</span>`;
+            if (data.curtTwh != null && data.curtTwh > 0) html += `<span>Curtailed: ${Math.round(data.curtTwh)} TWh</span>`;
             html += '</div>';
 
             // Resource table
@@ -870,15 +901,16 @@ class JarGrid {
                     </tr>`;
                 }
             }
-            if (data.x && Object.keys(data.x).length > 0) {
-                for (const [srcIso, resources] of Object.entries(data.x)) {
+            // Cross-ISO buyer flows (shows which buyers funded new-build on this grid)
+            if (data.buyerFlows && Object.keys(data.buyerFlows).length > 0) {
+                for (const [buyerIso, resources] of Object.entries(data.buyerFlows)) {
                     for (const [res, twh] of Object.entries(resources)) {
                         if (twh <= 0) continue;
                         html += `<tr>
-                            <td><span class="tooltip-iso-badge" style="background:${getIsoColor(srcIso)}20;color:${getIsoColor(srcIso)}">${srcIso}</span></td>
+                            <td><span class="tooltip-iso-badge" style="background:${getIsoColor(buyerIso)}20;color:${getIsoColor(buyerIso)}">${buyerIso}</span></td>
                             <td>${getResourceLabel(res)}</td>
                             <td class="detail-twh">${twh.toFixed(1)}</td>
-                            <td class="detail-type">Cross-ISO</td>
+                            <td class="detail-type">Funded by ${buyerIso}</td>
                         </tr>`;
                     }
                 }
@@ -956,13 +988,12 @@ class JarGrid {
                         resourceBreakdown.new[r] = (resourceBreakdown.new[r] || 0) + t;
                     }
                 }
-                if (d.x) {
-                    for (const [srcIso, resources] of Object.entries(d.x)) {
+                // Cross-ISO flows tracked via buyerFlows
+                if (d.buyerFlows) {
+                    for (const [buyerIso, resources] of Object.entries(d.buyerFlows)) {
                         for (const [r, t] of Object.entries(resources)) {
-                            if (t > 0) {
-                                totalCross += t;
-                                resourceBreakdown.new[r] = (resourceBreakdown.new[r] || 0) + t;
-                            }
+                            if (t > 0) totalCross += t;
+                            // Already counted in d.n above
                         }
                     }
                 }
@@ -970,7 +1001,7 @@ class JarGrid {
                 totalBaseline += d.bl || 0;
             }
 
-            const totalPaid = totalExisting + totalNew + totalCross;
+            const totalPaid = totalExisting + totalNew;  // cross is already in new
 
             stats[strat] = {
                 existingTwh: totalExisting,
