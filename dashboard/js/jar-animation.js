@@ -406,8 +406,8 @@ class JarGrid {
         const availWidth = rect.width - this.rowHeaderWidth;
         const jarW = Math.max(55, Math.floor(availWidth / numCols));
         const jarH = isMobile ? 150 : (isTablet ? 190 : 240);
-        // Extra vertical room: curtailment overflows above (~30px), HMS label below (~18px)
-        const curtailPad = isMobile ? 24 : 32;
+        // Extra vertical room: curtailment overflows above (up to 30 balls × ballSize), HMS label below
+        const curtailPad = isMobile ? 50 : 80;
         const hmsLabelPad = 18;
         const rowGap = (isMobile ? 14 : (isTablet ? 20 : 26)) + curtailPad + hmsLabelPad;
 
@@ -583,6 +583,9 @@ class JarGrid {
                 }
                 if (record.gridGasGw != null) {
                     view[buyerIso].gasGw = record.gridGasGw;
+                } else if (record.gasGw != null && view[buyerIso].gasGw == null) {
+                    // Fallback to buyer-centric gasGw when grid-centric not available
+                    view[buyerIso].gasGw = record.gasGw;
                 }
                 // Preserve cost/co2 data
                 if (record.tc != null) view[buyerIso].tc = (view[buyerIso].tc || 0) + record.tc;
@@ -608,23 +611,32 @@ class JarGrid {
 
         // Compute per-strategy metrics (gas GW, curtailed TWh, total cost) from grid views
         this.strategyGasGw = {};
+        this.strategyNewGasGw = {};
         this.strategyCurtTwh = {};
         this.strategyCostM = {};
         this.strategyGasCostM = {};
+        // Sum of existing gas across all ISOs (baseline without any clean procurement)
+        const totalExistingGas = ISO_LIST.reduce((s, iso) => s + (EXISTING_GAS_GW[iso] || 0), 0);
+
         for (const strat of this.activeStrategies) {
-            let totalNewGas = 0, totalCurt = 0, totalCost = 0, totalGasCost = 0;
+            let totalGasRemaining = 0, totalNewGas = 0, totalCurt = 0, totalCost = 0, totalGasCost = 0;
             const view = gridViews[strat] || {};
             for (const iso of ISO_LIST) {
                 const gv = view[iso];
                 if (!gv) continue;
-                const gasGw = gv.gasGw != null ? gv.gasGw : 0;
-                const newGasGw = Math.max(0, gasGw - (EXISTING_GAS_GW[iso] || 0));
-                totalNewGas += newGasGw;
+                // gasGw = total gas backup needed on this grid (decreases as clean increases)
+                const gasGw = gv.gasGw != null ? gv.gasGw : (EXISTING_GAS_GW[iso] || 0);
+                totalGasRemaining += gasGw;
+                const newGas = Math.max(0, gasGw - (EXISTING_GAS_GW[iso] || 0));
+                totalNewGas += newGas;
+                totalGasCost += newGas * (NEW_CCGT_COST_KW_YR[iso] || 100) * 1000;
                 totalCurt += gv.curtTwh || 0;
                 totalCost += gv.tc || 0;
-                totalGasCost += newGasGw * (NEW_CCGT_COST_KW_YR[iso] || 100) * 1000;
             }
-            this.strategyGasGw[strat] = totalNewGas;
+            // Primary: gas displaced (positive = good)
+            this.strategyGasGw[strat] = Math.max(0, totalExistingGas - totalGasRemaining);
+            // Secondary: new gas needed beyond existing + cost
+            this.strategyNewGasGw[strat] = totalNewGas;
             this.strategyCurtTwh[strat] = totalCurt;
             this.strategyGasCostM[strat] = totalGasCost;
             this.strategyCostM[strat] = totalCost + totalGasCost;
@@ -777,19 +789,20 @@ class JarGrid {
             const strat = this.activeStrategies[col];
             const x = this.rowHeaderWidth + col * this.jarWidth + this.jarWidth / 2;
 
-            // Line 1: Gas GW — bold red
-            const gasGw = this.strategyGasGw?.[strat] ?? 0;
+            // Line 1: Gas displaced — green (good = more displaced)
+            const gasDisplaced = this.strategyGasGw?.[strat] ?? 0;
             ctx.font = `700 ${metricFS}px 'DM Sans', sans-serif`;
-            ctx.fillStyle = gasGw > 0 ? '#EF4444' : '#9CA3AF';
-            ctx.fillText(gasGw > 0 ? `+${Math.round(gasGw)} GW gas` : '0 GW gas', x, metricBaseY);
+            ctx.fillStyle = gasDisplaced > 0 ? '#16A34A' : '#9CA3AF';
+            ctx.fillText(gasDisplaced > 0 ? `−${Math.round(gasDisplaced)} GW gas` : '0 GW gas', x, metricBaseY);
 
-            // Line 2: Gas capacity cost — red (lighter)
+            // Line 2: New gas needed + cost — discrete gray
+            const newGasGw = this.strategyNewGasGw?.[strat] ?? 0;
             const gasCostM = this.strategyGasCostM?.[strat] ?? 0;
-            ctx.font = `600 ${metricFS}px 'DM Sans', sans-serif`;
-            ctx.fillStyle = gasCostM > 0 ? '#DC2626' : '#9CA3AF';
-            const gasCostLabel = gasCostM >= 1000 ? `$${(gasCostM / 1000).toFixed(1)}B gas cost` :
-                                 gasCostM > 0 ? `$${Math.round(gasCostM)}M gas cost` : '$0 gas cost';
-            ctx.fillText(gasCostLabel, x, metricBaseY + metricLineH);
+            ctx.font = `500 ${Math.max(7, metricFS - 2)}px 'DM Sans', sans-serif`;
+            ctx.fillStyle = '#9CA3AF';
+            const gasCostStr = gasCostM >= 1000 ? `$${(gasCostM / 1000).toFixed(1)}B` :
+                               gasCostM > 0 ? `$${Math.round(gasCostM)}M` : '$0';
+            ctx.fillText(newGasGw > 0 ? `+${Math.round(newGasGw)} GW new (${gasCostStr})` : '', x, metricBaseY + metricLineH);
 
             // Line 3: Curtailed TWh — amber
             const curtTwh = this.strategyCurtTwh?.[strat] ?? 0;
