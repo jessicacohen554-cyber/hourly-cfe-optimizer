@@ -190,24 +190,24 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 
 /* ========== GLASSMORPHIC PANELS (light sections) ========== */
 
-/* Story content wrapper */
+/* Story content wrapper — higher opacity for text readability */
 .story-section > .story-content {
-    background: rgba(255, 255, 255, 0.55);
-    backdrop-filter: blur(10px) saturate(160%);
-    -webkit-backdrop-filter: blur(10px) saturate(160%);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.4);
     border-radius: 16px;
     padding: 36px 32px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
 }
 
 /* Generic glass panel class */
 .glass-panel {
-    background: rgba(255, 255, 255, 0.68);
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.02);
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05), 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 
 /* Cards and panels — comprehensive list from all CSS files */
@@ -254,19 +254,19 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 .peak-capacity-panel,
 .target-mode-panel,
 .pathway-metric {
-    background: rgba(255, 255, 255, 0.68) !important;
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.35) !important;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.02);
+    background: rgba(255, 255, 255, 0.78) !important;
+    backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05), 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 
 /* Slightly more opaque for callouts (text-heavy) */
 .callout-box,
 .callout-box.callout-left-border {
-    background: rgba(255, 255, 255, 0.72) !important;
-    backdrop-filter: blur(10px) saturate(160%);
-    -webkit-backdrop-filter: blur(10px) saturate(160%);
+    background: rgba(255, 255, 255, 0.82) !important;
+    backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
 }
 
 /* Story panel (gen_regional_pathways) */
@@ -288,11 +288,11 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 .scenario-card,
 .gap-card,
 .mechanism-card {
-    background: rgba(255, 255, 255, 0.68) !important;
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.35) !important;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.02);
+    background: rgba(255, 255, 255, 0.78) !important;
+    backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05), 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 
 /* Hero sections — glass or transparent */
@@ -302,27 +302,27 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 }
 .hero-overview .hero-stats-row .stat-tile,
 .hero-section .hero-stats-row .stat-tile {
-    background: rgba(255, 255, 255, 0.68) !important;
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    background: rgba(255, 255, 255, 0.78) !important;
+    backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
 }
 
 /* Data tables on glass */
 .data-table,
 .company-table,
 .delta-table {
-    background: rgba(255, 255, 255, 0.55);
+    background: rgba(255, 255, 255, 0.72);
     border-radius: var(--radius-md);
 }
 .data-table th {
-    background: rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.5);
 }
 
 /* Nav button secondary */
 .nav-btn-secondary {
-    background: rgba(255, 255, 255, 0.65) !important;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    background: rgba(255, 255, 255, 0.78) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
 }
 
 /* Section dividers on transparent bg */
@@ -337,43 +337,43 @@ hr.section-divider,
     background: transparent !important;
 }
 .hero-stat {
-    background: rgba(255, 255, 255, 0.68) !important;
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.35) !important;
+    background: rgba(255, 255, 255, 0.78) !important;
+    backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
 }
 .report-layout {
     background: transparent !important;
 }
 .report-toc {
-    background: rgba(255, 255, 255, 0.65) !important;
-    backdrop-filter: blur(10px) saturate(160%);
-    -webkit-backdrop-filter: blur(10px) saturate(160%);
-    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    background: rgba(255, 255, 255, 0.78) !important;
+    backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
 }
 .report-section {
-    background: rgba(255, 255, 255, 0.55) !important;
-    backdrop-filter: blur(10px) saturate(160%);
-    -webkit-backdrop-filter: blur(10px) saturate(160%);
-    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    background: rgba(255, 255, 255, 0.78) !important;
+    backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
     border-radius: 12px;
     padding: 32px 28px;
 }
 
 /* ========== SCENARIO COMPARISON COMPONENTS ========== */
 .scenario-legend {
-    background: rgba(255, 255, 255, 0.7) !important;
-    backdrop-filter: blur(10px) saturate(160%);
-    -webkit-backdrop-filter: blur(10px) saturate(160%);
+    background: rgba(255, 255, 255, 0.80) !important;
+    backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
 }
 .chart-wide {
-    background: rgba(255, 255, 255, 0.68) !important;
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.35) !important;
+    background: rgba(255, 255, 255, 0.78) !important;
+    backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
 }
 .metric-tiles {
-    background: rgba(255, 255, 255, 0.55) !important;
+    background: rgba(255, 255, 255, 0.72) !important;
 }
 
 /* ========== CLEAN FIRM / ARTICLE COMPONENTS ========== */
@@ -382,10 +382,10 @@ hr.section-divider,
 }
 .concept-section .chart-panel,
 .concept-section .card {
-    background: rgba(255, 255, 255, 0.68) !important;
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.35) !important;
+    background: rgba(255, 255, 255, 0.78) !important;
+    backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
 }
 
 /* ========== LMP / SCROLL SECTION COMPONENTS ========== */
@@ -393,18 +393,18 @@ hr.section-divider,
     background: transparent !important;
 }
 .scroll-section-inner {
-    background: rgba(255, 255, 255, 0.55);
-    backdrop-filter: blur(10px) saturate(160%);
-    -webkit-backdrop-filter: blur(10px) saturate(160%);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.4);
     border-radius: 16px;
     padding: 36px 32px;
 }
 .key-findings-panel {
-    background: rgba(255, 255, 255, 0.65) !important;
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.35) !important;
+    background: rgba(255, 255, 255, 0.78) !important;
+    backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
 }
 
 /* ========== ABATEMENT COMPONENTS ========== */
@@ -418,10 +418,10 @@ hr.section-divider,
 .strategy-accordion,
 .accordion-header,
 .accordion-content {
-    background: rgba(255, 255, 255, 0.65) !important;
-    backdrop-filter: blur(10px) saturate(160%);
-    -webkit-backdrop-filter: blur(10px) saturate(160%);
-    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    background: rgba(255, 255, 255, 0.78) !important;
+    backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
 }
 
 /* Comparison boxes */
@@ -440,7 +440,7 @@ hr.section-divider,
 .report-section p,
 .concept-section p,
 .scroll-section p {
-    color: #475569;
+    color: #334155;
 }
 .story-section h2,
 .story-section h3,
@@ -457,7 +457,159 @@ hr.section-divider,
 .callout-box p,
 .narrative-box p,
 .insight-box p {
+    color: #334155;
+}
+
+/* General text inside glass panels */
+.card p, .card li,
+.chart-panel p,
+.insight-card p,
+.narrative-card p {
+    color: #334155;
+}
+.section-header p {
     color: #475569;
+}
+
+/* ========== NAVY PANEL VARIANT ========== */
+/* Add class "panel-navy" to any story-section or section to get a navy treatment */
+.panel-navy > .story-content,
+.panel-navy.story-content,
+section.panel-navy {
+    background: rgba(15, 23, 42, 0.88) !important;
+    backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.2);
+}
+.panel-navy > .story-content h2,
+.panel-navy > .story-content h3,
+.panel-navy.story-content h2,
+.panel-navy.story-content h3,
+section.panel-navy h2,
+section.panel-navy h3 {
+    color: #fff;
+}
+.panel-navy > .story-content p,
+.panel-navy > .story-content li,
+.panel-navy.story-content p,
+.panel-navy.story-content li,
+section.panel-navy p,
+section.panel-navy li {
+    color: rgba(255, 255, 255, 0.82);
+}
+.panel-navy > .story-content strong,
+.panel-navy.story-content strong,
+section.panel-navy strong {
+    color: rgba(255, 255, 255, 0.95);
+}
+.panel-navy > .story-content .callout,
+.panel-navy > .story-content .callout-box,
+.panel-navy > .story-content .insight-box,
+section.panel-navy .callout,
+section.panel-navy .callout-box,
+section.panel-navy .insight-box {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: rgba(255, 255, 255, 0.85);
+}
+.panel-navy > .story-content .callout p,
+.panel-navy > .story-content .insight-box p,
+section.panel-navy .callout p,
+section.panel-navy .insight-box p {
+    color: rgba(255, 255, 255, 0.82);
+}
+.panel-navy > .story-content .callout strong,
+.panel-navy > .story-content .insight-box strong,
+section.panel-navy .callout strong,
+section.panel-navy .insight-box strong {
+    color: rgba(255, 255, 255, 0.95);
+}
+.panel-navy > .story-content .card,
+section.panel-navy .card {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: rgba(255, 255, 255, 0.85);
+}
+.panel-navy > .story-content .card h3,
+.panel-navy > .story-content .card h4,
+section.panel-navy .card h3,
+section.panel-navy .card h4 {
+    color: #fff;
+}
+.panel-navy > .story-content .card p,
+.panel-navy > .story-content .card li,
+section.panel-navy .card p,
+section.panel-navy .card li {
+    color: rgba(255, 255, 255, 0.78);
+}
+.panel-navy > .story-content .stat-tile,
+.panel-navy > .story-content .stat-card,
+section.panel-navy .stat-tile,
+section.panel-navy .stat-card {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+.panel-navy > .story-content .stat-value,
+section.panel-navy .stat-value {
+    color: #fff;
+}
+.panel-navy > .story-content .stat-label,
+section.panel-navy .stat-label {
+    color: rgba(255, 255, 255, 0.6);
+}
+.panel-navy .story-badge {
+    background: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.85);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+.panel-navy .citation,
+.panel-navy .ref {
+    color: rgba(255, 255, 255, 0.5);
+}
+.panel-navy a {
+    color: #60A5FA;
+}
+/* Chart canvas container in navy */
+.panel-navy .chart-container h3,
+.panel-navy .chart-wrapper h3 {
+    color: #fff;
+}
+.panel-navy .company-table,
+.panel-navy .data-table {
+    background: rgba(255, 255, 255, 0.04) !important;
+    color: rgba(255, 255, 255, 0.85);
+}
+.panel-navy .company-table th,
+.panel-navy .data-table th {
+    color: rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.06);
+}
+.panel-navy .company-table td,
+.panel-navy .data-table td {
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Report-section variant */
+section.report-section.panel-navy {
+    background: rgba(15, 23, 42, 0.88) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.2);
+}
+section.report-section.panel-navy h2,
+section.report-section.panel-navy h3,
+section.report-section.panel-navy h4 {
+    color: #fff;
+}
+section.report-section.panel-navy p,
+section.report-section.panel-navy li {
+    color: rgba(255, 255, 255, 0.82);
+}
+section.report-section.panel-navy strong {
+    color: rgba(255, 255, 255, 0.95);
+}
+section.report-section.panel-navy .report-section-number {
+    color: rgba(255, 255, 255, 0.4);
 }
 
 /* ========== FOOTER GLASS ========== */
@@ -494,12 +646,38 @@ hr.section-divider,
     .section-dark {
         margin: var(--space-xl) var(--space-sm);
     }
+    /* Story content panels: full width on mobile, less padding */
+    .story-section > .story-content {
+        max-width: 100% !important;
+        padding: 28px 20px;
+        border-radius: 12px;
+    }
+    .story-content {
+        max-width: 100% !important;
+    }
+    /* Scroll section panels too */
+    .scroll-section-inner {
+        padding: 28px 20px;
+        border-radius: 12px;
+    }
 }
 @media (max-width: 480px) {
     .story-section > .story-content {
-        padding: 24px 18px;
+        padding: 22px 16px;
     }
     .report-section {
-        padding: 24px 18px;
+        padding: 22px 16px;
+    }
+    .scroll-section-inner {
+        padding: 22px 16px;
+    }
+}
+@media (max-width: 375px) {
+    .story-section > .story-content {
+        padding: 18px 14px;
+        border-radius: 10px;
+    }
+    .report-section {
+        padding: 18px 14px;
     }
 }
