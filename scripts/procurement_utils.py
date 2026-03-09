@@ -123,13 +123,15 @@ STRATEGY_LEARNING_SPEED = {
 
 # Resource key → Wright's Law tech key
 RESOURCE_TO_WRIGHT_TECH = {
-    'clean_firm': 'nuclear', 'nuclear_uprate': 'nuclear',
+    'clean_firm': 'nuclear', 'nuclear_newbuild': 'nuclear', 'nuclear_uprate': 'nuclear',
     'solar': 'solar', 'wind': 'wind', 'offshore_wind': 'offshore_wind',
     'ccs': 'ccs', 'ccs_ccgt': 'ccs',
     'hydro': None,  # Existing only, no learning
     'battery': 'battery', 'battery8': 'battery8',
     'ldes': 'ldes', 'h2': 'h2', 'storage': 'battery',
     'geothermal': 'geothermal',
+    'existing_merchant': None, 'existing_clean_free': None,
+    'grid_mix_allocation': None,
 }
 
 
@@ -175,7 +177,7 @@ def _get_resource_foak_noak(resource, iso, level='Medium'):
     Returns (foak_cost, noak_cost) in $/MWh or $/MWh-cap for storage.
     Returns (None, None) for resources without learning curves.
     """
-    if resource in ('clean_firm', 'nuclear_uprate'):
+    if resource in ('clean_firm', 'nuclear_uprate', 'nuclear_newbuild'):
         foak = FOAK_NUCLEAR_NEWBUILD.get(iso, 175)
         noak = NUCLEAR_NEWBUILD_LCOE.get('Low', {}).get(iso, 68)
         return foak, noak
@@ -192,22 +194,10 @@ def _get_resource_foak_noak(resource, iso, level='Medium'):
         noak_dict = NOAK_OFFSHORE_WIND.get('Low', {})
         noak = noak_dict.get(iso) if foak else None
         return foak, noak
-    elif resource in ('battery', 'storage'):
-        base = LCOE_TABLES.get('battery', {}).get(level, {}).get(iso, 33814)
-        noak = NOAK_BATTERY.get('Low', {}).get(iso, 15000)
-        return base, noak
-    elif resource == 'battery8':
-        base = LCOE_TABLES.get('battery8', {}).get(level, {}).get(iso, 25000)
-        noak = NOAK_BATTERY8.get('Low', {}).get(iso, 13000)
-        return base, noak
-    elif resource == 'ldes':
-        foak = FOAK_LDES.get(iso, 12000)
-        noak = LCOE_TABLES.get('ldes', {}).get('Low', {}).get(iso, 6000)
-        return foak, noak
-    elif resource == 'h2':
-        foak = FOAK_H2.get(iso, 45000)
-        noak = LCOE_TABLES.get('h2', {}).get('Low', {}).get(iso, 25000)
-        return foak, noak
+    elif resource in ('battery', 'battery8', 'ldes', 'h2', 'storage'):
+        # Storage FOAK/NOAK are in $/MWh-cap (thousands), not $/MWh-dispatched.
+        # Skip endogenous learning — step8b already priced with dispatch ratios.
+        return None, None
     elif resource in ('solar', 'wind'):
         # Mature tech — no learning, return None
         return None, None
@@ -239,19 +229,52 @@ def compute_endogenous_cost(strategy, iso, threshold, participation_pct, resourc
     us_total_demand = sum(REGIONAL_DEMAND_TWH.values())
     demand_scale = us_total_demand / max(iso_demand, 1)
 
-    cumulative_gw = {}
+    # Parse resource mix — handle both formats:
+    # Strategy 2/3: {resource: {twh, price, cost_m, ...}}
+    # Strategy 1: {"{ISO}_{resource}": scalar_twh}
+    parsed_resources = []
     for key, val in resource_mix.items():
-        if not isinstance(val, dict):
+        if key in ('sss_allocation',):
             continue
-        twh = val.get('twh', 0)
+        if isinstance(val, dict):
+            twh = val.get('twh', 0)
+            base_price = val.get('price', 0)
+            res_key = key
+        elif isinstance(val, (int, float)):
+            twh = val
+            base_price = 0
+            # Strip ISO prefix if present (e.g., "MISO_wind" → "wind")
+            res_key = key
+            for iso_prefix in ISOS:
+                if key.startswith(f'{iso_prefix}_'):
+                    res_key = key[len(iso_prefix) + 1:]
+                    break
+        else:
+            continue
         if twh <= 0:
             continue
-        tech = RESOURCE_TO_WRIGHT_TECH.get(key)
+        parsed_resources.append((res_key, twh, base_price))
+
+    # Map resource key → RESOURCE_CAPACITY_FACTORS key
+    _CF_KEY_MAP = {
+        'nuclear_newbuild': 'clean_firm', 'nuclear_uprate': 'clean_firm',
+        'ccs': 'ccs_ccgt', 'firm': 'clean_firm',
+    }
+
+    def _get_cf(res_key, iso_name):
+        cf_key = _CF_KEY_MAP.get(res_key, res_key)
+        cf_entry = RESOURCE_CAPACITY_FACTORS.get(cf_key, {})
+        if isinstance(cf_entry, dict):
+            return cf_entry.get(iso_name, 0.30)
+        return cf_entry if isinstance(cf_entry, (int, float)) else 0.30
+
+    # Compute cumulative GW per technology
+    cumulative_gw = {}
+    for res_key, twh, _ in parsed_resources:
+        tech = RESOURCE_TO_WRIGHT_TECH.get(res_key)
         if tech is None:
             continue
-        # Scale: this ISO's TWh × demand_scale × participation → national TWh
-        # Convert TWh → GW: GW = TWh / (CF × 8.76)
-        cf = RESOURCE_CAPACITY_FACTORS.get(tech, 0.30)
+        cf = _get_cf(res_key, iso)
         if cf <= 0:
             continue
         national_twh = twh * demand_scale * participation_frac
@@ -262,16 +285,9 @@ def compute_endogenous_cost(strategy, iso, threshold, participation_pct, resourc
     total_cost = 0.0
     total_twh = 0.0
 
-    for key, val in resource_mix.items():
-        if not isinstance(val, dict):
-            continue
-        twh = val.get('twh', 0)
-        base_price = val.get('price', 0)
-        if twh <= 0:
-            continue
-
-        tech = RESOURCE_TO_WRIGHT_TECH.get(key)
-        foak, noak = _get_resource_foak_noak(key, iso)
+    for res_key, twh, base_price in parsed_resources:
+        tech = RESOURCE_TO_WRIGHT_TECH.get(res_key)
+        foak, noak = _get_resource_foak_noak(res_key, iso)
 
         if tech is not None and foak is not None and noak is not None:
             lr = WRIGHT_LEARNING_RATE.get(tech, {}).get(learning_speed, 0)
