@@ -1106,10 +1106,11 @@ body { background: var(--bg-page); }
             });
         }
 
+        const chartData = { labels: xLabels, datasets };
         const ctx = document.getElementById('chartRibbon').getContext('2d');
         chartRibbon = new Chart(ctx, {
             type: 'line',
-            data: { labels: xLabels, datasets },
+            data: chartData,
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -1129,8 +1130,8 @@ body { background: var(--bg-page); }
                             usePointStyle: false,
                             filter: (item) => {
                                 // Only show median lines in legend (not min/max)
-                                const ds = chartRibbon.data.datasets[item.datasetIndex];
-                                return ds._ribbonRole === 'median';
+                                const ds = chartData.datasets[item.datasetIndex];
+                                return ds && ds._ribbonRole === 'median';
                             },
                         },
                     },
@@ -1147,7 +1148,7 @@ body { background: var(--bg-page); }
                                 if (ds._ribbonRole !== 'median') return null;
                                 const strat = ds._stratKey;
                                 // Find the min/max for this strategy at this index
-                                const allDs = chartRibbon.data.datasets;
+                                const allDs = chartData.datasets;
                                 let minVal = 0, maxVal = 0;
                                 for (const d of allDs) {
                                     if (d._stratKey === strat && d._ribbonRole === 'min') minVal = d.data[ctx.dataIndex];
