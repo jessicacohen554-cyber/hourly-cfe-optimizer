@@ -244,10 +244,13 @@ EXTRACTORS = {
     '2A': lambda rm, iso: extract_strategy2a(rm),
     '2B': lambda rm, iso: extract_strategy2b(rm),
     '2C': lambda rm, iso: extract_strategy2c(rm),
+    '2C_rolloff': lambda rm, iso: extract_strategy2c(rm),  # Same extractor, rolloff data
     '3A': lambda rm, iso: extract_strategy3a(rm),
     '3B': lambda rm, iso: extract_strategy3b(rm, iso),
     '3C': lambda rm, iso: extract_strategy3c(rm),
+    '3C_rolloff': lambda rm, iso: extract_strategy3c(rm),  # Same extractor, rolloff data
     '3D': lambda rm, iso: extract_strategy3d(rm, iso),
+    '3D_rolloff': lambda rm, iso: extract_strategy3d(rm, iso),  # Same extractor, rolloff data
 }
 
 # Map strategy IDs to their JSON files and keys
@@ -257,10 +260,13 @@ STRATEGY_SOURCES = {
     '2A': ('strategy2_hourly.json', 'strategy2A'),
     '2B': ('strategy2_hourly.json', 'strategy2B'),
     '2C': ('strategy2_hourly.json', 'strategy2C'),
+    '2C_rolloff': ('strategy2_hourly.json', 'strategy2C_rolloff'),
     '3A': ('strategy3_annual.json', 'strategy3A'),
     '3B': ('strategy3_annual.json', 'strategy3B'),
     '3C': ('strategy3_annual.json', 'strategy3C'),
+    '3C_rolloff': ('strategy3_annual.json', 'strategy3C_rolloff'),
     '3D': ('strategy3_annual.json', 'strategy3D'),
+    '3D_rolloff': ('strategy3_annual.json', 'strategy3D_rolloff'),
 }
 
 

@@ -374,6 +374,9 @@ class JarGrid {
     init(deploymentData) {
         this.data = deploymentData;
         this.gridBaseline = deploymentData.gridBaseline || {};
+        // Optional strategy key mapper (e.g., for nuclear policy rolloff toggle)
+        // When set, maps user-facing strategy IDs to data keys
+        this.strategyKeyMapper = null;
         this._buildJars();
         this._updateData();
         this._drawCanvas();
@@ -519,7 +522,8 @@ class JarGrid {
         const gridViews = {};
 
         for (const strat of this.activeStrategies) {
-            const stratData = this.data.data[strat];
+            const dataKey = this.strategyKeyMapper ? this.strategyKeyMapper(strat) : strat;
+            const stratData = this.data.data[dataKey];
             if (!stratData) { gridViews[strat] = {}; continue; }
 
             const view = {};
