@@ -132,7 +132,7 @@ class Jar {
 
         // 1. Grid baseline balls — each ball = 1% of grid demand (saturated/solid)
         for (const [res, pct] of Object.entries(bl)) {
-            if (res === 'totalPct' || pct <= 0) continue;
+            if (res === 'totalPct' || res === 'baselineHms' || res === 'baselineCo2Mt' || pct <= 0) continue;
             items.push({
                 resource: res,
                 count: Math.max(1, Math.round(pct)),  // 1 ball per % of demand
