@@ -129,6 +129,65 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 .section-dark .stat-tile .stat-label,
 .section-dark .stat-card .stat-label { color: rgba(255,255,255,0.6); }
 
+/* ========== FULL-PAGE SECTION TRANSPARENCY ========== */
+/* These selectors catch all opaque section backgrounds from
+   scrollytell.css, article.css, dashboard-ui.css, pg-generator.css,
+   ipp-transition.css, and reference.css that would otherwise
+   block the circuit board background image. */
+
+/* Section-level wrappers that must be transparent */
+.region-section,
+.synthesis-section,
+.deepdive-section,
+.density-deep-dive-section,
+.methodology-section,
+.sources-section,
+.hero-overview,
+.hero-section,
+.foak-hero,
+.concept-section,
+.timeline-section,
+.content-section,
+.section-light,
+.story-panel,
+.hub-hero,
+.hub-hero-inner,
+.report-layout,
+.prose-body,
+.main-content,
+.content-wrap {
+    background: transparent !important;
+}
+
+/* article.css hero-overview has a ::before radial gradient — hide it */
+.hero-overview::before {
+    display: none !important;
+}
+
+/* scrollytell.css region-pills-bar — glass instead of white */
+.region-pills-bar {
+    background: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+}
+
+/* ipp-transition.css wrappers */
+.company-card-body,
+.ipp-transition-body {
+    background: transparent !important;
+}
+
+/* Additional section-level wrappers from page-specific inline CSS
+   (these are large layout containers, not cards — make transparent) */
+
+/* Foak hero gradient → transparent */
+.foak-hero {
+    background: transparent !important;
+}
+.foak-hero::before {
+    display: none !important;
+}
+
 /* ========== GLASSMORPHIC PANELS (light sections) ========== */
 
 /* Story content wrapper */
@@ -151,7 +210,7 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.02);
 }
 
-/* Cards and panels */
+/* Cards and panels — comprehensive list from all CSS files */
 .card,
 .chart-panel,
 .chart-box,
@@ -160,13 +219,41 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 .callout,
 .callout-box,
 .narrative-box,
+.narrative-card,
 .framework-card,
 .stat-block,
 .stat-tile,
 .stat-card,
 .key-insights,
 .key-insight-item,
-.flow-diagram {
+.flow-diagram,
+.concept-card,
+.counter-card,
+.finding-card,
+.incentive-card,
+.preservation-panel,
+.conclusion-panel,
+.sensitivity-panel,
+.company-table,
+.data-table,
+.strategy-accordion,
+.pool-card,
+.strat-variant-card,
+.wl-analysis-section,
+.iso-chart-card,
+.key-finding,
+.compare-box,
+.region-pills-bar,
+.company-card,
+.metric-tile,
+.cost-panel,
+.counter-box,
+.narrative-panel,
+.sim-panel,
+.what-you-need-panel,
+.peak-capacity-panel,
+.target-mode-panel,
+.pathway-metric {
     background: rgba(255, 255, 255, 0.68) !important;
     backdrop-filter: blur(12px) saturate(180%);
     -webkit-backdrop-filter: blur(12px) saturate(180%);
