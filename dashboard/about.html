@@ -65,6 +65,11 @@ body {
     -webkit-backdrop-filter: blur(12px) saturate(180%);
     border: 1px solid rgba(255, 255, 255, 0.35) !important;
 }
+/* Dark section flow diagrams: opaque enough to read */
+.section-dark .flow-diagram {
+    background: rgba(15, 23, 42, 0.85) !important;
+    border: 1px solid rgba(255,255,255,0.12) !important;
+}
 /* Dark section insight cards keep their own styling */
 .section-dark .insight-card {
     background: rgba(255,255,255,0.06) !important;
@@ -101,6 +106,12 @@ hr.section-divider {
     backdrop-filter: blur(12px) saturate(180%);
     -webkit-backdrop-filter: blur(12px) saturate(180%);
 }
+/* Dark sections: inset from edges so circuit board is visible around them */
+.section-dark {
+    margin: var(--space-2xl) var(--space-xl);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.3);
+}
 
 /* ========== CINEMATIC SCROLL BACKGROUND ========== */
 #bgCamera {
@@ -111,16 +122,16 @@ hr.section-divider {
     pointer-events: none;
 }
 #bgImage {
-    width: 130vw;
-    height: 130vh;
+    width: 160vw;
+    height: 160vh;
     object-fit: cover;
     will-change: transform;
-    transform: translate(-6%, -6%) scale(1.0);
+    transform: translate(-15%, -15%) scale(1.0);
 }
 
 /* All content above background */
 #topNav, .header, .content-wrap, .section-dark, .site-footer,
-.feedback-loops-wrap, .explore-grid, .gradient-transition, hr.section-divider {
+.explore-grid, .gradient-transition, hr.section-divider {
     position: relative;
     z-index: 1;
 }
@@ -149,13 +160,6 @@ hr.section-divider {
 }
 .explore-card {
     background: rgba(255, 255, 255, 0.68);
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.02);
-}
-.loop-svg-container {
-    background: rgba(255, 255, 255, 0.72);
     backdrop-filter: blur(12px) saturate(180%);
     -webkit-backdrop-filter: blur(12px) saturate(180%);
     border: 1px solid rgba(255, 255, 255, 0.35);
@@ -330,45 +334,6 @@ hr.section-divider {
 .thesis-card-red .thesis-label { color: #991B1B; }
 .thesis-card-blue .thesis-label { color: #0369A1; }
 
-/* ========== FEEDBACK LOOP DIAGRAMS ========== */
-.feedback-loops-wrap {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 0 24px;
-}
-.loop-svg-container {
-    border-radius: 12px;
-    padding: 16px;
-    text-align: center;
-}
-.loop-svg-container h4 {
-    font-family: var(--font-heading);
-    font-size: 1rem;
-    font-weight: 700;
-    margin-bottom: 12px;
-}
-.loop-svg-container svg {
-    max-width: 100%;
-    height: auto;
-}
-.conditions-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    margin-top: 24px;
-    max-width: 900px;
-    margin-left: auto;
-    margin-right: auto;
-}
-.conditions-grid .callout-box ul {
-    margin: 8px 0 0 0;
-    padding-left: 18px;
-    font-size: 0.92rem;
-    color: #475569;
-    line-height: 1.65;
-}
-
-
 /* ========== EXPLORE SECTION REDESIGN ========== */
 .explore-grid {
     display: grid;
@@ -445,15 +410,23 @@ hr.section-divider {
 }
 
 @media (max-width: 768px) {
-    .conditions-grid { grid-template-columns: 1fr; }
     .explore-grid { grid-template-columns: 1fr; }
     .thesis-num { font-size: 3.5rem; }
     .thesis-text { font-size: 1.05rem; }
+    /* Larger overscan on mobile for pan room */
+    #bgImage {
+        width: 180vw;
+        height: 180vh;
+        transform: translate(-20%, -20%) scale(1.0);
+    }
     /* Reduce glass blur on mobile for performance */
-    .thesis-card, .layer-card, .explore-card, .loop-svg-container, .callout-box,
+    .thesis-card, .layer-card, .explore-card, .callout-box,
     .story-section > .story-content {
         backdrop-filter: blur(8px) saturate(160%);
         -webkit-backdrop-filter: blur(8px) saturate(160%);
+    }
+    .section-dark {
+        margin: var(--space-xl) var(--space-sm);
     }
 }
 @media (max-width: 480px) {
@@ -744,153 +717,6 @@ hr.section-divider {
 </div>
 </section>
 
-<div class="gradient-transition"></div>
-
-<!-- FEEDBACK LOOPS VISUALIZATION -->
-<section class="story-section" id="sec-feedback">
-    <div class="story-content">
-        <span class="story-badge story-badge-purple">Feedback Dynamics</span>
-        <h2>Virtuous vs. Vicious Cycles</h2>
-        <p>
-            When buyers become active participants &mdash; matching clean supply to every hour of demand &mdash; they
-            create self-reinforcing virtuous cycles that drive down costs and scale deployment. When they remain passive
-            consumers hiding behind annual certificates, the opposite happens: gas persists, clean firm investment stalls,
-            and the grid&rsquo;s metabolic health deteriorates.
-        </p>
-    </div>
-</section>
-<div class="feedback-loops-wrap">
-    <div class="grid-2col" style="max-width:1000px; margin:0 auto;">
-        <!-- VIRTUOUS CYCLE -->
-        <div class="loop-svg-container">
-            <h4 style="color: #15803D;">Virtuous Cycle</h4>
-            <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Virtuous cycle: corporate demand drives clean firm investment and cost reductions">
-                <defs>
-                    <marker id="vArrow" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
-                        <path d="M0,0 L7,2.5 L0,5" fill="#22C55E" opacity="0.8"/>
-                    </marker>
-                </defs>
-                <!-- Orbital ring -->
-                <circle cx="200" cy="200" r="140" fill="none" stroke="#22C55E" stroke-width="1.5" stroke-opacity="0.15" stroke-dasharray="6,4"/>
-                <circle cx="200" cy="200" r="142" fill="none" stroke="#22C55E" stroke-width="0.5" stroke-opacity="0.08"/>
-                <!-- Center label -->
-                <text x="200" y="195" text-anchor="middle" fill="#15803D" font-family="'Plus Jakarta Sans',sans-serif" font-size="11" font-weight="700" opacity="0.35">VIRTUOUS</text>
-                <text x="200" y="211" text-anchor="middle" fill="#15803D" font-family="'Plus Jakarta Sans',sans-serif" font-size="11" font-weight="700" opacity="0.35">CYCLE</text>
-                <!-- Nodes arranged clockwise -->
-                <!-- N1: Corporate PPA demand (top) -->
-                <rect x="135" y="30" width="130" height="44" rx="10" fill="#F0FDF4" stroke="#22C55E" stroke-width="1.2"/>
-                <text x="200" y="50" text-anchor="middle" fill="#15803D" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">Corporate PPA</text>
-                <text x="200" y="64" text-anchor="middle" fill="#15803D" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">demand</text>
-                <!-- N2: Clean firm investment (right) -->
-                <rect x="290" y="128" width="105" height="44" rx="10" fill="#F0FDF4" stroke="#22C55E" stroke-width="1.2"/>
-                <text x="342" y="148" text-anchor="middle" fill="#15803D" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">Clean firm</text>
-                <text x="342" y="162" text-anchor="middle" fill="#15803D" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">investment</text>
-                <!-- N3: Cost learning curves (bottom-right) -->
-                <rect x="270" y="270" width="115" height="44" rx="10" fill="#F0FDF4" stroke="#22C55E" stroke-width="1.2"/>
-                <text x="327" y="290" text-anchor="middle" fill="#15803D" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">Cost learning</text>
-                <text x="327" y="304" text-anchor="middle" fill="#15803D" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">curves</text>
-                <!-- N4: Lower procurement costs (bottom-left) -->
-                <rect x="15" y="270" width="125" height="44" rx="10" fill="#F0FDF4" stroke="#22C55E" stroke-width="1.2"/>
-                <text x="77" y="290" text-anchor="middle" fill="#15803D" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">Lower procurement</text>
-                <text x="77" y="304" text-anchor="middle" fill="#15803D" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">costs</text>
-                <!-- N5: More demand (left) -->
-                <rect x="5" y="128" width="105" height="44" rx="10" fill="#F0FDF4" stroke="#22C55E" stroke-width="1.2"/>
-                <text x="57" y="148" text-anchor="middle" fill="#15803D" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">More buyers</text>
-                <text x="57" y="162" text-anchor="middle" fill="#15803D" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">participate</text>
-                <!-- Connecting curved arrows (clockwise) -->
-                <path id="v-arc1" d="M265,60 C310,70 340,100 360,128" stroke="#22C55E" stroke-width="1.5" stroke-opacity="0.5" fill="none" marker-end="url(#vArrow)"/>
-                <path id="v-arc2" d="M370,172 C370,220 360,250 350,270" stroke="#22C55E" stroke-width="1.5" stroke-opacity="0.5" fill="none" marker-end="url(#vArrow)"/>
-                <path id="v-arc3" d="M270,300 C220,330 170,330 140,300" stroke="#22C55E" stroke-width="1.5" stroke-opacity="0.5" fill="none" marker-end="url(#vArrow)"/>
-                <path id="v-arc4" d="M30,270 C20,230 20,190 30,172" stroke="#22C55E" stroke-width="1.5" stroke-opacity="0.5" fill="none" marker-end="url(#vArrow)"/>
-                <path id="v-arc5" d="M60,128 C70,100 100,75 135,60" stroke="#22C55E" stroke-width="1.5" stroke-opacity="0.5" fill="none" marker-end="url(#vArrow)"/>
-                <!-- Animated particles -->
-                <circle r="3.5" fill="#22C55E" opacity="0.8"><animateMotion dur="3s" repeatCount="indefinite"><mpath href="#v-arc1"/></animateMotion></circle>
-                <circle r="3" fill="#22C55E" opacity="0.7"><animateMotion dur="3s" repeatCount="indefinite" begin="0.6s"><mpath href="#v-arc2"/></animateMotion></circle>
-                <circle r="3" fill="#22C55E" opacity="0.7"><animateMotion dur="3s" repeatCount="indefinite" begin="1.2s"><mpath href="#v-arc3"/></animateMotion></circle>
-                <circle r="3" fill="#22C55E" opacity="0.7"><animateMotion dur="3s" repeatCount="indefinite" begin="1.8s"><mpath href="#v-arc4"/></animateMotion></circle>
-                <circle r="3" fill="#22C55E" opacity="0.7"><animateMotion dur="3s" repeatCount="indefinite" begin="2.4s"><mpath href="#v-arc5"/></animateMotion></circle>
-            </svg>
-        </div>
-        <!-- VICIOUS CYCLE -->
-        <div class="loop-svg-container">
-            <h4 style="color: #991B1B;">Vicious Cycle</h4>
-            <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vicious cycle: annual RECs fail to signal firm clean power need, leading to gas lock-in">
-                <defs>
-                    <marker id="rArrow" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
-                        <path d="M0,0 L7,2.5 L0,5" fill="#EF4444" opacity="0.8"/>
-                    </marker>
-                </defs>
-                <!-- Orbital ring -->
-                <circle cx="200" cy="200" r="140" fill="none" stroke="#EF4444" stroke-width="1.5" stroke-opacity="0.15" stroke-dasharray="6,4"/>
-                <circle cx="200" cy="200" r="142" fill="none" stroke="#EF4444" stroke-width="0.5" stroke-opacity="0.08"/>
-                <!-- Center label -->
-                <text x="200" y="195" text-anchor="middle" fill="#991B1B" font-family="'Plus Jakarta Sans',sans-serif" font-size="11" font-weight="700" opacity="0.35">VICIOUS</text>
-                <text x="200" y="211" text-anchor="middle" fill="#991B1B" font-family="'Plus Jakarta Sans',sans-serif" font-size="11" font-weight="700" opacity="0.35">CYCLE</text>
-                <!-- Nodes clockwise -->
-                <!-- N1: Annual RECs (top) -->
-                <rect x="140" y="30" width="120" height="44" rx="10" fill="#FEF2F2" stroke="#EF4444" stroke-width="1.2"/>
-                <text x="200" y="50" text-anchor="middle" fill="#991B1B" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">Annual REC</text>
-                <text x="200" y="64" text-anchor="middle" fill="#991B1B" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">compliance</text>
-                <!-- N2: No firm signal (right) -->
-                <rect x="290" y="115" width="105" height="44" rx="10" fill="#FEF2F2" stroke="#EF4444" stroke-width="1.2"/>
-                <text x="342" y="135" text-anchor="middle" fill="#991B1B" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">No firm clean</text>
-                <text x="342" y="149" text-anchor="middle" fill="#991B1B" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">demand signal</text>
-                <!-- N3: Gas build (bottom-right) -->
-                <rect x="275" y="250" width="120" height="44" rx="10" fill="#FEF2F2" stroke="#EF4444" stroke-width="1.2"/>
-                <text x="335" y="270" text-anchor="middle" fill="#991B1B" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">Gas build for</text>
-                <text x="335" y="284" text-anchor="middle" fill="#991B1B" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">reliability</text>
-                <!-- N4: Stranded assets (bottom) -->
-                <rect x="130" y="330" width="140" height="44" rx="10" fill="#FEF2F2" stroke="#EF4444" stroke-width="1.2"/>
-                <text x="200" y="350" text-anchor="middle" fill="#991B1B" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">Stranded asset risk</text>
-                <text x="200" y="364" text-anchor="middle" fill="#991B1B" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">&amp; higher system costs</text>
-                <!-- N5: Slower decarb (left) -->
-                <rect x="5" y="190" width="115" height="44" rx="10" fill="#FEF2F2" stroke="#EF4444" stroke-width="1.2"/>
-                <text x="62" y="210" text-anchor="middle" fill="#991B1B" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">Slower</text>
-                <text x="62" y="224" text-anchor="middle" fill="#991B1B" font-family="'DM Sans',sans-serif" font-size="10" font-weight="600">decarbonization</text>
-                <!-- Connecting curved arrows -->
-                <path id="r-arc1" d="M260,55 C310,70 340,95 355,115" stroke="#EF4444" stroke-width="1.5" stroke-opacity="0.5" fill="none" marker-end="url(#rArrow)"/>
-                <path id="r-arc2" d="M370,159 C375,200 370,230 365,250" stroke="#EF4444" stroke-width="1.5" stroke-opacity="0.5" fill="none" marker-end="url(#rArrow)"/>
-                <path id="r-arc3" d="M280,280 C250,310 230,325 240,330" stroke="#EF4444" stroke-width="1.5" stroke-opacity="0.5" fill="none" marker-end="url(#rArrow)"/>
-                <path id="r-arc4" d="M130,360 C90,340 50,290 35,234" stroke="#EF4444" stroke-width="1.5" stroke-opacity="0.5" fill="none" marker-end="url(#rArrow)"/>
-                <path id="r-arc5" d="M50,190 C55,140 80,95 140,65" stroke="#EF4444" stroke-width="1.5" stroke-opacity="0.5" fill="none" marker-end="url(#rArrow)"/>
-                <!-- Animated particles -->
-                <circle r="3.5" fill="#EF4444" opacity="0.8"><animateMotion dur="3.5s" repeatCount="indefinite"><mpath href="#r-arc1"/></animateMotion></circle>
-                <circle r="3" fill="#EF4444" opacity="0.7"><animateMotion dur="3.5s" repeatCount="indefinite" begin="0.7s"><mpath href="#r-arc2"/></animateMotion></circle>
-                <circle r="3" fill="#EF4444" opacity="0.7"><animateMotion dur="3.5s" repeatCount="indefinite" begin="1.4s"><mpath href="#r-arc3"/></animateMotion></circle>
-                <circle r="3" fill="#EF4444" opacity="0.7"><animateMotion dur="3.5s" repeatCount="indefinite" begin="2.1s"><mpath href="#r-arc4"/></animateMotion></circle>
-                <circle r="3" fill="#EF4444" opacity="0.7"><animateMotion dur="3.5s" repeatCount="indefinite" begin="2.8s"><mpath href="#r-arc5"/></animateMotion></circle>
-            </svg>
-        </div>
-    </div>
-
-    <!-- CONDITIONS PANEL -->
-    <div class="conditions-grid" style="padding: 0 24px;">
-        <div class="callout-box callout-success">
-            <h4>What Tips Toward Virtuous</h4>
-            <ul>
-                <li>Hourly matching mandates in corporate reporting</li>
-                <li>GHG Protocol Scope 2 revision with deliverability</li>
-                <li>SBTi hourly trajectories for ~8,000 companies</li>
-                <li>Regional deliverability requirements for EACs</li>
-                <li>Wright&rsquo;s Law cost reductions from deployment scale</li>
-            </ul>
-        </div>
-        <div class="callout-box callout-danger">
-            <h4>What Tips Toward Vicious</h4>
-            <ul>
-                <li>Annual REC compliance as default standard</li>
-                <li>Unbundled cross-border credit trading</li>
-                <li>45Q subsidies without capacity factor limits</li>
-                <li>Inadequate transmission planning for clean firm</li>
-                <li>Accounting rules that conflate paper credits with impact</li>
-            </ul>
-        </div>
-    </div>
-</div>
-
-<hr class="section-divider">
-
-<!-- SECTION 5: THE GAPS -->
 <section class="story-section" id="sec-gaps">
     <div class="story-content">
         <span class="story-badge story-badge-amber">Research Gaps</span>
@@ -1174,7 +1000,7 @@ hr.section-divider {
 (function() {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         var img = document.getElementById('bgImage');
-        if (img) img.style.transform = 'translate(-8%, -8%) scale(1.0)';
+        if (img) img.style.transform = 'translate(-15%, -15%) scale(1.0)';
         return;
     }
 
@@ -1183,48 +1009,53 @@ hr.section-divider {
     var bgImage = document.getElementById('bgImage');
     if (!bgImage) return;
 
-    // Set initial position (centered with margin for panning)
-    gsap.set(bgImage, { xPercent: -6, yPercent: -6, scale: 1.0 });
+    // Set initial position (centered with 60% overscan for wide panning)
+    gsap.set(bgImage, { xPercent: -15, yPercent: -15, scale: 1.0 });
 
-    // Timeline: pan + micro-zoom the background as user scrolls through sections
+    // Timeline: cinematic pan + zoom as user scrolls — wide sweeping motions
     var tl = gsap.timeline({
         scrollTrigger: {
             trigger: document.body,
             start: 'top top',
             end: 'bottom bottom',
-            scrub: 2
+            scrub: 1.8
         }
     });
 
-    // Hero → Theses: subtle drift left
+    // Header → Theses: sweep left and zoom in toward colored nodes
     tl.to(bgImage, {
-        xPercent: -10, yPercent: -4, scale: 1.03,
-        ease: 'power1.inOut', duration: 1
+        xPercent: -24, yPercent: -8, scale: 1.08,
+        ease: 'power2.inOut', duration: 1
     })
-    // Theses → Big Picture: pan toward upper region
+    // Theses → Big Picture: swing up-right, continue zooming
     .to(bgImage, {
-        xPercent: -3, yPercent: -10, scale: 1.05,
-        ease: 'power1.inOut', duration: 1
+        xPercent: -5, yPercent: -22, scale: 1.14,
+        ease: 'power2.inOut', duration: 1
     })
-    // Big Picture → Layers: pan toward colored node clusters
+    // Big Picture → Layers: pan down-left toward different node cluster
     .to(bgImage, {
-        xPercent: -12, yPercent: -8, scale: 1.07,
-        ease: 'power1.inOut', duration: 1
+        xPercent: -28, yPercent: -12, scale: 1.18,
+        ease: 'power2.inOut', duration: 1.2
     })
-    // Layers → Incentives: drift to different region
+    // Layers → Incentives (dark): drift right and pull back slightly
     .to(bgImage, {
-        xPercent: -5, yPercent: -12, scale: 1.09,
-        ease: 'power1.inOut', duration: 1
+        xPercent: -8, yPercent: -26, scale: 1.12,
+        ease: 'power2.inOut', duration: 1
     })
-    // Incentives → Feedback/Insights: pan back
+    // Incentives → Gaps: sweep to lower-left, zoom in tight
     .to(bgImage, {
-        xPercent: -8, yPercent: -5, scale: 1.06,
-        ease: 'power1.inOut', duration: 1
+        xPercent: -22, yPercent: -6, scale: 1.22,
+        ease: 'power2.inOut', duration: 1.2
     })
-    // Insights → Explore/Footer: settle back to neutral
+    // Gaps → Insights (dark): pan up-right, ease back
     .to(bgImage, {
-        xPercent: -8, yPercent: -6, scale: 1.0,
-        ease: 'power1.inOut', duration: 1
+        xPercent: -4, yPercent: -20, scale: 1.15,
+        ease: 'power2.inOut', duration: 1
+    })
+    // Insights → Explore: wide sweep back to center, zoom out to rest
+    .to(bgImage, {
+        xPercent: -15, yPercent: -15, scale: 1.05,
+        ease: 'power2.inOut', duration: 1.2
     });
 })();
 </script>
