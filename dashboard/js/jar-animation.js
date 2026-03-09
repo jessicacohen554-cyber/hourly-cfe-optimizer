@@ -492,11 +492,17 @@ class JarGrid {
     _updateData() {
         if (!this.data) return;
 
-        // Compute ball size — target ~10 balls per row to fit 100 inside jar
+        // Auto-size balls so 100 balls fills the jar exactly
         const isMobile = window.innerWidth < 768;
-        const jarInnerW = this.jarWidth * 0.76 * 0.90;
+        const jarPadding = 7;  // 3px CSS padding + 4px inset
+        const gapPx = 2;
+        const jarInnerW = this.jarWidth - 8 - jarPadding * 2;
+        const jarInnerH = this.jarHeight - 8 - jarPadding * 2;
+
+        // Pick balls-per-row, then compute ball size to fill height with ceil(100/bpr) rows
         const ballsPerRow = isMobile ? 7 : 10;
-        const ballSize = Math.max(4, Math.min(Math.floor(jarInnerW / ballsPerRow) - 2, 10));
+        const rowsNeeded = Math.ceil(100 / ballsPerRow);  // 10 desktop, 15 mobile
+        const ballSize = Math.max(4, Math.floor((jarInnerH - gapPx * (rowsNeeded - 1)) / rowsNeeded));
 
         // ── Grid-centric aggregation ──
         // For each strategy, aggregate all buyer records into grid-centric view:
