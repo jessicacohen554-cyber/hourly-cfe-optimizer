@@ -50,6 +50,8 @@ function getResourceColor(resource) {
         'battery': '#C4B5FD', 'battery4': '#C4B5FD', 'battery8': '#8B5CF6',
         'ldes': '#E91E63', 'green_h2': '#10B981',
         'storage': '#EF4444', 'gap': '#D1D5DB',
+        'new_vre': '#22C55E', 'new_build_vre': '#22C55E',
+        'existing_merchant': '#6366F1', 'existing_vre': '#F59E0B',
     };
     if (typeof RESOURCE_COLORS !== 'undefined') {
         const key = resource.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
@@ -68,6 +70,8 @@ function getResourceLabel(resource) {
         'sss_allocation': 'SSS Allocation', 'existing_nuclear': 'Nuclear',
         'nuclear_uprate': 'Nuclear Uprate', 'existing_vre': 'Existing VRE',
         'grid_clean': 'Grid Clean', 'existing_vre_hydro': 'Hydro (Existing)',
+        'new_vre': 'New VRE', 'new_build_vre': 'New VRE',
+        'existing_merchant': 'Merchant Clean',
     };
     return labels[resource] || resource.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
@@ -96,7 +100,7 @@ class Jar {
         this.el = null;       // DOM element (created on first render)
     }
 
-    setBalls(dataRecord, ballTwh, gridBaseline, crossIsoFlows) {
+    setBalls(dataRecord, ballTwh, gridBaseline, crossIsoFlows, showGlow) {
         this.data = dataRecord;
         this.gridBaseline = gridBaseline;
 
@@ -147,13 +151,13 @@ class Jar {
             }
         }
 
-        // 3. Cross-ISO glow
+        // 3. Cross-ISO flows — always show balls, glow only when toggled
         if (crossIsoFlows) {
             for (const [buyerIso, resources] of Object.entries(crossIsoFlows)) {
                 for (const [res, twh] of Object.entries(resources)) {
                     if (twh <= 0) continue;
                     const count = Math.max(1, Math.round(twh / ballTwh));
-                    items.push({ resource: res, count, tier: 'new', glowIso: buyerIso, twh });
+                    items.push({ resource: res, count, tier: 'new', glowIso: showGlow ? buyerIso : null, twh });
                 }
             }
         }
@@ -484,7 +488,7 @@ class JarGrid {
             const bl = this.gridBaseline[jar.iso] || null;
             const crossFlows = crossFlowsByStrategy[jar.strategy][jar.iso] || null;
 
-            jar.setBalls(record, ballTwh, bl, this.showCrossIsoGlow ? crossFlows : null);
+            jar.setBalls(record, ballTwh, bl, crossFlows, this.showCrossIsoGlow);
             jar.renderDOM(ballSize);
         }
 
