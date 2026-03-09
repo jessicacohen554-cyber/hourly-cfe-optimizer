@@ -295,7 +295,7 @@ class Jar {
         // HMS label
         const displayPct = hms != null ? hms : (gridCleanPct != null ? gridCleanPct : null);
         if (displayPct != null && displayPct >= 0.5) {
-            const label = hms != null ? `${Math.round(displayPct)}% HMS` : `${Math.round(displayPct)}%`;
+            const label = hms != null ? `${Math.round(displayPct)}% Grid HMS` : `${Math.round(displayPct)}%`;
             html += `<div class="jar-hms-label">${label}</div>`;
         } else if (this.gridBaseline) {
             const blPct = this.gridBaseline.totalPct || 0;
@@ -562,20 +562,21 @@ class JarGrid {
                     }
                 }
 
-                // Take dispatch metrics from the buyer record (best available)
-                // For grid-centric view, we want gridCleanPct and curtTwh
-                if (record.curtTwh > 0) {
-                    view[buyerIso].curtTwh += record.curtTwh;
+                // Take dispatch metrics from the buyer record
+                // Prefer grid-centric fields (gridHms, gridCurtTwh, gridGasGw) when available
+                // Grid-centric curtailment only
+                if (record.gridCurtTwh > 0) {
+                    view[buyerIso].curtTwh = record.gridCurtTwh;
                 }
-                if (record.hms != null) {
-                    // Use buyer-centric HMS until step9d provides gridHms
-                    view[buyerIso].hms = record.hms;
+                // Grid-centric metrics ONLY (no buyer-centric fallback)
+                if (record.gridHms != null) {
+                    view[buyerIso].hms = record.gridHms;
                 }
-                if (record.gridCleanPct != null) {
-                    view[buyerIso].gridCleanPct = record.gridCleanPct;
+                if (record.gridAggCleanPct != null) {
+                    view[buyerIso].gridCleanPct = record.gridAggCleanPct;
                 }
-                if (record.gasGw != null) {
-                    view[buyerIso].gasGw = record.gasGw;
+                if (record.gridGasGw != null) {
+                    view[buyerIso].gasGw = record.gridGasGw;
                 }
                 // Preserve cost/co2 data
                 if (record.tc != null) view[buyerIso].tc = (view[buyerIso].tc || 0) + record.tc;
@@ -837,7 +838,7 @@ class JarGrid {
         if (!this.tooltipEl) return;
         const stratLabel = (STRATEGY_LABELS[jar.strategy] || jar.strategy).replace('\n', ' ');
         const hms = jar.data && jar.data.hms != null ? jar.data.hms : (jar.data && jar.data.gridCleanPct != null ? jar.data.gridCleanPct : null);
-        const hmsText = hms != null ? ` · ${Math.round(hms)}% HMS` : '';
+        const hmsText = hms != null ? ` · ${Math.round(hms)}% Grid HMS` : '';
         this.tooltipEl.innerHTML = `<span style="color:${getIsoColor(jar.iso)};font-weight:700">${jar.iso}</span> — ${stratLabel}${hmsText} <span style="color:var(--text-muted);font-size:0.7rem">(click for details)</span>`;
         this.tooltipEl.style.display = 'block';
 
@@ -869,9 +870,9 @@ class JarGrid {
             const data = jar.data;
 
             html += '<div class="detail-panel-stats">';
-            if (data.hms != null) html += `<span>Hourly match: ${data.hms}%</span>`;
-            if (data.gridCleanPct != null) html += `<span>Grid clean: ${data.gridCleanPct}%</span>`;
-            if (data.gasGw != null) html += `<span>Gas: ${data.gasGw} GW</span>`;
+            if (data.hms != null) html += `<span>Grid Hourly Match: ${Math.round(data.hms)}%</span>`;
+            if (data.gridCleanPct != null) html += `<span>Grid Clean: ${Math.round(data.gridCleanPct)}%</span>`;
+            if (data.gasGw != null) html += `<span>Gas Backup: ${Math.round(data.gasGw)} GW</span>`;
             if (data.curtTwh != null && data.curtTwh > 0) html += `<span>Curtailed: ${Math.round(data.curtTwh)} TWh</span>`;
             html += '</div>';
 
