@@ -3,7 +3,44 @@
 > **Authoritative reference for all design decisions.** If a future session needs context, read this file first.
 > Last updated: 2026-03-07.
 
-## Current Status (Mar 7, 2026)
+## Current Status (Mar 9, 2026)
+
+### Nuclear Policy Sensitivity Toggle (Added — Mar 9, 2026)
+
+**Branch:** `claude/fix-strategy-1b-analysis-t7LGs`
+
+**Decision**: Add a "Nuclear Policy" toggle (Stable / Roll-Off) to the procurement deployment dashboard. When active, SSS-using strategies (2C, 3C, 3D) swap to rolloff data variants.
+
+**SSS Fixed Fleet (Stable):**
+- PJM: 95 TWh (IL ZEC/CMC ~50 + NJ ZEC ~15 + PA nuclear ~30)
+- NYISO: 42 TWh (NY ZEC Tier 3)
+- MISO: 30 TWh (IL CMC MISO-zone plants)
+
+**Rolloff Schedule:**
+| Program | Year | TWh Lost from SSS | ISO |
+|---------|------|-------------------|-----|
+| NJ ZEC expires | 2026 | −15 TWh | PJM |
+| IL CMC expires | 2028 | −50 TWh | PJM |
+| IL CMC MISO-zone | 2028 | −15 TWh | MISO |
+| NY ZEC Tier 3 | 2030 | −42 TWh | NYISO |
+
+**Modeling assumption**: Rolled-off plants stay running under federal 45U PTC ($15/MWh) + capacity market revenue. They move from SSS pool (free) to merchant clean pool (priced at EAC market rate ~$5/MWh). This is a pool reallocation, NOT a retirement scenario.
+
+**Impact (PJM, 10% participation, Strategy 2C):**
+- 2028 (IL CMC expiry): +$0.9/MWh
+- 2040 (90% target): +$0.8/MWh
+- 2050 (100% target): +$4.0/MWh
+- ERCOT: zero impact (no SSS)
+
+**Files modified:**
+- `scripts/procurement_utils.py` — Added `NUCLEAR_POLICY_ROLLOFF` schedule, `nuclear_policy` param to `get_sss_twh()` and `get_merchant_clean_twh()`
+- `scripts/step8b_strategy_hourly.py` — Runs both stable/rolloff, stores `strategy2C_rolloff`
+- `scripts/step8c_strategy_annual.py` — Runs both stable/rolloff, stores `strategy3C_rolloff`, `strategy3D_rolloff`
+- `scripts/step9c_extract_deployment_data.py` — Extracts rolloff variants
+- `dashboard/procurement_deployment.html` — Nuclear Policy toggle (Stable/Roll-Off)
+- `dashboard/js/jar-animation.js` — `strategyKeyMapper` support for data remapping
+
+---
 
 ### Step 12: Nuclear Retirement & Stranding Analysis (Added — Mar 7, 2026)
 
