@@ -1012,7 +1012,7 @@
                     const xPx = xScale.getPixelForValue(p.xIndex);
                     const yPx = yScale.getPixelForValue(p.y);
                     ctx.save();
-                    ctx.font = '600 10px "DM Sans", sans-serif';
+                    ctx.font = 'bold 13px "DM Sans", sans-serif';
                     ctx.fillStyle = p.color || '#374151';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = p.above ? 'bottom' : 'top';
@@ -1034,7 +1034,7 @@
         // Compute gaps and % labels at key milestones (indices: 0=2023, 1=2030, 2=2035, 3=2040, 4=2045, 5=2050)
         const gapAnnotations = [];
         const pctLabels = [];
-        const milestones = [1, 2, 3]; // 2030, 2035, 2040
+        const milestones = [1, 2, 3, 4, 5]; // 2030, 2035, 2040, 2045, 2050
 
         milestones.forEach(function (i) {
             const gap = p50[i] - targetData[i];
@@ -1049,13 +1049,13 @@
             // QT % reduction label
             pctLabels.push({
                 xIndex: i, y: p50[i],
-                label: 'QT: ' + pctLabel(p50[i], baseline),
+                label: pctLabel(p50[i], baseline),
                 color: '#6366F1', above: true
             });
             // Target % reduction label
             pctLabels.push({
                 xIndex: i, y: targetData[i],
-                label: targetLabel.split(' ')[0] + ': ' + pctLabel(targetData[i], baseline),
+                label: pctLabel(targetData[i], baseline),
                 color: targetColor, above: false
             });
         });
