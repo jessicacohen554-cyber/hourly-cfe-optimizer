@@ -579,6 +579,68 @@ body { background: var(--bg-page); }
     min-height: 260px;
 }
 
+/* ===== CONTOUR MAPS ===== */
+.contour-section-title {
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+    color: var(--navy);
+    margin-bottom: 6px;
+}
+.contour-section-subtitle {
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+    max-width: 720px;
+}
+.contour-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+}
+.contour-strategy-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.contour-strategy-label {
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--navy);
+    padding-left: 4px;
+}
+.contour-row-inner {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+}
+.contour-card {
+    background: white;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-light);
+    padding: 14px 14px 10px;
+    box-shadow: var(--shadow-sm);
+}
+.contour-card h4 {
+    font-family: var(--font-heading);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    text-align: center;
+}
+.contour-canvas-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1.4;
+    min-height: 200px;
+}
+.contour-canvas-wrap canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+}
+
 /* ===== MOBILE ===== */
 @media (max-width: 767px) {
     .controls-inner { gap: 10px; flex-direction: column; align-items: stretch; }
@@ -604,6 +666,9 @@ body { background: var(--bg-page); }
     .jar-hms-label { font-size: 0.52rem; bottom: -13px; }
     .info-icon:hover::after { white-space: normal; max-width: 200px; left: auto; right: 0; transform: none; }
     .deployment-tooltip { display: none !important; } /* No hover tooltip on mobile — use detail panel */
+    .contour-row-inner { grid-template-columns: 1fr; }
+    .contour-canvas-wrap { min-height: 180px; }
+    .contour-section-title { font-size: 1rem; }
 }
 @media (max-width: 480px) {
     .controls-bar { padding: 10px 10px; }
@@ -784,6 +849,13 @@ body { background: var(--bg-page); }
     </div>
 </div>
 
+<!-- Contour Maps (Isopleths) by Strategy -->
+<div class="agg-charts" id="contourSection">
+    <h2 class="contour-section-title">System Impact Isopleths by Strategy</h2>
+    <p class="contour-section-subtitle">Contour maps show how participation rate and CO₂ reduction targets jointly drive system outcomes. Each row is one strategy; each column is a metric summed across all 7 ISOs.</p>
+    <div id="contourGrid" class="contour-grid"></div>
+</div>
+
 
 <!-- Footer -->
 <div class="page-footer">
@@ -876,6 +948,7 @@ body { background: var(--bg-page); }
             }
             grid.setActiveStrategies(checked);
             rebuildCharts();
+            rebuildContourMaps();
         });
     });
 
@@ -979,8 +1052,426 @@ body { background: var(--bg-page); }
         chartCO2.update();
     }
 
-    // Initial chart build
-    setTimeout(rebuildCharts, 300);
+    // ═════════════════════════════════════════════════════════════════════════
+    // CONTOUR MAPS (ISOPLETHS) BY STRATEGY
+    // ═════════════════════════════════════════════════════════════════════════
+
+    const EXISTING_GAS = { CAISO:37, ERCOT:55, PJM:75, NYISO:18, NEISO:14, MISO:68, SPP:32 };
+    const CONTOUR_ISOS = ['CAISO','ERCOT','PJM','NYISO','NEISO','MISO','SPP'];
+
+    // Color palettes: [value_fraction, r, g, b]
+    const GAS_PALETTE = [[0,'#FECACA'],[0.25,'#FCA5A5'],[0.5,'#EF4444'],[0.75,'#DC2626'],[1,'#7F1D1D']];
+    const CO2_PALETTE = [[0,'#DBEAFE'],[0.25,'#93C5FD'],[0.5,'#3B82F6'],[0.75,'#1D4ED8'],[1,'#1E3A5F']];
+    const CURT_PALETTE = [[0,'#FEF3C7'],[0.25,'#FDE68A'],[0.5,'#F59E0B'],[0.75,'#D97706'],[1,'#78350F']];
+
+    function hexToRgb(hex) {
+        const r = parseInt(hex.slice(1,3), 16);
+        const g = parseInt(hex.slice(3,5), 16);
+        const b = parseInt(hex.slice(5,7), 16);
+        return [r, g, b];
+    }
+
+    function interpolateColor(palette, t) {
+        t = Math.max(0, Math.min(1, t));
+        for (let i = 1; i < palette.length; i++) {
+            if (t <= palette[i][0]) {
+                const f = (t - palette[i-1][0]) / (palette[i][0] - palette[i-1][0]);
+                const c0 = hexToRgb(palette[i-1][1]);
+                const c1 = hexToRgb(palette[i][1]);
+                return [
+                    Math.round(c0[0] + (c1[0]-c0[0]) * f),
+                    Math.round(c0[1] + (c1[1]-c0[1]) * f),
+                    Math.round(c0[2] + (c1[2]-c0[2]) * f),
+                ];
+            }
+        }
+        return hexToRgb(palette[palette.length-1][1]);
+    }
+
+    function findClosestKey(keys, target) {
+        let best = null, bestD = Infinity;
+        for (const k of keys) {
+            const d = Math.abs(parseFloat(k) - target);
+            if (d < bestD) { bestD = d; best = k; }
+        }
+        return best;
+    }
+
+    function buildContourData(strategy) {
+        const stratData = DEPLOYMENT_DATA.data[strategy];
+        if (!stratData) return null;
+
+        const gasGrid = [], co2Grid = [], curtGrid = [];
+
+        for (let pi = 0; pi < PARTICIPATION_LEVELS.length; pi++) {
+            gasGrid[pi] = []; co2Grid[pi] = []; curtGrid[pi] = [];
+            for (let ti = 0; ti < THRESHOLDS.length; ti++) {
+                let gas = 0, co2 = 0, curt = 0;
+                for (const iso of CONTOUR_ISOS) {
+                    const isoData = stratData[iso];
+                    if (!isoData) continue;
+                    const pk = findClosestKey(Object.keys(isoData), PARTICIPATION_LEVELS[pi]);
+                    if (!pk || !isoData[pk]) continue;
+                    const tk = findClosestKey(Object.keys(isoData[pk]), THRESHOLDS[ti]);
+                    if (!tk) continue;
+                    const rec = isoData[pk][tk];
+                    if (rec) {
+                        gas += Math.max(0, (rec.gasGw || 0) - (EXISTING_GAS[iso] || 0));
+                        co2 += rec.co2 || 0;
+                        curt += rec.curtTwh || 0;
+                    }
+                }
+                gasGrid[pi][ti] = gas;
+                co2Grid[pi][ti] = co2;
+                curtGrid[pi][ti] = curt;
+            }
+        }
+        return { gas: gasGrid, co2: co2Grid, curt: curtGrid };
+    }
+
+    // Bilinear interpolation on a 2D grid
+    function bilinearSample(grid, fy, fx) {
+        const rows = grid.length, cols = grid[0].length;
+        const y0 = Math.max(0, Math.min(rows - 1, Math.floor(fy)));
+        const x0 = Math.max(0, Math.min(cols - 1, Math.floor(fx)));
+        const y1 = Math.min(rows - 1, y0 + 1);
+        const x1 = Math.min(cols - 1, x0 + 1);
+        const dy = fy - y0, dx = fx - x0;
+        return (1-dy)*(1-dx)*grid[y0][x0] + (1-dy)*dx*grid[y0][x1] +
+               dy*(1-dx)*grid[y1][x0] + dy*dx*grid[y1][x1];
+    }
+
+    // Compute nice contour levels
+    function computeLevels(minVal, maxVal, count) {
+        if (maxVal <= minVal) return [minVal];
+        const range = maxVal - minVal;
+        const step = range / (count + 1);
+        const levels = [];
+        for (let i = 1; i <= count; i++) {
+            levels.push(minVal + step * i);
+        }
+        return levels;
+    }
+
+    // Marching squares: trace isopleth segments for a single level on a 2D grid
+    function marchingSquares(grid, level) {
+        const segments = [];
+        const rows = grid.length, cols = grid[0].length;
+        for (let r = 0; r < rows - 1; r++) {
+            for (let c = 0; c < cols - 1; c++) {
+                const tl = grid[r][c], tr = grid[r][c+1];
+                const bl = grid[r+1][c], br = grid[r+1][c+1];
+                const idx = (tl >= level ? 8 : 0) | (tr >= level ? 4 : 0) |
+                            (br >= level ? 2 : 0) | (bl >= level ? 1 : 0);
+                if (idx === 0 || idx === 15) continue;
+
+                const lerp = (a, b) => (a === b) ? 0.5 : (level - a) / (b - a);
+                const top =    [c + lerp(tl, tr), r];
+                const bottom = [c + lerp(bl, br), r + 1];
+                const left =   [c, r + lerp(tl, bl)];
+                const right =  [c + 1, r + lerp(tr, br)];
+
+                const add = (a, b) => segments.push([a, b]);
+                switch(idx) {
+                    case 1: case 14: add(left, bottom); break;
+                    case 2: case 13: add(bottom, right); break;
+                    case 3: case 12: add(left, right); break;
+                    case 4: case 11: add(top, right); break;
+                    case 5: add(left, top); add(bottom, right); break;
+                    case 6: case 9: add(top, bottom); break;
+                    case 7: case 8: add(left, top); break;
+                    case 10: add(top, right); add(left, bottom); break;
+                }
+            }
+        }
+        return segments;
+    }
+
+    function drawContourMap(canvas, grid2d, palette, unit) {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.parentElement.getBoundingClientRect();
+        const W = Math.round(rect.width);
+        const H = Math.round(rect.height);
+        canvas.width = W * dpr;
+        canvas.height = H * dpr;
+        canvas.style.width = W + 'px';
+        canvas.style.height = H + 'px';
+        const ctx = canvas.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        const ml = 52, mr = 56, mt = 8, mb = 36;
+        const pw = W - ml - mr, ph = H - mt - mb;
+
+        const rows = grid2d.length, cols = grid2d[0].length;
+
+        // Find min/max
+        let minV = Infinity, maxV = -Infinity;
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                if (grid2d[r][c] < minV) minV = grid2d[r][c];
+                if (grid2d[r][c] > maxV) maxV = grid2d[r][c];
+            }
+        }
+        if (maxV <= minV) maxV = minV + 1;
+
+        // Draw heatmap via ImageData
+        const imgData = ctx.createImageData(pw, ph);
+        for (let py = 0; py < ph; py++) {
+            for (let px = 0; px < pw; px++) {
+                // Map pixel to grid coords (y-axis inverted: bottom = low participation)
+                const fy = (1 - py / (ph - 1)) * (rows - 1);
+                const fx = px / (pw - 1) * (cols - 1);
+                const val = bilinearSample(grid2d, fy, fx);
+                const t = (val - minV) / (maxV - minV);
+                const rgb = interpolateColor(palette, t);
+                const i = (py * pw + px) * 4;
+                imgData.data[i] = rgb[0];
+                imgData.data[i+1] = rgb[1];
+                imgData.data[i+2] = rgb[2];
+                imgData.data[i+3] = 255;
+            }
+        }
+        ctx.putImageData(imgData, ml, mt);
+
+        // Draw contour lines (isopleths)
+        const levels = computeLevels(minV, maxV, 6);
+        ctx.save();
+        ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+        ctx.lineWidth = 1;
+        ctx.font = "600 9px 'DM Sans', sans-serif";
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        for (let li = 0; li < levels.length; li++) {
+            const segs = marchingSquares(grid2d, levels[li]);
+            // Draw segments
+            for (const [p0, p1] of segs) {
+                const x0 = ml + (p0[0] / (cols - 1)) * pw;
+                const y0 = mt + (1 - p0[1] / (rows - 1)) * ph;
+                const x1 = ml + (p1[0] / (cols - 1)) * pw;
+                const y1 = mt + (1 - p1[1] / (rows - 1)) * ph;
+                ctx.beginPath();
+                ctx.moveTo(x0, y0);
+                ctx.lineTo(x1, y1);
+                ctx.stroke();
+            }
+            // Label on one segment near the middle
+            if (segs.length > 0 && li % 2 === 0) {
+                const midSeg = segs[Math.floor(segs.length / 2)];
+                const lx = ml + ((midSeg[0][0] + midSeg[1][0]) / 2 / (cols - 1)) * pw;
+                const ly = mt + (1 - (midSeg[0][1] + midSeg[1][1]) / 2 / (rows - 1)) * ph;
+                const val = levels[li];
+                const label = val >= 1000 ? (val/1000).toFixed(1)+'k' : val >= 10 ? Math.round(val) : val.toFixed(1);
+                // White background for readability
+                const tm = ctx.measureText(label);
+                ctx.fillStyle = 'rgba(255,255,255,0.85)';
+                ctx.fillRect(lx - tm.width/2 - 2, ly - 6, tm.width + 4, 12);
+                ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                ctx.fillText(label, lx, ly);
+            }
+        }
+        ctx.restore();
+
+        // Axes
+        ctx.save();
+        ctx.strokeStyle = '#94A3B8';
+        ctx.lineWidth = 1;
+        // Plot border
+        ctx.strokeRect(ml, mt, pw, ph);
+
+        // X axis labels (thresholds)
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.font = "500 9px 'DM Sans', sans-serif";
+        ctx.fillStyle = '#64748B';
+        const xLabels = [0, 3, 6, 9, 11, 13]; // indices into THRESHOLDS: 50, 75, 90, 97.5, 99.5, 99.99
+        for (const ti of xLabels) {
+            if (ti >= THRESHOLDS.length) continue;
+            const x = ml + (ti / (cols - 1)) * pw;
+            const label = THRESHOLDS[ti] >= 99.99 ? '≥99.99' : THRESHOLDS[ti] + '';
+            ctx.fillText(label + '%', x, mt + ph + 4);
+        }
+        // X axis title
+        ctx.font = "600 10px 'Plus Jakarta Sans', sans-serif";
+        ctx.fillText('CO₂ Reduction Target', ml + pw/2, mt + ph + 20);
+
+        // Y axis labels (participation)
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.font = "500 9px 'DM Sans', sans-serif";
+        ctx.fillStyle = '#64748B';
+        const yLabels = [0, 2, 5, 8, 10, 12]; // indices: 5%, 15%, 30%, 60%, 90%, 100%
+        for (const pi of yLabels) {
+            if (pi >= PARTICIPATION_LEVELS.length) continue;
+            const y = mt + (1 - pi / (rows - 1)) * ph;
+            ctx.fillText(PARTICIPATION_LEVELS[pi] + '%', ml - 4, y);
+        }
+        // Y axis title (rotated)
+        ctx.save();
+        ctx.translate(12, mt + ph/2);
+        ctx.rotate(-Math.PI/2);
+        ctx.textAlign = 'center';
+        ctx.font = "600 10px 'Plus Jakarta Sans', sans-serif";
+        ctx.fillText('Participation', 0, 0);
+        ctx.restore();
+
+        // Color bar on right
+        const cbW = 12, cbH = ph, cbX = ml + pw + 14, cbY = mt;
+        for (let py = 0; py < cbH; py++) {
+            const t = 1 - py / (cbH - 1);
+            const rgb = interpolateColor(palette, t);
+            ctx.fillStyle = `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+            ctx.fillRect(cbX, cbY + py, cbW, 1);
+        }
+        ctx.strokeStyle = '#94A3B8';
+        ctx.lineWidth = 0.5;
+        ctx.strokeRect(cbX, cbY, cbW, cbH);
+
+        // Color bar labels
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.font = "500 8px 'DM Sans', sans-serif";
+        ctx.fillStyle = '#64748B';
+        const maxLabel = maxV >= 1000 ? (maxV/1000).toFixed(1)+'k' : maxV >= 10 ? Math.round(maxV) : maxV.toFixed(1);
+        const minLabel = minV >= 1000 ? (minV/1000).toFixed(1)+'k' : minV >= 10 ? Math.round(minV) : minV.toFixed(1);
+        ctx.fillText(maxLabel + ' ' + unit, cbX + cbW + 3, cbY);
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(minLabel + ' ' + unit, cbX + cbW + 3, cbY + cbH);
+
+        ctx.restore();
+    }
+
+    // Crosshair overlay (marks current slider position on contour maps)
+    let contourCanvasRefs = []; // [{canvas, grid2d, palette, unit}]
+
+    function updateContourCrosshairs() {
+        const p = getParticipation();
+        const t = getThreshold();
+        // Map to fractional grid indices
+        let pi = 0;
+        for (let i = 0; i < PARTICIPATION_LEVELS.length - 1; i++) {
+            if (p >= PARTICIPATION_LEVELS[i] && p <= PARTICIPATION_LEVELS[i+1]) {
+                pi = i + (p - PARTICIPATION_LEVELS[i]) / (PARTICIPATION_LEVELS[i+1] - PARTICIPATION_LEVELS[i]);
+                break;
+            }
+            if (p > PARTICIPATION_LEVELS[i]) pi = i;
+        }
+        if (p >= PARTICIPATION_LEVELS[PARTICIPATION_LEVELS.length-1]) pi = PARTICIPATION_LEVELS.length - 1;
+
+        let ti = 0;
+        for (let i = 0; i < THRESHOLDS.length - 1; i++) {
+            if (t >= THRESHOLDS[i] && t <= THRESHOLDS[i+1]) {
+                ti = i + (t - THRESHOLDS[i]) / (THRESHOLDS[i+1] - THRESHOLDS[i]);
+                break;
+            }
+            if (t > THRESHOLDS[i]) ti = i;
+        }
+        if (t >= THRESHOLDS[THRESHOLDS.length-1]) ti = THRESHOLDS.length - 1;
+
+        for (const ref of contourCanvasRefs) {
+            // Redraw the contour then overlay crosshair
+            drawContourMap(ref.canvas, ref.grid2d, ref.palette, ref.unit);
+
+            const dpr = window.devicePixelRatio || 1;
+            const W = ref.canvas.width / dpr;
+            const H = ref.canvas.height / dpr;
+            const ml = 52, mr = 56, mt = 8, mb = 36;
+            const pw = W - ml - mr, ph = H - mt - mb;
+            const rows = ref.grid2d.length, cols = ref.grid2d[0].length;
+
+            const cx = ml + (ti / (cols - 1)) * pw;
+            const cy = mt + (1 - pi / (rows - 1)) * ph;
+
+            const ctx = ref.canvas.getContext('2d');
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            ctx.save();
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 3;
+            // Crosshair
+            ctx.beginPath();
+            ctx.moveTo(cx - 8, cy); ctx.lineTo(cx + 8, cy);
+            ctx.moveTo(cx, cy - 8); ctx.lineTo(cx, cy + 8);
+            ctx.stroke();
+            ctx.strokeStyle = '#1E293B';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(cx - 8, cy); ctx.lineTo(cx + 8, cy);
+            ctx.moveTo(cx, cy - 8); ctx.lineTo(cx, cy + 8);
+            ctx.stroke();
+            // Value label
+            const val = bilinearSample(ref.grid2d, pi, ti);
+            const label = val >= 1000 ? (val/1000).toFixed(1)+'k' : val >= 10 ? Math.round(val) : val.toFixed(1);
+            ctx.font = "700 10px 'DM Sans', sans-serif";
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'bottom';
+            const tm = ctx.measureText(label + ' ' + ref.unit);
+            ctx.fillStyle = 'rgba(255,255,255,0.9)';
+            ctx.fillRect(cx + 6, cy - 18, tm.width + 6, 16);
+            ctx.strokeStyle = '#1E293B';
+            ctx.lineWidth = 0.5;
+            ctx.strokeRect(cx + 6, cy - 18, tm.width + 6, 16);
+            ctx.fillStyle = '#1E293B';
+            ctx.fillText(label + ' ' + ref.unit, cx + 9, cy - 5);
+            ctx.restore();
+        }
+    }
+
+    function rebuildContourMaps() {
+        const container = document.getElementById('contourGrid');
+        if (!container) return;
+        container.innerHTML = '';
+        contourCanvasRefs = [];
+        const active = getActiveStrategies();
+
+        for (const strat of active) {
+            const data = buildContourData(strat);
+            if (!data) continue;
+
+            const row = document.createElement('div');
+            row.className = 'contour-strategy-row';
+            row.innerHTML = `<div class="contour-strategy-label">${(STRAT_LABELS[strat] || strat).replace('\n',' — ')}</div>
+                <div class="contour-row-inner">
+                    <div class="contour-card"><h4>New Gas Capacity (GW)</h4><div class="contour-canvas-wrap"><canvas></canvas></div></div>
+                    <div class="contour-card"><h4>Fossil CO₂ Displaced (Mt)</h4><div class="contour-canvas-wrap"><canvas></canvas></div></div>
+                    <div class="contour-card"><h4>Curtailed Clean Energy (TWh)</h4><div class="contour-canvas-wrap"><canvas></canvas></div></div>
+                </div>`;
+            container.appendChild(row);
+
+            const canvases = row.querySelectorAll('canvas');
+            const configs = [
+                { grid2d: data.gas, palette: GAS_PALETTE, unit: 'GW' },
+                { grid2d: data.co2, palette: CO2_PALETTE, unit: 'Mt' },
+                { grid2d: data.curt, palette: CURT_PALETTE, unit: 'TWh' },
+            ];
+            // Defer drawing to after DOM layout
+            for (let i = 0; i < 3; i++) {
+                contourCanvasRefs.push({ canvas: canvases[i], ...configs[i] });
+            }
+        }
+
+        // Draw after layout settles
+        requestAnimationFrame(() => {
+            for (const ref of contourCanvasRefs) {
+                drawContourMap(ref.canvas, ref.grid2d, ref.palette, ref.unit);
+            }
+            updateContourCrosshairs();
+        });
+    }
+
+    // Wire slider updates to crosshair refresh
+    partSlider.addEventListener('input', () => {
+        if (contourCanvasRefs.length > 0) updateContourCrosshairs();
+    });
+    thrSlider.addEventListener('input', () => {
+        if (contourCanvasRefs.length > 0) updateContourCrosshairs();
+    });
+
+    // Initial chart + contour build
+    setTimeout(() => {
+        rebuildCharts();
+        rebuildContourMaps();
+    }, 300);
 
 })();
 </script>
