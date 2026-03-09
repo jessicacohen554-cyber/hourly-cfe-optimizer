@@ -292,11 +292,20 @@ class Jar {
             html += '</div>';
         }
 
-        // HMS label
+        // HMS label — always show baseline HMS when no procurement, with +delta when procured
+        const baselineHms = this.gridBaseline ? (this.gridBaseline.baselineHms || null) : null;
         const displayPct = hms != null ? hms : (gridCleanPct != null ? gridCleanPct : null);
         if (displayPct != null && displayPct >= 0.5) {
-            const label = hms != null ? `${Math.round(displayPct)}% Grid HMS` : `${Math.round(displayPct)}%`;
+            const roundedPct = Math.round(displayPct);
+            let label = `${roundedPct}% HMS`;
+            if (baselineHms != null) {
+                const delta = roundedPct - Math.round(baselineHms);
+                if (delta > 0) label += ` <span style="color:#22C55E;font-size:0.85em">+${delta}pp</span>`;
+            }
             html += `<div class="jar-hms-label">${label}</div>`;
+        } else if (baselineHms != null) {
+            // No procurement yet — show baseline HMS
+            html += `<div class="jar-hms-label" style="opacity:0.55">${Math.round(baselineHms)}% HMS</div>`;
         } else if (this.gridBaseline) {
             const blPct = this.gridBaseline.totalPct || 0;
             if (blPct > 0) {
@@ -589,7 +598,9 @@ class JarGrid {
                 }
                 // Preserve cost/co2 data
                 if (record.tc != null) view[buyerIso].tc = (view[buyerIso].tc || 0) + record.tc;
-                if (record.co2 != null) view[buyerIso].co2 = (view[buyerIso].co2 || 0) + record.co2;
+                // Prefer dispatch-based CO2 (gridDispCo2 > dispCo2 > paper co2)
+                const co2Val = record.gridDispCo2 ?? record.dispCo2 ?? record.co2 ?? null;
+                if (co2Val != null) view[buyerIso].co2 = (view[buyerIso].co2 || 0) + co2Val;
                 if (record.bl != null) view[buyerIso].bl = (view[buyerIso].bl || 0) + record.bl;
             }
 
