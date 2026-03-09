@@ -67,11 +67,11 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 }
 .section-dark h2,
 .section-dark h3 { color: #fff; }
-.section-dark p { color: rgba(255,255,255,0.72); }
-.section-dark strong { color: rgba(255,255,255,0.9); }
+.section-dark p { color: rgba(255,255,255,0.85); }
+.section-dark strong { color: rgba(255,255,255,0.95); }
 .section-dark .story-section h2,
 .section-dark .story-section h3 { color: #fff; }
-.section-dark .story-section p { color: rgba(255,255,255,0.72); }
+.section-dark .story-section p { color: rgba(255,255,255,0.85); }
 
 /* Dark section — no glass on story-content wrapper */
 .section-dark .story-section > .story-content {
@@ -83,51 +83,51 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
     padding: 0;
 }
 
-/* Dark section component overrides */
+/* Dark section component overrides — more opaque for readability */
 .section-dark .insight-box,
 .section-dark .insight-card {
-    background: rgba(255,255,255,0.06) !important;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(255,255,255,0.1) !important;
-    color: rgba(255,255,255,0.85);
+    background: rgba(255,255,255,0.12) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    color: rgba(255,255,255,0.9);
 }
 .section-dark .card {
-    background: rgba(255,255,255,0.06) !important;
-    border: 1px solid rgba(255,255,255,0.1) !important;
-    color: rgba(255,255,255,0.85);
+    background: rgba(255,255,255,0.12) !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    color: rgba(255,255,255,0.9);
 }
 .section-dark .flow-diagram {
     background: rgba(15, 23, 42, 0.85) !important;
-    border: 1px solid rgba(255,255,255,0.12) !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
 }
 .section-dark .chart-panel {
-    background: rgba(255,255,255,0.06) !important;
-    border: 1px solid rgba(255,255,255,0.1) !important;
+    background: rgba(255,255,255,0.12) !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
 }
 .section-dark .callout,
 .section-dark .callout-box,
 .section-dark .narrative-box {
-    background: rgba(255,255,255,0.06) !important;
+    background: rgba(255,255,255,0.12) !important;
     border-color: rgba(255,255,255,0.2) !important;
-    color: rgba(255,255,255,0.85);
+    color: rgba(255,255,255,0.9);
 }
 .section-dark .data-table,
 .section-dark .company-table,
 .section-dark .delta-table {
-    color: rgba(255,255,255,0.85);
+    color: rgba(255,255,255,0.9);
 }
-.section-dark .data-table th { color: rgba(255,255,255,0.6); }
-.section-dark .data-table td { border-color: rgba(255,255,255,0.08); }
+.section-dark .data-table th { color: rgba(255,255,255,0.7); }
+.section-dark .data-table td { border-color: rgba(255,255,255,0.12); }
 .section-dark .stat-tile,
 .section-dark .stat-card {
-    background: rgba(255,255,255,0.06) !important;
-    border: 1px solid rgba(255,255,255,0.1) !important;
+    background: rgba(255,255,255,0.12) !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
 }
 .section-dark .stat-tile .stat-value,
 .section-dark .stat-card .stat-value { color: #fff; }
 .section-dark .stat-tile .stat-label,
-.section-dark .stat-card .stat-label { color: rgba(255,255,255,0.6); }
+.section-dark .stat-card .stat-label { color: rgba(255,255,255,0.7); }
 
 /* ========== FULL-PAGE SECTION TRANSPARENCY ========== */
 /* These selectors catch all opaque section backgrounds from
@@ -496,7 +496,7 @@ section.panel-navy h3 {
 .panel-navy.story-content li,
 section.panel-navy p,
 section.panel-navy li {
-    color: rgba(255, 255, 255, 0.82);
+    color: rgba(255, 255, 255, 0.88);
 }
 .panel-navy > .story-content strong,
 .panel-navy.story-content strong,
@@ -509,15 +509,15 @@ section.panel-navy strong {
 section.panel-navy .callout,
 section.panel-navy .callout-box,
 section.panel-navy .insight-box {
-    background: rgba(255, 255, 255, 0.06) !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
-    color: rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.12) !important;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    color: rgba(255, 255, 255, 0.9);
 }
 .panel-navy > .story-content .callout p,
 .panel-navy > .story-content .insight-box p,
 section.panel-navy .callout p,
 section.panel-navy .insight-box p {
-    color: rgba(255, 255, 255, 0.82);
+    color: rgba(255, 255, 255, 0.88);
 }
 .panel-navy > .story-content .callout strong,
 .panel-navy > .story-content .insight-box strong,
@@ -527,9 +527,9 @@ section.panel-navy .insight-box strong {
 }
 .panel-navy > .story-content .card,
 section.panel-navy .card {
-    background: rgba(255, 255, 255, 0.06) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    color: rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.12) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    color: rgba(255, 255, 255, 0.9);
 }
 .panel-navy > .story-content .card h3,
 .panel-navy > .story-content .card h4,
@@ -541,14 +541,14 @@ section.panel-navy .card h4 {
 .panel-navy > .story-content .card li,
 section.panel-navy .card p,
 section.panel-navy .card li {
-    color: rgba(255, 255, 255, 0.78);
+    color: rgba(255, 255, 255, 0.85);
 }
 .panel-navy > .story-content .stat-tile,
 .panel-navy > .story-content .stat-card,
 section.panel-navy .stat-tile,
 section.panel-navy .stat-card {
-    background: rgba(255, 255, 255, 0.06) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background: rgba(255, 255, 255, 0.12) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
 }
 .panel-navy > .story-content .stat-value,
 section.panel-navy .stat-value {
@@ -556,7 +556,7 @@ section.panel-navy .stat-value {
 }
 .panel-navy > .story-content .stat-label,
 section.panel-navy .stat-label {
-    color: rgba(255, 255, 255, 0.6);
+    color: rgba(255, 255, 255, 0.7);
 }
 .panel-navy .story-badge {
     background: rgba(255, 255, 255, 0.12);
@@ -577,17 +577,17 @@ section.panel-navy .stat-label {
 }
 .panel-navy .company-table,
 .panel-navy .data-table {
-    background: rgba(255, 255, 255, 0.04) !important;
-    color: rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: rgba(255, 255, 255, 0.9);
 }
 .panel-navy .company-table th,
 .panel-navy .data-table th {
-    color: rgba(255, 255, 255, 0.6);
-    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.1);
 }
 .panel-navy .company-table td,
 .panel-navy .data-table td {
-    border-color: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.12);
 }
 
 /* Report-section variant */
@@ -603,7 +603,7 @@ section.report-section.panel-navy h4 {
 }
 section.report-section.panel-navy p,
 section.report-section.panel-navy li {
-    color: rgba(255, 255, 255, 0.82);
+    color: rgba(255, 255, 255, 0.88);
 }
 section.report-section.panel-navy strong {
     color: rgba(255, 255, 255, 0.95);
