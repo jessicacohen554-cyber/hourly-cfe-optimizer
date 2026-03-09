@@ -19,13 +19,111 @@
 
 body {
     background: var(--bg-page-white);
-    background-image:
-        radial-gradient(ellipse at 20% 0%, rgba(14,165,233,0.03) 0%, transparent 50%),
-        radial-gradient(ellipse at 80% 100%, rgba(245,158,11,0.02) 0%, transparent 50%);
-    background-attachment: fixed;
 }
 
-/* About-page story-section typography overrides */
+/* ========== CINEMATIC SCROLL BACKGROUND ========== */
+#bgCamera {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+#bgImage {
+    width: 130vw;
+    height: 130vh;
+    object-fit: cover;
+    will-change: transform;
+    transform: translate(-6%, -6%) scale(1.0);
+}
+
+/* All content above background */
+#topNav, .header, .content-wrap, .section-dark, .site-footer,
+.feedback-loops-wrap, .explore-grid, .gradient-transition, hr.section-divider {
+    position: relative;
+    z-index: 1;
+}
+
+/* ========== GLASSMORPHIC PANELS ========== */
+.glass-panel {
+    background: rgba(255, 255, 255, 0.68);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+.thesis-card {
+    background: rgba(255, 255, 255, 0.68);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+.layer-card {
+    background: rgba(255, 255, 255, 0.68);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+.explore-card {
+    background: rgba(255, 255, 255, 0.68);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+.loop-svg-container {
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+.callout-box {
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(10px) saturate(160%);
+    -webkit-backdrop-filter: blur(10px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+}
+.story-section > .story-content {
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(10px) saturate(160%);
+    -webkit-backdrop-filter: blur(10px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 16px;
+    padding: 36px 32px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.03);
+}
+/* Dark sections keep their own background — no glass */
+.section-dark .story-section > .story-content {
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+}
+
+/* ========== TEXT READABILITY ON GLASS ========== */
+/* Only override light-section text — dark sections keep their white text */
+.content-wrap > .story-section p,
+.theses-section .thesis-text,
+.content-wrap > section.story-section p {
+    color: #475569; /* darker than var(--text-secondary) for glass contrast */
+}
+.content-wrap > .story-section p.lead {
+    color: var(--navy);
+}
+.callout-box p {
+    color: #475569;
+}
+.layer-card p {
+    color: #475569;
+}
+
+/* About-page story-section typography overrides (light sections only) */
 .story-section h2 {
     font-size: 2rem;
     font-weight: 700;
@@ -42,7 +140,6 @@ body {
 }
 .story-section p {
     font-size: 1.05rem;
-    color: var(--text-secondary);
     line-height: 1.75;
 }
 .story-section p.lead {
@@ -51,19 +148,21 @@ body {
     color: var(--navy);
     line-height: 1.7;
 }
+/* Dark section typography keeps shared.css defaults */
+.section-dark .story-section h2,
+.section-dark .story-section h3 { color: #fff; }
+.section-dark .story-section p { color: rgba(255,255,255,0.72); }
 
-/* About-page callout overrides (left-border style) */
+/* About-page callout overrides (left-border style on glass) */
 .callout-box {
-    background: var(--bg-page-white);
-    border: 1px solid var(--border);
     border-left: 4px solid var(--hydro);
     border-radius: 8px;
     padding: 20px 24px;
     margin: 20px 0;
 }
-.callout-box.callout-warning { border-left-color: var(--solar); background: #FFFBEB; }
-.callout-box.callout-danger { border-left-color: var(--red); background: #FEF2F2; }
-.callout-box.callout-success { border-left-color: var(--wind); background: #F0FDF4; }
+.callout-box.callout-warning { border-left-color: var(--solar); }
+.callout-box.callout-danger { border-left-color: var(--red); }
+.callout-box.callout-success { border-left-color: var(--wind); }
 .callout-box h4 { font-size: 1rem; color: var(--navy); text-transform: none; letter-spacing: normal; }
 .callout-box p { font-size: 0.95rem; margin-bottom: 8px; }
 
@@ -85,8 +184,6 @@ body {
 .thesis-card {
     position: relative;
     overflow: hidden;
-    background: var(--bg-page-white);
-    border: 1px solid var(--border);
     border-radius: 12px;
     padding: 32px 28px 28px;
     margin-bottom: 20px;
@@ -94,7 +191,7 @@ body {
 }
 .thesis-card:hover {
     transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.03);
 }
 .thesis-card-green { border-left: 5px solid var(--wind); }
 .thesis-card-red { border-left: 5px solid var(--storage); }
@@ -159,8 +256,6 @@ body {
     padding: 0 24px;
 }
 .loop-svg-container {
-    background: var(--bg-page-white);
-    border: 1px solid var(--border);
     border-radius: 12px;
     padding: 16px;
     text-align: center;
@@ -188,58 +283,10 @@ body {
     margin: 8px 0 0 0;
     padding-left: 18px;
     font-size: 0.92rem;
-    color: var(--text-secondary);
+    color: #475569;
     line-height: 1.65;
 }
 
-/* ========== ORBITAL DIAGRAM (DARK THEME) ========== */
-.mm-tooltip {
-    position: fixed;
-    max-width: 300px;
-    padding: 16px 20px;
-    background: rgba(15, 26, 46, 0.95);
-    border: 1px solid rgba(14, 165, 233, 0.25);
-    border-radius: 12px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 20px rgba(14,165,233,0.1);
-    backdrop-filter: blur(12px);
-    font-family: var(--font-body);
-    font-size: 0.88rem;
-    color: rgba(255,255,255,0.75);
-    line-height: 1.55;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.25s ease;
-    z-index: 100;
-}
-.mm-tooltip.active { opacity: 1; }
-.mm-tooltip strong {
-    display: block;
-    font-family: var(--font-heading);
-    font-size: 0.95rem;
-    color: #ffffff;
-    margin-bottom: 6px;
-}
-@keyframes orbitalPulse {
-    0%, 100% { stroke-opacity: 0.12; }
-    50% { stroke-opacity: 0.25; }
-}
-.orbital-ring {
-    animation: orbitalPulse 5s ease-in-out infinite;
-}
-@keyframes tetherPulse {
-    0%, 100% { stroke-opacity: 0.15; }
-    50% { stroke-opacity: 0.35; }
-}
-.tether-line {
-    animation: tetherPulse 4s ease-in-out infinite;
-}
-.orbital-node {
-    transition: filter 0.3s ease;
-    cursor: pointer;
-}
-.orbital-node:hover {
-    filter: brightness(1.3) drop-shadow(0 0 8px rgba(14,165,233,0.5));
-}
 
 /* ========== EXPLORE SECTION REDESIGN ========== */
 .explore-grid {
@@ -251,15 +298,13 @@ body {
     padding: 0 24px 40px;
 }
 .explore-card {
-    background: var(--bg-page-white);
-    border: 1px solid var(--border);
     border-radius: 12px;
     padding: 28px 24px;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 .explore-card:hover {
     transform: translateY(-3px);
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.03);
 }
 .explore-card h4 {
     font-family: var(--font-heading);
@@ -270,7 +315,7 @@ body {
 }
 .explore-card .explore-desc {
     font-size: 0.9rem;
-    color: var(--text-secondary);
+    color: #475569;
     margin-bottom: 16px;
     line-height: 1.55;
 }
@@ -315,8 +360,7 @@ body {
 /* ========== REDUCED MOTION ========== */
 @media (prefers-reduced-motion: reduce) {
     .thesis-card.visible .thesis-text::after { animation: none; width: 100%; }
-    .orbital-ring, .tether-line, .mm-center-node { animation: none; }
-    .mm-node, .thesis-card, .orbital-node { transition: none; }
+    .thesis-card { transition: none; }
 }
 
 @media (max-width: 768px) {
@@ -324,6 +368,12 @@ body {
     .explore-grid { grid-template-columns: 1fr; }
     .thesis-num { font-size: 3.5rem; }
     .thesis-text { font-size: 1.05rem; }
+    /* Reduce glass blur on mobile for performance */
+    .thesis-card, .layer-card, .explore-card, .loop-svg-container, .callout-box,
+    .story-section > .story-content {
+        backdrop-filter: blur(8px) saturate(160%);
+        -webkit-backdrop-filter: blur(8px) saturate(160%);
+    }
 }
 @media (max-width: 480px) {
     .story-section { padding: 36px 16px; }
@@ -335,8 +385,15 @@ body {
 <script src="js/chart-colors.js"></script>
 <script src="js/shared-header.js"></script>
     <script src="js/scroll-observer.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 </head>
 <body>
+
+<!-- CINEMATIC SCROLL BACKGROUND -->
+<div id="bgCamera" aria-hidden="true">
+    <img src="134ECF38-1159-473B-809C-019548A1B759.png" alt="" id="bgImage">
+</div>
 
 <!-- TOP NAVIGATION (injected by nav.js) -->
 <nav id="topNav"></nav>
@@ -455,7 +512,7 @@ body {
             <div class="layer-card">
                 <div class="layer-accent" style="background:#0EA5E9;"></div>
                 <span class="layer-num">01</span>
-                <h4><span class="layer-icon">&#9889;</span> System-Level Grid Economics</h4>
+                <h4>System-Level Grid Economics</h4>
                 <p>
                     The physical grid operates on marginal cost dispatch: the cheapest available generator runs first.
                     Adding renewables pushes fossil plants off the margin during sunny/windy hours, but the last 5&ndash;20%
@@ -466,7 +523,7 @@ body {
             <div class="layer-card">
                 <div class="layer-accent" style="background:#22C55E;"></div>
                 <span class="layer-num">02</span>
-                <h4><span class="layer-icon">&#127981;</span> Power Generation &amp; Corporate Decarbonization</h4>
+                <h4>Power Generation &amp; Corporate Decarbonization</h4>
                 <p>
                     Utilities and IPPs face their own transition: retiring coal, extending nuclear, building renewables,
                     and deciding whether to invest in CCS, long-duration storage, or next-gen firm power. Their fleet
@@ -477,7 +534,7 @@ body {
             <div class="layer-card">
                 <div class="layer-accent" style="background:#F59E0B;"></div>
                 <span class="layer-num">03</span>
-                <h4><span class="layer-icon">&#128188;</span> Voluntary Corporate Buyers</h4>
+                <h4>Voluntary Corporate Buyers</h4>
                 <p>
                     Tech giants (Google, Microsoft, Amazon), data center operators, and Fortune 500 companies are the
                     primary demand signal for new clean energy. Their procurement commitments &mdash; virtual PPAs,
@@ -489,7 +546,7 @@ body {
             <div class="layer-card">
                 <div class="layer-accent" style="background:#8B5CF6;"></div>
                 <span class="layer-num">04</span>
-                <h4><span class="layer-icon">&#127963;</span> State &amp; National Policy</h4>
+                <h4>State &amp; National Policy</h4>
                 <p>
                     Renewable Portfolio Standards (RPS), clean energy mandates, tax credits (ITC, PTC, 45Q for CCS),
                     and capacity market designs set the floor for clean energy deployment. But policies designed for
@@ -501,7 +558,7 @@ body {
             <div class="layer-card">
                 <div class="layer-accent" style="background:#EF4444;"></div>
                 <span class="layer-num">05</span>
-                <h4><span class="layer-icon">&#128203;</span> Accounting &amp; Reporting Frameworks</h4>
+                <h4>Accounting &amp; Reporting Frameworks</h4>
                 <p>
                     The GHG Protocol Scope 2 revision (expected ~2027) will likely require hourly matching and
                     deliverability for emissions reporting. SBTi&rsquo;s power sector pathways are moving toward
@@ -514,7 +571,7 @@ body {
             <div class="layer-card">
                 <div class="layer-accent" style="background:#14B8A6;"></div>
                 <span class="layer-num">06</span>
-                <h4><span class="layer-icon">&#127758;</span> Global &amp; National Goals</h4>
+                <h4>Global &amp; National Goals</h4>
                 <p>
                     The Paris Agreement, IEA Net Zero by 2050, US federal clean electricity targets, and EU
                     climate law set the destination. But goals without mechanisms are aspirational. The gap between
@@ -523,158 +580,6 @@ body {
                 </p>
             </div>
         </div>
-    </div>
-</section>
-
-<hr class="section-divider">
-
-<!-- SECTION 3: THE DECARBONIZATION ECOSYSTEM (ORBITAL) -->
-<section class="story-section" id="sec-mindmap">
-    <div class="story-content">
-        <span class="story-badge story-badge-blue">Orbital Map</span>
-        <h2>The Decarbonization Ecosystem</h2>
-        <p>
-            The transition from passive consumer to active participant plays out across three concentric forces.
-            At the center, grid physics and generation fleets define the 8,760-hour reality &mdash; the immovable
-            foundation that every procurement strategy must respect. Around it, markets and accounting frameworks
-            act as the gearbox that translates demand into investment. And at the outer edge, policy and global
-            goals create the atmospheric pressure that forces the entire system to evolve &mdash; or stagnate.
-        </p>
-        <div id="mindmapContainer" style="margin: 32px 0; background: linear-gradient(135deg, #0F1A2E 0%, #1A2744 60%, #1E3A5F 100%); border-radius: 16px; padding: 32px 24px; overflow: hidden;">
-            <div class="mindmap-svg-wrap">
-                <svg id="mindmapSvg" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Orbital diagram showing how grid physics, market mechanisms, and global policy interact as concentric forces shaping decarbonization">
-                    <defs>
-                        <!-- Core sun glow -->
-                        <filter id="coreGlow" x="-50%" y="-50%" width="200%" height="200%">
-                            <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur1"/>
-                            <feGaussianBlur in="SourceGraphic" stdDeviation="20" result="blur2"/>
-                            <feFlood flood-color="#0EA5E9" flood-opacity="0.25" result="color1"/>
-                            <feFlood flood-color="#14B8A6" flood-opacity="0.12" result="color2"/>
-                            <feComposite in="color1" in2="blur1" operator="in" result="glow1"/>
-                            <feComposite in="color2" in2="blur2" operator="in" result="glow2"/>
-                            <feMerge>
-                                <feMergeNode in="glow2"/>
-                                <feMergeNode in="glow1"/>
-                                <feMergeNode in="SourceGraphic"/>
-                            </feMerge>
-                        </filter>
-                        <!-- Orbital node glow -->
-                        <filter id="orbitNodeGlow" x="-30%" y="-30%" width="160%" height="160%">
-                            <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur"/>
-                            <feFlood flood-color="#0EA5E9" flood-opacity="0.2" result="color"/>
-                            <feComposite in="color" in2="blur" operator="in" result="glow"/>
-                            <feMerge>
-                                <feMergeNode in="glow"/>
-                                <feMergeNode in="SourceGraphic"/>
-                            </feMerge>
-                        </filter>
-                        <!-- Central sun gradient -->
-                        <radialGradient id="sunGradient" cx="50%" cy="45%" r="55%">
-                            <stop offset="0%" stop-color="#0EA5E9" stop-opacity="0.9"/>
-                            <stop offset="50%" stop-color="#14B8A6" stop-opacity="0.5"/>
-                            <stop offset="100%" stop-color="#0F1A2E" stop-opacity="0.2"/>
-                        </radialGradient>
-                        <!-- Market node gradient -->
-                        <radialGradient id="marketGradient" cx="50%" cy="45%" r="60%">
-                            <stop offset="0%" stop-color="#0EA5E9" stop-opacity="0.35"/>
-                            <stop offset="100%" stop-color="#0EA5E9" stop-opacity="0.06"/>
-                        </radialGradient>
-                        <!-- Vision node gradient -->
-                        <radialGradient id="visionGradient" cx="50%" cy="45%" r="60%">
-                            <stop offset="0%" stop-color="#14B8A6" stop-opacity="0.35"/>
-                            <stop offset="100%" stop-color="#14B8A6" stop-opacity="0.06"/>
-                        </radialGradient>
-                        <!-- Subtle ambient glow for bg depth -->
-                        <radialGradient id="bgAmbient" cx="50%" cy="50%" r="50%">
-                            <stop offset="0%" stop-color="#0EA5E9" stop-opacity="0.06"/>
-                            <stop offset="100%" stop-color="#0F1A2E" stop-opacity="0"/>
-                        </radialGradient>
-                    </defs>
-
-                    <!-- AMBIENT BACKGROUND GLOW -->
-                    <circle cx="400" cy="300" r="260" fill="url(#bgAmbient)"/>
-
-                    <!-- CONCENTRIC ORBITAL RINGS -->
-                    <circle cx="400" cy="300" r="130" fill="none" stroke="#0EA5E9" stroke-width="0.8" stroke-dasharray="6,10" class="orbital-ring"/>
-                    <circle cx="400" cy="300" r="230" fill="none" stroke="#14B8A6" stroke-width="0.6" stroke-dasharray="4,12" class="orbital-ring" style="animation-delay: -2.5s;"/>
-
-                    <!-- TETHER LINES (curved paths connecting nodes to core) -->
-                    <path id="tether-market" d="M 445,265 C 475,230 495,205 510,190" stroke="#0EA5E9" stroke-width="1" stroke-dasharray="4,8" fill="none" stroke-linecap="round" class="tether-line"/>
-                    <path id="tether-vision" d="M 400,245 C 400,195 400,140 400,95" stroke="#14B8A6" stroke-width="1" stroke-dasharray="4,8" fill="none" stroke-linecap="round" class="tether-line" style="animation-delay: -2s;"/>
-                    <!-- Additional tethers for visual balance -->
-                    <path id="tether-market2" d="M 355,265 C 310,220 270,200 245,195" stroke="#0EA5E9" stroke-width="0.6" stroke-dasharray="3,9" fill="none" stroke-linecap="round" class="tether-line" style="animation-delay: -1s;"/>
-                    <path id="tether-vision2" d="M 400,355 C 400,410 400,470 400,505" stroke="#14B8A6" stroke-width="0.6" stroke-dasharray="3,9" fill="none" stroke-linecap="round" class="tether-line" style="animation-delay: -3s;"/>
-
-                    <!-- ANIMATED PARTICLES along tethers -->
-                    <circle r="3" fill="#0EA5E9" opacity="0.7">
-                        <animateMotion dur="3.5s" repeatCount="indefinite"><mpath href="#tether-market"/></animateMotion>
-                    </circle>
-                    <circle r="2.5" fill="#14B8A6" opacity="0.6">
-                        <animateMotion dur="4s" repeatCount="indefinite"><mpath href="#tether-vision"/></animateMotion>
-                    </circle>
-                    <circle r="2" fill="#0EA5E9" opacity="0.45">
-                        <animateMotion dur="5s" repeatCount="indefinite" begin="1.5s"><mpath href="#tether-market2"/></animateMotion>
-                    </circle>
-                    <circle r="2" fill="#14B8A6" opacity="0.4">
-                        <animateMotion dur="4.5s" repeatCount="indefinite" begin="2s"><mpath href="#tether-vision2"/></animateMotion>
-                    </circle>
-
-                    <!-- CENTRAL SUN — "The 8,760 Reality" -->
-                    <g class="mm-node mm-center-node" data-mm="core" filter="url(#coreGlow)">
-                        <circle cx="400" cy="300" r="55" fill="url(#sunGradient)" stroke="#0EA5E9" stroke-width="1.5" stroke-opacity="0.6"/>
-                        <circle cx="400" cy="300" r="55" fill="none" stroke="#fff" stroke-width="0.5" stroke-opacity="0.08"/>
-                        <text x="400" y="288" text-anchor="middle" fill="#ffffff" font-family="'Plus Jakarta Sans',sans-serif" font-size="12" font-weight="700" letter-spacing="0.5">THE 8,760</text>
-                        <text x="400" y="305" text-anchor="middle" fill="#ffffff" font-family="'Plus Jakarta Sans',sans-serif" font-size="12" font-weight="700" letter-spacing="0.5">REALITY</text>
-                        <text x="400" y="322" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-family="'DM Sans',sans-serif" font-size="8.5">Physics &amp; Generation</text>
-                    </g>
-
-                    <!-- INNER ORBIT NODE — "The Market Engine" (upper-right on inner ring) -->
-                    <g class="mm-node orbital-node" data-mm="market" filter="url(#orbitNodeGlow)">
-                        <circle cx="513" cy="185" r="40" fill="url(#marketGradient)" stroke="#0EA5E9" stroke-width="1.2" stroke-opacity="0.45"/>
-                        <circle cx="513" cy="185" r="40" fill="none" stroke="#fff" stroke-width="0.3" stroke-opacity="0.06"/>
-                        <text x="513" y="178" text-anchor="middle" fill="#ffffff" font-family="'Plus Jakarta Sans',sans-serif" font-size="10.5" font-weight="700">THE MARKET</text>
-                        <text x="513" y="193" text-anchor="middle" fill="#ffffff" font-family="'Plus Jakarta Sans',sans-serif" font-size="10.5" font-weight="700">ENGINE</text>
-                        <text x="513" y="208" text-anchor="middle" fill="rgba(255,255,255,0.45)" font-family="'DM Sans',sans-serif" font-size="7.5">Buyers &amp; Accounting</text>
-                    </g>
-
-                    <!-- OUTER ORBIT NODE — "Global Vision" (top on outer ring) -->
-                    <g class="mm-node orbital-node" data-mm="vision" filter="url(#orbitNodeGlow)">
-                        <circle cx="400" cy="70" r="44" fill="url(#visionGradient)" stroke="#14B8A6" stroke-width="1.2" stroke-opacity="0.45"/>
-                        <circle cx="400" cy="70" r="44" fill="none" stroke="#fff" stroke-width="0.3" stroke-opacity="0.06"/>
-                        <text x="400" y="63" text-anchor="middle" fill="#ffffff" font-family="'Plus Jakarta Sans',sans-serif" font-size="10.5" font-weight="700">GLOBAL</text>
-                        <text x="400" y="78" text-anchor="middle" fill="#ffffff" font-family="'Plus Jakarta Sans',sans-serif" font-size="10.5" font-weight="700">VISION</text>
-                        <text x="400" y="93" text-anchor="middle" fill="rgba(255,255,255,0.45)" font-family="'DM Sans',sans-serif" font-size="7.5">Policy &amp; Goals</text>
-                    </g>
-
-                    <!-- SECONDARY POSITION MARKERS (subtle dots on orbits for visual balance) -->
-                    <circle cx="245" cy="195" r="4" fill="#0EA5E9" fill-opacity="0.15" stroke="#0EA5E9" stroke-width="0.5" stroke-opacity="0.25"/>
-                    <circle cx="400" cy="530" r="5" fill="#14B8A6" fill-opacity="0.1" stroke="#14B8A6" stroke-width="0.5" stroke-opacity="0.2"/>
-                    <circle cx="570" cy="410" r="3.5" fill="#14B8A6" fill-opacity="0.08" stroke="#14B8A6" stroke-width="0.4" stroke-opacity="0.15"/>
-                    <circle cx="230" cy="410" r="3.5" fill="#14B8A6" fill-opacity="0.08" stroke="#14B8A6" stroke-width="0.4" stroke-opacity="0.15"/>
-                </svg>
-            </div>
-            <!-- LEGEND -->
-            <div class="legend" style="justify-content:center; margin-top:16px; gap:24px; flex-wrap:wrap; display:flex;">
-                <div class="legend-item" style="color:rgba(255,255,255,0.7);"><span class="legend-dot" style="background:#0EA5E9;"></span> Physics Core</div>
-                <div class="legend-item" style="color:rgba(255,255,255,0.7);"><span class="legend-dot" style="background:#0EA5E9; opacity:0.6;"></span> Market Interface</div>
-                <div class="legend-item" style="color:rgba(255,255,255,0.7);"><span class="legend-dot" style="background:#14B8A6;"></span> Policy &amp; Goals</div>
-            </div>
-        </div>
-
-        <!-- DESCRIPTION CARDS (light theme) -->
-        <div class="grid-2col" style="margin-top: 32px;">
-            <div class="callout-box" style="border-left-color: #0EA5E9;">
-                <h4>Drivers</h4>
-                <p>Grid physics determines what&rsquo;s possible in every hour. The existing generation fleet defines the starting position. Together they form the metabolic core of the grid &mdash; the 8,760-hour heartbeat that every procurement strategy must synchronize with, not paper over.</p>
-            </div>
-            <div class="callout-box" style="border-left-color: #14B8A6;">
-                <h4>Mechanisms</h4>
-                <p>Corporate procurement and accounting rules act as the gearbox that translates policy pressure into grid-level investment. The question is whether those signals transform buyers into active participants in every hour &mdash; or leave them as passive consumers hiding behind annual averages.</p>
-            </div>
-        </div>
-
-        <!-- Tooltip container for orbital diagram hover -->
-        <div class="mm-tooltip" id="mmTooltip"></div>
     </div>
 </section>
 
@@ -1171,20 +1076,6 @@ body {
     counters.forEach(function(c) { counterObserver.observe(c); });
 })();
 
-// ---- Mind map node animation trigger ----
-(function() {
-    const container = document.getElementById('mindmapContainer');
-    if (!container) return;
-    const observer = new IntersectionObserver(function(entries) {
-        entries.forEach(function(entry) {
-            if (entry.isIntersecting) {
-                container.classList.add('mindmap-visible');
-            }
-        });
-    }, { threshold: 0.2 });
-    observer.observe(container);
-})();
-
 // ---- Thesis card visibility (triggers underline animation) ----
 (function() {
     const cards = document.querySelectorAll('.thesis-card');
@@ -1198,48 +1089,62 @@ body {
     cards.forEach(function(c) { observer.observe(c); });
 })();
 
-// ---- Mind map interactive tooltips ----
+// ---- GSAP Cinematic Scroll Background ----
 (function() {
-    var tooltip = document.getElementById('mmTooltip');
-    if (!tooltip) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        var img = document.getElementById('bgImage');
+        if (img) img.style.transform = 'translate(-8%, -8%) scale(1.0)';
+        return;
+    }
 
-    var descriptions = {
-        core: { title: 'The 8,760 Reality', text: 'Physics and generation define what\u2019s possible in every hour. Renewables fill sunny and windy hours cheaply, but evening, winter, and windless gaps create a steep last-mile cost curve. The existing fleet \u2014 nuclear in PJM, gas in ERCOT, hydro in NYISO \u2014 determines each region\u2019s starting position. This is the immovable center of the system.' },
-        market: { title: 'The Market Engine', text: 'Corporate buyers and accounting frameworks translate grid physics into investment signals. PPAs, 24/7 CFE targets, and EAC demand shape which resources get built. GHG Protocol Scope 2 and SBTi\u2019s emerging hourly pathways determine whether spending drives real emission reductions or paper compliance.' },
-        vision: { title: 'Global Vision', text: 'Paris Agreement, IEA Net Zero, US federal targets, EU climate law, and RPS mandates set the destination and regulatory floor. ITC, PTC, and 45Q credits incentivize specific technologies. The gap between \u201cnet zero by 2050\u201d and matching clean energy in every hour of 2025 is where this analysis operates.' }
-    };
+    gsap.registerPlugin(ScrollTrigger);
 
-    var svg = document.getElementById('mindmapSvg');
-    if (!svg) return;
+    var bgImage = document.getElementById('bgImage');
+    if (!bgImage) return;
 
-    var nodes = svg.querySelectorAll('.mm-node[data-mm]');
-    nodes.forEach(function(node) {
-        node.style.cursor = 'pointer';
-        node.addEventListener('mouseenter', function(e) {
-            var key = node.getAttribute('data-mm');
-            var desc = descriptions[key];
-            if (!desc) return;
-            tooltip.innerHTML = '<strong>' + desc.title + '</strong>' + desc.text;
-            tooltip.classList.add('active');
-            positionTooltip(e);
-        });
-        node.addEventListener('mousemove', positionTooltip);
-        node.addEventListener('mouseleave', function() {
-            tooltip.classList.remove('active');
-        });
+    // Set initial position (centered with margin for panning)
+    gsap.set(bgImage, { xPercent: -6, yPercent: -6, scale: 1.0 });
+
+    // Timeline: pan + micro-zoom the background as user scrolls through sections
+    var tl = gsap.timeline({
+        scrollTrigger: {
+            trigger: document.body,
+            start: 'top top',
+            end: 'bottom bottom',
+            scrub: 2
+        }
     });
 
-    function positionTooltip(e) {
-        var x = e.clientX + 16;
-        var y = e.clientY - 10;
-        var w = tooltip.offsetWidth;
-        var h = tooltip.offsetHeight;
-        if (x + w > window.innerWidth - 16) x = e.clientX - w - 16;
-        if (y + h > window.innerHeight - 16) y = window.innerHeight - h - 16;
-        if (y < 8) y = 8;
-        tooltip.style.left = x + 'px';
-        tooltip.style.top = y + 'px';
-    }
+    // Hero → Theses: subtle drift left
+    tl.to(bgImage, {
+        xPercent: -10, yPercent: -4, scale: 1.03,
+        ease: 'power1.inOut', duration: 1
+    })
+    // Theses → Big Picture: pan toward upper region
+    .to(bgImage, {
+        xPercent: -3, yPercent: -10, scale: 1.05,
+        ease: 'power1.inOut', duration: 1
+    })
+    // Big Picture → Layers: pan toward colored node clusters
+    .to(bgImage, {
+        xPercent: -12, yPercent: -8, scale: 1.07,
+        ease: 'power1.inOut', duration: 1
+    })
+    // Layers → Incentives: drift to different region
+    .to(bgImage, {
+        xPercent: -5, yPercent: -12, scale: 1.09,
+        ease: 'power1.inOut', duration: 1
+    })
+    // Incentives → Feedback/Insights: pan back
+    .to(bgImage, {
+        xPercent: -8, yPercent: -5, scale: 1.06,
+        ease: 'power1.inOut', duration: 1
+    })
+    // Insights → Explore/Footer: settle back to neutral
+    .to(bgImage, {
+        xPercent: -8, yPercent: -6, scale: 1.0,
+        ease: 'power1.inOut', duration: 1
+    });
 })();
 </script>
 
