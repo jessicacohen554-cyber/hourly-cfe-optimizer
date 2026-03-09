@@ -92,44 +92,44 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
     padding: 0;
 }
 
-/* Dark section component overrides */
+/* Dark section component overrides — boosted for readability */
 .section-dark .insight-box,
 .section-dark .insight-card {
-    background: rgba(255,255,255,0.12) !important;
-    border: 1px solid rgba(255,255,255,0.15) !important;
-    color: rgba(255,255,255,0.9);
+    background: rgba(255,255,255,0.15) !important;
+    border: 1px solid rgba(255,255,255,0.22) !important;
+    color: rgba(255,255,255,0.92);
 }
 .section-dark .card {
-    background: rgba(255,255,255,0.12) !important;
-    border: 1px solid rgba(255,255,255,0.15) !important;
-    color: rgba(255,255,255,0.9);
+    background: rgba(255,255,255,0.15) !important;
+    border: 1px solid rgba(255,255,255,0.22) !important;
+    color: rgba(255,255,255,0.92);
 }
 .section-dark .flow-diagram {
     background: rgba(15, 23, 42, 0.85) !important;
-    border: 1px solid rgba(255,255,255,0.15) !important;
+    border: 1px solid rgba(255,255,255,0.22) !important;
 }
 .section-dark .chart-panel {
-    background: rgba(255,255,255,0.12) !important;
-    border: 1px solid rgba(255,255,255,0.15) !important;
+    background: rgba(255,255,255,0.15) !important;
+    border: 1px solid rgba(255,255,255,0.22) !important;
 }
 .section-dark .callout,
 .section-dark .callout-box,
 .section-dark .narrative-box {
-    background: rgba(255,255,255,0.12) !important;
-    border-color: rgba(255,255,255,0.2) !important;
-    color: rgba(255,255,255,0.9);
+    background: rgba(255,255,255,0.15) !important;
+    border-color: rgba(255,255,255,0.22) !important;
+    color: rgba(255,255,255,0.92);
 }
 .section-dark .data-table,
 .section-dark .company-table,
 .section-dark .delta-table {
-    color: rgba(255,255,255,0.9);
+    color: rgba(255,255,255,0.92);
 }
-.section-dark .data-table th { color: rgba(255,255,255,0.85); }
-.section-dark .data-table td { border-color: rgba(255,255,255,0.12); }
+.section-dark .data-table th { color: rgba(255,255,255,0.90); }
+.section-dark .data-table td { color: rgba(255,255,255,0.88); border-color: rgba(255,255,255,0.15); }
 .section-dark .stat-tile,
 .section-dark .stat-card {
-    background: rgba(255,255,255,0.12) !important;
-    border: 1px solid rgba(255,255,255,0.15) !important;
+    background: rgba(255,255,255,0.15) !important;
+    border: 1px solid rgba(255,255,255,0.22) !important;
 }
 .section-dark .stat-tile .stat-value,
 .section-dark .stat-card .stat-value { color: #fff; }
