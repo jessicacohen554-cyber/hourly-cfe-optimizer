@@ -10,20 +10,28 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/shared.css">
 <link rel="stylesheet" href="styles/dashboard-ui.css">
+<link rel="stylesheet" href="styles/cinematic.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="js/nav.js"></script>
 <script src="js/chart-colors.js"></script>
 <script src="js/shared-header.js"></script>
 <script src="js/scroll-observer.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <style>
-body { background: var(--bg-page); }
+/* body background handled by cinematic.css */
 
 /* ===== CONTROLS BAR ===== */
 .controls-bar {
     position: relative;
-    background: rgba(255,255,255,0.95);
-    border-bottom: 1px solid var(--border);
+    z-index: 2;
+    background: rgba(255,255,255,0.78);
+    backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    border-bottom: 1px solid rgba(255,255,255,0.3);
     padding: 16px var(--pad-page);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.06);
 }
 .controls-inner {
     max-width: 1320px;
@@ -70,7 +78,8 @@ body { background: var(--bg-page); }
     flex-wrap: wrap;
 }
 .stat-chip {
-    background: var(--bg-alt);
+    background: rgba(255,255,255,0.5);
+    border: 1px solid rgba(148,163,184,0.2);
     border-radius: var(--radius-md);
     padding: 6px 14px;
     font-family: var(--font-body);
@@ -87,13 +96,21 @@ body { background: var(--bg-page); }
 
 /* ===== LEGEND BAR ===== */
 .legend-bar {
+    position: relative;
+    z-index: 1;
     max-width: 1320px;
     margin: 16px auto;
-    padding: 0 var(--pad-page);
+    padding: 12px var(--pad-page);
     display: flex;
     flex-wrap: wrap;
     gap: 16px;
     align-items: center;
+    background: rgba(255,255,255,0.68);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    border-radius: var(--radius-lg, 12px);
+    border: 1px solid rgba(255,255,255,0.3);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
 }
 .legend-group {
     display: flex;
@@ -129,13 +146,21 @@ body { background: var(--bg-page); }
 
 /* ===== STRATEGY SELECTOR ===== */
 .strategy-selector {
+    position: relative;
+    z-index: 1;
     max-width: 1320px;
-    margin: 0 auto;
-    padding: 12px var(--pad-page);
+    margin: 8px auto;
+    padding: 14px var(--pad-page);
     display: flex;
     gap: 24px;
     flex-wrap: wrap;
     align-items: flex-start;
+    background: rgba(255,255,255,0.68);
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    border-radius: var(--radius-lg, 12px);
+    border: 1px solid rgba(255,255,255,0.3);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
 }
 .strategy-category {
     display: flex;
@@ -158,8 +183,8 @@ body { background: var(--bg-page); }
     gap: 4px;
     padding: 4px 10px;
     border-radius: var(--radius-pill);
-    border: 1px solid var(--border);
-    background: white;
+    border: 1px solid rgba(148,163,184,0.3);
+    background: rgba(255,255,255,0.6);
     font-family: var(--font-body);
     font-size: 0.78rem;
     cursor: pointer;
@@ -209,6 +234,8 @@ body { background: var(--bg-page); }
 
 /* ===== JAR MATRIX ===== */
 .matrix-section {
+    position: relative;
+    z-index: 1;
     max-width: 1320px;
     margin: 0 auto;
     padding: 0 var(--pad-page) 24px;
@@ -407,10 +434,12 @@ body { background: var(--bg-page); }
     position: fixed;
     display: none;
     z-index: 100;
-    background: white;
-    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    border: 1px solid rgba(255,255,255,0.3);
     border-radius: var(--radius-md);
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
     padding: 6px 12px;
     max-width: 400px;
     pointer-events: none;
@@ -449,10 +478,12 @@ body { background: var(--bg-page); }
     display: none;
     position: fixed;
     bottom: 0; left: 0; right: 0;
-    background: white;
-    border-top: 1px solid var(--border);
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border-top: 1px solid rgba(255,255,255,0.3);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-    box-shadow: 0 -4px 30px rgba(0,0,0,0.12);
+    box-shadow: 0 -4px 30px rgba(0,0,0,0.15);
     padding: 20px 24px 28px;
     max-height: 55vh;
     overflow-y: auto;
@@ -554,6 +585,8 @@ body { background: var(--bg-page); }
 
 /* ===== AGGREGATE CHARTS ===== */
 .agg-charts {
+    position: relative;
+    z-index: 1;
     max-width: 1320px;
     margin: 0 auto;
     padding: 0 var(--pad-page) 32px;
@@ -563,11 +596,13 @@ body { background: var(--bg-page); }
     margin-bottom: 20px;
 }
 .agg-chart-card {
-    background: white;
+    background: rgba(255,255,255,0.78);
+    backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
     border-radius: var(--radius-lg);
-    border: 1px solid var(--border-light);
+    border: 1px solid rgba(255,255,255,0.3);
     padding: 20px;
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.06);
 }
 .agg-chart-card h3 {
     font-family: var(--font-heading);
@@ -617,6 +652,7 @@ body { background: var(--bg-page); }
 </style>
 </head>
 <body>
+<nav id="topNav"></nav>
 
 <!-- Header -->
 <div class="header" id="pageHeader">
@@ -811,7 +847,7 @@ body { background: var(--bg-page); }
 <!-- Data & Scripts -->
 <script src="js/deployment-data.js"></script>
 <script src="js/jar-animation.js"></script>
-<script src="js/nav.js"></script>
+<script src="js/cinematic-bg.js"></script>
 <script>
 (function() {
     'use strict';
