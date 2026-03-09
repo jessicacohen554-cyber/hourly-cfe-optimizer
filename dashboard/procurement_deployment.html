@@ -855,11 +855,11 @@
 <!-- Chart 1: Grid Clean % by Participation (crossover lines) -->
 <div class="agg-charts">
     <div class="agg-chart-card">
-        <h3>Grid Clean % by Participation Level (Crossover Analysis)</h3>
+        <h3>Grid Hourly Match Score by Participation Level (Crossover Analysis)</h3>
         <p style="font-family:var(--font-body);font-size:0.8rem;color:var(--text-muted);margin:-4px 0 8px;">
-            How each strategy physically cleans the grid as more C&I load participates.
-            Consequential strategies (1A/1B) show near-zero local grid improvement because resources are deployed cross-regionally.
-            Dashed lines show 90%, 95%, and 99% grid-clean reference thresholds.
+            How each strategy physically cleans the grid as more C&I load participates, measured by dispatch-based hourly match score (HMS).
+            HMS captures hour-by-hour clean energy matching — harder to achieve than annual %.
+            Dashed lines show 90%, 95%, and 99% HMS reference thresholds.
         </p>
         <div class="grid-2col">
             <div>
@@ -877,7 +877,7 @@
             <div>
                 <h4 style="font-family:var(--font-heading);font-size:0.95rem;color:var(--text-primary);margin:0 0 8px;">Participation Required for Grid-Clean Targets</h4>
                 <p style="font-family:var(--font-body);font-size:0.78rem;color:var(--text-muted);margin:0 0 8px;">
-                    Minimum C&I participation (%) to reach grid-clean milestones at 90% CO₂ target.
+                    Minimum C&I participation (%) to reach grid HMS milestones at selected CO₂ target.
                     "—" = unreachable even at 100% participation.
                 </p>
                 <div style="overflow-x:auto;">
@@ -1382,7 +1382,8 @@
         const tk = findClosestKey(Object.keys(sd[iso][pk]), threshold);
         if (!tk) return null;
         const rec = sd[iso][pk][tk];
-        return rec ? (rec.gridCleanPct || 0) : null;
+        // Use hourly match score (dispatch-based) instead of annual clean %
+        return rec ? (rec.gridHms || rec.gridCleanPct || 0) : null;
     }
 
     function getDispCO2AtPart(strat, iso, part, threshold) {
@@ -1472,14 +1473,14 @@
                         padding: 10, cornerRadius: 8,
                         callbacks: {
                             title: (items) => `${crossoverIso} — ${items[0].label} participation`,
-                            label: (ctx) => `${ctx.dataset.label}: ${ctx.raw !== null ? ctx.raw.toFixed(1) + '% grid clean' : 'N/A'}`,
+                            label: (ctx) => `${ctx.dataset.label}: ${ctx.raw !== null ? ctx.raw.toFixed(1) + '% HMS' : 'N/A'}`,
                         },
                     },
                     annotation: {
                         annotations: {
-                            line90: { type: 'line', yMin: 90, yMax: 90, borderColor: '#22C55E80', borderWidth: 1.5, borderDash: [6,4], label: { display: true, content: '90% clean', position: 'start', font: { size: 10 }, color: '#22C55E' } },
-                            line95: { type: 'line', yMin: 95, yMax: 95, borderColor: '#F59E0B80', borderWidth: 1.5, borderDash: [6,4], label: { display: true, content: '95% clean', position: 'start', font: { size: 10 }, color: '#F59E0B' } },
-                            line99: { type: 'line', yMin: 99, yMax: 99, borderColor: '#EF444480', borderWidth: 1.5, borderDash: [6,4], label: { display: true, content: '99% clean', position: 'start', font: { size: 10 }, color: '#EF4444' } },
+                            line90: { type: 'line', yMin: 90, yMax: 90, borderColor: '#22C55E80', borderWidth: 1.5, borderDash: [6,4], label: { display: true, content: '90% HMS', position: 'start', font: { size: 10 }, color: '#22C55E' } },
+                            line95: { type: 'line', yMin: 95, yMax: 95, borderColor: '#F59E0B80', borderWidth: 1.5, borderDash: [6,4], label: { display: true, content: '95% HMS', position: 'start', font: { size: 10 }, color: '#F59E0B' } },
+                            line99: { type: 'line', yMin: 99, yMax: 99, borderColor: '#EF444480', borderWidth: 1.5, borderDash: [6,4], label: { display: true, content: '99% HMS', position: 'start', font: { size: 10 }, color: '#EF4444' } },
                         },
                     },
                 },
@@ -1492,7 +1493,7 @@
                     y: {
                         grid: { color: '#E2E8F0' },
                         ticks: { font: { family: "'Plus Jakarta Sans'", size: 10 }, callback: v => v + '%' },
-                        title: { display: true, text: 'Physical Grid Clean %', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' },
+                        title: { display: true, text: 'Grid Hourly Match Score (%)', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' },
                         beginAtZero: false,
                         suggestedMin: 25,
                         suggestedMax: 110,

@@ -435,11 +435,16 @@ def main():
                                     mapped = _map_resource(res)
                                     agg_pcts[mapped] = agg_pcts.get(mapped, 0) + (twh / grid_demand_twh * 100)
 
-                # Only compute if there's new capacity beyond baseline
+                # If no new capacity beyond baseline, use baseline HMS
                 baseline_total = sum(GRID_MIX_SHARES.get(grid_iso, {}).values())
                 agg_total = sum(agg_pcts.values())
                 if agg_total <= baseline_total + 0.1:
-                    continue  # No new capacity on this grid
+                    grid_record = strat_data.get(grid_iso, {}).get(pk, {}).get(tk)
+                    if grid_record and isinstance(grid_record, dict):
+                        bl = grid_baseline.get(grid_iso, {})
+                        grid_record.setdefault('gridHms', bl.get('baselineHms', 0))
+                        grid_record.setdefault('gridAggCleanPct', bl.get('baselineCleanPct', 0))
+                    continue
 
                 try:
                     dd = iso_dispatch[grid_iso]
