@@ -41,7 +41,7 @@ from procurement_utils import (
     get_existing_clean_twh, get_sss_twh, get_merchant_clean_twh,
     build_newbuild_only_tranches, get_resource_ppa_price,
     make_strategy_result, build_25yr_trajectory,
-    save_results_json,
+    save_results_json, compute_dispatch_hms,
     UPRATE_CAP_TWH, EXISTING_EAC_PRICE,
 )
 
@@ -193,11 +193,11 @@ def compute_strategy_3a(iso, year, threshold, participation_pct,
             'category': 'new_build',
         }
 
-    # CO2 accounting
+    # CO2 accounting — all new-build, all displaces fossil
     cost_per_mwh = total_cost / total_procured if total_procured > 0 else 0
-    emission_rate = get_emission_rate(iso, 'grid_average')
+    emission_rate = get_emission_rate(iso, 'fossil_average')
     baseline_co2_mt = buyer_demand * emission_rate
-    co2_abated = buyer_demand * target_fraction * emission_rate
+    co2_abated = total_procured * emission_rate  # all new-build → all displaces fossil
     mac = (total_cost * 1e6) / (co2_abated * 1e6) if co2_abated > 0 else None
     co2_reduction_pct = (co2_abated / baseline_co2_mt * 100) if baseline_co2_mt > 0 else 0
 
@@ -316,11 +316,11 @@ def compute_strategy_3b(iso, year, threshold, participation_pct,
             else:
                 resource_breakdown[key] = {'twh': round(procure, 2), 'price': round(price, 1), 'cost_m': round(cost, 2)}
 
-    # CO2 accounting
+    # CO2 accounting — all new-build, all displaces fossil
     cost_per_mwh = total_cost / total_procured if total_procured > 0 else 0
-    emission_rate = get_emission_rate(iso, 'grid_average')
+    emission_rate = get_emission_rate(iso, 'fossil_average')
     baseline_co2_mt = buyer_demand * emission_rate
-    co2_abated = buyer_demand * target_fraction * emission_rate
+    co2_abated = total_procured * emission_rate  # all new-build → all displaces fossil
     mac = (total_cost * 1e6) / (co2_abated * 1e6) if co2_abated > 0 else None
     co2_reduction_pct = (co2_abated / baseline_co2_mt * 100) if baseline_co2_mt > 0 else 0
 
@@ -446,12 +446,14 @@ def compute_strategy_3c(iso, year, threshold, participation_pct,
         'category': 'sss',
     }
 
-    # CO2 accounting
+    # CO2 accounting — only new-build + uprate displaces fossil (SSS + existing already running)
     effective_procured = total_procured + buyer_sss_share
     cost_per_mwh = total_cost / effective_procured if effective_procured > 0 else 0
-    emission_rate = get_emission_rate(iso, 'grid_average')
+    emission_rate = get_emission_rate(iso, 'fossil_average')
     baseline_co2_mt = buyer_demand * emission_rate
-    co2_abated = buyer_demand * target_fraction * emission_rate
+    new_build_twh = sum(info['twh'] for info in resource_breakdown.values()
+                        if isinstance(info, dict) and info.get('category') in ('new_build', 'uprate'))
+    co2_abated = new_build_twh * emission_rate
     mac = (total_cost * 1e6) / (co2_abated * 1e6) if co2_abated > 0 else None
     co2_reduction_pct = (co2_abated / baseline_co2_mt * 100) if baseline_co2_mt > 0 else 0
 
@@ -611,12 +613,14 @@ def compute_strategy_3d(iso, year, threshold, participation_pct,
         'category': 'sss',
     }
 
-    # CO2 accounting
+    # CO2 accounting — only new-build + uprate displaces fossil (SSS + existing already running)
     effective_procured = total_procured + buyer_sss_share
     cost_per_mwh = total_cost / effective_procured if effective_procured > 0 else 0
-    emission_rate = get_emission_rate(iso, 'grid_average')
+    emission_rate = get_emission_rate(iso, 'fossil_average')
     baseline_co2_mt = buyer_demand * emission_rate
-    co2_abated = buyer_demand * target_fraction * emission_rate
+    new_build_twh = sum(info['twh'] for info in resource_breakdown.values()
+                        if isinstance(info, dict) and info.get('category') in ('new_build', 'uprate'))
+    co2_abated = new_build_twh * emission_rate
     mac = (total_cost * 1e6) / (co2_abated * 1e6) if co2_abated > 0 else None
     co2_reduction_pct = (co2_abated / baseline_co2_mt * 100) if baseline_co2_mt > 0 else 0
 
@@ -742,6 +746,16 @@ def main():
     )
 
     save_results_json(results, 'strategy3_annual.json')
+
+    # ── Dispatch-based 8760 hourly match scoring ──
+    try:
+        compute_dispatch_hms(results, ['strategy3A', 'strategy3B', 'strategy3C', 'strategy3D'], isos)
+        # Re-save with dispatch scores
+        save_results_json(results, 'strategy3_annual.json')
+    except Exception as e:
+        print(f"  WARNING: Dispatch scoring failed: {e}")
+        import traceback; traceback.print_exc()
+        print("  (Continuing without dispatch scores)")
 
     # Summary
     print("\n" + "=" * 70)
