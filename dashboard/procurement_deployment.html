@@ -1005,19 +1005,19 @@ body { background: var(--bg-page); }
         return best;
     }
 
-    // For a strategy and participation level, compute total new gas GW across all ISOs at each threshold
-    function computeGasAtParticipation(strategy, participation) {
+    // For a strategy and threshold, compute total new gas GW across all ISOs at each participation level
+    function computeGasAtThreshold(strategy, threshold) {
         const stratData = DEPLOYMENT_DATA.data[strategy];
-        if (!stratData) return THRESHOLDS.map(() => 0);
+        if (!stratData) return PARTICIPATION_LEVELS.map(() => 0);
 
-        return THRESHOLDS.map(thr => {
+        return PARTICIPATION_LEVELS.map(part => {
             let totalGas = 0;
             for (const iso of RIBBON_ISOS) {
                 const isoData = stratData[iso];
                 if (!isoData) continue;
-                const pk = findClosestKey(Object.keys(isoData), participation);
+                const pk = findClosestKey(Object.keys(isoData), part);
                 if (!pk || !isoData[pk]) continue;
-                const tk = findClosestKey(Object.keys(isoData[pk]), thr);
+                const tk = findClosestKey(Object.keys(isoData[pk]), threshold);
                 if (!tk) continue;
                 const rec = isoData[pk][tk];
                 if (rec) totalGas += Math.max(0, (rec.gasGw || 0) - (EXISTING_GAS[iso] || 0));
@@ -1026,21 +1026,22 @@ body { background: var(--bg-page); }
         });
     }
 
-    // Build ribbon data for a strategy: min, median, max across all participation levels
+    // Build ribbon data for a strategy: min, median, max across all thresholds
+    // x-axis = participation level, bands = range across CFE targets
     function buildRibbonData(strategy) {
-        // Compute gas at every participation level
-        const allCurves = PARTICIPATION_LEVELS.map(p => computeGasAtParticipation(strategy, p));
+        // Compute gas at every threshold
+        const allCurves = THRESHOLDS.map(t => computeGasAtThreshold(strategy, t));
 
-        // For each threshold index, find min, median (50% participation), max
+        // For each participation index, find min, median (85% target), max across thresholds
         const minArr = [], medArr = [], maxArr = [];
-        const medIdx = PARTICIPATION_LEVELS.indexOf(50);
-        const medPIdx = medIdx >= 0 ? medIdx : Math.floor(PARTICIPATION_LEVELS.length / 2);
+        const medIdx = THRESHOLDS.indexOf(85);
+        const medTIdx = medIdx >= 0 ? medIdx : Math.floor(THRESHOLDS.length / 2);
 
-        for (let ti = 0; ti < THRESHOLDS.length; ti++) {
-            const vals = allCurves.map(c => c[ti]).sort((a, b) => a - b);
+        for (let pi = 0; pi < PARTICIPATION_LEVELS.length; pi++) {
+            const vals = allCurves.map(c => c[pi]).sort((a, b) => a - b);
             minArr.push(vals[0]);
             maxArr.push(vals[vals.length - 1]);
-            medArr.push(allCurves[medPIdx][ti]);
+            medArr.push(allCurves[medTIdx][pi]);
         }
         return { min: minArr, med: medArr, max: maxArr };
     }
@@ -1051,7 +1052,7 @@ body { background: var(--bg-page); }
         if (chartRibbon) chartRibbon.destroy();
 
         const active = getActiveStrategies();
-        const xLabels = THRESHOLDS.map(t => t >= 99.99 ? '≥99.99%' : t + '%');
+        const xLabels = PARTICIPATION_LEVELS.map(p => p + '%');
         const datasets = [];
 
         for (const strat of active) {
@@ -1142,7 +1143,7 @@ body { background: var(--bg-page); }
                         padding: 10,
                         cornerRadius: 8,
                         callbacks: {
-                            title: (items) => 'Target: ' + items[0].label,
+                            title: (items) => 'Participation: ' + items[0].label,
                             label: (ctx) => {
                                 const ds = ctx.dataset;
                                 if (ds._ribbonRole !== 'median') return null;
@@ -1155,7 +1156,7 @@ body { background: var(--bg-page); }
                                     if (d._stratKey === strat && d._ribbonRole === 'max') maxVal = d.data[ctx.dataIndex];
                                 }
                                 const label = (STRAT_LABELS[strat] || strat).replace('\n',' — ');
-                                return `${label}: ${Math.round(ctx.raw)} GW (${Math.round(minVal)}–${Math.round(maxVal)})`;
+                                return `${label}: ${Math.round(ctx.raw)} GW @ 85% target (${Math.round(minVal)}–${Math.round(maxVal)} across targets)`;
                             },
                         },
                     },
@@ -1171,7 +1172,7 @@ body { background: var(--bg-page); }
                         },
                         title: {
                             display: true,
-                            text: 'CO₂ Reduction Target',
+                            text: 'Corporate Participation Level',
                             font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 },
                             color: '#334155',
                         },
