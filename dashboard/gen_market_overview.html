@@ -348,7 +348,7 @@
 
         <div class="story-two-col" style="margin-top: 24px;">
             <div class="card" style="border: 2px solid #374151;">
-                <h4>Evergy (Coal-Heavy): 519 &rarr; 260 kg/MWh</h4>
+                <h4>Coal-Heavy Archetype: 519 &rarr; 260 kg/MWh</h4>
                 <ul style="font-size: 0.9rem; margin-left: 16px; color: var(--text-secondary);">
                     <li><strong>Strategy:</strong> Replace coal fleet with Kansas wind + battery storage</li>
                     <li><strong>Cost:</strong> New wind at $25&ndash;35/MWh undercuts coal operating costs ($35&ndash;50/MWh)</li>
@@ -408,22 +408,6 @@
         </div>
 
         <div class="chart-container">
-            <h3>CO&#8322; Intensity Trajectories by Company (kg CO&#8322;/MWh)</h3>
-            <div class="chart-wrapper" style="height: 450px;">
-                <canvas id="trajectoryChart"></canvas>
-            </div>
-            <p class="citation">Estimated trajectories based on eGRID 2005&ndash;2023 data, EIA Form 923, company sustainability reports, and MJ Bradley/ERM annual benchmarking.<sup class="ref">1,4</sup></p>
-        </div>
-
-        <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 16px; margin-bottom: 24px;" id="trajectoryLegend">
-            <button class="pill active" data-filter="all" onclick="filterTrajectory('all')">All Companies</button>
-            <button class="pill" data-filter="coal-heavy" onclick="filterTrajectory('coal-heavy')">Coal-Heavy</button>
-            <button class="pill" data-filter="diversified" onclick="filterTrajectory('diversified')">Diversified</button>
-            <button class="pill" data-filter="gas-nuclear" onclick="filterTrajectory('gas-nuclear')">Gas-Nuclear</button>
-            <button class="pill" data-filter="leaders" onclick="filterTrajectory('leaders')">Clean Leaders</button>
-        </div>
-
-        <div class="chart-container" style="margin-top: 24px;">
             <h3>Absolute CO&#8322; Emissions Trajectory: Top 15 Combined</h3>
             <div class="chart-wrapper" style="height: 320px;">
                 <canvas id="absoluteTrajectoryChart"></canvas>
@@ -711,67 +695,6 @@ new Chart(document.getElementById('macChart').getContext('2d'), {
         }
     }
 });
-
-// ============================================================
-// HISTORICAL EMISSIONS TRAJECTORY CHART
-// ============================================================
-const years = ['2005','2008','2010','2012','2014','2016','2018','2020','2022','2024'];
-
-const trajectories = {
-    'Constellation':  { data: [295, 275, 260, 245, 230, 215, 200, 170, 150, 131], color: '#7C3AED', group: 'leaders' },
-    'NextEra':        { data: [372, 340, 318, 295, 272, 254, 240, 231, 227, 222], color: '#22C55E', group: 'leaders' },
-    'Duke':           { data: [499, 476, 454, 431, 408, 395, 381, 368, 358, 354], color: '#0EA5E9', group: 'diversified' },
-    'Southern':       { data: [522, 490, 463, 440, 417, 399, 386, 372, 363, 361], color: '#06B6D4', group: 'diversified' },
-    'Vistra':         { data: [816, 771, 726, 680, 635, 590, 544, 517, 499, 485], color: '#DC2626', group: 'coal-heavy' },
-    'AEP':            { data: [862, 816, 771, 703, 635, 590, 567, 535, 517, 499], color: '#EF4444', group: 'coal-heavy' },
-    'Dominion':       { data: [499, 454, 417, 390, 367, 354, 345, 338, 335, 333], color: '#F59E0B', group: 'gas-nuclear' },
-    'BH Energy':      { data: [635, 626, 613, 590, 567, 544, 522, 504, 497, 494], color: '#9CA3AF', group: 'coal-heavy' },
-    'Entergy':        { data: [408, 399, 390, 381, 372, 363, 358, 354, 352, 349], color: '#84CC16', group: 'gas-nuclear' },
-    'AES':            { data: [635, 590, 544, 499, 476, 454, 431, 399, 386, 372], color: '#10B981', group: 'diversified' },
-    'Xcel':           { data: [680, 635, 590, 544, 499, 476, 454, 427, 413, 399], color: '#8B5CF6', group: 'diversified' },
-    'Evergy':         { data: [726, 703, 680, 658, 626, 599, 572, 544, 531, 519], color: '#374151', group: 'coal-heavy' },
-    'DTE':            { data: [635, 613, 590, 567, 544, 517, 490, 463, 454, 445], color: '#EC4899', group: 'diversified' },
-    'WEC':            { data: [613, 590, 567, 544, 517, 490, 463, 440, 431, 424], color: '#6366F1', group: 'diversified' },
-    'PPL':            { data: [680, 671, 663, 653, 635, 622, 608, 595, 583, 572], color: '#B45309', group: 'coal-heavy' }
-};
-
-const trajectoryDatasets = Object.entries(trajectories).map(([name, t]) => ({
-    label: name,
-    data: t.data,
-    borderColor: t.color,
-    backgroundColor: 'transparent',
-    tension: 0.3,
-    pointRadius: 3,
-    borderWidth: 2,
-    hidden: false,
-    _group: t.group
-}));
-
-const trajectoryChart = new Chart(document.getElementById('trajectoryChart').getContext('2d'), {
-    type: 'line',
-    data: { labels: years, datasets: trajectoryDatasets },
-    options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-            legend: { position: 'bottom', labels: { usePointStyle: true, padding: 8, font: { size: 10 } } },
-            tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.raw + ' kg/MWh' } },
-            datalabels: { display: false }
-        },
-        scales: {
-            x: { title: { display: true, text: 'Year', font: { weight: 600 } }, grid: { display: false }, border: { display: true } },
-            y: { title: { display: true, text: 'CO\u2082 Intensity (kg/MWh)', font: { weight: 600 } }, grid: { color: 'rgba(0,0,0,0.05)' }, border: { display: true } }
-        },
-        interaction: { mode: 'index', intersect: false }
-    }
-});
-
-function filterTrajectory(group) {
-    document.querySelectorAll('#trajectoryLegend .pill').forEach(p => p.classList.toggle('active', p.dataset.filter === group));
-    trajectoryChart.data.datasets.forEach(ds => {
-        ds.hidden = group === 'all' ? false : ds._group !== group;
-    });
-    trajectoryChart.update();
-}
 
 // ============================================================
 // ABSOLUTE TRAJECTORY CHART — Combined Top 15
