@@ -106,7 +106,7 @@ class Jar {
         this.el = null;       // DOM element (created on first render)
     }
 
-    setBalls(dataRecord, ballTwh, gridBaseline, crossIsoFlows, showGlow) {
+    setBalls(dataRecord, ballTwh, gridBaseline, crossIsoFlows, showGlow, targetBalls, maxCurtBalls) {
         this.data = dataRecord;
         this.gridBaseline = gridBaseline;
 
@@ -126,25 +126,24 @@ class Jar {
             }
         }
 
-        // 1. Grid baseline balls
+        // 1. Grid baseline balls (TWh-based, will be normalized below)
         for (const [res, pct] of Object.entries(bl)) {
             if (res === 'totalPct' || pct <= 0) continue;
             const twh = pct / 100 * gridDemand;
-            const totalCount = Math.max(1, Math.round(twh / ballTwh));
 
             const claimed = claimedTwh[res] || 0;
-            let claimedCount = 0;
+            let claimedTwhUsed = 0;
             if (claimed > 0) {
-                claimedCount = Math.min(totalCount, Math.max(1, Math.round(claimed / ballTwh)));
-                claimedTwh[res] = Math.max(0, claimed - claimedCount * ballTwh);
+                claimedTwhUsed = Math.min(twh, claimed);
+                claimedTwh[res] = Math.max(0, claimed - claimedTwhUsed);
             }
 
-            const unclaimed = totalCount - claimedCount;
-            if (unclaimed > 0) {
-                items.push({ resource: res, count: unclaimed, tier: 'baseline', glowIso: null, twh: twh - claimed });
+            const unclaimedTwh = twh - claimedTwhUsed;
+            if (unclaimedTwh > 0) {
+                items.push({ resource: res, twh: unclaimedTwh, tier: 'baseline', glowIso: null });
             }
-            if (claimedCount > 0) {
-                items.push({ resource: res, count: claimedCount, tier: 'claimed', glowIso: null, twh: claimed });
+            if (claimedTwhUsed > 0) {
+                items.push({ resource: res, twh: claimedTwhUsed, tier: 'claimed', glowIso: null });
             }
         }
 
@@ -152,8 +151,7 @@ class Jar {
         if (dataRecord && dataRecord.n) {
             for (const [res, twh] of Object.entries(dataRecord.n)) {
                 if (twh <= 0) continue;
-                const count = Math.max(1, Math.round(twh / ballTwh));
-                items.push({ resource: res, count, tier: 'new', glowIso: null, twh });
+                items.push({ resource: res, twh, tier: 'new', glowIso: null });
             }
         }
 
@@ -162,40 +160,77 @@ class Jar {
             for (const [buyerIso, resources] of Object.entries(crossIsoFlows)) {
                 for (const [res, twh] of Object.entries(resources)) {
                     if (twh <= 0) continue;
-                    const count = Math.max(1, Math.round(twh / ballTwh));
-                    items.push({ resource: res, count, tier: 'new', glowIso: showGlow ? buyerIso : null, twh });
+                    items.push({ resource: res, twh, tier: 'new', glowIso: showGlow ? buyerIso : null });
                 }
             }
         }
 
-        // 4. Curtailment balls
+        // 4. Curtailment items (separate — rendered above jar rim)
+        const curtItems = [];
         if (dataRecord && dataRecord.curtTwh > 0) {
-            const curtCount = Math.max(1, Math.round(dataRecord.curtTwh / ballTwh));
             const vreResources = ['solar', 'wind'];
-            const curtPerRes = Math.ceil(curtCount / vreResources.length);
             for (const res of vreResources) {
-                items.push({
+                curtItems.push({
                     resource: res,
-                    count: curtPerRes,
+                    twh: dataRecord.curtTwh / vreResources.length,
                     tier: 'curtailed',
                     glowIso: null,
-                    twh: dataRecord.curtTwh / vreResources.length,
                 });
             }
         }
 
-        // Sort: baseline bottom, then claimed, new, curtailed top
-        const tierOrder = { 'baseline': 0, 'claimed': 1, 'new': 2, 'curtailed': 3 };
+        // Sort non-curtailed: baseline bottom, then claimed, new top
+        const tierOrder = { 'baseline': 0, 'claimed': 1, 'new': 2 };
         items.sort((a, b) => {
             const ta = tierOrder[a.tier] || 0;
             const tb = tierOrder[b.tier] || 0;
             if (ta !== tb) return ta - tb;
-            return b.count - a.count;
+            return b.twh - a.twh;
         });
+
+        // ── Proportional normalization ──
+        // Non-curtailed balls fill exactly targetBalls (= jar capacity)
+        const totalNonCurtTwh = items.reduce((s, it) => s + it.twh, 0);
+        const tb = targetBalls || 70;
+
+        // Assign proportional ball counts — ensure each item gets at least 1 ball
+        let assigned = 0;
+        for (const item of items) {
+            if (totalNonCurtTwh > 0) {
+                item.count = Math.max(1, Math.round(item.twh / totalNonCurtTwh * tb));
+            } else {
+                item.count = 1;
+            }
+            assigned += item.count;
+        }
+        // Adjust for rounding — trim largest items if over budget
+        while (assigned > tb && items.length > 0) {
+            let maxIdx = 0;
+            for (let i = 1; i < items.length; i++) {
+                if (items[i].count > items[maxIdx].count) maxIdx = i;
+            }
+            if (items[maxIdx].count > 1) { items[maxIdx].count--; assigned--; }
+            else break;
+        }
+
+        // Curtailed balls — proportional to non-curtailed scale, capped at maxCurtBalls
+        const mcb = maxCurtBalls || 21;
+        const totalCurtTwh = curtItems.reduce((s, it) => s + it.twh, 0);
+        if (totalCurtTwh > 0 && totalNonCurtTwh > 0) {
+            const curtRawBalls = Math.round(totalCurtTwh / totalNonCurtTwh * tb);
+            const curtTarget = Math.min(curtRawBalls, mcb);
+            for (const item of curtItems) {
+                item.count = Math.max(1, Math.round(item.twh / totalCurtTwh * curtTarget));
+            }
+        } else if (totalCurtTwh > 0) {
+            for (const item of curtItems) { item.count = 1; }
+        }
 
         // Flatten to individual ball descriptors
         this.ballItems = [];
-        for (const item of items) {
+        const allItems = [...items, ...curtItems];
+        for (const item of allItems) {
+            if (!item.count) continue;
             for (let i = 0; i < item.count; i++) {
                 this.ballItems.push({
                     resource: item.resource,
@@ -206,9 +241,6 @@ class Jar {
                 });
             }
         }
-
-        // Cap at 120
-        if (this.ballItems.length > 120) this.ballItems.length = 120;
     }
 
     _mapClaimedResource(res) {
@@ -390,7 +422,7 @@ class JarGrid {
 
         // Row headers = ISO names (shorter), col headers = strategy IDs + gas GW sub-label
         this.rowHeaderWidth = isMobile ? 55 : (isTablet ? 65 : 80);
-        this.colHeaderHeight = isMobile ? 60 : 72;
+        this.colHeaderHeight = isMobile ? 84 : 100;
 
         const availWidth = rect.width - this.rowHeaderWidth;
         const jarW = Math.max(55, Math.floor(availWidth / numCols));
@@ -492,6 +524,11 @@ class JarGrid {
         const ballsPerRow = isMobile ? 5 : 7;
         const ballSize = Math.max(5, Math.min(Math.floor(jarInnerW / ballsPerRow) - 2, 12));
 
+        // Ball budget: jar fills exactly this many non-curtailed balls
+        const maxRows = isMobile ? 8 : 12;
+        const targetBalls = ballsPerRow * maxRows;       // 40 mobile, 84 desktop
+        const maxCurtBalls = ballsPerRow * 3;             // 15 mobile, 21 desktop
+
         for (const jar of this.jars) {
             const stratData = this.data.data[jar.strategy];
             let record = null;
@@ -511,17 +548,19 @@ class JarGrid {
             const bl = this.gridBaseline[jar.iso] || null;
             const crossFlows = crossFlowsByStrategy[jar.strategy][jar.iso] || null;
 
-            jar.setBalls(record, ballTwh, bl, crossFlows, this.showCrossIsoGlow);
+            jar.setBalls(record, ballTwh, bl, crossFlows, this.showCrossIsoGlow, targetBalls, maxCurtBalls);
             jar.renderDOM(ballSize);
         }
 
         this._positionDOMJars();
         this._wireTooltips();
 
-        // Compute per-strategy new-build gas GW (total gasGw - existing, summed across ISOs)
+        // Compute per-strategy metrics (gas GW, curtailed TWh, total cost) summed across ISOs
         this.strategyGasGw = {};
+        this.strategyCurtTwh = {};
+        this.strategyCostM = {};
         for (const strat of this.activeStrategies) {
-            let totalNewGas = 0;
+            let totalNewGas = 0, totalCurt = 0, totalCost = 0;
             for (const iso of ISO_LIST) {
                 const stratData = this.data.data[strat];
                 if (!stratData) continue;
@@ -532,11 +571,17 @@ class JarGrid {
                 const tk = this._findClosestKey(Object.keys(isoData[pk]), this.threshold);
                 if (!tk) continue;
                 const record = isoData[pk][tk];
-                if (record && record.gasGw != null) {
-                    totalNewGas += Math.max(0, record.gasGw - (EXISTING_GAS_GW[iso] || 0));
+                if (record) {
+                    if (record.gasGw != null) {
+                        totalNewGas += Math.max(0, record.gasGw - (EXISTING_GAS_GW[iso] || 0));
+                    }
+                    totalCurt += record.curtTwh || 0;
+                    totalCost += record.tc || 0;
                 }
             }
             this.strategyGasGw[strat] = totalNewGas;
+            this.strategyCurtTwh[strat] = totalCurt;
+            this.strategyCostM[strat] = totalCost;
         }
 
         // Fire stats callback
@@ -674,19 +719,39 @@ class JarGrid {
         }
         ctx.restore();
 
-        // Gas GW sub-labels (new-build gas capacity per strategy)
+        // Per-strategy metric sub-labels (gas GW, curtailed TWh, total cost)
         ctx.save();
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        const gasFontSize = this.jarWidth < 70 ? 7 : (this.jarWidth < 100 ? 8.5 : 10);
-        ctx.font = `500 ${gasFontSize}px 'DM Sans', sans-serif`;
-        ctx.fillStyle = '#6B7280';
+        const metricFS = this.jarWidth < 70 ? 7 : (this.jarWidth < 100 ? 8.5 : 10);
+        const metricLineH = metricFS + 3;
+        const metricBaseY = this.colHeaderHeight - 3 * metricLineH + metricLineH / 2;
+
         for (let col = 0; col < numCols; col++) {
             const strat = this.activeStrategies[col];
-            const gasGw = this.strategyGasGw?.[strat] ?? 0;
             const x = this.rowHeaderWidth + col * this.jarWidth + this.jarWidth / 2;
-            const label = gasGw > 0 ? `+${Math.round(gasGw)} GW gas` : '0 GW gas';
-            ctx.fillText(label, x, this.colHeaderHeight - 6);
+
+            // Line 1: Gas GW — bold red
+            const gasGw = this.strategyGasGw?.[strat] ?? 0;
+            ctx.font = `700 ${metricFS}px 'DM Sans', sans-serif`;
+            ctx.fillStyle = gasGw > 0 ? '#EF4444' : '#9CA3AF';
+            ctx.fillText(gasGw > 0 ? `+${Math.round(gasGw)} GW gas` : '0 GW gas', x, metricBaseY);
+
+            // Line 2: Curtailed TWh — amber
+            const curtTwh = this.strategyCurtTwh?.[strat] ?? 0;
+            ctx.font = `600 ${metricFS}px 'DM Sans', sans-serif`;
+            ctx.fillStyle = curtTwh > 1 ? '#F59E0B' : '#9CA3AF';
+            const curtLabel = curtTwh >= 1000 ? `${(curtTwh / 1000).toFixed(1)}k TWh curt.` :
+                              curtTwh >= 1 ? `${Math.round(curtTwh)} TWh curt.` : '0 TWh curt.';
+            ctx.fillText(curtLabel, x, metricBaseY + metricLineH);
+
+            // Line 3: Total cost — navy
+            const costM = this.strategyCostM?.[strat] ?? 0;
+            ctx.font = `600 ${metricFS}px 'DM Sans', sans-serif`;
+            ctx.fillStyle = '#334155';
+            const costLabel = costM >= 1000 ? `$${(costM / 1000).toFixed(1)}B total` :
+                              costM > 0 ? `$${Math.round(costM)}M total` : '$0';
+            ctx.fillText(costLabel, x, metricBaseY + 2 * metricLineH);
         }
         ctx.restore();
 
@@ -900,6 +965,8 @@ class JarGrid {
                 totalBaselineMt: totalBaseline,
                 co2ReductionPct: totalBaseline > 0 ? (totalCO2 / totalBaseline * 100) : 0,
                 totalNewGasGw: this.strategyGasGw?.[strat] ?? 0,
+                totalCurtTwh: this.strategyCurtTwh?.[strat] ?? 0,
+                totalCostM: this.strategyCostM?.[strat] ?? 0,
                 resourceBreakdown,
             };
         }
