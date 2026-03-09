@@ -44,8 +44,11 @@ CAPACITY_FACTORS = {
     'solar': 0.25, 'wind': 0.35, 'offshore_wind': 0.45,
     'clean_firm': 0.90, 'nuclear_uprate': 0.90,
     'ccs': 0.85, 'ccs_ccgt': 0.85,
-    'hydro': 0.40, 'battery': 0.0, 'ldes': 0.0,
-    'storage': 0.0, 'geothermal': 0.90, 'green_h2': 0.0,
+    'hydro': 0.40,
+    'battery': 0.15,   # 4hr daily cycle: 4/24 * 0.85 eff ≈ 0.14
+    'ldes': 0.10,      # 100hr, 7-day window, less frequent cycling
+    'storage': 0.15,   # generic storage → battery assumption
+    'geothermal': 0.90, 'green_h2': 0.0,
 }
 # Peak credit (fraction of nameplate counted toward RA)
 PEAK_CREDITS = {
@@ -132,9 +135,9 @@ def compute_dispatch_metrics(iso, resource_pcts, demand_norm, supply_profiles,
     ra_peak = peak_mw * (1 + RA_MARGIN)
     avg_demand_mw = total_mwh / H
 
-    # Clean peak contribution
+    # Clean peak contribution (generation + storage)
     clean_peak_mw = 0
-    all_pcts = dict(resource_pcts)  # generation resources
+    all_pcts = dict(resource_pcts)
     all_pcts['battery'] = battery_pct
     all_pcts['ldes'] = ldes_pct
     for res, pct in all_pcts.items():
@@ -157,15 +160,16 @@ def compute_dispatch_metrics(iso, resource_pcts, demand_norm, supply_profiles,
 
 
 def build_grid_resource_pcts(iso, record):
-    """Build resource_pcts dict from grid baseline + NEW procurement only.
+    """Build resource_pcts dict from grid baseline + NEW same-ISO procurement only.
 
     Existing claims (record['e']) are already part of the grid baseline
     (GRID_MIX_SHARES) — they represent accounting claims on existing capacity,
-    not new physical capacity. Only new-build ('n') and cross-ISO ('x')
-    resources add capacity beyond the baseline.
+    not new physical capacity. Only new-build ('n') adds physical capacity.
 
-    The 4 pools: SSS, Corporate-Contracted, Merchant Clean are all subsets
-    of existing grid clean. Only Pool 4 (New-Build) adds new capacity.
+    Cross-ISO resources (record['x']) are excluded — they are accounting
+    claims (RECs/contracts) not physical capacity on the buyer's grid.
+    Grid physics (dispatch, peak credit, gas backup) reflect only what's
+    physically built on each ISO's grid.
     """
     demand_twh = REGIONAL_DEMAND_TWH.get(iso, 300)
 
@@ -180,12 +184,10 @@ def build_grid_resource_pcts(iso, record):
                 mapped = _map_resource(res)
                 pcts[mapped] = pcts.get(mapped, 0) + (twh / demand_twh * 100)
 
-    if record.get('x'):
-        for src_iso, resources in record['x'].items():
-            for res, twh in resources.items():
-                if twh > 0:
-                    mapped = _map_resource(res)
-                    pcts[mapped] = pcts.get(mapped, 0) + (twh / demand_twh * 100)
+    # Cross-ISO resources (record['x']) are NOT added to grid physics.
+    # They are accounting claims (RECs/contracts) — not physical capacity
+    # on the buyer ISO's grid. Only resources physically built on the grid
+    # affect dispatch, peak credit, and gas backup requirements.
 
     return pcts
 
