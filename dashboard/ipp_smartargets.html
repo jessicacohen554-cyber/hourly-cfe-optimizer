@@ -7,7 +7,7 @@
 <title>IPP SMARTargets — Fleet-Level Decarbonization Analysis</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/shared.css">
 <link rel="stylesheet" href="styles/dashboard-ui.css">
 <script src="js/nav.js"></script>
@@ -597,11 +597,11 @@ function updateSingleFanChart(canvasId, chartVarName, fanData, passiveKey, activ
         options: {
             responsive: true, maintainAspectRatio: false,
             scales: {
-                x: { grid: { display: false }, ticks: { font: { family: 'Space Mono', size: 11 } } },
+                x: { grid: { display: false }, ticks: { font: { family: 'Plus Jakarta Sans', size: 11 } } },
                 y: {
                     title: { display: true, text: yLabel, font: { family: 'Plus Jakarta Sans', size: 12 } },
                     beginAtZero: passiveKey !== 'profit' && passiveKey !== 'active_profit',
-                    ticks: { font: { family: 'Space Mono', size: 11 },
+                    ticks: { font: { family: 'Plus Jakarta Sans', size: 11 },
                         callback: v => passiveKey.includes('profit') ? '$' + v.toLocaleString() : v.toLocaleString()
                     }
                 }
