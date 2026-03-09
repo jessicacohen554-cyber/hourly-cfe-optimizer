@@ -1510,7 +1510,12 @@
                     responsive: true, maintainAspectRatio: false,
                     plugins: {
                         legend: { position: 'bottom', labels: { usePointStyle: true, padding: 12 } },
-                        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${fmt(ctx.raw)} Mt CO₂` } }
+                        tooltip: { callbacks: { label: function (ctx) {
+                            var baseline = p50Emissions[0];
+                            var pct = baseline ? ((ctx.raw - baseline) / baseline * 100) : 0;
+                            var sign = pct >= 0 ? '+' : '';
+                            return ctx.dataset.label + ': ' + fmt(ctx.raw) + ' Mt CO\u2082 (' + sign + pct.toFixed(1) + '% vs 2023)';
+                        } } }
                     },
                     scales: {
                         x: { title: { display: true, text: 'Year' }, grid: { display: false } },
