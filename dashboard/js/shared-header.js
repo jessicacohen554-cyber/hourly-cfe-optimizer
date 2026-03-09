@@ -43,7 +43,7 @@
         // Wave 1: Wide gentle sine — represents baseload (hydro blue) with filled area
         '<path d="M0,200 C120,180 240,160 360,170 C480,180 600,200 720,190 ',
               'C840,180 960,160 1080,170 C1200,180 1320,200 1440,190 L1440,280 L0,280 Z" ',
-              'fill="url(#hdr-blue-fade)" opacity="0.6">',
+              'fill="url(#hdr-blue-fade)" opacity="0.35">',
         '  <animate attributeName="d" dur="12s" repeatCount="indefinite" values="',
             'M0,200 C120,180 240,160 360,170 C480,180 600,200 720,190 C840,180 960,160 1080,170 C1200,180 1320,200 1440,190 L1440,280 L0,280 Z;',
             'M0,195 C120,175 240,165 360,175 C480,185 600,195 720,185 C840,175 960,165 1080,175 C1200,185 1320,195 1440,185 L1440,280 L0,280 Z;',
@@ -63,7 +63,7 @@
         // Wave 2: Solar generation curve — peaks mid-page (amber) with filled area
         '<path d="M0,240 C180,230 300,180 450,140 C600,100 720,90 900,130 ',
               'C1050,165 1200,210 1350,230 L1440,240 L1440,280 L0,280 Z" ',
-              'fill="url(#hdr-amber-fade)" opacity="0.5">',
+              'fill="url(#hdr-amber-fade)" opacity="0.30">',
         '  <animate attributeName="d" dur="15s" repeatCount="indefinite" values="',
             'M0,240 C180,230 300,180 450,140 C600,100 720,90 900,130 C1050,165 1200,210 1350,230 L1440,240 L1440,280 L0,280 Z;',
             'M0,235 C180,225 300,175 450,145 C600,105 720,95 900,125 C1050,160 1200,205 1350,225 L1440,235 L1440,280 L0,280 Z;',
@@ -83,7 +83,7 @@
         // Wave 3: Wind variability — irregular undulation (green) with filled area
         '<path d="M0,180 C80,165 160,190 280,160 C400,130 480,170 600,150 ',
               'C720,130 840,160 960,140 C1080,120 1200,155 1320,145 L1440,160 L1440,280 L0,280 Z" ',
-              'fill="url(#hdr-green-fade)" opacity="0.4">',
+              'fill="url(#hdr-green-fade)" opacity="0.25">',
         '  <animate attributeName="d" dur="18s" repeatCount="indefinite" values="',
             'M0,180 C80,165 160,190 280,160 C400,130 480,170 600,150 C720,130 840,160 960,140 C1080,120 1200,155 1320,145 L1440,160 L1440,280 L0,280 Z;',
             'M0,175 C80,160 160,185 280,155 C400,135 480,165 600,155 C720,135 840,155 960,135 C1080,125 1200,150 1320,140 L1440,155 L1440,280 L0,280 Z;',
@@ -123,10 +123,10 @@
               'L1250,140 L1350,140 L1360,138 L1368,142 ',
               'L1375,124 L1382,158 L1390,100 L1398,166 L1405,120 L1412,144 L1420,140 ',
               'L1440,140" ',
-              'fill="none" stroke="rgba(239,68,68,0.30)" stroke-width="1.5" ',
+              'fill="none" stroke="rgba(239,68,68,0.18)" stroke-width="1.5" ',
               'stroke-linecap="round" stroke-linejoin="round">',
         '  <animate attributeName="stroke-opacity" dur="3s" repeatCount="indefinite" ',
-        '    values="0.30;0.50;0.30" keyTimes="0;0.5;1"/>',
+        '    values="0.18;0.30;0.18" keyTimes="0;0.5;1"/>',
         '</path>',
 
         // Second heartbeat line — offset vertically, different phase (cyan)
@@ -141,10 +141,10 @@
               'L1200,155 L1300,155 L1308,153 L1315,157 ',
               'L1322,140 L1329,170 L1337,110 L1345,174 L1352,134 L1359,156 L1367,155 ',
               'L1440,155" ',
-              'fill="none" stroke="rgba(56,189,248,0.22)" stroke-width="1.2" ',
+              'fill="none" stroke="rgba(56,189,248,0.14)" stroke-width="1.2" ',
               'stroke-linecap="round" stroke-linejoin="round">',
         '  <animate attributeName="stroke-opacity" dur="4s" repeatCount="indefinite" ',
-        '    values="0.22;0.38;0.22" keyTimes="0;0.5;1"/>',
+        '    values="0.14;0.24;0.14" keyTimes="0;0.5;1"/>',
         '</path>',
 
         // --- Subtle grid dots (small circles scattered) ---
