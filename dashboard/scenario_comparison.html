@@ -10,14 +10,16 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/shared.css">
     <link rel="stylesheet" href="styles/dashboard-ui.css">
+    <link rel="stylesheet" href="styles/cinematic.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 <script src="js/chart-colors.js"></script>
 <script src="js/shared-header.js"></script>
     <script src="js/scroll-observer.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <style>
-/* Page background — uses shared.css var */
-body { background: var(--bg-alt-warm); }
+/* Page background overridden by cinematic.css */
 
 /* ===== PAGE-SPECIFIC: Hero (article intro below dark header) ===== */
 .hero { background: linear-gradient(180deg, var(--navy-dark) 0%, var(--navy) 60%, var(--navy-mid) 100%); padding: 48px var(--pad-page) 40px; text-align: center; }
@@ -2387,5 +2389,6 @@ try { renderAll('PJM'); } catch(e) { console.error('renderAll init:', e); }
 
 })();
 </script>
+<script src="js/cinematic-bg.js"></script>
 </body>
 </html>
