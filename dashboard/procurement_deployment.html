@@ -698,10 +698,6 @@
                 <span class="slider-value" id="thresholdValue">85%</span>
             </div>
         </div>
-        <div class="stat-chips" id="statChips">
-            <div class="stat-chip">Total paid procurement: <span class="chip-val" id="chipPaid">—</span></div>
-            <div class="stat-chip">CO₂ reduced: <span class="chip-val" id="chipCO2">—</span></div>
-        </div>
         <div class="control-group" style="margin-left:auto">
             <button class="toggle-btn" id="crossIsoToggle" title="Show cross-ISO energy flows as glowing balls">Cross-ISO Flows</button>
         </div>
@@ -852,6 +848,73 @@
 </div>
 
 
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- CROSSOVER & PARTICIPATION ANALYSIS CHARTS                          -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+
+<!-- Chart 1: Grid Clean % by Participation (crossover lines) -->
+<div class="agg-charts">
+    <div class="agg-chart-card">
+        <h3>Grid Clean % by Participation Level (Crossover Analysis)</h3>
+        <p style="font-family:var(--font-body);font-size:0.8rem;color:var(--text-muted);margin:-4px 0 8px;">
+            How each strategy physically cleans the grid as more C&I load participates.
+            Consequential strategies (1A/1B) show near-zero local grid improvement because resources are deployed cross-regionally.
+            Dashed lines show 90%, 95%, and 99% grid-clean reference thresholds.
+        </p>
+        <div class="grid-2col">
+            <div>
+                <div class="iso-selector" id="crossoverIsoSelector" style="margin-bottom:8px;">
+                    <button class="iso-btn active" data-iso="CAISO">CAISO</button>
+                    <button class="iso-btn" data-iso="ERCOT">ERCOT</button>
+                    <button class="iso-btn" data-iso="PJM">PJM</button>
+                    <button class="iso-btn" data-iso="NYISO">NYISO</button>
+                    <button class="iso-btn" data-iso="NEISO">NEISO</button>
+                    <button class="iso-btn" data-iso="MISO">MISO</button>
+                    <button class="iso-btn" data-iso="SPP">SPP</button>
+                </div>
+                <div class="chart-container-lg"><canvas id="chartCrossover"></canvas></div>
+            </div>
+            <div>
+                <h4 style="font-family:var(--font-heading);font-size:0.95rem;color:var(--text-primary);margin:0 0 8px;">Participation Required for Grid-Clean Targets</h4>
+                <p style="font-family:var(--font-body);font-size:0.78rem;color:var(--text-muted);margin:0 0 8px;">
+                    Minimum C&I participation (%) to reach grid-clean milestones at 90% CO₂ target.
+                    "—" = unreachable even at 100% participation.
+                </p>
+                <div style="overflow-x:auto;">
+                    <table class="data-table" id="participationTable">
+                        <thead>
+                            <tr><th>Strategy</th><th>90%</th><th>95%</th><th>99%</th></tr>
+                        </thead>
+                        <tbody id="participationTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart 2: CO₂ Efficiency — Dispatch CO₂ displaced per TWh procured -->
+<div class="agg-charts">
+    <div class="grid-2col">
+        <div class="agg-chart-card">
+            <h3>Dispatch CO₂ Displaced vs. Participation</h3>
+            <p style="font-family:var(--font-body);font-size:0.8rem;color:var(--text-muted);margin:-4px 0 8px;">
+                Actual fossil CO₂ removed from the grid (MtCO₂) across all ISOs combined,
+                at the selected CO₂ target. Consequential strategies show minimal physical impact.
+            </p>
+            <div class="chart-container-lg"><canvas id="chartDispCO2"></canvas></div>
+        </div>
+        <div class="agg-chart-card">
+            <h3>CO₂ Efficiency: MtCO₂ Displaced per 100 TWh Procured</h3>
+            <p style="font-family:var(--font-body);font-size:0.8rem;color:var(--text-muted);margin:-4px 0 8px;">
+                How efficiently each strategy converts procurement dollars into real grid emissions reduction.
+                Higher = more CO₂ displaced per unit of procurement.
+            </p>
+            <div class="chart-container-lg"><canvas id="chartEfficiency"></canvas></div>
+        </div>
+    </div>
+</div>
+
 <!-- Footer -->
 <div class="page-footer">
     <div class="footer-links">
@@ -913,8 +976,7 @@
     const grid = new JarGrid('jarCanvas', 'jarTooltip');
 
     grid.onStatsUpdate = function(stats) {
-        document.getElementById('chipPaid').textContent = stats.totalPaidTwh.toFixed(0) + ' TWh';
-        document.getElementById('chipCO2').textContent = stats.totalRealCO2Mt.toFixed(1) + ' MtCO₂ displaced';
+        // Stats callback (chips removed — metrics not meaningful for cross-strategy comparison)
     };
 
     if (typeof DEPLOYMENT_DATA !== 'undefined') {
@@ -1293,10 +1355,387 @@
         });
     }
 
+    // ═════════════════════════════════════════════════════════════════════════
+    // CROSSOVER ANALYSIS CHART: Grid Clean % by Participation per Strategy
+    // ═════════════════════════════════════════════════════════════════════════
+
+    let chartCrossover = null;
+    let crossoverIso = 'CAISO';
+    const CROSSOVER_ISOS = ['CAISO','ERCOT','PJM','NYISO','NEISO','MISO','SPP'];
+
+    // ISO selector wiring
+    document.querySelectorAll('#crossoverIsoSelector .iso-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('#crossoverIsoSelector .iso-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            crossoverIso = btn.dataset.iso;
+            rebuildCrossoverChart();
+            rebuildParticipationTable();
+        });
+    });
+
+    function getGridCleanAtPart(strat, iso, part, threshold) {
+        const sd = DEPLOYMENT_DATA.data[strat];
+        if (!sd || !sd[iso]) return null;
+        const pk = findClosestKey(Object.keys(sd[iso]), part);
+        if (!pk || !sd[iso][pk]) return null;
+        const tk = findClosestKey(Object.keys(sd[iso][pk]), threshold);
+        if (!tk) return null;
+        const rec = sd[iso][pk][tk];
+        return rec ? (rec.gridCleanPct || 0) : null;
+    }
+
+    function getDispCO2AtPart(strat, iso, part, threshold) {
+        const sd = DEPLOYMENT_DATA.data[strat];
+        if (!sd || !sd[iso]) return null;
+        const pk = findClosestKey(Object.keys(sd[iso]), part);
+        if (!pk || !sd[iso][pk]) return null;
+        const tk = findClosestKey(Object.keys(sd[iso][pk]), threshold);
+        if (!tk) return null;
+        const rec = sd[iso][pk][tk];
+        return rec ? (rec.dispCo2 || 0) : null;
+    }
+
+    function getTotalProcuredAtPart(strat, iso, part, threshold) {
+        const sd = DEPLOYMENT_DATA.data[strat];
+        if (!sd || !sd[iso]) return null;
+        const pk = findClosestKey(Object.keys(sd[iso]), part);
+        if (!pk || !sd[iso][pk]) return null;
+        const tk = findClosestKey(Object.keys(sd[iso][pk]), threshold);
+        if (!tk) return null;
+        const rec = sd[iso][pk][tk];
+        if (!rec) return null;
+        // Sum all TWh from all categories (e, n, x)
+        let total = 0;
+        for (const cat of ['e','n','x']) {
+            if (rec[cat]) {
+                if (typeof rec[cat] === 'object' && !Array.isArray(rec[cat])) {
+                    // Check if it's {iso: {res: twh}} or {res: twh}
+                    for (const k in rec[cat]) {
+                        const v = rec[cat][k];
+                        if (typeof v === 'number') total += v;
+                        else if (typeof v === 'object') {
+                            for (const r in v) { if (typeof v[r] === 'number') total += v[r]; }
+                        }
+                    }
+                }
+            }
+        }
+        return total;
+    }
+
+    function rebuildCrossoverChart() {
+        if (chartCrossover) chartCrossover.destroy();
+
+        const active = getActiveStrategies();
+        const threshold = getThreshold();
+        const xLabels = PARTICIPATION_LEVELS.map(p => p + '%');
+        const datasets = [];
+
+        for (const strat of active) {
+            const color = STRAT_COLORS[strat] || '#6366F1';
+            const label = STRAT_LABELS[strat] || strat;
+            const data = PARTICIPATION_LEVELS.map(p => getGridCleanAtPart(strat, crossoverIso, p, threshold));
+            datasets.push({
+                label: label,
+                data: data,
+                borderColor: color,
+                backgroundColor: color + '20',
+                borderWidth: 2.5,
+                pointRadius: 3,
+                pointHoverRadius: 6,
+                pointBackgroundColor: color,
+                pointBorderColor: '#fff',
+                pointBorderWidth: 1.5,
+                tension: 0.3,
+                fill: false,
+            });
+        }
+
+        chartCrossover = new Chart(document.getElementById('chartCrossover').getContext('2d'), {
+            type: 'line',
+            data: { labels: xLabels, datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 400 },
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: {
+                        display: true, position: 'top',
+                        labels: { font: { family: "'DM Sans'", size: 11 }, boxWidth: 14, boxHeight: 3 },
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15,23,42,0.92)',
+                        titleFont: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 },
+                        bodyFont: { family: "'DM Sans'", size: 11 },
+                        padding: 10, cornerRadius: 8,
+                        callbacks: {
+                            title: (items) => `${crossoverIso} — ${items[0].label} participation`,
+                            label: (ctx) => `${ctx.dataset.label}: ${ctx.raw !== null ? ctx.raw.toFixed(1) + '% grid clean' : 'N/A'}`,
+                        },
+                    },
+                    annotation: {
+                        annotations: {
+                            line90: { type: 'line', yMin: 90, yMax: 90, borderColor: '#22C55E80', borderWidth: 1.5, borderDash: [6,4], label: { display: true, content: '90% clean', position: 'start', font: { size: 10 }, color: '#22C55E' } },
+                            line95: { type: 'line', yMin: 95, yMax: 95, borderColor: '#F59E0B80', borderWidth: 1.5, borderDash: [6,4], label: { display: true, content: '95% clean', position: 'start', font: { size: 10 }, color: '#F59E0B' } },
+                            line99: { type: 'line', yMin: 99, yMax: 99, borderColor: '#EF444480', borderWidth: 1.5, borderDash: [6,4], label: { display: true, content: '99% clean', position: 'start', font: { size: 10 }, color: '#EF4444' } },
+                        },
+                    },
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { family: "'DM Sans'", size: 10 }, maxRotation: 45, autoSkip: true, maxTicksLimit: 10 },
+                        title: { display: true, text: 'C&I Load Participation', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' },
+                    },
+                    y: {
+                        grid: { color: '#E2E8F0' },
+                        ticks: { font: { family: "'Plus Jakarta Sans'", size: 10 }, callback: v => v + '%' },
+                        title: { display: true, text: 'Physical Grid Clean %', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' },
+                        beginAtZero: false,
+                        suggestedMin: 25,
+                        suggestedMax: 110,
+                    },
+                },
+            },
+        });
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // PARTICIPATION REQUIREMENTS TABLE
+    // ═════════════════════════════════════════════════════════════════════════
+
+    function findMinPartForTarget(strat, iso, gridTarget, threshold) {
+        for (const p of PARTICIPATION_LEVELS) {
+            const val = getGridCleanAtPart(strat, iso, p, threshold);
+            if (val !== null && val >= gridTarget) return p;
+        }
+        return null; // unreachable
+    }
+
+    function rebuildParticipationTable() {
+        const active = getActiveStrategies();
+        const threshold = getThreshold();
+        const tbody = document.getElementById('participationTableBody');
+        tbody.innerHTML = '';
+
+        for (const strat of active) {
+            const tr = document.createElement('tr');
+            const color = STRAT_COLORS[strat] || '#6366F1';
+            const label = STRAT_LABELS[strat] || strat;
+
+            let stratTd = document.createElement('td');
+            stratTd.innerHTML = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${color};margin-right:6px;"></span>${label}`;
+            tr.appendChild(stratTd);
+
+            for (const target of [90, 95, 99]) {
+                const td = document.createElement('td');
+                const p = findMinPartForTarget(strat, crossoverIso, target, threshold);
+                if (p !== null) {
+                    td.textContent = p + '%';
+                    td.style.color = p <= 30 ? '#22C55E' : p <= 60 ? '#F59E0B' : p <= 90 ? '#EF4444' : '#7C3AED';
+                    td.style.fontWeight = '600';
+                } else {
+                    td.textContent = '—';
+                    td.style.color = '#94A3B8';
+                }
+                tr.appendChild(td);
+            }
+            tbody.appendChild(tr);
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // DISPATCH CO₂ DISPLACED vs PARTICIPATION (all ISOs summed)
+    // ═════════════════════════════════════════════════════════════════════════
+
+    let chartDispCO2 = null;
+    let chartEfficiency = null;
+
+    function rebuildDispCO2Chart() {
+        if (chartDispCO2) chartDispCO2.destroy();
+        if (chartEfficiency) chartEfficiency.destroy();
+
+        const active = getActiveStrategies();
+        const threshold = getThreshold();
+        const xLabels = PARTICIPATION_LEVELS.map(p => p + '%');
+        const dispDatasets = [];
+        const effDatasets = [];
+
+        for (const strat of active) {
+            const color = STRAT_COLORS[strat] || '#6366F1';
+            const label = STRAT_LABELS[strat] || strat;
+
+            const dispData = PARTICIPATION_LEVELS.map(p => {
+                let total = 0;
+                for (const iso of CROSSOVER_ISOS) {
+                    const v = getDispCO2AtPart(strat, iso, p, threshold);
+                    if (v !== null) total += v;
+                }
+                return Math.round(total * 10) / 10;
+            });
+
+            const effData = PARTICIPATION_LEVELS.map((p, i) => {
+                let totalCO2 = 0, totalTwh = 0;
+                for (const iso of CROSSOVER_ISOS) {
+                    const co2 = getDispCO2AtPart(strat, iso, p, threshold);
+                    const twh = getTotalProcuredAtPart(strat, iso, p, threshold);
+                    if (co2 !== null) totalCO2 += co2;
+                    if (twh !== null) totalTwh += twh;
+                }
+                return totalTwh > 0 ? Math.round(totalCO2 / totalTwh * 100 * 100) / 100 : 0;  // MtCO2 per 100 TWh
+            });
+
+            dispDatasets.push({
+                label: label, data: dispData,
+                borderColor: color, backgroundColor: color + '20',
+                borderWidth: 2.5, pointRadius: 3, pointHoverRadius: 6,
+                pointBackgroundColor: color, pointBorderColor: '#fff', pointBorderWidth: 1.5,
+                tension: 0.3, fill: false,
+            });
+
+            effDatasets.push({
+                label: label, data: effData,
+                borderColor: color, backgroundColor: color + '20',
+                borderWidth: 2.5, pointRadius: 3, pointHoverRadius: 6,
+                pointBackgroundColor: color, pointBorderColor: '#fff', pointBorderWidth: 1.5,
+                tension: 0.3, fill: false,
+            });
+        }
+
+        chartDispCO2 = new Chart(document.getElementById('chartDispCO2').getContext('2d'), {
+            type: 'line',
+            data: { labels: xLabels, datasets: dispDatasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                animation: { duration: 400 },
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { display: true, position: 'top', labels: { font: { family: "'DM Sans'", size: 11 }, boxWidth: 14, boxHeight: 3 } },
+                    tooltip: {
+                        backgroundColor: 'rgba(15,23,42,0.92)',
+                        callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.raw.toFixed(1)} MtCO₂` },
+                    },
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { font: { family: "'DM Sans'", size: 10 } }, title: { display: true, text: 'C&I Load Participation', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                    y: { grid: { color: '#E2E8F0' }, ticks: { font: { size: 10 }, callback: v => v + ' Mt' }, title: { display: true, text: 'Dispatch CO₂ Displaced (MtCO₂, all ISOs)', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' }, beginAtZero: true },
+                },
+            },
+        });
+
+        chartEfficiency = new Chart(document.getElementById('chartEfficiency').getContext('2d'), {
+            type: 'line',
+            data: { labels: xLabels, datasets: effDatasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                animation: { duration: 400 },
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { display: true, position: 'top', labels: { font: { family: "'DM Sans'", size: 11 }, boxWidth: 14, boxHeight: 3 } },
+                    tooltip: {
+                        backgroundColor: 'rgba(15,23,42,0.92)',
+                        callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.raw.toFixed(2)} MtCO₂/100 TWh` },
+                    },
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { font: { family: "'DM Sans'", size: 10 } }, title: { display: true, text: 'C&I Load Participation', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                    y: { grid: { color: '#E2E8F0' }, ticks: { font: { size: 10 } }, title: { display: true, text: 'MtCO₂ per 100 TWh Procured', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' }, beginAtZero: true },
+                },
+            },
+        });
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // PARTICIPATION CAPS: restrict slider when worst strategy saturates
+    // ═════════════════════════════════════════════════════════════════════════
+
+    // Find the max participation level at which ANY active strategy in ANY ISO
+    // achieves ≥99.99% grid clean. Above this, results are physically
+    // meaningless — cap the slider there.
+    function computeParticipationCap() {
+        const active = getActiveStrategies();
+        const threshold = getThreshold();
+        let maxAllowed = PARTICIPATION_LEVELS.length - 1; // default: no cap
+
+        for (let pi = 0; pi < PARTICIPATION_LEVELS.length; pi++) {
+            const part = PARTICIPATION_LEVELS[pi];
+            let allIsosMaxed = true;
+
+            for (const iso of CROSSOVER_ISOS) {
+                let isoMaxed = false;
+                for (const strat of active) {
+                    const gcp = getGridCleanAtPart(strat, iso, part, threshold);
+                    if (gcp !== null && gcp >= 99.99) {
+                        isoMaxed = true;
+                        break;
+                    }
+                }
+                if (!isoMaxed) {
+                    allIsosMaxed = false;
+                    break;
+                }
+            }
+
+            if (allIsosMaxed) {
+                maxAllowed = pi;
+                break;
+            }
+        }
+
+        return maxAllowed;
+    }
+
+    function applyParticipationCap() {
+        const cap = computeParticipationCap();
+        const slider = document.getElementById('participationSlider');
+        slider.max = cap;
+        if (parseInt(slider.value) > cap) {
+            slider.value = cap;
+            const p = PARTICIPATION_LEVELS[cap] || 0;
+            document.getElementById('participationValue').textContent = p + '%';
+            grid.setParticipation(p);
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // MASTER UPDATE — wire threshold slider to also update new charts
+    // ═════════════════════════════════════════════════════════════════════════
+
+    const origThrHandler = thrSlider.oninput;
+    thrSlider.addEventListener('input', () => {
+        applyParticipationCap();
+        rebuildCrossoverChart();
+        rebuildParticipationTable();
+        rebuildDispCO2Chart();
+    });
+
+    // Also wire participation slider changes
+    partSlider.addEventListener('input', () => {
+        // Crossover chart doesn't depend on participation (it shows all levels),
+        // but CO2 charts do react to threshold which doesn't change here.
+        // No extra work needed — threshold-dependent charts update on threshold change.
+    });
+
+    // Wire strategy checkboxes to rebuild new charts too
+    document.querySelectorAll('.strategy-check input').forEach(cb => {
+        cb.addEventListener('change', () => {
+            applyParticipationCap();
+            rebuildCrossoverChart();
+            rebuildParticipationTable();
+            rebuildDispCO2Chart();
+        });
+    });
+
     // Initial chart + ribbon build
     setTimeout(() => {
         rebuildCharts();
         rebuildRibbonChart();
+        applyParticipationCap();
+        rebuildCrossoverChart();
+        rebuildParticipationTable();
+        rebuildDispCO2Chart();
     }, 300);
 
 })();
