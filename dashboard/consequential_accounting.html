@@ -10,12 +10,15 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/shared.css">
     <link rel="stylesheet" href="styles/article.css">
+    <link rel="stylesheet" href="styles/cinematic.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 <script src="js/chart-colors.js"></script>
 <script src="js/shared-header.js"></script>
     <script src="js/scroll-observer.js"></script>
 <style>
 /* Page-specific overrides only — all shared styles in article.css */
-body { background: var(--bg-page-white); }
+/* body background overridden by cinematic.css */
 
 /* Hero uses shared hero-overview; just override bottom padding */
 .hero-overview { padding-bottom: 56px; }
@@ -946,5 +949,6 @@ heroObs.observe(document.querySelector('.hero-overview'));
 
 })();
 </script>
+<script src="js/cinematic-bg.js"></script>
 </body>
 </html>
