@@ -41,6 +41,12 @@ const GRID_DEMANDS = {
     'NYISO': 152, 'NEISO': 115, 'MISO': 660, 'SPP': 296,
 };
 
+// Existing gas capacity per ISO (GW) from pipeline_config.py
+const EXISTING_GAS_GW = {
+    'CAISO': 37.0, 'ERCOT': 55.0, 'PJM': 75.0,
+    'NYISO': 18.0, 'NEISO': 14.0, 'MISO': 68.0, 'SPP': 32.0,
+};
+
 
 function getResourceColor(resource) {
     const map = {
@@ -382,17 +388,17 @@ class JarGrid {
 
         const numCols = this.activeStrategies.length;
 
-        // Row headers = ISO names (shorter), col headers = strategy IDs
+        // Row headers = ISO names (shorter), col headers = strategy IDs + gas GW sub-label
         this.rowHeaderWidth = isMobile ? 55 : (isTablet ? 65 : 80);
-        this.colHeaderHeight = isMobile ? 45 : 55;
+        this.colHeaderHeight = isMobile ? 60 : 72;
 
         const availWidth = rect.width - this.rowHeaderWidth;
         const jarW = Math.max(55, Math.floor(availWidth / numCols));
-        const jarH = isMobile ? 110 : (isTablet ? 130 : 160);
+        const jarH = isMobile ? 150 : (isTablet ? 190 : 240);
         // Extra vertical room: curtailment overflows above (~30px), HMS label below (~18px)
         const curtailPad = isMobile ? 24 : 32;
         const hmsLabelPad = 18;
-        const rowGap = (isMobile ? 20 : (isTablet ? 28 : 36)) + curtailPad + hmsLabelPad;
+        const rowGap = (isMobile ? 14 : (isTablet ? 20 : 26)) + curtailPad + hmsLabelPad;
 
         this.jarWidth = jarW;
         this.jarHeight = jarH;
@@ -511,6 +517,27 @@ class JarGrid {
 
         this._positionDOMJars();
         this._wireTooltips();
+
+        // Compute per-strategy new-build gas GW (total gasGw - existing, summed across ISOs)
+        this.strategyGasGw = {};
+        for (const strat of this.activeStrategies) {
+            let totalNewGas = 0;
+            for (const iso of ISO_LIST) {
+                const stratData = this.data.data[strat];
+                if (!stratData) continue;
+                const isoData = stratData[iso];
+                if (!isoData) continue;
+                const pk = this._findClosestKey(Object.keys(isoData), this.participation);
+                if (!pk) continue;
+                const tk = this._findClosestKey(Object.keys(isoData[pk]), this.threshold);
+                if (!tk) continue;
+                const record = isoData[pk][tk];
+                if (record && record.gasGw != null) {
+                    totalNewGas += Math.max(0, record.gasGw - (EXISTING_GAS_GW[iso] || 0));
+                }
+            }
+            this.strategyGasGw[strat] = totalNewGas;
+        }
 
         // Fire stats callback
         if (this.onStatsUpdate) {
@@ -640,9 +667,26 @@ class JarGrid {
             const strat = this.activeStrategies[col];
             const x = this.rowHeaderWidth + col * this.jarWidth + this.jarWidth / 2;
             const lines = (STRATEGY_LABELS[strat] || strat).split('\n');
+            const labelCenterY = this.colHeaderHeight / 2 - 6;
             for (let li = 0; li < lines.length; li++) {
-                ctx.fillText(lines[li], x, this.colHeaderHeight / 2 + (li - (lines.length - 1) / 2) * (fontSize + 2));
+                ctx.fillText(lines[li], x, labelCenterY + (li - (lines.length - 1) / 2) * (fontSize + 2));
             }
+        }
+        ctx.restore();
+
+        // Gas GW sub-labels (new-build gas capacity per strategy)
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const gasFontSize = this.jarWidth < 70 ? 7 : (this.jarWidth < 100 ? 8.5 : 10);
+        ctx.font = `500 ${gasFontSize}px 'DM Sans', sans-serif`;
+        ctx.fillStyle = '#6B7280';
+        for (let col = 0; col < numCols; col++) {
+            const strat = this.activeStrategies[col];
+            const gasGw = this.strategyGasGw?.[strat] ?? 0;
+            const x = this.rowHeaderWidth + col * this.jarWidth + this.jarWidth / 2;
+            const label = gasGw > 0 ? `+${Math.round(gasGw)} GW gas` : '0 GW gas';
+            ctx.fillText(label, x, this.colHeaderHeight - 6);
         }
         ctx.restore();
 
@@ -855,6 +899,7 @@ class JarGrid {
                 totalRealCO2Mt: totalCO2,
                 totalBaselineMt: totalBaseline,
                 co2ReductionPct: totalBaseline > 0 ? (totalCO2 / totalBaseline * 100) : 0,
+                totalNewGasGw: this.strategyGasGw?.[strat] ?? 0,
                 resourceBreakdown,
             };
         }
