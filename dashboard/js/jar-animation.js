@@ -633,7 +633,7 @@ class JarGrid {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         const fontSize = this.jarWidth < 70 ? 8 : (this.jarWidth < 100 ? 10 : 12);
-        ctx.font = `600 ${fontSize}px 'Space Grotesk', sans-serif`;
+        ctx.font = `600 ${fontSize}px 'Plus Jakarta Sans', sans-serif`;
         ctx.fillStyle = '#334155';
 
         for (let col = 0; col < numCols; col++) {
