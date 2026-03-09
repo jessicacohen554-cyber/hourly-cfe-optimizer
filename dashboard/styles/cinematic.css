@@ -31,7 +31,13 @@ body {
 }
 
 /* ========== Z-INDEX LAYERING — All content above background ========== */
-#topNav, .header, .content-wrap, .main-content, .section-dark,
+/* Nav needs its own high z-index so dropdown menus aren't trapped */
+#topNav {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+.header, .content-wrap, .main-content, .section-dark,
 .site-footer, .page-footer, .explore-grid, .gradient-transition,
 hr.section-divider, .global-controls, .hero-section, .hero-overview,
 .content-section, .story-panel, .hub-hero, .report-layout,
@@ -630,4 +636,30 @@ section.report-section.panel-navy .report-section-number {
     .report-section {
         padding: 18px 14px;
     }
+}
+
+/* ========== SECTION TEXT ON TRANSPARENT BACKGROUNDS ========== */
+/* Text elements sitting directly in transparent section wrappers need light
+   colors so they're readable over the dark body (#0B1120). Cards inside
+   these sections keep dark-on-white — only direct-child headings change. */
+.content-section > .section-title,
+.story-section > .section-title,
+.story-section > h2.section-title,
+.content-section > h2.section-title {
+    color: #FFFFFF !important;
+}
+.content-section > .section-subtitle,
+.story-section > .section-subtitle {
+    color: rgba(255,255,255,0.85) !important;
+}
+.story-section > .story-badge {
+    color: #FFFFFF;
+    background: rgba(255,255,255,0.12);
+    border-color: rgba(255,255,255,0.25);
+}
+.dashboard-header h2 {
+    color: #FFFFFF !important;
+}
+.dashboard-header p {
+    color: rgba(255,255,255,0.85) !important;
 }
