@@ -259,8 +259,37 @@ def compute_all_isos_consequential(year, threshold, participation_pct,
             'baseline_co2_mt': baseline_co2_mt,
         }
 
-    # Walk the shared queue — all ISOs compete for the same steps
+    # Walk the shared queue with local-first allocation:
+    # Phase 1: Each queue step's resources are consumed by LOCAL buyers first.
+    # Phase 2: Remaining capacity goes cross-regionally, prioritized by
+    #          highest local MAC (most expensive ISOs get dibs on cheap sources).
     queue = _load_queue()
+
+    # Pre-compute local MAC for cross-regional priority ordering.
+    # ISOs with highest local MAC get first dibs on cheap cross-regional sources.
+    # Use the average marginal MAC across that ISO's queue entries as proxy.
+    _iso_mac = {}
+    for iso in isos:
+        iso_macs = [e.get('marginal_mac', 0) for e in queue
+                    if e.get('iso') == iso and e.get('marginal_mac', 0) > 0]
+        _iso_mac[iso] = sum(iso_macs) / len(iso_macs) if iso_macs else 500.0
+
+    def _allocate_to_buyer(b, src_iso, delta_res, co2_amount, fraction):
+        """Allocate a fraction of a queue step to a buyer."""
+        for resource, delta_twh in delta_res.items():
+            if delta_twh < 0.5:
+                continue
+            ppa_resource = _RESOURCE_TO_PPA.get(resource)
+            if ppa_resource is None:
+                continue
+            procure_twh = delta_twh * fraction
+            ppa_price = get_learning_adjusted_ppa(
+                ppa_resource, src_iso, threshold, scenario, level, ppa_level)
+            b['total_cost'] += procure_twh * ppa_price
+            b['total_procured'] += procure_twh
+            key = f"{src_iso}_{ppa_resource}"
+            b['resource_mix'][key] = b['resource_mix'].get(key, 0) + procure_twh
+        b['co2_displaced'] += co2_amount
 
     for step in queue:
         # Find buyers that still need CO2 abatement
@@ -275,38 +304,36 @@ def compute_all_isos_consequential(year, threshold, participation_pct,
         if step_co2 <= 0:
             continue
 
-        # Total demand from active buyers → pro-rata allocation
-        total_active_demand = sum(b['demand'] for b in active.values())
-        if total_active_demand <= 0:
-            break
+        remaining_step_co2 = step_co2
 
-        # Each buyer gets a share of this step proportional to their demand
-        for iso, b in active.items():
+        # --- PHASE 1: Local buyer gets first dibs ---
+        if src_iso in active:
+            b = active[src_iso]
             remaining_co2 = b['co2_target'] - b['co2_displaced']
-            # Pro-rata share of this step
-            demand_share = b['demand'] / total_active_demand
-            available_co2 = step_co2 * demand_share
-            use_fraction = min(1.0, remaining_co2 / available_co2) if available_co2 > 0 else 0
-            actual_fraction = demand_share * use_fraction  # fraction of total step this buyer consumes
+            local_co2 = min(remaining_step_co2, remaining_co2)
+            if local_co2 > 0 and remaining_step_co2 > 0:
+                frac = local_co2 / step_co2
+                _allocate_to_buyer(b, src_iso, delta_res, local_co2, frac)
+                remaining_step_co2 -= local_co2
 
-            for resource, delta_twh in delta_res.items():
-                if delta_twh < 0.5:
-                    continue
-                ppa_resource = _RESOURCE_TO_PPA.get(resource)
-                if ppa_resource is None:
-                    continue
+        # --- PHASE 2: Cross-regional allocation of remainder ---
+        # Highest local MAC ISOs get priority (most expensive local options → most
+        # incentive to seek cheap cross-regional sources).
+        if remaining_step_co2 > 0.001:
+            cross_buyers = [(iso, b) for iso, b in active.items()
+                            if iso != src_iso and b['co2_displaced'] < b['co2_target']]
+            # Sort by descending local MAC (most expensive gets first dibs)
+            cross_buyers.sort(key=lambda x: _iso_mac.get(x[0], 0), reverse=True)
 
-                procure_twh = delta_twh * actual_fraction
-                ppa_price = get_learning_adjusted_ppa(
-                    ppa_resource, src_iso, threshold, scenario, level, ppa_level)
-
-                b['total_cost'] += procure_twh * ppa_price
-                b['total_procured'] += procure_twh
-
-                key = f"{src_iso}_{ppa_resource}"
-                b['resource_mix'][key] = b['resource_mix'].get(key, 0) + procure_twh
-
-            b['co2_displaced'] += available_co2 * use_fraction
+            for iso, b in cross_buyers:
+                if remaining_step_co2 <= 0.001:
+                    break
+                remaining_co2 = b['co2_target'] - b['co2_displaced']
+                alloc_co2 = min(remaining_step_co2, remaining_co2)
+                if alloc_co2 > 0:
+                    frac = alloc_co2 / step_co2
+                    _allocate_to_buyer(b, src_iso, delta_res, alloc_co2, frac)
+                    remaining_step_co2 -= alloc_co2
 
     # Fallback for buyers that didn't reach their target
     for iso, b in buyers.items():
