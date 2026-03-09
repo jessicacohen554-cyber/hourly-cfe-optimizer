@@ -52,6 +52,13 @@
 
     const FUEL_ORDER = ['nuclear', 'hydro', 'geothermal', 'wind', 'solar', 'battery', 'gas_ccgt', 'gas_peaker', 'coal', 'oil'];
 
+    // Cumulative MAC ($/tCO₂) at 99.99% CFE threshold per ISO — from step5d MAC queue
+    const ISO_MAC_FULL = {
+        ERCOT: 356, PJM: 254, CAISO: 482, NEISO: 468, NYISO: 492, MISO: 357, SPP: 253
+    };
+
+    const FOSSIL_FUELS = ['coal', 'gas_ccgt', 'gas_peaker', 'oil'];
+
     function fmt(n, d) {
         if (n === undefined || n === null) return '—';
         if (d === undefined) d = Math.abs(n) >= 100 ? 0 : 1;
@@ -474,11 +481,272 @@
         el.innerHTML = html;
     }
 
+    // ─── Decarbonization Cost Comparison ──────────────────────
+    function computeFleetMAC(co) {
+        const summary = co.fleet_summary;
+        let totalFossilCO2 = 0, totalFossilGen = 0, totalCleanGen = 0;
+        let coalCO2 = 0, gasCO2 = 0;
+        const isoCO2 = {};
+
+        for (const iso of Object.keys(summary)) {
+            for (const fuel of Object.keys(summary[iso])) {
+                const p = summary[iso][fuel];
+                if (FOSSIL_FUELS.includes(fuel)) {
+                    totalFossilCO2 += p.co2_mt || 0;
+                    totalFossilGen += p.gen_twh || 0;
+                    isoCO2[iso] = (isoCO2[iso] || 0) + (p.co2_mt || 0);
+                    if (fuel === 'coal') coalCO2 += p.co2_mt || 0;
+                    else gasCO2 += p.co2_mt || 0;
+                } else {
+                    totalCleanGen += p.gen_twh || 0;
+                }
+            }
+        }
+
+        let weightedNum = 0, weightedDen = 0;
+        const isoBreakdown = [];
+        for (const [iso, co2] of Object.entries(isoCO2)) {
+            const mac = ISO_MAC_FULL[iso] || 0;
+            weightedNum += co2 * mac;
+            weightedDen += co2;
+            isoBreakdown.push({ iso, co2, mac, costB: co2 * mac / 1000 });
+        }
+
+        const totalGen = totalCleanGen + totalFossilGen;
+        return {
+            cleanPct: totalGen > 0 ? (totalCleanGen / totalGen * 100) : 0,
+            fossilCO2: totalFossilCO2,
+            fossilGen: totalFossilGen,
+            coalCO2, gasCO2,
+            avgMAC: weightedDen > 0 ? weightedNum / weightedDen : 0,
+            totalCostB: weightedNum / 1000,
+            costPerMWh: totalFossilGen > 0 ? weightedNum / totalFossilGen : 0,
+            isoBreakdown
+        };
+    }
+
+    function renderMACComparison() {
+        const macResults = companies.map(co => ({
+            ...computeFleetMAC(co),
+            name: co.shortName,
+            id: co.id,
+            intensity: co.intensity_kg
+        }));
+
+        // Sort by avg MAC (lowest first) for the bar chart
+        const sortedByMAC = [...macResults].sort((a, b) => a.avgMAC - b.avgMAC);
+        const sortedByCost = [...macResults].sort((a, b) => b.totalCostB - a.totalCostB);
+
+        // Chart 1: Weighted avg MAC horizontal bar
+        const macCtx = document.getElementById('macComparisonChart');
+        if (macCtx) {
+            new Chart(macCtx, {
+                type: 'bar',
+                data: {
+                    labels: sortedByMAC.map(r => r.name),
+                    datasets: [
+                        {
+                            label: 'Coal abatement',
+                            data: sortedByMAC.map(r => r.coalCO2 > 0 ? r.avgMAC * (r.coalCO2 / r.fossilCO2) : 0),
+                            backgroundColor: FUEL_COLORS.coal,
+                            borderRadius: 2
+                        },
+                        {
+                            label: 'Gas abatement',
+                            data: sortedByMAC.map(r => r.gasCO2 > 0 ? r.avgMAC * (r.gasCO2 / r.fossilCO2) : r.avgMAC),
+                            backgroundColor: FUEL_COLORS.gas_ccgt,
+                            borderRadius: 2
+                        }
+                    ]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            stacked: true,
+                            title: { display: true, text: '$/tCO₂ (fleet-weighted)' },
+                            beginAtZero: true,
+                            ticks: { callback: v => '$' + v }
+                        },
+                        y: { stacked: true }
+                    },
+                    plugins: {
+                        legend: { position: 'bottom', labels: { font: { size: 11 } } },
+                        tooltip: {
+                            callbacks: {
+                                afterBody: function(items) {
+                                    const idx = items[0].dataIndex;
+                                    const r = sortedByMAC[idx];
+                                    return [
+                                        `Total MAC: $${fmt(r.avgMAC, 0)}/tCO₂`,
+                                        `Fossil CO₂: ${fmt(r.fossilCO2, 1)} Mt`,
+                                        `Clean share: ${fmt(r.cleanPct, 0)}%`
+                                    ];
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Chart 2: Total annual abatement cost
+        const costCtx = document.getElementById('totalAbatementCostChart');
+        if (costCtx) {
+            const sorted = sortedByCost;
+            const maxCost = Math.max(...sorted.map(r => r.totalCostB));
+            new Chart(costCtx, {
+                type: 'bar',
+                data: {
+                    labels: sorted.map(r => r.name),
+                    datasets: [{
+                        label: 'Abatement Cost',
+                        data: sorted.map(r => r.totalCostB),
+                        backgroundColor: sorted.map(r => {
+                            const ratio = r.totalCostB / maxCost;
+                            return ratio > 0.8 ? '#dc2626' : ratio > 0.5 ? '#f59e0b' : '#22c55e';
+                        }),
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            title: { display: true, text: '$B / year' },
+                            beginAtZero: true,
+                            ticks: { callback: v => '$' + v + 'B' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => `$${fmt(ctx.raw, 1)}B/yr (${fmt(sortedByCost[ctx.dataIndex].fossilCO2, 1)} Mt CO₂)`
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Chart 3: Cost per MWh replaced
+        const mwhCtx = document.getElementById('costPerMwhChart');
+        if (mwhCtx) {
+            const sorted = [...macResults].sort((a, b) => b.costPerMWh - a.costPerMWh);
+            new Chart(mwhCtx, {
+                type: 'bar',
+                data: {
+                    labels: sorted.map(r => r.name),
+                    datasets: [{
+                        label: '$/MWh',
+                        data: sorted.map(r => r.costPerMWh),
+                        backgroundColor: sorted.map((_, i) => COMPANY_COLORS[companies.findIndex(c => c.shortName === sorted[i].name) % COMPANY_COLORS.length]),
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            title: { display: true, text: '$/MWh replaced' },
+                            beginAtZero: true,
+                            ticks: { callback: v => '$' + v }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => `$${fmt(ctx.raw, 0)}/MWh (${fmt(sorted[ctx.dataIndex].fossilGen, 1)} TWh fossil)`
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Summary table
+        const tableEl = document.getElementById('macSummaryTable');
+        if (tableEl) {
+            const sorted = [...macResults].sort((a, b) => a.avgMAC - b.avgMAC);
+            const cheapest = sorted[0];
+
+            let html = `<table class="data-table">
+                <thead><tr>
+                    <th>Company</th><th>Clean %</th><th>Fossil CO₂ (Mt)</th>
+                    <th>Coal (Mt)</th><th>Gas (Mt)</th>
+                    <th>Wtd MAC ($/tCO₂)</th><th>Total Cost ($B/yr)</th>
+                    <th>$/MWh Replaced</th><th>MAC Delta</th>
+                </tr></thead><tbody>`;
+
+            sorted.forEach(r => {
+                const delta = r.avgMAC - cheapest.avgMAC;
+                const deltaPct = cheapest.avgMAC > 0 ? (delta / cheapest.avgMAC * 100) : 0;
+                const deltaStr = delta < 1 ? '—' : `+$${fmt(delta, 0)} (+${fmt(deltaPct, 0)}%)`;
+                const deltaColor = delta < 1 ? 'var(--text-secondary)' : delta > 50 ? '#dc2626' : '#b45309';
+
+                html += `<tr>
+                    <td><a href="ipp_${r.id}.html" style="color:var(--accent);font-weight:600">${r.name}</a></td>
+                    <td>${fmt(r.cleanPct, 0)}%</td>
+                    <td>${fmt(r.fossilCO2, 1)}</td>
+                    <td>${fmt(r.coalCO2, 1)}</td>
+                    <td>${fmt(r.gasCO2, 1)}</td>
+                    <td><strong>$${fmt(r.avgMAC, 0)}</strong></td>
+                    <td>$${fmt(r.totalCostB, 1)}B</td>
+                    <td>$${fmt(r.costPerMWh, 0)}</td>
+                    <td style="color:${deltaColor}">${deltaStr}</td>
+                </tr>`;
+            });
+
+            html += '</tbody></table>';
+            tableEl.innerHTML = html;
+        }
+
+        // Insight box
+        const insightEl = document.getElementById('macInsightBox');
+        if (insightEl) {
+            const sorted = [...macResults].sort((a, b) => a.avgMAC - b.avgMAC);
+            const cheapestMAC = sorted[0];
+            const mostExpMAC = sorted[sorted.length - 1];
+            const cheapestTotal = [...macResults].sort((a, b) => a.totalCostB - b.totalCostB)[0];
+            const mostExpTotal = [...macResults].sort((a, b) => b.totalCostB - a.totalCostB)[0];
+            const macSpread = mostExpMAC.avgMAC - cheapestMAC.avgMAC;
+
+            const coalHeavy = macResults.filter(r => r.coalCO2 > 5).sort((a, b) => b.coalCO2 - a.coalCO2);
+            const pureGas = macResults.filter(r => r.coalCO2 < 1 && r.fossilCO2 > 5);
+
+            let insights = [];
+            insights.push(`<strong>${cheapestMAC.name}</strong> has the lowest per-ton cost at <strong>$${fmt(cheapestMAC.avgMAC, 0)}/tCO₂</strong>, driven by concentration in low-MAC ISOs (ERCOT $356/t, PJM $254/t).`);
+            insights.push(`<strong>${mostExpMAC.name}</strong> faces the highest at <strong>$${fmt(mostExpMAC.avgMAC, 0)}/tCO₂</strong> — a <strong>$${fmt(macSpread, 0)}/tCO₂</strong> premium over ${cheapestMAC.name}.`);
+
+            if (coalHeavy.length > 0) {
+                insights.push(`<strong>Coal exposure matters for total cost, not per-ton cost:</strong> ${coalHeavy.map(r => r.name).join(', ')} carry ${fmt(coalHeavy.reduce((s, r) => s + r.coalCO2, 0), 0)} Mt of coal CO₂ — high-emitting per MWh but cheaper to displace per ton because coal plants emit ~0.95 tCO₂/MWh vs ~0.4 for gas.`);
+            }
+
+            if (pureGas.length > 0) {
+                insights.push(`<strong>All-gas fleets pay more per ton:</strong> ${pureGas.map(r => r.name).join(', ')} must replace more MWh per ton abated because gas CCGTs emit less CO₂ per MWh than coal, pushing up the fleet-weighted MAC.`);
+            }
+
+            insightEl.innerHTML = `
+                <div class="insight-box scroll-reveal" style="margin-bottom:var(--space-xl)">
+                    <strong>Key Takeaways</strong>
+                    <ul style="margin:8px 0 0 16px">${insights.map(i => `<li style="margin-bottom:6px">${i}</li>`).join('')}</ul>
+                </div>
+            `;
+        }
+    }
+
     // ─── Initialize ──────────────────────────────────────────
     function init() {
         renderHeroStats();
         renderCompanyCards();
         renderKeyInsights();
+        renderMACComparison();
         renderEmissionsComparison();
         renderProfitResilience();
         renderFleetComposition();
