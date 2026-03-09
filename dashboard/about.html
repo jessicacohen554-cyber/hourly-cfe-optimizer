@@ -101,18 +101,11 @@ hr.section-divider {
     backdrop-filter: blur(12px) saturate(180%);
     -webkit-backdrop-filter: blur(12px) saturate(180%);
 }
-/* Dark sections: translucent navy so circuit board clearly bleeds through */
+/* Dark sections: inset from edges so circuit board is visible around them */
 .section-dark {
-    background: linear-gradient(135deg,
-        rgba(11, 17, 32, 0.58) 0%,
-        rgba(15, 23, 42, 0.52) 60%,
-        rgba(30, 41, 59, 0.48) 100%) !important;
-    backdrop-filter: blur(6px) saturate(120%);
-    -webkit-backdrop-filter: blur(6px) saturate(120%);
-}
-/* Tone down the radial glow pseudo-element so it doesn't re-opacify */
-.section-dark::before {
-    opacity: 0.35;
+    margin: var(--space-2xl) var(--space-xl);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.3);
 }
 
 /* ========== CINEMATIC SCROLL BACKGROUND ========== */
@@ -428,8 +421,7 @@ hr.section-divider {
         -webkit-backdrop-filter: blur(8px) saturate(160%);
     }
     .section-dark {
-        backdrop-filter: blur(4px) saturate(110%);
-        -webkit-backdrop-filter: blur(4px) saturate(110%);
+        margin: var(--space-xl) var(--space-sm);
     }
 }
 @media (max-width: 480px) {
