@@ -63,6 +63,35 @@
         <div class="company-cards-grid" id="companyCardsGrid"></div>
     </div>
 
+    <!-- Decarbonization Cost Comparison -->
+    <div class="content-section">
+        <h2 class="section-title">Fleet Decarbonization Cost Comparison</h2>
+        <p class="section-subtitle">Marginal abatement cost (MAC) to fully decarbonize each fleet, weighted by regional grid costs and fossil fuel mix. Costs reflect the cumulative $/tCO₂ to reach 99.99% clean energy in each ISO where the company operates.</p>
+
+        <div class="card scroll-reveal" style="padding: var(--space-xl); margin-bottom: var(--space-xl)">
+            <h3 style="font-size: 1.1rem; color: var(--navy); margin-bottom: var(--space-md)">Weighted Average MAC by Fleet ($/tCO₂)</h3>
+            <div class="chart-container-lg"><canvas id="macComparisonChart"></canvas></div>
+        </div>
+
+        <div class="grid-2col scroll-reveal" style="margin-bottom: var(--space-xl)">
+            <div class="card" style="padding: var(--space-lg)">
+                <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Total Annual Abatement Cost ($B/yr)</h3>
+                <div class="chart-container-lg"><canvas id="totalAbatementCostChart"></canvas></div>
+            </div>
+            <div class="card" style="padding: var(--space-lg)">
+                <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Cost per MWh of Fossil Generation Replaced</h3>
+                <div class="chart-container-lg"><canvas id="costPerMwhChart"></canvas></div>
+            </div>
+        </div>
+
+        <div class="card scroll-reveal" style="padding: var(--space-xl); margin-bottom: var(--space-xl)">
+            <h3 style="font-size: 1.1rem; color: var(--navy); margin-bottom: var(--space-md)">Fleet Decarbonization Summary</h3>
+            <div id="macSummaryTable"></div>
+        </div>
+
+        <div id="macInsightBox"></div>
+    </div>
+
     <!-- Interactive Tools -->
     <div class="content-section">
         <div class="card" style="padding: var(--space-xl); text-align: center; margin-bottom: var(--space-xl)">
