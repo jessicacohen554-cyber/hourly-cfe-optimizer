@@ -389,11 +389,15 @@ class JarGrid {
         const availWidth = rect.width - this.rowHeaderWidth;
         const jarW = Math.max(55, Math.floor(availWidth / numCols));
         const jarH = isMobile ? 110 : (isTablet ? 130 : 160);
-        const rowGap = isMobile ? 20 : (isTablet ? 28 : 36);
+        // Extra vertical room: curtailment overflows above (~30px), HMS label below (~18px)
+        const curtailPad = isMobile ? 24 : 32;
+        const hmsLabelPad = 18;
+        const rowGap = (isMobile ? 20 : (isTablet ? 28 : 36)) + curtailPad + hmsLabelPad;
 
         this.jarWidth = jarW;
         this.jarHeight = jarH;
         this.rowGap = rowGap;
+        this.curtailPad = curtailPad;
         this.rowStride = jarH + rowGap;
 
         const totalWidth = this.rowHeaderWidth + jarW * numCols;
@@ -540,7 +544,8 @@ class JarGrid {
             const col = i % numCols;
 
             const x = this.rowHeaderWidth + col * this.jarWidth + insetX;
-            const y = this.colHeaderHeight + row * this.rowStride + insetY;
+            // Offset jar down by curtailPad so curtailed balls have room above
+            const y = this.colHeaderHeight + row * this.rowStride + (this.curtailPad || 0) + insetY;
 
             const el = jar.el;
             el.style.left = x + 'px';
@@ -560,44 +565,41 @@ class JarGrid {
         this._tooltipWired = true;
 
         const self = this;
+        const isMobile = window.innerWidth < 768;
 
-        this.overlayEl.addEventListener('mouseenter', function(e) {
+        // Desktop: lightweight 1-line hover tooltip
+        if (!isMobile) {
+            this.overlayEl.addEventListener('mousemove', function(e) {
+                const jarEl = e.target.closest('.jar-dom');
+                if (!jarEl) {
+                    self._hideTooltip();
+                    self.hoveredJar = null;
+                    return;
+                }
+                const jar = self._findJarByEl(jarEl);
+                if (!jar) return;
+                self.hoveredJar = jar;
+                self._showMiniTooltip(e.clientX, e.clientY, jar);
+            }, true);
+
+            this.overlayEl.addEventListener('mouseleave', function() {
+                self._hideTooltip();
+                self.hoveredJar = null;
+            });
+        }
+
+        // Click → detail panel (desktop + mobile)
+        this.overlayEl.addEventListener('click', function(e) {
             const jarEl = e.target.closest('.jar-dom');
             if (!jarEl) return;
             const jar = self._findJarByEl(jarEl);
             if (jar) {
-                self.hoveredJar = jar;
-            }
-        }, true);
-
-        this.overlayEl.addEventListener('mousemove', function(e) {
-            const jarEl = e.target.closest('.jar-dom');
-            if (!jarEl) {
                 self._hideTooltip();
-                self.hoveredJar = null;
-                return;
+                self._showDetailPanel(jar);
             }
-            const jar = self._findJarByEl(jarEl);
-            if (!jar) return;
-            self.hoveredJar = jar;
-
-            // Check if hovering a specific ball
-            const ballEl = e.target.closest('.ball');
-            const ballData = ballEl ? {
-                resource: ballEl.dataset.resource,
-                tier: ballEl.dataset.tier,
-                glowIso: ballEl.dataset.glowIso || null,
-            } : null;
-
-            self._showTooltip(e.clientX, e.clientY, jar, ballData);
-        }, true);
-
-        this.overlayEl.addEventListener('mouseleave', function() {
-            self._hideTooltip();
-            self.hoveredJar = null;
         });
 
-        // Touch support
+        // Touch → detail panel (mobile)
         this.overlayEl.addEventListener('touchstart', function(e) {
             const touch = e.touches[0];
             const jarEl = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -605,12 +607,9 @@ class JarGrid {
             if (jarDom) {
                 const jar = self._findJarByEl(jarDom);
                 if (jar) {
-                    self.hoveredJar = jar;
-                    self._showTooltip(touch.clientX, touch.clientY, jar, null);
                     e.preventDefault();
+                    self._showDetailPanel(jar);
                 }
-            } else {
-                self._hideTooltip();
             }
         }, { passive: false });
     }
@@ -656,7 +655,8 @@ class JarGrid {
 
         for (let row = 0; row < ISO_LIST.length; row++) {
             const iso = ISO_LIST[row];
-            const y = this.colHeaderHeight + row * this.rowStride + this.jarHeight / 2;
+            // Match the jar's offset so labels center on the actual jar
+            const y = this.colHeaderHeight + row * this.rowStride + (this.curtailPad || 0) + this.jarHeight / 2;
             ctx.fillStyle = getIsoColor(iso);
             ctx.fillText(iso, this.rowHeaderWidth - 6, y);
         }
@@ -677,94 +677,12 @@ class JarGrid {
         ctx.restore();
     }
 
-    _showTooltip(px, py, jar, ballData) {
+    _showMiniTooltip(px, py, jar) {
         if (!this.tooltipEl) return;
-
-        let html = `<div class="deployment-tooltip-header">
-            <strong>${STRATEGY_LABELS[jar.strategy].replace('\n', ' ')}</strong> —
-            <span style="color:${getIsoColor(jar.iso)}">${jar.iso}</span>
-        </div>`;
-
-        const bl = this.gridBaseline[jar.iso];
-        if (bl) {
-            html += `<div class="deployment-tooltip-stats">
-                <span>Grid baseline: ${bl.totalPct.toFixed(0)}% clean</span>
-            </div>`;
-        }
-
-        if (jar.data) {
-            const data = jar.data;
-
-            html += '<div class="deployment-tooltip-stats">';
-            if (data.hms != null) html += `<span>Hourly match: ${data.hms}%</span>`;
-            if (data.gridCleanPct != null) html += `<span>Grid clean: ${data.gridCleanPct}%</span>`;
-            if (data.gasGw != null) html += `<span>Gas backup: ${data.gasGw} GW</span>`;
-            if (data.curtTwh != null && data.curtTwh > 0) html += `<span>Curtailed: ${data.curtTwh} TWh</span>`;
-            html += '</div>';
-
-            html += '<div class="deployment-tooltip-breakdown">';
-
-            if (data.e) {
-                const entries = Object.entries(data.e).filter(([, t]) => t > 0);
-                if (entries.length > 0) {
-                    html += '<div class="tooltip-section-label">Existing Claimed</div>';
-                    for (const [res, twh] of entries) {
-                        html += `<div class="tooltip-resource">
-                            <span class="tooltip-dot" style="background:${getResourceColor(res)};opacity:0.4;border:2px solid ${getResourceColor(res)}"></span>
-                            <span>${getResourceLabel(res)}</span>
-                            <span class="tooltip-twh">${twh.toFixed(1)} TWh</span>
-                        </div>`;
-                    }
-                }
-            }
-
-            if (data.n) {
-                const entries = Object.entries(data.n).filter(([, t]) => t > 0);
-                if (entries.length > 0) {
-                    html += '<div class="tooltip-section-label">New Build</div>';
-                    for (const [res, twh] of entries) {
-                        html += `<div class="tooltip-resource">
-                            <span class="tooltip-dot-hollow" style="border-color:${getResourceColor(res)}"></span>
-                            <span>${getResourceLabel(res)}</span>
-                            <span class="tooltip-twh">${twh.toFixed(1)} TWh</span>
-                        </div>`;
-                    }
-                }
-            }
-
-            if (data.x && Object.keys(data.x).length > 0) {
-                html += '<div class="tooltip-section-label">Cross-ISO Procurement</div>';
-                for (const [srcIso, resources] of Object.entries(data.x)) {
-                    for (const [res, twh] of Object.entries(resources)) {
-                        if (twh <= 0) continue;
-                        html += `<div class="tooltip-resource">
-                            <span class="tooltip-iso-badge" style="background:${getIsoColor(srcIso)}20;color:${getIsoColor(srcIso)}">${srcIso}</span>
-                            <span>${getResourceLabel(res)}</span>
-                            <span class="tooltip-twh">${twh.toFixed(1)} TWh</span>
-                        </div>`;
-                    }
-                }
-            }
-
-            html += '</div>';
-
-            if (data.co2 > 0) {
-                html += `<div class="deployment-tooltip-footer">
-                    CO₂ reduced: ${data.co2.toFixed(1)} MtCO₂
-                    ${data.co2r ? `(${data.co2r}% of baseline)` : ''}
-                </div>`;
-            }
-        }
-
-        // Hovered ball detail
-        if (ballData) {
-            const tierLabel = { baseline: 'grid baseline', claimed: 'existing claimed', new: 'new build', curtailed: 'curtailed' };
-            html += `<div class="deployment-tooltip-footer" style="margin-top:4px;font-style:italic">
-                ${getResourceLabel(ballData.resource)} (${tierLabel[ballData.tier] || ballData.tier})${ballData.glowIso ? ` → serving ${ballData.glowIso}` : ''}
-            </div>`;
-        }
-
-        this.tooltipEl.innerHTML = html;
+        const stratLabel = (STRATEGY_LABELS[jar.strategy] || jar.strategy).replace('\n', ' ');
+        const hms = jar.data && jar.data.hms != null ? jar.data.hms : (jar.data && jar.data.gridCleanPct != null ? jar.data.gridCleanPct : null);
+        const hmsText = hms != null ? ` · ${Math.round(hms)}% HMS` : '';
+        this.tooltipEl.innerHTML = `<span style="color:${getIsoColor(jar.iso)};font-weight:700">${jar.iso}</span> — ${stratLabel}${hmsText} <span style="color:var(--text-muted);font-size:0.7rem">(click for details)</span>`;
         this.tooltipEl.style.display = 'block';
 
         const ttRect = this.tooltipEl.getBoundingClientRect();
@@ -774,6 +692,113 @@ class JarGrid {
         if (top + ttRect.height > window.innerHeight - 10) top = window.innerHeight - ttRect.height - 10;
         this.tooltipEl.style.left = left + 'px';
         this.tooltipEl.style.top = top + 'px';
+    }
+
+    _showDetailPanel(jar) {
+        const panel = document.getElementById('jarDetailPanel');
+        if (!panel) return;
+
+        let html = `<div class="close-btn" id="detailPanelClose">&times;</div>`;
+        html += `<div class="detail-panel-header">
+            <strong>${(STRATEGY_LABELS[jar.strategy] || jar.strategy).replace('\n', ' ')}</strong> —
+            <span style="color:${getIsoColor(jar.iso)};font-weight:700">${jar.iso}</span>
+        </div>`;
+
+        const bl = this.gridBaseline[jar.iso];
+        if (bl) {
+            html += `<div class="detail-panel-stats">Grid baseline: ${bl.totalPct.toFixed(0)}% clean</div>`;
+        }
+
+        if (jar.data) {
+            const data = jar.data;
+
+            html += '<div class="detail-panel-stats">';
+            if (data.hms != null) html += `<span>Hourly match: ${data.hms}%</span>`;
+            if (data.gridCleanPct != null) html += `<span>Grid clean: ${data.gridCleanPct}%</span>`;
+            if (data.gasGw != null) html += `<span>Gas: ${data.gasGw} GW</span>`;
+            if (data.curtTwh != null && data.curtTwh > 0) html += `<span>Curtailed: ${data.curtTwh} TWh</span>`;
+            html += '</div>';
+
+            // Resource table
+            html += '<table class="detail-panel-table"><thead><tr><th></th><th>Resource</th><th>TWh</th><th>Type</th></tr></thead><tbody>';
+
+            if (data.e) {
+                for (const [res, twh] of Object.entries(data.e)) {
+                    if (twh <= 0) continue;
+                    html += `<tr>
+                        <td><span class="tooltip-dot" style="background:${getResourceColor(res)};opacity:0.4;border:2px solid ${getResourceColor(res)}"></span></td>
+                        <td>${getResourceLabel(res)}</td>
+                        <td class="detail-twh">${twh.toFixed(1)}</td>
+                        <td class="detail-type">Existing</td>
+                    </tr>`;
+                }
+            }
+            if (data.n) {
+                for (const [res, twh] of Object.entries(data.n)) {
+                    if (twh <= 0) continue;
+                    html += `<tr>
+                        <td><span class="tooltip-dot-hollow" style="border-color:${getResourceColor(res)}"></span></td>
+                        <td>${getResourceLabel(res)}</td>
+                        <td class="detail-twh">${twh.toFixed(1)}</td>
+                        <td class="detail-type">New Build</td>
+                    </tr>`;
+                }
+            }
+            if (data.x && Object.keys(data.x).length > 0) {
+                for (const [srcIso, resources] of Object.entries(data.x)) {
+                    for (const [res, twh] of Object.entries(resources)) {
+                        if (twh <= 0) continue;
+                        html += `<tr>
+                            <td><span class="tooltip-iso-badge" style="background:${getIsoColor(srcIso)}20;color:${getIsoColor(srcIso)}">${srcIso}</span></td>
+                            <td>${getResourceLabel(res)}</td>
+                            <td class="detail-twh">${twh.toFixed(1)}</td>
+                            <td class="detail-type">Cross-ISO</td>
+                        </tr>`;
+                    }
+                }
+            }
+
+            html += '</tbody></table>';
+
+            if (data.co2 > 0) {
+                html += `<div class="detail-panel-footer">CO₂ reduced: <strong>${data.co2.toFixed(1)} MtCO₂</strong>${data.co2r ? ` (${data.co2r}% of baseline)` : ''}</div>`;
+            }
+        }
+
+        panel.innerHTML = html;
+        // Force reflow then open
+        panel.classList.remove('open');
+        requestAnimationFrame(() => {
+            panel.style.display = 'block';
+            requestAnimationFrame(() => panel.classList.add('open'));
+        });
+
+        // Close handlers
+        const closeBtn = document.getElementById('detailPanelClose');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this._hideDetailPanel());
+        }
+
+        // Click outside to close
+        const self = this;
+        setTimeout(() => {
+            const handler = function(e) {
+                if (!panel.contains(e.target) && !e.target.closest('.jar-dom')) {
+                    self._hideDetailPanel();
+                    document.removeEventListener('click', handler);
+                    document.removeEventListener('touchstart', handler);
+                }
+            };
+            document.addEventListener('click', handler);
+            document.addEventListener('touchstart', handler, { passive: true });
+        }, 100);
+    }
+
+    _hideDetailPanel() {
+        const panel = document.getElementById('jarDetailPanel');
+        if (!panel) return;
+        panel.classList.remove('open');
+        setTimeout(() => { panel.style.display = 'none'; }, 300);
     }
 
     _hideTooltip() {
