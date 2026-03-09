@@ -142,6 +142,185 @@ body { background: var(--bg-page); }
 #jarCanvas {
     display: block;
 }
+#jarOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+}
+
+/* ===== GLASSMORPHISM JARS ===== */
+.jar-dom {
+    position: absolute;
+    border-radius: 0 0 10px 10px;
+    background: rgba(255, 255, 255, 0.10);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-top: 2.5px solid rgba(148, 163, 184, 0.55);
+    box-shadow:
+        0 8px 32px rgba(31, 38, 135, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2),
+        inset 0 -1px 0 rgba(255, 255, 255, 0.05);
+    overflow: visible;
+    display: flex;
+    flex-wrap: wrap-reverse;
+    align-content: flex-start;
+    justify-content: center;
+    gap: 2px;
+    padding: 3px 3px 4px;
+    pointer-events: auto;
+    cursor: pointer;
+    transition: box-shadow 0.3s ease, border-color 0.3s ease;
+    contain: layout style;
+}
+.jar-dom:hover {
+    border-color: rgba(99, 102, 241, 0.4);
+    box-shadow:
+        0 8px 32px rgba(31, 38, 135, 0.14),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3),
+        0 0 0 1px rgba(99, 102, 241, 0.15);
+}
+
+/* HMS gradient fill — rises from bottom */
+.jar-dom::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: var(--hms-pct, 0%);
+    background: linear-gradient(
+        to top,
+        rgba(99, 102, 241, 0.22) 0%,
+        rgba(99, 102, 241, 0.08) 60%,
+        transparent 100%
+    );
+    border-radius: 0 0 10px 10px;
+    z-index: 0;
+    pointer-events: none;
+    transition: height 0.7s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* Glass reflection streak */
+.jar-dom::after {
+    content: '';
+    position: absolute;
+    top: 6px;
+    left: 18%;
+    width: 2px;
+    bottom: 10px;
+    background: linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.25),
+        rgba(255, 255, 255, 0.05)
+    );
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* ===== BALL ELEMENTS ===== */
+.ball {
+    width: var(--ball-size, 10px);
+    height: var(--ball-size, 10px);
+    border-radius: 50%;
+    z-index: 1;
+    position: relative;
+    flex-shrink: 0;
+    will-change: transform;
+    animation: ball-float 3s ease-in-out infinite;
+    animation-delay: var(--float-delay, 0s);
+    transition: opacity 0.4s ease, transform 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* Tier: baseline — solid fill (grid baseline clean) */
+.ball--baseline {
+    background: var(--ball-color);
+    opacity: 1;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+}
+
+/* Tier: claimed — transparent + saturated ring (existing claimed) */
+.ball--claimed {
+    background: color-mix(in srgb, var(--ball-color) 25%, transparent);
+    border: 2px solid var(--ball-color);
+    box-sizing: border-box;
+    opacity: 0.85;
+}
+
+/* Tier: new — lighter translucent (new build) */
+.ball--new {
+    background: color-mix(in srgb, var(--ball-color) 40%, transparent);
+    opacity: 0.9;
+    box-shadow: 0 0 4px color-mix(in srgb, var(--ball-color) 20%, transparent);
+}
+
+/* Tier: curtailed — striped + dashed (above rim overflow) */
+.ball--curtailed {
+    background: repeating-linear-gradient(
+        -45deg,
+        color-mix(in srgb, var(--ball-color) 20%, transparent),
+        color-mix(in srgb, var(--ball-color) 20%, transparent) 2px,
+        transparent 2px,
+        transparent 4px
+    );
+    border: 1.5px dashed var(--ball-color);
+    box-sizing: border-box;
+    opacity: 0.7;
+}
+
+/* Cross-ISO glow overlay */
+.ball--glow {
+    box-shadow: 0 0 8px var(--glow-color), 0 0 3px var(--glow-color);
+    animation: ball-float 3s ease-in-out infinite, ball-glow-pulse 2s ease-in-out infinite;
+    animation-delay: var(--float-delay, 0s), var(--float-delay, 0s);
+}
+
+/* Curtailed balls container (above the rim) */
+.jar-curtailed-zone {
+    position: absolute;
+    bottom: 100%;
+    left: -1px;
+    right: -1px;
+    display: flex;
+    flex-wrap: wrap-reverse;
+    justify-content: center;
+    gap: 2px;
+    padding: 2px;
+    pointer-events: none;
+}
+
+/* HMS label below jar */
+.jar-hms-label {
+    position: absolute;
+    bottom: -15px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-family: var(--font-data);
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    pointer-events: none;
+    opacity: 0.65;
+    white-space: nowrap;
+}
+
+/* ===== @KEYFRAMES ===== */
+@keyframes ball-float {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-1.5px); }
+}
+
+@keyframes ball-glow-pulse {
+    0%, 100% { box-shadow: 0 0 6px var(--glow-color); }
+    50%      { box-shadow: 0 0 14px var(--glow-color), 0 0 4px var(--glow-color); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ball, .ball--glow { animation: none !important; }
+}
 
 /* Tooltip */
 .deployment-tooltip {
@@ -264,12 +443,17 @@ body { background: var(--bg-page); }
     .agg-chart-card { padding: 14px; }
     .agg-chart-card h3 { font-size: 0.85rem; }
     .slider-row input[type="range"] { min-height: 44px; }
+    .jar-dom { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); gap: 1px; padding: 2px; }
+    .ball { animation-duration: 4s; }
+    .jar-hms-label { font-size: 0.52rem; bottom: -13px; }
 }
 @media (max-width: 480px) {
     .controls-bar { padding: 10px 10px; }
     .control-group label { font-size: 0.68rem; }
     .slider-value { font-size: 0.95rem; min-width: 45px; }
     .legend-bar { gap: 4px; font-size: 0.6rem; }
+    .ball { animation: none; }
+    .ball--glow { animation: ball-glow-pulse 2s ease-in-out infinite; }
 }
 </style>
 </head>
@@ -329,7 +513,10 @@ body { background: var(--bg-page); }
         <span class="legend-ball" style="background:#6366F1"></span> Clean Firm
         <span class="legend-ball" style="background:#0EA5E9"></span> Hydro
         <span class="legend-ball" style="background:#64748B"></span> CCS
+        <span class="legend-ball" style="background:#C4B5FD"></span> Battery 4hr
+        <span class="legend-ball" style="background:#8B5CF6"></span> Battery 8hr
         <span class="legend-ball" style="background:#E91E63"></span> LDES
+        <span class="legend-ball" style="background:#10B981"></span> Green H₂
     </div>
     <div class="legend-divider"></div>
     <div class="legend-group">
@@ -342,6 +529,11 @@ body { background: var(--bg-page); }
         Above rim = curtailed
     </div>
     <div class="legend-divider"></div>
+    <div class="legend-group">
+        <span style="display:inline-block;width:14px;height:18px;border-radius:0 0 4px 4px;background:linear-gradient(to top, rgba(99,102,241,0.22), transparent);border:1px solid rgba(148,163,184,0.3);backdrop-filter:blur(4px)"></span>
+        Fill = hourly match %
+    </div>
+    <div class="legend-divider"></div>
     <div class="legend-group" style="font-style:italic;color:var(--text-muted)">
         Each ball = 1% of grid · Jar = ISO grid state under strategy
     </div>
@@ -351,6 +543,7 @@ body { background: var(--bg-page); }
 <div class="matrix-section">
     <div class="matrix-canvas-wrap">
         <canvas id="jarCanvas"></canvas>
+        <div id="jarOverlay"></div>
     </div>
 </div>
 

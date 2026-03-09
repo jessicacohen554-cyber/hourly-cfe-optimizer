@@ -1,18 +1,20 @@
 /**
- * Jar Animation Engine v3 — Grid-level impact visualization
+ * Jar Animation Engine v4 — DOM-based glassmorphism jars with CSS animations
  *
  * Each jar shows what happens to an ISO's GRID under a procurement strategy.
  * At 0% participation: baseline grid mix (solid balls).
  * As participation increases: new procurement adds to baseline.
  *
- * Visual tiers:
- * - Solid fill: grid baseline clean (always present)
- * - Transparent fill + saturated outline: existing clean claimed by buyers
- * - Transparent fill only: new-build procurement
- * - Above rim with stripe: curtailed energy
+ * Visual tiers (CSS classes):
+ * - .ball--baseline: solid fill (grid baseline clean)
+ * - .ball--claimed: transparent fill + saturated ring (existing clean claimed)
+ * - .ball--new: translucent fill (new-build procurement)
+ * - .ball--curtailed: diagonal stripe + dashed border (curtailed above rim)
  *
- * Glow semantics: in SOURCE ISO jar, balls serving external buyers glow
- * with the BUYER ISO's color.
+ * Glow: .ball--glow with --glow-color (buyer ISO color on source jar balls)
+ *
+ * Jar background: linear-gradient rising from bottom via --hms-pct CSS var
+ * representing hourly matching score.
  */
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -43,45 +45,31 @@ const GRID_DEMANDS = {
 function getResourceColor(resource) {
     const map = {
         'solar': '#F59E0B', 'wind': '#22C55E', 'offshore_wind': '#009688',
-        'hydro': '#0EA5E9', 'clean_firm': '#6366F1', 'nuclear_uprate': '#818CF8',
-        'ccs': '#64748B', 'battery': '#C4B5FD', 'storage': '#EF4444',
-        'ldes': '#E91E63', 'green_h2': '#10B981', 'geothermal': '#D97706',
-        'new_vre': '#4ADE80', 'new_build_uprate': '#818CF8',
-        'existing_vre': '#86EFAC', 'existing_nuclear': '#A5B4FC',
-        'existing_recs': '#86EFAC', 'cross_regional_recs': '#4ADE80',
-        'new_build_vre': '#4ADE80',
+        'hydro': '#0EA5E9', 'clean_firm': '#6366F1', 'nuclear': '#6366F1',
+        'ccs_ccgt': '#64748B', 'ccs': '#64748B', 'geothermal': '#D97706',
+        'battery': '#C4B5FD', 'battery4': '#C4B5FD', 'battery8': '#8B5CF6',
+        'ldes': '#E91E63', 'green_h2': '#10B981',
+        'storage': '#EF4444', 'gap': '#D1D5DB',
     };
     if (typeof RESOURCE_COLORS !== 'undefined') {
-        const rc = RESOURCE_COLORS;
-        if (resource === 'solar') return rc.solar;
-        if (resource === 'wind') return rc.wind;
-        if (resource === 'hydro') return rc.hydro;
-        if (resource === 'clean_firm') return rc.cleanFirm || rc.nuclear;
-        if (resource === 'ccs') return rc.ccs;
-        if (resource === 'ldes') return rc.ldes;
-        if (resource === 'storage') return rc.storage;
-        if (resource === 'battery') return rc.battery;
-        if (resource === 'geothermal') return rc.geothermal;
-        if (resource === 'green_h2') return rc.greenH2;
-        if (resource === 'nuclear_uprate') return '#818CF8';
-        if (resource === 'new_vre') return '#4ADE80';
-        if (resource === 'new_build_uprate') return '#818CF8';
+        const key = resource.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+        if (RESOURCE_COLORS[key]) return RESOURCE_COLORS[key];
     }
-    return map[resource] || '#9CA3AF';
+    return map[resource] || '#94A3B8';
 }
 
-function getResourceLabel(key) {
-    const names = {
+function getResourceLabel(resource) {
+    const labels = {
         'solar': 'Solar', 'wind': 'Wind', 'offshore_wind': 'Offshore Wind',
-        'hydro': 'Hydro', 'clean_firm': 'Clean Firm', 'nuclear_uprate': 'Nuclear Uprate',
-        'ccs': 'CCS-CCGT', 'battery': 'Battery', 'storage': 'Storage',
-        'ldes': 'LDES', 'green_h2': 'Green H₂', 'geothermal': 'Geothermal',
-        'new_vre': 'New VRE', 'new_build_uprate': 'New Uprate',
-        'existing_vre': 'Existing VRE/Hydro', 'existing_nuclear': 'Existing Nuclear',
-        'existing_recs': 'Existing RECs', 'cross_regional_recs': 'Cross-Regional RECs',
-        'new_build_vre': 'New Build VRE',
+        'hydro': 'Hydro', 'clean_firm': 'Clean Firm', 'nuclear': 'Nuclear',
+        'ccs_ccgt': 'CCS-CCGT', 'ccs': 'CCS', 'geothermal': 'Geothermal',
+        'battery': 'Battery 4hr', 'battery4': 'Battery 4hr', 'battery8': 'Battery 8hr',
+        'ldes': 'LDES', 'green_h2': 'Green H₂', 'storage': 'Storage',
+        'sss_allocation': 'SSS Allocation', 'existing_nuclear': 'Nuclear',
+        'nuclear_uprate': 'Nuclear Uprate', 'existing_vre': 'Existing VRE',
+        'grid_clean': 'Grid Clean', 'existing_vre_hydro': 'Hydro (Existing)',
     };
-    return names[key] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    return labels[resource] || resource.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
 function getIsoColor(iso) {
@@ -95,221 +83,53 @@ function getIsoColor(iso) {
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// BALL CLASS — Uniform-size resource ball with grid-level visual tiers
-// ═══════════════════════════════════════════════════════════════════════════════
-
-class Ball {
-    /**
-     * @param {string} resource - resource type
-     * @param {string} tier - 'baseline'|'claimed'|'new'|'curtailed'
-     * @param {string|null} glowIso - ISO color for glow (buyer ISO for source jars)
-     */
-    constructor(resource, tier, glowIso = null) {
-        this.resource = resource;
-        this.tier = tier;  // 'baseline', 'claimed', 'new', 'curtailed'
-        this.glowIso = glowIso;
-        this.color = getResourceColor(resource);
-        this.glowColor = glowIso ? getIsoColor(glowIso) : null;
-
-        // Position (set by jar packing)
-        this.x = 0;
-        this.y = 0;
-        this.targetX = 0;
-        this.targetY = 0;
-        this.radius = 0;
-
-        // Animation
-        this.opacity = 0;
-        this.targetOpacity = 1;
-        this.entered = false;
-    }
-
-    animate(dt) {
-        const springK = 10;
-        const dx = this.targetX - this.x;
-        const dy = this.targetY - this.y;
-        this.x += dx * springK * dt;
-        this.y += dy * springK * dt;
-
-        const opDiff = this.targetOpacity - this.opacity;
-        this.opacity += opDiff * 6 * dt;
-        this.opacity = Math.max(0, Math.min(1, this.opacity));
-
-        return Math.abs(dx) > 0.3 || Math.abs(dy) > 0.3 || Math.abs(opDiff) > 0.01;
-    }
-
-    draw(ctx, time) {
-        if (this.opacity <= 0.01 || this.radius <= 0) return;
-        ctx.save();
-
-        const r = this.radius;
-
-        // Cross-ISO glow outline
-        if (this.glowColor) {
-            const pulse = 0.5 + 0.3 * Math.sin(time * 3 + this.x * 0.1);
-            ctx.globalAlpha = this.opacity * pulse;
-            ctx.shadowColor = this.glowColor;
-            ctx.shadowBlur = r * 1.2;
-            ctx.strokeStyle = this.glowColor;
-            ctx.lineWidth = 2.5;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, r + 1, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.shadowBlur = 0;
-        }
-
-        if (this.tier === 'baseline') {
-            // Solid fill — grid baseline clean
-            ctx.globalAlpha = this.opacity;
-            ctx.fillStyle = this.color;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
-            ctx.fill();
-        } else if (this.tier === 'claimed') {
-            // Transparent fill + saturated outline — existing clean claimed by buyers
-            ctx.globalAlpha = this.opacity * 0.25;
-            ctx.fillStyle = this.color;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.globalAlpha = this.opacity;
-            ctx.strokeStyle = this.color;
-            ctx.lineWidth = 2.0;
-            ctx.stroke();
-        } else if (this.tier === 'curtailed') {
-            // Curtailed — diagonal stripe pattern above rim
-            ctx.globalAlpha = this.opacity * 0.20;
-            ctx.fillStyle = this.color;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Diagonal stripes
-            ctx.globalAlpha = this.opacity * 0.5;
-            ctx.strokeStyle = this.color;
-            ctx.lineWidth = 1;
-            ctx.setLineDash([2, 2]);
-            ctx.beginPath();
-            ctx.moveTo(this.x - r * 0.7, this.y + r * 0.7);
-            ctx.lineTo(this.x + r * 0.7, this.y - r * 0.7);
-            ctx.moveTo(this.x - r * 0.3, this.y + r * 0.7);
-            ctx.lineTo(this.x + r * 0.7, this.y - r * 0.3);
-            ctx.moveTo(this.x - r * 0.7, this.y + r * 0.3);
-            ctx.lineTo(this.x + r * 0.3, this.y - r * 0.7);
-            ctx.stroke();
-            ctx.setLineDash([]);
-
-            // Dashed outline
-            ctx.globalAlpha = this.opacity * 0.6;
-            ctx.strokeStyle = this.color;
-            ctx.lineWidth = 1.5;
-            ctx.setLineDash([3, 3]);
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.setLineDash([]);
-        } else {
-            // Tier 'new' — transparent fill only (new build)
-            ctx.globalAlpha = this.opacity * 0.35;
-            ctx.fillStyle = this.color;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
-            ctx.fill();
-        }
-
-        ctx.restore();
-    }
-
-    hitTest(mx, my) {
-        const dx = mx - this.x;
-        const dy = my - this.y;
-        return (dx * dx + dy * dy) <= (this.radius + 3) * (this.radius + 3);
-    }
-}
-
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// JAR CLASS — Grid-level view with baseline + procurement + curtailment
+// JAR CLASS — DOM-based glassmorphism jar with flexbox ball stacking
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class Jar {
-    constructor(strategy, iso, x, y, width, height) {
+    constructor(strategy, iso) {
         this.strategy = strategy;
         this.iso = iso;
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = height;
-        this.balls = [];
         this.data = null;
         this.gridBaseline = null;
-        this._computeGeometry();
-    }
-
-    _computeGeometry() {
-        const w = this.width;
-        const h = this.height;
-        this.cx = this.x + w / 2;
-        this.rimY = this.y + h * 0.08;
-        this.rimW = w * 0.82;
-        this.bodyW = w * 0.76;
-        this.bottomY = this.y + h * 0.92;
-        this.innerH = this.bottomY - this.rimY;
-    }
-
-    getHalfWidthAt(y) {
-        if (y <= this.rimY) return this.rimW / 2;
-        const rimZone = this.rimY + this.innerH * 0.04;
-        if (y <= rimZone) {
-            const frac = (y - this.rimY) / (rimZone - this.rimY);
-            return (this.rimW + (this.bodyW - this.rimW) * frac) / 2;
-        }
-        return this.bodyW / 2;
+        this.ballItems = [];  // data-only ball descriptors
+        this.el = null;       // DOM element (created on first render)
     }
 
     setBalls(dataRecord, ballTwh, gridBaseline, crossIsoFlows) {
         this.data = dataRecord;
         this.gridBaseline = gridBaseline;
-        const oldBalls = this.balls;
-        this.balls = [];
 
         const iso = this.iso;
         const bl = gridBaseline || {};
         const gridDemand = GRID_DEMANDS[iso] || 300;
 
-        // === Build ball list ===
         const items = [];
 
-        // Build a map of existing claims (e) per resource for converting baseline→claimed
-        // e resources are SUBSETS of the grid baseline (SSS, merchant clean, grid_mix)
-        // — they don't add new capacity, they show which baseline resources the buyer claims
+        // Build claimed resource map
         const claimedTwh = {};
         if (dataRecord && dataRecord.e) {
             for (const [res, twh] of Object.entries(dataRecord.e)) {
                 if (twh <= 0) continue;
-                // Map claimed resource names to grid baseline resource names
                 const mapped = this._mapClaimedResource(res);
                 claimedTwh[mapped] = (claimedTwh[mapped] || 0) + twh;
             }
         }
 
-        // 1. Grid baseline balls — split into baseline (solid) and claimed (transparent+outline)
+        // 1. Grid baseline balls
         for (const [res, pct] of Object.entries(bl)) {
             if (res === 'totalPct' || pct <= 0) continue;
             const twh = pct / 100 * gridDemand;
             const totalCount = Math.max(1, Math.round(twh / ballTwh));
 
-            // How many of these baseline balls are claimed by the buyer?
             const claimed = claimedTwh[res] || 0;
             let claimedCount = 0;
             if (claimed > 0) {
                 claimedCount = Math.min(totalCount, Math.max(1, Math.round(claimed / ballTwh)));
-                claimedTwh[res] = Math.max(0, claimed - claimedCount * ballTwh); // consume
+                claimedTwh[res] = Math.max(0, claimed - claimedCount * ballTwh);
             }
 
             const unclaimed = totalCount - claimedCount;
-
             if (unclaimed > 0) {
                 items.push({ resource: res, count: unclaimed, tier: 'baseline', glowIso: null, twh: twh - claimed });
             }
@@ -318,21 +138,16 @@ class Jar {
             }
         }
 
-        // 2. Procurement balls — ONLY new-build (n) adds physical capacity beyond baseline
-        if (dataRecord) {
-            if (dataRecord.n) {
-                for (const [res, twh] of Object.entries(dataRecord.n)) {
-                    if (twh <= 0) continue;
-                    const count = Math.max(1, Math.round(twh / ballTwh));
-                    items.push({ resource: res, count, tier: 'new', glowIso: null, twh });
-                }
+        // 2. New-build procurement
+        if (dataRecord && dataRecord.n) {
+            for (const [res, twh] of Object.entries(dataRecord.n)) {
+                if (twh <= 0) continue;
+                const count = Math.max(1, Math.round(twh / ballTwh));
+                items.push({ resource: res, count, tier: 'new', glowIso: null, twh });
             }
-            // Cross-ISO: balls appear in SOURCE jar, glowing with BUYER color
-            // dataRecord.x has {srcIso: {resource: twh}} — these are purchases FROM srcIso
-            // In the buyer's jar, we DON'T show cross-ISO balls (they're in the source jar)
         }
 
-        // 3. Cross-ISO glow: resources in THIS jar that serve external buyers
+        // 3. Cross-ISO glow
         if (crossIsoFlows) {
             for (const [buyerIso, resources] of Object.entries(crossIsoFlows)) {
                 for (const [res, twh] of Object.entries(resources)) {
@@ -343,10 +158,9 @@ class Jar {
             }
         }
 
-        // 4. Curtailment balls (above rim)
+        // 4. Curtailment balls
         if (dataRecord && dataRecord.curtTwh > 0) {
             const curtCount = Math.max(1, Math.round(dataRecord.curtTwh / ballTwh));
-            // Distribute curtailment across VRE resources proportionally
             const vreResources = ['solar', 'wind'];
             const curtPerRes = Math.ceil(curtCount / vreResources.length);
             for (const res of vreResources) {
@@ -360,9 +174,7 @@ class Jar {
             }
         }
 
-        if (items.length === 0) return;
-
-        // Sort: baseline at bottom, then claimed, then new, curtailed last (on top)
+        // Sort: baseline bottom, then claimed, new, curtailed top
         const tierOrder = { 'baseline': 0, 'claimed': 1, 'new': 2, 'curtailed': 3 };
         items.sort((a, b) => {
             const ta = tierOrder[a.tier] || 0;
@@ -371,66 +183,31 @@ class Jar {
             return b.count - a.count;
         });
 
+        // Flatten to individual ball descriptors
+        this.ballItems = [];
         for (const item of items) {
             for (let i = 0; i < item.count; i++) {
-                this.balls.push(new Ball(item.resource, item.tier, item.glowIso));
+                this.ballItems.push({
+                    resource: item.resource,
+                    tier: item.tier,
+                    glowIso: item.glowIso,
+                    color: getResourceColor(item.resource),
+                    glowColor: item.glowIso ? getIsoColor(item.glowIso) : null,
+                });
             }
         }
 
-        // Cap at 120 balls (100 = 100% grid + up to 20 curtailment)
-        const MAX_BALLS = 120;
-        if (this.balls.length > MAX_BALLS) this.balls.length = MAX_BALLS;
-
-        // Ball radius
-        const innerW = this.bodyW * 0.90;
-        const ballsPerRow = Math.max(4, Math.min(8, Math.ceil(Math.sqrt(this.balls.length * 1.5))));
-        const ballDiameter = innerW / ballsPerRow;
-        const ballRadius = Math.max(2.5, Math.min(ballDiameter / 2 - 1, 9));
-
-        for (const ball of this.balls) ball.radius = ballRadius;
-
-        this._packRows(ballRadius);
-
-        // Animate transitions
-        for (const ball of this.balls) {
-            const match = oldBalls.find(ob =>
-                ob.resource === ball.resource &&
-                ob.tier === ball.tier &&
-                ob.glowIso === ball.glowIso &&
-                ob.opacity > 0.5
-            );
-            if (match) {
-                ball.x = match.x;
-                ball.y = match.y;
-                ball.opacity = match.opacity;
-                oldBalls.splice(oldBalls.indexOf(match), 1);
-            } else {
-                ball.x = ball.targetX + (Math.random() - 0.5) * 10;
-                ball.y = this.rimY - ballRadius * 3;
-                ball.opacity = 0;
-            }
-            ball.targetOpacity = 1;
-            ball.entered = true;
-        }
-
-        for (const ob of oldBalls) {
-            if (ob.opacity > 0.05) {
-                ob.targetOpacity = 0;
-                ob.targetY = this.rimY - ob.radius * 4;
-                this.balls.push(ob);
-            }
-        }
+        // Cap at 120
+        if (this.ballItems.length > 120) this.ballItems.length = 120;
     }
 
     _mapClaimedResource(res) {
-        // Map claimed resource names (from 'e' field) to grid baseline resource names
-        // e.g., SSS allocation is mostly nuclear → clean_firm, merchant VRE → solar/wind
         const map = {
-            'grid_clean': 'clean_firm',  // 2B grid baseline → maps to clean_firm
-            'sss_allocation': 'clean_firm',  // SSS is mostly nuclear
+            'grid_clean': 'clean_firm',
+            'sss_allocation': 'clean_firm',
             'existing_nuclear': 'clean_firm',
             'nuclear_uprate': 'clean_firm',
-            'existing_vre': 'solar',  // existing VRE
+            'existing_vre': 'solar',
             'existing_vre_hydro': 'hydro',
             'ccs': 'ccs_ccgt',
             'ccs_ccgt': 'ccs_ccgt',
@@ -438,171 +215,69 @@ class Jar {
         return map[res] || res;
     }
 
-    _packRows(ballR) {
-        if (this.balls.length === 0) return;
-        const diameter = ballR * 2;
-        const padding = 1.5;
-        const step = diameter + padding;
-
-        // Separate curtailed balls from normal balls
-        const normalBalls = this.balls.filter(b => b.tier !== 'curtailed');
-        const curtailedBalls = this.balls.filter(b => b.tier === 'curtailed');
-
-        // Pack normal balls bottom-up inside jar
-        let currentY = this.bottomY - ballR - 2;
-        let idx = 0;
-
-        while (idx < normalBalls.length && currentY > this.rimY + ballR) {
-            const halfW = this.getHalfWidthAt(currentY) - ballR - 2;
-            if (halfW < ballR) { currentY -= step * 0.5; continue; }
-
-            const rowCapacity = Math.max(1, Math.floor((halfW * 2) / step));
-            const ballsThisRow = Math.min(rowCapacity, normalBalls.length - idx);
-            const rowWidth = ballsThisRow * step - padding;
-            let startX = this.cx - rowWidth / 2 + ballR;
-
-            for (let i = 0; i < ballsThisRow; i++) {
-                normalBalls[idx].targetX = startX + i * step;
-                normalBalls[idx].targetY = currentY;
-                idx++;
-            }
-            currentY -= step;
+    /**
+     * Render/update the DOM element for this jar.
+     * @param {number} ballSize - ball diameter in px
+     */
+    renderDOM(ballSize) {
+        if (!this.el) {
+            this.el = document.createElement('div');
+            this.el.className = 'jar-dom';
+            this.el.dataset.strategy = this.strategy;
+            this.el.dataset.iso = this.iso;
         }
 
-        // Overflow normal balls at rim
-        while (idx < normalBalls.length) {
-            normalBalls[idx].targetX = this.cx;
-            normalBalls[idx].targetY = this.rimY + ballR + 2;
-            idx++;
-        }
-
-        // Pack curtailed balls ABOVE rim (overflow area)
-        if (curtailedBalls.length > 0) {
-            let curtY = this.rimY - ballR - 2;
-            let ci = 0;
-            while (ci < curtailedBalls.length) {
-                const halfW = this.rimW / 2 - ballR - 2;
-                const rowCapacity = Math.max(1, Math.floor((halfW * 2) / step));
-                const ballsThisRow = Math.min(rowCapacity, curtailedBalls.length - ci);
-                const rowWidth = ballsThisRow * step - padding;
-                let startX = this.cx - rowWidth / 2 + ballR;
-
-                for (let i = 0; i < ballsThisRow; i++) {
-                    curtailedBalls[ci].targetX = startX + i * step;
-                    curtailedBalls[ci].targetY = curtY;
-                    ci++;
-                }
-                curtY -= step;
-            }
-        }
-    }
-
-    draw(ctx, time) {
-        const cx = this.cx;
-        const rimY = this.rimY;
-        const rimW = this.rimW;
-        const bodyW = this.bodyW;
-        const bottomY = this.bottomY;
-        const lipExtra = 4;
-
-        // ---- Subtle fill gradient ----
-        ctx.save();
-        const fillGrad = ctx.createLinearGradient(cx, rimY, cx, bottomY);
-        fillGrad.addColorStop(0, 'rgba(241, 245, 249, 0.3)');
-        fillGrad.addColorStop(1, 'rgba(226, 232, 240, 0.15)');
-        ctx.fillStyle = fillGrad;
-
-        ctx.beginPath();
-        ctx.moveTo(cx - rimW / 2, rimY);
-        ctx.lineTo(cx - bodyW / 2, bottomY);
-        ctx.lineTo(cx + bodyW / 2, bottomY);
-        ctx.lineTo(cx + rimW / 2, rimY);
-        ctx.closePath();
-        ctx.fill();
-        ctx.restore();
-
-        // ---- Draw balls (NO clipping for curtailed above rim) ----
-        ctx.save();
-
-        // Draw normal balls with jar clip
-        const normalBalls = this.balls.filter(b => b.tier !== 'curtailed');
-        ctx.save();
-        ctx.beginPath();
-        ctx.moveTo(cx - rimW / 2 + 2, rimY);
-        ctx.lineTo(cx - bodyW / 2 + 2, bottomY);
-        ctx.lineTo(cx + bodyW / 2 - 2, bottomY);
-        ctx.lineTo(cx + rimW / 2 - 2, rimY);
-        ctx.closePath();
-        ctx.clip();
-        for (const ball of normalBalls) ball.draw(ctx, time);
-        ctx.restore();
-
-        // Draw curtailed balls WITHOUT clipping (they overflow above rim)
-        const curtailedBalls = this.balls.filter(b => b.tier === 'curtailed');
-        for (const ball of curtailedBalls) ball.draw(ctx, time);
-
-        ctx.restore();
-
-        // ---- Jar outline ----
-        ctx.save();
-        ctx.strokeStyle = '#94A3B8';
-        ctx.lineWidth = 1.5;
-        ctx.globalAlpha = 0.7;
-
-        ctx.beginPath();
-        ctx.moveTo(cx - rimW / 2, rimY);
-        ctx.lineTo(cx - bodyW / 2, bottomY);
-        ctx.lineTo(cx + bodyW / 2, bottomY);
-        ctx.lineTo(cx + rimW / 2, rimY);
-        ctx.stroke();
-
-        // Rim lip (100% line)
-        ctx.lineWidth = 2.5;
-        ctx.globalAlpha = 0.55;
-        ctx.beginPath();
-        ctx.moveTo(cx - rimW / 2 - lipExtra, rimY);
-        ctx.lineTo(cx + rimW / 2 + lipExtra, rimY);
-        ctx.stroke();
-
-        // Glass reflection
-        ctx.globalAlpha = 0.12;
-        ctx.strokeStyle = '#FFFFFF';
-        ctx.lineWidth = 2;
-        const reflectX = cx - bodyW * 0.28;
-        ctx.beginPath();
-        ctx.moveTo(reflectX + 2, rimY + 8);
-        ctx.lineTo(reflectX, bottomY - 10);
-        ctx.stroke();
-
-        // Hourly match score label below jar (or grid clean %)
+        // Set HMS gradient height
         const hms = this.data && this.data.hms;
         const gridCleanPct = this.data && this.data.gridCleanPct;
-        const displayPct = hms != null ? hms : gridCleanPct;
+        const hmsPct = hms != null ? Math.min(100, Math.max(0, hms)) :
+                       (gridCleanPct != null ? Math.min(100, Math.max(0, gridCleanPct)) : 0);
+        this.el.style.setProperty('--hms-pct', hmsPct + '%');
+        this.el.style.setProperty('--ball-size', ballSize + 'px');
 
+        // Separate normal and curtailed balls
+        const normalBalls = this.ballItems.filter(b => b.tier !== 'curtailed');
+        const curtailedBalls = this.ballItems.filter(b => b.tier === 'curtailed');
+
+        // Build inner HTML in one batch for performance
+        let html = '';
+
+        // Normal balls (flexbox wrap-reverse stacks from bottom)
+        let ballIndex = 0;
+        for (const b of normalBalls) {
+            const delay = ((ballIndex * 0.13) % 3).toFixed(2);
+            const tierClass = `ball ball--${b.tier}`;
+            const glowClass = b.glowIso ? ' ball--glow' : '';
+            const glowStyle = b.glowColor ? `;--glow-color:${b.glowColor}` : '';
+            html += `<div class="${tierClass}${glowClass}" style="--ball-color:${b.color};--float-delay:${delay}s${glowStyle}" data-resource="${b.resource}" data-tier="${b.tier}"${b.glowIso ? ` data-glow-iso="${b.glowIso}"` : ''}></div>`;
+            ballIndex++;
+        }
+
+        // Curtailed zone (above rim)
+        if (curtailedBalls.length > 0) {
+            html += '<div class="jar-curtailed-zone">';
+            for (const b of curtailedBalls) {
+                const delay = ((ballIndex * 0.13) % 3).toFixed(2);
+                html += `<div class="ball ball--curtailed" style="--ball-color:${b.color};--float-delay:${delay}s" data-resource="${b.resource}" data-tier="curtailed"></div>`;
+                ballIndex++;
+            }
+            html += '</div>';
+        }
+
+        // HMS label
+        const displayPct = hms != null ? hms : (gridCleanPct != null ? gridCleanPct : null);
         if (displayPct != null && displayPct >= 0.5) {
-            ctx.globalAlpha = 0.65;
-            ctx.fillStyle = '#1E293B';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'top';
-            const fs = Math.max(7, Math.min(10, this.width * 0.08));
-            ctx.font = `600 ${fs}px 'DM Sans', sans-serif`;
             const label = hms != null ? `${Math.round(displayPct)}% HMS` : `${Math.round(displayPct)}%`;
-            ctx.fillText(label, cx, bottomY + 2);
+            html += `<div class="jar-hms-label">${label}</div>`;
         } else if (this.gridBaseline) {
-            // Show baseline clean % when no data
             const blPct = this.gridBaseline.totalPct || 0;
             if (blPct > 0) {
-                ctx.globalAlpha = 0.45;
-                ctx.fillStyle = '#64748B';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'top';
-                const fs = Math.max(7, Math.min(10, this.width * 0.08));
-                ctx.font = `600 ${fs}px 'DM Sans', sans-serif`;
-                ctx.fillText(`${Math.round(blPct)}%`, cx, bottomY + 2);
+                html += `<div class="jar-hms-label" style="opacity:0.45">${Math.round(blPct)}%</div>`;
             }
         }
 
-        ctx.restore();
+        this.el.innerHTML = html;
+        return this.el;
     }
 
     _getTotalCleanTwh() {
@@ -627,22 +302,11 @@ class Jar {
         }
         return total;
     }
-
-    hitTest(mx, my) {
-        // Extend hit area above rim for curtailed balls
-        const topY = Math.min(this.y, this.rimY - 30);
-        if (mx < this.x || mx > this.x + this.width ||
-            my < topY || my > this.y + this.height) return null;
-        for (const ball of this.balls) {
-            if (ball.hitTest(mx, my)) return { jar: this, ball };
-        }
-        return { jar: this, ball: null };
-    }
 }
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// JAR GRID — Main visualization controller
+// JAR GRID — Canvas grid + DOM jar overlay controller
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class JarGrid {
@@ -650,14 +314,13 @@ class JarGrid {
         this.canvas = document.getElementById(canvasId);
         this.ctx = this.canvas.getContext('2d');
         this.tooltipEl = document.getElementById(tooltipId);
+        this.overlayEl = document.getElementById('jarOverlay');
 
         this.participation = 10;
         this.threshold = 90;
         this.data = null;
         this.gridBaseline = null;
         this.jars = [];
-        this.animating = false;
-        this.lastTime = 0;
 
         // Layout
         this.rowHeaderWidth = 0;
@@ -667,17 +330,9 @@ class JarGrid {
 
         // Interaction
         this.hoveredJar = null;
-        this.hoveredBall = null;
-        this.showCrossIsoGlow = false;  // Cross-ISO glow OFF by default
+        this.showCrossIsoGlow = false;
 
-        this._boundMouseMove = this._onMouseMove.bind(this);
-        this._boundMouseLeave = this._onMouseLeave.bind(this);
-        this._boundTouchStart = this._onTouchStart.bind(this);
         this._boundResize = this._onResize.bind(this);
-
-        this.canvas.addEventListener('mousemove', this._boundMouseMove);
-        this.canvas.addEventListener('mouseleave', this._boundMouseLeave);
-        this.canvas.addEventListener('touchstart', this._boundTouchStart, { passive: false });
         window.addEventListener('resize', this._boundResize);
 
         this._onResize();
@@ -688,19 +343,21 @@ class JarGrid {
         this.gridBaseline = deploymentData.gridBaseline || {};
         this._buildJars();
         this._updateData();
-        this._startAnimation();
+        this._drawCanvas();
     }
 
     setParticipation(pct) {
         if (this.participation === pct) return;
         this.participation = pct;
         this._updateData();
+        this._drawCanvas();
     }
 
     setThreshold(thr) {
         if (this.threshold === thr) return;
         this.threshold = thr;
         this._updateData();
+        this._drawCanvas();
     }
 
     _onResize() {
@@ -717,7 +374,7 @@ class JarGrid {
         const availWidth = rect.width - this.rowHeaderWidth;
         const jarW = Math.max(55, Math.floor(availWidth / ISO_LIST.length));
         const jarH = isMobile ? 110 : (isTablet ? 130 : 160);
-        const rowGap = isMobile ? 20 : (isTablet ? 28 : 36); // space for curtailment overflow
+        const rowGap = isMobile ? 20 : (isTablet ? 28 : 36);
 
         this.jarWidth = jarW;
         this.jarHeight = jarH;
@@ -733,17 +390,26 @@ class JarGrid {
         this.canvas.height = totalHeight * dpr;
         this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
+        // Size overlay to match canvas
+        if (this.overlayEl) {
+            this.overlayEl.style.width = totalWidth + 'px';
+            this.overlayEl.style.height = totalHeight + 'px';
+        }
+
         this._buildJars();
         this._updateData();
+        this._drawCanvas();
     }
 
     _buildJars() {
+        // Remove old DOM elements
+        if (this.overlayEl) this.overlayEl.innerHTML = '';
+
         this.jars = [];
         for (let row = 0; row < STRATEGIES.length; row++) {
             for (let col = 0; col < ISO_LIST.length; col++) {
-                const x = this.rowHeaderWidth + col * this.jarWidth;
-                const y = this.colHeaderHeight + row * this.rowStride;
-                this.jars.push(new Jar(STRATEGIES[row], ISO_LIST[col], x, y, this.jarWidth, this.jarHeight));
+                const jar = new Jar(STRATEGIES[row], ISO_LIST[col]);
+                this.jars.push(jar);
             }
         }
     }
@@ -757,29 +423,21 @@ class JarGrid {
         return best;
     }
 
-    /**
-     * Build cross-ISO flow map: for each source ISO, which buyer ISOs claim its resources.
-     * Returns {sourceIso: {buyerIso: {resource: twh}}}
-     */
     _buildCrossIsoFlows(strategyId) {
         if (!this.data || !this.data.data[strategyId]) return {};
-
-        const flows = {};  // sourceIso → {buyerIso → {resource → twh}}
+        const flows = {};
         const stratData = this.data.data[strategyId];
 
         for (const buyerIso of ISO_LIST) {
             const isoData = stratData[buyerIso];
             if (!isoData) continue;
-
             const pk = this._findClosestKey(Object.keys(isoData), this.participation);
             if (!pk) continue;
             const tk = this._findClosestKey(Object.keys(isoData[pk]), this.threshold);
             if (!tk) continue;
-
             const record = isoData[pk][tk];
             if (!record || !record.x) continue;
 
-            // record.x = {sourceIso: {resource: twh}} — what buyerIso buys from sourceIso
             for (const [srcIso, resources] of Object.entries(record.x)) {
                 if (!flows[srcIso]) flows[srcIso] = {};
                 if (!flows[srcIso][buyerIso]) flows[srcIso][buyerIso] = {};
@@ -790,20 +448,23 @@ class JarGrid {
                 }
             }
         }
-
         return flows;
     }
 
     _updateData() {
         if (!this.data) return;
 
-        // Pre-compute cross-ISO flows per strategy for glow semantics
         const crossFlowsByStrategy = {};
         for (const strat of STRATEGIES) {
             crossFlowsByStrategy[strat] = this._buildCrossIsoFlows(strat);
         }
 
-        // Update each jar
+        // Compute ball size based on jar dimensions
+        const isMobile = window.innerWidth < 768;
+        const jarInnerW = this.jarWidth * 0.76 * 0.90;
+        const ballsPerRow = isMobile ? 5 : 7;
+        const ballSize = Math.max(5, Math.min(Math.floor(jarInnerW / ballsPerRow) - 2, 12));
+
         for (const jar of this.jars) {
             const stratData = this.data.data[jar.strategy];
             let record = null;
@@ -814,21 +475,21 @@ class JarGrid {
                     const pk = this._findClosestKey(Object.keys(isoData), this.participation);
                     if (pk) {
                         const tk = this._findClosestKey(Object.keys(isoData[pk]), this.threshold);
-                        if (tk) {
-                            record = isoData[pk][tk];
-                        }
+                        if (tk) record = isoData[pk][tk];
                     }
                 }
             }
 
-            const ballTwh = (GRID_DEMANDS[jar.iso] || 300) * 0.01;  // 1% of grid
+            const ballTwh = (GRID_DEMANDS[jar.iso] || 300) * 0.01;
             const bl = this.gridBaseline[jar.iso] || null;
-
-            // Cross-ISO flows for THIS jar's ISO as source
             const crossFlows = crossFlowsByStrategy[jar.strategy][jar.iso] || null;
 
             jar.setBalls(record, ballTwh, bl, this.showCrossIsoGlow ? crossFlows : null);
+            jar.renderDOM(ballSize);
         }
+
+        this._positionDOMJars();
+        this._wireTooltips();
 
         // Fire stats callback
         if (this.onStatsUpdate) {
@@ -846,37 +507,102 @@ class JarGrid {
         }
     }
 
+    _positionDOMJars() {
+        if (!this.overlayEl) return;
 
-    _startAnimation() {
-        if (this.animating) return;
-        this.animating = true;
-        this.lastTime = performance.now();
-        this._animationLoop();
-    }
+        const insetX = 4;  // inner padding from grid cell edges
+        const insetY = 4;
+        const jarContentH = this.jarHeight - insetY * 2;
+        const jarContentW = this.jarWidth - insetX * 2;
 
-    _animationLoop() {
-        if (!this.animating) return;
+        for (let i = 0; i < this.jars.length; i++) {
+            const jar = this.jars[i];
+            const row = Math.floor(i / ISO_LIST.length);
+            const col = i % ISO_LIST.length;
 
-        const now = performance.now();
-        const dt = Math.min((now - this.lastTime) / 1000, 0.05);
-        this.lastTime = now;
+            const x = this.rowHeaderWidth + col * this.jarWidth + insetX;
+            const y = this.colHeaderHeight + row * this.rowStride + insetY;
 
-        let needsUpdate = false;
-        for (const jar of this.jars) {
-            for (let i = jar.balls.length - 1; i >= 0; i--) {
-                const ball = jar.balls[i];
-                if (ball.animate(dt)) needsUpdate = true;
-                if (ball.opacity <= 0.01 && ball.targetOpacity <= 0) {
-                    jar.balls.splice(i, 1);
-                }
+            const el = jar.el;
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+            el.style.width = jarContentW + 'px';
+            el.style.height = jarContentH + 'px';
+
+            if (!el.parentElement) {
+                this.overlayEl.appendChild(el);
             }
         }
-
-        this._draw(now / 1000);
-        requestAnimationFrame(() => this._animationLoop());
     }
 
-    _draw(time) {
+    _wireTooltips() {
+        // Event delegation on overlay
+        if (this._tooltipWired) return;
+        this._tooltipWired = true;
+
+        const self = this;
+
+        this.overlayEl.addEventListener('mouseenter', function(e) {
+            const jarEl = e.target.closest('.jar-dom');
+            if (!jarEl) return;
+            const jar = self._findJarByEl(jarEl);
+            if (jar) {
+                self.hoveredJar = jar;
+            }
+        }, true);
+
+        this.overlayEl.addEventListener('mousemove', function(e) {
+            const jarEl = e.target.closest('.jar-dom');
+            if (!jarEl) {
+                self._hideTooltip();
+                self.hoveredJar = null;
+                return;
+            }
+            const jar = self._findJarByEl(jarEl);
+            if (!jar) return;
+            self.hoveredJar = jar;
+
+            // Check if hovering a specific ball
+            const ballEl = e.target.closest('.ball');
+            const ballData = ballEl ? {
+                resource: ballEl.dataset.resource,
+                tier: ballEl.dataset.tier,
+                glowIso: ballEl.dataset.glowIso || null,
+            } : null;
+
+            self._showTooltip(e.clientX, e.clientY, jar, ballData);
+        }, true);
+
+        this.overlayEl.addEventListener('mouseleave', function() {
+            self._hideTooltip();
+            self.hoveredJar = null;
+        });
+
+        // Touch support
+        this.overlayEl.addEventListener('touchstart', function(e) {
+            const touch = e.touches[0];
+            const jarEl = document.elementFromPoint(touch.clientX, touch.clientY);
+            const jarDom = jarEl && jarEl.closest('.jar-dom');
+            if (jarDom) {
+                const jar = self._findJarByEl(jarDom);
+                if (jar) {
+                    self.hoveredJar = jar;
+                    self._showTooltip(touch.clientX, touch.clientY, jar, null);
+                    e.preventDefault();
+                }
+            } else {
+                self._hideTooltip();
+            }
+        }, { passive: false });
+    }
+
+    _findJarByEl(el) {
+        const strat = el.dataset.strategy;
+        const iso = el.dataset.iso;
+        return this.jars.find(j => j.strategy === strat && j.iso === iso);
+    }
+
+    _drawCanvas() {
         const ctx = this.ctx;
         const w = this.canvas.width / (window.devicePixelRatio || 1);
         const h = this.canvas.height / (window.devicePixelRatio || 1);
@@ -930,75 +656,9 @@ class JarGrid {
             ctx.beginPath(); ctx.moveTo(x, this.colHeaderHeight); ctx.lineTo(x, h); ctx.stroke();
         }
         ctx.restore();
-
-        // Jars and balls
-        for (const jar of this.jars) {
-            jar.draw(ctx, time);
-        }
-
-        // Hover highlight
-        if (this.hoveredJar) {
-            ctx.save();
-            ctx.strokeStyle = '#3B82F6';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([4, 4]);
-            ctx.strokeRect(this.hoveredJar.x + 1, this.hoveredJar.y + 1, this.hoveredJar.width - 2, this.hoveredJar.height - 2);
-            ctx.restore();
-        }
     }
 
-    _onMouseMove(e) {
-        const rect = this.canvas.getBoundingClientRect();
-        const mx = e.clientX - rect.left;
-        const my = e.clientY - rect.top;
-
-        let hit = null;
-        for (const jar of this.jars) {
-            hit = jar.hitTest(mx, my);
-            if (hit) break;
-        }
-
-        if (hit) {
-            this.hoveredJar = hit.jar;
-            this.hoveredBall = hit.ball;
-            this.canvas.style.cursor = 'pointer';
-            this._showTooltip(e.clientX, e.clientY, hit.jar, hit.ball);
-        } else {
-            this.hoveredJar = null;
-            this.hoveredBall = null;
-            this.canvas.style.cursor = 'default';
-            this._hideTooltip();
-        }
-    }
-
-    _onMouseLeave() {
-        this.hoveredJar = null;
-        this.hoveredBall = null;
-        this._hideTooltip();
-    }
-
-    _onTouchStart(e) {
-        const rect = this.canvas.getBoundingClientRect();
-        const touch = e.touches[0];
-        const mx = touch.clientX - rect.left;
-        const my = touch.clientY - rect.top;
-
-        let hit = null;
-        for (const jar of this.jars) {
-            hit = jar.hitTest(mx, my);
-            if (hit) break;
-        }
-
-        if (hit) {
-            this.hoveredJar = hit.jar;
-            this._showTooltip(touch.clientX, touch.clientY, hit.jar, hit.ball);
-            e.preventDefault();
-        } else {
-            this._hideTooltip();
-        }
-    }
-
-    _showTooltip(px, py, jar, ball) {
+    _showTooltip(px, py, jar, ballData) {
         if (!this.tooltipEl) return;
 
         let html = `<div class="deployment-tooltip-header">
@@ -1006,7 +666,6 @@ class JarGrid {
             <span style="color:${getIsoColor(jar.iso)}">${jar.iso}</span>
         </div>`;
 
-        // Grid baseline info
         const bl = this.gridBaseline[jar.iso];
         if (bl) {
             html += `<div class="deployment-tooltip-stats">
@@ -1017,7 +676,6 @@ class JarGrid {
         if (jar.data) {
             const data = jar.data;
 
-            // Dispatch metrics
             html += '<div class="deployment-tooltip-stats">';
             if (data.hms != null) html += `<span>Hourly match: ${data.hms}%</span>`;
             if (data.gridCleanPct != null) html += `<span>Grid clean: ${data.gridCleanPct}%</span>`;
@@ -1025,7 +683,6 @@ class JarGrid {
             if (data.curtTwh != null && data.curtTwh > 0) html += `<span>Curtailed: ${data.curtTwh} TWh</span>`;
             html += '</div>';
 
-            // Resource breakdown
             html += '<div class="deployment-tooltip-breakdown">';
 
             if (data.e) {
@@ -1081,10 +738,10 @@ class JarGrid {
         }
 
         // Hovered ball detail
-        if (ball && ball.opacity > 0.5) {
+        if (ballData) {
             const tierLabel = { baseline: 'grid baseline', claimed: 'existing claimed', new: 'new build', curtailed: 'curtailed' };
             html += `<div class="deployment-tooltip-footer" style="margin-top:4px;font-style:italic">
-                ${getResourceLabel(ball.resource)} (${tierLabel[ball.tier] || ball.tier})${ball.glowIso ? ` → serving ${ball.glowIso}` : ''}
+                ${getResourceLabel(ballData.resource)} (${tierLabel[ballData.tier] || ballData.tier})${ballData.glowIso ? ` → serving ${ballData.glowIso}` : ''}
             </div>`;
         }
 
@@ -1161,10 +818,7 @@ class JarGrid {
     }
 
     dispose() {
-        this.animating = false;
-        this.canvas.removeEventListener('mousemove', this._boundMouseMove);
-        this.canvas.removeEventListener('mouseleave', this._boundMouseLeave);
-        this.canvas.removeEventListener('touchstart', this._boundTouchStart);
         window.removeEventListener('resize', this._boundResize);
+        if (this.overlayEl) this.overlayEl.innerHTML = '';
     }
 }
