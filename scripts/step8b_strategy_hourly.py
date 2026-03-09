@@ -106,15 +106,17 @@ def get_over_procurement_ratio(threshold):
 
 HOURLY_MIX_TEMPLATE = {
     # threshold: {resource: fraction of total procurement}
-    50:    {'solar': 0.40, 'wind': 0.35, 'firm': 0.10, 'storage': 0.10, 'uprate': 0.05},
-    70:    {'solar': 0.35, 'wind': 0.30, 'firm': 0.15, 'storage': 0.15, 'uprate': 0.05},
-    85:    {'solar': 0.25, 'wind': 0.25, 'firm': 0.25, 'storage': 0.20, 'uprate': 0.05},
-    90:    {'solar': 0.22, 'wind': 0.22, 'firm': 0.28, 'storage': 0.23, 'uprate': 0.05},
-    95:    {'solar': 0.18, 'wind': 0.18, 'firm': 0.32, 'storage': 0.27, 'uprate': 0.05},
-    99:    {'solar': 0.15, 'wind': 0.15, 'firm': 0.35, 'storage': 0.30, 'uprate': 0.05},
-    99.5:  {'solar': 0.14, 'wind': 0.14, 'firm': 0.36, 'storage': 0.31, 'uprate': 0.05},
-    99.9:  {'solar': 0.13, 'wind': 0.13, 'firm': 0.37, 'storage': 0.32, 'uprate': 0.05},
-    99.99: {'solar': 0.12, 'wind': 0.12, 'firm': 0.38, 'storage': 0.33, 'uprate': 0.05},
+    # Storage split into battery (daily cycling) and LDES (multi-day weather events).
+    # LDES share grows at higher thresholds where multi-day coverage is essential.
+    50:    {'solar': 0.40, 'wind': 0.35, 'firm': 0.10, 'battery': 0.08, 'ldes': 0.02, 'uprate': 0.05},
+    70:    {'solar': 0.35, 'wind': 0.30, 'firm': 0.15, 'battery': 0.10, 'ldes': 0.05, 'uprate': 0.05},
+    85:    {'solar': 0.25, 'wind': 0.25, 'firm': 0.25, 'battery': 0.12, 'ldes': 0.08, 'uprate': 0.05},
+    90:    {'solar': 0.22, 'wind': 0.22, 'firm': 0.28, 'battery': 0.13, 'ldes': 0.10, 'uprate': 0.05},
+    95:    {'solar': 0.18, 'wind': 0.18, 'firm': 0.32, 'battery': 0.14, 'ldes': 0.13, 'uprate': 0.05},
+    99:    {'solar': 0.15, 'wind': 0.15, 'firm': 0.35, 'battery': 0.15, 'ldes': 0.15, 'uprate': 0.05},
+    99.5:  {'solar': 0.14, 'wind': 0.14, 'firm': 0.36, 'battery': 0.15, 'ldes': 0.16, 'uprate': 0.05},
+    99.9:  {'solar': 0.13, 'wind': 0.13, 'firm': 0.37, 'battery': 0.15, 'ldes': 0.17, 'uprate': 0.05},
+    99.99: {'solar': 0.12, 'wind': 0.12, 'firm': 0.38, 'battery': 0.15, 'ldes': 0.18, 'uprate': 0.05},
 }
 
 
@@ -171,6 +173,18 @@ def compute_strategy_2a(iso, year, threshold, participation_pct,
     if not ef_mix:
         # Fallback to template if EF not available
         ef_mix = get_resource_mix_fractions(threshold)
+    else:
+        # EF data may have zero LDES/H2 even at high thresholds where they're
+        # physically essential. Supplement missing storage from template.
+        template = get_resource_mix_fractions(threshold)
+        for stype in ('battery', 'ldes'):
+            if stype not in ef_mix or ef_mix.get(stype, 0) <= 0:
+                tmpl_val = template.get(stype, 0)
+                if tmpl_val > 0:
+                    # Scale template fraction to match EF total generation scale
+                    gen_total = sum(v for k, v in ef_mix.items()
+                                   if k not in ('battery', 'battery8', 'ldes', 'h2'))
+                    ef_mix[stype] = tmpl_val * gen_total if gen_total > 0 else tmpl_val
 
     # Allocate procurement across resources using EF proportions
     total_pct = sum(ef_mix.values())
@@ -273,6 +287,16 @@ def compute_strategy_2b(iso, year, threshold, participation_pct,
     ef_mix = load_ef_resource_mix(iso, threshold)
     if not ef_mix:
         ef_mix = get_resource_mix_fractions(threshold)
+    else:
+        # Supplement missing storage from template at high thresholds
+        template = get_resource_mix_fractions(threshold)
+        for stype in ('battery', 'ldes'):
+            if stype not in ef_mix or ef_mix.get(stype, 0) <= 0:
+                tmpl_val = template.get(stype, 0)
+                if tmpl_val > 0:
+                    gen_total = sum(v for k, v in ef_mix.items()
+                                   if k not in ('battery', 'battery8', 'ldes', 'h2'))
+                    ef_mix[stype] = tmpl_val * gen_total if gen_total > 0 else tmpl_val
 
     total_pct = sum(ef_mix.values())
     if total_pct <= 0:
@@ -439,6 +463,16 @@ def compute_strategy_2c(iso, year, threshold, participation_pct,
         ef_mix = load_ef_resource_mix(iso, threshold)
         if not ef_mix:
             ef_mix = get_resource_mix_fractions(threshold)
+        else:
+            # Supplement missing storage from template at high thresholds
+            template = get_resource_mix_fractions(threshold)
+            for stype in ('battery', 'ldes'):
+                if stype not in ef_mix or ef_mix.get(stype, 0) <= 0:
+                    tmpl_val = template.get(stype, 0)
+                    if tmpl_val > 0:
+                        gen_total = sum(v for k, v in ef_mix.items()
+                                       if k not in ('battery', 'battery8', 'ldes', 'h2'))
+                        ef_mix[stype] = tmpl_val * gen_total if gen_total > 0 else tmpl_val
 
         total_pct = sum(ef_mix.values())
         if total_pct <= 0:
