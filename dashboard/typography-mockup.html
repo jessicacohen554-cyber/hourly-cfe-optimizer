@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Typography Mockups — The 8,760 Problem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #1A2744;
+    --navy-dark: #0F1A2E;
+    --bg-page: #F8F9FC;
+    --text-primary: #000000;
+    --text-secondary: #1E293B;
+    --text-muted: #6B7280;
+    --solar: #F59E0B;
+    --wind: #22C55E;
+    --hydro: #0EA5E9;
+    --nuclear: #6366F1;
+    --ccs: #64748B;
+    --battery: #C4B5FD;
+    --ldes: #E91E63;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #0F1A2E;
+    color: #E2E8F0;
+    line-height: 1.55;
+    padding: 0;
+  }
+
+  .page-header {
+    text-align: center;
+    padding: 60px 24px 40px;
+    background: linear-gradient(135deg, #0F1A2E 0%, #1A2744 50%, #1E3A5F 100%);
+  }
+  .page-header h1 {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 2.4rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 8px;
+  }
+  .page-header p {
+    color: #94A3B8;
+    font-size: 1.1rem;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .current-label {
+    display: inline-block;
+    background: rgba(239,68,68,0.15);
+    color: #EF4444;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    margin-bottom: 16px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .option-label {
+    display: inline-block;
+    background: rgba(34,197,94,0.15);
+    color: #22C55E;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    margin-bottom: 16px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .mockup-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+    max-width: 100%;
+  }
+
+  .mockup-section {
+    padding: 48px 32px 56px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .mockup-section:nth-child(odd) {
+    background: #111B2E;
+  }
+  .mockup-section:nth-child(even) {
+    background: #0F1A2E;
+  }
+
+  .mockup-label {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .mockup-label h2 {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #CBD5E1;
+    margin-bottom: 4px;
+  }
+  .mockup-label .fonts-used {
+    color: #64748B;
+    font-size: 0.85rem;
+  }
+
+  /* ---- The actual mockup card ---- */
+  .mockup-card {
+    max-width: 960px;
+    margin: 0 auto;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  }
+
+  /* Header banner area */
+  .mock-header {
+    background: linear-gradient(135deg, #0F1A2E 0%, #1A2744 40%, #1E3A5F 100%);
+    padding: 48px 40px 40px;
+    position: relative;
+    overflow: hidden;
+  }
+  .mock-header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background:
+      radial-gradient(ellipse 600px 200px at 20% 80%, rgba(14,165,233,0.12) 0%, transparent 70%),
+      radial-gradient(ellipse 400px 150px at 80% 20%, rgba(99,102,241,0.08) 0%, transparent 70%);
+  }
+  .mock-header .accent-bar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--navy) 0%, var(--hydro) 25%, var(--wind) 50%, var(--solar) 75%, var(--ldes) 100%);
+  }
+  .mock-header h1 {
+    position: relative;
+    color: #FFFFFF;
+    margin-bottom: 8px;
+  }
+  .mock-header .subtitle {
+    position: relative;
+    color: #94A3B8;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 400;
+  }
+
+  /* Body content area */
+  .mock-body {
+    background: var(--bg-page);
+    padding: 32px 40px 40px;
+  }
+
+  .mock-section-title {
+    color: var(--navy);
+    margin-bottom: 8px;
+  }
+
+  .mock-body-text {
+    color: var(--text-secondary);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    line-height: 1.65;
+    margin-bottom: 24px;
+    max-width: 680px;
+  }
+
+  .mock-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .mock-stat {
+    background: #fff;
+    border: 1px solid #E5E7EB;
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+  }
+  .mock-stat .value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 2px;
+  }
+  .mock-stat .label {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .mock-card-title {
+    color: var(--navy);
+    margin-bottom: 12px;
+  }
+
+  .mock-chart-area {
+    background: #fff;
+    border: 1px solid #E5E7EB;
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .mock-chart-placeholder {
+    height: 120px;
+    background: linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #94A3B8;
+    font-size: 0.85rem;
+  }
+
+  .mock-toggles {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 20px;
+  }
+  .mock-toggle {
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: 1px solid #D4D8E0;
+    background: #fff;
+    color: var(--text-secondary);
+    cursor: default;
+  }
+  .mock-toggle.active {
+    background: var(--navy);
+    color: #fff;
+    border-color: var(--navy);
+  }
+
+  .mock-story-section {
+    background: linear-gradient(135deg, #0F1A2E 0%, #1A2744 100%);
+    padding: 48px 40px;
+    position: relative;
+    overflow: hidden;
+  }
+  .mock-story-section::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse 500px 300px at 70% 50%, rgba(233,30,99,0.06) 0%, transparent 70%);
+  }
+  .mock-story-badge {
+    display: inline-block;
+    background: rgba(14,165,233,0.15);
+    color: #0EA5E9;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 16px;
+    position: relative;
+  }
+  .mock-story-h2 {
+    color: #FFFFFF;
+    margin-bottom: 12px;
+    position: relative;
+  }
+  .mock-story-text {
+    color: #CBD5E1;
+    font-size: 0.95rem;
+    line-height: 1.7;
+    max-width: 600px;
+    position: relative;
+  }
+  .mock-story-stat {
+    display: inline-block;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 16px 24px;
+    margin-top: 20px;
+    text-align: center;
+    position: relative;
+  }
+  .mock-story-stat .value {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #fff;
+  }
+  .mock-story-stat .label {
+    font-size: 0.75rem;
+    color: #94A3B8;
+    font-family: 'DM Sans', sans-serif;
+    margin-top: 2px;
+  }
+
+  /* ---- OPTION-SPECIFIC FONT OVERRIDES ---- */
+
+  /* CURRENT: Space Grotesk */
+  .font-current .mock-header h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 2.8rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  .font-current .mock-section-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+  .font-current .mock-card-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+  .font-current .mock-stat .value {
+    font-family: 'Space Mono', monospace;
+  }
+  .font-current .mock-toggle {
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  .font-current .mock-story-badge {
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  .font-current .mock-story-h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 2.2rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  .font-current .mock-story-stat .value {
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  /* OPTION A: Fraunces (editorial serif) */
+  .font-a .mock-header h1 {
+    font-family: 'Fraunces', serif;
+    font-size: 3rem;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    font-variation-settings: 'opsz' 144;
+  }
+  .font-a .mock-section-title {
+    font-family: 'Fraunces', serif;
+    font-size: 1.55rem;
+    font-weight: 600;
+    letter-spacing: -0.2px;
+    font-variation-settings: 'opsz' 48;
+  }
+  .font-a .mock-card-title {
+    font-family: 'Fraunces', serif;
+    font-size: 1.1rem;
+    font-weight: 600;
+    font-variation-settings: 'opsz' 24;
+  }
+  .font-a .mock-stat .value {
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .font-a .mock-toggle {
+    font-family: 'DM Sans', sans-serif;
+  }
+  .font-a .mock-story-badge {
+    font-family: 'DM Sans', sans-serif;
+  }
+  .font-a .mock-story-h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 2.4rem;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    font-variation-settings: 'opsz' 100;
+  }
+  .font-a .mock-story-stat .value {
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* OPTION B: Plus Jakarta Sans (warm humanist geometric) */
+  .font-b .mock-header h1 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 2.8rem;
+    font-weight: 800;
+    letter-spacing: -0.8px;
+  }
+  .font-b .mock-section-title {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+  .font-b .mock-card-title {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+  .font-b .mock-stat .value {
+    font-family: 'Space Mono', monospace;
+  }
+  .font-b .mock-toggle {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 600;
+  }
+  .font-b .mock-story-badge {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+  .font-b .mock-story-h2 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 2.3rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  .font-b .mock-story-stat .value {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+
+  /* OPTION C: Sora (bold geometric with personality) */
+  .font-c .mock-header h1 {
+    font-family: 'Sora', sans-serif;
+    font-size: 2.8rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  .font-c .mock-section-title {
+    font-family: 'Sora', sans-serif;
+    font-size: 1.45rem;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+  }
+  .font-c .mock-card-title {
+    font-family: 'Sora', sans-serif;
+    font-size: 1.02rem;
+    font-weight: 700;
+  }
+  .font-c .mock-stat .value {
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .font-c .mock-toggle {
+    font-family: 'Sora', sans-serif;
+    font-weight: 600;
+  }
+  .font-c .mock-story-badge {
+    font-family: 'Sora', sans-serif;
+  }
+  .font-c .mock-story-h2 {
+    font-family: 'Sora', sans-serif;
+    font-size: 2.3rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  .font-c .mock-story-stat .value {
+    font-family: 'Sora', sans-serif;
+  }
+
+  /* OPTION D: Instrument Serif + Inter */
+  .font-d .mock-header h1 {
+    font-family: 'Instrument Serif', serif;
+    font-size: 3.2rem;
+    font-weight: 400;
+    letter-spacing: -0.3px;
+    line-height: 1.1;
+  }
+  .font-d .mock-header .subtitle,
+  .font-d .mock-body-text {
+    font-family: 'Inter', sans-serif;
+  }
+  .font-d .mock-section-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: 1.65rem;
+    font-weight: 400;
+    letter-spacing: 0;
+  }
+  .font-d .mock-card-title {
+    font-family: 'Inter', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+  .font-d .mock-stat .value {
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .font-d .mock-stat .label {
+    font-family: 'Inter', sans-serif;
+  }
+  .font-d .mock-toggle {
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+  }
+  .font-d .mock-story-badge {
+    font-family: 'Inter', sans-serif;
+  }
+  .font-d .mock-story-h2 {
+    font-family: 'Instrument Serif', serif;
+    font-size: 2.6rem;
+    font-weight: 400;
+    letter-spacing: -0.2px;
+    line-height: 1.15;
+  }
+  .font-d .mock-story-stat .value {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+  }
+  .font-d .mock-story-text {
+    font-family: 'Inter', sans-serif;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .mock-header { padding: 32px 24px; }
+    .mock-body { padding: 24px; }
+    .mock-story-section { padding: 32px 24px; }
+    .mock-stats { grid-template-columns: repeat(2, 1fr); }
+    .mock-header h1 { font-size: 2rem !important; }
+    .mock-story-h2 { font-size: 1.8rem !important; }
+    .mock-section-title { font-size: 1.3rem !important; }
+    .page-header h1 { font-size: 1.6rem; }
+    .mockup-section { padding: 32px 16px 40px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>Typography Mockups</h1>
+  <p>Compare heading fonts rendered in the actual dashboard layout. Same content, different type systems. Scroll to compare all five options.</p>
+</div>
+
+<div class="mockup-grid">
+
+  <!-- CURRENT -->
+  <div class="mockup-section">
+    <div class="mockup-label">
+      <span class="current-label">Current</span>
+      <h2>Space Grotesk + DM Sans + Space Mono</h2>
+      <div class="fonts-used">Geometric sans-serif — the "techy" feel you want to replace</div>
+    </div>
+    <div class="mockup-card font-current">
+      <div class="mock-header">
+        <div class="accent-bar"></div>
+        <h1>The 8,760 Problem</h1>
+        <div class="subtitle">Hourly Clean Energy Optimization Across U.S. Power Markets</div>
+      </div>
+      <div class="mock-body">
+        <h2 class="mock-section-title">Cost Optimization Results</h2>
+        <p class="mock-body-text">The marginal cost of each additional percentage point of hourly CFE matching rises exponentially above 90%, driven by the increasing need for firm clean resources and long-duration storage.</p>
+        <div class="mock-stats">
+          <div class="mock-stat"><div class="value">$47.20</div><div class="label">$/MWh Blended</div></div>
+          <div class="mock-stat"><div class="value">92.5%</div><div class="label">CFE Target</div></div>
+          <div class="mock-stat"><div class="value">4.2 GW</div><div class="label">Solar Capacity</div></div>
+          <div class="mock-stat"><div class="value">1.8 GW</div><div class="label">Storage Needed</div></div>
+        </div>
+        <div class="mock-toggles">
+          <div class="mock-toggle active">Low</div>
+          <div class="mock-toggle">Medium</div>
+          <div class="mock-toggle">High</div>
+        </div>
+        <div class="mock-chart-area">
+          <h3 class="mock-card-title">Resource Mix by CFE Threshold</h3>
+          <div class="mock-chart-placeholder">[Chart area — same across all mockups]</div>
+        </div>
+      </div>
+      <div class="mock-story-section">
+        <div class="mock-story-badge">Key Finding</div>
+        <h2 class="mock-story-h2">The Last Mile Gets Expensive</h2>
+        <p class="mock-story-text">Moving from 90% to 99% hourly matching doubles procurement cost in most regions. The culprit: nighttime and winter gaps that only firm clean power can fill.</p>
+        <div class="mock-story-stat">
+          <div class="value">2.3×</div>
+          <div class="label">Cost multiplier 90%→99%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPTION A: Fraunces -->
+  <div class="mockup-section">
+    <div class="mockup-label">
+      <span class="option-label">Option A</span>
+      <h2>Fraunces + DM Sans + JetBrains Mono</h2>
+      <div class="fonts-used">Variable serif with optical sizing — FT / Nature Energy editorial feel</div>
+    </div>
+    <div class="mockup-card font-a">
+      <div class="mock-header">
+        <div class="accent-bar"></div>
+        <h1>The 8,760 Problem</h1>
+        <div class="subtitle">Hourly Clean Energy Optimization Across U.S. Power Markets</div>
+      </div>
+      <div class="mock-body">
+        <h2 class="mock-section-title">Cost Optimization Results</h2>
+        <p class="mock-body-text">The marginal cost of each additional percentage point of hourly CFE matching rises exponentially above 90%, driven by the increasing need for firm clean resources and long-duration storage.</p>
+        <div class="mock-stats">
+          <div class="mock-stat"><div class="value">$47.20</div><div class="label">$/MWh Blended</div></div>
+          <div class="mock-stat"><div class="value">92.5%</div><div class="label">CFE Target</div></div>
+          <div class="mock-stat"><div class="value">4.2 GW</div><div class="label">Solar Capacity</div></div>
+          <div class="mock-stat"><div class="value">1.8 GW</div><div class="label">Storage Needed</div></div>
+        </div>
+        <div class="mock-toggles">
+          <div class="mock-toggle active">Low</div>
+          <div class="mock-toggle">Medium</div>
+          <div class="mock-toggle">High</div>
+        </div>
+        <div class="mock-chart-area">
+          <h3 class="mock-card-title">Resource Mix by CFE Threshold</h3>
+          <div class="mock-chart-placeholder">[Chart area — same across all mockups]</div>
+        </div>
+      </div>
+      <div class="mock-story-section">
+        <div class="mock-story-badge">Key Finding</div>
+        <h2 class="mock-story-h2">The Last Mile Gets Expensive</h2>
+        <p class="mock-story-text">Moving from 90% to 99% hourly matching doubles procurement cost in most regions. The culprit: nighttime and winter gaps that only firm clean power can fill.</p>
+        <div class="mock-story-stat">
+          <div class="value">2.3×</div>
+          <div class="label">Cost multiplier 90%→99%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPTION B: Plus Jakarta Sans -->
+  <div class="mockup-section">
+    <div class="mockup-label">
+      <span class="option-label">Option B</span>
+      <h2>Plus Jakarta Sans + DM Sans + Space Mono</h2>
+      <div class="fonts-used">Warm humanist geometric — Stripe/Linear modern SaaS feel</div>
+    </div>
+    <div class="mockup-card font-b">
+      <div class="mock-header">
+        <div class="accent-bar"></div>
+        <h1>The 8,760 Problem</h1>
+        <div class="subtitle">Hourly Clean Energy Optimization Across U.S. Power Markets</div>
+      </div>
+      <div class="mock-body">
+        <h2 class="mock-section-title">Cost Optimization Results</h2>
+        <p class="mock-body-text">The marginal cost of each additional percentage point of hourly CFE matching rises exponentially above 90%, driven by the increasing need for firm clean resources and long-duration storage.</p>
+        <div class="mock-stats">
+          <div class="mock-stat"><div class="value">$47.20</div><div class="label">$/MWh Blended</div></div>
+          <div class="mock-stat"><div class="value">92.5%</div><div class="label">CFE Target</div></div>
+          <div class="mock-stat"><div class="value">4.2 GW</div><div class="label">Solar Capacity</div></div>
+          <div class="mock-stat"><div class="value">1.8 GW</div><div class="label">Storage Needed</div></div>
+        </div>
+        <div class="mock-toggles">
+          <div class="mock-toggle active">Low</div>
+          <div class="mock-toggle">Medium</div>
+          <div class="mock-toggle">High</div>
+        </div>
+        <div class="mock-chart-area">
+          <h3 class="mock-card-title">Resource Mix by CFE Threshold</h3>
+          <div class="mock-chart-placeholder">[Chart area — same across all mockups]</div>
+        </div>
+      </div>
+      <div class="mock-story-section">
+        <div class="mock-story-badge">Key Finding</div>
+        <h2 class="mock-story-h2">The Last Mile Gets Expensive</h2>
+        <p class="mock-story-text">Moving from 90% to 99% hourly matching doubles procurement cost in most regions. The culprit: nighttime and winter gaps that only firm clean power can fill.</p>
+        <div class="mock-story-stat">
+          <div class="value">2.3×</div>
+          <div class="label">Cost multiplier 90%→99%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPTION C: Sora -->
+  <div class="mockup-section">
+    <div class="mockup-label">
+      <span class="option-label">Option C</span>
+      <h2>Sora + DM Sans + JetBrains Mono</h2>
+      <div class="fonts-used">Bold geometric with personality — confident, expressive, presentation-grade</div>
+    </div>
+    <div class="mockup-card font-c">
+      <div class="mock-header">
+        <div class="accent-bar"></div>
+        <h1>The 8,760 Problem</h1>
+        <div class="subtitle">Hourly Clean Energy Optimization Across U.S. Power Markets</div>
+      </div>
+      <div class="mock-body">
+        <h2 class="mock-section-title">Cost Optimization Results</h2>
+        <p class="mock-body-text">The marginal cost of each additional percentage point of hourly CFE matching rises exponentially above 90%, driven by the increasing need for firm clean resources and long-duration storage.</p>
+        <div class="mock-stats">
+          <div class="mock-stat"><div class="value">$47.20</div><div class="label">$/MWh Blended</div></div>
+          <div class="mock-stat"><div class="value">92.5%</div><div class="label">CFE Target</div></div>
+          <div class="mock-stat"><div class="value">4.2 GW</div><div class="label">Solar Capacity</div></div>
+          <div class="mock-stat"><div class="value">1.8 GW</div><div class="label">Storage Needed</div></div>
+        </div>
+        <div class="mock-toggles">
+          <div class="mock-toggle active">Low</div>
+          <div class="mock-toggle">Medium</div>
+          <div class="mock-toggle">High</div>
+        </div>
+        <div class="mock-chart-area">
+          <h3 class="mock-card-title">Resource Mix by CFE Threshold</h3>
+          <div class="mock-chart-placeholder">[Chart area — same across all mockups]</div>
+        </div>
+      </div>
+      <div class="mock-story-section">
+        <div class="mock-story-badge">Key Finding</div>
+        <h2 class="mock-story-h2">The Last Mile Gets Expensive</h2>
+        <p class="mock-story-text">Moving from 90% to 99% hourly matching doubles procurement cost in most regions. The culprit: nighttime and winter gaps that only firm clean power can fill.</p>
+        <div class="mock-story-stat">
+          <div class="value">2.3×</div>
+          <div class="label">Cost multiplier 90%→99%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPTION D: Instrument Serif + Inter -->
+  <div class="mockup-section">
+    <div class="mockup-label">
+      <span class="option-label">Option D</span>
+      <h2>Instrument Serif + Inter + JetBrains Mono</h2>
+      <div class="fonts-used">Full visual refresh — modern editorial serif with polished UI sans. Economist meets Figma.</div>
+    </div>
+    <div class="mockup-card font-d">
+      <div class="mock-header">
+        <div class="accent-bar"></div>
+        <h1>The 8,760 Problem</h1>
+        <div class="subtitle">Hourly Clean Energy Optimization Across U.S. Power Markets</div>
+      </div>
+      <div class="mock-body">
+        <h2 class="mock-section-title">Cost Optimization Results</h2>
+        <p class="mock-body-text">The marginal cost of each additional percentage point of hourly CFE matching rises exponentially above 90%, driven by the increasing need for firm clean resources and long-duration storage.</p>
+        <div class="mock-stats">
+          <div class="mock-stat"><div class="value">$47.20</div><div class="label">$/MWh Blended</div></div>
+          <div class="mock-stat"><div class="value">92.5%</div><div class="label">CFE Target</div></div>
+          <div class="mock-stat"><div class="value">4.2 GW</div><div class="label">Solar Capacity</div></div>
+          <div class="mock-stat"><div class="value">1.8 GW</div><div class="label">Storage Needed</div></div>
+        </div>
+        <div class="mock-toggles">
+          <div class="mock-toggle active">Low</div>
+          <div class="mock-toggle">Medium</div>
+          <div class="mock-toggle">High</div>
+        </div>
+        <div class="mock-chart-area">
+          <h3 class="mock-card-title">Resource Mix by CFE Threshold</h3>
+          <div class="mock-chart-placeholder">[Chart area — same across all mockups]</div>
+        </div>
+      </div>
+      <div class="mock-story-section">
+        <div class="mock-story-badge">Key Finding</div>
+        <h2 class="mock-story-h2">The Last Mile Gets Expensive</h2>
+        <p class="mock-story-text">Moving from 90% to 99% hourly matching doubles procurement cost in most regions. The culprit: nighttime and winter gaps that only firm clean power can fill.</p>
+        <div class="mock-story-stat">
+          <div class="value">2.3×</div>
+          <div class="label">Cost multiplier 90%→99%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
