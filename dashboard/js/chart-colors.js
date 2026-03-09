@@ -17,9 +17,9 @@ var RESOURCE_COLORS = {
     nuclear:      '#6366F1',
     ccs:          '#64748B',
     cleanFirm:    '#6366F1',
-    battery:      '#C4B5FD',   // Battery 4hr — light lavender
-    battery4:     '#C4B5FD',   // Battery 4hr alias
-    battery8:     '#8B5CF6',   // Battery 8hr — medium purple
+    battery:      '#06B6D4',   // Battery 4hr — cyan
+    battery4:     '#06B6D4',   // Battery 4hr alias
+    battery8:     '#0891B2',   // Battery 8hr — deep cyan
     ldes:         '#E91E63',
     greenH2:      '#10B981',
     geothermal:   '#D97706',
@@ -37,9 +37,9 @@ var RESOURCE_COLORS = {
     nuclearT:      'rgba(99, 102, 241, 0.55)',
     ccsT:          'rgba(100, 116, 139, 0.55)',
     cleanFirmT:    'rgba(99, 102, 241, 0.55)',
-    batteryT:      'rgba(196, 181, 253, 0.55)',   // Battery 4hr
-    battery4T:     'rgba(196, 181, 253, 0.55)',   // Battery 4hr alias
-    battery8T:     'rgba(139, 92, 246, 0.55)',    // Battery 8hr
+    batteryT:      'rgba(6, 182, 212, 0.55)',   // Battery 4hr
+    battery4T:     'rgba(6, 182, 212, 0.55)',   // Battery 4hr alias
+    battery8T:     'rgba(8, 145, 178, 0.55)',    // Battery 8hr
     ldesT:         'rgba(233, 30, 99, 0.55)',
     greenH2T:      'rgba(16, 185, 129, 0.55)',
     geothermalT:   'rgba(217, 119, 6, 0.55)',
@@ -53,9 +53,9 @@ var RESOURCE_COLORS = {
     hydroBg:        'rgba(14, 165, 233, 0.08)',
     nuclearBg:      'rgba(99, 102, 241, 0.08)',
     ccsBg:          'rgba(100, 116, 139, 0.08)',
-    batteryBg:      'rgba(196, 181, 253, 0.08)',   // Battery 4hr
-    battery4Bg:     'rgba(196, 181, 253, 0.08)',
-    battery8Bg:     'rgba(139, 92, 246, 0.08)',
+    batteryBg:      'rgba(6, 182, 212, 0.08)',   // Battery 4hr
+    battery4Bg:     'rgba(6, 182, 212, 0.08)',
+    battery8Bg:     'rgba(8, 145, 178, 0.08)',
     ldesBg:         'rgba(233, 30, 99, 0.08)',
     storageBg:      'rgba(239, 68, 68, 0.08)'
 };

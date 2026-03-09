@@ -47,13 +47,19 @@ const EXISTING_GAS_GW = {
     'NYISO': 18.0, 'NEISO': 14.0, 'MISO': 68.0, 'SPP': 32.0,
 };
 
+// New-build CCGT annualized cost ($/kW-yr) from pipeline_config.py (Lazard v16.0)
+const NEW_CCGT_COST_KW_YR = {
+    'CAISO': 112, 'ERCOT': 89, 'PJM': 99, 'NYISO': 114, 'NEISO': 105,
+    'MISO': 95, 'SPP': 88,
+};
+
 
 function getResourceColor(resource) {
     const map = {
         'solar': '#F59E0B', 'wind': '#22C55E', 'offshore_wind': '#009688',
         'hydro': '#0EA5E9', 'clean_firm': '#6366F1', 'nuclear': '#6366F1',
         'ccs_ccgt': '#64748B', 'ccs': '#64748B', 'geothermal': '#D97706',
-        'battery': '#C4B5FD', 'battery4': '#C4B5FD', 'battery8': '#8B5CF6',
+        'battery': '#06B6D4', 'battery4': '#06B6D4', 'battery8': '#0891B2',
         'ldes': '#E91E63', 'green_h2': '#10B981',
         'storage': '#EF4444', 'gap': '#D1D5DB',
         'new_vre': '#22C55E', 'new_build_vre': '#22C55E',
@@ -69,7 +75,7 @@ function getResourceColor(resource) {
 function getResourceLabel(resource) {
     const labels = {
         'solar': 'Solar', 'wind': 'Wind', 'offshore_wind': 'Offshore Wind',
-        'hydro': 'Hydro', 'clean_firm': 'Clean Firm', 'nuclear': 'Nuclear',
+        'hydro': 'Hydro', 'clean_firm': 'Nuclear', 'nuclear': 'Nuclear',
         'ccs_ccgt': 'CCS-CCGT', 'ccs': 'CCS', 'geothermal': 'Geothermal',
         'battery': 'Battery 4hr', 'battery4': 'Battery 4hr', 'battery8': 'Battery 8hr',
         'ldes': 'LDES', 'green_h2': 'Green H₂', 'storage': 'Storage',
@@ -422,7 +428,7 @@ class JarGrid {
 
         // Row headers = ISO names (shorter), col headers = strategy IDs + gas GW sub-label
         this.rowHeaderWidth = isMobile ? 55 : (isTablet ? 65 : 80);
-        this.colHeaderHeight = isMobile ? 92 : 112;
+        this.colHeaderHeight = isMobile ? 105 : 128;
 
         const availWidth = rect.width - this.rowHeaderWidth;
         const jarW = Math.max(55, Math.floor(availWidth / numCols));
@@ -559,8 +565,9 @@ class JarGrid {
         this.strategyGasGw = {};
         this.strategyCurtTwh = {};
         this.strategyCostM = {};
+        this.strategyGasCostM = {};
         for (const strat of this.activeStrategies) {
-            let totalNewGas = 0, totalCurt = 0, totalCost = 0;
+            let totalNewGas = 0, totalCurt = 0, totalCost = 0, totalGasCost = 0;
             for (const iso of ISO_LIST) {
                 const stratData = this.data.data[strat];
                 if (!stratData) continue;
@@ -572,16 +579,18 @@ class JarGrid {
                 if (!tk) continue;
                 const record = isoData[pk][tk];
                 if (record) {
-                    if (record.gasGw != null) {
-                        totalNewGas += Math.max(0, record.gasGw - (EXISTING_GAS_GW[iso] || 0));
-                    }
+                    const newGasGw = record.gasGw != null ? Math.max(0, record.gasGw - (EXISTING_GAS_GW[iso] || 0)) : 0;
+                    totalNewGas += newGasGw;
                     totalCurt += record.curtTwh || 0;
                     totalCost += record.tc || 0;
+                    // Annualized cost of new gas capacity: GW × 1e6 kW/GW × $/kW-yr / 1e6 = $M/yr
+                    totalGasCost += newGasGw * (NEW_CCGT_COST_KW_YR[iso] || 100) * 1000;
                 }
             }
             this.strategyGasGw[strat] = totalNewGas;
             this.strategyCurtTwh[strat] = totalCurt;
-            this.strategyCostM[strat] = totalCost;
+            this.strategyGasCostM[strat] = totalGasCost;
+            this.strategyCostM[strat] = totalCost + totalGasCost;
         }
 
         // Fire stats callback
@@ -719,13 +728,13 @@ class JarGrid {
         }
         ctx.restore();
 
-        // Per-strategy metric sub-labels (gas GW, curtailed TWh, total cost)
+        // Per-strategy metric sub-labels (gas GW, gas cost, curtailed TWh, total cost)
         ctx.save();
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         const metricFS = this.jarWidth < 70 ? 7 : (this.jarWidth < 100 ? 8.5 : 10);
         const metricLineH = metricFS + 3;
-        const metricBaseY = this.colHeaderHeight - 3 * metricLineH + metricLineH / 2;
+        const metricBaseY = this.colHeaderHeight - 4 * metricLineH + metricLineH / 2;
 
         for (let col = 0; col < numCols; col++) {
             const strat = this.activeStrategies[col];
@@ -737,21 +746,29 @@ class JarGrid {
             ctx.fillStyle = gasGw > 0 ? '#EF4444' : '#9CA3AF';
             ctx.fillText(gasGw > 0 ? `+${Math.round(gasGw)} GW gas` : '0 GW gas', x, metricBaseY);
 
-            // Line 2: Curtailed TWh — amber
+            // Line 2: Gas capacity cost — red (lighter)
+            const gasCostM = this.strategyGasCostM?.[strat] ?? 0;
+            ctx.font = `600 ${metricFS}px 'DM Sans', sans-serif`;
+            ctx.fillStyle = gasCostM > 0 ? '#DC2626' : '#9CA3AF';
+            const gasCostLabel = gasCostM >= 1000 ? `$${(gasCostM / 1000).toFixed(1)}B gas cost` :
+                                 gasCostM > 0 ? `$${Math.round(gasCostM)}M gas cost` : '$0 gas cost';
+            ctx.fillText(gasCostLabel, x, metricBaseY + metricLineH);
+
+            // Line 3: Curtailed TWh — amber
             const curtTwh = this.strategyCurtTwh?.[strat] ?? 0;
             ctx.font = `600 ${metricFS}px 'DM Sans', sans-serif`;
             ctx.fillStyle = curtTwh > 1 ? '#F59E0B' : '#9CA3AF';
             const curtLabel = curtTwh >= 1000 ? `${(curtTwh / 1000).toFixed(1)}k TWh curt.` :
                               curtTwh >= 1 ? `${Math.round(curtTwh)} TWh curt.` : '0 TWh curt.';
-            ctx.fillText(curtLabel, x, metricBaseY + metricLineH);
+            ctx.fillText(curtLabel, x, metricBaseY + 2 * metricLineH);
 
-            // Line 3: Total cost — navy
+            // Line 4: Total system cost (clean + gas) — navy
             const costM = this.strategyCostM?.[strat] ?? 0;
             ctx.font = `600 ${metricFS}px 'DM Sans', sans-serif`;
             ctx.fillStyle = '#334155';
             const costLabel = costM >= 1000 ? `$${(costM / 1000).toFixed(1)}B total` :
                               costM > 0 ? `$${Math.round(costM)}M total` : '$0';
-            ctx.fillText(costLabel, x, metricBaseY + 2 * metricLineH);
+            ctx.fillText(costLabel, x, metricBaseY + 3 * metricLineH);
         }
         ctx.restore();
 
@@ -966,6 +983,7 @@ class JarGrid {
                 co2ReductionPct: totalBaseline > 0 ? (totalCO2 / totalBaseline * 100) : 0,
                 totalNewGasGw: this.strategyGasGw?.[strat] ?? 0,
                 totalCurtTwh: this.strategyCurtTwh?.[strat] ?? 0,
+                gasCostM: this.strategyGasCostM?.[strat] ?? 0,
                 totalCostM: this.strategyCostM?.[strat] ?? 0,
                 resourceBreakdown,
             };

@@ -78,7 +78,7 @@ const MIX_COLORS = {
     offshore_wind: { fill: 'rgba(0,150,136,0.50)',   border: '#009688' },
     wind:          { fill: 'rgba(34,197,94,0.50)',   border: '#22C55E' },
     solar:         { fill: 'rgba(245,158,11,0.50)',  border: '#F59E0B' },
-    battery:       { fill: 'rgba(139,92,246,0.50)',  border: '#8B5CF6' },
+    battery:       { fill: 'rgba(139,92,246,0.50)',  border: '#0891B2' },
     battery8:      { fill: 'rgba(167,139,250,0.50)', border: '#A78BFA' },
     ldes:          { fill: 'rgba(236,72,153,0.50)',  border: '#EC4899' },
     h2:            { fill: 'rgba(16,185,129,0.50)',  border: '#10B981' }

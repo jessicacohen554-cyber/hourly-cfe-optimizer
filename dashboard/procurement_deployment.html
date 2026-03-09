@@ -356,11 +356,22 @@
     opacity: 0.85;
 }
 
-/* Tier: new — lighter translucent (new build) */
+/* Tier: new — lighter translucent (new build) with border ring */
 .ball--new {
     background: color-mix(in srgb, var(--ball-color) 40%, transparent);
+    border: 2px solid var(--ball-color);
+    box-sizing: border-box;
     opacity: 0.9;
-    box-shadow: 0 0 4px color-mix(in srgb, var(--ball-color) 20%, transparent);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--ball-color) 30%, transparent);
+}
+/* Fallback for browsers without color-mix */
+@supports not (background: color-mix(in srgb, red 50%, blue)) {
+    .ball--new {
+        background: var(--ball-color);
+        opacity: 0.5;
+        border: 2px solid var(--ball-color);
+        box-shadow: 0 0 4px currentColor;
+    }
 }
 
 /* Tier: curtailed — striped + dashed (above rim overflow) */
@@ -705,13 +716,13 @@
     <div class="legend-group">
         <span class="legend-ball" style="background:#F59E0B"></span> Solar
         <span class="legend-ball" style="background:#22C55E"></span> Wind
-        <span class="legend-ball" style="background:#6366F1"></span> Clean Firm
+        <span class="legend-ball" style="background:#6366F1"></span> Nuclear
         <span class="legend-ball" style="background:#0EA5E9"></span> Hydro
         <span class="legend-ball" style="background:#64748B"></span> CCS
-        <span class="legend-ball" style="background:#C4B5FD"></span> Battery 4hr
-        <span class="legend-ball" style="background:#8B5CF6"></span> Battery 8hr
+        <span class="legend-ball" style="background:#D97706"></span> Geothermal
+        <span class="legend-ball" style="background:#06B6D4"></span> Battery 4hr
+        <span class="legend-ball" style="background:#0891B2"></span> Battery 8hr
         <span class="legend-ball" style="background:#E91E63"></span> LDES
-        <span class="legend-ball" style="background:#10B981"></span> Green H₂
     </div>
     <div class="legend-divider"></div>
     <div class="legend-group">
@@ -824,7 +835,7 @@
 <div class="agg-charts">
     <div class="agg-chart-card">
         <h3>New Gas Capacity Required by Strategy & Participation</h3>
-        <p style="font-family:var(--font-body);font-size:0.8rem;color:var(--text-muted);margin:-4px 0 12px;">Each ribbon shows the range of new gas capacity (GW) across all participation levels (5%–100%). Band width = sensitivity to participation. Median line shows the 50% participation level.</p>
+        <p style="font-family:var(--font-body);font-size:0.8rem;color:var(--text-muted);margin:-4px 0 12px;">Solid line = 90% clean target. Faint dashed lines = 85% and 95% reference targets. Band = min–max across all targets. X-axis = corporate participation level.</p>
         <div class="chart-container" style="min-height:380px;"><canvas id="chartRibbon"></canvas></div>
     </div>
 </div>
@@ -1062,24 +1073,30 @@
         });
     }
 
-    // Build ribbon data for a strategy: min, median, max across all thresholds
+    // Build ribbon data for a strategy: min, max range + 3 target lines (85%, 90%, 95%)
     // x-axis = participation level, bands = range across CFE targets
     function buildRibbonData(strategy) {
         // Compute gas at every threshold
         const allCurves = THRESHOLDS.map(t => computeGasAtThreshold(strategy, t));
 
-        // For each participation index, find min, median (85% target), max across thresholds
-        const minArr = [], medArr = [], maxArr = [];
-        const medIdx = THRESHOLDS.indexOf(85);
-        const medTIdx = medIdx >= 0 ? medIdx : Math.floor(THRESHOLDS.length / 2);
+        // Main line = 90% target, reference lines = 85% and 95%
+        const mainIdx = THRESHOLDS.indexOf(90);
+        const ref85Idx = THRESHOLDS.indexOf(85);
+        const ref95Idx = THRESHOLDS.indexOf(95);
+        const mainTIdx = mainIdx >= 0 ? mainIdx : Math.floor(THRESHOLDS.length / 2);
+        const ref85TIdx = ref85Idx >= 0 ? ref85Idx : mainTIdx;
+        const ref95TIdx = ref95Idx >= 0 ? ref95Idx : mainTIdx;
 
+        const minArr = [], maxArr = [], medArr = [], ref85Arr = [], ref95Arr = [];
         for (let pi = 0; pi < PARTICIPATION_LEVELS.length; pi++) {
             const vals = allCurves.map(c => c[pi]).sort((a, b) => a - b);
             minArr.push(vals[0]);
             maxArr.push(vals[vals.length - 1]);
-            medArr.push(allCurves[medTIdx][pi]);
+            medArr.push(allCurves[mainTIdx][pi]);
+            ref85Arr.push(allCurves[ref85TIdx][pi]);
+            ref95Arr.push(allCurves[ref95TIdx][pi]);
         }
-        return { min: minArr, med: medArr, max: maxArr };
+        return { min: minArr, med: medArr, max: maxArr, ref85: ref85Arr, ref95: ref95Arr };
     }
 
     let chartRibbon = null;
@@ -1124,7 +1141,37 @@
                 _ribbonRole: 'min',
             });
 
-            // Median line — solid, prominent
+            // 85% reference line — faint dashed
+            datasets.push({
+                label: label + ' (85%)',
+                data: ribbon.ref85,
+                fill: false,
+                borderColor: color + '50',
+                borderWidth: 1.2,
+                borderDash: [6, 4],
+                pointRadius: 0,
+                tension: 0.3,
+                order: 2,
+                _stratKey: strat,
+                _ribbonRole: 'ref85',
+            });
+
+            // 95% reference line — faint dashed
+            datasets.push({
+                label: label + ' (95%)',
+                data: ribbon.ref95,
+                fill: false,
+                borderColor: color + '50',
+                borderWidth: 1.2,
+                borderDash: [6, 4],
+                pointRadius: 0,
+                tension: 0.3,
+                order: 2,
+                _stratKey: strat,
+                _ribbonRole: 'ref95',
+            });
+
+            // Main line (90% target) — solid, prominent
             datasets.push({
                 label: label,
                 data: ribbon.med,
@@ -1182,7 +1229,10 @@
                             title: (items) => 'Participation: ' + items[0].label,
                             label: (ctx) => {
                                 const ds = ctx.dataset;
-                                if (ds._ribbonRole !== 'median') return null;
+                                if (ds._ribbonRole !== 'median' && ds._ribbonRole !== 'ref85' && ds._ribbonRole !== 'ref95') return null;
+                                if (ds._ribbonRole === 'ref85') return `  @ 85%: ${Math.round(ctx.raw)} GW`;
+                                if (ds._ribbonRole === 'ref95') return `  @ 95%: ${Math.round(ctx.raw)} GW`;
+                                // median = 90% main line
                                 const strat = ds._stratKey;
                                 // Find the min/max for this strategy at this index
                                 const allDs = chartData.datasets;
@@ -1192,7 +1242,7 @@
                                     if (d._stratKey === strat && d._ribbonRole === 'max') maxVal = d.data[ctx.dataIndex];
                                 }
                                 const label = (STRAT_LABELS[strat] || strat).replace('\n',' — ');
-                                return `${label}: ${Math.round(ctx.raw)} GW @ 85% target (${Math.round(minVal)}–${Math.round(maxVal)} across targets)`;
+                                return `${label}: ${Math.round(ctx.raw)} GW @ 90% target (${Math.round(minVal)}–${Math.round(maxVal)} across targets)`;
                             },
                         },
                     },
