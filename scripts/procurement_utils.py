@@ -39,6 +39,7 @@ from pipeline_config import (
     GEOTHERMAL_LCOE, EXISTING_NUCLEAR_GW, UPRATE_CAP_TWH,
     DEMAND_GROWTH_RATES, THRESHOLD_TARGET_YEARS,
     THRESHOLDS as ALL_THRESHOLDS, ACTIVE_THRESHOLDS,
+    STORAGE_REVENUE_CREDITS,
 )
 
 SBTI_YEAR_MAP = THRESHOLD_TARGET_YEARS  # Backward compat alias
@@ -769,13 +770,57 @@ def build_newbuild_only_tranches(iso, threshold, year, scenario='B',
 # ═══════════════════════════════════════════════════════════════════════════════
 
 _EF_CACHE = None
+_STORAGE_RATIO_CACHE = {}
+
+# Analytical fallback: cycles × duration × RTE / 8760
+_ANALYTICAL_DISPATCH_RATIOS = {
+    'battery':  365 * 4 * 0.85 / 8760 * 100,    # ~14.2
+    'battery8': 365 * 8 * 0.85 / 8760 * 100,    # ~28.4
+    'ldes':     10 * 100 * 0.50 / 8760 * 100,    # ~5.7
+    'h2':       3.5 * 1000 * 0.35 / 8760 * 100,  # ~14.0
+}
+
+
+def _load_storage_dispatch_ratios(iso):
+    """Load empirical capacity-to-dispatch ratios from Step 4 dispatch cache.
+
+    Returns dict of {storage_type: median_ratio} where ratio = dispatch_pct / capacity_pct.
+    Multiply a storage capacity fraction by this ratio to get dispatched energy fraction.
+    """
+    if iso in _STORAGE_RATIO_CACHE:
+        return _STORAGE_RATIO_CACHE[iso]
+
+    ratios = dict(_ANALYTICAL_DISPATCH_RATIOS)  # start with analytical fallback
+
+    try:
+        import pandas as pd
+        manifest_path = os.path.join(
+            os.path.dirname(SCRIPT_DIR), 'data', 'step4-dispatch-cache',
+            f'{iso}_annual_manifest.parquet')
+        if os.path.exists(manifest_path):
+            df = pd.read_parquet(manifest_path)
+            for stype in ['battery', 'battery8', 'ldes', 'h2']:
+                cap_col = f'{stype}_capacity_pct'
+                disp_col = f'{stype}_dispatch_pct'
+                if cap_col in df.columns and disp_col in df.columns:
+                    mask = df[cap_col] > 0
+                    if mask.sum() >= 3:  # need enough data points
+                        r = df.loc[mask, disp_col] / df.loc[mask, cap_col]
+                        ratios[stype] = float(r.median())
+    except Exception:
+        pass  # fall back to analytical
+
+    _STORAGE_RATIO_CACHE[iso] = ratios
+    return ratios
+
 
 def load_ef_resource_mix(iso, threshold):
     """Load physics-optimized resource mix from EF newbuild track.
 
     Returns dict of {resource: pct_of_demand} from track_scenarios.parquet.
-    These are the co-optimized mixes that actually achieve the target HMS
-    through 8760-hour dispatch physics — NOT price-ordered tranche walks.
+    Generation resources are in % of demand. Storage resources are converted
+    from energy capacity fractions to dispatched energy % using empirical
+    dispatch ratios from the Step 4 cache.
     """
     global _EF_CACHE
     if _EF_CACHE is None:
@@ -805,12 +850,15 @@ def load_ef_resource_mix(iso, threshold):
         if val > 0:
             mix[key] = val
 
-    # Storage resources (% of demand from dispatch)
+    # Storage resources — stored as energy capacity fraction of annual demand.
+    # Convert to dispatched energy % using empirical dispatch-to-capacity ratios.
+    dispatch_ratios = _load_storage_dispatch_ratios(iso)
     for col, key in [('battery_dispatch_pct', 'battery'), ('battery8_dispatch_pct', 'battery8'),
                      ('ldes_dispatch_pct', 'ldes'), ('h2_dispatch_pct', 'h2')]:
         val = float(row.get(col, 0) or 0)
         if val > 0:
-            mix[key] = val
+            ratio = dispatch_ratios.get(key, _ANALYTICAL_DISPATCH_RATIOS.get(key, 1.0))
+            mix[key] = val * ratio  # capacity fraction → dispatched energy %
 
     return mix
 
@@ -826,20 +874,31 @@ def get_resource_ppa_price(resource, iso, threshold, year, scenario='B',
         return min(nuc, ccs)
     elif resource == 'ccs':
         return get_learning_adjusted_ppa('ccs_45q_on', iso, threshold, scenario, level, ppa_level)
-    elif resource == 'battery':
-        return get_ppa_price('battery', iso, level, ppa_level)
-    elif resource == 'battery8':
-        return get_ppa_price('battery', iso, level, ppa_level) * 1.6  # 8hr premium
-    elif resource == 'ldes':
-        return get_learning_adjusted_ppa('ldes', iso, threshold, scenario, level, ppa_level)
-    elif resource == 'h2':
-        return get_learning_adjusted_ppa('ldes', iso, threshold, scenario, level, ppa_level) * 1.2
+    elif resource in ('battery', 'battery8', 'ldes', 'h2'):
+        # Storage LCOE tables are in capacity-fraction units ($/unit-of-demand-fraction).
+        # Convert to $/MWh-dispatched: (LCOE - revenue_credit) / dispatch_ratio
+        stype = resource
+        lcoe_key = stype if stype != 'h2' else 'h2'
+        capacity_cost = get_ppa_price(stype, iso, level, ppa_level)
+        rc = STORAGE_REVENUE_CREDITS.get(stype, {}).get(iso, 0)
+        net_capacity_cost = max(0, capacity_cost - rc)
+        ratios = _load_storage_dispatch_ratios(iso)
+        ratio = ratios.get(stype, _ANALYTICAL_DISPATCH_RATIOS.get(stype, 1.0))
+        if ratio <= 0:
+            ratio = 1.0
+        return net_capacity_cost / ratio
     elif resource == 'hydro':
         return get_ppa_price('hydro', iso, level, ppa_level)
     elif resource == 'geothermal':
         return get_learning_adjusted_ppa('geothermal', iso, threshold, scenario, level, ppa_level)
     elif resource == 'nuclear_uprate':
         return get_learning_adjusted_ppa('uprate', iso, threshold, scenario, level, ppa_level)
+    elif resource == 'storage':
+        # Generic storage key (template fallback) → weighted avg of battery + LDES
+        # Uses the same capacity→dispatch conversion as specific storage types
+        bat_dispatched = get_resource_ppa_price('battery', iso, threshold, year, scenario, level, ppa_level)
+        ldes_dispatched = get_resource_ppa_price('ldes', iso, threshold, year, scenario, level, ppa_level)
+        return 0.7 * bat_dispatched + 0.3 * ldes_dispatched
     else:
         return get_learning_adjusted_ppa('solar', iso, threshold, scenario, level, ppa_level)
 
