@@ -346,8 +346,8 @@ The SVG waveform overlay (energy curves + heartbeat/EKG lines) is auto-injected 
 | Nuclear | `--nuclear` | `#6366F1` | `RESOURCE_COLORS.nuclear` |
 | CCS-CCGT | `--ccs` | `#64748B` | `RESOURCE_COLORS.ccs` |
 | Clean Firm | `--clean-firm` | `#6366F1` | `RESOURCE_COLORS.cleanFirm` |
-| Battery 4hr | `--battery` / `--battery4` | `#C4B5FD` | `RESOURCE_COLORS.battery` / `.battery4` |
-| Battery 8hr | `--battery8` | `#8B5CF6` | `RESOURCE_COLORS.battery8` |
+| Battery 4hr | `--battery` / `--battery4` | `#06B6D4` | `RESOURCE_COLORS.battery` / `.battery4` |
+| Battery 8hr | `--battery8` | `#0891B2` | `RESOURCE_COLORS.battery8` |
 | LDES | `--ldes` | `#E91E63` | `RESOURCE_COLORS.ldes` |
 | Green H₂ | `--green-h2` | `#10B981` | `RESOURCE_COLORS.greenH2` |
 | Geothermal | `--geothermal` | `#D97706` | `RESOURCE_COLORS.geothermal` |
