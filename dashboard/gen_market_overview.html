@@ -67,16 +67,16 @@
     <!-- ================================================================
          SECTION 2: Market Structure (NEW)
          ================================================================ -->
-    <section class="story-section fade-in">
+    <section class="story-section fade-in" style="max-width: var(--max-content, 1320px);">
         <span class="story-badge navy">Market Structure</span>
-        <div class="story-content">
+        <div class="story-content" style="max-width: 960px;">
             <h2>How the U.S. Power Market Actually Works&mdash;and Why It Matters for Decarbonization</h2>
             <p>The U.S. electricity sector is not a single market. It is a patchwork of fundamentally different ownership structures, regulatory regimes, and competitive dynamics. Understanding these structures is essential because <strong>market design determines how&mdash;and whether&mdash;decarbonization investment happens.</strong></p>
 
             <p>Roughly half of U.S. generation is produced by vertically integrated utilities operating under state regulation. The other half trades through competitive wholesale markets run by independent system operators (ISOs). These two models create radically different incentive structures for clean energy investment.</p>
         </div>
 
-        <div class="card-grid" style="margin-top: 28px;">
+        <div class="card-grid-market" style="margin-top: 28px;">
             <div class="card" style="border-left: 4px solid var(--sky);">
                 <h3 style="color: var(--sky-dark); font-size: 1.1rem;">Vertically Integrated Utilities</h3>
                 <p style="font-size: 0.88rem; margin-bottom: 8px;"><strong>Southern, Duke, Dominion, Entergy, BH Energy, Xcel, DTE, WEC, Evergy, PPL</strong></p>
@@ -95,18 +95,24 @@
                     <p style="margin-bottom: 0;"><strong style="color: var(--red-accent);">Challenges:</strong> No centralized generation planning. Investment decisions driven by market economics, not emissions targets. Stranded asset risk from regulatory or market shifts. Wholesale price volatility creates investment uncertainty.</p>
                 </div>
             </div>
-            <div class="card" style="border-left: 4px solid var(--color-nuclear);">
-                <h3 style="color: var(--color-nuclear); font-size: 1.1rem;">The IPP Challenge</h3>
-                <p style="font-size: 0.88rem; margin-bottom: 8px;"><strong>Independent Power Producers: Vistra, NRG, Constellation, Talen, AES</strong></p>
-                <p style="font-size: 0.88rem;">IPPs operate as independent actors in competitive wholesale markets. They face a unique set of decarbonization constraints that neither regulated utilities nor policy-driven mandates address:</p>
-                <ul style="font-size: 0.85rem; margin: 8px 0 0 16px; color: var(--text-secondary); line-height: 1.6;">
-                    <li>No guaranteed cost recovery for clean energy investments</li>
-                    <li>Revenue depends on wholesale prices that don't value carbon reduction</li>
-                    <li>Must compete against vertically integrated utilities with captive ratebases</li>
-                    <li>Decarbonization driven by economics and voluntary commitments, not regulatory mandates</li>
-                </ul>
-                <div class="callout success" style="margin-top: 12px; padding: 12px 16px;">
-                    <p style="font-size: 0.85rem;"><strong>But also unique opportunities:</strong> IPPs are nimble, can move capital quickly, develop projects across multiple ISOs, and are less constrained by single-state regulators. This analysis focuses on how IPPs can approach decarbonization transition planning given their position as independent market actors.</p>
+            <div class="card-full-row">
+                <div class="card" style="border-left: 4px solid var(--color-nuclear);">
+                    <h3 style="color: var(--color-nuclear); font-size: 1.1rem;">The IPP Challenge</h3>
+                    <p style="font-size: 0.88rem; margin-bottom: 8px;"><strong>Independent Power Producers: Vistra, NRG, Constellation, Talen, AES</strong></p>
+                    <div class="card-ipp-body">
+                        <div>
+                            <p style="font-size: 0.88rem;">IPPs operate as independent actors in competitive wholesale markets. They face a unique set of decarbonization constraints that neither regulated utilities nor policy-driven mandates address:</p>
+                            <ul style="font-size: 0.85rem; margin: 8px 0 0 16px; color: var(--text-secondary); line-height: 1.6;">
+                                <li>No guaranteed cost recovery for clean energy investments</li>
+                                <li>Revenue depends on wholesale prices that don't value carbon reduction</li>
+                                <li>Must compete against vertically integrated utilities with captive ratebases</li>
+                                <li>Decarbonization driven by economics and voluntary commitments, not regulatory mandates</li>
+                            </ul>
+                        </div>
+                        <div class="callout success" style="margin-top: 0; padding: 12px 16px; align-self: stretch; display: flex; align-items: center;">
+                            <p style="font-size: 0.85rem; margin: 0;"><strong>But also unique opportunities:</strong> IPPs are nimble, can move capital quickly, develop projects across multiple ISOs, and are less constrained by single-state regulators. This analysis focuses on how IPPs can approach decarbonization transition planning given their position as independent market actors.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -130,7 +136,7 @@
             </div>
         </div>
 
-        <div class="chart-container" style="margin-top: 32px;">
+        <div class="chart-container chart-panel" style="margin-top: 32px;">
             <h3>ISO Emissions Landscape: IPP vs. Regulated Utility Generation</h3>
             <div class="chart-wrapper" style="height: 420px;">
                 <canvas id="isoStackedChart"></canvas>
@@ -181,7 +187,8 @@
             <p>Bubble size represents annual CO&#8322; emissions. Green = below 272 kg/MWh, amber = 272&ndash;408, red = above 408. The vertical spread reveals the enormous diversity in fleet carbon intensity&mdash;a 4&times; range from the cleanest to the dirtiest.</p>
         </div>
 
-        <div class="chart-container" style="margin-top: 24px;">
+        <div class="chart-container chart-panel" style="margin-top: 24px;">
+            <h3>Emissions Intensity vs. Generation</h3>
             <div class="chart-wrapper" style="height: 420px;">
                 <canvas id="bubbleChart"></canvas>
             </div>
@@ -390,7 +397,7 @@
             <p>The cost of each additional tonne of CO&#8322; avoided increases as generators pursue deeper decarbonization. The shape of this curve depends entirely on fleet starting composition.</p>
         </div>
 
-        <div class="chart-container">
+        <div class="chart-container chart-panel">
             <h3>CO&#8322; Abatement Cost Curve: Cheap Early Wins, Expensive Last Mile</h3>
             <div class="chart-wrapper" style="height: 400px;">
                 <canvas id="macChart"></canvas>
@@ -410,7 +417,7 @@
             <p>How have the top generators' CO&#8322; emission rates changed over the past two decades? The trajectories reveal which companies are genuinely decarbonizing and which are stalling.</p>
         </div>
 
-        <div class="chart-container">
+        <div class="chart-container chart-panel">
             <h3>Absolute CO&#8322; Emissions Trajectory: Top 15 Combined</h3>
             <div class="chart-wrapper" style="height: 320px;">
                 <canvas id="absoluteTrajectoryChart"></canvas>
