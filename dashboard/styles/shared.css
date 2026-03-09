@@ -15,11 +15,13 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html {
-    font-size: 17px;
+    font-size: 18px;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     scroll-behavior: smooth;
 }
+@media (min-width: 1200px) { html { font-size: 18.5px; } }
+@media (min-width: 1600px) { html { font-size: 19px; } }
 
 body {
     font-family: var(--font-body);
@@ -174,10 +176,10 @@ body {
     --shadow-xl: 0 8px 28px rgba(0,0,0,0.12);
 
     /* ---- Max widths ---- */
-    --max-content: 1320px;
-    --max-content-wide: 1440px;
-    --max-prose: 900px;
-    --max-narrow: 740px;
+    --max-content: 1440px;
+    --max-content-wide: 1600px;
+    --max-prose: 1080px;
+    --max-narrow: 820px;
 }
 
 /* ========== TYPOGRAPHY ========== */

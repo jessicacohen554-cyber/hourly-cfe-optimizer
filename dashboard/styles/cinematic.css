@@ -67,11 +67,11 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 }
 .section-dark h2,
 .section-dark h3 { color: #fff; }
-.section-dark p { color: rgba(255,255,255,0.85); }
-.section-dark strong { color: rgba(255,255,255,0.95); }
+.section-dark p { color: rgba(255,255,255,0.92); }
+.section-dark strong { color: rgba(255,255,255,0.97); }
 .section-dark .story-section h2,
 .section-dark .story-section h3 { color: #fff; }
-.section-dark .story-section p { color: rgba(255,255,255,0.85); }
+.section-dark .story-section p { color: rgba(255,255,255,0.92); }
 
 /* Dark section — no glass on story-content wrapper */
 .section-dark .story-section > .story-content {
@@ -117,7 +117,7 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 .section-dark .delta-table {
     color: rgba(255,255,255,0.9);
 }
-.section-dark .data-table th { color: rgba(255,255,255,0.7); }
+.section-dark .data-table th { color: rgba(255,255,255,0.85); }
 .section-dark .data-table td { border-color: rgba(255,255,255,0.12); }
 .section-dark .stat-tile,
 .section-dark .stat-card {
@@ -127,7 +127,7 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 .section-dark .stat-tile .stat-value,
 .section-dark .stat-card .stat-value { color: #fff; }
 .section-dark .stat-tile .stat-label,
-.section-dark .stat-card .stat-label { color: rgba(255,255,255,0.7); }
+.section-dark .stat-card .stat-label { color: rgba(255,255,255,0.85); }
 
 /* ========== FULL-PAGE SECTION TRANSPARENCY ========== */
 /* These selectors catch all opaque section backgrounds from
@@ -166,7 +166,7 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 
 /* scrollytell.css region-pills-bar — glass instead of white */
 .region-pills-bar {
-    background: rgba(255, 255, 255, 0.85) !important;
+    background: rgba(255, 255, 255, 0.95) !important;
     backdrop-filter: blur(12px) saturate(180%);
     -webkit-backdrop-filter: blur(12px) saturate(180%);
 }
@@ -190,12 +190,12 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 
 /* ========== GLASSMORPHIC PANELS (light sections) ========== */
 
-/* Story content wrapper — higher opacity for text readability */
+/* Story content wrapper — near-opaque for text readability */
 .story-section > .story-content {
-    background: rgba(255, 255, 255, 0.78);
+    background: rgba(255, 255, 255, 0.96);
     backdrop-filter: blur(14px) saturate(180%);
     -webkit-backdrop-filter: blur(14px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.55);
     border-radius: 16px;
     padding: 36px 32px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
@@ -203,10 +203,10 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 
 /* Generic glass panel class */
 .glass-panel {
-    background: rgba(255, 255, 255, 0.78);
+    background: rgba(255, 255, 255, 0.96);
     backdrop-filter: blur(14px) saturate(180%);
     -webkit-backdrop-filter: blur(14px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.55);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05), 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 
@@ -254,10 +254,10 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 .peak-capacity-panel,
 .target-mode-panel,
 .pathway-metric {
-    background: rgba(255, 255, 255, 0.78) !important;
+    background: rgba(255, 255, 255, 0.96) !important;
     backdrop-filter: blur(14px) saturate(180%);
     -webkit-backdrop-filter: blur(14px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+    border: 1px solid rgba(255, 255, 255, 0.55) !important;
     border-radius: var(--radius-lg, 12px);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05), 0 2px 8px rgba(0, 0, 0, 0.03);
 }
@@ -265,7 +265,7 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 /* Slightly more opaque for callouts (text-heavy) */
 .callout-box,
 .callout-box.callout-left-border {
-    background: rgba(255, 255, 255, 0.82) !important;
+    background: rgba(255, 255, 255, 0.97) !important;
     backdrop-filter: blur(14px) saturate(180%);
     -webkit-backdrop-filter: blur(14px) saturate(180%);
 }
@@ -277,10 +277,10 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 
 /* Interactive controls — glass with higher z-index */
 .global-controls {
-    background: rgba(255, 255, 255, 0.85) !important;
+    background: rgba(255, 255, 255, 0.96) !important;
     backdrop-filter: blur(12px) saturate(180%);
     -webkit-backdrop-filter: blur(12px) saturate(180%);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.4) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.55) !important;
     z-index: 50;
 }
 
@@ -289,10 +289,10 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 .scenario-card,
 .gap-card,
 .mechanism-card {
-    background: rgba(255, 255, 255, 0.78) !important;
+    background: rgba(255, 255, 255, 0.96) !important;
     backdrop-filter: blur(14px) saturate(180%);
     -webkit-backdrop-filter: blur(14px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+    border: 1px solid rgba(255, 255, 255, 0.55) !important;
     border-radius: var(--radius-lg, 12px);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05), 0 2px 8px rgba(0, 0, 0, 0.03);
 }
@@ -304,7 +304,7 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 }
 .hero-overview .hero-stats-row .stat-tile,
 .hero-section .hero-stats-row .stat-tile {
-    background: rgba(255, 255, 255, 0.78) !important;
+    background: rgba(255, 255, 255, 0.96) !important;
     backdrop-filter: blur(14px) saturate(180%);
     -webkit-backdrop-filter: blur(14px) saturate(180%);
 }
@@ -313,16 +313,16 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 .data-table,
 .company-table,
 .delta-table {
-    background: rgba(255, 255, 255, 0.72);
+    background: rgba(255, 255, 255, 0.94);
     border-radius: var(--radius-md);
 }
 .data-table th {
-    background: rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.7);
 }
 
 /* Nav button secondary */
 .nav-btn-secondary {
-    background: rgba(255, 255, 255, 0.78) !important;
+    background: rgba(255, 255, 255, 0.96) !important;
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
 }
@@ -339,43 +339,43 @@ hr.section-divider,
     background: transparent !important;
 }
 .hero-stat {
-    background: rgba(255, 255, 255, 0.78) !important;
+    background: rgba(255, 255, 255, 0.96) !important;
     backdrop-filter: blur(14px) saturate(180%);
     -webkit-backdrop-filter: blur(14px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+    border: 1px solid rgba(255, 255, 255, 0.55) !important;
 }
 .report-layout {
     background: transparent !important;
 }
 .report-toc {
-    background: rgba(255, 255, 255, 0.78) !important;
+    background: rgba(255, 255, 255, 0.96) !important;
     backdrop-filter: blur(14px) saturate(180%);
     -webkit-backdrop-filter: blur(14px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+    border: 1px solid rgba(255, 255, 255, 0.55) !important;
 }
 .report-section {
-    background: rgba(255, 255, 255, 0.78) !important;
+    background: rgba(255, 255, 255, 0.96) !important;
     backdrop-filter: blur(14px) saturate(180%);
     -webkit-backdrop-filter: blur(14px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+    border: 1px solid rgba(255, 255, 255, 0.55) !important;
     border-radius: 12px;
     padding: 32px 28px;
 }
 
 /* ========== SCENARIO COMPARISON COMPONENTS ========== */
 .scenario-legend {
-    background: rgba(255, 255, 255, 0.80) !important;
+    background: rgba(255, 255, 255, 0.96) !important;
     backdrop-filter: blur(14px) saturate(180%);
     -webkit-backdrop-filter: blur(14px) saturate(180%);
 }
 .chart-wide {
-    background: rgba(255, 255, 255, 0.78) !important;
+    background: rgba(255, 255, 255, 0.96) !important;
     backdrop-filter: blur(14px) saturate(180%);
     -webkit-backdrop-filter: blur(14px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+    border: 1px solid rgba(255, 255, 255, 0.55) !important;
 }
 .metric-tiles {
-    background: rgba(255, 255, 255, 0.72) !important;
+    background: rgba(255, 255, 255, 0.94) !important;
 }
 
 /* ========== CLEAN FIRM / ARTICLE COMPONENTS ========== */
@@ -384,10 +384,10 @@ hr.section-divider,
 }
 .concept-section .chart-panel,
 .concept-section .card {
-    background: rgba(255, 255, 255, 0.78) !important;
+    background: rgba(255, 255, 255, 0.96) !important;
     backdrop-filter: blur(14px) saturate(180%);
     -webkit-backdrop-filter: blur(14px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+    border: 1px solid rgba(255, 255, 255, 0.55) !important;
 }
 
 /* ========== LMP / SCROLL SECTION COMPONENTS ========== */
@@ -395,18 +395,18 @@ hr.section-divider,
     background: transparent !important;
 }
 .scroll-section-inner {
-    background: rgba(255, 255, 255, 0.78);
+    background: rgba(255, 255, 255, 0.96);
     backdrop-filter: blur(14px) saturate(180%);
     -webkit-backdrop-filter: blur(14px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.55);
     border-radius: 16px;
     padding: 36px 32px;
 }
 .key-findings-panel {
-    background: rgba(255, 255, 255, 0.78) !important;
+    background: rgba(255, 255, 255, 0.96) !important;
     backdrop-filter: blur(14px) saturate(180%);
     -webkit-backdrop-filter: blur(14px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+    border: 1px solid rgba(255, 255, 255, 0.55) !important;
 }
 
 /* ========== ABATEMENT COMPONENTS ========== */
@@ -420,10 +420,10 @@ hr.section-divider,
 .strategy-accordion,
 .accordion-header,
 .accordion-content {
-    background: rgba(255, 255, 255, 0.78) !important;
+    background: rgba(255, 255, 255, 0.96) !important;
     backdrop-filter: blur(14px) saturate(180%);
     -webkit-backdrop-filter: blur(14px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+    border: 1px solid rgba(255, 255, 255, 0.55) !important;
 }
 
 /* Comparison boxes */
@@ -498,12 +498,12 @@ section.panel-navy h3 {
 .panel-navy.story-content li,
 section.panel-navy p,
 section.panel-navy li {
-    color: rgba(255, 255, 255, 0.88);
+    color: rgba(255, 255, 255, 0.92);
 }
 .panel-navy > .story-content strong,
 .panel-navy.story-content strong,
 section.panel-navy strong {
-    color: rgba(255, 255, 255, 0.95);
+    color: rgba(255, 255, 255, 0.97);
 }
 .panel-navy > .story-content .callout,
 .panel-navy > .story-content .callout-box,
@@ -519,7 +519,7 @@ section.panel-navy .insight-box {
 .panel-navy > .story-content .insight-box p,
 section.panel-navy .callout p,
 section.panel-navy .insight-box p {
-    color: rgba(255, 255, 255, 0.88);
+    color: rgba(255, 255, 255, 0.92);
 }
 .panel-navy > .story-content .callout strong,
 .panel-navy > .story-content .insight-box strong,
@@ -543,7 +543,7 @@ section.panel-navy .card h4 {
 .panel-navy > .story-content .card li,
 section.panel-navy .card p,
 section.panel-navy .card li {
-    color: rgba(255, 255, 255, 0.85);
+    color: rgba(255, 255, 255, 0.92);
 }
 .panel-navy > .story-content .stat-tile,
 .panel-navy > .story-content .stat-card,
@@ -558,7 +558,7 @@ section.panel-navy .stat-value {
 }
 .panel-navy > .story-content .stat-label,
 section.panel-navy .stat-label {
-    color: rgba(255, 255, 255, 0.7);
+    color: rgba(255, 255, 255, 0.85);
 }
 .panel-navy .story-badge {
     background: rgba(255, 255, 255, 0.12);
@@ -567,7 +567,7 @@ section.panel-navy .stat-label {
 }
 .panel-navy .citation,
 .panel-navy .ref {
-    color: rgba(255, 255, 255, 0.7);
+    color: rgba(255, 255, 255, 0.82);
 }
 .panel-navy a {
     color: #60A5FA;
@@ -584,7 +584,7 @@ section.panel-navy .stat-label {
 }
 .panel-navy .company-table th,
 .panel-navy .data-table th {
-    color: rgba(255, 255, 255, 0.7);
+    color: rgba(255, 255, 255, 0.85);
     background: rgba(255, 255, 255, 0.1);
 }
 .panel-navy .company-table td,
@@ -605,18 +605,18 @@ section.report-section.panel-navy h4 {
 }
 section.report-section.panel-navy p,
 section.report-section.panel-navy li {
-    color: rgba(255, 255, 255, 0.88);
+    color: rgba(255, 255, 255, 0.92);
 }
 section.report-section.panel-navy strong {
-    color: rgba(255, 255, 255, 0.95);
+    color: rgba(255, 255, 255, 0.97);
 }
 section.report-section.panel-navy .report-section-number {
-    color: rgba(255, 255, 255, 0.55);
+    color: rgba(255, 255, 255, 0.72);
 }
 
 /* ========== FOOTER GLASS ========== */
 .site-footer {
-    background: rgba(248, 249, 252, 0.75) !important;
+    background: rgba(248, 249, 252, 0.94) !important;
     backdrop-filter: blur(12px) saturate(180%);
     -webkit-backdrop-filter: blur(12px) saturate(180%);
 }
