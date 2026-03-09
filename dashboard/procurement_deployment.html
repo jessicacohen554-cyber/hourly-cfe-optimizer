@@ -1651,9 +1651,10 @@
     // PARTICIPATION CAPS: restrict slider when worst strategy saturates
     // ═════════════════════════════════════════════════════════════════════════
 
-    // Find the max participation level at which ANY active strategy in ANY ISO
-    // achieves ≥99.99% grid clean. Above this, results are physically
-    // meaningless — cap the slider there.
+    // Cap participation when the WORST-performing active strategy (slowest to
+    // reach 100% clean) has all ISOs at ≥99.99% grid clean. Above this point,
+    // every strategy has fully decarbonized every grid — further participation
+    // just adds curtailment with no analytical value.
     function computeParticipationCap() {
         const active = getActiveStrategies();
         const threshold = getThreshold();
@@ -1661,24 +1662,25 @@
 
         for (let pi = 0; pi < PARTICIPATION_LEVELS.length; pi++) {
             const part = PARTICIPATION_LEVELS[pi];
-            let allIsosMaxed = true;
 
-            for (const iso of CROSSOVER_ISOS) {
-                let isoMaxed = false;
-                for (const strat of active) {
+            // Check: does EVERY active strategy have ALL ISOs at ≥99.99%?
+            let allStrategiesMaxed = true;
+            for (const strat of active) {
+                let thisStratAllIsos = true;
+                for (const iso of CROSSOVER_ISOS) {
                     const gcp = getGridCleanAtPart(strat, iso, part, threshold);
-                    if (gcp !== null && gcp >= 99.99) {
-                        isoMaxed = true;
+                    if (gcp === null || gcp < 99.99) {
+                        thisStratAllIsos = false;
                         break;
                     }
                 }
-                if (!isoMaxed) {
-                    allIsosMaxed = false;
+                if (!thisStratAllIsos) {
+                    allStrategiesMaxed = false;
                     break;
                 }
             }
 
-            if (allIsosMaxed) {
+            if (allStrategiesMaxed) {
                 maxAllowed = pi;
                 break;
             }
@@ -1703,7 +1705,6 @@
     // MASTER UPDATE — wire threshold slider to also update new charts
     // ═════════════════════════════════════════════════════════════════════════
 
-    const origThrHandler = thrSlider.oninput;
     thrSlider.addEventListener('input', () => {
         applyParticipationCap();
         rebuildCrossoverChart();
