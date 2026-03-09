@@ -10,203 +10,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/shared.css">
     <link rel="stylesheet" href="styles/reference.css">
+    <link rel="stylesheet" href="styles/cinematic.css">
 <style>
 /* ========== ABOUT PAGE — Page-specific styles only ========== */
-/* Shared: story-section, story-badge, story-badge-*, callout-box, layer-stack,
-   layer-card, mindmap-*, insight-card, insights-grid, nav-buttons, nav-btn,
-   stat-row, stat-block, stat-number, flow-diagram, flow-row, flow-box,
-   section-divider, mm-* animations → reference.css / shared.css */
-
-body {
-    background: #0B1120; /* dark fallback behind fixed image */
-}
-
-/* ========== TRANSPARENT OVERRIDES (let circuit board show through) ========== */
-/* .content-wrap in reference.css has opaque var(--bg-alt-warm) — must be transparent */
-.content-wrap {
-    background: transparent !important;
-}
-/* Gradient transitions between sections — make translucent so bg peeks through */
-.gradient-transition {
-    background: linear-gradient(180deg,
-        rgba(248,249,252,0.3) 0%,
-        rgba(11,17,32,0.04) 50%,
-        rgba(248,249,252,0.3) 100%) !important;
-}
-/* Light↔dark transitions need transparency on the light end */
-.section-transition-light-to-dark {
-    background: linear-gradient(180deg, rgba(255,255,255,0.0) 0%, #0B1120 100%) !important;
-}
-.section-transition-dark-to-light {
-    background: linear-gradient(180deg, #0B1120 0%, rgba(255,255,255,0.0) 100%) !important;
-}
-.section-transition-dark-to-gray {
-    background: linear-gradient(180deg, #0B1120 0%, rgba(248,249,252,0.0) 100%) !important;
-}
-/* stat-block: glass instead of opaque white */
-.stat-block {
-    background: rgba(255, 255, 255, 0.65) !important;
-    backdrop-filter: blur(10px) saturate(160%);
-    -webkit-backdrop-filter: blur(10px) saturate(160%);
-    border: 1px solid rgba(255, 255, 255, 0.4) !important;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
-}
-/* flow-diagram: glass */
-.flow-diagram {
-    background: rgba(255, 255, 255, 0.65) !important;
-    backdrop-filter: blur(10px) saturate(160%);
-    -webkit-backdrop-filter: blur(10px) saturate(160%);
-    border: 1px solid rgba(255, 255, 255, 0.4) !important;
-}
-/* insight-card in light sections: glass */
-.insight-card {
-    background: rgba(255, 255, 255, 0.68) !important;
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.35) !important;
-}
-/* Dark section flow diagrams: opaque enough to read */
-.section-dark .flow-diagram {
-    background: rgba(15, 23, 42, 0.85) !important;
-    border: 1px solid rgba(255,255,255,0.12) !important;
-}
-/* Dark section insight cards keep their own styling */
-.section-dark .insight-card {
-    background: rgba(255,255,255,0.06) !important;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(255,255,255,0.1) !important;
-}
-/* framework-card: glass */
-.framework-card {
-    background: rgba(255, 255, 255, 0.68) !important;
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.35) !important;
-}
-/* callout-box left-border variant: glass */
-.callout-box.callout-left-border {
-    background: rgba(255, 255, 255, 0.65) !important;
-    backdrop-filter: blur(10px) saturate(160%);
-    -webkit-backdrop-filter: blur(10px) saturate(160%);
-}
-/* nav-btn-secondary: glass */
-.nav-btn-secondary {
-    background: rgba(255, 255, 255, 0.65) !important;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-}
-/* hr section dividers: subtle on transparent bg */
-hr.section-divider {
-    border-color: rgba(212, 216, 224, 0.4);
-}
-/* Footer: slight glass instead of opaque bg-alt */
-.site-footer {
-    background: rgba(248, 249, 252, 0.75) !important;
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
-}
-/* Dark sections: inset from edges so circuit board is visible around them */
-.section-dark {
-    margin: var(--space-2xl) var(--space-xl);
-    border-radius: var(--radius-xl);
-    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.3);
-}
-
-/* ========== CINEMATIC SCROLL BACKGROUND ========== */
-#bgCamera {
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    overflow: hidden;
-    pointer-events: none;
-}
-#bgImage {
-    width: 160vw;
-    height: 160vh;
-    object-fit: cover;
-    will-change: transform;
-    transform: translate(-15%, -15%) scale(1.0);
-}
-
-/* All content above background */
-#topNav, .header, .content-wrap, .section-dark, .site-footer,
-.explore-grid, .gradient-transition, hr.section-divider {
-    position: relative;
-    z-index: 1;
-}
-
-/* ========== GLASSMORPHIC PANELS ========== */
-.glass-panel {
-    background: rgba(255, 255, 255, 0.68);
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.02);
-}
-.thesis-card {
-    background: rgba(255, 255, 255, 0.68);
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.02);
-}
-.layer-card {
-    background: rgba(255, 255, 255, 0.68);
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.02);
-}
-.explore-card {
-    background: rgba(255, 255, 255, 0.68);
-    backdrop-filter: blur(12px) saturate(180%);
-    -webkit-backdrop-filter: blur(12px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.02);
-}
-.callout-box {
-    background: rgba(255, 255, 255, 0.72);
-    backdrop-filter: blur(10px) saturate(160%);
-    -webkit-backdrop-filter: blur(10px) saturate(160%);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
-}
-.story-section > .story-content {
-    background: rgba(255, 255, 255, 0.55);
-    backdrop-filter: blur(10px) saturate(160%);
-    -webkit-backdrop-filter: blur(10px) saturate(160%);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 16px;
-    padding: 36px 32px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.03);
-}
-/* Dark sections keep their own background — no glass */
-.section-dark .story-section > .story-content {
-    background: transparent;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    border: none;
-    box-shadow: none;
-    padding: 0;
-}
-
-/* ========== TEXT READABILITY ON GLASS ========== */
-/* Only override light-section text — dark sections keep their white text */
-.content-wrap > .story-section p,
-.theses-section .thesis-text,
-.content-wrap > section.story-section p {
-    color: #475569; /* darker than var(--text-secondary) for glass contrast */
-}
-.content-wrap > .story-section p.lead {
-    color: var(--navy);
-}
-.callout-box p {
-    color: #475569;
-}
-.layer-card p {
-    color: #475569;
-}
+/* Cinematic background, glass, dark sections, z-index → cinematic.css */
+/* Shared components → reference.css / shared.css */
 
 /* About-page story-section typography overrides (light sections only) */
 .story-section h2 {
@@ -233,11 +41,6 @@ hr.section-divider {
     color: var(--navy);
     line-height: 1.7;
 }
-/* Dark section typography keeps shared.css defaults */
-.section-dark .story-section h2,
-.section-dark .story-section h3 { color: #fff; }
-.section-dark .story-section p { color: rgba(255,255,255,0.72); }
-
 /* About-page callout overrides (left-border style on glass) */
 .callout-box {
     border-left: 4px solid var(--hydro);
@@ -413,21 +216,6 @@ hr.section-divider {
     .explore-grid { grid-template-columns: 1fr; }
     .thesis-num { font-size: 3.5rem; }
     .thesis-text { font-size: 1.05rem; }
-    /* Larger overscan on mobile for pan room */
-    #bgImage {
-        width: 180vw;
-        height: 180vh;
-        transform: translate(-20%, -20%) scale(1.0);
-    }
-    /* Reduce glass blur on mobile for performance */
-    .thesis-card, .layer-card, .explore-card, .callout-box,
-    .story-section > .story-content {
-        backdrop-filter: blur(8px) saturate(160%);
-        -webkit-backdrop-filter: blur(8px) saturate(160%);
-    }
-    .section-dark {
-        margin: var(--space-xl) var(--space-sm);
-    }
 }
 @media (max-width: 480px) {
     .story-section { padding: 36px 16px; }
@@ -443,11 +231,6 @@ hr.section-divider {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 </head>
 <body>
-
-<!-- CINEMATIC SCROLL BACKGROUND -->
-<div id="bgCamera" aria-hidden="true">
-    <img src="134ECF38-1159-473B-809C-019548A1B759.png" alt="" id="bgImage">
-</div>
 
 <!-- TOP NAVIGATION (injected by nav.js) -->
 <nav id="topNav"></nav>
@@ -996,69 +779,9 @@ hr.section-divider {
     cards.forEach(function(c) { observer.observe(c); });
 })();
 
-// ---- GSAP Cinematic Scroll Background ----
-(function() {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        var img = document.getElementById('bgImage');
-        if (img) img.style.transform = 'translate(-15%, -15%) scale(1.0)';
-        return;
-    }
-
-    gsap.registerPlugin(ScrollTrigger);
-
-    var bgImage = document.getElementById('bgImage');
-    if (!bgImage) return;
-
-    // Set initial position (centered with 60% overscan for wide panning)
-    gsap.set(bgImage, { xPercent: -15, yPercent: -15, scale: 1.0 });
-
-    // Timeline: cinematic pan + zoom as user scrolls — wide sweeping motions
-    var tl = gsap.timeline({
-        scrollTrigger: {
-            trigger: document.body,
-            start: 'top top',
-            end: 'bottom bottom',
-            scrub: 1.8
-        }
-    });
-
-    // Header → Theses: sweep left and zoom in toward colored nodes
-    tl.to(bgImage, {
-        xPercent: -24, yPercent: -8, scale: 1.08,
-        ease: 'power2.inOut', duration: 1
-    })
-    // Theses → Big Picture: swing up-right, continue zooming
-    .to(bgImage, {
-        xPercent: -5, yPercent: -22, scale: 1.14,
-        ease: 'power2.inOut', duration: 1
-    })
-    // Big Picture → Layers: pan down-left toward different node cluster
-    .to(bgImage, {
-        xPercent: -28, yPercent: -12, scale: 1.18,
-        ease: 'power2.inOut', duration: 1.2
-    })
-    // Layers → Incentives (dark): drift right and pull back slightly
-    .to(bgImage, {
-        xPercent: -8, yPercent: -26, scale: 1.12,
-        ease: 'power2.inOut', duration: 1
-    })
-    // Incentives → Gaps: sweep to lower-left, zoom in tight
-    .to(bgImage, {
-        xPercent: -22, yPercent: -6, scale: 1.22,
-        ease: 'power2.inOut', duration: 1.2
-    })
-    // Gaps → Insights (dark): pan up-right, ease back
-    .to(bgImage, {
-        xPercent: -4, yPercent: -20, scale: 1.15,
-        ease: 'power2.inOut', duration: 1
-    })
-    // Insights → Explore: wide sweep back to center, zoom out to rest
-    .to(bgImage, {
-        xPercent: -15, yPercent: -15, scale: 1.05,
-        ease: 'power2.inOut', duration: 1.2
-    });
-})();
+// ---- GSAP Cinematic Scroll Background → now in cinematic-bg.js ----
 </script>
+<script src="js/cinematic-bg.js"></script>
 
 </body>
 </html>
