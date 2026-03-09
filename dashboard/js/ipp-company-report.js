@@ -966,7 +966,7 @@
         id: 'gapLabels',
         afterDraw(chart) {
             const meta = chart.options.plugins.gapLabels;
-            if (!meta || !meta.gaps) return;
+            if (!meta || !meta.gaps || meta.visible === false) return;
             const ctx = chart.ctx;
             const xScale = chart.scales.x;
             const yScale = chart.scales.y;
@@ -1123,6 +1123,20 @@
 
         // Enabling conditions cards — split into AT and SBTi
         renderConditionsCards(baseline, psV2_local, at_local, emissions);
+
+        // Wire label toggle buttons
+        document.querySelectorAll('.gap-label-toggle').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var chartId = btn.getAttribute('data-chart');
+                var chart = charts[chartId];
+                if (!chart) return;
+                var meta = chart.options.plugins.gapLabels;
+                var show = meta.visible === false;
+                meta.visible = show;
+                btn.classList.toggle('active', show);
+                chart.update('none');
+            });
+        });
     }
 
     function renderConditionsCards(baseline, psV2_local, at_local, emissions) {

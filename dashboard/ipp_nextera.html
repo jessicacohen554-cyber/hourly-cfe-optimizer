@@ -170,7 +170,10 @@
                 <!-- 6.1 SMARTargets AT -->
                 <h3 style="font-size: 1.1rem; color: var(--navy); margin-bottom: var(--space-md)">6.1 &nbsp;SMARTargets AT Enabling Conditions</h3>
                 <div class="card" style="padding: var(--space-lg); margin-bottom: var(--space-lg)">
-                    <h4 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Gap: Qualified Target vs SMARTargets AT Trajectory</h4>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-sm)">
+                        <h4 style="font-size: 0.95rem; color: var(--navy); margin: 0">Gap: Qualified Target vs SMARTargets AT Trajectory</h4>
+                        <button class="toggle-btn-group gap-label-toggle active" data-chart="gapChartAT" style="font-size:0.75rem;padding:4px 10px;cursor:pointer">Labels</button>
+                    </div>
                     <div class="chart-container-lg"><canvas id="gapChartAT"></canvas></div>
                 </div>
                 <div class="grid-2col" id="conditionsCardsAT" style="margin-bottom: var(--space-2xl)"></div>
@@ -178,7 +181,10 @@
                 <!-- 6.2 SBTi Power Sector v2 -->
                 <h3 style="font-size: 1.1rem; color: var(--navy); margin-bottom: var(--space-md)">6.2 &nbsp;SBTi Power Sector v2 Enabling Conditions</h3>
                 <div class="card" style="padding: var(--space-lg); margin-bottom: var(--space-lg)">
-                    <h4 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Gap: Qualified Target vs SBTi Power Sector v2 Trajectory</h4>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-sm)">
+                        <h4 style="font-size: 0.95rem; color: var(--navy); margin: 0">Gap: Qualified Target vs SBTi Power Sector v2 Trajectory</h4>
+                        <button class="toggle-btn-group gap-label-toggle active" data-chart="gapChartSBTi" style="font-size:0.75rem;padding:4px 10px;cursor:pointer">Labels</button>
+                    </div>
                     <div class="chart-container-lg"><canvas id="gapChartSBTi"></canvas></div>
                 </div>
                 <div class="grid-2col" id="conditionsCardsSBTi"></div>
