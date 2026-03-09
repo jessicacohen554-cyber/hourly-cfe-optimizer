@@ -20,8 +20,11 @@ import sys
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(SCRIPT_DIR)
+sys.path.insert(0, SCRIPT_DIR)
 DATA_DIR = os.path.join(ROOT_DIR, 'data', 'step5-post-processing')
 JS_DIR = os.path.join(ROOT_DIR, 'dashboard', 'js')
+
+from procurement_utils import compute_endogenous_cost
 
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 
@@ -301,7 +304,7 @@ def main():
     }
 
     # Key participation levels for the visualization (subset for compact output)
-    KEY_PARTICIPATION = {'5pct', '10pct', '15pct', '20pct', '25pct',
+    KEY_PARTICIPATION = {'0pct', '5pct', '10pct', '15pct', '20pct', '25pct',
                           '30pct', '40pct', '50pct', '60pct', '70pct', '80pct', '90pct', '100pct'}
     # Key thresholds — skip fine gradations to reduce size
     KEY_THRESHOLDS = {50, 60, 70, 75, 80, 85, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99}
@@ -382,8 +385,17 @@ def main():
                         record['n'] = new
                     if cross_iso:
                         record['x'] = cross_iso
-                    record['c'] = round(entry.get('cost_per_mwh', 0), 0)
-                    record['tc'] = round(entry.get('total_cost_m', 0), 0)
+
+                    # Apply endogenous Wright's Law learning curves
+                    part_pct_num = float(part_pct)
+                    adj_c, adj_tc = compute_endogenous_cost(
+                        strat_id, iso, threshold, part_pct_num, rm)
+                    if adj_c is not None:
+                        record['c'] = round(adj_c, 0)
+                        record['tc'] = round(adj_tc, 0)
+                    else:
+                        record['c'] = round(entry.get('cost_per_mwh', 0), 0)
+                        record['tc'] = round(entry.get('total_cost_m', 0), 0)
                     record['co2'] = round(entry.get('co2_abated_mmt', 0), 3)
                     record['bt'] = round(entry.get('buyer_demand_twh', 0), 1)
 
@@ -412,6 +424,16 @@ def main():
 
                 if part_dict:
                     output['data'][strat_id][iso][part_pct] = part_dict
+
+            # Add synthetic 0% participation entries (no procurement = grid baseline only)
+            zero_dict = {}
+            for thr in KEY_THRESHOLDS:
+                thr_key = str(thr) if thr != int(thr) else str(int(thr))
+                zero_dict[thr_key] = {
+                    'c': 0, 'tc': 0, 'co2': 0, 'bt': 0,
+                }
+            output['data'][strat_id][iso]['0'] = zero_dict
+            total_entries += len(zero_dict)
 
         iso_count = len(output['data'][strat_id])
         print(f"  {strat_id}: {iso_count} ISOs processed")

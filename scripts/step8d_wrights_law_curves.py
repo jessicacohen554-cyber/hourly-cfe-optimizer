@@ -55,8 +55,8 @@ SBTI_YEAR_MAP = THRESHOLD_TARGET_YEARS
 THRESHOLDS = ACTIVE_THRESHOLDS
 
 # Participation levels to evaluate (% of C&I demand)
-PARTICIPATION_PCTS = np.array([0.02, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30,
-                                0.40, 0.50, 0.60, 0.70, 0.80], dtype=np.float64)
+PARTICIPATION_PCTS = np.array([0.0, 0.02, 0.05, 0.10, 0.15, 0.20, 0.25, 0.30,
+                                0.40, 0.50, 0.60, 0.70, 0.80, 0.90, 1.00], dtype=np.float64)
 
 # Wright's Law learning curve parameters (from step3)
 LEARNING_PARAMS = {

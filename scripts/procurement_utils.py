@@ -39,7 +39,11 @@ from pipeline_config import (
     GEOTHERMAL_LCOE, EXISTING_NUCLEAR_GW, UPRATE_CAP_TWH,
     DEMAND_GROWTH_RATES, THRESHOLD_TARGET_YEARS,
     THRESHOLDS as ALL_THRESHOLDS, ACTIVE_THRESHOLDS,
-    STORAGE_REVENUE_CREDITS,
+    STORAGE_REVENUE_CREDITS, RESOURCE_CAPACITY_FACTORS,
+    FOAK_NUCLEAR_NEWBUILD, FOAK_CCS_45Q_ON, FOAK_GEOTHERMAL,
+    FOAK_LDES, FOAK_H2, FOAK_OFFSHORE_WIND,
+    NOAK_BATTERY, NOAK_BATTERY8, NOAK_OFFSHORE_WIND,
+    REGIONAL_DEMAND_TWH,
 )
 
 SBTI_YEAR_MAP = THRESHOLD_TARGET_YEARS  # Backward compat alias
@@ -69,6 +73,242 @@ def learning_fraction(threshold, scenario='B'):
 
     active = (year - foak_start) / (noak_year - foak_start)
     return active ** 0.6
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ENDOGENOUS WRIGHT'S LAW (from step10_smartargets — deployment-based learning)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Starting cumulative GW baselines (2025)
+WRIGHT_CUMULATIVE_GW_2025 = {
+    'nuclear': 2.0, 'ccs': 0.3, 'ldes': 0.01, 'h2': 0.1,
+    'geothermal': 0.05, 'battery': 50.0, 'battery8': 50.0,
+    'solar': 150.0, 'wind': 150.0, 'offshore_wind': 5.0,
+}
+
+# Learning rate = cost reduction per doubling of cumulative capacity
+WRIGHT_LEARNING_RATE = {
+    'nuclear':       {'Fast': 0.15, 'Slow': 0.10},
+    'ccs':           {'Fast': 0.12, 'Slow': 0.10},
+    'ldes':          {'Fast': 0.20, 'Slow': 0.15},
+    'h2':            {'Fast': 0.18, 'Slow': 0.12},
+    'geothermal':    {'Fast': 0.20, 'Slow': 0.15},
+    'battery':       {'Fast': 0.20, 'Slow': 0.18},
+    'battery8':      {'Fast': 0.20, 'Slow': 0.18},
+    'solar':         {'Fast': 0.0, 'Slow': 0.0},
+    'wind':          {'Fast': 0.0, 'Slow': 0.0},
+    'offshore_wind': {'Fast': 0.12, 'Slow': 0.08},
+}
+
+# Background learning (exogenous rest-of-world GW by 2035 and 2050)
+WRIGHT_BACKGROUND_GW = {
+    'nuclear':       {'Fast': (30, 150), 'Slow': (5, 20)},
+    'ccs':           {'Fast': (10, 50),  'Slow': (2, 10)},
+    'ldes':          {'Fast': (5, 30),   'Slow': (0.5, 5)},
+    'h2':            {'Fast': (3, 20),   'Slow': (0.5, 3)},
+    'geothermal':    {'Fast': (3, 15),   'Slow': (0.5, 3)},
+    'battery':       {'Fast': (200, 800), 'Slow': (80, 300)},
+    'battery8':      {'Fast': (50, 200), 'Slow': (20, 80)},
+    'solar':         {'Fast': (500, 2000), 'Slow': (200, 800)},
+    'wind':          {'Fast': (300, 1200), 'Slow': (100, 500)},
+    'offshore_wind': {'Fast': (40, 150),  'Slow': (10, 50)},
+}
+
+# Strategy → learning speed mapping
+STRATEGY_LEARNING_SPEED = {
+    '1A': 'Slow', '1B': 'Slow', '1C': 'Slow',  # Consequential: delayed adoption
+    '2A': 'Fast', '2B': 'Fast', '2C': 'Fast',  # Hourly: accelerated via matching signal
+    '3A': 'Slow', '3B': 'Slow', '3C': 'Slow', '3D': 'Slow',  # Annual: no deployment signal
+}
+
+# Resource key → Wright's Law tech key
+RESOURCE_TO_WRIGHT_TECH = {
+    'clean_firm': 'nuclear', 'nuclear_newbuild': 'nuclear', 'nuclear_uprate': 'nuclear',
+    'solar': 'solar', 'wind': 'wind', 'offshore_wind': 'offshore_wind',
+    'ccs': 'ccs', 'ccs_ccgt': 'ccs',
+    'hydro': None,  # Existing only, no learning
+    'battery': 'battery', 'battery8': 'battery8',
+    'ldes': 'ldes', 'h2': 'h2', 'storage': 'battery',
+    'geothermal': 'geothermal',
+    'existing_merchant': None, 'existing_clean_free': None,
+    'grid_mix_allocation': None,
+}
+
+
+def wright_cost(foak_cost, noak_floor, cumulative_gw, reference_gw, learning_rate):
+    """Deployment-based Wright's Law cost at current cumulative GW.
+
+    cost = FOAK × (cumulative / reference) ^ (-learning_exponent)
+    Capped at NOAK floor.
+    """
+    if cumulative_gw <= reference_gw or learning_rate <= 0:
+        return foak_cost
+    exponent = -np.log2(1.0 - learning_rate)
+    cost = foak_cost * (cumulative_gw / reference_gw) ** (-exponent)
+    return max(noak_floor, cost)
+
+
+def get_background_gw(tech, learning_speed, year):
+    """Interpolate exogenous rest-of-world cumulative GW at a given year."""
+    bg = WRIGHT_BACKGROUND_GW.get(tech, {}).get(learning_speed, (0, 0))
+    gw_2035, gw_2050 = bg
+    if year <= 2025:
+        return 0.0
+    if year >= 2050:
+        return gw_2050
+    if year <= 2035:
+        frac = (year - 2025) / 10.0
+        return gw_2035 * frac
+    # 2035-2050
+    frac = (year - 2035) / 15.0
+    return gw_2035 + (gw_2050 - gw_2035) * frac
+
+
+def get_effective_cumulative_gw(tech, model_deployed_gw, learning_speed, year):
+    """Total cumulative = 2025 baseline + model deployed + background."""
+    base = WRIGHT_CUMULATIVE_GW_2025.get(tech, 1.0)
+    bg = get_background_gw(tech, learning_speed, year)
+    return base + model_deployed_gw + bg
+
+
+def _get_resource_foak_noak(resource, iso, level='Medium'):
+    """Get FOAK and NOAK costs for a resource at a given ISO.
+
+    Returns (foak_cost, noak_cost) in $/MWh or $/MWh-cap for storage.
+    Returns (None, None) for resources without learning curves.
+    """
+    if resource in ('clean_firm', 'nuclear_uprate', 'nuclear_newbuild'):
+        foak = FOAK_NUCLEAR_NEWBUILD.get(iso, 175)
+        noak = NUCLEAR_NEWBUILD_LCOE.get('Low', {}).get(iso, 68)
+        return foak, noak
+    elif resource in ('ccs', 'ccs_ccgt'):
+        foak = FOAK_CCS_45Q_ON.get(iso, 130)
+        noak = CCS_LCOE_45Q_ON.get('Low', {}).get(iso, 80)
+        return foak, noak
+    elif resource == 'geothermal':
+        foak = FOAK_GEOTHERMAL if isinstance(FOAK_GEOTHERMAL, (int, float)) else 150
+        noak = GEOTHERMAL_LCOE.get('Low', 63) if isinstance(GEOTHERMAL_LCOE, dict) else 63
+        return foak, noak
+    elif resource == 'offshore_wind':
+        foak = FOAK_OFFSHORE_WIND.get(iso)
+        noak_dict = NOAK_OFFSHORE_WIND.get('Low', {})
+        noak = noak_dict.get(iso) if foak else None
+        return foak, noak
+    elif resource in ('battery', 'battery8', 'ldes', 'h2', 'storage'):
+        # Storage FOAK/NOAK are in $/MWh-cap (thousands), not $/MWh-dispatched.
+        # Skip endogenous learning — step8b already priced with dispatch ratios.
+        return None, None
+    elif resource in ('solar', 'wind'):
+        # Mature tech — no learning, return None
+        return None, None
+    else:
+        return None, None
+
+
+def compute_endogenous_cost(strategy, iso, threshold, participation_pct, resource_mix):
+    """Compute endogenous Wright's Law-adjusted blended cost for a deployment record.
+
+    Args:
+        strategy: Strategy ID (e.g., '2A', '1B')
+        iso: ISO region
+        threshold: CFE threshold (%)
+        participation_pct: Market participation (0-100)
+        resource_mix: dict of {resource_key: {'twh': float, 'price': float, ...}}
+
+    Returns:
+        (adjusted_cost_per_mwh, adjusted_total_cost_m) or (None, None) if can't compute
+    """
+    learning_speed = STRATEGY_LEARNING_SPEED.get(strategy, 'Slow')
+    year = SBTI_YEAR_MAP.get(threshold, SBTI_YEAR_MAP.get(int(threshold), 2050))
+    participation_frac = participation_pct / 100.0
+
+    # Compute global new-build GW per technology from resource mix scaled by participation
+    # Resource mix is per-ISO; scale to global by estimating total deployment
+    # Approximation: this ISO's demand share of US total → extrapolate to national
+    iso_demand = REGIONAL_DEMAND_TWH.get(iso, 300)
+    us_total_demand = sum(REGIONAL_DEMAND_TWH.values())
+    demand_scale = us_total_demand / max(iso_demand, 1)
+
+    # Parse resource mix — handle both formats:
+    # Strategy 2/3: {resource: {twh, price, cost_m, ...}}
+    # Strategy 1: {"{ISO}_{resource}": scalar_twh}
+    parsed_resources = []
+    for key, val in resource_mix.items():
+        if key in ('sss_allocation',):
+            continue
+        if isinstance(val, dict):
+            twh = val.get('twh', 0)
+            base_price = val.get('price', 0)
+            res_key = key
+        elif isinstance(val, (int, float)):
+            twh = val
+            base_price = 0
+            # Strip ISO prefix if present (e.g., "MISO_wind" → "wind")
+            res_key = key
+            for iso_prefix in ISOS:
+                if key.startswith(f'{iso_prefix}_'):
+                    res_key = key[len(iso_prefix) + 1:]
+                    break
+        else:
+            continue
+        if twh <= 0:
+            continue
+        parsed_resources.append((res_key, twh, base_price))
+
+    # Map resource key → RESOURCE_CAPACITY_FACTORS key
+    _CF_KEY_MAP = {
+        'nuclear_newbuild': 'clean_firm', 'nuclear_uprate': 'clean_firm',
+        'ccs': 'ccs_ccgt', 'firm': 'clean_firm',
+    }
+
+    def _get_cf(res_key, iso_name):
+        cf_key = _CF_KEY_MAP.get(res_key, res_key)
+        cf_entry = RESOURCE_CAPACITY_FACTORS.get(cf_key, {})
+        if isinstance(cf_entry, dict):
+            return cf_entry.get(iso_name, 0.30)
+        return cf_entry if isinstance(cf_entry, (int, float)) else 0.30
+
+    # Compute cumulative GW per technology
+    cumulative_gw = {}
+    for res_key, twh, _ in parsed_resources:
+        tech = RESOURCE_TO_WRIGHT_TECH.get(res_key)
+        if tech is None:
+            continue
+        cf = _get_cf(res_key, iso)
+        if cf <= 0:
+            continue
+        national_twh = twh * demand_scale * participation_frac
+        gw = national_twh / (cf * 8.76)
+        cumulative_gw[tech] = cumulative_gw.get(tech, 0) + gw
+
+    # Apply Wright's Law to each resource and recompute blended cost
+    total_cost = 0.0
+    total_twh = 0.0
+
+    for res_key, twh, base_price in parsed_resources:
+        tech = RESOURCE_TO_WRIGHT_TECH.get(res_key)
+        foak, noak = _get_resource_foak_noak(res_key, iso)
+
+        if tech is not None and foak is not None and noak is not None:
+            lr = WRIGHT_LEARNING_RATE.get(tech, {}).get(learning_speed, 0)
+            ref_gw = WRIGHT_CUMULATIVE_GW_2025.get(tech, 1.0)
+            eff_gw = get_effective_cumulative_gw(
+                tech, cumulative_gw.get(tech, 0), learning_speed, year)
+            adjusted_price = wright_cost(foak, noak, eff_gw, ref_gw, lr)
+        else:
+            # No learning curve (solar, wind, hydro, etc.) — use base price
+            adjusted_price = base_price
+
+        total_cost += adjusted_price * twh
+        total_twh += twh
+
+    if total_twh <= 0:
+        return None, None
+
+    cost_per_mwh = total_cost / total_twh
+    total_cost_m = total_cost  # Already TWh × $/MWh = $M (since TWh × $/MWh = $M)
+    return round(cost_per_mwh, 1), round(total_cost_m, 1)
+
 
 DATA_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), 'data')
 PP_DIR = os.path.join(DATA_DIR, 'step5-post-processing')
