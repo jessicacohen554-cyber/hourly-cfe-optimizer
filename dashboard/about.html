@@ -101,18 +101,18 @@ hr.section-divider {
     backdrop-filter: blur(12px) saturate(180%);
     -webkit-backdrop-filter: blur(12px) saturate(180%);
 }
-/* Dark sections: translucent navy so circuit board bleeds through */
+/* Dark sections: translucent navy so circuit board clearly bleeds through */
 .section-dark {
     background: linear-gradient(135deg,
-        rgba(11, 17, 32, 0.82) 0%,
-        rgba(15, 23, 42, 0.78) 60%,
-        rgba(30, 41, 59, 0.75) 100%) !important;
-    backdrop-filter: blur(16px) saturate(140%);
-    -webkit-backdrop-filter: blur(16px) saturate(140%);
+        rgba(11, 17, 32, 0.58) 0%,
+        rgba(15, 23, 42, 0.52) 60%,
+        rgba(30, 41, 59, 0.48) 100%) !important;
+    backdrop-filter: blur(6px) saturate(120%);
+    -webkit-backdrop-filter: blur(6px) saturate(120%);
 }
 /* Tone down the radial glow pseudo-element so it doesn't re-opacify */
 .section-dark::before {
-    opacity: 0.6;
+    opacity: 0.35;
 }
 
 /* ========== CINEMATIC SCROLL BACKGROUND ========== */
@@ -428,8 +428,8 @@ hr.section-divider {
         -webkit-backdrop-filter: blur(8px) saturate(160%);
     }
     .section-dark {
-        backdrop-filter: blur(10px) saturate(120%);
-        -webkit-backdrop-filter: blur(10px) saturate(120%);
+        backdrop-filter: blur(4px) saturate(110%);
+        -webkit-backdrop-filter: blur(4px) saturate(110%);
     }
 }
 @media (max-width: 480px) {
