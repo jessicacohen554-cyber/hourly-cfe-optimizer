@@ -799,8 +799,8 @@ class JarGrid {
             const curtTwh = this.strategyCurtTwh?.[strat] ?? 0;
             ctx.font = `600 ${metricFS}px 'DM Sans', sans-serif`;
             ctx.fillStyle = curtTwh > 1 ? '#F59E0B' : '#9CA3AF';
-            const curtLabel = curtTwh >= 1000 ? `${(curtTwh / 1000).toFixed(1)}k TWh curt.` :
-                              curtTwh >= 1 ? `${Math.round(curtTwh)} TWh curt.` : '0 TWh curt.';
+            const curtLabel = curtTwh >= 1000 ? `${(curtTwh / 1000).toFixed(1)}k TWh curtailed` :
+                              curtTwh >= 1 ? `${Math.round(curtTwh)} TWh curtailed` : '0 TWh curtailed';
             ctx.fillText(curtLabel, x, metricBaseY + metricLineH);
 
             // Line 3: Total system cost (clean + gas) — navy
