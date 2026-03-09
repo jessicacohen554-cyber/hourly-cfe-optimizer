@@ -422,7 +422,7 @@ class JarGrid {
 
         // Row headers = ISO names (shorter), col headers = strategy IDs + gas GW sub-label
         this.rowHeaderWidth = isMobile ? 55 : (isTablet ? 65 : 80);
-        this.colHeaderHeight = isMobile ? 84 : 100;
+        this.colHeaderHeight = isMobile ? 92 : 112;
 
         const availWidth = rect.width - this.rowHeaderWidth;
         const jarW = Math.max(55, Math.floor(availWidth / numCols));
