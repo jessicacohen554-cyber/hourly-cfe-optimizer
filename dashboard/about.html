@@ -18,7 +18,88 @@
    section-divider, mm-* animations → reference.css / shared.css */
 
 body {
-    background: var(--bg-page-white);
+    background: #0B1120; /* dark fallback behind fixed image */
+}
+
+/* ========== TRANSPARENT OVERRIDES (let circuit board show through) ========== */
+/* .content-wrap in reference.css has opaque var(--bg-alt-warm) — must be transparent */
+.content-wrap {
+    background: transparent !important;
+}
+/* Gradient transitions between sections — make translucent so bg peeks through */
+.gradient-transition {
+    background: linear-gradient(180deg,
+        rgba(248,249,252,0.3) 0%,
+        rgba(11,17,32,0.04) 50%,
+        rgba(248,249,252,0.3) 100%) !important;
+}
+/* Light↔dark transitions need transparency on the light end */
+.section-transition-light-to-dark {
+    background: linear-gradient(180deg, rgba(255,255,255,0.0) 0%, #0B1120 100%) !important;
+}
+.section-transition-dark-to-light {
+    background: linear-gradient(180deg, #0B1120 0%, rgba(255,255,255,0.0) 100%) !important;
+}
+.section-transition-dark-to-gray {
+    background: linear-gradient(180deg, #0B1120 0%, rgba(248,249,252,0.0) 100%) !important;
+}
+/* stat-block: glass instead of opaque white */
+.stat-block {
+    background: rgba(255, 255, 255, 0.65) !important;
+    backdrop-filter: blur(10px) saturate(160%);
+    -webkit-backdrop-filter: blur(10px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+}
+/* flow-diagram: glass */
+.flow-diagram {
+    background: rgba(255, 255, 255, 0.65) !important;
+    backdrop-filter: blur(10px) saturate(160%);
+    -webkit-backdrop-filter: blur(10px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+}
+/* insight-card in light sections: glass */
+.insight-card {
+    background: rgba(255, 255, 255, 0.68) !important;
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.35) !important;
+}
+/* Dark section insight cards keep their own styling */
+.section-dark .insight-card {
+    background: rgba(255,255,255,0.06) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.1) !important;
+}
+/* framework-card: glass */
+.framework-card {
+    background: rgba(255, 255, 255, 0.68) !important;
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.35) !important;
+}
+/* callout-box left-border variant: glass */
+.callout-box.callout-left-border {
+    background: rgba(255, 255, 255, 0.65) !important;
+    backdrop-filter: blur(10px) saturate(160%);
+    -webkit-backdrop-filter: blur(10px) saturate(160%);
+}
+/* nav-btn-secondary: glass */
+.nav-btn-secondary {
+    background: rgba(255, 255, 255, 0.65) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+/* hr section dividers: subtle on transparent bg */
+hr.section-divider {
+    border-color: rgba(212, 216, 224, 0.4);
+}
+/* Footer: slight glass instead of opaque bg-alt */
+.site-footer {
+    background: rgba(248, 249, 252, 0.75) !important;
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
 }
 
 /* ========== CINEMATIC SCROLL BACKGROUND ========== */
@@ -170,7 +251,7 @@ body {
 .stat-label { margin-top: 4px; font-weight: 500; }
 
 /* ========== FOOTER (about-specific light footer) ========== */
-.site-footer { background: var(--bg-alt); padding: 24px; text-align: center; }
+.site-footer { padding: 24px; text-align: center; }
 .site-footer a { color: rgba(15,23,42,0.6); text-decoration: none; font-size: 0.85rem; }
 .site-footer a:hover { color: var(--navy); }
 .site-footer p { color: rgba(15,23,42,0.35); font-size: 0.78rem; margin: 0; }
