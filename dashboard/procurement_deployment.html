@@ -127,6 +127,86 @@ body { background: var(--bg-page); }
     margin: 0 4px;
 }
 
+/* ===== STRATEGY SELECTOR ===== */
+.strategy-selector {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 12px var(--pad-page);
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+.strategy-category {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.category-label {
+    font-family: var(--font-body);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-right: 2px;
+}
+.strategy-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border);
+    background: white;
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+.strategy-check:has(input:checked) {
+    background: var(--indigo);
+    border-color: var(--indigo);
+    color: white;
+}
+.strategy-check:has(input:checked) .info-icon {
+    color: rgba(255,255,255,0.7);
+}
+.strategy-check input[type="checkbox"] {
+    display: none;
+}
+.strategy-id {
+    font-family: var(--font-data);
+    font-weight: 700;
+    font-size: 0.82rem;
+}
+.info-icon {
+    cursor: help;
+    position: relative;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    line-height: 1;
+}
+.info-icon:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 130%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--navy-dark, #1E293B);
+    color: white;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 0.7rem;
+    font-weight: 400;
+    white-space: nowrap;
+    z-index: 100;
+    pointer-events: none;
+    box-shadow: var(--shadow-md);
+}
+
 /* ===== JAR MATRIX ===== */
 .matrix-section {
     max-width: 1320px;
@@ -434,6 +514,10 @@ body { background: var(--bg-page); }
     .stat-chips { gap: 6px; justify-content: center; }
     .stat-chip { padding: 5px 10px; font-size: 0.72rem; }
     .stat-chip .chip-val { font-size: 0.85rem; }
+    .strategy-selector { gap: 12px; padding: 10px 12px; }
+    .strategy-category { gap: 4px; }
+    .strategy-check { padding: 3px 7px; font-size: 0.7rem; }
+    .category-label { font-size: 0.6rem; }
     .legend-bar { gap: 6px; font-size: 0.65rem; padding: 8px 12px; flex-wrap: wrap; justify-content: center; }
     .legend-group { gap: 4px; }
     .legend-ball, .legend-ball-hollow { width: 10px; height: 10px; }
@@ -446,11 +530,13 @@ body { background: var(--bg-page); }
     .jar-dom { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); gap: 1px; padding: 2px; }
     .ball { animation-duration: 4s; }
     .jar-hms-label { font-size: 0.52rem; bottom: -13px; }
+    .info-icon:hover::after { white-space: normal; max-width: 200px; left: auto; right: 0; transform: none; }
 }
 @media (max-width: 480px) {
     .controls-bar { padding: 10px 10px; }
     .control-group label { font-size: 0.68rem; }
     .slider-value { font-size: 0.95rem; min-width: 45px; }
+    .strategy-selector { flex-direction: column; gap: 8px; }
     .legend-bar { gap: 4px; font-size: 0.6rem; }
     .ball { animation: none; }
     .ball--glow { animation: ball-glow-pulse 2s ease-in-out infinite; }
@@ -536,6 +622,64 @@ body { background: var(--bg-page); }
     <div class="legend-divider"></div>
     <div class="legend-group" style="font-style:italic;color:var(--text-muted)">
         Each ball = 1% of grid · Jar = ISO grid state under strategy
+    </div>
+</div>
+
+<!-- Strategy Selector -->
+<div class="strategy-selector">
+    <div class="strategy-category">
+        <span class="category-label">Consequential</span>
+        <label class="strategy-check">
+            <input type="checkbox" value="1A">
+            <span class="strategy-id">1A</span>
+            <span class="info-icon" data-tooltip="Cross-regional netting against baseline grid emissions">&#9432;</span>
+        </label>
+        <label class="strategy-check">
+            <input type="checkbox" value="1B" checked>
+            <span class="strategy-id">1B</span>
+            <span class="info-icon" data-tooltip="Cross-regional netting against marginal grid emissions">&#9432;</span>
+        </label>
+    </div>
+    <div class="strategy-category">
+        <span class="category-label">Hourly</span>
+        <label class="strategy-check">
+            <input type="checkbox" value="2A">
+            <span class="strategy-id">2A</span>
+            <span class="info-icon" data-tooltip="Hourly matching — new-build only, same ISO">&#9432;</span>
+        </label>
+        <label class="strategy-check">
+            <input type="checkbox" value="2B">
+            <span class="strategy-id">2B</span>
+            <span class="info-icon" data-tooltip="Hourly matching — new-build + existing merchant clean">&#9432;</span>
+        </label>
+        <label class="strategy-check">
+            <input type="checkbox" value="2C" checked>
+            <span class="strategy-id">2C</span>
+            <span class="info-icon" data-tooltip="Hourly matching — new-build + existing merchant + SSS allocation">&#9432;</span>
+        </label>
+    </div>
+    <div class="strategy-category">
+        <span class="category-label">Annual</span>
+        <label class="strategy-check">
+            <input type="checkbox" value="3A">
+            <span class="strategy-id">3A</span>
+            <span class="info-icon" data-tooltip="Annual matching — new-build only, same ISO">&#9432;</span>
+        </label>
+        <label class="strategy-check">
+            <input type="checkbox" value="3B">
+            <span class="strategy-id">3B</span>
+            <span class="info-icon" data-tooltip="Annual matching — new-build, cross-regional">&#9432;</span>
+        </label>
+        <label class="strategy-check">
+            <input type="checkbox" value="3C">
+            <span class="strategy-id">3C</span>
+            <span class="info-icon" data-tooltip="Annual matching — new-build + existing credits, same ISO">&#9432;</span>
+        </label>
+        <label class="strategy-check">
+            <input type="checkbox" value="3D" checked>
+            <span class="strategy-id">3D</span>
+            <span class="info-icon" data-tooltip="Annual matching — cross-regional + existing credits">&#9432;</span>
+        </label>
     </div>
 </div>
 
@@ -645,6 +789,20 @@ body { background: var(--bg-page); }
         grid._updateData();
     });
 
+    // Strategy checkbox wiring
+    document.querySelectorAll('.strategy-check input').forEach(cb => {
+        cb.addEventListener('change', () => {
+            const checked = [...document.querySelectorAll('.strategy-check input:checked')]
+                .map(el => el.value);
+            if (checked.length === 0) {
+                cb.checked = true; // prevent unchecking all
+                return;
+            }
+            grid.setActiveStrategies(checked);
+            rebuildCharts();
+        });
+    });
+
     // ═════════════════════════════════════════════════════════════════════════
     // AGGREGATE CHARTS
     // ═════════════════════════════════════════════════════════════════════════
@@ -661,130 +819,92 @@ body { background: var(--bg-page); }
         '3A': '3A Annual (Same)', '3B': '3B Annual (Cross)',
         '3C': '3C Annual (Same Exist)', '3D': '3D Annual (Cross Exist)',
     };
-    const STRATEGIES_LIST = ['1A', '1B', '2A', '2B', '2C', '3A', '3B', '3C', '3D'];
 
     const chartOpts = {
         responsive: true,
         maintainAspectRatio: false,
         animation: { duration: 400 },
-        plugins: {
-            legend: { display: false },
-        },
+        plugins: { legend: { display: false } },
         scales: {
-            x: {
-                grid: { display: false },
-                ticks: { font: { family: "'DM Sans'", size: 11 } }
-            },
-            y: {
-                grid: { color: '#E2E8F0' },
-                ticks: { font: { family: "'Space Mono'", size: 10 } }
-            }
+            x: { grid: { display: false }, ticks: { font: { family: "'DM Sans'", size: 11 } } },
+            y: { grid: { color: '#E2E8F0' }, ticks: { font: { family: "'Space Mono'", size: 10 } } }
         }
     };
 
-    function makeBarChart(canvasId, label, unit) {
-        const ctx = document.getElementById(canvasId).getContext('2d');
-        return new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: STRATEGIES_LIST.map(s => STRAT_LABELS[s]),
-                datasets: [{
-                    label: label,
-                    data: STRATEGIES_LIST.map(() => 0),
-                    backgroundColor: STRATEGIES_LIST.map(s => STRAT_COLORS[s] + 'CC'),
-                    borderColor: STRATEGIES_LIST.map(s => STRAT_COLORS[s]),
-                    borderWidth: 1,
-                    borderRadius: 4,
-                }]
-            },
-            options: {
-                ...chartOpts,
-                plugins: {
-                    ...chartOpts.plugins,
-                    tooltip: {
-                        callbacks: {
-                            label: (ctx) => `${ctx.raw.toFixed(1)} ${unit}`
-                        }
-                    }
-                }
-            }
-        });
+    let chartProcurement = null;
+    let chartCO2 = null;
+
+    function getActiveStrategies() {
+        return [...document.querySelectorAll('.strategy-check input:checked')].map(el => el.value);
     }
 
-    function makeStackedBarChart(canvasId) {
-        const ctx = document.getElementById(canvasId).getContext('2d');
-        return new Chart(ctx, {
+    function rebuildCharts() {
+        const active = getActiveStrategies();
+
+        // Destroy old charts
+        if (chartProcurement) chartProcurement.destroy();
+        if (chartCO2) chartCO2.destroy();
+
+        // Stacked procurement chart
+        chartProcurement = new Chart(document.getElementById('chartProcurement').getContext('2d'), {
             type: 'bar',
             data: {
-                labels: STRATEGIES_LIST.map(s => STRAT_LABELS[s]),
+                labels: active.map(s => STRAT_LABELS[s]),
                 datasets: [
-                    {
-                        label: 'Existing',
-                        data: STRATEGIES_LIST.map(() => 0),
-                        backgroundColor: '#6366F1CC',
-                        borderColor: '#6366F1',
-                        borderWidth: 1,
-                        borderRadius: 2,
-                    },
-                    {
-                        label: 'New Build',
-                        data: STRATEGIES_LIST.map(() => 0),
-                        backgroundColor: '#6366F140',
-                        borderColor: '#6366F1',
-                        borderWidth: 1,
-                        borderRadius: 2,
-                    },
-                    {
-                        label: 'Cross-ISO',
-                        data: STRATEGIES_LIST.map(() => 0),
-                        backgroundColor: '#F59E0B80',
-                        borderColor: '#F59E0B',
-                        borderWidth: 1,
-                        borderRadius: 2,
-                    },
+                    { label: 'Existing', data: active.map(() => 0), backgroundColor: '#6366F1CC', borderColor: '#6366F1', borderWidth: 1, borderRadius: 2 },
+                    { label: 'New Build', data: active.map(() => 0), backgroundColor: '#6366F140', borderColor: '#6366F1', borderWidth: 1, borderRadius: 2 },
+                    { label: 'Cross-ISO', data: active.map(() => 0), backgroundColor: '#F59E0B80', borderColor: '#F59E0B', borderWidth: 1, borderRadius: 2 },
                 ]
             },
             options: {
                 ...chartOpts,
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top',
-                        labels: { font: { family: "'DM Sans'", size: 11 }, boxWidth: 12 }
-                    }
-                },
-                scales: {
-                    ...chartOpts.scales,
-                    x: { ...chartOpts.scales.x, stacked: true },
-                    y: { ...chartOpts.scales.y, stacked: true },
-                }
+                plugins: { legend: { display: true, position: 'top', labels: { font: { family: "'DM Sans'", size: 11 }, boxWidth: 12 } } },
+                scales: { ...chartOpts.scales, x: { ...chartOpts.scales.x, stacked: true }, y: { ...chartOpts.scales.y, stacked: true } }
             }
         });
+
+        // CO2 bar chart
+        chartCO2 = new Chart(document.getElementById('chartCO2').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: active.map(s => STRAT_LABELS[s]),
+                datasets: [{
+                    label: 'Fossil Displaced',
+                    data: active.map(() => 0),
+                    backgroundColor: active.map(s => STRAT_COLORS[s] + 'CC'),
+                    borderColor: active.map(s => STRAT_COLORS[s]),
+                    borderWidth: 1, borderRadius: 4,
+                }]
+            },
+            options: {
+                ...chartOpts,
+                plugins: { ...chartOpts.plugins, tooltip: { callbacks: { label: (ctx) => `${ctx.raw.toFixed(1)} MtCO₂` } } }
+            }
+        });
+
+        updateCharts();
     }
 
-    const chartProcurement = makeStackedBarChart('chartProcurement');
-    const chartCO2 = makeBarChart('chartCO2', 'Fossil Displaced', 'MtCO₂');
-
     function updateCharts() {
+        if (!chartProcurement || !chartCO2) return;
         const stats = grid.getAggregateStats();
+        const active = getActiveStrategies();
 
-        for (let i = 0; i < STRATEGIES_LIST.length; i++) {
-            const s = stats[STRATEGIES_LIST[i]];
+        for (let i = 0; i < active.length; i++) {
+            const s = stats[active[i]];
             if (!s) continue;
-
             chartProcurement.data.datasets[0].data[i] = s.existingTwh;
             chartProcurement.data.datasets[1].data[i] = s.newTwh;
             chartProcurement.data.datasets[2].data[i] = s.crossTwh;
-
-            chartCO2.data.datasets[0].data[i] = Math.round(s.totalRealCO2Mt * 10) / 10;  // Actual fossil displaced (MtCO₂)
+            chartCO2.data.datasets[0].data[i] = Math.round(s.totalRealCO2Mt * 10) / 10;
         }
 
         chartProcurement.update();
         chartCO2.update();
     }
 
-    // Initial chart update
-    setTimeout(updateCharts, 300);
+    // Initial chart build
+    setTimeout(rebuildCharts, 300);
 
 })();
 </script>

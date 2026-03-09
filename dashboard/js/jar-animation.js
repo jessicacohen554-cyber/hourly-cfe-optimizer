@@ -326,6 +326,9 @@ class JarGrid {
         this.gridBaseline = null;
         this.jars = [];
 
+        // Active strategies (user-selectable via checkboxes)
+        this.activeStrategies = ['1B', '2C', '3D'];
+
         // Layout
         this.rowHeaderWidth = 0;
         this.colHeaderHeight = 0;
@@ -364,6 +367,11 @@ class JarGrid {
         this._drawCanvas();
     }
 
+    setActiveStrategies(strategies) {
+        this.activeStrategies = strategies;
+        this._onResize();
+    }
+
     _onResize() {
         const dpr = window.devicePixelRatio || 1;
         const container = this.canvas.parentElement;
@@ -372,11 +380,14 @@ class JarGrid {
         const isMobile = window.innerWidth < 768;
         const isTablet = window.innerWidth < 1024;
 
-        this.rowHeaderWidth = isMobile ? 55 : (isTablet ? 75 : 110);
-        this.colHeaderHeight = isMobile ? 28 : 38;
+        const numCols = this.activeStrategies.length;
+
+        // Row headers = ISO names (shorter), col headers = strategy IDs
+        this.rowHeaderWidth = isMobile ? 55 : (isTablet ? 65 : 80);
+        this.colHeaderHeight = isMobile ? 45 : 55;
 
         const availWidth = rect.width - this.rowHeaderWidth;
-        const jarW = Math.max(55, Math.floor(availWidth / ISO_LIST.length));
+        const jarW = Math.max(55, Math.floor(availWidth / numCols));
         const jarH = isMobile ? 110 : (isTablet ? 130 : 160);
         const rowGap = isMobile ? 20 : (isTablet ? 28 : 36);
 
@@ -385,8 +396,8 @@ class JarGrid {
         this.rowGap = rowGap;
         this.rowStride = jarH + rowGap;
 
-        const totalWidth = this.rowHeaderWidth + jarW * ISO_LIST.length;
-        const totalHeight = this.colHeaderHeight + this.rowStride * STRATEGIES.length;
+        const totalWidth = this.rowHeaderWidth + jarW * numCols;
+        const totalHeight = this.colHeaderHeight + this.rowStride * ISO_LIST.length;
 
         this.canvas.style.width = totalWidth + 'px';
         this.canvas.style.height = totalHeight + 'px';
@@ -408,11 +419,13 @@ class JarGrid {
     _buildJars() {
         // Remove old DOM elements
         if (this.overlayEl) this.overlayEl.innerHTML = '';
+        this._tooltipWired = false;
 
+        // Rows = ISOs (7), Cols = active strategies (variable)
         this.jars = [];
-        for (let row = 0; row < STRATEGIES.length; row++) {
-            for (let col = 0; col < ISO_LIST.length; col++) {
-                const jar = new Jar(STRATEGIES[row], ISO_LIST[col]);
+        for (let row = 0; row < ISO_LIST.length; row++) {
+            for (let col = 0; col < this.activeStrategies.length; col++) {
+                const jar = new Jar(this.activeStrategies[col], ISO_LIST[row]);
                 this.jars.push(jar);
             }
         }
@@ -459,7 +472,7 @@ class JarGrid {
         if (!this.data) return;
 
         const crossFlowsByStrategy = {};
-        for (const strat of STRATEGIES) {
+        for (const strat of this.activeStrategies) {
             crossFlowsByStrategy[strat] = this._buildCrossIsoFlows(strat);
         }
 
@@ -514,15 +527,17 @@ class JarGrid {
     _positionDOMJars() {
         if (!this.overlayEl) return;
 
-        const insetX = 4;  // inner padding from grid cell edges
+        const insetX = 4;
         const insetY = 4;
         const jarContentH = this.jarHeight - insetY * 2;
         const jarContentW = this.jarWidth - insetX * 2;
+        const numCols = this.activeStrategies.length;
 
         for (let i = 0; i < this.jars.length; i++) {
             const jar = this.jars[i];
-            const row = Math.floor(i / ISO_LIST.length);
-            const col = i % ISO_LIST.length;
+            // Rows = ISOs, Cols = strategies
+            const row = Math.floor(i / numCols);
+            const col = i % numCols;
 
             const x = this.rowHeaderWidth + col * this.jarWidth + insetX;
             const y = this.colHeaderHeight + row * this.rowStride + insetY;
@@ -610,40 +625,40 @@ class JarGrid {
         const ctx = this.ctx;
         const w = this.canvas.width / (window.devicePixelRatio || 1);
         const h = this.canvas.height / (window.devicePixelRatio || 1);
+        const numCols = this.activeStrategies.length;
 
         ctx.clearRect(0, 0, w, h);
 
-        // Column headers (ISOs)
+        // Column headers (strategies — multi-line labels)
         ctx.save();
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        const fontSize = this.jarWidth < 70 ? 9 : (this.jarWidth < 90 ? 11 : 13);
+        const fontSize = this.jarWidth < 70 ? 8 : (this.jarWidth < 100 ? 10 : 12);
         ctx.font = `600 ${fontSize}px 'Space Grotesk', sans-serif`;
+        ctx.fillStyle = '#334155';
 
-        for (let col = 0; col < ISO_LIST.length; col++) {
-            const iso = ISO_LIST[col];
+        for (let col = 0; col < numCols; col++) {
+            const strat = this.activeStrategies[col];
             const x = this.rowHeaderWidth + col * this.jarWidth + this.jarWidth / 2;
-            const y = this.colHeaderHeight / 2;
-            ctx.fillStyle = getIsoColor(iso);
-            ctx.fillText(iso, x, y);
+            const lines = (STRATEGY_LABELS[strat] || strat).split('\n');
+            for (let li = 0; li < lines.length; li++) {
+                ctx.fillText(lines[li], x, this.colHeaderHeight / 2 + (li - (lines.length - 1) / 2) * (fontSize + 2));
+            }
         }
         ctx.restore();
 
-        // Row headers (strategies)
+        // Row headers (ISOs)
         ctx.save();
         ctx.textAlign = 'right';
         ctx.textBaseline = 'middle';
-        const rowFS = this.rowHeaderWidth < 65 ? 8 : (this.rowHeaderWidth < 80 ? 9 : 11);
-        ctx.font = `500 ${rowFS}px 'DM Sans', sans-serif`;
-        ctx.fillStyle = '#334155';
+        const rowFS = this.rowHeaderWidth < 60 ? 9 : (this.rowHeaderWidth < 75 ? 11 : 13);
+        ctx.font = `600 ${rowFS}px 'Space Grotesk', sans-serif`;
 
-        for (let row = 0; row < STRATEGIES.length; row++) {
-            const strat = STRATEGIES[row];
+        for (let row = 0; row < ISO_LIST.length; row++) {
+            const iso = ISO_LIST[row];
             const y = this.colHeaderHeight + row * this.rowStride + this.jarHeight / 2;
-            const lines = (STRATEGY_LABELS[strat] || strat).split('\n');
-            for (let li = 0; li < lines.length; li++) {
-                ctx.fillText(lines[li], this.rowHeaderWidth - 6, y + (li - (lines.length - 1) / 2) * (rowFS + 2));
-            }
+            ctx.fillStyle = getIsoColor(iso);
+            ctx.fillText(iso, this.rowHeaderWidth - 6, y);
         }
         ctx.restore();
 
@@ -651,11 +666,11 @@ class JarGrid {
         ctx.save();
         ctx.strokeStyle = '#E2E8F0';
         ctx.lineWidth = 0.5;
-        for (let row = 0; row <= STRATEGIES.length; row++) {
+        for (let row = 0; row <= ISO_LIST.length; row++) {
             const y = this.colHeaderHeight + row * this.rowStride;
             ctx.beginPath(); ctx.moveTo(this.rowHeaderWidth, y); ctx.lineTo(w, y); ctx.stroke();
         }
-        for (let col = 0; col <= ISO_LIST.length; col++) {
+        for (let col = 0; col <= numCols; col++) {
             const x = this.rowHeaderWidth + col * this.jarWidth;
             ctx.beginPath(); ctx.moveTo(x, this.colHeaderHeight); ctx.lineTo(x, h); ctx.stroke();
         }
@@ -767,7 +782,7 @@ class JarGrid {
 
     getAggregateStats() {
         const stats = {};
-        for (const strat of STRATEGIES) {
+        for (const strat of this.activeStrategies) {
             let totalNew = 0, totalCross = 0, totalExisting = 0;
             let totalCO2 = 0, totalBaseline = 0;
             const resourceBreakdown = { existing: {}, new: {} };
