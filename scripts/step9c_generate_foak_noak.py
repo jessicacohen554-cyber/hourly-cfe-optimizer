@@ -110,9 +110,9 @@ avg_gas_base = float(np.dot(weights, gas_all_in))
 gas_escalation = 0.02
 gas_base_trajectory = avg_gas_base * np.power(1.0 + gas_escalation, years - 2025)
 
-# Carbon price trajectory: EPA SCC starts ~$51/ton in 2025, grows ~2.5% real/yr
+# Carbon price trajectory: EPA SCC $190/ton (2024 TSD, 3% SDR), grows ~2.5% real/yr
 # CO2 intensity of natural gas CCGT: ~0.37 tCO2/MWh
-scc_2025 = 51.0
+scc_2025 = 190.0
 scc_growth = 0.025
 co2_intensity = 0.37  # tCO2/MWh for CCGT
 
@@ -142,7 +142,7 @@ lines.append('// FOAK → NOAK LEARNING CURVES (Step 9c)')
 lines.append('// Clean firm = 50/50 nuclear + CCS-CCGT (45Q ON), demand-weighted across 7 ISOs')
 lines.append(f'// FOAK: ${avg_foak:.0f}/MWh → NOAK: ${avg_noak:.0f}/MWh')
 lines.append('// Gas: wholesale + $15 heat-rate/O&M premium, 2% real escalation')
-lines.append('// Carbon: EPA SCC $51/t (2025), 2.5% real growth, 0.37 tCO2/MWh CCGT')
+lines.append('// Carbon: EPA SCC $190/t (2024 TSD, 3% SDR), 2.5% real growth, 0.37 tCO2/MWh CCGT')
 lines.append('// ============================================================================')
 lines.append(f'const FOAK_NOAK_YEARS = {json.dumps(years_list)};')
 lines.append('')
