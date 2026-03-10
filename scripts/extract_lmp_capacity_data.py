@@ -95,34 +95,75 @@ def extract_capacity_data():
     return all_data
 
 
-def extract_reference_case_data():
-    """Extract Step 10 reference case price fans for dashboard overlay."""
-    ref_data = {}
+def _extract_clean_price_map(df_2050, min_n=3):
+    """Bin 2050 data by clean% (5% bins) and compute P10/P50/P90 price stats."""
+    if len(df_2050) == 0 or 'clean_pct' not in df_2050.columns:
+        return []
 
-    for iso in ALL_ISOS:
-        path = os.path.join(STEP10_DIR, f'sweep_reference_{iso}.parquet')
-        if not os.path.exists(path):
+    df_2050 = df_2050.copy()
+    df_2050['clean_bin'] = (df_2050['clean_pct'] / 5).round() * 5
+    bins = sorted(df_2050['clean_bin'].unique())
+
+    result = []
+    for b in bins:
+        subset = df_2050[df_2050['clean_bin'] == b]
+        if len(subset) < min_n or b < 50 or b > 100:
             continue
 
-        df = pd.read_parquet(path)
-        if 'energy_rev_mwh' not in df.columns:
-            print(f"  {iso}: step10 sweep missing revenue breakdown columns")
-            # Still extract avg_lmp data if available
-            if 'avg_lmp' not in df.columns:
-                continue
+        entry = {
+            'clean_pct': round(float(b), 0),
+            'n': len(subset),
+            'avg_lmp_p50': round(float(subset['avg_lmp'].quantile(0.50)), 1),
+        }
+
+        # Power market revenue = energy + capacity (no RECs)
+        if 'energy_rev_mwh' in subset.columns and 'capacity_rev_mwh' in subset.columns:
+            pm = subset['energy_rev_mwh'] + subset['capacity_rev_mwh']
+            entry['power_market_p10'] = round(float(pm.quantile(0.10)), 1)
+            entry['power_market_p50'] = round(float(pm.quantile(0.50)), 1)
+            entry['power_market_p90'] = round(float(pm.quantile(0.90)), 1)
+
+        result.append(entry)
+
+    return result
+
+
+def extract_reference_case_data():
+    """Extract Step 10 reference case price fans for dashboard overlay.
+
+    Loads three sweep families (reference, power_nz, economy_nz) and outputs
+    per-family clean_price_map with P10/P50/P90 confidence intervals.
+    """
+    ref_data = {}
+
+    SWEEP_FAMILIES = {
+        'reference': 'Reference (Market)',
+        'power_nz': 'AT Power NZ',
+        'economy_nz': 'AT Economy NZ',
+    }
+
+    for iso in ALL_ISOS:
+        # Load reference sweep (always required)
+        ref_path = os.path.join(STEP10_DIR, f'sweep_reference_{iso}.parquet')
+        if not os.path.exists(ref_path):
+            continue
+
+        df_ref = pd.read_parquet(ref_path)
+        if 'energy_rev_mwh' not in df_ref.columns and 'avg_lmp' not in df_ref.columns:
+            continue
 
         iso_ref = {'years': [2023, 2030, 2035, 2040, 2045, 2050]}
 
-        # Price fans by year
+        # Price fans by year (aggregated across all reference scenarios)
         for metric in ['avg_lmp', 'revenue_per_mwh', 'energy_rev_mwh',
                         'capacity_rev_mwh', 'rec_rev_mwh', 'clean_pct',
                         'cost_per_mwh', 'emissions_mt']:
-            if metric not in df.columns:
+            if metric not in df_ref.columns:
                 continue
 
             p10, p25, p50, p75, p90 = [], [], [], [], []
             for yr in iso_ref['years']:
-                subset = df[df['year'] == yr][metric].dropna()
+                subset = df_ref[df_ref['year'] == yr][metric].dropna()
                 if len(subset) > 0:
                     p10.append(round(float(subset.quantile(0.10)), 2))
                     p25.append(round(float(subset.quantile(0.25)), 2))
@@ -130,39 +171,40 @@ def extract_reference_case_data():
                     p75.append(round(float(subset.quantile(0.75)), 2))
                     p90.append(round(float(subset.quantile(0.90)), 2))
                 else:
-                    p10.append(0)
-                    p25.append(0)
-                    p50.append(0)
-                    p75.append(0)
-                    p90.append(0)
+                    p10.append(0); p25.append(0); p50.append(0)
+                    p75.append(0); p90.append(0)
 
             iso_ref[metric] = {'p10': p10, 'p25': p25, 'p50': p50, 'p75': p75, 'p90': p90}
 
-        # Also get 2050 clean% → market price mapping for convergence analysis
-        df_2050 = df[df['year'] == 2050].copy()
-        if len(df_2050) > 0 and 'clean_pct' in df_2050.columns and 'avg_lmp' in df_2050.columns:
-            # Bin by clean% (5% bins) and get price stats
-            df_2050['clean_bin'] = (df_2050['clean_pct'] / 5).round() * 5
-            bins = sorted(df_2050['clean_bin'].unique())
-            clean_price_map = []
-            for b in bins:
-                subset = df_2050[df_2050['clean_bin'] == b]
-                entry = {
-                    'clean_pct': round(float(b), 0),
-                    'n': len(subset),
-                    'avg_lmp_p50': round(float(subset['avg_lmp'].quantile(0.50)), 1),
-                    'revenue_p50': round(float(subset['revenue_per_mwh'].quantile(0.50)), 1)
-                        if 'revenue_per_mwh' in subset.columns else 0,
+        # Legacy: aggregated clean_price_map_2050 (backward compat)
+        df_2050 = df_ref[df_ref['year'] == 2050]
+        iso_ref['clean_price_map_2050'] = _extract_clean_price_map(df_2050)
+
+        # Per-family clean_price_map with P10/P50/P90 CIs
+        families = {}
+        for sweep_key, sweep_label in SWEEP_FAMILIES.items():
+            sweep_path = os.path.join(STEP10_DIR, f'sweep_{sweep_key}_{iso}.parquet')
+            if not os.path.exists(sweep_path):
+                continue
+
+            df_sweep = pd.read_parquet(sweep_path)
+            df_sweep_2050 = df_sweep[df_sweep['year'] == 2050]
+            price_map = _extract_clean_price_map(df_sweep_2050)
+
+            if price_map:
+                families[sweep_key] = {
+                    'label': sweep_label,
+                    'n_scenarios': int(df_sweep['scenario'].nunique()),
+                    'clean_price_map_2050': price_map,
                 }
-                # Power market revenue = energy + capacity (no RECs)
-                if 'energy_rev_mwh' in subset.columns and 'capacity_rev_mwh' in subset.columns:
-                    pm = subset['energy_rev_mwh'] + subset['capacity_rev_mwh']
-                    entry['power_market_p50'] = round(float(pm.quantile(0.50)), 1)
-                clean_price_map.append(entry)
-            iso_ref['clean_price_map_2050'] = clean_price_map
+                print(f"    {iso}/{sweep_key}: {len(price_map)} bins, "
+                      f"{df_sweep['scenario'].nunique()} scenarios")
+
+        iso_ref['families'] = families
 
         ref_data[iso] = iso_ref
-        print(f"  {iso}: extracted reference case data ({len(df)} scenarios)")
+        n_families = len(families)
+        print(f"  {iso}: extracted reference case data ({n_families} families)")
 
     return ref_data
 

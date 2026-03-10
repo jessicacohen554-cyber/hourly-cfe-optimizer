@@ -524,11 +524,72 @@ function buildRefCaseChart(iso, accent) {
         });
     }
 
-    // Step 10: Reference case power market revenue (energy + capacity, NO RECs)
-    if (ref && ref.clean_price_map_2050) {
+    // Step 10: Per-family power market curves with P10/P50/P90 CI bands
+    var FAMILY_STYLES = {
+        'reference':  { color: '#EF4444', label: 'Reference (Market)',   pointStyle: 'triangle' },
+        'power_nz':   { color: '#F59E0B', label: 'AT Power Net-Zero',   pointStyle: 'rect' },
+        'economy_nz': { color: '#8B5CF6', label: 'AT Economy Net-Zero',  pointStyle: 'rectRot' }
+    };
+
+    if (ref && ref.families) {
+        var familyKeys = Object.keys(ref.families);
+        familyKeys.forEach(function(key) {
+            var family = ref.families[key];
+            var style = FAMILY_STYLES[key] || { color: '#6B7280', label: key, pointStyle: 'circle' };
+            var pmap = family.clean_price_map_2050 || [];
+
+            var p50pts = [], p10pts = [], p90pts = [];
+            pmap.forEach(function(pt) {
+                if (pt.n >= 3 && pt.clean_pct >= 50 && pt.clean_pct <= 100) {
+                    var val50 = (pt.power_market_p50 !== undefined && pt.power_market_p50 !== 0)
+                        ? pt.power_market_p50 : pt.avg_lmp_p50;
+                    p50pts.push({ x: pt.clean_pct, y: val50 });
+
+                    if (pt.power_market_p10 !== undefined) {
+                        p10pts.push({ x: pt.clean_pct, y: pt.power_market_p10 });
+                    }
+                    if (pt.power_market_p90 !== undefined) {
+                        p90pts.push({ x: pt.clean_pct, y: pt.power_market_p90 });
+                    }
+                }
+            });
+
+            if (p50pts.length === 0) return;
+
+            // P50 median line
+            datasets.push({
+                label: 'Step 10 ' + style.label + ' (P50)',
+                data: p50pts,
+                borderColor: style.color,
+                backgroundColor: 'transparent',
+                borderWidth: 2,
+                pointRadius: 4, pointStyle: style.pointStyle,
+                showLine: true, tension: 0.3, order: 1
+            });
+
+            // P10/P90 CI band
+            if (p10pts.length > 0 && p90pts.length > 0) {
+                datasets.push({
+                    label: 'Step 10 ' + style.label + ' P10',
+                    data: p10pts,
+                    borderColor: 'transparent', backgroundColor: 'transparent',
+                    pointRadius: 0, showLine: true, tension: 0.3,
+                    order: 3, _type: 'band'
+                });
+                datasets.push({
+                    label: 'Step 10 ' + style.label + ' P90',
+                    data: p90pts,
+                    borderColor: 'transparent',
+                    backgroundColor: hexToRgba(style.color, 0.10),
+                    fill: '-1', pointRadius: 0, showLine: true, tension: 0.3,
+                    order: 3, _type: 'band'
+                });
+            }
+        });
+    } else if (ref && ref.clean_price_map_2050) {
+        // Fallback: legacy single-curve mode (no families data)
         var s10pts = [];
         ref.clean_price_map_2050.forEach(function(pt) {
-            // Use power_market_p50 if available, fall back to avg_lmp_p50
             var val = (pt.power_market_p50 !== undefined && pt.power_market_p50 !== 0)
                 ? pt.power_market_p50 : pt.avg_lmp_p50;
             if (pt.n >= 3 && pt.clean_pct >= 50 && pt.clean_pct <= 100) {
@@ -555,7 +616,10 @@ function buildRefCaseChart(iso, accent) {
             responsive: true, maintainAspectRatio: false,
             plugins: {
                 legend: { display: true, position: 'top', labels: { usePointStyle: true, font: { size: 11 },
-                    filter: function(item) { return item.text.indexOf('P10') === -1; }
+                    filter: function(item) {
+                        // Hide all P10 and P90 band entries from legend
+                        return item.text.indexOf('P10') === -1 && item.text.indexOf('P90') === -1;
+                    }
                 } },
                 annotation: { annotations: sbtiAnnotations() },
                 tooltip: {
