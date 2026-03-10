@@ -220,6 +220,7 @@
             children: [
                 { label: 'Carbon Accounting', href: 'consequential_accounting.html' },
                 { label: 'Scenario Comparison', href: 'scenario_comparison.html' },
+                { label: 'Hourly Matching 2A/2B/2C', href: 'hourly_comparison.html' },
                 { label: 'Procurement Deployment', href: 'procurement_deployment.html' }
             ]
         },
