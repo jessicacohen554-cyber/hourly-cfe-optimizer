@@ -1472,8 +1472,6 @@ function initDashboard() {
 
     updateAll();
 
-    // Initialize mobile inline step charts after a short delay for layout
-    setTimeout(initMobileStepCharts, 400);
 }
 
 // ---- Find closest available threshold ----
@@ -2812,13 +2810,6 @@ function highlightCostStep(stepName) {
     ds.pointRadius = radii;
     narrativeCostChart.options.plugins.annotation.annotations = annotations;
     narrativeCostChart.update('none');
-}
-
-// ---- Mobile inline step charts ----
-let stepChartInstances = {};
-
-function isMobileScrolly() {
-    return window.matchMedia('(max-width: 1024px)').matches;
 }
 
 function buildStepChartData() {
