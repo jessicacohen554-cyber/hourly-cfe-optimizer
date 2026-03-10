@@ -84,8 +84,13 @@ if sys.stdout.encoding != 'utf-8':
         pass
 
 # ══════════════════════════════════════════════════════════════════════════════
-# CONSTANTS
+# CONSTANTS — INTENTIONALLY ISOLATED FROM pipeline_config.py
 # ══════════════════════════════════════════════════════════════════════════════
+# Step 1 deliberately defines its own constants rather than importing from
+# pipeline_config. This isolation protects multi-hour physics runs from
+# upstream import failures. Cross-validation between these constants and
+# pipeline_config is enforced by tests/test_constants.py::TestStep1CrossValidation.
+# If you change a constant here, update pipeline_config.py to match (and vice versa).
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data')
 DATA_YEAR = '2025'

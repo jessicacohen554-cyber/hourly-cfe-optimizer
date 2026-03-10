@@ -7,7 +7,9 @@ Tests cover:
   - Efficiency parameters in valid range (0, 1]
   - Demand totals are reasonable (~4000 TWh US total)
   - Threshold definitions are complete and ordered
-  - Cross-module constant consistency (pipeline_config vs dispatch_utils)
+  - Cross-module constant consistency (pipeline_config vs dispatch_utils vs step1)
+  - Wright's Law learning curve parameter validation
+  - Dispatch-specific constant completeness (HYDRO_CAPS, COAL_CAP_TWH, etc.)
 """
 import pytest
 import sys
@@ -30,6 +32,14 @@ from pipeline_config import (
     N_SCENARIOS_BASE, N_SCENARIOS_CAISO,
     DISPATCH_ORDER, H,
     OFFSHORE_ISOS, GEOTHERMAL_ISOS,
+    # Dispatch-specific constants (migrated from dispatch_utils)
+    HYDRO_CAPS, COAL_CAP_TWH, OIL_CAP_TWH,
+    NUCLEAR_SHARE_OF_CLEAN_FIRM, NUCLEAR_MONTHLY_CF,
+    # Wright's Law constants (migrated from procurement_utils)
+    WRIGHT_CUMULATIVE_GW_2025, WRIGHT_LEARNING_RATE, WRIGHT_BACKGROUND_GW,
+    # Learning curve functions
+    learning_fraction, threshold_learning_fraction,
+    LEARNING_PARAMS, LEARNING_EXPONENT, THRESHOLD_TARGET_YEARS,
 )
 
 
@@ -49,6 +59,11 @@ class TestISOCompleteness:
         ("GAS_AVAILABILITY_FACTOR", GAS_AVAILABILITY_FACTOR),
         ("EXISTING_NUCLEAR_GW", EXISTING_NUCLEAR_GW),
         ("UPRATE_CAP_TWH", UPRATE_CAP_TWH),
+        ("HYDRO_CAPS", HYDRO_CAPS),
+        ("COAL_CAP_TWH", COAL_CAP_TWH),
+        ("OIL_CAP_TWH", OIL_CAP_TWH),
+        ("NUCLEAR_SHARE_OF_CLEAN_FIRM", NUCLEAR_SHARE_OF_CLEAN_FIRM),
+        ("NUCLEAR_MONTHLY_CF", NUCLEAR_MONTHLY_CF),
     ])
     def test_all_isos_present(self, dict_name, config_dict):
         """Every ISO must have an entry."""
@@ -251,3 +266,310 @@ class TestOffshoreGeothermalISOs:
     def test_geothermal_caiso_only(self):
         """Only CAISO has geothermal."""
         assert GEOTHERMAL_ISOS == ['CAISO']
+
+
+# ============================================================================
+# CROSS-MODULE CONSTANT CONSISTENCY
+# ============================================================================
+# Step 1 intentionally isolates its constants for physics engine stability
+# (multi-hour runtime, can't risk import failures). These tests catch drift
+# between step1_pfs_generator.py and pipeline_config.py at test time without
+# coupling Step 1's runtime to pipeline_config imports.
+
+class TestStep1CrossValidation:
+    """Verify step1_pfs_generator constants match pipeline_config.
+
+    Step 1 intentionally defines its own constants for runtime isolation
+    (see CLAUDE.md "Step 1 special treatment"). These tests catch drift.
+    """
+
+    @pytest.fixture(autouse=True)
+    def load_step1_constants(self):
+        """Import step1 constants without running the generator."""
+        import importlib.util
+        step1_path = os.path.join(os.path.dirname(__file__), '..', 'step1_pfs_generator.py')
+        spec = importlib.util.spec_from_file_location("step1_pfs_generator", step1_path)
+        self.step1 = importlib.util.module_from_spec(spec)
+        # Only load module-level constants, don't execute main()
+        try:
+            spec.loader.exec_module(self.step1)
+        except (SystemExit, Exception):
+            pass  # Module may call sys.exit or fail on missing data; constants still loaded
+
+    def test_isos_match(self):
+        """Step 1 ISOS must match pipeline_config ISOS."""
+        assert self.step1.ISOS == ISOS, \
+            f"Step 1 ISOS {self.step1.ISOS} != pipeline_config {ISOS}"
+
+    def test_offshore_isos_match(self):
+        """Step 1 OFFSHORE_ISOS must match pipeline_config."""
+        assert set(self.step1.OFFSHORE_ISOS) == set(OFFSHORE_ISOS), \
+            f"Step 1 OFFSHORE_ISOS {self.step1.OFFSHORE_ISOS} != pipeline_config {OFFSHORE_ISOS}"
+
+    def test_thresholds_match(self):
+        """Step 1 THRESHOLDS must match pipeline_config."""
+        assert self.step1.THRESHOLDS == THRESHOLDS, \
+            f"Step 1 THRESHOLDS differ from pipeline_config"
+
+    def test_battery_efficiency_match(self):
+        """Step 1 battery efficiency must match pipeline_config."""
+        assert self.step1.BATTERY_EFFICIENCY == BATTERY_EFFICIENCY
+        assert self.step1.BATTERY8_EFFICIENCY == BATTERY8_EFFICIENCY
+
+    def test_ldes_efficiency_match(self):
+        """Step 1 LDES efficiency must match pipeline_config."""
+        assert self.step1.LDES_EFFICIENCY == LDES_EFFICIENCY
+
+    def test_h2_efficiency_match(self):
+        """Step 1 H2 efficiency must match pipeline_config."""
+        assert self.step1.H2_EFFICIENCY == H2_EFFICIENCY
+
+    def test_battery_duration_match(self):
+        """Step 1 battery durations must match pipeline_config."""
+        assert self.step1.BATTERY_DURATION_HOURS == BATTERY_DURATION_HOURS
+        assert self.step1.BATTERY8_DURATION_HOURS == BATTERY8_DURATION_HOURS
+
+    def test_ldes_duration_match(self):
+        """Step 1 LDES duration and window must match pipeline_config."""
+        assert self.step1.LDES_DURATION_HOURS == LDES_DURATION_HOURS
+        assert self.step1.LDES_WINDOW_DAYS == LDES_WINDOW_DAYS
+
+    def test_h2_duration_match(self):
+        """Step 1 H2 duration and window must match pipeline_config."""
+        assert self.step1.H2_DURATION_HOURS == H2_DURATION_HOURS
+        assert self.step1.H2_WINDOW_DAYS == H2_WINDOW_DAYS
+
+    def test_hours_match(self):
+        """Step 1 H constant must match pipeline_config."""
+        assert self.step1.H == H
+
+
+class TestDispatchUtilsConsistency:
+    """Verify dispatch_utils re-exports match pipeline_config originals.
+
+    dispatch_utils.py imports constants from pipeline_config. These tests
+    confirm the import chain works and values aren't shadowed.
+    """
+
+    def test_hydro_caps_match(self):
+        """dispatch_utils HYDRO_CAPS must match pipeline_config."""
+        from dispatch_utils import HYDRO_CAPS as du_hydro
+        assert du_hydro == HYDRO_CAPS
+
+    def test_coal_cap_match(self):
+        """dispatch_utils COAL_CAP_TWH must match pipeline_config."""
+        from dispatch_utils import COAL_CAP_TWH as du_coal
+        assert du_coal == COAL_CAP_TWH
+
+    def test_oil_cap_match(self):
+        """dispatch_utils OIL_CAP_TWH must match pipeline_config."""
+        from dispatch_utils import OIL_CAP_TWH as du_oil
+        assert du_oil == OIL_CAP_TWH
+
+    def test_nuclear_share_match(self):
+        """dispatch_utils NUCLEAR_SHARE_OF_CLEAN_FIRM must match pipeline_config."""
+        from dispatch_utils import NUCLEAR_SHARE_OF_CLEAN_FIRM as du_nuc
+        assert du_nuc == NUCLEAR_SHARE_OF_CLEAN_FIRM
+
+    def test_nuclear_monthly_cf_match(self):
+        """dispatch_utils NUCLEAR_MONTHLY_CF must match pipeline_config."""
+        from dispatch_utils import NUCLEAR_MONTHLY_CF as du_cf
+        assert du_cf == NUCLEAR_MONTHLY_CF
+
+    def test_isos_match(self):
+        """dispatch_utils ISOS must match pipeline_config."""
+        from dispatch_utils import ISOS as du_isos
+        assert du_isos == ISOS
+
+
+# ============================================================================
+# DISPATCH-SPECIFIC CONSTANTS
+# ============================================================================
+
+class TestDispatchConstants:
+    """Dispatch-specific constants must be complete and reasonable."""
+
+    @pytest.mark.parametrize("iso", ISOS)
+    def test_hydro_caps_positive(self, iso):
+        """Hydro caps must be non-negative."""
+        assert HYDRO_CAPS[iso] >= 0, f"{iso} HYDRO_CAPS is negative"
+
+    @pytest.mark.parametrize("iso", ISOS)
+    def test_coal_cap_nonnegative(self, iso):
+        """Coal caps must be non-negative."""
+        assert COAL_CAP_TWH[iso] >= 0, f"{iso} COAL_CAP_TWH is negative"
+
+    @pytest.mark.parametrize("iso", ISOS)
+    def test_oil_cap_nonnegative(self, iso):
+        """Oil caps must be non-negative."""
+        assert OIL_CAP_TWH[iso] >= 0, f"{iso} OIL_CAP_TWH is negative"
+
+    @pytest.mark.parametrize("iso", ISOS)
+    def test_nuclear_share_in_range(self, iso):
+        """Nuclear share of clean firm must be in (0, 1]."""
+        share = NUCLEAR_SHARE_OF_CLEAN_FIRM[iso]
+        assert 0 < share <= 1.0, f"{iso} nuclear share {share} outside (0, 1]"
+
+    def test_caiso_nuclear_share_below_1(self):
+        """CAISO nuclear share < 1.0 (has geothermal too)."""
+        assert NUCLEAR_SHARE_OF_CLEAN_FIRM['CAISO'] < 1.0
+
+    @pytest.mark.parametrize("iso", ISOS)
+    def test_nuclear_monthly_cf_12_months(self, iso):
+        """Nuclear monthly CF must have entries for months 1–12."""
+        months = set(NUCLEAR_MONTHLY_CF[iso].keys())
+        assert months == set(range(1, 13)), f"{iso} missing months: {set(range(1, 13)) - months}"
+
+    @pytest.mark.parametrize("iso", ISOS)
+    def test_nuclear_monthly_cf_range(self, iso):
+        """Nuclear monthly CF values must be in [0.5, 1.0]."""
+        for month, cf in NUCLEAR_MONTHLY_CF[iso].items():
+            assert 0.5 <= cf <= 1.0, f"{iso} month {month} CF {cf} outside [0.5, 1.0]"
+
+    def test_caiso_no_coal(self):
+        """CAISO should have 0 coal (last CA coal plant closed 2023)."""
+        assert COAL_CAP_TWH['CAISO'] == 0.0
+
+    def test_nyiso_no_coal(self):
+        """NYISO should have 0 coal (last NY coal plant retired 2020)."""
+        assert COAL_CAP_TWH['NYISO'] == 0.0
+
+
+# ============================================================================
+# WRIGHT'S LAW LEARNING CURVE CONSTANTS
+# ============================================================================
+
+class TestWrightsLawConstants:
+    """Wright's Law learning curve parameters must be complete and reasonable.
+
+    Reference: Wright, T.P. (1936). "Factors Affecting the Cost of Airplanes."
+    Journal of the Aeronautical Sciences, 3(4), 122–128.
+    """
+
+    EXPECTED_TECHS = {
+        'nuclear', 'ccs', 'ldes', 'h2', 'geothermal',
+        'battery', 'battery8', 'solar', 'wind', 'offshore_wind',
+    }
+
+    def test_cumulative_gw_all_techs(self):
+        """Every technology must have a 2025 cumulative GW baseline."""
+        missing = self.EXPECTED_TECHS - set(WRIGHT_CUMULATIVE_GW_2025.keys())
+        assert not missing, f"WRIGHT_CUMULATIVE_GW_2025 missing: {missing}"
+
+    def test_cumulative_gw_positive(self):
+        """All baselines must be positive (some deployment exists)."""
+        for tech, gw in WRIGHT_CUMULATIVE_GW_2025.items():
+            assert gw > 0, f"{tech} has 0 or negative cumulative GW"
+
+    def test_learning_rate_all_techs(self):
+        """Every technology must have Fast and Slow learning rates."""
+        missing = self.EXPECTED_TECHS - set(WRIGHT_LEARNING_RATE.keys())
+        assert not missing, f"WRIGHT_LEARNING_RATE missing: {missing}"
+
+    @pytest.mark.parametrize("tech", list(WRIGHT_LEARNING_RATE.keys()))
+    def test_learning_rate_range(self, tech):
+        """Learning rates must be in [0, 0.5] — 0 for mature techs."""
+        for speed in ['Fast', 'Slow']:
+            rate = WRIGHT_LEARNING_RATE[tech][speed]
+            assert 0 <= rate <= 0.5, \
+                f"{tech}/{speed} learning rate {rate} outside [0, 0.5]"
+
+    def test_mature_techs_zero_learning(self):
+        """Solar and wind should have ~0 learning rate (mature technology)."""
+        for tech in ['solar', 'wind']:
+            for speed in ['Fast', 'Slow']:
+                assert WRIGHT_LEARNING_RATE[tech][speed] == 0.0, \
+                    f"{tech}/{speed} should have 0 learning rate"
+
+    def test_background_gw_all_techs(self):
+        """Every technology must have background GW projections."""
+        missing = self.EXPECTED_TECHS - set(WRIGHT_BACKGROUND_GW.keys())
+        assert not missing, f"WRIGHT_BACKGROUND_GW missing: {missing}"
+
+    @pytest.mark.parametrize("tech", list(WRIGHT_BACKGROUND_GW.keys()))
+    def test_background_gw_increasing(self, tech):
+        """Background GW must increase from 2035 to 2050."""
+        for speed in ['Fast', 'Slow']:
+            gw_2035, gw_2050 = WRIGHT_BACKGROUND_GW[tech][speed]
+            assert gw_2050 >= gw_2035, \
+                f"{tech}/{speed} 2050 GW ({gw_2050}) < 2035 GW ({gw_2035})"
+
+
+# ============================================================================
+# LEARNING FRACTION FUNCTIONS
+# ============================================================================
+
+class TestLearningFraction:
+    """Learning fraction functions must behave correctly at boundaries."""
+
+    def test_before_foak_returns_zero(self):
+        """Before FOAK start year, fraction should be 0."""
+        assert learning_fraction(2025, 2030, 2040) == 0.0
+
+    def test_at_foak_returns_zero(self):
+        """At FOAK start year, fraction should be 0."""
+        assert learning_fraction(2030, 2030, 2040) == 0.0
+
+    def test_at_noak_returns_one(self):
+        """At NOAK year, fraction should be 1."""
+        assert learning_fraction(2040, 2030, 2040) == 1.0
+
+    def test_after_noak_returns_one(self):
+        """After NOAK year, fraction should be 1."""
+        assert learning_fraction(2050, 2030, 2040) == 1.0
+
+    def test_midpoint_concave(self):
+        """Midpoint fraction should be > 0.5 (concave ramp, exponent 0.6)."""
+        mid = learning_fraction(2035, 2030, 2040)
+        assert mid > 0.5, f"Midpoint fraction {mid} not > 0.5 (concave ramp)"
+        assert mid < 1.0
+
+    def test_monotonically_increasing(self):
+        """Fraction should increase monotonically with year."""
+        fracs = [learning_fraction(y, 2030, 2040) for y in range(2030, 2041)]
+        for i in range(1, len(fracs)):
+            assert fracs[i] >= fracs[i-1], \
+                f"Not monotonic: year {2030+i} frac {fracs[i]} < {fracs[i-1]}"
+
+
+class TestThresholdLearningFraction:
+    """threshold_learning_fraction must correctly delegate to learning_fraction."""
+
+    def test_scenario_b_at_50pct(self):
+        """50% threshold → year 2030 → Scenario B FOAK start → fraction 0."""
+        frac = threshold_learning_fraction(50, scenario='B')
+        assert frac == 0.0
+
+    def test_scenario_b_at_90pct(self):
+        """90% threshold → year 2040 → Scenario B NOAK → fraction 1.0."""
+        frac = threshold_learning_fraction(90, scenario='B')
+        assert frac == 1.0
+
+    def test_scenario_a_no_deployment_returns_zero(self):
+        """Scenario A with no deployment year → always FOAK (fraction 0)."""
+        frac = threshold_learning_fraction(90, scenario='A', first_deployment_year=None)
+        assert frac == 0.0
+
+    def test_scenario_a_with_deployment(self):
+        """Scenario A with deployment year → non-zero fraction after deployment."""
+        frac = threshold_learning_fraction(90, scenario='A', first_deployment_year=2030)
+        assert frac > 0.0  # 2040 - 2030 = 10yr learning window, year=2040 → NOAK
+
+    def test_learning_exponent_is_concave(self):
+        """Learning exponent should be < 1 for concave ramp."""
+        assert 0 < LEARNING_EXPONENT < 1.0
+
+    def test_threshold_target_years_complete(self):
+        """Every threshold should have a target year."""
+        for t in THRESHOLDS:
+            assert t in THRESHOLD_TARGET_YEARS, \
+                f"Threshold {t} missing from THRESHOLD_TARGET_YEARS"
+
+    def test_threshold_target_years_monotonic(self):
+        """Higher thresholds should map to later years."""
+        sorted_thresholds = sorted(THRESHOLD_TARGET_YEARS.items())
+        for i in range(1, len(sorted_thresholds)):
+            t1, y1 = sorted_thresholds[i-1]
+            t2, y2 = sorted_thresholds[i]
+            assert y2 >= y1, \
+                f"Threshold {t2}→{y2} earlier than {t1}→{y1}"

@@ -51,6 +51,9 @@ from pipeline_config import (
     WHOLESALE_PRICES, FUEL_ADJUSTMENTS,
     CCS_RESIDUAL_EMISSION_RATE, COAL_OIL_RETIREMENT_THRESHOLD,
     H,
+    # Dispatch-specific constants (migrated to pipeline_config)
+    HYDRO_CAPS, COAL_CAP_TWH, OIL_CAP_TWH,
+    NUCLEAR_SHARE_OF_CLEAN_FIRM, NUCLEAR_MONTHLY_CF,
 )
 
 DATA_YEAR = '2025'
@@ -59,45 +62,8 @@ RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'h
 # Alias for backward compatibility
 BASE_DEMAND_TWH = REGIONAL_DEMAND_TWH
 
-# ══════════════════════════════════════════════════════════════════════════════
-# DISPATCH-SPECIFIC CONSTANTS (not in pipeline_config)
-# ══════════════════════════════════════════════════════════════════════════════
-
-HYDRO_CAPS = {
-    'CAISO': 30, 'ERCOT': 5, 'PJM': 15, 'NYISO': 40, 'NEISO': 30,
-    'MISO': 1.6, 'SPP': 4.3,
-}
-
-COAL_CAP_TWH = {
-    'CAISO': 0.00, 'ERCOT': 67.58, 'PJM': 139.09, 'NYISO': 0.00, 'NEISO': 0.31,
-    'MISO': 125.0, 'SPP': 42.0,
-}
-OIL_CAP_TWH = {
-    'CAISO': 0.60, 'ERCOT': 0.00, 'PJM': 4.59, 'NYISO': 0.15, 'NEISO': 1.29,
-    'MISO': 0.50, 'SPP': 0.20,
-}
-
-# Nuclear seasonal derate — detailed monthly profiles (from Step 1)
-NUCLEAR_SHARE_OF_CLEAN_FIRM = {
-    'CAISO': 0.70, 'ERCOT': 1.0, 'PJM': 1.0, 'NYISO': 1.0, 'NEISO': 1.0,
-    'MISO': 1.0, 'SPP': 1.0,
-}
-NUCLEAR_MONTHLY_CF = {
-    'CAISO': {1: 0.94, 2: 0.94, 3: 0.85, 4: 0.75, 5: 0.80, 6: 0.99,
-              7: 1.0, 8: 1.0, 9: 0.90, 10: 0.78, 11: 0.82, 12: 0.94},
-    'ERCOT': {1: 1.0, 2: 1.0, 3: 0.90, 4: 0.80, 5: 0.89, 6: 0.97,
-              7: 0.97, 8: 0.96, 9: 0.88, 10: 0.79, 11: 0.85, 12: 1.0},
-    'PJM':   {1: 1.0, 2: 1.0, 3: 0.92, 4: 0.85, 5: 0.87, 6: 0.98,
-              7: 0.99, 8: 0.97, 9: 0.93, 10: 0.89, 11: 0.91, 12: 1.0},
-    'NYISO': {1: 1.0, 2: 1.0, 3: 0.88, 4: 0.78, 5: 0.81, 6: 0.95,
-              7: 0.96, 8: 0.94, 9: 0.85, 10: 0.75, 11: 0.79, 12: 1.0},
-    'NEISO': {1: 1.0, 2: 0.99, 3: 0.92, 4: 0.83, 5: 0.88, 6: 0.96,
-              7: 0.97, 8: 0.95, 9: 0.88, 10: 0.82, 11: 0.85, 12: 1.0},
-    'MISO':  {1: 1.0, 2: 1.0, 3: 0.92, 4: 0.84, 5: 0.87, 6: 0.98,
-              7: 0.99, 8: 0.97, 9: 0.93, 10: 0.88, 11: 0.91, 12: 1.0},
-    'SPP':   {1: 1.0, 2: 1.0, 3: 0.90, 4: 0.80, 5: 0.88, 6: 0.97,
-              7: 0.97, 8: 0.96, 9: 0.88, 10: 0.80, 11: 0.85, 12: 1.0},
-}
+# Dispatch-specific constants now imported from pipeline_config above:
+# HYDRO_CAPS, COAL_CAP_TWH, OIL_CAP_TWH, NUCLEAR_SHARE_OF_CLEAN_FIRM, NUCLEAR_MONTHLY_CF
 
 # ══════════════════════════════════════════════════════════════════════════════
 # DATA LOADING

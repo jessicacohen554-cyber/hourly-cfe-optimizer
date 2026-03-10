@@ -29,11 +29,10 @@ from dispatch_utils import (
     compute_co2_from_dispatch, COAL_CAP_TWH, OIL_CAP_TWH,
 )
 from pipeline_config import (
+    ISOS,
     GRID_MIX_SHARES, REGIONAL_DEMAND_TWH,
     PEAK_DEMAND_MW, EXISTING_GAS_CAPACITY_MW,
 )
-
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 JS_DIR = os.path.join(ROOT_DIR, 'dashboard', 'js')
 DEPLOYMENT_JS = os.path.join(JS_DIR, 'deployment-data.js')
 

@@ -3,13 +3,16 @@
 
 import json
 import os
+import sys
 import pandas as pd
 import numpy as np
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'data', 'step10-smartargets')
-OUT_PATH = os.path.join(os.path.dirname(__file__), '..', 'dashboard', 'js', 'smartargets-data.js')
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(SCRIPT_DIR, '..', 'data', 'step10-smartargets')
+OUT_PATH = os.path.join(SCRIPT_DIR, '..', 'dashboard', 'js', 'smartargets-data.js')
 
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
+sys.path.insert(0, SCRIPT_DIR)
+from pipeline_config import ISOS
 BASE_SCENARIOS = ['R1', 'R2', 'AT1', 'AT2', 'AT3', 'AT4']
 QT_SCENARIOS = ['QT1', 'QT2', 'QT3', 'QT4']
 MIX_COLS = ['mix_clean_firm_twh', 'mix_solar_twh', 'mix_wind_twh', 'mix_offshore_wind_twh',

@@ -25,8 +25,7 @@ DATA_DIR = os.path.join(ROOT_DIR, 'data', 'step5-post-processing')
 JS_DIR = os.path.join(ROOT_DIR, 'dashboard', 'js')
 
 from procurement_utils import compute_endogenous_cost
-
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
+from pipeline_config import ISOS
 
 # Canonical resource names for normalization
 RESOURCE_ALIASES = {

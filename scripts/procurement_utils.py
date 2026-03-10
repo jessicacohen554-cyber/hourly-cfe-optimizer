@@ -44,75 +44,20 @@ from pipeline_config import (
     FOAK_LDES, FOAK_H2, FOAK_OFFSHORE_WIND,
     NOAK_BATTERY, NOAK_BATTERY8, NOAK_OFFSHORE_WIND,
     REGIONAL_DEMAND_TWH,
+    # Wright's Law constants (migrated to pipeline_config)
+    WRIGHT_CUMULATIVE_GW_2025, WRIGHT_LEARNING_RATE, WRIGHT_BACKGROUND_GW,
+    # Unified learning fraction
+    threshold_learning_fraction,
 )
 
 SBTI_YEAR_MAP = THRESHOLD_TARGET_YEARS  # Backward compat alias
 
+# Backward compat: learning_fraction() now lives in pipeline_config as
+# threshold_learning_fraction(). This alias preserves existing call sites.
+learning_fraction = threshold_learning_fraction
 
-def learning_fraction(threshold, scenario='B'):
-    """Map CFE threshold to FOAK→NOAK learning curve fraction [0, 1].
-
-    0 = pure FOAK (High cost), 1 = full NOAK (Low cost).
-    Scenario B (Hourly): FOAK until 2030, NOAK by 2040 (10yr learning).
-    Scenario A (Consequential): FOAK until 2035, NOAK by 2047 (12yr learning).
-    Concave exponent 0.6 (Wright's Law early doublings).
-    """
-    year = SBTI_YEAR_MAP.get(threshold, 2050)
-
-    if scenario == 'B':
-        foak_start = 2030
-        noak_year = 2040
-    else:  # Scenario A
-        foak_start = 2035
-        noak_year = 2047
-
-    if year < foak_start:
-        return 0.0
-    if year >= noak_year:
-        return 1.0
-
-    active = (year - foak_start) / (noak_year - foak_start)
-    return active ** 0.6
-
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# ENDOGENOUS WRIGHT'S LAW (from step10_smartargets — deployment-based learning)
-# ═══════════════════════════════════════════════════════════════════════════════
-
-# Starting cumulative GW baselines (2025)
-WRIGHT_CUMULATIVE_GW_2025 = {
-    'nuclear': 2.0, 'ccs': 0.3, 'ldes': 0.01, 'h2': 0.1,
-    'geothermal': 0.05, 'battery': 50.0, 'battery8': 50.0,
-    'solar': 150.0, 'wind': 150.0, 'offshore_wind': 5.0,
-}
-
-# Learning rate = cost reduction per doubling of cumulative capacity
-WRIGHT_LEARNING_RATE = {
-    'nuclear':       {'Fast': 0.15, 'Slow': 0.10},
-    'ccs':           {'Fast': 0.12, 'Slow': 0.10},
-    'ldes':          {'Fast': 0.20, 'Slow': 0.15},
-    'h2':            {'Fast': 0.18, 'Slow': 0.12},
-    'geothermal':    {'Fast': 0.20, 'Slow': 0.15},
-    'battery':       {'Fast': 0.20, 'Slow': 0.18},
-    'battery8':      {'Fast': 0.20, 'Slow': 0.18},
-    'solar':         {'Fast': 0.0, 'Slow': 0.0},
-    'wind':          {'Fast': 0.0, 'Slow': 0.0},
-    'offshore_wind': {'Fast': 0.12, 'Slow': 0.08},
-}
-
-# Background learning (exogenous rest-of-world GW by 2035 and 2050)
-WRIGHT_BACKGROUND_GW = {
-    'nuclear':       {'Fast': (30, 150), 'Slow': (5, 20)},
-    'ccs':           {'Fast': (10, 50),  'Slow': (2, 10)},
-    'ldes':          {'Fast': (5, 30),   'Slow': (0.5, 5)},
-    'h2':            {'Fast': (3, 20),   'Slow': (0.5, 3)},
-    'geothermal':    {'Fast': (3, 15),   'Slow': (0.5, 3)},
-    'battery':       {'Fast': (200, 800), 'Slow': (80, 300)},
-    'battery8':      {'Fast': (50, 200), 'Slow': (20, 80)},
-    'solar':         {'Fast': (500, 2000), 'Slow': (200, 800)},
-    'wind':          {'Fast': (300, 1200), 'Slow': (100, 500)},
-    'offshore_wind': {'Fast': (40, 150),  'Slow': (10, 50)},
-}
+# Wright's Law constants now imported from pipeline_config:
+# WRIGHT_CUMULATIVE_GW_2025, WRIGHT_LEARNING_RATE, WRIGHT_BACKGROUND_GW
 
 # Strategy → learning speed mapping
 STRATEGY_LEARNING_SPEED = {

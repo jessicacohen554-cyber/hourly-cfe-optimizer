@@ -159,29 +159,17 @@ def get_demand_growth_factor(iso, threshold):
     return (1 + rate) ** years
 
 
-def learning_fraction(threshold, scenario='B', first_deployment_year=None):
-    """Map CFE threshold to FOAK→NOAK learning curve fraction [0, 1].
+# learning_fraction() now lives in pipeline_config as threshold_learning_fraction().
+# Import and alias for backward compat with existing call sites.
+from pipeline_config import threshold_learning_fraction
 
-    Scenario B: time-based, starts at 2030 (planned procurement).
-    Scenario A: deployment-gated — FOAK until first clean firm is deployed,
-                then learning starts from that threshold's year.
+def learning_fraction(threshold, scenario='B', first_deployment_year=None):
+    """Map CFE threshold to FOAK→NOAK learning fraction [0, 1].
+
+    Delegates to pipeline_config.threshold_learning_fraction() — the single
+    source of truth for learning curve logic.
     """
-    year = SBTI_YEAR_MAP.get(threshold, 2050)
-    if scenario == 'B':
-        foak_start, noak_year = 2030, 2040
-    elif scenario == 'A':
-        if first_deployment_year is None:
-            return 0.0  # No clean firm deployed yet → FOAK
-        foak_start = first_deployment_year
-        noak_year = first_deployment_year + 10
-    else:
-        foak_start, noak_year = 2036, 2048
-    if year < foak_start:
-        return 0.0
-    if year >= noak_year:
-        return 1.0
-    active = (year - foak_start) / (noak_year - foak_start)
-    return active ** 0.6
+    return threshold_learning_fraction(threshold, scenario, first_deployment_year)
 
 
 # ============================================================================

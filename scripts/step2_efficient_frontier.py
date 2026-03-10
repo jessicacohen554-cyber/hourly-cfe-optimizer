@@ -46,6 +46,14 @@ import pyarrow.parquet as pq
 import pyarrow.compute as pc
 
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+import sys
+sys.path.insert(0, os.path.join(SCRIPT_DIR, 'scripts'))
+from pipeline_config import (
+    ISOS, OFFSHORE_ISOS,
+    RESOURCE_COLS_BASE, RESOURCE_COLS_OFFSHORE, RESOURCE_COLS_CAISO,
+    get_resource_cols,
+)
+
 PFS_DIR = os.path.join(SCRIPT_DIR, 'data')
 STEP1_RAW_DIR = os.path.join(PFS_DIR, 'step1-pfs-parquets')
 STEP2_EF_OUTPUT_DIR = os.path.join(PFS_DIR, 'step2-ef-parquets')
@@ -54,19 +62,6 @@ STEP2_EF_OUTPUT_DIR = os.path.join(PFS_DIR, 'step2-ef-parquets')
 # Must match Step 1 THRESHOLDS and Step 3 OUTPUT_THRESHOLDS
 TARGET_THRESHOLDS = [10.0, 20.0, 30.0, 40.0, 50.0, 55.0, 60.0, 65.0, 70.0, 75.0, 80.0, 85.0, 87.5, 90.0, 92.5, 95.0, 97.5, 99.0, 99.5, 99.9, 99.99]
 TARGET_THRESHOLD_SET = set(TARGET_THRESHOLDS)
-
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
-
-# Resource columns per ISO — dimensionality depends on available resources
-# Interior ISOs (ERCOT, MISO, SPP): 4D
-# Offshore ISOs (NYISO, NEISO, PJM): 5D (+ offshore_wind)
-# CAISO: 6D (+ offshore_wind + geothermal)
-RESOURCE_COLS_BASE = ['clean_firm', 'solar', 'wind', 'hydro']
-RESOURCE_COLS_OFFSHORE = ['clean_firm', 'solar', 'wind', 'hydro', 'offshore_wind']
-RESOURCE_COLS_CAISO = ['clean_firm', 'solar', 'wind', 'hydro', 'offshore_wind', 'geothermal']
-
-# ISOs with offshore wind resource (must match step1_pfs_generator.py)
-OFFSHORE_ISOS = ['NYISO', 'NEISO', 'PJM', 'CAISO']
 
 # Storage dispatch columns (always present)
 STORAGE_COLS = ['battery_dispatch_pct', 'battery8_dispatch_pct', 'ldes_dispatch_pct', 'h2_dispatch_pct']
@@ -77,16 +72,6 @@ COMMON_COLS = ['iso', 'hourly_match_score', 'pareto_type']
 # Resource caps — must match Step 1 (step1_pfs_generator.py)
 SOLAR_CAP = 100       # Max solar as % of demand
 TOTAL_PROCUREMENT_CAP = 350  # Max sum of all resources as % of demand
-
-
-def get_resource_cols(iso):
-    """Return resource column names for the given ISO."""
-    if iso == 'CAISO':
-        return RESOURCE_COLS_CAISO
-    elif iso in OFFSHORE_ISOS:
-        return RESOURCE_COLS_OFFSHORE
-    else:
-        return RESOURCE_COLS_BASE
 
 
 def normalize_table(t, iso):
