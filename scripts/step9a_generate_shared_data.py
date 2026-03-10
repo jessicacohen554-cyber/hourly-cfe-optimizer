@@ -20,6 +20,7 @@ from datetime import datetime
 # Import cost tables from pipeline_config (single source of truth)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from pipeline_config import (
+    ISOS,
     OUTPUT_THRESHOLDS as _OUTPUT_THRESHOLDS,
     GRID_MIX_SHARES as _GRID_MIX_SHARES,
     WHOLESALE_PRICES as _WHOLESALE_PRICES,
@@ -36,8 +37,6 @@ from pipeline_config import (
     DEMAND_GROWTH_RATES as _DEMAND_GROWTH_RATES,
     THRESHOLD_TARGET_YEARS as _THRESHOLD_TARGET_YEARS,
 )
-
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 THRESHOLDS_NUM = _OUTPUT_THRESHOLDS
 THRESHOLDS = [str(int(t)) if t == int(t) else str(t) for t in THRESHOLDS_NUM]
 RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']

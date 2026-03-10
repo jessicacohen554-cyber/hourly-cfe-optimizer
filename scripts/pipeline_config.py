@@ -188,6 +188,23 @@ TOTAL_PROCUREMENT_CAP_PCT = 350
 # ============================================================================
 # STORAGE PARAMETERS
 # ============================================================================
+# Round-trip efficiency (RTE) and duration parameters for each storage class.
+#
+# Sources:
+#   Battery 4hr/8hr: NREL ATB 2024, utility-scale Li-ion. RTE = 85% is the
+#     2024 moderate-technology baseline (DC-side). Duration is nameplate.
+#     Reference: NREL Annual Technology Baseline 2024, "Utility-Scale Battery
+#     Storage" technology page.
+#   LDES 100hr: Form Energy iron-air battery (announced 2023). RTE ≈ 50%
+#     (lower bound of 45-55% range from DOE LDES Liftoff, Sep 2023).
+#     7-day rolling window reflects multi-day weather event bridging.
+#     Reference: DOE Pathways to Commercial Liftoff: LDES (2023), p.18.
+#   Green H2 1000hr: Electrolysis (PEM, ~70% HHV) × compression/storage
+#     (salt cavern, ~95%) × H2 turbine (combined cycle, ~55% HHV).
+#     Product: 0.70 × 0.95 × 0.55 ≈ 0.35 RTE. 30-day rolling window
+#     for seasonal/multi-week bridging.
+#     Reference: Hydrogen Council (2024), "Hydrogen Insights 2024"; IRENA
+#     (2024), "Green Hydrogen Cost Reduction: Scaling Up Electrolysers."
 
 # Battery (4-hour Li-ion)
 BATTERY_EFFICIENCY = 0.85
@@ -484,17 +501,10 @@ UPRATE_CAP_TWH = {
     for iso, gw in EXISTING_NUCLEAR_GW.items()
 }
 
-# Nuclear monthly capacity factors (seasonal derate)
-NUCLEAR_MONTHLY_CF = {
-    'CAISO': {1: 0.94, 2: 0.94, 3: 0.85, 4: 0.75, 5: 0.80, 6: 0.99,
-              7: 1.0, 8: 1.0, 9: 0.90, 10: 0.78, 11: 0.82, 12: 0.94},
-    'ERCOT': {m: 0.93 for m in range(1, 13)},
-    'PJM':   {m: 0.93 for m in range(1, 13)},
-    'NYISO': {m: 0.90 for m in range(1, 13)},
-    'NEISO': {m: 0.90 for m in range(1, 13)},
-    'MISO':  {m: 0.92 for m in range(1, 13)},
-    'SPP':   {m: 0.92 for m in range(1, 13)},
-}
+# Nuclear monthly capacity factors: see DISPATCH-SPECIFIC CONSTANTS section below
+# for the detailed monthly profiles (from NRC PRIS data). The earlier simplified
+# version (flat CFs for non-CAISO) was replaced by the detailed per-month data
+# during the constant consolidation from dispatch_utils.py.
 
 # ============================================================================
 # SENSITIVITY TOGGLE DEFINITIONS
@@ -1200,4 +1210,161 @@ def compute_clean_firm_tranches(
         'ccs_lcoe': ccs_lcoe,
         'total_cost': uprate_cost + geo_cost_val + tranche3_cost,
     }
+
+
+# ============================================================================
+# DISPATCH-SPECIFIC CONSTANTS
+# ============================================================================
+# Constants used by dispatch_utils.py and downstream analysis scripts.
+# Migrated here from dispatch_utils.py for single-source-of-truth consistency.
+#
+# Sources:
+#   HYDRO_CAPS: Maximum hydro capacity as TWh capacity / annual demand TWh,
+#     from EIA-923 2023 generation data cross-referenced with USACE dam
+#     capacity records. Values represent capacity-based upper bounds
+#     (installed turbine capacity × annual hours, not historical generation).
+#   COAL_CAP_TWH / OIL_CAP_TWH: 2025 baseline generation from EIA-923 annual
+#     data (2023 actuals, adjusted for announced retirements through 2025).
+#     Coal/oil capped at 2025 levels — no new coal/oil construction assumed.
+#   NUCLEAR_SHARE_OF_CLEAN_FIRM: Fraction of clean_firm that is nuclear
+#     (vs. other firm clean sources). CAISO = 0.70 due to Diablo Canyon
+#     (2.25 GW) plus geothermal baseload. All others = 1.0 (nuclear only).
+#   NUCLEAR_MONTHLY_CF: Monthly capacity factors from NRC PRIS data (2019–2023
+#     average). Captures refueling outage seasonality — spring/fall dips
+#     reflect 18-month refueling cycles staggered across fleet.
+#     Reference: NRC Information Digest, NUREG-1350, Vol. 35 (2023).
+
+HYDRO_CAPS = {
+    'CAISO': 30, 'ERCOT': 5, 'PJM': 15, 'NYISO': 40, 'NEISO': 30,
+    'MISO': 1.6, 'SPP': 4.3,
+}
+
+COAL_CAP_TWH = {
+    'CAISO': 0.00, 'ERCOT': 67.58, 'PJM': 139.09, 'NYISO': 0.00, 'NEISO': 0.31,
+    'MISO': 125.0, 'SPP': 42.0,
+}
+OIL_CAP_TWH = {
+    'CAISO': 0.60, 'ERCOT': 0.00, 'PJM': 4.59, 'NYISO': 0.15, 'NEISO': 1.29,
+    'MISO': 0.50, 'SPP': 0.20,
+}
+
+NUCLEAR_SHARE_OF_CLEAN_FIRM = {
+    'CAISO': 0.70, 'ERCOT': 1.0, 'PJM': 1.0, 'NYISO': 1.0, 'NEISO': 1.0,
+    'MISO': 1.0, 'SPP': 1.0,
+}
+
+# Monthly capacity factors — NRC PRIS 2019–2023 average.
+# Month 1 = January, 12 = December. Spring/fall dips = refueling outages.
+NUCLEAR_MONTHLY_CF = {
+    'CAISO': {1: 0.94, 2: 0.94, 3: 0.85, 4: 0.75, 5: 0.80, 6: 0.99,
+              7: 1.0, 8: 1.0, 9: 0.90, 10: 0.78, 11: 0.82, 12: 0.94},
+    'ERCOT': {1: 1.0, 2: 1.0, 3: 0.90, 4: 0.80, 5: 0.89, 6: 0.97,
+              7: 0.97, 8: 0.96, 9: 0.88, 10: 0.79, 11: 0.85, 12: 1.0},
+    'PJM':   {1: 1.0, 2: 1.0, 3: 0.92, 4: 0.85, 5: 0.87, 6: 0.98,
+              7: 0.99, 8: 0.97, 9: 0.93, 10: 0.89, 11: 0.91, 12: 1.0},
+    'NYISO': {1: 1.0, 2: 1.0, 3: 0.88, 4: 0.78, 5: 0.81, 6: 0.95,
+              7: 0.96, 8: 0.94, 9: 0.85, 10: 0.75, 11: 0.79, 12: 1.0},
+    'NEISO': {1: 1.0, 2: 0.99, 3: 0.92, 4: 0.83, 5: 0.88, 6: 0.96,
+              7: 0.97, 8: 0.95, 9: 0.88, 10: 0.82, 11: 0.85, 12: 1.0},
+    'MISO':  {1: 1.0, 2: 1.0, 3: 0.92, 4: 0.84, 5: 0.87, 6: 0.98,
+              7: 0.99, 8: 0.97, 9: 0.93, 10: 0.88, 11: 0.91, 12: 1.0},
+    'SPP':   {1: 1.0, 2: 1.0, 3: 0.90, 4: 0.80, 5: 0.88, 6: 0.97,
+              7: 0.97, 8: 0.96, 9: 0.88, 10: 0.80, 11: 0.85, 12: 1.0},
+}
+
+
+# ============================================================================
+# WRIGHT'S LAW — ENDOGENOUS DEPLOYMENT-BASED LEARNING CURVES
+# ============================================================================
+# Endogenous learning model from Wright (1936): cost declines as a power law
+# of cumulative production. Used by step8 procurement strategies and step10
+# SBTi target analysis.
+#
+# Sources:
+#   Cumulative GW baselines: IRENA Renewable Capacity Statistics 2025,
+#     Global Nuclear Power Tracker (Ember), Global CCS Institute Status Report 2024.
+#   Learning rates: NREL ATB 2024 (solar/wind/battery), Rubin et al. (2015)
+#     "The cost of CO2 capture and storage" (CCS), Breakthrough Energy (2024)
+#     "Advancing Long Duration Energy Storage" (LDES/H2).
+#   Background GW projections: IEA World Energy Outlook 2024 (NZE scenario
+#     for Fast, STEPS for Slow).
+#
+# Reference: Wright, T.P. (1936). "Factors Affecting the Cost of Airplanes."
+#   Journal of the Aeronautical Sciences, 3(4), 122–128.
+
+WRIGHT_CUMULATIVE_GW_2025 = {
+    'nuclear': 2.0, 'ccs': 0.3, 'ldes': 0.01, 'h2': 0.1,
+    'geothermal': 0.05, 'battery': 50.0, 'battery8': 50.0,
+    'solar': 150.0, 'wind': 150.0, 'offshore_wind': 5.0,
+}
+
+# Learning rate = fractional cost reduction per doubling of cumulative capacity
+WRIGHT_LEARNING_RATE = {
+    'nuclear':       {'Fast': 0.15, 'Slow': 0.10},
+    'ccs':           {'Fast': 0.12, 'Slow': 0.10},
+    'ldes':          {'Fast': 0.20, 'Slow': 0.15},
+    'h2':            {'Fast': 0.18, 'Slow': 0.12},
+    'geothermal':    {'Fast': 0.20, 'Slow': 0.15},
+    'battery':       {'Fast': 0.20, 'Slow': 0.18},
+    'battery8':      {'Fast': 0.20, 'Slow': 0.18},
+    'solar':         {'Fast': 0.0, 'Slow': 0.0},    # Mature — on flat part of curve
+    'wind':          {'Fast': 0.0, 'Slow': 0.0},    # Mature — on flat part of curve
+    'offshore_wind': {'Fast': 0.12, 'Slow': 0.08},
+}
+
+# Background learning: exogenous rest-of-world GW deployment by (2035, 2050)
+# Fast = IEA NZE scenario; Slow = IEA STEPS scenario
+WRIGHT_BACKGROUND_GW = {
+    'nuclear':       {'Fast': (30, 150), 'Slow': (5, 20)},
+    'ccs':           {'Fast': (10, 50),  'Slow': (2, 10)},
+    'ldes':          {'Fast': (5, 30),   'Slow': (0.5, 5)},
+    'h2':            {'Fast': (3, 20),   'Slow': (0.5, 3)},
+    'geothermal':    {'Fast': (3, 15),   'Slow': (0.5, 3)},
+    'battery':       {'Fast': (200, 800), 'Slow': (80, 300)},
+    'battery8':      {'Fast': (50, 200), 'Slow': (20, 80)},
+    'solar':         {'Fast': (500, 2000), 'Slow': (200, 800)},
+    'wind':          {'Fast': (300, 1200), 'Slow': (100, 500)},
+    'offshore_wind': {'Fast': (40, 150),  'Slow': (10, 50)},
+}
+
+
+# ============================================================================
+# THRESHOLD-BASED LEARNING FRACTION
+# ============================================================================
+# Maps CFE threshold → deployment year → Wright's Law learning fraction.
+# This is the "high-level" version used by scenario scripts. The low-level
+# `learning_fraction(year, foak_start, noak_year)` above is the primitive.
+#
+# Scenario B (Hourly Matching): Learning starts 2030 (planned procurement),
+#   reaches NOAK by 2040 (10-year learning window).
+# Scenario A (Consequential): Deployment-gated — FOAK until first clean firm
+#   is deployed, then 10-year learning from that deployment year.
+# Default (neither A nor B): Conservative delayed learning, 2036–2048.
+
+def threshold_learning_fraction(threshold, scenario='B', first_deployment_year=None):
+    """Map CFE threshold to FOAK→NOAK learning fraction [0, 1].
+
+    Uses THRESHOLD_TARGET_YEARS to convert threshold → year, then applies
+    Wright's Law concave ramp (exponent 0.6).
+
+    Args:
+        threshold: CFE matching percentage (e.g. 90, 99.9).
+        scenario: 'A' (consequential, deployment-gated) or 'B' (hourly, time-based).
+        first_deployment_year: For Scenario A, the year clean firm was first deployed.
+            If None and scenario='A', returns 0.0 (pure FOAK).
+
+    Returns:
+        float in [0, 1]: 0 = pure FOAK cost, 1 = full NOAK cost.
+    """
+    year = THRESHOLD_TARGET_YEARS.get(threshold, 2050)
+    if scenario == 'B':
+        foak_start, noak_year = 2030, 2040
+    elif scenario == 'A':
+        if first_deployment_year is None:
+            return 0.0  # No clean firm deployed yet → FOAK
+        foak_start = first_deployment_year
+        noak_year = first_deployment_year + 10
+    else:
+        foak_start, noak_year = 2036, 2048
+    return learning_fraction(year, foak_start, noak_year)
 

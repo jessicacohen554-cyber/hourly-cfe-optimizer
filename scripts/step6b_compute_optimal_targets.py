@@ -67,6 +67,8 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from pipeline_config import (
     ACTIVE_THRESHOLDS,
+    ISOS,
+    OFFSHORE_ISOS,
     DEMAND_GROWTH_RATES as _DEMAND_GROWTH_RATES_PC,
     THRESHOLD_TARGET_YEARS as _THRESHOLD_TARGET_YEARS_PC,
     REGIONAL_DEMAND_TWH as _REGIONAL_DEMAND_TWH_PC,
@@ -106,7 +108,6 @@ except ImportError:
 
 # Single source of truth: pipeline_config
 THRESHOLDS = ACTIVE_THRESHOLDS
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes', 'h2']
 
 WHOLESALE_PRICES = {
@@ -402,8 +403,7 @@ _PARQUET_MIXES = None  # {iso: {resource: [val_per_threshold]}}
 # Resource types for existing/new split
 _RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']
 
-# ISOs that have offshore wind resources
-OFFSHORE_ISOS = {'CAISO', 'NYISO', 'NEISO', 'PJM'}
+# OFFSHORE_ISOS imported from pipeline_config
 
 
 def load_parquet_mixes():

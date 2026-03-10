@@ -26,9 +26,7 @@ TRACK_PATH = os.path.join(SCRIPT_DIR, 'dashboard', 'track_results.json')
 BASELINE_PATH = os.path.join(SCRIPT_DIR, 'dashboard', 'overprocure_results.json')
 CO2_BATCH_DIR = os.path.join(SCRIPT_DIR, 'data', 'step5-post-processing', 'co2_results')
 
-from pipeline_config import OUTPUT_THRESHOLDS as THRESHOLDS
-
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
+from pipeline_config import OUTPUT_THRESHOLDS as THRESHOLDS, ISOS
 THRESHOLDS_STR = [str(t) for t in THRESHOLDS]
 RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']
 

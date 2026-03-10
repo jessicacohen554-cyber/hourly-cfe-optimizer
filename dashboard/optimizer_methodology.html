@@ -236,6 +236,7 @@
     <script src="js/scroll-observer.js"></script>
     <script src="js/shared-footer.js"></script>
     <script src="js/shared-back-button.js"></script>
+    <script src="js/data-flow-map.js"></script>
 </head>
 <body>
 
@@ -951,6 +952,595 @@
         <li><strong>PJM 2025 Long-Term Load Forecast</strong> &mdash; 20-year summer/winter peak and energy growth projections</li>
         <li><strong>Grid Strategies, <em>Power Demand Forecasts Revised Up for Third Year Running</em> (2025)</strong> &mdash; National load growth aggregation across planning entities</li>
     </ul>
+
+    <!-- ================================================================ -->
+    <!-- SECTION 11: PIPELINE DATA FLOW MAP                              -->
+    <!-- ================================================================ -->
+    <h2 id="pipeline-data-flow">11. Pipeline Data Flow</h2>
+
+    <p>
+        The optimizer runs as a 10-step directed acyclic graph (DAG). Step 1 (physics) is
+        compute-heavy (3&ndash;8 hours); Steps 2&ndash;9 are lightweight (minutes each).
+        Click any node below to inspect its scripts, inputs, outputs, and runtime.
+    </p>
+
+    <style>
+        /* ========== Data Flow Map — page-specific layout styles ========== */
+        .dfm-wrap {
+            position: relative;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin: 24px 0 32px;
+        }
+        .dfm-svg-container {
+            min-width: 820px;
+            width: 100%;
+            position: relative;
+        }
+        .dfm-svg-container svg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        /* Node base */
+        .dfm-node {
+            cursor: pointer;
+            transition: filter 0.2s ease, transform 0.2s ease;
+        }
+        .dfm-node:hover {
+            filter: brightness(1.08) drop-shadow(0 4px 12px rgba(0,0,0,0.15));
+        }
+        .dfm-node:hover rect,
+        .dfm-node:hover .dfm-node-rect {
+            stroke-width: 2.5;
+        }
+        .dfm-node rect, .dfm-node .dfm-node-rect {
+            rx: 10;
+            ry: 10;
+            stroke-width: 1.5;
+            transition: stroke-width 0.2s ease;
+        }
+        .dfm-node text {
+            font-family: var(--font-heading);
+            pointer-events: none;
+        }
+        .dfm-node .dfm-label {
+            font-size: 11px;
+            font-weight: 700;
+            fill: #fff;
+        }
+        .dfm-node .dfm-sublabel {
+            font-size: 8.5px;
+            font-weight: 400;
+            fill: rgba(255,255,255,0.82);
+        }
+
+        /* Edge lines */
+        .dfm-edge {
+            fill: none;
+            stroke: var(--navy-light, #2D3A52);
+            stroke-width: 1.4;
+            transition: stroke 0.2s ease, stroke-width 0.2s ease;
+        }
+        .dfm-edge-dashed {
+            stroke-dasharray: 6 4;
+            opacity: 0.6;
+        }
+        .dfm-edge-label {
+            font-family: var(--font-body);
+            font-size: 7.5px;
+            fill: var(--text-muted, #6B7280);
+        }
+        .dfm-arrowhead {
+            fill: var(--navy-light, #2D3A52);
+        }
+
+        /* Detail panel */
+        .dfm-detail {
+            display: none;
+            margin-top: 16px;
+            padding: 20px 24px;
+            background: #fff;
+            border: 1px solid var(--border-light, #E5E7EB);
+            border-radius: var(--radius-lg, 12px);
+            box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.06));
+            animation: dfmSlideIn 0.25s ease-out;
+        }
+        .dfm-detail.active {
+            display: block;
+        }
+        @keyframes dfmSlideIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .dfm-detail-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .dfm-detail-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+        .dfm-detail-title {
+            font-family: var(--font-heading);
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--navy, #1A2744);
+        }
+        .dfm-detail-close {
+            margin-left: auto;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: var(--text-muted, #6B7280);
+            padding: 4px 8px;
+            border-radius: var(--radius-sm, 6px);
+            transition: background 0.15s;
+        }
+        .dfm-detail-close:hover {
+            background: var(--bg-hover, rgba(0,0,0,0.05));
+        }
+        .dfm-detail-desc {
+            font-size: 0.9rem;
+            color: var(--text-secondary, #4B5563);
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+        .dfm-detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        @media (max-width: 600px) {
+            .dfm-detail-grid { grid-template-columns: 1fr; }
+        }
+        .dfm-detail-section h4 {
+            font-family: var(--font-heading);
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--navy, #1A2744);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+        .dfm-detail-section ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .dfm-detail-section li {
+            font-size: 0.82rem;
+            color: var(--text-secondary, #4B5563);
+            padding: 3px 0;
+            font-family: var(--font-mono, monospace);
+        }
+        .dfm-detail-runtime {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: var(--radius-pill, 9999px);
+            font-size: 0.78rem;
+            font-weight: 600;
+            background: var(--bg-alt-warm, #FEF3C7);
+            color: var(--amber-dark, #92400E);
+        }
+
+        /* Legend */
+        .dfm-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-top: 12px;
+            padding: 12px 16px;
+            background: var(--bg-alt-cool, #F0F4F8);
+            border-radius: var(--radius-md, 8px);
+        }
+        .dfm-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.78rem;
+            color: var(--text-secondary, #4B5563);
+            font-family: var(--font-body);
+        }
+        .dfm-legend-swatch {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        /* Data file table toggle */
+        .dfm-table-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 0;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-family: var(--font-heading);
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--navy, #1A2744);
+            width: 100%;
+            text-align: left;
+        }
+        .dfm-table-toggle:hover { color: var(--accent, #EF4444); }
+        .dfm-table-toggle .dfm-chevron {
+            transition: transform 0.25s ease;
+            font-size: 0.9rem;
+        }
+        .dfm-table-toggle.expanded .dfm-chevron {
+            transform: rotate(90deg);
+        }
+        .dfm-table-body {
+            display: none;
+            overflow-x: auto;
+        }
+        .dfm-table-body.expanded {
+            display: block;
+        }
+
+        /* Mobile vertical layout */
+        @media (max-width: 768px) {
+            .dfm-svg-container {
+                min-width: 0;
+            }
+            .dfm-wrap {
+                overflow-x: visible;
+            }
+        }
+    </style>
+
+    <div class="card" style="padding: 24px;">
+        <!-- Legend -->
+        <div class="dfm-legend" role="legend" aria-label="Node type legend">
+            <div class="dfm-legend-item"><span class="dfm-legend-swatch" style="background:#0EA5E9;"></span> Data Input</div>
+            <div class="dfm-legend-item"><span class="dfm-legend-swatch" style="background:#64748B;"></span> Config</div>
+            <div class="dfm-legend-item"><span class="dfm-legend-swatch" style="background:#F59E0B;"></span> Heavy Compute</div>
+            <div class="dfm-legend-item"><span class="dfm-legend-swatch" style="background:#6366F1;"></span> Compute</div>
+            <div class="dfm-legend-item"><span class="dfm-legend-swatch" style="background:#22C55E;"></span> Analysis</div>
+            <div class="dfm-legend-item"><span class="dfm-legend-swatch" style="background:#EF4444;"></span> Output</div>
+        </div>
+
+        <!-- DAG SVG -->
+        <div class="dfm-wrap" role="img" aria-label="Pipeline data flow directed acyclic graph">
+            <div class="dfm-svg-container" id="dfmSvgContainer"></div>
+        </div>
+
+        <!-- Detail panel -->
+        <div class="dfm-detail" id="dfmDetail" role="region" aria-label="Selected pipeline node details" aria-live="polite">
+            <div class="dfm-detail-header">
+                <span class="dfm-detail-dot" id="dfmDetailDot"></span>
+                <span class="dfm-detail-title" id="dfmDetailTitle"></span>
+                <button class="dfm-detail-close" id="dfmDetailClose" aria-label="Close detail panel">&times;</button>
+            </div>
+            <p class="dfm-detail-desc" id="dfmDetailDesc"></p>
+            <div class="dfm-detail-grid">
+                <div class="dfm-detail-section">
+                    <h4>Scripts</h4>
+                    <ul id="dfmDetailScripts"></ul>
+                </div>
+                <div class="dfm-detail-section">
+                    <h4>Outputs</h4>
+                    <ul id="dfmDetailOutputs"></ul>
+                </div>
+            </div>
+            <div style="margin-top:12px;">
+                <span class="dfm-detail-runtime" id="dfmDetailRuntime"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Collapsible data file reference table -->
+    <div class="card" style="padding: 0; margin-top: 20px;">
+        <button class="dfm-table-toggle" id="dfmTableToggle" aria-expanded="false" aria-controls="dfmTableBody">
+            <span class="dfm-chevron">&#9654;</span>
+            Data File Reference
+        </button>
+        <div class="dfm-table-body" id="dfmTableBody" role="region" aria-label="Data file reference table">
+            <table class="data-table" style="margin:0;" id="dfmDataTable">
+                <thead>
+                    <tr>
+                        <th>File Pattern</th>
+                        <th>Step</th>
+                        <th>Format</th>
+                        <th>Key Columns</th>
+                        <th>Description</th>
+                        <th>Source / Size</th>
+                    </tr>
+                </thead>
+                <tbody id="dfmDataTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+
+        // ── Color map ──
+        const TYPE_COLORS = {
+            data_input:    '#0EA5E9',
+            config:        '#64748B',
+            compute_heavy: '#F59E0B',
+            compute:       '#6366F1',
+            analysis:      '#22C55E',
+            output:        '#EF4444'
+        };
+
+        // ── Layout constants ──
+        const NODE_W = 150, NODE_H = 52, PAD_X = 40, PAD_Y = 18;
+
+        // Assign column (x) and row (y) positions for each node in the DAG
+        // Layout: 5 columns, left-to-right flow
+        const layout = {
+            raw_data:  { col: 0, row: 0 },
+            config:    { col: 0, row: 1.3 },
+            step1:     { col: 1, row: 0 },
+            step2:     { col: 2, row: 0 },
+            step3:     { col: 3, row: 0 },
+            step4:     { col: 3, row: 1.3 },
+            step5:     { col: 4, row: 0 },
+            step6:     { col: 4, row: 1.3 },
+            step7:     { col: 5, row: 0 },
+            step8:     { col: 5, row: 1.3 },
+            step9:     { col: 6, row: 0.65 },
+            dashboard: { col: 7, row: 0.65 }
+        };
+
+        const nodes = PIPELINE_FLOW.nodes;
+        const edges = PIPELINE_FLOW.edges;
+
+        // Compute positions
+        const nodeMap = {};
+        nodes.forEach(n => {
+            const l = layout[n.id];
+            nodeMap[n.id] = {
+                ...n,
+                x: l.col * (NODE_W + PAD_X),
+                y: l.row * (NODE_H + PAD_Y),
+                cx: l.col * (NODE_W + PAD_X) + NODE_W / 2,
+                cy: l.row * (NODE_H + PAD_Y) + NODE_H / 2
+            };
+        });
+
+        // SVG dimensions
+        const maxCol = Math.max(...Object.values(layout).map(l => l.col));
+        const maxRow = Math.max(...Object.values(layout).map(l => l.row));
+        const svgW = (maxCol + 1) * (NODE_W + PAD_X) - PAD_X + 40;
+        const svgH = (maxRow + 1) * (NODE_H + PAD_Y) - PAD_Y + 40;
+
+        // Build SVG
+        const ns = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(ns, 'svg');
+        svg.setAttribute('viewBox', '0 0 ' + svgW + ' ' + svgH);
+        svg.setAttribute('xmlns', ns);
+        svg.style.width = '100%';
+        svg.style.height = 'auto';
+
+        // Defs: arrowhead
+        const defs = document.createElementNS(ns, 'defs');
+        const marker = document.createElementNS(ns, 'marker');
+        marker.setAttribute('id', 'dfm-arrow');
+        marker.setAttribute('viewBox', '0 0 10 7');
+        marker.setAttribute('refX', '10');
+        marker.setAttribute('refY', '3.5');
+        marker.setAttribute('markerWidth', '8');
+        marker.setAttribute('markerHeight', '6');
+        marker.setAttribute('orient', 'auto-start-reverse');
+        const arrowPath = document.createElementNS(ns, 'path');
+        arrowPath.setAttribute('d', 'M 0 0 L 10 3.5 L 0 7 z');
+        arrowPath.classList.add('dfm-arrowhead');
+        marker.appendChild(arrowPath);
+        defs.appendChild(marker);
+
+        // Dashed arrowhead
+        const marker2 = marker.cloneNode(true);
+        marker2.setAttribute('id', 'dfm-arrow-dashed');
+        marker2.querySelector('path').style.opacity = '0.6';
+        defs.appendChild(marker2);
+        svg.appendChild(defs);
+
+        // Draw edges
+        const edgeGroup = document.createElementNS(ns, 'g');
+        edges.forEach(e => {
+            const from = nodeMap[e.from];
+            const to = nodeMap[e.to];
+            if (!from || !to) return;
+
+            // Determine connection points
+            let x1, y1, x2, y2;
+            if (Math.abs(from.cy - to.cy) < 5) {
+                // Horizontal: right edge → left edge
+                x1 = from.x + NODE_W;
+                y1 = from.cy;
+                x2 = to.x;
+                y2 = to.cy;
+            } else if (from.x + NODE_W <= to.x) {
+                // Diagonal forward
+                x1 = from.x + NODE_W;
+                y1 = from.cy;
+                x2 = to.x;
+                y2 = to.cy;
+            } else {
+                // Same column or backward: bottom → top
+                x1 = from.cx;
+                y1 = from.y + NODE_H;
+                x2 = to.cx;
+                y2 = to.y;
+            }
+
+            // Cubic bezier for smooth curves
+            const dx = x2 - x1;
+            const cpx1 = x1 + dx * 0.4;
+            const cpx2 = x2 - dx * 0.4;
+            const d = 'M ' + x1 + ' ' + y1 + ' C ' + cpx1 + ' ' + y1 + ' ' + cpx2 + ' ' + y2 + ' ' + x2 + ' ' + y2;
+
+            const path = document.createElementNS(ns, 'path');
+            path.setAttribute('d', d);
+            path.classList.add('dfm-edge');
+            if (e.style === 'dashed') path.classList.add('dfm-edge-dashed');
+            path.setAttribute('marker-end', e.style === 'dashed' ? 'url(#dfm-arrow-dashed)' : 'url(#dfm-arrow)');
+            edgeGroup.appendChild(path);
+
+            // Edge label at midpoint
+            if (e.label) {
+                const mx = (x1 + x2) / 2;
+                const my = (y1 + y2) / 2 - 5;
+                const text = document.createElementNS(ns, 'text');
+                text.setAttribute('x', mx);
+                text.setAttribute('y', my);
+                text.setAttribute('text-anchor', 'middle');
+                text.classList.add('dfm-edge-label');
+                text.textContent = e.label;
+                edgeGroup.appendChild(text);
+            }
+        });
+        svg.appendChild(edgeGroup);
+
+        // Draw nodes
+        const nodeGroup = document.createElementNS(ns, 'g');
+        nodes.forEach(n => {
+            const pos = nodeMap[n.id];
+            const g = document.createElementNS(ns, 'g');
+            g.classList.add('dfm-node');
+            g.setAttribute('data-node-id', n.id);
+            g.setAttribute('role', 'button');
+            g.setAttribute('tabindex', '0');
+            g.setAttribute('aria-label', n.label + '. Click for details.');
+
+            const rect = document.createElementNS(ns, 'rect');
+            rect.classList.add('dfm-node-rect');
+            rect.setAttribute('x', pos.x);
+            rect.setAttribute('y', pos.y);
+            rect.setAttribute('width', NODE_W);
+            rect.setAttribute('height', NODE_H);
+            rect.setAttribute('fill', TYPE_COLORS[n.type] || '#6B7280');
+            rect.setAttribute('stroke', 'rgba(255,255,255,0.3)');
+            g.appendChild(rect);
+
+            // Label — split into two lines if long
+            const parts = n.label.split(': ');
+            if (parts.length === 2) {
+                const t1 = document.createElementNS(ns, 'text');
+                t1.setAttribute('x', pos.cx);
+                t1.setAttribute('y', pos.y + 20);
+                t1.setAttribute('text-anchor', 'middle');
+                t1.classList.add('dfm-label');
+                t1.textContent = parts[0];
+                g.appendChild(t1);
+
+                const t2 = document.createElementNS(ns, 'text');
+                t2.setAttribute('x', pos.cx);
+                t2.setAttribute('y', pos.y + 34);
+                t2.setAttribute('text-anchor', 'middle');
+                t2.classList.add('dfm-sublabel');
+                t2.textContent = parts[1];
+                g.appendChild(t2);
+            } else {
+                const t = document.createElementNS(ns, 'text');
+                t.setAttribute('x', pos.cx);
+                t.setAttribute('y', pos.cy + 4);
+                t.setAttribute('text-anchor', 'middle');
+                t.classList.add('dfm-label');
+                // Truncate if too long
+                t.textContent = n.label.length > 22 ? n.label.substring(0, 20) + '\u2026' : n.label;
+                g.appendChild(t);
+            }
+
+            // Click handler
+            g.addEventListener('click', () => showDetail(n));
+            g.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); showDetail(n); } });
+            nodeGroup.appendChild(g);
+        });
+        svg.appendChild(nodeGroup);
+
+        document.getElementById('dfmSvgContainer').appendChild(svg);
+
+        // ── Detail panel ──
+        const detailEl = document.getElementById('dfmDetail');
+        const detailDot = document.getElementById('dfmDetailDot');
+        const detailTitle = document.getElementById('dfmDetailTitle');
+        const detailDesc = document.getElementById('dfmDetailDesc');
+        const detailScripts = document.getElementById('dfmDetailScripts');
+        const detailOutputs = document.getElementById('dfmDetailOutputs');
+        const detailRuntime = document.getElementById('dfmDetailRuntime');
+
+        function showDetail(node) {
+            detailDot.style.background = TYPE_COLORS[node.type] || '#6B7280';
+            detailTitle.textContent = node.label;
+            detailDesc.textContent = node.description;
+            detailScripts.innerHTML = '';
+            (node.scripts || []).forEach(s => {
+                const li = document.createElement('li');
+                li.textContent = s;
+                detailScripts.appendChild(li);
+            });
+            if (!node.scripts || node.scripts.length === 0) {
+                const li = document.createElement('li');
+                li.textContent = '(client-side only)';
+                li.style.fontStyle = 'italic';
+                detailScripts.appendChild(li);
+            }
+            detailOutputs.innerHTML = '';
+            (node.outputs || []).forEach(o => {
+                const li = document.createElement('li');
+                li.textContent = o;
+                detailOutputs.appendChild(li);
+            });
+            if (!node.outputs || node.outputs.length === 0) {
+                const li = document.createElement('li');
+                li.textContent = '(see dashboard pages)';
+                li.style.fontStyle = 'italic';
+                detailOutputs.appendChild(li);
+            }
+            detailRuntime.textContent = node.runtime || 'N/A';
+
+            detailEl.classList.add('active');
+            detailEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        document.getElementById('dfmDetailClose').addEventListener('click', () => {
+            detailEl.classList.remove('active');
+        });
+
+        // ── Data file table ──
+        const tableBody = document.getElementById('dfmDataTableBody');
+        PIPELINE_FLOW.dataFiles.forEach(f => {
+            const tr = document.createElement('tr');
+            tr.innerHTML =
+                '<td style="font-family:var(--font-mono,monospace);font-size:0.8rem;white-space:nowrap;">' + escHtml(f.pattern) + '</td>' +
+                '<td style="text-align:center;">' + escHtml(String(f.step)) + '</td>' +
+                '<td>' + escHtml(f.format) + '</td>' +
+                '<td style="font-size:0.8rem;">' + escHtml(f.keyColumns) + '</td>' +
+                '<td style="font-size:0.82rem;">' + escHtml(f.description) + '</td>' +
+                '<td style="font-size:0.82rem;">' + escHtml(f.source || f.approxSize || '') + '</td>';
+            tableBody.appendChild(tr);
+        });
+
+        // Toggle
+        const toggleBtn = document.getElementById('dfmTableToggle');
+        const tableBodyEl = document.getElementById('dfmTableBody');
+        toggleBtn.addEventListener('click', () => {
+            const expanded = tableBodyEl.classList.toggle('expanded');
+            toggleBtn.classList.toggle('expanded', expanded);
+            toggleBtn.setAttribute('aria-expanded', expanded);
+        });
+
+        function escHtml(str) {
+            const d = document.createElement('div');
+            d.textContent = str;
+            return d.innerHTML;
+        }
+    })();
+    </script>
 
     <p style="margin-top:40px;padding-top:20px;border-top:1px solid var(--border-light);font-size:0.82rem;color:var(--text-muted);text-align:center;">
         Hourly Clean Energy Cost Optimizer &mdash; About This Model v4.0

@@ -51,6 +51,10 @@ FLEET_FILE = DATA / 'ipp_fleet_config.json'
 OUT_DIR = DATA / 'step12-nuclear-retirement'
 JS_OUT = ROOT / 'dashboard' / 'js' / 'nuclear-retirement-data.js'
 
+# ─── Imports from pipeline ─────────────────────────────────────────────
+sys.path.insert(0, str(ROOT / 'scripts'))
+from pipeline_config import ISOS
+
 # ─── Constants ─────────────────────────────────────────────────────────
 NUCLEAR_FOM_KW_YR = 120      # $/kW-yr fixed O&M
 NUCLEAR_ELCC = 0.95           # Effective load carrying capacity
@@ -75,7 +79,6 @@ FEDERAL_45U_FLOOR_MWH = 15.0
 FEDERAL_45U_EXPIRY = 2032
 
 SIMULATION_YEARS = [2023, 2030, 2035, 2040, 2045, 2050]
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 
 # NZ scenario definitions
 NZ_SCENARIOS = {

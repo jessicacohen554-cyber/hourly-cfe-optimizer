@@ -31,6 +31,7 @@ sys.path.insert(0, ROOT)
 
 # Import shared constants from pipeline_config where available
 from pipeline_config import (
+    ISOS,
     WHOLESALE_PRICES, CAPACITY_MARKET_PRICES,
     EXISTING_GAS_FOM_KW_YR,
 )
@@ -40,8 +41,6 @@ STEP10_DIR = os.path.join(ROOT, 'data', 'step10-smartargets')
 OUT_JS = os.path.join(ROOT, 'dashboard', 'js', 'ipp-smartargets-data.js')
 OUT_PARQUET = os.path.join(STEP10_DIR, 'ipp_sweep_results.parquet')
 FLEET_CONFIG = os.path.join(ROOT, 'data', 'ipp_fleet_config.json')
-
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 SIM_YEARS = [2023, 2030, 2035, 2040, 2045, 2050]
 SWEEP_TYPES = ['reference', 'power_nz', 'economy_nz']
 

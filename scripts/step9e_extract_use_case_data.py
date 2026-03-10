@@ -24,7 +24,8 @@ ROOT = os.path.dirname(SCRIPT_DIR)
 DATA = os.path.join(ROOT, "data")
 DASH_JS = os.path.join(ROOT, "dashboard", "js")
 
-ISOS = ["CAISO", "ERCOT", "PJM", "NYISO", "NEISO", "MISO", "SPP"]
+sys.path.insert(0, SCRIPT_DIR)
+from pipeline_config import ISOS
 KEY_THRESHOLDS = [50, 75, 85, 90, 95, 97.5, 99, 99.5, 99.9, 99.99]
 ALL_THRESHOLDS = [10, 20, 30, 40, 50, 55, 60, 65, 70, 75, 80, 85, 87.5,
                   90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]

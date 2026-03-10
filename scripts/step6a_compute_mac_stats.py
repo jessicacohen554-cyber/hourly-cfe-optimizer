@@ -38,14 +38,12 @@ sys.path.insert(0, BASE_DIR)
 sys.path.insert(0, os.path.join(BASE_DIR, 'scripts'))
 from parquet_io import (find_input_dir, find_parquet, find_dg_parquets,
                         DEFAULT_INPUT_DIRS, RESOURCE_TYPES, REGIONAL_DEMAND_MWH)
-from pipeline_config import OUTPUT_THRESHOLDS as THRESHOLDS
+from pipeline_config import OUTPUT_THRESHOLDS as THRESHOLDS, ISOS
 
 RESULTS_PATH = os.path.join(BASE_DIR, 'dashboard', 'overprocure_results.json')
 JS_OUTPUT_PATH = os.path.join(BASE_DIR, 'dashboard', 'js', 'mac-stats-data.js')
 STEP5_DIR = os.path.join(BASE_DIR, 'data', 'step5-post-processing')
 JSON_OUTPUT_PATH = os.path.join(STEP5_DIR, 'mac_stats.json')
-
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 THRESHOLD_STRS = [str(t) if t != int(t) else str(int(t)) for t in THRESHOLDS]
 
 # Toggle factor names for ANOVA (6 paired dimensions — Battery/LDES split from Storage)

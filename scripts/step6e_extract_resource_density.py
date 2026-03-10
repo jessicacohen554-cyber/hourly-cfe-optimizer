@@ -31,9 +31,7 @@ OUT_PATH = ROOT / "dashboard" / "js" / "resource-density-data.js"
 ARCHIVE_DIR = ROOT / "data" / "step6-derived-analytics" / "resource-density"
 
 sys.path.insert(0, str(ROOT / "scripts"))
-from pipeline_config import ACTIVE_THRESHOLDS, THRESHOLD_TARGET_YEARS
-
-ISOS = ["CAISO", "ERCOT", "PJM", "NYISO", "NEISO", "MISO", "SPP"]
+from pipeline_config import ACTIVE_THRESHOLDS, THRESHOLD_TARGET_YEARS, ISOS
 # Single source of truth: pipeline_config
 ALL_THRESHOLDS = ACTIVE_THRESHOLDS
 

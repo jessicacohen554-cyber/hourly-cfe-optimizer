@@ -20,14 +20,13 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, SCRIPT_DIR)
 
 from pipeline_config import (
+    ISOS,
     NUCLEAR_NEWBUILD_LCOE, CCS_LCOE_45Q_ON, CCS_LCOE_45Q_OFF,
     FOAK_NUCLEAR_NEWBUILD, FOAK_CCS_45Q_ON, FOAK_CCS_45Q_OFF,
     FOAK_GEOTHERMAL,
     WHOLESALE_PRICES, FUEL_ADJUSTMENTS,
     REGIONAL_DEMAND_TWH,
 )
-
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # WRIGHT'S LAW ENGINE (same as step8d)

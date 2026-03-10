@@ -17,7 +17,8 @@ import numpy as np
 import pandas as pd
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
+sys.path.insert(0, os.path.join(REPO, 'scripts'))
+from pipeline_config import ISOS
 
 # Map step5d price_sensitivity names → step3 scenario keys
 # Format: {Ren}{Firm}{Batt}{LDES}_{Fuel}_{Tx}_{CCS}{45Q}_{Geo}

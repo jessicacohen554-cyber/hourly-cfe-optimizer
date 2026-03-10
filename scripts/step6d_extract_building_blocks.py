@@ -49,7 +49,7 @@ JS_PATH = ROOT / "dashboard" / "js" / "building-blocks-data.js"
 SCRIPTS_DIR = ROOT / "scripts"
 sys.path.insert(0, str(SCRIPTS_DIR))
 
-ISOS = ["CAISO", "ERCOT", "PJM", "NYISO", "NEISO", "MISO", "SPP"]
+from pipeline_config import ISOS
 ALL_THRESHOLDS = [10, 20, 30, 40, 50, 55, 60, 65, 70, 75, 80, 85, 87.5,
                   90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
 

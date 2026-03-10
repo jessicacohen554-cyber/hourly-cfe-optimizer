@@ -51,10 +51,7 @@ LOCAL_TIME_ISOS = {'CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO'}
 # ISOs that need UTC → local rotation for display
 UTC_ISOS = {'MISO', 'SPP'}
 
-# Which ISOs have offshore wind
-OFFSHORE_ISOS = {'CAISO', 'NYISO', 'NEISO', 'PJM'}
-
-ALL_ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
+from pipeline_config import ISOS as ALL_ISOS, OFFSHORE_ISOS
 
 # Synthetic storage dispatch shapes (same across all ISOs, in local time)
 # Battery 4hr: charge midday (solar surplus), discharge evening peak

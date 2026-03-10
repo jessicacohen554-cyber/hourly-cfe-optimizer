@@ -24,10 +24,12 @@ OUTPUT_PATH = os.path.join(ROOT_DIR, 'data', 'analysis_results.json')
 
 # Import constants from step3
 sys.path.insert(0, SCRIPT_DIR)
-from pipeline_config import REGIONAL_DEMAND_TWH
-
+from pipeline_config import REGIONAL_DEMAND_TWH, ISOS
 from pipeline_config import OUTPUT_THRESHOLDS as THRESHOLDS
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
+
+# Legacy subset: original analysis only covered 5 ISOs (pre-MISO/SPP integration).
+# Kept as LEGACY_ISOS in case any downstream logic depends on the 5-ISO subset.
+LEGACY_ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO']
 
 
 def medium_key(iso):
