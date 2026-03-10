@@ -959,8 +959,9 @@
     <h2 id="pipeline-data-flow">11. Pipeline Data Flow</h2>
 
     <p>
-        The optimizer runs as a 10-step directed acyclic graph (DAG). Step 1 (physics) is
-        compute-heavy (3&ndash;8 hours); Steps 2&ndash;9 are lightweight (minutes each).
+        The optimizer runs as an 8-step directed acyclic graph (DAG, Steps 0&ndash;7).
+        Step 1 (physics) is compute-heavy (3&ndash;8 hours); Steps 2&ndash;7 are lightweight
+        (minutes each). Sub-step notation: .1/.2/.3 = sequential, A/B/C = parallel.
         Click any node below to inspect its scripts, inputs, outputs, and runtime.
     </p>
 
@@ -1279,19 +1280,17 @@
         const NODE_W = 150, NODE_H = 52, PAD_X = 40, PAD_Y = 18;
 
         // Assign column (x) and row (y) positions for each node in the DAG
-        // Layout: 5 columns, left-to-right flow
+        // Layout: left-to-right flow, Steps 0–7
         const layout = {
             raw_data:  { col: 0, row: 0 },
             config:    { col: 0, row: 1.3 },
-            step1:     { col: 1, row: 0 },
-            step2:     { col: 2, row: 0 },
-            step3:     { col: 3, row: 0 },
-            step4:     { col: 3, row: 1.3 },
-            step5:     { col: 4, row: 0 },
-            step6:     { col: 4, row: 1.3 },
-            step7:     { col: 5, row: 0 },
-            step8:     { col: 5, row: 1.3 },
-            step9:     { col: 6, row: 0.65 },
+            step1:     { col: 1, row: 0.65 },
+            step2:     { col: 2, row: 0.65 },
+            step3:     { col: 3, row: 0.65 },
+            step4:     { col: 4, row: 0.65 },
+            step5:     { col: 5, row: 0 },
+            step6:     { col: 5, row: 1.3 },
+            step7:     { col: 6, row: 0.65 },
             dashboard: { col: 7, row: 0.65 }
         };
 
