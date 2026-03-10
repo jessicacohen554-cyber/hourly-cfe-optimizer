@@ -721,6 +721,9 @@ H = 8760  # Convenience constant
 # ============================================================================
 # COST TABLES — Single source of truth for all pipeline scripts
 # ============================================================================
+# Cost basis: NREL ATB 2024, 2024 USD. Supplemented by Lazard v17-18, EIA AEO 2024.
+# Battery storage: NREL ATB 2024 + Cost Projections for Utility-Scale Battery
+#   Storage 2025 Update. Offshore wind: Lazard v17-18, BNEF 2025, NREL ATB 2024.
 # Used by: step3a_cost_optimization.py, step3b_track_nb_ctr.py, scenario_common.py,
 #          procurement_utils.py, step9a_generate_shared_data.py
 #
