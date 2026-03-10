@@ -275,6 +275,126 @@ MAC = clean_resource_LCOE × demand_MWh / CO₂_displaced_tons  ($/tCO₂)
 
 ---
 
+## Codebase Audit — Decisions & Action Items (Mar 10, 2026)
+
+**Branch:** `claude/codebase-audit-review-RU7ch`
+
+Comprehensive code audit identified critical, high, and medium-severity issues. User decisions captured below. Items are prioritized C (critical), H (high), M (medium), L (low).
+
+### C1: LDES Double-Counting Bug — Fix Code, Defer Re-Run
+**Issue**: LDES charges energy from `residual_surplus` but never subtracts it (line ~751 of step1 dispatch). Battery 4hr, 8hr, and H2 all subtract. Same MWh can be consumed by both battery AND LDES, inflating CFE% by 2-5% at ≥95% thresholds.
+**Decision**: Fix the bug in code but don't re-run Step 1 yet. Document that existing caches have this known bias. Re-run when next Step 1 is needed.
+**Status**: [ ] Fix applied, [ ] Documented
+
+### C2: CO₂ Emission Baselines — Map to Scope 2 Strategy Variants (Intentional Design)
+**Issue**: Baseline CO₂ uses grid_average rates (0.21-0.43 tCO₂/MWh, includes existing clean) but displaced CO₂ uses fossil_average rates (0.38-0.58). CAISO example: baseline 0.210, displacement 0.430.
+**Decision**: The use of different baselines is **intentional** — testing how proposed Scope 2 accounting approaches play out in real-world optimization. The user is a member of the GHG Protocol Scope 2 technical working group; the revised guidance is under development. Fossil-average from eGRID serves as proxy for short-run marginal emission rate (an unreliable and debated metric with significant methodological variation). Map each strategy variant (1A/1B/1C) to a specific emission accounting tier (location-based, market-based, consequential) and label explicitly.
+**Status**: [ ] Strategy variants labeled with accounting tiers, [ ] Documentation updated
+
+### C3: MAC Definition Divergence — Deferred for Discussion
+**Issue**: Three different MAC calculations (Step 6A system-wide stepwise, Step 6B isotonic-smoothed, Step 5D per-technology LCOE/CO₂) produce 2-5x different values at same threshold. Step 7C scenario comparison uses different MAC sources for A vs B, creating confounding variable.
+**Decision**: User needs more context before deciding. **Revisit in future session.**
+**Status**: [ ] Pending user decision
+
+### C4: DAC Cost Trajectories — Cite and Adjust
+**Issue**: DAC costs hardcoded with no citations. Optimistic case ($100/ton by 2050) is below published lower bounds (Rubin $156-236/ton, Fuss et al. $124-243/ton). DAC crossover drives optimal CFE target recommendations.
+**Decision**: Add citations (Rubin 2015, Fuss et al. 2018, IEA 2022). Raise optimistic floor to ~$150/ton to match literature. Recalculate crossover points.
+**Status**: [ ] Citations added, [ ] Optimistic floor adjusted, [ ] Crossovers recalculated
+
+### H1: Coal Retirement — Add EIA Form 860 Schedule
+**Issue**: Coal capped at 2025 TWh indefinitely with binary retirement at 70% clean threshold. Real coal plants retire for economics/age independent of clean energy — model credits all displacement to clean procurement.
+**Decision**: Add linear coal decline per ISO based on announced closures (EIA Form 860). Reduces claimed abatement but more realistic.
+**Status**: [ ] Retirement schedule implemented, [ ] CO₂ model updated
+
+### H2: Emission Factor Terminology — Covered by C2
+**Issue**: Model uses eGRID blend-weighted averages but context implies "marginal" in some comments.
+**Decision**: Already resolved by C2 decision (map to Scope 2 strategy variants with explicit accounting tier labels). Add labels to code comments.
+**Status**: [ ] Code comments updated
+
+### H3: ISO Single-Zone Assumption — Document as Scope Limitation
+**Issue**: Each ISO modeled as single zone with perfect internal transmission. PJM Western Hub vs Hub can differ $5-15/MWh. CAISO North/South congestion is material.
+**Decision**: Add explicit limitation statement: "Suitable for corporate procurement analysis at ISO-level, not transmission system planning."
+**Status**: [ ] Documented in §19
+
+### H4: Over-Procurement Ratios — Derive from PFS/EF Data
+**Issue**: Hardcoded ratios (1.05x at 50%, 3.0x at 99.99%) claim PFS derivation but no actual link to PFS data. 3x means procuring 3 TWh to deliver 1 TWh.
+**Decision**: Compute total_procurement/demand_met per threshold from Step 1 outputs. Replace hardcoded values with data-driven ratios.
+**Status**: [ ] Ratios computed from PFS, [ ] Hardcoded values replaced
+
+### H5: Deployment Queue Double-Allocation — Add Shared Capacity Tracking
+**Issue**: When multiple ISOs consume from the same deployment queue step, no capacity accounting prevents double-allocation. If SPP wind has 2 TWh and both CAISO and PJM want it, both can consume the full amount.
+**Decision**: Track cumulative consumption per queue step across all buyers. Prevents double-allocation.
+**Status**: [ ] Capacity tracking implemented
+
+### H6: SSS/Merchant Cost Simplification — Document
+**Issue**: SSS savings = wholesale price × capacity. Merchant LCOE static at $35/MWh. No ISO variation, no validation against actual PPA or EAC data.
+**Decision**: Document as simplification. State that pool-adjusted costs are approximate. Note sensitivity to these assumptions.
+**Status**: [ ] Documented in §19
+
+### H7: Hourly Emission Rates — Investigate Current Dispatch Model
+**Issue**: Same scalar emission rate for all 8,760 hours. Real marginal rates vary 2-3x across day/night and season.
+**Decision**: User expected the dispatch model already approximates marginal rates. **Action**: Investigate what the current dispatch model actually does vs. what was intended. Update dispatch model to approximate hourly marginal rates if not already doing so.
+**Status**: [ ] Current model investigated, [ ] Gap assessment completed
+
+### H8: Social Cost of Carbon — Update to 2024 EPA
+**Issue**: Dashboard cites EPA $51/ton (2016, 7% SDR). Biden admin revised to $190-340/ton (2024, 3% SDR). EU ETS is market price, not SCC.
+**Decision**: Replace $51 with $190 (central, 2024 EPA). Keep Rennert et al. $185. Clarify EU ETS is market price, not SCC.
+**Status**: [ ] SCC values updated, [ ] EU ETS label clarified
+
+### M1: Weather-Year Sensitivity — Document Limitation
+**Issue**: Model uses 5-year averaged profiles but 2025 demand actuals. No P10/P50/P90 weather-year sensitivity.
+**Decision**: Document that profiles are 5-year average, no weather-year sensitivity exists. Add to future work (§21).
+**Status**: [ ] Documented
+
+### M2: Battery Annualization — Trace and Document
+**Issue**: Battery cost uses static annualization (0.1270) regardless of cycles/year.
+**Decision**: User believes this is correct by design — PFS results are based on capacity as % of annual demand, enabling simplified capacity pricing rather than cycle-dependent LCOS. **Action**: Trace through code to confirm this is the case. If confirmed, update documentation to make the capacity-pricing rationale explicitly clear.
+**Status**: [ ] Code trace completed, [ ] Documentation updated
+
+### M3: Storage Dispatch Priority — Document as Lower Bound
+**Issue**: Fixed priority (4hr → 8hr → LDES → H2), window-based, no price signal.
+**Decision**: Document: "Greedy sequential dispatch represents operational lower bound on storage utilization."
+**Status**: [ ] Documented in §19
+
+### M4: Demand Response / DSM — Add to Future Work
+**Issue**: No demand response, EV flexibility, or demand-side management modeled.
+**Decision**: Add to future work (§21): "DR/EV flexibility could reduce procurement costs 5-15% at high thresholds."
+**Status**: [ ] Added to §21
+
+### M5: Wright's Law Learning Rates — Add Citations & Calibrate
+**Issue**: Learning rates (solar 28%, wind 14%, battery 18%) have no citations. Battery 18% may be aggressive as market matures.
+**Decision**: Source all learning rates from published literature. Adjust if deviating from published values.
+**Status**: [ ] Citations added, [ ] Rates calibrated
+
+### M6: NEISO Gas Adder — Validate Against Algonquin Data
+**Issue**: $13.13/MWh winter gas pipeline adder has no citation.
+**Decision**: Check actual Algonquin Citygate basis spread; $13.13 may be high or low depending on year.
+**Status**: [ ] Validated against data, [ ] Citation added
+
+### M7: LMP Calibration — Run Existing Model
+**Issue**: Synthetic LMP from merit-order stack with no validation metrics reported.
+**Decision**: Run existing `calibrate_lmp_model.py`. Document R², MAPE, and bias for each ISO.
+**Status**: [ ] Calibration run, [ ] Results documented
+
+### M8: LCOE Tables — Update to NREL ATB 2024
+**Issue**: LCOE tables cite NREL ATB but no year specified. Values suggest 2023 or earlier.
+**Decision**: Update to NREL ATB 2024 (2024 USD). Add version/year to all cost table headers.
+**Status**: [ ] Tables updated, [ ] Version/year annotated
+
+### M9: Geothermal Scope — Document CAISO-Only Rationale + Cap Citation
+**Issue**: Geothermal limited to CAISO only. 39 TWh cap needs citation.
+**Decision**: Document why CAISO-only (Salton Sea ~80% of near-term identified resources). Note other ISOs have marginal potential. Add USGS citation for 39 TWh cap. (Partially covered by existing §19.6 — enhance with cap citation.)
+**Status**: [ ] Cap citation added
+
+### L1: Code Quality Improvements
+**Decision**: Pursue three improvements:
+1. **Consolidate dispatch code** — dispatch_utils.py should be single source of truth (eliminate duplication across step scripts)
+2. **Add type hints to public APIs** — aids readability and maintainability
+3. **Expand test coverage** — edge cases (empty ISOs, missing data)
+**Status**: [ ] Dispatch consolidated, [ ] Type hints added, [ ] Tests expanded
+
+---
+
 ## Previous Status (Mar 3, 2026)
 
 ### Dashboard Design Refactor — Observatory Theme (In Progress)
