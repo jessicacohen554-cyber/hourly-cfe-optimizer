@@ -749,6 +749,7 @@ def _score_with_all_storage(demand, supply_row, procurement,
                     if charge > remaining:
                         charge = remaining
                     soc += charge
+                    residual_surplus[h] -= charge  # BUG FIX: prevent double-counting
             for h in range(ws, we):
                 g = residual_gap[h]
                 if g > 0 and soc > 0:
@@ -968,6 +969,7 @@ def _batch_storage_scores(demand, supply_row, procurement,
                                 if s > 0 and h2_soc < h2_cap:
                                     charge = min(s, h2_pow, h2_cap - h2_soc)
                                     h2_soc += charge
+                                    res_surplus_l[h] -= charge  # BUG FIX: prevent double-counting
                             for h in range(ws, we):
                                 g = res_gap_l[h]
                                 if g > 0 and h2_soc > 0:

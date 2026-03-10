@@ -1935,8 +1935,9 @@ const CLEAN_FIRM_LEARNING_LOCAL = {
 const GAS_TRUE_COST_LOCAL = {
     // Gas CCGT base cost (fuel + O&M, no carbon price)
     base:        [48, 50, 50, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61],
-    // Gas + carbon pricing (EPA SCC ramp: ~$51→$85/ton, converted to $/MWh at 0.4 tCO2/MWh)
-    with_carbon: [68, 72, 73, 75, 78, 82, 85, 88, 91, 94, 97, 100, 103],
+    // Gas + carbon pricing (EPA SCC $190/ton 2024 TSD, 2.5% real growth, 0.4 tCO2/MWh)
+    // 2025: $190×0.4=$76 adder → $124; 2050: ~$366×0.4=$146 adder → $207
+    with_carbon: [124, 128, 131, 135, 139, 143, 147, 152, 157, 162, 167, 172, 178],
 };
 
 function renderFoakNOAKChart() {

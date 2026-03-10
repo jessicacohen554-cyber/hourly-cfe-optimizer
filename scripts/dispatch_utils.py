@@ -308,11 +308,16 @@ def _battery_loop(residual_surplus, residual_gap, dispatch_profile,
 def _ldes_loop(residual_surplus, residual_gap, dispatch_profile,
                energy_capacity, power_rating, ldes_efficiency,
                window_hours, total_hours):
-    """Inner loop for LDES/H2 multi-day dispatch — sequential hour-by-hour, matching step1.
+    """Inner loop for LDES/H2 multi-day dispatch — sequential hour-by-hour.
 
-    Note: charge phase does NOT subtract from residual_surplus, matching step1_pfs_generator
-    behavior (lines 742-751). Discharge phase DOES subtract from residual_gap so downstream
-    storage (H2) sees post-LDES gaps. SOC carries over between windows.
+    Charge phase subtracts from residual_surplus to prevent double-counting
+    between LDES and downstream storage (H2). Discharge subtracts from
+    residual_gap. SOC carries over between windows.
+
+    BUG FIX (Mar 2026): Previously did NOT subtract charge from residual_surplus,
+    allowing the same MWh to be consumed by both battery and LDES. Now consistent
+    with battery dispatch behavior. Existing Step 1 caches still have the old
+    behavior — defer re-run until next Step 1 is needed.
     """
     state_of_charge = 0.0
     num_windows = (total_hours + window_hours - 1) // window_hours
@@ -334,7 +339,7 @@ def _ldes_loop(residual_surplus, residual_gap, dispatch_profile,
                 if charge_amt > space:
                     charge_amt = space
                 state_of_charge += charge_amt
-                # Note: NOT subtracting from residual_surplus — matches step1
+                residual_surplus[h] -= charge_amt
 
         # Discharge pass: sequential hour-by-hour
         for h in range(w_start, w_end):
@@ -398,7 +403,8 @@ def _battery_loop_detailed(residual_surplus, residual_gap, dispatch_profile,
 def _ldes_loop_detailed(residual_surplus, residual_gap, dispatch_profile,
                         charge_profile, energy_capacity, power_rating,
                         ldes_efficiency, window_hours, total_hours):
-    """LDES/H2 dispatch with charge tracking — sequential hour-by-hour, matching step1."""
+    """LDES/H2 dispatch with charge tracking — sequential hour-by-hour.
+    BUG FIX (Mar 2026): Now subtracts charge from residual_surplus."""
     state_of_charge = 0.0
     num_windows = (total_hours + window_hours - 1) // window_hours
 
@@ -420,7 +426,7 @@ def _ldes_loop_detailed(residual_surplus, residual_gap, dispatch_profile,
                     charge_amt = space
                 state_of_charge += charge_amt
                 charge_profile[h] += charge_amt
-                # Note: NOT subtracting from residual_surplus — matches step1
+                residual_surplus[h] -= charge_amt
 
         # Discharge pass: sequential hour-by-hour
         for h in range(w_start, w_end):

@@ -97,6 +97,18 @@ WRIGHT_CUMULATIVE_GW_2025 = {
 }
 
 # Learning rate = cost reduction per doubling of cumulative capacity
+# Sources:
+#   Solar PV: ~20% module LR (Swanson's Law; Our World in Data 2023; Bolinger et al. 2022)
+#     — treated as mature (0% further learning) since >1 TW deployed, LCOE already <$30/MWh
+#   Wind: 7-14% CapEx LR (Bolinger et al. 2022; Oxford Energy Studies 2021)
+#     — treated as mature for onshore; offshore still on learning curve
+#   Battery Li-ion: 18-20% (BloombergNEF 2024; NREL ATB 2024)
+#   Nuclear SMR: 10-15% estimated (DOE Liftoff 2023; no historical data for SMRs)
+#   CCS: 10-12% (Global CCS Institute; limited deployment data)
+#   LDES (iron-air): 15-20% estimated (Form Energy; DOE LDES Liftoff 2023)
+#   Offshore wind: 8-12% (NREL Offshore Wind Market Report 2024)
+#   Note on methodology: Constant LR assumption is a simplification — recent literature
+#   (ScienceDirect Oct 2025) finds stepwise LR changes for 58/87 technologies studied.
 WRIGHT_LEARNING_RATE = {
     'nuclear':       {'Fast': 0.15, 'Slow': 0.10},
     'ccs':           {'Fast': 0.12, 'Slow': 0.10},
@@ -223,11 +235,12 @@ CES_DISCOUNT_FACTOR = 0.60  # ZEC/Tier 3 = ~60% of Tier 1 REC price
 # Sources: IEA 2024 DAC report, Rhodium Group, Climeworks/Orca published costs.
 DAC_COST_PER_TON = {
     # Facilitating: aggressive learning (Climeworks Gen3, Heirloom, etc.)
-    'Low': {2030: 400, 2035: 250, 2040: 180, 2045: 130, 2050: 100},
+    # Floor $150/ton per Rubin et al. (2015), Fuss et al. (2018) published lower bounds
+    'Low': {2030: 400, 2035: 275, 2040: 220, 2045: 180, 2050: 150},
     # Medium: moderate learning
-    'Medium': {2030: 600, 2035: 400, 2040: 300, 2045: 220, 2050: 150},
+    'Medium': {2030: 600, 2035: 400, 2040: 300, 2045: 230, 2050: 175},
     # Challenging: slow learning, limited deployment
-    'High': {2030: 800, 2035: 600, 2040: 450, 2045: 350, 2050: 250},
+    'High': {2030: 800, 2035: 600, 2040: 450, 2045: 350, 2050: 275},
 }
 
 # Queue overshoot premium — mandated build beyond queue cap costs extra ($/MWh adder)

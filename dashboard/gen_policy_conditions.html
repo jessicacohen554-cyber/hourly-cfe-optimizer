@@ -186,7 +186,7 @@
                 </div>
             </div>
 
-            <p class="citation" style="margin-top: 12px;">Reference points: EPA IWG social cost of carbon $51/tonne (2020$); Rennert et al. (Nature, 2022) $185/tonne; EU ETS &euro;70&ndash;100/tonne ($75&ndash;110); RGGI ~$15/tonne.</p>
+            <p class="citation" style="margin-top: 12px;">Reference points: EPA IWG social cost of carbon $190/tonne (2024$, 3% SDR); Rennert et al. (Nature, 2022) $185/tonne; EU ETS &euro;70&ndash;100/tonne ($75&ndash;110, market price, not SCC); RGGI ~$15/tonne.</p>
         </div>
     </section>
 
@@ -385,7 +385,7 @@ new Chart(document.getElementById('carbonPriceChart').getContext('2d'), {
         labels: ['RGGI\n(actual market)', 'EPA IWG\n(social cost)', 'EU ETS\n(actual market)', 'Rennert et al.\n(social cost)'],
         datasets: [{
             label: '$/tonne CO₂',
-            data: [15, 51, 90, 185],
+            data: [15, 190, 90, 185],
             backgroundColor: ['#9CA3AF', '#F59E0B', '#0EA5E9', '#DC2626'],
             borderRadius: 6
         }]
@@ -460,13 +460,13 @@ new Chart(document.getElementById('carbonThresholdChart').getContext('2d'), {
                 annotations: {
                     epaLine: {
                         type: 'line',
-                        xMin: 51, xMax: 51,
+                        xMin: 190, xMax: 190,
                         borderColor: '#F59E0B',
                         borderWidth: 2,
                         borderDash: [6, 4],
                         label: {
                             display: true,
-                            content: 'EPA SCC $51',
+                            content: 'EPA SCC $190',
                             position: 'start',
                             font: { size: 10 },
                             backgroundColor: 'rgba(245, 158, 11, 0.8)'
