@@ -82,7 +82,7 @@ def load_from_co2_batches(batch_dir, isos, thresholds):
     """Reassemble results dict from batched co2 result files.
 
     Reads _config.json, per-ISO meta files, and per-ISO/threshold files
-    written by step5a_compute_co2.py.
+    written by step4_1a_fossil_dispatch.py.
     """
     import glob as _glob
 
@@ -124,7 +124,7 @@ print("Loading data...")
 # Priority: (1) CO2 parquets, (2) monolithic JSON, (3) batched CO2 JSONs (legacy)
 data = None
 
-# Try CO2 parquets first (preferred — output of step5a_compute_co2.py)
+# Try CO2 parquets first (preferred — output of step4_1a_fossil_dispatch.py)
 if os.path.isdir(CO2_BATCH_DIR):
     co2_parquets = [f for f in os.listdir(CO2_BATCH_DIR) if f.endswith('.parquet')]
     if co2_parquets:
@@ -158,7 +158,7 @@ with open(MAC_STATS_PATH) as f:
     mac_stats = json.load(f)
 print(f"  MAC stats: {os.path.getsize(MAC_STATS_PATH) / 1024:.0f} KB")
 
-# Optimal targets (from step6b_compute_optimal_targets.py) — optional
+# Optimal targets (from step4_1d_compute_optimal_targets.py) — optional
 OPTIMAL_TARGETS_PATH = os.path.join(STEP5_DIR, 'optimal_targets.json')
 optimal_targets = {}
 if os.path.exists(OPTIMAL_TARGETS_PATH):
@@ -166,7 +166,7 @@ if os.path.exists(OPTIMAL_TARGETS_PATH):
         optimal_targets = json.load(f)
     print(f"  Optimal targets: {os.path.getsize(OPTIMAL_TARGETS_PATH) / 1024:.0f} KB")
 else:
-    print("  Optimal targets: not found (step6b_compute_optimal_targets.py not yet run)")
+    print("  Optimal targets: not found (step4_1d_compute_optimal_targets.py not yet run)")
 
 # Filter ISOS to only those present in BOTH results and mac_stats
 results_isos = set(data.get('results', {}).keys())
@@ -1583,7 +1583,7 @@ lines.append('};')
 lines.append('')
 
 # ============================================================================
-# CO2 DISPATCH DATA (from step5a_compute_co2.py)
+# CO2 DISPATCH DATA (from step4_1a_fossil_dispatch.py)
 # ============================================================================
 # Per-threshold CO2 abated tons, emission rate, and fossil displacement
 # breakdown for the medium scenario.  Used by dashboard metric tiles and
@@ -1620,7 +1620,7 @@ for iso in ISOS:
 
 lines.append('// ============================================================================')
 lines.append('// CO2 DISPATCH DATA — per-threshold CO2 abatement + fossil displacement')
-lines.append('// Source: step5a_compute_co2.py dispatch-stack retirement model')
+lines.append('// Source: step4_1a_fossil_dispatch.py dispatch-stack retirement model')
 lines.append('// abated_mt = total CO2 abated (Mt), rate = emission rate of displaced fossil (tCO2/MWh)')
 lines.append('// matched_twh = clean energy matched to demand (TWh)')
 lines.append('// coal/oil/gas_disp = displaced fossil generation (TWh)')
@@ -1659,13 +1659,13 @@ else:
     print("  No DG MAC data in mac_stats.json — skipping")
 
 # ============================================================================
-# OPTIMAL TARGETS (from step6b_compute_optimal_targets.py)
+# OPTIMAL TARGETS (from step4_1d_compute_optimal_targets.py)
 # ============================================================================
 if optimal_targets:
     print("Adding optimal targets data to shared-data.js...")
     lines.append('// ============================================================================')
     lines.append('// OPTIMAL CFE TARGETS — MAC × DAC crossover analysis')
-    lines.append('// Source: step6b_compute_optimal_targets.py → optimal_targets.json')
+    lines.append('// Source: step4_1d_compute_optimal_targets.py → optimal_targets.json')
     lines.append('// Crossover range = 3 grid cost tiers × 3 DAC scenarios = 9 combos')
     lines.append('// No-regrets: minimum resource floor across crossover range × L/M/H demand growth')
     lines.append('// ============================================================================')

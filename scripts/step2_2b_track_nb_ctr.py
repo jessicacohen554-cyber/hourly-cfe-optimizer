@@ -38,7 +38,7 @@ import pyarrow.compute as pc
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, SCRIPT_DIR)
 
-from step3a_cost_optimization import (
+from step2_2a_cost_optimization import (
     ISOS, OUTPUT_THRESHOLDS, REGIONAL_DEMAND_TWH, GRID_MIX_SHARES,
     WHOLESALE_PRICES, FUEL_ADJUSTMENTS, LEVEL_NAME, RESOURCE_TYPES,
     DEMAND_GROWTH_RATES, DEMAND_GROWTH_YEARS, DEMAND_GROWTH_LEVELS,
@@ -50,14 +50,14 @@ from step3a_cost_optimization import (
     HAS_NUMBA, effective_gate,
 )
 
-from step3a_cost_optimization import (
+from step2_2a_cost_optimization import (
     _N_COEFFS, _COL_WHOLESALE, _COL_SOL_NEW, _COL_WND_NEW, _COL_OSW_NEW,
     _COL_CCS_NEW, _COL_UPRATE, _COL_GEO, _COL_REMAINING, _COL_BAT4,
     _COL_BAT8, _COL_LDES, _COL_H2, OFFSHORE_ISOS,
 )
 
 # Additional constants needed for DG coefficient computation
-from step3a_cost_optimization import (
+from step2_2a_cost_optimization import (
     UPRATE_CAP_TWH, GEO_CAP_TWH, EXISTING_GEOTHERMAL_PCT,
     PEAK_DEMAND_MW, RESOURCE_ADEQUACY_MARGIN, PEAK_CAPACITY_CREDITS,
     GAS_AVAILABILITY_FACTOR, EXISTING_GAS_CAPACITY_MW,
@@ -988,7 +988,7 @@ def main():
 
     # Warm up Numba JIT (batched function)
     if HAS_NUMBA:
-        from step3a_cost_optimization import _batch_eval_and_argmin, _eval_cost_numba, _argmin_bucketed, _N_COEFFS
+        from step2_2a_cost_optimization import _batch_eval_and_argmin, _eval_cost_numba, _argmin_bucketed, _N_COEFFS
         _dcm = np.zeros((2, _N_COEFFS))
         _dc = np.zeros(2)
         _dp = np.zeros(_N_COEFFS)

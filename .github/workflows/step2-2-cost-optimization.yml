@@ -1,4 +1,4 @@
-name: "Step 3: Cost Optimization"
+name: "Step 2.2: Cost Optimization"
 
 # Vectorized cross-evaluation of EF mixes under 5,832 sensitivity combos
 # (17,496 for CAISO with geothermal). Merit-order tranche pricing for clean firm.
@@ -115,20 +115,20 @@ jobs:
         if: ${{ inputs.track == 'track1-baseline' || inputs.track == 'ALL' }}
         run: |
           echo "=== Track 1: Baseline ==="
-          python scripts/step3a_cost_optimization.py --track baseline --iso ${{ matrix.iso }}
+          python scripts/step2_2a_cost_optimization.py --track baseline --iso ${{ matrix.iso }}
 
       - name: "Track 2: New-Build — ${{ matrix.iso }}"
         if: ${{ inputs.track == 'track2-newbuild' || inputs.track == 'track2-and-3' || inputs.track == 'ALL' }}
         run: |
           echo "=== Track 2: New-Build ==="
-          python scripts/step3b_track_nb_ctr.py --fresh --track nb \
+          python scripts/step2_2b_track_nb_ctr.py --fresh --track nb \
             --iso ${{ matrix.iso }} ${{ steps.build-args.outputs.sens_flags }}
 
       - name: "Track 3: Cost-to-Replace — ${{ matrix.iso }}"
         if: ${{ inputs.track == 'track3-cost-to-replace' || inputs.track == 'track2-and-3' || inputs.track == 'ALL' }}
         run: |
           echo "=== Track 3: Cost-to-Replace ==="
-          python scripts/step3b_track_nb_ctr.py --fresh --track ctr \
+          python scripts/step2_2b_track_nb_ctr.py --fresh --track ctr \
             --iso ${{ matrix.iso }} ${{ steps.build-args.outputs.sens_flags }}
 
       - name: Scope output to current ISO only

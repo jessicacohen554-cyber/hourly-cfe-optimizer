@@ -1,4 +1,4 @@
-name: "Step 5E: Track Analysis"
+name: "Step 4: Track Analysis"
 
 # Exports track parquets to JSON and runs track cost envelope / mix
 # differential analysis. Independent of dispatch cache — reads from
@@ -68,9 +68,9 @@ jobs:
         if: ${{ inputs.script == 'ALL' }}
         run: |
           echo "=== Launching track scripts in parallel ==="
-          python scripts/step5e_export_tracks.py &
+          python scripts/step4_1e_export_tracks.py &
           PID_EXPORT=$!
-          python scripts/step6c_analyze_tracks.py &
+          python scripts/step4_2c_analyze_tracks.py &
           PID_ANALYZE=$!
 
           FAILED=0
@@ -80,11 +80,11 @@ jobs:
 
       - name: "Export Track Results"
         if: ${{ inputs.script == 'export-tracks-only' }}
-        run: python scripts/step5e_export_tracks.py
+        run: python scripts/step4_1e_export_tracks.py
 
       - name: "Analyze Tracks"
         if: ${{ inputs.script == 'analyze-tracks-only' }}
-        run: python scripts/step6c_analyze_tracks.py
+        run: python scripts/step4_2c_analyze_tracks.py
 
       - name: Commit and push
         run: |

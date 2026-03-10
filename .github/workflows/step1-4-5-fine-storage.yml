@@ -1,4 +1,4 @@
-name: "Step 1C: Storage Refinement"
+name: "Step 1.4-1.5: Fine Grid + Storage Refinement"
 
 # Matrix strategy: ISO × threshold band — up to 21 parallel jobs (7 ISOs × 3 bands).
 # HIGH band is split into per-threshold jobs (5 jobs per ISO) for better
@@ -210,8 +210,8 @@ jobs:
         echo "  Thresholds: ${{ steps.resolve.outputs.thresholds }}"
         echo "═══════════════════════════════════════════════════════════"
         ARGS="--iso ${{ matrix.iso }} --thresholds ${{ steps.resolve.outputs.thresholds }}"
-        echo "Running: python scripts/step1c_storage_refinement.py $ARGS"
-        eval python scripts/step1c_storage_refinement.py $ARGS
+        echo "Running: python scripts/step1_5_storage_refinement.py $ARGS"
+        eval python scripts/step1_5_storage_refinement.py $ARGS
 
     - name: Commit and push results
       if: always()
@@ -340,8 +340,8 @@ jobs:
         # For high thresholds (>=97.5%), the script also forces auto-commit
         # internally with smaller batch flush size (100K vs 500K).
         ARGS="--iso ${{ matrix.iso }} --thresholds ${{ matrix.threshold }} --auto-commit"
-        echo "Running: python scripts/step1c_storage_refinement.py $ARGS"
-        eval python scripts/step1c_storage_refinement.py $ARGS
+        echo "Running: python scripts/step1_5_storage_refinement.py $ARGS"
+        eval python scripts/step1_5_storage_refinement.py $ARGS
 
     - name: Commit and push remaining results
       if: always()

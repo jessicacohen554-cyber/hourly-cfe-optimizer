@@ -1,4 +1,4 @@
-name: "Step 10D: SMARTargets — Quick Transition"
+name: "Step 6.1: SMARTargets — Quick Transition"
 
 # Quick Transition: Rapid cost declines (5% annual cost cache = tech breakthrough),
 # fastest queue processing, emission constraint.
@@ -104,10 +104,10 @@ jobs:
             ARGS="$ARGS --isos ${{ inputs.iso }}"
           fi
           echo "SMARTARGETS_ARGS=$ARGS" >> "$GITHUB_ENV"
-          echo "Running: python scripts/step10_smartargets.py $ARGS"
+          echo "Running: python scripts/step6_1_smartargets.py $ARGS"
 
       - name: Run SMARTargets simulation
-        run: python scripts/step10_smartargets.py ${{ env.SMARTARGETS_ARGS }}
+        run: python scripts/step6_1_smartargets.py ${{ env.SMARTARGETS_ARGS }}
 
       - name: Commit and push results
         run: |

@@ -1,4 +1,4 @@
-name: "Step 9: Generate Shared Data"
+name: "Step 7: Dashboard Data"
 
 # Consolidates all pipeline results into dashboard/js/shared-data.js.
 # This is the data file that powers the Home Page (index.html) and Dashboard.
@@ -73,12 +73,12 @@ jobs:
       - name: "Generate Shared Data"
         run: |
           echo "=== Generating shared-data.js ==="
-          python scripts/step9a_generate_shared_data.py
+          python scripts/step7_1a_generate_shared_data.py
 
       - name: "Extract Resource Density Data"
         run: |
           echo "=== Extracting resource density data (step6e) ==="
-          python scripts/step6e_extract_resource_density.py || echo "WARNING: step6e failed (non-fatal)"
+          python scripts/step4_2a_extract_resource_density.py || echo "WARNING: step6e failed (non-fatal)"
 
       - name: Commit and push
         run: |

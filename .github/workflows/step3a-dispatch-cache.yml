@@ -1,4 +1,4 @@
-name: "Step 4: Build Dispatch Cache"
+name: "Step 3A: Build Dispatch Cache"
 
 # Pre-computes 8760-hour dispatch for all unique mixes per ISO.
 # Fans out parallel matrix jobs (one per ISO), merges artifacts, commits.
@@ -87,7 +87,7 @@ jobs:
       - name: "Build Dispatch Cache — ${{ matrix.iso }}"
         run: |
           FORCE_FLAG="${{ inputs.force == true && '--force' || '' }}"
-          python scripts/step4_build_dispatch_cache.py $FORCE_FLAG --iso ${{ matrix.iso }}
+          python scripts/step3a_build_dispatch_cache.py $FORCE_FLAG --iso ${{ matrix.iso }}
 
       - name: Scope output to current ISO only
         run: |

@@ -1,4 +1,4 @@
-name: "Step 1B: Zone Search + Floor/Fine PFS"
+name: "Step 1.2-1.3: Zone Search + Floor PFS"
 
 # Unified workflow for all Step 1B scripts:
 #   - Zone Search (1B): Score-band zone search, fine 1% mixes per zone
@@ -191,8 +191,8 @@ jobs:
         fi
 
         echo "=== Zone search for $ISO ==="
-        echo "Command: python scripts/step1b_zone_search.py $ARGS"
-        eval python scripts/step1b_zone_search.py $ARGS
+        echo "Command: python scripts/step1_2_zone_search.py $ARGS"
+        eval python scripts/step1_2_zone_search.py $ARGS
 
     - name: "Commit Zone Search results"
       if: (inputs.script == 'All' || inputs.script == 'Zone Search (1B)') && always()
@@ -211,7 +211,7 @@ jobs:
         echo "═══════════════════════════════════════════════════════════"
         echo "  ISO: ${{ matrix.iso }}  |  Floor-Aware PFS (50-70%)"
         echo "═══════════════════════════════════════════════════════════"
-        python scripts/step1b2_floor_aware_pfs.py --iso ${{ matrix.iso }}
+        python scripts/step1_3_floor_aware_pfs.py --iso ${{ matrix.iso }}
 
     - name: "Commit Floor-Aware results"
       if: (inputs.script == 'All' || inputs.script == 'Floor-Aware (1B2)') && always()
@@ -230,7 +230,7 @@ jobs:
         echo "═══════════════════════════════════════════════════════════"
         echo "  ISO: ${{ matrix.iso }}  |  Fine-Grid PFS (40-70%, 1% step)"
         echo "═══════════════════════════════════════════════════════════"
-        python scripts/step1b3_fine_grid_pfs.py --iso ${{ matrix.iso }}
+        python scripts/step1_4_fine_grid_pfs.py --iso ${{ matrix.iso }}
 
     - name: "Commit Fine-Grid results"
       if: (inputs.script == 'All' || inputs.script == 'Fine-Grid (1B3)') && always()

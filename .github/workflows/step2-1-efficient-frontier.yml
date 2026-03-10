@@ -1,4 +1,4 @@
-name: "Step 2: Efficient Frontier"
+name: "Step 2.1: Efficient Frontier"
 
 # Extract Efficient Frontier from PFS (~21M → ~1.8M rows)
 #
@@ -132,7 +132,7 @@ jobs:
           if [ -n "$THRESHOLDS" ]; then
             ARGS="$ARGS --thresholds $THRESHOLDS"
           fi
-          python scripts/step2_efficient_frontier.py $ARGS
+          python scripts/step2_1_efficient_frontier.py $ARGS
 
       - name: Commit and push
         run: |
@@ -223,7 +223,7 @@ jobs:
         if: ${{ inputs.thresholds != '' }}
         timeout-minutes: 60
         run: |
-          python scripts/step2_efficient_frontier.py \
+          python scripts/step2_1_efficient_frontier.py \
             --iso ${{ matrix.iso }} --clear \
             \
             --thresholds "${{ inputs.thresholds }}"
@@ -245,7 +245,7 @@ jobs:
       - name: "Batch LOW: thresholds 10-75% (${{ matrix.iso }})"
         if: ${{ inputs.thresholds == '' }}
         timeout-minutes: 30
-        run: python scripts/step2_efficient_frontier.py --iso ${{ matrix.iso }} --clear --batch low
+        run: python scripts/step2_1_efficient_frontier.py --iso ${{ matrix.iso }} --clear --batch low
 
       - name: "Commit batch LOW (${{ matrix.iso }})"
         if: ${{ inputs.thresholds == '' }}
@@ -264,7 +264,7 @@ jobs:
       - name: "Batch MID: thresholds 80-95% (${{ matrix.iso }})"
         if: ${{ inputs.thresholds == '' }}
         timeout-minutes: 30
-        run: python scripts/step2_efficient_frontier.py --iso ${{ matrix.iso }} --batch mid
+        run: python scripts/step2_1_efficient_frontier.py --iso ${{ matrix.iso }} --batch mid
 
       - name: "Commit batch MID (${{ matrix.iso }})"
         if: ${{ inputs.thresholds == '' }}
@@ -283,7 +283,7 @@ jobs:
       - name: "Batch HIGH: thresholds 97.5-99.99% (${{ matrix.iso }})"
         if: ${{ inputs.thresholds == '' }}
         timeout-minutes: 45
-        run: python scripts/step2_efficient_frontier.py --iso ${{ matrix.iso }} --batch high
+        run: python scripts/step2_1_efficient_frontier.py --iso ${{ matrix.iso }} --batch high
 
       - name: "Commit batch HIGH (${{ matrix.iso }})"
         if: ${{ inputs.thresholds == '' }}
@@ -302,7 +302,7 @@ jobs:
       - name: "Merge batches into final EF (${{ matrix.iso }})"
         if: ${{ inputs.thresholds == '' }}
         timeout-minutes: 30
-        run: python scripts/step2_efficient_frontier.py --iso ${{ matrix.iso }} --merge
+        run: python scripts/step2_1_efficient_frontier.py --iso ${{ matrix.iso }} --merge
 
       - name: "Commit final EF and push (${{ matrix.iso }})"
         run: |
