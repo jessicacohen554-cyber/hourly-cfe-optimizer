@@ -1,0 +1,212 @@
+name: "Step 2.2: Cost Optimization"
+
+# Vectorized cross-evaluation of EF mixes under 5,832 sensitivity combos
+# (17,496 for CAISO with geothermal). Merit-order tranche pricing for clean firm.
+# Supports 3 tracks: baseline (Track 1), new-build (Track 2), cost-to-replace (Track 3).
+#
+# iso=ALL fans out parallel matrix jobs, then merges into one branch + PR.
+# Prerequisite: Step 2 (Efficient Frontier) must have produced EF parquets.
+# Output: data/step2.2-cost/
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO region to run (ALL = parallel)'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      track:
+        description: 'Which track(s) to run'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - track1-baseline
+          - track2-newbuild
+          - track3-cost-to-replace
+          - track2-and-3
+      sensitivity_mode:
+        description: 'Track 2-3 sensitivity mode (ignored for Track 1)'
+        required: false
+        default: 'medium'
+        type: choice
+        options:
+          - medium
+          - full
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  BRANCH_PREFIX: step3-cost-opt
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            echo 'matrix=["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix=["${{ inputs.iso }}"]' >> "$GITHUB_OUTPUT"
+          fi
+
+  process:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 480
+    strategy:
+      matrix:
+        iso: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+
+      - name: Verify step-2 EF parquets exist
+        run: |
+          if [ ! -d data/step2.1-ef ] || [ -z "$(ls data/step2.1-ef/*.parquet 2>/dev/null)" ]; then
+            echo "ERROR: Step-2 EF parquets not found. Run Step 2 first."
+            exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy numba pyarrow
+
+      - name: Ensure output directories
+        run: |
+          mkdir -p data/step2.2-cost
+          mkdir -p dashboard
+
+      - name: Build sensitivity flag
+        id: build-args
+        run: |
+          if [ "${{ inputs.sensitivity_mode }}" = "full" ]; then
+            echo "sens_flags=--full" >> "$GITHUB_OUTPUT"
+          else
+            echo "sens_flags=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: "Track 1: Baseline — ${{ matrix.iso }}"
+        if: ${{ inputs.track == 'track1-baseline' || inputs.track == 'ALL' }}
+        run: |
+          echo "=== Track 1: Baseline ==="
+          python scripts/step2_2a_cost_optimization.py --track baseline --iso ${{ matrix.iso }}
+
+      - name: "Track 2: New-Build — ${{ matrix.iso }}"
+        if: ${{ inputs.track == 'track2-newbuild' || inputs.track == 'track2-and-3' || inputs.track == 'ALL' }}
+        run: |
+          echo "=== Track 2: New-Build ==="
+          python scripts/step2_2b_track_nb_ctr.py --fresh --track nb \
+            --iso ${{ matrix.iso }} ${{ steps.build-args.outputs.sens_flags }}
+
+      - name: "Track 3: Cost-to-Replace — ${{ matrix.iso }}"
+        if: ${{ inputs.track == 'track3-cost-to-replace' || inputs.track == 'track2-and-3' || inputs.track == 'ALL' }}
+        run: |
+          echo "=== Track 3: Cost-to-Replace ==="
+          python scripts/step2_2b_track_nb_ctr.py --fresh --track ctr \
+            --iso ${{ matrix.iso }} ${{ steps.build-args.outputs.sens_flags }}
+
+      - name: Scope output to current ISO only
+        run: |
+          # Remove parquets from other ISOs to prevent merge-multiple corruption
+          find data/step2.2-cost/ -name "*.parquet" ! -name "*${{ matrix.iso }}*" -delete 2>/dev/null || true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: step3-${{ matrix.iso }}
+          path: |
+            data/step2.2-cost/
+            dashboard/track_scenarios.parquet
+            dashboard/track_demand_growth.parquet
+          retention-days: 1
+
+  merge:
+    needs: [prepare, process]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Create output branch
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${{ inputs.track }}-${{ inputs.iso }}"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$TARGET_BRANCH"
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: step3-*
+          path: ./artifact-tmp/
+          merge-multiple: true
+
+      - name: Place artifacts
+        run: |
+          cp -f artifact-tmp/data/step2.2-cost/*.parquet data/step2.2-cost/ 2>/dev/null || true
+          cp -f artifact-tmp/dashboard/*.parquet dashboard/ 2>/dev/null || true
+
+      - name: Commit and push
+        run: |
+          git config http.postBuffer 524288000
+
+          git add -f data/step2.2-cost/ 2>/dev/null || true
+          git add -f dashboard/track_scenarios.parquet 2>/dev/null || true
+          git add -f dashboard/track_demand_growth.parquet 2>/dev/null || true
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "Step 3: ${{ inputs.track }} ${{ inputs.iso }} (${{ inputs.sensitivity_mode }}) — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i/$MAX_RETRIES..."
+            git push -u origin "$TARGET_BRANCH" 2>&1 && break
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "ERROR: Push failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done
+

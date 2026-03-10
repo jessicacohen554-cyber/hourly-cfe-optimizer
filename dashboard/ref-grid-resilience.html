@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The 8,760 Problem — Grid Resilience Stress Testing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/reference.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="js/shared-footer.js"></script>
+<script src="js/shared-back-button.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/grid-resilience-data.js"></script>
+<style>
+body { background: var(--bg-page-white); }
+.breadcrumb { max-width: 960px; margin: 0 auto; padding: 20px 24px 0; font-size: 0.82rem; font-family: var(--font-heading); letter-spacing: 0.03em; }
+.breadcrumb a { color: #0EA5E9; text-decoration: none; }
+.breadcrumb .sep { color: rgba(0,0,0,0.3); margin: 0 8px; }
+.breadcrumb .current { color: #374151; }
+.article-wrapper { max-width: 960px; margin: 0 auto; padding: 32px 24px 80px; }
+.article-title { font-family: var(--font-heading); font-size: 2rem; font-weight: 700; color: #1A2744; line-height: 1.25; margin-bottom: 8px; }
+.article-subtitle { color: #374151; font-size: 0.95rem; margin-bottom: 36px; line-height: 1.6; }
+.section-heading { font-family: var(--font-heading); font-size: 1.3rem; font-weight: 700; color: #1A2744; margin: 48px 0 16px; border-bottom: 2px solid #E5E7EB; padding-bottom: 8px; }
+.text-block { color: #374151; font-size: 0.95rem; line-height: 1.65; margin-bottom: 16px; }
+.control-bar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; align-items: center; }
+.control-bar label { font-family: var(--font-heading); font-size: 0.82rem; font-weight: 600; color: #374151; }
+.control-bar select { font-family: var(--font-body); font-size: 0.88rem; padding: 6px 12px; border: 1px solid #D1D5DB; border-radius: 8px; background: #fff; }
+.chart-box { background: #fff; border: 1px solid #E5E7EB; border-radius: 12px; padding: 16px; margin-bottom: 24px; }
+.chart-box canvas { max-height: 400px; }
+.stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.stat-tile { background: #F0F7FF; border-radius: 10px; padding: 14px 16px; text-align: center; }
+.stat-tile .val { font-family: var(--font-heading); font-size: 1.5rem; font-weight: 700; color: #1A2744; }
+.stat-tile .lbl { font-size: 0.78rem; color: #6B7280; margin-top: 4px; }
+.heatmap-grid { display: grid; grid-template-columns: auto repeat(5, 1fr); gap: 2px; margin-bottom: 24px; font-size: 0.82rem; }
+.heatmap-cell { padding: 10px 8px; text-align: center; border-radius: 6px; font-weight: 600; font-family: var(--font-data, var(--font-body)); }
+.heatmap-header { background: #F3F4F6; color: #374151; font-weight: 700; font-family: var(--font-heading); }
+.heatmap-label { background: transparent; color: #374151; font-weight: 600; text-align: right; padding-right: 12px; display: flex; align-items: center; justify-content: flex-end; }
+.scenario-card { background: #F9FAFB; border: 1px solid #E5E7EB; border-radius: 12px; padding: 16px 20px; margin-bottom: 12px; }
+.scenario-header { display: flex; justify-content: space-between; align-items: center; }
+.scenario-name { font-family: var(--font-heading); font-weight: 600; color: #1A2744; font-size: 0.95rem; }
+.scenario-badge { font-size: 0.78rem; padding: 3px 10px; border-radius: 6px; font-weight: 600; }
+.scenario-metrics { display: flex; gap: 24px; margin-top: 8px; font-size: 0.82rem; color: #6B7280; }
+.scenario-metrics strong { color: #374151; }
+@media (max-width: 640px) {
+    .article-title { font-size: 1.5rem; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .heatmap-grid { font-size: 0.72rem; }
+    .heatmap-cell { padding: 6px 4px; }
+}
+</style>
+</head>
+<body>
+<script src="js/nav.js"></script>
+
+<nav class="breadcrumb">
+    <a href="reference.html">Reference</a>
+    <span class="sep">/</span>
+    <span class="current">Grid Resilience Stress Testing</span>
+</nav>
+
+<div class="article-wrapper">
+    <h1 class="article-title">Grid Resilience Stress Testing</h1>
+    <p class="article-subtitle">How robust are optimized clean energy portfolios under worst-case weather? Synthetic stress tests — heat waves, polar vortices, wind droughts, and compound events — reveal which regions and thresholds are most vulnerable.</p>
+
+    <div class="control-bar">
+        <label>Region:</label>
+        <select id="isoSelect"></select>
+        <label style="margin-left:16px;">Threshold:</label>
+        <select id="thresholdSelect"></select>
+    </div>
+
+    <div class="stats-row" id="statsRow"></div>
+
+    <h2 class="section-heading">Resilience Heatmap</h2>
+    <p class="text-block">Each cell shows the resilience ratio: stressed CFE score divided by the baseline score. Values above 0.95 (green) indicate a robust portfolio; below 0.85 (red) signals significant vulnerability to that stress scenario.</p>
+    <div id="heatmapContainer"></div>
+
+    <h2 class="section-heading">Scenario Details</h2>
+    <p class="text-block">Detailed metrics for each stress scenario at the selected threshold. Max gap duration measures the longest consecutive streak of hours where clean supply falls below 50% of demand.</p>
+    <div id="scenarioList"></div>
+
+    <h2 class="section-heading">CFE Degradation Across Thresholds</h2>
+    <p class="text-block">How does each stress scenario degrade portfolio performance at different CFE targets? Counter-intuitively, higher-threshold portfolios often maintain higher resilience ratios because their storage buffers absorb weather shocks.</p>
+    <div class="chart-box">
+        <canvas id="degradationChart"></canvas>
+    </div>
+
+    <h2 class="section-heading">Maximum Gap Duration</h2>
+    <p class="text-block">The worst-case consecutive hours where clean supply fails to meet 50% of demand. Shorter gaps indicate faster recovery from stress events.</p>
+    <div class="chart-box">
+        <canvas id="gapChart"></canvas>
+    </div>
+
+    <h2 class="section-heading">Why This Matters</h2>
+    <p class="text-block"><strong>For grid planners:</strong> A portfolio that scores 95% under average weather but collapses to 70% during a polar vortex isn't actually a 95% portfolio — it's a fair-weather portfolio. Stress testing reveals the true performance floor.</p>
+    <p class="text-block"><strong>For corporate buyers:</strong> If your 24/7 CFE commitment is undermined by a single heat wave, the credibility cost is far higher than the incremental cost of a more resilient portfolio. Storage and firm power are insurance premiums, not waste.</p>
+    <p class="text-block"><strong>Key insight:</strong> Portfolios with storage (battery + LDES) consistently show higher resilience ratios than pure-renewable portfolios at the same threshold. The storage buffer absorbs short-duration weather shocks, maintaining CFE scores even when generation profiles degrade.</p>
+</div>
+
+<script>
+(function() {
+    const rawData = GRID_RESILIENCE_DATA;
+    const scenarioLabels = rawData.scenarios || {};
+    const isoSelect = document.getElementById('isoSelect');
+    const thresholdSelect = document.getElementById('thresholdSelect');
+    const SCENARIOS = ['summer_heat', 'winter_freeze', 'low_wind', 'low_solar', 'compound'];
+
+    // Populate ISO selector
+    Object.keys(rawData).filter(k => k !== 'scenarios').forEach(iso => {
+        const opt = document.createElement('option');
+        opt.value = iso; opt.textContent = iso;
+        if (iso === 'PJM') opt.selected = true;
+        isoSelect.appendChild(opt);
+    });
+
+    function ratioColor(r) {
+        if (r >= 0.95) return { bg: '#DCFCE7', text: '#166534' };
+        if (r >= 0.90) return { bg: '#FEF9C3', text: '#854D0E' };
+        if (r >= 0.85) return { bg: '#FED7AA', text: '#9A3412' };
+        return { bg: '#FECACA', text: '#991B1B' };
+    }
+
+    let degradationChart = null, gapChart = null;
+
+    function updateThresholds() {
+        const iso = isoSelect.value;
+        const isoData = rawData[iso] || {};
+        thresholdSelect.innerHTML = '';
+        Object.keys(isoData).sort((a,b) => parseFloat(a) - parseFloat(b)).forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t; opt.textContent = t + '%';
+            if (t === '90') opt.selected = true;
+            thresholdSelect.appendChild(opt);
+        });
+        if (!thresholdSelect.value && thresholdSelect.options.length) thresholdSelect.selectedIndex = 0;
+        render();
+    }
+
+    function render() {
+        const iso = isoSelect.value;
+        const t = thresholdSelect.value;
+        const isoData = rawData[iso] || {};
+        const td = isoData[t];
+        if (!td) return;
+
+        // Stats row
+        const scenarios = td.scenarios || {};
+        const ratios = SCENARIOS.map(s => scenarios[s]?.resilience_ratio || 0).filter(r => r > 0);
+        const minRatio = ratios.length ? Math.min(...ratios) : 0;
+        const avgRatio = ratios.length ? ratios.reduce((a,b) => a+b, 0) / ratios.length : 0;
+        const worstScenario = SCENARIOS.reduce((worst, s) =>
+            (scenarios[s]?.resilience_ratio || 1) < (scenarios[worst]?.resilience_ratio || 1) ? s : worst, SCENARIOS[0]);
+
+        document.getElementById('statsRow').innerHTML = `
+            <div class="stat-tile"><div class="val">${td.baseline_cfe}%</div><div class="lbl">Baseline CFE</div></div>
+            <div class="stat-tile"><div class="val">${(minRatio * 100).toFixed(1)}%</div><div class="lbl">Worst Resilience</div></div>
+            <div class="stat-tile"><div class="val">${(avgRatio * 100).toFixed(1)}%</div><div class="lbl">Avg Resilience</div></div>
+            <div class="stat-tile"><div class="val">${scenarioLabels[worstScenario] || worstScenario}</div><div class="lbl">Worst Scenario</div></div>
+        `;
+
+        // Heatmap — ISOs × scenarios for selected threshold
+        const heatmapEl = document.getElementById('heatmapContainer');
+        const allISOs = Object.keys(rawData).filter(k => k !== 'scenarios' && rawData[k][t]);
+        let heatHtml = '<div class="heatmap-grid" style="grid-template-columns: auto repeat(' + SCENARIOS.length + ', 1fr);">';
+        heatHtml += '<div class="heatmap-cell heatmap-header"></div>';
+        SCENARIOS.forEach(s => {
+            heatHtml += `<div class="heatmap-cell heatmap-header">${(scenarioLabels[s] || s).replace(' ', '<br>')}</div>`;
+        });
+        allISOs.forEach(hIso => {
+            const hData = rawData[hIso][t];
+            if (!hData) return;
+            heatHtml += `<div class="heatmap-cell heatmap-label">${hIso}</div>`;
+            SCENARIOS.forEach(s => {
+                const r = hData.scenarios[s]?.resilience_ratio || 0;
+                const c = ratioColor(r);
+                heatHtml += `<div class="heatmap-cell" style="background:${c.bg};color:${c.text}">${r > 0 ? (r * 100).toFixed(1) + '%' : '—'}</div>`;
+            });
+        });
+        heatHtml += '</div>';
+        heatmapEl.innerHTML = heatHtml;
+
+        // Scenario detail cards
+        const listEl = document.getElementById('scenarioList');
+        listEl.innerHTML = SCENARIOS.map(s => {
+            const sc = scenarios[s];
+            if (!sc) return '';
+            const c = ratioColor(sc.resilience_ratio);
+            return `<div class="scenario-card">
+                <div class="scenario-header">
+                    <span class="scenario-name">${scenarioLabels[s] || s}</span>
+                    <span class="scenario-badge" style="background:${c.bg};color:${c.text}">${(sc.resilience_ratio * 100).toFixed(1)}% resilient</span>
+                </div>
+                <div class="scenario-metrics">
+                    <span>Stressed CFE: <strong>${sc.stressed_cfe}%</strong></span>
+                    <span>Max gap: <strong>${sc.max_gap_hours}h</strong></span>
+                    <span>Worst week: <strong>${sc.worst_week_cfe}%</strong></span>
+                    <span>Hours &lt;50%: <strong>${sc.hours_below_50pct}</strong></span>
+                </div>
+            </div>`;
+        }).join('');
+
+        // Degradation chart — all thresholds for selected ISO
+        const thresholds = Object.keys(isoData).sort((a,b) => parseFloat(a) - parseFloat(b));
+        const colors = ['#EF4444', '#3B82F6', '#22C55E', '#F59E0B', '#8B5CF6'];
+
+        if (degradationChart) degradationChart.destroy();
+        degradationChart = new Chart(document.getElementById('degradationChart'), {
+            type: 'line',
+            data: {
+                labels: thresholds.map(tt => tt + '%'),
+                datasets: SCENARIOS.map((s, i) => ({
+                    label: scenarioLabels[s] || s,
+                    data: thresholds.map(tt => isoData[tt]?.scenarios[s]?.stressed_cfe || null),
+                    borderColor: colors[i % colors.length],
+                    backgroundColor: colors[i % colors.length] + '22',
+                    pointRadius: 4,
+                    tension: 0.3,
+                }))
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    y: { title: { display: true, text: 'Stressed CFE (%)' }, min: 0, max: 100 }
+                },
+                plugins: {
+                    tooltip: { mode: 'index', intersect: false }
+                }
+            }
+        });
+
+        // Gap duration chart
+        if (gapChart) gapChart.destroy();
+        gapChart = new Chart(document.getElementById('gapChart'), {
+            type: 'bar',
+            data: {
+                labels: SCENARIOS.map(s => scenarioLabels[s] || s),
+                datasets: [{
+                    label: 'Max Consecutive Gap (hours)',
+                    data: SCENARIOS.map(s => scenarios[s]?.max_gap_hours || 0),
+                    backgroundColor: SCENARIOS.map((_, i) => colors[i % colors.length] + '88'),
+                    borderColor: SCENARIOS.map((_, i) => colors[i % colors.length]),
+                    borderWidth: 1,
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                indexAxis: 'y',
+                scales: {
+                    x: { title: { display: true, text: 'Hours' }, beginAtZero: true }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+
+    isoSelect.addEventListener('change', updateThresholds);
+    thresholdSelect.addEventListener('change', render);
+    updateThresholds();
+})();
+</script>
+</body>
+</html>
