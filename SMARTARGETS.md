@@ -851,7 +851,7 @@ With 15-20 scenarios × 17 thresholds × 7 ISOs:
 ## Output
 
 TBD — likely:
-- `data/step5-post-processing/smartargets/` — per-scenario deployment trajectories
+- `data/step6-smartargets/` — per-scenario deployment trajectories
 - `dashboard/js/smartargets-data.js` — pre-computed for dashboard
 - Dashboard page: `dashboard/smartargets.html`
 

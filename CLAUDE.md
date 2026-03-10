@@ -117,22 +117,22 @@
 - Storage grids are the union of V1 (near-term) and V2 (2050-oriented) caps. Floor/fine mix augmentation always on.
 - Utilities: `step1_prior_windows.py` (search window computation from prior EF results).
 - 4D adaptive grid search (clean_firm, solar, wind, hydro) + procurement sweep + battery dispatch (4hr 85% RTE, 8hr 85% RTE) + LDES dispatch (100hr 50% RTE) + Green H2 (1000hr 35% RTE, ≥95% only). CAISO uses 5D (adds geothermal).
-- Output: `data/step1-pfs-parquets/`. **Only re-run if dispatch logic, generation profiles, or demand curves change.**
+- Output: `data/step1-pfs/`. **Only re-run if dispatch logic, generation profiles, or demand curves change.**
 
 **Step 2: Optimization** (sequential: 2.1 → 2.2):
-- **2.1** `step2_1_efficient_frontier.py` — Extracts non-dominated mixes from PFS. Filters existing gen utilization, procurement minimization, strict dominance removal. Output: `data/step2-ef-parquets/`.
+- **2.1** `step2_1_efficient_frontier.py` — Extracts non-dominated mixes from PFS. Filters existing gen utilization, procurement minimization, strict dominance removal. Output: `data/step2.1-ef/`.
 - **2.2A** `step2_2a_cost_optimization.py` — Track 1 baseline: vectorized cross-eval of EF mixes under 5,832 combos (17,496 CAISO). Merit-order tranche pricing for clean firm (uprate → geothermal → cheapest of nuclear/CCS). ─┐ parallel
 - **2.2B** `step2_2b_track_nb_ctr.py` — Track 2 (newbuild) + Track 3 (cost-to-replace): greenfield cost analysis. Demand growth sweep (25 years × 3 growth rates) with FOAK→NOAK learning curves (Wright's Law). ─┘
 - Includes NEISO winter gas pipeline constraint (+$13.13/MWh CCS adder), 45Q correction ($27.5/MWh).
-- Output: `data/step3-cost-opt-parquets/`. **Run when cost assumptions change. No physics re-run needed.**
+- Output: `data/step2.2-cost/`. **Run when cost assumptions change. No physics re-run needed.**
 
 **Step 3: Caches** (parallel):
-- **3A** `step3a_build_dispatch_cache.py` — Pre-computes 8,760-hour dispatch for all unique mixes. Versioned NPZ cache (v2) with per-resource matched/surplus + charge profiles. ← needs Step 2. Output: `data/step4-dispatch-cache/`.
-- **3B** `step3b_mac_queue.py` — Path-dependent MAC queue for consequential deployment. Reads raw PFS (Step 1) + shared utilities, NOT Step 2 output. ← needs Step 1 only. Output: `data/step5-post-processing/mac_queue/`.
+- **3A** `step3a_build_dispatch_cache.py` — Pre-computes 8,760-hour dispatch for all unique mixes. Versioned NPZ cache (v2) with per-resource matched/surplus + charge profiles. ← needs Step 2. Output: `data/step3-dispatch/`.
+- **3B** `step3b_mac_queue.py` — Path-dependent MAC queue for consequential deployment. Reads raw PFS (Step 1) + shared utilities, NOT Step 2 output. ← needs Step 1 only. Output: `data/step3-dispatch/`.
 
 **Step 4: Analysis** (two parallel tiers: 4.1 → 4.2):
 - **Tier 4.1** (parallel, mixed deps on Steps 2/3):
-  - **4.1A** `step4_1a_fossil_dispatch.py` — CO₂ + LMP: fossil dispatch-stack model, merit-order retirement (coal → oil → gas), synthetic hourly LMP. ← needs 3A. Output: `data/step5-post-processing/co2_results/`, `data/step5-post-processing/lmp/`.
+  - **4.1A** `step4_1a_fossil_dispatch.py` — CO₂ + LMP: fossil dispatch-stack model, merit-order retirement (coal → oil → gas), synthetic hourly LMP. ← needs 3A. Output: `data/step4-analysis/co2_results/`, `data/step4-analysis/lmp/`.
   - **4.1A** `step4_1a_augment_capacity_rev.py` — Augments capacity revenue data onto LMP results.
   - **4.1B** `step4_1b_compress_day_profiles.py` — 24-hour representative day profiles from dispatch cache. ← needs 3A.
   - **4.1C** `step4_1c_compute_mac_stats.py` — 6 MAC metrics: average fan (P10/P50/P90), stepwise marginal, monotonic envelope, path-constrained. ANOVA decomposition. Crossover vs DAC/SCC/ETS. ← needs Step 2.
@@ -174,6 +174,7 @@
 - `dispatch_utils.py` — Dispatch reconstruction, supply profiles, fossil retirement, cache I/O. Imports constants from pipeline_config.
 - `scenario_common.py` — Shared Scenario A/B logic: cost tables, demand growth, learning curves, EF/PFS loading. Imports constants from pipeline_config.
 - `eia_data_io.py` — Standardized EIA multi-year profile loading.
+- `lmp_engine.py` — Synthetic hourly LMP from merit-order fossil dispatch. Used by step4_1a, step6_1, calibrate_lmp_model.
 - `calibrate_lmp_model.py` — LMP model validation against actual ISO data.
 - Other: `anthropic_image_utils.py`, `extract_shared_data.py`, `analyze_pjm_lmp.py`, `analyze_results.py`, `sensitivity_analysis.py`
 
@@ -187,12 +188,15 @@
 - Data: `step0-fetch-lmp-data.yml`, `step0-fetch-offshore-wind.yml`
 - See `.github/workflows/README.md` for full docs and common patterns.
 
-**Data directories** (use legacy numbering on disk — NOT renamed):
-- `data/step1-pfs-parquets/` — Step 1 physics output
-- `data/step2-ef-parquets/` — Step 2.1 efficient frontier output
-- `data/step3-cost-opt-parquets/` — Step 2.2 cost optimization output
-- `data/step4-dispatch-cache/` — Step 3A dispatch cache output
-- `data/step5-post-processing/` — Steps 3B, 4, 5, 6 analysis outputs
+**Data directories:**
+- `data/step1-pfs/` — Step 1: PFS + storage parquets
+- `data/step2.1-ef/` — Step 2.1: efficient frontier parquets
+- `data/step2.2-cost/` — Step 2.2: cost optimization parquets
+- `data/step3-dispatch/` — Step 3: dispatch cache (NPZ) + MAC queue
+- `data/step4-analysis/` — Step 4: CO₂, LMP, MAC stats, optimal targets, tracks, building blocks, resource density
+- `data/step5-scenarios/` — Step 5: scenario comparison, procurement strategies
+- `data/step5-wrights/` — Step 5.2E: Wright's Law learning curves
+- `data/step6-smartargets/` — Step 6: SMARTargets, IPP, nuclear retirement
 
 **Data contract**: Step 2.2 must NOT change existing columns in shared-data.js or overprocure_results.json — only ADD new columns/fields.
 
@@ -472,9 +476,9 @@ Each color has transparent variants: CSS `--iso-caiso-t` (12% opacity) / JS `ISO
 - **Social cost of carbon references**: EPA $51/ton + Rennert et al. $185/ton + EU ETS $60-100/ton range — all three shown on charts
 
 ### Data Persistence (Critical — Never Lose Compute Results)
-- **NEVER gitignore compute-intensive outputs** — `data/step1-pfs-parquets/`, `data/step2-ef-parquets/`, and downstream parquets must be committed to git. Previous loss of 21M PFS solutions was caused by gitignoring cache files.
+- **NEVER gitignore compute-intensive outputs** — `data/step1-pfs/`, `data/step2.1-ef/`, and downstream parquets must be committed to git. Previous loss of 21M PFS solutions was caused by gitignoring cache files.
 - **Commit parquet caches immediately after optimizer runs** — the moment Step 1 completes, commit and push before doing anything else. This is higher priority than any code changes.
-- **After any Step 1 run**: `git add data/step1-pfs-parquets/ && git commit -m "Bank PFS cache" && git push`
+- **After any Step 1 run**: `git add data/step1-pfs/ && git commit -m "Bank PFS cache" && git push`
 - **Checkpoint directories (`data/checkpoints/`, `data/checkpoints_v4/`)** are gitignored and removed from the repo — they're crash-recovery artifacts not used downstream. The main parquet outputs are sacred.
 
 ### Build Process
