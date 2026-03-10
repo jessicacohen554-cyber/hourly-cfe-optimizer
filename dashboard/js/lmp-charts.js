@@ -200,6 +200,251 @@ function buildPeakChart(D) {
     });
 }
 
+// ===== 6. CANNIBALIZATION CHART =====
+function buildCannibalizationChart(D, accent) {
+    var ctx = document.getElementById('cannibalizationChart');
+    if (!ctx) return;
+    var T = D.thresholds, E = D.envelope, R = D.regime;
+    var c = accent || BLUE;
+    // Zero-price hours as % of year for area fill
+    var zeroPct = R.zeroP50.map(function(h) { return Math.round(h / 87.6) / 10; }); // % of 8760
+    chartInstances.cannibalization = new Chart(ctx, {
+        type: 'line',
+        data: { datasets: [
+            // Shaded area: zero/negative price hours (% of year) — right axis
+            { label: 'Zero/negative price hours', data: pts(T, R.zeroP50), borderColor: AMBER + '80',
+              backgroundColor: AMBER + '25', borderWidth: 1.5, pointRadius: 0, fill: 'origin',
+              tension: 0.35, order: 8, yAxisID: 'y1', _unit: 'hrs' },
+            // Main line: wholesale LMP P50 — left axis
+            { label: 'Avg wholesale LMP (P50)', data: pts(T, E.p50), borderColor: c,
+              backgroundColor: 'transparent', borderWidth: 2.5, pointRadius: 3,
+              pointBackgroundColor: c, fill: false, tension: 0.35, order: 3, yAxisID: 'y' }
+        ] },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            animation: { duration: 1000, easing: 'easeOutQuart' },
+            scales: {
+                x: {
+                    type: 'linear', min: 48, max: 100.5,
+                    title: { display: true, text: 'Clean Energy Threshold (%)', color: 'rgba(15,23,42,0.45)', font: { size: 11 } },
+                    grid: { color: 'rgba(0,0,0,0.025)' },
+                    ticks: { callback: function(v) { return v === 99.99 ? '\u226599.99%' : v + '%'; }, color: 'rgba(15,23,42,0.4)', font: { size: 10 } },
+                    afterBuildTicks: function(axis) { axis.ticks = [50,60,70,80,90,95,99.99].map(function(v) { return { value: v }; }); }
+                },
+                y: {
+                    position: 'left',
+                    title: { display: true, text: 'Average Wholesale Price ($/MWh)', color: 'rgba(15,23,42,0.45)', font: { size: 11 } },
+                    grid: { color: 'rgba(0,0,0,0.025)' },
+                    ticks: { color: 'rgba(15,23,42,0.4)', font: { size: 10 } },
+                    min: -15, max: 55
+                },
+                y1: {
+                    position: 'right',
+                    title: { display: true, text: 'Zero/Negative Price Hours', color: AMBER + 'BB', font: { size: 11 } },
+                    grid: { drawOnChartArea: false },
+                    ticks: { color: AMBER + 'BB', font: { size: 10 },
+                        callback: function(v) { return v >= 1000 ? (v/1000).toFixed(1) + 'k' : v; } },
+                    min: 0, max: 8760
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(255,255,255,0.97)', titleColor: '#1E293B', bodyColor: 'rgba(15,23,42,0.7)',
+                    borderColor: 'rgba(0,0,0,0.1)', borderWidth: 1, padding: 12, cornerRadius: 8,
+                    titleFont: { weight: '700', size: 12 }, bodyFont: { size: 11 },
+                    callbacks: {
+                        title: function(items) { return items[0] ? items[0].raw.x + '% Clean Energy' : ''; },
+                        label: function(item) {
+                            if (item.dataset.yAxisID === 'y1') return item.dataset.label + ': ' + Math.round(item.raw.y) + ' hours (' + (item.raw.y / 87.6).toFixed(0) + '% of year)';
+                            return item.dataset.label + ': $' + item.raw.y.toFixed(1) + '/MWh';
+                        }
+                    }
+                },
+                annotation: { annotations: Object.assign({ zeroLine: { type: 'line', yMin: 0, yMax: 0, borderColor: 'rgba(0,0,0,0.12)', borderWidth: 1, borderDash: [6, 4] } }, sbtiAnnotations()) }
+            }
+        }
+    });
+}
+
+// ===== 7. STORAGE ARBITRAGE CHART =====
+function buildStorageArbitrageChart(D, iso) {
+    var ctx = document.getElementById('storageArbitrageChart');
+    if (!ctx) return;
+    var T = D.thresholds, P = D.peak;
+
+    // Storage dispatch data from RESOURCE_MIX_DATA (21 thresholds)
+    // Map to LMP thresholds (15 points: 50,55,...,99,99.99)
+    var lmpThresholds = T; // [50,55,60,...,99,99.99]
+    var fullThresholds = typeof THRESHOLDS !== 'undefined' ? THRESHOLDS : null;
+    var mix = typeof RESOURCE_MIX_DATA !== 'undefined' ? RESOURCE_MIX_DATA[iso] : null;
+
+    // Map storage dispatch from 21-threshold to 15-threshold space
+    function mapToLmpThresholds(arr21) {
+        if (!arr21 || !fullThresholds) return lmpThresholds.map(function() { return 0; });
+        return lmpThresholds.map(function(t) {
+            var tVal = t >= 99.99 ? 99.99 : t;
+            var idx = -1;
+            for (var i = 0; i < fullThresholds.length; i++) {
+                if (Math.abs(fullThresholds[i] - tVal) < 0.01) { idx = i; break; }
+            }
+            return idx >= 0 ? arr21[idx] : 0;
+        });
+    }
+
+    var bat4 = mix ? mapToLmpThresholds(mix.battery) : lmpThresholds.map(function() { return 0; });
+    var bat8 = mix ? mapToLmpThresholds(mix.battery8) : lmpThresholds.map(function() { return 0; });
+    var ldes = mix ? mapToLmpThresholds(mix.ldes) : lmpThresholds.map(function() { return 0; });
+
+    var CYAN = typeof RESOURCE_COLORS !== 'undefined' ? RESOURCE_COLORS.battery : '#06B6D4';
+    var TEAL = typeof RESOURCE_COLORS !== 'undefined' ? RESOURCE_COLORS.battery8 : '#0891B2';
+    var PINK = typeof RESOURCE_COLORS !== 'undefined' ? RESOURCE_COLORS.ldes : '#E91E63';
+
+    chartInstances.storageArbitrage = new Chart(ctx, {
+        type: 'line',
+        data: { datasets: [
+            // Shaded area: peak-offpeak spread — right axis
+            { label: 'Peak\u2013offpeak spread', data: pts(T, P.spreadP50), borderColor: AMBER + '80',
+              backgroundColor: AMBER + '20', borderWidth: 1.5, pointRadius: 0, fill: 'origin',
+              tension: 0.35, order: 8, yAxisID: 'y1', _type: 'band' },
+            // Storage dispatch lines — left axis
+            { label: 'Battery 4hr dispatch %', data: pts(T, bat4), borderColor: CYAN,
+              backgroundColor: 'transparent', borderWidth: 2.5, pointRadius: 3,
+              pointBackgroundColor: CYAN, fill: false, tension: 0.35, order: 3, yAxisID: 'y' },
+            { label: 'Battery 8hr dispatch %', data: pts(T, bat8), borderColor: TEAL,
+              backgroundColor: 'transparent', borderWidth: 2.5, pointRadius: 3,
+              pointBackgroundColor: TEAL, fill: false, tension: 0.35, order: 3, yAxisID: 'y' },
+            { label: 'LDES dispatch %', data: pts(T, ldes), borderColor: PINK,
+              backgroundColor: 'transparent', borderWidth: 2.5, pointRadius: 3,
+              pointBackgroundColor: PINK, fill: false, tension: 0.35, order: 3, yAxisID: 'y' }
+        ] },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            animation: { duration: 1000, easing: 'easeOutQuart' },
+            scales: {
+                x: {
+                    type: 'linear', min: 48, max: 100.5,
+                    title: { display: true, text: 'Clean Energy Threshold (%)', color: 'rgba(15,23,42,0.45)', font: { size: 11 } },
+                    grid: { color: 'rgba(0,0,0,0.025)' },
+                    ticks: { callback: function(v) { return v === 99.99 ? '\u226599.99%' : v + '%'; }, color: 'rgba(15,23,42,0.4)', font: { size: 10 } },
+                    afterBuildTicks: function(axis) { axis.ticks = [50,60,70,80,90,95,99.99].map(function(v) { return { value: v }; }); }
+                },
+                y: {
+                    position: 'left',
+                    title: { display: true, text: 'Storage Dispatch (% of demand)', color: 'rgba(15,23,42,0.45)', font: { size: 11 } },
+                    grid: { color: 'rgba(0,0,0,0.025)' },
+                    ticks: { color: 'rgba(15,23,42,0.4)', font: { size: 10 },
+                        callback: function(v) { return v + '%'; } },
+                    min: 0
+                },
+                y1: {
+                    position: 'right',
+                    title: { display: true, text: 'Peak\u2013Offpeak Spread ($/MWh)', color: AMBER + 'BB', font: { size: 11 } },
+                    grid: { drawOnChartArea: false },
+                    ticks: { color: AMBER + 'BB', font: { size: 10 },
+                        callback: function(v) { return '$' + v; } },
+                    min: 0
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(255,255,255,0.97)', titleColor: '#1E293B', bodyColor: 'rgba(15,23,42,0.7)',
+                    borderColor: 'rgba(0,0,0,0.1)', borderWidth: 1, padding: 12, cornerRadius: 8,
+                    titleFont: { weight: '700', size: 12 }, bodyFont: { size: 11 },
+                    filter: function(item) { return item.dataset._type !== 'band'; },
+                    callbacks: {
+                        title: function(items) { return items[0] ? items[0].raw.x + '% Clean Energy' : ''; },
+                        label: function(item) {
+                            if (item.dataset._type === 'band') return null;
+                            if (item.dataset.yAxisID === 'y1') return item.dataset.label + ': $' + item.raw.y.toFixed(1) + '/MWh';
+                            return item.dataset.label + ': ' + item.raw.y.toFixed(1) + '%';
+                        }
+                    }
+                },
+                annotation: { annotations: sbtiAnnotations() }
+            }
+        }
+    });
+}
+
+// ===== 8. GAS STRANDING CHART =====
+function buildGasStrandingChart(iso) {
+    var ctx = document.getElementById('gasStrandingChart');
+    if (!ctx) return;
+    var gasData = typeof GAS_BACKUP_DATA !== 'undefined' ? GAS_BACKUP_DATA[iso] : null;
+    if (!gasData) return;
+
+    // Use full 21 thresholds from shared-data.js but filter to 50%+
+    var fullT = typeof THRESHOLDS !== 'undefined' ? THRESHOLDS : [];
+    var startIdx = 4; // index of 50.0 in THRESHOLDS [10,20,30,40,50,...]
+    var T = fullT.slice(startIdx);
+    var gasNeeded = gasData.gas_backup_mw.slice(startIdx).map(function(v) { return v / 1000; }); // GW
+    var baselineGas = gasData.gas_backup_mw[startIdx] / 1000; // GW at 50%
+
+    // Stranded = baseline - needed (clamp to 0)
+    var stranded = gasNeeded.map(function(v) { return Math.max(0, baselineGas - v); });
+
+    var GAS_COLOR = typeof RESOURCE_COLORS !== 'undefined' ? RESOURCE_COLORS.fossilGas : '#6B7280';
+
+    chartInstances.gasStranding = new Chart(ctx, {
+        type: 'line',
+        data: { datasets: [
+            // Installed gas fleet baseline — horizontal reference
+            { label: '2025 installed gas fleet', data: T.map(function(t) { return { x: t >= 99.99 ? 99.99 : t, y: baselineGas }; }),
+              borderColor: GAS_COLOR + '50', backgroundColor: 'transparent',
+              borderWidth: 1.5, borderDash: [6, 4], pointRadius: 0, fill: false,
+              tension: 0, order: 5 },
+            // Stranded capacity area (fill between baseline and needed)
+            { label: 'Stranded capacity', data: T.map(function(t, i) { return { x: t >= 99.99 ? 99.99 : t, y: baselineGas }; }),
+              borderColor: 'transparent', backgroundColor: 'rgba(239,68,68,0.12)',
+              borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0.35, order: 10, _type: 'band' },
+            // Gas capacity required line
+            { label: 'Gas capacity required (GW)', data: T.map(function(t, i) { return { x: t >= 99.99 ? 99.99 : t, y: gasNeeded[i] }; }),
+              borderColor: GAS_COLOR, backgroundColor: hexToRgba(GAS_COLOR, 0.08),
+              borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: GAS_COLOR,
+              fill: 'origin', tension: 0.35, order: 3 }
+        ] },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            animation: { duration: 1000, easing: 'easeOutQuart' },
+            scales: {
+                x: {
+                    type: 'linear', min: 48, max: 100.5,
+                    title: { display: true, text: 'Clean Energy Threshold (%)', color: 'rgba(15,23,42,0.45)', font: { size: 11 } },
+                    grid: { color: 'rgba(0,0,0,0.025)' },
+                    ticks: { callback: function(v) { return v === 99.99 ? '\u226599.99%' : v + '%'; }, color: 'rgba(15,23,42,0.4)', font: { size: 10 } },
+                    afterBuildTicks: function(axis) { axis.ticks = [50,60,70,80,90,95,99.99].map(function(v) { return { value: v }; }); }
+                },
+                y: {
+                    title: { display: true, text: 'Gas Capacity (GW)', color: 'rgba(15,23,42,0.45)', font: { size: 11 } },
+                    grid: { color: 'rgba(0,0,0,0.025)' },
+                    ticks: { color: 'rgba(15,23,42,0.4)', font: { size: 10 },
+                        callback: function(v) { return v + ' GW'; } },
+                    min: 0
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(255,255,255,0.97)', titleColor: '#1E293B', bodyColor: 'rgba(15,23,42,0.7)',
+                    borderColor: 'rgba(0,0,0,0.1)', borderWidth: 1, padding: 12, cornerRadius: 8,
+                    titleFont: { weight: '700', size: 12 }, bodyFont: { size: 11 },
+                    filter: function(item) { return item.dataset._type !== 'band'; },
+                    callbacks: {
+                        title: function(items) { return items[0] ? (items[0].raw.x >= 99.99 ? '\u226599.99' : items[0].raw.x) + '% Clean Energy' : ''; },
+                        label: function(item) {
+                            if (item.dataset._type === 'band') return null;
+                            return item.dataset.label + ': ' + item.raw.y.toFixed(1) + ' GW';
+                        }
+                    }
+                },
+                annotation: { annotations: sbtiAnnotations() }
+            }
+        }
+    });
+}
+
 // ===== BUILD ALL LMP CHARTS (nuclear crossover charts are in lmp_trends.html inline script) =====
 function buildAllCharts(D, accent) {
     destroyCharts();
@@ -214,6 +459,9 @@ function buildAllCharts(D, accent) {
     if (typeof REFERENCE_CASE !== 'undefined') {
         buildRefCaseChart(currentISO, accent);
     }
+    buildCannibalizationChart(D, accent);
+    buildStorageArbitrageChart(D, currentISO);
+    buildGasStrandingChart(currentISO);
 }
 
 // ===== CAPACITY MARKET REVENUE CHART =====
