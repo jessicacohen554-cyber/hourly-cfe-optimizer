@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The 8,760 Problem — Inter-ISO Energy Trading</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/reference.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="js/shared-footer.js"></script>
+<script src="js/shared-back-button.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/inter-iso-trading-data.js"></script>
+<style>
+body { background: var(--bg-page-white); }
+.breadcrumb { max-width: 960px; margin: 0 auto; padding: 20px 24px 0; font-size: 0.82rem; font-family: var(--font-heading); letter-spacing: 0.03em; }
+.breadcrumb a { color: #0EA5E9; text-decoration: none; }
+.breadcrumb .sep { color: rgba(0,0,0,0.3); margin: 0 8px; }
+.breadcrumb .current { color: #374151; }
+.article-wrapper { max-width: 960px; margin: 0 auto; padding: 32px 24px 80px; }
+.article-title { font-family: var(--font-heading); font-size: 2rem; font-weight: 700; color: #1A2744; line-height: 1.25; margin-bottom: 8px; }
+.article-subtitle { color: #374151; font-size: 0.95rem; margin-bottom: 36px; line-height: 1.6; }
+.section-heading { font-family: var(--font-heading); font-size: 1.3rem; font-weight: 700; color: #1A2744; margin: 48px 0 16px; border-bottom: 2px solid #E5E7EB; padding-bottom: 8px; }
+.text-block { color: #374151; font-size: 0.95rem; line-height: 1.65; margin-bottom: 16px; }
+.control-bar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; align-items: center; }
+.control-bar label { font-family: var(--font-heading); font-size: 0.82rem; font-weight: 600; color: #374151; }
+.control-bar select { font-family: var(--font-body); font-size: 0.88rem; padding: 6px 12px; border: 1px solid #D1D5DB; border-radius: 8px; background: #fff; }
+.chart-box { background: #fff; border: 1px solid #E5E7EB; border-radius: 12px; padding: 16px; margin-bottom: 24px; }
+.chart-box canvas { max-height: 400px; }
+.stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.stat-tile { background: #F0F7FF; border-radius: 10px; padding: 14px 16px; text-align: center; }
+.stat-tile .val { font-family: var(--font-heading); font-size: 1.5rem; font-weight: 700; color: #1A2744; }
+.stat-tile .lbl { font-size: 0.78rem; color: #6B7280; margin-top: 4px; }
+.position-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; justify-content: center; }
+.position-badge { padding: 12px 20px; border-radius: 10px; text-align: center; font-family: var(--font-heading); font-weight: 600; font-size: 0.9rem; min-width: 100px; }
+.position-badge .pos-label { font-size: 0.72rem; font-weight: 400; color: rgba(0,0,0,0.6); margin-top: 4px; }
+.pair-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-bottom: 24px; }
+.pair-table th { background: #F3F4F6; padding: 10px 14px; text-align: left; font-family: var(--font-heading); font-weight: 600; color: #374151; border-bottom: 2px solid #E5E7EB; }
+.pair-table td { padding: 10px 14px; border-bottom: 1px solid #F3F4F6; }
+.pair-table tr:hover { background: #F9FAFB; }
+.pair-value { font-weight: 700; color: #059669; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+@media (max-width: 768px) {
+    .two-col { grid-template-columns: 1fr; }
+    .article-title { font-size: 1.5rem; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+<script src="js/nav.js"></script>
+
+<nav class="breadcrumb">
+    <a href="reference.html">Reference</a>
+    <span class="sep">/</span>
+    <span class="current">Inter-ISO Energy Trading</span>
+</nav>
+
+<div class="article-wrapper">
+    <h1 class="article-title">The Case for Cross-Regional Clean Energy Trading</h1>
+    <p class="article-subtitle">CAISO has midday solar surplus while PJM needs evening power. SPP's wind blows strongest when NEISO's is calm. Cross-regional hourly netting could cut clean energy procurement costs significantly — if transmission economics allow it.</p>
+
+    <div class="control-bar">
+        <label>Threshold:</label>
+        <select id="thresholdSelect"></select>
+    </div>
+
+    <div class="stats-row" id="statsRow"></div>
+
+    <h2 class="section-heading">Island vs. Pool Cost Comparison</h2>
+    <p class="text-block">When each ISO procures clean energy independently ("island"), costs vary widely based on local resource quality. A pooled market where ISOs trade surplus energy reduces costs for high-cost regions by sourcing from cheaper neighbors.</p>
+    <div class="chart-box">
+        <canvas id="islandPoolChart"></canvas>
+    </div>
+
+    <h2 class="section-heading">Net Position: Exporters vs. Importers</h2>
+    <p class="text-block">Regions with abundant cheap renewables (SPP wind, ERCOT solar+wind) become net exporters. Resource-constrained regions (NEISO, NYISO) benefit most as importers — accessing clean energy they can't produce domestically at competitive cost.</p>
+    <div class="position-grid" id="positionGrid"></div>
+
+    <h2 class="section-heading">Trading Pair Values</h2>
+    <p class="text-block">The most valuable trading pairs combine low-cost supply with proximity (low transmission cost). SPP → PJM and ERCOT → MISO consistently rank highest due to cheap wind resources and moderate inter-regional distance.</p>
+    <table class="pair-table" id="pairTable">
+        <thead><tr><th>Trading Pair</th><th>Avg Value ($/MWh)</th><th>Max Value</th><th>TX Cost</th><th>Cheaper ISO</th></tr></thead>
+        <tbody></tbody>
+    </table>
+
+    <h2 class="section-heading">Savings by Threshold</h2>
+    <p class="text-block">Trading value increases at higher CFE thresholds because the "last mile" of clean energy is the most expensive — and the most likely to be available cheaply in a neighboring region.</p>
+    <div class="chart-box">
+        <canvas id="savingsChart"></canvas>
+    </div>
+
+    <h2 class="section-heading">Transmission Cost Sensitivity</h2>
+    <p class="text-block">How much does inter-regional transmission cost affect the value of trading? Even at high TX costs ($20+/MWh), trading remains valuable at extreme thresholds where the alternative is expensive local last-mile procurement.</p>
+    <div class="chart-box">
+        <canvas id="txSensChart"></canvas>
+    </div>
+
+    <h2 class="section-heading">Why This Matters</h2>
+    <p class="text-block"><strong>For policy makers:</strong> Inter-regional clean energy trading could save $5-15B annually across the US grid. New HVDC transmission corridors — especially SPP-to-East and CAISO-to-Southwest — have the highest benefit-cost ratios for enabling this trade.</p>
+    <p class="text-block"><strong>For corporate buyers:</strong> Cross-regional procurement (via VPPAs or EAC markets) can reduce your 24/7 CFE costs by 10-20% compared to same-ISO-only strategies. The key is finding trading partners with complementary generation profiles — not just the cheapest spot price.</p>
+    <p class="text-block"><strong>For market designers:</strong> Regional clean energy attribute markets (hourly EACs) need to be interoperable across ISOs for this value to be captured. Current market fragmentation — different tracking systems, different granularity — prevents efficient cross-regional clean energy trade.</p>
+</div>
+
+<script>
+(function() {
+    const data = INTER_ISO_TRADING_DATA;
+    const thresholdSelect = document.getElementById('thresholdSelect');
+    const ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP'];
+    const isoColors = {
+        CAISO: '#F59E0B', ERCOT: '#22C55E', PJM: '#0EA5E9', NYISO: '#E91E63',
+        NEISO: '#9C27B0', MISO: '#F97316', SPP: '#14B8A6'
+    };
+
+    // Populate threshold selector
+    const ivp = data.island_vs_pool || {};
+    Object.keys(ivp).sort((a,b) => parseFloat(a) - parseFloat(b)).forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t; opt.textContent = t + '%';
+        if (t === '90') opt.selected = true;
+        thresholdSelect.appendChild(opt);
+    });
+    if (!thresholdSelect.value && thresholdSelect.options.length) thresholdSelect.selectedIndex = 0;
+
+    let islandPoolChart = null, savingsChart = null, txSensChart = null;
+
+    function render() {
+        const t = thresholdSelect.value;
+        const td = ivp[t];
+        if (!td) return;
+
+        // Stats
+        document.getElementById('statsRow').innerHTML = `
+            <div class="stat-tile"><div class="val">$${td.island_avg.toFixed(1)}</div><div class="lbl">Island Avg ($/MWh)</div></div>
+            <div class="stat-tile"><div class="val">$${td.pool_avg.toFixed(1)}</div><div class="lbl">Pool Avg ($/MWh)</div></div>
+            <div class="stat-tile"><div class="val">${td.savings_pct.toFixed(1)}%</div><div class="lbl">Cost Savings</div></div>
+            <div class="stat-tile"><div class="val">$${(td.island_avg - td.pool_avg).toFixed(1)}</div><div class="lbl">Savings $/MWh</div></div>
+        `;
+
+        // Island vs Pool chart
+        const ic = td.island_costs || {};
+        const pc = td.pool_costs || {};
+        const chartISOs = ISOS.filter(iso => iso in ic);
+
+        if (islandPoolChart) islandPoolChart.destroy();
+        islandPoolChart = new Chart(document.getElementById('islandPoolChart'), {
+            type: 'bar',
+            data: {
+                labels: chartISOs,
+                datasets: [
+                    {
+                        label: 'Island Cost (self-supply)',
+                        data: chartISOs.map(iso => ic[iso]),
+                        backgroundColor: chartISOs.map(iso => isoColors[iso] + '88'),
+                        borderColor: chartISOs.map(iso => isoColors[iso]),
+                        borderWidth: 2,
+                    },
+                    {
+                        label: 'Pool Cost (with trading)',
+                        data: chartISOs.map(iso => pc[iso] || ic[iso]),
+                        backgroundColor: '#10B98166',
+                        borderColor: '#10B981',
+                        borderWidth: 2,
+                    }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    y: { title: { display: true, text: '$/MWh' }, beginAtZero: true }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            afterBody: (ctx) => {
+                                if (ctx[0].datasetIndex === 1) {
+                                    const iso = chartISOs[ctx[0].dataIndex];
+                                    const source = td.pool_sources?.[iso];
+                                    return source && source !== iso ? `Source: ${source}` : 'Self-supply';
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Net position badges
+        const posEl = document.getElementById('positionGrid');
+        const posColors = {
+            exporter: { bg: '#DCFCE7', text: '#166534' },
+            importer: { bg: '#FECACA', text: '#991B1B' },
+            neutral: { bg: '#F3F4F6', text: '#374151' },
+        };
+        posEl.innerHTML = chartISOs.map(iso => {
+            const pos = data.net_position?.[iso]?.[t] || 'neutral';
+            const c = posColors[pos];
+            return `<div class="position-badge" style="background:${c.bg};color:${c.text}">
+                ${iso}
+                <div class="pos-label">${pos.charAt(0).toUpperCase() + pos.slice(1)}</div>
+            </div>`;
+        }).join('');
+
+        // Trading pairs table
+        const pairs = data.trading_pairs || {};
+        const sortedPairs = Object.entries(pairs)
+            .sort((a,b) => b[1].avg_value - a[1].avg_value);
+        const tbody = document.querySelector('#pairTable tbody');
+        tbody.innerHTML = sortedPairs.map(([key, val]) => `
+            <tr>
+                <td>${key.replace('_', ' ↔ ')}</td>
+                <td class="pair-value">$${val.avg_value.toFixed(1)}</td>
+                <td>$${val.max_value.toFixed(1)}</td>
+                <td>$${val.tx_cost}</td>
+                <td>${val.cheaper_iso}</td>
+            </tr>
+        `).join('');
+
+        // Savings curve across thresholds
+        const allThresholds = Object.keys(ivp).sort((a,b) => parseFloat(a) - parseFloat(b));
+        if (savingsChart) savingsChart.destroy();
+        savingsChart = new Chart(document.getElementById('savingsChart'), {
+            type: 'line',
+            data: {
+                labels: allThresholds.map(tt => tt + '%'),
+                datasets: [{
+                    label: 'Trading Savings (%)',
+                    data: allThresholds.map(tt => ivp[tt]?.savings_pct || 0),
+                    borderColor: '#10B981',
+                    backgroundColor: '#10B98122',
+                    fill: true,
+                    pointRadius: 4,
+                    tension: 0.3,
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    y: { title: { display: true, text: 'Savings (%)' }, beginAtZero: true }
+                }
+            }
+        });
+
+        // TX sensitivity chart
+        const txSens = data.tx_sensitivity || {};
+        const txLabels = Object.keys(txSens);
+        if (txSensChart) txSensChart.destroy();
+        txSensChart = new Chart(document.getElementById('txSensChart'), {
+            type: 'bar',
+            data: {
+                labels: txLabels.map(k => k.charAt(0).toUpperCase() + k.slice(1) + ' TX (' + txSens[k].tx_multiplier + 'x)'),
+                datasets: [{
+                    label: 'Avg Savings (%)',
+                    data: txLabels.map(k => txSens[k].avg_savings_pct),
+                    backgroundColor: ['#22C55E88', '#F59E0B88', '#EF444488'],
+                    borderColor: ['#22C55E', '#F59E0B', '#EF4444'],
+                    borderWidth: 2,
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    y: { title: { display: true, text: 'Savings (%)' }, beginAtZero: true }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+
+    thresholdSelect.addEventListener('change', render);
+    render();
+})();
+</script>
+</body>
+</html>
