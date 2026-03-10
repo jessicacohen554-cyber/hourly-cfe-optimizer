@@ -29,7 +29,7 @@
 ### Compute Execution
 - **Running scripts locally is allowed** — including full pipeline scripts. GitHub Actions minutes are limited, so local execution is preferred for most tasks.
 - **Heavy compute (Step 1 full runs, all-ISO sweeps, multi-hour jobs)**: Only launch when the user explicitly says to. Ask before starting anything that will take more than a few minutes.
-- **Everything else is fair game**: Single-ISO runs, subset tests, Steps 2–9, post-processing, validation, benchmarking — run freely without asking.
+- **Everything else is fair game**: Single-ISO runs, subset tests, Steps 2–7, post-processing, validation, benchmarking — run freely without asking.
 - **Still applies**: Syntax checks, import validation, and quick verification reads remain the cheapest first step before any run.
 
 ### Git & Commits
@@ -99,62 +99,75 @@
 
 ### Pipeline Architecture (Critical — Know What You're Changing)
 
-**10-Step Pipeline** — Step 1 expensive (hours), Steps 2–9 cheap (seconds to minutes). Only re-run what changed.
+**8-Step Pipeline (0–7)** — Step 1 expensive (hours), Steps 2–7 cheap (seconds to minutes). Only re-run what changed.
 
-**Step 0: Data Acquisition** (`step0_*.py`, 8 scripts, annual cadence):
-- `step0_fetch_all_data.py`, `step0_fetch_egrid.py`, `step0_fetch_eia_multiyear.py`, `step0_fetch_lmp_2025.py`, `step0_fetch_offshore_wind.py`, `step0_fix_offshore_wind.py`, `step0_fix_utc_profiles.py`, `step0_consolidate_miso_spp.py`
+**Naming convention**: `.1/.2/.3` = sequential sub-steps (must run in order). `A/B/C` = parallel scripts (can run simultaneously).
 
-**Step 1: Physics Feasible Space** — Two execution paths:
+**Step 0: Data Acquisition** (`step0_*.py`, 9 scripts, annual cadence):
+- `step0_fetch_all_data.py`, `step0_fetch_egrid.py`, `step0_extract_egrid_baselines.py`, `step0_fetch_eia_multiyear.py`, `step0_fetch_lmp_2025.py`, `step0_fetch_offshore_wind.py`, `step0_fix_offshore_wind.py`, `step0_fix_utc_profiles.py`, `step0_consolidate_miso_spp.py`
+
+**Step 1: Physics Feasible Space** (sequential sub-steps):
 - **Monolithic**: `step1_pfs_generator.py` — runs full PFS generation in one process.
-- **Modular (CI/CD)**: `step1a_generate_mixes.py` + `step1b_score_mixes.py` (Step 1A: Generate+Score) → `step1b_zone_search.py` (Step 1B: Zone Search) → `step1b2_floor_aware_pfs.py` (Step 1B2: Floor-Aware PFS, 50-80%) → `step1b3_fine_grid_pfs.py` (Step 1B3: Fine-Grid PFS, 40-75%) → `step1c_storage_refinement.py` (Step 1C: Storage Refinement).
-- Step 1C storage grids are the union of V1 (near-term) and V2 (2050-oriented) caps — full coverage in a single run. Floor/fine mix augmentation (1B2/1B3) is always on.
+- **Modular (CI/CD)**:
+  - **1.1** `step1_1a_generate_mixes.py` + `step1_1b_score_mixes.py` — Generate + score coarse mixes.
+  - **1.2** `step1_2_zone_search.py` — Zone search around promising regions.
+  - **1.3** `step1_3_floor_aware_pfs.py` — Floor-aware PFS augmentation (50-80%).
+  - **1.4** `step1_4_fine_grid_pfs.py` — Fine-grid PFS (40-75%).
+  - **1.5** `step1_5_storage_refinement.py` — Storage dispatch refinement (battery/LDES/H2 grid).
+- Storage grids are the union of V1 (near-term) and V2 (2050-oriented) caps. Floor/fine mix augmentation always on.
 - Utilities: `step1_prior_windows.py` (search window computation from prior EF results).
 - 4D adaptive grid search (clean_firm, solar, wind, hydro) + procurement sweep + battery dispatch (4hr 85% RTE, 8hr 85% RTE) + LDES dispatch (100hr 50% RTE) + Green H2 (1000hr 35% RTE, ≥95% only). CAISO uses 5D (adds geothermal).
 - Output: `data/step1-pfs-parquets/`. **Only re-run if dispatch logic, generation profiles, or demand curves change.**
 
-**Step 2: Efficient Frontier** (`step2_efficient_frontier.py`):
-- Extracts non-dominated mixes from PFS. Reads step1 parquets.
-- Filters existing gen utilization, procurement minimization, strict dominance removal.
-- Output: `data/step2-ef-parquets/`. **Only re-run if PFS or filtering criteria change.**
-
-**Step 3: Cost Optimization** (`step3a_cost_optimization.py` + `step3b_track_nb_ctr.py`):
-- 3A: Track 1 baseline: vectorized cross-eval of EF mixes under 5,832 combos (17,496 CAISO). Merit-order tranche pricing for clean firm (uprate → geothermal → cheapest of nuclear/CCS).
-- 3B: Track 2 (newbuild) + Track 3 (cost-to-replace): greenfield cost analysis. Demand growth sweep (25 years × 3 growth rates) with FOAK→NOAK learning curves (Wright's Law).
+**Step 2: Optimization** (sequential: 2.1 → 2.2):
+- **2.1** `step2_1_efficient_frontier.py` — Extracts non-dominated mixes from PFS. Filters existing gen utilization, procurement minimization, strict dominance removal. Output: `data/step2-ef-parquets/`.
+- **2.2A** `step2_2a_cost_optimization.py` — Track 1 baseline: vectorized cross-eval of EF mixes under 5,832 combos (17,496 CAISO). Merit-order tranche pricing for clean firm (uprate → geothermal → cheapest of nuclear/CCS). ─┐ parallel
+- **2.2B** `step2_2b_track_nb_ctr.py` — Track 2 (newbuild) + Track 3 (cost-to-replace): greenfield cost analysis. Demand growth sweep (25 years × 3 growth rates) with FOAK→NOAK learning curves (Wright's Law). ─┘
 - Includes NEISO winter gas pipeline constraint (+$13.13/MWh CCS adder), 45Q correction ($27.5/MWh).
 - Output: `data/step3-cost-opt-parquets/`. **Run when cost assumptions change. No physics re-run needed.**
 
-**Step 4: Dispatch Cache** (`step4_build_dispatch_cache.py`):
-- Pre-computes 8,760-hour dispatch for all unique mixes. Versioned NPZ cache (v2) with per-resource matched/surplus + charge profiles.
-- Output: `data/step4-dispatch-cache/`. **Run after Step 3.**
+**Step 3: Caches** (parallel):
+- **3A** `step3a_build_dispatch_cache.py` — Pre-computes 8,760-hour dispatch for all unique mixes. Versioned NPZ cache (v2) with per-resource matched/surplus + charge profiles. ← needs Step 2. Output: `data/step4-dispatch-cache/`.
+- **3B** `step3b_mac_queue.py` — Path-dependent MAC queue for consequential deployment. Reads raw PFS (Step 1) + shared utilities, NOT Step 2 output. ← needs Step 1 only. Output: `data/step5-post-processing/mac_queue/`.
 
-**Step 5: Core Analysis** (6 scripts, all parallel after Step 4, output to `data/step5-post-processing/`):
-- `step5a_compute_co2.py` — CO₂ dispatch-stack model. Merit-order retirement (coal → oil → gas). Coal/oil capped at 2025 TWh. **Run before Step 6A (MAC stats).**
-- `step5b_compute_lmp_prices.py` — 8,760-hour dispatch; synthetic hourly LMP from merit-order fossil stack. All 7 ISOs. Output: `data/step5-post-processing/lmp/`.
-- `step5c_compress_day_profiles.py` — 24-hour representative day profiles. Reads from dispatch cache; falls back to live compute on miss.
-- `step5d_deployment_queue.py` — Cross-regional deployment path under consequential accounting. Hourly emission accounting via dispatch cache.
-- `step5e_export_tracks.py` — Exports track parquets (NB + CTR) to `track_results.json`. No cache dependency.
-- `step5f_analyze_storage.py` — Battery/LDES utilization, dispatch patterns, capacity factor analysis. Reads dispatch cache + step3 parquets.
+**Step 4: Analysis** (two parallel tiers: 4.1 → 4.2):
+- **Tier 4.1** (parallel, mixed deps on Steps 2/3):
+  - **4.1A** `step4_1a_fossil_dispatch.py` — CO₂ + LMP: fossil dispatch-stack model, merit-order retirement (coal → oil → gas), synthetic hourly LMP. ← needs 3A. Output: `data/step5-post-processing/co2_results/`, `data/step5-post-processing/lmp/`.
+  - **4.1A** `step4_1a_augment_capacity_rev.py` — Augments capacity revenue data onto LMP results.
+  - **4.1B** `step4_1b_compress_day_profiles.py` — 24-hour representative day profiles from dispatch cache. ← needs 3A.
+  - **4.1C** `step4_1c_compute_mac_stats.py` — 6 MAC metrics: average fan (P10/P50/P90), stepwise marginal, monotonic envelope, path-constrained. ANOVA decomposition. Crossover vs DAC/SCC/ETS. ← needs Step 2.
+  - **4.1D** `step4_1d_compute_optimal_targets.py` — Optimal CFE target per ISO via marginal MAC × DAC crossover (PCHIP spline). 3×3 grid-cost × DAC-scenario matrix. No-regrets resource analysis. ← needs Step 2. Output: `optimal_targets.json` + `dashboard/js/optimal-target-data.js`.
+  - **4.1E** `step4_1e_export_tracks.py` — Exports track parquets (NB + CTR) to `track_results.json`. ← needs Step 2.
+  - **4.1F** `step4_1f_extract_building_blocks.py` — Building-block resource decomposition per ISO/threshold. ← needs Step 2.
+- **Tier 4.2** (parallel, needs specific 4.1 outputs):
+  - **4.2A** `step4_2a_extract_resource_density.py` — Resource density analysis across thresholds. ← needs 4.1D.
+  - **4.2B** `step4_2b_analyze_storage.py` — Battery/LDES utilization, dispatch patterns, capacity factor analysis. ← needs Step 2 + 4.1B.
+  - **4.2C** `step4_2c_analyze_tracks.py` — Track cost envelopes (P10/P50/P90), resource mix differentials. ← needs 4.1E.
 
-**Step 6: Derived Analytics** (3 scripts, output to `data/step5-post-processing/`):
-- `step6a_compute_mac_stats.py` — 6 MAC metrics: average fan (P10/P50/P90), stepwise marginal, monotonic envelope, path-constrained. ANOVA decomposition. Crossover vs DAC/SCC/ETS. **Needs Step 5A (CO₂).**
-- `step6b_compute_optimal_targets.py` — Optimal CFE target per ISO via marginal MAC × DAC crossover (PCHIP spline). 3×3 grid-cost × DAC-scenario matrix. No-regrets resource analysis. Reads step3 parquets directly. Output: `optimal_targets.json` + `dashboard/js/optimal-target-data.js`.
-- `step6c_analyze_tracks.py` — Track cost envelopes (P10/P50/P90), resource mix differentials.
+**Step 5: Scenarios & Procurement** (sequential then parallel):
+- **5.1** `step5_1_scenario_hourly.py` — Hourly matching procurement strategy. ← needs 4.1D (optimal targets).
+- **5.2A** `step5_2a_scenario_comparison.py` — Consequential vs. hourly matching comparison. ← needs 3B + 5.1. ─┐
+- **5.2B** `step5_2b_strategy_consequential.py` — Strategy 1 (A/B/C): cross-regional consequential netting under 3 emission baselines. ← needs 3B. │
+- **5.2C** `step5_2c_strategy_hourly.py` — Strategy 2 (A/B/C): hourly matching same-ISO with existing clean credit variants. ← needs 5.1. │ parallel
+- **5.2D** `step5_2d_strategy_annual.py` — Strategy 3 (A/B/C/D): annual matching 2×2 matrix. ← needs Step 2. │
+- **5.2E** `step5_2e_wrights_law_curves.py` — Wright's Law learning curves & critical mass threshold. ← independent. ─┘
+- Shared utilities: `procurement_utils.py` (SSS allocation, EAC pricing, LMP feedback, PPA premiums, learning curves, 25-year timeline).
 
-**Step 7: Scenario Comparison** (2 scripts, output to `data/step5-post-processing/`):
-- Scenario A: **READ from MAC queue** (`data/step5-post-processing/mac_queue/scenario_a_*.json`), produced by `step5d_mac_queue.py`. No separate step7a script.
-- `step7b_scenario_hourly.py` — Hourly matching procurement strategy. **Needs Step 6B (optimal targets).**
-- `step7c_scenario_comparison.py` — Consequential vs. hourly matching comparison. **Needs Step 5D MAC Queue + 7B.**
+**Step 6: Policy Analysis** (sequential then parallel):
+- **6.1** `step6_1_smartargets.py` — Regional SMARTargets modeling. ← needs Step 2 + 4.1A (LMP engine).
+- **6.1B** `step6_1b_dashboard_data.py` — Converts SMARTargets parquets to dashboard JS.
+- **6.2A** `step6_2a_ipp_smartargets.py` — IPP fleet modeling applied to SMARTargets results. ← needs 6.1. ─┐ parallel
+- **6.2B** `step6_2b_nuclear_retirement.py` — Nuclear stranding risk analysis. ← needs 6.1 + Step 2. ─┘
 
-**Step 8: Procurement Strategies** (4 scripts + 1 utility, output to `data/step5-post-processing/`):
-- `procurement_utils.py` — Shared utilities (SSS allocation, EAC pricing, LMP feedback, PPA premiums, learning curves, 25-year timeline).
-- `step8a_strategy_consequential.py` — Strategy 1 (A/B/C): cross-regional consequential netting under 3 emission baselines. **Needs Step 5D (deployment queue).**
-- `step8b_strategy_hourly.py` — Strategy 2 (A/B/C): hourly matching same-ISO with existing clean credit variants.
-- `step8c_strategy_annual.py` — Strategy 3 (A/B/C/D): annual matching 2×2 matrix.
-- `step8d_wrights_law_curves.py` — Wright's Law learning curves & critical mass threshold for procurement comparison.
-
-**Step 9: Dashboard Data Generation:**
-- `step9a_generate_shared_data.py` — Extracts all results into `dashboard/js/shared-data.js`. SBTi milestone mapping, DAC trajectory projections, LCOE/transmission tables for client-side repricing. Aggregates all upstream outputs. **Runs last.**
-- `step9b_extract_no_regrets.py` — Optimal targets and no-regrets resource investments from crossover analysis.
+**Step 7: Dashboard Aggregation** (parallel data gen, then sequential):
+- **7.1A** `step7_1a_generate_shared_data.py` — Extracts all results into `dashboard/js/shared-data.js`. SBTi milestone mapping, DAC trajectory projections, LCOE/transmission tables for client-side repricing. Aggregates all upstream outputs. ─┐
+- **7.1B** `step7_1b_extract_deployment_data.py` — Deployment queue data for dashboard. │
+- **7.1C** `step7_1c_generate_foak_noak.py` — FOAK/NOAK learning curve data. │ parallel
+- **7.1D** `step7_1d_generate_building_blocks.py` — Building blocks dashboard data. │
+- **7.1E** `step7_1e_dispatch_deployment.py` — Dispatch deployment visualization data. │
+- **7.1F** `step7_1f_extract_hourly_comparison.py` — Hourly comparison data. │
+- **7.1G** `step7_1g_extract_use_case_data.py` — Use case analysis data. ─┘
+- **7.2** `step7_2_extract_no_regrets.py` — Optimal targets and no-regrets resource investments from crossover analysis. ← needs 7.1A.
 
 **Utility modules** (no step prefix):
 - `pipeline_config.py` — **Single source of truth** for all shared constants (LCOE tables, fuel adjustments, CCS caps, storage parameters, wholesale prices). All step scripts import from here.
@@ -164,26 +177,36 @@
 - `calibrate_lmp_model.py` — LMP model validation against actual ISO data.
 - Other: `anthropic_image_utils.py`, `extract_shared_data.py`, `analyze_pjm_lmp.py`, `analyze_results.py`, `sensitivity_analysis.py`
 
-**GitHub Actions** (~22 workflows, all `workflow_dispatch`):
-- Core pipeline: `step1a-scored-database.yml` → `step1b-zone-search.yml` → `step1c-storage-refinement.yml` → `step2-efficient-frontier.yml` → `step3-cost-optimization.yml` → `step4-dispatch-cache.yml`
-- Core analysis: `step5a-compute-co2.yml`, `step5b-compute-lmp.yml`, `step5c-dashboard-update.yml`, `step5d-consequential-queue.yml`, `step5e-track-analysis.yml`, `step5f-storage-analysis.yml`
-- Derived analytics: `step6-derived-analytics.yml`, `step7-scenario-comparison.yml`, `step8-procurement-strategies.yml`
-- Final: `step9-generate-shared-data.yml`
+**GitHub Actions** (~21 workflows, all `workflow_dispatch`):
+- Core pipeline: `step1-1-scored-database.yml` → `step1-2-3-zone-floor.yml` → `step1-4-5-fine-storage.yml` → `step2-1-efficient-frontier.yml` → `step2-2-cost-optimization.yml`
+- Caches: `step3a-dispatch-cache.yml`, `step3b-mac-queue.yml` (parallel)
+- Analysis: `step4-1b-day-profiles.yml`, `step4-tracks.yml`, `step4-2b-storage-analysis.yml`, `step4-derived-analytics.yml`
+- Scenarios & Procurement: `step5-scenarios.yml`, `step5-procurement.yml`, `step5-2e-wrights-law.yml`
+- Policy: `step6-1-smartargets-reference.yml`, `step6-1-smartargets-power-nz.yml`, `step6-1-smartargets-economy-nz.yml`, `step6-1-smartargets-quick-transition.yml`
+- Dashboard: `step7-dashboard-data.yml`
+- Data: `step0-fetch-lmp-data.yml`, `step0-fetch-offshore-wind.yml`
 - See `.github/workflows/README.md` for full docs and common patterns.
 
-**Data contract**: Step 3 must NOT change existing columns in shared-data.js or overprocure_results.json — only ADD new columns/fields.
+**Data directories** (use legacy numbering on disk — NOT renamed):
+- `data/step1-pfs-parquets/` — Step 1 physics output
+- `data/step2-ef-parquets/` — Step 2.1 efficient frontier output
+- `data/step3-cost-opt-parquets/` — Step 2.2 cost optimization output
+- `data/step4-dispatch-cache/` — Step 3A dispatch cache output
+- `data/step5-post-processing/` — Steps 3B, 4, 5, 6 analysis outputs
 
-**Key principle**: Steps 2–9 are cheap (seconds to minutes). Step 1 is expensive (hours). Default to Steps 3 + post-processing unless physics assumptions change.
+**Data contract**: Step 2.2 must NOT change existing columns in shared-data.js or overprocure_results.json — only ADD new columns/fields.
+
+**Key principle**: Steps 2–7 are cheap (seconds to minutes). Step 1 is expensive (hours). Default to Step 2.2 + post-processing unless physics assumptions change.
 
 ### Incremental Results (Critical — Never Rerun What's Already Computed)
 - **Default to temp functions for new analysis tracks** — when adding a new analysis dimension (e.g., new-build track, LMP module, CO2 dispatch), write a standalone temp script that computes ONLY the missing results and appends them to the existing output files. Never rerun the full pipeline when only a subset of results is needed.
 - **Pattern**: (1) Write temp function to compute delta results, (2) Append/merge into existing output JSON/parquet, (3) Update primary scripts for future iterations (but don't rerun them)
-- **Step 3 cost optimization is semi-expensive with large EFs** — 27M mixes × 5,832 scenarios × 7 ISOs × numpy takes hours without Numba. Always preserve existing baseline results and only compute new tracks/dimensions incrementally.
+- **Step 2.2 cost optimization is semi-expensive with large EFs** — 27M mixes × 5,832 scenarios × 7 ISOs × numpy takes hours without Numba. Always preserve existing baseline results and only compute new tracks/dimensions incrementally.
 - **CO2 dispatch model**: Only run on mixes NOT already in results. Read existing results, identify gaps, compute only the gap, merge back.
-- **This rule exists because**: A full step3 rerun on 27M mixes took 5+ hours when only the new track results (~30% of compute) were actually needed. The existing baseline results were perfectly valid and didn't need recomputation.
+- **This rule exists because**: A full Step 2.2 rerun on 27M mixes took 5+ hours when only the new track results (~30% of compute) were actually needed. The existing baseline results were perfectly valid and didn't need recomputation.
 
 ### Optimizer Run Discipline (Critical — Token Budget Protection)
-- **Step 1 (physics) runs are expensive** — they cost compute time AND user tokens. A stale run that gets thrown away wastes both. Treat every Step 1 run as a high-value operation that must succeed. Steps 2–9 are cheap and can be re-run freely.
+- **Step 1 (physics) runs are expensive** — they cost compute time AND user tokens. A stale run that gets thrown away wastes both. Treat every Step 1 run as a high-value operation that must succeed. Steps 2–7 are cheap and can be re-run freely.
 - **NEVER start a Step 1 run while decisions are still being discussed.** The optimizer must reflect ALL decisions made up to the point of launch.
 - **Pre-run gate**: Before launching Step 1, explicitly verify:
   1. All decisions from the current conversation have been implemented in the optimizer code
@@ -208,7 +231,7 @@
 ### Session Start Checklist
 1. **Read SPEC.md first** — it contains every design decision, cost table, and implementation detail
 2. **Read this file (CLAUDE.md)** — it contains all user preferences and project context
-3. **Install dependencies**: `pip install numba` — Numba JIT is required for fast vectorized cost evaluation. Always install at the start of every session (environments don't persist). **NEVER run any optimizer script (step1-3, temp scripts, post-processing) without first verifying Numba is installed** (`python3 -c "from numba import njit; print('OK')"`). Running without Numba falls back to numpy and is 10-50× slower.
+3. **Install dependencies**: `pip install numba` — Numba JIT is required for fast vectorized cost evaluation. Always install at the start of every session (environments don't persist). **NEVER run any optimizer script (steps 1-2, temp scripts, post-processing) without first verifying Numba is installed** (`python3 -c "from numba import njit; print('OK')"`). Running without Numba falls back to numpy and is 10-50× slower.
 4. **Check the todo list** or review git log to see what's been completed
 5. **Confirm which branch you're on** — develop on the designated branch for your task
 
@@ -232,7 +255,7 @@
 
 ## Architecture Overview
 
-- **Pipeline**: 6-step optimization pipeline (see Pipeline Architecture above) — 40+ Python scripts
+- **Pipeline**: 8-step optimization pipeline (Steps 0–7, see Pipeline Architecture above) — 40+ Python scripts
 - **Dashboard**: 20+ interactive HTML pages in `dashboard/`
 - **Homepage**: `dashboard/index.html` — scrollytelling landing page with key findings
 - **Cost Optimizer**: `dashboard/dashboard.html` — interactive optimizer with all sensitivity toggles
@@ -244,7 +267,7 @@
 - **Methodology**: `dashboard/optimizer_methodology.html` — technical specs only
 - **Research Paper**: `dashboard/research_paper.html` — full standalone paper with regional deep-dives
 - **Data**: `data/` — EIA hourly profiles, eGRID emission rates, fossil mix data, pipeline outputs
-- **Results**: `dashboard/js/shared-data.js` — pre-computed dashboard data (Step 6 output)
+- **Results**: `dashboard/js/shared-data.js` — pre-computed dashboard data (Step 7 output)
 
 ## Site Architecture Intent
 

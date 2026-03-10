@@ -5,44 +5,47 @@ Every workflow creates a fresh branch, commits results, and opens a PR.
 
 ## Naming Convention
 
-- **`stepN-description.yml`** — Core pipeline steps (run in order)
-- **`stepNx-description.yml`** — Sub-step workflows (e.g., step5a, step5b)
+- **`stepN-description.yml`** — Pipeline steps (N = major step number)
+- **`stepN-Na-description.yml`** — Sub-step workflows (e.g., step4-1b)
 - **`lmp-calibration.yml`** — Standalone utility (not a pipeline step)
+
+**Step numbering**: `.1/.2/.3` = sequential sub-steps. `A/B/C` = parallel scripts.
 
 ## Pipeline Order
 
-Run these in sequence. Each step depends on the output of the previous step.
+Run these in sequence. Steps at the same level with A/B suffixes can run in parallel.
 
-| # | Workflow | Display Name | What It Does | Inputs |
-|---|----------|-------------|--------------|--------|
+| Step | Workflow | Display Name | What It Does | Inputs |
+|------|----------|-------------|--------------|--------|
 | 0 | `step0-fetch-lmp-data.yml` | **Step 0: Fetch Actual LMP Data** | Fetches actual DA hourly LMP from ISO APIs via gridstatus. | ISO, year, force |
 | 0 | `step0-fetch-offshore-wind.yml` | **Step 0: Fetch Offshore Wind** | Fetches offshore wind profiles from NREL Wind Toolkit API. | — |
-| 1a | `step1a-scored-database.yml` | **Step 1A: Build Scored Mix Database** | Generates all resource fraction combos and scores them → `coarse_cache.parquet`. | ISO, **script** (generate-mixes / score-mixes), chunk_size, force flags |
-| 1b | `step1b-zone-search.yml` | **Step 1B: Zone-Based Fine Search** | Zone-based fine search around PFS boundary. | ISO, thresholds |
-| 1c | `step1c-storage-refinement.yml` | **Step 1C: Storage Refinement** | Fine-grid storage refinement for step1b gaps. | ISO, thresholds |
-| 2 | `step2-efficient-frontier.yml` | **Step 2: Efficient Frontier** | EF filter. | ISO, target_mixes, dry_run |
-| 3 | `step3-cost-optimization.yml` | **Step 3: Cost Optimization** | Vectorized cost optimization across 5,832 sensitivity combos. 3 tracks. | ISO, **track**, sensitivity_mode |
-| 4 | `step4-dispatch-cache.yml` | **Step 4: Build Dispatch Cache** | Pre-computes 8760-hour dispatch for all unique mixes per ISO. | ISO |
+| 1.1 | `step1-1-scored-database.yml` | **Step 1.1: Build Scored Mix Database** | Generates all resource fraction combos and scores them. | ISO, script, chunk_size, force |
+| 1.2–1.3 | `step1-2-3-zone-floor.yml` | **Step 1.2-1.3: Zone Search + Floor PFS** | Zone-based fine search + floor-aware PFS. | ISO, thresholds |
+| 1.4–1.5 | `step1-4-5-fine-storage.yml` | **Step 1.4-1.5: Fine Grid + Storage Refinement** | Fine-grid PFS + storage gap filling. | ISO, thresholds |
+| 2.1 | `step2-1-efficient-frontier.yml` | **Step 2.1: Efficient Frontier** | EF filter. | ISO, target_mixes, dry_run |
+| 2.2 | `step2-2-cost-optimization.yml` | **Step 2.2: Cost Optimization** | Vectorized cost optimization (5,832 combos × 3 tracks). | ISO, track, sensitivity_mode |
+| 3A | `step3a-dispatch-cache.yml` | **Step 3A: Build Dispatch Cache** | Pre-computes 8760-hour dispatch for all unique mixes. | ISO |
+| 3B | `step3b-mac-queue.yml` | **Step 3B: MAC Queue** | MAC-optimized consequential queue + Scenario A export. | ISO |
 
-## Analysis Workflows (Steps 5–9)
+## Analysis Workflows (Steps 4–7)
 
-Post-processing analysis pipelines. Steps 5A–5F can run in parallel after Step 4.
-Steps 6–8 depend on Step 5 outputs. Step 9 runs last.
+Post-processing analysis pipelines. Step 4.1 scripts can run in parallel after Steps 2/3.
+Steps 5–6 depend on Step 4 outputs. Step 7 runs last.
 
-| # | Workflow | Display Name | What It Does | Scripts |
-|---|----------|-------------|--------------|---------|
-| 5A | `step5a-compute-co2.yml` | **Step 5A: Compute CO₂** | Dispatch-stack CO₂ emissions. **Run before Step 6.** | `step5a_compute_co2.py` |
-| 5B | `step5b-compute-lmp.yml` | **Step 5B: Compute LMP** | Synthetic 8760-hour LMP per ISO × threshold × fuel level. | `step5b_compute_lmp_prices.py` |
-| 5C | `step5c-dashboard-update.yml` | **Step 5C: Dashboard Day Profiles** | 24-hour representative day profiles per unique mix. | `step5c_compress_day_profiles.py` |
-| 5D | `step5d-consequential-queue.yml` | **Step 5D: Consequential Deployment Queue** | Cross-regional deployment path under consequential accounting. | `step5d_deployment_queue.py` |
-| 5E | `step5e-track-analysis.yml` | **Step 5E: Track Analysis** | Export tracks + track cost envelopes (P10/P50/P90). | `step5e_export_tracks.py`, `step6c_analyze_tracks.py` |
-| 5F | `step5f-storage-analysis.yml` | **Step 5F: Storage Analysis** | Battery/LDES utilization, dispatch patterns, capacity factors. | `step5f_analyze_storage.py` |
-| 6 | `step6-derived-analytics.yml` | **Step 6: Derived Analytics** | MAC stats + Optimal targets. | `step6a_compute_mac_stats.py`, `step6b_compute_optimal_targets.py` |
-| 5D-MAC | `step5d-mac-queue.yml` | **Step 5D: MAC Queue** | MAC-optimized consequential queue + Scenario A export. | `step5d_mac_queue.py` |
-| 7 | `step7-scenario-comparison.yml` | **Step 7: Scenario Comparison** | Scenario B + Compare (Scenario A from MAC queue). | `step7b_scenario_hourly.py`, `step7c_scenario_comparison.py` |
-| 8 | `step8-procurement-strategies.yml` | **Step 8: Procurement Strategies** | 10 strategy variants → combined dashboard JS. | `step8a_strategy_consequential.py`, `step8b_strategy_hourly.py`, `step8c_strategy_annual.py` |
-| 8D | `step8d-wrights-law.yml` | **Step 8D: Wright's Law Curves** | FOAK→NOAK learning curve projections. | `step8d_wrights_law_curves.py` |
-| 9 | `step9-generate-shared-data.yml` | **Step 9: Generate Shared Data** | Consolidates all results into `shared-data.js`. **Run this last.** | `step9a_generate_shared_data.py` |
+| Step | Workflow | Display Name | What It Does | Scripts |
+|------|----------|-------------|--------------|---------|
+| 4 | `step4-derived-analytics.yml` | **Step 4: Derived Analytics** | MAC stats + optimal targets + building blocks + resource density. | `step4_1c_*.py`, `step4_1d_*.py`, `step4_1f_*.py`, `step4_2a_*.py` |
+| 4.1B | `step4-1b-day-profiles.yml` | **Step 4.1B: Compress Day Profiles** | 24-hour representative day profiles. | `step4_1b_compress_day_profiles.py` |
+| 4 | `step4-tracks.yml` | **Step 4: Track Analysis** | Export tracks + track cost envelopes. | `step4_1e_export_tracks.py`, `step4_2c_analyze_tracks.py` |
+| 4.2B | `step4-2b-storage-analysis.yml` | **Step 4.2B: Storage Analysis** | Battery/LDES utilization, dispatch patterns. | `step4_2b_analyze_storage.py` |
+| 5 | `step5-scenarios.yml` | **Step 5: Scenarios** | Scenario B + Compare (Scenario A from MAC queue). | `step5_1_scenario_hourly.py`, `step5_2a_scenario_comparison.py` |
+| 5 | `step5-procurement.yml` | **Step 5: Procurement Strategies** | 10 strategy variants → combined dashboard JS. | `step5_2b_*.py`, `step5_2c_*.py`, `step5_2d_*.py` |
+| 5.2E | `step5-2e-wrights-law.yml` | **Step 5.2E: Wright's Law Learning Curves** | FOAK→NOAK learning curve projections. | `step5_2e_wrights_law_curves.py` |
+| 6.1 | `step6-1-smartargets-reference.yml` | **Step 6.1: SMARTargets** | Regional SMARTargets — Reference scenario. | `step6_1_smartargets.py` |
+| 6.1 | `step6-1-smartargets-power-nz.yml` | **Step 6.1: SMARTargets — Power Sector NZ** | Regional SMARTargets — Power Sector NZ. | `step6_1_smartargets.py` |
+| 6.1 | `step6-1-smartargets-economy-nz.yml` | **Step 6.1: SMARTargets — Economy-Wide NZ** | Regional SMARTargets — Economy-Wide NZ. | `step6_1_smartargets.py` |
+| 6.1 | `step6-1-smartargets-quick-transition.yml` | **Step 6.1: SMARTargets — Quick Transition** | Regional SMARTargets — Quick Transition. | `step6_1_smartargets.py` |
+| 7 | `step7-dashboard-data.yml` | **Step 7: Dashboard Data** | Consolidates all results into `shared-data.js`. **Run this last.** | `step7_1a_generate_shared_data.py` |
 
 ## Utilities
 
@@ -64,41 +67,36 @@ All workflows accept these standard inputs:
 - **`script`** — Which specific script to run (ALL runs the full sequence)
 
 Additional inputs on specific workflows:
-- **`thresholds`** — Comma-separated threshold list or "all" (Step 1B)
-- **`track`** — Track selector: baseline, newbuild, cost-to-replace (Step 3)
-- **`strategy`** — Strategy family selector (Step 8)
-- **`fuel_level`** — Fuel price level: L/M/H (Step 5B)
+- **`thresholds`** — Comma-separated threshold list or "all" (Step 1.2–1.5)
+- **`track`** — Track selector: baseline, newbuild, cost-to-replace (Step 2.2)
+- **`strategy`** — Strategy family selector (Step 5)
+- **`fuel_level`** — Fuel price level: L/M/H (Step 4.1A)
 
 ## Typical Usage Patterns
 
 ### "I just want to update the Optimizer Dashboard"
 ```
-Step 5C → Step 9
+Step 4.1B → Step 7
 ```
 
 ### "I just want to update the Abatement page"
 ```
-Step 5A (if CO₂ needs refresh) → Step 6 → Step 9
-```
-
-### "I just want to update the LMP page"
-```
-Step 5B → Step 9
+Step 4.1A (if CO₂ needs refresh) → Step 4 (derived analytics) → Step 7
 ```
 
 ### "I just want to regenerate shared-data.js and deploy"
 ```
-Step 9
+Step 7
 ```
 
 ### "I changed cost assumptions and need to refresh everything"
 ```
-Step 3 → Step 4 → Step 5A → Steps 5B + 5C + 6 + 7 (parallel) → Step 9
+Step 2.2 → Step 3 → Step 4 (parallel) → Step 5+6 → Step 7
 ```
 
 ### "Full pipeline from scratch"
 ```
-Step 0 (optional) → Step 1A → Step 1B → Step 1C → Step 2 → Step 3 → Step 4 → Steps 5A–5F (parallel) → Steps 6–8 → Step 9
+Step 0 → Step 1.1 → 1.2–1.3 → 1.4–1.5 → Step 2.1 → 2.2 → Step 3A ∥ 3B → Step 4 → Step 5+6 → Step 7
 ```
 
 ### "I want to clear data directories before re-running a pipeline step"
@@ -112,7 +110,7 @@ Unified Data Directory Cleanup (dry_run=true first to preview, then dry_run=fals
 ```
 Squash Pipeline Branches (dry_run=true first to preview, then dry_run=false)
 ```
-- **`branch_pattern`** — Filter branches: `auto/` (all), `auto/.*step1c` (step 1c only)
+- **`branch_pattern`** — Filter branches: `auto/` (all), `auto/.*step1` (step 1 only)
 - **`merge_direct`** — `true` to merge straight to master, `false` (default) to open a PR
 - **`delete_branches`** — Cleans up merged remote branches (default: true)
 - **`close_prs`** — Auto-closes superseded PRs (default: true)
