@@ -344,22 +344,24 @@ Comprehensive code audit identified critical, high, and medium-severity issues. 
 ### M1: Weather-Year Sensitivity — Document Limitation
 **Issue**: Model uses 5-year averaged profiles but 2025 demand actuals. No P10/P50/P90 weather-year sensitivity.
 **Decision**: Document that profiles are 5-year average, no weather-year sensitivity exists. Add to future work (§21).
-**Status**: [ ] Documented
+**Status**: [x] Documented in §19.8 + §21.5
 
 ### M2: Battery Annualization — Trace and Document
 **Issue**: Battery cost uses static annualization (0.1270) regardless of cycles/year.
 **Decision**: User believes this is correct by design — PFS results are based on capacity as % of annual demand, enabling simplified capacity pricing rather than cycle-dependent LCOS. **Action**: Trace through code to confirm this is the case. If confirmed, update documentation to make the capacity-pricing rationale explicitly clear.
-**Status**: [ ] Code trace completed, [ ] Documentation updated
+**Status**: [x] Code trace completed, [x] Confirmed capacity-based by design
+
+**Trace results**: The 0.1270 factor = CRF (0.1019 at 8% WACC, 20yr life) + FOM (0.0251 at 2.5% of power component per NREL ATB). Battery capacity is specified as % of annual demand energy throughout the pipeline (`battery_dispatch_pct` in dispatch_utils line 454, step3a line 333). LCOE table values are in $/MWh per % of annual demand — e.g., CAISO Medium 4hr = $41,610 means 0.01% costs $4.16/MWh. Revenue credits (capacity market + arbitrage) subtracted in same units. Model correctly treats battery as firm capacity investment, not cycle-dependent dispatch. Existing §19.1 documents the LCOS limitation adequately.
 
 ### M3: Storage Dispatch Priority — Document as Lower Bound
 **Issue**: Fixed priority (4hr → 8hr → LDES → H2), window-based, no price signal.
 **Decision**: Document: "Greedy sequential dispatch represents operational lower bound on storage utilization."
-**Status**: [ ] Documented in §19
+**Status**: [x] Documented in §19.9
 
 ### M4: Demand Response / DSM — Add to Future Work
 **Issue**: No demand response, EV flexibility, or demand-side management modeled.
 **Decision**: Add to future work (§21): "DR/EV flexibility could reduce procurement costs 5-15% at high thresholds."
-**Status**: [ ] Added to §21
+**Status**: [x] Documented in §19.10 + §21.6
 
 ### M5: Wright's Law Learning Rates — Add Citations & Calibrate
 **Issue**: Learning rates (solar 28%, wind 14%, battery 18%) have no citations. Battery 18% may be aggressive as market matures.
@@ -384,7 +386,7 @@ Comprehensive code audit identified critical, high, and medium-severity issues. 
 ### M9: Geothermal Scope — Document CAISO-Only Rationale + Cap Citation
 **Issue**: Geothermal limited to CAISO only. 39 TWh cap needs citation.
 **Decision**: Document why CAISO-only (Salton Sea ~80% of near-term identified resources). Note other ISOs have marginal potential. Add USGS citation for 39 TWh cap. (Partially covered by existing §19.6 — enhance with cap citation.)
-**Status**: [ ] Cap citation added
+**Status**: [x] Cap citation added to §19.6 (USGS 2008 + CA Energy Commission 2021)
 
 ### L1: Code Quality Improvements
 **Decision**: Pursue three improvements:
