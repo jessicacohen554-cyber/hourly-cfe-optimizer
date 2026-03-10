@@ -1,12 +1,11 @@
-name: "Step 5C: Compress Day Profiles"
+name: "Step 3B: MAC Queue"
 
-# Computes 24-hour representative day profiles per unique mix:
-#   step5c_compress_day_profiles.py — compressed dispatch profiles for dashboard charts
+# Runs step5d_mac_queue.py — MAC-optimized consequential deployment queue.
+# Forward-stepping through thresholds with per-resource floor ratchets,
+# hybrid 8760-hour dispatch CO2 rescoring, and dual-floor (filter/cost) logic.
 #
-# iso=ALL fans out parallel matrix jobs, then merge job commits everything.
-# Prerequisite: Steps 3-5 complete (cost optimization + dispatch cache).
-# Output: data/step5-post-processing/compressed_day/
-# Note: Run Step 9 separately afterward to regenerate shared-data.js.
+# iso=ALL fans out parallel matrix jobs, then merges into one branch + PR.
+# Output: data/step5-post-processing/mac_queue/
 
 on:
   workflow_dispatch:
@@ -25,6 +24,28 @@ on:
           - NEISO
           - MISO
           - SPP
+      sensitivity:
+        description: 'Price sensitivity (blank = all 5)'
+        required: false
+        default: ''
+        type: choice
+        options:
+          - ''
+          - all_low
+          - all_med
+          - all_high
+          - high_vre_low_firm
+          - high_firm_low_vre
+      growth:
+        description: 'Demand growth level (blank = all 3)'
+        required: false
+        default: ''
+        type: choice
+        options:
+          - ''
+          - Low
+          - Medium
+          - High
       branch:
         description: 'Branch to checkout'
         required: false
@@ -32,7 +53,7 @@ on:
         type: string
 
 env:
-  BRANCH_PREFIX: step5c-dashboard
+  BRANCH_PREFIX: step5d-mac-queue
 
 jobs:
   prepare:
@@ -51,7 +72,7 @@ jobs:
   process:
     needs: prepare
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 240
     strategy:
       matrix:
         iso: ${{ fromJson(needs.prepare.outputs.matrix) }}
@@ -63,13 +84,6 @@ jobs:
         with:
           ref: ${{ inputs.branch || 'master' }}
 
-      - name: Verify upstream data exists
-        run: |
-          if [ ! -d "data/step3-cost-opt-parquets" ] || ! ls data/step3-cost-opt-parquets/*.parquet >/dev/null 2>&1; then
-            echo "ERROR: No step-3 parquets found."
-            exit 1
-          fi
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -79,31 +93,35 @@ jobs:
         run: pip install numpy numba pyarrow pandas scipy
 
       - name: Ensure output directories
-        run: mkdir -p data/step5-post-processing
+        run: mkdir -p data/step5-post-processing/mac_queue
 
-      - name: "Compressed Day — ${{ matrix.iso }}"
-        run: python scripts/step5c_compress_day_profiles.py --iso ${{ matrix.iso }}
-
-      - name: Scope output to current ISO only
+      - name: "MAC Queue — ${{ matrix.iso }}"
         run: |
-          find data/step5-post-processing/ -name "*.parquet" -o -name "*.json" | grep -v "${{ matrix.iso }}" | xargs rm -f 2>/dev/null || true
+          ARGS="--iso ${{ matrix.iso }}"
+          if [ -n "${{ inputs.sensitivity }}" ]; then
+            ARGS="$ARGS --sensitivity ${{ inputs.sensitivity }}"
+          fi
+          if [ -n "${{ inputs.growth }}" ]; then
+            ARGS="$ARGS --growth ${{ inputs.growth }}"
+          fi
+          echo "Running: python scripts/step3b_mac_queue.py $ARGS"
+          python scripts/step3b_mac_queue.py $ARGS
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: dashboard-${{ matrix.iso }}
-          path: data/step5-post-processing/
+          name: mac-queue-${{ matrix.iso }}
+          path: data/step5-post-processing/mac_queue/
           retention-days: 1
 
   merge:
     needs: [prepare, process]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 30
 
     permissions:
       contents: write
-
 
     steps:
       - name: Checkout repo
@@ -121,12 +139,17 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$TARGET_BRANCH"
 
-      - name: Download compressed-day artifacts
+      - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: dashboard-*
-          path: data/step5-post-processing/
+          pattern: mac-queue-*
+          path: data/step5-post-processing/mac_queue/
           merge-multiple: true
+
+      - name: Verify artifacts
+        run: |
+          echo "=== Downloaded artifacts ==="
+          find data/step5-post-processing/mac_queue/ -type f 2>/dev/null | head -50 || echo "  (no files found)"
 
       - name: Batched commit and push (per-ISO)
         run: |
@@ -158,7 +181,7 @@ jobs:
 
           for iso in $ISOS; do
             echo "--- Batching commit for $iso ---"
-            FILES=$(find data/step5-post-processing/ -name "*${iso}*" -type f 2>/dev/null || true)
+            FILES=$(find data/step5-post-processing/mac_queue/ -name "*${iso}*" -type f 2>/dev/null || true)
             if [ -z "$FILES" ]; then
               echo "  No files for $iso — skipping"
               continue
@@ -170,7 +193,7 @@ jobs:
             fi
             BATCH_MB=$(du -cm $FILES | tail -1 | cut -f1)
             echo "  Staging ~${BATCH_MB} MB for $iso"
-            git commit -m "Step 5C Day Profiles: ${iso} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git commit -m "Step 5D MAC Queue: ${iso} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             if push_with_retry "$iso"; then
               PUSHED=true
             else
@@ -180,21 +203,20 @@ jobs:
                 FNAME=$(basename "$f")
                 git add -f "$f"
                 if git diff --cached --quiet; then continue; fi
-                git commit -m "Step 5C Day Profiles: ${iso} ${FNAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                git commit -m "Step 5D MAC Queue: ${iso} ${FNAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
                 if push_with_retry "$FNAME"; then PUSHED=true; else git reset HEAD~1; fi
               done
             fi
           done
 
-          # Remaining post-processing files
-          git add -f data/step5-post-processing/ 2>/dev/null || true
+          # Summary JSON + remaining mac_queue files
+          git add -f data/step5-post-processing/mac_queue/ 2>/dev/null || true
           if ! git diff --cached --quiet; then
             echo "--- Staging remaining files ---"
-            git commit -m "Step 5C Day Profiles: remaining — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            if push_with_retry "remaining"; then PUSHED=true; else git reset HEAD~1; fi
+            git commit -m "Step 5D MAC Queue: summary + scenario A export — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            if push_with_retry "summary"; then PUSHED=true; else git reset HEAD~1; fi
           fi
 
           if [ "$PUSHED" = "false" ]; then
             echo "No changes were pushed"
           fi
-

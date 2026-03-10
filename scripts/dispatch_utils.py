@@ -2,7 +2,7 @@
 """
 Shared Dispatch Utilities — Single source of truth for hourly dispatch reconstruction.
 ======================================================================================
-Extracted from step5a_compute_co2.py to avoid duplicating dispatch logic between the CO2
+Extracted from step4_1a_fossil_dispatch.py to avoid duplicating dispatch logic between the CO2
 model and the LMP pricing module. Both import from here.
 
 Provides:

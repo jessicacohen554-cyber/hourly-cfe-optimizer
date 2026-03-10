@@ -1,11 +1,8 @@
-name: "Step 10C: SMARTargets — AT Economy-Wide NZ"
+name: "Step 6.1: SMARTargets"
 
-# Ambitious Transition: Economy-wide net-zero emission constraint.
-# Tighter cap — power sector must overachieve (cheapest to abate).
-# Trajectory: 2030=35%, 2035=15%, 2040=8%, 2045=3%, 2050=0%.
-# Electrification drives High demand growth.
+# Runs SMARTargets V1 market simulation for reference scenarios (R1–R4).
 #
-# Prerequisite: Step 3 cost optimization parquets + data/egrid_2023_baseline_emissions.json
+# Prerequisite: Step 3 cost optimization parquets must exist.
 # Output: data/step10-smartargets/smartargets_{scenario}.parquet + _summary.json
 
 on:
@@ -18,8 +15,10 @@ on:
         type: choice
         options:
           - ALL
-          - AT3
-          - AT4
+          - R1
+          - R2
+          - R3
+          - R4
       iso:
         description: 'ISO region (or ALL)'
         required: true
@@ -41,10 +40,10 @@ on:
         type: string
 
 env:
-  BRANCH_PREFIX: step10c-smartargets-economy-nz
+  BRANCH_PREFIX: step10a-smartargets
 
 jobs:
-  smartargets-economy-nz:
+  smartargets-reference:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -75,9 +74,6 @@ jobs:
             echo "ERROR: No step-3 parquets found. Run Step 3 first."
             exit 1
           fi
-          if [ ! -f "data/egrid_2023_baseline_emissions.json" ]; then
-            echo "WARNING: eGRID baseline not found — will use hardcoded fallback values"
-          fi
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -93,19 +89,21 @@ jobs:
       - name: Build CLI arguments
         run: |
           ARGS=""
+          # Scenarios
           if [ "${{ inputs.scenario }}" = "ALL" ]; then
-            ARGS="--scenarios AT3 AT4"
+            ARGS="--scenarios R1 R2 R3 R4"
           else
             ARGS="--scenarios ${{ inputs.scenario }}"
           fi
+          # ISOs
           if [ "${{ inputs.iso }}" != "ALL" ]; then
             ARGS="$ARGS --isos ${{ inputs.iso }}"
           fi
           echo "SMARTARGETS_ARGS=$ARGS" >> "$GITHUB_ENV"
-          echo "Running: python scripts/step10_smartargets.py $ARGS"
+          echo "Running: python scripts/step6_1_smartargets.py $ARGS"
 
       - name: Run SMARTargets simulation
-        run: python scripts/step10_smartargets.py ${{ env.SMARTARGETS_ARGS }}
+        run: python scripts/step6_1_smartargets.py ${{ env.SMARTARGETS_ARGS }}
 
       - name: Commit and push results
         run: |
@@ -129,7 +127,7 @@ jobs:
 
           git add -f data/step10-smartargets/
           if ! git diff --cached --quiet; then
-            git commit -m "Step 10C SMARTargets Economy NZ: ${{ inputs.scenario }} × ${{ inputs.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git commit -m "Step 10A SMARTargets: ${{ inputs.scenario }} × ${{ inputs.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             push_with_retry "smartargets-results"
           else
             echo "No changes to commit"

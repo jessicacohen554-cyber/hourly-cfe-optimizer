@@ -1,4 +1,4 @@
-name: "Step 7: Scenario Comparison"
+name: "Step 5: Scenarios"
 
 # Runs scenario scripts to populate the Scenarios comparison page:
 #   1. Scenario A: READ from step5d MAC queue (data/step5-post-processing/mac_queue/scenario_a_*.json)
@@ -110,7 +110,7 @@ jobs:
         run: mkdir -p data/step5-post-processing
 
       - name: "Scenario B (Hourly Matching) — ${{ matrix.iso }}"
-        run: python scripts/step7b_scenario_hourly.py --iso ${{ matrix.iso }}
+        run: python scripts/step5_1_scenario_hourly.py --iso ${{ matrix.iso }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -171,7 +171,7 @@ jobs:
       - name: "Scenario Comparison — all ISOs"
         run: |
           ISO_LIST="${{ needs.prepare.outputs.iso_list }}"
-          python scripts/step7c_scenario_comparison.py --iso $ISO_LIST
+          python scripts/step5_2a_scenario_comparison.py --iso $ISO_LIST
 
       - name: Upload comparison artifact
         uses: actions/upload-artifact@v4

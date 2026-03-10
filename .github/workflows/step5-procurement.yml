@@ -1,4 +1,4 @@
-name: "Step 8: Procurement Strategies"
+name: "Step 5: Procurement Strategies"
 
 # Computes procurement strategy comparison for the Procurement Strategy page.
 # 10 strategy variants across 3 families:
@@ -102,7 +102,7 @@ jobs:
         run: |
           QUICK_FLAG=""
           if [ "${{ inputs.mode }}" = "quick" ]; then QUICK_FLAG="--quick"; fi
-          python scripts/step8a_strategy_consequential.py \
+          python scripts/step5_2b_strategy_consequential.py \
             --iso ${{ matrix.iso }} $QUICK_FLAG
 
       - name: "Strategy 2: Hourly — ${{ matrix.iso }}"
@@ -110,7 +110,7 @@ jobs:
         run: |
           QUICK_FLAG=""
           if [ "${{ inputs.mode }}" = "quick" ]; then QUICK_FLAG="--quick"; fi
-          python scripts/step8b_strategy_hourly.py \
+          python scripts/step5_2c_strategy_hourly.py \
             --iso ${{ matrix.iso }} $QUICK_FLAG
 
       - name: "Strategy 3: Annual — ${{ matrix.iso }}"
@@ -118,7 +118,7 @@ jobs:
         run: |
           QUICK_FLAG=""
           if [ "${{ inputs.mode }}" = "quick" ]; then QUICK_FLAG="--quick"; fi
-          python scripts/step8c_strategy_annual.py \
+          python scripts/step5_2d_strategy_annual.py \
             --iso ${{ matrix.iso }} $QUICK_FLAG
 
       - name: Upload artifact

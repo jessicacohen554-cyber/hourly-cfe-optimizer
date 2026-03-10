@@ -1,4 +1,4 @@
-name: "Step 1A: Build Scored Mix Database"
+name: "Step 1.1: Build Scored Mix Database"
 
 # Generates all resource fraction combos (1a) and scores them (1b) → coarse_cache.parquet.
 # This is the database that Step 1B (zone search) mines per-threshold.
@@ -88,10 +88,10 @@ jobs:
         if [ "$ISO" = "ALL" ]; then
           for iso in CAISO ERCOT PJM NYISO NEISO MISO SPP; do
             echo "=== Generating mixes for $iso ==="
-            python scripts/step1a_generate_mixes.py --iso "$iso" $FORCE_FLAG
+            python scripts/step1_1a_generate_mixes.py --iso "$iso" $FORCE_FLAG
           done
         else
-          python scripts/step1a_generate_mixes.py --iso "$ISO" $FORCE_FLAG
+          python scripts/step1_1a_generate_mixes.py --iso "$ISO" $FORCE_FLAG
         fi
 
     - name: "Stage 1b: Score mix combinations (chunked)"
@@ -105,10 +105,10 @@ jobs:
         if [ "$ISO" = "ALL" ]; then
           for iso in CAISO ERCOT PJM NYISO NEISO MISO SPP; do
             echo "=== Scoring mixes for $iso ==="
-            python scripts/step1b_score_mixes.py --iso "$iso" --chunk-size "$CHUNK" $FORCE_FLAG
+            python scripts/step1_1b_score_mixes.py --iso "$iso" --chunk-size "$CHUNK" $FORCE_FLAG
           done
         else
-          python scripts/step1b_score_mixes.py --iso "$ISO" --chunk-size "$CHUNK" $FORCE_FLAG
+          python scripts/step1_1b_score_mixes.py --iso "$ISO" --chunk-size "$CHUNK" $FORCE_FLAG
         fi
 
     - name: Commit and push scored database (batched by ISO)

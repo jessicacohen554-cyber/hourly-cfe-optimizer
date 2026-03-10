@@ -204,7 +204,13 @@
     // Pages archived: procurement_comparison.html (Legacy — superseded)
     // Pages merged: pipeline_map.html folded into pipeline.html
     const NAV_ITEMS = [
-        { label: 'About', href: 'about.html' },
+        {
+            label: 'About',
+            children: [
+                { label: 'Overview', href: 'about.html' },
+                { label: 'Methodology', href: 'optimizer_methodology.html' }
+            ]
+        },
         {
             label: 'Supply Side',
             children: [

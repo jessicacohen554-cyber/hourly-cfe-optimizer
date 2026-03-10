@@ -1,4 +1,4 @@
-name: "Step 6: Derived Analytics"
+name: "Step 4: Derived Analytics"
 
 # Runs derived analytics scripts sequentially:
 #   1. step6a_compute_mac_stats.py  — 6 MAC metrics, ANOVA decomposition, crossover analysis
@@ -104,25 +104,25 @@ jobs:
         if: ${{ inputs.script == 'ALL' || inputs.script == 'mac-stats' }}
         run: |
           echo "=== MAC Statistics (6 metrics, ANOVA, crossover) ==="
-          python scripts/step6a_compute_mac_stats.py
+          python scripts/step4_1c_compute_mac_stats.py
 
       - name: "2/4 — Compute Optimal Targets"
         if: ${{ inputs.script == 'ALL' || inputs.script == 'optimal-targets' }}
         run: |
           echo "=== Optimal CFE Targets (DAC crossover analysis) ==="
-          python scripts/step6b_compute_optimal_targets.py
+          python scripts/step4_1d_compute_optimal_targets.py
 
       - name: "3/4 — Extract Building Blocks Data"
         if: ${{ inputs.script == 'ALL' || inputs.script == 'building-blocks' }}
         run: |
           echo "=== Building Blocks (hourly profiles + resource mixes) ==="
-          python scripts/step6d_extract_building_blocks.py
+          python scripts/step4_1f_extract_building_blocks.py
 
       - name: "4/4 — Extract Resource Density Data"
         if: ${{ inputs.script == 'ALL' || inputs.script == 'resource-density' }}
         run: |
           echo "=== Resource Density (per-scenario strip plot data) ==="
-          python scripts/step6e_extract_resource_density.py
+          python scripts/step4_2a_extract_resource_density.py
 
       - name: Batched commit and push
         run: |

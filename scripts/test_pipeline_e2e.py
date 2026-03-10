@@ -205,7 +205,7 @@ def run_step2_test(results, isos, thresholds, max_mixes):
     print("="*70)
 
     try:
-        from step2_efficient_frontier import (
+        from step2_1_efficient_frontier import (
             load_and_process_iso, scan_iso_files,
             partition_by_threshold_band, write_per_iso_threshold_outputs,
             get_resource_cols as ef_get_resource_cols,
@@ -383,7 +383,7 @@ def cross_validate_cost_function(results, isos, thresholds):
     print("="*70)
 
     try:
-        from step3a_cost_optimization import (
+        from step2_2a_cost_optimization import (
             price_mix_batch, REGIONAL_DEMAND_TWH as S3_DEMAND,
             GRID_MIX_SHARES as S3_GRID,
         )
@@ -620,7 +620,7 @@ def validate_constants_consistency(results):
     print("="*70)
 
     try:
-        from step3a_cost_optimization import (
+        from step2_2a_cost_optimization import (
             REGIONAL_DEMAND_TWH as S3_DEMAND,
             GRID_MIX_SHARES as S3_GRID,
             WHOLESALE_PRICES as S3_WS,
