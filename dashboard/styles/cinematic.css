@@ -9,9 +9,11 @@
    text is always fully readable. No glassmorphism/backdrop-filter.
    ============================================================ */
 
-/* ========== DARK BODY FALLBACK ========== */
+/* ========== BODY FALLBACK ========== */
+/* Background image is a white/light circuit board pattern.
+   Fallback matches so text contrast is always correct. */
 body {
-    background: #0B1120 !important;
+    background: #F8F9FC !important;
 }
 
 /* ========== FIXED BACKGROUND CONTAINER ========== */
@@ -57,17 +59,17 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 .gradient-transition {
     background: linear-gradient(180deg,
         rgba(248,249,252,0.3) 0%,
-        rgba(11,17,32,0.04) 50%,
+        rgba(248,249,252,0.04) 50%,
         rgba(248,249,252,0.3) 100%) !important;
 }
 .section-transition-light-to-dark {
-    background: linear-gradient(180deg, rgba(255,255,255,0.0) 0%, #0B1120 100%) !important;
+    background: linear-gradient(180deg, rgba(255,255,255,0.0) 0%, rgba(248,249,252,1) 100%) !important;
 }
 .section-transition-dark-to-light {
-    background: linear-gradient(180deg, #0B1120 0%, rgba(255,255,255,0.0) 100%) !important;
+    background: linear-gradient(180deg, rgba(248,249,252,1) 0%, rgba(255,255,255,0.0) 100%) !important;
 }
 .section-transition-dark-to-gray {
-    background: linear-gradient(180deg, #0B1120 0%, rgba(248,249,252,0.0) 100%) !important;
+    background: linear-gradient(180deg, rgba(248,249,252,1) 0%, rgba(248,249,252,0.0) 100%) !important;
 }
 
 /* ========== DARK SECTION INSETS ========== */
@@ -157,14 +159,13 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 .content-section,
 .section-light,
 .story-panel,
-.hub-hero,
-.hub-hero-inner,
 .report-layout,
 .prose-body,
 .main-content,
 .content-wrap {
     background: transparent !important;
 }
+/* hub-hero keeps its navy gradient from ipp-transition.css */
 
 /* article.css hero-overview has a ::before radial gradient — hide it */
 .hero-overview::before {
@@ -322,10 +323,7 @@ hr.section-divider,
 }
 
 /* ========== IPP PAGE COMPONENTS ========== */
-.hub-hero,
-.hub-hero-inner {
-    background: transparent !important;
-}
+/* hub-hero + hub-hero-inner: NOT transparent — keeps navy gradient from ipp-transition.css */
 .hero-stat {
     background: #FFFFFF !important;
     border: 1px solid #E5E7EB !important;
@@ -639,27 +637,75 @@ section.report-section.panel-navy .report-section-number {
 }
 
 /* ========== SECTION TEXT ON TRANSPARENT BACKGROUNDS ========== */
-/* Text elements sitting directly in transparent section wrappers need light
-   colors so they're readable over the dark body (#0B1120). Cards inside
-   these sections keep dark-on-white — only direct-child headings change. */
+/* Background image is white/light circuit board — text on transparent
+   sections must be dark for readability. Cards keep dark-on-white as-is. */
 .content-section > .section-title,
 .story-section > .section-title,
 .story-section > h2.section-title,
 .content-section > h2.section-title {
-    color: #FFFFFF !important;
+    color: var(--navy) !important;
 }
 .content-section > .section-subtitle,
 .story-section > .section-subtitle {
-    color: rgba(255,255,255,0.85) !important;
+    color: var(--text-secondary) !important;
 }
 .story-section > .story-badge {
-    color: #FFFFFF;
-    background: rgba(255,255,255,0.12);
-    border-color: rgba(255,255,255,0.25);
+    color: var(--navy);
+    background: rgba(26,39,68,0.08);
+    border-color: rgba(26,39,68,0.15);
 }
 .dashboard-header h2 {
-    color: #FFFFFF !important;
+    color: var(--navy) !important;
 }
 .dashboard-header p {
-    color: rgba(255,255,255,0.85) !important;
+    color: var(--text-secondary) !important;
+}
+
+/* ========== HERO-OVERVIEW TEXT ON TRANSPARENT BACKGROUND ========== */
+/* scrollytell.css hero-overview text was white for navy gradient bg.
+   With transparent bg over white circuit board, flip to dark text. */
+.hero-text-block h2 {
+    color: var(--navy) !important;
+}
+.hero-text-block p {
+    color: var(--text-secondary) !important;
+}
+.hero-narrative-block h3 {
+    color: var(--navy) !important;
+}
+.hero-narrative-block p {
+    color: #475569 !important;
+}
+.hero-narrative-block .finding-highlight {
+    color: #15803d !important;
+    background: rgba(34,197,94,0.08) !important;
+    border-color: rgba(34,197,94,0.2) !important;
+}
+
+/* ========== ISO TILES ON TRANSPARENT BACKGROUND ========== */
+/* Originally semi-transparent white on dark bg. Now solid white panels. */
+.iso-tile {
+    background: #FFFFFF !important;
+    border: 1px solid #E5E7EB !important;
+    border-radius: 14px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+.iso-tile:hover {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    border-color: #D1D5DB;
+}
+.tile-region-label {
+    color: var(--text-muted) !important;
+}
+.tile-range {
+    color: var(--navy) !important;
+}
+.tile-range-label {
+    color: var(--text-muted) !important;
+}
+.tile-finding {
+    color: #475569 !important;
+}
+.tile-finding strong {
+    color: var(--navy) !important;
 }
