@@ -88,13 +88,15 @@
     <script src="js/chart-colors.js"></script>
     <script src="js/shared-header.js"></script>
     <script src="js/scroll-observer.js"></script>
+    <script src="js/shared-footer.js"></script>
+    <script src="js/shared-back-button.js"></script>
 </head>
 <body>
 
 <!-- TOP NAV (injected by nav.js) -->
 <nav id="topNav"></nav>
 <script src="js/nav.js"></script>
-<div style="background:var(--navy-dark);padding:8px 24px;"><a href="about.html" style="font-family:var(--font-heading);font-size:0.82rem;font-weight:600;color:rgba(255,255,255,0.75);text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;min-height:44px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to About</a></div>
+<div id="backBar" data-back-href="about.html" data-back-label="Back to About"></div>
 
 <header class="header" id="pageHeader">
     <div class="header-accent"></div>
@@ -512,7 +514,7 @@
     </p>
 </div>
 
-<div class="accent-bar"></div>
+<footer id="siteFooter" data-footer-note="The 8,760 Problem &mdash; Literature Review &amp; References"></footer>
 
 </body>
 </html>

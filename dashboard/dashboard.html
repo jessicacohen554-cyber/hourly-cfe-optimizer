@@ -13,6 +13,8 @@
 <script src="js/chart-colors.js"></script>
 <script src="js/shared-header.js"></script>
     <script src="js/scroll-observer.js"></script>
+    <script src="js/shared-footer.js"></script>
+    <script src="js/shared-back-button.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
@@ -108,7 +110,7 @@ body {
 <!-- TOP NAVIGATION BAR (injected by nav.js) -->
 <nav id="topNav"></nav>
 <script src="js/nav.js"></script>
-<div style="background:var(--navy-dark);padding:8px 24px;"><a href="about.html" class="back-link" style="font-family:var(--font-heading);font-size:0.82rem;font-weight:600;color:rgba(255,255,255,0.75);text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;min-height:44px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
+<div id="backBar" data-back-href="about.html" data-back-label="Back to Home"></div>
 
 <!-- HEADER / BANNER -->
 <header class="header">
@@ -116,7 +118,6 @@ body {
     <p class="subtitle">Optimizing clean energy procurement across 8,760 hours, seven power markets, and thousands of cost scenarios.</p>
     <div class="header-accent"></div>
 </header>
-<div class="bottom-banner"></div>
 
 <!-- PAGE TITLE & INTRO -->
 <div class="site-intro">
@@ -549,6 +550,8 @@ body {
     Analysis based on 8,760-hour dispatch modeling &bull; Storage: 4h duration, 85% round-trip efficiency &bull;
     CO&#8322; accounting follows hourly matching protocol
 </footer>
+
+<footer id="siteFooter" data-footer-note=""></footer>
 
 <script src="js/shared-data.js"></script>
 <script>

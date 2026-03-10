@@ -16,6 +16,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="js/shared-footer.js"></script>
 </head>
 <body>
 
@@ -509,20 +510,7 @@ new Chart(document.getElementById('carbonThresholdChart').getContext('2d'), {
 });
 </script>
 
-<footer class="page-footer">
-    <div class="footer-links">
-        <a href="about.html">About</a>
-        <a href="dashboard.html">Cost Optimizer</a>
-        <a href="gen_market_overview.html">Market Overview</a>
-        <a href="gen_policy_conditions.html">Policy &amp; Market</a>
-        <a href="gen_target_setting.html">Target Setting</a>
-        <a href="gen_regional_pathways.html">Regional Pathways</a>
-        <a href="ipp_climate_transition.html">IPP Deep Dives</a>
-        <a href="research_paper.html">Research Paper</a>
-    </div>
-    <p class="footer-note">Analysis based on EPA eGRID 2023, EIA data, MJ Bradley/ERM, company filings, IRA legislation, and hourly CFE optimizer modeling. &copy; 2026</p>
-</footer>
-<div class="bottom-banner"></div>
+<footer id="siteFooter" data-footer-note="Analysis based on EPA eGRID 2023, EIA data, MJ Bradley/ERM, company filings, IRA legislation, and hourly CFE optimizer modeling. &copy; 2026"></footer>
 
 <script src="js/cinematic-bg.js"></script>
 </body>

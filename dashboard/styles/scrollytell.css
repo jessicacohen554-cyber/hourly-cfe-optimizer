@@ -69,15 +69,7 @@
     border-radius: var(--radius-xl);
 }
 
-/* ========== ENERGY SPECTRUM DIVIDER ========== */
-.energy-spectrum-bar {
-    height: 3px;
-    background: linear-gradient(90deg,
-        var(--navy) 0%, var(--hydro) 15%, var(--wind) 35%,
-        var(--solar) 55%, var(--red) 80%, var(--red-dark) 100%);
-    border-radius: 2px;
-    opacity: 0.6;
-}
+/* energy-spectrum-bar: use canonical definition from shared.css */
 .story-divider-wrap {
     max-width: var(--max-content-wide);
     margin: 0 auto;
@@ -319,41 +311,7 @@
     text-transform: capitalize;
 }
 
-/* ========== CHART LEGEND (inline figure legends) ========== */
-.chart-legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px 16px;
-    justify-content: center;
-    padding: 8px 12px 2px;
-    margin-top: 4px;
-}
-.chart-legend-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-family: var(--font-data);
-    font-size: 0.7rem;
-    color: var(--text-dim);
-    white-space: nowrap;
-}
-.chart-legend-swatch { display: inline-block; flex-shrink: 0; }
-.swatch-line { width: 18px; height: 3px; border-radius: 1.5px; }
-.swatch-dashed { width: 18px; height: 0; border-top: 2px dashed; }
-.swatch-band { width: 18px; height: 10px; border-radius: 2px; border: 1px solid rgba(0,0,0,0.1); }
-.swatch-dot-line {
-    width: 18px; height: 3px; border-radius: 1.5px; position: relative;
-}
-.swatch-dot-line::after {
-    content: '';
-    position: absolute; top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: 5px; height: 5px; border-radius: 50%;
-    background: inherit; border: 1px solid rgba(0,0,0,0.5);
-}
-.chart-legend-divider {
-    width: 1px; height: 12px; background: rgba(0,0,0,0.1); align-self: center;
-}
+/* chart-legend + swatch styles: use canonical definitions from shared.css */
 
 /* ========== REGION TAG (ISO label pill) ========== */
 .region-tag {
@@ -945,14 +903,7 @@
     .conclusion-bottom-line { font-size: 1.05rem; }
 }
 
-/* ---- 600px: Chart legend smaller ---- */
-@media (max-width: 600px) {
-    .chart-legend { gap: 3px 8px; padding: 4px 4px 0; }
-    .chart-legend-item { font-size: 0.58rem; gap: 4px; }
-    .swatch-line, .swatch-dashed, .swatch-dot-line { width: 12px; }
-    .swatch-band { width: 12px; height: 7px; }
-    .chart-legend-divider { height: 10px; }
-}
+/* chart-legend responsive: use canonical rules from shared.css */
 
 /* ---- 480px: Compact mobile ---- */
 @media (max-width: 480px) {
@@ -965,11 +916,6 @@
     .hero-callout-card { min-width: 80px; padding: 16px 8px; border-radius: 12px; }
     .hero-callout-value { font-size: 1.6rem; }
     .hero-callout-label { font-size: 0.75rem; letter-spacing: 0.5px; }
-    .chart-legend { gap: 3px 6px; padding: 4px 2px 0; }
-    .chart-legend-item { font-size: 0.55rem; gap: 3px; }
-    .swatch-line, .swatch-dashed, .swatch-dot-line { width: 10px; }
-    .swatch-band { width: 10px; height: 6px; }
-    .chart-legend-divider { height: 8px; }
     .reliability-gauge-row { flex-wrap: wrap; gap: 8px; }
     .reliability-gauge { min-width: 70px; max-width: 80px; padding: 10px 6px; }
     .gauge-ring { width: 56px; height: 56px; }

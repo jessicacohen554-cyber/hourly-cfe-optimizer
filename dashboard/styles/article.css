@@ -8,19 +8,7 @@
 /* ========== OVERFLOW PREVENTION ========== */
 html, body { overflow-x: hidden; max-width: 100vw; }
 
-/* ========== FADE-IN SCROLL ANIMATION ========== */
-.fade-in {
-    opacity: 0;
-    transform: translateY(24px);
-    transition: opacity 0.7s ease-out, transform 0.7s ease-out;
-}
-.fade-in.visible {
-    opacity: 1;
-    transform: translateY(0);
-}
-@media (prefers-reduced-motion: reduce) {
-    .fade-in { opacity: 1; transform: none; transition: none; }
-}
+/* fade-in animation: use canonical definition from shared.css */
 
 /* ========== HERO OVERVIEW (light-bg article intro) ========== */
 .hero-overview {
@@ -246,30 +234,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     padding: 0 24px 48px;
 }
 
-/* ========== CHART LEGEND (line/band/dashed swatches) ========== */
-.chart-legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px 16px;
-    margin-top: 12px;
-    font-size: 0.7rem;
-    color: var(--text-dim);
-    font-family: var(--font-body);
-}
-.chart-legend-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    white-space: nowrap;
-}
-.chart-legend-swatch { display: inline-block; flex-shrink: 0; }
-.swatch-line { width: 18px; height: 3px; border-radius: 1.5px; }
-.swatch-band { width: 18px; height: 10px; border-radius: 2px; border: 1px solid rgba(0,0,0,0.1); }
-.swatch-dashed { width: 18px; height: 0; border-top: 2px dashed; }
-.chart-legend-divider {
-    width: 1px; height: 12px; background: rgba(0,0,0,0.1);
-    margin: 0 4px; align-self: center;
-}
+/* chart-legend + swatch styles: use canonical definitions from shared.css */
 
 /* ========== STAT BADGE (inline metric callout) ========== */
 .stat-badge {
@@ -721,15 +686,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 .section-dark .finding-label { color: rgba(255,255,255,0.92); }
 .section-dark .finding-desc { color: rgba(255,255,255,0.78); }
 
-/* ========== ENERGY SPECTRUM BAR ========== */
-.energy-spectrum-bar {
-    height: 3px;
-    background: linear-gradient(90deg, var(--navy) 0%, var(--hydro) 15%, var(--wind) 35%, var(--solar) 55%, var(--red) 80%, var(--red-dark) 100%);
-    border-radius: 2px;
-    margin: 0 auto;
-    max-width: var(--max-content);
-    opacity: 0.5;
-}
+/* energy-spectrum-bar: use canonical definition from shared.css */
 
 /* ========== REGION PILLS BAR (sticky ISO selector) ========== */
 .region-pills-bar {
@@ -888,10 +845,6 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     .synthesis-grid { grid-template-columns: 1fr; }
     .narrative-card { padding: 22px 18px; }
     .narrative-card h3 { font-size: 1.15rem; }
-    .chart-legend { gap: 4px 10px; }
-    .chart-legend-item { font-size: 0.62rem; }
-    .swatch-line, .swatch-dashed { width: 14px; }
-    .swatch-band { width: 14px; height: 8px; }
     .chart-narrative-wrap { grid-template-columns: 1fr; gap: 16px; }
     .chart-sticky { position: static; }
     .concept-grid { grid-template-columns: 1fr; }
@@ -917,10 +870,6 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     .synthesis-card { padding: 20px 16px; }
     .synthesis-card h3 { font-size: 1.1rem; }
     .synthesis-card p { font-size: 0.85rem; }
-    .chart-legend { gap: 3px 8px; }
-    .chart-legend-item { font-size: 0.58rem; gap: 4px; }
-    .swatch-line, .swatch-dashed { width: 12px; }
-    .swatch-band { width: 12px; height: 7px; }
     .hero-text h2 { font-size: 1.3rem; }
     .hero-text p { font-size: 0.85rem; }
     .counter-card { min-width: 80px; padding: 10px 8px; }
@@ -937,9 +886,5 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     .synthesis-card { padding: 16px 12px; }
     .synthesis-card h3 { font-size: 1rem; }
     .synthesis-card p { font-size: 0.82rem; line-height: 1.6; }
-    .chart-legend { gap: 3px 6px; }
-    .chart-legend-item { font-size: 0.55rem; gap: 3px; }
-    .swatch-line, .swatch-dashed { width: 10px; }
-    .swatch-band { width: 10px; height: 6px; }
     .hero-text h2 { font-size: 1.3rem; }
 }

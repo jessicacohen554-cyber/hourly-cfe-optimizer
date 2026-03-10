@@ -22,6 +22,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 <script src="js/smartargets-data.js"></script>
+<script src="js/shared-footer.js"></script>
 <style>
 /* body background overridden by cinematic.css */
 
@@ -185,14 +186,14 @@
     </div>
 
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px;">
-        <div class="narrative-box" style="border-left-color: #6366F1;">
+        <div class="narrative-box" style="border-left-color: var(--nuclear);">
             <strong>SMARTargets Aspirational Targets</strong><br>
             2030: −56% from baseline<br>
             2035: −82% from baseline<br>
             2050: Net-zero<br>
             <em style="font-size: 0.8rem; color: var(--text-dim);">Company-specific qualified targets may differ based on fleet composition and market constraints.</em>
         </div>
-        <div class="narrative-box" style="border-left-color: #E91E63;">
+        <div class="narrative-box" style="border-left-color: var(--ldes);">
             <strong>SBTi Power Sector v2</strong><br>
             2030: ~118 kg CO₂/MWh<br>
             2035: ~57 kg CO₂/MWh<br>
@@ -294,23 +295,7 @@
 
 </div>
 
-<!-- FOOTER -->
-<footer class="page-footer">
-    <div class="footer-inner">
-        <div class="footer-links">
-            <a href="about.html">About</a>
-            <a href="dashboard.html">Cost Optimizer</a>
-            <a href="gen_market_overview.html">Market Overview</a>
-            <a href="gen_policy_conditions.html">Policy & Market</a>
-            <a href="gen_target_setting.html">Target Setting</a>
-            <a href="gen_regional_pathways.html">Regional Pathways</a>
-            <a href="ipp_climate_transition.html">IPP Deep Dives</a>
-            <a href="research_paper.html">Research Paper</a>
-        </div>
-        <p class="footer-note">Analysis based on EPRI SMARTargets, SBTi Power Sector v2, EIA, eGRID, NREL ATB. © 2026</p>
-    </div>
-</footer>
-<div class="bottom-banner"></div>
+<footer id="siteFooter" data-footer-note="Analysis based on EPRI SMARTargets, SBTi Power Sector v2, EIA, eGRID, NREL ATB. © 2026"></footer>
 
 <script>
 Chart.defaults.plugins.datalabels = { display: false };

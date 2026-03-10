@@ -16,6 +16,7 @@
 <script src="js/nav.js"></script>
 <script src="js/shared-header.js"></script>
 <script src="js/scroll-observer.js"></script>
+<script src="js/shared-footer.js"></script>
 <style>
 body { background: var(--bg-page); }
 
@@ -494,8 +495,8 @@ body { background: var(--bg-page); }
     </div>
 
     <div class="strat-legend">
-        <div class="strat-legend-item"><div class="strat-legend-dot" style="background:#DC2626;"></div> 2A (All New Build)</div>
-        <div class="strat-legend-item"><div class="strat-legend-dot" style="background:#D97706;"></div> 2B (Grid Baseline)</div>
+        <div class="strat-legend-item"><div class="strat-legend-dot" style="background:var(--red-dark);"></div> 2A (All New Build)</div>
+        <div class="strat-legend-item"><div class="strat-legend-dot" style="background:var(--geothermal);"></div> 2B (Grid Baseline)</div>
         <div class="strat-legend-item"><div class="strat-legend-dot" style="background:#16A34A;"></div> 2C (SSS + Tranches)</div>
         <div class="strat-legend-item" id="rolloffLegend" style="display:none;"><div class="strat-legend-dot" style="background:#16A34A; opacity:0.5; border: 2px dashed #16A34A;"></div> 2C Rolloff</div>
     </div>
@@ -637,16 +638,7 @@ body { background: var(--bg-page); }
 </div><!-- /.content -->
 
 <!-- FOOTER -->
-<footer class="page-footer">
-    <p style="margin:0;">The 8,760 Problem &mdash; Hourly CFE Matching Strategy Analysis</p>
-    <div class="footer-links" style="margin-top:8px;">
-        <a href="index.html">Home</a> &middot;
-        <a href="dashboard.html">Cost Optimizer</a> &middot;
-        <a href="scenario_comparison.html">Strategy 1B vs 2C</a> &middot;
-        <a href="procurement_strategies.html">Procurement Strategies</a>
-    </div>
-</footer>
-<div class="bottom-banner"></div>
+<footer id="siteFooter" data-footer-note="The 8,760 Problem &mdash; Hourly CFE Matching Strategy Analysis"></footer>
 
 <!-- DATA -->
 <script src="js/hourly-comparison-data.js"></script>
