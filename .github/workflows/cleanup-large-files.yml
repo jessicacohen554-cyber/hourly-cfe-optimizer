@@ -5,15 +5,16 @@ name: Cleanup Large File Blobs from History (Protected)
 # plus any *.parquet, *.npz, and *.json files anywhere in the repo.
 #
 # How it works:
-#   1. Record the HEAD tree hash (for post-cleanup integrity verification)
-#   2. Snapshot all blob SHAs in the current HEAD tree (the "protected set")
+#   1. Record the master HEAD tree hash (for post-cleanup integrity verification)
+#   2. Snapshot all blob SHAs live in ANY branch HEAD or tag (the "protected set")
 #   3. Walk all history to find blobs under data/ or matching target extensions
 #   4. Only blobs NOT in the protected set are candidates for removal
 #   5. Strip dead blobs via git-filter-repo --strip-blobs-with-ids
-#   6. Verify HEAD tree hash is unchanged after rewrite
+#   6. Verify master HEAD tree hash is unchanged after rewrite
 #
-# Protected files include ALL live files: EIA 930 profiles, eGRID data,
-# pipeline parquets (step1–step5), dashboard JSON results, and everything else in HEAD.
+# Protected files include ALL live files across ALL refs: EIA 930 profiles,
+# eGRID data, pipeline parquets (step1–step5), dashboard JSON results,
+# feature branch files, and everything else reachable from any branch tip or tag.
 #
 # WARNING: This rewrites history. All collaborators must re-clone afterward.
 
@@ -81,27 +82,55 @@ jobs:
       - name: Build protected blob set and record HEAD tree hash
         id: protect
         run: |
-          echo "=== Building protected blob set (all blobs live in HEAD) ==="
+          echo "=== Building protected blob set (all blobs live in ANY branch HEAD) ==="
 
           # Record HEAD tree hash for post-cleanup integrity verification
           HEAD_TREE=$(git rev-parse HEAD^{tree})
           echo "HEAD tree hash: $HEAD_TREE"
           echo "head_tree=$HEAD_TREE" >> "$GITHUB_OUTPUT"
 
-          # Every blob currently in the working tree — these are sacred
+          # Protect blobs from ALL branch tips — not just master.
+          # This is critical because --force --all pushes every branch,
+          # so stripping a blob live in another branch would corrupt it.
           PROTECTED_BLOBS=$(mktemp)
-          git ls-tree -r HEAD | awk '{print $3}' | sort -u > "$PROTECTED_BLOBS"
-          protected_count=$(wc -l < "$PROTECTED_BLOBS")
-          echo "Protected blob SHAs (live in HEAD): $protected_count"
 
-          # Also show what's protected in data/ specifically
+          # Start with master HEAD (the primary branch)
+          git ls-tree -r HEAD | awk '{print $3}' >> "$PROTECTED_BLOBS"
+
+          # Add blobs from every other branch tip
+          BRANCH_COUNT=1
+          for ref in $(git for-each-ref --format='%(refname)' refs/heads/ refs/remotes/origin/ | grep -v HEAD); do
+            # Skip master since we already included it
+            branch_name=$(basename "$ref")
+            if [ "$branch_name" = "master" ] || [ "$branch_name" = "main" ]; then
+              continue
+            fi
+            git ls-tree -r "$ref" 2>/dev/null | awk '{print $3}' >> "$PROTECTED_BLOBS" || true
+            BRANCH_COUNT=$((BRANCH_COUNT + 1))
+          done
+
+          # Also protect blobs reachable from all tags
+          TAG_COUNT=0
+          for tag in $(git for-each-ref --format='%(refname)' refs/tags/); do
+            git ls-tree -r "$tag" 2>/dev/null | awk '{print $3}' >> "$PROTECTED_BLOBS" || true
+            TAG_COUNT=$((TAG_COUNT + 1))
+          done
+
+          # Deduplicate
+          sort -u -o "$PROTECTED_BLOBS" "$PROTECTED_BLOBS"
+          protected_count=$(wc -l < "$PROTECTED_BLOBS")
+          echo "Protected blob SHAs (live in any ref): $protected_count"
+          echo "  Branches scanned: $BRANCH_COUNT"
+          echo "  Tags scanned: $TAG_COUNT"
+
+          # Also show what's protected in data/ specifically (master HEAD only for readability)
           PROTECTED_DATA=$(mktemp)
           git ls-tree -r HEAD -- data/ | awk '{print $3, $4}' > "$PROTECTED_DATA"
           protected_data_count=$(wc -l < "$PROTECTED_DATA")
-          echo "Protected data/ files: $protected_data_count"
+          echo "Protected data/ files (master HEAD): $protected_data_count"
           echo ""
 
-          echo "--- Protected data/ files by directory ---"
+          echo "--- Protected data/ files by directory (master HEAD) ---"
           for dir in data/eia-930 data/step1-pfs data/step1-pfs \
                      data/step2.1-ef data/step2.2-cost \
                      data/step4-analysis; do
@@ -154,14 +183,13 @@ jobs:
           KEPT_SHAS=$(mktemp)
           comm -12 "$TARGET_SHAS" "$PROTECTED_BLOBS" > "$KEPT_SHAS"
 
-          # Now filter the full blob list by these SHA sets
-          while IFS=' ' read -r sha size path; do
-            if grep -qF "$sha" "$REMOVABLE_SHAS"; then
-              echo "$sha $size $path" >> "$REMOVABLE"
-            elif grep -qF "$sha" "$KEPT_SHAS"; then
-              echo "$sha $size $path" >> "$KEPT"
-            fi
-          done < "$TARGET_BLOBS"
+          # Now filter the full blob list by these SHA sets using awk for O(n) performance
+          # (The previous while+grep approach was O(n²) and extremely slow on large repos)
+          awk -v removable_file="$REMOVABLE" -v kept_file="$KEPT" '
+            FILENAME == ARGV[1] { removable[$1]=1; next }
+            FILENAME == ARGV[2] { kept[$1]=1; next }
+            { if($1 in removable) print >> removable_file; else if($1 in kept) print >> kept_file }
+          ' "$REMOVABLE_SHAS" "$KEPT_SHAS" "$TARGET_BLOBS"
 
           # Ensure files exist even if empty
           touch "$REMOVABLE" "$KEPT"
