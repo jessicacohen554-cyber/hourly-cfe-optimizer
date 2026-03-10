@@ -390,16 +390,13 @@ SSS_NEW_BUILD_FRACTION = 0.40  # 40% of new RPS build goes to SSS, 60% to mercha
 
 NUCLEAR_POLICY_ROLLOFF = {
     # (year_effective, twh_lost_from_sss) — cumulative within each ISO
+    # Only PJM has confirmed rolloff exposure:
     'PJM': [
         (2026, 15.0),   # NJ ZEC expires (Salem + Hope Creek subsidy ends)
         (2028, 50.0),   # IL CMC expires (Exelon fleet: Byron, Braidwood, Quad Cities)
     ],
-    'NYISO': [
-        (2030, 42.0),   # NY ZEC Tier 3 expires ~2029 (FitzPatrick, Nine Mile, Ginna)
-    ],
-    'MISO': [
-        (2028, 15.0),   # IL CMC MISO-zone plants (Quad Cities share, Dresden, LaSalle)
-    ],
+    # NYISO: NY renewing ZEC Tier 3 — stable, no rolloff
+    # MISO: IL CMC plants dual-registered PJM/MISO, but impact captured via PJM entry
     # CAISO: Diablo Canyon extended to 2030 under SB 846, not modeled as roll-off
     # NEISO: Millstone under CT CCEF (extended), stable
     # SPP: Wolf Creek — no state subsidy, market-based, stable
