@@ -172,8 +172,11 @@ THRESHOLD_YEAR_MAP = {
 }
 
 # DAC cost trajectories ($/tCO₂, 2024 USD)
+# Sources: Rubin et al. (2015) $156-236/tCO₂, Fuss et al. (2018) $124-243/tCO₂,
+# IEA DAC Report (2022), Sievert et al. (Joule 2024), DOE Liftoff (2023).
+# Optimistic floor raised to $150/ton (was $100) to align with published lower bounds.
 DAC_TRAJECTORY = {
-    'optimistic':   {2025: 600, 2030: 350, 2035: 230, 2040: 175, 2045: 130, 2050: 100},
+    'optimistic':   {2025: 600, 2030: 375, 2035: 275, 2040: 220, 2045: 180, 2050: 150},
     'central':      {2025: 800, 2030: 500, 2035: 375, 2040: 300, 2045: 250, 2050: 200},
     'conservative': {2025: 1100, 2030: 750, 2035: 550, 2040: 450, 2045: 375, 2050: 300},
 }

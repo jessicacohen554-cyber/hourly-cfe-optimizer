@@ -223,11 +223,12 @@ CES_DISCOUNT_FACTOR = 0.60  # ZEC/Tier 3 = ~60% of Tier 1 REC price
 # Sources: IEA 2024 DAC report, Rhodium Group, Climeworks/Orca published costs.
 DAC_COST_PER_TON = {
     # Facilitating: aggressive learning (Climeworks Gen3, Heirloom, etc.)
-    'Low': {2030: 400, 2035: 250, 2040: 180, 2045: 130, 2050: 100},
+    # Floor $150/ton per Rubin et al. (2015), Fuss et al. (2018) published lower bounds
+    'Low': {2030: 400, 2035: 275, 2040: 220, 2045: 180, 2050: 150},
     # Medium: moderate learning
-    'Medium': {2030: 600, 2035: 400, 2040: 300, 2045: 220, 2050: 150},
+    'Medium': {2030: 600, 2035: 400, 2040: 300, 2045: 230, 2050: 175},
     # Challenging: slow learning, limited deployment
-    'High': {2030: 800, 2035: 600, 2040: 450, 2045: 350, 2050: 250},
+    'High': {2030: 800, 2035: 600, 2040: 450, 2045: 350, 2050: 275},
 }
 
 # Queue overshoot premium — mandated build beyond queue cap costs extra ($/MWh adder)
