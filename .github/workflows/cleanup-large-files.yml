@@ -102,9 +102,9 @@ jobs:
           echo ""
 
           echo "--- Protected data/ files by directory ---"
-          for dir in data/eia-930 data/step1-pfs-parquets data/step1-pfs-parquets \
-                     data/step2-ef-parquets data/step3-cost-opt-parquets \
-                     data/step5-post-processing; do
+          for dir in data/eia-930 data/step1-pfs data/step1-pfs \
+                     data/step2.1-ef data/step2.2-cost \
+                     data/step4-analysis; do
             count=$(grep -c "^.* ${dir}/" "$PROTECTED_DATA" 2>/dev/null || echo 0)
             [ "$count" -gt 0 ] && echo "  ${dir}/  →  ${count} live files"
           done
@@ -204,10 +204,10 @@ jobs:
             done
             echo ""
             echo "--- Protected by directory ---"
-            for dir in data/eia-930 data/step1-pfs-parquets data/step1-pfs-parquets \
-                       data/step2-ef-parquets data/step3-cost-opt-parquets \
-                       data/step5-post-processing \
-                       data/step5-post-processing/lmp data/step5-post-processing/co2_results \
+            for dir in data/eia-930 data/step1-pfs data/step1-pfs \
+                       data/step2.1-ef data/step2.2-cost \
+                       data/step4-analysis \
+                       data/step4-analysis/lmp data/step4-analysis/co2_results \
                        dashboard dashboard/js; do
               matched=$(grep " ${dir}/" "$KEPT" || true)
               count=$(echo "$matched" | grep -c "." 2>/dev/null || echo 0)
@@ -241,10 +241,10 @@ jobs:
             done
             echo ""
             echo "--- Removable by directory ---"
-            for dir in data/eia-930 data/step1-pfs-parquets data/step1-pfs-parquets \
-                       data/step2-ef-parquets data/step3-cost-opt-parquets \
-                       data/step5-post-processing \
-                       data/step5-post-processing/lmp data/step5-post-processing/co2_results \
+            for dir in data/eia-930 data/step1-pfs data/step1-pfs \
+                       data/step2.1-ef data/step2.2-cost \
+                       data/step4-analysis \
+                       data/step4-analysis/lmp data/step4-analysis/co2_results \
                        data/checkpoints data/checkpoints_v4 \
                        dashboard dashboard/js; do
               matched=$(grep " ${dir}/" "$REMOVABLE" || true)

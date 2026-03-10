@@ -18,7 +18,7 @@ Key characteristics:
 - Learning curve: Scenario A (delayed) — FOAK until 2035
 - At high thresholds, faces FOAK firm costs (never invested in firm clean)
 
-Output: data/step5-post-processing/strategy1_consequential.json
+Output: data/step5-scenarios/strategy1_consequential.json
 """
 
 import os
@@ -54,8 +54,8 @@ from procurement_utils import (
 _QUEUE_CACHE = None
 
 # Try mac_queue subdirectory first (step5d_deployment_queue output), fall back to step5 root
-_MAC_QUEUE_PATH = os.path.join(BASE_DIR, 'data', 'step5-post-processing', 'mac_queue', 'consequential_queue.json')
-_LEGACY_PATH = os.path.join(BASE_DIR, 'data', 'step5-post-processing', 'consequential_queue.json')
+_MAC_QUEUE_PATH = os.path.join(BASE_DIR, 'data', 'step3-dispatch', 'mac_queue', 'consequential_queue.json')
+_LEGACY_PATH = os.path.join(BASE_DIR, 'data', 'step3-dispatch', 'consequential_queue.json')
 QUEUE_JSON_PATH = _MAC_QUEUE_PATH if os.path.isfile(_MAC_QUEUE_PATH) else _LEGACY_PATH
 
 # Map queue resource names → PPA resource names

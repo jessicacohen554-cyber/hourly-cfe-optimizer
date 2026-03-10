@@ -5,11 +5,11 @@ Replaces the entire file with fresh data from the latest pipeline run.
 
 Pipeline order: Step 1 (physics) → Step 2 (tranche) → postprocess → co2 → mac_stats → THIS
 
-Input:  data/step5-post-processing/co2_results/ (CO2-enriched parquets, preferred)
+Input:  data/step4-analysis/co2_results/ (CO2-enriched parquets, preferred)
         dashboard/overprocure_results.json      (monolithic JSON fallback)
-        data/step5-post-processing/mac_stats.json
+        data/step4-analysis/mac_stats.json
 Output: dashboard/js/shared-data.js             (complete rewrite)
-        data/step5-post-processing/shared_data.json (canonical JSON archive)
+        data/step4-analysis/shared_data.json (canonical JSON archive)
 """
 
 import json
@@ -68,7 +68,7 @@ def get_scenario(iso_data, threshold, iso):
 # ============================================================================
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-STEP5_DIR = os.path.join(SCRIPT_DIR, '..', 'data', 'step5-post-processing')
+STEP5_DIR = os.path.join(SCRIPT_DIR, '..', 'data', 'step4-analysis')
 MAC_STATS_PATH = os.path.join(STEP5_DIR, 'mac_stats.json')
 # Fallback to legacy path if step5 dir doesn't have mac_stats yet
 if not os.path.exists(MAC_STATS_PATH):
@@ -297,7 +297,7 @@ for iso in ISOS:
 print("\nExtracting SYSTEM_COST_DATA (P10/Median/P90 from step3 parquets)...")
 import numpy as np_sc
 
-STEP3_DIR = os.path.join(SCRIPT_DIR, '..', 'data', 'step3-cost-opt-parquets')
+STEP3_DIR = os.path.join(SCRIPT_DIR, '..', 'data', 'step2.2-cost')
 system_cost_data = {'medium': {}, 'low': {}, 'high': {}}
 for iso in ISOS:
     med_line, lo_line, hi_line = [], [], []
@@ -385,8 +385,8 @@ for iso in ISOS:
 # overprocure_results.json, which showed identical mixes up to ~80%.
 
 print("\nExtracting RESOURCE_MIX_DATA from DG parquets (Medium growth × Medium sensitivity)...")
-DG_PARQUET_DIR = os.path.join(SCRIPT_DIR, '..', 'data', 'step3-cost-opt-parquets')
-DISPATCH_CACHE_DIR = os.path.join(SCRIPT_DIR, '..', 'data', 'step4-dispatch-cache')
+DG_PARQUET_DIR = os.path.join(SCRIPT_DIR, '..', 'data', 'step2.2-cost')
+DISPATCH_CACHE_DIR = os.path.join(SCRIPT_DIR, '..', 'data', 'step3-dispatch')
 
 try:
     import pandas as _pd
@@ -559,7 +559,7 @@ for iso in ISOS:
 
 print("\nExtracting COMPRESSED_DAY_DATA...")
 cd_profiles_path = os.path.join(SCRIPT_DIR, '..', 'dashboard', 'compressed_day_profiles.json')
-# Fallback to step5-post-processing dir
+# Fallback to step4-analysis dir
 if not os.path.exists(cd_profiles_path):
     cd_profiles_path = os.path.join(STEP5_DIR, 'compressed_day_profiles.json')
 cd_profiles = {}
@@ -1748,7 +1748,7 @@ print("Extracting FEASIBLE_MIXES from Step 3 feasible-mix parquets...")
 import numpy as np
 import pandas as pd
 
-STEP3_DIR = os.path.join(SCRIPT_DIR, '..', 'data', 'step3-cost-opt-parquets')
+STEP3_DIR = os.path.join(SCRIPT_DIR, '..', 'data', 'step2.2-cost')
 MIX_FIELDS = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro',
               'hourly_match_score',
               'battery_dispatch_pct', 'battery8_dispatch_pct', 'ldes_dispatch_pct',

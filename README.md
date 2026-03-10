@@ -61,11 +61,11 @@ Utilities: `step1_pfs_generator.py` (monolithic), `step1_prior_windows.py` (sear
 
 | Sub-step | Script(s) | What It Does |
 |----------|-----------|-------------|
-| **2.1** | `step2_1_efficient_frontier.py` | Non-dominated mix extraction. Output: `data/step2-ef-parquets/`. |
+| **2.1** | `step2_1_efficient_frontier.py` | Non-dominated mix extraction. Output: `data/step2.1-ef/`. |
 | **2.2A** | `step2_2a_cost_optimization.py` | Track 1 baseline (5,832 combos). ─┐ parallel |
 | **2.2B** | `step2_2b_track_nb_ctr.py` | Track 2 (NB) + Track 3 (CTR). ─┘ |
 
-Output: `data/step3-cost-opt-parquets/`.
+Output: `data/step2.2-cost/`.
 
 ### Step 3: Caches (parallel: 3A ∥ 3B)
 
@@ -191,13 +191,14 @@ hourly-cfe-optimizer/
 │   ├── procurement_utils.py               # Procurement shared utilities
 │   └── ...                                 # Additional utilities
 ├── data/
-│   ├── step1-pfs-parquets/                 # Physics (Step 1)
-│   ├── step2-ef-parquets/                  # Efficient frontier (Step 2.1)
-│   ├── step3-cost-opt-parquets/            # Cost optimization (Step 2.2)
-│   ├── step4-dispatch-cache/               # Dispatch cache (Step 3A)
-│   ├── step5-post-processing/              # Analysis outputs (Steps 3B, 4–6)
-│   ├── step10-smartargets/                 # SMARTargets (Step 6)
-│   ├── step12-nuclear-retirement/          # Nuclear analysis (Step 6.2B)
+│   ├── step1-pfs/                          # Physics feasible space (Step 1)
+│   ├── step2.1-ef/                         # Efficient frontier (Step 2.1)
+│   ├── step2.2-cost/                       # Cost optimization (Step 2.2)
+│   ├── step3-dispatch/                     # Dispatch cache + MAC queue (Step 3)
+│   ├── step4-analysis/                     # CO₂, LMP, MAC, targets, tracks, building blocks (Step 4)
+│   ├── step5-scenarios/                    # Scenario comparison, strategies (Step 5)
+│   ├── step5-wrights/                      # Wright's Law curves (Step 5.2E)
+│   ├── step6-smartargets/                  # SMARTargets, IPP, nuclear (Step 6)
 │   └── ...                                 # Additional data files
 ├── dashboard/
 │   ├── index.html                          # Homepage (scrollytelling)

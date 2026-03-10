@@ -9,7 +9,7 @@ name: "Step 5: Procurement Strategies"
 #
 # iso=ALL fans out parallel matrix jobs for strategy computation, then merge
 # job combines results into dashboard JS and commits everything.
-# Output: data/step5-post-processing/strategy*.json, dashboard/js/procurement-strategy-data.js
+# Output: data/step5-scenarios/strategy*.json, dashboard/js/procurement-strategy-data.js
 
 on:
   workflow_dispatch:
@@ -125,7 +125,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: procurement-${{ matrix.iso }}
-          path: data/step5-post-processing/
+          path: data/step5-scenarios/
           retention-days: 1
 
   merge:
@@ -169,7 +169,7 @@ jobs:
           import json, os, glob
 
           artifact_dirs = sorted(glob.glob('artifacts/procurement-*'))
-          pp_dir = 'data/step5-post-processing'
+          pp_dir = 'data/step5-scenarios'
           os.makedirs(pp_dir, exist_ok=True)
 
           strategy_files = [
@@ -211,7 +211,7 @@ jobs:
           python -c "
           import json, os
 
-          pp_dir = 'data/step5-post-processing'
+          pp_dir = 'data/step5-scenarios'
           raw = {}
 
           for f in ['strategy1_consequential.json', 'strategy2_hourly.json', 'strategy3_annual.json']:
@@ -307,7 +307,7 @@ jobs:
 
           for iso in $ISOS; do
             echo "--- Batching commit for $iso ---"
-            FILES=$(find data/step5-post-processing/ -name "*${iso}*" -type f 2>/dev/null || true)
+            FILES=$(find data/step5-scenarios/ -name "*${iso}*" -type f 2>/dev/null || true)
             if [ -z "$FILES" ]; then
               echo "  No files for $iso — skipping"
               continue
@@ -336,7 +336,7 @@ jobs:
           done
 
           # Remaining post-processing + dashboard JS
-          git add -f data/step5-post-processing/ 2>/dev/null || true
+          git add -f data/step5-scenarios/ 2>/dev/null || true
           git add -f dashboard/js/ 2>/dev/null || true
           if ! git diff --cached --quiet; then
             echo "--- Staging remaining files + dashboard JS ---"

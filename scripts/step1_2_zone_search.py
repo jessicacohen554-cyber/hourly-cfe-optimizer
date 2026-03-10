@@ -18,8 +18,8 @@ Architecture:
   4. Save union near-miss list for step1c storage sweep
 
 Output:
-  data/step1-pfs-parquets/{ISO}_t{XX}_raw_pfs.parquet  (per-threshold feasible)
-  data/step1-pfs-parquets/{ISO}_near_miss.parquet       (union near-miss for 1d)
+  data/step1-pfs/{ISO}_t{XX}_raw_pfs.parquet  (per-threshold feasible)
+  data/step1-pfs/{ISO}_near_miss.parquet       (union near-miss for 1d)
 
 Usage:
   python scripts/step1b_zone_search.py --iso CAISO
@@ -746,7 +746,7 @@ def git_commit_iso_progress(iso, zone_name, n_thresholds, auto_commit):
     pfs_dir = s1.STEP1_RAW_PFS_PARQUET_DIR
 
     def stage():
-        # Must use -f: data/step1-pfs-parquets/ may be gitignored.
+        # Must use -f: data/step1-pfs/ may be gitignored.
         # Only add parquets — zone_manifest.json is a run-time checkpoint.
         subprocess.run(
             f'git add -f "{pfs_dir}"/*.parquet 2>/dev/null; true',

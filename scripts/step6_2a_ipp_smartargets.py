@@ -12,9 +12,9 @@ V2 changes vs V1:
 - Integrates PPA level and gas friction into per-plant economics
 - Vectorized: no Python for-loops over the scenario dimension
 
-Inputs:  data/step10-smartargets/sweep_{reference|power_nz|economy_nz}_*.parquet
+Inputs:  data/step6-smartargets/sweep_{reference|power_nz|economy_nz}_*.parquet
 Outputs: dashboard/js/ipp-smartargets-data.js
-         data/step10-smartargets/ipp_sweep_results.parquet
+         data/step6-smartargets/ipp_sweep_results.parquet
 """
 
 import json
@@ -37,7 +37,7 @@ from pipeline_config import (
 )
 
 # ─── PATHS ───────────────────────────────────────────────────────
-STEP10_DIR = os.path.join(ROOT, 'data', 'step10-smartargets')
+STEP10_DIR = os.path.join(ROOT, 'data', 'step6-smartargets')
 OUT_JS = os.path.join(ROOT, 'dashboard', 'js', 'ipp-smartargets-data.js')
 OUT_PARQUET = os.path.join(STEP10_DIR, 'ipp_sweep_results.parquet')
 FLEET_CONFIG = os.path.join(ROOT, 'data', 'ipp_fleet_config.json')

@@ -13,8 +13,8 @@ import numpy as np
 import pandas as pd
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LMP_DIR = os.path.join(ROOT_DIR, 'data', 'step5-post-processing', 'lmp')
-STEP10_DIR = os.path.join(ROOT_DIR, 'data', 'step10-smartargets')
+LMP_DIR = os.path.join(ROOT_DIR, 'data', 'step4-analysis', 'lmp')
+STEP10_DIR = os.path.join(ROOT_DIR, 'data', 'step6-smartargets')
 OUTPUT_JS = os.path.join(ROOT_DIR, 'dashboard', 'js', 'lmp-capacity-data.js')
 
 ALL_ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']

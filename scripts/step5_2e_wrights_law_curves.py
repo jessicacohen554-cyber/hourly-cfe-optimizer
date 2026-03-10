@@ -18,8 +18,8 @@ Computes the data behind FIGURE 8 (procurement comparison page):
 3. Comparison overlay: cost trajectories for Strategies 1A, 2A, 2B, 3A
    at same participation levels (all degrade; 2C improves past threshold)
 
-Output: data/step8-wrights-law/wrights_law_curves.parquet (snappy compressed)
-        + data/step8-wrights-law/wrights_law_curves.json (dashboard-ready)
+Output: data/step5-wrights/wrights_law_curves.parquet (snappy compressed)
+        + data/step5-wrights/wrights_law_curves.json (dashboard-ready)
 
 Design: 100% vectorized numpy. No Python for-loops over data arrays.
 """
@@ -32,8 +32,8 @@ import numpy as np
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, SCRIPT_DIR)
 DATA_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), 'data')
-PP_DIR = os.path.join(DATA_DIR, 'step5-post-processing')
-OUT_DIR = os.path.join(DATA_DIR, 'step8-wrights-law')
+PP_DIR = os.path.join(DATA_DIR, 'step4-analysis')
+OUT_DIR = os.path.join(DATA_DIR, 'step5-wrights')
 os.makedirs(OUT_DIR, exist_ok=True)
 
 # Import canonical constants from pipeline_config (single source of truth)
@@ -204,8 +204,8 @@ def _extract_cf_tranche_from_parquets():
     """
     from parquet_io import load_from_parquets
 
-    co2_dir = os.path.join(DATA_DIR, 'step5-post-processing', 'co2_results')
-    step3_dir = os.path.join(DATA_DIR, 'step3-cost-opt-parquets')
+    co2_dir = os.path.join(DATA_DIR, 'step4-analysis', 'co2_results')
+    step3_dir = os.path.join(DATA_DIR, 'step2.2-cost')
 
     data = None
     if os.path.isdir(co2_dir):
@@ -268,8 +268,8 @@ def load_shared_data():
         raise FileNotFoundError(
             f"Cannot load tranche data. Need either:\n"
             f"  {path}\n"
-            f"  data/step5-post-processing/co2_results/ (parquets)\n"
-            f"  data/step3-cost-opt-parquets/ (parquets)")
+            f"  data/step4-analysis/co2_results/ (parquets)\n"
+            f"  data/step2.2-cost/ (parquets)")
     return result
 
 

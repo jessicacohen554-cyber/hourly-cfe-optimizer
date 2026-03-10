@@ -10,7 +10,7 @@ name: "Squash Pipeline Branches"
 #
 # Branch naming conventions produced by each step:
 #   Step 1B:  auto/{TS}-step1b-zone-search-{iso}          (PFS parquets — gitignored, force-added)
-#   Step 1C:  auto/{TS}-step1c-storage-{iso}-{band}       (storage parquets in step1-pfs-parquets/)
+#   Step 1C:  auto/{TS}-step1c-storage-{iso}-{band}       (storage parquets in step1-pfs/)
 #   Others:   auto/{TS}-{step}-{iso}
 #
 # branch_pattern examples:
@@ -23,7 +23,7 @@ name: "Squash Pipeline Branches"
 #   "auto/.*step1c.*caiso"     — only CAISO Step 1C branches
 #   "auto/.*refilter"          — all refilter near-miss branches
 #
-# NOTE: Step 1B writes to data/step1-pfs-parquets/ which is gitignored.
+# NOTE: Step 1B writes to data/step1-pfs/ which is gitignored.
 # Those files are force-committed on the auto/* branches and re-force-added
 # here during squash so they survive the git reset --soft master step.
 #
@@ -31,7 +31,7 @@ name: "Squash Pipeline Branches"
 #   1. Finds all remote auto/* branches not yet merged to master
 #   2. Creates a temp branch from master
 #   3. Sequentially merges each branch (skip on conflict)
-#   4. Force-adds gitignored data dirs (step1-pfs-parquets/)
+#   4. Force-adds gitignored data dirs (step1-pfs/)
 #   5. Squashes all merged changes into a single commit (git reset --soft)
 #   6. Pushes and opens a PR
 #   7. Optionally closes old PRs and deletes merged branches
@@ -218,7 +218,7 @@ jobs:
           # via "git add -f" on their branches. After git reset --soft master,
           # those files are in the working tree but gitignore would block a plain
           # "git add". Re-force-add so they're included in the squash commit.
-          git add -f data/step1-pfs-parquets/ 2>/dev/null || true
+          git add -f data/step1-pfs/ 2>/dev/null || true
 
           # Build commit message
           CUSTOM_MSG="${{ inputs.commit_message }}"

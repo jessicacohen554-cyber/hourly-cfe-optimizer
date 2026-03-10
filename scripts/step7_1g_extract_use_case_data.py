@@ -43,7 +43,7 @@ LEVEL_MAP = {"L": "Low", "M": "Medium", "H": "High"}
 
 def load_co_parquet(iso):
     """Load Step 3 cost optimization baseline parquet."""
-    path = os.path.join(DATA, "step3-cost-opt-parquets", f"step3_co_{iso}.parquet")
+    path = os.path.join(DATA, "step2.2-cost", f"step3_co_{iso}.parquet")
     if not os.path.exists(path):
         return None
     return pd.read_parquet(path)
@@ -338,7 +338,7 @@ def extract_carbon_credit_pricing():
     print("  Extracting carbon credit pricing data...")
 
     # Load existing MAC stats
-    mac_path = os.path.join(DATA, "step5-post-processing", "mac_stats.json")
+    mac_path = os.path.join(DATA, "step4-analysis", "mac_stats.json")
     if not os.path.exists(mac_path):
         print("    WARNING: mac_stats.json not found")
         return {}
@@ -347,7 +347,7 @@ def extract_carbon_credit_pricing():
         mac = json.load(f)
 
     # Load optimal targets for crossover data
-    targets_path = os.path.join(DATA, "step5-post-processing", "optimal_targets.json")
+    targets_path = os.path.join(DATA, "step4-analysis", "optimal_targets.json")
     targets = {}
     if os.path.exists(targets_path):
         with open(targets_path) as f:

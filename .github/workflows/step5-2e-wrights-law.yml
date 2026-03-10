@@ -2,7 +2,7 @@ name: "Step 5.2E: Wright's Law Learning Curves"
 
 # Computes Wright's Law cost learning curves for renewable + storage technologies.
 # Projects FOAK → NOAK cost trajectories over 25-year deployment horizons.
-# Output: data/step5-post-processing/ + dashboard data
+# Output: data/step4-analysis/ + dashboard data
 
 on:
   workflow_dispatch:
@@ -40,7 +40,7 @@ jobs:
         run: pip install numpy numba pyarrow pandas scipy
 
       - name: Ensure output directories
-        run: mkdir -p data/step5-post-processing data/step8-wrights-law
+        run: mkdir -p data/step4-analysis data/step5-wrights
 
       - name: "Run Wright's Law curves"
         run: |
@@ -55,7 +55,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$TARGET_BRANCH"
 
-          git add -f data/step5-post-processing/ data/step8-wrights-law/ dashboard/js/ 2>/dev/null || true
+          git add -f data/step4-analysis/ data/step5-wrights/ dashboard/js/ 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No changes to commit"
             exit 0

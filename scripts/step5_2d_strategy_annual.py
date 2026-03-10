@@ -16,7 +16,7 @@ Key characteristics:
 - Learning curve: Scenario A (delayed) — annual flexibility defers firm clean
 - 3D is the "status quo" — cheapest unbundled RECs from anywhere
 
-Output: data/step5-post-processing/strategy3_annual.json
+Output: data/step5-scenarios/strategy3_annual.json
 """
 
 import os

@@ -1,7 +1,7 @@
 name: "Step 5: Scenarios"
 
 # Runs scenario scripts to populate the Scenarios comparison page:
-#   1. Scenario A: READ from step5d MAC queue (data/step5-post-processing/mac_queue/scenario_a_*.json)
+#   1. Scenario A: READ from step5d MAC queue (data/step3-dispatch/scenario_a_*.json)
 #      — produced by step5d_mac_queue.py, NOT computed here.
 #   2. step7b_scenario_hourly.py — Hourly matching scenario (per-ISO parallel)
 #   3. step7c_scenario_comparison.py — Merges A+B per-ISO results into comparison data
@@ -14,7 +14,7 @@ name: "Step 5: Scenarios"
 # step7c reads scenario_a_*.json from mac_queue/ directory first (already committed to repo).
 #
 # Prerequisite: Step 5D MAC Queue must have run first.
-# Output: data/step5-post-processing/scenario_*.json, dashboard/js/scenario-comparison-data.js
+# Output: data/step5-scenarios/scenario_*.json, dashboard/js/scenario-comparison-data.js
 
 on:
   workflow_dispatch:
@@ -93,7 +93,7 @@ jobs:
 
       - name: Verify upstream data exists
         run: |
-          if [ ! -d "data/step3-cost-opt-parquets" ] || ! ls data/step3-cost-opt-parquets/*.parquet >/dev/null 2>&1; then
+          if [ ! -d "data/step2.2-cost" ] || ! ls data/step2.2-cost/*.parquet >/dev/null 2>&1; then
             echo "ERROR: No step-3 parquets found."
             exit 1
           fi
@@ -107,7 +107,7 @@ jobs:
         run: pip install numpy numba pyarrow pandas scipy
 
       - name: Ensure output directories
-        run: mkdir -p data/step5-post-processing
+        run: mkdir -p data/step5-scenarios
 
       - name: "Scenario B (Hourly Matching) — ${{ matrix.iso }}"
         run: python scripts/step5_1_scenario_hourly.py --iso ${{ matrix.iso }}
@@ -116,7 +116,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: scenario-b-${{ matrix.iso }}
-          path: data/step5-post-processing/scenario_b_${{ matrix.iso }}.json
+          path: data/step5-scenarios/scenario_b_${{ matrix.iso }}.json
           retention-days: 1
 
   # ====================================================================
@@ -144,13 +144,13 @@ jobs:
 
       - name: Ensure output directories
         run: |
-          mkdir -p data/step5-post-processing/mac_queue
+          mkdir -p data/step3-dispatch
           mkdir -p dashboard/js
 
       - name: Verify Scenario A from MAC queue
         run: |
           echo "Scenario A results (from step5d MAC queue, committed to repo):"
-          ls -la data/step5-post-processing/mac_queue/scenario_a_*.json 2>/dev/null || {
+          ls -la data/step3-dispatch/scenario_a_*.json 2>/dev/null || {
             echo "ERROR: No Scenario A files found in mac_queue/."
             echo "Run step5d-mac-queue.yml first to generate Scenario A results."
             exit 1
@@ -160,13 +160,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: scenario-b-*
-          path: data/step5-post-processing/
+          path: data/step5-scenarios/
           merge-multiple: true
 
       - name: List gathered results
         run: |
           echo "Per-ISO result files:"
-          ls -la data/step5-post-processing/scenario_*.json 2>/dev/null || echo "  (none found)"
+          ls -la data/step5-scenarios/scenario_*.json 2>/dev/null || echo "  (none found)"
 
       - name: "Scenario Comparison — all ISOs"
         run: |
@@ -178,7 +178,7 @@ jobs:
         with:
           name: scenario-comparison
           path: |
-            data/step5-post-processing/scenario_comparison.json
+            data/step5-scenarios/scenario_comparison.json
             dashboard/js/scenario-comparison-data.js
           retention-days: 1
 
@@ -220,12 +220,12 @@ jobs:
       - name: Place artifacts
         run: |
           # Per-ISO result JSONs land directly in artifact-tmp/
-          cp -f artifact-tmp/scenario_*.json data/step5-post-processing/ 2>/dev/null || true
+          cp -f artifact-tmp/scenario_*.json data/step5-scenarios/ 2>/dev/null || true
           # Comparison outputs
-          cp -f artifact-tmp/scenario_comparison.json data/step5-post-processing/ 2>/dev/null || true
+          cp -f artifact-tmp/scenario_comparison.json data/step5-scenarios/ 2>/dev/null || true
           cp -f artifact-tmp/scenario-comparison-data.js dashboard/js/ 2>/dev/null || true
           echo "Files staged:"
-          ls -la data/step5-post-processing/scenario_*.json 2>/dev/null || true
+          ls -la data/step5-scenarios/scenario_*.json 2>/dev/null || true
 
       - name: Batched commit and push (per-ISO)
         run: |
@@ -257,7 +257,7 @@ jobs:
 
           for iso in $ISOS; do
             echo "--- Batching commit for $iso ---"
-            FILES=$(find data/step5-post-processing/ -name "*${iso}*" -type f 2>/dev/null || true)
+            FILES=$(find data/step5-scenarios/ -name "*${iso}*" -type f 2>/dev/null || true)
             if [ -z "$FILES" ]; then
               echo "  No files for $iso — skipping"
               continue
@@ -286,7 +286,7 @@ jobs:
           done
 
           # Remaining post-processing + dashboard JS
-          git add -f data/step5-post-processing/ 2>/dev/null || true
+          git add -f data/step5-scenarios/ 2>/dev/null || true
           git add -f dashboard/js/scenario-comparison-data.js 2>/dev/null || true
           if ! git diff --cached --quiet; then
             echo "--- Staging remaining files + dashboard JS ---"

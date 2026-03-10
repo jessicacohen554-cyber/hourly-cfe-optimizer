@@ -23,8 +23,8 @@ Dependencies:
   - step1_pfs_generator.py (load_data, get_supply_profiles)
   - data/eia-930/eia_generation_profiles.parquet
   - data/eia-930/eia_demand_profiles.parquet
-  - data/step3-cost-opt-parquets/step3_co_{ISO}.parquet (baseline)
-  - data/step3-cost-opt-parquets/step3_dg_{ISO}_t{T}.parquet (demand growth)
+  - data/step2.2-cost/step3_co_{ISO}.parquet (baseline)
+  - data/step2.2-cost/step3_dg_{ISO}_t{T}.parquet (demand growth)
 """
 
 import json
@@ -41,8 +41,8 @@ import pandas as pd
 # ---------------------------------------------------------------------------
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
-STEP3_DIR = DATA_DIR / "step3-cost-opt-parquets"
-OUT_DIR = DATA_DIR / "step6-derived-analytics" / "building-blocks"
+STEP3_DIR = DATA_DIR / "step2.2-cost"
+OUT_DIR = DATA_DIR / "step4-analysis" / "building-blocks"
 JS_PATH = ROOT / "dashboard" / "js" / "building-blocks-data.js"
 
 # Add scripts dir to sys.path for Step 1 imports

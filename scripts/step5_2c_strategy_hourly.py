@@ -18,7 +18,7 @@ The hourly matching premium is captured by the over-procurement ratio:
 higher CFE targets require more over-procurement because VRE doesn't
 match demand hour-by-hour. This comes from the existing optimizer results.
 
-Output: data/step5-post-processing/strategy2_hourly.json
+Output: data/step5-scenarios/strategy2_hourly.json
 """
 
 import os

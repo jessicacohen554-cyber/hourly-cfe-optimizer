@@ -20,7 +20,7 @@ demand_arr, supply_matrix = s1.prepare_numpy_profiles('CAISO', demand_norm, supp
 # ── Load coarse cache (wider score range for high-curtailment mixes) ──
 print("Loading coarse cache...")
 resource_types = s1.get_resource_types('CAISO')
-cc_df = pq.read_table('data/step1-pfs-parquets/CAISO_coarse_cache.parquet').to_pandas()
+cc_df = pq.read_table('data/step1-pfs/CAISO_coarse_cache.parquet').to_pandas()
 nm_scores = cc_df['score'].values.astype(np.float64)
 nm_combos = cc_df[resource_types].values.astype(np.float64)
 n_mixes = len(nm_scores)
@@ -382,7 +382,7 @@ for bi in range(0, len(test_indices), batch_size):
 # Load current CAISO 95% winner from step3
 print("\n  Loading current CAISO 95% winner from step3...")
 import pandas as pd
-step3_df = pd.read_parquet('data/step3-cost-opt-parquets/step3_co_CAISO.parquet')
+step3_df = pd.read_parquet('data/step2.2-cost/step3_co_CAISO.parquet')
 t95 = step3_df[step3_df['threshold'] == 95]
 
 # Find the Low VRE / Low TX / Low Battery / High Firm scenario

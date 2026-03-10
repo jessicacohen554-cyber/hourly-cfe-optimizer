@@ -4,7 +4,7 @@
 DEPRECATED: This script only generates HOURLY_PROFILES and SEASONAL_PROFILES.
 Use step6d_extract_building_blocks.py instead — it generates all 4 constants
 (HOURLY_PROFILES, SEASONAL_PROFILES, BUILDING_BLOCKS_BASELINE, BUILDING_BLOCKS_DG)
-and is the canonical path run by the step6-derived-analytics workflow.
+and is the canonical path run by the step4-analysis workflow.
 
 Reads EIA hourly profiles from parquet and creates 24-hour representative day
 shapes for each resource type per ISO. Nuclear, geothermal, and CCS-CCGT use

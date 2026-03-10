@@ -23,8 +23,8 @@ from pipeline_config import (
     PEAK_CAPACITY_CREDITS, RESOURCE_CAPACITY_FACTORS,
 )
 
-LMP_DIR = os.path.join(ROOT_DIR, 'data', 'step5-post-processing', 'lmp')
-STEP3_DIR = os.path.join(ROOT_DIR, 'data', 'step3-cost-opt-parquets')
+LMP_DIR = os.path.join(ROOT_DIR, 'data', 'step4-analysis', 'lmp')
+STEP3_DIR = os.path.join(ROOT_DIR, 'data', 'step2.2-cost')
 
 ALL_ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 

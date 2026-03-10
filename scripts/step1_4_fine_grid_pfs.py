@@ -30,7 +30,7 @@ No storage at this level — just resource dispatch shapes.
 Storage is handled by step1c at 50%+ thresholds.
 
 Input:  EIA-930 demand/generation profiles
-Output: data/step1-pfs-parquets/{ISO}_t{T}_fine_pfs.parquet (per threshold)
+Output: data/step1-pfs/{ISO}_t{T}_fine_pfs.parquet (per threshold)
 
 Usage:
   python scripts/step1b3_fine_grid_pfs.py --iso CAISO
@@ -76,7 +76,7 @@ except ImportError:
 # ============================================================================
 
 PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
-OUTPUT_DIR = os.path.join(PROJECT_ROOT, 'data', 'step1-pfs-parquets')
+OUTPUT_DIR = os.path.join(PROJECT_ROOT, 'data', 'step1-pfs')
 
 # Target thresholds for fine-grid search
 FINE_THRESHOLDS = [40, 45, 50, 55, 60, 65, 70]

@@ -38,7 +38,7 @@ from dispatch_utils import (
     load_common_data, get_demand_profile, get_supply_profiles,
     reconstruct_hourly_dispatch,
 )
-from step5b_compute_lmp_prices import (
+from lmp_engine import (
     build_merit_order_stack, get_price_model,
     compute_hourly_lmp_vectorized, compute_lmp_stats,
     load_scenarios,
@@ -46,7 +46,7 @@ from step5b_compute_lmp_prices import (
 
 DATA_DIR = os.path.join(SCRIPT_DIR, 'data')
 EIA_930_DATA_DIR = os.path.join(DATA_DIR, 'eia-930')
-LMP_DIR = os.path.join(DATA_DIR, 'step5-post-processing', 'lmp')
+LMP_DIR = os.path.join(DATA_DIR, 'step4-analysis', 'lmp')
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PUBLISHED PJM REFERENCE DATA (Monitoring Analytics SOM / EIA)
@@ -416,7 +416,7 @@ def run_qa_actual(iso='PJM', year=2025, fuel_level='Medium'):
     Computes actual clean %, actual fossil dispatch, then runs LMP engine on
     the actual residual demand. Cross-references model constants against EIA actuals.
     """
-    from step5b_compute_lmp_prices import (
+    from lmp_engine import (
         INSTALLED_FOSSIL_MW, FOSSIL_CAPACITY_SHARES, PEAK_DEMAND_MW,
         RESOURCE_ADEQUACY_MARGIN, GAS_AVAILABILITY_FACTOR,
     )

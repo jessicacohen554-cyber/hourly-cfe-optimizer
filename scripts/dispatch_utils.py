@@ -877,7 +877,7 @@ def compute_fossil_capacity_at_threshold(iso, clean_pct, demand_growth_factor=1.
 # HOURLY DISPATCH CACHE — append-mode, keyed by archetype hash
 # ══════════════════════════════════════════════════════════════════════════════
 
-DISPATCH_CACHE_DIR = os.path.join(DATA_DIR, 'step4-dispatch-cache')
+DISPATCH_CACHE_DIR = os.path.join(DATA_DIR, 'step3-dispatch')
 
 
 def _archetype_key(iso, resource_pcts, procurement_pct=100, battery_dispatch_pct=0,

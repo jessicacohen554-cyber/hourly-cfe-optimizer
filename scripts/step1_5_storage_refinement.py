@@ -26,8 +26,8 @@ Floor/fine mix augmentation (always on):
 Storage grids are the union of V1 (near-term) and V2 (2050-oriented) caps,
 giving full coverage across both ranges in a single run.
 
-Output: data/step1-pfs-parquets/{ISO}_t{XX}_storage.parquet
-        data/step1-pfs-parquets/{ISO}_t{XX}_storage_b{N}.parquet  (auto-batched)
+Output: data/step1-pfs/{ISO}_t{XX}_storage.parquet
+        data/step1-pfs/{ISO}_t{XX}_storage_b{N}.parquet  (auto-batched)
 
 Usage:
   python scripts/step1c_storage_refinement.py --iso CAISO
@@ -92,7 +92,7 @@ except ImportError:
 # ══════════════════════════════════════════════════════════════════════════════
 
 DATA_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), 'data')
-STEP1D_OUTPUT_DIR = os.path.join(DATA_DIR, 'step1-pfs-parquets')
+STEP1D_OUTPUT_DIR = os.path.join(DATA_DIR, 'step1-pfs')
 
 # Thresholds for storage refinement
 STORAGE_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5,

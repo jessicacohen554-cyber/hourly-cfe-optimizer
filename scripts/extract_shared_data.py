@@ -6,7 +6,7 @@ into shared-data.js format.
 Adds new constants WITHOUT modifying existing ones.
 Uses ISO-aware medium scenario key (9-dim format).
 
-Reads from: data/step5-post-processing/co2_results/ (parquets preferred, JSON fallback)
+Reads from: data/step4-analysis/co2_results/ (parquets preferred, JSON fallback)
 Outputs to: dashboard/js/shared-data-new-block.js
 """
 
@@ -16,7 +16,7 @@ import sys
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(SCRIPT_DIR)
-CO2_DIR = os.path.join(ROOT_DIR, 'data', 'step5-post-processing', 'co2_results')
+CO2_DIR = os.path.join(ROOT_DIR, 'data', 'step4-analysis', 'co2_results')
 OUTPUT_PATH = os.path.join(ROOT_DIR, 'dashboard', 'js', 'shared-data-new-block.js')
 
 sys.path.insert(0, SCRIPT_DIR)

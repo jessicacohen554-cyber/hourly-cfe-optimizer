@@ -17,7 +17,7 @@ name: "Step 1.4-1.5: Fine Grid + Storage Refinement"
 # Floor/fine mix augmentation is always on.
 #
 # Prerequisite: Step 1B (Zone Search) must have run first.
-# Output: data/step1-pfs-parquets/{ISO}_t{XX}_storage.parquet
+# Output: data/step1-pfs/{ISO}_t{XX}_storage.parquet
 
 on:
   workflow_dispatch:
@@ -168,7 +168,7 @@ jobs:
     - name: Verify near-miss data exists
       run: |
         ISO="${{ matrix.iso }}"
-        NM="data/step1-pfs-parquets/${ISO}_near_miss.parquet"
+        NM="data/step1-pfs/${ISO}_near_miss.parquet"
         if [ ! -f "$NM" ]; then
           echo "ERROR: Missing near-miss data for $ISO"
           echo "  Expected: $NM"
@@ -184,7 +184,7 @@ jobs:
         fi
 
     - name: Ensure output directory
-      run: mkdir -p data/step1-pfs-parquets
+      run: mkdir -p data/step1-pfs
 
     - name: Resolve thresholds for this band
       id: resolve
@@ -222,9 +222,9 @@ jobs:
         [ -n "$CUSTOM" ] && BAND="custom($CUSTOM)"
 
         # Stage storage parquet + manifest files for this ISO only.
-        # Must use -f: data/step1-pfs-parquets/ is gitignored, normal add skips it.
-        git add -f data/step1-pfs-parquets/"${ISO}"_*_storage*.parquet 2>/dev/null || true
-        git add -f data/step1-pfs-parquets/"${ISO}"_storage_manifest.json 2>/dev/null || true
+        # Must use -f: data/step1-pfs/ is gitignored, normal add skips it.
+        git add -f data/step1-pfs/"${ISO}"_*_storage*.parquet 2>/dev/null || true
+        git add -f data/step1-pfs/"${ISO}"_storage_manifest.json 2>/dev/null || true
 
         if ! git diff --cached --quiet; then
           COUNT=$(git diff --cached --name-only | wc -l)
@@ -311,7 +311,7 @@ jobs:
     - name: Verify near-miss data exists
       run: |
         ISO="${{ matrix.iso }}"
-        NM="data/step1-pfs-parquets/${ISO}_near_miss.parquet"
+        NM="data/step1-pfs/${ISO}_near_miss.parquet"
         if [ ! -f "$NM" ]; then
           echo "ERROR: Missing near-miss data for $ISO"
           echo "  Expected: $NM"
@@ -327,7 +327,7 @@ jobs:
         fi
 
     - name: Ensure output directory
-      run: mkdir -p data/step1-pfs-parquets
+      run: mkdir -p data/step1-pfs
 
     - name: "Run Step 1C — ${{ matrix.iso }} / t${{ matrix.threshold }}%"
       timeout-minutes: 180
@@ -350,8 +350,8 @@ jobs:
         THRESHOLD="${{ matrix.threshold }}"
 
         # Stage any results not yet committed by auto-commit.
-        git add -f data/step1-pfs-parquets/"${ISO}"_*_storage*.parquet 2>/dev/null || true
-        git add -f data/step1-pfs-parquets/"${ISO}"_storage_manifest.json 2>/dev/null || true
+        git add -f data/step1-pfs/"${ISO}"_*_storage*.parquet 2>/dev/null || true
+        git add -f data/step1-pfs/"${ISO}"_storage_manifest.json 2>/dev/null || true
 
         if ! git diff --cached --quiet; then
           COUNT=$(git diff --cached --name-only | wc -l)

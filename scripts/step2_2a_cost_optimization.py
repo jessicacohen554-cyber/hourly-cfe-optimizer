@@ -15,8 +15,8 @@ Pipeline position: Step 3 of 4
   Step 3 — Cost optimization (this file)
   Step 4 — Post-processing (step4_postprocess.py)
 
-Input:  data/step2-ef-parquets/step2_ef_{ISO}_t{T}.parquet  (from Step 2, per-ISO/threshold)
-Output: data/step3-cost-opt-parquets/step3_co_<ISO>.parquet  (per-ISO cost optimization results)
+Input:  data/step2.1-ef/step2_ef_{ISO}_t{T}.parquet  (from Step 2, per-ISO/threshold)
+Output: data/step2.2-cost/step3_co_<ISO>.parquet  (per-ISO cost optimization results)
 
 Key format: RFS_FF_TX_CCSq45_GEO (e.g., MMM_M_M_M1_M for CAISO all-Medium)
   CAISO: 17,496 combos per threshold. Non-CAISO: 5,832 combos per threshold.
@@ -1595,8 +1595,8 @@ def prepare_threshold_metadata(scores, thresholds):
 # LOAD PFS POST-EF
 # ============================================================================
 
-INPUT_DIR = Path('data/step2-ef-parquets')
-OUTPUT_DIR = Path('data/step3-cost-opt-parquets')
+INPUT_DIR = Path('data/step2.1-ef')
+OUTPUT_DIR = Path('data/step2.2-cost')
 
 # Thresholds to evaluate (imported from pipeline_config, re-assigned here for backward compat)
 
@@ -1696,7 +1696,7 @@ def _discover_iso_threshold_files(input_dir, iso):
 def load_pfs_post_ef(input_dir, selected_isos=None):
     """Load PFS post-EF from per-ISO/threshold parquet files in input_dir.
 
-    Reads from data/step2-ef-parquets/step2_ef_{ISO}_t{T}.parquet (per-threshold
+    Reads from data/step2.1-ef/step2_ef_{ISO}_t{T}.parquet (per-threshold
     band files). Falls back to legacy step2_ef_{ISO}.parquet if per-threshold
     files don't exist.
 

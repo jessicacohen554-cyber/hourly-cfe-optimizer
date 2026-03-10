@@ -20,10 +20,10 @@ Pipeline position:
                                ├→ CO₂ results
                                └→ LMP results
 
-Input:  data/step4-dispatch-cache/{ISO}_dispatch_cache.parquet
-        data/step3-cost-opt-parquets/ (scenario metadata)
-Output: data/step5-post-processing/co2_results/
-        data/step5-post-processing/lmp/
+Input:  data/step3-dispatch/{ISO}_dispatch_cache.parquet
+        data/step2.2-cost/ (scenario metadata)
+Output: data/step4-analysis/co2_results/
+        data/step4-analysis/lmp/
 
 DO NOT TOUCH: step5d_deployment_queue.py — intentionally does NOT use dispatch cache.
 
@@ -63,9 +63,8 @@ from parquet_io import (
     find_input_dir, find_parquet, ALL_ISOS,
 )
 
-# Import LMP functions from archived step5b (merged into this script)
-sys.path.insert(0, os.path.join(SCRIPT_DIR, 'scripts', 'archive'))
-from step5b_compute_lmp_prices import (
+# Import LMP engine
+from lmp_engine import (
     build_merit_order_stack,
     compute_hourly_lmp_vectorized,
     compute_lmp_stats,
@@ -74,7 +73,7 @@ from step5b_compute_lmp_prices import (
 )
 
 DATA_DIR = os.path.join(SCRIPT_DIR, 'data')
-STEP5_DIR = os.path.join(DATA_DIR, 'step5-post-processing')
+STEP5_DIR = os.path.join(DATA_DIR, 'step4-analysis')
 CO2_DIR = os.path.join(STEP5_DIR, 'co2_results')
 LMP_DIR = os.path.join(STEP5_DIR, 'lmp')
 

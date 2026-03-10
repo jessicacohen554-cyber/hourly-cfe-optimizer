@@ -70,7 +70,7 @@
 - `scripts/step6_2b_nuclear_retirement.py` — Recomputes nuclear economics from scratch using Step 10 sweep parquets
 - `dashboard/nuclear_retirement.html` — Interactive reference page with policy timeline, stranding heatmap, revenue waterfalls, ISO impact charts
 - `dashboard/js/nuclear-retirement-data.js` — Pre-computed JS data for dashboard
-- `data/step12-nuclear-retirement/` — Parquet outputs (stranding results + probabilities)
+- `data/step6-smartargets/` — Parquet outputs (stranding results + probabilities)
 
 **Key findings from initial run:**
 - Most PJM nuclear plants are profitable on merchant economics alone (strong $120/kW-yr capacity market)
@@ -141,7 +141,7 @@
 | Step 5D | NOT TOUCHED | Intentionally designed to not use dispatch cache. |
 | Column rename (future) | Deferred | Rename `battery_dispatch_pct` → `battery_capacity_pct` in Steps 1-3 parquets. |
 
-**Manifest schema**: `data/step4-dispatch-cache/{ISO}_annual_manifest.parquet`
+**Manifest schema**: `data/step3-dispatch/{ISO}_annual_manifest.parquet`
 - Key: `archetype_key` (MD5 hash of mix params)
 - Capacity columns: `battery_capacity_pct`, `battery8_capacity_pct`, `ldes_capacity_pct`, `h2_capacity_pct`
 - Dispatch columns: `battery_dispatch_pct`, `battery8_dispatch_pct`, etc. (actual cycling dispatch)
@@ -1127,8 +1127,8 @@ The split varies dramatically by ISO. Nuclear-heavy ISOs (PJM 32%, NEISO 24%) al
 Data sources: Track 2 NB (new-build costs), Track 3 CTR (existing premium costs), learning curve parameters from `step6_scenario_comparison.py`, resource mix data from shared-data.js.
 
 **Step 8 implementation: `scripts/step8_wrights_law_curves.py`** — COMPLETE. Vectorized numpy, no sequential loops. Output:
-- `data/step8-wrights-law/wrights_law_curves.parquet` (4 KB, snappy compressed — 252 rows: 12 participation levels × 21 thresholds)
-- `data/step8-wrights-law/wrights_law_curves.json` (8.4 KB — dashboard-ready figure data)
+- `data/step5-wrights/wrights_law_curves.parquet` (4 KB, snappy compressed — 252 rows: 12 participation levels × 21 thresholds)
+- `data/step5-wrights/wrights_law_curves.json` (8.4 KB — dashboard-ready figure data)
 
 Key results at 90% CFE:
 - **Critical mass threshold: 25% C&I participation** — where cumulative CCS-CCGT deployment exceeds 8 GW globally
@@ -1231,7 +1231,7 @@ Charts on this page show *that* something is happening at a participation thresh
   - **Lines:** LMP trajectory under Strategy 1 (cross-regional), Strategy 2A (all new, same-ISO), Strategy 2C (premium + new, same-ISO)
   - **Key feature:** Horizontal band at ~$44/MWh (45U strike price) with annotation: "Below this line, existing nuclear can't cover operating costs." When Strategy 2A's line crosses below this band, highlight it.
   - **Strategy 2C difference:** Its line stays higher because the premium mechanism acts as a revenue floor — you're paying existing clean to stay online rather than flooding the market with competing new zero-marginal gen.
-  - **Data source:** `data/step5-post-processing/lmp/lmp_summary.json` has PJM LMP data. `scenario_comparison.json` has stranding analysis (`stranding_a`, `stranding_b`). **LMP currently computed for PJM only — show PJM as representative, note other ISOs forthcoming.** Track 3 CTR effective costs from `track_results.json` provide the "premium" price signal.
+  - **Data source:** `data/step4-analysis/lmp/lmp_summary.json` has PJM LMP data. `scenario_comparison.json` has stranding analysis (`stranding_a`, `stranding_b`). **LMP currently computed for PJM only — show PJM as representative, note other ISOs forthcoming.** Track 3 CTR effective costs from `track_results.json` provide the "premium" price signal.
   - **Callout box:** "Strategy 2A and Strategy 1 both destroy wholesale prices — they just do it in different geographies. Strategy 2C is the only variant with a built-in mechanism to prevent it."
 
 **Section 2.4 — The MAC Wall**
@@ -1473,7 +1473,7 @@ National C&I = ~62% of total US load (~2,400 of ~3,860 TWh). Range by ISO: 52-57
 - L/M/H demand growth scenarios (scale-invariant for MAC %, but affects absolute resource quantities)
 - No-regrets resource investment analysis: floor, consensus, and average resource investments within the crossover range
 - Uses canonical CO₂ model from `dispatch_utils.compute_fossil_retirement()` (same as step5_compute_co2, step5_compute_mac_stats)
-- Output: `data/step5-post-processing/optimal_targets.json` + `dashboard/js/optimal-target-data.js`
+- Output: `data/step4-analysis/optimal_targets.json` + `dashboard/js/optimal-target-data.js`
 - Wired into `step6_generate_shared_data.py` → OPTIMAL_TARGETS constant in shared-data.js
 - Added to Step 6 GitHub Actions workflow (parallel batch with MAC, LMP, compressed day, etc.)
 - Added scipy to workflow dependencies
@@ -1568,7 +1568,7 @@ Step 4 → dispatch cache → CO2/MAC/LMP/compressed day (read from cache, run i
 **Completed:**
 - Energy-based battery caps (replaces power-based formula): `bat4_cap = max_daily_surplus`, `bat8_cap = max_2day_surplus`, `ldes_cap = max_7day_surplus`
 - Two-phase adaptive storage sweep: Phase 1 coarse (0.25% steps) → analyze saturation → Phase 2 fine (0.05% steps) within saturation range
-- Per-ISO/threshold output files: `data/step1-pfs-parquets/{ISO}_t{XX}_raw_pfs.parquet`
+- Per-ISO/threshold output files: `data/step1-pfs/{ISO}_t{XX}_raw_pfs.parquet`
 - ERCOT: 2,033,961 solutions (complete)
 - CAISO: Running (Phase 2 in progress)
 
@@ -1942,7 +1942,7 @@ Complete optimizer rebuild with new architecture. All 9 design decisions + 5 eff
 
 The optimizer runs as an 8-step pipeline (Steps 0–7). Step 1 is expensive (hours). Steps 2–7 are cheap (seconds to minutes). Only re-run what changed.
 
-**Data directories use legacy numbering on disk** (not renamed): `data/step1-pfs-parquets/` (Step 1), `data/step2-ef-parquets/` (Step 2.1), `data/step3-cost-opt-parquets/` (Step 2.2), `data/step4-dispatch-cache/` (Step 3A), `data/step5-post-processing/` (Steps 3B, 4–6).
+**Data directories**: `data/step1-pfs/` (Step 1), `data/step2.1-ef/` (Step 2.1), `data/step2.2-cost/` (Step 2.2), `data/step3-dispatch/` (Step 3), `data/step4-analysis/` (Step 4), `data/step5-scenarios/` (Step 5), `data/step5-wrights/` (Step 5.2E), `data/step6-smartargets/` (Step 6).
 
 #### Step 0: Data Acquisition
 
@@ -1962,24 +1962,24 @@ The optimizer runs as an 8-step pipeline (Steps 0–7). Step 1 is expensive (hou
 | **1.5** | `step1_5_storage_refinement.py` | Storage dispatch refinement (battery/LDES/H2 grid search). |
 
 Utilities: `step1_prior_windows.py` (search windows from prior EF results).
-Output: `data/step1-pfs-parquets/`. **Only re-run if dispatch logic, generation profiles, or demand curves change.**
+Output: `data/step1-pfs/`. **Only re-run if dispatch logic, generation profiles, or demand curves change.**
 
 #### Step 2: Optimization (sequential: 2.1 → 2.2)
 
 | Sub-step | Script(s) | What It Does | When to Re-run |
 |----------|-----------|-------------|---------------|
-| **2.1** | `step2_1_efficient_frontier.py` | **Efficient Frontier** — Non-dominated mix extraction. Output: `data/step2-ef-parquets/`. | PFS or filtering criteria change. |
+| **2.1** | `step2_1_efficient_frontier.py` | **Efficient Frontier** — Non-dominated mix extraction. Output: `data/step2.1-ef/`. | PFS or filtering criteria change. |
 | **2.2A** | `step2_2a_cost_optimization.py` | **Track 1 baseline** — 5,832 sensitivity combos (17,496 CAISO). Merit-order tranche pricing. ─┐ parallel | Cost assumptions change. |
 | **2.2B** | `step2_2b_track_nb_ctr.py` | **Track 2 (NB) + Track 3 (CTR)** — Demand growth × FOAK→NOAK learning curves. ─┘ | Cost assumptions change. |
 
-Output: `data/step3-cost-opt-parquets/`.
+Output: `data/step2.2-cost/`.
 
 #### Step 3: Caches (parallel: 3A ∥ 3B)
 
 | Script | What It Does | Dependencies |
 |--------|-------------|-------------|
-| `step3a_build_dispatch_cache.py` | **Dispatch cache** — 8,760-hour dispatch for all unique mixes. NPZ v2. Output: `data/step4-dispatch-cache/`. | Step 2.2 |
-| `step3b_mac_queue.py` | **MAC queue** — Path-dependent consequential deployment queue. Output: `data/step5-post-processing/mac_queue/`. | Step 1 only (NOT Step 2) |
+| `step3a_build_dispatch_cache.py` | **Dispatch cache** — 8,760-hour dispatch for all unique mixes. NPZ v2. Output: `data/step3-dispatch/`. | Step 2.2 |
+| `step3b_mac_queue.py` | **MAC queue** — Path-dependent consequential deployment queue. Output: `data/step3-dispatch/`. | Step 1 only (NOT Step 2) |
 
 #### Step 4: Analysis (two tiers: 4.1 parallel → 4.2 parallel)
 
@@ -2092,8 +2092,8 @@ All workflows: `workflow_dispatch`, ISO selectors. See `.github/workflows/README
 | 7 | `step7-dashboard-data.yml` | Dashboard data export |
 
 **Key acronyms**:
-- **PFS** — Physics Feasible Space: all physically valid resource mixes (Step 1 output, `data/step1-pfs-parquets/`)
-- **EF** — Efficient Frontier: non-dominated mixes optimal under some cost assumption (Step 2.1 output, `data/step2-ef-parquets/`)
+- **PFS** — Physics Feasible Space: all physically valid resource mixes (Step 1 output, `data/step1-pfs/`)
+- **EF** — Efficient Frontier: non-dominated mixes optimal under some cost assumption (Step 2.1 output, `data/step2.1-ef/`)
 
 **Data contract**: Step 2.2 must NOT change existing columns in shared-data.js or overprocure_results.json. Add new columns/fields only. This prevents recoding existing figures and dashboards.
 
@@ -2493,16 +2493,16 @@ Before launching `step1_pfs_generator.py`, the following must be verified:
 
 **Purpose**: Compute synthetic hourly LMP (Locational Marginal Prices) for each winning scenario by reconstructing 8760-hour dispatch and applying ISO-specific price formation models. Enables cost-of-energy analysis that accounts for how clean energy penetration reshapes wholesale electricity prices.
 
-**Pipeline position**: Downstream of Step 4. Reads Step 3/4 outputs, writes to `data/step5-post-processing/lmp/`. No changes to Steps 1–4.
+**Pipeline position**: Downstream of Step 4. Reads Step 3/4 outputs, writes to `data/step4-analysis/lmp/`. No changes to Steps 1–4.
 
 ```
 Step 1 (PFS) → Step 2 (EF) → Step 3 (Cost) → Step 4 (Postprocess)
                                                       ↓
                                           step5_compute_lmp_prices.py
                                                       ↓
-                              data/step5-post-processing/lmp/{ISO}_lmp.parquet   (per-ISO output)
-                              data/step5-post-processing/lmp/{ISO}_archetypes.parquet
-                              data/step5-post-processing/lmp/lmp_summary.json  (dashboard-ready)
+                              data/step4-analysis/lmp/{ISO}_lmp.parquet   (per-ISO output)
+                              data/step4-analysis/lmp/{ISO}_archetypes.parquet
+                              data/step4-analysis/lmp/lmp_summary.json  (dashboard-ready)
 ```
 
 #### Shared Architecture: `dispatch_utils.py`
@@ -2526,7 +2526,7 @@ dispatch_utils.py (shared)
 step4_build_dispatch_cache.py (runs first — Step 5)
 ├── extract_unique_mixes(iso, input_dir)              ← reads step4/step3 parquets
 ├── build_cache_for_iso(iso, mixes, ...)              ← detailed=True for all mixes
-└── Output: data/step4-dispatch-cache/{ISO}_dispatch_cache.npz (v2)
+└── Output: data/step3-dispatch/{ISO}_dispatch_cache.npz (v2)
 
 step5_compress_day_profiles.py (Step 6 — reads from dispatch cache)
 ├── dispatch_from_cache(iso, mix, ...)                ← cache lookup → result format
@@ -2583,13 +2583,13 @@ step5_compute_lmp_prices.py (Step 6 — imports dispatch_utils)
 - Step 3/4 constants — wholesale prices, fuel adjustments, gas capacity (imported at runtime, NOT hardcoded)
 
 **New inputs (Phase 2 — calibration)**:
-- `data/step5-post-processing/lmp/actual_lmp_PJM.json` — PJM Data Miner 2 API (Western Hub, 2021-2025)
+- `data/step4-analysis/lmp/actual_lmp_PJM.json` — PJM Data Miner 2 API (Western Hub, 2021-2025)
 
 **Outputs**:
-- `data/step5-post-processing/lmp/{ISO}_lmp.parquet` — summary stats per (threshold, scenario), ~2 MB/ISO
-- `data/step5-post-processing/lmp/{ISO}_archetypes.parquet` — 8760h profiles for unique archetypes, ~15-20 MB/ISO
-- `data/step5-post-processing/lmp/{ISO}_checkpoint.json` — resume state (transient, deleted on completion)
-- `data/step5-post-processing/lmp/lmp_summary.json` — dashboard-ready cross-ISO summary, <500 KB
+- `data/step4-analysis/lmp/{ISO}_lmp.parquet` — summary stats per (threshold, scenario), ~2 MB/ISO
+- `data/step4-analysis/lmp/{ISO}_archetypes.parquet` — 8760h profiles for unique archetypes, ~15-20 MB/ISO
+- `data/step4-analysis/lmp/{ISO}_checkpoint.json` — resume state (transient, deleted on completion)
+- `data/step4-analysis/lmp/lmp_summary.json` — dashboard-ready cross-ISO summary, <500 KB
 - `dashboard/js/lmp-data.js` — client-side visualization data (Phase 4)
 
 #### Hourly Dispatch Reconstruction
@@ -2640,7 +2640,7 @@ Each ISO gets its own `PriceModel` class with calibratable parameters:
 
 #### Output Schema
 
-**Per-ISO stats: `data/step5-post-processing/lmp/{ISO}_lmp.parquet`**
+**Per-ISO stats: `data/step4-analysis/lmp/{ISO}_lmp.parquet`**
 
 | Column | Type | Description |
 |---|---|---|
@@ -2659,7 +2659,7 @@ Each ISO gets its own `PriceModel` class with calibratable parameters:
 | `net_peak_price` | float32 | Price at max net demand hour |
 | `fossil_revenue_mwh` | float32 | Avg $/MWh earned by remaining fossil |
 
-**Per-ISO archetype profiles: `data/step5-post-processing/lmp/{ISO}_archetypes.parquet`**
+**Per-ISO archetype profiles: `data/step4-analysis/lmp/{ISO}_archetypes.parquet`**
 
 | Column | Type |
 |---|---|
@@ -2718,7 +2718,7 @@ dispatch_utils.py              # Shared dispatch/retirement/profiles (~300 lines
 step5_compute_lmp_prices.py  # Main LMP script (~750 lines)
 fetch_pjm_lmp.py               # Phase 2: LMP data fetcher (~150 lines)
 calibrate_lmp_model.py         # Phase 2: Parameter calibration (~200 lines)
-data/step5-post-processing/lmp/                      # Output directory
+data/step4-analysis/lmp/                      # Output directory
   ├── {ISO}_lmp.parquet        # ~2 MB each
   ├── {ISO}_archetypes.parquet # ~15-20 MB each
   ├── {ISO}_checkpoint.json    # Transient
@@ -3367,9 +3367,9 @@ H2:    [0, 5, 10, 20]         # same as 1C
 6. Curtailment filter: batteries need ≥150 surplus days (same as 1C §6.4.4)
 7. Output feasible solutions (score ≥ target AND at least one storage > 0) to new parquets
 
-**Output**: `data/step1-pfs-parquets/{ISO}_t{XX}_storage_refined.parquet` — same schema as Step 1C PFS parquets, `pareto_type = 'storage_refined'`.
+**Output**: `data/step1-pfs/{ISO}_t{XX}_storage_refined.parquet` — same schema as Step 1C PFS parquets, `pareto_type = 'storage_refined'`.
 
-**Step 2 integration**: `step2_efficient_frontier.py` scans `data/step1-pfs-parquets/`. Deduplication handles any overlap between 1C and 1D results (keeps max score per unique resource + storage key).
+**Step 2 integration**: `step2_efficient_frontier.py` scans `data/step1-pfs/`. Deduplication handles any overlap between 1C and 1D results (keeps max score per unique resource + storage key).
 
 **Test results** (ERCOT t75): 3,303,625 new storage-enabled solutions found in 78s (vs 0 from Step 1C). Cap ranges confirmed: bat4=[0.00%, 0.34%, 0.80%], LDES=[0.00%, 2.10%, 5.15%].
 
@@ -3598,7 +3598,7 @@ Within the crossover range, some resource investments are needed regardless of w
 - All three scaled by L/M/H demand growth for absolute TWh quantities
 
 **Implementation**: `scripts/step5_compute_optimal_targets.py` (Step 6 post-processor, runs in parallel with MAC/LMP/etc.)
-- Outputs: `data/step5-post-processing/optimal_targets.json`, `dashboard/js/optimal-target-data.js`
+- Outputs: `data/step4-analysis/optimal_targets.json`, `dashboard/js/optimal-target-data.js`
 - Consumed by: `step6_generate_shared_data.py` → OPTIMAL_TARGETS in shared-data.js
 - Depends on: CLEAN_COST (L/M/H effective_cost, no gas backup), RESOURCE_MIX_DATA, emission rates, DAC trajectories
 - No dispatch cache dependency — uses pre-computed Step 3 cost data
@@ -3747,7 +3747,7 @@ For each resource:
 
 **Two-phase architecture**:
 
-**Phase 1a — One-time coarse sweep per ISO** (cached to `data/step1-pfs-parquets/{ISO}_coarse_cache.parquet`):
+**Phase 1a — One-time coarse sweep per ISO** (cached to `data/step1-pfs/{ISO}_coarse_cache.parquet`):
 - Generate all resource fraction combos at 5% step
 - Score each combo once: `supply[h] = sum(frac[r] * profile[r][h])`, `score = sum(min(demand[h], supply[h]))`
 - Cache `(resource fractions, score)` — reusable across ALL thresholds
@@ -3768,7 +3768,7 @@ For each resource:
 
 **Cost formula change**: Step 3 simplifies from `resource_frac/100 × procurement/100 × LCOE` to `resource_frac/100 × LCOE × demand_TWh`. Resource fractions directly represent generation volume.
 
-**Persistent solution cache**: Results accumulated in `data/step1-pfs-parquets/` as per-ISO/threshold parquet files. Deduplication by (resource fractions, storage levels) key — no procurement dimension.
+**Persistent solution cache**: Results accumulated in `data/step1-pfs/` as per-ISO/threshold parquet files. Deduplication by (resource fractions, storage levels) key — no procurement dimension.
 
 ### 11.2 Edge Case Seed Mixes
 
@@ -4859,7 +4859,7 @@ gas_needed_mw = max(0, ra_peak - clean_peak) / GAF
 **Results per ISO:**
 - ERCOT: 2,033,961 solutions (Phase 1: 226K coarse → Phase 2: 1.8M fine), 11 min
 - CAISO: ~1.8M solutions (saturation: bat4=1.00%, bat8=2.00%), ~25 min
-- Output: Per-ISO/threshold parquet files (`data/step1-pfs-parquets/{ISO}_t{XX}_raw_pfs.parquet`)
+- Output: Per-ISO/threshold parquet files (`data/step1-pfs/{ISO}_t{XX}_raw_pfs.parquet`)
 
 **Scientific rigor preserved:** Every level from 0 to saturation+margin is swept at 0.05% resolution. No levels are skipped or short-circuited. The coarse phase just identifies WHERE the fine sweep should focus.
 
@@ -5124,7 +5124,7 @@ Step 1D.2 addresses gap (1) with research-informed 2050 capacity caps. The Econo
 1. Reads `STORAGE_MAX_V2` instead of `STORAGE_MAX`
 2. Coarser initial grid (wider range → need 0.5% coarse step instead of 0.25%)
 3. Same fine resolution (0.05%) on frontier boundary mixes
-4. Output directory: `data/step1-pfs-parquets/` (consolidated storage output)
+4. Output directory: `data/step1-pfs/` (consolidated storage output)
 
 ### §16.4 Pipeline Integration
 

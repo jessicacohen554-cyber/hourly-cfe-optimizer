@@ -5,7 +5,7 @@ Reads existing efficient frontier parquets and computes per-ISO, per-threshold
 resource mix bounds with buffer. Used by step1a (coarse grid narrowing) and
 step1c (zone-specific fine search windows).
 
-Output: data/step1-pfs-parquets/{ISO}_prior_windows.json
+Output: data/step1-pfs/{ISO}_prior_windows.json
 
 Usage:
   python scripts/step1_prior_windows.py --iso CAISO
@@ -48,7 +48,7 @@ ZONES = [
 # Additional thresholds below zone A (no fine search needed, coarse only)
 LOW_THRESHOLDS = [10, 20, 30, 40]
 
-EF_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), 'data', 'step2-ef-parquets')
+EF_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), 'data', 'step2.1-ef')
 
 
 def _ef_path(iso, threshold):

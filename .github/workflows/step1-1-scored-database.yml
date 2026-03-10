@@ -3,7 +3,7 @@ name: "Step 1.1: Build Scored Mix Database"
 # Generates all resource fraction combos (1a) and scores them (1b) → coarse_cache.parquet.
 # This is the database that Step 1B (zone search) mines per-threshold.
 # Run once after physics changes or code updates.
-# Output: data/step1-pfs-parquets/{ISO}_mixes.parquet, {ISO}_coarse_cache.parquet
+# Output: data/step1-pfs/{ISO}_mixes.parquet, {ISO}_coarse_cache.parquet
 
 on:
   workflow_dispatch:
@@ -76,7 +76,7 @@ jobs:
       run: pip install numpy numba pyarrow pandas
 
     - name: Create output directories
-      run: mkdir -p data/step1-pfs-parquets
+      run: mkdir -p data/step1-pfs
 
     - name: "Stage 1a: Generate mix combinations"
       if: ${{ inputs.script == 'ALL' || inputs.script == 'generate-mixes' }}
@@ -153,7 +153,7 @@ jobs:
           echo ""
           echo "--- Batching commit for $iso ---"
 
-          FILES=$(ls data/step1-pfs-parquets/${iso}_mixes.parquet data/step1-pfs-parquets/${iso}_coarse_cache.parquet 2>/dev/null || true)
+          FILES=$(ls data/step1-pfs/${iso}_mixes.parquet data/step1-pfs/${iso}_coarse_cache.parquet 2>/dev/null || true)
           if [ -z "$FILES" ]; then
             echo "  No database files for $iso — skipping"
             continue

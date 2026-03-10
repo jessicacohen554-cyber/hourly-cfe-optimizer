@@ -9,7 +9,7 @@ name: "Step 1.2-1.3: Zone Search + Floor PFS"
 # sequentially per ISO.
 #
 # Each ISO runs on its own runner in parallel and commits to its own auto/* branch.
-# Output: data/step1-pfs-parquets/{ISO}_*.parquet
+# Output: data/step1-pfs/{ISO}_*.parquet
 
 on:
   workflow_dispatch:
@@ -149,14 +149,14 @@ jobs:
         python -c "from numba import njit; print('Numba OK')"
 
     - name: Ensure output directory
-      run: mkdir -p data/step1-pfs-parquets
+      run: mkdir -p data/step1-pfs
 
     # ── Zone Search (1B) ──────────────────────────────────────────────
     - name: Verify scored database (Zone Search)
       if: inputs.script == 'All' || inputs.script == 'Zone Search (1B)'
       run: |
         ISO="${{ matrix.iso }}"
-        CACHE="data/step1-pfs-parquets/${ISO}_coarse_cache.parquet"
+        CACHE="data/step1-pfs/${ISO}_coarse_cache.parquet"
         if [ ! -f "$CACHE" ]; then
           echo "ERROR: Missing scored database for $ISO"
           echo "  Expected: $CACHE"
@@ -198,7 +198,7 @@ jobs:
       if: (inputs.script == 'All' || inputs.script == 'Zone Search (1B)') && always()
       run: |
         ISO="${{ matrix.iso }}"
-        git add -f data/step1-pfs-parquets/"${ISO}"_*.parquet 2>/dev/null || true
+        git add -f data/step1-pfs/"${ISO}"_*.parquet 2>/dev/null || true
         if ! git diff --cached --quiet; then
           git commit -m "Step 1B Zone Search: ${ISO} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
         fi
@@ -217,7 +217,7 @@ jobs:
       if: (inputs.script == 'All' || inputs.script == 'Floor-Aware (1B2)') && always()
       run: |
         ISO="${{ matrix.iso }}"
-        git add -f data/step1-pfs-parquets/"${ISO}"_*.parquet 2>/dev/null || true
+        git add -f data/step1-pfs/"${ISO}"_*.parquet 2>/dev/null || true
         if ! git diff --cached --quiet; then
           git commit -m "Step 1B2 Floor-Aware PFS: ${ISO} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
         fi
@@ -236,7 +236,7 @@ jobs:
       if: (inputs.script == 'All' || inputs.script == 'Fine-Grid (1B3)') && always()
       run: |
         ISO="${{ matrix.iso }}"
-        git add -f data/step1-pfs-parquets/"${ISO}"_*.parquet 2>/dev/null || true
+        git add -f data/step1-pfs/"${ISO}"_*.parquet 2>/dev/null || true
         if ! git diff --cached --quiet; then
           git commit -m "Step 1B3 Fine-Grid PFS: ${ISO} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
         fi

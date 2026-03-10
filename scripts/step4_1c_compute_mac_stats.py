@@ -12,7 +12,7 @@ Reads existing optimizer results and computes:
 
 Outputs:
   - dashboard/js/mac-stats-data.js              (JavaScript constants for dashboard)
-  - data/step5-post-processing/mac_stats.json    (full JSON for programmatic use)
+  - data/step4-analysis/mac_stats.json    (full JSON for programmatic use)
 
 Performance: Uses vectorized pandas/numpy operations throughout.
 Data is loaded as DataFrames and never converted to nested dicts.
@@ -42,7 +42,7 @@ from pipeline_config import OUTPUT_THRESHOLDS as THRESHOLDS, ISOS
 
 RESULTS_PATH = os.path.join(BASE_DIR, 'dashboard', 'overprocure_results.json')
 JS_OUTPUT_PATH = os.path.join(BASE_DIR, 'dashboard', 'js', 'mac-stats-data.js')
-STEP5_DIR = os.path.join(BASE_DIR, 'data', 'step5-post-processing')
+STEP5_DIR = os.path.join(BASE_DIR, 'data', 'step4-analysis')
 JSON_OUTPUT_PATH = os.path.join(STEP5_DIR, 'mac_stats.json')
 THRESHOLD_STRS = [str(t) if t != int(t) else str(int(t)) for t in THRESHOLDS]
 

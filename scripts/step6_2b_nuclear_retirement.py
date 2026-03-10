@@ -30,8 +30,8 @@ Revenue model per plant per scenario per year:
 
 Output:
   - dashboard/js/nuclear-retirement-data.js (pre-computed dashboard data)
-  - data/step12-nuclear-retirement/nuclear_stranding_results.parquet
-  - data/step12-nuclear-retirement/nuclear_stranding_probabilities.parquet
+  - data/step6-smartargets/nuclear_stranding_results.parquet
+  - data/step6-smartargets/nuclear_stranding_probabilities.parquet
 """
 
 import json
@@ -44,11 +44,11 @@ from pathlib import Path
 # ─── Project paths ─────────────────────────────────────────────────────
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / 'data'
-SWEEP_DIR = DATA / 'step10-smartargets'
-STEP3_DIR = DATA / 'step3-cost-opt-parquets'
+SWEEP_DIR = DATA / 'step6-smartargets'
+STEP3_DIR = DATA / 'step2.2-cost'
 POLICY_FILE = DATA / 'nuclear_policy_data.json'
 FLEET_FILE = DATA / 'ipp_fleet_config.json'
-OUT_DIR = DATA / 'step12-nuclear-retirement'
+OUT_DIR = DATA / 'step6-smartargets'
 JS_OUT = ROOT / 'dashboard' / 'js' / 'nuclear-retirement-data.js'
 
 # ─── Imports from pipeline ─────────────────────────────────────────────

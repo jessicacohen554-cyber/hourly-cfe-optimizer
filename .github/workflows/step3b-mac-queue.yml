@@ -5,7 +5,7 @@ name: "Step 3B: MAC Queue"
 # hybrid 8760-hour dispatch CO2 rescoring, and dual-floor (filter/cost) logic.
 #
 # iso=ALL fans out parallel matrix jobs, then merges into one branch + PR.
-# Output: data/step5-post-processing/mac_queue/
+# Output: data/step3-dispatch/
 
 on:
   workflow_dispatch:
@@ -93,7 +93,7 @@ jobs:
         run: pip install numpy numba pyarrow pandas scipy
 
       - name: Ensure output directories
-        run: mkdir -p data/step5-post-processing/mac_queue
+        run: mkdir -p data/step3-dispatch
 
       - name: "MAC Queue — ${{ matrix.iso }}"
         run: |
@@ -111,7 +111,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: mac-queue-${{ matrix.iso }}
-          path: data/step5-post-processing/mac_queue/
+          path: data/step3-dispatch/
           retention-days: 1
 
   merge:
@@ -143,13 +143,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: mac-queue-*
-          path: data/step5-post-processing/mac_queue/
+          path: data/step3-dispatch/
           merge-multiple: true
 
       - name: Verify artifacts
         run: |
           echo "=== Downloaded artifacts ==="
-          find data/step5-post-processing/mac_queue/ -type f 2>/dev/null | head -50 || echo "  (no files found)"
+          find data/step3-dispatch/ -type f 2>/dev/null | head -50 || echo "  (no files found)"
 
       - name: Batched commit and push (per-ISO)
         run: |
@@ -181,7 +181,7 @@ jobs:
 
           for iso in $ISOS; do
             echo "--- Batching commit for $iso ---"
-            FILES=$(find data/step5-post-processing/mac_queue/ -name "*${iso}*" -type f 2>/dev/null || true)
+            FILES=$(find data/step3-dispatch/ -name "*${iso}*" -type f 2>/dev/null || true)
             if [ -z "$FILES" ]; then
               echo "  No files for $iso — skipping"
               continue
@@ -210,7 +210,7 @@ jobs:
           done
 
           # Summary JSON + remaining mac_queue files
-          git add -f data/step5-post-processing/mac_queue/ 2>/dev/null || true
+          git add -f data/step3-dispatch/ 2>/dev/null || true
           if ! git diff --cached --quiet; then
             echo "--- Staging remaining files ---"
             git commit -m "Step 5D MAC Queue: summary + scenario A export — $(date -u +%Y-%m-%dT%H:%M:%SZ)"

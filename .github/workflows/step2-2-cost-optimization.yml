@@ -6,7 +6,7 @@ name: "Step 2.2: Cost Optimization"
 #
 # iso=ALL fans out parallel matrix jobs, then merges into one branch + PR.
 # Prerequisite: Step 2 (Efficient Frontier) must have produced EF parquets.
-# Output: data/step3-cost-opt-parquets/
+# Output: data/step2.2-cost/
 
 on:
   workflow_dispatch:
@@ -84,7 +84,7 @@ jobs:
 
       - name: Verify step-2 EF parquets exist
         run: |
-          if [ ! -d data/step2-ef-parquets ] || [ -z "$(ls data/step2-ef-parquets/*.parquet 2>/dev/null)" ]; then
+          if [ ! -d data/step2.1-ef ] || [ -z "$(ls data/step2.1-ef/*.parquet 2>/dev/null)" ]; then
             echo "ERROR: Step-2 EF parquets not found. Run Step 2 first."
             exit 1
           fi
@@ -99,7 +99,7 @@ jobs:
 
       - name: Ensure output directories
         run: |
-          mkdir -p data/step3-cost-opt-parquets
+          mkdir -p data/step2.2-cost
           mkdir -p dashboard
 
       - name: Build sensitivity flag
@@ -134,14 +134,14 @@ jobs:
       - name: Scope output to current ISO only
         run: |
           # Remove parquets from other ISOs to prevent merge-multiple corruption
-          find data/step3-cost-opt-parquets/ -name "*.parquet" ! -name "*${{ matrix.iso }}*" -delete 2>/dev/null || true
+          find data/step2.2-cost/ -name "*.parquet" ! -name "*${{ matrix.iso }}*" -delete 2>/dev/null || true
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: step3-${{ matrix.iso }}
           path: |
-            data/step3-cost-opt-parquets/
+            data/step2.2-cost/
             dashboard/track_scenarios.parquet
             dashboard/track_demand_growth.parquet
           retention-days: 1
@@ -179,14 +179,14 @@ jobs:
 
       - name: Place artifacts
         run: |
-          cp -f artifact-tmp/data/step3-cost-opt-parquets/*.parquet data/step3-cost-opt-parquets/ 2>/dev/null || true
+          cp -f artifact-tmp/data/step2.2-cost/*.parquet data/step2.2-cost/ 2>/dev/null || true
           cp -f artifact-tmp/dashboard/*.parquet dashboard/ 2>/dev/null || true
 
       - name: Commit and push
         run: |
           git config http.postBuffer 524288000
 
-          git add -f data/step3-cost-opt-parquets/ 2>/dev/null || true
+          git add -f data/step2.2-cost/ 2>/dev/null || true
           git add -f dashboard/track_scenarios.parquet 2>/dev/null || true
           git add -f dashboard/track_demand_growth.parquet 2>/dev/null || true
 

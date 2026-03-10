@@ -320,7 +320,7 @@ def main():
         json.dump(output, f, separators=(',', ':'))
 
     # Archive canonical copy to step5 results directory
-    step5_dir = os.path.join(DATA_DIR, 'step5-post-processing')
+    step5_dir = os.path.join(DATA_DIR, 'step4-analysis')
     os.makedirs(step5_dir, exist_ok=True)
     step5_out = os.path.join(step5_dir, 'compressed_day_profiles.json')
     with open(step5_out, 'w') as f:

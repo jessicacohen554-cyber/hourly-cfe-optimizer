@@ -16,8 +16,8 @@ import pandas as pd
 
 warnings.filterwarnings("ignore")
 
-INPUT_PATH = "/home/user/hourly-cfe-optimizer/data/step5-post-processing/lmp/PJM_lmp.parquet"
-OUTPUT_PATH = "/home/user/hourly-cfe-optimizer/data/step5-post-processing/lmp/pjm_lmp_trends.json"
+INPUT_PATH = "/home/user/hourly-cfe-optimizer/data/step4-analysis/lmp/PJM_lmp.parquet"
+OUTPUT_PATH = "/home/user/hourly-cfe-optimizer/data/step4-analysis/lmp/pjm_lmp_trends.json"
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from pipeline_config import OUTPUT_THRESHOLDS as THRESHOLDS

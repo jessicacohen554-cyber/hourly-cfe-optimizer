@@ -14,8 +14,8 @@ Analyzes:
   - Regional variation in storage need (solar-dominant vs wind-dominant ISOs)
 
 Input:
-  - data/step4-dispatch-cache/{ISO}_dispatch_cache.parquet
-  - data/step3-cost-opt-parquets/ (Medium scenario optimal mixes)
+  - data/step3-dispatch/{ISO}_dispatch_cache.parquet
+  - data/step2.2-cost/ (Medium scenario optimal mixes)
   - dashboard/compressed_day_profiles.json (24hr compressed profiles)
 
 Output:
@@ -75,7 +75,7 @@ def load_resource_mixes_from_parquets():
         print("  WARNING: pandas not available")
         return {}
 
-    dg_dir = os.path.join(DATA_DIR, 'step3-cost-opt-parquets')
+    dg_dir = os.path.join(DATA_DIR, 'step2.2-cost')
     if not os.path.exists(dg_dir):
         print(f"  WARNING: {dg_dir} not found")
         return {}
@@ -465,7 +465,7 @@ def extract_parquet_storage_stats():
         print("  pandas not available — skipping parquet analysis")
         return {}
 
-    pdir = os.path.join(DATA_DIR, 'step3-cost-opt-parquets')
+    pdir = os.path.join(DATA_DIR, 'step2.2-cost')
     if not os.path.exists(pdir):
         return {}
 
