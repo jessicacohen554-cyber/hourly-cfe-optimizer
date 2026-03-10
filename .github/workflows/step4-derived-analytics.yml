@@ -1,0 +1,205 @@
+name: "Step 4: Derived Analytics"
+
+# Runs derived analytics scripts sequentially:
+#   1. step6a_compute_mac_stats.py  — 6 MAC metrics, ANOVA decomposition, crossover analysis
+#   2. step6b_compute_optimal_targets.py — optimal CFE target per ISO via DAC crossover
+#   3. step6d_extract_building_blocks.py — hourly profiles + resource mix data for building blocks page
+#   4. step6e_extract_resource_density.py — per-scenario resource density strip plots
+#
+# Prerequisite: Step 5A (CO2) must have run first — MAC depends on CO2 output.
+# Output: dashboard/js/{mac-stats,optimal-target,building-blocks,resource-density}-data.js
+#         data/step4-analysis/{building-blocks,resource-density}/
+# Note: Run Step 9 separately afterward to regenerate shared-data.js.
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO region to process'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      script:
+        description: 'Which script to run'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - mac-stats
+          - optimal-targets
+          - building-blocks
+          - resource-density
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  BRANCH_PREFIX: step6-analytics
+
+jobs:
+  update-mac-page:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Create output branch
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          ISO_LABEL="${{ inputs.iso }}"
+          SCRIPT_LABEL="${{ inputs.script }}"
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${SCRIPT_LABEL}-${ISO_LABEL}"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$TARGET_BRANCH"
+
+      - name: Verify upstream data exists
+        run: |
+          if [ ! -d "data/step2.2-cost" ] || ! ls data/step2.2-cost/*.parquet >/dev/null 2>&1; then
+            echo "ERROR: No step-3 parquets found. Run earlier steps first."
+            exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy numba pyarrow pandas scipy
+
+      - name: Ensure output directories
+        run: |
+          mkdir -p data/step4-analysis
+          mkdir -p data/step4-analysis/building-blocks
+          mkdir -p data/step4-analysis/resource-density
+          mkdir -p dashboard/js
+
+      # ════════════════════════════════════════════════════════════════════
+      # Sequential: MAC Stats → Optimal Targets → Building Blocks → Resource Density
+      # ════════════════════════════════════════════════════════════════════
+
+      - name: "1/4 — Compute MAC Statistics"
+        if: ${{ inputs.script == 'ALL' || inputs.script == 'mac-stats' }}
+        run: |
+          echo "=== MAC Statistics (6 metrics, ANOVA, crossover) ==="
+          python scripts/step4_1c_compute_mac_stats.py
+
+      - name: "2/4 — Compute Optimal Targets"
+        if: ${{ inputs.script == 'ALL' || inputs.script == 'optimal-targets' }}
+        run: |
+          echo "=== Optimal CFE Targets (DAC crossover analysis) ==="
+          python scripts/step4_1d_compute_optimal_targets.py
+
+      - name: "3/4 — Extract Building Blocks Data"
+        if: ${{ inputs.script == 'ALL' || inputs.script == 'building-blocks' }}
+        run: |
+          echo "=== Building Blocks (hourly profiles + resource mixes) ==="
+          python scripts/step4_1f_extract_building_blocks.py
+
+      - name: "4/4 — Extract Resource Density Data"
+        if: ${{ inputs.script == 'ALL' || inputs.script == 'resource-density' }}
+        run: |
+          echo "=== Resource Density (per-scenario strip plot data) ==="
+          python scripts/step4_2a_extract_resource_density.py
+
+      - name: Batched commit and push
+        run: |
+          git config http.postBuffer 524288000
+
+          push_with_retry() {
+            local label="$1"
+            local MAX_RETRIES=4
+            for i in $(seq 1 $MAX_RETRIES); do
+              echo "  Push attempt $i/$MAX_RETRIES for ${label}..."
+              git push -u origin "$TARGET_BRANCH" 2>&1 && return 0
+              if [ "$i" -eq "$MAX_RETRIES" ]; then
+                echo "  ERROR: Push failed for ${label} after $MAX_RETRIES attempts"
+                return 1
+              fi
+              BACKOFF=$((2 ** i))
+              echo "  Retrying in ${BACKOFF}s..."
+              sleep "$BACKOFF"
+            done
+          }
+
+          PUSHED=false
+
+          # Batch 1: Post-processing parquets/data (per-ISO)
+          ISOS="CAISO ERCOT PJM NYISO NEISO MISO SPP"
+          for iso in $ISOS; do
+            FILES=$(find data/step4-analysis/ -name "*${iso}*" -type f 2>/dev/null || true)
+            if [ -z "$FILES" ]; then continue; fi
+            git add -f $FILES
+            if git diff --cached --quiet; then continue; fi
+            BATCH_MB=$(du -cm $FILES | tail -1 | cut -f1)
+            echo "--- Staging ~${BATCH_MB} MB for $iso ---"
+            git commit -m "Step 6 MAC data: ${iso} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            if push_with_retry "$iso"; then
+              PUSHED=true
+            else
+              echo "  Per-ISO push failed for $iso — falling back to per-file"
+              git reset HEAD~1
+              for f in $FILES; do
+                FNAME=$(basename "$f")
+                git add -f "$f"
+                if git diff --cached --quiet; then continue; fi
+                git commit -m "Step 6 MAC: ${iso} ${FNAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                if push_with_retry "$FNAME"; then PUSHED=true; else git reset HEAD~1; fi
+              done
+            fi
+          done
+
+          # Batch 2: Non-ISO post-processing files (JSON aggregates)
+          git add -f data/step4-analysis/optimal_targets.json 2>/dev/null || true
+          # Catch any remaining non-ISO files
+          git add -f data/step4-analysis/ 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            echo "--- Staging aggregate JSON files ---"
+            git commit -m "Step 6 MAC: aggregate data — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            if push_with_retry "aggregate-data"; then PUSHED=true; else git reset HEAD~1; fi
+          fi
+
+          # Batch 3: Step 6 derived analytics output directory
+          git add -f data/step4-analysis/ 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            echo "--- Staging step6 derived analytics data ---"
+            git commit -m "Step 6 derived analytics: building-blocks + resource-density — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            if push_with_retry "step6-data"; then PUSHED=true; else git reset HEAD~1; fi
+          fi
+
+          # Batch 4: Dashboard JS files
+          git add -f dashboard/js/mac-stats-data.js 2>/dev/null || true
+          git add -f dashboard/js/optimal-target-data.js 2>/dev/null || true
+          git add -f dashboard/js/building-blocks-data.js 2>/dev/null || true
+          git add -f dashboard/js/resource-density-data.js 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            echo "--- Staging dashboard JS ---"
+            git commit -m "Step 6 derived analytics: dashboard JS — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            if push_with_retry "dashboard-js"; then PUSHED=true; else git reset HEAD~1; fi
+          fi
+
+          if [ "$PUSHED" = "false" ]; then
+            echo "No changes were pushed"
+          fi

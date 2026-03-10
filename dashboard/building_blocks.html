@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Building Blocks — Hourly CFE Optimizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/scrollytell.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+<script src="js/scroll-observer.js"></script>
+<style>
+body { background: var(--bg-page-white); }
+
+.bb-intro {
+    max-width: var(--max-prose); margin: 0 auto; padding: 0 var(--pad-page);
+    font-size: 0.95rem; color: var(--text-dim); line-height: 1.75;
+}
+
+.section-header { margin-bottom: var(--space-xl); }
+.section-header h3 {
+    font-family: var(--font-heading); font-size: 1.5rem; font-weight: 700;
+    color: var(--navy); margin-bottom: var(--space-sm);
+}
+.section-header p { font-size: 0.9rem; color: var(--text-dim); line-height: 1.6; max-width: 800px; }
+
+.controls-bar {
+    display: flex; flex-wrap: wrap; gap: var(--space-md); align-items: center;
+    margin-bottom: var(--space-lg); padding: var(--space-md);
+    background: var(--bg-alt); border-radius: var(--radius-md);
+}
+.controls-bar label {
+    font-family: var(--font-heading); font-size: 0.8rem; font-weight: 600;
+    color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+.iso-pills {
+    display: flex; gap: 4px; flex-wrap: wrap;
+}
+.iso-pill {
+    padding: 6px 14px; border: 2px solid var(--border-light); border-radius: var(--radius-pill);
+    background: white; cursor: pointer; font-family: var(--font-heading);
+    font-size: 0.8rem; font-weight: 600; color: var(--text-muted);
+    transition: all 0.2s; min-height: 44px; display: flex; align-items: center;
+}
+.iso-pill:hover { border-color: var(--navy); color: var(--navy); }
+.iso-pill.active { background: var(--navy); color: white; border-color: var(--navy); }
+
+.track-pills {
+    display: flex; gap: 2px; background: var(--bg-alt); border-radius: var(--radius-md);
+    padding: 3px;
+}
+.track-pill {
+    padding: 6px 16px; border: none; background: transparent; cursor: pointer;
+    font-family: var(--font-heading); font-size: 0.8rem; font-weight: 600;
+    color: var(--text-muted); border-radius: var(--radius-sm); transition: all 0.2s;
+    min-height: 44px;
+}
+.track-pill.active { background: white; color: var(--navy); box-shadow: var(--shadow-sm); }
+
+.threshold-slider-wrap {
+    display: flex; align-items: center; gap: var(--space-sm);
+}
+.threshold-slider-wrap input[type="range"] {
+    width: 200px; accent-color: var(--navy);
+}
+.threshold-val {
+    font-family: var(--font-data, var(--font-mono)); font-size: 0.9rem;
+    font-weight: 700; color: var(--navy); min-width: 70px;
+}
+
+.chart-panel h4 {
+    font-family: var(--font-heading); font-size: 1.05rem; font-weight: 700;
+    color: var(--navy); margin-bottom: 4px;
+}
+
+.bb-area-chart { height: 450px; position: relative; }
+@media (max-width: 768px) { .bb-area-chart { height: 340px; } }
+@media (min-width: 1024px) { .bb-area-chart { height: 500px; } }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-lg); }
+@media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-lg); }
+@media (max-width: 1024px) { .grid-3 { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 768px) { .grid-3 { grid-template-columns: 1fr; } }
+
+.resource-card {
+    background: white; border: 1px solid var(--border-light); border-radius: var(--radius-md);
+    padding: var(--space-md); position: relative; overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.resource-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.resource-card .rc-color {
+    position: absolute; top: 0; left: 0; right: 0; height: 4px;
+}
+.resource-card .rc-name {
+    font-family: var(--font-heading); font-size: 0.95rem; font-weight: 700;
+    color: var(--navy); margin-bottom: 4px; margin-top: 8px;
+}
+.resource-card .rc-shape {
+    font-size: 0.78rem; color: var(--text-muted); margin-bottom: var(--space-sm);
+}
+.resource-card .rc-chart { height: 120px; }
+.resource-card .rc-stats {
+    display: flex; gap: var(--space-md); margin-top: var(--space-sm);
+    font-size: 0.75rem; color: var(--text-dim);
+}
+.resource-card .rc-stats strong {
+    font-family: var(--font-data, var(--font-mono)); color: var(--navy);
+}
+
+.insight-box h5 {
+    font-family: var(--font-heading); font-weight: 700; font-size: 0.95rem;
+    color: var(--navy); margin-bottom: var(--space-sm);
+}
+.insight-box p { font-size: 0.88rem; color: var(--text-secondary); line-height: 1.6; margin: 0; }
+
+.mix-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin: var(--space-md) 0; }
+.mix-table th {
+    background: var(--bg-alt); font-weight: 700; text-align: left; padding: 10px 12px;
+    border-bottom: 2px solid var(--border-light); font-size: 0.7rem;
+    text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim);
+}
+.mix-table td { padding: 10px 12px; border-bottom: 1px solid var(--bg-alt); }
+.mix-table tr:hover td { background: var(--bg-alt); }
+.mix-table .zero { color: var(--text-muted); }
+
+.bb-footer {
+    max-width: var(--max-content); margin: 0 auto; padding: var(--space-lg);
+    font-size: 0.78rem; color: var(--text-muted); line-height: 1.6;
+    border-top: 1px solid var(--border-light);
+}
+
+.comparison-wrap {
+    display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-lg);
+    margin-top: var(--space-lg);
+}
+@media (max-width: 768px) { .comparison-wrap { grid-template-columns: 1fr; } }
+.comparison-wrap .chart-panel { min-height: 380px; }
+.comparison-wrap canvas { height: 340px !important; }
+</style>
+</head>
+<body>
+<nav id="topNav"></nav>
+
+<div class="header" id="pageHeader">
+    <h1>Building Blocks</h1>
+    <div class="subtitle">How each resource shapes the supply curve — and why your starting point determines your path</div>
+    <div class="header-accent"></div>
+</div>
+
+<!-- ========== INTRO ========== -->
+<section class="content-section">
+    <div class="bb-intro">
+        <p>
+            Every grid is a puzzle. The shape of demand &mdash; when it peaks, when it dips &mdash; determines
+            which resources "fit" the gaps. Solar fills midday. Wind fills nights and winters. Nuclear and hydro
+            run around the clock. Storage shifts surplus to deficit hours. But the <strong>existing clean fleet</strong>
+            changes everything: a grid with 30% nuclear already running needs a fundamentally different build plan
+            than one starting from scratch.
+        </p>
+        <p style="margin-top: var(--space-md);">
+            This page breaks down each resource's hourly shape, shows how they stack up against demand,
+            and illustrates why the path from 50% to 99.99% clean looks radically different across regions.
+            <strong>Track 1 (baseline)</strong> starts from the existing fleet.
+            <strong>Track 2 (greenfield)</strong> builds from zero under demand growth.
+        </p>
+    </div>
+</section>
+
+<!-- ========== RESOURCE SHAPE GALLERY ========== -->
+<section class="content-section">
+    <div class="section-header">
+        <h3>Resource Shape Gallery</h3>
+        <p>The daily generation profile of each resource determines when it can serve demand.
+           These shapes are why resource selection is a geometry problem, not just a cost problem.</p>
+    </div>
+
+    <div class="controls-bar">
+        <label>Region:</label>
+        <div class="iso-pills" id="galleryIsoPills"></div>
+    </div>
+
+    <div class="grid-3" id="resourceGallery"></div>
+</section>
+
+<!-- ========== STACKED SUPPLY vs DEMAND ========== -->
+<!-- ========== THRESHOLD DEEP DIVE: 24-HOUR VIEW ========== -->
+<section class="content-section">
+    <div class="section-header">
+        <h3>24-Hour Supply Stack</h3>
+        <p>A representative day showing how each resource contributes hour-by-hour.
+           This is the "puzzle" view &mdash; solar fills midday, wind fills night, baseload runs flat,
+           and storage bridges the gaps. Slide the threshold to see how the stack evolves.</p>
+    </div>
+
+    <div class="controls-bar">
+        <label>Region:</label>
+        <div class="iso-pills" id="dayIsoPills"></div>
+        <div class="threshold-slider-wrap" style="margin-left: var(--space-md);">
+            <label>CFE Target:</label>
+            <input type="range" id="thresholdSlider" min="0" max="20" value="13" step="1">
+            <span class="threshold-val" id="thresholdLabel">90%</span>
+        </div>
+    </div>
+
+    <div class="chart-panel">
+        <h4 id="dayTitle">CAISO — Representative Day at 90% CFE</h4>
+        <div class="bb-area-chart"><canvas id="dayChart"></canvas></div>
+    </div>
+</section>
+
+
+<div class="bb-footer">
+    <strong>Profiles:</strong> EIA-930 multi-year average hourly generation &amp; demand (2021&ndash;2024).
+    Offshore wind: synthetic profiles from NREL.
+    <strong>Storage shapes:</strong> Illustrative daily dispatch patterns (actual dispatch varies by day/season).
+</div>
+
+<script src="js/building-blocks-data.js"></script>
+<script src="js/nav.js"></script>
+<script>
+(function() {
+    'use strict';
+    if (window.ChartDataLabels) Chart.unregister(ChartDataLabels);
+
+    const BB_BL = BUILDING_BLOCKS_BASELINE;
+    const BB_DG = BUILDING_BLOCKS_DG;
+    const HP = HOURLY_PROFILES;
+    const SP = SEASONAL_PROFILES;
+    const ISOS = ['CAISO','ERCOT','PJM','NYISO','NEISO','MISO','SPP'];
+    const THRESHOLDS = [10,20,30,40,50,55,60,65,70,75,80,85,87.5,90,92.5,95,97.5,99,99.5,99.9,99.99];
+
+    const ISO_CLR = {}; ISOS.forEach(iso => { ISO_CLR[iso] = ISO_COLORS[iso]; });
+    const RES_CLR = {
+        clean_firm: RESOURCE_COLORS.cleanFirm, solar: RESOURCE_COLORS.solar,
+        wind: RESOURCE_COLORS.wind, offshore_wind: RESOURCE_COLORS.offshoreWind || '#009688',
+        ccs_ccgt: RESOURCE_COLORS.ccs, hydro: RESOURCE_COLORS.hydro,
+        nuclear: RESOURCE_COLORS.nuclear || '#6366F1',
+        geothermal: RESOURCE_COLORS.geothermal || '#D97706',
+        battery4: RESOURCE_COLORS.battery || '#06B6D4', battery8: '#0891B2',
+        ldes: RESOURCE_COLORS.ldes || '#E91E63', h2: RESOURCE_COLORS.greenH2 || '#10B981'
+    };
+
+    const fmtT = t => t >= 99.99 ? '≥99.99%' : t + '%';
+    const safe = arr => (arr || []).map(v => v == null ? undefined : v);
+    const HOURS = Array.from({length:24}, (_,i) => i + ':00');
+
+    // ======== RESOURCE DESCRIPTIONS ========
+    const RES_INFO = {
+        solar: { name: 'Solar', shape: 'Bell curve — peak at noon, zero at night', color: RES_CLR.solar,
+            desc: 'Produces only during daylight. Creates midday surplus, evening deficit. Defines storage need.' },
+        wind: { name: 'Onshore Wind', shape: 'Inverse solar — stronger at night, seasonal', color: RES_CLR.wind,
+            desc: 'Complements solar with nighttime generation. Multi-day lulls drive LDES need at high thresholds.' },
+        offshore_wind: { name: 'Offshore Wind', shape: 'Steadier than onshore — less diurnal variation', color: RES_CLR.offshore_wind,
+            desc: 'Higher capacity factor, steadier output. Available in CAISO, PJM, NYISO, NEISO only.' },
+        nuclear: { name: 'Nuclear', shape: 'Flat baseload — nearly constant 24/7', color: RES_CLR.nuclear,
+            desc: 'The ultimate baseload. Existing nuclear is the cheapest clean resource. Reduces need for everything else.' },
+        hydro: { name: 'Hydro', shape: 'Slightly higher during day, seasonal variation', color: RES_CLR.hydro,
+            desc: 'Dispatchable within constraints. Existing-only in our model. Free but limited by geography.' },
+        geothermal: { name: 'Geothermal', shape: 'Flat baseload — 24/7 year-round', color: RES_CLR.geothermal,
+            desc: 'CAISO only. Flat year-round generation up to 39 TWh cap. Reduces storage and overbuild need.' },
+        ccs_ccgt: { name: 'CCS-CCGT', shape: 'Flat baseload — dispatchable clean firm', color: RES_CLR.ccs_ccgt,
+            desc: 'Gas turbine with carbon capture. Flat output, includes 45Q tax credit offset. Clean firm backstop.' },
+        battery4: { name: 'Battery 4hr', shape: 'Charge midday (solar), discharge evening peak', color: RES_CLR.battery4,
+            desc: 'Daily cycling workhorse. Shifts solar surplus to evening peak. 85% round-trip efficiency.' },
+        battery8: { name: 'Battery 8hr', shape: 'Wider charge/discharge — extended evening', color: RES_CLR.battery8,
+            desc: 'Covers longer evening deficits. Enters only in last-mile scenarios. 85% RTE.' },
+        ldes: { name: 'LDES (Iron-Air)', shape: 'Multi-day charge/discharge — weather gap bridge', color: RES_CLR.ldes,
+            desc: '100-hour duration. Bridges multi-day wind lulls and winter gaps. 50% RTE. Only at ≥99%.' }
+    };
+
+    // ======== ISO PILL BUILDERS ========
+    function buildPills(containerId, callback, defaultISO) {
+        const el = document.getElementById(containerId);
+        ISOS.forEach(iso => {
+            const btn = document.createElement('button');
+            btn.className = 'iso-pill' + (iso === (defaultISO || 'CAISO') ? ' active' : '');
+            btn.textContent = iso;
+            btn.addEventListener('click', () => {
+                el.querySelectorAll('.iso-pill').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                callback(iso);
+            });
+            el.appendChild(btn);
+        });
+    }
+
+    // ======== RESOURCE GALLERY ========
+    let galleryISO = 'CAISO';
+    function renderGallery(iso) {
+        galleryISO = iso;
+        const el = document.getElementById('resourceGallery');
+        el.innerHTML = '';
+        const profiles = HP[iso];
+        if (!profiles) return;
+
+        const resources = ['solar','wind','nuclear','hydro','ccs_ccgt','battery4','battery8','ldes'];
+        if (profiles.offshore_wind) resources.splice(2, 0, 'offshore_wind');
+        if (profiles.geothermal) resources.splice(resources.indexOf('ccs_ccgt'), 0, 'geothermal');
+
+        resources.forEach(res => {
+            const info = RES_INFO[res];
+            if (!info) return;
+            const profile = res === 'battery4' ? profiles.battery4_shape :
+                           res === 'battery8' ? profiles.battery8_shape :
+                           res === 'ldes' ? profiles.ldes_shape : profiles[res];
+            if (!profile) return;
+
+            const card = document.createElement('div');
+            card.className = 'resource-card scroll-reveal';
+            card.innerHTML = `
+                <div class="rc-color" style="background:${info.color}"></div>
+                <div class="rc-name">${info.name}</div>
+                <div class="rc-shape">${info.shape}</div>
+                <div class="rc-chart"><canvas id="rc_${res}"></canvas></div>
+                <p style="font-size:0.78rem;color:var(--text-dim);line-height:1.5;margin:var(--space-sm) 0 0;">${info.desc}</p>
+            `;
+            el.appendChild(card);
+
+            // Mini chart
+            const isStorage = ['battery4','battery8','ldes'].includes(res);
+            const isBaseload = ['nuclear','geothermal','ccs_ccgt'].includes(res);
+            const chartData = profile;
+            const bgColor = isStorage ?
+                chartData.map(v => v >= 0 ? info.color + '60' : '#EF444440') :
+                info.color + '40';
+
+            new Chart(document.getElementById('rc_' + res), {
+                type: isStorage ? 'bar' : 'line',
+                data: {
+                    labels: HOURS,
+                    datasets: [{
+                        data: chartData,
+                        borderColor: info.color,
+                        backgroundColor: bgColor,
+                        borderWidth: isStorage ? 0 : 2,
+                        fill: !isStorage,
+                        tension: 0.3,
+                        pointRadius: 0,
+                        barPercentage: 1.0,
+                        categoryPercentage: 1.0
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, datalabels: false,
+                        tooltip: { enabled: false } },
+                    scales: {
+                        x: { display: false },
+                        y: { display: false, min: isBaseload ? 0 : undefined, max: isBaseload ? 1.2 : undefined }
+                    },
+                    animation: { duration: 400 }
+                }
+            });
+        });
+    }
+    buildPills('galleryIsoPills', renderGallery, 'CAISO');
+    renderGallery('CAISO');
+
+    // (Stacked mix by threshold section removed)
+
+    // ======== 24-HOUR DAY VIEW ========
+    let dayISO = 'CAISO', dayChart = null;
+    const slider = document.getElementById('thresholdSlider');
+    const threshLabel = document.getElementById('thresholdLabel');
+
+    function renderDayView() {
+        const tidx = parseInt(slider.value);
+        const threshold = THRESHOLDS[tidx];
+        threshLabel.textContent = fmtT(threshold);
+        document.getElementById('dayTitle').textContent =
+            dayISO + ' — Representative Day at ' + fmtT(threshold) + ' CFE';
+
+        const profiles = HP[dayISO];
+        if (!profiles) return;
+
+        // Get the mix at this threshold from baseline
+        const data = BB_BL[dayISO];
+        const mixIdx = data.thresholds.indexOf(threshold);
+        const mix = mixIdx >= 0 ? data.mixes[mixIdx] : null;
+
+        if (dayChart) dayChart.destroy();
+
+        // Build cumulative stacked area: nuclear (bottom) → geo → CCS → hydro → offshore → onshore → solar → bat4 → bat8 → LDES → H₂
+        const datasets = [];
+        const demand = profiles.demand;
+        if (!mix) return;
+
+        // Resource generation stack order (bottom to top)
+        const STACK_ORDER = [
+            { key: 'nuclear',       profileKey: 'nuclear',       label: 'Nuclear',        color: RES_CLR.nuclear },
+            { key: 'geothermal',    profileKey: 'geothermal',    label: 'Geothermal',     color: RES_CLR.geothermal },
+            { key: 'ccs_ccgt',      profileKey: 'ccs_ccgt',      label: 'CCS-CCGT',       color: RES_CLR.ccs_ccgt },
+            { key: 'hydro',         profileKey: 'hydro',         label: 'Hydro',          color: RES_CLR.hydro },
+            { key: 'offshore_wind', profileKey: 'offshore_wind', label: 'Offshore Wind',  color: RES_CLR.offshore_wind },
+            { key: 'wind',          profileKey: 'wind',          label: 'Onshore Wind',   color: RES_CLR.wind },
+            { key: 'solar',         profileKey: 'solar',         label: 'Solar',          color: RES_CLR.solar },
+            { key: 'battery4',      profileKey: 'battery',       label: 'Battery (4hr)',  color: RES_CLR.battery4 },
+            { key: 'battery8',      profileKey: 'battery8',      label: 'Battery (8hr)',  color: RES_CLR.battery8 },
+            { key: 'ldes',          profileKey: 'ldes',          label: 'LDES (100hr)',   color: RES_CLR.ldes },
+            { key: 'h2',            profileKey: 'h2',            label: 'Green H₂',      color: RES_CLR.h2 },
+        ];
+
+        // For clean_firm, split into nuclear + geothermal using ISO-specific ratio
+        const geoSplit = dayISO === 'CAISO' ? 0.3 : 0;
+        const nucGW = (mix.clean_firm || 0) * (1 - geoSplit);
+        const geoGW = (mix.clean_firm || 0) * geoSplit;
+
+        // Per-resource GW values (override clean_firm into nuclear+geo)
+        const gwMap = {
+            nuclear: nucGW, geothermal: geoGW,
+            ccs_ccgt: mix.ccs_ccgt || 0, hydro: mix.hydro || 0,
+            offshore_wind: mix.offshore_wind || 0, wind: mix.wind || 0,
+            solar: mix.solar || 0,
+            battery4: mix.battery4 || mix.battery || 0, battery8: mix.battery8 || 0,
+            ldes: mix.ldes || 0, h2: mix.h2 || 0
+        };
+
+        // Build cumulative stacked arrays
+        const cumulative = new Array(24).fill(0);
+        const dsBase = { borderWidth: 1, pointRadius: 0, pointHoverRadius: 0, tension: 0.3 };
+        let orderIdx = STACK_ORDER.length + 2;
+
+        for (const res of STACK_ORDER) {
+            const gw = gwMap[res.key] || 0;
+            if (gw <= 0) continue;
+            const profile = profiles[res.profileKey];
+            if (!profile) continue;
+            const prevData = cumulative.slice();
+            const newData = cumulative.map((v, i) => {
+                const val = v + (profile[i] || 0) * gw;
+                cumulative[i] = val;
+                return val;
+            });
+            datasets.push({
+                ...dsBase, label: res.label, data: newData,
+                backgroundColor: res.color + '80', borderColor: res.color,
+                fill: datasets.length === 0 ? 'origin' : '-1',
+                order: orderIdx--
+            });
+        }
+
+        // Demand line from actual shaped EIA profile
+        const totalGW = Object.values(gwMap).reduce((s,v) => s + v, 0);
+        const demandScale = totalGW > 0 ? totalGW / (threshold / 100) : 1;
+        const demandData = demand.map(v => v * demandScale);
+        // Normalize demand shape so peak matches demandScale
+        const demandMax = Math.max(...demandData);
+        const demandNorm = demandMax > 0 ? demandData.map(v => v * demandScale / demandMax) : demandData;
+
+        datasets.push({
+            label: 'Demand', data: demandNorm,
+            borderColor: '#1A2744', backgroundColor: 'transparent',
+            borderWidth: 2.5, borderDash: [6,3], fill: false,
+            tension: 0.3, pointRadius: 0, order: 0
+        });
+
+        // Illustrative curtailment: generation above demand, stacked with cross-hatch
+        // Curtailment order bottom→top: solar, onshore, offshore, hydro, CCS, geothermal, nuclear
+        const CURTAIL_ORDER = ['solar', 'wind', 'offshore_wind', 'hydro', 'ccs_ccgt', 'geothermal', 'nuclear'];
+        const genPerResource = {};
+        for (const res of STACK_ORDER) {
+            const gw = gwMap[res.key] || 0;
+            const profile = profiles[res.profileKey];
+            if (gw > 0 && profile) {
+                genPerResource[res.key] = profile.map(v => (v || 0) * gw);
+            }
+        }
+        const totalGenPerHour = cumulative;
+        const excessPerHour = HOURS.map((_, i) => Math.max(0, totalGenPerHour[i] - demandNorm[i]));
+        const hasCurtailment = excessPerHour.some(v => v > 0.01);
+
+        if (hasCurtailment) {
+            let curtBase = demandNorm.slice();
+            for (const rt of CURTAIL_ORDER) {
+                const gen = genPerResource[rt];
+                if (!gen || !gen.some(v => v > 0)) continue;
+                const curtData = HOURS.map((_, i) => {
+                    if (excessPerHour[i] <= 0) return curtBase[i];
+                    const totalG = totalGenPerHour[i];
+                    const share = totalG > 0 ? Math.min(gen[i], excessPerHour[i] * (gen[i] / totalG)) : 0;
+                    const val = curtBase[i] + share;
+                    return val;
+                });
+                const clr = RES_CLR[rt] || '#888';
+                // Create hatch pattern
+                const patCanvas = document.createElement('canvas');
+                patCanvas.width = 8; patCanvas.height = 8;
+                const patCtx = patCanvas.getContext('2d');
+                patCtx.fillStyle = clr + '30';
+                patCtx.fillRect(0, 0, 8, 8);
+                patCtx.strokeStyle = clr + '90';
+                patCtx.lineWidth = 1;
+                patCtx.beginPath(); patCtx.moveTo(0, 8); patCtx.lineTo(8, 0); patCtx.stroke();
+                const hatchPat = document.getElementById('dayChart').getContext('2d').createPattern(patCanvas, 'repeat');
+                datasets.push({
+                    ...dsBase, label: (CURTAIL_ORDER.indexOf(rt) >= 0 ? STACK_ORDER.find(s => s.key === rt)?.label || rt : rt) + ' (Curtailed)',
+                    data: curtData,
+                    backgroundColor: hatchPat, borderColor: clr, borderWidth: 0.5, borderDash: [3,3],
+                    fill: { target: datasets.length - (CURTAIL_ORDER.indexOf(rt) === 0 ? 1 : 1), above: hatchPat },
+                    order: -1 - CURTAIL_ORDER.indexOf(rt)
+                });
+                curtBase = curtData.slice();
+            }
+        }
+
+        dayChart = new Chart(document.getElementById('dayChart'), {
+            type: 'line',
+            data: { labels: HOURS, datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { position: 'top', labels: { usePointStyle: true, padding: 10, font: { size: 10 } } },
+                    datalabels: false,
+                    tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + (ctx.parsed.y||0).toFixed(2) + ' GW' } }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Hour of Day', font: { size: 11 } }, ticks: { font: { size: 9 } } },
+                    y: { title: { display: true, text: 'GW', font: { size: 11 } }, min: 0 }
+                }
+            }
+        });
+    }
+
+    buildPills('dayIsoPills', iso => { dayISO = iso; renderDayView(); }, 'CAISO');
+    slider.addEventListener('input', renderDayView);
+    renderDayView();
+
+    // (Track comparison, fingerprints, and related analyses sections removed)
+    if (false) { // dead code — deleted sections
+    let cmpISO = 'CAISO', cmpBaseChart = null, cmpDgChart = null;
+
+    function renderComparison() {
+        const blD = BB_BL[cmpISO], dgD = BB_DG[cmpISO];
+        if (!blD || !dgD) return;
+
+        document.getElementById('cmpBaseTitle').textContent = 'Track 1: Baseline — ' + cmpISO;
+        document.getElementById('cmpDgTitle').textContent = 'Track 2: Demand Growth — ' + cmpISO;
+
+        function makeStackedBar(canvasId, data, existingChart) {
+            if (existingChart) existingChart.destroy();
+            const labels = data.thresholds.filter(t => t >= 50).map(fmtT);
+            const mixes = data.mixes.filter((m,i) => data.thresholds[i] >= 50);
+
+            const fields = [
+                {key:'clean_firm', label:'Clean Firm', color: RES_CLR.clean_firm},
+                {key:'solar', label:'Solar', color: RES_CLR.solar},
+                {key:'wind', label:'Wind', color: RES_CLR.wind},
+            ];
+            if (mixes.some(m => m.offshore_wind > 0))
+                fields.push({key:'offshore_wind', label:'OSW', color: RES_CLR.offshore_wind});
+            fields.push(
+                {key:'ccs_ccgt', label:'CCS', color: RES_CLR.ccs_ccgt},
+                {key:'hydro', label:'Hydro', color: RES_CLR.hydro}
+            );
+
+            return new Chart(document.getElementById(canvasId), {
+                type:'bar', data:{labels, datasets: fields.map(f => ({
+                    label: f.label, data: mixes.map(m => m[f.key]||0),
+                    backgroundColor: f.color, stack:'s'
+                }))},
+                options:{responsive:true, maintainAspectRatio:false,
+                    plugins:{legend:{position:'top',labels:{usePointStyle:true,padding:8,font:{size:9}}},
+                        datalabels:false, tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+(ctx.parsed.y||0).toFixed(2)+' GW'}}},
+                    scales:{x:{stacked:true,ticks:{maxRotation:45,font:{size:8}}},
+                        y:{stacked:true,title:{display:true,text:'GW',font:{size:10}}}}}
+            });
+        }
+
+        cmpBaseChart = makeStackedBar('cmpBaseChart', blD, cmpBaseChart);
+        cmpDgChart = makeStackedBar('cmpDgChart', dgD, cmpDgChart);
+
+        // Comparison table
+        const tbody = document.getElementById('cmpTableBody');
+        tbody.innerHTML = '';
+        const showT = [50,75,90,95,99,99.99];
+        showT.forEach(t => {
+            const blIdx = blD.thresholds.indexOf(t);
+            const dgIdx = dgD.thresholds.indexOf(t);
+            if (blIdx === -1 && dgIdx === -1) return;
+            const bl = blIdx >= 0 ? blD.mixes[blIdx] : null;
+            const dg = dgIdx >= 0 ? dgD.mixes[dgIdx] : null;
+            const f = (m,k) => m ? (m[k]||0).toFixed(1) : '—';
+            const fp = (m,k) => m ? (m[k]||0).toFixed(1)+'%' : '—';
+            const fc = m => m ? '$'+m.cost.toFixed(0) : '—';
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td style="font-weight:600">${fmtT(t)}</td>
+                <td>${f(bl,'clean_firm')}</td><td>${f(bl,'solar')}</td><td>${f(bl,'wind')}</td>
+                <td>${f(bl,'offshore_wind')}</td><td>${fp(bl,'battery4_pct')}</td><td>${fc(bl)}</td>
+                <td>${f(dg,'clean_firm')}</td><td>${f(dg,'solar')}</td><td>${f(dg,'wind')}</td>
+                <td>${f(dg,'offshore_wind')}</td><td>${fp(dg,'battery4_pct')}</td><td>${fc(dg)}</td>`;
+            tbody.appendChild(tr);
+        });
+    }
+
+    buildPills('compareIsoPills', iso => { cmpISO = iso; renderComparison(); }, 'CAISO');
+    renderComparison();
+
+    // ======== REGIONAL FINGERPRINTS AT 90% ========
+    function renderFingerprints() {
+        const el = document.getElementById('fingerprintGrid');
+        el.innerHTML = '';
+
+        ISOS.forEach(iso => {
+            const data = BB_BL[iso];
+            const idx = data.thresholds.indexOf(90);
+            if (idx === -1) return;
+            const mix = data.mixes[idx];
+
+            const card = document.createElement('div');
+            card.className = 'chart-panel scroll-reveal';
+            card.innerHTML = `
+                <h4 style="margin-bottom:2px;">${iso} at 90% CFE</h4>
+                <div class="chart-subtitle">$${mix.cost.toFixed(0)}/MWh | Bat4: ${mix.battery4_pct}%</div>
+                <div style="height:200px;"><canvas id="fp_${iso}"></canvas></div>
+            `;
+            el.appendChild(card);
+
+            const resources = [
+                {label:'Clean Firm', val: mix.clean_firm, color: RES_CLR.clean_firm},
+                {label:'Solar', val: mix.solar, color: RES_CLR.solar},
+                {label:'Wind', val: mix.wind, color: RES_CLR.wind},
+                {label:'OSW', val: mix.offshore_wind, color: RES_CLR.offshore_wind},
+                {label:'CCS', val: mix.ccs_ccgt, color: RES_CLR.ccs_ccgt},
+                {label:'Hydro', val: mix.hydro, color: RES_CLR.hydro}
+            ].filter(r => r.val > 0);
+
+            new Chart(document.getElementById('fp_' + iso), {
+                type: 'doughnut',
+                data: {
+                    labels: resources.map(r => r.label),
+                    datasets: [{
+                        data: resources.map(r => r.val),
+                        backgroundColor: resources.map(r => r.color),
+                        borderWidth: 1, borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right', labels: { font: { size: 10 }, padding: 6, usePointStyle: true } },
+                        datalabels: false,
+                        tooltip: { callbacks: { label: ctx => ctx.label + ': ' + ctx.parsed.toFixed(2) + ' GW' } }
+                    }
+                }
+            });
+        });
+    }
+    renderFingerprints();
+    } // end dead code block
+
+})();
+</script>
+
+</body>
+</html>

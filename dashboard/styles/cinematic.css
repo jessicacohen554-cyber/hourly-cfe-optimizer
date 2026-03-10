@@ -1,0 +1,872 @@
+/* ============================================================
+   CINEMATIC SCROLL BACKGROUND — Shared Visual Layer
+   Include on any page that wants the parallax background treatment.
+   Requires: shared.css loaded first, GSAP + ScrollTrigger in <head>,
+             cinematic-bg.js before </body>
+
+   DESIGN: Background image is visible in gaps/margins between content
+   sections. All panels and cards use SOLID opaque backgrounds so
+   text is always fully readable. No glassmorphism/backdrop-filter.
+   ============================================================ */
+
+/* ========== BODY FALLBACK ========== */
+/* Background image is a white/light circuit board pattern.
+   Fallback matches so text contrast is always correct. */
+body {
+    background: #F8F9FC !important;
+}
+
+/* ========== FIXED BACKGROUND CONTAINER ========== */
+#bgCamera {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+#bgImage {
+    width: 160vw;
+    height: 160vh;
+    object-fit: cover;
+    will-change: transform;
+    transform: translate(-15%, -15%) scale(1.0);
+}
+
+/* ========== Z-INDEX LAYERING — All content above background ========== */
+/* Nav needs its own high z-index so dropdown menus aren't trapped */
+#topNav {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+.header, .content-wrap, .main-content, .section-dark,
+.site-footer, .page-footer, .explore-grid, .gradient-transition,
+hr.section-divider, .global-controls, .hero-section, .hero-overview,
+.content-section, .story-panel, .hub-hero, .report-layout,
+.foak-hero, .bottom-banner {
+    position: relative;
+    z-index: 1;
+}
+
+/* ========== TRANSPARENT CONTENT WRAPPER ========== */
+/* These outer wrappers stay transparent so bg image shows between sections */
+.content-wrap,
+.main-content {
+    background: transparent !important;
+}
+
+/* ========== GRADIENT TRANSITIONS ========== */
+.gradient-transition {
+    background: linear-gradient(180deg,
+        rgba(248,249,252,0.3) 0%,
+        rgba(248,249,252,0.04) 50%,
+        rgba(248,249,252,0.3) 100%) !important;
+}
+.section-transition-light-to-dark {
+    background: linear-gradient(180deg, rgba(255,255,255,0.0) 0%, rgba(248,249,252,1) 100%) !important;
+}
+.section-transition-dark-to-light {
+    background: linear-gradient(180deg, rgba(248,249,252,1) 0%, rgba(255,255,255,0.0) 100%) !important;
+}
+.section-transition-dark-to-gray {
+    background: linear-gradient(180deg, rgba(248,249,252,1) 0%, rgba(248,249,252,0.0) 100%) !important;
+}
+
+/* ========== DARK SECTION INSETS ========== */
+.section-dark {
+    margin: var(--space-2xl) var(--space-xl);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.3);
+}
+.section-dark h2,
+.section-dark h3 { color: #fff; }
+.section-dark p { color: rgba(255,255,255,0.92); }
+.section-dark strong { color: rgba(255,255,255,0.97); }
+.section-dark .story-section h2,
+.section-dark .story-section h3 { color: #fff; }
+.section-dark .story-section p { color: rgba(255,255,255,0.92); }
+
+/* Dark section — no panel on story-content wrapper */
+.section-dark .story-section > .story-content {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+}
+
+/* Dark section component overrides — boosted for readability */
+.section-dark .insight-box,
+.section-dark .insight-card {
+    background: rgba(255,255,255,0.15) !important;
+    border: 1px solid rgba(255,255,255,0.22) !important;
+    color: rgba(255,255,255,0.92);
+}
+.section-dark .card {
+    background: rgba(255,255,255,0.15) !important;
+    border: 1px solid rgba(255,255,255,0.22) !important;
+    color: rgba(255,255,255,0.92);
+}
+.section-dark .flow-diagram {
+    background: rgba(15, 23, 42, 0.85) !important;
+    border: 1px solid rgba(255,255,255,0.22) !important;
+}
+.section-dark .chart-panel {
+    background: rgba(255,255,255,0.15) !important;
+    border: 1px solid rgba(255,255,255,0.22) !important;
+}
+.section-dark .callout,
+.section-dark .callout-box,
+.section-dark .narrative-box {
+    background: rgba(255,255,255,0.15) !important;
+    border-color: rgba(255,255,255,0.22) !important;
+    color: rgba(255,255,255,0.92);
+}
+.section-dark .data-table,
+.section-dark .company-table,
+.section-dark .delta-table {
+    color: rgba(255,255,255,0.92);
+}
+.section-dark .data-table th { color: rgba(255,255,255,0.90); }
+.section-dark .data-table td { color: rgba(255,255,255,0.88); border-color: rgba(255,255,255,0.15); }
+.section-dark .stat-tile,
+.section-dark .stat-card {
+    background: rgba(255,255,255,0.15) !important;
+    border: 1px solid rgba(255,255,255,0.22) !important;
+}
+.section-dark .stat-tile .stat-value,
+.section-dark .stat-card .stat-value { color: #fff; }
+.section-dark .stat-tile .stat-label,
+.section-dark .stat-card .stat-label { color: rgba(255,255,255,0.85); }
+
+/* ========== FULL-PAGE SECTION TRANSPARENCY ========== */
+/* These selectors catch all opaque section backgrounds from
+   scrollytell.css, article.css, dashboard-ui.css, pg-generator.css,
+   ipp-transition.css, and reference.css that would otherwise
+   block the circuit board background image. */
+
+/* Section-level wrappers that must be transparent */
+.region-section,
+.synthesis-section,
+.deepdive-section,
+.density-deep-dive-section,
+.methodology-section,
+.sources-section,
+.hero-overview,
+.hero-section,
+.foak-hero,
+.concept-section,
+.timeline-section,
+.content-section,
+.section-light,
+.story-panel,
+.report-layout,
+.prose-body,
+.main-content,
+.content-wrap {
+    background: transparent !important;
+}
+/* hub-hero keeps its navy gradient from ipp-transition.css */
+
+/* article.css hero-overview has a ::before radial gradient — hide it */
+.hero-overview::before {
+    display: none !important;
+}
+
+/* scrollytell.css region-pills-bar — solid white */
+.region-pills-bar {
+    background: #FFFFFF !important;
+}
+
+/* ipp-transition.css wrappers */
+.company-card-body,
+.ipp-transition-body {
+    background: transparent !important;
+}
+
+/* Foak hero gradient → transparent */
+.foak-hero {
+    background: transparent !important;
+}
+.foak-hero::before {
+    display: none !important;
+}
+
+/* ========== SOLID OPAQUE PANELS (light sections) ========== */
+/* All panels use solid white backgrounds — no transparency, no backdrop-filter.
+   Background image is only visible in gaps between sections/panels. */
+
+/* Story content wrapper — solid white panel */
+.story-section > .story-content {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 16px;
+    padding: 36px 32px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* Generic glass panel class (now solid) */
+.glass-panel {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* Cards and panels — comprehensive list from all CSS files */
+.card,
+.chart-panel,
+.chart-box,
+.insight-box,
+.insight-card,
+.callout,
+.callout-box,
+.narrative-box,
+.narrative-card,
+.framework-card,
+.stat-block,
+.stat-tile,
+.stat-card,
+.flow-diagram,
+.concept-card,
+.counter-card,
+.finding-card,
+.incentive-card,
+.preservation-panel,
+.conclusion-panel,
+.sensitivity-panel,
+.company-table,
+.data-table,
+.strategy-accordion,
+.pool-card,
+.strat-variant-card,
+.wl-analysis-section,
+.iso-chart-card,
+.key-finding,
+.compare-box,
+.region-pills-bar,
+.company-card,
+.metric-tile,
+.cost-panel,
+.counter-box,
+.narrative-panel,
+.sim-panel,
+.what-you-need-panel,
+.peak-capacity-panel,
+.target-mode-panel,
+.pathway-metric {
+    background: #FFFFFF !important;
+    border: 1px solid #E5E7EB !important;
+    border-radius: var(--radius-lg, 12px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* Callouts — solid white */
+.callout-box,
+.callout-box.callout-left-border {
+    background: #FFFFFF !important;
+}
+
+/* ========== DARK CONTEXT OVERRIDES ========== */
+/* Undo the white !important catch-all for elements inside dark sections.
+   These elements need transparent/glass backgrounds to be readable on dark navy. */
+.section-dark .finding-card,
+.section-dark .stat-tile,
+.section-dark .stat-card,
+.section-dark .stat-block,
+.section-dark .concept-card,
+.section-dark .counter-card,
+.section-dark .incentive-card,
+.section-dark .flow-diagram,
+.section-dark .insight-box,
+.section-dark .insight-card,
+.section-dark .callout,
+.section-dark .callout-box,
+.section-dark .narrative-box,
+.section-dark .narrative-card,
+.section-dark .card,
+.panel-navy .finding-card,
+.panel-navy .concept-card,
+.panel-navy .counter-card,
+.panel-navy .incentive-card,
+.panel-navy .flow-diagram,
+.panel-navy .narrative-box,
+.panel-navy .narrative-card,
+.panel-navy .preservation-panel,
+.panel-navy .conclusion-panel {
+    background: rgba(255, 255, 255, 0.12) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    color: rgba(255, 255, 255, 0.9);
+}
+/* Text inside dark-context cards */
+.section-dark .finding-label,
+.section-dark .stat-label,
+.panel-navy .finding-label {
+    color: rgba(255, 255, 255, 0.92) !important;
+}
+.section-dark .finding-desc,
+.panel-navy .finding-desc {
+    color: rgba(255, 255, 255, 0.78) !important;
+}
+.section-dark .stat-value,
+.panel-navy .concept-card h3,
+.panel-navy .concept-card p,
+.panel-navy .concept-card li {
+    color: rgba(255, 255, 255, 0.92) !important;
+}
+.panel-navy .concept-card strong {
+    color: #fff !important;
+}
+.section-dark .stat-value {
+    color: #fff !important;
+}
+/* Dark-context insight/callout boxes */
+.panel-navy .insight-box,
+.panel-navy .insight-card,
+.panel-navy .callout,
+.panel-navy .callout-box {
+    background: rgba(255, 255, 255, 0.12) !important;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    color: rgba(255, 255, 255, 0.9);
+}
+.panel-navy .insight-box p,
+.panel-navy .insight-box li,
+.panel-navy .callout p {
+    color: rgba(255, 255, 255, 0.92) !important;
+}
+.panel-navy .insight-box strong,
+.panel-navy .callout strong {
+    color: rgba(255, 255, 255, 0.95) !important;
+}
+
+/* Story panel (gen_regional_pathways) */
+.story-panel {
+    background: transparent;
+}
+
+/* Interactive controls — solid white bar */
+.global-controls {
+    background: #FFFFFF !important;
+    border-bottom: 1px solid #E5E7EB !important;
+    z-index: 50;
+}
+
+/* ISO / scenario cards */
+.iso-card,
+.scenario-card,
+.gap-card,
+.mechanism-card {
+    background: #FFFFFF !important;
+    border: 1px solid #E5E7EB !important;
+    border-radius: var(--radius-lg, 12px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* Hero sections — transparent wrapper, solid stat tiles */
+.hero-overview,
+.hero-section {
+    background: transparent !important;
+}
+.hero-overview .hero-stats-row .stat-tile,
+.hero-section .hero-stats-row .stat-tile {
+    background: #FFFFFF !important;
+}
+
+/* Data tables — solid white */
+.data-table,
+.company-table,
+.delta-table {
+    background: #FFFFFF;
+    border-radius: var(--radius-md);
+}
+.data-table th {
+    background: #F3F4F6;
+}
+
+/* Nav button secondary */
+.nav-btn-secondary {
+    background: #FFFFFF !important;
+}
+
+/* Section dividers on transparent bg */
+hr.section-divider,
+.energy-divider {
+    border-color: rgba(212, 216, 224, 0.4);
+}
+
+/* ========== IPP PAGE COMPONENTS ========== */
+/* hub-hero + hub-hero-inner: NOT transparent — keeps navy gradient from ipp-transition.css */
+.hero-stat {
+    background: #FFFFFF !important;
+    border: 1px solid #E5E7EB !important;
+}
+.report-layout {
+    background: transparent !important;
+}
+.report-toc {
+    background: #FFFFFF !important;
+    border: 1px solid #E5E7EB !important;
+}
+.report-section {
+    background: #FFFFFF !important;
+    border: 1px solid #E5E7EB !important;
+    border-radius: 12px;
+    padding: 32px 28px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* ========== SCENARIO COMPARISON COMPONENTS ========== */
+.scenario-legend {
+    background: #FFFFFF !important;
+}
+.chart-wide {
+    background: #FFFFFF !important;
+    border: 1px solid #E5E7EB !important;
+}
+.metric-tiles {
+    background: #FFFFFF !important;
+}
+
+/* ========== CLEAN FIRM / ARTICLE COMPONENTS ========== */
+.concept-section {
+    background: transparent !important;
+}
+.concept-section .chart-panel,
+.concept-section .card {
+    background: #FFFFFF !important;
+    border: 1px solid #E5E7EB !important;
+}
+
+/* ========== LMP / SCROLL SECTION COMPONENTS ========== */
+.scroll-section {
+    background: transparent !important;
+}
+.scroll-section-inner {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 16px;
+    padding: 36px 32px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+.key-findings-panel {
+    background: #FFFFFF !important;
+    border: 1px solid #E5E7EB !important;
+}
+
+/* ========== ABATEMENT COMPONENTS ========== */
+.deepdive-section,
+.methodology-section,
+.density-deep-dive-section {
+    background: transparent !important;
+}
+
+/* ========== ACCORDION / STRATEGY PANELS ========== */
+.strategy-accordion,
+.accordion-header,
+.accordion-content {
+    background: #FFFFFF !important;
+    border: 1px solid #E5E7EB !important;
+}
+
+/* Comparison boxes */
+.compare-vs {
+    background: transparent !important;
+}
+
+/* ========== SECTION-LIGHT OVERRIDE ========== */
+.section-light {
+    background: transparent !important;
+}
+
+/* ========== TEXT READABILITY — DARK TEXT ON WHITE PANELS ========== */
+.story-section p,
+.story-panel p,
+.report-section p,
+.concept-section p,
+.scroll-section p {
+    color: #334155;
+}
+.story-section h2,
+.story-section h3,
+.story-panel h2,
+.story-panel h3,
+.report-section h2,
+.report-section h3 {
+    color: var(--navy);
+}
+.story-section p.lead,
+.story-panel p.lead {
+    color: var(--navy);
+}
+.callout-box p,
+.narrative-box p,
+.insight-box p {
+    color: #334155;
+}
+
+/* General text inside panels */
+.card p, .card li,
+.chart-panel p,
+.insight-card p,
+.narrative-card p {
+    color: #334155;
+}
+.section-header p {
+    color: #475569;
+}
+
+/* ========== NAVY PANEL VARIANT ========== */
+/* Add class "panel-navy" to any story-section or section to get a navy treatment */
+.panel-navy > .story-content,
+.panel-navy.story-content,
+section.panel-navy {
+    background: #0F172A !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.2);
+}
+.panel-navy > .story-content h2,
+.panel-navy > .story-content h3,
+.panel-navy.story-content h2,
+.panel-navy.story-content h3,
+section.panel-navy h2,
+section.panel-navy h3 {
+    color: #fff;
+}
+.panel-navy > .story-content p,
+.panel-navy > .story-content li,
+.panel-navy.story-content p,
+.panel-navy.story-content li,
+section.panel-navy p,
+section.panel-navy li {
+    color: rgba(255, 255, 255, 0.92);
+}
+.panel-navy > .story-content strong,
+.panel-navy.story-content strong,
+section.panel-navy strong {
+    color: rgba(255, 255, 255, 0.97);
+}
+.panel-navy > .story-content .callout,
+.panel-navy > .story-content .callout-box,
+.panel-navy > .story-content .insight-box,
+section.panel-navy .callout,
+section.panel-navy .callout-box,
+section.panel-navy .insight-box {
+    background: rgba(255, 255, 255, 0.12) !important;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    color: rgba(255, 255, 255, 0.9);
+}
+.panel-navy > .story-content .callout p,
+.panel-navy > .story-content .insight-box p,
+section.panel-navy .callout p,
+section.panel-navy .insight-box p {
+    color: rgba(255, 255, 255, 0.92);
+}
+.panel-navy > .story-content .callout strong,
+.panel-navy > .story-content .insight-box strong,
+section.panel-navy .callout strong,
+section.panel-navy .insight-box strong {
+    color: rgba(255, 255, 255, 0.95);
+}
+.panel-navy > .story-content .card,
+section.panel-navy .card {
+    background: rgba(255, 255, 255, 0.12) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    color: rgba(255, 255, 255, 0.9);
+}
+.panel-navy > .story-content .card h3,
+.panel-navy > .story-content .card h4,
+section.panel-navy .card h3,
+section.panel-navy .card h4 {
+    color: #fff;
+}
+.panel-navy > .story-content .card p,
+.panel-navy > .story-content .card li,
+section.panel-navy .card p,
+section.panel-navy .card li {
+    color: rgba(255, 255, 255, 0.92);
+}
+.panel-navy > .story-content .stat-tile,
+.panel-navy > .story-content .stat-card,
+section.panel-navy .stat-tile,
+section.panel-navy .stat-card {
+    background: rgba(255, 255, 255, 0.12) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+.panel-navy > .story-content .stat-value,
+section.panel-navy .stat-value {
+    color: #fff;
+}
+.panel-navy > .story-content .stat-label,
+section.panel-navy .stat-label {
+    color: rgba(255, 255, 255, 0.85);
+}
+.panel-navy .story-badge {
+    background: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.85);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+.panel-navy .citation,
+.panel-navy .ref {
+    color: rgba(255, 255, 255, 0.82);
+}
+.panel-navy a {
+    color: #60A5FA;
+}
+/* Chart canvas container in navy */
+.panel-navy .chart-container h3,
+.panel-navy .chart-wrapper h3 {
+    color: #fff;
+}
+/* Old glass-on-navy table rules removed — see WHITE CARDS section below for readable table overrides */
+
+/* ========== WHITE CARDS INSIDE NAVY PANELS ========== */
+/* Layer-cards (about.html) have white bg — force dark text inside panel-navy */
+.panel-navy .layer-card,
+.section-dark .layer-card {
+    background: #FFFFFF !important;
+    border: 1px solid #E5E7EB !important;
+}
+.panel-navy .layer-card h4,
+.section-dark .layer-card h4 {
+    color: var(--navy, #1A2744) !important;
+}
+.panel-navy .layer-card p,
+.section-dark .layer-card p {
+    color: var(--text-secondary, #4B5563) !important;
+}
+.panel-navy .layer-card .layer-num {
+    color: rgba(26,39,68,0.06) !important;
+}
+
+/* Cards that need white bg + dark text inside panel-navy (archetype cards, etc.) */
+.panel-navy .card-grid .card,
+.panel-navy .card-grid-3 .card {
+    background: #FFFFFF !important;
+    border: 1px solid #E5E7EB !important;
+    color: var(--text-primary, #1F2937);
+}
+.panel-navy .card-grid .card h3,
+.panel-navy .card-grid-3 .card h3 {
+    color: var(--navy, #1A2744);  /* no !important — allow inline archetype colors to override */
+}
+.panel-navy .card-grid .card h4,
+.panel-navy .card-grid-3 .card h4 {
+    color: var(--navy, #1A2744) !important;
+}
+.panel-navy .card-grid .card p,
+.panel-navy .card-grid-3 .card p,
+.panel-navy .card-grid .card li,
+.panel-navy .card-grid-3 .card li {
+    color: var(--text-secondary, #4B5563) !important;
+}
+.panel-navy .card-grid .stat-tile,
+.panel-navy .card-grid-3 .stat-tile {
+    background: #F9FAFB !important;
+    border: 1px solid #E5E7EB !important;
+}
+.panel-navy .card-grid .stat-value,
+.panel-navy .card-grid-3 .stat-value {
+    color: var(--navy, #1A2744);  /* no !important — allow inline archetype colors to override */
+}
+.panel-navy .card-grid .stat-label,
+.panel-navy .card-grid-3 .stat-label {
+    color: var(--text-secondary, #4B5563) !important;
+}
+
+/* Data tables inside panel-navy — white bg + dark text for readability */
+.panel-navy .data-table,
+.panel-navy .company-table {
+    background: #FFFFFF !important;
+    color: var(--text-primary, #1F2937) !important;
+}
+.panel-navy .data-table th,
+.panel-navy .company-table th {
+    background: var(--navy, #1A2744) !important;
+    color: #fff !important;
+}
+.panel-navy .data-table td,
+.panel-navy .company-table td {
+    color: var(--text-primary, #1F2937) !important;
+    border-color: #E5E7EB !important;
+}
+.panel-navy .data-table td strong,
+.panel-navy .company-table td strong {
+    color: var(--navy, #1A2744) !important;
+}
+
+/* Section-desc inside panel-navy (regional pathways) */
+.panel-navy .section-desc,
+.story-panel.panel-navy .section-desc {
+    color: rgba(255, 255, 255, 0.88) !important;
+}
+
+/* Stat-row mobile overflow fix */
+@media (max-width: 480px) {
+    .stat-row {
+        grid-template-columns: 1fr 1fr;
+    }
+    .stat-row .stat-tile {
+        min-width: 0;
+        overflow-wrap: break-word;
+        word-break: break-word;
+    }
+    .stat-row .stat-value {
+        font-size: 1.3rem !important;
+    }
+    .stat-row .stat-sublabel {
+        font-size: 0.75rem;
+    }
+}
+@media (max-width: 360px) {
+    .stat-row {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* Report-section variant */
+section.report-section.panel-navy {
+    background: #0F172A !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.2);
+}
+section.report-section.panel-navy h2,
+section.report-section.panel-navy h3,
+section.report-section.panel-navy h4 {
+    color: #fff;
+}
+section.report-section.panel-navy p,
+section.report-section.panel-navy li {
+    color: rgba(255, 255, 255, 0.92);
+}
+section.report-section.panel-navy strong {
+    color: rgba(255, 255, 255, 0.97);
+}
+section.report-section.panel-navy .report-section-number {
+    color: rgba(255, 255, 255, 0.72);
+}
+
+/* ========== FOOTER — SOLID ========== */
+.site-footer {
+    background: #F3F4F6 !important;
+}
+.page-footer {
+    background: #0F172A !important;
+}
+
+/* ========== MOBILE RESPONSIVE ========== */
+@media (max-width: 768px) {
+    #bgImage {
+        width: 180vw;
+        height: 180vh;
+        transform: translate(-20%, -20%) scale(1.0);
+    }
+    .section-dark {
+        margin: var(--space-xl) var(--space-sm);
+    }
+    /* Story content panels: full width on mobile, less padding */
+    .story-section > .story-content {
+        max-width: 100% !important;
+        padding: 28px 20px;
+        border-radius: 12px;
+    }
+    .story-content {
+        max-width: 100% !important;
+    }
+    /* Scroll section panels too */
+    .scroll-section-inner {
+        padding: 28px 20px;
+        border-radius: 12px;
+    }
+}
+@media (max-width: 480px) {
+    .story-section > .story-content {
+        padding: 22px 16px;
+    }
+    .report-section {
+        padding: 22px 16px;
+    }
+    .scroll-section-inner {
+        padding: 22px 16px;
+    }
+}
+@media (max-width: 375px) {
+    .story-section > .story-content {
+        padding: 18px 14px;
+        border-radius: 10px;
+    }
+    .report-section {
+        padding: 18px 14px;
+    }
+}
+
+/* ========== SECTION TEXT ON TRANSPARENT BACKGROUNDS ========== */
+/* Background image is white/light circuit board — text on transparent
+   sections must be dark for readability. Cards keep dark-on-white as-is. */
+.content-section > .section-title,
+.story-section > .section-title,
+.story-section > h2.section-title,
+.content-section > h2.section-title {
+    color: var(--navy) !important;
+}
+.content-section > .section-subtitle,
+.story-section > .section-subtitle {
+    color: var(--text-secondary) !important;
+}
+.story-section > .story-badge {
+    color: var(--navy);
+    background: rgba(26,39,68,0.08);
+    border-color: rgba(26,39,68,0.15);
+}
+.dashboard-header h2 {
+    color: var(--navy) !important;
+}
+.dashboard-header p {
+    color: var(--text-secondary) !important;
+}
+
+/* ========== HERO-OVERVIEW TEXT ON TRANSPARENT BACKGROUND ========== */
+/* scrollytell.css hero-overview text was white for navy gradient bg.
+   With transparent bg over white circuit board, flip to dark text. */
+.hero-text-block h2 {
+    color: var(--navy) !important;
+}
+.hero-text-block p {
+    color: var(--text-secondary) !important;
+}
+.hero-narrative-block h3 {
+    color: var(--navy) !important;
+}
+.hero-narrative-block p {
+    color: #475569 !important;
+}
+.hero-narrative-block .finding-highlight {
+    color: #15803d !important;
+    background: rgba(34,197,94,0.08) !important;
+    border-color: rgba(34,197,94,0.2) !important;
+}
+
+/* ========== ISO TILES ON TRANSPARENT BACKGROUND ========== */
+/* Originally semi-transparent white on dark bg. Now solid white panels. */
+.iso-tile {
+    background: #FFFFFF !important;
+    border: 1px solid #E5E7EB !important;
+    border-radius: 14px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+.iso-tile:hover {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    border-color: #D1D5DB;
+}
+.tile-region-label {
+    color: var(--text-muted) !important;
+}
+.tile-range {
+    color: var(--navy) !important;
+}
+.tile-range-label {
+    color: var(--text-muted) !important;
+}
+.tile-finding {
+    color: #475569 !important;
+}
+.tile-finding strong {
+    color: var(--navy) !important;
+}

@@ -1,0 +1,1552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The 8,760 Problem — About This Model</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/reference.css">
+    <style>
+        /* ========== ABOUT THIS MODEL — Page-specific styles only ========== */
+        html { font-size: 16px; }
+        body {
+            background: var(--bg-alt-warm);
+            background-image:
+                radial-gradient(ellipse at 20% 0%, rgba(245,158,11,0.04) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 100%, rgba(239,68,68,0.03) 0%, transparent 50%);
+            background-attachment: fixed;
+            line-height: 1.7;
+        }
+
+        .content {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 24px 80px;
+        }
+
+        .back-link {
+            gap: 6px;
+            margin-bottom: 32px;
+            color: var(--navy);
+            font-size: 0.95rem;
+            padding: 8px 14px;
+            border-radius: 8px;
+            border-bottom: 1px solid rgba(239,68,68,0.3);
+        }
+        .back-link:hover {
+            color: var(--accent-dark);
+            background: rgba(239,68,68,0.05);
+            border-bottom-color: var(--accent-dark);
+        }
+
+        .toc { background: var(--bg-card); box-shadow: 0 4px 6px -4px rgba(0,0,0,0.04); }
+        .toc h2 { text-transform: capitalize; }
+
+        h2 {
+            font-size: 1.6rem;
+            color: var(--accent);
+            margin-top: 52px;
+            margin-bottom: 18px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--border);
+            letter-spacing: 0.02em;
+            text-transform: capitalize;
+        }
+        h3 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--red-dark);
+            margin-top: 28px;
+            margin-bottom: 10px;
+        }
+        p {
+            margin-bottom: 14px;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.75;
+        }
+        strong { color: var(--navy); }
+
+        /* Capability cards */
+        .capability-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 20px;
+            margin: 24px 0;
+        }
+        .capability-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            border-top: 3px solid var(--accent);
+        }
+        .capability-card h4 {
+            font-family: var(--font-heading);
+            font-size: 0.95rem;
+            color: var(--navy);
+            margin-bottom: 8px;
+        }
+        .capability-card p {
+            font-size: 0.88rem;
+            margin-bottom: 0;
+        }
+
+        /* Stat highlights */
+        .stat-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 16px;
+            margin: 24px 0;
+        }
+        .stat-highlight {
+            text-align: center;
+            padding: 20px 12px;
+            background: var(--bg-card);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-light);
+        }
+        .stat-highlight .num {
+            font-family: var(--font-heading);
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--accent);
+            display: block;
+        }
+        .stat-highlight .lbl {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+            display: block;
+        }
+
+        /* Phase pipeline */
+        .phase-list {
+            list-style: none;
+            padding: 0;
+            margin: 20px 0;
+            counter-reset: phase;
+        }
+        .phase-list li {
+            counter-increment: phase;
+            padding: 16px 16px 16px 56px;
+            margin-bottom: 12px;
+            background: var(--bg-card);
+            border-left: 3px solid var(--accent);
+            border-radius: 0 var(--radius-md) var(--radius-md) 0;
+            position: relative;
+            font-size: 0.92rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        .phase-list li::before {
+            content: counter(phase);
+            position: absolute;
+            left: 14px;
+            top: 14px;
+            width: 28px;
+            height: 28px;
+            background: var(--accent);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-heading);
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+        .phase-list li strong {
+            display: block;
+            font-size: 0.95rem;
+            margin-bottom: 4px;
+        }
+
+        /* Resource grid */
+        .resource-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin: 20px 0;
+        }
+        .resource-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 14px;
+            background: var(--bg-card);
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-light);
+            font-size: 0.88rem;
+            color: var(--text-primary);
+        }
+        .resource-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        /* Source list overrides */
+        .source-list { padding-left: 0; list-style: none; }
+        .source-list li {
+            padding: 6px 0;
+            border-bottom: 1px solid var(--border-light);
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+        }
+        .source-list li:last-child { border-bottom: none; }
+
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 768px) {
+            html { font-size: 15px; }
+            .content { padding: 28px 16px 60px; }
+            h2 { font-size: 1.35rem; margin-top: 36px; }
+            h3 { font-size: 1.05rem; }
+            p { font-size: 0.9rem; }
+            .stat-highlight .num { font-size: 1.5rem; }
+            .phase-list li { padding-left: 48px; }
+        }
+        @media (max-width: 480px) {
+            html { font-size: 14px; }
+            .content { padding: 20px 10px 48px; }
+            h2 { font-size: 1.2rem; margin-top: 28px; margin-bottom: 12px; }
+            h3 { font-size: 1rem; margin-top: 20px; }
+            p { font-size: 0.85rem; }
+            .stat-row { grid-template-columns: repeat(2, 1fr); }
+            .capability-grid { grid-template-columns: 1fr; }
+            .resource-grid { grid-template-columns: 1fr; }
+            .back-link { font-size: 0.85rem; padding: 6px 10px; }
+        }
+        @media (max-width: 375px) {
+            .content { padding: 16px 8px 40px; }
+        }
+        @media print {
+            body { background: white; }
+            .header { background: var(--navy); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            h2 { page-break-before: auto; }
+        }
+    </style>
+    <script src="js/chart-colors.js"></script>
+    <script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
+    <script src="js/shared-footer.js"></script>
+    <script src="js/shared-back-button.js"></script>
+    <script src="js/data-flow-map.js"></script>
+</head>
+<body>
+
+<!-- ========== TOP NAVIGATION (injected by nav.js) ========== -->
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+<div id="backBar" data-back-href="about.html" data-back-label="Back to Home"></div>
+
+<header class="header" id="pageHeader">
+    <h1>The 8,760 Problem</h1>
+    <div class="subtitle">About this model &mdash; what it does, why it matters, and how it was built.</div>
+    <div class="header-accent"></div>
+</header>
+
+<div style="max-width:900px;margin:0 auto;padding:40px 48px 24px;background:var(--bg-alt-warm);border-radius:var(--radius-xl);">
+    <h2 style="font-family:var(--font-heading);font-size:2.4rem;font-weight:800;color:var(--red-dark);margin-bottom:16px;letter-spacing:-0.5px;line-height:1.2;">About This Model</h2>
+    <p style="font-size:0.98rem;color:var(--text-primary);line-height:1.75;max-width:800px;">
+        This model is a full-year, hourly-resolution clean energy procurement optimizer
+        that co-optimizes resource mix and cost across every hour of the year. It evaluates
+        millions of resource combinations under thousands of cost scenarios to find the most
+        cost-effective paths to any hourly clean energy matching target&mdash;from 10% to &ge;99.99%.
+    </p>
+</div>
+
+<div class="content section-light">
+    <div class="toc">
+        <h2>Contents</h2>
+        <ol>
+            <li><a href="#problem">The Problem: Why Hourly Matching Is Hard</a></li>
+            <li><a href="#model-scope">Model Scope &amp; Scale</a></li>
+            <li><a href="#resources">Resources Modeled</a></li>
+            <li><a href="#pipeline">Analytical Pipeline</a></li>
+            <li><a href="#data-sources">Data Foundation</a></li>
+            <li><a href="#outputs">Analytical Outputs</a></li>
+            <li><a href="#rigor">Methodological Rigor</a></li>
+            <li><a href="#assumptions">Assumptions &amp; Limitations</a></li>
+            <li><a href="#enhancements">Future Enhancements</a></li>
+            <li><a href="#bibliography">Data Sources</a></li>
+        </ol>
+    </div>
+
+    <!-- ================================================================ -->
+    <!-- SECTION 1: THE PROBLEM                                           -->
+    <!-- ================================================================ -->
+    <h2 id="problem">1. The Problem: Why Hourly Matching Is Hard</h2>
+
+    <p>
+        Most clean energy procurement today operates on an <strong>annual matching</strong> basis:
+        buy enough clean energy over the year to offset total consumption. This approach is simple
+        but masks a fundamental temporal mismatch&mdash;solar doesn't generate at night, wind is
+        intermittent, and demand is constant.
+    </p>
+    <p>
+        <strong>Hourly matching</strong> requires that clean energy supply meets or exceeds demand
+        in every single hour of the year&mdash;all 8,760 of them. This is an exponentially harder
+        problem. Each hour has different solar irradiance, wind speeds, hydro availability, and
+        demand levels. The resource mix that works at 75% hourly matching looks fundamentally
+        different from the mix needed at 95% or 99%.
+    </p>
+    <p>
+        This optimizer was built to answer a deceptively simple question: <strong>what does it
+        actually cost to match clean energy to demand on an hourly basis, and what's the most
+        cost-effective way to get there?</strong>
+    </p>
+
+    <div class="insight-box">
+        The answer depends on where you are, what clean resources already exist on your grid,
+        what you're willing to pay for new capacity, and how close to 100% you need to get.
+        This model captures all of those dimensions simultaneously.
+    </div>
+
+    <!-- ================================================================ -->
+    <!-- SECTION 2: MODEL SCOPE & SCALE                                   -->
+    <!-- ================================================================ -->
+    <h2 id="model-scope">2. Model Scope &amp; Scale</h2>
+
+    <p>
+        The optimizer operates at a scale designed to capture the full complexity of the hourly
+        matching problem without taking analytical shortcuts.
+    </p>
+
+    <div class="stat-row">
+        <div class="stat-highlight">
+            <span class="num">8,760</span>
+            <span class="lbl">Hours per year</span>
+        </div>
+        <div class="stat-highlight">
+            <span class="num">7</span>
+            <span class="lbl">US ISO/RTO regions</span>
+        </div>
+        <div class="stat-highlight">
+            <span class="num">21</span>
+            <span class="lbl">CFE thresholds</span>
+        </div>
+        <div class="stat-highlight">
+            <span class="num">5,832+</span>
+            <span class="lbl">Cost scenarios per region</span>
+        </div>
+    </div>
+
+    <h3>Geographic Coverage</h3>
+    <p>
+        The model covers all seven major US Independent System Operators and Regional Transmission
+        Organizations: <strong>CAISO</strong>, <strong>ERCOT</strong>, <strong>PJM</strong>,
+        <strong>NYISO</strong>, <strong>NEISO</strong>, <strong>MISO</strong>, and <strong>SPP</strong>.
+        Each region has distinct generation profiles, existing clean energy mixes, wholesale market
+        conditions, and transmission characteristics that produce meaningfully different optimal
+        resource portfolios.
+    </p>
+
+    <h3>Threshold Coverage</h3>
+    <p>
+        The model evaluates 21 hourly matching targets spanning the full range from 10% to &ge;99.99%.
+        Threshold spacing is tighter in the critical inflection zones (85&ndash;97.5%) where cost
+        curves steepen, and finest in the "last mile" (99&ndash;&ge;99.99%) where each additional
+        fraction of a percent demands disproportionate resources. The top target is &ge;99.99%&mdash;true
+        100% hourly matching is physically unreachable due to irreducible weather variability.
+    </p>
+
+    <h3>Sensitivity Analysis</h3>
+    <p>
+        Cost is not a single number&mdash;it depends on technology costs, fuel prices, transmission
+        availability, and policy assumptions. The model evaluates each resource mix under
+        <strong>5,832 distinct cost scenarios</strong> per region (17,496 for CAISO, which includes
+        geothermal as an additional dimension). These scenarios are generated from 8 sensitivity
+        toggle groups spanning renewable generation costs, firm generation costs, storage costs,
+        fossil fuel prices, transmission costs, CCS assumptions, the 45Q tax credit, and
+        region-specific factors.
+    </p>
+    <p>
+        All toggles use a <strong>Low / Medium / High</strong> framework grounded in published
+        cost ranges from NREL, Lazard, and LBNL.
+    </p>
+
+    <!-- ================================================================ -->
+    <!-- SECTION 3: RESOURCES MODELED                                     -->
+    <!-- ================================================================ -->
+    <h2 id="resources">3. Resources Modeled</h2>
+
+    <p>
+        The optimizer evaluates portfolios drawn from the full spectrum of clean energy technologies,
+        each with technology-appropriate temporal profiles and dispatch characteristics.
+    </p>
+
+    <div class="resource-grid">
+        <div class="resource-item">
+            <div class="resource-dot" style="background: var(--solar);"></div>
+            <div><strong>Solar</strong> &mdash; Variable, daytime generation</div>
+        </div>
+        <div class="resource-item">
+            <div class="resource-dot" style="background: var(--wind);"></div>
+            <div><strong>Wind</strong> &mdash; Variable, often strongest at night</div>
+        </div>
+        <div class="resource-item">
+            <div class="resource-dot" style="background: var(--hydro);"></div>
+            <div><strong>Hydro</strong> &mdash; Seasonal, existing-only</div>
+        </div>
+        <div class="resource-item">
+            <div class="resource-dot" style="background: var(--clean-firm);"></div>
+            <div><strong>Clean Firm</strong> &mdash; Nuclear &amp; geothermal baseload</div>
+        </div>
+        <div class="resource-item">
+            <div class="resource-dot" style="background: var(--ccs);"></div>
+            <div><strong>CCS-CCGT</strong> &mdash; Dispatchable with carbon capture</div>
+        </div>
+        <div class="resource-item">
+            <div class="resource-dot" style="background: var(--battery);"></div>
+            <div><strong>Battery</strong> &mdash; Short-duration daily-cycle storage</div>
+        </div>
+        <div class="resource-item">
+            <div class="resource-dot" style="background: var(--ldes);"></div>
+            <div><strong>LDES</strong> &mdash; Long-duration multi-day storage</div>
+        </div>
+        <div class="resource-item">
+            <div class="resource-dot" style="background: var(--green-h2);"></div>
+            <div><strong>Green H&#8322;</strong> &mdash; Ultra-long-duration seasonal storage</div>
+        </div>
+        <div class="resource-item">
+            <div class="resource-dot" style="background: var(--geothermal);"></div>
+            <div><strong>Geothermal</strong> &mdash; CAISO-only, flat year-round</div>
+        </div>
+    </div>
+
+    <p>
+        Each resource type is modeled with region-specific hourly generation profiles derived from
+        actual grid data. Storage technologies use technology-appropriate dispatch constraints
+        reflecting real-world operational characteristics&mdash;daily cycling for batteries,
+        multi-day arbitrage for LDES, and seasonal balancing for Green H&#8322;.
+    </p>
+    <p>
+        The model distinguishes between <strong>existing</strong> clean resources already on the grid
+        (priced at wholesale market rates) and <strong>new-build</strong> capacity (priced at
+        regionalized levelized costs plus applicable transmission). This two-tier approach reflects the
+        reality that procurement up to the existing clean share of the grid is fundamentally cheaper
+        than building new dedicated capacity.
+    </p>
+
+    <!-- ================================================================ -->
+    <!-- SECTION 4: ANALYTICAL PIPELINE                                   -->
+    <!-- ================================================================ -->
+    <h2 id="pipeline">4. Analytical Pipeline</h2>
+
+    <p>
+        The model is implemented as a modular, multi-phase computational pipeline. Each phase builds
+        on the outputs of prior phases, progressing from raw data through physics-based feasibility
+        analysis to economic optimization and derived analytics.
+    </p>
+
+    <ol class="phase-list">
+        <li>
+            <strong>Data Acquisition &amp; Preparation</strong>
+            Automated ingestion, validation, and harmonization of hourly generation profiles,
+            demand curves, emission factors, and market data from federal and state sources.
+            Quality controls ensure temporal consistency and flag anomalies before they propagate.
+        </li>
+        <li>
+            <strong>Physics-Based Feasibility Analysis</strong>
+            Exhaustive evaluation of resource combinations to identify every portfolio capable of
+            meeting each hourly matching threshold. This phase operates at full 8,760-hour
+            resolution&mdash;no monthly or seasonal aggregation shortcuts&mdash;and evaluates
+            millions of candidate mixes per region. Storage dispatch is simulated with
+            technology-appropriate operational constraints at each candidate point.
+        </li>
+        <li>
+            <strong>Economic Optimization &amp; Sensitivity</strong>
+            Feasible portfolios are evaluated under thousands of cost scenarios reflecting different
+            assumptions about technology costs, fuel prices, policy environment, and transmission
+            availability. The optimizer identifies the cost-minimizing resource mix for each
+            scenario, producing a complete map of how optimal strategy shifts with economic conditions.
+            Marginal abatement cost analysis, CO&#8322; displacement modeling, and market pricing
+            impacts are computed from the optimized results.
+        </li>
+        <li>
+            <strong>Derived Analytics &amp; Scenario Comparison</strong>
+            Cross-regional deployment analysis, procurement strategy comparison, storage utilization
+            patterns, and EAC market scarcity assessment. This phase synthesizes upstream results
+            into actionable insights about procurement pathways&mdash;comparing consequential,
+            hourly, and annual matching strategies under different market conditions.
+        </li>
+        <li>
+            <strong>Market Dynamics, Decarbonization Pathways &amp; Retirement Risk</strong>
+            Built on the SMARTargets methodology, this phase extends the model beyond static
+            optimization into probabilistic market simulation. An enhanced parametric design
+            evaluates 270+ market scenarios&mdash;spanning demand growth rates, fuel price
+            trajectories, PPA structures, and gas friction assumptions&mdash;alongside 10
+            structured net-zero transition pathways through 2050, including both facilitating
+            scenarios (with DAC backstop) and challenging scenarios (forced grid deployment only).
+            Corporate power sector target-setting implications are assessed against SBTi milestones,
+            while a multi-model nuclear stranding analysis stress-tests the economics of the
+            existing fleet under contract-for-difference policy structures (state ZEC/CMC programs,
+            federal 45U PTC) across all market scenarios. This probabilistic approach produces
+            confidence distributions rather than point estimates, capturing the full envelope of
+            plausible outcomes for procurement planning and retirement risk assessment.
+        </li>
+    </ol>
+
+    <div class="insight-box">
+        The physics-based feasibility phase is computationally intensive, running for hours on
+        cloud infrastructure. All subsequent phases operate on cached physics results and complete
+        in seconds to minutes&mdash;enabling rapid iteration on economic assumptions without
+        re-running the physics.
+    </div>
+
+    <!-- ================================================================ -->
+    <!-- SECTION 5: DATA FOUNDATION                                       -->
+    <!-- ================================================================ -->
+    <h2 id="data-sources">5. Data Foundation</h2>
+
+    <p>
+        Every input to the model is grounded in published, peer-reviewed, or government-collected
+        data. No proprietary datasets are used for generation profiles, demand curves, or cost
+        benchmarks.
+    </p>
+
+    <div class="capability-grid">
+        <div class="capability-card">
+            <h4>Hourly Generation Profiles</h4>
+            <p>
+                Solar, wind, hydro, nuclear, and fossil generation at hourly resolution for all
+                7 ISOs, sourced from EIA Hourly Electric Grid Monitor and cross-validated with
+                Form 923 plant-level data.
+            </p>
+        </div>
+        <div class="capability-card">
+            <h4>Demand Curves</h4>
+            <p>
+                8,760-hour demand profiles by ISO from EIA, normalized and quality-controlled
+                for chronological consistency and outlier detection.
+            </p>
+        </div>
+        <div class="capability-card">
+            <h4>Cost Benchmarks</h4>
+            <p>
+                Levelized costs from NREL Annual Technology Baseline, Lazard LCOE analysis,
+                and LBNL interconnection studies. Regionalized with ISO-specific adjustments
+                for resource quality, transmission distance, and market conditions.
+            </p>
+        </div>
+        <div class="capability-card">
+            <h4>Emission Factors</h4>
+            <p>
+                EPA eGRID subregion emission rates, fossil fuel mix data by ISO, and
+                regional fuel-switching elasticities for dynamic CO&#8322; displacement modeling.
+            </p>
+        </div>
+        <div class="capability-card">
+            <h4>Market Data</h4>
+            <p>
+                Wholesale electricity prices, locational marginal pricing data, and state-level
+                renewable portfolio standard requirements from DSIRE and ISO market reports.
+            </p>
+        </div>
+        <div class="capability-card">
+            <h4>Storage Parameters</h4>
+            <p>
+                Technology-specific round-trip efficiencies, duration ratings, and cost trajectories
+                from NREL ATB and published technology assessments for Li-ion, iron-air, and
+                hydrogen storage systems.
+            </p>
+        </div>
+    </div>
+
+    <!-- ================================================================ -->
+    <!-- SECTION 6: ANALYTICAL OUTPUTS                                    -->
+    <!-- ================================================================ -->
+    <h2 id="outputs">6. Analytical Outputs</h2>
+
+    <p>
+        The model produces a comprehensive set of results that together answer the key questions
+        facing clean energy procurement decision-makers.
+    </p>
+
+    <h3>Cost Optimization Results</h3>
+    <p>
+        For every combination of ISO, CFE threshold, and cost scenario: the optimal resource mix,
+        total procurement cost, cost per MWh of matched demand, curtailment rates, and the
+        contribution of each resource to hourly matching. These results power the interactive
+        Cost Optimizer dashboard, where users can adjust sensitivity toggles and see how optimal
+        strategy shifts in real time.
+    </p>
+
+    <h3>CO&#8322; Abatement Analysis</h3>
+    <p>
+        Marginal and average CO&#8322; abatement costs at each threshold, benchmarked against
+        alternative decarbonization pathways (direct air capture, sustainable aviation fuel,
+        bioenergy with CCS). Includes dispatch-based emission displacement modeling that accounts
+        for which fossil fuels are actually retired as clean energy penetration increases.
+    </p>
+
+    <h3>Storage Dispatch Analysis</h3>
+    <p>
+        Hourly dispatch profiles for battery and long-duration storage, showing charge/discharge
+        patterns, capacity utilization, and the role of storage in bridging temporal gaps between
+        supply and demand at different CFE thresholds.
+    </p>
+
+    <h3>EAC Market Scarcity Assessment</h3>
+    <p>
+        Analysis of energy attribute certificate supply and demand balance across ISOs,
+        incorporating state RPS requirements, corporate procurement activity, and the temporal
+        structure of clean energy surplus and deficit hours. Identifies regions where hourly
+        matching at scale may face supply constraints.
+    </p>
+
+    <h3>Procurement Strategy Comparison</h3>
+    <p>
+        Side-by-side evaluation of consequential, hourly, and annual matching procurement
+        strategies under different market conditions, emission accounting frameworks, and
+        corporate ambition levels. Includes deployment pathway analysis showing how procurement
+        decisions aggregate across regions.
+    </p>
+
+    <h3>Synthetic LMP Analysis</h3>
+    <p>
+        Merit-order-based wholesale price modeling showing how clean energy procurement at scale
+        affects locational marginal prices, and the feedback between procurement cost and
+        market impact.
+    </p>
+
+    <!-- ================================================================ -->
+    <!-- SECTION 7: METHODOLOGICAL RIGOR                                  -->
+    <!-- ================================================================ -->
+    <h2 id="rigor">7. Methodological Rigor</h2>
+
+    <p>
+        This model was built to withstand academic scrutiny. Key design choices that
+        distinguish it from simpler clean energy planning tools:
+    </p>
+
+    <div class="capability-grid">
+        <div class="capability-card">
+            <h4>Full 8,760-Hour Resolution</h4>
+            <p>
+                No aggregation to monthly or seasonal averages. Every hour of the year is evaluated
+                independently, preserving the temporal variability that drives the cost of hourly
+                matching.
+            </p>
+        </div>
+        <div class="capability-card">
+            <h4>Cost-Mix Co-Optimization</h4>
+            <p>
+                Cost assumptions and resource mix are optimized simultaneously&mdash;not sequentially.
+                Different cost assumptions produce different optimal mixes. This co-optimization
+                is the model's core contribution.
+            </p>
+        </div>
+        <div class="capability-card">
+            <h4>Exhaustive Feasibility Search</h4>
+            <p>
+                The physics layer evaluates millions of candidate resource portfolios per region,
+                ensuring the optimizer doesn't miss non-obvious solutions. Sub-optimality bounds
+                are validated to confirm results are within a narrow tolerance of the true optimum.
+            </p>
+        </div>
+        <div class="capability-card">
+            <h4>Region-Specific Cost Structures</h4>
+            <p>
+                Every cost parameter&mdash;generation, transmission, storage, fuel&mdash;is
+                regionalized to reflect actual market conditions, resource quality, and
+                infrastructure constraints in each ISO.
+            </p>
+        </div>
+        <div class="capability-card">
+            <h4>Multi-Technology Storage Dispatch</h4>
+            <p>
+                Three storage technologies (short-duration, long-duration, and ultra-long-duration)
+                with technology-appropriate dispatch algorithms that respect operational constraints
+                including round-trip efficiency losses and duration limits.
+            </p>
+        </div>
+        <div class="capability-card">
+            <h4>Peer-Reviewed Data Inputs</h4>
+            <p>
+                All cost benchmarks, generation profiles, and emission factors sourced from
+                published government and research institution datasets (NREL ATB, EIA, EPA eGRID,
+                Lazard, LBNL).
+            </p>
+        </div>
+    </div>
+
+    <!-- ================================================================ -->
+    <!-- SECTION 8: ASSUMPTIONS & LIMITATIONS                             -->
+    <!-- ================================================================ -->
+    <h2 id="assumptions">8. Assumptions &amp; Limitations</h2>
+
+    <p>
+        Transparency about model boundaries is essential for proper interpretation of results.
+    </p>
+
+    <h3>Demand Growth Projections (Tracks 2 &amp; 3)</h3>
+    <p style="font-size:0.92rem;color:var(--text-secondary);line-height:1.8;">
+        The new-build (Track 2) and cost-to-replace (Track 3) analyses model demand growth over a
+        25-year horizon (2026&ndash;2050), with each CFE threshold mapped to a target year via SBTi milestones.
+        Demand compounds annually as <code>(1 + rate)<sup>years</sup></code>, where <code>years = target_year &minus; 2025</code>.
+        Existing clean generation remains constant in absolute TWh; its share of total generation declines as demand grows.
+    </p>
+    <p style="font-size:0.92rem;color:var(--text-secondary);line-height:1.8;">
+        Growth rates are ISO-specific and set at three levels (Low / Medium / High), calibrated from
+        EIA AEO 2025 reference and side cases, NERC 2024 LTRA, and ISO/RTO planning forecasts:
+    </p>
+    <table class="data-table" style="font-size:0.85rem; max-width:600px; margin-bottom:16px;">
+        <thead>
+            <tr><th>ISO</th><th>Low (%/yr)</th><th>Medium (%/yr)</th><th>High (%/yr)</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>CAISO</td><td>1.4</td><td>1.9</td><td>2.5</td></tr>
+            <tr><td>ERCOT</td><td>2.0</td><td>3.5</td><td>5.5</td></tr>
+            <tr><td>PJM</td><td>1.5</td><td>2.4</td><td>3.6</td></tr>
+            <tr><td>NYISO</td><td>1.3</td><td>2.0</td><td>4.4</td></tr>
+            <tr><td>NEISO</td><td>0.9</td><td>1.8</td><td>2.9</td></tr>
+            <tr><td>MISO</td><td>1.2</td><td>2.2</td><td>3.8</td></tr>
+            <tr><td>SPP</td><td>1.0</td><td>1.8</td><td>3.0</td></tr>
+        </tbody>
+    </table>
+    <p style="font-size:0.85rem;color:var(--text-muted);line-height:1.7;">
+        <strong>Low</strong> reflects baseline economic/population growth (EIA Low Economic Growth case, ~1.2% GDP CAGR).
+        <strong>Medium</strong> incorporates confirmed large-load requests (data centers, industrial reshoring) anchored to the
+        EIA AEO 2025 Reference Case (~1.6% national electricity CAGR), regionalized using ISO planning data.
+        <strong>High</strong> assumes full realization of data center/AI load growth plus accelerated electrification
+        (economy-wide net-zero pathway); ERCOT's 5.5% aligns with recent ERCOT board projections of near-term demand doubling.
+    </p>
+
+    <h3>Key Assumptions</h3>
+    <ul style="font-size:0.92rem;color:var(--text-secondary);line-height:1.8;">
+        <li><strong>2025 snapshot model</strong> &mdash; generation profiles and grid mix reflect
+            current conditions. No forward projections of capacity additions or retirements,
+            except where learning curves are explicitly modeled for new-build cost trajectories.</li>
+        <li><strong>ISO-level geographic resolution</strong> &mdash; resources are sourced within
+            the buyer's ISO/RTO region. No intra-ISO transmission constraints or nodal pricing.</li>
+        <li><strong>Hydro is existing-only</strong> &mdash; no new hydroelectric capacity is modeled.
+            Existing hydro is available at wholesale market rates with no incremental transmission cost.</li>
+        <li><strong>No incrementality requirement</strong> &mdash; buyers can claim existing clean
+            generation via EAC procurement. If additionality were required, costs would increase
+            significantly at lower thresholds.</li>
+        <li><strong>Flat corporate load profile</strong> &mdash; demand is modeled as approximately
+            flat baseload, representative of data center and large commercial loads.</li>
+    </ul>
+
+    <h3>Known Limitations</h3>
+    <ul style="font-size:0.92rem;color:var(--text-secondary);line-height:1.8;">
+        <li><strong>Static supply model</strong> &mdash; does not account for price-induced supply
+            responses. In reality, high EAC prices would stimulate new clean energy investment.</li>
+        <li><strong>No cross-ISO interactions</strong> &mdash; each ISO is modeled independently.
+            Scarcity in one region could drive inter-regional EAC trade or load migration.</li>
+        <li><strong>No intra-ISO transmission constraints</strong> &mdash; each ISO is modeled as a
+            single zone (copper plate). Transmission costs are flat $/MWh adders rather than
+            flow-constrained network optimization. Production models like GenX (DC optimal power flow)
+            and EPRI's US-REGEN (zonal pipe-and-bubble) capture congestion-driven price separation
+            within ISOs that can materially affect resource siting economics.</li>
+        <li><strong>No unit commitment constraints</strong> &mdash; perfect dispatch assumed with no
+            minimum up/down times, ramp rate limits, start-up costs, or minimum stable output for
+            thermal generators. This may understate the cost of integrating variable renewables
+            at high penetration levels.</li>
+        <li><strong>Reserve margin without hourly reserves</strong> &mdash; the model enforces a
+            resource adequacy requirement (reserve margin) in cost optimization, but does not model
+            spinning, non-spinning, or regulation reserves as hourly dispatch constraints.
+            This captures planning-level reliability but not real-time ancillary service costs.</li>
+        <li><strong>No demand-side flexibility</strong> &mdash; load is treated as perfectly inelastic.
+            No demand response, load shifting, or flexible consumption (EV charging, data center
+            workload scheduling) is modeled&mdash;understating the system's ability to absorb surplus
+            clean energy and reduce curtailment.</li>
+        <li><strong>Single-sector scope</strong> &mdash; electricity-only analysis. Cross-sector
+            interactions (transport electrification, building heating, industrial hydrogen demand)
+            that affect electricity prices and resource availability are not captured.</li>
+        <li><strong>Policy evolution</strong> &mdash; state RPS targets, federal tax credits,
+            and GHG Protocol requirements continue to evolve. Results reflect current policy
+            as of early 2025.</li>
+        <li><strong>Interconnection queue constraints</strong> &mdash; the model assumes new capacity
+            can be built as needed, without modeling interconnection queue delays or developer
+            competition effects.</li>
+    </ul>
+
+    <div class="insight-box insight-warn">
+        <strong>Interpreting results:</strong> This model identifies the <em>theoretical
+        cost-optimal</em> resource mix under specified assumptions. Real-world procurement
+        involves additional factors&mdash;developer availability, interconnection timelines,
+        contract structure, and counterparty risk&mdash;that may shift actual portfolios from
+        the modeled optimum.
+    </div>
+
+    <!-- ================================================================ -->
+    <!-- SECTION 9: FUTURE ENHANCEMENTS                                   -->
+    <!-- ================================================================ -->
+    <h2 id="enhancements">9. Future Enhancements</h2>
+
+    <p>
+        The following enhancements are informed by two open-source capacity expansion models:
+        EPRI's US-REGEN and MIT/Princeton's GenX.jl. They represent opportunities to increase
+        dispatch realism, transmission fidelity, and demand-side sophistication while preserving
+        the model's core strength of full 8,760-hour cost-mix co-optimization.
+    </p>
+
+    <h3>Tier 1 &mdash; High Impact, Feasible</h3>
+    <div class="capability-grid">
+        <div class="capability-card">
+            <h4>Zonal Transmission Modeling</h4>
+            <p>
+                Upgrade from flat $/MWh adders to a pipe-and-bubble inter-zone flow model with
+                congestion pricing. Define 2&ndash;5 transmission zones per ISO based on actual
+                constraint boundaries (e.g., PJM West/East, MISO North/South, CAISO SP15/NP15).
+                Captures locational cost signals that shift optimal resource siting and reveals
+                intra-ISO price separation masked by copper-plate assumptions. Informed by
+                EPRI US-REGEN's zonal architecture.
+            </p>
+        </div>
+        <div class="capability-card">
+            <h4>Operating Reserve &amp; Unit Commitment</h4>
+            <p>
+                Add spinning reserve requirements and thermal generator operational constraints
+                (ramp rates, minimum stable output, start-up costs). Increases dispatch realism
+                for fossil backup and CCS-CCGT, particularly at high CFE thresholds where firm
+                capacity margins tighten and cycling costs become material. Informed by GenX.jl's
+                unit commitment formulation.
+            </p>
+        </div>
+        <div class="capability-card">
+            <h4>Demand-Side Flexibility</h4>
+            <p>
+                Model flexible loads&mdash;EV charging, data center workload shifting, industrial
+                process scheduling&mdash;that can absorb surplus clean energy during high-generation
+                hours, reducing curtailment and storage requirements. Particularly impactful for
+                solar-heavy ISOs where midday surplus depresses value. Informed by REGEN's
+                buildings and transport demand response modules.
+            </p>
+        </div>
+    </div>
+
+    <h3>Tier 2 &mdash; Medium Impact, Moderate Effort</h3>
+    <div class="capability-grid">
+        <div class="capability-card">
+            <h4>Cross-ISO EAC Trade</h4>
+            <p>
+                Model inter-regional energy attribute certificate markets with deliverability
+                constraints and transaction costs. Enables cheaper cross-regional procurement
+                paths and captures how scarcity in one ISO drives price signals in others&mdash;a
+                dynamic increasingly relevant as corporate CFE demand scales.
+            </p>
+        </div>
+        <div class="capability-card">
+            <h4>Endogenous Capacity Retirement</h4>
+            <p>
+                Allow the optimization to retire gas generation capacity when clean energy
+                deployment makes plants uneconomic, rather than holding the fossil fleet static.
+                Captures the feedback between clean deployment, declining fossil utilization, and
+                eventual economic retirement&mdash;important for accurate CO&#8322; abatement
+                accounting. Informed by GenX's retirement module.
+            </p>
+        </div>
+        <div class="capability-card">
+            <h4>Flexible CCS Dispatch</h4>
+            <p>
+                Variable CO&#8322; capture rate that responds to electricity prices and carbon
+                costs, rather than a fixed 90% capture assumption. Allows CCS-CCGT to trade off
+                capture cost against generation flexibility&mdash;running at lower capture rates
+                during peak demand and higher rates during surplus hours. Informed by GenX's
+                flexible CCS resource model.
+            </p>
+        </div>
+    </div>
+
+    <h3>Tier 3 &mdash; Aspirational, High Effort</h3>
+    <div class="capability-grid">
+        <div class="capability-card">
+            <h4>DC Optimal Power Flow</h4>
+            <p>
+                Full angle-based power flow with Kirchhoff's law enforcement and transmission
+                loss modeling. Provides maximum fidelity for congestion and curtailment analysis
+                but requires nodal network topology data and significantly increases computational
+                complexity. Informed by GenX.jl's DCOPF transmission module.
+            </p>
+        </div>
+        <div class="capability-card">
+            <h4>Multi-Stage Pathway Optimization</h4>
+            <p>
+                Intertemporal investment sequencing using dynamic programming to optimize the
+                timing and ordering of capacity additions over a 25-year horizon. Complements
+                the existing parametric market simulation with endogenous buildout decisions
+                that account for path dependency and option value.
+            </p>
+        </div>
+        <div class="capability-card">
+            <h4>Multi-Sector Energy Integration</h4>
+            <p>
+                Extend the model to capture electricity&ndash;transport&ndash;buildings&ndash;industry
+                interactions, enabling holistic decarbonization pathway analysis where
+                electrification decisions in one sector affect resource requirements and prices
+                in others. Informed by REGEN's full energy-economy integration architecture.
+            </p>
+        </div>
+    </div>
+
+    <div class="insight-box">
+        <strong>Licensing note:</strong> Enhancement roadmap informed by EPRI's US-REGEN
+        (BSD-3-Clause&mdash;direct adaptation permitted with attribution) and MIT/Princeton's
+        GenX.jl (GPL-2.0&mdash;independent reimplementation of published algorithms required).
+        All implementations would be original code built on publicly documented methodologies.
+    </div>
+
+    <!-- ================================================================ -->
+    <!-- SECTION 10: DATA SOURCES                                         -->
+    <!-- ================================================================ -->
+    <h2 id="bibliography">10. Data Sources</h2>
+
+    <p>
+        The following public datasets and published research inform the model's inputs,
+        cost assumptions, and validation benchmarks.
+    </p>
+
+    <h3>Generation &amp; Demand Data</h3>
+    <ul class="source-list">
+        <li><strong>EIA Hourly Electric Grid Monitor</strong> &mdash; Hourly generation by fuel type and demand by balancing authority (2021&ndash;2025)</li>
+        <li><strong>EIA Form 923</strong> &mdash; Plant-level net generation by fuel and prime mover (2023&ndash;2024)</li>
+        <li><strong>EIA Form 860</strong> &mdash; Generator-level capacity, technology, and location data</li>
+        <li><strong>NRC Power Reactor Status Reports</strong> &mdash; Nuclear plant capacity factors and outage schedules (2024&ndash;2025)</li>
+    </ul>
+
+    <h3>Cost &amp; Technology Benchmarks</h3>
+    <ul class="source-list">
+        <li><strong>NREL Annual Technology Baseline (ATB) 2024</strong> &mdash; LCOE projections for solar, wind, storage, nuclear, geothermal, and CCS</li>
+        <li><strong>Lazard LCOE v17 (2024)</strong> &mdash; Levelized cost benchmarks across generation technologies</li>
+        <li><strong>LBNL "Queued Up" 2025</strong> &mdash; Interconnection queue data, transmission cost estimates by ISO</li>
+        <li><strong>LBNL Utility-Scale Solar / Wind Reports</strong> &mdash; Installed cost trends and regional variations</li>
+    </ul>
+
+    <h3>Emissions &amp; Environmental</h3>
+    <ul class="source-list">
+        <li><strong>EPA eGRID</strong> &mdash; Subregion emission factors by fuel type</li>
+        <li><strong>EPA Power Sector Carbon Data</strong> &mdash; Historical and projected fossil fleet emissions</li>
+        <li><strong>Rennert et al. (2022)</strong> &mdash; Social cost of carbon estimates</li>
+    </ul>
+
+    <h3>Market &amp; Policy</h3>
+    <ul class="source-list">
+        <li><strong>ISO/RTO Market Reports</strong> &mdash; Wholesale electricity prices and LMP data (CAISO OASIS, ERCOT RTLMP, PJM Data Miner)</li>
+        <li><strong>DSIRE Database</strong> &mdash; State renewable portfolio standard and clean energy standard requirements</li>
+        <li><strong>CEBA Deal Tracker (2024)</strong> &mdash; Corporate clean energy procurement volumes by ISO</li>
+        <li><strong>GHG Protocol Scope 2 Revision First Consultation Draft (Oct 2025)</strong> &mdash; SSS framework and quality criteria</li>
+        <li><strong>SBTi Power Sector v2 Draft (Sep 2025)</strong> &mdash; Hourly matching requirements and target-setting methodology</li>
+    </ul>
+
+    <h3>Storage Technology</h3>
+    <ul class="source-list">
+        <li><strong>NREL ATB Storage Module</strong> &mdash; Li-ion battery and long-duration storage cost projections</li>
+        <li><strong>Form Energy / ESS Inc. Published Specifications</strong> &mdash; Iron-air LDES technology parameters</li>
+        <li><strong>DOE Long Duration Energy Storage Shot</strong> &mdash; LDES cost targets and technology roadmap</li>
+    </ul>
+
+    <h3>Demand Growth Projections</h3>
+    <ul class="source-list">
+        <li><strong>EIA Annual Energy Outlook 2025</strong> &mdash; Reference, High/Low Economic Growth cases for national electricity demand trajectories</li>
+        <li><strong>NERC 2024 Long-Term Reliability Assessment</strong> &mdash; 10-year peak demand growth by assessment area; regional risk classifications</li>
+        <li><strong>ERCOT 2025 Long-Term Load Forecast Report</strong> &mdash; ISO-specific demand projections incorporating large-load interconnection requests</li>
+        <li><strong>PJM 2025 Long-Term Load Forecast</strong> &mdash; 20-year summer/winter peak and energy growth projections</li>
+        <li><strong>Grid Strategies, <em>Power Demand Forecasts Revised Up for Third Year Running</em> (2025)</strong> &mdash; National load growth aggregation across planning entities</li>
+    </ul>
+
+    <!-- ================================================================ -->
+    <!-- SECTION 11: PIPELINE DATA FLOW MAP                              -->
+    <!-- ================================================================ -->
+    <h2 id="pipeline-data-flow">11. Pipeline Data Flow</h2>
+
+    <p>
+        The optimizer runs as an 8-step directed acyclic graph (DAG, Steps 0&ndash;7).
+        Step 1 (physics) is compute-heavy (3&ndash;8 hours); Steps 2&ndash;7 are lightweight
+        (minutes each). Sub-step notation: .1/.2/.3 = sequential, A/B/C = parallel.
+        Click any node below to inspect its scripts, inputs, outputs, and runtime.
+    </p>
+
+    <style>
+        /* ========== Data Flow Map — page-specific layout styles ========== */
+        .dfm-wrap {
+            position: relative;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin: 24px 0 32px;
+        }
+        .dfm-svg-container {
+            min-width: 820px;
+            width: 100%;
+            position: relative;
+        }
+        .dfm-svg-container svg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        /* Node base */
+        .dfm-node {
+            cursor: pointer;
+            transition: filter 0.2s ease, transform 0.2s ease;
+        }
+        .dfm-node:hover {
+            filter: brightness(1.08) drop-shadow(0 4px 12px rgba(0,0,0,0.15));
+        }
+        .dfm-node:hover rect,
+        .dfm-node:hover .dfm-node-rect {
+            stroke-width: 2.5;
+        }
+        .dfm-node rect, .dfm-node .dfm-node-rect {
+            rx: 10;
+            ry: 10;
+            stroke-width: 1.5;
+            transition: stroke-width 0.2s ease;
+        }
+        .dfm-node text {
+            font-family: var(--font-heading);
+            pointer-events: none;
+        }
+        .dfm-node .dfm-label {
+            font-size: 11px;
+            font-weight: 700;
+            fill: #fff;
+        }
+        .dfm-node .dfm-sublabel {
+            font-size: 8.5px;
+            font-weight: 400;
+            fill: rgba(255,255,255,0.82);
+        }
+
+        /* Edge lines */
+        .dfm-edge {
+            fill: none;
+            stroke: var(--navy-light, #2D3A52);
+            stroke-width: 1.4;
+            transition: stroke 0.2s ease, stroke-width 0.2s ease;
+        }
+        .dfm-edge-dashed {
+            stroke-dasharray: 6 4;
+            opacity: 0.6;
+        }
+        .dfm-edge-label {
+            font-family: var(--font-body);
+            font-size: 7.5px;
+            fill: var(--text-muted, #6B7280);
+        }
+        .dfm-arrowhead {
+            fill: var(--navy-light, #2D3A52);
+        }
+
+        /* Detail panel */
+        .dfm-detail {
+            display: none;
+            margin-top: 16px;
+            padding: 20px 24px;
+            background: #fff;
+            border: 1px solid var(--border-light, #E5E7EB);
+            border-radius: var(--radius-lg, 12px);
+            box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.06));
+            animation: dfmSlideIn 0.25s ease-out;
+        }
+        .dfm-detail.active {
+            display: block;
+        }
+        @keyframes dfmSlideIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .dfm-detail-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .dfm-detail-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+        .dfm-detail-title {
+            font-family: var(--font-heading);
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--navy, #1A2744);
+        }
+        .dfm-detail-close {
+            margin-left: auto;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: var(--text-muted, #6B7280);
+            padding: 4px 8px;
+            border-radius: var(--radius-sm, 6px);
+            transition: background 0.15s;
+        }
+        .dfm-detail-close:hover {
+            background: var(--bg-hover, rgba(0,0,0,0.05));
+        }
+        .dfm-detail-desc {
+            font-size: 0.9rem;
+            color: var(--text-secondary, #4B5563);
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+        .dfm-detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        @media (max-width: 600px) {
+            .dfm-detail-grid { grid-template-columns: 1fr; }
+        }
+        .dfm-detail-section h4 {
+            font-family: var(--font-heading);
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--navy, #1A2744);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+        .dfm-detail-section ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .dfm-detail-section li {
+            font-size: 0.82rem;
+            color: var(--text-secondary, #4B5563);
+            padding: 3px 0;
+            font-family: var(--font-mono, monospace);
+        }
+        .dfm-detail-runtime {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: var(--radius-pill, 9999px);
+            font-size: 0.78rem;
+            font-weight: 600;
+            background: var(--bg-alt-warm, #FEF3C7);
+            color: var(--amber-dark, #92400E);
+        }
+
+        /* Legend */
+        .dfm-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-top: 12px;
+            padding: 12px 16px;
+            background: var(--bg-alt-cool, #F0F4F8);
+            border-radius: var(--radius-md, 8px);
+        }
+        .dfm-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.78rem;
+            color: var(--text-secondary, #4B5563);
+            font-family: var(--font-body);
+        }
+        .dfm-legend-swatch {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        /* Data file table toggle */
+        .dfm-table-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 0;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-family: var(--font-heading);
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--navy, #1A2744);
+            width: 100%;
+            text-align: left;
+        }
+        .dfm-table-toggle:hover { color: var(--accent, #EF4444); }
+        .dfm-table-toggle .dfm-chevron {
+            transition: transform 0.25s ease;
+            font-size: 0.9rem;
+        }
+        .dfm-table-toggle.expanded .dfm-chevron {
+            transform: rotate(90deg);
+        }
+        .dfm-table-body {
+            display: none;
+            overflow-x: auto;
+        }
+        .dfm-table-body.expanded {
+            display: block;
+        }
+
+        /* Mobile vertical layout */
+        @media (max-width: 768px) {
+            .dfm-svg-container {
+                min-width: 0;
+            }
+            .dfm-wrap {
+                overflow-x: visible;
+            }
+        }
+    </style>
+
+    <div class="card" style="padding: 24px;">
+        <!-- Legend -->
+        <div class="dfm-legend" role="legend" aria-label="Node type legend">
+            <div class="dfm-legend-item"><span class="dfm-legend-swatch" style="background:#0EA5E9;"></span> Data Input</div>
+            <div class="dfm-legend-item"><span class="dfm-legend-swatch" style="background:#64748B;"></span> Config</div>
+            <div class="dfm-legend-item"><span class="dfm-legend-swatch" style="background:#F59E0B;"></span> Heavy Compute</div>
+            <div class="dfm-legend-item"><span class="dfm-legend-swatch" style="background:#6366F1;"></span> Compute</div>
+            <div class="dfm-legend-item"><span class="dfm-legend-swatch" style="background:#22C55E;"></span> Analysis</div>
+            <div class="dfm-legend-item"><span class="dfm-legend-swatch" style="background:#EF4444;"></span> Output</div>
+        </div>
+
+        <!-- DAG SVG -->
+        <div class="dfm-wrap" role="img" aria-label="Pipeline data flow directed acyclic graph">
+            <div class="dfm-svg-container" id="dfmSvgContainer"></div>
+        </div>
+
+        <!-- Detail panel -->
+        <div class="dfm-detail" id="dfmDetail" role="region" aria-label="Selected pipeline node details" aria-live="polite">
+            <div class="dfm-detail-header">
+                <span class="dfm-detail-dot" id="dfmDetailDot"></span>
+                <span class="dfm-detail-title" id="dfmDetailTitle"></span>
+                <button class="dfm-detail-close" id="dfmDetailClose" aria-label="Close detail panel">&times;</button>
+            </div>
+            <p class="dfm-detail-desc" id="dfmDetailDesc"></p>
+            <div class="dfm-detail-grid">
+                <div class="dfm-detail-section">
+                    <h4>Scripts</h4>
+                    <ul id="dfmDetailScripts"></ul>
+                </div>
+                <div class="dfm-detail-section">
+                    <h4>Outputs</h4>
+                    <ul id="dfmDetailOutputs"></ul>
+                </div>
+            </div>
+            <div style="margin-top:12px;">
+                <span class="dfm-detail-runtime" id="dfmDetailRuntime"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Collapsible data file reference table -->
+    <div class="card" style="padding: 0; margin-top: 20px;">
+        <button class="dfm-table-toggle" id="dfmTableToggle" aria-expanded="false" aria-controls="dfmTableBody">
+            <span class="dfm-chevron">&#9654;</span>
+            Data File Reference
+        </button>
+        <div class="dfm-table-body" id="dfmTableBody" role="region" aria-label="Data file reference table">
+            <table class="data-table" style="margin:0;" id="dfmDataTable">
+                <thead>
+                    <tr>
+                        <th>File Pattern</th>
+                        <th>Step</th>
+                        <th>Format</th>
+                        <th>Key Columns</th>
+                        <th>Description</th>
+                        <th>Source / Size</th>
+                    </tr>
+                </thead>
+                <tbody id="dfmDataTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+
+        // ── Color map ──
+        const TYPE_COLORS = {
+            data_input:    '#0EA5E9',
+            config:        '#64748B',
+            compute_heavy: '#F59E0B',
+            compute:       '#6366F1',
+            analysis:      '#22C55E',
+            output:        '#EF4444'
+        };
+
+        // ── Layout constants ──
+        const NODE_W = 150, NODE_H = 52, PAD_X = 40, PAD_Y = 18;
+
+        // Assign column (x) and row (y) positions for each node in the DAG
+        // Layout: left-to-right flow, Steps 0–7
+        const layout = {
+            raw_data:  { col: 0, row: 0 },
+            config:    { col: 0, row: 1.3 },
+            step1:     { col: 1, row: 0.65 },
+            step2:     { col: 2, row: 0.65 },
+            step3:     { col: 3, row: 0.65 },
+            step4:     { col: 4, row: 0.65 },
+            step5:     { col: 5, row: 0 },
+            step6:     { col: 5, row: 1.3 },
+            step7:     { col: 6, row: 0.65 },
+            dashboard: { col: 7, row: 0.65 }
+        };
+
+        const nodes = PIPELINE_FLOW.nodes;
+        const edges = PIPELINE_FLOW.edges;
+
+        // Compute positions
+        const nodeMap = {};
+        nodes.forEach(n => {
+            const l = layout[n.id];
+            nodeMap[n.id] = {
+                ...n,
+                x: l.col * (NODE_W + PAD_X),
+                y: l.row * (NODE_H + PAD_Y),
+                cx: l.col * (NODE_W + PAD_X) + NODE_W / 2,
+                cy: l.row * (NODE_H + PAD_Y) + NODE_H / 2
+            };
+        });
+
+        // SVG dimensions
+        const maxCol = Math.max(...Object.values(layout).map(l => l.col));
+        const maxRow = Math.max(...Object.values(layout).map(l => l.row));
+        const svgW = (maxCol + 1) * (NODE_W + PAD_X) - PAD_X + 40;
+        const svgH = (maxRow + 1) * (NODE_H + PAD_Y) - PAD_Y + 40;
+
+        // Build SVG
+        const ns = 'http://www.w3.org/2000/svg';
+        const svg = document.createElementNS(ns, 'svg');
+        svg.setAttribute('viewBox', '0 0 ' + svgW + ' ' + svgH);
+        svg.setAttribute('xmlns', ns);
+        svg.style.width = '100%';
+        svg.style.height = 'auto';
+
+        // Defs: arrowhead
+        const defs = document.createElementNS(ns, 'defs');
+        const marker = document.createElementNS(ns, 'marker');
+        marker.setAttribute('id', 'dfm-arrow');
+        marker.setAttribute('viewBox', '0 0 10 7');
+        marker.setAttribute('refX', '10');
+        marker.setAttribute('refY', '3.5');
+        marker.setAttribute('markerWidth', '8');
+        marker.setAttribute('markerHeight', '6');
+        marker.setAttribute('orient', 'auto-start-reverse');
+        const arrowPath = document.createElementNS(ns, 'path');
+        arrowPath.setAttribute('d', 'M 0 0 L 10 3.5 L 0 7 z');
+        arrowPath.classList.add('dfm-arrowhead');
+        marker.appendChild(arrowPath);
+        defs.appendChild(marker);
+
+        // Dashed arrowhead
+        const marker2 = marker.cloneNode(true);
+        marker2.setAttribute('id', 'dfm-arrow-dashed');
+        marker2.querySelector('path').style.opacity = '0.6';
+        defs.appendChild(marker2);
+        svg.appendChild(defs);
+
+        // Draw edges
+        const edgeGroup = document.createElementNS(ns, 'g');
+        edges.forEach(e => {
+            const from = nodeMap[e.from];
+            const to = nodeMap[e.to];
+            if (!from || !to) return;
+
+            // Determine connection points
+            let x1, y1, x2, y2;
+            if (Math.abs(from.cy - to.cy) < 5) {
+                // Horizontal: right edge → left edge
+                x1 = from.x + NODE_W;
+                y1 = from.cy;
+                x2 = to.x;
+                y2 = to.cy;
+            } else if (from.x + NODE_W <= to.x) {
+                // Diagonal forward
+                x1 = from.x + NODE_W;
+                y1 = from.cy;
+                x2 = to.x;
+                y2 = to.cy;
+            } else {
+                // Same column or backward: bottom → top
+                x1 = from.cx;
+                y1 = from.y + NODE_H;
+                x2 = to.cx;
+                y2 = to.y;
+            }
+
+            // Cubic bezier for smooth curves
+            const dx = x2 - x1;
+            const cpx1 = x1 + dx * 0.4;
+            const cpx2 = x2 - dx * 0.4;
+            const d = 'M ' + x1 + ' ' + y1 + ' C ' + cpx1 + ' ' + y1 + ' ' + cpx2 + ' ' + y2 + ' ' + x2 + ' ' + y2;
+
+            const path = document.createElementNS(ns, 'path');
+            path.setAttribute('d', d);
+            path.classList.add('dfm-edge');
+            if (e.style === 'dashed') path.classList.add('dfm-edge-dashed');
+            path.setAttribute('marker-end', e.style === 'dashed' ? 'url(#dfm-arrow-dashed)' : 'url(#dfm-arrow)');
+            edgeGroup.appendChild(path);
+
+            // Edge label at midpoint
+            if (e.label) {
+                const mx = (x1 + x2) / 2;
+                const my = (y1 + y2) / 2 - 5;
+                const text = document.createElementNS(ns, 'text');
+                text.setAttribute('x', mx);
+                text.setAttribute('y', my);
+                text.setAttribute('text-anchor', 'middle');
+                text.classList.add('dfm-edge-label');
+                text.textContent = e.label;
+                edgeGroup.appendChild(text);
+            }
+        });
+        svg.appendChild(edgeGroup);
+
+        // Draw nodes
+        const nodeGroup = document.createElementNS(ns, 'g');
+        nodes.forEach(n => {
+            const pos = nodeMap[n.id];
+            const g = document.createElementNS(ns, 'g');
+            g.classList.add('dfm-node');
+            g.setAttribute('data-node-id', n.id);
+            g.setAttribute('role', 'button');
+            g.setAttribute('tabindex', '0');
+            g.setAttribute('aria-label', n.label + '. Click for details.');
+
+            const rect = document.createElementNS(ns, 'rect');
+            rect.classList.add('dfm-node-rect');
+            rect.setAttribute('x', pos.x);
+            rect.setAttribute('y', pos.y);
+            rect.setAttribute('width', NODE_W);
+            rect.setAttribute('height', NODE_H);
+            rect.setAttribute('fill', TYPE_COLORS[n.type] || '#6B7280');
+            rect.setAttribute('stroke', 'rgba(255,255,255,0.3)');
+            g.appendChild(rect);
+
+            // Label — split into two lines if long
+            const parts = n.label.split(': ');
+            if (parts.length === 2) {
+                const t1 = document.createElementNS(ns, 'text');
+                t1.setAttribute('x', pos.cx);
+                t1.setAttribute('y', pos.y + 20);
+                t1.setAttribute('text-anchor', 'middle');
+                t1.classList.add('dfm-label');
+                t1.textContent = parts[0];
+                g.appendChild(t1);
+
+                const t2 = document.createElementNS(ns, 'text');
+                t2.setAttribute('x', pos.cx);
+                t2.setAttribute('y', pos.y + 34);
+                t2.setAttribute('text-anchor', 'middle');
+                t2.classList.add('dfm-sublabel');
+                t2.textContent = parts[1];
+                g.appendChild(t2);
+            } else {
+                const t = document.createElementNS(ns, 'text');
+                t.setAttribute('x', pos.cx);
+                t.setAttribute('y', pos.cy + 4);
+                t.setAttribute('text-anchor', 'middle');
+                t.classList.add('dfm-label');
+                // Truncate if too long
+                t.textContent = n.label.length > 22 ? n.label.substring(0, 20) + '\u2026' : n.label;
+                g.appendChild(t);
+            }
+
+            // Click handler
+            g.addEventListener('click', () => showDetail(n));
+            g.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); showDetail(n); } });
+            nodeGroup.appendChild(g);
+        });
+        svg.appendChild(nodeGroup);
+
+        document.getElementById('dfmSvgContainer').appendChild(svg);
+
+        // ── Detail panel ──
+        const detailEl = document.getElementById('dfmDetail');
+        const detailDot = document.getElementById('dfmDetailDot');
+        const detailTitle = document.getElementById('dfmDetailTitle');
+        const detailDesc = document.getElementById('dfmDetailDesc');
+        const detailScripts = document.getElementById('dfmDetailScripts');
+        const detailOutputs = document.getElementById('dfmDetailOutputs');
+        const detailRuntime = document.getElementById('dfmDetailRuntime');
+
+        function showDetail(node) {
+            detailDot.style.background = TYPE_COLORS[node.type] || '#6B7280';
+            detailTitle.textContent = node.label;
+            detailDesc.textContent = node.description;
+            detailScripts.innerHTML = '';
+            (node.scripts || []).forEach(s => {
+                const li = document.createElement('li');
+                li.textContent = s;
+                detailScripts.appendChild(li);
+            });
+            if (!node.scripts || node.scripts.length === 0) {
+                const li = document.createElement('li');
+                li.textContent = '(client-side only)';
+                li.style.fontStyle = 'italic';
+                detailScripts.appendChild(li);
+            }
+            detailOutputs.innerHTML = '';
+            (node.outputs || []).forEach(o => {
+                const li = document.createElement('li');
+                li.textContent = o;
+                detailOutputs.appendChild(li);
+            });
+            if (!node.outputs || node.outputs.length === 0) {
+                const li = document.createElement('li');
+                li.textContent = '(see dashboard pages)';
+                li.style.fontStyle = 'italic';
+                detailOutputs.appendChild(li);
+            }
+            detailRuntime.textContent = node.runtime || 'N/A';
+
+            detailEl.classList.add('active');
+            detailEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        document.getElementById('dfmDetailClose').addEventListener('click', () => {
+            detailEl.classList.remove('active');
+        });
+
+        // ── Data file table ──
+        const tableBody = document.getElementById('dfmDataTableBody');
+        PIPELINE_FLOW.dataFiles.forEach(f => {
+            const tr = document.createElement('tr');
+            tr.innerHTML =
+                '<td style="font-family:var(--font-mono,monospace);font-size:0.8rem;white-space:nowrap;">' + escHtml(f.pattern) + '</td>' +
+                '<td style="text-align:center;">' + escHtml(String(f.step)) + '</td>' +
+                '<td>' + escHtml(f.format) + '</td>' +
+                '<td style="font-size:0.8rem;">' + escHtml(f.keyColumns) + '</td>' +
+                '<td style="font-size:0.82rem;">' + escHtml(f.description) + '</td>' +
+                '<td style="font-size:0.82rem;">' + escHtml(f.source || f.approxSize || '') + '</td>';
+            tableBody.appendChild(tr);
+        });
+
+        // Toggle
+        const toggleBtn = document.getElementById('dfmTableToggle');
+        const tableBodyEl = document.getElementById('dfmTableBody');
+        toggleBtn.addEventListener('click', () => {
+            const expanded = tableBodyEl.classList.toggle('expanded');
+            toggleBtn.classList.toggle('expanded', expanded);
+            toggleBtn.setAttribute('aria-expanded', expanded);
+        });
+
+        function escHtml(str) {
+            const d = document.createElement('div');
+            d.textContent = str;
+            return d.innerHTML;
+        }
+    })();
+    </script>
+
+    <p style="margin-top:40px;padding-top:20px;border-top:1px solid var(--border-light);font-size:0.82rem;color:var(--text-muted);text-align:center;">
+        Hourly Clean Energy Cost Optimizer &mdash; About This Model v4.0
+    </p>
+</div>
+
+<footer id="siteFooter" data-footer-note="Hourly Clean Energy Cost Optimizer &mdash; About This Model v4.0"></footer>
+
+</body>
+</html>
