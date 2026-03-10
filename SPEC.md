@@ -284,7 +284,7 @@ Comprehensive code audit identified critical, high, and medium-severity issues. 
 ### C1: LDES Double-Counting Bug — Fix Code, Defer Re-Run
 **Issue**: LDES charges energy from `residual_surplus` but never subtracts it (line ~751 of step1 dispatch). Battery 4hr, 8hr, and H2 all subtract. Same MWh can be consumed by both battery AND LDES, inflating CFE% by 2-5% at ≥95% thresholds.
 **Decision**: Fix the bug in code but don't re-run Step 1 yet. Document that existing caches have this known bias. Re-run when next Step 1 is needed.
-**Status**: [ ] Fix applied, [ ] Documented
+**Status**: [x] Fix applied (dispatch_utils.py + step1_pfs_generator.py, 4 locations), [x] Documented in commit message
 
 ### C2: CO₂ Emission Baselines — Map to Scope 2 Strategy Variants (Intentional Design)
 **Issue**: Baseline CO₂ uses grid_average rates (0.21-0.43 tCO₂/MWh, includes existing clean) but displaced CO₂ uses fossil_average rates (0.38-0.58). CAISO example: baseline 0.210, displacement 0.430.
@@ -299,7 +299,7 @@ Comprehensive code audit identified critical, high, and medium-severity issues. 
 ### C4: DAC Cost Trajectories — Cite and Adjust
 **Issue**: DAC costs hardcoded with no citations. Optimistic case ($100/ton by 2050) is below published lower bounds (Rubin $156-236/ton, Fuss et al. $124-243/ton). DAC crossover drives optimal CFE target recommendations.
 **Decision**: Add citations (Rubin 2015, Fuss et al. 2018, IEA 2022). Raise optimistic floor to ~$150/ton to match literature. Recalculate crossover points.
-**Status**: [ ] Citations added, [ ] Optimistic floor adjusted, [ ] Crossovers recalculated
+**Status**: [x] Citations added (step6b, step9a, step10), [x] Optimistic floor adjusted ($100→$150), [ ] Crossovers recalculated (need to re-run Step 6b)
 
 ### H1: Coal Retirement — Add EIA Form 860 Schedule
 **Issue**: Coal capped at 2025 TWh indefinitely with binary retirement at 70% clean threshold. Real coal plants retire for economics/age independent of clean energy — model credits all displacement to clean procurement.
@@ -339,7 +339,7 @@ Comprehensive code audit identified critical, high, and medium-severity issues. 
 ### H8: Social Cost of Carbon — Update to 2024 EPA
 **Issue**: Dashboard cites EPA $51/ton (2016, 7% SDR). Biden admin revised to $190-340/ton (2024, 3% SDR). EU ETS is market price, not SCC.
 **Decision**: Replace $51 with $190 (central, 2024 EPA). Keep Rennert et al. $185. Clarify EU ETS is market price, not SCC.
-**Status**: [ ] SCC values updated, [ ] EU ETS label clarified
+**Status**: [x] SCC values updated (7 files), [x] EU ETS label clarified, [x] Gas carbon trajectory recalculated
 
 ### M1: Weather-Year Sensitivity — Document Limitation
 **Issue**: Model uses 5-year averaged profiles but 2025 demand actuals. No P10/P50/P90 weather-year sensitivity.
@@ -364,22 +364,22 @@ Comprehensive code audit identified critical, high, and medium-severity issues. 
 ### M5: Wright's Law Learning Rates — Add Citations & Calibrate
 **Issue**: Learning rates (solar 28%, wind 14%, battery 18%) have no citations. Battery 18% may be aggressive as market matures.
 **Decision**: Source all learning rates from published literature. Adjust if deviating from published values.
-**Status**: [ ] Citations added, [ ] Rates calibrated
+**Status**: [x] Citations added (step10, step11, pipeline_config), [x] Rates verified against literature (solar 24% LCOE-based matches Bolinger et al., wind 15% matches, battery 18% matches BNEF)
 
 ### M6: NEISO Gas Adder — Validate Against Algonquin Data
 **Issue**: $13.13/MWh winter gas pipeline adder has no citation.
 **Decision**: Check actual Algonquin Citygate basis spread; $13.13 may be high or low depending on year.
-**Status**: [ ] Validated against data, [ ] Citation added
+**Status**: [x] Validated (Winter 2024/25 ACG averaged $7.45/MMBtu above HH — model uses $7.50), [x] Citations added (EIA, NGI, ISO-NE sources)
 
 ### M7: LMP Calibration — Run Existing Model
 **Issue**: Synthetic LMP from merit-order stack with no validation metrics reported.
 **Decision**: Run existing `calibrate_lmp_model.py`. Document R², MAPE, and bias for each ISO.
-**Status**: [ ] Calibration run, [ ] Results documented
+**Status**: [ ] Blocked — calibrate_lmp_model.py imports from step5b_compute_lmp_prices.py which was merged into step5ab_fossil_dispatch.py. Import path needs updating before calibration can run.
 
 ### M8: LCOE Tables — Update to NREL ATB 2024
 **Issue**: LCOE tables cite NREL ATB but no year specified. Values suggest 2023 or earlier.
 **Decision**: Update to NREL ATB 2024 (2024 USD). Add version/year to all cost table headers.
-**Status**: [ ] Tables updated, [ ] Version/year annotated
+**Status**: [x] Tables already cite ATB 2024 (verified), [x] Version/year header added to pipeline_config.py cost table section
 
 ### M9: Geothermal Scope — Document CAISO-Only Rationale + Cap Citation
 **Issue**: Geothermal limited to CAISO only. 39 TWh cap needs citation.
