@@ -21,7 +21,7 @@ Major overhaul of the procurement deployment visualization to show **grid-level 
 ### 1C. Add Strategy 3C and 3D to extraction pipeline
 - 3C (same-ISO, no additionality) — already coded in `step8c_strategy_annual.py`
 - 3D (cross-regional, no additionality) — already coded
-- Add both to `STRATEGY_SOURCES` in `step9c_extract_deployment_data.py`
+- Add both to `STRATEGY_SOURCES` in `step7_1b_extract_deployment_data.py`
 - Add extractors for 3C (same format as 2C/3A existing+new) and 3D (same format as 3B cross-regional)
 
 ## Phase 2: Backend — Dispatch Integration (New Pipeline Step)
@@ -142,7 +142,7 @@ python scripts/step9d_dispatch_deployment.py
 
 ### 5D. Re-run step 9c with new strategies + dispatch data
 ```bash
-python scripts/step9c_extract_deployment_data.py
+python scripts/step7_1b_extract_deployment_data.py
 ```
 
 ## Execution Order

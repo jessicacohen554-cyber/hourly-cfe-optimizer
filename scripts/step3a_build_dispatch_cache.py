@@ -42,6 +42,7 @@ import pyarrow.parquet as pq
 
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, SCRIPT_DIR)
+sys.path.insert(0, os.path.join(SCRIPT_DIR, 'scripts'))
 
 from dispatch_utils import (
     ISOS, RESOURCE_TYPES, CACHE_VERSION, H,

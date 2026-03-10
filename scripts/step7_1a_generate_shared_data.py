@@ -128,7 +128,7 @@ data = None
 if os.path.isdir(CO2_BATCH_DIR):
     co2_parquets = [f for f in os.listdir(CO2_BATCH_DIR) if f.endswith('.parquet')]
     if co2_parquets:
-        sys.path.insert(0, os.path.join(SCRIPT_DIR, '..'))
+        sys.path.insert(0, SCRIPT_DIR)
         from parquet_io import load_from_parquets
         data = load_from_parquets(CO2_BATCH_DIR, ISOS)
         n_isos = len(data.get('results', {}))

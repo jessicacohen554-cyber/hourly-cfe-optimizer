@@ -37,6 +37,7 @@ import numpy as np
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data')
 sys.path.insert(0, os.path.dirname(DATA_DIR))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from parquet_io import load_from_parquets, find_input_dir
 
 from pipeline_config import ACTIVE_THRESHOLDS, THRESHOLD_TARGET_YEARS
