@@ -63,8 +63,8 @@ from scenario_common import (
 )
 from procurement_utils import get_rps_target_at_year, PPA_PREMIUMS
 
-# Import LMP engine from step5b
-from step5b_compute_lmp_prices import (
+# Import LMP engine
+from lmp_engine import (
     build_merit_order_stack, compute_hourly_lmp_vectorized, PriceModel,
 )
 
