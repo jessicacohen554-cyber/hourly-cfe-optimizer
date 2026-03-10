@@ -423,6 +423,9 @@ def compute_strategy_2c(iso, year, threshold, participation_pct,
     resource_breakdown = {}
     remaining_need = procurement_twh
 
+    # buyer_share used for capacity pools (uprate) that scale with participation
+    buyer_share = (buyer_demand / total_demand) if total_demand > 0 else 0.01
+
     # Pool 2: Existing merchant clean (competitive exhaustion)
     # Merchant pool is first-come-first-served, NOT pro-rata like SSS.
     # At low participation, few buyers share the full pool → plenty of cheap clean.
