@@ -4,12 +4,12 @@ Track 2-3: New-Build (NB) + Cost-to-Replace (CTR) analysis.
 Does NOT rerun baseline — preserves existing overprocure_results.json.
 
 Track 2 (newbuild / NB): hydro=0 mixes, uprates ON
-  Source: per-ISO EF parquets (data/step2-ef-parquets/step2_ef_{ISO}_t{T}.parquet)
+  Source: per-ISO EF parquets (data/step2.1-ef/step2_ef_{ISO}_t{T}.parquet)
   Filtered to hydro=0 mixes.
   Purpose: What does hourly matching incentivize from scratch?
 
 Track 3 (cost-to-replace / CTR): nuclear retirement scenario, uprates OFF
-  Source: per-ISO EF parquets (data/step2-ef-parquets/step2_ef_{ISO}_t{T}.parquet)
+  Source: per-ISO EF parquets (data/step2.1-ef/step2_ef_{ISO}_t{T}.parquet)
   Purpose: Cost if existing nuclear retires and must be replaced with new-build.
   All other existing clean (hydro, solar, wind, geothermal) continues operating.
   CAISO: geothermal portion of clean_firm kept at wholesale (32.4% of clean_firm energy).
@@ -79,7 +79,7 @@ _PARETO_MIN_PRICES = np.array([25, 45, 47, 0, 59, 15, 0, 59, 70, 0, 6200, 1700, 
 _PARETO_MAX_PRICES = np.array([45, 94, 109, 235, 148, 40, 116, 146, 166, 21200, 30300, 7800, 35800], dtype=np.float64)
 
 # Per-ISO EF parquet directory (Step 2 output)
-EF_ISO_DIR = os.path.join(SCRIPT_DIR, 'data', 'step2-ef-parquets')
+EF_ISO_DIR = os.path.join(SCRIPT_DIR, 'data', 'step2.1-ef')
 
 # Parquet paths — these ARE the checkpoints
 PQ_SCENARIOS_PATH = os.path.join(SCRIPT_DIR, 'dashboard', 'track_scenarios.parquet')
@@ -379,7 +379,7 @@ def append_to_parquet(new_rows, pq_path):
 def load_iso_ef_parquet(iso):
     """Load numpy arrays for a single ISO from its per-threshold EF parquets.
 
-    Reads from data/step2-ef-parquets/step2_ef_{ISO}_t{T}.parquet (Step 2 output).
+    Reads from data/step2.1-ef/step2_ef_{ISO}_t{T}.parquet (Step 2 output).
     Falls back to legacy monolithic step2_ef_{ISO}.parquet if per-threshold
     files don't exist. Returns None if no files found or all empty.
     """

@@ -5,7 +5,7 @@ name: "Step 4.1B: Compress Day Profiles"
 #
 # iso=ALL fans out parallel matrix jobs, then merge job commits everything.
 # Prerequisite: Steps 3-5 complete (cost optimization + dispatch cache).
-# Output: data/step5-post-processing/compressed_day/
+# Output: data/step4-analysis/compressed_day/
 # Note: Run Step 9 separately afterward to regenerate shared-data.js.
 
 on:
@@ -65,7 +65,7 @@ jobs:
 
       - name: Verify upstream data exists
         run: |
-          if [ ! -d "data/step3-cost-opt-parquets" ] || ! ls data/step3-cost-opt-parquets/*.parquet >/dev/null 2>&1; then
+          if [ ! -d "data/step2.2-cost" ] || ! ls data/step2.2-cost/*.parquet >/dev/null 2>&1; then
             echo "ERROR: No step-3 parquets found."
             exit 1
           fi
@@ -79,20 +79,20 @@ jobs:
         run: pip install numpy numba pyarrow pandas scipy
 
       - name: Ensure output directories
-        run: mkdir -p data/step5-post-processing
+        run: mkdir -p data/step4-analysis
 
       - name: "Compressed Day — ${{ matrix.iso }}"
         run: python scripts/step4_1b_compress_day_profiles.py --iso ${{ matrix.iso }}
 
       - name: Scope output to current ISO only
         run: |
-          find data/step5-post-processing/ -name "*.parquet" -o -name "*.json" | grep -v "${{ matrix.iso }}" | xargs rm -f 2>/dev/null || true
+          find data/step4-analysis/ -name "*.parquet" -o -name "*.json" | grep -v "${{ matrix.iso }}" | xargs rm -f 2>/dev/null || true
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: dashboard-${{ matrix.iso }}
-          path: data/step5-post-processing/
+          path: data/step4-analysis/
           retention-days: 1
 
   merge:
@@ -125,7 +125,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: dashboard-*
-          path: data/step5-post-processing/
+          path: data/step4-analysis/
           merge-multiple: true
 
       - name: Batched commit and push (per-ISO)
@@ -158,7 +158,7 @@ jobs:
 
           for iso in $ISOS; do
             echo "--- Batching commit for $iso ---"
-            FILES=$(find data/step5-post-processing/ -name "*${iso}*" -type f 2>/dev/null || true)
+            FILES=$(find data/step4-analysis/ -name "*${iso}*" -type f 2>/dev/null || true)
             if [ -z "$FILES" ]; then
               echo "  No files for $iso — skipping"
               continue
@@ -187,7 +187,7 @@ jobs:
           done
 
           # Remaining post-processing files
-          git add -f data/step5-post-processing/ 2>/dev/null || true
+          git add -f data/step4-analysis/ 2>/dev/null || true
           if ! git diff --cached --quiet; then
             echo "--- Staging remaining files ---"
             git commit -m "Step 5C Day Profiles: remaining — $(date -u +%Y-%m-%dT%H:%M:%SZ)"

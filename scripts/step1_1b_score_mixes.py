@@ -5,7 +5,7 @@ Reads the static mixes parquet from step1a ({ISO}_mixes.parquet), loads
 EIA demand + generation profiles, and computes each combo's hourly match
 score in memory-bounded chunks. Never allocates the full N × 8760 array.
 
-Output: data/step1-pfs-parquets/{ISO}_coarse_cache.parquet
+Output: data/step1-pfs/{ISO}_coarse_cache.parquet
   Columns: clean_firm, solar, wind, hydro, [geothermal], score
 
 Memory: Peak ~1.4 GiB (20K × 8760 × 8 bytes per scoring chunk).

@@ -15,14 +15,14 @@ Pipeline position:
                                                       ↓
                                           step4_build_dispatch_cache.py  ← THIS
                                                       ↓
-                            data/step4-dispatch-cache/{ISO}_dispatch_cache.parquet
+                            data/step3-dispatch/{ISO}_dispatch_cache.parquet
                                                       ↓
                                   +--------+----------+----------+
                                   |        |          |          |
                               step6_cd  step6_sc  step6_co2  step6_lmp
 
-Input:  data/step3-cost-opt-parquets/
-Output: data/step4-dispatch-cache/{ISO}_dispatch_cache.parquet
+Input:  data/step2.2-cost/
+Output: data/step3-dispatch/{ISO}_dispatch_cache.parquet
 
 Usage:
   python step4_build_dispatch_cache.py                    # All ISOs

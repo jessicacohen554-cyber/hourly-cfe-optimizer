@@ -52,7 +52,7 @@ import pandas as pd
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PQ_SCENARIOS = os.path.join(SCRIPT_DIR, 'dashboard', 'track_scenarios.parquet')
 OUT_PATH = os.path.join(SCRIPT_DIR, 'dashboard', 'track_results.json')
-STEP5_DIR = os.path.join(SCRIPT_DIR, 'data', 'step5-post-processing')
+STEP5_DIR = os.path.join(SCRIPT_DIR, 'data', 'step4-analysis')
 
 # Known medium scenario keys (non-CAISO and CAISO variants)
 MEDIUM_KEYS = {'MMMM_M_M_M1_X', 'MMMM_M_M_M1_M'}

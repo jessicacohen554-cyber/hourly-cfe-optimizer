@@ -21,7 +21,7 @@ import sys
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(SCRIPT_DIR)
 sys.path.insert(0, SCRIPT_DIR)
-DATA_DIR = os.path.join(ROOT_DIR, 'data', 'step5-post-processing')
+DATA_DIR = os.path.join(ROOT_DIR, 'data', 'step4-analysis')
 JS_DIR = os.path.join(ROOT_DIR, 'dashboard', 'js')
 
 from procurement_utils import compute_endogenous_cost

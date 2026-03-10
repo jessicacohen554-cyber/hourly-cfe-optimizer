@@ -7,7 +7,7 @@ for the resource density strip plot on the CO2 abatement page.
 
 Output:
   - dashboard/js/resource-density-data.js
-  - data/step6-derived-analytics/resource-density/resource_density.json
+  - data/step4-analysis/resource-density/resource_density.json
 
 Dependencies: Step 3 DG parquets, optimal_targets.json (for crossover ranges)
 """
@@ -25,10 +25,10 @@ import pandas as pd
 # Paths
 # ---------------------------------------------------------------------------
 ROOT = Path(__file__).resolve().parent.parent
-DG_DIR = ROOT / "data" / "step3-cost-opt-parquets"
-OT_PATH = ROOT / "data" / "step5-post-processing" / "optimal_targets.json"
+DG_DIR = ROOT / "data" / "step2.2-cost"
+OT_PATH = ROOT / "data" / "step4-analysis" / "optimal_targets.json"
 OUT_PATH = ROOT / "dashboard" / "js" / "resource-density-data.js"
-ARCHIVE_DIR = ROOT / "data" / "step6-derived-analytics" / "resource-density"
+ARCHIVE_DIR = ROOT / "data" / "step4-analysis" / "resource-density"
 
 sys.path.insert(0, str(ROOT / "scripts"))
 from pipeline_config import ACTIVE_THRESHOLDS, THRESHOLD_TARGET_YEARS, ISOS

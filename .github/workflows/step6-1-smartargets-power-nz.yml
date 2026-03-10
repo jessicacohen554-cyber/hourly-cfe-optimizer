@@ -5,7 +5,7 @@ name: "Step 6.1: SMARTargets — Power Sector NZ"
 # Trajectory: 2030=43%, 2035=18%, 2040=12%, 2045=6%, 2050=0%.
 #
 # Prerequisite: Step 3 cost optimization parquets + data/egrid_2023_baseline_emissions.json
-# Output: data/step10-smartargets/smartargets_{scenario}.parquet + _summary.json
+# Output: data/step6-smartargets/smartargets_{scenario}.parquet + _summary.json
 
 on:
   workflow_dispatch:
@@ -70,7 +70,7 @@ jobs:
 
       - name: Verify upstream data exists
         run: |
-          if [ ! -d "data/step3-cost-opt-parquets" ] || ! ls data/step3-cost-opt-parquets/*.parquet >/dev/null 2>&1; then
+          if [ ! -d "data/step2.2-cost" ] || ! ls data/step2.2-cost/*.parquet >/dev/null 2>&1; then
             echo "ERROR: No step-3 parquets found. Run Step 3 first."
             exit 1
           fi
@@ -87,7 +87,7 @@ jobs:
         run: pip install numpy numba pyarrow pandas scipy
 
       - name: Ensure output directory
-        run: mkdir -p data/step10-smartargets
+        run: mkdir -p data/step6-smartargets
 
       - name: Build CLI arguments
         run: |
@@ -126,7 +126,7 @@ jobs:
             done
           }
 
-          git add -f data/step10-smartargets/
+          git add -f data/step6-smartargets/
           if ! git diff --cached --quiet; then
             git commit -m "Step 10B SMARTargets Power NZ: ${{ inputs.scenario }} × ${{ inputs.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             push_with_retry "smartargets-results"

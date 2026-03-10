@@ -22,8 +22,8 @@ Pipeline position: Step 2 of 4
   Step 3 — Cost optimization (step3a_cost_optimization.py)
   Step 4 — Post-processing (step4_postprocess.py)
 
-Input:  data/step1-pfs-parquets/{ISO}_t{XX}_*.parquet (raw_pfs, fine_pfs, floor_pfs, storage)
-Output: data/step2-ef-parquets/step2_ef_{ISO}_t{XX}.parquet (per-ISO per-threshold band)
+Input:  data/step1-pfs/{ISO}_t{XX}_*.parquet (raw_pfs, fine_pfs, floor_pfs, storage)
+Output: data/step2.1-ef/step2_ef_{ISO}_t{XX}.parquet (per-ISO per-threshold band)
 
 After dedup, mixes are partitioned into non-overlapping threshold bands based
 on their score. Each mix appears in exactly one file — the band whose threshold
@@ -55,8 +55,8 @@ from pipeline_config import (
 )
 
 PFS_DIR = os.path.join(SCRIPT_DIR, 'data')
-STEP1_RAW_DIR = os.path.join(PFS_DIR, 'step1-pfs-parquets')
-STEP2_EF_OUTPUT_DIR = os.path.join(PFS_DIR, 'step2-ef-parquets')
+STEP1_RAW_DIR = os.path.join(PFS_DIR, 'step1-pfs')
+STEP2_EF_OUTPUT_DIR = os.path.join(PFS_DIR, 'step2.1-ef')
 
 # Target thresholds — 10-40 added for Track 2/3 greenfield, 50-100 for all tracks
 # Must match Step 1 THRESHOLDS and Step 3 OUTPUT_THRESHOLDS
@@ -143,7 +143,7 @@ def scan_iso_files(target_isos=None, threshold_filter=None):
     """Scan Step 1 parquet directory and return {iso: [filenames]} mapping.
 
     All file types (raw_pfs, fine_pfs, floor_pfs, storage) live in
-    data/step1-pfs-parquets/. Groups files by ISO prefix, handles
+    data/step1-pfs/. Groups files by ISO prefix, handles
     canonical vs batch file dedup.
     Does NOT load any data — just discovers and validates file paths.
 
@@ -233,7 +233,7 @@ def validate_storage_coverage(files_by_iso, target_isos, threshold_filter=None):
     grid. Without these files, the EF will miss high-quality storage-optimized
     mixes, leading to suboptimal results at thresholds >= 50%.
 
-    All storage files live in data/step1-pfs-parquets/ alongside raw/fine/floor
+    All storage files live in data/step1-pfs/ alongside raw/fine/floor
     PFS files, identified by the '_storage' filename pattern.
 
     Args:
@@ -513,7 +513,7 @@ def partition_by_threshold_band(table, thresholds):
 
 
 def write_per_iso_threshold_outputs(results_by_iso, thresholds, batch_label=None):
-    """Write per-ISO/threshold Step 2 EF outputs to data/step2-ef-parquets.
+    """Write per-ISO/threshold Step 2 EF outputs to data/step2.1-ef.
 
     Partitions each ISO's deduped mixes into non-overlapping threshold bands
     and writes one parquet file per band.
@@ -760,7 +760,7 @@ def parse_args():
                              'Reads step2_ef_{ISO}_batch_*.parquet, deduplicates, '
                              'writes step2_ef_{ISO}.parquet.')
     parser.add_argument('--clear', action='store_true',
-                        help='Clear existing step2-ef-parquets for the target ISO(s) '
+                        help='Clear existing step2.1-ef for the target ISO(s) '
                              'before running. Removes stale EF files from previous runs.')
     return parser.parse_args()
 
@@ -915,10 +915,10 @@ def main():
     print("\n" + "=" * 70)
     if batch_label:
         print(f"  STEP 2 BATCH '{batch_label}' COMPLETE")
-        print(f"  Batch outputs in data/step2-ef-parquets/step2_ef_*_t*_batch_{batch_label}.parquet")
+        print(f"  Batch outputs in data/step2.1-ef/step2_ef_*_t*_batch_{batch_label}.parquet")
         print(f"  Run with --merge to combine all batches into final per-threshold EF files.")
     else:
-        print("  STEP 2 COMPLETE — per-ISO/threshold EF parquets ready in data/step2-ef-parquets/")
+        print("  STEP 2 COMPLETE — per-ISO/threshold EF parquets ready in data/step2.1-ef/")
         print("  Output: step2_ef_{ISO}_t{T}.parquet (one file per threshold band)")
     print("=" * 70)
 

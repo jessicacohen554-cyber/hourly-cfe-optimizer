@@ -40,7 +40,7 @@ from dispatch_utils import (
 )
 
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)),
-                          'data', 'step5-post-processing', 'mac_queue')
+                          'data', 'step3-dispatch', 'mac_queue')
 PARQUET_DIR = OUTPUT_DIR
 
 

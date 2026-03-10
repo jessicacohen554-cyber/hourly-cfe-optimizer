@@ -36,8 +36,8 @@ from dispatch_utils import (
     load_dispatch_cache, save_dispatch_cache, get_or_compute_dispatch,
 )
 
-LMP_DIR = os.path.join(SCRIPT_DIR, 'data', 'step5-post-processing', 'lmp')
-STEP3_PARQUET_DIR = os.path.join(SCRIPT_DIR, 'data', 'step3-cost-opt-parquets')
+LMP_DIR = os.path.join(SCRIPT_DIR, 'data', 'step4-analysis', 'lmp')
+STEP3_PARQUET_DIR = os.path.join(SCRIPT_DIR, 'data', 'step2.2-cost')
 
 # ══════════════════════════════════════════════════════════════════════════════
 # FOSSIL MERIT-ORDER STACK — heat rates, VOM, marginal cost

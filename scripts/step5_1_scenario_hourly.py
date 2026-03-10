@@ -86,7 +86,7 @@ DEFAULT_TARGET_THRESHOLD = 95.0
 
 def _load_optimal_targets():
     """Load per-ISO optimal target thresholds from MAC/DAC crossover analysis."""
-    targets_path = Path(__file__).parent.parent / 'data' / 'step5-post-processing' / 'optimal_targets.json'
+    targets_path = Path(__file__).parent.parent / 'data' / 'step4-analysis' / 'optimal_targets.json'
     if not targets_path.exists():
         print(f"  WARNING: {targets_path} not found, using default {DEFAULT_TARGET_THRESHOLD}% for all ISOs")
         return {iso: DEFAULT_TARGET_THRESHOLD for iso in ISOS}

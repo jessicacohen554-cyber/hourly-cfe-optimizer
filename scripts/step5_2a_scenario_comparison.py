@@ -59,7 +59,7 @@ def _load_step5d_queue(filename='consequential_queue_scenario_a.json',
     """
     if mac_queue_dir is None:
         project_root = Path(__file__).parent.parent
-        mac_queue_dir = project_root / 'data' / 'step5-post-processing' / 'mac_queue'
+        mac_queue_dir = project_root / 'data' / 'step3-dispatch'
     queue_path = os.path.join(mac_queue_dir, filename)
     if not os.path.exists(queue_path):
         return None
@@ -518,7 +518,7 @@ def write_output(trajectories, queue_a, queue_b,
         'stranding_b': stranding_b,
     }
 
-    out_json = 'data/step5-post-processing/scenario_comparison.json'
+    out_json = 'data/step5-scenarios/scenario_comparison.json'
     os.makedirs(os.path.dirname(out_json), exist_ok=True)
     with open(out_json, 'w') as f:
         json.dump(output, f, indent=2, default=str)
@@ -554,7 +554,7 @@ def main():
     # ------------------------------------------------------------------
     print("\nLoading Scenario A results...")
     # Try mac_queue subdirectory first (step5d output), fall back to step5 root
-    mac_queue_dir = 'data/step5-post-processing/mac_queue'
+    mac_queue_dir = 'data/step3-dispatch'
     results_a, _meta_a = load_scenario_results('A', isos=requested_isos, out_dir=mac_queue_dir)
     if results_a is None:
         # Fallback: legacy location in step5 root
@@ -562,7 +562,7 @@ def main():
     if results_a is None:
         print("ERROR: Scenario A results not found.")
         print("  Run step5d_deployment_queue.py first to produce intermediate results.")
-        print("  Expected: data/step5-post-processing/mac_queue/scenario_a_{ISO}.json per ISO")
+        print("  Expected: data/step3-dispatch/scenario_a_{ISO}.json per ISO")
         sys.exit(1)
 
     print(f"  Loaded A: {sorted(results_a.keys())}")
@@ -572,7 +572,7 @@ def main():
     if results_b is None:
         print("ERROR: Scenario B results not found.")
         print("  Run the Scenario B script first to produce intermediate results.")
-        print("  Expected: data/step5-post-processing/scenario_b_{ISO}.json per ISO")
+        print("  Expected: data/step5-scenarios/scenario_b_{ISO}.json per ISO")
         sys.exit(1)
 
     print(f"  Loaded B: {sorted(results_b.keys())}")

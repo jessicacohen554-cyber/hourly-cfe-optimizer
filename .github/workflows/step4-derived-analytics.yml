@@ -8,7 +8,7 @@ name: "Step 4: Derived Analytics"
 #
 # Prerequisite: Step 5A (CO2) must have run first — MAC depends on CO2 output.
 # Output: dashboard/js/{mac-stats,optimal-target,building-blocks,resource-density}-data.js
-#         data/step6-derived-analytics/{building-blocks,resource-density}/
+#         data/step4-analysis/{building-blocks,resource-density}/
 # Note: Run Step 9 separately afterward to regenerate shared-data.js.
 
 on:
@@ -76,7 +76,7 @@ jobs:
 
       - name: Verify upstream data exists
         run: |
-          if [ ! -d "data/step3-cost-opt-parquets" ] || ! ls data/step3-cost-opt-parquets/*.parquet >/dev/null 2>&1; then
+          if [ ! -d "data/step2.2-cost" ] || ! ls data/step2.2-cost/*.parquet >/dev/null 2>&1; then
             echo "ERROR: No step-3 parquets found. Run earlier steps first."
             exit 1
           fi
@@ -91,9 +91,9 @@ jobs:
 
       - name: Ensure output directories
         run: |
-          mkdir -p data/step5-post-processing
-          mkdir -p data/step6-derived-analytics/building-blocks
-          mkdir -p data/step6-derived-analytics/resource-density
+          mkdir -p data/step4-analysis
+          mkdir -p data/step4-analysis/building-blocks
+          mkdir -p data/step4-analysis/resource-density
           mkdir -p dashboard/js
 
       # ════════════════════════════════════════════════════════════════════
@@ -149,7 +149,7 @@ jobs:
           # Batch 1: Post-processing parquets/data (per-ISO)
           ISOS="CAISO ERCOT PJM NYISO NEISO MISO SPP"
           for iso in $ISOS; do
-            FILES=$(find data/step5-post-processing/ -name "*${iso}*" -type f 2>/dev/null || true)
+            FILES=$(find data/step4-analysis/ -name "*${iso}*" -type f 2>/dev/null || true)
             if [ -z "$FILES" ]; then continue; fi
             git add -f $FILES
             if git diff --cached --quiet; then continue; fi
@@ -172,9 +172,9 @@ jobs:
           done
 
           # Batch 2: Non-ISO post-processing files (JSON aggregates)
-          git add -f data/step5-post-processing/optimal_targets.json 2>/dev/null || true
+          git add -f data/step4-analysis/optimal_targets.json 2>/dev/null || true
           # Catch any remaining non-ISO files
-          git add -f data/step5-post-processing/ 2>/dev/null || true
+          git add -f data/step4-analysis/ 2>/dev/null || true
           if ! git diff --cached --quiet; then
             echo "--- Staging aggregate JSON files ---"
             git commit -m "Step 6 MAC: aggregate data — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -182,7 +182,7 @@ jobs:
           fi
 
           # Batch 3: Step 6 derived analytics output directory
-          git add -f data/step6-derived-analytics/ 2>/dev/null || true
+          git add -f data/step4-analysis/ 2>/dev/null || true
           if ! git diff --cached --quiet; then
             echo "--- Staging step6 derived analytics data ---"
             git commit -m "Step 6 derived analytics: building-blocks + resource-density — $(date -u +%Y-%m-%dT%H:%M:%SZ)"

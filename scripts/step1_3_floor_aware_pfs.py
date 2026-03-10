@@ -31,7 +31,7 @@ Grid generation:
 No storage at this level — just resource dispatch shapes.
 
 Input:  EIA-930 demand/generation profiles
-Output: data/step1-pfs-parquets/{ISO}_t{T}_floor_pfs.parquet (per threshold)
+Output: data/step1-pfs/{ISO}_t{T}_floor_pfs.parquet (per threshold)
 
 Usage:
   python scripts/step1b2_floor_aware_pfs.py --iso CAISO
@@ -77,7 +77,7 @@ except ImportError:
 # ============================================================================
 
 PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
-OUTPUT_DIR = os.path.join(PROJECT_ROOT, 'data', 'step1-pfs-parquets')
+OUTPUT_DIR = os.path.join(PROJECT_ROOT, 'data', 'step1-pfs')
 
 # Target thresholds for floor-aware search (50-70% + near-miss into 75-80%)
 FLOOR_THRESHOLDS = [50, 55, 60, 65, 70]

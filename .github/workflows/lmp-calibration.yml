@@ -6,7 +6,7 @@ name: "LMP Calibration: Validate Model"
 #   - qa-actual: Compare against actual historical LMP (needs fetched data)
 #
 # iso=ALL fans out parallel matrix jobs, then merges into one branch + PR.
-# Output: data/step5-post-processing/lmp/{ISO}_calibration.json
+# Output: data/step4-analysis/lmp/{ISO}_calibration.json
 
 on:
   workflow_dispatch:
@@ -100,7 +100,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: lmp-cal-${{ matrix.iso }}
-          path: data/step5-post-processing/lmp/
+          path: data/step4-analysis/lmp/
           retention-days: 1
 
   merge:
@@ -131,14 +131,14 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: lmp-cal-*
-          path: data/step5-post-processing/lmp/
+          path: data/step4-analysis/lmp/
           merge-multiple: true
 
       - name: Commit and push
         run: |
           git config http.postBuffer 524288000
 
-          git add -f data/step5-post-processing/lmp/ 2>/dev/null || true
+          git add -f data/step4-analysis/lmp/ 2>/dev/null || true
 
           if git diff --cached --quiet; then
             echo "No calibration reports to commit"

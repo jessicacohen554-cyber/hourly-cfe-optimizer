@@ -20,10 +20,10 @@ Pipeline position:
                                ├→ CO₂ results
                                └→ LMP results
 
-Input:  data/step4-dispatch-cache/{ISO}_dispatch_cache.parquet
-        data/step3-cost-opt-parquets/ (scenario metadata)
-Output: data/step5-post-processing/co2_results/
-        data/step5-post-processing/lmp/
+Input:  data/step3-dispatch/{ISO}_dispatch_cache.parquet
+        data/step2.2-cost/ (scenario metadata)
+Output: data/step4-analysis/co2_results/
+        data/step4-analysis/lmp/
 
 DO NOT TOUCH: step5d_deployment_queue.py — intentionally does NOT use dispatch cache.
 
@@ -73,7 +73,7 @@ from lmp_engine import (
 )
 
 DATA_DIR = os.path.join(SCRIPT_DIR, 'data')
-STEP5_DIR = os.path.join(DATA_DIR, 'step5-post-processing')
+STEP5_DIR = os.path.join(DATA_DIR, 'step4-analysis')
 CO2_DIR = os.path.join(STEP5_DIR, 'co2_results')
 LMP_DIR = os.path.join(STEP5_DIR, 'lmp')
 

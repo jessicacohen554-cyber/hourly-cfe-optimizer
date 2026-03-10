@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(SCRIPT_DIR, '..', 'data', 'step10-smartargets')
+DATA_DIR = os.path.join(SCRIPT_DIR, '..', 'data', 'step6-smartargets')
 OUT_PATH = os.path.join(SCRIPT_DIR, '..', 'dashboard', 'js', 'smartargets-data.js')
 
 sys.path.insert(0, SCRIPT_DIR)

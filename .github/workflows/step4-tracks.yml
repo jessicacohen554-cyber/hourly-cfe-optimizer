@@ -9,7 +9,7 @@ name: "Step 4: Track Analysis"
 #   - step6c_analyze_tracks.py — track cost envelopes (P10/P50/P90), mix differentials
 #
 # Prerequisite: Step 3 parquets must exist.
-# Output: dashboard/track_results.json, data/step5-post-processing/
+# Output: dashboard/track_results.json, data/step4-analysis/
 
 on:
   workflow_dispatch:
@@ -90,7 +90,7 @@ jobs:
         run: |
           git config http.postBuffer 524288000
 
-          git add -f data/step5-post-processing/ 2>/dev/null || true
+          git add -f data/step4-analysis/ 2>/dev/null || true
           git add -f dashboard/track_results.json 2>/dev/null || true
 
           if git diff --cached --quiet; then

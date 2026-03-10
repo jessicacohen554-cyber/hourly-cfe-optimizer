@@ -13,7 +13,7 @@ Usage:
     python scripts/step9b_extract_no_regrets.py
 
 Depends on:
-    - data/step3-cost-opt-parquets/step3_dg_{ISO}_t{T}.parquet
+    - data/step2.2-cost/step3_dg_{ISO}_t{T}.parquet
     - dashboard/js/shared-data.js (for MAC data, DAC trajectories — read inline below)
     - dashboard/js/mac-stats-data.js (for MAC_STEPWISE_FAN — crossover computation)
 """
@@ -46,9 +46,9 @@ THRESHOLD_FILE_KEYS = {
     95: '95', 97.5: '97.5', 99: '99', 99.99: '99.9'  # 99.99 may be stored as 99.9
 }
 
-DG_DIR = Path('data/step3-cost-opt-parquets')
+DG_DIR = Path('data/step2.2-cost')
 OUTPUT_JS = Path('dashboard/js/no-regrets-data.js')
-OUTPUT_JSON = Path('data/step5-post-processing/no_regrets_analysis.json')
+OUTPUT_JSON = Path('data/step4-analysis/no_regrets_analysis.json')
 
 # Resources to track
 MIX_RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']

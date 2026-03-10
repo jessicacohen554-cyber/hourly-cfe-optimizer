@@ -68,7 +68,7 @@ from lmp_engine import (
     build_merit_order_stack, compute_hourly_lmp_vectorized, PriceModel,
 )
 
-OUTPUT_DIR = os.path.join(ROOT_DIR, 'data', 'step10-smartargets')
+OUTPUT_DIR = os.path.join(ROOT_DIR, 'data', 'step6-smartargets')
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SMARTARGETS-SPECIFIC CONSTANTS
@@ -1103,7 +1103,7 @@ def load_step3_data():
 
     Returns {iso: {threshold_float: result_dict}}.
     """
-    step3_dir = os.path.join(ROOT_DIR, 'data', 'step3-cost-opt-parquets')
+    step3_dir = os.path.join(ROOT_DIR, 'data', 'step2.2-cost')
     all_data = {}
 
     for iso in ISOS:
@@ -1919,8 +1919,8 @@ def save_sweep_results(all_rows, sweep_type='reference'):
 
     all_rows: list of flat dicts (one per scenario × ISO × year).
     Outputs:
-      - data/step10-smartargets/sweep_{type}_{ISO}.parquet  (per-ISO, for parallelism)
-      - data/step10-smartargets/smartargets_sweep_{type}_summary.json
+      - data/step6-smartargets/sweep_{type}_{ISO}.parquet  (per-ISO, for parallelism)
+      - data/step6-smartargets/smartargets_sweep_{type}_summary.json
     """
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 

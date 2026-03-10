@@ -10,7 +10,7 @@ space is narrowed to the union of prior EF bounds + 15pp buffer, plus 100
 scout mixes to catch regime shifts. This typically saves ~30% of the
 combinatorial space.
 
-Output: data/step1-pfs-parquets/{ISO}_mixes.parquet
+Output: data/step1-pfs/{ISO}_mixes.parquet
   Columns: clean_firm, solar, wind, hydro, [geothermal]
 
 Usage:

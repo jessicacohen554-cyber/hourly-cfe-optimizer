@@ -3,7 +3,7 @@ name: "Step 4.2B: Storage Analysis"
 # Runs storage utilization analysis — battery/LDES dispatch patterns,
 # capacity factor analysis, and storage economics.
 # Reads from dispatch cache + step3 cost optimization parquets.
-# Output: data/step5-post-processing/storage_analysis/ + dashboard/js/storage-analysis-data.js
+# Output: data/step4-analysis/storage_analysis/ + dashboard/js/storage-analysis-data.js
 
 on:
   workflow_dispatch:
@@ -34,11 +34,11 @@ jobs:
 
       - name: Verify upstream data exists
         run: |
-          if [ ! -d "data/step3-cost-opt-parquets" ] || ! ls data/step3-cost-opt-parquets/*.parquet >/dev/null 2>&1; then
+          if [ ! -d "data/step2.2-cost" ] || ! ls data/step2.2-cost/*.parquet >/dev/null 2>&1; then
             echo "ERROR: No step-3 parquets found."
             exit 1
           fi
-          if [ ! -d "data/step4-dispatch-cache" ]; then
+          if [ ! -d "data/step3-dispatch" ]; then
             echo "WARNING: No dispatch cache found — script will compute dispatch on the fly"
           fi
 
@@ -51,7 +51,7 @@ jobs:
         run: pip install numpy numba pyarrow pandas scipy
 
       - name: Ensure output directories
-        run: mkdir -p data/step5-post-processing/storage_analysis
+        run: mkdir -p data/step4-analysis/storage_analysis
 
       - name: "Run storage analysis"
         run: |
@@ -66,7 +66,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$TARGET_BRANCH"
 
-          git add -f data/step5-post-processing/storage_analysis/ dashboard/js/storage-analysis-data.js 2>/dev/null || true
+          git add -f data/step4-analysis/storage_analysis/ dashboard/js/storage-analysis-data.js 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "No changes to commit"
             exit 0

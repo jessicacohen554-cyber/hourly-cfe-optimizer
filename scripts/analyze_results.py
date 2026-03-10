@@ -8,7 +8,7 @@ Runs after the pipeline completes. Performs:
 3. Curtailment quantification: inputs for DAC-VRE co-optimization
 4. Summary statistics for dashboard/narrative updates
 
-Reads from: data/step5-post-processing/co2_results/{ISO}_{threshold}_2025.json
+Reads from: data/step4-analysis/co2_results/{ISO}_{threshold}_2025.json
 Outputs: analysis summary to stdout + data/analysis_results.json
 """
 
@@ -19,7 +19,7 @@ import numpy as np
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(SCRIPT_DIR)
-CO2_DIR = os.path.join(ROOT_DIR, 'data', 'step5-post-processing', 'co2_results')
+CO2_DIR = os.path.join(ROOT_DIR, 'data', 'step4-analysis', 'co2_results')
 OUTPUT_PATH = os.path.join(ROOT_DIR, 'data', 'analysis_results.json')
 
 # Import constants from step3

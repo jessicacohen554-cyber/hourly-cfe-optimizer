@@ -256,7 +256,7 @@ def compute_endogenous_cost(strategy, iso, threshold, participation_pct, resourc
 
 
 DATA_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), 'data')
-PP_DIR = os.path.join(DATA_DIR, 'step5-post-processing')
+PP_DIR = os.path.join(DATA_DIR, 'step5-scenarios')
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SBTi MILESTONES & TIMELINE
@@ -1017,7 +1017,7 @@ def _load_storage_dispatch_ratios(iso):
     try:
         import pandas as pd
         manifest_path = os.path.join(
-            os.path.dirname(SCRIPT_DIR), 'data', 'step4-dispatch-cache',
+            os.path.dirname(SCRIPT_DIR), 'data', 'step3-dispatch',
             f'{iso}_annual_manifest.parquet')
         if os.path.exists(manifest_path):
             df = pd.read_parquet(manifest_path)

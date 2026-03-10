@@ -7,7 +7,7 @@ Answers:
 2. What are "no regrets" resources across all sensitivities?
 3. Under low demand growth, what's the floor for new wind?
 
-Reads from: data/step5-post-processing/co2_results/{ISO}_{threshold}_2025.json
+Reads from: data/step4-analysis/co2_results/{ISO}_{threshold}_2025.json
 """
 
 import json
@@ -17,7 +17,7 @@ import numpy as np
 from collections import defaultdict
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-CO2_DIR = os.path.join(SCRIPT_DIR, '..', 'data', 'step5-post-processing', 'co2_results')
+CO2_DIR = os.path.join(SCRIPT_DIR, '..', 'data', 'step4-analysis', 'co2_results')
 
 # Import constants from step3
 sys.path.insert(0, SCRIPT_DIR)

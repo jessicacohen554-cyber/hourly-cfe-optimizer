@@ -46,7 +46,7 @@ def load_baseline_co2():
     """Load baseline CO2 from step5a co2 results."""
     global BASELINE_CO2_MT
     for iso in ISOS:
-        co2_path = os.path.join(REPO, 'data/step5-post-processing/co2_results', f'co2_{iso}.parquet')
+        co2_path = os.path.join(REPO, 'data/step4-analysis/co2_results', f'co2_{iso}.parquet')
         if os.path.exists(co2_path):
             df = pd.read_parquet(co2_path)
             # Use emission rate × demand for the median scenario at lowest threshold
@@ -58,7 +58,7 @@ def load_baseline_co2():
 
 def load_scenario_a_json(iso):
     """Load scenario_a JSON for enriched gas/cost data."""
-    path = os.path.join(REPO, 'data/step5-post-processing/mac_queue', f'scenario_a_{iso}.json')
+    path = os.path.join(REPO, 'data/step3-dispatch', f'scenario_a_{iso}.json')
     if os.path.exists(path):
         with open(path) as f:
             return json.load(f)
@@ -75,7 +75,7 @@ def get_scenario_key(iso, sensitivity):
 
 def extract_step3_data(iso, scenario_key):
     """Extract Step 3 CO data for one ISO × scenario."""
-    co_path = os.path.join(REPO, 'data/step3-cost-opt-parquets', f'step3_co_{iso}.parquet')
+    co_path = os.path.join(REPO, 'data/step2.2-cost', f'step3_co_{iso}.parquet')
     df = pd.read_parquet(co_path)
     df = df[df['scenario'] == scenario_key].copy()
     df = df.sort_values('threshold')
@@ -84,13 +84,13 @@ def extract_step3_data(iso, scenario_key):
 
 def extract_step4_manifest(iso):
     """Load Step 4 annual manifest for mix → dispatch mapping."""
-    path = os.path.join(REPO, 'data/step4-dispatch-cache', f'{iso}_annual_manifest.parquet')
+    path = os.path.join(REPO, 'data/step3-dispatch', f'{iso}_annual_manifest.parquet')
     return pd.read_parquet(path)
 
 
 def extract_co2_data(iso, scenario_key):
     """Extract Step 5A CO2 results for one ISO × scenario."""
-    path = os.path.join(REPO, 'data/step5-post-processing/co2_results', f'co2_{iso}.parquet')
+    path = os.path.join(REPO, 'data/step4-analysis/co2_results', f'co2_{iso}.parquet')
     df = pd.read_parquet(path)
     df = df[df['scenario'] == scenario_key].copy()
     df = df.sort_values('threshold')
@@ -99,7 +99,7 @@ def extract_co2_data(iso, scenario_key):
 
 def extract_step5d_data(iso, sensitivity):
     """Extract Step 5D MAC queue results for one ISO × sensitivity (Medium growth only)."""
-    path = os.path.join(REPO, 'data/step5-post-processing/mac_queue', f'mac_queue_{iso}.parquet')
+    path = os.path.join(REPO, 'data/step3-dispatch', f'mac_queue_{iso}.parquet')
     df = pd.read_parquet(path)
     df = df[(df['price_sensitivity'] == sensitivity) & (df['demand_growth'] == 'Medium')].copy()
     df = df.sort_values('threshold')

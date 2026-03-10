@@ -548,14 +548,14 @@ _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PATHS = {
     'project_root':     _PROJECT_ROOT,
     'data':             os.path.join(_PROJECT_ROOT, 'data'),
-    'step1_pfs':        os.path.join(_PROJECT_ROOT, 'data', 'step1-pfs-parquets'),
-    'step1_storage':    os.path.join(_PROJECT_ROOT, 'data', 'step1-pfs-parquets'),  # storage files live alongside PFS
-    'step2_ef':         os.path.join(_PROJECT_ROOT, 'data', 'step2-ef-parquets'),
-    'step3_cost':       os.path.join(_PROJECT_ROOT, 'data', 'step3-cost-opt-parquets'),
-    'step4_post':       os.path.join(_PROJECT_ROOT, 'data', 'step5-post-processing'),  # legacy dir name
-    'dispatch_cache':   os.path.join(_PROJECT_ROOT, 'data', 'step4-dispatch-cache'),
-    'co2_results':      os.path.join(_PROJECT_ROOT, 'data', 'step5-post-processing', 'co2_results'),
-    'lmp':              os.path.join(_PROJECT_ROOT, 'data', 'step5-post-processing', 'lmp'),
+    'step1_pfs':        os.path.join(_PROJECT_ROOT, 'data', 'step1-pfs'),
+    'step1_storage':    os.path.join(_PROJECT_ROOT, 'data', 'step1-pfs'),  # storage files live alongside PFS
+    'step2_ef':         os.path.join(_PROJECT_ROOT, 'data', 'step2.1-ef'),
+    'step3_cost':       os.path.join(_PROJECT_ROOT, 'data', 'step2.2-cost'),
+    'step4_post':       os.path.join(_PROJECT_ROOT, 'data', 'step4-analysis'),
+    'dispatch_cache':   os.path.join(_PROJECT_ROOT, 'data', 'step3-dispatch'),
+    'co2_results':      os.path.join(_PROJECT_ROOT, 'data', 'step4-analysis', 'co2_results'),
+    'lmp':              os.path.join(_PROJECT_ROOT, 'data', 'step4-analysis', 'lmp'),
     'dashboard':        os.path.join(_PROJECT_ROOT, 'dashboard'),
     'dashboard_js':     os.path.join(_PROJECT_ROOT, 'dashboard', 'js'),
     'scripts':          os.path.join(_PROJECT_ROOT, 'scripts'),
@@ -570,7 +570,7 @@ PATHS = {
 #
 # Examples:
 #   step1_pfs_CAISO_t90.parquet      (Step 1 PFS)
-#   PJM_t65_storage.parquet          (Step 1C storage refinement, in step1-pfs-parquets/)
+#   PJM_t65_storage.parquet          (Step 1C storage refinement, in step1-pfs/)
 #   step2_ef_CAISO_t90.parquet       (Step 2 efficient frontier)
 #   step3_co_CAISO.parquet           (Step 3 cost optimization, all thresholds)
 #   step4_CAISO.parquet              (Step 4 gas/CCS, all thresholds)
@@ -584,7 +584,7 @@ def step1_pfs_filename(iso, threshold):
     return f'{iso}_t{t_str}_raw_pfs.parquet'
 
 def step1c_storage_filename(iso, threshold, batch=None):
-    """Step 1C storage filename: {ISO}_t{T}_storage.parquet or _b{N}.parquet (in step1-pfs-parquets/)"""
+    """Step 1C storage filename: {ISO}_t{T}_storage.parquet or _b{N}.parquet (in step1-pfs/)"""
     t_str = f'{threshold:g}'
     if batch is not None:
         return f'{iso}_t{t_str}_storage_b{batch}.parquet'

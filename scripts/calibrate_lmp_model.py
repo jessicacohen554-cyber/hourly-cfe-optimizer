@@ -46,7 +46,7 @@ from lmp_engine import (
 
 DATA_DIR = os.path.join(SCRIPT_DIR, 'data')
 EIA_930_DATA_DIR = os.path.join(DATA_DIR, 'eia-930')
-LMP_DIR = os.path.join(DATA_DIR, 'step5-post-processing', 'lmp')
+LMP_DIR = os.path.join(DATA_DIR, 'step4-analysis', 'lmp')
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PUBLISHED PJM REFERENCE DATA (Monitoring Analytics SOM / EIA)

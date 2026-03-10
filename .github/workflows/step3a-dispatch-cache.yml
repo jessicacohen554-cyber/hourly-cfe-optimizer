@@ -4,7 +4,7 @@ name: "Step 3A: Build Dispatch Cache"
 # Fans out parallel matrix jobs (one per ISO), merges artifacts, commits.
 #
 # Prerequisite: Step 3 must have produced parquets.
-# Output: data/step4-dispatch-cache/{ISO}_dispatch_cache.parquet
+# Output: data/step3-dispatch/{ISO}_dispatch_cache.parquet
 
 on:
   workflow_dispatch:
@@ -35,7 +35,7 @@ on:
         type: string
 
 env:
-  BRANCH_PREFIX: step4-dispatch-cache
+  BRANCH_PREFIX: step3-dispatch
 
 jobs:
   prepare:
@@ -68,7 +68,7 @@ jobs:
 
       - name: Verify upstream data
         run: |
-          if [ ! -d "data/step3-cost-opt-parquets" ] || ! ls data/step3-cost-opt-parquets/*.parquet >/dev/null 2>&1; then
+          if [ ! -d "data/step2.2-cost" ] || ! ls data/step2.2-cost/*.parquet >/dev/null 2>&1; then
             echo "ERROR: No step-3 parquets found."
             exit 1
           fi
@@ -82,7 +82,7 @@ jobs:
         run: pip install numpy numba pyarrow pandas
 
       - name: Ensure output directories
-        run: mkdir -p data/step4-dispatch-cache
+        run: mkdir -p data/step3-dispatch
 
       - name: "Build Dispatch Cache — ${{ matrix.iso }}"
         run: |
@@ -91,13 +91,13 @@ jobs:
 
       - name: Scope output to current ISO only
         run: |
-          find data/step4-dispatch-cache/ -name "*.parquet" -o -name "*.npz" | grep -v "${{ matrix.iso }}" | xargs rm -f 2>/dev/null || true
+          find data/step3-dispatch/ -name "*.parquet" -o -name "*.npz" | grep -v "${{ matrix.iso }}" | xargs rm -f 2>/dev/null || true
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: dispatch-${{ matrix.iso }}
-          path: data/step4-dispatch-cache/
+          path: data/step3-dispatch/
           retention-days: 1
 
   commit:
@@ -129,14 +129,14 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: dispatch-*
-          path: data/step4-dispatch-cache/
+          path: data/step3-dispatch/
           merge-multiple: true
 
       - name: Commit and push
         run: |
           git config http.postBuffer 524288000
 
-          git add -f data/step4-dispatch-cache/ 2>/dev/null || true
+          git add -f data/step3-dispatch/ 2>/dev/null || true
 
           if git diff --cached --quiet; then
             echo "No changes to commit"

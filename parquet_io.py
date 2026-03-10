@@ -29,7 +29,7 @@ REGIONAL_DEMAND_MWH = {
 
 # Default parquet directory for cost optimization results
 DEFAULT_INPUT_DIRS = [
-    os.path.join(SCRIPT_DIR, 'data', 'step3-cost-opt-parquets'),
+    os.path.join(SCRIPT_DIR, 'data', 'step2.2-cost'),
 ]
 
 

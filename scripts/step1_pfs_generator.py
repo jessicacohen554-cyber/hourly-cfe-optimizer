@@ -25,8 +25,8 @@ Key features:
   - Vectorized batch mix evaluation
 
 Output:
-  data/step1-pfs-parquets/{ISO}_coarse_cache.parquet (one-time coarse sweep)
-  data/step1-pfs-parquets/{ISO}_t{XX}_raw_pfs.parquet (per ISO/threshold)
+  data/step1-pfs/{ISO}_coarse_cache.parquet (one-time coarse sweep)
+  data/step1-pfs/{ISO}_t{XX}_raw_pfs.parquet (per ISO/threshold)
 
 Resource types:
   - Clean Firm (0-120%): nuclear (seasonal-derated) + CCS-CCGT
@@ -225,7 +225,7 @@ NUCLEAR_MONTHLY_CF = {
 
 # Checkpoint directory
 CHECKPOINT_DIR = os.path.join(DATA_DIR, 'checkpoints_v4')
-STEP1_RAW_PFS_PARQUET_DIR = os.path.join(DATA_DIR, 'step1-pfs-parquets')
+STEP1_RAW_PFS_PARQUET_DIR = os.path.join(DATA_DIR, 'step1-pfs')
 
 # Chunked saving — flush candidates to disk every N batches to survive OOM/crashes.
 # Each chunk is saved as {ISO}_t{XX}_chunk{N}.parquet and merged at threshold end.

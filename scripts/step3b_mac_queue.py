@@ -30,8 +30,8 @@ CO2 model: Merit-order fossil retirement (coal → oil → gas).
   - Path-dependent baseline: CO2 after prior threshold procurement
   - Hourly dispatch reconstruction for shape-accurate fossil displacement
 
-Input:  data/step1-pfs-parquets/ (raw_pfs, fine_pfs, floor_pfs, storage)
-Output: data/step5-post-processing/mac_queue/mac_queue_{ISO}.parquet + mac_queue_summary.json
+Input:  data/step1-pfs/ (raw_pfs, fine_pfs, floor_pfs, storage)
+Output: data/step3-dispatch/mac_queue_{ISO}.parquet + mac_queue_summary.json
 """
 
 import argparse
@@ -104,10 +104,10 @@ from scenario_common import (
 # ============================================================================
 
 PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
-OUTPUT_DIR = os.path.join(PROJECT_ROOT, 'data', 'step5-post-processing', 'mac_queue')
+OUTPUT_DIR = os.path.join(PROJECT_ROOT, 'data', 'step3-dispatch', 'mac_queue')
 
 PFS_DIRS = [
-    os.path.join(PROJECT_ROOT, 'data', 'step1-pfs-parquets'),
+    os.path.join(PROJECT_ROOT, 'data', 'step1-pfs'),
 ]
 
 RESOURCE_COLS = ['clean_firm', 'solar', 'wind', 'hydro', 'offshore_wind', 'geothermal']

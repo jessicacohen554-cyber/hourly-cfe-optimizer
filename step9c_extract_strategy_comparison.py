@@ -14,8 +14,8 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'scripts'))
 from pipeline_config import ISOS
 
-DATA_DIR = "data/step5-post-processing"
-WRIGHTS_DIR = "data/step8-wrights-law"
+DATA_DIR = "data/step5-scenarios"
+WRIGHTS_DIR = "data/step5-wrights"
 OUTPUT = "dashboard/js/strategy-comparison-data.js"
 STRATEGIES = ["strategy2A", "strategy2B", "strategy2C", "strategy2C_rolloff"]
 STRAT_LABELS = {"strategy2A": "2A", "strategy2B": "2B", "strategy2C": "2C", "strategy2C_rolloff": "2C_rolloff"}

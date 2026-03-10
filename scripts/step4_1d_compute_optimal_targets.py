@@ -52,7 +52,7 @@ INPUTS:
   - Demand growth rates per ISO × L/M/H
 
 OUTPUTS:
-  - data/step5-post-processing/optimal_targets.json
+  - data/step4-analysis/optimal_targets.json
   - dashboard/js/optimal-target-data.js
   (Both consumed by step9a_generate_shared_data.py for abatement dashboard)
 """
@@ -420,8 +420,8 @@ def load_parquet_mixes():
     import pandas as pd
 
     base_dir = Path(__file__).parent.parent
-    step3_dir = base_dir / 'data' / 'step3-cost-opt-parquets'
-    ef_dir = base_dir / 'data' / 'step2-ef-parquets'
+    step3_dir = base_dir / 'data' / 'step2.2-cost'
+    ef_dir = base_dir / 'data' / 'step2.1-ef'
 
     result = {}
     mix_resources = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
@@ -547,8 +547,8 @@ def load_parquet_costs():
 
     base_dir = Path(__file__).parent.parent
     data_dirs = [
-        base_dir / 'data' / 'step5-post-processing' / 'co2_results',
-        base_dir / 'data' / 'step3-cost-opt-parquets',
+        base_dir / 'data' / 'step4-analysis' / 'co2_results',
+        base_dir / 'data' / 'step2.2-cost',
     ]
     prefixes = ['co2_', 'step3_co_']
 
@@ -566,7 +566,7 @@ def load_parquet_costs():
 
         if df is None or 'cost_total_cost' not in df.columns:
             # co2 parquets don't have cost columns — try step3 directly
-            step3_path = base_dir / 'data' / 'step3-cost-opt-parquets' / f'step3_co_{iso}.parquet'
+            step3_path = base_dir / 'data' / 'step2.2-cost' / f'step3_co_{iso}.parquet'
             if step3_path.exists():
                 df = pd.read_parquet(step3_path)
             if df is None or 'cost_total_cost' not in df.columns:
@@ -1230,7 +1230,7 @@ def compute_no_regrets_investments(iso, lower_bound, upper_bound):
 
 def main():
     base_dir = Path(__file__).parent.parent
-    output_dir = base_dir / 'data' / 'step5-post-processing'
+    output_dir = base_dir / 'data' / 'step4-analysis'
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # Load canonical data files (emission rates + fossil mix from dispatch_utils pipeline)

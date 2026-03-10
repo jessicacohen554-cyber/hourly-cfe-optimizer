@@ -8,7 +8,7 @@ name: "Step 7: Dashboard Data"
 # tables, and aggregated Step 5-8 outputs (mac_stats, etc.).
 #
 # Prerequisite: Steps 4-5 should have produced their respective outputs.
-# Output: dashboard/js/shared-data.js, data/step5-post-processing/shared_data.json
+# Output: dashboard/js/shared-data.js, data/step4-analysis/shared_data.json
 
 on:
   workflow_dispatch:
@@ -49,10 +49,10 @@ jobs:
       - name: Verify upstream data
         run: |
           echo "Available inputs:"
-          ls -lh data/step5-post-processing/ 2>/dev/null || echo "  No step5 results dir"
+          ls -lh data/step4-analysis/ 2>/dev/null || echo "  No step5 results dir"
           ls -lh dashboard/overprocure_results.json 2>/dev/null || echo "  No overprocure_results.json"
 
-          if [ ! -d "data/step5-post-processing" ]; then
+          if [ ! -d "data/step4-analysis" ]; then
             echo "ERROR: No step-5 data found. Run earlier pipeline steps first."
             exit 1
           fi
@@ -68,7 +68,7 @@ jobs:
       - name: Ensure output directories
         run: |
           mkdir -p dashboard/js
-          mkdir -p data/step5-post-processing
+          mkdir -p data/step4-analysis
 
       - name: "Generate Shared Data"
         run: |
@@ -86,7 +86,7 @@ jobs:
 
           git add -f dashboard/js/shared-data.js 2>/dev/null || true
           git add -f dashboard/js/resource-density-data.js 2>/dev/null || true
-          git add -f data/step5-post-processing/shared_data.json 2>/dev/null || true
+          git add -f data/step4-analysis/shared_data.json 2>/dev/null || true
 
           if git diff --cached --quiet; then
             echo "No changes to commit"

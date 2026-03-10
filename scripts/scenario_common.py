@@ -176,7 +176,7 @@ def learning_fraction(threshold, scenario='B', first_deployment_year=None):
 # PARSE FEASIBLE MIXES
 # ============================================================================
 
-def _load_feasible_from_parquet(iso, step3_dir='data/step3-cost-opt-parquets'):
+def _load_feasible_from_parquet(iso, step3_dir='data/step2.2-cost'):
     """Load feasible mixes for a single ISO from the step3 parquet file.
     Uses vectorized column extraction — no iterrows().
     """
@@ -1140,7 +1140,7 @@ def _load_pfs_mixes(iso, threshold):
     Uses vectorized column extraction — no iterrows().
     """
     t_str = str(int(threshold)) if threshold == int(threshold) else str(threshold)
-    pfs_path = Path(f'data/step1-pfs-parquets/{iso}_t{t_str}_raw_pfs.parquet')
+    pfs_path = Path(f'data/step1-pfs/{iso}_t{t_str}_raw_pfs.parquet')
     if not pfs_path.exists():
         return np.empty((0, 11), dtype=np.float64)
     df = pd.read_parquet(pfs_path)
@@ -1811,7 +1811,7 @@ def save_scenario_results(results, scenario_label, isos_processed, out_dir=None)
     This allows parallel matrix jobs (one per ISO) to write without clobbering.
     """
     if out_dir is None:
-        out_dir = 'data/step5-post-processing'
+        out_dir = 'data/step5-scenarios'
     os.makedirs(out_dir, exist_ok=True)
 
     for iso in isos_processed:
@@ -1841,12 +1841,12 @@ def load_scenario_results(scenario_label, isos=None, out_dir=None):
     Args:
         scenario_label: 'A' or 'B'
         isos: optional list of ISOs to load (defaults to all found files)
-        out_dir: optional output directory (defaults to data/step5-post-processing)
+        out_dir: optional output directory (defaults to data/step5-scenarios)
 
     Returns: (results_dict, metadata) or (None, None) if no files found.
     """
     if out_dir is None:
-        out_dir = 'data/step5-post-processing'
+        out_dir = 'data/step5-scenarios'
     label_lower = scenario_label.lower()
     pattern = f'scenario_{label_lower}_'
 

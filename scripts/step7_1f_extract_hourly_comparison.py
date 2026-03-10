@@ -18,7 +18,7 @@ sys.path.insert(0, SCRIPT_DIR)
 
 from pipeline_config import ISOS
 
-INPUT_FILE = os.path.join(ROOT, 'data', 'step5-post-processing', 'strategy2_hourly.json')
+INPUT_FILE = os.path.join(ROOT, 'data', 'step5-scenarios', 'strategy2_hourly.json')
 OUTPUT_FILE = os.path.join(ROOT, 'dashboard', 'js', 'hourly-comparison-data.js')
 STRATEGIES = ['strategy2A', 'strategy2B', 'strategy2C', 'strategy2C_rolloff']
 GROWTH = 'Medium'  # Static pages use all-Medium
