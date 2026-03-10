@@ -10,6 +10,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/shared.css">
     <link rel="stylesheet" href="styles/reference.css">
+<script src="js/shared-footer.js"></script>
+<script src="js/shared-back-button.js"></script>
 <style>
 body { background: var(--bg-page-white); }
 
@@ -784,20 +786,11 @@ body { background: var(--bg-page-white); }
         <p class="metric-detail"><strong>Connection to this optimizer:</strong> The entire 8,760 Problem framework is built on hourly matching logic. Every resource mix in the Physics Feasible Space is evaluated hour-by-hour against actual demand profiles. The cost curves, inflection points, and regional variations in this optimizer are precisely the analytics that corporate procurement teams will need as Scope 2 accounting shifts from annual to temporal matching. The question changes from &ldquo;what&rsquo;s the cheapest REC?&rdquo; to &ldquo;what portfolio of resources delivers the highest hourly CFE at the lowest cost in my grid region?&rdquo; &mdash; which is exactly what this tool answers.</p>
     </div>
 
-    <a href="reference.html" class="back-link"><span>&larr;</span> Back to Reference Library</a>
+    <div id="backBar" data-back-href="reference.html" data-back-label="Back to Reference Library"></div>
 
 </article>
 
-<footer class="page-footer">
-    <div class="footer-links">
-        <a href="about.html">About</a>
-        <a href="dashboard.html">Grid Simulation</a>
-        <a href="reference.html">Reference Library</a>
-        <a href="research_paper.html">Research Paper</a>
-    </div>
-    <p class="footer-note">The 8,760 Problem &mdash; Reference Library</p>
-</footer>
-<div class="bottom-banner"></div>
+<footer id="siteFooter" data-footer-note="The 8,760 Problem &mdash; Reference Library"></footer>
 
 <script>
 // Smooth scroll for glossary links

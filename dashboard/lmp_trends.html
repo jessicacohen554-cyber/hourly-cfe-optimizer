@@ -19,6 +19,7 @@
 <script src="js/chart-colors.js"></script>
 <script src="js/shared-header.js"></script>
     <script src="js/scroll-observer.js"></script>
+    <script src="js/shared-footer.js"></script>
 <style>
 /* Page-specific overrides only — all shared styles in article.css */
 
@@ -293,7 +294,7 @@
                     <canvas id="heroEnvelopeChart"></canvas>
                 </div>
                 <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#0EA5E9;"></span>Median (P50)</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:var(--hydro);"></span>Median (P50)</span>
                     <span class="chart-legend-divider"></span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(14,165,233,0.35);"></span>P25&ndash;P75</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(14,165,233,0.18);"></span>P10&ndash;P90</span>
@@ -315,9 +316,9 @@
                     <canvas id="fuelEnvelopeChart"></canvas>
                 </div>
                 <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#22C55E;"></span>Low fuel</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#F59E0B;"></span>Medium fuel</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#EF4444;"></span>High fuel</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:var(--wind);"></span>Low fuel</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:var(--solar);"></span>Medium fuel</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:var(--red);"></span>High fuel</span>
                     <span class="chart-legend-divider"></span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(0,0,0,0.12);"></span>P10&ndash;P90 within each</span>
                 </div>
@@ -353,10 +354,10 @@
                     <canvas id="regimeChart"></canvas>
                 </div>
                 <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#0EA5E9;"></span>Zero-price hours (P50)</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:var(--hydro);"></span>Zero-price hours (P50)</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(14,165,233,0.2);"></span>Zero-price P50&ndash;P90</span>
                     <span class="chart-legend-divider"></span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#EF4444;"></span>Scarcity hours (&gt;$200)</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:var(--red);"></span>Scarcity hours (&gt;$200)</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(239,68,68,0.2);"></span>Scarcity P50&ndash;P90</span>
                 </div>
             </div>
@@ -391,8 +392,8 @@
                     <canvas id="peakSpreadChart"></canvas>
                 </div>
                 <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#F59E0B;"></span>Peak (weekday 7am&ndash;10pm)</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#9C27B0;"></span>Off-peak</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:var(--solar);"></span>Peak (weekday 7am&ndash;10pm)</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:var(--iso-neiso);"></span>Off-peak</span>
                     <span class="chart-legend-divider"></span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(0,0,0,0.1);"></span>Peak&ndash;off-peak spread</span>
                 </div>
@@ -494,7 +495,7 @@
                     <canvas id="cannibalizationChart"></canvas>
                 </div>
                 <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#0EA5E9;"></span>Avg wholesale LMP (P50)</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:var(--hydro);"></span>Avg wholesale LMP (P50)</span>
                     <span class="chart-legend-divider"></span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(245,158,11,0.3);"></span>Zero/negative price hours</span>
                 </div>
@@ -529,9 +530,9 @@
                     <canvas id="storageArbitrageChart"></canvas>
                 </div>
                 <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#06B6D4;"></span>Battery 4hr dispatch %</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#0891B2;"></span>Battery 8hr dispatch %</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#E91E63;"></span>LDES dispatch %</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:var(--battery);"></span>Battery 4hr dispatch %</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:var(--battery8);"></span>Battery 8hr dispatch %</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:var(--ldes);"></span>LDES dispatch %</span>
                     <span class="chart-legend-divider"></span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(245,158,11,0.25);"></span>Peak&ndash;offpeak spread</span>
                 </div>
@@ -566,7 +567,7 @@
                     <canvas id="gasStrandingChart"></canvas>
                 </div>
                 <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#6B7280;"></span>Gas capacity required (GW)</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:var(--fossil-gas);"></span>Gas capacity required (GW)</span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:rgba(107,114,128,0.3);"></span>2025 installed gas fleet</span>
                     <span class="chart-legend-divider"></span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(239,68,68,0.15);"></span>Stranded capacity</span>
@@ -708,17 +709,7 @@
 </div>
 
 <!-- FOOTER -->
-<footer class="page-footer">
-    <div class="footer-links">
-        <a href="about.html">About</a>
-        <a href="dashboard.html">Grid Simulation</a>
-        <a href="abatement_dashboard.html">CO&#8322; Abatement</a>
-        <a href="research_paper.html">Research Paper</a>
-        <a href="optimizer_methodology.html">Methodology</a>
-    </div>
-    <div class="footer-note" id="footerNote">All analysis on this page is PJM Interconnection &middot; 151,944 simulated scenarios &middot; Synthetic LMP model calibrated to PJM IMM State of the Market 2024</div>
-</footer>
-<div class="bottom-banner"></div>
+<footer id="siteFooter" data-footer-note="All analysis on this page is PJM Interconnection &middot; 151,944 simulated scenarios &middot; Synthetic LMP model calibrated to PJM IMM State of the Market 2024"></footer>
 
 
 <!-- DATA + CHARTS + REGION SWITCHING -->

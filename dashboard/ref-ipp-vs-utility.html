@@ -10,6 +10,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/shared.css">
 <link rel="stylesheet" href="styles/reference.css">
+<script src="js/shared-footer.js"></script>
+<script src="js/shared-back-button.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <style>
 body { background: var(--bg-page-white); }
@@ -723,20 +725,11 @@ body { background: var(--bg-page-white); }
         </ul>
     </div>
 
-    <a href="reference.html" class="back-link"><span>&larr;</span> Back to Reference Library</a>
+    <div id="backBar" data-back-href="reference.html" data-back-label="Back to Reference Library"></div>
 
 </article>
 
-<footer class="page-footer">
-    <div class="footer-links">
-        <a href="about.html">About</a>
-        <a href="dashboard.html">Grid Simulation</a>
-        <a href="reference.html">Reference Library</a>
-        <a href="research_paper.html">Research Paper</a>
-    </div>
-    <p class="footer-note">The 8,760 Problem &mdash; Reference Library</p>
-</footer>
-<div class="bottom-banner"></div>
+<footer id="siteFooter" data-footer-note="The 8,760 Problem &mdash; Reference Library"></footer>
 
 <script>
 /* ===================================================================

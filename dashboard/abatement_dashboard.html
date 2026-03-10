@@ -32,7 +32,9 @@ html, body {
 <script src="js/chart-colors.js"></script>
 <script src="js/shared-header.js"></script>
     <script src="js/scroll-observer.js"></script>
-<div style="background:var(--navy-dark);padding:8px 24px;"><a href="about.html" style="font-family:var(--font-heading);font-size:0.82rem;font-weight:600;color:rgba(255,255,255,0.88);text-decoration:none;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.03em;min-height:44px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Back to Home</a></div>
+    <script src="js/shared-footer.js"></script>
+    <script src="js/shared-back-button.js"></script>
+<div id="backBar" data-back-href="about.html" data-back-label="Back to Home"></div>
 
 <!-- HEADER BANNER -->
 <header class="header">
@@ -74,13 +76,13 @@ html, body {
                     <canvas id="heroScrollyChart"></canvas>
                 </div>
                 <div class="chart-legend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#22C55E;"></span>ERCOT</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#0EA5E9;"></span>PJM</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#F59E0B;"></span>CAISO</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#E91E63;"></span>NYISO</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#9C27B0;"></span>NEISO</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#F97316;"></span>MISO</span>
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:#14B8A6;"></span>SPP</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:var(--iso-ercot);"></span>ERCOT</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:var(--iso-pjm);"></span>PJM</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:var(--iso-caiso);"></span>CAISO</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:var(--iso-nyiso);"></span>NYISO</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:var(--iso-neiso);"></span>NEISO</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:var(--iso-miso);"></span>MISO</span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-line" style="background:var(--iso-spp);"></span>SPP</span>
                     <span class="chart-legend-divider"></span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(0,0,0,0.08);"></span>P10&ndash;P90 band</span>
                     <span class="chart-legend-divider"></span>
@@ -107,25 +109,25 @@ html, body {
     <!-- ISO Selector Tabs -->
     <div class="iso-selector" id="isoSelector">
         <button class="iso-tab active" data-iso="ERCOT" onclick="switchISO('ERCOT')">
-            <span class="tab-dot" style="background:#22C55E;"></span>ERCOT
+            <span class="tab-dot" style="background:var(--iso-ercot);"></span>ERCOT
         </button>
         <button class="iso-tab" data-iso="PJM" onclick="switchISO('PJM')">
-            <span class="tab-dot" style="background:#0EA5E9;"></span>PJM
+            <span class="tab-dot" style="background:var(--iso-pjm);"></span>PJM
         </button>
         <button class="iso-tab" data-iso="CAISO" onclick="switchISO('CAISO')">
-            <span class="tab-dot" style="background:#F59E0B;"></span>CAISO
+            <span class="tab-dot" style="background:var(--iso-caiso);"></span>CAISO
         </button>
         <button class="iso-tab" data-iso="NYISO" onclick="switchISO('NYISO')">
-            <span class="tab-dot" style="background:#E91E63;"></span>NYISO
+            <span class="tab-dot" style="background:var(--iso-nyiso);"></span>NYISO
         </button>
         <button class="iso-tab" data-iso="NEISO" onclick="switchISO('NEISO')">
-            <span class="tab-dot" style="background:#9C27B0;"></span>NEISO
+            <span class="tab-dot" style="background:var(--iso-neiso);"></span>NEISO
         </button>
         <button class="iso-tab" data-iso="MISO" onclick="switchISO('MISO')">
-            <span class="tab-dot" style="background:#F97316;"></span>MISO
+            <span class="tab-dot" style="background:var(--iso-miso);"></span>MISO
         </button>
         <button class="iso-tab" data-iso="SPP" onclick="switchISO('SPP')">
-            <span class="tab-dot" style="background:#14B8A6;"></span>SPP
+            <span class="tab-dot" style="background:var(--iso-spp);"></span>SPP
         </button>
     </div>
 
@@ -154,7 +156,7 @@ html, body {
                     <canvas id="deepdiveChart"></canvas>
                 </div>
                 <div class="chart-legend" id="deepdiveChartLegend">
-                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dot-line" style="background:#22C55E;" id="ddLegendColor"></span><span id="ddLegendLabel">Stepwise marginal MAC (Medium cost)</span></span>
+                    <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dot-line" style="background:var(--iso-ercot);" id="ddLegendColor"></span><span id="ddLegendLabel">Stepwise marginal MAC (Medium cost)</span></span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-band" style="background:rgba(34,197,94,0.2);" id="ddLegendBand"></span>P10&ndash;P90 sensitivity band</span>
                     <span class="chart-legend-divider"></span>
                     <span class="chart-legend-item"><span class="chart-legend-swatch swatch-dashed" style="border-color:#E91E6399;"></span>DAC Central</span>
@@ -290,17 +292,7 @@ html, body {
 </section>
 
 <!-- FOOTER -->
-<footer class="page-footer">
-    <div class="footer-links">
-        <a href="about.html">About</a>
-        <a href="dashboard.html">Cost Optimizer</a>
-        <a href="abatement_dashboard.html">CO&#8322; Abatement</a>
-        <a href="research_paper.html">Methodology &amp; Paper</a>
-        <a href="about.html">About</a>
-    </div>
-    <div class="footer-note">The 8,760 Problem &mdash; 2025 Snapshot Model</div>
-</footer>
-<div class="bottom-banner"></div>
+<footer id="siteFooter" data-footer-note="The 8,760 Problem &mdash; 2025 Snapshot Model"></footer>
 
 <!-- ================================================================== -->
 <!-- SCRIPTS                                                             -->

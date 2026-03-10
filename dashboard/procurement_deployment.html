@@ -17,6 +17,7 @@
 <script src="js/chart-colors.js"></script>
 <script src="js/shared-header.js"></script>
 <script src="js/scroll-observer.js"></script>
+<script src="js/shared-footer.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <style>
@@ -714,11 +715,11 @@
 <!-- Legend -->
 <div class="legend-bar">
     <div class="legend-group">
-        <span class="legend-ball" style="background:#6366F1"></span> Grid baseline (solid)
+        <span class="legend-ball" style="background:var(--nuclear)"></span> Grid baseline (solid)
     </div>
     <div class="legend-divider"></div>
     <div class="legend-group">
-        <span class="legend-ball" style="background:rgba(99,102,241,0.25);border:2px solid #6366F1"></span> Existing claimed
+        <span class="legend-ball" style="background:rgba(99,102,241,0.25);border:2px solid var(--nuclear)"></span> Existing claimed
     </div>
     <div class="legend-divider"></div>
     <div class="legend-group">
@@ -726,15 +727,15 @@
     </div>
     <div class="legend-divider"></div>
     <div class="legend-group">
-        <span class="legend-ball" style="background:#F59E0B"></span> Solar
-        <span class="legend-ball" style="background:#22C55E"></span> Wind
-        <span class="legend-ball" style="background:#6366F1"></span> Nuclear
-        <span class="legend-ball" style="background:#0EA5E9"></span> Hydro
-        <span class="legend-ball" style="background:#64748B"></span> CCS
-        <span class="legend-ball" style="background:#D97706"></span> Geothermal
-        <span class="legend-ball" style="background:#06B6D4"></span> Battery 4hr
-        <span class="legend-ball" style="background:#0891B2"></span> Battery 8hr
-        <span class="legend-ball" style="background:#E91E63"></span> LDES
+        <span class="legend-ball" style="background:var(--solar)"></span> Solar
+        <span class="legend-ball" style="background:var(--wind)"></span> Wind
+        <span class="legend-ball" style="background:var(--nuclear)"></span> Nuclear
+        <span class="legend-ball" style="background:var(--hydro)"></span> Hydro
+        <span class="legend-ball" style="background:var(--ccs)"></span> CCS
+        <span class="legend-ball" style="background:var(--geothermal)"></span> Geothermal
+        <span class="legend-ball" style="background:var(--battery)"></span> Battery 4hr
+        <span class="legend-ball" style="background:var(--battery8)"></span> Battery 8hr
+        <span class="legend-ball" style="background:var(--ldes)"></span> LDES
     </div>
     <div class="legend-divider"></div>
     <div class="legend-group">
@@ -743,7 +744,7 @@
     </div>
     <div class="legend-divider"></div>
     <div class="legend-group">
-        <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:rgba(99,102,241,0.15);border:1.5px dashed #6366F1"></span>
+        <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:rgba(99,102,241,0.15);border:1.5px dashed var(--nuclear)"></span>
         Above rim = curtailed
     </div>
     <div class="legend-divider"></div>
@@ -923,18 +924,7 @@
 </div>
 
 <!-- Footer -->
-<div class="page-footer">
-    <div class="footer-links">
-        <a href="index.html">Home</a>
-        <a href="dashboard.html">Cost Optimizer</a>
-        <a href="optimizer_methodology.html">Methodology</a>
-        <a href="research_paper.html">Research Paper</a>
-    </div>
-    <p style="margin-top:12px;font-size:0.75rem;color:rgba(255,255,255,0.82)">
-        Hourly CFE Optimizer &copy; 2025-2026. Data: EIA, eGRID, NREL ATB.
-    </p>
-</div>
-<div class="bottom-banner"></div>
+<footer id="siteFooter" data-footer-note="Hourly CFE Optimizer &copy; 2025-2026. Data: EIA, eGRID, NREL ATB."></footer>
 
 <!-- Data & Scripts -->
 <script src="js/deployment-data.js"></script>

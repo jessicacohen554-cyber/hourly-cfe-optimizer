@@ -547,13 +547,10 @@
 }
 
 /* ========== COMMON ANIMATIONS ========== */
+/* fade-in: use canonical definition from shared.css */
 @keyframes fadeInUp {
     from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
-}
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
 }
 @keyframes slideInLeft {
     from { opacity: 0; transform: translateX(-20px); }
@@ -570,18 +567,6 @@
 @keyframes bounceDown {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(10px); }
-}
-.fade-in {
-    opacity: 0;
-    transform: translateY(30px);
-    transition: opacity 0.7s ease, transform 0.7s ease;
-}
-.fade-in.visible {
-    opacity: 1;
-    transform: translateY(0);
-}
-@media (prefers-reduced-motion: reduce) {
-    .fade-in { opacity: 1; transform: none; transition: none; }
 }
 
 /* ========== TILE ENTRY ANIMATIONS ========== */
@@ -1218,17 +1203,11 @@
 .story-divider {
     border: none;
     height: 3px;
-    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 15%, #22C55E 35%, #F59E0B 55%, #EF4444 80%, #DC2626 100%);
+    background: linear-gradient(90deg, var(--navy) 0%, var(--hydro) 15%, var(--wind) 35%, var(--solar) 55%, var(--red) 80%, var(--red-dark) 100%);
     margin: 0;
     opacity: 0.7;
 }
-.energy-spectrum-bar {
-    height: 3px;
-    background: linear-gradient(90deg, #1A2744 0%, #0EA5E9 15%, #22C55E 35%, #F59E0B 55%, #EF4444 80%, #DC2626 100%);
-    border-radius: 2px;
-    margin: 32px 0;
-    opacity: 0.6;
-}
+/* energy-spectrum-bar: use canonical definition from shared.css */
 .scrolly-container {
     position: relative;
     display: flex;

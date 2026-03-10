@@ -1023,6 +1023,17 @@ p {
 .swatch-dot-line { width: 18px; height: 3px; border-radius: 1.5px; position: relative; flex-shrink: 0; }
 .swatch-dot-line::after { content: ''; position: absolute; width: 5px; height: 5px; border-radius: 50%; top: -1px; left: 6px; background: inherit; }
 .swatch-hatch { width: 18px; height: 10px; border-radius: 2px; flex-shrink: 0; background: repeating-linear-gradient(45deg, transparent, transparent 2px, currentColor 2px, currentColor 3px); opacity: 0.5; }
+.chart-legend-swatch { display: inline-block; flex-shrink: 0; }
+.chart-legend-divider { width: 1px; height: 12px; background: rgba(0,0,0,0.1); align-self: center; }
+
+/* ========== ENERGY SPECTRUM BAR ========== */
+.energy-spectrum-bar {
+    height: 3px;
+    background: linear-gradient(90deg, var(--navy) 0%, var(--hydro) 15%, var(--wind) 35%, var(--solar) 55%, var(--red) 80%, var(--red-dark) 100%);
+    border-radius: 2px;
+    opacity: 0.6;
+}
+
 .legend-label {
     font-weight: 600;
 }
@@ -1211,7 +1222,50 @@ p {
     color: var(--text-muted);
 }
 
+/* ========== BACK BAR ========== */
+.back-bar {
+    background: var(--navy-dark);
+    padding: 8px 24px;
+}
+.back-bar-link {
+    font-family: var(--font-heading);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: rgba(255,255,255,0.88);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    letter-spacing: 0.03em;
+    min-height: 44px;
+    transition: color 0.2s;
+}
+.back-bar-link:hover { color: #ffffff; }
+
+/* ========== ANIMATIONS ========== */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+.fade-in.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
 /* ========== UTILITY CLASSES ========== */
+.text-center { text-align: center; }
+.full-width { grid-column: 1 / -1; }
+.mx-auto { margin-left: auto; margin-right: auto; }
+.flex-center { display: flex; align-items: center; justify-content: center; }
+.gap-sm { gap: var(--space-xs); }
+.gap-md { gap: var(--space-md); }
+.gap-lg { gap: var(--space-lg); }
+
 .visually-hidden {
     position: absolute;
     width: 1px;
@@ -1312,6 +1366,12 @@ p {
         grid-template-columns: 1fr;
         gap: var(--space-lg);
     }
+    /* Chart legends — scale down for mobile */
+    .chart-legend { gap: 4px 10px; }
+    .chart-legend-item { font-size: 0.62rem; }
+    .swatch-line, .swatch-dashed, .swatch-dot-line { width: 14px; }
+    .swatch-band { width: 14px; height: 8px; }
+    .chart-legend-divider { height: 10px; }
     /* Chart panels */
     .chart-panel {
         padding: 18px 14px;
@@ -1359,6 +1419,13 @@ p {
 @media (min-width: 769px) {
     .nav-brand { display: none; }
 }
+@media (max-width: 600px) {
+    .chart-legend { gap: 3px 8px; }
+    .chart-legend-item { font-size: 0.58rem; gap: 4px; }
+    .swatch-line, .swatch-dashed, .swatch-dot-line { width: 12px; }
+    .swatch-band { width: 12px; height: 7px; }
+    .chart-legend-divider { height: 10px; }
+}
 @media (max-width: 480px) {
     .header {
         padding: 36px 16px 32px;
@@ -1372,6 +1439,11 @@ p {
     .headline-row {
         grid-template-columns: 1fr;
     }
+    .chart-legend { gap: 3px 6px; }
+    .chart-legend-item { font-size: 0.55rem; gap: 3px; }
+    .swatch-line, .swatch-dashed, .swatch-dot-line { width: 10px; }
+    .swatch-band { width: 10px; height: 6px; }
+    .chart-legend-divider { height: 8px; }
 }
 
 /* ========== LIGHT / DARK RHYTHM SYSTEM (Observatory Design) ========== */
