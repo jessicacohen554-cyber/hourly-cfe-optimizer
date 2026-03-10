@@ -338,6 +338,18 @@
         capacity expansion pathway.
     </p>
     <p>
+        CO&#8322; emission rates are static annual averages per ISO and fuel type (sourced from EPA eGRID),
+        applied uniformly across all 8,760 hours. The model does not capture hourly marginal emission rate
+        variation&mdash;real grids exhibit significant diurnal and seasonal shifts in marginal fuel mix
+        (e.g., gas-heavy overnight vs. coal-heavy afternoon in PJM). Fuel-switching elasticity is also
+        absent: the fossil fuel price toggle affects LMP-based cost calculations but does not alter
+        emission factors. The deployment queue is an economic ordering (cheapest marginal abatement cost
+        first, with within-ISO sequential buildout constraints), not a representation of physical FERC
+        interconnection queue position, permitting timelines, or supply chain bottlenecks. These are
+        defensible simplifications for a portfolio-level procurement model but should be noted when
+        interpreting abatement cost estimates at the margin.
+    </p>
+    <p>
         These are appropriate simplifications for the question being asked. A corporate buyer evaluating
         hourly CFE procurement does not need to solve the system planner&rsquo;s problem. They need to
         understand how their portfolio&rsquo;s cost and physical performance interact across plausible
