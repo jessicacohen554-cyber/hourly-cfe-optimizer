@@ -225,8 +225,6 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 .stat-block,
 .stat-tile,
 .stat-card,
-.key-insights,
-.key-insight-item,
 .flow-diagram,
 .concept-card,
 .counter-card,
@@ -265,6 +263,78 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 .callout-box,
 .callout-box.callout-left-border {
     background: #FFFFFF !important;
+}
+
+/* ========== DARK CONTEXT OVERRIDES ========== */
+/* Undo the white !important catch-all for elements inside dark sections.
+   These elements need transparent/glass backgrounds to be readable on dark navy. */
+.section-dark .finding-card,
+.section-dark .stat-tile,
+.section-dark .stat-card,
+.section-dark .stat-block,
+.section-dark .concept-card,
+.section-dark .counter-card,
+.section-dark .incentive-card,
+.section-dark .flow-diagram,
+.section-dark .insight-box,
+.section-dark .insight-card,
+.section-dark .callout,
+.section-dark .callout-box,
+.section-dark .narrative-box,
+.section-dark .narrative-card,
+.section-dark .card,
+.panel-navy .finding-card,
+.panel-navy .concept-card,
+.panel-navy .counter-card,
+.panel-navy .incentive-card,
+.panel-navy .flow-diagram,
+.panel-navy .narrative-box,
+.panel-navy .narrative-card,
+.panel-navy .preservation-panel,
+.panel-navy .conclusion-panel {
+    background: rgba(255, 255, 255, 0.12) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    color: rgba(255, 255, 255, 0.9);
+}
+/* Text inside dark-context cards */
+.section-dark .finding-label,
+.section-dark .stat-label,
+.panel-navy .finding-label {
+    color: rgba(255, 255, 255, 0.92) !important;
+}
+.section-dark .finding-desc,
+.panel-navy .finding-desc {
+    color: rgba(255, 255, 255, 0.78) !important;
+}
+.section-dark .stat-value,
+.panel-navy .concept-card h3,
+.panel-navy .concept-card p,
+.panel-navy .concept-card li {
+    color: rgba(255, 255, 255, 0.92) !important;
+}
+.panel-navy .concept-card strong {
+    color: #fff !important;
+}
+.section-dark .stat-value {
+    color: #fff !important;
+}
+/* Dark-context insight/callout boxes */
+.panel-navy .insight-box,
+.panel-navy .insight-card,
+.panel-navy .callout,
+.panel-navy .callout-box {
+    background: rgba(255, 255, 255, 0.12) !important;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    color: rgba(255, 255, 255, 0.9);
+}
+.panel-navy .insight-box p,
+.panel-navy .insight-box li,
+.panel-navy .callout p {
+    color: rgba(255, 255, 255, 0.92) !important;
+}
+.panel-navy .insight-box strong,
+.panel-navy .callout strong {
+    color: rgba(255, 255, 255, 0.95) !important;
 }
 
 /* Story panel (gen_regional_pathways) */
@@ -545,19 +615,110 @@ section.panel-navy .stat-label {
 .panel-navy .chart-wrapper h3 {
     color: #fff;
 }
-.panel-navy .company-table,
-.panel-navy .data-table {
-    background: rgba(255, 255, 255, 0.08) !important;
-    color: rgba(255, 255, 255, 0.9);
+/* Old glass-on-navy table rules removed — see WHITE CARDS section below for readable table overrides */
+
+/* ========== WHITE CARDS INSIDE NAVY PANELS ========== */
+/* Layer-cards (about.html) have white bg — force dark text inside panel-navy */
+.panel-navy .layer-card,
+.section-dark .layer-card {
+    background: #FFFFFF !important;
+    border: 1px solid #E5E7EB !important;
 }
-.panel-navy .company-table th,
-.panel-navy .data-table th {
-    color: rgba(255, 255, 255, 0.85);
-    background: rgba(255, 255, 255, 0.1);
+.panel-navy .layer-card h4,
+.section-dark .layer-card h4 {
+    color: var(--navy, #1A2744) !important;
 }
-.panel-navy .company-table td,
-.panel-navy .data-table td {
-    border-color: rgba(255, 255, 255, 0.12);
+.panel-navy .layer-card p,
+.section-dark .layer-card p {
+    color: var(--text-secondary, #4B5563) !important;
+}
+.panel-navy .layer-card .layer-num {
+    color: rgba(26,39,68,0.06) !important;
+}
+
+/* Cards that need white bg + dark text inside panel-navy (archetype cards, etc.) */
+.panel-navy .card-grid .card,
+.panel-navy .card-grid-3 .card {
+    background: #FFFFFF !important;
+    border: 1px solid #E5E7EB !important;
+    color: var(--text-primary, #1F2937);
+}
+.panel-navy .card-grid .card h3,
+.panel-navy .card-grid-3 .card h3 {
+    color: var(--navy, #1A2744);  /* no !important — allow inline archetype colors to override */
+}
+.panel-navy .card-grid .card h4,
+.panel-navy .card-grid-3 .card h4 {
+    color: var(--navy, #1A2744) !important;
+}
+.panel-navy .card-grid .card p,
+.panel-navy .card-grid-3 .card p,
+.panel-navy .card-grid .card li,
+.panel-navy .card-grid-3 .card li {
+    color: var(--text-secondary, #4B5563) !important;
+}
+.panel-navy .card-grid .stat-tile,
+.panel-navy .card-grid-3 .stat-tile {
+    background: #F9FAFB !important;
+    border: 1px solid #E5E7EB !important;
+}
+.panel-navy .card-grid .stat-value,
+.panel-navy .card-grid-3 .stat-value {
+    color: var(--navy, #1A2744);  /* no !important — allow inline archetype colors to override */
+}
+.panel-navy .card-grid .stat-label,
+.panel-navy .card-grid-3 .stat-label {
+    color: var(--text-secondary, #4B5563) !important;
+}
+
+/* Data tables inside panel-navy — white bg + dark text for readability */
+.panel-navy .data-table,
+.panel-navy .company-table {
+    background: #FFFFFF !important;
+    color: var(--text-primary, #1F2937) !important;
+}
+.panel-navy .data-table th,
+.panel-navy .company-table th {
+    background: var(--navy, #1A2744) !important;
+    color: #fff !important;
+}
+.panel-navy .data-table td,
+.panel-navy .company-table td {
+    color: var(--text-primary, #1F2937) !important;
+    border-color: #E5E7EB !important;
+}
+.panel-navy .data-table td strong,
+.panel-navy .company-table td strong {
+    color: var(--navy, #1A2744) !important;
+}
+
+/* Section-desc inside panel-navy (regional pathways) */
+.panel-navy .section-desc,
+.story-panel.panel-navy .section-desc {
+    color: rgba(255, 255, 255, 0.88) !important;
+}
+
+/* Stat-row mobile overflow fix */
+@media (max-width: 480px) {
+    .stat-row {
+        grid-template-columns: 1fr 1fr;
+    }
+    .stat-row .stat-tile {
+        min-width: 0;
+        overflow-wrap: break-word;
+        word-break: break-word;
+    }
+    .stat-row .stat-value {
+        font-size: 1.3rem !important;
+    }
+    .stat-row .stat-sublabel {
+        font-size: 0.75rem;
+    }
+}
+@media (max-width: 360px) {
+    .stat-row {
+        grid-template-columns: 1fr !important;
+    }
 }
 
 /* Report-section variant */
