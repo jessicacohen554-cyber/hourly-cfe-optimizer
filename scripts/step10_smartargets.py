@@ -97,6 +97,18 @@ WRIGHT_CUMULATIVE_GW_2025 = {
 }
 
 # Learning rate = cost reduction per doubling of cumulative capacity
+# Sources:
+#   Solar PV: ~20% module LR (Swanson's Law; Our World in Data 2023; Bolinger et al. 2022)
+#     — treated as mature (0% further learning) since >1 TW deployed, LCOE already <$30/MWh
+#   Wind: 7-14% CapEx LR (Bolinger et al. 2022; Oxford Energy Studies 2021)
+#     — treated as mature for onshore; offshore still on learning curve
+#   Battery Li-ion: 18-20% (BloombergNEF 2024; NREL ATB 2024)
+#   Nuclear SMR: 10-15% estimated (DOE Liftoff 2023; no historical data for SMRs)
+#   CCS: 10-12% (Global CCS Institute; limited deployment data)
+#   LDES (iron-air): 15-20% estimated (Form Energy; DOE LDES Liftoff 2023)
+#   Offshore wind: 8-12% (NREL Offshore Wind Market Report 2024)
+#   Note on methodology: Constant LR assumption is a simplification — recent literature
+#   (ScienceDirect Oct 2025) finds stepwise LR changes for 58/87 technologies studied.
 WRIGHT_LEARNING_RATE = {
     'nuclear':       {'Fast': 0.15, 'Slow': 0.10},
     'ccs':           {'Fast': 0.12, 'Slow': 0.10},

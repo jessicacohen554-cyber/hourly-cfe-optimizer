@@ -456,6 +456,10 @@ DISPATCH_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 's
 # NEISO Winter Gas Pipeline Constraint (Algonquin Citygates)
 # During winter (~25% of year), gas pipeline capacity is constrained,
 # driving gas prices $7.50/MMBtu above Henry Hub.
+# Validated: Winter 2024/25 ACG averaged $7.45/MMBtu above Henry Hub (EIA, NGI).
+# Sources: ISO-NE Operational Fuel Security Analysis (2018), EIA Today in Energy
+# (Dec 2023, "Market dynamics vary at key natural gas pricing hubs"),
+# NaturalGasIntel (Jan 2025, winter 2024/25 ACG data).
 NEISO_CCS_GAS_ADDER = 13.13    # $/MWh annualized CCS adder (7 HR × $7.50 × 0.25)
 NEISO_WHOLESALE_ADDER = 4.0    # $/MWh annualized wholesale adder
 

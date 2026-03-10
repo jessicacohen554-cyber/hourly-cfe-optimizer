@@ -125,6 +125,11 @@ PPA_MARKET_DEPTH = {
 
 # ─── ACTIVE QT: NEW CLEAN DEPLOYMENT ─────────────────────────────
 NEW_LCOE_2025 = {'solar': 60, 'wind': 50, 'battery': 10}
+# LCOE-based learning rates (not CapEx-only). Sources:
+#   Solar 24%: Bolinger et al. (2022) found ~19% LCOE LR; we use 24% to account for
+#     BOS/soft cost reductions beyond module price (Swanson's Law = 20% module only).
+#   Wind 15%: Bolinger et al. (2022) LCOE LR ~15% for utility-scale US wind.
+#   Battery 18%: BloombergNEF 2024 Li-ion pack price LR.
 LEARNING_RATE = {'solar': 0.24, 'wind': 0.15, 'battery': 0.18}
 CUMULATIVE_GW_2025 = {'solar': 180, 'wind': 160, 'battery': 35}
 NATIONAL_DEPLOY_GW_YR = {'solar': 40, 'wind': 15, 'battery': 12}
