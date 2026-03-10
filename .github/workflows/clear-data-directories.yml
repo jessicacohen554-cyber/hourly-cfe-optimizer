@@ -1,0 +1,202 @@
+name: "Clear Data Directories (EMPTY-FOR-CLONING)"
+
+# Removes all pipeline output data from the EMPTY-FOR-CLONING branch to create
+# a clean clone-ready copy of the repo. Only raw source data (data/eia-930/) is
+# preserved. Directory folders and .gitkeep files are kept so the structure remains.
+#
+# SAFETY: This workflow ONLY operates on the EMPTY-FOR-CLONING branch.
+# It will refuse to run on master or any other branch.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Preview only — list files that would be deleted without changing anything'
+        default: true
+        type: boolean
+      preserve_eia:
+        description: 'Preserve raw EIA source data (data/eia-930/)'
+        default: true
+        type: boolean
+
+jobs:
+  clear-data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout EMPTY-FOR-CLONING branch
+        uses: actions/checkout@v4
+        with:
+          ref: EMPTY-FOR-CLONING
+          fetch-depth: 1
+
+      - name: Verify branch safety
+        run: |
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          echo "Current branch: $BRANCH"
+          if [ "$BRANCH" != "EMPTY-FOR-CLONING" ]; then
+            echo "::error::This workflow ONLY runs on the EMPTY-FOR-CLONING branch. Current branch: $BRANCH"
+            exit 1
+          fi
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Enumerate files to clear
+        id: enumerate
+        run: |
+          FILES="/tmp/files_to_clear.txt"
+          > "$FILES"
+
+          DIRS=(
+            "data/step1-pfs"
+            "data/step2.1-ef"
+            "data/step2.2-cost"
+            "data/step3-dispatch"
+            "data/step4-analysis"
+            "data/step5-scenarios"
+            "data/step5-wrights"
+            "data/step6-smartargets"
+          )
+
+          # Optionally include raw EIA data
+          if [ "${{ inputs.preserve_eia }}" != "true" ]; then
+            DIRS+=("data/eia-930")
+          fi
+
+          for dir in "${DIRS[@]}"; do
+            if [ -d "$dir" ]; then
+              find "$dir" -type f ! -name ".gitkeep" >> "$FILES" 2>/dev/null || true
+            fi
+          done
+
+          # Deduplicate and sort
+          sort -u -o "$FILES" "$FILES"
+          COUNT=$(grep -c . "$FILES" 2>/dev/null || echo 0)
+
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+          echo "Found $COUNT file(s) to clear."
+
+      - name: Preview (dry run)
+        if: ${{ inputs.dry_run && steps.enumerate.outputs.count != '0' }}
+        run: |
+          FILES="/tmp/files_to_clear.txt"
+
+          echo "═══════════════════════════════════════════════"
+          echo "  DRY RUN — No files will be deleted"
+          echo "═══════════════════════════════════════════════"
+          echo ""
+
+          for dir in data/eia-930 data/step1-pfs data/step2.1-ef \
+                     data/step2.2-cost data/step3-dispatch \
+                     data/step4-analysis data/step4-analysis/co2_results \
+                     data/step4-analysis/lmp data/step4-analysis/building-blocks \
+                     data/step4-analysis/resource-density \
+                     data/step5-scenarios data/step5-wrights \
+                     data/step6-smartargets; do
+            matched=$(grep "^${dir}/" "$FILES" 2>/dev/null || true)
+            if [ -n "$matched" ]; then
+              count=$(echo "$matched" | wc -l)
+              size=0
+              while IFS= read -r f; do
+                if [ -f "$f" ]; then
+                  s=$(stat -c%s "$f" 2>/dev/null || echo 0)
+                  size=$((size + s))
+                fi
+              done <<< "$matched"
+              size_mb=$(awk "BEGIN{printf \"%.1f\", $size/1048576}")
+              echo "  ${dir}/  →  ${count} file(s), ${size_mb} MB"
+            fi
+          done
+
+          TOTAL=${{ steps.enumerate.outputs.count }}
+          echo ""
+          echo "═══════════════════════════════════════════════"
+          echo "  Total: $TOTAL file(s)"
+          echo "  Re-run with dry_run=false to delete."
+          echo "═══════════════════════════════════════════════"
+
+      - name: Nothing to clear
+        if: ${{ steps.enumerate.outputs.count == '0' }}
+        run: |
+          echo "No data files found. Directories are already clean."
+
+      - name: Delete files and commit
+        if: ${{ !inputs.dry_run && steps.enumerate.outputs.count != '0' }}
+        run: |
+          FILES="/tmp/files_to_clear.txt"
+          COUNT=${{ steps.enumerate.outputs.count }}
+
+          echo "Deleting $COUNT file(s)..."
+
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            rm -f "$f"
+          done < "$FILES"
+
+          # Stage all deletions
+          git add -u data/
+
+          # Check if there are staged changes
+          if git diff --cached --quiet; then
+            echo "No tracked file changes to commit."
+            exit 0
+          fi
+
+          PRESERVE_NOTE=""
+          if [ "${{ inputs.preserve_eia }}" = "true" ]; then
+            PRESERVE_NOTE=" (preserved data/eia-930/)"
+          fi
+
+          git commit -m "Clear all pipeline data directories for clean clone${PRESERVE_NOTE}
+
+          Removed $COUNT files from: step1-pfs, step2.1-ef, step2.2-cost,
+          step3-dispatch, step4-analysis, step5-scenarios, step5-wrights,
+          step6-smartargets. Directory structure and .gitkeep files preserved."
+
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i/$MAX_RETRIES..."
+            git push origin EMPTY-FOR-CLONING 2>&1 && break
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "::error::Push failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done
+
+      - name: Summary
+        if: always()
+        run: |
+          echo ""
+          echo "═══════════════════════════════════════════════"
+          echo "  CLEAR DATA DIRECTORIES SUMMARY"
+          echo "═══════════════════════════════════════════════"
+          echo "  Branch:      EMPTY-FOR-CLONING"
+          echo "  Files found: ${{ steps.enumerate.outputs.count }}"
+          echo "  Dry run:     ${{ inputs.dry_run }}"
+          echo "  Preserve EIA: ${{ inputs.preserve_eia }}"
+          echo ""
+          echo "  Directories targeted:"
+          echo "    • data/step1-pfs/"
+          echo "    • data/step2.1-ef/"
+          echo "    • data/step2.2-cost/"
+          echo "    • data/step3-dispatch/"
+          echo "    • data/step4-analysis/"
+          echo "    • data/step5-scenarios/"
+          echo "    • data/step5-wrights/"
+          echo "    • data/step6-smartargets/"
+          if [ "${{ inputs.preserve_eia }}" != "true" ]; then
+            echo "    • data/eia-930/"
+          else
+            echo "    ○ data/eia-930/ (preserved)"
+          fi
+          echo "═══════════════════════════════════════════════"
