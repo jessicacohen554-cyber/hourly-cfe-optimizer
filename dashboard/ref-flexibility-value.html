@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The 8,760 Problem — Value of Flexibility</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/reference.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="js/shared-footer.js"></script>
+<script src="js/shared-back-button.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/flexibility-value-data.js"></script>
+<style>
+body { background: var(--bg-page-white); }
+.breadcrumb { max-width: 960px; margin: 0 auto; padding: 20px 24px 0; font-size: 0.82rem; font-family: var(--font-heading); letter-spacing: 0.03em; }
+.breadcrumb a { color: #0EA5E9; text-decoration: none; }
+.breadcrumb .sep { color: rgba(0,0,0,0.3); margin: 0 8px; }
+.breadcrumb .current { color: #374151; }
+.article-wrapper { max-width: 960px; margin: 0 auto; padding: 32px 24px 80px; }
+.article-title { font-family: var(--font-heading); font-size: 2rem; font-weight: 700; color: #1A2744; line-height: 1.25; margin-bottom: 8px; }
+.article-subtitle { color: #374151; font-size: 0.95rem; margin-bottom: 36px; line-height: 1.6; }
+.section-heading { font-family: var(--font-heading); font-size: 1.3rem; font-weight: 700; color: #1A2744; margin: 48px 0 16px; border-bottom: 2px solid #E5E7EB; padding-bottom: 8px; }
+.text-block { color: #374151; font-size: 0.95rem; line-height: 1.65; margin-bottom: 16px; }
+.control-bar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; align-items: center; }
+.control-bar label { font-family: var(--font-heading); font-size: 0.82rem; font-weight: 600; color: #374151; }
+.control-bar select { font-family: var(--font-body); font-size: 0.88rem; padding: 6px 12px; border: 1px solid #D1D5DB; border-radius: 8px; background: #fff; }
+.chart-box { background: #fff; border: 1px solid #E5E7EB; border-radius: 12px; padding: 16px; margin-bottom: 24px; }
+.chart-box canvas { max-height: 380px; }
+.insight { background: #EFF6FF; border-left: 4px solid #3B82F6; border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 16px 0 24px; font-size: 0.9rem; color: #1E40AF; line-height: 1.5; }
+.value-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-bottom: 24px; }
+.value-table th { background: #F3F4F6; padding: 10px 14px; text-align: left; font-family: var(--font-heading); font-weight: 600; color: #374151; border-bottom: 2px solid #E5E7EB; }
+.value-table td { padding: 10px 14px; border-bottom: 1px solid #F3F4F6; color: #374151; }
+.value-table tr:hover td { background: #F9FAFB; }
+.value-positive { color: #059669; font-weight: 600; }
+.value-zero { color: #9CA3AF; }
+@media (max-width: 640px) { .article-title { font-size: 1.5rem; } }
+</style>
+</head>
+<body>
+<script src="js/nav.js"></script>
+
+<nav class="breadcrumb">
+    <a href="reference.html">Reference</a>
+    <span class="sep">/</span>
+    <span class="current">Value of Flexibility</span>
+</nav>
+
+<div class="article-wrapper">
+    <h1 class="article-title">The System Value of Energy Storage</h1>
+    <p class="article-subtitle">How much does each storage technology reduce total system cost? This isn't LCOE or LCOS — it's the portfolio-level value of flexibility, measured as the cost savings enabled by including each storage type in the optimization.</p>
+
+    <div class="control-bar">
+        <label>Region:</label>
+        <select id="isoSelect"></select>
+    </div>
+
+    <h2 class="section-heading">Storage Value by Threshold</h2>
+    <p class="text-block">The value of storage increases exponentially with CFE target. At 75% matching, batteries barely matter. At 99%+, they can save $5-15/MWh — because the alternative is massive renewable overbuild or expensive clean firm capacity.</p>
+    <div class="chart-box">
+        <canvas id="valueChart"></canvas>
+    </div>
+
+    <h2 class="section-heading">Value Under Cost Uncertainty (P10/P50/P90)</h2>
+    <p class="text-block">Storage value varies dramatically with cost assumptions. Under Low renewable costs, storage matters less (cheap solar/wind can overbuild instead). Under High costs, storage is critical for cost containment.</p>
+    <div class="chart-box">
+        <canvas id="fanChart"></canvas>
+    </div>
+
+    <h2 class="section-heading">Detailed Value Table</h2>
+    <p class="text-block">Cost savings from including each storage technology at Medium cost assumptions.</p>
+    <div style="overflow-x:auto;">
+        <table class="value-table" id="valueTable">
+            <thead><tr><th>Threshold</th><th>Battery 4hr</th><th>Battery 8hr</th><th>LDES (100hr)</th><th>Green H₂</th><th>Total w/ Storage</th></tr></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <h2 class="section-heading">Why This Matters</h2>
+    <div class="insight">Storage's system value is fundamentally different from its standalone cost. A battery with $200/kWh LCOS that saves $8/MWh at the system level is economically justified even if its standalone economics look marginal. Portfolio value > component cost.</div>
+
+    <p class="text-block"><strong>For storage developers:</strong> This quantifies your technology's value proposition beyond LCOS. When pitching to utilities or corporate buyers, the relevant metric is system cost reduction — and these numbers show it ranges from near-zero at low thresholds to transformative at 95%+.</p>
+    <p class="text-block"><strong>For grid planners:</strong> The exponential increase in storage value past 90% CFE reveals why long-duration storage (LDES, Green H₂) becomes essential for the last mile. Short-duration batteries hit diminishing returns earlier.</p>
+    <p class="text-block"><strong>For investors:</strong> The P10/P50/P90 fan shows storage's value robustness. If a technology delivers savings under 90% of cost scenarios, that's a strong investment signal regardless of any single LCOE forecast.</p>
+</div>
+
+<script>
+(function() {
+    const data = FLEXIBILITY_VALUE_DATA;
+    const isoSelect = document.getElementById('isoSelect');
+
+    Object.keys(data).forEach(iso => {
+        const opt = document.createElement('option');
+        opt.value = iso; opt.textContent = iso;
+        if (iso === 'PJM') opt.selected = true;
+        isoSelect.appendChild(opt);
+    });
+
+    const storageColors = {
+        battery_4hr: RESOURCE_COLORS?.battery || '#06B6D4',
+        battery_8hr: RESOURCE_COLORS?.battery8 || '#0891B2',
+        ldes: RESOURCE_COLORS?.ldes || '#E91E63',
+        green_h2: RESOURCE_COLORS?.greenH2 || '#10B981',
+    };
+    const storageLabels = { battery_4hr: 'Battery 4hr', battery_8hr: 'Battery 8hr', ldes: 'LDES (100hr)', green_h2: 'Green H₂' };
+
+    let valueChart = null, fanChart = null;
+
+    function render() {
+        const iso = isoSelect.value;
+        const isoData = data[iso] || {};
+        const thresholds = Object.keys(isoData).sort((a,b) => parseFloat(a) - parseFloat(b));
+
+        // Value chart — lines per storage type
+        const datasets = Object.keys(storageColors).map(stype => ({
+            label: storageLabels[stype],
+            data: thresholds.map(t => {
+                const sv = isoData[t]?.storage_value?.[stype];
+                return sv?.value_per_mwh ?? 0;
+            }),
+            borderColor: storageColors[stype],
+            backgroundColor: storageColors[stype] + '20',
+            fill: false,
+            tension: 0.3,
+            pointRadius: 4,
+        }));
+
+        if (valueChart) valueChart.destroy();
+        valueChart = new Chart(document.getElementById('valueChart'), {
+            type: 'line',
+            data: { labels: thresholds.map(t => t + '%'), datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: { y: { title: { display: true, text: '$/MWh savings' }, beginAtZero: true } },
+                plugins: { tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: $${ctx.parsed.y.toFixed(2)}/MWh` } } }
+            }
+        });
+
+        // Fan chart — P10/P50/P90 for battery_4hr
+        const fanData = thresholds.map(t => isoData[t]?.fan || {});
+        const fanStype = 'battery_4hr';
+        const p10 = fanData.map(f => f.p10?.[fanStype] ?? 0);
+        const p50 = fanData.map(f => f.p50?.[fanStype] ?? 0);
+        const p90 = fanData.map(f => f.p90?.[fanStype] ?? 0);
+
+        if (fanChart) fanChart.destroy();
+        fanChart = new Chart(document.getElementById('fanChart'), {
+            type: 'line',
+            data: {
+                labels: thresholds.map(t => t + '%'),
+                datasets: [
+                    { label: 'P90 (High value)', data: p90, borderColor: '#06B6D4', backgroundColor: '#06B6D420', fill: '+1', tension: 0.3, pointRadius: 2 },
+                    { label: 'P50 (Median)', data: p50, borderColor: '#06B6D4', backgroundColor: '#06B6D440', fill: '+1', borderWidth: 2, tension: 0.3, pointRadius: 3 },
+                    { label: 'P10 (Low value)', data: p10, borderColor: '#06B6D4', backgroundColor: '#06B6D420', fill: false, borderDash: [5,3], tension: 0.3, pointRadius: 2 },
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: { y: { title: { display: true, text: 'Battery 4hr Value ($/MWh)' }, beginAtZero: true } },
+            }
+        });
+
+        // Table
+        const tbody = document.querySelector('#valueTable tbody');
+        tbody.innerHTML = thresholds.filter(t => [50,75,85,90,95,97.5,99,99.9,99.99].map(String).includes(t)).map(t => {
+            const sv = isoData[t]?.storage_value || {};
+            const base = isoData[t]?.baseline_cost || 0;
+            const cells = ['battery_4hr','battery_8hr','ldes','green_h2'].map(s => {
+                const v = sv[s]?.value_per_mwh;
+                if (v === null || v === undefined) return '<td class="value-zero">—</td>';
+                if (v <= 0.01) return '<td class="value-zero">$0.00</td>';
+                return `<td class="value-positive">$${v.toFixed(2)}</td>`;
+            }).join('');
+            return `<tr><td><strong>${t}%</strong></td>${cells}<td>$${base.toFixed(2)}</td></tr>`;
+        }).join('');
+    }
+
+    isoSelect.addEventListener('change', render);
+    render();
+})();
+</script>
+</body>
+</html>
