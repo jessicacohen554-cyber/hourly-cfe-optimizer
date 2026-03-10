@@ -370,7 +370,8 @@ def compute_strategy_2b(iso, year, threshold, participation_pct,
 def compute_strategy_2c(iso, year, threshold, participation_pct,
                          growth_level='Medium', scenario='B',
                          level='Medium', ppa_level='Medium',
-                         use_45u=True, use_ctr=False, ctr_value=None, **kwargs):
+                         use_45u=True, use_ctr=False, ctr_value=None,
+                         nuclear_policy='stable', **kwargs):
     """Strategy 2C: SSS allocation + premium tranches for hourly matching.
 
     Layer 1: SSS allocation (free, follows SSS 8760 shape)
@@ -378,6 +379,9 @@ def compute_strategy_2c(iso, year, threshold, participation_pct,
     Layer 3: New-build (at PPA prices)
 
     The tranche merit-order determines cost (§15.14.4).
+
+    Args:
+        nuclear_policy: 'stable' or 'rolloff' — controls ZEC/CMC expiration modeling.
     """
     buyer_demand = get_buyer_demand_twh(iso, year, participation_pct, growth_level)
     if buyer_demand <= 0 or threshold <= 0:
@@ -388,7 +392,7 @@ def compute_strategy_2c(iso, year, threshold, participation_pct,
     target_fraction = min(threshold / 100.0, 1.0)
 
     # Layer 1: SSS allocation (free)
-    sss_twh = get_sss_twh(iso, year, growth_level)
+    sss_twh = get_sss_twh(iso, year, growth_level, nuclear_policy=nuclear_policy)
     buyer_sss_share = (buyer_demand / total_demand) * sss_twh if total_demand > 0 else 0
 
     # Total clean needed (buyer's share of target)
@@ -420,7 +424,7 @@ def compute_strategy_2c(iso, year, threshold, participation_pct,
     remaining_need = procurement_twh
 
     # Pool 2: Existing merchant clean (competitive exhaustion)
-    merchant_pool = get_merchant_clean_twh(iso, year, growth_level)
+    merchant_pool = get_merchant_clean_twh(iso, year, growth_level, nuclear_policy=nuclear_policy)
     buyer_share = (buyer_demand / total_demand) if total_demand > 0 else 0.01
     merchant_available = merchant_pool * buyer_share
     merchant_procured = min(remaining_need, merchant_available)
@@ -603,7 +607,8 @@ def _apply_participation_ratchet(result, floor_twh):
     return result, new_floor
 
 
-def run_full_sweep(isos=None, participation_levels=None, growth_levels=None):
+def run_full_sweep(isos=None, participation_levels=None, growth_levels=None,
+                   nuclear_policy='stable'):
     """Run Strategy 2 (all variants) for all ISOs × participation × growth.
 
     For 2A and 2B, applies a participation-level floor ratchet: resources
@@ -616,6 +621,9 @@ def run_full_sweep(isos=None, participation_levels=None, growth_levels=None):
         'strategy2B': {iso: {growth: {part: [trajectory]}}},
         'strategy2C': {iso: {growth: {part: [trajectory]}}},
     }
+
+    Args:
+        nuclear_policy: 'stable' (default) or 'rolloff'. Passed to 2C/3D compute functions.
     """
     if isos is None:
         isos = ISOS
@@ -662,6 +670,7 @@ def run_full_sweep(isos=None, participation_levels=None, growth_levels=None):
                             scenario='B',  # Hourly always uses Scenario B
                             level='Medium',
                             ppa_level='Medium',
+                            nuclear_policy=nuclear_policy,
                         )
 
                         # Apply participation ratchet for 2A/2B
@@ -720,10 +729,13 @@ def main():
     print(f"Scenario: B (accelerated learning curve)")
     print()
 
+    # ── Run stable policy (default) ──
+    print("\n── Nuclear Policy: STABLE ──")
     results = run_full_sweep(
         isos=isos,
         participation_levels=participation,
         growth_levels=growth_levels,
+        nuclear_policy='stable',
     )
 
     save_results_json(results, 'strategy2_hourly.json')
@@ -738,11 +750,28 @@ def main():
         import traceback; traceback.print_exc()
         print("  (Continuing without dispatch scores)")
 
+    # ── Run rolloff policy (ZEC/CMC expiration sensitivity) ──
+    # Only 2C uses SSS, so only 2C results change. Run full sweep but only
+    # keep the 2C variant under a separate key.
+    print("\n── Nuclear Policy: ROLLOFF (ZEC/CMC expiration) ──")
+    rolloff_results = run_full_sweep(
+        isos=isos,
+        participation_levels=participation,
+        growth_levels=growth_levels,
+        nuclear_policy='rolloff',
+    )
+
+    # Merge rolloff 2C into results under 'strategy2C_rolloff'
+    results['strategy2C_rolloff'] = rolloff_results.get('strategy2C', {})
+
+    # Re-save with rolloff variant included
+    save_results_json(results, 'strategy2_hourly.json')
+
     # Summary
     print("\n" + "=" * 70)
     print("SUMMARY: Strategy 2 at 10% participation, Medium growth")
     print("=" * 70)
-    for variant in ['strategy2A', 'strategy2B', 'strategy2C']:
+    for variant in ['strategy2A', 'strategy2B', 'strategy2C', 'strategy2C_rolloff']:
         if variant not in results:
             continue
         print(f"\n--- {variant.upper()} ---")

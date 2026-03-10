@@ -379,6 +379,34 @@ RPS_TARGETS = {
 SSS_NEW_BUILD_FRACTION = 0.40  # 40% of new RPS build goes to SSS, 60% to merchant
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# NUCLEAR POLICY ROLL-OFF SCHEDULE
+# ═══════════════════════════════════════════════════════════════════════════════
+# State-level ZEC/CMC programs expire on known timelines. When they expire,
+# the underlying plants are assumed to STAY RUNNING (federal 45U PTC backstop
+# at $15/MWh + capacity market revenue), but shift from SSS (free, policy-
+# supported) to the merchant clean pool (priced at EAC market rates).
+# This is a pool-reallocation, NOT a retirement scenario.
+# Source: IL CEJA (PA 102-0662), NJ BPU ZEC orders, NY PSC Tier 3, FERC 45U.
+
+NUCLEAR_POLICY_ROLLOFF = {
+    # (year_effective, twh_lost_from_sss) — cumulative within each ISO
+    'PJM': [
+        (2026, 15.0),   # NJ ZEC expires (Salem + Hope Creek subsidy ends)
+        (2028, 50.0),   # IL CMC expires (Exelon fleet: Byron, Braidwood, Quad Cities)
+    ],
+    'NYISO': [
+        (2030, 42.0),   # NY ZEC Tier 3 expires ~2029 (FitzPatrick, Nine Mile, Ginna)
+    ],
+    'MISO': [
+        (2028, 15.0),   # IL CMC MISO-zone plants (Quad Cities share, Dresden, LaSalle)
+    ],
+    # CAISO: Diablo Canyon extended to 2030 under SB 846, not modeled as roll-off
+    # NEISO: Millstone under CT CCEF (extended), stable
+    # SPP: Wolf Creek — no state subsidy, market-based, stable
+    # ERCOT: No nuclear, no SSS
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # CORPORATE-CONTRACTED CLEAN ENERGY (Pool 2 — Locked/Unavailable)
 # ═══════════════════════════════════════════════════════════════════════════════
 # Nuclear PPAs already locked to hyperscalers via long-term contracts.
@@ -499,12 +527,25 @@ def get_rps_target_at_year(iso, year):
     return values[-1]
 
 
-def get_sss_twh(iso, year, growth_level='Medium'):
+def get_sss_twh(iso, year, growth_level='Medium', nuclear_policy='stable'):
     """Get total SSS (state-sponsored/subscribed) clean TWh at a given year.
 
     SSS = fixed fleet (nuclear/hydro, constant) + fraction of RPS new build.
+
+    Args:
+        nuclear_policy: 'stable' = SSS fixed fleet constant (default).
+                        'rolloff' = ZEC/CMC expiration reduces fixed fleet.
+                        Plants stay running under 45U PTC but move to merchant pool.
     """
     fixed = SSS_FIXED_FLEET_TWH[iso]
+
+    # Apply nuclear policy roll-off if requested
+    if nuclear_policy == 'rolloff':
+        rolloff_events = NUCLEAR_POLICY_ROLLOFF.get(iso, [])
+        for event_year, twh_lost in rolloff_events:
+            if year >= event_year:
+                fixed -= twh_lost
+        fixed = max(0.0, fixed)
 
     # RPS-mandated clean TWh
     total_demand = get_demand_twh_at_year(iso, year, growth_level)
@@ -537,17 +578,16 @@ def get_contracted_clean_twh(iso):
     return CONTRACTED_CLEAN_TWH.get(iso, 0.0)
 
 
-def get_merchant_clean_twh(iso, year=2025, growth_level='Medium'):
+def get_merchant_clean_twh(iso, year=2025, growth_level='Medium', nuclear_policy='stable'):
     """Get existing merchant clean TWh available for voluntary EAC procurement.
 
     Merchant clean = total existing clean - SSS (policy-supported) - contracted (locked).
     This is Pool 3 in the four-pool supply model.
 
-    In ERCOT: ~183 TWh (essentially all existing solar+wind, no SSS, no contracts).
-    In PJM: smaller pool after subtracting 95 TWh SSS + 18.8 TWh contracted.
+    When nuclear_policy='rolloff', SSS shrinks → merchant pool grows (plants stay running).
     """
     total_existing = get_existing_clean_twh(iso)
-    sss = get_sss_twh(iso, year, growth_level)
+    sss = get_sss_twh(iso, year, growth_level, nuclear_policy=nuclear_policy)
     contracted = get_contracted_clean_twh(iso)
     merchant = total_existing - sss - contracted
     return max(0.0, merchant)

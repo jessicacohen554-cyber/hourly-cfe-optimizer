@@ -698,6 +698,13 @@
                 <span class="slider-value" id="thresholdValue">85%</span>
             </div>
         </div>
+        <div class="control-group">
+            <label>Nuclear Policy</label>
+            <div class="toggle-btn-group">
+                <button class="toggle-btn active" data-nuclear="stable" title="ZEC/CMC programs remain stable — SSS fixed fleet constant">Stable</button>
+                <button class="toggle-btn" data-nuclear="rolloff" title="NJ ZEC expires 2026, IL CMC expires 2028 — SSS shrinks, plants move to merchant pool">Roll-Off</button>
+            </div>
+        </div>
         <div class="control-group" style="margin-left:auto">
             <button class="toggle-btn" id="crossIsoToggle" title="Show cross-ISO energy flows as glowing balls">Cross-ISO Flows</button>
         </div>
@@ -956,6 +963,26 @@
         return THRESHOLDS[parseInt(thrSlider.value)] || 85;
     }
 
+    // ═════════════════════════════════════════════════════════════════════════
+    // NUCLEAR POLICY TOGGLE
+    // ═════════════════════════════════════════════════════════════════════════
+    // When 'Roll-Off' is active, SSS-using strategies (2C, 3C, 3D) swap to
+    // their rolloff data variants. Other strategies are unaffected.
+
+    let nuclearPolicy = 'stable';
+    const ROLLOFF_MAP = { '2C': '2C_rolloff', '3C': '3C_rolloff', '3D': '3D_rolloff' };
+
+    function getStrategyDataKey(strat) {
+        if (nuclearPolicy === 'rolloff' && ROLLOFF_MAP[strat]) {
+            // Use rolloff variant if data exists, otherwise fall back to stable
+            const rolloffKey = ROLLOFF_MAP[strat];
+            if (typeof DEPLOYMENT_DATA !== 'undefined' && DEPLOYMENT_DATA.data[rolloffKey]) {
+                return rolloffKey;
+            }
+        }
+        return strat;
+    }
+
     partSlider.addEventListener('input', () => {
         const p = getParticipation();
         partValue.textContent = p + '%';
@@ -981,11 +1008,25 @@
 
     if (typeof DEPLOYMENT_DATA !== 'undefined') {
         grid.init(DEPLOYMENT_DATA);
+        // Wire nuclear policy toggle to jar grid
+        grid.strategyKeyMapper = getStrategyDataKey;
         // Set initial slider display
         partValue.textContent = getParticipation() + '%';
         const t0 = getThreshold();
         thrValue.textContent = t0 >= 99.99 ? '≥99.99%' : t0 + '% CO₂';
     }
+
+    // Nuclear Policy toggle
+    document.querySelectorAll('[data-nuclear]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('[data-nuclear]').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            nuclearPolicy = this.dataset.nuclear;
+            grid._updateData();
+            rebuildCharts();
+            rebuildRibbonChart();
+        });
+    });
 
     // Cross-ISO glow toggle
     document.getElementById('crossIsoToggle').addEventListener('click', function() {
@@ -1016,14 +1057,18 @@
     const STRAT_COLORS = {
         '1A': '#F59E0B', '1B': '#D97706',
         '2A': '#6366F1', '2B': '#818CF8', '2C': '#4F46E5',
+        '2C_rolloff': '#4F46E5',
         '3A': '#22C55E', '3B': '#16A34A',
-        '3C': '#10B981', '3D': '#059669',
+        '3C': '#10B981', '3C_rolloff': '#10B981',
+        '3D': '#059669', '3D_rolloff': '#059669',
     };
     const STRAT_LABELS = {
         '1A': '1A Conseq (Grid)', '1B': '1B Conseq (Fossil)',
         '2A': '2A Hourly (New)', '2B': '2B Hourly (Grid)', '2C': '2C Hourly (SSS)',
+        '2C_rolloff': '2C Hourly (SSS Roll-Off)',
         '3A': '3A Annual (Same)', '3B': '3B Annual (Cross)',
-        '3C': '3C Annual (Same Exist)', '3D': '3D Annual (Cross Exist)',
+        '3C': '3C Annual (Same Exist)', '3C_rolloff': '3C Annual (Roll-Off)',
+        '3D': '3D Annual (Cross Exist)', '3D_rolloff': '3D Annual (Roll-Off)',
     };
 
     const chartOpts = {
@@ -1127,7 +1172,7 @@
 
     // For a strategy and threshold, compute total new gas GW across all ISOs at each participation level
     function computeGasAtThreshold(strategy, threshold) {
-        const stratData = DEPLOYMENT_DATA.data[strategy];
+        const stratData = DEPLOYMENT_DATA.data[getStrategyDataKey(strategy)];
         if (!stratData) return PARTICIPATION_LEVELS.map(() => 0);
 
         return PARTICIPATION_LEVELS.map(part => {
@@ -1375,7 +1420,7 @@
     });
 
     function getGridCleanAtPart(strat, iso, part, threshold) {
-        const sd = DEPLOYMENT_DATA.data[strat];
+        const sd = DEPLOYMENT_DATA.data[getStrategyDataKey(strat)];
         if (!sd || !sd[iso]) return null;
         const pk = findClosestKey(Object.keys(sd[iso]), part);
         if (!pk || !sd[iso][pk]) return null;
@@ -1387,7 +1432,7 @@
     }
 
     function getDispCO2AtPart(strat, iso, part, threshold) {
-        const sd = DEPLOYMENT_DATA.data[strat];
+        const sd = DEPLOYMENT_DATA.data[getStrategyDataKey(strat)];
         if (!sd || !sd[iso]) return null;
         const pk = findClosestKey(Object.keys(sd[iso]), part);
         if (!pk || !sd[iso][pk]) return null;
@@ -1398,7 +1443,7 @@
     }
 
     function getTotalProcuredAtPart(strat, iso, part, threshold) {
-        const sd = DEPLOYMENT_DATA.data[strat];
+        const sd = DEPLOYMENT_DATA.data[getStrategyDataKey(strat)];
         if (!sd || !sd[iso]) return null;
         const pk = findClosestKey(Object.keys(sd[iso]), part);
         if (!pk || !sd[iso][pk]) return null;

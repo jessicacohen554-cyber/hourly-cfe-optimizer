@@ -342,13 +342,17 @@ def compute_strategy_3b(iso, year, threshold, participation_pct,
 
 def compute_strategy_3c(iso, year, threshold, participation_pct,
                          growth_level='Medium', scenario='A',
-                         level='Medium', ppa_level='Medium', **kwargs):
+                         level='Medium', ppa_level='Medium',
+                         nuclear_policy='stable', **kwargs):
     """Strategy 3C: Annual matching, same-ISO, 4-pool model (same pools as 2C).
 
     Pool 1: SSS (free, pro-rata)
     Pool 2: Non-SSS existing merchant clean (competitive exhaustion)
     Pool 3: Nuclear uprate
     Pool 4: New-build (tranche walk for remaining)
+
+    Args:
+        nuclear_policy: 'stable' or 'rolloff' — controls ZEC/CMC expiration modeling.
     """
     buyer_demand = get_buyer_demand_twh(iso, year, participation_pct, growth_level)
     if buyer_demand <= 0 or threshold <= 0:
@@ -360,7 +364,7 @@ def compute_strategy_3c(iso, year, threshold, participation_pct,
     buyer_share = (buyer_demand / total_demand) if total_demand > 0 else 0.01
 
     # Pool 1: SSS (free)
-    sss_twh = get_sss_twh(iso, year, growth_level)
+    sss_twh = get_sss_twh(iso, year, growth_level, nuclear_policy=nuclear_policy)
     buyer_sss_share = sss_twh * buyer_share
 
     total_clean_needed = buyer_demand * target_fraction
@@ -382,7 +386,7 @@ def compute_strategy_3c(iso, year, threshold, participation_pct,
     left = procurement_twh
 
     # Pool 2: Non-SSS existing merchant clean (competitive exhaustion)
-    merchant_pool = get_merchant_clean_twh(iso, year, growth_level)
+    merchant_pool = get_merchant_clean_twh(iso, year, growth_level, nuclear_policy=nuclear_policy)
     merchant_available = merchant_pool * buyer_share
     merchant_procured = min(left, merchant_available)
 
@@ -476,7 +480,8 @@ def compute_strategy_3c(iso, year, threshold, participation_pct,
 
 def compute_strategy_3d(iso, year, threshold, participation_pct,
                          growth_level='Medium', scenario='A',
-                         level='Medium', ppa_level='Medium', **kwargs):
+                         level='Medium', ppa_level='Medium',
+                         nuclear_policy='stable', **kwargs):
     """Strategy 3D: Annual matching, cross-regional, 4-pool model.
 
     Same 4-pool structure as 2C/3C but cross-regional:
@@ -484,6 +489,9 @@ def compute_strategy_3d(iso, year, threshold, participation_pct,
     Pool 2: Cross-ISO merchant clean (competitive exhaustion, cheapest first)
     Pool 3: Cross-ISO uprates
     Pool 4: Cross-ISO new-build (cheapest $/MWh across regions)
+
+    Args:
+        nuclear_policy: 'stable' or 'rolloff' — controls ZEC/CMC expiration modeling.
     """
     buyer_demand = get_buyer_demand_twh(iso, year, participation_pct, growth_level)
     if buyer_demand <= 0 or threshold <= 0:
@@ -495,7 +503,7 @@ def compute_strategy_3d(iso, year, threshold, participation_pct,
     buyer_share = (buyer_demand / total_demand) if total_demand > 0 else 0.01
 
     # Pool 1: SSS (same-ISO, free)
-    sss_twh = get_sss_twh(iso, year, growth_level)
+    sss_twh = get_sss_twh(iso, year, growth_level, nuclear_policy=nuclear_policy)
     buyer_sss_share = sss_twh * buyer_share
 
     total_clean_needed = buyer_demand * target_fraction
@@ -519,7 +527,7 @@ def compute_strategy_3d(iso, year, threshold, participation_pct,
     # Pool 2: Cross-ISO merchant clean (cheapest across all ISOs)
     merchant_sources = []
     for src_iso in ISOS:
-        m_twh = get_merchant_clean_twh(src_iso, year, growth_level)
+        m_twh = get_merchant_clean_twh(src_iso, year, growth_level, nuclear_policy=nuclear_policy)
         src_demand = get_demand_twh_at_year(src_iso, year, growth_level)
         m_available = m_twh * buyer_share  # competitive share
         eac_price = EXISTING_EAC_PRICE.get(level, 5.0)
@@ -650,7 +658,8 @@ STRATEGY_3_FUNCS = {
 }
 
 
-def run_full_sweep(isos=None, participation_levels=None, growth_levels=None):
+def run_full_sweep(isos=None, participation_levels=None, growth_levels=None,
+                   nuclear_policy='stable'):
     """Run Strategy 3 (all variants) for all ISOs × participation × growth."""
     if isos is None:
         isos = ISOS
@@ -688,6 +697,7 @@ def run_full_sweep(isos=None, participation_levels=None, growth_levels=None):
                             scenario='A',  # Annual always uses Scenario A
                             level='Medium',
                             ppa_level='Medium',
+                            nuclear_policy=nuclear_policy,
                         )
                         result['year'] = year
                         result['demand_twh'] = round(get_demand_twh_at_year(iso, year, growth), 2)
@@ -739,10 +749,13 @@ def main():
     print(f"Scenario: A (delayed learning curve)")
     print()
 
+    # ── Run stable policy (default) ──
+    print("\n── Nuclear Policy: STABLE ──")
     results = run_full_sweep(
         isos=isos,
         participation_levels=participation,
         growth_levels=growth_levels,
+        nuclear_policy='stable',
     )
 
     save_results_json(results, 'strategy3_annual.json')
@@ -757,11 +770,29 @@ def main():
         import traceback; traceback.print_exc()
         print("  (Continuing without dispatch scores)")
 
+    # ── Run rolloff policy (ZEC/CMC expiration sensitivity) ──
+    # Only 3C/3D use SSS, so only those results change.
+    print("\n── Nuclear Policy: ROLLOFF (ZEC/CMC expiration) ──")
+    rolloff_results = run_full_sweep(
+        isos=isos,
+        participation_levels=participation,
+        growth_levels=growth_levels,
+        nuclear_policy='rolloff',
+    )
+
+    # Merge rolloff variants into results
+    results['strategy3C_rolloff'] = rolloff_results.get('strategy3C', {})
+    results['strategy3D_rolloff'] = rolloff_results.get('strategy3D', {})
+
+    # Re-save with rolloff variants included
+    save_results_json(results, 'strategy3_annual.json')
+
     # Summary
     print("\n" + "=" * 70)
     print("SUMMARY: Strategy 3 at 10% participation, Medium growth")
     print("=" * 70)
-    for variant in ['strategy3A', 'strategy3B', 'strategy3C', 'strategy3D']:
+    for variant in ['strategy3A', 'strategy3B', 'strategy3C', 'strategy3C_rolloff',
+                     'strategy3D', 'strategy3D_rolloff']:
         if variant not in results:
             continue
         print(f"\n--- {variant.upper()} ---")
