@@ -424,9 +424,11 @@ def compute_strategy_2c(iso, year, threshold, participation_pct,
     remaining_need = procurement_twh
 
     # Pool 2: Existing merchant clean (competitive exhaustion)
+    # Merchant pool is first-come-first-served, NOT pro-rata like SSS.
+    # At low participation, few buyers share the full pool → plenty of cheap clean.
+    # At high participation, pool exhausts → new-build required → Wright's Law kicks in.
     merchant_pool = get_merchant_clean_twh(iso, year, growth_level, nuclear_policy=nuclear_policy)
-    buyer_share = (buyer_demand / total_demand) if total_demand > 0 else 0.01
-    merchant_available = merchant_pool * buyer_share
+    merchant_available = merchant_pool  # entire pool available to participating buyers
     merchant_procured = min(remaining_need, merchant_available)
 
     if merchant_procured > 0:
