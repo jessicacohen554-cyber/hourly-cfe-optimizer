@@ -141,6 +141,20 @@
                 margin: 0;
             }
             .viz-sidebar { max-height: 360px; }
+            #gridMap { height: 420px; }
+            .map-wrap { border-radius: 0; }
+            .map-legend { margin: 12px 12px 6px; border-radius: var(--radius-md, 8px); padding: 8px 12px; }
+            .stack-chart-wrap { margin: 12px; }
+            .viz-controls { padding: 12px 16px; gap: 12px; }
+        }
+        @media (max-width: 480px) {
+            #gridMap { height: 340px; }
+            .stats-grid { gap: 6px; }
+            .stat-mini { padding: 8px 10px; }
+            .stat-mini-val { font-size: 0.95rem; }
+            .scenario-intro { padding: 16px 12px; }
+            .scenario-cards-row { gap: 10px; }
+            .stack-chart-container { height: 200px; }
         }
 
         /* ── Map container ──────────────────────────────────────── */
@@ -565,6 +579,19 @@
         const LABEL_TO_KEY = {};
         for (const [k, v] of Object.entries(FUEL_LABELS)) { LABEL_TO_KEY[v] = k; }
 
+        // ── Mobile dot scaling ────────────────────────────────────
+        // On small screens the map is compressed — boost dot radii so plants stay visible.
+        // Desktop (>900px): 1.0x. Tablet (600-900px): 1.6x. Phone (<480px): 2.2x.
+        function getDotScale() {
+            const w = window.innerWidth;
+            if (w <= 480) return 2.2;
+            if (w <= 768) return 1.8;
+            if (w <= 900) return 1.4;
+            return 1.0;
+        }
+        let dotScale = getDotScale();
+        window.addEventListener('resize', () => { dotScale = getDotScale(); });
+
         // ── Plant rendering state ─────────────────────────────────
         // Per-plant animated state: { displayRadius, displayOpacity, targetRadius, targetOpacity }
         let plantState = [];
@@ -742,7 +769,7 @@
                 const dx = pt.x - mx;
                 const dy = pt.y - my;
                 const dist = Math.sqrt(dx * dx + dy * dy);
-                const hitR = Math.max(plantState[i].displayRadius * 1.5, 8);
+                const hitR = Math.max(plantState[i].displayRadius * 1.5, dotScale > 1.2 ? 16 : 8);
                 if (dist < hitR && dist < closestDist) {
                     closest = i;
                     closestDist = dist;
@@ -785,11 +812,11 @@
                 const mwNext = output[i][nextHour] || 0;
                 const mw = mwCurr + (mwNext - mwCurr) * interpFrac;
 
-                // Compute targets from MW
+                // Compute targets from MW (scaled for mobile visibility)
                 if (mw > 0.5) {
                     const sqrtMw = Math.sqrt(mw);
-                    ps.targetRadius = Math.min(sqrtMw * 1.5, 30);
-                    ps.targetGlowRadius = Math.min(sqrtMw * 3, 50);
+                    ps.targetRadius = Math.min(sqrtMw * 1.5 * dotScale, 30 * dotScale);
+                    ps.targetGlowRadius = Math.min(sqrtMw * 3 * dotScale, 50 * dotScale);
                     ps.targetOpacity = 1;
                 } else {
                     ps.targetRadius = 0;
@@ -814,10 +841,11 @@
                 const color = FUEL_HEX[fuelKey] || '#9CA3AF';
                 const opacity = ps.displayOpacity;
 
-                // Layer 1: Outer glow (blurred, 10% opacity)
+                // Layer 1: Outer glow (blurred, 10% opacity — boost blur on mobile)
                 if (ps.displayGlowRadius > 1) {
                     ctx.save();
-                    ctx.filter = 'blur(12px)';
+                    const blurPx = dotScale > 1.2 ? 16 : 12;
+                    ctx.filter = `blur(${blurPx}px)`;
                     ctx.globalAlpha = opacity;
                     ctx.beginPath();
                     ctx.arc(x, y, ps.displayGlowRadius, 0, Math.PI * 2);
@@ -844,7 +872,7 @@
                     ctx.beginPath();
                     ctx.arc(x, y, ps.displayRadius, 0, Math.PI * 2);
                     ctx.strokeStyle = color;
-                    ctx.lineWidth = 1.5;
+                    ctx.lineWidth = dotScale > 1.2 ? 2 : 1.5;
                     ctx.stroke();
                     ctx.restore();
                 }
@@ -1103,8 +1131,8 @@
                     const ps = plantState[i];
                     if (mw > 0.5) {
                         const sqrtMw = Math.sqrt(mw);
-                        ps.targetRadius = Math.min(sqrtMw * 1.5, 30);
-                        ps.targetGlowRadius = Math.min(sqrtMw * 3, 50);
+                        ps.targetRadius = Math.min(sqrtMw * 1.5 * dotScale, 30 * dotScale);
+                        ps.targetGlowRadius = Math.min(sqrtMw * 3 * dotScale, 50 * dotScale);
                         ps.targetOpacity = 1;
                     } else {
                         ps.targetRadius = 0;
