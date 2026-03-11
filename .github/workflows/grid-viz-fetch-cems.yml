@@ -1,7 +1,11 @@
 name: "Grid Viz: Fetch CEMS Hourly Data"
 
-# Fetches plant-level hourly emissions + generation data from EPA CAMD API
-# for ERCOT fossil fuel plants. Used by the grid animation visualization.
+# Fetches plant-level hourly emissions + generation data for ERCOT fossil plants.
+# Used by the grid animation visualization.
+#
+# Data sources (tries in order):
+# 1. PUDL bulk Parquet (fastest, no API key) — downloads full year from AWS
+# 2. CAMD Streaming API (fallback) — requires CAMD_API_KEY secret
 #
 # Scenarios: Winter Storm Uri (Feb 2021), Summer 2023 heat dome, Normal spring day
 # Output: grid_viz/data/cems/cems_*.csv
@@ -19,6 +23,14 @@ on:
           - uri_2021
           - summer_2023_heat
           - normal_spring
+      source:
+        description: 'Data source preference'
+        required: true
+        default: 'pudl'
+        type: choice
+        options:
+          - pudl
+          - api
       branch:
         description: 'Branch to checkout'
         required: false
@@ -46,26 +58,31 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install pandas requests
+        run: pip install pandas requests pyarrow
 
       - name: Fetch CEMS data
+        env:
+          CAMD_API_KEY: ${{ secrets.CAMD_API_KEY }}
         run: |
+          NO_PUDL_FLAG=""
+          if [ "${{ inputs.source }}" = "api" ]; then
+            NO_PUDL_FLAG="--no-pudl"
+          fi
+
           if [ "${{ inputs.scenario }}" = "all" ]; then
-            python grid_viz/fetch/fetch_cems_hourly.py
+            python grid_viz/fetch/fetch_cems_hourly.py $NO_PUDL_FLAG
           else
             python -c "
-          import sys
+          import sys, os
           sys.path.insert(0, 'grid_viz')
-          from fetch.fetch_cems_hourly import fetch_cems_hourly
+          from fetch.fetch_cems_hourly import fetch_all_scenarios, fetch_pudl_cems, extract_scenario_from_pudl, load_ercot_oris_codes
           from config import SCENARIO_DAYS, CEMS_DIR
-          import os
 
           os.makedirs(CEMS_DIR, exist_ok=True)
-          scenario = '${{ inputs.scenario }}'
-          info = SCENARIO_DAYS[scenario]
-          begin, end = info['date_range']
-          output_path = os.path.join(CEMS_DIR, f'cems_{scenario}.csv')
-          fetch_cems_hourly(state='TX', begin_date=begin, end_date=end, output_path=output_path)
+          use_pudl = '${{ inputs.source }}' != 'api'
+          results = fetch_all_scenarios(use_pudl=use_pudl)
+          for sid, df in results.items():
+              print(f'{sid}: {len(df)} records')
           "
           fi
 
