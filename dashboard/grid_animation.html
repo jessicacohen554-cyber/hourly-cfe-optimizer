@@ -140,41 +140,27 @@
         .viz-main {
             display: grid;
             grid-template-columns: 1fr 300px;
-            height: 520px;
-            min-height: 420px;
         }
         @media (max-width: 900px) {
             .viz-main {
                 grid-template-columns: 1fr;
-                height: auto;
             }
             .viz-sidebar { max-height: 300px; }
         }
 
-        /* Map container */
+        /* Map container — white/off-white background */
         .map-wrap {
             position: relative;
             overflow: hidden;
-            border-right: 1px solid var(--grid-border);
         }
         #gridMap {
             width: 100%;
-            height: 100%;
-            min-height: 420px;
-            background: #0B1120;
+            height: 560px;
+            background: #F5F5F0;
         }
-        /* Override Leaflet controls for dark theme */
-        .leaflet-control-zoom a {
-            background: #1E293B !important;
-            color: #E5E7EB !important;
-            border-color: var(--grid-border) !important;
-        }
-        .leaflet-control-attribution {
-            background: rgba(17,24,39,0.7) !important;
-            color: var(--grid-muted) !important;
-            font-size: 10px !important;
-        }
-        .leaflet-control-attribution a { color: var(--grid-muted) !important; }
+        /* Hide all Leaflet chrome — no zoom, no attribution on map */
+        .leaflet-control-zoom { display: none !important; }
+        .leaflet-control-attribution { display: none !important; }
 
         /* Map legend overlay */
         .map-legend {
@@ -182,11 +168,11 @@
             bottom: 12px;
             left: 12px;
             z-index: 1000;
-            background: rgba(17,24,39,0.88);
+            background: rgba(255,255,255,0.92);
             backdrop-filter: blur(8px);
             border-radius: 10px;
             padding: 10px 14px;
-            border: 1px solid var(--grid-border);
+            border: 1px solid #E5E7EB;
             display: flex;
             flex-wrap: wrap;
             gap: 6px 14px;
@@ -196,7 +182,7 @@
             align-items: center;
             gap: 5px;
             font-size: 11px;
-            color: #D1D5DB;
+            color: #374151;
         }
         .legend-dot-fuel {
             width: 9px;
@@ -322,28 +308,39 @@
             margin: 0;
         }
 
-        /* Leaflet tooltip styling */
+        /* Leaflet tooltip on white map */
         .plant-tooltip {
             font-family: 'DM Sans', sans-serif;
             font-size: 12px;
             line-height: 1.5;
-            padding: 6px 10px;
-            background: rgba(17,24,39,0.92);
-            color: #E5E7EB;
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-        }
-        .plant-tooltip .fuel-tag {
-            color: var(--grid-muted);
         }
         .leaflet-tooltip.plant-tooltip {
-            background: rgba(17,24,39,0.92);
-            border: 1px solid rgba(255,255,255,0.1);
-            color: #E5E7EB;
+            background: rgba(255,255,255,0.96);
+            border: 1px solid #D1D5DB;
+            color: #1F2937;
+            border-radius: 8px;
+            padding: 6px 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
         }
         .leaflet-tooltip.plant-tooltip::before {
-            border-top-color: rgba(17,24,39,0.92);
+            border-top-color: rgba(255,255,255,0.96);
+        }
+        .plant-tooltip .fuel-tag {
+            color: #6B7280;
+        }
+
+        /* Zone labels on map */
+        .zone-label {
+            background: none !important;
+            border: none !important;
+            box-shadow: none !important;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 11px;
+            font-weight: 600;
+            color: #6B7280;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            white-space: nowrap;
         }
     </style>
 </head>
@@ -402,12 +399,7 @@
             <div class="reserve-badge" id="reserveBadge">—</div>
         </div>
 
-        <!-- Time slider -->
-        <div class="slider-bar">
-            <input type="range" id="hourSlider" min="0" max="263" value="0" step="1">
-        </div>
-
-        <!-- Map + Sidebar -->
+        <!-- Map + Sidebar (slider is BELOW the map now) -->
         <div class="viz-main">
             <div class="map-wrap">
                 <div id="gridMap"></div>
@@ -418,6 +410,11 @@
                     <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#6B7280"></div>Gas</div>
                     <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#374151"></div>Coal</div>
                     <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#0EA5E9"></div>Hydro</div>
+                    <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#EF4444;border:1.5px solid #EF4444;background:none"></div>Interzone flow</div>
+                </div>
+                <!-- Time slider directly below the map -->
+                <div class="slider-bar">
+                    <input type="range" id="hourSlider" min="0" max="263" value="0" step="1">
                 </div>
             </div>
             <div class="viz-sidebar">
@@ -467,8 +464,10 @@
         let playing = false;
         let playInterval = null;
         let speed = 500;
-        let map, plantMarkers = [], zoneLayer = null;
+        let map, plantMarkers = [];
+        let arcLines = [];  // {line, fromId, toId}
         let supplyChart = null;
+        let plantZoneIndex = []; // zone index per plant
         const DATA = GRID_ANIMATION_DATA;
 
         // ── Fuel colors ────────────────────────────────────────────
@@ -483,6 +482,48 @@
             OTHF: 'Other', OFSL: 'Other Fossil',
         };
         const STACK_ORDER = ['NUCLEAR','COAL','GAS','OIL','HYDRO','WIND','SOLAR','BIOMASS','OTHF','OFSL'];
+
+        // ── ERCOT Zone Boundaries (from GeoJSON) ───────────────────
+        const ZONES = [
+            { id: 'COAST', name: 'Coast', color: '#0EA5E9',
+              coords: [[-97.5,27.5],[-95.0,27.5],[-93.8,29.5],[-94.0,30.0],[-95.5,30.5],[-97.0,29.0],[-97.5,27.5]],
+              center: [28.8, -95.7] },
+            { id: 'EAST', name: 'East', color: '#22C55E',
+              coords: [[-95.5,30.5],[-93.8,29.5],[-93.5,31.0],[-94.0,33.5],[-96.0,33.8],[-96.0,31.5],[-95.5,30.5]],
+              center: [31.6, -94.8] },
+            { id: 'FWEST', name: 'Far West', color: '#F97316',
+              coords: [[-104.7,29.5],[-103.0,29.0],[-103.0,31.0],[-103.5,32.0],[-104.7,32.0],[-104.7,29.5]],
+              center: [30.7, -103.8] },
+            { id: 'NORTH', name: 'North', color: '#6366F1',
+              coords: [[-98.5,31.5],[-96.0,31.5],[-96.0,33.8],[-97.5,34.0],[-100.0,34.0],[-100.0,32.5],[-98.5,31.5]],
+              center: [32.9, -98.0] },
+            { id: 'NCENT', name: 'N. Central', color: '#9C27B0',
+              coords: [[-98.5,30.5],[-96.0,30.5],[-96.0,31.5],[-98.5,31.5],[-98.5,30.5]],
+              center: [31.0, -97.3] },
+            { id: 'SOUTH', name: 'South', color: '#E91E63',
+              coords: [[-100.5,27.0],[-97.5,27.5],[-97.0,29.0],[-98.5,30.5],[-100.5,30.0],[-100.5,27.0]],
+              center: [28.7, -99.0] },
+            { id: 'SCENT', name: 'S. Central', color: '#06B6D4',
+              coords: [[-98.5,29.5],[-97.0,29.0],[-95.5,30.5],[-96.0,30.5],[-98.5,30.5],[-98.5,29.5]],
+              center: [29.9, -97.0] },
+            { id: 'WEST', name: 'West', color: '#F59E0B',
+              coords: [[-103.0,29.0],[-100.5,27.0],[-100.5,30.0],[-100.0,32.5],[-100.0,34.0],[-103.5,32.0],[-103.0,31.0],[-103.0,29.0]],
+              center: [30.9, -101.5] },
+        ];
+
+        // ── Interzone Transmission Corridors ───────────────────────
+        // Major transmission paths between ERCOT weather zones
+        const INTERZONE_LINKS = [
+            { from: 'FWEST', to: 'WEST',  label: 'Far West–West' },
+            { from: 'WEST',  to: 'NORTH', label: 'West–North' },
+            { from: 'WEST',  to: 'SOUTH', label: 'West–South' },
+            { from: 'NORTH', to: 'NCENT', label: 'North–N.Central' },
+            { from: 'NORTH', to: 'EAST',  label: 'North–East' },
+            { from: 'NCENT', to: 'SCENT', label: 'N.Central–S.Central' },
+            { from: 'SCENT', to: 'COAST', label: 'S.Central–Coast' },
+            { from: 'SCENT', to: 'SOUTH', label: 'S.Central–South' },
+            { from: 'COAST', to: 'EAST',  label: 'Coast–East' },
+        ];
 
         // ── Elements ───────────────────────────────────────────────
         const els = {
@@ -500,22 +541,214 @@
             annotationPanel: document.getElementById('annotationPanel'),
         };
 
+        // ── Helper: compute bezier arc between two [lat,lng] points ─
+        function computeArc(from, to, numPoints) {
+            numPoints = numPoints || 20;
+            const points = [];
+            // Midpoint with perpendicular offset for curvature
+            const midLat = (from[0] + to[0]) / 2;
+            const midLng = (from[1] + to[1]) / 2;
+            // Perpendicular offset (rotate 90 deg)
+            const dLat = to[0] - from[0];
+            const dLng = to[1] - from[1];
+            const dist = Math.sqrt(dLat * dLat + dLng * dLng);
+            const offset = dist * 0.18; // curvature amount
+            const controlLat = midLat + (-dLng / dist) * offset;
+            const controlLng = midLng + (dLat / dist) * offset;
+
+            for (let i = 0; i <= numPoints; i++) {
+                const t = i / numPoints;
+                const lat = (1-t)*(1-t)*from[0] + 2*(1-t)*t*controlLat + t*t*to[0];
+                const lng = (1-t)*(1-t)*from[1] + 2*(1-t)*t*controlLng + t*t*to[1];
+                points.push([lat, lng]);
+            }
+            return points;
+        }
+
+        // ── Point-in-polygon (ray casting) ─────────────────────────
+        // coords are [lng, lat] pairs (GeoJSON order), point is {lat, lon}
+        function pointInPolygon(lat, lon, coords) {
+            let inside = false;
+            for (let i = 0, j = coords.length - 1; i < coords.length; j = i++) {
+                const xi = coords[i][1], yi = coords[i][0]; // lat, lng
+                const xj = coords[j][1], yj = coords[j][0];
+                if ((yi > lon) !== (yj > lon) &&
+                    lat < (xj - xi) * (lon - yi) / (yj - yi) + xi) {
+                    inside = !inside;
+                }
+            }
+            return inside;
+        }
+
+        // Assign each plant to a zone index (or -1 if none)
+        function assignPlantsToZones() {
+            const plants = DATA.plants;
+            plantZoneIndex = new Array(plants.length);
+            for (let i = 0; i < plants.length; i++) {
+                const p = plants[i];
+                let found = -1;
+                for (let z = 0; z < ZONES.length; z++) {
+                    if (pointInPolygon(p.lat, p.lon, ZONES[z].coords)) {
+                        found = z;
+                        break;
+                    }
+                }
+                // Fallback: nearest centroid
+                if (found === -1) {
+                    let minD = Infinity;
+                    for (let z = 0; z < ZONES.length; z++) {
+                        const dLat = p.lat - ZONES[z].center[0];
+                        const dLon = p.lon - ZONES[z].center[1];
+                        const d = dLat * dLat + dLon * dLon;
+                        if (d < minD) { minD = d; found = z; }
+                    }
+                }
+                plantZoneIndex[i] = found;
+            }
+        }
+
+        // Compute per-zone generation for a given hour
+        function getZoneGeneration(hour) {
+            const sc = DATA.scenarios[currentScenario];
+            if (!sc) return new Float32Array(ZONES.length);
+            const output = sc.output;
+            const zoneMw = new Float32Array(ZONES.length);
+            for (let i = 0; i < DATA.plants.length; i++) {
+                const z = plantZoneIndex[i];
+                if (z >= 0) zoneMw[z] += (output[i][hour] || 0);
+            }
+            return zoneMw;
+        }
+
+        // Update arc appearance based on zone generation differential
+        function updateArcs(hour) {
+            const zoneMw = getZoneGeneration(hour);
+            // Total system gen for normalization
+            let totalGen = 0;
+            for (let z = 0; z < zoneMw.length; z++) totalGen += zoneMw[z];
+            if (totalGen < 1) totalGen = 1;
+
+            for (const arc of arcLines) {
+                const fromIdx = ZONES.findIndex(z => z.id === arc.fromId);
+                const toIdx = ZONES.findIndex(z => z.id === arc.toId);
+                if (fromIdx < 0 || toIdx < 0) continue;
+
+                const fromMw = zoneMw[fromIdx];
+                const toMw = zoneMw[toIdx];
+                const diff = Math.abs(fromMw - toMw);
+                // Normalized flow intensity: 0–1 (capped)
+                const intensity = Math.min(diff / (totalGen * 0.15), 1.0);
+
+                // Width: 1–6 based on flow
+                const weight = 1 + intensity * 5;
+                // Opacity: 0.12 (idle) to 0.7 (max flow)
+                const opacity = 0.12 + intensity * 0.58;
+                // Color: shift from grey (idle) to red (active flow)
+                const r = Math.round(107 + intensity * 132); // 107→239
+                const g = Math.round(114 - intensity * 46);  // 114→68
+                const b = Math.round(128 - intensity * 60);  // 128→68
+                const color = `rgb(${r},${g},${b})`;
+
+                arc.line.setStyle({
+                    weight: weight,
+                    opacity: opacity,
+                    color: color,
+                    dashArray: intensity > 0.3 ? null : '6,4',
+                });
+
+                // Update tooltip with flow info
+                const flowDir = fromMw > toMw
+                    ? `${ZONES[fromIdx].name} → ${ZONES[toIdx].name}`
+                    : `${ZONES[toIdx].name} → ${ZONES[fromIdx].name}`;
+                arc.line.setTooltipContent(
+                    `<b>${arc.label}</b><br>` +
+                    `Flow: ${flowDir}<br>` +
+                    `Differential: ${Math.round(diff).toLocaleString()} MW`
+                );
+            }
+        }
+
         // ── Initialize Map ─────────────────────────────────────────
         function initMap() {
+            // ERCOT bounding box (padded)
+            const ercotBounds = L.latLngBounds(
+                [26.0, -105.5],  // SW corner
+                [34.8, -93.0]    // NE corner
+            );
+
             map = L.map('gridMap', {
-                center: [31.5, -99.0],
+                center: [30.8, -99.0],
                 zoom: 6,
-                zoomControl: true,
+                zoomControl: false,
+                dragging: false,
+                touchZoom: false,
+                scrollWheelZoom: false,
+                doubleClickZoom: false,
+                boxZoom: false,
+                keyboard: false,
                 preferCanvas: true,
-                attributionControl: true,
+                attributionControl: false,
+                maxBounds: ercotBounds,
+                maxBoundsViscosity: 1.0,
             });
 
-            // Dark tile layer (free, no API key)
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
-                subdomains: 'abcd',
-                maxZoom: 19,
-            }).addTo(map);
+            // Fit to ERCOT territory
+            map.fitBounds(ercotBounds);
+
+            // NO tile layer — just the white CSS background (#F5F5F0)
+
+            // Draw zone polygons
+            const zoneById = {};
+            for (const z of ZONES) {
+                // Leaflet uses [lat, lng] — GeoJSON coords are [lng, lat]
+                const latLngs = z.coords.map(c => [c[1], c[0]]);
+                const poly = L.polygon(latLngs, {
+                    fillColor: z.color,
+                    fillOpacity: 0.06,
+                    color: z.color,
+                    weight: 1.5,
+                    opacity: 0.35,
+                    dashArray: '4,3',
+                });
+                poly.addTo(map);
+                zoneById[z.id] = z;
+
+                // Zone label
+                L.marker(z.center, {
+                    icon: L.divIcon({
+                        className: 'zone-label',
+                        html: z.name,
+                        iconSize: [80, 16],
+                        iconAnchor: [40, 8],
+                    }),
+                    interactive: false,
+                }).addTo(map);
+            }
+
+            // Draw interzone arcs (animated based on zone generation differential)
+            for (const link of INTERZONE_LINKS) {
+                const fromZ = zoneById[link.from];
+                const toZ = zoneById[link.to];
+                if (!fromZ || !toZ) continue;
+
+                const arcPts = computeArc(fromZ.center, toZ.center, 24);
+                const line = L.polyline(arcPts, {
+                    color: '#6B7280',
+                    weight: 1,
+                    opacity: 0.12,
+                    dashArray: '6,4',
+                });
+                line.bindTooltip(link.label, {
+                    className: 'plant-tooltip',
+                    direction: 'center',
+                    permanent: false,
+                });
+                line.addTo(map);
+                arcLines.push({ line, fromId: link.from, toId: link.to, label: link.label });
+            }
+
+            // Assign plants to zones for flow computation
+            assignPlantsToZones();
 
             // Create markers for all plants
             const plants = DATA.plants;
@@ -525,10 +758,9 @@
                 const marker = L.circleMarker([p.lat, p.lon], {
                     radius: 1,
                     fillColor: `rgb(${p.r},${p.g},${p.b})`,
-                    color: `rgba(${p.r},${p.g},${p.b},0.4)`,
+                    color: `rgba(${p.r},${p.g},${p.b},0.5)`,
                     weight: 1,
                     fillOpacity: 0.15,
-                    className: '',
                 });
                 marker.bindTooltip('', {
                     className: 'plant-tooltip',
@@ -559,20 +791,18 @@
                 const mw = output[i][hour] || 0;
                 const marker = plantMarkers[i];
 
-                // Radius: sqrt scaling, 1–14px
                 let r, opacity;
                 if (mw > 0) {
                     r = 2 + 12 * Math.pow(mw / maxMw, 0.5);
-                    opacity = 0.75;
+                    opacity = 0.8;
                 } else {
-                    r = 1;
-                    opacity = 0.12;
+                    r = 1.5;
+                    opacity = 0.08;
                 }
 
                 marker.setRadius(r);
                 marker.setStyle({ fillOpacity: opacity });
 
-                // Update tooltip content
                 marker.setTooltipContent(
                     `<b>${p.name}</b><br>` +
                     `<span class="fuel-tag">Fuel:</span> ${p.label}<br>` +
@@ -643,8 +873,6 @@
                                 label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y?.toLocaleString() || 0} MW`,
                             },
                         },
-                        // Current hour indicator via annotation plugin (simple vertical line)
-                        annotation: undefined,
                     },
                 },
             });
@@ -654,10 +882,8 @@
             const sc = DATA.scenarios[currentScenario];
             if (!sc || !supplyChart) return;
 
-            // Labels = datetime strings, shortened
             const labels = sc.hours.map(h => {
                 if (!h) return '';
-                // Format: "Feb 15 12:00" from "2021-02-15 12:00:00"
                 const d = new Date(h.replace(' ', 'T'));
                 if (isNaN(d)) return h.slice(5, 16);
                 const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -681,7 +907,7 @@
                 }
             }
 
-            // Demand line (not stacked — separate from supply stack)
+            // Demand line (not stacked)
             datasets.push({
                 label: 'Demand',
                 data: sc.demand,
@@ -707,12 +933,9 @@
             const ctx = chart.ctx;
             const xScale = chart.scales.x;
             const yScale = chart.scales.y;
-
             if (!xScale || !yScale) return;
-
             const x = xScale.getPixelForValue(hour);
             if (x === undefined || isNaN(x)) return;
-
             ctx.save();
             ctx.beginPath();
             ctx.moveTo(x, yScale.top);
@@ -739,7 +962,6 @@
             els.statRen.innerHTML = `${Math.round(ren).toLocaleString()}<span class="stat-mini-unit">MW</span>`;
             els.statFossil.innerHTML = `${Math.round(fos).toLocaleString()}<span class="stat-mini-unit">MW</span>`;
 
-            // CO2 from stack
             let totalCo2 = 0;
             if (sc.stackCo2) {
                 for (const fuel in sc.stackCo2) {
@@ -748,10 +970,8 @@
             }
             els.statCo2.innerHTML = `${Math.round(totalCo2).toLocaleString()}<span class="stat-mini-unit">tons/hr</span>`;
 
-            // Time display
             els.timeDisplay.textContent = sc.hours[hour] || '—';
 
-            // Reserve badge
             const reserveMw = gen - demand;
             const reservePct = demand > 0 ? (reserveMw / demand * 100) : 0;
             let status, color;
@@ -786,7 +1006,6 @@
 
             els.annotationPanel.innerHTML = html;
 
-            // Scroll active annotation into view
             const activeEl = els.annotationPanel.querySelector('.annotation-block.active');
             if (activeEl) {
                 activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -797,13 +1016,12 @@
         function update(hour) {
             currentHour = hour;
             updateMap(hour);
+            updateArcs(hour);
             updateStats(hour);
             updateAnnotations(hour);
 
-            // Redraw supply chart "now" line
             if (supplyChart) {
                 supplyChart.update('none');
-                // Use afterDraw to overlay the line
                 drawNowLine(hour);
             }
         }
@@ -819,21 +1037,15 @@
             els.slider.value = 0;
             currentHour = 0;
 
-            // Update select
             els.scenarioSelect.value = scenarioId;
 
-            // Update cards
             document.querySelectorAll('.scenario-pick').forEach(card => {
                 card.classList.toggle('selected', card.dataset.scenario === scenarioId);
             });
 
-            // Rebuild supply chart
             updateSupplyChart();
-
-            // Update display
             update(0);
 
-            // Stop playback
             if (playing) togglePlay();
         }
 
@@ -883,14 +1095,13 @@
             }
         });
 
-        // Scenario card clicks
         document.querySelectorAll('.scenario-pick').forEach(card => {
             card.addEventListener('click', () => {
                 switchScenario(card.dataset.scenario);
             });
         });
 
-        // After chart render, add the "now" line overlay
+        // "Now" line plugin for Chart.js
         const nowLinePlugin = {
             id: 'nowLine',
             afterDraw(chart) {
