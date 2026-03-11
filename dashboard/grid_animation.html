@@ -162,27 +162,20 @@
         .leaflet-control-zoom { display: none !important; }
         .leaflet-control-attribution { display: none !important; }
 
-        /* Map legend overlay */
+        /* Map legend — above map, not overlaid */
         .map-legend {
-            position: absolute;
-            bottom: 12px;
-            left: 12px;
-            z-index: 1000;
-            background: rgba(255,255,255,0.92);
-            backdrop-filter: blur(8px);
-            border-radius: 10px;
-            padding: 10px 14px;
-            border: 1px solid #E5E7EB;
             display: flex;
             flex-wrap: wrap;
-            gap: 6px 14px;
+            gap: 6px 16px;
+            padding: 8px 24px;
+            background: rgba(30,41,59,0.6);
         }
         .legend-item-fuel {
             display: flex;
             align-items: center;
             gap: 5px;
             font-size: 11px;
-            color: #374151;
+            color: #D1D5DB;
         }
         .legend-dot-fuel {
             width: 9px;
@@ -399,19 +392,20 @@
             <div class="reserve-badge" id="reserveBadge">—</div>
         </div>
 
-        <!-- Map + Sidebar (slider is BELOW the map now) -->
+        <!-- Legend above map -->
+        <div class="map-legend">
+            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#F59E0B"></div>Solar</div>
+            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#22C55E"></div>Wind</div>
+            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#6366F1"></div>Nuclear</div>
+            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#6B7280"></div>Gas</div>
+            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#374151"></div>Coal</div>
+            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#0EA5E9"></div>Hydro</div>
+        </div>
+
+        <!-- Map + Sidebar -->
         <div class="viz-main">
             <div class="map-wrap">
                 <div id="gridMap"></div>
-                <div class="map-legend">
-                    <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#F59E0B"></div>Solar</div>
-                    <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#22C55E"></div>Wind</div>
-                    <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#6366F1"></div>Nuclear</div>
-                    <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#6B7280"></div>Gas</div>
-                    <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#374151"></div>Coal</div>
-                    <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#0EA5E9"></div>Hydro</div>
-                    <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#EF4444;border:1.5px solid #EF4444;background:none"></div>Interzone flow</div>
-                </div>
                 <!-- Time slider directly below the map -->
                 <div class="slider-bar">
                     <input type="range" id="hourSlider" min="0" max="263" value="0" step="1">
@@ -465,9 +459,7 @@
         let playInterval = null;
         let speed = 500;
         let map, plantMarkers = [];
-        let arcLines = [];  // {line, fromId, toId}
         let supplyChart = null;
-        let plantZoneIndex = []; // zone index per plant
         const DATA = GRID_ANIMATION_DATA;
 
         // ── Fuel colors ────────────────────────────────────────────
@@ -511,20 +503,6 @@
               center: [30.9, -101.5] },
         ];
 
-        // ── Interzone Transmission Corridors ───────────────────────
-        // Major transmission paths between ERCOT weather zones
-        const INTERZONE_LINKS = [
-            { from: 'FWEST', to: 'WEST',  label: 'Far West–West' },
-            { from: 'WEST',  to: 'NORTH', label: 'West–North' },
-            { from: 'WEST',  to: 'SOUTH', label: 'West–South' },
-            { from: 'NORTH', to: 'NCENT', label: 'North–N.Central' },
-            { from: 'NORTH', to: 'EAST',  label: 'North–East' },
-            { from: 'NCENT', to: 'SCENT', label: 'N.Central–S.Central' },
-            { from: 'SCENT', to: 'COAST', label: 'S.Central–Coast' },
-            { from: 'SCENT', to: 'SOUTH', label: 'S.Central–South' },
-            { from: 'COAST', to: 'EAST',  label: 'Coast–East' },
-        ];
-
         // ── Elements ───────────────────────────────────────────────
         const els = {
             slider: document.getElementById('hourSlider'),
@@ -540,133 +518,6 @@
             statCo2: document.getElementById('statCo2'),
             annotationPanel: document.getElementById('annotationPanel'),
         };
-
-        // ── Helper: compute bezier arc between two [lat,lng] points ─
-        function computeArc(from, to, numPoints) {
-            numPoints = numPoints || 20;
-            const points = [];
-            // Midpoint with perpendicular offset for curvature
-            const midLat = (from[0] + to[0]) / 2;
-            const midLng = (from[1] + to[1]) / 2;
-            // Perpendicular offset (rotate 90 deg)
-            const dLat = to[0] - from[0];
-            const dLng = to[1] - from[1];
-            const dist = Math.sqrt(dLat * dLat + dLng * dLng);
-            const offset = dist * 0.18; // curvature amount
-            const controlLat = midLat + (-dLng / dist) * offset;
-            const controlLng = midLng + (dLat / dist) * offset;
-
-            for (let i = 0; i <= numPoints; i++) {
-                const t = i / numPoints;
-                const lat = (1-t)*(1-t)*from[0] + 2*(1-t)*t*controlLat + t*t*to[0];
-                const lng = (1-t)*(1-t)*from[1] + 2*(1-t)*t*controlLng + t*t*to[1];
-                points.push([lat, lng]);
-            }
-            return points;
-        }
-
-        // ── Point-in-polygon (ray casting) ─────────────────────────
-        // coords are [lng, lat] pairs (GeoJSON order), point is {lat, lon}
-        function pointInPolygon(lat, lon, coords) {
-            let inside = false;
-            for (let i = 0, j = coords.length - 1; i < coords.length; j = i++) {
-                const xi = coords[i][1], yi = coords[i][0]; // lat, lng
-                const xj = coords[j][1], yj = coords[j][0];
-                if ((yi > lon) !== (yj > lon) &&
-                    lat < (xj - xi) * (lon - yi) / (yj - yi) + xi) {
-                    inside = !inside;
-                }
-            }
-            return inside;
-        }
-
-        // Assign each plant to a zone index (or -1 if none)
-        function assignPlantsToZones() {
-            const plants = DATA.plants;
-            plantZoneIndex = new Array(plants.length);
-            for (let i = 0; i < plants.length; i++) {
-                const p = plants[i];
-                let found = -1;
-                for (let z = 0; z < ZONES.length; z++) {
-                    if (pointInPolygon(p.lat, p.lon, ZONES[z].coords)) {
-                        found = z;
-                        break;
-                    }
-                }
-                // Fallback: nearest centroid
-                if (found === -1) {
-                    let minD = Infinity;
-                    for (let z = 0; z < ZONES.length; z++) {
-                        const dLat = p.lat - ZONES[z].center[0];
-                        const dLon = p.lon - ZONES[z].center[1];
-                        const d = dLat * dLat + dLon * dLon;
-                        if (d < minD) { minD = d; found = z; }
-                    }
-                }
-                plantZoneIndex[i] = found;
-            }
-        }
-
-        // Compute per-zone generation for a given hour
-        function getZoneGeneration(hour) {
-            const sc = DATA.scenarios[currentScenario];
-            if (!sc) return new Float32Array(ZONES.length);
-            const output = sc.output;
-            const zoneMw = new Float32Array(ZONES.length);
-            for (let i = 0; i < DATA.plants.length; i++) {
-                const z = plantZoneIndex[i];
-                if (z >= 0) zoneMw[z] += (output[i][hour] || 0);
-            }
-            return zoneMw;
-        }
-
-        // Update arc appearance based on zone generation differential
-        function updateArcs(hour) {
-            const zoneMw = getZoneGeneration(hour);
-            // Total system gen for normalization
-            let totalGen = 0;
-            for (let z = 0; z < zoneMw.length; z++) totalGen += zoneMw[z];
-            if (totalGen < 1) totalGen = 1;
-
-            for (const arc of arcLines) {
-                const fromIdx = ZONES.findIndex(z => z.id === arc.fromId);
-                const toIdx = ZONES.findIndex(z => z.id === arc.toId);
-                if (fromIdx < 0 || toIdx < 0) continue;
-
-                const fromMw = zoneMw[fromIdx];
-                const toMw = zoneMw[toIdx];
-                const diff = Math.abs(fromMw - toMw);
-                // Normalized flow intensity: 0–1 (capped)
-                const intensity = Math.min(diff / (totalGen * 0.15), 1.0);
-
-                // Width: 1–6 based on flow
-                const weight = 1 + intensity * 5;
-                // Opacity: 0.12 (idle) to 0.7 (max flow)
-                const opacity = 0.12 + intensity * 0.58;
-                // Color: shift from grey (idle) to red (active flow)
-                const r = Math.round(107 + intensity * 132); // 107→239
-                const g = Math.round(114 - intensity * 46);  // 114→68
-                const b = Math.round(128 - intensity * 60);  // 128→68
-                const color = `rgb(${r},${g},${b})`;
-
-                arc.line.setStyle({
-                    weight: weight,
-                    opacity: opacity,
-                    color: color,
-                    dashArray: intensity > 0.3 ? null : '6,4',
-                });
-
-                // Update tooltip with flow info
-                const flowDir = fromMw > toMw
-                    ? `${ZONES[fromIdx].name} → ${ZONES[toIdx].name}`
-                    : `${ZONES[toIdx].name} → ${ZONES[fromIdx].name}`;
-                arc.line.setTooltipContent(
-                    `<b>${arc.label}</b><br>` +
-                    `Flow: ${flowDir}<br>` +
-                    `Differential: ${Math.round(diff).toLocaleString()} MW`
-                );
-            }
-        }
 
         // ── Initialize Map ─────────────────────────────────────────
         function initMap() {
@@ -695,23 +546,23 @@
             // Fit to ERCOT territory
             map.fitBounds(ercotBounds);
 
-            // NO tile layer — just the white CSS background (#F5F5F0)
+            // Light tile layer — shows Texas geography
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+                subdomains: 'abcd',
+                maxZoom: 19,
+            }).addTo(map);
 
             // Draw zone polygons
-            const zoneById = {};
             for (const z of ZONES) {
-                // Leaflet uses [lat, lng] — GeoJSON coords are [lng, lat]
                 const latLngs = z.coords.map(c => [c[1], c[0]]);
-                const poly = L.polygon(latLngs, {
+                L.polygon(latLngs, {
                     fillColor: z.color,
                     fillOpacity: 0.06,
                     color: z.color,
                     weight: 1.5,
                     opacity: 0.35,
                     dashArray: '4,3',
-                });
-                poly.addTo(map);
-                zoneById[z.id] = z;
+                }).addTo(map);
 
                 // Zone label
                 L.marker(z.center, {
@@ -724,31 +575,6 @@
                     interactive: false,
                 }).addTo(map);
             }
-
-            // Draw interzone arcs (animated based on zone generation differential)
-            for (const link of INTERZONE_LINKS) {
-                const fromZ = zoneById[link.from];
-                const toZ = zoneById[link.to];
-                if (!fromZ || !toZ) continue;
-
-                const arcPts = computeArc(fromZ.center, toZ.center, 24);
-                const line = L.polyline(arcPts, {
-                    color: '#6B7280',
-                    weight: 1,
-                    opacity: 0.12,
-                    dashArray: '6,4',
-                });
-                line.bindTooltip(link.label, {
-                    className: 'plant-tooltip',
-                    direction: 'center',
-                    permanent: false,
-                });
-                line.addTo(map);
-                arcLines.push({ line, fromId: link.from, toId: link.to, label: link.label });
-            }
-
-            // Assign plants to zones for flow computation
-            assignPlantsToZones();
 
             // Create markers for all plants
             const plants = DATA.plants;
@@ -1016,7 +842,6 @@
         function update(hour) {
             currentHour = hour;
             updateMap(hour);
-            updateArcs(hour);
             updateStats(hour);
             updateAnnotations(hour);
 
