@@ -695,6 +695,13 @@
         // Per-plant animated state: { displayRadius, displayOpacity, targetRadius, targetOpacity }
         let plantState = [];
 
+        // Draw order: coal on bottom → gas → nuclear → wind → solar → battery on top
+        const DRAW_ORDER_PRIORITY = {
+            COAL: 0, OIL: 1, GAS: 2, OTHF: 3, OFSL: 3, BIOMASS: 4,
+            NUCLEAR: 5, HYDRO: 6, WIND: 7, SOLAR: 8, BATTERY: 9,
+        };
+        let plantDrawOrder = []; // indices sorted by draw priority
+
         function getFuelKey(plant) {
             // Try matching label to key, fall back to matching r,g,b
             if (plant.fuelKey) return plant.fuelKey;
@@ -823,9 +830,10 @@
                 maxZoom: 19,
             }).addTo(map);
 
-            // Init plant state array
+            // Init plant state array + draw order (coal bottom → battery top)
             const plants = DATA.plants;
             plantState = new Array(plants.length);
+            plantDrawOrder = [];
             for (let i = 0; i < plants.length; i++) {
                 plantState[i] = {
                     displayRadius: 0,
@@ -835,7 +843,14 @@
                     displayGlowRadius: 0,
                     targetGlowRadius: 0,
                 };
+                plantDrawOrder.push(i);
             }
+            // Sort so coal draws first (behind), battery draws last (on top)
+            plantDrawOrder.sort((a, b) => {
+                const fA = getFuelKey(plants[a]);
+                const fB = getFuelKey(plants[b]);
+                return (DRAW_ORDER_PRIORITY[fA] || 0) - (DRAW_ORDER_PRIORITY[fB] || 0);
+            });
 
             syncCanvas();
             map.on('moveend', syncCanvas);
@@ -897,7 +912,8 @@
             const nextHour = Math.min(currentHour + 1, sc.hours.length - 1);
             const dt16 = 16.67; // approx frame ms for easing
 
-            for (let i = 0; i < plants.length; i++) {
+            for (let di = 0; di < plantDrawOrder.length; di++) {
+                const i = plantDrawOrder[di];
                 const p = plants[i];
                 const ps = plantState[i];
                 const mwCurr = output[i][currentHour] || 0;
