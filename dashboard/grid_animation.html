@@ -9,217 +9,438 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles/shared.css">
     <link rel="stylesheet" href="styles/scrollytell.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script src="js/nav.js"></script>
     <script src="js/chart-colors.js"></script>
     <script src="js/shared-header.js"></script>
     <script src="js/scroll-observer.js"></script>
     <style>
-        .launch-section {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: var(--space-2xl) var(--pad-page);
+        :root {
+            --grid-bg: #111827;
+            --grid-surface: rgba(255,255,255,0.03);
+            --grid-border: rgba(255,255,255,0.06);
+            --grid-text: #E5E7EB;
+            --grid-muted: #9CA3AF;
         }
-        .launch-card {
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: var(--radius-lg);
-            padding: var(--space-2xl);
-            text-align: center;
-            backdrop-filter: blur(8px);
+
+        .grid-viz-wrapper {
+            background: var(--grid-bg);
+            color: var(--grid-text);
+            min-height: 100vh;
         }
-        .launch-card h2 {
-            font-family: var(--font-heading);
-            font-size: 1.8rem;
-            font-weight: 800;
-            margin-bottom: var(--space-md);
-            background: linear-gradient(90deg, #22C55E, #0EA5E9);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .launch-card p {
-            color: var(--text-muted);
-            font-size: 1rem;
-            line-height: 1.7;
-            max-width: 600px;
-            margin: 0 auto var(--space-lg);
-        }
-        .launch-btn {
-            display: inline-flex;
+
+        /* Controls bar */
+        .viz-controls {
+            display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 14px 32px;
-            background: linear-gradient(135deg, #22C55E, #0EA5E9);
-            color: white;
-            font-family: var(--font-heading);
-            font-weight: 700;
-            font-size: 1rem;
-            border: none;
-            border-radius: var(--radius-pill);
+            gap: 16px;
+            padding: 12px 24px;
+            background: rgba(30,41,59,0.9);
+            border-bottom: 1px solid var(--grid-border);
+            flex-wrap: wrap;
+        }
+        .viz-controls label {
+            font-size: 11px;
+            color: var(--grid-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            display: block;
+            margin-bottom: 2px;
+        }
+        .scenario-select {
+            padding: 7px 12px;
+            background: #1E293B;
+            border: 1px solid var(--grid-border);
+            border-radius: var(--radius-sm);
+            color: var(--grid-text);
+            font-family: var(--font-body);
+            font-size: 13px;
             cursor: pointer;
-            text-decoration: none;
-            transition: transform 0.2s, box-shadow 0.2s;
         }
-        .launch-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(34, 197, 94, 0.3);
-        }
-        .scenario-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: var(--space-lg);
-            margin-top: var(--space-2xl);
-        }
-        .scenario-card {
-            background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(255,255,255,0.06);
-            border-radius: var(--radius-md);
-            padding: var(--space-lg);
-            text-align: left;
-        }
-        .scenario-card h3 {
-            font-family: var(--font-heading);
-            font-size: 1rem;
-            font-weight: 700;
-            margin-bottom: var(--space-sm);
-        }
-        .scenario-card p {
-            color: var(--text-muted);
-            font-size: 0.85rem;
-            line-height: 1.6;
-            margin: 0;
-        }
-        .scenario-card .date-badge {
-            display: inline-block;
-            padding: 2px 10px;
+        .play-btn {
+            padding: 7px 18px;
+            border-radius: var(--radius-sm);
+            border: 1px solid rgba(34,197,94,0.4);
             background: rgba(34,197,94,0.1);
             color: #22C55E;
-            border-radius: var(--radius-pill);
-            font-size: 0.75rem;
+            cursor: pointer;
             font-weight: 600;
-            margin-bottom: var(--space-sm);
+            font-size: 14px;
+            font-family: var(--font-body);
+            transition: background 0.2s;
         }
-        .scenario-card.danger .date-badge {
-            background: rgba(239,68,68,0.1);
-            color: #EF4444;
+        .play-btn:hover { background: rgba(34,197,94,0.2); }
+        .speed-select {
+            padding: 7px 10px;
+            background: #1E293B;
+            border: 1px solid var(--grid-border);
+            border-radius: var(--radius-sm);
+            color: var(--grid-text);
+            font-family: var(--font-body);
+            font-size: 13px;
         }
-        .scenario-card.warning .date-badge {
-            background: rgba(245,158,11,0.1);
-            color: #F59E0B;
+        .time-display {
+            font-size: 18px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', var(--font-mono);
+            color: #F8FAFC;
+            margin-left: auto;
         }
-        .feature-list {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: var(--space-md) var(--space-xl);
-            max-width: 700px;
-            margin: var(--space-xl) auto 0;
-            text-align: left;
+        .reserve-badge {
+            padding: 6px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
         }
-        .feature-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
+
+        /* Time slider */
+        .slider-bar {
+            padding: 8px 24px 0;
+            background: var(--grid-bg);
         }
-        .feature-dot {
-            width: 8px;
-            height: 8px;
+        .slider-bar input[type=range] {
+            width: 100%;
+            -webkit-appearance: none;
+            background: transparent;
+            cursor: pointer;
+        }
+        .slider-bar input[type=range]::-webkit-slider-runnable-track {
+            height: 6px;
+            background: linear-gradient(90deg, #22C55E 0%, #0EA5E9 50%, #E91E63 100%);
+            border-radius: 3px;
+        }
+        .slider-bar input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
             border-radius: 50%;
-            margin-top: 6px;
+            background: #F8FAFC;
+            border: 2px solid #22C55E;
+            margin-top: -6px;
+            box-shadow: 0 0 8px rgba(34,197,94,0.4);
+        }
+        .slider-bar input[type=range]::-moz-range-track {
+            height: 6px;
+            background: linear-gradient(90deg, #22C55E, #0EA5E9, #E91E63);
+            border-radius: 3px;
+        }
+        .slider-bar input[type=range]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #F8FAFC;
+            border: 2px solid #22C55E;
+            box-shadow: 0 0 8px rgba(34,197,94,0.4);
+        }
+
+        /* Main layout: map + sidebar */
+        .viz-main {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            height: 520px;
+            min-height: 420px;
+        }
+        @media (max-width: 900px) {
+            .viz-main {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+            .viz-sidebar { max-height: 300px; }
+        }
+
+        /* Map container */
+        .map-wrap {
+            position: relative;
+            overflow: hidden;
+            border-right: 1px solid var(--grid-border);
+        }
+        #gridMap {
+            width: 100%;
+            height: 100%;
+            min-height: 420px;
+            background: #0B1120;
+        }
+        /* Override Leaflet controls for dark theme */
+        .leaflet-control-zoom a {
+            background: #1E293B !important;
+            color: #E5E7EB !important;
+            border-color: var(--grid-border) !important;
+        }
+        .leaflet-control-attribution {
+            background: rgba(17,24,39,0.7) !important;
+            color: var(--grid-muted) !important;
+            font-size: 10px !important;
+        }
+        .leaflet-control-attribution a { color: var(--grid-muted) !important; }
+
+        /* Map legend overlay */
+        .map-legend {
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            z-index: 1000;
+            background: rgba(17,24,39,0.88);
+            backdrop-filter: blur(8px);
+            border-radius: 10px;
+            padding: 10px 14px;
+            border: 1px solid var(--grid-border);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 14px;
+        }
+        .legend-item-fuel {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11px;
+            color: #D1D5DB;
+        }
+        .legend-dot-fuel {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
             flex-shrink: 0;
         }
-        @media (max-width: 768px) {
-            .feature-list { grid-template-columns: 1fr; }
+
+        /* Sidebar */
+        .viz-sidebar {
+            background: rgba(15,23,42,0.97);
+            padding: 16px;
+            overflow-y: auto;
+            border-left: 1px solid var(--grid-border);
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .stat-mini {
+            background: var(--grid-surface);
+            border-radius: 8px;
+            padding: 8px 10px;
+            border: 1px solid var(--grid-border);
+        }
+        .stat-mini-label {
+            font-size: 10px;
+            color: var(--grid-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .stat-mini-val {
+            font-size: 17px;
+            font-weight: 700;
+            margin-top: 2px;
+        }
+        .stat-mini-unit {
+            font-size: 11px;
+            color: #6B7280;
+            margin-left: 2px;
+        }
+
+        /* Annotations */
+        .annotation-block {
+            padding: 8px 10px;
+            margin-bottom: 6px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.02);
+            border-left: 3px solid rgba(255,255,255,0.1);
+            transition: all 0.3s ease;
+        }
+        .annotation-block.active {
+            background: rgba(34,197,94,0.1);
+            border-left-color: #22C55E;
+        }
+        .annotation-time {
+            font-size: 11px;
+            color: var(--grid-muted);
+            font-weight: 600;
+        }
+        .annotation-text {
+            font-size: 12px;
+            margin-top: 3px;
+            line-height: 1.55;
+        }
+
+        /* Supply stack chart */
+        .stack-chart-wrap {
+            padding: 16px 24px 24px;
+            background: var(--grid-bg);
+        }
+        .stack-chart-container {
+            height: 220px;
+            position: relative;
+        }
+
+        /* Scenario intro cards */
+        .scenario-intro {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--space-xl) var(--pad-page);
+        }
+        .scenario-cards-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: var(--space-md);
+            margin-top: var(--space-lg);
+        }
+        .scenario-pick {
+            background: var(--grid-surface);
+            border: 1px solid var(--grid-border);
+            border-radius: var(--radius-md);
+            padding: var(--space-md);
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .scenario-pick:hover, .scenario-pick.selected {
+            border-color: rgba(34,197,94,0.5);
+            background: rgba(34,197,94,0.05);
+        }
+        .scenario-pick .badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: var(--radius-pill);
+            font-size: 11px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .badge-danger { background: rgba(239,68,68,0.12); color: #EF4444; }
+        .badge-warning { background: rgba(245,158,11,0.12); color: #F59E0B; }
+        .badge-success { background: rgba(34,197,94,0.12); color: #22C55E; }
+        .scenario-pick h3 {
+            font-family: var(--font-heading);
+            font-size: 1rem;
+            font-weight: 700;
+            margin: 4px 0;
+        }
+        .scenario-pick p {
+            color: var(--grid-muted);
+            font-size: 0.82rem;
+            line-height: 1.55;
+            margin: 0;
+        }
+
+        /* Leaflet tooltip styling */
+        .plant-tooltip {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 12px;
+            line-height: 1.5;
+            padding: 6px 10px;
+            background: rgba(17,24,39,0.92);
+            color: #E5E7EB;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+        .plant-tooltip .fuel-tag {
+            color: var(--grid-muted);
+        }
+        .leaflet-tooltip.plant-tooltip {
+            background: rgba(17,24,39,0.92);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #E5E7EB;
+        }
+        .leaflet-tooltip.plant-tooltip::before {
+            border-top-color: rgba(17,24,39,0.92);
         }
     </style>
 </head>
 <body>
     <nav id="topNav"></nav>
 
-    <div class="header" id="pageHeader">
-        <h1>ERCOT Grid Animation</h1>
-        <div class="subtitle">Spatiotemporal visualization of how the Texas grid breathes under stress</div>
-        <div class="header-accent"></div>
-    </div>
+    <div class="grid-viz-wrapper">
+        <div class="header" id="pageHeader">
+            <h1>ERCOT Grid Animation</h1>
+            <div class="subtitle">Watch the Texas grid breathe — every power plant animated hour by hour</div>
+            <div class="header-accent"></div>
+        </div>
 
-    <div class="launch-section">
-        <div class="launch-card">
-            <h2>Watch the Grid in Motion</h2>
-            <p>
-                Every power plant in ERCOT mapped in real time. Watch solar bloom at noon,
-                wind sweep across West Texas overnight, and gas ramp to fill the gaps.
-                See what happens when it all goes wrong.
-            </p>
-
-            <a href="http://localhost:8050" target="_blank" class="launch-btn">
-                Launch Grid Animation
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path d="M6 3L11 8L6 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-            </a>
-
-            <div class="feature-list">
-                <div class="feature-item">
-                    <div class="feature-dot" style="background: #22C55E"></div>
-                    <span>733 generation resources animated hourly</span>
+        <!-- Scenario selector cards -->
+        <div class="scenario-intro">
+            <div class="scenario-cards-row">
+                <div class="scenario-pick selected" data-scenario="uri_2021">
+                    <span class="badge badge-danger">Feb 10–20, 2021</span>
+                    <h3>Winter Storm Uri</h3>
+                    <p>30+ GW offline. 4.5M customers in the dark. Watch the cascade unfold hour by hour.</p>
                 </div>
-                <div class="feature-item">
-                    <div class="feature-dot" style="background: #0EA5E9"></div>
-                    <span>Synchronized supply stack chart</span>
+                <div class="scenario-pick" data-scenario="summer_2023_heat">
+                    <span class="badge badge-warning">Aug 20–25, 2023</span>
+                    <h3>Summer Heat Dome</h3>
+                    <p>Extreme heat, ~85 GW demand, low wind. See how gas compensates when renewables fade.</p>
                 </div>
-                <div class="feature-item">
-                    <div class="feature-dot" style="background: #F59E0B"></div>
-                    <span>Real-time reserve margin gauge</span>
-                </div>
-                <div class="feature-item">
-                    <div class="feature-dot" style="background: #E91E63"></div>
-                    <span>CO₂ emissions tracking per hour</span>
-                </div>
-                <div class="feature-item">
-                    <div class="feature-dot" style="background: #6366F1"></div>
-                    <span>ERCOT weather zone boundaries</span>
-                </div>
-                <div class="feature-item">
-                    <div class="feature-dot" style="background: #EF4444"></div>
-                    <span>Scrollytelling annotations for key events</span>
+                <div class="scenario-pick" data-scenario="normal_spring">
+                    <span class="badge badge-success">Apr 15–16, 2023</span>
+                    <h3>Normal Spring Day</h3>
+                    <p>Strong wind and solar, moderate demand, comfortable reserves. The grid as designed.</p>
                 </div>
             </div>
         </div>
 
-        <div class="scenario-grid">
-            <div class="scenario-card danger">
-                <span class="date-badge">Feb 10–20, 2021</span>
-                <h3>Winter Storm Uri</h3>
-                <p>
-                    The worst grid crisis in ERCOT history. Over 30 GW of generation went offline
-                    as temperatures plunged below 0°F. Rolling blackouts affected 4.5 million customers.
-                    Watch the cascade unfold hour by hour.
-                </p>
+        <!-- Controls -->
+        <div class="viz-controls">
+            <div>
+                <label>Scenario</label>
+                <select class="scenario-select" id="scenarioSelect">
+                    <option value="uri_2021">Winter Storm Uri</option>
+                    <option value="summer_2023_heat">Summer Heat Dome</option>
+                    <option value="normal_spring">Normal Spring Day</option>
+                </select>
             </div>
-            <div class="scenario-card warning">
-                <span class="date-badge">Aug 20–25, 2023</span>
-                <h3>Summer Heat Dome</h3>
-                <p>
-                    Extreme heat drove demand near 85 GW. Low wind during peak afternoon hours
-                    stressed reserves. See how solar and gas compensate when wind dies down.
-                </p>
+            <button class="play-btn" id="playBtn">&#9654; Play</button>
+            <div>
+                <label>Speed</label>
+                <select class="speed-select" id="speedSelect">
+                    <option value="1000">0.5x</option>
+                    <option value="500" selected>1x</option>
+                    <option value="250">2x</option>
+                    <option value="125">4x</option>
+                </select>
             </div>
-            <div class="scenario-card">
-                <span class="date-badge">Apr 15–16, 2023</span>
-                <h3>Normal Spring Day</h3>
-                <p>
-                    The grid operating as designed. Strong wind and solar, moderate demand,
-                    comfortable reserves. The baseline for what "normal" looks like.
-                </p>
+            <div class="time-display" id="timeDisplay">—</div>
+            <div class="reserve-badge" id="reserveBadge">—</div>
+        </div>
+
+        <!-- Time slider -->
+        <div class="slider-bar">
+            <input type="range" id="hourSlider" min="0" max="263" value="0" step="1">
+        </div>
+
+        <!-- Map + Sidebar -->
+        <div class="viz-main">
+            <div class="map-wrap">
+                <div id="gridMap"></div>
+                <div class="map-legend">
+                    <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#F59E0B"></div>Solar</div>
+                    <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#22C55E"></div>Wind</div>
+                    <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#6366F1"></div>Nuclear</div>
+                    <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#6B7280"></div>Gas</div>
+                    <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#374151"></div>Coal</div>
+                    <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#0EA5E9"></div>Hydro</div>
+                </div>
+            </div>
+            <div class="viz-sidebar">
+                <div class="stats-grid" id="statsGrid">
+                    <div class="stat-mini"><div class="stat-mini-label">Demand</div><div class="stat-mini-val" id="statDemand">—<span class="stat-mini-unit">MW</span></div></div>
+                    <div class="stat-mini"><div class="stat-mini-label">Generation</div><div class="stat-mini-val" id="statGen" style="color:#22C55E">—<span class="stat-mini-unit">MW</span></div></div>
+                    <div class="stat-mini"><div class="stat-mini-label">Renewables</div><div class="stat-mini-val" id="statRen" style="color:#0EA5E9">—<span class="stat-mini-unit">MW</span></div></div>
+                    <div class="stat-mini"><div class="stat-mini-label">Fossil</div><div class="stat-mini-val" id="statFossil" style="color:#6B7280">—<span class="stat-mini-unit">MW</span></div></div>
+                </div>
+                <div class="stat-mini" style="margin-top:10px">
+                    <div class="stat-mini-label">CO₂ Emissions</div>
+                    <div class="stat-mini-val" id="statCo2" style="color:#EF4444">—<span class="stat-mini-unit">tons/hr</span></div>
+                </div>
+                <hr style="border-color:rgba(255,255,255,0.05);margin:14px 0">
+                <div id="annotationPanel" style="font-size:13px;line-height:1.6"></div>
             </div>
         </div>
-    </div>
 
-    <div class="content-section-narrow" style="margin-top: var(--space-2xl);">
-        <div class="insight-box">
-            <strong>How to run the animation:</strong>
-            Start the Dash server locally with <code>python grid_viz/app/app.py</code>,
-            then click "Launch Grid Animation" above. The app runs on port 8050 by default.
+        <!-- Supply stack chart -->
+        <div class="stack-chart-wrap">
+            <div class="stack-chart-container">
+                <canvas id="supplyStackChart"></canvas>
+            </div>
         </div>
     </div>
 
@@ -234,5 +455,455 @@
         </div>
     </footer>
     <div class="bottom-banner"></div>
+
+    <script src="js/grid-animation-data.js"></script>
+    <script>
+    (function() {
+        'use strict';
+
+        // ── State ──────────────────────────────────────────────────
+        let currentScenario = 'uri_2021';
+        let currentHour = 0;
+        let playing = false;
+        let playInterval = null;
+        let speed = 500;
+        let map, plantMarkers = [], zoneLayer = null;
+        let supplyChart = null;
+        const DATA = GRID_ANIMATION_DATA;
+
+        // ── Fuel colors ────────────────────────────────────────────
+        const FUEL_HEX = {
+            GAS: '#6B7280', COAL: '#374151', OIL: '#92400E',
+            NUCLEAR: '#6366F1', WIND: '#22C55E', SOLAR: '#F59E0B',
+            HYDRO: '#0EA5E9', BIOMASS: '#8B5CF6', OTHF: '#9CA3AF', OFSL: '#9CA3AF',
+        };
+        const FUEL_LABELS = {
+            NUCLEAR: 'Nuclear', COAL: 'Coal', GAS: 'Natural Gas', OIL: 'Oil',
+            HYDRO: 'Hydro', WIND: 'Wind', SOLAR: 'Solar', BIOMASS: 'Biomass',
+            OTHF: 'Other', OFSL: 'Other Fossil',
+        };
+        const STACK_ORDER = ['NUCLEAR','COAL','GAS','OIL','HYDRO','WIND','SOLAR','BIOMASS','OTHF','OFSL'];
+
+        // ── Elements ───────────────────────────────────────────────
+        const els = {
+            slider: document.getElementById('hourSlider'),
+            playBtn: document.getElementById('playBtn'),
+            scenarioSelect: document.getElementById('scenarioSelect'),
+            speedSelect: document.getElementById('speedSelect'),
+            timeDisplay: document.getElementById('timeDisplay'),
+            reserveBadge: document.getElementById('reserveBadge'),
+            statDemand: document.getElementById('statDemand'),
+            statGen: document.getElementById('statGen'),
+            statRen: document.getElementById('statRen'),
+            statFossil: document.getElementById('statFossil'),
+            statCo2: document.getElementById('statCo2'),
+            annotationPanel: document.getElementById('annotationPanel'),
+        };
+
+        // ── Initialize Map ─────────────────────────────────────────
+        function initMap() {
+            map = L.map('gridMap', {
+                center: [31.5, -99.0],
+                zoom: 6,
+                zoomControl: true,
+                preferCanvas: true,
+                attributionControl: true,
+            });
+
+            // Dark tile layer (free, no API key)
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 19,
+            }).addTo(map);
+
+            // Create markers for all plants
+            const plants = DATA.plants;
+            plantMarkers = new Array(plants.length);
+            for (let i = 0; i < plants.length; i++) {
+                const p = plants[i];
+                const marker = L.circleMarker([p.lat, p.lon], {
+                    radius: 1,
+                    fillColor: `rgb(${p.r},${p.g},${p.b})`,
+                    color: `rgba(${p.r},${p.g},${p.b},0.4)`,
+                    weight: 1,
+                    fillOpacity: 0.15,
+                    className: '',
+                });
+                marker.bindTooltip('', {
+                    className: 'plant-tooltip',
+                    direction: 'top',
+                    offset: [0, -6],
+                });
+                marker.addTo(map);
+                plantMarkers[i] = marker;
+            }
+        }
+
+        // ── Update map markers for current hour ────────────────────
+        function updateMap(hour) {
+            const sc = DATA.scenarios[currentScenario];
+            if (!sc) return;
+            const plants = DATA.plants;
+            const output = sc.output;
+
+            // Find max output for scaling
+            let maxMw = 1;
+            for (let i = 0; i < plants.length; i++) {
+                const mw = output[i][hour] || 0;
+                if (mw > maxMw) maxMw = mw;
+            }
+
+            for (let i = 0; i < plants.length; i++) {
+                const p = plants[i];
+                const mw = output[i][hour] || 0;
+                const marker = plantMarkers[i];
+
+                // Radius: sqrt scaling, 1–14px
+                let r, opacity;
+                if (mw > 0) {
+                    r = 2 + 12 * Math.pow(mw / maxMw, 0.5);
+                    opacity = 0.75;
+                } else {
+                    r = 1;
+                    opacity = 0.12;
+                }
+
+                marker.setRadius(r);
+                marker.setStyle({ fillOpacity: opacity });
+
+                // Update tooltip content
+                marker.setTooltipContent(
+                    `<b>${p.name}</b><br>` +
+                    `<span class="fuel-tag">Fuel:</span> ${p.label}<br>` +
+                    `<span class="fuel-tag">Output:</span> ${mw.toLocaleString()} MW<br>` +
+                    `<span class="fuel-tag">Capacity:</span> ${p.cap.toLocaleString()} MW`
+                );
+            }
+        }
+
+        // ── Supply Stack Chart ─────────────────────────────────────
+        function initSupplyChart() {
+            const ctx = document.getElementById('supplyStackChart').getContext('2d');
+            supplyChart = new Chart(ctx, {
+                type: 'line',
+                data: { labels: [], datasets: [] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: '#9CA3AF',
+                                font: { size: 10 },
+                                maxRotation: 45,
+                                autoSkip: true,
+                                maxTicksLimit: 12,
+                            },
+                            grid: { display: false },
+                        },
+                        y: {
+                            stacked: true,
+                            ticks: {
+                                color: '#9CA3AF',
+                                font: { size: 10 },
+                                callback: v => (v / 1000).toFixed(0) + 'k',
+                            },
+                            grid: { color: 'rgba(255,255,255,0.04)' },
+                            title: {
+                                display: true,
+                                text: 'MW',
+                                color: '#9CA3AF',
+                                font: { size: 11 },
+                            },
+                        },
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                color: '#D1D5DB',
+                                font: { size: 11 },
+                                boxWidth: 12,
+                                padding: 12,
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                            },
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(17,24,39,0.92)',
+                            titleColor: '#F8FAFC',
+                            bodyColor: '#D1D5DB',
+                            borderColor: 'rgba(255,255,255,0.1)',
+                            borderWidth: 1,
+                            callbacks: {
+                                label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y?.toLocaleString() || 0} MW`,
+                            },
+                        },
+                        // Current hour indicator via annotation plugin (simple vertical line)
+                        annotation: undefined,
+                    },
+                },
+            });
+        }
+
+        function updateSupplyChart() {
+            const sc = DATA.scenarios[currentScenario];
+            if (!sc || !supplyChart) return;
+
+            // Labels = datetime strings, shortened
+            const labels = sc.hours.map(h => {
+                if (!h) return '';
+                // Format: "Feb 15 12:00" from "2021-02-15 12:00:00"
+                const d = new Date(h.replace(' ', 'T'));
+                if (isNaN(d)) return h.slice(5, 16);
+                const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                return `${months[d.getMonth()]} ${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:00`;
+            });
+
+            const datasets = [];
+            for (const fuel of STACK_ORDER) {
+                if (sc.stack[fuel]) {
+                    datasets.push({
+                        label: FUEL_LABELS[fuel] || fuel,
+                        data: sc.stack[fuel],
+                        backgroundColor: FUEL_HEX[fuel] + 'CC',
+                        borderColor: FUEL_HEX[fuel],
+                        borderWidth: 0.5,
+                        fill: 'origin',
+                        stack: 'supply',
+                        pointRadius: 0,
+                        tension: 0.2,
+                    });
+                }
+            }
+
+            // Demand line (not stacked — separate from supply stack)
+            datasets.push({
+                label: 'Demand',
+                data: sc.demand,
+                borderColor: '#FFFFFF',
+                borderWidth: 2,
+                borderDash: [6, 3],
+                fill: false,
+                pointRadius: 0,
+                tension: 0.2,
+                stack: 'demand',
+                order: -1,
+            });
+
+            supplyChart.data.labels = labels;
+            supplyChart.data.datasets = datasets;
+            supplyChart.update('none');
+        }
+
+        // Draw a vertical "now" line on the chart
+        function drawNowLine(hour) {
+            if (!supplyChart) return;
+            const chart = supplyChart;
+            const ctx = chart.ctx;
+            const xScale = chart.scales.x;
+            const yScale = chart.scales.y;
+
+            if (!xScale || !yScale) return;
+
+            const x = xScale.getPixelForValue(hour);
+            if (x === undefined || isNaN(x)) return;
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(x, yScale.top);
+            ctx.lineTo(x, yScale.bottom);
+            ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 3]);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // ── Stats update ───────────────────────────────────────────
+        function updateStats(hour) {
+            const sc = DATA.scenarios[currentScenario];
+            if (!sc) return;
+
+            const demand = sc.demand[hour] || 0;
+            const gen = sc.generation[hour] || 0;
+            const ren = sc.renewable[hour] || 0;
+            const fos = sc.fossil[hour] || 0;
+
+            els.statDemand.innerHTML = `${Math.round(demand).toLocaleString()}<span class="stat-mini-unit">MW</span>`;
+            els.statGen.innerHTML = `${Math.round(gen).toLocaleString()}<span class="stat-mini-unit">MW</span>`;
+            els.statRen.innerHTML = `${Math.round(ren).toLocaleString()}<span class="stat-mini-unit">MW</span>`;
+            els.statFossil.innerHTML = `${Math.round(fos).toLocaleString()}<span class="stat-mini-unit">MW</span>`;
+
+            // CO2 from stack
+            let totalCo2 = 0;
+            if (sc.stackCo2) {
+                for (const fuel in sc.stackCo2) {
+                    totalCo2 += (sc.stackCo2[fuel][hour] || 0);
+                }
+            }
+            els.statCo2.innerHTML = `${Math.round(totalCo2).toLocaleString()}<span class="stat-mini-unit">tons/hr</span>`;
+
+            // Time display
+            els.timeDisplay.textContent = sc.hours[hour] || '—';
+
+            // Reserve badge
+            const reserveMw = gen - demand;
+            const reservePct = demand > 0 ? (reserveMw / demand * 100) : 0;
+            let status, color;
+            if (reservePct < 0) { status = 'EMERGENCY'; color = '#EF4444'; }
+            else if (reservePct < 3) { status = 'CRITICAL'; color = '#F97316'; }
+            else if (reservePct < 6) { status = 'TIGHT'; color = '#F59E0B'; }
+            else { status = 'NORMAL'; color = '#22C55E'; }
+
+            els.reserveBadge.textContent = `${status} ${reservePct >= 0 ? '+' : ''}${reservePct.toFixed(1)}%`;
+            els.reserveBadge.style.backgroundColor = color + '18';
+            els.reserveBadge.style.color = color;
+            els.reserveBadge.style.border = `1px solid ${color}40`;
+        }
+
+        // ── Annotations ────────────────────────────────────────────
+        function updateAnnotations(hour) {
+            const sc = DATA.scenarios[currentScenario];
+            if (!sc) return;
+
+            const meta = sc.meta || {};
+            let html = `<h3 style="font-size:15px;font-weight:700;margin:0 0 4px">${meta.name || currentScenario}</h3>`;
+            html += `<p style="color:#9CA3AF;font-size:12px;margin:0 0 10px">${meta.description || ''}</p>`;
+
+            const annotations = sc.annotations || [];
+            for (const ann of annotations) {
+                const active = hour >= (ann.hour_start || -1) && hour <= (ann.hour_end || -1);
+                html += `<div class="annotation-block ${active ? 'active' : ''}">`;
+                html += `<div class="annotation-time">${ann.time_label || ''}</div>`;
+                html += `<div class="annotation-text">${ann.text || ''}</div>`;
+                html += `</div>`;
+            }
+
+            els.annotationPanel.innerHTML = html;
+
+            // Scroll active annotation into view
+            const activeEl = els.annotationPanel.querySelector('.annotation-block.active');
+            if (activeEl) {
+                activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        // ── Master update ──────────────────────────────────────────
+        function update(hour) {
+            currentHour = hour;
+            updateMap(hour);
+            updateStats(hour);
+            updateAnnotations(hour);
+
+            // Redraw supply chart "now" line
+            if (supplyChart) {
+                supplyChart.update('none');
+                // Use afterDraw to overlay the line
+                drawNowLine(hour);
+            }
+        }
+
+        // ── Scenario switch ────────────────────────────────────────
+        function switchScenario(scenarioId) {
+            if (!DATA.scenarios[scenarioId]) return;
+            currentScenario = scenarioId;
+            const sc = DATA.scenarios[scenarioId];
+            const maxH = sc.hours.length - 1;
+
+            els.slider.max = maxH;
+            els.slider.value = 0;
+            currentHour = 0;
+
+            // Update select
+            els.scenarioSelect.value = scenarioId;
+
+            // Update cards
+            document.querySelectorAll('.scenario-pick').forEach(card => {
+                card.classList.toggle('selected', card.dataset.scenario === scenarioId);
+            });
+
+            // Rebuild supply chart
+            updateSupplyChart();
+
+            // Update display
+            update(0);
+
+            // Stop playback
+            if (playing) togglePlay();
+        }
+
+        // ── Playback ───────────────────────────────────────────────
+        function togglePlay() {
+            playing = !playing;
+            els.playBtn.innerHTML = playing ? '&#9646;&#9646; Pause' : '&#9654; Play';
+
+            if (playing) {
+                playInterval = setInterval(() => {
+                    const sc = DATA.scenarios[currentScenario];
+                    if (!sc) return;
+                    let next = currentHour + 1;
+                    if (next >= sc.hours.length) next = 0;
+                    els.slider.value = next;
+                    update(next);
+                }, speed);
+            } else {
+                clearInterval(playInterval);
+                playInterval = null;
+            }
+        }
+
+        // ── Event listeners ────────────────────────────────────────
+        els.slider.addEventListener('input', e => {
+            update(parseInt(e.target.value));
+        });
+
+        els.playBtn.addEventListener('click', togglePlay);
+
+        els.scenarioSelect.addEventListener('change', e => {
+            switchScenario(e.target.value);
+        });
+
+        els.speedSelect.addEventListener('change', e => {
+            speed = parseInt(e.target.value);
+            if (playing) {
+                clearInterval(playInterval);
+                playInterval = setInterval(() => {
+                    const sc = DATA.scenarios[currentScenario];
+                    if (!sc) return;
+                    let next = currentHour + 1;
+                    if (next >= sc.hours.length) next = 0;
+                    els.slider.value = next;
+                    update(next);
+                }, speed);
+            }
+        });
+
+        // Scenario card clicks
+        document.querySelectorAll('.scenario-pick').forEach(card => {
+            card.addEventListener('click', () => {
+                switchScenario(card.dataset.scenario);
+            });
+        });
+
+        // After chart render, add the "now" line overlay
+        const nowLinePlugin = {
+            id: 'nowLine',
+            afterDraw(chart) {
+                drawNowLine(currentHour);
+            }
+        };
+
+        // ── Init ───────────────────────────────────────────────────
+        initMap();
+        initSupplyChart();
+        Chart.register(nowLinePlugin);
+        switchScenario('uri_2021');
+    })();
+    </script>
 </body>
 </html>
