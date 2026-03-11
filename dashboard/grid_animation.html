@@ -140,21 +140,25 @@
                 grid-template-columns: 1fr;
                 margin: 0;
             }
-            .viz-sidebar { max-height: 360px; }
+            /* Hide sidebar story on mobile — events shown as timeline markers instead */
+            .viz-sidebar { display: none; }
             #gridMap { height: 420px; }
             .map-wrap { border-radius: 0; }
             .map-legend { margin: 12px 12px 6px; border-radius: var(--radius-md, 8px); padding: 8px 12px; }
             .stack-chart-wrap { margin: 12px; }
             .viz-controls { padding: 12px 16px; gap: 12px; }
+            /* Mobile stats overlay on the map */
+            .mobile-stats-overlay {
+                display: flex !important;
+            }
         }
         @media (max-width: 480px) {
             #gridMap { height: 340px; }
-            .stats-grid { gap: 6px; }
-            .stat-mini { padding: 8px 10px; }
-            .stat-mini-val { font-size: 0.95rem; }
             .scenario-intro { padding: 16px 12px; }
             .scenario-cards-row { gap: 10px; }
-            .stack-chart-container { height: 200px; }
+            .stack-chart-container { height: 220px; }
+            .mobile-stats-overlay { gap: 4px; padding: 6px 8px; }
+            .mobile-stat { font-size: 0.7rem; padding: 3px 6px; }
         }
 
         /* ── Map container ──────────────────────────────────────── */
@@ -388,6 +392,79 @@
             color: var(--text-muted, #6B7280);
         }
 
+        /* ── Mobile stats overlay (shown on top of map) ─────────── */
+        .mobile-stats-overlay {
+            display: none;
+            position: absolute;
+            bottom: 44px; /* above slider */
+            left: 8px;
+            right: 8px;
+            z-index: 460;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding: 8px 10px;
+            background: rgba(255,255,255,0.88);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: var(--radius-md, 8px);
+            pointer-events: none;
+        }
+        .mobile-stat {
+            font-family: var(--font-data, var(--font-body));
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: var(--radius-sm, 4px);
+            background: rgba(0,0,0,0.04);
+            white-space: nowrap;
+        }
+        .mobile-stat .ms-label { color: var(--text-muted, #6B7280); font-weight: 400; }
+
+        /* ── Event marker popup (tap circle on timeline) ──────── */
+        .event-popup {
+            display: none;
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(320px, 90vw);
+            background: rgba(255,255,255,0.96);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-light, #E5E7EB);
+            border-radius: var(--radius-md, 8px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            padding: 12px 14px;
+            z-index: 600;
+            pointer-events: auto;
+        }
+        .event-popup.show { display: block; }
+        .event-popup-title {
+            font-family: var(--font-heading);
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--navy, #1A2744);
+            margin-bottom: 4px;
+        }
+        .event-popup-text {
+            font-size: 0.78rem;
+            line-height: 1.5;
+            color: var(--text-secondary, #1E293B);
+            margin: 0;
+        }
+        .event-popup-close {
+            position: absolute;
+            top: 6px;
+            right: 8px;
+            background: none;
+            border: none;
+            font-size: 1rem;
+            color: var(--text-muted, #6B7280);
+            cursor: pointer;
+            padding: 4px;
+            line-height: 1;
+        }
+
         /* ── Zone labels ────────────────────────────────────────── */
         .zone-label {
             background: none !important;
@@ -493,6 +570,14 @@
             <div class="map-wrap">
                 <div id="gridMap"></div>
                 <canvas id="plantCanvas"></canvas>
+                <!-- Mobile-only: compact stats overlay on map -->
+                <div class="mobile-stats-overlay" id="mobileStatsOverlay">
+                    <div class="mobile-stat"><span class="ms-label">Demand</span> <span id="msDemand">—</span></div>
+                    <div class="mobile-stat"><span class="ms-label">Gen</span> <span id="msGen" style="color:#16A34A">—</span></div>
+                    <div class="mobile-stat"><span class="ms-label">Renew</span> <span id="msRen" style="color:#0EA5E9">—</span></div>
+                    <div class="mobile-stat"><span class="ms-label">Fossil</span> <span id="msFossil" style="color:#6B7280">—</span></div>
+                    <div class="mobile-stat"><span class="ms-label">CO₂</span> <span id="msCo2" style="color:#DC2626">—</span></div>
+                </div>
                 <div class="slider-bar">
                     <input type="range" id="hourSlider" min="0" max="263" value="0" step="1">
                 </div>
@@ -525,11 +610,19 @@
             </div>
         </div>
 
-        <!-- Supply stack chart -->
-        <div class="stack-chart-wrap">
+        <!-- Supply stack chart with event markers -->
+        <div class="stack-chart-wrap" style="position:relative">
             <div class="stack-chart-title">Supply Stack</div>
-            <div class="stack-chart-container">
+            <div class="stack-chart-container" style="position:relative">
                 <div id="supplyStackChart" style="width:100%;height:100%"></div>
+                <!-- Event marker circles rendered as an overlay -->
+                <div id="eventMarkersOverlay" style="position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:10"></div>
+            </div>
+            <!-- Popup for tapped event marker -->
+            <div class="event-popup" id="eventPopup">
+                <button class="event-popup-close" id="eventPopupClose">&times;</button>
+                <div class="event-popup-title" id="eventPopupTitle"></div>
+                <p class="event-popup-text" id="eventPopupText"></p>
             </div>
         </div>
     </div>
@@ -654,6 +747,16 @@
             statCo2: document.getElementById('statCo2'),
             annotationPanel: document.getElementById('annotationPanel'),
             plantCanvas: document.getElementById('plantCanvas'),
+            // Mobile stats overlay
+            msDemand: document.getElementById('msDemand'),
+            msGen: document.getElementById('msGen'),
+            msRen: document.getElementById('msRen'),
+            msFossil: document.getElementById('msFossil'),
+            msCo2: document.getElementById('msCo2'),
+            eventPopup: document.getElementById('eventPopup'),
+            eventPopupTitle: document.getElementById('eventPopupTitle'),
+            eventPopupText: document.getElementById('eventPopupText'),
+            eventPopupClose: document.getElementById('eventPopupClose'),
         };
 
         // ── Canvas setup ──────────────────────────────────────────
@@ -682,11 +785,15 @@
 
         // ── Initialize Map ────────────────────────────────────────
         function initMap() {
-            const ercotBounds = L.latLngBounds([26.0, -105.5], [34.8, -93.0]);
+            // Tighter crop focused on ERCOT plant locations
+            const isMobile = window.innerWidth <= 900;
+            const ercotBounds = isMobile
+                ? L.latLngBounds([27.5, -101.5], [34.0, -94.0])   // mobile: tight crop on plant cluster
+                : L.latLngBounds([27.0, -103.0], [34.5, -93.5]);  // desktop: slightly wider
 
             map = L.map('gridMap', {
-                center: [30.8, -99.0],
-                zoom: 6,
+                center: [31.0, -98.0],
+                zoom: isMobile ? 6.5 : 6,
                 zoomControl: false,
                 dragging: false,
                 touchZoom: false,
@@ -954,7 +1061,53 @@
                     font: { family: "'DM Sans', sans-serif", size: 11, color: '#1A2744' },
                 },
                 shapes: [],
+                annotations: [],
             };
+
+            // Build event marker shapes + annotations for annotations
+            const annotations = sc.annotations || [];
+            eventMarkerData = []; // store for click handling
+            annotations.forEach((ann, idx) => {
+                const midHour = Math.round((ann.hour_start + ann.hour_end) / 2);
+                if (midHour >= labels.length) return;
+                const xLabel = labels[midHour];
+                eventMarkerData.push({ x: xLabel, hour: midHour, title: ann.time_label, text: ann.text, idx });
+
+                // Vertical dashed line from bottom to near top
+                layout.shapes.push({
+                    type: 'line',
+                    x0: xLabel, x1: xLabel,
+                    y0: 0, y1: 0.88,
+                    xref: 'x', yref: 'paper',
+                    line: { color: 'rgba(26,39,68,0.15)', width: 1, dash: 'dot' },
+                    layer: 'below',
+                });
+            });
+
+            // Add a scatter trace for event marker circles at top
+            if (eventMarkerData.length > 0) {
+                // Compute a y value near top of chart for markers
+                const maxY = Math.max(...(sc.demand || [0])) * 1.12;
+                traces.push({
+                    x: eventMarkerData.map(e => e.x),
+                    y: eventMarkerData.map(() => maxY),
+                    mode: 'markers+text',
+                    type: 'scatter',
+                    marker: {
+                        size: 22,
+                        color: 'rgba(26,39,68,0.08)',
+                        line: { color: 'rgba(26,39,68,0.4)', width: 1.5 },
+                        symbol: 'circle',
+                    },
+                    text: eventMarkerData.map((_, i) => String(i + 1)),
+                    textfont: { size: 10, color: '#1A2744', family: "'DM Sans', sans-serif", weight: 700 },
+                    textposition: 'middle center',
+                    hoverinfo: 'text',
+                    hovertext: eventMarkerData.map(e => e.title),
+                    showlegend: false,
+                    name: '_events',
+                });
+            }
 
             const config = { responsive: true, displayModeBar: false };
 
@@ -963,22 +1116,66 @@
             } else {
                 Plotly.newPlot('supplyStackChart', traces, layout, config);
                 supplyChartInitialized = true;
+
+                // Click handler for event markers
+                document.getElementById('supplyStackChart').on('plotly_click', function(data) {
+                    if (!data.points || !data.points.length) return;
+                    const pt = data.points[0];
+                    if (pt.data.name !== '_events') return;
+                    const evtIdx = pt.pointIndex;
+                    if (evtIdx < 0 || evtIdx >= eventMarkerData.length) return;
+                    showEventPopup(eventMarkerData[evtIdx]);
+                });
             }
+        }
+
+        // ── Event marker data + popup ────────────────────────────
+        let eventMarkerData = [];
+
+        function showEventPopup(evt) {
+            els.eventPopupTitle.textContent = evt.title;
+            els.eventPopupText.textContent = evt.text;
+            els.eventPopup.classList.add('show');
+        }
+
+        function hideEventPopup() {
+            els.eventPopup.classList.remove('show');
         }
 
         function updateCursorLine(hour) {
             const sc = DATA.scenarios[currentScenario];
             if (!sc || !supplyChartInitialized) return;
             const label = formatTimeLabel(sc.hours[hour]);
-            Plotly.relayout('supplyStackChart', {
-                shapes: [{
+
+            // Rebuild shapes: event marker lines + cursor line
+            const shapes = [];
+
+            // Event marker dashed lines
+            const annotations = sc.annotations || [];
+            const labels = sc.hours.map(formatTimeLabel);
+            annotations.forEach(ann => {
+                const midHour = Math.round((ann.hour_start + ann.hour_end) / 2);
+                if (midHour >= labels.length) return;
+                shapes.push({
                     type: 'line',
-                    x0: label, x1: label,
-                    y0: 0, y1: 1,
+                    x0: labels[midHour], x1: labels[midHour],
+                    y0: 0, y1: 0.88,
                     xref: 'x', yref: 'paper',
-                    line: { color: 'rgba(26,39,68,0.3)', width: 2 },
-                }]
+                    line: { color: 'rgba(26,39,68,0.15)', width: 1, dash: 'dot' },
+                    layer: 'below',
+                });
             });
+
+            // Playback cursor line
+            shapes.push({
+                type: 'line',
+                x0: label, x1: label,
+                y0: 0, y1: 1,
+                xref: 'x', yref: 'paper',
+                line: { color: 'rgba(26,39,68,0.3)', width: 2 },
+            });
+
+            Plotly.relayout('supplyStackChart', { shapes });
         }
 
         // ── Counting animation for stat values ────────────────────
@@ -1027,6 +1224,13 @@
             animateValue(els.statRen, ren);
             animateValue(els.statFossil, fos);
 
+            // Mobile stats overlay (simple text, no animation)
+            const fmt = v => v >= 1000 ? (v/1000).toFixed(1) + 'k' : v.toLocaleString();
+            if (els.msDemand) els.msDemand.textContent = fmt(demand);
+            if (els.msGen) els.msGen.textContent = fmt(gen);
+            if (els.msRen) els.msRen.textContent = fmt(ren);
+            if (els.msFossil) els.msFossil.textContent = fmt(fos);
+
             let totalCo2 = 0;
             if (sc.stackCo2) {
                 for (const fuel in sc.stackCo2) {
@@ -1034,6 +1238,7 @@
                 }
             }
             animateValue(els.statCo2, Math.round(totalCo2));
+            if (els.msCo2) els.msCo2.textContent = fmt(Math.round(totalCo2));
 
             els.timeDisplay.textContent = sc.hours[hour] || '—';
 
@@ -1229,6 +1434,12 @@
             card.addEventListener('click', () => {
                 switchScenario(card.dataset.scenario);
             });
+        });
+
+        // ── Event popup close handler ─────────────────────────────
+        els.eventPopupClose.addEventListener('click', hideEventPopup);
+        document.addEventListener('click', (e) => {
+            if (!els.eventPopup.contains(e.target)) hideEventPopup();
         });
 
         // ── Init ──────────────────────────────────────────────────
