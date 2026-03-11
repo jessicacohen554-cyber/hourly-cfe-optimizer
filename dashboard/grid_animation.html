@@ -11,95 +11,87 @@
     <link rel="stylesheet" href="styles/scrollytell.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>
     <script src="js/nav.js"></script>
     <script src="js/chart-colors.js"></script>
     <script src="js/shared-header.js"></script>
     <script src="js/scroll-observer.js"></script>
     <style>
-        :root {
-            --grid-bg: #111827;
-            --grid-surface: rgba(255,255,255,0.03);
-            --grid-border: rgba(255,255,255,0.06);
-            --grid-text: #E5E7EB;
-            --grid-muted: #9CA3AF;
-        }
-
+        /* ── Light glass-morphism theme ─────────────────────────── */
         .grid-viz-wrapper {
-            background: var(--grid-bg);
-            color: var(--grid-text);
+            background: var(--bg-page, #F8F9FC);
+            color: var(--text-primary, #000);
             min-height: 100vh;
         }
 
-        /* Controls bar */
+        /* ── Controls bar ───────────────────────────────────────── */
         .viz-controls {
             display: flex;
             align-items: center;
-            gap: 16px;
-            padding: 12px 24px;
-            background: rgba(30,41,59,0.9);
-            border-bottom: 1px solid var(--grid-border);
+            gap: 20px;
+            padding: 16px var(--pad-page, 24px);
+            background: rgba(255,255,255,0.78);
+            backdrop-filter: blur(14px) saturate(180%);
+            -webkit-backdrop-filter: blur(14px) saturate(180%);
+            border-bottom: 1px solid rgba(255,255,255,0.3);
+            box-shadow: 0 4px 24px rgba(0,0,0,0.06);
             flex-wrap: wrap;
         }
         .viz-controls label {
-            font-size: 11px;
-            color: var(--grid-muted);
+            font-family: var(--font-body);
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-secondary, #1E293B);
             text-transform: uppercase;
             letter-spacing: 0.04em;
             display: block;
-            margin-bottom: 2px;
+            margin-bottom: 4px;
         }
-        .scenario-select {
+        .scenario-select, .speed-select {
             padding: 7px 12px;
-            background: #1E293B;
-            border: 1px solid var(--grid-border);
-            border-radius: var(--radius-sm);
-            color: var(--grid-text);
+            background: #fff;
+            border: 1px solid var(--border, #D4D8E0);
+            border-radius: var(--radius-sm, 6px);
+            color: var(--navy, #1A2744);
             font-family: var(--font-body);
             font-size: 13px;
             cursor: pointer;
         }
         .play-btn {
             padding: 7px 18px;
-            border-radius: var(--radius-sm);
+            border-radius: var(--radius-sm, 6px);
             border: 1px solid rgba(34,197,94,0.4);
             background: rgba(34,197,94,0.1);
-            color: #22C55E;
+            color: #16A34A;
             cursor: pointer;
             font-weight: 600;
             font-size: 14px;
             font-family: var(--font-body);
-            transition: background 0.2s;
+            transition: background 0.2s, box-shadow 0.2s;
         }
-        .play-btn:hover { background: rgba(34,197,94,0.2); }
-        .speed-select {
-            padding: 7px 10px;
-            background: #1E293B;
-            border: 1px solid var(--grid-border);
-            border-radius: var(--radius-sm);
-            color: var(--grid-text);
-            font-family: var(--font-body);
-            font-size: 13px;
+        .play-btn:hover {
+            background: rgba(34,197,94,0.18);
+            box-shadow: 0 2px 8px rgba(34,197,94,0.15);
         }
         .time-display {
-            font-size: 18px;
+            font-family: var(--font-data);
+            font-size: 1.1rem;
             font-weight: 700;
-            font-family: 'JetBrains Mono', var(--font-mono);
-            color: #F8FAFC;
+            color: var(--navy, #1A2744);
             margin-left: auto;
         }
         .reserve-badge {
             padding: 6px 14px;
-            border-radius: var(--radius-sm);
+            border-radius: var(--radius-sm, 6px);
             font-size: 12px;
             font-weight: 600;
             white-space: nowrap;
         }
 
-        /* Time slider */
+        /* ── Time slider ────────────────────────────────────────── */
         .slider-bar {
             padding: 8px 24px 0;
-            background: var(--grid-bg);
+            background: transparent;
         }
         .slider-bar input[type=range] {
             width: 100%;
@@ -117,10 +109,10 @@
             width: 18px;
             height: 18px;
             border-radius: 50%;
-            background: #F8FAFC;
-            border: 2px solid #22C55E;
+            background: #fff;
+            border: 2px solid var(--navy, #1A2744);
             margin-top: -6px;
-            box-shadow: 0 0 8px rgba(34,197,94,0.4);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
         }
         .slider-bar input[type=range]::-moz-range-track {
             height: 6px;
@@ -131,209 +123,289 @@
             width: 18px;
             height: 18px;
             border-radius: 50%;
-            background: #F8FAFC;
-            border: 2px solid #22C55E;
-            box-shadow: 0 0 8px rgba(34,197,94,0.4);
+            background: #fff;
+            border: 2px solid var(--navy, #1A2744);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
         }
 
-        /* Main layout: map + sidebar */
+        /* ── Main layout: map + sidebar ─────────────────────────── */
         .viz-main {
             display: grid;
-            grid-template-columns: 1fr 300px;
+            grid-template-columns: 1fr 320px;
+            margin: 0 var(--pad-page, 24px);
+            gap: 16px;
         }
         @media (max-width: 900px) {
             .viz-main {
                 grid-template-columns: 1fr;
+                margin: 0;
             }
-            .viz-sidebar { max-height: 300px; }
+            .viz-sidebar { max-height: 360px; }
         }
 
-        /* Map container — white/off-white background */
+        /* ── Map container ──────────────────────────────────────── */
         .map-wrap {
             position: relative;
             overflow: hidden;
+            border-radius: var(--radius-lg, 12px);
+            border: 1px solid var(--border-light, #E5E7EB);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
         }
         #gridMap {
             width: 100%;
             height: 560px;
             background: #F5F5F0;
         }
-        /* Hide all Leaflet chrome — no zoom, no attribution on map */
+        #plantCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 450;
+        }
         .leaflet-control-zoom { display: none !important; }
         .leaflet-control-attribution { display: none !important; }
 
-        /* Map legend — above map, not overlaid */
+        /* ── Map legend ─────────────────────────────────────────── */
         .map-legend {
             display: flex;
             flex-wrap: wrap;
             gap: 6px 16px;
-            padding: 8px 24px;
-            background: rgba(30,41,59,0.6);
+            padding: 10px var(--pad-page, 24px);
+            background: rgba(255,255,255,0.68);
+            backdrop-filter: blur(12px) saturate(180%);
+            -webkit-backdrop-filter: blur(12px) saturate(180%);
+            border-radius: var(--radius-lg, 12px);
+            border: 1px solid rgba(255,255,255,0.3);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            margin: 16px var(--pad-page, 24px) 8px;
         }
         .legend-item-fuel {
             display: flex;
             align-items: center;
-            gap: 5px;
-            font-size: 11px;
-            color: #D1D5DB;
+            gap: 6px;
+            font-size: 0.75rem;
+            font-family: var(--font-body);
+            color: var(--text-secondary, #1E293B);
         }
         .legend-dot-fuel {
-            width: 9px;
-            height: 9px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
             flex-shrink: 0;
+            box-shadow: 0 0 6px currentColor;
         }
 
-        /* Sidebar */
+        /* ── Sidebar ────────────────────────────────────────────── */
         .viz-sidebar {
-            background: rgba(15,23,42,0.97);
-            padding: 16px;
+            background: rgba(255,255,255,0.78);
+            backdrop-filter: blur(14px) saturate(180%);
+            -webkit-backdrop-filter: blur(14px) saturate(180%);
+            border-radius: var(--radius-lg, 12px);
+            border: 1px solid rgba(255,255,255,0.3);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.06);
+            padding: 20px 16px;
             overflow-y: auto;
-            border-left: 1px solid var(--grid-border);
         }
         .stats-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 10px;
         }
+
+        /* ── Stat cards (glass) ─────────────────────────────────── */
         .stat-mini {
-            background: var(--grid-surface);
-            border-radius: 8px;
-            padding: 8px 10px;
-            border: 1px solid var(--grid-border);
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(221,208,192,0.5);
+            border-radius: var(--radius-lg, 12px);
+            padding: 12px 14px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
         }
         .stat-mini-label {
-            font-size: 10px;
-            color: var(--grid-muted);
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--text-muted, #6B7280);
             text-transform: uppercase;
-            letter-spacing: 0.04em;
+            letter-spacing: 0.3px;
+            font-family: var(--font-body);
         }
         .stat-mini-val {
-            font-size: 17px;
+            font-family: var(--font-data);
+            font-size: 1.1rem;
             font-weight: 700;
-            margin-top: 2px;
+            color: var(--navy, #1A2744);
+            margin-top: 4px;
         }
         .stat-mini-unit {
-            font-size: 11px;
-            color: #6B7280;
-            margin-left: 2px;
+            font-size: 0.7rem;
+            color: var(--text-muted, #6B7280);
+            margin-left: 3px;
+            font-weight: 500;
         }
 
-        /* Annotations */
+        /* ── Annotations ────────────────────────────────────────── */
         .annotation-block {
-            padding: 8px 10px;
-            margin-bottom: 6px;
-            border-radius: 8px;
-            background: rgba(255,255,255,0.02);
-            border-left: 3px solid rgba(255,255,255,0.1);
-            transition: all 0.3s ease;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            border-radius: var(--radius-md, 8px);
+            background: rgba(255,255,255,0.6);
+            border-left: 3px solid var(--border, #D4D8E0);
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
         }
         .annotation-block.active {
-            background: rgba(34,197,94,0.1);
+            background: rgba(34,197,94,0.08);
             border-left-color: #22C55E;
+            box-shadow: 0 2px 8px rgba(34,197,94,0.1);
         }
         .annotation-time {
-            font-size: 11px;
-            color: var(--grid-muted);
+            font-size: 0.72rem;
+            color: var(--text-muted, #6B7280);
             font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
         }
         .annotation-text {
-            font-size: 12px;
-            margin-top: 3px;
+            font-size: 0.82rem;
+            margin-top: 4px;
             line-height: 1.55;
+            color: var(--text-secondary, #1E293B);
         }
 
-        /* Supply stack chart */
+        /* ── Supply stack chart ──────────────────────────────────── */
         .stack-chart-wrap {
-            padding: 16px 24px 24px;
-            background: var(--grid-bg);
+            margin: 16px var(--pad-page, 24px) 24px;
+            background: rgba(255,255,255,0.78);
+            backdrop-filter: blur(14px) saturate(180%);
+            -webkit-backdrop-filter: blur(14px) saturate(180%);
+            border-radius: var(--radius-lg, 12px);
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.06);
+        }
+        .stack-chart-title {
+            font-family: var(--font-heading);
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--navy, #1A2744);
+            margin-bottom: 12px;
         }
         .stack-chart-container {
-            height: 220px;
+            height: 260px;
             position: relative;
         }
 
-        /* Scenario intro cards */
+        /* ── Scenario intro cards ───────────────────────────────── */
         .scenario-intro {
             max-width: 1200px;
             margin: 0 auto;
-            padding: var(--space-xl) var(--pad-page);
+            padding: var(--space-xl, 32px) var(--pad-page, 24px);
         }
         .scenario-cards-row {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: var(--space-md);
-            margin-top: var(--space-lg);
+            gap: var(--space-md, 16px);
         }
         .scenario-pick {
-            background: var(--grid-surface);
-            border: 1px solid var(--grid-border);
-            border-radius: var(--radius-md);
-            padding: var(--space-md);
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-light, #E5E7EB);
+            border-radius: var(--radius-lg, 12px);
+            padding: var(--space-md, 16px);
             cursor: pointer;
-            transition: border-color 0.2s, background 0.2s;
+            transition: border-color 0.2s, box-shadow 0.25s, transform 0.25s;
+            box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.05));
         }
-        .scenario-pick:hover, .scenario-pick.selected {
+        .scenario-pick:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        }
+        .scenario-pick.selected {
             border-color: rgba(34,197,94,0.5);
-            background: rgba(34,197,94,0.05);
+            box-shadow: 0 4px 16px rgba(34,197,94,0.15);
         }
         .scenario-pick .badge {
             display: inline-block;
             padding: 2px 10px;
-            border-radius: var(--radius-pill);
+            border-radius: var(--radius-pill, 20px);
             font-size: 11px;
             font-weight: 600;
             margin-bottom: 6px;
         }
-        .badge-danger { background: rgba(239,68,68,0.12); color: #EF4444; }
-        .badge-warning { background: rgba(245,158,11,0.12); color: #F59E0B; }
-        .badge-success { background: rgba(34,197,94,0.12); color: #22C55E; }
+        .badge-danger { background: rgba(239,68,68,0.1); color: #DC2626; }
+        .badge-warning { background: rgba(245,158,11,0.1); color: #D97706; }
+        .badge-success { background: rgba(34,197,94,0.1); color: #16A34A; }
         .scenario-pick h3 {
             font-family: var(--font-heading);
             font-size: 1rem;
             font-weight: 700;
+            color: var(--navy, #1A2744);
             margin: 4px 0;
         }
         .scenario-pick p {
-            color: var(--grid-muted);
+            color: var(--text-muted, #6B7280);
             font-size: 0.82rem;
             line-height: 1.55;
             margin: 0;
         }
 
-        /* Leaflet tooltip on white map */
+        /* ── Leaflet tooltip ────────────────────────────────────── */
         .plant-tooltip {
-            font-family: 'DM Sans', sans-serif;
+            font-family: var(--font-body);
             font-size: 12px;
             line-height: 1.5;
         }
         .leaflet-tooltip.plant-tooltip {
             background: rgba(255,255,255,0.96);
-            border: 1px solid #D1D5DB;
-            color: #1F2937;
-            border-radius: 8px;
-            padding: 6px 10px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+            border: 1px solid var(--border, #D4D8E0);
+            color: var(--text-secondary, #1E293B);
+            border-radius: var(--radius-md, 8px);
+            padding: 8px 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
         }
         .leaflet-tooltip.plant-tooltip::before {
             border-top-color: rgba(255,255,255,0.96);
         }
         .plant-tooltip .fuel-tag {
-            color: #6B7280;
+            color: var(--text-muted, #6B7280);
         }
 
-        /* Zone labels on map */
+        /* ── Zone labels ────────────────────────────────────────── */
         .zone-label {
             background: none !important;
             border: none !important;
             box-shadow: none !important;
-            font-family: 'DM Sans', sans-serif;
+            font-family: var(--font-body);
             font-size: 11px;
             font-weight: 600;
-            color: #6B7280;
+            color: var(--text-muted, #6B7280);
             text-transform: uppercase;
             letter-spacing: 0.06em;
             white-space: nowrap;
+        }
+
+        /* ── Sidebar annotation header ──────────────────────────── */
+        .sidebar-section-title {
+            font-family: var(--font-heading);
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--navy, #1A2744);
+            margin: 0 0 4px;
+        }
+        .sidebar-section-desc {
+            color: var(--text-muted, #6B7280);
+            font-size: 0.78rem;
+            margin: 0 0 12px;
+            line-height: 1.5;
+        }
+        .sidebar-divider {
+            border: none;
+            border-top: 1px solid var(--border-light, #E5E7EB);
+            margin: 14px 0;
         }
     </style>
 </head>
@@ -392,45 +464,58 @@
             <div class="reserve-badge" id="reserveBadge">—</div>
         </div>
 
-        <!-- Legend above map -->
+        <!-- Legend -->
         <div class="map-legend">
-            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#F59E0B"></div>Solar</div>
-            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#22C55E"></div>Wind</div>
-            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#6366F1"></div>Nuclear</div>
-            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#6B7280"></div>Gas</div>
-            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#374151"></div>Coal</div>
-            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#0EA5E9"></div>Hydro</div>
+            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#F59E0B;color:#F59E0B"></div>Solar</div>
+            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#22C55E;color:#22C55E"></div>Wind</div>
+            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#6366F1;color:#6366F1"></div>Nuclear</div>
+            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#6B7280;color:#6B7280"></div>Gas</div>
+            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#374151;color:#374151"></div>Coal</div>
+            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#0EA5E9;color:#0EA5E9"></div>Hydro</div>
         </div>
 
         <!-- Map + Sidebar -->
         <div class="viz-main">
             <div class="map-wrap">
                 <div id="gridMap"></div>
-                <!-- Time slider directly below the map -->
+                <canvas id="plantCanvas"></canvas>
                 <div class="slider-bar">
                     <input type="range" id="hourSlider" min="0" max="263" value="0" step="1">
                 </div>
             </div>
             <div class="viz-sidebar">
                 <div class="stats-grid" id="statsGrid">
-                    <div class="stat-mini"><div class="stat-mini-label">Demand</div><div class="stat-mini-val" id="statDemand">—<span class="stat-mini-unit">MW</span></div></div>
-                    <div class="stat-mini"><div class="stat-mini-label">Generation</div><div class="stat-mini-val" id="statGen" style="color:#22C55E">—<span class="stat-mini-unit">MW</span></div></div>
-                    <div class="stat-mini"><div class="stat-mini-label">Renewables</div><div class="stat-mini-val" id="statRen" style="color:#0EA5E9">—<span class="stat-mini-unit">MW</span></div></div>
-                    <div class="stat-mini"><div class="stat-mini-label">Fossil</div><div class="stat-mini-val" id="statFossil" style="color:#6B7280">—<span class="stat-mini-unit">MW</span></div></div>
+                    <div class="stat-mini">
+                        <div class="stat-mini-label">Demand</div>
+                        <div class="stat-mini-val" id="statDemand" data-unit="MW" data-prev="0">—<span class="stat-mini-unit">MW</span></div>
+                    </div>
+                    <div class="stat-mini">
+                        <div class="stat-mini-label">Generation</div>
+                        <div class="stat-mini-val" id="statGen" data-unit="MW" data-prev="0" style="color:#16A34A">—<span class="stat-mini-unit">MW</span></div>
+                    </div>
+                    <div class="stat-mini">
+                        <div class="stat-mini-label">Renewables</div>
+                        <div class="stat-mini-val" id="statRen" data-unit="MW" data-prev="0" style="color:#0EA5E9">—<span class="stat-mini-unit">MW</span></div>
+                    </div>
+                    <div class="stat-mini">
+                        <div class="stat-mini-label">Fossil</div>
+                        <div class="stat-mini-val" id="statFossil" data-unit="MW" data-prev="0" style="color:#6B7280">—<span class="stat-mini-unit">MW</span></div>
+                    </div>
                 </div>
                 <div class="stat-mini" style="margin-top:10px">
                     <div class="stat-mini-label">CO₂ Emissions</div>
-                    <div class="stat-mini-val" id="statCo2" style="color:#EF4444">—<span class="stat-mini-unit">tons/hr</span></div>
+                    <div class="stat-mini-val" id="statCo2" data-unit="tons/hr" data-prev="0" style="color:#DC2626">—<span class="stat-mini-unit">tons/hr</span></div>
                 </div>
-                <hr style="border-color:rgba(255,255,255,0.05);margin:14px 0">
+                <hr class="sidebar-divider">
                 <div id="annotationPanel" style="font-size:13px;line-height:1.6"></div>
             </div>
         </div>
 
         <!-- Supply stack chart -->
         <div class="stack-chart-wrap">
+            <div class="stack-chart-title">Supply Stack</div>
             <div class="stack-chart-container">
-                <canvas id="supplyStackChart"></canvas>
+                <div id="supplyStackChart" style="width:100%;height:100%"></div>
             </div>
         </div>
     </div>
@@ -456,13 +541,14 @@
         let currentScenario = 'uri_2021';
         let currentHour = 0;
         let playing = false;
-        let playInterval = null;
-        let speed = 500;
-        let map, plantMarkers = [];
-        let supplyChart = null;
+        let animFrameId = null;
+        let speed = 500;            // ms per hour transition
+        let lastTimestamp = 0;
+        let interpProgress = 0;     // 0→1 between currentHour and next
+        let map;
         const DATA = GRID_ANIMATION_DATA;
 
-        // ── Fuel colors ────────────────────────────────────────────
+        // ── Fuel colors (canonical from chart-colors.js) ──────────
         const FUEL_HEX = {
             GAS: '#6B7280', COAL: '#374151', OIL: '#92400E',
             NUCLEAR: '#6366F1', WIND: '#22C55E', SOLAR: '#F59E0B',
@@ -475,7 +561,31 @@
         };
         const STACK_ORDER = ['NUCLEAR','COAL','GAS','OIL','HYDRO','WIND','SOLAR','BIOMASS','OTHF','OFSL'];
 
-        // ── ERCOT Zone Boundaries (from GeoJSON) ───────────────────
+        // Map plant fuel labels to FUEL_HEX keys
+        const LABEL_TO_KEY = {};
+        for (const [k, v] of Object.entries(FUEL_LABELS)) { LABEL_TO_KEY[v] = k; }
+
+        // ── Plant rendering state ─────────────────────────────────
+        // Per-plant animated state: { displayRadius, displayOpacity, targetRadius, targetOpacity }
+        let plantState = [];
+
+        function getFuelKey(plant) {
+            // Try matching label to key, fall back to matching r,g,b
+            if (plant.fuelKey) return plant.fuelKey;
+            const key = LABEL_TO_KEY[plant.label];
+            if (key) { plant.fuelKey = key; return key; }
+            plant.fuelKey = 'GAS';
+            return 'GAS';
+        }
+
+        function hexToRgba(hex, alpha) {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return `rgba(${r},${g},${b},${alpha})`;
+        }
+
+        // ── ERCOT Zone Boundaries ─────────────────────────────────
         const ZONES = [
             { id: 'COAST', name: 'Coast', color: '#0EA5E9',
               coords: [[-97.5,27.5],[-95.0,27.5],[-93.8,29.5],[-94.0,30.0],[-95.5,30.5],[-97.0,29.0],[-97.5,27.5]],
@@ -503,7 +613,7 @@
               center: [30.9, -101.5] },
         ];
 
-        // ── Elements ───────────────────────────────────────────────
+        // ── Elements ──────────────────────────────────────────────
         const els = {
             slider: document.getElementById('hourSlider'),
             playBtn: document.getElementById('playBtn'),
@@ -517,15 +627,36 @@
             statFossil: document.getElementById('statFossil'),
             statCo2: document.getElementById('statCo2'),
             annotationPanel: document.getElementById('annotationPanel'),
+            plantCanvas: document.getElementById('plantCanvas'),
         };
 
-        // ── Initialize Map ─────────────────────────────────────────
+        // ── Canvas setup ──────────────────────────────────────────
+        const canvas = els.plantCanvas;
+        const ctx = canvas.getContext('2d');
+        let canvasDPR = window.devicePixelRatio || 1;
+
+        function syncCanvas() {
+            const mapEl = document.getElementById('gridMap');
+            const rect = mapEl.getBoundingClientRect();
+            canvas.width = rect.width * canvasDPR;
+            canvas.height = rect.height * canvasDPR;
+            canvas.style.width = rect.width + 'px';
+            canvas.style.height = rect.height + 'px';
+            ctx.setTransform(canvasDPR, 0, 0, canvasDPR, 0, 0);
+        }
+
+        // ── Tooltip overlay (since canvas dots have no pointer events) ──
+        const tooltipDiv = document.createElement('div');
+        tooltipDiv.className = 'plant-tooltip';
+        tooltipDiv.style.cssText = 'position:absolute;z-index:500;pointer-events:none;display:none;' +
+            'background:rgba(255,255,255,0.96);border:1px solid #D4D8E0;color:#1E293B;' +
+            'border-radius:8px;padding:8px 12px;box-shadow:0 4px 16px rgba(0,0,0,0.12);' +
+            'font-family:var(--font-body);font-size:12px;line-height:1.5;max-width:220px;';
+        document.querySelector('.map-wrap').appendChild(tooltipDiv);
+
+        // ── Initialize Map ────────────────────────────────────────
         function initMap() {
-            // ERCOT bounding box (padded)
-            const ercotBounds = L.latLngBounds(
-                [26.0, -105.5],  // SW corner
-                [34.8, -93.0]    // NE corner
-            );
+            const ercotBounds = L.latLngBounds([26.0, -105.5], [34.8, -93.0]);
 
             map = L.map('gridMap', {
                 center: [30.8, -99.0],
@@ -543,10 +674,8 @@
                 maxBoundsViscosity: 1.0,
             });
 
-            // Fit to ERCOT territory
             map.fitBounds(ercotBounds);
 
-            // Light tile layer — shows Texas geography
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
                 subdomains: 'abcd',
                 maxZoom: 19,
@@ -564,7 +693,6 @@
                     dashArray: '4,3',
                 }).addTo(map);
 
-                // Zone label
                 L.marker(z.center, {
                     icon: L.divIcon({
                         className: 'zone-label',
@@ -576,217 +704,301 @@
                 }).addTo(map);
             }
 
-            // Create markers for all plants
+            // Init plant state array
             const plants = DATA.plants;
-            plantMarkers = new Array(plants.length);
+            plantState = new Array(plants.length);
             for (let i = 0; i < plants.length; i++) {
-                const p = plants[i];
-                const marker = L.circleMarker([p.lat, p.lon], {
-                    radius: 1,
-                    fillColor: `rgb(${p.r},${p.g},${p.b})`,
-                    color: `rgba(${p.r},${p.g},${p.b},0.5)`,
-                    weight: 1,
-                    fillOpacity: 0.15,
-                });
-                marker.bindTooltip('', {
-                    className: 'plant-tooltip',
-                    direction: 'top',
-                    offset: [0, -6],
-                });
-                marker.addTo(map);
-                plantMarkers[i] = marker;
+                plantState[i] = {
+                    displayRadius: 0,
+                    displayOpacity: 0,
+                    targetRadius: 0,
+                    targetOpacity: 0,
+                    displayGlowRadius: 0,
+                    targetGlowRadius: 0,
+                };
             }
+
+            syncCanvas();
+            map.on('moveend', syncCanvas);
+            window.addEventListener('resize', syncCanvas);
+
+            // Mouse hover for tooltip
+            const mapEl = document.getElementById('gridMap');
+            mapEl.parentElement.addEventListener('mousemove', handleMapHover);
+            mapEl.parentElement.addEventListener('mouseleave', () => { tooltipDiv.style.display = 'none'; });
         }
 
-        // ── Update map markers for current hour ────────────────────
-        function updateMap(hour) {
-            const sc = DATA.scenarios[currentScenario];
-            if (!sc) return;
+        function handleMapHover(e) {
+            const rect = canvas.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
             const plants = DATA.plants;
-            const output = sc.output;
+            let closest = -1;
+            let closestDist = 20; // max pixel distance
 
-            // Find max output for scaling
-            let maxMw = 1;
             for (let i = 0; i < plants.length; i++) {
-                const mw = output[i][hour] || 0;
-                if (mw > maxMw) maxMw = mw;
+                if (plantState[i].displayRadius < 0.5) continue;
+                const pt = map.latLngToContainerPoint([plants[i].lat, plants[i].lon]);
+                const dx = pt.x - mx;
+                const dy = pt.y - my;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const hitR = Math.max(plantState[i].displayRadius * 1.5, 8);
+                if (dist < hitR && dist < closestDist) {
+                    closest = i;
+                    closestDist = dist;
+                }
             }
 
-            for (let i = 0; i < plants.length; i++) {
-                const p = plants[i];
-                const mw = output[i][hour] || 0;
-                const marker = plantMarkers[i];
-
-                let r, opacity;
-                if (mw > 0) {
-                    r = 2 + 12 * Math.pow(mw / maxMw, 0.5);
-                    opacity = 0.8;
-                } else {
-                    r = 1.5;
-                    opacity = 0.08;
-                }
-
-                marker.setRadius(r);
-                marker.setStyle({ fillOpacity: opacity });
-
-                marker.setTooltipContent(
+            if (closest >= 0) {
+                const p = plants[closest];
+                const sc = DATA.scenarios[currentScenario];
+                const mw = sc ? (sc.output[closest][currentHour] || 0) : 0;
+                tooltipDiv.innerHTML =
                     `<b>${p.name}</b><br>` +
                     `<span class="fuel-tag">Fuel:</span> ${p.label}<br>` +
-                    `<span class="fuel-tag">Output:</span> ${mw.toLocaleString()} MW<br>` +
-                    `<span class="fuel-tag">Capacity:</span> ${p.cap.toLocaleString()} MW`
-                );
+                    `<span class="fuel-tag">Output:</span> ${Math.round(mw).toLocaleString()} MW<br>` +
+                    `<span class="fuel-tag">Capacity:</span> ${p.cap.toLocaleString()} MW`;
+                const pt = map.latLngToContainerPoint([p.lat, p.lon]);
+                tooltipDiv.style.left = (pt.x + 12) + 'px';
+                tooltipDiv.style.top = (pt.y - 40) + 'px';
+                tooltipDiv.style.display = 'block';
+            } else {
+                tooltipDiv.style.display = 'none';
             }
         }
 
-        // ── Supply Stack Chart ─────────────────────────────────────
-        function initSupplyChart() {
-            const ctx = document.getElementById('supplyStackChart').getContext('2d');
-            supplyChart = new Chart(ctx, {
-                type: 'line',
-                data: { labels: [], datasets: [] },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: false,
-                    interaction: { mode: 'index', intersect: false },
-                    scales: {
-                        x: {
-                            ticks: {
-                                color: '#9CA3AF',
-                                font: { size: 10 },
-                                maxRotation: 45,
-                                autoSkip: true,
-                                maxTicksLimit: 12,
-                            },
-                            grid: { display: false },
-                        },
-                        y: {
-                            stacked: true,
-                            ticks: {
-                                color: '#9CA3AF',
-                                font: { size: 10 },
-                                callback: v => (v / 1000).toFixed(0) + 'k',
-                            },
-                            grid: { color: 'rgba(255,255,255,0.04)' },
-                            title: {
-                                display: true,
-                                text: 'MW',
-                                color: '#9CA3AF',
-                                font: { size: 11 },
-                            },
-                        },
-                    },
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'top',
-                            labels: {
-                                color: '#D1D5DB',
-                                font: { size: 11 },
-                                boxWidth: 12,
-                                padding: 12,
-                                usePointStyle: true,
-                                pointStyle: 'circle',
-                            },
-                        },
-                        tooltip: {
-                            backgroundColor: 'rgba(17,24,39,0.92)',
-                            titleColor: '#F8FAFC',
-                            bodyColor: '#D1D5DB',
-                            borderColor: 'rgba(255,255,255,0.1)',
-                            borderWidth: 1,
-                            callbacks: {
-                                label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y?.toLocaleString() || 0} MW`,
-                            },
-                        },
-                    },
-                },
-            });
+        // ── Draw plant dots on canvas (3-layer concentric) ────────
+        function drawPlants(interpFrac) {
+            ctx.clearRect(0, 0, canvas.width / canvasDPR, canvas.height / canvasDPR);
+            const sc = DATA.scenarios[currentScenario];
+            if (!sc || !map) return;
+
+            const plants = DATA.plants;
+            const output = sc.output;
+            const nextHour = Math.min(currentHour + 1, sc.hours.length - 1);
+            const dt16 = 16.67; // approx frame ms for easing
+
+            for (let i = 0; i < plants.length; i++) {
+                const p = plants[i];
+                const ps = plantState[i];
+                const mwCurr = output[i][currentHour] || 0;
+                const mwNext = output[i][nextHour] || 0;
+                const mw = mwCurr + (mwNext - mwCurr) * interpFrac;
+
+                // Compute targets from MW
+                if (mw > 0.5) {
+                    const sqrtMw = Math.sqrt(mw);
+                    ps.targetRadius = Math.min(sqrtMw * 1.5, 30);
+                    ps.targetGlowRadius = Math.min(sqrtMw * 3, 50);
+                    ps.targetOpacity = 1;
+                } else {
+                    ps.targetRadius = 0;
+                    ps.targetGlowRadius = 0;
+                    ps.targetOpacity = 0;
+                }
+
+                // Ease towards targets (300ms for radius, 500ms for opacity via exponential decay)
+                const radiusRate = 1 - Math.pow(0.001, dt16 / 300);
+                const opacityRate = 1 - Math.pow(0.001, dt16 / 500);
+                ps.displayRadius += (ps.targetRadius - ps.displayRadius) * radiusRate;
+                ps.displayGlowRadius += (ps.targetGlowRadius - ps.displayGlowRadius) * radiusRate;
+                ps.displayOpacity += (ps.targetOpacity - ps.displayOpacity) * opacityRate;
+
+                // Skip tiny dots
+                if (ps.displayRadius < 0.3 && ps.displayOpacity < 0.01) continue;
+
+                const pt = map.latLngToContainerPoint([p.lat, p.lon]);
+                const x = pt.x;
+                const y = pt.y;
+                const fuelKey = getFuelKey(p);
+                const color = FUEL_HEX[fuelKey] || '#9CA3AF';
+                const opacity = ps.displayOpacity;
+
+                // Layer 1: Outer glow (blurred, 10% opacity)
+                if (ps.displayGlowRadius > 1) {
+                    ctx.save();
+                    ctx.filter = 'blur(12px)';
+                    ctx.globalAlpha = opacity;
+                    ctx.beginPath();
+                    ctx.arc(x, y, ps.displayGlowRadius, 0, Math.PI * 2);
+                    ctx.fillStyle = hexToRgba(color, 0.10);
+                    ctx.fill();
+                    ctx.restore();
+                }
+
+                // Layer 2: Transparent fill (15% opacity)
+                if (ps.displayRadius > 0.5) {
+                    ctx.save();
+                    ctx.globalAlpha = opacity;
+                    ctx.beginPath();
+                    ctx.arc(x, y, ps.displayRadius, 0, Math.PI * 2);
+                    ctx.fillStyle = hexToRgba(color, 0.15);
+                    ctx.fill();
+                    ctx.restore();
+                }
+
+                // Layer 3: Saturated border (100% color, 1.5px stroke)
+                if (ps.displayRadius > 0.5) {
+                    ctx.save();
+                    ctx.globalAlpha = opacity;
+                    ctx.beginPath();
+                    ctx.arc(x, y, ps.displayRadius, 0, Math.PI * 2);
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            }
         }
 
-        function updateSupplyChart() {
+        // ── Supply Stack Chart (Plotly.js) ────────────────────────
+        let supplyChartInitialized = false;
+
+        function formatTimeLabel(h) {
+            if (!h) return '';
+            const d = new Date(h.replace(' ', 'T'));
+            if (isNaN(d)) return h.slice(5, 16);
+            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            return `${months[d.getMonth()]} ${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:00`;
+        }
+
+        function buildSupplyChart() {
             const sc = DATA.scenarios[currentScenario];
-            if (!sc || !supplyChart) return;
+            if (!sc) return;
 
-            const labels = sc.hours.map(h => {
-                if (!h) return '';
-                const d = new Date(h.replace(' ', 'T'));
-                if (isNaN(d)) return h.slice(5, 16);
-                const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-                return `${months[d.getMonth()]} ${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:00`;
-            });
+            const labels = sc.hours.map(formatTimeLabel);
+            const traces = [];
 
-            const datasets = [];
             for (const fuel of STACK_ORDER) {
-                if (sc.stack[fuel]) {
-                    datasets.push({
-                        label: FUEL_LABELS[fuel] || fuel,
-                        data: sc.stack[fuel],
-                        backgroundColor: FUEL_HEX[fuel] + 'CC',
-                        borderColor: FUEL_HEX[fuel],
-                        borderWidth: 0.5,
-                        fill: 'origin',
-                        stack: 'supply',
-                        pointRadius: 0,
-                        tension: 0.2,
-                    });
-                }
+                if (!sc.stack[fuel]) continue;
+                traces.push({
+                    x: labels,
+                    y: sc.stack[fuel],
+                    name: FUEL_LABELS[fuel] || fuel,
+                    type: 'scatter',
+                    mode: 'lines',
+                    stackgroup: 'supply',
+                    fillcolor: hexToRgba(FUEL_HEX[fuel], 0.15),
+                    line: { color: FUEL_HEX[fuel], width: 2 },
+                    hovertemplate: '%{y:,.0f} MW<extra>%{fullData.name}</extra>',
+                });
             }
 
             // Demand line (not stacked)
-            datasets.push({
-                label: 'Demand',
-                data: sc.demand,
-                borderColor: '#FFFFFF',
-                borderWidth: 2,
-                borderDash: [6, 3],
-                fill: false,
-                pointRadius: 0,
-                tension: 0.2,
-                stack: 'demand',
-                order: -1,
+            traces.push({
+                x: labels,
+                y: sc.demand,
+                name: 'Demand',
+                type: 'scatter',
+                mode: 'lines',
+                line: { color: '#1A2744', width: 2.5, dash: 'dash' },
+                hovertemplate: '%{y:,.0f} MW<extra>Demand</extra>',
             });
 
-            supplyChart.data.labels = labels;
-            supplyChart.data.datasets = datasets;
-            supplyChart.update('none');
+            const layout = {
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { family: "'DM Sans', 'Plus Jakarta Sans', sans-serif", color: '#6B7280', size: 11 },
+                xaxis: {
+                    showgrid: false,
+                    tickfont: { size: 10 },
+                    nticks: 12,
+                },
+                yaxis: {
+                    gridcolor: '#E2E8F0',
+                    gridwidth: 1,
+                    tickformat: ',d',
+                    title: { text: 'MW', font: { size: 11, color: '#6B7280' } },
+                    zeroline: false,
+                },
+                margin: { l: 65, r: 16, t: 8, b: 40 },
+                showlegend: true,
+                legend: {
+                    orientation: 'h',
+                    y: -0.2,
+                    x: 0.5,
+                    xanchor: 'center',
+                    font: { size: 10 },
+                },
+                hovermode: 'x unified',
+                hoverlabel: {
+                    bgcolor: 'rgba(255,255,255,0.95)',
+                    bordercolor: '#D4D8E0',
+                    font: { family: "'DM Sans', sans-serif", size: 11, color: '#1A2744' },
+                },
+                shapes: [],
+            };
+
+            const config = { responsive: true, displayModeBar: false };
+
+            if (supplyChartInitialized) {
+                Plotly.react('supplyStackChart', traces, layout, config);
+            } else {
+                Plotly.newPlot('supplyStackChart', traces, layout, config);
+                supplyChartInitialized = true;
+            }
         }
 
-        // Draw a vertical "now" line on the chart
-        function drawNowLine(hour) {
-            if (!supplyChart) return;
-            const chart = supplyChart;
-            const ctx = chart.ctx;
-            const xScale = chart.scales.x;
-            const yScale = chart.scales.y;
-            if (!xScale || !yScale) return;
-            const x = xScale.getPixelForValue(hour);
-            if (x === undefined || isNaN(x)) return;
-            ctx.save();
-            ctx.beginPath();
-            ctx.moveTo(x, yScale.top);
-            ctx.lineTo(x, yScale.bottom);
-            ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([5, 3]);
-            ctx.stroke();
-            ctx.restore();
+        function updateCursorLine(hour) {
+            const sc = DATA.scenarios[currentScenario];
+            if (!sc || !supplyChartInitialized) return;
+            const label = formatTimeLabel(sc.hours[hour]);
+            Plotly.relayout('supplyStackChart', {
+                shapes: [{
+                    type: 'line',
+                    x0: label, x1: label,
+                    y0: 0, y1: 1,
+                    xref: 'x', yref: 'paper',
+                    line: { color: 'rgba(26,39,68,0.3)', width: 2 },
+                }]
+            });
         }
 
-        // ── Stats update ───────────────────────────────────────────
+        // ── Counting animation for stat values ────────────────────
+        const activeAnimations = {};
+
+        function animateValue(el, to) {
+            const from = parseInt(el.dataset.prev) || 0;
+            if (from === to) return;
+
+            const unit = el.dataset.unit || '';
+            const id = el.id;
+
+            // Cancel any running animation
+            if (activeAnimations[id]) cancelAnimationFrame(activeAnimations[id]);
+
+            const startTime = performance.now();
+            const duration = 300;
+
+            function tick(now) {
+                const t = Math.min((now - startTime) / duration, 1);
+                const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+                const current = Math.round(from + (to - from) * eased);
+                el.innerHTML = `${current.toLocaleString()}<span class="stat-mini-unit">${unit}</span>`;
+                if (t < 1) {
+                    activeAnimations[id] = requestAnimationFrame(tick);
+                } else {
+                    el.dataset.prev = to;
+                    delete activeAnimations[id];
+                }
+            }
+            requestAnimationFrame(tick);
+        }
+
+        // ── Stats update ──────────────────────────────────────────
         function updateStats(hour) {
             const sc = DATA.scenarios[currentScenario];
             if (!sc) return;
 
-            const demand = sc.demand[hour] || 0;
-            const gen = sc.generation[hour] || 0;
-            const ren = sc.renewable[hour] || 0;
-            const fos = sc.fossil[hour] || 0;
+            const demand = Math.round(sc.demand[hour] || 0);
+            const gen = Math.round(sc.generation[hour] || 0);
+            const ren = Math.round(sc.renewable[hour] || 0);
+            const fos = Math.round(sc.fossil[hour] || 0);
 
-            els.statDemand.innerHTML = `${Math.round(demand).toLocaleString()}<span class="stat-mini-unit">MW</span>`;
-            els.statGen.innerHTML = `${Math.round(gen).toLocaleString()}<span class="stat-mini-unit">MW</span>`;
-            els.statRen.innerHTML = `${Math.round(ren).toLocaleString()}<span class="stat-mini-unit">MW</span>`;
-            els.statFossil.innerHTML = `${Math.round(fos).toLocaleString()}<span class="stat-mini-unit">MW</span>`;
+            animateValue(els.statDemand, demand);
+            animateValue(els.statGen, gen);
+            animateValue(els.statRen, ren);
+            animateValue(els.statFossil, fos);
 
             let totalCo2 = 0;
             if (sc.stackCo2) {
@@ -794,32 +1006,32 @@
                     totalCo2 += (sc.stackCo2[fuel][hour] || 0);
                 }
             }
-            els.statCo2.innerHTML = `${Math.round(totalCo2).toLocaleString()}<span class="stat-mini-unit">tons/hr</span>`;
+            animateValue(els.statCo2, Math.round(totalCo2));
 
             els.timeDisplay.textContent = sc.hours[hour] || '—';
 
-            const reserveMw = gen - demand;
-            const reservePct = demand > 0 ? (reserveMw / demand * 100) : 0;
+            const reserveMw = (sc.generation[hour] || 0) - (sc.demand[hour] || 0);
+            const reservePct = (sc.demand[hour] || 0) > 0 ? (reserveMw / sc.demand[hour] * 100) : 0;
             let status, color;
-            if (reservePct < 0) { status = 'EMERGENCY'; color = '#EF4444'; }
+            if (reservePct < 0) { status = 'EMERGENCY'; color = '#DC2626'; }
             else if (reservePct < 3) { status = 'CRITICAL'; color = '#F97316'; }
-            else if (reservePct < 6) { status = 'TIGHT'; color = '#F59E0B'; }
-            else { status = 'NORMAL'; color = '#22C55E'; }
+            else if (reservePct < 6) { status = 'TIGHT'; color = '#D97706'; }
+            else { status = 'NORMAL'; color = '#16A34A'; }
 
             els.reserveBadge.textContent = `${status} ${reservePct >= 0 ? '+' : ''}${reservePct.toFixed(1)}%`;
-            els.reserveBadge.style.backgroundColor = color + '18';
+            els.reserveBadge.style.backgroundColor = hexToRgba(color, 0.1);
             els.reserveBadge.style.color = color;
-            els.reserveBadge.style.border = `1px solid ${color}40`;
+            els.reserveBadge.style.border = `1px solid ${hexToRgba(color, 0.25)}`;
         }
 
-        // ── Annotations ────────────────────────────────────────────
+        // ── Annotations ───────────────────────────────────────────
         function updateAnnotations(hour) {
             const sc = DATA.scenarios[currentScenario];
             if (!sc) return;
 
             const meta = sc.meta || {};
-            let html = `<h3 style="font-size:15px;font-weight:700;margin:0 0 4px">${meta.name || currentScenario}</h3>`;
-            html += `<p style="color:#9CA3AF;font-size:12px;margin:0 0 10px">${meta.description || ''}</p>`;
+            let html = `<h3 class="sidebar-section-title">${meta.name || currentScenario}</h3>`;
+            html += `<p class="sidebar-section-desc">${meta.description || ''}</p>`;
 
             const annotations = sc.annotations || [];
             for (const ann of annotations) {
@@ -838,20 +1050,77 @@
             }
         }
 
-        // ── Master update ──────────────────────────────────────────
-        function update(hour) {
+        // ── Master update (discrete hour change) ──────────────────
+        function updateDiscrete(hour) {
             currentHour = hour;
-            updateMap(hour);
             updateStats(hour);
             updateAnnotations(hour);
-
-            if (supplyChart) {
-                supplyChart.update('none');
-                drawNowLine(hour);
-            }
+            updateCursorLine(hour);
         }
 
-        // ── Scenario switch ────────────────────────────────────────
+        // ── Animation loop (requestAnimationFrame) ────────────────
+        function animationLoop(timestamp) {
+            if (!playing) return;
+
+            if (lastTimestamp === 0) lastTimestamp = timestamp;
+            const dt = timestamp - lastTimestamp;
+            lastTimestamp = timestamp;
+
+            interpProgress += dt / speed;
+
+            if (interpProgress >= 1) {
+                // Advance to next hour
+                interpProgress -= 1;
+                if (interpProgress > 1) interpProgress = 0; // guard for tab-away
+
+                const sc = DATA.scenarios[currentScenario];
+                if (!sc) return;
+                let next = currentHour + 1;
+                if (next >= sc.hours.length) next = 0;
+
+                currentHour = next;
+                els.slider.value = next;
+                updateDiscrete(next);
+            }
+
+            // Draw interpolated plants
+            drawPlants(interpProgress);
+
+            animFrameId = requestAnimationFrame(animationLoop);
+        }
+
+        // ── Full update (for slider / scenario switch) ────────────
+        function update(hour) {
+            currentHour = hour;
+            interpProgress = 0;
+
+            // Set plant targets immediately then draw
+            const sc = DATA.scenarios[currentScenario];
+            if (sc) {
+                const output = sc.output;
+                for (let i = 0; i < DATA.plants.length; i++) {
+                    const mw = output[i][hour] || 0;
+                    const ps = plantState[i];
+                    if (mw > 0.5) {
+                        const sqrtMw = Math.sqrt(mw);
+                        ps.targetRadius = Math.min(sqrtMw * 1.5, 30);
+                        ps.targetGlowRadius = Math.min(sqrtMw * 3, 50);
+                        ps.targetOpacity = 1;
+                    } else {
+                        ps.targetRadius = 0;
+                        ps.targetGlowRadius = 0;
+                        ps.targetOpacity = 0;
+                    }
+                }
+            }
+
+            drawPlants(0);
+            updateStats(hour);
+            updateAnnotations(hour);
+            updateCursorLine(hour);
+        }
+
+        // ── Scenario switch ───────────────────────────────────────
         function switchScenario(scenarioId) {
             if (!DATA.scenarios[scenarioId]) return;
             currentScenario = scenarioId;
@@ -861,6 +1130,14 @@
             els.slider.max = maxH;
             els.slider.value = 0;
             currentHour = 0;
+            interpProgress = 0;
+
+            // Reset stat prev values
+            els.statDemand.dataset.prev = '0';
+            els.statGen.dataset.prev = '0';
+            els.statRen.dataset.prev = '0';
+            els.statFossil.dataset.prev = '0';
+            els.statCo2.dataset.prev = '0';
 
             els.scenarioSelect.value = scenarioId;
 
@@ -868,34 +1145,46 @@
                 card.classList.toggle('selected', card.dataset.scenario === scenarioId);
             });
 
-            updateSupplyChart();
+            // Reset plant state
+            for (let i = 0; i < plantState.length; i++) {
+                plantState[i].displayRadius = 0;
+                plantState[i].displayOpacity = 0;
+                plantState[i].displayGlowRadius = 0;
+            }
+
+            buildSupplyChart();
             update(0);
 
             if (playing) togglePlay();
         }
 
-        // ── Playback ───────────────────────────────────────────────
+        // ── Playback ──────────────────────────────────────────────
         function togglePlay() {
             playing = !playing;
             els.playBtn.innerHTML = playing ? '&#9646;&#9646; Pause' : '&#9654; Play';
 
             if (playing) {
-                playInterval = setInterval(() => {
-                    const sc = DATA.scenarios[currentScenario];
-                    if (!sc) return;
-                    let next = currentHour + 1;
-                    if (next >= sc.hours.length) next = 0;
-                    els.slider.value = next;
-                    update(next);
-                }, speed);
+                lastTimestamp = 0;
+                interpProgress = 0;
+                animFrameId = requestAnimationFrame(animationLoop);
             } else {
-                clearInterval(playInterval);
-                playInterval = null;
+                if (animFrameId) cancelAnimationFrame(animFrameId);
+                animFrameId = null;
             }
         }
 
-        // ── Event listeners ────────────────────────────────────────
+        // ── Idle rendering (when paused, still animate dot easing) ─
+        let idleFrameId = null;
+        function idleLoop() {
+            if (!playing) {
+                drawPlants(0);
+            }
+            idleFrameId = requestAnimationFrame(idleLoop);
+        }
+
+        // ── Event listeners ───────────────────────────────────────
         els.slider.addEventListener('input', e => {
+            if (playing) togglePlay();
             update(parseInt(e.target.value));
         });
 
@@ -907,17 +1196,6 @@
 
         els.speedSelect.addEventListener('change', e => {
             speed = parseInt(e.target.value);
-            if (playing) {
-                clearInterval(playInterval);
-                playInterval = setInterval(() => {
-                    const sc = DATA.scenarios[currentScenario];
-                    if (!sc) return;
-                    let next = currentHour + 1;
-                    if (next >= sc.hours.length) next = 0;
-                    els.slider.value = next;
-                    update(next);
-                }, speed);
-            }
         });
 
         document.querySelectorAll('.scenario-pick').forEach(card => {
@@ -926,19 +1204,11 @@
             });
         });
 
-        // "Now" line plugin for Chart.js
-        const nowLinePlugin = {
-            id: 'nowLine',
-            afterDraw(chart) {
-                drawNowLine(currentHour);
-            }
-        };
-
-        // ── Init ───────────────────────────────────────────────────
+        // ── Init ──────────────────────────────────────────────────
         initMap();
-        initSupplyChart();
-        Chart.register(nowLinePlugin);
         switchScenario('uri_2021');
+        idleLoop(); // Start idle rendering for smooth easing even when paused
+
     })();
     </script>
 </body>
