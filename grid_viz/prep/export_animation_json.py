@@ -70,10 +70,12 @@ def main():
         print("ERROR: No frame parquets found")
         return
 
-    # Get unique plants (use hour 0 or first available hour)
-    h0 = first_frames[first_frames["hour_index"] == first_frames["hour_index"].min()]
-    plant_roster = h0[["plant_id", "plant_name", "lat", "lon", "fuel", "fuel_label",
-                        "capacity_mw", "color_r", "color_g", "color_b"]].copy()
+    # Get unique plants from ALL hours (not just hour 0 — solar plants have zero
+    # output at night and are missing from hour 0 entirely)
+    plant_roster = first_frames.drop_duplicates(subset=["plant_id"], keep="first")[
+        ["plant_id", "plant_name", "lat", "lon", "fuel", "fuel_label",
+         "capacity_mw", "color_r", "color_g", "color_b"]
+    ].copy()
     plant_roster = plant_roster.sort_values("plant_id").reset_index(drop=True)
 
     # Build plant ID to index mapping
@@ -131,8 +133,10 @@ def main():
             h = int(row["hour_index"])
             if pid in pid_to_idx and h < n_hours:
                 idx = pid_to_idx[pid]
-                output_arr[idx, h] = row["output_mw"]
-                co2_arr[idx, h] = row["co2_tons_hr"]
+                mw = row["output_mw"]
+                output_arr[idx, h] = mw if not np.isnan(mw) else 0.0
+                co2 = row["co2_tons_hr"]
+                co2_arr[idx, h] = co2 if not np.isnan(co2) else 0.0
 
         # Round to 1 decimal for compactness
         output_list = [[round(float(v), 1) for v in row] for row in output_arr]
