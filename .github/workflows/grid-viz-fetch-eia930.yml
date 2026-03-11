@@ -19,6 +19,10 @@ on:
           - uri_2021
           - summer_2023_heat
           - normal_spring
+      eia_api_key:
+        description: 'EIA API key (overrides secret if provided)'
+        required: false
+        type: string
       branch:
         description: 'Branch to commit results to'
         required: false
@@ -50,7 +54,7 @@ jobs:
 
       - name: Fetch EIA-930 raw hourly data
         env:
-          EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
+          EIA_API_KEY: ${{ inputs.eia_api_key || secrets.EIA_API_KEY }}
         run: |
           python grid_viz/fetch/fetch_eia930_raw.py --scenario ${{ inputs.scenario }}
 

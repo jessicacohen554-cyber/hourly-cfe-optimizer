@@ -1,0 +1,134 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "zone": "Coast",
+        "zone_id": "COAST",
+        "description": "Gulf Coast region — Houston, Corpus Christi, Galveston",
+        "color": [14, 165, 233, 30]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-97.5, 27.5], [-95.0, 27.5], [-93.8, 29.5],
+          [-94.0, 30.0], [-95.5, 30.5], [-97.0, 29.0], [-97.5, 27.5]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "zone": "East",
+        "zone_id": "EAST",
+        "description": "East Texas — Beaumont, Tyler, Lufkin",
+        "color": [34, 197, 94, 30]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-95.5, 30.5], [-93.8, 29.5], [-93.5, 31.0],
+          [-94.0, 33.5], [-96.0, 33.8], [-96.0, 31.5], [-95.5, 30.5]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "zone": "Far West",
+        "zone_id": "FWEST",
+        "description": "Far West Texas — El Paso, Big Bend, Pecos",
+        "color": [249, 115, 22, 30]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-104.7, 29.5], [-103.0, 29.0], [-103.0, 31.0],
+          [-103.5, 32.0], [-104.7, 32.0], [-104.7, 29.5]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "zone": "North",
+        "zone_id": "NORTH",
+        "description": "North Texas — Dallas-Fort Worth, Wichita Falls",
+        "color": [99, 102, 241, 30]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-98.5, 31.5], [-96.0, 31.5], [-96.0, 33.8],
+          [-97.5, 34.0], [-100.0, 34.0], [-100.0, 32.5], [-98.5, 31.5]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "zone": "North Central",
+        "zone_id": "NCENT",
+        "description": "North Central — Waco, Temple, Killeen",
+        "color": [156, 39, 176, 30]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-98.5, 30.5], [-96.0, 30.5], [-96.0, 31.5],
+          [-98.5, 31.5], [-98.5, 30.5]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "zone": "South",
+        "zone_id": "SOUTH",
+        "description": "South Texas — San Antonio, Laredo, McAllen",
+        "color": [233, 30, 99, 30]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-100.5, 27.0], [-97.5, 27.5], [-97.0, 29.0],
+          [-98.5, 30.5], [-100.5, 30.0], [-100.5, 27.0]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "zone": "South Central",
+        "zone_id": "SCENT",
+        "description": "South Central — Austin, San Marcos",
+        "color": [6, 182, 212, 30]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-98.5, 29.5], [-97.0, 29.0], [-95.5, 30.5],
+          [-96.0, 30.5], [-98.5, 30.5], [-98.5, 29.5]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "zone": "West",
+        "zone_id": "WEST",
+        "description": "West Texas — Midland, Odessa, Abilene (major wind region)",
+        "color": [245, 158, 11, 30]
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-103.0, 29.0], [-100.5, 27.0], [-100.5, 30.0],
+          [-100.0, 32.5], [-100.0, 34.0], [-103.5, 32.0],
+          [-103.0, 31.0], [-103.0, 29.0]
+        ]]
+      }
+    }
+  ]
+}

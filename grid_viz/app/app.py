@@ -75,6 +75,18 @@ FUEL_LABELS = {
     "OTHF": "Other", "OFSL": "Other Fossil",
 }
 
+# ── Zone Boundaries ──────────────────────────────────────────────────────────
+
+def load_zone_geojson():
+    """Load ERCOT weather zone boundaries."""
+    path = "grid_viz/data/geo/ercot_weather_zones.geojson"
+    if os.path.exists(path):
+        with open(path) as f:
+            return json.load(f)
+    return None
+
+ZONE_GEOJSON = load_zone_geojson()
+
 # ── PyDeck Map ───────────────────────────────────────────────────────────────
 
 def build_map(frame_data, hour_idx):
@@ -108,6 +120,19 @@ def build_map(frame_data, hour_idx):
     # Glow layer for active plants
     active = hour_data[hour_data["output_mw"] > 0].copy()
     layers = []
+
+    # Zone boundary layer (subtle, underneath everything)
+    if ZONE_GEOJSON:
+        layers.append(pdk.Layer(
+            "GeoJsonLayer",
+            data=ZONE_GEOJSON,
+            get_fill_color="properties.color",
+            get_line_color=[255, 255, 255, 40],
+            get_line_width=1500,
+            pickable=True,
+            auto_highlight=True,
+            highlight_color=[255, 255, 255, 20],
+        ))
 
     if len(active) > 0:
         # Subtle heatmap underlay

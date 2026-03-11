@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERCOT Grid Animation — Hourly CFE Optimizer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/scrollytell.css">
+    <script src="js/nav.js"></script>
+    <script src="js/chart-colors.js"></script>
+    <script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
+    <style>
+        .launch-section {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: var(--space-2xl) var(--pad-page);
+        }
+        .launch-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: var(--radius-lg);
+            padding: var(--space-2xl);
+            text-align: center;
+            backdrop-filter: blur(8px);
+        }
+        .launch-card h2 {
+            font-family: var(--font-heading);
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin-bottom: var(--space-md);
+            background: linear-gradient(90deg, #22C55E, #0EA5E9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .launch-card p {
+            color: var(--text-muted);
+            font-size: 1rem;
+            line-height: 1.7;
+            max-width: 600px;
+            margin: 0 auto var(--space-lg);
+        }
+        .launch-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 32px;
+            background: linear-gradient(135deg, #22C55E, #0EA5E9);
+            color: white;
+            font-family: var(--font-heading);
+            font-weight: 700;
+            font-size: 1rem;
+            border: none;
+            border-radius: var(--radius-pill);
+            cursor: pointer;
+            text-decoration: none;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .launch-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(34, 197, 94, 0.3);
+        }
+        .scenario-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: var(--space-lg);
+            margin-top: var(--space-2xl);
+        }
+        .scenario-card {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: var(--radius-md);
+            padding: var(--space-lg);
+            text-align: left;
+        }
+        .scenario-card h3 {
+            font-family: var(--font-heading);
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: var(--space-sm);
+        }
+        .scenario-card p {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            line-height: 1.6;
+            margin: 0;
+        }
+        .scenario-card .date-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            background: rgba(34,197,94,0.1);
+            color: #22C55E;
+            border-radius: var(--radius-pill);
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-bottom: var(--space-sm);
+        }
+        .scenario-card.danger .date-badge {
+            background: rgba(239,68,68,0.1);
+            color: #EF4444;
+        }
+        .scenario-card.warning .date-badge {
+            background: rgba(245,158,11,0.1);
+            color: #F59E0B;
+        }
+        .feature-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-md) var(--space-xl);
+            max-width: 700px;
+            margin: var(--space-xl) auto 0;
+            text-align: left;
+        }
+        .feature-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+        .feature-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-top: 6px;
+            flex-shrink: 0;
+        }
+        @media (max-width: 768px) {
+            .feature-list { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <nav id="topNav"></nav>
+
+    <div class="header" id="pageHeader">
+        <h1>ERCOT Grid Animation</h1>
+        <div class="subtitle">Spatiotemporal visualization of how the Texas grid breathes under stress</div>
+        <div class="header-accent"></div>
+    </div>
+
+    <div class="launch-section">
+        <div class="launch-card">
+            <h2>Watch the Grid in Motion</h2>
+            <p>
+                Every power plant in ERCOT mapped in real time. Watch solar bloom at noon,
+                wind sweep across West Texas overnight, and gas ramp to fill the gaps.
+                See what happens when it all goes wrong.
+            </p>
+
+            <a href="http://localhost:8050" target="_blank" class="launch-btn">
+                Launch Grid Animation
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M6 3L11 8L6 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </a>
+
+            <div class="feature-list">
+                <div class="feature-item">
+                    <div class="feature-dot" style="background: #22C55E"></div>
+                    <span>733 generation resources animated hourly</span>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-dot" style="background: #0EA5E9"></div>
+                    <span>Synchronized supply stack chart</span>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-dot" style="background: #F59E0B"></div>
+                    <span>Real-time reserve margin gauge</span>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-dot" style="background: #E91E63"></div>
+                    <span>CO₂ emissions tracking per hour</span>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-dot" style="background: #6366F1"></div>
+                    <span>ERCOT weather zone boundaries</span>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-dot" style="background: #EF4444"></div>
+                    <span>Scrollytelling annotations for key events</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="scenario-grid">
+            <div class="scenario-card danger">
+                <span class="date-badge">Feb 10–20, 2021</span>
+                <h3>Winter Storm Uri</h3>
+                <p>
+                    The worst grid crisis in ERCOT history. Over 30 GW of generation went offline
+                    as temperatures plunged below 0°F. Rolling blackouts affected 4.5 million customers.
+                    Watch the cascade unfold hour by hour.
+                </p>
+            </div>
+            <div class="scenario-card warning">
+                <span class="date-badge">Aug 20–25, 2023</span>
+                <h3>Summer Heat Dome</h3>
+                <p>
+                    Extreme heat drove demand near 85 GW. Low wind during peak afternoon hours
+                    stressed reserves. See how solar and gas compensate when wind dies down.
+                </p>
+            </div>
+            <div class="scenario-card">
+                <span class="date-badge">Apr 15–16, 2023</span>
+                <h3>Normal Spring Day</h3>
+                <p>
+                    The grid operating as designed. Strong wind and solar, moderate demand,
+                    comfortable reserves. The baseline for what "normal" looks like.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="content-section-narrow" style="margin-top: var(--space-2xl);">
+        <div class="insight-box">
+            <strong>How to run the animation:</strong>
+            Start the Dash server locally with <code>python grid_viz/app/app.py</code>,
+            then click "Launch Grid Animation" above. The app runs on port 8050 by default.
+        </div>
+    </div>
+
+    <footer class="page-footer">
+        <div class="footer-content">
+            <p>Hourly CFE Optimizer — Grid Visualization Module</p>
+            <div class="footer-links">
+                <a href="index.html">Home</a>
+                <a href="dashboard.html">Cost Optimizer</a>
+                <a href="optimizer_methodology.html">Methodology</a>
+            </div>
+        </div>
+    </footer>
+    <div class="bottom-banner"></div>
+</body>
+</html>
