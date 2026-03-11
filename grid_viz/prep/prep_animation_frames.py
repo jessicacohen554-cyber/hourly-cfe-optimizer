@@ -2,15 +2,18 @@
 """
 Prepare animation frames for ERCOT grid visualization.
 
-Merges:
+Data sources (in priority order):
+1. Raw EIA-930 hourly MW by fuel type (grid_viz/data/ercot/raw_generation_*.csv)
+   - Actual historical data, fetched via fetch_eia930_raw.py or GitHub workflow
+   - Critical for event accuracy (Uri collapse, summer peaks, etc.)
+2. Normalized EIA-930 profiles (data/eia-930/eia_generation_profiles.parquet)
+   - Fallback: averaged profile shapes × annual generation = hourly MW estimate
+   - Smooths out actual events — only use if raw data not available
+
+Also merges:
 - eGRID plant locations (lat/lon, fuel type, capacity)
-- EIA-930 hourly generation profiles (normalized shares × annual gen = hourly MW)
 - EIA-930 hourly demand profiles (total ERCOT load in MW)
 - EIA-930 fossil fuel mix shares (coal/gas/oil hourly split)
-
-The EIA-930 generation profile "value" is a normalized share that sums to 1.0
-across all 8,760 hours for each (iso, year, fuel). Multiply by annual generation
-in MWh to get hourly MW output.
 
 For each scenario day range, produces precomputed DataFrames for animation.
 """
@@ -23,7 +26,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from config import SCENARIO_DAYS, FUEL_COLORS_RGB, FRAMES_DIR
+from config import SCENARIO_DAYS, FUEL_COLORS_RGB, FRAMES_DIR, ERCOT_DIR
 
 # Emission rates (lbs CO2/MWh) from egrid_emission_rates.json
 EMISSION_RATES = {
@@ -46,6 +49,30 @@ EIA_TO_EGRID_FUEL = {
     "nuclear": "NUCLEAR",
     "hydro": "HYDRO",
 }
+
+
+def try_load_raw_generation(scenario_id: str) -> pd.DataFrame | None:
+    """Try to load raw (actual) EIA-930 hourly generation data for a scenario.
+
+    Returns DataFrame with columns: datetime_local, date_local, hour_local, fuel, mw
+    or None if raw data doesn't exist (fall back to normalized profiles).
+    """
+    path = os.path.join(ERCOT_DIR, f"raw_generation_{scenario_id}.csv")
+    if os.path.exists(path):
+        df = pd.read_csv(path)
+        print(f"  ✓ Using RAW hourly generation data from {path} ({len(df)} records)")
+        return df
+    return None
+
+
+def try_load_raw_demand(scenario_id: str) -> pd.DataFrame | None:
+    """Try to load raw (actual) EIA-930 hourly demand data for a scenario."""
+    path = os.path.join(ERCOT_DIR, f"raw_demand_{scenario_id}.csv")
+    if os.path.exists(path):
+        df = pd.read_csv(path)
+        print(f"  ✓ Using RAW hourly demand data from {path} ({len(df)} records)")
+        return df
+    return None
 
 
 def load_all_data():
@@ -117,6 +144,15 @@ def compute_scenario_frames(
 
     print(f"\n=== {scenario_id}: {begin_str} to {end_str} ({n_days} days, {n_hours} hours) ===")
 
+    # Try raw data first (actual historical MW, not averaged profiles)
+    raw_gen = try_load_raw_generation(scenario_id)
+    raw_demand = try_load_raw_demand(scenario_id)
+    use_raw = raw_gen is not None
+    if use_raw:
+        print(f"  Using RAW data — actual historical generation for {scenario_id}")
+    else:
+        print(f"  Using NORMALIZED profiles (fallback) — run fetch_eia930_raw.py for actual data")
+
     # Get annual generation by fuel for this year
     annual_gen, year_scale = get_annual_gen_by_fuel(plants, year, demand_meta)
     print(f"  Year scale factor (vs 2023): {year_scale:.3f}")
@@ -173,40 +209,50 @@ def compute_scenario_frames(
         # Clamp to array bounds
         h_idx = min(hour_of_year, len(demand_arr) - 1)
 
-        total_demand_mw = demand_arr[h_idx]
-
-        # Calculate renewable + nuclear generation (hourly MW)
-        renewable_gen = {}
-        for eia_fuel, egrid_fuel in EIA_TO_EGRID_FUEL.items():
-            if eia_fuel in gen_by_fuel and h_idx < len(gen_by_fuel[eia_fuel]):
-                # value is normalized share; multiply by annual MWh to get hourly MW
-                # (since the share represents fraction of annual energy, and there are
-                #  8760 hours, value × annual_MWh ≈ hourly MW... but more precisely,
-                #  sum of value across 8760 hours = 1.0, so value[h] × annual_MWh = MWh in that hour = MW avg)
-                norm_val = gen_by_fuel[eia_fuel][h_idx]
-                annual_mwh = annual_gen.get(egrid_fuel, 0)
-                hourly_mw = norm_val * annual_mwh  # since 1 hour interval, MWh = MW
-                renewable_gen[egrid_fuel] = hourly_mw
-            else:
-                renewable_gen[egrid_fuel] = 0
-
-        # Fossil residual
-        total_renewable = sum(renewable_gen.values())
-        fossil_residual = max(0, total_demand_mw - total_renewable)
-
-        # Split fossil by fuel type
-        if h_idx < len(coal_shares):
-            cs, gs, os_ = coal_shares[h_idx], gas_shares[h_idx], oil_shares[h_idx]
+        # Demand: prefer raw data, fall back to normalized profiles
+        if raw_demand is not None:
+            rd = raw_demand[(raw_demand["date_local"] == current_date.strftime("%Y-%m-%d")) &
+                           (raw_demand["hour_local"] == hour_of_day)]
+            total_demand_mw = rd["demand_mw"].values[0] if len(rd) > 0 else demand_arr[h_idx]
         else:
-            cs, gs, os_ = 0.27, 0.73, 0.0
+            total_demand_mw = demand_arr[h_idx]
 
-        fossil_gen = {
-            "COAL": fossil_residual * cs,
-            "GAS": fossil_residual * gs,
-            "OIL": fossil_residual * os_,
-        }
+        # Generation: prefer raw data (actual MW per fuel), fall back to normalized
+        if use_raw:
+            # RAW PATH: actual historical MW by fuel type for this hour
+            hour_gen = raw_gen[(raw_gen["date_local"] == current_date.strftime("%Y-%m-%d")) &
+                              (raw_gen["hour_local"] == hour_of_day)]
+            all_gen = {}
+            for _, row in hour_gen.iterrows():
+                fuel = row["fuel"]
+                mw = row["mw"] if not pd.isna(row["mw"]) else 0
+                all_gen[fuel] = all_gen.get(fuel, 0) + mw
+        else:
+            # FALLBACK: normalized profiles × annual generation
+            renewable_gen = {}
+            for eia_fuel, egrid_fuel in EIA_TO_EGRID_FUEL.items():
+                if eia_fuel in gen_by_fuel and h_idx < len(gen_by_fuel[eia_fuel]):
+                    norm_val = gen_by_fuel[eia_fuel][h_idx]
+                    annual_mwh = annual_gen.get(egrid_fuel, 0)
+                    hourly_mw = norm_val * annual_mwh
+                    renewable_gen[egrid_fuel] = hourly_mw
+                else:
+                    renewable_gen[egrid_fuel] = 0
 
-        all_gen = {**renewable_gen, **fossil_gen}
+            total_renewable = sum(renewable_gen.values())
+            fossil_residual = max(0, total_demand_mw - total_renewable)
+
+            if h_idx < len(coal_shares):
+                cs, gs, os_ = coal_shares[h_idx], gas_shares[h_idx], oil_shares[h_idx]
+            else:
+                cs, gs, os_ = 0.27, 0.73, 0.0
+
+            fossil_gen = {
+                "COAL": fossil_residual * cs,
+                "GAS": fossil_residual * gs,
+                "OIL": fossil_residual * os_,
+            }
+            all_gen = {**renewable_gen, **fossil_gen}
 
         # Stack summary for this hour
         for fuel, mw in all_gen.items():
