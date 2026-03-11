@@ -40,7 +40,27 @@ EMISSION_RATES = {
     "HYDRO": 0.0,
     "OTHF": 1180.3,
     "OFSL": 1180.3,
+    "BATTERY": 0.0,
 }
+
+# Known ERCOT battery storage facilities (not in eGRID — curated from EIA-860 & public filings)
+ERCOT_BATTERY_PLANTS = [
+    {"ORISPL": 990001, "PNAME": "Gambit Energy Storage", "LAT": 32.69, "LON": -97.37, "NAMEPCAP": 210, "PLFUELCT": "BATTERY", "FUEL_LABEL": "Battery"},
+    {"ORISPL": 990002, "PNAME": "Broad Reach Permian", "LAT": 31.95, "LON": -102.13, "NAMEPCAP": 150, "PLFUELCT": "BATTERY", "FUEL_LABEL": "Battery"},
+    {"ORISPL": 990003, "PNAME": "Vistra Moss Landing TX", "LAT": 30.16, "LON": -97.68, "NAMEPCAP": 260, "PLFUELCT": "BATTERY", "FUEL_LABEL": "Battery"},
+    {"ORISPL": 990004, "PNAME": "ENGIE Pflugerville", "LAT": 30.45, "LON": -97.63, "NAMEPCAP": 185, "PLFUELCT": "BATTERY", "FUEL_LABEL": "Battery"},
+    {"ORISPL": 990005, "PNAME": "Jupiter Power Sweetwater", "LAT": 32.47, "LON": -100.41, "NAMEPCAP": 200, "PLFUELCT": "BATTERY", "FUEL_LABEL": "Battery"},
+    {"ORISPL": 990006, "PNAME": "Eolian West Texas BESS", "LAT": 31.42, "LON": -100.47, "NAMEPCAP": 350, "PLFUELCT": "BATTERY", "FUEL_LABEL": "Battery"},
+    {"ORISPL": 990007, "PNAME": "Recurrent Energy Crimson", "LAT": 30.85, "LON": -97.00, "NAMEPCAP": 200, "PLFUELCT": "BATTERY", "FUEL_LABEL": "Battery"},
+    {"ORISPL": 990008, "PNAME": "Plus Power Rocking R", "LAT": 30.40, "LON": -97.90, "NAMEPCAP": 300, "PLFUELCT": "BATTERY", "FUEL_LABEL": "Battery"},
+    {"ORISPL": 990009, "PNAME": "Glidepath Abilene", "LAT": 32.43, "LON": -99.74, "NAMEPCAP": 175, "PLFUELCT": "BATTERY", "FUEL_LABEL": "Battery"},
+    {"ORISPL": 990010, "PNAME": "Energy Vault Snyder", "LAT": 32.72, "LON": -100.92, "NAMEPCAP": 200, "PLFUELCT": "BATTERY", "FUEL_LABEL": "Battery"},
+    {"ORISPL": 990011, "PNAME": "NextEra Odessa BESS", "LAT": 31.85, "LON": -102.35, "NAMEPCAP": 250, "PLFUELCT": "BATTERY", "FUEL_LABEL": "Battery"},
+    {"ORISPL": 990012, "PNAME": "Arevon San Marcos", "LAT": 29.88, "LON": -97.94, "NAMEPCAP": 175, "PLFUELCT": "BATTERY", "FUEL_LABEL": "Battery"},
+    {"ORISPL": 990013, "PNAME": "RWE Corpus Christi", "LAT": 27.80, "LON": -97.40, "NAMEPCAP": 200, "PLFUELCT": "BATTERY", "FUEL_LABEL": "Battery"},
+    {"ORISPL": 990014, "PNAME": "Quinbrook Laredo BESS", "LAT": 27.51, "LON": -99.51, "NAMEPCAP": 150, "PLFUELCT": "BATTERY", "FUEL_LABEL": "Battery"},
+    {"ORISPL": 990015, "PNAME": "AES Surge Houston", "LAT": 29.76, "LON": -95.37, "NAMEPCAP": 225, "PLFUELCT": "BATTERY", "FUEL_LABEL": "Battery"},
+]
 
 # EIA-930 fuel name → eGRID PLFUELCT mapping
 EIA_TO_EGRID_FUEL = {
@@ -78,7 +98,19 @@ def try_load_raw_demand(scenario_id: str) -> pd.DataFrame | None:
 def load_all_data():
     """Load all required datasets."""
     plants = pd.read_csv("grid_viz/data/egrid/ercot_plants.csv")
-    print(f"Plants: {len(plants)}")
+
+    # Append battery storage plants (not in eGRID)
+    batt_df = pd.DataFrame(ERCOT_BATTERY_PLANTS)
+    # Fill missing columns with defaults
+    for col in plants.columns:
+        if col not in batt_df.columns:
+            batt_df[col] = 0 if plants[col].dtype in ['float64', 'int64'] else ""
+    batt_df["PLPRMFL"] = "BAT"
+    batt_df["CAPFAC"] = 0.15
+    batt_df["SECTOR"] = "Electric Utility"
+    batt_df["PSTATABB"] = "TX"
+    plants = pd.concat([plants, batt_df[plants.columns]], ignore_index=True)
+    print(f"Plants: {len(plants)} ({len(batt_df)} battery added)")
 
     gen_profiles = pd.read_parquet("data/eia-930/eia_generation_profiles.parquet")
     gen_profiles = gen_profiles[gen_profiles["iso"] == "ERCOT"]

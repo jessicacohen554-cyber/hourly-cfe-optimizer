@@ -52,6 +52,7 @@ FUEL_COLORS = {
     "OTHF":     "#9CA3AF",   # Gray-400 - other/unknown fuels
     "OFSL":     "#9CA3AF",   # Gray-400 - other fossil
     "GEOTHERMAL": RESOURCE_COLORS["geothermal"],
+    "BATTERY":  RESOURCE_COLORS["battery"],
 }
 
 # RGB versions for PyDeck (0-255 scale)
@@ -90,6 +91,14 @@ SCENARIO_DAYS = {
         "peak_date": "2023-04-15",
         "description": "Typical spring day with moderate demand, strong wind/solar, "
                        "comfortable reserves. Shows the grid operating as designed.",
+    },
+    "battery_2025": {
+        "name": "2025 Solar + Battery Peak",
+        "date_range": ("2025-03-08", "2025-03-09"),
+        "peak_date": "2025-03-09",
+        "description": "Peak solar output with record battery dispatch. 25+ GW solar, "
+                       "batteries charge midday and discharge into evening peak. "
+                       "The grid of the future, today.",
     },
 }
 
