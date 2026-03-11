@@ -1547,7 +1547,7 @@
             }
         }
 
-        function dismissStoryOverlay() {
+        function dismissStoryOverlay(autoResume) {
             if (!storyOverlayActive) return;
 
             els.storyDimOverlay.classList.remove('active');
@@ -1556,7 +1556,7 @@
             els.storyDimOverlay.classList.remove('uri-tint');
             storyOverlayActive = false;
 
-            if (storyWasPlaying) {
+            if (autoResume !== false && storyWasPlaying) {
                 storyWasPlaying = false;
                 togglePlay();
             }
@@ -1660,12 +1660,12 @@
         })();
 
         // ── Master update (discrete hour change) ──────────────────
-        function updateDiscrete(hour) {
+        function updateDiscrete(hour, fromAnimation) {
             currentHour = hour;
             updateStats(hour);
             updateAnnotations(hour);
             updateCursorLine(hour);
-            checkStoryTrigger(hour);
+            if (fromAnimation) checkStoryTrigger(hour);
         }
 
         // ── Animation loop (requestAnimationFrame) ────────────────
@@ -1690,7 +1690,7 @@
 
                 currentHour = next;
                 els.slider.value = next;
-                updateDiscrete(next);
+                updateDiscrete(next, true);
 
                 // Story overlay paused playback — exit animation loop
                 if (storyOverlayActive) return;
@@ -1737,7 +1737,7 @@
         function switchScenario(scenarioId) {
             if (!DATA.scenarios[scenarioId]) return;
             storyShownSet.clear();
-            if (storyOverlayActive) dismissStoryOverlay();
+            if (storyOverlayActive) dismissStoryOverlay(false);
             currentScenario = scenarioId;
             const sc = DATA.scenarios[scenarioId];
             const maxH = sc.hours.length - 1;
@@ -1799,13 +1799,13 @@
 
         // ── Event listeners ───────────────────────────────────────
         els.slider.addEventListener('input', e => {
-            if (storyOverlayActive) dismissStoryOverlay();
+            if (storyOverlayActive) dismissStoryOverlay(false);
             if (playing) togglePlay();
             update(parseInt(e.target.value));
         });
 
         els.playBtn.addEventListener('click', () => {
-            if (storyOverlayActive) { dismissStoryOverlay(); return; }
+            if (storyOverlayActive) { dismissStoryOverlay(false); }
             togglePlay();
         });
 
