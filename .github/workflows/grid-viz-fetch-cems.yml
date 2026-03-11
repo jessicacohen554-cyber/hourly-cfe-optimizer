@@ -31,6 +31,10 @@ on:
         options:
           - pudl
           - api
+      campd_api_key:
+        description: 'CAMPD/data.gov API key (only needed for API mode, overrides secret)'
+        required: false
+        type: string
       branch:
         description: 'Branch to checkout'
         required: false
@@ -62,7 +66,7 @@ jobs:
 
       - name: Fetch CEMS data
         env:
-          CAMD_API_KEY: ${{ secrets.CAMD_API_KEY }}
+          CAMD_API_KEY: ${{ inputs.campd_api_key || secrets.CAMD_API_KEY }}
         run: |
           NO_PUDL_FLAG=""
           if [ "${{ inputs.source }}" = "api" ]; then
