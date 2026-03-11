@@ -46,7 +46,7 @@ SCENARIO_META = {
     },
 }
 
-STACK_ORDER = ["NUCLEAR", "COAL", "GAS", "OIL", "HYDRO", "WIND", "SOLAR", "BIOMASS", "OTHF", "OFSL"]
+STACK_ORDER = ["NUCLEAR", "COAL", "GAS", "OIL", "HYDRO", "WIND", "SOLAR", "BATTERY", "BIOMASS", "OTHF", "OFSL"]
 
 
 def load_annotations(scenario_id):

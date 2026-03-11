@@ -528,6 +528,11 @@
                     <h3>Normal Spring Day</h3>
                     <p>Strong wind and solar, moderate demand, comfortable reserves. The grid as designed.</p>
                 </div>
+                <div class="scenario-pick" data-scenario="battery_2025">
+                    <span class="badge" style="background:rgba(6,182,212,0.1);color:#06B6D4">Mar 8–9, 2025</span>
+                    <h3>Solar + Battery Peak</h3>
+                    <p>25+ GW solar, record battery dispatch. Batteries charge midday, discharge into evening. The future grid.</p>
+                </div>
             </div>
         </div>
 
@@ -539,6 +544,7 @@
                     <option value="uri_2021">Winter Storm Uri</option>
                     <option value="summer_2023_heat">Summer Heat Dome</option>
                     <option value="normal_spring">Normal Spring Day</option>
+                    <option value="battery_2025">2025 Solar + Battery</option>
                 </select>
             </div>
             <button class="play-btn" id="playBtn">&#9654; Play</button>
@@ -563,6 +569,7 @@
             <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#F97316;color:#F97316"></div>Gas</div>
             <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#881337;color:#881337"></div>Coal</div>
             <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#0EA5E9;color:#0EA5E9"></div>Hydro</div>
+            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#06B6D4;color:#06B6D4"></div>Battery</div>
         </div>
 
         <!-- Map + Sidebar -->
@@ -659,14 +666,14 @@
         const FUEL_HEX = {
             GAS: '#F97316', COAL: '#881337', OIL: '#92400E',
             NUCLEAR: '#6366F1', WIND: '#22C55E', SOLAR: '#F59E0B',
-            HYDRO: '#0EA5E9', BIOMASS: '#8B5CF6', OTHF: '#9CA3AF', OFSL: '#9CA3AF',
+            HYDRO: '#0EA5E9', BATTERY: '#06B6D4', BIOMASS: '#8B5CF6', OTHF: '#9CA3AF', OFSL: '#9CA3AF',
         };
         const FUEL_LABELS = {
             NUCLEAR: 'Nuclear', COAL: 'Coal', GAS: 'Natural Gas', OIL: 'Oil',
-            HYDRO: 'Hydro', WIND: 'Wind', SOLAR: 'Solar', BIOMASS: 'Biomass',
-            OTHF: 'Other', OFSL: 'Other Fossil',
+            HYDRO: 'Hydro', WIND: 'Wind', SOLAR: 'Solar', BATTERY: 'Battery',
+            BIOMASS: 'Biomass', OTHF: 'Other', OFSL: 'Other Fossil',
         };
-        const STACK_ORDER = ['NUCLEAR','COAL','GAS','OIL','HYDRO','WIND','SOLAR','BIOMASS','OTHF','OFSL'];
+        const STACK_ORDER = ['NUCLEAR','COAL','GAS','OIL','HYDRO','WIND','SOLAR','BATTERY','BIOMASS','OTHF','OFSL'];
 
         // Map plant fuel labels to FUEL_HEX keys
         const LABEL_TO_KEY = {};
@@ -810,31 +817,10 @@
 
             map.fitBounds(ercotBounds);
 
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+            // Base map with visible state borders (light_all includes labels + borders)
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
                 subdomains: 'abcd',
                 maxZoom: 19,
-            }).addTo(map);
-
-            // Bold Texas state outline (simplified boundary)
-            const texasBorder = [
-                [36.5, -103.04], [36.5, -100.0], [34.56, -100.0], [34.31, -99.19],
-                [34.08, -99.57], [33.94, -98.95], [33.84, -98.6], [33.58, -97.97],
-                [33.87, -97.21], [33.74, -96.56], [33.86, -96.15], [33.69, -95.82],
-                [33.30, -95.23], [33.15, -94.97], [33.02, -94.47], [32.38, -94.04],
-                [31.99, -94.04], [31.17, -93.82], [30.07, -93.73], [29.77, -93.85],
-                [29.58, -93.84], [29.48, -94.69], [29.38, -94.83], [28.93, -95.10],
-                [28.67, -96.21], [28.21, -96.62], [27.84, -97.04], [27.56, -97.38],
-                [26.84, -97.21], [26.07, -97.17], [25.84, -97.40], [25.95, -97.70],
-                [26.39, -98.57], [27.28, -99.44], [27.77, -99.70], [28.17, -100.42],
-                [28.65, -100.70], [29.08, -100.75], [29.37, -101.04], [29.77, -101.40],
-                [29.78, -102.07], [30.59, -103.00], [31.00, -103.33], [31.39, -103.63],
-                [32.00, -103.06], [32.00, -103.04], [36.5, -103.04],
-            ];
-            L.polyline(texasBorder, {
-                color: '#1A2744',
-                weight: 2.5,
-                opacity: 0.6,
-                fill: false,
             }).addTo(map);
 
             // Init plant state array

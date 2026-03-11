@@ -51,6 +51,7 @@ FUEL_MAP = {
     "OIL": "OIL",
     "OTH": "OTHER",
     "GEO": "GEOTHERMAL",
+    "BAT": "BATTERY",
 }
 
 MAX_RETRIES = 5
