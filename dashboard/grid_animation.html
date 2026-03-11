@@ -498,6 +498,180 @@
             border-top: 1px solid var(--border-light, #E5E7EB);
             margin: 14px 0;
         }
+
+        /* ── Story overlay system ──────────────────────────────── */
+        .map-dim-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 470;
+            background: rgba(0,0,0,0.35);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.35s ease;
+        }
+        .map-dim-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+            cursor: pointer;
+        }
+        .map-dim-overlay.uri-tint {
+            background: rgba(139,19,55,0.3);
+        }
+
+        .story-overlay {
+            position: absolute;
+            bottom: 44px;
+            left: 0;
+            right: 0;
+            z-index: 480;
+            transform: translateY(120%);
+            opacity: 0;
+            pointer-events: none;
+            transition: transform 0.4s cubic-bezier(0.22,1,0.36,1), opacity 0.3s ease;
+        }
+        .story-overlay.active {
+            transform: translateY(0);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .story-card {
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(14px) saturate(180%);
+            -webkit-backdrop-filter: blur(14px) saturate(180%);
+            border-radius: 16px 16px 0 0;
+            border-top: 3px solid #22C55E;
+            padding: 16px 20px 14px;
+            box-shadow: 0 -4px 24px rgba(0,0,0,0.1);
+            max-height: 55vh;
+            overflow-y: auto;
+        }
+        .story-card.uri {
+            border-top-color: #DC2626;
+            box-shadow: 0 -4px 24px rgba(220,38,38,0.15);
+        }
+        .story-card.uri.critical {
+            animation: storyPulseRed 1.5s ease-in-out infinite;
+        }
+
+        .story-handle {
+            width: 40px;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(0,0,0,0.15);
+            margin: 0 auto 10px;
+            cursor: grab;
+        }
+        .story-handle:active { cursor: grabbing; }
+
+        .story-dots {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+        .story-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.12);
+            transition: background 0.2s, transform 0.2s;
+        }
+        .story-dot.active {
+            background: #22C55E;
+            transform: scale(1.3);
+        }
+        .story-dot.past {
+            background: rgba(34,197,94,0.4);
+        }
+        .story-card.uri .story-dot.active {
+            background: #DC2626;
+        }
+        .story-card.uri .story-dot.past {
+            background: rgba(220,38,38,0.35);
+        }
+
+        .story-title {
+            font-family: var(--font-heading);
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--navy, #1A2744);
+            margin-bottom: 6px;
+        }
+        .story-card.uri .story-title {
+            color: #991B1B;
+        }
+
+        .story-text {
+            font-size: 0.84rem;
+            line-height: 1.6;
+            color: var(--text-muted, #6B7280);
+            margin-bottom: 12px;
+        }
+
+        .story-chips {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 4px;
+        }
+        .story-chip {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.73rem;
+            font-weight: 600;
+            background: rgba(34,197,94,0.1);
+            color: #16A34A;
+            white-space: nowrap;
+        }
+        .story-chip.danger {
+            background: rgba(220,38,38,0.1);
+            color: #DC2626;
+        }
+
+        .story-hint {
+            text-align: center;
+            font-size: 0.72rem;
+            color: rgba(0,0,0,0.3);
+            margin-top: 8px;
+            user-select: none;
+        }
+        .story-hint-arrow {
+            display: inline-block;
+            animation: storyBounce 1.5s ease-in-out infinite;
+            font-size: 0.85rem;
+        }
+
+        @keyframes storyBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(5px); }
+        }
+        @keyframes storyPulseRed {
+            0%, 100% { box-shadow: 0 -4px 24px rgba(220,38,38,0.15); }
+            50% { box-shadow: 0 -4px 32px rgba(220,38,38,0.35), 0 0 12px rgba(220,38,38,0.1); }
+        }
+        @keyframes storyShake {
+            0%, 100% { transform: translateX(0); }
+            12.5% { transform: translateX(-3px); }
+            25% { transform: translateX(3px); }
+            37.5% { transform: translateX(-3px); }
+            50% { transform: translateX(3px); }
+            62.5% { transform: translateX(-2px); }
+            75% { transform: translateX(2px); }
+            87.5% { transform: translateX(-1px); }
+        }
+        .map-wrap.shake {
+            animation: storyShake 0.4s ease-in-out;
+        }
+
+        @media (max-width: 600px) {
+            .story-card {
+                padding: 12px 14px 10px;
+            }
+            .story-title { font-size: 0.9rem; }
+            .story-text { font-size: 0.78rem; }
+            .story-chip { font-size: 0.68rem; padding: 3px 8px; }
+        }
     </style>
 </head>
 <body>
@@ -577,6 +751,20 @@
             <div class="map-wrap">
                 <div id="gridMap"></div>
                 <canvas id="plantCanvas"></canvas>
+                <!-- Story overlay system -->
+                <div class="map-dim-overlay" id="storyDimOverlay"></div>
+                <div class="story-overlay" id="storyOverlay">
+                    <div class="story-card" id="storyCard">
+                        <div class="story-handle" id="storyHandle"></div>
+                        <div class="story-dots" id="storyDots"></div>
+                        <div class="story-title" id="storyTitle"></div>
+                        <div class="story-text" id="storyText"></div>
+                        <div class="story-chips" id="storyChips"></div>
+                        <div class="story-hint">
+                            <span class="story-hint-arrow">&#8595;</span> swipe down to continue
+                        </div>
+                    </div>
+                </div>
                 <!-- Mobile-only: compact stats overlay on map -->
                 <div class="mobile-stats-overlay" id="mobileStatsOverlay">
                     <div class="mobile-stat"><span class="ms-label">Demand</span> <span id="msDemand">—</span></div>
@@ -661,6 +849,12 @@
         let interpProgress = 0;     // 0→1 between currentHour and next
         let map;
         const DATA = GRID_ANIMATION_DATA;
+
+        // ── Story overlay state ──────────────────────────────────
+        let storyShownSet = new Set();
+        let storyOverlayActive = false;
+        let storyWasPlaying = false;
+        const CRITICAL_RE = /emergency|blackout|shed|offline|trip|collapse|freeze|outage|dark/i;
 
         // ── Fuel colors (canonical from chart-colors.js) ──────────
         const FUEL_HEX = {
@@ -771,6 +965,16 @@
             eventPopupTitle: document.getElementById('eventPopupTitle'),
             eventPopupText: document.getElementById('eventPopupText'),
             eventPopupClose: document.getElementById('eventPopupClose'),
+            // Story overlay
+            storyDimOverlay: document.getElementById('storyDimOverlay'),
+            storyOverlay: document.getElementById('storyOverlay'),
+            storyCard: document.getElementById('storyCard'),
+            storyHandle: document.getElementById('storyHandle'),
+            storyDots: document.getElementById('storyDots'),
+            storyTitle: document.getElementById('storyTitle'),
+            storyText: document.getElementById('storyText'),
+            storyChips: document.getElementById('storyChips'),
+            mapWrap: document.querySelector('.map-wrap'),
         };
 
         // ── Canvas setup ──────────────────────────────────────────
@@ -1284,12 +1488,184 @@
             }
         }
 
+        // ── Story overlay system ─────────────────────────────────
+        function showStoryOverlay(ann, annIdx, sc, hour) {
+            storyOverlayActive = true;
+            storyWasPlaying = playing;
+            if (playing) togglePlay();
+
+            const isUri = currentScenario === 'uri_2021';
+            const isCritical = isUri && CRITICAL_RE.test(ann.text || '');
+            const annotations = sc.annotations || [];
+
+            // Step dots
+            let dotsHtml = '';
+            for (let i = 0; i < annotations.length; i++) {
+                const cls = i === annIdx ? 'active' : (i < annIdx ? 'past' : '');
+                dotsHtml += `<div class="story-dot ${cls}"></div>`;
+            }
+            els.storyDots.innerHTML = dotsHtml;
+
+            // Title — use headline if available, fallback to time_label
+            els.storyTitle.textContent = ann.headline || ann.time_label || '';
+
+            // Text
+            els.storyText.textContent = ann.text || '';
+
+            // Stat chips
+            const demand = Math.round(sc.demand[hour] || 0);
+            const gen = Math.round(sc.generation[hour] || 0);
+            const reserveMw = gen - demand;
+            const reservePct = demand > 0 ? (reserveMw / demand * 100) : 0;
+            const fmt = v => v >= 1000 ? (v/1000).toFixed(1) + 'k' : v.toLocaleString();
+            const reserveNeg = reservePct < 0;
+            const chipDanger = (isUri && reserveNeg) ? ' danger' : '';
+
+            els.storyChips.innerHTML =
+                `<span class="story-chip${chipDanger}">Demand ${fmt(demand)} MW</span>` +
+                `<span class="story-chip${chipDanger}">Gen ${fmt(gen)} MW</span>` +
+                `<span class="story-chip${chipDanger}">Reserve ${reservePct >= 0 ? '+' : ''}${reservePct.toFixed(1)}%</span>`;
+
+            // Apply styling classes
+            els.storyCard.classList.toggle('uri', isUri);
+            els.storyCard.classList.toggle('critical', isCritical);
+            els.storyDimOverlay.classList.toggle('uri-tint', isUri);
+
+            // Activate
+            els.storyDimOverlay.classList.add('active');
+            els.storyOverlay.classList.add('active');
+
+            // Shake for critical Uri annotations
+            if (isCritical) {
+                els.mapWrap.classList.remove('shake');
+                void els.mapWrap.offsetWidth; // reflow to restart animation
+                els.mapWrap.classList.add('shake');
+                els.mapWrap.addEventListener('animationend', function onEnd() {
+                    els.mapWrap.classList.remove('shake');
+                    els.mapWrap.removeEventListener('animationend', onEnd);
+                }, { once: true });
+            }
+        }
+
+        function dismissStoryOverlay(autoResume) {
+            if (!storyOverlayActive) return;
+
+            els.storyDimOverlay.classList.remove('active');
+            els.storyOverlay.classList.remove('active');
+            els.storyCard.classList.remove('uri', 'critical');
+            els.storyDimOverlay.classList.remove('uri-tint');
+            storyOverlayActive = false;
+
+            if (autoResume !== false && storyWasPlaying) {
+                storyWasPlaying = false;
+                togglePlay();
+            }
+        }
+
+        function checkStoryTrigger(hour) {
+            if (storyOverlayActive) return false;
+            const sc = DATA.scenarios[currentScenario];
+            if (!sc) return false;
+            const annotations = sc.annotations || [];
+            if (annotations.length === 0) return false;
+
+            for (let i = 0; i < annotations.length; i++) {
+                const ann = annotations[i];
+                if (hour === ann.hour_start && !storyShownSet.has(i)) {
+                    storyShownSet.add(i);
+                    showStoryOverlay(ann, i, sc, hour);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // ── Story overlay swipe/drag handling ────────────────────
+        (function initStorySwipe() {
+            let startY = 0;
+            let dragging = false;
+            let currentTranslateY = 0;
+
+            // Touch events on story overlay
+            els.storyOverlay.addEventListener('touchstart', e => {
+                if (!storyOverlayActive) return;
+                startY = e.touches[0].clientY;
+                dragging = true;
+                currentTranslateY = 0;
+                els.storyOverlay.style.transition = 'none';
+            }, { passive: true });
+
+            els.storyOverlay.addEventListener('touchmove', e => {
+                if (!dragging) return;
+                const dy = e.touches[0].clientY - startY;
+                if (dy > 0) { // only allow downward
+                    currentTranslateY = dy;
+                    els.storyOverlay.style.transform = `translateY(${dy}px)`;
+                    els.storyOverlay.style.opacity = Math.max(0, 1 - dy / 200);
+                }
+            }, { passive: true });
+
+            els.storyOverlay.addEventListener('touchend', () => {
+                if (!dragging) return;
+                dragging = false;
+                els.storyOverlay.style.transition = '';
+                if (currentTranslateY > 40) {
+                    dismissStoryOverlay();
+                } else {
+                    els.storyOverlay.style.transform = '';
+                    els.storyOverlay.style.opacity = '';
+                }
+            });
+
+            // Mouse drag on handle (desktop)
+            let mouseDown = false;
+            let mouseStartY = 0;
+            let mouseTranslateY = 0;
+
+            els.storyHandle.addEventListener('mousedown', e => {
+                if (!storyOverlayActive) return;
+                mouseDown = true;
+                mouseStartY = e.clientY;
+                mouseTranslateY = 0;
+                els.storyOverlay.style.transition = 'none';
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', e => {
+                if (!mouseDown) return;
+                const dy = e.clientY - mouseStartY;
+                if (dy > 0) {
+                    mouseTranslateY = dy;
+                    els.storyOverlay.style.transform = `translateY(${dy}px)`;
+                    els.storyOverlay.style.opacity = Math.max(0, 1 - dy / 200);
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (!mouseDown) return;
+                mouseDown = false;
+                els.storyOverlay.style.transition = '';
+                if (mouseTranslateY > 40) {
+                    dismissStoryOverlay();
+                } else {
+                    els.storyOverlay.style.transform = '';
+                    els.storyOverlay.style.opacity = '';
+                }
+            });
+
+            // Click on dim overlay to dismiss
+            els.storyDimOverlay.addEventListener('click', () => {
+                if (storyOverlayActive) dismissStoryOverlay();
+            });
+        })();
+
         // ── Master update (discrete hour change) ──────────────────
-        function updateDiscrete(hour) {
+        function updateDiscrete(hour, fromAnimation) {
             currentHour = hour;
             updateStats(hour);
             updateAnnotations(hour);
             updateCursorLine(hour);
+            if (fromAnimation) checkStoryTrigger(hour);
         }
 
         // ── Animation loop (requestAnimationFrame) ────────────────
@@ -1314,7 +1690,10 @@
 
                 currentHour = next;
                 els.slider.value = next;
-                updateDiscrete(next);
+                updateDiscrete(next, true);
+
+                // Story overlay paused playback — exit animation loop
+                if (storyOverlayActive) return;
             }
 
             // Draw interpolated plants
@@ -1357,6 +1736,8 @@
         // ── Scenario switch ───────────────────────────────────────
         function switchScenario(scenarioId) {
             if (!DATA.scenarios[scenarioId]) return;
+            storyShownSet.clear();
+            if (storyOverlayActive) dismissStoryOverlay(false);
             currentScenario = scenarioId;
             const sc = DATA.scenarios[scenarioId];
             const maxH = sc.hours.length - 1;
@@ -1418,11 +1799,15 @@
 
         // ── Event listeners ───────────────────────────────────────
         els.slider.addEventListener('input', e => {
+            if (storyOverlayActive) dismissStoryOverlay(false);
             if (playing) togglePlay();
             update(parseInt(e.target.value));
         });
 
-        els.playBtn.addEventListener('click', togglePlay);
+        els.playBtn.addEventListener('click', () => {
+            if (storyOverlayActive) { dismissStoryOverlay(false); }
+            togglePlay();
+        });
 
         els.scenarioSelect.addEventListener('change', e => {
             switchScenario(e.target.value);
