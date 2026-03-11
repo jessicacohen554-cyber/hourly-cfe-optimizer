@@ -237,6 +237,12 @@
                 { label: 'Clean Asset Value', href: 'lmp_trends.html' }
             ]
         },
+        {
+            label: 'Grid Visualizations',
+            children: [
+                { label: 'ERCOT Grid Animation', href: 'grid_animation.html' }
+            ]
+        },
         { label: 'Reference', href: 'reference.html' }
     ];
 
