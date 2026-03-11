@@ -564,7 +564,7 @@
 
         // ── Fuel colors (canonical from chart-colors.js) ──────────
         const FUEL_HEX = {
-            GAS: '#6B7280', COAL: '#374151', OIL: '#92400E',
+            GAS: '#F97316', COAL: '#881337', OIL: '#92400E',
             NUCLEAR: '#6366F1', WIND: '#22C55E', SOLAR: '#F59E0B',
             HYDRO: '#0EA5E9', BIOMASS: '#8B5CF6', OTHF: '#9CA3AF', OFSL: '#9CA3AF',
         };
@@ -580,13 +580,12 @@
         for (const [k, v] of Object.entries(FUEL_LABELS)) { LABEL_TO_KEY[v] = k; }
 
         // ── Mobile dot scaling ────────────────────────────────────
-        // On small screens the map is compressed — boost dot radii so plants stay visible.
-        // Desktop (>900px): 1.0x. Tablet (600-900px): 1.6x. Phone (<480px): 2.2x.
+        // Shrink dots on mobile so the compressed map stays readable.
         function getDotScale() {
             const w = window.innerWidth;
-            if (w <= 480) return 2.2;
-            if (w <= 768) return 1.8;
-            if (w <= 900) return 1.4;
+            if (w <= 480) return 0.45;
+            if (w <= 768) return 0.6;
+            if (w <= 900) return 0.75;
             return 1.0;
         }
         let dotScale = getDotScale();
@@ -815,8 +814,8 @@
                 // Compute targets from MW (scaled for mobile visibility)
                 if (mw > 0.5) {
                     const sqrtMw = Math.sqrt(mw);
-                    ps.targetRadius = Math.min(sqrtMw * 1.5 * dotScale, 30 * dotScale);
-                    ps.targetGlowRadius = Math.min(sqrtMw * 3 * dotScale, 50 * dotScale);
+                    ps.targetRadius = Math.min(sqrtMw * 1.5 * dotScale, 28);
+                    ps.targetGlowRadius = Math.min(sqrtMw * 2 * dotScale, 35);
                     ps.targetOpacity = 1;
                 } else {
                     ps.targetRadius = 0;
@@ -841,15 +840,15 @@
                 const color = FUEL_HEX[fuelKey] || '#9CA3AF';
                 const opacity = ps.displayOpacity;
 
-                // Layer 1: Outer glow (blurred, 10% opacity — boost blur on mobile)
+                // Layer 1: Outer glow (blurred, scaled down on mobile)
                 if (ps.displayGlowRadius > 1) {
                     ctx.save();
-                    const blurPx = dotScale > 1.2 ? 16 : 12;
+                    const blurPx = dotScale < 0.7 ? 6 : 12;
                     ctx.filter = `blur(${blurPx}px)`;
                     ctx.globalAlpha = opacity;
                     ctx.beginPath();
                     ctx.arc(x, y, ps.displayGlowRadius, 0, Math.PI * 2);
-                    ctx.fillStyle = hexToRgba(color, 0.10);
+                    ctx.fillStyle = hexToRgba(color, 0.08);
                     ctx.fill();
                     ctx.restore();
                 }
@@ -872,7 +871,7 @@
                     ctx.beginPath();
                     ctx.arc(x, y, ps.displayRadius, 0, Math.PI * 2);
                     ctx.strokeStyle = color;
-                    ctx.lineWidth = dotScale > 1.2 ? 2 : 1.5;
+                    ctx.lineWidth = dotScale < 0.7 ? 1 : 1.5;
                     ctx.stroke();
                     ctx.restore();
                 }
@@ -1131,8 +1130,8 @@
                     const ps = plantState[i];
                     if (mw > 0.5) {
                         const sqrtMw = Math.sqrt(mw);
-                        ps.targetRadius = Math.min(sqrtMw * 1.5 * dotScale, 30 * dotScale);
-                        ps.targetGlowRadius = Math.min(sqrtMw * 3 * dotScale, 50 * dotScale);
+                        ps.targetRadius = Math.min(sqrtMw * 1.5 * dotScale, 28);
+                        ps.targetGlowRadius = Math.min(sqrtMw * 2 * dotScale, 35);
                         ps.targetOpacity = 1;
                     } else {
                         ps.targetRadius = 0;
