@@ -1,0 +1,100 @@
+name: "Grid Viz: Fetch Raw EIA-930 Hourly Data"
+
+# Fetches ACTUAL (not averaged) hourly generation by fuel type + demand from EIA API
+# for specific scenario date ranges. Required for accurate event visualization
+# (e.g., Winter Storm Uri where averaged profiles hide the generation collapse).
+#
+# Output: grid_viz/data/ercot/raw_generation_*.csv, raw_demand_*.csv
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: 'Scenario to fetch'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - uri_2021
+          - summer_2023_heat
+          - normal_spring
+      branch:
+        description: 'Branch to commit results to'
+        required: false
+        default: 'master'
+        type: string
+
+jobs:
+  fetch-eia930:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pandas requests
+
+      - name: Fetch EIA-930 raw hourly data
+        env:
+          EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
+        run: |
+          python grid_viz/fetch/fetch_eia930_raw.py --scenario ${{ inputs.scenario }}
+
+      - name: Show results
+        run: |
+          echo "=== EIA-930 Data Files ==="
+          ls -lh grid_viz/data/ercot/ 2>/dev/null || echo "No files"
+          for f in grid_viz/data/ercot/raw_*.csv; do
+            if [ -f "$f" ]; then
+              echo ""
+              echo "--- $(basename $f) ---"
+              head -1 "$f"
+              wc -l "$f"
+            fi
+          done
+
+      - name: Create branch and commit
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          TARGET_BRANCH="auto/${TIMESTAMP}-grid-viz-eia930-${{ inputs.scenario }}"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$TARGET_BRANCH"
+
+          git add -f grid_viz/data/ercot/ 2>/dev/null || true
+
+          if git diff --cached --quiet; then
+            echo "No new data to commit"
+            exit 0
+          fi
+
+          git commit -m "Grid Viz: Fetch raw EIA-930 hourly data for ${{ inputs.scenario }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i/$MAX_RETRIES..."
+            git push -u origin "$TARGET_BRANCH" 2>&1 && break
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "ERROR: Push failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done
