@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 """
-Fetch hourly CEMS (Continuous Emissions Monitoring) data from EPA CAMD API.
+Fetch hourly CEMS (Continuous Emissions Monitoring) data from EPA CAMD API
+or Catalyst Cooperative's PUDL bulk Parquet files.
 
-CAMD API: https://api.epa.gov/easey
-- Public, no API key required
-- Returns hourly emissions + generation for fossil fuel plants
-- Covers: CO2, NOx, SO2, heat input, gross/steam load
-- Available historically back to 1995
+Data sources (in priority order):
+1. PUDL Parquet bulk files (fastest, no API key needed)
+   - Pre-packaged by Catalyst Cooperative from EPA CEMS data
+   - Available on AWS Open Data / Zenodo
+   - Partitioned by year and state
+2. CAMD Streaming API (api.epa.gov/easey)
+   - Requires free api.data.gov API key
+   - Returns CSV for large queries
+   - Good for targeted date ranges
 
 This fetches plant-level hourly generation and emissions for ERCOT fossil plants
 on specific scenario days (Uri, summer heat, normal spring).
@@ -176,40 +181,186 @@ def fetch_cems_hourly(
     return pd.DataFrame()
 
 
-def fetch_all_scenarios(state: str = "TX") -> dict[str, pd.DataFrame]:
-    """Fetch CEMS data for all configured scenario days."""
+def fetch_pudl_cems(
+    year: int,
+    state: str = "TX",
+    output_dir: str | None = None,
+) -> pd.DataFrame:
+    """
+    Download CEMS data from PUDL (Catalyst Cooperative) bulk Parquet files.
 
-    results = {}
-    for scenario_id, info in SCENARIO_DAYS.items():
-        begin, end = info["date_range"]
-        output_path = os.path.join(CEMS_DIR, f"cems_{scenario_id}.csv")
+    PUDL repackages all EPA CEMS data as clean Parquet. Much faster than the API
+    for full-year or multi-month queries. No API key needed.
 
-        if os.path.exists(output_path):
-            print(f"  [{scenario_id}] Already cached at {output_path}")
-            results[scenario_id] = pd.read_csv(output_path)
+    The PUDL dataset is hosted on AWS Open Data and Zenodo.
+    """
+    # PUDL S3 bucket (public, no auth needed)
+    pudl_url = f"https://s3.us-west-2.amazonaws.com/pudl.catalyst.coop/v2024.11.0/out/epacems/year={year}/state={state.lower()}/part0.parquet"
+
+    # Alternative: direct from nightly builds
+    pudl_nightly = f"https://s3.us-west-2.amazonaws.com/pudl.catalyst.coop/nightly/epacems/year={year}/state={state.lower()}/part0.parquet"
+
+    print(f"  Downloading PUDL CEMS data: {state} {year}...")
+
+    for url in [pudl_url, pudl_nightly]:
+        try:
+            df = pd.read_parquet(url)
+            print(f"  Downloaded {len(df)} records from PUDL")
+
+            # PUDL columns: plant_id_eia, datetime_utc, gross_load_mw, co2_mass_tons,
+            # nox_mass_lbs, so2_mass_lbs, heat_content_mmbtu, operating_time_hours, etc.
+            col_map = {
+                "plant_id_eia": "facilityId",
+                "emissions_unit_id_epa": "unitId",
+                "datetime_utc": "datetime_utc",
+                "gross_load_mw": "grossLoad",
+                "steam_load_1000_lbs": "steamLoad",
+                "so2_mass_lbs": "so2Mass",
+                "co2_mass_tons": "co2Mass",
+                "nox_mass_lbs": "noxMass",
+                "heat_content_mmbtu": "heatInput",
+                "operating_time_hours": "operatingTime",
+                "state": "state",
+                "facility_name": "facilityName",
+                "primary_fuel": "primaryFuel",
+            }
+            df = df.rename(columns={k: v for k, v in col_map.items() if k in df.columns})
+
+            # Extract date/hour from datetime
+            if "datetime_utc" in df.columns:
+                df["datetime_utc"] = pd.to_datetime(df["datetime_utc"])
+                df["date"] = df["datetime_utc"].dt.strftime("%Y-%m-%d")
+                df["hour"] = df["datetime_utc"].dt.hour
+
+            if output_dir:
+                out_path = os.path.join(output_dir, f"cems_pudl_{state}_{year}.parquet")
+                os.makedirs(output_dir, exist_ok=True)
+                df.to_parquet(out_path, index=False)
+                print(f"  Saved to {out_path}")
+
+            return df
+
+        except Exception as e:
+            print(f"  Failed from {url}: {e}")
             continue
 
-        df = fetch_cems_hourly(
-            state=state,
-            begin_date=begin,
-            end_date=end,
-            output_path=output_path,
-        )
-        results[scenario_id] = df
+    print(f"  PUDL download failed for {state} {year}")
+    return pd.DataFrame()
 
-        # Be polite to the API between large requests
-        time.sleep(2)
+
+def extract_scenario_from_pudl(
+    pudl_df: pd.DataFrame,
+    scenario_id: str,
+    scenario_info: dict,
+    ercot_oris_codes: set | None = None,
+    output_path: str | None = None,
+) -> pd.DataFrame:
+    """Extract scenario date range from a full-year PUDL CEMS DataFrame."""
+    begin_str, end_str = scenario_info["date_range"]
+
+    # Filter to date range
+    mask = (pudl_df["date"] >= begin_str) & (pudl_df["date"] <= end_str)
+    df = pudl_df[mask].copy()
+
+    # Filter to ERCOT plants if we have the ORIS code set
+    if ercot_oris_codes and "facilityId" in df.columns:
+        df = df[df["facilityId"].isin(ercot_oris_codes)]
+
+    print(f"  [{scenario_id}] Extracted {len(df)} records for {begin_str} to {end_str}")
+
+    if output_path and len(df) > 0:
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        df.to_csv(output_path, index=False)
+        print(f"  Saved to {output_path}")
+
+    return df
+
+
+def load_ercot_oris_codes() -> set:
+    """Load ERCOT plant ORIS codes from eGRID extract."""
+    path = "grid_viz/data/egrid/ercot_plants.csv"
+    if os.path.exists(path):
+        df = pd.read_csv(path)
+        codes = set(df["ORISPL"].astype(int).values)
+        print(f"  Loaded {len(codes)} ERCOT plant ORIS codes")
+        return codes
+    return set()
+
+
+def fetch_all_scenarios(state: str = "TX", use_pudl: bool = True) -> dict[str, pd.DataFrame]:
+    """Fetch CEMS data for all configured scenario days.
+
+    Tries PUDL bulk download first (faster, no API key), falls back to CAMD API.
+    """
+    results = {}
+
+    # Group scenarios by year for efficient PUDL downloads
+    scenarios_by_year = {}
+    for scenario_id, info in SCENARIO_DAYS.items():
+        begin_str = info["date_range"][0]
+        year = int(begin_str[:4])
+        if year not in scenarios_by_year:
+            scenarios_by_year[year] = []
+        scenarios_by_year[year].append((scenario_id, info))
+
+    ercot_oris = load_ercot_oris_codes()
+
+    for year, scenarios in scenarios_by_year.items():
+        pudl_df = None
+
+        # Check if all scenarios for this year are already cached
+        all_cached = all(
+            os.path.exists(os.path.join(CEMS_DIR, f"cems_{sid}.csv"))
+            for sid, _ in scenarios
+        )
+        if all_cached:
+            for sid, _ in scenarios:
+                path = os.path.join(CEMS_DIR, f"cems_{sid}.csv")
+                print(f"  [{sid}] Already cached at {path}")
+                results[sid] = pd.read_csv(path)
+            continue
+
+        # Try PUDL first
+        if use_pudl:
+            pudl_df = fetch_pudl_cems(year, state, output_dir=CEMS_DIR)
+
+        for scenario_id, info in scenarios:
+            output_path = os.path.join(CEMS_DIR, f"cems_{scenario_id}.csv")
+
+            if os.path.exists(output_path):
+                print(f"  [{scenario_id}] Already cached at {output_path}")
+                results[scenario_id] = pd.read_csv(output_path)
+                continue
+
+            if pudl_df is not None and len(pudl_df) > 0:
+                df = extract_scenario_from_pudl(pudl_df, scenario_id, info, ercot_oris, output_path)
+                results[scenario_id] = df
+            else:
+                # Fall back to CAMD API
+                begin, end = info["date_range"]
+                df = fetch_cems_hourly(state=state, begin_date=begin, end_date=end, output_path=output_path)
+                results[scenario_id] = df
+                time.sleep(2)
 
     return results
 
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Fetch CEMS hourly data for grid animation")
+    parser.add_argument("--no-pudl", action="store_true", help="Skip PUDL, use CAMD API only")
+    parser.add_argument("--api-key", default=os.environ.get("CAMD_API_KEY", ""),
+                       help="CAMD/data.gov API key (for API mode)")
+    args = parser.parse_args()
+
     os.makedirs(CEMS_DIR, exist_ok=True)
-    results = fetch_all_scenarios()
+    results = fetch_all_scenarios(use_pudl=not args.no_pudl)
 
     print("\n=== Fetch Summary ===")
     for scenario_id, df in results.items():
         if len(df) > 0:
-            print(f"  {scenario_id}: {len(df)} records, {df['facilityId'].nunique() if 'facilityId' in df.columns else '?'} facilities")
+            fac_col = "facilityId" if "facilityId" in df.columns else None
+            n_fac = df[fac_col].nunique() if fac_col else "?"
+            print(f"  {scenario_id}: {len(df)} records, {n_fac} facilities")
         else:
             print(f"  {scenario_id}: FAILED or empty")
