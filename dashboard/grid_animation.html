@@ -560,8 +560,8 @@
             <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#F59E0B;color:#F59E0B"></div>Solar</div>
             <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#22C55E;color:#22C55E"></div>Wind</div>
             <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#6366F1;color:#6366F1"></div>Nuclear</div>
-            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#6B7280;color:#6B7280"></div>Gas</div>
-            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#374151;color:#374151"></div>Coal</div>
+            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#F97316;color:#F97316"></div>Gas</div>
+            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#881337;color:#881337"></div>Coal</div>
             <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#0EA5E9;color:#0EA5E9"></div>Hydro</div>
         </div>
 
@@ -787,13 +787,14 @@
         function initMap() {
             // Tighter crop focused on ERCOT plant locations
             const isMobile = window.innerWidth <= 900;
+            // Full east-west to show all of Texas; crop top/bottom to reduce whitespace
             const ercotBounds = isMobile
-                ? L.latLngBounds([27.5, -101.5], [34.0, -94.0])   // mobile: tight crop on plant cluster
-                : L.latLngBounds([27.0, -103.0], [34.5, -93.5]);  // desktop: slightly wider
+                ? L.latLngBounds([27.2, -106.8], [34.2, -93.0])   // mobile: top/bottom cropped
+                : L.latLngBounds([26.5, -107.0], [35.0, -93.0]);  // desktop: a bit more headroom
 
             map = L.map('gridMap', {
-                center: [31.0, -98.0],
-                zoom: isMobile ? 6.5 : 6,
+                center: [31.0, -99.5],
+                zoom: 6,
                 zoomControl: false,
                 dragging: false,
                 touchZoom: false,
@@ -814,28 +815,27 @@
                 maxZoom: 19,
             }).addTo(map);
 
-            // Draw zone polygons
-            for (const z of ZONES) {
-                const latLngs = z.coords.map(c => [c[1], c[0]]);
-                L.polygon(latLngs, {
-                    fillColor: z.color,
-                    fillOpacity: 0.06,
-                    color: z.color,
-                    weight: 1.5,
-                    opacity: 0.35,
-                    dashArray: '4,3',
-                }).addTo(map);
-
-                L.marker(z.center, {
-                    icon: L.divIcon({
-                        className: 'zone-label',
-                        html: z.name,
-                        iconSize: [80, 16],
-                        iconAnchor: [40, 8],
-                    }),
-                    interactive: false,
-                }).addTo(map);
-            }
+            // Bold Texas state outline (simplified boundary)
+            const texasBorder = [
+                [36.5, -103.04], [36.5, -100.0], [34.56, -100.0], [34.31, -99.19],
+                [34.08, -99.57], [33.94, -98.95], [33.84, -98.6], [33.58, -97.97],
+                [33.87, -97.21], [33.74, -96.56], [33.86, -96.15], [33.69, -95.82],
+                [33.30, -95.23], [33.15, -94.97], [33.02, -94.47], [32.38, -94.04],
+                [31.99, -94.04], [31.17, -93.82], [30.07, -93.73], [29.77, -93.85],
+                [29.58, -93.84], [29.48, -94.69], [29.38, -94.83], [28.93, -95.10],
+                [28.67, -96.21], [28.21, -96.62], [27.84, -97.04], [27.56, -97.38],
+                [26.84, -97.21], [26.07, -97.17], [25.84, -97.40], [25.95, -97.70],
+                [26.39, -98.57], [27.28, -99.44], [27.77, -99.70], [28.17, -100.42],
+                [28.65, -100.70], [29.08, -100.75], [29.37, -101.04], [29.77, -101.40],
+                [29.78, -102.07], [30.59, -103.00], [31.00, -103.33], [31.39, -103.63],
+                [32.00, -103.06], [32.00, -103.04], [36.5, -103.04],
+            ];
+            L.polyline(texasBorder, {
+                color: '#1A2744',
+                weight: 2.5,
+                opacity: 0.6,
+                fill: false,
+            }).addTo(map);
 
             // Init plant state array
             const plants = DATA.plants;
