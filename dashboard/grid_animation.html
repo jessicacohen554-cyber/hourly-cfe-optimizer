@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="styles/scrollytell.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>
+    <!-- Plotly removed — fuel mix bar uses canvas directly -->
     <script src="js/nav.js"></script>
     <script src="js/chart-colors.js"></script>
     <script src="js/shared-header.js"></script>
@@ -156,7 +156,9 @@
             #gridMap { height: 340px; }
             .scenario-intro { padding: 16px 12px; }
             .scenario-cards-row { gap: 10px; }
-            .stack-chart-container { height: 220px; }
+            .fmb-sparkline-wrap { height: 36px; }
+            .fmb-bar-container { height: 40px; }
+            .fmb-bar { height: 40px; }
             .mobile-stats-overlay { gap: 4px; padding: 6px 8px; }
             .mobile-stat { font-size: 0.7rem; padding: 3px 6px; }
         }
@@ -293,7 +295,7 @@
             color: var(--text-secondary, #1E293B);
         }
 
-        /* ── Supply stack chart ──────────────────────────────────── */
+        /* ── Fuel mix bar widget ────────────────────────────────── */
         .stack-chart-wrap {
             margin: 16px var(--pad-page, 24px) 24px;
             background: rgba(255,255,255,0.78);
@@ -311,9 +313,141 @@
             color: var(--navy, #1A2744);
             margin-bottom: 12px;
         }
-        .stack-chart-container {
-            height: 260px;
+        .fmb-sparkline-wrap {
             position: relative;
+            height: 48px;
+            margin-bottom: 10px;
+        }
+        .fmb-sparkline-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .fmb-bar-container {
+            position: relative;
+            height: 48px;
+            margin-bottom: 8px;
+        }
+        .fmb-bar {
+            display: flex;
+            height: 48px;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+        .fmb-segment {
+            height: 100%;
+            transition: flex-basis 0.4s cubic-bezier(0.25,0.8,0.25,1);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 0;
+            overflow: hidden;
+        }
+        .fmb-segment-label {
+            font-family: var(--font-body, 'DM Sans', sans-serif);
+            font-size: 10px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.95);
+            white-space: nowrap;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .fmb-segment.wide-enough .fmb-segment-label {
+            opacity: 1;
+        }
+        .fmb-reserve-zone {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            border-radius: 0 8px 8px 0;
+            pointer-events: none;
+        }
+        .fmb-reserve-zone.surplus {
+            background: repeating-linear-gradient(
+                45deg,
+                rgba(22,163,74,0.06),
+                rgba(22,163,74,0.06) 4px,
+                transparent 4px,
+                transparent 8px
+            );
+        }
+        .fmb-reserve-zone.deficit {
+            background: repeating-linear-gradient(
+                45deg,
+                rgba(220,38,38,0.08),
+                rgba(220,38,38,0.08) 4px,
+                transparent 4px,
+                transparent 8px
+            );
+            border-left: 2px solid rgba(220,38,38,0.3);
+        }
+        .fmb-demand-needle {
+            position: absolute;
+            top: -4px;
+            width: 2px;
+            height: calc(100% + 8px);
+            background: #1A2744;
+            z-index: 5;
+            transition: left 0.4s cubic-bezier(0.25,0.8,0.25,1);
+            pointer-events: none;
+        }
+        .fmb-demand-needle::before {
+            content: '';
+            position: absolute;
+            top: -3px;
+            left: -4px;
+            width: 10px;
+            height: 6px;
+            background: #1A2744;
+            clip-path: polygon(0 0, 100% 0, 50% 100%);
+        }
+        .fmb-demand-label {
+            position: absolute;
+            top: -22px;
+            transform: translateX(-50%);
+            font-family: var(--font-data, 'DM Sans', monospace);
+            font-size: 10px;
+            font-weight: 700;
+            color: #1A2744;
+            white-space: nowrap;
+            background: rgba(255,255,255,0.9);
+            padding: 1px 5px;
+            border-radius: 3px;
+            transition: left 0.4s cubic-bezier(0.25,0.8,0.25,1);
+            pointer-events: none;
+        }
+        .fmb-fuel-labels {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px 12px;
+            margin-top: 6px;
+        }
+        .fmb-fuel-label {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-family: var(--font-body, 'DM Sans', sans-serif);
+            font-size: 11px;
+            color: #6B7280;
+            transition: opacity 0.3s;
+        }
+        .fmb-fuel-label.inactive {
+            opacity: 0.3;
+        }
+        .fmb-fuel-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .fmb-fuel-mw {
+            font-weight: 700;
+            font-family: var(--font-data, 'DM Sans', monospace);
+            color: #374151;
         }
 
         /* ── Scenario intro cards ───────────────────────────────── */
@@ -807,15 +941,22 @@
             </div>
         </div>
 
-        <!-- Supply stack chart with event markers -->
+        <!-- Fuel mix bar widget -->
         <div class="stack-chart-wrap" style="position:relative">
-            <div class="stack-chart-title">Supply Stack</div>
-            <div class="stack-chart-container" style="position:relative">
-                <div id="supplyStackChart" style="width:100%;height:100%"></div>
-                <!-- Event marker circles rendered as an overlay -->
-                <div id="eventMarkersOverlay" style="position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:10"></div>
+            <div class="stack-chart-title">Generation Mix</div>
+            <!-- Sparkline: last 24h gen vs demand -->
+            <div class="fmb-sparkline-wrap">
+                <canvas class="fmb-sparkline-canvas" id="fmbSparkline"></canvas>
             </div>
-            <!-- Popup for tapped event marker -->
+            <!-- Horizontal stacked bar -->
+            <div class="fmb-bar-container" id="fmbBarContainer">
+                <div class="fmb-bar" id="fmbBar"></div>
+                <div class="fmb-demand-needle" id="fmbNeedle"></div>
+                <div class="fmb-demand-label" id="fmbNeedleLabel"></div>
+            </div>
+            <!-- Fuel labels with live MW -->
+            <div class="fmb-fuel-labels" id="fmbFuelLabels"></div>
+            <!-- Popup for tapped event marker (kept for story overlay compatibility) -->
             <div class="event-popup" id="eventPopup">
                 <button class="event-popup-close" id="eventPopupClose">&times;</button>
                 <div class="event-popup-title" id="eventPopupTitle"></div>
@@ -1484,8 +1625,16 @@
             }
         }
 
-        // ── Supply Stack Chart (Plotly.js) ────────────────────────
-        let supplyChartInitialized = false;
+        // ── Fuel Mix Bar Widget ──────────────────────────────────
+        const fmbBar = document.getElementById('fmbBar');
+        const fmbNeedle = document.getElementById('fmbNeedle');
+        const fmbNeedleLabel = document.getElementById('fmbNeedleLabel');
+        const fmbFuelLabels = document.getElementById('fmbFuelLabels');
+        const fmbSparklineCanvas = document.getElementById('fmbSparkline');
+        const fmbSparklineCtx = fmbSparklineCanvas.getContext('2d');
+        let fmbSegmentEls = {};   // fuel -> DOM element
+        let fmbLabelEls = {};     // fuel -> {dot, mw, wrap}
+        let fmbInitialized = false;
 
         function formatTimeLabel(h) {
             if (!h) return '';
@@ -1496,139 +1645,239 @@
         }
 
         function buildSupplyChart() {
+            // Build the bar segments and fuel labels (once per scenario switch)
             const sc = DATA.scenarios[currentScenario];
             if (!sc) return;
 
-            const labels = sc.hours.map(formatTimeLabel);
-            const traces = [];
-
+            // Create bar segments for each fuel in stack order
+            fmbBar.innerHTML = '';
+            fmbSegmentEls = {};
             for (const fuel of STACK_ORDER) {
                 if (!sc.stack[fuel]) continue;
-                traces.push({
-                    x: labels,
-                    y: sc.stack[fuel],
-                    name: FUEL_LABELS[fuel] || fuel,
-                    type: 'scatter',
-                    mode: 'lines',
-                    stackgroup: 'supply',
-                    fillcolor: hexToRgba(FUEL_HEX[fuel], 0.15),
-                    line: { color: FUEL_HEX[fuel], width: 2 },
-                    hovertemplate: '%{y:,.0f} MW<extra>%{fullData.name}</extra>',
-                });
+                const seg = document.createElement('div');
+                seg.className = 'fmb-segment';
+                seg.style.backgroundColor = FUEL_HEX[fuel] || '#9CA3AF';
+                seg.style.flexBasis = '0%';
+                const lbl = document.createElement('span');
+                lbl.className = 'fmb-segment-label';
+                lbl.textContent = '';
+                seg.appendChild(lbl);
+                fmbBar.appendChild(seg);
+                fmbSegmentEls[fuel] = { el: seg, labelEl: lbl };
             }
 
-            // Demand line (not stacked)
-            traces.push({
-                x: labels,
-                y: sc.demand,
-                name: 'Demand',
-                type: 'scatter',
-                mode: 'lines',
-                line: { color: '#1A2744', width: 2.5, dash: 'dash' },
-                hovertemplate: '%{y:,.0f} MW<extra>Demand</extra>',
-            });
-
-            const layout = {
-                paper_bgcolor: 'rgba(0,0,0,0)',
-                plot_bgcolor: 'rgba(0,0,0,0)',
-                font: { family: "'DM Sans', 'Plus Jakarta Sans', sans-serif", color: '#6B7280', size: 11 },
-                xaxis: {
-                    showgrid: false,
-                    tickfont: { size: 10 },
-                    nticks: 12,
-                },
-                yaxis: {
-                    gridcolor: '#E2E8F0',
-                    gridwidth: 1,
-                    tickformat: ',d',
-                    title: { text: 'MW', font: { size: 11, color: '#6B7280' } },
-                    zeroline: false,
-                },
-                margin: { l: 65, r: 16, t: 8, b: 40 },
-                showlegend: true,
-                legend: {
-                    orientation: 'h',
-                    y: -0.2,
-                    x: 0.5,
-                    xanchor: 'center',
-                    font: { size: 10 },
-                },
-                hovermode: 'x unified',
-                hoverlabel: {
-                    bgcolor: 'rgba(255,255,255,0.95)',
-                    bordercolor: '#D4D8E0',
-                    font: { family: "'DM Sans', sans-serif", size: 11, color: '#1A2744' },
-                },
-                shapes: [],
-                annotations: [],
-            };
-
-            // Build event marker shapes + annotations for annotations
-            const annotations = sc.annotations || [];
-            eventMarkerData = []; // store for click handling
-            annotations.forEach((ann, idx) => {
-                const midHour = Math.round((ann.hour_start + ann.hour_end) / 2);
-                if (midHour >= labels.length) return;
-                const xLabel = labels[midHour];
-                eventMarkerData.push({ x: xLabel, hour: midHour, title: ann.time_label, text: ann.text, idx });
-
-                // Vertical dashed line from bottom to near top
-                layout.shapes.push({
-                    type: 'line',
-                    x0: xLabel, x1: xLabel,
-                    y0: 0, y1: 0.88,
-                    xref: 'x', yref: 'paper',
-                    line: { color: 'rgba(26,39,68,0.15)', width: 1, dash: 'dot' },
-                    layer: 'below',
-                });
-            });
-
-            // Add a scatter trace for event marker circles at top
-            if (eventMarkerData.length > 0) {
-                // Compute a y value near top of chart for markers
-                const maxY = Math.max(...(sc.demand || [0])) * 1.12;
-                traces.push({
-                    x: eventMarkerData.map(e => e.x),
-                    y: eventMarkerData.map(() => maxY),
-                    mode: 'markers+text',
-                    type: 'scatter',
-                    marker: {
-                        size: 22,
-                        color: 'rgba(26,39,68,0.08)',
-                        line: { color: 'rgba(26,39,68,0.4)', width: 1.5 },
-                        symbol: 'circle',
-                    },
-                    text: eventMarkerData.map((_, i) => String(i + 1)),
-                    textfont: { size: 10, color: '#1A2744', family: "'DM Sans', sans-serif", weight: 700 },
-                    textposition: 'middle center',
-                    hoverinfo: 'text',
-                    hovertext: eventMarkerData.map(e => e.title),
-                    showlegend: false,
-                    name: '_events',
-                });
+            // Create fuel label row below bar
+            fmbFuelLabels.innerHTML = '';
+            fmbLabelEls = {};
+            for (const fuel of STACK_ORDER) {
+                if (!sc.stack[fuel]) continue;
+                const wrap = document.createElement('div');
+                wrap.className = 'fmb-fuel-label';
+                const dot = document.createElement('span');
+                dot.className = 'fmb-fuel-dot';
+                dot.style.backgroundColor = FUEL_HEX[fuel] || '#9CA3AF';
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = (FUEL_LABELS[fuel] || fuel) + ' ';
+                const mwSpan = document.createElement('span');
+                mwSpan.className = 'fmb-fuel-mw';
+                mwSpan.textContent = '0';
+                wrap.appendChild(dot);
+                wrap.appendChild(nameSpan);
+                wrap.appendChild(mwSpan);
+                fmbFuelLabels.appendChild(wrap);
+                fmbLabelEls[fuel] = { wrap, mw: mwSpan };
             }
 
-            const config = { responsive: true, displayModeBar: false };
+            fmbInitialized = true;
+            updateFuelMixBar(0);
+        }
 
-            if (supplyChartInitialized) {
-                Plotly.react('supplyStackChart', traces, layout, config);
-            } else {
-                Plotly.newPlot('supplyStackChart', traces, layout, config);
-                supplyChartInitialized = true;
+        function updateFuelMixBar(hour) {
+            const sc = DATA.scenarios[currentScenario];
+            if (!sc || !fmbInitialized) return;
 
-                // Click handler for event markers
-                document.getElementById('supplyStackChart').on('plotly_click', function(data) {
-                    if (!data.points || !data.points.length) return;
-                    const pt = data.points[0];
-                    if (pt.data.name !== '_events') return;
-                    const evtIdx = pt.pointIndex;
-                    if (evtIdx < 0 || evtIdx >= eventMarkerData.length) return;
-                    showEventPopup(eventMarkerData[evtIdx]);
-                });
+            // Compute per-fuel MW at this hour
+            let totalGen = 0;
+            const fuelMW = {};
+            for (const fuel of STACK_ORDER) {
+                if (!sc.stack[fuel]) continue;
+                const mw = sc.stack[fuel][hour] || 0;
+                fuelMW[fuel] = mw;
+                totalGen += mw;
+            }
+
+            const demandMW = sc.demand[hour] || 0;
+            // The bar represents max(totalGen, demandMW) so needle fits
+            const barTotal = Math.max(totalGen, demandMW, 1);
+
+            // Update segment widths
+            for (const fuel of STACK_ORDER) {
+                if (!fmbSegmentEls[fuel]) continue;
+                const mw = fuelMW[fuel] || 0;
+                const pct = (mw / barTotal) * 100;
+                const seg = fmbSegmentEls[fuel];
+                seg.el.style.flexBasis = pct + '%';
+
+                // Show label if segment is wide enough (>8%)
+                const isWide = pct > 8;
+                seg.el.classList.toggle('wide-enough', isWide);
+                if (isWide) {
+                    seg.labelEl.textContent = Math.round(mw / 1000) + ' GW';
+                }
+            }
+
+            // Update fuel labels below
+            for (const fuel of STACK_ORDER) {
+                if (!fmbLabelEls[fuel]) continue;
+                const mw = fuelMW[fuel] || 0;
+                fmbLabelEls[fuel].mw.textContent = mw >= 1000
+                    ? (mw / 1000).toFixed(1) + ' GW'
+                    : Math.round(mw) + ' MW';
+                fmbLabelEls[fuel].wrap.classList.toggle('inactive', mw < 1);
+            }
+
+            // Position demand needle
+            const needlePct = (demandMW / barTotal) * 100;
+            fmbNeedle.style.left = needlePct + '%';
+            fmbNeedleLabel.style.left = needlePct + '%';
+            fmbNeedleLabel.textContent = 'Demand ' + (demandMW / 1000).toFixed(1) + ' GW';
+
+            // Reserve/deficit zone
+            const barContainer = document.getElementById('fmbBarContainer');
+            let reserveZone = barContainer.querySelector('.fmb-reserve-zone');
+            if (totalGen > demandMW && demandMW > 0) {
+                // Surplus: hatched zone from demand% to totalGen%
+                const startPct = (demandMW / barTotal) * 100;
+                const widthPct = ((totalGen - demandMW) / barTotal) * 100;
+                if (!reserveZone) {
+                    reserveZone = document.createElement('div');
+                    reserveZone.className = 'fmb-reserve-zone surplus';
+                    barContainer.appendChild(reserveZone);
+                }
+                reserveZone.className = 'fmb-reserve-zone surplus';
+                reserveZone.style.left = startPct + '%';
+                reserveZone.style.width = widthPct + '%';
+            } else if (demandMW > totalGen && totalGen > 0) {
+                // Deficit: red zone past the bar
+                const startPct = (totalGen / barTotal) * 100;
+                const widthPct = ((demandMW - totalGen) / barTotal) * 100;
+                if (!reserveZone) {
+                    reserveZone = document.createElement('div');
+                    reserveZone.className = 'fmb-reserve-zone deficit';
+                    barContainer.appendChild(reserveZone);
+                }
+                reserveZone.className = 'fmb-reserve-zone deficit';
+                reserveZone.style.left = startPct + '%';
+                reserveZone.style.width = widthPct + '%';
+            } else if (reserveZone) {
+                reserveZone.style.width = '0%';
             }
         }
 
-        // ── Event marker data + popup ────────────────────────────
+        // ── Sparkline: gen vs demand trailing 24h ────────────────
+        function drawSparkline(hour) {
+            const sc = DATA.scenarios[currentScenario];
+            if (!sc) return;
+            const cvs = fmbSparklineCanvas;
+            const dpr = window.devicePixelRatio || 1;
+            const rect = cvs.parentElement.getBoundingClientRect();
+            cvs.width = rect.width * dpr;
+            cvs.height = rect.height * dpr;
+            cvs.style.width = rect.width + 'px';
+            cvs.style.height = rect.height + 'px';
+            const cx = fmbSparklineCtx;
+            cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            cx.clearRect(0, 0, rect.width, rect.height);
+
+            // Window: 24 hours ending at current hour
+            const windowSize = 24;
+            const endH = Math.min(hour, sc.hours.length - 1);
+            const startH = Math.max(0, endH - windowSize + 1);
+            const count = endH - startH + 1;
+            if (count < 2) return;
+
+            // Gather data points
+            const genPts = [];
+            const demPts = [];
+            let maxVal = 0;
+            for (let h = startH; h <= endH; h++) {
+                const g = sc.generation[h] || 0;
+                const d = sc.demand[h] || 0;
+                genPts.push(g);
+                demPts.push(d);
+                if (g > maxVal) maxVal = g;
+                if (d > maxVal) maxVal = d;
+            }
+            if (maxVal === 0) return;
+
+            const pad = 4;
+            const w = rect.width - pad * 2;
+            const h = rect.height - pad * 2;
+
+            function drawLine(pts, color, width, dash) {
+                cx.save();
+                cx.strokeStyle = color;
+                cx.lineWidth = width;
+                cx.lineJoin = 'round';
+                cx.lineCap = 'round';
+                if (dash) cx.setLineDash(dash);
+                cx.beginPath();
+                for (let i = 0; i < pts.length; i++) {
+                    const x = pad + (i / (pts.length - 1)) * w;
+                    const y = pad + h - (pts[i] / maxVal) * h;
+                    if (i === 0) cx.moveTo(x, y);
+                    else cx.lineTo(x, y);
+                }
+                cx.stroke();
+                cx.restore();
+            }
+
+            // Fill area under generation line
+            cx.save();
+            cx.globalAlpha = 0.06;
+            cx.fillStyle = '#22C55E';
+            cx.beginPath();
+            cx.moveTo(pad, pad + h);
+            for (let i = 0; i < genPts.length; i++) {
+                const x = pad + (i / (genPts.length - 1)) * w;
+                const y = pad + h - (genPts[i] / maxVal) * h;
+                cx.lineTo(x, y);
+            }
+            cx.lineTo(pad + w, pad + h);
+            cx.closePath();
+            cx.fill();
+            cx.restore();
+
+            drawLine(genPts, '#22C55E', 1.5);
+            drawLine(demPts, '#1A2744', 1.5, [3, 3]);
+
+            // Current hour marker
+            const curX = pad + ((count - 1) / (count - 1)) * w;
+            cx.save();
+            cx.fillStyle = '#1A2744';
+            cx.beginPath();
+            cx.arc(curX, pad + h - (demPts[demPts.length - 1] / maxVal) * h, 3, 0, Math.PI * 2);
+            cx.fill();
+            cx.restore();
+
+            // Tiny labels
+            cx.save();
+            cx.font = '9px "DM Sans", sans-serif';
+            cx.fillStyle = '#9CA3AF';
+            cx.textAlign = 'left';
+            cx.fillText('Gen', pad + 2, pad + 8);
+            cx.fillStyle = '#1A2744';
+            cx.fillText('Demand', pad + 28, pad + 8);
+            cx.restore();
+        }
+
+        function updateCursorLine(hour) {
+            // Update the fuel mix bar and sparkline for this hour
+            updateFuelMixBar(hour);
+            drawSparkline(hour);
+        }
+
+        // ── Event popup (kept for story overlay compatibility) ───
         let eventMarkerData = [];
 
         function showEventPopup(evt) {
@@ -1639,42 +1888,6 @@
 
         function hideEventPopup() {
             els.eventPopup.classList.remove('show');
-        }
-
-        function updateCursorLine(hour) {
-            const sc = DATA.scenarios[currentScenario];
-            if (!sc || !supplyChartInitialized) return;
-            const label = formatTimeLabel(sc.hours[hour]);
-
-            // Rebuild shapes: event marker lines + cursor line
-            const shapes = [];
-
-            // Event marker dashed lines
-            const annotations = sc.annotations || [];
-            const labels = sc.hours.map(formatTimeLabel);
-            annotations.forEach(ann => {
-                const midHour = Math.round((ann.hour_start + ann.hour_end) / 2);
-                if (midHour >= labels.length) return;
-                shapes.push({
-                    type: 'line',
-                    x0: labels[midHour], x1: labels[midHour],
-                    y0: 0, y1: 0.88,
-                    xref: 'x', yref: 'paper',
-                    line: { color: 'rgba(26,39,68,0.15)', width: 1, dash: 'dot' },
-                    layer: 'below',
-                });
-            });
-
-            // Playback cursor line
-            shapes.push({
-                type: 'line',
-                x0: label, x1: label,
-                y0: 0, y1: 1,
-                xref: 'x', yref: 'paper',
-                line: { color: 'rgba(26,39,68,0.3)', width: 2 },
-            });
-
-            Plotly.relayout('supplyStackChart', { shapes });
         }
 
         // ── Counting animation for stat values ────────────────────
