@@ -744,6 +744,8 @@
             <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#881337;color:#881337"></div>Coal</div>
             <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#0EA5E9;color:#0EA5E9"></div>Hydro</div>
             <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#06B6D4;color:#06B6D4"></div>Battery</div>
+            <div class="legend-item-fuel" style="margin-left:12px;opacity:0.7"><div class="legend-dot-fuel" style="background:#1A2744;width:8px;height:8px;border-radius:50%"></div>Load Center</div>
+            <div class="legend-item-fuel" style="opacity:0.7"><div style="width:18px;height:2px;background:linear-gradient(90deg,#F59E0B,#1A2744);border-radius:1px;margin-right:6px"></div>Flow</div>
         </div>
 
         <!-- Map + Sidebar -->
@@ -885,16 +887,12 @@
         let dotScale = getDotScale();
         window.addEventListener('resize', () => { dotScale = getDotScale(); });
 
-        // ── Plant rendering state ─────────────────────────────────
-        // Per-plant animated state: { displayRadius, displayOpacity, targetRadius, targetOpacity }
-        let plantState = [];
-
+        // ── Cluster rendering state ──────────────────────────────
         // Draw order: coal on bottom → gas → nuclear → wind → solar → battery on top
         const DRAW_ORDER_PRIORITY = {
             COAL: 0, OIL: 1, GAS: 2, OTHF: 3, OFSL: 3, BIOMASS: 4,
             NUCLEAR: 5, HYDRO: 6, WIND: 7, SOLAR: 8, BATTERY: 9,
         };
-        let plantDrawOrder = []; // indices sorted by draw priority
 
         function getFuelKey(plant) {
             // Try matching label to key, fall back to matching r,g,b
@@ -903,6 +901,185 @@
             if (key) { plant.fuelKey = key; return key; }
             plant.fuelKey = 'GAS';
             return 'GAS';
+        }
+
+        // ── Clustering system ────────────────────────────────────────
+        // Load centers (major Texas metros)
+        const LOAD_CENTERS = [
+            { name: 'Houston',         lat: 29.76, lon: -95.37 },
+            { name: 'Dallas-Fort Worth', lat: 32.78, lon: -96.80 },
+            { name: 'San Antonio',     lat: 29.42, lon: -98.49 },
+            { name: 'Austin',          lat: 30.27, lon: -97.74 },
+        ];
+
+        let clusters = [];         // [{fuel, lat, lon, cap, plantIndices, nearestLC, displayRadius, displayOpacity, displayGlowRadius, targetRadius, targetOpacity, targetGlowRadius}]
+        let clusterDrawOrder = [];  // indices into clusters[], sorted by draw priority
+        let flowParticles = [];     // [{clusterIdx, t, speed}] — t in [0,1] along bezier
+
+        // Haversine distance in km
+        function haversineKm(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) ** 2 +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon / 2) ** 2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        }
+
+        function findNearestLoadCenter(lat, lon) {
+            let bestIdx = 0, bestDist = Infinity;
+            for (let i = 0; i < LOAD_CENTERS.length; i++) {
+                const d = haversineKm(lat, lon, LOAD_CENTERS[i].lat, LOAD_CENTERS[i].lon);
+                if (d < bestDist) { bestDist = d; bestIdx = i; }
+            }
+            return bestIdx;
+        }
+
+        // Build clusters for the current scenario
+        function buildClusters() {
+            const plants = DATA.plants;
+            // Group plants by fuel type
+            const fuelGroups = {};
+            for (let i = 0; i < plants.length; i++) {
+                const fuel = getFuelKey(plants[i]);
+                if (!fuelGroups[fuel]) fuelGroups[fuel] = [];
+                fuelGroups[fuel].push(i);
+            }
+
+            clusters = [];
+            const NUCLEAR_SOLO = true; // Nuclear shown individually
+
+            for (const fuel of Object.keys(fuelGroups)) {
+                const indices = fuelGroups[fuel];
+                if (fuel === 'NUCLEAR' && NUCLEAR_SOLO) {
+                    // Each nuclear plant is its own cluster
+                    for (const idx of indices) {
+                        const p = plants[idx];
+                        clusters.push({
+                            fuel, lat: p.lat, lon: p.lon, cap: p.cap,
+                            plantIndices: [idx],
+                            nearestLC: findNearestLoadCenter(p.lat, p.lon),
+                            plantCount: 1,
+                            displayRadius: 0, displayOpacity: 0, displayGlowRadius: 0,
+                            targetRadius: 0, targetOpacity: 0, targetGlowRadius: 0,
+                        });
+                    }
+                    continue;
+                }
+
+                // Agglomerative clustering by distance
+                let radius = 30; // km starting radius
+                let merged;
+                do {
+                    merged = clusterByRadius(indices, radius);
+                    // Check total capacity coverage
+                    let totalCap = 0;
+                    for (const c of merged) totalCap += c.cap;
+                    if (totalCap >= 200000 || radius >= 120) break; // 200 GW threshold or max
+                    radius += 15;
+                } while (true);
+
+                for (const c of merged) {
+                    c.fuel = fuel;
+                    c.nearestLC = findNearestLoadCenter(c.lat, c.lon);
+                    c.displayRadius = 0;
+                    c.displayOpacity = 0;
+                    c.displayGlowRadius = 0;
+                    c.targetRadius = 0;
+                    c.targetOpacity = 0;
+                    c.targetGlowRadius = 0;
+                    clusters.push(c);
+                }
+            }
+
+            // Sort draw order
+            clusterDrawOrder = clusters.map((_, i) => i);
+            clusterDrawOrder.sort((a, b) => {
+                return (DRAW_ORDER_PRIORITY[clusters[a].fuel] || 0) -
+                       (DRAW_ORDER_PRIORITY[clusters[b].fuel] || 0);
+            });
+
+            // Reset flow particles
+            flowParticles = [];
+        }
+
+        function clusterByRadius(indices, radiusKm) {
+            const plants = DATA.plants;
+            // Each plant starts as its own cluster
+            const active = indices.map(idx => ({
+                lat: plants[idx].lat,
+                lon: plants[idx].lon,
+                cap: plants[idx].cap,
+                plantIndices: [idx],
+                plantCount: 1,
+            }));
+
+            // Greedy agglomerative: merge closest pair until no pair within radius
+            let changed = true;
+            while (changed) {
+                changed = false;
+                for (let i = 0; i < active.length; i++) {
+                    if (!active[i]) continue;
+                    for (let j = i + 1; j < active.length; j++) {
+                        if (!active[j]) continue;
+                        const d = haversineKm(active[i].lat, active[i].lon, active[j].lat, active[j].lon);
+                        if (d <= radiusKm) {
+                            // Merge j into i (weighted centroid)
+                            const totalCap = active[i].cap + active[j].cap;
+                            active[i].lat = (active[i].lat * active[i].cap + active[j].lat * active[j].cap) / totalCap;
+                            active[i].lon = (active[i].lon * active[i].cap + active[j].lon * active[j].cap) / totalCap;
+                            active[i].cap = totalCap;
+                            active[i].plantIndices = active[i].plantIndices.concat(active[j].plantIndices);
+                            active[i].plantCount += active[j].plantCount;
+                            active[j] = null;
+                            changed = true;
+                        }
+                    }
+                }
+            }
+            return active.filter(Boolean);
+        }
+
+        // Precompute hourly output sums per cluster for the current scenario
+        let clusterOutputCache = null; // Float64Array[clusters.length * numHours]
+        let clusterOutputHours = 0;
+
+        function buildClusterOutputCache() {
+            const sc = DATA.scenarios[currentScenario];
+            if (!sc) return;
+            const numHours = sc.hours.length;
+            const numClusters = clusters.length;
+            clusterOutputHours = numHours;
+            clusterOutputCache = new Float64Array(numClusters * numHours);
+            const output = sc.output;
+
+            for (let ci = 0; ci < numClusters; ci++) {
+                const plantIndices = clusters[ci].plantIndices;
+                const base = ci * numHours;
+                for (let h = 0; h < numHours; h++) {
+                    let sum = 0;
+                    for (let pi = 0; pi < plantIndices.length; pi++) {
+                        sum += (output[plantIndices[pi]][h] || 0);
+                    }
+                    clusterOutputCache[base + h] = sum;
+                }
+            }
+        }
+
+        function getClusterMW(ci, hour) {
+            if (!clusterOutputCache) return 0;
+            return clusterOutputCache[ci * clusterOutputHours + hour];
+        }
+
+        // Find max MW across all clusters and hours for sizing
+        let maxClusterMW = 1;
+        function computeMaxClusterMW() {
+            maxClusterMW = 1;
+            if (!clusterOutputCache) return;
+            for (let i = 0; i < clusterOutputCache.length; i++) {
+                if (clusterOutputCache[i] > maxClusterMW) maxClusterMW = clusterOutputCache[i];
+            }
         }
 
         function hexToRgba(hex, alpha) {
@@ -1034,27 +1211,8 @@
                 maxZoom: 19,
             }).addTo(map);
 
-            // Init plant state array + draw order (coal bottom → battery top)
-            const plants = DATA.plants;
-            plantState = new Array(plants.length);
-            plantDrawOrder = [];
-            for (let i = 0; i < plants.length; i++) {
-                plantState[i] = {
-                    displayRadius: 0,
-                    displayOpacity: 0,
-                    targetRadius: 0,
-                    targetOpacity: 0,
-                    displayGlowRadius: 0,
-                    targetGlowRadius: 0,
-                };
-                plantDrawOrder.push(i);
-            }
-            // Sort so coal draws first (behind), battery draws last (on top)
-            plantDrawOrder.sort((a, b) => {
-                const fA = getFuelKey(plants[a]);
-                const fB = getFuelKey(plants[b]);
-                return (DRAW_ORDER_PRIORITY[fA] || 0) - (DRAW_ORDER_PRIORITY[fB] || 0);
-            });
+            // Build clusters from plant data
+            buildClusters();
 
             syncCanvas();
             map.on('moveend', syncCanvas);
@@ -1070,17 +1228,17 @@
             const rect = canvas.getBoundingClientRect();
             const mx = e.clientX - rect.left;
             const my = e.clientY - rect.top;
-            const plants = DATA.plants;
             let closest = -1;
-            let closestDist = 20; // max pixel distance
+            let closestDist = 30; // max pixel distance
 
-            for (let i = 0; i < plants.length; i++) {
-                if (plantState[i].displayRadius < 0.5) continue;
-                const pt = map.latLngToContainerPoint([plants[i].lat, plants[i].lon]);
+            for (let i = 0; i < clusters.length; i++) {
+                const c = clusters[i];
+                if (c.displayRadius < 0.5) continue;
+                const pt = map.latLngToContainerPoint([c.lat, c.lon]);
                 const dx = pt.x - mx;
                 const dy = pt.y - my;
                 const dist = Math.sqrt(dx * dx + dy * dy);
-                const hitR = Math.max(plantState[i].displayRadius * 1.5, dotScale > 1.2 ? 16 : 8);
+                const hitR = Math.max(c.displayRadius * 1.5, dotScale > 1.2 ? 16 : 8);
                 if (dist < hitR && dist < closestDist) {
                     closest = i;
                     closestDist = dist;
@@ -1088,15 +1246,18 @@
             }
 
             if (closest >= 0) {
-                const p = plants[closest];
-                const sc = DATA.scenarios[currentScenario];
-                const mw = sc ? (sc.output[closest][currentHour] || 0) : 0;
+                const c = clusters[closest];
+                const mw = getClusterMW(closest, currentHour);
+                const fuelLabel = FUEL_LABELS[c.fuel] || c.fuel;
+                const plantCountLabel = c.plantCount === 1
+                    ? DATA.plants[c.plantIndices[0]].name
+                    : `${c.plantCount} ${fuelLabel} plants`;
                 tooltipDiv.innerHTML =
-                    `<b>${p.name}</b><br>` +
-                    `<span class="fuel-tag">Fuel:</span> ${p.label}<br>` +
+                    `<b>${plantCountLabel}</b><br>` +
+                    `<span class="fuel-tag">Fuel:</span> ${fuelLabel}<br>` +
                     `<span class="fuel-tag">Output:</span> ${Math.round(mw).toLocaleString()} MW<br>` +
-                    `<span class="fuel-tag">Capacity:</span> ${p.cap.toLocaleString()} MW`;
-                const pt = map.latLngToContainerPoint([p.lat, p.lon]);
+                    `<span class="fuel-tag">Capacity:</span> ${Math.round(c.cap).toLocaleString()} MW`;
+                const pt = map.latLngToContainerPoint([c.lat, c.lon]);
                 tooltipDiv.style.left = (pt.x + 12) + 'px';
                 tooltipDiv.style.top = (pt.y - 40) + 'px';
                 tooltipDiv.style.display = 'block';
@@ -1105,89 +1266,221 @@
             }
         }
 
-        // ── Draw plant dots on canvas (3-layer concentric) ────────
+        // ── Bezier helpers for flow lines ────────────────────────
+        function getBezierControlPoint(x1, y1, x2, y2) {
+            // Control point offset perpendicular to midpoint
+            const mx = (x1 + x2) / 2;
+            const my = (y1 + y2) / 2;
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            if (len < 1) return { cx: mx, cy: my };
+            // Perpendicular offset = 20% of line length
+            const offset = len * 0.2;
+            return { cx: mx - dy / len * offset, cy: my + dx / len * offset };
+        }
+
+        function bezierPoint(x1, y1, cx, cy, x2, y2, t) {
+            const u = 1 - t;
+            return {
+                x: u * u * x1 + 2 * u * t * cx + t * t * x2,
+                y: u * u * y1 + 2 * u * t * cy + t * t * y2,
+            };
+        }
+
+        // ── Update flow particles each frame ─────────────────────
+        function updateFlowParticles(dt) {
+            const PARTICLE_SPEED = 0.0008; // t per ms (~1.25s full traversal)
+            // Remove dead particles and advance live ones
+            for (let i = flowParticles.length - 1; i >= 0; i--) {
+                flowParticles[i].t += PARTICLE_SPEED * dt;
+                if (flowParticles[i].t >= 1) {
+                    flowParticles.splice(i, 1);
+                }
+            }
+
+            // Spawn new particles based on cluster output
+            for (let ci = 0; ci < clusters.length; ci++) {
+                const c = clusters[ci];
+                const mw = getClusterMW(ci, currentHour);
+                if (mw < 10) continue; // skip tiny output
+
+                // Number of particles scales with MW: 1 per 500MW, max 8
+                const targetCount = Math.min(Math.ceil(mw / 500), 8);
+                // Count existing particles for this cluster
+                let existing = 0;
+                for (let p = 0; p < flowParticles.length; p++) {
+                    if (flowParticles[p].ci === ci) existing++;
+                }
+
+                // Spawn if needed (stagger spawns — probabilistic per frame)
+                if (existing < targetCount && Math.random() < 0.08) {
+                    flowParticles.push({
+                        ci, t: 0,
+                    });
+                }
+            }
+        }
+
+        // ── Draw cluster dots + flow lines on canvas ─────────────
         function drawPlants(interpFrac) {
             ctx.clearRect(0, 0, canvas.width / canvasDPR, canvas.height / canvasDPR);
             const sc = DATA.scenarios[currentScenario];
-            if (!sc || !map) return;
+            if (!sc || !map || clusters.length === 0) return;
 
-            const plants = DATA.plants;
-            const output = sc.output;
             const nextHour = Math.min(currentHour + 1, sc.hours.length - 1);
-            const dt16 = 16.67; // approx frame ms for easing
+            const dt16 = 16.67;
+            const isMobile = dotScale < 0.7;
+            const MAX_RADIUS = isMobile ? 28 : 40;
+            const MAX_GLOW = isMobile ? 35 : 50;
 
-            for (let di = 0; di < plantDrawOrder.length; di++) {
-                const i = plantDrawOrder[di];
-                const p = plants[i];
-                const ps = plantState[i];
-                const mwCurr = output[i][currentHour] || 0;
-                const mwNext = output[i][nextHour] || 0;
+            // Precompute load center screen positions
+            const lcPts = LOAD_CENTERS.map(lc => map.latLngToContainerPoint([lc.lat, lc.lon]));
+
+            // ── Phase 1: Draw flow lines (behind dots) ───────────
+            for (let ci = 0; ci < clusters.length; ci++) {
+                const c = clusters[ci];
+                const mwCurr = getClusterMW(ci, currentHour);
+                const mwNext = getClusterMW(ci, nextHour);
+                const mw = mwCurr + (mwNext - mwCurr) * interpFrac;
+                if (mw < 10) continue;
+
+                const srcPt = map.latLngToContainerPoint([c.lat, c.lon]);
+                const dstPt = lcPts[c.nearestLC];
+                const color = FUEL_HEX[c.fuel] || '#9CA3AF';
+
+                // Line opacity and width scale with MW output
+                const mwFrac = Math.min(mw / maxClusterMW, 1);
+                const lineWidth = 0.5 + mwFrac * (isMobile ? 2.5 : 3.5);
+                const lineAlpha = 0.06 + mwFrac * 0.18;
+
+                const cp = getBezierControlPoint(srcPt.x, srcPt.y, dstPt.x, dstPt.y);
+
+                // Draw the flow arc
+                ctx.save();
+                ctx.globalAlpha = lineAlpha;
+                ctx.strokeStyle = color;
+                ctx.lineWidth = lineWidth;
+                ctx.beginPath();
+                ctx.moveTo(srcPt.x, srcPt.y);
+                ctx.quadraticCurveTo(cp.cx, cp.cy, dstPt.x, dstPt.y);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // ── Phase 2: Draw particles along flow lines ─────────
+            for (let pi = 0; pi < flowParticles.length; pi++) {
+                const fp = flowParticles[pi];
+                const c = clusters[fp.ci];
+                const srcPt = map.latLngToContainerPoint([c.lat, c.lon]);
+                const dstPt = lcPts[c.nearestLC];
+                const cp = getBezierControlPoint(srcPt.x, srcPt.y, dstPt.x, dstPt.y);
+                const pt = bezierPoint(srcPt.x, srcPt.y, cp.cx, cp.cy, dstPt.x, dstPt.y, fp.t);
+
+                const color = FUEL_HEX[c.fuel] || '#9CA3AF';
+                const particleR = isMobile ? 2 : 3.5;
+                // Fade in at start, fade out at end
+                const fadeAlpha = fp.t < 0.1 ? fp.t / 0.1 : (fp.t > 0.85 ? (1 - fp.t) / 0.15 : 1);
+
+                ctx.save();
+                ctx.globalAlpha = fadeAlpha * 0.85;
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, particleR, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // ── Phase 3: Draw cluster dots (on top) ──────────────
+            for (let di = 0; di < clusterDrawOrder.length; di++) {
+                const ci = clusterDrawOrder[di];
+                const c = clusters[ci];
+                const mwCurr = getClusterMW(ci, currentHour);
+                const mwNext = getClusterMW(ci, nextHour);
                 const mw = mwCurr + (mwNext - mwCurr) * interpFrac;
 
-                // Compute targets from MW (scaled for mobile visibility)
+                // Compute targets from interpolated MW
                 if (mw > 0.5) {
                     const sqrtMw = Math.sqrt(mw);
-                    ps.targetRadius = Math.min(sqrtMw * 1.5 * dotScale, 28);
-                    ps.targetGlowRadius = Math.min(sqrtMw * 2 * dotScale, 35);
-                    ps.targetOpacity = 1;
+                    // Scale so largest cluster ≈ MAX_RADIUS
+                    const scaleFactor = MAX_RADIUS / Math.sqrt(maxClusterMW);
+                    c.targetRadius = Math.min(sqrtMw * scaleFactor * dotScale, MAX_RADIUS);
+                    c.targetGlowRadius = Math.min(sqrtMw * scaleFactor * 1.3 * dotScale, MAX_GLOW);
+                    c.targetOpacity = 1;
                 } else {
-                    ps.targetRadius = 0;
-                    ps.targetGlowRadius = 0;
-                    ps.targetOpacity = 0;
+                    c.targetRadius = 0;
+                    c.targetGlowRadius = 0;
+                    c.targetOpacity = 0;
                 }
 
-                // Ease towards targets (300ms for radius, 500ms for opacity via exponential decay)
+                // Ease towards targets
                 const radiusRate = 1 - Math.pow(0.001, dt16 / 300);
                 const opacityRate = 1 - Math.pow(0.001, dt16 / 500);
-                ps.displayRadius += (ps.targetRadius - ps.displayRadius) * radiusRate;
-                ps.displayGlowRadius += (ps.targetGlowRadius - ps.displayGlowRadius) * radiusRate;
-                ps.displayOpacity += (ps.targetOpacity - ps.displayOpacity) * opacityRate;
+                c.displayRadius += (c.targetRadius - c.displayRadius) * radiusRate;
+                c.displayGlowRadius += (c.targetGlowRadius - c.displayGlowRadius) * radiusRate;
+                c.displayOpacity += (c.targetOpacity - c.displayOpacity) * opacityRate;
 
-                // Skip tiny dots
-                if (ps.displayRadius < 0.3 && ps.displayOpacity < 0.01) continue;
+                if (c.displayRadius < 0.3 && c.displayOpacity < 0.01) continue;
 
-                const pt = map.latLngToContainerPoint([p.lat, p.lon]);
+                const pt = map.latLngToContainerPoint([c.lat, c.lon]);
                 const x = pt.x;
                 const y = pt.y;
-                const fuelKey = getFuelKey(p);
-                const color = FUEL_HEX[fuelKey] || '#9CA3AF';
-                const opacity = ps.displayOpacity;
+                const color = FUEL_HEX[c.fuel] || '#9CA3AF';
+                const opacity = c.displayOpacity;
 
-                // Layer 1: Outer glow (blurred, scaled down on mobile)
-                if (ps.displayGlowRadius > 1) {
+                // Layer 1: Outer glow
+                if (c.displayGlowRadius > 1) {
                     ctx.save();
-                    const blurPx = dotScale < 0.7 ? 6 : 12;
+                    const blurPx = isMobile ? 6 : 12;
                     ctx.filter = `blur(${blurPx}px)`;
                     ctx.globalAlpha = opacity;
                     ctx.beginPath();
-                    ctx.arc(x, y, ps.displayGlowRadius, 0, Math.PI * 2);
+                    ctx.arc(x, y, c.displayGlowRadius, 0, Math.PI * 2);
                     ctx.fillStyle = hexToRgba(color, 0.08);
                     ctx.fill();
                     ctx.restore();
                 }
 
-                // Layer 2: Transparent fill (15% opacity)
-                if (ps.displayRadius > 0.5) {
+                // Layer 2: Transparent fill
+                if (c.displayRadius > 0.5) {
                     ctx.save();
                     ctx.globalAlpha = opacity;
                     ctx.beginPath();
-                    ctx.arc(x, y, ps.displayRadius, 0, Math.PI * 2);
+                    ctx.arc(x, y, c.displayRadius, 0, Math.PI * 2);
                     ctx.fillStyle = hexToRgba(color, 0.15);
                     ctx.fill();
                     ctx.restore();
                 }
 
-                // Layer 3: Saturated border (100% color, 1.5px stroke)
-                if (ps.displayRadius > 0.5) {
+                // Layer 3: Saturated border
+                if (c.displayRadius > 0.5) {
                     ctx.save();
                     ctx.globalAlpha = opacity;
                     ctx.beginPath();
-                    ctx.arc(x, y, ps.displayRadius, 0, Math.PI * 2);
+                    ctx.arc(x, y, c.displayRadius, 0, Math.PI * 2);
                     ctx.strokeStyle = color;
-                    ctx.lineWidth = dotScale < 0.7 ? 1 : 1.5;
+                    ctx.lineWidth = isMobile ? 1 : 1.5;
                     ctx.stroke();
                     ctx.restore();
                 }
+            }
+
+            // ── Phase 4: Draw load center markers ────────────────
+            for (let i = 0; i < LOAD_CENTERS.length; i++) {
+                const pt = lcPts[i];
+                const r = isMobile ? 4 : 6;
+                ctx.save();
+                ctx.globalAlpha = 0.5;
+                ctx.fillStyle = '#1A2744';
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, r, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 0.8;
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, r * 0.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
             }
         }
 
@@ -1696,7 +1989,8 @@
                 if (storyOverlayActive) return;
             }
 
-            // Draw interpolated plants
+            // Update flow particles and draw
+            updateFlowParticles(dt);
             drawPlants(interpProgress);
 
             animFrameId = requestAnimationFrame(animationLoop);
@@ -1707,22 +2001,25 @@
             currentHour = hour;
             interpProgress = 0;
 
-            // Set plant targets immediately then draw
+            // Set cluster targets immediately then draw
             const sc = DATA.scenarios[currentScenario];
             if (sc) {
-                const output = sc.output;
-                for (let i = 0; i < DATA.plants.length; i++) {
-                    const mw = output[i][hour] || 0;
-                    const ps = plantState[i];
+                const isMobile = dotScale < 0.7;
+                const MAX_RADIUS = isMobile ? 28 : 40;
+                const MAX_GLOW = isMobile ? 35 : 50;
+                const scaleFactor = MAX_RADIUS / Math.sqrt(maxClusterMW);
+                for (let ci = 0; ci < clusters.length; ci++) {
+                    const mw = getClusterMW(ci, hour);
+                    const c = clusters[ci];
                     if (mw > 0.5) {
                         const sqrtMw = Math.sqrt(mw);
-                        ps.targetRadius = Math.min(sqrtMw * 1.5 * dotScale, 28);
-                        ps.targetGlowRadius = Math.min(sqrtMw * 2 * dotScale, 35);
-                        ps.targetOpacity = 1;
+                        c.targetRadius = Math.min(sqrtMw * scaleFactor * dotScale, MAX_RADIUS);
+                        c.targetGlowRadius = Math.min(sqrtMw * scaleFactor * 1.3 * dotScale, MAX_GLOW);
+                        c.targetOpacity = 1;
                     } else {
-                        ps.targetRadius = 0;
-                        ps.targetGlowRadius = 0;
-                        ps.targetOpacity = 0;
+                        c.targetRadius = 0;
+                        c.targetGlowRadius = 0;
+                        c.targetOpacity = 0;
                     }
                 }
             }
@@ -1760,11 +2057,16 @@
                 card.classList.toggle('selected', card.dataset.scenario === scenarioId);
             });
 
-            // Reset plant state
-            for (let i = 0; i < plantState.length; i++) {
-                plantState[i].displayRadius = 0;
-                plantState[i].displayOpacity = 0;
-                plantState[i].displayGlowRadius = 0;
+            // Rebuild cluster output cache for new scenario
+            buildClusterOutputCache();
+            computeMaxClusterMW();
+            flowParticles = [];
+
+            // Reset cluster display state
+            for (let ci = 0; ci < clusters.length; ci++) {
+                clusters[ci].displayRadius = 0;
+                clusters[ci].displayOpacity = 0;
+                clusters[ci].displayGlowRadius = 0;
             }
 
             buildSupplyChart();
@@ -1788,11 +2090,17 @@
             }
         }
 
-        // ── Idle rendering (when paused, still animate dot easing) ─
+        // ── Idle rendering (when paused, still animate dot easing + particles) ─
         let idleFrameId = null;
-        function idleLoop() {
+        let idleLastTs = 0;
+        function idleLoop(ts) {
             if (!playing) {
+                const dt = idleLastTs ? (ts - idleLastTs) : 16;
+                idleLastTs = ts;
+                updateFlowParticles(dt);
                 drawPlants(0);
+            } else {
+                idleLastTs = 0;
             }
             idleFrameId = requestAnimationFrame(idleLoop);
         }
