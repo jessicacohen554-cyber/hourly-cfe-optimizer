@@ -524,6 +524,110 @@ body { background: var(--bg-page-white); }
 </div>
 
 <!-- ============================================================ -->
+<h2>11. Technology Cost Trajectories &amp; Learning Curves</h2>
+<!-- ============================================================ -->
+
+<p>Cost decline rates determine which resources will be competitive for hyperscaler PPAs by 2030&ndash;2035. Solar and batteries are on steep learning curves; nuclear and geothermal have potential but unproven trajectories at scale.</p>
+
+<div class="chart-panel-article">
+    <h4>LCOE Trajectories by Technology ($/MWh, Unsubsidized Midpoint)</h4>
+    <div class="chart-container-article" style="height:420px">
+        <canvas id="lcoeTrajectoryChart"></canvas>
+    </div>
+    <p class="citation">Sources: Lazard LCOE+ v18 (June 2025); NREL ATB 2024 Moderate scenario; Fervo Energy; Form Energy; Carbon Direct</p>
+</div>
+
+<div class="data-table-wrap">
+<table>
+<thead>
+<tr><th>Technology</th><th>2025 $/MWh</th><th>2030E</th><th>2035E</th><th>Learning Rate</th><th>OBBBA Impact</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Utility Solar</strong></td><td>$38&ndash;78</td><td>$28&ndash;50</td><td>$22&ndash;40</td><td style="color:#22C55E;font-weight:600">20&ndash;24%</td><td style="color:#EF4444">60% credit &rsquo;26 &rarr; 0% by &rsquo;28</td></tr>
+<tr><td><strong>Onshore Wind</strong></td><td>$37&ndash;86</td><td>$30&ndash;60</td><td>$27&ndash;55</td><td>10&ndash;15%</td><td style="color:#EF4444">Same phase-down as solar</td></tr>
+<tr><td><strong>Battery 4hr (LCOS)</strong></td><td>$78&ndash;254</td><td>$55&ndash;150</td><td>$40&ndash;100</td><td style="color:#22C55E;font-weight:600">35%</td><td style="color:#22C55E">Preserved through 2032</td></tr>
+<tr><td><strong>LDES Iron-Air</strong></td><td>$150&ndash;250</td><td>$80&ndash;120</td><td>$50&ndash;80</td><td>~15% (modeled)</td><td style="color:#22C55E">Preserved (storage ITC)</td></tr>
+<tr><td><strong>Geothermal EGS</strong></td><td>$60&ndash;100</td><td>$45&ndash;70</td><td>$35&ndash;55</td><td>15&ndash;20%</td><td style="color:#22C55E">Preserved through 2032</td></tr>
+<tr><td><strong>Nuclear SMR</strong></td><td>&mdash;</td><td>$100&ndash;150 (FOAK)</td><td>$80&ndash;120</td><td>0% (historical)</td><td>45U PTC preserved through 2032</td></tr>
+<tr><td><strong>CCS-CCGT (net of 45Q)</strong></td><td>$45&ndash;75</td><td>$40&ndash;65</td><td>$35&ndash;60</td><td>5&ndash;10%</td><td style="color:#22C55E;font-weight:600">45Q expanded ($85/ton)</td></tr>
+<tr><td><strong>Solar+4hr Storage</strong></td><td>$50&ndash;131</td><td>$40&ndash;90</td><td>$30&ndash;70</td><td>&mdash;</td><td>Blended: solar cliff + storage preserved</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="key-finding">
+<strong>The cost crossover:</strong> By 2030, solar+4hr storage ($40&ndash;90/MWh) will be cheaper than new gas CCGT ($48&ndash;109/MWh) in most ISOs. Enhanced geothermal ($45&ndash;70/MWh) becomes competitive with existing nuclear PPAs ($40&ndash;60/MWh). Iron-air LDES ($80&ndash;120/MWh) crosses below nuclear SMR FOAK ($100&ndash;150/MWh). <strong>For VRE developers: the shaped product (solar+storage) is already cost-competitive with fossil alternatives &mdash; the green premium is pure upside.</strong>
+</div>
+
+<!-- ============================================================ -->
+<h2>12. The Hourly vs. Annual Technology Demand Split</h2>
+<!-- ============================================================ -->
+
+<p>The accounting framework determines <em>which</em> technologies get built. Hourly matching is the sole demand driver for LDES, geothermal, and new nuclear. Annual matching drives solar/wind volume but provides zero market signal for firm clean technologies.</p>
+
+<div class="chart-panel-article">
+    <h4>Resource Demand by Procurement Strategy (GW by 2035)</h4>
+    <div class="chart-container-article" style="height:420px">
+        <canvas id="resourceDemandChart"></canvas>
+    </div>
+    <p class="citation">Sources: Princeton ZERO Lab (Riepin et al. 2025); RMI Clean Power by the Hour; NREL ATB 2024; author synthesis</p>
+</div>
+
+<div class="data-table-wrap">
+<table>
+<thead>
+<tr><th>CFE Target</th><th>Cost Premium vs. Annual</th><th>Approx $/MWh Adder</th><th>Key Technology Unlocked</th></tr>
+</thead>
+<tbody>
+<tr><td>70&ndash;80%</td><td style="color:#22C55E">~0%</td><td>$0</td><td>Solar + wind + grid baseline</td></tr>
+<tr><td>80&ndash;90%</td><td>~5&ndash;15%</td><td>$3&ndash;8</td><td>+ 4hr battery storage</td></tr>
+<tr><td>90&ndash;95%</td><td>~15&ndash;30%</td><td>$8&ndash;18</td><td>+ LDES or clean firm</td></tr>
+<tr><td>98%</td><td style="color:#F59E0B;font-weight:600">~54%</td><td>$25&ndash;35</td><td>+ Geothermal / nuclear / CCS</td></tr>
+<tr><td>100% (with LDES+firm)</td><td style="color:#EF4444;font-weight:600">~42&ndash;64%</td><td>$25&ndash;40</td><td>Full portfolio: all of the above</td></tr>
+<tr><td>100% (VRE+battery only)</td><td style="color:#EF4444;font-weight:700">~200%+</td><td>$60&ndash;100+</td><td>Massive overbuild. Impractical.</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="opportunity-box">
+<strong>The 3% tipping point:</strong> Princeton ZERO Lab found that if companies representing just <strong>3% of C&amp;I electricity demand</strong> committed to 24/7 CFE, it would quadruple LDES deployment and drive 25% cost reduction in iron-air batteries by 2030. Google and Microsoft alone represent ~1.5% of US electricity. Add a few more hourly buyers and the entire firm clean technology sector tips into viability.
+</div>
+
+<!-- ============================================================ -->
+<h2>13. OBBBA Policy Landscape</h2>
+<!-- ============================================================ -->
+
+<p>The One Big Beautiful Bill Act (signed July 4, 2025) reshaped the clean energy incentive landscape. Solar and wind face a subsidy cliff; storage, geothermal, nuclear, and CCS are largely preserved.</p>
+
+<div class="chart-panel-article">
+    <h4>IRA Credit Phase-Down Timeline by Technology</h4>
+    <div class="chart-container-article" style="height:340px">
+        <canvas id="obbbaChart"></canvas>
+    </div>
+    <p class="citation">Sources: Akin Gump; Grant Thornton; Tax Foundation analysis of OBBBA enacted provisions</p>
+</div>
+
+<div class="data-table-wrap">
+<table>
+<thead>
+<tr><th>Technology</th><th>Pre-OBBBA</th><th>Post-OBBBA</th><th>Net Impact</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Solar/Wind (PTC/ITC)</strong></td><td>Full credit through 2032+</td><td style="color:#EF4444;font-weight:600">60% in 2026 &rarr; 20% in 2027 &rarr; 0% from 2028</td><td style="color:#EF4444">$336B investment cut est. (Aurora)</td></tr>
+<tr><td><strong>Battery Storage ITC</strong></td><td>30% + bonuses through 2032</td><td style="color:#22C55E">Preserved. Phase-down 2032&ndash;2036</td><td>Forecast grew 15% post-OBBBA</td></tr>
+<tr><td><strong>Geothermal (48E ITC)</strong></td><td>Full ITC</td><td style="color:#22C55E">Preserved. Same phase-down as storage</td><td>Minimal impact near-term</td></tr>
+<tr><td><strong>Nuclear PTC (45U)</strong></td><td>Through 2032</td><td>Three-step phase-down after 2032</td><td>Existing fleet protected</td></tr>
+<tr><td><strong>45Q (CCS)</strong></td><td>$85/ton for saline</td><td style="color:#22C55E;font-weight:600">Preserved &amp; expanded (EOR at parity)</td><td>Most favorable outcome</td></tr>
+<tr><td><strong>Clean Hydrogen (45V)</strong></td><td>Begin construction by 2033</td><td style="color:#EF4444;font-weight:600">Terminated for construction after Dec 2027</td><td>Green H₂ development halted</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="warning-box">
+<strong>The solar/wind cliff matters for VRE developers:</strong> Projects must begin construction by July 2026 for full ITC/PTC credit. After 2028, unsubsidized solar ($38&ndash;78/MWh) is still competitive with gas ($48&ndash;109/MWh) but developer IRRs compress by 2&ndash;4 percentage points. The PPA green premium becomes even more critical as the only source of above-market returns. <strong>Safe harbor now, lock in PPAs now.</strong>
+</div>
+
+<!-- ============================================================ -->
 <div class="sources-section">
 <h2>Sources &amp; Citations</h2>
 <ul>
@@ -546,6 +650,18 @@ body { background: var(--bg-page-white); }
 <li><a href="https://www.mckinsey.com/industries/electric-power-and-natural-gas/our-insights/how-hyperscalers-are-fueling-the-race-for-24-7-clean-power" target="_blank">McKinsey: How Hyperscalers Fuel 24/7 Clean Power</a> &mdash; Hyperscaler demand dynamics</li>
 <li><a href="https://watttime.org/news-and-insights/impact-accounting-and-hourly-matching-a-review-of-the-research-into-outcomes/" target="_blank">WattTime: Impact Accounting vs. Hourly Matching Review</a> &mdash; 4.7x emissions avoided claim</li>
 <li><a href="https://synertics.io/blog/42/pv-solar-capture-rates-in-spain-are-decreasing" target="_blank">Synertics: Spain Solar Capture Rates</a> &mdash; Spain cannibalization reference case</li>
+<li><a href="https://www.lazard.com/media/5tlbhyla/lazards-lcoeplus-june-2025-_vf.pdf" target="_blank">Lazard LCOE+ v18 (June 2025)</a> &mdash; Unsubsidized LCOE ranges by technology</li>
+<li><a href="https://atb.nrel.gov/electricity/2024/index" target="_blank">NREL Annual Technology Baseline 2024</a> &mdash; LCOE projections through 2050</li>
+<li><a href="https://zero.lab.princeton.edu/wp-content/uploads/2025/03/Riepin-et-al.-2025-247-carbon-free-electricity-matching-accelerates-adoption-of-advanced-clean-energy-technologies.pdf" target="_blank">Princeton ZERO Lab &mdash; Riepin et al. 2025 (Joule)</a> &mdash; 24/7 CFE system-level impacts; 3% tipping point</li>
+<li><a href="https://rmi.org/insight/clean-power-by-the-hour/" target="_blank">RMI: Clean Power by the Hour</a> &mdash; Hourly matching technology demand signals</li>
+<li><a href="https://fervoenergy.com/" target="_blank">Fervo Energy</a> &mdash; Enhanced geothermal cost trajectory; drilling time 150&rarr;15 days</li>
+<li><a href="https://www.carbon-direct.com/insights/carbon-capture-for-natural-gas-fired-power-generation-an-opportunity-for-hyperscalers" target="_blank">Carbon Direct: CCS for Gas Power</a> &mdash; CCS-CCGT LCOE and 45Q economics</li>
+<li><a href="https://www.globalccsinstitute.com/u-s-preserves-and-increases-45q-credit-in-one-big-beautiful-bill-act/" target="_blank">Global CCS Institute: OBBBA 45Q</a> &mdash; 45Q credit preservation and expansion</li>
+<li><a href="https://www.akingump.com/en/insights/alerts/significant-cuts-to-ira-clean-energy-tax-credits-included-in-enacted-reconciliation-bill" target="_blank">Akin Gump: OBBBA Energy Tax Analysis</a> &mdash; Solar/wind ITC/PTC phase-down schedule</li>
+<li><a href="https://www.utilitydive.com/news/nuclear-power-smr-data-center-deloitte/745390/" target="_blank">Deloitte: Nuclear and Data Centers</a> &mdash; 35&ndash;65 GW nuclear projection over next decade</li>
+<li><a href="https://pv-magazine-usa.com/2026/02/24/google-to-deploy-worlds-largest-iron-air-battery-for-minnesota-data-center/" target="_blank">pv magazine: Google/Form Energy 30 GWh Iron-Air</a> &mdash; Landmark LDES deployment</li>
+<li><a href="https://sustainability.google/operations/" target="_blank">Google Sustainability Report 2024</a> &mdash; 66% global CFE; 27% electricity consumption growth</li>
+<li><a href="https://sustainability.atmeta.com/2025-sustainability-report/" target="_blank">Meta 2025 Sustainability Report</a> &mdash; Nuclear pipeline, emissions trajectory</li>
 </ul>
 </div>
 
@@ -564,6 +680,8 @@ body { background: var(--bg-page-white); }
 <li><code>btm_gas_buildout.csv</code> &mdash; Behind-the-meter gas capacity by company and location</li>
 <li><code>emissions_trajectory.csv</code> &mdash; Location vs. market-based Scope 2 emissions by company</li>
 <li><code>dc_load_profile_parameters.csv</code> &mdash; Parameters for constructing 8,760-hour DC load profiles</li>
+<li><code>resource_mix_projections.csv</code> &mdash; Resource demand by procurement strategy (hourly/annual/grid) through 2035</li>
+<li><code>cost_projections.csv</code> &mdash; LCOE trajectories, learning rates, and OBBBA impacts by technology</li>
 </ul>
 </div>
 
@@ -808,7 +926,97 @@ new Chart(matrixCtx, {
 });
 
 // ============================================================
-// Chart 8: Supply-Demand Gap by ISO
+// Chart 8: LCOE Trajectory
+// ============================================================
+const lcoeCtx = document.getElementById('lcoeTrajectoryChart').getContext('2d');
+new Chart(lcoeCtx, {
+    type: 'line',
+    data: {
+        labels: ['2025', '2030E', '2035E', '2040E'],
+        datasets: [
+            { label: 'Utility Solar', data: [58, 39, 31, 27], borderColor: '#F59E0B', backgroundColor: 'rgba(245,158,11,0.1)', borderWidth: 2.5, tension: 0.3, fill: false },
+            { label: 'Solar+4hr Storage', data: [91, 65, 50, 43], borderColor: '#F97316', backgroundColor: 'rgba(249,115,22,0.1)', borderWidth: 2.5, tension: 0.3, borderDash: [6,3], fill: false },
+            { label: 'Battery 4hr (LCOS)', data: [166, 103, 70, 55], borderColor: '#06B6D4', backgroundColor: 'rgba(6,182,212,0.1)', borderWidth: 2.5, tension: 0.3, fill: false },
+            { label: 'LDES Iron-Air', data: [200, 100, 65, 48], borderColor: '#E91E63', backgroundColor: 'rgba(233,30,99,0.1)', borderWidth: 2.5, tension: 0.3, fill: false },
+            { label: 'Geothermal EGS', data: [80, 58, 45, 40], borderColor: '#D97706', backgroundColor: 'rgba(217,119,6,0.1)', borderWidth: 2.5, tension: 0.3, fill: false },
+            { label: 'Nuclear SMR', data: [null, 125, 100, 75], borderColor: '#6366F1', backgroundColor: 'rgba(99,102,241,0.1)', borderWidth: 2.5, tension: 0.3, borderDash: [4,4], fill: false, pointStyle: 'triangle' },
+            { label: 'CCS-CCGT (net 45Q)', data: [60, 53, 48, 43], borderColor: '#64748B', backgroundColor: 'rgba(100,116,139,0.1)', borderWidth: 2, tension: 0.3, fill: false },
+            { label: 'Gas CCGT (reference)', data: [79, 79, 79, 79], borderColor: '#6B7280', backgroundColor: 'rgba(107,114,128,0.1)', borderWidth: 1.5, tension: 0, borderDash: [2,4], fill: false }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'top', labels: { usePointStyle: true, padding: 10, font: { size: 10 } } },
+            tooltip: { callbacks: { label: ctx => ctx.parsed.y ? `${ctx.dataset.label}: $${ctx.parsed.y}/MWh` : '' } }
+        },
+        scales: {
+            y: { title: { display: true, text: '$/MWh (midpoint, unsubsidized)' }, min: 0, max: 220, grid: { color: 'rgba(0,0,0,0.06)' } },
+            x: { grid: { display: false } }
+        }
+    }
+});
+
+// ============================================================
+// Chart 9: Resource Demand by Strategy (grouped bar)
+// ============================================================
+const rdCtx = document.getElementById('resourceDemandChart').getContext('2d');
+new Chart(rdCtx, {
+    type: 'bar',
+    data: {
+        labels: ['Solar', 'Wind', 'Battery\n4-8hr', 'LDES\n100hr+', 'Nuclear\n(new)', 'Geothermal\nEGS', 'CCS-\nCCGT'],
+        datasets: [
+            { label: 'Hourly Matching', data: [48, 30, 12, 6, 6, 4, 2], backgroundColor: 'rgba(14,165,233,0.7)', borderColor: '#0EA5E9', borderWidth: 1, borderRadius: 3 },
+            { label: 'Annual Matching', data: [18, 20, 1, 0, 0.5, 0, 0], backgroundColor: 'rgba(249,115,22,0.7)', borderColor: '#F97316', borderWidth: 1, borderRadius: 3 },
+            { label: 'Grid/Utility', data: [8, 8, 6, 0.5, 4, 1, 4], backgroundColor: 'rgba(100,116,139,0.5)', borderColor: '#64748B', borderWidth: 1, borderRadius: 3 }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'top', labels: { usePointStyle: true, padding: 12, font: { size: 11 } } },
+            tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y} GW` } }
+        },
+        scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+            y: { title: { display: true, text: 'GW by 2035 (midpoint est.)' }, grid: { color: 'rgba(0,0,0,0.06)' } }
+        }
+    }
+});
+
+// ============================================================
+// Chart 10: OBBBA Credit Phase-Down Timeline
+// ============================================================
+const obbbaCtx = document.getElementById('obbbaChart').getContext('2d');
+new Chart(obbbaCtx, {
+    type: 'bar',
+    data: {
+        labels: ['2025', '2026', '2027', '2028', '2030', '2032', '2034', '2036'],
+        datasets: [
+            { label: 'Solar/Wind ITC/PTC', data: [100, 60, 20, 0, 0, 0, 0, 0], backgroundColor: 'rgba(245,158,11,0.7)', borderColor: '#F59E0B', borderWidth: 1 },
+            { label: 'Battery Storage ITC', data: [100, 100, 100, 100, 100, 100, 75, 0], backgroundColor: 'rgba(6,182,212,0.7)', borderColor: '#06B6D4', borderWidth: 1 },
+            { label: 'Geothermal/Nuclear', data: [100, 100, 100, 100, 100, 100, 75, 50], backgroundColor: 'rgba(99,102,241,0.7)', borderColor: '#6366F1', borderWidth: 1 },
+            { label: '45Q (CCS)', data: [100, 100, 100, 100, 100, 100, 100, 100], backgroundColor: 'rgba(100,116,139,0.7)', borderColor: '#64748B', borderWidth: 1 }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'top', labels: { usePointStyle: true, padding: 10, font: { size: 10 } } },
+            tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y}% of full credit` } }
+        },
+        scales: {
+            x: { grid: { display: false } },
+            y: { title: { display: true, text: '% of Full Credit Value' }, min: 0, max: 110, grid: { color: 'rgba(0,0,0,0.06)' } }
+        }
+    }
+});
+
+// ============================================================
+// Chart 11: Supply-Demand Gap by ISO
 // ============================================================
 const gapCtx = document.getElementById('supplyDemandGapChart').getContext('2d');
 new Chart(gapCtx, {
@@ -838,7 +1046,7 @@ new Chart(gapCtx, {
 });
 
 // ============================================================
-// Chart 9: Emissions Gap (Location-based Scope 2)
+// Chart 12: Emissions Gap (Location-based Scope 2)
 // ============================================================
 const emCtx = document.getElementById('emissionsGapChart').getContext('2d');
 new Chart(emCtx, {
@@ -867,7 +1075,7 @@ new Chart(emCtx, {
 });
 
 // ============================================================
-// Chart 10: BTM Gas Buildout by Company
+// Chart 13: BTM Gas Buildout by Company
 // ============================================================
 const gasCtx = document.getElementById('btmGasChart').getContext('2d');
 new Chart(gasCtx, {
