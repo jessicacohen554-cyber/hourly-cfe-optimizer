@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VRE Investment Thesis — Data Center Clean Energy Demand</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/reference.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+<script src="js/scroll-observer.js"></script>
+<script src="js/shared-footer.js"></script>
+<style>
+body { background: var(--bg-page-white); }
+
+.article-container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+}
+.article-container h2 {
+    font-family: var(--font-heading);
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin: 48px 0 16px;
+    letter-spacing: -0.3px;
+}
+.article-container h3 {
+    font-family: var(--font-heading);
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--navy);
+    margin: 32px 0 12px;
+}
+.article-container p, .article-container li {
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    line-height: 1.75;
+    font-family: var(--font-body);
+}
+.article-container ul { padding-left: 24px; margin: 12px 0; }
+.article-container li { margin-bottom: 8px; }
+
+.key-finding {
+    background: linear-gradient(135deg, rgba(14,165,233,0.08), rgba(99,102,241,0.08));
+    border-left: 4px solid var(--hydro);
+    border-radius: 0 8px 8px 0;
+    padding: 20px 24px;
+    margin: 24px 0;
+}
+.key-finding strong { color: var(--navy); }
+
+.warning-box {
+    background: rgba(239,68,68,0.06);
+    border-left: 4px solid #EF4444;
+    border-radius: 0 8px 8px 0;
+    padding: 20px 24px;
+    margin: 24px 0;
+}
+
+.opportunity-box {
+    background: rgba(34,197,94,0.06);
+    border-left: 4px solid #22C55E;
+    border-radius: 0 8px 8px 0;
+    padding: 20px 24px;
+    margin: 24px 0;
+}
+
+.data-table-wrap {
+    overflow-x: auto;
+    margin: 24px 0;
+    border-radius: 8px;
+    border: 1px solid var(--border-light);
+}
+.data-table-wrap table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    font-family: var(--font-body);
+}
+.data-table-wrap th {
+    background: var(--navy);
+    color: white;
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+.data-table-wrap td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-light);
+    white-space: nowrap;
+}
+.data-table-wrap tr:nth-child(even) { background: rgba(0,0,0,0.02); }
+.data-table-wrap tr:hover { background: rgba(14,165,233,0.05); }
+
+.rating-strong { color: #16a34a; font-weight: 700; }
+.rating-buy { color: #22C55E; font-weight: 600; }
+.rating-hold { color: #F59E0B; font-weight: 600; }
+.rating-avoid { color: #EF4444; font-weight: 600; }
+
+.chart-panel-article {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    padding: 24px;
+    margin: 24px 0;
+    box-shadow: var(--shadow-sm);
+}
+.chart-panel-article h4 {
+    font-family: var(--font-heading);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--navy);
+    margin: 0 0 16px;
+}
+.chart-container-article {
+    position: relative;
+    height: 380px;
+}
+@media (max-width: 768px) {
+    .chart-container-article { height: 300px; }
+}
+
+.citation {
+    font-size: 0.78rem;
+    color: var(--text-tertiary);
+    font-style: italic;
+    margin-top: 8px;
+}
+
+.sources-section {
+    margin-top: 48px;
+    padding-top: 32px;
+    border-top: 2px solid var(--border-light);
+}
+.sources-section h2 { margin-top: 0; }
+.sources-section a {
+    color: var(--hydro);
+    text-decoration: none;
+}
+.sources-section a:hover { text-decoration: underline; }
+.sources-section li { font-size: 0.85rem; line-height: 1.6; }
+
+.two-col-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin: 24px 0;
+}
+@media (max-width: 768px) {
+    .two-col-grid { grid-template-columns: 1fr; }
+}
+
+.last-updated {
+    font-size: 0.8rem;
+    color: var(--text-tertiary);
+    margin-top: 8px;
+}
+</style>
+</head>
+<body>
+
+<div class="header" id="pageHeader">
+    <h1>VRE Investment Thesis</h1>
+    <div class="subtitle">Is Variable Renewable Energy Development Still Worthwhile? A Data-Center-Demand Analysis</div>
+    <div class="header-accent"></div>
+</div>
+
+<div class="article-container">
+
+<p class="last-updated">Last updated: March 11, 2026 &bull; Data sources: LBNL, EPRI, S&P Global, PJM, ERCOT, LevelTen, BNEF</p>
+
+<!-- ============================================================ -->
+<h2>The Core Question</h2>
+<!-- ============================================================ -->
+
+<p>Does VRE (solar/wind) development generate attractive returns for suppliers, given accelerating price cannibalization, <strong>without</strong> relying on market reform or carbon pricing? And if so, where, in what form, and for whom?</p>
+
+<div class="key-finding">
+<strong>Short answer:</strong> Yes, but conditionally. The corporate PPA market &mdash; driven overwhelmingly by hyperscaler sustainability commitments &mdash; creates a <strong>willingness-to-pay floor</strong> that sits well above cannibalized wholesale value. This premium is the hedge. But it only works in the right ISOs, with the right product (increasingly storage-paired), and only as long as at least some hyperscalers maintain ambitious climate targets. The investment thesis lives or dies on the durability of corporate demand, not wholesale market fundamentals.
+</div>
+
+<!-- ============================================================ -->
+<h2>1. The Cannibalization Landscape</h2>
+<!-- ============================================================ -->
+
+<p>Solar and wind capture rates &mdash; the ratio of generation-weighted price to flat average price &mdash; are declining at different speeds across the 7 US ISOs. This is the core risk for VRE developers: as more zero-marginal-cost generation enters, it suppresses prices during its own generation hours.</p>
+
+<div class="chart-panel-article">
+    <h4>Solar Capture Rate Trajectory by ISO (2020&ndash;2035 est.)</h4>
+    <div class="chart-container-article">
+        <canvas id="captureRateChart"></canvas>
+    </div>
+    <p class="citation">Sources: LBNL Utility-Scale Solar 2024; S&P Global Commodity Insights; REsurety; author estimates for 2026&ndash;2035</p>
+</div>
+
+<div class="data-table-wrap">
+<table>
+<thead>
+<tr><th>ISO</th><th>Solar Capture 2024</th><th>Solar Capture 2030E</th><th>Wind Capture 2024</th><th>Stage</th><th>Key Driver</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>CAISO</strong></td><td style="color:#EF4444;font-weight:600">&lt;30%</td><td style="color:#EF4444">~15%</td><td>85%</td><td>Advanced</td><td>30% solar penetration. 13% negative-price hours. 3.4M MWh curtailed.</td></tr>
+<tr><td><strong>ERCOT</strong></td><td style="color:#F59E0B;font-weight:600">70%</td><td style="color:#EF4444">~45%</td><td>54%</td><td>Active</td><td>15% solar &amp; rising. 8 TWh curtailed in 2024. Prices halved YoY.</td></tr>
+<tr><td><strong>PJM</strong></td><td style="color:#22C55E;font-weight:600">95%</td><td style="color:#F59E0B">~70%</td><td>90%</td><td>Early</td><td>Curtailment jumped 6x in 2024. Solar growing fast. 3&ndash;5 year window.</td></tr>
+<tr><td><strong>MISO</strong></td><td style="color:#22C55E;font-weight:600">98%</td><td style="color:#F59E0B">~70%</td><td>78%</td><td>Early &rarr; Active</td><td>Solar 4x since 2023 (4.2&rarr;16.2 GW). Approaching inflection.</td></tr>
+<tr><td><strong>SPP</strong></td><td style="color:#22C55E;font-weight:600">98%</td><td style="color:#F59E0B">~72%</td><td style="color:#EF4444">58%</td><td>Solar early; Wind severe</td><td>Wind 42% below flat. Worst wind capture in US.</td></tr>
+<tr><td><strong>NYISO</strong></td><td style="color:#22C55E;font-weight:600">100%</td><td style="color:#22C55E">~88%</td><td>96%</td><td>Pre-cannibalization</td><td>Low penetration. Constrained market. Moratorium risk.</td></tr>
+<tr><td><strong>NEISO</strong></td><td style="color:#22C55E;font-weight:600">100%</td><td style="color:#22C55E">~90%</td><td>95%</td><td>Pre-cannibalization</td><td>Highest power costs. Offshore wind pipeline.</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="warning-box">
+<strong>Spain: the endgame without storage.</strong> Spain&rsquo;s solar capture rate fell to 56% in 2025 H1, with 500+ negative-price hours, project valuations down 60%+, and only 18 MW of standalone BESS deployed nationally. This is where CAISO ends up without continued storage deployment &mdash; and where ERCOT/PJM/MISO are headed on a 5&ndash;10 year lag.
+</div>
+
+<!-- ============================================================ -->
+<h2>2. The Hyperscaler Demand Hedge</h2>
+<!-- ============================================================ -->
+
+<p>The critical insight: <strong>VRE developers don't need healthy wholesale markets if they have corporate PPA offtakers willing to pay above wholesale.</strong> The "green premium" &mdash; the gap between a corporate PPA price and the cannibalized capture value &mdash; is the entire margin story.</p>
+
+<div class="chart-panel-article">
+    <h4>The Green Premium: PPA Price vs. Capture-Weighted Wholesale Value by ISO (2025)</h4>
+    <div class="chart-container-article">
+        <canvas id="greenPremiumChart"></canvas>
+    </div>
+    <p class="citation">Sources: LevelTen PPA Price Index Q3 2025; LBNL value factor data; author synthesis</p>
+</div>
+
+<h3>Who's buying, and what do they need?</h3>
+
+<div class="data-table-wrap">
+<table>
+<thead>
+<tr><th>Company</th><th>Approach</th><th>US Capacity (GW)</th><th>Clean PPAs (GW)</th><th>Unmet Need (GW)</th><th>Product Demand</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Google</strong></td><td>Hourly (24/7 CFE)</td><td>8.0</td><td>3.5</td><td style="color:#EF4444;font-weight:600">4.5</td><td>Shaped clean: solar+storage, wind, nuclear, geothermal. Same ISO.</td></tr>
+<tr><td><strong>Microsoft</strong></td><td>Hourly (24/7 CFE)</td><td>7.5</td><td>4.0</td><td style="color:#EF4444;font-weight:600">3.5</td><td>Shaped clean: nuclear (TMI), solar+storage, wind. Same ISO.</td></tr>
+<tr><td><strong>Amazon/AWS</strong></td><td>Consequential</td><td>12.0</td><td>6.0</td><td style="color:#F59E0B;font-weight:600">6.0</td><td>Cheapest VRE anywhere. Wind RECs in MISO/SPP. Volume over location.</td></tr>
+<tr><td><strong>Meta</strong></td><td>Consequential</td><td>6.0</td><td>2.0</td><td style="color:#EF4444;font-weight:600">4.0</td><td>Cheapest VRE + gas. Offset strategy. Nuclear for optics.</td></tr>
+<tr><td><strong>Equinix</strong></td><td>Annual</td><td>3.0</td><td>1.5</td><td>1.5</td><td>Green tariffs + PPAs. Annual matching.</td></tr>
+<tr><td><strong>Digital Realty</strong></td><td>Annual (SBTi)</td><td>2.5</td><td>1.0</td><td>1.5</td><td>Mix of PPAs + RECs.</td></tr>
+<tr><td><strong>Oracle</strong></td><td>None</td><td>3.0</td><td>0.3</td><td>&mdash;</td><td>No clean procurement mandate.</td></tr>
+<tr><td><strong>CoreWeave</strong></td><td>None</td><td>3.0</td><td>0.0</td><td>&mdash;</td><td>Pure compute. No sustainability commitments.</td></tr>
+<tr><td><strong>xAI</strong></td><td>None</td><td>1.0</td><td>0.0</td><td>&mdash;</td><td>Gas turbines. No clean commitments.</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="key-finding">
+<strong>~20 GW of unmet hyperscaler clean energy demand exists today,</strong> growing to 40&ndash;60 GW by 2030 as data center load doubles. Google and Microsoft alone need ~8 GW of <em>new, shaped</em> clean energy by 2030. Meta and Amazon need ~10 GW of <em>any</em> VRE for annual/consequential claims. This is the addressable market for VRE developers.
+</div>
+
+<!-- ============================================================ -->
+<h2>3. Where Does VRE Investment Make Sense?</h2>
+<!-- ============================================================ -->
+
+<div class="chart-panel-article">
+    <h4>VRE Investment Attractiveness by ISO (Combining Cannibalization Risk, Demand, and Premium)</h4>
+    <div class="chart-container-article">
+        <canvas id="investmentScoreChart"></canvas>
+    </div>
+    <p class="citation">Author analysis combining capture rate projections, hyperscaler demand density, PPA premium, and interconnection feasibility</p>
+</div>
+
+<div class="data-table-wrap">
+<table>
+<thead>
+<tr><th>ISO</th><th>Product</th><th>PPA Price</th><th>Capture Value</th><th>Green Premium</th><th>Developer IRR</th><th>Rating</th><th>Why</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>PJM</strong></td><td>Solar+Storage</td><td>$85/MWh</td><td>$35</td><td style="color:#22C55E;font-weight:600">$50</td><td>9&ndash;11%</td><td class="rating-strong">Strong Buy</td><td>Largest DC market. 30 GW DC growth. $666/MW-day capacity. Massive unmet demand.</td></tr>
+<tr><td><strong>PJM</strong></td><td>Solar standalone</td><td>$70</td><td>$49</td><td style="color:#22C55E">$21</td><td>7&ndash;9%</td><td class="rating-buy">Buy (shrinking window)</td><td>Good today but 3&ndash;5yr window before capture erodes. Lock in PPAs now.</td></tr>
+<tr><td><strong>ERCOT</strong></td><td>Solar+Storage</td><td>$60</td><td>$20</td><td style="color:#22C55E;font-weight:600">$40</td><td>8&ndash;10%</td><td class="rating-strong">Strong Buy</td><td>233 GW load queue. Battery arbitrage $150+/kW-yr. Behind-meter DC demand.</td></tr>
+<tr><td><strong>ERCOT</strong></td><td>Solar standalone</td><td>$42</td><td>$27</td><td style="color:#F59E0B">$15</td><td>6&ndash;8%</td><td class="rating-hold">Hold</td><td>Cannibalization accelerating. No capacity market floor. Merchant tail risky.</td></tr>
+<tr><td><strong>MISO</strong></td><td>Solar+Storage</td><td>$65</td><td>$37</td><td style="color:#22C55E">$28</td><td>8&ndash;10%</td><td class="rating-buy">Buy</td><td>Meta/Amazon primary market. Conditional on consequential accounting surviving.</td></tr>
+<tr><td><strong>MISO</strong></td><td>Wind</td><td>$45</td><td>$27</td><td style="color:#F59E0B">$18</td><td>6&ndash;8%</td><td class="rating-hold">Hold</td><td>Already well-supplied. Cheap RECs ($1&ndash;5). Diminishing marginal value.</td></tr>
+<tr><td><strong>NYISO</strong></td><td>Solar+Storage</td><td>$95</td><td>$66</td><td style="color:#22C55E">$29</td><td>9&ndash;11%</td><td class="rating-buy">Buy</td><td>Premium market. No cannibalization. Hard to build (permitting).</td></tr>
+<tr><td><strong>NEISO</strong></td><td>Solar+Storage</td><td>$100</td><td>$72</td><td style="color:#22C55E">$29</td><td>8&ndash;10%</td><td class="rating-buy">Buy (small)</td><td>Premium but tiny market. Scale-limited.</td></tr>
+<tr><td><strong>CAISO</strong></td><td>Solar standalone</td><td>$75</td><td>$5</td><td style="color:#EF4444;font-weight:600">$70 (illusory)</td><td>4&ndash;6%</td><td class="rating-avoid">Avoid</td><td>&lt;30% capture. Unbankable standalone. Curtailment risk.</td></tr>
+<tr><td><strong>CAISO</strong></td><td>Solar+Storage</td><td>$90</td><td>$25</td><td style="color:#22C55E">$65</td><td>7&ndash;9%</td><td class="rating-buy">Buy (selective)</td><td>Must be storage-paired. Storage saturation risk emerging.</td></tr>
+<tr><td><strong>SPP</strong></td><td>Wind</td><td>$40</td><td>$8</td><td style="color:#EF4444">$32 (fragile)</td><td>5&ndash;7%</td><td class="rating-avoid">Avoid</td><td>58% capture. Worst wind market. No hyperscaler anchor.</td></tr>
+</tbody>
+</table>
+</div>
+
+<!-- ============================================================ -->
+<h2>4. The Accounting Regime Determines Everything</h2>
+<!-- ============================================================ -->
+
+<p>The GHG Protocol Scope 2 revision &mdash; expected mid-2026 to end-2027 &mdash; is the single biggest determinant of VRE investment value. The outcome dictates <em>what kind</em> of clean energy has value, <em>where</em> it needs to be built, and <em>how much</em> hyperscalers will pay.</p>
+
+<div class="two-col-grid">
+    <div class="chart-panel-article">
+        <h4>Scenario A: Hourly Matching Wins</h4>
+        <div class="chart-container-article" style="height:280px">
+            <canvas id="scenarioHourlyChart"></canvas>
+        </div>
+    </div>
+    <div class="chart-panel-article">
+        <h4>Scenario B: Consequential Wins</h4>
+        <div class="chart-container-article" style="height:280px">
+            <canvas id="scenarioConsequentialChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="data-table-wrap">
+<table>
+<thead>
+<tr><th>Factor</th><th>Hourly Matching Wins</th><th>Consequential Wins</th><th>Hybrid (Current Reality)</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>VRE demand location</strong></td><td>Same ISO as data center load</td><td>Cheapest possible (MISO/SPP wind)</td><td>Split: hourly buyers local, consequential buyers anywhere</td></tr>
+<tr><td><strong>VRE product needed</strong></td><td>Shaped (solar+storage, wind+storage)</td><td>Cheapest unshaped (standalone wind)</td><td>Mix of both</td></tr>
+<tr><td><strong>Clean firm demand</strong></td><td>High (nuclear, geothermal, LDES)</td><td>Near zero</td><td>Moderate (Google/MSFT only)</td></tr>
+<tr><td><strong>PPA premium over wholesale</strong></td><td>30&ndash;50% (shaped product commands premium)</td><td>5&ndash;15% (unbundled RECs race to bottom)</td><td>15&ndash;30%</td></tr>
+<tr><td><strong>Storage investment signal</strong></td><td>Very strong</td><td>Weak</td><td>Moderate</td></tr>
+<tr><td><strong>Best ISO for VRE developer</strong></td><td>PJM, ERCOT, CAISO (where DCs are)</td><td>MISO, SPP (cheapest production)</td><td>PJM best in all scenarios</td></tr>
+<tr><td><strong>MISO wind RECs value</strong></td><td>Near zero (wrong ISO for buyers)</td><td>High (cheapest $/tCO2 avoided)</td><td>Moderate</td></tr>
+<tr><td><strong>Total clean energy demand (GW by 2030)</strong></td><td>~40 GW</td><td>~40 GW</td><td>~30 GW</td></tr>
+<tr><td><strong>Developer IRR impact</strong></td><td>Higher margins, higher capex</td><td>Lower margins, lower capex</td><td>Mixed</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="key-finding">
+<strong>PJM solar+storage is the dominant position regardless of accounting outcome.</strong> Under hourly matching, PJM is where Google/Microsoft need shaped clean energy. Under consequential accounting, PJM still has massive DC load and capacity market payments ($666/MW-day). It&rsquo;s the only ISO where VRE investment is robust to all policy scenarios.
+</div>
+
+<!-- ============================================================ -->
+<h2>5. The Five Risks</h2>
+<!-- ============================================================ -->
+
+<h3>Risk 1: Capture Rate Erosion</h3>
+<p>The most quantifiable risk. Every ISO is on the cannibalization curve &mdash; the question is <em>where</em>. CAISO is the warning: solar went from 146% capture (2012) to &lt;30% (2024). PJM and MISO are 3&ndash;7 years behind on the same trajectory. <strong>Mitigation:</strong> Storage pairing lifts capture ~30%. Lock in 15-year PPAs before rates decline further.</p>
+
+<h3>Risk 2: Accounting Regime Uncertainty</h3>
+<p>If the GHG Protocol mandates hourly matching, MISO/SPP wind RECs become worthless for corporate claims. If consequential wins, shaped products lose their premium. <strong>Mitigation:</strong> Develop in PJM (robust to both). Pair with storage (valuable in either regime). Avoid pure REC plays in MISO.</p>
+
+<h3>Risk 3: Hyperscaler Demand Durability</h3>
+<p>Corporate clean energy buying fell 10% in 2025 (BNEF) after nearly a decade of growth. Meta and Amazon&rsquo;s emissions are rising 34&ndash;65% despite pledges. If hyperscalers abandon targets, the green premium disappears. <strong>Mitigation:</strong> Target long-term PPAs (15&ndash;20yr). Diversify across buyers. Capacity market revenue provides a floor in PJM/NYISO.</p>
+
+<h3>Risk 4: Policy / Tax Credit Erosion</h3>
+<p>The One Big Beautiful Bill Act cut most IRA clean energy incentives. Solar/wind must begin construction by July 2026 for full ITC/PTC. <strong>Mitigation:</strong> Safe harbor ASAP. Projects already in construction are protected. Battery ITC standalone still available through 2032.</p>
+
+<h3>Risk 5: Interconnection Queue Congestion</h3>
+<p>PJM has 170+ GW in its generation queue. ERCOT has 432 GW. Completion rates are 15&ndash;25%. Projects wait 4&ndash;6 years for interconnection. <strong>Mitigation:</strong> Co-location with data centers (behind-meter). Acquire queue positions. Target ISOs with better throughput (ERCOT &gt; PJM for queue velocity).</p>
+
+<!-- ============================================================ -->
+<h2>6. The Five Opportunities</h2>
+<!-- ============================================================ -->
+
+<div class="opportunity-box">
+<strong>Opportunity 1: The Supply-Demand Gap is Enormous.</strong> ~20 GW of unmet hyperscaler demand today. Growing to 40&ndash;60 GW by 2030. PJM alone needs 30 GW of new generation capacity for data centers. Only 57 GW of projects have even been offered interconnection agreements across the entire PJM footprint. Demand &gt;&gt; supply for years.
+</div>
+
+<div class="opportunity-box">
+<strong>Opportunity 2: Shaped Products Command Premium Margins.</strong> Solar+4hr storage PPAs at $85/MWh in PJM vs. $35/MWh capture-weighted wholesale value = $50/MWh green premium. That&rsquo;s a 140% premium over wholesale. Battery pairing adds $10&ndash;15/MWh to LCOE but $50+ to PPA revenue. The economics of shaping are outstanding.
+</div>
+
+<div class="opportunity-box">
+<strong>Opportunity 3: Capacity Market Tailwind.</strong> PJM capacity prices hit $666/MW-day (22x prior year). This adds ~$75/kW-yr to revenue for any resource that clears the capacity auction. Solar+storage can clear. This is an additional ~$8&ndash;10/MWh of revenue on top of energy + PPA premium.
+</div>
+
+<div class="opportunity-box">
+<strong>Opportunity 4: Consequential Buyers Need Volume.</strong> Even if Meta/Amazon use consequential accounting, they still need to buy VRE &mdash; just the cheapest possible. 10+ GW of new wind/solar demand from just these two companies. For developers in MISO/SPP with low costs, this is a reliable floor of demand.
+</div>
+
+<div class="opportunity-box">
+<strong>Opportunity 5: Behind-the-Meter Co-location.</strong> At least 46 data centers with 56 GW combined are already using behind-the-meter gas. Solar+storage co-located with data centers avoids interconnection queues, gets guaranteed offtake, and provides the DC with resilience benefits. This market is embryonic but enormous.
+</div>
+
+<!-- ============================================================ -->
+<h2>7. The Bottom Line: Where to Invest</h2>
+<!-- ============================================================ -->
+
+<div class="chart-panel-article">
+    <h4>Investment Decision Matrix: ISO &times; Product &times; Accounting Regime</h4>
+    <div class="chart-container-article" style="height:320px">
+        <canvas id="matrixChart"></canvas>
+    </div>
+    <p class="citation">Author analysis. Bubble size = addressable market (GW). Color = investment rating.</p>
+</div>
+
+<div class="key-finding">
+<strong>Tier 1 (Invest now):</strong> PJM solar+storage, ERCOT solar+storage, PJM wind<br>
+<strong>Tier 2 (Invest selectively):</strong> MISO solar+storage (if consequential survives), NYISO solar+storage (premium, small), CAISO solar+storage (selective)<br>
+<strong>Tier 3 (Wait/Avoid):</strong> Standalone solar anywhere cannibalization is active. MISO/SPP wind (oversupplied). CAISO standalone solar (unbankable).
+</div>
+
+<h3>The hyperscaler sustainability hedge in one sentence:</h3>
+<p><strong>Hyperscaler data center demand creates a PPA price floor 30&ndash;140% above cannibalized wholesale value, making VRE development profitable even as merchant revenues collapse &mdash; but only for storage-paired products in ISOs where data centers are physically located, and only as long as at least some hyperscalers maintain credible climate commitments.</strong></p>
+
+<p>The durability of this hedge depends on three things: (1) the GHG Protocol outcome, (2) whether hyperscalers keep spending on clean energy as AI capex consumes budgets, and (3) whether storage pairing can keep capture rates above bankability thresholds. All three are currently favorable. The window for VRE developers to lock in premium PPAs is open now but narrowing as cannibalization accelerates and policy uncertainty grows.</p>
+
+<!-- ============================================================ -->
+<h2>8. Data Center Demand by ISO</h2>
+<!-- ============================================================ -->
+
+<div class="chart-panel-article">
+    <h4>Data Center Load: Existing vs. Pipeline by ISO (GW)</h4>
+    <div class="chart-container-article">
+        <canvas id="dcLoadChart"></canvas>
+    </div>
+    <p class="citation">Sources: PJM 2025 Load Forecast; ERCOT LFL Reports; S&P Global 451 Research; EPRI Powering Intelligence 2026</p>
+</div>
+
+<div class="data-table-wrap">
+<table>
+<thead>
+<tr><th>ISO</th><th>Existing (GW)</th><th>Under Construction</th><th>Committed/Permitted</th><th>Announced/Intended</th><th>Total Pipeline</th><th>2030 Forecast</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>PJM</strong></td><td>14.1</td><td>6.5</td><td>11.0</td><td>25.0</td><td>56.6</td><td>35&ndash;44 GW</td></tr>
+<tr><td><strong>ERCOT</strong></td><td>6.5</td><td>3.5</td><td>7.5</td><td>16.0</td><td>33.5</td><td>25&ndash;30 GW</td></tr>
+<tr><td><strong>CAISO</strong></td><td>3.5</td><td>0.8</td><td>1.5</td><td>3.5</td><td>9.3</td><td>7&ndash;10 GW</td></tr>
+<tr><td><strong>MISO</strong></td><td>2.5</td><td>1.5</td><td>3.5</td><td>7.5</td><td>15.0</td><td>7&ndash;12 GW</td></tr>
+<tr><td><strong>SPP</strong></td><td>0.5</td><td>0.2</td><td>0.5</td><td>2.0</td><td>3.2</td><td>2&ndash;4 GW</td></tr>
+<tr><td><strong>NYISO</strong></td><td>2.3</td><td>0.6</td><td>1.3</td><td>3.0</td><td>7.2</td><td>5&ndash;7 GW</td></tr>
+<tr><td><strong>NEISO</strong></td><td>0.7</td><td>0.2</td><td>0.3</td><td>0.8</td><td>2.0</td><td>1.5&ndash;2 GW</td></tr>
+<tr style="font-weight:700;background:rgba(14,165,233,0.08)"><td>US Total</td><td>30.1</td><td>13.3</td><td>25.6</td><td>57.8</td><td>126.8</td><td>82&ndash;109 GW</td></tr>
+</tbody>
+</table>
+</div>
+
+<p class="citation"><strong>Note on materialization rates:</strong> Sightline Climate estimates 30&ndash;50% of announced DC capacity will be delayed or cancelled. PJM assumes 35% materialization for planning. EPRI&rsquo;s low scenario assumes most under-construction + 25% of advanced planning. Apply a 35&ndash;50% haircut to "Announced/Intended" for realistic projections.</p>
+
+<!-- ============================================================ -->
+<div class="sources-section">
+<h2>Sources &amp; Citations</h2>
+<ul>
+<li><a href="https://emp.lbl.gov/utility-scale-solar" target="_blank">LBNL Utility-Scale Solar, 2024/2025 Edition</a> &mdash; Capture rates, value factors, PPA pricing</li>
+<li><a href="https://www.leveltenenergy.com/ppa" target="_blank">LevelTen Energy PPA Price Index</a> &mdash; Q2/Q3 2025 PPA pricing data</li>
+<li><a href="https://about.bnef.com/insights/clean-energy/corporate-clean-energy-buying-fell-in-2025-after-nearly-a-decade-of-growth/" target="_blank">BNEF Corporate Energy Market Outlook 2026</a> &mdash; Corporate PPA volumes, hyperscaler share</li>
+<li><a href="https://www.pjm.com/-/media/DotCom/library/reports-notices/load-forecast/2025-load-report.pdf" target="_blank">PJM 2025 Long-Term Load Forecast</a> &mdash; 30 GW DC growth by 2030</li>
+<li><a href="https://modoenergy.com/research/en/pjm-demand-forecast-2025-data-centers-grid-capacity" target="_blank">Modo Energy: PJM Demand Forecast Analysis</a> &mdash; Supply-constrained demand scenarios</li>
+<li><a href="https://www.latitudemedia.com/news/ercots-large-load-queue-has-nearly-quadrupled-in-a-single-year/" target="_blank">Latitude Media: ERCOT Large Load Queue</a> &mdash; 233 GW queue, 70% data centers</li>
+<li><a href="https://www.globenewswire.com/news-release/2026/02/26/3245491/0/en/EPRI-Data-Centers-Could-Consume-Up-to-17-of-U-S-Electricity-by-2030.html" target="_blank">EPRI Powering Intelligence 2026</a> &mdash; 380&ndash;790 TWh DC demand by 2030</li>
+<li><a href="https://www.spglobal.com/energy/en/news-research/latest-news/electric-power/101425-data-center-grid-power-demand-to-rise-22-in-2025-nearly-triple-by-2030" target="_blank">S&amp;P Global 451 Research</a> &mdash; 134 GW DC demand by 2030</li>
+<li><a href="https://sustainability.atmeta.com/blog/2022/12/13/putting-emissions-first/" target="_blank">Meta: Emissions First Partnership</a> &mdash; Consequential accounting position</li>
+<li><a href="https://www.latitudemedia.com/news/for-24-7-clean-energy-big-tech-has-two-camps/" target="_blank">Latitude Media: Big Tech Two Camps</a> &mdash; Hourly vs. consequential split</li>
+<li><a href="https://newclimate.org/news/briefing-247-renewable-electricity-matching-is-a-far-more-credible-approach-for-the-ghg" target="_blank">NewClimate Institute: 24/7 vs. EFP Briefing</a> &mdash; GHG Protocol debate analysis</li>
+<li><a href="https://techcrunch.com/2025/08/21/gas-power-plants-approved-for-metas-10b-data-center-and-not-everyone-is-happy/" target="_blank">TechCrunch: Meta Louisiana Gas Plants</a> &mdash; 2.25 GW new gas for Meta DC</li>
+<li><a href="https://www.amperon.co/blog/us-solar-and-wind-curtailment-is-exploding" target="_blank">Amperon: US Curtailment Exploding</a> &mdash; 4 of 7 ISOs set curtailment records</li>
+<li><a href="https://www.sightlineclimate.com/research/data-center-outlook" target="_blank">Sightline Climate: DC Pipeline Materialization</a> &mdash; 30&ndash;50% attrition rate</li>
+<li><a href="https://www.pv-magazine.com/2025/11/10/three-emerging-structures-for-solar-plus-storage-ppas/" target="_blank">pv magazine: Solar+Storage PPA Structures</a> &mdash; Hybrid PPA models</li>
+<li><a href="https://ember-energy.org/latest-insights/how-cheap-is-battery-storage/" target="_blank">Ember: How Cheap is Battery Storage?</a> &mdash; 40% cost drop in 2024</li>
+<li><a href="https://www.mckinsey.com/industries/electric-power-and-natural-gas/our-insights/how-hyperscalers-are-fueling-the-race-for-24-7-clean-power" target="_blank">McKinsey: How Hyperscalers Fuel 24/7 Clean Power</a> &mdash; Hyperscaler demand dynamics</li>
+<li><a href="https://watttime.org/news-and-insights/impact-accounting-and-hourly-matching-a-review-of-the-research-into-outcomes/" target="_blank">WattTime: Impact Accounting vs. Hourly Matching Review</a> &mdash; 4.7x emissions avoided claim</li>
+<li><a href="https://synertics.io/blog/42/pv-solar-capture-rates-in-spain-are-decreasing" target="_blank">Synertics: Spain Solar Capture Rates</a> &mdash; Spain cannibalization reference case</li>
+</ul>
+</div>
+
+<div class="sources-section" style="border-top:none;padding-top:0">
+<h3>CSV Data Files</h3>
+<p>Raw data underlying this analysis is available in <code>data/dc-clean-energy-research/</code>:</p>
+<ul>
+<li><code>dc_load_by_iso.csv</code> &mdash; Data center capacity by ISO, metro, and development stage</li>
+<li><code>demand_forecasts_by_iso.csv</code> &mdash; Multi-source demand projections through 2040</li>
+<li><code>hyperscaler_projects.csv</code> &mdash; Company-level capacity, climate targets, PPAs</li>
+<li><code>capture_rates_by_iso.csv</code> &mdash; Solar/wind capture rates by ISO (2020&ndash;2035)</li>
+<li><code>ppa_value_framework.csv</code> &mdash; PPA prices, wholesale values, green premiums</li>
+<li><code>vre_investment_thesis.csv</code> &mdash; Investment ratings by ISO and product type</li>
+<li><code>accounting_regime_scenarios.csv</code> &mdash; Hourly vs. consequential vs. hybrid scenario modeling</li>
+</ul>
+</div>
+
+</div><!-- /article-container -->
+
+<script>
+// ============================================================
+// Chart 1: Solar Capture Rate Trajectory
+// ============================================================
+const captureCtx = document.getElementById('captureRateChart').getContext('2d');
+new Chart(captureCtx, {
+    type: 'line',
+    data: {
+        labels: ['2020', '2022', '2024', '2026E', '2030E', '2035E'],
+        datasets: [
+            { label: 'CAISO', data: [72, 50, 30, 22, 15, 10], borderColor: '#F59E0B', backgroundColor: 'rgba(245,158,11,0.1)', borderWidth: 2.5, tension: 0.3, fill: false },
+            { label: 'ERCOT', data: [90, 80, 70, 60, 45, 35], borderColor: '#22C55E', backgroundColor: 'rgba(34,197,94,0.1)', borderWidth: 2.5, tension: 0.3, fill: false },
+            { label: 'PJM', data: [105, 100, 95, 88, 70, 55], borderColor: '#0EA5E9', backgroundColor: 'rgba(14,165,233,0.1)', borderWidth: 2.5, tension: 0.3, fill: false },
+            { label: 'MISO', data: [105, 102, 98, 90, 70, 55], borderColor: '#F97316', backgroundColor: 'rgba(249,115,22,0.1)', borderWidth: 2.5, tension: 0.3, fill: false },
+            { label: 'SPP', data: [105, 102, 98, 92, 72, 58], borderColor: '#14B8A6', backgroundColor: 'rgba(20,184,166,0.1)', borderWidth: 2.5, tension: 0.3, fill: false },
+            { label: 'NYISO', data: [105, 102, 100, 97, 88, 78], borderColor: '#E91E63', backgroundColor: 'rgba(233,30,99,0.1)', borderWidth: 2.5, tension: 0.3, fill: false },
+            { label: 'NEISO', data: [105, 102, 100, 97, 90, 82], borderColor: '#9C27B0', backgroundColor: 'rgba(156,39,176,0.1)', borderWidth: 2.5, tension: 0.3, fill: false }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'top', labels: { usePointStyle: true, padding: 16, font: { size: 11 } } },
+            tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y}%` } }
+        },
+        scales: {
+            y: {
+                title: { display: true, text: 'Solar Capture Rate (% of flat block)' },
+                min: 0, max: 120,
+                grid: { color: 'rgba(0,0,0,0.06)' }
+            },
+            x: { grid: { display: false } }
+        },
+        annotation: {
+            annotations: {
+                bankabilityLine: {
+                    type: 'line', yMin: 50, yMax: 50,
+                    borderColor: 'rgba(239,68,68,0.5)', borderWidth: 1.5, borderDash: [6, 4],
+                    label: { display: true, content: 'Bankability Threshold', position: 'start', color: '#EF4444', font: { size: 10 } }
+                }
+            }
+        }
+    }
+});
+
+// ============================================================
+// Chart 2: Green Premium (PPA Price vs Capture Value)
+// ============================================================
+const premiumCtx = document.getElementById('greenPremiumChart').getContext('2d');
+new Chart(premiumCtx, {
+    type: 'bar',
+    data: {
+        labels: ['PJM\nSol+Stor', 'PJM\nSolar', 'ERCOT\nSol+Stor', 'ERCOT\nSolar', 'MISO\nSol+Stor', 'MISO\nWind', 'NYISO\nSol+Stor', 'CAISO\nSol+Stor', 'CAISO\nSolar'],
+        datasets: [
+            {
+                label: 'Capture-Weighted Wholesale Value',
+                data: [35, 49, 20, 27, 37, 27, 66, 25, 5],
+                backgroundColor: 'rgba(100,116,139,0.6)',
+                borderColor: '#64748B',
+                borderWidth: 1
+            },
+            {
+                label: 'Green Premium (PPA − Wholesale)',
+                data: [50, 21, 40, 15, 28, 18, 29, 65, 70],
+                backgroundColor: 'rgba(34,197,94,0.6)',
+                borderColor: '#22C55E',
+                borderWidth: 1
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'top', labels: { usePointStyle: true, padding: 16, font: { size: 11 } } },
+            tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: $${ctx.parsed.y}/MWh` } }
+        },
+        scales: {
+            x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 } } },
+            y: {
+                stacked: true,
+                title: { display: true, text: '$/MWh' },
+                grid: { color: 'rgba(0,0,0,0.06)' }
+            }
+        }
+    }
+});
+
+// ============================================================
+// Chart 3: Investment Attractiveness Score
+// ============================================================
+const investCtx = document.getElementById('investmentScoreChart').getContext('2d');
+new Chart(investCtx, {
+    type: 'bar',
+    data: {
+        labels: ['PJM\nSol+Stor', 'ERCOT\nSol+Stor', 'PJM\nWind', 'PJM\nSolar', 'MISO\nSol+Stor', 'NYISO\nSol+Stor', 'NEISO\nSol+Stor', 'CAISO\nSol+Stor', 'ERCOT\nSolar', 'MISO\nWind', 'CAISO\nSolar', 'SPP\nWind'],
+        datasets: [{
+            label: 'Investment Score (0-100)',
+            data: [92, 85, 78, 72, 68, 65, 60, 58, 50, 40, 20, 15],
+            backgroundColor: [
+                '#16a34a', '#16a34a', '#22C55E', '#22C55E',
+                '#22C55E', '#22C55E', '#22C55E', '#22C55E',
+                '#F59E0B', '#F59E0B', '#EF4444', '#EF4444'
+            ],
+            borderColor: [
+                '#15803d', '#15803d', '#16a34a', '#16a34a',
+                '#16a34a', '#16a34a', '#16a34a', '#16a34a',
+                '#d97706', '#d97706', '#dc2626', '#dc2626'
+            ],
+            borderWidth: 1,
+            borderRadius: 4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: ctx => `Score: ${ctx.parsed.x}/100` } }
+        },
+        scales: {
+            x: { min: 0, max: 100, title: { display: true, text: 'Investment Attractiveness Score' }, grid: { color: 'rgba(0,0,0,0.06)' } },
+            y: { grid: { display: false }, ticks: { font: { size: 10 } } }
+        }
+    }
+});
+
+// ============================================================
+// Chart 4 & 5: Scenario comparison (resource mix)
+// ============================================================
+const hourlyCtx = document.getElementById('scenarioHourlyChart').getContext('2d');
+new Chart(hourlyCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Solar+Storage', 'Wind', 'Nuclear', 'Geothermal', 'LDES', 'Battery (standalone)'],
+        datasets: [{
+            data: [35, 20, 25, 5, 10, 5],
+            backgroundColor: ['#F59E0B', '#22C55E', '#6366F1', '#D97706', '#E91E63', '#06B6D4'],
+            borderWidth: 1, borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'bottom', labels: { usePointStyle: true, padding: 8, font: { size: 10 } } },
+            title: { display: true, text: 'Resource Mix Under Hourly Matching', font: { size: 12 } },
+            tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.parsed}%` } }
+        }
+    }
+});
+
+const conseqCtx = document.getElementById('scenarioConsequentialChart').getContext('2d');
+new Chart(conseqCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Cheap Wind (MISO/SPP)', 'Cheap Solar', 'Nuclear (limited)', 'Storage', 'Geothermal', 'LDES'],
+        datasets: [{
+            data: [45, 30, 10, 8, 5, 2],
+            backgroundColor: ['#22C55E', '#F59E0B', '#6366F1', '#06B6D4', '#D97706', '#E91E63'],
+            borderWidth: 1, borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'bottom', labels: { usePointStyle: true, padding: 8, font: { size: 10 } } },
+            title: { display: true, text: 'Resource Mix Under Consequential', font: { size: 12 } },
+            tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.parsed}%` } }
+        }
+    }
+});
+
+// ============================================================
+// Chart 6: DC Load by ISO (stacked bar)
+// ============================================================
+const dcCtx = document.getElementById('dcLoadChart').getContext('2d');
+new Chart(dcCtx, {
+    type: 'bar',
+    data: {
+        labels: ['PJM', 'ERCOT', 'MISO', 'CAISO', 'NYISO', 'SPP', 'NEISO'],
+        datasets: [
+            { label: 'Existing', data: [14.1, 6.5, 2.5, 3.5, 2.3, 0.5, 0.7], backgroundColor: '#0EA5E9', borderRadius: 2 },
+            { label: 'Under Construction', data: [6.5, 3.5, 1.5, 0.8, 0.6, 0.2, 0.2], backgroundColor: '#22C55E', borderRadius: 2 },
+            { label: 'Committed/Permitted', data: [11.0, 7.5, 3.5, 1.5, 1.3, 0.5, 0.3], backgroundColor: '#F59E0B', borderRadius: 2 },
+            { label: 'Announced/Intended', data: [25.0, 16.0, 7.5, 3.5, 3.0, 2.0, 0.8], backgroundColor: 'rgba(239,68,68,0.5)', borderRadius: 2 }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'top', labels: { usePointStyle: true, padding: 12, font: { size: 11 } } },
+            tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y} GW` } }
+        },
+        scales: {
+            x: { stacked: true, grid: { display: false } },
+            y: { stacked: true, title: { display: true, text: 'GW' }, grid: { color: 'rgba(0,0,0,0.06)' } }
+        }
+    }
+});
+
+// ============================================================
+// Chart 7: Bubble chart - Investment Matrix
+// ============================================================
+const matrixCtx = document.getElementById('matrixChart').getContext('2d');
+new Chart(matrixCtx, {
+    type: 'bubble',
+    data: {
+        datasets: [
+            { label: 'PJM Sol+Stor', data: [{x: 70, y: 50, r: 20}], backgroundColor: 'rgba(22,163,74,0.6)', borderColor: '#16a34a' },
+            { label: 'ERCOT Sol+Stor', data: [{x: 45, y: 40, r: 16}], backgroundColor: 'rgba(22,163,74,0.6)', borderColor: '#16a34a' },
+            { label: 'PJM Wind', data: [{x: 90, y: 35, r: 10}], backgroundColor: 'rgba(34,197,94,0.6)', borderColor: '#22C55E' },
+            { label: 'MISO Sol+Stor', data: [{x: 70, y: 28, r: 8}], backgroundColor: 'rgba(34,197,94,0.6)', borderColor: '#22C55E' },
+            { label: 'NYISO Sol+Stor', data: [{x: 88, y: 29, r: 6}], backgroundColor: 'rgba(34,197,94,0.6)', borderColor: '#22C55E' },
+            { label: 'CAISO Sol+Stor', data: [{x: 15, y: 65, r: 7}], backgroundColor: 'rgba(249,115,22,0.6)', borderColor: '#F97316' },
+            { label: 'ERCOT Solar', data: [{x: 45, y: 15, r: 12}], backgroundColor: 'rgba(249,115,22,0.6)', borderColor: '#F97316' },
+            { label: 'CAISO Solar', data: [{x: 15, y: 70, r: 5}], backgroundColor: 'rgba(239,68,68,0.6)', borderColor: '#EF4444' },
+            { label: 'SPP Wind', data: [{x: 58, y: 32, r: 4}], backgroundColor: 'rgba(239,68,68,0.6)', borderColor: '#EF4444' }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'right', labels: { usePointStyle: true, padding: 8, font: { size: 10 } } },
+            tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: Capture ${ctx.parsed.x}%, Premium $${ctx.parsed.y}/MWh` } }
+        },
+        scales: {
+            x: { title: { display: true, text: 'Capture Rate 2030E (%)' }, min: 0, max: 100, grid: { color: 'rgba(0,0,0,0.06)' } },
+            y: { title: { display: true, text: 'Green Premium ($/MWh)' }, min: 0, max: 80, grid: { color: 'rgba(0,0,0,0.06)' } }
+        }
+    }
+});
+
+// Scroll observer for fade-in
+document.querySelectorAll('.chart-panel-article, .key-finding, .warning-box, .opportunity-box').forEach(el => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(20px)';
+    el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+    const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.1 });
+    observer.observe(el);
+});
+</script>
+
+</body>
+</html>
