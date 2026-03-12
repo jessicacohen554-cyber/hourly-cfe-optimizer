@@ -67,6 +67,8 @@ A locally containerized Docker app that lets users adjust forward-looking assump
 │  │  step4-analysis/ MAC, LMP, CO2 results       │ │
 │  │  step5-wrights/  learning curve data          │ │
 │  │  eia-860/        unit-level fleet data        │ │
+│  │  eia-923/        generation + fuel consumption│ │
+│  │  eia-natgas-prices/ spot + futures prices     │ │
 │  └──────────────────────────────────────────────┘ │
 └───────────────────────────────────────────────────┘
 ```
@@ -208,7 +210,7 @@ Escalate to Opus ONLY when:
 >   - `ScreeningRequest`: iso (str), bin_breakpoints (list[float] | null, default null — e.g., [6.5, 7.0, 7.5, 8.5] creates 5 bins; null = use EIA 860 default 5 equal-capacity bins), fuel_types (list[str], default ["gas_cc", "gas_ct", "coal"]), carbon_price_range (object: min/max/step, default 0-300 step 25), demand_growth_range (object: min/max/step, default 0-5 step 1), cfe_targets (list[float], default [75, 85, 90, 95]), learning_rate (float, default 0.18)
 >   - `ScreeningResponse`: bins (list[BinResult]), new_build_trigger (dict[str, int|null]), scenario_count (int), metadata (dict)
 >   - `BinResult`: bin_id (int), fuel_type (str), heat_rate_range (tuple), capacity_mw (float), avg_age_years (float), p_operating (float), p_marginal (float), p_stranded (float), median_retirement_carbon_price (float|null), capacity_factor_p10 (float), capacity_factor_p50 (float), capacity_factor_p90 (float)
-> - `backend/config.py` — Constants: ISO list, default LCOE values (solar: 31, onshore wind: 26, offshore wind: 53, nuclear: 88, ccs: 73, battery_4hr: 8.4, battery_8hr: 15.2, ldes: 35, geothermal: 52 — all $/MWh), Wright's Law default learning rate 0.18. Default heat rate bins: 5 (calibrated from EIA 860 fleet distribution).
+> - `backend/config.py` — Constants: ISO list, default LCOE values (solar: 31, onshore wind: 26, offshore wind: 53, nuclear: 88, ccs: 73, battery_4hr: 8.4, battery_8hr: 15.2, ldes: 35, geothermal: 52 — all $/MWh), Wright's Law default learning rate 0.18. Default heat rate bins: 5 (calibrated from EIA 860 fleet distribution). Gas price defaults from `eia-natgas-prices/` spot data (fallback: $2.50/MMBtu if data missing).
 >
 > Keep everything minimal — stubs only. No real logic yet.
 
@@ -301,7 +303,10 @@ Escalate to Opus ONLY when:
 
 > Implement `backend/fleet_model.py` — loads EIA 860 unit-level generator data and bins the fossil fleet by heat rate for carbon price sensitivity analysis.
 >
-> **Data source**: EIA Form 860 (annual generator inventory) provides per-unit: plant_id, generator_id, capacity_mw, heat_rate_mmbtu_mwh, fuel_type (coal, gas_cc, gas_ct, oil_ct), online_year, planned_retirement_year, ISO/balancing_authority. Data files in `/app/data/eia-860/`.
+> **Data sources** (all pre-loaded in `/app/data/`, no fetching needed):
+> - `eia-860/` — EIA Form 860 generator inventory: plant_id, generator_id, capacity_mw, heat_rate_mmbtu_mwh, fuel_type, online_year, planned_retirement_year, balancing_authority
+> - `eia-923/` — EIA Form 923 generation + fuel consumption: actual capacity factors, fuel burn rates, net generation by unit. Use for validating modeled dispatch against real-world utilization.
+> - `eia-natgas-prices/` — Natural gas spot + futures prices. Use for fuel cost inputs instead of static defaults — enables forward price curve scenarios.
 >
 > **Core class: `FleetModel`**
 >
@@ -384,7 +389,7 @@ Escalate to Opus ONLY when:
 > 3. **Carbon cost integration** (heat-rate-aware, uses `fleet_model.py`):
 >    - Load fleet bins from `FleetModel(iso, n_bins=request.heat_rate_bins)`
 >    - For each bin: `carbon_adder = carbon_price × bin.emission_rate_tco2_mwh`
->    - Variable cost per bin: `fuel_price × bin.heat_rate / 1000 + VOM + carbon_adder`
+>    - Variable cost per bin: `gas_price × bin.heat_rate / 1000 + VOM + carbon_adder` (gas_price from `eia-natgas-prices/` spot/futures curve, not static default)
 >    - **Key behavior**: At $50/ton carbon, efficient H-class CCGT (6.2 HR) pays $16.5/MWh carbon cost; inefficient old CCGT (8.5 HR) pays $22.6/MWh — a $6/MWh spread that determines who operates and who doesn't
 >    - Bins whose variable cost exceeds the clean energy clearing price are dispatched less or retired
 >    - This is what makes the model sensitive enough to differentiate old vs. new CCGTs
@@ -566,6 +571,10 @@ This is the core **probabilistic screening tool** — a proxy for IPM / capacity
 >    - Aggregate: P10/P50/P90 of trigger year across scenarios
 >
 > **Performance**: The scenario grid is small (~300 combos) and each projection is <500ms, so total sweep <2min. Use `concurrent.futures.ThreadPoolExecutor` or vectorize the sweep with numpy broadcasting if possible.
+>
+> 6. **Validation against EIA 923 actuals**: At $0 carbon price, compare modeled bin capacity factors against EIA 923 actual generation for the same units. If the base case doesn't match reality (±10% CF tolerance), flag a calibration warning in the response metadata. This grounds the screening results in observed behavior before projecting forward.
+>
+> 7. **Gas price from futures curve**: Load `eia-natgas-prices/` spot + futures data. For projection years within the futures curve, use actual forward prices. For years beyond, extrapolate at user-specified growth rate or flat. This replaces the static fuel price assumption and makes coal-to-gas switching timing more realistic.
 >
 > **Key insight this enables**: "Under 78% of plausible scenarios, CCGTs with heat rates above 8.0 are economically stranded by $75/ton carbon. New gas is needed in PJM by 2031 under 60% of high-demand scenarios." — This is exactly the kind of directional, probabilistic output that screens which scenarios deserve a full IPM run.
 
@@ -773,38 +782,29 @@ data/
 ├── step2.1-ef/            # Required — efficient frontier mixes
 │   ├── CAISO_ef.parquet
 │   └── ...
-├── eia-860/               # Required for screening — unit-level fleet data
-│   ├── generators.parquet # EIA 860 generator inventory (plant_id, cap_mw, heat_rate, fuel, online_year, iso)
-│   └── README.md          # Data dictionary + vintage notes
+├── eia-860/               # Pre-loaded — unit-level fleet data (generator inventory)
+├── eia-923/               # Pre-loaded — actual generation + fuel consumption by unit
+├── eia-natgas-prices/     # Pre-loaded — natural gas spot + futures prices
 ├── step1-pfs/             # Optional — raw physics (only if re-optimizing)
 └── step5-wrights/         # Optional — learning curve fits (fallback to defaults)
 ```
 
 **Data tiers**:
 - **Projection tool** (Phases 0-4): Needs `step2.2-cost/` + `step2.1-ef/`. Works without EIA 860.
-- **Screening tool** (Phase 5): Needs `eia-860/` for heat rate binning. Without it, falls back to aggregate heat rates from `config.py` (equivalent to 1-bin mode).
+- **Screening tool** (Phase 5): Needs `eia-860/` for heat rate binning, `eia-923/` for real-world CF validation, `eia-natgas-prices/` for forward fuel price curves. All pre-loaded in the data directory.
 
 If you haven't run the optimizer pipeline, the module will start with default 2025 values from `config.py` and still produce projections — they just won't be grounded in ISO-specific optimized mixes.
 
-### EIA 860 Data Preparation
+### EIA Data (Pre-Loaded)
 
-The screening tool needs unit-level generator data from EIA Form 860. To prepare:
+All EIA datasets are already in the `data/` directory — no fetching or preparation needed:
 
-```bash
-# Download from EIA (annual release, usually March):
-# https://www.eia.gov/electricity/data/eia860/
+| Directory | Source | Contents | Used By |
+|-----------|--------|----------|---------|
+| `eia-860/` | EIA Form 860 | Generator inventory: capacity, heat rate, fuel type, online year, retirement, BA | Fleet binning (Phase 1.5), screening (Phase 5) |
+| `eia-923/` | EIA Form 923 | Actual generation + fuel consumption per unit | Validation: compare modeled dispatch CFs against real-world utilization |
+| `eia-natgas-prices/` | EIA + futures | Natural gas spot + futures prices | Fuel cost inputs for projection engine + screening (replaces static $2.50/MMBtu default) |
 
-# Required columns from 3_1_Generator_Y2024.xlsx:
-# Plant Code, Generator ID, Nameplate Capacity (MW),
-# Heat Rate (Btu/kWh), Energy Source Code, Operating Year,
-# Planned Retirement Year, Balancing Authority Code
+**923 data enables a key validation step**: After the screening engine classifies bins as operating/marginal/stranded, compare the modeled capacity factors against EIA 923 actual generation data for the same units. If modeled CFs diverge significantly from historical actuals at $0 carbon price, the dispatch model needs calibration.
 
-# Map Balancing Authority → ISO:
-# CISO → CAISO, ERCO → ERCOT, PJM → PJM,
-# NYIS → NYISO, ISNE → NEISO, MISO → MISO, SWPP → SPP
-
-# Filter to: fuel_type IN (coal, gas_cc, gas_ct, oil)
-# Export as parquet to data/eia-860/generators.parquet
-```
-
-A step0 script can automate this — or do it manually once per year.
+**Gas futures enable forward price scenarios**: Instead of a flat gas price assumption, the projection engine can use the futures curve for near-term years and user-defined assumptions for out-years. This makes the screening results more realistic — gas price volatility is a major driver of CCGT economics.
