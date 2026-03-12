@@ -132,7 +132,7 @@ Use the cheapest model that can handle each step. Escalate only when needed.
 | README / documentation | Straightforward writing |
 | Bug fixes with clear error messages | Stack trace → fix pattern |
 | EIA 860 data cleaning + column mapping | Mechanical CSV→parquet conversion |
-| Heat rate binning config defaults | Transcribing bin boundaries from analysis |
+| Heat rate bin editor HTML/CSS (table layout, text input, toggle switch) | Standard form components, no domain logic |
 
 ### Sonnet ($3/MTok in, $15/MTok out) — Core Application Logic
 
@@ -150,7 +150,7 @@ Use the cheapest model that can handle each step. Escalate only when needed.
 | `fleet_model.py` — EIA 860 loading + capacity-weighted binning | Multi-file I/O, numpy aggregation, caching — follows established patterns |
 | `screening.py` — scenario sweep + survival classification | Cartesian product sweep, threshold classification, probability aggregation — domain-informed but formulaic |
 | `screening.js` — Plotly heatmap, fan charts, cascade visualization | Complex multi-chart page with interactive controls — moderate complexity |
-| Heat rate bins slider with live re-binning | UI ↔ API ↔ engine round-trip with debouncing |
+| Heat rate bin editor (table + text dual-mode) with live re-binning | Synced dual-input UX, validation, live capacity feedback — moderate UI complexity |
 
 ### Opus ($15/MTok in, $75/MTok out) — Complex Domain Logic & Debugging
 
@@ -205,7 +205,7 @@ Escalate to Opus ONLY when:
 > - `backend/models.py` — Pydantic models:
 >   - `ProjectionRequest`: iso (str), target_year (int, 2025-2050), carbon_price_usd (float, 0-300), demand_growth_pct (float, 0-5), cfe_target_pct (float, 50-99.99), cost_scenario (str: low/medium/high), learning_rate (float, 0.1-0.3)
 >   - `ProjectionResponse`: years (list[int]), resource_mix (dict[str, list[float]]), total_cost (list[float]), lcoe_trajectories (dict[str, list[float]]), carbon_abated (list[float])
->   - `ScreeningRequest`: iso (str), heat_rate_bins (int, 1-7, default 5), carbon_price_range (object: min/max/step, default 0-300 step 25), demand_growth_range (object: min/max/step, default 0-5 step 1), cfe_targets (list[float], default [75, 85, 90, 95]), learning_rate (float, default 0.18)
+>   - `ScreeningRequest`: iso (str), bin_breakpoints (list[float] | null, default null — e.g., [6.5, 7.0, 7.5, 8.5] creates 5 bins; null = use EIA 860 default 5 equal-capacity bins), fuel_types (list[str], default ["gas_cc", "gas_ct", "coal"]), carbon_price_range (object: min/max/step, default 0-300 step 25), demand_growth_range (object: min/max/step, default 0-5 step 1), cfe_targets (list[float], default [75, 85, 90, 95]), learning_rate (float, default 0.18)
 >   - `ScreeningResponse`: bins (list[BinResult]), new_build_trigger (dict[str, int|null]), scenario_count (int), metadata (dict)
 >   - `BinResult`: bin_id (int), fuel_type (str), heat_rate_range (tuple), capacity_mw (float), avg_age_years (float), p_operating (float), p_marginal (float), p_stranded (float), median_retirement_carbon_price (float|null), capacity_factor_p10 (float), capacity_factor_p50 (float), capacity_factor_p90 (float)
 > - `backend/config.py` — Constants: ISO list, default LCOE values (solar: 31, onshore wind: 26, offshore wind: 53, nuclear: 88, ccs: 73, battery_4hr: 8.4, battery_8hr: 15.2, ldes: 35, geothermal: 52 — all $/MWh), Wright's Law default learning rate 0.18. Default heat rate bins: 5 (calibrated from EIA 860 fleet distribution).
@@ -305,17 +305,20 @@ Escalate to Opus ONLY when:
 >
 > **Core class: `FleetModel`**
 >
-> Constructor: `FleetModel(iso: str, n_bins: int = 5)`
-> - `n_bins` is user-configurable from 1 to 7. Default 5.
-> - 1 bin = aggregate (current model behavior, single heat rate per fuel type)
-> - 7 bins = maximum granularity (captures full fleet heterogeneity)
+> Constructor: `FleetModel(iso: str, breakpoints: list[float] | None = None)`
+> - `breakpoints` = user-defined heat rate boundaries in MMBtu/MWh. E.g., `[6.5, 7.0, 7.5, 8.5]` creates 5 bins: <6.5, 6.5–7.0, 7.0–7.5, 7.5–8.5, >8.5.
+> - If `None` (default), auto-compute 5 equal-capacity breakpoints from the ISO's EIA 860 data (quintile split by cumulative MW).
+> - Min 1 bin (no breakpoints = aggregate), max 7 bins (6 breakpoints). Validate: 1 ≤ len(breakpoints)+1 ≤ 7.
+> - Breakpoints must be strictly ascending. Backend validates and returns 422 with clear message if not.
 >
 > **Binning logic**:
 > - Load all generators for the given ISO from EIA 860 parquet
 > - Separate by fuel type: gas_cc (combined cycle), gas_ct (combustion turbine), coal, oil
 > - For each fuel type, sort units by heat rate ascending
-> - Create N equal-**capacity** bins (not equal-count) — each bin holds ~1/N of total MW
+> - If `breakpoints` provided: assign each unit to the bin defined by the breakpoint boundaries
+> - If `breakpoints` is None: compute default breakpoints at equal-capacity quantiles (each bin holds ~1/5 of total MW)
 > - Per bin, compute: weighted_avg_heat_rate, total_capacity_mw, capacity_weighted_avg_age, emission_rate_tco2_mwh (= heat_rate × fuel_emission_factor)
+> - Return actual breakpoints used (so frontend can display them regardless of whether user or auto provided them)
 >
 > **Default 5-bin structure for gas CC** (illustrative, actual breakpoints from EIA 860 data):
 >
@@ -331,7 +334,8 @@ Escalate to Opus ONLY when:
 > - `get_bins(fuel_type: str) → list[FleetBin]` — returns bins for given fuel
 > - `get_merit_order(carbon_price: float) → list[FleetBin]` — all bins sorted by variable cost (fuel + carbon + VOM) ascending
 > - `get_bin_marginal_cost(bin: FleetBin, fuel_price: float, carbon_price: float) → float` — per-bin MC
-> - `rebin(n_bins: int)` — re-create bins with different granularity (live slider support)
+> - `rebin(breakpoints: list[float] | None)` — re-create bins with new breakpoints (live UI support). If None, revert to default equal-capacity quintiles.
+> - `get_default_breakpoints(fuel_type: str) → list[float]` — returns the auto-computed equal-capacity breakpoints for a fuel type (for pre-populating the UI)
 >
 > **Emission factors** (tCO2 per MMBtu):
 > - Natural gas: 0.0531
@@ -525,12 +529,12 @@ This is the core **probabilistic screening tool** — a proxy for IPM / capacity
 > **Purpose**: Sweep a multi-dimensional scenario space and compute, for each heat-rate bin in the fossil fleet, the probability of being operating, marginal, or stranded. Also detect when new gas capacity is needed.
 >
 > **Endpoint**: `POST /api/screen`
-> - Input: `ScreeningRequest` (iso, heat_rate_bins, carbon_price_range, demand_growth_range, cfe_targets, learning_rate)
+> - Input: `ScreeningRequest` (iso, bin_breakpoints, fuel_types, carbon_price_range, demand_growth_range, cfe_targets, learning_rate)
 > - Output: `ScreeningResponse` (bins with survival probabilities, new-build triggers, scenario count)
 >
 > **Screening logic**:
 >
-> 1. **Build fleet**: `FleetModel(iso, n_bins=request.heat_rate_bins)` → get all bins for gas_cc, gas_ct, coal, oil
+> 1. **Build fleet**: `FleetModel(iso, breakpoints=request.bin_breakpoints)` → get all bins for requested fuel_types. If `bin_breakpoints` is null, FleetModel auto-computes default equal-capacity quintiles.
 >
 > 2. **Generate scenario grid**: Cartesian product of:
 >    - Carbon price: range(min, max, step) — e.g., 0, 25, 50, ..., 300 (13 values)
@@ -570,14 +574,32 @@ This is the core **probabilistic screening tool** — a proxy for IPM / capacity
 > Create `frontend/screening.html` (or a tab within `index.html`) for the asset screening tool:
 >
 > **Parameter panel**:
-> - ISO selector (same as projection page)
-> - **Heat rate bins slider**: 1–7, integer steps, default 5. Label shows current value + description:
->   - 1: "Aggregate (single class per fuel)"
->   - 2-3: "Coarse (old vs. new)"
->   - 4-5: "Standard (recommended)"
->   - 6-7: "Fine (maximum granularity)"
-> - Carbon price range: min/max/step sliders (default 0-300 step 25)
-> - Demand growth range: min/max sliders (default 0-5%)
+> - ISO selector (same as projection page). On ISO change, fetch default breakpoints for that ISO and populate the bin editor.
+> - **Heat rate bin editor** — two input modes, toggled via "Table / Text" switch:
+>
+>   **Table mode** (default, visual):
+>   - Editable table with one row per bin. Columns: Bin #, Min HR (MMBtu/MWh), Max HR (MMBtu/MWh), Capacity (MW, read-only, auto-computed from EIA 860 data)
+>   - Pre-populated with the selected ISO's default 5 equal-capacity bins on page load
+>   - Min HR of bin 1 is always empty (open lower bound); Max HR of last bin is always empty (open upper bound)
+>   - Each interior boundary is shared: Max HR of bin N = Min HR of bin N+1 (editing one updates the other)
+>   - "[+ Add Bin]" button (disabled if already 7 bins) — inserts a new row, splitting the widest bin at its midpoint
+>   - "[− Remove]" button per row (disabled if only 1 bin) — merges with adjacent bin
+>   - "[Reset to ISO Default]" button — reverts to EIA 860 equal-capacity quintiles
+>   - Capacity column updates live as breakpoints change (re-queries fleet data)
+>   - Validation: red border + tooltip if breakpoints aren't strictly ascending or if any bin has 0 MW capacity
+>
+>   **Text mode** (power-user, compact):
+>   - Single text input: comma-separated breakpoint values in MMBtu/MWh
+>   - Example placeholder: "6.5, 7.0, 7.5, 8.5"
+>   - Below the input, show parsed result: "5 bins: <6.5 | 6.5–7.0 | 7.0–7.5 | 7.5–8.5 | >8.5"
+>   - Show capacity per bin inline: "12.3 | 9.9 | 15.2 | 8.4 | 3.1 GW"
+>   - Validation: parse on keyup (debounced 300ms), show error if not valid floats, not ascending, or >6 breakpoints
+>
+>   Both modes sync to the same `breakpoints` array. Switching mode preserves current values.
+>
+> - **Fuel type selector**: checkboxes for Gas CC, Gas CT, Coal (all on by default). Each fuel type gets its own bin set — breakpoints apply independently per fuel.
+> - Carbon price range: min/max/step inputs (default 0-300 step 25)
+> - Demand growth range: min/max inputs (default 0-5%)
 > - CFE target checkboxes: 75%, 85%, 90%, 95% (multi-select, all on by default)
 > - "Run Screening" button
 >
@@ -625,7 +647,7 @@ This is the core **probabilistic screening tool** — a proxy for IPM / capacity
 > - "Most resilient asset: [bin label] — operates in [X]% of scenarios"
 > - "Coal fully retired at $[X]/ton in [X]% of scenarios"
 >
-> Use Plotly for all charts. Same design system (shared.css, chart-colors.js). Mobile responsive — charts stack vertically below 768px. Heat rate bins slider triggers live re-run via debounced API call.
+> Use Plotly for all charts. Same design system (shared.css, chart-colors.js). Mobile responsive — charts stack vertically below 768px. Any change to bin breakpoints (via table edit, text input, or reset button) triggers a debounced (500ms) re-run of the screening API call, with a loading indicator on each chart.
 
 **Prompt 13 (Opus — only if needed) — Validating screening results:**
 
