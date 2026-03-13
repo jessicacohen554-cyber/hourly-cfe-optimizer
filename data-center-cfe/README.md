@@ -1,6 +1,62 @@
 # Data Center Clean Energy Portfolio Analysis
 
-Estimating how much clean energy hyperscalers and major data center operators have under contract, by technology type, geography, and project status — and whether their contracted pipelines are sufficient to meet projected demand growth.
+Self-contained package for the VRE Investment Thesis deck and supporting analysis. Estimating how much clean energy hyperscalers and major data center operators have under contract, by technology type, geography, and project status — and whether their contracted pipelines are sufficient to meet projected demand growth.
+
+## Quick Start
+
+```bash
+cd data-center-cfe/
+pip install -r requirements.txt
+
+# Generate the 14-slide HTML deck from CSV data
+python generate_deck.py          # → output/vre-investment-thesis-deck.html
+
+# Generate standalone PNG figures
+python generate_figures.py       # → output/figures/*.png
+
+# (Optional) Convert reference article to PDF (requires weasyprint)
+pip install weasyprint
+python convert_to_pdf.py         # → output/ref-vre-investment-thesis.pdf
+```
+
+## Updating Data
+
+Replace CSVs in `data-inputs/` with new data (same column schema), then re-run:
+- `python generate_deck.py` — regenerates the HTML deck
+- `python generate_figures.py` — regenerates all PNG figures
+
+Key data files that drive the deck:
+- `data-inputs/us_hyperscaler_gap_analysis.csv` — Slide 4 gap table + waterfall
+- `data-inputs/capture_rates_by_iso.csv` — Slide 5 capture rate chart
+- `data-inputs/cfe_premium.csv` — Slide 6 CFE premium chart
+- `data-inputs/vre_investment_thesis.csv` — Slide 9 regional matrix
+- `data-inputs/demand_forecasts.csv` — Slide 2 demand chart
+
+## Directory Structure
+
+```
+data-center-cfe/
+├── generate_deck.py           # CSV → HTML deck
+├── generate_figures.py        # CSV → PNG figures
+├── convert_to_pdf.py          # Reference article → PDF
+├── requirements.txt           # Python dependencies
+├── templates/
+│   └── deck_template.html     # Jinja2 template for the deck
+├── styles/                    # Shared CSS (for reference article)
+├── js/                        # Shared JS (for reference article)
+├── data-inputs/               # Source CSVs (replace these to update)
+├── data/                      # Processed data
+├── analysis/                  # Analysis scripts
+├── research/                  # Reference article + docs
+├── output/                    # Generated artifacts
+│   ├── vre-investment-thesis-deck.html
+│   └── figures/               # PNG figures
+├── CEG-style.css              # Constellation branding reference
+├── sources.md                 # Bibliography
+└── README.md                  # This file
+```
+
+---
 
 ## Key Findings (as of March 2026)
 
