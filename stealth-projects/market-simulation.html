@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="googlebot" content="noindex, nofollow">
+<title>Market Simulation — Internal Tool</title>
+<link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/simulator.css">
+<link rel="stylesheet" href="styles/results.css">
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+/* ── Page-level tab switching ── */
+.page-tab-bar {
+    display: flex;
+    gap: 0;
+    margin: 0 auto;
+    max-width: 400px;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--bg-mid);
+}
+.page-tab {
+    flex: 1;
+    padding: 12px 24px;
+    background: transparent;
+    border: none;
+    font-family: var(--font);
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-dim);
+    cursor: pointer;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+}
+.page-tab:not(:last-child) { border-right: 1px solid var(--glass-border); }
+.page-tab:hover { background: rgba(35,114,185,0.06); color: var(--text-bright); }
+.page-tab.active { background: var(--ceg-blue); color: white; }
+
+.page-view { display: none; }
+.page-view.active { display: block; }
+
+/* Results ISO bar adjustment */
+.results-iso-bar {
+    background: white;
+    border-bottom: 1px solid var(--glass-border);
+    padding: var(--space-md) 0;
+    box-shadow: var(--shadow-sm);
+}
+</style>
+</head>
+<body>
+
+<!-- Progress bar -->
+<div class="progress-bar"><div class="progress-bar-fill"></div></div>
+
+<!-- Nav -->
+<nav>
+    <div class="nav-logo">
+        <div class="nav-logo-mark">
+            <svg viewBox="0 0 32 32" width="32" height="32">
+                <circle cx="16" cy="16" r="14" fill="none" stroke="#2372B9" stroke-width="2"/>
+                <circle cx="16" cy="16" r="6" fill="#2372B9"/>
+                <line x1="16" y1="2" x2="16" y2="10" stroke="#2372B9" stroke-width="2"/>
+                <line x1="16" y1="22" x2="16" y2="30" stroke="#2372B9" stroke-width="2"/>
+                <line x1="2" y1="16" x2="10" y2="16" stroke="#2372B9" stroke-width="2"/>
+                <line x1="22" y1="16" x2="30" y2="16" stroke="#2372B9" stroke-width="2"/>
+            </svg>
+        </div>
+        <div>
+            <div class="nav-title">Constellation Energy</div>
+            <div class="nav-subtitle">Market Simulation Tool</div>
+        </div>
+    </div>
+</nav>
+
+<!-- Hero -->
+<div class="hero-section">
+    <div class="hero-inner">
+        <div class="hero-eyebrow">Internal Screening Tool</div>
+        <h1>Market <strong>Simulation</strong></h1>
+        <p class="hero-desc">
+            Set market preconditions, run the model, see what happens to generators across ISOs.
+        </p>
+        <div class="page-tab-bar">
+            <button class="page-tab active" data-page="setup">Setup</button>
+            <button class="page-tab" data-page="results">Results</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!--                         SETUP VIEW                                     -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="page-view active" id="view-setup">
+<div class="content-section">
+    <form id="simulationForm">
+
+        <!-- Mode Selection -->
+        <div class="glass-card form-section">
+            <div class="section-eyebrow">Simulation Mode</div>
+            <h2 class="section-heading">Choose Your Analysis Type</h2>
+            <div class="mode-toggle">
+                <button type="button" class="toggle-btn active" data-mode="snapshot">Single Snapshot</button>
+                <button type="button" class="toggle-btn" data-mode="trajectory">Multi-Year Trajectory</button>
+                <button type="button" class="toggle-btn" data-mode="sweep">Full 270-Scenario Sweep</button>
+            </div>
+            <p class="mode-description" id="modeDescription">
+                One point-in-time simulation with your exact cost inputs. No learning curves.
+            </p>
+        </div>
+
+        <!-- Region Selection -->
+        <div class="glass-card form-section">
+            <div class="section-eyebrow">Region</div>
+            <h2 class="section-heading">Select ISOs</h2>
+            <div class="iso-selector" id="isoSelector">
+                <button type="button" class="iso-btn active" data-iso="CAISO">CAISO</button>
+                <button type="button" class="iso-btn active" data-iso="ERCOT">ERCOT</button>
+                <button type="button" class="iso-btn active" data-iso="PJM">PJM</button>
+                <button type="button" class="iso-btn active" data-iso="NYISO">NYISO</button>
+                <button type="button" class="iso-btn active" data-iso="NEISO">NEISO</button>
+                <button type="button" class="iso-btn active" data-iso="MISO">MISO</button>
+                <button type="button" class="iso-btn active" data-iso="SPP">SPP</button>
+            </div>
+            <div class="iso-summary" id="isoSummary"></div>
+        </div>
+
+        <!-- Fuel Prices -->
+        <div class="glass-card form-section">
+            <div class="section-eyebrow">Fuel Prices</div>
+            <h2 class="section-heading">$/MMBtu — use L/M/H presets or enter custom values</h2>
+            <div class="grid-3col">
+                <div class="input-group">
+                    <label>Natural Gas</label>
+                    <div class="input-with-presets">
+                        <input type="number" id="fuel_gas" value="3.50" step="0.25" min="0">
+                        <div class="preset-btns">
+                            <button type="button" class="preset-btn" data-target="fuel_gas" data-value="2.00">L</button>
+                            <button type="button" class="preset-btn active" data-target="fuel_gas" data-value="3.50">M</button>
+                            <button type="button" class="preset-btn" data-target="fuel_gas" data-value="6.00">H</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Coal</label>
+                    <div class="input-with-presets">
+                        <input type="number" id="fuel_coal" value="2.25" step="0.25" min="0">
+                        <div class="preset-btns">
+                            <button type="button" class="preset-btn" data-target="fuel_coal" data-value="2.00">L</button>
+                            <button type="button" class="preset-btn active" data-target="fuel_coal" data-value="2.25">M</button>
+                            <button type="button" class="preset-btn" data-target="fuel_coal" data-value="2.50">H</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Oil</label>
+                    <div class="input-with-presets">
+                        <input type="number" id="fuel_oil" value="10.50" step="0.50" min="0">
+                        <div class="preset-btns">
+                            <button type="button" class="preset-btn" data-target="fuel_oil" data-value="8.00">L</button>
+                            <button type="button" class="preset-btn active" data-target="fuel_oil" data-value="10.50">M</button>
+                            <button type="button" class="preset-btn" data-target="fuel_oil" data-value="13.00">H</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Carbon Price -->
+        <div class="glass-card form-section">
+            <div class="section-eyebrow">Carbon Price</div>
+            <h2 class="section-heading">$/ton CO2 — affects fossil generator marginal costs</h2>
+            <div class="carbon-controls">
+                <div class="input-group" style="max-width: 200px;">
+                    <input type="number" id="carbon_price" value="5.50" step="0.50" min="0">
+                </div>
+                <div class="carbon-presets">
+                    <button type="button" class="preset-btn-wide" data-target="carbon_price" data-value="0">$0</button>
+                    <button type="button" class="preset-btn-wide active" data-target="carbon_price" data-value="5.50">$5.50 RGGI</button>
+                    <button type="button" class="preset-btn-wide" data-target="carbon_price" data-value="14.00">$14 Full RGGI</button>
+                    <button type="button" class="preset-btn-wide" data-target="carbon_price" data-value="51.00">$51 EPA SCC</button>
+                    <button type="button" class="preset-btn-wide" data-target="carbon_price" data-value="100.00">$100 EU ETS</button>
+                    <button type="button" class="preset-btn-wide" data-target="carbon_price" data-value="185.00">$185 Rennert</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Generator Heat Rates -->
+        <div class="glass-card form-section collapsible">
+            <h2 class="section-heading collapsible-header" data-target="heatRateSection">
+                Generator Heat Rates &amp; VOM
+                <span class="collapse-icon">&#9660;</span>
+            </h2>
+            <p class="section-note">MMBtu/MWh heat rates and $/MWh variable O&amp;M — advanced tuning</p>
+            <div class="collapsible-content" id="heatRateSection">
+                <table class="data-table">
+                    <thead>
+                        <tr><th>Generator</th><th>Heat Rate</th><th>VOM</th><th>CO2 Rate</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Coal Steam</td><td><input type="number" id="hr_coal_steam" value="10.0" step="0.1" class="table-input"></td><td><input type="number" id="vom_coal_steam" value="5.50" step="0.25" class="table-input"></td><td class="readonly">0.95</td></tr>
+                        <tr><td>Gas CCGT</td><td><input type="number" id="hr_gas_ccgt" value="7.0" step="0.1" class="table-input"></td><td><input type="number" id="vom_gas_ccgt" value="3.50" step="0.25" class="table-input"></td><td class="readonly">0.37</td></tr>
+                        <tr><td>Gas CT</td><td><input type="number" id="hr_gas_ct" value="10.5" step="0.1" class="table-input"></td><td><input type="number" id="vom_gas_ct" value="5.00" step="0.25" class="table-input"></td><td class="readonly">0.55</td></tr>
+                        <tr><td>Oil CT</td><td><input type="number" id="hr_oil_ct" value="10.5" step="0.1" class="table-input"></td><td><input type="number" id="vom_oil_ct" value="6.00" step="0.25" class="table-input"></td><td class="readonly">0.65</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Clean Resource LCOEs -->
+        <div class="glass-card form-section">
+            <div class="section-eyebrow">Clean Energy</div>
+            <h2 class="section-heading">Clean Resource LCOEs</h2>
+            <p class="section-note">$/MWh levelized cost — determines new-build economics</p>
+            <div class="grid-3col">
+                <div class="input-group"><label>Solar</label><div class="input-with-presets"><input type="number" id="lcoe_solar" value="31.8" step="1" min="0"><div class="preset-btns"><button type="button" class="preset-btn" data-target="lcoe_solar" data-value="24.5">L</button><button type="button" class="preset-btn active" data-target="lcoe_solar" data-value="31.8">M</button><button type="button" class="preset-btn" data-target="lcoe_solar" data-value="42.0">H</button></div></div></div>
+                <div class="input-group"><label>Wind (Onshore)</label><div class="input-with-presets"><input type="number" id="lcoe_wind" value="34.5" step="1" min="0"><div class="preset-btns"><button type="button" class="preset-btn" data-target="lcoe_wind" data-value="28.0">L</button><button type="button" class="preset-btn active" data-target="lcoe_wind" data-value="34.5">M</button><button type="button" class="preset-btn" data-target="lcoe_wind" data-value="46.0">H</button></div></div></div>
+                <div class="input-group"><label>Offshore Wind</label><div class="input-with-presets"><input type="number" id="lcoe_offshore" value="82.0" step="1" min="0"><div class="preset-btns"><button type="button" class="preset-btn" data-target="lcoe_offshore" data-value="68.0">L</button><button type="button" class="preset-btn active" data-target="lcoe_offshore" data-value="82.0">M</button><button type="button" class="preset-btn" data-target="lcoe_offshore" data-value="105.0">H</button></div></div></div>
+                <div class="input-group"><label>Nuclear</label><div class="input-with-presets"><input type="number" id="lcoe_nuclear" value="89.0" step="1" min="0"><div class="preset-btns"><button type="button" class="preset-btn" data-target="lcoe_nuclear" data-value="72.0">L</button><button type="button" class="preset-btn active" data-target="lcoe_nuclear" data-value="89.0">M</button><button type="button" class="preset-btn" data-target="lcoe_nuclear" data-value="115.0">H</button></div></div></div>
+                <div class="input-group"><label>CCS-CCGT</label><div class="input-with-presets"><input type="number" id="lcoe_ccs" value="86.0" step="1" min="0"><div class="preset-btns"><button type="button" class="preset-btn" data-target="lcoe_ccs" data-value="72.0">L</button><button type="button" class="preset-btn active" data-target="lcoe_ccs" data-value="86.0">M</button><button type="button" class="preset-btn" data-target="lcoe_ccs" data-value="110.0">H</button></div></div></div>
+                <div class="input-group" id="geoGroup" style="display:none;"><label>Geothermal (CAISO only)</label><div class="input-with-presets"><input type="number" id="lcoe_geo" value="55.0" step="1" min="0"><div class="preset-btns"><button type="button" class="preset-btn" data-target="lcoe_geo" data-value="45.0">L</button><button type="button" class="preset-btn active" data-target="lcoe_geo" data-value="55.0">M</button><button type="button" class="preset-btn" data-target="lcoe_geo" data-value="70.0">H</button></div></div></div>
+            </div>
+        </div>
+
+        <!-- Storage Costs -->
+        <div class="glass-card form-section">
+            <div class="section-eyebrow">Storage</div>
+            <h2 class="section-heading">Storage Costs</h2>
+            <p class="section-note">$/kW-yr installed cost</p>
+            <div class="grid-3col">
+                <div class="input-group"><label>Battery 4hr</label><div class="input-with-presets"><input type="number" id="cost_battery" value="295" step="5" min="0"><div class="preset-btns"><button type="button" class="preset-btn" data-target="cost_battery" data-value="220">L</button><button type="button" class="preset-btn active" data-target="cost_battery" data-value="295">M</button><button type="button" class="preset-btn" data-target="cost_battery" data-value="380">H</button></div></div></div>
+                <div class="input-group"><label>Battery 8hr</label><div class="input-with-presets"><input type="number" id="cost_battery8" value="456" step="5" min="0"><div class="preset-btns"><button type="button" class="preset-btn" data-target="cost_battery8" data-value="350">L</button><button type="button" class="preset-btn active" data-target="cost_battery8" data-value="456">M</button><button type="button" class="preset-btn" data-target="cost_battery8" data-value="580">H</button></div></div></div>
+                <div class="input-group"><label>LDES 100hr</label><div class="input-with-presets"><input type="number" id="cost_ldes" value="220" step="5" min="0"><div class="preset-btns"><button type="button" class="preset-btn" data-target="cost_ldes" data-value="150">L</button><button type="button" class="preset-btn active" data-target="cost_ldes" data-value="220">M</button><button type="button" class="preset-btn" data-target="cost_ldes" data-value="300">H</button></div></div></div>
+            </div>
+        </div>
+
+        <!-- Market Parameters -->
+        <div class="glass-card form-section">
+            <div class="section-eyebrow">Market</div>
+            <h2 class="section-heading">Market Parameters</h2>
+            <div class="grid-3col">
+                <div class="input-group">
+                    <label>Capacity Market ($/kW-yr)</label>
+                    <input type="number" id="capacity_market" value="" placeholder="Auto per ISO" step="5" min="0">
+                    <span class="input-hint" id="capMarketHint">ERCOT/SPP: $0 (energy-only)</span>
+                </div>
+                <div class="input-group">
+                    <label>Transmission Level</label>
+                    <div class="toggle-btn-group" id="txToggle">
+                        <button type="button" class="toggle-btn" data-value="None">None</button>
+                        <button type="button" class="toggle-btn" data-value="Low">Low</button>
+                        <button type="button" class="toggle-btn active" data-value="Medium">Med</button>
+                        <button type="button" class="toggle-btn" data-value="High">High</button>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>45Q Tax Credit</label>
+                    <div class="toggle-btn-group" id="q45Toggle">
+                        <button type="button" class="toggle-btn active" data-value="1">On</button>
+                        <button type="button" class="toggle-btn" data-value="0">Off</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Demand Growth & PPA -->
+        <div class="glass-card form-section">
+            <div class="section-eyebrow">Demand &amp; Procurement</div>
+            <h2 class="section-heading">Demand Growth &amp; PPA Availability</h2>
+            <div class="grid-3col">
+                <div class="input-group">
+                    <label>Demand Growth</label>
+                    <div class="toggle-btn-group" id="demandToggle">
+                        <button type="button" class="toggle-btn" data-value="Low">Low</button>
+                        <button type="button" class="toggle-btn active" data-value="Medium">Med</button>
+                        <button type="button" class="toggle-btn" data-value="High">High</button>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>PPA Availability</label>
+                    <div class="toggle-btn-group" id="ppaToggle">
+                        <button type="button" class="toggle-btn" data-value="Low">Low</button>
+                        <button type="button" class="toggle-btn active" data-value="Medium">Med</button>
+                        <button type="button" class="toggle-btn" data-value="High">High</button>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Gas Friction</label>
+                    <div class="toggle-btn-group" id="gasFrictionToggle">
+                        <button type="button" class="toggle-btn" data-value="Low">Low</button>
+                        <button type="button" class="toggle-btn active" data-value="Medium">Med</button>
+                        <button type="button" class="toggle-btn" data-value="High">High</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Nuclear Retirement -->
+        <div class="glass-card form-section">
+            <div class="section-eyebrow">Nuclear</div>
+            <h2 class="section-heading">Nuclear Retirement Threshold</h2>
+            <p class="section-note">If total nuclear revenue drops below this $/MWh, the plant retires.</p>
+            <div class="slider-group">
+                <input type="range" id="nuclearRetirementSlider" min="10" max="60" value="30" step="1">
+                <div class="slider-value"><span id="nuclearRetirementValue">$30</span>/MWh</div>
+                <input type="number" id="nuclear_retirement" value="30" step="1" min="10" max="60" class="slider-input">
+            </div>
+        </div>
+
+        <!-- Trajectory Settings -->
+        <div class="glass-card form-section" id="trajectorySettings" style="display:none;">
+            <div class="section-eyebrow">Trajectory</div>
+            <h2 class="section-heading">Trajectory Settings</h2>
+            <div class="grid-2col">
+                <div class="input-group"><label>Projection Years</label><div class="checkbox-group"><label><input type="checkbox" value="2030" checked> 2030</label><label><input type="checkbox" value="2035" checked> 2035</label><label><input type="checkbox" value="2040" checked> 2040</label><label><input type="checkbox" value="2045" checked> 2045</label><label><input type="checkbox" value="2050" checked> 2050</label></div></div>
+                <div class="input-group"><label>Conditions</label><div class="toggle-btn-group" id="conditionToggle"><button type="button" class="toggle-btn active" data-value="Facilitating">Facilitating</button><button type="button" class="toggle-btn" data-value="Challenging">Challenging</button><button type="button" class="toggle-btn" data-value="Both">Both</button></div></div>
+            </div>
+            <div class="grid-2col" style="margin-top: var(--space-lg);">
+                <div class="input-group"><label>Learning Curves</label><div class="toggle-btn-group" id="learningToggle"><button type="button" class="toggle-btn active" data-value="On">On</button><button type="button" class="toggle-btn" data-value="Off">Off</button></div></div>
+                <div class="input-group" id="learningSpeedGroup"><label>Learning Speed</label><div class="toggle-btn-group" id="learningSpeedToggle"><button type="button" class="toggle-btn" data-value="Slow">Slow</button><button type="button" class="toggle-btn active" data-value="Medium">Med</button><button type="button" class="toggle-btn" data-value="Fast">Fast</button></div></div>
+            </div>
+        </div>
+
+        <!-- Submit -->
+        <div class="submit-section">
+            <button type="submit" class="btn-primary submit-btn" id="submitBtn">
+                <span class="submit-text">Run Market Simulation</span>
+                <span class="submit-spinner" style="display:none;">
+                    <svg class="spinner" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" stroke-dasharray="31.4" stroke-dashoffset="10"></circle></svg>
+                    Running...
+                </span>
+            </button>
+            <div class="submit-status" id="submitStatus"></div>
+        </div>
+    </form>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!--                         RESULTS VIEW                                   -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="page-view" id="view-results">
+
+    <!-- ISO Tab Bar -->
+    <div class="results-iso-bar">
+        <div class="content-section" style="padding-top:0;padding-bottom:0;">
+            <div class="iso-tabs" id="resultsIsoSelector" style="border-radius:12px;"></div>
+            <div class="controls-row" style="margin-top:var(--space-sm);">
+                <div class="control-group" id="yearControl" style="display:none;">
+                    <label>Year</label>
+                    <select id="yearSelect" class="control-select"></select>
+                </div>
+                <button class="btn-outline btn-sm" onclick="switchPage('setup')">&larr; Modify Inputs</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="content-section">
+        <!-- KPI Cards -->
+        <div class="kpi-grid" id="topStats">
+            <div class="kpi-card"><div class="kpi-value" id="statCleanPct">--</div><div class="kpi-unit">%</div><div class="kpi-label">Market Clean</div></div>
+            <div class="kpi-card"><div class="kpi-value" id="statAvgLMP">--</div><div class="kpi-unit">$/MWh</div><div class="kpi-label">Avg LMP</div></div>
+            <div class="kpi-card"><div class="kpi-value" id="statNewGW">--</div><div class="kpi-unit">GW</div><div class="kpi-label">New Clean</div></div>
+            <div class="kpi-card"><div class="kpi-value" id="statNucRev">--</div><div class="kpi-unit">$/MWh</div><div class="kpi-label">Nuclear Rev</div></div>
+            <div class="kpi-card"><div class="kpi-value" id="statCCSBreakeven">--</div><div class="kpi-unit">$/ton</div><div class="kpi-label">CCS Breakeven</div></div>
+        </div>
+
+        <!-- Charts -->
+        <div class="chart-card"><div class="chart-card-header"><h3>Merit-Order Stack</h3><p>Fossil generators ordered by marginal cost</p></div><div class="chart-container-lg" id="chartMeritOrder"></div></div>
+
+        <div class="grid-2col">
+            <div class="chart-card"><div class="chart-card-header"><h3>Generator Profitability</h3><p>Revenue vs cost per generator class</p></div><div class="chart-container" id="chartProfitability"></div></div>
+            <div class="chart-card"><div class="chart-card-header"><h3>Nuclear Revenue by ISO</h3><p>Energy + capacity + PTC breakdown</p></div><div class="chart-container" id="chartNuclearRevenue"></div></div>
+        </div>
+
+        <div class="chart-card"><div class="chart-card-header"><h3>LMP Impact Curve</h3><p>Price suppression as clean penetration increases</p></div><div class="chart-container" id="chartLMPImpact"></div></div>
+
+        <div class="grid-2col">
+            <div class="chart-card"><div class="chart-card-header"><h3>CCS Retrofit vs New Gas</h3><p>Carbon price crossover analysis</p></div><div class="chart-container" id="chartCCSBreakeven"></div></div>
+            <div class="chart-card"><div class="chart-card-header"><h3>What Gets Built</h3><p>Resource mix through market-cleared level</p></div><div class="chart-container" id="chartWhatBuilt"></div></div>
+        </div>
+
+        <div class="chart-card"><div class="chart-card-header"><h3>Fossil Fleet Economics by Heat Rate Bin</h3><p>Dispatch hours, revenue, cost, and margin</p></div><div class="chart-container-lg" id="chartFossilBins"></div></div>
+
+        <div class="chart-card"><div class="chart-card-header"><h3>Clean Energy Cost Ladder</h3><p>$/MWh vs cumulative GW added</p></div><div class="chart-container" id="chartCostLadder"></div></div>
+
+        <div class="grid-2col">
+            <div class="chart-card"><div class="chart-card-header"><h3>Gas Fleet Efficiency Shift</h3><p>Dispatch shift as carbon price increases</p></div><div class="chart-container" id="chartGasShift"></div></div>
+            <div class="chart-card"><div class="chart-card-header"><h3>Gas Price vs Carbon Price</h3><p>Market-cleared clean % sensitivity</p></div><div class="chart-container" id="chartSensitivity"></div></div>
+        </div>
+
+        <!-- Generator Table -->
+        <div class="chart-card">
+            <div class="chart-card-header collapsible-header" data-target="rawDataSection" style="cursor:pointer;">
+                <h3>Generator Economics Detail</h3>
+                <span class="collapse-icon">&#9660;</span>
+            </div>
+            <div class="collapsible-content" id="rawDataSection">
+                <table class="data-table" id="generatorTable">
+                    <thead><tr><th>Generator</th><th>Capacity MW</th><th>Marginal Cost</th><th>Dispatch Hours</th><th>CF</th><th>Avg Revenue</th><th>Profit $/MWh</th><th>Status</th></tr></thead>
+                    <tbody id="generatorTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Footer -->
+<footer>
+    <div class="footer-brand"><strong>Constellation Energy</strong> · Market Simulation Tool</div>
+    <div class="footer-note">Internal screening tool — not for external distribution</div>
+</footer>
+<div class="bottom-banner"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!--                         JAVASCRIPT                                     -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<script src="js/setup.js"></script>
+<script src="js/results.js"></script>
+
+<script>
+// ── Page tab switching ──
+function switchPage(page) {
+    document.querySelectorAll('.page-tab').forEach(t => t.classList.toggle('active', t.dataset.page === page));
+    document.querySelectorAll('.page-view').forEach(v => v.classList.toggle('active', v.id === 'view-' + page));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+document.querySelectorAll('.page-tab').forEach(tab => {
+    tab.addEventListener('click', () => switchPage(tab.dataset.page));
+});
+
+// Override form submission to switch to results tab on success
+const origForm = document.getElementById('simulationForm');
+if (origForm) {
+    origForm.addEventListener('submit', function(e) {
+        // The setup.js handles the actual submission; we just need to detect completion
+        const checkResult = setInterval(() => {
+            if (sessionStorage.getItem('simulationResult')) {
+                clearInterval(checkResult);
+                switchPage('results');
+            }
+        }, 500);
+        // Clear after 30s to prevent infinite polling
+        setTimeout(() => clearInterval(checkResult), 30000);
+    });
+}
+</script>
+</body>
+</html>
