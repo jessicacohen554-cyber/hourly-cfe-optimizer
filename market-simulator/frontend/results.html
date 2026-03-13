@@ -7,8 +7,18 @@
     <link rel="stylesheet" href="styles/shared.css">
     <link rel="stylesheet" href="styles/simulator.css">
     <link rel="stylesheet" href="styles/results.css">
-    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="/js/plotly.min.js" onerror="
+        var s=document.createElement('script');
+        s.src='https://cdn.plot.ly/plotly-2.27.0.min.js';
+        document.head.appendChild(s);
+    "></script>
     <script src="js/chart-colors.js"></script>
+    <script src="/js/html2canvas.min.js" onerror="
+        var s=document.createElement('script');
+        s.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+        document.head.appendChild(s);
+    "></script>
+    <link rel="stylesheet" href="styles/simulator.css">
 </head>
 <body>
 
@@ -94,6 +104,33 @@
             </div>
         </div>
 
+        <!-- Run ID & Export Bar -->
+        <div class="run-bar" id="runBar" style="display:none;">
+            <div class="run-id-badge" id="runIdBadge"></div>
+            <div class="run-actions">
+                <button class="btn-export" id="btnExportCharts" title="Save all charts as PNG images to the results directory">Export Charts</button>
+                <button class="btn-export" id="btnDownloadCSV" title="Download results data as CSV">Download CSV</button>
+            </div>
+        </div>
+
+        <!-- Narrative Interpretation -->
+        <div class="narrative-box" id="narrativeBox" style="display:none;">
+            <div class="narrative-header">
+                <h3>Results Interpretation</h3>
+                <span class="info-icon" data-tooltip="Auto-generated plain-English summary of the simulation results. Also saved to narrative.txt in the results directory.">i</span>
+            </div>
+            <pre class="narrative-text" id="narrativeText"></pre>
+        </div>
+
+        <!-- Input Summary (collapsible) -->
+        <details class="input-summary-panel" id="inputSummaryPanel">
+            <summary class="input-summary-toggle">
+                <span>Your Input Parameters</span>
+                <span class="info-icon" data-tooltip="Summary of the parameters you selected on the Setup page. These drove the simulation results below.">i</span>
+            </summary>
+            <div class="input-summary-grid" id="inputSummaryGrid"></div>
+        </details>
+
         <!-- ════════════════════════════════════════════════════════════════ -->
         <!-- LEVEL 1: MARKET-WIDE RESULTS                                   -->
         <!-- ════════════════════════════════════════════════════════════════ -->
@@ -106,7 +143,7 @@
         <!-- Chart 1: LMP + Capacity Revenue Time Series -->
         <div class="chart-card">
             <div class="chart-card-header">
-                <h3>LMP &amp; Capacity Revenue</h3>
+                <h3>LMP &amp; Capacity Revenue <span class="info-icon" data-tooltip="Locational Marginal Price (LMP) represents the cost of serving the next MWh of load. Set by the marginal fossil generator's cost. Capacity revenue is an additional payment for being available during peak demand.">i</span></h3>
                 <p>Hourly energy price profile (snapshot) or year-over-year price evolution (trajectory).
                    Capacity revenue overlay shows total generator revenue stack.</p>
             </div>
@@ -116,7 +153,7 @@
         <!-- Chart 2: Supply Stack Time Series -->
         <div class="chart-card">
             <div class="chart-card-header">
-                <h3>Supply Stack</h3>
+                <h3>Supply Stack <span class="info-icon" data-tooltip="Generation mix by fuel source (TWh). Shows how the supply portfolio splits between clean and fossil resources under your market assumptions.">i</span></h3>
                 <p>Generation mix by fuel source — how the supply portfolio changes under market conditions</p>
             </div>
             <div class="chart-container-lg" id="chartSupplyStack"></div>
@@ -150,7 +187,7 @@
         <!-- Chart 4: Merit-Order Stack -->
         <div class="chart-card">
             <div class="chart-card-header">
-                <h3>Merit-Order Stack</h3>
+                <h3>Merit-Order Stack <span class="info-icon" data-tooltip="Fossil generators sorted by marginal cost (cheapest to most expensive). The LMP line shows where the market clears — generators above this line lose money and face retirement.">i</span></h3>
                 <p>Fossil generators ordered by marginal cost. Generators above the LMP line are uneconomic.</p>
             </div>
             <div class="chart-container-lg" id="chartMeritOrder"></div>
