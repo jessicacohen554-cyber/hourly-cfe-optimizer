@@ -17,7 +17,7 @@ from weasyprint import HTML, CSS
 SRC = Path(__file__).parent / "research" / "ref-vre-investment-thesis.html"
 OUT = Path(__file__).parent / "output" / "ref-vre-investment-thesis.pdf"
 
-html = SRC.read_text()
+html = SRC.read_text(encoding="utf-8")
 
 # Remove all <script> tags (Chart.js, nav.js, etc.)
 html = re.sub(r'<script[^>]*>.*?</script>', '', html, flags=re.DOTALL)

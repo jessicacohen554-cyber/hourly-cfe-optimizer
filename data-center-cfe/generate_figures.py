@@ -80,10 +80,10 @@ def load_csv(name):
         print(f"  WARNING: {path} not found, skipping.")
         return pd.DataFrame()
     try:
-        return pd.read_csv(path)
+        return pd.read_csv(path, encoding="utf-8")
     except pd.errors.ParserError:
         # Some CSVs have unquoted commas in fields — try with python engine
-        return pd.read_csv(path, engine="python", on_bad_lines="warn")
+        return pd.read_csv(path, encoding="utf-8", engine="python", on_bad_lines="warn")
 
 
 # ══════════════════════════════════════════════════════════════════════
