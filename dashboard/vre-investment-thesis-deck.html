@@ -1426,12 +1426,188 @@ body {
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════
-     SLIDE 12: CONSTELLATION HOURLY CFE OPTIMIZER — MODEL ARCHITECTURE
+     SLIDE 12: CROSS-REGIONAL PROCUREMENT FLOW — VISUAL
+     ═══════════════════════════════════════════════════════════════════ -->
+<section class="slide">
+  <div class="slide-header">
+    <h1>How Accounting Rules Shape Cross-Regional VRE Procurement</h1>
+    <span class="slide-number">12</span>
+  </div>
+  <div class="slide-body">
+    <p style="font-size:10.5pt;margin-bottom:0.06in;color:var(--text-dim);">Under consequential accounting, a PJM data center can procure from MISO wind — the cheapest abatement source in the US. Under hourly matching, that same buyer must build locally. Both strategies drive VRE pipeline, but in different regions.</p>
+
+    <div class="two-col" style="flex:1;">
+      <div>
+        <h3 style="font-size:11pt;color:var(--ceg-blue);">Consequential: Cross-Regional Flow</h3>
+        <svg viewBox="0 0 480 340" style="width:100%;max-height:3.8in;" xmlns="http://www.w3.org/2000/svg">
+          <!-- PJM "Jar" (buyer) -->
+          <rect x="30" y="30" width="130" height="180" rx="16" fill="rgba(14,165,233,0.06)" stroke="#0EA5E9" stroke-width="2"/>
+          <text x="95" y="22" text-anchor="middle" font-size="12" font-weight="700" fill="#0EA5E9">PJM</text>
+          <text x="95" y="222" text-anchor="middle" font-size="8" fill="#7E8083">Data Center Load</text>
+
+          <!-- DC load balls in PJM jar — grey = unmet locally, needs cross-regional -->
+          <circle cx="60" cy="170" r="12" fill="#D1D5DB"/><text x="60" y="174" text-anchor="middle" font-size="5.5" fill="#6B7280" font-weight="600">Unmet</text>
+          <circle cx="90" cy="170" r="12" fill="#D1D5DB"/><text x="90" y="174" text-anchor="middle" font-size="5.5" fill="#6B7280" font-weight="600">Unmet</text>
+          <circle cx="120" cy="170" r="12" fill="#D1D5DB"/><text x="120" y="174" text-anchor="middle" font-size="5.5" fill="#6B7280" font-weight="600">Unmet</text>
+          <circle cx="75" cy="143" r="12" fill="#D1D5DB"/><text x="75" y="147" text-anchor="middle" font-size="5.5" fill="#6B7280" font-weight="600">Unmet</text>
+          <circle cx="105" cy="143" r="12" fill="#D1D5DB"/><text x="105" y="147" text-anchor="middle" font-size="5.5" fill="#6B7280" font-weight="600">Unmet</text>
+
+          <!-- Existing nuclear in PJM (SSS) — met locally -->
+          <circle cx="60" cy="100" r="11" fill="#6366F1" opacity="0.8"/><text x="60" y="104" text-anchor="middle" font-size="5.5" fill="white">Nuc</text>
+          <circle cx="90" cy="100" r="11" fill="#6366F1" opacity="0.8"/><text x="90" y="104" text-anchor="middle" font-size="5.5" fill="white">Nuc</text>
+          <circle cx="120" cy="100" r="11" fill="#6366F1" opacity="0.8"/><text x="120" y="104" text-anchor="middle" font-size="5.5" fill="white">Nuc</text>
+          <circle cx="75" cy="73" r="11" fill="#6366F1" opacity="0.6"/><text x="75" y="77" text-anchor="middle" font-size="5.5" fill="white">Nuc</text>
+          <circle cx="105" cy="73" r="11" fill="#6366F1" opacity="0.6"/><text x="105" y="77" text-anchor="middle" font-size="5.5" fill="white">Nuc</text>
+          <text x="95" y="55" text-anchor="middle" font-size="7" fill="#6366F1" font-weight="600">95 TWh SSS (nuclear)</text>
+
+          <!-- Legend for grey -->
+          <text x="95" y="195" text-anchor="middle" font-size="6.5" fill="#9CA3AF" font-style="italic">Grey = unmet by local supply</text>
+
+          <!-- MISO "Jar" (source) -->
+          <rect x="320" y="30" width="130" height="180" rx="16" fill="rgba(34,197,94,0.06)" stroke="#22C55E" stroke-width="2"/>
+          <text x="385" y="22" text-anchor="middle" font-size="12" font-weight="700" fill="#22C55E">MISO</text>
+          <text x="385" y="222" text-anchor="middle" font-size="8" fill="#7E8083">Wind Supply Pool</text>
+
+          <!-- Wind balls in MISO jar — some glowing (claimed by PJM) -->
+          <circle cx="350" cy="170" r="12" fill="#22C55E" opacity="0.9" stroke="#0EA5E9" stroke-width="2.5"/><text x="350" y="174" text-anchor="middle" font-size="5.5" fill="white">Wind</text>
+          <circle cx="380" cy="170" r="12" fill="#22C55E" opacity="0.9" stroke="#0EA5E9" stroke-width="2.5"/><text x="380" y="174" text-anchor="middle" font-size="5.5" fill="white">Wind</text>
+          <circle cx="410" cy="170" r="12" fill="#22C55E" opacity="0.9" stroke="#0EA5E9" stroke-width="2.5"/><text x="410" y="174" text-anchor="middle" font-size="5.5" fill="white">Wind</text>
+          <circle cx="365" cy="143" r="12" fill="#22C55E" opacity="0.8" stroke="#0EA5E9" stroke-width="2.5"/><text x="365" y="147" text-anchor="middle" font-size="5.5" fill="white">Wind</text>
+          <circle cx="395" cy="143" r="12" fill="#22C55E" opacity="0.8" stroke="#0EA5E9" stroke-width="2.5"/><text x="395" y="147" text-anchor="middle" font-size="5.5" fill="white">Wind</text>
+          <!-- Unclaimed MISO wind (no PJM glow) -->
+          <circle cx="350" cy="116" r="12" fill="#22C55E" opacity="0.4"/><text x="350" y="120" text-anchor="middle" font-size="5.5" fill="white">Wind</text>
+          <circle cx="380" cy="116" r="12" fill="#22C55E" opacity="0.4"/><text x="380" y="120" text-anchor="middle" font-size="5.5" fill="white">Wind</text>
+          <circle cx="410" cy="116" r="12" fill="#22C55E" opacity="0.4"/><text x="410" y="120" text-anchor="middle" font-size="5.5" fill="white">Wind</text>
+
+          <!-- Solar balls (unclaimed) -->
+          <circle cx="365" cy="89" r="10" fill="#F59E0B" opacity="0.4"/><text x="365" y="93" text-anchor="middle" font-size="5" fill="white">Sol</text>
+          <circle cx="395" cy="89" r="10" fill="#F59E0B" opacity="0.4"/><text x="395" y="93" text-anchor="middle" font-size="5" fill="white">Sol</text>
+
+          <text x="385" y="60" text-anchor="middle" font-size="7" fill="#22C55E" font-weight="600">Deep wind pool: $49/MWh</text>
+          <text x="385" y="70" text-anchor="middle" font-size="7" fill="#7E8083">Flat cost to 30% participation</text>
+
+          <!-- Legend for PJM glow ring -->
+          <text x="385" y="197" text-anchor="middle" font-size="6.5" fill="#0EA5E9" font-style="italic">Blue ring = claimed by PJM buyer</text>
+
+          <!-- Arch connectors: each grey PJM ball → corresponding MISO wind ball -->
+          <!-- Arch 1: PJM (60,170) → MISO (350,170) -->
+          <path d="M72 165 C130 60, 280 60, 338 165" stroke="#2372B9" stroke-width="1.8" fill="none" opacity="0.6"/>
+          <!-- Arch 2: PJM (90,170) → MISO (380,170) -->
+          <path d="M102 165 C150 50, 310 50, 368 165" stroke="#2372B9" stroke-width="1.8" fill="none" opacity="0.5"/>
+          <!-- Arch 3: PJM (120,170) → MISO (410,170) -->
+          <path d="M132 165 C180 40, 340 40, 398 165" stroke="#2372B9" stroke-width="1.8" fill="none" opacity="0.4"/>
+          <!-- Arch 4: PJM (75,143) → MISO (365,143) -->
+          <path d="M87 138 C140 30, 300 30, 353 138" stroke="#2372B9" stroke-width="1.8" fill="none" opacity="0.35"/>
+          <!-- Arch 5: PJM (105,143) → MISO (395,143) -->
+          <path d="M117 138 C170 20, 330 20, 383 138" stroke="#2372B9" stroke-width="1.8" fill="none" opacity="0.3"/>
+
+          <!-- Flow label on arches -->
+          <rect x="190" y="30" width="100" height="32" rx="6" fill="rgba(35,114,185,0.12)" stroke="#2372B9" stroke-width="1"/>
+          <text x="240" y="43" text-anchor="middle" font-size="8" font-weight="700" fill="#2372B9">RECs + EACs</text>
+          <text x="240" y="55" text-anchor="middle" font-size="7" fill="#2372B9">34 TWh @ $49/MWh</text>
+
+          <!-- Bottom: what this means for VRE pipeline -->
+          <rect x="30" y="240" width="420" height="85" rx="8" fill="rgba(34,197,94,0.05)" stroke="#22C55E" stroke-width="1.5"/>
+          <text x="240" y="258" text-anchor="middle" font-size="10" font-weight="700" fill="#22C55E">Consequential = MISO/SPP Wind Pipeline Is the Product</text>
+          <text x="40" y="275" font-size="8" fill="#1A232F">&#x2022; PJM buyer gets 95% CFE at $49/MWh (vs. $151 if forced to buy locally)</text>
+          <text x="40" y="288" font-size="8" fill="#1A232F">&#x2022; MISO wind developer gets guaranteed offtake from PJM/ERCOT demand signal</text>
+          <text x="40" y="301" font-size="8" fill="#1A232F">&#x2022; At 10% C&amp;I participation: 34 TWh clean procurement = ~13 GW new VRE pipeline in MISO</text>
+          <text x="40" y="314" font-size="8" fill="#1A232F">&#x2022; At 30% (inflection): existing pool exhausts &rarr; new-build required &rarr; VRE development thesis validates</text>
+
+          <defs>
+            <marker id="arrowProcure" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+              <path d="M0,0 L8,3 L0,6 Z" fill="#2372B9"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+
+      <div>
+        <h3 style="font-size:11pt;color:var(--ceg-green);">Hourly Matching: Local Build Required</h3>
+        <svg viewBox="0 0 480 200" style="width:100%;max-height:2.2in;" xmlns="http://www.w3.org/2000/svg">
+          <!-- PJM "Jar" (buyer + builder) — must do everything locally -->
+          <rect x="100" y="10" width="280" height="140" rx="16" fill="rgba(14,165,233,0.06)" stroke="#0EA5E9" stroke-width="2"/>
+          <text x="240" y="6" text-anchor="middle" font-size="12" font-weight="700" fill="#0EA5E9">PJM — Must Build Locally</text>
+
+          <!-- DC load -->
+          <circle cx="130" cy="120" r="11" fill="#374151" opacity="0.7"/><text x="130" y="124" text-anchor="middle" font-size="5.5" fill="white">DC</text>
+          <circle cx="155" cy="120" r="11" fill="#374151" opacity="0.7"/><text x="155" y="124" text-anchor="middle" font-size="5.5" fill="white">DC</text>
+
+          <!-- Nuclear (SSS) -->
+          <circle cx="130" cy="85" r="11" fill="#6366F1" opacity="0.7"/><text x="130" y="89" text-anchor="middle" font-size="5" fill="white">Nuc</text>
+          <circle cx="155" cy="85" r="11" fill="#6366F1" opacity="0.7"/><text x="155" y="89" text-anchor="middle" font-size="5" fill="white">Nuc</text>
+
+          <!-- New build VRE (must be local) -->
+          <circle cx="200" cy="120" r="11" fill="#22C55E" opacity="0.8" stroke="#22C55E" stroke-width="2" stroke-dasharray="3,2"/><text x="200" y="124" text-anchor="middle" font-size="5" fill="white">Wind</text>
+          <circle cx="225" cy="120" r="11" fill="#F59E0B" opacity="0.8" stroke="#F59E0B" stroke-width="2" stroke-dasharray="3,2"/><text x="225" y="124" text-anchor="middle" font-size="5" fill="white">Sol</text>
+          <circle cx="250" cy="120" r="11" fill="#6366F1" opacity="0.8" stroke="#6366F1" stroke-width="2" stroke-dasharray="3,2"/><text x="250" y="124" text-anchor="middle" font-size="5" fill="white">Firm</text>
+
+          <!-- Storage (must pair) -->
+          <circle cx="290" cy="120" r="11" fill="#06B6D4" opacity="0.8" stroke="#06B6D4" stroke-width="2" stroke-dasharray="3,2"/><text x="290" y="124" text-anchor="middle" font-size="5" fill="white">Bat</text>
+          <circle cx="315" cy="120" r="11" fill="#E91E63" opacity="0.7" stroke="#E91E63" stroke-width="2" stroke-dasharray="3,2"/><text x="315" y="124" text-anchor="middle" font-size="5" fill="white">LDES</text>
+          <circle cx="340" cy="120" r="11" fill="#22C55E" opacity="0.6" stroke="#22C55E" stroke-width="2" stroke-dasharray="3,2"/><text x="340" y="124" text-anchor="middle" font-size="5" fill="white">Wind</text>
+          <circle cx="355" cy="93" r="11" fill="#F59E0B" opacity="0.6" stroke="#F59E0B" stroke-width="2" stroke-dasharray="3,2"/><text x="355" y="97" text-anchor="middle" font-size="5" fill="white">Sol</text>
+
+          <!-- 1.7x label -->
+          <text x="280" y="75" font-size="9" font-weight="700" fill="#DC2626">1.7× over-procurement</text>
+          <text x="280" y="87" font-size="7" fill="#DC2626">$151/MWh (vs. $49 consequential)</text>
+
+          <!-- Dashed new-build label -->
+          <text x="200" y="45" font-size="7" fill="#7E8083">
+            <tspan>--- dashed = new-build required</tspan>
+          </text>
+          <line x1="200" y1="49" x2="350" y2="49" stroke="#7E8083" stroke-width="1" stroke-dasharray="3,2"/>
+
+          <!-- MISO jar (greyed out — can't access) -->
+          <rect x="410" y="40" width="60" height="80" rx="10" fill="rgba(0,0,0,0.03)" stroke="#D1D5DB" stroke-width="1.5" stroke-dasharray="4,3"/>
+          <text x="440" y="85" text-anchor="middle" font-size="9" fill="#D1D5DB" font-weight="600">MISO</text>
+          <line x1="415" y1="45" x2="465" y2="115" stroke="#DC2626" stroke-width="2" opacity="0.4"/>
+          <line x1="465" y1="45" x2="415" y2="115" stroke="#DC2626" stroke-width="2" opacity="0.4"/>
+          <text x="440" y="133" text-anchor="middle" font-size="7" fill="#DC2626">Blocked</text>
+        </svg>
+
+        <h3 style="font-size:10.5pt;margin-top:0.06in;">What This Means for VRE Pipeline Developers</h3>
+        <table class="data-table" style="font-size:8.5pt;">
+          <tr><th>Scenario</th><th>MISO/SPP Pipeline</th><th>PJM/ERCOT Pipeline</th></tr>
+          <tr>
+            <td><strong>All consequential</strong></td>
+            <td style="color:var(--ceg-green);font-weight:600;">Very high value</td>
+            <td>Moderate (local SSS covers much)</td>
+          </tr>
+          <tr>
+            <td><strong>All hourly</strong></td>
+            <td style="color:var(--ceg-gray);">Low (no cross-regional demand)</td>
+            <td style="color:var(--ceg-green);font-weight:600;">Very high value (must build local)</td>
+          </tr>
+          <tr style="background:rgba(35,114,185,0.04);">
+            <td><strong>Hybrid (likely)</strong></td>
+            <td style="color:var(--ceg-blue);font-weight:600;">Moderate &mdash; hedge position</td>
+            <td style="color:var(--ceg-green);font-weight:600;">High &mdash; core portfolio</td>
+          </tr>
+        </table>
+
+        <div class="callout" style="font-size:9pt;padding:0.06in 0.1in;margin-top:0.06in;">
+          <strong style="color:var(--ceg-blue);">Portfolio construction rule:</strong> Build 80% of pipeline in strategy-proof markets (PJM, ERCOT) where VRE+Storage wins under <em>any</em> accounting method. Allocate 15&ndash;20% to MISO/SPP as a consequential upside play &mdash; if Meta/Amazon load materializes above the 30% participation inflection, that pipeline becomes very high value. If hourly wins, MISO basis cost is low enough to pivot to storage-paired local offtake.
+        </div>
+      </div>
+    </div>
+
+    <div class="source-note">Sources: Cross-regional procurement flow modeled via Constellation Hourly CFE Optimizer Step 5.2B (strategy_consequential.py), Strategy 1B (fossil-avg baseline), 10% C&amp;I participation, 95% CFE target. PJM consequential cost $49/MWh and MISO flat pricing from cross-regional queue analysis. Hourly matching $151/MWh PJM and 1.7× over-procurement from Step 5.2C (strategy_hourly.py), Strategy 2A. SSS values: PJM 95 TWh (IL ZEC/CMC + NJ ZEC + PA nuclear), MISO 30 TWh (IL CMC MISO-zone) per EIA-860/861 and state program databases. Jar visualization concept from Constellation Hourly CFE Optimizer procurement deployment dashboard.</div>
+  </div>
+  <div class="slide-footer">
+    <span class="brand">CONSTELLATION ENERGY</span>
+    <span class="confidential">Confidential &mdash; Not for Distribution</span>
+  </div>
+  <div class="footer-accent"></div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     SLIDE 13: CONSTELLATION HOURLY CFE OPTIMIZER — MODEL ARCHITECTURE
      ═══════════════════════════════════════════════════════════════════ -->
 <section class="slide">
   <div class="slide-header">
     <h1>Appendix A: Constellation Hourly CFE Optimizer</h1>
-    <span class="slide-number">12</span>
+    <span class="slide-number">13</span>
   </div>
   <div class="slide-body">
     <p style="font-size:10.5pt;margin-bottom:0.08in;color:var(--text-dim);">
@@ -1605,12 +1781,12 @@ body {
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════
-     SLIDE 13: METHODOLOGY & FULL SOURCE BIBLIOGRAPHY
+     SLIDE 14: METHODOLOGY & FULL SOURCE BIBLIOGRAPHY
      ═══════════════════════════════════════════════════════════════════ -->
 <section class="slide">
   <div class="slide-header">
     <h1>Appendix B: Methodology &amp; Source Bibliography</h1>
-    <span class="slide-number">13</span>
+    <span class="slide-number">14</span>
   </div>
   <div class="slide-body">
     <div class="two-col" style="flex:1;">
