@@ -4,16 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Market Simulation Tool — Constellation Energy</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles/shared.css">
     <link rel="stylesheet" href="styles/simulator.css">
     <script src="js/chart-colors.js"></script>
 </head>
 <body>
+
     <!-- Progress bar -->
-    <div class="progress-bar"></div>
+    <div class="progress-bar"><div class="progress-bar-fill"></div></div>
 
     <!-- Nav -->
     <nav>
@@ -39,11 +37,16 @@
         </ul>
     </nav>
 
-    <!-- Hero -->
-    <div class="hero">
-        <div class="eyebrow">— Market Screening Tool</div>
-        <h1>Market Simulation</h1>
-        <p class="hero-subtitle">Set market preconditions, run the model, see what happens to generators</p>
+    <!-- Hero section — matches reference pattern -->
+    <div class="hero-section">
+        <div class="hero-inner">
+            <div class="hero-eyebrow">Market Screening Tool</div>
+            <h1>Market <strong>Simulation</strong></h1>
+            <p class="hero-desc">
+                Set market preconditions — fuel prices, carbon costs, clean energy economics —
+                then run the model to see what happens to generators across ISOs.
+            </p>
+        </div>
     </div>
 
     <div class="content-section">
@@ -402,7 +405,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="grid-2col">
+                <div class="grid-2col" style="margin-top: var(--space-lg);">
                     <div class="input-group">
                         <label>Learning Curves</label>
                         <div class="toggle-btn-group" id="learningToggle">
@@ -437,9 +440,9 @@
     </div>
 
     <!-- Footer -->
-    <footer class="page-footer">
-        <p>Market Simulation Screening Tool &mdash; Constellation Energy</p>
-        <p class="footer-note">Directionally correct economics for targeted IPM/GenX analysis</p>
+    <footer>
+        <div class="footer-brand"><strong>Constellation Energy</strong> · Market Simulation Tool</div>
+        <div class="footer-note">Directionally correct economics for targeted IPM/GenX analysis</div>
     </footer>
     <div class="bottom-banner"></div>
 
