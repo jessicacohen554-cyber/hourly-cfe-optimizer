@@ -1,6 +1,11 @@
 /**
  * Market Simulator — Results Page
  * Renders Plotly.js charts from simulation results stored in sessionStorage.
+ *
+ * Layout hierarchy:
+ *   Level 1: Market-wide (LMP time series, supply stack, fuel bin table, merit order)
+ *   Level 2: Year drill-down (profitability, deployment, CCS, gas shift)
+ *   Level 3: IPP fleet analysis (generator economics table)
  */
 
 const UNIT_COLORS = {
@@ -31,6 +36,16 @@ const CLEAN_COLORS = {
     geothermal: '#9B6B3A',
 };
 
+// Combined resource colors (clean + fossil)
+const ALL_RESOURCE_COLORS = {
+    ...CLEAN_COLORS,
+    coal_steam: '#2C3E50',
+    gas_ccgt: '#2372B9',
+    gas_ct: '#007FA4',
+    oil_ct: '#9B6B3A',
+    fossil: '#6B7280',
+};
+
 const PLOTLY_LAYOUT_BASE = {
     font: { family: "'Source Sans Pro', Calibri, Arial, sans-serif", color: '#1A232F' },
     paper_bgcolor: 'rgba(0,0,0,0)',
@@ -56,12 +71,11 @@ function init() {
     simResult = JSON.parse(raw);
     simParams = rawParams ? JSON.parse(rawParams) : {};
 
-    // Handle multi-ISO results (sweep or multi-ISO run)
+    // Handle multi-ISO results
     if (Array.isArray(simResult)) {
         currentISO = simResult[0]?.iso || 'ERCOT';
         buildISOSelector(simResult.map(r => r.iso));
     } else if (simResult.results && typeof simResult.results === 'object') {
-        // Keyed by ISO
         const isos = Object.keys(simResult.results);
         currentISO = isos[0];
         buildISOSelector(isos);
@@ -69,6 +83,15 @@ function init() {
         currentISO = simResult.iso || 'ERCOT';
         buildISOSelector([currentISO]);
     }
+
+    // View toggle (hourly / monthly)
+    document.querySelectorAll('#viewToggle .toggle-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('#viewToggle .toggle-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderAll();
+        });
+    });
 
     renderAll();
 }
@@ -112,33 +135,272 @@ function renderAll() {
     if (!data) return;
 
     const iso = data.iso || currentISO;
+    const mode = data.mode || simParams?.mode || 'snapshot';
     document.getElementById('resultsSubtitle').textContent =
-        `${iso} — ${data.mode || 'snapshot'} simulation`;
+        `${iso} — ${mode} simulation`;
+
+    // Show year drill-down header for trajectory mode
+    const yearHeader = document.getElementById('yearDrilldownHeader');
+    if (yearHeader) {
+        yearHeader.style.display = (data.year_results && data.year_results.length > 1) ? '' : 'none';
+    }
 
     updateStats(data);
+
+    // Level 1: Market-wide
+    renderLMPTimeSeries(data);
+    renderSupplyStack(data);
+    renderFuelBinTable(data);
     renderMeritOrder(data);
+
+    // Level 2: Year drill-down
     renderProfitability(data);
-    renderNuclearRevenue(data);
+    renderWhatBuilt(data);
     renderLMPImpact(data);
     renderCCSBreakeven(data);
-    renderWhatBuilt(data);
     renderFossilBins(data);
     renderCostLadder(data);
     renderGasShift(data);
+    renderNuclearRevenue(data);
     renderSensitivity(data);
+
+    // Level 3: IPP
     renderGeneratorTable(data);
 }
 
-// ── Stats ──
+// ══════════════════════════════════════════════════════════════════════════════
+// STATS
+// ══════════════════════════════════════════════════════════════════════════════
+
 function updateStats(data) {
     setText('statCleanPct', fmtPct(data.market_outcome_clean_pct || data.existing_clean_pct));
     setText('statAvgLMP', '$' + fmtNum(data.avg_lmp || data.lmp_summary?.avg));
-    setText('statNewGW', fmtNum((data.new_capacity_gw || 0), 1) + ' GW');
+    setText('statEmissions', fmtNum(data.emissions_mt, 1));
+    setText('statDemand', fmtNum(data.demand_twh, 0));
     setText('statNucRev', '$' + fmtNum(data.nuclear_revenue?.total_mwh));
-    setText('statCCSBreakeven', '$' + fmtNum(data.ccs_breakeven_carbon_price) + '/ton');
 }
 
-// ── Chart 1: Merit-Order Stack ──
+// ══════════════════════════════════════════════════════════════════════════════
+// LEVEL 1: MARKET-WIDE CHARTS
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── Chart 1: LMP + Capacity Revenue Time Series ──
+function renderLMPTimeSeries(data) {
+    const container = 'chartLMPTimeSeries';
+    const traces = [];
+
+    // Check for hourly LMP profile data
+    const lmpProfile = data.lmp_time_series || data.lmp_hourly_profile;
+    const capRevProfile = data.capacity_rev_time_series || data.capacity_revenue_profile;
+
+    if (lmpProfile && lmpProfile.values && lmpProfile.values.length > 0) {
+        // Hourly or representative-day profile (snapshot mode)
+        const hours = lmpProfile.hours || lmpProfile.values.map((_, i) => i);
+        traces.push({
+            x: hours,
+            y: lmpProfile.values,
+            name: 'Energy LMP ($/MWh)',
+            type: 'scatter',
+            mode: 'lines',
+            line: { color: '#2372B9', width: 2 },
+            fill: 'tozeroy',
+            fillcolor: 'rgba(35, 114, 185, 0.1)',
+        });
+
+        if (capRevProfile && capRevProfile.values && capRevProfile.values.length > 0) {
+            traces.push({
+                x: capRevProfile.hours || capRevProfile.values.map((_, i) => i),
+                y: capRevProfile.values,
+                name: 'Capacity Revenue ($/MWh)',
+                type: 'scatter',
+                mode: 'lines',
+                line: { color: '#6BA543', width: 2, dash: 'dash' },
+                yaxis: 'y2',
+            });
+        }
+
+        const xTitle = hours.length > 48 ? 'Hour of Year' : 'Hour of Day';
+        Plotly.newPlot(container, traces, {
+            ...PLOTLY_LAYOUT_BASE,
+            xaxis: { title: xTitle, gridcolor: '#f0f0f0' },
+            yaxis: { title: 'LMP ($/MWh)', gridcolor: '#f0f0f0' },
+            yaxis2: capRevProfile ? { title: 'Capacity Rev ($/MWh)', overlaying: 'y', side: 'right' } : undefined,
+            legend: { x: 0, y: 1.12, orientation: 'h' },
+        }, { responsive: true });
+    } else if (data.year_results && data.year_results.length > 1) {
+        // Trajectory mode — year-over-year LMP
+        const years = data.year_results.map(yr => yr.year);
+        const lmps = data.year_results.map(yr => yr.avg_lmp || 0);
+        const capRevs = data.year_results.map(yr => yr.capacity_rev_mwh || 0);
+        const energyRevs = data.year_results.map(yr => yr.energy_rev_mwh || 0);
+
+        traces.push({
+            x: years, y: lmps,
+            name: 'Avg LMP',
+            type: 'scatter', mode: 'lines+markers',
+            line: { color: '#2372B9', width: 3 },
+            marker: { size: 8 },
+        });
+        traces.push({
+            x: years, y: energyRevs,
+            name: 'Energy Revenue',
+            type: 'scatter', mode: 'lines+markers',
+            line: { color: '#6BA543', width: 2 },
+        });
+        traces.push({
+            x: years, y: capRevs,
+            name: 'Capacity Revenue',
+            type: 'scatter', mode: 'lines+markers',
+            line: { color: '#F47B27', width: 2, dash: 'dash' },
+        });
+
+        Plotly.newPlot(container, traces, {
+            ...PLOTLY_LAYOUT_BASE,
+            xaxis: { title: 'Year', gridcolor: '#f0f0f0' },
+            yaxis: { title: '$/MWh', gridcolor: '#f0f0f0' },
+            legend: { x: 0, y: 1.12, orientation: 'h' },
+        }, { responsive: true });
+    } else {
+        // Fallback: single LMP value
+        const avgLMP = data.avg_lmp || 0;
+        Plotly.newPlot(container, [{
+            x: ['Avg LMP'],
+            y: [avgLMP],
+            type: 'bar',
+            marker: { color: '#2372B9' },
+            text: [`$${avgLMP.toFixed(1)}/MWh`],
+            textposition: 'outside',
+        }], {
+            ...PLOTLY_LAYOUT_BASE,
+            yaxis: { title: '$/MWh', gridcolor: '#f0f0f0' },
+        }, { responsive: true });
+    }
+}
+
+// ── Chart 2: Supply Stack ──
+function renderSupplyStack(data) {
+    const container = 'chartSupplyStack';
+
+    // Try supply_stack_summary first, then resource_mix_twh
+    const stackData = data.supply_stack_summary;
+
+    if (stackData && stackData.length > 0) {
+        const resources = stackData.map(s => s.resource);
+        const genTWh = stackData.map(s => s.generation_twh);
+        const colors = resources.map(r => ALL_RESOURCE_COLORS[r] || '#9CA3AF');
+
+        Plotly.newPlot(container, [{
+            x: resources.map(r => r.replace(/_/g, ' ')),
+            y: genTWh,
+            type: 'bar',
+            marker: { color: colors },
+            hovertemplate: '%{x}: %{y:.1f} TWh<extra></extra>',
+        }], {
+            ...PLOTLY_LAYOUT_BASE,
+            yaxis: { title: 'Generation (TWh)', gridcolor: '#f0f0f0' },
+            xaxis: { title: '' },
+        }, { responsive: true });
+    } else if (data.year_results && data.year_results.length > 1) {
+        // Trajectory: stacked area by resource over years
+        const years = data.year_results.map(yr => yr.year);
+        const allResources = new Set();
+        data.year_results.forEach(yr => {
+            Object.keys(yr.resource_mix_twh || {}).forEach(r => allResources.add(r));
+        });
+
+        const traces = [];
+        for (const res of allResources) {
+            traces.push({
+                x: years,
+                y: data.year_results.map(yr => (yr.resource_mix_twh || {})[res] || 0),
+                name: res.replace(/_/g, ' '),
+                type: 'scatter',
+                mode: 'lines',
+                stackgroup: 'one',
+                fillcolor: ALL_RESOURCE_COLORS[res] || '#9CA3AF',
+                line: { width: 0.5, color: ALL_RESOURCE_COLORS[res] || '#9CA3AF' },
+            });
+        }
+
+        Plotly.newPlot(container, traces, {
+            ...PLOTLY_LAYOUT_BASE,
+            xaxis: { title: 'Year', gridcolor: '#f0f0f0' },
+            yaxis: { title: 'Generation (TWh)', gridcolor: '#f0f0f0' },
+            legend: { x: 0, y: 1.15, orientation: 'h' },
+        }, { responsive: true });
+    } else if (data.resource_mix_twh && Object.keys(data.resource_mix_twh).length > 0) {
+        // Snapshot: single bar chart of resource mix
+        const resources = Object.keys(data.resource_mix_twh);
+        const values = resources.map(r => data.resource_mix_twh[r]);
+        const colors = resources.map(r => ALL_RESOURCE_COLORS[r] || '#9CA3AF');
+
+        Plotly.newPlot(container, [{
+            x: resources.map(r => r.replace(/_/g, ' ')),
+            y: values,
+            type: 'bar',
+            marker: { color: colors },
+            hovertemplate: '%{x}: %{y:.1f} TWh<extra></extra>',
+        }], {
+            ...PLOTLY_LAYOUT_BASE,
+            yaxis: { title: 'Generation (TWh)', gridcolor: '#f0f0f0' },
+        }, { responsive: true });
+    } else {
+        placeholderChart(container);
+    }
+}
+
+// ── Table 3: Fuel Source / Heat Rate Bin Breakdown ──
+function renderFuelBinTable(data) {
+    const tbody = document.getElementById('fuelBinTableBody');
+    if (!tbody) return;
+
+    const bins = data.fuel_bin_table || [];
+
+    if (bins.length > 0) {
+        tbody.innerHTML = bins.map(row => `
+            <tr>
+                <td style="font-weight: 600;">${row.fuel_type.replace(/_/g, ' ')}</td>
+                <td>${row.heat_rate_bin || '—'}</td>
+                <td>${fmtNum(row.capacity_gw, 1)}</td>
+                <td>${fmtPct((row.capacity_factor || 0) * 100)}</td>
+                <td>${fmtNum(row.generation_twh, 1)}</td>
+                <td>$${fmtNum(row.marginal_cost, 1)}</td>
+                <td>$${fmtNum(row.avg_revenue, 1)}</td>
+                <td class="status-cell ${row.status || 'operating'}">${row.status || 'operating'}</td>
+            </tr>
+        `).join('');
+    } else {
+        // Build from generator_economics data
+        const gens = data.generator_economics || [];
+        if (gens.length > 0) {
+            tbody.innerHTML = gens.map(g => {
+                const capGW = (g.capacity_mw || 0) / 1000;
+                const cf = g.capacity_factor || 0;
+                const genTWh = capGW * cf * 8.76; // GW × CF × 8760h / 1000
+                return `
+                    <tr>
+                        <td style="font-weight: 600;">${g.unit_type.replace(/_/g, ' ')}</td>
+                        <td>—</td>
+                        <td>${fmtNum(capGW, 1)}</td>
+                        <td>${fmtPct(cf * 100)}</td>
+                        <td>${fmtNum(genTWh, 1)}</td>
+                        <td>$${fmtNum(g.marginal_cost, 1)}</td>
+                        <td>$${fmtNum(g.avg_revenue_mwh, 1)}</td>
+                        <td class="status-cell ${g.status || 'operating'}">${g.status || 'operating'}</td>
+                    </tr>
+                `;
+            }).join('');
+        } else {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#9CA3AF;">No fuel bin data available</td></tr>';
+        }
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// EXISTING CHARTS (Level 2 + 3) — retained from previous version
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── Merit-Order Stack ──
 function renderMeritOrder(data) {
     const gens = data.generator_economics || data.merit_order_stack || [];
     if (!gens.length) { placeholderChart('chartMeritOrder'); return; }
@@ -154,27 +416,21 @@ function renderMeritOrder(data) {
         customdata: sorted.map(g => g.marginal_cost),
     }];
 
-    const avgLMP = data.avg_lmp || data.lmp_summary?.avg || 0;
-    const layout = {
+    const avgLMP = data.avg_lmp || 0;
+    Plotly.newPlot('chartMeritOrder', traces, {
         ...PLOTLY_LAYOUT_BASE,
         yaxis: { title: 'Capacity (GW)', gridcolor: '#f0f0f0' },
-        xaxis: { title: '' },
-        shapes: [{
-            type: 'line', x0: -0.5, x1: sorted.length - 0.5,
-            y0: 0, y1: 0, yref: 'paper',
-            line: { color: '#F47B27', width: 0 }
-        }],
         annotations: [{
-            x: sorted.length - 1, y: avgLMP / (Math.max(...sorted.map(g => g.capacity_mw/1000)) || 1) * 0.5,
+            x: sorted.length - 1,
+            y: Math.max(...sorted.map(g => g.capacity_mw / 1000)) * 0.9,
             text: `Avg LMP: $${avgLMP.toFixed(1)}`,
-            showarrow: false, font: { color: '#F47B27', size: 12 }
+            showarrow: false,
+            font: { color: '#F47B27', size: 12 },
         }],
-    };
-
-    Plotly.newPlot('chartMeritOrder', traces, layout, { responsive: true });
+    }, { responsive: true });
 }
 
-// ── Chart 2: Generator Profitability ──
+// ── Generator Profitability ──
 function renderProfitability(data) {
     const gens = data.generator_economics || [];
     if (!gens.length) { placeholderChart('chartProfitability'); return; }
@@ -184,20 +440,18 @@ function renderProfitability(data) {
     const cost = gens.map(g => g.marginal_cost || 0);
     const profit = gens.map(g => g.profit_mwh || 0);
 
-    const traces = [
+    Plotly.newPlot('chartProfitability', [
         { x: names, y: revenue, name: 'Revenue $/MWh', type: 'bar', marker: { color: '#6BA543' } },
         { x: names, y: cost, name: 'Cost $/MWh', type: 'bar', marker: { color: '#F47B27' } },
         { x: names, y: profit, name: 'Profit $/MWh', type: 'bar', marker: { color: profit.map(p => p >= 0 ? '#6BA543' : '#F47B27') } },
-    ];
-
-    Plotly.newPlot('chartProfitability', traces, {
+    ], {
         ...PLOTLY_LAYOUT_BASE,
         barmode: 'group',
         yaxis: { title: '$/MWh', gridcolor: '#f0f0f0' },
     }, { responsive: true });
 }
 
-// ── Chart 3: Nuclear Revenue ──
+// ── Nuclear Revenue ──
 function renderNuclearRevenue(data) {
     const nuc = data.nuclear_revenue;
     if (!nuc) { placeholderChart('chartNuclearRevenue'); return; }
@@ -216,7 +470,7 @@ function renderNuclearRevenue(data) {
     }, { responsive: true });
 }
 
-// ── Chart 4: LMP Impact ──
+// ── LMP Impact ──
 function renderLMPImpact(data) {
     const sweep = data.threshold_sweep || data.lmp_by_threshold;
     if (!sweep) { placeholderChart('chartLMPImpact'); return; }
@@ -236,7 +490,7 @@ function renderLMPImpact(data) {
     }, { responsive: true });
 }
 
-// ── Chart 5: CCS Breakeven ──
+// ── CCS Breakeven ──
 function renderCCSBreakeven(data) {
     const ccs = data.ccs_analysis || data.ccs_breakeven;
     if (!ccs) { placeholderChart('chartCCSBreakeven'); return; }
@@ -257,7 +511,7 @@ function renderCCSBreakeven(data) {
     }, { responsive: true });
 }
 
-// ── Chart 6: What Gets Built ──
+// ── What Gets Built ──
 function renderWhatBuilt(data) {
     const built = data.what_gets_built || data.deployment_stack;
     if (!built) { placeholderChart('chartWhatBuilt'); return; }
@@ -273,12 +527,10 @@ function renderWhatBuilt(data) {
         marker: { colors: colors },
         textinfo: 'label+percent',
         hovertemplate: '%{label}: %{value:.1f} GW (%{percent})<extra></extra>',
-    }], {
-        ...PLOTLY_LAYOUT_BASE,
-    }, { responsive: true });
+    }], PLOTLY_LAYOUT_BASE, { responsive: true });
 }
 
-// ── Chart 7: Fossil Bin Economics ──
+// ── Fossil Bin Economics ──
 function renderFossilBins(data) {
     const bins = data.fossil_bin_economics || data.generator_economics;
     if (!bins || !bins.length) { placeholderChart('chartFossilBins'); return; }
@@ -296,7 +548,7 @@ function renderFossilBins(data) {
     }, { responsive: true });
 }
 
-// ── Chart 8: Cost Ladder ──
+// ── Cost Ladder ──
 function renderCostLadder(data) {
     const ladder = data.cost_ladder;
     if (!ladder) { placeholderChart('chartCostLadder'); return; }
@@ -315,12 +567,11 @@ function renderCostLadder(data) {
     }, { responsive: true });
 }
 
-// ── Chart 9: Gas Shift ──
+// ── Gas Shift ──
 function renderGasShift(data) {
     const shift = data.gas_fleet_shift || data.fleet_shift;
     if (!shift) { placeholderChart('chartGasShift'); return; }
 
-    // Expect array of {carbon_price, efficient_cf, avg_cf, old_cf}
     if (Array.isArray(shift)) {
         Plotly.newPlot('chartGasShift', [
             { x: shift.map(s => s.carbon_price), y: shift.map(s => s.efficient_cf * 100), name: 'Efficient CCGT', mode: 'lines', line: { color: '#6BA543', width: 3 } },
@@ -336,7 +587,7 @@ function renderGasShift(data) {
     }
 }
 
-// ── Chart 10: Sensitivity Heatmap ──
+// ── Sensitivity Heatmap ──
 function renderSensitivity(data) {
     const sens = data.sensitivity_matrix;
     if (!sens) { placeholderChart('chartSensitivity'); return; }
@@ -356,7 +607,7 @@ function renderSensitivity(data) {
     }, { responsive: true });
 }
 
-// ── Generator Table ──
+// ── Generator Table (Level 3: IPP) ──
 function renderGeneratorTable(data) {
     const gens = data.generator_economics || [];
     const tbody = document.getElementById('generatorTableBody');
@@ -365,7 +616,7 @@ function renderGeneratorTable(data) {
     tbody.innerHTML = gens.map(g => `
         <tr>
             <td>${g.unit_type.replace(/_/g, ' ')}</td>
-            <td>${fmtNum(g.capacity_mw, 0)}</td>
+            <td>${fmtNum((g.capacity_mw || 0) / 1000, 1)}</td>
             <td>$${fmtNum(g.marginal_cost)}</td>
             <td>${fmtNum(g.dispatch_hours, 0)}</td>
             <td>${fmtPct(g.capacity_factor * 100)}</td>
@@ -376,7 +627,10 @@ function renderGeneratorTable(data) {
     `).join('');
 }
 
-// ── Helpers ──
+// ══════════════════════════════════════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════════════════════════════════════
+
 function setText(id, text) {
     const el = document.getElementById(id);
     if (el) el.textContent = text || '--';
@@ -398,18 +652,6 @@ function placeholderChart(containerId) {
         el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#7F8F97;font-style:italic;">No data for this chart</div>';
     }
 }
-
-// ── Collapsible sections ──
-document.querySelectorAll('.collapsible-header').forEach(header => {
-    header.addEventListener('click', () => {
-        const target = document.getElementById(header.dataset.target);
-        if (target) {
-            const isOpen = target.style.maxHeight && target.style.maxHeight !== '0px';
-            target.style.maxHeight = isOpen ? '0px' : '2000px';
-            header.querySelector('.collapse-icon').style.transform = isOpen ? '' : 'rotate(180deg)';
-        }
-    });
-});
 
 // ── Initialize ──
 init();

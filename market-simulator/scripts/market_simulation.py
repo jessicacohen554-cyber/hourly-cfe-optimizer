@@ -276,7 +276,9 @@ def get_effective_cumulative_gw(tech, model_deployed_gw, learning_speed, year):
 def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
                               demand_mw_profile, supply_profiles, resource_pcts,
                               battery_pct=0, battery8_pct=0, ldes_pct=0, h2_pct=0,
-                              carbon_price=0):
+                              carbon_price=0, nox_price=0.0, sox_price=0.0,
+                              nox_limit=None, sox_limit=None,
+                              custom_fuel_prices=None, custom_co2_price=None):
     """Compute 8760-hour LMP at a given clean percentage.
 
     Returns (hourly_lmp_array, avg_lmp, lmp_p90, generator_economics).
@@ -287,6 +289,10 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
         resource_mix=resource_pcts,
         battery_pct=battery_pct, battery8_pct=battery8_pct,
         ldes_pct=ldes_pct, h2_pct=h2_pct,
+        nox_price=nox_price, sox_price=sox_price,
+        nox_limit=nox_limit, sox_limit=sox_limit,
+        custom_fuel_prices=custom_fuel_prices,
+        custom_co2_price=custom_co2_price,
     )
 
     dispatch = reconstruct_hourly_dispatch(
@@ -1092,6 +1098,12 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                         ldes_pct=mix_data['ldes_pct'],
                         h2_pct=mix_data['h2_pct'],
                         carbon_price=carbon_price,
+                        nox_price=conditions.get('nox_price', 0.0),
+                        sox_price=conditions.get('sox_price', 0.0),
+                        nox_limit=conditions.get('nox_limit'),
+                        sox_limit=conditions.get('sox_limit'),
+                        custom_fuel_prices=conditions.get('custom_fuel_prices'),
+                        custom_co2_price=conditions.get('custom_co2_price'),
                     )
                     if _lmp_cache is not None:
                         _lmp_cache[_lmp_key] = (hourly_lmp, avg_lmp, p90_lmp, gen_econ)

@@ -69,6 +69,28 @@ class CleanLCOEs(BaseModel):
     ccs_ccgt: float = 120.0
 
 
+class EmissionPrices(BaseModel):
+    """Emission allowance prices ($/ton) for NOx and SOx."""
+    nox: float = 0.0       # $/ton NOx
+    sox: float = 0.0       # $/ton SOx
+
+
+class EmissionLimits(BaseModel):
+    """Hard emission rate caps (lb/MWh). Generators exceeding these must retire."""
+    nox_limit: Optional[float] = None   # lb/MWh — None = no limit
+    sox_limit: Optional[float] = None   # lb/MWh — None = no limit
+
+
+class Incentives(BaseModel):
+    """Federal/state incentive inputs."""
+    ptc_wind: float = 26.0             # $/MWh Production Tax Credit for wind
+    ptc_solar: float = 26.0            # $/MWh PTC for solar (post-IRA)
+    ptc_nuclear_existing: float = 15.0 # $/MWh 45U existing nuclear PTC
+    ptc_nuclear_new: float = 26.0      # $/MWh 45Y new nuclear PTC
+    itc_pct: float = 30.0             # % Investment Tax Credit (storage, offshore wind)
+    rec_price: Optional[float] = None  # $/MWh REC price override — None = model default
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Request models
 # ─────────────────────────────────────────────────────────────────────────────
@@ -78,9 +100,13 @@ class SimulationRequest(BaseModel):
     iso: str = "ERCOT"
     fuel_prices: FuelPrices = Field(default_factory=FuelPrices)
     carbon_price: float = 5.50
+    emission_prices: EmissionPrices = Field(default_factory=EmissionPrices)
+    emission_limits: EmissionLimits = Field(default_factory=EmissionLimits)
     heat_rates: HeatRates = Field(default_factory=HeatRates)
     clean_lcoes: CleanLCOEs = Field(default_factory=CleanLCOEs)
+    incentives: Incentives = Field(default_factory=Incentives)
     capacity_market_price: Optional[float] = None  # None → use ISO default
+    wholesale_price_override: Optional[float] = None  # $/MWh — None = model-derived
     transmission_level: str = "Medium"  # None/Low/Medium/High
     demand_growth: str = "Medium"       # Low/Medium/High
     ppa_level: str = "Medium"           # Low/Medium/High
@@ -155,6 +181,32 @@ class ZoneDetail(BaseModel):
     rec_rev_mwh: float = 0.0
 
 
+class FuelBinRow(BaseModel):
+    """One row in the fuel source / heat rate bin breakdown table."""
+    fuel_type: str              # e.g. "coal_steam", "gas_ccgt_efficient"
+    heat_rate_bin: str          # e.g. "< 7.2", "7.2-8.0", "> 8.0"
+    capacity_gw: float          # Total capacity in GW
+    capacity_factor: float      # 0–1
+    generation_twh: float       # Annual generation in TWh
+    marginal_cost: float        # $/MWh
+    avg_revenue: float = 0.0    # $/MWh
+    status: str = "operating"   # operating / retiring / retired
+
+
+class HourlyProfile(BaseModel):
+    """Compact hourly profile — 24 representative hours or full 8760."""
+    hours: List[float] = Field(default_factory=list)       # hour indices
+    values: List[float] = Field(default_factory=list)      # values at each hour
+    label: str = ""
+
+
+class SupplyStackEntry(BaseModel):
+    """One slice of the supply stack at a given year."""
+    resource: str               # e.g. "solar", "wind", "gas_ccgt", "coal_steam"
+    capacity_gw: float
+    generation_twh: float
+
+
 class YearResult(BaseModel):
     """Results for a single ISO × year."""
     iso: str
@@ -182,6 +234,11 @@ class YearResult(BaseModel):
     nuclear_revenue: Dict[str, float] = Field(default_factory=dict)
     nuclear_retired: bool = False
     ccs_breakeven: Dict[str, float] = Field(default_factory=dict)
+    # New: detailed data for results page
+    fuel_bin_table: List[FuelBinRow] = Field(default_factory=list)
+    supply_stack: List[SupplyStackEntry] = Field(default_factory=list)
+    lmp_hourly_profile: Optional[HourlyProfile] = None
+    capacity_revenue_profile: Optional[HourlyProfile] = None
 
 
 class SimulationResponse(BaseModel):
@@ -198,6 +255,11 @@ class SimulationResponse(BaseModel):
     resource_mix_twh: Dict[str, float] = Field(default_factory=dict)
     year_results: List[YearResult] = Field(default_factory=list)
     zones_deployed: List[ZoneDetail] = Field(default_factory=list)
+    # New: market-wide time series for results page
+    lmp_time_series: Optional[HourlyProfile] = None
+    capacity_rev_time_series: Optional[HourlyProfile] = None
+    supply_stack_summary: List[SupplyStackEntry] = Field(default_factory=list)
+    fuel_bin_table: List[FuelBinRow] = Field(default_factory=list)
 
 
 class SweepJob(BaseModel):
@@ -252,6 +314,8 @@ class ISODefaults(BaseModel):
     heat_rates: Dict[str, float]
     vom: Dict[str, float]
     co2_rates: Dict[str, float]
+    nox_rates: Dict[str, float] = Field(default_factory=dict)
+    sox_rates: Dict[str, float] = Field(default_factory=dict)
 
 
 class ErrorResponse(BaseModel):
