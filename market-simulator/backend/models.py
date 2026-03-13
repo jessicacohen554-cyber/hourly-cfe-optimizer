@@ -61,12 +61,28 @@ class HeatRates(BaseModel):
     oil_ct: float = 10.5
 
 
+class VOM(BaseModel):
+    """Variable O&M costs ($/MWh) by generator type."""
+    coal_steam: float = 5.50
+    gas_ccgt: float = 3.50
+    gas_ct: float = 5.00
+    oil_ct: float = 6.00
+
+
+class StorageCosts(BaseModel):
+    """Installed storage costs ($/kW-yr)."""
+    battery: float = 295.0    # 4hr Li-ion
+    battery8: float = 456.0   # 8hr Li-ion
+    ldes: float = 220.0       # 100hr Iron-Air
+
+
 class CleanLCOEs(BaseModel):
     solar: float = 65.0
     wind: float = 62.0
     offshore_wind: float = 85.0
     nuclear: float = 90.0
     ccs_ccgt: float = 120.0
+    geothermal: Optional[float] = None  # CAISO only
 
 
 class EmissionPrices(BaseModel):
@@ -85,8 +101,12 @@ class Incentives(BaseModel):
     """Federal/state incentive inputs."""
     ptc_wind: float = 26.0             # $/MWh Production Tax Credit for wind
     ptc_solar: float = 26.0            # $/MWh PTC for solar (post-IRA)
-    ptc_nuclear_existing: float = 15.0 # $/MWh 45U existing nuclear PTC
     ptc_nuclear_new: float = 26.0      # $/MWh 45Y new nuclear PTC
+    # 45U existing nuclear — contract-for-difference floor mechanism
+    ptc_45u_max: float = 15.0          # $/MWh max credit
+    ptc_45u_floor: float = 40.0        # $/MWh revenue floor
+    ptc_45u_floor_escalation: float = 0.0  # % annual increase on floor
+    ptc_45u_sunset_year: int = 2032    # Sunset year (user can extend)
     itc_pct: float = 30.0             # % Investment Tax Credit (storage, offshore wind)
     rec_price: Optional[float] = None  # $/MWh REC price override — None = model default
 
@@ -103,10 +123,14 @@ class SimulationRequest(BaseModel):
     emission_prices: EmissionPrices = Field(default_factory=EmissionPrices)
     emission_limits: EmissionLimits = Field(default_factory=EmissionLimits)
     heat_rates: HeatRates = Field(default_factory=HeatRates)
+    vom: VOM = Field(default_factory=VOM)
     clean_lcoes: CleanLCOEs = Field(default_factory=CleanLCOEs)
     incentives: Incentives = Field(default_factory=Incentives)
+    storage_costs: StorageCosts = Field(default_factory=StorageCosts)
     capacity_market_price: Optional[float] = None  # None → use ISO default
     wholesale_price_override: Optional[float] = None  # $/MWh — None = model-derived
+    q45: bool = True                    # 45Q tax credit on/off
+    ccs_credit_override: Optional[float] = None  # $/MWh CCS credit override (replaces 45Q tables)
     transmission_level: str = "Medium"  # None/Low/Medium/High
     demand_growth: str = "Medium"       # Low/Medium/High
     ppa_level: str = "Medium"           # Low/Medium/High

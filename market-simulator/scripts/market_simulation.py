@@ -42,8 +42,8 @@ from pipeline_config import (
     CAPACITY_MARKET_PRICES, CAPACITY_DEGRADATION_ALPHA,
     PEAK_CAPACITY_CREDITS, RESOURCE_CAPACITY_FACTORS,
     LCOE_TABLES, TX_TABLES, get_tx,
-    NUCLEAR_NEWBUILD_LCOE, CCS_LCOE_45Q_ON, GEOTHERMAL_LCOE,
-    FOAK_NUCLEAR_NEWBUILD, FOAK_CCS_45Q_ON, FOAK_GEOTHERMAL,
+    NUCLEAR_NEWBUILD_LCOE, CCS_LCOE_45Q_ON, CCS_LCOE_45Q_OFF, GEOTHERMAL_LCOE,
+    FOAK_NUCLEAR_NEWBUILD, FOAK_CCS_45Q_ON, FOAK_CCS_45Q_OFF, FOAK_GEOTHERMAL,
     FOAK_LDES, FOAK_H2, FOAK_OFFSHORE_WIND,
     EXISTING_GAS_FOM_KW_YR,
     NEW_GAS_CCGT_LCOE, NEW_GAS_CT_LCOE,
@@ -278,7 +278,8 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
                               battery_pct=0, battery8_pct=0, ldes_pct=0, h2_pct=0,
                               carbon_price=0, nox_price=0.0, sox_price=0.0,
                               nox_limit=None, sox_limit=None,
-                              custom_fuel_prices=None, custom_co2_price=None):
+                              custom_fuel_prices=None, custom_co2_price=None,
+                              custom_heat_rates=None, custom_vom=None):
     """Compute 8760-hour LMP at a given clean percentage.
 
     Returns (hourly_lmp_array, avg_lmp, lmp_p90, generator_economics).
@@ -293,6 +294,8 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
         nox_limit=nox_limit, sox_limit=sox_limit,
         custom_fuel_prices=custom_fuel_prices,
         custom_co2_price=custom_co2_price,
+        custom_heat_rates=custom_heat_rates,
+        custom_vom=custom_vom,
     )
 
     dispatch = reconstruct_hourly_dispatch(
@@ -428,10 +431,11 @@ def compute_generator_economics(stack, hourly_lmp, unit_idx, dispatch,
     return gen_econ
 
 
-def compute_nuclear_revenue(iso, clean_pct, hourly_lmp, year):
+def compute_nuclear_revenue(iso, clean_pct, hourly_lmp, year, conditions=None):
     """Compute nuclear plant revenue stack by ISO.
 
     Returns dict with energy_rev, capacity_rev, ptc, total (all $/MWh).
+    Uses 45U contract-for-difference floor mechanism when conditions provided.
     """
     nuclear_cf = 0.93
     nuclear_gen = np.ones(H) * nuclear_cf  # Flat baseload
@@ -441,12 +445,28 @@ def compute_nuclear_revenue(iso, clean_pct, hourly_lmp, year):
 
     # Capacity revenue
     base_price = CAPACITY_MARKET_PRICES.get(iso, 0)
+    if conditions and conditions.get('capacity_market_price') is not None:
+        base_price = conditions['capacity_market_price']
     alpha = CAPACITY_DEGRADATION_ALPHA.get(iso, 0)
     degraded_price = base_price * max(0, 1.0 - alpha * clean_pct / 100.0)
     cap_rev = degraded_price * 1.0 / (nuclear_cf * 8.760)  # ELCC=1.0 for nuclear
 
-    # PTC (45U for existing nuclear)
-    ptc = PTC_45U_VALUE if year <= PTC_45U_SUNSET_YEAR else 0.0
+    # PTC 45U — contract-for-difference floor mechanism
+    ptc_max = conditions.get('ptc_45u_max', PTC_45U_VALUE) if conditions else PTC_45U_VALUE
+    floor_base = conditions.get('ptc_45u_floor', 40.0) if conditions else 40.0
+    escalation = conditions.get('ptc_45u_floor_escalation', 0.0) if conditions else 0.0
+    sunset_year = conditions.get('ptc_45u_sunset_year', PTC_45U_SUNSET_YEAR) if conditions else PTC_45U_SUNSET_YEAR
+
+    if year <= sunset_year:
+        # Escalate floor from base year (2024)
+        years_elapsed = max(0, year - 2024)
+        floor_price = floor_base * (1 + escalation / 100.0) ** years_elapsed
+        # All-in revenue before PTC
+        all_in_rev = energy_rev + cap_rev
+        # CfD: credit fills gap between floor and revenue, capped at ptc_max
+        ptc = max(0.0, min(ptc_max, floor_price - all_in_rev))
+    else:
+        ptc = 0.0
 
     total = energy_rev + cap_rev + ptc
 
@@ -477,9 +497,11 @@ def compute_energy_revenue_by_resource(hourly_lmp, supply_profiles, resource_pct
     return revenues
 
 
-def compute_capacity_revenue(iso, clean_pct, resource_pcts):
+def compute_capacity_revenue(iso, clean_pct, resource_pcts, conditions=None):
     """Compute capacity market revenue ($/MWh) per resource."""
     base_price = CAPACITY_MARKET_PRICES.get(iso, 0)
+    if conditions and conditions.get('capacity_market_price') is not None:
+        base_price = conditions['capacity_market_price']
     alpha = CAPACITY_DEGRADATION_ALPHA.get(iso, 0)
     degraded_price = base_price * max(0, 1.0 - alpha * clean_pct / 100.0)
 
@@ -503,8 +525,10 @@ def get_compliance_eligible_pct(resource_pcts, iso):
                if res in eligible and pct > 0)
 
 
-def compute_rec_price(iso, eligible_pct, year):
+def compute_rec_price(iso, eligible_pct, year, rec_price_override=None):
     """Scarcity-driven compliance REC price ($/MWh)."""
+    if rec_price_override is not None:
+        return rec_price_override
     acp = ACP_RATES.get(iso, 0)
     if acp <= 0:
         return VOLUNTARY_REC_FLOOR.get(iso, 0)
@@ -526,10 +550,10 @@ def compute_rec_price(iso, eligible_pct, year):
     return max(floor, min(acp, price))
 
 
-def compute_rec_revenue(iso, resource_pcts, clean_pct, year):
+def compute_rec_revenue(iso, resource_pcts, clean_pct, year, rec_price_override=None):
     """REC/CES revenue for eligible resources ($/MWh)."""
     eligible_pct = get_compliance_eligible_pct(resource_pcts, iso)
-    rec_price = compute_rec_price(iso, eligible_pct, year)
+    rec_price = compute_rec_price(iso, eligible_pct, year, rec_price_override=rec_price_override)
 
     result = {}
     for res, pct in resource_pcts.items():
@@ -545,12 +569,14 @@ def compute_rec_revenue(iso, resource_pcts, clean_pct, year):
 
 
 def compute_zone_revenue(iso, clean_pct, resource_pcts, hourly_lmp,
-                          supply_profiles, demand_total_mwh, year):
+                          supply_profiles, demand_total_mwh, year,
+                          rec_price_override=None, conditions=None):
     """Total blended revenue ($/MWh) for resources at this zone."""
     energy_revs = compute_energy_revenue_by_resource(
         hourly_lmp, supply_profiles, resource_pcts, demand_total_mwh)
-    cap_revs = compute_capacity_revenue(iso, clean_pct, resource_pcts)
-    rec_revs = compute_rec_revenue(iso, resource_pcts, clean_pct, year)
+    cap_revs = compute_capacity_revenue(iso, clean_pct, resource_pcts, conditions=conditions)
+    rec_revs = compute_rec_revenue(iso, resource_pcts, clean_pct, year,
+                                    rec_price_override=rec_price_override)
 
     total_pct = sum(pct for pct in resource_pcts.values() if pct > 0)
     if total_pct <= 0:
@@ -585,8 +611,28 @@ def compute_zone_revenue(iso, clean_pct, resource_pcts, hourly_lmp,
 # COST MODEL
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def get_resource_lcoe(res, iso, lcoe_level, cumulative_gw, learning_speed, year):
-    """Get effective LCOE after Wright's Law learning."""
+# Baseline PTC/ITC assumptions baked into LCOE tables (for delta approach)
+BASELINE_PTC_IN_LCOE = {'solar': 26.0, 'wind': 26.0}
+BASELINE_ITC_PCT = 30.0  # ITC already in offshore wind / storage LCOE tables
+
+
+def get_resource_lcoe(res, iso, lcoe_level, cumulative_gw, learning_speed, year,
+                       conditions=None):
+    """Get effective LCOE after Wright's Law learning.
+
+    When conditions dict includes custom_lcoes, those override the entire LCOE
+    pipeline (no Wright's Law, no PTC subtraction). PTC/ITC delta adjustments
+    only apply when using the default LCOE tables.
+    """
+    # Phase 6: Custom LCOE overrides replace everything
+    if conditions:
+        custom_lcoes = conditions.get('custom_lcoes')
+        if custom_lcoes:
+            lcoe_key_map = {'clean_firm': 'nuclear', 'ccs_ccgt': 'ccs_ccgt', 'geothermal': 'geothermal'}
+            key = lcoe_key_map.get(res, res)
+            if key in custom_lcoes and custom_lcoes[key] is not None:
+                return custom_lcoes[key]
+
     tech = RESOURCE_TO_TECH.get(res, res)
 
     if res == 'clean_firm':
@@ -598,13 +644,32 @@ def get_resource_lcoe(res, iso, lcoe_level, cumulative_gw, learning_speed, year)
         eff_gw = get_effective_cumulative_gw('nuclear', cumulative_gw.get('nuclear', 0),
                                               learning_speed, year)
         cost = wright_cost(foak, noak, eff_gw, ref_gw, lr)
-        cost = max(noak, cost - PTC_45Y_NEW_NUCLEAR)
+        # Phase 2A: Parameterized 45Y PTC for new nuclear
+        ptc_new_nuc = conditions.get('ptc_nuclear_new', PTC_45Y_NEW_NUCLEAR) if conditions else PTC_45Y_NEW_NUCLEAR
+        cost = max(noak, cost - ptc_new_nuc)
         return cost
 
     elif res == 'ccs_ccgt':
-        base_lcoe = CCS_LCOE_45Q_ON.get(lcoe_level, {}).get(iso, 120)
-        foak = FOAK_CCS_45Q_ON.get(iso, 130)
-        noak = CCS_LCOE_45Q_ON.get('Low', {}).get(iso, 80)
+        # 3-tier logic: custom CCS credit override > 45Q toggle > default ON
+        ccs_credit_override = conditions.get('ccs_credit_override') if conditions else None
+
+        if ccs_credit_override is not None:
+            # User specified exact $/MWh credit — apply as offset from 45Q-OFF table
+            ccs_table = CCS_LCOE_45Q_OFF
+            base_lcoe = ccs_table.get(lcoe_level, {}).get(iso, 120) - ccs_credit_override
+            foak = FOAK_CCS_45Q_OFF.get(iso, 130) - ccs_credit_override
+            noak = ccs_table.get('Low', {}).get(iso, 80) - ccs_credit_override
+        else:
+            q45_on = conditions.get('q45', True) if conditions else True
+            if q45_on:
+                ccs_table = CCS_LCOE_45Q_ON
+                foak = FOAK_CCS_45Q_ON.get(iso, 130)
+            else:
+                ccs_table = CCS_LCOE_45Q_OFF
+                foak = FOAK_CCS_45Q_OFF.get(iso, 130)
+            base_lcoe = ccs_table.get(lcoe_level, {}).get(iso, 120)
+            noak = ccs_table.get('Low', {}).get(iso, 80)
+
         lr = WRIGHT_LEARNING_RATE.get('ccs', {}).get(learning_speed, 0.10)
         ref_gw = WRIGHT_CUMULATIVE_GW_2025.get('ccs', 0.3)
         eff_gw = get_effective_cumulative_gw('ccs', cumulative_gw.get('ccs', 0),
@@ -623,14 +688,46 @@ def get_resource_lcoe(res, iso, lcoe_level, cumulative_gw, learning_speed, year)
 
     elif res in ('solar', 'wind', 'offshore_wind'):
         tables = LCOE_TABLES.get(res, {})
-        return tables.get(lcoe_level, {}).get(iso, 50)
+        base = tables.get(lcoe_level, {}).get(iso, 50)
+
+        if conditions:
+            # Phase 2C: Solar/Wind PTC delta adjustment
+            if res in ('solar', 'wind'):
+                user_ptc = conditions.get(f'ptc_{res}', BASELINE_PTC_IN_LCOE.get(res, 26.0))
+                delta = user_ptc - BASELINE_PTC_IN_LCOE.get(res, 26.0)
+                base -= delta  # More credit → lower LCOE; less credit → higher LCOE
+
+            # Phase 3: ITC delta adjustment for offshore wind
+            elif res == 'offshore_wind':
+                user_itc = conditions.get('itc_pct', BASELINE_ITC_PCT)
+                if user_itc != BASELINE_ITC_PCT:
+                    capital_fraction = 0.80  # ~80% of offshore wind LCOE is capital
+                    itc_delta = (user_itc - BASELINE_ITC_PCT) / 100.0
+                    base *= (1 - capital_fraction * itc_delta / (1 - BASELINE_ITC_PCT / 100))
+
+        return max(0, base)
 
     elif res == 'hydro':
+        # Phase 5A: Wholesale price override for hydro
+        if conditions and conditions.get('wholesale_price_override') is not None:
+            return conditions['wholesale_price_override']
         return WHOLESALE_PRICES.get(iso, 30)
 
     else:
         tables = LCOE_TABLES.get(res, {})
-        return tables.get(lcoe_level, {}).get(iso, 50)
+        base = tables.get(lcoe_level, {}).get(iso, 50)
+        if conditions and res in ('battery', 'battery8', 'ldes'):
+            # Custom storage cost override (converted from $/kW-yr to $/MWh in main.py)
+            custom_storage = conditions.get('custom_storage_lcoe')
+            if custom_storage and custom_storage.get(res) is not None:
+                base = custom_storage[res]
+            # ITC delta adjustment for storage
+            user_itc = conditions.get('itc_pct', BASELINE_ITC_PCT)
+            if user_itc != BASELINE_ITC_PCT:
+                capital_fraction = 0.85  # ~85% of storage LCOE is capital
+                itc_delta = (user_itc - BASELINE_ITC_PCT) / 100.0
+                base *= (1 - capital_fraction * itc_delta / (1 - BASELINE_ITC_PCT / 100))
+        return max(0, base)
 
 
 def _get_ppa_discount(res, ppa_level, iso=None):
@@ -642,7 +739,8 @@ def _get_ppa_discount(res, ppa_level, iso=None):
 
 
 def compute_zone_cost(iso, delta_resources, lcoe_level, cumulative_gw,
-                       learning_speed, year, tx_level='Medium', ppa_level=None):
+                       learning_speed, year, tx_level='Medium', ppa_level=None,
+                       conditions=None):
     """Compute blended LCOE ($/MWh) for incremental resources."""
     per_resource_cost = {}
     total_twh = 0
@@ -652,7 +750,7 @@ def compute_zone_cost(iso, delta_resources, lcoe_level, cumulative_gw,
         if delta_twh <= 0:
             continue
         lcoe = get_resource_lcoe(res, iso, lcoe_level, cumulative_gw,
-                                  learning_speed, year)
+                                  learning_speed, year, conditions=conditions)
 
         if res in ('solar', 'wind', 'clean_firm', 'offshore_wind'):
             tx = get_tx(res if res != 'clean_firm' else 'clean_firm', tx_level, iso)
@@ -674,7 +772,7 @@ def compute_zone_cost(iso, delta_resources, lcoe_level, cumulative_gw,
 # CCS RETROFIT BREAKEVEN
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def compute_ccs_retrofit_breakeven(iso, fuel_level='Medium'):
+def compute_ccs_retrofit_breakeven(iso, fuel_level='Medium', conditions=None):
     """Find carbon price where CCS retrofit beats continued unabated CCGT operation.
 
     Returns dict with breakeven carbon prices for:
@@ -691,7 +789,14 @@ def compute_ccs_retrofit_breakeven(iso, fuel_level='Medium'):
     existing_fixed_cost = gas_hr * fuel_price + gas_vom
 
     # CCS CCGT: ~90% capture, higher fixed cost, lower variable emissions
-    ccs_lcoe = CCS_LCOE_45Q_ON.get('Medium', {}).get(iso, 100)
+    # Select CCS LCOE based on 45Q toggle / credit override
+    ccs_credit_override = conditions.get('ccs_credit_override') if conditions else None
+    if ccs_credit_override is not None:
+        ccs_lcoe = CCS_LCOE_45Q_OFF.get('Medium', {}).get(iso, 100) - ccs_credit_override
+    else:
+        q45_on = conditions.get('q45', True) if conditions else True
+        ccs_table = CCS_LCOE_45Q_ON if q45_on else CCS_LCOE_45Q_OFF
+        ccs_lcoe = ccs_table.get('Medium', {}).get(iso, 100)
     ccs_co2_rate = gas_co2 * 0.10  # 90% capture → 10% residual
 
     # Breakeven: existing_cost + gas_co2 × Cp = ccs_lcoe + ccs_co2 × Cp
@@ -1037,7 +1142,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
 
             zone_deployed = False
             zone_results = []
-            avg_lmp = WHOLESALE_PRICES[iso]
+            avg_lmp = conditions.get('wholesale_price_override') or WHOLESALE_PRICES.get(iso, 30)
             p90_lmp = avg_lmp * 1.5
             blended_revenue = 0
             blended_cost = 0
@@ -1104,12 +1209,14 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                         sox_limit=conditions.get('sox_limit'),
                         custom_fuel_prices=conditions.get('custom_fuel_prices'),
                         custom_co2_price=conditions.get('custom_co2_price'),
+                        custom_heat_rates=conditions.get('custom_heat_rates'),
+                        custom_vom=conditions.get('custom_vom'),
                     )
                     if _lmp_cache is not None:
                         _lmp_cache[_lmp_key] = (hourly_lmp, avg_lmp, p90_lmp, gen_econ)
 
                 # Nuclear revenue at this threshold
-                nuclear_rev = compute_nuclear_revenue(iso, t_end, hourly_lmp, year)
+                nuclear_rev = compute_nuclear_revenue(iso, t_end, hourly_lmp, year, conditions=conditions)
 
                 # --- NUCLEAR RETIREMENT CHECK ---
                 if (nuclear_retirement_threshold is not None and
@@ -1124,6 +1231,8 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 blended_revenue, per_res_rev, rev_breakdown = compute_zone_revenue(
                     iso, t_end, delta_pcts, hourly_lmp,
                     supply_profiles_iso, demand_total_mwh, year,
+                    rec_price_override=conditions.get('rec_price_override'),
+                    conditions=conditions,
                 )
 
                 # Cost
@@ -1131,6 +1240,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                     iso, delta_twh, conditions['lcoe_level'], cumulative_gw,
                     conditions['learning_speed'], year, conditions['tx_level'],
                     ppa_level=conditions.get('ppa_level'),
+                    conditions=conditions,
                 )
 
                 # Profit

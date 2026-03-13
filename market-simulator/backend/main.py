@@ -285,8 +285,51 @@ def _map_request_to_conditions(req: SimulationRequest) -> dict:
         # Custom fuel prices (override fuel_level presets)
         "custom_fuel_prices": custom_fuel_prices,
         "custom_co2_price": req.carbon_price,
+        # Custom heat rates and VOM (override lmp_engine defaults)
+        "custom_heat_rates": {
+            'coal_steam': req.heat_rates.coal_steam,
+            'gas_ccgt': req.heat_rates.gas_ccgt,
+            'gas_ct': req.heat_rates.gas_ct,
+            'oil_ct': req.heat_rates.oil_ct,
+        } if req.heat_rates else None,
+        "custom_vom": {
+            'coal_steam': req.vom.coal_steam,
+            'gas_ccgt': req.vom.gas_ccgt,
+            'gas_ct': req.vom.gas_ct,
+            'oil_ct': req.vom.oil_ct,
+        } if req.vom else None,
         # Wholesale price override
         "wholesale_price_override": req.wholesale_price_override,
+        # Incentives (PTC/ITC/REC)
+        "ptc_wind": req.incentives.ptc_wind if req.incentives else 26.0,
+        "ptc_solar": req.incentives.ptc_solar if req.incentives else 26.0,
+        "ptc_nuclear_new": req.incentives.ptc_nuclear_new if req.incentives else 26.0,
+        "ptc_45u_max": req.incentives.ptc_45u_max if req.incentives else 15.0,
+        "ptc_45u_floor": req.incentives.ptc_45u_floor if req.incentives else 40.0,
+        "ptc_45u_floor_escalation": req.incentives.ptc_45u_floor_escalation if req.incentives else 0.0,
+        "ptc_45u_sunset_year": req.incentives.ptc_45u_sunset_year if req.incentives else 2032,
+        "itc_pct": req.incentives.itc_pct if req.incentives else 30.0,
+        "rec_price_override": req.incentives.rec_price if req.incentives else None,
+        # 45Q toggle and CCS credit override
+        "q45": req.q45,
+        "ccs_credit_override": req.ccs_credit_override,
+        # Capacity market price override
+        "capacity_market_price": req.capacity_market_price,
+        # Storage costs ($/kW-yr → $/MWh LCOS conversion)
+        "custom_storage_lcoe": {
+            'battery': req.storage_costs.battery / 1.241,
+            'battery8': req.storage_costs.battery8 / 2.040,
+            'ldes': req.storage_costs.ldes / 0.500,
+        } if req.storage_costs else None,
+        # Custom LCOE overrides
+        "custom_lcoes": {
+            'solar': req.clean_lcoes.solar,
+            'wind': req.clean_lcoes.wind,
+            'offshore_wind': req.clean_lcoes.offshore_wind,
+            'nuclear': req.clean_lcoes.nuclear,
+            'ccs_ccgt': req.clean_lcoes.ccs_ccgt,
+            'geothermal': req.clean_lcoes.geothermal if req.clean_lcoes else None,
+        } if req.clean_lcoes else None,
     }
 
 
