@@ -1297,12 +1297,141 @@ body {
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════
-     SLIDE 11: CONSTELLATION HOURLY CFE OPTIMIZER — MODEL ARCHITECTURE
+     SLIDE 11: PROCUREMENT ACCOUNTING — WHAT IT MEANS FOR WHERE TO BUY
+     ═══════════════════════════════════════════════════════════════════ -->
+<section class="slide">
+  <div class="slide-header">
+    <h1>Procurement Accounting: What It Means for Where to Buy</h1>
+    <span class="slide-number">11</span>
+  </div>
+  <div class="slide-body">
+    <p style="font-size:10.5pt;margin-bottom:0.06in;color:var(--text-dim);">Three competing procurement strategies are fragmenting the market &mdash; but the VRE+Storage investment thesis holds under all of them. Strategy choice shapes <em>where</em> to weight the portfolio, not <em>whether</em> to invest.</p>
+
+    <div class="two-col" style="flex:1;">
+      <div>
+        <h3 style="font-size:10.5pt;">Three Strategies, One Thesis</h3>
+
+        <!-- Strategy 1 -->
+        <div class="callout" style="font-size:9pt;padding:0.06in 0.1in;margin-bottom:0.05in;">
+          <strong style="color:var(--ceg-blue);">&#x2460; Consequential (Cross-Regional)</strong><br/>
+          Buy cheapest $/tCO₂ clean energy <em>anywhere</em> in the US. No hourly constraint. Buyer picks lowest-cost ISO. Drives new-build in MISO/SPP/ERCOT where wind is cheapest.
+          <div style="margin-top:2px;font-size:8pt;color:var(--text-dim);"><strong>Buyers:</strong> Meta, Amazon (large MISO/SPP unbundled REC purchases). <strong>Incentive:</strong> Cheapest path to high CFE % &mdash; VRE pipeline in wind-rich ISOs is the product.</div>
+        </div>
+
+        <!-- Strategy 2 -->
+        <div class="callout green" style="font-size:9pt;padding:0.06in 0.1in;margin-bottom:0.05in;">
+          <strong style="color:var(--ceg-green);">&#x2461; Hourly Matching (Same-ISO)</strong><br/>
+          Match consumption with clean generation <em>every hour</em>, same ISO. Forces storage + firm pairing. Requires 1.7&times; over-procurement at 95% CFE to cover nights and low-wind.
+          <div style="margin-top:2px;font-size:8pt;color:var(--text-dim);"><strong>Buyers:</strong> Google (24/7 CFE), Microsoft (nuclear PPAs). <strong>Incentive:</strong> VRE+Storage is the <em>only</em> product that satisfies hourly matching &mdash; mandatory pairing = higher $/MWh but guaranteed offtake.</div>
+        </div>
+
+        <!-- Strategy 3 -->
+        <div class="callout orange" style="font-size:9pt;padding:0.06in 0.1in;margin-bottom:0.05in;">
+          <strong style="color:var(--ceg-orange);">&#x2462; Annual Volumetric (Status Quo)</strong><br/>
+          Match total MWh over the year. Cheapest unbundled RECs satisfy targets &mdash; high paper CFE %, low emissions impact. Being phased out by leading buyers.
+          <div style="margin-top:2px;font-size:8pt;color:var(--text-dim);"><strong>Incentive:</strong> Minimal VRE pipeline value &mdash; existing RECs suffice. Sunset strategy as SBTi/SEC tighten standards.</div>
+        </div>
+
+        <h3 style="font-size:10.5pt;margin-top:0.06in;">Deployment Model: Participation &rarr; Pipeline Value</h3>
+        <p style="font-size:9pt;margin-bottom:0.04in;color:var(--text-dim);">At 95% CFE target, how much VRE does each strategy deploy? (Constellation Hourly CFE Optimizer, Medium growth)</p>
+
+        <table class="data-table" style="font-size:8pt;margin-bottom:0.05in;">
+          <tr><th>C&amp;I Load<br/>Participating</th><th>Consequential<br/>Cost ($/MWh)</th><th>Hourly Cost<br/>($/MWh)</th><th>Hourly VRE<br/>Deploy (GW)</th><th style="width:130px;">What Happens</th></tr>
+          <tr><td>5%</td><td style="color:var(--ceg-green);">$49</td><td style="color:#DC2626;">$223</td><td>13 GW</td><td style="font-size:7.5pt;">Cheap coal displacement. Consequential still buying existing wind RECs.</td></tr>
+          <tr><td>10%</td><td style="color:var(--ceg-green);">$49</td><td style="color:#DC2626;">$223</td><td>26 GW</td><td style="font-size:7.5pt;">MISO consequential pool still deep. Hourly forces 26 GW new VRE+S build.</td></tr>
+          <tr><td>20%</td><td style="color:var(--ceg-green);">$49</td><td style="color:#DC2626;">$223</td><td>53 GW</td><td style="font-size:7.5pt;">PJM consequential cost rises to $58. MISO still flat at $49.</td></tr>
+          <tr style="background:rgba(244,123,39,0.06);"><td><strong>30%</strong></td><td style="color:var(--ceg-green);"><strong>$49</strong></td><td style="color:#DC2626;"><strong>$223</strong></td><td><strong>79 GW</strong></td><td style="font-size:7.5pt;"><strong>MISO threshold</strong> &mdash; cheap pool begins to exhaust. New-build required.</td></tr>
+          <tr><td>40%</td><td style="color:var(--ceg-orange);">$51</td><td style="color:#DC2626;">$223</td><td>105 GW</td><td style="font-size:7.5pt;">MISO consequential cost rising. Now drives new VRE pipeline value.</td></tr>
+          <tr><td>50%</td><td style="color:var(--ceg-orange);">$59</td><td style="color:#DC2626;">$223</td><td>132 GW</td><td style="font-size:7.5pt;">Convergence begins. Both strategies now building new generation.</td></tr>
+        </table>
+
+        <div style="background:rgba(35,114,185,0.06);border:1.5px solid var(--ceg-blue);border-radius:6px;padding:0.06in 0.1in;font-size:9pt;">
+          <strong style="color:var(--ceg-blue);">Key finding:</strong> MISO&rsquo;s consequential displacement pool stays cheap ($49/MWh) through 30% C&amp;I participation &mdash; far deeper than PJM (exhausts at 15&ndash;20%). This means MISO VRE pipeline is attractive <em>specifically because</em> consequential buyers like Meta/Amazon can source from it cheaply. <strong>But above 30%, MISO too requires new-build, and costs converge.</strong>
+        </div>
+      </div>
+
+      <div>
+        <h3 style="font-size:10.5pt;">Regional Portfolio Impact by Strategy</h3>
+        <table class="data-table" style="font-size:8pt;margin-bottom:0.06in;">
+          <tr>
+            <th style="width:55px;">ISO</th>
+            <th>Consequential</th>
+            <th>Hourly</th>
+            <th>Pipeline Translation</th>
+          </tr>
+          <tr>
+            <td><strong>PJM</strong></td>
+            <td style="color:var(--ceg-green);font-weight:600;">$49&rarr;$72/MWh</td>
+            <td style="color:var(--ceg-green);font-weight:600;">$151/MWh</td>
+            <td style="font-size:7.5pt;"><strong>Core hold.</strong> Capacity market ($666/MW-day) pays for storage under either method. Consequential cost rises fastest here (pool exhausts at 15%) &mdash; PJM VRE is needed regardless.</td>
+          </tr>
+          <tr>
+            <td><strong>ERCOT</strong></td>
+            <td style="color:var(--ceg-green);font-weight:600;">$49&rarr;$72/MWh</td>
+            <td style="color:var(--ceg-green);font-weight:600;">$253/MWh</td>
+            <td style="font-size:7.5pt;"><strong>Core hold.</strong> Battery arbitrage ($150+/kW-yr) is strategy-agnostic. BTM co-location bypasses accounting entirely. 67 GW DC pipeline guarantees offtake.</td>
+          </tr>
+          <tr>
+            <td><strong>MISO</strong></td>
+            <td style="color:var(--ceg-green);font-weight:600;">$49 (flat to 30%)</td>
+            <td style="color:var(--ceg-orange);font-weight:600;">$223/MWh</td>
+            <td style="font-size:7.5pt;"><strong>Hedge + upside.</strong> Deep cheap wind pool makes MISO the #1 source for consequential buyers. At 10% participation, consequential drives 34 TWh clean procurement. The question: <em>how much Meta/Amazon committed load actually materializes?</em></td>
+          </tr>
+          <tr>
+            <td><strong>SPP</strong></td>
+            <td style="color:var(--ceg-blue);font-weight:600;">$47&rarr;$57/MWh</td>
+            <td style="color:var(--ceg-gray);font-weight:600;">$213/MWh</td>
+            <td style="font-size:7.5pt;">Consequential-only play. Cheapest wind in US ($47/MWh at 10%). No local DC load for hourly. Speculative position.</td>
+          </tr>
+          <tr>
+            <td><strong>NYISO</strong></td>
+            <td style="color:var(--ceg-blue);font-weight:600;">Moderate</td>
+            <td style="color:var(--ceg-green);font-weight:600;">Strong</td>
+            <td style="font-size:7.5pt;">Premium insulated. Zero cannibalization = highest PPA prices under any method.</td>
+          </tr>
+        </table>
+
+        <h3 style="font-size:10.5pt;">The MISO Question: How Much Committed Load Makes It Work?</h3>
+        <div class="callout orange" style="font-size:9pt;padding:0.06in 0.1in;margin-bottom:0.05in;">
+          <strong>Meta + Amazon = the demand signal.</strong> Both companies use consequential accounting. MISO VRE pipeline value depends on whether their committed DC load actually materializes and drives procurement:
+          <ul style="margin:3px 0 0 14px;padding:0;font-size:8.5pt;line-height:1.5;">
+            <li><strong>5% C&amp;I participation</strong> (hyperscaler-only): 17 TWh clean demand &rarr; ~7 GW new VRE at $49/MWh &mdash; <em>still buyable from existing pool</em></li>
+            <li><strong>10% participation</strong> (+ corporate followers): 34 TWh &rarr; ~13 GW VRE. Still $49/MWh. Pipeline value emerging but not dominant.</li>
+            <li><strong>20&ndash;30%</strong> (broad adoption): 69&ndash;103 TWh &rarr; existing pool exhausts. <strong>New-build wind + solar required.</strong> This is the inflection point where MISO VRE pipeline becomes a must-own.</li>
+          </ul>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.08in;">
+          <div class="callout green" style="font-size:8.5pt;padding:0.06in 0.08in;">
+            <strong>Strategy-proof portfolio</strong> (PJM, ERCOT, NYISO &mdash; 80% weight): VRE+Storage holds value regardless of which accounting method dominates.
+          </div>
+          <div class="callout" style="font-size:8.5pt;padding:0.06in 0.08in;">
+            <strong>Strategy-leveraged hedge</strong> (MISO, SPP &mdash; 15&ndash;20%): Upside if consequential persists + Meta/Amazon load materializes. Downside protected by cheap basis (pivot to storage-paired if hourly wins).
+          </div>
+        </div>
+
+        <div style="background:rgba(107,165,67,0.08);border-radius:6px;padding:0.05in 0.08in;margin-top:0.05in;font-size:9pt;">
+          <strong style="color:var(--ceg-green);">Bottom line:</strong> The market will adopt a <em>hybrid</em> of strategies &mdash; Google hourly, Meta consequential, most corporates annual. Fragmentation <strong>increases</strong> total VRE demand. Storage pairing is essential under both strategies that matter (hourly + consequential at scale). Different companies, different methods, same conclusion: <strong>build VRE+Storage.</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="source-note">Sources: All cost and deployment figures from Constellation Hourly CFE Optimizer (Step 5.2B consequential, Step 5.2C hourly matching), Medium growth scenario, 95% CFE target, Strategy 1B (fossil-avg baseline) and Strategy 2A (hourly matching). Participation sweep: 5%–100% of C&amp;I load (C&amp;I = 62% of total demand per EIA 2024). MISO $49/MWh flat to 30%: consequential queue exhaustion analysis showing coal/gas displacement pool depth. PJM exhaustion at 15–20%: same analysis. Over-procurement 1.7×: Step 5.2C hourly matching model at 95% threshold. MISO unbundled REC pricing ($1–5/MWh): S&amp;P Global Platts REC Tracker (Q4 2025). Meta/Amazon consequential procurement: company sustainability reports (2024). Google 24/7 CFE: Google, "24/7 Carbon-Free Energy: Methodology &amp; Results" (2022). Strategy fragmentation: Eurelectric/EY, "24/7 CFE: The Ecosystem" (Nov 2023). PJM $666/MW-day: RPM BRA 2025/2026. ERCOT arbitrage: Modo Energy (Q3 2025).</div>
+  </div>
+  <div class="slide-footer">
+    <span class="brand">CONSTELLATION ENERGY</span>
+    <span class="confidential">Confidential &mdash; Not for Distribution</span>
+  </div>
+  <div class="footer-accent"></div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     SLIDE 12: CONSTELLATION HOURLY CFE OPTIMIZER — MODEL ARCHITECTURE
      ═══════════════════════════════════════════════════════════════════ -->
 <section class="slide">
   <div class="slide-header">
     <h1>Appendix A: Constellation Hourly CFE Optimizer</h1>
-    <span class="slide-number">11</span>
+    <span class="slide-number">12</span>
   </div>
   <div class="slide-body">
     <p style="font-size:10.5pt;margin-bottom:0.08in;color:var(--text-dim);">
@@ -1476,12 +1605,12 @@ body {
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════
-     SLIDE 12: METHODOLOGY & FULL SOURCE BIBLIOGRAPHY
+     SLIDE 13: METHODOLOGY & FULL SOURCE BIBLIOGRAPHY
      ═══════════════════════════════════════════════════════════════════ -->
 <section class="slide">
   <div class="slide-header">
     <h1>Appendix B: Methodology &amp; Source Bibliography</h1>
-    <span class="slide-number">12</span>
+    <span class="slide-number">13</span>
   </div>
   <div class="slide-body">
     <div class="two-col" style="flex:1;">
