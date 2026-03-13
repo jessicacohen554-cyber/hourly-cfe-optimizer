@@ -141,6 +141,17 @@ class Jar {
             });
         }
 
+        // 1.5. Existing claimed balls — transparent fill + saturated ring
+        //    gridRecord.e has {resource: twh} for existing clean claimed by buyers
+        if (gridRecord && gridRecord.e) {
+            for (const [res, twh] of Object.entries(gridRecord.e)) {
+                if (twh <= 0 || res === 'sss_allocation') continue;  // SSS already in baseline
+                const pctOfDemand = twh / gridDemand * 100;
+                const ballCount = Math.max(1, Math.round(pctOfDemand));
+                items.push({ resource: res, count: ballCount, tier: 'claimed', glowIso: null });
+            }
+        }
+
         // 2. New-build procurement balls — transparent/outline
         //    gridRecord.n has {resource: twh} aggregated from all buyers targeting this grid
         if (gridRecord && gridRecord.n) {
@@ -201,8 +212,8 @@ class Jar {
             }
         }
 
-        // Sort non-curtailed: baseline bottom, new top
-        const tierOrder = { 'baseline': 0, 'new': 1 };
+        // Sort non-curtailed: baseline bottom, claimed middle, new top
+        const tierOrder = { 'baseline': 0, 'claimed': 1, 'new': 2 };
         items.sort((a, b) => {
             const ta = tierOrder[a.tier] || 0;
             const tb_order = tierOrder[b.tier] || 0;
@@ -564,19 +575,25 @@ class JarGrid {
                 }
 
                 // Cross-ISO flows → go to SOURCE grid, with buyer glow tracking
+                // Existing merchant/SSS flows → claimed tier; new VRE/uprates → new tier
                 if (record.x) {
                     for (const [srcIso, resources] of Object.entries(record.x)) {
                         if (!view[srcIso]) continue;  // unknown ISO
                         for (const [res, twh] of Object.entries(resources)) {
-                            if (twh > 0) {
+                            if (twh <= 0) continue;
+                            const isExisting = /existing|merchant|sss/i.test(res);
+                            if (isExisting) {
+                                if (!view[srcIso].e) view[srcIso].e = {};
+                                view[srcIso].e[res] = (view[srcIso].e[res] || 0) + twh;
+                            } else {
                                 view[srcIso].n[res] = (view[srcIso].n[res] || 0) + twh;
-                                // Track buyer origin for glow
-                                if (!view[srcIso].buyerFlows[buyerIso]) {
-                                    view[srcIso].buyerFlows[buyerIso] = {};
-                                }
-                                view[srcIso].buyerFlows[buyerIso][res] =
-                                    (view[srcIso].buyerFlows[buyerIso][res] || 0) + twh;
                             }
+                            // Track buyer origin for glow (regardless of tier)
+                            if (!view[srcIso].buyerFlows[buyerIso]) {
+                                view[srcIso].buyerFlows[buyerIso] = {};
+                            }
+                            view[srcIso].buyerFlows[buyerIso][res] =
+                                (view[srcIso].buyerFlows[buyerIso][res] || 0) + twh;
                         }
                     }
                 }
