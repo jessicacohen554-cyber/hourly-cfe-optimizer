@@ -1525,6 +1525,17 @@ body {
       <div>
         <h3 style="font-size:11pt;color:var(--ceg-green);">Hourly Matching: Local Build Required</h3>
         <svg viewBox="0 0 480 200" style="width:100%;max-height:2.2in;" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <!-- Cross-hatch patterns for curtailed/unused new-build -->
+            <pattern id="hatch-wind" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <rect width="6" height="6" fill="rgba(34,197,94,0.15)"/>
+              <line x1="0" y1="0" x2="0" y2="6" stroke="#22C55E" stroke-width="1.5" opacity="0.6"/>
+            </pattern>
+            <pattern id="hatch-solar" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <rect width="6" height="6" fill="rgba(245,158,11,0.15)"/>
+              <line x1="0" y1="0" x2="0" y2="6" stroke="#F59E0B" stroke-width="1.5" opacity="0.6"/>
+            </pattern>
+          </defs>
           <!-- PJM "Jar" (buyer + builder) — must do everything locally -->
           <rect x="100" y="10" width="280" height="140" rx="16" fill="rgba(14,165,233,0.06)" stroke="#0EA5E9" stroke-width="2"/>
           <text x="240" y="6" text-anchor="middle" font-size="12" font-weight="700" fill="#0EA5E9">PJM — Must Build Locally</text>
@@ -1537,26 +1548,27 @@ body {
           <circle cx="130" cy="85" r="11" fill="#6366F1" opacity="0.7"/><text x="130" y="89" text-anchor="middle" font-size="5" fill="white">Nuc</text>
           <circle cx="155" cy="85" r="11" fill="#6366F1" opacity="0.7"/><text x="155" y="89" text-anchor="middle" font-size="5" fill="white">Nuc</text>
 
-          <!-- New build VRE (must be local) -->
-          <circle cx="200" cy="120" r="11" fill="#22C55E" opacity="0.8" stroke="#22C55E" stroke-width="2" stroke-dasharray="3,2"/><text x="200" y="124" text-anchor="middle" font-size="5" fill="white">Wind</text>
-          <circle cx="225" cy="120" r="11" fill="#F59E0B" opacity="0.8" stroke="#F59E0B" stroke-width="2" stroke-dasharray="3,2"/><text x="225" y="124" text-anchor="middle" font-size="5" fill="white">Sol</text>
-          <circle cx="250" cy="120" r="11" fill="#6366F1" opacity="0.8" stroke="#6366F1" stroke-width="2" stroke-dasharray="3,2"/><text x="250" y="124" text-anchor="middle" font-size="5" fill="white">Firm</text>
+          <!-- New build VRE (must be local) — transparent fill, solid saturated outline -->
+          <circle cx="200" cy="120" r="11" fill="rgba(34,197,94,0.2)" stroke="#22C55E" stroke-width="2"/><text x="200" y="124" text-anchor="middle" font-size="5" fill="#22C55E" font-weight="600">Wind</text>
+          <circle cx="225" cy="120" r="11" fill="rgba(245,158,11,0.2)" stroke="#F59E0B" stroke-width="2"/><text x="225" y="124" text-anchor="middle" font-size="5" fill="#F59E0B" font-weight="600">Sol</text>
+          <circle cx="250" cy="120" r="11" fill="rgba(99,102,241,0.2)" stroke="#6366F1" stroke-width="2"/><text x="250" y="124" text-anchor="middle" font-size="5" fill="#6366F1" font-weight="600">Firm</text>
 
-          <!-- Storage (must pair) -->
-          <circle cx="290" cy="120" r="11" fill="#06B6D4" opacity="0.8" stroke="#06B6D4" stroke-width="2" stroke-dasharray="3,2"/><text x="290" y="124" text-anchor="middle" font-size="5" fill="white">Bat</text>
-          <circle cx="315" cy="120" r="11" fill="#E91E63" opacity="0.7" stroke="#E91E63" stroke-width="2" stroke-dasharray="3,2"/><text x="315" y="124" text-anchor="middle" font-size="5" fill="white">LDES</text>
-          <circle cx="340" cy="120" r="11" fill="#22C55E" opacity="0.6" stroke="#22C55E" stroke-width="2" stroke-dasharray="3,2"/><text x="340" y="124" text-anchor="middle" font-size="5" fill="white">Wind</text>
-          <circle cx="355" cy="93" r="11" fill="#F59E0B" opacity="0.6" stroke="#F59E0B" stroke-width="2" stroke-dasharray="3,2"/><text x="355" y="97" text-anchor="middle" font-size="5" fill="white">Sol</text>
+          <!-- Storage (must pair) — transparent fill, solid saturated outline -->
+          <circle cx="290" cy="120" r="11" fill="rgba(6,182,212,0.2)" stroke="#06B6D4" stroke-width="2"/><text x="290" y="124" text-anchor="middle" font-size="5" fill="#06B6D4" font-weight="600">Bat</text>
+          <circle cx="315" cy="120" r="11" fill="rgba(233,30,99,0.2)" stroke="#E91E63" stroke-width="2"/><text x="315" y="124" text-anchor="middle" font-size="5" fill="#E91E63" font-weight="600">LDES</text>
+          <!-- Curtailed / unused new-build — diagonal cross-hatching -->
+          <circle cx="340" cy="120" r="11" fill="url(#hatch-wind)" stroke="#22C55E" stroke-width="2"/><text x="340" y="124" text-anchor="middle" font-size="5" fill="#22C55E" font-weight="600">Wind</text>
+          <circle cx="355" cy="93" r="11" fill="url(#hatch-solar)" stroke="#F59E0B" stroke-width="2"/><text x="355" y="97" text-anchor="middle" font-size="5" fill="#F59E0B" font-weight="600">Sol</text>
 
           <!-- 1.7x label -->
           <text x="280" y="75" font-size="9" font-weight="700" fill="#DC2626">1.7× over-procurement</text>
           <text x="280" y="87" font-size="7" fill="#DC2626">$151/MWh (vs. $49 consequential)</text>
 
-          <!-- Dashed new-build label -->
-          <text x="200" y="45" font-size="7" fill="#7E8083">
-            <tspan>--- dashed = new-build required</tspan>
-          </text>
-          <line x1="200" y1="49" x2="350" y2="49" stroke="#7E8083" stroke-width="1" stroke-dasharray="3,2"/>
+          <!-- New-build legend -->
+          <circle cx="207" cy="42" r="5" fill="rgba(14,165,233,0.2)" stroke="#0EA5E9" stroke-width="1.5"/>
+          <text x="216" y="45" font-size="6.5" fill="#7E8083">= new-build</text>
+          <rect x="260" y="37" width="10" height="10" rx="1" fill="url(#hatch-wind)" stroke="#22C55E" stroke-width="1"/>
+          <text x="274" y="45" font-size="6.5" fill="#7E8083">= curtailed / unused</text>
 
           <!-- MISO jar (greyed out — can't access) -->
           <rect x="410" y="40" width="60" height="80" rx="10" fill="rgba(0,0,0,0.03)" stroke="#D1D5DB" stroke-width="1.5" stroke-dasharray="4,3"/>
