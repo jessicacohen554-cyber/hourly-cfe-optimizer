@@ -3,29 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Market Simulator — Preconditions Setup</title>
+    <title>Market Simulation Tool — Constellation Energy</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles/shared.css">
     <link rel="stylesheet" href="styles/simulator.css">
     <script src="js/chart-colors.js"></script>
-    <script src="js/shared-header.js"></script>
 </head>
 <body>
-    <!-- Header -->
-    <div class="header" id="pageHeader">
-        <h1>Market Simulation Tool</h1>
-        <div class="subtitle">Set market preconditions, run the model, see what happens to generators</div>
-        <div class="header-accent"></div>
+    <!-- Progress bar -->
+    <div class="progress-bar"></div>
+
+    <!-- Nav -->
+    <nav>
+        <div class="nav-logo">
+            <div class="nav-logo-mark">
+                <svg viewBox="0 0 32 32" width="32" height="32">
+                    <circle cx="16" cy="16" r="14" fill="none" stroke="#2372B9" stroke-width="2"/>
+                    <circle cx="16" cy="16" r="6" fill="#2372B9"/>
+                    <line x1="16" y1="2" x2="16" y2="10" stroke="#2372B9" stroke-width="2"/>
+                    <line x1="16" y1="22" x2="16" y2="30" stroke="#2372B9" stroke-width="2"/>
+                    <line x1="2" y1="16" x2="10" y2="16" stroke="#2372B9" stroke-width="2"/>
+                    <line x1="22" y1="16" x2="30" y2="16" stroke="#2372B9" stroke-width="2"/>
+                </svg>
+            </div>
+            <div>
+                <div class="nav-title">Constellation Energy</div>
+                <div class="nav-subtitle">Market Simulation Tool</div>
+            </div>
+        </div>
+        <ul class="nav-links">
+            <li><a href="/" class="active">Setup</a></li>
+            <li><a href="/results">Results</a></li>
+        </ul>
+    </nav>
+
+    <!-- Hero -->
+    <div class="hero">
+        <div class="eyebrow">— Market Screening Tool</div>
+        <h1>Market Simulation</h1>
+        <p class="hero-subtitle">Set market preconditions, run the model, see what happens to generators</p>
     </div>
 
     <div class="content-section">
         <form id="simulationForm">
 
             <!-- Mode Selection -->
-            <div class="card form-section">
-                <h2 class="section-title">Simulation Mode</h2>
+            <div class="glass-card form-section">
+                <div class="section-eyebrow">Simulation Mode</div>
+                <h2 class="section-heading">Choose Your Analysis Type</h2>
                 <div class="mode-toggle">
                     <button type="button" class="toggle-btn active" data-mode="snapshot">Single Snapshot</button>
                     <button type="button" class="toggle-btn" data-mode="trajectory">Multi-Year Trajectory</button>
@@ -37,8 +64,9 @@
             </div>
 
             <!-- Region Selection -->
-            <div class="card form-section">
-                <h2 class="section-title">Region</h2>
+            <div class="glass-card form-section">
+                <div class="section-eyebrow">Region</div>
+                <h2 class="section-heading">Select ISOs</h2>
                 <div class="iso-selector" id="isoSelector">
                     <button type="button" class="iso-btn active" data-iso="CAISO">CAISO</button>
                     <button type="button" class="iso-btn active" data-iso="ERCOT">ERCOT</button>
@@ -52,9 +80,9 @@
             </div>
 
             <!-- Fuel Prices -->
-            <div class="card form-section">
-                <h2 class="section-title">Fuel Prices</h2>
-                <p class="section-subtitle">$/MMBtu — use L/M/H presets or enter custom values</p>
+            <div class="glass-card form-section">
+                <div class="section-eyebrow">Fuel Prices</div>
+                <h2 class="section-heading">$/MMBtu — use L/M/H presets or enter custom values</h2>
                 <div class="grid-3col">
                     <div class="input-group">
                         <label>Natural Gas</label>
@@ -93,9 +121,9 @@
             </div>
 
             <!-- Carbon Price -->
-            <div class="card form-section">
-                <h2 class="section-title">Carbon Price</h2>
-                <p class="section-subtitle">$/ton CO2 — affects fossil generator marginal costs</p>
+            <div class="glass-card form-section">
+                <div class="section-eyebrow">Carbon Price</div>
+                <h2 class="section-heading">$/ton CO2 — affects fossil generator marginal costs</h2>
                 <div class="carbon-controls">
                     <div class="input-group" style="max-width: 200px;">
                         <input type="number" id="carbon_price" value="5.50" step="0.50" min="0">
@@ -112,12 +140,12 @@
             </div>
 
             <!-- Generator Heat Rates -->
-            <div class="card form-section collapsible">
-                <h2 class="section-title collapsible-header" data-target="heatRateSection">
-                    Generator Heat Rates & VOM
+            <div class="glass-card form-section collapsible">
+                <h2 class="section-heading collapsible-header" data-target="heatRateSection">
+                    Generator Heat Rates &amp; VOM
                     <span class="collapse-icon">&#9660;</span>
                 </h2>
-                <p class="section-subtitle">MMBtu/MWh heat rates and $/MWh variable O&M — advanced tuning</p>
+                <p class="section-note">MMBtu/MWh heat rates and $/MWh variable O&amp;M — advanced tuning</p>
                 <div class="collapsible-content" id="heatRateSection">
                     <table class="data-table">
                         <thead>
@@ -159,9 +187,10 @@
             </div>
 
             <!-- Clean Resource LCOEs -->
-            <div class="card form-section">
-                <h2 class="section-title">Clean Resource LCOEs</h2>
-                <p class="section-subtitle">$/MWh levelized cost — determines new-build economics</p>
+            <div class="glass-card form-section">
+                <div class="section-eyebrow">Clean Energy</div>
+                <h2 class="section-heading">Clean Resource LCOEs</h2>
+                <p class="section-note">$/MWh levelized cost — determines new-build economics</p>
                 <div class="grid-3col">
                     <div class="input-group">
                         <label>Solar</label>
@@ -233,9 +262,10 @@
             </div>
 
             <!-- Storage Costs -->
-            <div class="card form-section">
-                <h2 class="section-title">Storage Costs</h2>
-                <p class="section-subtitle">$/kW-yr installed cost</p>
+            <div class="glass-card form-section">
+                <div class="section-eyebrow">Storage</div>
+                <h2 class="section-heading">Storage Costs</h2>
+                <p class="section-note">$/kW-yr installed cost</p>
                 <div class="grid-3col">
                     <div class="input-group">
                         <label>Battery (4hr Li-ion)</label>
@@ -274,8 +304,9 @@
             </div>
 
             <!-- Market Parameters -->
-            <div class="card form-section">
-                <h2 class="section-title">Market Parameters</h2>
+            <div class="glass-card form-section">
+                <div class="section-eyebrow">Market</div>
+                <h2 class="section-heading">Market Parameters</h2>
                 <div class="grid-3col">
                     <div class="input-group">
                         <label>Capacity Market ($/kW-yr)</label>
@@ -302,8 +333,9 @@
             </div>
 
             <!-- Demand Growth & PPA -->
-            <div class="card form-section">
-                <h2 class="section-title">Demand & Procurement</h2>
+            <div class="glass-card form-section">
+                <div class="section-eyebrow">Demand &amp; Procurement</div>
+                <h2 class="section-heading">Demand Growth &amp; PPA Availability</h2>
                 <div class="grid-3col">
                     <div class="input-group">
                         <label>Demand Growth</label>
@@ -333,9 +365,10 @@
             </div>
 
             <!-- Nuclear Retirement -->
-            <div class="card form-section">
-                <h2 class="section-title">Nuclear Retirement Threshold</h2>
-                <p class="section-subtitle">If total nuclear revenue stack drops below this $/MWh, the plant retires. Cascading effects are modeled.</p>
+            <div class="glass-card form-section">
+                <div class="section-eyebrow">Nuclear</div>
+                <h2 class="section-heading">Nuclear Retirement Threshold</h2>
+                <p class="section-note">If total nuclear revenue stack drops below this $/MWh, the plant retires. Cascading effects are modeled.</p>
                 <div class="slider-group">
                     <input type="range" id="nuclearRetirementSlider" min="10" max="60" value="30" step="1">
                     <div class="slider-value">
@@ -346,8 +379,9 @@
             </div>
 
             <!-- Trajectory Settings (shown only in trajectory mode) -->
-            <div class="card form-section" id="trajectorySettings" style="display:none;">
-                <h2 class="section-title">Trajectory Settings</h2>
+            <div class="glass-card form-section" id="trajectorySettings" style="display:none;">
+                <div class="section-eyebrow">Trajectory</div>
+                <h2 class="section-heading">Trajectory Settings</h2>
                 <div class="grid-2col">
                     <div class="input-group">
                         <label>Projection Years</label>
@@ -389,7 +423,7 @@
 
             <!-- Submit -->
             <div class="submit-section">
-                <button type="submit" class="submit-btn" id="submitBtn">
+                <button type="submit" class="btn-primary submit-btn" id="submitBtn">
                     <span class="submit-text">Run Market Simulation</span>
                     <span class="submit-spinner" style="display:none;">
                         <svg class="spinner" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none" stroke-dasharray="31.4" stroke-dashoffset="10"></circle></svg>
@@ -404,9 +438,8 @@
 
     <!-- Footer -->
     <footer class="page-footer">
-        <div class="footer-content">
-            <p>Market Simulation Screening Tool — Directionally correct economics for targeted IPM/GenX analysis</p>
-        </div>
+        <p>Market Simulation Screening Tool &mdash; Constellation Energy</p>
+        <p class="footer-note">Directionally correct economics for targeted IPM/GenX analysis</p>
     </footer>
     <div class="bottom-banner"></div>
 

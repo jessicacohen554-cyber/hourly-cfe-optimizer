@@ -1,14 +1,48 @@
-/* Results page specific styles */
+/* ============================================================================
+   RESULTS.CSS — Constellation Energy Market Simulation Results
+   Styles for results.html: KPI cards, chart cards, ISO tabs, data tables
+   ============================================================================ */
 
-/* Controls bar */
-.controls-bar {
+/* ── ISO Tab Bar ── */
+.iso-tab-bar {
     background: white;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--glass-border);
     padding: var(--space-md) 0;
     position: sticky;
-    top: 0;
+    top: 63px;
     z-index: 100;
     box-shadow: var(--shadow-sm);
+}
+
+.iso-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: var(--space-sm);
+}
+
+.iso-tabs .iso-btn {
+    border-radius: 0;
+    border: none;
+    border-bottom: 3px solid transparent;
+    background: transparent;
+    padding: 10px 20px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.iso-tabs .iso-btn:hover {
+    color: var(--ceg-blue);
+}
+
+.iso-tabs .iso-btn.active {
+    color: var(--ceg-blue);
+    border-bottom-color: var(--ceg-blue);
+    background: transparent;
 }
 
 .controls-row {
@@ -26,24 +60,25 @@
 
 .control-group label {
     font-weight: 700;
-    font-size: 0.85rem;
+    font-size: 0.72rem;
     color: var(--text-secondary);
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.5px;
 }
 
 .control-select {
     padding: 6px 12px;
-    border: 1.5px solid var(--border);
+    border: 1.5px solid var(--glass-border);
     border-radius: var(--radius-sm);
     font-family: var(--font-body);
     font-size: 0.9rem;
     background: white;
+    color: var(--text-primary);
 }
 
 .back-link {
     margin-left: auto;
-    color: var(--primary);
+    color: var(--ceg-blue);
     text-decoration: none;
     font-weight: 600;
     font-size: 0.9rem;
@@ -53,66 +88,102 @@
     text-decoration: underline;
 }
 
-/* Stats grid */
-.grid-stats {
+/* ── KPI Grid ── */
+.kpi-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: var(--space-md);
     margin-bottom: var(--space-xl);
 }
 
-.stat-card {
+.kpi-card {
     background: white;
-    border-radius: var(--radius-md);
-    padding: var(--space-lg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg) var(--space-md);
     text-align: center;
     box-shadow: var(--shadow-sm);
-    border-top: 3px solid var(--primary);
+    position: relative;
+    overflow: hidden;
 }
 
-.stat-value {
+.kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--ceg-blue);
+}
+
+.kpi-value {
     font-family: var(--font-heading);
-    font-size: 1.8rem;
-    font-weight: 800;
-    color: var(--primary);
-    line-height: 1.2;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--ceg-blue);
+    line-height: 1.1;
 }
 
-.stat-label {
-    font-size: 0.8rem;
+.kpi-unit {
+    font-size: 0.75rem;
+    font-weight: 600;
     color: var(--text-muted);
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-top: 4px;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
 }
 
-/* Chart sections */
-.chart-section {
+.kpi-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 8px;
+}
+
+/* ── Chart Cards ── */
+.chart-card {
+    background: white;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
     margin-bottom: var(--space-lg);
-    padding: var(--space-xl);
+    overflow: hidden;
 }
 
-.chart-section .section-title {
-    margin-bottom: var(--space-xs);
+.chart-card-header {
+    padding: var(--space-lg) var(--space-xl) var(--space-sm);
 }
 
-.chart-section .section-subtitle {
-    margin-bottom: var(--space-lg);
-    color: var(--text-muted);
+.chart-card-header h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.chart-card-header p {
     font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 300;
+    line-height: 1.5;
 }
 
 .chart-container {
     min-height: 350px;
     width: 100%;
+    padding: 0 var(--space-md) var(--space-md);
 }
 
 .chart-container-lg {
     min-height: 450px;
     width: 100%;
+    padding: 0 var(--space-md) var(--space-md);
 }
 
-/* Status badges */
+/* ── Status badges ── */
 .status-badge {
     display: inline-block;
     padding: 3px 10px;
@@ -120,36 +191,32 @@
     font-size: 0.75rem;
     font-weight: 700;
     text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .status-profitable {
-    background: #dcfce7;
-    color: #166534;
+    background: rgba(107, 165, 67, 0.15);
+    color: #4A7C2E;
 }
 
 .status-marginal {
-    background: #fef3c7;
-    color: #92400e;
+    background: rgba(251, 178, 84, 0.15);
+    color: #9A6B1B;
 }
 
 .status-retiring {
-    background: #fee2e2;
+    background: rgba(220, 38, 38, 0.15);
     color: #991b1b;
 }
 
-/* Collapsible in results context */
-.collapsible-header {
-    cursor: pointer;
-    user-select: none;
-}
-
-/* Generator table enhancements */
+/* ── Generator table ── */
 #generatorTable td {
-    font-family: var(--font-data, var(--font-mono, monospace));
+    font-family: var(--font-data);
     font-size: 0.85rem;
+    color: var(--text-primary);
 }
 
-/* No data state */
+/* ── No data state ── */
 .no-data {
     text-align: center;
     padding: var(--space-3xl);
@@ -159,10 +226,20 @@
 .no-data h3 {
     font-size: 1.2rem;
     margin-bottom: var(--space-sm);
+    color: var(--text-primary);
 }
 
-/* Responsive */
+/* ── Responsive ── */
 @media (max-width: 768px) {
+    .iso-tab-bar {
+        top: 63px;
+    }
+
+    .iso-tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
     .controls-row {
         flex-direction: column;
         align-items: flex-start;
@@ -176,7 +253,11 @@
         grid-template-columns: 1fr;
     }
 
-    .stat-value {
-        font-size: 1.4rem;
+    .kpi-value {
+        font-size: 1.5rem;
+    }
+
+    .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
     }
 }

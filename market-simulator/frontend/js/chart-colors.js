@@ -25,9 +25,10 @@ var RESOURCE_COLORS = {
     geothermal:   '#D97706',
     storage:      '#EF4444',
     gap:          '#D1D5DB',
-    fossilGas:    '#6B7280',
-    fossilCoal:   '#374151',
-    fossilOil:    '#92400E',
+    fossilGas:    '#2372B9',
+    fossilCoal:   '#2C3E50',
+    fossilOil:    '#9B6B3A',
+    fossilGasCT:  '#007FA4',
 
     // Transparent fills (55% opacity)
     solarT:        'rgba(245, 158, 11, 0.55)',
