@@ -142,13 +142,63 @@
                 </div>
             </div>
 
+            <!-- NOx and SOx Emissions -->
+            <div class="glass-card form-section">
+                <div class="section-eyebrow">Emissions</div>
+                <h2 class="section-heading">NOx &amp; SOx Pricing &amp; Limits</h2>
+                <p class="section-note">Emission allowance prices affect fossil marginal costs. Hard limits force non-compliant generators offline.</p>
+                <div class="grid-2col">
+                    <div>
+                        <h4 style="margin: 0 0 var(--space-sm) 0; font-size: 0.9rem; color: var(--navy);">Allowance Prices ($/ton)</h4>
+                        <div class="grid-2col" style="gap: var(--space-sm);">
+                            <div class="input-group">
+                                <label>NOx Price</label>
+                                <div class="input-with-presets">
+                                    <input type="number" id="nox_price" value="0" step="100" min="0">
+                                    <div class="preset-btns">
+                                        <button type="button" class="preset-btn active" data-target="nox_price" data-value="0">$0</button>
+                                        <button type="button" class="preset-btn" data-target="nox_price" data-value="2500">$2.5K</button>
+                                        <button type="button" class="preset-btn" data-target="nox_price" data-value="5000">$5K</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="input-group">
+                                <label>SOx Price</label>
+                                <div class="input-with-presets">
+                                    <input type="number" id="sox_price" value="0" step="25" min="0">
+                                    <div class="preset-btns">
+                                        <button type="button" class="preset-btn active" data-target="sox_price" data-value="0">$0</button>
+                                        <button type="button" class="preset-btn" data-target="sox_price" data-value="100">$100</button>
+                                        <button type="button" class="preset-btn" data-target="sox_price" data-value="500">$500</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 style="margin: 0 0 var(--space-sm) 0; font-size: 0.9rem; color: var(--navy);">Emission Rate Limits (lb/MWh)</h4>
+                        <p class="section-note" style="margin-top: 0;">Generators exceeding these limits must retrofit or retire.</p>
+                        <div class="grid-2col" style="gap: var(--space-sm);">
+                            <div class="input-group">
+                                <label>NOx Limit</label>
+                                <input type="number" id="nox_limit" value="" placeholder="No limit" step="0.1" min="0">
+                            </div>
+                            <div class="input-group">
+                                <label>SOx Limit</label>
+                                <input type="number" id="sox_limit" value="" placeholder="No limit" step="0.1" min="0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Generator Heat Rates -->
             <div class="glass-card form-section collapsible">
                 <h2 class="section-heading collapsible-header" data-target="heatRateSection">
-                    Generator Heat Rates &amp; VOM
+                    Generator Heat Rates, VOM &amp; Emission Rates
                     <span class="collapse-icon">&#9660;</span>
                 </h2>
-                <p class="section-note">MMBtu/MWh heat rates and $/MWh variable O&amp;M — advanced tuning</p>
+                <p class="section-note">MMBtu/MWh heat rates, $/MWh variable O&amp;M, and emission rates — advanced tuning</p>
                 <div class="collapsible-content" id="heatRateSection">
                     <table class="data-table">
                         <thead>
@@ -156,7 +206,9 @@
                                 <th>Generator</th>
                                 <th>Heat Rate (MMBtu/MWh)</th>
                                 <th>VOM ($/MWh)</th>
-                                <th>CO2 Rate (t/MWh)</th>
+                                <th>CO2 (t/MWh)</th>
+                                <th>NOx (lb/MWh)</th>
+                                <th>SOx (lb/MWh)</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -165,24 +217,32 @@
                                 <td><input type="number" id="hr_coal_steam" value="10.0" step="0.1" min="5" max="15" class="table-input"></td>
                                 <td><input type="number" id="vom_coal_steam" value="5.50" step="0.25" min="0" class="table-input"></td>
                                 <td class="readonly">0.95</td>
+                                <td class="readonly">0.80</td>
+                                <td class="readonly">1.80</td>
                             </tr>
                             <tr>
                                 <td>Gas CCGT</td>
                                 <td><input type="number" id="hr_gas_ccgt" value="7.0" step="0.1" min="5" max="12" class="table-input"></td>
                                 <td><input type="number" id="vom_gas_ccgt" value="3.50" step="0.25" min="0" class="table-input"></td>
                                 <td class="readonly">0.37</td>
+                                <td class="readonly">0.10</td>
+                                <td class="readonly">0.01</td>
                             </tr>
                             <tr>
                                 <td>Gas CT</td>
                                 <td><input type="number" id="hr_gas_ct" value="10.5" step="0.1" min="7" max="15" class="table-input"></td>
                                 <td><input type="number" id="vom_gas_ct" value="5.00" step="0.25" min="0" class="table-input"></td>
                                 <td class="readonly">0.55</td>
+                                <td class="readonly">0.25</td>
+                                <td class="readonly">0.01</td>
                             </tr>
                             <tr>
                                 <td>Oil CT</td>
                                 <td><input type="number" id="hr_oil_ct" value="10.5" step="0.1" min="7" max="15" class="table-input"></td>
                                 <td><input type="number" id="vom_oil_ct" value="6.00" step="0.25" min="0" class="table-input"></td>
                                 <td class="readonly">0.65</td>
+                                <td class="readonly">1.20</td>
+                                <td class="readonly">0.80</td>
                             </tr>
                         </tbody>
                     </table>
@@ -264,6 +324,73 @@
                 </div>
             </div>
 
+            <!-- Federal Incentives -->
+            <div class="glass-card form-section">
+                <div class="section-eyebrow">Incentives</div>
+                <h2 class="section-heading">Federal Tax Credits &amp; RECs</h2>
+                <p class="section-note">Production Tax Credits ($/MWh), Investment Tax Credit (%), and REC pricing</p>
+                <div class="grid-3col">
+                    <div class="input-group">
+                        <label>PTC — Wind ($/MWh)</label>
+                        <div class="input-with-presets">
+                            <input type="number" id="ptc_wind" value="26.0" step="1" min="0">
+                            <div class="preset-btns">
+                                <button type="button" class="preset-btn" data-target="ptc_wind" data-value="0">$0</button>
+                                <button type="button" class="preset-btn active" data-target="ptc_wind" data-value="26">$26</button>
+                                <button type="button" class="preset-btn" data-target="ptc_wind" data-value="33">$33</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label>PTC — Solar ($/MWh)</label>
+                        <div class="input-with-presets">
+                            <input type="number" id="ptc_solar" value="26.0" step="1" min="0">
+                            <div class="preset-btns">
+                                <button type="button" class="preset-btn" data-target="ptc_solar" data-value="0">$0</button>
+                                <button type="button" class="preset-btn active" data-target="ptc_solar" data-value="26">$26</button>
+                                <button type="button" class="preset-btn" data-target="ptc_solar" data-value="33">$33</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label>PTC — Existing Nuclear ($/MWh)</label>
+                        <div class="input-with-presets">
+                            <input type="number" id="ptc_nuclear_existing" value="15.0" step="1" min="0">
+                            <div class="preset-btns">
+                                <button type="button" class="preset-btn" data-target="ptc_nuclear_existing" data-value="0">$0</button>
+                                <button type="button" class="preset-btn active" data-target="ptc_nuclear_existing" data-value="15">$15</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label>PTC — New Nuclear ($/MWh)</label>
+                        <div class="input-with-presets">
+                            <input type="number" id="ptc_nuclear_new" value="26.0" step="1" min="0">
+                            <div class="preset-btns">
+                                <button type="button" class="preset-btn" data-target="ptc_nuclear_new" data-value="0">$0</button>
+                                <button type="button" class="preset-btn active" data-target="ptc_nuclear_new" data-value="26">$26</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label>ITC — Storage/Offshore (%)</label>
+                        <div class="input-with-presets">
+                            <input type="number" id="itc_pct" value="30" step="5" min="0" max="50">
+                            <div class="preset-btns">
+                                <button type="button" class="preset-btn" data-target="itc_pct" data-value="0">0%</button>
+                                <button type="button" class="preset-btn active" data-target="itc_pct" data-value="30">30%</button>
+                                <button type="button" class="preset-btn" data-target="itc_pct" data-value="40">40%</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label>REC Price Override ($/MWh)</label>
+                        <input type="number" id="rec_price" value="" placeholder="Auto per ISO" step="1" min="0">
+                        <span class="input-hint">Leave blank = model default by ISO</span>
+                    </div>
+                </div>
+            </div>
+
             <!-- Storage Costs -->
             <div class="glass-card form-section">
                 <div class="section-eyebrow">Storage</div>
@@ -317,6 +444,11 @@
                         <span class="input-hint" id="capMarketHint">ERCOT/SPP: $0 (energy-only)</span>
                     </div>
                     <div class="input-group">
+                        <label>Wholesale Price Override ($/MWh)</label>
+                        <input type="number" id="wholesale_override" value="" placeholder="Model-derived" step="1" min="0">
+                        <span class="input-hint">Override base wholesale price; blank = model-derived</span>
+                    </div>
+                    <div class="input-group">
                         <label>Transmission Level</label>
                         <div class="toggle-btn-group" id="txToggle">
                             <button type="button" class="toggle-btn" data-value="None">None</button>
@@ -325,6 +457,8 @@
                             <button type="button" class="toggle-btn" data-value="High">High</button>
                         </div>
                     </div>
+                </div>
+                <div class="grid-3col" style="margin-top: var(--space-md);">
                     <div class="input-group">
                         <label>45Q Tax Credit</label>
                         <div class="toggle-btn-group" id="q45Toggle">

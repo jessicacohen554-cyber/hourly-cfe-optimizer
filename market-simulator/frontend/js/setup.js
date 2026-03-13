@@ -209,6 +209,16 @@ function collectFormData() {
             oil: parseFloat(document.getElementById('fuel_oil').value),
         },
         carbon_price: parseFloat(document.getElementById('carbon_price').value),
+        emission_prices: {
+            nox: parseFloat(document.getElementById('nox_price').value) || 0,
+            sox: parseFloat(document.getElementById('sox_price').value) || 0,
+        },
+        emission_limits: {
+            nox_limit: document.getElementById('nox_limit').value ?
+                parseFloat(document.getElementById('nox_limit').value) : null,
+            sox_limit: document.getElementById('sox_limit').value ?
+                parseFloat(document.getElementById('sox_limit').value) : null,
+        },
         heat_rates: {
             coal_steam: parseFloat(document.getElementById('hr_coal_steam').value),
             gas_ccgt: parseFloat(document.getElementById('hr_gas_ccgt').value),
@@ -229,6 +239,15 @@ function collectFormData() {
             ccs_ccgt: parseFloat(document.getElementById('lcoe_ccs').value),
             geothermal: parseFloat(document.getElementById('lcoe_geo').value || 55),
         },
+        incentives: {
+            ptc_wind: parseFloat(document.getElementById('ptc_wind').value) || 0,
+            ptc_solar: parseFloat(document.getElementById('ptc_solar').value) || 0,
+            ptc_nuclear_existing: parseFloat(document.getElementById('ptc_nuclear_existing').value) || 0,
+            ptc_nuclear_new: parseFloat(document.getElementById('ptc_nuclear_new').value) || 0,
+            itc_pct: parseFloat(document.getElementById('itc_pct').value) || 0,
+            rec_price: document.getElementById('rec_price').value ?
+                parseFloat(document.getElementById('rec_price').value) : null,
+        },
         storage_costs: {
             battery: parseFloat(document.getElementById('cost_battery').value),
             battery8: parseFloat(document.getElementById('cost_battery8').value),
@@ -236,6 +255,8 @@ function collectFormData() {
         },
         capacity_market_price: document.getElementById('capacity_market').value ?
             parseFloat(document.getElementById('capacity_market').value) : null,
+        wholesale_price_override: document.getElementById('wholesale_override').value ?
+            parseFloat(document.getElementById('wholesale_override').value) : null,
         transmission_level: document.querySelector('#txToggle .toggle-btn.active')?.dataset.value || 'Medium',
         q45: document.querySelector('#q45Toggle .toggle-btn.active')?.dataset.value === '1',
         demand_growth: document.querySelector('#demandToggle .toggle-btn.active')?.dataset.value || 'Medium',

@@ -72,6 +72,42 @@ CO2_RATES = {
     'oil_ct': 0.65,       # ~1,430 lb/MWh ≈ 0.65 t/MWh
 }
 
+# NOx emission rates (lb/MWh) — EPA CAMPD 2023, Cross-State Air Pollution Rule
+# Coal: 1.5-3.0 lb/MWh uncontrolled, 0.5-1.0 with SCR; using fleet avg w/ SCR
+# Gas CCGT: 0.06-0.15 lb/MWh (low-NOx DLN burners); Gas CT: 0.15-0.4 lb/MWh
+# Oil: 0.8-2.0 lb/MWh; using fleet avg with typical controls
+NOX_RATES = {
+    'coal_steam': 0.80,   # lb/MWh — fleet avg with SCR/SNCR (EPA CAMPD 2023)
+    'gas_ccgt':   0.10,   # lb/MWh — DLN burners (EPA CAMPD 2023)
+    'gas_ct':     0.25,   # lb/MWh — simple cycle, higher per-MWh (EPA CAMPD 2023)
+    'oil_ct':     1.20,   # lb/MWh — distillate oil CT (EPA CAMPD 2023)
+}
+
+# SOx emission rates (lb/MWh) — EPA CAMPD 2023, Acid Rain Program
+# Coal: highly variable, 2-12 lb/MWh uncontrolled; 0.5-3.0 with FGD
+# Gas: essentially zero (no sulfur in pipeline gas)
+# Oil: 0.5-2.0 lb/MWh depending on sulfur content
+SOX_RATES = {
+    'coal_steam': 1.80,   # lb/MWh — fleet avg with FGD scrubbers (EPA CAMPD 2023)
+    'gas_ccgt':   0.01,   # lb/MWh — trace (mercaptan odorant)
+    'gas_ct':     0.01,   # lb/MWh — trace
+    'oil_ct':     0.80,   # lb/MWh — low-sulfur distillate oil (EPA CAMPD 2023)
+}
+
+# NOx allowance prices ($/ton) — CSAPR, state trading programs
+NOX_PRICES = {
+    'Low': 500.0,        # $/ton — low market, surplus allowances
+    'Medium': 2500.0,    # $/ton — 2024 CSAPR Group 3 avg
+    'High': 5000.0,      # $/ton — scarcity pricing / tighter caps
+}
+
+# SOx allowance prices ($/ton) — Acid Rain Program
+SOX_PRICES = {
+    'Low': 25.0,         # $/ton — 2024 ARP (surplus era)
+    'Medium': 100.0,     # $/ton — moderate enforcement
+    'High': 500.0,       # $/ton — tight cap scenario
+}
+
 # CO2 allowance prices ($/ton) — RGGI, state programs
 # PJM SOM 2024: CO2 cost component = $1.94/MWh (5.8% of LMP)
 # RGGI 2024 avg clearing price ~$14/ton; not all PJM states in RGGI
@@ -158,24 +194,35 @@ GAS_AVAILABILITY_FACTOR = {
 }
 
 
-def compute_marginal_costs(fuel_level='Medium', co2_level='Medium'):
+def compute_marginal_costs(fuel_level='Medium', co2_level='Medium',
+                           nox_price=0.0, sox_price=0.0,
+                           custom_fuel_prices=None, custom_co2_price=None):
     """Compute marginal cost ($/MWh) for each fossil unit type.
 
     PJM Manual 15 cost-based offer formula:
-      MC = (Incremental Heat Rate × Fuel Price + VOM + CO2 Rate × CO2 Price) × (1 + 10% Adder)
+      MC = (Incremental Heat Rate × Fuel Price + VOM + CO2 Rate × CO2 Price
+            + NOx Rate × NOx Price + SOx Rate × SOx Price) × (1 + 10% Adder)
 
+    NOx/SOx rates are in lb/MWh; prices are $/ton. Conversion: rate_lb * price_$/ton / 2000.
     The 10% adder is PJM's allowed markup above cost-based offers (SOM 2024: $2.00/MWh).
     CO2 costs reflect RGGI and state compliance programs (SOM 2024: $1.94/MWh).
     """
-    fp = FUEL_PRICES[fuel_level]
-    co2_price = CO2_PRICES.get(co2_level, CO2_PRICES['Medium'])
+    fp = custom_fuel_prices if custom_fuel_prices else FUEL_PRICES[fuel_level]
+    co2_price = custom_co2_price if custom_co2_price is not None else CO2_PRICES.get(co2_level, CO2_PRICES['Medium'])
     adder = 1.0 + TEN_PERCENT_ADDER
 
     costs = {}
     for unit_type in HEAT_RATES:
         fuel_key = {'coal_steam': 'coal', 'gas_ccgt': 'gas', 'gas_ct': 'gas', 'oil_ct': 'oil'}[unit_type]
+        # Base: fuel + VOM + CO2
         base_cost = (HEAT_RATES[unit_type] * fp[fuel_key] + VOM[unit_type]
                      + CO2_RATES[unit_type] * co2_price)
+        # NOx: rate (lb/MWh) × price ($/ton) / 2000 (lb/ton)
+        if nox_price > 0:
+            base_cost += NOX_RATES.get(unit_type, 0) * nox_price / 2000.0
+        # SOx: same conversion
+        if sox_price > 0:
+            base_cost += SOX_RATES.get(unit_type, 0) * sox_price / 2000.0
         costs[unit_type] = base_cost * adder
 
     return costs
@@ -210,7 +257,10 @@ def _compute_clean_peak_mw(iso, resource_mix, battery_pct=0,
 def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw=None,
                              resource_mix=None,
                              battery_pct=0, battery8_pct=0, ldes_pct=0,
-                             h2_pct=0, co2_level='Medium'):
+                             h2_pct=0, co2_level='Medium',
+                             nox_price=0.0, sox_price=0.0,
+                             nox_limit=None, sox_limit=None,
+                             custom_fuel_prices=None, custom_co2_price=None):
     """Build merit-order stack: list of (unit_type, capacity_mw, marginal_cost).
 
     Ordered by marginal cost (cheapest first). Stack composition reflects
@@ -231,12 +281,21 @@ def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw
         ldes_pct: LDES dispatch percentage
         h2_pct: H2 storage dispatch percentage
         co2_level: 'Low', 'Medium', 'High' — CO2 allowance pricing
+        nox_price: $/ton NOx allowance price (added to marginal cost)
+        sox_price: $/ton SOx allowance price (added to marginal cost)
+        nox_limit: lb/MWh NOx emission cap — generators above this are retired
+        sox_limit: lb/MWh SOx emission cap — generators above this are retired
+        custom_fuel_prices: dict with 'coal', 'gas', 'oil' prices (overrides fuel_level)
+        custom_co2_price: float CO2 price (overrides co2_level)
 
     Returns:
         stack: list of (unit_type, capacity_mw, marginal_cost_per_mwh)
         total_capacity_mw: total fossil MW
     """
-    mc = compute_marginal_costs(fuel_level, co2_level)
+    mc = compute_marginal_costs(fuel_level, co2_level,
+                                nox_price=nox_price, sox_price=sox_price,
+                                custom_fuel_prices=custom_fuel_prices,
+                                custom_co2_price=custom_co2_price)
 
     if total_fossil_mw is None:
         installed = INSTALLED_FOSSIL_MW.get(iso, 80_000)
@@ -295,6 +354,24 @@ def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw
             active_shares = {k: v / total for k, v in active_shares.items()}
     else:
         active_shares = dict(shares)
+
+    # Enforce NOx/SOx emission limits — retire generators exceeding caps
+    if nox_limit is not None:
+        retired_nox = [ut for ut in active_shares if NOX_RATES.get(ut, 0) > nox_limit]
+        for ut in retired_nox:
+            del active_shares[ut]
+        # Renormalize remaining shares
+        total_sh = sum(active_shares.values())
+        if total_sh > 0:
+            active_shares = {k: v / total_sh for k, v in active_shares.items()}
+
+    if sox_limit is not None:
+        retired_sox = [ut for ut in active_shares if SOX_RATES.get(ut, 0) > sox_limit]
+        for ut in retired_sox:
+            del active_shares[ut]
+        total_sh = sum(active_shares.values())
+        if total_sh > 0:
+            active_shares = {k: v / total_sh for k, v in active_shares.items()}
 
     # Build stack: list of (type, capacity_mw, mc)
     stack = []
