@@ -85,8 +85,12 @@ class Incentives(BaseModel):
     """Federal/state incentive inputs."""
     ptc_wind: float = 26.0             # $/MWh Production Tax Credit for wind
     ptc_solar: float = 26.0            # $/MWh PTC for solar (post-IRA)
-    ptc_nuclear_existing: float = 15.0 # $/MWh 45U existing nuclear PTC
     ptc_nuclear_new: float = 26.0      # $/MWh 45Y new nuclear PTC
+    # 45U existing nuclear — contract-for-difference floor mechanism
+    ptc_45u_max: float = 15.0          # $/MWh max credit
+    ptc_45u_floor: float = 40.0        # $/MWh revenue floor
+    ptc_45u_floor_escalation: float = 0.0  # % annual increase on floor
+    ptc_45u_sunset_year: int = 2032    # Sunset year (user can extend)
     itc_pct: float = 30.0             # % Investment Tax Credit (storage, offshore wind)
     rec_price: Optional[float] = None  # $/MWh REC price override — None = model default
 

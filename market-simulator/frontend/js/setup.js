@@ -242,8 +242,11 @@ function collectFormData() {
         incentives: {
             ptc_wind: parseFloat(document.getElementById('ptc_wind').value) || 0,
             ptc_solar: parseFloat(document.getElementById('ptc_solar').value) || 0,
-            ptc_nuclear_existing: parseFloat(document.getElementById('ptc_nuclear_existing').value) || 0,
             ptc_nuclear_new: parseFloat(document.getElementById('ptc_nuclear_new').value) || 0,
+            ptc_45u_max: parseFloat(document.getElementById('ptc_45u_max').value) || 0,
+            ptc_45u_floor: parseFloat(document.getElementById('ptc_45u_floor').value) || 0,
+            ptc_45u_floor_escalation: parseFloat(document.getElementById('ptc_45u_floor_escalation').value) || 0,
+            ptc_45u_sunset_year: parseInt(document.getElementById('ptc_45u_sunset_year').value) || 2032,
             itc_pct: parseFloat(document.getElementById('itc_pct').value) || 0,
             rec_price: document.getElementById('rec_price').value ?
                 parseFloat(document.getElementById('rec_price').value) : null,
