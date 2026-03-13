@@ -18,14 +18,12 @@ import json
 MODULE_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(MODULE_ROOT, 'data')
 
-# Search multiple directories for EIA data
+# Search local directories for EIA data
 # 1. market-simulator/data/profiles/ (synthetic or generated)
 # 2. market-simulator/data/eia-930/ (standard EIA 930 location)
-# 3. Parent repo data/eia-930/ (if running from within main repo)
 EIA_SEARCH_DIRS = [
     os.path.join(DATA_DIR, 'profiles'),
     os.path.join(DATA_DIR, 'eia-930'),
-    os.path.join(MODULE_ROOT, '..', 'data', 'eia-930'),
 ]
 EIA_DIR = os.path.join(DATA_DIR, 'eia-930')  # Default for error messages
 

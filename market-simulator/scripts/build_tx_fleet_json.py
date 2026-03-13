@@ -15,7 +15,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
-OUT = ROOT.parent / "dashboard" / "js" / "tx-fleet-data.js"
+OUT = ROOT / "frontend" / "js" / "tx-fleet-data.js"
 
 # ── Fuel code → category mapping ──
 FUEL_CATEGORIES = {
