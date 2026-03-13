@@ -287,6 +287,24 @@ def _map_request_to_conditions(req: SimulationRequest) -> dict:
         "custom_co2_price": req.carbon_price,
         # Wholesale price override
         "wholesale_price_override": req.wholesale_price_override,
+        # Incentives (PTC/ITC/REC)
+        "ptc_wind": req.incentives.ptc_wind if req.incentives else 26.0,
+        "ptc_solar": req.incentives.ptc_solar if req.incentives else 26.0,
+        "ptc_nuclear_new": req.incentives.ptc_nuclear_new if req.incentives else 26.0,
+        "ptc_45u_max": req.incentives.ptc_45u_max if req.incentives else 15.0,
+        "ptc_45u_floor": req.incentives.ptc_45u_floor if req.incentives else 40.0,
+        "ptc_45u_floor_escalation": req.incentives.ptc_45u_floor_escalation if req.incentives else 0.0,
+        "ptc_45u_sunset_year": req.incentives.ptc_45u_sunset_year if req.incentives else 2032,
+        "itc_pct": req.incentives.itc_pct if req.incentives else 30.0,
+        "rec_price_override": req.incentives.rec_price if req.incentives else None,
+        # Custom LCOE overrides
+        "custom_lcoes": {
+            'solar': req.clean_lcoes.solar,
+            'wind': req.clean_lcoes.wind,
+            'offshore_wind': req.clean_lcoes.offshore_wind,
+            'nuclear': req.clean_lcoes.nuclear,
+            'ccs_ccgt': req.clean_lcoes.ccs_ccgt,
+        } if req.clean_lcoes else None,
     }
 
 

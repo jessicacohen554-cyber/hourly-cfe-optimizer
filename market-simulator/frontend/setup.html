@@ -353,12 +353,38 @@
                         </div>
                     </div>
                     <div class="input-group">
-                        <label>PTC — Existing Nuclear ($/MWh)</label>
+                        <label>45U Max Credit ($/MWh)</label>
                         <div class="input-with-presets">
-                            <input type="number" id="ptc_nuclear_existing" value="15.0" step="1" min="0">
+                            <input type="number" id="ptc_45u_max" value="15.0" step="1" min="0">
                             <div class="preset-btns">
-                                <button type="button" class="preset-btn" data-target="ptc_nuclear_existing" data-value="0">$0</button>
-                                <button type="button" class="preset-btn active" data-target="ptc_nuclear_existing" data-value="15">$15</button>
+                                <button type="button" class="preset-btn" data-target="ptc_45u_max" data-value="0">$0</button>
+                                <button type="button" class="preset-btn active" data-target="ptc_45u_max" data-value="15">$15</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label>45U Floor Price ($/MWh)</label>
+                        <div class="input-with-presets">
+                            <input type="number" id="ptc_45u_floor" value="40.0" step="5" min="0">
+                            <div class="preset-btns">
+                                <button type="button" class="preset-btn" data-target="ptc_45u_floor" data-value="25">$25</button>
+                                <button type="button" class="preset-btn active" data-target="ptc_45u_floor" data-value="40">$40</button>
+                                <button type="button" class="preset-btn" data-target="ptc_45u_floor" data-value="50">$50</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label>45U Floor Escalation (%/yr)</label>
+                        <input type="number" id="ptc_45u_floor_escalation" value="0" step="0.5" min="0" max="10">
+                    </div>
+                    <div class="input-group">
+                        <label>45U Sunset Year</label>
+                        <div class="input-with-presets">
+                            <input type="number" id="ptc_45u_sunset_year" value="2032" step="1" min="2025" max="2060">
+                            <div class="preset-btns">
+                                <button type="button" class="preset-btn active" data-target="ptc_45u_sunset_year" data-value="2032">2032</button>
+                                <button type="button" class="preset-btn" data-target="ptc_45u_sunset_year" data-value="2040">2040</button>
+                                <button type="button" class="preset-btn" data-target="ptc_45u_sunset_year" data-value="2050">2050</button>
                             </div>
                         </div>
                     </div>
