@@ -279,10 +279,22 @@ function collectFormData() {
         q45: document.querySelector('#q45Toggle .toggle-btn.active')?.dataset.value === '1',
         ccs_credit_override: document.getElementById('ccs_credit_override').value ?
             parseFloat(document.getElementById('ccs_credit_override').value) : null,
-        demand_growth: document.querySelector('#demandToggle .toggle-btn.active')?.dataset.value || 'Medium',
+        demand_growth: (() => {
+            const sel = document.querySelector('#demandToggle .toggle-btn.active')?.dataset.value || 'Medium';
+            if (sel === 'Custom') {
+                return parseFloat(document.getElementById('custom_demand_pct')?.value) || 1.5;
+            }
+            return sel;
+        })(),
         ppa_level: document.querySelector('#ppaToggle .toggle-btn.active')?.dataset.value || 'Medium',
         gas_friction: document.querySelector('#gasFrictionToggle .toggle-btn.active')?.dataset.value || 'Medium',
         nuclear_retirement_threshold: parseFloat(document.getElementById('nuclear_retirement').value),
+        custom_overrides: {
+            fuel: document.getElementById('custom_fuel_toggle')?.checked || false,
+            lmp: document.getElementById('custom_lmp_toggle')?.checked || false,
+            capacity: document.getElementById('custom_capacity_toggle')?.checked || false,
+            rec: document.getElementById('custom_rec_toggle')?.checked || false,
+        },
     };
 
     // Trajectory-specific params
@@ -337,6 +349,59 @@ async function pollSweepStatus(jobId) {
     poll();
 }
 
+// ── Custom demand growth toggle ──
+document.querySelectorAll('#demandToggle .toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const isCustom = btn.dataset.value === 'Custom';
+        const customInput = document.getElementById('customDemandInput');
+        if (customInput) {
+            customInput.classList.toggle('visible', isCustom);
+        }
+    });
+});
+
+// ── Custom file status checking ──
+async function checkCustomInputStatus() {
+    try {
+        const resp = await fetch('/api/custom-input-status');
+        if (!resp.ok) return;
+        const status = await resp.json();
+        const fileMap = {
+            'fuel': 'customFuelStatus',
+            'lmp': 'customLmpStatus',
+            'capacity': 'customCapacityStatus',
+            'rec': 'customRecStatus',
+        };
+        for (const [key, elementId] of Object.entries(fileMap)) {
+            const el = document.getElementById(elementId);
+            if (!el) continue;
+            const fileStatus = status[key];
+            if (!fileStatus) {
+                el.textContent = '';
+                continue;
+            }
+            if (fileStatus.found && fileStatus.valid) {
+                el.textContent = `✓ File found and valid (${fileStatus.rows} rows)`;
+                el.className = 'custom-file-status found';
+            } else if (fileStatus.found && !fileStatus.valid) {
+                el.textContent = `✗ File found but invalid: ${fileStatus.error}`;
+                el.className = 'custom-file-status invalid';
+            } else {
+                el.textContent = 'No custom file found — using model defaults';
+                el.className = 'custom-file-status missing';
+            }
+        }
+    } catch (e) {
+        // Silently fail — custom inputs are optional
+    }
+}
+
+// Check custom file toggles and update status on toggle change
+document.querySelectorAll('#custom_fuel_toggle, #custom_lmp_toggle, #custom_capacity_toggle, #custom_rec_toggle').forEach(toggle => {
+    toggle.addEventListener('change', () => checkCustomInputStatus());
+});
+
 // ── Initialize ──
 updateISOSummary();
 updateGeothermalVisibility();
+checkCustomInputStatus();
