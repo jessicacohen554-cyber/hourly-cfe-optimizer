@@ -34,7 +34,7 @@ echo [OK] Dependencies installed
 REM ── Generate synthetic data if needed ──────────────────────────────────
 if not exist "data\demand_profiles_2025.json" (
     echo Generating synthetic data profiles...
-    set PYTHONPATH=%~dp0
+    set PYTHONPATH=%~dp0;%~dp0backend;%~dp0scripts
     %PYTHON% scripts\generate_synthetic_profiles.py 2>nul
 )
 echo [OK] Data profiles ready
@@ -50,7 +50,7 @@ echo   Close this window to stop the server
 echo ================================================================
 echo.
 
-set PYTHONPATH=%~dp0
+set PYTHONPATH=%~dp0;%~dp0backend;%~dp0scripts
 %PYTHON% -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
 
 pause
