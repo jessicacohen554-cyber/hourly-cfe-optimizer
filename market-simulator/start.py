@@ -38,7 +38,7 @@ def ensure_data():
     if not data_file.exists():
         print("Generating synthetic data profiles...")
         env = os.environ.copy()
-        env["PYTHONPATH"] = str(ROOT)
+        env["PYTHONPATH"] = os.pathsep.join([str(ROOT), str(ROOT / "backend"), str(ROOT / "scripts")])
         subprocess.run(
             [sys.executable, str(ROOT / "scripts" / "generate_synthetic_profiles.py")],
             env=env, capture_output=True,
@@ -57,8 +57,8 @@ def main():
     install_deps()
     ensure_data()
 
-    # Set PYTHONPATH for module imports
-    os.environ["PYTHONPATH"] = str(ROOT)
+    # Set PYTHONPATH for module imports (root + backend + scripts)
+    os.environ["PYTHONPATH"] = os.pathsep.join([str(ROOT), str(ROOT / "backend"), str(ROOT / "scripts")])
 
     print()
     print("═" * 60)
