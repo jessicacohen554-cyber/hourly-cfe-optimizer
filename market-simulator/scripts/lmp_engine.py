@@ -196,7 +196,8 @@ GAS_AVAILABILITY_FACTOR = {
 
 def compute_marginal_costs(fuel_level='Medium', co2_level='Medium',
                            nox_price=0.0, sox_price=0.0,
-                           custom_fuel_prices=None, custom_co2_price=None):
+                           custom_fuel_prices=None, custom_co2_price=None,
+                           custom_heat_rates=None, custom_vom=None):
     """Compute marginal cost ($/MWh) for each fossil unit type.
 
     PJM Manual 15 cost-based offer formula:
@@ -209,13 +210,15 @@ def compute_marginal_costs(fuel_level='Medium', co2_level='Medium',
     """
     fp = custom_fuel_prices if custom_fuel_prices else FUEL_PRICES[fuel_level]
     co2_price = custom_co2_price if custom_co2_price is not None else CO2_PRICES.get(co2_level, CO2_PRICES['Medium'])
+    hr = custom_heat_rates if custom_heat_rates else HEAT_RATES
+    vm = custom_vom if custom_vom else VOM
     adder = 1.0 + TEN_PERCENT_ADDER
 
     costs = {}
-    for unit_type in HEAT_RATES:
+    for unit_type in hr:
         fuel_key = {'coal_steam': 'coal', 'gas_ccgt': 'gas', 'gas_ct': 'gas', 'oil_ct': 'oil'}[unit_type]
         # Base: fuel + VOM + CO2
-        base_cost = (HEAT_RATES[unit_type] * fp[fuel_key] + VOM[unit_type]
+        base_cost = (hr[unit_type] * fp[fuel_key] + vm[unit_type]
                      + CO2_RATES[unit_type] * co2_price)
         # NOx: rate (lb/MWh) × price ($/ton) / 2000 (lb/ton)
         if nox_price > 0:
@@ -260,7 +263,8 @@ def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw
                              h2_pct=0, co2_level='Medium',
                              nox_price=0.0, sox_price=0.0,
                              nox_limit=None, sox_limit=None,
-                             custom_fuel_prices=None, custom_co2_price=None):
+                             custom_fuel_prices=None, custom_co2_price=None,
+                             custom_heat_rates=None, custom_vom=None):
     """Build merit-order stack: list of (unit_type, capacity_mw, marginal_cost).
 
     Ordered by marginal cost (cheapest first). Stack composition reflects
@@ -295,7 +299,9 @@ def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw
     mc = compute_marginal_costs(fuel_level, co2_level,
                                 nox_price=nox_price, sox_price=sox_price,
                                 custom_fuel_prices=custom_fuel_prices,
-                                custom_co2_price=custom_co2_price)
+                                custom_co2_price=custom_co2_price,
+                                custom_heat_rates=custom_heat_rates,
+                                custom_vom=custom_vom)
 
     if total_fossil_mw is None:
         installed = INSTALLED_FOSSIL_MW.get(iso, 80_000)

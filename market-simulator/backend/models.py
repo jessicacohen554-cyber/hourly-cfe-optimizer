@@ -61,12 +61,28 @@ class HeatRates(BaseModel):
     oil_ct: float = 10.5
 
 
+class VOM(BaseModel):
+    """Variable O&M costs ($/MWh) by generator type."""
+    coal_steam: float = 5.50
+    gas_ccgt: float = 3.50
+    gas_ct: float = 5.00
+    oil_ct: float = 6.00
+
+
+class StorageCosts(BaseModel):
+    """Installed storage costs ($/kW-yr)."""
+    battery: float = 295.0    # 4hr Li-ion
+    battery8: float = 456.0   # 8hr Li-ion
+    ldes: float = 220.0       # 100hr Iron-Air
+
+
 class CleanLCOEs(BaseModel):
     solar: float = 65.0
     wind: float = 62.0
     offshore_wind: float = 85.0
     nuclear: float = 90.0
     ccs_ccgt: float = 120.0
+    geothermal: Optional[float] = None  # CAISO only
 
 
 class EmissionPrices(BaseModel):
@@ -107,10 +123,14 @@ class SimulationRequest(BaseModel):
     emission_prices: EmissionPrices = Field(default_factory=EmissionPrices)
     emission_limits: EmissionLimits = Field(default_factory=EmissionLimits)
     heat_rates: HeatRates = Field(default_factory=HeatRates)
+    vom: VOM = Field(default_factory=VOM)
     clean_lcoes: CleanLCOEs = Field(default_factory=CleanLCOEs)
     incentives: Incentives = Field(default_factory=Incentives)
+    storage_costs: StorageCosts = Field(default_factory=StorageCosts)
     capacity_market_price: Optional[float] = None  # None → use ISO default
     wholesale_price_override: Optional[float] = None  # $/MWh — None = model-derived
+    q45: bool = True                    # 45Q tax credit on/off
+    ccs_credit_override: Optional[float] = None  # $/MWh CCS credit override (replaces 45Q tables)
     transmission_level: str = "Medium"  # None/Low/Medium/High
     demand_growth: str = "Medium"       # Low/Medium/High
     ppa_level: str = "Medium"           # Low/Medium/High

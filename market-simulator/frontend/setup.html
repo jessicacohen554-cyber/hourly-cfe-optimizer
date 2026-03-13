@@ -426,35 +426,38 @@
                     <div class="input-group">
                         <label>Battery (4hr Li-ion)</label>
                         <div class="input-with-presets">
-                            <input type="number" id="cost_battery" value="295" step="5" min="0">
+                            <input type="number" id="cost_battery" value="295" step="5" min="0" oninput="updateStorageLCOE('battery')">
                             <div class="preset-btns">
                                 <button type="button" class="preset-btn" data-target="cost_battery" data-value="220">L</button>
                                 <button type="button" class="preset-btn active" data-target="cost_battery" data-value="295">M</button>
                                 <button type="button" class="preset-btn" data-target="cost_battery" data-value="380">H</button>
                             </div>
                         </div>
+                        <span class="input-hint" id="lcoe_battery_computed">&asymp; $237.7/MWh</span>
                     </div>
                     <div class="input-group">
                         <label>Battery (8hr Li-ion)</label>
                         <div class="input-with-presets">
-                            <input type="number" id="cost_battery8" value="456" step="5" min="0">
+                            <input type="number" id="cost_battery8" value="456" step="5" min="0" oninput="updateStorageLCOE('battery8')">
                             <div class="preset-btns">
                                 <button type="button" class="preset-btn" data-target="cost_battery8" data-value="350">L</button>
                                 <button type="button" class="preset-btn active" data-target="cost_battery8" data-value="456">M</button>
                                 <button type="button" class="preset-btn" data-target="cost_battery8" data-value="580">H</button>
                             </div>
                         </div>
+                        <span class="input-hint" id="lcoe_battery8_computed">&asymp; $223.5/MWh</span>
                     </div>
                     <div class="input-group">
                         <label>LDES (100hr Iron-Air)</label>
                         <div class="input-with-presets">
-                            <input type="number" id="cost_ldes" value="220" step="5" min="0">
+                            <input type="number" id="cost_ldes" value="220" step="5" min="0" oninput="updateStorageLCOE('ldes')">
                             <div class="preset-btns">
                                 <button type="button" class="preset-btn" data-target="cost_ldes" data-value="150">L</button>
                                 <button type="button" class="preset-btn active" data-target="cost_ldes" data-value="220">M</button>
                                 <button type="button" class="preset-btn" data-target="cost_ldes" data-value="300">H</button>
                             </div>
                         </div>
+                        <span class="input-hint" id="lcoe_ldes_computed">&asymp; $440.0/MWh</span>
                     </div>
                 </div>
             </div>
@@ -491,6 +494,11 @@
                             <button type="button" class="toggle-btn active" data-value="1">On</button>
                             <button type="button" class="toggle-btn" data-value="0">Off</button>
                         </div>
+                    </div>
+                    <div class="input-group">
+                        <label>CCS Credit Override ($/MWh)</label>
+                        <input type="number" id="ccs_credit_override" placeholder="Auto (45Q toggle)" step="1" min="0">
+                        <span class="input-hint">Overrides 45Q toggle when set</span>
                     </div>
                 </div>
             </div>

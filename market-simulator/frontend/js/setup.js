@@ -3,6 +3,16 @@
  * Handles form interactions, preset buttons, mode switching, and form submission.
  */
 
+// Storage $/kW-yr → $/MWh LCOS conversion divisors
+const STORAGE_DIVISORS = { battery: 1.241, battery8: 2.040, ldes: 0.500 };
+
+function updateStorageLCOE(type) {
+    const cost = parseFloat(document.getElementById(`cost_${type}`).value) || 0;
+    const lcoe = (cost / STORAGE_DIVISORS[type]).toFixed(1);
+    const el = document.getElementById(`lcoe_${type}_computed`);
+    if (el) el.textContent = `≈ $${lcoe}/MWh`;
+}
+
 // ISO summary data (from pipeline_config)
 const ISO_DATA = {
     CAISO: { demand_twh: 224.0, clean_pct: 48.5, fossil_mw: 47000, cap_market: 75 },
@@ -77,6 +87,11 @@ document.querySelectorAll('.preset-btn, .preset-btn-wide').forEach(btn => {
         const parent = btn.parentElement;
         parent.querySelectorAll('.preset-btn, .preset-btn-wide').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
+
+        // Update storage LCOE readouts when preset buttons are clicked
+        if (target === 'cost_battery') updateStorageLCOE('battery');
+        else if (target === 'cost_battery8') updateStorageLCOE('battery8');
+        else if (target === 'cost_ldes') updateStorageLCOE('ldes');
     });
 });
 
@@ -262,6 +277,8 @@ function collectFormData() {
             parseFloat(document.getElementById('wholesale_override').value) : null,
         transmission_level: document.querySelector('#txToggle .toggle-btn.active')?.dataset.value || 'Medium',
         q45: document.querySelector('#q45Toggle .toggle-btn.active')?.dataset.value === '1',
+        ccs_credit_override: document.getElementById('ccs_credit_override').value ?
+            parseFloat(document.getElementById('ccs_credit_override').value) : null,
         demand_growth: document.querySelector('#demandToggle .toggle-btn.active')?.dataset.value || 'Medium',
         ppa_level: document.querySelector('#ppaToggle .toggle-btn.active')?.dataset.value || 'Medium',
         gas_friction: document.querySelector('#gasFrictionToggle .toggle-btn.active')?.dataset.value || 'Medium',
