@@ -806,4 +806,12 @@ function setupExportButtons(data) {
 }
 
 // ── Initialize ──
-init();
+// Guard: wait for Plotly to be available (handles async CDN fallback edge case)
+function waitForPlotlyAndInit() {
+    if (typeof Plotly !== 'undefined') {
+        init();
+    } else {
+        setTimeout(waitForPlotlyAndInit, 100);
+    }
+}
+waitForPlotlyAndInit();
