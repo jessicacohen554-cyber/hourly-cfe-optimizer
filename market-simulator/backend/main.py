@@ -124,6 +124,18 @@ if FRONTEND_DIR.exists():
     # Mount the entire frontend as a fallback for any other static assets
     app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
+# Mount brand assets
+brand_assets_dir = MARKET_SIM_ROOT / "brand-assets"
+if brand_assets_dir.exists():
+    app.mount("/brand-assets", StaticFiles(directory=str(brand_assets_dir)), name="brand-assets")
+
+# Ensure results directory exists
+RESULTS_DIR = MARKET_SIM_ROOT / "results"
+RESULTS_DIR.mkdir(exist_ok=True)
+
+# Custom user inputs directory
+CUSTOM_INPUTS_DIR = MARKET_SIM_ROOT / "custom-user-inputs"
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # In-memory stores
@@ -159,8 +171,18 @@ def _get_preloaded_data() -> Dict:
 # ─────────────────────────────────────────────────────────────────────────────
 
 @app.get("/", response_class=HTMLResponse)
+async def serve_guide_page():
+    """Serve the guide / landing page."""
+    guide_path = FRONTEND_DIR / "guide.html"
+    if not guide_path.exists():
+        # Fallback to setup if guide doesn't exist yet
+        return FileResponse(str(FRONTEND_DIR / "setup.html"), media_type="text/html")
+    return FileResponse(str(guide_path), media_type="text/html")
+
+
+@app.get("/setup", response_class=HTMLResponse)
 async def serve_setup_page():
-    """Serve the setup / landing page."""
+    """Serve the setup / input form page."""
     setup_path = FRONTEND_DIR / "setup.html"
     if not setup_path.exists():
         raise HTTPException(status_code=404, detail="setup.html not found")
