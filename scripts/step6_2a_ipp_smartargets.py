@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Step 11: IPP SMARTargets Application (V2 — Parametric Sweep)
+Step 6.2A: IPP SMARTargets Application (V2 — Parametric Sweep)
 =============================================================
-Maps Step 10 parametric sweep results onto individual IPP fleets.
+Maps Step 6.1 parametric sweep results onto individual IPP fleets.
 
 V2 changes vs V1:
 - Reads new sweep parquets (smartargets_sweep_*.parquet / sweep_*_*.parquet)
@@ -700,7 +700,7 @@ def compute_active_qt_fan(company, results_df, sweep_df):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def main():
-    print('Step 11: IPP SMARTargets Application (V2 — Parametric Sweep)')
+    print('Step 6.2A: IPP SMARTargets Application (V2 — Parametric Sweep)')
     print('=' * 60)
 
     companies = load_fleet_config()

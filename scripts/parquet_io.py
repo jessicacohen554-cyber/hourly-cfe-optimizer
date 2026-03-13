@@ -29,17 +29,33 @@ REGIONAL_DEMAND_MWH = {
 
 # Default parquet directory for cost optimization results
 DEFAULT_INPUT_DIRS = [
+    os.path.join(SCRIPT_DIR, '..', 'data', 'step2.2-cost'),
     os.path.join(SCRIPT_DIR, 'data', 'step2.2-cost'),
 ]
 
 
 def find_parquet(input_dir, iso):
     """Find parquet file for an ISO in the given directory."""
-    for prefix in ['step3_co_', 'co2_']:
+    for prefix in ['step_2_2a_CO_', 'step3_co_', 'co2_']:
         path = os.path.join(input_dir, f'{prefix}{iso}.parquet')
         if os.path.exists(path):
             return path
     return None
+
+
+def resolve_step22_path(directory, new_name, legacy_name):
+    """Return the first existing path: new naming convention, then legacy fallback.
+
+    Example:
+        resolve_step22_path(d, f'step_2_2a_CO_{iso}.parquet', f'step3_co_{iso}.parquet')
+    """
+    new_path = os.path.join(directory, new_name)
+    if os.path.exists(new_path):
+        return new_path
+    legacy_path = os.path.join(directory, legacy_name)
+    if os.path.exists(legacy_path):
+        return legacy_path
+    return new_path  # default to new name (caller handles missing)
 
 
 def find_input_dir(isos=None, preferred_dirs=None):
@@ -66,7 +82,8 @@ def load_from_parquets(input_dir, isos):
     """
     Read per-ISO parquets and reconstruct nested dict format.
 
-    Reads step3_co_<ISO>.parquet files from cost optimization output.
+    Reads step_2_2a_CO_<ISO>.parquet (or legacy step3_co_<ISO>.parquet) files
+    from cost optimization output.
 
     Returns:
         data: {
@@ -305,12 +322,12 @@ def save_to_parquets(data, output_dir, isos, file_prefix='step4_'):
 def find_dg_parquets(input_dir, iso, prefix='step4_dg_'):
     """Find all DG parquet files for an ISO in the given directory.
 
-    Tries step4_dg_ first (post-processed), then step3_dg_ (raw).
+    Tries step4_dg_ first, then step_2_2a_DG_ (new naming), then step3_dg_ (legacy).
     Returns list of file paths sorted by threshold.
     """
     import glob as glob_mod
-    for pfx in [prefix, 'step4_dg_', 'step3_dg_']:
-        pattern = os.path.join(input_dir, f'{pfx}{iso}_t*.parquet')
+    for pfx in [prefix, 'step4_dg_', 'step_2_2a_DG_', 'step3_dg_']:
+        pattern = os.path.join(input_dir, f'{pfx}{iso}_*.parquet')
         files = sorted(glob_mod.glob(pattern))
         if files:
             return files

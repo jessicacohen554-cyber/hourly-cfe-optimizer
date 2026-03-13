@@ -54,7 +54,7 @@ INPUTS:
 OUTPUTS:
   - data/step4-analysis/optimal_targets.json
   - dashboard/js/optimal-target-data.js
-  (Both consumed by step9a_generate_shared_data.py for abatement dashboard)
+  (Both consumed by step7_1a_generate_shared_data.py for abatement dashboard)
 """
 
 import json
@@ -428,7 +428,9 @@ def load_parquet_mixes():
     storage_resources = ['battery', 'battery8', 'ldes', 'h2']
 
     for iso in ISOS:
-        step3_path = step3_dir / f'step3_co_{iso}.parquet'
+        step3_path = step3_dir / f'step_2_2a_CO_{iso}.parquet'
+        if not step3_path.exists():
+            step3_path = step3_dir / f'step3_co_{iso}.parquet'
         if not step3_path.exists():
             print(f"  {iso}: No step3 parquet — using hardcoded RESOURCE_MIX_DATA")
             continue
@@ -550,7 +552,7 @@ def load_parquet_costs():
         base_dir / 'data' / 'step4-analysis' / 'co2_results',
         base_dir / 'data' / 'step2.2-cost',
     ]
-    prefixes = ['co2_', 'step3_co_']
+    prefixes = ['co2_', 'step_2_2a_CO_', 'step3_co_']
 
     result = {}
     for iso in ISOS:
@@ -566,7 +568,9 @@ def load_parquet_costs():
 
         if df is None or 'cost_total_cost' not in df.columns:
             # co2 parquets don't have cost columns — try step3 directly
-            step3_path = base_dir / 'data' / 'step2.2-cost' / f'step3_co_{iso}.parquet'
+            step3_path = base_dir / 'data' / 'step2.2-cost' / f'step_2_2a_CO_{iso}.parquet'
+            if not step3_path.exists():
+                step3_path = base_dir / 'data' / 'step2.2-cost' / f'step3_co_{iso}.parquet'
             if step3_path.exists():
                 df = pd.read_parquet(step3_path)
             if df is None or 'cost_total_cost' not in df.columns:

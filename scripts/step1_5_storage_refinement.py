@@ -42,7 +42,6 @@ import gc
 import hashlib
 import json
 import os
-import subprocess
 import sys
 import time
 
@@ -996,50 +995,8 @@ def save_storage_results(iso, threshold, nm_combos, results, rtypes,
 
 def git_commit_threshold(iso, threshold, phase_label, auto_commit,
                          batch_num=None):
-    """Commit and push threshold results."""
-    if not auto_commit:
-        return
-
-    try:
-        t_str = s1._normalize_threshold_str(threshold)
-        if batch_num is not None:
-            fname = f'{iso}_t{t_str}_storage_b{batch_num}.parquet'
-        else:
-            fname = f'{iso}_t{t_str}_storage.parquet'
-        out_path = os.path.join(STEP1D_OUTPUT_DIR, fname)
-        if not os.path.exists(out_path):
-            return
-
-        subprocess.run(['git', 'add', '-f', out_path],
-                       check=True, capture_output=True, text=True)
-
-        result = subprocess.run(['git', 'diff', '--cached', '--quiet'],
-                                capture_output=True)
-        if result.returncode == 0:
-            return
-
-        size_mb = os.path.getsize(out_path) / (1024 * 1024)
-        batch_label = f" batch {batch_num}" if batch_num is not None else ""
-        msg = (f"Storage {phase_label}: {iso} {threshold}%{batch_label} "
-               f"({size_mb:.1f} MB) — auto-commit")
-        subprocess.run(['git', 'commit', '-m', msg],
-                       check=True, capture_output=True, text=True)
-
-        for attempt in range(1, 5):
-            result = subprocess.run(
-                ['git', 'push', '-u', 'origin', 'HEAD'],
-                capture_output=True, text=True)
-            if result.returncode == 0:
-                batch_str = f" b{batch_num}" if batch_num is not None else ""
-                print(f"    [auto-commit] {iso} {threshold}%{batch_str} committed & pushed")
-                return
-            if attempt < 4:
-                time.sleep(2 ** attempt)
-
-        print(f"    [auto-commit] Push failed — committed locally")
-
-    except subprocess.CalledProcessError as e:
-        print(f"    [auto-commit] Git error: {e}")
+    """Auto-commit removed — all outputs are written locally."""
+    return
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1095,7 +1052,8 @@ def _save_manifest(iso, code_hash, pass1_thresholds, pass2_done):
 # MAIN PIPELINE
 # ══════════════════════════════════════════════════════════════════════════════
 
-def process_iso(iso, auto_commit=False, thresholds_filter=None):
+def process_iso(iso, thresholds_filter=None):
+    auto_commit = False  # Auto-commit removed — all outputs are written locally
     """Run three-pass adaptive storage sweep for one ISO.
 
     Pass 0: Max-storage screen (1 combo/mix) → eliminates unreachable mixes
@@ -1246,11 +1204,10 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
                 n_flush = len(results[t])
                 # Keep for Pass 2 boundary detection
                 pass2_coarse[t].extend(results[t])
-                # Save batch file and commit.
-                # High thresholds always auto-commit regardless of flag.
+                # Save batch file and optionally commit.
                 save_storage_results(iso, t, nm_combos, results[t], rtypes,
                                      batch_num=bn)
-                should_commit = auto_commit or t >= HIGH_THRESHOLD_FLOOR
+                should_commit = auto_commit
                 git_commit_threshold(iso, t, f"Pass1-b{bn}", should_commit,
                                      batch_num=bn)
                 print(f"    Auto-flush {iso} t{t}%: {n_flush:,} results → "
@@ -1332,8 +1289,7 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
                     remaining = group_coarse.get(t, [])
                     if remaining:
                         pass2_coarse[t].extend(remaining)
-                    # High thresholds always auto-commit
-                    t_commit = auto_commit or t >= HIGH_THRESHOLD_FLOOR
+                    t_commit = auto_commit
                     if t in batch_nums:
                         # Threshold was auto-batched — save remainder as
                         # next batch file (even if small)
@@ -1440,8 +1396,7 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None):
         n_coarse = len(coarse_for_t)
         n_fine = len(fine_results)
 
-        # High thresholds always auto-commit
-        t_commit = auto_commit or t >= HIGH_THRESHOLD_FLOOR
+        t_commit = auto_commit
 
         if t in batch_nums:
             # Batched threshold — save fine results as next batch file.
@@ -1624,9 +1579,6 @@ def main():
         description="Step 1C: Three-pass storage sweep with auto-batching.")
     parser.add_argument("--iso", required=True,
                         help="ISO name or 'ALL'")
-    parser.add_argument("--auto-commit", action="store_true",
-                        help="Commit & push after each threshold (and each "
-                             "auto-batch for large thresholds)")
     parser.add_argument("--thresholds", default="",
                         help="Comma-separated thresholds to process "
                              "(e.g. '90,95,99'). Default: all 17.")
@@ -1664,7 +1616,7 @@ def main():
         print(f"Threshold filter: {thresholds_filter}")
 
     for iso in isos:
-        process_iso(iso, auto_commit=args.auto_commit,
+        process_iso(iso,
                     thresholds_filter=thresholds_filter)
 
 

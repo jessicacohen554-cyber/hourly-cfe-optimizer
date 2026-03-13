@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Step 5D: MAC-Optimized Consequential Queue
-============================================
+Step 3B: MAC-Optimized Consequential Queue
+===========================================
 Path-dependent deployment queue optimizing for cheapest $/mtCO2 avoided,
 with resource lock-in ("ratcheting floor") at each threshold.
 
@@ -2188,13 +2188,13 @@ def main():
         queue_path = os.path.join(args.output_dir, 'consequential_queue.json')
         with open(queue_path, 'w') as f:
             json.dump({'queue': queue, 'generated': time.strftime('%Y-%m-%d %H:%M:%S'),
-                       'source': 'step5d_mac_queue.py',
+                       'source': 'step3b_mac_queue.py',
                        'sensitivity': 'all_med'}, f, indent=2, default=str)
         print(f"Saved consequential queue: {queue_path} ({len(queue)} steps)")
 
-    # ── Export consequential_queue_scenario_a.json for step7c ──
+    # ── Export consequential_queue_scenario_a.json for step5_2a ──
     # Same queue format but using high_firm_low_vre sensitivity (Scenario A toggles).
-    # Step7c reads this for its queue_a to ensure exact sensitivity match.
+    # step5_2a reads this for its queue_a to ensure exact sensitivity match.
     if all_results:
         queue_a = _build_consequential_queue(all_results,
                                               demand_data=demand_data,
@@ -2204,13 +2204,13 @@ def main():
         queue_a_path = os.path.join(args.output_dir, 'consequential_queue_scenario_a.json')
         with open(queue_a_path, 'w') as f:
             json.dump({'queue': queue_a, 'generated': time.strftime('%Y-%m-%d %H:%M:%S'),
-                       'source': 'step5d_mac_queue.py',
+                       'source': 'step3b_mac_queue.py',
                        'sensitivity': 'high_firm_low_vre'}, f, indent=2, default=str)
         print(f"Saved scenario A queue: {queue_a_path} ({len(queue_a)} steps)")
 
-    # ── Export scenario_a_{ISO}.json for step7c compatibility ──
+    # ── Export scenario_a_{ISO}.json for step5_2a compatibility ──
     # Re-prices MAC queue winners under SCENARIO_A toggles (Low VRE, High firm)
-    # so step7c can read them as Scenario A for comparison with Scenario B.
+    # so step5_2a can read them as Scenario A for comparison with Scenario B.
     if all_results:
         print("\n" + "=" * 60)
         print("EXPORTING SCENARIO A (for step7c scenario comparison)")

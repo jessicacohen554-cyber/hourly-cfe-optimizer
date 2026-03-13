@@ -2,7 +2,7 @@
 """
 LMP Model Calibration — Validate synthetic LMP against PJM actual data
 ========================================================================
-Compares step5b_compute_lmp_prices.py output against published PJM market statistics
+Compares lmp_engine.py output against published PJM market statistics
 from the Independent Market Monitor (Monitoring Analytics) State of the Market
 reports and EIA wholesale data.
 

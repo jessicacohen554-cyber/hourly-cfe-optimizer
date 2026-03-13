@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Step 9D — Extract Strategy 2 Hourly Matching Comparison Data
+Step 7.1F — Extract Strategy 2 Hourly Matching Comparison Data
 =============================================================
 Reads strategy2_hourly.json (~54MB) and extracts a compact JS data file
 for the hourly_comparison.html dashboard page.

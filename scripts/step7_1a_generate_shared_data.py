@@ -3,7 +3,7 @@
 Generate complete shared-data.js from pipeline results + mac_stats.json.
 Replaces the entire file with fresh data from the latest pipeline run.
 
-Pipeline order: Step 1 (physics) → Step 2 (tranche) → postprocess → co2 → mac_stats → THIS
+Pipeline order: Step 1 (PFS) → Step 2 (EF/Cost) → Step 3 (Dispatch/MAC) → Step 4 (CO₂/LMP) → Step 7 (this)
 
 Input:  data/step4-analysis/co2_results/ (CO2-enriched parquets, preferred)
         dashboard/overprocure_results.json      (monolithic JSON fallback)
@@ -301,7 +301,9 @@ STEP3_DIR = os.path.join(SCRIPT_DIR, '..', 'data', 'step2.2-cost')
 system_cost_data = {'medium': {}, 'low': {}, 'high': {}}
 for iso in ISOS:
     med_line, lo_line, hi_line = [], [], []
-    step3_path = os.path.join(STEP3_DIR, f'step3_co_{iso}.parquet')
+    step3_path = os.path.join(STEP3_DIR, f'step_2_2a_CO_{iso}.parquet')
+    if not os.path.exists(step3_path):
+        step3_path = os.path.join(STEP3_DIR, f'step3_co_{iso}.parquet')
     if os.path.exists(step3_path):
         import pandas as _pd_sc
         _df_sc = _pd_sc.read_parquet(step3_path,
@@ -435,7 +437,9 @@ for iso in ISOS:
 
     for t_idx, t in enumerate(THRESHOLDS):
         t_num = THRESHOLDS_NUM[t_idx]
-        dg_file = os.path.join(DG_PARQUET_DIR, f'step3_dg_{iso}_t{t_num}.parquet')
+        dg_file = os.path.join(DG_PARQUET_DIR, f'step_2_2a_DG_{iso}_{t_num}.parquet')
+        if not os.path.exists(dg_file):
+            dg_file = os.path.join(DG_PARQUET_DIR, f'step3_dg_{iso}_t{t_num}.parquet')
 
         dg_row = None
         if _pd is not None and os.path.exists(dg_file):
@@ -595,7 +599,7 @@ for iso in ISOS:
             batt8 = sc.get('battery8_dispatch_pct', 0)
             ldes = sc.get('ldes_dispatch_pct', 0)
             h2 = sc.get('h2_dispatch_pct', 0)
-            # Primary key: matches step5c_compress_day_profiles.py mix_key()
+            # Primary key: matches step4_1b_compress_day_profiles.py mix_key()
             # Format: {cf}_{s}_{w}_{c}_{h}_{battery_pct}_{ldes_pct}_{h2_pct}
             mk = f"{rm.get('clean_firm',0)}_{rm.get('solar',0)}_{rm.get('wind',0)}_{rm.get('ccs_ccgt',0)}_{rm.get('hydro',0)}_{batt}_{ldes}_{h2}"
             profile = iso_profiles.get(mk)
@@ -708,7 +712,9 @@ for iso in ISOS:
     }
 
     # Try loading from step3 parquets (preferred — has all gas_* columns)
-    step3_gb_path = os.path.join(STEP3_DIR, f'step3_co_{iso}.parquet')
+    step3_gb_path = os.path.join(STEP3_DIR, f'step_2_2a_CO_{iso}.parquet')
+    if not os.path.exists(step3_gb_path):
+        step3_gb_path = os.path.join(STEP3_DIR, f'step3_co_{iso}.parquet')
     _gb_from_parquet = False
     if os.path.exists(step3_gb_path):
         import pandas as _pd_gb
@@ -1213,7 +1219,7 @@ lines.append('};')
 # GAS_BACKUP_DATA
 lines.append('')
 lines.append('// --- Gas Capacity Backup & Resource Adequacy --- ')
-lines.append('// Source: step4_postprocess.py compute_gas_capacity_and_ra()')
+lines.append('// Source: step2_2a_cost_optimization.py compute_gas_capacity_and_ra()')
 lines.append(f'// Indices match THRESHOLDS array: [{thresh_str}]')
 lines.append('// total_system_cost = clean_cost + gas_backup_cost (existing+new)')
 lines.append('// incremental_with_new_gas = clean_cost + new-build gas cost only')
@@ -1764,7 +1770,9 @@ for iso_idx, iso in enumerate(ISOS):
     lines.append(f'    {iso}: {{')
 
     # Load the feasible parquet for this ISO (all thresholds in one file)
-    feasible_path = os.path.join(STEP3_DIR, f'step3_feasible_{iso}.parquet')
+    feasible_path = os.path.join(STEP3_DIR, f'step_2_2a_feasible_{iso}.parquet')
+    if not os.path.exists(feasible_path):
+        feasible_path = os.path.join(STEP3_DIR, f'step3_feasible_{iso}.parquet')
     if os.path.exists(feasible_path):
         feas_df = pd.read_parquet(feasible_path)
         # Ensure all expected columns exist
@@ -1832,7 +1840,7 @@ print(f"  Feasible mixes: {total_fm} total across {len(ISOS)} ISOs × {len(THRES
 js_content = '\n'.join(lines) + '\n'
 output_path = os.path.join(SCRIPT_DIR, '..', 'dashboard', 'js', 'shared-data.js')
 os.makedirs(os.path.dirname(output_path), exist_ok=True)
-with open(output_path, 'w') as f:
+with open(output_path, 'w', encoding='utf-8') as f:
     f.write(js_content)
 
 file_size = os.path.getsize(output_path)

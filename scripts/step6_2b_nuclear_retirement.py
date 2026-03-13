@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
-"""Step 12: Nuclear Retirement & Stranding Analysis — Multi-Model Stress Test
+"""Step 6.2B: Nuclear Retirement & Stranding Analysis — Multi-Model Stress Test
 
 Assesses merchant nuclear stranding risk under three independent modeling approaches:
 
-  Model A: Step 10 Reference Sweep (270 parametric market scenarios)
+  Model A: Step 6.1 Reference Sweep (270 parametric market scenarios)
     - 2 conditions × 3 demand × 5 price × 3 PPA × 3 gas friction = 270
     - Provides LMP and clean_pct trajectories through 2050
 
-  Model B: Step 10 Net-Zero Pathways (10 structured transition scenarios)
+  Model B: Step 6.1 Net-Zero Pathways (10 structured transition scenarios)
     - AT1/AT2: Power Sector NZ (Facilitating/Challenging)
     - AT3/AT4: Economy-Wide NZ (Facilitating/Challenging)
     - QT1-QT4: Queue-driven trajectories
     - R1/R2: Reference pathways
     - Each provides ISO-level LMP + clean_pct trajectory
 
-  Model C: Step 3A Track 1 Baseline + Capacity Adders
+  Model C: Step 2.2A Track 1 Baseline + Capacity Adders
     - 5,832 cost scenarios per ISO per threshold
     - Wholesale price distribution → energy revenue
     - Capacity market signals from gas backup needs
@@ -361,7 +361,9 @@ def load_model_c_scenarios():
 
     # Load step3 parquets for each ISO
     for iso in ISOS:
-        fpath = STEP3_DIR / f'step3_co_{iso}.parquet'
+        fpath = STEP3_DIR / f'step_2_2a_CO_{iso}.parquet'
+        if not fpath.exists():
+            fpath = STEP3_DIR / f'step3_co_{iso}.parquet'
         if not fpath.exists():
             continue
         df = pd.read_parquet(fpath)

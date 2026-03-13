@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Step 9E: Extract data for novel use-case reference pages.
+Step 7.1G: Extract data for novel use-case reference pages.
 
 Produces 4 JS data files:
   - dashboard/js/tipping-point-data.js      (Technology Tipping Points)
@@ -8,7 +8,7 @@ Produces 4 JS data files:
   - dashboard/js/datacenter-siting-data.js   (Data Center Siting)
   - dashboard/js/carbon-credit-data.js       (Carbon Credit Pricing)
 
-All read from existing Step 3 parquets + Step 5 post-processing JSON.
+All read from existing Step 2.2 parquets + Step 4 analysis JSON.
 No new compute — pure post-processing.
 """
 
@@ -43,7 +43,9 @@ LEVEL_MAP = {"L": "Low", "M": "Medium", "H": "High"}
 
 def load_co_parquet(iso):
     """Load Step 3 cost optimization baseline parquet."""
-    path = os.path.join(DATA, "step2.2-cost", f"step3_co_{iso}.parquet")
+    path = os.path.join(DATA, "step2.2-cost", f"step_2_2a_CO_{iso}.parquet")
+    if not os.path.exists(path):
+        path = os.path.join(DATA, "step2.2-cost", f"step3_co_{iso}.parquet")
     if not os.path.exists(path):
         return None
     return pd.read_parquet(path)
@@ -930,7 +932,7 @@ def write_js(filename, varname, data):
 
 
 def main():
-    print("Step 9E: Extracting use-case reference page data")
+    print("Step 7.1G: Extracting use-case reference page data")
     print("=" * 50)
 
     tp = extract_tipping_points()

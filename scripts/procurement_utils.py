@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Step 6.5 — Shared Procurement Strategy Utilities
-=================================================
+Shared Procurement Strategy Utilities
+=======================================
 Cross-cutting logic used by all three strategy family scripts:
   - SSS allocation (8760 shape per ISO)
   - EAC pricing tranches (§15.14.4)
@@ -12,10 +12,9 @@ Cross-cutting logic used by all three strategy family scripts:
   - Wholesale LMP price degradation feedback
 
 Constants and data structures are sourced from:
-  - dispatch_utils.py (grid mix, demand, ISOS)
-  - step3a_cost_optimization.py (LCOE tables, uprate costs, CCS costs)
-  - step7c_scenario_comparison.py (learning_fraction, SBTI_YEAR_MAP)
-  - step9a_generate_shared_data.py (SBTI_MILESTONES, DAC_TRAJECTORY)
+  - pipeline_config.py (single source of truth for all constants)
+  - dispatch_utils.py (grid mix, demand, ISOS, dispatch functions)
+  - scenario_common.py (learning_fraction, SBTI_YEAR_MAP)
 """
 
 import os
@@ -1146,7 +1145,7 @@ def estimate_lmp_at_clean_pct(iso, clean_pct, fuel_level='Medium'):
     - At very high clean %, scarcity pricing partially offsets depression
     - Cannibalization S-curve: steep depression 30-70%, flattening at extremes
 
-    For full 8760 LMP, use step5b_compute_lmp_prices.py.
+    For full 8760 LMP, use lmp_engine.py.
     This is a fast approximation for cost modeling.
     """
     base_lmp = get_wholesale_price(iso, fuel_level)

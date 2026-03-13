@@ -51,7 +51,7 @@ def load_from_co2_parquets(batch_dir):
     data = {'results': {}}
     for iso in ISOS:
         parquet_path = None
-        for prefix in ['step4_', 'step3_co_', 'co2_']:
+        for prefix in ['step4_', 'step_2_2a_CO_', 'step3_co_', 'co2_']:
             candidate = os.path.join(batch_dir, f'{prefix}{iso}.parquet')
             if os.path.exists(candidate):
                 parquet_path = candidate
@@ -126,8 +126,8 @@ def load_from_co2_batches(batch_dir):
 
 
 def load_baseline():
-    """Load baseline results: CO2 parquets → monolithic JSON → batched co2 JSONs → step4 parquets."""
-    # Prefer CO2-enriched parquets (output of step5a_compute_co2.py)
+    """Load baseline results: CO2 parquets → monolithic JSON → batched co2 JSONs → step2.2 parquets."""
+    # Prefer CO2-enriched parquets (output of step4_1a_fossil_dispatch.py)
     if os.path.isdir(CO2_BATCH_DIR):
         data = load_from_co2_parquets(CO2_BATCH_DIR)
         if data and data.get('results'):

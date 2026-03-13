@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Step 9C: Generate building-blocks-data.js for the building blocks dashboard page.
+"""Step 7.1D: Generate building-blocks-data.js for the building blocks dashboard page.
 
 DEPRECATED: This script only generates HOURLY_PROFILES and SEASONAL_PROFILES.
 Use step6d_extract_building_blocks.py instead — it generates all 4 constants

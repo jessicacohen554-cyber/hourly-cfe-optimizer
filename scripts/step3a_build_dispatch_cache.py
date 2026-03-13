@@ -1,34 +1,31 @@
 #!/usr/bin/env python3
 """
-Step 5: Build Dispatch Cache
-=============================
+Step 3A: Build Dispatch Cache
+==============================
 Pre-computes full 8760-hour dispatch for every unique resource mix across all
-ISOs and thresholds. Downstream modules (step5c_compress_day_profiles, step5a_compute_co2,
-step5b_compute_lmp_prices) read from cache instead of recomputing independently.
+ISOs and thresholds. Downstream modules (step4_1b_compress_day_profiles,
+step4_1a_fossil_dispatch) read from cache instead of recomputing independently.
 
 Uses dispatch_utils.reconstruct_hourly_dispatch(detailed=True) to produce
 per-resource matched/surplus breakdowns and storage charge profiles needed
-by step5c_compress_day_profiles's compressed day profiles.
+by step4_1b_compress_day_profiles's compressed day profiles.
 
 Pipeline position:
-  Step 1 (PFS) → Step 2 (EF) → Step 3 (Cost) → Step 4 (Gas/CCS)
-                                                      ↓
-                                          step4_build_dispatch_cache.py  ← THIS
-                                                      ↓
-                            data/step3-dispatch/{ISO}_dispatch_cache.parquet
-                                                      ↓
-                                  +--------+----------+----------+
-                                  |        |          |          |
-                              step6_cd  step6_sc  step6_co2  step6_lmp
+  Step 1 (PFS) → Step 2 (EF/Cost) → Step 3A (Dispatch Cache) ← THIS
+                                   → Step 3B (MAC Queue)
+                                                 ↓
+                              data/step3-dispatch/{ISO}_dispatch_cache.parquet
+                                                 ↓
+                                   Step 4 (Derived Analytics)
 
 Input:  data/step2.2-cost/
 Output: data/step3-dispatch/{ISO}_dispatch_cache.parquet
 
 Usage:
-  python step4_build_dispatch_cache.py                    # All ISOs
-  python step4_build_dispatch_cache.py --iso PJM          # Single ISO
-  python step4_build_dispatch_cache.py --force            # Rebuild from scratch
-  python step4_build_dispatch_cache.py --input-dir PATH   # Custom input
+  python step3a_build_dispatch_cache.py                    # All ISOs
+  python step3a_build_dispatch_cache.py --iso PJM          # Single ISO
+  python step3a_build_dispatch_cache.py --force            # Rebuild from scratch
+  python step3a_build_dispatch_cache.py --input-dir PATH   # Custom input
 """
 
 import argparse
@@ -252,7 +249,9 @@ def enrich_parquets_with_dispatch_shares(iso, input_dir, cache):
           f"batt4 share max={batt4_shares.max():.2f}%, ldes max={ldes_shares.max():.2f}%")
 
     # Also enrich the feasible parquet (used by FEASIBLE_MIXES in shared-data.js)
-    feas_path = os.path.join(input_dir, f'step3_feasible_{iso}.parquet')
+    feas_path = os.path.join(input_dir, f'step_2_2a_feasible_{iso}.parquet')
+    if not os.path.exists(feas_path):
+        feas_path = os.path.join(input_dir, f'step3_feasible_{iso}.parquet')
     if os.path.exists(feas_path):
         try:
             _enrich_single_parquet(feas_path, iso, cache)
@@ -493,7 +492,7 @@ def main():
     args = parser.parse_args()
 
     print("=" * 70)
-    print("  Step 5: Build Dispatch Cache")
+    print("  Step 3A: Build Dispatch Cache")
     print("  Pre-computes 8760-hour dispatch for all unique resource mixes")
     print(f"  Cache version: {CACHE_VERSION}")
     print("=" * 70)
@@ -554,7 +553,7 @@ def main():
 
     elapsed = time.time() - t0
     print(f"\n{'='*70}")
-    print(f"  Step 5 Dispatch Cache Complete")
+    print(f"  Step 3A Dispatch Cache Complete")
     print(f"  {total_mixes} unique mixes across {len(run_isos)} ISOs")
     print(f"  Computed: {total_computed}, skipped: {total_skipped}")
     print(f"  Elapsed: {elapsed:.1f}s")

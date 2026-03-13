@@ -2,19 +2,28 @@
 """
 Shared Dispatch Utilities — Single source of truth for hourly dispatch reconstruction.
 ======================================================================================
-Extracted from step4_1a_fossil_dispatch.py to avoid duplicating dispatch logic between the CO2
+Extracted from step4_1a_fossil_dispatch.py to avoid duplicating dispatch logic between the CO₂
 model and the LMP pricing module. Both import from here.
 
 Provides:
-  - Constants (battery/LDES params, hydro caps, grid mix, coal/oil caps, base demand)
-  - get_supply_profiles(iso, gen_profiles) — generation shape profiles (Step 1 version)
-  - reconstruct_hourly_dispatch(mix, demand, profiles, ...) — battery + LDES + battery8
-  - compute_fossil_retirement(iso, clean_pct, ...) — remaining capacity at threshold
+  - Constants imported from pipeline_config (battery/LDES params, hydro caps,
+    grid mix, coal/oil caps, base demand, cache version)
+  - get_supply_profiles(iso, gen_profiles) — generation shape profiles
+  - reconstruct_hourly_dispatch(mix, demand, profiles, ...) — full 4-phase
+    storage dispatch: battery4 → battery8 → LDES → H2
+  - compute_fossil_retirement(iso, clean_pct, ...) — remaining fossil capacity
   - load_common_data() — demand, gen profiles, emission rates, fossil mix
   - Hourly dispatch cache: save/load/append cached 8760 profiles per archetype
 
-The dispatch cache persists computed hourly profiles so downstream modules (CO2, LMP)
-don't recompute dispatch for mixes already evaluated.
+Dispatch model:
+  All storage types carry SOC across window boundaries and apply round-trip
+  efficiency per discharge event (SOC -= discharge / eff). This enables
+  multi-day energy shifting while maintaining correct round-trip losses.
+  Matches step1_pfs_generator.py dispatch algorithm exactly.
+
+Cache version (DISPATCH_CACHE_VERSION) is imported from pipeline_config —
+single source of truth. Downstream modules compare cache version to detect
+stale caches that need rebuilding.
 """
 
 import json
@@ -51,6 +60,7 @@ from pipeline_config import (
     WHOLESALE_PRICES, FUEL_ADJUSTMENTS,
     CCS_RESIDUAL_EMISSION_RATE, COAL_OIL_RETIREMENT_THRESHOLD,
     H,
+    DISPATCH_CACHE_VERSION,
     # Dispatch-specific constants (migrated to pipeline_config)
     HYDRO_CAPS, COAL_CAP_TWH, OIL_CAP_TWH,
     NUCLEAR_SHARE_OF_CLEAN_FIRM, NUCLEAR_MONTHLY_CF,
@@ -98,10 +108,9 @@ def get_demand_profile(iso, demand_data):
 # ══════════════════════════════════════════════════════════════════════════════
 
 def get_supply_profiles(iso, gen_profiles):
-    """Get generation shape profiles — Step 1 version with nuclear seasonal derate.
+    """Get generation shape profiles with nuclear seasonal derate.
 
-    This is the authoritative version. step5a_compute_co2.py's simpler version (flat
-    clean_firm) is preserved for backward compatibility but new code should use this.
+    This is the authoritative version used by all pipeline stages.
     """
     profiles = {}
 
@@ -219,14 +228,19 @@ DISPATCH_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 's
 _DISPATCH_ORDER_INDICES = np.array([RESOURCE_TYPES.index(r) for r in DISPATCH_ORDER],
                                     dtype=np.int64)
 
-# Cache version — bump when dispatch algorithm or field set changes
-CACHE_VERSION = 4  # v4 = sequential dispatch aligned with step1_pfs_generator
+# Cache version — imported from pipeline_config (single source of truth).
+# Aliased here for backward compatibility with code referencing CACHE_VERSION.
+CACHE_VERSION = DISPATCH_CACHE_VERSION
 
 
 @njit(cache=True)
 def _battery_loop(residual_surplus, residual_gap, dispatch_profile,
                   capacity, power_rating, efficiency, window_hours, total_hours):
     """Inner loop for battery dispatch — sequential hour-by-hour, matching step1_pfs_generator.
+
+    SOC carries across window boundaries so energy stored late in one window
+    can be discharged early in the next. RTE is applied per discharge event
+    (not once per window). This matches the LDES dispatch pattern.
 
     Args:
         capacity: energy capacity as fraction of annual demand
@@ -236,37 +250,37 @@ def _battery_loop(residual_surplus, residual_gap, dispatch_profile,
         total_hours: 8760
     """
     n_windows = (total_hours + window_hours - 1) // window_hours
+    soc = 0.0
     for w in range(n_windows):
         ws = w * window_hours
         we = ws + window_hours
         if we > total_hours:
             we = total_hours
         # Charge pass: sequential hour-by-hour
-        stored = 0.0
         for h in range(ws, we):
             s = residual_surplus[h]
-            if s > 0.0 and stored < capacity:
+            if s > 0.0 and soc < capacity:
                 charge = s
                 if charge > power_rating:
                     charge = power_rating
-                remaining = capacity - stored
+                remaining = capacity - soc
                 if charge > remaining:
                     charge = remaining
-                stored += charge
+                soc += charge
                 residual_surplus[h] -= charge
         # Discharge pass: sequential hour-by-hour
-        available = stored * efficiency
         for h in range(ws, we):
             g = residual_gap[h]
-            if g > 0.0 and available > 0.0:
+            if g > 0.0 and soc > 0.0:
+                available = soc * efficiency
                 discharge = g
                 if discharge > power_rating:
                     discharge = power_rating
                 if discharge > available:
                     discharge = available
                 dispatch_profile[h] = discharge
+                soc -= discharge / efficiency
                 residual_gap[h] -= discharge
-                available -= discharge
     return dispatch_profile
 
 
@@ -278,12 +292,8 @@ def _ldes_loop(residual_surplus, residual_gap, dispatch_profile,
 
     Charge phase subtracts from residual_surplus to prevent double-counting
     between LDES and downstream storage (H2). Discharge subtracts from
-    residual_gap. SOC carries over between windows.
-
-    BUG FIX (Mar 2026): Previously did NOT subtract charge from residual_surplus,
-    allowing the same MWh to be consumed by both battery and LDES. Now consistent
-    with battery dispatch behavior. Existing Step 1 caches still have the old
-    behavior — defer re-run until next Step 1 is needed.
+    residual_gap so downstream phases (H2) see the post-LDES residual.
+    SOC carries across window boundaries. RTE applied per discharge event.
     """
     state_of_charge = 0.0
     num_windows = (total_hours + window_hours - 1) // window_hours
@@ -326,42 +336,43 @@ def _ldes_loop(residual_surplus, residual_gap, dispatch_profile,
 
 @njit(cache=True)
 def _battery_loop_detailed(residual_surplus, residual_gap, dispatch_profile,
-                           charge_profile, capacity, power_rating, efficiency,
-                           window_hours, total_hours):
-    """Battery dispatch with charge tracking — sequential hour-by-hour, matching step1."""
+                            charge_profile, capacity, power_rating, efficiency,
+                            window_hours, total_hours):
+    """Battery dispatch with charge tracking — sequential hour-by-hour, matching step1.
+    SOC carries across window boundaries. RTE applied per discharge event."""
     n_windows = (total_hours + window_hours - 1) // window_hours
+    soc = 0.0
     for w in range(n_windows):
         ws = w * window_hours
         we = ws + window_hours
         if we > total_hours:
             we = total_hours
         # Charge pass: sequential hour-by-hour
-        stored = 0.0
         for h in range(ws, we):
             s = residual_surplus[h]
-            if s > 0.0 and stored < capacity:
+            if s > 0.0 and soc < capacity:
                 charge = s
                 if charge > power_rating:
                     charge = power_rating
-                remaining = capacity - stored
+                remaining = capacity - soc
                 if charge > remaining:
                     charge = remaining
-                stored += charge
+                soc += charge
                 residual_surplus[h] -= charge
                 charge_profile[h] += charge
         # Discharge pass: sequential hour-by-hour
-        available = stored * efficiency
         for h in range(ws, we):
             g = residual_gap[h]
-            if g > 0.0 and available > 0.0:
+            if g > 0.0 and soc > 0.0:
+                available = soc * efficiency
                 discharge = g
                 if discharge > power_rating:
                     discharge = power_rating
                 if discharge > available:
                     discharge = available
                 dispatch_profile[h] = discharge
+                soc -= discharge / efficiency
                 residual_gap[h] -= discharge
-                available -= discharge
     return dispatch_profile, charge_profile
 
 
@@ -370,7 +381,8 @@ def _ldes_loop_detailed(residual_surplus, residual_gap, dispatch_profile,
                         charge_profile, energy_capacity, power_rating,
                         ldes_efficiency, window_hours, total_hours):
     """LDES/H2 dispatch with charge tracking — sequential hour-by-hour.
-    BUG FIX (Mar 2026): Now subtracts charge from residual_surplus."""
+    SOC carries across window boundaries. RTE applied per discharge event.
+    Discharge updates residual_gap for downstream storage phases."""
     state_of_charge = 0.0
     num_windows = (total_hours + window_hours - 1) // window_hours
 
@@ -609,7 +621,7 @@ def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
         supply_matrix: optional (N_RESOURCES, H) numpy array from build_supply_matrix().
             If provided, skips per-call array conversion (faster for batch calls).
         detailed: if True, also compute per-resource matched/surplus arrays and
-            storage charge profiles. Used by step4_build_dispatch_cache and step5c_compress_day_profiles.
+            storage charge profiles. Used by step3a_build_dispatch_cache and step4_1b_compress_day_profiles.
         h2_dispatch_pct: green H2 seasonal storage capacity as % of demand (default 0).
 
     Returns:

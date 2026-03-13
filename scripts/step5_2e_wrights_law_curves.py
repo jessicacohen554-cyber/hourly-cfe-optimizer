@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Step 8 — Wright's Law Learning Curves & Critical Mass Threshold
+Step 5.2E — Wright's Law Learning Curves & Critical Mass Threshold
 ================================================================
 Computes the data behind FIGURE 8 (procurement comparison page):
 
@@ -599,7 +599,7 @@ def compute_wrights_law_curves():
     safe_total = np.maximum(total_spend_iso, 1e-6)
     premium_share_iso = existing_spend_iso / safe_total  # (N_iso, N_part, N_thr)
 
-    print(f"[Step 8] Computed {N_part} participation levels × {N_thr} thresholds × {N_iso} ISOs")
+    print(f"[Step 5.2E] Computed {N_part} participation levels × {N_thr} thresholds × {N_iso} ISOs")
 
     # ═══════════════════════════════════════════════════════════════════════════
     # ASSEMBLE RESULTS
@@ -725,7 +725,7 @@ def save_parquet(results):
         import pyarrow as pa
         import pyarrow.parquet as pq
     except ImportError:
-        print("[Step 8] pyarrow not available — skipping parquet output")
+        print("[Step 5.2E] pyarrow not available — skipping parquet output")
         return
 
     # Flatten the main grid into a columnar table:
@@ -771,7 +771,7 @@ def save_parquet(results):
     out_path = os.path.join(OUT_DIR, 'wrights_law_curves.parquet')
     pq.write_table(table, out_path, compression='snappy')
     size_kb = os.path.getsize(out_path) / 1024
-    print(f"[Step 8] Parquet: {out_path} ({size_kb:.1f} KB, {len(table)} rows)")
+    print(f"[Step 5.2E] Parquet: {out_path} ({size_kb:.1f} KB, {len(table)} rows)")
 
 
 def save_json(results):
@@ -799,12 +799,12 @@ def save_json(results):
     with open(out_path, 'w') as f:
         json.dump(dashboard, f, separators=(',', ':'))
     size_kb = os.path.getsize(out_path) / 1024
-    print(f"[Step 8] JSON:    {out_path} ({size_kb:.1f} KB)")
+    print(f"[Step 5.2E] JSON:    {out_path} ({size_kb:.1f} KB)")
 
 
 def main():
     print("=" * 70)
-    print("Step 8 — Wright's Law Learning Curves & Critical Mass Threshold")
+    print("Step 5.2E — Wright's Law Learning Curves & Critical Mass Threshold")
     print("=" * 70)
 
     results = compute_wrights_law_curves()

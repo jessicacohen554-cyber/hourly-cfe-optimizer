@@ -90,8 +90,8 @@ THRESHOLD_SET = set(THRESHOLDS)
 # ============================================================================
 # REGIONAL DEMAND (TWh, 2025 base year)
 # ============================================================================
-# Source: EIA-930 hourly generation data, 2024 annualized and adjusted
-# for 2025 growth trends. See SPEC.md §2.1 for methodology.
+# Source: EIA-930 hourly demand data, 2025 actuals (total_annual_mwh from
+# eia_demand_meta.parquet). Cross-validated against step1_pfs_generator.ISO_DEMAND_TWH.
 
 REGIONAL_DEMAND_TWH = {
     'CAISO': 224.039,
@@ -99,8 +99,8 @@ REGIONAL_DEMAND_TWH = {
     'PJM':   843.331,
     'NYISO': 151.599,
     'NEISO': 115.336,
-    'MISO':  660.000,
-    'SPP':   296.000,
+    'MISO':  663.771,
+    'SPP':   299.820,
 }
 
 # ============================================================================
@@ -175,10 +175,14 @@ GEOTHERMAL_CAP_TWH = 39.0
 # Used in Step 3 to split physics geothermal into existing ($0) vs new-build (priced)
 EXISTING_GEOTHERMAL_PCT = 2.37
 
-# Hydro caps: existing only, region-dependent
+# Hydro caps: existing only, region-dependent.
+# Derived directly from GRID_MIX_SHARES['hydro'] — must match exactly.
+# Step 1 explores +10pp above these caps for physics exploration only;
+# those extended-hydro mixes are flagged as exploratory and filtered
+# out before cost optimization in Step 2.1.
 HYDRO_CAP_PCT = {
-    'CAISO': 10.5, 'ERCOT': 0.5, 'PJM': 2.0,
-    'NYISO': 17.5, 'NEISO': 5.0, 'MISO': 2.0, 'SPP': 5.0,
+    'CAISO': 9.5, 'ERCOT': 0.1, 'PJM': 1.8,
+    'NYISO': 15.9, 'NEISO': 4.4, 'MISO': 1.6, 'SPP': 4.3,
 }
 
 # Solar and total procurement caps
@@ -460,8 +464,9 @@ CCS_RESIDUAL_EMISSION_RATE = 0.037
 # Above this threshold, coal and oil are fully retired from the fossil fleet
 COAL_OIL_RETIREMENT_THRESHOLD = 70.0
 
-# Dispatch cache version
-DISPATCH_CACHE_VERSION = 3
+# Dispatch cache version — must match dispatch_utils.CACHE_VERSION.
+# Bump when dispatch algorithm or field set changes. Used for cache invalidation.
+DISPATCH_CACHE_VERSION = 5
 
 # Dispatch order (merit order for hourly matching)
 DISPATCH_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar']
@@ -514,10 +519,14 @@ LMH = ['L', 'M', 'H']
 LEVEL_NAME = {'L': 'Low', 'M': 'Medium', 'H': 'High', 'N': 'None'}
 
 # Toggle group definitions (for scenario key generation)
+# 9-dim key format: {Ren}{Firm}{Batt}{LDES}_{Fuel}_{Tx}_{CCS}{45Q}_{Geo}
+# Example: MMMM_M_M_M1_M (all-Medium, 45Q on, CAISO)
+# Battery and LDES are independent sensitivity toggles (separate cost drivers).
 TOGGLE_GROUPS = OrderedDict([
     ('ren',      {'name': 'Renewable Gen',  'levels': LMH}),
     ('firm',     {'name': 'Firm Gen',       'levels': LMH}),
-    ('batt',     {'name': 'Storage',        'levels': LMH}),
+    ('batt',     {'name': 'Battery',        'levels': LMH}),
+    ('ldes_lvl', {'name': 'LDES',           'levels': LMH}),
     ('fuel',     {'name': 'Fossil Fuel',    'levels': LMH}),
     ('tx',       {'name': 'Transmission',   'levels': ['N', 'L', 'M', 'H']}),
     ('ccs',      {'name': 'CCS',            'levels': LMH}),
@@ -734,11 +743,11 @@ H = 8760  # Convenience constant
 # Cost basis: NREL ATB 2024, 2024 USD. Supplemented by Lazard v17-18, EIA AEO 2024.
 # Battery storage: NREL ATB 2024 + Cost Projections for Utility-Scale Battery
 #   Storage 2025 Update. Offshore wind: Lazard v17-18, BNEF 2025, NREL ATB 2024.
-# Used by: step3a_cost_optimization.py, step3b_track_nb_ctr.py, scenario_common.py,
-#          procurement_utils.py, step9a_generate_shared_data.py
+# Used by: step2_2a_cost_optimization.py, step2_2b_track_nb_ctr.py, scenario_common.py,
+#          procurement_utils.py, step7_1a_generate_shared_data.py
 #
-# Previously defined separately in step3a_cost_optimization.py and scenario_common.py.
-# Unified here 2026-03-04 to eliminate duplication and drift risk.
+# Previously defined separately in multiple scripts.
+# Unified here as single source of truth.
 
 # LCOE tables by resource type × sensitivity × ISO ($/MWh)
 LCOE_TABLES = {

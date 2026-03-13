@@ -32,7 +32,6 @@ import gc
 import hashlib
 import json
 import os
-import subprocess
 import sys
 import time
 
@@ -684,78 +683,7 @@ def save_near_miss_interim(iso, all_combos_lists, all_scores_lists, rtypes,
     save_near_miss(iso, interim_combos[nm_arr], interim_scores[nm_arr], rtypes)
 
 
-def _git_stage_commit_push(stage_fn, commit_msg, success_msg):
-    """Stage files, commit, and push with exponential-backoff retry.
-
-    Args:
-        stage_fn: callable that stages the desired files (git add).
-        commit_msg: commit message string.
-        success_msg: printed on successful push.
-    """
-    try:
-        stage_fn()
-
-        result = subprocess.run(['git', 'diff', '--cached', '--quiet'],
-                                capture_output=True)
-        if result.returncode == 0:
-            return  # nothing staged
-
-        subprocess.run(['git', 'commit', '-m', commit_msg],
-                       check=True, capture_output=True, text=True)
-
-        for attempt in range(1, 5):
-            result = subprocess.run(
-                ['git', 'push', '-u', 'origin', 'HEAD'],
-                capture_output=True, text=True)
-            if result.returncode == 0:
-                print(f"    {success_msg}")
-                return
-            if attempt < 4:
-                time.sleep(2 ** attempt)
-
-        print(f"    [auto-commit] Push failed — committed locally")
-    except subprocess.CalledProcessError as e:
-        print(f"    [auto-commit] Git error: {e}")
-
-
-def git_commit_threshold_pfs(iso, threshold, auto_commit):
-    """Commit a single threshold's PFS parquet after it's saved."""
-    if not auto_commit:
-        return
-    pfs_dir = s1.STEP1_RAW_PFS_PARQUET_DIR
-    t_str = s1._normalize_threshold_str(threshold)
-    pfs_path = os.path.join(pfs_dir, f'{iso}_t{t_str}_raw_pfs.parquet')
-    nm_path = os.path.join(pfs_dir, f'{iso}_near_miss.parquet')
-
-    def stage():
-        for path in [pfs_path, nm_path]:
-            if os.path.exists(path):
-                subprocess.run(['git', 'add', '-f', path],
-                               capture_output=True, text=True)
-
-    _git_stage_commit_push(
-        stage,
-        f"PFS 1b: {iso} {threshold}% — auto-commit",
-        f"[auto-commit] {iso} t{threshold}% pushed")
-
-
-def git_commit_iso_progress(iso, zone_name, n_thresholds, auto_commit):
-    """Commit current ISO progress after a zone completes."""
-    if not auto_commit:
-        return
-    pfs_dir = s1.STEP1_RAW_PFS_PARQUET_DIR
-
-    def stage():
-        # Must use -f: data/step1-pfs/ may be gitignored.
-        # Only add parquets — zone_manifest.json is a run-time checkpoint.
-        subprocess.run(
-            f'git add -f "{pfs_dir}"/*.parquet 2>/dev/null; true',
-            shell=True, capture_output=True)
-
-    _git_stage_commit_push(
-        stage,
-        f"PFS zone {zone_name}: {iso} ({n_thresholds} thresholds) — auto-commit",
-        f"[auto-commit] Zone {zone_name} committed & pushed")
+# NOTE: Auto-commit to git removed — all outputs are written locally.
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -813,7 +741,7 @@ def _save_manifest(iso, code_hash, zones_done, thresholds_done):
 # MAIN PIPELINE
 # ══════════════════════════════════════════════════════════════════════════════
 
-def process_iso(iso, auto_commit=False, thresholds_filter=None, zones_filter=None):
+def process_iso(iso, thresholds_filter=None, zones_filter=None):
     """Run zone-based fine search for one ISO.
 
     Args:
@@ -980,8 +908,6 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None, zones_filter=Non
         save_near_miss_interim(iso, all_combos_list, all_scores_list,
                                rtypes, active_thresholds)
 
-        # Auto-commit after each zone (near-miss + any PFS written so far)
-        git_commit_iso_progress(iso, zone_name, len(z_thresholds), auto_commit)
         gc.collect()
 
     # ── Combine all scored mixes ──
@@ -1024,7 +950,6 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None, zones_filter=Non
             save_threshold_pfs(iso, t, np.empty((0, n_res)), np.empty(0), rtypes)
             thresholds_done.add(t)
             _save_manifest(iso, code_hash, zones_done, thresholds_done)
-            git_commit_threshold_pfs(iso, t, auto_commit)
             continue
 
         t_combos = all_combos[feas_i]
@@ -1046,9 +971,6 @@ def process_iso(iso, auto_commit=False, thresholds_filter=None, zones_filter=Non
 
         thresholds_done.add(t)
         _save_manifest(iso, code_hash, zones_done, thresholds_done)
-
-        # Commit after each threshold so partial results are banked
-        git_commit_threshold_pfs(iso, t, auto_commit)
 
     iso_elapsed = time.time() - iso_start
     print(f"\n{'=' * 70}")
@@ -1090,8 +1012,6 @@ def main():
         description="Step 1b: Zone-based fine search with global dedup.")
     parser.add_argument("--iso", required=True,
                         help="ISO name or 'ALL'")
-    parser.add_argument("--auto-commit", action="store_true",
-                        help="Commit & push after each zone completes")
     parser.add_argument("--thresholds", default="",
                         help="Comma-separated thresholds to process "
                              "(e.g. '90,95,99'). Default: all 21.")
@@ -1116,7 +1036,7 @@ def main():
         print(f"Zone filter: {sorted(zones_filter)}")
 
     for iso in isos:
-        process_iso(iso, auto_commit=args.auto_commit,
+        process_iso(iso,
                     thresholds_filter=thresholds_filter,
                     zones_filter=zones_filter)
 

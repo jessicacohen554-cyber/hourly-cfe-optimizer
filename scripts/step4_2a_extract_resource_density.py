@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Step 6E — Extract per-scenario resource density data for the abatement dashboard.
+"""Step 4.2A — Extract per-scenario resource density data for the abatement dashboard.
 
 Reads Step 3 DG parquets for thresholds in each ISO's optimal crossover range,
 computes new-build TWh per resource per cost scenario, and outputs a JS data file
@@ -155,7 +155,9 @@ def process_iso(iso, ot_data):
     frames = []
     for t in thresholds:
         t_str = str(int(t)) if t == int(t) else str(t)
-        path = DG_DIR / f"step3_dg_{iso}_t{t_str}.parquet"
+        path = DG_DIR / f"step_2_2a_DG_{iso}_{t_str}.parquet"
+        if not path.exists():
+            path = DG_DIR / f"step3_dg_{iso}_t{t_str}.parquet"
         if not path.exists():
             continue
         df = pd.read_parquet(path)
@@ -283,7 +285,7 @@ def process_iso(iso, ot_data):
 
 
 def main():
-    print("Step 6E: Extracting resource density data for abatement dashboard")
+    print("Step 4.2A: Extracting resource density data for abatement dashboard")
 
     # Load optimal targets for crossover ranges
     if OT_PATH.exists():

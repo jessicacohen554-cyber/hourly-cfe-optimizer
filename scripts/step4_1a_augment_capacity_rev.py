@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Augment existing Step 5B LMP parquets with capacity market revenue columns.
+"""Augment existing Step 4.1A LMP parquets with capacity market revenue columns.
 
-Post-hoc computation: reads existing LMP parquets + step3 resource mixes,
+Post-hoc computation: reads existing LMP parquets + Step 2.2A resource mixes,
 computes capacity market revenue per resource category, and overwrites
 the LMP parquets with new columns added.
 
-This avoids needing the dispatch cache (Step 4) — capacity revenue depends
+This avoids needing the dispatch cache (Step 3A) — capacity revenue depends
 only on ISO, threshold (clean%), and resource mix, not hourly profiles.
 """
 import os
@@ -71,7 +71,9 @@ def weighted_category_rev(per_res_rev, mix_row, cat_resources):
 def process_iso(iso):
     """Augment LMP parquet for one ISO with capacity revenue columns."""
     lmp_path = os.path.join(LMP_DIR, f'{iso}_lmp.parquet')
-    s3_path = os.path.join(STEP3_DIR, f'step3_co_{iso}.parquet')
+    s3_path = os.path.join(STEP3_DIR, f'step_2_2a_CO_{iso}.parquet')
+    if not os.path.exists(s3_path):
+        s3_path = os.path.join(STEP3_DIR, f'step3_co_{iso}.parquet')
 
     if not os.path.exists(lmp_path):
         print(f"  {iso}: No LMP parquet, skipping")
@@ -175,7 +177,7 @@ def process_iso(iso):
 
 if __name__ == '__main__':
     print("=" * 70)
-    print("  Step 5B Augmentation: Adding Capacity Market Revenue")
+    print("  Step 4.1A Augmentation: Adding Capacity Market Revenue")
     print("=" * 70)
 
     for iso in ALL_ISOS:
