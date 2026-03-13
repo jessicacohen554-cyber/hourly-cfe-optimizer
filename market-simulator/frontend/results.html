@@ -3,152 +3,195 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Market Simulator — Results</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>Simulation Results — Constellation Energy</title>
     <link rel="stylesheet" href="styles/shared.css">
     <link rel="stylesheet" href="styles/simulator.css">
     <link rel="stylesheet" href="styles/results.css">
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="js/chart-colors.js"></script>
-    <script src="js/shared-header.js"></script>
 </head>
 <body>
-    <!-- Header -->
-    <div class="header" id="pageHeader">
-        <h1>Simulation Results</h1>
-        <div class="subtitle" id="resultsSubtitle">Loading...</div>
-        <div class="header-accent"></div>
+
+    <!-- Progress bar -->
+    <div class="progress-bar"><div class="progress-bar-fill"></div></div>
+
+    <!-- Nav -->
+    <nav>
+        <div class="nav-logo">
+            <div class="nav-logo-mark">
+                <svg viewBox="0 0 32 32" width="32" height="32">
+                    <circle cx="16" cy="16" r="14" fill="none" stroke="#2372B9" stroke-width="2"/>
+                    <circle cx="16" cy="16" r="6" fill="#2372B9"/>
+                    <line x1="16" y1="2" x2="16" y2="10" stroke="#2372B9" stroke-width="2"/>
+                    <line x1="16" y1="22" x2="16" y2="30" stroke="#2372B9" stroke-width="2"/>
+                    <line x1="2" y1="16" x2="10" y2="16" stroke="#2372B9" stroke-width="2"/>
+                    <line x1="22" y1="16" x2="30" y2="16" stroke="#2372B9" stroke-width="2"/>
+                </svg>
+            </div>
+            <div>
+                <div class="nav-title">Constellation Energy</div>
+                <div class="nav-subtitle">Market Simulation Tool</div>
+            </div>
+        </div>
+        <ul class="nav-links">
+            <li><a href="/">Setup</a></li>
+            <li><a href="/results" class="active">Results</a></li>
+        </ul>
+    </nav>
+
+    <!-- Hero section -->
+    <div class="hero-section" style="padding-bottom: 0;">
+        <div class="hero-inner" style="padding-bottom: 1.5rem;">
+            <div class="hero-eyebrow">Simulation Output</div>
+            <h1>Results</h1>
+            <p class="hero-desc" id="resultsSubtitle">Loading...</p>
+        </div>
     </div>
 
-    <!-- Controls Bar -->
-    <div class="controls-bar" id="controlsBar">
-        <div class="content-section">
+    <!-- ISO Tab Switcher -->
+    <div class="iso-tab-bar" id="controlsBar">
+        <div class="content-section" style="padding-top: 0; padding-bottom: 0;">
+            <div class="iso-tabs" id="resultsIsoSelector"></div>
             <div class="controls-row">
-                <div class="control-group">
-                    <label>ISO</label>
-                    <div class="iso-selector" id="resultsIsoSelector"></div>
-                </div>
                 <div class="control-group" id="yearControl" style="display:none;">
                     <label>Year</label>
                     <select id="yearSelect" class="control-select"></select>
                 </div>
-                <a href="/" class="back-link">&#8592; Modify Inputs</a>
+                <a href="/" class="back-link">&larr; Modify Inputs</a>
             </div>
         </div>
     </div>
 
     <div class="content-section">
 
-        <!-- Top Stats -->
-        <div class="grid-stats" id="topStats">
-            <div class="stat-card">
-                <div class="stat-value" id="statCleanPct">--</div>
-                <div class="stat-label">Market Clean %</div>
+        <!-- KPI Cards -->
+        <div class="kpi-grid" id="topStats">
+            <div class="kpi-card">
+                <div class="kpi-value" id="statCleanPct">--</div>
+                <div class="kpi-unit">%</div>
+                <div class="kpi-label">Market Clean</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-value" id="statAvgLMP">--</div>
-                <div class="stat-label">Avg LMP $/MWh</div>
+            <div class="kpi-card">
+                <div class="kpi-value" id="statAvgLMP">--</div>
+                <div class="kpi-unit">$/MWh</div>
+                <div class="kpi-label">Avg LMP</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-value" id="statNewGW">--</div>
-                <div class="stat-label">New Clean GW</div>
+            <div class="kpi-card">
+                <div class="kpi-value" id="statNewGW">--</div>
+                <div class="kpi-unit">GW</div>
+                <div class="kpi-label">New Clean</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-value" id="statNucRev">--</div>
-                <div class="stat-label">Nuclear Rev $/MWh</div>
+            <div class="kpi-card">
+                <div class="kpi-value" id="statNucRev">--</div>
+                <div class="kpi-unit">$/MWh</div>
+                <div class="kpi-label">Nuclear Rev</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-value" id="statCCSBreakeven">--</div>
-                <div class="stat-label">CCS Breakeven $/ton</div>
+            <div class="kpi-card">
+                <div class="kpi-value" id="statCCSBreakeven">--</div>
+                <div class="kpi-unit">$/ton</div>
+                <div class="kpi-label">CCS Breakeven</div>
             </div>
         </div>
 
         <!-- Chart 1: Merit-Order Stack -->
-        <div class="card chart-section">
-            <h3 class="section-title">Merit-Order Stack</h3>
-            <p class="section-subtitle">Fossil generators ordered by marginal cost. Dashed line = average LMP. Generators above the line are uneconomic.</p>
+        <div class="chart-card">
+            <div class="chart-card-header">
+                <h3>Merit-Order Stack</h3>
+                <p>Fossil generators ordered by marginal cost. Generators above the LMP line are uneconomic.</p>
+            </div>
             <div class="chart-container-lg" id="chartMeritOrder"></div>
         </div>
 
-        <!-- Charts Row: Profitability + Dispatch -->
+        <!-- Charts Row: Profitability + Nuclear -->
         <div class="grid-2col">
-            <!-- Chart 2: Generator Profitability -->
-            <div class="card chart-section">
-                <h3 class="section-title">Generator Profitability</h3>
-                <p class="section-subtitle">Revenue vs cost per generator class</p>
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <h3>Generator Profitability</h3>
+                    <p>Revenue vs cost per generator class</p>
+                </div>
                 <div class="chart-container" id="chartProfitability"></div>
             </div>
 
-            <!-- Chart 3: Nuclear Revenue Stack -->
-            <div class="card chart-section">
-                <h3 class="section-title">Nuclear Revenue by ISO</h3>
-                <p class="section-subtitle">Energy + capacity + PTC breakdown</p>
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <h3>Nuclear Revenue by ISO</h3>
+                    <p>Energy + capacity + PTC breakdown</p>
+                </div>
                 <div class="chart-container" id="chartNuclearRevenue"></div>
             </div>
         </div>
 
         <!-- Chart 4: LMP Impact Curve -->
-        <div class="card chart-section">
-            <h3 class="section-title">LMP Impact Curve</h3>
-            <p class="section-subtitle">How average LMP changes as clean penetration increases — price suppression effect</p>
+        <div class="chart-card">
+            <div class="chart-card-header">
+                <h3>LMP Impact Curve</h3>
+                <p>How average LMP changes as clean penetration increases &mdash; price suppression effect</p>
+            </div>
             <div class="chart-container" id="chartLMPImpact"></div>
         </div>
 
         <!-- Charts Row: CCS Breakeven + What Gets Built -->
         <div class="grid-2col">
-            <!-- Chart 5: CCS Retrofit Breakeven -->
-            <div class="card chart-section">
-                <h3 class="section-title">CCS Retrofit vs New Gas</h3>
-                <p class="section-subtitle">Carbon price crossover: when does CCS beat unabated CCGT?</p>
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <h3>CCS Retrofit vs New Gas</h3>
+                    <p>Carbon price crossover: when does CCS beat unabated CCGT?</p>
+                </div>
                 <div class="chart-container" id="chartCCSBreakeven"></div>
             </div>
 
-            <!-- Chart 6: What Gets Built -->
-            <div class="card chart-section">
-                <h3 class="section-title">What Gets Built</h3>
-                <p class="section-subtitle">Resource mix from existing baseline through market-cleared level</p>
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <h3>What Gets Built</h3>
+                    <p>Resource mix from existing baseline through market-cleared level</p>
+                </div>
                 <div class="chart-container" id="chartWhatBuilt"></div>
             </div>
         </div>
 
         <!-- Chart 7: Fossil Fleet Bin Economics -->
-        <div class="card chart-section">
-            <h3 class="section-title">Fossil Fleet Economics by Heat Rate Bin</h3>
-            <p class="section-subtitle">Per-bin dispatch hours, revenue, cost, and margin. Shows shift toward efficient gas.</p>
+        <div class="chart-card">
+            <div class="chart-card-header">
+                <h3>Fossil Fleet Economics by Heat Rate Bin</h3>
+                <p>Per-bin dispatch hours, revenue, cost, and margin. Shows shift toward efficient gas.</p>
+            </div>
             <div class="chart-container-lg" id="chartFossilBins"></div>
         </div>
 
         <!-- Chart 8: Clean Energy Cost Ladder -->
-        <div class="card chart-section">
-            <h3 class="section-title">Clean Energy Cost Ladder</h3>
-            <p class="section-subtitle">$/MWh vs cumulative GW added. Each step = incremental build at a threshold. Market stops where cost > revenue.</p>
+        <div class="chart-card">
+            <div class="chart-card-header">
+                <h3>Clean Energy Cost Ladder</h3>
+                <p>$/MWh vs cumulative GW added. Market stops where cost exceeds revenue.</p>
+            </div>
             <div class="chart-container" id="chartCostLadder"></div>
         </div>
 
-        <!-- Chart 9: Gas Fleet Dispatch Shift -->
+        <!-- Chart 9 + 10 -->
         <div class="grid-2col">
-            <div class="card chart-section">
-                <h3 class="section-title">Gas Fleet Age/Efficiency Shift</h3>
-                <p class="section-subtitle">How dispatch shifts between heat rate bins as carbon price increases</p>
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <h3>Gas Fleet Age/Efficiency Shift</h3>
+                    <p>How dispatch shifts between heat rate bins as carbon price increases</p>
+                </div>
                 <div class="chart-container" id="chartGasShift"></div>
             </div>
 
-            <!-- Chart 10: Sensitivity Heatmap -->
-            <div class="card chart-section">
-                <h3 class="section-title">Sensitivity: Gas Price vs Carbon Price</h3>
-                <p class="section-subtitle">Market-cleared clean % under different fuel/carbon combinations</p>
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <h3>Sensitivity: Gas Price vs Carbon Price</h3>
+                    <p>Market-cleared clean % under different fuel/carbon combinations</p>
+                </div>
                 <div class="chart-container" id="chartSensitivity"></div>
             </div>
         </div>
 
         <!-- Raw Data Table -->
-        <div class="card chart-section">
-            <h3 class="section-title collapsible-header" data-target="rawDataSection">
-                Generator Economics Detail
+        <div class="chart-card">
+            <div class="chart-card-header collapsible-header" data-target="rawDataSection">
+                <h3>Generator Economics Detail</h3>
                 <span class="collapse-icon">&#9660;</span>
-            </h3>
+            </div>
             <div class="collapsible-content" id="rawDataSection">
                 <table class="data-table" id="generatorTable">
                     <thead>
@@ -171,10 +214,9 @@
     </div>
 
     <!-- Footer -->
-    <footer class="page-footer">
-        <div class="footer-content">
-            <p>Market Simulation Screening Tool — Directionally correct economics for targeted IPM/GenX analysis</p>
-        </div>
+    <footer>
+        <div class="footer-brand"><strong>Constellation Energy</strong> · Market Simulation Tool</div>
+        <div class="footer-note">Directionally correct economics for targeted IPM/GenX analysis</div>
     </footer>
     <div class="bottom-banner"></div>
 

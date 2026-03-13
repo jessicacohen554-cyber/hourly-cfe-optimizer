@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
 Fleet Model — Real Generator-Level Merit-Order Stacks from EIA 860/923 + EPA CAMPD
-===================================================================================
+==================================================================================
 Loads actual generator inventory (EIA 860), generation/fuel data (EIA 923), and
-emissions monitoring (EPA CAMPD) from CSV/XLSX files. Cross-references to compute
-revealed heat rates, bins generators by efficiency, and builds real merit-order
-stacks that can replace the stylized stack in lmp_engine.py.
+emissions monitoring (EPA CAMPD) from CSV/XLSX/JSON files. Cross-references to
+compute revealed heat rates, bins generators by efficiency, and builds real
+merit-order stacks that can replace the stylized stack in lmp_engine.py.
 
 Data directory layout:
     market-simulator/data/eia-860/{state}/   — EIA Form 860 generator inventory
@@ -116,7 +116,9 @@ STATE_TO_ISO = {
     'VT': 'NEISO', 'RI': 'NEISO',
     'MN': 'MISO', 'WI': 'MISO', 'IN': 'MISO', 'MI': 'MISO',
     'IA': 'MISO', 'MO': 'MISO', 'AR': 'MISO', 'LA': 'MISO', 'MS': 'MISO',
+    'AL': 'MISO',
     'OK': 'SPP', 'KS': 'SPP', 'NE': 'SPP', 'ND': 'SPP', 'SD': 'SPP',
+    'AZ': 'CAISO', 'OR': 'CAISO',  # WECC, mapped to CAISO as nearest ISO
 }
 
 # Prime mover → unit type classification
@@ -196,7 +198,7 @@ def _fuzzy_col(df: pd.DataFrame, candidates: List[str]) -> Optional[str]:
 
 
 def _read_data_files(directory: str) -> Optional[pd.DataFrame]:
-    """Read all CSV and XLSX files from a directory, concatenate into one DataFrame.
+    """Read all CSV, XLSX, and JSON files from a directory, concatenate into one DataFrame.
 
     Args:
         directory: Path to scan for data files.
@@ -208,10 +210,12 @@ def _read_data_files(directory: str) -> Optional[pd.DataFrame]:
         return None
 
     frames = []
-    for pattern in ['*.csv', '*.CSV', '*.xlsx', '*.XLSX', '*.xls']:
+    for pattern in ['*.csv', '*.CSV', '*.xlsx', '*.XLSX', '*.xls', '*.json', '*.JSON']:
         for fpath in glob.glob(os.path.join(directory, pattern)):
             try:
-                if fpath.lower().endswith(('.xlsx', '.xls')):
+                if fpath.lower().endswith('.json'):
+                    df = pd.read_json(fpath)
+                elif fpath.lower().endswith(('.xlsx', '.xls')):
                     df = pd.read_excel(fpath, engine='openpyxl')
                 else:
                     # Try common encodings
@@ -349,28 +353,32 @@ class FleetModel:
             return None
 
         # Map columns to standard names
+        # Includes both CSV/XLSX names and EIA API JSON field names
         col_map = {
-            'plant_id':       ['Plant Id', 'Plant ID', 'Plant Code', 'Utility ID',
-                               'plant_id', 'PLANT_ID', 'Plant.ID'],
-            'gen_id':         ['Generator Id', 'Generator ID', 'gen_id', 'GENERATOR_ID',
-                               'Generator.ID', 'Genid'],
-            'capacity_mw':    ['Nameplate Capacity (MW)', 'Nameplate Capacity',
-                               'Capacity (MW)', 'capacity_mw', 'NAMEPLATE',
-                               'Summer Capacity (MW)', 'Net Summer Capacity (MW)'],
+            'plant_id':       ['plantid', 'Plant Id', 'Plant ID', 'Plant Code',
+                               'Utility ID', 'plant_id', 'PLANT_ID', 'Plant.ID'],
+            'gen_id':         ['generatorid', 'Generator Id', 'Generator ID', 'gen_id',
+                               'GENERATOR_ID', 'Generator.ID', 'Genid'],
+            'capacity_mw':    ['nameplate-capacity-mw', 'Nameplate Capacity (MW)',
+                               'Nameplate Capacity', 'Capacity (MW)', 'capacity_mw',
+                               'NAMEPLATE', 'Summer Capacity (MW)',
+                               'Net Summer Capacity (MW)'],
             'heat_rate':      ['Heat Rate (MMBtu/MWh)', 'Heat Rate', 'heat_rate',
                                'HEAT_RATE', 'Design Heat Rate'],
-            'fuel_type':      ['Energy Source 1', 'Reported Fuel Type Code',
+            'fuel_type':      ['energy_source_code', 'Energy Source 1', 'Reported Fuel Type Code',
                                'Energy Source Code', 'fuel_type', 'FUEL_TYPE',
                                'Fuel Type', 'Energy Source', 'Primary Fuel'],
-            'prime_mover':    ['Prime Mover', 'Prime Mover Code', 'prime_mover',
-                               'PRIME_MOVER', 'Technology', 'Reported Prime Mover'],
-            'online_year':    ['Operating Year', 'Online Year', 'online_year',
-                               'ONLINE_YEAR', 'Year Online', 'Initial Year of Operation'],
-            'retirement_year': ['Planned Retirement Year', 'Retirement Year',
-                                'retirement_year', 'RETIREMENT_YEAR',
+            'prime_mover':    ['prime_mover_code', 'Prime Mover Code', 'Prime Mover',
+                               'prime_mover', 'PRIME_MOVER', 'Reported Prime Mover'],
+            'online_year':    ['operating-year-month', 'Operating Year', 'Online Year',
+                               'online_year', 'ONLINE_YEAR', 'Year Online',
+                               'Initial Year of Operation'],
+            'retirement_year': ['planned-retirement-year-month', 'Planned Retirement Year',
+                                'Retirement Year', 'retirement_year', 'RETIREMENT_YEAR',
                                 'Expected Retirement Year', 'Planned Retirement Date'],
-            'ba':             ['Balancing Authority Code', 'Balancing Authority',
-                               'ba', 'BA_CODE', 'BA Code', 'Balancing Authority Name'],
+            'ba':             ['balancing_authority_code', 'Balancing Authority Code',
+                               'Balancing Authority', 'ba', 'BA_CODE', 'BA Code',
+                               'Balancing Authority Name'],
             'status':         ['Status', 'Operating Status', 'status', 'STATUS',
                                'Generator Status'],
         }
@@ -386,8 +394,17 @@ class FleetModel:
         # Coerce types
         for col in ['capacity_mw', 'heat_rate']:
             df[col] = pd.to_numeric(df[col], errors='coerce')
+
+        # Extract year from YYYY-MM strings (e.g., "1980-07" → 1980) or plain numeric
         for col in ['online_year', 'retirement_year']:
-            df[col] = pd.to_numeric(df[col], errors='coerce').astype('Int64')
+            vals = df[col].astype(str).str.strip()
+            # If values look like "YYYY-MM", extract the year portion
+            yyyy_mm_mask = vals.str.match(r'^\d{4}-\d{1,2}$', na=False)
+            if yyyy_mm_mask.any():
+                extracted = vals.str.extract(r'^(\d{4})', expand=False)
+                df[col] = pd.to_numeric(extracted, errors='coerce').astype('Int64')
+            else:
+                df[col] = pd.to_numeric(df[col], errors='coerce').astype('Int64')
 
         # Map BA to ISO
         df['iso'] = df['ba'].map(lambda x: BA_TO_ISO.get(str(x).strip().upper(), None)
@@ -414,7 +431,7 @@ class FleetModel:
 
         col_map = {
             'plant_id':       ['Plant Id', 'Plant ID', 'Plant Code', 'plant_id',
-                               'PLANT_ID', 'Plant.ID'],
+                               'PLANT_ID', 'Plant.ID', 'plantCode'],
             'gen_id':         ['Generator Id', 'Generator ID', 'gen_id',
                                'GENERATOR_ID', 'Generator.ID', 'Genid',
                                'Nuclear Unit Id'],
@@ -422,18 +439,28 @@ class FleetModel:
                                'Net Generation (MWh)', 'Net Generation',
                                'net_gen_mwh', 'NET_GENERATION',
                                'Electricity Net Generation (Thousand Kilowatthours)',
-                               'Annual Net Generation (MWh)'],
+                               'Annual Net Generation (MWh)',
+                               'generation'],
             'fuel_mmbtu':     ['Total Fuel Consumption MMBtu',
                                'ELEC_FUEL_CONSUMPTION_MMBTU',
                                'Fuel Consumed (MMBtu)',
                                'Elec Fuel Consumption MMBtu',
                                'fuel_mmbtu', 'FUEL_CONSUMED',
                                'Total Fuel Consumed (MMBtu)',
-                               'Electricity Fuel Consumption (MMBtu)'],
+                               'Electricity Fuel Consumption (MMBtu)',
+                               'consumption-for-eg-btu'],
             'fuel_type':      ['Reported Fuel Type Code', 'Energy Source',
                                'Fuel Type', 'fuel_type', 'FUEL_TYPE',
-                               'AER Fuel Type Code', 'FUEL_CODE'],
+                               'AER Fuel Type Code', 'FUEL_CODE',
+                               'fuel2002'],
+            'prime_mover':    ['Prime Mover', 'Prime Mover Code', 'prime_mover',
+                               'PRIME_MOVER', 'primeMover'],
         }
+
+        # Filter out EIA API "ALL" summary rows (fuel2002='ALL' or primeMover='ALL')
+        for all_col in ['fuel2002', 'primeMover']:
+            if all_col in raw.columns:
+                raw = raw[raw[all_col].astype(str).str.upper() != 'ALL'].copy()
 
         df = pd.DataFrame()
         for std_name, candidates in col_map.items():
@@ -468,7 +495,7 @@ class FleetModel:
         """Load EPA CAMPD (Clean Air Markets Program Data) hourly emissions.
 
         Reads from market-simulator/data/epa-campd/{state}/.
-        Extracts: Unit ID, hourly CO2 (tons), Heat Input (MMBtu), Gross Load (MW).
+        Supports JSON (EIA API format) and CSV/XLSX.
 
         Returns:
             DataFrame with standardized column names, or None if no data found.
@@ -480,23 +507,19 @@ class FleetModel:
             return None
 
         col_map = {
-            'facility_id':  ['Facility ID', 'ORISPL_CODE', 'facility_id',
-                             'FACILITY_ID', 'Plant ID', 'Facility Name'],
-            'unit_id':      ['Unit ID', 'UNITID', 'unit_id', 'UNIT_ID',
-                             'Unit Id'],
-            'date':         ['Date', 'OP_DATE', 'date', 'DATE',
-                             'Operating Date', 'Op Date'],
-            'hour':         ['Hour', 'OP_HOUR', 'hour', 'HOUR',
-                             'Operating Hour', 'Op Hour'],
-            'co2_tons':     ['CO2 (tons)', 'CO2_MASS', 'co2_tons',
-                             'CO2_TONS', 'CO2 Mass (short tons)',
-                             'CO2 Mass', 'CO2 (short tons)'],
-            'heat_input':   ['Heat Input (mmBtu)', 'HEAT_INPUT',
-                             'heat_input', 'HEAT_INPUT_MMBTU',
-                             'Heat Input', 'Heat Input (MMBtu)'],
-            'gross_load':   ['Gross Load (MW)', 'GLOAD', 'gross_load',
-                             'GROSS_LOAD', 'Gross Load',
-                             'Gross Load (MWh)', 'Gross Generation (MWh)'],
+            'facility_id':  ['facilityId', 'Facility ID', 'ORISPL_CODE', 'facility_id',
+                             'FACILITY_ID', 'Plant ID'],
+            'facility_name': ['facilityName', 'Facility Name', 'facility_name'],
+            'date':         ['date', 'Date', 'OP_DATE', 'DATE', 'Operating Date'],
+            'hour':         ['hour', 'Hour', 'OP_HOUR', 'HOUR', 'Operating Hour'],
+            'co2_tons':     ['co2Mass', 'CO2 (tons)', 'CO2_MASS', 'co2_tons',
+                             'CO2_TONS', 'CO2 Mass (short tons)', 'CO2 Mass'],
+            'heat_input':   ['heatInput', 'Heat Input (mmBtu)', 'HEAT_INPUT',
+                             'heat_input', 'HEAT_INPUT_MMBTU', 'Heat Input'],
+            'gross_load':   ['grossLoad', 'Gross Load (MW)', 'GLOAD', 'gross_load',
+                             'GROSS_LOAD', 'Gross Load'],
+            'nox_mass':     ['noxMass', 'NOx Mass', 'NOX_MASS', 'nox_mass'],
+            'so2_mass':     ['so2Mass', 'SO2 Mass', 'SO2_MASS', 'so2_mass'],
         }
 
         df = pd.DataFrame()
@@ -507,11 +530,73 @@ class FleetModel:
             else:
                 df[std_name] = np.nan
 
-        for col in ['co2_tons', 'heat_input', 'gross_load']:
+        for col in ['co2_tons', 'heat_input', 'gross_load', 'nox_mass', 'so2_mass']:
             df[col] = pd.to_numeric(df[col], errors='coerce')
 
         self.campd = df
         return df
+
+    def validate_emissions(self) -> Optional[pd.DataFrame]:
+        """Validate fleet emission rates against EPA CAMPD data.
+
+        Cross-references CAMPD hourly CO2 and heat input data with fleet
+        generators to compare modeled vs. measured emission intensities.
+
+        Returns:
+            DataFrame with per-unit-type validation metrics, or None if CAMPD unavailable.
+        """
+        if self.campd is None:
+            self.load_campd()
+        if self.campd is None or len(self.campd) == 0:
+            warnings.warn("No CAMPD data available for emission validation")
+            return None
+
+        campd = self.campd.copy()
+
+        # Aggregate CAMPD: total CO2 and gross load per facility
+        if 'facility_id' in campd.columns:
+            campd['facility_id'] = campd['facility_id'].astype(str).str.strip()
+
+        agg = campd.groupby('facility_id', as_index=False).agg({
+            'co2_tons': 'sum',
+            'gross_load': 'sum',
+            'heat_input': 'sum',
+        })
+
+        # Compute measured emission rate (tons CO2 / MWh)
+        load = agg['gross_load'].values.astype(float)
+        co2 = agg['co2_tons'].values.astype(float)
+        valid = (load > 0) & np.isfinite(load) & np.isfinite(co2)
+        agg['measured_co2_rate'] = np.where(valid, co2 / load, np.nan)
+
+        # Compute measured heat rate from CAMPD
+        heat = agg['heat_input'].values.astype(float)
+        valid_hr = (load > 0) & np.isfinite(load) & np.isfinite(heat)
+        agg['measured_heat_rate'] = np.where(valid_hr, heat / load, np.nan)
+
+        # If we have fleet data, aggregate by unit type
+        if self.fleet is not None and len(self.fleet) > 0:
+            fleet_agg = self.fleet.groupby('unit_type', as_index=False).agg({
+                'heat_rate': 'mean',
+            })
+            fleet_agg['modeled_co2_rate'] = fleet_agg['unit_type'].map(DEFAULT_CO2_RATES)
+
+            overall_measured = float(np.nanmean(agg['measured_co2_rate'].values))
+            overall_measured_hr = float(np.nanmean(agg['measured_heat_rate'].values))
+
+            results = []
+            for _, row in fleet_agg.iterrows():
+                ut = row['unit_type']
+                results.append({
+                    'unit_type': ut,
+                    'modeled_co2_rate': row['modeled_co2_rate'],
+                    'fleet_avg_heat_rate': row['heat_rate'],
+                    'campd_avg_co2_rate': overall_measured,
+                    'campd_avg_heat_rate': overall_measured_hr,
+                })
+            return pd.DataFrame(results)
+
+        return agg[['facility_id', 'measured_co2_rate', 'measured_heat_rate']].copy()
 
     # ------------------------------------------------------------------
     # Fleet building
@@ -571,22 +656,33 @@ class FleetModel:
         if self.eia923 is not None and len(self.eia923) > 0:
             eia923 = self.eia923.copy()
 
-            # Coerce join keys to string
-            for col in ['plant_id', 'gen_id']:
-                if col in df.columns:
-                    df[col] = df[col].astype(str).str.strip()
-                if col in eia923.columns:
-                    eia923[col] = eia923[col].astype(str).str.strip()
+            # Coerce plant_id to string for merge
+            df['plant_id'] = df['plant_id'].astype(str).str.strip()
+            if 'plant_id' in eia923.columns:
+                eia923['plant_id'] = eia923['plant_id'].astype(str).str.strip()
 
-            # Aggregate 923 by plant+generator (may have multiple fuel rows)
-            agg_923 = eia923.groupby(['plant_id', 'gen_id'], as_index=False).agg({
-                'net_gen_mwh': 'sum',
-                'fuel_mmbtu': 'sum',
-            })
+            # Check if 923 has gen_id — EIA API JSON typically doesn't
+            has_gen_id = ('gen_id' in eia923.columns and
+                          eia923['gen_id'].notna().any() and
+                          (eia923['gen_id'].astype(str).str.strip() != 'nan').any())
 
-            # Merge
-            df = df.merge(agg_923, on=['plant_id', 'gen_id'], how='left',
-                          suffixes=('', '_923'))
+            if has_gen_id:
+                df['gen_id'] = df['gen_id'].astype(str).str.strip()
+                eia923['gen_id'] = eia923['gen_id'].astype(str).str.strip()
+                agg_923 = eia923.groupby(['plant_id', 'gen_id'], as_index=False).agg({
+                    'net_gen_mwh': 'sum',
+                    'fuel_mmbtu': 'sum',
+                })
+                df = df.merge(agg_923, on=['plant_id', 'gen_id'], how='left',
+                              suffixes=('', '_923'))
+            else:
+                # Fall back to plant-level merge (aggregate all gens per plant)
+                agg_923 = eia923.groupby('plant_id', as_index=False).agg({
+                    'net_gen_mwh': 'sum',
+                    'fuel_mmbtu': 'sum',
+                })
+                df = df.merge(agg_923, on='plant_id', how='left',
+                              suffixes=('', '_923'))
 
             # Use 923 values where available
             if 'net_gen_mwh_923' in df.columns:
@@ -796,77 +892,6 @@ class FleetModel:
 
         total_mw = sum(s[1] for s in stack)
         return stack, total_mw
-
-    # ------------------------------------------------------------------
-    # CAMPD validation
-    # ------------------------------------------------------------------
-
-    def validate_emissions(self) -> Optional[pd.DataFrame]:
-        """Validate fleet emission rates against EPA CAMPD data.
-
-        Cross-references CAMPD hourly CO2 and heat input data with fleet
-        generators to compare modeled vs. measured emission intensities.
-
-        Returns:
-            DataFrame with per-unit-type validation metrics (modeled_co2_rate,
-            measured_co2_rate, pct_error), or None if CAMPD data unavailable.
-        """
-        if self.campd is None:
-            self.load_campd()
-        if self.campd is None or len(self.campd) == 0:
-            warnings.warn("No CAMPD data available for emission validation")
-            return None
-
-        campd = self.campd.copy()
-
-        # Aggregate CAMPD: total CO2 and gross load per facility
-        for col in ['facility_id', 'unit_id']:
-            if col in campd.columns:
-                campd[col] = campd[col].astype(str).str.strip()
-
-        agg = campd.groupby('facility_id', as_index=False).agg({
-            'co2_tons': 'sum',
-            'gross_load': 'sum',
-            'heat_input': 'sum',
-        })
-
-        # Compute measured emission rate (tons CO2 / MWh)
-        load = agg['gross_load'].values.astype(float)
-        co2 = agg['co2_tons'].values.astype(float)
-        valid = (load > 0) & np.isfinite(load) & np.isfinite(co2)
-        agg['measured_co2_rate'] = np.where(valid, co2 / load, np.nan)
-
-        # Compute measured heat rate from CAMPD
-        heat = agg['heat_input'].values.astype(float)
-        valid_hr = (load > 0) & np.isfinite(load) & np.isfinite(heat)
-        agg['measured_heat_rate'] = np.where(valid_hr, heat / load, np.nan)
-
-        # If we have fleet data, try to match facilities
-        if self.fleet is not None and len(self.fleet) > 0:
-            fleet_agg = self.fleet.groupby('unit_type', as_index=False).agg({
-                'heat_rate': 'mean',
-            })
-            fleet_agg['modeled_co2_rate'] = fleet_agg['unit_type'].map(DEFAULT_CO2_RATES)
-
-            # Overall CAMPD averages by rough type matching
-            overall_measured = float(np.nanmean(agg['measured_co2_rate'].values))
-            overall_measured_hr = float(np.nanmean(agg['measured_heat_rate'].values))
-
-            results = []
-            for _, row in fleet_agg.iterrows():
-                ut = row['unit_type']
-                modeled_co2 = row['modeled_co2_rate']
-                results.append({
-                    'unit_type': ut,
-                    'modeled_co2_rate': modeled_co2,
-                    'fleet_avg_heat_rate': row['heat_rate'],
-                    'campd_avg_co2_rate': overall_measured,
-                    'campd_avg_heat_rate': overall_measured_hr,
-                })
-            return pd.DataFrame(results)
-
-        # No fleet — just return CAMPD summary
-        return agg[['facility_id', 'measured_co2_rate', 'measured_heat_rate']].copy()
 
     # ------------------------------------------------------------------
     # Summary
