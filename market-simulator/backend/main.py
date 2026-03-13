@@ -9,13 +9,18 @@ files from ../frontend/.
 from __future__ import annotations
 
 import asyncio
+import csv
+import json
 import os
+import re
+import shutil
 import sys
 import time
 import traceback
 import uuid
+from datetime import datetime
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
@@ -73,6 +78,7 @@ from pipeline_config import (
 from models import (
     SimulationRequest,
     SimulationResponse,
+    CustomOverrides,
     SweepRequest,
     SweepJob,
     SweepStatus,
@@ -124,6 +130,18 @@ if FRONTEND_DIR.exists():
     # Mount the entire frontend as a fallback for any other static assets
     app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
+# Mount brand assets
+brand_assets_dir = MARKET_SIM_ROOT / "brand-assets"
+if brand_assets_dir.exists():
+    app.mount("/brand-assets", StaticFiles(directory=str(brand_assets_dir)), name="brand-assets")
+
+# Ensure results directory exists
+RESULTS_DIR = MARKET_SIM_ROOT / "results"
+RESULTS_DIR.mkdir(exist_ok=True)
+
+# Custom user inputs directory
+CUSTOM_INPUTS_DIR = MARKET_SIM_ROOT / "custom-user-inputs"
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # In-memory stores
@@ -159,8 +177,18 @@ def _get_preloaded_data() -> Dict:
 # ─────────────────────────────────────────────────────────────────────────────
 
 @app.get("/", response_class=HTMLResponse)
+async def serve_guide_page():
+    """Serve the guide / landing page."""
+    guide_path = FRONTEND_DIR / "guide.html"
+    if not guide_path.exists():
+        # Fallback to setup if guide doesn't exist yet
+        return FileResponse(str(FRONTEND_DIR / "setup.html"), media_type="text/html")
+    return FileResponse(str(guide_path), media_type="text/html")
+
+
+@app.get("/setup", response_class=HTMLResponse)
 async def serve_setup_page():
-    """Serve the setup / landing page."""
+    """Serve the setup / input form page."""
     setup_path = FRONTEND_DIR / "setup.html"
     if not setup_path.exists():
         raise HTTPException(status_code=404, detail="setup.html not found")
@@ -562,7 +590,21 @@ async def simulate(req: SimulationRequest):
         )
 
         iso_results = results.get(iso, [])
-        return _build_simulation_response(iso, iso_results)
+        response = _build_simulation_response(iso, iso_results)
+
+        # Save results to indexed run directory
+        try:
+            run_id = _next_run_id()
+            response_data = response.model_dump()
+            params_data = req.model_dump()
+            narrative = _save_run_artifacts(run_id, iso, response_data, params_data)
+            response.run_id = run_id
+            response.narrative = narrative
+        except Exception as save_err:
+            # Don't fail the simulation if saving fails
+            print(f"Warning: Failed to save run artifacts: {save_err}")
+
+        return response
 
     except Exception as e:
         traceback.print_exc()
@@ -750,6 +792,356 @@ async def run_sensitivity(req: SensitivityRequest):
         base_iso=iso,
         results=results,
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Results directory management
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _next_run_id() -> str:
+    """Determine the next run ID by scanning the results directory."""
+    existing = [d.name for d in RESULTS_DIR.iterdir() if d.is_dir() and d.name.startswith("run_")]
+    if not existing:
+        return "run_001"
+    nums = []
+    for name in existing:
+        match = re.match(r"run_(\d+)", name)
+        if match:
+            nums.append(int(match.group(1)))
+    next_num = max(nums) + 1 if nums else 1
+    return f"run_{next_num:03d}"
+
+
+def _generate_narrative(iso: str, response_data: dict, params: dict) -> str:
+    """Generate a plain-English narrative interpretation of simulation results."""
+    lines = []
+    lines.append(f"MARKET SIMULATION RESULTS — {iso}")
+    lines.append(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    lines.append("=" * 60)
+    lines.append("")
+
+    # Market outcome
+    clean_pct = response_data.get("market_outcome_clean_pct", 0)
+    existing_clean = response_data.get("existing_clean_pct", 0)
+    avg_lmp = response_data.get("avg_lmp", 0)
+    emissions = response_data.get("emissions_mt", 0)
+    demand = response_data.get("demand_twh", 0)
+
+    lines.append("MARKET OUTCOME:")
+    lines.append(f"Under the specified market conditions, {iso} achieves a {clean_pct:.1f}% clean energy mix,")
+    delta = clean_pct - existing_clean
+    direction = "up from" if delta > 0 else "down from" if delta < 0 else "unchanged from"
+    lines.append(f"{direction} the existing {existing_clean:.1f}% baseline ({delta:+.1f} percentage points).")
+    lines.append("")
+
+    # LMP
+    lines.append(f"ENERGY PRICES:")
+    lines.append(f"Average LMP settles at ${avg_lmp:.1f}/MWh.")
+    if avg_lmp < 30:
+        lines.append("This is a low-price environment — marginal generators face revenue pressure.")
+    elif avg_lmp > 60:
+        lines.append("This is a high-price environment — fossil generators earn strong margins.")
+    else:
+        lines.append("This is a moderate price environment.")
+    lines.append("")
+
+    # Emissions
+    if emissions > 0:
+        lines.append(f"EMISSIONS:")
+        lines.append(f"Annual CO2 emissions: {emissions:.1f} MT from {demand:.0f} TWh of demand.")
+        intensity = emissions / demand * 1000 if demand > 0 else 0
+        lines.append(f"Grid emission intensity: {intensity:.0f} kg CO2/MWh.")
+        lines.append("")
+
+    # Generator economics
+    gen_econ = response_data.get("generator_economics", [])
+    if gen_econ:
+        retiring = [g for g in gen_econ if isinstance(g, dict) and g.get("status") == "retiring"]
+        profitable = [g for g in gen_econ if isinstance(g, dict) and g.get("status") == "profitable"]
+        lines.append("GENERATOR FLEET:")
+        if retiring:
+            ret_names = [g.get("unit_type", "unknown") for g in retiring]
+            lines.append(f"Units facing retirement pressure: {', '.join(ret_names)}.")
+        if profitable:
+            prof_names = [g.get("unit_type", "unknown") for g in profitable]
+            lines.append(f"Profitable units: {', '.join(prof_names)}.")
+        lines.append("")
+
+    # Nuclear
+    nuc_rev = response_data.get("nuclear_revenue", {})
+    if isinstance(nuc_rev, dict) and nuc_rev.get("total_mwh", 0) > 0:
+        total_nuc = nuc_rev["total_mwh"]
+        nrt = params.get("nuclear_retirement_threshold", 30)
+        lines.append(f"NUCLEAR:")
+        lines.append(f"Nuclear total revenue stack: ${total_nuc:.1f}/MWh (threshold: ${nrt}/MWh).")
+        if total_nuc > nrt:
+            lines.append("Nuclear fleet is economically viable under these conditions.")
+        else:
+            lines.append("WARNING: Nuclear revenue falls below retirement threshold — retirement risk.")
+        lines.append("")
+
+    # Key inputs summary
+    lines.append("KEY INPUT ASSUMPTIONS:")
+    fp = params.get("fuel_prices", {})
+    lines.append(f"  Gas: ${fp.get('gas', 3.5)}/MMBtu | Coal: ${fp.get('coal', 2.25)}/MMBtu | Oil: ${fp.get('oil', 10.5)}/MMBtu")
+    lines.append(f"  Carbon price: ${params.get('carbon_price', 5.5)}/ton CO2")
+    lines.append(f"  Demand growth: {params.get('demand_growth', 'Medium')}")
+    lines.append(f"  Transmission: {params.get('transmission_level', 'Medium')}")
+    lines.append("")
+
+    lines.append("NOTE: This is a screening-level analysis for directional guidance.")
+    lines.append("For production-grade results, validate with IPM or GenX capacity models.")
+
+    return "\n".join(lines)
+
+
+def _save_run_artifacts(run_id: str, iso: str, response_data: dict, params: dict):
+    """Save all result artifacts to the run directory."""
+    run_dir = RESULTS_DIR / run_id
+    run_dir.mkdir(exist_ok=True)
+    charts_dir = run_dir / "charts"
+    charts_dir.mkdir(exist_ok=True)
+
+    # 1. Inputs text file
+    with open(run_dir / "inputs.txt", "w") as f:
+        f.write(f"SIMULATION INPUT PARAMETERS — {run_id}\n")
+        f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write("=" * 60 + "\n\n")
+        f.write(json.dumps(params, indent=2, default=str))
+
+    # 2. Narrative text file
+    narrative = _generate_narrative(iso, response_data, params)
+    with open(run_dir / "narrative.txt", "w") as f:
+        f.write(narrative)
+
+    # 3. Results data CSV
+    _save_results_csv(run_dir / "results_data.csv", response_data)
+
+    # 4. Input parameters CSV
+    _save_params_csv(run_dir / "input_parameters.csv", params)
+
+    # 5. Copy custom input files if used
+    overrides = params.get("custom_overrides", {})
+    if isinstance(overrides, dict):
+        for key, enabled in overrides.items():
+            if not enabled:
+                continue
+            file_map = {
+                "fuel": ["fuel_prices_gas.csv", "fuel_prices_coal.csv", "fuel_prices_oil.csv"],
+                "lmp": ["lmp_hourly.csv"],
+                "capacity": ["capacity_prices.csv"],
+                "rec": ["rec_prices.csv"],
+            }
+            for fname in file_map.get(key, []):
+                src = CUSTOM_INPUTS_DIR / fname
+                if src.exists():
+                    shutil.copy2(src, run_dir / f"custom_{fname}")
+
+    return narrative
+
+
+def _save_results_csv(filepath: Path, response_data: dict):
+    """Save result data as CSV."""
+    with open(filepath, "w", newline="") as f:
+        w = csv.writer(f)
+        # Generator economics
+        gen_econ = response_data.get("generator_economics", [])
+        if gen_econ:
+            w.writerow(["=== Generator Economics ==="])
+            w.writerow(["unit_type", "capacity_mw", "marginal_cost", "dispatch_hours",
+                         "capacity_factor", "avg_revenue_mwh", "profit_mwh", "status"])
+            for g in gen_econ:
+                if isinstance(g, dict):
+                    w.writerow([g.get("unit_type"), g.get("capacity_mw"), g.get("marginal_cost"),
+                                g.get("dispatch_hours"), g.get("capacity_factor"),
+                                g.get("avg_revenue_mwh"), g.get("profit_mwh"), g.get("status")])
+            w.writerow([])
+
+        # Supply stack
+        supply = response_data.get("supply_stack_summary", [])
+        if supply:
+            w.writerow(["=== Supply Stack ==="])
+            w.writerow(["resource", "generation_twh"])
+            for s in supply:
+                if isinstance(s, dict):
+                    w.writerow([s.get("resource"), s.get("generation_twh")])
+            w.writerow([])
+
+        # Resource mix
+        rmix = response_data.get("resource_mix_twh", {})
+        if rmix:
+            w.writerow(["=== Resource Mix (TWh) ==="])
+            w.writerow(["resource", "twh"])
+            for r, v in sorted(rmix.items(), key=lambda x: -x[1]):
+                w.writerow([r, round(v, 1)])
+            w.writerow([])
+
+        # Summary metrics
+        w.writerow(["=== Summary Metrics ==="])
+        w.writerow(["metric", "value"])
+        w.writerow(["iso", response_data.get("iso", "")])
+        w.writerow(["existing_clean_pct", response_data.get("existing_clean_pct", 0)])
+        w.writerow(["market_outcome_clean_pct", response_data.get("market_outcome_clean_pct", 0)])
+        w.writerow(["avg_lmp", response_data.get("avg_lmp", 0)])
+        w.writerow(["emissions_mt", response_data.get("emissions_mt", 0)])
+        w.writerow(["demand_twh", response_data.get("demand_twh", 0)])
+
+
+def _save_params_csv(filepath: Path, params: dict):
+    """Save input parameters as CSV."""
+    with open(filepath, "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["parameter", "value"])
+        _flatten_dict(params, "", w)
+
+
+def _flatten_dict(d: dict, prefix: str, writer):
+    """Recursively flatten a dict into CSV rows."""
+    for key, val in d.items():
+        full_key = f"{prefix}.{key}" if prefix else key
+        if isinstance(val, dict):
+            _flatten_dict(val, full_key, writer)
+        elif isinstance(val, list):
+            writer.writerow([full_key, json.dumps(val)])
+        else:
+            writer.writerow([full_key, val])
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Custom input file endpoints
+# ─────────────────────────────────────────────────────────────────────────────
+
+CUSTOM_FILE_MAP = {
+    "fuel": {
+        "files": ["fuel_prices_gas.csv", "fuel_prices_coal.csv", "fuel_prices_oil.csv"],
+        "expected_rows": 12,
+    },
+    "lmp": {
+        "files": ["lmp_hourly.csv"],
+        "expected_rows": 8760,
+    },
+    "capacity": {
+        "files": ["capacity_prices.csv"],
+        "expected_rows": 12,
+    },
+    "rec": {
+        "files": ["rec_prices.csv"],
+        "expected_rows": 12,
+    },
+}
+
+EXPECTED_ISO_COLS = {"CAISO", "ERCOT", "PJM", "NYISO", "NEISO", "MISO", "SPP"}
+
+
+def _validate_custom_file(filepath: Path, expected_rows: int) -> dict:
+    """Validate a custom input CSV file."""
+    if not filepath.exists():
+        return {"found": False, "valid": False, "error": "File not found"}
+
+    try:
+        with open(filepath) as f:
+            reader = csv.reader(f)
+            header = next(reader)
+
+        # Check ISO columns
+        header_set = set(header)
+        missing_isos = EXPECTED_ISO_COLS - header_set
+        if missing_isos:
+            return {"found": True, "valid": False,
+                    "error": f"Missing columns: {', '.join(sorted(missing_isos))}"}
+
+        # Count data rows and check for NaN
+        import pandas as pd
+        df = pd.read_csv(filepath)
+        if len(df) != expected_rows:
+            return {"found": True, "valid": False,
+                    "error": f"Expected {expected_rows} rows, found {len(df)}"}
+
+        if df.isnull().any().any():
+            return {"found": True, "valid": False, "error": "Contains NaN/blank values"}
+
+        return {"found": True, "valid": True, "rows": len(df)}
+
+    except Exception as e:
+        return {"found": True, "valid": False, "error": str(e)}
+
+
+@app.get("/api/custom-input-status")
+async def custom_input_status():
+    """Check status of custom input files in the custom-user-inputs folder."""
+    result = {}
+    for category, config in CUSTOM_FILE_MAP.items():
+        # Check the first (primary) file for each category
+        primary_file = config["files"][0]
+        filepath = CUSTOM_INPUTS_DIR / primary_file
+        result[category] = _validate_custom_file(filepath, config["expected_rows"])
+    return result
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Run management endpoints
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.get("/api/runs")
+async def list_runs():
+    """List all saved simulation runs."""
+    runs = []
+    if RESULTS_DIR.exists():
+        for d in sorted(RESULTS_DIR.iterdir()):
+            if d.is_dir() and d.name.startswith("run_"):
+                info = {"run_id": d.name}
+                inputs_file = d / "inputs.txt"
+                if inputs_file.exists():
+                    info["created"] = datetime.fromtimestamp(inputs_file.stat().st_mtime).isoformat()
+                runs.append(info)
+    return {"runs": runs}
+
+
+@app.get("/api/runs/{run_id}")
+async def get_run(run_id: str):
+    """Get data from a specific run."""
+    run_dir = RESULTS_DIR / run_id
+    if not run_dir.exists():
+        raise HTTPException(status_code=404, detail=f"Run '{run_id}' not found")
+
+    result = {"run_id": run_id}
+    for fname in ["inputs.txt", "narrative.txt"]:
+        fpath = run_dir / fname
+        if fpath.exists():
+            result[fname.replace(".txt", "")] = fpath.read_text()
+    return result
+
+
+from fastapi import Request
+from fastapi.responses import JSONResponse
+import base64
+
+
+@app.post("/api/runs/{run_id}/save-chart")
+async def save_chart(run_id: str, request: Request):
+    """Save a base64-encoded chart PNG from client-side html2canvas."""
+    run_dir = RESULTS_DIR / run_id
+    if not run_dir.exists():
+        raise HTTPException(status_code=404, detail=f"Run '{run_id}' not found")
+
+    charts_dir = run_dir / "charts"
+    charts_dir.mkdir(exist_ok=True)
+
+    body = await request.json()
+    chart_name = body.get("name", "chart")
+    image_data = body.get("image", "")
+
+    # Strip data URL prefix if present
+    if "," in image_data:
+        image_data = image_data.split(",", 1)[1]
+
+    try:
+        img_bytes = base64.b64decode(image_data)
+        filepath = charts_dir / f"{chart_name}.png"
+        filepath.write_bytes(img_bytes)
+        return {"status": "ok", "path": str(filepath)}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to save chart: {str(e)}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────

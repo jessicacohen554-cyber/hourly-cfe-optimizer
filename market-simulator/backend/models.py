@@ -115,6 +115,14 @@ class Incentives(BaseModel):
 # Request models
 # ─────────────────────────────────────────────────────────────────────────────
 
+class CustomOverrides(BaseModel):
+    """Flags indicating which custom input files to use."""
+    fuel: bool = False
+    lmp: bool = False
+    capacity: bool = False
+    rec: bool = False
+
+
 class SimulationRequest(BaseModel):
     """Parameters for a single market simulation run."""
     iso: str = "ERCOT"
@@ -132,13 +140,14 @@ class SimulationRequest(BaseModel):
     q45: bool = True                    # 45Q tax credit on/off
     ccs_credit_override: Optional[float] = None  # $/MWh CCS credit override (replaces 45Q tables)
     transmission_level: str = "Medium"  # None/Low/Medium/High
-    demand_growth: str = "Medium"       # Low/Medium/High
+    demand_growth: object = "Medium"    # Low/Medium/High OR float for custom %
     ppa_level: str = "Medium"           # Low/Medium/High
     gas_friction: str = "Medium"        # Low/Medium/High
     condition: str = "Facilitating"     # Facilitating/Challenging
     nuclear_retirement_threshold: float = 30.0  # $/MWh
     mode: str = "snapshot"              # snapshot / trajectory
     years: List[int] = Field(default_factory=lambda: [2030, 2035, 2040, 2045, 2050])
+    custom_overrides: CustomOverrides = Field(default_factory=CustomOverrides)
 
 
 class SweepRequest(BaseModel):
@@ -279,11 +288,14 @@ class SimulationResponse(BaseModel):
     resource_mix_twh: Dict[str, float] = Field(default_factory=dict)
     year_results: List[YearResult] = Field(default_factory=list)
     zones_deployed: List[ZoneDetail] = Field(default_factory=list)
-    # New: market-wide time series for results page
+    # Market-wide time series for results page
     lmp_time_series: Optional[HourlyProfile] = None
     capacity_rev_time_series: Optional[HourlyProfile] = None
     supply_stack_summary: List[SupplyStackEntry] = Field(default_factory=list)
     fuel_bin_table: List[FuelBinRow] = Field(default_factory=list)
+    # Run tracking
+    run_id: Optional[str] = None
+    narrative: Optional[str] = None
 
 
 class SweepJob(BaseModel):
