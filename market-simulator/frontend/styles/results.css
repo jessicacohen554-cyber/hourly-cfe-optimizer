@@ -110,6 +110,59 @@
   color: var(--text-bright);
 }
 
+/* ── Results section headers ── */
+.results-section-header {
+  margin-top: var(--space-2xl);
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-sm);
+  border-bottom: 2px solid var(--ceg-blue);
+}
+
+.results-section-header h2 {
+  font-family: var(--font);
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--navy);
+  margin: 0 0 var(--space-xs) 0;
+}
+
+.results-section-header p {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  margin: 0;
+}
+
+/* ── Fuel bin table ── */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+#fuelBinTable {
+  width: 100%;
+  font-size: 0.85rem;
+}
+
+#fuelBinTable td {
+  font-family: var(--font-data);
+}
+
+#fuelBinTable .fuel-type-header {
+  font-weight: 700;
+  background: rgba(35, 114, 185, 0.06);
+}
+
+#fuelBinTable .status-cell {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+}
+
+#fuelBinTable .status-cell.operating { color: #4A7C2E; }
+#fuelBinTable .status-cell.retiring { color: #991b1b; }
+#fuelBinTable .status-cell.retired { color: #6B7280; }
+
 /* ── No data state ── */
 .no-data {
   text-align: center;

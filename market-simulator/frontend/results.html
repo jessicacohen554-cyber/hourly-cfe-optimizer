@@ -48,7 +48,7 @@
         </div>
     </div>
 
-    <!-- ISO Tab Switcher -->
+    <!-- ISO Tab Switcher + Controls -->
     <div class="iso-tab-bar" id="controlsBar">
         <div class="content-section" style="padding-top: 0; padding-bottom: 0;">
             <div class="iso-tabs" id="resultsIsoSelector"></div>
@@ -56,6 +56,13 @@
                 <div class="control-group" id="yearControl" style="display:none;">
                     <label>Year</label>
                     <select id="yearSelect" class="control-select"></select>
+                </div>
+                <div class="control-group">
+                    <label>View</label>
+                    <div class="toggle-btn-group" id="viewToggle">
+                        <button type="button" class="toggle-btn active" data-view="hourly">Hourly</button>
+                        <button type="button" class="toggle-btn" data-view="monthly">Monthly</button>
+                    </div>
                 </div>
                 <a href="/" class="back-link">&larr; Modify Inputs</a>
             </div>
@@ -77,23 +84,76 @@
                 <div class="kpi-label">Avg LMP</div>
             </div>
             <div class="kpi-card">
-                <div class="kpi-value" id="statNewGW">--</div>
-                <div class="kpi-unit">GW</div>
-                <div class="kpi-label">New Clean</div>
+                <div class="kpi-value" id="statEmissions">--</div>
+                <div class="kpi-unit">MT CO2</div>
+                <div class="kpi-label">Annual Emissions</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value" id="statDemand">--</div>
+                <div class="kpi-unit">TWh</div>
+                <div class="kpi-label">Demand</div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-value" id="statNucRev">--</div>
                 <div class="kpi-unit">$/MWh</div>
                 <div class="kpi-label">Nuclear Rev</div>
             </div>
-            <div class="kpi-card">
-                <div class="kpi-value" id="statCCSBreakeven">--</div>
-                <div class="kpi-unit">$/ton</div>
-                <div class="kpi-label">CCS Breakeven</div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════════════════ -->
+        <!-- LEVEL 1: MARKET-WIDE RESULTS                                   -->
+        <!-- ════════════════════════════════════════════════════════════════ -->
+
+        <div class="results-section-header">
+            <h2>Market Overview</h2>
+            <p>System-wide price and generation dynamics based on your inputs</p>
+        </div>
+
+        <!-- Chart 1: LMP + Capacity Revenue Time Series -->
+        <div class="chart-card">
+            <div class="chart-card-header">
+                <h3>LMP &amp; Capacity Revenue</h3>
+                <p>Hourly energy price profile (snapshot) or year-over-year price evolution (trajectory).
+                   Capacity revenue overlay shows total generator revenue stack.</p>
+            </div>
+            <div class="chart-container-lg" id="chartLMPTimeSeries"></div>
+        </div>
+
+        <!-- Chart 2: Supply Stack Time Series -->
+        <div class="chart-card">
+            <div class="chart-card-header">
+                <h3>Supply Stack</h3>
+                <p>Generation mix by fuel source — how the supply portfolio changes under market conditions</p>
+            </div>
+            <div class="chart-container-lg" id="chartSupplyStack"></div>
+        </div>
+
+        <!-- Table 3: Fuel Source / Heat Rate Bin Breakdown -->
+        <div class="chart-card">
+            <div class="chart-card-header">
+                <h3>Generation by Fuel Source &amp; Heat Rate</h3>
+                <p>Capacity, capacity factor, and TWh generation for each generator class</p>
+            </div>
+            <div class="table-responsive" id="fuelBinTableContainer">
+                <table class="data-table" id="fuelBinTable">
+                    <thead>
+                        <tr>
+                            <th>Fuel Source</th>
+                            <th>Heat Rate Bin</th>
+                            <th>Capacity (GW)</th>
+                            <th>CF (%)</th>
+                            <th>Generation (TWh)</th>
+                            <th>Marginal Cost ($/MWh)</th>
+                            <th>Avg Revenue ($/MWh)</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fuelBinTableBody"></tbody>
+                </table>
             </div>
         </div>
 
-        <!-- Chart 1: Merit-Order Stack -->
+        <!-- Chart 4: Merit-Order Stack -->
         <div class="chart-card">
             <div class="chart-card-header">
                 <h3>Merit-Order Stack</h3>
@@ -102,7 +162,16 @@
             <div class="chart-container-lg" id="chartMeritOrder"></div>
         </div>
 
-        <!-- Charts Row: Profitability + Nuclear -->
+        <!-- ════════════════════════════════════════════════════════════════ -->
+        <!-- LEVEL 2: YEAR DRILL-DOWN                                        -->
+        <!-- ════════════════════════════════════════════════════════════════ -->
+
+        <div class="results-section-header" id="yearDrilldownHeader" style="display:none;">
+            <h2>Year-by-Year Detail</h2>
+            <p>Drill into each projection year for deployment, pricing, and fleet economics</p>
+        </div>
+
+        <!-- Charts Row: Profitability + What Gets Built -->
         <div class="grid-2col">
             <div class="chart-card">
                 <div class="chart-card-header">
@@ -114,34 +183,6 @@
 
             <div class="chart-card">
                 <div class="chart-card-header">
-                    <h3>Nuclear Revenue by ISO</h3>
-                    <p>Energy + capacity + PTC breakdown</p>
-                </div>
-                <div class="chart-container" id="chartNuclearRevenue"></div>
-            </div>
-        </div>
-
-        <!-- Chart 4: LMP Impact Curve -->
-        <div class="chart-card">
-            <div class="chart-card-header">
-                <h3>LMP Impact Curve</h3>
-                <p>How average LMP changes as clean penetration increases &mdash; price suppression effect</p>
-            </div>
-            <div class="chart-container" id="chartLMPImpact"></div>
-        </div>
-
-        <!-- Charts Row: CCS Breakeven + What Gets Built -->
-        <div class="grid-2col">
-            <div class="chart-card">
-                <div class="chart-card-header">
-                    <h3>CCS Retrofit vs New Gas</h3>
-                    <p>Carbon price crossover: when does CCS beat unabated CCGT?</p>
-                </div>
-                <div class="chart-container" id="chartCCSBreakeven"></div>
-            </div>
-
-            <div class="chart-card">
-                <div class="chart-card-header">
                     <h3>What Gets Built</h3>
                     <p>Resource mix from existing baseline through market-cleared level</p>
                 </div>
@@ -149,32 +190,61 @@
             </div>
         </div>
 
-        <!-- Chart 7: Fossil Fleet Bin Economics -->
+        <!-- LMP Impact + CCS Breakeven -->
+        <div class="grid-2col">
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <h3>LMP Impact Curve</h3>
+                    <p>How average LMP changes as clean penetration increases</p>
+                </div>
+                <div class="chart-container" id="chartLMPImpact"></div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <h3>CCS Retrofit vs New Gas</h3>
+                    <p>Carbon price crossover: when does CCS beat unabated CCGT?</p>
+                </div>
+                <div class="chart-container" id="chartCCSBreakeven"></div>
+            </div>
+        </div>
+
+        <!-- Fossil Bin Economics -->
         <div class="chart-card">
             <div class="chart-card-header">
                 <h3>Fossil Fleet Economics by Heat Rate Bin</h3>
-                <p>Per-bin dispatch hours, revenue, cost, and margin. Shows shift toward efficient gas.</p>
+                <p>Per-bin dispatch hours, revenue, cost, and margin</p>
             </div>
             <div class="chart-container-lg" id="chartFossilBins"></div>
         </div>
 
-        <!-- Chart 8: Clean Energy Cost Ladder -->
-        <div class="chart-card">
-            <div class="chart-card-header">
-                <h3>Clean Energy Cost Ladder</h3>
-                <p>$/MWh vs cumulative GW added. Market stops where cost exceeds revenue.</p>
-            </div>
-            <div class="chart-container" id="chartCostLadder"></div>
-        </div>
-
-        <!-- Chart 9 + 10 -->
+        <!-- Clean Cost Ladder + Gas Shift -->
         <div class="grid-2col">
             <div class="chart-card">
                 <div class="chart-card-header">
-                    <h3>Gas Fleet Age/Efficiency Shift</h3>
-                    <p>How dispatch shifts between heat rate bins as carbon price increases</p>
+                    <h3>Clean Energy Cost Ladder</h3>
+                    <p>$/MWh vs cumulative GW — market stops where cost exceeds revenue</p>
+                </div>
+                <div class="chart-container" id="chartCostLadder"></div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <h3>Gas Fleet Efficiency Shift</h3>
+                    <p>Dispatch shift between heat rate bins as carbon price rises</p>
                 </div>
                 <div class="chart-container" id="chartGasShift"></div>
+            </div>
+        </div>
+
+        <!-- Nuclear Revenue + Sensitivity -->
+        <div class="grid-2col">
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <h3>Nuclear Revenue Stack</h3>
+                    <p>Energy + capacity + PTC breakdown</p>
+                </div>
+                <div class="chart-container" id="chartNuclearRevenue"></div>
             </div>
 
             <div class="chart-card">
@@ -186,29 +256,36 @@
             </div>
         </div>
 
-        <!-- Raw Data Table -->
+        <!-- ════════════════════════════════════════════════════════════════ -->
+        <!-- LEVEL 3: IPP FLEET ANALYSIS                                     -->
+        <!-- ════════════════════════════════════════════════════════════════ -->
+
+        <div class="results-section-header">
+            <h2>IPP Fleet Analysis</h2>
+            <p>How individual generator fleets perform under these market conditions (EIA-860 data)</p>
+        </div>
+
+        <!-- IPP Toggle (future: select specific company fleets) -->
         <div class="chart-card">
-            <div class="chart-card-header collapsible-header" data-target="rawDataSection">
+            <div class="chart-card-header">
                 <h3>Generator Economics Detail</h3>
-                <span class="collapse-icon">&#9660;</span>
+                <p>Full fleet breakdown — all generator types with dispatch, revenue, and profitability</p>
             </div>
-            <div class="collapsible-content" id="rawDataSection">
-                <table class="data-table" id="generatorTable">
-                    <thead>
-                        <tr>
-                            <th>Generator</th>
-                            <th>Capacity MW</th>
-                            <th>Marginal Cost</th>
-                            <th>Dispatch Hours</th>
-                            <th>Capacity Factor</th>
-                            <th>Avg Revenue</th>
-                            <th>Profit $/MWh</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="generatorTableBody"></tbody>
-                </table>
-            </div>
+            <table class="data-table" id="generatorTable">
+                <thead>
+                    <tr>
+                        <th>Generator</th>
+                        <th>Capacity (GW)</th>
+                        <th>Marginal Cost</th>
+                        <th>Dispatch Hours</th>
+                        <th>Capacity Factor</th>
+                        <th>Avg Revenue</th>
+                        <th>Profit $/MWh</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="generatorTableBody"></tbody>
+            </table>
         </div>
 
     </div>

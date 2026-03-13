@@ -57,6 +57,10 @@ from lmp_engine import (
     FUEL_PRICES,
     INSTALLED_FOSSIL_MW,
     FOSSIL_CAPACITY_SHARES,
+    NOX_RATES,
+    SOX_RATES,
+    NOX_PRICES,
+    SOX_PRICES,
 )
 from pipeline_config import (
     ISOS,
@@ -79,6 +83,9 @@ from models import (
     NuclearRevenue,
     ZoneDetail,
     YearResult,
+    FuelBinRow,
+    HourlyProfile,
+    SupplyStackEntry,
     ISOSummary,
     ISODefaults,
 )
@@ -209,6 +216,8 @@ async def get_iso_defaults(iso: str):
         heat_rates=HEAT_RATES,
         vom=VOM,
         co2_rates=CO2_RATES,
+        nox_rates=NOX_RATES,
+        sox_rates=SOX_RATES,
     )
 
 
@@ -248,6 +257,15 @@ def _map_request_to_conditions(req: SimulationRequest) -> dict:
         elif avg_lcoe > 75:
             lcoe_level = "High"
 
+    # Build custom fuel prices dict if user provided specific values
+    custom_fuel_prices = None
+    if req.fuel_prices:
+        custom_fuel_prices = {
+            'coal': req.fuel_prices.coal,
+            'gas': req.fuel_prices.gas,
+            'oil': req.fuel_prices.oil,
+        }
+
     return {
         "name": f"API: {req.iso} | {req.condition} | {req.demand_growth} demand | carbon=${req.carbon_price}",
         "demand_growth": req.demand_growth,
@@ -259,6 +277,16 @@ def _map_request_to_conditions(req: SimulationRequest) -> dict:
         "fuel_level": fuel_level,
         "tx_level": tx_level,
         "ppa_level": req.ppa_level,
+        # NOx/SOx emission pricing and limits
+        "nox_price": req.emission_prices.nox if req.emission_prices else 0.0,
+        "sox_price": req.emission_prices.sox if req.emission_prices else 0.0,
+        "nox_limit": req.emission_limits.nox_limit if req.emission_limits else None,
+        "sox_limit": req.emission_limits.sox_limit if req.emission_limits else None,
+        # Custom fuel prices (override fuel_level presets)
+        "custom_fuel_prices": custom_fuel_prices,
+        "custom_co2_price": req.carbon_price,
+        # Wholesale price override
+        "wholesale_price_override": req.wholesale_price_override,
     }
 
 
@@ -381,6 +409,64 @@ def _build_simulation_response(iso: str, year_results: list) -> SimulationRespon
             ccs_breakeven=yr.get("ccs_breakeven", {}),
         ))
 
+    # Build supply stack summary from resource_mix_twh
+    supply_stack = []
+    rmix = final.get("resource_mix_twh", {})
+    for res, twh in sorted(rmix.items(), key=lambda x: -x[1]):
+        if twh > 0:
+            supply_stack.append(SupplyStackEntry(
+                resource=res,
+                capacity_gw=0,  # Not available from current data
+                generation_twh=round(twh, 1),
+            ))
+
+    # Build fuel bin table from generator_economics
+    fuel_bins = []
+    gen_raw = final.get("generator_economics", {})
+    if isinstance(gen_raw, dict):
+        for unit_type, data in gen_raw.items():
+            if not isinstance(data, dict):
+                continue
+            cap_mw = data.get("capacity_mw", 0)
+            cf = data.get("capacity_factor", data.get("cf", 0))
+            gen_twh = cap_mw * cf * 8760 / 1e6  # MW × CF × hours → TWh
+            mc = data.get("marginal_cost", data.get("var_cost_mwh", 0))
+            avg_rev = data.get("avg_revenue_mwh", data.get("avg_rev_mwh", 0))
+            margin = avg_rev - mc if avg_rev and mc else 0
+
+            if margin > 5:
+                status = "operating"
+            elif margin > -5:
+                status = "marginal"
+            else:
+                status = "retiring"
+
+            fuel_bins.append(FuelBinRow(
+                fuel_type=unit_type,
+                heat_rate_bin="—",
+                capacity_gw=round(cap_mw / 1000, 2),
+                capacity_factor=round(cf, 4),
+                generation_twh=round(gen_twh, 1),
+                marginal_cost=round(mc, 1),
+                avg_revenue=round(avg_rev, 1),
+                status=status,
+            ))
+
+    # Build LMP time series from year_results (trajectory) or hourly data
+    lmp_ts = None
+    cap_rev_ts = None
+    if len(year_results) > 1:
+        lmp_ts = HourlyProfile(
+            hours=[float(yr.get("year", 0)) for yr in year_results],
+            values=[float(yr.get("avg_lmp", 0)) for yr in year_results],
+            label="Avg LMP by Year",
+        )
+        cap_rev_ts = HourlyProfile(
+            hours=[float(yr.get("year", 0)) for yr in year_results],
+            values=[float(yr.get("capacity_rev_mwh", 0)) for yr in year_results],
+            label="Capacity Revenue by Year",
+        )
+
     return SimulationResponse(
         iso=iso,
         existing_clean_pct=round(existing_clean, 1),
@@ -394,6 +480,10 @@ def _build_simulation_response(iso: str, year_results: list) -> SimulationRespon
         resource_mix_twh=final.get("resource_mix_twh", {}),
         year_results=typed_years,
         zones_deployed=zone_details,
+        lmp_time_series=lmp_ts,
+        capacity_rev_time_series=cap_rev_ts,
+        supply_stack_summary=supply_stack,
+        fuel_bin_table=fuel_bins,
     )
 
 
