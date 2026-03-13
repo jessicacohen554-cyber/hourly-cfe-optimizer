@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Market Simulator &mdash; High-Level Architecture</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    font-family: 'Franklin Gothic Book', 'Libre Franklin', 'Segoe UI', sans-serif;
+    background: #FFFFFF;
+    color: #1a1a2e;
+    width: 864px;
+    height: 576px;
+    overflow: hidden;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    padding: 14px 20px 10px;
+  }
+  h1, h2, h3, .phase-label, .step-name {
+    font-family: 'Franklin Gothic Demi', 'Libre Franklin', 'Segoe UI Semibold', sans-serif;
+    font-weight: 700;
+  }
+  .title-bar {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 8px;
+    flex-shrink: 0;
+  }
+  .title-bar h1 {
+    font-size: 15px;
+    color: #1a1a2e;
+  }
+  .title-bar .subtitle {
+    font-size: 10px;
+    color: #7E8083;
+  }
+  .pipeline {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .phase {
+    flex: 1;
+    display: flex;
+    align-items: stretch;
+    min-height: 0;
+  }
+  .phase-label {
+    width: 100px;
+    min-width: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 8px;
+    font-size: 10.5px;
+    letter-spacing: 0.02em;
+    color: #fff;
+    border-radius: 5px 0 0 5px;
+    text-align: center;
+    line-height: 1.25;
+  }
+  .phase-content {
+    flex: 1;
+    display: flex;
+    gap: 6px;
+    padding: 6px 8px;
+    background: #f8f9fb;
+    border: 1px solid #e5e8ed;
+    border-left: none;
+    border-radius: 0 5px 5px 0;
+    align-items: stretch;
+  }
+  .step-box {
+    background: #fff;
+    border: 1px solid #d8dce3;
+    border-radius: 4px;
+    padding: 6px 9px;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .step-box .step-id {
+    font-family: 'Franklin Gothic Demi', 'Libre Franklin', sans-serif;
+    font-weight: 700;
+    font-size: 9px;
+    color: #2372B9;
+    margin-bottom: 1px;
+  }
+  .step-box .step-name {
+    font-size: 11px;
+    color: #1a1a2e;
+    line-height: 1.2;
+    margin-bottom: 2px;
+  }
+  .step-box .step-desc {
+    font-size: 9px;
+    color: #7E8083;
+    line-height: 1.35;
+  }
+  .step-box .step-script {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 8px;
+    color: #007FA4;
+    margin-top: 2px;
+  }
+
+  /* Phase colors */
+  .phase-data .phase-label { background: #7E8083; }
+  .phase-engine .phase-label { background: #2372B9; }
+  .phase-scenarios .phase-label { background: #F47B27; }
+  .phase-output .phase-label { background: #6BA543; }
+
+  .arrow-row {
+    flex-shrink: 0;
+    display: flex;
+    justify-content: center;
+    height: 10px;
+    align-items: center;
+    line-height: 0;
+  }
+
+  .bottom {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 6px;
+  }
+  .legend {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 9px;
+    color: #7E8083;
+  }
+  .legend-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+  }
+  .footer {
+    margin-top: 4px;
+    font-size: 8px;
+    color: #bbb;
+  }
+
+  /* Highlight key box */
+  .step-box.highlight {
+    border-color: #2372B9;
+    border-width: 1.5px;
+  }
+  .step-box.highlight .step-id {
+    color: #F47B27;
+  }
+
+  /* Data flow annotation */
+  .flow-note {
+    font-size: 8px;
+    color: #999;
+    text-align: center;
+    margin: -2px 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="title-bar">
+  <h1>Market Simulator &mdash; High-Level Architecture</h1>
+  <span class="subtitle">Profit-Driven Electricity Market Model &bull; 7 ISOs &bull; 3 Simulation Modes</span>
+</div>
+
+<div class="pipeline">
+
+  <!-- PHASE 1: Data Foundation -->
+  <div class="phase phase-data">
+    <div class="phase-label">Data<br>Foundation</div>
+    <div class="phase-content">
+      <div class="step-box">
+        <div class="step-id">Pre-computed</div>
+        <div class="step-name">Physics Feasible Space</div>
+        <div class="step-desc">Exhaustive 4&ndash;6D resource mix search. Millions of scored mixes per ISO at 21 thresholds (10&ndash;99.99%).</div>
+        <div class="step-script">PFS parquets &rarr; EF parquets</div>
+      </div>
+      <div class="step-box">
+        <div class="step-id">Pre-computed</div>
+        <div class="step-name">Efficient Frontier</div>
+        <div class="step-desc">Cost-optimized mixes: 5,832&ndash;17,496 sensitivity combos per ISO/threshold. 9-dim key (Ren/Firm/Batt/LDES/Fuel/TX/CCS/45Q/Geo).</div>
+        <div class="step-script">cost optimization parquets</div>
+      </div>
+      <div class="step-box">
+        <div class="step-id">EIA / eGRID</div>
+        <div class="step-name">Profiles &amp; Emissions</div>
+        <div class="step-desc">8,760-hour demand &amp; generation (EIA-930, 5-yr avg). eGRID emission rates. Fossil fleet mix.</div>
+        <div class="step-script">eia_data_io.py, pipeline_config.py</div>
+      </div>
+      <div class="step-box">
+        <div class="step-id">EIA 860/923</div>
+        <div class="step-name">Fleet Inventory</div>
+        <div class="step-desc">Real generator-level data: capacity, heat rates, emissions. EIA + EPA CAMPD cross-reference.</div>
+        <div class="step-script">fleet_model.py</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-row"><svg width="14" height="8"><polygon points="7,7 2,1 12,1" fill="#7E8083"/></svg></div>
+
+  <!-- PHASE 2: Simulation Engine -->
+  <div class="phase phase-engine">
+    <div class="phase-label">Market<br>Simulation<br>Engine</div>
+    <div class="phase-content">
+      <div class="step-box highlight">
+        <div class="step-id">Core</div>
+        <div class="step-name">LMP Engine</div>
+        <div class="step-desc">Merit-order fossil stack: HR &times; fuel + VOM + CO&sub2; &times; carbon. 8,760-hour vectorized clearing. ISO-specific price models.</div>
+        <div class="step-script">lmp_engine.py</div>
+      </div>
+      <div class="step-box">
+        <div class="step-id">Core</div>
+        <div class="step-name">Hourly Dispatch</div>
+        <div class="step-desc">4-phase storage: bat4 &rarr; bat8 &rarr; LDES &rarr; H&sub2;. Clean supply vs demand matching. Per-resource breakdowns.</div>
+        <div class="step-script">dispatch_utils.py</div>
+      </div>
+      <div class="step-box">
+        <div class="step-id">Core</div>
+        <div class="step-name">Profitability Analysis</div>
+        <div class="step-desc">Revenue (LMP &times; CF + capacity + PTC) vs Cost (fuel + VOM + CO&sub2;). Deploy where profit &gt; 0; stop at first loss.</div>
+        <div class="step-script">market_simulation.py</div>
+      </div>
+      <div class="step-box">
+        <div class="step-id">Core</div>
+        <div class="step-name">Fossil Retirement</div>
+        <div class="step-desc">Merit-order cascade: coal &rarr; oil &rarr; gas CT &rarr; gas CCGT. Nuclear floor mechanism with &sect;45U PTC.</div>
+        <div class="step-script">dispatch_utils.py</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-row"><svg width="14" height="8"><polygon points="7,7 2,1 12,1" fill="#2372B9"/></svg></div>
+
+  <!-- PHASE 3: Scenario Analysis -->
+  <div class="phase phase-scenarios">
+    <div class="phase-label">Scenario<br>Analysis</div>
+    <div class="phase-content">
+      <div class="step-box">
+        <div class="step-id">Mode 1</div>
+        <div class="step-name">Snapshot</div>
+        <div class="step-desc">Single point-in-time. User&rsquo;s exact inputs, no learning curves or demand growth. 5&ndash;15 seconds.</div>
+      </div>
+      <div class="step-box">
+        <div class="step-id">Mode 2</div>
+        <div class="step-name">Trajectory</div>
+        <div class="step-desc">2023 &rarr; 2050 (6 timesteps). Wright&rsquo;s Law learning curves, demand growth (L/M/H), queue caps. 30&ndash;120 sec.</div>
+      </div>
+      <div class="step-box">
+        <div class="step-id">Mode 3</div>
+        <div class="step-name">Parametric Sweep</div>
+        <div class="step-desc">270 scenarios = 2 conditions &times; 3 demand &times; 5 price &times; 3 PPA &times; 3 gas friction. Full sensitivity surface. 5&ndash;30 min.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-row"><svg width="14" height="8"><polygon points="7,7 2,1 12,1" fill="#F47B27"/></svg></div>
+
+  <!-- PHASE 4: Visualization & Export -->
+  <div class="phase phase-output">
+    <div class="phase-label">Visualization<br>&amp; Export</div>
+    <div class="phase-content">
+      <div class="step-box">
+        <div class="step-id">Charts</div>
+        <div class="step-name">10 Interactive Charts</div>
+        <div class="step-desc">Merit-order stack, generator profitability, nuclear revenue, LMP curve, CCS breakeven, supply mix, sensitivity heatmap.</div>
+      </div>
+      <div class="step-box">
+        <div class="step-id">KPIs</div>
+        <div class="step-name">Dashboard Cards</div>
+        <div class="step-desc">Market clean %, avg LMP, new clean GW, nuclear revenue, CCS breakeven price, annual CO&sub2;.</div>
+      </div>
+      <div class="step-box">
+        <div class="step-id">Export</div>
+        <div class="step-name">CSV / JSON / PNG</div>
+        <div class="step-desc">Full results table, input parameters, narrative interpretation, chart image exports.</div>
+      </div>
+      <div class="step-box">
+        <div class="step-id">API</div>
+        <div class="step-name">REST Endpoints</div>
+        <div class="step-desc">FastAPI: /api/simulate, /api/sweep, /api/sensitivity, /api/iso-defaults. JSON request/response.</div>
+        <div class="step-script">backend/main.py, models.py</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="bottom">
+  <div class="legend">
+    <div class="legend-item"><div class="legend-swatch" style="background:#7E8083"></div>Data Foundation (pre-computed)</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#2372B9"></div>Simulation Engine</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#F47B27"></div>Scenario Analysis</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#6BA543"></div>Visualization &amp; Export</div>
+  </div>
+  <div class="footer">Constellation Energy &mdash; Market Simulator v1.0</div>
+</div>
+
+</body>
+</html>
