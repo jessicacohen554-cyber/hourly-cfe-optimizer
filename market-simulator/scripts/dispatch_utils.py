@@ -36,8 +36,12 @@ except ImportError:
             return args[0]
         return decorator
 
-SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_DIR = os.path.join(SCRIPT_DIR, 'data')
+MODULE_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_DIR = os.path.join(MODULE_ROOT, 'data')
+# Also check profiles subdirectory and parent repo data directory
+_DATA_SEARCH = [DATA_DIR, os.path.join(DATA_DIR, 'profiles'),
+                os.path.join(MODULE_ROOT, '..', 'data')]
+SCRIPT_DIR = MODULE_ROOT  # backward compat
 
 # Import shared constants from pipeline_config (single source of truth)
 from pipeline_config import (
@@ -74,8 +78,16 @@ def load_common_data():
     from eia_data_io import load_generation_profiles, load_demand_profiles, load_fossil_mix
     demand_data = load_demand_profiles()
     gen_profiles = load_generation_profiles()
-    with open(os.path.join(DATA_DIR, 'egrid_emission_rates.json')) as f:
-        emission_rates = json.load(f)
+    # Search multiple directories for emission rates
+    emission_rates = None
+    for search_dir in _DATA_SEARCH:
+        epath = os.path.join(search_dir, 'egrid_emission_rates.json')
+        if os.path.exists(epath):
+            with open(epath) as f:
+                emission_rates = json.load(f)
+            break
+    if emission_rates is None:
+        raise FileNotFoundError("egrid_emission_rates.json not found in any data directory")
     fossil_mix = load_fossil_mix()
     return demand_data, gen_profiles, emission_rates, fossil_mix
 

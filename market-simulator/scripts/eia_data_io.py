@@ -15,20 +15,37 @@ Files:
 import os
 import json
 
-DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data')
-EIA_DIR = os.path.join(DATA_DIR, 'eia-930')
+MODULE_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_DIR = os.path.join(MODULE_ROOT, 'data')
+
+# Search multiple directories for EIA data
+# 1. market-simulator/data/profiles/ (synthetic or generated)
+# 2. market-simulator/data/eia-930/ (standard EIA 930 location)
+# 3. Parent repo data/eia-930/ (if running from within main repo)
+EIA_SEARCH_DIRS = [
+    os.path.join(DATA_DIR, 'profiles'),
+    os.path.join(DATA_DIR, 'eia-930'),
+    os.path.join(MODULE_ROOT, '..', 'data', 'eia-930'),
+]
+EIA_DIR = os.path.join(DATA_DIR, 'eia-930')  # Default for error messages
 
 
 def _try_parquet(name):
-    """Check if parquet version exists."""
-    path = os.path.join(EIA_DIR, name + '.parquet')
-    return path if os.path.exists(path) else None
+    """Check if parquet version exists in any search directory."""
+    for search_dir in EIA_SEARCH_DIRS:
+        path = os.path.join(search_dir, name + '.parquet')
+        if os.path.exists(path):
+            return path
+    return None
 
 
 def _try_json(name):
-    """Check if JSON version exists."""
-    path = os.path.join(EIA_DIR, name + '.json')
-    return path if os.path.exists(path) else None
+    """Check if JSON version exists in any search directory."""
+    for search_dir in EIA_SEARCH_DIRS:
+        path = os.path.join(search_dir, name + '.json')
+        if os.path.exists(path):
+            return path
+    return None
 
 
 def load_generation_profiles():

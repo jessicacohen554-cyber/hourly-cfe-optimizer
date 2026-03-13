@@ -1,0 +1,86 @@
+{
+  "MKT_CUSTOM": {
+    "ERCOT": [
+      {
+        "iso": "ERCOT",
+        "scenario": "MKT_CUSTOM",
+        "year": 2025,
+        "clean_pct": 46.1,
+        "demand_twh": 522.8,
+        "emissions_mt": 0.0,
+        "emission_rate_tco2_mwh": 0.0,
+        "cost_per_mwh": 75.5,
+        "revenue_per_mwh": 44.48,
+        "energy_rev_mwh": 44.48,
+        "capacity_rev_mwh": 0.0,
+        "rec_rev_mwh": 0.0,
+        "avg_lmp": 44.5,
+        "lmp_p90": 53.6,
+        "gas_built_gw": 0,
+        "total_gas_gw": 0,
+        "market_stop": true,
+        "resource_mix_twh": {
+          "clean_firm": 47.05,
+          "solar": 73.19,
+          "wind": 162.06,
+          "offshore_wind": 0.0,
+          "ccs_ccgt": 240.48,
+          "hydro": 0.0
+        },
+        "cumulative_gw": {
+          "nuclear": 2.0,
+          "ccs": 0.3,
+          "ldes": 0.01,
+          "h2": 0.1,
+          "geothermal": 0.05,
+          "battery": 50.0,
+          "battery8": 50.0,
+          "solar": 150.0,
+          "wind": 150.0,
+          "offshore_wind": 5.0
+        },
+        "zones_deployed": [],
+        "zone_details": [],
+        "generator_economics": {
+          "gas_ccgt": {
+            "dispatch_hours": 8760,
+            "cf": 0.0,
+            "avg_rev_mwh": 53.98,
+            "var_cost_mwh": 33.04,
+            "margin_mwh": 20.94,
+            "capacity_mw": 38549.30942949881
+          },
+          "coal_steam": {
+            "dispatch_hours": 0,
+            "cf": 0.0,
+            "avg_rev_mwh": 0.0,
+            "var_cost_mwh": 36.55,
+            "margin_mwh": -36.55,
+            "capacity_mw": 16961.696148979478
+          },
+          "gas_ct": {
+            "dispatch_hours": 0,
+            "cf": 0.0,
+            "avg_rev_mwh": 0.0,
+            "var_cost_mwh": 49.25,
+            "margin_mwh": -49.25,
+            "capacity_mw": 21587.613280519337
+          }
+        },
+        "nuclear_revenue": {
+          "energy_rev_mwh": 44.48,
+          "capacity_rev_mwh": 0.0,
+          "ptc_mwh": 15.0,
+          "total_mwh": 59.48
+        },
+        "nuclear_retired": false,
+        "ccs_breakeven": {
+          "ccs_vs_existing_carbon_price": 216.2,
+          "new_gas_vs_old_carbon_price": 0,
+          "existing_ccgt_var_cost": 28.0,
+          "ccs_lcoe": 100
+        }
+      }
+    ]
+  }
+}
