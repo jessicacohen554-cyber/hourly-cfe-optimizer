@@ -17,7 +17,12 @@ import sys
 from pathlib import Path
 
 import pandas as pd
-from jinja2 import Environment, FileSystemLoader
+
+try:
+    from jinja2 import Environment, FileSystemLoader
+except ImportError:
+    print("ERROR: jinja2 is not installed. Run: pip install -r requirements.txt")
+    sys.exit(1)
 
 # ── Paths ──────────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).parent
