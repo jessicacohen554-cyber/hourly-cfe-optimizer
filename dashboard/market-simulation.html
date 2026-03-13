@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="styles/ceg-market.css">
 <link rel="stylesheet" href="styles/ceg-results.css">
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<script src="js/ipp-fleet-data.js"></script>
 <style>
 /* ── Demo controls bar ── */
 .demo-controls { background: white; border-bottom: 1px solid var(--glass-border); padding: var(--space-lg) 0; position: sticky; top: 60px; z-index: 100; box-shadow: var(--shadow-sm); }
@@ -194,6 +195,32 @@
     <div class="chart-card">
         <div class="chart-card-header"><h3>Owner Portfolio Trajectory (2025–2050)</h3><p>Revenue trajectory across year snapshots at current fuel/carbon scenario</p></div>
         <div class="chart-container-lg" id="chartTrajectory"></div>
+    </div>
+
+    <!-- Section 3b: Competitor Comparison -->
+    <hr class="section-divider">
+    <div class="section-eyebrow">Competitive Landscape</div>
+    <div class="section-heading">IPP Competitor Comparison</div>
+
+    <div class="chart-card">
+        <div class="chart-card-header"><h3>ERCOT Portfolio Mix</h3><p>Capacity breakdown by fuel type for top IPPs — fossil vs clean positioning</p></div>
+        <div class="chart-container-lg" id="chartCompetitorMix"></div>
+    </div>
+
+    <div class="grid-2col">
+        <div class="chart-card">
+            <div class="chart-card-header"><h3>Carbon Exposure Ranking</h3><p>CO₂ intensity and fossil exposure across major ERCOT IPPs</p></div>
+            <div class="chart-container" id="chartCarbonExposure"></div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-card-header"><h3>Revenue Resilience (Carbon Sweep)</h3><p>How total ERCOT portfolio profit changes from $0 to $100/ton carbon</p></div>
+            <div class="chart-container" id="chartRevenueResilience"></div>
+        </div>
+    </div>
+
+    <div class="chart-card">
+        <div class="chart-card-header"><h3>Full Portfolio Trajectory (ERCOT + National)</h3><p>Complete revenue stack including national nuclear, gas, and renewable assets</p></div>
+        <div class="chart-container-lg" id="chartFullTrajectory"></div>
     </div>
 
     <!-- Section 4: Nuclear Economics -->
@@ -389,6 +416,10 @@ function update() {
     renderTimeSeries();
     renderSensitivity();
     renderTable(sim);
+    renderCompetitorMix();
+    renderCarbonExposure();
+    renderRevenueResilience();
+    renderFullTrajectory();
 }
 
 // ── Chart: Merit Order ──
@@ -777,6 +808,128 @@ function renderTable(sim) {
             <td><span style="background:${statusBg};color:${statusColor};padding:2px 8px;border-radius:20px;font-size:0.75rem;font-weight:700;text-transform:uppercase;">${g.status||'—'}</span></td>
         </tr>`;
     }).join('');
+}
+
+// ── Chart: Competitor Portfolio Mix ──
+function renderCompetitorMix() {
+    const comps = runCompetitorComparison(currentPriceLevel, currentCarbon, currentYear);
+    if (!comps || !comps.length) return;
+
+    const names = comps.map(c => c.name);
+    Plotly.newPlot('chartCompetitorMix', [
+        { x: names, y: comps.map(c => c.ercot_fossil_mw / 1000), name: 'Fossil', type: 'bar', marker: { color: '#6B7280' } },
+        { x: names, y: comps.map(c => c.ercot_nuclear_mw / 1000), name: 'Nuclear', type: 'bar', marker: { color: '#6366F1' } },
+        { x: names, y: comps.map(c => c.ercot_re_mw / 1000), name: 'Wind/Solar', type: 'bar', marker: { color: '#22C55E' } },
+        { x: names, y: comps.map(c => c.ercot_battery_mw / 1000), name: 'Battery', type: 'bar', marker: { color: '#06B6D4' } },
+    ], {
+        ...PLOTLY_LAYOUT,
+        barmode: 'stack',
+        yaxis: { title: 'ERCOT Capacity (GW)', gridcolor: '#f0f0f0' },
+        legend: { x: 0.02, y: 0.98 },
+        annotations: comps.map((c, i) => ({
+            x: c.name, y: c.ercot_total_mw / 1000 + 0.3,
+            text: `${c.clean_pct}% clean`, showarrow: false,
+            font: { size: 10, color: c.clean_pct > 30 ? '#22C55E' : '#DC2626' },
+        })),
+    }, { responsive: true });
+}
+
+// ── Chart: Carbon Exposure ──
+function renderCarbonExposure() {
+    const comps = runCompetitorComparison(currentPriceLevel, currentCarbon, currentYear);
+    if (!comps || !comps.length) return;
+
+    const names = comps.map(c => c.name);
+    Plotly.newPlot('chartCarbonExposure', [
+        { x: names, y: comps.map(c => c.retiring_pct), name: 'Retiring %', type: 'bar',
+          marker: { color: comps.map(c => c.retiring_pct > 30 ? '#DC2626' : c.retiring_pct > 15 ? '#FBB254' : '#22C55E') },
+          hovertemplate: '%{x}<br>%{y:.1f}% at risk<br>CO₂: ' + comps.map(c => c.ercot_co2_mt.toFixed(1)).join('|').split('|').map(v => v + ' MT').join('<br>') + '<extra></extra>',
+        },
+    ], {
+        ...PLOTLY_LAYOUT,
+        yaxis: { title: 'Capacity at Risk (%)', gridcolor: '#f0f0f0', range: [0, 80] },
+        showlegend: false,
+        annotations: comps.map((c, i) => ({
+            x: c.name, y: c.retiring_pct + 3,
+            text: `${c.ercot_co2_mt.toFixed(1)} MT`, showarrow: false,
+            font: { size: 10, color: '#7E8083' },
+        })),
+    }, { responsive: true });
+}
+
+// ── Chart: Revenue Resilience (carbon sweep) ──
+function renderRevenueResilience() {
+    if (!window.IPP_DATA) return;
+    const carbonPrices = [0, 10, 20, 35, 50, 75, 100];
+    const traces = [];
+    const colors = { vistra: '#2372B9', constellation: '#F47B27', nrg: '#22C55E', nextera: '#6366F1' };
+
+    for (const company of IPP_DATA.companies) {
+        const eiaNames = Object.entries(EIA_TO_IPP_MAP)
+            .filter(([_, id]) => id === company.id)
+            .map(([name, _]) => name);
+
+        const profits = carbonPrices.map(cp => {
+            const sim = runFleetSimulation(currentPriceLevel, cp, currentYear);
+            if (!sim) return 0;
+            const gens = sim.generators.filter(g => eiaNames.includes(g.owner));
+            return gens.reduce((s, g) => s + (g.annual_profit_mw || 0) * g.mw / 1e6, 0);
+        });
+
+        traces.push({
+            x: carbonPrices, y: profits.map(p => +p.toFixed(1)),
+            name: company.shortName, mode: 'lines+markers',
+            line: { color: colors[company.id] || '#999', width: 3 },
+            marker: { size: 6 },
+            hovertemplate: `${company.shortName}<br>$%{x}/ton: $%{y:.0f}M profit<extra></extra>`,
+        });
+    }
+
+    Plotly.newPlot('chartRevenueResilience', traces, {
+        ...PLOTLY_LAYOUT,
+        xaxis: { title: 'Carbon Price ($/ton)', gridcolor: '#f0f0f0' },
+        yaxis: { title: 'ERCOT Portfolio Profit ($M/yr)', gridcolor: '#f0f0f0' },
+        legend: { x: 0.02, y: 0.98 },
+    }, { responsive: true });
+}
+
+// ── Chart: Full Portfolio Trajectory (ERCOT + National) ──
+function renderFullTrajectory() {
+    if (!window.IPP_DATA) return;
+
+    // Default to Constellation, or selected owner
+    let ippId = 'constellation';
+    if (currentOwner) {
+        const mapped = EIA_TO_IPP_MAP[currentOwner];
+        if (mapped) ippId = mapped;
+    }
+
+    const traj = runCompanyFullTrajectory(ippId, currentPriceLevel);
+    if (!traj || !traj.points.length) return;
+
+    // Filter to current carbon price points across years
+    const years = [2025, 2030, 2035, 2040, 2045, 2050];
+    const cp = currentCarbon;
+    const pts = years.map(yr => traj.points.find(p => p.year === yr && p.carbon_price === cp)).filter(Boolean);
+
+    if (!pts.length) return;
+
+    Plotly.newPlot('chartFullTrajectory', [
+        { x: years, y: pts.map(p => p.ercot_fossil_rev), name: 'ERCOT Fossil', type: 'bar', marker: { color: '#6B7280' } },
+        { x: years, y: pts.map(p => p.ercot_nuclear_rev), name: 'ERCOT Nuclear', type: 'bar', marker: { color: '#6366F1' } },
+        { x: years, y: pts.map(p => p.ercot_re_rev), name: 'ERCOT Wind/Solar', type: 'bar', marker: { color: '#22C55E' } },
+        { x: years, y: pts.map(p => p.national_nuclear_rev), name: 'National Nuclear', type: 'bar', marker: { color: '#A78BFA' } },
+        { x: years, y: pts.map(p => p.national_gas_rev), name: 'National Gas', type: 'bar', marker: { color: '#9CA3AF' } },
+        { x: years, y: pts.map(p => p.national_re_rev), name: 'National RE', type: 'bar', marker: { color: '#86EFAC' } },
+        { x: years, y: pts.map(p => p.total_rev), name: 'Total Revenue', type: 'scatter', mode: 'lines+markers', line: { color: '#F47B27', width: 3 }, marker: { size: 8 } },
+    ], {
+        ...PLOTLY_LAYOUT,
+        barmode: 'stack',
+        xaxis: { title: 'Year', dtick: 5 },
+        yaxis: { title: 'Annual Revenue/Profit ($M)', gridcolor: '#f0f0f0' },
+        legend: { x: 0.02, y: 0.98 },
+        title: { text: `${traj.company} — Full Portfolio (${currentPriceLevel} fuel, $${cp}/ton CO₂)`, font: { size: 14 } },
+    }, { responsive: true });
 }
 
 // ── Init ──

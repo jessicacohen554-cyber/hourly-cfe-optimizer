@@ -496,3 +496,235 @@ function runCCGTStrandingAnalysis(fuelLevel, snapshotYear) {
 
     return binData;
 }
+
+
+/**
+ * Map EIA entity names to curated IPP company IDs.
+ * EIA names don't always match curated names exactly.
+ */
+const EIA_TO_IPP_MAP = {
+    'Luminant Generation Company LLC': 'vistra',
+    'Vistra Operations Company LLC': 'vistra',
+    'TXU Energy Retail Company LLC': 'vistra',
+    'Constellation Power, Inc': 'constellation',
+    'Calpine Corporation': 'constellation',  // Post-merger Jan 2026
+    'NRG Texas Power LLC': 'nrg',
+    'NRG Texas LP': 'nrg',
+    'GenOn Energy': 'nrg',
+    'NextEra Energy Resources': 'nextera',
+    'FPL Group': 'nextera',
+    'STP Nuclear Operating Co': 'constellation',  // 44% Constellation share
+};
+
+
+/**
+ * Build comprehensive company portfolio combining EIA fleet data + curated IPP data.
+ * Returns enriched owner records with national portfolio context.
+ */
+function buildCompanyPortfolios(sim) {
+    if (!sim || !window.IPP_DATA) return sim.owners;
+
+    const enriched = sim.owners.map(owner => {
+        // Try to match to curated IPP
+        const ippId = EIA_TO_IPP_MAP[owner.name];
+        const ippCompany = ippId ? IPP_DATA.companies.find(c => c.id === ippId) : null;
+
+        if (ippCompany) {
+            return {
+                ...owner,
+                ipp_id: ippId,
+                short_name: ippCompany.shortName,
+                target: ippCompany.target,
+                national: ippCompany.national_portfolio,
+                curated_ercot: ippCompany.ercot_plants,
+                co2_company_total_mt: ippCompany.co2_2024_mt,
+                gen_company_total_twh: ippCompany.gen_twh,
+                cap_company_total_gw: ippCompany.cap_gw,
+            };
+        }
+        return owner;
+    });
+
+    return enriched;
+}
+
+
+/**
+ * Compute full portfolio revenue trajectory for a company across years and carbon prices.
+ * Includes national nuclear + RE revenue estimates (not just ERCOT).
+ */
+function runCompanyFullTrajectory(ippId, fuelLevel) {
+    if (!window.IPP_DATA) return null;
+    const company = IPP_DATA.companies.find(c => c.id === ippId);
+    if (!company) return null;
+
+    const years = YEAR_SNAPSHOTS;
+    const carbonPrices = [0, 10, 20, 35, 50, 75, 100, 150, 200];
+    const points = [];
+
+    for (const year of years) {
+        for (const cp of carbonPrices) {
+            const sim = runFleetSimulation(fuelLevel, cp, year);
+            if (!sim) continue;
+
+            const avgLMP = sim.fleet_summary.avg_lmp;
+
+            // Find this company's ERCOT fleet in the simulation
+            const eiaNames = Object.entries(EIA_TO_IPP_MAP)
+                .filter(([_, id]) => id === ippId)
+                .map(([name, _]) => name);
+
+            const companyGens = sim.generators.filter(g => eiaNames.includes(g.owner));
+
+            // ERCOT revenue
+            let ercotFossilRev = 0, ercotNucRev = 0, ercotRERev = 0, ercotBattRev = 0;
+            let ercotFossilMW = 0, ercotNucMW = 0, ercotREMW = 0;
+            let ercotCO2 = 0, ercotRetiringMW = 0;
+
+            for (const g of companyGens) {
+                const annRev = (g.annual_profit_mw || 0) * g.mw / 1e6;
+                if (g.fuel === 'coal' || g.fuel === 'gas' || g.fuel === 'oil') {
+                    ercotFossilRev += annRev;
+                    ercotFossilMW += g.mw;
+                    ercotCO2 += (g.co2_rate || 0) * (g.cf_sim || 0) * g.mw * 8760;
+                    if (g.status === 'retiring' || g.status === 'marginal') ercotRetiringMW += g.mw;
+                } else if (g.fuel === 'nuclear') {
+                    ercotNucRev += annRev;
+                    ercotNucMW += g.mw;
+                } else if (g.fuel === 'wind' || g.fuel === 'solar' || g.fuel === 'hydro') {
+                    ercotRERev += annRev;
+                    ercotREMW += g.mw;
+                } else if (g.fuel === 'battery') {
+                    ercotBattRev += annRev;
+                }
+            }
+
+            // National portfolio (non-ERCOT) — estimate from curated data
+            const nat = company.national_portfolio;
+            const natNucMW = Math.max(0, nat.nuclear_mw - ercotNucMW);
+            const natGasMW = Math.max(0, nat.gas_ccgt_mw + nat.gas_peaker_mw - ercotFossilMW);
+
+            // Rough PJM/other-ISO nuclear revenue (higher than ERCOT due to capacity markets)
+            const otherISOLMP = avgLMP * 1.1 + 5; // PJM/NYISO tend higher
+            const capMarketRev = 120 / 8.76; // ~$13.7/MWh from PJM capacity
+            const natNucRev = natNucMW > 0
+                ? natNucMW * (otherISOLMP * NUCLEAR_CF + NUCLEAR_PTC + capMarketRev - NUCLEAR_COST_MWH) * 8760 / 1e6
+                : 0;
+
+            // National renewable revenue
+            const natWindMW = nat.wind_mw || 0;
+            const natSolarMW = nat.solar_mw || 0;
+            const natGeoMW = nat.geothermal_mw || 0;
+            const natRERev = (natWindMW * avgLMP * 0.35 + natSolarMW * avgLMP * 0.22 * 0.8 + natGeoMW * avgLMP * 0.90) * 8760 / 1e6;
+
+            // National gas revenue
+            const fp = FUEL_PRICES[fuelLevel];
+            const natGasMC = fp.gas * 7.0 + 3.50 + cp * 0.0531 * 7.0;
+            const natGasLMP = otherISOLMP;
+            const natGasCF = natGasMC < natGasLMP ? Math.min(0.75, 0.4 + (natGasLMP - natGasMC) / natGasLMP) : 0.05;
+            const natGasRev = natGasMW > 0
+                ? natGasMW * (natGasLMP * natGasCF - natGasMC * natGasCF) * 8760 / 1e6
+                : 0;
+
+            points.push({
+                year,
+                carbon_price: cp,
+                // ERCOT
+                ercot_fossil_rev: +ercotFossilRev.toFixed(1),
+                ercot_nuclear_rev: +ercotNucRev.toFixed(1),
+                ercot_re_rev: +ercotRERev.toFixed(1),
+                ercot_battery_rev: +ercotBattRev.toFixed(1),
+                ercot_fossil_mw: Math.round(ercotFossilMW),
+                ercot_retiring_mw: Math.round(ercotRetiringMW),
+                ercot_co2_mt: +(ercotCO2 / 1e6).toFixed(2),
+                // National (non-ERCOT)
+                national_nuclear_rev: +natNucRev.toFixed(1),
+                national_gas_rev: +natGasRev.toFixed(1),
+                national_re_rev: +natRERev.toFixed(1),
+                // Totals
+                total_rev: +(ercotFossilRev + ercotNucRev + ercotRERev + ercotBattRev + natNucRev + natGasRev + natRERev).toFixed(1),
+                avg_lmp: avgLMP,
+            });
+        }
+    }
+
+    return {
+        company: company.shortName,
+        ipp_id: ippId,
+        target: company.target,
+        national_portfolio: company.national_portfolio,
+        points,
+    };
+}
+
+
+/**
+ * Run competitor comparison: compute portfolio metrics for all ERCOT IPPs at one scenario.
+ */
+function runCompetitorComparison(fuelLevel, carbonPrice, snapshotYear) {
+    if (!window.IPP_DATA) return [];
+
+    const sim = runFleetSimulation(fuelLevel, carbonPrice, snapshotYear);
+    if (!sim) return [];
+
+    const results = [];
+    for (const company of IPP_DATA.companies) {
+        const eiaNames = Object.entries(EIA_TO_IPP_MAP)
+            .filter(([_, id]) => id === company.id)
+            .map(([name, _]) => name);
+
+        const gens = sim.generators.filter(g => eiaNames.includes(g.owner));
+        if (!gens.length) continue;
+
+        let fossilRev = 0, nucRev = 0, reRev = 0, totalMW = 0;
+        let fossilMW = 0, nucMW = 0, reMW = 0, battMW = 0;
+        let retiringMW = 0, co2 = 0;
+
+        for (const g of gens) {
+            totalMW += g.mw;
+            const profit = (g.annual_profit_mw || 0) * g.mw / 1e6;
+            if (g.fuel === 'coal' || g.fuel === 'gas' || g.fuel === 'oil') {
+                fossilRev += profit;
+                fossilMW += g.mw;
+                co2 += (g.co2_rate || 0) * (g.cf_sim || 0) * g.mw * 8760;
+                if (g.status === 'retiring' || g.status === 'marginal') retiringMW += g.mw;
+            } else if (g.fuel === 'nuclear') {
+                nucRev += profit;
+                nucMW += g.mw;
+            } else if (g.fuel === 'wind' || g.fuel === 'solar' || g.fuel === 'hydro') {
+                reRev += profit;
+                reMW += g.mw;
+            } else if (g.fuel === 'battery') {
+                battMW += g.mw;
+            }
+        }
+
+        const nat = company.national_portfolio;
+        results.push({
+            id: company.id,
+            name: company.shortName,
+            target: company.target,
+            // ERCOT
+            ercot_total_mw: Math.round(totalMW),
+            ercot_fossil_mw: Math.round(fossilMW),
+            ercot_nuclear_mw: Math.round(nucMW),
+            ercot_re_mw: Math.round(reMW),
+            ercot_battery_mw: Math.round(battMW),
+            ercot_fossil_rev: +fossilRev.toFixed(1),
+            ercot_nuclear_rev: +nucRev.toFixed(1),
+            ercot_re_rev: +reRev.toFixed(1),
+            ercot_retiring_mw: Math.round(retiringMW),
+            ercot_co2_mt: +(co2 / 1e6).toFixed(2),
+            // National
+            national_nuclear_mw: nat.nuclear_mw,
+            national_total_gen_twh: nat.total_gen_twh,
+            national_total_co2_mt: nat.total_co2_mt,
+            // Exposure metrics
+            fossil_pct: totalMW > 0 ? +((fossilMW / totalMW) * 100).toFixed(1) : 0,
+            retiring_pct: totalMW > 0 ? +((retiringMW / totalMW) * 100).toFixed(1) : 0,
+            clean_pct: totalMW > 0 ? +(((nucMW + reMW + battMW) / totalMW) * 100).toFixed(1) : 0,
+        });
+    }
+
+    return results.sort((a, b) => b.ercot_total_mw - a.ercot_total_mw);
+}
