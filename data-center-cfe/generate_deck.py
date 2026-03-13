@@ -17,7 +17,12 @@ import sys
 from pathlib import Path
 
 import pandas as pd
-from jinja2 import Environment, FileSystemLoader
+
+try:
+    from jinja2 import Environment, FileSystemLoader
+except ImportError:
+    print("ERROR: jinja2 is not installed. Run: pip install -r requirements.txt")
+    sys.exit(1)
 
 # ── Paths ──────────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).parent
@@ -49,7 +54,7 @@ def load_csv(name):
     if not path.exists():
         print(f"WARNING: {path} not found, skipping.")
         return pd.DataFrame()
-    return pd.read_csv(path)
+    return pd.read_csv(path, encoding="utf-8")
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -403,9 +408,8 @@ def main():
     # existing CSS/JS {{ }} usage would be complex; instead we use the default
     # delimiters since our template variables are clearly outside CSS/JS.
     env = Environment(
-        loader=FileSystemLoader(str(TEMPLATE_DIR)),
+        loader=FileSystemLoader(str(TEMPLATE_DIR), encoding="utf-8"),
         autoescape=False,
-        # Keep template output as-is for non-template content
         keep_trailing_newline=True,
     )
     template = env.get_template("deck_template.html")
@@ -435,7 +439,7 @@ def main():
     )
 
     out_path = OUTPUT_DIR / "vre-investment-thesis-deck.html"
-    out_path.write_text(html)
+    out_path.write_text(html, encoding="utf-8")
 
     print(f"\nDeck generated: {out_path}")
     print(f"  Size: {out_path.stat().st_size / 1024:.0f} KB")
