@@ -38,9 +38,8 @@ except ImportError:
 
 MODULE_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(MODULE_ROOT, 'data')
-# Also check profiles subdirectory and parent repo data directory
-_DATA_SEARCH = [DATA_DIR, os.path.join(DATA_DIR, 'profiles'),
-                os.path.join(MODULE_ROOT, '..', 'data')]
+# Search local data directory and profiles subdirectory
+_DATA_SEARCH = [DATA_DIR, os.path.join(DATA_DIR, 'profiles')]
 SCRIPT_DIR = MODULE_ROOT  # backward compat
 
 # Import shared constants from pipeline_config (single source of truth)
