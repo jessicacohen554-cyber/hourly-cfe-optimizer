@@ -1489,22 +1489,22 @@ body {
           <!-- Legend for PJM glow ring -->
           <text x="385" y="197" text-anchor="middle" font-size="6.5" fill="#0EA5E9" font-style="italic">Blue ring = claimed by PJM buyer</text>
 
-          <!-- Arch connectors: each grey PJM ball → corresponding MISO wind ball -->
+          <!-- Arch connectors: green (wind color) linking PJM unmet → MISO wind -->
           <!-- Arch 1: PJM (60,170) → MISO (350,170) -->
-          <path d="M72 165 C130 60, 280 60, 338 165" stroke="#2372B9" stroke-width="1.8" fill="none" opacity="0.6"/>
+          <path d="M72 165 C130 60, 280 60, 338 165" stroke="#22C55E" stroke-width="2" fill="none" opacity="0.7"/>
           <!-- Arch 2: PJM (90,170) → MISO (380,170) -->
-          <path d="M102 165 C150 50, 310 50, 368 165" stroke="#2372B9" stroke-width="1.8" fill="none" opacity="0.5"/>
+          <path d="M102 165 C150 50, 310 50, 368 165" stroke="#22C55E" stroke-width="2" fill="none" opacity="0.6"/>
           <!-- Arch 3: PJM (120,170) → MISO (410,170) -->
-          <path d="M132 165 C180 40, 340 40, 398 165" stroke="#2372B9" stroke-width="1.8" fill="none" opacity="0.4"/>
+          <path d="M132 165 C180 40, 340 40, 398 165" stroke="#22C55E" stroke-width="2" fill="none" opacity="0.5"/>
           <!-- Arch 4: PJM (75,143) → MISO (365,143) -->
-          <path d="M87 138 C140 30, 300 30, 353 138" stroke="#2372B9" stroke-width="1.8" fill="none" opacity="0.35"/>
+          <path d="M87 138 C140 30, 300 30, 353 138" stroke="#22C55E" stroke-width="2" fill="none" opacity="0.45"/>
           <!-- Arch 5: PJM (105,143) → MISO (395,143) -->
-          <path d="M117 138 C170 20, 330 20, 383 138" stroke="#2372B9" stroke-width="1.8" fill="none" opacity="0.3"/>
+          <path d="M117 138 C170 20, 330 20, 383 138" stroke="#22C55E" stroke-width="2" fill="none" opacity="0.4"/>
 
-          <!-- Flow label on arches -->
-          <rect x="190" y="30" width="100" height="32" rx="6" fill="rgba(35,114,185,0.12)" stroke="#2372B9" stroke-width="1"/>
-          <text x="240" y="43" text-anchor="middle" font-size="8" font-weight="700" fill="#2372B9">RECs + EACs</text>
-          <text x="240" y="55" text-anchor="middle" font-size="7" fill="#2372B9">34 TWh @ $49/MWh</text>
+          <!-- Flow label — below the arches so it's readable -->
+          <rect x="185" y="230" width="110" height="32" rx="6" fill="rgba(34,197,94,0.1)" stroke="#22C55E" stroke-width="1"/>
+          <text x="240" y="243" text-anchor="middle" font-size="8" font-weight="700" fill="#22C55E">Wind RECs + EACs</text>
+          <text x="240" y="255" text-anchor="middle" font-size="7" fill="#22C55E">34 TWh @ $49/MWh</text>
 
           <!-- Bottom: what this means for VRE pipeline -->
           <rect x="30" y="240" width="420" height="85" rx="8" fill="rgba(34,197,94,0.05)" stroke="#22C55E" stroke-width="1.5"/>
