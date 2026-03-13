@@ -217,6 +217,7 @@ function collectFormData() {
 
     const params = {
         mode: mode,
+        iso: selectedISOs[0],
         isos: selectedISOs,
         fuel_prices: {
             gas: parseFloat(document.getElementById('fuel_gas').value),
