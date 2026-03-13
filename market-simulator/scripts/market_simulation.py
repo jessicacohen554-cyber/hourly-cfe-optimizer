@@ -220,10 +220,7 @@ PPA_MARKET_DEPTH = {
 
 def load_egrid_baselines():
     """Load 2023 eGRID absolute emission baselines."""
-    egrid_path = os.path.join(MODULE_ROOT, '..', 'data', 'egrid_2023_baseline_emissions.json')
-    if not os.path.exists(egrid_path):
-        # Also check in the market-simulator data dir
-        egrid_path = os.path.join(MODULE_ROOT, 'data', 'egrid_2023_baseline_emissions.json')
+    egrid_path = os.path.join(MODULE_ROOT, 'data', 'egrid_2023_baseline_emissions.json')
     if os.path.exists(egrid_path):
         with open(egrid_path) as f:
             data = json.load(f)
@@ -841,10 +838,7 @@ def load_step3_data():
 
     Returns {iso: {threshold_float: result_dict}}.
     """
-    # Check market-simulator data dir first, then main repo
     step3_dir = os.path.join(MODULE_ROOT, 'data', 'step2.2-cost')
-    if not os.path.exists(step3_dir) or not os.listdir(step3_dir):
-        step3_dir = os.path.join(MODULE_ROOT, '..', 'data', 'step2.2-cost')
 
     all_data = {}
     for iso in ISOS:
