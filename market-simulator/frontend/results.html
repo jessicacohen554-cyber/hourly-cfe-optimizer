@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Simulator — Results</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/simulator.css">
+    <link rel="stylesheet" href="styles/results.css">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="js/chart-colors.js"></script>
+    <script src="js/shared-header.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header" id="pageHeader">
+        <h1>Simulation Results</h1>
+        <div class="subtitle" id="resultsSubtitle">Loading...</div>
+        <div class="header-accent"></div>
+    </div>
+
+    <!-- Controls Bar -->
+    <div class="controls-bar" id="controlsBar">
+        <div class="content-section">
+            <div class="controls-row">
+                <div class="control-group">
+                    <label>ISO</label>
+                    <div class="iso-selector" id="resultsIsoSelector"></div>
+                </div>
+                <div class="control-group" id="yearControl" style="display:none;">
+                    <label>Year</label>
+                    <select id="yearSelect" class="control-select"></select>
+                </div>
+                <a href="/" class="back-link">&#8592; Modify Inputs</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="content-section">
+
+        <!-- Top Stats -->
+        <div class="grid-stats" id="topStats">
+            <div class="stat-card">
+                <div class="stat-value" id="statCleanPct">--</div>
+                <div class="stat-label">Market Clean %</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statAvgLMP">--</div>
+                <div class="stat-label">Avg LMP $/MWh</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statNewGW">--</div>
+                <div class="stat-label">New Clean GW</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statNucRev">--</div>
+                <div class="stat-label">Nuclear Rev $/MWh</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statCCSBreakeven">--</div>
+                <div class="stat-label">CCS Breakeven $/ton</div>
+            </div>
+        </div>
+
+        <!-- Chart 1: Merit-Order Stack -->
+        <div class="card chart-section">
+            <h3 class="section-title">Merit-Order Stack</h3>
+            <p class="section-subtitle">Fossil generators ordered by marginal cost. Dashed line = average LMP. Generators above the line are uneconomic.</p>
+            <div class="chart-container-lg" id="chartMeritOrder"></div>
+        </div>
+
+        <!-- Charts Row: Profitability + Dispatch -->
+        <div class="grid-2col">
+            <!-- Chart 2: Generator Profitability -->
+            <div class="card chart-section">
+                <h3 class="section-title">Generator Profitability</h3>
+                <p class="section-subtitle">Revenue vs cost per generator class</p>
+                <div class="chart-container" id="chartProfitability"></div>
+            </div>
+
+            <!-- Chart 3: Nuclear Revenue Stack -->
+            <div class="card chart-section">
+                <h3 class="section-title">Nuclear Revenue by ISO</h3>
+                <p class="section-subtitle">Energy + capacity + PTC breakdown</p>
+                <div class="chart-container" id="chartNuclearRevenue"></div>
+            </div>
+        </div>
+
+        <!-- Chart 4: LMP Impact Curve -->
+        <div class="card chart-section">
+            <h3 class="section-title">LMP Impact Curve</h3>
+            <p class="section-subtitle">How average LMP changes as clean penetration increases — price suppression effect</p>
+            <div class="chart-container" id="chartLMPImpact"></div>
+        </div>
+
+        <!-- Charts Row: CCS Breakeven + What Gets Built -->
+        <div class="grid-2col">
+            <!-- Chart 5: CCS Retrofit Breakeven -->
+            <div class="card chart-section">
+                <h3 class="section-title">CCS Retrofit vs New Gas</h3>
+                <p class="section-subtitle">Carbon price crossover: when does CCS beat unabated CCGT?</p>
+                <div class="chart-container" id="chartCCSBreakeven"></div>
+            </div>
+
+            <!-- Chart 6: What Gets Built -->
+            <div class="card chart-section">
+                <h3 class="section-title">What Gets Built</h3>
+                <p class="section-subtitle">Resource mix from existing baseline through market-cleared level</p>
+                <div class="chart-container" id="chartWhatBuilt"></div>
+            </div>
+        </div>
+
+        <!-- Chart 7: Fossil Fleet Bin Economics -->
+        <div class="card chart-section">
+            <h3 class="section-title">Fossil Fleet Economics by Heat Rate Bin</h3>
+            <p class="section-subtitle">Per-bin dispatch hours, revenue, cost, and margin. Shows shift toward efficient gas.</p>
+            <div class="chart-container-lg" id="chartFossilBins"></div>
+        </div>
+
+        <!-- Chart 8: Clean Energy Cost Ladder -->
+        <div class="card chart-section">
+            <h3 class="section-title">Clean Energy Cost Ladder</h3>
+            <p class="section-subtitle">$/MWh vs cumulative GW added. Each step = incremental build at a threshold. Market stops where cost > revenue.</p>
+            <div class="chart-container" id="chartCostLadder"></div>
+        </div>
+
+        <!-- Chart 9: Gas Fleet Dispatch Shift -->
+        <div class="grid-2col">
+            <div class="card chart-section">
+                <h3 class="section-title">Gas Fleet Age/Efficiency Shift</h3>
+                <p class="section-subtitle">How dispatch shifts between heat rate bins as carbon price increases</p>
+                <div class="chart-container" id="chartGasShift"></div>
+            </div>
+
+            <!-- Chart 10: Sensitivity Heatmap -->
+            <div class="card chart-section">
+                <h3 class="section-title">Sensitivity: Gas Price vs Carbon Price</h3>
+                <p class="section-subtitle">Market-cleared clean % under different fuel/carbon combinations</p>
+                <div class="chart-container" id="chartSensitivity"></div>
+            </div>
+        </div>
+
+        <!-- Raw Data Table -->
+        <div class="card chart-section">
+            <h3 class="section-title collapsible-header" data-target="rawDataSection">
+                Generator Economics Detail
+                <span class="collapse-icon">&#9660;</span>
+            </h3>
+            <div class="collapsible-content" id="rawDataSection">
+                <table class="data-table" id="generatorTable">
+                    <thead>
+                        <tr>
+                            <th>Generator</th>
+                            <th>Capacity MW</th>
+                            <th>Marginal Cost</th>
+                            <th>Dispatch Hours</th>
+                            <th>Capacity Factor</th>
+                            <th>Avg Revenue</th>
+                            <th>Profit $/MWh</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="generatorTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="page-footer">
+        <div class="footer-content">
+            <p>Market Simulation Screening Tool — Directionally correct economics for targeted IPM/GenX analysis</p>
+        </div>
+    </footer>
+    <div class="bottom-banner"></div>
+
+    <script src="js/results.js"></script>
+</body>
+</html>
