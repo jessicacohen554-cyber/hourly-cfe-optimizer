@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Step 9C: Extract compact deployment data for the Procurement Deployment visualization.
+Step 7.1B: Extract compact deployment data for the Procurement Deployment visualization.
 
 Reads strategy1_consequential.json, strategy2_hourly.json, strategy3_annual.json
 and produces dashboard/js/deployment-data.js with normalized existing/new/cross-ISO splits.
@@ -21,7 +21,8 @@ import sys
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(SCRIPT_DIR)
 sys.path.insert(0, SCRIPT_DIR)
-DATA_DIR = os.path.join(ROOT_DIR, 'data', 'step4-analysis')
+DATA_DIR = os.path.join(ROOT_DIR, 'data', 'step5-scenarios')
+LEGACY_DATA_DIR = os.path.join(ROOT_DIR, 'data', 'step4-analysis')
 JS_DIR = os.path.join(ROOT_DIR, 'dashboard', 'js')
 
 from procurement_utils import compute_endogenous_cost
@@ -270,12 +271,17 @@ STRATEGY_SOURCES = {
 
 
 def load_json(filename):
-    path = os.path.join(DATA_DIR, filename)
-    if not os.path.exists(path):
-        print(f"  WARNING: {path} not found, skipping")
-        return None
-    with open(path) as f:
-        return json.load(f)
+    # Prefer current Step 5 outputs, but keep backward compatibility.
+    for base_dir in (DATA_DIR, LEGACY_DATA_DIR):
+        path = os.path.join(base_dir, filename)
+        if os.path.exists(path):
+            with open(path) as f:
+                return json.load(f)
+    print(
+        f"  WARNING: {os.path.join(DATA_DIR, filename)} and "
+        f"{os.path.join(LEGACY_DATA_DIR, filename)} not found, skipping"
+    )
+    return None
 
 
 def remove_zero_entries(d, threshold=1e-6):
@@ -285,7 +291,7 @@ def remove_zero_entries(d, threshold=1e-6):
 
 def main():
     print("=" * 70)
-    print("Step 9C: Extract Deployment Data for Procurement Deployment Viz")
+    print("Step 7.1B: Extract Deployment Data for Procurement Deployment Viz")
     print("=" * 70)
 
     # Load all strategy JSONs
@@ -298,7 +304,7 @@ def main():
             print(f"  OK — keys: {list(data.keys())}")
 
     if not loaded:
-        print("ERROR: No strategy JSON files found. Run step 8 first.")
+        print("ERROR: No strategy JSON files found. Run Step 5.2B/5.2C/5.2D first.")
         sys.exit(1)
 
     # Build output

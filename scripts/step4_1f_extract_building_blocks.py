@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Step 6D — Extract building blocks data for the Building Blocks dashboard page.
+"""Step 4.1F — Extract building blocks data for the Building Blocks dashboard page.
 
 Uses Step 1's EXACT generation profiles (via step1_pfs_generator.load_data +
 get_supply_profiles) to ensure the 24-hour shapes shown on the dashboard match
@@ -235,7 +235,9 @@ def extract_mix_data(track="baseline"):
 
         if track == "baseline":
             # Baseline: single parquet per ISO with all thresholds
-            co_path = STEP3_DIR / f"step3_co_{iso}.parquet"
+            co_path = STEP3_DIR / f"step_2_2a_CO_{iso}.parquet"
+            if not co_path.exists():
+                co_path = STEP3_DIR / f"step3_co_{iso}.parquet"
             if not co_path.exists():
                 print(f"  {iso}: baseline parquet not found, skipping")
                 continue
@@ -256,7 +258,9 @@ def extract_mix_data(track="baseline"):
             # Demand growth: per-threshold parquets
             for t in ALL_THRESHOLDS:
                 t_str = str(int(t)) if t == int(t) else str(t)
-                dg_path = STEP3_DIR / f"step3_dg_{iso}_t{t_str}.parquet"
+                dg_path = STEP3_DIR / f"step_2_2a_DG_{iso}_{t_str}.parquet"
+                if not dg_path.exists():
+                    dg_path = STEP3_DIR / f"step3_dg_{iso}_t{t_str}.parquet"
                 if not dg_path.exists():
                     continue
 
@@ -299,7 +303,7 @@ def extract_row(row, demand_gw):
 
 
 def main():
-    print("Step 6D: Extracting building blocks data")
+    print("Step 4.1F: Extracting building blocks data")
     print("=" * 60)
 
     # 1-2. Load hourly + seasonal profiles from Step 1's exact generation shapes

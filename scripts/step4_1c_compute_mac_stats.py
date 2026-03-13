@@ -60,38 +60,12 @@ MEDIUM_KEYS_SET = frozenset({
 #  MAC uses pure LCOE of new-build resources / CO₂ displaced.)
 
 # ── Dispatch-model-based CO₂ baseline ──
-# Import canonical grid mix shares and fossil caps from dispatch_utils
-try:
-    from dispatch_utils import (
-        GRID_MIX_SHARES, BASE_DEMAND_TWH, COAL_CAP_TWH, OIL_CAP_TWH,
-        COAL_OIL_RETIREMENT_THRESHOLD,
-    )
-    HAS_DISPATCH_UTILS = True
-except ImportError:
-    HAS_DISPATCH_UTILS = False
-    # Fallback constants
-    GRID_MIX_SHARES = {
-        'CAISO': {'clean_firm': 7.9, 'solar': 22.3, 'wind': 8.8, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 9.5},
-        'ERCOT': {'clean_firm': 8.6, 'solar': 13.8, 'wind': 23.6, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 0.1},
-        'PJM':   {'clean_firm': 32.1, 'solar': 2.9, 'wind': 3.8, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 1.8},
-        'NYISO': {'clean_firm': 18.4, 'solar': 0.0, 'wind': 4.7, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 15.9},
-        'NEISO': {'clean_firm': 23.8, 'solar': 1.4, 'wind': 3.9, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 4.4},
-        'MISO':  {'clean_firm': 13.1, 'solar': 2.1, 'wind': 14.5, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 1.6},
-        'SPP':   {'clean_firm': 5.2, 'solar': 0.4, 'wind': 37.1, 'offshore_wind': 0, 'ccs_ccgt': 0, 'hydro': 4.3},
-    }
-    BASE_DEMAND_TWH = {
-        'CAISO': 224.039, 'ERCOT': 488.02, 'PJM': 843.331, 'NYISO': 151.599,
-        'NEISO': 115.336, 'MISO': 660.0, 'SPP': 296.0,
-    }
-    COAL_CAP_TWH = {
-        'CAISO': 0.00, 'ERCOT': 67.58, 'PJM': 139.09, 'NYISO': 0.00,
-        'NEISO': 0.31, 'MISO': 125.0, 'SPP': 42.0,
-    }
-    OIL_CAP_TWH = {
-        'CAISO': 0.60, 'ERCOT': 0.00, 'PJM': 4.59, 'NYISO': 0.15,
-        'NEISO': 1.29, 'MISO': 0.50, 'SPP': 0.20,
-    }
-    COAL_OIL_RETIREMENT_THRESHOLD = 70.0
+# Import canonical grid mix shares and fossil caps from dispatch_utils (required).
+# These constants are the single source of truth — no fallback copies maintained.
+from dispatch_utils import (
+    GRID_MIX_SHARES, BASE_DEMAND_TWH, COAL_CAP_TWH, OIL_CAP_TWH,
+    COAL_OIL_RETIREMENT_THRESHOLD,
+)
 
 # Load emission rates for CO₂ computation
 _LB_PER_TON = 2204.623

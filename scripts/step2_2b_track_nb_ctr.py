@@ -4,12 +4,12 @@ Track 2-3: New-Build (NB) + Cost-to-Replace (CTR) analysis.
 Does NOT rerun baseline — preserves existing overprocure_results.json.
 
 Track 2 (newbuild / NB): hydro=0 mixes, uprates ON
-  Source: per-ISO EF parquets (data/step2.1-ef/step2_ef_{ISO}_t{T}.parquet)
+  Source: per-ISO EF parquets (data/step2.1-ef/step_2_1_EF_{ISO}_{T}.parquet)
   Filtered to hydro=0 mixes.
   Purpose: What does hourly matching incentivize from scratch?
 
 Track 3 (cost-to-replace / CTR): nuclear retirement scenario, uprates OFF
-  Source: per-ISO EF parquets (data/step2.1-ef/step2_ef_{ISO}_t{T}.parquet)
+  Source: per-ISO EF parquets (data/step2.1-ef/step_2_1_EF_{ISO}_{T}.parquet)
   Purpose: Cost if existing nuclear retires and must be replaced with new-build.
   All other existing clean (hydro, solar, wind, geothermal) continues operating.
   CAISO: geothermal portion of clean_firm kept at wholesale (32.4% of clean_firm energy).
@@ -367,10 +367,18 @@ def append_to_parquet(new_rows, pq_path):
     else:
         merged = new_table
 
-    # Atomic write
+    # Atomic write (retry on Windows file locking)
     tmp = pq_path + '.tmp'
     pq.write_table(merged, tmp, compression='zstd')
-    os.replace(tmp, pq_path)
+    for _attempt in range(10):
+        try:
+            os.replace(tmp, pq_path)
+            break
+        except PermissionError:
+            import time
+            time.sleep(2)
+    else:
+        os.replace(tmp, pq_path)  # final attempt, let it raise if still locked
     size_mb = os.path.getsize(pq_path) / (1024 * 1024)
     print(f"    Saved: {pq_path} ({merged.num_rows:,} rows, {size_mb:.1f} MB)")
     return merged.num_rows
@@ -379,16 +387,23 @@ def append_to_parquet(new_rows, pq_path):
 def load_iso_ef_parquet(iso):
     """Load numpy arrays for a single ISO from its per-threshold EF parquets.
 
-    Reads from data/step2.1-ef/step2_ef_{ISO}_t{T}.parquet (Step 2 output).
-    Falls back to legacy monolithic step2_ef_{ISO}.parquet if per-threshold
-    files don't exist. Returns None if no files found or all empty.
+    Reads from data/step2.1-ef/step_2_1_EF_{ISO}_{T}.parquet (Step 2.1 output).
+    Falls back to legacy step2_ef_{ISO}_t{T}.parquet or monolithic
+    step2_ef_{ISO}.parquet if new naming doesn't exist. Returns None if no
+    files found or all empty.
     """
     import glob as globmod
 
-    # Try per-threshold files first (new format)
-    pattern = os.path.join(EF_ISO_DIR, f'step2_ef_{iso}_t*.parquet')
+    # Try new naming convention first
+    pattern = os.path.join(EF_ISO_DIR, f'step_2_1_EF_{iso}_*.parquet')
     thr_files = sorted(globmod.glob(pattern))
     thr_files = [f for f in thr_files if '_batch_' not in os.path.basename(f)]
+
+    if not thr_files:
+        # Fall back to legacy per-threshold files
+        pattern = os.path.join(EF_ISO_DIR, f'step2_ef_{iso}_t*.parquet')
+        thr_files = sorted(globmod.glob(pattern))
+        thr_files = [f for f in thr_files if '_batch_' not in os.path.basename(f)]
 
     if thr_files:
         tables = []

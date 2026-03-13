@@ -3,7 +3,7 @@
 Step 1: Physics Feasible Space (PFS) Generator
 ===============================================
 Generates the Physical Feasibility Space (PFS) for hourly CFE matching.
-Physics only — no cost model. Cost sensitivities applied in Step 3.
+Physics only — no cost model. Cost sensitivities applied in Step 2.2.
 
 v5.0 Architecture: Direct resource fractions as % of demand.
   - No procurement multiplier — each resource independently varies from 0% to its cap.
@@ -11,14 +11,16 @@ v5.0 Architecture: Direct resource fractions as % of demand.
   - Per-threshold: filter cache → storage sweep → fine 1% refinement.
 
 Pipeline position: Step 1 of 7
-  Step 1 — PFS Generator (this file)
-  Step 2 — Efficient Frontier (EF) extraction
-  Step 3 — Cost optimization
-  Steps 4-7 — Post-processing, dispatch, dashboard
+  Step 1   — PFS Generator (this file)
+  Step 1.5 — Storage refinement (step1_5_storage_refinement.py)
+  Step 2.1 — Efficient Frontier extraction (step2_1_efficient_frontier.py)tep scripts 
+  Step 2.2 — Cost optimization (step2_2a_cost_optimization.py)
+  Step 3   — Dispatch cache (step3a) + MAC queue (step3b)
+  Steps 4-7 — Analysis, scenarios, SMARTargets, dashboard
 
 Key features:
   - 4D interior / 5D offshore / 6D CAISO: independent resource fractions
-  - 17 thresholds: 50..100 with finer resolution at inflection zone
+  - 21 thresholds: 10..99.99 with finer resolution at inflection zone
   - Coarse 5% → Fine 1% adaptive grid (±4% radius around archetypes)
   - Numba JIT-compiled scoring functions
   - Inter-ISO parallel execution via multiprocessing.Pool (--workers N)
@@ -30,17 +32,24 @@ Output:
 
 Resource types:
   - Clean Firm (0-120%): nuclear (seasonal-derated) + CCS-CCGT
-  - Solar (0-250%): EIA 2021-2025 averaged hourly profile (DST-aware)
+  - Solar (0-100%): EIA 2021-2025 averaged hourly profile (DST-aware)
   - Wind (0-250%): EIA 2021-2025 averaged hourly profile
-  - Hydro (0-cap+10%): EIA 2021-2025 averaged hourly (capped by region)
+  - Hydro (0-cap+10%): EIA 2021-2025 averaged hourly (capped by region);
+      +10% adder explores run-of-river potential — flagged as exploratory,
+      filtered out by Step 2.1 before cost optimization
   - Offshore Wind (NYISO/NEISO/PJM/CAISO, 0-cap%): NOW-23 + IEA 15MW power curve
   - Geothermal (CAISO only, 0-20%): Flat year-round, no seasonal derate
 
 Storage (swept as separate dimensions after resource fractions):
-  - Battery (4hr): Li-ion, 85% RTE, daily-cycle dispatch
-  - Battery (8hr): Li-ion, 85% RTE, daily-cycle dispatch (power = cap/8hr)
-  - LDES: 100hr iron-air, 50% RTE, 7-day rolling window dispatch
-  - Green H2: 1000hr salt cavern, 35% RTE, 30-day rolling window (≥95% only)
+  - Battery (4hr): Li-ion, 85% RTE, 24hr window; SOC carries across windows
+  - Battery (8hr): Li-ion, 85% RTE, 48hr window; SOC carries across windows
+  - LDES: 100hr iron-air, 50% RTE, 7-day rolling window; SOC carries
+  - Green H2: 1000hr salt cavern, 35% RTE, 30-day rolling window (≥95% only);
+      each H2 level evaluated independently on post-LDES residual
+
+All storage types use per-discharge-event RTE (SOC -= discharge / eff)
+rather than per-window bulk RTE. This enables multi-day energy shifting
+across window boundaries while maintaining correct round-trip losses.
 """
 
 import json
@@ -143,13 +152,16 @@ ISO_LABELS = {
     'SPP': 'SPP (Central)',
 }
 
-# Hydro caps (% of demand, existing only)
+# Hydro caps (% of demand, existing 2025 generation share from EIA-930)
+# Must match GRID_MIX_SHARES['hydro'] in pipeline_config.py.
+# Cross-validated by tests/test_constants.py::TestStep1CrossValidation.
 HYDRO_CAPS = {
     'CAISO': 9.5, 'ERCOT': 0.1, 'PJM': 1.8, 'NYISO': 15.9, 'NEISO': 4.4,
     'MISO': 1.6, 'SPP': 4.3,
 }
-# Physics-only hydro adder: allow +10% above existing cap for run-of-river
-# innovation potential. NOT priced in Step 3 — just explored in physics cache.
+# Physics-only hydro adder: allow +10pp above existing cap for run-of-river
+# innovation potential. Mixes using the adder are flagged as exploratory
+# and filtered out by Step 2.1's resource_cap_filter() before cost optimization.
 HYDRO_ADDER_PCT = 10
 
 # CAISO geothermal cap: (existing_geo_TWh + potential) / demand
@@ -164,15 +176,17 @@ OFFSHORE_WIND_CAPS_TWH = {
     'PJM':   30,   # NJ 7.5 GW mandated + DE/MD/VA pipeline
     'CAISO': 20,   # ~5 GW (Morro Bay + Humboldt WEAs)
 }
-# ISO annual demand TWh (2025 actuals) for converting caps to percentages
+# ISO annual demand TWh (2025 actuals from EIA-930) for converting caps to percentages
+# Cross-validated against pipeline_config.REGIONAL_DEMAND_TWH and
+# data/eia-930/eia_demand_meta.parquet (total_annual_mwh for year=2025).
 ISO_DEMAND_TWH = {
-    'CAISO': 224.0, 'ERCOT': 435.0, 'PJM': 757.0, 'NYISO': 148.0,
-    'NEISO': 112.0, 'MISO': 618.0, 'SPP': 252.0,
+    'CAISO': 224.039, 'ERCOT': 488.020, 'PJM': 843.331, 'NYISO': 151.599,
+    'NEISO': 115.336, 'MISO': 663.771, 'SPP': 299.820,
 }
 OFFSHORE_WIND_CAP_PCT = {
     iso: round(twh / ISO_DEMAND_TWH[iso] * 100, 1)
     for iso, twh in OFFSHORE_WIND_CAPS_TWH.items()
-}  # NYISO: 25%, NEISO: 33%, PJM: 4%, CAISO: 8.9%
+}  # NYISO: 24.4%, NEISO: 32.1%, PJM: 3.6%, CAISO: 8.9%
 
 # Resource caps: max % of demand for each resource in coarse grid search
 # Each resource varies independently — no sum-to-100 constraint.
@@ -640,10 +654,15 @@ def _score_with_all_storage(demand, supply_row, procurement,
                             ldes_window_hours,
                             h2_capacity=0.0, h2_power=0.0, h2_eff=0.0,
                             h2_window_hours=720):
-    """Hourly score + battery4 (daily) + battery8 (daily) + LDES (multi-day) + H2 (seasonal).
+    """Hourly score + battery4 (daily) + battery8 (48hr) + LDES (multi-day) + H2 (seasonal).
 
-    Dispatch order: battery4 first (cheapest short-duration), then battery8,
-    then LDES on post-battery residual. Each phase updates residual surplus/gap.
+    Dispatch order: battery4 → battery8 → LDES → H2. Each phase updates
+    residual surplus/gap arrays before the next phase runs. All storage
+    types carry SOC across window boundaries and apply RTE per discharge
+    event (soc -= discharge / efficiency), enabling multi-day energy shifting.
+
+    LDES discharge updates residual_gap so H2 sees the post-LDES residual
+    and doesn't double-count gaps already filled by LDES.
     """
     supply = np.empty(8760)
     surplus = np.empty(8760)
@@ -664,74 +683,77 @@ def _score_with_all_storage(demand, supply_row, procurement,
         base_matched += min(demand[h], supply[h])
 
     # Phase 1: Battery 4hr daily cycle on residual surplus/gap
+    # SOC carries across day boundaries so energy stored late in a day
+    # can be discharged the following morning. RTE applied per discharge event.
     batt_dispatched = 0.0
     residual_surplus = np.copy(surplus)
     residual_gap = np.copy(gap)
 
     if batt_capacity > 0:
+        batt_soc = 0.0
         for day in range(365):
             ds = day * 24
-            stored = 0.0
             for h in range(24):
                 s = residual_surplus[ds + h]
-                if s > 0 and stored < batt_capacity:
+                if s > 0 and batt_soc < batt_capacity:
                     charge = s
                     if charge > batt_power:
                         charge = batt_power
-                    remaining = batt_capacity - stored
+                    remaining = batt_capacity - batt_soc
                     if charge > remaining:
                         charge = remaining
-                    stored += charge
+                    batt_soc += charge
                     residual_surplus[ds + h] -= charge
-            available = stored * batt_eff
             for h in range(24):
                 g = residual_gap[ds + h]
-                if g > 0 and available > 0:
+                if g > 0 and batt_soc > 0:
+                    available_e = batt_soc * batt_eff
                     discharge = g
                     if discharge > batt_power:
                         discharge = batt_power
-                    if discharge > available:
-                        discharge = available
+                    if discharge > available_e:
+                        discharge = available_e
                     batt_dispatched += discharge
-                    available -= discharge
+                    batt_soc -= discharge / batt_eff
                     residual_gap[ds + h] -= discharge
 
     # Phase 2: Battery 8hr on 2-day (48hr) window cycle on post-4hr residual
     # 8hr batteries cycle ~200×/year (~every 1.8 days), not daily.
     # Using 2-day windows allows accumulating surplus across 2 days before
     # discharging, better reflecting actual 8hr battery operations.
+    # SOC carries across window boundaries (same pattern as LDES).
     batt8_dispatched = 0.0
     if batt8_capacity > 0:
         batt8_window = 48  # 2-day window
+        batt8_soc = 0.0
         n_win8 = (8760 + batt8_window - 1) // batt8_window
         for w in range(n_win8):
             ws = w * batt8_window
             we = ws + batt8_window
             if we > 8760:
                 we = 8760
-            stored = 0.0
             for h in range(ws, we):
                 s = residual_surplus[h]
-                if s > 0 and stored < batt8_capacity:
+                if s > 0 and batt8_soc < batt8_capacity:
                     charge = s
                     if charge > batt8_power:
                         charge = batt8_power
-                    remaining = batt8_capacity - stored
+                    remaining = batt8_capacity - batt8_soc
                     if charge > remaining:
                         charge = remaining
-                    stored += charge
+                    batt8_soc += charge
                     residual_surplus[h] -= charge
-            available = stored * batt8_eff
             for h in range(ws, we):
                 g = residual_gap[h]
-                if g > 0 and available > 0:
+                if g > 0 and batt8_soc > 0:
+                    available_e = batt8_soc * batt8_eff
                     discharge = g
                     if discharge > batt8_power:
                         discharge = batt8_power
-                    if discharge > available:
-                        discharge = available
+                    if discharge > available_e:
+                        discharge = available_e
                     batt8_dispatched += discharge
-                    available -= discharge
+                    batt8_soc -= discharge / batt8_eff
                     residual_gap[h] -= discharge
 
     # Phase 3: LDES multi-day rolling window on post-battery residual
@@ -754,7 +776,7 @@ def _score_with_all_storage(demand, supply_row, procurement,
                     if charge > remaining:
                         charge = remaining
                     soc += charge
-                    residual_surplus[h] -= charge  # BUG FIX: prevent double-counting
+                    residual_surplus[h] -= charge
             for h in range(ws, we):
                 g = residual_gap[h]
                 if g > 0 and soc > 0:
@@ -766,6 +788,7 @@ def _score_with_all_storage(demand, supply_row, procurement,
                         discharge = available_e
                     ldes_dispatched += discharge
                     soc -= discharge / ldes_eff
+                    residual_gap[h] -= discharge  # Update gap so H2 sees post-LDES residual
 
     # Phase 4: Green H2 seasonal storage on post-LDES residual
     h2_dispatched = 0.0
@@ -819,11 +842,15 @@ def _batch_storage_scores(demand, supply_row, procurement,
     1. Computes base supply/surplus/gap once
     2. For each bat4 level, dispatches bat4 → gets residual (reused for all bat8)
     3. For each bat8 level, dispatches bat8 → gets residual (reused for all LDES)
-    4. For each LDES level, dispatches LDES → gets residual (reused for all H2)
-    5. For each H2 level, dispatches H2 → computes score
+    4. For each LDES level, dispatches LDES → gets residual
+    5. For each H2 level, copies post-LDES residual into dedicated scratch arrays
+       and dispatches H2 independently (no cross-contamination between H2 levels)
 
-    Pre-allocates scratch arrays once and copies into them to avoid ~2,400
-    heap allocations per mix from .copy() calls in the inner loops.
+    All battery/LDES types carry SOC across window boundaries and apply RTE
+    per discharge event (consistent with _score_with_all_storage).
+
+    Pre-allocates scratch arrays once (bat4, bat8, LDES, H2) and copies into
+    them to avoid ~2,400 heap allocations per mix from .copy() calls.
 
     Returns flat array of scores with shape (n_b4 * n_b8 * n_ldes * n_h2,).
     Index mapping: scores[b4_idx * n_b8 * n_ldes * n_h2 + b8_idx * n_ldes * n_h2 + l_idx * n_h2 + h2_idx]
@@ -852,6 +879,8 @@ def _batch_storage_scores(demand, supply_row, procurement,
     res_gap8 = np.empty(8760)
     res_surplus_l = np.empty(8760)
     res_gap_l = np.empty(8760)
+    res_surplus_h2 = np.empty(8760)
+    res_gap_h2 = np.empty(8760)
 
     for b4_idx in range(n_b4):
         bp = bat4_levels[b4_idx]
@@ -865,22 +894,22 @@ def _batch_storage_scores(demand, supply_row, procurement,
         batt_dispatched = 0.0
 
         if batt_cap > 0:
+            batt_soc = 0.0
             for day in range(365):
                 ds = day * 24
-                stored = 0.0
                 for h in range(24):
                     s = res_surplus4[ds + h]
-                    if s > 0 and stored < batt_cap:
-                        charge = min(s, batt_pow, batt_cap - stored)
-                        stored += charge
+                    if s > 0 and batt_soc < batt_cap:
+                        charge = min(s, batt_pow, batt_cap - batt_soc)
+                        batt_soc += charge
                         res_surplus4[ds + h] -= charge
-                available = stored * batt_eff
                 for h in range(24):
                     g = res_gap4[ds + h]
-                    if g > 0 and available > 0:
-                        discharge = min(g, batt_pow, available)
+                    if g > 0 and batt_soc > 0:
+                        ae = batt_soc * batt_eff
+                        discharge = min(g, batt_pow, ae)
                         batt_dispatched += discharge
-                        available -= discharge
+                        batt_soc -= discharge / batt_eff
                         res_gap4[ds + h] -= discharge
 
         for b8_idx in range(n_b8):
@@ -895,26 +924,26 @@ def _batch_storage_scores(demand, supply_row, procurement,
             batt8_dispatched = 0.0
 
             if batt8_cap > 0:
+                batt8_soc = 0.0
                 n_win8 = (8760 + batt8_window - 1) // batt8_window
                 for w in range(n_win8):
                     ws = w * batt8_window
                     we = ws + batt8_window
                     if we > 8760:
                         we = 8760
-                    stored = 0.0
                     for h in range(ws, we):
                         s = res_surplus8[h]
-                        if s > 0 and stored < batt8_cap:
-                            charge = min(s, batt8_pow, batt8_cap - stored)
-                            stored += charge
+                        if s > 0 and batt8_soc < batt8_cap:
+                            charge = min(s, batt8_pow, batt8_cap - batt8_soc)
+                            batt8_soc += charge
                             res_surplus8[h] -= charge
-                    available = stored * batt8_eff
                     for h in range(ws, we):
                         g = res_gap8[h]
-                        if g > 0 and available > 0:
-                            discharge = min(g, batt8_pow, available)
+                        if g > 0 and batt8_soc > 0:
+                            ae = batt8_soc * batt8_eff
+                            discharge = min(g, batt8_pow, ae)
                             batt8_dispatched += discharge
-                            available -= discharge
+                            batt8_soc -= discharge / batt8_eff
                             res_gap8[h] -= discharge
 
             for l_idx in range(n_ldes):
@@ -953,6 +982,7 @@ def _batch_storage_scores(demand, supply_row, procurement,
                                 res_gap_l[h] -= discharge
 
                 # Phase 4: H2 seasonal storage on post-LDES residual
+                # Snapshot post-LDES state so each H2 level is evaluated independently
                 for h2_idx in range(n_h2):
                     h2p = h2_levels_arr[h2_idx]
                     if bp == 0 and b8p == 0 and lp == 0 and h2p == 0:
@@ -962,6 +992,11 @@ def _batch_storage_scores(demand, supply_row, procurement,
 
                     h2_dispatched = 0.0
                     if h2_cap > 0:
+                        # Copy post-LDES residuals into H2 scratch arrays so each
+                        # H2 level evaluation is independent (no cross-contamination)
+                        for h in range(8760):
+                            res_surplus_h2[h] = res_surplus_l[h]
+                            res_gap_h2[h] = res_gap_l[h]
                         h2_soc = 0.0
                         n_h2_win = (8760 + h2_window_hours - 1) // h2_window_hours
                         for w in range(n_h2_win):
@@ -970,18 +1005,19 @@ def _batch_storage_scores(demand, supply_row, procurement,
                             if we > 8760:
                                 we = 8760
                             for h in range(ws, we):
-                                s = res_surplus_l[h]
+                                s = res_surplus_h2[h]
                                 if s > 0 and h2_soc < h2_cap:
                                     charge = min(s, h2_pow, h2_cap - h2_soc)
                                     h2_soc += charge
-                                    res_surplus_l[h] -= charge  # BUG FIX: prevent double-counting
+                                    res_surplus_h2[h] -= charge
                             for h in range(ws, we):
-                                g = res_gap_l[h]
+                                g = res_gap_h2[h]
                                 if g > 0 and h2_soc > 0:
                                     ae = h2_soc * h2_eff
                                     discharge = min(g, h2_pow, ae)
                                     h2_dispatched += discharge
                                     h2_soc -= discharge / h2_eff
+                                    res_gap_h2[h] -= discharge
 
                     idx = b4_idx * n_b8 * n_ldes * n_h2 + b8_idx * n_ldes * n_h2 + l_idx * n_h2 + h2_idx
                     scores[idx] = base_matched + batt_dispatched + batt8_dispatched + ldes_dispatched + h2_dispatched

@@ -2,16 +2,14 @@
 """
 LMP Engine — Synthetic Hourly LMP from Merit-Order Fossil Dispatch
 ==================================================================
-Utility module imported by step4_1a_fossil_dispatch.py, step6_1_smartargets.py,
-and calibrate_lmp_model.py. Provides:
+Shared utility module imported by step4_1a_fossil_dispatch.py,
+step6_1_smartargets.py, and calibrate_lmp_model.py. Provides:
   - build_merit_order_stack() — fossil plant merit-order by marginal cost
   - compute_hourly_lmp_vectorized() — 8,760-hour synthetic LMP
   - PriceModel / get_price_model() — fuel-price-dependent cost models
   - compute_lmp_stats() — summary statistics
   - compute_marginal_costs() — per-unit marginal cost calculation
   - load_scenarios() — scenario configuration loading
-
-Originally step5b_compute_lmp_prices.py, now a shared utility.
 """
 
 import json
@@ -123,16 +121,16 @@ INSTALLED_FOSSIL_MW = {
     'SPP':   58_000,   # ~58 GW fossil (gas ~35, coal ~20, oil ~3) — EIA 860M 2024
 }
 
-# Peak demand (MW) — matches step3a_cost_optimization.py
+# Peak demand (MW) — matches pipeline_config.py
 PEAK_DEMAND_MW = {
     'CAISO': 43_860, 'ERCOT': 83_597, 'PJM': 160_560, 'NYISO': 31_857, 'NEISO': 25_898,
     'MISO': 118_661, 'SPP': 54_745,
 }
 
-# Resource adequacy reserve margin — 15%, consistent with step3/step4
+# Resource adequacy reserve margin — 15%, consistent with pipeline_config
 RESOURCE_ADEQUACY_MARGIN = 0.15
 
-# Peak capacity credits — exact copy from step3a_cost_optimization.py
+# Peak capacity credits — from pipeline_config.py (single source of truth)
 PEAK_CAPACITY_CREDITS = {
     'clean_firm': 1.0,   # nuclear — fully accredited
     'solar': 0.30,       # ELCC — only afternoon contribution
@@ -185,7 +183,7 @@ def _compute_clean_peak_mw(iso, resource_mix, battery_pct=0,
                            battery8_pct=0, ldes_pct=0, h2_pct=0):
     """Compute clean peak capacity contribution (MW) from resource mix.
 
-    Mirrors step3a_cost_optimization.py clean_peak_mw calculation exactly.
+    Mirrors step2_2a_cost_optimization.py clean_peak_mw calculation exactly.
     Uses per-resource ELCC capacity credits at system peak.
     """
     peak_mw = PEAK_DEMAND_MW.get(iso, 80_000)
@@ -1223,7 +1221,7 @@ def run_lmp_for_iso(iso, scenarios, demand_data, gen_profiles,
 
     print(f"    Dispatch cache: {cache_hits} hits, {cache_misses} misses")
     if cache_misses > 0:
-        print(f"    WARNING: {cache_misses} cache misses — consider running step4_build_dispatch_cache.py first "
+        print(f"    WARNING: {cache_misses} cache misses — consider running step3a_build_dispatch_cache.py first "
               f"to pre-populate the cache.")
     return results
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Step 6.5 — Strategy 3: Annual Matching
+Step 5.2D — Strategy 3: Annual Matching
 ========================================
 Models four variants of annual volumetric matching:
   3A: Same-ISO, new build required
@@ -721,7 +721,7 @@ def run_full_sweep(isos=None, participation_levels=None, growth_levels=None,
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Step 6.5 — Strategy 3: Annual Matching'
+        description='Step 5.2D — Strategy 3: Annual Matching'
     )
     parser.add_argument('--iso', type=str, default='ALL',
                         help='ISO to compute (default ALL)')
@@ -743,7 +743,7 @@ def main():
         growth_levels = args.growth
 
     print("=" * 70)
-    print("Step 6.5 — Strategy 3: Annual Matching")
+    print("Step 5.2D — Strategy 3: Annual Matching")
     print("=" * 70)
     print(f"ISOs: {isos}")
     print(f"Participation levels: {[f'{p*100:.0f}%' for p in participation]}")

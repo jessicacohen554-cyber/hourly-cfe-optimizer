@@ -1,24 +1,28 @@
 #!/usr/bin/env python3
 """
-Step 3: Cost Optimization — Vectorized Cross-Evaluation
-========================================================
+Step 2.2A: Cost Optimization — Vectorized Cross-Evaluation
+==========================================================
 For each (region, threshold):
-  1. Load physically feasible mixes from PFS post-EF (Step 2 output)
+  1. Load physically feasible mixes from EF (Step 2.1 output)
   2. For each sensitivity combo: vectorized evaluation of ALL mixes
   3. Select cheapest mix → that becomes the scenario result
   4. Extract archetypes (unique winning mixes) for demand growth sweep
   5. For each (year, growth): evaluate archetypes, select cheapest
 
-Pipeline position: Step 3 of 4
-  Step 1 — PFS Generator (step1_pfs_generator.py)
-  Step 2 — Efficient Frontier extraction (step2_efficient_frontier.py)
-  Step 3 — Cost optimization (this file)
-  Step 4 — Post-processing (step4_postprocess.py)
+Pipeline position: Step 2.2A of 7
+  Step 1   — PFS Generator (step1_pfs_generator.py)
+  Step 1.5 — Storage refinement (step1_5_storage_refinement.py)
+  Step 2.1 — Efficient Frontier extraction (step2_1_efficient_frontier.py)
+  Step 2.2A — Cost optimization (this file)
+  Step 2.2B — Track NB/CTR (step2_2b_track_nb_ctr.py)
+  Step 3   — Dispatch cache (step3a) + MAC queue (step3b)
+  Steps 4-7 — Analysis, scenarios, SMARTargets, dashboard
 
-Input:  data/step2.1-ef/step2_ef_{ISO}_t{T}.parquet  (from Step 2, per-ISO/threshold)
-Output: data/step2.2-cost/step3_co_<ISO>.parquet  (per-ISO cost optimization results)
+Input:  data/step2.1-ef/step_2_1_EF_{ISO}_{T}.parquet  (from Step 2.1, per-ISO/threshold)
+Output: data/step2.2-cost/step_2_2a_CO_<ISO>.parquet  (per-ISO cost optimization results)
 
-Key format: RFS_FF_TX_CCSq45_GEO (e.g., MMM_M_M_M1_M for CAISO all-Medium)
+Key format: {Ren}{Firm}{Batt}{LDES}_{Fuel}_{Tx}_{CCS}{45Q}_{Geo} (9-dim)
+  (e.g., MMMM_M_M_M1_M for CAISO all-Medium)
   CAISO: 17,496 combos per threshold. Non-CAISO: 5,832 combos per threshold.
 
 Dependencies
@@ -30,7 +34,7 @@ Install all required packages before running:
   - numpy   : Vectorized array math for cost evaluation across millions of mixes.
   - numba   : JIT compilation via @njit decorators for 10-50× speedup over pure numpy.
               Falls back to numpy if missing, but runs MUCH slower — always install.
-  - pyarrow : Reading/writing Parquet files (Step 2 input, Step 3 output).
+  - pyarrow : Reading/writing Parquet files (Step 2.1 input, Step 2.2 output).
   - pandas  : DataFrame construction for flattening results to Parquet output.
 
 Or install from the project root:
@@ -1669,17 +1673,25 @@ def _table_to_arrays(table):
 def _discover_iso_threshold_files(input_dir, iso):
     """Discover per-threshold EF band files for an ISO.
 
-    Looks for step2_ef_{ISO}_t{T}.parquet files. Falls back to the legacy
+    Looks for step_2_1_EF_{ISO}_{T}.parquet files. Falls back to the legacy
     monolithic step2_ef_{ISO}.parquet if no per-threshold files exist.
 
     Returns list of Path objects, or empty list if nothing found.
     """
     import glob as globmod
 
-    # Try per-threshold files first (new format)
-    pattern = str(input_dir / f'step2_ef_{iso}_t*.parquet')
+    # Try new naming convention first
+    pattern = str(input_dir / f'step_2_1_EF_{iso}_*.parquet')
     thr_files = sorted(globmod.glob(pattern))
     # Exclude batch files
+    thr_files = [f for f in thr_files if '_batch_' not in os.path.basename(f)]
+
+    if thr_files:
+        return [Path(f) for f in thr_files]
+
+    # Fall back to legacy per-threshold files
+    pattern = str(input_dir / f'step2_ef_{iso}_t*.parquet')
+    thr_files = sorted(globmod.glob(pattern))
     thr_files = [f for f in thr_files if '_batch_' not in os.path.basename(f)]
 
     if thr_files:
@@ -1696,7 +1708,7 @@ def _discover_iso_threshold_files(input_dir, iso):
 def load_pfs_post_ef(input_dir, selected_isos=None):
     """Load PFS post-EF from per-ISO/threshold parquet files in input_dir.
 
-    Reads from data/step2.1-ef/step2_ef_{ISO}_t{T}.parquet (per-threshold
+    Reads from data/step2.1-ef/step_2_1_EF_{ISO}_{T}.parquet (per-threshold
     band files). Falls back to legacy step2_ef_{ISO}.parquet if per-threshold
     files don't exist.
 
@@ -2712,7 +2724,7 @@ def main():
         annual = iso_data.get('annual_demand_mwh', 0)
 
         # --- 1. Baseline scenarios (generator → chunked write) ---
-        iso_out = output_dir / f'step3_co_{iso}.parquet'
+        iso_out = output_dir / f'step_2_2a_CO_{iso}.parquet'
         n = _rows_to_parquet(_flatten_scenarios(iso, iso_data), iso_out)
         if n > 0:
             print(f"  {iso_out}: {n:,} scenario rows, "
@@ -2734,7 +2746,7 @@ def main():
                 track_iters.append(
                     _flatten_scenarios(iso, track_iso_data, track_name=track_name))
         if track_iters:
-            tracks_out = output_dir / f'step3_tracks_{iso}.parquet'
+            tracks_out = output_dir / f'step_2_2a_tracks_{iso}.parquet'
             n = _rows_to_parquet(chain(*track_iters), tracks_out)
             print(f"  {tracks_out}: {n:,} track rows, "
                   f"{os.path.getsize(tracks_out) / 1e6:.1f} MB")
@@ -2847,12 +2859,12 @@ def main():
 
             for t_str, thr_scenarios in iso_dg.items():
                 t_label = f"{float(t_str):g}"
-                dg_t_out = output_dir / f'step3_dg_{iso}_t{t_label}.parquet'
+                dg_t_out = output_dir / f'step_2_2a_DG_{iso}_{t_label}.parquet'
                 n = _rows_to_parquet(
                     _dg_row_gen(iso, t_str, thr_scenarios, iso_arrays, iso_t3_cache),
                     dg_t_out)
                 dg_total += n
-            print(f"  step3_dg_{iso}: {dg_total:,} demand growth rows "
+            print(f"  step_2_2a_DG_{iso}: {dg_total:,} demand growth rows "
                   f"across {len(iso_dg)} threshold files")
             del iso_dg
             gc.collect()
@@ -2869,19 +2881,19 @@ def main():
             for t_str, thr_scenarios in iso_tdg.items():
                 tdg_thresholds.add(t_str)
                 t_label = f"{float(t_str):g}"
-                tdg_t_out = output_dir / f'step3_track_dg_{iso}_t{t_label}_{track_name}.parquet'
+                tdg_t_out = output_dir / f'step_2_2a_track_DG_{iso}_{t_label}_{track_name}.parquet'
                 n = _rows_to_parquet(
                     _dg_row_gen(iso, t_str, thr_scenarios, track_pfs_arrays,
                                 iso_t3_cache, track_name_=track_name),
                     tdg_t_out)
                 tdg_total += n
         if tdg_total > 0:
-            print(f"  step3_track_dg_{iso}: {tdg_total:,} track DG rows "
+            print(f"  step_2_2a_track_DG_{iso}: {tdg_total:,} track DG rows "
                   f"across {len(tdg_thresholds)} thresholds")
         gc.collect()
 
         # --- 5. Feasible mixes (generator → chunked write) ---
-        mix_out = output_dir / f'step3_feasible_{iso}.parquet'
+        mix_out = output_dir / f'step_2_2a_feasible_{iso}.parquet'
         n = _rows_to_parquet(_flatten_feasible_mixes(iso, iso_data), mix_out)
         if n > 0:
             print(f"  {mix_out}: {n:,} feasible mix rows, "
@@ -2893,7 +2905,7 @@ def main():
 
     # Save config metadata as JSON (small, one file for all ISOs)
     meta = {k: output[k] for k in output if k != 'results'}
-    meta_path = output_dir / 'step3_meta.json'
+    meta_path = output_dir / 'step_2_2a_meta.json'
     with open(meta_path, 'w') as f:
         json.dump(meta, f, indent=2)
     print(f"  {meta_path}: {os.path.getsize(meta_path) / 1e3:.1f} KB")

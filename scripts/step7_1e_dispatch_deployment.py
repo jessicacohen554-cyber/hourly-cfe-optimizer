@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Step 9D: Compute grid-level dispatch metrics for deployment visualization.
+Step 7.1E: Compute grid-level dispatch metrics for deployment visualization.
 
 For each strategy × ISO × participation × threshold, runs the procurement
 resource mix through hourly dispatch physics to compute:
@@ -287,7 +287,7 @@ def _map_resource(res):
 
 def main():
     print("=" * 70)
-    print("Step 9D: Dispatch Integration for Deployment Visualization")
+    print("Step 7.1E: Dispatch Integration for Deployment Visualization")
     print("=" * 70)
 
     # Load deployment data

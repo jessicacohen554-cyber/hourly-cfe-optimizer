@@ -3,9 +3,9 @@
 Shared constants, cost functions, and utilities for scenario comparison scripts.
 
 Used by:
-  - step5d_mac_queue.py (Scenario A: MAC-optimized consequential queue)
-  - step7b_scenario_hourly.py (Scenario B: Hourly Matching)
-  - step7c_scenario_comparison.py (comparison and output)
+  - step3b_mac_queue.py (Scenario A: MAC-optimized consequential queue)
+  - step5_1_scenario_hourly.py (Scenario B: Hourly Matching)
+  - step5_2_scenario_comparison.py (comparison and output)
 """
 
 import json

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Step 5AB: Merged Fossil Dispatch — CO₂ + LMP from Single Merit-Order Computation
+Step 4.1A: Merged Fossil Dispatch — CO₂ + LMP from Single Merit-Order Computation
 ==================================================================================
-Replaces separate step5a_compute_co2.py and step5b_compute_lmp_prices.py.
+Replaces separate CO₂ and LMP computation scripts.
 
 Both CO₂ and LMP require the same underlying computation:
-  1. Read clean dispatch from Step 4 dispatch cache (8760h profiles)
+  1. Read clean dispatch from Step 3A dispatch cache (8760h profiles)
   2. Compute residual_demand[h] = max(0, demand[h] - total_clean[h])
   3. Fill residual with merit-order fossil stack (coal → oil → gas)
   4. CO₂ = sum of fossil_unit_dispatch[h] × emission_rate[unit]
@@ -16,21 +16,19 @@ retirement thresholds, different fossil fleet assumptions). This module
 guarantees consistency.
 
 Pipeline position:
-  Step 4 (Dispatch Cache) → THIS
-                               ├→ CO₂ results
-                               └→ LMP results
+  Step 3A (Dispatch Cache) → THIS
+                                ├→ CO₂ results
+                                └→ LMP results
 
 Input:  data/step3-dispatch/{ISO}_dispatch_cache.parquet
         data/step2.2-cost/ (scenario metadata)
 Output: data/step4-analysis/co2_results/
         data/step4-analysis/lmp/
 
-DO NOT TOUCH: step5d_deployment_queue.py — intentionally does NOT use dispatch cache.
-
 Usage:
-  python step5ab_fossil_dispatch.py                    # All ISOs, Medium fuel
-  python step5ab_fossil_dispatch.py --iso PJM          # Single ISO
-  python step5ab_fossil_dispatch.py --fuel-level High   # Specific fuel level
+  python step4_1a_fossil_dispatch.py                    # All ISOs, Medium fuel
+  python step4_1a_fossil_dispatch.py --iso PJM          # Single ISO
+  python step4_1a_fossil_dispatch.py --fuel-level High   # Specific fuel level
 """
 
 import argparse
@@ -376,7 +374,7 @@ def main():
     args = parser.parse_args()
 
     print("=" * 70)
-    print("  Step 5AB: Merged Fossil Dispatch — CO₂ + LMP")
+    print("  Step 4.1A: Merged Fossil Dispatch — CO₂ + LMP")
     print("  Single-pass merit-order computation for both outputs")
     print("=" * 70)
 
@@ -413,7 +411,7 @@ def main():
 
     elapsed = time.time() - t0
     print(f"\n{'='*70}")
-    print(f"  Step 5AB Complete")
+    print(f"  Step 4.1A Complete")
     print(f"  CO₂: {total_co2} scenarios, LMP: {total_lmp} scenarios")
     print(f"  Elapsed: {elapsed:.1f}s")
     print(f"{'='*70}")

@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
 """
-Step 5: Compressed Day Profile Generator
-=========================================
+Step 4.1B: Compressed Day Profile Generator
+============================================
 Generates 24-hour representative day profiles for every unique resource mix
 in the dashboard. Replays the 8760-hour physics (demand, generation, storage
 dispatch) and compresses to hour-of-day annualized sums.
 
-Pipeline position: Step 5 of 5
-  Step 1 — PFS Generator (physics)
-  Step 2 — Efficient Frontier extraction
-  Step 3 — Cost optimization
-  Step 4 — Post-processing (CO2, MAC, NEISO gas)
-  Step 5 — Compressed day profiles (this file)
+Pipeline position: Step 4.1B of 7
+  Step 1   — PFS Generator (physics)
+  Step 1.5 — Storage refinement
+  Step 2.1 — Efficient Frontier extraction
+  Step 2.2 — Cost optimization
+  Step 3   — Dispatch cache + MAC queue
+  Step 4   — Analysis (CO₂, LMP, day profiles — this file)
+  Steps 5-7 — Scenarios, SMARTargets, dashboard
 
 Input:
   - data/eia-930/eia_demand_profiles.json (8760 demand)
@@ -101,7 +103,7 @@ def dispatch_from_cache(iso, mix, battery_pct, battery8_pct,
         }
 
     # Cache miss — Step 4 dispatch cache is required. No fallback.
-    print(f"    WARNING: Cache miss for {iso} key {key}. Run Step 4 first.")
+    print(f"    WARNING: Cache miss for {iso} key {key}. Run Step 3A first.")
     return None
 
 
@@ -189,7 +191,7 @@ def mix_key(mix, battery_pct, ldes_pct, h2_pct=0):
 def main():
     t0 = time.time()
     print("=" * 70)
-    print("Step 6: Compressed Day Profile Generator")
+    print("Step 4.1B: Compressed Day Profile Generator")
     print("=" * 70)
     print("Generates profiles for ALL feasible mixes (not just base-year optimal).")
     print("Uses dispatch cache from step3a_build_dispatch_cache when available; falls back to live compute.\n")

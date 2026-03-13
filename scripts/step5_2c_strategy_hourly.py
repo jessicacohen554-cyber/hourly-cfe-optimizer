@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Step 6.5 — Strategy 2: Hourly Matching (Same-ISO)
+Step 5.2C — Strategy 2: Hourly Matching (Same-ISO)
 ===================================================
 Models three variants of hourly CFE matching:
   2A: 100% new build — no existing clean credit
@@ -703,7 +703,7 @@ def run_full_sweep(isos=None, participation_levels=None, growth_levels=None,
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Step 6.5 — Strategy 2: Hourly Matching (Same-ISO)'
+        description='Step 5.2C — Strategy 2: Hourly Matching (Same-ISO)'
     )
     parser.add_argument('--iso', type=str, default='ALL',
                         help='ISO to compute (default ALL)')
@@ -725,7 +725,7 @@ def main():
         growth_levels = args.growth
 
     print("=" * 70)
-    print("Step 6.5 — Strategy 2: Hourly Matching (Same-ISO)")
+    print("Step 5.2C — Strategy 2: Hourly Matching (Same-ISO)")
     print("=" * 70)
     print(f"ISOs: {isos}")
     print(f"Participation levels: {[f'{p*100:.0f}%' for p in participation]}")

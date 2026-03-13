@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Step 6: Battery & Hydrogen Storage Analysis
+Step 4.2B: Battery & Hydrogen Storage Analysis
 =============================================
 Extracts storage dispatch metrics from the dispatch cache and compressed day
 profiles, producing a standalone JS data file for the storage analysis dashboard.
@@ -97,7 +97,9 @@ def load_resource_mixes_from_parquets():
 
         for t in SD_THRESHOLDS:
             t_num = int(t * 10) if t != int(t) else int(t)
-            dg_file = os.path.join(dg_dir, f'step3_dg_{iso}_t{t_num}.parquet')
+            dg_file = os.path.join(dg_dir, f'step_2_2a_DG_{iso}_{t_num}.parquet')
+            if not os.path.exists(dg_file):
+                dg_file = os.path.join(dg_dir, f'step3_dg_{iso}_t{t_num}.parquet')
 
             row = None
             if os.path.exists(dg_file):
@@ -471,7 +473,9 @@ def extract_parquet_storage_stats():
 
     result = {}
     for iso in ISOS:
-        fpath = os.path.join(pdir, f'step3_co_{iso}.parquet')
+        fpath = os.path.join(pdir, f'step_2_2a_CO_{iso}.parquet')
+        if not os.path.exists(fpath):
+            fpath = os.path.join(pdir, f'step3_co_{iso}.parquet')
         if not os.path.exists(fpath):
             fpath = os.path.join(pdir, f'step3_{iso}.parquet')
         if not os.path.exists(fpath):
@@ -546,7 +550,7 @@ def extract_parquet_storage_stats():
 
 def main():
     print("=" * 70)
-    print("Step 6: Battery & Hydrogen Storage Analysis")
+    print("Step 4.2B: Battery & Hydrogen Storage Analysis")
     print("=" * 70)
 
     # 1. Load resource mixes from step3 DG parquets

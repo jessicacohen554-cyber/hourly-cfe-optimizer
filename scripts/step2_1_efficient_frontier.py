@@ -1,37 +1,42 @@
 #!/usr/bin/env python3
 """
-Step 2: Efficient Frontier (EF) Extraction from Physics Feasible Space (PFS)
-=============================================================================
-Reads the PFS parquets and applies a 2-phase reduction:
+Step 2.1: Efficient Frontier (EF) Extraction from Physics Feasible Space (PFS)
+================================================================================
+Reads the PFS parquets and applies a 3-phase reduction:
 
   Phase 1: Threshold gate — keep only rows whose scores fall in target ranges
-  Phase 2: Global deduplication. Drop the threshold column. For each unique
+  Phase 2: Resource cap filter — enforce solar cap, total procurement cap,
+           and hydro cap (filters out Step 1's +10pp hydro-adder mixes
+           that were physics-only exploration)
+  Phase 3: Global deduplication. Drop the threshold column. For each unique
            allocation (ISO/CF/Sol/Wnd/Hyd/Geo/Bat/Bat8/LDES), keep only the
            row with the highest hourly_match_score. Each unique physical
-           configuration is stored ONCE — Step 3 handles threshold selection
+           configuration is stored ONCE — Step 2.2 handles threshold selection
            by filtering to mixes with score >= target threshold.
 
 Note: No dominance removal across different resource mixes is performed.
 Different resource mixes at the same storage/score can have very different
 costs under different LCOE assumptions — removing them risks losing true
-cost optimums. Cost-based selection happens in Step 3.
+cost optimums. Cost-based selection happens in Step 2.2.
 
-Pipeline position: Step 2 of 4
-  Step 1 — PFS Generator (step1_pfs_generator.py)
-  Step 2 — Efficient Frontier extraction (this file)
-  Step 3 — Cost optimization (step3a_cost_optimization.py)
-  Step 4 — Post-processing (step4_postprocess.py)
+Pipeline position: Step 2.1 of 7
+  Step 1   — PFS Generator (step1_pfs_generator.py)
+  Step 1.5 — Storage refinement (step1_5_storage_refinement.py)
+  Step 2.1 — Efficient Frontier extraction (this file)
+  Step 2.2 — Cost optimization (step2_2a_cost_optimization.py)
+  Step 3   — Dispatch cache (step3a) + MAC queue (step3b)
+  Steps 4-7 — Analysis, scenarios, SMARTargets, dashboard
 
 Input:  data/step1-pfs/{ISO}_t{XX}_*.parquet (raw_pfs, fine_pfs, floor_pfs, storage)
-Output: data/step2.1-ef/step2_ef_{ISO}_t{XX}.parquet (per-ISO per-threshold band)
+Output: data/step2.1-ef/step_2_1_EF_{ISO}_{XX}.parquet (per-ISO per-threshold band)
 
 After dedup, mixes are partitioned into non-overlapping threshold bands based
 on their score. Each mix appears in exactly one file — the band whose threshold
-is the highest T where T <= score. Step 3 loads bands >= its target threshold
+is the highest T where T <= score. Step 2.2 loads bands >= its target threshold
 to reconstruct the full qualifying set for any target.
 
 The output preserves all mixes that could be optimal under ANY cost assumption
-at ANY threshold, ensuring no true optimum is lost during Step 3.
+at ANY threshold, ensuring no true optimum is lost during Step 2.2.
 """
 
 import argparse
@@ -52,6 +57,7 @@ from pipeline_config import (
     ISOS, OFFSHORE_ISOS,
     RESOURCE_COLS_BASE, RESOURCE_COLS_OFFSHORE, RESOURCE_COLS_CAISO,
     get_resource_cols,
+    GRID_MIX_SHARES,
 )
 
 PFS_DIR = os.path.join(SCRIPT_DIR, 'data')
@@ -407,9 +413,13 @@ def threshold_gate(table):
 
 
 def resource_cap_filter(table, iso):
-    """Enforce solar cap and total procurement cap (matching Step 1 constraints).
+    """Enforce solar cap, total procurement cap, and hydro cap.
 
-    Removes mixes where solar > SOLAR_CAP or total resources > TOTAL_PROCUREMENT_CAP.
+    Removes mixes where:
+      - solar > SOLAR_CAP
+      - total resources > TOTAL_PROCUREMENT_CAP
+      - hydro > existing hydro share (Step 1 explores +10pp above existing
+        for physics experimentation; those mixes must not enter cost optimization)
     """
     if table.num_rows == 0:
         return table
@@ -422,6 +432,12 @@ def resource_cap_filter(table, iso):
     for col in resource_cols:
         total += table.column(col).to_numpy()
     mask &= total <= TOTAL_PROCUREMENT_CAP
+
+    # Hydro cap: existing share only — floor() to match integer PFS grid
+    import math
+    hydro_existing_pct = math.floor(GRID_MIX_SHARES[iso].get('hydro', 0))
+    hydro = table.column('hydro').to_numpy()
+    mask &= hydro <= hydro_existing_pct
 
     if mask.all():
         return table
@@ -537,9 +553,9 @@ def write_per_iso_threshold_outputs(results_by_iso, thresholds, batch_label=None
             band_table = bands[thr]
             thr_str = format_threshold(thr)
             if batch_label:
-                fname = f'step2_ef_{iso}_t{thr_str}_batch_{batch_label}.parquet'
+                fname = f'step_2_1_EF_{iso}_{thr_str}_batch_{batch_label}.parquet'
             else:
-                fname = f'step2_ef_{iso}_t{thr_str}.parquet'
+                fname = f'step_2_1_EF_{iso}_{thr_str}.parquet'
             path = os.path.join(STEP2_EF_OUTPUT_DIR, fname)
             pq.write_table(band_table, path, compression='snappy')
             size_mb = os.path.getsize(path) / (1024 * 1024)
@@ -609,7 +625,7 @@ def _batch_labels_cover_all_thresholds(batch_files):
     for bf in batch_files:
         base = os.path.basename(bf)
         # step2_ef_{ISO}_t{T}_batch_{label}.parquet
-        m = re.match(r'^step2_ef_[A-Z]+_t[\d.]+_batch_(.+)\.parquet$', base)
+        m = re.match(r'^step_2_1_EF_[A-Z]+_[\d.]+_batch_(.+)\.parquet$', base)
         if m:
             labels.add(m.group(1))
     return labels >= {'low', 'mid', 'high'}
@@ -633,7 +649,7 @@ def merge_batch_outputs(iso):
     """
     import glob as globmod
 
-    pattern = os.path.join(STEP2_EF_OUTPUT_DIR, f'step2_ef_{iso}_t*_batch_*.parquet')
+    pattern = os.path.join(STEP2_EF_OUTPUT_DIR, f'step_2_1_EF_{iso}_*_batch_*.parquet')
     batch_files = sorted(globmod.glob(pattern))
 
     if not batch_files:
@@ -647,7 +663,7 @@ def merge_batch_outputs(iso):
 
     # Discover existing final per-threshold files
     existing_thr_files = sorted(globmod.glob(
-        os.path.join(STEP2_EF_OUTPUT_DIR, f'step2_ef_{iso}_t*.parquet')
+        os.path.join(STEP2_EF_OUTPUT_DIR, f'step_2_1_EF_{iso}_*.parquet')
     ))
     # Exclude batch files from existing list
     existing_thr_files = [f for f in existing_thr_files if '_batch_' not in os.path.basename(f)]
@@ -705,7 +721,7 @@ def merge_batch_outputs(iso):
     for thr in sorted(bands.keys()):
         band_table = bands[thr]
         thr_str = format_threshold(thr)
-        fname = f'step2_ef_{iso}_t{thr_str}.parquet'
+        fname = f'step_2_1_EF_{iso}_{thr_str}.parquet'
         path = os.path.join(STEP2_EF_OUTPUT_DIR, fname)
         pq.write_table(band_table, path, compression='snappy')
         size_mb = os.path.getsize(path) / (1024 * 1024)
@@ -782,7 +798,7 @@ def main():
         import glob as globmod
         removed = 0
         for iso in target_isos:
-            pattern = os.path.join(STEP2_EF_OUTPUT_DIR, f'step2_ef_{iso}_t*.parquet')
+            pattern = os.path.join(STEP2_EF_OUTPUT_DIR, f'step_2_1_EF_{iso}_*.parquet')
             for f in globmod.glob(pattern):
                 os.remove(f)
                 removed += 1
@@ -915,11 +931,11 @@ def main():
     print("\n" + "=" * 70)
     if batch_label:
         print(f"  STEP 2 BATCH '{batch_label}' COMPLETE")
-        print(f"  Batch outputs in data/step2.1-ef/step2_ef_*_t*_batch_{batch_label}.parquet")
+        print(f"  Batch outputs in data/step2.1-ef/step_2_1_EF_*_*_batch_{batch_label}.parquet")
         print(f"  Run with --merge to combine all batches into final per-threshold EF files.")
     else:
         print("  STEP 2 COMPLETE — per-ISO/threshold EF parquets ready in data/step2.1-ef/")
-        print("  Output: step2_ef_{ISO}_t{T}.parquet (one file per threshold band)")
+        print("  Output: step_2_1_EF_{ISO}_{T}.parquet (one file per threshold band)")
     print("=" * 70)
 
 

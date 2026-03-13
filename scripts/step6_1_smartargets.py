@@ -1,25 +1,24 @@
 #!/usr/bin/env python3
 """
-SMARTargets V1 — Market Simulation of Clean Energy Deployment
-=============================================================
-Market-driven simulation: deploys resources where profitable, stops when profit ≤ 0.
+SMARTargets V2 — Parametric Sweep (Reference + Emission Ceilings)
+============================================================
+Market-driven simulation with parametric sweeps over cost/policy dimensions.
 CFE level is an OUTPUT (emerges from profitability), not an input.
 
-V1 Scope: R1-R2 (Reference) + AT1-AT4 (Ambitious Transition) + QT1-QT4 (Quick Transition).
-- Per-ISO (no cross-regional capital flow)
-- 5% zone steps
-- Merchant revenue (no PPA discount)
-- RPS/CES compliance modeled via scarcity-driven REC pricing (not mandate floors)
+V2 Scope: Three sweep types:
+- Reference: Market-only, no emission constraints (2 conditions × 3 demand × 5 price_sens × 3 ppa × 3 gas_friction = 270 scenarios)
+- Power NZ: Power sector net-zero by 2050 with emission ceilings
+- Economy NZ: Economy-wide net-zero with tighter power sector ceilings
 
-Architecture: Built on scenario_common.build_zones() zone-delta structure.
+Architecture: Parametric sweep over (conditions, demand growth, price sensitivity, PPA level, gas friction).
 Revenue model: step5b LMP engine + capacity market + storage + REC.
 Cost model: pipeline_config LCOE tables + Wright's Law learning curves.
 
 Usage:
-  python step10_smartargets.py                          # R1 + R2, all ISOs
-  python step10_smartargets.py --scenarios R1            # R1 only
-  python step10_smartargets.py --isos ERCOT CAISO        # subset ISOs
-  python step10_smartargets.py --scenarios R1 --isos ERCOT  # single combo
+  python step6_1_smartargets.py --sweep reference        # Reference sweep, all ISOs
+  python step6_1_smartargets.py --sweep power_nz         # Power NZ sweep, all ISOs
+  python step6_1_smartargets.py --sweep economy_nz       # Economy NZ sweep, all ISOs
+  python step6_1_smartargets.py --sweep reference --isos ERCOT CAISO  # subset ISOs
 """
 
 import argparse
@@ -273,163 +272,9 @@ RESOURCE_TO_TECH = {
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# SCENARIO DEFINITIONS
-# ═══════════════════════════════════════════════════════════════════════════════
-
-SCENARIOS = {
-    'R1': {
-        'name': 'Reference: Facilitating',
-        'demand_growth': 'Medium',
-        'lcoe_level': 'Low',
-        'learning_speed': 'Fast',
-        'queue_type': 'Facilitating',
-        'gas_friction': 0.7,       # ESG/siting friction on new gas
-        'carbon_price': 0,
-        'fuel_level': 'Medium',
-        'tx_level': 'Medium',
-    },
-    'R2': {
-        'name': 'Reference: Challenging',
-        'demand_growth': 'High',
-        'lcoe_level': 'High',
-        'learning_speed': 'Slow',
-        'queue_type': 'Challenging',
-        'gas_friction': 1.0,       # Gas builds freely
-        'carbon_price': 0,
-        'fuel_level': 'Medium',
-        'tx_level': 'Medium',
-    },
-
-    # ─── Ambitious Transition: Power Sector Net-Zero ─────────────────────
-    # Emission CONSTRAINT as % of 2023 eGRID absolute emissions per ISO.
-    # Power NZ trajectory: 2030=43%, 2035=18%, 2040=12%, 2045=6%, 2050=0%.
-    # e.g., PJM 2045 = 6% of 267 Mt = 16 Mt allowed (94% absolute reduction).
-    # Market-profitable build happens first, then mandated build fills the
-    # gap to meet the constraint (policy subsidy covers the loss).
-    'AT1': {
-        'name': 'AT Power NZ: Facilitating',
-        'demand_growth': 'Medium',
-        'lcoe_level': 'Low',
-        'learning_speed': 'Fast',
-        'queue_type': 'Facilitating',
-        'gas_friction': 0.5,       # Strong ESG/policy friction on new gas
-        'carbon_price': 0,
-        'fuel_level': 'Medium',
-        'tx_level': 'Medium',
-        'emission_constraint': 'power_nz',
-        'dac_available': True,     # DAC backstop available under facilitating conditions
-    },
-    'AT2': {
-        'name': 'AT Power NZ: Challenging',
-        'demand_growth': 'High',
-        'lcoe_level': 'High',
-        'learning_speed': 'Slow',
-        'queue_type': 'Challenging',
-        'gas_friction': 0.7,
-        'carbon_price': 0,
-        'fuel_level': 'Medium',
-        'tx_level': 'Medium',
-        'emission_constraint': 'power_nz',
-        'dac_available': False,    # No DAC under challenging — must overbuild grid
-    },
-
-    # ─── Ambitious Transition: Economy-Wide Net-Zero ─────────────────────
-    # Tighter constraint — economy-wide decarbonization forces power sector
-    # to overachieve since it's cheapest to abate.
-    # Economy NZ trajectory: 2030=35%, 2035=15%, 2040=8%, 2045=3%, 2050=0%.
-    # Electrification drives demand growth (High).
-    'AT3': {
-        'name': 'AT Economy NZ: Facilitating',
-        'demand_growth': 'High',   # Electrification drives demand
-        'lcoe_level': 'Low',
-        'learning_speed': 'Fast',
-        'queue_type': 'Facilitating',
-        'gas_friction': 0.3,       # Near-moratorium on new gas
-        'carbon_price': 0,
-        'fuel_level': 'High',      # Fossil fuel prices rise
-        'tx_level': 'Low',         # Accelerated tx buildout
-        'emission_constraint': 'economy_nz',
-        'dac_available': True,     # DAC backstop available under facilitating conditions
-    },
-    'AT4': {
-        'name': 'AT Economy NZ: Challenging',
-        'demand_growth': 'High',
-        'lcoe_level': 'High',
-        'learning_speed': 'Slow',
-        'queue_type': 'Challenging',
-        'gas_friction': 0.5,
-        'carbon_price': 0,
-        'fuel_level': 'High',
-        'tx_level': 'Medium',
-        'emission_constraint': 'economy_nz',
-        'dac_available': False,    # No DAC under challenging — must overbuild grid
-    },
-
-    # ─── Quick Transition ────────────────────────────────────────────────
-    # Parametric sweep: 19 emission reduction targets (5%, 10%, ..., 95%)
-    # by 2050. Each target follows the AT temporal shape scaled to that
-    # final reduction level. QT1/QT2 use medium demand, QT3/QT4 high demand.
-    # The 'qt_reduction_grid' flag triggers the sweep in run_market_simulation.
-    'QT1': {
-        'name': 'QT Medium Demand: Facilitating',
-        'demand_growth': 'Medium',
-        'lcoe_level': 'Low',
-        'learning_speed': 'Fast',
-        'queue_type': 'Facilitating',
-        'gas_friction': 0.3,
-        'carbon_price': 0,
-        'fuel_level': 'Low',
-        'tx_level': 'Low',
-        'emission_constraint': 'power_nz',
-        'qt_reduction_grid': True,
-        'dac_available': True,
-    },
-    'QT2': {
-        'name': 'QT Medium Demand: Challenging',
-        'demand_growth': 'Medium',
-        'lcoe_level': 'High',
-        'learning_speed': 'Slow',
-        'queue_type': 'Challenging',
-        'gas_friction': 0.7,
-        'carbon_price': 0,
-        'fuel_level': 'Medium',
-        'tx_level': 'Medium',
-        'emission_constraint': 'power_nz',
-        'qt_reduction_grid': True,
-        'dac_available': False,
-    },
-    'QT3': {
-        'name': 'QT High Demand: Facilitating',
-        'demand_growth': 'High',
-        'lcoe_level': 'Low',
-        'learning_speed': 'Fast',
-        'queue_type': 'Facilitating',
-        'gas_friction': 0.3,
-        'carbon_price': 0,
-        'fuel_level': 'Low',
-        'tx_level': 'Low',
-        'emission_constraint': 'economy_nz',
-        'qt_reduction_grid': True,
-        'dac_available': True,
-    },
-    'QT4': {
-        'name': 'QT High Demand: Challenging',
-        'demand_growth': 'High',
-        'lcoe_level': 'High',
-        'learning_speed': 'Slow',
-        'queue_type': 'Challenging',
-        'gas_friction': 0.5,
-        'carbon_price': 0,
-        'fuel_level': 'High',
-        'tx_level': 'Medium',
-        'emission_constraint': 'economy_nz',
-        'qt_reduction_grid': True,
-        'dac_available': False,
-    },
-}
-
-# QT reduction targets: 5% to 95% in 5% intervals
-QT_REDUCTION_TARGETS = [i / 100.0 for i in range(5, 100, 5)]  # 0.05, 0.10, ..., 0.95
+# Legacy scenario definitions removed — using parametric sweep only.
+# Runtime-only SCENARIOS dict for temporary registration of sweep scenarios
+SCENARIOS = {}
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1107,7 +952,9 @@ def load_step3_data():
     all_data = {}
 
     for iso in ISOS:
-        path = os.path.join(step3_dir, f'step3_co_{iso}.parquet')
+        path = os.path.join(step3_dir, f'step_2_2a_CO_{iso}.parquet')
+        if not os.path.exists(path):
+            path = os.path.join(step3_dir, f'step3_co_{iso}.parquet')
         if not os.path.exists(path):
             print(f"  WARNING: No step3 parquet for {iso}, skipping")
             continue
@@ -1971,15 +1818,13 @@ def save_sweep_results(all_rows, sweep_type='reference'):
 def main():
     parser = argparse.ArgumentParser(
         description='SMARTargets V1 — Market Simulation of Clean Energy Deployment')
-    parser.add_argument('--scenarios', nargs='+', default=['R1', 'R2'],
-                        choices=list(SCENARIOS.keys()),
-                        help='Scenarios to run (default: R1 R2)')
     parser.add_argument('--isos', nargs='+', default=None,
                         help='ISOs to simulate (default: all 7)')
     parser.add_argument('--dry-run', action='store_true',
                         help='Load data and validate, but skip simulation')
     parser.add_argument('--sweep', choices=['reference', 'power_nz', 'economy_nz'],
-                        help='Run parametric sweep (270 scenarios per type)')
+                        required=True,
+                        help='Parametric sweep type: reference, power_nz, or economy_nz (required)')
     parser.add_argument('--sweep-limit', type=int, default=0,
                         help='Limit sweep to first N scenarios (for testing)')
     args = parser.parse_args()
@@ -1991,7 +1836,7 @@ def main():
         sys.exit(1)
 
     print(f"SMARTargets V1 — Market Simulation Engine")
-    print(f"Scenarios: {args.scenarios}")
+    print(f"Sweep type: {args.sweep}")
     print(f"ISOs: {isos}")
     print()
 
@@ -2124,76 +1969,7 @@ def main():
               f"({elapsed/n_total:.1f}s/scenario)")
         return
 
-    for scenario_id in args.scenarios:
-        conditions = SCENARIOS[scenario_id]
-        is_qt = conditions.get('qt_reduction_grid', False)
-
-        if is_qt:
-            # QT: parametric sweep over 19 reduction targets (5% to 95%)
-            all_qt_results = {iso_name: [] for iso_name in isos}
-
-            for target in QT_REDUCTION_TARGETS:
-                pct_label = int(target * 100)
-                results = run_market_simulation(
-                    scenario_id, conditions, isos, reduction_target=target)
-
-                # Accumulate results across all targets
-                for iso_name in isos:
-                    if iso_name in results:
-                        all_qt_results[iso_name].extend(results[iso_name])
-
-            # Save combined results for this QT scenario
-            save_results(all_qt_results, scenario_id)
-
-            # Print summary: one line per ISO showing range of outcomes
-            print(f"\n{'='*50}")
-            print(f"SUMMARY — {scenario_id}: {conditions['name']} (19 targets)")
-            print(f"{'='*50}")
-            for iso_name in isos:
-                iso_results = all_qt_results.get(iso_name, [])
-                if not iso_results:
-                    continue
-                # Group by reduction target — show 2050 outcome per target
-                targets_2050 = {}
-                for yr in iso_results:
-                    t = yr.get('reduction_target', 1.0)
-                    if yr['year'] == 2050:
-                        targets_2050[t] = yr
-                if not targets_2050:
-                    continue
-                # Find where market stops needing subsidy
-                market_viable = [t for t, yr in sorted(targets_2050.items())
-                                 if yr.get('mandated_subsidy_mwh', 0) == 0
-                                 and yr.get('cumulative_subsidy_mwh', 0) == 0]
-                max_viable = max(market_viable) * 100 if market_viable else 0
-                min_target = min(targets_2050.keys()) * 100
-                max_target = max(targets_2050.keys()) * 100
-                print(f"  {iso_name}: targets {min_target:.0f}%-{max_target:.0f}%, "
-                      f"market-viable up to {max_viable:.0f}% reduction")
-
-        else:
-            # R1/R2/AT: single simulation
-            results = run_market_simulation(scenario_id, conditions, isos)
-            save_results(results, scenario_id)
-
-            # Print summary
-            print(f"\n{'='*50}")
-            print(f"SUMMARY — {scenario_id}: {conditions['name']}")
-            print(f"{'='*50}")
-            for iso_name in isos:
-                if iso_name not in results or not results[iso_name]:
-                    continue
-                final = results[iso_name][-1]
-                stop = [yr for yr in results[iso_name] if yr['market_stop']]
-                stop_info = f"stops at {stop[0]['clean_pct']:.0f}% (year {stop[0]['year']})" if stop else "no stop"
-                subsidy = final.get('cumulative_subsidy_mwh', 0)
-                subsidy_info = f", subsidy=${subsidy:.1f}/MWh" if subsidy > 0 else ""
-                cap_info = ""
-                if final.get('emission_cap_mt') is not None:
-                    cap_info = f", cap={final['emission_cap_mt']:.1f}Mt"
-                print(f"  {iso_name}: {final['clean_pct']:.0f}% clean by 2050, "
-                      f"{final['emissions_mt']:.0f} MtCO2{cap_info}, {stop_info}, "
-                      f"+{final['total_gas_gw']:.1f} GW new gas{subsidy_info}")
+    # Deprecated: legacy scenario loop removed. Only parametric sweep mode is supported.
 
     elapsed = time.time() - t_start
     print(f"\nTotal runtime: {elapsed:.1f}s")

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Step 6.5 — Strategy 1: Consequential Cross-Regional Netting
+Step 5.2B — Strategy 1: Consequential Cross-Regional Netting
 ============================================================
 Models three variants of consequential accounting:
   1A: Grid-average emission baseline
@@ -53,7 +53,7 @@ from procurement_utils import (
 
 _QUEUE_CACHE = None
 
-# Try mac_queue subdirectory first (step5d_deployment_queue output), fall back to step5 root
+# Try mac_queue subdirectory first (step3b_mac_queue output), fall back to root
 _MAC_QUEUE_PATH = os.path.join(BASE_DIR, 'data', 'step3-dispatch', 'mac_queue', 'consequential_queue.json')
 _LEGACY_PATH = os.path.join(BASE_DIR, 'data', 'step3-dispatch', 'consequential_queue.json')
 QUEUE_JSON_PATH = _MAC_QUEUE_PATH if os.path.isfile(_MAC_QUEUE_PATH) else _LEGACY_PATH
@@ -503,7 +503,7 @@ def run_full_sweep(isos=None, participation_levels=None, growth_levels=None):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Step 6.5 — Strategy 1: Consequential Cross-Regional Netting'
+        description='Step 5.2B — Strategy 1: Consequential Cross-Regional Netting'
     )
     parser.add_argument('--iso', type=str, default='ALL',
                         help='ISO to compute (default ALL)')
@@ -525,7 +525,7 @@ def main():
         growth_levels = args.growth
 
     print("=" * 70)
-    print("Step 6.5 — Strategy 1: Consequential Cross-Regional Netting")
+    print("Step 5.2B — Strategy 1: Consequential Cross-Regional Netting")
     print("=" * 70)
     print(f"ISOs: {isos}")
     print(f"Participation levels: {[f'{p*100:.0f}%' for p in participation]}")

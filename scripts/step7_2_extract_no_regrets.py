@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Step 7 Post-Processor: Extract No-Regrets Investment Data from Step 3 DG Parquets
+Step 7.2 Post-Processor: Extract No-Regrets Investment Data from Step 2.2A DG Parquets
 
 Reads the demand-growth parquets (step3_dg_{ISO}_t{T}.parquet) for thresholds
 within each ISO's MAC-DAC crossover range and computes no-regrets resource
@@ -199,12 +199,18 @@ def find_dg_file(iso, threshold):
     # Try different key formats
     for key_fmt in [str(int(threshold)) if threshold == int(threshold) else str(threshold),
                     str(threshold), f"{threshold:.1f}"]:
+        path = DG_DIR / f'step_2_2a_DG_{iso}_{key_fmt}.parquet'
+        if path.exists():
+            return path
         path = DG_DIR / f'step3_dg_{iso}_t{key_fmt}.parquet'
         if path.exists():
             return path
 
     # Also try without decimal for integer thresholds
     if threshold == int(threshold):
+        path = DG_DIR / f'step_2_2a_DG_{iso}_{int(threshold)}.parquet'
+        if path.exists():
+            return path
         path = DG_DIR / f'step3_dg_{iso}_t{int(threshold)}.parquet'
         if path.exists():
             return path
@@ -314,7 +320,7 @@ def analyze_no_regrets(iso, crossover_range):
 
 def main():
     print("=" * 70)
-    print("Step 7: Extract No-Regrets Investment Data")
+    print("Step 7.2: Extract No-Regrets Investment Data")
     print("=" * 70)
 
     # Load MAC data for crossover computation

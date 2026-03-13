@@ -28,9 +28,9 @@ Algorithm:
   9. Floor ratchet — committed resources don't un-deploy
 
 Usage:
-  python step7b_scenario_hourly.py             # Run all ISOs
-  python step7b_scenario_hourly.py --iso CAISO  # Run single ISO
-  python step7b_scenario_hourly.py --iso CAISO ERCOT  # Run multiple ISOs
+  python step5_1_scenario_hourly.py             # Run all ISOs
+  python step5_1_scenario_hourly.py --iso CAISO  # Run single ISO
+  python step5_1_scenario_hourly.py --iso CAISO ERCOT  # Run multiple ISOs
 """
 
 import json
