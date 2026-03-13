@@ -93,7 +93,17 @@ function init() {
         });
     });
 
+    // Render input summary (once, doesn't change per ISO)
+    renderInputSummary();
+
     renderAll();
+
+    // Setup export after first render
+    const firstData = getISOResult(currentISO);
+    if (firstData) {
+        renderRunBar(firstData);
+        setupExportButtons(firstData);
+    }
 }
 
 function getISOResult(iso) {
@@ -110,7 +120,7 @@ function showNoData() {
     document.querySelector('.content-section').innerHTML = `
         <div class="no-data">
             <h3>No simulation results</h3>
-            <p>Run a simulation from the <a href="/">setup page</a> first.</p>
+            <p>Run a simulation from the <a href="/setup">setup page</a> first.</p>
         </div>`;
 }
 
@@ -146,6 +156,7 @@ function renderAll() {
     }
 
     updateStats(data);
+    renderNarrative(data);
 
     // Level 1: Market-wide
     renderLMPTimeSeries(data);
@@ -650,6 +661,147 @@ function placeholderChart(containerId) {
     const el = document.getElementById(containerId);
     if (el) {
         el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#7F8F97;font-style:italic;">No data for this chart</div>';
+    }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// INPUT SUMMARY, NARRATIVE, RUN BAR, EXPORT
+// ══════════════════════════════════════════════════════════════════════════════
+
+function renderInputSummary() {
+    if (!simParams || Object.keys(simParams).length === 0) return;
+
+    const grid = document.getElementById('inputSummaryGrid');
+    if (!grid) return;
+
+    const items = [];
+
+    // Mode & ISO
+    items.push({ label: 'Mode', value: simParams.mode || 'snapshot' });
+    const isos = simParams.isos || [simParams.iso || 'ERCOT'];
+    items.push({ label: 'ISO(s)', value: isos.join(', ') });
+
+    // Fuel prices
+    const fp = simParams.fuel_prices || {};
+    items.push({ label: 'Gas Price', value: `$${fp.gas || 3.5}/MMBtu` });
+    items.push({ label: 'Coal Price', value: `$${fp.coal || 2.25}/MMBtu` });
+    items.push({ label: 'Oil Price', value: `$${fp.oil || 10.5}/MMBtu` });
+
+    // Carbon
+    items.push({ label: 'Carbon Price', value: `$${simParams.carbon_price || 5.5}/ton` });
+
+    // Clean LCOEs
+    const lcoe = simParams.clean_lcoes || {};
+    items.push({ label: 'Solar LCOE', value: `$${lcoe.solar || '--'}/MWh` });
+    items.push({ label: 'Wind LCOE', value: `$${lcoe.wind || '--'}/MWh` });
+    items.push({ label: 'Nuclear LCOE', value: `$${lcoe.nuclear || '--'}/MWh` });
+    items.push({ label: 'CCS LCOE', value: `$${lcoe.ccs_ccgt || '--'}/MWh` });
+
+    // Key toggles
+    items.push({ label: 'Demand Growth', value: simParams.demand_growth || 'Medium' });
+    items.push({ label: 'Transmission', value: simParams.transmission_level || 'Medium' });
+    items.push({ label: '45Q', value: simParams.q45 ? 'On' : 'Off' });
+
+    // Storage
+    const sc = simParams.storage_costs || {};
+    items.push({ label: 'Battery 4hr', value: `$${sc.battery || 295}/kW-yr` });
+    items.push({ label: 'LDES 100hr', value: `$${sc.ldes || 220}/kW-yr` });
+
+    // Nuclear
+    items.push({ label: 'Nuc Retirement', value: `$${simParams.nuclear_retirement_threshold || 30}/MWh` });
+
+    grid.innerHTML = items.map(i =>
+        `<div class="input-summary-item"><span class="label">${i.label}</span><span class="value">${i.value}</span></div>`
+    ).join('');
+}
+
+function renderNarrative(data) {
+    const box = document.getElementById('narrativeBox');
+    const text = document.getElementById('narrativeText');
+    if (!box || !text) return;
+
+    const narrative = data.narrative;
+    if (narrative) {
+        text.textContent = narrative;
+        box.style.display = '';
+    } else {
+        box.style.display = 'none';
+    }
+}
+
+function renderRunBar(data) {
+    const bar = document.getElementById('runBar');
+    const badge = document.getElementById('runIdBadge');
+    if (!bar || !badge) return;
+
+    if (data.run_id) {
+        badge.textContent = `Run: ${data.run_id}`;
+        bar.style.display = '';
+    } else {
+        bar.style.display = 'none';
+    }
+}
+
+function setupExportButtons(data) {
+    // Export Charts button
+    const btnExport = document.getElementById('btnExportCharts');
+    if (btnExport) {
+        btnExport.addEventListener('click', async () => {
+            if (!data.run_id) {
+                alert('No run ID available for export.');
+                return;
+            }
+            btnExport.textContent = 'Exporting...';
+            btnExport.disabled = true;
+
+            const chartContainers = document.querySelectorAll('.chart-container, .chart-container-lg');
+            let saved = 0;
+
+            for (const container of chartContainers) {
+                const chartId = container.id || `chart_${saved}`;
+                try {
+                    if (typeof html2canvas === 'function') {
+                        const canvas = await html2canvas(container, { backgroundColor: '#ffffff', scale: 2 });
+                        const imageData = canvas.toDataURL('image/png');
+                        await fetch(`/api/runs/${data.run_id}/save-chart`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ name: chartId, image: imageData }),
+                        });
+                        saved++;
+                    }
+                } catch (e) {
+                    console.warn(`Failed to export chart ${chartId}:`, e);
+                }
+            }
+
+            btnExport.textContent = `Exported ${saved} charts`;
+            setTimeout(() => {
+                btnExport.textContent = 'Export Charts';
+                btnExport.disabled = false;
+            }, 2000);
+        });
+    }
+
+    // Download CSV button
+    const btnCSV = document.getElementById('btnDownloadCSV');
+    if (btnCSV && data.run_id) {
+        btnCSV.addEventListener('click', async () => {
+            try {
+                const resp = await fetch(`/api/runs/${data.run_id}`);
+                const runData = await resp.json();
+                // Trigger download of the inputs text as a file
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${data.run_id}_results.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                console.warn('Failed to download:', e);
+            }
+        });
     }
 }
 
