@@ -1,0 +1,38 @@
+{
+  "description": "Synthetic data center 8760-hour load profile",
+  "sources": [
+    "LBNL 2024 United States Data Center Energy Usage Report",
+    "EPRI 2024 Powering Intelligence Report",
+    "DOE/LBNL Prototype Data Center Energy Models (Shehabi et al. 2020)",
+    "Google published PUE data (2023-2025)",
+    "Uptime Institute 2023 Global Data Center Survey"
+  ],
+  "parameters": {
+    "it_capacity_mw": 100.0,
+    "it_utilization_mean": 0.7,
+    "pue_base": 1.12,
+    "pue_seasonal_amplitude": 0.04,
+    "diurnal_amplitude": 0.025,
+    "random_seed": 42
+  },
+  "statistics": {
+    "hours": 8760,
+    "mean_load_mw": 78.18,
+    "min_load_mw": 70.08,
+    "max_load_mw": 86.44,
+    "load_factor": 0.9044,
+    "annual_energy_gwh": 684.85,
+    "mean_pue": 1.12,
+    "mean_it_load_mw": 69.79,
+    "mean_cooling_load_mw": 5.45
+  },
+  "column_descriptions": {
+    "hour": "Hour index (0-8759)",
+    "datetime": "ISO 8601 datetime (2023 calendar year, hourly)",
+    "load_mw": "Total facility electrical load (MW)",
+    "it_load_mw": "IT equipment load (MW) \u2014 servers, networking, storage",
+    "cooling_load_mw": "Cooling system load (MW) \u2014 chillers, CRAHs, pumps",
+    "other_load_mw": "Other facility load (MW) \u2014 UPS losses, PDUs, lighting, office",
+    "pue": "Power Usage Effectiveness (total / IT)"
+  }
+}
