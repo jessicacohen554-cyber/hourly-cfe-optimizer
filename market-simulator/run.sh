@@ -39,7 +39,7 @@ echo "✓ Dependencies installed"
 # ── Generate synthetic data if needed ────────────────────────────────────────
 if [ ! -f "data/demand_profiles_2025.json" ]; then
     echo "Generating synthetic data profiles..."
-    PYTHONPATH="$SCRIPT_DIR" $PYTHON scripts/generate_synthetic_profiles.py 2>/dev/null || true
+    PYTHONPATH="$SCRIPT_DIR:$SCRIPT_DIR/backend:$SCRIPT_DIR/scripts" $PYTHON scripts/generate_synthetic_profiles.py 2>/dev/null || true
     echo "✓ Data profiles ready"
 else
     echo "✓ Data profiles found"
@@ -78,7 +78,7 @@ echo "  Press Ctrl+C to stop"
 echo "═══════════════════════════════════════════════════════════════"
 echo ""
 
-export PYTHONPATH="$SCRIPT_DIR"
+export PYTHONPATH="$SCRIPT_DIR:$SCRIPT_DIR/backend:$SCRIPT_DIR/scripts"
 trap 'echo ""; echo "Server stopped."; exit 0' INT TERM
 
 $PYTHON -m uvicorn backend.main:app --host 127.0.0.1 --port $PORT
