@@ -4,28 +4,35 @@
  */
 
 const UNIT_COLORS = {
-    coal_steam: '#374151',
-    gas_ccgt: '#6B7280',
-    gas_ccgt_efficient: '#4B5563',
-    gas_ccgt_old: '#9CA3AF',
-    gas_ct: '#D1D5DB',
-    oil_ct: '#92400E',
+    coal_steam: '#2C3E50',
+    coal_steam_efficient: '#34495E',
+    coal_steam_avg: '#2C3E50',
+    coal_steam_old: '#1A252F',
+    gas_ccgt: '#2372B9',
+    gas_ccgt_efficient: '#2372B9',
+    gas_ccgt_avg: '#1B5E9E',
+    gas_ccgt_old: '#144A7D',
+    gas_ct: '#007FA4',
+    gas_ct_efficient: '#007FA4',
+    gas_ct_avg: '#006A8A',
+    gas_ct_old: '#005570',
+    oil_ct: '#9B6B3A',
 };
 
 const CLEAN_COLORS = {
-    solar: '#F59E0B',
-    wind: '#22C55E',
-    offshore_wind: '#009688',
-    nuclear: '#6366F1',
-    ccs_ccgt: '#64748B',
-    hydro: '#0EA5E9',
-    battery: '#06B6D4',
-    ldes: '#E91E63',
-    geothermal: '#D97706',
+    solar: '#FBB254',
+    wind: '#6BA543',
+    offshore_wind: '#007FA4',
+    nuclear: '#2372B9',
+    ccs_ccgt: '#7F8F97',
+    hydro: '#007FA4',
+    battery: '#CADB2E',
+    ldes: '#F47B27',
+    geothermal: '#9B6B3A',
 };
 
 const PLOTLY_LAYOUT_BASE = {
-    font: { family: 'DM Sans, sans-serif' },
+    font: { family: "'Source Sans Pro', Calibri, Arial, sans-serif", color: '#1A232F' },
     paper_bgcolor: 'rgba(0,0,0,0)',
     plot_bgcolor: 'rgba(0,0,0,0)',
     margin: { t: 30, r: 30, b: 50, l: 60 },
@@ -155,12 +162,12 @@ function renderMeritOrder(data) {
         shapes: [{
             type: 'line', x0: -0.5, x1: sorted.length - 0.5,
             y0: 0, y1: 0, yref: 'paper',
-            line: { color: '#EF4444', width: 0 }
+            line: { color: '#F47B27', width: 0 }
         }],
         annotations: [{
             x: sorted.length - 1, y: avgLMP / (Math.max(...sorted.map(g => g.capacity_mw/1000)) || 1) * 0.5,
             text: `Avg LMP: $${avgLMP.toFixed(1)}`,
-            showarrow: false, font: { color: '#EF4444', size: 12 }
+            showarrow: false, font: { color: '#F47B27', size: 12 }
         }],
     };
 
@@ -178,9 +185,9 @@ function renderProfitability(data) {
     const profit = gens.map(g => g.profit_mwh || 0);
 
     const traces = [
-        { x: names, y: revenue, name: 'Revenue $/MWh', type: 'bar', marker: { color: '#22C55E' } },
-        { x: names, y: cost, name: 'Cost $/MWh', type: 'bar', marker: { color: '#EF4444' } },
-        { x: names, y: profit, name: 'Profit $/MWh', type: 'bar', marker: { color: profit.map(p => p >= 0 ? '#6366F1' : '#F59E0B') } },
+        { x: names, y: revenue, name: 'Revenue $/MWh', type: 'bar', marker: { color: '#6BA543' } },
+        { x: names, y: cost, name: 'Cost $/MWh', type: 'bar', marker: { color: '#F47B27' } },
+        { x: names, y: profit, name: 'Profit $/MWh', type: 'bar', marker: { color: profit.map(p => p >= 0 ? '#6BA543' : '#F47B27') } },
     ];
 
     Plotly.newPlot('chartProfitability', traces, {
@@ -197,7 +204,7 @@ function renderNuclearRevenue(data) {
 
     const categories = ['Energy', 'Capacity', 'PTC', 'Total'];
     const values = [nuc.energy_rev_mwh, nuc.capacity_rev_mwh, nuc.ptc_mwh, nuc.total_mwh];
-    const colors = ['#6366F1', '#0EA5E9', '#22C55E', '#1e293b'];
+    const colors = ['#2372B9', '#007FA4', '#6BA543', '#1A232F'];
 
     Plotly.newPlot('chartNuclearRevenue', [{
         x: categories, y: values, type: 'bar',
@@ -219,7 +226,7 @@ function renderLMPImpact(data) {
 
     Plotly.newPlot('chartLMPImpact', [{
         x: thresholds, y: lmps, type: 'scatter', mode: 'lines+markers',
-        line: { color: '#6366F1', width: 3 },
+        line: { color: '#2372B9', width: 3 },
         marker: { size: 6 },
         hovertemplate: '%{x}% clean: $%{y:.1f}/MWh<extra></extra>',
     }], {
@@ -242,7 +249,7 @@ function renderCCSBreakeven(data) {
     Plotly.newPlot('chartCCSBreakeven', [
         { x: carbonPrices, y: existingCost, name: 'Existing CCGT', mode: 'lines', line: { color: '#6B7280', width: 3 } },
         { x: carbonPrices, y: ccsCost, name: 'CCS Retrofit', mode: 'lines', line: { color: '#64748B', width: 3, dash: 'dash' } },
-        { x: carbonPrices, y: newGasCost, name: 'New Efficient Gas', mode: 'lines', line: { color: '#22C55E', width: 3 } },
+        { x: carbonPrices, y: newGasCost, name: 'New Efficient Gas', mode: 'lines', line: { color: '#6BA543', width: 3 } },
     ], {
         ...PLOTLY_LAYOUT_BASE,
         xaxis: { title: 'Carbon Price ($/ton)', gridcolor: '#f0f0f0' },
@@ -279,8 +286,8 @@ function renderFossilBins(data) {
     const names = bins.map(b => b.unit_type.replace(/_/g, ' '));
 
     Plotly.newPlot('chartFossilBins', [
-        { x: names, y: bins.map(b => b.dispatch_hours || 0), name: 'Dispatch Hours', type: 'bar', yaxis: 'y', marker: { color: '#6366F1' } },
-        { x: names, y: bins.map(b => (b.capacity_factor || 0) * 100), name: 'CF %', type: 'scatter', mode: 'lines+markers', yaxis: 'y2', line: { color: '#EF4444', width: 3 }, marker: { size: 8 } },
+        { x: names, y: bins.map(b => b.dispatch_hours || 0), name: 'Dispatch Hours', type: 'bar', yaxis: 'y', marker: { color: '#2372B9' } },
+        { x: names, y: bins.map(b => (b.capacity_factor || 0) * 100), name: 'CF %', type: 'scatter', mode: 'lines+markers', yaxis: 'y2', line: { color: '#F47B27', width: 3 }, marker: { size: 8 } },
     ], {
         ...PLOTLY_LAYOUT_BASE,
         yaxis: { title: 'Dispatch Hours', gridcolor: '#f0f0f0' },
@@ -299,8 +306,8 @@ function renderCostLadder(data) {
     const revenues = ladder.map(s => s.revenue_mwh);
 
     Plotly.newPlot('chartCostLadder', [
-        { x: cumGW, y: costs, name: 'Cost $/MWh', type: 'scatter', mode: 'lines+markers', line: { color: '#EF4444', width: 3 } },
-        { x: cumGW, y: revenues, name: 'Revenue $/MWh', type: 'scatter', mode: 'lines+markers', line: { color: '#22C55E', width: 3 } },
+        { x: cumGW, y: costs, name: 'Cost $/MWh', type: 'scatter', mode: 'lines+markers', line: { color: '#F47B27', width: 3 } },
+        { x: cumGW, y: revenues, name: 'Revenue $/MWh', type: 'scatter', mode: 'lines+markers', line: { color: '#6BA543', width: 3 } },
     ], {
         ...PLOTLY_LAYOUT_BASE,
         xaxis: { title: 'Cumulative New Clean GW', gridcolor: '#f0f0f0' },
@@ -316,7 +323,7 @@ function renderGasShift(data) {
     // Expect array of {carbon_price, efficient_cf, avg_cf, old_cf}
     if (Array.isArray(shift)) {
         Plotly.newPlot('chartGasShift', [
-            { x: shift.map(s => s.carbon_price), y: shift.map(s => s.efficient_cf * 100), name: 'Efficient CCGT', mode: 'lines', line: { color: '#22C55E', width: 3 } },
+            { x: shift.map(s => s.carbon_price), y: shift.map(s => s.efficient_cf * 100), name: 'Efficient CCGT', mode: 'lines', line: { color: '#6BA543', width: 3 } },
             { x: shift.map(s => s.carbon_price), y: shift.map(s => s.avg_cf * 100), name: 'Average CCGT', mode: 'lines', line: { color: '#6B7280', width: 3 } },
             { x: shift.map(s => s.carbon_price), y: shift.map(s => s.old_cf * 100), name: 'Old CCGT', mode: 'lines', line: { color: '#9CA3AF', width: 3, dash: 'dash' } },
         ], {
@@ -363,7 +370,7 @@ function renderGeneratorTable(data) {
             <td>${fmtNum(g.dispatch_hours, 0)}</td>
             <td>${fmtPct(g.capacity_factor * 100)}</td>
             <td>$${fmtNum(g.avg_revenue_mwh)}</td>
-            <td style="color: ${g.profit_mwh >= 0 ? '#166534' : '#991b1b'}">$${fmtNum(g.profit_mwh)}</td>
+            <td style="color: ${g.profit_mwh >= 0 ? '#4A7C2E' : '#991b1b'}">$${fmtNum(g.profit_mwh)}</td>
             <td><span class="status-badge status-${g.status || 'marginal'}">${g.status || 'unknown'}</span></td>
         </tr>
     `).join('');
@@ -388,7 +395,7 @@ function fmtPct(val) {
 function placeholderChart(containerId) {
     const el = document.getElementById(containerId);
     if (el) {
-        el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#9CA3AF;font-style:italic;">No data for this chart</div>';
+        el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#7F8F97;font-style:italic;">No data for this chart</div>';
     }
 }
 

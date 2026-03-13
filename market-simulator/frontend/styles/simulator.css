@@ -1,22 +1,174 @@
-/* Market Simulator — Page-specific styles */
+/* ============================================================================
+   SIMULATOR.CSS — Constellation Energy Market Simulation Tool
+   Page-specific styles for setup.html and results.html shared elements
+   ============================================================================ */
 
-/* Form sections */
+/* ── Progress bar ── */
+.progress-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--ceg-blue), var(--ceg-teal), var(--ceg-green));
+    z-index: 2000;
+}
+
+/* ── Navigation ── */
+nav {
+    position: fixed;
+    top: 3px;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--glass-border);
+    padding: 0 2rem;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.nav-logo-mark {
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+}
+
+.nav-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.nav-subtitle {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: -2px;
+}
+
+.nav-links {
+    display: flex;
+    gap: 1.5rem;
+    list-style: none;
+}
+
+.nav-links a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    transition: color 0.2s;
+    padding: 4px 0;
+    border-bottom: 2px solid transparent;
+}
+
+.nav-links a:hover,
+.nav-links a.active {
+    color: var(--ceg-blue);
+    border-bottom-color: var(--ceg-blue);
+}
+
+/* ── Hero ── */
+.hero {
+    padding: 120px 2rem 60px;
+    text-align: center;
+    background: var(--bg-page);
+}
+
+.hero-compact {
+    padding: 100px 2rem 40px;
+}
+
+.eyebrow {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--ceg-orange);
+    margin-bottom: 12px;
+}
+
+.hero h1 {
+    font-size: clamp(2.2rem, 4vw, 3.6rem);
+    font-weight: 300;
+    color: var(--text-primary);
+    line-height: 1.15;
+    margin-bottom: 12px;
+}
+
+.hero h1 strong {
+    font-weight: 700;
+}
+
+.hero-subtitle {
+    font-size: 1.1rem;
+    font-weight: 300;
+    color: var(--text-secondary);
+    max-width: 600px;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+/* ── Section eyebrows and headings ── */
+.section-eyebrow {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--ceg-blue);
+    margin-bottom: 8px;
+}
+
+.section-heading {
+    font-size: clamp(1.3rem, 2.5vw, 1.8rem);
+    font-weight: 300;
+    color: var(--text-primary);
+    margin-bottom: var(--space-xs);
+    line-height: 1.3;
+}
+
+.section-note {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: var(--space-lg);
+    font-weight: 300;
+}
+
+/* ── Glass cards ── */
+.glass-card {
+    background: var(--bg-card);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.2s;
+}
+
+.glass-card:hover {
+    box-shadow: var(--shadow-md);
+}
+
+/* ── Form sections ── */
 .form-section {
     margin-bottom: var(--space-lg);
     padding: var(--space-xl);
 }
 
-.form-section .section-title {
-    margin-bottom: var(--space-xs);
-}
-
-.form-section .section-subtitle {
-    margin-bottom: var(--space-lg);
-    color: var(--text-muted);
-    font-size: 0.9rem;
-}
-
-/* Mode toggle */
+/* ── Mode toggle ── */
 .mode-toggle {
     display: flex;
     gap: var(--space-sm);
@@ -26,7 +178,7 @@
 
 .mode-toggle .toggle-btn {
     padding: 10px 20px;
-    border: 2px solid var(--border);
+    border: 2px solid var(--glass-border);
     background: var(--bg-page);
     border-radius: var(--radius-md);
     cursor: pointer;
@@ -37,13 +189,13 @@
 }
 
 .mode-toggle .toggle-btn:hover {
-    border-color: var(--primary);
-    color: var(--primary);
+    border-color: var(--ceg-blue);
+    color: var(--ceg-blue);
 }
 
 .mode-toggle .toggle-btn.active {
-    background: var(--primary);
-    border-color: var(--primary);
+    background: var(--ceg-blue);
+    border-color: var(--ceg-blue);
     color: white;
 }
 
@@ -51,9 +203,10 @@
     color: var(--text-muted);
     font-style: italic;
     font-size: 0.9rem;
+    font-weight: 300;
 }
 
-/* ISO selector overrides for form context */
+/* ── ISO selector ── */
 .iso-selector {
     display: flex;
     gap: var(--space-sm);
@@ -63,7 +216,7 @@
 
 .iso-btn {
     padding: 8px 16px;
-    border: 2px solid var(--border);
+    border: 2px solid var(--glass-border);
     background: white;
     border-radius: var(--radius-pill);
     cursor: pointer;
@@ -71,15 +224,16 @@
     font-weight: 600;
     font-size: 0.9rem;
     transition: all 0.2s;
+    color: var(--text-primary);
 }
 
 .iso-btn:hover {
-    border-color: var(--primary);
+    border-color: var(--ceg-blue);
 }
 
 .iso-btn.active {
-    background: var(--primary);
-    border-color: var(--primary);
+    background: var(--ceg-blue);
+    border-color: var(--ceg-blue);
     color: white;
 }
 
@@ -92,9 +246,9 @@
 
 .iso-summary-card {
     padding: var(--space-sm);
-    background: var(--bg-page);
+    background: var(--bg-page-alt);
     border-radius: var(--radius-sm);
-    border-left: 3px solid var(--primary);
+    border-left: 3px solid var(--ceg-blue);
 }
 
 .iso-summary-card .iso-name {
@@ -107,7 +261,7 @@
     font-size: 0.8rem;
 }
 
-/* Input groups */
+/* ── Input groups ── */
 .input-group {
     display: flex;
     flex-direction: column;
@@ -122,19 +276,21 @@
 
 .input-group input[type="number"] {
     padding: 8px 12px;
-    border: 1.5px solid var(--border);
+    border: 1.5px solid var(--glass-border);
     border-radius: var(--radius-sm);
-    font-family: var(--font-data, var(--font-body));
+    font-family: var(--font-data);
     font-size: 0.95rem;
     width: 100%;
     box-sizing: border-box;
     transition: border-color 0.2s;
+    color: var(--text-primary);
+    background: white;
 }
 
 .input-group input[type="number"]:focus {
     outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    border-color: var(--ceg-blue);
+    box-shadow: 0 0 0 3px rgba(35, 114, 185, 0.1);
 }
 
 .input-with-presets {
@@ -155,7 +311,7 @@
 
 .preset-btn {
     padding: 6px 10px;
-    border: 1.5px solid var(--border);
+    border: 1.5px solid var(--glass-border);
     background: white;
     border-radius: var(--radius-sm);
     cursor: pointer;
@@ -165,22 +321,23 @@
     transition: all 0.15s;
     min-width: 28px;
     text-align: center;
+    color: var(--text-primary);
 }
 
 .preset-btn:hover {
-    border-color: var(--primary);
-    color: var(--primary);
+    border-color: var(--ceg-blue);
+    color: var(--ceg-blue);
 }
 
 .preset-btn.active {
-    background: var(--primary);
-    border-color: var(--primary);
+    background: var(--ceg-blue);
+    border-color: var(--ceg-blue);
     color: white;
 }
 
 .preset-btn-wide {
     padding: 6px 12px;
-    border: 1.5px solid var(--border);
+    border: 1.5px solid var(--glass-border);
     background: white;
     border-radius: var(--radius-pill);
     cursor: pointer;
@@ -189,20 +346,21 @@
     font-size: 0.8rem;
     transition: all 0.15s;
     white-space: nowrap;
+    color: var(--text-primary);
 }
 
 .preset-btn-wide:hover {
-    border-color: var(--primary);
-    color: var(--primary);
+    border-color: var(--ceg-blue);
+    color: var(--ceg-blue);
 }
 
 .preset-btn-wide.active {
-    background: var(--primary);
-    border-color: var(--primary);
+    background: var(--ceg-blue);
+    border-color: var(--ceg-blue);
     color: white;
 }
 
-/* Carbon controls */
+/* ── Carbon controls ── */
 .carbon-controls {
     display: flex;
     flex-direction: column;
@@ -215,11 +373,11 @@
     flex-wrap: wrap;
 }
 
-/* Toggle button groups */
+/* ── Toggle button groups ── */
 .toggle-btn-group {
     display: flex;
     gap: 2px;
-    background: var(--bg-page);
+    background: var(--bg-page-alt);
     border-radius: var(--radius-md);
     padding: 2px;
 }
@@ -239,16 +397,16 @@
 }
 
 .toggle-btn-group .toggle-btn:hover {
-    color: var(--primary);
+    color: var(--ceg-blue);
 }
 
 .toggle-btn-group .toggle-btn.active {
     background: white;
-    color: var(--primary);
+    color: var(--ceg-blue);
     box-shadow: var(--shadow-sm);
 }
 
-/* Data table for heat rates */
+/* ── Data table ── */
 .data-table {
     width: 100%;
     border-collapse: collapse;
@@ -258,7 +416,7 @@
 .data-table th {
     text-align: left;
     padding: 10px 12px;
-    border-bottom: 2px solid var(--border);
+    border-bottom: 2px solid var(--glass-border);
     font-weight: 700;
     color: var(--text-primary);
     font-size: 0.8rem;
@@ -268,29 +426,32 @@
 
 .data-table td {
     padding: 8px 12px;
-    border-bottom: 1px solid var(--border-light, #f0f0f0);
+    border-bottom: 1px solid var(--border-light);
+    color: var(--text-primary);
 }
 
 .data-table .table-input {
     padding: 6px 8px;
-    border: 1.5px solid var(--border);
+    border: 1.5px solid var(--glass-border);
     border-radius: var(--radius-sm);
-    font-family: var(--font-data, var(--font-body));
+    font-family: var(--font-data);
     font-size: 0.9rem;
     width: 80px;
+    color: var(--text-primary);
+    background: white;
 }
 
 .data-table .table-input:focus {
     outline: none;
-    border-color: var(--primary);
+    border-color: var(--ceg-blue);
 }
 
 .data-table .readonly {
     color: var(--text-muted);
-    font-family: var(--font-data, var(--font-mono));
+    font-family: var(--font-data);
 }
 
-/* Collapsible sections */
+/* ── Collapsible ── */
 .collapsible-header {
     cursor: pointer;
     display: flex;
@@ -301,6 +462,7 @@
 .collapse-icon {
     font-size: 0.7rem;
     transition: transform 0.2s;
+    color: var(--text-muted);
 }
 
 .collapsible-content {
@@ -317,7 +479,7 @@
     transform: rotate(180deg);
 }
 
-/* Slider group */
+/* ── Slider group ── */
 .slider-group {
     display: flex;
     align-items: center;
@@ -331,7 +493,7 @@
     height: 6px;
     -webkit-appearance: none;
     appearance: none;
-    background: var(--border);
+    background: var(--glass-border);
     border-radius: 3px;
     outline: none;
 }
@@ -341,28 +503,30 @@
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background: var(--primary);
+    background: var(--ceg-blue);
     cursor: pointer;
 }
 
 .slider-value {
-    font-family: var(--font-data, var(--font-body));
+    font-family: var(--font-data);
     font-weight: 700;
     font-size: 1.1rem;
-    color: var(--primary);
+    color: var(--ceg-blue);
     min-width: 80px;
 }
 
 .slider-input {
     width: 70px;
     padding: 6px 8px;
-    border: 1.5px solid var(--border);
+    border: 1.5px solid var(--glass-border);
     border-radius: var(--radius-sm);
-    font-family: var(--font-data, var(--font-body));
+    font-family: var(--font-data);
     font-size: 0.9rem;
+    color: var(--text-primary);
+    background: white;
 }
 
-/* Checkbox group */
+/* ── Checkbox group ── */
 .checkbox-group {
     display: flex;
     gap: var(--space-md);
@@ -375,16 +539,17 @@
     gap: 6px;
     font-weight: 500;
     cursor: pointer;
+    color: var(--text-primary);
 }
 
-/* Input hint */
+/* ── Input hint ── */
 .input-hint {
     font-size: 0.75rem;
     color: var(--text-muted);
     font-style: italic;
 }
 
-/* Submit section */
+/* ── Submit section ── */
 .submit-section {
     text-align: center;
     padding: var(--space-xl) 0;
@@ -392,32 +557,7 @@
 
 .submit-btn {
     padding: 16px 48px;
-    background: var(--primary);
-    color: white;
-    border: none;
-    border-radius: var(--radius-md);
-    font-family: var(--font-heading);
-    font-weight: 700;
     font-size: 1.1rem;
-    cursor: pointer;
-    transition: all 0.2s;
-    box-shadow: var(--shadow-md);
-}
-
-.submit-btn:hover {
-    background: var(--primary-dark, #4f46e5);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-lg);
-}
-
-.submit-btn:active {
-    transform: translateY(0);
-}
-
-.submit-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
 }
 
 .submit-spinner {
@@ -444,30 +584,48 @@
 }
 
 .submit-status.error {
-    color: var(--danger, #ef4444);
+    color: var(--danger);
 }
 
 .submit-status.success {
-    color: var(--success, #22c55e);
+    color: var(--ceg-green);
 }
 
-/* Footer */
+/* ── Footer ── */
 .page-footer {
-    background: var(--navy, #1e293b);
+    background: var(--text-primary);
     color: white;
-    padding: var(--space-xl);
+    padding: var(--space-xl) var(--space-lg);
     text-align: center;
     font-size: 0.85rem;
-    opacity: 0.9;
+    font-weight: 300;
+}
+
+.page-footer .footer-note {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.75rem;
+    margin-top: 4px;
 }
 
 .bottom-banner {
-    height: 4px;
-    background: linear-gradient(90deg, var(--primary), #22c55e, #f59e0b);
+    height: 3px;
+    background: linear-gradient(90deg, var(--ceg-blue), var(--ceg-teal), var(--ceg-green));
 }
 
-/* Responsive */
+/* ── Responsive ── */
 @media (max-width: 768px) {
+    nav {
+        padding: 0 1rem;
+    }
+
+    .nav-links {
+        gap: 0.75rem;
+    }
+
+    .hero {
+        padding: 100px 1rem 40px;
+    }
+
     .form-section {
         padding: var(--space-lg);
     }
