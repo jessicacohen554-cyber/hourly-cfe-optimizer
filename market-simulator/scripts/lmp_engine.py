@@ -118,9 +118,21 @@ CO2_PRICES = {
     'High': 14.00,    # $/ton — full RGGI clearing price
 }
 
-# 10% Adder — PJM market rules allow generators 10% markup above cost-based offers
-# PJM SOM 2024: 10% adder contributed $2.00/MWh (5.9% of RT LMP)
-TEN_PERCENT_ADDER = 0.10
+# Cost-based offer adder — ISO-specific markup above marginal cost
+# PJM Manual 15 allows 10% markup for cost-based offers (SOM 2024: $2.00/MWh, 5.9% of RT LMP)
+# Energy-only markets (ERCOT, SPP) use competitive offers — no regulatory markup
+# MISO has cost-based offers but lower effective markup due to market structure
+TEN_PERCENT_ADDER = 0.10  # Legacy default (backward compat)
+
+COST_BASED_ADDERS = {
+    'CAISO': 0.10,   # RA market — cost-based offer rules similar to PJM
+    'ERCOT': 0.00,   # Energy-only — competitive offers, no regulatory markup
+    'PJM':   0.10,   # RPM capacity market — PJM Manual 15 cost-based offer rule
+    'NYISO': 0.10,   # ICAP capacity market — NYISO OATT cost-based rules
+    'NEISO': 0.10,   # FCM capacity market — ISO-NE Manual for Market Operations
+    'MISO':  0.07,   # PRA capacity market — lower effective markup (Module C energy offer rules)
+    'SPP':   0.00,   # Energy-only — competitive offers, no regulatory markup
+}
 
 # Fuel prices ($/MMBtu) by sensitivity level
 FUEL_PRICES = {
@@ -197,22 +209,28 @@ GAS_AVAILABILITY_FACTOR = {
 def compute_marginal_costs(fuel_level='Medium', co2_level='Medium',
                            nox_price=0.0, sox_price=0.0,
                            custom_fuel_prices=None, custom_co2_price=None,
-                           custom_heat_rates=None, custom_vom=None):
+                           custom_heat_rates=None, custom_vom=None,
+                           iso=None):
     """Compute marginal cost ($/MWh) for each fossil unit type.
 
-    PJM Manual 15 cost-based offer formula:
+    Cost-based offer formula:
       MC = (Incremental Heat Rate × Fuel Price + VOM + CO2 Rate × CO2 Price
-            + NOx Rate × NOx Price + SOx Rate × SOx Price) × (1 + 10% Adder)
+            + NOx Rate × NOx Price + SOx Rate × SOx Price) × (1 + Adder)
+
+    The adder is ISO-specific:
+      - PJM/NYISO/NEISO/CAISO: 10% (PJM Manual 15 cost-based offer rule)
+      - MISO: 7% (Module C energy offer rules, lower effective markup)
+      - ERCOT/SPP: 0% (energy-only markets, competitive offers)
 
     NOx/SOx rates are in lb/MWh; prices are $/ton. Conversion: rate_lb * price_$/ton / 2000.
-    The 10% adder is PJM's allowed markup above cost-based offers (SOM 2024: $2.00/MWh).
     CO2 costs reflect RGGI and state compliance programs (SOM 2024: $1.94/MWh).
     """
     fp = custom_fuel_prices if custom_fuel_prices else FUEL_PRICES[fuel_level]
     co2_price = custom_co2_price if custom_co2_price is not None else CO2_PRICES.get(co2_level, CO2_PRICES['Medium'])
     hr = custom_heat_rates if custom_heat_rates else HEAT_RATES
     vm = custom_vom if custom_vom else VOM
-    adder = 1.0 + TEN_PERCENT_ADDER
+    adder_rate = COST_BASED_ADDERS.get(iso, TEN_PERCENT_ADDER) if iso else TEN_PERCENT_ADDER
+    adder = 1.0 + adder_rate
 
     costs = {}
     for unit_type in hr:
@@ -301,7 +319,8 @@ def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw
                                 custom_fuel_prices=custom_fuel_prices,
                                 custom_co2_price=custom_co2_price,
                                 custom_heat_rates=custom_heat_rates,
-                                custom_vom=custom_vom)
+                                custom_vom=custom_vom,
+                                iso=iso)
 
     if total_fossil_mw is None:
         installed = INSTALLED_FOSSIL_MW.get(iso, 80_000)
