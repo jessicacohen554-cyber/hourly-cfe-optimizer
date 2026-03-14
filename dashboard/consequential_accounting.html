@@ -182,16 +182,16 @@
     align-items: flex-start;
     margin: 12px 0;
     padding: 12px 16px;
-    background: rgba(239,68,68,0.03);
+    background: rgba(100,116,139,0.04);
     border-radius: var(--radius-md);
-    border-left: 3px solid rgba(239,68,68,0.3);
+    border-left: 3px solid rgba(100,116,139,0.25);
 }
 .failure-mode-num {
     flex-shrink: 0;
     font-family: var(--font-heading);
     font-weight: 700;
     font-size: 0.82rem;
-    color: var(--red-neg);
+    color: var(--slate);
     min-width: 20px;
 }
 .failure-mode-text {
@@ -253,7 +253,7 @@
 
 <div class="header" id="pageHeader">
     <h1>Carbon Accounting Frameworks</h1>
-    <div class="subtitle">How you count carbon determines where capital flows — and whether it decarbonizes the grid</div>
+    <div class="subtitle">How you count carbon determines where capital flows — and how it reshapes the grid</div>
     <div class="header-accent"></div>
 </div>
 
@@ -261,12 +261,12 @@
 <section class="hero-overview section-light">
 <div class="hero-inner">
     <div class="hero-text">
-        <h2>Three Ways to Count Carbon: Which One Actually Decarbonizes the Grid?</h2>
+        <h2>Three Ways to Count Carbon: How Each Shapes Grid Decarbonization</h2>
         <p class="hero-lead">The GHG Protocol Scope 2 revision has sparked a three-way debate about how corporations should account for electricity emissions. The answer determines where hundreds of billions in clean energy capital flows — and whether it actually decarbonizes anything.</p>
-        <p>Annual RECs are the status quo. The proposed revision adds hourly matching with deliverability constraints — still attributional, but aligned to grid physics. A third camp argues for pure consequential accounting: chase the cheapest $/tCO&#8322; anywhere, regardless of whether it matches your load in time or space. We model <strong>7 procurement strategies across 3 families</strong> to assess how each shapes investment incentives across 7 ISO/RTO regions.</p>
+        <p>Annual RECs are the status quo. The proposed revision adds hourly matching with deliverability constraints — still attributional, but aligned to grid physics. A parallel track develops consequential accounting: optimize for the cheapest $/tCO&#8322; displaced anywhere on the grid, independent of temporal or spatial matching to the buyer's load. We model <strong>10 procurement strategies across 3 families</strong> to assess how each shapes investment incentives across 7 ISO/RTO regions.</p>
         <div class="counter-row">
             <div class="counter-card">
-                <div class="counter-val" data-target="7" data-suffix="">7</div>
+                <div class="counter-val" data-target="10" data-suffix="">10</div>
                 <div class="counter-lbl">Procurement<br>Strategies</div>
             </div>
             <div class="counter-card">
@@ -288,7 +288,7 @@
         <div class="compare-box attr">
             <h4>Annual Attribution</h4>
             <p>"We purchased RECs equal to 100% of our annual consumption."</p>
-            <p style="margin-top:10px; font-size:0.72rem; color:rgba(239,68,68,0.7);">Current Scope 2 MBM<br>&#10007; No temporal matching<br>&#10007; No deliverability<br>&#10007; Near-zero grid impact</p>
+            <p style="margin-top:10px; font-size:0.72rem; color:rgba(239,68,68,0.7);">Current Scope 2 MBM<br>&#10007; No temporal matching<br>&#10007; No deliverability<br>&#8226; Lowest cost &amp; barrier to entry</p>
         </div>
         <div class="compare-box hourly">
             <h4>Hourly Attribution</h4>
@@ -298,7 +298,7 @@
         <div class="compare-box conseq">
             <h4>Consequential</h4>
             <p>"Our investment displaced 45,000 tCO&#8322; at $38/ton — the cheapest abatement we could find."</p>
-            <p style="margin-top:10px; font-size:0.72rem; color:rgba(34,197,94,0.7);">WattTime / Emissions First<br>&#10003; Cheapest $/tCO&#8322;<br>&#10007; No temporal matching<br>&#10007; No spatial matching</p>
+            <p style="margin-top:10px; font-size:0.72rem; color:rgba(34,197,94,0.7);">Impact-Based Framework<br>&#10003; Cheapest $/tCO&#8322;<br>&#10003; Cross-regional optimization<br>&#10007; No temporal or spatial matching</p>
         </div>
     </div>
 </div>
@@ -313,22 +313,22 @@
         <!-- Tier 1: The headline -->
         <div class="finding-row top">
             <div class="finding-card tier1">
-                <div class="finding-num red">20–30%</div>
-                <div class="finding-label">The participation threshold where consequential accounting breaks: just 20–30% of C&amp;I load</div>
-                <div class="finding-desc">Across 7 ISO/RTOs (~2.7 million GWh), pure consequential drives capital toward coal-heavy grids (SPP, MISO) at ~$15–25/tCO&#8322; and away from gas-dependent grids (NEISO, NYISO, CAISO) where displacement costs $40–80/tCO&#8322;. At 25% C&amp;I participation, gas-only grids receive less investment than their load share — the free-rider dynamics dominate and nobody funds firm clean power where it's needed most.</div>
+                <div class="finding-num amber">10 Paths</div>
+                <div class="finding-label">The same corporate dollar produces dramatically different outcomes depending on accounting framework</div>
+                <div class="finding-desc">Across 7 ISO/RTOs (~2.7 million GWh), the three accounting families — consequential, hourly, and annual — create distinct investment incentive structures. Consequential directs capital cross-regionally toward the cheapest marginal abatement; hourly matching constrains procurement to the buyer's own grid on an 8,760-hour basis; annual matching allows temporal flexibility that simplifies compliance but weakens signals for firm clean power and storage. Each framework involves real tradeoffs between cost efficiency, verifiability, and grid transformation.</div>
             </div>
         </div>
         <!-- Tier 2: The two pillars -->
         <div class="finding-row mid">
             <div class="finding-card tier2">
                 <div class="finding-num amber">2–5&times;</div>
-                <div class="finding-label">The last 10% costs more — and that's exactly where innovation happens</div>
-                <div class="finding-desc">Hourly matching from 90% &rarr; 100% costs 2–5&times; more per ton. Consequential accounting would tell you to stop and spend that dollar elsewhere. But these hard hours drive the technology development (firm clean power, LDES) that deep decarbonization requires.</div>
+                <div class="finding-label">The last-mile cost escalation reveals a real tradeoff</div>
+                <div class="finding-desc">Hourly matching from 90% &rarr; &#8805;99.99% costs 2–5&times; more per MWh. These hard hours — nights, low-wind winter days — require firm clean power and storage that VRE alone cannot provide. The consequential critique that this marginal dollar could buy more abatement elsewhere is valid at the margin; the hourly matching argument is that these costs drive the technology learning curves (nuclear, CCS, LDES) needed for system-wide deep decarbonization.</div>
             </div>
             <div class="finding-card tier2">
-                <div class="finding-num green">Both</div>
-                <div class="finding-label">Hourly attribution is attributional AND has strong consequential impact</div>
-                <div class="finding-desc">Hourly matching with deliverability creates accurate inventory accounting aligned to grid physics — while simultaneously driving real emissions displacement. It's not one or the other. The best attributional method also produces the best real-world outcomes.</div>
+                <div class="finding-num green">Dual Effect</div>
+                <div class="finding-label">Hourly attribution produces both inventory accounting and real emissions displacement</div>
+                <div class="finding-desc">Because hourly matching requires procurement aligned to grid physics and deliverability, it produces accurate consumption-based inventory accounting while also driving local clean energy deployment. This dual effect means the attributional framework also generates consequential outcomes — though at higher cost than purpose-optimized consequential approaches at low-to-moderate CFE targets.</div>
             </div>
         </div>
         <!-- Tier 3: Supporting details -->
@@ -339,14 +339,14 @@
                 <div class="finding-desc">Annual attribution (current Scope 2) and hourly attribution (proposed revision) are both inventory accounting. Consequential is a separate paradigm — estimating marginal impact rather than tracking consumption. The GHG Protocol is consulting on both tracks simultaneously.</div>
             </div>
             <div class="finding-card tier3">
-                <div class="finding-num purple">Free Rider</div>
-                <div class="finding-label">Consequential creates free-rider dynamics</div>
-                <div class="finding-desc">If everyone chases the cheapest $/tCO&#8322; regardless of location, buyers cluster on the same low-hanging fruit while their own grids remain dirty. The data center in PJM claims abatement from a MISO wind farm while running on coal.</div>
+                <div class="finding-num purple">Coordination</div>
+                <div class="finding-label">Cross-regional optimization raises collective action questions</div>
+                <div class="finding-desc">When buyers independently optimize for cheapest $/tCO&#8322; regardless of location, procurement concentrates on the same low-cost opportunities. This raises questions about whether local grids receive sufficient investment — particularly gas-dependent grids where abatement costs more but is still necessary for system-wide decarbonization.</div>
             </div>
             <div class="finding-card tier3">
-                <div class="finding-num amber">Counterfactual</div>
-                <div class="finding-label">Marginal impact modeling is inherently unverifiable</div>
-                <div class="finding-desc">Consequential accounting depends on estimating what would have happened without the intervention. Marginal emissions rates shift hourly and vary by model assumptions. This creates massive scope for cherry-picking baselines and gaming results.</div>
+                <div class="finding-num amber">Baselines</div>
+                <div class="finding-label">Marginal impact measurement depends on model assumptions</div>
+                <div class="finding-desc">Consequential accounting relies on estimating counterfactual outcomes — what would have happened without the intervention. Marginal emissions rates vary by hour, model, and baseline assumption. This introduces measurement uncertainty and makes third-party verification more challenging than for attributional approaches.</div>
             </div>
         </div>
     </div>
@@ -386,14 +386,14 @@
             </ul>
         </div>
         <div class="concept-card">
-            <h3 style="color: var(--green-pos);">3. Consequential / Impact <span class="badge conseq">Advocated</span></h3>
+            <h3 style="color: var(--green-pos);">3. Consequential / Impact <span class="badge conseq">Impact-Based</span></h3>
             <p>Championed by WattTime and the Emissions First Partnership. Estimate marginal emissions impact of procurement decisions. Optimize for cheapest $/tCO&#8322; abated — anywhere, anytime.</p>
             <ul>
                 <li>Separate GHG Protocol consultation track (parallel to Scope 2 revision)</li>
                 <li>No requirement to match load temporally or spatially</li>
                 <li>Metric: tCO&#8322; displaced per dollar, measured via marginal emissions rates</li>
                 <li>Philosophy: pursue the cheapest abatement wherever it exists on the grid</li>
-                <li><strong>Intellectual appeal but potential perverse incentives</strong> when decoupled from load</li>
+                <li><strong>Optimizes for lowest-cost abatement</strong>; does not require temporal or spatial matching to buyer load</li>
             </ul>
         </div>
     </div>
@@ -401,8 +401,8 @@
 
 <div class="insight-callout fade-in">
     <div class="insight-box">
-        <h3>The Critical Distinction</h3>
-        <p>Hourly attribution is <em>attributional</em> — it tracks what you consume and what you procure. But because it aligns accounting to grid physics and deliverability, it produces <span class="highlight">strong consequential impact as a natural byproduct</span>. You can't match every hour without deploying resources that actually serve your grid. Pure consequential accounting, by contrast, explicitly <em>doesn't require</em> matching your load. It says: forget your consumption profile — just find the cheapest ton of CO&#8322; to displace anywhere. The question is whether that philosophy, scaled across thousands of corporate buyers, creates the right incentives for deep grid decarbonization.</p>
+        <h3>The Core Tradeoff</h3>
+        <p>Hourly attribution is <em>attributional</em> — it tracks what you consume and what you procure. Because it aligns accounting to grid physics and deliverability, it also produces consequential impact: you can't match every hour without deploying resources that actually serve your grid. Consequential accounting takes a different approach — it explicitly optimizes for the cheapest $/tCO&#8322; displaced anywhere on the grid, regardless of the buyer's consumption profile. The central question in the GHG Protocol debate is how to weigh these tradeoffs: hourly matching's physics alignment and verifiability vs. consequential's cost efficiency and global optimization. Both frameworks aim for decarbonization but create different investment incentive structures at scale.</p>
     </div>
 </div>
 
@@ -462,7 +462,7 @@
     <th>Dimension</th>
     <th>Annual Attribution <span class="badge attr">Current</span></th>
     <th>Hourly Attribution <span class="badge hourly">Proposed</span></th>
-    <th>Consequential <span class="badge conseq">Advocated</span></th>
+    <th>Consequential <span class="badge conseq">Impact-Based</span></th>
 </tr>
 </thead>
 <tbody>
@@ -512,7 +512,7 @@
     <td><strong>Gaming Risk</strong></td>
     <td>High (temporal/spatial arbitrage)</td>
     <td>Low (physics constrains claims)</td>
-    <td>High (counterfactual modeling is unverifiable)</td>
+    <td>Moderate-High (counterfactual baselines are model-dependent)</td>
 </tr>
 <tr>
     <td><strong>Typical Claim</strong></td>
@@ -533,21 +533,21 @@
 <!-- ============ SECTION 4: Strategy Deep Dives ============ -->
 <div class="section-header fade-in">
     <div class="section-number">4</div>
-    <h2>Seven Strategies We Assess</h2>
-    <p>The same corporate dollar can displace dramatically different amounts of carbon depending on <strong>how</strong> and <strong>where</strong> it's deployed. We model 7 procurement strategies across 3 families, each with distinct rules about what counts as "clean," where investment goes, and how emissions are attributed. Click each family below for the full deep dive.</p>
+    <h2>Ten Strategies We Assess</h2>
+    <p>The same corporate dollar can displace dramatically different amounts of carbon depending on <strong>how</strong> and <strong>where</strong> it's deployed. We model 10 procurement strategies across 3 families, each with distinct rules about what counts as "clean," where investment goes, and how emissions are attributed. Click each family below for the full deep dive.</p>
 </div>
 
-<section class="content-section fade-in panel-navy" style="padding-top: 0;">
+<section class="content-section fade-in" style="padding-top: 0;">
 
 <!-- ───────── CONSEQUENTIAL ACCORDION ───────── -->
 <div class="strategy-accordion" id="accordionConseq">
     <div class="strategy-accordion-header" onclick="toggleAccordion('accordionConseq')">
         <div class="strategy-accordion-icon conseq">1</div>
         <div class="strategy-accordion-text">
-            <h3>Consequential Accounting (Strategies 1A &amp; 1B)</h3>
+            <h3>Consequential Accounting (Strategies 1A, 1B &amp; 1C)</h3>
             <p class="strat-summary">Cross-regional deployment queue — build clean energy wherever the marginal abatement cost is lowest, regardless of where the buyer sits.</p>
         </div>
-        <span class="strategy-accordion-badge conseq">2 variants</span>
+        <span class="strategy-accordion-badge conseq">3 variants</span>
         <div class="strategy-accordion-chevron">&#9660;</div>
     </div>
     <div class="strategy-accordion-body">
@@ -555,7 +555,7 @@
 
             <h4 style="font-family: var(--font-heading); font-size: 0.95rem; color: var(--navy); margin: 20px 0 8px;">How It Works</h4>
             <p style="font-size: 0.88rem; line-height: 1.7; color: var(--slate);">
-                Consequential procurement builds clean energy <strong>wherever the marginal abatement cost is lowest</strong>, regardless of the buyer's location. This creates a cross-regional deployment queue — a merit order of decarbonization opportunities ranked by $/tCO&#8322; displaced. At each threshold step, the optimizer deploys resources sequentially across all 7 ISOs, locking in prior deployments as committed infrastructure. Coal displacement comes first (~$15–25/tCO&#8322;), then gas (~$40–80/tCO&#8322;).
+                Consequential procurement builds clean energy <strong>wherever the marginal abatement cost is lowest</strong>, regardless of the buyer's location. This creates a cross-regional deployment queue — a merit order of decarbonization opportunities ranked by $/tCO&#8322; displaced. At each threshold step, the optimizer deploys resources sequentially across all 7 ISOs, locking in prior deployments as committed infrastructure. The deployment queue follows the fossil fuel merit order: coal displacement comes first (highest emissions per MWh), then oil, then gas.
             </p>
 
             <div class="strat-variant-card">
@@ -570,8 +570,14 @@
                 <p>Credits reductions against <strong>only the fossil fleet's emission rate</strong>. Uses actual marginal dispatch rates from 8,760-hour models where available; falls back to fossil-fleet average as proxy. At 80% C&amp;I participation, 1B attributes ~33% more emissions to corporate load than 1A — setting a higher bar for displacement and providing a more honest picture of what fossil generation is actually being displaced.</p>
             </div>
 
+            <div class="strat-variant-card">
+                <div class="strat-tag" style="background: rgba(34,197,94,0.2); color: var(--green-pos);">Strategy 1C</div>
+                <h4>Marginal Emission Baseline</h4>
+                <p>Credits reductions against <strong>marginal emission rates</strong> — the emission rate of the specific generator that would have run next absent the clean intervention. Sets the highest bar for displacement claims: in MISO, marginal rates are ~17% higher than the fossil fleet average; in SPP, ~22% higher. Each MWh of clean energy displaces more CO&#8322; under marginal accounting, but the baseline is harder to clear. In gas-dominated grids (CAISO, NEISO), marginal and fossil-average rates are nearly identical since gas CCGTs are the marginal unit in most hours.</p>
+            </div>
+
             <div class="insight-box" style="margin: 16px 0;">
-                <strong>1A vs 1B:</strong> Both strategies deploy identical resources in the same sequence — the deployment queue is the same. The difference is purely in how emissions are <em>attributed</em>. 1B is the superior method because it measures what actually gets displaced from the fossil stack, not a diluted grid average. Same physics, different accounting.
+                <strong>1A vs 1B vs 1C:</strong> All three strategies deploy identical resources in the same cross-regional sequence — the deployment queue is the same. The difference is purely in how emissions are <em>attributed</em>. 1A uses the full grid average (lowest bar), 1B uses the fossil fleet average (higher bar), and 1C uses the marginal emission rate (highest bar in coal-heavy grids). Same physics, different accounting — the choice of baseline determines how much credit each buyer can claim per MWh procured.
             </div>
 
             <h4 style="font-family: var(--font-heading); font-size: 0.95rem; color: var(--navy); margin: 20px 0 8px;">The Coal Wall</h4>
@@ -579,8 +585,8 @@
                 Consequential deployment follows the fossil fuel merit order: <strong>coal is displaced first</strong> (highest emissions per MWh, ~2,200 lb CO&#8322;/MWh), then oil, then gas (~850 lb/MWh). The "coal wall" is the threshold where all coal generation has been retired from the dispatch stack. In most ISOs, this happens at roughly 70% CFE. Beyond the coal wall, every additional clean MWh only displaces gas — cutting the marginal carbon benefit nearly in half and sharply increasing the marginal abatement cost. CAISO, with zero coal in its dispatch stack, is entirely gas + oil from day one.
             </p>
 
-            <h4 style="font-family: var(--font-heading); font-size: 0.95rem; color: var(--navy); margin: 20px 0 8px;">Key Risks at Scale</h4>
-            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">Five failure modes emerge when consequential accounting is used as a system-wide procurement framework rather than a single buyer's analytical tool:</p>
+            <h4 style="font-family: var(--font-heading); font-size: 0.95rem; color: var(--navy); margin: 20px 0 8px;">Considerations at Scale</h4>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">Five dynamics emerge when consequential accounting scales from individual buyer analysis to a system-wide procurement framework:</p>
 
             <div class="failure-mode-item">
                 <div class="failure-mode-num">1</div>
@@ -588,27 +594,27 @@
             </div>
             <div class="failure-mode-item">
                 <div class="failure-mode-num">2</div>
-                <div class="failure-mode-text"><strong>Saturation &amp; Diminishing Returns.</strong> Every grid has a finite stock of "cheap abatement." Consequential concentrates capital on this stock until it's exhausted. SPP exhausts coal/oil at ~52% penetration, MISO at ~42%, PJM/ERCOT at ~24%. After saturation, consequential produces the same $/tCO&#8322; as hourly matching — but a decade of capital has already been directed away from gas-dependent grids.</div>
+                <div class="failure-mode-text"><strong>Saturation &amp; Diminishing Returns.</strong> Every grid has a finite stock of high-emission generators available for displacement. Consequential concentrates capital on this stock until it's exhausted — coal-heavy grids saturate first because they have the cheapest abatement. Once coal generation is retired from the dispatch stack, every additional clean MWh only displaces gas, cutting the marginal carbon benefit roughly in half and raising the effective $/tCO&#8322;.</div>
             </div>
             <div class="failure-mode-item">
                 <div class="failure-mode-num">3</div>
-                <div class="failure-mode-text"><strong>Fossil Lock-In.</strong> By directing all marginal clean energy capital to coal displacement, consequential extends the economic life of gas infrastructure in gas-dependent grids (NEISO, NYISO, CAISO) by decades. Without demand signals for nuclear/CCS/LDES, no developer builds firm clean alternatives. Gas plants face no competitive pressure.</div>
+                <div class="failure-mode-text"><strong>Firm Clean Underinvestment.</strong> By directing marginal clean energy capital toward the cheapest abatement opportunities (primarily coal displacement), consequential may delay investment in firm clean alternatives for gas-dependent grids (NEISO, NYISO, CAISO). Without specific demand signals for nuclear, CCS, or LDES, developers have less incentive to build these technologies in regions where gas is the primary fossil fuel. Consequential proponents counter that system-wide emissions reduction is more efficient than requiring every region to develop its own firm clean resources simultaneously.</div>
             </div>
             <div class="failure-mode-item">
                 <div class="failure-mode-num">4</div>
-                <div class="failure-mode-text"><strong>Geographic Clustering.</strong> SPP + MISO (~33% of C&amp;I load) attract 45–55% of consequential investment. NEISO + NYISO + CAISO (~18% of load) receive only 8–12%. Corporate buyers in gas-dependent grids fund abatement in coal-heavy grids while their own grids remain dirty.</div>
+                <div class="failure-mode-text"><strong>Geographic Clustering.</strong> Because consequential optimizes for cheapest $/tCO&#8322; cross-regionally, investment concentrates in grids with the largest coal fleets (e.g., SPP, MISO) while gas-dependent grids (NEISO, NYISO, CAISO) receive proportionally less. Corporate buyers in these gas-heavy regions may fund abatement in other grids while their own grids see limited clean energy deployment.</div>
             </div>
             <div class="failure-mode-item">
                 <div class="failure-mode-num">5</div>
-                <div class="failure-mode-text"><strong>Tragedy of the Carbon Commons.</strong> Each buyer optimizing for their own cheapest $/tCO&#8322; is locally rational. But the shared resource — each grid's need for firm clean investment — is neglected because everyone free-rides on cheaper abatement elsewhere. Hourly matching avoids this by construction: when procurement must match load hour-by-hour within a region, there is no mechanism for free-riding.</div>
+                <div class="failure-mode-text"><strong>Collective Action Dynamics.</strong> Each buyer optimizing for their own cheapest $/tCO&#8322; is individually rational. But the aggregate effect may under-invest in each grid's need for firm clean power — because cheaper abatement exists elsewhere, no individual buyer has an incentive to fund the more expensive local resources. Hourly matching addresses this by construction: when procurement must match load hour-by-hour within a region, investment stays local. Consequential proponents argue that system-wide optimization is more efficient than requiring every buyer to solve their own grid independently.</div>
             </div>
 
-            <div class="insight-box insight-warn" style="margin-top: 16px;">
-                <strong>When Consequential Works:</strong> As a niche analytical tool — measuring displacement impact alongside an hourly matching procurement strategy. It fails as a <em>primary procurement framework at scale</em>. The five failure modes aren't edge cases; they're the predictable consequences of optimizing for cheapest $/tCO&#8322; across unconstrained geographies.
+            <div class="insight-box" style="margin-top: 16px;">
+                <strong>The Role of Consequential Analysis:</strong> These dynamics suggest consequential accounting may be most effective as a <em>complementary analytical lens</em> — measuring displacement impact alongside a procurement standard — rather than as the sole framework governing procurement decisions. As a primary system-wide framework, the scaling dynamics above introduce coordination challenges. As an analytical overlay on hourly or annual procurement, it provides valuable insight into marginal grid impact.
             </div>
 
             <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 16px;">
-                <strong>Deep dive:</strong> <a href="consequential_vacuum.html" style="color: var(--sky);">Consequential in a Vacuum &rarr;</a> — full 5-section analysis with interactive charts and 7-ISO participation threshold modeling.
+                <strong>Deep dive:</strong> <a href="consequential_vacuum.html" style="color: var(--sky);">Consequential Scaling Analysis &rarr;</a> — detailed analysis of how consequential procurement dynamics evolve with participation levels across 7 ISOs.
             </p>
         </div>
     </div>
@@ -630,7 +636,7 @@
 
             <h4 style="font-family: var(--font-heading); font-size: 0.95rem; color: var(--navy); margin: 20px 0 8px;">How It Works</h4>
             <p style="font-size: 0.88rem; line-height: 1.7; color: var(--slate);">
-                Hourly matching requires clean energy generation to equal consumption <strong>every hour of every day</strong> within the buyer's own ISO/RTO region. No annual averaging, no cross-regional credit. This is the most physics-aligned accounting standard — and the one that reveals the true cost of deep decarbonization, because night hours and low-wind winter days can't be covered by solar and wind alone. The hourly constraint forces investment in firm clean power (nuclear, CCS, geothermal) and long-duration storage.
+                Hourly matching requires clean energy generation to equal consumption <strong>every hour of every day</strong> within the buyer's own ISO/RTO region. No annual averaging, no cross-regional credit. This is the most temporally granular accounting standard, and it reveals the full cost structure of deep decarbonization — because night hours and low-wind winter days can't be covered by solar and wind alone. The hourly constraint creates demand signals for firm clean power (nuclear, CCS, geothermal) and long-duration storage.
             </p>
 
             <div class="strat-variant-card">
@@ -648,7 +654,7 @@
             <div class="strat-variant-card">
                 <div class="strat-tag" style="background: rgba(14,165,233,0.15); color: var(--sky);">Strategy 2C</div>
                 <h4>Pro-Rata Allocation with SSS (GHG Protocol Proposed)</h4>
-                <p>The model aligned with the GHG Protocol's proposed Scope 2 revision. The grid's clean energy supply splits into <strong>four distinct pools</strong> — each with different pricing, availability, and incentive effects. Standard Supply Service (SSS) — policy-supported clean energy — is free to all ratepayers. Corporate buyers wanting to claim <em>beyond</em> SSS must procure additional clean energy hour-by-hour.</p>
+                <p>The model aligned with the GHG Protocol's proposed Scope 2 revision. The grid's clean energy supply splits into <strong>four distinct pools</strong> — each with different pricing, availability, and incentive effects. Standard Supply Service (SSS) — policy-supported clean energy — is free to all ratepayers. Corporate buyers wanting to claim <em>beyond</em> SSS must procure additional clean energy hour-by-hour. This analysis also includes a <strong>roll-off sensitivity</strong> (Strategy 2C Roll-Off) that models the impact of scheduled nuclear support program expirations — see below.</p>
             </div>
 
             <h4 style="font-family: var(--font-heading); font-size: 0.95rem; color: var(--navy); margin: 24px 0 12px;">The Four-Pool Supply Model (Strategy 2C)</h4>
@@ -703,8 +709,23 @@
             </div>
 
             <div class="insight-box" style="margin-top: 20px;">
-                <strong>The Hourly Constraint Creates the Right Incentives:</strong> At 80–90% CFE targets, over 4,000 hours per year require firm clean or storage — every night plus every low-wind winter day. Hourly matching forces 25+ TWh of firm clean that annual matching would never signal. The cost is higher in the short run, but the learning curve payoff from early firm investment makes the system cheaper by 2040–2045.
+                <strong>SSS Stability vs. Roll-Off:</strong> This analysis uses a <strong>2025 snapshot</strong> that treats all current nuclear support policies as stable. In practice, several key programs have scheduled expirations:
+                <ul style="margin: 8px 0 4px; padding-left: 20px; font-size: 0.85rem;">
+                    <li><strong>NJ ZEC</strong> — expires 2026 (−15 TWh from PJM SSS)</li>
+                    <li><strong>IL CMC</strong> — expires 2028 (−50 TWh PJM, −15 TWh MISO)</li>
+                    <li><strong>NY ZEC Tier 3</strong> — expires 2030 (−42 TWh from NYISO SSS)</li>
+                </ul>
+                Strategy 2C includes a <strong>roll-off sensitivity variant</strong> that models these expirations. Critically, rolled-off plants do not retire — they continue operating under the federal 45U PTC ($15/MWh) and capacity market revenue, moving from the SSS pool (Pool 1, free) to the merchant pool (Pool 3, ~$4–5/MWh EAC premium). The impact is cost reallocation across supply pools, not capacity loss. See the <a href="procurement_deployment.html" style="color: var(--sky);">Procurement Deployment</a> dashboard for the interactive roll-off toggle.
             </div>
+
+            <div class="insight-box" style="margin-top: 16px;">
+                <strong>The Hourly Constraint and Investment Signals:</strong> At 80–90% CFE targets, over 4,000 hours per year require firm clean or storage — every night plus every low-wind winter day. Hourly matching signals a need for 25+ TWh of firm clean that annual matching would not reveal. The cost is higher in the short run, but learning curve effects from early firm investment may reduce system costs by 2040–2045.
+            </div>
+
+            <h4 style="font-family: var(--font-heading); font-size: 0.95rem; color: var(--navy); margin: 24px 0 8px;">Considerations &amp; Tradeoffs</h4>
+            <p style="font-size: 0.88rem; line-height: 1.7; color: var(--slate);">
+                Hourly matching is the most demanding standard. At high CFE targets (&gt;95%), costs escalate steeply — 2–5&times; the cost at the inflection zone — because firm clean power and storage are required for every nighttime and low-wind hour. This creates real concerns about <strong>cost accessibility</strong>: smaller buyers or those in expensive, supply-constrained grids (NEISO, NYISO) may find high hourly targets prohibitively expensive. The consequential critique — that the same marginal dollar buys more abatement when deployed cross-regionally — has real force, particularly at the margin. Hourly matching also depends on the availability of firm clean technologies (nuclear, CCS, LDES) that are not yet commercially mature in all markets.
+            </p>
 
         </div>
     </div>
@@ -715,10 +736,10 @@
     <div class="strategy-accordion-header" onclick="toggleAccordion('accordionAnnual')">
         <div class="strategy-accordion-icon annual">3</div>
         <div class="strategy-accordion-text">
-            <h3>Annual Matching (Strategies 3A &amp; 3B)</h3>
-            <p class="strat-summary">Match total annual clean generation to annual consumption — simpler accounting, but allows temporal mismatches that weaken investment signals.</p>
+            <h3>Annual Matching (Strategies 3A, 3B, 3C &amp; 3D)</h3>
+            <p class="strat-summary">Match total annual clean generation to annual consumption — simpler accounting, but temporal mismatches weaken investment signals for firm clean power.</p>
         </div>
-        <span class="strategy-accordion-badge annual">2 variants</span>
+        <span class="strategy-accordion-badge annual">4 variants</span>
         <div class="strategy-accordion-chevron">&#9660;</div>
     </div>
     <div class="strategy-accordion-body">
@@ -726,19 +747,31 @@
 
             <h4 style="font-family: var(--font-heading); font-size: 0.95rem; color: var(--navy); margin: 20px 0 8px;">How It Works</h4>
             <p style="font-size: 0.88rem; line-height: 1.7; color: var(--slate);">
-                Annual matching requires total clean energy generation to equal or exceed total annual consumption — with no requirement to match on an hourly basis. Summer solar surplus can offset winter gas peaks. This is the simplest accounting standard and the current GHG Protocol Scope 2 market-based method. The approach allows temporal mismatches that fundamentally weaken the investment signal for firm clean power and storage.
+                Annual matching requires total clean energy generation to equal or exceed total annual consumption — with no requirement to match on an hourly basis. Summer solar surplus can offset winter gas peaks. This is the simplest accounting standard and the current GHG Protocol Scope 2 market-based method. Because temporal mismatches are permitted, the approach has the lowest barrier to entry but generates weaker investment signals for firm clean power and storage compared to hourly matching.
             </p>
 
             <div class="strat-variant-card">
                 <div class="strat-tag" style="background: rgba(239,68,68,0.1); color: var(--red-neg);">Strategy 3A</div>
-                <h4>Cross-Regional New Build (Additionality)</h4>
-                <p>Annual matching with an <strong>additionality requirement</strong>: only newly built clean energy counts toward the corporate claim. Can be deployed across ISOs (cross-regional). This is the "responsible annual" approach — it drives real capital investment, but the temporal mismatch means it can claim 100% annual matching while running on gas every winter evening. Cost is moderate (new VRE is cheap), but there is <strong>zero signal for firm clean power or storage</strong> because solar/wind annual surplus covers all hours on paper.</p>
+                <h4>Same-ISO New Build (Additionality)</h4>
+                <p>Annual matching within the buyer's own ISO with an <strong>additionality requirement</strong>: only newly built clean energy counts toward the corporate claim. This drives real capital investment within the buyer's region, but the temporal mismatch means it can claim 100% annual matching while running on gas every winter evening. Cost is moderate (new VRE is cheap), but the annual flexibility means solar/wind surplus covers all hours on paper — creating <strong>limited signal for firm clean power or storage</strong>.</p>
             </div>
 
             <div class="strat-variant-card">
                 <div class="strat-tag" style="background: rgba(239,68,68,0.15); color: var(--red-neg);">Strategy 3B</div>
-                <h4>Unbundled RECs (No Additionality)</h4>
-                <p>The status quo. Purchase unbundled Renewable Energy Certificates (RECs) equal to annual consumption. <strong>No additionality guarantee</strong> — existing clean generation counts. Cheapest option by far ($1–5/MWh for unbundled RECs vs. $30–80/MWh for new-build hourly-matched CFE). Near-zero consequential emissions impact. A data center in Virginia buys West Texas wind RECs at 2 AM to cover a January 6 PM gas peak — and claims "100% renewable."</p>
+                <h4>Cross-Regional New Build (No Additionality)</h4>
+                <p>Annual matching from any US ISO with <strong>no additionality requirement</strong> — existing clean generation counts. Can purchase bundled RECs from existing generators at low cost. Cross-regional flexibility keeps costs low, but the lack of additionality means procurement may not drive any new clean energy deployment.</p>
+            </div>
+
+            <div class="strat-variant-card">
+                <div class="strat-tag" style="background: rgba(239,68,68,0.2); color: var(--red-neg);">Strategy 3C</div>
+                <h4>Same-ISO + No Additionality</h4>
+                <p>Annual matching constrained to the buyer's own ISO region, with <strong>existing clean energy counting</strong> toward the claim. Limits geographic arbitrage (can't claim cross-regional RECs), but still allows temporal mismatch and provides no additionality signal. The same-ISO constraint means costs vary significantly by region — cheap in ERCOT/SPP (abundant merchant clean), expensive in supply-constrained NEISO/NYISO.</p>
+            </div>
+
+            <div class="strat-variant-card">
+                <div class="strat-tag" style="background: rgba(239,68,68,0.25); color: var(--red-neg);">Strategy 3D</div>
+                <h4>Cross-Regional + No Additionality (Status Quo)</h4>
+                <p>The loosest standard and the <strong>de facto status quo</strong> for most corporate procurement today. Buy unbundled RECs from any ISO, any vintage, existing or new — equal to annual consumption. Cheapest option by far ($1–5/MWh for unbundled RECs vs. $30–80/MWh for new-build hourly-matched CFE). Near-zero consequential emissions impact (Xu et al. 2024). A data center in Virginia buys West Texas wind RECs at 2 AM to cover a January 6 PM gas peak — and claims "100% renewable."</p>
             </div>
 
             <h4 style="font-family: var(--font-heading); font-size: 0.95rem; color: var(--navy); margin: 24px 0 8px;">The Temporal Gap Problem</h4>
@@ -754,8 +787,8 @@
                 The annual total balances — but the grid runs on fossil fuel for thousands of hours. No investment signal for firm clean power. No storage deployment. No learning curves for next-generation technologies. The accounting gives a passing grade to a strategy that leaves the hard hours permanently unsolved.
             </p>
 
-            <div class="insight-box insight-danger" style="margin-top: 16px;">
-                <strong>The Physical Limit:</strong> Annual matching hits physical limits above ~95% — massive VRE overbuild with curtailment, but can't actually deliver &gt;95% hourly clean energy even if the annual MWh target is met. The 4,000+ night and low-wind hours remain fossil-dependent under any amount of solar/wind overbuild. Only hourly matching creates the economic incentive to solve these hours.
+            <div class="insight-box" style="margin-top: 16px;">
+                <strong>The Physical Limit:</strong> Annual matching faces a practical ceiling around ~95% — beyond this point, massive VRE overbuild and curtailment are required, but 4,000+ night and low-wind hours still cannot be covered by solar and wind alone regardless of annual surplus. Bridging these hours requires firm clean power or long-duration storage — resources that annual matching, by design, does not specifically incentivize. Hourly matching and consequential accounting address this gap through different mechanisms: hourly matching by creating direct procurement demand for these resources, and consequential by directing capital to wherever the next marginal ton of CO&#8322; can be displaced most cheaply.
             </div>
         </div>
     </div>
@@ -800,6 +833,14 @@
     <td>Weak</td>
 </tr>
 <tr>
+    <td><strong>1C</strong></td>
+    <td>Consequential</td>
+    <td>Cross-regional</td>
+    <td>N/A</td>
+    <td>Marginal impact (marginal baseline)</td>
+    <td>Weak</td>
+</tr>
+<tr>
     <td><strong>2A</strong></td>
     <td>Hourly</td>
     <td>Same ISO</td>
@@ -826,13 +867,29 @@
 <tr>
     <td><strong>3A</strong></td>
     <td>Annual</td>
-    <td>Cross-regional</td>
+    <td>Same ISO</td>
     <td>Annual</td>
     <td>New-build required</td>
     <td>None</td>
 </tr>
 <tr>
     <td><strong>3B</strong></td>
+    <td>Annual</td>
+    <td>Cross-regional</td>
+    <td>Annual</td>
+    <td>New-build required</td>
+    <td>None</td>
+</tr>
+<tr>
+    <td><strong>3C</strong></td>
+    <td>Annual</td>
+    <td>Same ISO</td>
+    <td>Annual</td>
+    <td>None (existing counts)</td>
+    <td>None</td>
+</tr>
+<tr>
+    <td><strong>3D</strong></td>
     <td>Annual</td>
     <td>Cross-regional</td>
     <td>Annual</td>
@@ -862,8 +919,8 @@
     <div class="related-analyses-grid">
         <a href="consequential_vacuum.html" class="related-card">
             <div class="related-card-tag">Deep Dive</div>
-            <div class="related-card-title">Consequential in a Vacuum</div>
-            <div class="related-card-desc">Full 5-section analysis of failure modes with interactive charts and 7-ISO modeling.</div>
+            <div class="related-card-title">Consequential Scaling Analysis</div>
+            <div class="related-card-desc">Detailed analysis of how consequential procurement dynamics evolve with participation levels across 7 ISOs.</div>
             <div class="related-card-arrow">Explore &rarr;</div>
         </a>
         <a href="scenario_comparison.html" class="related-card">
