@@ -1257,6 +1257,18 @@ OIL_CAP_TWH = {
     'MISO': 0.50, 'SPP': 0.20,
 }
 
+# Unit commitment: minimum generation as fraction of nameplate capacity
+# Nuclear: fully must-run (can't economically cycle)
+# Coal steam: min stable generation ~40% (thermal inertia, boiler constraints)
+# Gas CCGT/CT: fully dispatchable (can cycle off)
+MUST_RUN_PCT = {
+    'nuclear': 1.0,
+    'coal_steam': 0.40,
+    'gas_ccgt': 0.0,
+    'gas_ct': 0.0,
+    'oil_ct': 0.0,
+}
+
 NUCLEAR_SHARE_OF_CLEAN_FIRM = {
     'CAISO': 0.70, 'ERCOT': 1.0, 'PJM': 1.0, 'NYISO': 1.0, 'NEISO': 1.0,
     'MISO': 1.0, 'SPP': 1.0,
