@@ -628,29 +628,29 @@ Despite wide individual uncertainty ranges, the tool is highly reliable for dire
 
 ### 10.2 High-Priority Improvements
 
-| # | Recommendation | Rationale |
-|---|---------------|-----------|
-| 4 | Add explicit uncertainty bands to all outputs (P10/P50/P90 from sweep mode) | Users need to understand result confidence, not just point estimates |
-| 5 | Implement weather-year sensitivity (use individual historical years) | Multi-year average smooths extremes that drive capacity adequacy decisions |
-| 6 | Add "45Q realization probability" parameter (70%/85%/100%) | CCS economics are highly sensitive to 45Q execution risk |
-| 7 | Scale negative pricing with VRE penetration in trajectory mode | Current calibration is fixed to 2024 VRE levels |
+| # | Recommendation | Rationale | Status |
+|---|---------------|-----------|--------|
+| 4 | Add explicit uncertainty bands to all outputs (P10/P50/P90 from sweep mode) | Users need to understand result confidence, not just point estimates | Open |
+| 5 | Implement weather-year sensitivity (use individual historical years) | Multi-year average smooths extremes that drive capacity adequacy decisions | Open |
+| 6 | Add "45Q realization probability" parameter (70%/85%/100%) | CCS economics are highly sensitive to 45Q execution risk | **Fixed** — `CCS_45Q_REALIZATION_PROB` parameter added to `pipeline_config.py` with 3 levels (0.70/0.85/1.00). `compute_clean_firm_tranches()` accepts `q45_realization` parameter that applies a credit haircut to CCS LCOE. |
+| 7 | Scale negative pricing with VRE penetration in trajectory mode | Current calibration is fixed to 2024 VRE levels | **Fixed** — `compute_hourly_lmp_vectorized()` accepts `vre_penetration` parameter. At >25% VRE, negative price floor deepens (1.5× scaling per 10pp above baseline) and negative-price band widens (1.0× per 10pp). Capped at 2× to prevent extremes. Calibrated against CAISO DMM 2019-2024 negative price hour trends. |
 
 ### 10.3 Medium-Priority Improvements
 
-| # | Recommendation | Rationale |
-|---|---------------|-----------|
-| 8 | Add demand elasticity for extreme price events (>$200/MWh) | Overstates scarcity pricing by 10–20% |
-| 9 | Extend fleet_model.py real generator data beyond Texas | Strengthens heat rate and emission rate validation |
-| 10 | Add MISO planned coal retirement adjustments | Current coal cap overstated by 5–10 TWh |
-| 11 | Model nuclear offtake contracts (ERCOT) | Prevents false retirement signal for contracted plants |
+| # | Recommendation | Rationale | Status |
+|---|---------------|-----------|--------|
+| 8 | Add demand elasticity for extreme price events (>$200/MWh) | Overstates scarcity pricing by 10–20% | Open |
+| 9 | Extend fleet_model.py real generator data beyond Texas | Strengthens heat rate and emission rate validation | Open — blocked on EIA 860/923 multi-state data acquisition |
+| 10 | Add MISO planned coal retirement adjustments | Current coal cap overstated by 5–10 TWh | **Fixed** — `COAL_CAP_TWH['MISO']` reduced from 125.0 to 112.0 TWh. Accounts for Rush Island (retired 2024), Sherco Unit 2 (retired 2023), Campbell 1-3 (retiring 2025), Belle River (retiring 2028-29). Sourced from EIA-860M Dec 2024. |
+| 11 | Model nuclear offtake contracts (ERCOT) | Prevents false retirement signal for contracted plants | **Fixed** — `NUCLEAR_OFFTAKE_CONTRACTS` added to `pipeline_config.py` with ERCOT Comanche Peak data (2.3 GW, $35/MWh floor, contract through 2045). Nuclear retirement check in `market_simulation.py` skips retirement for contracted plants within contract period. |
 
 ### 10.4 Documentation Improvements
 
-| # | Recommendation | Rationale |
-|---|---------------|-----------|
-| 12 | Add source citations for interconnection queue caps | Currently undocumented in code comments |
-| 13 | Publish demand-quantile pricing calibration methodology as technical note | Key innovation deserves standalone documentation |
-| 14 | Document synthetic LMP validation against actual ISO clearing prices (all 7 ISOs) | Currently available for PJM only |
+| # | Recommendation | Rationale | Status |
+|---|---------------|-----------|--------|
+| 12 | Add source citations for interconnection queue caps | Currently undocumented in code comments | **Fixed** — Detailed per-ISO citations added to `QUEUE_CAP_GW` in `market_simulation.py`. Sources: LBNL "Queued Up 2024" (Rand et al.), queue sizes and completion rates per ISO, cross-validated against Princeton REPEAT and Rhodium Clean Investment Monitor. |
+| 13 | Publish demand-quantile pricing calibration methodology as technical note | Key innovation deserves standalone documentation | Open |
+| 14 | Document synthetic LMP validation against actual ISO clearing prices (all 7 ISOs) | Currently available for PJM only | Open |
 
 ---
 

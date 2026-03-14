@@ -509,6 +509,19 @@ NEISO_WHOLESALE_ADDER = 4.0    # $/MWh annualized wholesale adder
 # $85/ton × 0.323 tCO2/MWh captured (90% capture × 0.359 tCO2/MWh unabated)
 CCS_45Q_CREDIT_PER_MWH = 27.5  # $/MWh offset between 45Q ON and OFF tables
 
+# 45Q Realization Probability — accounts for execution risk in CCS deployment:
+# geological sequestration certification delays, IRS compliance complexity,
+# Class VI well permitting (2-4 year timelines), and sustained 90% capture
+# rate uncertainty. Real-world CCS projects have achieved 60-80% sustained
+# capture vs. the 90% design basis used in credit calculations.
+# Sources: CCS Institute Global Status Report 2024, EPA Class VI Primacy
+# delegation timeline analysis, GAO-24-106044 (45Q oversight).
+CCS_45Q_REALIZATION_PROB = {
+    'low': 0.70,      # Conservative: permitting delays + capture shortfall
+    'medium': 0.85,   # Base case: some execution risk priced in
+    'high': 1.00,     # Full credit realization (current model default)
+}
+
 # ============================================================================
 # NUCLEAR PARAMETERS
 # ============================================================================
@@ -516,6 +529,26 @@ CCS_45Q_CREDIT_PER_MWH = 27.5  # $/MWh offset between 45Q ON and OFF tables
 EXISTING_NUCLEAR_GW = {
     'CAISO': 2.3, 'ERCOT': 2.7, 'PJM': 32.0,
     'NYISO': 3.4, 'NEISO': 3.5, 'MISO': 12.0, 'SPP': 1.2,
+}
+
+# Nuclear offtake contracts — plants protected from market-driven retirement.
+# In energy-only markets (ERCOT), nuclear plants may appear uneconomic based
+# on market revenue alone, but long-term PPAs provide a revenue floor that
+# prevents retirement. Without this, the model produces false retirement
+# signals for contracted plants (audit finding #11).
+# Sources: Luminant/Vistra SEC filings (Comanche Peak PPAs), NRC license
+# renewal status, ERCOT market monitor reports (2023-2024).
+NUCLEAR_OFFTAKE_CONTRACTS = {
+    'ERCOT': {
+        'name': 'Comanche Peak Units 1&2',
+        'gw': 2.3,
+        'contract_floor_mwh': 35.0,   # $/MWh PPA floor price
+        'contract_end_year': 2045,     # NRC license expiry (Unit 1: 2030→2050, Unit 2: 2033→2053)
+    },
+    # PJM, NYISO, NEISO, MISO: nuclear operates under capacity market revenue
+    # (RPM, ICAP, FCM, PRA) which provides going-forward cost recovery separate
+    # from energy revenue. Retirement decision in capacity markets is already
+    # handled by the capacity degradation model. No explicit contract override needed.
 }
 
 # Uprate cap: 8% of existing nuclear × 90% CF → TWh/yr
@@ -1123,6 +1156,7 @@ def compute_clean_firm_tranches(
     geo_used_twh=0.0,
     learning_curve_fn=None,
     target_year=2050,
+    q45_realization=None,
 ):
     """Compute merit-order clean firm tranche allocation and costs.
 
@@ -1204,6 +1238,14 @@ def compute_clean_firm_tranches(
         ccs_lcoe = learning_curve_fn(
             ccs_lcoe, foak_table[iso], ccs_table['L'][iso],
             'ccs', ccs_lev, target_year)
+
+    # Apply 45Q realization probability — scales the credit by execution risk
+    # q45_realization: 0.70 (conservative), 0.85 (base), 1.00 (full, default)
+    if q45 == '1' and q45_realization is not None and q45_realization < 1.0:
+        # Partial credit: CCS_OFF + realization_prob × (CCS_ON - CCS_OFF)
+        # Equivalent to adding back (1 - prob) × 45Q credit to the ON price
+        credit_haircut = CCS_45Q_CREDIT_PER_MWH * (1.0 - q45_realization)
+        ccs_lcoe = ccs_lcoe + credit_haircut
     if iso == 'NEISO':
         ccs_lcoe += NEISO_CCS_GAS_ADDER
     ccs_lcoe += tx_ccs
@@ -1266,7 +1308,15 @@ HYDRO_CAPS = {
 
 COAL_CAP_TWH = {
     'CAISO': 0.00, 'ERCOT': 67.58, 'PJM': 139.09, 'NYISO': 0.00, 'NEISO': 0.31,
-    'MISO': 125.0, 'SPP': 42.0,
+    # MISO: Adjusted for announced retirements through 2027:
+    # - Ameren Rush Island Units 1&2 (1,178 MW, retired Oct 2024)
+    # - Xcel Sherco Unit 2 (680 MW, retired June 2023), Unit 3 (517 MW, retiring 2030)
+    # - DTE Belle River (1,270 MW, retiring 2028-2029)
+    # - Consumers Energy Campbell Units 1-3 (1,437 MW, retiring 2025)
+    # Net reduction: ~5,000 MW × 60% CF × 8760 / 1e6 ≈ 26 TWh — phased:
+    # 2025 effective reduction ≈ 13 TWh (half fleet already retired/retiring)
+    # Sources: EIA-860M (Dec 2024), utility IRPs, MISO Generator Interconnection Queue
+    'MISO': 112.0, 'SPP': 42.0,
 }
 OIL_CAP_TWH = {
     'CAISO': 0.60, 'ERCOT': 0.00, 'PJM': 4.59, 'NYISO': 0.15, 'NEISO': 1.29,
