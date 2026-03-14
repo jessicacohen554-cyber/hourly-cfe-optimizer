@@ -856,15 +856,39 @@
     </div>
 </div>
 
-<!-- Ribbon Chart: New Gas Capacity by Strategy -->
+<!-- New Gas Capacity by Strategy (bar chart) -->
 <div class="agg-charts">
     <div class="agg-chart-card">
-        <h3>New Gas Capacity Required by Strategy & Participation</h3>
-        <p style="font-family:var(--font-body);font-size:0.8rem;color:var(--text-muted);margin:-4px 0 12px;">Solid line = 90% clean target. Faint dashed lines = 85% and 95% reference targets. Band = min–max across all targets. X-axis = corporate participation level.</p>
-        <div class="chart-container" style="min-height:380px;"><canvas id="chartRibbon"></canvas></div>
+        <h3>New Gas Capacity by Strategy</h3>
+        <p style="font-family:var(--font-body);font-size:0.8rem;color:var(--text-muted);margin:-4px 0 12px;">
+            Net new gas capacity (GW) required at the selected participation level and CO₂ target. Negative values indicate retirement of existing gas.
+        </p>
+        <div class="chart-container" style="min-height:380px;"><canvas id="chartGasBar"></canvas></div>
     </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- PARTICIPATION-LEVEL ANALYSIS SECTION                                -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+
+<div class="agg-charts">
+    <div class="content-section" style="padding:24px 0 0;">
+        <h2 class="section-title" id="participationSectionHeader" style="font-size:1.3rem;margin-bottom:4px;">
+            At 85% CO₂ reduction target: Implications of each strategy at varying participation levels
+        </h2>
+    </div>
+</div>
+
+<!-- Gas Capacity Needed vs Participation (line chart — replaces ribbon) -->
+<div class="agg-charts">
+    <div class="agg-chart-card">
+        <h3>Gas Capacity Needed vs. Participation Level</h3>
+        <p style="font-family:var(--font-body);font-size:0.8rem;color:var(--text-muted);margin:-4px 0 12px;">
+            Total resource-adequacy gas capacity per strategy at the selected CO₂ target. Lines crossing below 299 GW indicate strategies that retire existing gas fleet.
+        </p>
+        <div class="chart-container" style="min-height:380px;"><canvas id="chartGasLine"></canvas></div>
+    </div>
+</div>
 
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 <!-- CROSSOVER & PARTICIPATION ANALYSIS CHARTS                          -->
@@ -1035,7 +1059,8 @@
             nuclearPolicy = this.dataset.nuclear;
             grid._updateData();
             rebuildCharts();
-            rebuildRibbonChart();
+            rebuildGasBarChart();
+            rebuildGasLineChart();
             applyParticipationCap();
             rebuildCrossoverChart();
             rebuildParticipationTable();
@@ -1061,7 +1086,7 @@
             }
             grid.setActiveStrategies(checked);
             rebuildCharts();
-            rebuildRibbonChart();
+            rebuildGasBarChart();
         });
     });
 
@@ -1070,12 +1095,12 @@
     // ═════════════════════════════════════════════════════════════════════════
 
     const STRAT_COLORS = {
-        '1A': '#F59E0B', '1B': '#D97706',
-        '2A': '#6366F1', '2B': '#818CF8', '2C': '#4F46E5',
-        '2C_rolloff': '#4F46E5',
+        '1A': '#F59E0B', '1B': '#B45309',
+        '2A': '#6366F1', '2B': '#A5B4FC', '2C': '#4338CA',
+        '2C_rolloff': '#7C3AED',
         '3A': '#22C55E', '3B': '#16A34A',
-        '3C': '#10B981', '3C_rolloff': '#10B981',
-        '3D': '#059669', '3D_rolloff': '#059669',
+        '3C': '#059669', '3C_rolloff': '#0D9488',
+        '3D': '#0F766E', '3D_rolloff': '#115E59',
     };
     const STRAT_LABELS = {
         '1A': '1A Conseq (Grid)', '1B': '1B Conseq (Fossil)',
@@ -1206,202 +1231,179 @@
         });
     }
 
-    // Build ribbon data for a strategy: min, max range + 3 target lines (85%, 90%, 95%)
-    // x-axis = participation level, bands = range across CFE targets
-    function buildRibbonData(strategy) {
-        // Compute gas at every threshold
-        const allCurves = THRESHOLDS.map(t => computeGasAtThreshold(strategy, t));
+    // ═════════════════════════════════════════════════════════════════════════
+    // NEW GAS CAPACITY BAR CHART (reacts to both sliders)
+    // ═════════════════════════════════════════════════════════════════════════
 
-        // Main line = 90% target, reference lines = 85% and 95%
-        const mainIdx = THRESHOLDS.indexOf(90);
-        const ref85Idx = THRESHOLDS.indexOf(85);
-        const ref95Idx = THRESHOLDS.indexOf(95);
-        const mainTIdx = mainIdx >= 0 ? mainIdx : Math.floor(THRESHOLDS.length / 2);
-        const ref85TIdx = ref85Idx >= 0 ? ref85Idx : mainTIdx;
-        const ref95TIdx = ref95Idx >= 0 ? ref95Idx : mainTIdx;
+    let chartGasBar = null;
 
-        const minArr = [], maxArr = [], medArr = [], ref85Arr = [], ref95Arr = [];
-        for (let pi = 0; pi < PARTICIPATION_LEVELS.length; pi++) {
-            const vals = allCurves.map(c => c[pi]).sort((a, b) => a - b);
-            minArr.push(vals[0]);
-            maxArr.push(vals[vals.length - 1]);
-            medArr.push(allCurves[mainTIdx][pi]);
-            ref85Arr.push(allCurves[ref85TIdx][pi]);
-            ref95Arr.push(allCurves[ref95TIdx][pi]);
+    function computeTotalGasAtPoint(strategy, participation, threshold) {
+        const stratData = DEPLOYMENT_DATA.data[getStrategyDataKey(strategy)];
+        if (!stratData) return 0;
+        let totalNewGas = 0;
+        for (const iso of RIBBON_ISOS) {
+            const isoData = stratData[iso];
+            if (!isoData) continue;
+            const pk = findClosestKey(Object.keys(isoData), participation);
+            if (!pk || !isoData[pk]) continue;
+            const tk = findClosestKey(Object.keys(isoData[pk]), threshold);
+            if (!tk) continue;
+            const rec = isoData[pk][tk];
+            if (rec) totalNewGas += (rec.gasGw || 0) - (EXISTING_GAS[iso] || 0);
         }
-        return { min: minArr, med: medArr, max: maxArr, ref85: ref85Arr, ref95: ref95Arr };
+        return totalNewGas;
     }
 
-    let chartRibbon = null;
-
-    function rebuildRibbonChart() {
-        if (chartRibbon) chartRibbon.destroy();
-
+    function rebuildGasBarChart() {
+        if (chartGasBar) chartGasBar.destroy();
         const active = getActiveStrategies();
-        const xLabels = PARTICIPATION_LEVELS.map(p => p + '%');
-        const datasets = [];
+        const participation = getParticipation();
+        const threshold = getThreshold();
 
-        for (const strat of active) {
-            const ribbon = buildRibbonData(strat);
-            const color = STRAT_COLORS[strat] || '#6366F1';
-            const label = (STRAT_LABELS[strat] || strat).replace('\n', ' — ');
+        const labels = active.map(s => STRAT_LABELS[s] || s);
+        const data = active.map(s => Math.round(computeTotalGasAtPoint(s, participation, threshold) * 10) / 10);
+        const colors = active.map(s => STRAT_COLORS[s] || '#6366F1');
 
-            // Upper band fill (max → min as fill between)
-            datasets.push({
-                label: label + ' (max)',
-                data: ribbon.max,
-                fill: false,
-                borderColor: 'transparent',
-                pointRadius: 0,
-                borderWidth: 0,
-                order: 3,
-                _stratKey: strat,
-                _ribbonRole: 'max',
-            });
-
-            // Lower band — fill to previous dataset (the max line)
-            datasets.push({
-                label: label + ' (min)',
-                data: ribbon.min,
-                fill: '-1', // fill to previous dataset
-                backgroundColor: color + '20',
-                borderColor: color + '40',
-                borderWidth: 1,
-                borderDash: [4, 3],
-                pointRadius: 0,
-                order: 2,
-                _stratKey: strat,
-                _ribbonRole: 'min',
-            });
-
-            // 85% reference line — faint dashed
-            datasets.push({
-                label: label + ' (85%)',
-                data: ribbon.ref85,
-                fill: false,
-                borderColor: color + '50',
-                borderWidth: 1.2,
-                borderDash: [6, 4],
-                pointRadius: 0,
-                tension: 0.3,
-                order: 2,
-                _stratKey: strat,
-                _ribbonRole: 'ref85',
-            });
-
-            // 95% reference line — faint dashed
-            datasets.push({
-                label: label + ' (95%)',
-                data: ribbon.ref95,
-                fill: false,
-                borderColor: color + '50',
-                borderWidth: 1.2,
-                borderDash: [6, 4],
-                pointRadius: 0,
-                tension: 0.3,
-                order: 2,
-                _stratKey: strat,
-                _ribbonRole: 'ref95',
-            });
-
-            // Main line (90% target) — solid, prominent
-            datasets.push({
-                label: label,
-                data: ribbon.med,
-                fill: false,
-                borderColor: color,
-                borderWidth: 2.5,
-                pointRadius: 0,
-                pointHoverRadius: 5,
-                pointHoverBackgroundColor: color,
-                pointHoverBorderColor: '#fff',
-                pointHoverBorderWidth: 2,
-                tension: 0.3,
-                order: 1,
-                _stratKey: strat,
-                _ribbonRole: 'median',
-            });
-        }
-
-        // Compute "no new procurement" baseline: gas at 0% participation (index 0)
-        // Uses the first active strategy's data — value is the same for all strategies at 0%
-        const baselineStrat = active[0] || '1A';
-        const baselineGasGw = computeGasAtThreshold(baselineStrat, 90)[0];
-
-        const chartData = { labels: xLabels, datasets };
-        const ctx = document.getElementById('chartRibbon').getContext('2d');
-        chartRibbon = new Chart(ctx, {
-            type: 'line',
-            data: chartData,
+        chartGasBar = new Chart(document.getElementById('chartGasBar').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'New Gas Capacity (GW)',
+                    data: data,
+                    backgroundColor: colors.map(c => c + 'CC'),
+                    borderColor: colors,
+                    borderWidth: 1, borderRadius: 4,
+                }]
+            },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                animation: { duration: 500 },
-                interaction: {
-                    mode: 'index',
-                    intersect: false,
-                },
+                animation: { duration: 400 },
                 plugins: {
+                    legend: { display: false },
                     annotation: {
                         annotations: {
-                            noCleanBaseline: {
-                                type: 'line',
-                                yMin: baselineGasGw,
-                                yMax: baselineGasGw,
-                                borderColor: '#9CA3AF',
-                                borderWidth: 2,
-                                borderDash: [8, 4],
-                                label: {
-                                    display: true,
-                                    content: `No new procurement baseline (${Math.round(baselineGasGw)} GW)`,
-                                    position: 'start',
-                                    backgroundColor: 'rgba(156,163,175,0.85)',
-                                    color: '#fff',
-                                    font: { size: 11, family: "'DM Sans'" },
-                                    padding: { top: 3, bottom: 3, left: 6, right: 6 },
-                                },
+                            newGasBuildout: {
+                                type: 'line', yMin: 195, yMax: 195,
+                                borderColor: '#EF4444', borderWidth: 2, borderDash: [8, 4],
+                                label: { display: true, content: '2050 gas buildout if no clean (195 GW new)', position: 'start', backgroundColor: 'rgba(239,68,68,0.85)', color: '#fff', font: { size: 10, family: "'DM Sans'" }, padding: { top: 2, bottom: 2, left: 5, right: 5 } },
                             },
-                        },
-                    },
-                    legend: {
-                        display: true,
-                        position: 'top',
-                        labels: {
-                            font: { family: "'DM Sans'", size: 11 },
-                            boxWidth: 14,
-                            boxHeight: 3,
-                            usePointStyle: false,
-                            filter: (item) => {
-                                // Only show median lines in legend (not min/max)
-                                const ds = chartData.datasets[item.datasetIndex];
-                                return ds && ds._ribbonRole === 'median';
+                            fullRetirement: {
+                                type: 'line', yMin: 0, yMax: 0,
+                                borderColor: '#22C55E', borderWidth: 2, borderDash: [8, 4],
+                                label: { display: true, content: 'Full retirement of existing gas', position: 'end', backgroundColor: 'rgba(34,197,94,0.85)', color: '#fff', font: { size: 10, family: "'DM Sans'" }, padding: { top: 2, bottom: 2, left: 5, right: 5 } },
                             },
                         },
                     },
                     tooltip: {
                         backgroundColor: 'rgba(15,23,42,0.92)',
+                        callbacks: { label: (ctx) => `${ctx.raw > 0 ? '+' : ''}${ctx.raw.toFixed(1)} GW new gas` },
+                    },
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { font: { family: "'DM Sans'", size: 10 }, maxRotation: 45 } },
+                    y: {
+                        grid: { color: '#E2E8F0' },
+                        ticks: { font: { family: "'Plus Jakarta Sans'", size: 10 }, callback: v => v + ' GW' },
+                        title: { display: true, text: 'Net New Gas Capacity (GW)', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' },
+                    },
+                },
+            },
+        });
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // GAS CAPACITY LINE CHART (x = participation, one line per strategy)
+    // ═════════════════════════════════════════════════════════════════════════
+
+    let chartGasLine = null;
+
+    function computeTotalGasAtThreshold(strategy, threshold) {
+        // Returns TOTAL gas (not net new) for each participation level
+        const stratData = DEPLOYMENT_DATA.data[getStrategyDataKey(strategy)];
+        if (!stratData) return PARTICIPATION_LEVELS.map(() => 0);
+
+        return PARTICIPATION_LEVELS.map(part => {
+            let totalGas = 0;
+            for (const iso of RIBBON_ISOS) {
+                const isoData = stratData[iso];
+                if (!isoData) continue;
+                const pk = findClosestKey(Object.keys(isoData), part);
+                if (!pk || !isoData[pk]) continue;
+                const tk = findClosestKey(Object.keys(isoData[pk]), threshold);
+                if (!tk) continue;
+                const rec = isoData[pk][tk];
+                if (rec) totalGas += (rec.gasGw || 0);
+            }
+            return totalGas;
+        });
+    }
+
+    function rebuildGasLineChart() {
+        if (chartGasLine) chartGasLine.destroy();
+
+        const active = getActiveStrategies();
+        const threshold = getThreshold();
+        const xLabels = PARTICIPATION_LEVELS.map(p => p + '%');
+        const datasets = [];
+
+        for (const strat of active) {
+            const color = STRAT_COLORS[strat] || '#6366F1';
+            const label = (STRAT_LABELS[strat] || strat).replace('\n', ' — ');
+            const data = computeTotalGasAtThreshold(strat, threshold);
+            datasets.push({
+                label: label, data: data,
+                borderColor: color, backgroundColor: color + '20',
+                borderWidth: 2.5, pointRadius: 3, pointHoverRadius: 6,
+                pointBackgroundColor: color, pointBorderColor: '#fff', pointBorderWidth: 1.5,
+                tension: 0.3, fill: false,
+            });
+        }
+
+        chartGasLine = new Chart(document.getElementById('chartGasLine').getContext('2d'), {
+            type: 'line',
+            data: { labels: xLabels, datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 500 },
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    annotation: {
+                        annotations: {
+                            theoreticalMax: {
+                                type: 'line', yMin: 494, yMax: 494,
+                                borderColor: '#EF4444', borderWidth: 2, borderDash: [8, 4],
+                                label: { display: true, content: 'Theoretical 2050 new gas buildout (494 GW, no clean energy)', position: 'start', backgroundColor: 'rgba(239,68,68,0.85)', color: '#fff', font: { size: 10, family: "'DM Sans'" }, padding: { top: 2, bottom: 2, left: 5, right: 5 } },
+                            },
+                            existingGas: {
+                                type: 'line', yMin: 299, yMax: 299,
+                                borderColor: '#F59E0B', borderWidth: 2, borderDash: [8, 4],
+                                label: { display: true, content: 'Existing gas capacity (299 GW, 7 ISOs)', position: 'end', backgroundColor: 'rgba(245,158,11,0.85)', color: '#fff', font: { size: 10, family: "'DM Sans'" }, padding: { top: 2, bottom: 2, left: 5, right: 5 } },
+                            },
+                            fullRetirement: {
+                                type: 'line', yMin: 0, yMax: 0,
+                                borderColor: '#22C55E', borderWidth: 2, borderDash: [8, 4],
+                                label: { display: true, content: 'Full retirement of existing gas', position: 'start', backgroundColor: 'rgba(34,197,94,0.85)', color: '#fff', font: { size: 10, family: "'DM Sans'" }, padding: { top: 2, bottom: 2, left: 5, right: 5 } },
+                            },
+                        },
+                    },
+                    legend: {
+                        display: true, position: 'top',
+                        labels: { font: { family: "'DM Sans'", size: 11 }, boxWidth: 14, boxHeight: 3 },
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15,23,42,0.92)',
                         titleFont: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 },
                         bodyFont: { family: "'DM Sans'", size: 11 },
-                        padding: 10,
-                        cornerRadius: 8,
+                        padding: 10, cornerRadius: 8,
                         callbacks: {
                             title: (items) => 'Participation: ' + items[0].label,
                             label: (ctx) => {
-                                const ds = ctx.dataset;
-                                if (ds._ribbonRole !== 'median' && ds._ribbonRole !== 'ref85' && ds._ribbonRole !== 'ref95') return null;
-                                if (ds._ribbonRole === 'ref85') return `  @ 85%: ${Math.round(ctx.raw)} GW`;
-                                if (ds._ribbonRole === 'ref95') return `  @ 95%: ${Math.round(ctx.raw)} GW`;
-                                // median = 90% main line
-                                const strat = ds._stratKey;
-                                // Find the min/max for this strategy at this index
-                                const allDs = chartData.datasets;
-                                let minVal = 0, maxVal = 0;
-                                for (const d of allDs) {
-                                    if (d._stratKey === strat && d._ribbonRole === 'min') minVal = d.data[ctx.dataIndex];
-                                    if (d._stratKey === strat && d._ribbonRole === 'max') maxVal = d.data[ctx.dataIndex];
-                                }
-                                const label = (STRAT_LABELS[strat] || strat).replace('\n',' — ');
-                                return `${label}: ${Math.round(ctx.raw)} GW @ 90% target (${Math.round(minVal)}–${Math.round(maxVal)} across targets)`;
+                                const totalGas = ctx.raw;
+                                const netNew = totalGas - 299;
+                                return `${ctx.dataset.label}: ${Math.round(totalGas)} GW total (${netNew > 0 ? '+' : ''}${Math.round(netNew)} GW vs existing)`;
                             },
                         },
                     },
@@ -1409,36 +1411,26 @@
                 scales: {
                     x: {
                         grid: { display: false },
-                        ticks: {
-                            font: { family: "'DM Sans'", size: 10 },
-                            maxRotation: 45,
-                            autoSkip: true,
-                            maxTicksLimit: 10,
-                        },
-                        title: {
-                            display: true,
-                            text: 'Corporate Participation Level',
-                            font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 },
-                            color: '#334155',
-                        },
+                        ticks: { font: { family: "'DM Sans'", size: 10 }, maxRotation: 45, autoSkip: true, maxTicksLimit: 10 },
+                        title: { display: true, text: 'Corporate Participation Level', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' },
                     },
                     y: {
                         grid: { color: '#E2E8F0' },
-                        ticks: {
-                            font: { family: "'Plus Jakarta Sans'", size: 10 },
-                            callback: (v) => v + ' GW',
-                        },
-                        title: {
-                            display: true,
-                            text: 'New Gas Capacity Required (GW)',
-                            font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 },
-                            color: '#334155',
-                        },
+                        ticks: { font: { family: "'Plus Jakarta Sans'", size: 10 }, callback: v => v + ' GW' },
+                        title: { display: true, text: 'Total Gas Capacity (GW)', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' },
                         beginAtZero: true,
                     },
                 },
             },
         });
+    }
+
+    // Update section header text when threshold changes
+    function updateSectionHeader() {
+        const t = getThreshold();
+        const label = t >= 99.99 ? '≥99.99' : t;
+        document.getElementById('participationSectionHeader').textContent =
+            `At ${label}% CO₂ reduction target: Implications of each strategy at varying participation levels`;
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -1794,32 +1786,37 @@
 
     thrSlider.addEventListener('input', () => {
         applyParticipationCap();
+        updateSectionHeader();
+        rebuildGasBarChart();
+        rebuildGasLineChart();
         rebuildCrossoverChart();
         rebuildParticipationTable();
         rebuildDispCO2Chart();
     });
 
-    // Also wire participation slider changes
+    // Participation slider: update bar chart + jar matrix (line charts don't depend on it)
     partSlider.addEventListener('input', () => {
-        // Crossover chart doesn't depend on participation (it shows all levels),
-        // but CO2 charts do react to threshold which doesn't change here.
-        // No extra work needed — threshold-dependent charts update on threshold change.
+        rebuildGasBarChart();
     });
 
-    // Wire strategy checkboxes to rebuild new charts too
+    // Wire strategy checkboxes to rebuild all charts
     document.querySelectorAll('.strategy-check input').forEach(cb => {
         cb.addEventListener('change', () => {
             applyParticipationCap();
+            rebuildGasBarChart();
+            rebuildGasLineChart();
             rebuildCrossoverChart();
             rebuildParticipationTable();
             rebuildDispCO2Chart();
         });
     });
 
-    // Initial chart + ribbon build
+    // Initial build
     setTimeout(() => {
         rebuildCharts();
-        rebuildRibbonChart();
+        updateSectionHeader();
+        rebuildGasBarChart();
+        rebuildGasLineChart();
         applyParticipationCap();
         rebuildCrossoverChart();
         rebuildParticipationTable();

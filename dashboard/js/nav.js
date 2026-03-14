@@ -225,7 +225,7 @@
             label: 'Demand Side',
             children: [
                 { label: 'Carbon Accounting', href: 'consequential_accounting.html' },
-                { label: 'Procurement Deployment', href: 'procurement_deployment.html' }
+                { label: 'Procurement Strategy Dashboard', href: 'procurement_deployment.html' }
             ]
         },
         {
