@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IPP Climate Transition Analysis — Constellation Energy</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap');
+
+/* ─── CEG Design Tokens ─── */
+:root {
+  --ceg-blue: #2372B9;
+  --ceg-blue-dark: #1B5E9E;
+  --ceg-orange: #F47B27;
+  --ceg-green: #6BA543;
+  --ceg-teal: #007FA4;
+  --ceg-yellow: #FBB254;
+  --ceg-gray: #7E8083;
+  --ceg-slate: #7F8F97;
+  --glass-border: #E0E6EF;
+  --bg-mid: #F7FAFC;
+  --text-bright: #1A232F;
+  --text-dim: #7E8083;
+  --font: 'Source Sans Pro', 'Franklin Gothic Book', Calibri, Arial, sans-serif;
+  --font-heading: 'Source Sans Pro', 'Franklin Gothic Book', Calibri, Arial, sans-serif;
+  --font-data: 'Source Sans Pro', Calibri, monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font);
+  font-weight: 300;
+  color: var(--text-bright);
+  background: #E8E8E8;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Slide Layout ─── */
+.slide {
+  width: 14in;
+  height: 7.5in;
+  margin: 0.5in auto;
+  background: white;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+  page-break-after: always;
+  display: flex;
+  flex-direction: column;
+}
+
+.slide-header {
+  height: 1in;
+  padding: 0 1in;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid var(--glass-border);
+  flex-shrink: 0;
+}
+.slide-header h1 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 18pt;
+  color: var(--ceg-blue);
+  letter-spacing: -0.3px;
+}
+.slide-header .slide-number {
+  font-size: 11pt;
+  color: var(--ceg-gray);
+}
+
+.slide-body {
+  flex: 1;
+  padding: 0.35in 1in 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.slide-body h2 {
+  font-size: 16pt;
+  font-weight: 700;
+  color: var(--ceg-blue);
+  margin-bottom: 0.15in;
+}
+.slide-body h3 {
+  font-size: 13pt;
+  font-weight: 600;
+  color: var(--text-bright);
+  margin-bottom: 0.1in;
+}
+.slide-body p, .slide-body li {
+  font-size: 12pt;
+  line-height: 1.5;
+  font-weight: 300;
+}
+.slide-body ul { padding-left: 0.3in; }
+.slide-body li { margin-bottom: 0.05in; }
+
+.slide-footer {
+  height: 0.5in;
+  padding: 0 1in;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--glass-border);
+  flex-shrink: 0;
+  background: var(--bg-mid);
+}
+.slide-footer .brand {
+  font-size: 9pt;
+  font-weight: 600;
+  color: var(--ceg-blue);
+  letter-spacing: 0.5px;
+}
+.slide-footer .confidential {
+  font-size: 8pt;
+  color: var(--ceg-gray);
+  font-style: italic;
+}
+
+.footer-accent {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--ceg-blue), var(--ceg-teal), var(--ceg-green));
+}
+
+.source-note {
+  font-size: 8pt;
+  color: var(--ceg-gray);
+  margin-top: auto;
+  padding-top: 0.1in;
+  border-top: 1px solid #F0F3F7;
+  font-style: italic;
+}
+
+/* ─── Layout Helpers ─── */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4in; height: 100%; }
+.left-right { display: grid; grid-template-columns: 5in 6in; gap: 0.5in; align-items: start; }
+.center-chart { display: flex; justify-content: center; align-items: center; flex: 1; }
+.center-chart img { max-height: 5in; max-width: 100%; }
+
+/* ─── KPI Cards ─── */
+.kpi-row { display: flex; gap: 0.25in; margin-bottom: 0.2in; }
+.kpi-card {
+  flex: 1;
+  background: linear-gradient(135deg, rgba(35,114,185,0.06), rgba(0,127,164,0.04));
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  padding: 0.15in 0.2in;
+  text-align: center;
+}
+.kpi-card .kpi-value {
+  font-size: 24pt;
+  font-weight: 700;
+  color: var(--ceg-blue);
+  font-family: var(--font-data);
+  line-height: 1.1;
+}
+.kpi-card .kpi-unit {
+  font-size: 11pt;
+  font-weight: 600;
+  color: var(--ceg-teal);
+}
+.kpi-card .kpi-label {
+  font-size: 9pt;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+.kpi-card.orange { background: linear-gradient(135deg, rgba(244,123,39,0.08), rgba(251,178,84,0.04)); }
+.kpi-card.orange .kpi-value { color: var(--ceg-orange); }
+.kpi-card.green { background: linear-gradient(135deg, rgba(107,165,67,0.08), rgba(107,165,67,0.04)); }
+.kpi-card.green .kpi-value { color: var(--ceg-green); }
+.kpi-card.teal { background: linear-gradient(135deg, rgba(0,127,164,0.08), rgba(0,127,164,0.04)); }
+.kpi-card.teal .kpi-value { color: var(--ceg-teal); }
+
+/* ─── Callout ─── */
+.callout {
+  border-left: 4px solid var(--ceg-blue);
+  background: rgba(35,114,185,0.05);
+  padding: 0.12in 0.2in;
+  border-radius: 0 8px 8px 0;
+  margin: 0.1in 0;
+  font-size: 11pt;
+}
+.callout.orange { border-left-color: var(--ceg-orange); background: rgba(244,123,39,0.05); }
+.callout.green { border-left-color: var(--ceg-green); background: rgba(107,165,67,0.05); }
+.callout strong { font-weight: 600; }
+
+/* ─── Data Table ─── */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10pt;
+  font-family: var(--font-data);
+}
+.data-table th {
+  background: var(--ceg-blue);
+  color: white;
+  padding: 0.1in 0.15in;
+  text-align: center;
+  font-weight: 600;
+}
+.data-table th:first-child { text-align: left; }
+.data-table td {
+  padding: 0.08in 0.15in;
+  border-bottom: 1px solid var(--glass-border);
+  text-align: center;
+}
+.data-table td:first-child { text-align: left; font-weight: 500; }
+.data-table tr:hover { background: var(--bg-mid); }
+.data-table tr.hero { background: rgba(35,114,185,0.06); font-weight: 600; }
+
+/* ─── Title Slide ─── */
+.title-slide {
+  background: linear-gradient(135deg, #1B5E9E 0%, #2372B9 40%, #007FA4 100%);
+  color: white;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+.title-slide h1 {
+  font-size: 36pt;
+  font-weight: 700;
+  letter-spacing: -1px;
+  margin-bottom: 0.2in;
+}
+.title-slide .subtitle {
+  font-size: 16pt;
+  font-weight: 300;
+  opacity: 0.9;
+  margin-bottom: 0.4in;
+}
+.title-slide .date {
+  font-size: 12pt;
+  opacity: 0.7;
+}
+.title-slide .title-accent {
+  width: 80px;
+  height: 3px;
+  background: var(--ceg-orange);
+  margin: 0.15in auto 0.3in;
+}
+
+/* ─── Score Highlights ─── */
+.score-pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 10pt;
+  font-weight: 700;
+  font-family: var(--font-data);
+}
+.score-high { background: rgba(107,165,67,0.15); color: #4A7A2E; }
+.score-mid { background: rgba(251,178,84,0.2); color: #B45309; }
+.score-low { background: rgba(220,38,38,0.12); color: #DC2626; }
+
+@media print {
+  body { background: white; }
+  .slide { box-shadow: none; margin: 0; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ SLIDE 1: Title ═══ -->
+<div class="slide title-slide">
+  <h1>IPP Climate Transition<br>Risk Assessment</h1>
+  <div class="title-accent"></div>
+  <div class="subtitle">Strategic Positioning Analysis of 7 Major US Independent Power Producers</div>
+  <div class="date">{{ report_date }} · Constellation Energy</div>
+  <div class="footer-accent"></div>
+</div>
+
+<!-- ═══ SLIDE 2: Executive Summary ═══ -->
+<div class="slide">
+  <div class="slide-header">
+    <h1>Executive Summary</h1>
+    <span class="slide-number">2</span>
+  </div>
+  <div class="slide-body">
+    <div class="kpi-row">
+      {{ kpi_cards_html }}
+    </div>
+    <h3>Key Findings</h3>
+    <ul>
+      {{ key_findings_html }}
+    </ul>
+    <div class="callout green" style="margin-top:0.15in">
+      <strong>Constellation's Edge:</strong> {{ constellation_edge }}
+    </div>
+    <div class="source-note">Source: Hourly CFE Optimizer model; EIA-860/923; eGRID 2022</div>
+  </div>
+  <div class="slide-footer">
+    <span class="brand">CONSTELLATION ENERGY</span>
+    <span class="confidential">Confidential — For Internal Use Only</span>
+  </div>
+  <div class="footer-accent"></div>
+</div>
+
+<!-- ═══ SLIDE 3: IPP Landscape ═══ -->
+<div class="slide">
+  <div class="slide-header">
+    <h1>IPP Market Landscape</h1>
+    <span class="slide-number">3</span>
+  </div>
+  <div class="slide-body">
+    <div class="center-chart">
+      <img src="data:image/png;base64,{{ fig_fleet_composition }}" alt="Fleet Composition">
+    </div>
+    <div class="source-note">Source: EIA-860 (2023 operating capacity)</div>
+  </div>
+  <div class="slide-footer">
+    <span class="brand">CONSTELLATION ENERGY</span>
+    <span class="confidential">Confidential</span>
+  </div>
+  <div class="footer-accent"></div>
+</div>
+
+<!-- ═══ SLIDE 4: Strategic Positioning Pentagon ═══ -->
+<div class="slide">
+  <div class="slide-header">
+    <h1>Strategic Positioning — IPP Pentagon</h1>
+    <span class="slide-number">4</span>
+  </div>
+  <div class="slide-body">
+    <div class="center-chart">
+      <img src="data:image/png;base64,{{ fig_spider_comparison }}" alt="Spider Map">
+    </div>
+    <div class="source-note">5-axis scoring: Nuclear Advantage, Geographic Diversity, Coal Exit Progress, Gas Flexibility, Clean Pipeline. Score 0–100.</div>
+  </div>
+  <div class="slide-footer">
+    <span class="brand">CONSTELLATION ENERGY</span>
+    <span class="confidential">Confidential</span>
+  </div>
+  <div class="footer-accent"></div>
+</div>
+
+<!-- ═══ SLIDE 5: Constellation Competitive Advantage ═══ -->
+<div class="slide">
+  <div class="slide-header">
+    <h1>Constellation's Competitive Advantage</h1>
+    <span class="slide-number">5</span>
+  </div>
+  <div class="slide-body">
+    <div class="left-right">
+      <div>
+        <img src="data:image/png;base64,{{ fig_spider_constellation }}" alt="Constellation Spider" style="max-height:4.5in;width:100%;">
+      </div>
+      <div>
+        <h3>Score Breakdown</h3>
+        {{ constellation_scores_html }}
+        <div class="callout" style="margin-top:0.15in">
+          <strong>Nuclear fleet</strong> provides Constellation with the strongest zero-carbon baseload foundation among all US IPPs. The 45U Production Tax Credit ($15/MWh for 10 years) further secures this advantage.
+        </div>
+      </div>
+    </div>
+    <div class="source-note">Scores derived from EIA fleet data; methodology in Appendix</div>
+  </div>
+  <div class="slide-footer">
+    <span class="brand">CONSTELLATION ENERGY</span>
+    <span class="confidential">Confidential</span>
+  </div>
+  <div class="footer-accent"></div>
+</div>
+
+<!-- ═══ SLIDE 6: Nuclear Fleet Advantage ═══ -->
+<div class="slide">
+  <div class="slide-header">
+    <h1>Nuclear Fleet Advantage</h1>
+    <span class="slide-number">6</span>
+  </div>
+  <div class="slide-body">
+    <div class="center-chart">
+      <img src="data:image/png;base64,{{ fig_nuclear_advantage }}" alt="Nuclear Advantage">
+    </div>
+    <div class="callout green">
+      <strong>45U PTC Impact:</strong> The 10-year Production Tax Credit at $15/MWh provides ~$3B+ in revenue certainty for Constellation's nuclear fleet, creating a structural cost advantage over fossil-dependent competitors.
+    </div>
+    <div class="source-note">Source: EIA-860 (2023 nameplate capacity)</div>
+  </div>
+  <div class="slide-footer">
+    <span class="brand">CONSTELLATION ENERGY</span>
+    <span class="confidential">Confidential</span>
+  </div>
+  <div class="footer-accent"></div>
+</div>
+
+<!-- ═══ SLIDE 7: Coal Exit Progress ═══ -->
+<div class="slide">
+  <div class="slide-header">
+    <h1>Coal Exit Progress & Timeline</h1>
+    <span class="slide-number">7</span>
+  </div>
+  <div class="slide-body">
+    <div class="center-chart">
+      <img src="data:image/png;base64,{{ fig_coal_exit }}" alt="Coal Exit Timeline">
+    </div>
+    <div class="source-note">Retirement dates from company announcements and EIA filings</div>
+  </div>
+  <div class="slide-footer">
+    <span class="brand">CONSTELLATION ENERGY</span>
+    <span class="confidential">Confidential</span>
+  </div>
+  <div class="footer-accent"></div>
+</div>
+
+<!-- ═══ SLIDE 8: Emissions Trajectory ═══ -->
+<div class="slide">
+  <div class="slide-header">
+    <h1>Fleet Emissions Trajectory</h1>
+    <span class="slide-number">8</span>
+  </div>
+  <div class="slide-body">
+    <div class="center-chart">
+      <img src="data:image/png;base64,{{ fig_emissions_fan }}" alt="Emissions Fan Chart">
+    </div>
+    <div class="source-note">P50 median trajectory across {{ n_scenarios }} scenarios; Constellation band shows P10–P90 range</div>
+  </div>
+  <div class="slide-footer">
+    <span class="brand">CONSTELLATION ENERGY</span>
+    <span class="confidential">Confidential</span>
+  </div>
+  <div class="footer-accent"></div>
+</div>
+
+<!-- ═══ SLIDE 9: Stranded Asset Risk ═══ -->
+<div class="slide">
+  <div class="slide-header">
+    <h1>Stranded Asset Risk</h1>
+    <span class="slide-number">9</span>
+  </div>
+  <div class="slide-body">
+    <div class="center-chart">
+      <img src="data:image/png;base64,{{ fig_stranded_assets }}" alt="Stranded Assets">
+    </div>
+    <div class="source-note">Stranded capacity = MW unable to recover fixed costs under scenario assumptions</div>
+  </div>
+  <div class="slide-footer">
+    <span class="brand">CONSTELLATION ENERGY</span>
+    <span class="confidential">Confidential</span>
+  </div>
+  <div class="footer-accent"></div>
+</div>
+
+<!-- ═══ SLIDE 10: Carbon Pricing Sensitivity ═══ -->
+<div class="slide">
+  <div class="slide-header">
+    <h1>Carbon Pricing Sensitivity — Constellation</h1>
+    <span class="slide-number">10</span>
+  </div>
+  <div class="slide-body">
+    <div class="center-chart">
+      <img src="data:image/png;base64,{{ fig_carbon_pricing }}" alt="Carbon Pricing">
+    </div>
+    <div class="source-note">Fleet profit under different wholesale/carbon price scenarios</div>
+  </div>
+  <div class="slide-footer">
+    <span class="brand">CONSTELLATION ENERGY</span>
+    <span class="confidential">Confidential</span>
+  </div>
+  <div class="footer-accent"></div>
+</div>
+
+<!-- ═══ SLIDE 11: Geographic Diversification ═══ -->
+<div class="slide">
+  <div class="slide-header">
+    <h1>Geographic Diversification</h1>
+    <span class="slide-number">11</span>
+  </div>
+  <div class="slide-body">
+    <div class="center-chart">
+      <img src="data:image/png;base64,{{ fig_geographic }}" alt="Geographic Heatmap">
+    </div>
+    <div class="source-note">Capacity in MW by ISO region. Color intensity reflects concentration.</div>
+  </div>
+  <div class="slide-footer">
+    <span class="brand">CONSTELLATION ENERGY</span>
+    <span class="confidential">Confidential</span>
+  </div>
+  <div class="footer-accent"></div>
+</div>
+
+<!-- ═══ SLIDE 12: Scenario Sensitivity ═══ -->
+<div class="slide">
+  <div class="slide-header">
+    <h1>Scenario Sensitivity — Constellation</h1>
+    <span class="slide-number">12</span>
+  </div>
+  <div class="slide-body">
+    <div class="center-chart">
+      <img src="data:image/png;base64,{{ fig_sensitivity }}" alt="Tornado Chart">
+    </div>
+    <div class="source-note">Deviation from median profit across scenario parameters</div>
+  </div>
+  <div class="slide-footer">
+    <span class="brand">CONSTELLATION ENERGY</span>
+    <span class="confidential">Confidential</span>
+  </div>
+  <div class="footer-accent"></div>
+</div>
+
+<!-- ═══ SLIDE 13: Recommended Actions ═══ -->
+<div class="slide">
+  <div class="slide-header">
+    <h1>Strategic Recommendations</h1>
+    <span class="slide-number">13</span>
+  </div>
+  <div class="slide-body">
+    <div class="two-col">
+      <div>
+        <h3>Leverage Strengths</h3>
+        <ul>
+          <li><strong>Maximize nuclear uptime</strong> — the 45U PTC makes every nuclear MWh worth $15/MWh more; prioritize license extensions and uprates</li>
+          <li><strong>Pursue 24/7 CFE contracts</strong> — nuclear baseload + geographic diversity enables premium hourly-matching PPAs</li>
+          <li><strong>Expand clean energy portfolio</strong> — pair existing nuclear with solar/storage to offer full-spectrum clean energy</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Mitigate Risks</h3>
+        <ul>
+          <li><strong>Accelerate coal exit</strong> — remaining coal exposure creates regulatory and financial risk; prioritize orderly retirement</li>
+          <li><strong>Hedge gas peaker exposure</strong> — transition peakers to battery storage or dual-fuel configurations</li>
+          <li><strong>Monitor capacity market evolution</strong> — PJM capacity revenues are a significant revenue stream; track reform proposals</li>
+        </ul>
+      </div>
+    </div>
+    <div class="callout" style="margin-top:0.15in">
+      <strong>Bottom line:</strong> Constellation is the best-positioned US IPP for the energy transition, with the largest zero-carbon fleet, geographic reach, and regulatory tailwinds. The primary risk is complacency — competitors are investing aggressively in renewables and storage.
+    </div>
+  </div>
+  <div class="slide-footer">
+    <span class="brand">CONSTELLATION ENERGY</span>
+    <span class="confidential">Confidential</span>
+  </div>
+  <div class="footer-accent"></div>
+</div>
+
+<!-- ═══ SLIDE 14: Methodology ═══ -->
+<div class="slide">
+  <div class="slide-header">
+    <h1>Appendix: Methodology</h1>
+    <span class="slide-number">14</span>
+  </div>
+  <div class="slide-body">
+    <h3>Data Sources</h3>
+    <ul>
+      <li><strong>Fleet data:</strong> EIA-860 (capacity), EIA-923 (generation), eGRID 2022 (emissions)</li>
+      <li><strong>Scenario modeling:</strong> Hourly CFE Optimizer — SMARTargets IPP sweep module</li>
+      <li><strong>Cost assumptions:</strong> NREL ATB 2024, Lazard LCOE v17, pipeline_config.py</li>
+    </ul>
+    <h3>Spider Map Scoring</h3>
+    <ul>
+      <li><strong>Nuclear Advantage:</strong> Nuclear capacity / total capacity × 200 (capped at 100)</li>
+      <li><strong>Geographic Diversity:</strong> Number of ISOs × 25 (capped at 100)</li>
+      <li><strong>Coal Exit Progress:</strong> 100 − (coal capacity / total capacity × 200)</li>
+      <li><strong>Gas Flexibility:</strong> CCGT / (CCGT + Peaker) capacity × 100</li>
+      <li><strong>Clean Pipeline:</strong> (Solar + Wind + Battery) / total capacity × 300 (capped at 100)</li>
+    </ul>
+    <h3>Scenario Parameters</h3>
+    <ul>
+      <li>Demand growth: Low / Medium / High</li>
+      <li>Price sensitivity: Multiple wholesale price scenarios</li>
+      <li>PPA levels: Low / Medium / High contract coverage</li>
+      <li>Gas transition friction: 0.3 / 0.7 / 1.0 (probability of gas asset stranding)</li>
+    </ul>
+    <div class="source-note">Full methodology: Hourly CFE Optimizer documentation · github.com/jessicacohen554-cyber/hourly-cfe-optimizer</div>
+  </div>
+  <div class="slide-footer">
+    <span class="brand">CONSTELLATION ENERGY</span>
+    <span class="confidential">Confidential</span>
+  </div>
+  <div class="footer-accent"></div>
+</div>
+
+</body>
+</html>
