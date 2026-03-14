@@ -682,6 +682,16 @@
     <div class="header-accent"></div>
 </div>
 
+<!-- Interpretation Panel -->
+<div class="content-section" style="padding-top:var(--space-lg);padding-bottom:0;">
+    <div class="insight-box">
+        <strong>How to read this page</strong>
+        <p style="margin:8px 0 6px;">This is a <strong>cost optimization model for corporate voluntary procurement</strong>, not a market simulation. It shows what happens in a vacuum when different procurement strategies are applied at varying participation levels, based purely on LCOE and capital costs.</p>
+        <p style="margin:6px 0;">In reality, market dynamics drive a broader mix of new generation — we explore those trajectories in the supply-side regional climate transition analysis. Here, the goal is to isolate the demand-pull signal: which resources do these strategies incentivize, where, and at what cost?</p>
+        <p style="margin:6px 0 0;"><strong>Demand grows with ambition.</strong> Each CFE target maps to an SBTi-aligned deployment year (50%&nbsp;→&nbsp;2030, 90%&nbsp;→&nbsp;2040, ≥99.99%&nbsp;→&nbsp;2050). Demand scales at ISO-specific growth rates from a 2025 baseline. Higher targets = later years = more demand to serve.</p>
+    </div>
+</div>
+
 <!-- Controls Bar -->
 <div class="controls-bar">
     <div class="controls-inner">
@@ -920,6 +930,17 @@
             </p>
             <div class="chart-container-lg"><canvas id="chartEfficiency"></canvas></div>
         </div>
+    </div>
+</div>
+
+<!-- Data Sources & Methodology -->
+<div class="content-section" style="padding-bottom:0;">
+    <div class="insight-box" style="font-size:0.82rem;line-height:1.6;">
+        <strong>Data Sources & Methodology</strong>
+        <p style="margin:8px 0 6px;"><strong>Demand</strong> — 2025 baseline demand (TWh) per ISO, grown at region-specific annual rates indexed to SBTi target years. Medium growth rates: CAISO 1.9%, ERCOT 3.5%, PJM 2.4%, NYISO 2.0%, NEISO 1.8%, MISO 2.2%, SPP 1.8%.</p>
+        <p style="margin:6px 0;"><strong>Hourly profiles</strong> — Generation and demand shapes from 2021–2025 weather-year average (EIA Form 930). Profile shapes held constant across target years; total TWh scales with demand growth.</p>
+        <p style="margin:6px 0;"><strong>Offshore wind</strong> — NREL National Offshore Wind dataset (NOW-23), 2&nbsp;km resolution, 2000–2020 historical record. Applied to CAISO, PJM, NYISO, and NEISO. Not modeled for ERCOT, MISO, or SPP.</p>
+        <p style="margin:6px 0 0;"><strong>Other sources</strong> — Solar: NREL TMY3. Onshore wind: EIA/NREL. Hydro: historical inflow-weighted. Emission factors: EPA eGRID. Cost assumptions: NREL ATB 2024, Lazard LCOE+ v17.</p>
     </div>
 </div>
 
@@ -1302,6 +1323,11 @@
             });
         }
 
+        // Compute "no new procurement" baseline: gas at 0% participation (index 0)
+        // Uses the first active strategy's data — value is the same for all strategies at 0%
+        const baselineStrat = active[0] || '1A';
+        const baselineGasGw = computeGasAtThreshold(baselineStrat, 90)[0];
+
         const chartData = { labels: xLabels, datasets };
         const ctx = document.getElementById('chartRibbon').getContext('2d');
         chartRibbon = new Chart(ctx, {
@@ -1316,6 +1342,27 @@
                     intersect: false,
                 },
                 plugins: {
+                    annotation: {
+                        annotations: {
+                            noCleanBaseline: {
+                                type: 'line',
+                                yMin: baselineGasGw,
+                                yMax: baselineGasGw,
+                                borderColor: '#9CA3AF',
+                                borderWidth: 2,
+                                borderDash: [8, 4],
+                                label: {
+                                    display: true,
+                                    content: `No new procurement baseline (${Math.round(baselineGasGw)} GW)`,
+                                    position: 'start',
+                                    backgroundColor: 'rgba(156,163,175,0.85)',
+                                    color: '#fff',
+                                    font: { size: 11, family: "'DM Sans'" },
+                                    padding: { top: 3, bottom: 3, left: 6, right: 6 },
+                                },
+                            },
+                        },
+                    },
                     legend: {
                         display: true,
                         position: 'top',
