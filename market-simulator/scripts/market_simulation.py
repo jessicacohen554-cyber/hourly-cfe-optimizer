@@ -39,7 +39,7 @@ sys.path.insert(0, SCRIPT_DIR)
 from pipeline_config import (
     ISOS, REGIONAL_DEMAND_TWH, DEMAND_GROWTH_RATES,
     GRID_MIX_SHARES, WHOLESALE_PRICES, THRESHOLDS,
-    CAPACITY_MARKET_PRICES, CAPACITY_DEGRADATION_ALPHA,
+    CAPACITY_MARKET_PRICES, CAPACITY_DEGRADATION_ALPHA, CAPACITY_DEGRADATION_PARAMS,
     PEAK_CAPACITY_CREDITS, RESOURCE_CAPACITY_FACTORS,
     LCOE_TABLES, TX_TABLES, get_tx,
     NUCLEAR_NEWBUILD_LCOE, CCS_LCOE_45Q_ON, CCS_LCOE_45Q_OFF, GEOTHERMAL_LCOE,
@@ -428,6 +428,34 @@ def compute_generator_economics(stack, hourly_lmp, unit_idx, dispatch,
     return gen_econ
 
 
+def compute_capacity_degradation(iso, clean_pct):
+    """Compute capacity price degradation factor using S-curve (sigmoid) model.
+
+    Returns a multiplier in [floor, 1.0] applied to the base capacity price.
+    At low clean shares, price stays near base. Through the transition zone
+    (midpoint ± ~15%), prices drop steeply. At high clean shares, prices
+    approach floor × base_price.
+
+    S-curve matches real RPM/ICAP auction behavior better than linear alpha:
+    - PJM RPM clearing prices show sticky behavior below 40% clean, then steep
+      decline through 50-70%, flattening above 80%.
+    - Linear model over-degrades at low clean shares and under-degrades mid-range.
+    """
+    params = CAPACITY_DEGRADATION_PARAMS.get(iso, {})
+    max_degrade = params.get('max_degrade', 0.0)
+    midpoint = params.get('midpoint', 0.50)
+    k = params.get('k', 8)
+    floor = params.get('floor', 0.0)
+
+    if max_degrade <= 0:
+        return 1.0  # No degradation (energy-only or weak capacity market)
+
+    x = clean_pct / 100.0
+    sigmoid = 1.0 / (1.0 + np.exp(-k * (x - midpoint)))
+    factor = 1.0 - max_degrade * sigmoid
+    return max(floor, factor)
+
+
 def compute_nuclear_revenue(iso, clean_pct, hourly_lmp, year, conditions=None):
     """Compute nuclear plant revenue stack by ISO.
 
@@ -440,12 +468,12 @@ def compute_nuclear_revenue(iso, clean_pct, hourly_lmp, year, conditions=None):
     # Energy revenue: LMP × generation
     energy_rev = float(np.mean(hourly_lmp * nuclear_gen)) / nuclear_cf
 
-    # Capacity revenue
+    # Capacity revenue — S-curve degradation
     base_price = CAPACITY_MARKET_PRICES.get(iso, 0)
     if conditions and conditions.get('capacity_market_price') is not None:
         base_price = conditions['capacity_market_price']
-    alpha = CAPACITY_DEGRADATION_ALPHA.get(iso, 0)
-    degraded_price = base_price * max(0, 1.0 - alpha * clean_pct / 100.0)
+    degrade_factor = compute_capacity_degradation(iso, clean_pct)
+    degraded_price = base_price * degrade_factor
     cap_rev = degraded_price * 1.0 / (nuclear_cf * 8.760)  # ELCC=1.0 for nuclear
 
     # PTC 45U — contract-for-difference floor mechanism
@@ -499,8 +527,8 @@ def compute_capacity_revenue(iso, clean_pct, resource_pcts, conditions=None):
     base_price = CAPACITY_MARKET_PRICES.get(iso, 0)
     if conditions and conditions.get('capacity_market_price') is not None:
         base_price = conditions['capacity_market_price']
-    alpha = CAPACITY_DEGRADATION_ALPHA.get(iso, 0)
-    degraded_price = base_price * max(0, 1.0 - alpha * clean_pct / 100.0)
+    degrade_factor = compute_capacity_degradation(iso, clean_pct)
+    degraded_price = base_price * degrade_factor
 
     cap_revs = {}
     for res, pct in resource_pcts.items():
@@ -1280,8 +1308,10 @@ def run_market_simulation(scenario_id, conditions, isos=None,
 
             # --- EMISSION ACCOUNTING ---
             gf = demand_twh / REGIONAL_DEMAND_TWH[iso]
-            er, _ = compute_fossil_retirement(
+            _, retirement_info = compute_fossil_retirement(
                 iso, current_pct, emission_rates, fossil_mix, gf)
+            # Use remaining fleet emission rate (not displaced rate) for actual emissions
+            er = retirement_info.get('remaining_rate_tco2_mwh', 0)
             fossil_twh = (1 - current_pct / 100.0) * demand_twh
             emissions_mt = fossil_twh * 1e6 * er / 1e6
 
