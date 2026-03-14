@@ -60,6 +60,12 @@ from pipeline_config import (
 )
 
 DATA_YEAR = '2025'
+# Available weather years for sensitivity analysis (EIA-930 parquet data)
+# Years 2021-2025 provide 5 distinct weather patterns for demand and renewable
+# generation profiles. Using individual years instead of multi-year average
+# captures extreme events (e.g., Winter Storm Uri 2021 in ERCOT, 2023 CAISO
+# atmospheric rivers) that drive capacity adequacy decisions.
+AVAILABLE_WEATHER_YEARS = ['2021', '2022', '2023', '2024', '2025']
 RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']
 
 # Alias for backward compatibility
@@ -91,10 +97,20 @@ def load_common_data():
     return demand_data, gen_profiles, emission_rates, fossil_mix
 
 
-def get_demand_profile(iso, demand_data):
-    """Extract normalized 8760 demand profile and total MWh for an ISO."""
+def get_demand_profile(iso, demand_data, weather_year=None):
+    """Extract normalized 8760 demand profile and total MWh for an ISO.
+
+    Args:
+        iso: ISO identifier string
+        demand_data: Nested dict from load_demand_profiles()
+        weather_year: Optional year string ('2021'-'2025') for weather-year
+            sensitivity analysis. If None, uses DATA_YEAR (default '2025').
+            Different weather years capture distinct demand patterns driven
+            by temperature extremes (e.g., 2021 Winter Storm Uri in ERCOT).
+    """
+    year = weather_year or DATA_YEAR
     iso_demand = demand_data.get(iso, {})
-    year_demand = iso_demand.get(DATA_YEAR, iso_demand.get('2024', {}))
+    year_demand = iso_demand.get(year, iso_demand.get(DATA_YEAR, iso_demand.get('2024', {})))
     if isinstance(year_demand, dict):
         demand_norm = year_demand.get('normalized', [0.0] * H)[:H]
         total_mwh = year_demand.get('total_annual_mwh', 0)
@@ -108,8 +124,16 @@ def get_demand_profile(iso, demand_data):
 # SUPPLY PROFILES — Step 1 version (nuclear seasonal derate, DST correction)
 # ══════════════════════════════════════════════════════════════════════════════
 
-def get_supply_profiles(iso, gen_profiles):
+def get_supply_profiles(iso, gen_profiles, weather_year=None):
     """Get generation shape profiles — Step 1 version with nuclear seasonal derate.
+
+    Args:
+        iso: ISO identifier string
+        gen_profiles: Nested dict from load_generation_profiles()
+        weather_year: Optional year string ('2021'-'2025') for weather-year
+            sensitivity. Affects solar and wind profiles (different irradiance
+            and wind patterns per year). Clean_firm/CCS are flat baseload
+            and are not affected by weather year.
 
     This is the authoritative version. step5a_compute_co2.py's simpler version (flat
     clean_firm) is preserved for backward compatibility but new code should use this.
@@ -135,19 +159,21 @@ def get_supply_profiles(iso, gen_profiles):
         cf_profile.append(1.0 / H)
     profiles['clean_firm'] = cf_profile[:H]
 
+    _wy = weather_year or DATA_YEAR
+
     # Solar (with DST-aware nighttime correction)
     if iso == 'NYISO':
-        p = gen_profiles.get(iso, {}).get(DATA_YEAR, gen_profiles.get(iso, {})).get('solar_proxy')
+        p = gen_profiles.get(iso, {}).get(_wy, gen_profiles.get(iso, {}).get(DATA_YEAR, gen_profiles.get(iso, {}))).get('solar_proxy')
         if not p:
             neiso_data = gen_profiles.get('NEISO', {})
-            neiso_year = neiso_data.get(DATA_YEAR, neiso_data)
+            neiso_year = neiso_data.get(_wy, neiso_data.get(DATA_YEAR, neiso_data))
             p = neiso_year.get('solar') if isinstance(neiso_year, dict) else None
         if not p:
             p = [0.0] * H
         solar_raw = list(p[:H])
     else:
         iso_data = gen_profiles.get(iso, {})
-        year_data = iso_data.get(DATA_YEAR, iso_data)
+        year_data = iso_data.get(_wy, iso_data.get(DATA_YEAR, iso_data))
         if isinstance(year_data, dict):
             solar_raw = list(year_data.get('solar', [0.0] * H)[:H])
         else:
@@ -178,7 +204,7 @@ def get_supply_profiles(iso, gen_profiles):
 
     # Wind
     iso_data = gen_profiles.get(iso, {})
-    year_data = iso_data.get(DATA_YEAR, iso_data)
+    year_data = iso_data.get(_wy, iso_data.get(DATA_YEAR, iso_data))
     if isinstance(year_data, dict):
         profiles['wind'] = year_data.get('wind', [0.0] * H)[:H]
     else:
@@ -187,7 +213,7 @@ def get_supply_profiles(iso, gen_profiles):
     # Offshore wind (NYISO, NEISO, PJM, CAISO only — zeros for other ISOs)
     if iso in OFFSHORE_ISOS:
         iso_data_osw = gen_profiles.get(iso, {})
-        year_data_osw = iso_data_osw.get(DATA_YEAR, iso_data_osw)
+        year_data_osw = iso_data_osw.get(_wy, iso_data_osw.get(DATA_YEAR, iso_data_osw))
         if isinstance(year_data_osw, dict):
             profiles['offshore_wind'] = year_data_osw.get('offshore_wind', [0.0] * H)[:H]
         else:
