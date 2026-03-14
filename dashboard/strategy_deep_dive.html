@@ -1,0 +1,1546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strategy Deep Dive — The 8,760 Problem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/scrollytell.css">
+<script src="js/nav.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+<script src="js/scroll-observer.js"></script>
+<script src="js/shared-footer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<style>
+/* ===== STICKY STRATEGY CONTROLS ===== */
+.strategy-controls {
+    position: sticky;
+    top: 60px;
+    z-index: 50;
+    background: rgba(255,255,255,0.88);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(226,232,240,0.6);
+    padding: 12px var(--pad-page);
+    box-shadow: var(--shadow-sm);
+}
+.strategy-controls-inner {
+    max-width: 1320px;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+}
+.strategy-category {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.category-label {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--navy);
+    margin-right: 2px;
+}
+.strategy-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    background: rgba(255,255,255,0.6);
+    border: 1.5px solid #CBD5E1;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: var(--font-data);
+    font-weight: 600;
+    font-size: 12px;
+    color: #334155;
+}
+.strategy-check:hover {
+    border-color: var(--indigo);
+    background: rgba(99,102,241,0.06);
+}
+.strategy-check:has(input:checked) {
+    background: var(--indigo);
+    border-color: var(--indigo);
+    color: white;
+}
+.strategy-check input[type="checkbox"] {
+    display: none;
+}
+.strategy-id {
+    font-weight: 700;
+}
+
+/* ===== CHART CONTAINERS ===== */
+.deep-chart-wrap {
+    position: relative;
+    min-height: 360px;
+    max-height: 500px;
+}
+.deep-chart-wrap canvas {
+    width: 100% !important;
+}
+.chart-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-lg);
+}
+
+/* ===== HEATMAP ===== */
+.heatmap-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: var(--space-lg);
+}
+.heatmap-panel {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: var(--space-md);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid #E2E8F0;
+}
+.heatmap-panel h4 {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--navy);
+    margin-bottom: var(--space-sm);
+}
+.heatmap-canvas-wrap {
+    position: relative;
+    min-height: 280px;
+}
+
+/* ===== PARTICIPATION SLIDER ===== */
+.slider-control {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: var(--space-md);
+}
+.slider-control label {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--navy);
+    white-space: nowrap;
+}
+.slider-control input[type="range"] {
+    flex: 1;
+    max-width: 300px;
+}
+.slider-control .slider-value {
+    font-family: var(--font-data);
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--indigo);
+    min-width: 40px;
+}
+
+/* ===== HEADLINE CARDS ===== */
+.synthesis-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-md);
+    margin: var(--space-xl) 0;
+}
+.synth-card {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    text-align: center;
+    box-shadow: var(--shadow-md);
+    border: 1px solid #E2E8F0;
+}
+.synth-val {
+    font-family: var(--font-data);
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: var(--indigo);
+    line-height: 1;
+    margin-bottom: 6px;
+}
+.synth-lbl {
+    font-family: var(--font-body);
+    font-size: 13px;
+    color: #64748B;
+    line-height: 1.4;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .strategy-controls { top: 50px; padding: 8px 12px; }
+    .strategy-controls-inner { gap: 6px; }
+    .category-label { font-size: 10px; }
+    .strategy-check { padding: 3px 7px; font-size: 11px; }
+    .deep-chart-wrap { min-height: 300px; }
+    .chart-grid-2 { grid-template-columns: 1fr; }
+    .heatmap-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- HEADER                                                                -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="header" id="pageHeader">
+    <h1>Strategy Deep Dive</h1>
+    <div class="subtitle">Exploring what procurement strategy choices mean for grid transformation, gas displacement, technology learning, and market dynamics</div>
+    <div class="header-accent"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- STICKY STRATEGY SELECTOR                                              -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="strategy-controls" id="strategyControls">
+    <div class="strategy-controls-inner">
+        <div class="strategy-category">
+            <span class="category-label">Track 1</span>
+            <label class="strategy-check"><input type="checkbox" value="1A"><span class="strategy-id">1A</span></label>
+            <label class="strategy-check"><input type="checkbox" value="1B" checked><span class="strategy-id">1B</span></label>
+        </div>
+        <div class="strategy-category">
+            <span class="category-label">Track 2</span>
+            <label class="strategy-check"><input type="checkbox" value="2A"><span class="strategy-id">2A</span></label>
+            <label class="strategy-check"><input type="checkbox" value="2B"><span class="strategy-id">2B</span></label>
+            <label class="strategy-check"><input type="checkbox" value="2C" checked><span class="strategy-id">2C</span></label>
+        </div>
+        <div class="strategy-category">
+            <span class="category-label">Track 3</span>
+            <label class="strategy-check"><input type="checkbox" value="3A"><span class="strategy-id">3A</span></label>
+            <label class="strategy-check"><input type="checkbox" value="3B"><span class="strategy-id">3B</span></label>
+            <label class="strategy-check"><input type="checkbox" value="3C"><span class="strategy-id">3C</span></label>
+            <label class="strategy-check"><input type="checkbox" value="3D" checked><span class="strategy-id">3D</span></label>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 1: GAS CAPACITY TRANSFORMATION                                -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section class="content-section story-section scroll-reveal">
+    <h2 class="section-title">1. Gas Capacity Transformation</h2>
+    <p class="section-subtitle">What does each procurement strategy mean for the future of gas-fired generation? Not just preventing new build, but potentially driving retirement of existing capacity.</p>
+
+    <div class="card">
+        <h3 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Total Gas Capacity vs. Corporate Participation</h3>
+        <p style="font-family:var(--font-body);font-size:13px;color:#64748B;margin-bottom:var(--space-md)">Ribbon bands show the range across all CO&#8322; targets (50&ndash;99.99%). Solid line = 90% target. When lines cross below 299 GW, strategies begin displacing existing gas.</p>
+        <div class="deep-chart-wrap">
+            <canvas id="chartGasRibbon"></canvas>
+        </div>
+    </div>
+
+    <div class="insight-box scroll-reveal">
+        <strong>Key insight:</strong> <span id="gasInsightText">Select strategies above to see which ones cross below existing gas capacity (299 GW) and at what participation levels.</span>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 2: PARTICIPATION-LEVEL DEEP DIVE                             -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section class="content-section story-section scroll-reveal">
+    <h2 class="section-title">2. Participation-Level Deep Dive</h2>
+    <p class="section-subtitle">How do strategies compare across the full range of CO&#8322; ambition? Ribbon bands show the threshold range; solid lines mark the 90% target.</p>
+
+    <div class="chart-grid-2">
+        <div class="card">
+            <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Grid Hourly Match Score (%)</h4>
+            <div class="deep-chart-wrap">
+                <canvas id="chartHmsRibbon"></canvas>
+            </div>
+        </div>
+        <div class="card">
+            <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Fossil CO&#8322; Displaced (Mt)</h4>
+            <div class="deep-chart-wrap">
+                <canvas id="chartCo2Ribbon"></canvas>
+            </div>
+        </div>
+        <div class="card">
+            <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">CO&#8322; Efficiency (Mt displaced per $B)</h4>
+            <div class="deep-chart-wrap">
+                <canvas id="chartEffRibbon"></canvas>
+            </div>
+        </div>
+        <div class="card">
+            <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Curtailment (TWh)</h4>
+            <div class="deep-chart-wrap">
+                <canvas id="chartCurtRibbon"></canvas>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 3: FULL DECARBONIZATION MATRIX                                -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section class="content-section story-section scroll-reveal">
+    <h2 class="section-title">3. Full Decarbonization Matrix</h2>
+    <p class="section-subtitle">Which combinations of participation and CO&#8322; target actually achieve a fully decarbonized grid? Cell color shows grid clean percentage.</p>
+
+    <div class="heatmap-grid" id="heatmapContainer">
+        <!-- Heatmaps inserted dynamically -->
+    </div>
+
+    <div class="insight-box scroll-reveal" style="margin-top:var(--space-lg)">
+        <strong>Reading the matrix:</strong> <span id="heatmapInsight">Green cells indicate &gt;95% grid decarbonization. The minimum participation &times; target combination for full decarbonization varies dramatically by strategy.</span>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 4: OPTIMAL TARGETS & NO-REGRETS                              -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section class="content-section story-section scroll-reveal">
+    <h2 class="section-title">4. Optimal Targets &amp; No-Regrets Alignment</h2>
+    <p class="section-subtitle">The CO&#8322; abatement analysis identified optimal CFE targets where grid MAC crosses DAC cost. How do procurement strategies interact with these targets?</p>
+
+    <div class="chart-grid-2">
+        <div class="card">
+            <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Optimal Target Overlay on Gas Capacity</h4>
+            <p style="font-family:var(--font-body);font-size:12px;color:#94A3B8;margin-bottom:var(--space-sm)">Vertical markers show each ISO's MAC-DAC crossover threshold</p>
+            <div class="deep-chart-wrap">
+                <canvas id="chartOptimalGas"></canvas>
+            </div>
+        </div>
+        <div class="card">
+            <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Resource Buildout at Optimal Target</h4>
+            <p style="font-family:var(--font-body);font-size:12px;color:#94A3B8;margin-bottom:var(--space-sm)">Stacked resources deployed as participation increases. Bold borders = no-regrets resources.</p>
+            <div class="slider-control">
+                <label>Strategy:</label>
+                <select id="optimalStratSelect" style="font-family:var(--font-data);font-size:12px;padding:4px 8px;border-radius:var(--radius-sm);border:1px solid #CBD5E1;">
+                    <option value="1B">1B Conseq (Fossil)</option>
+                    <option value="2C" selected>2C Hourly (SSS)</option>
+                    <option value="3D">3D Annual (Cross Exist)</option>
+                </select>
+            </div>
+            <div class="deep-chart-wrap">
+                <canvas id="chartOptimalResources"></canvas>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 5: RESOURCE BUILDOUT TRAJECTORIES                             -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section class="content-section story-section scroll-reveal">
+    <h2 class="section-title">5. Resource Buildout Trajectories &amp; Stranded Assets</h2>
+    <p class="section-subtitle">As strategies scale from low to high ambition, the resource mix evolves. Some strategies build gas in intermediate phases that becomes stranded at higher targets.</p>
+
+    <div class="slider-control">
+        <label>Participation Level:</label>
+        <input type="range" id="trajectorySlider" min="0" max="13" step="1" value="4">
+        <span class="slider-value" id="trajectoryValue">20%</span>
+    </div>
+
+    <div class="chart-grid-2">
+        <div class="card">
+            <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Resource Mix vs. Threshold</h4>
+            <p style="font-family:var(--font-body);font-size:12px;color:#94A3B8;margin-bottom:var(--space-sm)">How the resource mix evolves as CO&#8322; ambition increases. Select a strategy to view.</p>
+            <div class="slider-control">
+                <label>Strategy:</label>
+                <select id="trajectoryStratSelect" style="font-family:var(--font-data);font-size:12px;padding:4px 8px;border-radius:var(--radius-sm);border:1px solid #CBD5E1;">
+                </select>
+            </div>
+            <div class="deep-chart-wrap">
+                <canvas id="chartResourceTrajectory"></canvas>
+            </div>
+        </div>
+        <div class="card">
+            <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Curtailment vs. Threshold</h4>
+            <p style="font-family:var(--font-body);font-size:12px;color:#94A3B8;margin-bottom:var(--space-sm)">Strategies that overbuild renewables early show rising curtailment at higher targets.</p>
+            <div class="deep-chart-wrap">
+                <canvas id="chartCurtTrajectory"></canvas>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 6: WRIGHT'S LAW CRITICAL MASS                                 -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section class="content-section story-section scroll-reveal">
+    <h2 class="section-title">6. Wright&rsquo;s Law Critical Mass</h2>
+    <p class="section-subtitle">Technology costs follow learning curves. Which strategies reach critical deployment mass fastest for key clean firm technologies?</p>
+
+    <div class="chart-grid-2">
+        <div class="card">
+            <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Cost Trajectories by Strategy (at 90% target)</h4>
+            <p style="font-family:var(--font-body);font-size:12px;color:#94A3B8;margin-bottom:var(--space-sm)">Blended $/MWh as participation scales. Lower = faster learning curve realization.</p>
+            <div class="deep-chart-wrap">
+                <canvas id="chartWrightsTrajectory"></canvas>
+            </div>
+        </div>
+        <div class="card">
+            <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Critical Mass Threshold</h4>
+            <p style="font-family:var(--font-body);font-size:12px;color:#94A3B8;margin-bottom:var(--space-sm)">Participation level where blended costs reach net-negative (learning curves outpace premiums).</p>
+            <div class="deep-chart-wrap">
+                <canvas id="chartCriticalMass"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="insight-box scroll-reveal" style="margin-top:var(--space-lg)">
+        <strong>Learning curves matter:</strong> Strategies that concentrate deployment (hourly matching) reach critical mass faster than those that spread procurement thinly (annual matching with existing credits).
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 7: MARKET DYNAMICS & LMP IMPACT                               -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section class="content-section story-section scroll-reveal">
+    <h2 class="section-title">7. Market Dynamics &amp; LMP Impact</h2>
+    <p class="section-subtitle">Higher renewable deployment depresses wholesale electricity prices. Different strategies create different LMP impacts across regions.</p>
+
+    <div class="chart-grid-2">
+        <div class="card">
+            <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Wholesale LMP vs. CFE Threshold</h4>
+            <p style="font-family:var(--font-body);font-size:12px;color:#94A3B8;margin-bottom:var(--space-sm)">Average LMP trajectory as clean energy penetration increases, by ISO.</p>
+            <div class="deep-chart-wrap">
+                <canvas id="chartLmpThreshold"></canvas>
+            </div>
+        </div>
+        <div class="card">
+            <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Peak-Offpeak Spread (Duck Curve Effect)</h4>
+            <p style="font-family:var(--font-body);font-size:12px;color:#94A3B8;margin-bottom:var(--space-sm)">The widening gap between peak and off-peak prices as solar penetration grows.</p>
+            <div class="deep-chart-wrap">
+                <canvas id="chartLmpSpread"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="insight-box scroll-reveal" style="margin-top:var(--space-lg)">
+        <strong>Price cannibalization paradox:</strong> Strategies that drive the most renewable deployment also depress the wholesale prices that make those investments economically viable &mdash; creating a self-limiting dynamic that favors firm clean energy and storage.
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 8: SYNTHESIS                                                  -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section class="content-section story-section scroll-reveal">
+    <h2 class="section-title">8. Synthesis</h2>
+    <p class="section-subtitle">Pulling together the key findings across all dimensions of strategy analysis.</p>
+
+    <div class="synthesis-stats" id="synthesisStats">
+        <div class="synth-card scroll-reveal">
+            <div class="synth-val" id="synthGasReduction">--</div>
+            <div class="synth-lbl">Max gas displacement at 50% participation (best strategy)</div>
+        </div>
+        <div class="synth-card scroll-reveal">
+            <div class="synth-val" id="synthGridClean">--</div>
+            <div class="synth-lbl">Peak grid clean % achievable at 90% target</div>
+        </div>
+        <div class="synth-card scroll-reveal">
+            <div class="synth-val" id="synthCritMass">--</div>
+            <div class="synth-lbl">Participation needed for cost-negative clean energy (Wright&rsquo;s Law)</div>
+        </div>
+        <div class="synth-card scroll-reveal">
+            <div class="synth-val" id="synthCO2">--</div>
+            <div class="synth-lbl">Mt CO&#8322; displaced at 30% participation, 90% target (best strategy)</div>
+        </div>
+    </div>
+
+    <div class="card scroll-reveal" style="margin-top:var(--space-lg)">
+        <h3 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-md)">Key Takeaways</h3>
+        <div style="font-family:var(--font-body);color:#334155;line-height:1.7;font-size:14px;">
+            <p><strong>Strategy choice matters enormously.</strong> The difference between the most and least effective procurement strategies spans hundreds of GW of avoided gas capacity, tens of Mt of CO&#8322;, and tens of billions of dollars in learning-curve acceleration.</p>
+            <p style="margin-top:var(--space-sm)"><strong>Hourly matching drives the deepest decarbonization.</strong> Track 2 strategies (especially 2C with SSS allocation) consistently achieve the highest grid clean percentages and gas displacement at moderate participation levels.</p>
+            <p style="margin-top:var(--space-sm)"><strong>Annual matching is cheapest but least impactful.</strong> Track 3 strategies offer the lowest buyer cost but rely heavily on existing credits, producing minimal new-build additionality and limited grid transformation.</p>
+            <p style="margin-top:var(--space-sm)"><strong>Scale unlocks learning curves.</strong> At sufficient participation (25&ndash;40%), Wright&rsquo;s Law effects drive clean firm technology costs below fossil alternatives, creating a self-reinforcing deployment cycle. The question is which strategy gets there fastest.</p>
+        </div>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer id="siteFooter" data-footer-note="Strategy Deep Dive — The 8,760 Problem"></footer>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- DATA SCRIPTS                                                          -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<script src="js/deployment-data.js"></script>
+<script src="js/optimal-target-data.js"></script>
+<script src="js/lmp-data.js"></script>
+<script src="js/strategy-comparison-data.js"></script>
+<script src="js/no-regrets-data.js"></script>
+
+<script>
+(function() {
+    'use strict';
+
+    // ═════════════════════════════════════════════════════════════════════
+    // CONSTANTS
+    // ═════════════════════════════════════════════════════════════════════
+
+    const STRAT_COLORS = {
+        '1A': '#F59E0B', '1B': '#B45309',
+        '2A': '#6366F1', '2B': '#A5B4FC', '2C': '#4338CA',
+        '2C_rolloff': '#7C3AED',
+        '3A': '#22C55E', '3B': '#16A34A',
+        '3C': '#059669', '3C_rolloff': '#0D9488',
+        '3D': '#0F766E', '3D_rolloff': '#115E59',
+    };
+    const STRAT_LABELS = {
+        '1A': '1A Conseq (Grid)', '1B': '1B Conseq (Fossil)',
+        '2A': '2A Hourly (New)', '2B': '2B Hourly (Grid)', '2C': '2C Hourly (SSS)',
+        '2C_rolloff': '2C Hourly (SSS Roll-Off)',
+        '3A': '3A Annual (Same)', '3B': '3B Annual (Cross)',
+        '3C': '3C Annual (Same Exist)', '3C_rolloff': '3C Annual (Roll-Off)',
+        '3D': '3D Annual (Cross Exist)', '3D_rolloff': '3D Annual (Roll-Off)',
+    };
+
+    const PARTICIPATION_LEVELS = [0, 5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100];
+    const THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99];
+    const ISOS = ['CAISO','ERCOT','PJM','NYISO','NEISO','MISO','SPP'];
+    const EXISTING_GAS = { CAISO:37, ERCOT:55, PJM:75, NYISO:18, NEISO:14, MISO:68, SPP:32 };
+    const EXISTING_GAS_TOTAL = Object.values(EXISTING_GAS).reduce((a,b) => a+b, 0); // 299
+
+    // Non-rolloff strategies only for main analysis
+    const MAIN_STRATEGIES = ['1A','1B','2A','2B','2C','3A','3B','3C','3D'];
+
+    // Chart.js common options
+    const baseOpts = {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 400 },
+        plugins: {
+            legend: { display: true, position: 'top', labels: { font: { family: "'DM Sans'", size: 11 }, boxWidth: 14, boxHeight: 3 } },
+            tooltip: {
+                backgroundColor: 'rgba(15,23,42,0.92)',
+                titleFont: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 },
+                bodyFont: { family: "'DM Sans'", size: 11 },
+                padding: 10, cornerRadius: 8,
+            },
+        },
+        scales: {
+            x: { grid: { display: false }, ticks: { font: { family: "'DM Sans'", size: 10 }, maxRotation: 45 } },
+            y: { grid: { color: '#E2E8F0' }, ticks: { font: { family: "'Plus Jakarta Sans'", size: 10 } } },
+        },
+    };
+
+    // ═════════════════════════════════════════════════════════════════════
+    // DATA HELPERS
+    // ═════════════════════════════════════════════════════════════════════
+
+    function findClosestKey(keys, target) {
+        let best = null, bestD = Infinity;
+        for (const k of keys) {
+            const d = Math.abs(parseFloat(k) - target);
+            if (d < bestD) { bestD = d; best = k; }
+        }
+        return best;
+    }
+
+    function getRecord(strat, iso, part, thr) {
+        const sd = DEPLOYMENT_DATA.data[strat];
+        if (!sd || !sd[iso]) return null;
+        const pk = findClosestKey(Object.keys(sd[iso]), part);
+        if (!pk || !sd[iso][pk]) return null;
+        const tk = findClosestKey(Object.keys(sd[iso][pk]), thr);
+        if (!tk) return null;
+        return sd[iso][pk][tk] || null;
+    }
+
+    function getActiveStrategies() {
+        return [...document.querySelectorAll('.strategy-check input:checked')].map(el => el.value);
+    }
+
+    // Aggregate a metric across all ISOs for a strategy at each participation level
+    // Returns { p90: [...], min: [...], max: [...] } arrays (one value per participation level)
+    function buildRibbonData(strat, metricFn) {
+        return PARTICIPATION_LEVELS.map(part => {
+            const vals = [];
+            for (const thr of THRESHOLDS) {
+                let total = 0;
+                let valid = false;
+                for (const iso of ISOS) {
+                    const rec = getRecord(strat, iso, part, thr);
+                    if (rec) { total += metricFn(rec, iso); valid = true; }
+                }
+                if (valid) vals.push(total);
+            }
+            if (vals.length === 0) return { min: 0, max: 0, p90: 0 };
+            vals.sort((a, b) => a - b);
+            const p90Idx = Math.min(Math.floor(vals.length * 0.75), vals.length - 1); // ~90th percentile threshold
+            return { min: vals[0], max: vals[vals.length - 1], p90: vals[p90Idx] };
+        });
+    }
+
+    // Build ribbon datasets for Chart.js (fill band + solid line)
+    function ribbonDatasets(strat, ribbonData) {
+        const color = STRAT_COLORS[strat] || '#6366F1';
+        const label = STRAT_LABELS[strat] || strat;
+        return [
+            {
+                label: label + ' (max)',
+                data: ribbonData.map(d => d.max),
+                borderColor: 'transparent',
+                backgroundColor: color + '33',
+                fill: '+1',
+                pointRadius: 0,
+                tension: 0.3,
+                order: 10,
+            },
+            {
+                label: label + ' (min)',
+                data: ribbonData.map(d => d.min),
+                borderColor: 'transparent',
+                backgroundColor: 'transparent',
+                fill: false,
+                pointRadius: 0,
+                tension: 0.3,
+                order: 10,
+            },
+            {
+                label: label,
+                data: ribbonData.map(d => d.p90),
+                borderColor: color,
+                backgroundColor: color + '20',
+                borderWidth: 2.5,
+                pointRadius: 3,
+                pointHoverRadius: 6,
+                pointBackgroundColor: color,
+                pointBorderColor: '#fff',
+                pointBorderWidth: 1.5,
+                tension: 0.3,
+                fill: false,
+                order: 1,
+            },
+        ];
+    }
+
+    // ═════════════════════════════════════════════════════════════════════
+    // CHART INSTANCES
+    // ═════════════════════════════════════════════════════════════════════
+
+    let chartGasRibbon = null;
+    let chartHmsRibbon = null;
+    let chartCo2Ribbon = null;
+    let chartEffRibbon = null;
+    let chartCurtRibbon = null;
+    let chartOptimalGas = null;
+    let chartOptimalResources = null;
+    let chartResourceTrajectory = null;
+    let chartCurtTrajectory = null;
+    let chartWrightsTrajectory = null;
+    let chartCriticalMass = null;
+    let chartLmpThreshold = null;
+    let chartLmpSpread = null;
+
+    const xLabels = PARTICIPATION_LEVELS.map(p => p + '%');
+
+    // ═════════════════════════════════════════════════════════════════════
+    // SECTION 1: GAS CAPACITY RIBBON
+    // ═════════════════════════════════════════════════════════════════════
+
+    function buildGasRibbon() {
+        if (chartGasRibbon) chartGasRibbon.destroy();
+        const active = getActiveStrategies();
+        const datasets = [];
+
+        let crossBelow299 = [];
+
+        for (const strat of active) {
+            const data = buildRibbonData(strat, (rec) => rec.gasGw || 0);
+            datasets.push(...ribbonDatasets(strat, data));
+
+            // Find first participation where p90 line crosses below 299
+            for (let i = 0; i < data.length; i++) {
+                if (data[i].p90 < EXISTING_GAS_TOTAL) {
+                    crossBelow299.push({ strat: STRAT_LABELS[strat] || strat, part: PARTICIPATION_LEVELS[i] });
+                    break;
+                }
+            }
+        }
+
+        // Update insight
+        if (crossBelow299.length > 0) {
+            const parts = crossBelow299.map(c => `${c.strat} at ${c.part}%`).join('; ');
+            document.getElementById('gasInsightText').textContent =
+                `Strategies crossing below existing gas (299 GW): ${parts}. Beyond these thresholds, clean energy doesn't just prevent new gas — it retires existing capacity.`;
+        } else {
+            document.getElementById('gasInsightText').textContent =
+                'At current selections, no strategy crosses below existing gas capacity (299 GW) at the 90% CO₂ target line. Try selecting more aggressive strategies or check higher participation levels.';
+        }
+
+        chartGasRibbon = new Chart(document.getElementById('chartGasRibbon').getContext('2d'), {
+            type: 'line',
+            data: { labels: xLabels, datasets },
+            options: {
+                ...baseOpts,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    ...baseOpts.plugins,
+                    legend: {
+                        ...baseOpts.plugins.legend,
+                        labels: {
+                            ...baseOpts.plugins.legend.labels,
+                            filter: (item) => !item.text.includes('(max)') && !item.text.includes('(min)'),
+                        },
+                    },
+                    annotation: {
+                        annotations: {
+                            theoretical: {
+                                type: 'line', yMin: 494, yMax: 494,
+                                borderColor: '#EF4444', borderWidth: 2, borderDash: [8, 4],
+                                label: { display: true, content: 'Theoretical 2050 gas need (494 GW)', position: 'start', backgroundColor: 'rgba(239,68,68,0.85)', color: '#fff', font: { size: 10, family: "'DM Sans'" }, padding: { top: 2, bottom: 2, left: 5, right: 5 } },
+                            },
+                            existing: {
+                                type: 'line', yMin: 299, yMax: 299,
+                                borderColor: '#F59E0B', borderWidth: 2, borderDash: [8, 4],
+                                label: { display: true, content: 'Existing gas capacity (299 GW)', position: 'end', backgroundColor: 'rgba(245,158,11,0.85)', color: '#fff', font: { size: 10, family: "'DM Sans'" }, padding: { top: 2, bottom: 2, left: 5, right: 5 } },
+                            },
+                        },
+                    },
+                    tooltip: {
+                        ...baseOpts.plugins.tooltip,
+                        callbacks: {
+                            title: (items) => 'Participation: ' + items[0].label,
+                            label: (ctx) => {
+                                if (ctx.dataset.label.includes('(max)') || ctx.dataset.label.includes('(min)')) return null;
+                                return `${ctx.dataset.label}: ${Math.round(ctx.raw)} GW`;
+                            },
+                        },
+                    },
+                },
+                scales: {
+                    ...baseOpts.scales,
+                    x: { ...baseOpts.scales.x, title: { display: true, text: 'Corporate Participation Level', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                    y: { ...baseOpts.scales.y, beginAtZero: true, ticks: { ...baseOpts.scales.y.ticks, callback: v => v + ' GW' }, title: { display: true, text: 'Total Gas Capacity (GW)', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                },
+            },
+        });
+    }
+
+    // ═════════════════════════════════════════════════════════════════════
+    // SECTION 2: PARTICIPATION RIBBONS
+    // ═════════════════════════════════════════════════════════════════════
+
+    function buildGenericRibbon(canvasId, chartRef, metricFn, yLabel, yCallback, tooltipSuffix) {
+        if (chartRef) chartRef.destroy();
+        const active = getActiveStrategies();
+        const datasets = [];
+
+        for (const strat of active) {
+            const data = buildRibbonData(strat, metricFn);
+            datasets.push(...ribbonDatasets(strat, data));
+        }
+
+        return new Chart(document.getElementById(canvasId).getContext('2d'), {
+            type: 'line',
+            data: { labels: xLabels, datasets },
+            options: {
+                ...baseOpts,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    ...baseOpts.plugins,
+                    legend: {
+                        ...baseOpts.plugins.legend,
+                        labels: {
+                            ...baseOpts.plugins.legend.labels,
+                            filter: (item) => !item.text.includes('(max)') && !item.text.includes('(min)'),
+                        },
+                    },
+                    tooltip: {
+                        ...baseOpts.plugins.tooltip,
+                        callbacks: {
+                            title: (items) => 'Participation: ' + items[0].label,
+                            label: (ctx) => {
+                                if (ctx.dataset.label.includes('(max)') || ctx.dataset.label.includes('(min)')) return null;
+                                return `${ctx.dataset.label}: ${typeof ctx.raw === 'number' ? ctx.raw.toFixed(1) : ctx.raw} ${tooltipSuffix}`;
+                            },
+                        },
+                    },
+                },
+                scales: {
+                    ...baseOpts.scales,
+                    x: { ...baseOpts.scales.x, title: { display: true, text: 'Corporate Participation Level', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                    y: { ...baseOpts.scales.y, ticks: { ...baseOpts.scales.y.ticks, callback: yCallback || (v => v) }, title: { display: true, text: yLabel, font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                },
+            },
+        });
+    }
+
+    function buildSection2() {
+        // Grid HMS — average across ISOs (weighted by demand would be better, but average is simpler)
+        chartHmsRibbon = buildGenericRibbon('chartHmsRibbon', chartHmsRibbon,
+            (rec) => rec.gridHms || rec.gridCleanPct || 0,
+            'Grid Hourly Match Score (%)', v => v.toFixed(0) + '%', '%'
+        );
+
+        // Fossil CO2 displaced — baseline minus current
+        chartCo2Ribbon = buildGenericRibbon('chartCo2Ribbon', chartCo2Ribbon,
+            (rec) => {
+                const baseline = rec.bl || 0;
+                const current = rec.co2 || 0;
+                return Math.max(0, baseline - current);
+            },
+            'CO₂ Displaced (Mt)', v => v.toFixed(0) + ' Mt', 'Mt'
+        );
+
+        // CO2 efficiency = CO2 displaced per $B cost
+        chartEffRibbon = buildGenericRibbon('chartEffRibbon', chartEffRibbon,
+            (rec) => {
+                const displaced = Math.max(0, (rec.bl || 0) - (rec.co2 || 0));
+                const costB = (rec.tc || 0) / 1000; // tc is in $M, convert to $B
+                return costB > 0.001 ? displaced / costB : 0;
+            },
+            'CO₂ Efficiency (Mt/$B)', v => v.toFixed(1), 'Mt/$B'
+        );
+
+        // Curtailment
+        chartCurtRibbon = buildGenericRibbon('chartCurtRibbon', chartCurtRibbon,
+            (rec) => rec.curtTwh || 0,
+            'Curtailment (TWh)', v => v.toFixed(0) + ' TWh', 'TWh'
+        );
+    }
+
+    // ═════════════════════════════════════════════════════════════════════
+    // SECTION 3: DECARBONIZATION HEATMAP
+    // ═════════════════════════════════════════════════════════════════════
+
+    function heatmapColor(pct) {
+        if (pct >= 95) return '#16A34A';
+        if (pct >= 90) return '#22C55E';
+        if (pct >= 80) return '#86EFAC';
+        if (pct >= 70) return '#FDE047';
+        if (pct >= 50) return '#FBBF24';
+        if (pct >= 30) return '#F97316';
+        return '#EF4444';
+    }
+
+    function buildHeatmaps() {
+        const container = document.getElementById('heatmapContainer');
+        container.innerHTML = '';
+        const active = getActiveStrategies();
+
+        const partLabels = [5, 10, 20, 30, 50, 70, 100]; // subset for readability
+        const thrLabels = [50, 70, 80, 90, 95, 99, 99.99];
+
+        for (const strat of active) {
+            const panel = document.createElement('div');
+            panel.className = 'heatmap-panel';
+
+            const title = document.createElement('h4');
+            title.textContent = STRAT_LABELS[strat] || strat;
+            panel.appendChild(title);
+
+            const wrap = document.createElement('div');
+            wrap.className = 'heatmap-canvas-wrap';
+
+            const canvas = document.createElement('canvas');
+            canvas.id = 'heatmap_' + strat;
+            wrap.appendChild(canvas);
+            panel.appendChild(wrap);
+            container.appendChild(panel);
+
+            // Build bubble chart as heatmap proxy
+            const dataPoints = [];
+            for (let pi = 0; pi < partLabels.length; pi++) {
+                for (let ti = 0; ti < thrLabels.length; ti++) {
+                    let totalClean = 0, count = 0;
+                    for (const iso of ISOS) {
+                        const rec = getRecord(strat, iso, partLabels[pi], thrLabels[ti]);
+                        if (rec) {
+                            totalClean += (rec.gridHms || rec.gridCleanPct || 0);
+                            count++;
+                        }
+                    }
+                    const avg = count > 0 ? totalClean / count : 0;
+                    dataPoints.push({ x: pi, y: ti, v: Math.round(avg * 10) / 10 });
+                }
+            }
+
+            new Chart(canvas.getContext('2d'), {
+                type: 'bubble',
+                data: {
+                    datasets: [{
+                        data: dataPoints.map(p => ({
+                            x: p.x, y: p.y, r: 16,
+                        })),
+                        backgroundColor: dataPoints.map(p => heatmapColor(p.v)),
+                        borderColor: dataPoints.map(p => heatmapColor(p.v)),
+                        borderWidth: 1,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 300 },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(15,23,42,0.92)',
+                            callbacks: {
+                                label: (ctx) => {
+                                    const idx = ctx.dataIndex;
+                                    const pi = Math.floor(idx / thrLabels.length);
+                                    const ti = idx % thrLabels.length;
+                                    return `${partLabels[pi]}% participation, ${thrLabels[ti]}% target: ${dataPoints[idx].v}% grid clean`;
+                                },
+                            },
+                        },
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { callback: (v) => partLabels[v] + '%', font: { family: "'DM Sans'", size: 10 } },
+                            title: { display: true, text: 'Participation', font: { family: "'Plus Jakarta Sans'", size: 11, weight: '600' }, color: '#334155' },
+                            min: -0.5, max: partLabels.length - 0.5,
+                        },
+                        y: {
+                            grid: { display: false },
+                            ticks: { callback: (v) => (thrLabels[v] >= 99.99 ? '≥99.99' : thrLabels[v]) + '%', font: { family: "'DM Sans'", size: 10 } },
+                            title: { display: true, text: 'CO₂ Target', font: { family: "'Plus Jakarta Sans'", size: 11, weight: '600' }, color: '#334155' },
+                            min: -0.5, max: thrLabels.length - 0.5,
+                        },
+                    },
+                },
+            });
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════
+    // SECTION 4: OPTIMAL TARGETS & NO-REGRETS
+    // ═════════════════════════════════════════════════════════════════════
+
+    function buildOptimalGasChart() {
+        if (chartOptimalGas) chartOptimalGas.destroy();
+        const active = getActiveStrategies();
+        const datasets = [];
+
+        // Use first active strategy for the gas line
+        const strat = active[0] || '2C';
+        const data = buildRibbonData(strat, (rec) => rec.gasGw || 0);
+        const color = STRAT_COLORS[strat] || '#6366F1';
+        datasets.push({
+            label: STRAT_LABELS[strat] || strat,
+            data: data.map(d => d.p90),
+            borderColor: color,
+            backgroundColor: color + '20',
+            borderWidth: 2.5, pointRadius: 3, tension: 0.3, fill: false,
+        });
+
+        // Add optimal target annotations
+        const annotations = {};
+        if (typeof OPTIMAL_TARGETS !== 'undefined') {
+            for (const iso of ISOS) {
+                const ot = OPTIMAL_TARGETS[iso];
+                if (ot && ot.crossover_central) {
+                    const thr = ot.crossover_central.threshold;
+                    annotations['opt_' + iso] = {
+                        type: 'label',
+                        xValue: 4, // ~20% participation as visual marker
+                        yValue: 280 + ISOS.indexOf(iso) * 20,
+                        content: iso + ': ' + Math.round(thr) + '%',
+                        font: { size: 10, family: "'DM Sans'", weight: '600' },
+                        color: ISO_COLORS ? ISO_COLORS[iso] || '#6366F1' : '#6366F1',
+                        backgroundColor: 'rgba(255,255,255,0.8)',
+                        padding: 3,
+                        borderRadius: 4,
+                    };
+                }
+            }
+        }
+
+        chartOptimalGas = new Chart(document.getElementById('chartOptimalGas').getContext('2d'), {
+            type: 'line',
+            data: { labels: xLabels, datasets },
+            options: {
+                ...baseOpts,
+                plugins: {
+                    ...baseOpts.plugins,
+                    annotation: { annotations },
+                },
+                scales: {
+                    ...baseOpts.scales,
+                    x: { ...baseOpts.scales.x, title: { display: true, text: 'Participation', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                    y: { ...baseOpts.scales.y, beginAtZero: true, ticks: { ...baseOpts.scales.y.ticks, callback: v => v + ' GW' } },
+                },
+            },
+        });
+    }
+
+    function buildOptimalResourcesChart() {
+        if (chartOptimalResources) chartOptimalResources.destroy();
+        const strat = document.getElementById('optimalStratSelect').value;
+        if (typeof STRATEGY_CMP === 'undefined') return;
+
+        const stratData = STRATEGY_CMP.strategies && STRATEGY_CMP.strategies[strat];
+        if (!stratData) return;
+
+        // Get optimal threshold (average across ISOs)
+        let optThr = 90;
+        if (typeof OPTIMAL_TARGETS !== 'undefined') {
+            const thrs = ISOS.map(iso => OPTIMAL_TARGETS[iso]?.crossover_central?.threshold).filter(Boolean);
+            if (thrs.length > 0) optThr = Math.round(thrs.reduce((a,b) => a+b, 0) / thrs.length);
+        }
+
+        // Find closest available threshold
+        const thrKey = findClosestKey(Object.keys(stratData.CAISO?.by_threshold || {}), optThr);
+        if (!thrKey) return;
+
+        const resources = ['solar', 'wind', 'ccs', 'battery', 'ldes'];
+        const resColors = {
+            solar: RESOURCE_COLORS ? RESOURCE_COLORS.solar : '#F59E0B',
+            wind: RESOURCE_COLORS ? RESOURCE_COLORS.wind : '#22C55E',
+            ccs: RESOURCE_COLORS ? RESOURCE_COLORS.ccs : '#64748B',
+            battery: RESOURCE_COLORS ? RESOURCE_COLORS.battery : '#06B6D4',
+            ldes: RESOURCE_COLORS ? RESOURCE_COLORS.ldes : '#E91E63',
+        };
+
+        // Aggregate across ISOs for each resource at the optimal threshold
+        const resData = {};
+        for (const r of resources) resData[r] = [];
+
+        // Use participation as proxy — we only have threshold-level data in STRATEGY_CMP
+        // So we show resource mix at the optimal threshold across ISOs
+        const availableThrs = Object.keys(stratData.CAISO?.by_threshold || {}).map(Number).sort((a,b) => a - b);
+
+        for (const thr of availableThrs) {
+            for (const r of resources) {
+                let total = 0;
+                for (const iso of ISOS) {
+                    const entry = stratData[iso]?.by_threshold?.[String(thr)];
+                    if (entry?.resources?.[r]) total += entry.resources[r].twh || 0;
+                }
+                resData[r].push(total);
+            }
+        }
+
+        // Check no-regrets
+        const noRegretsSet = new Set();
+        if (typeof NO_REGRETS_DATA !== 'undefined') {
+            for (const iso of ISOS) {
+                const analysis = NO_REGRETS_DATA[iso]?.analysis;
+                if (!analysis) continue;
+                for (const [res, info] of Object.entries(analysis)) {
+                    if (info.isNoRegrets) noRegretsSet.add(res);
+                }
+            }
+        }
+
+        const datasets = resources.map(r => ({
+            label: r.charAt(0).toUpperCase() + r.slice(1),
+            data: resData[r],
+            backgroundColor: resColors[r] + 'CC',
+            borderColor: noRegretsSet.has(r) ? '#000' : resColors[r],
+            borderWidth: noRegretsSet.has(r) ? 2.5 : 1,
+            fill: true,
+        }));
+
+        chartOptimalResources = new Chart(document.getElementById('chartOptimalResources').getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: availableThrs.map(t => t >= 99.99 ? '≥99.99%' : t + '%'),
+                datasets,
+            },
+            options: {
+                ...baseOpts,
+                plugins: {
+                    ...baseOpts.plugins,
+                    filler: { propagate: true },
+                },
+                scales: {
+                    ...baseOpts.scales,
+                    x: { ...baseOpts.scales.x, title: { display: true, text: 'CO₂ Target', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                    y: { ...baseOpts.scales.y, stacked: true, ticks: { ...baseOpts.scales.y.ticks, callback: v => v.toFixed(0) + ' TWh' }, title: { display: true, text: 'Resource Deployment (TWh)', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                },
+            },
+        });
+    }
+
+    // ═════════════════════════════════════════════════════════════════════
+    // SECTION 5: RESOURCE BUILDOUT TRAJECTORIES
+    // ═════════════════════════════════════════════════════════════════════
+
+    function getTrajectoryParticipation() {
+        const slider = document.getElementById('trajectorySlider');
+        return PARTICIPATION_LEVELS[parseInt(slider.value)] || 20;
+    }
+
+    function populateTrajectoryStratSelect() {
+        const sel = document.getElementById('trajectoryStratSelect');
+        sel.innerHTML = '';
+        for (const s of MAIN_STRATEGIES) {
+            const opt = document.createElement('option');
+            opt.value = s;
+            opt.textContent = STRAT_LABELS[s] || s;
+            if (s === '2C') opt.selected = true;
+            sel.appendChild(opt);
+        }
+    }
+
+    function buildResourceTrajectory() {
+        if (chartResourceTrajectory) chartResourceTrajectory.destroy();
+        const strat = document.getElementById('trajectoryStratSelect').value;
+        const part = getTrajectoryParticipation();
+
+        // Get data from STRATEGY_CMP
+        if (typeof STRATEGY_CMP === 'undefined') return;
+        const stratData = STRATEGY_CMP.strategies?.[strat];
+        if (!stratData) return;
+
+        const resources = ['solar', 'wind', 'ccs', 'battery', 'ldes'];
+        const resColors = {
+            solar: RESOURCE_COLORS ? RESOURCE_COLORS.solar : '#F59E0B',
+            wind: RESOURCE_COLORS ? RESOURCE_COLORS.wind : '#22C55E',
+            ccs: RESOURCE_COLORS ? RESOURCE_COLORS.ccs : '#64748B',
+            battery: RESOURCE_COLORS ? RESOURCE_COLORS.battery : '#06B6D4',
+            ldes: RESOURCE_COLORS ? RESOURCE_COLORS.ldes : '#E91E63',
+        };
+
+        const availableThrs = Object.keys(stratData.CAISO?.by_threshold || {}).map(Number).sort((a,b) => a - b);
+
+        const resData = {};
+        for (const r of resources) resData[r] = [];
+
+        for (const thr of availableThrs) {
+            for (const r of resources) {
+                let total = 0;
+                for (const iso of ISOS) {
+                    const entry = stratData[iso]?.by_threshold?.[String(thr)];
+                    if (entry?.resources?.[r]) total += entry.resources[r].twh || 0;
+                }
+                resData[r].push(total);
+            }
+        }
+
+        // Also add gas backup from deployment data
+        const gasData = availableThrs.map(thr => {
+            let total = 0;
+            for (const iso of ISOS) {
+                const rec = getRecord(strat, iso, part, thr);
+                if (rec) total += (rec.gasGw || 0) * 0.4; // rough GW→TWh proxy (40% CF)
+            }
+            return total;
+        });
+
+        const datasets = [
+            ...resources.map(r => ({
+                label: r.charAt(0).toUpperCase() + r.slice(1),
+                data: resData[r],
+                backgroundColor: resColors[r] + 'AA',
+                borderColor: resColors[r],
+                borderWidth: 1,
+                fill: true,
+            })),
+            {
+                label: 'Gas Backup',
+                data: gasData,
+                backgroundColor: '#6B728066',
+                borderColor: '#6B7280',
+                borderWidth: 1,
+                fill: true,
+            },
+        ];
+
+        chartResourceTrajectory = new Chart(document.getElementById('chartResourceTrajectory').getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: availableThrs.map(t => t >= 99.99 ? '≥99.99%' : t + '%'),
+                datasets,
+            },
+            options: {
+                ...baseOpts,
+                plugins: { ...baseOpts.plugins, filler: { propagate: true } },
+                scales: {
+                    ...baseOpts.scales,
+                    x: { ...baseOpts.scales.x, title: { display: true, text: 'CO₂ Reduction Target', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                    y: { ...baseOpts.scales.y, stacked: true, ticks: { ...baseOpts.scales.y.ticks, callback: v => v.toFixed(0) + ' TWh' } },
+                },
+            },
+        });
+    }
+
+    function buildCurtTrajectory() {
+        if (chartCurtTrajectory) chartCurtTrajectory.destroy();
+        const active = getActiveStrategies();
+        const part = getTrajectoryParticipation();
+        const datasets = [];
+
+        for (const strat of active) {
+            const color = STRAT_COLORS[strat] || '#6366F1';
+            const data = THRESHOLDS.map(thr => {
+                let total = 0;
+                for (const iso of ISOS) {
+                    const rec = getRecord(strat, iso, part, thr);
+                    if (rec) total += (rec.curtTwh || 0);
+                }
+                return total;
+            });
+
+            datasets.push({
+                label: STRAT_LABELS[strat] || strat,
+                data,
+                borderColor: color,
+                backgroundColor: color + '20',
+                borderWidth: 2,
+                pointRadius: 2,
+                tension: 0.3,
+                fill: false,
+            });
+        }
+
+        chartCurtTrajectory = new Chart(document.getElementById('chartCurtTrajectory').getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: THRESHOLDS.map(t => t >= 99.99 ? '≥99.99%' : t + '%'),
+                datasets,
+            },
+            options: {
+                ...baseOpts,
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    ...baseOpts.scales,
+                    x: { ...baseOpts.scales.x, title: { display: true, text: 'CO₂ Reduction Target', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                    y: { ...baseOpts.scales.y, ticks: { ...baseOpts.scales.y.ticks, callback: v => v.toFixed(0) + ' TWh' }, title: { display: true, text: 'Curtailment (TWh)', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                },
+            },
+        });
+    }
+
+    // ═════════════════════════════════════════════════════════════════════
+    // SECTION 6: WRIGHT'S LAW
+    // ═════════════════════════════════════════════════════════════════════
+
+    let wrightsData = null;
+
+    async function loadWrightsData() {
+        try {
+            const resp = await fetch('js/wrights_law_data.json');
+            if (resp.ok) wrightsData = await resp.json();
+        } catch (e) {
+            console.warn('Could not load wrights_law_data.json:', e);
+        }
+    }
+
+    function buildWrightsCharts() {
+        if (!wrightsData) return;
+
+        // Chart 6A: Cost trajectories by strategy at 90% target
+        if (chartWrightsTrajectory) chartWrightsTrajectory.destroy();
+
+        const fig8 = wrightsData.figure8 || wrightsData.strategy_comparison_90;
+        if (!fig8) return;
+
+        const partPcts = fig8.participation_pcts || wrightsData.metadata?.participation_pcts || [];
+        const partLabelsW = partPcts.map(p => Math.round(p * 100) + '%');
+
+        const stratKeys = [
+            { key: 'strat_1a_at_90', label: '1A Conseq', color: STRAT_COLORS['1A'] },
+            { key: 'strat_2a_at_90', label: '2A Hourly (New)', color: STRAT_COLORS['2A'] },
+            { key: 'strat_2b_at_90', label: '2B Hourly (Grid)', color: STRAT_COLORS['2B'] },
+            { key: 'strat_2c_gated', label: '2C Hourly (SSS)', color: STRAT_COLORS['2C'] },
+            { key: 'strat_3a_at_90', label: '3A Annual', color: STRAT_COLORS['3A'] },
+        ];
+
+        const datasets = [];
+        for (const sk of stratKeys) {
+            const data = fig8[sk.key];
+            if (!data) continue;
+            datasets.push({
+                label: sk.label,
+                data: data,
+                borderColor: sk.color,
+                backgroundColor: sk.color + '20',
+                borderWidth: 2.5,
+                pointRadius: 3,
+                tension: 0.3,
+                fill: false,
+            });
+        }
+
+        chartWrightsTrajectory = new Chart(document.getElementById('chartWrightsTrajectory').getContext('2d'), {
+            type: 'line',
+            data: { labels: partLabelsW, datasets },
+            options: {
+                ...baseOpts,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    ...baseOpts.plugins,
+                    annotation: {
+                        annotations: {
+                            zeroline: {
+                                type: 'line', yMin: 0, yMax: 0,
+                                borderColor: '#22C55E', borderWidth: 2, borderDash: [6, 3],
+                                label: { display: true, content: 'Cost parity', position: 'end', backgroundColor: 'rgba(34,197,94,0.85)', color: '#fff', font: { size: 10, family: "'DM Sans'" }, padding: 3 },
+                            },
+                        },
+                    },
+                },
+                scales: {
+                    ...baseOpts.scales,
+                    x: { ...baseOpts.scales.x, title: { display: true, text: 'Participation Level', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                    y: { ...baseOpts.scales.y, title: { display: true, text: 'Blended Cost Premium ($/MWh)', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                },
+            },
+        });
+
+        // Chart 6B: Critical mass threshold
+        if (chartCriticalMass) chartCriticalMass.destroy();
+
+        const cm = wrightsData.critical_mass;
+        if (!cm) return;
+
+        const cmThresholds = Object.keys(cm).map(Number).sort((a,b) => a - b);
+        const cmData = cmThresholds.map(t => (cm[String(t)] || 0) * 100);
+
+        chartCriticalMass = new Chart(document.getElementById('chartCriticalMass').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: cmThresholds.map(t => t >= 99.99 ? '≥99.99%' : t + '%'),
+                datasets: [{
+                    label: 'Participation for Net-Negative Cost',
+                    data: cmData,
+                    backgroundColor: '#6366F1AA',
+                    borderColor: '#6366F1',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                }],
+            },
+            options: {
+                ...baseOpts,
+                plugins: {
+                    ...baseOpts.plugins,
+                    legend: { display: false },
+                    tooltip: {
+                        ...baseOpts.plugins.tooltip,
+                        callbacks: {
+                            label: (ctx) => `${ctx.raw.toFixed(0)}% participation needed`,
+                        },
+                    },
+                },
+                scales: {
+                    ...baseOpts.scales,
+                    x: { ...baseOpts.scales.x, title: { display: true, text: 'CO₂ Reduction Target', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                    y: { ...baseOpts.scales.y, ticks: { ...baseOpts.scales.y.ticks, callback: v => v + '%' }, title: { display: true, text: 'Participation Needed (%)', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                },
+            },
+        });
+    }
+
+    // ═════════════════════════════════════════════════════════════════════
+    // SECTION 7: LMP IMPACT
+    // ═════════════════════════════════════════════════════════════════════
+
+    function buildLmpCharts() {
+        if (typeof PJM_RAW === 'undefined' || typeof ISO_SHAPES === 'undefined') return;
+
+        // Chart 7A: LMP vs threshold per ISO
+        if (chartLmpThreshold) chartLmpThreshold.destroy();
+
+        const thresholds = PJM_RAW.thresholds || [];
+        const thrLabels = thresholds.map(t => t >= 99.99 ? '≥99.99%' : t + '%');
+        const pjmP50 = PJM_RAW.envelope?.p50 || [];
+
+        const datasets = [];
+        for (const iso of ISOS) {
+            const shape = ISO_SHAPES[iso];
+            if (!shape) continue;
+            const color = (typeof ISO_COLORS !== 'undefined') ? ISO_COLORS[iso] || '#6366F1' : '#6366F1';
+
+            // Scale PJM data by ISO shape
+            const scaled = pjmP50.map((v, i) => {
+                const frac = i / (pjmP50.length - 1);
+                const scaleFactor = 1 + (shape.pow || 0) * frac;
+                const endAdj = shape.endLMP || 1;
+                return v * scaleFactor * endAdj;
+            });
+
+            datasets.push({
+                label: iso,
+                data: scaled,
+                borderColor: color,
+                backgroundColor: color + '20',
+                borderWidth: 2,
+                pointRadius: 2,
+                tension: 0.3,
+                fill: false,
+            });
+        }
+
+        chartLmpThreshold = new Chart(document.getElementById('chartLmpThreshold').getContext('2d'), {
+            type: 'line',
+            data: { labels: thrLabels, datasets },
+            options: {
+                ...baseOpts,
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    ...baseOpts.scales,
+                    x: { ...baseOpts.scales.x, title: { display: true, text: 'CFE Threshold', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                    y: { ...baseOpts.scales.y, ticks: { ...baseOpts.scales.y.ticks, callback: v => '$' + v.toFixed(0) }, title: { display: true, text: 'Average LMP ($/MWh)', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                },
+            },
+        });
+
+        // Chart 7B: Peak-offpeak spread
+        if (chartLmpSpread) chartLmpSpread.destroy();
+
+        const peakData = PJM_RAW.peak;
+        const offpeakData = PJM_RAW.offpeak;
+        if (!peakData || !offpeakData) return;
+
+        const peakP50 = peakData.p50 || [];
+        const offP50 = offpeakData.p50 || [];
+
+        const spreadDatasets = [];
+        for (const iso of ISOS) {
+            const shape = ISO_SHAPES[iso];
+            if (!shape) continue;
+            const color = (typeof ISO_COLORS !== 'undefined') ? ISO_COLORS[iso] || '#6366F1' : '#6366F1';
+
+            const spread = peakP50.map((v, i) => {
+                const peakScaled = v * (shape.endPeak || 1);
+                const offScaled = (offP50[i] || 0) * (shape.endOff || 1);
+                return peakScaled - offScaled;
+            });
+
+            spreadDatasets.push({
+                label: iso,
+                data: spread,
+                borderColor: color,
+                backgroundColor: color + '20',
+                borderWidth: 2,
+                pointRadius: 2,
+                tension: 0.3,
+                fill: false,
+            });
+        }
+
+        chartLmpSpread = new Chart(document.getElementById('chartLmpSpread').getContext('2d'), {
+            type: 'line',
+            data: { labels: thrLabels, datasets: spreadDatasets },
+            options: {
+                ...baseOpts,
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    ...baseOpts.scales,
+                    x: { ...baseOpts.scales.x, title: { display: true, text: 'CFE Threshold', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                    y: { ...baseOpts.scales.y, ticks: { ...baseOpts.scales.y.ticks, callback: v => '$' + v.toFixed(0) }, title: { display: true, text: 'Peak–Offpeak Spread ($/MWh)', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                },
+            },
+        });
+    }
+
+    // ═════════════════════════════════════════════════════════════════════
+    // SECTION 8: SYNTHESIS STATS
+    // ═════════════════════════════════════════════════════════════════════
+
+    function computeSynthesisStats() {
+        const active = getActiveStrategies();
+
+        // Gas reduction at 50% participation
+        let maxGasReduction = 0;
+        for (const strat of active) {
+            let totalGas = 0;
+            for (const iso of ISOS) {
+                const rec = getRecord(strat, iso, 50, 90);
+                if (rec) totalGas += (rec.gasGw || 0);
+            }
+            const reduction = EXISTING_GAS_TOTAL + 195 - totalGas; // vs theoretical 494
+            if (reduction > maxGasReduction) maxGasReduction = reduction;
+        }
+        document.getElementById('synthGasReduction').textContent = Math.round(maxGasReduction) + ' GW';
+
+        // Peak grid clean at 90% target
+        let maxClean = 0;
+        for (const strat of active) {
+            let totalClean = 0, count = 0;
+            for (const iso of ISOS) {
+                const rec = getRecord(strat, iso, 100, 90);
+                if (rec) { totalClean += (rec.gridHms || rec.gridCleanPct || 0); count++; }
+            }
+            const avg = count > 0 ? totalClean / count : 0;
+            if (avg > maxClean) maxClean = avg;
+        }
+        document.getElementById('synthGridClean').textContent = maxClean.toFixed(1) + '%';
+
+        // Critical mass from Wright's data
+        if (wrightsData?.critical_mass) {
+            const cm90 = wrightsData.critical_mass['90.0'] || wrightsData.critical_mass['90'];
+            if (cm90) {
+                document.getElementById('synthCritMass').textContent = Math.round(cm90 * 100) + '%';
+            }
+        }
+
+        // CO2 displaced at 30% participation, 90% target
+        let maxCO2 = 0;
+        for (const strat of active) {
+            let totalDisp = 0;
+            for (const iso of ISOS) {
+                const rec = getRecord(strat, iso, 30, 90);
+                if (rec) totalDisp += Math.max(0, (rec.bl || 0) - (rec.co2 || 0));
+            }
+            if (totalDisp > maxCO2) maxCO2 = totalDisp;
+        }
+        document.getElementById('synthCO2').textContent = maxCO2.toFixed(0) + ' Mt';
+    }
+
+    // ═════════════════════════════════════════════════════════════════════
+    // MASTER UPDATE
+    // ═════════════════════════════════════════════════════════════════════
+
+    function updateAllCharts() {
+        buildGasRibbon();
+        buildSection2();
+        buildHeatmaps();
+        buildOptimalGasChart();
+        buildOptimalResourcesChart();
+        buildResourceTrajectory();
+        buildCurtTrajectory();
+        buildWrightsCharts();
+        buildLmpCharts();
+        computeSynthesisStats();
+    }
+
+    // ═════════════════════════════════════════════════════════════════════
+    // EVENT WIRING
+    // ═════════════════════════════════════════════════════════════════════
+
+    // Strategy checkboxes
+    document.querySelectorAll('.strategy-check input').forEach(cb => {
+        cb.addEventListener('change', updateAllCharts);
+    });
+
+    // Optimal strategy select
+    document.getElementById('optimalStratSelect').addEventListener('change', buildOptimalResourcesChart);
+
+    // Trajectory controls
+    document.getElementById('trajectorySlider').addEventListener('input', function() {
+        const part = PARTICIPATION_LEVELS[parseInt(this.value)] || 20;
+        document.getElementById('trajectoryValue').textContent = part + '%';
+        buildResourceTrajectory();
+        buildCurtTrajectory();
+    });
+
+    document.getElementById('trajectoryStratSelect').addEventListener('change', buildResourceTrajectory);
+
+    // ═════════════════════════════════════════════════════════════════════
+    // INIT
+    // ═════════════════════════════════════════════════════════════════════
+
+    populateTrajectoryStratSelect();
+
+    // Load Wright's data then build all
+    loadWrightsData().then(() => {
+        updateAllCharts();
+    });
+
+})();
+</script>
+
+</body>
+</html>
