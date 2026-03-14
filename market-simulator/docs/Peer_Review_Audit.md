@@ -630,8 +630,8 @@ Despite wide individual uncertainty ranges, the tool is highly reliable for dire
 
 | # | Recommendation | Rationale | Status |
 |---|---------------|-----------|--------|
-| 4 | Add explicit uncertainty bands to all outputs (P10/P50/P90 from sweep mode) | Users need to understand result confidence, not just point estimates | Open |
-| 5 | Implement weather-year sensitivity (use individual historical years) | Multi-year average smooths extremes that drive capacity adequacy decisions | Open |
+| 4 | Add explicit uncertainty bands to all outputs (P10/P50/P90 from sweep mode) | Users need to understand result confidence, not just point estimates | **Fixed** — `aggregate_sweep_percentiles()` computes P10/P50/P90/mean/std across all 270 sweep scenarios for 12 scalar metrics, boolean metrics (% of scenarios), per-resource mix TWh, nuclear revenue, and zone deployment count. Results injected as `_aggregates` key in output JSON. |
+| 5 | Implement weather-year sensitivity (use individual historical years) | Multi-year average smooths extremes that drive capacity adequacy decisions | **Fixed** — `get_demand_profile()` and `get_supply_profiles()` accept `weather_year` parameter. 5 years available (2021-2025) from EIA-930 parquets. `run_full_sweep()` accepts `weather_years` list for multi-year sweep. CLI: `--weather-year all` runs 5× sweep (1,350 scenarios). |
 | 6 | Add "45Q realization probability" parameter (70%/85%/100%) | CCS economics are highly sensitive to 45Q execution risk | **Fixed** — `CCS_45Q_REALIZATION_PROB` parameter added to `pipeline_config.py` with 3 levels (0.70/0.85/1.00). `compute_clean_firm_tranches()` accepts `q45_realization` parameter that applies a credit haircut to CCS LCOE. |
 | 7 | Scale negative pricing with VRE penetration in trajectory mode | Current calibration is fixed to 2024 VRE levels | **Fixed** — `compute_hourly_lmp_vectorized()` accepts `vre_penetration` parameter. At >25% VRE, negative price floor deepens (1.5× scaling per 10pp above baseline) and negative-price band widens (1.0× per 10pp). Capped at 2× to prevent extremes. Calibrated against CAISO DMM 2019-2024 negative price hour trends. |
 
@@ -649,8 +649,8 @@ Despite wide individual uncertainty ranges, the tool is highly reliable for dire
 | # | Recommendation | Rationale | Status |
 |---|---------------|-----------|--------|
 | 12 | Add source citations for interconnection queue caps | Currently undocumented in code comments | **Fixed** — Detailed per-ISO citations added to `QUEUE_CAP_GW` in `market_simulation.py`. Sources: LBNL "Queued Up 2024" (Rand et al.), queue sizes and completion rates per ISO, cross-validated against Princeton REPEAT and Rhodium Clean Investment Monitor. |
-| 13 | Publish demand-quantile pricing calibration methodology as technical note | Key innovation deserves standalone documentation | Open |
-| 14 | Document synthetic LMP validation against actual ISO clearing prices (all 7 ISOs) | Currently available for PJM only | Open |
+| 13 | Publish demand-quantile pricing calibration methodology as technical note | Key innovation deserves standalone documentation | **Fixed** — `docs/Demand_Quantile_Pricing_Methodology.md`: comprehensive technical note covering architecture (4 pricing layers), all parameter definitions with formulas, ISO-specific parameter table (v11.3), calibration process (v11.0→v11.3 iteration), VRE scaling extension, and known limitations. |
+| 14 | Document synthetic LMP validation against actual ISO clearing prices (all 7 ISOs) | Currently available for PJM only | **Fixed** — `docs/LMP_Validation_Results.md`: all 7 ISOs documented with calibration targets, sources, ISO-specific notes, accuracy metrics (avg ±8%, P50 ±8%, P90 ±15%), confidence ratings (High for PJM/ERCOT, Medium-High for CAISO/MISO/SPP, Medium for NYISO/NEISO), and known biases. |
 
 ---
 
