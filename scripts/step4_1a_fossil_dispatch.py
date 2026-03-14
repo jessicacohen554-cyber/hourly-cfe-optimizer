@@ -293,7 +293,8 @@ def run_fossil_dispatch_for_iso(iso, demand_data, gen_profiles, emission_rates,
                 h2_pct=sc.get('h2_dispatch_pct', 0))
 
             hourly_lmp, hourly_mu = compute_hourly_lmp_vectorized(
-                entry, demand_mw_profile, stack, price_model, iso)
+                entry, demand_mw_profile, stack, price_model, iso,
+                vre_penetration=threshold / 100.0 if threshold else None)
 
             lmp_stats = compute_lmp_stats(hourly_lmp, hourly_mu, demand_mw_profile, entry)
 
