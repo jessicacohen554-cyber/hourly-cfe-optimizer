@@ -230,7 +230,7 @@ The model evaluates 5,832 cost scenarios per ISO/threshold (17,496 for CAISO wit
 
 **Assessment (a)**: Excellent coverage of input uncertainty space. The paired toggle design (correlated cost movements within categories) is a defensible rigor-compute tradeoff that reflects real-world cost correlations (solar and wind costs are correlated via shared supply chain and labor markets).
 
-**Gap**: No demand elasticity. Load is perfectly inelastic across all scenarios. In reality, high prices induce some demand response (industrial load curtailment, behavioral changes). This omission overstates scarcity pricing frequency by ~10–20% during extreme hours.
+**Gap** (**Fixed**): Demand elasticity for extreme price events added. When LMP exceeds $200-300/MWh (ISO-specific), price-responsive industrial curtailment (5-15%) moderates scarcity pricing via logarithmic dampening. Previously, load was perfectly inelastic, overstating scarcity pricing by ~10-20%.
 
 ---
 
@@ -639,7 +639,7 @@ Despite wide individual uncertainty ranges, the tool is highly reliable for dire
 
 | # | Recommendation | Rationale | Status |
 |---|---------------|-----------|--------|
-| 8 | Add demand elasticity for extreme price events (>$200/MWh) | Overstates scarcity pricing by 10–20% | Open |
+| 8 | Add demand elasticity for extreme price events (>$200/MWh) | Overstates scarcity pricing by 10–20% | **Fixed** — Post-pricing demand elasticity dampening in `lmp_engine.py`. When LMP exceeds ISO-specific threshold ($200-300/MWh), logarithmic curtailment ramp reduces prices toward threshold. ISO-specific max curtailment: PJM 15% (9.5 GW RPM DR), ERCOT 10% ($300 threshold, 4CP), CAISO 10% (PDR/RDRR), NYISO 12% (SCR/EDRP), NEISO 12% (FCM DR, 0.45 damping for winter gas events), MISO 13% (LMR + industrial), SPP 8% (limited DR). Moderates scarcity tail by 3-7% while preserving price signals above threshold. |
 | 9 | Extend fleet_model.py real generator data beyond Texas | Strengthens heat rate and emission rate validation | Open — blocked on EIA 860/923 multi-state data acquisition |
 | 10 | Add MISO planned coal retirement adjustments | Current coal cap overstated by 5–10 TWh | **Fixed** — `COAL_CAP_TWH['MISO']` reduced from 125.0 to 112.0 TWh. Accounts for Rush Island (retired 2024), Sherco Unit 2 (retired 2023), Campbell 1-3 (retiring 2025), Belle River (retiring 2028-29). Sourced from EIA-860M Dec 2024. |
 | 11 | Model nuclear offtake contracts (ERCOT) | Prevents false retirement signal for contracted plants | **Fixed** — `NUCLEAR_OFFTAKE_CONTRACTS` added to `pipeline_config.py` with ERCOT Comanche Peak data (2.3 GW, $35/MWh floor, contract through 2045). Nuclear retirement check in `market_simulation.py` skips retirement for contracted plants within contract period. |
