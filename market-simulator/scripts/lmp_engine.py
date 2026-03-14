@@ -454,6 +454,17 @@ class PriceModel:
         self.dq_low_floor = -25.0       # $/MWh floor for low-demand hours
         self.dq_low_exponent = 1.5      # curvature for negative pricing
 
+        # Demand elasticity for extreme prices (Rec #8)
+        # At prices >$200/MWh, price-responsive industrial loads curtail (5-15%).
+        # Interruptible contracts, demand response programs, and voluntary
+        # curtailment moderate scarcity pricing. Elasticity applied as
+        # post-pricing dampening: reduces extreme prices toward threshold.
+        # Sources: FERC DR assessment (2024), PJM IMM DR participation rates,
+        # ERCOT 4CP/load shed programs, CAISO RDRR/PDR programs.
+        self.demand_elasticity_threshold = 200.0  # $/MWh — onset of curtailment
+        self.demand_elasticity_max_curtailment = 0.12  # 12% max demand reduction
+        self.demand_elasticity_damping = 0.5  # price damping factor per unit curtailment
+
     def price_hour(self, residual_demand_mw, demand_mw, stack, surplus_mw=0.0):
         """Compute LMP for a single hour given residual demand and merit-order stack.
 
@@ -545,6 +556,12 @@ class PJMPriceModel(PriceModel):
         self.scarcity_threshold = 0.03  # PJM has large reserves; scarcity is rare
         self.coal_min_gen_fraction = 0.4
 
+        # PJM demand elasticity: RPM DR programs (Economic, Emergency, Pre-Emergency)
+        # PJM had ~9.5 GW DR resources in 2024 (IMM SOM) — largest pool of any ISO
+        self.demand_elasticity_threshold = 200.0
+        self.demand_elasticity_max_curtailment = 0.15  # 15% — most DR of any ISO
+        self.demand_elasticity_damping = 0.50
+
         # PJM demand-quantile calibration (v11 — iterative SOM calibration)
         # Base merit-order includes 10% adder + CO2 + realistic VOM/heat rates.
         # Demand-quantile layer adds: congestion ($3.01), markup beyond 10% (~$1.56),
@@ -584,6 +601,13 @@ class ERCOTPriceModel(PriceModel):
         self.ordc_knee_mw = 3000.0  # reserves below this trigger exponential ORDC
         self.scarcity_threshold = 0.02   # v11: 0.05→0.02, ERCOT 2024 solar+storage reduced scarcity
 
+        # ERCOT demand elasticity: 4CP program + load shed contracts
+        # Higher threshold ($300) because ORDC already captures scarcity efficiently
+        # 4CP industrial curtailment is ~3-5 GW responsive load
+        self.demand_elasticity_threshold = 300.0
+        self.demand_elasticity_max_curtailment = 0.10  # 10% — 4CP + voluntary
+        self.demand_elasticity_damping = 0.45  # ORDC already moderates, so less damping
+
         # ERCOT demand-quantile calibration (v11.1 — SOM iterative calibration)
         # 2024 was mild: solar+storage entry reduced shortage pricing dramatically
         # Modo Energy 2024: avg RT ~$26/MWh, down from $63 in 2023
@@ -622,6 +646,12 @@ class CAISOPriceModel(PriceModel):
         self.surplus_decay = 0.022        # v11: 0.030→0.022, reduce neg hrs 889→~600
         self.scarcity_threshold = 0.03    # v11: 0.05→0.03
 
+        # CAISO demand elasticity: RDRR + PDR programs, ~2 GW responsive
+        # RA market provides baseline, DR adds during evening ramp stress
+        self.demand_elasticity_threshold = 200.0
+        self.demand_elasticity_max_curtailment = 0.10  # 10% — RA + PDR
+        self.demand_elasticity_damping = 0.50
+
         # CAISO demand-quantile calibration (v11.1 — SOM iterative calibration)
         # CAISO DMM 2024: avg ~$38, huge solar surplus midday, evening ramp premium
         # CAISO has largest peak/offpeak spread of any ISO (duck curve)
@@ -647,6 +677,12 @@ class NYISOPriceModel(PriceModel):
         self.floor_price = -20.0
         self.surplus_decay = 0.008         # v11: 0.012→0.008, reduce neg hrs 273→~150
         self.scarcity_threshold = 0.03     # v11: 0.06→0.03
+
+        # NYISO demand elasticity: ICAP SCR/EDRP programs, ~1.3 GW responsive
+        # NYC load pocket has limited DR flexibility
+        self.demand_elasticity_threshold = 200.0
+        self.demand_elasticity_max_curtailment = 0.12  # 12% — ICAP DR programs
+        self.demand_elasticity_damping = 0.50
 
         # NYISO demand-quantile calibration (v11.1 — SOM iterative calibration)
         # Potomac Economics 2024: avg $42, tight geography → congestion, ICAP dampens
@@ -675,6 +711,12 @@ class NEISOPriceModel(PriceModel):
         self.floor_price = -25.0
         self.surplus_decay = 0.008         # v11: 0.012→0.008, reduce neg hrs 314→~180
         self.scarcity_threshold = 0.02     # v11.1: 0.03→0.02, imports + FCM provide reserves
+
+        # NEISO demand elasticity: FCM passive DR + active DR, ~1.5 GW responsive
+        # Winter gas constraint limits DR effectiveness (can't substitute fuel)
+        self.demand_elasticity_threshold = 200.0
+        self.demand_elasticity_max_curtailment = 0.12  # 12% — FCM DR
+        self.demand_elasticity_damping = 0.45  # less effective in winter gas events
 
         # NEISO demand-quantile calibration (v11.1 — SOM iterative calibration)
         # ISO-NE 2024 EMM: avg $39.50, winter gas pipeline premium, FCM capacity market
@@ -724,6 +766,12 @@ class MISOPriceModel(PriceModel):
         self.surplus_decay = 0.015     # v11.1: 0.018→0.015, reduce neg hrs 400→~300
         self.scarcity_threshold = 0.02  # v11: 0.05→0.02, PRA provides ample cushion
 
+        # MISO demand elasticity: LMR (Load-Modifying Resources), ~8 GW responsive
+        # Large industrial load base (aluminum, steel, refining) with interruptible contracts
+        self.demand_elasticity_threshold = 200.0
+        self.demand_elasticity_max_curtailment = 0.13  # 13% — LMR + industrial
+        self.demand_elasticity_damping = 0.50
+
         # MISO demand-quantile calibration (v11 — SOM iterative calibration)
         # Potomac Economics 2024: avg RT $31/MWh, 14% decrease from 2023
         # Coal-heavy fleet (35%), wind congestion drives ~40% of RT congestion
@@ -757,6 +805,12 @@ class SPPPriceModel(PriceModel):
         self.floor_price = -40.0       # deeper negative prices than MISO (more wind surplus)
         self.surplus_decay = 0.025     # steep negative pricing from wind over-generation
         self.scarcity_threshold = 0.02  # v11: 0.06→0.02
+
+        # SPP demand elasticity: limited formal DR, some interruptible industrial
+        # Lowest price market → fewer hours hit threshold, but less DR infrastructure
+        self.demand_elasticity_threshold = 200.0
+        self.demand_elasticity_max_curtailment = 0.08  # 8% — limited DR programs
+        self.demand_elasticity_damping = 0.45
 
         # SPP demand-quantile calibration (v11 — SOM iterative calibration)
         # SPP MMU 2024: avg RT $26.18, cheapest US market
@@ -1065,6 +1119,39 @@ def compute_hourly_lmp_vectorized(dispatch_result, demand_mw_profile, stack, pri
             depressed = current * (1 - surplus_factor * 0.6) + floor * surplus_factor * 0.6
             # Only depress, never increase
             hourly_lmp[surplus_active] = np.minimum(current, depressed)
+
+    # ══════════════════════════════════════════════════════════════════════
+    # DEMAND ELASTICITY FOR EXTREME PRICES (Rec #8)
+    # ══════════════════════════════════════════════════════════════════════
+    # At extreme prices (>$200/MWh), price-responsive industrial loads curtail.
+    # Interruptible contracts, demand response programs (PJM Economic DR,
+    # ERCOT 4CP, CAISO PDR/RDRR, MISO LMR), and voluntary curtailment
+    # reduce effective demand by 5-15%, moderating scarcity pricing.
+    #
+    # Implementation: post-pricing dampening. For each hour where computed
+    # LMP exceeds the elasticity threshold, compute curtailment fraction
+    # proportional to price excess, then reduce price toward the threshold.
+    # This approximates the equilibrium price that would result from
+    # re-dispatching at reduced demand without requiring iterative solve.
+    #
+    # Sources: FERC Order 745 DR assessment (2024), PJM IMM DR participation,
+    # ERCOT PUCT 4CP program data, CAISO DMM DR effectiveness reports.
+    threshold = price_model.demand_elasticity_threshold
+    max_curtail = price_model.demand_elasticity_max_curtailment
+    damping = price_model.demand_elasticity_damping
+    extreme_mask = hourly_lmp > threshold
+    if extreme_mask.any():
+        excess_ratio = (hourly_lmp[extreme_mask] - threshold) / threshold
+        # Curtailment ramps logarithmically: quick onset, diminishing returns
+        # At 2× threshold ($400): ~60% of max curtailment
+        # At 5× threshold ($1000): ~90% of max curtailment
+        curtailment_frac = max_curtail * (1.0 - np.exp(-1.5 * excess_ratio))
+        # Damped price: reduce extreme price toward threshold
+        # damping=0.5 means each 1% curtailment → 0.5% price reduction
+        price_reduction = curtailment_frac * damping
+        hourly_lmp[extreme_mask] *= (1.0 - price_reduction)
+        # Floor at threshold — demand response shouldn't push price below onset
+        hourly_lmp[extreme_mask] = np.maximum(hourly_lmp[extreme_mask], threshold)
 
     # NEISO winter gas adder — demand-dependent (v11.1)
     # Pipeline constraint only bites during peak winter hours (cold snaps),
