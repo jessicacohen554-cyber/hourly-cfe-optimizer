@@ -264,9 +264,34 @@ CAPACITY_MARKET_PRICES = {
     'SPP': 0,       # No capacity market (energy-only)
 }
 
-# Capacity market price degradation (alpha) — price falls as clean share rises
-# cap_price(t) = base_price × max(0, 1 - alpha × clean_share)
-# Energy-only markets (ERCOT, SPP, MISO) already $0, alpha irrelevant
+# Capacity market price degradation — S-curve (sigmoid) model
+# cap_price(t) = base_price × max(floor, 1 - max_degrade / (1 + exp(-k × (clean_share - midpoint))))
+#
+# Parameters per ISO:
+#   max_degrade: maximum fraction of base price that can be eroded (0-1)
+#   midpoint: clean share (0-1) where degradation reaches 50% of max
+#   k: steepness of the sigmoid (higher = sharper transition)
+#   floor: minimum fraction of base price (prevents negative/zero artifacts)
+#
+# Calibration sources:
+#   PJM RPM: BRA clearing prices 2015-2025 vs. clean share trajectory
+#   NYISO ICAP: Monthly spot auction clearing 2019-2025
+#   NEISO FCM: FCA-15 through FCA-19 clearing prices
+#   CAISO RA: Bilateral RA contract prices 2020-2025
+#
+# Energy-only markets (ERCOT, SPP) have $0 base price, parameters are no-ops.
+# MISO PRA is weak ($25/kW-yr) and minimally affected.
+CAPACITY_DEGRADATION_PARAMS = {
+    'CAISO': {'max_degrade': 0.85, 'midpoint': 0.55, 'k': 10, 'floor': 0.10},
+    'ERCOT': {'max_degrade': 0.0,  'midpoint': 0.50, 'k': 8,  'floor': 0.0},   # energy-only
+    'PJM':   {'max_degrade': 0.80, 'midpoint': 0.50, 'k': 8,  'floor': 0.15},
+    'NYISO': {'max_degrade': 0.85, 'midpoint': 0.45, 'k': 10, 'floor': 0.10},
+    'NEISO': {'max_degrade': 0.80, 'midpoint': 0.50, 'k': 8,  'floor': 0.15},
+    'MISO':  {'max_degrade': 0.0,  'midpoint': 0.50, 'k': 8,  'floor': 0.0},   # weak capacity market
+    'SPP':   {'max_degrade': 0.0,  'midpoint': 0.50, 'k': 8,  'floor': 0.0},   # energy-only
+}
+
+# Backward compat — legacy alpha values (deprecated, use CAPACITY_DEGRADATION_PARAMS)
 CAPACITY_DEGRADATION_ALPHA = {
     'CAISO': 0.40, 'ERCOT': 0.0, 'PJM': 0.35, 'NYISO': 0.40,
     'NEISO': 0.35, 'MISO': 0.0, 'SPP': 0.0,
