@@ -1044,7 +1044,8 @@ def estimate_new_gw_from_delta(delta_resources_twh, iso):
 def run_market_simulation(scenario_id, conditions, isos=None,
                            nuclear_retirement_threshold=None,
                            snapshot_mode=False,
-                           _preloaded=None, _lmp_cache=None, _quiet=False):
+                           _preloaded=None, _lmp_cache=None, _quiet=False,
+                           weather_year=None):
     """Run purely profit-driven market simulation.
 
     No emission constraints, no mandated deployment, no DAC. Deploy where
@@ -1060,6 +1061,10 @@ def run_market_simulation(scenario_id, conditions, isos=None,
         _preloaded: Pre-loaded data dict to avoid re-reading.
         _lmp_cache: Shared LMP cache across scenarios.
         _quiet: Suppress per-zone print output.
+        weather_year: Optional year string ('2021'-'2025') for weather-year
+            sensitivity. Uses historical demand/generation shapes from the
+            specified year instead of the default (2025). This captures
+            interannual variability in renewable generation and demand.
 
     Returns {iso: [year_result_dict, ...]}.
     """
@@ -1161,8 +1166,8 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             demand_twh = get_demand_at_year(iso, year, conditions['demand_growth'])
             demand_total_mwh = demand_twh * 1e6
 
-            demand_norm, total_mwh_base = get_demand_profile(iso, demand_data)
-            supply_profiles_iso = get_supply_profiles(iso, gen_profiles)
+            demand_norm, total_mwh_base = get_demand_profile(iso, demand_data, weather_year=weather_year)
+            supply_profiles_iso = get_supply_profiles(iso, gen_profiles, weather_year=weather_year)
 
             growth_factor = demand_twh / REGIONAL_DEMAND_TWH[iso]
             demand_mw_profile = np.array(demand_norm, dtype=np.float64) * total_mwh_base * growth_factor
@@ -1391,10 +1396,17 @@ def run_market_simulation(scenario_id, conditions, isos=None,
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def run_full_sweep(isos=None, nuclear_retirement_threshold=None,
-                    snapshot_mode=False):
+                    snapshot_mode=False, weather_years=None):
     """Run full 270-scenario market sweep.
 
     Pre-loads data once, shares LMP cache across scenarios.
+
+    Args:
+        weather_years: Optional list of year strings (e.g., ['2021', '2023', '2025'])
+            to run weather-year sensitivity. Each year runs the full sweep
+            independently, then results are combined. If None, uses default
+            year only (1× sweep = 270 scenarios). With 5 years, runs 5× sweep
+            = 1,350 scenarios total.
     """
     t0 = time.time()
     print("Loading common data...")
@@ -1415,27 +1427,41 @@ def run_full_sweep(isos=None, nuclear_retirement_threshold=None,
     }
 
     scenarios = build_market_scenarios()
-    print(f"\nRunning {len(scenarios)} market scenarios...")
+
+    # Weather-year iteration: run each weather year as a separate sweep pass
+    wy_list = weather_years or [None]  # None = default year (DATA_YEAR)
+    total_runs = len(scenarios) * len(wy_list)
+    print(f"\nRunning {len(scenarios)} market scenarios × {len(wy_list)} weather year(s) = {total_runs} total...")
 
     lmp_cache = {}
     all_results = {}
+    run_count = 0
 
-    for i, (scenario_id, conditions) in enumerate(scenarios):
-        print(f"\n[{i+1}/{len(scenarios)}] {scenario_id}")
-        results = run_market_simulation(
-            scenario_id, conditions, isos=isos,
-            nuclear_retirement_threshold=nuclear_retirement_threshold,
-            snapshot_mode=snapshot_mode,
-            _preloaded=preloaded,
-            _lmp_cache=lmp_cache,
-            _quiet=True,
-        )
-        all_results[scenario_id] = results
+    for wy in wy_list:
+        wy_label = f"_WY{wy}" if wy else ""
+        if wy:
+            print(f"\n--- Weather Year {wy} ---")
+            lmp_cache.clear()  # Each weather year has different profiles
+
+        for i, (scenario_id, conditions) in enumerate(scenarios):
+            run_count += 1
+            full_id = f"{scenario_id}{wy_label}"
+            print(f"\n[{run_count}/{total_runs}] {full_id}")
+            results = run_market_simulation(
+                full_id, conditions, isos=isos,
+                nuclear_retirement_threshold=nuclear_retirement_threshold,
+                snapshot_mode=snapshot_mode,
+                _preloaded=preloaded,
+                _lmp_cache=lmp_cache,
+                _quiet=True,
+                weather_year=wy,
+            )
+            all_results[full_id] = results
 
     elapsed = time.time() - t0
     print(f"\n{'='*70}")
-    print(f"Sweep complete: {len(scenarios)} scenarios in {elapsed:.1f}s")
-    print(f"LMP cache hits: {len(lmp_cache)} unique threshold/fuel/demand combos")
+    print(f"Sweep complete: {total_runs} scenarios in {elapsed:.1f}s")
+    print(f"LMP cache entries: {len(lmp_cache)} unique threshold/fuel/demand combos")
 
     return all_results
 
@@ -1615,10 +1641,23 @@ def main():
                         help='Clean resource LCOE level')
     parser.add_argument('--nuclear-retirement', type=float, default=None,
                         help='Nuclear retirement threshold $/MWh (default: None = no retirement)')
+    parser.add_argument('--weather-year', default=None,
+                        help='Weather year for demand/gen profiles (2021-2025). '
+                             'For sweep: comma-separated (e.g., "2021,2023,2025") '
+                             'or "all" for all 5 years.')
     parser.add_argument('--output-dir', default=None,
                         help='Output directory for results')
 
     args = parser.parse_args()
+
+    # Parse weather-year argument
+    weather_years = None
+    if args.weather_year:
+        if args.weather_year == 'all':
+            from dispatch_utils import AVAILABLE_WEATHER_YEARS
+            weather_years = AVAILABLE_WEATHER_YEARS
+        else:
+            weather_years = [y.strip() for y in args.weather_year.split(',')]
 
     if args.single:
         overrides = {
@@ -1627,10 +1666,12 @@ def main():
             'lcoe_level': args.lcoe_level,
         }
         scenario_id, conditions = build_single_scenario(overrides)
+        wy = weather_years[0] if weather_years else None
         results = run_market_simulation(
             scenario_id, conditions, isos=args.isos,
             nuclear_retirement_threshold=args.nuclear_retirement,
             snapshot_mode=args.snapshot,
+            weather_year=wy,
         )
         all_results = {scenario_id: results}
     else:
@@ -1638,6 +1679,7 @@ def main():
             isos=args.isos,
             nuclear_retirement_threshold=args.nuclear_retirement,
             snapshot_mode=args.snapshot,
+            weather_years=weather_years,
         )
 
     save_results(all_results, args.output_dir)
