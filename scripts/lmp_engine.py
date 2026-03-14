@@ -720,11 +720,18 @@ def archetype_key(mix, fuel_level, threshold):
 
 
 def compute_hourly_lmp_vectorized(dispatch_result, demand_mw_profile, stack, price_model,
-                                   iso=None):
+                                   iso=None, vre_penetration=None):
     """Vectorized LMP computation — faster than per-hour loop.
 
     Uses the merit-order stack as a step function and np.searchsorted for
     marginal unit identification.
+
+    Parameters
+    ----------
+    vre_penetration : float or None
+        VRE penetration fraction (0-1). When provided, amplifies the
+        merit-order effect of zero-marginal-cost renewables on LMP
+        depression. Higher penetration → stronger surplus depression.
     """
     # Build cumulative capacity and marginal cost arrays from stack
     n_units = len(stack)
@@ -926,6 +933,12 @@ def compute_hourly_lmp_vectorized(dispatch_result, demand_mw_profile, stack, pri
         if surplus_active.any():
             # Scale: 3% surplus → mild effect, 20%+ → strong effect
             surplus_factor = np.clip((surplus_ratio[surplus_active] - surplus_thresh) * 8, 0, 1)
+            # VRE penetration amplifier: at high penetration (>50%), surplus
+            # depression is stronger because more hours have zero-MC supply
+            # displacing fossil. Scales linearly: 0% VRE → 1.0×, 100% → 1.4×.
+            if vre_penetration is not None and vre_penetration > 0:
+                vre_amp = 1.0 + 0.4 * min(vre_penetration, 1.0)
+                surplus_factor = np.clip(surplus_factor * vre_amp, 0, 1)
             current = hourly_lmp[surplus_active]
             floor = price_model.dq_low_floor
             # Depress toward floor: stronger with more surplus

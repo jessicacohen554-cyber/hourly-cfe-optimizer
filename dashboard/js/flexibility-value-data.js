@@ -1669,26 +1669,26 @@ const FLEXIBILITY_VALUE_DATA = {
       }
     },
     "97.5": {
-      "baseline_cost": 39.53,
+      "baseline_cost": 39.51,
       "storage_value": {
         "battery_4hr": {
-          "cost_with": 39.53,
+          "cost_with": 39.51,
           "cost_without": 39.53,
-          "value_per_mwh": 0.0
+          "value_per_mwh": 0.02
         },
         "battery_8hr": {
-          "cost_with": 39.53,
-          "cost_without": 39.53,
+          "cost_with": 39.51,
+          "cost_without": 39.51,
           "value_per_mwh": 0.0
         },
         "ldes": {
-          "cost_with": 39.53,
+          "cost_with": 39.51,
           "cost_without": 39.53,
-          "value_per_mwh": 0.0
+          "value_per_mwh": 0.02
         },
         "green_h2": {
-          "cost_with": 39.53,
-          "cost_without": 39.53,
+          "cost_with": 39.51,
+          "cost_without": 39.51,
           "value_per_mwh": 0.0
         }
       },
@@ -1714,26 +1714,27 @@ const FLEXIBILITY_VALUE_DATA = {
       }
     },
     "99": {
-      "baseline_cost": 46.36,
+      "baseline_cost": 45.29,
       "storage_value": {
         "battery_4hr": {
-          "cost_with": 46.36,
-          "cost_without": 46.36,
-          "value_per_mwh": 0.0
+          "cost_with": 45.29,
+          "cost_without": null,
+          "value_per_mwh": null,
+          "note": "All optimal mixes include this storage"
         },
         "battery_8hr": {
-          "cost_with": 46.36,
-          "cost_without": 46.36,
+          "cost_with": 45.29,
+          "cost_without": 45.29,
           "value_per_mwh": 0.0
         },
         "ldes": {
-          "cost_with": 46.36,
-          "cost_without": 46.36,
+          "cost_with": 45.29,
+          "cost_without": 45.29,
           "value_per_mwh": 0.0
         },
         "green_h2": {
-          "cost_with": 46.36,
-          "cost_without": 46.36,
+          "cost_with": 45.29,
+          "cost_without": 45.29,
           "value_per_mwh": 0.0
         }
       },
@@ -1759,26 +1760,27 @@ const FLEXIBILITY_VALUE_DATA = {
       }
     },
     "99.5": {
-      "baseline_cost": 51.98,
+      "baseline_cost": 48.66,
       "storage_value": {
         "battery_4hr": {
-          "cost_with": 51.98,
-          "cost_without": 51.98,
-          "value_per_mwh": 0.0
+          "cost_with": 48.66,
+          "cost_without": null,
+          "value_per_mwh": null,
+          "note": "All optimal mixes include this storage"
         },
         "battery_8hr": {
-          "cost_with": 51.98,
-          "cost_without": 51.98,
+          "cost_with": 48.66,
+          "cost_without": 48.66,
           "value_per_mwh": 0.0
         },
         "ldes": {
-          "cost_with": 51.98,
-          "cost_without": 51.98,
+          "cost_with": 48.66,
+          "cost_without": 48.66,
           "value_per_mwh": 0.0
         },
         "green_h2": {
-          "cost_with": 51.98,
-          "cost_without": 51.98,
+          "cost_with": 48.66,
+          "cost_without": 48.66,
           "value_per_mwh": 0.0
         }
       },
@@ -1804,27 +1806,27 @@ const FLEXIBILITY_VALUE_DATA = {
       }
     },
     "99.9": {
-      "baseline_cost": 62.74,
+      "baseline_cost": 56.63,
       "storage_value": {
         "battery_4hr": {
-          "cost_with": 62.74,
+          "cost_with": 56.63,
           "cost_without": null,
           "value_per_mwh": null,
           "note": "All optimal mixes include this storage"
         },
         "battery_8hr": {
-          "cost_with": 62.74,
-          "cost_without": 62.74,
+          "cost_with": 56.63,
+          "cost_without": 56.63,
           "value_per_mwh": 0.0
         },
         "ldes": {
-          "cost_with": 62.74,
-          "cost_without": 62.74,
-          "value_per_mwh": 0.0
+          "cost_with": 56.63,
+          "cost_without": 57.23,
+          "value_per_mwh": 0.6
         },
         "green_h2": {
-          "cost_with": 62.74,
-          "cost_without": 62.74,
+          "cost_with": 56.63,
+          "cost_without": 56.63,
           "value_per_mwh": 0.0
         }
       },
@@ -1850,42 +1852,44 @@ const FLEXIBILITY_VALUE_DATA = {
       }
     },
     "99.99": {
-      "baseline_cost": 65.86,
+      "baseline_cost": 61.66,
       "storage_value": {
         "battery_4hr": {
-          "cost_with": 65.86,
-          "cost_without": null,
-          "value_per_mwh": null,
-          "note": "All optimal mixes include this storage"
+          "cost_with": 61.66,
+          "cost_without": 79.02,
+          "value_per_mwh": 17.36
         },
         "battery_8hr": {
-          "cost_with": 65.86,
-          "cost_without": 65.86,
+          "cost_with": 61.66,
+          "cost_without": 61.66,
           "value_per_mwh": 0.0
         },
         "ldes": {
-          "cost_with": 65.86,
-          "cost_without": 65.86,
-          "value_per_mwh": 0.0
+          "cost_with": 61.66,
+          "cost_without": 63.7,
+          "value_per_mwh": 2.04
         },
         "green_h2": {
-          "cost_with": 65.86,
-          "cost_without": 65.86,
+          "cost_with": 61.66,
+          "cost_without": 61.66,
           "value_per_mwh": 0.0
         }
       },
       "fan": {
         "p10": {
+          "battery_4hr": 0.0,
           "battery_8hr": 0.0,
           "ldes": 0.0,
           "green_h2": 0.0
         },
         "p50": {
+          "battery_4hr": 0.0,
           "battery_8hr": 0.0,
           "ldes": 0.0,
           "green_h2": 0.0
         },
         "p90": {
+          "battery_4hr": 0.0,
           "battery_8hr": 0.0,
           "ldes": 0.0,
           "green_h2": 0.0
@@ -3333,27 +3337,27 @@ const FLEXIBILITY_VALUE_DATA = {
       }
     },
     "85": {
-      "baseline_cost": 46.69,
+      "baseline_cost": 46.14,
       "storage_value": {
         "battery_4hr": {
-          "cost_with": 46.69,
+          "cost_with": 46.14,
           "cost_without": null,
           "value_per_mwh": null,
           "note": "All optimal mixes include this storage"
         },
         "battery_8hr": {
-          "cost_with": 46.69,
-          "cost_without": 46.69,
+          "cost_with": 46.14,
+          "cost_without": 46.14,
           "value_per_mwh": 0.0
         },
         "ldes": {
-          "cost_with": 46.69,
-          "cost_without": 46.69,
+          "cost_with": 46.14,
+          "cost_without": 46.14,
           "value_per_mwh": 0.0
         },
         "green_h2": {
-          "cost_with": 46.69,
-          "cost_without": 46.69,
+          "cost_with": 46.14,
+          "cost_without": 46.14,
           "value_per_mwh": 0.0
         }
       },
@@ -3379,27 +3383,27 @@ const FLEXIBILITY_VALUE_DATA = {
       }
     },
     "87.5": {
-      "baseline_cost": 50.07,
+      "baseline_cost": 50.04,
       "storage_value": {
         "battery_4hr": {
-          "cost_with": 50.07,
+          "cost_with": 50.04,
           "cost_without": null,
           "value_per_mwh": null,
           "note": "All optimal mixes include this storage"
         },
         "battery_8hr": {
-          "cost_with": 50.07,
-          "cost_without": 50.07,
+          "cost_with": 50.04,
+          "cost_without": 50.04,
           "value_per_mwh": 0.0
         },
         "ldes": {
-          "cost_with": 50.07,
-          "cost_without": 50.07,
+          "cost_with": 50.04,
+          "cost_without": 50.04,
           "value_per_mwh": 0.0
         },
         "green_h2": {
-          "cost_with": 50.07,
-          "cost_without": 50.07,
+          "cost_with": 50.04,
+          "cost_without": 50.04,
           "value_per_mwh": 0.0
         }
       },
@@ -3425,27 +3429,27 @@ const FLEXIBILITY_VALUE_DATA = {
       }
     },
     "90": {
-      "baseline_cost": 54.79,
+      "baseline_cost": 54.76,
       "storage_value": {
         "battery_4hr": {
-          "cost_with": 54.79,
+          "cost_with": 54.76,
           "cost_without": null,
           "value_per_mwh": null,
           "note": "All optimal mixes include this storage"
         },
         "battery_8hr": {
-          "cost_with": 54.79,
-          "cost_without": 54.79,
+          "cost_with": 54.76,
+          "cost_without": 54.76,
           "value_per_mwh": 0.0
         },
         "ldes": {
-          "cost_with": 54.79,
-          "cost_without": 54.79,
+          "cost_with": 54.76,
+          "cost_without": 54.76,
           "value_per_mwh": 0.0
         },
         "green_h2": {
-          "cost_with": 54.79,
-          "cost_without": 54.79,
+          "cost_with": 54.76,
+          "cost_without": 54.76,
           "value_per_mwh": 0.0
         }
       },
@@ -3471,26 +3475,27 @@ const FLEXIBILITY_VALUE_DATA = {
       }
     },
     "92.5": {
-      "baseline_cost": 63.4,
+      "baseline_cost": 60.09,
       "storage_value": {
         "battery_4hr": {
-          "cost_with": 63.4,
-          "cost_without": 63.4,
-          "value_per_mwh": 0.0
+          "cost_with": 60.09,
+          "cost_without": null,
+          "value_per_mwh": null,
+          "note": "All optimal mixes include this storage"
         },
         "battery_8hr": {
-          "cost_with": 63.4,
-          "cost_without": 63.4,
+          "cost_with": 60.09,
+          "cost_without": 60.09,
           "value_per_mwh": 0.0
         },
         "ldes": {
-          "cost_with": 63.4,
-          "cost_without": 63.4,
+          "cost_with": 60.09,
+          "cost_without": 60.09,
           "value_per_mwh": 0.0
         },
         "green_h2": {
-          "cost_with": 63.4,
-          "cost_without": 63.4,
+          "cost_with": 60.09,
+          "cost_without": 60.09,
           "value_per_mwh": 0.0
         }
       },
@@ -3741,27 +3746,27 @@ const FLEXIBILITY_VALUE_DATA = {
       }
     },
     "99.99": {
-      "baseline_cost": 105.74,
+      "baseline_cost": 106.29,
       "storage_value": {
         "battery_4hr": {
-          "cost_with": 105.74,
+          "cost_with": 106.29,
           "cost_without": null,
           "value_per_mwh": null,
           "note": "All optimal mixes include this storage"
         },
         "battery_8hr": {
-          "cost_with": 105.74,
-          "cost_without": 105.74,
+          "cost_with": 106.29,
+          "cost_without": 106.29,
           "value_per_mwh": 0.0
         },
         "ldes": {
-          "cost_with": 105.74,
-          "cost_without": 105.74,
+          "cost_with": 106.29,
+          "cost_without": 106.29,
           "value_per_mwh": 0.0
         },
         "green_h2": {
-          "cost_with": 105.74,
-          "cost_without": 105.74,
+          "cost_with": 106.29,
+          "cost_without": 106.29,
           "value_per_mwh": 0.0
         }
       },
@@ -5544,26 +5549,26 @@ const FLEXIBILITY_VALUE_DATA = {
       }
     },
     "99.5": {
-      "baseline_cost": 72.89,
+      "baseline_cost": 72.97,
       "storage_value": {
         "battery_4hr": {
-          "cost_with": 72.89,
-          "cost_without": 72.89,
+          "cost_with": 72.97,
+          "cost_without": 72.97,
           "value_per_mwh": 0.0
         },
         "battery_8hr": {
-          "cost_with": 72.89,
-          "cost_without": 72.89,
+          "cost_with": 72.97,
+          "cost_without": 72.97,
           "value_per_mwh": 0.0
         },
         "ldes": {
-          "cost_with": 72.89,
-          "cost_without": 72.89,
+          "cost_with": 72.97,
+          "cost_without": 72.97,
           "value_per_mwh": 0.0
         },
         "green_h2": {
-          "cost_with": 72.89,
-          "cost_without": 72.89,
+          "cost_with": 72.97,
+          "cost_without": 72.97,
           "value_per_mwh": 0.0
         }
       },
@@ -5589,27 +5594,27 @@ const FLEXIBILITY_VALUE_DATA = {
       }
     },
     "99.9": {
-      "baseline_cost": 79.06,
+      "baseline_cost": 79.14,
       "storage_value": {
         "battery_4hr": {
-          "cost_with": 79.06,
+          "cost_with": 79.14,
           "cost_without": null,
           "value_per_mwh": null,
           "note": "All optimal mixes include this storage"
         },
         "battery_8hr": {
-          "cost_with": 79.06,
-          "cost_without": 79.06,
+          "cost_with": 79.14,
+          "cost_without": 79.14,
           "value_per_mwh": 0.0
         },
         "ldes": {
-          "cost_with": 79.06,
-          "cost_without": 80.24,
+          "cost_with": 79.14,
+          "cost_without": 80.32,
           "value_per_mwh": 1.18
         },
         "green_h2": {
-          "cost_with": 79.06,
-          "cost_without": 79.06,
+          "cost_with": 79.14,
+          "cost_without": 79.14,
           "value_per_mwh": 0.0
         }
       },
@@ -5635,27 +5640,27 @@ const FLEXIBILITY_VALUE_DATA = {
       }
     },
     "99.99": {
-      "baseline_cost": 80.24,
+      "baseline_cost": 80.32,
       "storage_value": {
         "battery_4hr": {
-          "cost_with": 80.24,
+          "cost_with": 80.32,
           "cost_without": null,
           "value_per_mwh": null,
           "note": "All optimal mixes include this storage"
         },
         "battery_8hr": {
-          "cost_with": 80.24,
-          "cost_without": 80.24,
+          "cost_with": 80.32,
+          "cost_without": 80.32,
           "value_per_mwh": 0.0
         },
         "ldes": {
-          "cost_with": 80.24,
-          "cost_without": 80.24,
+          "cost_with": 80.32,
+          "cost_without": 80.32,
           "value_per_mwh": 0.0
         },
         "green_h2": {
-          "cost_with": 80.24,
-          "cost_without": 80.24,
+          "cost_with": 80.32,
+          "cost_without": 80.32,
           "value_per_mwh": 0.0
         }
       },
@@ -6175,26 +6180,26 @@ const FLEXIBILITY_VALUE_DATA = {
       }
     },
     "85": {
-      "baseline_cost": 18.01,
+      "baseline_cost": 18.02,
       "storage_value": {
         "battery_4hr": {
-          "cost_with": 18.01,
-          "cost_without": 18.01,
+          "cost_with": 18.02,
+          "cost_without": 18.02,
           "value_per_mwh": 0.0
         },
         "battery_8hr": {
-          "cost_with": 18.01,
-          "cost_without": 18.01,
+          "cost_with": 18.02,
+          "cost_without": 18.02,
           "value_per_mwh": 0.0
         },
         "ldes": {
-          "cost_with": 18.01,
-          "cost_without": 18.01,
+          "cost_with": 18.02,
+          "cost_without": 18.02,
           "value_per_mwh": 0.0
         },
         "green_h2": {
-          "cost_with": 18.01,
-          "cost_without": 18.01,
+          "cost_with": 18.02,
+          "cost_without": 18.02,
           "value_per_mwh": 0.0
         }
       },
@@ -6355,26 +6360,26 @@ const FLEXIBILITY_VALUE_DATA = {
       }
     },
     "95": {
-      "baseline_cost": 29.29,
+      "baseline_cost": 29.3,
       "storage_value": {
         "battery_4hr": {
-          "cost_with": 29.29,
-          "cost_without": 29.29,
+          "cost_with": 29.3,
+          "cost_without": 29.3,
           "value_per_mwh": 0.0
         },
         "battery_8hr": {
-          "cost_with": 29.29,
-          "cost_without": 29.29,
+          "cost_with": 29.3,
+          "cost_without": 29.3,
           "value_per_mwh": 0.0
         },
         "ldes": {
-          "cost_with": 29.29,
-          "cost_without": 29.29,
+          "cost_with": 29.3,
+          "cost_without": 29.3,
           "value_per_mwh": 0.0
         },
         "green_h2": {
-          "cost_with": 29.29,
-          "cost_without": 29.29,
+          "cost_with": 29.3,
+          "cost_without": 29.3,
           "value_per_mwh": 0.0
         }
       },
@@ -6400,26 +6405,26 @@ const FLEXIBILITY_VALUE_DATA = {
       }
     },
     "97.5": {
-      "baseline_cost": 35.27,
+      "baseline_cost": 35.28,
       "storage_value": {
         "battery_4hr": {
-          "cost_with": 35.27,
-          "cost_without": 35.27,
+          "cost_with": 35.28,
+          "cost_without": 35.28,
           "value_per_mwh": 0.0
         },
         "battery_8hr": {
-          "cost_with": 35.27,
-          "cost_without": 35.27,
+          "cost_with": 35.28,
+          "cost_without": 35.28,
           "value_per_mwh": 0.0
         },
         "ldes": {
-          "cost_with": 35.27,
-          "cost_without": 35.27,
+          "cost_with": 35.28,
+          "cost_without": 35.28,
           "value_per_mwh": 0.0
         },
         "green_h2": {
-          "cost_with": 35.27,
-          "cost_without": 35.27,
+          "cost_with": 35.28,
+          "cost_without": 35.28,
           "value_per_mwh": 0.0
         }
       },
@@ -6535,27 +6540,27 @@ const FLEXIBILITY_VALUE_DATA = {
       }
     },
     "99.9": {
-      "baseline_cost": 59.34,
+      "baseline_cost": 59.43,
       "storage_value": {
         "battery_4hr": {
-          "cost_with": 59.34,
+          "cost_with": 59.43,
           "cost_without": null,
           "value_per_mwh": null,
           "note": "All optimal mixes include this storage"
         },
         "battery_8hr": {
-          "cost_with": 59.34,
+          "cost_with": 59.43,
           "cost_without": 60.08,
-          "value_per_mwh": 0.74
+          "value_per_mwh": 0.65
         },
         "ldes": {
-          "cost_with": 59.34,
+          "cost_with": 59.43,
           "cost_without": 60.08,
-          "value_per_mwh": 0.74
+          "value_per_mwh": 0.65
         },
         "green_h2": {
-          "cost_with": 59.34,
-          "cost_without": 59.34,
+          "cost_with": 59.43,
+          "cost_without": 59.43,
           "value_per_mwh": 0.0
         }
       },
@@ -6581,27 +6586,27 @@ const FLEXIBILITY_VALUE_DATA = {
       }
     },
     "99.99": {
-      "baseline_cost": 64.77,
+      "baseline_cost": 63.87,
       "storage_value": {
         "battery_4hr": {
-          "cost_with": 64.77,
+          "cost_with": 63.87,
           "cost_without": null,
           "value_per_mwh": null,
           "note": "All optimal mixes include this storage"
         },
         "battery_8hr": {
-          "cost_with": 64.77,
-          "cost_without": 64.77,
+          "cost_with": 63.87,
+          "cost_without": 63.87,
           "value_per_mwh": 0.0
         },
         "ldes": {
-          "cost_with": 64.77,
-          "cost_without": 65.16,
-          "value_per_mwh": 0.39
+          "cost_with": 63.87,
+          "cost_without": 64.21,
+          "value_per_mwh": 0.34
         },
         "green_h2": {
-          "cost_with": 64.77,
-          "cost_without": 64.77,
+          "cost_with": 63.87,
+          "cost_without": 63.87,
           "value_per_mwh": 0.0
         }
       },

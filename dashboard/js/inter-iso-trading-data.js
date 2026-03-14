@@ -29,7 +29,7 @@ const INTER_ISO_TRADING_DATA = {
         "MISO": "MISO",
         "SPP": "SPP"
       },
-      "island_avg": 6.85,
+      "island_avg": 6.84,
       "pool_avg": 6.2,
       "savings_pct": 9.4
     },
@@ -61,7 +61,7 @@ const INTER_ISO_TRADING_DATA = {
         "MISO": "MISO",
         "SPP": "SPP"
       },
-      "island_avg": 6.85,
+      "island_avg": 6.84,
       "pool_avg": 6.2,
       "savings_pct": 9.4
     },
@@ -93,7 +93,7 @@ const INTER_ISO_TRADING_DATA = {
         "MISO": "MISO",
         "SPP": "SPP"
       },
-      "island_avg": 6.85,
+      "island_avg": 6.84,
       "pool_avg": 6.2,
       "savings_pct": 9.4
     },
@@ -125,7 +125,7 @@ const INTER_ISO_TRADING_DATA = {
         "MISO": "MISO",
         "SPP": "SPP"
       },
-      "island_avg": 6.85,
+      "island_avg": 6.84,
       "pool_avg": 6.2,
       "savings_pct": 9.4
     },
@@ -157,8 +157,8 @@ const INTER_ISO_TRADING_DATA = {
         "MISO": "SPP",
         "SPP": "SPP"
       },
-      "island_avg": 8.31,
-      "pool_avg": 7.8,
+      "island_avg": 8.3,
+      "pool_avg": 7.79,
       "savings_pct": 6.2
     },
     "55": {
@@ -189,8 +189,8 @@ const INTER_ISO_TRADING_DATA = {
         "MISO": "SPP",
         "SPP": "SPP"
       },
-      "island_avg": 10.08,
-      "pool_avg": 9.43,
+      "island_avg": 10.07,
+      "pool_avg": 9.42,
       "savings_pct": 6.5
     },
     "60": {
@@ -221,8 +221,8 @@ const INTER_ISO_TRADING_DATA = {
         "MISO": "SPP",
         "SPP": "SPP"
       },
-      "island_avg": 12.49,
-      "pool_avg": 11.73,
+      "island_avg": 12.48,
+      "pool_avg": 11.72,
       "savings_pct": 6.1
     },
     "65": {
@@ -253,8 +253,8 @@ const INTER_ISO_TRADING_DATA = {
         "MISO": "SPP",
         "SPP": "SPP"
       },
-      "island_avg": 15.08,
-      "pool_avg": 14.04,
+      "island_avg": 15.07,
+      "pool_avg": 14.03,
       "savings_pct": 6.9
     },
     "70": {
@@ -285,9 +285,9 @@ const INTER_ISO_TRADING_DATA = {
         "MISO": "SPP",
         "SPP": "SPP"
       },
-      "island_avg": 17.59,
-      "pool_avg": 16.05,
-      "savings_pct": 8.7
+      "island_avg": 17.58,
+      "pool_avg": 16.04,
+      "savings_pct": 8.8
     },
     "75": {
       "island_costs": {
@@ -317,8 +317,8 @@ const INTER_ISO_TRADING_DATA = {
         "MISO": "SPP",
         "SPP": "SPP"
       },
-      "island_avg": 19.73,
-      "pool_avg": 17.38,
+      "island_avg": 19.72,
+      "pool_avg": 17.37,
       "savings_pct": 11.9
     },
     "80": {
@@ -349,8 +349,8 @@ const INTER_ISO_TRADING_DATA = {
         "MISO": "SPP",
         "SPP": "SPP"
       },
-      "island_avg": 22.74,
-      "pool_avg": 18.45,
+      "island_avg": 22.73,
+      "pool_avg": 18.44,
       "savings_pct": 18.9
     },
     "85": {
@@ -358,19 +358,19 @@ const INTER_ISO_TRADING_DATA = {
         "CAISO": 41.71,
         "ERCOT": 20.38,
         "PJM": 32.78,
-        "NYISO": 46.69,
+        "NYISO": 46.14,
         "NEISO": 47.29,
         "MISO": 28.42,
-        "SPP": 18.01
+        "SPP": 18.02
       },
       "pool_costs": {
-        "CAISO": 30.01,
+        "CAISO": 30.02,
         "ERCOT": 20.38,
-        "PJM": 32.01,
-        "NYISO": 34.01,
-        "NEISO": 35.01,
-        "MISO": 23.01,
-        "SPP": 18.01
+        "PJM": 32.02,
+        "NYISO": 34.02,
+        "NEISO": 35.02,
+        "MISO": 23.02,
+        "SPP": 18.02
       },
       "pool_sources": {
         "CAISO": "SPP",
@@ -381,16 +381,16 @@ const INTER_ISO_TRADING_DATA = {
         "MISO": "SPP",
         "SPP": "SPP"
       },
-      "island_avg": 30.07,
-      "pool_avg": 26.41,
-      "savings_pct": 12.2
+      "island_avg": 30.03,
+      "pool_avg": 26.4,
+      "savings_pct": 12.1
     },
     "87.5": {
       "island_costs": {
         "CAISO": 45.66,
         "ERCOT": 22.52,
         "PJM": 36.14,
-        "NYISO": 50.07,
+        "NYISO": 50.04,
         "NEISO": 52.16,
         "MISO": 31.23,
         "SPP": 20.12
@@ -413,8 +413,8 @@ const INTER_ISO_TRADING_DATA = {
         "MISO": "SPP",
         "SPP": "SPP"
       },
-      "island_avg": 33.07,
-      "pool_avg": 28.53,
+      "island_avg": 33.05,
+      "pool_avg": 28.51,
       "savings_pct": 13.7
     },
     "90": {
@@ -422,7 +422,7 @@ const INTER_ISO_TRADING_DATA = {
         "CAISO": 49.5,
         "ERCOT": 25.32,
         "PJM": 40.28,
-        "NYISO": 54.79,
+        "NYISO": 54.76,
         "NEISO": 58.32,
         "MISO": 34.43,
         "SPP": 22.57
@@ -445,8 +445,8 @@ const INTER_ISO_TRADING_DATA = {
         "MISO": "SPP",
         "SPP": "SPP"
       },
-      "island_avg": 36.66,
-      "pool_avg": 31.04,
+      "island_avg": 36.64,
+      "pool_avg": 31.02,
       "savings_pct": 15.3
     },
     "92.5": {
@@ -454,7 +454,7 @@ const INTER_ISO_TRADING_DATA = {
         "CAISO": 57.54,
         "ERCOT": 28.66,
         "PJM": 45.44,
-        "NYISO": 63.4,
+        "NYISO": 60.09,
         "NEISO": 64.16,
         "MISO": 37.88,
         "SPP": 25.56
@@ -477,9 +477,9 @@ const INTER_ISO_TRADING_DATA = {
         "MISO": "SPP",
         "SPP": "SPP"
       },
-      "island_avg": 41.31,
-      "pool_avg": 34.09,
-      "savings_pct": 17.5
+      "island_avg": 41.11,
+      "pool_avg": 34.07,
+      "savings_pct": 17.1
     },
     "95": {
       "island_costs": {
@@ -489,16 +489,16 @@ const INTER_ISO_TRADING_DATA = {
         "NYISO": 70.85,
         "NEISO": 74.37,
         "MISO": 42.56,
-        "SPP": 29.29
+        "SPP": 29.3
       },
       "pool_costs": {
-        "CAISO": 41.29,
+        "CAISO": 41.3,
         "ERCOT": 33.21,
-        "PJM": 43.29,
-        "NYISO": 45.29,
-        "NEISO": 46.29,
-        "MISO": 34.29,
-        "SPP": 29.29
+        "PJM": 43.3,
+        "NYISO": 45.3,
+        "NEISO": 46.3,
+        "MISO": 34.3,
+        "SPP": 29.3
       },
       "pool_sources": {
         "CAISO": "SPP",
@@ -509,28 +509,28 @@ const INTER_ISO_TRADING_DATA = {
         "MISO": "SPP",
         "SPP": "SPP"
       },
-      "island_avg": 49.4,
-      "pool_avg": 37.96,
-      "savings_pct": 23.2
+      "island_avg": 49.36,
+      "pool_avg": 37.95,
+      "savings_pct": 23.1
     },
     "97.5": {
       "island_costs": {
         "CAISO": 69.18,
-        "ERCOT": 39.53,
+        "ERCOT": 39.51,
         "PJM": 68.33,
         "NYISO": 80.61,
         "NEISO": 86.94,
         "MISO": 50.68,
-        "SPP": 35.27
+        "SPP": 35.28
       },
       "pool_costs": {
-        "CAISO": 47.27,
-        "ERCOT": 39.53,
-        "PJM": 49.27,
-        "NYISO": 51.27,
-        "NEISO": 52.27,
-        "MISO": 40.27,
-        "SPP": 35.27
+        "CAISO": 47.28,
+        "ERCOT": 39.51,
+        "PJM": 49.28,
+        "NYISO": 51.28,
+        "NEISO": 52.28,
+        "MISO": 40.28,
+        "SPP": 35.28
       },
       "pool_sources": {
         "CAISO": "SPP",
@@ -541,14 +541,14 @@ const INTER_ISO_TRADING_DATA = {
         "MISO": "SPP",
         "SPP": "SPP"
       },
-      "island_avg": 57.07,
-      "pool_avg": 44.0,
+      "island_avg": 57.03,
+      "pool_avg": 43.99,
       "savings_pct": 22.9
     },
     "99": {
       "island_costs": {
         "CAISO": 78.37,
-        "ERCOT": 46.36,
+        "ERCOT": 45.29,
         "PJM": 76.14,
         "NYISO": 89.55,
         "NEISO": 97.19,
@@ -557,7 +557,7 @@ const INTER_ISO_TRADING_DATA = {
       },
       "pool_costs": {
         "CAISO": 54.63,
-        "ERCOT": 46.36,
+        "ERCOT": 45.29,
         "PJM": 56.63,
         "NYISO": 58.63,
         "NEISO": 59.63,
@@ -573,23 +573,23 @@ const INTER_ISO_TRADING_DATA = {
         "MISO": "SPP",
         "SPP": "SPP"
       },
-      "island_avg": 66.25,
-      "pool_avg": 51.27,
-      "savings_pct": 22.6
+      "island_avg": 66.02,
+      "pool_avg": 51.06,
+      "savings_pct": 22.7
     },
     "99.5": {
       "island_costs": {
         "CAISO": 88.43,
-        "ERCOT": 51.98,
+        "ERCOT": 48.66,
         "PJM": 76.14,
         "NYISO": 95.1,
         "NEISO": 105.75,
-        "MISO": 72.89,
+        "MISO": 72.97,
         "SPP": 48.34
       },
       "pool_costs": {
         "CAISO": 60.34,
-        "ERCOT": 51.98,
+        "ERCOT": 48.66,
         "PJM": 62.34,
         "NYISO": 64.34,
         "NEISO": 65.34,
@@ -605,73 +605,73 @@ const INTER_ISO_TRADING_DATA = {
         "MISO": "SPP",
         "SPP": "SPP"
       },
-      "island_avg": 71.42,
-      "pool_avg": 56.96,
-      "savings_pct": 20.2
+      "island_avg": 70.83,
+      "pool_avg": 56.36,
+      "savings_pct": 20.4
     },
     "99.9": {
       "island_costs": {
         "CAISO": 88.43,
-        "ERCOT": 62.74,
+        "ERCOT": 56.63,
         "PJM": 76.14,
         "NYISO": 102.75,
         "NEISO": 117.27,
-        "MISO": 79.06,
-        "SPP": 59.34
+        "MISO": 79.14,
+        "SPP": 59.43
       },
       "pool_costs": {
-        "CAISO": 71.34,
-        "ERCOT": 62.74,
-        "PJM": 73.34,
-        "NYISO": 75.34,
-        "NEISO": 76.34,
-        "MISO": 64.34,
-        "SPP": 59.34
+        "CAISO": 71.43,
+        "ERCOT": 56.63,
+        "PJM": 72.63,
+        "NYISO": 74.63,
+        "NEISO": 75.63,
+        "MISO": 64.43,
+        "SPP": 59.43
       },
       "pool_sources": {
         "CAISO": "SPP",
         "ERCOT": "ERCOT",
-        "PJM": "SPP",
-        "NYISO": "SPP",
-        "NEISO": "SPP",
+        "PJM": "ERCOT",
+        "NYISO": "ERCOT",
+        "NEISO": "ERCOT",
         "MISO": "SPP",
         "SPP": "SPP"
       },
-      "island_avg": 76.84,
-      "pool_avg": 67.92,
-      "savings_pct": 11.6
+      "island_avg": 75.78,
+      "pool_avg": 66.59,
+      "savings_pct": 12.1
     },
     "99.99": {
       "island_costs": {
         "CAISO": 89.96,
-        "ERCOT": 65.86,
+        "ERCOT": 61.66,
         "PJM": 76.14,
-        "NYISO": 105.74,
+        "NYISO": 106.29,
         "NEISO": 119.45,
-        "MISO": 80.24,
-        "SPP": 64.77
+        "MISO": 80.32,
+        "SPP": 63.87
       },
       "pool_costs": {
-        "CAISO": 76.77,
-        "ERCOT": 65.86,
+        "CAISO": 75.87,
+        "ERCOT": 61.66,
         "PJM": 76.14,
-        "NYISO": 80.14,
-        "NEISO": 81.77,
-        "MISO": 69.77,
-        "SPP": 64.77
+        "NYISO": 79.66,
+        "NEISO": 80.66,
+        "MISO": 68.87,
+        "SPP": 63.87
       },
       "pool_sources": {
         "CAISO": "SPP",
         "ERCOT": "ERCOT",
         "PJM": "PJM",
-        "NYISO": "PJM",
-        "NEISO": "SPP",
+        "NYISO": "ERCOT",
+        "NEISO": "ERCOT",
         "MISO": "SPP",
         "SPP": "SPP"
       },
-      "island_avg": 78.62,
-      "pool_avg": 72.11,
-      "savings_pct": 8.3
+      "island_avg": 77.82,
+      "pool_avg": 70.91,
+      "savings_pct": 8.9
     }
   },
   "net_position": {
@@ -718,8 +718,8 @@ const INTER_ISO_TRADING_DATA = {
       "97.5": "neutral",
       "99": "neutral",
       "99.5": "neutral",
-      "99.9": "neutral",
-      "99.99": "neutral"
+      "99.9": "exporter",
+      "99.99": "exporter"
     },
     "PJM": {
       "10": "importer",
@@ -742,7 +742,7 @@ const INTER_ISO_TRADING_DATA = {
       "99": "importer",
       "99.5": "importer",
       "99.9": "importer",
-      "99.99": "exporter"
+      "99.99": "neutral"
     },
     "NYISO": {
       "10": "exporter",
@@ -839,8 +839,8 @@ const INTER_ISO_TRADING_DATA = {
   },
   "trading_pairs": {
     "CAISO_ERCOT": {
-      "avg_value": 6.58,
-      "max_value": 21.45,
+      "avg_value": 7.29,
+      "max_value": 24.77,
       "tx_cost": 15,
       "cheaper_iso": "ERCOT"
     },
@@ -869,32 +869,32 @@ const INTER_ISO_TRADING_DATA = {
       "cheaper_iso": "MISO"
     },
     "CAISO_SPP": {
-      "avg_value": 9.8,
+      "avg_value": 9.84,
       "max_value": 28.09,
       "tx_cost": 12,
       "cheaper_iso": "SPP"
     },
     "ERCOT_PJM": {
-      "avg_value": 2.23,
-      "max_value": 13.78,
+      "avg_value": 2.61,
+      "max_value": 14.85,
       "tx_cost": 16,
       "cheaper_iso": "ERCOT"
     },
     "ERCOT_NYISO": {
-      "avg_value": 9.54,
-      "max_value": 25.19,
+      "avg_value": 10.08,
+      "max_value": 28.44,
       "tx_cost": 18,
       "cheaper_iso": "ERCOT"
     },
     "ERCOT_NEISO": {
-      "avg_value": 11.25,
-      "max_value": 35.53,
+      "avg_value": 11.96,
+      "max_value": 41.64,
       "tx_cost": 19,
       "cheaper_iso": "ERCOT"
     },
     "ERCOT_MISO": {
-      "avg_value": 1.65,
-      "max_value": 10.91,
+      "avg_value": 2.36,
+      "max_value": 14.31,
       "tx_cost": 10,
       "cheaper_iso": "ERCOT"
     },
@@ -905,8 +905,8 @@ const INTER_ISO_TRADING_DATA = {
       "cheaper_iso": "SPP"
     },
     "PJM_NYISO": {
-      "avg_value": 7.58,
-      "max_value": 25.6,
+      "avg_value": 7.42,
+      "max_value": 26.15,
       "tx_cost": 4,
       "cheaper_iso": "PJM"
     },
@@ -923,51 +923,51 @@ const INTER_ISO_TRADING_DATA = {
       "cheaper_iso": "MISO"
     },
     "PJM_SPP": {
-      "avg_value": 3.97,
+      "avg_value": 3.96,
       "max_value": 19.51,
       "tx_cost": 14,
       "cheaper_iso": "SPP"
     },
     "NYISO_NEISO": {
-      "avg_value": 5.73,
+      "avg_value": 5.76,
       "max_value": 19.99,
       "tx_cost": 3,
       "cheaper_iso": "NYISO"
     },
     "NYISO_MISO": {
-      "avg_value": 7.03,
+      "avg_value": 6.86,
       "max_value": 19.93,
       "tx_cost": 10,
       "cheaper_iso": "MISO"
     },
     "NYISO_SPP": {
-      "avg_value": 11.97,
+      "avg_value": 11.85,
       "max_value": 30.92,
       "tx_cost": 16,
       "cheaper_iso": "SPP"
     },
     "NEISO_MISO": {
-      "avg_value": 8.64,
-      "max_value": 27.21,
+      "avg_value": 8.63,
+      "max_value": 27.13,
       "tx_cost": 12,
       "cheaper_iso": "MISO"
     },
     "NEISO_SPP": {
-      "avg_value": 13.67,
-      "max_value": 40.93,
+      "avg_value": 13.7,
+      "max_value": 40.84,
       "tx_cost": 17,
       "cheaper_iso": "SPP"
     },
     "MISO_SPP": {
-      "avg_value": 6.03,
-      "max_value": 19.55,
+      "avg_value": 6.08,
+      "max_value": 19.63,
       "tx_cost": 5,
       "cheaper_iso": "SPP"
     }
   },
   "tx_sensitivity": {
     "low": {
-      "avg_savings_pct": 25.3,
+      "avg_savings_pct": 25.4,
       "tx_multiplier": 0.5
     },
     "medium": {
