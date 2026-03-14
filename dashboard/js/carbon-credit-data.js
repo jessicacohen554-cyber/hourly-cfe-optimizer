@@ -91,8 +91,8 @@ const CARBON_CREDIT_DATA = {
         469.3,
         508.1,
         560.9,
-        595.8,
-        599.5
+        595.7,
+        597.8
       ],
       "p90": [
         null,
@@ -114,8 +114,8 @@ const CARBON_CREDIT_DATA = {
         514.0,
         557.5,
         646.0,
-        647.0,
-        654.2
+        646.8,
+        654.0
       ]
     },
     "ERCOT": {
@@ -136,11 +136,11 @@ const CARBON_CREDIT_DATA = {
         74.4,
         81.8,
         92.8,
-        111.0,
-        142.3,
-        161.9,
-        201.5,
-        210.3
+        109.9,
+        130.2,
+        145.5,
+        175.6,
+        197.5
       ],
       "p25": [
         null,
@@ -159,11 +159,11 @@ const CARBON_CREDIT_DATA = {
         88.1,
         96.7,
         109.8,
-        130.2,
-        156.0,
-        176.4,
-        217.0,
-        224.5
+        126.6,
+        148.6,
+        162.9,
+        194.2,
+        214.3
       ],
       "p50": [
         null,
@@ -182,11 +182,11 @@ const CARBON_CREDIT_DATA = {
         101.9,
         111.9,
         124.9,
-        146.1,
-        180.9,
-        201.4,
-        236.7,
-        243.0
+        146.6,
+        169.1,
+        185.6,
+        214.4,
+        230.2
       ],
       "p75": [
         null,
@@ -204,12 +204,12 @@ const CARBON_CREDIT_DATA = {
         110.7,
         120.4,
         131.9,
-        148.7,
-        175.9,
-        202.9,
-        226.5,
-        268.1,
-        278.6
+        148.9,
+        170.9,
+        193.8,
+        207.1,
+        240.2,
+        263.1
       ],
       "p90": [
         null,
@@ -228,11 +228,11 @@ const CARBON_CREDIT_DATA = {
         134.0,
         146.8,
         165.8,
-        187.2,
-        229.8,
-        258.0,
-        293.5,
-        302.6
+        186.1,
+        209.5,
+        229.7,
+        268.9,
+        288.3
       ]
     },
     "PJM": {
@@ -365,10 +365,10 @@ const CARBON_CREDIT_DATA = {
         170.7,
         177.9,
         183.3,
-        193.8,
-        197.7,
-        203.6,
-        218.7,
+        188.8,
+        194.7,
+        201.2,
+        214.1,
         228.3,
         243.8,
         267.9,
@@ -387,17 +387,17 @@ const CARBON_CREDIT_DATA = {
         196.6,
         202.8,
         203.1,
-        210.9,
+        210.5,
         216.9,
-        223.9,
+        222.2,
         219.4,
-        234.8,
+        227.4,
         242.6,
         261.0,
         287.5,
         304.9,
         316.4,
-        331.0
+        332.7
       ],
       "p50": [
         null,
@@ -411,16 +411,16 @@ const CARBON_CREDIT_DATA = {
         227.2,
         230.1,
         228.5,
-        241.5,
-        246.6,
+        241.1,
+        246.2,
         240.0,
-        272.9,
+        251.1,
         296.0,
         336.4,
         378.8,
         394.3,
         415.5,
-        424.7
+        428.9
       ],
       "p75": [
         null,
@@ -433,17 +433,17 @@ const CARBON_CREDIT_DATA = {
         260.7,
         265.7,
         273.0,
-        279.2,
-        297.7,
-        302.1,
-        311.1,
-        331.0,
+        278.5,
+        296.8,
+        300.8,
+        310.8,
+        320.0,
         342.7,
         378.7,
         454.2,
-        453.8,
+        453.3,
         457.2,
-        476.7
+        479.4
       ],
       "p90": [
         null,
@@ -457,16 +457,16 @@ const CARBON_CREDIT_DATA = {
         304.2,
         311.0,
         318.1,
-        333.6,
-        337.1,
+        328.9,
+        334.1,
         340.2,
-        376.2,
+        351.7,
         413.7,
         478.9,
         544.1,
         575.6,
-        603.6,
-        602.7
+        602.4,
+        618.9
       ]
     },
     "NEISO": {
@@ -591,116 +591,116 @@ const CARBON_CREDIT_DATA = {
         null,
         null,
         null,
-        76.6,
+        76.9,
         88.6,
-        90.6,
-        92.1,
+        90.8,
+        92.2,
         94.2,
-        52.4,
-        57.6,
-        64.0,
-        72.0,
-        76.8,
-        83.3,
-        91.8,
-        104.3,
-        128.4,
-        152.3,
-        172.3,
-        183.1,
-        183.6
+        52.6,
+        57.8,
+        64.2,
+        72.2,
+        77.0,
+        83.4,
+        92.0,
+        104.6,
+        128.7,
+        152.6,
+        172.6,
+        183.5,
+        184.0
       ],
       "p25": [
         null,
         null,
         null,
-        91.2,
+        91.5,
         101.9,
-        103.7,
-        105.1,
+        103.8,
+        105.2,
         107.5,
-        59.6,
-        65.6,
-        72.2,
-        81.8,
-        87.7,
-        94.8,
-        102.9,
-        114.5,
-        142.5,
-        165.2,
-        183.6,
-        194.3,
-        195.9
+        59.8,
+        65.8,
+        72.4,
+        82.0,
+        88.0,
+        95.0,
+        103.1,
+        114.8,
+        142.9,
+        165.5,
+        183.9,
+        194.6,
+        196.3
       ],
       "p50": [
         null,
         null,
         null,
-        115.2,
+        115.5,
         123.7,
-        125.1,
-        126.2,
-        128.7,
-        71.3,
-        77.5,
-        85.3,
-        95.1,
-        100.4,
-        107.2,
-        117.1,
-        132.8,
-        154.5,
-        181.0,
-        205.0,
-        224.7,
-        228.4
+        125.3,
+        126.3,
+        128.8,
+        71.5,
+        77.7,
+        85.6,
+        95.3,
+        100.7,
+        107.5,
+        117.3,
+        133.0,
+        154.8,
+        181.3,
+        205.5,
+        225.1,
+        229.0
       ],
       "p75": [
         null,
         null,
         null,
-        142.0,
+        142.2,
         148.2,
-        149.3,
-        150.2,
-        152.8,
-        84.6,
-        91.6,
-        100.5,
-        111.6,
-        118.2,
-        127.6,
-        139.4,
-        151.1,
-        176.3,
-        217.2,
-        242.3,
-        255.7,
-        257.3
+        149.5,
+        150.3,
+        152.9,
+        84.8,
+        91.8,
+        100.8,
+        111.8,
+        118.5,
+        127.9,
+        139.7,
+        151.4,
+        176.7,
+        217.6,
+        242.8,
+        256.2,
+        257.8
       ],
       "p90": [
         null,
         null,
         null,
-        160.3,
+        160.6,
         164.4,
-        165.1,
-        165.6,
-        168.8,
-        93.2,
-        101.7,
-        111.6,
-        125.1,
-        133.3,
-        139.0,
-        149.8,
-        169.8,
-        199.9,
-        239.3,
-        265.8,
-        289.6,
-        292.6
+        165.2,
+        165.7,
+        168.9,
+        93.5,
+        102.0,
+        111.8,
+        125.4,
+        133.6,
+        139.3,
+        150.1,
+        170.2,
+        200.2,
+        239.7,
+        266.3,
+        290.4,
+        293.4
       ]
     },
     "SPP": {
@@ -709,68 +709,68 @@ const CARBON_CREDIT_DATA = {
         null,
         null,
         null,
-        22.9,
-        56.1,
-        66.3,
-        76.9,
-        38.6,
-        44.6,
-        51.6,
-        60.0,
-        65.1,
-        70.6,
-        76.9,
-        86.4,
-        100.9,
-        127.4,
-        140.7,
-        177.0,
-        193.7
+        23.8,
+        56.4,
+        66.7,
+        77.2,
+        39.0,
+        45.0,
+        52.0,
+        60.4,
+        65.5,
+        71.0,
+        77.3,
+        86.8,
+        101.4,
+        128.0,
+        141.3,
+        176.2,
+        194.2
       ],
       "p25": [
         null,
         null,
         null,
         null,
-        34.8,
+        35.7,
+        70.3,
+        79.5,
+        89.2,
+        45.4,
+        52.1,
+        60.2,
         69.8,
-        79.1,
-        88.9,
-        45.0,
-        51.7,
-        59.8,
-        69.4,
-        75.1,
-        81.9,
-        89.7,
-        100.3,
-        117.6,
-        142.5,
-        159.9,
-        199.4,
-        214.3
+        75.5,
+        82.3,
+        90.1,
+        100.8,
+        118.1,
+        143.2,
+        160.5,
+        199.1,
+        214.2
       ],
       "p50": [
         null,
         null,
         null,
         null,
-        60.3,
-        87.3,
-        95.8,
-        106.9,
-        53.4,
-        61.1,
-        70.2,
-        81.1,
-        87.7,
-        94.9,
-        103.2,
-        115.2,
-        133.8,
-        164.8,
-        182.4,
-        222.2,
+        61.2,
+        87.8,
+        96.2,
+        107.2,
+        53.9,
+        61.6,
+        70.7,
+        81.6,
+        88.2,
+        95.4,
+        103.8,
+        115.8,
+        134.4,
+        165.5,
+        183.3,
+        222.8,
         233.9
       ],
       "p75": [
@@ -778,46 +778,46 @@ const CARBON_CREDIT_DATA = {
         null,
         null,
         null,
-        85.8,
-        109.2,
-        116.4,
-        128.3,
-        63.7,
-        72.6,
-        82.7,
-        94.5,
-        102.3,
-        111.0,
-        121.1,
-        135.1,
-        157.5,
-        195.0,
-        213.8,
-        250.3,
-        266.8
+        86.7,
+        109.6,
+        116.7,
+        128.6,
+        64.2,
+        73.1,
+        83.2,
+        95.0,
+        102.9,
+        111.6,
+        121.7,
+        135.8,
+        158.2,
+        195.8,
+        214.8,
+        251.3,
+        267.7
       ],
       "p90": [
         null,
         null,
         null,
         null,
-        105.3,
-        127.8,
-        132.9,
-        143.4,
-        71.6,
-        81.3,
-        92.8,
-        106.8,
-        114.8,
-        123.9,
-        135.3,
-        150.5,
-        175.4,
-        212.4,
-        234.2,
-        279.8,
-        292.3
+        106.2,
+        128.1,
+        133.3,
+        143.7,
+        72.2,
+        81.8,
+        93.4,
+        107.4,
+        115.4,
+        124.6,
+        136.0,
+        151.2,
+        176.2,
+        213.3,
+        235.3,
+        278.1,
+        291.7
       ]
     }
   },
@@ -850,11 +850,11 @@ const CARBON_CREDIT_DATA = {
     },
     "ERCOT": {
       "scc_epa_190": {
-        "envelope": 99.0,
-        "median": 99.5
+        "envelope": 99.5,
+        "median": 99.9
       },
       "scc_rennert_185": {
-        "envelope": 99.0,
+        "envelope": 99.5,
         "median": 99.5
       },
       "dac_low_400": {
@@ -1078,15 +1078,13 @@ const CARBON_CREDIT_DATA = {
   "optimal_targets": {
     "CAISO": {
       "crossover_range": {
-        "lower_bound": 68.7,
-        "upper_bound": 93.0,
+        "lower_bound": 76.6,
+        "upper_bound": 94.0,
         "lower_scenario": "p75_grid__optimistic_dac",
         "upper_scenario": "p25_grid__conservative_dac"
       },
       "no_regrets": {
         "range_thresholds": [
-          65.0,
-          70.0,
           75.0,
           80.0,
           85.0,
@@ -1098,41 +1096,31 @@ const CARBON_CREDIT_DATA = {
         ],
         "resources": {
           "clean_firm": {
-            "floor_pct": 9,
-            "avg_pct": 25.0,
+            "floor_pct": 13,
+            "avg_pct": 28.8,
             "max_pct": 68,
-            "floor_demand_share": 9.0,
-            "avg_demand_share": 25.0,
+            "floor_demand_share": 13.0,
+            "avg_demand_share": 28.75,
             "max_demand_share": 68.0,
             "is_consensus": true,
             "twh_by_growth": {
               "low": {
-                "floor_twh": 22.85,
-                "avg_twh": 71.49,
+                "floor_twh": 33.94,
+                "avg_twh": 82.97,
                 "max_twh": 201.18
               },
               "medium": {
-                "floor_twh": 23.89,
-                "avg_twh": 78.01,
+                "floor_twh": 35.82,
+                "avg_twh": 90.81,
                 "max_twh": 221.98
               },
               "high": {
-                "floor_twh": 25.18,
-                "avg_twh": 86.64,
+                "floor_twh": 38.21,
+                "avg_twh": 101.21,
                 "max_twh": 249.64
               }
             },
             "per_threshold": [
-              {
-                "threshold": 65.0,
-                "pct": 9,
-                "pct_of_demand": 0.09
-              },
-              {
-                "threshold": 70.0,
-                "pct": 11,
-                "pct_of_demand": 0.11
-              },
               {
                 "threshold": 75.0,
                 "pct": 13,
@@ -1177,40 +1165,30 @@ const CARBON_CREDIT_DATA = {
           },
           "solar": {
             "floor_pct": 22,
-            "avg_pct": 23.8,
+            "avg_pct": 23.9,
             "max_pct": 33,
             "floor_demand_share": 22.0,
-            "avg_demand_share": 23.8,
+            "avg_demand_share": 23.88,
             "max_demand_share": 33.0,
             "is_consensus": true,
             "twh_by_growth": {
               "low": {
                 "floor_twh": 57.43,
-                "avg_twh": 65.51,
+                "avg_twh": 66.87,
                 "max_twh": 97.63
               },
               "medium": {
                 "floor_twh": 60.63,
-                "avg_twh": 70.53,
+                "avg_twh": 72.41,
                 "max_twh": 107.73
               },
               "high": {
-                "floor_twh": 64.35,
-                "avg_twh": 77.06,
+                "floor_twh": 64.67,
+                "avg_twh": 79.68,
                 "max_twh": 121.15
               }
             },
             "per_threshold": [
-              {
-                "threshold": 65.0,
-                "pct": 23,
-                "pct_of_demand": 0.23
-              },
-              {
-                "threshold": 70.0,
-                "pct": 24,
-                "pct_of_demand": 0.24
-              },
               {
                 "threshold": 75.0,
                 "pct": 22,
@@ -1255,40 +1233,30 @@ const CARBON_CREDIT_DATA = {
           },
           "wind": {
             "floor_pct": 21,
-            "avg_pct": 38.5,
+            "avg_pct": 39.4,
             "max_pct": 55,
             "floor_demand_share": 21.0,
-            "avg_demand_share": 38.5,
+            "avg_demand_share": 39.37,
             "max_demand_share": 55.0,
             "is_consensus": true,
             "twh_by_growth": {
               "low": {
                 "floor_twh": 62.13,
-                "avg_twh": 105.54,
+                "avg_twh": 109.54,
                 "max_twh": 158.26
               },
               "medium": {
                 "floor_twh": 68.55,
-                "avg_twh": 113.43,
+                "avg_twh": 118.33,
                 "max_twh": 172.91
               },
               "high": {
                 "floor_twh": 77.09,
-                "avg_twh": 123.69,
+                "avg_twh": 129.81,
                 "max_twh": 192.18
               }
             },
             "per_threshold": [
-              {
-                "threshold": 65.0,
-                "pct": 33,
-                "pct_of_demand": 0.33
-              },
-              {
-                "threshold": 70.0,
-                "pct": 37,
-                "pct_of_demand": 0.37
-              },
               {
                 "threshold": 75.0,
                 "pct": 29,
@@ -1333,40 +1301,30 @@ const CARBON_CREDIT_DATA = {
           },
           "offshore_wind": {
             "floor_pct": 0,
-            "avg_pct": 3.6,
+            "avg_pct": 3.5,
             "max_pct": 7,
             "floor_demand_share": 0.0,
-            "avg_demand_share": 3.6,
+            "avg_demand_share": 3.5,
             "max_demand_share": 7.0,
             "is_consensus": false,
             "twh_by_growth": {
               "low": {
                 "floor_twh": 0.0,
-                "avg_twh": 10.0,
+                "avg_twh": 9.95,
                 "max_twh": 20.14
               },
               "medium": {
                 "floor_twh": 0.0,
-                "avg_twh": 10.8,
+                "avg_twh": 10.83,
                 "max_twh": 22.01
               },
               "high": {
                 "floor_twh": 0.0,
-                "avg_twh": 11.85,
+                "avg_twh": 11.98,
                 "max_twh": 24.46
               }
             },
             "per_threshold": [
-              {
-                "threshold": 65.0,
-                "pct": 4,
-                "pct_of_demand": 0.04
-              },
-              {
-                "threshold": 70.0,
-                "pct": 4,
-                "pct_of_demand": 0.04
-              },
               {
                 "threshold": 75.0,
                 "pct": 0,
@@ -1411,40 +1369,30 @@ const CARBON_CREDIT_DATA = {
           },
           "ccs_ccgt": {
             "floor_pct": 0,
-            "avg_pct": 4.7,
-            "max_pct": 21,
+            "avg_pct": 1.5,
+            "max_pct": 10,
             "floor_demand_share": 0.0,
-            "avg_demand_share": 4.7,
-            "max_demand_share": 21.0,
+            "avg_demand_share": 1.5,
+            "max_demand_share": 10.0,
             "is_consensus": false,
             "twh_by_growth": {
               "low": {
                 "floor_twh": 0.0,
-                "avg_twh": 12.08,
-                "max_twh": 53.32
+                "avg_twh": 3.93,
+                "max_twh": 26.11
               },
               "medium": {
                 "floor_twh": 0.0,
-                "avg_twh": 12.68,
-                "max_twh": 55.73
+                "avg_twh": 4.15,
+                "max_twh": 27.56
               },
               "high": {
                 "floor_twh": 0.0,
-                "avg_twh": 13.43,
-                "max_twh": 58.76
+                "avg_twh": 4.43,
+                "max_twh": 29.4
               }
             },
             "per_threshold": [
-              {
-                "threshold": 65.0,
-                "pct": 21,
-                "pct_of_demand": 0.21
-              },
-              {
-                "threshold": 70.0,
-                "pct": 14,
-                "pct_of_demand": 0.14
-              },
               {
                 "threshold": 75.0,
                 "pct": 10,
@@ -1497,32 +1445,22 @@ const CARBON_CREDIT_DATA = {
             "is_consensus": true,
             "twh_by_growth": {
               "low": {
-                "floor_twh": 22.85,
-                "avg_twh": 24.71,
+                "floor_twh": 23.5,
+                "avg_twh": 25.14,
                 "max_twh": 27.76
               },
               "medium": {
-                "floor_twh": 23.89,
-                "avg_twh": 26.58,
+                "floor_twh": 24.8,
+                "avg_twh": 27.2,
                 "max_twh": 31.09
               },
               "high": {
-                "floor_twh": 25.18,
-                "avg_twh": 29.01,
+                "floor_twh": 26.46,
+                "avg_twh": 29.89,
                 "max_twh": 35.58
               }
             },
             "per_threshold": [
-              {
-                "threshold": 65.0,
-                "pct": 9,
-                "pct_of_demand": 0.09
-              },
-              {
-                "threshold": 70.0,
-                "pct": 9,
-                "pct_of_demand": 0.09
-              },
               {
                 "threshold": 75.0,
                 "pct": 9,
@@ -1592,16 +1530,6 @@ const CARBON_CREDIT_DATA = {
             },
             "per_threshold": [
               {
-                "threshold": 65.0,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
-              {
-                "threshold": 70.0,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
-              {
                 "threshold": 75.0,
                 "pct": 0,
                 "pct_of_demand": 0.0
@@ -1669,16 +1597,6 @@ const CARBON_CREDIT_DATA = {
               }
             },
             "per_threshold": [
-              {
-                "threshold": 65.0,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
-              {
-                "threshold": 70.0,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
               {
                 "threshold": 75.0,
                 "pct": 0,
@@ -1748,16 +1666,6 @@ const CARBON_CREDIT_DATA = {
             },
             "per_threshold": [
               {
-                "threshold": 65.0,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
-              {
-                "threshold": 70.0,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
-              {
                 "threshold": 75.0,
                 "pct": 0,
                 "pct_of_demand": 0.0
@@ -1826,16 +1734,6 @@ const CARBON_CREDIT_DATA = {
             },
             "per_threshold": [
               {
-                "threshold": 65.0,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
-              {
-                "threshold": 70.0,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
-              {
                 "threshold": 75.0,
                 "pct": 0,
                 "pct_of_demand": 0.0
@@ -1881,40 +1779,40 @@ const CARBON_CREDIT_DATA = {
         "total_clean_by_growth": {
           "low": {
             "floor_twh": 216.7,
-            "avg_twh": 289.3,
+            "avg_twh": 298.4,
             "max_twh": 396.4
           },
           "medium": {
             "floor_twh": 228.7,
-            "avg_twh": 312.0,
+            "avg_twh": 323.7,
             "max_twh": 437.4
           },
           "high": {
             "floor_twh": 244.0,
-            "avg_twh": 341.7,
+            "avg_twh": 357.0,
             "max_twh": 494.2
           }
         },
         "demand_growth_factors": {
           "low": {
-            "lower": 1.145,
-            "upper": 1.2915
+            "lower": 1.1704,
+            "upper": 1.306
           },
           "medium": {
-            "lower": 1.2012,
-            "upper": 1.4139
+            "lower": 1.2375,
+            "upper": 1.4353
           },
           "high": {
-            "lower": 1.2719,
-            "upper": 1.5751
+            "lower": 1.3225,
+            "upper": 1.6066
           }
         }
       }
     },
     "ERCOT": {
       "crossover_range": {
-        "lower_bound": 82.1,
-        "upper_bound": 98.0,
+        "lower_bound": 84.4,
+        "upper_bound": 98.6,
         "lower_scenario": "p75_grid__optimistic_dac",
         "upper_scenario": "p25_grid__conservative_dac"
       },
@@ -1933,27 +1831,27 @@ const CARBON_CREDIT_DATA = {
         "resources": {
           "clean_firm": {
             "floor_pct": 9,
-            "avg_pct": 16.6,
-            "max_pct": 50,
+            "avg_pct": 9.9,
+            "max_pct": 15,
             "floor_demand_share": 9.0,
-            "avg_demand_share": 16.56,
-            "max_demand_share": 50.0,
+            "avg_demand_share": 9.89,
+            "max_demand_share": 15.0,
             "is_consensus": true,
             "twh_by_growth": {
               "low": {
                 "floor_twh": 55.7,
-                "avg_twh": 122.42,
-                "max_twh": 392.47
+                "avg_twh": 70.09,
+                "max_twh": 117.74
               },
               "medium": {
                 "floor_twh": 66.37,
-                "avg_twh": 167.06,
-                "max_twh": 557.15
+                "avg_twh": 92.77,
+                "max_twh": 167.15
               },
               "high": {
                 "floor_twh": 83.5,
-                "avg_twh": 252.5,
-                "max_twh": 882.0
+                "avg_twh": 134.9,
+                "max_twh": 264.6
               }
             },
             "per_threshold": [
@@ -1994,39 +1892,39 @@ const CARBON_CREDIT_DATA = {
               },
               {
                 "threshold": 99.0,
-                "pct": 35,
-                "pct_of_demand": 0.35
+                "pct": 10,
+                "pct_of_demand": 0.1
               },
               {
                 "threshold": 99.5,
-                "pct": 50,
-                "pct_of_demand": 0.5
+                "pct": 15,
+                "pct_of_demand": 0.15
               }
             ]
           },
           "solar": {
             "floor_pct": 14,
-            "avg_pct": 19.6,
-            "max_pct": 32,
+            "avg_pct": 22.3,
+            "max_pct": 35,
             "floor_demand_share": 14.0,
-            "avg_demand_share": 19.56,
-            "max_demand_share": 32.0,
+            "avg_demand_share": 22.33,
+            "max_demand_share": 35.0,
             "is_consensus": true,
             "twh_by_growth": {
               "low": {
                 "floor_twh": 88.38,
-                "avg_twh": 136.9,
-                "max_twh": 198.06
+                "avg_twh": 158.62,
+                "max_twh": 274.73
               },
               "medium": {
                 "floor_twh": 106.85,
-                "avg_twh": 179.62,
-                "max_twh": 235.98
+                "avg_twh": 210.36,
+                "max_twh": 390.01
               },
               "high": {
                 "floor_twh": 137.04,
-                "avg_twh": 258.26,
-                "max_twh": 352.8
+                "avg_twh": 306.75,
+                "max_twh": 617.4
               }
             },
             "per_threshold": [
@@ -2062,44 +1960,44 @@ const CARBON_CREDIT_DATA = {
               },
               {
                 "threshold": 97.5,
-                "pct": 20,
-                "pct_of_demand": 0.2
+                "pct": 25,
+                "pct_of_demand": 0.25
               },
               {
                 "threshold": 99.0,
-                "pct": 20,
-                "pct_of_demand": 0.2
+                "pct": 25,
+                "pct_of_demand": 0.25
               },
               {
                 "threshold": 99.5,
-                "pct": 20,
-                "pct_of_demand": 0.2
+                "pct": 35,
+                "pct_of_demand": 0.35
               }
             ]
           },
           "wind": {
             "floor_pct": 24,
             "avg_pct": 83.4,
-            "max_pct": 115,
+            "max_pct": 110,
             "floor_demand_share": 24.0,
             "avg_demand_share": 83.44,
-            "max_demand_share": 115.0,
+            "max_demand_share": 110.0,
             "is_consensus": true,
             "twh_by_growth": {
               "low": {
                 "floor_twh": 148.54,
-                "avg_twh": 596.91,
-                "max_twh": 884.99
+                "avg_twh": 597.25,
+                "max_twh": 863.44
               },
               "medium": {
                 "floor_twh": 176.98,
-                "avg_twh": 794.89,
-                "max_twh": 1238.12
+                "avg_twh": 795.73,
+                "max_twh": 1225.74
               },
               "high": {
                 "floor_twh": 222.68,
-                "avg_twh": 1163.71,
-                "max_twh": 1922.84
+                "avg_twh": 1165.76,
+                "max_twh": 1940.39
               }
             },
             "per_threshold": [
@@ -2135,18 +2033,18 @@ const CARBON_CREDIT_DATA = {
               },
               {
                 "threshold": 97.5,
-                "pct": 115,
-                "pct_of_demand": 1.15
+                "pct": 95,
+                "pct_of_demand": 0.95
               },
               {
                 "threshold": 99.0,
-                "pct": 100,
-                "pct_of_demand": 1.0
+                "pct": 110,
+                "pct_of_demand": 1.1
               },
               {
                 "threshold": 99.5,
-                "pct": 90,
-                "pct_of_demand": 0.9
+                "pct": 100,
+                "pct_of_demand": 1.0
               }
             ]
           },
@@ -2665,86 +2563,81 @@ const CARBON_CREDIT_DATA = {
         "total_clean_by_growth": {
           "low": {
             "floor_twh": 618.9,
-            "avg_twh": 882.4,
-            "max_twh": 1255.9
+            "avg_twh": 852.1,
+            "max_twh": 1177.4
           },
           "medium": {
             "floor_twh": 737.4,
-            "avg_twh": 1172.8,
-            "max_twh": 1782.9
+            "avg_twh": 1130.1,
+            "max_twh": 1671.5
           },
           "high": {
             "floor_twh": 927.8,
-            "avg_twh": 1713.8,
-            "max_twh": 2822.4
+            "avg_twh": 1646.7,
+            "max_twh": 2646.0
           }
         },
         "demand_growth_factors": {
           "low": {
-            "lower": 1.2788,
-            "upper": 1.5873
+            "lower": 1.2905,
+            "upper": 1.6
           },
           "medium": {
-            "lower": 1.5331,
-            "upper": 2.2316
+            "lower": 1.5575,
+            "upper": 2.2625
           },
           "high": {
-            "lower": 1.9444,
-            "upper": 3.4878
+            "lower": 1.9929,
+            "upper": 3.5633
           }
         }
       }
     },
     "PJM": {
       "crossover_range": {
-        "lower_bound": 78.8,
-        "upper_bound": 94.1,
+        "lower_bound": 81.7,
+        "upper_bound": 96.9,
         "lower_scenario": "p75_grid__optimistic_dac",
         "upper_scenario": "p25_grid__conservative_dac"
       },
       "no_regrets": {
         "range_thresholds": [
-          75.0,
           80.0,
           85.0,
           87.5,
           90.0,
           92.5,
           95.0,
-          97.5
+          97.5,
+          99.0
         ],
         "resources": {
           "clean_firm": {
             "floor_pct": 37,
-            "avg_pct": 51.5,
-            "max_pct": 93,
+            "avg_pct": 58.2,
+            "max_pct": 97,
             "floor_demand_share": 37.0,
-            "avg_demand_share": 51.5,
-            "max_demand_share": 93.0,
+            "avg_demand_share": 58.25,
+            "max_demand_share": 97.0,
             "is_consensus": true,
             "twh_by_growth": {
               "low": {
                 "floor_twh": 420.26,
-                "avg_twh": 556.56,
-                "max_twh": 1104.59
+                "avg_twh": 649.34,
+                "max_twh": 1169.38
               },
               "medium": {
-                "floor_twh": 470.72,
-                "avg_twh": 646.02,
-                "max_twh": 1353.26
+                "floor_twh": 501.42,
+                "avg_twh": 767.85,
+                "max_twh": 1445.34
               },
               "high": {
-                "floor_twh": 535.09,
-                "avg_twh": 788.28,
-                "max_twh": 1769.11
+                "floor_twh": 605.92,
+                "avg_twh": 960.34,
+                "max_twh": 1911.63
               }
             },
             "per_threshold": [
-              {
-                "threshold": 75.0,
-                "pct": 43,
-                "pct_of_demand": 0.43
-              },
               {
                 "threshold": 80.0,
                 "pct": 47,
@@ -2779,40 +2672,40 @@ const CARBON_CREDIT_DATA = {
                 "threshold": 97.5,
                 "pct": 93,
                 "pct_of_demand": 0.93
+              },
+              {
+                "threshold": 99.0,
+                "pct": 97,
+                "pct_of_demand": 0.97
               }
             ]
           },
           "solar": {
             "floor_pct": 4,
-            "avg_pct": 8.8,
+            "avg_pct": 10.5,
             "max_pct": 19,
             "floor_demand_share": 4.0,
-            "avg_demand_share": 8.75,
+            "avg_demand_share": 10.5,
             "max_demand_share": 19.0,
             "is_consensus": true,
             "twh_by_growth": {
               "low": {
-                "floor_twh": 39.74,
-                "avg_twh": 96.75,
-                "max_twh": 215.81
+                "floor_twh": 40.33,
+                "avg_twh": 118.91,
+                "max_twh": 217.0
               },
               "medium": {
-                "floor_twh": 43.79,
-                "avg_twh": 113.8,
-                "max_twh": 261.92
+                "floor_twh": 44.84,
+                "avg_twh": 141.85,
+                "max_twh": 268.21
               },
               "high": {
-                "floor_twh": 49.78,
-                "avg_twh": 141.25,
-                "max_twh": 342.41
+                "floor_twh": 51.57,
+                "avg_twh": 179.37,
+                "max_twh": 354.74
               }
             },
             "per_threshold": [
-              {
-                "threshold": 75.0,
-                "pct": 4,
-                "pct_of_demand": 0.04
-              },
               {
                 "threshold": 80.0,
                 "pct": 4,
@@ -2847,40 +2740,40 @@ const CARBON_CREDIT_DATA = {
                 "threshold": 97.5,
                 "pct": 18,
                 "pct_of_demand": 0.18
+              },
+              {
+                "threshold": 99.0,
+                "pct": 18,
+                "pct_of_demand": 0.18
               }
             ]
           },
           "wind": {
             "floor_pct": 8,
-            "avg_pct": 40.4,
+            "avg_pct": 37.9,
             "max_pct": 76,
             "floor_demand_share": 8.0,
-            "avg_demand_share": 40.38,
+            "avg_demand_share": 37.88,
             "max_demand_share": 76.0,
             "is_consensus": true,
             "twh_by_growth": {
               "low": {
                 "floor_twh": 95.02,
-                "avg_twh": 431.33,
+                "avg_twh": 409.41,
                 "max_twh": 863.24
               },
               "medium": {
                 "floor_twh": 116.41,
-                "avg_twh": 496.84,
+                "avg_twh": 474.91,
                 "max_twh": 1029.94
               },
               "high": {
                 "floor_twh": 152.18,
-                "avg_twh": 599.59,
+                "avg_twh": 578.47,
                 "max_twh": 1300.19
               }
             },
             "per_threshold": [
-              {
-                "threshold": 75.0,
-                "pct": 31,
-                "pct_of_demand": 0.31
-              },
               {
                 "threshold": 80.0,
                 "pct": 32,
@@ -2915,40 +2808,40 @@ const CARBON_CREDIT_DATA = {
                 "threshold": 97.5,
                 "pct": 8,
                 "pct_of_demand": 0.08
+              },
+              {
+                "threshold": 99.0,
+                "pct": 11,
+                "pct_of_demand": 0.11
               }
             ]
           },
           "offshore_wind": {
-            "floor_pct": 0,
-            "avg_pct": 2.0,
+            "floor_pct": 1,
+            "avg_pct": 2.5,
             "max_pct": 4,
-            "floor_demand_share": 0.0,
-            "avg_demand_share": 2.0,
+            "floor_demand_share": 1.0,
+            "avg_demand_share": 2.5,
             "max_demand_share": 4.0,
-            "is_consensus": false,
+            "is_consensus": true,
             "twh_by_growth": {
               "low": {
-                "floor_twh": 0.0,
-                "avg_twh": 21.67,
-                "max_twh": 44.1
+                "floor_twh": 10.08,
+                "avg_twh": 27.7,
+                "max_twh": 48.22
               },
               "medium": {
-                "floor_twh": 0.0,
-                "avg_twh": 25.18,
-                "max_twh": 51.7
+                "floor_twh": 11.21,
+                "avg_twh": 32.63,
+                "max_twh": 59.6
               },
               "high": {
-                "floor_twh": 0.0,
-                "avg_twh": 30.73,
-                "max_twh": 63.76
+                "floor_twh": 12.89,
+                "avg_twh": 40.58,
+                "max_twh": 78.83
               }
             },
             "per_threshold": [
-              {
-                "threshold": 75.0,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
               {
                 "threshold": 80.0,
                 "pct": 1,
@@ -2983,40 +2876,40 @@ const CARBON_CREDIT_DATA = {
                 "threshold": 97.5,
                 "pct": 2,
                 "pct_of_demand": 0.02
+              },
+              {
+                "threshold": 99.0,
+                "pct": 4,
+                "pct_of_demand": 0.04
               }
             ]
           },
           "ccs_ccgt": {
             "floor_pct": 0,
-            "avg_pct": 5.6,
-            "max_pct": 21,
+            "avg_pct": 3.0,
+            "max_pct": 15,
             "floor_demand_share": 0.0,
-            "avg_demand_share": 5.62,
-            "max_demand_share": 21.0,
+            "avg_demand_share": 3.0,
+            "max_demand_share": 15.0,
             "is_consensus": false,
             "twh_by_growth": {
               "low": {
                 "floor_twh": 0.0,
-                "avg_twh": 56.53,
-                "max_twh": 208.61
+                "avg_twh": 30.46,
+                "max_twh": 151.25
               },
               "medium": {
                 "floor_twh": 0.0,
-                "avg_twh": 62.74,
-                "max_twh": 229.89
+                "avg_twh": 34.0,
+                "max_twh": 168.15
               },
               "high": {
                 "floor_twh": 0.0,
-                "avg_twh": 71.98,
-                "max_twh": 261.32
+                "avg_twh": 39.32,
+                "max_twh": 193.38
               }
             },
             "per_threshold": [
-              {
-                "threshold": 75.0,
-                "pct": 21,
-                "pct_of_demand": 0.21
-              },
               {
                 "threshold": 80.0,
                 "pct": 15,
@@ -3051,6 +2944,11 @@ const CARBON_CREDIT_DATA = {
                 "threshold": 97.5,
                 "pct": 0,
                 "pct_of_demand": 0.0
+              },
+              {
+                "threshold": 99.0,
+                "pct": 0,
+                "pct_of_demand": 0.0
               }
             ]
           },
@@ -3064,27 +2962,22 @@ const CARBON_CREDIT_DATA = {
             "is_consensus": true,
             "twh_by_growth": {
               "low": {
-                "floor_twh": 9.93,
-                "avg_twh": 10.68,
-                "max_twh": 11.88
+                "floor_twh": 10.08,
+                "avg_twh": 10.95,
+                "max_twh": 12.06
               },
               "medium": {
-                "floor_twh": 10.95,
-                "avg_twh": 12.31,
-                "max_twh": 14.55
+                "floor_twh": 11.21,
+                "avg_twh": 12.8,
+                "max_twh": 14.9
               },
               "high": {
-                "floor_twh": 12.44,
-                "avg_twh": 14.87,
-                "max_twh": 19.02
+                "floor_twh": 12.89,
+                "avg_twh": 15.77,
+                "max_twh": 19.71
               }
             },
             "per_threshold": [
-              {
-                "threshold": 75.0,
-                "pct": 1,
-                "pct_of_demand": 0.01
-              },
               {
                 "threshold": 80.0,
                 "pct": 1,
@@ -3117,6 +3010,11 @@ const CARBON_CREDIT_DATA = {
               },
               {
                 "threshold": 97.5,
+                "pct": 1,
+                "pct_of_demand": 0.01
+              },
+              {
+                "threshold": 99.0,
                 "pct": 1,
                 "pct_of_demand": 0.01
               }
@@ -3149,11 +3047,6 @@ const CARBON_CREDIT_DATA = {
             },
             "per_threshold": [
               {
-                "threshold": 75.0,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
-              {
                 "threshold": 80.0,
                 "pct": 0,
                 "pct_of_demand": 0.0
@@ -3185,6 +3078,11 @@ const CARBON_CREDIT_DATA = {
               },
               {
                 "threshold": 97.5,
+                "pct": 0,
+                "pct_of_demand": 0.0
+              },
+              {
+                "threshold": 99.0,
                 "pct": 0,
                 "pct_of_demand": 0.0
               }
@@ -3217,11 +3115,6 @@ const CARBON_CREDIT_DATA = {
             },
             "per_threshold": [
               {
-                "threshold": 75.0,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
-              {
                 "threshold": 80.0,
                 "pct": 0,
                 "pct_of_demand": 0.0
@@ -3253,6 +3146,11 @@ const CARBON_CREDIT_DATA = {
               },
               {
                 "threshold": 97.5,
+                "pct": 0,
+                "pct_of_demand": 0.0
+              },
+              {
+                "threshold": 99.0,
                 "pct": 0,
                 "pct_of_demand": 0.0
               }
@@ -3285,11 +3183,6 @@ const CARBON_CREDIT_DATA = {
             },
             "per_threshold": [
               {
-                "threshold": 75.0,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
-              {
                 "threshold": 80.0,
                 "pct": 0,
                 "pct_of_demand": 0.0
@@ -3321,6 +3214,11 @@ const CARBON_CREDIT_DATA = {
               },
               {
                 "threshold": 97.5,
+                "pct": 0,
+                "pct_of_demand": 0.0
+              },
+              {
+                "threshold": 99.0,
                 "pct": 0,
                 "pct_of_demand": 0.0
               }
@@ -3353,11 +3251,6 @@ const CARBON_CREDIT_DATA = {
             },
             "per_threshold": [
               {
-                "threshold": 75.0,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
-              {
                 "threshold": 80.0,
                 "pct": 0,
                 "pct_of_demand": 0.0
@@ -3391,53 +3284,57 @@ const CARBON_CREDIT_DATA = {
                 "threshold": 97.5,
                 "pct": 0,
                 "pct_of_demand": 0.0
+              },
+              {
+                "threshold": 99.0,
+                "pct": 0,
+                "pct_of_demand": 0.0
               }
             ]
           }
         },
         "total_clean_by_growth": {
           "low": {
-            "floor_twh": 993.4,
-            "avg_twh": 1173.5,
-            "max_twh": 1533.4
+            "floor_twh": 1008.3,
+            "avg_twh": 1246.8,
+            "max_twh": 1579.3
           },
           "medium": {
-            "floor_twh": 1094.7,
-            "avg_twh": 1356.9,
-            "max_twh": 1829.5
+            "floor_twh": 1121.0,
+            "avg_twh": 1464.0,
+            "max_twh": 1951.9
           },
           "high": {
-            "floor_twh": 1244.4,
-            "avg_twh": 1646.7,
-            "max_twh": 2320.8
+            "floor_twh": 1289.2,
+            "avg_twh": 1813.9,
+            "max_twh": 2581.7
           }
         },
         "demand_growth_factors": {
           "low": {
-            "lower": 1.1914,
-            "upper": 1.3325
+            "lower": 1.2017,
+            "upper": 1.3934
           },
           "medium": {
-            "lower": 1.3217,
-            "upper": 1.5797
+            "lower": 1.34,
+            "upper": 1.6962
           },
           "high": {
-            "lower": 1.5158,
-            "upper": 1.9776
+            "lower": 1.5472,
+            "upper": 2.1989
           }
         }
       }
     },
     "NYISO": {
       "crossover_range": {
-        "lower_bound": 67.9,
-        "upper_bound": 97.6,
+        "lower_bound": 72.8,
+        "upper_bound": 97.8,
         "lower_scenario": "p75_grid__optimistic_dac",
         "upper_scenario": "p25_grid__conservative_dac"
       },
       "no_regrets": {
         "range_thresholds": [
-          65.0,
           70.0,
           75.0,
           80.0,
@@ -3453,35 +3350,30 @@ const CARBON_CREDIT_DATA = {
         "resources": {
           "clean_firm": {
             "floor_pct": 20,
-            "avg_pct": 42.1,
+            "avg_pct": 42.3,
             "max_pct": 90,
             "floor_demand_share": 20.0,
-            "avg_demand_share": 42.08,
+            "avg_demand_share": 42.27,
             "max_demand_share": 90.0,
             "is_consensus": true,
             "twh_by_growth": {
               "low": {
-                "floor_twh": 34.06,
-                "avg_twh": 82.17,
+                "floor_twh": 34.95,
+                "avg_twh": 83.07,
                 "max_twh": 186.02
               },
               "medium": {
-                "floor_twh": 36.23,
-                "avg_twh": 94.2,
+                "floor_twh": 37.7,
+                "avg_twh": 95.53,
                 "max_twh": 219.45
               },
               "high": {
-                "floor_twh": 44.67,
-                "avg_twh": 150.67,
+                "floor_twh": 48.69,
+                "avg_twh": 154.32,
                 "max_twh": 383.49
               }
             },
             "per_threshold": [
-              {
-                "threshold": 65.0,
-                "pct": 20,
-                "pct_of_demand": 0.2
-              },
               {
                 "threshold": 70.0,
                 "pct": 22,
@@ -3514,8 +3406,8 @@ const CARBON_CREDIT_DATA = {
               },
               {
                 "threshold": 92.5,
-                "pct": 45,
-                "pct_of_demand": 0.45
+                "pct": 25,
+                "pct_of_demand": 0.25
               },
               {
                 "threshold": 95.0,
@@ -3540,36 +3432,31 @@ const CARBON_CREDIT_DATA = {
             ]
           },
           "solar": {
-            "floor_pct": 1,
-            "avg_pct": 10.5,
+            "floor_pct": 2,
+            "avg_pct": 11.4,
             "max_pct": 25,
-            "floor_demand_share": 1.0,
-            "avg_demand_share": 10.5,
+            "floor_demand_share": 2.0,
+            "avg_demand_share": 11.36,
             "max_demand_share": 25.0,
             "is_consensus": true,
             "twh_by_growth": {
               "low": {
-                "floor_twh": 1.7,
-                "avg_twh": 19.8,
-                "max_twh": 46.0
+                "floor_twh": 3.45,
+                "avg_twh": 21.58,
+                "max_twh": 47.82
               },
               "medium": {
-                "floor_twh": 1.81,
-                "avg_twh": 22.27,
-                "max_twh": 51.01
+                "floor_twh": 3.7,
+                "avg_twh": 24.36,
+                "max_twh": 54.13
               },
               "high": {
-                "floor_twh": 2.23,
-                "avg_twh": 33.39,
-                "max_twh": 72.3
+                "floor_twh": 4.66,
+                "avg_twh": 36.93,
+                "max_twh": 82.27
               }
             },
             "per_threshold": [
-              {
-                "threshold": 65.0,
-                "pct": 1,
-                "pct_of_demand": 0.01
-              },
               {
                 "threshold": 70.0,
                 "pct": 2,
@@ -3587,23 +3474,23 @@ const CARBON_CREDIT_DATA = {
               },
               {
                 "threshold": 85.0,
+                "pct": 10,
+                "pct_of_demand": 0.1
+              },
+              {
+                "threshold": 87.5,
                 "pct": 15,
                 "pct_of_demand": 0.15
               },
               {
-                "threshold": 87.5,
+                "threshold": 90.0,
                 "pct": 20,
                 "pct_of_demand": 0.2
               },
               {
-                "threshold": 90.0,
+                "threshold": 92.5,
                 "pct": 25,
                 "pct_of_demand": 0.25
-              },
-              {
-                "threshold": 92.5,
-                "pct": 10,
-                "pct_of_demand": 0.1
               },
               {
                 "threshold": 95.0,
@@ -3629,35 +3516,30 @@ const CARBON_CREDIT_DATA = {
           },
           "wind": {
             "floor_pct": 5,
-            "avg_pct": 26.2,
+            "avg_pct": 28.0,
             "max_pct": 41,
             "floor_demand_share": 5.0,
-            "avg_demand_share": 26.25,
+            "avg_demand_share": 28.0,
             "max_demand_share": 41.0,
             "is_consensus": true,
             "twh_by_growth": {
               "low": {
                 "floor_twh": 10.2,
-                "avg_twh": 47.89,
-                "max_twh": 72.58
+                "avg_twh": 51.55,
+                "max_twh": 73.6
               },
               "medium": {
                 "floor_twh": 11.95,
-                "avg_twh": 52.94,
-                "max_twh": 78.83
+                "avg_twh": 57.25,
+                "max_twh": 81.61
               },
               "high": {
                 "floor_twh": 20.41,
-                "avg_twh": 74.83,
-                "max_twh": 104.2
+                "avg_twh": 82.14,
+                "max_twh": 115.68
               }
             },
             "per_threshold": [
-              {
-                "threshold": 65.0,
-                "pct": 32,
-                "pct_of_demand": 0.32
-              },
               {
                 "threshold": 70.0,
                 "pct": 32,
@@ -3675,8 +3557,8 @@ const CARBON_CREDIT_DATA = {
               },
               {
                 "threshold": 85.0,
-                "pct": 25,
-                "pct_of_demand": 0.25
+                "pct": 30,
+                "pct_of_demand": 0.3
               },
               {
                 "threshold": 87.5,
@@ -3685,13 +3567,13 @@ const CARBON_CREDIT_DATA = {
               },
               {
                 "threshold": 90.0,
-                "pct": 35,
-                "pct_of_demand": 0.35
+                "pct": 40,
+                "pct_of_demand": 0.4
               },
               {
                 "threshold": 92.5,
-                "pct": 20,
-                "pct_of_demand": 0.2
+                "pct": 35,
+                "pct_of_demand": 0.35
               },
               {
                 "threshold": 95.0,
@@ -3717,35 +3599,30 @@ const CARBON_CREDIT_DATA = {
           },
           "offshore_wind": {
             "floor_pct": 0,
-            "avg_pct": 4.2,
-            "max_pct": 15,
+            "avg_pct": 2.8,
+            "max_pct": 10,
             "floor_demand_share": 0.0,
-            "avg_demand_share": 4.25,
-            "max_demand_share": 15.0,
+            "avg_demand_share": 2.82,
+            "max_demand_share": 10.0,
             "is_consensus": false,
             "twh_by_growth": {
               "low": {
                 "floor_twh": 0.0,
-                "avg_twh": 7.93,
-                "max_twh": 28.69
+                "avg_twh": 5.26,
+                "max_twh": 18.4
               },
               "medium": {
                 "floor_twh": 0.0,
-                "avg_twh": 8.87,
-                "max_twh": 32.48
+                "avg_twh": 5.89,
+                "max_twh": 20.4
               },
               "high": {
                 "floor_twh": 0.0,
-                "avg_twh": 12.99,
-                "max_twh": 49.36
+                "avg_twh": 8.64,
+                "max_twh": 28.92
               }
             },
             "per_threshold": [
-              {
-                "threshold": 65.0,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
               {
                 "threshold": 70.0,
                 "pct": 2,
@@ -3763,23 +3640,23 @@ const CARBON_CREDIT_DATA = {
               },
               {
                 "threshold": 85.0,
-                "pct": 15,
-                "pct_of_demand": 0.15
+                "pct": 0,
+                "pct_of_demand": 0.0
               },
               {
                 "threshold": 87.5,
-                "pct": 5,
-                "pct_of_demand": 0.05
+                "pct": 10,
+                "pct_of_demand": 0.1
               },
               {
                 "threshold": 90.0,
-                "pct": 5,
-                "pct_of_demand": 0.05
+                "pct": 10,
+                "pct_of_demand": 0.1
               },
               {
                 "threshold": 92.5,
-                "pct": 15,
-                "pct_of_demand": 0.15
+                "pct": 0,
+                "pct_of_demand": 0.0
               },
               {
                 "threshold": 95.0,
@@ -3805,35 +3682,30 @@ const CARBON_CREDIT_DATA = {
           },
           "ccs_ccgt": {
             "floor_pct": 0,
-            "avg_pct": 9.0,
-            "max_pct": 32,
+            "avg_pct": 6.9,
+            "max_pct": 27,
             "floor_demand_share": 0.0,
-            "avg_demand_share": 9.0,
-            "max_demand_share": 32.0,
+            "avg_demand_share": 6.91,
+            "max_demand_share": 27.0,
             "is_consensus": false,
             "twh_by_growth": {
               "low": {
                 "floor_twh": 0.0,
-                "avg_twh": 15.65,
-                "max_twh": 54.49
+                "avg_twh": 12.12,
+                "max_twh": 46.58
               },
               "medium": {
                 "floor_twh": 0.0,
-                "avg_twh": 16.84,
-                "max_twh": 57.98
+                "avg_twh": 13.1,
+                "max_twh": 49.9
               },
               "high": {
                 "floor_twh": 0.0,
-                "avg_twh": 21.59,
-                "max_twh": 71.47
+                "avg_twh": 17.06,
+                "max_twh": 62.96
               }
             },
             "per_threshold": [
-              {
-                "threshold": 65.0,
-                "pct": 32,
-                "pct_of_demand": 0.32
-              },
               {
                 "threshold": 70.0,
                 "pct": 27,
@@ -3901,27 +3773,22 @@ const CARBON_CREDIT_DATA = {
             "is_consensus": true,
             "twh_by_growth": {
               "low": {
-                "floor_twh": 25.54,
-                "avg_twh": 28.06,
+                "floor_twh": 25.88,
+                "avg_twh": 28.28,
                 "max_twh": 31.0
               },
               "medium": {
-                "floor_twh": 27.18,
-                "avg_twh": 31.44,
+                "floor_twh": 27.72,
+                "avg_twh": 31.83,
                 "max_twh": 36.58
               },
               "high": {
-                "floor_twh": 33.5,
-                "avg_twh": 46.67,
+                "floor_twh": 34.98,
+                "avg_twh": 47.87,
                 "max_twh": 63.91
               }
             },
             "per_threshold": [
-              {
-                "threshold": 65.0,
-                "pct": 15,
-                "pct_of_demand": 0.15
-              },
               {
                 "threshold": 70.0,
                 "pct": 15,
@@ -4006,11 +3873,6 @@ const CARBON_CREDIT_DATA = {
             },
             "per_threshold": [
               {
-                "threshold": 65.0,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
-              {
                 "threshold": 70.0,
                 "pct": 0,
                 "pct_of_demand": 0.0
@@ -4093,11 +3955,6 @@ const CARBON_CREDIT_DATA = {
               }
             },
             "per_threshold": [
-              {
-                "threshold": 65.0,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
               {
                 "threshold": 70.0,
                 "pct": 0,
@@ -4182,11 +4039,6 @@ const CARBON_CREDIT_DATA = {
             },
             "per_threshold": [
               {
-                "threshold": 65.0,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
-              {
                 "threshold": 70.0,
                 "pct": 0,
                 "pct_of_demand": 0.0
@@ -4270,11 +4122,6 @@ const CARBON_CREDIT_DATA = {
             },
             "per_threshold": [
               {
-                "threshold": 65.0,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
-              {
                 "threshold": 70.0,
                 "pct": 0,
                 "pct_of_demand": 0.0
@@ -4334,41 +4181,41 @@ const CARBON_CREDIT_DATA = {
         },
         "total_clean_by_growth": {
           "low": {
-            "floor_twh": 170.3,
-            "avg_twh": 201.5,
+            "floor_twh": 152.4,
+            "avg_twh": 201.9,
             "max_twh": 268.7
           },
           "medium": {
-            "floor_twh": 181.2,
-            "avg_twh": 226.6,
+            "floor_twh": 166.7,
+            "avg_twh": 228.0,
             "max_twh": 317.0
           },
           "high": {
-            "floor_twh": 223.4,
-            "avg_twh": 340.1,
+            "floor_twh": 225.5,
+            "avg_twh": 347.0,
             "max_twh": 553.9
           }
         },
         "demand_growth_factors": {
           "low": {
-            "lower": 1.1317,
-            "upper": 1.3471
+            "lower": 1.1461,
+            "upper": 1.3494
           },
           "medium": {
-            "lower": 1.2089,
-            "upper": 1.579
+            "lower": 1.2326,
+            "upper": 1.5832
           },
           "high": {
-            "lower": 1.5106,
-            "upper": 2.7
+            "lower": 1.5757,
+            "upper": 2.7155
           }
         }
       }
     },
     "NEISO": {
       "crossover_range": {
-        "lower_bound": 80.6,
-        "upper_bound": 82.0,
+        "lower_bound": 81.8,
+        "upper_bound": 84.3,
         "lower_scenario": "p75_grid__optimistic_dac",
         "upper_scenario": "p25_grid__conservative_dac"
       },
@@ -4829,30 +4676,29 @@ const CARBON_CREDIT_DATA = {
         },
         "demand_growth_factors": {
           "low": {
-            "lower": 1.1147,
-            "upper": 1.1175
+            "lower": 1.1171,
+            "upper": 1.1221
           },
           "medium": {
-            "lower": 1.2414,
-            "upper": 1.2476
+            "lower": 1.2467,
+            "upper": 1.2579
           },
           "high": {
-            "lower": 1.4141,
-            "upper": 1.4254
+            "lower": 1.4238,
+            "upper": 1.4443
           }
         }
       }
     },
     "MISO": {
       "crossover_range": {
-        "lower_bound": 80.8,
-        "upper_bound": 96.2,
+        "lower_bound": 85.2,
+        "upper_bound": 96.5,
         "lower_scenario": "p75_grid__optimistic_dac",
         "upper_scenario": "p25_grid__conservative_dac"
       },
       "no_regrets": {
         "range_thresholds": [
-          80.0,
           85.0,
           87.5,
           90.0,
@@ -4864,35 +4710,30 @@ const CARBON_CREDIT_DATA = {
         "resources": {
           "clean_firm": {
             "floor_pct": 14,
-            "avg_pct": 23.4,
-            "max_pct": 45,
+            "avg_pct": 24.6,
+            "max_pct": 44,
             "floor_demand_share": 14.0,
-            "avg_demand_share": 23.38,
-            "max_demand_share": 45.0,
+            "avg_demand_share": 24.57,
+            "max_demand_share": 44.0,
             "is_consensus": true,
             "twh_by_growth": {
               "low": {
-                "floor_twh": 106.62,
-                "avg_twh": 194.62,
-                "max_twh": 390.76
+                "floor_twh": 109.19,
+                "avg_twh": 205.95,
+                "max_twh": 382.07
               },
               "medium": {
-                "floor_twh": 119.97,
-                "avg_twh": 236.16,
-                "max_twh": 489.92
+                "floor_twh": 125.31,
+                "avg_twh": 251.21,
+                "max_twh": 479.03
               },
               "high": {
-                "floor_twh": 144.56,
-                "avg_twh": 321.73,
-                "max_twh": 700.32
+                "floor_twh": 155.75,
+                "avg_twh": 344.81,
+                "max_twh": 684.76
               }
             },
             "per_threshold": [
-              {
-                "threshold": 80.0,
-                "pct": 14,
-                "pct_of_demand": 0.14
-              },
               {
                 "threshold": 85.0,
                 "pct": 15,
@@ -4920,8 +4761,8 @@ const CARBON_CREDIT_DATA = {
               },
               {
                 "threshold": 97.5,
-                "pct": 45,
-                "pct_of_demand": 0.45
+                "pct": 44,
+                "pct_of_demand": 0.44
               },
               {
                 "threshold": 99.0,
@@ -4931,36 +4772,31 @@ const CARBON_CREDIT_DATA = {
             ]
           },
           "solar": {
-            "floor_pct": 7,
-            "avg_pct": 13.6,
+            "floor_pct": 9,
+            "avg_pct": 14.4,
             "max_pct": 17,
-            "floor_demand_share": 7.0,
-            "avg_demand_share": 13.63,
+            "floor_demand_share": 9.0,
+            "avg_demand_share": 14.43,
             "max_demand_share": 17.0,
             "is_consensus": true,
             "twh_by_growth": {
               "low": {
-                "floor_twh": 53.31,
-                "avg_twh": 111.95,
+                "floor_twh": 69.36,
+                "avg_twh": 119.09,
                 "max_twh": 142.43
               },
               "medium": {
-                "floor_twh": 59.99,
-                "avg_twh": 134.36,
+                "floor_twh": 78.82,
+                "avg_twh": 143.42,
                 "max_twh": 178.03
               },
               "high": {
-                "floor_twh": 72.28,
-                "avg_twh": 179.83,
+                "floor_twh": 96.46,
+                "avg_twh": 192.97,
                 "max_twh": 258.46
               }
             },
             "per_threshold": [
-              {
-                "threshold": 80.0,
-                "pct": 7,
-                "pct_of_demand": 0.07
-              },
               {
                 "threshold": 85.0,
                 "pct": 9,
@@ -4988,8 +4824,8 @@ const CARBON_CREDIT_DATA = {
               },
               {
                 "threshold": 97.5,
-                "pct": 16,
-                "pct_of_demand": 0.16
+                "pct": 15,
+                "pct_of_demand": 0.15
               },
               {
                 "threshold": 99.0,
@@ -4999,36 +4835,31 @@ const CARBON_CREDIT_DATA = {
             ]
           },
           "wind": {
-            "floor_pct": 63,
-            "avg_pct": 77.0,
+            "floor_pct": 69,
+            "avg_pct": 79.4,
             "max_pct": 111,
-            "floor_demand_share": 63.0,
-            "avg_demand_share": 77.0,
+            "floor_demand_share": 69.0,
+            "avg_demand_share": 79.43,
             "max_demand_share": 111.0,
             "is_consensus": true,
             "twh_by_growth": {
               "low": {
-                "floor_twh": 479.79,
-                "avg_twh": 630.03,
+                "floor_twh": 531.79,
+                "avg_twh": 655.21,
                 "max_twh": 975.44
               },
               "medium": {
-                "floor_twh": 539.88,
-                "avg_twh": 753.69,
+                "floor_twh": 604.3,
+                "avg_twh": 788.9,
                 "max_twh": 1235.06
               },
               "high": {
-                "floor_twh": 650.51,
-                "avg_twh": 1004.18,
+                "floor_twh": 739.53,
+                "avg_twh": 1061.38,
                 "max_twh": 1793.1
               }
             },
             "per_threshold": [
-              {
-                "threshold": 80.0,
-                "pct": 63,
-                "pct_of_demand": 0.63
-              },
               {
                 "threshold": 85.0,
                 "pct": 69,
@@ -5056,8 +4887,8 @@ const CARBON_CREDIT_DATA = {
               },
               {
                 "threshold": 97.5,
-                "pct": 71,
-                "pct_of_demand": 0.71
+                "pct": 74,
+                "pct_of_demand": 0.74
               },
               {
                 "threshold": 99.0,
@@ -5092,11 +4923,6 @@ const CARBON_CREDIT_DATA = {
               }
             },
             "per_threshold": [
-              {
-                "threshold": 80.0,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
               {
                 "threshold": 85.0,
                 "pct": 0,
@@ -5136,35 +4962,30 @@ const CARBON_CREDIT_DATA = {
           },
           "ccs_ccgt": {
             "floor_pct": 0,
-            "avg_pct": 2.8,
-            "max_pct": 15,
+            "avg_pct": 1.0,
+            "max_pct": 6,
             "floor_demand_share": 0.0,
-            "avg_demand_share": 2.75,
-            "max_demand_share": 15.0,
+            "avg_demand_share": 1.0,
+            "max_demand_share": 6.0,
             "is_consensus": false,
             "twh_by_growth": {
               "low": {
                 "floor_twh": 0.0,
-                "avg_twh": 21.03,
-                "max_twh": 114.24
+                "avg_twh": 7.72,
+                "max_twh": 46.24
               },
               "medium": {
                 "floor_twh": 0.0,
-                "avg_twh": 23.76,
-                "max_twh": 128.54
+                "avg_twh": 8.79,
+                "max_twh": 52.55
               },
               "high": {
                 "floor_twh": 0.0,
-                "avg_twh": 28.79,
-                "max_twh": 154.88
+                "avg_twh": 10.78,
+                "max_twh": 64.31
               }
             },
             "per_threshold": [
-              {
-                "threshold": 80.0,
-                "pct": 15,
-                "pct_of_demand": 0.15
-              },
               {
                 "threshold": 85.0,
                 "pct": 6,
@@ -5212,27 +5033,22 @@ const CARBON_CREDIT_DATA = {
             "is_consensus": true,
             "twh_by_growth": {
               "low": {
-                "floor_twh": 7.62,
-                "avg_twh": 8.13,
+                "floor_twh": 7.71,
+                "avg_twh": 8.2,
                 "max_twh": 8.79
               },
               "medium": {
-                "floor_twh": 8.57,
-                "avg_twh": 9.68,
+                "floor_twh": 8.76,
+                "avg_twh": 9.83,
                 "max_twh": 11.13
               },
               "high": {
-                "floor_twh": 10.33,
-                "avg_twh": 12.78,
+                "floor_twh": 10.72,
+                "avg_twh": 13.13,
                 "max_twh": 16.15
               }
             },
             "per_threshold": [
-              {
-                "threshold": 80.0,
-                "pct": 1,
-                "pct_of_demand": 0.01
-              },
               {
                 "threshold": 85.0,
                 "pct": 1,
@@ -5297,11 +5113,6 @@ const CARBON_CREDIT_DATA = {
             },
             "per_threshold": [
               {
-                "threshold": 80.0,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
-              {
                 "threshold": 85.0,
                 "pct": 0,
                 "pct_of_demand": 0.0
@@ -5364,11 +5175,6 @@ const CARBON_CREDIT_DATA = {
               }
             },
             "per_threshold": [
-              {
-                "threshold": 80.0,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
               {
                 "threshold": 85.0,
                 "pct": 0,
@@ -5433,11 +5239,6 @@ const CARBON_CREDIT_DATA = {
             },
             "per_threshold": [
               {
-                "threshold": 80.0,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
-              {
                 "threshold": 85.0,
                 "pct": 0,
                 "pct_of_demand": 0.0
@@ -5501,11 +5302,6 @@ const CARBON_CREDIT_DATA = {
             },
             "per_threshold": [
               {
-                "threshold": 80.0,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
-              {
                 "threshold": 85.0,
                 "pct": 0,
                 "pct_of_demand": 0.0
@@ -5545,48 +5341,46 @@ const CARBON_CREDIT_DATA = {
         },
         "total_clean_by_growth": {
           "low": {
-            "floor_twh": 761.6,
-            "avg_twh": 965.8,
+            "floor_twh": 770.7,
+            "avg_twh": 996.2,
             "max_twh": 1467.5
           },
           "medium": {
-            "floor_twh": 856.9,
-            "avg_twh": 1157.6,
+            "floor_twh": 875.8,
+            "avg_twh": 1202.1,
             "max_twh": 1858.2
           },
           "high": {
-            "floor_twh": 1032.6,
-            "avg_twh": 1547.3,
+            "floor_twh": 1071.8,
+            "avg_twh": 1623.1,
             "max_twh": 2697.7
           }
         },
         "demand_growth_factors": {
           "low": {
-            "lower": 1.1561,
-            "upper": 1.2914
+            "lower": 1.1689,
+            "upper": 1.297
           },
           "medium": {
-            "lower": 1.3029,
-            "upper": 1.5945
+            "lower": 1.3293,
+            "upper": 1.6071
           },
           "high": {
-            "lower": 1.5738,
-            "upper": 2.2247
+            "lower": 1.6288,
+            "upper": 2.2548
           }
         }
       }
     },
     "SPP": {
       "crossover_range": {
-        "lower_bound": 85.7,
-        "upper_bound": 97.8,
+        "lower_bound": 91.1,
+        "upper_bound": 98.1,
         "lower_scenario": "p75_grid__optimistic_dac",
         "upper_scenario": "p25_grid__conservative_dac"
       },
       "no_regrets": {
         "range_thresholds": [
-          85.0,
-          87.5,
           90.0,
           92.5,
           95.0,
@@ -5597,40 +5391,30 @@ const CARBON_CREDIT_DATA = {
         "resources": {
           "clean_firm": {
             "floor_pct": 5,
-            "avg_pct": 8.4,
+            "avg_pct": 9.3,
             "max_pct": 21,
             "floor_demand_share": 5.0,
-            "avg_demand_share": 8.38,
+            "avg_demand_share": 9.33,
             "max_demand_share": 21.0,
             "is_consensus": true,
             "twh_by_growth": {
               "low": {
-                "floor_twh": 16.84,
-                "avg_twh": 30.45,
+                "floor_twh": 17.7,
+                "avg_twh": 34.39,
                 "max_twh": 78.93
               },
               "medium": {
-                "floor_twh": 18.66,
-                "avg_twh": 35.89,
+                "floor_twh": 20.4,
+                "avg_twh": 40.94,
                 "max_twh": 95.38
               },
               "high": {
-                "floor_twh": 21.73,
-                "avg_twh": 45.89,
+                "floor_twh": 25.2,
+                "avg_twh": 53.09,
                 "max_twh": 126.36
               }
             },
             "per_threshold": [
-              {
-                "threshold": 85.0,
-                "pct": 5,
-                "pct_of_demand": 0.05
-              },
-              {
-                "threshold": 87.5,
-                "pct": 6,
-                "pct_of_demand": 0.06
-              },
               {
                 "threshold": 90.0,
                 "pct": 6,
@@ -5664,41 +5448,31 @@ const CARBON_CREDIT_DATA = {
             ]
           },
           "solar": {
-            "floor_pct": 5,
-            "avg_pct": 13.5,
+            "floor_pct": 9,
+            "avg_pct": 16.2,
             "max_pct": 19,
-            "floor_demand_share": 5.0,
-            "avg_demand_share": 13.5,
+            "floor_demand_share": 9.0,
+            "avg_demand_share": 16.17,
             "max_demand_share": 19.0,
             "is_consensus": true,
             "twh_by_growth": {
               "low": {
-                "floor_twh": 16.84,
-                "avg_twh": 49.09,
+                "floor_twh": 30.93,
+                "avg_twh": 59.25,
                 "max_twh": 71.41
               },
               "medium": {
-                "floor_twh": 18.66,
-                "avg_twh": 57.85,
+                "floor_twh": 34.81,
+                "avg_twh": 70.23,
                 "max_twh": 86.3
               },
               "high": {
-                "floor_twh": 21.73,
-                "avg_twh": 73.94,
+                "floor_twh": 41.5,
+                "avg_twh": 90.48,
                 "max_twh": 114.32
               }
             },
             "per_threshold": [
-              {
-                "threshold": 85.0,
-                "pct": 5,
-                "pct_of_demand": 0.05
-              },
-              {
-                "threshold": 87.5,
-                "pct": 6,
-                "pct_of_demand": 0.06
-              },
               {
                 "threshold": 90.0,
                 "pct": 9,
@@ -5732,41 +5506,31 @@ const CARBON_CREDIT_DATA = {
             ]
           },
           "wind": {
-            "floor_pct": 79,
-            "avg_pct": 94.6,
+            "floor_pct": 84,
+            "avg_pct": 99.3,
             "max_pct": 131,
-            "floor_demand_share": 79.0,
-            "avg_demand_share": 94.62,
+            "floor_demand_share": 84.0,
+            "avg_demand_share": 99.33,
             "max_demand_share": 131.0,
             "is_consensus": true,
             "twh_by_growth": {
               "low": {
-                "floor_twh": 266.13,
-                "avg_twh": 340.28,
+                "floor_twh": 288.66,
+                "avg_twh": 362.86,
                 "max_twh": 492.35
               },
               "medium": {
-                "floor_twh": 294.88,
-                "avg_twh": 397.58,
+                "floor_twh": 324.93,
+                "avg_twh": 429.03,
                 "max_twh": 594.99
               },
               "high": {
-                "floor_twh": 343.4,
-                "avg_twh": 501.98,
+                "floor_twh": 387.37,
+                "avg_twh": 550.88,
                 "max_twh": 788.24
               }
             },
             "per_threshold": [
-              {
-                "threshold": 85.0,
-                "pct": 79,
-                "pct_of_demand": 0.79
-              },
-              {
-                "threshold": 87.5,
-                "pct": 82,
-                "pct_of_demand": 0.82
-              },
               {
                 "threshold": 90.0,
                 "pct": 84,
@@ -5826,16 +5590,6 @@ const CARBON_CREDIT_DATA = {
             },
             "per_threshold": [
               {
-                "threshold": 85.0,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
-              {
-                "threshold": 87.5,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
-              {
                 "threshold": 90.0,
                 "pct": 0,
                 "pct_of_demand": 0.0
@@ -5869,40 +5623,30 @@ const CARBON_CREDIT_DATA = {
           },
           "ccs_ccgt": {
             "floor_pct": 0,
-            "avg_pct": 1.1,
-            "max_pct": 7,
+            "avg_pct": 0.0,
+            "max_pct": 0,
             "floor_demand_share": 0.0,
-            "avg_demand_share": 1.13,
-            "max_demand_share": 7.0,
+            "avg_demand_share": 0.0,
+            "max_demand_share": 0.0,
             "is_consensus": false,
             "twh_by_growth": {
               "low": {
                 "floor_twh": 0.0,
-                "avg_twh": 3.8,
-                "max_twh": 23.58
+                "avg_twh": 0.0,
+                "max_twh": 0.0
               },
               "medium": {
                 "floor_twh": 0.0,
-                "avg_twh": 4.22,
-                "max_twh": 26.13
+                "avg_twh": 0.0,
+                "max_twh": 0.0
               },
               "high": {
                 "floor_twh": 0.0,
-                "avg_twh": 4.92,
-                "max_twh": 30.43
+                "avg_twh": 0.0,
+                "max_twh": 0.0
               }
             },
             "per_threshold": [
-              {
-                "threshold": 85.0,
-                "pct": 7,
-                "pct_of_demand": 0.07
-              },
-              {
-                "threshold": 87.5,
-                "pct": 2,
-                "pct_of_demand": 0.02
-              },
               {
                 "threshold": 90.0,
                 "pct": 0,
@@ -5945,32 +5689,22 @@ const CARBON_CREDIT_DATA = {
             "is_consensus": true,
             "twh_by_growth": {
               "low": {
-                "floor_twh": 13.48,
-                "avg_twh": 14.3,
+                "floor_twh": 13.75,
+                "avg_twh": 14.55,
                 "max_twh": 15.03
               },
               "medium": {
-                "floor_twh": 14.93,
-                "avg_twh": 16.63,
+                "floor_twh": 15.47,
+                "avg_twh": 17.15,
                 "max_twh": 18.17
               },
               "high": {
-                "floor_twh": 17.39,
-                "avg_twh": 20.85,
+                "floor_twh": 18.45,
+                "avg_twh": 21.92,
                 "max_twh": 24.07
               }
             },
             "per_threshold": [
-              {
-                "threshold": 85.0,
-                "pct": 4,
-                "pct_of_demand": 0.04
-              },
-              {
-                "threshold": 87.5,
-                "pct": 4,
-                "pct_of_demand": 0.04
-              },
               {
                 "threshold": 90.0,
                 "pct": 4,
@@ -6030,16 +5764,6 @@ const CARBON_CREDIT_DATA = {
             },
             "per_threshold": [
               {
-                "threshold": 85.0,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
-              {
-                "threshold": 87.5,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
-              {
                 "threshold": 90.0,
                 "pct": 0,
                 "pct_of_demand": 0.0
@@ -6097,16 +5821,6 @@ const CARBON_CREDIT_DATA = {
               }
             },
             "per_threshold": [
-              {
-                "threshold": 85.0,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
-              {
-                "threshold": 87.5,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
               {
                 "threshold": 90.0,
                 "pct": 0,
@@ -6166,16 +5880,6 @@ const CARBON_CREDIT_DATA = {
             },
             "per_threshold": [
               {
-                "threshold": 85.0,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
-              {
-                "threshold": 87.5,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
-              {
                 "threshold": 90.0,
                 "pct": 0,
                 "pct_of_demand": 0.0
@@ -6234,16 +5938,6 @@ const CARBON_CREDIT_DATA = {
             },
             "per_threshold": [
               {
-                "threshold": 85.0,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
-              {
-                "threshold": 87.5,
-                "pct": 0,
-                "pct_of_demand": 0.0
-              },
-              {
                 "threshold": 90.0,
                 "pct": 0,
                 "pct_of_demand": 0.0
@@ -6278,33 +5972,33 @@ const CARBON_CREDIT_DATA = {
         },
         "total_clean_by_growth": {
           "low": {
-            "floor_twh": 336.9,
-            "avg_twh": 437.9,
+            "floor_twh": 354.0,
+            "avg_twh": 471.0,
             "max_twh": 623.9
           },
           "medium": {
-            "floor_twh": 373.3,
-            "avg_twh": 512.2,
+            "floor_twh": 398.4,
+            "avg_twh": 557.3,
             "max_twh": 754.0
           },
           "high": {
-            "floor_twh": 434.7,
-            "avg_twh": 647.6,
+            "floor_twh": 475.0,
+            "avg_twh": 716.4,
             "max_twh": 998.8
           }
         },
         "demand_growth_factors": {
           "low": {
-            "lower": 1.1413,
-            "upper": 1.2597
+            "lower": 1.1763,
+            "upper": 1.2622
           },
           "medium": {
-            "lower": 1.2673,
-            "upper": 1.5127
+            "lower": 1.338,
+            "upper": 1.5181
           },
           "high": {
-            "lower": 1.4807,
-            "upper": 1.9853
+            "lower": 1.62,
+            "upper": 1.9971
           }
         }
       }
@@ -6490,33 +6184,33 @@ const CARBON_CREDIT_DATA = {
       },
       {
         "threshold": 97.5,
-        "hourly_mac": 146.1,
-        "annual_mac_est": 87.7,
-        "quality_premium": 58.4
+        "hourly_mac": 146.6,
+        "annual_mac_est": 88.0,
+        "quality_premium": 58.6
       },
       {
         "threshold": 99,
-        "hourly_mac": 180.9,
-        "annual_mac_est": 108.5,
-        "quality_premium": 72.4
+        "hourly_mac": 169.1,
+        "annual_mac_est": 101.5,
+        "quality_premium": 67.6
       },
       {
         "threshold": 99.5,
-        "hourly_mac": 201.4,
-        "annual_mac_est": 120.8,
-        "quality_premium": 80.6
+        "hourly_mac": 185.6,
+        "annual_mac_est": 111.4,
+        "quality_premium": 74.2
       },
       {
         "threshold": 99.9,
-        "hourly_mac": 236.7,
-        "annual_mac_est": 142.0,
-        "quality_premium": 94.7
+        "hourly_mac": 214.4,
+        "annual_mac_est": 128.6,
+        "quality_premium": 85.8
       },
       {
         "threshold": 99.99,
-        "hourly_mac": 243.0,
-        "annual_mac_est": 145.8,
-        "quality_premium": 97.2
+        "hourly_mac": 230.2,
+        "annual_mac_est": 138.1,
+        "quality_premium": 92.1
       }
     ],
     "PJM": [
@@ -6674,15 +6368,15 @@ const CARBON_CREDIT_DATA = {
       },
       {
         "threshold": 85,
-        "hourly_mac": 241.5,
-        "annual_mac_est": 144.9,
-        "quality_premium": 96.6
+        "hourly_mac": 241.1,
+        "annual_mac_est": 144.7,
+        "quality_premium": 96.4
       },
       {
         "threshold": 87.5,
-        "hourly_mac": 246.6,
-        "annual_mac_est": 148.0,
-        "quality_premium": 98.6
+        "hourly_mac": 246.2,
+        "annual_mac_est": 147.7,
+        "quality_premium": 98.5
       },
       {
         "threshold": 90,
@@ -6692,9 +6386,9 @@ const CARBON_CREDIT_DATA = {
       },
       {
         "threshold": 92.5,
-        "hourly_mac": 272.9,
-        "annual_mac_est": 163.7,
-        "quality_premium": 109.2
+        "hourly_mac": 251.1,
+        "annual_mac_est": 150.7,
+        "quality_premium": 100.4
       },
       {
         "threshold": 95,
@@ -6728,9 +6422,9 @@ const CARBON_CREDIT_DATA = {
       },
       {
         "threshold": 99.99,
-        "hourly_mac": 424.7,
-        "annual_mac_est": 254.8,
-        "quality_premium": 169.9
+        "hourly_mac": 428.9,
+        "annual_mac_est": 257.3,
+        "quality_premium": 171.6
       }
     ],
     "NEISO": [
@@ -6846,9 +6540,9 @@ const CARBON_CREDIT_DATA = {
     "MISO": [
       {
         "threshold": 40,
-        "hourly_mac": 115.2,
-        "annual_mac_est": 69.1,
-        "quality_premium": 46.1
+        "hourly_mac": 115.5,
+        "annual_mac_est": 69.3,
+        "quality_premium": 46.2
       },
       {
         "threshold": 50,
@@ -6858,197 +6552,197 @@ const CARBON_CREDIT_DATA = {
       },
       {
         "threshold": 55,
-        "hourly_mac": 125.1,
-        "annual_mac_est": 75.1,
-        "quality_premium": 50.0
+        "hourly_mac": 125.3,
+        "annual_mac_est": 75.2,
+        "quality_premium": 50.1
       },
       {
         "threshold": 60,
-        "hourly_mac": 126.2,
-        "annual_mac_est": 75.7,
+        "hourly_mac": 126.3,
+        "annual_mac_est": 75.8,
         "quality_premium": 50.5
       },
       {
         "threshold": 65,
-        "hourly_mac": 128.7,
-        "annual_mac_est": 77.2,
+        "hourly_mac": 128.8,
+        "annual_mac_est": 77.3,
         "quality_premium": 51.5
       },
       {
         "threshold": 70,
-        "hourly_mac": 71.3,
-        "annual_mac_est": 42.8,
-        "quality_premium": 28.5
+        "hourly_mac": 71.5,
+        "annual_mac_est": 42.9,
+        "quality_premium": 28.6
       },
       {
         "threshold": 75,
-        "hourly_mac": 77.5,
-        "annual_mac_est": 46.5,
-        "quality_premium": 31.0
+        "hourly_mac": 77.7,
+        "annual_mac_est": 46.6,
+        "quality_premium": 31.1
       },
       {
         "threshold": 80,
-        "hourly_mac": 85.3,
-        "annual_mac_est": 51.2,
-        "quality_premium": 34.1
+        "hourly_mac": 85.6,
+        "annual_mac_est": 51.4,
+        "quality_premium": 34.2
       },
       {
         "threshold": 85,
-        "hourly_mac": 95.1,
-        "annual_mac_est": 57.1,
-        "quality_premium": 38.0
+        "hourly_mac": 95.3,
+        "annual_mac_est": 57.2,
+        "quality_premium": 38.1
       },
       {
         "threshold": 87.5,
-        "hourly_mac": 100.4,
-        "annual_mac_est": 60.2,
-        "quality_premium": 40.2
+        "hourly_mac": 100.7,
+        "annual_mac_est": 60.4,
+        "quality_premium": 40.3
       },
       {
         "threshold": 90,
-        "hourly_mac": 107.2,
-        "annual_mac_est": 64.3,
-        "quality_premium": 42.9
+        "hourly_mac": 107.5,
+        "annual_mac_est": 64.5,
+        "quality_premium": 43.0
       },
       {
         "threshold": 92.5,
-        "hourly_mac": 117.1,
-        "annual_mac_est": 70.3,
-        "quality_premium": 46.8
+        "hourly_mac": 117.3,
+        "annual_mac_est": 70.4,
+        "quality_premium": 46.9
       },
       {
         "threshold": 95,
-        "hourly_mac": 132.8,
-        "annual_mac_est": 79.7,
-        "quality_premium": 53.1
+        "hourly_mac": 133.0,
+        "annual_mac_est": 79.8,
+        "quality_premium": 53.2
       },
       {
         "threshold": 97.5,
-        "hourly_mac": 154.5,
-        "annual_mac_est": 92.7,
-        "quality_premium": 61.8
+        "hourly_mac": 154.8,
+        "annual_mac_est": 92.9,
+        "quality_premium": 61.9
       },
       {
         "threshold": 99,
-        "hourly_mac": 181.0,
-        "annual_mac_est": 108.6,
-        "quality_premium": 72.4
+        "hourly_mac": 181.3,
+        "annual_mac_est": 108.8,
+        "quality_premium": 72.5
       },
       {
         "threshold": 99.5,
-        "hourly_mac": 205.0,
-        "annual_mac_est": 123.0,
-        "quality_premium": 82.0
+        "hourly_mac": 205.5,
+        "annual_mac_est": 123.3,
+        "quality_premium": 82.2
       },
       {
         "threshold": 99.9,
-        "hourly_mac": 224.7,
-        "annual_mac_est": 134.8,
-        "quality_premium": 89.9
+        "hourly_mac": 225.1,
+        "annual_mac_est": 135.1,
+        "quality_premium": 90.0
       },
       {
         "threshold": 99.99,
-        "hourly_mac": 228.4,
-        "annual_mac_est": 137.0,
-        "quality_premium": 91.4
+        "hourly_mac": 229.0,
+        "annual_mac_est": 137.4,
+        "quality_premium": 91.6
       }
     ],
     "SPP": [
       {
         "threshold": 50,
-        "hourly_mac": 60.3,
-        "annual_mac_est": 36.2,
-        "quality_premium": 24.1
+        "hourly_mac": 61.2,
+        "annual_mac_est": 36.7,
+        "quality_premium": 24.5
       },
       {
         "threshold": 55,
-        "hourly_mac": 87.3,
-        "annual_mac_est": 52.4,
-        "quality_premium": 34.9
-      },
-      {
-        "threshold": 60,
-        "hourly_mac": 95.8,
-        "annual_mac_est": 57.5,
-        "quality_premium": 38.3
-      },
-      {
-        "threshold": 65,
-        "hourly_mac": 106.9,
-        "annual_mac_est": 64.1,
-        "quality_premium": 42.8
-      },
-      {
-        "threshold": 70,
-        "hourly_mac": 53.4,
-        "annual_mac_est": 32.0,
-        "quality_premium": 21.4
-      },
-      {
-        "threshold": 75,
-        "hourly_mac": 61.1,
-        "annual_mac_est": 36.7,
-        "quality_premium": 24.4
-      },
-      {
-        "threshold": 80,
-        "hourly_mac": 70.2,
-        "annual_mac_est": 42.1,
-        "quality_premium": 28.1
-      },
-      {
-        "threshold": 85,
-        "hourly_mac": 81.1,
-        "annual_mac_est": 48.7,
-        "quality_premium": 32.4
-      },
-      {
-        "threshold": 87.5,
-        "hourly_mac": 87.7,
-        "annual_mac_est": 52.6,
+        "hourly_mac": 87.8,
+        "annual_mac_est": 52.7,
         "quality_premium": 35.1
       },
       {
+        "threshold": 60,
+        "hourly_mac": 96.2,
+        "annual_mac_est": 57.7,
+        "quality_premium": 38.5
+      },
+      {
+        "threshold": 65,
+        "hourly_mac": 107.2,
+        "annual_mac_est": 64.3,
+        "quality_premium": 42.9
+      },
+      {
+        "threshold": 70,
+        "hourly_mac": 53.9,
+        "annual_mac_est": 32.3,
+        "quality_premium": 21.6
+      },
+      {
+        "threshold": 75,
+        "hourly_mac": 61.6,
+        "annual_mac_est": 37.0,
+        "quality_premium": 24.6
+      },
+      {
+        "threshold": 80,
+        "hourly_mac": 70.7,
+        "annual_mac_est": 42.4,
+        "quality_premium": 28.3
+      },
+      {
+        "threshold": 85,
+        "hourly_mac": 81.6,
+        "annual_mac_est": 49.0,
+        "quality_premium": 32.6
+      },
+      {
+        "threshold": 87.5,
+        "hourly_mac": 88.2,
+        "annual_mac_est": 52.9,
+        "quality_premium": 35.3
+      },
+      {
         "threshold": 90,
-        "hourly_mac": 94.9,
-        "annual_mac_est": 56.9,
-        "quality_premium": 38.0
+        "hourly_mac": 95.4,
+        "annual_mac_est": 57.2,
+        "quality_premium": 38.2
       },
       {
         "threshold": 92.5,
-        "hourly_mac": 103.2,
-        "annual_mac_est": 61.9,
-        "quality_premium": 41.3
+        "hourly_mac": 103.8,
+        "annual_mac_est": 62.3,
+        "quality_premium": 41.5
       },
       {
         "threshold": 95,
-        "hourly_mac": 115.2,
-        "annual_mac_est": 69.1,
-        "quality_premium": 46.1
+        "hourly_mac": 115.8,
+        "annual_mac_est": 69.5,
+        "quality_premium": 46.3
       },
       {
         "threshold": 97.5,
-        "hourly_mac": 133.8,
-        "annual_mac_est": 80.3,
-        "quality_premium": 53.5
+        "hourly_mac": 134.4,
+        "annual_mac_est": 80.6,
+        "quality_premium": 53.8
       },
       {
         "threshold": 99,
-        "hourly_mac": 164.8,
-        "annual_mac_est": 98.9,
-        "quality_premium": 65.9
+        "hourly_mac": 165.5,
+        "annual_mac_est": 99.3,
+        "quality_premium": 66.2
       },
       {
         "threshold": 99.5,
-        "hourly_mac": 182.4,
-        "annual_mac_est": 109.4,
-        "quality_premium": 73.0
+        "hourly_mac": 183.3,
+        "annual_mac_est": 110.0,
+        "quality_premium": 73.3
       },
       {
         "threshold": 99.9,
-        "hourly_mac": 222.2,
-        "annual_mac_est": 133.3,
-        "quality_premium": 88.9
+        "hourly_mac": 222.8,
+        "annual_mac_est": 133.7,
+        "quality_premium": 89.1
       },
       {
         "threshold": 99.99,

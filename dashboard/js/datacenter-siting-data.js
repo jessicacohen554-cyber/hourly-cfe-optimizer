@@ -67,7 +67,7 @@ const DATACENTER_SITING_DATA = {
           "ldes": 0.0
         },
         "cost_p10": 80.59,
-        "cost_p50": 100.92,
+        "cost_p50": 100.91,
         "cost_p90": 132.49
       }
     },
@@ -104,41 +104,41 @@ const DATACENTER_SITING_DATA = {
         },
         "cost_p10": 27.35,
         "cost_p50": 36.23,
-        "cost_p90": 47.95
+        "cost_p90": 47.48
       },
       "99": {
         "threshold": 99,
-        "cost_total": 46.36,
-        "cost_incremental": 26.83,
+        "cost_total": 45.29,
+        "cost_incremental": 25.73,
         "mix": {
-          "clean_firm": 50.0,
-          "solar": 17.0,
-          "wind": 80.0
+          "clean_firm": 40.0,
+          "solar": 20.0,
+          "wind": 75.0
         },
         "storage": {
-          "battery": 0.0,
+          "battery": 0.02,
           "ldes": 0.0
         },
-        "cost_p10": 43.38,
-        "cost_p50": 54.56,
-        "cost_p90": 69.21
+        "cost_p10": 39.38,
+        "cost_p50": 50.76,
+        "cost_p90": 62.79
       },
       "99.99": {
         "threshold": 99.99,
-        "cost_total": 65.86,
-        "cost_incremental": 45.87,
+        "cost_total": 61.66,
+        "cost_incremental": 41.66,
         "mix": {
-          "clean_firm": 59.0,
-          "solar": 34.0,
-          "wind": 68.0
+          "clean_firm": 50.0,
+          "solar": 25.0,
+          "wind": 70.0
         },
         "storage": {
-          "battery": 0.03,
-          "ldes": 0.0
+          "battery": 0.01,
+          "ldes": 0.5
         },
-        "cost_p10": 63.83,
-        "cost_p50": 73.77,
-        "cost_p90": 91.86
+        "cost_p10": 59.95,
+        "cost_p50": 69.89,
+        "cost_p90": 87.53
       }
     },
     "PJM": {
@@ -214,18 +214,18 @@ const DATACENTER_SITING_DATA = {
     "NYISO": {
       "90": {
         "threshold": 90,
-        "cost_total": 54.79,
-        "cost_incremental": 22.77,
+        "cost_total": 54.76,
+        "cost_incremental": 22.76,
         "mix": {
           "clean_firm": 20.0,
-          "solar": 15.0,
-          "wind": 35.0
+          "solar": 20.0,
+          "wind": 40.0
         },
         "storage": {
-          "battery": 0.02,
+          "battery": 0.03,
           "ldes": 0.0
         },
-        "cost_p10": 43.26,
+        "cost_p10": 42.94,
         "cost_p50": 51.15,
         "cost_p90": 72.36
       },
@@ -243,7 +243,7 @@ const DATACENTER_SITING_DATA = {
           "ldes": 0.0
         },
         "cost_p10": 53.17,
-        "cost_p50": 69.21,
+        "cost_p50": 69.09,
         "cost_p90": 96.7
       },
       "99": {
@@ -265,20 +265,20 @@ const DATACENTER_SITING_DATA = {
       },
       "99.99": {
         "threshold": 99.99,
-        "cost_total": 105.74,
-        "cost_incremental": 67.74,
+        "cost_total": 106.29,
+        "cost_incremental": 68.3,
         "mix": {
           "clean_firm": 85.0,
-          "solar": 25.0,
-          "wind": 10.0
+          "solar": 30.0,
+          "wind": 5.0
         },
         "storage": {
           "battery": 0.02,
           "ldes": 0.0
         },
         "cost_p10": 77.92,
-        "cost_p50": 107.43,
-        "cost_p90": 152.48
+        "cost_p50": 108.5,
+        "cost_p90": 156.57
       }
     },
     "NEISO": {
@@ -399,14 +399,14 @@ const DATACENTER_SITING_DATA = {
           "battery": 0.0,
           "ldes": 0.0
         },
-        "cost_p10": 58.84,
+        "cost_p10": 58.87,
         "cost_p50": 69.95,
-        "cost_p90": 92.47
+        "cost_p90": 92.48
       },
       "99.99": {
         "threshold": 99.99,
-        "cost_total": 80.24,
-        "cost_incremental": 56.24,
+        "cost_total": 80.32,
+        "cost_incremental": 56.32,
         "mix": {
           "clean_firm": 84.0,
           "solar": 19.0,
@@ -417,8 +417,8 @@ const DATACENTER_SITING_DATA = {
           "ldes": 0.0
         },
         "cost_p10": 71.67,
-        "cost_p50": 89.12,
-        "cost_p90": 114.21
+        "cost_p50": 89.22,
+        "cost_p90": 114.31
       }
     },
     "SPP": {
@@ -441,7 +441,7 @@ const DATACENTER_SITING_DATA = {
       },
       "95": {
         "threshold": 95,
-        "cost_total": 29.29,
+        "cost_total": 29.3,
         "cost_incremental": 12.84,
         "mix": {
           "clean_firm": 7.0,
@@ -475,20 +475,20 @@ const DATACENTER_SITING_DATA = {
       },
       "99.99": {
         "threshold": 99.99,
-        "cost_total": 64.77,
-        "cost_incremental": 46.78,
+        "cost_total": 63.87,
+        "cost_incremental": 45.87,
         "mix": {
           "clean_firm": 26.0,
           "solar": 27.0,
           "wind": 115.0
         },
         "storage": {
-          "battery": 0.01,
-          "ldes": 0.2
+          "battery": 0.02,
+          "ldes": 0.05
         },
-        "cost_p10": 57.61,
-        "cost_p50": 69.55,
-        "cost_p90": 86.92
+        "cost_p10": 57.54,
+        "cost_p50": 69.3,
+        "cost_p90": 86.4
       }
     }
   },
@@ -646,23 +646,23 @@ const DATACENTER_SITING_DATA = {
       },
       {
         "t": 97.5,
-        "cost": 39.53
+        "cost": 39.51
       },
       {
         "t": 99,
-        "cost": 46.36
+        "cost": 45.29
       },
       {
         "t": 99.5,
-        "cost": 51.98
+        "cost": 48.66
       },
       {
         "t": 99.9,
-        "cost": 62.74
+        "cost": 56.63
       },
       {
         "t": 99.99,
-        "cost": 65.86
+        "cost": 61.66
       }
     ],
     "PJM": [
@@ -798,19 +798,19 @@ const DATACENTER_SITING_DATA = {
       },
       {
         "t": 85,
-        "cost": 46.69
+        "cost": 46.14
       },
       {
         "t": 87.5,
-        "cost": 50.07
+        "cost": 50.04
       },
       {
         "t": 90,
-        "cost": 54.79
+        "cost": 54.76
       },
       {
         "t": 92.5,
-        "cost": 63.4
+        "cost": 60.09
       },
       {
         "t": 95,
@@ -834,7 +834,7 @@ const DATACENTER_SITING_DATA = {
       },
       {
         "t": 99.99,
-        "cost": 105.74
+        "cost": 106.29
       }
     ],
     "NEISO": [
@@ -998,15 +998,15 @@ const DATACENTER_SITING_DATA = {
       },
       {
         "t": 99.5,
-        "cost": 72.89
+        "cost": 72.97
       },
       {
         "t": 99.9,
-        "cost": 79.06
+        "cost": 79.14
       },
       {
         "t": 99.99,
-        "cost": 80.24
+        "cost": 80.32
       }
     ],
     "SPP": [
@@ -1056,7 +1056,7 @@ const DATACENTER_SITING_DATA = {
       },
       {
         "t": 85,
-        "cost": 18.01
+        "cost": 18.02
       },
       {
         "t": 87.5,
@@ -1072,11 +1072,11 @@ const DATACENTER_SITING_DATA = {
       },
       {
         "t": 95,
-        "cost": 29.29
+        "cost": 29.3
       },
       {
         "t": 97.5,
-        "cost": 35.27
+        "cost": 35.28
       },
       {
         "t": 99,
@@ -1088,11 +1088,11 @@ const DATACENTER_SITING_DATA = {
       },
       {
         "t": 99.9,
-        "cost": 59.34
+        "cost": 59.43
       },
       {
         "t": 99.99,
-        "cost": 64.77
+        "cost": 63.87
       }
     ]
   },
@@ -1145,11 +1145,11 @@ const DATACENTER_SITING_DATA = {
       },
       {
         "iso": "NYISO",
-        "cost": 54.79,
+        "cost": 54.76,
         "mix": {
           "clean_firm": 20.0,
-          "solar": 15.0,
-          "wind": 35.0
+          "solar": 20.0,
+          "wind": 40.0
         }
       },
       {
@@ -1165,7 +1165,7 @@ const DATACENTER_SITING_DATA = {
     "95": [
       {
         "iso": "SPP",
-        "cost": 29.29,
+        "cost": 29.3,
         "mix": {
           "clean_firm": 7.0,
           "solar": 14.0,
@@ -1239,11 +1239,11 @@ const DATACENTER_SITING_DATA = {
       },
       {
         "iso": "ERCOT",
-        "cost": 46.36,
+        "cost": 45.29,
         "mix": {
-          "clean_firm": 50.0,
-          "solar": 17.0,
-          "wind": 80.0
+          "clean_firm": 40.0,
+          "solar": 20.0,
+          "wind": 75.0
         }
       },
       {

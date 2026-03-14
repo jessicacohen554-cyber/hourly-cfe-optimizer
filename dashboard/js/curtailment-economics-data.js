@@ -3090,81 +3090,81 @@ const CURTAILMENT_ECONOMICS_DATA = {
       }
     },
     "97.5": {
-      "curtailment_twh": 145.671,
-      "curtailment_pct": 24.1,
-      "peak_mw": 62059.0,
+      "curtailment_twh": 167.093,
+      "curtailment_pct": 27.0,
+      "peak_mw": 76286.0,
       "hourly_shape": [
-        20193.1,
-        21985.9,
-        22820.7,
-        22670.2,
-        21852.7,
-        20336.6,
-        18264.7,
-        15890.9,
-        13816.2,
-        10539.7,
-        8257.0,
-        16587.6,
-        19995.7,
-        18661.3,
-        17707.7,
-        17227.4,
-        16717.1,
-        15199.7,
-        12878.7,
-        11935.7,
-        11271.4,
-        12076.7,
-        14648.1,
-        17563.5
+        23674.6,
+        25307.8,
+        25909.8,
+        25415.4,
+        24191.4,
+        22271.5,
+        20000.5,
+        17540.4,
+        15221.2,
+        11569.0,
+        9069.5,
+        18678.7,
+        22588.0,
+        21193.7,
+        20268.2,
+        19841.1,
+        19411.3,
+        17930.4,
+        15664.7,
+        14622.5,
+        13736.7,
+        14741.9,
+        17874.8,
+        21066.9
       ],
       "monthly_twh": [
-        12.2433,
-        13.7631,
-        22.7579,
-        19.4025,
-        11.1037,
-        11.3303,
-        7.6599,
-        3.4992,
-        3.9504,
-        9.2372,
-        14.209,
-        16.5144
+        13.2328,
+        14.4325,
+        25.8804,
+        23.9978,
+        12.9784,
+        13.3829,
+        9.0386,
+        4.157,
+        4.5223,
+        11.4126,
+        16.3874,
+        17.6707
       ],
       "by_resource": {
-        "solar": 22.0,
-        "wind": 78.0
+        "solar": 22.4,
+        "wind": 77.6
       },
       "value_scenarios": {
         "green_h2": {
-          "revenue_low_m": 4370.1,
-          "revenue_high_m": 8740.3,
+          "revenue_low_m": 5012.8,
+          "revenue_high_m": 10025.6,
           "price_range": [
             30,
             60
           ]
         },
         "desal": {
-          "revenue_low_m": 2185.1,
-          "revenue_high_m": 3641.8,
+          "revenue_low_m": 2506.4,
+          "revenue_high_m": 4177.3,
           "price_range": [
             15,
             25
           ]
         },
         "industrial": {
-          "revenue_low_m": 2913.4,
-          "revenue_high_m": 6555.2,
+          "revenue_low_m": 3341.9,
+          "revenue_high_m": 7519.2,
           "price_range": [
             20,
             45
           ]
         },
         "ev_charging": {
-          "revenue_low_m": 5826.8,
-          "revenue_high_m": 11653.7,
+          "revenue_low_m": 6683.7,
+          "revenue_high_m": 13367.5,
           "price_range": [
             40,
             80
@@ -3173,9 +3173,175 @@ const CURTAILMENT_ECONOMICS_DATA = {
       }
     },
     "99": {
-      "curtailment_twh": 211.717,
-      "curtailment_pct": 31.0,
-      "peak_mw": 78195.0,
+      "curtailment_twh": 166.069,
+      "curtailment_pct": 26.2,
+      "peak_mw": 69624.0,
+      "hourly_shape": [
+        22066.1,
+        23829.8,
+        24574.5,
+        24291.8,
+        23334.0,
+        21661.6,
+        19472.7,
+        17034.1,
+        14826.7,
+        11325.5,
+        8894.4,
+        20077.3,
+        24721.1,
+        23268.2,
+        22121.8,
+        21522.5,
+        20895.0,
+        18922.4,
+        15868.6,
+        14221.3,
+        12831.8,
+        13507.5,
+        16318.5,
+        19396.4
+      ],
+      "monthly_twh": [
+        13.3616,
+        14.8749,
+        25.2178,
+        22.3687,
+        13.0502,
+        13.5074,
+        9.3673,
+        4.4675,
+        4.964,
+        11.0162,
+        15.9801,
+        17.8933
+      ],
+      "by_resource": {
+        "solar": 25.8,
+        "wind": 74.2
+      },
+      "value_scenarios": {
+        "green_h2": {
+          "revenue_low_m": 4982.1,
+          "revenue_high_m": 9964.1,
+          "price_range": [
+            30,
+            60
+          ]
+        },
+        "desal": {
+          "revenue_low_m": 2491.0,
+          "revenue_high_m": 4151.7,
+          "price_range": [
+            15,
+            25
+          ]
+        },
+        "industrial": {
+          "revenue_low_m": 3321.4,
+          "revenue_high_m": 7473.1,
+          "price_range": [
+            20,
+            45
+          ]
+        },
+        "ev_charging": {
+          "revenue_low_m": 6642.8,
+          "revenue_high_m": 13285.5,
+          "price_range": [
+            40,
+            80
+          ]
+        }
+      }
+    },
+    "99.5": {
+      "curtailment_twh": 177.696,
+      "curtailment_pct": 27.2,
+      "peak_mw": 69074.0,
+      "hourly_shape": [
+        22948.4,
+        24804.5,
+        25618.4,
+        25392.6,
+        24506.4,
+        22892.7,
+        20700.9,
+        18138.5,
+        15903.3,
+        12247.6,
+        9724.9,
+        22044.5,
+        27203.1,
+        25680.9,
+        24434.4,
+        23692.3,
+        22933.5,
+        20769.5,
+        17302.9,
+        15230.7,
+        13491.1,
+        14088.8,
+        16955.8,
+        20131.5
+      ],
+      "monthly_twh": [
+        14.4435,
+        16.0806,
+        26.1945,
+        22.842,
+        14.0797,
+        14.7326,
+        10.4964,
+        5.2786,
+        5.8667,
+        11.7453,
+        16.8105,
+        19.1256
+      ],
+      "by_resource": {
+        "solar": 26.7,
+        "wind": 73.3
+      },
+      "value_scenarios": {
+        "green_h2": {
+          "revenue_low_m": 5330.9,
+          "revenue_high_m": 10661.7,
+          "price_range": [
+            30,
+            60
+          ]
+        },
+        "desal": {
+          "revenue_low_m": 2665.4,
+          "revenue_high_m": 4442.4,
+          "price_range": [
+            15,
+            25
+          ]
+        },
+        "industrial": {
+          "revenue_low_m": 3553.9,
+          "revenue_high_m": 7996.3,
+          "price_range": [
+            20,
+            45
+          ]
+        },
+        "ev_charging": {
+          "revenue_low_m": 7107.8,
+          "revenue_high_m": 14215.7,
+          "price_range": [
+            40,
+            80
+          ]
+        }
+      }
+    },
+    "99.9": {
+      "curtailment_twh": 240.464,
+      "curtailment_pct": 33.3,
+      "peak_mw": 83544.0,
       "hourly_shape": [
         29493.5,
         31442.8,
@@ -3188,232 +3354,66 @@ const CURTAILMENT_ECONOMICS_DATA = {
         20776.7,
         16300.6,
         13240.0,
-        23431.3,
-        27528.1,
-        25924.3,
-        24733.2,
-        24159.3,
-        23732.9,
-        22230.4,
-        19691.4,
-        18532.3,
-        17725.9,
-        19059.6,
-        22702.1,
-        26415.6
+        30913.8,
+        38411.0,
+        36822.6,
+        35451.8,
+        34558.3,
+        33554.5,
+        30609.1,
+        25588.5,
+        21845.8,
+        18640.0,
+        19113.3,
+        22702.7,
+        26415.9
       ],
       "monthly_twh": [
-        17.549,
-        18.9913,
-        30.2969,
-        26.9714,
-        16.6361,
-        17.8162,
-        12.8091,
-        6.655,
-        7.1711,
-        14.1501,
-        20.0211,
-        22.6493
+        18.8231,
+        20.4799,
+        32.7967,
+        29.6158,
+        19.6044,
+        21.0822,
+        15.8957,
+        9.2135,
+        10.0059,
+        16.8261,
+        21.9216,
+        24.1995
       ],
       "by_resource": {
-        "solar": 19.5,
-        "wind": 80.5
+        "solar": 29.1,
+        "wind": 70.9
       },
       "value_scenarios": {
         "green_h2": {
-          "revenue_low_m": 6351.5,
-          "revenue_high_m": 12703.0,
+          "revenue_low_m": 7213.9,
+          "revenue_high_m": 14427.9,
           "price_range": [
             30,
             60
           ]
         },
         "desal": {
-          "revenue_low_m": 3175.8,
-          "revenue_high_m": 5292.9,
+          "revenue_low_m": 3607.0,
+          "revenue_high_m": 6011.6,
           "price_range": [
             15,
             25
           ]
         },
         "industrial": {
-          "revenue_low_m": 4234.3,
-          "revenue_high_m": 9527.3,
+          "revenue_low_m": 4809.3,
+          "revenue_high_m": 10820.9,
           "price_range": [
             20,
             45
           ]
         },
         "ev_charging": {
-          "revenue_low_m": 8468.7,
-          "revenue_high_m": 16937.3,
-          "price_range": [
-            40,
-            80
-          ]
-        }
-      }
-    },
-    "99.5": {
-      "curtailment_twh": 267.402,
-      "curtailment_pct": 36.0,
-      "peak_mw": 91328.0,
-      "hourly_shape": [
-        36185.7,
-        38168.5,
-        38787.3,
-        38185.2,
-        36825.1,
-        34684.8,
-        31948.6,
-        28747.9,
-        25805.9,
-        20586.5,
-        16926.8,
-        30336.3,
-        35776.8,
-        34010.3,
-        32662.1,
-        32022.7,
-        31508.6,
-        29687.3,
-        26430.3,
-        24440.1,
-        22934.1,
-        24435.9,
-        28671.5,
-        32838.8
-      ],
-      "monthly_twh": [
-        21.6965,
-        23.063,
-        36.3065,
-        33.0999,
-        21.4268,
-        23.3827,
-        17.4341,
-        9.8573,
-        10.5017,
-        18.5466,
-        24.721,
-        27.3655
-      ],
-      "by_resource": {
-        "solar": 20.6,
-        "wind": 79.4
-      },
-      "value_scenarios": {
-        "green_h2": {
-          "revenue_low_m": 8022.0,
-          "revenue_high_m": 16044.1,
-          "price_range": [
-            30,
-            60
-          ]
-        },
-        "desal": {
-          "revenue_low_m": 4011.0,
-          "revenue_high_m": 6685.0,
-          "price_range": [
-            15,
-            25
-          ]
-        },
-        "industrial": {
-          "revenue_low_m": 5348.0,
-          "revenue_high_m": 12033.1,
-          "price_range": [
-            20,
-            45
-          ]
-        },
-        "ev_charging": {
-          "revenue_low_m": 10696.1,
-          "revenue_high_m": 21392.1,
-          "price_range": [
-            40,
-            80
-          ]
-        }
-      }
-    },
-    "99.9": {
-      "curtailment_twh": 291.302,
-      "curtailment_pct": 37.6,
-      "peak_mw": 100533.0,
-      "hourly_shape": [
-        29931.5,
-        31891.4,
-        32616.4,
-        32208.6,
-        31072.0,
-        29178.7,
-        26689.8,
-        23773.1,
-        21165.0,
-        16641.5,
-        13531.7,
-        42953.3,
-        55937.7,
-        54750.3,
-        53450.1,
-        52320.6,
-        50525.7,
-        45347.3,
-        36307.3,
-        27890.2,
-        20445.5,
-        19543.6,
-        23086.8,
-        26829.7
-      ],
-      "monthly_twh": [
-        21.1165,
-        23.0906,
-        36.9118,
-        33.8968,
-        24.634,
-        26.5046,
-        21.4351,
-        14.7613,
-        15.2897,
-        21.6449,
-        25.1022,
-        26.9145
-      ],
-      "by_resource": {
-        "solar": 40.5,
-        "wind": 59.5
-      },
-      "value_scenarios": {
-        "green_h2": {
-          "revenue_low_m": 8739.1,
-          "revenue_high_m": 17478.1,
-          "price_range": [
-            30,
-            60
-          ]
-        },
-        "desal": {
-          "revenue_low_m": 4369.5,
-          "revenue_high_m": 7282.6,
-          "price_range": [
-            15,
-            25
-          ]
-        },
-        "industrial": {
-          "revenue_low_m": 5826.0,
-          "revenue_high_m": 13108.6,
-          "price_range": [
-            20,
-            45
-          ]
-        },
-        "ev_charging": {
-          "revenue_low_m": 11652.1,
-          "revenue_high_m": 23304.2,
+          "revenue_low_m": 9618.6,
+          "revenue_high_m": 19237.1,
           "price_range": [
             40,
             80
@@ -3422,81 +3422,81 @@ const CURTAILMENT_ECONOMICS_DATA = {
       }
     },
     "99.99": {
-      "curtailment_twh": 255.079,
-      "curtailment_pct": 34.4,
-      "peak_mw": 87903.0,
+      "curtailment_twh": 195.791,
+      "curtailment_pct": 28.7,
+      "peak_mw": 72548.0,
       "hourly_shape": [
-        25481.0,
-        27466.3,
-        28309.7,
-        28112.2,
-        27229.4,
-        25598.3,
-        23339.1,
-        20632.1,
-        18282.9,
-        14299.8,
-        11517.0,
-        38560.3,
-        50515.1,
-        49359.2,
-        48049.1,
-        46877.6,
-        45066.7,
-        40120.8,
-        31597.3,
-        23780.6,
-        16998.7,
-        16064.4,
-        19091.8,
-        22496.7
+        22948.4,
+        24804.5,
+        25618.4,
+        25392.6,
+        24506.4,
+        22892.7,
+        20700.9,
+        18138.5,
+        15903.3,
+        12247.6,
+        9724.9,
+        26791.2,
+        34091.8,
+        32602.5,
+        31246.7,
+        30294.7,
+        29147.4,
+        26007.0,
+        20940.8,
+        17209.2,
+        13997.6,
+        14117.3,
+        16956.2,
+        20131.7
       ],
       "monthly_twh": [
-        18.7548,
-        20.8227,
-        32.7862,
-        29.2006,
-        21.5362,
-        22.9283,
-        18.5164,
-        12.6835,
-        13.2016,
-        18.5239,
-        21.9866,
-        24.1379
+        15.2346,
+        17.0091,
+        27.7561,
+        24.4937,
+        15.9481,
+        16.7647,
+        12.4402,
+        6.9073,
+        7.704,
+        13.4446,
+        17.996,
+        20.0921
       ],
       "by_resource": {
-        "solar": 42.1,
-        "wind": 57.9
+        "solar": 33.5,
+        "wind": 66.5
       },
       "value_scenarios": {
         "green_h2": {
-          "revenue_low_m": 7652.4,
-          "revenue_high_m": 15304.7,
+          "revenue_low_m": 5873.7,
+          "revenue_high_m": 11747.4,
           "price_range": [
             30,
             60
           ]
         },
         "desal": {
-          "revenue_low_m": 3826.2,
-          "revenue_high_m": 6377.0,
+          "revenue_low_m": 2936.9,
+          "revenue_high_m": 4894.8,
           "price_range": [
             15,
             25
           ]
         },
         "industrial": {
-          "revenue_low_m": 5101.6,
-          "revenue_high_m": 11478.5,
+          "revenue_low_m": 3915.8,
+          "revenue_high_m": 8810.6,
           "price_range": [
             20,
             45
           ]
         },
         "ev_charging": {
-          "revenue_low_m": 10203.1,
-          "revenue_high_m": 20406.3,
+          "revenue_low_m": 7831.6,
+          "revenue_high_m": 15663.2,
           "price_range": [
             40,
             80
@@ -4922,7 +4922,7 @@ const CURTAILMENT_ECONOMICS_DATA = {
     },
     "99": {
       "curtailment_twh": 417.829,
-      "curtailment_pct": 33.3,
+      "curtailment_pct": 33.2,
       "peak_mw": 243793.0,
       "hourly_shape": [
         16655.5,
@@ -5005,7 +5005,7 @@ const CURTAILMENT_ECONOMICS_DATA = {
     },
     "99.5": {
       "curtailment_twh": 417.829,
-      "curtailment_pct": 33.3,
+      "curtailment_pct": 33.2,
       "peak_mw": 243793.0,
       "hourly_shape": [
         16655.5,
@@ -5088,7 +5088,7 @@ const CURTAILMENT_ECONOMICS_DATA = {
     },
     "99.9": {
       "curtailment_twh": 417.829,
-      "curtailment_pct": 33.3,
+      "curtailment_pct": 33.2,
       "peak_mw": 243793.0,
       "hourly_shape": [
         16655.5,
@@ -5171,7 +5171,7 @@ const CURTAILMENT_ECONOMICS_DATA = {
     },
     "99.99": {
       "curtailment_twh": 417.829,
-      "curtailment_pct": 33.3,
+      "curtailment_pct": 33.2,
       "peak_mw": 243793.0,
       "hourly_shape": [
         16655.5,
@@ -6166,81 +6166,81 @@ const CURTAILMENT_ECONOMICS_DATA = {
       }
     },
     "85": {
-      "curtailment_twh": 16.277,
-      "curtailment_pct": 10.7,
-      "peak_mw": 26639.0,
+      "curtailment_twh": 16.434,
+      "curtailment_pct": 10.9,
+      "peak_mw": 25495.0,
       "hourly_shape": [
-        868.3,
-        1017.5,
-        1100.6,
-        1126.7,
-        1118.2,
-        1048.6,
-        946.5,
-        761.1,
-        633.5,
-        546.6,
-        572.7,
-        656.6,
-        938.1,
-        1750.0,
-        3035.4,
-        4172.9,
-        4666.4,
-        4576.4,
-        4237.6,
-        3759.7,
-        2932.7,
-        2001.7,
-        1229.2,
-        898.2
+        1424.2,
+        1608.3,
+        1694.8,
+        1728.6,
+        1709.6,
+        1610.0,
+        1489.3,
+        1284.6,
+        1106.3,
+        978.4,
+        985.7,
+        1075.4,
+        1285.0,
+        1807.2,
+        2553.8,
+        3220.8,
+        3459.5,
+        3320.4,
+        3039.0,
+        2726.2,
+        2252.0,
+        1825.5,
+        1475.5,
+        1365.0
       ],
       "monthly_twh": [
-        1.1549,
-        0.7937,
-        3.3229,
-        2.6874,
-        1.8159,
-        1.162,
-        0.0949,
-        0.6901,
-        0.7919,
-        1.2134,
-        1.5901,
-        0.9601
+        1.5424,
+        0.9086,
+        3.6849,
+        2.7697,
+        1.6747,
+        0.9564,
+        0.01,
+        0.3216,
+        0.371,
+        0.9615,
+        1.867,
+        1.3664
       ],
       "by_resource": {
-        "solar": 60.4,
-        "wind": 39.4
+        "solar": 34.9,
+        "wind": 64.9
       },
       "value_scenarios": {
         "green_h2": {
-          "revenue_low_m": 488.3,
-          "revenue_high_m": 976.6,
+          "revenue_low_m": 493.0,
+          "revenue_high_m": 986.0,
           "price_range": [
             30,
             60
           ]
         },
         "desal": {
-          "revenue_low_m": 244.2,
-          "revenue_high_m": 406.9,
+          "revenue_low_m": 246.5,
+          "revenue_high_m": 410.9,
           "price_range": [
             15,
             25
           ]
         },
         "industrial": {
-          "revenue_low_m": 325.5,
-          "revenue_high_m": 732.5,
+          "revenue_low_m": 328.7,
+          "revenue_high_m": 739.5,
           "price_range": [
             20,
             45
           ]
         },
         "ev_charging": {
-          "revenue_low_m": 651.1,
-          "revenue_high_m": 1302.2,
+          "revenue_low_m": 657.4,
+          "revenue_high_m": 1314.7,
           "price_range": [
             40,
             80
@@ -6249,81 +6249,81 @@ const CURTAILMENT_ECONOMICS_DATA = {
       }
     },
     "87.5": {
-      "curtailment_twh": 16.783,
-      "curtailment_pct": 11.2,
-      "peak_mw": 25205.0,
+      "curtailment_twh": 19.316,
+      "curtailment_pct": 12.7,
+      "peak_mw": 28368.0,
       "hourly_shape": [
-        1485.0,
-        1665.2,
-        1748.2,
-        1774.8,
-        1749.5,
-        1648.9,
-        1524.0,
-        1315.8,
-        1139.3,
-        1005.2,
-        1008.2,
-        1095.1,
-        1300.3,
-        1809.4,
-        2557.4,
-        3225.0,
-        3475.5,
-        3362.2,
-        3099.5,
-        2805.1,
-        2327.4,
-        1901.4,
-        1537.0,
-        1421.5
+        1336.7,
+        1498.8,
+        1567.6,
+        1575.4,
+        1560.9,
+        1480.2,
+        1389.7,
+        1190.4,
+        1036.1,
+        923.0,
+        939.0,
+        1040.0,
+        1316.1,
+        2084.3,
+        3296.4,
+        4389.1,
+        4868.8,
+        4746.4,
+        4384.7,
+        3892.1,
+        3129.7,
+        2298.5,
+        1629.0,
+        1349.2
       ],
       "monthly_twh": [
-        1.5973,
-        0.9336,
-        3.7819,
-        2.8233,
-        1.7051,
-        0.9689,
-        0.0113,
-        0.3054,
-        0.3737,
-        0.9664,
-        1.9161,
-        1.4002
+        1.7328,
+        1.0969,
+        4.0447,
+        3.1047,
+        1.8588,
+        1.2583,
+        0.084,
+        0.62,
+        0.6654,
+        1.2428,
+        2.0618,
+        1.5463
       ],
       "by_resource": {
-        "solar": 34.4,
-        "wind": 65.4
+        "solar": 47.6,
+        "wind": 52.3
       },
       "value_scenarios": {
         "green_h2": {
-          "revenue_low_m": 503.5,
-          "revenue_high_m": 1007.0,
+          "revenue_low_m": 579.5,
+          "revenue_high_m": 1159.0,
           "price_range": [
             30,
             60
           ]
         },
         "desal": {
-          "revenue_low_m": 251.7,
-          "revenue_high_m": 419.6,
+          "revenue_low_m": 289.7,
+          "revenue_high_m": 482.9,
           "price_range": [
             15,
             25
           ]
         },
         "industrial": {
-          "revenue_low_m": 335.7,
-          "revenue_high_m": 755.2,
+          "revenue_low_m": 386.3,
+          "revenue_high_m": 869.2,
           "price_range": [
             20,
             45
           ]
         },
         "ev_charging": {
-          "revenue_low_m": 671.3,
-          "revenue_high_m": 1342.6,
+          "revenue_low_m": 772.7,
+          "revenue_high_m": 1545.3,
           "price_range": [
             40,
             80
@@ -6332,81 +6332,81 @@ const CURTAILMENT_ECONOMICS_DATA = {
       }
     },
     "90": {
-      "curtailment_twh": 19.58,
-      "curtailment_pct": 12.9,
-      "peak_mw": 28077.0,
+      "curtailment_twh": 22.774,
+      "curtailment_pct": 14.8,
+      "peak_mw": 31240.0,
       "hourly_shape": [
-        1384.8,
-        1546.5,
-        1611.1,
-        1613.7,
-        1592.7,
-        1507.5,
-        1414.4,
-        1216.1,
-        1061.1,
-        943.1,
-        958.7,
-        1058.0,
-        1324.9,
-        2076.1,
-        3286.3,
-        4375.0,
-        4863.5,
-        4772.2,
-        4432.5,
-        3957.7,
-        3197.9,
-        2369.6,
-        1682.8,
-        1398.0
+        1283.7,
+        1438.6,
+        1494.7,
+        1493.2,
+        1469.7,
+        1389.5,
+        1323.4,
+        1138.9,
+        1001.3,
+        897.3,
+        917.6,
+        1027.9,
+        1375.3,
+        2397.6,
+        4119.1,
+        5704.8,
+        6421.4,
+        6329.2,
+        5893.9,
+        5207.5,
+        4093.1,
+        2823.8,
+        1802.8,
+        1349.5
       ],
       "monthly_twh": [
-        1.7837,
-        1.1202,
-        4.1319,
-        3.1513,
-        1.8761,
-        1.2716,
-        0.0781,
-        0.5964,
-        0.6539,
-        1.2366,
-        2.1024,
-        1.5779
+        1.9436,
+        1.3017,
+        4.4386,
+        3.4687,
+        2.112,
+        1.6257,
+        0.2561,
+        1.0017,
+        1.0384,
+        1.5586,
+        2.2873,
+        1.7413
       ],
       "by_resource": {
-        "solar": 47.0,
-        "wind": 52.9
+        "solar": 56.9,
+        "wind": 43.1
       },
       "value_scenarios": {
         "green_h2": {
-          "revenue_low_m": 587.4,
-          "revenue_high_m": 1174.8,
+          "revenue_low_m": 683.2,
+          "revenue_high_m": 1366.4,
           "price_range": [
             30,
             60
           ]
         },
         "desal": {
-          "revenue_low_m": 293.7,
-          "revenue_high_m": 489.5,
+          "revenue_low_m": 341.6,
+          "revenue_high_m": 569.3,
           "price_range": [
             15,
             25
           ]
         },
         "industrial": {
-          "revenue_low_m": 391.6,
-          "revenue_high_m": 881.1,
+          "revenue_low_m": 455.5,
+          "revenue_high_m": 1024.8,
           "price_range": [
             20,
             45
           ]
         },
         "ev_charging": {
-          "revenue_low_m": 783.2,
-          "revenue_high_m": 1566.4,
+          "revenue_low_m": 910.9,
+          "revenue_high_m": 1821.9,
           "price_range": [
             40,
             80
@@ -6415,81 +6415,81 @@ const CURTAILMENT_ECONOMICS_DATA = {
       }
     },
     "92.5": {
-      "curtailment_twh": 27.02,
-      "curtailment_pct": 16.6,
-      "peak_mw": 29517.0,
+      "curtailment_twh": 23.913,
+      "curtailment_pct": 14.9,
+      "peak_mw": 29797.0,
       "hourly_shape": [
-        2075.2,
-        2277.4,
-        2366.2,
-        2382.1,
-        2340.0,
-        2217.5,
-        2084.7,
-        1854.8,
-        1638.0,
-        1464.9,
-        1453.2,
-        1572.2,
-        1933.3,
-        2910.5,
-        4338.8,
-        5575.8,
-        6116.7,
-        6056.3,
-        5743.7,
-        5238.9,
-        4388.8,
-        3386.0,
-        2515.3,
-        2096.7
+        1178.2,
+        1330.8,
+        1398.3,
+        1412.2,
+        1390.3,
+        1311.5,
+        1206.0,
+        1017.4,
+        870.4,
+        761.0,
+        785.2,
+        893.4,
+        1276.0,
+        2476.4,
+        4407.2,
+        6138.0,
+        6934.9,
+        6950.3,
+        6599.6,
+        5973.7,
+        4765.5,
+        3242.3,
+        1906.8,
+        1288.7
       ],
       "monthly_twh": [
-        2.5335,
-        1.6817,
-        5.2735,
-        3.9907,
-        2.7131,
-        1.834,
-        0.1941,
-        0.883,
-        1.0183,
-        1.777,
-        2.82,
-        2.301
+        1.7847,
+        1.2876,
+        4.4094,
+        3.5546,
+        2.4922,
+        1.8504,
+        0.3819,
+        1.2441,
+        1.3659,
+        1.7946,
+        2.2415,
+        1.5058
       ],
       "by_resource": {
-        "solar": 42.6,
-        "wind": 57.4
+        "solar": 63.9,
+        "wind": 36.0
       },
       "value_scenarios": {
         "green_h2": {
-          "revenue_low_m": 810.6,
-          "revenue_high_m": 1621.2,
+          "revenue_low_m": 717.4,
+          "revenue_high_m": 1434.8,
           "price_range": [
             30,
             60
           ]
         },
         "desal": {
-          "revenue_low_m": 405.3,
-          "revenue_high_m": 675.5,
+          "revenue_low_m": 358.7,
+          "revenue_high_m": 597.8,
           "price_range": [
             15,
             25
           ]
         },
         "industrial": {
-          "revenue_low_m": 540.4,
-          "revenue_high_m": 1215.9,
+          "revenue_low_m": 478.3,
+          "revenue_high_m": 1076.1,
           "price_range": [
             20,
             45
           ]
         },
         "ev_charging": {
-          "revenue_low_m": 1080.8,
-          "revenue_high_m": 2161.6,
+          "revenue_low_m": 956.5,
+          "revenue_high_m": 1913.0,
           "price_range": [
             40,
             80
@@ -6922,83 +6922,83 @@ const CURTAILMENT_ECONOMICS_DATA = {
       }
     },
     "99.99": {
-      "curtailment_twh": 48.02,
-      "curtailment_pct": 24.1,
-      "peak_mw": 36340.0,
+      "curtailment_twh": 48.467,
+      "curtailment_pct": 24.3,
+      "peak_mw": 38425.0,
       "hourly_shape": [
-        1859.4,
-        2222.3,
-        2545.8,
-        2769.7,
-        2868.9,
-        2768.8,
-        2447.5,
-        1974.9,
-        1702.4,
-        1536.4,
-        1601.1,
-        1976.7,
-        3294.4,
-        6081.9,
-        9408.7,
-        11936.1,
-        13062.7,
-        13054.6,
-        12555.2,
-        11672.0,
-        9964.1,
-        7291.5,
-        4428.5,
-        2539.3
+        1086.3,
+        1389.1,
+        1700.8,
+        1930.4,
+        2038.9,
+        1951.4,
+        1636.7,
+        1213.7,
+        999.8,
+        881.7,
+        981.9,
+        1406.8,
+        2971.5,
+        6307.1,
+        10297.9,
+        13353.4,
+        14755.9,
+        14818.8,
+        14288.1,
+        13266.7,
+        11206.7,
+        7923.9,
+        4395.3,
+        1982.1
       ],
       "monthly_twh": [
-        3.2503,
-        3.1482,
-        5.7875,
-        4.864,
-        5.1637,
-        4.8696,
-        2.7118,
-        4.7659,
-        4.073,
-        3.579,
-        2.9155,
-        2.8921
+        2.7659,
+        2.8835,
+        5.3785,
+        4.7419,
+        5.2632,
+        5.2312,
+        3.4082,
+        5.4862,
+        4.6363,
+        3.7724,
+        2.5845,
+        2.3147
       ],
       "by_resource": {
-        "solar": 68.6,
-        "wind": 21.8,
-        "offshore_wind": 5.3,
+        "solar": 81.3,
+        "wind": 9.2,
+        "offshore_wind": 5.2,
         "hydro": 4.0
       },
       "value_scenarios": {
         "green_h2": {
-          "revenue_low_m": 1440.6,
-          "revenue_high_m": 2881.2,
+          "revenue_low_m": 1454.0,
+          "revenue_high_m": 2908.0,
           "price_range": [
             30,
             60
           ]
         },
         "desal": {
-          "revenue_low_m": 720.3,
-          "revenue_high_m": 1200.5,
+          "revenue_low_m": 727.0,
+          "revenue_high_m": 1211.7,
           "price_range": [
             15,
             25
           ]
         },
         "industrial": {
-          "revenue_low_m": 960.4,
-          "revenue_high_m": 2160.9,
+          "revenue_low_m": 969.3,
+          "revenue_high_m": 2181.0,
           "price_range": [
             20,
             45
           ]
         },
         "ev_charging": {
-          "revenue_low_m": 1920.8,
-          "revenue_high_m": 3841.6,
+          "revenue_low_m": 1938.7,
+          "revenue_high_m": 3877.3,
           "price_range": [
             40,
             80
@@ -12203,7 +12203,7 @@ const CURTAILMENT_ECONOMICS_DATA = {
     },
     "99.99": {
       "curtailment_twh": 206.378,
-      "curtailment_pct": 40.9,
+      "curtailment_pct": 41.0,
       "peak_mw": 66089.0,
       "hourly_shape": [
         21224.4,

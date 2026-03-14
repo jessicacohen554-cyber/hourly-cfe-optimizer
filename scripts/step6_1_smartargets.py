@@ -595,6 +595,7 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
     price_model = PriceModel(iso, fuel_level)
     hourly_lmp, _ = compute_hourly_lmp_vectorized(
         dispatch, demand_mw_profile, stack, price_model, iso=iso,
+        vre_penetration=clean_pct / 100.0 if clean_pct is not None else None,
     )
 
     avg_lmp = float(np.mean(hourly_lmp))
