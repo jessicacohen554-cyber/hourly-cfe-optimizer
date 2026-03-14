@@ -141,16 +141,8 @@ class Jar {
             });
         }
 
-        // 1.5. Existing claimed balls — transparent fill + saturated ring
-        //    gridRecord.e has {resource: twh} for existing clean claimed by buyers
-        if (gridRecord && gridRecord.e) {
-            for (const [res, twh] of Object.entries(gridRecord.e)) {
-                if (twh <= 0 || res === 'sss_allocation') continue;  // SSS already in baseline
-                const pctOfDemand = twh / gridDemand * 100;
-                const ballCount = Math.max(1, Math.round(pctOfDemand));
-                items.push({ resource: res, count: ballCount, tier: 'claimed', glowIso: null });
-            }
-        }
+        // Existing claims (gridRecord.e) are already represented in the grid
+        // baseline — no additional balls needed. Data kept for metrics only.
 
         // 2. New-build procurement balls — transparent/outline
         //    gridRecord.n has {resource: twh} aggregated from all buyers targeting this grid
@@ -213,7 +205,7 @@ class Jar {
         }
 
         // Sort non-curtailed: baseline bottom, claimed middle, new top
-        const tierOrder = { 'baseline': 0, 'claimed': 1, 'new': 2 };
+        const tierOrder = { 'baseline': 0, 'new': 1 };
         items.sort((a, b) => {
             const ta = tierOrder[a.tier] || 0;
             const tb_order = tierOrder[b.tier] || 0;
@@ -236,20 +228,6 @@ class Jar {
                 });
             }
         }
-    }
-
-    _mapClaimedResource(res) {
-        const map = {
-            'grid_clean': 'clean_firm',
-            'sss_allocation': 'clean_firm',
-            'existing_nuclear': 'clean_firm',
-            'nuclear_uprate': 'clean_firm',
-            'existing_vre': 'solar',
-            'existing_vre_hydro': 'hydro',
-            'ccs': 'ccs_ccgt',
-            'ccs_ccgt': 'ccs_ccgt',
-        };
-        return map[res] || res;
     }
 
     /**
