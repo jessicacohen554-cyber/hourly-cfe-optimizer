@@ -1440,8 +1440,130 @@ def run_full_sweep(isos=None, nuclear_retirement_threshold=None,
     return all_results
 
 
+def aggregate_sweep_percentiles(all_results):
+    """Compute P10/P50/P90 uncertainty bands across all sweep scenarios.
+
+    Groups year_results by (iso, year), computes percentiles across 270 scenarios
+    for all scalar metrics and per-resource breakdowns. This is the primary
+    uncertainty quantification output — it shows how sensitive each outcome is
+    to parametric uncertainty (fuel prices, demand growth, grid conditions, etc.).
+
+    Args:
+        all_results: dict[scenario_id, dict[iso, list[year_result]]]
+
+    Returns:
+        dict[iso, dict[year, dict[metric, dict[p10/p50/p90, float]]]]
+    """
+    # Scalar metrics to aggregate
+    SCALAR_METRICS = [
+        'clean_pct', 'demand_twh', 'emissions_mt', 'emission_rate_tco2_mwh',
+        'cost_per_mwh', 'revenue_per_mwh', 'energy_rev_mwh', 'capacity_rev_mwh',
+        'rec_rev_mwh', 'avg_lmp', 'lmp_p90', 'gas_built_gw',
+    ]
+    # Boolean metrics: report % of scenarios where condition is True
+    BOOL_METRICS = ['market_stop', 'nuclear_retired']
+
+    # Collect values by (iso, year)
+    from collections import defaultdict
+    grouped = defaultdict(lambda: defaultdict(list))  # (iso, year) → [year_result, ...]
+
+    for scenario_id, iso_results in all_results.items():
+        for iso, year_results in iso_results.items():
+            for yr in year_results:
+                key = (iso, yr.get('year', 0))
+                grouped[key]['_results'].append(yr)
+
+    aggregates = {}
+    for (iso, year), data in grouped.items():
+        results_list = data['_results']
+        n = len(results_list)
+        if n < 3:
+            continue  # Need at least 3 scenarios for meaningful percentiles
+
+        if iso not in aggregates:
+            aggregates[iso] = {}
+
+        year_agg = {}
+
+        # Scalar metrics
+        for metric in SCALAR_METRICS:
+            values = [r.get(metric, 0) or 0 for r in results_list]
+            values = [v for v in values if isinstance(v, (int, float))]
+            if values:
+                arr = np.array(values, dtype=np.float64)
+                year_agg[metric] = {
+                    'p10': round(float(np.percentile(arr, 10)), 3),
+                    'p50': round(float(np.percentile(arr, 50)), 3),
+                    'p90': round(float(np.percentile(arr, 90)), 3),
+                    'mean': round(float(np.mean(arr)), 3),
+                    'std': round(float(np.std(arr)), 3),
+                    'n': len(values),
+                }
+
+        # Boolean metrics: fraction of scenarios where True
+        for metric in BOOL_METRICS:
+            values = [1 if r.get(metric) else 0 for r in results_list]
+            year_agg[metric] = {
+                'pct_true': round(100 * sum(values) / n, 1),
+                'n': n,
+            }
+
+        # Per-resource mix breakdown
+        resource_agg = {}
+        all_resources = set()
+        for r in results_list:
+            rmix = r.get('resource_mix_twh', {})
+            if isinstance(rmix, dict):
+                all_resources.update(rmix.keys())
+
+        for resource in sorted(all_resources):
+            values = []
+            for r in results_list:
+                rmix = r.get('resource_mix_twh', {})
+                if isinstance(rmix, dict):
+                    values.append(rmix.get(resource, 0) or 0)
+            if values:
+                arr = np.array(values, dtype=np.float64)
+                resource_agg[resource] = {
+                    'p10': round(float(np.percentile(arr, 10)), 3),
+                    'p50': round(float(np.percentile(arr, 50)), 3),
+                    'p90': round(float(np.percentile(arr, 90)), 3),
+                }
+
+        if resource_agg:
+            year_agg['resource_mix_twh'] = resource_agg
+
+        # Nuclear revenue aggregation
+        nuc_rev_values = []
+        for r in results_list:
+            nr = r.get('nuclear_revenue', {})
+            if isinstance(nr, dict) and 'total_mwh' in nr:
+                nuc_rev_values.append(nr['total_mwh'])
+        if nuc_rev_values:
+            arr = np.array(nuc_rev_values, dtype=np.float64)
+            year_agg['nuclear_revenue_mwh'] = {
+                'p10': round(float(np.percentile(arr, 10)), 3),
+                'p50': round(float(np.percentile(arr, 50)), 3),
+                'p90': round(float(np.percentile(arr, 90)), 3),
+            }
+
+        # Zone deployment count
+        zone_counts = [len(r.get('zones_deployed', [])) for r in results_list]
+        if zone_counts:
+            arr = np.array(zone_counts, dtype=np.float64)
+            year_agg['zones_deployed_count'] = {
+                'p10': round(float(np.percentile(arr, 10)), 1),
+                'p50': round(float(np.percentile(arr, 50)), 1),
+                'p90': round(float(np.percentile(arr, 90)), 1),
+            }
+
+        aggregates[iso][str(year)] = year_agg
+
+    return aggregates
+
+
 def save_results(all_results, output_dir=None):
-    """Save results as JSON."""
+    """Save results as JSON, including P10/P50/P90 uncertainty bands."""
     if output_dir is None:
         output_dir = OUTPUT_DIR
     os.makedirs(output_dir, exist_ok=True)
@@ -1453,6 +1575,16 @@ def save_results(all_results, output_dir=None):
         serializable[scenario_id] = {}
         for iso, year_results in iso_results.items():
             serializable[scenario_id][iso] = year_results
+
+    # Compute P10/P50/P90 uncertainty bands across all scenarios
+    if len(all_results) > 1:
+        print("Computing P10/P50/P90 uncertainty bands across sweep scenarios...")
+        aggregates = aggregate_sweep_percentiles(all_results)
+        serializable['_aggregates'] = aggregates
+        n_isos = len(aggregates)
+        n_years = sum(len(yrs) for yrs in aggregates.values())
+        print(f"  Aggregated {n_isos} ISOs × {n_years} year-groups "
+              f"from {len(all_results)} scenarios")
 
     with open(output_path, 'w') as f:
         json.dump(serializable, f, indent=2, default=str)
