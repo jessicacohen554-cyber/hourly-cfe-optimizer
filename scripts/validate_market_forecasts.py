@@ -218,12 +218,13 @@ def build_benchmark_data():
                     "2040": {"solar": 430, "wind": 130, "battery": 170, "gas": 80, "nuclear": 5},
                     "2050": {"solar": 700, "wind": 200, "battery": 280, "gas": 120, "nuclear": 10}
                 },
-                # Demand projections (TWh)
+                # Demand projections (TWh) — AEO 2025: 4,419 TWh (2025) → 6,646 TWh (2050), +50%
                 "demand_twh": {
-                    "2023": 4000, "2030": 4350, "2035": 4620,
-                    "2040": 5000, "2050": 5600
+                    "2023": 4178, "2025": 4419, "2030": 4800, "2035": 5300,
+                    "2040": 5700, "2050": 6646
                 },
-                "demand_growth_pct_yr": 1.2
+                "demand_growth_pct_yr": 1.6,
+                "notes": "AEO 2025 projects +50% generation growth to 2050, driven by data centers (+440 TWh by 2050) and electrification. Sales growth +15.9% by 2035 (3x AEO 2023)."
             },
 
             # Regional EMM-level data (mapped to ISOs)
@@ -353,52 +354,74 @@ def build_benchmark_data():
         # Source: REPEAT Project (repeatproject.org), IRA analysis 2023-2024
         # Focuses on IRA policy impacts through 2035
         "PRINCETON_REPEAT": {
-            "description": "Princeton REPEAT — IRA as-enacted impact analysis through 2035",
+            "description": "Princeton REPEAT 2024 Annual Update — IRA as-enacted impact analysis through 2035",
             "national": {
                 "clean_pct": {
                     "2023": 42.5,
-                    "2030": 58,
-                    "2035": 68
+                    "2030": 75,
+                    "2035": 90
                 },
-                "emissions_mt": {
-                    "2023": 1550,
-                    "2030": 960,
-                    "2035": 720
+                "clean_pct_transmission_constrained": {
+                    "2030": 61,
+                    "2035": 71
                 },
-                "capacity_additions_gw": {
-                    "2030": {"solar": 220, "wind": 80, "battery": 100, "gas": 15},
-                    "2035": {"solar": 420, "wind": 145, "battery": 200, "gas": 25}
-                }
+                "emissions_reduction_vs_2005": {
+                    "2030": "37-41%",
+                    "2035": "66-87%"
+                },
+                "capacity_additions_gw_per_yr": {
+                    "2023_2030": {"solar": 48, "wind": 41},
+                    "2031_2035": {"solar": 145, "wind": 34}
+                },
+                "ira_total_clean_additions_gw_yr": "70-126"
             },
-            "notes": "REPEAT projects faster deployment than EIA AEO due to fuller modeling of IRA incentives. Through 2035 only."
+            "notes": "REPEAT projects 75% clean by 2030, 90% by 2035 with IRA. But if transmission growth stays at 1%/yr (vs required 2.3%/yr), clean% drops to 61%/71%. Our reference sweep (market-only) should be compared to the transmission-constrained case since we don't model transmission expansion. IRA repeal would cost $500B in clean investment and -820 TWh by 2035."
         },
 
         # ── LBNL Queued Up 2024 ───────────────────────────────────────
         # Source: Lawrence Berkeley National Lab, emp.lbl.gov/queues
         # Active interconnection queue as of end 2023
         "LBNL_QUEUED_UP": {
-            "description": "LBNL interconnection queue data — active proposals by ISO and technology",
+            "description": "LBNL Queued Up 2025 Edition — active proposals by ISO and technology (end-2024 data)",
+            "national_summary": {
+                "total_projects": 10300,
+                "total_generation_gw": 1400,
+                "total_storage_gw": 890,
+                "total_queue_gw": 2300,
+                "yoy_change_pct": -12
+            },
             "active_queue_gw": {
-                "PJM": {"solar": 130, "wind": 35, "battery": 85, "total": 260},
-                "ERCOT": {"solar": 120, "wind": 40, "battery": 90, "total": 260},
-                "CAISO": {"solar": 85, "wind": 15, "battery": 95, "total": 200},
-                "NYISO": {"solar": 25, "wind": 12, "battery": 18, "total": 60},
-                "NEISO": {"solar": 12, "wind": 8, "battery": 10, "total": 35},
-                "MISO": {"solar": 95, "wind": 65, "battery": 45, "total": 215},
-                "SPP": {"solar": 55, "wind": 50, "battery": 20, "total": 130}
+                "CAISO": {"total": 523},
+                "MISO": {"total": 312},
+                "PJM": {"total": 287},
+                "ERCOT": {"total": 269},
+                "SPP": {"total": 145},
+                "NYISO": {"total": 132},
+                "NEISO": {"total": 51}
+            },
+            "national_by_technology_gw": {
+                "solar": 956,
+                "storage": 890,
+                "wind": 271,
+                "gas": 136
             },
             "completion_rates": {
-                "solar": 0.14,
+                "overall": 0.13,
+                "gas": 0.31,
                 "wind": 0.20,
-                "battery": 0.12,
-                "overall": 0.15
+                "solar": 0.13,
+                "battery": 0.11,
+                "withdrawal_rate": 0.77
             },
             "median_development_time_years": {
-                "solar": 5.0,
-                "wind": 4.5,
-                "battery": 4.0
+                "2000_2007_cohort": 2.0,
+                "2018_2024_cohort": 4.0
             },
-            "notes": "Queue completion rates are historically low (14-20%). Most projects withdraw. Our model's queue caps (3-8 GW/yr) should be validated against completion-rate-adjusted queue throughput."
+            "ia_suspension_rates": {
+                "high_group": {"isos": ["NYISO", "SPP", "PJM", "NEISO"], "rate_pct": "46-79%"},
+                "low_group": {"isos": ["ERCOT", "CAISO", "MISO"], "rate_pct": "~20%"}
+            },
+            "notes": "Queue completion rates 13% overall (2000-2019 cohort). 77% withdraw. Our model's queue caps (3-8 GW/yr) validated: LBNL effective throughput ≈ queue × 13% completion ÷ ~5yr dev time. E.g., PJM 287 GW × 0.13 / 5 ≈ 7.5 GW/yr, consistent with our 7 GW/yr Facilitating cap."
         },
 
         # ── EPA IPM ───────────────────────────────────────────────────
