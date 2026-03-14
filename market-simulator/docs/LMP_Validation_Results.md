@@ -258,7 +258,7 @@ Based on gas CCGT heat rate variation: ~6.7-7.5 MMBtu/MWh across load range (~12
 |-----------|-----------|-------|------------|
 | +$2-4/MWh average for ERCOT/SPP | Systematic positive | Was: uniform 10% adder. Now: ISO-specific (0% for energy-only) | **Fixed** in v11.3 |
 | -$1-3/MWh for NEISO winter | Systematic negative | Gas pipeline constraint adder only on CCS, not on gas dispatch | Documented as known limitation |
-| +$5-15/MWh P90 for all ISOs | Positive tail bias | Demand-quantile scarcity tail is linear; real scarcity is clustered | Linear ramp intentional to avoid single-hour spikes |
+| +$5-15/MWh P90 for all ISOs | Positive tail bias | Demand-quantile scarcity tail is linear; real scarcity is clustered | Linear ramp intentional; demand elasticity dampening (v11.3) moderates extreme prices by 3-7% |
 | ±30% negative hours | High variance | Negative pricing driven by rare surplus events | Order-of-magnitude accuracy acceptable for screening |
 
 ---

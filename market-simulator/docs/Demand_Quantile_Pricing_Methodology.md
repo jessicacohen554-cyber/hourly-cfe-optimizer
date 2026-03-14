@@ -23,7 +23,7 @@ This approach is **descriptive, not causal**. It reproduces observed price distr
 
 ## 2. Architecture
 
-The pricing computation applies four layers sequentially to each of 8,760 hourly prices:
+The pricing computation applies five layers sequentially to each of 8,760 hourly prices:
 
 ```
 Layer 1: Merit-Order Dispatch (base layer)
@@ -42,6 +42,10 @@ Layer 4: Demand-Quantile Adjustments (this methodology)
   ├─ 4c: Low-demand negative pricing (bottom 7-22% of hours)
   ├─ 4d: Mid-low price compression (between low and midlow percentiles)
   └─ 4e: Clean surplus merit-order effect (> 3% surplus ratio)
+
+Layer 5: Demand Elasticity Dampening (v11.3)
+  └─ If LMP > threshold ($200-300/MWh) → logarithmic curtailment dampening
+  └─ Reduces extreme prices by 3-7% (ISO-specific max curtailment 8-15%)
 ```
 
 ### Implementation Location
@@ -250,7 +254,7 @@ pct_scale = 1.0 + 1.0 × vre_excess       # Widens negative-price band
 
 4. **Static calibration baseline**: Parameters calibrated to 2024 market structure. Structural changes (coal retirements, gas plant additions, storage deployment) may shift price formation beyond what VRE scaling captures.
 
-5. **No demand elasticity**: Price-responsive demand not modeled. At extreme prices (>$200/MWh), industrial curtailment would reduce demand by 5-15%, moderating scarcity pricing.
+5. **Simplified demand elasticity** (**Addressed v11.3**): Post-pricing dampening applied when LMP exceeds ISO-specific threshold ($200-300/MWh). Logarithmic curtailment ramp (5-15% max, ISO-specific) moderates extreme prices. This is a reduced-form approximation — real demand response involves complex contract structures, notification delays, and minimum curtailment durations not captured here.
 
 ---
 
