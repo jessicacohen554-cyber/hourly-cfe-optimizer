@@ -339,11 +339,12 @@
         var glowOp = opts.glowOpacity !== undefined ? opts.glowOpacity : 0.1;
         var fillOp = opts.fillOpacity !== undefined ? opts.fillOpacity : 0.2;
         var borderOp = opts.borderOpacity !== undefined ? opts.borderOpacity : 0.6;
+        var ts = opts.timeScale !== undefined ? opts.timeScale : 1.0;
 
         for (var i = 0; i < fs.bars.length; i++) {
             var bar = fs.bars[i];
-            var oscillation = (Math.sin(t * bar.freq + bar.phase) + 1) / 2;
-            var waveEffect = (Math.sin(t * 0.5 + i * 0.15) + 1) / 2;
+            var oscillation = (Math.sin(t * ts * bar.freq + bar.phase) + 1) / 2;
+            var waveEffect = (Math.sin(t * ts * 0.5 + i * 0.15) + 1) / 2;
             var barH = h * bar.maxH * (oscillation * 0.6 + waveEffect * 0.4);
             var barY = h - barH;
             var bw = fs.barWidth;
@@ -662,9 +663,10 @@
                 pathOpacity: 0.08, nodeOpacity: 0.2, ringOpacity: 0.25,
                 signalGlowOpacity: 0.08, signalCoreOpacity: 0.4
             });
-            // Top layer: frequency bars (light-adjusted)
+            // Top layer: frequency bars (light-adjusted, slowed to stacked-curve pace)
             drawFrequency(st.ctx, st.w, st.h, st.freq, t, {
-                glowOpacity: 0.08, fillOpacity: 0.25, borderOpacity: 0.5
+                glowOpacity: 0.08, fillOpacity: 0.25, borderOpacity: 0.5,
+                timeScale: 0.35
             });
         }
     });
