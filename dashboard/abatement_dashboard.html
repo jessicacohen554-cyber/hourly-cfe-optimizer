@@ -90,9 +90,25 @@ html, body {
 .panel-navy .nr-interpret-label { color: #E2E8F0 !important; }
 .panel-navy .nr-interpret-desc { color: #94A3B8 !important; }
 
-/* contrast-fix: density section header text on light bg */
-.density-deep-dive-section .section-title { color: #1E293B; } /* contrast-fix: ratio 12.6:1 on bg white */
-.density-deep-dive-section .section-subtitle { color: #475569; } /* contrast-fix: ratio 5.34:1 on bg white */
+/* contrast-fix: density section is also panel-navy (#0F172A bg) */
+.density-deep-dive-section.panel-navy .section-title { color: #E2E8F0 !important; } /* contrast-fix: ratio 12.3:1 on bg #0F172A */
+.density-deep-dive-section.panel-navy .section-subtitle { color: #94A3B8 !important; } /* contrast-fix: ratio 6.59:1 on bg #0F172A */
+
+/* contrast-fix: density reading guide in navy */
+.panel-navy .density-reading-guide { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); }
+.panel-navy .nr-reading-guide-title { color: #86EFAC !important; }
+.panel-navy .density-reading-guide .nr-reading-guide-title { color: #E2E8F0 !important; } /* contrast-fix: ratio 12.3:1 on bg #0F172A */
+.panel-navy .density-reading-guide .nr-reading-guide-text { color: #CBD5E1 !important; } /* contrast-fix: ratio 10.2:1 on bg #0F172A */
+
+/* contrast-fix: density row elements in navy */
+.panel-navy .density-resource-name { color: #E2E8F0 !important; } /* contrast-fix: was var(--text-primary), now #E2E8F0, ratio 12.3:1 on bg #0F172A */
+.panel-navy .density-stat-label { color: #94A3B8 !important; } /* contrast-fix: was #64748B, now #94A3B8, ratio 6.59:1 on bg #0F172A */
+.panel-navy .density-stat-value { color: #E2E8F0 !important; } /* contrast-fix: was var(--text-primary), now #E2E8F0, ratio 12.3:1 on bg #0F172A */
+.panel-navy .density-driver { color: #94A3B8 !important; } /* contrast-fix: was #64748B, now #94A3B8, ratio 6.59:1 on bg #0F172A */
+.panel-navy .density-axis-tick { color: #94A3B8 !important; } /* contrast-fix: was #64748B, now #94A3B8, ratio 6.59:1 on bg #0F172A */
+.panel-navy .density-axis-label { color: #94A3B8 !important; } /* contrast-fix: was #64748B, now #94A3B8, ratio 6.59:1 on bg #0F172A */
+.panel-navy .density-row { border-bottom-color: rgba(255,255,255,0.06); }
+.panel-navy .density-strip-wrap { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); }
 
 /* contrast-fix: NR zero resource text in navy */
 .panel-navy .nr-zero-resource .nr-bar-container { background: rgba(255,255,255,0.02); }

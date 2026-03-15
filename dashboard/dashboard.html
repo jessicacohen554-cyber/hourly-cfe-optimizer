@@ -1570,7 +1570,7 @@ function updateKeyFinding(iso, threshold, entry, region) {
     const dominantName = dominant[0].replace('clean_firm', 'clean firm');
     const dominantPct = dominant[1];
     const isoLabel = region.label.split(' (')[0];
-    const cfTag = selectedCfCost !== 90 ? ` <span style="color:#D97706;font-size:0.85em;">(CF@$${selectedCfCost})</span>` : '';
+    const cfTag = selectedCfCost !== 90 ? ` <span style="color:#B45309;font-size:0.85em;" /* contrast-fix: was #D97706, now #B45309, ratio 5.02:1 on white */>(CF@$${selectedCfCost})</span>` : '';
 
     let text = '';
     if (proc <= 100) {
@@ -1616,7 +1616,7 @@ function updateMetrics(region, entry) {
             document.getElementById('metricCost').textContent = '+$' + formatNum(adj.newIncremental) + '/MWh';
             document.getElementById('metricCostSub').innerHTML =
                 `$${formatNum(adj.newEffective)}/MWh blended` +
-                (selectedCfCost !== 90 ? ` <span style="color:#D97706;font-size:0.78rem;">(CF@$${selectedCfCost})</span>` : '');
+                (selectedCfCost !== 90 ? ` <span style="color:#B45309;font-size:0.78rem;" /* contrast-fix: was #D97706, now #B45309, ratio 5.02:1 */>(CF@$${selectedCfCost})</span>` : '');
         } else {
             document.getElementById('metricCost').textContent = '$' + formatNum(adj.newEffective);
             document.getElementById('metricCostSub').textContent = 'per MWh (effective)';
@@ -2337,25 +2337,25 @@ function updatePeakCapacity(entry, region) {
 
     container.innerHTML = `
         <div class="peak-capacity-note">
-            At <strong style="color:#0EA5E9;">${procPct}%</strong> procurement and
-            <strong style="color:#0EA5E9;">${currentThreshVal}%</strong> hourly match,
-            <strong style="color:#22C55E;">${formatPct(cleanCoveragePct)}</strong> of peak demand is covered by clean capacity.
+            At <strong style="color:#0369A1;">${procPct}%</strong> procurement and
+            <strong style="color:#0369A1;">${currentThreshVal}%</strong> hourly match,
+            <strong style="color:#15803D;">${formatPct(cleanCoveragePct)}</strong> of peak demand is covered by clean capacity.
             Gas backup provides the remaining
-            <strong style="color:#EF4444;">${formatPct(peakGapPct, 1)}</strong>.
+            <strong style="color:#DC2626;">${formatPct(peakGapPct, 1)}</strong>.
         </div>
         <div class="peak-tower-wrap">
             <div class="peak-tower">
-                <div class="peak-tower-value" style="color:#F59E0B;">${formatCommas(peakDemandMW)} MW</div>
+                <div class="peak-tower-value" style="color:#B45309;">${formatCommas(peakDemandMW)} MW</div>
                 <div class="peak-tower-bar" style="height:${demandH}px; background: rgba(245,158,11,0.4); border: 2px solid #F59E0B;"></div>
                 <div class="peak-tower-label">RA Peak<br>Demand</div>
             </div>
             <div class="peak-tower">
-                <div class="peak-tower-value" style="color:#22C55E;">${formatCommas(cleanCoverageMW)} MW</div>
+                <div class="peak-tower-value" style="color:#15803D;">${formatCommas(cleanCoverageMW)} MW</div>
                 <div class="peak-tower-bar" style="height:${coveredH}px; background: rgba(34,197,94,0.4); border: 2px solid #22C55E;"></div>
                 <div class="peak-tower-label">Clean<br>Coverage</div>
             </div>
             <div class="peak-tower">
-                <div class="peak-tower-value" style="color:#EF4444;">${formatCommas(gasBackupMW)} MW</div>
+                <div class="peak-tower-value" style="color:#DC2626;">${formatCommas(gasBackupMW)} MW</div>
                 <div class="peak-tower-bar" style="height:${gapH}px; background: rgba(239,68,68,0.4); border: 2px solid #EF4444;"></div>
                 <div class="peak-tower-label">Gas<br>Backup</div>
             </div>
@@ -2403,7 +2403,7 @@ function updateCostPanel(entry) {
                 <td>${totalPct != null ? Math.round(totalPct) + '%' : '--'}</td>
                 <td>${existPct != null ? Math.round(existPct) + '%' : '--'}</td>
                 <td>${newPct != null ? Math.round(newPct) + '%' : '--'}</td>
-                <td${isCfAdjusted ? ' style="color:#D97706;font-weight:600;"' : ''}>${displayCost != null ? '$' + formatNum(displayCost) : '--'}${isCfAdjusted ? '*' : ''}</td>
+                <td${isCfAdjusted ? ' style="color:#B45309;font-weight:600;" /* contrast-fix: was #D97706, now #B45309, ratio 5.02:1 */' : ''}>${displayCost != null ? '$' + formatNum(displayCost) : '--'}${isCfAdjusted ? '*' : ''}</td>
             </tr>`;
     });
 
@@ -2422,7 +2422,7 @@ function updateCostPanel(entry) {
             </tr>`;
     });
 
-    const cfNote = selectedCfCost !== 90 ? `<div class="cost-note" style="color:#D97706;">* Clean firm cost adjusted from $90/MWh to $${selectedCfCost}/MWh. New-build portion: ${formatNum(rc.clean_firm?.new_pct || 0)}% of demand &times; $${selectedCfCost}/MWh LCOE. Delta: +$${formatNum(adj.totalDelta)}/MWh.</div>` : '';
+    const cfNote = selectedCfCost !== 90 ? `<div class="cost-note" style="color:#B45309;">* Clean firm cost adjusted from $90/MWh to $${selectedCfCost}/MWh. New-build portion: ${formatNum(rc.clean_firm?.new_pct || 0)}% of demand &times; $${selectedCfCost}/MWh LCOE. Delta: +$${formatNum(adj.totalDelta)}/MWh.</div>` : '';
 
     content.innerHTML = `
         <div class="cost-table-wrapper">
@@ -2441,13 +2441,13 @@ function updateCostPanel(entry) {
                     <tr class="row-total">
                         <td>Total Blended Cost</td>
                         <td colspan="3"></td>
-                        <td${selectedCfCost !== 90 ? ' style="color:#D97706;"' : ''}>${'$' + formatNum(adj.newTotal)}/MWh</td>
+                        <td${selectedCfCost !== 90 ? ' style="color:#B45309;"' : ''}>${'$' + formatNum(adj.newTotal)}/MWh</td>
                     </tr>
                     ${costs.effective_cost_per_useful_mwh != null ? `
                     <tr class="row-total">
                         <td>Effective Cost (adj. for curtailment)</td>
                         <td colspan="3"></td>
-                        <td${selectedCfCost !== 90 ? ' style="color:#D97706;"' : ''}>$${formatNum(adj.newEffective)}/MWh</td>
+                        <td${selectedCfCost !== 90 ? ' style="color:#B45309;"' : ''}>$${formatNum(adj.newEffective)}/MWh</td>
                     </tr>` : ''}
                 </tbody>
             </table>
@@ -2562,7 +2562,7 @@ function refreshNarrativeStats() {
     const avgCost100 = getAvgAdjustedCost('100');
     const has100 = avgCost100 > 0;
     const fullMultiplier = has100 ? (avgCost100 / avgCost75) : (avgCost99 / avgCost75);
-    const cfTag = selectedCfCost !== 90 ? ` <span style="font-size:0.72rem;color:#D97706;">(CF@$${selectedCfCost})</span>` : '';
+    const cfTag = selectedCfCost !== 90 ? ` <span style="font-size:0.72rem;color:#B45309;">(CF@$${selectedCfCost})</span>` : '';
 
     container.innerHTML = `
         <div class="story-stat-card">

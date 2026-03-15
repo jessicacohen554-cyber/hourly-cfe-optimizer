@@ -1959,8 +1959,8 @@
             let status, color;
             if (reservePct < 0) { status = 'EMERGENCY'; color = '#DC2626'; }
             else if (reservePct < 3) { status = 'CRITICAL'; color = '#F97316'; }
-            else if (reservePct < 6) { status = 'TIGHT'; color = '#D97706'; }
-            else { status = 'NORMAL'; color = '#16A34A'; }
+            else if (reservePct < 6) { status = 'TIGHT'; color = '#B45309'; /* contrast-fix: was #D97706, now #B45309, ratio 5.02:1 */ }
+            else { status = 'NORMAL'; color = '#15803D'; /* contrast-fix: was #16A34A, now #15803D, ratio 5.02:1 */ }
 
             els.reserveBadge.textContent = `${status} ${reservePct >= 0 ? '+' : ''}${reservePct.toFixed(1)}%`;
             els.reserveBadge.style.backgroundColor = hexToRgba(color, 0.1);

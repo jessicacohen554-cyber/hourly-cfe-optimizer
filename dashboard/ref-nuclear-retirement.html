@@ -19,7 +19,7 @@ body { background: var(--bg-page-white); }
     max-width: 1100px; margin: 0 auto; padding: 20px 24px 0;
     font-size: 0.82rem; font-family: var(--font-heading); letter-spacing: 0.03em;
 }
-.breadcrumb a { color: #0EA5E9; text-decoration: none; }
+.breadcrumb a { color: #0369A1; /* contrast-fix: was #0EA5E9, now #0369A1, ratio 5.93:1 on white */ text-decoration: none; }
 .breadcrumb .sep { color: rgba(0,0,0,0.3); margin: 0 8px; }
 .breadcrumb .current { color: #374151; }
 
@@ -61,10 +61,10 @@ body { background: var(--bg-page-white); }
     font-family: var(--font-data, var(--font-mono)); font-size: 1.6rem;
     font-weight: 700; line-height: 1.2;
 }
-.hero-stat .val.safe { color: #22C55E; }
-.hero-stat .val.risk { color: #EF4444; }
-.hero-stat .val.warn { color: #F59E0B; }
-.hero-stat .val.neutral { color: #0EA5E9; }
+.hero-stat .val.safe { color: #15803D; /* contrast-fix: was #22C55E, now #15803D, ratio 5.02:1 on white */ }
+.hero-stat .val.risk { color: #DC2626; /* contrast-fix: was #EF4444, now #DC2626, ratio 4.83:1 on white */ }
+.hero-stat .val.warn { color: #B45309; /* contrast-fix: was #F59E0B, now #B45309, ratio 5.02:1 on white */ }
+.hero-stat .val.neutral { color: #0369A1; /* contrast-fix: was #0EA5E9, now #0369A1, ratio 5.93:1 on white */ }
 .hero-stat .lbl {
     font-family: var(--font-body); font-size: 0.75rem; color: rgba(255,255,255,0.75);
     margin-top: 4px;
@@ -106,8 +106,8 @@ body { background: var(--bg-page-white); }
 }
 .accordion-badge.model-a { background: rgba(14,165,233,0.12); color: #0284C7; }
 .accordion-badge.model-b { background: rgba(99,102,241,0.12); color: #6366F1; }
-.accordion-badge.model-c { background: rgba(245,158,11,0.12); color: #D97706; }
-.accordion-badge.cross { background: rgba(34,197,94,0.12); color: #16A34A; }
+.accordion-badge.model-c { background: rgba(245,158,11,0.12); color: #B45309; /* contrast-fix: was #D97706, now #B45309, ratio 5.02:1 on white */ }
+.accordion-badge.cross { background: rgba(34,197,94,0.12); color: #15803D; /* contrast-fix: was #16A34A, now #15803D, ratio 5.02:1 on white */ }
 .accordion-body {
     max-height: 0; overflow: hidden; transition: max-height 0.4s ease;
     background: #FAFBFC;
@@ -158,8 +158,8 @@ body { background: var(--bg-page-white); }
     font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.04em;
 }
 .model-table td { padding: 8px 12px; border-bottom: 1px solid #F3F4F6; }
-.model-table .cell-safe { background: rgba(34,197,94,0.1); color: #16A34A; font-weight: 600; }
-.model-table .cell-warn { background: rgba(245,158,11,0.1); color: #D97706; font-weight: 600; }
+.model-table .cell-safe { background: rgba(34,197,94,0.1); color: #15803D; /* contrast-fix: was #16A34A, now #15803D, ratio 5.02:1 on white */ font-weight: 600; }
+.model-table .cell-warn { background: rgba(245,158,11,0.1); color: #B45309; /* contrast-fix: was #D97706, now #B45309, ratio 5.02:1 on white */ font-weight: 600; }
 .model-table .cell-danger { background: rgba(239,68,68,0.1); color: #DC2626; font-weight: 600; }
 
 /* ─── Heatmap table ───────────────────────────────────────────────── */
@@ -191,7 +191,7 @@ body { background: var(--bg-page-white); }
 .pw-type.power { background: rgba(99,102,241,0.12); color: #6366F1; }
 .pw-type.economy { background: rgba(239,68,68,0.12); color: #DC2626; }
 .pw-type.reference { background: rgba(107,114,128,0.12); color: #6B7280; }
-.pw-type.queue { background: rgba(245,158,11,0.12); color: #D97706; }
+.pw-type.queue { background: rgba(245,158,11,0.12); color: #B45309; /* contrast-fix: was #D97706, now #B45309, ratio 5.02:1 on white */ }
 .pathway-card .pw-stat {
     font-family: var(--font-mono); font-size: 0.78rem; color: #374151;
 }
@@ -216,7 +216,7 @@ body { background: var(--bg-page-white); }
     padding: 2px 6px; border-radius: 4px; margin-left: 4px;
     font-family: var(--font-heading); text-transform: uppercase; letter-spacing: 0.04em;
 }
-.policy-badge.active { background: rgba(34,197,94,0.15); color: #16A34A; }
+.policy-badge.active { background: rgba(34,197,94,0.15); color: #15803D; /* contrast-fix: was #16A34A, now #15803D, ratio 5.02:1 on white */ }
 .policy-badge.expired { background: rgba(239,68,68,0.15); color: #DC2626; }
 .policy-badge.ppa { background: rgba(14,165,233,0.15); color: #0284C7; }
 
