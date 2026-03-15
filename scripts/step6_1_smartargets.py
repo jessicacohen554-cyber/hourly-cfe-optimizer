@@ -50,6 +50,10 @@ from pipeline_config import (
     compute_storage_revenue_credit,
     OFFSHORE_ISOS, CCS_CAP_TWH, GEOTHERMAL_CAP_TWH,
     H,
+    REGULATORY_FEEDBACK_THRESHOLD_MULTIPLIER,
+    REGULATORY_FEEDBACK_DAMPING,
+    REGULATORY_FEEDBACK_CAP_MULTIPLIER,
+    ENERGY_ONLY_ISOS,
 )
 from dispatch_utils import (
     load_common_data, get_demand_profile, get_supply_profiles,
@@ -556,6 +560,88 @@ def get_effective_cumulative_gw(tech, model_deployed_gw, learning_speed, year):
     base = WRIGHT_CUMULATIVE_GW_2025.get(tech, 1.0)
     bg = get_background_gw(tech, learning_speed, year)
     return base + model_deployed_gw + bg
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# REGULATORY FEEDBACK — LMP DAMPENING
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def apply_regulatory_feedback(iso, year, avg_lmp, lmp_history, hourly_lmp):
+    """Apply regulatory feedback dampening to LMP when sustained high prices trigger reform.
+
+    Models the real-world regulatory response to sustained high electricity prices:
+    - Energy-only ISOs (ERCOT, SPP): introduction of capacity payments reduces scarcity pricing
+    - Capacity market ISOs (PJM, NYISO, etc.): increased capacity procurement target
+
+    Operates on price signals only — does NOT modify dispatch physics.
+
+    Args:
+        iso: ISO identifier
+        year: Simulation year
+        avg_lmp: Average LMP for this year (pre-feedback)
+        lmp_history: dict {iso: [(year, avg_lmp), ...]} — rolling history
+        hourly_lmp: 8760-element numpy array of hourly LMP values (modified in-place)
+
+    Returns:
+        (adjusted_avg_lmp, adjusted_p90_lmp, feedback_applied, feedback_details)
+    """
+    baseline_lmp = EGRID_2023_LMP.get(iso, 30.0)
+    threshold_lmp = baseline_lmp * REGULATORY_FEEDBACK_THRESHOLD_MULTIPLIER
+    cap_lmp = baseline_lmp * REGULATORY_FEEDBACK_CAP_MULTIPLIER
+
+    # Build rolling average from history (up to 3 most recent periods)
+    history = lmp_history.get(iso, [])
+    recent = [lmp for _, lmp in history[-3:]]
+    recent.append(avg_lmp)
+    rolling_avg = sum(recent) / len(recent)
+
+    feedback_details = {
+        'rolling_avg_lmp': round(rolling_avg, 1),
+        'threshold_lmp': round(threshold_lmp, 1),
+        'cap_lmp': round(cap_lmp, 1),
+        'baseline_lmp': round(baseline_lmp, 1),
+    }
+
+    if rolling_avg <= threshold_lmp:
+        # No feedback needed
+        return avg_lmp, float(np.percentile(hourly_lmp, 90)), False, feedback_details
+
+    # Calculate damping factor based on how far above threshold
+    excess_ratio = rolling_avg / threshold_lmp - 1.0
+    damping_factor = min(1.0, excess_ratio * REGULATORY_FEEDBACK_DAMPING)
+
+    # Energy-only ISOs get stronger damping (capacity payments are a bigger structural shift)
+    if iso in ENERGY_ONLY_ISOS:
+        damping_factor = min(1.0, damping_factor * 1.3)
+
+    # Dampen scarcity hours (top 5% of hourly prices) — these are the hours
+    # where ORDC/capacity reforms would have the most impact
+    p95 = np.percentile(hourly_lmp, 95)
+    scarcity_mask = hourly_lmp > p95
+    if scarcity_mask.any():
+        # Reduce scarcity-hour prices toward the P95 level
+        hourly_lmp[scarcity_mask] = (
+            p95 + (hourly_lmp[scarcity_mask] - p95) * (1.0 - damping_factor)
+        )
+
+    # Hard cap: if avg still exceeds cap_lmp, scale all positive hours proportionally
+    new_avg = float(np.mean(hourly_lmp))
+    if new_avg > cap_lmp:
+        # Scale only positive hours to bring average down
+        pos_mask = hourly_lmp > 0
+        if pos_mask.any():
+            scale = cap_lmp / new_avg
+            hourly_lmp[pos_mask] *= scale
+
+    adjusted_avg = float(np.mean(hourly_lmp))
+    adjusted_p90 = float(np.percentile(hourly_lmp, 90))
+
+    feedback_details['damping_factor'] = round(damping_factor, 3)
+    feedback_details['pre_feedback_avg'] = round(avg_lmp, 1)
+    feedback_details['post_feedback_avg'] = round(adjusted_avg, 1)
+
+    return adjusted_avg, adjusted_p90, True, feedback_details
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1093,6 +1179,9 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
 
     results = {iso: [] for iso in isos}
 
+    # Rolling LMP history for regulatory feedback (tracks avg LMP per ISO per year)
+    lmp_history = {iso: [] for iso in isos}
+
     # Per-ISO state tracking
     iso_state = {}
     for iso in isos:
@@ -1268,6 +1357,20 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                     )
                     if _lmp_cache is not None:
                         _lmp_cache[_lmp_key] = (hourly_lmp, avg_lmp, p90_lmp)
+
+                # --- REGULATORY FEEDBACK ---
+                # Apply dampening to scarcity hours if sustained high LMP triggers reform.
+                # Copy hourly_lmp to avoid corrupting cache.
+                hourly_lmp = hourly_lmp.copy()
+                avg_lmp_fb, p90_lmp_fb, fb_applied, fb_details = apply_regulatory_feedback(
+                    iso, year, avg_lmp, lmp_history, hourly_lmp)
+                if fb_applied:
+                    avg_lmp = avg_lmp_fb
+                    p90_lmp = p90_lmp_fb
+                    _log(f"  {iso} regulatory feedback at {t_end:.0f}%: "
+                         f"avg LMP ${fb_details['pre_feedback_avg']:.0f}"
+                         f"→${fb_details['post_feedback_avg']:.0f} "
+                         f"(damping={fb_details['damping_factor']:.2f})")
 
                 # Revenue for the DELTA resources at this LMP
                 blended_revenue, per_res_rev, rev_breakdown = compute_zone_revenue(
@@ -1453,6 +1556,12 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                             )
                             if _lmp_cache is not None:
                                 _lmp_cache[_lmp_key_m] = (hourly_lmp_m, avg_lmp_m, p90_lmp_m)
+
+                        # --- REGULATORY FEEDBACK (mandated section) ---
+                        hourly_lmp_m = hourly_lmp_m.copy()
+                        avg_lmp_m, p90_lmp_m, fb_m, _ = apply_regulatory_feedback(
+                            iso, year, avg_lmp_m, lmp_history, hourly_lmp_m)
+
                         m_rev, _, _ = compute_zone_revenue(
                             iso, t_end, delta_pcts, hourly_lmp_m,
                             supply_profiles_iso, demand_total_mwh, year,
@@ -1645,6 +1754,10 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                 'zones_deployed': zone_results,
             }
             results[iso].append(year_result)
+
+            # Record LMP for regulatory feedback rolling average
+            recorded_lmp = avg_lmp if zone_deployed else WHOLESALE_PRICES[iso]
+            lmp_history[iso].append((year, recorded_lmp))
 
     return results
 

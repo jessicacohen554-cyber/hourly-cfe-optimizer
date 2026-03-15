@@ -1,9 +1,45 @@
 # Advanced Sensitivity Model — Complete Specification
 
 > **Authoritative reference for all design decisions.** If a future session needs context, read this file first.
-> Last updated: 2026-03-14.
+> Last updated: 2026-03-15.
 
-## Current Status (Mar 14, 2026)
+## Current Status (Mar 15, 2026)
+
+### Regulatory Feedback — LMP Dampening at High Clean Penetration (Added — Mar 15, 2026)
+
+**Branch:** `claude/add-regulatory-feedback-n8MJ1`
+
+**Problem**: SMARTargets forward sweep projects unrealistic LMP at high clean penetration. ERCOT P50 LMP reaches $172/MWh by 2050 (vs EIA $35, Cambium $10). PJM P50 hits $111/MWh by 2050 (vs EIA $43). The divergence comes from scarcity hours pulling up averages — plausible under static ORDC/energy-only pricing, but unrealistic because regulators would intervene with capacity mechanisms or price reforms well before averages sustained at those levels.
+
+**Real-world precedent**: ERCOT reformed ORDC after 2021 freeze. PJM reformed RPM parameters after price spikes. MISO raised VOLL to $10K in 2025.
+
+**Mechanism**:
+1. Track rolling 3-period average LMP per ISO across simulation years
+2. If rolling avg exceeds `REGULATORY_FEEDBACK_THRESHOLD_MULTIPLIER` × 2023 baseline LMP → trigger reform
+3. Dampen scarcity hours (top 5% of hourly prices) by a factor proportional to the excess
+4. Energy-only ISOs (ERCOT, SPP) get 30% stronger damping (capacity payment introduction is a bigger structural shift)
+5. Hard cap: if avg LMP still exceeds `REGULATORY_FEEDBACK_CAP_MULTIPLIER` × baseline, scale all positive hours proportionally
+
+**Parameters** (`pipeline_config.py`):
+```python
+REGULATORY_FEEDBACK_THRESHOLD_MULTIPLIER = 2.0  # Trigger when rolling avg > 2× baseline
+REGULATORY_FEEDBACK_DAMPING = 0.5               # Damping strength (0=none, 1=full clamp)
+REGULATORY_FEEDBACK_CAP_MULTIPLIER = 1.75       # Hard cap: effective avg ≤ 1.75× baseline
+ENERGY_ONLY_ISOS = {'ERCOT', 'SPP'}
+CAPACITY_MARKET_ISOS = {'PJM', 'NYISO', 'NEISO', 'MISO', 'CAISO'}
+```
+
+**What it does NOT change**: Dispatch physics, hourly generation profiles, merit-order stacks. Only price signals that feed back into deployment economics within the SMARTargets simulation loop.
+
+**Files modified**:
+- `scripts/pipeline_config.py` — Added `REGULATORY_FEEDBACK_*` constants + `ENERGY_ONLY_ISOS` / `CAPACITY_MARKET_ISOS`
+- `scripts/step6_1_smartargets.py` — Added `apply_regulatory_feedback()` function; integrated into profit-driven and mandated deployment sections of `run_market_simulation()`; added `lmp_history` rolling tracker
+
+**Validation targets**: ERCOT 2050 P50 LMP should come down from ~$172 to ~$50-60 range. PJM 2050 should drop from ~$111 to ~$60-75.
+
+---
+
+## Previous Status (Mar 14, 2026)
 
 ### Unit Commitment / Min-Gen Constraints in LMP Engine (Added — Mar 14, 2026)
 
