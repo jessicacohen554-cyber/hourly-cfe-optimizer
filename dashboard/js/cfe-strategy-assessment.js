@@ -174,18 +174,19 @@ function buildScorecardData(threshold, participation) {
     }
 
     // Compute raw values for each criterion
+    // Cost Efficiency = total system cost (clean procurement + new-build gas capacity)
+    // The cost of new gas is endogenous to the strategy — 1B's cheap per-MWh hides
+    // massive gas backup costs that are a direct consequence of that strategy choice
     const co2Vals = CORE_STRATEGIES.map(s => aggs[s].totalCo2);
-    const costVals = CORE_STRATEGIES.map(s => aggs[s].avgCost);
+    const costVals = CORE_STRATEGIES.map(s => computeSystemCost(s, participation, threshold));
     const gasVals = CORE_STRATEGIES.map(s => aggs[s].totalGasGw);
-    const sysCostVals = CORE_STRATEGIES.map(s => computeSystemCost(s, participation, threshold));
     const learnVals = CORE_STRATEGIES.map(s => computeLearningScore(s));
     const curtVals = CORE_STRATEGIES.map(s => aggs[s].totalCurtTwh);
 
-    // Rank: co2 higher is better, cost lower better, gas lower better, sysCost lower better, learning higher better, curt lower better
+    // Rank: co2 higher is better, cost lower better, gas lower better, learning higher better, curt lower better
     const co2Ranks = rankStrategies(CORE_STRATEGIES, co2Vals, false);
-    const costRanks = rankStrategies(CORE_STRATEGIES, costVals, true);
+    const costRanks = rankStrategies(CORE_STRATEGIES, costVals, true);  // lower system cost = better
     const gasRanks = rankStrategies(CORE_STRATEGIES, gasVals, true);
-    const sysCostRanks = rankStrategies(CORE_STRATEGIES, sysCostVals, true);  // lower total system cost = better
     const learnRanks = rankStrategies(CORE_STRATEGIES, learnVals, false);
     const curtRanks = rankStrategies(CORE_STRATEGIES, curtVals, true);
 
@@ -194,19 +195,17 @@ function buildScorecardData(threshold, participation) {
         const co2Grade = rankToGrade(co2Ranks[s], n);
         const costGrade = rankToGrade(costRanks[s], n);
         const gasGrade = rankToGrade(gasRanks[s], n);
-        const sysCostGrade = rankToGrade(sysCostRanks[s], n);
         const learnGrade = rankToGrade(learnRanks[s], n);
         const curtGrade = rankToGrade(curtRanks[s], n);
 
-        // Composite: equally weighted ranks across 6 criteria
-        const composite = 100 - ((co2Ranks[s] + costRanks[s] + gasRanks[s] + sysCostRanks[s] + learnRanks[s] + curtRanks[s]) / (6 * n)) * 100;
+        // Composite: equally weighted ranks across 5 criteria
+        const composite = 100 - ((co2Ranks[s] + costRanks[s] + gasRanks[s] + learnRanks[s] + curtRanks[s]) / (5 * n)) * 100;
 
         results.push({
             strategy: s,
             co2: { val: co2Vals[i], grade: co2Grade, rank: co2Ranks[s] },
             cost: { val: costVals[i], grade: costGrade, rank: costRanks[s] },
             gas: { val: gasVals[i], grade: gasGrade, rank: gasRanks[s] },
-            sysCost: { val: sysCostVals[i], grade: sysCostGrade, rank: sysCostRanks[s] },
             learn: { val: learnVals[i], grade: learnGrade, rank: learnRanks[s] },
             curt: { val: curtVals[i], grade: curtGrade, rank: curtRanks[s] },
             composite: Math.round(composite)
@@ -247,12 +246,13 @@ function populateExecutiveSummary() {
     const scorecard = buildScorecardData(95, 25);
     const best = scorecard[0];
 
-    // Find strategy with lowest cost at 95%/25%
+    // Find strategy with lowest TRUE cost (system cost = clean + new-build gas) at 95%/25%
     let lowestCost = Infinity, lowestCostStrat = '';
     let highestCo2 = -Infinity, highestCo2Strat = '';
     for (const s of CORE_STRATEGIES) {
         const agg = cachedAggregate(s, 25, 95);
-        if (agg.avgCost < lowestCost) { lowestCost = agg.avgCost; lowestCostStrat = s; }
+        const sysCost = computeSystemCost(s, 25, 95);
+        if (sysCost < lowestCost) { lowestCost = sysCost; lowestCostStrat = s; }
         if (agg.totalCo2 > highestCo2) { highestCo2 = agg.totalCo2; highestCo2Strat = s; }
     }
 
@@ -346,9 +346,8 @@ function renderScorecardTable(threshold, participation) {
         tr.innerHTML = `
             <td style="font-weight:600; white-space:nowrap; color:${STRATEGY_COLORS[row.strategy]}">${STRATEGY_LABELS[row.strategy]}</td>
             <td><span class="${gradeClass(row.co2.grade)}">${row.co2.grade}</span> <span style="font-size:0.8em;color:var(--text-muted)">${fmt(row.co2.val)} Mt</span></td>
-            <td><span class="${gradeClass(row.cost.grade)}">${row.cost.grade}</span> <span style="font-size:0.8em;color:var(--text-muted)">$${fmt(row.cost.val)}/MWh</span></td>
+            <td><span class="${gradeClass(row.cost.grade)}">${row.cost.grade}</span> <span style="font-size:0.8em;color:var(--text-muted)">$${fmt(row.cost.val / 1000, 0)}B</span></td>
             <td><span class="${gradeClass(row.gas.grade)}">${row.gas.grade}</span> <span style="font-size:0.8em;color:var(--text-muted)">${fmt(row.gas.val, 0)} GW</span></td>
-            <td><span class="${gradeClass(row.sysCost.grade)}">${row.sysCost.grade}</span> <span style="font-size:0.8em;color:var(--text-muted)">$${fmt(row.sysCost.val / 1000, 0)}B</span></td>
             <td><span class="${gradeClass(row.learn.grade)}">${row.learn.grade}</span></td>
             <td><span class="${gradeClass(row.curt.grade)}">${row.curt.grade}</span> <span style="font-size:0.8em;color:var(--text-muted)">${fmt(row.curt.val)} TWh</span></td>
             <td style="font-weight:700; color:var(--navy)">${row.composite}</td>
@@ -440,9 +439,8 @@ function buildClusterRadar() {
         const agg = cachedAggregate(s, 25, 95);
         stratData[s] = {
             co2: agg.totalCo2,
-            cost: agg.avgCost,
+            cost: computeSystemCost(s, 25, 95),
             gas: agg.totalGasGw,
-            sysCost: computeSystemCost(s, 25, 95),
             learn: computeLearningScore(s),
             curt: agg.totalCurtTwh
         };
@@ -461,13 +459,12 @@ function buildClusterRadar() {
     }
 
     const normCo2 = normalize('co2', false);    // higher = better
-    const normCost = normalize('cost', true);    // lower = better
+    const normCost = normalize('cost', true);    // lower system cost = better
     const normGas = normalize('gas', true);      // lower = better
-    const normSysCost = normalize('sysCost', true); // lower = better
     const normLearn = normalize('learn', false); // higher = better
     const normCurt = normalize('curt', true);    // lower = better
 
-    const radarLabels = ['Emission\nReduction', 'Cost\nEfficiency', 'Low Gas\nLock-in', 'System\nCost', 'Learning\nCurves', 'Low\nCurtailment'];
+    const radarLabels = ['Emission\nReduction', 'True\nCost', 'Low Gas\nLock-in', 'Learning\nCurves', 'Low\nCurtailment'];
 
     // Build individual radar chart per strategy
     for (const cluster of CLUSTERS) {
@@ -475,7 +472,7 @@ function buildClusterRadar() {
         const chartId = 'radarChart' + s.replace('_', '');
         destroyChart(chartId);
 
-        const data = [normCo2[s], normCost[s], normGas[s], normSysCost[s], normLearn[s], normCurt[s]];
+        const data = [normCo2[s], normCost[s], normGas[s], normLearn[s], normCurt[s]];
 
         const ctx = document.getElementById(chartId);
         if (!ctx) continue;
