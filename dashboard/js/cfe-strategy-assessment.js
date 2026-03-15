@@ -2,15 +2,15 @@
 'use strict';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
-const STRATEGIES = ['1A','1B','2A','2C','2C_rolloff'];
-const CORE_STRATEGIES = ['1A','1B','2A','2C'];
+const STRATEGIES = ['1B','2A','2C','2C_rolloff'];
+const CORE_STRATEGIES = ['1B','2A','2C'];
 const ROLLOFF_PAIRS = { '2C': '2C_rolloff' };
 const ISOS = ['CAISO','ERCOT','PJM','NYISO','NEISO','MISO','SPP'];
-const THRESHOLDS = [50, 60, 70, 75, 80, 85, 90, 92.5, 95, 97.5, 99.5, 99.99];
-const KEY_THRESHOLDS = [70, 90, 99.5];
+const THRESHOLDS = [80, 85, 90, 92.5, 95, 97.5, 99.5, 99.99];
+const PARTICIPATION_LEVELS = [5, 10, 15, 20, 25, 50, 75];
+const KEY_THRESHOLDS = [85, 90, 95, 99.5];
 
 const STRATEGY_LABELS = {
-    '1A': '1A — Consequential (Grid-Avg)',
     '1B': '1B — Consequential (Fossil-Avg)',
     '2A': '2A — Hourly (New-Build Only)',
     '2C': '2C — Hourly (All Clean)',
@@ -18,12 +18,12 @@ const STRATEGY_LABELS = {
 };
 
 const STRATEGY_SHORT = {
-    '1A': '1A', '1B': '1B', '2A': '2A', '2C': '2C',
+    '1B': '1B', '2A': '2A', '2C': '2C',
     '2C_rolloff': '2C-R'
 };
 
 const STRATEGY_COLORS = {
-    '1A': '#6366F1', '1B': '#818CF8',
+    '1B': '#6366F1',
     '2A': '#F59E0B', '2C': '#0EA5E9', '2C_rolloff': '#7DD3FC'
 };
 
@@ -33,7 +33,7 @@ const TOTAL_DEMAND = Object.values(GRID_DEMANDS).reduce((a, b) => a + b, 0);
 
 // Cluster definitions
 const CLUSTERS = [
-    { name: 'Consequential Netting', strategies: ['1A', '1B'], color: '#6366F1', desc: 'Cross-regional new-build deployment via queue-ordered procurement. Cheapest per-MWh, but deploys mostly mature VRE (solar/wind). New firm clean (nuclear, CCS, LDES) only appears at extreme thresholds (95%+) — minimal contribution to learning curves for immature technologies.' },
+    { name: 'Consequential Netting', strategies: ['1B'], color: '#6366F1', desc: 'Cross-regional new-build deployment via queue-ordered procurement using fossil-avg emission baseline. Cheapest per-MWh, but deploys mostly mature VRE (solar/wind). New firm clean (nuclear, CCS, LDES) only appears at extreme thresholds (95%+) — minimal contribution to learning curves for immature technologies.' },
     { name: 'Hourly New-Build', strategies: ['2A'], color: '#F59E0B', desc: 'Same-ISO hourly matching using 100% new-build resources. The hourly constraint forces early deployment of new firm clean (10–38% of mix) and storage (battery + LDES, 10–33%) — the primary driver of learning curves for next-generation clean technologies.' },
     { name: 'Hourly Hybrid', strategies: ['2C'], color: '#0EA5E9', desc: 'Same-ISO hourly matching blending existing clean (SSS, merchant EAC, nuclear uprate) with new-build. Cost-effective but depends on nuclear staying online for cheapest firm supply.' }
 ];
@@ -123,7 +123,7 @@ function computeLearningScore(strategy) {
     // Hourly matching forces firm clean + storage deployment from 50% CFE onward
     // Consequential netting deploys mostly VRE; firm clean only at extreme thresholds (95%+)
     const scores = {
-        '1A': 3, '1B': 3, // mostly mature VRE, minimal firm clean until 95%+, Scenario A delayed learning
+        '1B': 3, // mostly mature VRE, minimal firm clean until 95%+, Scenario A delayed learning
         '2A': 9, // hourly constraint forces 10-38% firm clean + 10-33% storage, Scenario B fast learning
         '2C': 8  // same hourly template but mixed sourcing dilutes new firm clean signal
     };
@@ -258,19 +258,18 @@ function populateExecutiveSummary() {
 
     // Executive finding narrative
     const finding = document.getElementById('executiveFinding');
-    finding.innerHTML = `<p><strong>Key Finding:</strong> No single strategy dominates across all five criteria.
+    finding.innerHTML = `<p><strong>Key Finding:</strong> No single strategy dominates across all six criteria.
         Strategy <strong>${STRATEGY_SHORT[best.strategy]}</strong> (${STRATEGY_LABELS[best.strategy]}) achieves the best composite score
-        at 90% CFE / 25% participation, balancing emission reductions, cost efficiency, and system-level effects.
-        Consequential netting strategies (1A/1B) deploy new-build capacity cross-regionally at the lowest per-MWh cost
-        ($${fmt(lowestCost)}/MWh), but primarily build mature VRE (solar/wind). New firm clean technologies
+        at 90% CFE / 25% participation, balancing emission reductions, cost efficiency, scalability, and system-level effects.
+        Consequential netting (1B) deploys new-build capacity cross-regionally at the lowest per-MWh cost
+        ($${fmt(lowestCost)}/MWh), but primarily builds mature VRE (solar/wind). New firm clean technologies
         (nuclear, CCS, LDES) only enter the mix at extreme thresholds (95%+), contributing minimally to learning curves.
         Strategy 2A (hourly new-build only) costs
         $${fmt(cachedAggregate('2A', 25, 90).avgCost)}/MWh but the hourly matching constraint forces early deployment of
         new firm clean (10–38% of mix) and storage (10–33%) — directly accelerating learning curves for immature technologies.
+        Its costs actually decrease at higher participation (negative scalability premium), making it uniquely suited for mass adoption.
         Strategy 2C (hourly hybrid) combines existing clean (SSS, EACs, nuclear uprate) with new-build,
-        following the same hourly template as 2A but with mixed sourcing that partially dilutes the new firm clean signal.
-        The optimal strategy is regime-dependent:
-        low ambition favors 1A for cost; high ambition with mainstream participation favors 2C for balanced outcomes.</p>`;
+        but its scalability is poor — costs jump significantly as participation increases beyond 25%.</p>`;
 }
 
 function buildSummaryBarChart() {
@@ -376,12 +375,12 @@ function buildCrossoverCharts(participation) {
 }
 
 function populateCrossoverInsight(participation) {
-    // Find where 1A loses cost advantage to 2C or 3A
+    // Find where 1B loses cost advantage to 2C
     let crossoverThreshold = null;
     for (const t of THRESHOLDS) {
-        const a1a = cachedAggregate('1A', participation, t);
+        const a1b = cachedAggregate('1B', participation, t);
         const a2c = cachedAggregate('2C', participation, t);
-        if (a2c.totalCo2 > a1a.totalCo2 * 1.5) {
+        if (a2c.totalCo2 > a1b.totalCo2 * 1.5) {
             crossoverThreshold = t;
             break;
         }
@@ -611,7 +610,7 @@ function buildLearningCurveChart() {
         .then(data => {
             const pcts = data.metadata.participation_pcts.map(p => (p * 100) + '%');
             const datasets = [
-                { key: 'strat_1a', label: '1A', color: STRATEGY_COLORS['1A'] },
+                { key: 'strat_1b', label: '1B', color: STRATEGY_COLORS['1B'] },
                 { key: 'strat_2a', label: '2A', color: STRATEGY_COLORS['2A'] },
                 { key: 'strat_2c_gated', label: '2C', color: STRATEGY_COLORS['2C'] }
             ].map(d => ({
@@ -655,9 +654,9 @@ function buildNuclearStrandChart() {
         // 2A is 100% new-build, zero nuclear dependency — no stranding exposure either way
         // 1A/1B deploy new-build cross-regionally, no EAC revenue pathway for existing nuclear
         const strandingAdj = {
-            '1A': 15, '1B': 15,  // no EAC revenue pathway — nuclear unsupported, highest stranding risk
-            '2A': 0,             // 100% new-build, zero nuclear dependency — no stranding exposure
-            '2C': 0              // directly funds existing nuclear via EAC purchases — lowest risk
+            '1B': 15,  // no EAC revenue pathway — nuclear unsupported, highest stranding risk
+            '2A': 0,   // 100% new-build, zero nuclear dependency — no stranding exposure
+            '2C': 0    // directly funds existing nuclear via EAC purchases — lowest risk
         };
         return dep + (strandingAdj[s] || 5);
     });
@@ -698,19 +697,19 @@ function populateRiskInsight() {
         Strategy 2C (hourly hybrid) carries nuclear stranding risk because it relies on existing nuclear for
         cheap firm supply — if nuclear plants close, 2C loses its cost advantage (see Section 05).
         Strategy 2A (hourly new-build only) has zero nuclear dependency since it deploys 100% new capacity.
-        Consequential netting (1A, 1B) deploys 100% new-build cross-regionally but provides no EAC revenue
-        to support existing nuclear — they contribute to stranding risk indirectly by not creating a revenue pathway.</p>`;
+        Consequential netting (1B) deploys 100% new-build cross-regionally but provides no EAC revenue
+        to support existing nuclear — it contributes to stranding risk indirectly by not creating a revenue pathway.</p>`;
 }
 
 // ─── Section 07: Regime Map ─────────────────────────────────────────────────
 
 function buildRegimeMap() {
     const ambitionTiers = [
-        { label: 'Low (50–70%)', thresholds: [50, 60, 70] },
-        { label: 'Medium (75–90%)', thresholds: [75, 80, 85, 90] },
-        { label: 'High (95–99.99%)', thresholds: [95, 97.5, 99.5, 99.99] }
+        { label: 'Moderate (80–85%)', thresholds: [80, 85] },
+        { label: 'Ambitious (90–95%)', thresholds: [90, 92.5, 95] },
+        { label: 'Last Mile (97.5–99.99%)', thresholds: [97.5, 99.5, 99.99] }
     ];
-    const participations = [5, 10, 25, 50, 100];
+    const participations = PARTICIPATION_LEVELS;
 
     const tbody = document.getElementById('regimeMapBody');
     tbody.innerHTML = '';
@@ -754,13 +753,13 @@ function buildRegimeMap() {
 
     // Regime insight
     document.getElementById('regimeInsight').innerHTML = `<p><strong>Regime Insights:</strong>
-        At low ambition (50–70%), cost-efficient strategies like consequential netting dominate because the
-        CFE threshold is achievable with mostly VRE. At medium ambition (75–90%), the value of
-        grid-transformative strategies increases — hourly strategies (2A, 2C) force deployment of new firm clean
-        (nuclear, CCS) and storage (LDES) that consequential netting avoids until extreme thresholds.
-        At high ambition (95%+), strategies must deploy significant firm clean and storage, making the
-        learning curve criterion decisive. The hourly matching constraint is the key mechanism that forces
-        early firm clean deployment — driving cost reductions for immature technologies at scale.
+        At 80–85% CFE, consequential netting (1B) dominates on cost because the threshold is achievable with
+        mostly VRE deployed cross-regionally. At 90%+, the value of grid-transformative strategies increases —
+        hourly strategies (2A, 2C) force deployment of new firm clean (nuclear, CCS) and storage (LDES) that
+        consequential netting avoids until extreme thresholds.
+        At 95%+, strategies must deploy significant firm clean and storage, making the learning curve and
+        scalability criteria decisive. 2A's costs decrease at higher participation (learning curve benefits),
+        while 2C's costs increase sharply (existing clean supply exhaustion).
         Participation level matters most at high ambition: early adopters (5–10%) cannot move the learning
         curve alone, but at 25%+ participation, collective procurement volumes begin to reach critical mass
         for technology cost breakthroughs.</p>`;
@@ -772,20 +771,21 @@ function populateDissenting() {
     const el = document.getElementById('dissentingContent');
     el.innerHTML = `
         <div class="insight-box" style="margin-bottom: var(--space-lg)">
-            <h4 style="font-family: var(--font-heading); color: var(--navy); margin: 0 0 var(--space-sm)">Against Consequential Netting (1A/1B)</h4>
-            <p>While 1A/1B deploy 100% new-build capacity, they do so <strong>cross-regionally</strong> via
+            <h4 style="font-family: var(--font-heading); color: var(--navy); margin: 0 0 var(--space-sm)">Against Consequential Netting (1B)</h4>
+            <p>While 1B deploys 100% new-build capacity, it does so <strong>cross-regionally</strong> via
             queue-ordered procurement — the new clean generation may be built in a distant ISO, not in
             the buyer's grid. This means the buyer's local grid sees no physical transformation. The emission
             reduction is real on a system-wide basis, but the buyer's ISO may retain the same fossil fleet.
             At scale, this concentrates new clean capacity in the cheapest-to-build regions while leaving
             harder-to-decarbonize grids untouched. Additionally, consequential netting uses annual accounting,
-            missing the hourly mismatch between clean generation and actual load.</p>
+            missing the hourly mismatch between clean generation and actual load. The new capacity deployed is
+            overwhelmingly mature VRE — minimal contribution to firm clean learning curves.</p>
         </div>
 
         <div class="insight-box" style="margin-bottom: var(--space-lg)">
             <h4 style="font-family: var(--font-heading); color: var(--navy); margin: 0 0 var(--space-sm)">Against Hourly New-Build Only (2A)</h4>
             <p>Strategy 2A deploys 100% new-build capacity in the buyer's ISO with hourly matching — maximum
-            additionality and local grid transformation. However, this comes at the highest cost among the four
+            additionality and local grid transformation. However, this comes at the highest cost among the three
             strategies because every MWh must come from newly built resources matched to each hour. The premium
             reflects the full cost of new clean firm, storage, and variable renewables without the cost relief
             of existing clean supply. At lower participation levels, 2A's high per-buyer cost may limit adoption,
@@ -812,7 +812,7 @@ function populateDissenting() {
             Strategy 2C's fragility. <strong>Technology breakthroughs:</strong> If advanced nuclear or
             LDES costs fall faster than Wright's Law projections, hourly strategies become more
             cost-competitive sooner. <strong>Grid topology:</strong> If inter-ISO
-            transmission capacity expands significantly, cross-regional strategies (1A) gain
+            transmission capacity expands significantly, cross-regional strategies (1B) gain
             effectiveness while same-ISO hourly strategies lose their geographic advantage.</p>
         </div>
     `;
@@ -883,8 +883,8 @@ function initTocHighlight() {
 function init() {
     populateExecutiveSummary();
     buildSummaryBarChart();
-    renderScorecardTable(90, 10);
-    buildCrossoverCharts(10);
+    renderScorecardTable(90, 25);
+    buildCrossoverCharts(25);
     buildClusterRadar();
     buildFragilityCharts();
     buildRiskCharts();
