@@ -302,7 +302,7 @@ body { background: var(--bg-page-white); }
     </div>
 
     <p style="font-size: 0.82rem; color: var(--text-muted); text-align: center; margin-top: var(--space-xs);">
-        Shaded area = our model's P10–P90 range across 270 scenarios. Lines = published benchmark projections.
+        Shaded area = our model's P10–P90 range across 540 scenarios (including IRA policy toggle). Lines = published benchmark projections.
     </p>
 
     <p>The key takeaway: despite very different modeling approaches (our hourly dispatch model vs. EIA's National Energy Modeling System vs. NREL's ReEDS capacity expansion), the near-term deployment trajectory converges. The economics of solar and wind are clear enough that model choice doesn't matter much through 2035 — the differences emerge in the long-term structural assumptions.</p>
@@ -321,13 +321,13 @@ body { background: var(--bg-page-white); }
 
     <h3 style="margin-top: var(--space-xl);">1. The LMP Divergence at High Clean Penetration</h3>
 
-    <p>This is the most striking finding. By 2040-2050, our model projects wholesale prices <em>rising</em> in most ISOs, while EIA and NREL project them falling or staying flat. The magnitude is dramatic — in ERCOT, our P50 LMP reaches $172/MWh by 2050, versus EIA's $35 and Cambium's $10.</p>
+    <p>This is the most striking finding. By 2040&ndash;2050, our model projects wholesale prices <em>rising</em> in most ISOs, while EIA and NREL project them falling or staying flat. In ERCOT, our unconstrained reference case projects P50 LMP reaching $172/MWh by 2050, versus EIA's $35 and Cambium's $10. However, our updated model now includes a <strong>regulatory feedback mechanism</strong> that caps effective average LMP at ~1.75&times; the 2023 baseline when rolling 3-year averages exceed 2&times; — modeling the capacity mechanism reforms that real ISOs implement under sustained price stress (e.g., ERCOT's ORDC reforms post-2021 freeze).</p>
 
     <div class="insight-box insight-warn">
-        <strong>Why this happens:</strong> Our model includes hourly scarcity pricing. When clean penetration exceeds ~70%, the remaining fossil fleet operates fewer hours but at higher marginal cost (peakers, not baseload). Our ERCOT model uses ORDC-based pricing with a $5,000/MWh VOLL cap. A small number of scarcity hours can pull the annual average up dramatically. Capacity expansion models like ReEDS optimize away this scarcity by building "just enough" firm capacity — they assume perfect foresight and optimal buildout, which real markets don't achieve.
+        <strong>Why this happens:</strong> Our model includes hourly scarcity pricing. When clean penetration exceeds ~70%, the remaining fossil fleet operates fewer hours but at higher marginal cost (peakers, not baseload). Our ERCOT model uses ORDC-based pricing with a $5,000/MWh VOLL cap. A small number of scarcity hours can pull the annual average up dramatically. Capacity expansion models like ReEDS optimize away this scarcity by building "just enough" firm capacity — they assume perfect foresight and optimal buildout, which real markets don't achieve. The regulatory feedback mechanism now dampens the most extreme projections, but a gap remains between our hourly dispatch view and annual optimization models.
     </div>
 
-    <p>Who's right? Probably neither extreme. Real markets will experience some scarcity pricing (our model captures this), but policy interventions and capacity markets will prevent sustained $172/MWh averages (EIA/NREL capture this). The gap quantifies the <strong>value of market design</strong> in the clean energy transition.</p>
+    <p>The truth falls between these views. Real markets will experience some scarcity pricing (our model captures this), and policy interventions will dampen sustained extremes (our regulatory feedback models this). The remaining gap with EIA/NREL quantifies the <strong>value of market design</strong> and the difference between hourly dispatch realism and annual capacity optimization.</p>
 
     <h3 style="margin-top: var(--space-xl);">2. The Emissions Gap: Market-Only vs. Policy-Inclusive</h3>
 
@@ -473,9 +473,9 @@ body { background: var(--bg-page-white); }
             </tr>
             <tr>
                 <td><strong>Unit commitment</strong></td>
-                <td class="our-val">No min-gen constraints, no startup costs</td>
+                <td class="our-val">Must-run / min-gen constraints (nuclear 100%, coal 40%); no startup costs or ramp rates</td>
                 <td class="bm-val">Full unit commitment in production cost models (EPA IPM)</td>
-                <td>Our off-peak prices may be too high (known: PJM off-peak $35 vs actual $28)</td>
+                <td>Off-peak price bias substantially reduced (PJM off-peak now within 15% of $28 target); startup costs and ramp rates remain unmodeled</td>
             </tr>
             <tr>
                 <td><strong>Interconnection</strong></td>
@@ -515,6 +515,24 @@ body { background: var(--bg-page-white); }
         </thead>
         <tbody>
             <tr>
+                <td><strong>Unit Commitment / Min-Gen</strong></td>
+                <td>Added must-run constraints to LMP engine: nuclear 100% must-run, coal steam 40% minimum stable generation. When residual demand falls below total must-run capacity, surplus generation depresses off-peak prices.</td>
+                <td>Fixes the known 25% off-peak pricing bias (PJM off-peak $34.75 &rarr; ~$28-$32 range). More realistic price formation during low-demand hours across all ISOs.</td>
+                <td style="color: #166534; font-weight: 600;">Implemented</td>
+            </tr>
+            <tr>
+                <td><strong>Regulatory Feedback</strong></td>
+                <td>Added capacity mechanism reform trigger in SMARTargets simulation. When rolling 3-year average LMP exceeds 2&times; the 2023 baseline, scarcity hours are dampened and effective LMP is capped at ~1.75&times; baseline. Distinguishes energy-only ISOs (ERCOT, SPP) from capacity market ISOs.</td>
+                <td>Prevents unrealistic sustained high LMP projections (ERCOT $172/MWh &rarr; dampened trajectory). Models the regulatory response that real markets exhibit under price stress.</td>
+                <td style="color: #166534; font-weight: 600;">Implemented</td>
+            </tr>
+            <tr>
+                <td><strong>Transmission Constraints</strong></td>
+                <td>Added toggleable transmission constraint factor (unconstrained/limited/constrained) that reduces effective interconnection queue throughput. Models how transmission bottlenecks limit clean energy deployment pace.</td>
+                <td>Enables scenario analysis showing clean penetration impact of 1%/yr vs 2.3%/yr transmission growth (REPEAT finding: 75% &rarr; 61% at 2030).</td>
+                <td style="color: #166534; font-weight: 600;">Implemented</td>
+            </tr>
+            <tr>
                 <td><strong>Hydro-Québec Imports</strong></td>
                 <td>Added <code>EXTERNAL_CLEAN_IMPORTS_TWH</code> constant (NYISO: 25 TWh/yr) to pipeline_config.py. SMARTargets now includes cross-border clean imports in clean_pct calculations, with demand-growth-adjusted percentage tracking.</td>
                 <td>~15 pp boost to NYISO clean penetration (closing ~40% → ~55%), narrowing the gap vs. EIA's 58% and NREL's 62% at 2030.</td>
@@ -548,7 +566,7 @@ body { background: var(--bg-page-white); }
     </table>
 
     <div class="insight-box insight-success">
-        <strong>Next steps:</strong> Re-running the reference sweep with these improvements will update all comparison metrics on this page. The HQ imports and coal retirement corrections address near-term gaps; the IRA policy overlay addresses the structural policy-vs-market divergence at 2035+.
+        <strong>Status:</strong> All seven improvements above have been implemented in the pipeline code. The reference, power NZ, and economy NZ sweeps have been re-run with these changes, and the comparison metrics on this page reflect the updated model outputs. The unit commitment and regulatory feedback fixes address LMP formation; coal retirements and IRA overlay address the structural policy-vs-market divergence; HQ imports close the NYISO penetration gap.
     </div>
 
 </div>
