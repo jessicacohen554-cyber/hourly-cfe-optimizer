@@ -55,6 +55,10 @@ from pipeline_config import (
     REGULATORY_FEEDBACK_CAP_MULTIPLIER,
     ENERGY_ONLY_ISOS,
     TRANSMISSION_CONSTRAINT,
+    # IRA policy overlay
+    IRA_PTC_SOLAR, IRA_PTC_WIND, IRA_ITC_BATTERY_PCT, IRA_PTC_45U_NUCLEAR,
+    RGGI_ISOS, RGGI_PRICE_PER_TON,
+    STATE_RPS_FLOORS, get_rps_floor,
 )
 from dispatch_utils import (
     load_common_data, get_demand_profile, get_supply_profiles,
@@ -315,6 +319,10 @@ PRICE_SENSITIVITIES = {
 # Gas friction: how freely new gas can be built (ESG/permitting/policy friction)
 GAS_FRICTION_LEVELS = {'Low': 0.3, 'Medium': 0.7, 'High': 1.0}
 
+# IRA policy overlay: toggles IRA PTC/ITC, RGGI carbon pricing, state RPS floors.
+# 'off' = pure market-only (current default), 'on' = with policy drivers.
+IRA_POLICY_MODES = ['off', 'on']
+
 # PPA level: maps to procurement_utils.PPA_PREMIUMS (VRE/Firm/Uprate)
 # Low = deep PPA market (low risk premium), High = merchant-only (high premium)
 PPA_LEVELS = ['Low', 'Medium', 'High']
@@ -360,9 +368,12 @@ def build_sweep_scenarios(scenario_type='reference', emission_constraint=None):
     """Generate all parametric sweep scenarios as a list of (scenario_id, conditions_dict).
 
     Scenario types:
-      - 'reference': No emission constraint (R-series). 2 × 3 × 5 × 3 × 3 = 270
+      - 'reference': No emission constraint (R-series). 2 × 3 × 5 × 3 × 3 × 2 = 540
       - 'power_nz': Power sector net-zero constraint (AT-series)
       - 'economy_nz': Economy-wide net-zero constraint (AT-series)
+
+    The ira_policy dimension doubles scenario count (on/off) but LMP cache is shared
+    (policy affects deployment economics, not physics), so compute cost is modest.
 
     Returns list of (scenario_id_str, conditions_dict).
     """
@@ -374,9 +385,10 @@ def build_sweep_scenarios(scenario_type='reference', emission_constraint=None):
     price_keys = list(PRICE_SENSITIVITIES.keys())
     ppa_keys = PPA_LEVELS
     gas_keys = list(GAS_FRICTION_LEVELS.keys())
+    policy_keys = IRA_POLICY_MODES
 
-    for cond, demand, price_name, ppa, gas_name in cartesian(
-            cond_keys, demand_keys, price_keys, ppa_keys, gas_keys):
+    for cond, demand, price_name, ppa, gas_name, ira_policy in cartesian(
+            cond_keys, demand_keys, price_keys, ppa_keys, gas_keys, policy_keys):
 
         bundle = CONDITIONS_BUNDLE[cond]
         price_mapping = _map_price_sens_to_lcoe_fuel_tx(PRICE_SENSITIVITIES[price_name])
@@ -386,21 +398,28 @@ def build_sweep_scenarios(scenario_type='reference', emission_constraint=None):
         demand_code = demand[0]  # L, M, H
         ppa_code = ppa[0]        # L, M, H
         gas_code = gas_name[0]   # L, M, H
-        scenario_id = f"S_{cond_code}_{demand_code}_{price_name}_{ppa_code}_{gas_code}"
+        policy_code = 'P' if ira_policy == 'on' else 'M'  # P=Policy, M=Market-only
+        scenario_id = f"S_{cond_code}_{demand_code}_{price_name}_{ppa_code}_{gas_code}_{policy_code}"
+
+        # Map fuel level → RGGI carbon price level (correlated: high fuel → high carbon)
+        carbon_price_level = price_mapping['fuel_level']
 
         conditions = {
-            'name': f"{scenario_type.title()}: {cond} | {demand} demand | {price_name} | PPA={ppa} | Gas={gas_name}",
+            'name': f"{scenario_type.title()}: {cond} | {demand} demand | {price_name} | PPA={ppa} | Gas={gas_name} | IRA={ira_policy}",
             'demand_growth': demand,
             'lcoe_level': price_mapping['lcoe_level'],
             'learning_speed': bundle['learning_speed'],
             'queue_type': bundle['queue_type'],
             'gas_friction': GAS_FRICTION_LEVELS[gas_name],
-            'carbon_price': 0,
+            'carbon_price': 0,  # National carbon price (0 = none)
             'fuel_level': price_mapping['fuel_level'],
             'tx_level': price_mapping['tx_level'],
             'ppa_level': ppa,
             '_price_sens_name': price_name,
             '_price_sens': price_mapping.get('_price_sens', {}),
+            # IRA policy overlay
+            'ira_policy': ira_policy,          # 'on' or 'off'
+            'carbon_price_level': carbon_price_level,  # RGGI price tier (L/M/H)
         }
 
         if emission_constraint:
@@ -651,12 +670,15 @@ def apply_regulatory_feedback(iso, year, avg_lmp, lmp_history, hourly_lmp):
 
 def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
                               demand_mw_profile, supply_profiles, resource_pcts,
-                              battery_pct=0, battery8_pct=0, ldes_pct=0, h2_pct=0):
+                              battery_pct=0, battery8_pct=0, ldes_pct=0, h2_pct=0,
+                              carbon_price_override=None):
     """Compute 8760-hour LMP at a given clean percentage.
 
     Args:
         demand_norm: Normalized demand profile (sums to ~1.0) — for dispatch reconstruction
         demand_mw_profile: MW demand profile (demand_norm × total_mwh) — for LMP pricing
+        carbon_price_override: float or None — ISO-specific CO2 $/ton override for
+            RGGI-differentiated pricing. Passed through to build_merit_order_stack().
 
     Returns (hourly_lmp_array, avg_lmp, lmp_p90).
     """
@@ -666,6 +688,7 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
         resource_mix=resource_pcts,
         battery_pct=battery_pct, battery8_pct=battery8_pct,
         ldes_pct=ldes_pct, h2_pct=h2_pct,
+        carbon_price_override=carbon_price_override,
     )
 
     # Reconstruct dispatch — uses NORMALIZED demand profile
@@ -856,11 +879,18 @@ def compute_zone_revenue(iso, clean_pct, resource_pcts, hourly_lmp,
 # COST MODEL
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def get_resource_lcoe(res, iso, lcoe_level, cumulative_gw, learning_speed, year):
+def get_resource_lcoe(res, iso, lcoe_level, cumulative_gw, learning_speed, year,
+                      ira_policy='off'):
     """Get effective LCOE for a resource after Wright's Law learning.
 
-    Solar/wind/battery LCOE tables already include all-in costs (no separate 45Y).
-    New nuclear gets 45Y PTC reduction. CCS has 45Q baked into tables.
+    Base LCOE tables (NREL ATB 2024) represent pre-incentive costs.
+    New nuclear gets 45Y PTC reduction (always on). CCS has 45Q baked into tables.
+
+    When ira_policy='on', additionally applies:
+    - Solar: -$26/MWh (§45Y PTC)
+    - Wind: -$26/MWh (§45Y PTC)
+    - Battery/battery8: -30% (§48E ITC)
+    - Offshore wind: -$26/MWh (§45Y PTC)
     """
     tech = RESOURCE_TO_TECH.get(res, res)
 
@@ -908,7 +938,12 @@ def get_resource_lcoe(res, iso, lcoe_level, cumulative_gw, learning_speed, year)
         ref_gw = WRIGHT_CUMULATIVE_GW_2025.get(tech, 100)
         eff_gw = get_effective_cumulative_gw(tech, cumulative_gw.get(tech, 0),
                                               learning_speed, year)
-        return wright_cost(base_lcoe, noak, eff_gw, ref_gw, lr)
+        cost = wright_cost(base_lcoe, noak, eff_gw, ref_gw, lr)
+        # IRA §45Y PTC: reduces effective LCOE for solar, wind, offshore wind
+        if ira_policy == 'on':
+            ptc = IRA_PTC_SOLAR if res == 'solar' else IRA_PTC_WIND
+            cost = max(noak * 0.5, cost - ptc)  # Floor at 50% of NOAK (can't go negative)
+        return cost
 
     elif res == 'hydro':
         # Existing only, near-zero cost (already built)
@@ -926,7 +961,11 @@ def get_resource_lcoe(res, iso, lcoe_level, cumulative_gw, learning_speed, year)
         ref_gw = WRIGHT_CUMULATIVE_GW_2025.get(tech, 1.0)
         eff_gw = get_effective_cumulative_gw(tech, cumulative_gw.get(tech, 0),
                                               learning_speed, year)
-        return wright_cost(base_val, noak_val, eff_gw, ref_gw, lr)
+        cost = wright_cost(base_val, noak_val, eff_gw, ref_gw, lr)
+        # IRA §48E ITC: 30% investment tax credit for battery storage
+        if ira_policy == 'on' and res in ('battery', 'battery8'):
+            cost = max(noak_val, cost * (1.0 - IRA_ITC_BATTERY_PCT))
+        return cost
 
     else:
         return 50  # Fallback
@@ -989,13 +1028,15 @@ def _get_ppa_discount(res, ppa_level, iso=None):
 
 
 def compute_zone_cost(iso, delta_resources, lcoe_level, cumulative_gw,
-                       learning_speed, year, tx_level='Medium', ppa_level=None):
+                       learning_speed, year, tx_level='Medium', ppa_level=None,
+                       ira_policy='off'):
     """Compute blended LCOE ($/MWh) for incremental resources in a zone.
 
     Args:
         ppa_level: 'Low'/'Medium'/'High' or None. PPA availability reduces
             effective LCOE via risk premium reduction, scaled by regional
             PPA market depth (ERCOT=1.0 → SPP=0.50).
+        ira_policy: 'on' or 'off'. When 'on', applies IRA PTC/ITC reductions.
 
     Returns (blended_cost, per_resource_cost_dict).
     """
@@ -1007,7 +1048,7 @@ def compute_zone_cost(iso, delta_resources, lcoe_level, cumulative_gw,
         if delta_twh <= 0:
             continue
         lcoe = get_resource_lcoe(res, iso, lcoe_level, cumulative_gw,
-                                  learning_speed, year)
+                                  learning_speed, year, ira_policy=ira_policy)
 
         # Add transmission for applicable resources
         if res in ('solar', 'wind', 'clean_firm', 'offshore_wind'):
@@ -1345,9 +1386,24 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
 
                 # --- REVENUE ---
                 # LMP at the END threshold (reflects fossil stack at this clean %)
-                # Cache key: LMP depends on ISO, threshold, fuel level, and demand growth
-                # (resource_pcts are deterministic from step3 at a given threshold)
-                _lmp_key = (iso, t_end, conditions['fuel_level'], conditions['demand_growth'], year)
+                # Cache key: LMP depends on ISO, threshold, fuel level, demand growth,
+                # and carbon pricing (RGGI-differentiated when ira_policy='on').
+                #
+                # Compute ISO-specific carbon price override:
+                # RGGI = floor, national = conditions['carbon_price'], effective = max()
+                _ira_policy = conditions.get('ira_policy', 'off')
+                _carbon_override = None
+                if _ira_policy == 'on':
+                    national_carbon = conditions.get('carbon_price', 0)
+                    if iso in RGGI_ISOS:
+                        rggi_price = RGGI_PRICE_PER_TON.get(
+                            conditions.get('carbon_price_level', 'Medium'), 5.5)
+                        _carbon_override = max(national_carbon, rggi_price)
+                    else:
+                        _carbon_override = national_carbon  # 0 for non-RGGI unless national set
+
+                _lmp_key = (iso, t_end, conditions['fuel_level'], conditions['demand_growth'],
+                            year, _carbon_override)
                 if _lmp_cache is not None and _lmp_key in _lmp_cache:
                     hourly_lmp, avg_lmp, p90_lmp = _lmp_cache[_lmp_key]
                 else:
@@ -1359,6 +1415,7 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                         battery8_pct=mix_data['battery8_pct'],
                         ldes_pct=mix_data['ldes_pct'],
                         h2_pct=mix_data['h2_pct'],
+                        carbon_price_override=_carbon_override,
                     )
                     if _lmp_cache is not None:
                         _lmp_cache[_lmp_key] = (hourly_lmp, avg_lmp, p90_lmp)
@@ -1395,6 +1452,7 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                     iso, delta_twh, conditions['lcoe_level'], cumulative_gw,
                     conditions['learning_speed'], year, conditions['tx_level'],
                     ppa_level=conditions.get('ppa_level'),
+                    ira_policy=conditions.get('ira_policy', 'off'),
                 )
 
                 # --- PROFIT ---
@@ -1445,6 +1503,22 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                     _log(f"  {iso} STOP at {current_pct:.0f}%: profit={delta_profit:+.1f} $/MWh "
                          f"(rev={blended_revenue:.1f}, cost={blended_cost:.1f})")
                     break
+
+            # --- RPS FLOOR ENFORCEMENT ---
+            # When ira_policy='on', state RPS mandates act as deployment floors.
+            # If market-driven deployment falls below the interpolated RPS floor,
+            # force deployment to meet it (mandated at a loss, like emission caps).
+            rps_mandated_pct = 0
+            if conditions.get('ira_policy') == 'on':
+                rps_floor = get_rps_floor(iso, year)
+                if rps_floor > 0 and current_pct < rps_floor:
+                    rps_gap = rps_floor - current_pct
+                    _log(f"  {iso} RPS floor {rps_floor:.0f}% > market {current_pct:.0f}%: "
+                         f"forcing +{rps_gap:.1f}% deployment")
+                    # Jump to the RPS floor — treat as mandated deployment
+                    current_pct = rps_floor
+                    state['clean_pct'] = current_pct
+                    rps_mandated_pct = rps_gap
 
             # --- EMISSION CONSTRAINT: MANDATED DEPLOYMENT + DAC/OVERSHOOT ---
             # After profit-driven deployment, enforce emission cap as a HARD CEILING.
@@ -1537,6 +1611,7 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                             iso, delta_twh, conditions['lcoe_level'], cumulative_gw,
                             conditions['learning_speed'], year, conditions['tx_level'],
                             ppa_level=conditions.get('ppa_level'),
+                            ira_policy=conditions.get('ira_policy', 'off'),
                         )
 
                         # Queue overshoot premium — if beyond queue cap, add premium
@@ -1757,6 +1832,8 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                 'queue_used_gw': round(
                     QUEUE_CAP_GW[conditions['queue_type']][iso] * tx_factor * years_in_period - queue_remaining_gw, 1),
                 'zones_deployed': zone_results,
+                'ira_policy': conditions.get('ira_policy', 'off'),
+                'rps_mandated_pct': round(rps_mandated_pct, 1),
             }
             results[iso].append(year_result)
 
@@ -1807,6 +1884,8 @@ def save_results(results, scenario_id):
                 'total_gas_gw': yr['total_gas_gw'],
                 'market_stop': yr['market_stop'],
                 'queue_used_gw': yr['queue_used_gw'],
+                'ira_policy': yr.get('ira_policy', 'off'),
+                'rps_mandated_pct': yr.get('rps_mandated_pct', 0),
             }
             # Add resource mix columns
             for res in ['clean_firm', 'solar', 'wind', 'offshore_wind',
@@ -2067,6 +2146,8 @@ def main():
                         'total_gas_gw': yr['total_gas_gw'],
                         'market_stop': yr['market_stop'],
                         'queue_used_gw': yr['queue_used_gw'],
+                        'ira_policy': yr.get('ira_policy', 'off'),
+                        'rps_mandated_pct': yr.get('rps_mandated_pct', 0),
                     }
                     # Resource mix columns
                     for res in ['clean_firm', 'solar', 'wind', 'offshore_wind',

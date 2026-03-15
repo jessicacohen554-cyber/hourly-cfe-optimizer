@@ -5,6 +5,75 @@
 
 ## Current Status (Mar 15, 2026)
 
+### IRA Policy Overlay + LMP Decomposition (Added — Mar 15, 2026)
+
+**Branch:** `claude/ira-policy-lmp-decomposition-55AOX`
+
+**Part A — IRA Policy Overlay for Reference Sweep**
+
+**Problem**: Reference sweep is market-only (no policy drivers), causing large emissions gaps vs. every published benchmark. The "conditions" dimension (Facilitating/Challenging) only controls learning rates, queue caps, and DAC — NOT policy.
+
+**Solution**: New `ira_policy` sweep dimension ('on'/'off') that toggles three policy layers:
+
+1. **IRA PTC/ITC** — Reduces effective LCOE when `ira_policy='on'`:
+   - Solar: -$26/MWh (§45Y PTC)
+   - Wind: -$26/MWh (§45Y PTC)
+   - Offshore wind: -$26/MWh (§45Y PTC)
+   - Battery/battery8: -30% ITC (§48E)
+   - Nuclear new-build: Already has 45Y (-$26/MWh) — no double-count
+   - CCS: Already has 45Q toggle — no change
+
+2. **RGGI Carbon Pricing** — ISO-specific fossil cost adder via merit-order stack:
+   - Applies to: NYISO, NEISO, PJM (RGGI member states)
+   - Levels: Low $3/ton, Medium $5.50/ton, High $14/ton (mapped from fuel_level)
+   - Non-RGGI ISOs: $0/ton (removes incorrect uniform CO2 pricing)
+   - **Critical**: RGGI acts as a FLOOR, not additive to national carbon price. `effective = max(national, rggi)`. Same as CBAM — overlapping carbon markets don't stack.
+
+3. **State RPS Deployment Floors** — Mandated minimum clean% by year:
+   - CAISO: 44%→60%→75%→90%→100% (2025→2030→2035→2040→2045)
+   - NYISO: 35%→70%→80%→90%→100%
+   - PJM: 20%→35%→45%→55%→65% (NJ/PA/VA weighted)
+   - NEISO: 35%→50%→65%→80%→100% (MA net-zero weighted)
+   - ERCOT: None
+   - MISO: 15%→20%→25%→30%→40%
+   - SPP: 10%→15%→20%→25%→35%
+
+**Sweep impact**: Doubles scenarios from 270 → 540 (×2 policy modes). LMP cache partially shared (ira_policy='off' uses same cache as before; 'on' adds carbon_price_override to cache key for RGGI ISOs).
+
+**Scenario ID format**: Appends `_P` (policy on) or `_M` (market only). Example: `S_F_M_all_med_M_M_P`.
+
+**Files modified**:
+- `scripts/pipeline_config.py` — Added `IRA_PTC_SOLAR`, `IRA_PTC_WIND`, `IRA_ITC_BATTERY_PCT`, `IRA_PTC_45U_NUCLEAR`, `RGGI_ISOS`, `RGGI_PRICE_PER_TON`, `STATE_RPS_FLOORS`, `get_rps_floor()`
+- `scripts/lmp_engine.py` — Added `carbon_price_override` param to `compute_marginal_costs()` and `build_merit_order_stack()`
+- `scripts/step6_1_smartargets.py` — Added `IRA_POLICY_MODES`, expanded `build_sweep_scenarios()`, wired `ira_policy` through `get_resource_lcoe()` → `compute_zone_cost()` → `run_market_simulation()`, added RPS floor enforcement, RGGI carbon pricing passthrough to LMP engine
+
+**Backward compatibility**: `ira_policy='off'` (default) preserves existing market-only behavior for all callers.
+
+---
+
+**Part B — LMP Decomposition (Analytics Only)**
+
+**Problem**: We compare our all-in LMP (with scarcity + congestion + must-run depression) against NREL Cambium's short-run marginal cost (SRMC), inflating apparent divergence.
+
+**Solution**: Component tracking in `compute_hourly_lmp_vectorized()`:
+- `merit_base[h]` = base marginal cost from stack dispatch (heat-rate-ramped, no scarcity)
+- `scarcity[h]` = reserve scarcity adder + full scarcity pricing
+- `dq_adder[h]` = residual (demand-quantile layers, must-run depression, clean surplus, NEISO winter gas)
+- Identity: `merit_base[h] + scarcity[h] + dq_adder[h] == hourly_lmp[h]`
+
+**Implementation**: `track_components=False` default param. When True, returns 3-tuple `(hourly_lmp, hourly_mu, components_dict)`. Existing 2-tuple callers unaffected.
+
+**Component averages** added to `compute_lmp_stats()` when `components` provided: `merit_base_avg`, `scarcity_avg`, `dq_adder_avg`, `merit_base_p50`, `scarcity_hours_nonzero`.
+
+**Use case**: Compare `merit_base_avg` against Cambium SRMC for apples-to-apples validation.
+
+**Files modified**:
+- `scripts/lmp_engine.py` — `compute_hourly_lmp_vectorized()` track_components param + component arrays, `compute_lmp_stats()` components param
+
+**Decision**: LCOE tables (NREL ATB 2024) represent pre-incentive costs. IRA applied as explicit overlay, not baked into base tables. This enables on/off comparison.
+
+---
+
 ### Announced Coal Retirements + Transmission Constraint Toggle (Added — Mar 15, 2026)
 
 **Branch:** `claude/coal-retirements-transmission-kN6hR`
