@@ -472,86 +472,105 @@ p {
     background: linear-gradient(90deg, #334155 0%, #64748B 25%, #94A3B8 50%, #64748B 75%, #334155 100%);
 }
 
-/* --- Topographic Contour: navy with green-blue tints, topo map aesthetic --- */
+/* --- Topographic Contour: light, scientific/cartographic --- */
 .header--topo {
-    background: linear-gradient(145deg, #0A1628 0%, #0F2235 40%, #0D2B2E 70%, #0A1628 100%);
+    background: linear-gradient(145deg, rgba(240,253,250,0.95) 0%, rgba(236,254,246,0.90) 40%, rgba(241,245,249,0.92) 100%);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
 }
 .header--topo::before {
     background:
-        radial-gradient(ellipse 60% 50% at 50% 50%, rgba(20,184,166,0.08) 0%, transparent 70%),
-        radial-gradient(ellipse 40% 40% at 35% 55%, rgba(34,197,94,0.06) 0%, transparent 60%),
-        radial-gradient(ellipse 40% 40% at 65% 45%, rgba(14,165,233,0.05) 0%, transparent 60%);
+        radial-gradient(ellipse 50% 50% at 47% 48%, rgba(13,148,136,0.06) 0%, transparent 70%);
 }
+.header--topo::after { background: none; }
+.header--topo h1 { color: var(--navy-dark, #0F1A2E); }
+.header--topo .subtitle { color: #475569; }
 .header--topo .header-accent {
-    background: linear-gradient(90deg, #0A1628 0%, #0D9488 30%, #14B8A6 55%, #22C55E 80%, #10B981 100%);
+    background: linear-gradient(90deg, #94A3B8 0%, #0D9488 30%, #14B8A6 55%, #22C55E 80%, #10B981 100%);
 }
 
-/* --- Constellation Network: very dark navy, near-black, astronomical --- */
+/* --- Constellation Network: light with pastel nodes --- */
 .header--constellation {
-    background: linear-gradient(180deg, #060B15 0%, #0A1225 50%, #0D1830 100%);
+    background: linear-gradient(180deg, rgba(248,250,252,0.94) 0%, rgba(241,245,249,0.90) 50%, rgba(248,250,252,0.92) 100%);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
 }
 .header--constellation::before {
     background:
-        radial-gradient(ellipse 80% 60% at 50% 50%, rgba(99,102,241,0.04) 0%, transparent 70%);
+        radial-gradient(ellipse 70% 50% at 50% 50%, rgba(99,102,241,0.04) 0%, transparent 70%);
 }
+.header--constellation::after { background: none; }
+.header--constellation h1 { color: var(--navy-dark, #0F1A2E); }
+.header--constellation .subtitle { color: #475569; }
 .header--constellation .header-accent {
     background: linear-gradient(90deg, #6366F1 0%, #0EA5E9 30%, #22C55E 65%, #F59E0B 100%);
 }
 
-/* --- Radial Sundial: dark navy with warm amber at bottom-left --- */
+/* --- Radial Sundial: warm white with amber glow at bottom-left --- */
 .header--sundial {
-    background: linear-gradient(135deg, #1A1005 0%, #0F1520 40%, #0A1225 100%);
+    background: linear-gradient(135deg, rgba(255,251,235,0.95) 0%, rgba(254,249,236,0.90) 30%, rgba(248,250,252,0.92) 100%);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
 }
 .header--sundial::before {
     background:
-        radial-gradient(ellipse 60% 70% at 8% 92%, rgba(245,158,11,0.15) 0%, transparent 65%),
-        radial-gradient(ellipse 40% 40% at 30% 70%, rgba(251,146,60,0.06) 0%, transparent 55%);
+        radial-gradient(ellipse 50% 60% at 8% 92%, rgba(245,158,11,0.10) 0%, transparent 65%),
+        radial-gradient(ellipse 40% 40% at 30% 70%, rgba(251,146,60,0.05) 0%, transparent 55%);
 }
+.header--sundial::after { background: none; }
+.header--sundial h1 { color: var(--navy-dark, #0F1A2E); }
+.header--sundial .subtitle { color: #78350F; }
 .header--sundial .header-accent {
-    background: linear-gradient(90deg, #78350F 0%, #D97706 25%, #F59E0B 50%, #FBBF24 75%, #F59E0B 100%);
+    background: linear-gradient(90deg, #94A3B8 0%, #D97706 25%, #F59E0B 50%, #FBBF24 75%, #F59E0B 100%);
 }
 
-/* --- Stacked Terrain: near-black, Joy Division aesthetic --- */
+/* --- Stacked Terrain: light with colorful dispatch layers --- */
 .header--terrain {
-    background: linear-gradient(180deg, #050505 0%, #0A0A0A 50%, #080808 100%);
+    background: linear-gradient(180deg, rgba(248,250,252,0.94) 0%, rgba(241,245,249,0.90) 50%, rgba(248,250,252,0.92) 100%);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
 }
 .header--terrain::before {
     background: none;
 }
-.header--terrain::after {
-    background: none;
-}
-.header--terrain h1 {
-    text-shadow: 0 0 40px rgba(255,255,255,0.15);
-}
-.header--terrain .subtitle {
-    color: rgba(255,255,255,0.65);
-}
+.header--terrain::after { background: none; }
+.header--terrain h1 { color: var(--navy-dark, #0F1A2E); }
+.header--terrain .subtitle { color: #475569; }
 .header--terrain .header-accent {
     background: linear-gradient(90deg, #0EA5E9 0%, #22C55E 30%, #F59E0B 60%, #EF4444 100%);
 }
 
-/* --- Hexagonal Mosaic: dark navy/slate, structured beauty --- */
+/* --- Hexagonal Mosaic: light with colorful hex tessellation --- */
 .header--hexmosaic {
-    background: linear-gradient(160deg, #0B1120 0%, #111827 50%, #0F172A 100%);
+    background: linear-gradient(160deg, rgba(248,250,252,0.94) 0%, rgba(241,245,249,0.90) 50%, rgba(248,250,252,0.92) 100%);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
 }
 .header--hexmosaic::before {
     background:
-        radial-gradient(ellipse 40% 40% at 30% 50%, rgba(14,165,233,0.06) 0%, transparent 60%),
-        radial-gradient(ellipse 40% 40% at 70% 50%, rgba(245,158,11,0.05) 0%, transparent 60%);
+        radial-gradient(ellipse 40% 40% at 30% 50%, rgba(14,165,233,0.04) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 40% at 70% 50%, rgba(245,158,11,0.04) 0%, transparent 60%);
 }
+.header--hexmosaic::after { background: none; }
+.header--hexmosaic h1 { color: var(--navy-dark, #0F1A2E); }
+.header--hexmosaic .subtitle { color: #475569; }
 .header--hexmosaic .header-accent {
     background: linear-gradient(90deg, #0EA5E9 0%, #22C55E 25%, #F59E0B 50%, #6366F1 75%, #EF4444 100%);
 }
 
-/* --- Particle Flow: deep navy, energy streams converging --- */
+/* --- Particle Flow: light with colored energy streams --- */
 .header--particleflow {
-    background: linear-gradient(180deg, #060D1A 0%, #0A1628 50%, #0D1B30 100%);
+    background: linear-gradient(180deg, rgba(248,250,252,0.94) 0%, rgba(241,245,249,0.90) 50%, rgba(248,250,252,0.92) 100%);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
 }
 .header--particleflow::before {
     background:
-        radial-gradient(ellipse 30% 30% at 50% 57%, rgba(255,255,255,0.04) 0%, transparent 70%);
+        radial-gradient(ellipse 25% 25% at 50% 57%, rgba(99,102,241,0.04) 0%, transparent 70%);
 }
+.header--particleflow::after { background: none; }
+.header--particleflow h1 { color: var(--navy-dark, #0F1A2E); }
+.header--particleflow .subtitle { color: #475569; }
 .header--particleflow .header-accent {
     background: linear-gradient(90deg, #F59E0B 0%, #22C55E 35%, #0EA5E9 70%, #6366F1 100%);
 }
