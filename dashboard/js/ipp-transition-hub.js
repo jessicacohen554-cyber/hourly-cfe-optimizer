@@ -481,6 +481,135 @@
         el.innerHTML = html;
     }
 
+    // ─── Trajectory vs PPA Chart ──────────────────────────────
+    function renderTrajectoryPpaChart() {
+        const ctx = document.getElementById('trajectoryPpaChart');
+        if (!ctx) return;
+
+        const datasets = [];
+
+        // Per-company: solid = P50 market-driven, dashed = High PPA depth
+        companies.forEach((co, i) => {
+            const color = COMPANY_COLORS[i % COMPANY_COLORS.length];
+            const baseline = co.co2_2024_mt || co.co2_2023_mt || 1;
+
+            // Market-driven P50 (reference or all)
+            const fbRef = (co.fan_bands.reference || co.fan_bands.all).emissions;
+            const refPct = fbRef.p50.map(v => ((baseline - v) / baseline) * 100);
+
+            datasets.push({
+                label: co.shortName,
+                data: refPct,
+                borderColor: color,
+                backgroundColor: 'transparent',
+                borderWidth: 2.5,
+                pointRadius: 4,
+                pointBackgroundColor: color,
+                tension: 0.3,
+                order: 1
+            });
+
+            // High PPA depth
+            const ppaDim = co.dimension_fans && co.dimension_fans.ppa_level;
+            if (ppaDim && ppaDim.High && ppaDim.High.emissions) {
+                const highPpa = ppaDim.High.emissions.p50;
+                const ppaPct = highPpa.map(v => ((baseline - v) / baseline) * 100);
+
+                datasets.push({
+                    label: co.shortName + ' (High PPA)',
+                    data: ppaPct,
+                    borderColor: color,
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [6, 4],
+                    pointRadius: 3,
+                    pointStyle: 'triangle',
+                    pointBackgroundColor: color,
+                    tension: 0.3,
+                    order: 1
+                });
+            }
+        });
+
+        // SBTi Power v2 benchmark
+        const sbtiPct = YEARS.map(y => ((1 - (SBTI_POWER_V2_REMAINING[y] || 0)) * 100));
+        datasets.push({
+            label: 'SBTi Power v2 (NZ 2040)',
+            data: sbtiPct,
+            borderColor: '#dc2626',
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            borderDash: [10, 5],
+            pointRadius: 0,
+            tension: 0.3,
+            order: 0
+        });
+
+        // EPRI AT benchmark
+        const atPct = YEARS.map(y => ((1 - (AT_TRAJECTORY_REMAINING[y] || 0)) * 100));
+        datasets.push({
+            label: 'EPRI AT',
+            data: atPct,
+            borderColor: '#9333ea',
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            borderDash: [4, 4],
+            pointRadius: 0,
+            tension: 0.3,
+            order: 0
+        });
+
+        new Chart(ctx, {
+            type: 'line',
+            data: { labels: YEAR_LABELS, datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        title: { display: true, text: '% Emission Reduction from Baseline' },
+                        min: 0,
+                        max: 105,
+                        ticks: { callback: v => v + '%' }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            font: { size: 10 },
+                            boxWidth: 14,
+                            filter: item => !item.text.includes('High PPA')
+                        },
+                        onClick: function(e, legendItem, legend) {
+                            // Default toggle behaviour
+                            const ci = legend.chart;
+                            const idx = legendItem.datasetIndex;
+                            // Also toggle the paired High PPA dataset
+                            const label = ci.data.datasets[idx].label;
+                            const ppaIdx = ci.data.datasets.findIndex(d => d.label === label + ' (High PPA)');
+                            Chart.defaults.plugins.legend.onClick.call(this, e, legendItem, legend);
+                            if (ppaIdx !== -1) {
+                                ci.setDatasetVisibility(ppaIdx, ci.isDatasetVisible(idx));
+                                ci.update();
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx2 => {
+                                const lbl = ctx2.dataset.label;
+                                const pct = ctx2.raw;
+                                const suffix = lbl.includes('High PPA') ? ' [High PPA]' : '';
+                                return `${lbl.replace(' (High PPA)', '')}${suffix}: ${fmt(pct, 1)}% reduction`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
     // ─── Decarbonization Cost Comparison ──────────────────────
     function computeFleetMAC(co) {
         const summary = co.fleet_summary;
@@ -748,6 +877,7 @@
         renderKeyInsights();
         renderMACComparison();
         renderEmissionsComparison();
+        renderTrajectoryPpaChart();
         renderProfitResilience();
         renderFleetComposition();
         renderTargetsSummary();
