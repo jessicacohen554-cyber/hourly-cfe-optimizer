@@ -237,7 +237,7 @@ function populateExecutiveSummary() {
     document.getElementById('statBestCost').textContent = STRATEGY_SHORT[lowestCostStrat];
     document.getElementById('statBestCo2').textContent = STRATEGY_SHORT[highestCo2Strat];
     document.getElementById('statGasRisk').textContent = `${fmt(gasMin, 0)}–${fmt(gasMax, 0)} GW`;
-    document.getElementById('statLearning').textContent = '2C';
+    document.getElementById('statLearning').textContent = '2A';
     document.getElementById('statNuclearDep').textContent = `${fmt(nucDep, 0)}% cost shift`;
     document.getElementById('statRecommended').textContent = STRATEGY_SHORT[best.strategy];
 
