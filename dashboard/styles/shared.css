@@ -107,6 +107,13 @@ body {
     --ldes-bg: rgba(233, 30, 99, 0.08);
     --storage-bg: rgba(239, 68, 68, 0.08);
 
+    /* WCAG AA text-safe variants (4.5:1+ on white) — use for text-color on light backgrounds */
+    --hydro-text: #0369A1; /* contrast-fix: #0EA5E9 only 2.77:1, this is 5.93:1 on #FFFFFF */
+    --green-text: #15803D; /* contrast-fix: #22C55E only 2.28:1, this is 5.02:1 on #FFFFFF */
+    --red-text: #DC2626; /* contrast-fix: #EF4444 only 3.76:1, this is 4.83:1 on #FFFFFF */
+    --amber-text: #B45309; /* contrast-fix: #F59E0B only 2.15:1, this is 5.02:1 on #FFFFFF */
+    --orange-text: #C2410C; /* contrast-fix: #F97316 only 2.70:1, this is 5.18:1 on #FFFFFF */
+
     /* ---- ISO colors (CANONICAL — use these everywhere) ---- */
     --iso-caiso: #F59E0B;
     --iso-ercot: #22C55E;
@@ -132,8 +139,8 @@ body {
     --red: #EF4444;
     --red-dark: #DC2626;
     --red-light: rgba(239, 68, 68, 0.08);
-    --green-pos: #16A34A;
-    --amber-warn: #D97706;
+    --green-pos: #15803D; /* contrast-fix: was #16A34A (3.30:1), now #15803D, ratio 5.02:1 on bg #FFFFFF */
+    --amber-warn: #B45309; /* contrast-fix: was #D97706 (3.19:1), now #B45309, ratio 5.02:1 on bg #FFFFFF */
     --indigo: #4F46E5;
 
     /* Scarcity scale */

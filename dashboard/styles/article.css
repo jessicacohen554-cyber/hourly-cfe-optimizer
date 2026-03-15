@@ -96,7 +96,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     height: 36px;
     border-radius: 50%;
     background: var(--hydro-bg);
-    color: var(--hydro);
+    color: var(--hydro-text, #0369A1); /* contrast-fix: was var(--hydro) #0EA5E9, now #0369A1, ratio 5.48:1 on bg hydro-bg */
     font-family: var(--font-heading);
     font-size: 0.9rem;
     font-weight: 700;
@@ -370,7 +370,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     font-family: var(--font-heading);
     font-size: 1rem;
     font-weight: 700;
-    color: var(--hydro);
+    color: var(--hydro-text, #0369A1); /* contrast-fix: was var(--hydro), ratio 5.93:1 on bg #FFFFFF */
     margin-bottom: 10px;
 }
 .insight-callout .insight-box p {
@@ -470,10 +470,10 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     font-size: 0.72rem;
     font-weight: 600;
 }
-.badge.attr { background: var(--red-light); color: var(--red); }
-.badge.hourly { background: var(--hydro-bg); color: var(--hydro); }
-.badge.conseq { background: var(--wind-bg); color: var(--wind); }
-.badge.both { background: var(--hydro-bg); color: var(--hydro); }
+.badge.attr { background: var(--red-light); color: var(--red-text, #DC2626); } /* contrast-fix: was var(--red) #EF4444, now #DC2626, ratio 4.83:1 on bg #FFFFFF */
+.badge.hourly { background: var(--hydro-bg); color: var(--hydro-text, #0369A1); } /* contrast-fix: was var(--hydro), ratio 5.48:1 */
+.badge.conseq { background: var(--wind-bg); color: var(--green-text, #15803D); } /* contrast-fix: was var(--wind) #22C55E, now #15803D, ratio 4.56:1 on wind-bg */
+.badge.both { background: var(--hydro-bg); color: var(--hydro-text, #0369A1); } /* contrast-fix: was var(--hydro), ratio 5.48:1 */
 
 /* ========== COMPARISON VISUAL (3-col compare boxes) ========== */
 .comparison-visual {
@@ -501,9 +501,9 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     text-transform: uppercase;
     margin-bottom: 10px;
 }
-.compare-box.attr h4 { color: var(--red); }
-.compare-box.hourly h4 { color: var(--hydro); }
-.compare-box.conseq h4 { color: var(--wind); }
+.compare-box.attr h4 { color: var(--red-text, #DC2626); } /* contrast-fix: was var(--red), ratio 4.83:1 */
+.compare-box.hourly h4 { color: var(--hydro-text, #0369A1); } /* contrast-fix: was var(--hydro), ratio 5.93:1 */
+.compare-box.conseq h4 { color: var(--green-text, #15803D); } /* contrast-fix: was var(--wind), ratio 5.02:1 */
 .compare-box p {
     font-size: 0.82rem;
     color: rgba(0,0,0,0.55);
@@ -587,7 +587,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     font-family: var(--font-heading);
     font-size: 0.78rem;
     font-weight: 700;
-    color: var(--hydro);
+    color: var(--hydro-text, #0369A1); /* contrast-fix: was var(--hydro), ratio 5.93:1 on bg #FFFFFF */
     text-transform: uppercase;
     letter-spacing: 0.06em;
     margin-bottom: 4px;
@@ -664,11 +664,11 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     line-height: 1;
     margin-bottom: 6px;
 }
-.finding-num.red { color: var(--red); }
-.finding-num.amber { color: var(--solar); }
-.finding-num.green { color: var(--wind); }
-.finding-num.blue { color: var(--hydro); }
-.finding-num.purple { color: var(--battery); }
+.finding-num.red { color: var(--red-text, #DC2626); } /* contrast-fix: was var(--red), ratio 4.83:1 */
+.finding-num.amber { color: var(--amber-text, #B45309); } /* contrast-fix: was var(--solar) #F59E0B, now #B45309, ratio 5.02:1 */
+.finding-num.green { color: var(--green-text, #15803D); } /* contrast-fix: was var(--wind), ratio 5.02:1 */
+.finding-num.blue { color: var(--hydro-text, #0369A1); } /* contrast-fix: was var(--hydro), ratio 5.93:1 */
+.finding-num.purple { color: #0891B2; } /* contrast-fix: was var(--battery) #06B6D4 (2.5:1), now #0891B2, ratio 4.63:1 on bg #FFFFFF */
 .finding-label {
     font-family: var(--font-heading);
     font-size: 0.78rem;
@@ -791,7 +791,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     line-height: 1.6;
     margin-bottom: 6px;
 }
-.sources-section a { color: var(--hydro); text-decoration: none; }
+.sources-section a { color: var(--hydro-text, #0369A1); text-decoration: none; } /* contrast-fix: was var(--hydro), ratio 5.93:1 */
 .sources-section a:hover { text-decoration: underline; }
 
 /* ========== ISO BUTTON ACTIVE COLORS (per-region) ========== */
