@@ -25,18 +25,18 @@ def extract_scenario_data(parquet_path, scenario_code):
     if not os.path.exists(parquet_path):
         print(f'    ERROR: {parquet_path} not found')
         return {}
-    
+
     df = pd.read_parquet(parquet_path)
     result = {}
-    
+
     for iso in ISOS:
         iso_df = df[df['iso'] == iso].copy()
         if iso_df.empty:
             continue
-        
+
         iso_df = iso_df.sort_values('year')
         years = iso_df['year'].tolist()
-        
+
         # Build time series arrays for all relevant metrics
         data = {
             'years': [int(y) for y in years],
@@ -47,16 +47,100 @@ def extract_scenario_data(parquet_path, scenario_code):
             'dac_cost_per_ton': iso_df.get('dac_cost_per_ton', [0]*len(years)).fillna(0).round(2).tolist() if 'dac_cost_per_ton' in iso_df.columns else [0]*len(years),
             'mandated_subsidy_mwh': iso_df['mandated_subsidy_mwh'].round(2).tolist(),
         }
-        
+
         # Add resource mix data
         mix_cols = ['mix_clean_firm_twh', 'mix_solar_twh', 'mix_wind_twh', 'mix_offshore_wind_twh',
                     'mix_ccs_ccgt_twh', 'mix_hydro_twh', 'mix_battery_twh', 'mix_ldes_twh']
         for col in mix_cols:
             if col in iso_df.columns:
                 data[col] = iso_df[col].round(2).tolist()
-        
+
         result[iso] = data
-    
+
+    return result
+
+
+def extract_at_from_sweep(sweep_type, condition_filter):
+    """Extract AT-equivalent P50 trajectory from a parametric sweep.
+
+    AT1 = power_nz + Facilitating (F)
+    AT2 = power_nz + Challenging (C)
+    AT3 = economy_nz + Facilitating (F)
+    AT4 = economy_nz + Challenging (C)
+
+    Returns P50 (median) across all scenarios matching the condition filter,
+    plus P10/P90 fan for uncertainty visualization.
+    """
+    result = {}
+
+    for iso in ISOS:
+        path = os.path.join(DATA_DIR, f'sweep_{sweep_type}_{iso}.parquet')
+        if not os.path.exists(path):
+            continue
+
+        df = pd.read_parquet(path)
+        if 'conditions' in df.columns:
+            df = df[df['conditions'] == condition_filter]
+
+        if df.empty:
+            continue
+
+        years = sorted(df['year'].unique())
+
+        data = {'years': [int(y) for y in years]}
+
+        # Compute P50 for key metrics, P10/P90 for emissions fan
+        metric_cols = {
+            'emissions_mt': 2,
+            'clean_pct': 1,
+            'carbon_shadow_price': 1,
+            'dac_offset_mt': 2,
+            'mandated_subsidy_mwh': 2,
+        }
+
+        for col, decimals in metric_cols.items():
+            if col not in df.columns:
+                data[col] = [0] * len(years)
+                continue
+            vals = []
+            for yr in years:
+                yr_vals = df[df['year'] == yr][col].dropna()
+                vals.append(round(float(yr_vals.median()), decimals) if len(yr_vals) > 0 else 0)
+            data[col] = vals
+
+        # Emissions fan (P10/P90)
+        data['emissions_fan'] = {'p10': [], 'p50': [], 'p90': []}
+        for yr in years:
+            yr_vals = df[df['year'] == yr]['emissions_mt'].values
+            data['emissions_fan']['p10'].append(round(float(np.percentile(yr_vals, 10)), 2))
+            data['emissions_fan']['p50'].append(round(float(np.percentile(yr_vals, 50)), 2))
+            data['emissions_fan']['p90'].append(round(float(np.percentile(yr_vals, 90)), 2))
+
+        # DAC cost per ton: compute from dac_cost_million / dac_offset_mt
+        dac_cost_per_ton = []
+        for yr in years:
+            yr_df = df[df['year'] == yr]
+            cost = yr_df['dac_cost_million'].median() if 'dac_cost_million' in yr_df.columns else 0
+            offset = yr_df['dac_offset_mt'].median() if 'dac_offset_mt' in yr_df.columns else 0
+            if offset > 0 and cost > 0:
+                dac_cost_per_ton.append(round(float(cost / offset), 2))
+            else:
+                dac_cost_per_ton.append(0)
+        data['dac_cost_per_ton'] = dac_cost_per_ton
+
+        # Resource mix (P50)
+        mix_cols = ['mix_clean_firm_twh', 'mix_solar_twh', 'mix_wind_twh', 'mix_offshore_wind_twh',
+                    'mix_ccs_ccgt_twh', 'mix_hydro_twh', 'mix_battery_twh', 'mix_ldes_twh']
+        for col in mix_cols:
+            if col in df.columns:
+                vals = []
+                for yr in years:
+                    yr_vals = df[df['year'] == yr][col].dropna()
+                    vals.append(round(float(yr_vals.median()), 2) if len(yr_vals) > 0 else 0)
+                data[col] = vals
+
+        result[iso] = data
+
     return result
 
 
@@ -131,17 +215,30 @@ def main():
     for iso in ref_data:
         print(f'    {iso}: {len(ref_data[iso]["years"])} years')
     
-    # Extract AT1, AT2, AT3, AT4 from dedicated parquet files
-    scenario_files = {
-        'AT1': os.path.join(DATA_DIR, 'smartargets_AT1.parquet'),
-        'AT2': os.path.join(DATA_DIR, 'smartargets_AT2.parquet'),
-        'AT3': os.path.join(DATA_DIR, 'smartargets_AT3.parquet'),
-        'AT4': os.path.join(DATA_DIR, 'smartargets_AT4.parquet'),
+    # Extract AT1-AT4 from sweep parquets (preferred) or legacy AT parquets (fallback)
+    at_sweep_mapping = {
+        'AT1': ('power_nz', 'F'),      # Facilitating
+        'AT2': ('power_nz', 'C'),      # Challenging
+        'AT3': ('economy_nz', 'F'),    # Facilitating
+        'AT4': ('economy_nz', 'C'),    # Challenging
     }
-    
-    for code, path in scenario_files.items():
-        print(f'  Extracting {code} (SMARTargets Aspirational Target)...')
-        data = extract_scenario_data(path, code)
+
+    for code, (sweep_type, cond_filter) in at_sweep_mapping.items():
+        # Check if sweep parquets exist
+        sweep_exists = any(
+            os.path.exists(os.path.join(DATA_DIR, f'sweep_{sweep_type}_{iso}.parquet'))
+            for iso in ISOS
+        )
+
+        if sweep_exists:
+            print(f'  Extracting {code} from {sweep_type} sweep (conditions={cond_filter})...')
+            data = extract_at_from_sweep(sweep_type, cond_filter)
+        else:
+            # Fallback to legacy AT parquet
+            legacy_path = os.path.join(DATA_DIR, f'smartargets_{code}.parquet')
+            print(f'  Extracting {code} from legacy parquet...')
+            data = extract_scenario_data(legacy_path, code)
+
         output['scenarios'][code] = data
         for iso in data:
             print(f'    {iso}: {len(data[iso]["years"])} years')
