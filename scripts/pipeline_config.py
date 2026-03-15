@@ -120,6 +120,24 @@ GRID_MIX_SHARES = {
 }
 
 # ============================================================================
+# EXTERNAL CLEAN ENERGY IMPORTS (TWh/yr)
+# ============================================================================
+# Cross-border or cross-region clean energy imports not captured by in-ISO
+# generation profiles. These are fixed constants (not modeled flows) that
+# boost the clean energy numerator when computing clean penetration.
+#
+# NYISO: ~25 TWh/yr from Hydro-Québec via HVDC ties (HQ Phase I/II, CHPE).
+#   Source: NYISO Gold Book 2024, Hydro-Québec annual reports.
+#   Real imports vary with market conditions/hydrology; 25 TWh is a
+#   representative annual average. This is a known simplification.
+# Other ISOs: 0 for now (cross-ISO clean flows within the US are small
+#   relative to total generation and partially captured in generation profiles).
+EXTERNAL_CLEAN_IMPORTS_TWH = {
+    'CAISO': 0, 'ERCOT': 0, 'PJM': 0,
+    'NYISO': 25, 'NEISO': 0, 'MISO': 0, 'SPP': 0,
+}
+
+# ============================================================================
 # WHOLESALE ELECTRICITY PRICES ($/MWh)
 # ============================================================================
 # Source: EIA-930 + ISO annual market reports, 2024 weighted average DA LMP.

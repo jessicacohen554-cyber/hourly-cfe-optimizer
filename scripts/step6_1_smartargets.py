@@ -38,7 +38,7 @@ sys.path.insert(0, os.path.join(SCRIPT_DIR, 'archive'))
 
 from pipeline_config import (
     ISOS, REGIONAL_DEMAND_TWH, DEMAND_GROWTH_RATES,
-    GRID_MIX_SHARES, WHOLESALE_PRICES,
+    GRID_MIX_SHARES, WHOLESALE_PRICES, EXTERNAL_CLEAN_IMPORTS_TWH,
     CAPACITY_MARKET_PRICES, CAPACITY_DEGRADATION_ALPHA,
     PEAK_CAPACITY_CREDITS, RESOURCE_CAPACITY_FACTORS,
     LCOE_TABLES, TX_TABLES, get_tx,
@@ -1228,8 +1228,14 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
     iso_state = {}
     for iso in isos:
         existing_clean = sum(GRID_MIX_SHARES.get(iso, {}).values())
+        # Add external clean imports (e.g., NYISO Hydro-Québec ~25 TWh/yr)
+        # as a percentage-point boost to the clean energy base.
+        ext_import_twh = EXTERNAL_CLEAN_IMPORTS_TWH.get(iso, 0)
+        ext_import_pct = ext_import_twh / REGIONAL_DEMAND_TWH[iso] * 100 if ext_import_twh > 0 else 0
+        existing_clean += ext_import_pct
         iso_state[iso] = {
             'clean_pct': existing_clean,
+            'ext_import_pct': ext_import_pct,  # Track for emissions accounting
             'market_stopped': False,
             'gas_built_gw': 0,
             'mandated_subsidy_total': 0,  # Cumulative subsidy for mandated build
@@ -1249,6 +1255,10 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                 baseline_co2_mt = baseline_co2_tons / 1e6
                 baseline_demand = REGIONAL_DEMAND_TWH[iso]
                 baseline_clean = EGRID_2023_CLEAN_PCT.get(iso, 40.0)
+                # Add external clean imports to baseline (e.g., NYISO HQ imports)
+                ext_twh = EXTERNAL_CLEAN_IMPORTS_TWH.get(iso, 0)
+                if ext_twh > 0:
+                    baseline_clean += ext_twh / baseline_demand * 100
                 baseline_lmp = EGRID_2023_LMP.get(iso, 30.0)
                 fossil_twh = (1 - baseline_clean / 100.0) * baseline_demand
                 baseline_er = baseline_co2_tons / (fossil_twh * 1e6) if fossil_twh > 0 else 0.5
@@ -1300,6 +1310,15 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
 
             demand_twh = get_demand_at_year(iso, year, conditions['demand_growth'])
             demand_total_mwh = demand_twh * 1e6
+
+            # Recalculate external import pct at current demand level
+            # (fixed TWh imports shrink as % when demand grows)
+            ext_import_twh = EXTERNAL_CLEAN_IMPORTS_TWH.get(iso, 0)
+            if ext_import_twh > 0:
+                old_ext_pct = state['ext_import_pct']
+                new_ext_pct = ext_import_twh / demand_twh * 100
+                state['clean_pct'] += (new_ext_pct - old_ext_pct)
+                state['ext_import_pct'] = new_ext_pct
 
             # Get demand and supply profiles
             demand_norm, total_mwh_base = get_demand_profile(iso, demand_data)

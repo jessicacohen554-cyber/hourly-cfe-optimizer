@@ -249,7 +249,7 @@ body { background: var(--bg-page-white); }
             <div class="big-label">ISOs Compared</div>
         </div>
         <div class="stat-counter">
-            <div class="big-num" id="statDirectional">86%</div>
+            <div class="big-num" id="statDirectional">60%</div>
             <div class="big-label">Directional Alignment</div>
         </div>
     </div>
@@ -257,13 +257,14 @@ body { background: var(--bg-page-white); }
     <p>We validated our SMARTargets market simulation against five published benchmark forecasts — EIA's Annual Energy Outlook, NREL's Cambium model, Princeton's REPEAT project, LBNL's interconnection queue data, and EPA's Integrated Planning Model — across all seven U.S. ISOs.</p>
 
     <div class="insight-box">
-        <strong>Bottom line:</strong> Our model's clean energy penetration trajectories are directionally aligned with consensus forecasts in 86% of year-over-year comparisons. Near-term projections (2030) align closely with both EIA and NREL. The meaningful divergences appear at 2040+ and are <em>explainable</em> — they trace directly to structural model differences, not errors.
+        <strong>Bottom line:</strong> Our model's clean energy penetration trajectories are directionally aligned with consensus forecasts in 60% of year-over-year comparisons. Near-term (2030) projections are close to EIA for most ISOs, but our market-only reference sweep consistently projects slower decarbonization than policy-inclusive benchmarks. The divergences at 2040+ are <em>structural and explainable</em> — they trace to our omission of policy mandates (IRA, state RPS, RGGI), not model errors.
     </div>
 
-    <p>The two most important findings from this validation:</p>
+    <p>The three most important findings from this validation:</p>
     <ol>
         <li><strong>Our model captures scarcity pricing that capacity-expansion models miss.</strong> At high clean penetration (>70%), our hourly dispatch resolution shows wholesale prices rising — not falling — as fossil generation becomes scarce and expensive to maintain. EIA and NREL models, which optimize capacity over annual blocks, project steadily declining prices from VRE surplus. The truth likely falls between these views.</li>
         <li><strong>Our reference sweep is a market-only scenario</strong> — no emission caps, no RPS mandates, no carbon price escalation. This is intentional: it shows what the market alone would deliver. Benchmarks that include IRA incentives, state policies, and EPA regulations naturally project faster decarbonization. The gap between our reference case and these policy-inclusive benchmarks is itself informative — it quantifies the policy premium.</li>
+        <li><strong>Cross-border clean imports matter for NYISO.</strong> Our model treats ISOs as independent grids, ignoring ~25 TWh/yr of Hydro-Québec clean energy imports into NYISO. This partly explains the NYISO clean penetration lag (our ~40% vs. benchmarks' 58–62% at 2030). We've implemented a correction for this in the model code (see Model Improvements below).</li>
     </ol>
 
 </div>
@@ -278,10 +279,10 @@ body { background: var(--bg-page-white); }
     <h2 class="section-title">Where We Agree</h2>
     <p class="section-subtitle">Clean energy deployment pace — strong near-term consensus</p>
 
-    <p>Through 2035, our model and EIA AEO agree on clean energy penetration within 10% for most ISOs. This isn't surprising — both models use similar near-term cost assumptions (NREL ATB-derived LCOEs), similar existing fleet data (EIA 860), and similar demand baselines.</p>
+    <p>Through 2035, our model and EIA AEO agree on the direction of clean energy deployment for most ISOs: clean penetration is rising, and the near-term cost economics are clear. Both models use similar near-term cost assumptions (NREL ATB-derived LCOEs), similar existing fleet data (EIA 860), and similar demand baselines — though our ISO-specific demand growth rates (ERCOT 3.5%/yr, PJM 2.4%/yr, CAISO 1.9%/yr, etc.) diverge from EIA's national average.</p>
 
     <div class="insight-box insight-success">
-        <strong>Strongest alignment:</strong> PJM and ERCOT clean penetration tracks EIA AEO within 5% through 2040. NEISO deployment pace matches NREL Cambium almost exactly — both project ~70% clean by 2035 and ~85% by 2050.
+        <strong>Strongest alignment:</strong> PJM and ERCOT clean penetration directionally tracks EIA AEO through 2040 — both show steady upward trajectories. NEISO deployment direction matches NREL Cambium closely. The magnitude gaps widen after 2035, but both models agree on the direction of the transition.
     </div>
 
     <p>Select an ISO to see how our model's P10–P90 fan band compares with benchmark projections for clean energy penetration:</p>
@@ -340,11 +341,14 @@ body { background: var(--bg-page-white); }
 
     <h3 style="margin-top: var(--space-xl);">3. NYISO Early-Period Deployment Lag</h3>
 
-    <p>Our model projects NYISO at ~40% clean by 2030, while both EIA (58%) and NREL (62%) project much higher levels. This is the widest near-term gap and warrants investigation.</p>
+    <p>Our model projects NYISO at ~40% clean by 2030 (P50), while both EIA (58%) and NREL (62%) project much higher levels. This is the widest near-term gap and has two root causes:</p>
 
-    <p>Root cause: NYISO's existing clean base is dominated by hydro and nuclear. The benchmarks include NY CLCPA mandates (70% clean by 2030 state law), which drive rapid offshore wind and solar deployment. Our reference sweep, being market-only, doesn't enforce these mandates — and in pure market terms, NYISO's tight geography and high interconnection costs slow voluntary deployment.</p>
+    <ol>
+        <li><strong>Missing Hydro-Québec imports:</strong> NYISO imports ~25 TWh/yr of clean hydropower from Québec via HVDC ties — roughly a 15 percentage-point boost to clean penetration. Our model treated ISOs as independent grids and missed this entirely. We've now added an <code>EXTERNAL_CLEAN_IMPORTS_TWH</code> correction to the model (see Model Improvements below), which will close about half of the gap in the next sweep run.</li>
+        <li><strong>Missing state mandates:</strong> The benchmarks include NY CLCPA mandates (70% clean by 2030 state law), which drive rapid offshore wind and solar deployment. Our reference sweep, being market-only, doesn't enforce these mandates — and in pure market terms, NYISO's tight geography and high interconnection costs slow voluntary deployment.</li>
+    </ol>
 
-    <p>This deviation is well-understood: it reflects the difference between a legal mandate (CLCPA) and market incentive alone. Our policy scenarios (AT1–AT4) would close this gap.</p>
+    <p>The remaining deviation after the HQ import correction reflects the difference between a legal mandate (CLCPA) and market incentive alone. Our policy scenarios (IRA overlay with RPS floors) will close most of the residual gap.</p>
 
 </div>
 </div>
@@ -451,21 +455,21 @@ body { background: var(--bg-page-white); }
             </tr>
             <tr>
                 <td><strong>Policy modeling</strong></td>
-                <td class="our-val">Reference sweep = market-only; policy scenarios separate</td>
+                <td class="our-val">Reference = market-only; IRA overlay (PTC/ITC, RGGI, state RPS) available as sweep dimension</td>
                 <td class="bm-val">IRA, state RPS, RGGI, EPA rules embedded in reference case</td>
-                <td>Our reference case shows slower decarbonization; must compare policy scenarios for parity</td>
+                <td>Reference case is still market-only for comparison purposes; policy-on sweep matches benchmark assumptions</td>
             </tr>
             <tr>
                 <td><strong>Coal retirement</strong></td>
-                <td class="our-val">Threshold-based (retires when clean % exceeds threshold)</td>
+                <td class="our-val">Hybrid: EIA 860 announced retirements through 2035 + threshold-based after</td>
                 <td class="bm-val">Plant-by-plant announced retirements + economic dispatch (EIA 860)</td>
-                <td>Our retirement timing is approximate; we may under/overstate the pace in specific ISOs</td>
+                <td>Near-term (2025–2035) now uses ISO-specific announced schedules; long-term remains approximate</td>
             </tr>
             <tr>
                 <td><strong>Demand growth</strong></td>
-                <td class="our-val">Three fixed rates: 0.5% / 1.2% / 2.0% per year</td>
+                <td class="our-val">ISO-specific L/M/H rates (ERCOT 3.5%, PJM 2.4%, CAISO 1.9%, NYISO 2.0%, NEISO 1.8%, MISO 2.2%, SPP 1.8% at Medium)</td>
                 <td class="bm-val">Sector-specific (EV, heat pumps, data centers, industrial) with regional variation</td>
-                <td>We may miss regional demand spikes (e.g., ERCOT data center boom) or electrification timing</td>
+                <td>Our rates capture regional variation (ERCOT data center boom, PJM electrification) but not sector-level timing</td>
             </tr>
             <tr>
                 <td><strong>Unit commitment</strong></td>
@@ -490,7 +494,68 @@ body { background: var(--bg-page-white); }
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════ -->
-<!-- SECTION 7: Conclusions -->
+<!-- SECTION 7: Model Improvements -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="story-section" data-observe>
+<div class="content-section-narrow">
+
+    <h2 class="section-title">Model Improvements</h2>
+    <p class="section-subtitle">Changes implemented since initial validation</p>
+
+    <p>This validation exercise identified several areas where targeted model improvements could close explainable gaps with benchmarks. The following changes have been implemented:</p>
+
+    <table class="assumption-table">
+        <thead>
+            <tr>
+                <th>Improvement</th>
+                <th>What Changed</th>
+                <th>Expected Impact</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Hydro-Québec Imports</strong></td>
+                <td>Added <code>EXTERNAL_CLEAN_IMPORTS_TWH</code> constant (NYISO: 25 TWh/yr) to pipeline_config.py. SMARTargets now includes cross-border clean imports in clean_pct calculations, with demand-growth-adjusted percentage tracking.</td>
+                <td>~15 pp boost to NYISO clean penetration (closing ~40% → ~55%), narrowing the gap vs. EIA's 58% and NREL's 62% at 2030.</td>
+                <td style="color: #166534; font-weight: 600;">Implemented</td>
+            </tr>
+            <tr>
+                <td><strong>IRA Policy Overlay</strong></td>
+                <td>New <code>ira_policy</code> sweep dimension toggling IRA PTC/ITC incentives, RGGI carbon pricing (ISO-specific), and state RPS deployment floors.</td>
+                <td>Policy-on scenarios will show faster decarbonization matching benchmark trajectories. Market-only baseline preserved for comparison.</td>
+                <td style="color: #166534; font-weight: 600;">Implemented</td>
+            </tr>
+            <tr>
+                <td><strong>Announced Coal Retirements</strong></td>
+                <td>Hybrid coal retirement model: EIA 860 announced schedule through 2035, threshold-based after. Replaces pure threshold cliff model.</td>
+                <td>Earlier coal exit in PJM/MISO/SPP, reducing emissions gap vs. EIA/EPA projections at 2030–2035.</td>
+                <td style="color: #166534; font-weight: 600;">Implemented</td>
+            </tr>
+            <tr>
+                <td><strong>ISO-Specific Demand Growth</strong></td>
+                <td>Replaced uniform national rates with ISO-specific L/M/H rates sourced from EIA AEO 2025, NERC LTRA, and ISO-specific load forecasts (e.g., ERCOT 3.5%/yr Medium vs. NEISO 1.8%/yr).</td>
+                <td>Better demand trajectory alignment, especially for ERCOT (data center boom) and NEISO (slow growth).</td>
+                <td style="color: #166534; font-weight: 600;">Implemented</td>
+            </tr>
+            <tr>
+                <td><strong>LMP Decomposition</strong></td>
+                <td>Component tracking in LMP engine: merit_base + scarcity + dq_adder. Enables apples-to-apples comparison of our merit_base_avg against Cambium's SRMC.</td>
+                <td>Resolves apparent LMP over-prediction — much of the gap is scarcity/congestion pricing that Cambium's SRMC excludes by design.</td>
+                <td style="color: #166534; font-weight: 600;">Implemented</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="insight-box insight-success">
+        <strong>Next steps:</strong> Re-running the reference sweep with these improvements will update all comparison metrics on this page. The HQ imports and coal retirement corrections address near-term gaps; the IRA policy overlay addresses the structural policy-vs-market divergence at 2035+.
+    </div>
+
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION 8: Conclusions -->
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <div class="story-section" data-observe>
 <div class="content-section-narrow">
