@@ -287,7 +287,7 @@
 
     // ─── SECTION 2: Scenario Convergence & Divergence ────────
     function renderConvergenceDivergence() {
-        const fb = co.fan_bands.reference || co.fan_bands.reference;
+        const fb = co.fan_bands.reference;
         const emissions = fb.emissions;
 
         // Fan band chart — P10/P50/P90 + min/max
