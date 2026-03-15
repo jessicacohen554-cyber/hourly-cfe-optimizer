@@ -472,6 +472,90 @@ p {
     background: linear-gradient(90deg, #334155 0%, #64748B 25%, #94A3B8 50%, #64748B 75%, #334155 100%);
 }
 
+/* --- Topographic Contour: navy with green-blue tints, topo map aesthetic --- */
+.header--topo {
+    background: linear-gradient(145deg, #0A1628 0%, #0F2235 40%, #0D2B2E 70%, #0A1628 100%);
+}
+.header--topo::before {
+    background:
+        radial-gradient(ellipse 60% 50% at 50% 50%, rgba(20,184,166,0.08) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 40% at 35% 55%, rgba(34,197,94,0.06) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 40% at 65% 45%, rgba(14,165,233,0.05) 0%, transparent 60%);
+}
+.header--topo .header-accent {
+    background: linear-gradient(90deg, #0A1628 0%, #0D9488 30%, #14B8A6 55%, #22C55E 80%, #10B981 100%);
+}
+
+/* --- Constellation Network: very dark navy, near-black, astronomical --- */
+.header--constellation {
+    background: linear-gradient(180deg, #060B15 0%, #0A1225 50%, #0D1830 100%);
+}
+.header--constellation::before {
+    background:
+        radial-gradient(ellipse 80% 60% at 50% 50%, rgba(99,102,241,0.04) 0%, transparent 70%);
+}
+.header--constellation .header-accent {
+    background: linear-gradient(90deg, #6366F1 0%, #0EA5E9 30%, #22C55E 65%, #F59E0B 100%);
+}
+
+/* --- Radial Sundial: dark navy with warm amber at bottom-left --- */
+.header--sundial {
+    background: linear-gradient(135deg, #1A1005 0%, #0F1520 40%, #0A1225 100%);
+}
+.header--sundial::before {
+    background:
+        radial-gradient(ellipse 60% 70% at 8% 92%, rgba(245,158,11,0.15) 0%, transparent 65%),
+        radial-gradient(ellipse 40% 40% at 30% 70%, rgba(251,146,60,0.06) 0%, transparent 55%);
+}
+.header--sundial .header-accent {
+    background: linear-gradient(90deg, #78350F 0%, #D97706 25%, #F59E0B 50%, #FBBF24 75%, #F59E0B 100%);
+}
+
+/* --- Stacked Terrain: near-black, Joy Division aesthetic --- */
+.header--terrain {
+    background: linear-gradient(180deg, #050505 0%, #0A0A0A 50%, #080808 100%);
+}
+.header--terrain::before {
+    background: none;
+}
+.header--terrain::after {
+    background: none;
+}
+.header--terrain h1 {
+    text-shadow: 0 0 40px rgba(255,255,255,0.15);
+}
+.header--terrain .subtitle {
+    color: rgba(255,255,255,0.65);
+}
+.header--terrain .header-accent {
+    background: linear-gradient(90deg, #0EA5E9 0%, #22C55E 30%, #F59E0B 60%, #EF4444 100%);
+}
+
+/* --- Hexagonal Mosaic: dark navy/slate, structured beauty --- */
+.header--hexmosaic {
+    background: linear-gradient(160deg, #0B1120 0%, #111827 50%, #0F172A 100%);
+}
+.header--hexmosaic::before {
+    background:
+        radial-gradient(ellipse 40% 40% at 30% 50%, rgba(14,165,233,0.06) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 40% at 70% 50%, rgba(245,158,11,0.05) 0%, transparent 60%);
+}
+.header--hexmosaic .header-accent {
+    background: linear-gradient(90deg, #0EA5E9 0%, #22C55E 25%, #F59E0B 50%, #6366F1 75%, #EF4444 100%);
+}
+
+/* --- Particle Flow: deep navy, energy streams converging --- */
+.header--particleflow {
+    background: linear-gradient(180deg, #060D1A 0%, #0A1628 50%, #0D1B30 100%);
+}
+.header--particleflow::before {
+    background:
+        radial-gradient(ellipse 30% 30% at 50% 57%, rgba(255,255,255,0.04) 0%, transparent 70%);
+}
+.header--particleflow .header-accent {
+    background: linear-gradient(90deg, #F59E0B 0%, #22C55E 35%, #0EA5E9 70%, #6366F1 100%);
+}
+
 /* ========== SECTION LAYOUT PRIMITIVES ========== */
 .content-section {
     max-width: var(--max-content);
