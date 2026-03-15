@@ -1612,7 +1612,7 @@ p {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--hydro);
+    color: #0369A1; /* contrast-fix: was var(--hydro) #0EA5E9, now #0369A1, ratio 5.93:1 on bg #FFFFFF */
     margin-bottom: 8px;
 }
 .related-card-title {

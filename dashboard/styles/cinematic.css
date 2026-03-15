@@ -600,7 +600,7 @@ section.panel-navy .stat-label {
 }
 .panel-navy .story-badge {
     background: rgba(255, 255, 255, 0.12);
-    color: rgba(255, 255, 255, 0.85);
+    color: rgba(255, 255, 255, 0.85) !important; /* contrast-fix: was without !important, ensure light text on dark badge bg in navy panels */
     border-color: rgba(255, 255, 255, 0.2);
 }
 .panel-navy .citation,
@@ -658,8 +658,10 @@ section.panel-navy .stat-label {
     color: var(--text-secondary, #4B5563) !important;
 }
 .panel-navy .card-grid .stat-tile,
-.panel-navy .card-grid-3 .stat-tile {
-    background: #F9FAFB !important;
+.panel-navy .card-grid-3 .stat-tile,
+.panel-navy .card-grid .stat-card,
+.panel-navy .card-grid-3 .stat-card {
+    background: #F9FAFB !important; /* contrast-fix: was rgba(255,255,255,0.12), now #F9FAFB, ensures light bg for dark text */
     border: 1px solid #E5E7EB !important;
 }
 .panel-navy .card-grid .stat-value,
@@ -668,7 +670,7 @@ section.panel-navy .stat-label {
 }
 .panel-navy .card-grid .stat-label,
 .panel-navy .card-grid-3 .stat-label {
-    color: var(--text-secondary, #4B5563) !important;
+    color: var(--text-secondary, #4B5563) !important; /* contrast-fix: 7.22:1 on bg #F9FAFB */
 }
 
 /* Data tables inside panel-navy — white bg + dark text for readability */
