@@ -117,7 +117,7 @@ body { background: var(--bg-alt-warm); }
 <section class="hero" style="background: linear-gradient(180deg, var(--navy-dark) 0%, var(--navy) 60%, var(--navy-mid) 100%); padding: 48px var(--pad-page) 40px; text-align: center;">
     <h1 style="font-family: var(--font-heading); font-size: 2.2rem; font-weight: 800; color: #fff; margin-bottom: 12px;">What Do Regional Targets Mean for Your Fleet?</h1>
     <p style="font-size: 1.05rem; color: rgba(255,255,255,0.88); max-width: 860px; margin: 0 auto; line-height: 1.7;">
-        270 parametric scenarios reveal the range of outcomes for each IPP fleet. P10/P50/P90 fan bands show the
+        540 parametric scenarios reveal the range of outcomes for each IPP fleet. P10/P50/P90 fan bands show the
         envelope of emissions, profitability, and stranding risk across market conditions, demand growth, price
         sensitivity, PPA availability, and gas friction.
     </p>
@@ -182,7 +182,7 @@ body { background: var(--bg-alt-warm); }
 
 <!-- SECTION 2: FAN BAND CHARTS -->
 <div class="dashboard-section panel-navy" id="fanSection">
-    <h2>Outcome Envelope (270 Scenarios)</h2>
+    <h2>Outcome Envelope (540 Scenarios)</h2>
     <p class="section-desc">P10/P50/P90 fan bands across all parametric scenarios. Purple = passive fleet, green = with new clean deployment. Use dimension filters above to isolate specific market conditions.</p>
 
     <div class="fan-grid">
@@ -193,7 +193,7 @@ body { background: var(--bg-alt-warm); }
         </div>
         <div class="fan-card">
             <h3 id="profFanTitle">Fleet Profit</h3>
-            <div class="chart-note">Annual fleet profit across 270 scenario combinations.</div>
+            <div class="chart-note">Annual fleet profit across 540 scenario combinations.</div>
             <div class="fan-chart-container"><canvas id="profitFanChart"></canvas></div>
         </div>
     </div>
@@ -634,7 +634,7 @@ function updateFanNarrative(fanData) {
     const p90_2050 = em.p90[em.p90.length - 1];
     const reduction = ((co2_base - p50_2050) / co2_base * 100).toFixed(0);
 
-    let text = `<strong>${co.name}</strong>: Across 270 scenarios, 2050 emissions range from `;
+    let text = `<strong>${co.name}</strong>: Across 540 scenarios, 2050 emissions range from `;
     text += `<strong>${p10_2050.toFixed(1)} Mt</strong> (P10, best case) to `;
     text += `<strong>${p90_2050.toFixed(1)} Mt</strong> (P90, worst case), `;
     text += `with a median of <strong>${p50_2050.toFixed(1)} Mt</strong> (${reduction}% reduction from 2023 baseline).`;

@@ -480,16 +480,20 @@
             <strong>Market Dynamics, Decarbonization Pathways &amp; Retirement Risk</strong>
             Built on the SMARTargets methodology, this phase extends the model beyond static
             optimization into probabilistic market simulation. An enhanced parametric design
-            evaluates 270+ market scenarios&mdash;spanning demand growth rates, fuel price
-            trajectories, PPA structures, and gas friction assumptions&mdash;alongside 10
-            structured net-zero transition pathways through 2050, including both facilitating
-            scenarios (with DAC backstop) and challenging scenarios (forced grid deployment only).
-            Corporate power sector target-setting implications are assessed against SBTi milestones,
-            while a multi-model nuclear stranding analysis stress-tests the economics of the
-            existing fleet under contract-for-difference policy structures (state ZEC/CMC programs,
-            federal 45U PTC) across all market scenarios. This probabilistic approach produces
-            confidence distributions rather than point estimates, capturing the full envelope of
-            plausible outcomes for procurement planning and retirement risk assessment.
+            evaluates 540+ market scenarios&mdash;spanning demand growth rates, fuel price
+            trajectories, PPA structures, gas friction assumptions, and IRA policy toggle
+            (on/off)&mdash;alongside 10 structured net-zero transition pathways through 2050,
+            including both facilitating scenarios (with DAC backstop) and challenging scenarios
+            (forced grid deployment only). The simulation incorporates announced coal retirements
+            (EIA 860 schedule through 2035), transmission constraint modeling, RGGI carbon pricing
+            for northeast ISOs, state RPS deployment floors, and a regulatory feedback mechanism
+            that dampens unrealistic sustained high LMP. Corporate power sector target-setting
+            implications are assessed against SBTi milestones, while a multi-model nuclear stranding
+            analysis stress-tests the economics of the existing fleet under contract-for-difference
+            policy structures (state ZEC/CMC programs, federal 45U PTC) across all market scenarios.
+            This probabilistic approach produces confidence distributions rather than point estimates,
+            capturing the full envelope of plausible outcomes for procurement planning and retirement
+            risk assessment.
         </li>
     </ol>
 
@@ -613,7 +617,25 @@
     <p>
         Merit-order-based wholesale price modeling showing how clean energy procurement at scale
         affects locational marginal prices, and the feedback between procurement cost and
-        market impact.
+        market impact. The LMP engine includes three pricing layers:
+    </p>
+    <ul style="font-size:0.92rem;color:var(--text-secondary);line-height:1.8;">
+        <li><strong>Merit-order base</strong> &mdash; marginal cost from dispatch stack, reflecting fuel costs, heat rates, and variable O&amp;M for each unit in the regional fossil fleet.</li>
+        <li><strong>Unit commitment / must-run floor</strong> &mdash; nuclear operates at 100% must-run; coal steam generators have a 40% minimum stable generation constraint. When residual demand falls below the total must-run floor, prices are depressed by surplus generation&mdash;capturing the off-peak price dynamics observed in real markets (e.g., PJM off-peak ~$28/MWh).</li>
+        <li><strong>Scarcity pricing</strong> &mdash; ORDC-based pricing with ISO-specific value-of-lost-load caps ($5,000/MWh ERCOT ORDC, $2,000/MWh capacity market ISOs). Triggers when reserve margins fall below reliability thresholds.</li>
+    </ul>
+    <p>
+        A <strong>regulatory feedback mechanism</strong> dampens sustained high LMP at high clean penetration.
+        When rolling 3-year average LMP exceeds 2&times; the ISO's 2023 baseline, a capacity mechanism
+        reform is triggered&mdash;reducing scarcity hours for energy-only ISOs (ERCOT, SPP) and increasing
+        capacity procurement for capacity-market ISOs (PJM, NYISO, NEISO, MISO). This prevents unrealistic
+        sustained prices (e.g., $172/MWh ERCOT 2050 averages) by modeling the regulatory responses that
+        real markets exhibit under price stress.
+    </p>
+    <p>
+        LMP component decomposition tracks merit-order base, scarcity, and demand-quantile adders
+        separately, enabling apples-to-apples comparison against NREL Cambium's short-run marginal
+        cost (SRMC) metric.
     </p>
 
     <!-- ================================================================ -->
@@ -746,10 +768,11 @@
             flow-constrained network optimization. Production models like GenX (DC optimal power flow)
             and EPRI's US-REGEN (zonal pipe-and-bubble) capture congestion-driven price separation
             within ISOs that can materially affect resource siting economics.</li>
-        <li><strong>No unit commitment constraints</strong> &mdash; perfect dispatch assumed with no
-            minimum up/down times, ramp rate limits, start-up costs, or minimum stable output for
-            thermal generators. This may understate the cost of integrating variable renewables
-            at high penetration levels.</li>
+        <li><strong>Partial unit commitment</strong> &mdash; the LMP engine enforces must-run /
+            minimum-generation constraints (nuclear 100% must-run, coal steam 40% min stable output)
+            that capture off-peak price depression dynamics. Full unit commitment with minimum
+            up/down times, ramp rate limits, and start-up costs is not yet modeled&mdash;this may
+            slightly understate cycling costs at high variable renewable penetration.</li>
         <li><strong>Reserve margin without hourly reserves</strong> &mdash; the model enforces a
             resource adequacy requirement (reserve margin) in cost optimization, but does not model
             spinning, non-spinning, or regulation reserves as hourly dispatch constraints.
@@ -761,9 +784,11 @@
         <li><strong>Single-sector scope</strong> &mdash; electricity-only analysis. Cross-sector
             interactions (transport electrification, building heating, industrial hydrogen demand)
             that affect electricity prices and resource availability are not captured.</li>
-        <li><strong>Policy evolution</strong> &mdash; state RPS targets, federal tax credits,
-            and GHG Protocol requirements continue to evolve. Results reflect current policy
-            as of early 2025.</li>
+        <li><strong>Policy evolution</strong> &mdash; the model includes an IRA policy overlay
+            (PTC/ITC incentives, RGGI carbon pricing, state RPS floors) as a toggleable sweep
+            dimension, enabling comparison between market-only and policy-inclusive scenarios.
+            However, policy parameters are static as of early 2025&mdash;future regulatory changes
+            (GHG Protocol updates, new state mandates, carbon border adjustments) are not modeled.</li>
         <li><strong>Interconnection queue constraints</strong> &mdash; the model assumes new capacity
             can be built as needed, without modeling interconnection queue delays or developer
             competition effects.</li>
@@ -803,13 +828,13 @@
             </p>
         </div>
         <div class="capability-card">
-            <h4>Operating Reserve &amp; Unit Commitment</h4>
+            <h4>Full Unit Commitment &amp; Operating Reserves</h4>
             <p>
-                Add spinning reserve requirements and thermal generator operational constraints
-                (ramp rates, minimum stable output, start-up costs). Increases dispatch realism
-                for fossil backup and CCS-CCGT, particularly at high CFE thresholds where firm
-                capacity margins tighten and cycling costs become material. Informed by GenX.jl's
-                unit commitment formulation.
+                Extend the existing must-run / minimum-generation constraints (nuclear 100%,
+                coal 40%) with spinning reserve requirements, ramp rates, minimum up/down times,
+                and start-up costs. The current partial implementation captures off-peak price
+                dynamics; full commitment would add cycling cost realism for fossil backup and
+                CCS-CCGT at high CFE thresholds. Informed by GenX.jl's unit commitment formulation.
             </p>
         </div>
         <div class="capability-card">
@@ -836,13 +861,14 @@
             </p>
         </div>
         <div class="capability-card">
-            <h4>Endogenous Capacity Retirement</h4>
+            <h4>Endogenous Gas Retirement</h4>
             <p>
-                Allow the optimization to retire gas generation capacity when clean energy
-                deployment makes plants uneconomic, rather than holding the fossil fleet static.
-                Captures the feedback between clean deployment, declining fossil utilization, and
-                eventual economic retirement&mdash;important for accurate CO&#8322; abatement
-                accounting. Informed by GenX's retirement module.
+                Coal retirement now uses a hybrid model (EIA 860 announced retirements through 2035,
+                threshold-based after). The remaining enhancement is endogenous <em>gas</em>
+                retirement&mdash;allowing the optimization to retire gas capacity when clean energy
+                deployment makes plants uneconomic. This would capture the feedback between
+                deployment, declining fossil utilization, and economic retirement. Informed by
+                GenX's retirement module.
             </p>
         </div>
         <div class="capability-card">
