@@ -33,7 +33,7 @@ const TOTAL_DEMAND = Object.values(GRID_DEMANDS).reduce((a, b) => a + b, 0);
 // Cluster definitions
 const CLUSTERS = [
     { name: 'Consequential Netting', strategies: ['1B'], color: '#6366F1', desc: 'Cross-regional new-build deployment via queue-ordered procurement using fossil-avg emission baseline. Cheapest per-MWh, but deploys mostly mature VRE (solar/wind). New firm clean (nuclear, CCS, LDES) only appears at extreme thresholds (95%+) — minimal contribution to learning curves for immature technologies.' },
-    { name: 'Hourly Hybrid', strategies: ['2C'], color: '#0EA5E9', desc: 'Same-ISO hourly matching blending existing clean (SSS, merchant EAC, nuclear uprate) with new-build. Cost-effective at low participation but costs escalate as cheap pools exhaust. Depends on nuclear staying online for cheapest firm supply.' }
+    { name: 'Hourly Hybrid', strategies: ['2C'], color: '#0EA5E9', desc: 'Same-ISO hourly matching blending existing clean (SSS, merchant EAC, nuclear uprate) with new-build. Cost-effective at low participation but costs escalate as cheap pools exhaust. Critically, 2C creates a revenue pathway that enables existing nuclear to stay online — losing nuclear would be catastrophic for grid decarbonization.' }
 ];
 
 const charts = {};
@@ -294,7 +294,9 @@ function populateExecutiveSummary() {
         with total system cost of $${fmt(sys2c / 1000, 0)}B. Its hourly matching constraint forces deployment of firm clean
         and storage in the buyer's ISO, accelerating learning curves.
         ${crossoverP ? `<strong>The critical crossover occurs at ~${crossoverP}% participation</strong> — below that, 1B wins on total cost; above it, 2C's lower gas requirements make it the more cost-effective system-wide strategy. At 95% CFE and 30% participation, 1B's system cost is 3× higher than 2C's due to massive new-build gas backup needs.` : ''}
-        The nuclear fragility test (Section 05) quantifies 2C's key downside risk: dependence on existing nuclear staying online.</p>`;
+        A key advantage of 2C: it creates EAC revenue that keeps existing nuclear online — preserving ~50% of US clean
+        electricity that would otherwise face merchant revenue erosion. 1B provides zero support to nuclear, leaving grid
+        decarbonization exposed to premature plant closures.</p>`;
 }
 
 function buildSummaryBarChart() {
@@ -567,8 +569,12 @@ function buildFragilityCharts() {
         At 95% CFE / ${participation}% participation, nuclear retirement shifts costs by
         ${costDelta >= 0 ? '+' : ''}$${fmt(costDelta)}/MWh, CO₂ by ${co2Delta >= 0 ? '+' : ''}${fmt(co2Delta)} Mt,
         and gas capacity by ${gasDelta >= 0 ? '+' : ''}${fmt(gasDelta, 0)} GW.
-        ${Math.abs(costDelta) > 5 ? 'This is a <strong>material fragility</strong> — Strategy 2C\'s cost advantage depends significantly on nuclear staying online. If merchant revenue erodes and plants close, the strategy\'s economics deteriorate.' : 'The impact is <strong>moderate</strong> — 2C retains most of its advantage even under nuclear retirement, though at a cost premium.'}
-        ${gasDelta > 5 ? ' Notably, nuclear retirement results in ' + fmt(gasDelta, 0) + ' GW more gas on the grid — converting a clean energy asset loss into a fossil fuel lock-in.' : ''}</p>`;
+        This test highlights <strong>why nuclear preservation matters</strong>: losing existing nuclear doesn't just hurt 2C's economics —
+        it's catastrophic for grid-level climate goals. The US nuclear fleet provides ~20% of all electricity and ~50% of all clean electricity.
+        ${gasDelta > 5 ? 'Nuclear retirement would add ' + fmt(gasDelta, 0) + ' GW of gas to the grid, converting a clean baseload asset into fossil fuel lock-in. ' : ''}
+        <strong>Strategy 2C actively prevents this outcome</strong> by creating EAC revenue that supports nuclear plant economics.
+        Strategy 1B provides zero financial support to existing nuclear — under 1B, nuclear plants face the same merchant revenue erosion
+        from VRE oversupply with no offsetting demand signal, accelerating the risk of premature retirement.</p>`;
 }
 
 // ─── Section 06: Critical Risks ─────────────────────────────────────────────
@@ -682,13 +688,13 @@ function buildNuclearStrandChart() {
 
     const exposures = CORE_STRATEGIES.map(s => {
         const dep = computeNuclearDependency(s, participation, threshold);
-        // Nuclear stranding risk = does the strategy create revenue for existing nuclear?
-        // 2C actively funds nuclear via EAC purchases — lowest stranding risk
-        // 2A is 100% new-build, zero nuclear dependency — no stranding exposure either way
-        // 1A/1B deploy new-build cross-regionally, no EAC revenue pathway for existing nuclear
+        // Nuclear stranding risk = does the strategy SUPPORT existing nuclear staying online?
+        // 2C actively funds nuclear via EAC purchases — creates revenue pathway, lowest stranding risk
+        // 1B deploys new-build cross-regionally, provides ZERO support to existing nuclear — highest stranding risk
+        // Losing existing nuclear is catastrophic for grid decarbonization (50% of US clean electricity)
         const strandingAdj = {
-            '1B': 15,  // no EAC revenue pathway — nuclear unsupported, highest stranding risk
-            '2C': 0    // directly funds existing nuclear via EAC purchases — lowest risk
+            '1B': 20,  // zero EAC revenue for nuclear — actively exposes nuclear to merchant erosion
+            '2C': -5   // directly funds existing nuclear via EAC purchases — helps prevent retirement
         };
         return dep + (strandingAdj[s] || 5);
     });
@@ -726,12 +732,13 @@ function populateRiskInsight() {
         Gas lock-in varies from ${fmt(gas95[gas95.length - 1].gas, 0)} GW (${STRATEGY_SHORT[gas95[gas95.length - 1].s]}) to
         ${fmt(gas95[0].gas, 0)} GW (${STRATEGY_SHORT[gas95[0].s]}) — a ${fmt(gas95[0].gas - gas95[gas95.length - 1].gas, 0)} GW spread.
         Curtailment ranges from ${fmt(curt95[curt95.length - 1].curt)} TWh to ${fmt(curt95[0].curt)} TWh.
-        <strong>2C</strong> carries nuclear stranding risk because it relies on existing nuclear for
-        cheap firm supply — if nuclear plants close, 2C loses its cost advantage (see Section 05).
-        <strong>1B</strong> deploys new-build cross-regionally but provides no EAC revenue
-        to support existing nuclear — it contributes to stranding risk indirectly by not creating a revenue pathway.
-        The key tradeoff: 1B avoids nuclear dependency but leaves more gas on grid; 2C funds nuclear via EAC purchases
-        but is exposed if nuclear retires anyway.</p>`;
+        <strong>Nuclear preservation is the critical climate variable.</strong> The US nuclear fleet provides ~50% of all
+        clean electricity — losing it would be catastrophic for decarbonization, replacing baseload clean with gas.
+        <strong>2C</strong> actively supports nuclear by creating EAC revenue that improves plant economics and prevents
+        premature retirement. <strong>1B</strong> provides zero financial support to existing nuclear — cross-regional
+        VRE procurement does nothing to address nuclear merchant revenue erosion. Under 1B, nuclear plants face the
+        same economic pressures with no offsetting demand signal, making premature closure more likely.
+        The key risk asymmetry: 1B leaves more gas on grid AND fails to protect nuclear; 2C reduces gas AND funds nuclear.</p>`;
 }
 
 // ─── Section 07: Regime Map ─────────────────────────────────────────────────
@@ -803,24 +810,26 @@ function populateDissenting() {
     el.innerHTML = `
         <div class="insight-box" style="margin-bottom: var(--space-lg)">
             <h4 style="font-family: var(--font-heading); color: var(--navy); margin: 0 0 var(--space-sm)">Against Consequential Netting (1B)</h4>
-            <p>While 1B deploys 100% new-build capacity, it does so <strong>cross-regionally</strong> via
-            queue-ordered procurement — the new clean generation may be built in a distant ISO, not in
-            the buyer's grid. This means the buyer's local grid sees no physical transformation. The emission
-            reduction is real on a system-wide basis, but the buyer's ISO may retain the same fossil fleet.
-            At scale, this concentrates new clean capacity in the cheapest-to-build regions while leaving
-            harder-to-decarbonize grids untouched. Additionally, consequential netting uses annual accounting,
-            missing the hourly mismatch between clean generation and actual load. The new capacity deployed is
-            overwhelmingly mature VRE — minimal contribution to firm clean learning curves.</p>
+            <p>1B's new-build requirement means it provides <strong>zero financial support to existing nuclear</strong>.
+            In a world where 1B is the dominant procurement strategy, existing nuclear faces the same merchant revenue
+            erosion from VRE oversupply with no offsetting demand signal — accelerating premature retirement of the
+            largest source of clean firm generation on the grid. Losing existing nuclear would be catastrophic for
+            climate goals, replacing ~50% of US clean electricity with gas.
+            Beyond nuclear, 1B deploys cross-regionally — new clean generation may be built in a distant ISO, leaving
+            the buyer's grid physically untransformed. The new capacity is overwhelmingly mature VRE (solar/wind),
+            contributing minimally to firm clean learning curves. And consequential netting uses annual accounting,
+            missing the hourly mismatch between clean generation and actual load.</p>
         </div>
 
         <div class="insight-box" style="margin-bottom: var(--space-lg)">
             <h4 style="font-family: var(--font-heading); color: var(--navy); margin: 0 0 var(--space-sm)">Against Hourly Hybrid (2C)</h4>
-            <p>Strategy 2C's cost advantage depends heavily on existing nuclear remaining online.
-            The nuclear fragility test (Section 05) quantifies this risk. If merchant revenue
-            erosion from VRE oversupply closes nuclear plants, 2C loses its cheapest firm generation
-            source and must either accept higher costs or increased gas dependency. Additionally,
-            2C's blending of existing and new clean resources may dilute the additionality signal
-            that drives learning curve acceleration for advanced technologies.</p>
+            <p>While 2C's EAC purchases create revenue that helps keep nuclear online, this is a
+            <strong>mutual dependency</strong> — 2C needs nuclear for cheap firm supply, and nuclear needs
+            2C's revenue for economic viability. If nuclear plants close despite EAC support (e.g., due to
+            regulatory or safety issues), 2C loses its cheapest firm generation source and must accept
+            higher costs or increased gas dependency. Additionally, 2C's blending of existing and new clean
+            resources means only ~30% of its clean procurement is truly additional new-build — the rest
+            reshuffles existing clean claims, which may dilute the additionality signal for advanced technologies.</p>
         </div>
 
         <div class="insight-box" style="margin-bottom: var(--space-lg)">
