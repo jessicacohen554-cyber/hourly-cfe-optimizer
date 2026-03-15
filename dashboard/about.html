@@ -221,7 +221,6 @@
 </style>
 <script src="js/chart-colors.js"></script>
 <script src="js/shared-header.js"></script>
-<script src="js/canvas-banners.js"></script>
     <script src="js/scroll-observer.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
@@ -234,7 +233,7 @@
 <script src="js/nav.js"></script>
 
 <!-- HEADER / BANNER -->
-<header class="header" id="pageHeader" data-header-variant="freq-circuit-flat">
+<header class="header" id="pageHeader">
     <h1>The 8,760 Problem</h1>
     <div class="subtitle">
         The transition from passive consumer of electrons to active participant in the grid&rsquo;s metabolic
@@ -243,69 +242,6 @@
     <div class="header-accent"></div>
 </header>
 
-<!-- VARIANT SELECTOR (for design testing — remove before production) -->
-<div id="variantSelector" class="variant-selector">
-    <div class="variant-group">
-        <span class="variant-group-label">Light Freq + Circuit</span>
-        <button class="variant-btn active" data-variant="freq-circuit-flat">Flat #FEFEFE</button>
-        <button class="variant-btn" data-variant="freq-circuit-warm">Warm #FEFDFC</button>
-        <button class="variant-btn" data-variant="freq-circuit-cool">Cool #FEFEFD</button>
-        <button class="variant-btn" data-variant="freq-circuit-gradient">Gradient Blend</button>
-    </div>
-</div>
-<style>
-.variant-selector {
-    position: sticky; top: 56px; z-index: 999;
-    background: #fff; border-bottom: 1px solid #E5E7EB;
-    padding: 10px 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    font-family: var(--font-body, 'DM Sans', sans-serif);
-}
-.variant-group {
-    display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
-    margin-bottom: 6px;
-}
-.variant-group:last-child { margin-bottom: 0; }
-.variant-group-label {
-    font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 1px; color: #94A3B8; width: 44px; flex-shrink: 0;
-}
-.variant-btn {
-    padding: 5px 12px; border: 1px solid #D1D5DB; border-radius: 6px;
-    background: #F9FAFB; cursor: pointer; font-size: 0.78rem; font-weight: 500;
-    color: #374151; transition: all 0.2s; font-family: inherit;
-}
-.variant-btn:hover { background: #EEF2FF; border-color: #818CF8; color: #4338CA; }
-.variant-btn.active { background: #1A2744; color: #fff; border-color: #1A2744; }
-</style>
-<script>
-(function() {
-    // Debug: verify scripts loaded
-    console.log('[Banner] _switchHeaderVariant defined:', typeof window._switchHeaderVariant === 'function');
-    console.log('[Banner] _canvasBanners loaded:', window._canvasBanners ? Object.keys(window._canvasBanners).length + ' variants' : 'NOT LOADED');
-
-    var btns = document.querySelectorAll('.variant-btn');
-    console.log('[Banner] Found', btns.length, 'variant buttons');
-
-    btns.forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            var variant = btn.getAttribute('data-variant');
-            console.log('[Banner] Switching to:', variant);
-            btns.forEach(function(b) { b.classList.remove('active'); });
-            btn.classList.add('active');
-            if (window._switchHeaderVariant) {
-                try {
-                    window._switchHeaderVariant(variant);
-                } catch (e) {
-                    console.error('[Banner] Switch failed:', e);
-                }
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            } else {
-                console.error('[Banner] _switchHeaderVariant is not defined!');
-            }
-        });
-    });
-})();
-</script>
 
 <!-- ========== SCROLLYTELL CONTENT ========== -->
 <div class="content-wrap">

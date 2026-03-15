@@ -228,7 +228,7 @@
         var headers = document.querySelectorAll('.header');
         headers.forEach(function(header) {
             if (header.querySelector('.header-svg-overlay') || header.querySelector('.header-canvas-overlay')) return;
-            var variant = header.getAttribute('data-header-variant') || 'default';
+            var variant = header.getAttribute('data-header-variant') || 'freq-circuit-gradient';
 
             if (isCanvasVariant(variant)) {
                 // Canvas banner
@@ -245,10 +245,41 @@
         });
     }
 
+    // ---- Dynamic canvas-banners.js loader ----
+    // Loads canvas-banners.js automatically so every page gets the freq+circuit variants
+    // without needing to add a <script> tag to each HTML file.
+    function loadCanvasBanners(callback) {
+        // Skip if already loaded
+        if (window._canvasBanners && Object.keys(window._canvasBanners).length > 0) {
+            callback();
+            return;
+        }
+        // Determine script path relative to shared-header.js
+        var scripts = document.querySelectorAll('script[src*="shared-header"]');
+        var basePath = 'js/';
+        if (scripts.length > 0) {
+            var src = scripts[0].getAttribute('src');
+            basePath = src.substring(0, src.lastIndexOf('/') + 1);
+        }
+        var script = document.createElement('script');
+        script.src = basePath + 'canvas-banners.js';
+        script.onload = callback;
+        script.onerror = function() {
+            // Fallback to SVG default if canvas-banners fails to load
+            console.warn('canvas-banners.js failed to load, falling back to SVG default');
+            callback();
+        };
+        document.head.appendChild(script);
+    }
+
+    function boot() {
+        loadCanvasBanners(injectOverlay);
+    }
+
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', injectOverlay);
+        document.addEventListener('DOMContentLoaded', boot);
     } else {
-        injectOverlay();
+        boot();
     }
 
     // Expose variant list (dynamic — includes canvas banners when loaded)
