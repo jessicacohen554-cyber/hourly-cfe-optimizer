@@ -668,7 +668,7 @@ body { background: var(--bg-page-white); }
                 <strong>No Transmission Congestion</strong> — Transmission is modeled as a flat $/MWh adder per resource type per ISO, not as a nodal network with congestion pricing. This simplification means the model doesn't capture locational marginal costs within an ISO (e.g., West Texas wind vs. Dallas load).
             </li>
             <li style="margin-bottom: 12px;">
-                <strong>No Weather Year Sensitivity</strong> — Generation profiles use a single representative year (2025) or 4-year average. No Monte Carlo weather uncertainty analysis across historical weather years. Extreme events (polar vortex, drought) are not stress-tested.
+                <strong>Weather Year Averaging</strong> — Generation and demand profile <em>shapes</em> are 5-year element-wise averages (2021–2025); absolute quantities from 2025 actuals. Weather-year sensitivity analysis (re-scoring efficient frontier mixes against individual year profiles) quantifies the interannual variation envelope. Extreme events (polar vortex, drought) are partially smoothed by the averaging but not individually stress-tested.
             </li>
             <li style="margin-bottom: 12px;">
                 <strong>Merit-Order Retirement is Directional</strong> — The CO₂ model assumes clean energy displaces the dirtiest fossil fuel first (coal → oil → gas). Actual retirement timing depends on policy, plant age, fuel contracts, and stranded asset economics. The directional effect is correct but timing is approximate.
@@ -737,8 +737,8 @@ body { background: var(--bg-page-white); }
 
         <div style="margin-bottom: var(--space-lg);">
             <h3>10.6 Why Greedy Dispatch Instead of LP?</h3>
-            <p>The model evaluates 7M+ resource mixes × 8,760 hours × 4+ storage technologies. A linear program per mix would take ~1 second; total = 80+ compute-days. The greedy heuristic takes &lt;1ms per mix, completing 7M mixes in hours. The greedy approach is conservative — it <em>understates</em> storage value, meaning the true optimal cost is lower than what the model reports. This is a deliberate design choice: we'd rather understate the benefit of storage than overstate it.</p>
-            <p style="color: #64748b; font-size: 0.88rem;"><em>Alternative considered:</em> LP dispatch via CVXPY/Gurobi. Rejected due to 100× computational cost. Could be implemented as a post-hoc refinement on the Pareto frontier (~1,000 mixes) rather than the full grid (~7M mixes).</p>
+            <p>The model evaluates ~5.87M unique efficient frontier mixes × 8,760 hours × 4+ storage technologies (from a larger PFS of ~21M+ physics-validated candidates). A linear program per mix would take ~1 second; total = 80+ compute-days. The greedy heuristic takes &lt;1ms per mix, completing millions of mixes in hours. The greedy approach is conservative — it <em>understates</em> storage value, meaning the true optimal cost is lower than what the model reports. This is a deliberate design choice: we'd rather understate the benefit of storage than overstate it.</p>
+            <p style="color: #64748b; font-size: 0.88rem;"><em>Alternative considered:</em> LP dispatch via CVXPY/Gurobi. Rejected due to 100× computational cost. Could be implemented as a post-hoc refinement on the Pareto frontier (~1,000 mixes) rather than the full grid (~5.87M EF mixes).</p>
         </div>
 
         <div>
