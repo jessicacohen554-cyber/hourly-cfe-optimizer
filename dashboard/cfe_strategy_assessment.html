@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CFE Strategy Assessment — Hourly CFE Optimizer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/ipp-transition.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="js/nav.js"></script>
+    <script src="js/chart-colors.js"></script>
+    <script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
+    <script src="js/shared-footer.js"></script>
+</head>
+<body>
+    <nav id="topNav"></nav>
+
+    <div class="header" id="pageHeader">
+        <h1>CFE Strategy Assessment</h1>
+        <div class="subtitle">Independent comparative analysis of 10 corporate clean energy procurement strategies across 7 ISOs</div>
+        <div class="header-accent"></div>
+    </div>
+
+    <div class="report-layout" id="reportContent">
+        <!-- TOC Sidebar -->
+        <aside class="report-toc">
+            <a href="procurement_deployment.html" class="report-toc-back">&larr; Procurement Dashboard</a>
+            <div class="report-toc-title">Sections</div>
+            <ol class="report-toc-list">
+                <li><a href="#executive-summary">Executive Summary</a></li>
+                <li><a href="#scorecard">Strategy Scorecard</a></li>
+                <li><a href="#crossover">Crossover Analysis</a></li>
+                <li><a href="#clusters">Strategy Clusters</a></li>
+                <li><a href="#nuclear-fragility">Nuclear Fragility Test</a></li>
+                <li><a href="#risks">Critical Risks</a></li>
+                <li><a href="#regime-map">Strategy Regime Map</a></li>
+                <li><a href="#dissenting">Dissenting Considerations</a></li>
+            </ol>
+        </aside>
+
+        <!-- Main Report Content -->
+        <main>
+            <!-- Section 01: Executive Summary -->
+            <section class="report-section scroll-reveal" id="executive-summary">
+                <div class="report-section-header">
+                    <span class="report-section-number">01</span>
+                    <h2>Executive Summary</h2>
+                </div>
+
+                <div class="grid-stats" style="margin-bottom: var(--space-xl)">
+                    <div class="stat-card"><div class="stat-value" id="statBestCost">&mdash;</div><div class="stat-label">Lowest Cost Strategy</div></div>
+                    <div class="stat-card"><div class="stat-value" id="statBestCo2">&mdash;</div><div class="stat-label">Best CO&#8322; Reduction</div></div>
+                    <div class="stat-card"><div class="stat-value" id="statGasRisk">&mdash;</div><div class="stat-label">Gas Lock-in Range</div></div>
+                    <div class="stat-card"><div class="stat-value" id="statLearning">&mdash;</div><div class="stat-label">Learning Curve Leader</div></div>
+                    <div class="stat-card"><div class="stat-value" id="statNuclearDep">&mdash;</div><div class="stat-label">Nuclear Dependency</div></div>
+                    <div class="stat-card"><div class="stat-value" id="statRecommended">&mdash;</div><div class="stat-label">Recommended (90%)</div></div>
+                </div>
+
+                <div class="insight-box" id="executiveFinding" style="margin-bottom: var(--space-xl)">
+                    <p>Loading analysis...</p>
+                </div>
+
+                <div class="card" style="padding: var(--space-lg)">
+                    <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Composite Strategy Performance at 90% CFE / 25% Participation</h3>
+                    <div class="chart-container"><canvas id="summaryBarChart"></canvas></div>
+                </div>
+            </section>
+
+            <!-- Section 02: Strategy Scorecard -->
+            <section class="report-section scroll-reveal" id="scorecard">
+                <div class="report-section-header">
+                    <span class="report-section-number">02</span>
+                    <h2>Strategy Scorecard</h2>
+                </div>
+
+                <div style="display: flex; gap: var(--space-lg); flex-wrap: wrap; margin-bottom: var(--space-lg)">
+                    <div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: var(--space-xs); text-transform: uppercase; letter-spacing: 0.5px">CFE Threshold</div>
+                        <div class="toggle-btn-group" id="scorecardThresholdToggle">
+                            <button data-val="70">70%</button>
+                            <button data-val="90" class="active">90%</button>
+                            <button data-val="99.5">99%+</button>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: var(--space-xs); text-transform: uppercase; letter-spacing: 0.5px">Participation Level</div>
+                        <div class="toggle-btn-group" id="scorecardParticipationToggle">
+                            <button data-val="10" class="active">10%</button>
+                            <button data-val="50">50%</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="padding: var(--space-lg)">
+                    <div style="overflow-x: auto">
+                        <table class="data-table" id="scorecardTable">
+                            <thead>
+                                <tr>
+                                    <th>Strategy</th>
+                                    <th>Emission Reduction</th>
+                                    <th>Cost Efficiency</th>
+                                    <th>Gas Lock-in</th>
+                                    <th>Asset Stranding</th>
+                                    <th>Learning Curves</th>
+                                    <th>Overall</th>
+                                </tr>
+                            </thead>
+                            <tbody id="scorecardBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 03: Crossover Analysis -->
+            <section class="report-section scroll-reveal" id="crossover">
+                <div class="report-section-header">
+                    <span class="report-section-number">03</span>
+                    <h2>Crossover Analysis</h2>
+                </div>
+
+                <p style="color: var(--text-muted); margin-bottom: var(--space-lg)">Where and why strategy rankings shift. Each chart traces all strategies across CFE thresholds at a given participation level.</p>
+
+                <div style="margin-bottom: var(--space-lg)">
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: var(--space-xs); text-transform: uppercase; letter-spacing: 0.5px">Participation Level</div>
+                    <div class="toggle-btn-group" id="crossoverParticipationToggle">
+                        <button data-val="10" class="active">10%</button>
+                        <button data-val="25">25%</button>
+                        <button data-val="50">50%</button>
+                    </div>
+                </div>
+
+                <div class="grid-2col" style="margin-bottom: var(--space-xl)">
+                    <div class="card" style="padding: var(--space-lg)">
+                        <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Clean Energy Cost by Threshold</h3>
+                        <div class="chart-container"><canvas id="crossoverCostChart"></canvas></div>
+                    </div>
+                    <div class="card" style="padding: var(--space-lg)">
+                        <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">CO&#8322; Displaced by Threshold</h3>
+                        <div class="chart-container"><canvas id="crossoverCo2Chart"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="grid-2col">
+                    <div class="card" style="padding: var(--space-lg)">
+                        <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Gas Capacity on Grid by Threshold</h3>
+                        <div class="chart-container"><canvas id="crossoverGasChart"></canvas></div>
+                    </div>
+                    <div class="card" style="padding: var(--space-lg)">
+                        <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">VRE Curtailment by Threshold</h3>
+                        <div class="chart-container"><canvas id="crossoverCurtChart"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="insight-box" id="crossoverInsight" style="margin-top: var(--space-xl)">
+                    <p>Loading crossover analysis...</p>
+                </div>
+            </section>
+
+            <!-- Section 04: Strategy Clusters -->
+            <section class="report-section scroll-reveal" id="clusters">
+                <div class="report-section-header">
+                    <span class="report-section-number">04</span>
+                    <h2>Strategy Clusters</h2>
+                </div>
+
+                <p style="color: var(--text-muted); margin-bottom: var(--space-lg)">Strategies grouped by functional similarity in outcomes. Strategies within a cluster produce near-identical results across most thresholds and participation levels.</p>
+
+                <div class="card" style="padding: var(--space-lg); margin-bottom: var(--space-xl)">
+                    <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Cluster Performance Profile (Normalized, 90% / 25% Participation)</h3>
+                    <div class="chart-container-lg"><canvas id="clusterRadarChart"></canvas></div>
+                </div>
+
+                <div class="grid-2col" id="clusterDescriptions"></div>
+            </section>
+
+            <!-- Section 05: Nuclear Fragility Test -->
+            <section class="report-section scroll-reveal" id="nuclear-fragility">
+                <div class="report-section-header">
+                    <span class="report-section-number">05</span>
+                    <h2>Nuclear Fragility Test</h2>
+                </div>
+
+                <p style="color: var(--text-muted); margin-bottom: var(--space-lg)">Comparing Strategy 2C (hourly matching with existing + new clean) against the 2C_rolloff scenario where existing nuclear retires as merchant revenue erodes. If 2C depends on nuclear staying online, its advantage is fragile.</p>
+
+                <div class="grid-2col" style="margin-bottom: var(--space-xl)">
+                    <div class="card" style="padding: var(--space-lg)">
+                        <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Cost Impact: 2C vs Nuclear Rolloff</h3>
+                        <div class="chart-container"><canvas id="fragilityCostChart"></canvas></div>
+                    </div>
+                    <div class="card" style="padding: var(--space-lg)">
+                        <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">CO&#8322; Impact: 2C vs Nuclear Rolloff</h3>
+                        <div class="chart-container"><canvas id="fragilityCo2Chart"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="grid-2col">
+                    <div class="card" style="padding: var(--space-lg)">
+                        <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Gas Capacity: 2C vs Nuclear Rolloff</h3>
+                        <div class="chart-container"><canvas id="fragilityGasChart"></canvas></div>
+                    </div>
+                    <div class="card" style="padding: var(--space-lg)">
+                        <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Curtailment: 2C vs Nuclear Rolloff</h3>
+                        <div class="chart-container"><canvas id="fragilityCurtChart"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="insight-box" id="fragilityInsight" style="margin-top: var(--space-xl)">
+                    <p>Loading fragility analysis...</p>
+                </div>
+            </section>
+
+            <!-- Section 06: Critical Risks -->
+            <section class="report-section scroll-reveal" id="risks">
+                <div class="report-section-header">
+                    <span class="report-section-number">06</span>
+                    <h2>Critical Risks</h2>
+                </div>
+
+                <p style="color: var(--text-muted); margin-bottom: var(--space-lg)">Strategies that look good on surface metrics but create hidden systemic risks. Gas lock-in creates political constituencies resisting retirement. Learning curve stalls delay cost breakthroughs the entire grid needs.</p>
+
+                <div class="grid-2col" style="margin-bottom: var(--space-xl)">
+                    <div class="card" style="padding: var(--space-lg)">
+                        <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Gas Lock-in by Strategy (GW at 90% / 50% Participation)</h3>
+                        <div class="chart-container"><canvas id="gasLockinChart"></canvas></div>
+                    </div>
+                    <div class="card" style="padding: var(--space-lg)">
+                        <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">VRE Curtailment Waste (TWh at 90% / 50%)</h3>
+                        <div class="chart-container"><canvas id="curtailmentChart"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="grid-2col">
+                    <div class="card" style="padding: var(--space-lg)">
+                        <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Learning Curve Trajectories ($/MWh at 90% Target)</h3>
+                        <div class="chart-container"><canvas id="learningCurveChart"></canvas></div>
+                    </div>
+                    <div class="card" style="padding: var(--space-lg)">
+                        <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Nuclear Stranding Exposure by Strategy</h3>
+                        <div class="chart-container"><canvas id="nuclearStrandChart"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="insight-box insight-warn" id="riskInsight" style="margin-top: var(--space-xl)">
+                    <p>Loading risk analysis...</p>
+                </div>
+            </section>
+
+            <!-- Section 07: Strategy Regime Map -->
+            <section class="report-section scroll-reveal" id="regime-map">
+                <div class="report-section-header">
+                    <span class="report-section-number">07</span>
+                    <h2>Strategy Regime Map</h2>
+                </div>
+
+                <p style="color: var(--text-muted); margin-bottom: var(--space-lg)">The optimal strategy depends on ambition level and market participation. This matrix maps the recommended strategy for each regime, based on the composite score across all five evaluation criteria.</p>
+
+                <div class="card" style="padding: var(--space-lg)">
+                    <div style="overflow-x: auto">
+                        <table class="data-table" id="regimeMapTable">
+                            <thead>
+                                <tr>
+                                    <th>Ambition Level</th>
+                                    <th>5% Participation</th>
+                                    <th>10%</th>
+                                    <th>25%</th>
+                                    <th>50%</th>
+                                    <th>100%</th>
+                                </tr>
+                            </thead>
+                            <tbody id="regimeMapBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="insight-box" id="regimeInsight" style="margin-top: var(--space-xl)">
+                    <p>Loading regime analysis...</p>
+                </div>
+            </section>
+
+            <!-- Section 08: Dissenting Considerations -->
+            <section class="report-section scroll-reveal" id="dissenting">
+                <div class="report-section-header">
+                    <span class="report-section-number">08</span>
+                    <h2>Dissenting Considerations</h2>
+                </div>
+
+                <div id="dissentingContent">
+                    <p style="color: var(--text-muted)">Loading dissenting analysis...</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <footer id="siteFooter" data-footer-note="&copy; 2026 Hourly CFE Optimizer &mdash; Independent Strategy Assessment"></footer>
+
+    <!-- Data scripts -->
+    <script src="js/deployment-data.js"></script>
+    <script src="js/strategy-comparison-data.js"></script>
+    <script src="js/lmp-data.js"></script>
+    <script src="js/no-regrets-data.js"></script>
+    <script src="js/cfe-strategy-assessment.js"></script>
+</body>
+</html>
