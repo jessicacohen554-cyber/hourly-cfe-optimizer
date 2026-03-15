@@ -83,11 +83,6 @@ function cachedAggregate(strategy, participation, threshold) {
 
 // ─── Cost Functions ─────────────────────────────────────────────────────────
 
-function computeLearningScore(strategy) {
-    const scores = { '1B': 3, '2C': 8 };
-    return scores[strategy] || 3;
-}
-
 function computeSystemCost(strategy, participation, threshold) {
     let totalCleanM = 0, totalNewGasCostM = 0;
     for (const iso of ISOS) {
@@ -161,7 +156,12 @@ function populateHeroStats() {
 
     const gasDelta = a1b.totalGasGw - a2c.totalGasGw;
     document.getElementById('heroStatGasDelta').textContent = (gasDelta > 0 ? '' : '+') + fmt(Math.abs(gasDelta), 0) + ' GW';
-    document.getElementById('heroStatLearning').textContent = '2.7\u00d7';
+
+    // Gas differential at scale (50% participation)
+    const gas1b50 = cachedAggregate('1B', 50, 95).totalGasGw;
+    const gas2c50 = cachedAggregate('2C', 50, 95).totalGasGw;
+    const gasScaleDelta = gas1b50 - gas2c50;
+    document.getElementById('heroStatGasScale').textContent = fmt(Math.abs(gasScaleDelta), 0) + ' GW';
 }
 
 // ─── Section 2: Crossover Charts ────────────────────────────────────────────
@@ -462,105 +462,7 @@ function populateCrossoverInsight() {
     }
 }
 
-// ─── Section 5: Strategy Pentagon (Overlaid Radar) ──────────────────────────
-
-function buildClusterRadar(participation) {
-    participation = participation || 15;
-    const threshold = 95;
-    destroyChart('radarOverlayChart');
-
-    const stratData = {};
-    for (const s of CORE_STRATEGIES) {
-        const agg = cachedAggregate(s, participation, threshold);
-        stratData[s] = {
-            co2: agg.totalCo2,
-            cost: computeSystemCost(s, participation, threshold),
-            gas: agg.totalGasGw,
-            learn: computeLearningScore(s),
-            curt: agg.totalCurtTwh
-        };
-    }
-
-    function normalizeRelativeToBest(field, higherIsBetter) {
-        const vals = CORE_STRATEGIES.map(s => stratData[s][field]);
-        if (higherIsBetter) {
-            const best = Math.max(...vals);
-            const normed = {};
-            CORE_STRATEGIES.forEach((s, i) => { normed[s] = best > 0 ? vals[i] / best : 0; });
-            return normed;
-        } else {
-            const best = Math.min(...vals);
-            const normed = {};
-            CORE_STRATEGIES.forEach((s, i) => { normed[s] = vals[i] > 0 ? best / vals[i] : 0; });
-            return normed;
-        }
-    }
-
-    const normCo2 = normalizeRelativeToBest('co2', true);
-    const normCost = normalizeRelativeToBest('cost', false);
-    const normGas = normalizeRelativeToBest('gas', false);
-    const normLearn = normalizeRelativeToBest('learn', true);
-    const normCurt = normalizeRelativeToBest('curt', false);
-
-    const radarLabels = ['Emission\nReduction', 'True\nCost', 'Low Gas\nLock-in', 'Learning\nCurves', 'Low\nCurtailment'];
-
-    const datasets = CORE_STRATEGIES.map(s => ({
-        label: STRATEGY_LABELS[s],
-        data: [normCo2[s], normCost[s], normGas[s], normLearn[s], normCurt[s]],
-        borderColor: STRATEGY_COLORS[s],
-        backgroundColor: STRATEGY_COLORS[s] + '25',
-        borderWidth: 2.5,
-        pointRadius: 5,
-        pointBackgroundColor: STRATEGY_COLORS[s],
-        pointBorderColor: '#fff',
-        pointBorderWidth: 1
-    }));
-
-    const ctx = document.getElementById('radarOverlayChart');
-    if (!ctx) return;
-
-    charts.radarOverlayChart = new Chart(ctx, {
-        type: 'radar',
-        data: { labels: radarLabels, datasets },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                r: {
-                    beginAtZero: true, max: 1, min: 0,
-                    ticks: { display: false, stepSize: 0.25 },
-                    pointLabels: { font: { family: 'DM Sans', size: 12, weight: 600 }, color: '#1A2744' },
-                    grid: { color: 'rgba(0,0,0,0.08)' },
-                    angleLines: { color: 'rgba(0,0,0,0.08)' }
-                }
-            },
-            plugins: {
-                legend: { labels: { font: { family: 'DM Sans', size: 12 }, usePointStyle: true, padding: 16 } },
-                tooltip: {
-                    bodyFont: { family: 'DM Sans' },
-                    callbacks: {
-                        label: function(ctx) {
-                            return `${ctx.dataset.label}: ${(ctx.raw * 100).toFixed(0)}% of best`;
-                        }
-                    }
-                }
-            }
-        }
-    });
-
-    // Insight text
-    const descEl = document.getElementById('radarInsightText');
-    if (descEl) {
-        const dims = ['Emission Reduction', 'True Cost', 'Gas Lock-in', 'Learning Curves', 'Curtailment'];
-        const wins1b = [normCo2, normCost, normGas, normLearn, normCurt].filter(n => n['1B'] > n['2C']).length;
-        const wins2c = 5 - wins1b;
-        descEl.innerHTML = `<p>At ${participation}% participation / 95% CFE: <strong>2C leads on ${wins2c} of 5 dimensions</strong>, 1B on ${wins1b}. ` +
-            `2C\u2019s advantages in gas displacement and learning curve deployment are structural \u2014 they grow with participation. ` +
-            `1B\u2019s per-MWh cost advantage narrows as gas backup requirements scale.</p>`;
-    }
-}
-
-// ─── Section 6: Wright's Law Chart ──────────────────────────────────────────
+// ─── Section 5: Wright's Law Chart ──────────────────────────────────────────
 
 function buildWrightsLawChart() {
     destroyChart('wrightsLawChart');
@@ -684,7 +586,6 @@ function buildWrightsLawChart() {
 // ─── Section 7: Critical Risks ──────────────────────────────────────────────
 
 function buildRiskCharts() {
-    buildGasLockinChart();
     buildCurtailmentChart();
     populateRiskInsight();
 }
@@ -750,17 +651,17 @@ function buildCurtailmentChart() {
 }
 
 function populateRiskInsight() {
-    const gas95 = CORE_STRATEGIES.map(s => ({ s, gas: cachedAggregate(s, 50, 95).totalGasGw }));
-    gas95.sort((a, b) => b.gas - a.gas);
     const curt95 = CORE_STRATEGIES.map(s => ({ s, curt: cachedAggregate(s, 50, 95).totalCurtTwh }));
     curt95.sort((a, b) => b.curt - a.curt);
 
     const el = document.getElementById('riskInsight');
     if (el) {
-        el.innerHTML = `<p><strong>Risk Summary (95% / 50% participation):</strong>
-            Gas lock-in: ${fmt(gas95[gas95.length - 1].gas, 0)} GW (${STRATEGY_SHORT[gas95[gas95.length - 1].s]}) to
-            ${fmt(gas95[0].gas, 0)} GW (${STRATEGY_SHORT[gas95[0].s]}) \u2014 a ${fmt(gas95[0].gas - gas95[gas95.length - 1].gas, 0)} GW spread.
-            Curtailment: ${fmt(curt95[curt95.length - 1].curt)} TWh to ${fmt(curt95[0].curt)} TWh.</p>`;
+        el.innerHTML = `<p><strong>Curtailment Risk (95% / 50% participation):</strong>
+            ${fmt(curt95[curt95.length - 1].curt)} TWh (${STRATEGY_SHORT[curt95[curt95.length - 1].s]}) to
+            ${fmt(curt95[0].curt)} TWh (${STRATEGY_SHORT[curt95[0].s]}).
+            VRE-heavy strategies (1B) generate more surplus clean energy that can\u2019t be absorbed by the grid,
+            while hourly matching (2C) produces less curtailment by design \u2014 its firm clean + storage portfolio
+            better matches generation to load patterns.</p>`;
     }
 }
 
@@ -875,6 +776,17 @@ function populateDissenting() {
             hourly strategies become cost-competitive sooner. <strong>Transmission:</strong> Major inter-ISO expansion
             would boost cross-regional strategies (1B) while reducing same-ISO hourly strategies\u2019 geographic advantage.</p>
         </div>
+
+        <div class="insight-box insight-warn fade-in" style="margin-bottom: var(--space-lg)">
+            <h4 style="font-family: var(--font-heading); color: var(--navy); margin: 0 0 var(--space-sm)">What If the GHG Protocol Doesn\u2019t Adopt Hourly Matching?</h4>
+            <p>Strategy 2C\u2019s framework alignment advantage rests on the GHG Protocol Scope 2 revision adopting hourly
+            temporal granularity. If the revision retains annual matching or adopts a weaker temporal requirement,
+            2C becomes a voluntary premium framework without regulatory backing. Companies that invested in hourly
+            matching infrastructure and premium PPAs would face stranded procurement costs, while 1B\u2019s simpler
+            annual framework would remain fully compliant. The counterargument: large buyers (Microsoft, Google, Amazon)
+            are already committing to 24/7 clean regardless of GHG Protocol, creating de facto market standards
+            that may matter more than accounting standards for IPP investment decisions.</p>
+        </div>
     `;
 }
 
@@ -897,10 +809,6 @@ function wireToggles() {
         buildCrossoverCharts(parseInt(p));
     });
 
-    wireToggleGroup(document.getElementById('radarParticipationToggle'), () => {
-        const p = document.getElementById('radarParticipationToggle').querySelector('.active').dataset.val;
-        buildClusterRadar(parseInt(p));
-    });
 }
 
 // ─── Fade-in Observer ───────────────────────────────────────────────────────
@@ -922,17 +830,17 @@ function initFadeObserver() {
 // ─── Init ───────────────────────────────────────────────────────────────────
 
 function init() {
-    populateHeroStats();
-    buildCrossoverCharts(15);
-    buildGasRibbonChart();
-    buildSystemCostCrossover();
-    buildCostBreakdown();
-    populateCrossoverInsight();
-    buildClusterRadar(15);
-    buildWrightsLawChart();
-    buildRiskCharts();
-    populateNuclearNarrative();
-    populateDissenting();
+    populateHeroStats();           // Hero
+    buildCrossoverCharts(15);      // Section 3: Ambition levels
+    buildGasRibbonChart();         // Section 4: Demand signal (gas ribbon)
+    buildSystemCostCrossover();    // Section 4: Demand signal (system cost)
+    buildCostBreakdown();          // Section 4: Demand signal (cost breakdown)
+    populateCrossoverInsight();    // Section 4: Demand signal (insight)
+    buildGasLockinChart();         // Section 4: Demand signal (gas lock-in)
+    buildWrightsLawChart();        // Section 5: Learning curves
+    populateNuclearNarrative();    // Section 6: Nuclear
+    populateDissenting();          // Section 8: Dissenting
+    buildRiskCharts();             // Section 9: Critical risks (curtailment)
     wireToggles();
     initFadeObserver();
 }
