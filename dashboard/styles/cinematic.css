@@ -575,7 +575,7 @@ section.panel-navy .card {
 .panel-navy > .story-content .card h4,
 section.panel-navy .card h3,
 section.panel-navy .card h4 {
-    color: #fff;
+    color: #fff !important; /* contrast-fix: override inline color:var(--navy) on headings inside dark panel cards */
 }
 .panel-navy > .story-content .card p,
 .panel-navy > .story-content .card li,
@@ -732,7 +732,7 @@ section.report-section.panel-navy {
 section.report-section.panel-navy h2,
 section.report-section.panel-navy h3,
 section.report-section.panel-navy h4 {
-    color: #fff;
+    color: #fff !important; /* contrast-fix: added !important to override inline color:var(--navy) on headings in dark panels */
 }
 section.report-section.panel-navy p,
 section.report-section.panel-navy li {
