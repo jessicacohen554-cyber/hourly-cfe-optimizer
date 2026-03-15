@@ -1236,13 +1236,26 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
         ext_import_twh = EXTERNAL_CLEAN_IMPORTS_TWH.get(iso, 0)
         ext_import_pct = ext_import_twh / REGIONAL_DEMAND_TWH[iso] * 100 if ext_import_twh > 0 else 0
         existing_clean += ext_import_pct
+        # RPS-eligible baseline: only renewables + hydro + geothermal (not nuclear/CCS)
+        # For non-CES ISOs, RPS mandates count only these resources toward compliance
+        baseline_rps_eligible = sum(
+            v for k, v in GRID_MIX_SHARES.get(iso, {}).items()
+            if k in REC_ELIGIBLE
+        )
+        # External clean imports (e.g., HQ hydro) are RPS-eligible
+        if ext_import_pct > 0:
+            baseline_rps_eligible += ext_import_pct
         iso_state[iso] = {
             'clean_pct': existing_clean,
+            'rps_eligible_pct': baseline_rps_eligible,  # Renewables-only for RPS compliance
+            'rps_eligible_twh_floor': baseline_rps_eligible / 100.0 * REGIONAL_DEMAND_TWH[iso],  # Ratchet for RPS-eligible TWh
             'clean_twh_floor': existing_clean / 100.0 * REGIONAL_DEMAND_TWH[iso],  # Ratchet: absolute clean TWh never decreases
             'ext_import_pct': ext_import_pct,  # Track for emissions accounting
             'market_stopped': False,
             'gas_built_gw': 0,
             'mandated_subsidy_total': 0,  # Cumulative subsidy for mandated build
+            'acp_bonus_queue_gw': 0,  # ACP recycling: bonus queue capacity from prior period
+            'cumulative_acp_million': 0,  # Total ACP payments to date
         }
 
     # Always load eGRID baselines for 2023 baseline row
@@ -1297,6 +1310,10 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                     'cumulative_gw': dict(WRIGHT_CUMULATIVE_GW_2025),
                     'queue_used_gw': 0,
                     'zones_deployed': [],
+                    'rps_eligible_pct': round(iso_state[iso]['rps_eligible_pct'], 1),
+                    'rps_shortfall_pct': 0,
+                    'acp_cost_million': 0,
+                    'cumulative_acp_million': 0,
                 }
                 results[iso].append(year_result)
                 _log(f"  {iso}: 2023 eGRID baseline — {baseline_co2_mt:.1f} Mt, "
@@ -1321,7 +1338,10 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
             if ext_import_twh > 0:
                 old_ext_pct = state['ext_import_pct']
                 new_ext_pct = ext_import_twh / demand_twh * 100
-                state['clean_pct'] += (new_ext_pct - old_ext_pct)
+                ext_delta = new_ext_pct - old_ext_pct
+                state['clean_pct'] += ext_delta
+                # External imports (e.g., HQ hydro) are RPS-eligible
+                state['rps_eligible_pct'] += ext_delta
                 state['ext_import_pct'] = new_ext_pct
 
             # Enforce TWh ratchet: absolute clean TWh never decreases
@@ -1330,6 +1350,10 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
             floor_pct = state['clean_twh_floor'] / demand_twh * 100
             if state['clean_pct'] < floor_pct:
                 state['clean_pct'] = floor_pct
+            # Same ratchet for RPS-eligible: installed renewable TWh doesn't decrease
+            rps_elig_floor_pct = state['rps_eligible_twh_floor'] / demand_twh * 100
+            if state['rps_eligible_pct'] < rps_elig_floor_pct:
+                state['rps_eligible_pct'] = rps_elig_floor_pct
 
             # Get demand and supply profiles
             demand_norm, total_mwh_base = get_demand_profile(iso, demand_data)
@@ -1361,6 +1385,14 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
             else:
                 years_in_period = 5  # 2030-2035, 2035-2040, etc.
             queue_remaining_gw = queue_budget_gw * years_in_period
+            # ACP recycling: prior-period ACP payments boost queue capacity (capped at 20% of base)
+            acp_bonus = min(state.get('acp_bonus_queue_gw', 0),
+                           queue_budget_gw * years_in_period * 0.20)
+            if acp_bonus > 0:
+                queue_remaining_gw += acp_bonus
+                _log(f"  {iso} ACP recycling: +{acp_bonus:.1f} GW bonus queue "
+                     f"(capped at 20% of {queue_budget_gw * years_in_period:.1f} GW base)")
+                state['acp_bonus_queue_gw'] = 0  # Reset after applying
 
             zone_deployed = False
             zone_results = []
@@ -1505,8 +1537,11 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                         cumulative_gw[tech] = cumulative_gw.get(tech, 0) + gw
 
                     queue_remaining_gw -= total_new_gw
+                    deployment_delta = t_end - current_pct
                     current_pct = t_end
                     state['clean_pct'] = current_pct
+                    # All new deployment is VRE (solar/wind) → RPS-eligible
+                    state['rps_eligible_pct'] += deployment_delta
                     zone_deployed = True
 
                     zone_results.append({
@@ -1539,41 +1574,91 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
             # and apply regardless of federal IRA policy status. If market-driven
             # deployment falls below the interpolated RPS floor, force deployment
             # to meet it (mandated at a loss, like emission caps).
+            #
+            # Critical distinction: CES ISOs (NYISO, NEISO, CAISO) count nuclear
+            # toward compliance. Traditional RPS ISOs (PJM, MISO, SPP) count ONLY
+            # renewables + hydro + geothermal — nuclear is excluded. This means
+            # PJM's 32.1% nuclear does NOT count toward its 22%+ RPS floor.
+            # PJM has only ~8.5% RPS-eligible resources → floor is deeply binding.
+            #
             # Queue-constrained: RPS cannot deploy more GW than the interconnection
-            # queue can physically deliver. Shortfall carries to the next period.
+            # queue can physically deliver. Shortfall is covered by ACP (Alternative
+            # Compliance Payments) — a financial penalty, not physical deployment.
+            # ACP payments get recycled into renewable dev funds, modeled as bonus
+            # queue capacity in the next period (capped at 20% of base queue).
             rps_mandated_pct = 0
+            acp_cost_million = 0
+            rps_shortfall_pct = 0
             rps_floor = get_rps_floor(iso, year)
-            if rps_floor > 0 and current_pct < rps_floor:
-                rps_gap = rps_floor - current_pct
-                # Estimate GW needed using blended solar/wind CF for RPS-eligible resources
-                rps_twh_needed = rps_gap / 100.0 * demand_twh
-                solar_cf = RESOURCE_CAPACITY_FACTORS.get('solar', {}).get(iso, 0.20)
-                wind_cf = RESOURCE_CAPACITY_FACTORS.get('wind', {}).get(iso, 0.30)
-                blended_cf = (solar_cf + wind_cf) / 2.0  # RPS is primarily VRE
-                rps_gw_needed = rps_twh_needed / (blended_cf * 8.760) if blended_cf > 0 else 0
-
-                if rps_gw_needed > queue_remaining_gw and queue_remaining_gw > 0:
-                    # Queue-constrained: deploy what's physically possible
-                    scale = queue_remaining_gw / rps_gw_needed
-                    achievable_pct = rps_gap * scale
-                    current_pct += achievable_pct
-                    rps_mandated_pct = achievable_pct
-                    queue_remaining_gw = 0
-                    _log(f"  {iso} RPS floor {rps_floor:.0f}% queue-constrained: "
-                         f"achieved +{achievable_pct:.1f}% of +{rps_gap:.1f}% target "
-                         f"({rps_gw_needed:.1f} GW needed, queue exhausted)")
-                elif queue_remaining_gw <= 0:
-                    # Queue already exhausted by market deployment — no RPS build possible
-                    _log(f"  {iso} RPS floor {rps_floor:.0f}% SKIPPED: queue exhausted "
-                         f"(need +{rps_gap:.1f}%)")
+            if rps_floor > 0:
+                # CES ISOs: all clean energy counts (nuclear, CCS included)
+                # Non-CES ISOs: only REC_ELIGIBLE resources (solar, wind, hydro, geo)
+                if iso in CES_ISOS:
+                    compliance_pct = current_pct
                 else:
-                    # Queue has capacity — deploy fully to RPS floor
-                    current_pct = rps_floor
-                    rps_mandated_pct = rps_gap
-                    queue_remaining_gw -= rps_gw_needed
-                    _log(f"  {iso} RPS/CES floor {rps_floor:.0f}% > market "
-                         f"{current_pct - rps_gap:.0f}%: forcing +{rps_gap:.1f}% "
-                         f"({rps_gw_needed:.1f} GW, {queue_remaining_gw:.1f} GW remaining)")
+                    compliance_pct = state['rps_eligible_pct']
+
+                if compliance_pct < rps_floor:
+                    rps_gap = rps_floor - compliance_pct
+                    _log(f"  {iso} RPS floor {rps_floor:.0f}% vs compliance "
+                         f"{compliance_pct:.1f}% ({'CES' if iso in CES_ISOS else 'RPS-eligible only'}): "
+                         f"gap = {rps_gap:.1f}pp")
+                    # Estimate GW needed using blended solar/wind CF for RPS-eligible resources
+                    rps_twh_needed = rps_gap / 100.0 * demand_twh
+                    solar_cf = RESOURCE_CAPACITY_FACTORS.get('solar', {}).get(iso, 0.20)
+                    wind_cf = RESOURCE_CAPACITY_FACTORS.get('wind', {}).get(iso, 0.30)
+                    blended_cf = (solar_cf + wind_cf) / 2.0  # RPS is primarily VRE
+                    rps_gw_needed = rps_twh_needed / (blended_cf * 8.760) if blended_cf > 0 else 0
+
+                    if rps_gw_needed > queue_remaining_gw and queue_remaining_gw > 0:
+                        # Queue-constrained: deploy what's physically possible
+                        scale = queue_remaining_gw / rps_gw_needed
+                        achievable_pct = rps_gap * scale
+                        current_pct += achievable_pct
+                        state['rps_eligible_pct'] += achievable_pct
+                        rps_mandated_pct = achievable_pct
+                        # ACP for the unbuilt shortfall
+                        rps_shortfall_pct = rps_gap - achievable_pct
+                        shortfall_twh = rps_shortfall_pct / 100.0 * demand_twh
+                        acp_rate = ACP_RATES.get(iso, 0)
+                        acp_cost_million = shortfall_twh * 1e3 * acp_rate / 1e6
+                        queue_remaining_gw = 0
+                        _log(f"  {iso} RPS floor {rps_floor:.0f}% queue-constrained: "
+                             f"achieved +{achievable_pct:.1f}% of +{rps_gap:.1f}% target "
+                             f"({rps_gw_needed:.1f} GW needed, queue exhausted). "
+                             f"ACP on {rps_shortfall_pct:.1f}pp shortfall: "
+                             f"${acp_cost_million:.0f}M")
+                    elif queue_remaining_gw <= 0:
+                        # Queue already exhausted — entire RPS gap covered by ACP
+                        rps_shortfall_pct = rps_gap
+                        shortfall_twh = rps_shortfall_pct / 100.0 * demand_twh
+                        acp_rate = ACP_RATES.get(iso, 0)
+                        acp_cost_million = shortfall_twh * 1e3 * acp_rate / 1e6
+                        _log(f"  {iso} RPS floor {rps_floor:.0f}% FULLY ACP-covered: "
+                             f"queue exhausted, {shortfall_twh:.1f} TWh shortfall at "
+                             f"${acp_rate}/MWh = ${acp_cost_million:.0f}M")
+                    else:
+                        # Queue has capacity — deploy fully to RPS floor
+                        current_pct += rps_gap
+                        state['rps_eligible_pct'] += rps_gap
+                        rps_mandated_pct = rps_gap
+                        queue_remaining_gw -= rps_gw_needed
+                        _log(f"  {iso} RPS/CES floor {rps_floor:.0f}% > compliance "
+                             f"{compliance_pct:.0f}%: forcing +{rps_gap:.1f}% "
+                             f"({rps_gw_needed:.1f} GW, {queue_remaining_gw:.1f} GW remaining)")
+
+                    # ACP recycling: payments fund future renewable development
+                    # Converted to bonus queue GW for next period (capped at 20% of base)
+                    if acp_cost_million > 0:
+                        # ~$1.2B/GW for utility-scale solar/wind, 65% fund efficiency
+                        ACP_FUND_EFFICIENCY = 0.65
+                        AVG_COST_PER_GW = 1200  # $M/GW
+                        bonus_gw = (acp_cost_million * ACP_FUND_EFFICIENCY) / AVG_COST_PER_GW
+                        state['acp_bonus_queue_gw'] += bonus_gw
+                        state['cumulative_acp_million'] += acp_cost_million
+                        _log(f"  {iso} ACP recycling: ${acp_cost_million:.0f}M → "
+                             f"{bonus_gw:.1f} GW bonus queue for next period")
+
                 state['clean_pct'] = current_pct
 
             # --- EMISSION CONSTRAINT: MANDATED DEPLOYMENT + DAC/OVERSHOOT ---
@@ -1738,8 +1823,11 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                         for tech, gw in new_gw.items():
                             cumulative_gw[tech] = cumulative_gw.get(tech, 0) + gw
 
+                        mandated_delta = t_end - current_pct
                         current_pct = t_end
                         state['clean_pct'] = current_pct
+                        # Mandated deployment is VRE → RPS-eligible
+                        state['rps_eligible_pct'] += mandated_delta
                         zone_deployed = True
                         mandated_subsidy += subsidy_per_mwh
                         carbon_shadow_price = max(carbon_shadow_price, zone_mac_per_ton)
@@ -1853,6 +1941,9 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
             # Update TWh ratchet floor after all deployment
             current_clean_twh = current_pct / 100.0 * demand_twh
             state['clean_twh_floor'] = max(state['clean_twh_floor'], current_clean_twh)
+            # Same ratchet for RPS-eligible TWh
+            current_rps_twh = state['rps_eligible_pct'] / 100.0 * demand_twh
+            state['rps_eligible_twh_floor'] = max(state['rps_eligible_twh_floor'], current_rps_twh)
 
             # Record year result
             mix_at_pct = iso_data.get(current_pct, iso_data.get(
@@ -1894,6 +1985,10 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                 'zones_deployed': zone_results,
                 'ira_policy': conditions.get('ira_policy', 'off'),
                 'rps_mandated_pct': round(rps_mandated_pct, 1),
+                'rps_eligible_pct': round(state['rps_eligible_pct'], 1),
+                'rps_shortfall_pct': round(rps_shortfall_pct, 1),
+                'acp_cost_million': round(acp_cost_million, 1),
+                'cumulative_acp_million': round(state['cumulative_acp_million'], 1),
             }
             results[iso].append(year_result)
 
@@ -1946,6 +2041,10 @@ def save_results(results, scenario_id):
                 'queue_used_gw': yr['queue_used_gw'],
                 'ira_policy': yr.get('ira_policy', 'off'),
                 'rps_mandated_pct': yr.get('rps_mandated_pct', 0),
+                'rps_eligible_pct': yr.get('rps_eligible_pct', 0),
+                'rps_shortfall_pct': yr.get('rps_shortfall_pct', 0),
+                'acp_cost_million': yr.get('acp_cost_million', 0),
+                'cumulative_acp_million': yr.get('cumulative_acp_million', 0),
             }
             # Add resource mix columns
             for res in ['clean_firm', 'solar', 'wind', 'offshore_wind',
@@ -2208,6 +2307,10 @@ def main():
                         'queue_used_gw': yr['queue_used_gw'],
                         'ira_policy': yr.get('ira_policy', 'off'),
                         'rps_mandated_pct': yr.get('rps_mandated_pct', 0),
+                        'rps_eligible_pct': yr.get('rps_eligible_pct', 0),
+                        'rps_shortfall_pct': yr.get('rps_shortfall_pct', 0),
+                        'acp_cost_million': yr.get('acp_cost_million', 0),
+                        'cumulative_acp_million': yr.get('cumulative_acp_million', 0),
                     }
                     # Resource mix columns
                     for res in ['clean_firm', 'solar', 'wind', 'offshore_wind',
