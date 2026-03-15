@@ -139,6 +139,17 @@ function computeNuclearDependency(strategy, participation, threshold) {
     return Math.abs(rolloff.avgCost - base.avgCost) / Math.max(base.avgCost, 1) * 100;
 }
 
+function computeScalability(strategy, threshold) {
+    // Scalability = how much does $/MWh increase as participation scales from 10% to 50%?
+    // Lower cost increase = more scalable = better score
+    // Strategies whose costs blow up at scale score poorly
+    const lowP = cachedAggregate(strategy, 10, threshold);
+    const highP = cachedAggregate(strategy, 50, threshold);
+    if (!lowP.avgCost || !highP.avgCost) return 0;
+    // Return the $/MWh increase (positive = costs rise at scale)
+    return highP.avgCost - lowP.avgCost;
+}
+
 function buildScorecardData(threshold, participation) {
     const results = [];
     const n = CORE_STRATEGIES.length;
@@ -152,34 +163,38 @@ function buildScorecardData(threshold, participation) {
     const co2Vals = CORE_STRATEGIES.map(s => aggs[s].totalCo2);
     const costVals = CORE_STRATEGIES.map(s => aggs[s].avgCost);
     const gasVals = CORE_STRATEGIES.map(s => aggs[s].totalGasGw);
-    const curtVals = CORE_STRATEGIES.map(s => aggs[s].totalCurtTwh);
+    const scaleVals = CORE_STRATEGIES.map(s => computeScalability(s, threshold));
     const learnVals = CORE_STRATEGIES.map(s => computeLearningScore(s));
+    const curtVals = CORE_STRATEGIES.map(s => aggs[s].totalCurtTwh);
 
-    // Rank: co2 higher is better (more displaced), cost lower better, gas lower better, curt lower better, learning higher better
+    // Rank: co2 higher is better, cost lower better, gas lower better, scale lower better, learning higher better, curt lower better
     const co2Ranks = rankStrategies(CORE_STRATEGIES, co2Vals, false);
     const costRanks = rankStrategies(CORE_STRATEGIES, costVals, true);
     const gasRanks = rankStrategies(CORE_STRATEGIES, gasVals, true);
-    const curtRanks = rankStrategies(CORE_STRATEGIES, curtVals, true);
+    const scaleRanks = rankStrategies(CORE_STRATEGIES, scaleVals, true);  // lower cost increase = better
     const learnRanks = rankStrategies(CORE_STRATEGIES, learnVals, false);
+    const curtRanks = rankStrategies(CORE_STRATEGIES, curtVals, true);
 
     for (let i = 0; i < n; i++) {
         const s = CORE_STRATEGIES[i];
         const co2Grade = rankToGrade(co2Ranks[s], n);
         const costGrade = rankToGrade(costRanks[s], n);
         const gasGrade = rankToGrade(gasRanks[s], n);
-        const curtGrade = rankToGrade(curtRanks[s], n);
+        const scaleGrade = rankToGrade(scaleRanks[s], n);
         const learnGrade = rankToGrade(learnRanks[s], n);
+        const curtGrade = rankToGrade(curtRanks[s], n);
 
-        // Composite: equally weighted ranks
-        const composite = 100 - ((co2Ranks[s] + costRanks[s] + gasRanks[s] + curtRanks[s] + learnRanks[s]) / (5 * n)) * 100;
+        // Composite: equally weighted ranks across 6 criteria
+        const composite = 100 - ((co2Ranks[s] + costRanks[s] + gasRanks[s] + scaleRanks[s] + learnRanks[s] + curtRanks[s]) / (6 * n)) * 100;
 
         results.push({
             strategy: s,
             co2: { val: co2Vals[i], grade: co2Grade, rank: co2Ranks[s] },
             cost: { val: costVals[i], grade: costGrade, rank: costRanks[s] },
             gas: { val: gasVals[i], grade: gasGrade, rank: gasRanks[s] },
-            curt: { val: curtVals[i], grade: curtGrade, rank: curtRanks[s] },
+            scale: { val: scaleVals[i], grade: scaleGrade, rank: scaleRanks[s] },
             learn: { val: learnVals[i], grade: learnGrade, rank: learnRanks[s] },
+            curt: { val: curtVals[i], grade: curtGrade, rank: curtRanks[s] },
             composite: Math.round(composite)
         });
     }
@@ -307,8 +322,9 @@ function renderScorecardTable(threshold, participation) {
             <td><span class="${gradeClass(row.co2.grade)}">${row.co2.grade}</span> <span style="font-size:0.8em;color:var(--text-muted)">${fmt(row.co2.val)} Mt</span></td>
             <td><span class="${gradeClass(row.cost.grade)}">${row.cost.grade}</span> <span style="font-size:0.8em;color:var(--text-muted)">$${fmt(row.cost.val)}/MWh</span></td>
             <td><span class="${gradeClass(row.gas.grade)}">${row.gas.grade}</span> <span style="font-size:0.8em;color:var(--text-muted)">${fmt(row.gas.val, 0)} GW</span></td>
-            <td><span class="${gradeClass(row.curt.grade)}">${row.curt.grade}</span> <span style="font-size:0.8em;color:var(--text-muted)">${fmt(row.curt.val)} TWh</span></td>
+            <td><span class="${gradeClass(row.scale.grade)}">${row.scale.grade}</span> <span style="font-size:0.8em;color:var(--text-muted)">${row.scale.val >= 0 ? '+' : ''}$${fmt(row.scale.val)}/MWh</span></td>
             <td><span class="${gradeClass(row.learn.grade)}">${row.learn.grade}</span></td>
+            <td><span class="${gradeClass(row.curt.grade)}">${row.curt.grade}</span> <span style="font-size:0.8em;color:var(--text-muted)">${fmt(row.curt.val)} TWh</span></td>
             <td style="font-weight:700; color:var(--navy)">${row.composite}</td>
         `;
         tbody.appendChild(tr);
@@ -398,7 +414,8 @@ function buildClusterRadar() {
         const avgGas = aggs.reduce((s, a) => s + a.totalGasGw, 0) / aggs.length;
         const avgCurt = aggs.reduce((s, a) => s + a.totalCurtTwh, 0) / aggs.length;
         const avgLearn = cluster.strategies.reduce((s, st) => s + computeLearningScore(st), 0) / cluster.strategies.length;
-        return { cost: avgCost, co2: avgCo2, gas: avgGas, curt: avgCurt, learn: avgLearn };
+        const avgScale = cluster.strategies.reduce((s, st) => s + computeScalability(st, 90), 0) / cluster.strategies.length;
+        return { cost: avgCost, co2: avgCo2, gas: avgGas, curt: avgCurt, learn: avgLearn, scale: avgScale };
     });
 
     // Normalize each dimension to 0-1 (invert where lower is better)
@@ -407,6 +424,7 @@ function buildClusterRadar() {
     const allGas = clusterData.map(d => d.gas);
     const allCurt = clusterData.map(d => d.curt);
     const allLearn = clusterData.map(d => d.learn);
+    const allScale = clusterData.map(d => d.scale);
 
     function normalize(vals, invert) {
         const min = Math.min(...vals), max = Math.max(...vals);
@@ -419,10 +437,11 @@ function buildClusterRadar() {
     const normGas = normalize(allGas, true);
     const normCurt = normalize(allCurt, true);
     const normLearn = normalize(allLearn, false);
+    const normScale = normalize(allScale, true); // lower cost increase at scale = better
 
     const datasets = CLUSTERS.map((cluster, i) => ({
         label: cluster.name,
-        data: [normCo2[i], normCost[i], normGas[i], normCurt[i], normLearn[i]],
+        data: [normCo2[i], normCost[i], normGas[i], normScale[i], normLearn[i], normCurt[i]],
         borderColor: cluster.color,
         backgroundColor: cluster.color + '30',
         borderWidth: 2,
@@ -434,7 +453,7 @@ function buildClusterRadar() {
     charts.clusterRadarChart = new Chart(ctx, {
         type: 'radar',
         data: {
-            labels: ['Emission Reduction', 'Cost Efficiency', 'Low Gas Lock-in', 'Low Curtailment', 'Learning Curves'],
+            labels: ['Emission Reduction', 'Cost Efficiency', 'Low Gas Lock-in', 'Scalability', 'Learning Curves', 'Low Curtailment'],
             datasets
         },
         options: {
