@@ -33,7 +33,7 @@ from dispatch_utils import (
     compute_fossil_capacity_at_threshold,
     load_dispatch_cache, save_dispatch_cache, get_or_compute_dispatch,
 )
-from pipeline_config import MUST_RUN_PCT
+from pipeline_config import MUST_RUN_PCT, get_announced_coal_retired_gw
 
 LMP_DIR = os.path.join(SCRIPT_DIR, 'data', 'step4-analysis', 'lmp')
 STEP3_PARQUET_DIR = os.path.join(SCRIPT_DIR, 'data', 'step2.2-cost')
@@ -209,7 +209,7 @@ def _compute_clean_peak_mw(iso, resource_mix, battery_pct=0,
 def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw=None,
                              resource_mix=None,
                              battery_pct=0, battery8_pct=0, ldes_pct=0,
-                             h2_pct=0, co2_level='Medium'):
+                             h2_pct=0, co2_level='Medium', year=None):
     """Build merit-order stack: list of (unit_type, capacity_mw, marginal_cost).
 
     Ordered by marginal cost (cheapest first). Stack composition reflects
@@ -279,11 +279,24 @@ def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw
             # below reliability requirement, but also doesn't magically grow
             total_fossil_mw = min(installed, max(ra_floor_mw, linear_mw))
 
-    shares = FOSSIL_CAPACITY_SHARES.get(iso, FOSSIL_CAPACITY_SHARES['PJM'])
+    shares = dict(FOSSIL_CAPACITY_SHARES.get(iso, FOSSIL_CAPACITY_SHARES['PJM']))
 
-    # Apply retirement model
+    # Apply announced coal retirements (near-term through 2035)
+    if year is not None and shares.get('coal_steam', 0) > 0:
+        coal_installed_mw = total_fossil_mw * shares['coal_steam']
+        retired_gw = get_announced_coal_retired_gw(iso, year)
+        retired_mw = retired_gw * 1000
+        remaining_coal_mw = max(0, coal_installed_mw - retired_mw)
+        if coal_installed_mw > 0:
+            shares['coal_steam'] = shares['coal_steam'] * (remaining_coal_mw / coal_installed_mw)
+        # Renormalize shares to sum to 1.0
+        share_total = sum(shares.values())
+        if share_total > 0:
+            shares = {k: v / share_total for k, v in shares.items()}
+
+    # Apply retirement model (threshold-based, on top of announced retirements)
     if clean_pct >= COAL_OIL_RETIREMENT_THRESHOLD:
-        # All coal and oil retired
+        # All remaining coal and oil retired
         active_shares = {
             'gas_ccgt': shares.get('gas_ccgt', 0.5),
             'gas_ct': shares.get('gas_ct', 0.5),
