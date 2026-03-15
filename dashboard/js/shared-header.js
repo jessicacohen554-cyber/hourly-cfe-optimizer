@@ -252,47 +252,49 @@
     }
 
     // Expose variant list (dynamic — includes canvas banners when loaded)
-    Object.defineProperty(window, '_headerVariants', {
-        get: function() {
-            var keys = Object.keys(VARIANTS);
-            if (window._canvasBanners) {
-                keys = keys.concat(Object.keys(window._canvasBanners));
-            }
-            return keys;
+    window._getHeaderVariants = function() {
+        var keys = Object.keys(VARIANTS);
+        if (window._canvasBanners) {
+            keys = keys.concat(Object.keys(window._canvasBanners));
         }
-    });
+        return keys;
+    };
 
     // Expose for dynamic switching (used by variant selector on test pages)
     window._switchHeaderVariant = function(variant) {
         var headers = document.querySelectorAll('.header');
         headers.forEach(function(header) {
-            // 1. Destroy active canvas banner if any
-            destroyCanvasBanner();
+            try {
+                // 1. Destroy active canvas banner if any
+                destroyCanvasBanner();
 
-            // 2. Remove old overlays
-            var oldSvg = header.querySelector('.header-svg-overlay');
-            if (oldSvg) oldSvg.remove();
-            var oldCanvas = header.querySelector('.header-canvas-overlay');
-            if (oldCanvas) oldCanvas.remove();
+                // 2. Remove old overlays
+                var oldSvg = header.querySelector('.header-svg-overlay');
+                if (oldSvg) oldSvg.remove();
+                var oldCanvas = header.querySelector('.header-canvas-overlay');
+                if (oldCanvas) oldCanvas.remove();
 
-            // 3. Remove all theme/variant classes
-            header.classList.remove('header--light', 'header--dark');
-            // Also remove any legacy classes
-            Object.keys(VARIANTS).forEach(function(v) {
-                header.classList.remove('header--' + v);
-            });
+                // 3. Remove all theme/variant classes
+                header.classList.remove('header--light');
+                header.classList.remove('header--dark');
 
-            // 4. Set variant attribute
-            header.setAttribute('data-header-variant', variant);
+                // 4. Set variant attribute
+                header.setAttribute('data-header-variant', variant);
 
-            // 5. Apply new variant
-            if (isCanvasVariant(variant)) {
-                var theme = getCanvasTheme(variant);
-                header.classList.add('header--' + theme);
-                initCanvasBanner(header, variant);
-            } else {
-                // SVG (default)
-                header.insertAdjacentHTML('afterbegin', buildSVG(variant));
+                // 5. Apply new variant
+                if (isCanvasVariant(variant)) {
+                    var theme = getCanvasTheme(variant);
+                    header.classList.add('header--' + theme);
+                    initCanvasBanner(header, variant);
+                } else {
+                    // SVG (default)
+                    header.insertAdjacentHTML('afterbegin', buildSVG(variant));
+                }
+            } catch (e) {
+                // Fallback to default SVG on any error
+                console.error('Banner switch error for "' + variant + '":', e);
+                header.setAttribute('data-header-variant', 'default');
+                try { header.insertAdjacentHTML('afterbegin', buildSVG('default')); } catch(e2) {}
             }
         });
     };

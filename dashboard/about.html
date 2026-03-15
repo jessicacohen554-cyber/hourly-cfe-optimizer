@@ -292,14 +292,28 @@
 </style>
 <script>
 (function() {
+    // Debug: verify scripts loaded
+    console.log('[Banner] _switchHeaderVariant defined:', typeof window._switchHeaderVariant === 'function');
+    console.log('[Banner] _canvasBanners loaded:', window._canvasBanners ? Object.keys(window._canvasBanners).length + ' variants' : 'NOT LOADED');
+
     var btns = document.querySelectorAll('.variant-btn');
+    console.log('[Banner] Found', btns.length, 'variant buttons');
+
     btns.forEach(function(btn) {
         btn.addEventListener('click', function() {
+            var variant = btn.getAttribute('data-variant');
+            console.log('[Banner] Switching to:', variant);
             btns.forEach(function(b) { b.classList.remove('active'); });
             btn.classList.add('active');
             if (window._switchHeaderVariant) {
-                window._switchHeaderVariant(btn.getAttribute('data-variant'));
+                try {
+                    window._switchHeaderVariant(variant);
+                } catch (e) {
+                    console.error('[Banner] Switch failed:', e);
+                }
                 window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                console.error('[Banner] _switchHeaderVariant is not defined!');
             }
         });
     });

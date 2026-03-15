@@ -14,6 +14,25 @@
 
     window._canvasBanners = {};
 
+    // ---- roundRect polyfill for older browsers ----
+    if (typeof CanvasRenderingContext2D !== 'undefined' &&
+        !CanvasRenderingContext2D.prototype.roundRect) {
+        CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+            if (typeof r === 'number') r = [r];
+            var rad = r[0] || 0;
+            this.moveTo(x + rad, y);
+            this.lineTo(x + w - rad, y);
+            this.arcTo(x + w, y, x + w, y + rad, rad);
+            this.lineTo(x + w, y + h - rad);
+            this.arcTo(x + w, y + h, x + w - rad, y + h, rad);
+            this.lineTo(x + rad, y + h);
+            this.arcTo(x, y + h, x, y + h - rad, rad);
+            this.lineTo(x, y + rad);
+            this.arcTo(x, y, x + rad, y, rad);
+            return this;
+        };
+    }
+
     // ---- Shared utilities ----
 
     var isMobile = window.innerWidth < 768;
@@ -81,10 +100,15 @@
                     this._observer.observe(header);
                 }
 
-                // RAF loop
+                // RAF loop (try/catch prevents one bad frame from killing animation)
+                var errCount = 0;
                 var tick = function(ts) {
                     if (!self._paused && self._state) {
-                        factory.draw(self._state, ts);
+                        try {
+                            factory.draw(self._state, ts);
+                        } catch (e) {
+                            if (++errCount <= 3) console.warn('Banner draw error:', e);
+                        }
                     }
                     self._rafId = requestAnimationFrame(tick);
                 };
