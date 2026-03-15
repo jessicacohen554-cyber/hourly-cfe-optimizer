@@ -445,12 +445,16 @@ Interconnection queue caps limit annual new-build:
 | ISO | Facilitating (GW/yr) | Challenging (GW/yr) |
 |---|---|---|
 | CAISO | 6 | 3 |
-| ERCOT | 8 | 4 |
+| ERCOT | 12 | 6 |
 | PJM | 7 | 3 |
 | NYISO | 5 | 2 |
 | NEISO | 5 | 2 |
 | MISO | 7 | 3 |
 | SPP | 6 | 3 |
+
+*ERCOT caps reflect faster permitting (no FERC jurisdiction, single-state ISO) and 8-12 GW/yr historical completion rate (ERCOT CDR 2024).*
+
+**RPS/CES floor enforcement** is queue-constrained: mandated clean deployment cannot exceed the interconnection queue's physical throughput. If the queue can't deliver enough GW in one period to meet the RPS floor, deployment is capped at available queue capacity and the shortfall carries forward.
 
 #### Sweep Mode
 270-scenario parametric sweep:

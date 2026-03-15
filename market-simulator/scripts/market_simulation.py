@@ -80,7 +80,8 @@ OUTPUT_DIR = os.path.join(MODULE_ROOT, 'data', 'results')
 #   limited transmission expansion). Approximately 15-25% of queue reaches COD.
 # Per-ISO estimates:
 #   CAISO: 143 GW in queue (2024), 4.1% historical completion → 6 GW/yr facilitating
-#   ERCOT: 198 GW in queue, highest completion rate (5.1%) → 8 GW/yr facilitating
+#   ERCOT: 198 GW in queue, no FERC jurisdiction, single-state ISO with streamlined
+#     permitting. 8-12 GW/yr historical completions (ERCOT CDR 2024) → 12 GW/yr fac.
 #   PJM: 262 GW in queue, recent reform (transition cluster study) → 7 GW/yr
 #   NYISO: 93 GW in queue, constrained by T&D in NYC/LI → 5 GW/yr facilitating
 #   NEISO: 47 GW in queue, ISO-NE Cluster Study process → 5 GW/yr facilitating
@@ -89,11 +90,11 @@ OUTPUT_DIR = os.path.join(MODULE_ROOT, 'data', 'results')
 # Cross-validated against: Princeton REPEAT (2024), Rhodium Clean Investment Monitor
 QUEUE_CAP_GW = {
     'Facilitating': {
-        'CAISO': 6, 'ERCOT': 8, 'PJM': 7, 'NYISO': 5,
+        'CAISO': 6, 'ERCOT': 12, 'PJM': 7, 'NYISO': 5,
         'NEISO': 5, 'MISO': 7, 'SPP': 6,
     },
     'Challenging': {
-        'CAISO': 3, 'ERCOT': 4, 'PJM': 3, 'NYISO': 2,
+        'CAISO': 3, 'ERCOT': 6, 'PJM': 3, 'NYISO': 2,
         'NEISO': 2, 'MISO': 3, 'SPP': 3,
     },
 }
