@@ -1539,16 +1539,42 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
             # and apply regardless of federal IRA policy status. If market-driven
             # deployment falls below the interpolated RPS floor, force deployment
             # to meet it (mandated at a loss, like emission caps).
+            # Queue-constrained: RPS cannot deploy more GW than the interconnection
+            # queue can physically deliver. Shortfall carries to the next period.
             rps_mandated_pct = 0
             rps_floor = get_rps_floor(iso, year)
             if rps_floor > 0 and current_pct < rps_floor:
                 rps_gap = rps_floor - current_pct
-                _log(f"  {iso} RPS/CES floor {rps_floor:.0f}% > market {current_pct:.0f}%: "
-                     f"forcing +{rps_gap:.1f}% deployment")
-                # Jump to the RPS floor — treat as mandated deployment
-                current_pct = rps_floor
+                # Estimate GW needed using blended solar/wind CF for RPS-eligible resources
+                rps_twh_needed = rps_gap / 100.0 * demand_twh
+                solar_cf = RESOURCE_CAPACITY_FACTORS.get('solar', {}).get(iso, 0.20)
+                wind_cf = RESOURCE_CAPACITY_FACTORS.get('wind', {}).get(iso, 0.30)
+                blended_cf = (solar_cf + wind_cf) / 2.0  # RPS is primarily VRE
+                rps_gw_needed = rps_twh_needed / (blended_cf * 8.760) if blended_cf > 0 else 0
+
+                if rps_gw_needed > queue_remaining_gw and queue_remaining_gw > 0:
+                    # Queue-constrained: deploy what's physically possible
+                    scale = queue_remaining_gw / rps_gw_needed
+                    achievable_pct = rps_gap * scale
+                    current_pct += achievable_pct
+                    rps_mandated_pct = achievable_pct
+                    queue_remaining_gw = 0
+                    _log(f"  {iso} RPS floor {rps_floor:.0f}% queue-constrained: "
+                         f"achieved +{achievable_pct:.1f}% of +{rps_gap:.1f}% target "
+                         f"({rps_gw_needed:.1f} GW needed, queue exhausted)")
+                elif queue_remaining_gw <= 0:
+                    # Queue already exhausted by market deployment — no RPS build possible
+                    _log(f"  {iso} RPS floor {rps_floor:.0f}% SKIPPED: queue exhausted "
+                         f"(need +{rps_gap:.1f}%)")
+                else:
+                    # Queue has capacity — deploy fully to RPS floor
+                    current_pct = rps_floor
+                    rps_mandated_pct = rps_gap
+                    queue_remaining_gw -= rps_gw_needed
+                    _log(f"  {iso} RPS/CES floor {rps_floor:.0f}% > market "
+                         f"{current_pct - rps_gap:.0f}%: forcing +{rps_gap:.1f}% "
+                         f"({rps_gw_needed:.1f} GW, {queue_remaining_gw:.1f} GW remaining)")
                 state['clean_pct'] = current_pct
-                rps_mandated_pct = rps_gap
 
             # --- EMISSION CONSTRAINT: MANDATED DEPLOYMENT + DAC/OVERSHOOT ---
             # After profit-driven deployment, enforce emission cap as a HARD CEILING.
