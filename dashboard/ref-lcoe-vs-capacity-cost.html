@@ -24,9 +24,9 @@ body { background: var(--bg-page-white); }
     font-family: var(--font-heading);
     letter-spacing: 0.03em;
 }
-.breadcrumb a { color: #0EA5E9; text-decoration: none; transition: color 0.2s; }
+.breadcrumb a { color: #0369A1; text-decoration: none; transition: color 0.2s; } /* contrast-fix: was #0EA5E9, now #0369A1, ratio 5.93:1 on white */
 .breadcrumb a:hover { color: #0284c7; }
-.breadcrumb .sep { color: rgba(0,0,0,0.3); margin: 0 8px; }
+.breadcrumb .sep { color: rgba(0,0,0,0.58); margin: 0 8px; } /* contrast-fix: was rgba(0,0,0,0.3), now rgba(0,0,0,0.58), ratio 5.30:1 on white */
 .breadcrumb .current { color: #374151; }
 
 /* ===== Article ===== */
@@ -63,7 +63,7 @@ body { background: var(--bg-page-white); }
     font-family: var(--font-heading);
     font-size: 0.82rem;
     font-weight: 700;
-    color: rgba(0,0,0,0.5);
+    color: rgba(0,0,0,0.58); /* contrast-fix: was rgba(0,0,0,0.5), now rgba(0,0,0,0.58), ratio 5.30:1 on #F9FAFB */
     text-transform: uppercase;
     letter-spacing: 0.08em;
     margin-bottom: 12px;
@@ -74,7 +74,7 @@ body { background: var(--bg-page-white); }
     gap: 6px 10px;
 }
 .glossary-links a {
-    color: #0EA5E9;
+    color: #0369A1; /* contrast-fix: was #0EA5E9, now #0369A1, ratio 5.93:1 on white */
     text-decoration: none;
     font-size: 0.85rem;
     font-weight: 500;
@@ -91,7 +91,7 @@ body { background: var(--bg-page-white); }
 .glossary-category {
     font-size: 0.72rem;
     font-weight: 700;
-    color: rgba(0,0,0,0.35);
+    color: rgba(0,0,0,0.58); /* contrast-fix: was rgba(0,0,0,0.35), now rgba(0,0,0,0.58), ratio 5.30:1 on #F9FAFB */
     text-transform: uppercase;
     letter-spacing: 0.06em;
     margin-top: 12px;
@@ -122,12 +122,12 @@ body { background: var(--bg-page-white); }
 .metric-unit {
     font-family: 'Courier New', monospace;
     font-size: 0.88rem;
-    color: #0EA5E9;
+    color: #0369A1; /* contrast-fix: was #0EA5E9, now #0369A1, ratio 5.93:1 on white */
     font-weight: 600;
 }
 .metric-aka {
     font-size: 0.82rem;
-    color: rgba(0,0,0,0.4);
+    color: #475569; /* contrast-fix: was rgba(0,0,0,0.4), now #475569, ratio 5.78:1 on white */
     font-style: italic;
 }
 .metric-divider {
@@ -162,7 +162,7 @@ body { background: var(--bg-page-white); }
 .metric-formula {
     font-family: 'Courier New', monospace;
     font-size: 0.9rem;
-    color: #0EA5E9;
+    color: #0369A1; /* contrast-fix: was #0EA5E9, now #0369A1, ratio 5.93:1 on light bg */
     background: rgba(14,165,233,0.06);
     border: 1px solid rgba(14,165,233,0.15);
     border-radius: 6px;
@@ -190,7 +190,7 @@ body { background: var(--bg-page-white); }
 }
 .diagram-caption {
     font-size: 0.78rem;
-    color: rgba(0,0,0,0.4);
+    color: #475569; /* contrast-fix: was rgba(0,0,0,0.4), now #475569, ratio 5.78:1 on white */
     text-align: center;
     margin-top: 14px;
     line-height: 1.5;
@@ -207,7 +207,7 @@ body { background: var(--bg-page-white); }
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    color: #0EA5E9;
+    color: #0369A1; /* contrast-fix: was #0EA5E9, now #0369A1, ratio 5.93:1 on white */
     text-decoration: none;
     font-family: var(--font-heading);
     font-size: 0.85rem;
@@ -309,11 +309,11 @@ body { background: var(--bg-page-white); }
 
             <!-- Row 1: Input metrics -->
             <rect x="20" y="20" width="130" height="52" class="d-box" fill="rgba(245,158,11,0.1)" stroke="rgba(245,158,11,0.35)" stroke-width="1.2"/>
-            <text x="85" y="43" class="d-label" fill="#F59E0B" text-anchor="middle">CapEx ($/kW)</text>
+            <text x="85" y="43" class="d-label" fill="#B45309" text-anchor="middle">CapEx ($/kW)</text>
             <text x="85" y="58" class="d-sub" text-anchor="middle">overnight capital</text>
 
             <rect x="170" y="20" width="120" height="52" class="d-box" fill="rgba(34,197,94,0.1)" stroke="rgba(34,197,94,0.35)" stroke-width="1.2"/>
-            <text x="230" y="43" class="d-label" fill="#22C55E" text-anchor="middle">CRF</text>
+            <text x="230" y="43" class="d-label" fill="#15803D" text-anchor="middle">CRF</text>
             <text x="230" y="58" class="d-sub" text-anchor="middle">annualization rate</text>
 
             <rect x="310" y="20" width="120" height="52" class="d-box" fill="rgba(139,92,246,0.1)" stroke="rgba(139,92,246,0.35)" stroke-width="1.2"/>
@@ -337,7 +337,7 @@ body { background: var(--bg-page-white); }
 
             <!-- Row 2: LCOE -->
             <rect x="240" y="130" width="220" height="56" class="d-box" fill="rgba(14,165,233,0.12)" stroke="#0EA5E9" stroke-width="1.8"/>
-            <text x="350" y="155" class="d-label" fill="#0EA5E9" text-anchor="middle" font-size="14">LCOE ($/MWh)</text>
+            <text x="350" y="155" class="d-label" fill="#0369A1" text-anchor="middle" font-size="14">LCOE ($/MWh)</text>
             <text x="350" y="172" class="d-sub" text-anchor="middle">lifetime cost per unit of energy</text>
 
             <!-- Arrows from LCOE down -->

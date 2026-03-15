@@ -62,7 +62,7 @@
             border-radius: var(--radius-sm, 6px);
             border: 1px solid rgba(34,197,94,0.4);
             background: rgba(34,197,94,0.1);
-            color: #16A34A;
+            color: #15803D; /* contrast-fix: was #16A34A, now #15803D, ratio 5.02:1 on white */
             cursor: pointer;
             font-weight: 600;
             font-size: 14px;
@@ -489,8 +489,8 @@
             margin-bottom: 6px;
         }
         .badge-danger { background: rgba(239,68,68,0.1); color: #DC2626; }
-        .badge-warning { background: rgba(245,158,11,0.1); color: #D97706; }
-        .badge-success { background: rgba(34,197,94,0.1); color: #16A34A; }
+        .badge-warning { background: rgba(245,158,11,0.1); color: #B45309; /* contrast-fix: was #D97706, now #B45309, ratio 5.02:1 on white */ }
+        .badge-success { background: rgba(34,197,94,0.1); color: #15803D; /* contrast-fix: was #16A34A, now #15803D, ratio 5.02:1 on white */ }
         .scenario-pick h3 {
             font-family: var(--font-heading);
             font-size: 1rem;
@@ -755,7 +755,7 @@
             font-size: 0.73rem;
             font-weight: 600;
             background: rgba(34,197,94,0.1);
-            color: #16A34A;
+            color: #15803D; /* contrast-fix: was #16A34A, now #15803D, ratio 5.02:1 on white */
             white-space: nowrap;
         }
         .story-chip.danger {
@@ -904,8 +904,8 @@
                 <!-- Mobile-only: compact stats overlay on map -->
                 <div class="mobile-stats-overlay" id="mobileStatsOverlay">
                     <div class="mobile-stat"><span class="ms-label">Demand</span> <span id="msDemand">—</span></div>
-                    <div class="mobile-stat"><span class="ms-label">Gen</span> <span id="msGen" style="color:#16A34A">—</span></div>
-                    <div class="mobile-stat"><span class="ms-label">Renew</span> <span id="msRen" style="color:#0EA5E9">—</span></div>
+                    <div class="mobile-stat"><span class="ms-label">Gen</span> <span id="msGen" style="color:#15803D; /* contrast-fix: was #16A34A, now #15803D, ratio 5.02:1 on white */">—</span></div>
+                    <div class="mobile-stat"><span class="ms-label">Renew</span> <span id="msRen" style="color:#0369A1; /* contrast-fix: was #0EA5E9, now #0369A1, ratio 5.93:1 on white */">—</span></div>
                     <div class="mobile-stat"><span class="ms-label">Fossil</span> <span id="msFossil" style="color:#6B7280">—</span></div>
                     <div class="mobile-stat"><span class="ms-label">CO₂</span> <span id="msCo2" style="color:#DC2626">—</span></div>
                 </div>
@@ -921,11 +921,11 @@
                     </div>
                     <div class="stat-mini">
                         <div class="stat-mini-label">Generation</div>
-                        <div class="stat-mini-val" id="statGen" data-unit="MW" data-prev="0" style="color:#16A34A">—<span class="stat-mini-unit">MW</span></div>
+                        <div class="stat-mini-val" id="statGen" data-unit="MW" data-prev="0" style="color:#15803D; /* contrast-fix: was #16A34A, now #15803D, ratio 5.02:1 on white */">—<span class="stat-mini-unit">MW</span></div>
                     </div>
                     <div class="stat-mini">
                         <div class="stat-mini-label">Renewables</div>
-                        <div class="stat-mini-val" id="statRen" data-unit="MW" data-prev="0" style="color:#0EA5E9">—<span class="stat-mini-unit">MW</span></div>
+                        <div class="stat-mini-val" id="statRen" data-unit="MW" data-prev="0" style="color:#0369A1; /* contrast-fix: was #0EA5E9, now #0369A1, ratio 5.93:1 on white */">—<span class="stat-mini-unit">MW</span></div>
                     </div>
                     <div class="stat-mini">
                         <div class="stat-mini-label">Fossil</div>

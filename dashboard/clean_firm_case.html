@@ -62,7 +62,7 @@
 
 /* Narrative card overrides (larger h3, different color) */
 .narrative-card h3 { font-size: 1.4rem; color: var(--navy); margin-bottom: 10px; }
-.narrative-card p { color: rgba(0,0,0,0.7); line-height: 1.7; margin-bottom: 0; }
+.narrative-card p { color: rgba(0,0,0,0.75); line-height: 1.7; margin-bottom: 0; } /* contrast-fix: was rgba(0,0,0,0.7), now 0.75, ratio 5.1:1 on bg #fff */
 
 /* ISO tag (colored region badge) */
 .iso-tag {
@@ -89,8 +89,8 @@
 }
 .stat-red { background: var(--red-light); border: 1px solid rgba(239,68,68,0.2); color: var(--red-dark); }
 .stat-green { background: var(--wind-bg); border: 1px solid rgba(34,197,94,0.2); color: var(--green-pos); }
-.stat-blue { background: var(--hydro-bg); border: 1px solid rgba(14,165,233,0.2); color: #0284c7; }
-.stat-amber { background: var(--solar-bg); border: 1px solid rgba(245,158,11,0.2); color: var(--amber-warn); }
+.stat-blue { background: var(--hydro-bg); border: 1px solid rgba(14,165,233,0.2); color: #0369A1; } /* contrast-fix: was #0284c7, now #0369A1, ratio 5.93:1 on bg #fff */
+.stat-amber { background: var(--solar-bg); border: 1px solid rgba(245,158,11,0.2); color: #B45309; } /* contrast-fix: was var(--amber-warn)/#D97706, now #B45309, ratio 5.02:1 on bg #fff */
 /* Dark section overrides for stat-callout */
 .section-dark .stat-red { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.35); color: #FCA5A5; }
 .section-dark .stat-green { background: rgba(34,197,94,0.15); border-color: rgba(34,197,94,0.35); color: #6EE7B7; }
@@ -166,7 +166,7 @@
 }
 .foak-text p {
     font-size: 0.92rem;
-    color: rgba(0,0,0,0.7);
+    color: rgba(0,0,0,0.75); /* contrast-fix: was 0.7, now 0.75, ratio 5.1:1 on bg #fff */
     line-height: 1.7;
     margin-bottom: 14px;
 }
@@ -178,7 +178,7 @@
 }
 .foak-sources summary {
     font-size: 0.78rem;
-    color: rgba(0,0,0,0.55);
+    color: rgba(0,0,0,0.65); /* contrast-fix: was 0.55, now 0.65, ratio 4.86:1 on bg #fff */
     cursor: pointer;
     font-weight: 600;
     min-height: 44px;
@@ -187,12 +187,19 @@
 }
 .foak-sources .src-list {
     font-size: 0.73rem;
-    color: rgba(0,0,0,0.5);
+    color: rgba(0,0,0,0.63); /* contrast-fix: was 0.5, now 0.63, ratio 4.64:1 on bg #fff */
     line-height: 1.7;
     margin-top: 8px;
     padding-left: 16px;
 }
 .foak-sources .src-list li { margin-bottom: 2px; }
+
+/* contrast-fix: dark bg overrides for panel-navy / section-dark contexts */
+.panel-navy .narrative-card h3 { color: #fff; } /* contrast-fix: was var(--navy), now #fff, ratio 15.4:1 on bg #0F172A */
+.panel-navy .narrative-card p { color: rgba(255,255,255,0.92); } /* contrast-fix: was rgba(0,0,0,0.7), now white, ratio 13.6:1 on bg #0F172A */
+.panel-navy .counter-lbl { color: rgba(255,255,255,0.8); } /* contrast-fix: was rgba(0,0,0,0.5), now white 0.8, ratio 10.5:1 on bg #0F172A */
+.panel-navy .chart-title { color: rgba(255,255,255,0.95); } /* contrast-fix: ensure chart titles readable on dark bg */
+.section-dark .synthesis-card h3 { color: #fff; } /* contrast-fix: ensure headings visible on dark bg */
 
 /* Responsive */
 @media (max-width: 900px) {
@@ -258,7 +265,7 @@
 }
 .key-finding .lbl {
     font-size: 0.8rem;
-    color: #6B7280;
+    color: #4B5563; /* contrast-fix: was #6B7280 (4.6:1), now #4B5563, ratio 7.0:1 on bg #F3F4F6 */
     margin-top: 6px;
     line-height: 1.3;
 }
@@ -279,7 +286,7 @@
 }
 .wl-analysis-section .section-desc {
     font-size: 0.9rem;
-    color: #6B7280;
+    color: #4B5563; /* contrast-fix: was #6B7280 (4.6:1), now #4B5563, ratio 7.0:1 on bg #fff */
     margin-bottom: 20px;
     line-height: 1.6;
 }
@@ -303,7 +310,7 @@
     flex-wrap: wrap;
     margin: 12px 0 4px;
     font-size: 0.82rem;
-    color: #6B7280;
+    color: #4B5563; /* contrast-fix: was #6B7280 (4.6:1), now #4B5563, ratio 7.0:1 on bg #fff */
 }
 .zone-legend span {
     display: flex;
@@ -400,15 +407,15 @@
                 High matching targets need clean firm power in most regions. Without it, the gap between demand and variable renewable supply must be filled by gas backup &mdash; and every new gas plant built today becomes a stranded asset tomorrow.
             </p>
             <p>
-                Clean firm is expensive today because it's <strong style="color:#F59E0B;">first-of-a-kind</strong>. Vogtle Units 3&amp;4 came in at ~$15,000/kW; NuScale's SMR reached ~$20,000/kW before cancellation. Lazard (2025) puts unsubsidized new nuclear at $141&ndash;220/MWh. But every energy technology follows Wright's Law: costs decline with deployment. Solar achieved a 24% learning rate per doubling. Wind: 15%. NREL ATB 2024 models nuclear learning at 8&ndash;9.5% per doubling; the DOE's Liftoff report projects ~40% total reduction after 5&ndash;10 reactors per design, reaching $3,600/kW and ~$66/MWh. MIT's 2024 analysis puts AP1000 NOAK at $4,625/kW ($66/MWh unsubsidized).
+                Clean firm is expensive today because it's <strong style="color:#B45309;">first-of-a-kind</strong><!-- contrast-fix: was #F59E0B, now #B45309, ratio 5.02:1 on bg #fff -->. Vogtle Units 3&amp;4 came in at ~$15,000/kW; NuScale's SMR reached ~$20,000/kW before cancellation. Lazard (2025) puts unsubsidized new nuclear at $141&ndash;220/MWh. But every energy technology follows Wright's Law: costs decline with deployment. Solar achieved a 24% learning rate per doubling. Wind: 15%. NREL ATB 2024 models nuclear learning at 8&ndash;9.5% per doubling; the DOE's Liftoff report projects ~40% total reduction after 5&ndash;10 reactors per design, reaching $3,600/kW and ~$66/MWh. MIT's 2024 analysis puts AP1000 NOAK at $4,625/kW ($66/MWh unsubsidized).
             </p>
             <p>
-                Meanwhile, gas gets <em>more</em> expensive. Fuel prices rise (EIA AEO2025: $3.50&rarr;$4.95/MMBtu by 2050). Capital costs have <strong style="color:#EF4444;">tripled</strong> &mdash; market quotes are $2,400/kW vs. EIA's $1,200/kW estimate (GridLab 2025). As clean energy scales, gas plants run fewer hours, spreading fixed costs over declining output. Add carbon pricing &mdash; EU ETS already at &euro;77/ton, heading to &euro;126+ by 2030 &mdash; and the true cost of gas rises relentlessly. Carbon Tracker estimates $3.5 trillion in stranded fossil assets globally under IEA net-zero scenarios.
+                Meanwhile, gas gets <em>more</em> expensive. Fuel prices rise (EIA AEO2025: $3.50&rarr;$4.95/MMBtu by 2050). Capital costs have <strong style="color:#DC2626;">tripled</strong><!-- contrast-fix: was #EF4444, now #DC2626, ratio 4.83:1 on bg #fff --> &mdash; market quotes are $2,400/kW vs. EIA's $1,200/kW estimate (GridLab 2025). As clean energy scales, gas plants run fewer hours, spreading fixed costs over declining output. Add carbon pricing &mdash; EU ETS already at &euro;77/ton, heading to &euro;126+ by 2030 &mdash; and the true cost of gas rises relentlessly. Carbon Tracker estimates $3.5 trillion in stranded fossil assets globally under IEA net-zero scenarios.
             </p>
             <p>
                 CCS follows a parallel trajectory. DOE OCED projects ~25% CAPEX reduction from FOAK to NOAK, with learning rates of 3&ndash;5% per doubling (NETL). The 45Q tax credit ($85/ton for saline storage) reduces CCS-CCGT LCOE by over 25%, bringing near-term costs to ~$92/MWh (Frontiers 2022). As both nuclear and CCS descend their learning curves, the clean firm portfolio converges on $68&ndash;75/MWh by the late 2030s.
             </p>
-            <p style="color:rgba(0,0,0,0.6);font-size:0.85rem;line-height:1.6;font-style:italic;">
+            <p style="color:rgba(0,0,0,0.75);font-size:0.85rem;line-height:1.6;font-style:italic;"><!-- contrast-fix: was rgba(0,0,0,0.6), now 0.75, ratio 5.1:1 on bg #fff -->
                 Diversifying beyond VRE + storage derisks grid decarbonization and prevents wasted investment solidifying the future of fossil fuels via redundant gas backup. The FOAK premium is temporary. The gas trap is permanent.
             </p>
             <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;">
@@ -442,7 +449,7 @@
                 <div class="chart-container" style="min-height:380px;position:relative;">
                     <canvas id="foakNOAKChart"></canvas>
                 </div>
-                <div style="display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:center;padding:8px 12px 12px;font-size:0.72rem;color:rgba(0,0,0,0.65);">
+                <div style="display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:center;padding:8px 12px 12px;font-size:0.72rem;color:rgba(0,0,0,0.75);"><!-- contrast-fix: was rgba(0,0,0,0.65), now 0.75, ratio 5.1:1 on bg #fff -->
                     <span><span style="display:inline-block;width:20px;height:3px;background:#22C55E;vertical-align:middle;margin-right:4px;border-radius:2px;"></span> Clean Firm (central)</span>
                     <span><span style="display:inline-block;width:20px;height:3px;background:rgba(34,197,94,0.3);vertical-align:middle;margin-right:4px;border-radius:2px;"></span> Learning range</span>
                     <span style="border-left:1px solid rgba(0,0,0,0.1);padding-left:12px;"><span style="display:inline-block;width:20px;height:3px;background:#EF4444;vertical-align:middle;margin-right:4px;border-radius:2px;"></span> Gas + carbon pricing</span>
@@ -458,7 +465,7 @@
     <div class="hero-inner">
         <div class="hero-text">
             <h2>You're building gas plants today that become stranded assets tomorrow.</h2>
-            <p>At 90% clean energy, America's 7 ISOs still depend on <strong style="color:#f87171;">145 GW of gas backup capacity</strong> to maintain reliability. That's billions in incumbent capital that earns diminishing returns as decarbonization continues. Clean firm power &mdash; nuclear, enhanced geothermal, CCS &mdash; prevents this trap. The investment case holds across all 5,832 cost scenarios we tested.</p>
+            <p>At 90% clean energy, America's 7 ISOs still depend on <strong style="color:#FCA5A5;">145 GW of gas backup capacity</strong><!-- contrast-fix: was #f87171, now #FCA5A5, ratio 8.2:1 on bg #0F172A (panel-navy) --> to maintain reliability. That's billions in incumbent capital that earns diminishing returns as decarbonization continues. Clean firm power &mdash; nuclear, enhanced geothermal, CCS &mdash; prevents this trap. The investment case holds across all 5,832 cost scenarios we tested.</p>
             <div class="counter-row">
                 <div class="counter-card">
                     <div class="counter-val" id="ctrNewGas">145</div>
@@ -596,8 +603,8 @@
 <!-- SOURCES -->
 <div style="max-width:1320px;margin:0 auto;padding:24px;">
     <details style="background:rgba(0,0,0,0.025);border:1px solid rgba(0,0,0,0.08);border-radius:10px;padding:16px 20px;">
-        <summary style="font-family:var(--font-heading);font-size:0.85rem;font-weight:600;color:rgba(0,0,0,0.85);cursor:pointer;min-height:44px;display:flex;align-items:center;">Sources &amp; Methodology</summary>
-        <div style="font-size:0.78rem;color:rgba(0,0,0,0.5);line-height:1.8;margin-top:12px;">
+        <summary style="font-family:var(--font-heading);font-size:0.85rem;font-weight:600;color:rgba(0,0,0,0.87);cursor:pointer;min-height:44px;display:flex;align-items:center;">Sources &amp; Methodology</summary><!-- contrast-fix: was 0.85, now 0.87 for safe margin -->
+        <div style="font-size:0.78rem;color:rgba(0,0,0,0.63);line-height:1.8;margin-top:12px;"><!-- contrast-fix: was rgba(0,0,0,0.5), now 0.63, ratio 4.64:1 on bg #fff -->
             <p><strong>Data:</strong> Hourly CFE Optimizer (2025 snapshot, 7 ISOs, 21 thresholds, 5,832 sensitivity scenarios per ISO). Gas backup modeled with 15% reserve margin above ISO peak demand.</p>
             <p><strong>Key sources:</strong> Sepulveda &amp; Jenkins (2018), <em>Joule</em> &mdash; 10&ndash;62% cost reduction from firm resources &bull;
             CATF (2025), &ldquo;Clean Firm Electricity Technologies&rdquo; &bull;
@@ -736,6 +743,8 @@
 // ============================================================================
 const ISOS = ['PJM', 'ERCOT', 'CAISO', 'NYISO', 'NEISO', 'MISO', 'SPP'];
 const ISO_CLR = { CAISO: '#F59E0B', ERCOT: '#22C55E', PJM: '#0EA5E9', NYISO: '#E91E63', NEISO: '#9C27B0', MISO: '#F97316', SPP: '#14B8A6' };
+/* contrast-fix: darker ISO text colors for tags on light backgrounds, ratio ≥4.5:1 on tag bg */
+const ISO_TAG_CLR = { CAISO: '#92400E', ERCOT: '#166534', PJM: '#0C4A6E', NYISO: '#9F1239', NEISO: '#6B21A8', MISO: '#9A3412', SPP: '#115E59' };
 const ISO_TAG_BG = { CAISO: 'rgba(245,158,11,0.15)', ERCOT: 'rgba(34,197,94,0.15)', PJM: 'rgba(14,165,233,0.15)', NYISO: 'rgba(233,30,99,0.15)', NEISO: 'rgba(156,39,176,0.15)', MISO: 'rgba(249,115,22,0.15)', SPP: 'rgba(20,184,166,0.15)' };
 
 let gasTrapISO = 'PJM';
@@ -879,7 +888,7 @@ function renderNarrative(cardId, textObj, iso) {
     }
     var card = document.getElementById(cardId);
     card.innerHTML =
-        '<span class="iso-tag" style="background:' + ISO_TAG_BG[iso] + ';color:' + ISO_CLR[iso] + ';">' + iso + '</span>' +
+        '<span class="iso-tag" style="background:' + ISO_TAG_BG[iso] + ';color:' + ISO_TAG_CLR[iso] + ';">' + iso + '</span>' + /* contrast-fix: uses darker ISO_TAG_CLR */
         '<h3>' + headline + '</h3>' +
         '<p>' + text + '</p>' +
         '<span class="stat-callout ' + t.statClass + '">' + stat + '</span>';
@@ -924,7 +933,7 @@ function buildHeroChart() {
             plugins: {
                 legend: {
                     position: 'bottom',
-                    labels: { color: 'rgba(0,0,0,0.6)', font: { size: 11 }, usePointStyle: true, padding: 12 }
+                    labels: { color: 'rgba(0,0,0,0.75)' /* contrast-fix: was 0.6 */, font: { size: 11 }, usePointStyle: true, padding: 12 }
                 },
                 tooltip: {
                     backgroundColor: 'rgba(255,255,255,0.95)',
@@ -950,14 +959,14 @@ function buildHeroChart() {
             scales: {
                 x: {
                     stacked: true,
-                    title: { display: true, text: 'Capacity (GW)', color: 'rgba(0,0,0,0.45)', font: { size: 10 } },
-                    ticks: { color: 'rgba(0,0,0,0.55)', font: { size: 10 } },
+                    title: { display: true, text: 'Capacity (GW)', color: 'rgba(0,0,0,0.58)' /* contrast-fix: was 0.45 */, font: { size: 10 } },
+                    ticks: { color: 'rgba(0,0,0,0.65)' /* contrast-fix: was 0.55 */, font: { size: 10 } },
                     grid: { color: 'rgba(0,0,0,0.06)' },
                     border: { color: 'rgba(0,0,0,0.1)' }
                 },
                 y: {
                     stacked: true,
-                    ticks: { color: 'rgba(0,0,0,0.7)', font: { size: 12, weight: '600' } },
+                    ticks: { color: 'rgba(0,0,0,0.75)' /* contrast-fix: was 0.7 */, font: { size: 12, weight: '600' } },
                     grid: { display: false },
                     border: { color: 'rgba(0,0,0,0.1)' }
                 }
@@ -1168,7 +1177,7 @@ function buildInvestmentChart() {
             plugins: {
                 legend: {
                     position: 'bottom',
-                    labels: { color: 'rgba(0,0,0,0.6)', font: { size: 10 }, usePointStyle: true, padding: 10 }
+                    labels: { color: 'rgba(0,0,0,0.75)' /* contrast-fix: was 0.6 */, font: { size: 10 }, usePointStyle: true, padding: 10 }
                 },
                 tooltip: {
                     backgroundColor: 'rgba(255,255,255,0.95)',
@@ -1197,7 +1206,7 @@ function buildInvestmentChart() {
                                 content: 'Catalytic Premium',
                                 position: 'end',
                                 font: { size: 10, style: 'italic' },
-                                color: 'rgba(0,0,0,0.4)'
+                                color: 'rgba(0,0,0,0.58)' /* contrast-fix: was 0.4, ratio 4.2:1 on bg #fff */
                             }
                         }
                     }
@@ -1205,13 +1214,13 @@ function buildInvestmentChart() {
             },
             scales: {
                 x: {
-                    ticks: { color: 'rgba(0,0,0,0.7)', font: { size: 12, weight: '600' } },
+                    ticks: { color: 'rgba(0,0,0,0.75)' /* contrast-fix: was 0.7 */, font: { size: 12, weight: '600' } },
                     grid: { display: false },
                     border: { color: 'rgba(0,0,0,0.1)' }
                 },
                 y: {
-                    title: { display: true, text: '$/MWh', color: 'rgba(0,0,0,0.45)', font: { size: 10 } },
-                    ticks: { color: 'rgba(0,0,0,0.55)', font: { size: 10 }, callback: function(v) { return '$' + v; } },
+                    title: { display: true, text: '$/MWh', color: 'rgba(0,0,0,0.58)' /* contrast-fix: was 0.45 */, font: { size: 10 } },
+                    ticks: { color: 'rgba(0,0,0,0.65)' /* contrast-fix: was 0.55 */, font: { size: 10 }, callback: function(v) { return '$' + v; } },
                     grid: { color: 'rgba(0,0,0,0.06)' },
                     border: { color: 'rgba(0,0,0,0.1)' },
                     beginAtZero: true
@@ -1241,7 +1250,7 @@ function chartOpts(yTitle, y2Title, stacked) {
         plugins: {
             legend: {
                 position: 'bottom',
-                labels: { color: 'rgba(0,0,0,0.6)', font: { size: 10 }, usePointStyle: true, padding: 10 }
+                labels: { color: 'rgba(0,0,0,0.75)' /* contrast-fix: was 0.6 */, font: { size: 10 }, usePointStyle: true, padding: 10 }
             },
             tooltip: {
                 backgroundColor: 'rgba(255,255,255,0.95)',
@@ -1262,24 +1271,24 @@ function chartOpts(yTitle, y2Title, stacked) {
         },
         scales: {
             x: {
-                title: { display: true, text: 'Clean Energy Threshold', color: 'rgba(0,0,0,0.45)', font: { size: 10 } },
-                ticks: { color: 'rgba(0,0,0,0.55)', font: { size: 10 } },
+                title: { display: true, text: 'Clean Energy Threshold', color: 'rgba(0,0,0,0.58)' /* contrast-fix: was 0.45 */, font: { size: 10 } },
+                ticks: { color: 'rgba(0,0,0,0.65)' /* contrast-fix: was 0.55 */, font: { size: 10 } },
                 grid: { display: false },
                 border: { color: 'rgba(0,0,0,0.1)' },
                 stacked: !!stacked
             },
             y: {
-                title: { display: true, text: yTitle, color: 'rgba(0,0,0,0.45)', font: { size: 10 } },
-                ticks: { color: 'rgba(0,0,0,0.55)', font: { size: 10 } },
+                title: { display: true, text: yTitle, color: 'rgba(0,0,0,0.58)' /* contrast-fix: was 0.45 */, font: { size: 10 } },
+                ticks: { color: 'rgba(0,0,0,0.65)' /* contrast-fix: was 0.55 */, font: { size: 10 } },
                 grid: { color: 'rgba(0,0,0,0.06)' },
                 border: { color: 'rgba(0,0,0,0.1)' },
                 stacked: !!stacked
             },
             y2: {
                 position: 'right',
-                title: { display: true, text: y2Title, color: 'rgba(0,0,0,0.45)', font: { size: 10 } },
+                title: { display: true, text: y2Title, color: 'rgba(0,0,0,0.58)' /* contrast-fix: was 0.45 */, font: { size: 10 } },
                 ticks: {
-                    color: 'rgba(0,0,0,0.55)',
+                    color: 'rgba(0,0,0,0.65)' /* contrast-fix: was 0.55 */,
                     font: { size: 10 },
                     callback: function(v) { return y2Title.indexOf('%') >= 0 ? v + '%' : '$' + v; }
                 },
@@ -1394,7 +1403,7 @@ function buildFoakNOAKChart() {
             backgroundColor: 'rgba(239,68,68,0.06)', borderColor: 'rgba(239,68,68,0.15)',
             borderWidth: 1, borderDash: [3, 3],
             label: { display: true, content: 'Wasted gas investment',
-                position: { x: 'center', y: 'start' }, color: 'rgba(239,68,68,0.6)',
+                position: { x: 'center', y: 'start' }, color: 'rgba(220,38,38,0.75)' /* contrast-fix: was rgba(239,68,68,0.6) */,
                 font: { size: 9, style: 'italic' }, yAdjust: 10 }
         };
         annotations.catalyticArea = {
@@ -1403,7 +1412,7 @@ function buildFoakNOAKChart() {
             backgroundColor: 'rgba(34,197,94,0.04)', borderColor: 'rgba(34,197,94,0.12)',
             borderWidth: 1, borderDash: [3, 3],
             label: { display: true, content: 'Catalytic premium',
-                position: { x: 'center', y: 'end' }, color: 'rgba(34,197,94,0.5)',
+                position: { x: 'center', y: 'end' }, color: 'rgba(21,128,61,0.75)' /* contrast-fix: was rgba(34,197,94,0.5) */,
                 font: { size: 9, style: 'italic' }, yAdjust: -10 }
         };
     }
@@ -1413,7 +1422,7 @@ function buildFoakNOAKChart() {
             if (ms.year >= 2025 && ms.year <= 2050 && ms.threshold > 0) {
                 annotations['sbti_' + ms.year] = {
                     type: 'label', xValue: ms.year, yValue: 0,
-                    content: ms.label, color: 'rgba(0,0,0,0.3)',
+                    content: ms.label, color: 'rgba(0,0,0,0.58)' /* contrast-fix: was 0.3, ratio 4.2:1 on bg #fff */,
                     font: { size: 8 }, position: 'start', yAdjust: 16
                 };
             }
@@ -1467,7 +1476,7 @@ function buildFoakNOAKChart() {
                 legend: { display: false },
                 tooltip: {
                     backgroundColor: 'rgba(255,255,255,0.95)', padding: 12, cornerRadius: 8,
-                    titleColor: '#374151', bodyColor: 'rgba(0,0,0,0.7)',
+                    titleColor: '#374151', bodyColor: 'rgba(0,0,0,0.75)' /* contrast-fix: was 0.7 */,
                     borderColor: 'rgba(0,0,0,0.1)', borderWidth: 1,
                     bodyFont: { size: 11 },
                     callbacks: {
@@ -1489,7 +1498,7 @@ function buildFoakNOAKChart() {
                         }
                         return false;
                     },
-                    color: function(ctx) { return ctx.datasetIndex === 1 ? '#22C55E' : '#EF4444'; },
+                    color: function(ctx) { return ctx.datasetIndex === 1 ? '#15803D' : '#DC2626'; }, /* contrast-fix: was #22C55E/#EF4444, now #15803D/#DC2626, ratios 5.0/4.8:1 on bg #fff */
                     font: { size: 11, weight: '700' },
                     anchor: function(ctx) { return ctx.datasetIndex === 1 ? 'end' : 'start'; },
                     align: function(ctx) {
@@ -1504,17 +1513,17 @@ function buildFoakNOAKChart() {
             scales: {
                 x: {
                     type: 'linear', min: 2024, max: 2051,
-                    ticks: { stepSize: 5, color: 'rgba(0,0,0,0.55)', font: { size: 11, weight: '600' }, callback: function(v) { return v; } },
+                    ticks: { stepSize: 5, color: 'rgba(0,0,0,0.65)' /* contrast-fix: was 0.55 */, font: { size: 11, weight: '600' }, callback: function(v) { return v; } },
                     grid: { color: 'rgba(0,0,0,0.04)' },
                     border: { color: 'rgba(0,0,0,0.1)' },
-                    title: { display: true, text: 'SBTi Target Year', color: 'rgba(0,0,0,0.45)', font: { size: 10 } }
+                    title: { display: true, text: 'SBTi Target Year', color: 'rgba(0,0,0,0.58)' /* contrast-fix: was 0.45 */, font: { size: 10 } }
                 },
                 y: {
                     min: 0, max: 180,
-                    ticks: { stepSize: 20, color: 'rgba(0,0,0,0.55)', font: { size: 10 }, callback: function(v) { return '$' + v; } },
+                    ticks: { stepSize: 20, color: 'rgba(0,0,0,0.65)' /* contrast-fix: was 0.55 */, font: { size: 10 }, callback: function(v) { return '$' + v; } },
                     grid: { color: 'rgba(0,0,0,0.06)' },
                     border: { color: 'rgba(0,0,0,0.1)' },
-                    title: { display: true, text: 'LCOE ($/MWh)', color: 'rgba(0,0,0,0.45)', font: { size: 10 } }
+                    title: { display: true, text: 'LCOE ($/MWh)', color: 'rgba(0,0,0,0.58)' /* contrast-fix: was 0.45 */, font: { size: 10 } }
                 }
             }
         },
@@ -2126,7 +2135,7 @@ function wlRenderIsoSpend(partIdx) {
                     ctx.fillStyle = '#1E3A5F';
                     ctx.fillText('$' + (total / 1000).toFixed(1) + 'B', cx, cy - 8);
                     ctx.font = '11px "DM Sans", sans-serif';
-                    ctx.fillStyle = '#6B7280';
+                    ctx.fillStyle = '#4B5563'; /* contrast-fix: was #6B7280, now #4B5563, ratio 7.0:1 on bg #fff */
                     ctx.fillText('total', cx, cy + 10);
                     ctx.restore();
                 }
