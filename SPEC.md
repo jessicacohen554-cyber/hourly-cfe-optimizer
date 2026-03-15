@@ -5,6 +5,36 @@
 
 ## Current Status (Mar 15, 2026)
 
+### NYISO Hydro-Québec Imports + Forecast Validation Update (Added — Mar 15, 2026)
+
+**Branch:** `claude/hydro-quebec-imports-validation-UP70G`
+
+**Part A — External Clean Imports (NYISO Hydro-Québec)**
+
+**Problem**: NYISO imports ~25 TWh/yr of clean hydropower from Hydro-Québec via HVDC ties. Our model treats ISOs as independent grids, ignoring these cross-border flows. This partly explains the NYISO clean penetration lag (our ~40% vs benchmarks' 58–62% at 2030).
+
+**Solution**: Fixed-constant external clean import model:
+- `pipeline_config.py`: `EXTERNAL_CLEAN_IMPORTS_TWH = {'NYISO': 25, ...}` (others 0 for now)
+- `step6_1_smartargets.py`: Adds import TWh as percentage-point boost to clean_pct
+  - Initial state: `ext_import_pct = ext_import_twh / REGIONAL_DEMAND_TWH[iso] * 100`
+  - Per-year adjustment: recalculates ext_import_pct as demand grows (fixed TWh / growing demand = shrinking %)
+  - 2023 baseline: adds ext_import_pct to eGRID baseline clean_pct
+- NYISO: 25 TWh / 160 TWh = ~15.6 pp boost to clean penetration
+
+**Known simplification**: Real HQ imports vary with market conditions, hydrology, and contract terms. 25 TWh is a representative annual average from NYISO Gold Book 2024 and HQ annual reports.
+
+**Part B — Forecast Validation Narrative Update**
+
+Updated `dashboard/forecast_validation.html`:
+- Directional alignment stat: 86% → 60% (reflects actual computed value from validation data)
+- Added NYISO HQ imports as 3rd key finding in executive summary
+- Updated NYISO divergence section with dual root causes (HQ imports + state mandates)
+- Fixed demand growth reference: was "0.5%/1.2%/2.0%" uniform → now shows actual ISO-specific rates (ERCOT 3.5%, PJM 2.4%, etc.)
+- Updated Known Limitations table: coal retirement (now hybrid), policy modeling (now has IRA overlay), demand growth (now ISO-specific)
+- Added "Model Improvements" section documenting 5 changes: HQ imports, IRA overlay, coal retirements, ISO-specific demand growth, LMP decomposition
+
+---
+
 ### IRA Policy Overlay + LMP Decomposition (Added — Mar 15, 2026)
 
 **Branch:** `claude/ira-policy-lmp-decomposition-55AOX`
