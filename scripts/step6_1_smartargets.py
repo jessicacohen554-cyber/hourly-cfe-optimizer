@@ -85,13 +85,16 @@ OUTPUT_DIR = os.path.join(ROOT_DIR, 'data', 'step6-smartargets')
 # CAPACITY_DEGRADATION_ALPHA imported from pipeline_config
 
 # Interconnection queue caps (GW/yr new build per ISO)
+# ERCOT: Higher caps reflect faster permitting, no federal FERC jurisdiction,
+# single-state ISO with streamlined interconnection. ERCOT has completed
+# 8-12 GW/yr of new solar/wind/battery in recent years (ERCOT CDR 2024).
 QUEUE_CAP_GW = {
     'Facilitating': {
-        'CAISO': 6, 'ERCOT': 8, 'PJM': 7, 'NYISO': 5,
+        'CAISO': 6, 'ERCOT': 12, 'PJM': 7, 'NYISO': 5,
         'NEISO': 5, 'MISO': 7, 'SPP': 6,
     },
     'Challenging': {
-        'CAISO': 3, 'ERCOT': 4, 'PJM': 3, 'NYISO': 2,
+        'CAISO': 3, 'ERCOT': 6, 'PJM': 3, 'NYISO': 2,
         'NEISO': 2, 'MISO': 3, 'SPP': 3,
     },
 }
