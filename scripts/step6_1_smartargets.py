@@ -1235,6 +1235,7 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
         existing_clean += ext_import_pct
         iso_state[iso] = {
             'clean_pct': existing_clean,
+            'clean_twh_floor': existing_clean / 100.0 * REGIONAL_DEMAND_TWH[iso],  # Ratchet: absolute clean TWh never decreases
             'ext_import_pct': ext_import_pct,  # Track for emissions accounting
             'market_stopped': False,
             'gas_built_gw': 0,
@@ -1320,6 +1321,13 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                 state['clean_pct'] += (new_ext_pct - old_ext_pct)
                 state['ext_import_pct'] = new_ext_pct
 
+            # Enforce TWh ratchet: absolute clean TWh never decreases
+            # (clean_pct can fall if demand grows faster than deployment,
+            #  but not below what the installed capacity provides)
+            floor_pct = state['clean_twh_floor'] / demand_twh * 100
+            if state['clean_pct'] < floor_pct:
+                state['clean_pct'] = floor_pct
+
             # Get demand and supply profiles
             demand_norm, total_mwh_base = get_demand_profile(iso, demand_data)
             supply_profiles_iso = get_supply_profiles(iso, gen_profiles)
@@ -1336,7 +1344,7 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
             candidate_thresholds = sorted(t for t in THRESHOLDS if t > current_pct)
             if not candidate_thresholds:
                 state['market_stopped'] = True
-                continue
+                # Fall through to record the year result (don't skip with continue)
 
             # Annual queue budget
             queue_budget_gw = QUEUE_CAP_GW[conditions['queue_type']][iso]
@@ -1523,21 +1531,21 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                          f"(rev={blended_revenue:.1f}, cost={blended_cost:.1f})")
                     break
 
-            # --- RPS FLOOR ENFORCEMENT ---
-            # When ira_policy='on', state RPS mandates act as deployment floors.
-            # If market-driven deployment falls below the interpolated RPS floor,
-            # force deployment to meet it (mandated at a loss, like emission caps).
+            # --- RPS/CES FLOOR ENFORCEMENT ---
+            # State RPS/CES mandates (e.g., CA SB 100, NY CLCPA) are existing law
+            # and apply regardless of federal IRA policy status. If market-driven
+            # deployment falls below the interpolated RPS floor, force deployment
+            # to meet it (mandated at a loss, like emission caps).
             rps_mandated_pct = 0
-            if conditions.get('ira_policy') == 'on':
-                rps_floor = get_rps_floor(iso, year)
-                if rps_floor > 0 and current_pct < rps_floor:
-                    rps_gap = rps_floor - current_pct
-                    _log(f"  {iso} RPS floor {rps_floor:.0f}% > market {current_pct:.0f}%: "
-                         f"forcing +{rps_gap:.1f}% deployment")
-                    # Jump to the RPS floor — treat as mandated deployment
-                    current_pct = rps_floor
-                    state['clean_pct'] = current_pct
-                    rps_mandated_pct = rps_gap
+            rps_floor = get_rps_floor(iso, year)
+            if rps_floor > 0 and current_pct < rps_floor:
+                rps_gap = rps_floor - current_pct
+                _log(f"  {iso} RPS/CES floor {rps_floor:.0f}% > market {current_pct:.0f}%: "
+                     f"forcing +{rps_gap:.1f}% deployment")
+                # Jump to the RPS floor — treat as mandated deployment
+                current_pct = rps_floor
+                state['clean_pct'] = current_pct
+                rps_mandated_pct = rps_gap
 
             # --- EMISSION CONSTRAINT: MANDATED DEPLOYMENT + DAC/OVERSHOOT ---
             # After profit-driven deployment, enforce emission cap as a HARD CEILING.
@@ -1812,6 +1820,10 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
             # For constrained scenarios, enforce the cap as a hard ceiling
             if emission_cap_mt is not None and year > 2023:
                 co2_mt = min(co2_mt, emission_cap_mt)
+
+            # Update TWh ratchet floor after all deployment
+            current_clean_twh = current_pct / 100.0 * demand_twh
+            state['clean_twh_floor'] = max(state['clean_twh_floor'], current_clean_twh)
 
             # Record year result
             mix_at_pct = iso_data.get(current_pct, iso_data.get(
