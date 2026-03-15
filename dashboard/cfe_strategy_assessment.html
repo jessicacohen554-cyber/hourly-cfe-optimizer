@@ -83,8 +83,8 @@
                         <div class="toggle-btn-group" id="scorecardThresholdToggle">
                             <button data-val="80">80%</button>
                             <button data-val="85">85%</button>
-                            <button data-val="90" class="active">90%</button>
-                            <button data-val="95">95%</button>
+                            <button data-val="90">90%</button>
+                            <button data-val="95" class="active">95%</button>
                             <button data-val="99.5">99%+</button>
                         </div>
                     </div>
@@ -111,7 +111,7 @@
                                     <th>Emission Reduction</th>
                                     <th>Cost Efficiency</th>
                                     <th>Gas Lock-in</th>
-                                    <th>Scalability</th>
+                                    <th>System Cost</th>
                                     <th>Learning Curves</th>
                                     <th>Curtailment</th>
                                     <th>Overall</th>
@@ -181,12 +181,23 @@
 
                 <p style="color: var(--text-muted); margin-bottom: var(--space-lg)">Strategies grouped by functional similarity in outcomes. Strategies within a cluster produce near-identical results across most thresholds and participation levels.</p>
 
-                <div class="card" style="padding: var(--space-lg); margin-bottom: var(--space-xl)">
-                    <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Cluster Performance Profile (Normalized, 90% / 25% Participation)</h3>
-                    <div class="chart-container-lg"><canvas id="clusterRadarChart"></canvas></div>
+                <div class="grid-3col" id="strategyRadarGrid">
+                    <div class="card" style="padding: var(--space-lg)">
+                        <h3 style="font-size: 0.9rem; color: var(--navy); margin-bottom: var(--space-sm); text-align: center">1B — Consequential</h3>
+                        <div class="chart-container"><canvas id="radarChart1B"></canvas></div>
+                        <div id="clusterDesc1B" style="margin-top: var(--space-sm)"></div>
+                    </div>
+                    <div class="card" style="padding: var(--space-lg)">
+                        <h3 style="font-size: 0.9rem; color: var(--navy); margin-bottom: var(--space-sm); text-align: center">2A — Hourly New-Build</h3>
+                        <div class="chart-container"><canvas id="radarChart2A"></canvas></div>
+                        <div id="clusterDesc2A" style="margin-top: var(--space-sm)"></div>
+                    </div>
+                    <div class="card" style="padding: var(--space-lg)">
+                        <h3 style="font-size: 0.9rem; color: var(--navy); margin-bottom: var(--space-sm); text-align: center">2C — Hourly Hybrid</h3>
+                        <div class="chart-container"><canvas id="radarChart2C"></canvas></div>
+                        <div id="clusterDesc2C" style="margin-top: var(--space-sm)"></div>
+                    </div>
                 </div>
-
-                <div class="grid-2col" id="clusterDescriptions"></div>
             </section>
 
             <!-- Section 05: Nuclear Fragility Test -->

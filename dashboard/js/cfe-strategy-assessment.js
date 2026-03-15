@@ -139,15 +139,32 @@ function computeNuclearDependency(strategy, participation, threshold) {
     return Math.abs(rolloff.avgCost - base.avgCost) / Math.max(base.avgCost, 1) * 100;
 }
 
-function computeScalability(strategy, threshold) {
-    // Scalability = how much does $/MWh increase as participation scales from 10% to 50%?
-    // Lower cost increase = more scalable = better score
-    // Strategies whose costs blow up at scale score poorly
-    const lowP = cachedAggregate(strategy, 10, threshold);
-    const highP = cachedAggregate(strategy, 50, threshold);
-    if (!lowP.avgCost || !highP.avgCost) return 0;
-    // Return the $/MWh increase (positive = costs rise at scale)
-    return highP.avgCost - lowP.avgCost;
+// Gas backup capacity costs from pipeline_config.py (step 2.2)
+// Existing gas: fixed O&M only ($/kW-yr). New gas: full annualized CCGT ($/kW-yr).
+const EXISTING_GAS_FOM_KW_YR = { CAISO: 16, ERCOT: 13, PJM: 14, NYISO: 17, NEISO: 15, MISO: 14, SPP: 13 };
+const NEW_CCGT_COST_KW_YR = { CAISO: 112, ERCOT: 89, PJM: 99, NYISO: 114, NEISO: 105, MISO: 95, SPP: 88 };
+const EXISTING_GAS_CAPACITY_GW = { CAISO: 37, ERCOT: 55, PJM: 75, NYISO: 18, NEISO: 14, MISO: 68, SPP: 32 };
+
+function computeSystemCost(strategy, participation, threshold) {
+    // Total system cost = clean procurement ($M) + NEW-BUILD gas capacity cost ($M)
+    // Existing gas is sunk cost — only new gas above existing capacity counts
+    // Uses step 2.2 annualized CCGT cost ($/kW-yr) from pipeline_config.py
+    let totalCleanM = 0, totalNewGasCostM = 0;
+
+    for (const iso of ISOS) {
+        const d = getRecord(strategy, iso, participation, threshold);
+        if (!d) continue;
+        totalCleanM += d.tc || 0;
+
+        const gasGw = d.gasGw || 0;
+        const existingGw = EXISTING_GAS_CAPACITY_GW[iso] || 0;
+        const newGasGw = Math.max(0, gasGw - existingGw);
+
+        // Convert: GW × $/kW-yr × 1e6 kW/GW = $M/yr
+        totalNewGasCostM += newGasGw * NEW_CCGT_COST_KW_YR[iso] * 1e3;
+    }
+
+    return totalCleanM + totalNewGasCostM; // $M total
 }
 
 function buildScorecardData(threshold, participation) {
@@ -163,15 +180,15 @@ function buildScorecardData(threshold, participation) {
     const co2Vals = CORE_STRATEGIES.map(s => aggs[s].totalCo2);
     const costVals = CORE_STRATEGIES.map(s => aggs[s].avgCost);
     const gasVals = CORE_STRATEGIES.map(s => aggs[s].totalGasGw);
-    const scaleVals = CORE_STRATEGIES.map(s => computeScalability(s, threshold));
+    const sysCostVals = CORE_STRATEGIES.map(s => computeSystemCost(s, participation, threshold));
     const learnVals = CORE_STRATEGIES.map(s => computeLearningScore(s));
     const curtVals = CORE_STRATEGIES.map(s => aggs[s].totalCurtTwh);
 
-    // Rank: co2 higher is better, cost lower better, gas lower better, scale lower better, learning higher better, curt lower better
+    // Rank: co2 higher is better, cost lower better, gas lower better, sysCost lower better, learning higher better, curt lower better
     const co2Ranks = rankStrategies(CORE_STRATEGIES, co2Vals, false);
     const costRanks = rankStrategies(CORE_STRATEGIES, costVals, true);
     const gasRanks = rankStrategies(CORE_STRATEGIES, gasVals, true);
-    const scaleRanks = rankStrategies(CORE_STRATEGIES, scaleVals, true);  // lower cost increase = better
+    const sysCostRanks = rankStrategies(CORE_STRATEGIES, sysCostVals, true);  // lower total system cost = better
     const learnRanks = rankStrategies(CORE_STRATEGIES, learnVals, false);
     const curtRanks = rankStrategies(CORE_STRATEGIES, curtVals, true);
 
@@ -180,19 +197,19 @@ function buildScorecardData(threshold, participation) {
         const co2Grade = rankToGrade(co2Ranks[s], n);
         const costGrade = rankToGrade(costRanks[s], n);
         const gasGrade = rankToGrade(gasRanks[s], n);
-        const scaleGrade = rankToGrade(scaleRanks[s], n);
+        const sysCostGrade = rankToGrade(sysCostRanks[s], n);
         const learnGrade = rankToGrade(learnRanks[s], n);
         const curtGrade = rankToGrade(curtRanks[s], n);
 
         // Composite: equally weighted ranks across 6 criteria
-        const composite = 100 - ((co2Ranks[s] + costRanks[s] + gasRanks[s] + scaleRanks[s] + learnRanks[s] + curtRanks[s]) / (6 * n)) * 100;
+        const composite = 100 - ((co2Ranks[s] + costRanks[s] + gasRanks[s] + sysCostRanks[s] + learnRanks[s] + curtRanks[s]) / (6 * n)) * 100;
 
         results.push({
             strategy: s,
             co2: { val: co2Vals[i], grade: co2Grade, rank: co2Ranks[s] },
             cost: { val: costVals[i], grade: costGrade, rank: costRanks[s] },
             gas: { val: gasVals[i], grade: gasGrade, rank: gasRanks[s] },
-            scale: { val: scaleVals[i], grade: scaleGrade, rank: scaleRanks[s] },
+            sysCost: { val: sysCostVals[i], grade: sysCostGrade, rank: sysCostRanks[s] },
             learn: { val: learnVals[i], grade: learnGrade, rank: learnRanks[s] },
             curt: { val: curtVals[i], grade: curtGrade, rank: curtRanks[s] },
             composite: Math.round(composite)
@@ -230,24 +247,24 @@ function fmt(v, dec) { return v != null && isFinite(v) ? v.toFixed(dec || 1) : '
 // ─── Section 01: Executive Summary ──────────────────────────────────────────
 
 function populateExecutiveSummary() {
-    const scorecard = buildScorecardData(90, 25);
+    const scorecard = buildScorecardData(95, 25);
     const best = scorecard[0];
 
-    // Find strategy with lowest cost at 90%/25%
+    // Find strategy with lowest cost at 95%/25%
     let lowestCost = Infinity, lowestCostStrat = '';
     let highestCo2 = -Infinity, highestCo2Strat = '';
     for (const s of CORE_STRATEGIES) {
-        const agg = cachedAggregate(s, 25, 90);
+        const agg = cachedAggregate(s, 25, 95);
         if (agg.avgCost < lowestCost) { lowestCost = agg.avgCost; lowestCostStrat = s; }
         if (agg.totalCo2 > highestCo2) { highestCo2 = agg.totalCo2; highestCo2Strat = s; }
     }
 
     // Gas range
-    const gasVals = CORE_STRATEGIES.map(s => cachedAggregate(s, 25, 90).totalGasGw);
+    const gasVals = CORE_STRATEGIES.map(s => cachedAggregate(s, 25, 95).totalGasGw);
     const gasMin = Math.min(...gasVals), gasMax = Math.max(...gasVals);
 
     // Nuclear dependency — 2C
-    const nucDep = computeNuclearDependency('2C', 25, 90);
+    const nucDep = computeNuclearDependency('2C', 25, 95);
 
     document.getElementById('statBestCost').textContent = STRATEGY_SHORT[lowestCostStrat];
     document.getElementById('statBestCo2').textContent = STRATEGY_SHORT[highestCo2Strat];
@@ -260,16 +277,17 @@ function populateExecutiveSummary() {
     const finding = document.getElementById('executiveFinding');
     finding.innerHTML = `<p><strong>Key Finding:</strong> No single strategy dominates across all six criteria.
         Strategy <strong>${STRATEGY_SHORT[best.strategy]}</strong> (${STRATEGY_LABELS[best.strategy]}) achieves the best composite score
-        at 90% CFE / 25% participation, balancing emission reductions, cost efficiency, scalability, and system-level effects.
+        at 95% CFE / 25% participation — the threshold where firm clean deployment becomes decisive.
         Consequential netting (1B) deploys new-build capacity cross-regionally at the lowest per-MWh cost
-        ($${fmt(lowestCost)}/MWh), but primarily builds mature VRE (solar/wind). New firm clean technologies
-        (nuclear, CCS, LDES) only enter the mix at extreme thresholds (95%+), contributing minimally to learning curves.
+        ($${fmt(lowestCost)}/MWh), but primarily builds mature VRE (solar/wind) and avoids firm clean until forced.
         Strategy 2A (hourly new-build only) costs
-        $${fmt(cachedAggregate('2A', 25, 90).avgCost)}/MWh but the hourly matching constraint forces early deployment of
+        $${fmt(cachedAggregate('2A', 25, 95).avgCost)}/MWh but the hourly matching constraint forces early deployment of
         new firm clean (10–38% of mix) and storage (10–33%) — directly accelerating learning curves for immature technologies.
-        Its costs actually decrease at higher participation (negative scalability premium), making it uniquely suited for mass adoption.
+        At 95%, the gap between strategies that deploy firm clean and those that don't becomes critical:
+        strategies without firm clean must either accept significantly more gas on the grid or pay exponentially more
+        for VRE overbuild plus curtailment.
         Strategy 2C (hourly hybrid) combines existing clean (SSS, EACs, nuclear uprate) with new-build,
-        but its scalability is poor — costs jump significantly as participation increases beyond 25%.</p>`;
+        but total system cost (including new-build gas backup) reveals hidden costs that per-MWh pricing obscures.</p>`;
 }
 
 function buildSummaryBarChart() {
@@ -321,7 +339,7 @@ function renderScorecardTable(threshold, participation) {
             <td><span class="${gradeClass(row.co2.grade)}">${row.co2.grade}</span> <span style="font-size:0.8em;color:var(--text-muted)">${fmt(row.co2.val)} Mt</span></td>
             <td><span class="${gradeClass(row.cost.grade)}">${row.cost.grade}</span> <span style="font-size:0.8em;color:var(--text-muted)">$${fmt(row.cost.val)}/MWh</span></td>
             <td><span class="${gradeClass(row.gas.grade)}">${row.gas.grade}</span> <span style="font-size:0.8em;color:var(--text-muted)">${fmt(row.gas.val, 0)} GW</span></td>
-            <td><span class="${gradeClass(row.scale.grade)}">${row.scale.grade}</span> <span style="font-size:0.8em;color:var(--text-muted)">${row.scale.val >= 0 ? '+' : ''}$${fmt(row.scale.val)}/MWh</span></td>
+            <td><span class="${gradeClass(row.sysCost.grade)}">${row.sysCost.grade}</span> <span style="font-size:0.8em;color:var(--text-muted)">$${fmt(row.sysCost.val / 1000, 0)}B</span></td>
             <td><span class="${gradeClass(row.learn.grade)}">${row.learn.grade}</span></td>
             <td><span class="${gradeClass(row.curt.grade)}">${row.curt.grade}</span> <span style="font-size:0.8em;color:var(--text-muted)">${fmt(row.curt.val)} TWh</span></td>
             <td style="font-weight:700; color:var(--navy)">${row.composite}</td>
@@ -403,85 +421,90 @@ function populateCrossoverInsight(participation) {
 // ─── Section 04: Strategy Clusters ──────────────────────────────────────────
 
 function buildClusterRadar() {
-    destroyChart('clusterRadarChart');
-
-    // Compute normalized scores per cluster (0-1, higher = better)
-    const clusterData = CLUSTERS.map(cluster => {
-        const aggs = cluster.strategies.map(s => cachedAggregate(s, 25, 90));
-        const avgCost = aggs.reduce((s, a) => s + a.avgCost, 0) / aggs.length;
-        const avgCo2 = aggs.reduce((s, a) => s + a.totalCo2, 0) / aggs.length;
-        const avgGas = aggs.reduce((s, a) => s + a.totalGasGw, 0) / aggs.length;
-        const avgCurt = aggs.reduce((s, a) => s + a.totalCurtTwh, 0) / aggs.length;
-        const avgLearn = cluster.strategies.reduce((s, st) => s + computeLearningScore(st), 0) / cluster.strategies.length;
-        const avgScale = cluster.strategies.reduce((s, st) => s + computeScalability(st, 90), 0) / cluster.strategies.length;
-        return { cost: avgCost, co2: avgCo2, gas: avgGas, curt: avgCurt, learn: avgLearn, scale: avgScale };
-    });
-
-    // Normalize each dimension to 0-1 (invert where lower is better)
-    const allCosts = clusterData.map(d => d.cost);
-    const allCo2 = clusterData.map(d => d.co2);
-    const allGas = clusterData.map(d => d.gas);
-    const allCurt = clusterData.map(d => d.curt);
-    const allLearn = clusterData.map(d => d.learn);
-    const allScale = clusterData.map(d => d.scale);
-
-    function normalize(vals, invert) {
-        const min = Math.min(...vals), max = Math.max(...vals);
-        const range = max - min || 1;
-        return vals.map(v => invert ? 1 - (v - min) / range : (v - min) / range);
+    // Compute raw values per strategy at 95%/25%
+    const stratData = {};
+    for (const s of CORE_STRATEGIES) {
+        const agg = cachedAggregate(s, 25, 95);
+        stratData[s] = {
+            co2: agg.totalCo2,
+            cost: agg.avgCost,
+            gas: agg.totalGasGw,
+            sysCost: computeSystemCost(s, 25, 95),
+            learn: computeLearningScore(s),
+            curt: agg.totalCurtTwh
+        };
     }
 
-    const normCost = normalize(allCosts, true); // lower cost = higher score
-    const normCo2 = normalize(allCo2, false);   // higher co2 displaced = higher score
-    const normGas = normalize(allGas, true);
-    const normCurt = normalize(allCurt, true);
-    const normLearn = normalize(allLearn, false);
-    const normScale = normalize(allScale, true); // lower cost increase at scale = better
+    // Normalize across all 3 strategies (0-1, higher = better)
+    function normalize(field, invert) {
+        const vals = CORE_STRATEGIES.map(s => stratData[s][field]);
+        const min = Math.min(...vals), max = Math.max(...vals);
+        const range = max - min || 1;
+        const normed = {};
+        CORE_STRATEGIES.forEach((s, i) => {
+            normed[s] = invert ? 1 - (vals[i] - min) / range : (vals[i] - min) / range;
+        });
+        return normed;
+    }
 
-    const datasets = CLUSTERS.map((cluster, i) => ({
-        label: cluster.name,
-        data: [normCo2[i], normCost[i], normGas[i], normScale[i], normLearn[i], normCurt[i]],
-        borderColor: cluster.color,
-        backgroundColor: cluster.color + '30',
-        borderWidth: 2,
-        pointRadius: 4,
-        pointBackgroundColor: cluster.color
-    }));
+    const normCo2 = normalize('co2', false);    // higher = better
+    const normCost = normalize('cost', true);    // lower = better
+    const normGas = normalize('gas', true);      // lower = better
+    const normSysCost = normalize('sysCost', true); // lower = better
+    const normLearn = normalize('learn', false); // higher = better
+    const normCurt = normalize('curt', true);    // lower = better
 
-    const ctx = document.getElementById('clusterRadarChart');
-    charts.clusterRadarChart = new Chart(ctx, {
-        type: 'radar',
-        data: {
-            labels: ['Emission Reduction', 'Cost Efficiency', 'Low Gas Lock-in', 'Scalability', 'Learning Curves', 'Low Curtailment'],
-            datasets
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                r: {
-                    beginAtZero: true, max: 1,
-                    ticks: { display: false },
-                    pointLabels: { font: { family: 'DM Sans', size: 11 } },
-                    grid: { color: 'rgba(0,0,0,0.08)' }
-                }
+    const radarLabels = ['Emission\nReduction', 'Cost\nEfficiency', 'Low Gas\nLock-in', 'System\nCost', 'Learning\nCurves', 'Low\nCurtailment'];
+
+    // Build individual radar chart per strategy
+    for (const cluster of CLUSTERS) {
+        const s = cluster.strategies[0];
+        const chartId = 'radarChart' + s.replace('_', '');
+        destroyChart(chartId);
+
+        const data = [normCo2[s], normCost[s], normGas[s], normSysCost[s], normLearn[s], normCurt[s]];
+
+        const ctx = document.getElementById(chartId);
+        if (!ctx) continue;
+
+        charts[chartId] = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: radarLabels,
+                datasets: [{
+                    label: STRATEGY_LABELS[s],
+                    data: data,
+                    borderColor: cluster.color,
+                    backgroundColor: cluster.color + '30',
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    pointBackgroundColor: cluster.color
+                }]
             },
-            plugins: {
-                legend: { labels: { font: { family: 'DM Sans', size: 12 }, usePointStyle: true, padding: 16 } },
-                tooltip: { bodyFont: { family: 'DM Sans' } }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        beginAtZero: true, max: 1,
+                        ticks: { display: false },
+                        pointLabels: { font: { family: 'DM Sans', size: 10 } },
+                        grid: { color: 'rgba(0,0,0,0.08)' }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { bodyFont: { family: 'DM Sans' } }
+                }
             }
-        }
-    });
+        });
 
-    // Cluster description cards
-    const container = document.getElementById('clusterDescriptions');
-    container.innerHTML = CLUSTERS.map(c => `
-        <div class="card" style="padding: var(--space-lg); border-left: 4px solid ${c.color}">
-            <h4 style="font-family: var(--font-heading); color: var(--navy); margin: 0 0 var(--space-xs)">${c.name}</h4>
-            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: var(--space-sm)">Strategies: ${c.strategies.join(', ')}</div>
-            <p style="font-size: 0.9rem; margin: 0">${c.desc}</p>
-        </div>
-    `).join('');
+        // Description below chart
+        const descEl = document.getElementById('clusterDesc' + s.replace('_', ''));
+        if (descEl) {
+            descEl.innerHTML = `<p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0">${cluster.desc}</p>`;
+        }
+    }
 }
 
 // ─── Section 05: Nuclear Fragility ──────────────────────────────────────────
@@ -883,7 +906,7 @@ function initTocHighlight() {
 function init() {
     populateExecutiveSummary();
     buildSummaryBarChart();
-    renderScorecardTable(90, 25);
+    renderScorecardTable(95, 25);
     buildCrossoverCharts(25);
     buildClusterRadar();
     buildFragilityCharts();
