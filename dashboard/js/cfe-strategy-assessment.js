@@ -11,8 +11,8 @@ const KEY_THRESHOLDS = [70, 90, 99.5];
 
 const STRATEGY_LABELS = {
     '1A': '1A — Consequential (Grid-Avg)',
-    '1B': '1B — Consequential (Marginal)',
-    '2A': '2A — Hourly (Existing Only)',
+    '1B': '1B — Consequential (Fossil-Avg)',
+    '2A': '2A — Hourly (New-Build Only)',
     '2C': '2C — Hourly (All Clean)',
     '2C_rolloff': '2C — Nuclear Rolloff'
 };
@@ -33,9 +33,9 @@ const TOTAL_DEMAND = Object.values(GRID_DEMANDS).reduce((a, b) => a + b, 0);
 
 // Cluster definitions
 const CLUSTERS = [
-    { name: 'Consequential Netting', strategies: ['1A', '1B'], color: '#6366F1', desc: 'Cross-regional emission offset accounting. Cheapest per-MWh but does not drive local grid transformation or new capacity deployment.' },
-    { name: 'Hourly Existing', strategies: ['2A'], color: '#F59E0B', desc: 'Hourly matching using only existing clean generation. High cost due to new-build requirements for temporal matching, but strong additionality signal.' },
-    { name: 'Hourly Hybrid', strategies: ['2C'], color: '#0EA5E9', desc: 'Blends existing clean + new-build for hourly matching. Cost-effective but depends on nuclear staying online.' }
+    { name: 'Consequential Netting', strategies: ['1A', '1B'], color: '#6366F1', desc: 'Cross-regional 100% new-build deployment via queue-ordered procurement. Cheapest per-MWh with full additionality, but capacity is deployed cross-regionally — not necessarily in the buyer\'s ISO.' },
+    { name: 'Hourly New-Build', strategies: ['2A'], color: '#F59E0B', desc: 'Same-ISO hourly matching using 100% new-build resources (EF-templated mix). High additionality with local grid transformation, but higher cost due to hourly matching constraint and all-new capacity.' },
+    { name: 'Hourly Hybrid', strategies: ['2C'], color: '#0EA5E9', desc: 'Same-ISO hourly matching blending existing clean (SSS, merchant EAC, nuclear uprate) with new-build. Cost-effective but depends on nuclear staying online for cheapest firm supply.' }
 ];
 
 const charts = {};
@@ -118,11 +118,12 @@ function gradeClass(grade) {
 }
 
 function computeLearningScore(strategy) {
-    // Strategies that drive new clean firm + LDES deployment score higher
+    // All strategies except 2C deploy 100% new-build capacity
+    // Learning score reflects: additionality level × learning curve speed (Scenario A vs B)
     const scores = {
-        '1A': 2, '1B': 2, // consequential netting — low additionality
-        '2A': 5, // existing-only hourly — moderate (requires some new-build for matching)
-        '2C': 8  // hybrid — strong new-build component driving learning curves
+        '1A': 7, '1B': 7, // 100% new-build (queue-ordered), but Scenario A slower learning curves
+        '2A': 8, // 100% new-build (EF-templated) + Scenario B fast learning curves
+        '2C': 8  // mixed (~30% new-build) but Scenario B fast learning + high participation volumes
     };
     return scores[strategy] || 3;
 }
@@ -243,10 +244,13 @@ function populateExecutiveSummary() {
     finding.innerHTML = `<p><strong>Key Finding:</strong> No single strategy dominates across all five criteria.
         Strategy <strong>${STRATEGY_SHORT[best.strategy]}</strong> (${STRATEGY_LABELS[best.strategy]}) achieves the best composite score
         at 90% CFE / 25% participation, balancing emission reductions, cost efficiency, and system-level effects.
-        Consequential netting strategies (1A/1B) offer the lowest per-MWh cost ($${fmt(lowestCost)}/MWh) but produce minimal grid
-        transformation. Hourly matching with existing clean (2A) costs
-        $${fmt(cachedAggregate('2A', 25, 90).avgCost)}/MWh — a significant premium driven by new-build requirements for temporal matching.
-        Strategy 2C (hourly hybrid) balances cost and grid impact by leveraging existing clean generation alongside new-build capacity.
+        Consequential netting strategies (1A/1B) deploy 100% new-build capacity cross-regionally via queue-ordered procurement,
+        offering the lowest per-MWh cost ($${fmt(lowestCost)}/MWh) but without same-ISO grid transformation.
+        Strategy 2A (hourly new-build only) costs
+        $${fmt(cachedAggregate('2A', 25, 90).avgCost)}/MWh and deploys 100% new capacity in the buyer's ISO — maximum local additionality
+        but at a premium driven by the hourly matching constraint on an all-new resource mix.
+        Strategy 2C (hourly hybrid) balances cost and grid impact by combining existing clean (SSS, EACs, nuclear uprate)
+        with new-build capacity, keeping costs lower than the all-new-build approach while still driving meaningful deployment.
         The optimal strategy is regime-dependent:
         low ambition favors 1A for cost; high ambition with mainstream participation favors 2C for balanced outcomes.</p>`;
 }
@@ -624,14 +628,14 @@ function buildNuclearStrandChart() {
 
     const exposures = CORE_STRATEGIES.map(s => {
         const dep = computeNuclearDependency(s, participation, threshold);
-        // Strategies that DON'T pay for existing clean EACs increase stranding risk
-        // 2C actively supports nuclear revenue via EAC purchases — lowest stranding risk among hourly
-        // 1A/1B don't create EAC revenue streams — nuclear gets no procurement support
-        // 2A uses existing but at high cost, marginal revenue support
+        // Nuclear stranding risk = does the strategy create revenue for existing nuclear?
+        // 2C actively funds nuclear via EAC purchases — lowest stranding risk
+        // 2A is 100% new-build, zero nuclear dependency — no stranding exposure either way
+        // 1A/1B deploy new-build cross-regionally, no EAC revenue pathway for existing nuclear
         const strandingAdj = {
-            '1A': 15, '1B': 15,  // no EAC revenue pathway — nuclear unsupported
-            '2A': 10,            // some existing procurement but at premium prices
-            '2C': 0              // directly funds existing nuclear via EAC purchases
+            '1A': 15, '1B': 15,  // no EAC revenue pathway — nuclear unsupported, highest stranding risk
+            '2A': 0,             // 100% new-build, zero nuclear dependency — no stranding exposure
+            '2C': 0              // directly funds existing nuclear via EAC purchases — lowest risk
         };
         return dep + (strandingAdj[s] || 5);
     });
@@ -669,10 +673,11 @@ function populateRiskInsight() {
         Gas lock-in varies from ${fmt(gas90[gas90.length - 1].gas, 0)} GW (${STRATEGY_SHORT[gas90[gas90.length - 1].s]}) to
         ${fmt(gas90[0].gas, 0)} GW (${STRATEGY_SHORT[gas90[0].s]}) — a ${fmt(gas90[0].gas - gas90[gas90.length - 1].gas, 0)} GW spread.
         Curtailment ranges from ${fmt(curt90[curt90.length - 1].curt)} TWh to ${fmt(curt90[0].curt)} TWh.
-        Strategies relying on existing clean generation (2A, 2C) carry nuclear stranding risk —
-        if nuclear plants close, these strategies lose their cheapest firm generation source and either
-        increase costs or increase gas dependency. Consequential netting (1A, 1B) avoids both risks but produces
-        minimal grid transformation.</p>`;
+        Strategy 2C (hourly hybrid) carries nuclear stranding risk because it relies on existing nuclear for
+        cheap firm supply — if nuclear plants close, 2C loses its cost advantage (see Section 05).
+        Strategy 2A (hourly new-build only) has zero nuclear dependency since it deploys 100% new capacity.
+        Consequential netting (1A, 1B) deploys 100% new-build cross-regionally but provides no EAC revenue
+        to support existing nuclear — they contribute to stranding risk indirectly by not creating a revenue pathway.</p>`;
 }
 
 // ─── Section 07: Regime Map ─────────────────────────────────────────────────
@@ -745,22 +750,24 @@ function populateDissenting() {
     el.innerHTML = `
         <div class="insight-box" style="margin-bottom: var(--space-lg)">
             <h4 style="font-family: var(--font-heading); color: var(--navy); margin: 0 0 var(--space-sm)">Against Consequential Netting (1A/1B)</h4>
-            <p>If the entire C&I sector adopted consequential netting, the total additional
-            clean capacity deployed would be <strong>zero</strong>. These strategies rely on
-            purchasing emission reductions from the cheapest marginal source — often in regions
-            distant from the buyer's actual load — without building any new clean generation.
-            At scale, this creates a free-rider problem: everyone takes credit for the same
-            avoided emissions without funding the clean energy transition.</p>
+            <p>While 1A/1B deploy 100% new-build capacity, they do so <strong>cross-regionally</strong> via
+            queue-ordered procurement — the new clean generation may be built in a distant ISO, not in
+            the buyer's grid. This means the buyer's local grid sees no physical transformation. The emission
+            reduction is real on a system-wide basis, but the buyer's ISO may retain the same fossil fleet.
+            At scale, this concentrates new clean capacity in the cheapest-to-build regions while leaving
+            harder-to-decarbonize grids untouched. Additionally, consequential netting uses annual accounting,
+            missing the hourly mismatch between clean generation and actual load.</p>
         </div>
 
         <div class="insight-box" style="margin-bottom: var(--space-lg)">
-            <h4 style="font-family: var(--font-heading); color: var(--navy); margin: 0 0 var(--space-sm)">Against Hourly Existing-Only (2A)</h4>
-            <p>Strategy 2A's reliance on existing clean generation means it does not create strong
-            additionality signals for new capacity deployment. While it does require temporal matching —
-            driving some new-build to fill gaps — it primarily reshuffles existing clean energy claims
-            rather than funding the next generation of clean firm and storage technologies needed for
-            deep decarbonization. Its high cost stems from the difficulty of hourly matching without
-            access to the full portfolio of existing + new clean resources.</p>
+            <h4 style="font-family: var(--font-heading); color: var(--navy); margin: 0 0 var(--space-sm)">Against Hourly New-Build Only (2A)</h4>
+            <p>Strategy 2A deploys 100% new-build capacity in the buyer's ISO with hourly matching — maximum
+            additionality and local grid transformation. However, this comes at the highest cost among the four
+            strategies because every MWh must come from newly built resources matched to each hour. The premium
+            reflects the full cost of new clean firm, storage, and variable renewables without the cost relief
+            of existing clean supply. At lower participation levels, 2A's high per-buyer cost may limit adoption,
+            slowing the very learning curves it aims to accelerate. Its resource mix, templated from the efficient
+            frontier, may also over-build in ISOs where existing clean supply could be leveraged more cost-effectively.</p>
         </div>
 
         <div class="insight-box" style="margin-bottom: var(--space-lg)">
