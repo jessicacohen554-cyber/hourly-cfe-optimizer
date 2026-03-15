@@ -545,10 +545,16 @@ def compute_wrights_law_curves():
 
     # ── Comparison strategies: degradation curves ──
     # All shaped (N_part,) — participation-dependent, evaluated at single threshold
-    # Strategy 1A (consequential): starts cheaper, degrades via wholesale erosion
+    # Strategy 1A (consequential, grid-average baseline): starts cheaper, degrades via wholesale erosion
     wholesale_erosion_pct = np.clip(PARTICIPATION_PCTS * 0.5, 0, 0.30)
     base_1a_cost = 35.0
     strat_1a = base_1a_cost + wholesale_erosion_pct * 40.0  # (N_part,)
+
+    # Strategy 1B (consequential, fossil-average baseline): similar to 1A but lower baseline
+    # means more VRE deployed cross-regionally — slightly cheaper at low participation but
+    # larger gas backup requirements at scale (reflected in system cost, not here)
+    base_1b_cost = 32.0  # Lower per-MWh due to fossil-average baseline accepting cheaper VRE
+    strat_1b = base_1b_cost + wholesale_erosion_pct * 35.0  # (N_part,)
 
     # Strategy 2A (hourly, no existing credit): pure new-build, no premiums
     thr_90_idx_tmp = thresholds.tolist().index(90)
@@ -623,11 +629,14 @@ def compute_wrights_law_curves():
             'blended_2c_at_90': blended_2c[:, thresholds.tolist().index(90)].tolist(),
             'blended_2c_noak_at_90': blended_2c_noak[:, thresholds.tolist().index(90)].tolist(),
             'strat_1a_at_90': strat_1a.tolist(),
+            'strat_1b_at_90': strat_1b.tolist(),
             'strat_2a_at_90': strat_2a.tolist(),
             'strat_2b_at_90': strat_2b.tolist(),
             'strat_3a_at_90': strat_3a.tolist(),
             'critical_mass_pct_at_90': float(critical_mass_pct[thresholds.tolist().index(90)])
                 if not np.isnan(critical_mass_pct[thresholds.tolist().index(90)]) else None,
+            'critical_mass_pct_at_95': float(critical_mass_pct[thresholds.tolist().index(95)])
+                if not np.isnan(critical_mass_pct[thresholds.tolist().index(95)]) else None,
         },
 
         # ── Full grid: 2C blended cost (N_part × N_thr) ──
@@ -677,10 +686,22 @@ def compute_wrights_law_curves():
         # ── Comparison strategies at 90% CFE ──
         'strategy_comparison_90': {
             'strat_1a': strat_1a.tolist(),
+            'strat_1b': strat_1b.tolist(),
             'strat_2a': strat_2a.tolist(),
             'strat_2b': strat_2b.tolist(),
             'strat_2c_gated': blended_2c[:, thr_90_idx_tmp].tolist(),
             'strat_2c_noak': blended_2c_noak[:, thr_90_idx_tmp].tolist(),
+            'strat_3a': strat_3a.tolist(),
+        },
+
+        # ── Comparison strategies at 95% CFE ──
+        'strategy_comparison_95': {
+            'strat_1a': strat_1a.tolist(),
+            'strat_1b': strat_1b.tolist(),
+            'strat_2a': (ccs_lcoe_pure[:, thresholds.tolist().index(95)] * 0.7 + vre_price * 0.3).tolist(),
+            'strat_2b': strat_2b.tolist(),
+            'strat_2c_gated': blended_2c[:, thresholds.tolist().index(95)].tolist(),
+            'strat_2c_noak': blended_2c_noak[:, thresholds.tolist().index(95)].tolist(),
             'strat_3a': strat_3a.tolist(),
         },
 
@@ -792,6 +813,7 @@ def save_json(results):
         },
         'critical_mass': results['critical_mass']['pct_by_threshold'],
         'strategy_comparison_90': results['strategy_comparison_90'],
+        'strategy_comparison_95': results['strategy_comparison_95'],
         'iso_spend_90': results['iso_spend_90'],
     }
 

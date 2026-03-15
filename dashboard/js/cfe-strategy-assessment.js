@@ -9,7 +9,6 @@ const ISOS = ['CAISO','ERCOT','PJM','NYISO','NEISO','MISO','SPP'];
 const THRESHOLDS = [90, 92.5, 95, 97.5, 99.5, 99.99];
 const PARTICIPATION_LEVELS = [5, 10, 15, 20, 25, 50, 75];
 
-// Display labels — internal data keys stay '1B'/'2C' to match DEPLOYMENT_DATA
 const STRATEGY_LABELS = {
     '1B': '1B — Consequential',
     '2C': '2C — Hourly Matching with SSS',
@@ -23,24 +22,14 @@ const STRATEGY_COLORS = {
     '2C_rolloff': '#7DD3FC'
 };
 
-// TWh demand per ISO (approximate 2023 load)
 const GRID_DEMANDS = { CAISO: 224, ERCOT: 488, PJM: 843, NYISO: 152, NEISO: 115, MISO: 660, SPP: 296 };
 const TOTAL_DEMAND = Object.values(GRID_DEMANDS).reduce((a, b) => a + b, 0);
 
-// Cluster definitions
-const CLUSTERS = [
-    { name: 'Consequential Netting', strategies: ['1B'], color: '#6366F1',
-      desc: 'Cross-regional new-build deployment via queue-ordered procurement. Deploys mostly mature VRE (solar/wind). New firm clean only at extreme thresholds. Minimal contribution to learning curves for immature technologies. Provides zero financial support to existing nuclear.' },
-    { name: 'Hourly Matching with SSS', strategies: ['2C'], color: '#0EA5E9',
-      desc: 'Same-ISO hourly matching blending existing clean (SSS, merchant EAC, nuclear uprate) with new-build. Forces firm clean + storage deployment. Creates EAC revenue that keeps existing nuclear economically viable. Proposed framework for GHG Protocol Scope 2 revision.' }
-];
-
-const charts = {};
-
-// Gas costs from pipeline_config.py
 const EXISTING_GAS_FOM_KW_YR = { CAISO: 16, ERCOT: 13, PJM: 14, NYISO: 17, NEISO: 15, MISO: 14, SPP: 13 };
 const NEW_CCGT_COST_KW_YR = { CAISO: 112, ERCOT: 89, PJM: 99, NYISO: 114, NEISO: 105, MISO: 95, SPP: 88 };
 const EXISTING_GAS_CAPACITY_GW = { CAISO: 37, ERCOT: 55, PJM: 75, NYISO: 18, NEISO: 14, MISO: 68, SPP: 32 };
+
+const charts = {};
 
 // ─── Data Aggregation ───────────────────────────────────────────────────────
 
@@ -54,7 +43,6 @@ function aggregateCrossISO(strategy, participation, threshold) {
     let weightedCost = 0, totalDemand = 0;
     let co2 = 0, tc = 0, gasGw = 0, curtTwh = 0, fossilCo2 = 0, dispCo2 = 0;
     let hmsWeighted = 0, gridCleanWeighted = 0;
-    let count = 0;
 
     for (const iso of ISOS) {
         const d = getRecord(strategy, iso, participation, threshold);
@@ -70,7 +58,6 @@ function aggregateCrossISO(strategy, participation, threshold) {
         dispCo2 += d.dispCo2 || 0;
         hmsWeighted += (d.hms || 0) * demand;
         gridCleanWeighted += (d.gridCleanPct || 0) * demand;
-        count++;
     }
 
     return {
@@ -83,7 +70,7 @@ function aggregateCrossISO(strategy, participation, threshold) {
         totalDispCo2: dispCo2,
         avgHms: totalDemand > 0 ? hmsWeighted / totalDemand : 0,
         avgGridClean: totalDemand > 0 ? gridCleanWeighted / totalDemand : 0,
-        isoCount: count
+        isoCount: totalDemand > 0 ? ISOS.length : 0
     };
 }
 
@@ -115,6 +102,19 @@ function computeSystemCost(strategy, participation, threshold) {
     return totalCleanM + totalNewGasCostM;
 }
 
+function computeGasCostOnly(strategy, participation, threshold) {
+    let totalNewGasCostM = 0;
+    for (const iso of ISOS) {
+        const d = getRecord(strategy, iso, participation, threshold);
+        if (!d) continue;
+        const gasGw = d.gasGw || 0;
+        const existingGw = EXISTING_GAS_CAPACITY_GW[iso] || 0;
+        const newGasGw = Math.max(0, gasGw - existingGw);
+        totalNewGasCostM += newGasGw * NEW_CCGT_COST_KW_YR[iso] * 1e3;
+    }
+    return totalNewGasCostM;
+}
+
 // ─── Chart Helpers ──────────────────────────────────────────────────────────
 
 function destroyChart(id) {
@@ -139,7 +139,7 @@ function baseOpts(titleText) {
 
 function fmt(v, dec) { return v != null && isFinite(v) ? v.toFixed(dec || 1) : '—'; }
 
-// ─── Section 1: Hero Stats ──────────────────────────────────────────────────
+// ─── Section: Hero Stats ────────────────────────────────────────────────────
 
 function populateHeroStats() {
     const part = 15, thresh = 95;
@@ -148,34 +148,28 @@ function populateHeroStats() {
     const sys1b = computeSystemCost('1B', part, thresh);
     const sys2c = computeSystemCost('2C', part, thresh);
 
-    // Best CO2
     const bestCo2 = Math.max(a1b.totalCo2, a2c.totalCo2);
     document.getElementById('heroStatCo2').textContent = fmt(bestCo2, 0) + ' Mt';
 
-    // System cost ratio
     if (sys2c > 0 && sys1b > 0) {
         if (sys1b > sys2c) {
-            const ratio = sys1b / sys2c;
-            document.getElementById('heroStatCostRatio').textContent = fmt(ratio, 1) + '×';
+            document.getElementById('heroStatCostRatio').textContent = fmt(sys1b / sys2c, 1) + '\u00d7';
         } else {
             document.getElementById('heroStatCostRatio').textContent = 'Comparable';
         }
     }
 
-    // Gas delta
     const gasDelta = a1b.totalGasGw - a2c.totalGasGw;
     document.getElementById('heroStatGasDelta').textContent = (gasDelta > 0 ? '' : '+') + fmt(Math.abs(gasDelta), 0) + ' GW';
-
-    // Learning advantage
-    document.getElementById('heroStatLearning').textContent = '2.7×';
+    document.getElementById('heroStatLearning').textContent = '2.7\u00d7';
 }
 
-// ─── Section 3: Crossover Charts ────────────────────────────────────────────
+// ─── Section 2: Crossover Charts ────────────────────────────────────────────
 
 function buildCrossoverCharts(participation) {
     const chartConfigs = [
         { id: 'crossoverCostChart', field: 'avgCost', label: '$/MWh', title: 'Clean Energy Cost' },
-        { id: 'crossoverCo2Chart', field: 'totalCo2', label: 'Mt CO₂', title: 'CO₂ Displaced' },
+        { id: 'crossoverCo2Chart', field: 'totalCo2', label: 'Mt CO\u2082', title: 'CO\u2082 Displaced' },
         { id: 'crossoverGasChart', field: 'totalGasGw', label: 'GW Gas', title: 'Gas on Grid' },
         { id: 'crossoverCurtChart', field: 'totalCurtTwh', label: 'TWh', title: 'Curtailment' }
     ];
@@ -231,20 +225,19 @@ function populateCrossoverSteps(participation) {
     if (sysEl) sysEl.innerHTML = `<strong>Total system cost at 95%:</strong> 1B = $${fmt(sys1b / 1000, 0)}B &nbsp; 2C = $${fmt(sys2c / 1000, 0)}B`;
 
     const co2El = document.getElementById('stepCo2Stat');
-    if (co2El) co2El.innerHTML = `<strong>CO₂ displaced:</strong> 1B = ${fmt(a1b.totalCo2)} Mt &nbsp; 2C = ${fmt(a2c.totalCo2)} Mt`;
+    if (co2El) co2El.innerHTML = `<strong>CO\u2082 displaced:</strong> 1B = ${fmt(a1b.totalCo2)} Mt &nbsp; 2C = ${fmt(a2c.totalCo2)} Mt`;
 
     const gasEl = document.getElementById('stepGasStat');
     if (gasEl) gasEl.innerHTML = `<strong>Gas on grid:</strong> 1B = ${fmt(a1b.totalGasGw, 0)} GW &nbsp; 2C = ${fmt(a2c.totalGasGw, 0)} GW &nbsp; (${fmt(Math.abs(a1b.totalGasGw - a2c.totalGasGw), 0)} GW delta)`;
 }
 
-// ─── Section 4: Gas Ribbon Chart ────────────────────────────────────────────
+// ─── Section 3: Gas Ribbon Chart ────────────────────────────────────────────
 
 function buildGasRibbonChart() {
     destroyChart('gasRibbonChart');
     const partLabels = PARTICIPATION_LEVELS.map(p => p + '%');
     const existingGasGw = Object.values(EXISTING_GAS_CAPACITY_GW).reduce((a, b) => a + b, 0);
 
-    // For each strategy, compute min/median/max gas across thresholds at each participation
     function computeRibbonData(strategy) {
         return PARTICIPATION_LEVELS.map(p => {
             const vals = THRESHOLDS.map(t => cachedAggregate(strategy, p, t).totalGasGw).filter(v => isFinite(v));
@@ -258,20 +251,16 @@ function buildGasRibbonChart() {
     const ribbon2C = computeRibbonData('2C');
 
     const datasets = [
-        // 1B ribbon band
         { label: '1B range', data: ribbon1B.map(r => r.max), borderColor: 'transparent', backgroundColor: STRATEGY_COLORS['1B'] + '18',
           fill: '+1', pointRadius: 0, order: 4 },
-        { label: '_1A_min', data: ribbon1B.map(r => r.min), borderColor: 'transparent', backgroundColor: 'transparent',
+        { label: '_1B_min', data: ribbon1B.map(r => r.min), borderColor: 'transparent', backgroundColor: 'transparent',
           fill: false, pointRadius: 0, order: 4 },
-        // 1B median line
         { label: STRATEGY_SHORT['1B'], data: ribbon1B.map(r => r.median), borderColor: STRATEGY_COLORS['1B'],
           backgroundColor: STRATEGY_COLORS['1B'], borderWidth: 2.5, tension: 0.3, pointRadius: 3, pointHoverRadius: 6, fill: false, order: 1 },
-        // 2C ribbon band
         { label: '2C range', data: ribbon2C.map(r => r.max), borderColor: 'transparent', backgroundColor: STRATEGY_COLORS['2C'] + '18',
           fill: '+1', pointRadius: 0, order: 3 },
         { label: '_2C_min', data: ribbon2C.map(r => r.min), borderColor: 'transparent', backgroundColor: 'transparent',
           fill: false, pointRadius: 0, order: 3 },
-        // 2C median line
         { label: STRATEGY_SHORT['2C'], data: ribbon2C.map(r => r.median), borderColor: STRATEGY_COLORS['2C'],
           backgroundColor: STRATEGY_COLORS['2C'], borderWidth: 2.5, tension: 0.3, pointRadius: 3, pointHoverRadius: 6, fill: false, order: 1 }
     ];
@@ -319,25 +308,167 @@ function buildGasRibbonChart() {
         }
     });
 
-    // Insight
     const gas1b50 = cachedAggregate('1B', 50, 95).totalGasGw;
     const gas2c50 = cachedAggregate('2C', 50, 95).totalGasGw;
     const el = document.getElementById('gasRibbonInsight');
     if (el) {
         el.innerHTML = `<p><strong>Gas Displacement:</strong> At 50% participation and 95% CFE,
             <strong>1B</strong> leaves ${fmt(gas1b50, 0)} GW of gas on grid while
-            <strong>2C</strong> reduces it to ${fmt(gas2c50, 0)} GW — a ${fmt(Math.abs(gas1b50 - gas2c50), 0)} GW difference.
-            ${gas1b50 > existingGasGw ? `Under 1B, gas capacity actually <em>exceeds</em> today's ${existingGasGw} GW installed base — meaning new gas must be built to backstop the VRE-heavy mix.` : ''}
-            The ribbon shows how this gap widens at higher participation levels, where 1B's cheap-VRE-plus-gas model becomes increasingly expensive relative to 2C's firm-clean approach.</p>`;
+            <strong>2C</strong> reduces it to ${fmt(gas2c50, 0)} GW \u2014 a ${fmt(Math.abs(gas1b50 - gas2c50), 0)} GW difference.
+            ${gas1b50 > existingGasGw ? `Under 1B, gas capacity actually <em>exceeds</em> today\u2019s ${existingGasGw} GW installed base \u2014 meaning new gas must be built to backstop the VRE-heavy mix.` : ''}
+            The ribbon shows how this gap widens at higher participation levels.</p>`;
     }
 }
 
-// ─── Section 5: Strategy Pentagon (Radar) Charts ────────────────────────────
+// ─── Section 4: Cost Crossover Charts ───────────────────────────────────────
 
-function buildClusterRadar() {
-    const participation = 15, threshold = 95;
+function buildSystemCostCrossover() {
+    destroyChart('systemCostCrossoverChart');
+    const threshold = 95;
 
-    // Compute raw values per strategy
+    const datasets = CORE_STRATEGIES.map(s => ({
+        label: STRATEGY_LABELS[s],
+        data: PARTICIPATION_LEVELS.map(p => computeSystemCost(s, p, threshold) / 1e6),
+        borderColor: STRATEGY_COLORS[s],
+        backgroundColor: STRATEGY_COLORS[s] + '15',
+        tension: 0.3,
+        pointRadius: 4,
+        pointHoverRadius: 7,
+        borderWidth: 2.5,
+        fill: false
+    }));
+
+    const ctx = document.getElementById('systemCostCrossoverChart');
+    if (!ctx) return;
+
+    charts.systemCostCrossoverChart = new Chart(ctx, {
+        type: 'line',
+        data: { labels: PARTICIPATION_LEVELS.map(p => p + '%'), datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { labels: { font: { family: 'DM Sans', size: 11 }, usePointStyle: true, padding: 12 } },
+                tooltip: {
+                    mode: 'index', intersect: false, bodyFont: { family: 'DM Sans' },
+                    callbacks: {
+                        label: function(ctx) {
+                            return ctx.dataset.label + ': $' + fmt(ctx.raw, 0) + 'T';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { ticks: { font: { family: 'DM Sans', size: 11 } }, grid: { color: 'rgba(0,0,0,0.05)' },
+                     title: { display: true, text: 'Corporate Participation', font: { family: 'DM Sans', size: 11 } } },
+                y: { ticks: { font: { family: 'DM Sans', size: 11 } }, grid: { color: 'rgba(0,0,0,0.05)' },
+                     title: { display: true, text: 'System Cost ($T)', font: { family: 'DM Sans', size: 11 } } }
+            }
+        }
+    });
+}
+
+function buildCostBreakdown() {
+    destroyChart('costBreakdownChart');
+    const threshold = 95;
+    const keyParts = [5, 15, 25, 50];
+
+    const labels = [];
+    const cleanData = [];
+    const gasData = [];
+    const barColors = [];
+    const gasColors = [];
+
+    for (const p of keyParts) {
+        for (const s of CORE_STRATEGIES) {
+            labels.push(STRATEGY_SHORT[s] + ' @ ' + p + '%');
+            const agg = cachedAggregate(s, p, threshold);
+            const cleanM = agg.totalCostM;
+            const gasCostM = computeGasCostOnly(s, p, threshold);
+            cleanData.push(cleanM / 1e6);
+            gasData.push(gasCostM / 1e6);
+            barColors.push(STRATEGY_COLORS[s]);
+            gasColors.push(STRATEGY_COLORS[s] + '40');
+        }
+    }
+
+    const ctx = document.getElementById('costBreakdownChart');
+    if (!ctx) return;
+
+    charts.costBreakdownChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Clean Procurement',
+                    data: cleanData,
+                    backgroundColor: barColors,
+                    borderRadius: 2
+                },
+                {
+                    label: 'Gas Backup Cost',
+                    data: gasData,
+                    backgroundColor: gasColors,
+                    borderRadius: 2
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { labels: { font: { family: 'DM Sans', size: 11 }, usePointStyle: true, padding: 12 } },
+                tooltip: {
+                    mode: 'index', intersect: false, bodyFont: { family: 'DM Sans' },
+                    callbacks: {
+                        label: function(ctx) {
+                            return ctx.dataset.label + ': $' + fmt(ctx.raw, 1) + 'T';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { ticks: { font: { family: 'DM Sans', size: 9 }, maxRotation: 45 }, grid: { display: false },
+                     stacked: true },
+                y: { ticks: { font: { family: 'DM Sans', size: 11 } }, grid: { color: 'rgba(0,0,0,0.05)' },
+                     stacked: true,
+                     title: { display: true, text: 'Total Cost ($T)', font: { family: 'DM Sans', size: 11 } } }
+            }
+        }
+    });
+}
+
+function populateCrossoverInsight() {
+    // Find crossover point
+    let crossoverPart = null;
+    for (const p of PARTICIPATION_LEVELS) {
+        const sys1b = computeSystemCost('1B', p, 95);
+        const sys2c = computeSystemCost('2C', p, 95);
+        if (sys1b > sys2c) { crossoverPart = p; break; }
+    }
+
+    const sys1b50 = computeSystemCost('1B', 50, 95);
+    const sys2c50 = computeSystemCost('2C', 50, 95);
+    const ratio50 = sys1b50 > 0 && sys2c50 > 0 ? sys1b50 / sys2c50 : 0;
+
+    const el = document.getElementById('crossoverInsight');
+    if (el) {
+        el.innerHTML = `<p><strong>Regime Insights:</strong>
+            At low participation (5\u201310%), 1B\u2019s cheap cross-regional VRE keeps total system cost competitive.
+            ${crossoverPart ? `As participation rises above ${crossoverPart}%, 1B\u2019s gas backup requirements drive system costs dramatically higher than 2C.` : 'As participation rises, 1B\'s gas backup requirements increasingly dominate system costs.'}
+            At 50% participation and 95% CFE, 1B\u2019s system cost (clean + gas) ${ratio50 > 1.5 ? `exceeds 2C\u2019s by ${fmt(ratio50, 1)}\u00d7` : 'significantly exceeds 2C\u2019s'}.
+            This crossover is consistent across ambition levels because the gas penalty scales with the gap between 1B\u2019s VRE-heavy mix and the firm capacity needed for grid reliability.</p>`;
+    }
+}
+
+// ─── Section 5: Strategy Pentagon (Overlaid Radar) ──────────────────────────
+
+function buildClusterRadar(participation) {
+    participation = participation || 15;
+    const threshold = 95;
+    destroyChart('radarOverlayChart');
+
     const stratData = {};
     for (const s of CORE_STRATEGIES) {
         const agg = cachedAggregate(s, participation, threshold);
@@ -350,93 +481,82 @@ function buildClusterRadar() {
         };
     }
 
-    // Normalize: best strategy = 1.0 (outer edge), other = proportion of best
-    // "Higher is better" metrics: value / max(values)
-    // "Lower is better" metrics: min(values) / value
     function normalizeRelativeToBest(field, higherIsBetter) {
         const vals = CORE_STRATEGIES.map(s => stratData[s][field]);
         if (higherIsBetter) {
             const best = Math.max(...vals);
             const normed = {};
-            CORE_STRATEGIES.forEach((s, i) => {
-                normed[s] = best > 0 ? vals[i] / best : 0;
-            });
+            CORE_STRATEGIES.forEach((s, i) => { normed[s] = best > 0 ? vals[i] / best : 0; });
             return normed;
         } else {
             const best = Math.min(...vals);
             const normed = {};
-            CORE_STRATEGIES.forEach((s, i) => {
-                normed[s] = vals[i] > 0 ? best / vals[i] : 0;
-            });
+            CORE_STRATEGIES.forEach((s, i) => { normed[s] = vals[i] > 0 ? best / vals[i] : 0; });
             return normed;
         }
     }
 
-    const normCo2 = normalizeRelativeToBest('co2', true);     // higher = better
-    const normCost = normalizeRelativeToBest('cost', false);    // lower = better
-    const normGas = normalizeRelativeToBest('gas', false);      // lower = better
-    const normLearn = normalizeRelativeToBest('learn', true);   // higher = better
-    const normCurt = normalizeRelativeToBest('curt', false);    // lower = better
+    const normCo2 = normalizeRelativeToBest('co2', true);
+    const normCost = normalizeRelativeToBest('cost', false);
+    const normGas = normalizeRelativeToBest('gas', false);
+    const normLearn = normalizeRelativeToBest('learn', true);
+    const normCurt = normalizeRelativeToBest('curt', false);
 
     const radarLabels = ['Emission\nReduction', 'True\nCost', 'Low Gas\nLock-in', 'Learning\nCurves', 'Low\nCurtailment'];
 
-    for (const cluster of CLUSTERS) {
-        const s = cluster.strategies[0];
-        const chartId = 'radarChart' + s.replace('_', '');
-        destroyChart(chartId);
+    const datasets = CORE_STRATEGIES.map(s => ({
+        label: STRATEGY_LABELS[s],
+        data: [normCo2[s], normCost[s], normGas[s], normLearn[s], normCurt[s]],
+        borderColor: STRATEGY_COLORS[s],
+        backgroundColor: STRATEGY_COLORS[s] + '25',
+        borderWidth: 2.5,
+        pointRadius: 5,
+        pointBackgroundColor: STRATEGY_COLORS[s],
+        pointBorderColor: '#fff',
+        pointBorderWidth: 1
+    }));
 
-        const data = [normCo2[s], normCost[s], normGas[s], normLearn[s], normCurt[s]];
+    const ctx = document.getElementById('radarOverlayChart');
+    if (!ctx) return;
 
-        const ctx = document.getElementById(chartId);
-        if (!ctx) continue;
-
-        charts[chartId] = new Chart(ctx, {
-            type: 'radar',
-            data: {
-                labels: radarLabels,
-                datasets: [{
-                    label: STRATEGY_LABELS[s],
-                    data: data,
-                    borderColor: cluster.color,
-                    backgroundColor: cluster.color + '30',
-                    borderWidth: 2.5,
-                    pointRadius: 5,
-                    pointBackgroundColor: cluster.color,
-                    pointBorderColor: '#fff',
-                    pointBorderWidth: 1
-                }]
+    charts.radarOverlayChart = new Chart(ctx, {
+        type: 'radar',
+        data: { labels: radarLabels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                r: {
+                    beginAtZero: true, max: 1, min: 0,
+                    ticks: { display: false, stepSize: 0.25 },
+                    pointLabels: { font: { family: 'DM Sans', size: 12, weight: 600 }, color: '#1A2744' },
+                    grid: { color: 'rgba(0,0,0,0.08)' },
+                    angleLines: { color: 'rgba(0,0,0,0.08)' }
+                }
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    r: {
-                        beginAtZero: true, max: 1, min: 0,
-                        ticks: { display: false, stepSize: 0.25 },
-                        pointLabels: { font: { family: 'DM Sans', size: 11, weight: 600 }, color: '#1A2744' },
-                        grid: { color: 'rgba(0,0,0,0.08)' },
-                        angleLines: { color: 'rgba(0,0,0,0.08)' }
-                    }
-                },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        bodyFont: { family: 'DM Sans' },
-                        callbacks: {
-                            label: function(ctx) {
-                                return `${ctx.label}: ${(ctx.raw * 100).toFixed(0)}% of best`;
-                            }
+            plugins: {
+                legend: { labels: { font: { family: 'DM Sans', size: 12 }, usePointStyle: true, padding: 16 } },
+                tooltip: {
+                    bodyFont: { family: 'DM Sans' },
+                    callbacks: {
+                        label: function(ctx) {
+                            return `${ctx.dataset.label}: ${(ctx.raw * 100).toFixed(0)}% of best`;
                         }
                     }
                 }
             }
-        });
-
-        // Description
-        const descEl = document.getElementById('clusterDesc' + s.replace('_', ''));
-        if (descEl) {
-            descEl.innerHTML = `<p style="font-size: 0.82rem; color: var(--text-secondary); margin: 0; line-height: 1.6">${cluster.desc}</p>`;
         }
+    });
+
+    // Insight text
+    const descEl = document.getElementById('radarInsightText');
+    if (descEl) {
+        const dims = ['Emission Reduction', 'True Cost', 'Gas Lock-in', 'Learning Curves', 'Curtailment'];
+        const wins1b = [normCo2, normCost, normGas, normLearn, normCurt].filter(n => n['1B'] > n['2C']).length;
+        const wins2c = 5 - wins1b;
+        descEl.innerHTML = `<p>At ${participation}% participation / 95% CFE: <strong>2C leads on ${wins2c} of 5 dimensions</strong>, 1B on ${wins1b}. ` +
+            `2C\u2019s advantages in gas displacement and learning curve deployment are structural \u2014 they grow with participation. ` +
+            `1B\u2019s per-MWh cost advantage narrows as gas backup requirements scale.</p>`;
     }
 }
 
@@ -448,23 +568,31 @@ function buildWrightsLawChart() {
     fetch('js/wrights_law_data.json')
         .then(r => r.json())
         .then(data => {
+            // Use 95% comparison if available, fall back to 90%
+            const comparison = data.strategy_comparison_95 || data.strategy_comparison_90;
+            const targetLabel = data.strategy_comparison_95 ? '95' : '90';
             const pcts = data.metadata.participation_pcts.map(p => (p * 100) + '%');
             const stratKeys = [
                 { key: 'strat_1b', label: STRATEGY_SHORT['1B'], color: STRATEGY_COLORS['1B'] },
                 { key: 'strat_2c_gated', label: STRATEGY_SHORT['2C'], color: STRATEGY_COLORS['2C'] }
             ];
 
-            const datasets = stratKeys.map(d => ({
-                label: d.label,
-                data: data.strategy_comparison_90[d.key],
-                borderColor: d.color,
-                backgroundColor: d.color + '15',
-                tension: 0.3,
-                pointRadius: 4,
-                pointHoverRadius: 7,
-                borderWidth: 2.5,
-                fill: false
-            }));
+            const datasets = [];
+            for (const d of stratKeys) {
+                if (comparison[d.key]) {
+                    datasets.push({
+                        label: d.label,
+                        data: comparison[d.key],
+                        borderColor: d.color,
+                        backgroundColor: d.color + '15',
+                        tension: 0.3,
+                        pointRadius: 4,
+                        pointHoverRadius: 7,
+                        borderWidth: 2.5,
+                        fill: false
+                    });
+                }
+            }
 
             const ctx = document.getElementById('wrightsLawChart');
             if (!ctx) return;
@@ -499,17 +627,52 @@ function buildWrightsLawChart() {
                 }
             });
 
-            // Find crossover points
+            // Insight with new-build firm clean TWh stats
             const insight = document.getElementById('wrightsInsight');
             if (insight) {
-                const d2c = data.strategy_comparison_90.strat_2c_gated;
+                const d2c = comparison.strat_2c_gated;
                 let crossIdx = d2c ? d2c.findIndex(v => v <= 0) : -1;
                 const crossPct = crossIdx >= 0 ? data.metadata.participation_pcts[crossIdx] : null;
 
-                insight.innerHTML = `<p><strong>Learning Curve Impact:</strong>
-                    Strategy 2C forces deployment of firm clean (nuclear uprate, CCS) and long-duration storage (LDES) — technologies still on steep learning curves.
-                    ${crossPct ? `At ${(crossPct * 100).toFixed(0)}% participation, Wright's Law cost reductions make 2C <strong>cost-negative</strong> — the learning curve benefits exceed the procurement premium.` : 'As participation scales, learning curve benefits accumulate.'}
-                    Strategy 1B deploys mostly mature VRE (solar/onshore wind) that is already at NOAK pricing — contributing minimally to the cost breakthroughs the entire grid needs for deep decarbonization.</p>`;
+                // Compute new-build firm TWh from DEPLOYMENT_DATA at 95% for key insights
+                let firm1b10twh = null, firm2c10twh = null;
+                for (const p of PARTICIPATION_LEVELS) {
+                    if (firm2c10twh === null) {
+                        let totalFirm = 0;
+                        for (const iso of ISOS) {
+                            const d = getRecord('2C', iso, p, 95);
+                            if (d && d.x) {
+                                for (const [k, v] of Object.entries(d.x)) {
+                                    if (k.includes('nuclear') || k.includes('ccs') || k.includes('geo')) totalFirm += v;
+                                }
+                            }
+                        }
+                        if (totalFirm >= 10) firm2c10twh = p;
+                    }
+                    if (firm1b10twh === null) {
+                        let totalFirm = 0;
+                        for (const iso of ISOS) {
+                            const d = getRecord('1B', iso, p, 95);
+                            if (d && d.x) {
+                                for (const [k, v] of Object.entries(d.x)) {
+                                    if (k.includes('nuclear') || k.includes('ccs') || k.includes('geo')) totalFirm += v;
+                                }
+                            }
+                        }
+                        if (totalFirm >= 10) firm1b10twh = p;
+                    }
+                }
+
+                let firmInsight = '';
+                if (firm2c10twh) firmInsight += ` Strategy 2C reaches 10 TWh of new-build firm clean generation at <strong>${firm2c10twh}%</strong> participation.`;
+                if (firm1b10twh) firmInsight += ` Strategy 1B reaches it at <strong>${firm1b10twh}%</strong>.`;
+                else firmInsight += ' Strategy 1B does not reach 10 TWh of firm clean at any modeled participation level.';
+
+                insight.innerHTML = `<p><strong>Learning Curve Impact (${targetLabel}% CFE):</strong>
+                    Strategy 2C forces deployment of firm clean (nuclear uprate, CCS) and long-duration storage (LDES) \u2014 technologies still on steep learning curves.
+                    ${crossPct ? `At ${(crossPct * 100).toFixed(0)}% participation, Wright\u2019s Law cost reductions make 2C <strong>cost-negative</strong> \u2014 the learning curve benefits exceed the procurement premium.` : 'As participation scales, learning curve benefits accumulate.'}
+                    Strategy 1B deploys mostly mature VRE (solar/onshore wind) that is already at NOAK pricing \u2014 contributing minimally to cost breakthroughs the entire grid needs.</p>
+                    <p>${firmInsight}</p>`;
             }
         })
         .catch(() => {
@@ -518,44 +681,11 @@ function buildWrightsLawChart() {
         });
 }
 
-// ─── Section 7: Nuclear Narrative ───────────────────────────────────────────
-
-function populateNuclearNarrative() {
-    const part = 15, thresh = 95;
-    const base = cachedAggregate('2C', part, thresh);
-    const rolloff = cachedAggregate('2C_rolloff', part, thresh);
-
-    const costDelta = rolloff.avgCost - base.avgCost;
-    const co2Delta = base.totalCo2 - rolloff.totalCo2; // positive = CO2 displaced lost
-    const gasDelta = rolloff.totalGasGw - base.totalGasGw;
-
-    const costEl = document.getElementById('nucCostDelta');
-    if (costEl) costEl.textContent = '+$' + fmt(Math.abs(costDelta)) + '/MWh';
-
-    const co2El = document.getElementById('nucCo2Delta');
-    if (co2El) co2El.textContent = fmt(Math.abs(co2Delta)) + ' Mt';
-
-    const gasEl = document.getElementById('nucGasDelta');
-    if (gasEl) gasEl.textContent = '+' + fmt(Math.abs(gasDelta), 0) + ' GW';
-
-    const insight = document.getElementById('nuclearInsight');
-    if (insight) {
-        insight.innerHTML = `<p><strong>What happens if nuclear retires?</strong>
-            At 95% CFE / ${part}% participation, losing the existing nuclear fleet would increase clean procurement costs by
-            <strong>$${fmt(Math.abs(costDelta))}/MWh</strong>, reduce CO₂ displacement by <strong>${fmt(Math.abs(co2Delta))} Mt</strong>,
-            and add <strong>${fmt(Math.abs(gasDelta), 0)} GW</strong> of gas to the grid.</p>
-            <p><strong>Strategy 2C actively prevents this outcome</strong> by creating EAC revenue (~$20–40/MWh) that supports nuclear plant economics and prevents premature retirement.
-            <strong>Strategy 1B provides zero financial support to existing nuclear</strong> — under 1B, nuclear plants face the same merchant revenue erosion from VRE oversupply with no offsetting demand signal, accelerating the risk of premature closure.
-            The US nuclear fleet generates ~20% of all electricity and ~50% of all clean electricity. Losing it would be catastrophic for grid decarbonization.</p>`;
-    }
-}
-
-// ─── Section 8: Critical Risks ──────────────────────────────────────────────
+// ─── Section 7: Critical Risks ──────────────────────────────────────────────
 
 function buildRiskCharts() {
     buildGasLockinChart();
     buildCurtailmentChart();
-    buildNuclearStrandChart();
     populateRiskInsight();
 }
 
@@ -573,7 +703,10 @@ function buildGasLockinChart() {
         borderRadius: 2
     }));
 
-    charts.gasLockinChart = new Chart(document.getElementById('gasLockinChart'), {
+    const ctx = document.getElementById('gasLockinChart');
+    if (!ctx) return;
+
+    charts.gasLockinChart = new Chart(ctx, {
         type: 'bar',
         data: { labels: CORE_STRATEGIES.map(s => STRATEGY_SHORT[s]), datasets },
         options: {
@@ -591,7 +724,10 @@ function buildCurtailmentChart() {
     const participation = 50, threshold = 95;
     const values = CORE_STRATEGIES.map(s => cachedAggregate(s, participation, threshold).totalCurtTwh);
 
-    charts.curtailmentChart = new Chart(document.getElementById('curtailmentChart'), {
+    const ctx = document.getElementById('curtailmentChart');
+    if (!ctx) return;
+
+    charts.curtailmentChart = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: CORE_STRATEGIES.map(s => STRATEGY_SHORT[s]),
@@ -613,6 +749,55 @@ function buildCurtailmentChart() {
     });
 }
 
+function populateRiskInsight() {
+    const gas95 = CORE_STRATEGIES.map(s => ({ s, gas: cachedAggregate(s, 50, 95).totalGasGw }));
+    gas95.sort((a, b) => b.gas - a.gas);
+    const curt95 = CORE_STRATEGIES.map(s => ({ s, curt: cachedAggregate(s, 50, 95).totalCurtTwh }));
+    curt95.sort((a, b) => b.curt - a.curt);
+
+    const el = document.getElementById('riskInsight');
+    if (el) {
+        el.innerHTML = `<p><strong>Risk Summary (95% / 50% participation):</strong>
+            Gas lock-in: ${fmt(gas95[gas95.length - 1].gas, 0)} GW (${STRATEGY_SHORT[gas95[gas95.length - 1].s]}) to
+            ${fmt(gas95[0].gas, 0)} GW (${STRATEGY_SHORT[gas95[0].s]}) \u2014 a ${fmt(gas95[0].gas - gas95[gas95.length - 1].gas, 0)} GW spread.
+            Curtailment: ${fmt(curt95[curt95.length - 1].curt)} TWh to ${fmt(curt95[0].curt)} TWh.</p>`;
+    }
+}
+
+// ─── Section 8: Nuclear Narrative ───────────────────────────────────────────
+
+function populateNuclearNarrative() {
+    const part = 15, thresh = 95;
+    const base = cachedAggregate('2C', part, thresh);
+    const rolloff = cachedAggregate('2C_rolloff', part, thresh);
+
+    const costDelta = rolloff.avgCost - base.avgCost;
+    const co2Delta = base.totalCo2 - rolloff.totalCo2;
+    const gasDelta = rolloff.totalGasGw - base.totalGasGw;
+
+    const costEl = document.getElementById('nucCostDelta');
+    if (costEl) costEl.textContent = '+$' + fmt(Math.abs(costDelta)) + '/MWh';
+
+    const co2El = document.getElementById('nucCo2Delta');
+    if (co2El) co2El.textContent = fmt(Math.abs(co2Delta)) + ' Mt';
+
+    const gasEl = document.getElementById('nucGasDelta');
+    if (gasEl) gasEl.textContent = '+' + fmt(Math.abs(gasDelta), 0) + ' GW';
+
+    buildNuclearStrandChart();
+
+    const insight = document.getElementById('nuclearInsight');
+    if (insight) {
+        insight.innerHTML = `<p><strong>What happens if nuclear retires?</strong>
+            At 95% CFE / ${part}% participation, losing the existing nuclear fleet would increase clean procurement costs by
+            <strong>$${fmt(Math.abs(costDelta))}/MWh</strong>, reduce CO\u2082 displacement by <strong>${fmt(Math.abs(co2Delta))} Mt</strong>,
+            and add <strong>${fmt(Math.abs(gasDelta), 0)} GW</strong> of gas to the grid.</p>
+            <p><strong>Strategy 2C actively supports nuclear economics</strong> by creating EAC revenue (~$20\u201340/MWh) that helps prevent premature retirement.
+            Under 1B, nuclear plants face merchant revenue erosion from VRE oversupply with no offsetting demand signal.
+            The US nuclear fleet generates ~20% of all electricity and ~50% of all clean electricity.</p>`;
+    }
+}
+
 function buildNuclearStrandChart() {
     destroyChart('nuclearStrandChart');
     const participation = 15, threshold = 95;
@@ -622,16 +807,17 @@ function buildNuclearStrandChart() {
     const dep2c = base2c.avgCost > 0 ? Math.abs(roll2c.avgCost - base2c.avgCost) / base2c.avgCost * 100 : 0;
 
     const exposures = CORE_STRATEGIES.map(s => {
-        // 1B: zero nuclear support → high stranding risk
-        // 2C: EAC revenue supports nuclear → low stranding risk
         const strandingScore = {
-            '1B': 20 + dep2c * 0.5,  // high: no support + would face same consequences if nuclear retires
-            '2C': Math.max(0, dep2c - 5)  // lower: actively supports but has dependency
+            '1B': 20 + dep2c * 0.5,
+            '2C': Math.max(0, dep2c - 5)
         };
         return strandingScore[s] || 10;
     });
 
-    charts.nuclearStrandChart = new Chart(document.getElementById('nuclearStrandChart'), {
+    const ctx = document.getElementById('nuclearStrandChart');
+    if (!ctx) return;
+
+    charts.nuclearStrandChart = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: CORE_STRATEGIES.map(s => STRATEGY_SHORT[s]),
@@ -654,102 +840,40 @@ function buildNuclearStrandChart() {
     });
 }
 
-function populateRiskInsight() {
-    const gas95 = CORE_STRATEGIES.map(s => ({ s, gas: cachedAggregate(s, 50, 95).totalGasGw }));
-    gas95.sort((a, b) => b.gas - a.gas);
-    const curt95 = CORE_STRATEGIES.map(s => ({ s, curt: cachedAggregate(s, 50, 95).totalCurtTwh }));
-    curt95.sort((a, b) => b.curt - a.curt);
-
-    document.getElementById('riskInsight').innerHTML = `<p><strong>Risk Summary (95% / 50% participation):</strong>
-        Gas lock-in: ${fmt(gas95[gas95.length - 1].gas, 0)} GW (${STRATEGY_SHORT[gas95[gas95.length - 1].s]}) to
-        ${fmt(gas95[0].gas, 0)} GW (${STRATEGY_SHORT[gas95[0].s]}) — a ${fmt(gas95[0].gas - gas95[gas95.length - 1].gas, 0)} GW spread.
-        Curtailment: ${fmt(curt95[curt95.length - 1].curt)} TWh to ${fmt(curt95[0].curt)} TWh.
-        <strong>Nuclear preservation is the critical climate variable.</strong> 2C actively supports nuclear via EAC revenue;
-        1B provides zero support — leaving the grid's largest clean generation source exposed to merchant revenue erosion and premature retirement.</p>`;
-}
-
-// ─── Section 9: Regime Map ──────────────────────────────────────────────────
-
-function buildRegimeMap() {
-    const ambitionTiers = [
-        { label: 'High Ambition (90–95%)', thresholds: [90, 92.5, 95] },
-        { label: 'Last Mile (97.5–99.99%)', thresholds: [97.5, 99.5, 99.99] }
-    ];
-    const participations = [5, 10, 15, 25, 50];
-
-    const tbody = document.getElementById('regimeMapBody');
-    tbody.innerHTML = '';
-
-    for (const tier of ambitionTiers) {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td style="font-weight:600; white-space:nowrap">${tier.label}</td>`;
-
-        for (const p of participations) {
-            // Average system cost across thresholds in tier — lower wins
-            const avgCosts = {};
-            for (const s of CORE_STRATEGIES) {
-                avgCosts[s] = tier.thresholds.reduce((sum, t) => sum + computeSystemCost(s, p, t), 0) / tier.thresholds.length;
-            }
-
-            let bestStrat = CORE_STRATEGIES[0];
-            for (const s of CORE_STRATEGIES) {
-                if (avgCosts[s] < avgCosts[bestStrat]) bestStrat = s;
-            }
-
-            const td = document.createElement('td');
-            td.style.backgroundColor = STRATEGY_COLORS[bestStrat] + '25';
-            td.style.fontWeight = '700';
-            td.style.textAlign = 'center';
-            td.style.color = STRATEGY_COLORS[bestStrat];
-            td.textContent = STRATEGY_SHORT[bestStrat];
-            td.title = `${STRATEGY_LABELS[bestStrat]} — system cost: $${fmt(avgCosts[bestStrat] / 1000, 0)}B`;
-            tr.appendChild(td);
-        }
-        tbody.appendChild(tr);
-    }
-
-    document.getElementById('regimeInsight').innerHTML = `<p><strong>Regime Insights:</strong>
-        At low participation (5–10%), 1B's cheap cross-regional VRE keeps total system cost competitive.
-        As participation rises above 15–25%, 1B's gas backup requirements drive system costs dramatically higher than 2C.
-        At 50% participation and 95% CFE, 1B's system cost (clean + gas) can exceed 2C's by 3× or more.
-        This crossover is consistent across ambition levels because the gas penalty scales with the gap between 1B's VRE-heavy mix and the firm capacity needed for grid reliability.</p>`;
-}
-
-// ─── Section 10: Dissenting ─────────────────────────────────────────────────
+// ─── Section 9: Dissenting ─────────────────────────────────────────────────
 
 function populateDissenting() {
     const el = document.getElementById('dissentingContent');
+    if (!el) return;
     el.innerHTML = `
-        <div class="insight-box scroll-reveal" style="margin-bottom: var(--space-lg)">
-            <h4 style="font-family: var(--font-heading); color: var(--navy); margin: 0 0 var(--space-sm)">Against 1B — Consequential</h4>
-            <p>1B's new-build requirement means it provides <strong>zero financial support to existing nuclear</strong>.
-            Under 1B, nuclear faces the same merchant revenue erosion from VRE oversupply with no offsetting demand signal —
-            accelerating premature retirement of the largest source of clean firm generation on the grid.
-            Beyond nuclear, 1B deploys cross-regionally — new clean generation may be built in a distant ISO,
-            leaving the buyer's grid physically untransformed. The new capacity is overwhelmingly mature VRE,
-            contributing minimally to firm clean learning curves. And consequential netting uses annual accounting,
-            missing the hourly mismatch between clean generation and actual load.</p>
+        <div class="insight-box fade-in" style="margin-bottom: var(--space-lg)">
+            <h4 style="font-family: var(--font-heading); color: var(--navy); margin: 0 0 var(--space-sm)">Against 1B \u2014 Consequential</h4>
+            <p>1B deploys cross-regionally \u2014 new clean generation may be built in a distant ISO,
+            leaving the buyer\u2019s grid physically untransformed. The new capacity is overwhelmingly mature VRE,
+            contributing minimally to firm clean learning curves. Consequential netting uses annual accounting,
+            missing the hourly mismatch between clean generation and actual load. And 1B provides no financial
+            support to existing nuclear, leaving the grid\u2019s largest clean source exposed to merchant revenue erosion.</p>
         </div>
 
-        <div class="insight-box scroll-reveal" style="margin-bottom: var(--space-lg)">
-            <h4 style="font-family: var(--font-heading); color: var(--navy); margin: 0 0 var(--space-sm)">Against 2C — Hourly Matching with SSS</h4>
-            <p>While 2C's EAC purchases create revenue that helps keep nuclear online, this is a
-            <strong>mutual dependency</strong> — 2C needs nuclear for cheap firm supply, and nuclear needs
-            2C's revenue for economic viability. If nuclear plants close despite EAC support (e.g., due to
+        <div class="insight-box fade-in" style="margin-bottom: var(--space-lg)">
+            <h4 style="font-family: var(--font-heading); color: var(--navy); margin: 0 0 var(--space-sm)">Against 2C \u2014 Hourly Matching with SSS</h4>
+            <p>While 2C\u2019s EAC purchases create revenue that helps keep nuclear online, this is a
+            <strong>mutual dependency</strong> \u2014 2C needs nuclear for cheap firm supply, and nuclear needs
+            2C\u2019s revenue for economic viability. If nuclear plants close despite EAC support (e.g., due to
             regulatory or safety issues), 2C loses its cheapest firm generation source and must accept
-            higher costs or increased gas dependency. Additionally, 2C's blending of existing and new clean
-            resources means only ~30% of its clean procurement is truly additional new-build — the rest
+            higher costs or increased gas dependency. Additionally, 2C\u2019s blending of existing and new clean
+            resources means only ~30% of its clean procurement is truly additional new-build \u2014 the rest
             reshuffles existing clean claims, which may dilute the additionality signal.</p>
         </div>
 
-        <div class="insight-box scroll-reveal" style="margin-bottom: var(--space-lg)">
+        <div class="insight-box fade-in" style="margin-bottom: var(--space-lg)">
             <h4 style="font-family: var(--font-heading); color: var(--navy); margin: 0 0 var(--space-sm)">What Could Flip This Analysis</h4>
-            <p><strong>Policy:</strong> A federal clean energy standard or carbon price above $100/ton would make 1B's cost advantage
+            <p><strong>Policy:</strong> A federal clean energy standard or carbon price above $100/ton would make 1B\u2019s cost advantage
             irrelevant and reward high-additionality strategies. <strong>Nuclear policy:</strong> Extended production tax credits (45U)
-            would reduce nuclear revenue adequacy concerns, reducing 2C's fragility.
-            <strong>Technology:</strong> If advanced nuclear or LDES costs fall faster than Wright's Law projections,
+            would reduce nuclear revenue adequacy concerns, reducing 2C\u2019s fragility.
+            <strong>Technology:</strong> If advanced nuclear or LDES costs fall faster than Wright\u2019s Law projections,
             hourly strategies become cost-competitive sooner. <strong>Transmission:</strong> Major inter-ISO expansion
-            would boost cross-regional strategies (1B) while reducing same-ISO hourly strategies' geographic advantage.</p>
+            would boost cross-regional strategies (1B) while reducing same-ISO hourly strategies\u2019 geographic advantage.</p>
         </div>
     `;
 }
@@ -772,6 +896,27 @@ function wireToggles() {
         const p = document.getElementById('crossoverParticipationToggle').querySelector('.active').dataset.val;
         buildCrossoverCharts(parseInt(p));
     });
+
+    wireToggleGroup(document.getElementById('radarParticipationToggle'), () => {
+        const p = document.getElementById('radarParticipationToggle').querySelector('.active').dataset.val;
+        buildClusterRadar(parseInt(p));
+    });
+}
+
+// ─── Fade-in Observer ───────────────────────────────────────────────────────
+
+function initFadeObserver() {
+    var fadeEls = document.querySelectorAll('.fade-in');
+    if (!fadeEls.length) return;
+    var obs = new IntersectionObserver(function(entries) {
+        entries.forEach(function(e) {
+            if (e.isIntersecting) {
+                e.target.classList.add('visible');
+                obs.unobserve(e.target);
+            }
+        });
+    }, { threshold: 0.15 });
+    fadeEls.forEach(function(el) { obs.observe(el); });
 }
 
 // ─── Init ───────────────────────────────────────────────────────────────────
@@ -780,13 +925,16 @@ function init() {
     populateHeroStats();
     buildCrossoverCharts(15);
     buildGasRibbonChart();
-    buildClusterRadar();
+    buildSystemCostCrossover();
+    buildCostBreakdown();
+    populateCrossoverInsight();
+    buildClusterRadar(15);
     buildWrightsLawChart();
-    populateNuclearNarrative();
     buildRiskCharts();
-    buildRegimeMap();
+    populateNuclearNarrative();
     populateDissenting();
     wireToggles();
+    initFadeObserver();
 }
 
 if (document.readyState === 'loading') {

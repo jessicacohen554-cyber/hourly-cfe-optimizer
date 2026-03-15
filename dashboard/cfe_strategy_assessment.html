@@ -2,13 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="robots" content="noindex, nofollow">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CFE Strategy Assessment — Hourly CFE Optimizer</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles/shared.css">
-    <link rel="stylesheet" href="styles/scrollytell.css">
+    <link rel="stylesheet" href="styles/article.css">
+    <link rel="stylesheet" href="styles/cinematic.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
     <script src="js/nav.js"></script>
@@ -17,52 +21,35 @@
     <script src="js/scroll-observer.js"></script>
     <script src="js/shared-footer.js"></script>
     <style>
-        .hero-stats-grid {
+        .crossover-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-md);
+        }
+        .crossover-grid .chart-container {
+            min-height: 220px;
+        }
+        .ribbon-chart-wrap {
+            min-height: 360px;
+            max-height: 480px;
+            position: relative;
+        }
+        .strategy-pair {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: var(--space-lg);
-            margin: var(--space-2xl) auto;
-            max-width: 900px;
+            margin: var(--space-xl) 0;
         }
-        .hero-stat {
-            text-align: center;
-            padding: 28px 16px;
-            background: linear-gradient(135deg, rgba(26,39,68,0.04) 0%, rgba(26,39,68,0.08) 100%);
-            border: 1px solid rgba(26,39,68,0.1);
-            border-radius: var(--radius-xl);
+        .strategy-pair .card {
+            border-top: 3px solid var(--navy);
         }
-        .hero-stat-value {
-            font-family: var(--font-heading);
-            font-size: 2.4rem;
-            font-weight: 800;
-            color: var(--navy);
-            line-height: 1.1;
+        .strategy-pair .card.strat-1b {
+            border-top-color: #6366F1;
         }
-        .hero-stat-label {
-            font-family: var(--font-body);
-            font-size: 0.82rem;
-            color: var(--text-muted);
-            margin-top: var(--space-xs);
+        .strategy-pair .card.strat-2c {
+            border-top-color: #0EA5E9;
         }
-        .strategy-card {
-            padding: var(--space-xl);
-            border-radius: var(--radius-xl);
-            border: 1px solid rgba(221,208,192,0.5);
-            background: rgba(255,255,255,0.92);
-            backdrop-filter: blur(12px);
-        }
-        .strategy-card h3 {
-            font-family: var(--font-heading);
-            font-size: 1.15rem;
-            margin: 0 0 var(--space-sm);
-        }
-        .strategy-card p {
-            font-size: 0.92rem;
-            color: var(--text-secondary);
-            line-height: 1.7;
-            margin: 0;
-        }
-        .strategy-card .strategy-tag {
+        .strat-tag {
             display: inline-block;
             font-size: 0.72rem;
             font-weight: 700;
@@ -72,80 +59,18 @@
             border-radius: var(--radius-pill);
             margin-bottom: var(--space-sm);
         }
-        .tag-consequential {
-            background: rgba(99,102,241,0.12);
-            color: #6366F1;
-        }
-        .tag-hourly {
-            background: rgba(14,165,233,0.12);
-            color: #0EA5E9;
-        }
-        .ghg-callout {
-            background: linear-gradient(135deg, rgba(14,165,233,0.06) 0%, rgba(99,102,241,0.06) 100%);
-            border: 1px solid rgba(14,165,233,0.2);
-            border-radius: var(--radius-lg);
-            padding: var(--space-lg) var(--space-xl);
-            margin: var(--space-xl) 0;
-            font-size: 0.92rem;
-            line-height: 1.7;
-        }
-        .ghg-callout strong {
-            color: var(--navy);
-        }
-        .crossover-grid {
+        .strat-tag-purple { background: rgba(99,102,241,0.12); color: #6366F1; }
+        .strat-tag-blue { background: rgba(14,165,233,0.12); color: #0EA5E9; }
+        .crossover-section-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: var(--space-md);
-        }
-        .crossover-grid .chart-container {
-            min-height: 220px;
+            gap: var(--space-lg);
+            margin: var(--space-xl) 0;
         }
         @media (max-width: 768px) {
             .crossover-grid { grid-template-columns: 1fr; }
-            .hero-stats-grid { grid-template-columns: 1fr 1fr; }
-            .hero-stat-value { font-size: 1.8rem; }
-        }
-        @media (max-width: 480px) {
-            .hero-stats-grid { grid-template-columns: 1fr; }
-        }
-        .nuclear-stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: var(--space-md);
-            margin: var(--space-lg) 0;
-        }
-        .nuclear-stat {
-            text-align: center;
-            padding: var(--space-lg);
-            border-radius: var(--radius-lg);
-            background: rgba(239,68,68,0.04);
-            border: 1px solid rgba(239,68,68,0.12);
-        }
-        .nuclear-stat-value {
-            font-family: var(--font-heading);
-            font-size: 1.6rem;
-            font-weight: 800;
-            color: #DC2626;
-        }
-        .nuclear-stat-label {
-            font-size: 0.78rem;
-            color: var(--text-muted);
-            margin-top: 4px;
-        }
-        @media (max-width: 768px) {
-            .nuclear-stats { grid-template-columns: 1fr; }
-        }
-        .ribbon-chart-wrap {
-            min-height: 360px;
-            max-height: 480px;
-            position: relative;
-        }
-        .section-lead {
-            font-size: 1.05rem;
-            color: var(--text-secondary);
-            line-height: 1.75;
-            max-width: 780px;
-            margin-bottom: var(--space-xl);
+            .strategy-pair { grid-template-columns: 1fr; }
+            .crossover-section-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -158,241 +83,251 @@
         <div class="header-accent"></div>
     </div>
 
-    <!-- Section 1: Hero Stats -->
-    <section class="content-section story-section scroll-reveal" id="hero-stats">
-        <p class="section-lead" style="text-align:center; margin: 0 auto var(--space-xl)">
+    <!-- Hero Stats -->
+    <section class="content-section fade-in" id="hero-stats">
+        <p style="text-align:center; max-width:780px; margin:0 auto var(--space-xl); font-size:1.05rem; color:var(--text-secondary); line-height:1.75">
             Two fundamentally different approaches to corporate clean energy procurement. One deploys cheap renewables cross-regionally. The other matches clean generation to load every hour in the buyer's grid — and it's the framework proposed for the GHG Protocol Scope 2 revision.
         </p>
-        <div class="hero-stats-grid" id="heroStatsGrid">
-            <div class="hero-stat scroll-reveal">
-                <div class="hero-stat-value" id="heroStatCo2">&mdash;</div>
-                <div class="hero-stat-label">Mt CO&#8322; displaced at 95% CFE</div>
+        <div class="grid-stats" id="heroStatsGrid">
+            <div class="stat-card fade-in">
+                <div class="stat-value" id="heroStatCo2">&mdash;</div>
+                <div class="stat-label">Mt CO&#8322; displaced at 95% CFE</div>
             </div>
-            <div class="hero-stat scroll-reveal">
-                <div class="hero-stat-value" id="heroStatCostRatio">&mdash;</div>
-                <div class="hero-stat-label">System cost advantage (2C vs 1B)</div>
+            <div class="stat-card fade-in">
+                <div class="stat-value" id="heroStatCostRatio">&mdash;</div>
+                <div class="stat-label">System cost advantage (2C vs 1B)</div>
             </div>
-            <div class="hero-stat scroll-reveal">
-                <div class="hero-stat-value" id="heroStatGasDelta">&mdash;</div>
-                <div class="hero-stat-label">Less gas on grid with hourly matching</div>
+            <div class="stat-card fade-in">
+                <div class="stat-value" id="heroStatGasDelta">&mdash;</div>
+                <div class="stat-label">Less gas on grid with hourly matching</div>
             </div>
-            <div class="hero-stat scroll-reveal">
-                <div class="hero-stat-value" id="heroStatLearning">&mdash;</div>
-                <div class="hero-stat-label">Learning curve impact (2C vs 1B)</div>
+            <div class="stat-card fade-in">
+                <div class="stat-value" id="heroStatLearning">&mdash;</div>
+                <div class="stat-label">Learning curve impact (2C vs 1B)</div>
             </div>
         </div>
     </section>
 
-    <!-- Section 2: The Two Strategies -->
-    <section class="content-section story-section scroll-reveal" id="strategies-intro">
-        <h2 class="section-title">The Two Strategies</h2>
-        <div class="grid-2col" style="margin-bottom: var(--space-xl)">
-            <div class="strategy-card scroll-reveal">
-                <span class="strategy-tag tag-consequential">Strategy 1B</span>
-                <h3 style="color: #6366F1">1B — Consequential</h3>
-                <p>Cross-regional new-build deployment via queue-ordered procurement using a fossil-average emission baseline. Deploys mostly mature VRE (solar, onshore wind) across any ISO. Cheapest per-MWh, but annual accounting misses hourly mismatches between clean generation and actual load. Provides <strong>zero financial support</strong> to existing nuclear plants.</p>
+    <!-- Section 1: The Two Strategies -->
+    <div class="section-header fade-in">
+        <div class="section-number">1</div>
+        <h2>The Two Strategies</h2>
+        <p>Cross-regional consequential netting vs. same-ISO hourly matching</p>
+    </div>
+    <section class="content-section fade-in" id="strategies-intro">
+        <div class="strategy-pair">
+            <div class="card strat-1b fade-in" style="padding: var(--space-xl)">
+                <span class="strat-tag strat-tag-purple">Strategy 1B</span>
+                <h3 style="font-family: var(--font-heading); font-size: 1.15rem; color: #6366F1; margin: 0 0 var(--space-sm)">1B — Consequential</h3>
+                <p style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.7; margin: 0">Cross-regional new-build deployment via queue-ordered procurement using a fossil-average emission baseline. Deploys mostly mature VRE (solar, onshore wind) across any ISO. Cheapest per-MWh, but annual accounting misses hourly mismatches between clean generation and actual load. Minimal firm clean or storage deployment — relying instead on existing grid infrastructure for reliability.</p>
             </div>
-            <div class="strategy-card scroll-reveal">
-                <span class="strategy-tag tag-hourly">Strategy 2C</span>
-                <h3 style="color: #0EA5E9">2C — Hourly Matching with SSS</h3>
-                <p>Same-ISO hourly matching blending existing clean resources (Surplus Supply Stack, merchant EAC, nuclear uprate) with new-build. Clean generation must match load every hour in the buyer's grid — forcing deployment of firm clean and storage. Creates EAC revenue that keeps existing nuclear economically viable.</p>
+            <div class="card strat-2c fade-in" style="padding: var(--space-xl)">
+                <span class="strat-tag strat-tag-blue">Strategy 2C</span>
+                <h3 style="font-family: var(--font-heading); font-size: 1.15rem; color: #0EA5E9; margin: 0 0 var(--space-sm)">2C — Hourly Matching with SSS</h3>
+                <p style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.7; margin: 0">Same-ISO hourly matching blending existing clean resources (Surplus Supply Stack, merchant EAC, nuclear uprate) with new-build. Clean generation must match load every hour in the buyer's grid — forcing deployment of firm clean and storage. Proposed framework for the GHG Protocol Scope 2 revision.</p>
             </div>
         </div>
 
-        <div class="ghg-callout scroll-reveal">
+        <div class="insight-box fade-in">
             <strong>Proposed GHG Protocol Scope 2 Revision:</strong> Strategy 2C represents the hourly matching framework under active consideration for the GHG Protocol Scope 2 standard revision. Unlike annual matching (which allows temporal arbitrage), hourly matching requires clean energy to be generated in the same hour it's consumed — ensuring corporate procurement drives real-time grid decarbonization rather than paper accounting.
         </div>
     </section>
 
-    <!-- Section 3: Crossover Analysis (Sticky Chart + Steps) -->
-    <section class="content-section story-section" id="crossover">
-        <h2 class="section-title scroll-reveal">How They Compare Across Ambition Levels</h2>
-        <p class="section-lead scroll-reveal">As the CFE target rises from 90% to 99.99%, the two strategies diverge dramatically. Each chart traces both strategies across thresholds at 15% corporate participation.</p>
-
-        <div class="scrolly-container">
-            <div class="scrolly-sticky">
-                <div class="scrolly-chart-wrap" style="padding: var(--space-lg)">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-md)">
-                        <h3 style="font-family: var(--font-heading); font-size: 0.95rem; color: var(--navy); margin: 0">Strategy Crossover</h3>
-                        <div class="toggle-btn-group" id="crossoverParticipationToggle" style="font-size: 0.75rem">
-                            <button data-val="5">5%</button>
-                            <button data-val="10">10%</button>
-                            <button data-val="15" class="active">15%</button>
-                            <button data-val="20">20%</button>
-                            <button data-val="25">25%</button>
-                            <button data-val="50">50%</button>
-                        </div>
-                    </div>
-                    <div class="crossover-grid">
-                        <div><div class="chart-container" style="min-height:200px"><canvas id="crossoverCostChart"></canvas></div></div>
-                        <div><div class="chart-container" style="min-height:200px"><canvas id="crossoverCo2Chart"></canvas></div></div>
-                        <div><div class="chart-container" style="min-height:200px"><canvas id="crossoverGasChart"></canvas></div></div>
-                        <div><div class="chart-container" style="min-height:200px"><canvas id="crossoverCurtChart"></canvas></div></div>
-                    </div>
+    <!-- Section 2: How They Compare -->
+    <div class="section-header fade-in">
+        <div class="section-number">2</div>
+        <h2>How They Compare Across Ambition Levels</h2>
+        <p>As the CFE target rises, the two strategies diverge dramatically</p>
+    </div>
+    <section class="content-section fade-in" id="crossover">
+        <div class="card fade-in" style="padding: var(--space-xl)">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-md); flex-wrap: wrap; gap: var(--space-sm)">
+                <h3 style="font-family: var(--font-heading); font-size: 0.95rem; color: var(--navy); margin: 0">Strategy Crossover</h3>
+                <div class="toggle-btn-group" id="crossoverParticipationToggle" style="font-size: 0.75rem">
+                    <button data-val="5">5%</button>
+                    <button data-val="10">10%</button>
+                    <button data-val="15" class="active">15%</button>
+                    <button data-val="20">20%</button>
+                    <button data-val="25">25%</button>
+                    <button data-val="50">50%</button>
                 </div>
             </div>
+            <div class="crossover-grid">
+                <div><div class="chart-container" style="min-height:200px"><canvas id="crossoverCostChart"></canvas></div></div>
+                <div><div class="chart-container" style="min-height:200px"><canvas id="crossoverCo2Chart"></canvas></div></div>
+                <div><div class="chart-container" style="min-height:200px"><canvas id="crossoverGasChart"></canvas></div></div>
+                <div><div class="chart-container" style="min-height:200px"><canvas id="crossoverCurtChart"></canvas></div></div>
+            </div>
+        </div>
 
-            <div class="scrolly-steps">
-                <div class="scrolly-step" data-step="cost">
-                    <div class="step-card">
-                        <h3>Per-MWh Cost Favors 1B</h3>
-                        <p>Consequential netting procures cheap cross-regional VRE — solar and onshore wind at wholesale prices. On a per-MWh basis, 1B is consistently cheaper. But this metric hides the full system cost.</p>
-                        <div class="step-stat step-stat-purple" id="stepCostStat"></div>
-                    </div>
-                </div>
-                <div class="scrolly-step" data-step="system">
-                    <div class="step-card">
-                        <h3>System Cost Tells a Different Story</h3>
-                        <p>1B's VRE-heavy mix requires massive gas backup for reliability. When you include new-build gas capacity costs, the total system cost flips. Above a critical participation threshold, 2C becomes the cheaper system-wide strategy.</p>
-                        <div class="step-stat step-stat-blue" id="stepSystemStat"></div>
-                    </div>
-                </div>
-                <div class="scrolly-step" data-step="co2">
-                    <div class="step-card">
-                        <h3>CO&#8322; Displacement</h3>
-                        <p>Both strategies reduce emissions, but through fundamentally different mechanisms. 1B displaces fossil generation cross-regionally via additionality. 2C restructures the buyer's own grid — blending existing clean with new-build to match load hourly.</p>
-                        <div class="step-stat step-stat-green" id="stepCo2Stat"></div>
-                    </div>
-                </div>
-                <div class="scrolly-step" data-step="gas">
-                    <div class="step-card">
-                        <h3>Gas Lock-in: The Hidden Cost</h3>
-                        <p>This is where the strategies diverge most dramatically. 1B leaves substantially more gas on the grid — creating political constituencies and infrastructure that resist retirement. 2C's hourly constraint forces firm clean + storage deployment, directly displacing gas.</p>
-                        <div class="step-stat step-stat-red" id="stepGasStat"></div>
-                    </div>
-                </div>
+        <div class="grid-2col" style="margin-top: var(--space-lg)">
+            <div class="insight-box fade-in">
+                <h4 style="font-family:var(--font-heading); color:var(--navy); margin:0 0 var(--space-xs)">Per-MWh Cost Favors 1B</h4>
+                <p style="margin:0">Consequential netting procures cheap cross-regional VRE — solar and onshore wind at wholesale prices. On a per-MWh basis, 1B is consistently cheaper. But this metric hides the full system cost.</p>
+                <div id="stepCostStat" style="margin-top:var(--space-sm); font-size:0.88rem; font-weight:600; color:var(--navy)"></div>
+            </div>
+            <div class="insight-box fade-in">
+                <h4 style="font-family:var(--font-heading); color:var(--navy); margin:0 0 var(--space-xs)">System Cost Tells a Different Story</h4>
+                <p style="margin:0">1B's VRE-heavy mix requires massive gas backup for reliability. When you include new-build gas capacity costs, the total system cost flips above a critical participation threshold.</p>
+                <div id="stepSystemStat" style="margin-top:var(--space-sm); font-size:0.88rem; font-weight:600; color:var(--navy)"></div>
+            </div>
+            <div class="insight-box fade-in">
+                <h4 style="font-family:var(--font-heading); color:var(--navy); margin:0 0 var(--space-xs)">CO&#8322; Displacement</h4>
+                <p style="margin:0">Both strategies reduce emissions through fundamentally different mechanisms. 1B displaces fossil cross-regionally via additionality. 2C restructures the buyer's own grid hourly.</p>
+                <div id="stepCo2Stat" style="margin-top:var(--space-sm); font-size:0.88rem; font-weight:600; color:var(--navy)"></div>
+            </div>
+            <div class="insight-box fade-in">
+                <h4 style="font-family:var(--font-heading); color:var(--navy); margin:0 0 var(--space-xs)">Gas Lock-in: The Hidden Cost</h4>
+                <p style="margin:0">1B leaves substantially more gas on the grid — creating infrastructure that resists retirement. 2C's hourly constraint forces firm clean + storage deployment, directly displacing gas.</p>
+                <div id="stepGasStat" style="margin-top:var(--space-sm); font-size:0.88rem; font-weight:600; color:var(--navy)"></div>
             </div>
         </div>
     </section>
 
-    <!-- Section 4: Gas Capacity Ribbon -->
-    <section class="content-section story-section scroll-reveal" id="gas-ribbon">
-        <h2 class="section-title">Gas Capacity on the Grid</h2>
-        <p class="section-lead">How much gas backup remains as corporate participation scales? The ribbon shows the range across ambition levels (90%&ndash;99.99% CFE). The solid line is the median threshold (95%).</p>
+    <!-- Section 3: Gas Capacity Ribbon -->
+    <div class="section-header fade-in">
+        <div class="section-number">3</div>
+        <h2>Gas Capacity on the Grid</h2>
+        <p>How much gas backup remains as corporate participation scales</p>
+    </div>
+    <section class="content-section fade-in" id="gas-ribbon">
+        <p style="font-size:1.05rem; color:var(--text-secondary); line-height:1.75; max-width:780px; margin-bottom:var(--space-xl)">The ribbon shows the range across ambition levels (90%&ndash;99.99% CFE). The solid line is the median threshold (95%).</p>
 
-        <div class="card scroll-reveal" style="padding: var(--space-xl)">
+        <div class="card fade-in" style="padding: var(--space-xl)">
             <div class="ribbon-chart-wrap"><canvas id="gasRibbonChart"></canvas></div>
         </div>
-        <div class="insight-box scroll-reveal" id="gasRibbonInsight" style="margin-top: var(--space-lg)">
+        <div class="insight-box fade-in" id="gasRibbonInsight" style="margin-top: var(--space-lg)">
             <p>Loading gas capacity analysis...</p>
         </div>
     </section>
 
-    <!-- Section 5: Strategy Pentagons -->
-    <section class="content-section story-section scroll-reveal" id="clusters">
-        <h2 class="section-title">Strategy Performance Profile</h2>
-        <p class="section-lead">Five dimensions of strategy performance at 95% CFE / 15% participation. The outer edge represents the best-performing strategy on each axis. The center is zero.</p>
+    <!-- Section 4: Cost Crossover — Why Participation Matters -->
+    <div class="section-header fade-in">
+        <div class="section-number">4</div>
+        <h2>Cost Crossover: Why Participation Matters</h2>
+        <p>Total system cost (clean procurement + gas backup) reveals the true economics</p>
+    </div>
+    <section class="content-section fade-in" id="cost-crossover">
+        <div class="crossover-section-grid">
+            <div class="card fade-in" style="padding: var(--space-xl)">
+                <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm); font-family: var(--font-heading)">System Cost vs. Participation (95% CFE)</h3>
+                <div class="chart-container-lg"><canvas id="systemCostCrossoverChart"></canvas></div>
+            </div>
+            <div class="card fade-in" style="padding: var(--space-xl)">
+                <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm); font-family: var(--font-heading)">Cost Breakdown: Clean + Gas (95% CFE)</h3>
+                <div class="chart-container-lg"><canvas id="costBreakdownChart"></canvas></div>
+            </div>
+        </div>
+        <div class="insight-box fade-in" id="crossoverInsight" style="margin-top: var(--space-lg)">
+            <p>Loading cost crossover analysis...</p>
+        </div>
+    </section>
 
-        <div class="grid-2col" id="strategyRadarGrid">
-            <div class="card scroll-reveal" style="padding: var(--space-xl)">
-                <h3 style="font-size: 1rem; color: #6366F1; margin-bottom: var(--space-sm); text-align: center; font-family: var(--font-heading)">1B — Consequential</h3>
-                <div class="chart-container"><canvas id="radarChart1B"></canvas></div>
-                <div id="clusterDesc1B" style="margin-top: var(--space-sm)"></div>
+    <!-- Section 5: Strategy Performance Profile -->
+    <div class="section-header fade-in">
+        <div class="section-number">5</div>
+        <h2>Strategy Performance Profile</h2>
+        <p>Five dimensions of strategy performance — both strategies overlaid for direct comparison</p>
+    </div>
+    <section class="content-section fade-in" id="clusters">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-md); flex-wrap: wrap; gap: var(--space-sm)">
+            <div class="legend" style="margin: 0">
+                <span class="legend-item"><span class="legend-dot" style="background:#6366F1"></span> 1B — Consequential</span>
+                <span class="legend-item"><span class="legend-dot" style="background:#0EA5E9"></span> 2C — Hourly Matching</span>
             </div>
-            <div class="card scroll-reveal" style="padding: var(--space-xl)">
-                <h3 style="font-size: 1rem; color: #0EA5E9; margin-bottom: var(--space-sm); text-align: center; font-family: var(--font-heading)">2C — Hourly Matching with SSS</h3>
-                <div class="chart-container"><canvas id="radarChart2C"></canvas></div>
-                <div id="clusterDesc2C" style="margin-top: var(--space-sm)"></div>
+            <div class="toggle-btn-group" id="radarParticipationToggle" style="font-size: 0.75rem">
+                <button data-val="5">5%</button>
+                <button data-val="10">10%</button>
+                <button data-val="15" class="active">15%</button>
+                <button data-val="25">25%</button>
+                <button data-val="50">50%</button>
             </div>
+        </div>
+        <div class="card fade-in" style="padding: var(--space-xl)">
+            <div class="chart-container-lg"><canvas id="radarOverlayChart"></canvas></div>
+            <div id="radarInsightText" style="margin-top: var(--space-md); font-size: 0.88rem; color: var(--text-secondary); line-height: 1.7"></div>
         </div>
     </section>
 
     <!-- Section 6: Wright's Law & Learning Curves -->
-    <section class="content-section story-section scroll-reveal" id="learning-curves">
-        <h2 class="section-title">Learning Curves: The Long Game</h2>
-        <p class="section-lead">Wright's Law predicts that technology costs fall as cumulative deployment doubles. Strategy 2C forces deployment of firm clean and storage — technologies still on steep learning curves. 1B deploys mostly mature VRE, contributing minimally to cost breakthroughs the entire grid needs.</p>
+    <div class="section-header fade-in">
+        <div class="section-number">6</div>
+        <h2>Learning Curves: The Long Game</h2>
+        <p>Wright's Law cost reductions accumulate as firm clean and storage deployment scales</p>
+    </div>
+    <section class="content-section fade-in" id="learning-curves">
+        <p style="font-size:1.05rem; color:var(--text-secondary); line-height:1.75; max-width:780px; margin-bottom:var(--space-xl)">Strategy 2C forces deployment of firm clean and storage — technologies still on steep learning curves. 1B deploys mostly mature VRE, contributing minimally to cost breakthroughs the entire grid needs.</p>
 
-        <div class="card scroll-reveal" style="padding: var(--space-xl)">
-            <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm); font-family: var(--font-heading)">Cost Premium vs. Participation (90% CFE Target)</h3>
+        <div class="card fade-in" style="padding: var(--space-xl)">
+            <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm); font-family: var(--font-heading)">Cost Premium vs. Participation (95% CFE Target)</h3>
             <div class="chart-container-lg"><canvas id="wrightsLawChart"></canvas></div>
         </div>
-        <div class="insight-box scroll-reveal" id="wrightsInsight" style="margin-top: var(--space-lg)">
+        <div class="insight-box fade-in" id="wrightsInsight" style="margin-top: var(--space-lg)">
             <p>Loading Wright's Law analysis...</p>
         </div>
     </section>
 
-    <!-- Section 7: Nuclear — The Hidden Variable -->
-    <section class="content-section story-section scroll-reveal" id="nuclear-narrative">
-        <h2 class="section-title">Nuclear: The Hidden Variable</h2>
-        <p class="section-lead">Existing nuclear provides approximately 50% of US clean electricity. Its fate is the single largest variable in grid decarbonization — and these two strategies treat it very differently.</p>
-
-        <div class="nuclear-stats scroll-reveal" id="nuclearStatsGrid">
-            <div class="nuclear-stat">
-                <div class="nuclear-stat-value" id="nucCostDelta">&mdash;</div>
-                <div class="nuclear-stat-label">Cost increase if nuclear retires</div>
-            </div>
-            <div class="nuclear-stat">
-                <div class="nuclear-stat-value" id="nucCo2Delta">&mdash;</div>
-                <div class="nuclear-stat-label">CO&#8322; displaced lost</div>
-            </div>
-            <div class="nuclear-stat">
-                <div class="nuclear-stat-value" id="nucGasDelta">&mdash;</div>
-                <div class="nuclear-stat-label">Additional gas on grid</div>
-            </div>
-        </div>
-
-        <div class="insight-box insight-warn scroll-reveal" id="nuclearInsight">
-            <p>Loading nuclear analysis...</p>
-        </div>
-    </section>
-
-    <!-- Section 8: Critical Risks -->
-    <section class="content-section story-section scroll-reveal" id="risks">
-        <h2 class="section-title">Critical Risks</h2>
-        <p class="section-lead">Strategies that look good on surface metrics can create hidden systemic risks. Gas lock-in creates political constituencies resisting retirement. Failing to support nuclear jeopardizes 50% of existing clean generation.</p>
-
+    <!-- Section 7: Critical Risks -->
+    <div class="section-header fade-in">
+        <div class="section-number">7</div>
+        <h2>Critical Risks</h2>
+        <p>Gas lock-in and curtailment create hidden systemic costs</p>
+    </div>
+    <section class="content-section fade-in" id="risks">
         <div class="grid-2col" style="margin-bottom: var(--space-xl)">
-            <div class="card scroll-reveal" style="padding: var(--space-lg)">
+            <div class="card fade-in" style="padding: var(--space-lg)">
                 <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm); font-family: var(--font-heading)">Gas Lock-in by ISO (95% / 50% Participation)</h3>
                 <div class="chart-container"><canvas id="gasLockinChart"></canvas></div>
             </div>
-            <div class="card scroll-reveal" style="padding: var(--space-lg)">
+            <div class="card fade-in" style="padding: var(--space-lg)">
                 <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm); font-family: var(--font-heading)">VRE Curtailment (95% / 50%)</h3>
                 <div class="chart-container"><canvas id="curtailmentChart"></canvas></div>
             </div>
         </div>
-
-        <div class="card scroll-reveal" style="padding: var(--space-lg)">
-            <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm); font-family: var(--font-heading)">Nuclear Stranding Exposure</h3>
-            <div class="chart-container-sm"><canvas id="nuclearStrandChart"></canvas></div>
-        </div>
-
-        <div class="insight-box insight-warn scroll-reveal" id="riskInsight" style="margin-top: var(--space-xl)">
+        <div class="insight-box insight-warn fade-in" id="riskInsight" style="margin-top: var(--space-lg)">
             <p>Loading risk analysis...</p>
         </div>
     </section>
 
-    <!-- Section 9: Strategy Regime Map -->
-    <section class="content-section story-section scroll-reveal" id="regime-map">
-        <h2 class="section-title">When Does Each Strategy Win?</h2>
-        <p class="section-lead">The optimal strategy depends on ambition level and market participation. This matrix maps the lower-cost strategy for each regime based on total system cost (clean procurement + gas backup).</p>
-
-        <div class="card scroll-reveal" style="padding: var(--space-lg)">
-            <div style="overflow-x: auto">
-                <table class="data-table" id="regimeMapTable">
-                    <thead>
-                        <tr>
-                            <th>Ambition Level</th>
-                            <th>5%</th>
-                            <th>10%</th>
-                            <th>15%</th>
-                            <th>25%</th>
-                            <th>50%</th>
-                        </tr>
-                    </thead>
-                    <tbody id="regimeMapBody"></tbody>
-                </table>
+    <!-- Section 8: Nuclear -->
+    <div class="section-header fade-in">
+        <div class="section-number">8</div>
+        <h2>Nuclear: The Hidden Variable</h2>
+        <p>Existing nuclear provides ~50% of US clean electricity — its fate depends on procurement framework</p>
+    </div>
+    <section class="content-section fade-in" id="nuclear-narrative">
+        <div class="grid-stats fade-in" id="nuclearStatsGrid">
+            <div class="stat-card">
+                <div class="stat-value" id="nucCostDelta" style="color:#DC2626">&mdash;</div>
+                <div class="stat-label">Cost increase if nuclear retires</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="nucCo2Delta" style="color:#DC2626">&mdash;</div>
+                <div class="stat-label">CO&#8322; displaced lost</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="nucGasDelta" style="color:#DC2626">&mdash;</div>
+                <div class="stat-label">Additional gas on grid</div>
             </div>
         </div>
 
-        <div class="insight-box scroll-reveal" id="regimeInsight" style="margin-top: var(--space-lg)">
-            <p>Loading regime analysis...</p>
+        <div class="card fade-in" style="padding: var(--space-lg); margin: var(--space-xl) 0">
+            <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm); font-family: var(--font-heading)">Nuclear Stranding Exposure</h3>
+            <div class="chart-container-sm"><canvas id="nuclearStrandChart"></canvas></div>
+        </div>
+
+        <div class="insight-box insight-warn fade-in" id="nuclearInsight">
+            <p>Loading nuclear analysis...</p>
         </div>
     </section>
 
-    <!-- Section 10: Dissenting Considerations -->
-    <section class="content-section story-section scroll-reveal" id="dissenting">
-        <h2 class="section-title">Dissenting Considerations</h2>
+    <!-- Section 9: Dissenting Considerations -->
+    <div class="section-header fade-in">
+        <div class="section-number">9</div>
+        <h2>Dissenting Considerations</h2>
+        <p>Arguments against each strategy and what could flip the analysis</p>
+    </div>
+    <section class="content-section fade-in" id="dissenting">
         <div id="dissentingContent">
             <p style="color: var(--text-muted)">Loading dissenting analysis...</p>
         </div>
@@ -406,5 +341,6 @@
     <script src="js/lmp-data.js"></script>
     <script src="js/no-regrets-data.js"></script>
     <script src="js/cfe-strategy-assessment.js"></script>
+    <script src="js/cinematic-bg.js"></script>
 </body>
 </html>
