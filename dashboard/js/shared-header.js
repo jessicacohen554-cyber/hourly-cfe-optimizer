@@ -11,7 +11,7 @@
 //       <div class="header-accent"></div>
 //   </header>
 //
-// Variants: default | frosted | terrain | hexmosaic | particleflow | circuit
+// Variants: default | frosted | terrain | hexmosaic
 // Set via data-header-variant attribute. CSS class header--{variant} is auto-added.
 // ============================================================================
 
@@ -285,28 +285,35 @@
         ].join('\n');
     };
 
-    // ========== 13. HEXAGONAL MOSAIC — LIGHT (Tessellated Heat Map) ==========
+    // ========== 13. HEX TERRAIN — LIGHT (Dispatch-Colored Hex Fill) ==========
     VARIANTS['hexmosaic'] = function() {
         var hexR = 28;
         var hexW = hexR * 1.732;
         var hexH = hexR * 1.5;
         var cols = Math.ceil(1440 / hexW) + 1;
         var rows = Math.ceil(280 / hexH) + 1;
-        // Higher opacity colors for light background
-        var colors = [
-            'rgba(14,165,233,',   // hydro blue
-            'rgba(34,197,94,',    // wind green
-            'rgba(245,158,11,',   // solar amber
-            'rgba(99,102,241,',   // nuclear indigo
-            'rgba(6,182,212,',    // cyan/teal
-            'rgba(239,68,68,'     // storage red
-        ];
-        var seed = 42;
-        function rng() {
-            seed = (seed * 16807 + 0) % 2147483647;
-            return seed / 2147483647;
+
+        // Terrain layer colors by Y position (bottom to top):
+        // hydro blue (bottom) → wind green → solar amber → storage red (top)
+        function terrainColor(cy, cx) {
+            if (cy >= 235) return 'rgba(14,165,233,';   // hydro blue — bottom
+            if (cy >= 195) return 'rgba(34,197,94,';    // wind green
+            // Solar bell curve — stronger in center (x 400-1000)
+            var solarStrength = 1.0 - Math.min(1.0, Math.abs(cx - 720) / 500);
+            if (cy >= 170 && solarStrength > 0.3) return 'rgba(245,158,11,';  // solar amber
+            if (cy >= 155) return 'rgba(239,68,68,';    // storage red
+            return 'rgba(148,163,184,';                  // above demand — faint slate
         }
-        var clusters = [[4,2], [8,3], [12,2], [6,4], [10,1]];
+
+        // Terrain opacity by Y — denser at bottom, sparser toward top
+        function terrainOpacity(cy) {
+            if (cy >= 235) return 0.32;
+            if (cy >= 210) return 0.26;
+            if (cy >= 185) return 0.22;
+            if (cy >= 165) return 0.18;
+            return 0.06;
+        }
+
         function hexPath(cx, cy) {
             var pts = [];
             for (var a = 0; a < 6; a++) {
@@ -315,92 +322,39 @@
             }
             return 'M' + pts.join(' L') + ' Z';
         }
-        function isNearCluster(col, row) {
-            for (var c = 0; c < clusters.length; c++) {
-                var dx = col - clusters[c][0], dy = row - clusters[c][1];
-                if (dx * dx + dy * dy <= 3) return true;
-            }
-            return false;
-        }
+
         var hexes = [];
         for (var row = 0; row < rows && row < 8; row++) {
             for (var col = 0; col < cols && col < 32; col++) {
                 var cx = col * hexW + (row % 2 ? hexW / 2 : 0);
                 var cy = row * hexH + hexH / 2;
                 if (cx > 1480 || cy > 300) continue;
-                var colorIdx = Math.floor(rng() * colors.length);
-                var nearCluster = isNearCluster(col, row);
-                // Higher opacities for light bg
-                var baseOp = nearCluster ? (0.12 + rng() * 0.18) : (0.05 + rng() * 0.08);
-                var opLow = (baseOp * 0.3).toFixed(3);
-                var opHigh = baseOp.toFixed(3);
-                var dur = (5 + rng() * 3).toFixed(1);
-                var begin = (col * 0.25 + row * 0.3).toFixed(1);
+
+                var color = terrainColor(cy, cx);
+                var op = terrainOpacity(cy);
+
+                // Staggered fill-in: sweeps left-to-right, bottom-to-top
+                var begin = (col * 0.06 + (7 - row) * 0.12).toFixed(2);
+                var dur = '0.6';
+
                 hexes.push(
-                    '<path d="' + hexPath(cx, cy) + '" fill="' + colors[colorIdx] + opHigh + ')" stroke="' + colors[colorIdx] + (baseOp * 0.6).toFixed(3) + ')" stroke-width="0.5">' +
-                    '<animate attributeName="opacity" dur="' + dur + 's" repeatCount="indefinite"' +
-                    ' values="' + opLow + ';' + opHigh + ';' + opLow + '" begin="' + begin + 's"/>' +
+                    '<path d="' + hexPath(cx, cy) + '" fill="' + color + op.toFixed(2) + ')" ' +
+                    'stroke="' + color + (op * 0.4).toFixed(3) + ')" stroke-width="0.5" opacity="0">' +
+                    '<animate attributeName="opacity" dur="' + dur + 's" fill="freeze" ' +
+                    'begin="' + begin + 's" values="0;1"/>' +
                     '</path>'
                 );
             }
         }
-        return hexes.join('\n');
-    };
 
-    // ========== 14. PARTICLE FLOW — LIGHT (Energy Streams Converging) ==========
-    VARIANTS['particleflow'] = function() {
-        var centerX = 720, centerY = 160;
-        var paths = [
-            { id: 'hdr-pf-solar', d: 'M720,0 C720,40 680,80 700,120 C720,150 720,155 720,160', color: 'rgba(217,119,6,', dur: 8 },
-            { id: 'hdr-pf-wind', d: 'M0,100 C120,95 280,110 420,120 C560,130 650,145 720,160', color: 'rgba(22,163,74,', dur: 10 },
-            { id: 'hdr-pf-hydro', d: 'M100,280 C180,260 300,220 440,200 C580,180 660,168 720,160', color: 'rgba(2,132,199,', dur: 9 },
-            { id: 'hdr-pf-wind2', d: 'M1440,120 C1320,115 1160,125 1020,135 C880,145 790,152 720,160', color: 'rgba(22,163,74,', dur: 11 }
-        ];
-        var defs = ['<defs>'];
-        for (var i = 0; i < paths.length; i++) {
-            defs.push('  <path id="' + paths[i].id + '" d="' + paths[i].d + '" fill="none" stroke="none"/>');
-        }
-        defs.push('</defs>');
-        // Visible trail lines — higher opacity for light bg
-        var trails = [];
-        for (var t = 0; t < paths.length; t++) {
-            trails.push(
-                '<path d="' + paths[t].d + '" fill="none" stroke="' + paths[t].color + '0.12)" stroke-width="1.2"/>'
-            );
-        }
-        var particles = [];
-        for (var p = 0; p < paths.length; p++) {
-            var stream = paths[p];
-            var particlesPerStream = 6;
-            for (var j = 0; j < particlesPerStream; j++) {
-                var pSize = 2 + (j % 3) * 0.5;
-                var pOpacity = (0.35 + (j % 3) * 0.10).toFixed(2);
-                var pDelay = (j * (stream.dur / particlesPerStream)).toFixed(1);
-                particles.push(
-                    '<circle r="' + pSize + '" fill="' + stream.color + pOpacity + ')">',
-                    '  <animateMotion dur="' + stream.dur + 's" repeatCount="indefinite" begin="' + pDelay + 's">',
-                    '    <mpath href="#' + stream.id + '"/>',
-                    '  </animateMotion>',
-                    '</circle>'
-                );
-            }
-        }
-        // Convergence glow — soft colored halo on light bg
-        var glow = [
-            '<circle cx="' + centerX + '" cy="' + centerY + '" r="30" fill="rgba(99,102,241,0.04)"/>',
-            '<circle cx="' + centerX + '" cy="' + centerY + '" r="12" fill="rgba(99,102,241,0.08)">',
-            '  <animate attributeName="r" dur="3s" repeatCount="indefinite" values="12;16;12"/>',
-            '  <animate attributeName="opacity" dur="3s" repeatCount="indefinite" values="0.6;1;0.6"/>',
-            '</circle>'
-        ].join('\n');
-        return [defs.join('\n'), trails.join('\n'), particles.join('\n'), glow].join('\n');
-    };
+        // Demand line overlay — dashed, appears after hex fill completes
+        var demandLine =
+            '<path d="M0,155 C240,148 480,160 720,152 C960,145 1200,155 1440,150" ' +
+            'fill="none" stroke="rgba(30,41,59,0.30)" stroke-width="1.5" stroke-dasharray="6 3" opacity="0">' +
+            '<animate attributeName="opacity" dur="0.5s" fill="freeze" begin="2.5s" values="0;0.8"/>' +
+            '</path>';
 
-    // ========== 6. CIRCUIT BOARD (External SVG background) ==========
-    VARIANTS['circuit'] = function() {
-        // Visual comes from CSS background-image (images/circuit-header.svg)
-        // Return empty SVG — the header overlay is purely CSS-driven
-        return '';
+        return hexes.join('\n') + '\n' + demandLine;
     };
 
     // ---- Build SVG wrapper ----
