@@ -361,61 +361,44 @@ p {
 /* ========== HEADER VARIANTS ========== */
 /* Set via data-header-variant attribute; class header--{name} auto-added by shared-header.js */
 
-/* --- Frosted Circuit: semi-transparent white, glass effect --- */
-.header--frosted {
-    background: linear-gradient(180deg, rgba(248,249,252,0.92) 0%, rgba(241,245,249,0.88) 50%, rgba(226,232,240,0.90) 100%);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+/* --- Canvas overlay — positioned identically to SVG overlay --- */
+.header-canvas-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    overflow: hidden;
 }
-.header--frosted::before {
-    background:
-        radial-gradient(ellipse 60% 50% at 50% 50%, rgba(14,165,233,0.06) 0%, transparent 70%);
-}
-.header--frosted::after {
-    background: none;
-}
-.header--frosted h1 {
-    color: var(--navy-dark, #0F1A2E);
-}
-.header--frosted .subtitle {
-    color: #475569;
-}
-.header--frosted .header-accent {
-    background: linear-gradient(90deg, var(--navy) 0%, var(--hydro) 25%, var(--wind) 50%, var(--solar) 75%, var(--red) 100%);
+.header-canvas-overlay canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    will-change: transform;
 }
 
-/* --- Stacked Terrain: light with colorful dispatch layers --- */
-.header--terrain {
-    background: linear-gradient(180deg, rgba(248,250,252,0.94) 0%, rgba(241,245,249,0.90) 50%, rgba(248,250,252,0.92) 100%);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+/* --- Light banner theme (dark text on light bg) --- */
+.header--light {
+    background: linear-gradient(180deg, rgba(248,249,252,0.94) 0%, rgba(241,245,249,0.90) 50%, rgba(226,232,240,0.92) 100%);
 }
-.header--terrain::before {
-    background: none;
-}
-.header--terrain::after { background: none; }
-.header--terrain h1 { color: var(--navy-dark, #0F1A2E); }
-.header--terrain .subtitle { color: #475569; }
-.header--terrain .header-accent {
-    background: linear-gradient(90deg, #0EA5E9 0%, #22C55E 30%, #F59E0B 60%, #EF4444 100%);
-}
+.header--light::before { background: none; }
+.header--light::after { background: none; }
+.header--light h1 { color: var(--navy-dark, #0F1A2E); }
+.header--light .subtitle { color: #475569; }
 
-/* --- Hexagonal Mosaic: light with colorful hex tessellation --- */
-.header--hexmosaic {
-    background: linear-gradient(160deg, rgba(248,250,252,0.94) 0%, rgba(241,245,249,0.90) 50%, rgba(248,250,252,0.92) 100%);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-}
-.header--hexmosaic::before {
-    background:
-        radial-gradient(ellipse 40% 40% at 30% 50%, rgba(14,165,233,0.04) 0%, transparent 60%),
-        radial-gradient(ellipse 40% 40% at 70% 50%, rgba(245,158,11,0.04) 0%, transparent 60%);
-}
-.header--hexmosaic::after { background: none; }
-.header--hexmosaic h1 { color: var(--navy-dark, #0F1A2E); }
-.header--hexmosaic .subtitle { color: #475569; }
-.header--hexmosaic .header-accent {
-    background: linear-gradient(90deg, #0EA5E9 0%, #22C55E 25%, #F59E0B 50%, #6366F1 75%, #EF4444 100%);
+/* --- Dark banner theme (inherits base .header styles — white text on navy) --- */
+.header--dark {}
+
+/* --- Per-variant background overrides --- */
+.header[data-header-variant="frosted-circuit"] { background: #F8F8F7; }
+.header[data-header-variant="dense-circuit-map"] { background: #F5F5F3; }
+.header[data-header-variant="topographic-contours-light"] { background: #F5F5F3; }
+.header[data-header-variant="particle-fill-dark"],
+.header[data-header-variant="heatmap-pulse-dark"],
+.header[data-header-variant="stacked-curves-dark"],
+.header[data-header-variant="network-constellation-dark"],
+.header[data-header-variant="frequency-spectrum"],
+.header[data-header-variant="topographic-contours-dark"] {
+    background: #0B1120;
 }
 
 
