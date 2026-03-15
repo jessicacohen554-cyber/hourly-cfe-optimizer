@@ -301,43 +301,10 @@
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!-- SECTION 4: OPTIMAL TARGETS & NO-REGRETS                              -->
+<!-- SECTION 4: RESOURCE BUILDOUT TRAJECTORIES                             -->
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 <section class="content-section story-section scroll-reveal">
-    <h2 class="section-title">4. Optimal Targets &amp; No-Regrets Alignment</h2>
-    <p class="section-subtitle">The CO&#8322; abatement analysis identified optimal CFE targets where grid MAC crosses DAC cost. How do procurement strategies interact with these targets?</p>
-
-    <div class="chart-grid-2">
-        <div class="card">
-            <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Optimal Target Overlay on Gas Capacity</h4>
-            <p style="font-family:var(--font-body);font-size:12px;color:#94A3B8;margin-bottom:var(--space-sm)">Vertical markers show each ISO's MAC-DAC crossover threshold</p>
-            <div class="deep-chart-wrap">
-                <canvas id="chartOptimalGas"></canvas>
-            </div>
-        </div>
-        <div class="card">
-            <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Resource Buildout at Optimal Target</h4>
-            <p style="font-family:var(--font-body);font-size:12px;color:#94A3B8;margin-bottom:var(--space-sm)">Stacked resources deployed as participation increases. Bold borders = no-regrets resources.</p>
-            <div class="slider-control">
-                <label>Strategy:</label>
-                <select id="optimalStratSelect" style="font-family:var(--font-data);font-size:12px;padding:4px 8px;border-radius:var(--radius-sm);border:1px solid #CBD5E1;">
-                    <option value="1B">1B Conseq (Fossil)</option>
-                    <option value="2C" selected>2C Hourly (SSS)</option>
-                    <option value="3D">3D Annual (Cross Exist)</option>
-                </select>
-            </div>
-            <div class="deep-chart-wrap">
-                <canvas id="chartOptimalResources"></canvas>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!-- SECTION 5: RESOURCE BUILDOUT TRAJECTORIES                             -->
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<section class="content-section story-section scroll-reveal">
-    <h2 class="section-title">5. Resource Buildout Trajectories &amp; Stranded Assets</h2>
+    <h2 class="section-title">4. Resource Buildout Trajectories &amp; Stranded Assets</h2>
     <p class="section-subtitle">As strategies scale from low to high ambition, the resource mix evolves. Some strategies build gas in intermediate phases that becomes stranded at higher targets.</p>
 
     <div class="slider-control">
@@ -370,10 +337,10 @@
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!-- SECTION 6: WRIGHT'S LAW CRITICAL MASS                                 -->
+<!-- SECTION 5: WRIGHT'S LAW CRITICAL MASS                                 -->
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 <section class="content-section story-section scroll-reveal">
-    <h2 class="section-title">6. Wright&rsquo;s Law Critical Mass</h2>
+    <h2 class="section-title">5. Wright&rsquo;s Law Critical Mass</h2>
     <p class="section-subtitle">Technology costs follow learning curves. Which strategies reach critical deployment mass fastest for key clean firm technologies?</p>
 
     <div class="chart-grid-2">
@@ -399,39 +366,10 @@
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!-- SECTION 7: MARKET DYNAMICS & LMP IMPACT                               -->
+<!-- SECTION 6: SYNTHESIS                                                  -->
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 <section class="content-section story-section scroll-reveal">
-    <h2 class="section-title">7. Market Dynamics &amp; LMP Impact</h2>
-    <p class="section-subtitle">Higher renewable deployment depresses wholesale electricity prices. Different strategies create different LMP impacts across regions.</p>
-
-    <div class="chart-grid-2">
-        <div class="card">
-            <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Wholesale LMP vs. CFE Threshold</h4>
-            <p style="font-family:var(--font-body);font-size:12px;color:#94A3B8;margin-bottom:var(--space-sm)">Average LMP trajectory as clean energy penetration increases, by ISO.</p>
-            <div class="deep-chart-wrap">
-                <canvas id="chartLmpThreshold"></canvas>
-            </div>
-        </div>
-        <div class="card">
-            <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Peak-Offpeak Spread (Duck Curve Effect)</h4>
-            <p style="font-family:var(--font-body);font-size:12px;color:#94A3B8;margin-bottom:var(--space-sm)">The widening gap between peak and off-peak prices as solar penetration grows.</p>
-            <div class="deep-chart-wrap">
-                <canvas id="chartLmpSpread"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <div class="insight-box scroll-reveal" style="margin-top:var(--space-lg)">
-        <strong>Price cannibalization paradox:</strong> Strategies that drive the most renewable deployment also depress the wholesale prices that make those investments economically viable &mdash; creating a self-limiting dynamic that favors firm clean energy and storage.
-    </div>
-</section>
-
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!-- SECTION 8: SYNTHESIS                                                  -->
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<section class="content-section story-section scroll-reveal">
-    <h2 class="section-title">8. Synthesis</h2>
+    <h2 class="section-title">6. Synthesis</h2>
     <p class="section-subtitle">Pulling together the key findings across all dimensions of strategy analysis.</p>
 
     <div class="synthesis-stats" id="synthesisStats">
@@ -630,14 +568,10 @@
     let chartCo2Ribbon = null;
     let chartEffRibbon = null;
     let chartCurtRibbon = null;
-    let chartOptimalGas = null;
-    let chartOptimalResources = null;
     let chartResourceTrajectory = null;
     let chartCurtTrajectory = null;
     let chartWrightsTrajectory = null;
     let chartCriticalMass = null;
-    let chartLmpThreshold = null;
-    let chartLmpSpread = null;
 
     const xLabels = PARTICIPATION_LEVELS.map(p => p + '%');
 
@@ -913,157 +847,45 @@
     }
 
     // ═════════════════════════════════════════════════════════════════════
-    // SECTION 4: OPTIMAL TARGETS & NO-REGRETS
+    // THRESHOLD REFERENCE LINES HELPER
     // ═════════════════════════════════════════════════════════════════════
 
-    function buildOptimalGasChart() {
-        if (chartOptimalGas) chartOptimalGas.destroy();
-        const active = getActiveStrategies();
-        const datasets = [];
-
-        // Use first active strategy for the gas line
-        const strat = active[0] || '2C';
-        const data = buildRibbonData(strat, (rec) => rec.gasGw || 0);
-        const color = STRAT_COLORS[strat] || '#6366F1';
-        datasets.push({
-            label: STRAT_LABELS[strat] || strat,
-            data: data.map(d => d.p90),
-            borderColor: color,
-            backgroundColor: color + '20',
-            borderWidth: 2.5, pointRadius: 3, tension: 0.3, fill: false,
-        });
-
-        // Add optimal target annotations
+    function thresholdAnnotations(labels) {
+        const refs = [
+            { value: 85,   dash: [4, 4],  label: '85%' },
+            { value: 90,   dash: [12, 4], label: '90%' },
+            { value: 92.5, dash: [4, 4],  label: '92.5%' },
+            { value: 95,   dash: [12, 4], label: '95%' },
+            { value: 99.9, dash: [4, 4],  label: '≥99.9%' },
+        ];
         const annotations = {};
-        if (typeof OPTIMAL_TARGETS !== 'undefined') {
-            for (const iso of ISOS) {
-                const ot = OPTIMAL_TARGETS[iso];
-                if (ot && ot.crossover_central) {
-                    const thr = ot.crossover_central.threshold;
-                    annotations['opt_' + iso] = {
-                        type: 'label',
-                        xValue: 4, // ~20% participation as visual marker
-                        yValue: 280 + ISOS.indexOf(iso) * 20,
-                        content: iso + ': ' + Math.round(thr) + '%',
-                        font: { size: 10, family: "'DM Sans'", weight: '600' },
-                        color: ISO_COLORS ? ISO_COLORS[iso] || '#6366F1' : '#6366F1',
-                        backgroundColor: 'rgba(255,255,255,0.8)',
-                        padding: 3,
-                        borderRadius: 4,
-                    };
-                }
-            }
-        }
-
-        chartOptimalGas = new Chart(document.getElementById('chartOptimalGas').getContext('2d'), {
-            type: 'line',
-            data: { labels: xLabels, datasets },
-            options: {
-                ...baseOpts,
-                plugins: {
-                    ...baseOpts.plugins,
-                    annotation: { annotations },
+        for (const r of refs) {
+            const matchLabel = r.value >= 99.9
+                ? labels.find(l => l.includes('99.9'))
+                : r.value + '%';
+            const idx = labels.indexOf(matchLabel);
+            if (idx < 0) continue;
+            annotations['ref_' + r.value] = {
+                type: 'line',
+                xMin: idx, xMax: idx,
+                borderColor: 'rgba(0,0,0,0.15)',
+                borderWidth: 1,
+                borderDash: r.dash,
+                label: {
+                    display: true,
+                    content: r.label,
+                    position: 'start',
+                    font: { size: 9, family: "'DM Sans'" },
+                    color: 'rgba(0,0,0,0.4)',
+                    backgroundColor: 'transparent',
                 },
-                scales: {
-                    ...baseOpts.scales,
-                    x: { ...baseOpts.scales.x, title: { display: true, text: 'Participation', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
-                    y: { ...baseOpts.scales.y, beginAtZero: true, ticks: { ...baseOpts.scales.y.ticks, callback: v => v + ' GW' } },
-                },
-            },
-        });
-    }
-
-    function buildOptimalResourcesChart() {
-        if (chartOptimalResources) chartOptimalResources.destroy();
-        const strat = document.getElementById('optimalStratSelect').value;
-        if (typeof STRATEGY_CMP === 'undefined') return;
-
-        const stratData = STRATEGY_CMP.strategies && STRATEGY_CMP.strategies[strat];
-        if (!stratData) return;
-
-        // Get optimal threshold (average across ISOs)
-        let optThr = 90;
-        if (typeof OPTIMAL_TARGETS !== 'undefined') {
-            const thrs = ISOS.map(iso => OPTIMAL_TARGETS[iso]?.crossover_central?.threshold).filter(Boolean);
-            if (thrs.length > 0) optThr = Math.round(thrs.reduce((a,b) => a+b, 0) / thrs.length);
+            };
         }
-
-        // Find closest available threshold
-        const thrKey = findClosestKey(Object.keys(stratData.CAISO?.by_threshold || {}), optThr);
-        if (!thrKey) return;
-
-        const resources = ['solar', 'wind', 'ccs', 'battery', 'ldes'];
-        const resColors = {
-            solar: RESOURCE_COLORS ? RESOURCE_COLORS.solar : '#F59E0B',
-            wind: RESOURCE_COLORS ? RESOURCE_COLORS.wind : '#22C55E',
-            ccs: RESOURCE_COLORS ? RESOURCE_COLORS.ccs : '#64748B',
-            battery: RESOURCE_COLORS ? RESOURCE_COLORS.battery : '#06B6D4',
-            ldes: RESOURCE_COLORS ? RESOURCE_COLORS.ldes : '#E91E63',
-        };
-
-        // Aggregate across ISOs for each resource at the optimal threshold
-        const resData = {};
-        for (const r of resources) resData[r] = [];
-
-        // Use participation as proxy — we only have threshold-level data in STRATEGY_CMP
-        // So we show resource mix at the optimal threshold across ISOs
-        const availableThrs = Object.keys(stratData.CAISO?.by_threshold || {}).map(Number).sort((a,b) => a - b);
-
-        for (const thr of availableThrs) {
-            for (const r of resources) {
-                let total = 0;
-                for (const iso of ISOS) {
-                    const entry = stratData[iso]?.by_threshold?.[String(thr)];
-                    if (entry?.resources?.[r]) total += entry.resources[r].twh || 0;
-                }
-                resData[r].push(total);
-            }
-        }
-
-        // Check no-regrets
-        const noRegretsSet = new Set();
-        if (typeof NO_REGRETS_DATA !== 'undefined') {
-            for (const iso of ISOS) {
-                const analysis = NO_REGRETS_DATA[iso]?.analysis;
-                if (!analysis) continue;
-                for (const [res, info] of Object.entries(analysis)) {
-                    if (info.isNoRegrets) noRegretsSet.add(res);
-                }
-            }
-        }
-
-        const datasets = resources.map(r => ({
-            label: r.charAt(0).toUpperCase() + r.slice(1),
-            data: resData[r],
-            backgroundColor: resColors[r] + 'CC',
-            borderColor: noRegretsSet.has(r) ? '#000' : resColors[r],
-            borderWidth: noRegretsSet.has(r) ? 2.5 : 1,
-            fill: true,
-        }));
-
-        chartOptimalResources = new Chart(document.getElementById('chartOptimalResources').getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: availableThrs.map(t => t >= 99.99 ? '≥99.99%' : t + '%'),
-                datasets,
-            },
-            options: {
-                ...baseOpts,
-                plugins: {
-                    ...baseOpts.plugins,
-                    filler: { propagate: true },
-                },
-                scales: {
-                    ...baseOpts.scales,
-                    x: { ...baseOpts.scales.x, title: { display: true, text: 'CO₂ Target', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
-                    y: { ...baseOpts.scales.y, stacked: true, ticks: { ...baseOpts.scales.y.ticks, callback: v => v.toFixed(0) + ' TWh' }, title: { display: true, text: 'Resource Deployment (TWh)', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
-                },
-            },
-        });
+        return annotations;
     }
 
     // ═════════════════════════════════════════════════════════════════════
-    // SECTION 5: RESOURCE BUILDOUT TRAJECTORIES
+    // SECTION 4: RESOURCE BUILDOUT TRAJECTORIES
     // ═════════════════════════════════════════════════════════════════════
 
     function getTrajectoryParticipation() {
@@ -1147,15 +969,13 @@
             },
         ];
 
+        const rtLabels = availableThrs.map(t => t >= 99.99 ? '≥99.99%' : t + '%');
         chartResourceTrajectory = new Chart(document.getElementById('chartResourceTrajectory').getContext('2d'), {
             type: 'line',
-            data: {
-                labels: availableThrs.map(t => t >= 99.99 ? '≥99.99%' : t + '%'),
-                datasets,
-            },
+            data: { labels: rtLabels, datasets },
             options: {
                 ...baseOpts,
-                plugins: { ...baseOpts.plugins, filler: { propagate: true } },
+                plugins: { ...baseOpts.plugins, filler: { propagate: true }, annotation: { annotations: thresholdAnnotations(rtLabels) } },
                 scales: {
                     ...baseOpts.scales,
                     x: { ...baseOpts.scales.x, title: { display: true, text: 'CO₂ Reduction Target', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
@@ -1194,15 +1014,14 @@
             });
         }
 
+        const ctLabels = THRESHOLDS.map(t => t >= 99.99 ? '≥99.99%' : t + '%');
         chartCurtTrajectory = new Chart(document.getElementById('chartCurtTrajectory').getContext('2d'), {
             type: 'line',
-            data: {
-                labels: THRESHOLDS.map(t => t >= 99.99 ? '≥99.99%' : t + '%'),
-                datasets,
-            },
+            data: { labels: ctLabels, datasets },
             options: {
                 ...baseOpts,
                 interaction: { mode: 'index', intersect: false },
+                plugins: { ...baseOpts.plugins, annotation: { annotations: thresholdAnnotations(ctLabels) } },
                 scales: {
                     ...baseOpts.scales,
                     x: { ...baseOpts.scales.x, title: { display: true, text: 'CO₂ Reduction Target', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
@@ -1213,7 +1032,7 @@
     }
 
     // ═════════════════════════════════════════════════════════════════════
-    // SECTION 6: WRIGHT'S LAW
+    // SECTION 5: WRIGHT'S LAW
     // ═════════════════════════════════════════════════════════════════════
 
     let wrightsData = null;
@@ -1333,110 +1152,7 @@
     }
 
     // ═════════════════════════════════════════════════════════════════════
-    // SECTION 7: LMP IMPACT
-    // ═════════════════════════════════════════════════════════════════════
-
-    function buildLmpCharts() {
-        if (typeof PJM_RAW === 'undefined' || typeof ISO_SHAPES === 'undefined') return;
-
-        // Chart 7A: LMP vs threshold per ISO
-        if (chartLmpThreshold) chartLmpThreshold.destroy();
-
-        const thresholds = PJM_RAW.thresholds || [];
-        const thrLabels = thresholds.map(t => t >= 99.99 ? '≥99.99%' : t + '%');
-        const pjmP50 = PJM_RAW.envelope?.p50 || [];
-
-        const datasets = [];
-        for (const iso of ISOS) {
-            const shape = ISO_SHAPES[iso];
-            if (!shape) continue;
-            const color = (typeof ISO_COLORS !== 'undefined') ? ISO_COLORS[iso] || '#6366F1' : '#6366F1';
-
-            // Scale PJM data by ISO shape
-            const scaled = pjmP50.map((v, i) => {
-                const frac = i / (pjmP50.length - 1);
-                const scaleFactor = 1 + (shape.pow || 0) * frac;
-                const endAdj = shape.endLMP || 1;
-                return v * scaleFactor * endAdj;
-            });
-
-            datasets.push({
-                label: iso,
-                data: scaled,
-                borderColor: color,
-                backgroundColor: color + '20',
-                borderWidth: 2,
-                pointRadius: 2,
-                tension: 0.3,
-                fill: false,
-            });
-        }
-
-        chartLmpThreshold = new Chart(document.getElementById('chartLmpThreshold').getContext('2d'), {
-            type: 'line',
-            data: { labels: thrLabels, datasets },
-            options: {
-                ...baseOpts,
-                interaction: { mode: 'index', intersect: false },
-                scales: {
-                    ...baseOpts.scales,
-                    x: { ...baseOpts.scales.x, title: { display: true, text: 'CFE Threshold', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
-                    y: { ...baseOpts.scales.y, ticks: { ...baseOpts.scales.y.ticks, callback: v => '$' + v.toFixed(0) }, title: { display: true, text: 'Average LMP ($/MWh)', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
-                },
-            },
-        });
-
-        // Chart 7B: Peak-offpeak spread
-        if (chartLmpSpread) chartLmpSpread.destroy();
-
-        const peakData = PJM_RAW.peak;
-        const offpeakData = PJM_RAW.offpeak;
-        if (!peakData || !offpeakData) return;
-
-        const peakP50 = peakData.p50 || [];
-        const offP50 = offpeakData.p50 || [];
-
-        const spreadDatasets = [];
-        for (const iso of ISOS) {
-            const shape = ISO_SHAPES[iso];
-            if (!shape) continue;
-            const color = (typeof ISO_COLORS !== 'undefined') ? ISO_COLORS[iso] || '#6366F1' : '#6366F1';
-
-            const spread = peakP50.map((v, i) => {
-                const peakScaled = v * (shape.endPeak || 1);
-                const offScaled = (offP50[i] || 0) * (shape.endOff || 1);
-                return peakScaled - offScaled;
-            });
-
-            spreadDatasets.push({
-                label: iso,
-                data: spread,
-                borderColor: color,
-                backgroundColor: color + '20',
-                borderWidth: 2,
-                pointRadius: 2,
-                tension: 0.3,
-                fill: false,
-            });
-        }
-
-        chartLmpSpread = new Chart(document.getElementById('chartLmpSpread').getContext('2d'), {
-            type: 'line',
-            data: { labels: thrLabels, datasets: spreadDatasets },
-            options: {
-                ...baseOpts,
-                interaction: { mode: 'index', intersect: false },
-                scales: {
-                    ...baseOpts.scales,
-                    x: { ...baseOpts.scales.x, title: { display: true, text: 'CFE Threshold', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
-                    y: { ...baseOpts.scales.y, ticks: { ...baseOpts.scales.y.ticks, callback: v => '$' + v.toFixed(0) }, title: { display: true, text: 'Peak–Offpeak Spread ($/MWh)', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
-                },
-            },
-        });
-    }
-
-    // ═════════════════════════════════════════════════════════════════════
-    // SECTION 8: SYNTHESIS STATS
+    // SECTION 6: SYNTHESIS STATS
     // ═════════════════════════════════════════════════════════════════════
 
     function computeSynthesisStats() {
@@ -1497,12 +1213,9 @@
         buildGasRibbon();
         buildSection2();
         buildHeatmaps();
-        buildOptimalGasChart();
-        buildOptimalResourcesChart();
         buildResourceTrajectory();
         buildCurtTrajectory();
         buildWrightsCharts();
-        buildLmpCharts();
         computeSynthesisStats();
     }
 
@@ -1514,9 +1227,6 @@
     document.querySelectorAll('.strategy-check input').forEach(cb => {
         cb.addEventListener('change', updateAllCharts);
     });
-
-    // Optimal strategy select
-    document.getElementById('optimalStratSelect').addEventListener('change', buildOptimalResourcesChart);
 
     // Trajectory controls
     document.getElementById('trajectorySlider').addEventListener('input', function() {
