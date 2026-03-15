@@ -624,9 +624,16 @@ function buildNuclearStrandChart() {
 
     const exposures = CORE_STRATEGIES.map(s => {
         const dep = computeNuclearDependency(s, participation, threshold);
-        // Also consider: strategies using existing clean (2A, 2C) have nuclear exposure
-        const existingHeavy = ['2A', '2C'].includes(s) ? 20 : 0;
-        return dep + existingHeavy;
+        // Strategies that DON'T pay for existing clean EACs increase stranding risk
+        // 2C actively supports nuclear revenue via EAC purchases — lowest stranding risk among hourly
+        // 1A/1B don't create EAC revenue streams — nuclear gets no procurement support
+        // 2A uses existing but at high cost, marginal revenue support
+        const strandingAdj = {
+            '1A': 15, '1B': 15,  // no EAC revenue pathway — nuclear unsupported
+            '2A': 10,            // some existing procurement but at premium prices
+            '2C': 0              // directly funds existing nuclear via EAC purchases
+        };
+        return dep + (strandingAdj[s] || 5);
     });
 
     charts.nuclearStrandChart = new Chart(document.getElementById('nuclearStrandChart'), {
