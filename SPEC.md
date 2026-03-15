@@ -5,6 +5,66 @@
 
 ## Current Status (Mar 15, 2026)
 
+### Announced Coal Retirements + Transmission Constraint Toggle (Added — Mar 15, 2026)
+
+**Branch:** `claude/coal-retirements-transmission-kN6hR`
+
+**Part A — Announced Coal Retirements (Hybrid Model)**
+
+**Problem**: Threshold-based coal retirement (coal exits at 70% clean) doesn't match real-world retirement schedules. PJM emissions at 2035 show 356 Mt vs EIA's 200 Mt — the cliff model over-retains coal in early years.
+
+**Solution**: Hybrid model — near-term (through 2035) uses EIA 860 announced retirement schedule; long-term (2035+) falls back to threshold-based retirement. Smooth transition via linear interpolation between milestone years.
+
+**Data** (cumulative GW retired by year, EIA 860 Monthly Dec 2024 + EPA 111(d) projections):
+```python
+ANNOUNCED_COAL_RETIREMENTS = {
+    'PJM':   {2025: 3.0, 2028: 10.0, 2030: 18.0, 2032: 25.0, 2035: 30.0},
+    'MISO':  {2025: 2.0, 2028: 6.0,  2030: 10.0, 2032: 15.0, 2035: 18.0},
+    'ERCOT': {2025: 1.5, 2028: 3.0,  2030: 5.0,  2032: 5.0,  2035: 5.0},
+    'SPP':   {2025: 1.0, 2028: 3.0,  2030: 5.0,  2032: 8.0,  2035: 9.0},
+    'CAISO': {},  'NYISO': {},  'NEISO': {},  # No/negligible coal
+}
+```
+
+**Mechanism**:
+1. `get_announced_coal_retired_gw(iso, year)` — linearly interpolates between milestone years
+2. `compute_fossil_retirement()` — when `year` param provided and ≤2035, reduces `coal_cap` (TWh) by `retired_gw × 4.38` (50% CF) before merit-order displacement
+3. `build_merit_order_stack()` — when `year` param provided, reduces coal share in capacity mix before threshold-based retirement
+
+**Backward compatibility**: `year=None` (default) preserves existing threshold-only behavior for all callers not yet passing year.
+
+**Files modified**:
+- `scripts/pipeline_config.py` — Added `ANNOUNCED_COAL_RETIREMENTS` dict + `get_announced_coal_retired_gw()` helper
+- `scripts/dispatch_utils.py` — Added `year` param to `compute_fossil_retirement()`, reduces coal_cap by announced retirements
+- `scripts/lmp_engine.py` — Added `year` param to `build_merit_order_stack()`, reduces coal capacity shares by announced retirements
+
+**Validation target**: PJM 2035 emissions should drop from ~356 Mt toward EIA AEO ~200 Mt.
+
+---
+
+**Part B — Transmission Constraint Toggle**
+
+**Problem**: Clean energy deployment modeled with unconstrained interconnection queue throughput. Princeton REPEAT shows clean penetration drops 75%→61% at 2030 when transmission growth limited to 1%/yr (vs required 2.3%/yr).
+
+**Solution**: Lightweight queue throughput factor applied to `QUEUE_CAP_GW` in SMARTargets simulation.
+
+**Parameters**:
+```python
+TRANSMISSION_CONSTRAINT = {
+    'unconstrained': 1.0,  # Full queue throughput (default)
+    'limited': 0.7,        # Moderate constraints (~1.5%/yr TX growth)
+    'constrained': 0.5,    # Severe constraints (~1%/yr TX growth, REPEAT low)
+}
+```
+
+**Mechanism**: Applied via `conditions.get('transmission_constraint', 'unconstrained')` in `run_market_simulation()`. Multiplies `queue_budget_gw` before period scaling. Default `'unconstrained'` preserves backward compatibility.
+
+**Files modified**:
+- `scripts/pipeline_config.py` — Added `TRANSMISSION_CONSTRAINT` dict
+- `scripts/step6_1_smartargets.py` — Imported constant, applied factor at both queue_cap_gw usage points
+
+---
+
 ### Regulatory Feedback — LMP Dampening at High Clean Penetration (Added — Mar 15, 2026)
 
 **Branch:** `claude/add-regulatory-feedback-n8MJ1`

@@ -482,6 +482,57 @@ CCS_RESIDUAL_EMISSION_RATE = 0.037
 # Above this threshold, coal and oil are fully retired from the fossil fleet
 COAL_OIL_RETIREMENT_THRESHOLD = 70.0
 
+# Announced coal retirement schedule (cumulative GW retired by year)
+# Source: EIA 860 Monthly (Dec 2024), EPA 111(d) rule projections
+# EPA projects 36.5 GW total coal retiring by 2032 under Clean Power Plan 2.0
+# Near-term (through 2035): announced retirements take priority over threshold-based
+# Long-term (2035+): threshold-based retirement as fallback
+ANNOUNCED_COAL_RETIREMENTS = {
+    'PJM':   {2025: 3.0, 2028: 10.0, 2030: 18.0, 2032: 25.0, 2035: 30.0},
+    'MISO':  {2025: 2.0, 2028: 6.0,  2030: 10.0, 2032: 15.0, 2035: 18.0},
+    'ERCOT': {2025: 1.5, 2028: 3.0,  2030: 5.0,  2032: 5.0,  2035: 5.0},
+    'SPP':   {2025: 1.0, 2028: 3.0,  2030: 5.0,  2032: 8.0,  2035: 9.0},
+    'CAISO': {},  # No coal
+    'NYISO': {},  # No coal
+    'NEISO': {},  # Negligible coal (<0.3 TWh)
+}
+
+
+def get_announced_coal_retired_gw(iso, year):
+    """Get cumulative announced coal retirements (GW) for an ISO at a given year.
+
+    Linearly interpolates between milestone years for smooth transitions.
+    Returns 0 for ISOs with no announced retirements.
+    For years beyond the last milestone, returns the last milestone value (no extrapolation).
+    """
+    schedule = ANNOUNCED_COAL_RETIREMENTS.get(iso, {})
+    if not schedule:
+        return 0.0
+
+    years = sorted(schedule.keys())
+    if year <= years[0]:
+        return schedule[years[0]] * max(0, year - 2023) / (years[0] - 2023) if year > 2023 else 0.0
+    if year >= years[-1]:
+        return schedule[years[-1]]
+
+    # Linear interpolation between bracketing years
+    for i in range(len(years) - 1):
+        if years[i] <= year <= years[i + 1]:
+            t = (year - years[i]) / (years[i + 1] - years[i])
+            return schedule[years[i]] + t * (schedule[years[i + 1]] - schedule[years[i]])
+
+    return schedule[years[-1]]
+
+
+# Transmission constraint factors — models interconnection queue throughput limits
+# Princeton REPEAT: clean penetration drops 75% → 61% at 2030 with 1%/yr TX growth
+# Factor reduces effective queue throughput (1.0 = unconstrained, lower = more constrained)
+TRANSMISSION_CONSTRAINT = {
+    'unconstrained': 1.0,  # Full queue throughput (optimistic/planned TX build)
+    'limited': 0.7,        # Moderate constraints (~1.5%/yr TX growth)
+    'constrained': 0.5,    # Severe constraints (~1%/yr TX growth, REPEAT low scenario)
+}
+
 # Dispatch cache version — must match dispatch_utils.CACHE_VERSION.
 # Bump when dispatch algorithm or field set changes. Used for cache invalidation.
 DISPATCH_CACHE_VERSION = 5
