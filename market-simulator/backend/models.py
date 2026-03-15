@@ -267,6 +267,12 @@ class YearResult(BaseModel):
     nuclear_revenue: Dict[str, float] = Field(default_factory=dict)
     nuclear_retired: bool = False
     ccs_breakeven: Dict[str, float] = Field(default_factory=dict)
+    # RPS compliance tracking
+    rps_mandated_pct: float = 0.0
+    rps_eligible_pct: float = 0.0
+    rps_shortfall_pct: float = 0.0
+    acp_cost_million: float = 0.0
+    cumulative_acp_million: float = 0.0
     # New: detailed data for results page
     fuel_bin_table: List[FuelBinRow] = Field(default_factory=list)
     supply_stack: List[SupplyStackEntry] = Field(default_factory=list)
