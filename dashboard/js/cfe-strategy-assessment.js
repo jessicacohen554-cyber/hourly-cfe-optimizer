@@ -2,9 +2,9 @@
 'use strict';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
-const STRATEGIES = ['1A','1B','2A','2B','2C','2C_rolloff','3A','3B','3C','3C_rolloff','3D','3D_rolloff'];
-const CORE_STRATEGIES = ['1A','1B','2A','2B','2C','3A','3B','3C','3D'];
-const ROLLOFF_PAIRS = { '2C': '2C_rolloff', '3C': '3C_rolloff', '3D': '3D_rolloff' };
+const STRATEGIES = ['1A','1B','2A','2C','2C_rolloff'];
+const CORE_STRATEGIES = ['1A','1B','2A','2C'];
+const ROLLOFF_PAIRS = { '2C': '2C_rolloff' };
 const ISOS = ['CAISO','ERCOT','PJM','NYISO','NEISO','MISO','SPP'];
 const THRESHOLDS = [50, 60, 70, 75, 80, 85, 90, 92.5, 95, 97.5, 99.5, 99.99];
 const KEY_THRESHOLDS = [70, 90, 99.5];
@@ -13,28 +13,18 @@ const STRATEGY_LABELS = {
     '1A': '1A — Consequential (Grid-Avg)',
     '1B': '1B — Consequential (Marginal)',
     '2A': '2A — Hourly (Existing Only)',
-    '2B': '2B — Hourly (New-Build Only)',
     '2C': '2C — Hourly (All Clean)',
-    '2C_rolloff': '2C — Nuclear Rolloff',
-    '3A': '3A — Annual (Same-ISO)',
-    '3B': '3B — Annual (Cross-Regional)',
-    '3C': '3C — Annual (Existing Only)',
-    '3C_rolloff': '3C — Existing Rolloff',
-    '3D': '3D — Annual (New-Build Only)',
-    '3D_rolloff': '3D — New-Build Rolloff'
+    '2C_rolloff': '2C — Nuclear Rolloff'
 };
 
 const STRATEGY_SHORT = {
-    '1A': '1A', '1B': '1B', '2A': '2A', '2B': '2B', '2C': '2C',
-    '2C_rolloff': '2C-R', '3A': '3A', '3B': '3B', '3C': '3C',
-    '3C_rolloff': '3C-R', '3D': '3D', '3D_rolloff': '3D-R'
+    '1A': '1A', '1B': '1B', '2A': '2A', '2C': '2C',
+    '2C_rolloff': '2C-R'
 };
 
 const STRATEGY_COLORS = {
     '1A': '#6366F1', '1B': '#818CF8',
-    '2A': '#F59E0B', '2B': '#22C55E', '2C': '#0EA5E9', '2C_rolloff': '#7DD3FC',
-    '3A': '#E91E63', '3B': '#9C27B0', '3C': '#14B8A6', '3C_rolloff': '#5EEAD4',
-    '3D': '#F97316', '3D_rolloff': '#FDBA74'
+    '2A': '#F59E0B', '2C': '#0EA5E9', '2C_rolloff': '#7DD3FC'
 };
 
 // TWh demand per ISO (approximate 2023 load)
@@ -43,10 +33,9 @@ const TOTAL_DEMAND = Object.values(GRID_DEMANDS).reduce((a, b) => a + b, 0);
 
 // Cluster definitions
 const CLUSTERS = [
-    { name: 'Consequential Netting', strategies: ['1A', '1B'], color: '#6366F1', desc: 'Cross-regional emission offset accounting. Cheapest per-MWh but does not drive local grid transformation.' },
-    { name: 'Hourly New-Build', strategies: ['2A', '2B'], color: '#F59E0B', desc: 'High-additionality hourly matching with new clean capacity. Expensive but drives deployment and learning curves.' },
-    { name: 'Hourly Hybrid', strategies: ['2C'], color: '#0EA5E9', desc: 'Blends existing clean + new-build for hourly matching. Cost-effective but depends on nuclear staying online.' },
-    { name: 'Annual Matching', strategies: ['3A', '3B', '3C', '3D'], color: '#E91E63', desc: 'Volume-based annual accounting. Lower cost than hourly, but weaker temporal signal and less grid-transformative.' }
+    { name: 'Consequential Netting', strategies: ['1A', '1B'], color: '#6366F1', desc: 'Cross-regional emission offset accounting. Cheapest per-MWh but does not drive local grid transformation or new capacity deployment.' },
+    { name: 'Hourly Existing', strategies: ['2A'], color: '#F59E0B', desc: 'Hourly matching using only existing clean generation. High cost due to new-build requirements for temporal matching, but strong additionality signal.' },
+    { name: 'Hourly Hybrid', strategies: ['2C'], color: '#0EA5E9', desc: 'Blends existing clean + new-build for hourly matching. Cost-effective but depends on nuclear staying online.' }
 ];
 
 const charts = {};
@@ -132,12 +121,8 @@ function computeLearningScore(strategy) {
     // Strategies that drive new clean firm + LDES deployment score higher
     const scores = {
         '1A': 2, '1B': 2, // consequential netting — low additionality
-        '2A': 3, // existing-only hourly — moderate (no new-build)
-        '2B': 9, // new-build hourly — strongest learning driver
-        '2C': 7, // hybrid — decent new-build component
-        '3A': 5, '3B': 5, // annual — some new-build signal
-        '3C': 1, // existing-only — zero new deployment
-        '3D': 8  // new-build annual — strong signal
+        '2A': 5, // existing-only hourly — moderate (requires some new-build for matching)
+        '2C': 8  // hybrid — strong new-build component driving learning curves
     };
     return scores[strategy] || 3;
 }
@@ -249,7 +234,7 @@ function populateExecutiveSummary() {
     document.getElementById('statBestCost').textContent = STRATEGY_SHORT[lowestCostStrat];
     document.getElementById('statBestCo2').textContent = STRATEGY_SHORT[highestCo2Strat];
     document.getElementById('statGasRisk').textContent = `${fmt(gasMin, 0)}–${fmt(gasMax, 0)} GW`;
-    document.getElementById('statLearning').textContent = '2B';
+    document.getElementById('statLearning').textContent = '2C';
     document.getElementById('statNuclearDep').textContent = `${fmt(nucDep, 0)}% cost shift`;
     document.getElementById('statRecommended').textContent = STRATEGY_SHORT[best.strategy];
 
@@ -259,10 +244,11 @@ function populateExecutiveSummary() {
         Strategy <strong>${STRATEGY_SHORT[best.strategy]}</strong> (${STRATEGY_LABELS[best.strategy]}) achieves the best composite score
         at 90% CFE / 25% participation, balancing emission reductions, cost efficiency, and system-level effects.
         Consequential netting strategies (1A/1B) offer the lowest per-MWh cost ($${fmt(lowestCost)}/MWh) but produce minimal grid
-        transformation. New-build hourly matching (2B) maximizes learning curve acceleration but at
-        ${fmt(cachedAggregate('2B', 25, 90).avgCost)}$/MWh — a significant cost premium.
-        Annual strategies (3A–3D) cluster in the middle on most metrics. The optimal strategy is regime-dependent:
-        low ambition favors 1A for cost; high ambition with mainstream participation favors 2C or 3A for balanced outcomes.</p>`;
+        transformation. Hourly matching with existing clean (2A) costs
+        $${fmt(cachedAggregate('2A', 25, 90).avgCost)}/MWh — a significant premium driven by new-build requirements for temporal matching.
+        Strategy 2C (hourly hybrid) balances cost and grid impact by leveraging existing clean generation alongside new-build capacity.
+        The optimal strategy is regime-dependent:
+        low ambition favors 1A for cost; high ambition with mainstream participation favors 2C for balanced outcomes.</p>`;
 }
 
 function buildSummaryBarChart() {
@@ -601,9 +587,7 @@ function buildLearningCurveChart() {
             const datasets = [
                 { key: 'strat_1a', label: '1A', color: STRATEGY_COLORS['1A'] },
                 { key: 'strat_2a', label: '2A', color: STRATEGY_COLORS['2A'] },
-                { key: 'strat_2b', label: '2B', color: STRATEGY_COLORS['2B'] },
-                { key: 'strat_2c_gated', label: '2C', color: STRATEGY_COLORS['2C'] },
-                { key: 'strat_3a', label: '3A', color: STRATEGY_COLORS['3A'] }
+                { key: 'strat_2c_gated', label: '2C', color: STRATEGY_COLORS['2C'] }
             ].map(d => ({
                 label: d.label,
                 data: data.strategy_comparison_90[d.key],
@@ -640,8 +624,8 @@ function buildNuclearStrandChart() {
 
     const exposures = CORE_STRATEGIES.map(s => {
         const dep = computeNuclearDependency(s, participation, threshold);
-        // Also consider: strategies using existing clean (2A, 2C, 3C) have nuclear exposure
-        const existingHeavy = ['2A', '2C', '3C'].includes(s) ? 20 : 0;
+        // Also consider: strategies using existing clean (2A, 2C) have nuclear exposure
+        const existingHeavy = ['2A', '2C'].includes(s) ? 20 : 0;
         return dep + existingHeavy;
     });
 
@@ -678,10 +662,9 @@ function populateRiskInsight() {
         Gas lock-in varies from ${fmt(gas90[gas90.length - 1].gas, 0)} GW (${STRATEGY_SHORT[gas90[gas90.length - 1].s]}) to
         ${fmt(gas90[0].gas, 0)} GW (${STRATEGY_SHORT[gas90[0].s]}) — a ${fmt(gas90[0].gas - gas90[gas90.length - 1].gas, 0)} GW spread.
         Curtailment ranges from ${fmt(curt90[curt90.length - 1].curt)} TWh to ${fmt(curt90[0].curt)} TWh.
-        Strategies relying on existing clean generation (2A, 2C, 3C) carry nuclear stranding risk —
+        Strategies relying on existing clean generation (2A, 2C) carry nuclear stranding risk —
         if nuclear plants close, these strategies lose their cheapest firm generation source and either
-        increase costs or increase gas dependency. New-build strategies (2B, 3D) avoid this fragility
-        but at higher upfront cost. Consequential netting (1A, 1B) avoids both risks but produces
+        increase costs or increase gas dependency. Consequential netting (1A, 1B) avoids both risks but produces
         minimal grid transformation.</p>`;
 }
 
@@ -739,10 +722,10 @@ function buildRegimeMap() {
     document.getElementById('regimeInsight').innerHTML = `<p><strong>Regime Insights:</strong>
         At low ambition (50–70%), cost-efficient strategies like consequential netting dominate because the
         CFE threshold is achievable with minimal new capacity. At medium ambition (75–90%), the value of
-        grid-transformative strategies increases — hourly hybrid (2C) and annual matching (3A) balance
-        cost with meaningful deployment. At high ambition (95%+), strategies must deploy significant clean firm
-        and storage, making the learning curve criterion decisive. New-build strategies (2B, 3D) become
-        competitive here because their higher costs are offset by technology cost reduction at scale.
+        grid-transformative strategies increases — hourly hybrid (2C) balances cost with meaningful deployment.
+        At high ambition (95%+), strategies must deploy significant clean firm and storage, making the
+        learning curve criterion decisive. Strategy 2C becomes increasingly competitive as its new-build
+        component drives technology cost reduction at scale.
         Participation level matters most at high ambition: early adopters (5–10%) cannot move the learning
         curve alone, but at 25%+ participation, collective procurement volumes begin to reach critical mass
         for technology cost breakthroughs.</p>`;
@@ -764,23 +747,23 @@ function populateDissenting() {
         </div>
 
         <div class="insight-box" style="margin-bottom: var(--space-lg)">
-            <h4 style="font-family: var(--font-heading); color: var(--navy); margin: 0 0 var(--space-sm)">Against New-Build Only (2B/3D)</h4>
-            <p>Dismissing existing clean energy is not cost-effective and may accelerate nuclear
-            retirement by denying revenue streams to operating plants. If clean energy buyers only
-            value new-build capacity, they implicitly devalue the 800+ TWh of existing nuclear,
-            hydro, and wind that currently supplies ~40% of US electricity. The resulting merchant
-            revenue erosion could accelerate plant closures, paradoxically <strong>increasing</strong>
-            grid emissions even as procurement spending rises.</p>
+            <h4 style="font-family: var(--font-heading); color: var(--navy); margin: 0 0 var(--space-sm)">Against Hourly Existing-Only (2A)</h4>
+            <p>Strategy 2A's reliance on existing clean generation means it does not create strong
+            additionality signals for new capacity deployment. While it does require temporal matching —
+            driving some new-build to fill gaps — it primarily reshuffles existing clean energy claims
+            rather than funding the next generation of clean firm and storage technologies needed for
+            deep decarbonization. Its high cost stems from the difficulty of hourly matching without
+            access to the full portfolio of existing + new clean resources.</p>
         </div>
 
         <div class="insight-box" style="margin-bottom: var(--space-lg)">
-            <h4 style="font-family: var(--font-heading); color: var(--navy); margin: 0 0 var(--space-sm)">Against Hourly Matching (2A/2B/2C)</h4>
-            <p>Hourly matching's temporal precision comes at a cost premium that may not be justified
-            at lower ambition levels. Below 80% CFE, annual and hourly strategies produce similar
-            grid outcomes because the marginal clean generation is almost always available during high-demand
-            hours. The hourly premium (often 30–60% more expensive) only becomes grid-relevant above
-            ~85% where temporal mismatch creates genuine surplus/deficit cycling that requires storage
-            and firm generation to resolve.</p>
+            <h4 style="font-family: var(--font-heading); color: var(--navy); margin: 0 0 var(--space-sm)">Against Hourly Hybrid (2C)</h4>
+            <p>Strategy 2C's cost advantage depends heavily on existing nuclear remaining online.
+            The nuclear fragility test (Section 05) quantifies this risk. If merchant revenue
+            erosion from VRE oversupply closes nuclear plants, 2C loses its cheapest firm generation
+            source and must either accept higher costs or increased gas dependency. Additionally,
+            2C's blending of existing and new clean resources may dilute the additionality signal
+            that drives learning curve acceleration for advanced technologies.</p>
         </div>
 
         <div class="insight-box" style="margin-bottom: var(--space-lg)">
@@ -790,10 +773,10 @@ function populateDissenting() {
             high-additionality strategies. <strong>Nuclear policy:</strong> If production tax credits
             (45U) are extended or expanded, nuclear revenue adequacy concerns diminish, reducing
             Strategy 2C's fragility. <strong>Technology breakthroughs:</strong> If advanced nuclear or
-            LDES costs fall faster than Wright's Law projections, new-build strategies become cost-competitive
-            sooner, strengthening the case for 2B/3D. <strong>Grid topology:</strong> If inter-ISO
-            transmission capacity expands significantly, cross-regional strategies (1A, 3B) gain
-            effectiveness while same-ISO strategies lose their geographic advantage.</p>
+            LDES costs fall faster than Wright's Law projections, hourly strategies become more
+            cost-competitive sooner. <strong>Grid topology:</strong> If inter-ISO
+            transmission capacity expands significantly, cross-regional strategies (1A) gain
+            effectiveness while same-ISO hourly strategies lose their geographic advantage.</p>
         </div>
     `;
 }
