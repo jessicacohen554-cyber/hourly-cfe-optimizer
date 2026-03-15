@@ -54,6 +54,7 @@ from pipeline_config import (
     REGULATORY_FEEDBACK_DAMPING,
     REGULATORY_FEEDBACK_CAP_MULTIPLIER,
     ENERGY_ONLY_ISOS,
+    TRANSMISSION_CONSTRAINT,
 )
 from dispatch_utils import (
     load_common_data, get_demand_profile, get_supply_profiles,
@@ -1279,6 +1280,10 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
 
             # Annual queue budget
             queue_budget_gw = QUEUE_CAP_GW[conditions['queue_type']][iso]
+            # Apply transmission constraint factor (reduces effective queue throughput)
+            tx_constraint = conditions.get('transmission_constraint', 'unconstrained')
+            tx_factor = TRANSMISSION_CONSTRAINT.get(tx_constraint, 1.0)
+            queue_budget_gw *= tx_factor
             # Scale to zone step years (years per milestone period)
             if year == 2030:
                 years_in_period = 7  # 2023-2030 (first period is 7 years)
@@ -1750,7 +1755,7 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
                 'resource_mix_twh': {k: round(v, 1) for k, v in resource_mix_twh.items()},
                 'cumulative_gw': {k: round(v, 2) for k, v in cumulative_gw.items()},
                 'queue_used_gw': round(
-                    QUEUE_CAP_GW[conditions['queue_type']][iso] * years_in_period - queue_remaining_gw, 1),
+                    QUEUE_CAP_GW[conditions['queue_type']][iso] * tx_factor * years_in_period - queue_remaining_gw, 1),
                 'zones_deployed': zone_results,
             }
             results[iso].append(year_result)

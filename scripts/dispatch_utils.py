@@ -59,6 +59,7 @@ from pipeline_config import (
     GRID_MIX_SHARES, REGIONAL_DEMAND_TWH,
     WHOLESALE_PRICES, FUEL_ADJUSTMENTS,
     CCS_RESIDUAL_EMISSION_RATE, COAL_OIL_RETIREMENT_THRESHOLD,
+    ANNOUNCED_COAL_RETIREMENTS, get_announced_coal_retired_gw,
     H,
     DISPATCH_CACHE_VERSION,
     # Dispatch-specific constants (migrated to pipeline_config)
@@ -741,8 +742,13 @@ def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
 # ══════════════════════════════════════════════════════════════════════════════
 
 def compute_fossil_retirement(iso, clean_pct, emission_rates, fossil_mix,
-                               demand_growth_factor=1.0):
+                               demand_growth_factor=1.0, year=None):
     """Dispatch-stack retirement model: coal → oil → gas merit-order displacement.
+
+    Hybrid model:
+    - Near-term (through 2035): Uses EIA 860 announced retirement schedule to reduce
+      coal capacity before applying merit-order displacement.
+    - Long-term (2035+ or year=None): Pure threshold-based retirement (backward compat).
 
     Returns:
         displaced_rate: tCO2/MWh weighted avg of displaced fossil
@@ -762,6 +768,12 @@ def compute_fossil_retirement(iso, clean_pct, emission_rates, fossil_mix,
     coal_cap = COAL_CAP_TWH.get(iso, 0)
     oil_cap = OIL_CAP_TWH.get(iso, 0)
     baseline_clean = sum(GRID_MIX_SHARES.get(iso, {}).values())
+
+    # Apply announced coal retirements (near-term through 2035)
+    if year is not None and year <= 2035 and coal_cap > 0:
+        retired_gw = get_announced_coal_retired_gw(iso, year)
+        retired_twh = retired_gw * 4.38  # ~50% capacity factor
+        coal_cap = max(0, coal_cap - retired_twh)
 
     if fossil_twh <= 0.01 or clean_pct >= 100:
         total_fossil_twh = grown_demand_twh * (100.0 - baseline_clean) / 100.0
