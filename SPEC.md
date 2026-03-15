@@ -5,6 +5,33 @@
 
 ## Current Status (Mar 15, 2026)
 
+### RPS Floor Fix: Renewable-Only Compliance for Non-CES ISOs (Added — Mar 15, 2026)
+
+**Branch:** `claude/analyze-pjm-emissions-qHlEF`
+
+**Problem**: PJM's P50 reference trajectory showed emissions *rising* from 267 Mt (2023) to 562 Mt (2035) — counterintuitive given existing RPS mandates in MD, NJ, IL, VA, DE, PA. Root cause: the RPS floor enforcement compared against **total clean%** (including 32.1% nuclear) instead of **RPS-eligible renewables only** (8.5% — solar 2.9%, wind 3.8%, hydro 1.8%). Since 40.6% > 22% floor, the RPS mandate never bound.
+
+**Key insight**: Most PJM-state RPS mandates are **renewable-only** — they exclude existing nuclear. MD, NJ, IL, PA, VA, DE all have renewable portfolio standards (not clean energy standards). Nuclear Zero Emission Credits (ZECs) exist in some states (IL, NJ, NY) but are separate programs from RPS compliance.
+
+**Fix (step6_1_smartargets.py)**:
+1. **CES vs. RPS distinction for deployment**: CES ISOs (CAISO, NYISO, NEISO) count nuclear toward compliance floor; non-CES ISOs (PJM, MISO, SPP, ERCOT) use only `REC_ELIGIBLE` resources (solar, wind, offshore_wind, hydro, geothermal).
+2. **`rps_eligible_pct` state tracking**: New field tracking renewables-only percentage through the simulation. Updated whenever market-driven or mandated deployment adds VRE capacity. Has its own TWh ratchet floor (absolute RPS-eligible TWh never decreases even as demand grows).
+3. **ACP compliance fallback**: When queue constraints prevent physical renewable build, Alternative Compliance Payments ($45/MWh for PJM) cover the shortfall. ACP does NOT add clean MWh — fossil generation persists for that portion.
+4. **ACP recycling (capped)**: ACP revenue funds future renewable development. Converted to bonus queue GW for next period at 65% fund efficiency and $1.2B/GW cost. **Capped at 20% of base queue budget** to prevent unrealistic acceleration.
+
+**New output fields**: `rps_eligible_pct`, `rps_shortfall_pct`, `acp_cost_million`, `cumulative_acp_million`.
+
+**Expected impact**:
+- **PJM** (major): RPS-eligible baseline 8.5% vs. floors 22%→40%→55% — massive forced renewable build, queue-constrained + ACP. Emissions should decline meaningfully.
+- **MISO** (moderate): RPS-eligible 18.2%, floor binding by 2030 (~7pp gap).
+- **SPP** (none): RPS-eligible 41.8% (wind fleet exceeds all floors).
+- **CAISO/NYISO/NEISO** (unchanged): CES ISOs — nuclear counts.
+
+**Files modified**:
+- `scripts/step6_1_smartargets.py` — RPS floor logic, ACP fallback, rps_eligible_pct tracking, result fields
+
+---
+
 ### NYISO Hydro-Québec Imports + Forecast Validation Update (Added — Mar 15, 2026)
 
 **Branch:** `claude/hydro-quebec-imports-validation-UP70G`
@@ -60,13 +87,14 @@ Updated `dashboard/forecast_validation.html`:
    - **Critical**: RGGI acts as a FLOOR, not additive to national carbon price. `effective = max(national, rggi)`. Same as CBAM — overlapping carbon markets don't stack.
 
 3. **State RPS Deployment Floors** — Mandated minimum clean% by year:
-   - CAISO: 44%→60%→75%→90%→100% (2025→2030→2035→2040→2045)
-   - NYISO: 35%→70%→80%→90%→100%
-   - PJM: 20%→35%→45%→55%→65% (NJ/PA/VA weighted)
-   - NEISO: 35%→50%→65%→80%→100% (MA net-zero weighted)
+   - CAISO: 44%→60%→75%→90%→100% (2025→2030→2035→2040→2045) — **CES** (nuclear counts)
+   - NYISO: 35%→70%→80%→90%→100% — **CES** (nuclear counts via CLCPA Tier 3 ZECs)
+   - PJM: 20%→35%→45%→55%→65% (NJ/PA/VA weighted) — **RPS** (renewables only, nuclear excluded)
+   - NEISO: 35%→50%→65%→80%→100% (MA net-zero weighted) — **CES** (nuclear counts via CT CCEF)
    - ERCOT: None
-   - MISO: 15%→20%→25%→30%→40%
-   - SPP: 10%→15%→20%→25%→35%
+   - MISO: 15%→20%→25%→30%→40% — **RPS** (renewables only)
+   - SPP: 10%→15%→20%→25%→35% — **RPS** (renewables only)
+   - **Critical**: CES ISOs (CAISO, NYISO, NEISO) compare floor against total clean%. Non-CES ISOs (PJM, MISO, SPP) compare against RPS-eligible% only (solar, wind, offshore_wind, hydro, geothermal). PJM has 32.1% nuclear but only 8.5% RPS-eligible → floor is deeply binding.
 
 **Sweep impact**: Doubles scenarios from 270 → 540 (×2 policy modes). LMP cache partially shared (ira_policy='off' uses same cache as before; 'on' adds carbon_price_override to cache key for RGGI ISOs).
 
