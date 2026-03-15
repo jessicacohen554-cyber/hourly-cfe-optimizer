@@ -142,8 +142,8 @@ def compute_threshold_stats(baseline_scores, year_scores_dict, thresholds):
     """
     results = {}
     for thr in thresholds:
-        thr_pct = thr / 100.0
-        mask = baseline_scores >= thr_pct
+        # Both baseline_scores and year_scores are in percentage units (0-100)
+        mask = baseline_scores >= thr
         n_mixes = int(mask.sum())
         if n_mixes == 0:
             results[str(thr)] = {'n_mixes': 0, 'skip': True}
@@ -155,7 +155,7 @@ def compute_threshold_stats(baseline_scores, year_scores_dict, thresholds):
 
         for year, year_scores in year_scores_dict.items():
             yr_scores = year_scores[mask]
-            delta = (yr_scores - base_scores) * 100.0  # Convert to percentage points
+            delta = yr_scores - base_scores  # Already in percentage points
             deltas_by_year[year] = {
                 'mean_delta_pp': round(float(delta.mean()), 3),
                 'p10_delta_pp': round(float(np.percentile(delta, 10)), 3),
@@ -163,7 +163,7 @@ def compute_threshold_stats(baseline_scores, year_scores_dict, thresholds):
                 'p90_delta_pp': round(float(np.percentile(delta, 90)), 3),
                 'min_delta_pp': round(float(delta.min()), 3),
                 'max_delta_pp': round(float(delta.max()), 3),
-                'pct_cross_threshold': round(float((yr_scores < thr_pct).sum() / n_mixes * 100), 2),
+                'pct_cross_threshold': round(float((yr_scores < thr).sum() / n_mixes * 100), 2),
             }
             all_deltas.append(delta)
 
@@ -246,6 +246,10 @@ def main():
         if max_diff > 0.01:
             print(f"  WARNING: Large baseline discrepancy — scores may have been computed with different profiles")
 
+        # Use the re-scored baseline (without storage) as reference, so storage
+        # offset cancels out and we isolate pure weather-driven variation
+        rescore_ref = rescore_baseline
+
         # Score against each individual year
         year_scores = {}
         for year_str in PROFILE_YEARS:
@@ -259,19 +263,19 @@ def main():
             scores = rescore_ef_for_year(iso, mix_matrix, demand_arr, supply_matrix)
             year_scores[year_str] = scores
 
-            # Quick summary
-            delta = (scores - baseline_scores) * 100.0
+            # Compare against re-scored baseline to isolate weather variation
+            delta = scores - rescore_ref
             print(f"  {year_str}: mean delta = {delta.mean():+.2f}pp, "
                   f"P10/P90 = [{np.percentile(delta,10):+.2f}, {np.percentile(delta,90):+.2f}]pp "
                   f"({time.time()-t1:.1f}s)")
 
-        # Compute per-threshold statistics
-        threshold_stats = compute_threshold_stats(baseline_scores, year_scores, THRESHOLDS)
+        # Use re-scored baseline for threshold stats (apples-to-apples without storage)
+        threshold_stats = compute_threshold_stats(rescore_ref, year_scores, THRESHOLDS)
 
         # ISO-level summary
         all_deltas = []
         for yr, sc in year_scores.items():
-            all_deltas.append((sc - baseline_scores) * 100.0)
+            all_deltas.append(sc - baseline_scores)  # Already percentage points
         if all_deltas:
             combined = np.concatenate(all_deltas)
             iso_summary = {
