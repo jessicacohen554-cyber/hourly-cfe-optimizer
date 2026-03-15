@@ -667,7 +667,8 @@
 
     // ─── SECTION 4: Qualified Target Proposal ────────────────
     function renderQualifiedTarget() {
-        const refBands = co.fan_bands.reference || co.fan_bands.all;
+        const refBands = co.fan_bands.reference;
+        if (!refBands || !refBands.emissions) { console.warn('No reference fan bands for QT'); return; }
         const emissions = refBands.emissions;
         const baseline = emissions.p50[0];
 
@@ -1107,7 +1108,8 @@
     }
 
     function renderEnablingConditions() {
-        const refBands = co.fan_bands.reference || co.fan_bands.all;
+        const refBands = co.fan_bands.reference;
+        if (!refBands || !refBands.emissions) return;
         const emissions = refBands.emissions;
         const baseline = emissions.p50[0];
         const psV2_local = powerSectorV2Trajectory(baseline);
