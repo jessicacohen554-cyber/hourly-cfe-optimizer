@@ -157,7 +157,7 @@ GAS_AVAILABILITY_FACTOR = {
 }
 
 
-def compute_marginal_costs(fuel_level='Medium', co2_level='Medium'):
+def compute_marginal_costs(fuel_level='Medium', co2_level='Medium', carbon_price_override=None):
     """Compute marginal cost ($/MWh) for each fossil unit type.
 
     PJM Manual 15 cost-based offer formula:
@@ -165,9 +165,19 @@ def compute_marginal_costs(fuel_level='Medium', co2_level='Medium'):
 
     The 10% adder is PJM's allowed markup above cost-based offers (SOM 2024: $2.00/MWh).
     CO2 costs reflect RGGI and state compliance programs (SOM 2024: $1.94/MWh).
+
+    Parameters
+    ----------
+    carbon_price_override : float or None
+        When provided, overrides the co2_level lookup with this $/ton value.
+        Used for ISO-specific carbon pricing (e.g., RGGI for NE ISOs, 0 for
+        non-RGGI ISOs). When None, uses CO2_PRICES[co2_level] as before.
     """
     fp = FUEL_PRICES[fuel_level]
-    co2_price = CO2_PRICES.get(co2_level, CO2_PRICES['Medium'])
+    if carbon_price_override is not None:
+        co2_price = carbon_price_override
+    else:
+        co2_price = CO2_PRICES.get(co2_level, CO2_PRICES['Medium'])
     adder = 1.0 + TEN_PERCENT_ADDER
 
     costs = {}
@@ -209,7 +219,8 @@ def _compute_clean_peak_mw(iso, resource_mix, battery_pct=0,
 def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw=None,
                              resource_mix=None,
                              battery_pct=0, battery8_pct=0, ldes_pct=0,
-                             h2_pct=0, co2_level='Medium', year=None):
+                             h2_pct=0, co2_level='Medium', year=None,
+                             carbon_price_override=None):
     """Build merit-order stack: list of (unit_type, capacity_mw, marginal_cost).
 
     Ordered by marginal cost (cheapest first). Stack composition reflects
@@ -230,12 +241,15 @@ def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw
         ldes_pct: LDES dispatch percentage
         h2_pct: H2 storage dispatch percentage
         co2_level: 'Low', 'Medium', 'High' — CO2 allowance pricing
+        carbon_price_override: float or None — ISO-specific CO2 $/ton override.
+            When provided, overrides co2_level for this stack. Used for
+            RGGI-differentiated pricing (RGGI ISOs get RGGI price, non-RGGI get 0).
 
     Returns:
         stack: list of (unit_type, capacity_mw, marginal_cost_per_mwh)
         total_capacity_mw: total fossil MW
     """
-    mc = compute_marginal_costs(fuel_level, co2_level)
+    mc = compute_marginal_costs(fuel_level, co2_level, carbon_price_override=carbon_price_override)
 
     if total_fossil_mw is None:
         installed = INSTALLED_FOSSIL_MW.get(iso, 80_000)
@@ -746,7 +760,7 @@ def archetype_key(mix, fuel_level, threshold):
 
 
 def compute_hourly_lmp_vectorized(dispatch_result, demand_mw_profile, stack, price_model,
-                                   iso=None, vre_penetration=None):
+                                   iso=None, vre_penetration=None, track_components=False):
     """Vectorized LMP computation — faster than per-hour loop.
 
     Uses the merit-order stack as a step function and np.searchsorted for
@@ -758,11 +772,23 @@ def compute_hourly_lmp_vectorized(dispatch_result, demand_mw_profile, stack, pri
         VRE penetration fraction (0-1). When provided, amplifies the
         merit-order effect of zero-marginal-cost renewables on LMP
         depression. Higher penetration → stronger surplus depression.
+    track_components : bool
+        When True, track LMP component decomposition for validation:
+        - merit_base: base marginal cost from stack dispatch
+        - scarcity: scarcity/ORDC adder above merit-order base
+        - dq_adder: demand-quantile layers (congestion, depression, must-run)
+        Returns 3-tuple (hourly_lmp, hourly_marginal_unit, components_dict).
+        When False (default), returns 2-tuple for backward compatibility.
     """
     # Build cumulative capacity and marginal cost arrays from stack
     n_units = len(stack)
     if n_units == 0:
-        return np.zeros(H, dtype=np.float64), np.full(H, -1, dtype=np.int8)
+        empty_lmp = np.zeros(H, dtype=np.float64)
+        empty_mu = np.full(H, -1, dtype=np.int8)
+        if track_components:
+            empty_comp = {'merit_base': np.zeros(H), 'scarcity': np.zeros(H), 'dq_adder': np.zeros(H)}
+            return empty_lmp, empty_mu, empty_comp
+        return empty_lmp, empty_mu
 
     cum_capacity = np.zeros(n_units, dtype=np.float64)
     marginal_costs = np.zeros(n_units, dtype=np.float64)
@@ -798,6 +824,11 @@ def compute_hourly_lmp_vectorized(dispatch_result, demand_mw_profile, stack, pri
 
     hourly_lmp = np.zeros(H, dtype=np.float64)
     hourly_marginal_unit = np.full(H, -1, dtype=np.int8)
+
+    # Component tracking arrays (only allocated when track_components=True)
+    if track_components:
+        merit_base = np.zeros(H, dtype=np.float64)
+        scarcity_component = np.zeros(H, dtype=np.float64)
 
     # Positive residual: use searchsorted on cumulative capacity
     pos_mask = residual_mw > 0
@@ -836,6 +867,10 @@ def compute_hourly_lmp_vectorized(dispatch_result, demand_mw_profile, stack, pri
             heat_rate_ramp = 1.0 + 0.15 * position_in_band ** 1.5
             normal_prices = base_prices * heat_rate_ramp
 
+            # Snapshot merit-order base BEFORE scarcity adders
+            if track_components:
+                merit_base_normal = normal_prices.copy()
+
             # Reserve margin check for scarcity adder
             # Use TOTAL stack remaining (not within-band), reflecting actual system reserves
             pos_demand = demand_mw_profile[pos_mask][normal_mask]
@@ -853,6 +888,11 @@ def compute_hourly_lmp_vectorized(dispatch_result, demand_mw_profile, stack, pri
             hourly_lmp[normal_global] = normal_prices
             hourly_marginal_unit[normal_global] = normal_idx.astype(np.int8)
 
+            # Record components for normal-dispatch hours
+            if track_components:
+                merit_base[normal_global] = merit_base_normal
+                scarcity_component[normal_global] = normal_prices - merit_base_normal
+
         # Scarcity pricing
         if scarcity_mask.any():
             pos_indices = np.where(pos_mask)[0]
@@ -863,6 +903,12 @@ def compute_hourly_lmp_vectorized(dispatch_result, demand_mw_profile, stack, pri
                     float(total_fossil_cap),
                     float(demand_mw_profile[gi]))
                 hourly_marginal_unit[gi] = n_units
+
+            # Scarcity hours: merit_base = top-of-stack cost, scarcity = remainder
+            if track_components:
+                top_of_stack_mc = marginal_costs[-1]
+                merit_base[scarcity_global] = top_of_stack_mc
+                scarcity_component[scarcity_global] = hourly_lmp[scarcity_global] - top_of_stack_mc
 
     # Negative/zero residual (surplus): negative pricing
     neg_mask = residual_mw <= 0
@@ -1023,6 +1069,19 @@ def compute_hourly_lmp_vectorized(dispatch_result, demand_mw_profile, stack, pri
                     hourly_lmp[winter_slice])
             h += mh
 
+    # --- COMPONENT DECOMPOSITION ---
+    if track_components:
+        # dq_adder = residual after subtracting merit_base and scarcity
+        # Captures: must-run depression, demand-quantile layers, clean surplus,
+        # NEISO winter gas adder — everything beyond merit-order + scarcity.
+        dq_adder = hourly_lmp - merit_base - scarcity_component
+        components = {
+            'merit_base': merit_base,
+            'scarcity': scarcity_component,
+            'dq_adder': dq_adder,
+        }
+        return hourly_lmp, hourly_marginal_unit, components
+
     return hourly_lmp, hourly_marginal_unit
 
 
@@ -1031,8 +1090,14 @@ def compute_hourly_lmp_vectorized(dispatch_result, demand_mw_profile, stack, pri
 # ══════════════════════════════════════════════════════════════════════════════
 
 def compute_lmp_stats(hourly_lmp, hourly_marginal_unit, demand_mw_profile,
-                       dispatch_result):
+                       dispatch_result, components=None):
     """Compute summary statistics from 8760 hourly LMP array.
+
+    Parameters
+    ----------
+    components : dict or None
+        If provided (from track_components=True), adds component averages
+        to output dict: merit_base_avg, scarcity_avg, dq_adder_avg, etc.
 
     Returns dict matching the output schema in SPEC.md.
     """
@@ -1084,7 +1149,7 @@ def compute_lmp_stats(hourly_lmp, hourly_marginal_unit, demand_mw_profile,
     fossil_hours = hourly_lmp[residual > 0]
     fossil_revenue = float(np.mean(fossil_hours)) if len(fossil_hours) > 0 else 0.0
 
-    return {
+    stats = {
         'avg_lmp': round(avg_lmp, 2),
         'peak_avg_lmp': round(peak_avg, 2),
         'offpeak_avg_lmp': round(offpeak_avg, 2),
@@ -1101,6 +1166,16 @@ def compute_lmp_stats(hourly_lmp, hourly_marginal_unit, demand_mw_profile,
         'net_peak_price': round(net_peak_price, 2),
         'fossil_revenue_mwh': round(fossil_revenue, 2),
     }
+
+    # LMP component decomposition (from track_components=True)
+    if components is not None:
+        stats['merit_base_avg'] = round(float(np.mean(components['merit_base'])), 2)
+        stats['scarcity_avg'] = round(float(np.mean(components['scarcity'])), 2)
+        stats['dq_adder_avg'] = round(float(np.mean(components['dq_adder'])), 2)
+        stats['merit_base_p50'] = round(float(np.median(components['merit_base'])), 2)
+        stats['scarcity_hours_nonzero'] = int(np.count_nonzero(components['scarcity']))
+
+    return stats
 
 
 # ══════════════════════════════════════════════════════════════════════════════
