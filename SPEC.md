@@ -1,9 +1,49 @@
 # Advanced Sensitivity Model — Complete Specification
 
 > **Authoritative reference for all design decisions.** If a future session needs context, read this file first.
-> Last updated: 2026-03-07.
+> Last updated: 2026-03-14.
 
-## Current Status (Mar 9, 2026)
+## Current Status (Mar 14, 2026)
+
+### Unit Commitment / Min-Gen Constraints in LMP Engine (Added — Mar 14, 2026)
+
+**Branch:** `claude/add-unit-commitment-constraints-Mq8pE`
+
+**Problem**: LMP engine off-peak pricing bias — PJM off-peak $34.75 vs actual $28.00 (25% overshoot). The pure merit-order dispatch had no must-run / min-gen constraints, so off-peak prices stayed near merit-order marginal cost instead of being depressed by inflexible baseload.
+
+**Solution**: Added must-run pricing layer to `compute_hourly_lmp_vectorized()` that physically models the price depression when residual demand falls below the total must-run floor (coal min-gen 40% + gas must-run 0%).
+
+**Constants** (`pipeline_config.py`):
+```python
+MUST_RUN_PCT = {'nuclear': 1.0, 'coal_steam': 0.40, 'gas_ccgt': 0.0, 'gas_ct': 0.0, 'oil_ct': 0.0}
+```
+
+**Per-ISO `must_run_depression` parameter** (PriceModel subclasses):
+| ISO | Depression | Rationale |
+|-----|-----------|-----------|
+| PJM | 0.35 | 29% coal + large nuclear fleet |
+| MISO | 0.35 | 35% coal, heavy must-run floor |
+| SPP | 0.30 | 30% coal |
+| ERCOT | 0.25 | 22% coal |
+| CAISO | 0.15 | No coal, gas-only |
+| NYISO | 0.15 | No coal, gas-only |
+| NEISO | 0.15 | No coal, gas-only |
+
+**Calibration result (PJM)**: Off-peak $34.75 → $28.77 (target $28.00 ± 15%). Avg LMP $35.96 (target $34.70). All 7 ISOs: avg LMP within GOOD range.
+
+**Files modified**:
+- `scripts/pipeline_config.py` — Added `MUST_RUN_PCT` constants
+- `scripts/lmp_engine.py` — Added `must_run_depression` to PriceModel + all subclasses; added must-run pricing layer in `compute_hourly_lmp_vectorized()` (before demand-quantile layers); imported `MUST_RUN_PCT` from pipeline_config
+
+**Design decisions**:
+- Must-run computed inside `compute_hourly_lmp_vectorized()` (not `build_merit_order_stack()`) to avoid changing return signatures
+- Depression is multiplicative (`price *= 1 - surplus_ratio * depression`) — scales with fuel price level
+- Applied BEFORE demand-quantile layers — physical constraint first, statistical refinement second
+- Nuclear must-run not directly in fossil stack (already in clean supply reducing residual demand)
+
+---
+
+## Previous Status (Mar 9, 2026)
 
 ### Nuclear Policy Sensitivity Toggle (Added — Mar 9, 2026)
 
