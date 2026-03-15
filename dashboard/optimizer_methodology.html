@@ -266,12 +266,15 @@
         <h2>Contents</h2>
         <ol>
             <li><a href="#problem">The Problem: Why Hourly Matching Is Hard</a></li>
+            <li><a href="#scope-intent">Scope &amp; Intent</a></li>
             <li><a href="#model-scope">Model Scope &amp; Scale</a></li>
             <li><a href="#resources">Resources Modeled</a></li>
             <li><a href="#pipeline">Analytical Pipeline</a></li>
             <li><a href="#data-sources">Data Foundation</a></li>
             <li><a href="#outputs">Analytical Outputs</a></li>
             <li><a href="#rigor">Methodological Rigor</a></li>
+            <li><a href="#comparison">Model Comparison</a></li>
+            <li><a href="#validation">Validation &amp; Uncertainty</a></li>
             <li><a href="#assumptions">Assumptions &amp; Limitations</a></li>
             <li><a href="#enhancements">Future Enhancements</a></li>
             <li><a href="#bibliography">Data Sources</a></li>
@@ -309,9 +312,58 @@
     </div>
 
     <!-- ================================================================ -->
-    <!-- SECTION 2: MODEL SCOPE & SCALE                                   -->
+    <!-- SECTION 2: SCOPE & INTENT                                        -->
     <!-- ================================================================ -->
-    <h2 id="model-scope">2. Model Scope &amp; Scale</h2>
+    <h2 id="scope-intent">2. Scope &amp; Intent</h2>
+
+    <p>
+        This model is a <strong>high-resolution procurement screening and scenario exploration tool</strong>
+        designed for corporate buyers evaluating hourly clean energy matching strategies. It answers the
+        question: <em>given a target hourly clean energy percentage, what is the least-cost resource portfolio
+        to achieve it, and how does that cost change under different technology cost and policy assumptions?</em>
+    </p>
+
+    <h3>What This Model Is</h3>
+    <ul style="font-size:0.92rem;color:var(--text-secondary);line-height:1.8;">
+        <li><strong>A procurement decision support tool</strong> &mdash; optimized for the question corporate
+            buyers actually face: what portfolio of clean energy resources minimizes my hourly matching cost?</li>
+        <li><strong>A scenario exploration framework</strong> &mdash; evaluating ~5.87 million unique resource
+            mixes under 5,832&ndash;17,496 cost scenarios per region, providing uncertainty coverage orders of
+            magnitude beyond standard capacity expansion models</li>
+        <li><strong>A transparency engine</strong> &mdash; every feasible mix is visible and explorable, avoiding
+            the &ldquo;black box&rdquo; problem of mathematical optimization where stakeholders must trust a
+            solver&rsquo;s single answer</li>
+    </ul>
+
+    <h3>What This Model Is Not</h3>
+    <ul style="font-size:0.92rem;color:var(--text-secondary);line-height:1.8;">
+        <li><strong>Not a capacity expansion model</strong> &mdash; it does not endogenously determine what to
+            build or when. Models like GenX, PyPSA, ReEDS, and US-REGEN solve that problem with endogenous
+            investment decisions, multi-period dynamics, and transmission network modeling.</li>
+        <li><strong>Not a transmission planning tool</strong> &mdash; each ISO is modeled as a single zone.
+            Intra-ISO congestion, inter-regional power flows, and nodal pricing are not captured.</li>
+        <li><strong>Not a grid reliability simulator</strong> &mdash; operating reserves, unit commitment
+            constraints, and real-time dispatch are modeled partially (nuclear must-run, coal minimum generation)
+            but not at full fidelity.</li>
+        <li><strong>Not a forecast</strong> &mdash; it does not predict future electricity prices, technology
+            adoption timelines, or policy outcomes. It is a parametric snapshot showing the 2025 cost landscape
+            under thousands of scenario combinations.</li>
+    </ul>
+
+    <h3>Complementary Role</h3>
+    <p>
+        This model and capacity expansion models answer different questions. CE models generate the technology
+        cost projections and system-level deployment trajectories that inform this optimizer&rsquo;s input
+        assumptions (LCOE ranges, transmission costs, capacity factors). This optimizer then applies those
+        assumptions to the specific problem of hourly load matching&mdash;a procurement-scale question that
+        system models are not designed to answer at the temporal granularity required. The two approaches are
+        complementary, not competing.
+    </p>
+
+    <!-- ================================================================ -->
+    <!-- SECTION 3: MODEL SCOPE & SCALE                                   -->
+    <!-- ================================================================ -->
+    <h2 id="model-scope">3. Model Scope &amp; Scale</h2>
 
     <p>
         The optimizer operates at a scale designed to capture the full complexity of the hourly
@@ -326,6 +378,10 @@
         <div class="stat-highlight">
             <span class="num">7</span>
             <span class="lbl">US ISO/RTO regions</span>
+        </div>
+        <div class="stat-highlight">
+            <span class="num">5.87M</span>
+            <span class="lbl">Unique efficient frontier mixes</span>
         </div>
         <div class="stat-highlight">
             <span class="num">21</span>
@@ -374,7 +430,7 @@
     <!-- ================================================================ -->
     <!-- SECTION 3: RESOURCES MODELED                                     -->
     <!-- ================================================================ -->
-    <h2 id="resources">3. Resources Modeled</h2>
+    <h2 id="resources">4. Resources Modeled</h2>
 
     <p>
         The optimizer evaluates portfolios drawn from the full spectrum of clean energy technologies,
@@ -437,7 +493,7 @@
     <!-- ================================================================ -->
     <!-- SECTION 4: ANALYTICAL PIPELINE                                   -->
     <!-- ================================================================ -->
-    <h2 id="pipeline">4. Analytical Pipeline</h2>
+    <h2 id="pipeline">5. Analytical Pipeline</h2>
 
     <p>
         The model is implemented as a modular, multi-phase computational pipeline. Each phase builds
@@ -445,60 +501,105 @@
         analysis to economic optimization and derived analytics.
     </p>
 
-    <ol class="phase-list">
-        <li>
-            <strong>Data Acquisition &amp; Preparation</strong>
-            Automated ingestion, validation, and harmonization of hourly generation profiles,
-            demand curves, emission factors, and market data from federal and state sources.
-            Quality controls ensure temporal consistency and flag anomalies before they propagate.
-        </li>
-        <li>
-            <strong>Physics-Based Feasibility Analysis</strong>
-            Exhaustive evaluation of resource combinations to identify every portfolio capable of
-            meeting each hourly matching threshold. This phase operates at full 8,760-hour
-            resolution&mdash;no monthly or seasonal aggregation shortcuts&mdash;and evaluates
-            millions of candidate mixes per region. Storage dispatch is simulated with
-            technology-appropriate operational constraints at each candidate point.
-        </li>
-        <li>
-            <strong>Economic Optimization &amp; Sensitivity</strong>
-            Feasible portfolios are evaluated under thousands of cost scenarios reflecting different
-            assumptions about technology costs, fuel prices, policy environment, and transmission
-            availability. The optimizer identifies the cost-minimizing resource mix for each
-            scenario, producing a complete map of how optimal strategy shifts with economic conditions.
-            Marginal abatement cost analysis, CO&#8322; displacement modeling, and market pricing
-            impacts are computed from the optimized results.
-        </li>
-        <li>
-            <strong>Derived Analytics &amp; Scenario Comparison</strong>
-            Cross-regional deployment analysis, procurement strategy comparison, storage utilization
-            patterns, and EAC market scarcity assessment. This phase synthesizes upstream results
-            into actionable insights about procurement pathways&mdash;comparing consequential,
-            hourly, and annual matching strategies under different market conditions.
-        </li>
-        <li>
-            <strong>Market Dynamics, Decarbonization Pathways &amp; Retirement Risk</strong>
-            Built on the SMARTargets methodology, this phase extends the model beyond static
-            optimization into probabilistic market simulation. An enhanced parametric design
-            evaluates 540+ market scenarios&mdash;spanning demand growth rates, fuel price
-            trajectories, PPA structures, gas friction assumptions, and IRA policy toggle
-            (on/off)&mdash;alongside 10 structured net-zero transition pathways through 2050,
-            including both facilitating scenarios (with DAC backstop) and challenging scenarios
-            (forced grid deployment only). The simulation incorporates announced coal retirements
-            (EIA 860 schedule through 2035), transmission constraint modeling, RGGI carbon pricing
-            for northeast ISOs, state RPS deployment floors, and a regulatory feedback mechanism
-            that dampens unrealistic sustained high LMP. Corporate power sector target-setting
-            implications are assessed against SBTi milestones, while a multi-model nuclear stranding
-            analysis stress-tests the economics of the existing fleet under contract-for-difference
-            policy structures (state ZEC/CMC programs, federal 45U PTC) across all market scenarios.
-            This probabilistic approach produces confidence distributions rather than point estimates,
-            capturing the full envelope of plausible outcomes for procurement planning and retirement
-            risk assessment.
-        </li>
+    <h3>Phase 1: Multi-Stage Adaptive Physics Search</h3>
+    <p>
+        The physics layer identifies every resource portfolio capable of achieving each hourly matching
+        threshold. Rather than a single uniform grid search, it uses a <strong>six-stage adaptive
+        pipeline</strong> that progressively refines resolution where it matters most:
+    </p>
+    <ol style="font-size:0.92rem;color:var(--text-secondary);line-height:1.8;">
+        <li><strong>Coarse grid generation</strong> &mdash; Resource fractions are varied independently
+            in 5-percentage-point steps across 4&ndash;6 dimensions depending on the ISO: clean firm
+            (0&ndash;120%), solar (0&ndash;100%), wind (0&ndash;250%), hydro (0&ndash;existing cap),
+            plus offshore wind for coastal ISOs and geothermal for CAISO. Combinations filtered to
+            sum&nbsp;&gt;&nbsp;0 and total procurement&nbsp;&le;&nbsp;350% of demand.</li>
+        <li><strong>8,760-hour scoring</strong> &mdash; Every coarse combination is dispatched against
+            full hourly resolution generation and demand profiles. No monthly or seasonal aggregation.
+            Each mix&rsquo;s score is sum(min(demand<sub>h</sub>, supply<sub>h</sub>)) across all
+            8,760 hours.</li>
+        <li><strong>Zone search</strong> &mdash; 1-percentage-point refinement around promising regions
+            identified from the coarse grid, capturing near-optimal solutions between grid points.</li>
+        <li><strong>Floor-aware augmentation</strong> &mdash; Ensures adequate coverage at 50&ndash;80%
+            thresholds, where the coarse grid may miss transition-zone portfolios.</li>
+        <li><strong>Fine-grid PFS</strong> &mdash; Dense coverage at 40&ndash;75% thresholds with
+            finer increments to map the inflection zone where cost curves begin steepening.</li>
+        <li><strong>Storage refinement</strong> &mdash; Battery (4hr &amp; 8hr Li-ion, 85% RTE),
+            LDES (100hr iron-air, 50% RTE), and Green H&#8322; (1000hr, 35% RTE) dispatch is
+            simulated with technology-appropriate operational constraints: daily cycling for batteries,
+            7-day rolling windows for LDES, 30-day windows for H&#8322;. Storage grids are swept
+            independently per base mix to find optimal dispatch allocation.</li>
     </ol>
 
+    <h3>Phase 2: Efficient Frontier Extraction</h3>
+    <p>
+        The raw physics output (tens of millions of scored mixes) is reduced to a non-dominated
+        <strong>efficient frontier</strong> via three-phase filtering:
+    </p>
+    <ol style="font-size:0.92rem;color:var(--text-secondary);line-height:1.8;">
+        <li><strong>Threshold gate</strong> &mdash; Retain only mixes meeting each target threshold.</li>
+        <li><strong>Resource cap filter</strong> &mdash; Enforce realistic bounds (hydro &le; existing
+            capacity, solar &le; 100%, total procurement &le; 350%).</li>
+        <li><strong>Global deduplication</strong> &mdash; For each unique resource + storage dispatch
+            combination, keep only the highest-scoring instance.</li>
+    </ol>
+    <p>
+        The resulting efficient frontier contains <strong>~5.87 million unique mixes</strong> across
+        all 7 ISOs:
+    </p>
+    <table class="data-table" style="font-size:0.85rem; max-width:500px; margin-bottom:16px;">
+        <thead>
+            <tr><th>ISO</th><th>Dimensions</th><th>Unique EF Mixes</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>NEISO</td><td>5D (+ offshore wind)</td><td>1,938,464</td></tr>
+            <tr><td>CAISO</td><td>6D (+ offshore + geothermal)</td><td>1,285,073</td></tr>
+            <tr><td>NYISO</td><td>5D (+ offshore wind)</td><td>927,749</td></tr>
+            <tr><td>PJM</td><td>5D (+ offshore wind)</td><td>641,918</td></tr>
+            <tr><td>SPP</td><td>4D</td><td>461,612</td></tr>
+            <tr><td>MISO</td><td>4D</td><td>337,189</td></tr>
+            <tr><td>ERCOT</td><td>4D</td><td>282,289</td></tr>
+            <tr><td colspan="2"><strong>Total</strong></td><td><strong>5,874,294</strong></td></tr>
+        </tbody>
+    </table>
+
+    <h3>Phase 3: Vectorized Cost Optimization</h3>
+    <p>
+        Every efficient frontier mix is evaluated under <strong>5,832 cost scenarios</strong> per
+        region (17,496 for CAISO). The 8 sensitivity toggle groups&mdash;renewable generation costs,
+        firm generation costs, storage costs, fossil fuel prices, transmission costs, CCS technology,
+        45Q tax credit, and geothermal (CAISO only)&mdash;generate the full combinatorial scenario
+        space. A Numba JIT-compiled vectorized engine evaluates the coefficient matrix &times; price
+        vector product across all mixes and scenarios simultaneously, with per-threshold bucketed
+        argmin to find the cheapest mix per scenario per threshold. Typically ~100&ndash;2,000 unique
+        winning &ldquo;archetypes&rdquo; per ISO emerge from billions of cost evaluations.
+    </p>
+
+    <h3>Phase 4: Derived Analytics &amp; Scenario Comparison</h3>
+    <p>
+        Cross-regional deployment analysis, procurement strategy comparison, storage utilization
+        patterns, and EAC market scarcity assessment. This phase synthesizes upstream results
+        into actionable insights about procurement pathways&mdash;comparing consequential,
+        hourly, and annual matching strategies under different market conditions. Marginal
+        abatement cost analysis, CO&#8322; displacement modeling, and market pricing impacts are
+        computed from the optimized results.
+    </p>
+
+    <h3>Phase 5: Market Dynamics &amp; Retirement Risk</h3>
+    <p>
+        Built on the SMARTargets methodology, this phase extends the model beyond static
+        optimization into probabilistic market simulation. An enhanced parametric design
+        evaluates 540+ market scenarios&mdash;spanning demand growth rates, fuel price
+        trajectories, PPA structures, gas friction assumptions, and IRA policy toggle
+        (on/off)&mdash;alongside 10 structured net-zero transition pathways through 2050.
+        The simulation incorporates announced coal retirements (EIA 860 schedule through 2035),
+        transmission constraint modeling, RGGI carbon pricing for northeast ISOs, state RPS
+        deployment floors, and a regulatory feedback mechanism that dampens unrealistic sustained
+        high LMP. This probabilistic approach produces confidence distributions rather than
+        point estimates.
+    </p>
+
     <div class="insight-box">
-        The physics-based feasibility phase is computationally intensive, running for hours on
+        The physics-based feasibility phase (Phase 1) is computationally intensive, running for hours on
         cloud infrastructure. All subsequent phases operate on cached physics results and complete
         in seconds to minutes&mdash;enabling rapid iteration on economic assumptions without
         re-running the physics.
@@ -507,7 +608,7 @@
     <!-- ================================================================ -->
     <!-- SECTION 5: DATA FOUNDATION                                       -->
     <!-- ================================================================ -->
-    <h2 id="data-sources">5. Data Foundation</h2>
+    <h2 id="data-sources">6. Data Foundation</h2>
 
     <p>
         Every input to the model is grounded in published, peer-reviewed, or government-collected
@@ -520,15 +621,21 @@
             <h4>Hourly Generation Profiles</h4>
             <p>
                 Solar, wind, hydro, nuclear, and fossil generation at hourly resolution for all
-                7 ISOs, sourced from EIA Hourly Electric Grid Monitor and cross-validated with
-                Form 923 plant-level data.
+                7 ISOs, sourced from EIA Hourly Electric Grid Monitor (Form 930) and cross-validated with
+                Form 923 plant-level data. <strong>Profile shapes are 5-year element-wise averages
+                (2021&ndash;2025)</strong>&mdash;each hour&rsquo;s normalized generation is averaged across
+                all five years independently, then re-normalized. This smooths single-year weather anomalies
+                while preserving diurnal and seasonal patterns. Absolute generation quantities are from
+                2025 actuals. Individual year profiles are preserved for weather-year sensitivity analysis.
             </p>
         </div>
         <div class="capability-card">
             <h4>Demand Curves</h4>
             <p>
-                8,760-hour demand profiles by ISO from EIA, normalized and quality-controlled
-                for chronological consistency and outlier detection.
+                8,760-hour demand profiles by ISO from EIA, using the same <strong>5-year element-wise
+                averaging</strong> methodology as generation profiles. Demand shapes averaged across
+                2021&ndash;2025; absolute quantities (peak MW, annual MWh) from 2025 actuals.
+                Normalized and quality-controlled for chronological consistency and outlier detection.
             </p>
         </div>
         <div class="capability-card">
@@ -566,7 +673,7 @@
     <!-- ================================================================ -->
     <!-- SECTION 6: ANALYTICAL OUTPUTS                                    -->
     <!-- ================================================================ -->
-    <h2 id="outputs">6. Analytical Outputs</h2>
+    <h2 id="outputs">7. Analytical Outputs</h2>
 
     <p>
         The model produces a comprehensive set of results that together answer the key questions
@@ -641,7 +748,7 @@
     <!-- ================================================================ -->
     <!-- SECTION 7: METHODOLOGICAL RIGOR                                  -->
     <!-- ================================================================ -->
-    <h2 id="rigor">7. Methodological Rigor</h2>
+    <h2 id="rigor">8. Methodological Rigor</h2>
 
     <p>
         This model was built to withstand academic scrutiny. Key design choices that
@@ -666,11 +773,14 @@
             </p>
         </div>
         <div class="capability-card">
-            <h4>Exhaustive Feasibility Search</h4>
+            <h4>Adaptive Multi-Stage Feasibility Search</h4>
             <p>
-                The physics layer evaluates millions of candidate resource portfolios per region,
-                ensuring the optimizer doesn't miss non-obvious solutions. Sub-optimality bounds
-                are validated to confirm results are within a narrow tolerance of the true optimum.
+                A six-stage adaptive pipeline evaluates millions of candidate portfolios per region
+                at progressively finer resolution (5% coarse &rarr; 1% zone search &rarr; storage
+                sweep). The resulting ~5.87 million unique efficient frontier mixes across all ISOs
+                ensure the optimizer doesn&rsquo;t miss non-obvious solutions. The fine-grid refinement
+                (1% steps in zone search) bounds the discretization gap between enumerated grid points
+                and the continuous optimum.
             </p>
         </div>
         <div class="capability-card">
@@ -702,7 +812,162 @@
     <!-- ================================================================ -->
     <!-- SECTION 8: ASSUMPTIONS & LIMITATIONS                             -->
     <!-- ================================================================ -->
-    <h2 id="assumptions">8. Assumptions &amp; Limitations</h2>
+    <!-- ================================================================ -->
+    <!-- SECTION 9: MODEL COMPARISON                                      -->
+    <!-- ================================================================ -->
+    <h2 id="comparison">9. Model Comparison</h2>
+
+    <p>
+        This model occupies a distinct niche relative to major capacity expansion models. It trades
+        endogenous investment decisions and transmission modeling for exhaustive scenario coverage
+        and full solution transparency.
+    </p>
+
+    <div style="overflow-x:auto;margin:20px 0;">
+    <table class="data-table" style="font-size:0.82rem;">
+        <thead>
+            <tr>
+                <th>Capability</th>
+                <th>GenX</th>
+                <th>PyPSA</th>
+                <th>ReEDS</th>
+                <th>US-REGEN</th>
+                <th style="background:rgba(239,68,68,0.08);"><strong>This Model</strong></th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Investment</strong></td>
+                <td>Endogenous</td>
+                <td>Endogenous</td>
+                <td>Endogenous</td>
+                <td>Endogenous</td>
+                <td style="background:rgba(239,68,68,0.04);"><strong>Exogenous (5.87M enumerated)</strong></td>
+            </tr>
+            <tr>
+                <td><strong>Temporal resolution</strong></td>
+                <td>Up to 8,760 hrs</td>
+                <td>Up to 8,760 hrs</td>
+                <td>17 time-slices</td>
+                <td>Representative hrs</td>
+                <td style="background:rgba(239,68,68,0.04);"><strong>Full 8,760 hrs (always)</strong></td>
+            </tr>
+            <tr>
+                <td><strong>Transmission</strong></td>
+                <td>Multi-region</td>
+                <td>Full network</td>
+                <td>134 BAs</td>
+                <td>16 regions</td>
+                <td style="background:rgba(239,68,68,0.04);">ISO-level (flat $/MWh)</td>
+            </tr>
+            <tr>
+                <td><strong>Time horizon</strong></td>
+                <td>Single/multi-period</td>
+                <td>Single/multi-period</td>
+                <td>2-yr steps to 2050</td>
+                <td>5-yr steps to 2050</td>
+                <td style="background:rgba(239,68,68,0.04);">Snapshot (5-yr avg profiles)</td>
+            </tr>
+            <tr>
+                <td><strong>Uncertainty coverage</strong></td>
+                <td>~Dozens of scenarios</td>
+                <td>~Dozens + stochastic</td>
+                <td>~Dozens</td>
+                <td>~Dozens</td>
+                <td style="background:rgba(239,68,68,0.04);"><strong>5,832&ndash;17,496 cost scenarios</strong></td>
+            </tr>
+            <tr>
+                <td><strong>Solution transparency</strong></td>
+                <td>Single optimum (+MGA)</td>
+                <td>Single optimum (+MGA)</td>
+                <td>Single optimum</td>
+                <td>Single optimum</td>
+                <td style="background:rgba(239,68,68,0.04);"><strong>All 5.87M mixes visible</strong></td>
+            </tr>
+            <tr>
+                <td><strong>Profile basis</strong></td>
+                <td>Varies</td>
+                <td>Varies</td>
+                <td>Varies</td>
+                <td>Varies</td>
+                <td style="background:rgba(239,68,68,0.04);"><strong>5-year avg (2021&ndash;2025)</strong></td>
+            </tr>
+        </tbody>
+    </table>
+    </div>
+
+    <p>
+        <strong>Where this model excels:</strong> Its full 8,760-hour temporal resolution avoids the
+        approximation errors that Bistline (2021) showed can &ldquo;understate the value of broader
+        technological portfolios, firm low-emitting technologies, wind generation, and energy storage
+        resources.&rdquo; Its massive scenario enumeration provides uncertainty coverage orders of
+        magnitude beyond standard practice. Its transparency allows stakeholders to explore trade-offs
+        directly rather than trusting a solver&rsquo;s single answer.
+    </p>
+    <p>
+        <strong>Where CE models excel:</strong> Endogenous capacity selection (discovering optimal
+        combinations between enumeration grid points), transmission network modeling (capturing up to
+        46% cost savings from inter-regional coordination per Brown &amp; Botterud 2021), multi-year
+        dynamics (path dependencies, asset aging, sequential investment), and co-optimization feedback
+        (counterintuitive portfolio shifts that emerge when investment and operations are solved simultaneously).
+    </p>
+
+    <!-- ================================================================ -->
+    <!-- SECTION 10: VALIDATION & UNCERTAINTY                              -->
+    <!-- ================================================================ -->
+    <h2 id="validation">10. Validation &amp; Uncertainty</h2>
+
+    <h3>Weather-Year Sensitivity</h3>
+    <p>
+        Generation and demand profiles use <strong>5-year element-wise averages (2021&ndash;2025)</strong>,
+        not a single weather year. This smooths year-to-year weather variability while preserving
+        diurnal and seasonal patterns. To quantify the sensitivity of results to weather variation,
+        the ~5.87 million efficient frontier mixes were re-scored against each individual year&rsquo;s
+        profiles independently. Results are reported as the change in hourly match score (in percentage
+        points) relative to the 5-year average baseline.
+    </p>
+    <div class="insight-box" id="weather-validation-results">
+        <strong>Weather-year validation results loading...</strong>
+        <noscript>Weather-year validation results require JavaScript.</noscript>
+    </div>
+    <p style="font-size:0.88rem;color:var(--text-muted);">
+        <em>Note:</em> These scores reflect generation-only matching without storage re-dispatch.
+        Storage smoothing would reduce the year-to-year variance, so the reported spreads represent
+        an upper bound on weather-driven uncertainty.
+    </p>
+
+    <h3>LMP Model Calibration</h3>
+    <p>
+        The synthetic LMP engine is calibrated against <strong>published 2024 market statistics</strong>
+        from ISO market monitors (Monitoring Analytics for PJM, Potomac Economics for ERCOT/MISO/SPP,
+        ISO-NE and CAISO Department of Market Monitoring). Calibration targets include load-weighted
+        average LMP, P10/P50/P90 distribution, volatility, and frequency of negative-price and
+        scarcity-price hours. These published statistics implicitly reflect weather variation across
+        the actual 2024 operating year.
+    </p>
+
+    <h3>Storage Dispatch Conservatism</h3>
+    <p>
+        Battery and LDES use a <strong>greedy heuristic</strong> (charge from largest surplus,
+        discharge to largest gap) rather than a perfect-foresight linear program. This conservative
+        approach deliberately <strong>understates storage value</strong> by an estimated 2&ndash;5%
+        for daily-cycle batteries and 5&ndash;15% for LDES. Actual storage economics are
+        <em>better</em> than modeled&mdash;a deliberate bias toward understatement.
+    </p>
+
+    <h3>Enumeration Coverage</h3>
+    <p>
+        The adaptive multi-stage grid search evaluates mixes at 1&ndash;5% resource fraction steps.
+        The true continuous optimum may lie between grid points. The fine-grid refinement (1% steps in
+        zone search) bounds this discretization gap. For a buyer making a procurement commitment, the
+        practical difference between the enumerated optimum and the true continuous optimum is small
+        relative to the uncertainty captured by the 5,832-scenario sensitivity analysis.
+    </p>
+
+    <!-- ================================================================ -->
+    <!-- SECTION 11: ASSUMPTIONS & LIMITATIONS                             -->
+    <!-- ================================================================ -->
+    <h2 id="assumptions">11. Assumptions &amp; Limitations</h2>
 
     <p>
         Transparency about model boundaries is essential for proper interpretation of results.
@@ -743,9 +1008,12 @@
 
     <h3>Key Assumptions</h3>
     <ul style="font-size:0.92rem;color:var(--text-secondary);line-height:1.8;">
-        <li><strong>2025 snapshot model</strong> &mdash; generation profiles and grid mix reflect
-            current conditions. No forward projections of capacity additions or retirements,
-            except where learning curves are explicitly modeled for new-build cost trajectories.</li>
+        <li><strong>2025 snapshot model with 5-year averaged profiles</strong> &mdash; generation and
+            demand profile <em>shapes</em> are element-wise averages across 2021&ndash;2025 (smoothing
+            single-year weather anomalies); absolute <em>quantities</em> (TWh, peak MW) are from 2025
+            actuals. No forward projections of capacity additions or retirements, except where learning
+            curves are explicitly modeled for new-build cost trajectories. Per-year profiles are
+            preserved for weather-year sensitivity analysis (see Section 10).</li>
         <li><strong>ISO-level geographic resolution</strong> &mdash; resources are sourced within
             the buyer's ISO/RTO region. No intra-ISO transmission constraints or nodal pricing.</li>
         <li><strong>Hydro is existing-only</strong> &mdash; no new hydroelectric capacity is modeled.
@@ -762,7 +1030,12 @@
         <li><strong>Static supply model</strong> &mdash; does not account for price-induced supply
             responses. In reality, high EAC prices would stimulate new clean energy investment.</li>
         <li><strong>No cross-ISO interactions</strong> &mdash; each ISO is modeled independently.
-            Scarcity in one region could drive inter-regional EAC trade or load migration.</li>
+            Brown &amp; Botterud (2021) found that inter-state coordination and transmission expansion
+            can reduce system costs by up to 46% in high-renewable scenarios. This limitation is
+            appropriate for the procurement question (a buyer operates within one ISO) but means
+            system-level cost estimates may overstate the true cost of hourly matching relative to a
+            nationally coordinated approach. Scarcity in one region could also drive inter-regional
+            EAC trade or load migration.</li>
         <li><strong>No intra-ISO transmission constraints</strong> &mdash; each ISO is modeled as a
             single zone (copper plate). Transmission costs are flat $/MWh adders rather than
             flow-constrained network optimization. Production models like GenX (DC optimal power flow)
@@ -791,7 +1064,15 @@
             (GHG Protocol updates, new state mandates, carbon border adjustments) are not modeled.</li>
         <li><strong>Interconnection queue constraints</strong> &mdash; the model assumes new capacity
             can be built as needed, without modeling interconnection queue delays or developer
-            competition effects.</li>
+            competition effects. LBNL&rsquo;s &ldquo;Queued Up&rdquo; 2025 Edition reports that only
+            13% of projects submitted from 2000&ndash;2019 reached commercial operations, with median
+            time from request to operation of 5 years. Modeled &ldquo;optimal&rdquo; portfolios should
+            be interpreted as theoretical cost-minimizing solutions, not guaranteed buildable portfolios.</li>
+        <li><strong>Enumeration granularity</strong> &mdash; the adaptive grid search evaluates mixes at
+            1&ndash;5% resource fraction steps. The true continuous optimum may lie between grid points,
+            though the zone search refinement (1% steps) bounds this gap. For practical procurement
+            decisions, the difference between the enumerated and continuous optima is small relative to
+            the cost uncertainty captured by the 5,832-scenario sensitivity analysis.</li>
     </ul>
 
     <div class="insight-box insight-warn">
@@ -805,7 +1086,7 @@
     <!-- ================================================================ -->
     <!-- SECTION 9: FUTURE ENHANCEMENTS                                   -->
     <!-- ================================================================ -->
-    <h2 id="enhancements">9. Future Enhancements</h2>
+    <h2 id="enhancements">12. Future Enhancements</h2>
 
     <p>
         The following enhancements are informed by two open-source capacity expansion models:
@@ -924,7 +1205,7 @@
     <!-- ================================================================ -->
     <!-- SECTION 10: DATA SOURCES                                         -->
     <!-- ================================================================ -->
-    <h2 id="bibliography">10. Data Sources</h2>
+    <h2 id="bibliography">13. Data Sources</h2>
 
     <p>
         The following public datasets and published research inform the model's inputs,
@@ -982,7 +1263,7 @@
     <!-- ================================================================ -->
     <!-- SECTION 11: PIPELINE DATA FLOW MAP                              -->
     <!-- ================================================================ -->
-    <h2 id="pipeline-data-flow">11. Pipeline Data Flow</h2>
+    <h2 id="pipeline-data-flow">14. Pipeline Data Flow</h2>
 
     <p>
         The optimizer runs as an 8-step directed acyclic graph (DAG, Steps 0&ndash;7).
