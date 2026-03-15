@@ -233,7 +233,7 @@
 <script src="js/nav.js"></script>
 
 <!-- HEADER / BANNER -->
-<header class="header" id="pageHeader">
+<header class="header" id="pageHeader" data-header-variant="default">
     <h1>The 8,760 Problem</h1>
     <div class="subtitle">
         The transition from passive consumer of electrons to active participant in the grid&rsquo;s metabolic
@@ -241,6 +241,50 @@
     </div>
     <div class="header-accent"></div>
 </header>
+
+<!-- VARIANT SELECTOR (for design testing — remove before production) -->
+<div id="variantSelector" style="
+    position: sticky; top: 56px; z-index: 999;
+    background: #fff; border-bottom: 1px solid #E5E7EB;
+    padding: 12px 24px; display: flex; align-items: center; gap: 10px;
+    flex-wrap: wrap; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    font-family: var(--font-body, 'DM Sans', sans-serif); font-size: 0.85rem;
+">
+    <span style="font-weight: 600; color: #1A2744; margin-right: 4px;">Banner Style:</span>
+    <button class="variant-btn active" data-variant="default">1. Midnight Grid</button>
+    <button class="variant-btn" data-variant="dawn">2. Dawn Horizon</button>
+    <button class="variant-btn" data-variant="living">3. Living Grid</button>
+    <button class="variant-btn" data-variant="frosted">4. Frosted Circuit</button>
+    <button class="variant-btn" data-variant="voltage">5. Voltage Gradient</button>
+    <button class="variant-btn" data-variant="pulse">6. Pulse Monitor</button>
+    <button class="variant-btn" data-variant="ocean">7. Deep Ocean</button>
+    <button class="variant-btn" data-variant="blueprint">8. Blueprint</button>
+</div>
+<style>
+.variant-btn {
+    padding: 6px 14px; border: 1px solid #D1D5DB; border-radius: 6px;
+    background: #F9FAFB; cursor: pointer; font-size: 0.82rem; font-weight: 500;
+    color: #374151; transition: all 0.2s; font-family: inherit;
+}
+.variant-btn:hover { background: #EEF2FF; border-color: #818CF8; color: #4338CA; }
+.variant-btn.active { background: #1A2744; color: #fff; border-color: #1A2744; }
+</style>
+<script>
+(function() {
+    var btns = document.querySelectorAll('.variant-btn');
+    btns.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            btns.forEach(function(b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            if (window._switchHeaderVariant) {
+                window._switchHeaderVariant(btn.getAttribute('data-variant'));
+                // Scroll to top to see the header
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+    });
+})();
+</script>
 
 <!-- ========== SCROLLYTELL CONTENT ========== -->
 <div class="content-wrap">
