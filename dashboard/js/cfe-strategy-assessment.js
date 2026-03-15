@@ -33,8 +33,8 @@ const TOTAL_DEMAND = Object.values(GRID_DEMANDS).reduce((a, b) => a + b, 0);
 
 // Cluster definitions
 const CLUSTERS = [
-    { name: 'Consequential Netting', strategies: ['1A', '1B'], color: '#6366F1', desc: 'Cross-regional 100% new-build deployment via queue-ordered procurement. Cheapest per-MWh with full additionality, but capacity is deployed cross-regionally — not necessarily in the buyer\'s ISO.' },
-    { name: 'Hourly New-Build', strategies: ['2A'], color: '#F59E0B', desc: 'Same-ISO hourly matching using 100% new-build resources (EF-templated mix). High additionality with local grid transformation, but higher cost due to hourly matching constraint and all-new capacity.' },
+    { name: 'Consequential Netting', strategies: ['1A', '1B'], color: '#6366F1', desc: 'Cross-regional new-build deployment via queue-ordered procurement. Cheapest per-MWh, but deploys mostly mature VRE (solar/wind). New firm clean (nuclear, CCS, LDES) only appears at extreme thresholds (95%+) — minimal contribution to learning curves for immature technologies.' },
+    { name: 'Hourly New-Build', strategies: ['2A'], color: '#F59E0B', desc: 'Same-ISO hourly matching using 100% new-build resources. The hourly constraint forces early deployment of new firm clean (10–38% of mix) and storage (battery + LDES, 10–33%) — the primary driver of learning curves for next-generation clean technologies.' },
     { name: 'Hourly Hybrid', strategies: ['2C'], color: '#0EA5E9', desc: 'Same-ISO hourly matching blending existing clean (SSS, merchant EAC, nuclear uprate) with new-build. Cost-effective but depends on nuclear staying online for cheapest firm supply.' }
 ];
 
@@ -118,12 +118,14 @@ function gradeClass(grade) {
 }
 
 function computeLearningScore(strategy) {
-    // All strategies except 2C deploy 100% new-build capacity
-    // Learning score reflects: additionality level × learning curve speed (Scenario A vs B)
+    // Learning curves are driven by new FIRM CLEAN deployment (nuclear, CCS, LDES, offshore wind)
+    // NOT by new-build VRE (solar/onshore wind are mature, already at NOAK pricing)
+    // Hourly matching forces firm clean + storage deployment from 50% CFE onward
+    // Consequential netting deploys mostly VRE; firm clean only at extreme thresholds (95%+)
     const scores = {
-        '1A': 7, '1B': 7, // 100% new-build (queue-ordered), but Scenario A slower learning curves
-        '2A': 8, // 100% new-build (EF-templated) + Scenario B fast learning curves
-        '2C': 8  // mixed (~30% new-build) but Scenario B fast learning + high participation volumes
+        '1A': 3, '1B': 3, // mostly mature VRE, minimal firm clean until 95%+, Scenario A delayed learning
+        '2A': 9, // hourly constraint forces 10-38% firm clean + 10-33% storage, Scenario B fast learning
+        '2C': 8  // same hourly template but mixed sourcing dilutes new firm clean signal
     };
     return scores[strategy] || 3;
 }
@@ -244,13 +246,14 @@ function populateExecutiveSummary() {
     finding.innerHTML = `<p><strong>Key Finding:</strong> No single strategy dominates across all five criteria.
         Strategy <strong>${STRATEGY_SHORT[best.strategy]}</strong> (${STRATEGY_LABELS[best.strategy]}) achieves the best composite score
         at 90% CFE / 25% participation, balancing emission reductions, cost efficiency, and system-level effects.
-        Consequential netting strategies (1A/1B) deploy 100% new-build capacity cross-regionally via queue-ordered procurement,
-        offering the lowest per-MWh cost ($${fmt(lowestCost)}/MWh) but without same-ISO grid transformation.
+        Consequential netting strategies (1A/1B) deploy new-build capacity cross-regionally at the lowest per-MWh cost
+        ($${fmt(lowestCost)}/MWh), but primarily build mature VRE (solar/wind). New firm clean technologies
+        (nuclear, CCS, LDES) only enter the mix at extreme thresholds (95%+), contributing minimally to learning curves.
         Strategy 2A (hourly new-build only) costs
-        $${fmt(cachedAggregate('2A', 25, 90).avgCost)}/MWh and deploys 100% new capacity in the buyer's ISO — maximum local additionality
-        but at a premium driven by the hourly matching constraint on an all-new resource mix.
-        Strategy 2C (hourly hybrid) balances cost and grid impact by combining existing clean (SSS, EACs, nuclear uprate)
-        with new-build capacity, keeping costs lower than the all-new-build approach while still driving meaningful deployment.
+        $${fmt(cachedAggregate('2A', 25, 90).avgCost)}/MWh but the hourly matching constraint forces early deployment of
+        new firm clean (10–38% of mix) and storage (10–33%) — directly accelerating learning curves for immature technologies.
+        Strategy 2C (hourly hybrid) combines existing clean (SSS, EACs, nuclear uprate) with new-build,
+        following the same hourly template as 2A but with mixed sourcing that partially dilutes the new firm clean signal.
         The optimal strategy is regime-dependent:
         low ambition favors 1A for cost; high ambition with mainstream participation favors 2C for balanced outcomes.</p>`;
 }
@@ -733,11 +736,12 @@ function buildRegimeMap() {
     // Regime insight
     document.getElementById('regimeInsight').innerHTML = `<p><strong>Regime Insights:</strong>
         At low ambition (50–70%), cost-efficient strategies like consequential netting dominate because the
-        CFE threshold is achievable with minimal new capacity. At medium ambition (75–90%), the value of
-        grid-transformative strategies increases — hourly hybrid (2C) balances cost with meaningful deployment.
-        At high ambition (95%+), strategies must deploy significant clean firm and storage, making the
-        learning curve criterion decisive. Strategy 2C becomes increasingly competitive as its new-build
-        component drives technology cost reduction at scale.
+        CFE threshold is achievable with mostly VRE. At medium ambition (75–90%), the value of
+        grid-transformative strategies increases — hourly strategies (2A, 2C) force deployment of new firm clean
+        (nuclear, CCS) and storage (LDES) that consequential netting avoids until extreme thresholds.
+        At high ambition (95%+), strategies must deploy significant firm clean and storage, making the
+        learning curve criterion decisive. The hourly matching constraint is the key mechanism that forces
+        early firm clean deployment — driving cost reductions for immature technologies at scale.
         Participation level matters most at high ambition: early adopters (5–10%) cannot move the learning
         curve alone, but at 25%+ participation, collective procurement volumes begin to reach critical mass
         for technology cost breakthroughs.</p>`;
