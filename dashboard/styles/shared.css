@@ -389,8 +389,8 @@ p {
 }
 .header--light::before { background: none; }
 .header--light::after { background: none; }
-.header--light h1 { color: var(--navy-dark, #0F1A2E); }
-.header--light .subtitle { color: #475569; }
+.header--light h1 { color: #000000; }
+.header--light .subtitle { color: #1a1a1a; }
 
 /* --- Dark banner theme (inherits base .header styles — white text on navy) --- */
 .header--dark {}
