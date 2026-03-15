@@ -10,7 +10,7 @@
 //   stacked-curves-dark (dark)
 //   network-constellation-light (light)
 //   frequency-dense-navy (dark), frequency-dense-white (light) [composites]
-//   stacked-dense-navy (dark) [composite]
+//   stacked-dense-navy (dark), stacked-dense-white (light) [composites]
 //
 // Each banner: init(canvas, header) starts animation, destroy() stops it.
 // Uses requestAnimationFrame exclusively (no setInterval).
@@ -389,11 +389,12 @@
         var fillOp = opts.fillOpacity !== undefined ? opts.fillOpacity : 0.12;
         var strokeOp = opts.strokeOpacity !== undefined ? opts.strokeOpacity : 0.6;
         var glowOp = opts.glowOpacity !== undefined ? opts.glowOpacity : 0.15;
-        var demandOp = opts.demandOpacity !== undefined ? opts.demandOpacity : 0.5;
         var showParticles = opts.showParticles !== undefined ? opts.showParticles : true;
+        var gridColor = opts.gridColor || 'rgba(255,255,255,';
+        var particleColor = opts.particleColor || 'rgba(255,255,255,';
 
         // Subtle time-axis grid
-        ctx.strokeStyle = 'rgba(255,255,255,' + gridOp + ')';
+        ctx.strokeStyle = gridColor + gridOp + ')';
         ctx.lineWidth = 0.5;
         for (var gx = 0; gx < w; gx += w / 24) {
             ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, h); ctx.stroke();
@@ -432,16 +433,6 @@
             ctx.stroke();
         }
 
-        // Demand line (white, thin, on top)
-        ctx.beginPath();
-        for (var dx = 0; dx <= w; dx += 3) {
-            var dy = h * 0.28 + Math.sin(dx / w * Math.PI * 0.7 + t * 0.2) * h * 0.03;
-            if (dx === 0) ctx.moveTo(dx, dy); else ctx.lineTo(dx, dy);
-        }
-        ctx.strokeStyle = 'rgba(255,255,255,' + demandOp + ')';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-
         // Occasional floating particles
         if (showParticles) {
             var particleCount = 12;
@@ -451,7 +442,7 @@
                 var pOp = 0.15 + 0.1 * Math.sin(t * 0.5 + pi);
                 ctx.beginPath();
                 ctx.arc(ppx, ppy - t * 3 % 20, 1.5, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(255,255,255,' + pOp + ')';
+                ctx.fillStyle = particleColor + pOp + ')';
                 ctx.fill();
             }
         }
@@ -643,8 +634,10 @@
                 pathOpacity: 0.15, nodeOpacity: 0.3, ringOpacity: 0.35,
                 signalGlowOpacity: 0.12, signalCoreOpacity: 0.5
             });
-            // Top layer: frequency bars
-            drawFrequency(st.ctx, st.w, st.h, st.freq, t, {});
+            // Top layer: frequency bars (slowed to stacked-curve pace)
+            drawFrequency(st.ctx, st.w, st.h, st.freq, t, {
+                timeScale: 0.35
+            });
         }
     });
 
@@ -688,6 +681,30 @@
             });
             // Top layer: stacked curves
             drawStackedCurves(st.ctx, st.w, st.h, st.stacked, t, {});
+        }
+    });
+
+    // ---- 11. Stacked Curves + Dense Circuit (light, white bg) ----
+    registerBanner('stacked-dense-white', 'light', {
+        create: function(env) {
+            var cs = createCircuitState(env, {});
+            var ss = createStackedState(env);
+            return { ctx: env.ctx, w: env.w, h: env.h, circuit: cs, stacked: ss };
+        },
+        draw: function(st, ts) {
+            var t = ts / 1000;
+            st.ctx.clearRect(0, 0, st.w, st.h);
+            // Base layer: circuit (subdued for light bg)
+            drawCircuit(st.ctx, st.w, st.h, st.circuit, t, {
+                pathOpacity: 0.08, nodeOpacity: 0.2, ringOpacity: 0.25,
+                signalGlowOpacity: 0.08, signalCoreOpacity: 0.4
+            });
+            // Top layer: stacked curves (light-adjusted)
+            drawStackedCurves(st.ctx, st.w, st.h, st.stacked, t, {
+                gridOpacity: 0.04, fillOpacity: 0.18, strokeOpacity: 0.5,
+                glowOpacity: 0.12, showParticles: false,
+                gridColor: 'rgba(30,41,59,'
+            });
         }
     });
 
