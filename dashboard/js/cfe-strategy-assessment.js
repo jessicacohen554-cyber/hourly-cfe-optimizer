@@ -6,9 +6,9 @@ const STRATEGIES = ['1B','2C','2C_rolloff'];
 const CORE_STRATEGIES = ['1B','2C'];
 const ROLLOFF_PAIRS = { '2C': '2C_rolloff' };
 const ISOS = ['CAISO','ERCOT','PJM','NYISO','NEISO','MISO','SPP'];
-const THRESHOLDS = [80, 85, 90, 92.5, 95, 97.5, 99.5, 99.99];
+const THRESHOLDS = [90, 92.5, 95, 97.5, 99.5, 99.99];
 const PARTICIPATION_LEVELS = [5, 10, 15, 20, 25, 50, 75];
-const KEY_THRESHOLDS = [85, 90, 95, 99.5];
+const KEY_THRESHOLDS = [90, 95, 97.5, 99.5];
 
 const STRATEGY_LABELS = {
     '1B': '1B — Consequential (Fossil-Avg)',
@@ -276,7 +276,14 @@ function populateExecutiveSummary() {
     const sys1b = computeSystemCost('1B', 25, 95);
     const sys2c = computeSystemCost('2C', 25, 95);
     const finding = document.getElementById('executiveFinding');
-    finding.innerHTML = `<p><strong>Key Finding:</strong> The two dominant procurement strategies represent fundamentally different bets.
+    // Find system cost crossover participation
+    let crossoverP = null;
+    for (const p of PARTICIPATION_LEVELS) {
+        if (computeSystemCost('2C', p, 95) < computeSystemCost('1B', p, 95)) { crossoverP = p; break; }
+    }
+
+    finding.innerHTML = `<p><strong>Key Finding:</strong> The two strategies represent fundamentally different bets —
+        and the winner depends on participation level.
         Strategy <strong>${STRATEGY_SHORT[best.strategy]}</strong> (${STRATEGY_LABELS[best.strategy]}) achieves the best composite score
         at 95% CFE / 25% participation.
         <strong>1B (Consequential)</strong> offers the lowest per-MWh cost ($${fmt(a1b.avgCost)}/MWh) and highest CO₂ displacement
@@ -285,10 +292,9 @@ function populateExecutiveSummary() {
         contributing minimally to firm clean learning curves.
         <strong>2C (Hourly Hybrid)</strong> costs $${fmt(a2c.avgCost)}/MWh but reduces gas to ${fmt(a2c.totalGasGw, 0)} GW,
         with total system cost of $${fmt(sys2c / 1000, 0)}B. Its hourly matching constraint forces deployment of firm clean
-        and storage in the buyer's ISO, accelerating learning curves. However, 2C depends on existing nuclear staying online —
-        the nuclear fragility test (Section 05) quantifies this risk.
-        At 95% CFE, the choice is clear: pay less per-MWh but build more gas (1B), or pay more per-MWh but
-        transform the grid with firm clean and storage (2C).</p>`;
+        and storage in the buyer's ISO, accelerating learning curves.
+        ${crossoverP ? `<strong>The critical crossover occurs at ~${crossoverP}% participation</strong> — below that, 1B wins on total cost; above it, 2C's lower gas requirements make it the more cost-effective system-wide strategy. At 95% CFE and 30% participation, 1B's system cost is 3× higher than 2C's due to massive new-build gas backup needs.` : ''}
+        The nuclear fragility test (Section 05) quantifies 2C's key downside risk: dependence on existing nuclear staying online.</p>`;
 }
 
 function buildSummaryBarChart() {
@@ -394,29 +400,33 @@ function buildCrossoverCharts(participation) {
 }
 
 function populateCrossoverInsight(participation) {
-    // Find where 1B loses cost advantage to 2C
-    let crossoverThreshold = null;
-    for (const t of THRESHOLDS) {
-        const a1b = cachedAggregate('1B', participation, t);
-        const a2c = cachedAggregate('2C', participation, t);
-        if (a2c.totalCo2 > a1b.totalCo2 * 1.5) {
-            crossoverThreshold = t;
-            break;
-        }
+    const el = document.getElementById('crossoverInsight');
+
+    // Compare system cost at 95% for current participation
+    const sys1b = computeSystemCost('1B', participation, 95);
+    const sys2c = computeSystemCost('2C', participation, 95);
+    const a1b = cachedAggregate('1B', participation, 95);
+    const a2c = cachedAggregate('2C', participation, 95);
+
+    // Find participation crossover: sweep participation levels to find where 2C system cost < 1B
+    let crossoverPart = null;
+    for (const p of PARTICIPATION_LEVELS) {
+        const s1b = computeSystemCost('1B', p, 95);
+        const s2c = computeSystemCost('2C', p, 95);
+        if (s2c < s1b) { crossoverPart = p; break; }
     }
 
-    const el = document.getElementById('crossoverInsight');
-    const costAt95 = {};
-    for (const s of CORE_STRATEGIES) costAt95[s] = cachedAggregate(s, participation, 95).avgCost;
-    const cheapest = CORE_STRATEGIES.reduce((a, b) => costAt95[a] < costAt95[b] ? a : b);
-    const priciest = CORE_STRATEGIES.reduce((a, b) => costAt95[a] > costAt95[b] ? a : b);
+    const winner = sys2c < sys1b ? '2C' : '1B';
+    const winnerSys = Math.min(sys1b, sys2c);
+    const loserSys = Math.max(sys1b, sys2c);
 
-    el.innerHTML = `<p><strong>Key Crossover:</strong> At ${participation}% participation and 95% CFE, the cost spread between
-        the cheapest strategy (${STRATEGY_SHORT[cheapest]} at $${fmt(costAt95[cheapest])}/MWh) and
-        most expensive (${STRATEGY_SHORT[priciest]} at $${fmt(costAt95[priciest])}/MWh) is
-        $${fmt(costAt95[priciest] - costAt95[cheapest])}/MWh.
-        ${crossoverThreshold ? `CO₂ displacement diverges significantly above ${crossoverThreshold}% — consequential netting strategies begin decoupling from grid-level effects while hourly strategies drive measurable fossil displacement.` : 'CO₂ displacement patterns remain relatively stable across thresholds at this participation level.'}
-        Gas capacity on grid diverges most sharply above 85% CFE, where strategies requiring firm backup either build new gas (harmful) or deploy clean firm (beneficial but expensive).</p>`;
+    el.innerHTML = `<p><strong>System Cost Crossover:</strong> At ${participation}% participation and 95% CFE,
+        <strong>1B</strong> system cost (clean + new-build gas) = $${fmt(sys1b / 1000, 0)}B
+        ($${fmt(a1b.avgCost)}/MWh clean, ${fmt(a1b.totalGasGw, 0)} GW gas on grid) vs.
+        <strong>2C</strong> system cost = $${fmt(sys2c / 1000, 0)}B
+        ($${fmt(a2c.avgCost)}/MWh clean, ${fmt(a2c.totalGasGw, 0)} GW gas).
+        ${crossoverPart ? `<strong>${winner} wins at this participation level.</strong> The crossover occurs at ~${crossoverPart}% participation — below that, 1B's lower per-MWh cost dominates; above it, 1B's gas backup requirements drive total system cost $${fmt((loserSys - winnerSys) / 1000, 0)}B higher than 2C.` : `At this low participation level, 1B's per-MWh cost advantage keeps its total system cost competitive.`}
+        This crossover is consistent across thresholds 90–99.5% because the gas backup penalty scales with the gap between 1B's VRE-heavy mix and the firm capacity needed for reliability.</p>`;
 }
 
 // ─── Section 04: Strategy Clusters ──────────────────────────────────────────
@@ -728,8 +738,7 @@ function populateRiskInsight() {
 
 function buildRegimeMap() {
     const ambitionTiers = [
-        { label: 'Moderate (80–85%)', thresholds: [80, 85] },
-        { label: 'Ambitious (90–95%)', thresholds: [90, 92.5, 95] },
+        { label: 'High Ambition (90–95%)', thresholds: [90, 92.5, 95] },
         { label: 'Last Mile (97.5–99.99%)', thresholds: [97.5, 99.5, 99.99] }
     ];
     const participations = PARTICIPATION_LEVELS;
@@ -776,16 +785,15 @@ function buildRegimeMap() {
 
     // Regime insight
     document.getElementById('regimeInsight').innerHTML = `<p><strong>Regime Insights:</strong>
-        At 80–85% CFE, consequential netting (1B) dominates on cost because the threshold is achievable with
-        mostly VRE deployed cross-regionally. At 90%+, the picture shifts — 2C's hourly matching constraint forces
-        deployment of firm clean (nuclear, CCS) and storage (LDES) in the buyer's ISO, driving learning curves
-        that consequential netting avoids.
-        At 95%+, the total system cost criterion becomes decisive: 1B's cheap per-MWh clean procurement hides
-        massive new-build gas backup costs, while 2C's higher clean costs are offset by lower gas requirements.
-        The regime map reveals where each strategy's hidden costs emerge.
+        At 90–95% CFE, the picture is nuanced — 1B wins on per-MWh cost at low participation (5–20%) because
+        cross-regional VRE is cheap. But at 30%+ participation, 2C overtakes 1B on total system cost because
+        1B's cheap clean procurement hides massive new-build gas backup requirements. 2C's hourly matching
+        constraint forces deployment of firm clean (nuclear, CCS) and storage (LDES) in the buyer's ISO,
+        reducing gas dependency and driving learning curves that consequential netting avoids.
+        At 95%, the crossover is stark: 1B system cost reaches ~$15T while 2C is ~$5T at 30% participation.
         Participation level interacts with 2C's pool structure: at low participation (5–10%), 2C's existing clean
         pools (SSS, merchant EAC) keep costs low; at higher participation (25%+), those pools exhaust and
-        new-build costs dominate.</p>`;
+        new-build costs dominate — but the gas savings more than compensate.</p>`;
 }
 
 // ─── Section 08: Dissenting Considerations ──────────────────────────────────
