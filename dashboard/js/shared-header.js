@@ -5,149 +5,22 @@
 //   <script src="js/shared-header.js"></script>
 //
 // Then place a simple header element in your HTML:
-//   <div class="header" id="pageHeader">
+//   <header class="header" id="pageHeader" data-header-variant="default">
 //       <h1>Page Title</h1>
 //       <div class="subtitle">Page description</div>
 //       <div class="header-accent"></div>
-//   </div>
+//   </header>
 //
-// This script will automatically inject the SVG overlay into the header.
+// Variants: default | dawn | living | frosted | voltage | pulse | ocean | blueprint
+// Set via data-header-variant attribute. CSS class header--{variant} is auto-added.
 // ============================================================================
 
 (function() {
     'use strict';
 
-    // SVG waveform overlay with energy curve lines and heartbeat/EKG pulse
-    var SVG_OVERLAY = [
-        '<div class="header-svg-overlay">',
-        '<svg viewBox="0 0 1440 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">',
+    // ---- Shared SVG building blocks ----
 
-        // --- Gradient fills for area beneath energy curves ---
-        '<defs>',
-        '  <linearGradient id="hdr-blue-fade" x1="0" y1="0" x2="0" y2="1">',
-        '    <stop offset="0%" stop-color="rgba(14,165,233,0.18)"/>',
-        '    <stop offset="100%" stop-color="rgba(14,165,233,0)"/>',
-        '  </linearGradient>',
-        '  <linearGradient id="hdr-amber-fade" x1="0" y1="0" x2="0" y2="1">',
-        '    <stop offset="0%" stop-color="rgba(245,158,11,0.14)"/>',
-        '    <stop offset="100%" stop-color="rgba(245,158,11,0)"/>',
-        '  </linearGradient>',
-        '  <linearGradient id="hdr-green-fade" x1="0" y1="0" x2="0" y2="1">',
-        '    <stop offset="0%" stop-color="rgba(34,197,94,0.12)"/>',
-        '    <stop offset="100%" stop-color="rgba(34,197,94,0)"/>',
-        '  </linearGradient>',
-        '</defs>',
-
-        // --- Smooth energy curve lines (flowing sinusoidal waves) ---
-
-        // Wave 1: Wide gentle sine — represents baseload (hydro blue) with filled area
-        '<path d="M0,200 C120,180 240,160 360,170 C480,180 600,200 720,190 ',
-              'C840,180 960,160 1080,170 C1200,180 1320,200 1440,190 L1440,280 L0,280 Z" ',
-              'fill="url(#hdr-blue-fade)" opacity="0.35">',
-        '  <animate attributeName="d" dur="12s" repeatCount="indefinite" values="',
-            'M0,200 C120,180 240,160 360,170 C480,180 600,200 720,190 C840,180 960,160 1080,170 C1200,180 1320,200 1440,190 L1440,280 L0,280 Z;',
-            'M0,195 C120,175 240,165 360,175 C480,185 600,195 720,185 C840,175 960,165 1080,175 C1200,185 1320,195 1440,185 L1440,280 L0,280 Z;',
-            'M0,200 C120,180 240,160 360,170 C480,180 600,200 720,190 C840,180 960,160 1080,170 C1200,180 1320,200 1440,190 L1440,280 L0,280 Z',
-        '"/>',
-        '</path>',
-        '<path d="M0,200 C120,180 240,160 360,170 C480,180 600,200 720,190 ',
-              'C840,180 960,160 1080,170 C1200,180 1320,200 1440,190" ',
-              'fill="none" stroke="rgba(14,165,233,0.35)" stroke-width="1.8">',
-        '  <animate attributeName="d" dur="12s" repeatCount="indefinite" values="',
-            'M0,200 C120,180 240,160 360,170 C480,180 600,200 720,190 C840,180 960,160 1080,170 C1200,180 1320,200 1440,190;',
-            'M0,195 C120,175 240,165 360,175 C480,185 600,195 720,185 C840,175 960,165 1080,175 C1200,185 1320,195 1440,185;',
-            'M0,200 C120,180 240,160 360,170 C480,180 600,200 720,190 C840,180 960,160 1080,170 C1200,180 1320,200 1440,190',
-        '"/>',
-        '</path>',
-
-        // Wave 2: Solar generation curve — peaks mid-page (amber) with filled area
-        '<path d="M0,240 C180,230 300,180 450,140 C600,100 720,90 900,130 ',
-              'C1050,165 1200,210 1350,230 L1440,240 L1440,280 L0,280 Z" ',
-              'fill="url(#hdr-amber-fade)" opacity="0.30">',
-        '  <animate attributeName="d" dur="15s" repeatCount="indefinite" values="',
-            'M0,240 C180,230 300,180 450,140 C600,100 720,90 900,130 C1050,165 1200,210 1350,230 L1440,240 L1440,280 L0,280 Z;',
-            'M0,235 C180,225 300,175 450,145 C600,105 720,95 900,125 C1050,160 1200,205 1350,225 L1440,235 L1440,280 L0,280 Z;',
-            'M0,240 C180,230 300,180 450,140 C600,100 720,90 900,130 C1050,165 1200,210 1350,230 L1440,240 L1440,280 L0,280 Z',
-        '"/>',
-        '</path>',
-        '<path d="M0,240 C180,230 300,180 450,140 C600,100 720,90 900,130 ',
-              'C1050,165 1200,210 1350,230 L1440,240" ',
-              'fill="none" stroke="rgba(245,158,11,0.30)" stroke-width="1.5">',
-        '  <animate attributeName="d" dur="15s" repeatCount="indefinite" values="',
-            'M0,240 C180,230 300,180 450,140 C600,100 720,90 900,130 C1050,165 1200,210 1350,230 L1440,240;',
-            'M0,235 C180,225 300,175 450,145 C600,105 720,95 900,125 C1050,160 1200,205 1350,225 L1440,235;',
-            'M0,240 C180,230 300,180 450,140 C600,100 720,90 900,130 C1050,165 1200,210 1350,230 L1440,240',
-        '"/>',
-        '</path>',
-
-        // Wave 3: Wind variability — irregular undulation (green) with filled area
-        '<path d="M0,180 C80,165 160,190 280,160 C400,130 480,170 600,150 ',
-              'C720,130 840,160 960,140 C1080,120 1200,155 1320,145 L1440,160 L1440,280 L0,280 Z" ',
-              'fill="url(#hdr-green-fade)" opacity="0.25">',
-        '  <animate attributeName="d" dur="18s" repeatCount="indefinite" values="',
-            'M0,180 C80,165 160,190 280,160 C400,130 480,170 600,150 C720,130 840,160 960,140 C1080,120 1200,155 1320,145 L1440,160 L1440,280 L0,280 Z;',
-            'M0,175 C80,160 160,185 280,155 C400,135 480,165 600,155 C720,135 840,155 960,135 C1080,125 1200,150 1320,140 L1440,155 L1440,280 L0,280 Z;',
-            'M0,180 C80,165 160,190 280,160 C400,130 480,170 600,150 C720,130 840,160 960,140 C1080,120 1200,155 1320,145 L1440,160 L1440,280 L0,280 Z',
-        '"/>',
-        '</path>',
-        '<path d="M0,180 C80,165 160,190 280,160 C400,130 480,170 600,150 ',
-              'C720,130 840,160 960,140 C1080,120 1200,155 1320,145 L1440,160" ',
-              'fill="none" stroke="rgba(34,197,94,0.25)" stroke-width="1.2">',
-        '  <animate attributeName="d" dur="18s" repeatCount="indefinite" values="',
-            'M0,180 C80,165 160,190 280,160 C400,130 480,170 600,150 C720,130 840,160 960,140 C1080,120 1200,155 1320,145 L1440,160;',
-            'M0,175 C80,160 160,185 280,155 C400,135 480,165 600,155 C720,135 840,155 960,135 C1080,125 1200,150 1320,140 L1440,155;',
-            'M0,180 C80,165 160,190 280,160 C400,130 480,170 600,150 C720,130 840,160 960,140 C1080,120 1200,155 1320,145 L1440,160',
-        '"/>',
-        '</path>',
-
-        // Wave 4: Subtle demand baseline — smooth low-amplitude (white)
-        '<path d="M0,220 C240,215 480,225 720,218 C960,211 1200,222 1440,216" ',
-              'fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="2.0">',
-        '  <animate attributeName="d" dur="20s" repeatCount="indefinite" values="',
-            'M0,220 C240,215 480,225 720,218 C960,211 1200,222 1440,216;',
-            'M0,222 C240,217 480,222 720,215 C960,213 1200,220 1440,218;',
-            'M0,220 C240,215 480,225 720,218 C960,211 1200,222 1440,216',
-        '"/>',
-        '</path>',
-
-        // --- Heartbeat / EKG pulse line (center of banner) ---
-        // Sharp peaks represent energy dispatch events
-        '<path d="M0,140 L180,140 L200,140 L210,138 L218,142 ',
-              'L225,120 L232,165 L240,95 L248,170 L255,115 L262,145 L270,140 ',
-              'L350,140 L450,140 L460,138 L468,142 ',
-              'L475,118 L482,162 L490,90 L498,168 L505,112 L512,148 L520,140 ',
-              'L650,140 L750,140 L760,138 L768,142 ',
-              'L775,122 L782,160 L790,98 L798,165 L805,118 L812,146 L820,140 ',
-              'L950,140 L1050,140 L1060,138 L1068,142 ',
-              'L1075,120 L1082,164 L1090,92 L1098,170 L1105,114 L1112,148 L1120,140 ',
-              'L1250,140 L1350,140 L1360,138 L1368,142 ',
-              'L1375,124 L1382,158 L1390,100 L1398,166 L1405,120 L1412,144 L1420,140 ',
-              'L1440,140" ',
-              'fill="none" stroke="rgba(239,68,68,0.18)" stroke-width="1.5" ',
-              'stroke-linecap="round" stroke-linejoin="round">',
-        '  <animate attributeName="stroke-opacity" dur="3s" repeatCount="indefinite" ',
-        '    values="0.18;0.30;0.18" keyTimes="0;0.5;1"/>',
-        '</path>',
-
-        // Second heartbeat line — offset vertically, different phase (cyan)
-        '<path d="M-100,155 L80,155 L100,155 L108,153 L115,157 ',
-              'L122,135 L129,178 L137,105 L145,180 L152,130 L159,158 L167,155 ',
-              'L300,155 L400,155 L408,153 L415,157 ',
-              'L422,133 L429,175 L437,100 L445,178 L452,128 L459,160 L467,155 ',
-              'L600,155 L700,155 L708,153 L715,157 ',
-              'L722,138 L729,172 L737,108 L745,176 L752,132 L759,158 L767,155 ',
-              'L900,155 L1000,155 L1008,153 L1015,157 ',
-              'L1022,136 L1029,176 L1037,103 L1045,179 L1052,130 L1059,160 L1067,155 ',
-              'L1200,155 L1300,155 L1308,153 L1315,157 ',
-              'L1322,140 L1329,170 L1337,110 L1345,174 L1352,134 L1359,156 L1367,155 ',
-              'L1440,155" ',
-              'fill="none" stroke="rgba(56,189,248,0.14)" stroke-width="1.2" ',
-              'stroke-linecap="round" stroke-linejoin="round">',
-        '  <animate attributeName="stroke-opacity" dur="4s" repeatCount="indefinite" ',
-        '    values="0.14;0.24;0.14" keyTimes="0;0.5;1"/>',
-        '</path>',
-
-        // --- Subtle grid dots (small circles scattered) ---
+    var GRID_DOTS_DARK = [
         '<circle cx="200" cy="80" r="1.5" fill="rgba(255,255,255,0.12)"/>',
         '<circle cx="400" cy="60" r="1.8" fill="rgba(255,255,255,0.10)"/>',
         '<circle cx="600" cy="100" r="1.5" fill="rgba(255,255,255,0.11)"/>',
@@ -156,24 +29,572 @@
         '<circle cx="1200" cy="90" r="1.8" fill="rgba(255,255,255,0.10)"/>',
         '<circle cx="300" cy="250" r="1.5" fill="rgba(255,255,255,0.08)"/>',
         '<circle cx="700" cy="240" r="1.8" fill="rgba(255,255,255,0.10)"/>',
-        '<circle cx="1100" cy="260" r="1.5" fill="rgba(255,255,255,0.11)"/>',
-
-        // --- Horizontal faint grid lines (depth/texture) ---
-        '<line x1="0" y1="70" x2="1440" y2="70" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>',
-        '<line x1="0" y1="140" x2="1440" y2="140" stroke="rgba(255,255,255,0.05)" stroke-width="0.5"/>',
-        '<line x1="0" y1="210" x2="1440" y2="210" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>',
-
-        '</svg>',
-        '</div>'
+        '<circle cx="1100" cy="260" r="1.5" fill="rgba(255,255,255,0.11)"/>'
     ].join('\n');
 
+    var GRID_LINES_DARK = [
+        '<line x1="0" y1="70" x2="1440" y2="70" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>',
+        '<line x1="0" y1="140" x2="1440" y2="140" stroke="rgba(255,255,255,0.05)" stroke-width="0.5"/>',
+        '<line x1="0" y1="210" x2="1440" y2="210" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>'
+    ].join('\n');
+
+    // Standard heartbeat paths (reused across variants)
+    var HEARTBEAT_RED = [
+        '<path d="M0,140 L180,140 L200,140 L210,138 L218,142 ',
+        'L225,120 L232,165 L240,95 L248,170 L255,115 L262,145 L270,140 ',
+        'L350,140 L450,140 L460,138 L468,142 ',
+        'L475,118 L482,162 L490,90 L498,168 L505,112 L512,148 L520,140 ',
+        'L650,140 L750,140 L760,138 L768,142 ',
+        'L775,122 L782,160 L790,98 L798,165 L805,118 L812,146 L820,140 ',
+        'L950,140 L1050,140 L1060,138 L1068,142 ',
+        'L1075,120 L1082,164 L1090,92 L1098,170 L1105,114 L1112,148 L1120,140 ',
+        'L1250,140 L1350,140 L1360,138 L1368,142 ',
+        'L1375,124 L1382,158 L1390,100 L1398,166 L1405,120 L1412,144 L1420,140 ',
+        'L1440,140"'
+    ].join('');
+
+    var HEARTBEAT_CYAN = [
+        '<path d="M-100,155 L80,155 L100,155 L108,153 L115,157 ',
+        'L122,135 L129,178 L137,105 L145,180 L152,130 L159,158 L167,155 ',
+        'L300,155 L400,155 L408,153 L415,157 ',
+        'L422,133 L429,175 L437,100 L445,178 L452,128 L459,160 L467,155 ',
+        'L600,155 L700,155 L708,153 L715,157 ',
+        'L722,138 L729,172 L737,108 L745,176 L752,132 L759,158 L767,155 ',
+        'L900,155 L1000,155 L1008,153 L1015,157 ',
+        'L1022,136 L1029,176 L1037,103 L1045,179 L1052,130 L1059,160 L1067,155 ',
+        'L1200,155 L1300,155 L1308,153 L1315,157 ',
+        'L1322,140 L1329,170 L1337,110 L1345,174 L1352,134 L1359,156 L1367,155 ',
+        'L1440,155"'
+    ].join('');
+
+    // Shared wave path data
+    var WAVE_HYDRO = {
+        fill: 'M0,200 C120,180 240,160 360,170 C480,180 600,200 720,190 C840,180 960,160 1080,170 C1200,180 1320,200 1440,190 L1440,280 L0,280 Z',
+        fillAlt: 'M0,195 C120,175 240,165 360,175 C480,185 600,195 720,185 C840,175 960,165 1080,175 C1200,185 1320,195 1440,185 L1440,280 L0,280 Z',
+        stroke: 'M0,200 C120,180 240,160 360,170 C480,180 600,200 720,190 C840,180 960,160 1080,170 C1200,180 1320,200 1440,190',
+        strokeAlt: 'M0,195 C120,175 240,165 360,175 C480,185 600,195 720,185 C840,175 960,165 1080,175 C1200,185 1320,195 1440,185'
+    };
+    var WAVE_SOLAR = {
+        fill: 'M0,240 C180,230 300,180 450,140 C600,100 720,90 900,130 C1050,165 1200,210 1350,230 L1440,240 L1440,280 L0,280 Z',
+        fillAlt: 'M0,235 C180,225 300,175 450,145 C600,105 720,95 900,125 C1050,160 1200,205 1350,225 L1440,235 L1440,280 L0,280 Z',
+        stroke: 'M0,240 C180,230 300,180 450,140 C600,100 720,90 900,130 C1050,165 1200,210 1350,230 L1440,240',
+        strokeAlt: 'M0,235 C180,225 300,175 450,145 C600,105 720,95 900,125 C1050,160 1200,205 1350,225 L1440,235'
+    };
+    var WAVE_WIND = {
+        fill: 'M0,180 C80,165 160,190 280,160 C400,130 480,170 600,150 C720,130 840,160 960,140 C1080,120 1200,155 1320,145 L1440,160 L1440,280 L0,280 Z',
+        fillAlt: 'M0,175 C80,160 160,185 280,155 C400,135 480,165 600,155 C720,135 840,155 960,135 C1080,125 1200,150 1320,140 L1440,155 L1440,280 L0,280 Z',
+        stroke: 'M0,180 C80,165 160,190 280,160 C400,130 480,170 600,150 C720,130 840,160 960,140 C1080,120 1200,155 1320,145 L1440,160',
+        strokeAlt: 'M0,175 C80,160 160,185 280,155 C400,135 480,165 600,155 C720,135 840,155 960,135 C1080,125 1200,150 1320,140 L1440,155'
+    };
+    var WAVE_DEMAND = {
+        stroke: 'M0,220 C240,215 480,225 720,218 C960,211 1200,222 1440,216',
+        strokeAlt: 'M0,222 C240,217 480,222 720,215 C960,213 1200,220 1440,218'
+    };
+
+    // ---- Helper to build animated wave paths ----
+    function animWave(wave, fillGrad, fillOpacity, strokeColor, strokeWidth, dur) {
+        var parts = [];
+        if (fillGrad) {
+            parts.push(
+                '<path d="' + wave.fill + '" fill="url(#' + fillGrad + ')" opacity="' + fillOpacity + '">',
+                '  <animate attributeName="d" dur="' + dur + 's" repeatCount="indefinite" values="' +
+                    wave.fill + ';' + wave.fillAlt + ';' + wave.fill + '"/>',
+                '</path>'
+            );
+        }
+        var sPath = wave.stroke || wave.fill.replace(/ L1440,280 L0,280 Z/, '');
+        var sAlt = wave.strokeAlt || wave.fillAlt.replace(/ L1440,280 L0,280 Z/, '');
+        parts.push(
+            '<path d="' + sPath + '" fill="none" stroke="' + strokeColor + '" stroke-width="' + strokeWidth + '">',
+            '  <animate attributeName="d" dur="' + dur + 's" repeatCount="indefinite" values="' +
+                sPath + ';' + sAlt + ';' + sPath + '"/>',
+            '</path>'
+        );
+        return parts.join('\n');
+    }
+
+    function heartbeat(path, strokeColor, strokeWidth, dur, opLow, opHigh) {
+        return [
+            path,
+            ' fill="none" stroke="' + strokeColor + '" stroke-width="' + strokeWidth + '"',
+            ' stroke-linecap="round" stroke-linejoin="round">',
+            '  <animate attributeName="stroke-opacity" dur="' + dur + 's" repeatCount="indefinite"',
+            '    values="' + opLow + ';' + opHigh + ';' + opLow + '" keyTimes="0;0.5;1"/>',
+            '</path>'
+        ].join('');
+    }
+
+    // ---- SVG variant generators ----
+
+    var VARIANTS = {};
+
+    // ========== 1. DEFAULT (Midnight Grid) ==========
+    VARIANTS['default'] = function() {
+        return [
+            '<defs>',
+            '  <linearGradient id="hdr-blue-fade" x1="0" y1="0" x2="0" y2="1">',
+            '    <stop offset="0%" stop-color="rgba(14,165,233,0.18)"/>',
+            '    <stop offset="100%" stop-color="rgba(14,165,233,0)"/>',
+            '  </linearGradient>',
+            '  <linearGradient id="hdr-amber-fade" x1="0" y1="0" x2="0" y2="1">',
+            '    <stop offset="0%" stop-color="rgba(245,158,11,0.14)"/>',
+            '    <stop offset="100%" stop-color="rgba(245,158,11,0)"/>',
+            '  </linearGradient>',
+            '  <linearGradient id="hdr-green-fade" x1="0" y1="0" x2="0" y2="1">',
+            '    <stop offset="0%" stop-color="rgba(34,197,94,0.12)"/>',
+            '    <stop offset="100%" stop-color="rgba(34,197,94,0)"/>',
+            '  </linearGradient>',
+            '</defs>',
+            animWave(WAVE_HYDRO, 'hdr-blue-fade', '0.35', 'rgba(14,165,233,0.35)', '1.8', 12),
+            animWave(WAVE_SOLAR, 'hdr-amber-fade', '0.30', 'rgba(245,158,11,0.30)', '1.5', 15),
+            animWave(WAVE_WIND, 'hdr-green-fade', '0.25', 'rgba(34,197,94,0.25)', '1.2', 18),
+            // Demand baseline
+            '<path d="' + WAVE_DEMAND.stroke + '" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="2.0">',
+            '  <animate attributeName="d" dur="20s" repeatCount="indefinite" values="' +
+                WAVE_DEMAND.stroke + ';' + WAVE_DEMAND.strokeAlt + ';' + WAVE_DEMAND.stroke + '"/>',
+            '</path>',
+            heartbeat(HEARTBEAT_RED, 'rgba(239,68,68,0.18)', '1.5', 3, '0.18', '0.30'),
+            heartbeat(HEARTBEAT_CYAN, 'rgba(56,189,248,0.14)', '1.2', 4, '0.14', '0.24'),
+            GRID_DOTS_DARK,
+            GRID_LINES_DARK
+        ].join('\n');
+    };
+
+    // ========== 2. DAWN HORIZON ==========
+    VARIANTS['dawn'] = function() {
+        return [
+            '<defs>',
+            '  <linearGradient id="hdr-dawn-amber" x1="0" y1="0" x2="0" y2="1">',
+            '    <stop offset="0%" stop-color="rgba(251,146,60,0.22)"/>',
+            '    <stop offset="100%" stop-color="rgba(251,146,60,0)"/>',
+            '  </linearGradient>',
+            '  <linearGradient id="hdr-dawn-teal" x1="0" y1="0" x2="0" y2="1">',
+            '    <stop offset="0%" stop-color="rgba(20,184,166,0.14)"/>',
+            '    <stop offset="100%" stop-color="rgba(20,184,166,0)"/>',
+            '  </linearGradient>',
+            '  <linearGradient id="hdr-dawn-blue" x1="0" y1="0" x2="0" y2="1">',
+            '    <stop offset="0%" stop-color="rgba(96,165,250,0.12)"/>',
+            '    <stop offset="100%" stop-color="rgba(96,165,250,0)"/>',
+            '  </linearGradient>',
+            '</defs>',
+            // Solar curve — dominant, warm amber
+            animWave(WAVE_SOLAR, 'hdr-dawn-amber', '0.40', 'rgba(251,146,60,0.35)', '1.8', 15),
+            // Wind curve — teal tones
+            animWave(WAVE_WIND, 'hdr-dawn-teal', '0.25', 'rgba(20,184,166,0.22)', '1.3', 18),
+            // Hydro — soft blue
+            animWave(WAVE_HYDRO, 'hdr-dawn-blue', '0.20', 'rgba(96,165,250,0.20)', '1.2', 12),
+            // Demand — warm white
+            '<path d="' + WAVE_DEMAND.stroke + '" fill="none" stroke="rgba(255,237,213,0.15)" stroke-width="1.5">',
+            '  <animate attributeName="d" dur="20s" repeatCount="indefinite" values="' +
+                WAVE_DEMAND.stroke + ';' + WAVE_DEMAND.strokeAlt + ';' + WAVE_DEMAND.stroke + '"/>',
+            '</path>',
+            // Single amber heartbeat — sunrise pulse
+            heartbeat(HEARTBEAT_RED, 'rgba(251,146,60,0.20)', '1.5', 3, '0.20', '0.35'),
+            // Radial glow at bottom — sunrise effect (via circle)
+            '<circle cx="720" cy="270" r="300" fill="rgba(251,146,60,0.06)"/>',
+            GRID_DOTS_DARK,
+            GRID_LINES_DARK
+        ].join('\n');
+    };
+
+    // ========== 3. LIVING GRID (Organic/Biomorphic) ==========
+    VARIANTS['living'] = function() {
+        // More organic curves with thicker strokes and bioluminescent colors
+        var organicWave1 = {
+            fill: 'M0,190 C100,160 200,200 350,155 C500,110 600,170 750,140 C900,110 1050,165 1200,135 C1300,120 1380,155 1440,145 L1440,280 L0,280 Z',
+            fillAlt: 'M0,185 C100,155 200,195 350,160 C500,115 600,175 750,135 C900,115 1050,160 1200,140 C1300,125 1380,150 1440,140 L1440,280 L0,280 Z',
+            stroke: 'M0,190 C100,160 200,200 350,155 C500,110 600,170 750,140 C900,110 1050,165 1200,135 C1300,120 1380,155 1440,145',
+            strokeAlt: 'M0,185 C100,155 200,195 350,160 C500,115 600,175 750,135 C900,115 1050,160 1200,140 C1300,125 1380,150 1440,140'
+        };
+        var organicWave2 = {
+            fill: 'M0,210 C150,180 300,220 500,175 C700,130 850,190 1000,160 C1150,130 1300,175 1440,165 L1440,280 L0,280 Z',
+            fillAlt: 'M0,205 C150,175 300,215 500,180 C700,135 850,195 1000,155 C1150,135 1300,170 1440,160 L1440,280 L0,280 Z',
+            stroke: 'M0,210 C150,180 300,220 500,175 C700,130 850,190 1000,160 C1150,130 1300,175 1440,165',
+            strokeAlt: 'M0,205 C150,175 300,215 500,180 C700,135 850,195 1000,155 C1150,135 1300,170 1440,160'
+        };
+
+        // Large heartbeat — prominent, center of design
+        var bigHB = '<path d="M0,140 L160,140 L185,140 L195,136 L205,144 ' +
+            'L215,105 L225,180 L238,70 L250,185 L260,100 L272,150 L285,140 ' +
+            'L430,140 L470,140 L480,136 L490,144 ' +
+            'L500,100 L510,178 L523,65 L535,182 L545,95 L558,152 L570,140 ' +
+            'L715,140 L755,140 L765,136 L775,144 ' +
+            'L785,108 L795,175 L808,72 L820,180 L830,102 L842,148 L855,140 ' +
+            'L1000,140 L1040,140 L1050,136 L1060,144 ' +
+            'L1070,102 L1080,180 L1093,68 L1105,184 L1115,98 L1127,150 L1140,140 ' +
+            'L1300,140 L1340,140 L1350,136 L1360,144 ' +
+            'L1370,110 L1380,172 L1393,78 L1405,178 L1415,105 L1427,148 L1440,140"';
+
+        // Pulse dots along heartbeat peaks
+        var pulseDots = [
+            '<circle cx="238" cy="70" r="2.5" fill="rgba(239,68,68,0.15)"><animate attributeName="r" dur="3s" repeatCount="indefinite" values="2;4;2"/><animate attributeName="opacity" dur="3s" repeatCount="indefinite" values="0.15;0.40;0.15"/></circle>',
+            '<circle cx="523" cy="65" r="2.5" fill="rgba(239,68,68,0.15)"><animate attributeName="r" dur="3s" repeatCount="indefinite" values="2;4;2" begin="0.5s"/><animate attributeName="opacity" dur="3s" repeatCount="indefinite" values="0.15;0.40;0.15" begin="0.5s"/></circle>',
+            '<circle cx="808" cy="72" r="2.5" fill="rgba(239,68,68,0.15)"><animate attributeName="r" dur="3s" repeatCount="indefinite" values="2;4;2" begin="1.0s"/><animate attributeName="opacity" dur="3s" repeatCount="indefinite" values="0.15;0.40;0.15" begin="1.0s"/></circle>',
+            '<circle cx="1093" cy="68" r="2.5" fill="rgba(239,68,68,0.15)"><animate attributeName="r" dur="3s" repeatCount="indefinite" values="2;4;2" begin="1.5s"/><animate attributeName="opacity" dur="3s" repeatCount="indefinite" values="0.15;0.40;0.15" begin="1.5s"/></circle>',
+            '<circle cx="1393" cy="78" r="2.5" fill="rgba(239,68,68,0.15)"><animate attributeName="r" dur="3s" repeatCount="indefinite" values="2;4;2" begin="2.0s"/><animate attributeName="opacity" dur="3s" repeatCount="indefinite" values="0.15;0.40;0.15" begin="2.0s"/></circle>'
+        ].join('\n');
+
+        // Bioluminescent floating dots
+        var bioDots = [
+            '<circle cx="150" cy="60" r="2" fill="rgba(6,182,212,0.08)"><animate attributeName="opacity" dur="4s" repeatCount="indefinite" values="0.05;0.20;0.05"/></circle>',
+            '<circle cx="380" cy="90" r="1.5" fill="rgba(16,185,129,0.10)"><animate attributeName="opacity" dur="5s" repeatCount="indefinite" values="0.05;0.18;0.05" begin="1s"/></circle>',
+            '<circle cx="550" cy="45" r="2" fill="rgba(6,182,212,0.08)"><animate attributeName="opacity" dur="6s" repeatCount="indefinite" values="0.04;0.16;0.04" begin="2s"/></circle>',
+            '<circle cx="820" cy="70" r="1.8" fill="rgba(16,185,129,0.10)"><animate attributeName="opacity" dur="4.5s" repeatCount="indefinite" values="0.06;0.22;0.06" begin="0.5s"/></circle>',
+            '<circle cx="1050" cy="55" r="2" fill="rgba(6,182,212,0.08)"><animate attributeName="opacity" dur="7s" repeatCount="indefinite" values="0.05;0.18;0.05" begin="3s"/></circle>',
+            '<circle cx="1280" cy="80" r="1.5" fill="rgba(16,185,129,0.10)"><animate attributeName="opacity" dur="5.5s" repeatCount="indefinite" values="0.04;0.20;0.04" begin="1.5s"/></circle>',
+            '<circle cx="260" cy="230" r="1.8" fill="rgba(6,182,212,0.06)"><animate attributeName="opacity" dur="6s" repeatCount="indefinite" values="0.04;0.15;0.04" begin="2.5s"/></circle>',
+            '<circle cx="680" cy="250" r="2" fill="rgba(16,185,129,0.08)"><animate attributeName="opacity" dur="5s" repeatCount="indefinite" values="0.05;0.17;0.05" begin="0.8s"/></circle>',
+            '<circle cx="1150" cy="240" r="1.5" fill="rgba(6,182,212,0.06)"><animate attributeName="opacity" dur="7s" repeatCount="indefinite" values="0.03;0.14;0.03" begin="3.5s"/></circle>'
+        ].join('\n');
+
+        return [
+            '<defs>',
+            '  <linearGradient id="hdr-liv-cyan" x1="0" y1="0" x2="0" y2="1">',
+            '    <stop offset="0%" stop-color="rgba(6,182,212,0.18)"/>',
+            '    <stop offset="100%" stop-color="rgba(6,182,212,0)"/>',
+            '  </linearGradient>',
+            '  <linearGradient id="hdr-liv-emerald" x1="0" y1="0" x2="0" y2="1">',
+            '    <stop offset="0%" stop-color="rgba(16,185,129,0.14)"/>',
+            '    <stop offset="100%" stop-color="rgba(16,185,129,0)"/>',
+            '  </linearGradient>',
+            '</defs>',
+            // Organic curves — thicker, more flowing
+            animWave(organicWave1, 'hdr-liv-cyan', '0.35', 'rgba(6,182,212,0.35)', '2.5', 15),
+            animWave(organicWave2, 'hdr-liv-emerald', '0.30', 'rgba(16,185,129,0.28)', '2.2', 20),
+            // Prominent heartbeat
+            heartbeat(bigHB, 'rgba(239,68,68,0.22)', '2.5', 2.5, '0.22', '0.45'),
+            pulseDots,
+            bioDots,
+            // Radial glows behind heartbeat peaks
+            '<circle cx="238" cy="100" r="60" fill="rgba(239,68,68,0.04)"/>',
+            '<circle cx="808" cy="100" r="60" fill="rgba(239,68,68,0.04)"/>',
+            GRID_LINES_DARK
+        ].join('\n');
+    };
+
+    // ========== 4. FROSTED CIRCUIT (Light/Glass) ==========
+    VARIANTS['frosted'] = function() {
+        // Higher-opacity curves for light background, grid dots in dark
+        var gridDotsLight = [
+            '<circle cx="200" cy="80" r="1.5" fill="rgba(30,55,100,0.10)"/>',
+            '<circle cx="400" cy="60" r="1.8" fill="rgba(30,55,100,0.08)"/>',
+            '<circle cx="600" cy="100" r="1.5" fill="rgba(30,55,100,0.09)"/>',
+            '<circle cx="800" cy="50" r="2.0" fill="rgba(30,55,100,0.07)"/>',
+            '<circle cx="1000" cy="75" r="1.5" fill="rgba(30,55,100,0.10)"/>',
+            '<circle cx="1200" cy="90" r="1.8" fill="rgba(30,55,100,0.08)"/>',
+            '<circle cx="300" cy="250" r="1.5" fill="rgba(30,55,100,0.06)"/>',
+            '<circle cx="700" cy="240" r="1.8" fill="rgba(30,55,100,0.08)"/>',
+            '<circle cx="1100" cy="260" r="1.5" fill="rgba(30,55,100,0.09)"/>'
+        ].join('\n');
+
+        var gridLinesLight = [
+            '<line x1="0" y1="70" x2="1440" y2="70" stroke="rgba(148,163,184,0.12)" stroke-width="0.5"/>',
+            '<line x1="0" y1="140" x2="1440" y2="140" stroke="rgba(148,163,184,0.15)" stroke-width="0.5"/>',
+            '<line x1="0" y1="210" x2="1440" y2="210" stroke="rgba(148,163,184,0.12)" stroke-width="0.5"/>'
+        ].join('\n');
+
+        // Dispatch event dots where curves cross grid lines
+        var dispatchDots = [
+            '<circle cx="360" cy="170" r="3" fill="rgba(14,165,233,0.25)" stroke="rgba(14,165,233,0.40)" stroke-width="1"/>',
+            '<circle cx="720" cy="90" r="3" fill="rgba(245,158,11,0.25)" stroke="rgba(245,158,11,0.40)" stroke-width="1"/>',
+            '<circle cx="960" cy="140" r="3" fill="rgba(34,197,94,0.25)" stroke="rgba(34,197,94,0.40)" stroke-width="1"/>',
+            '<circle cx="480" cy="170" r="2.5" fill="rgba(245,158,11,0.20)" stroke="rgba(245,158,11,0.35)" stroke-width="1"/>',
+            '<circle cx="1200" cy="155" r="2.5" fill="rgba(14,165,233,0.20)" stroke="rgba(14,165,233,0.35)" stroke-width="1"/>',
+            '<circle cx="280" cy="160" r="2.5" fill="rgba(34,197,94,0.20)" stroke="rgba(34,197,94,0.35)" stroke-width="1"/>'
+        ].join('\n');
+
+        return [
+            '<defs>',
+            '  <linearGradient id="hdr-fr-blue" x1="0" y1="0" x2="0" y2="1">',
+            '    <stop offset="0%" stop-color="rgba(14,165,233,0.25)"/>',
+            '    <stop offset="100%" stop-color="rgba(14,165,233,0.02)"/>',
+            '  </linearGradient>',
+            '  <linearGradient id="hdr-fr-amber" x1="0" y1="0" x2="0" y2="1">',
+            '    <stop offset="0%" stop-color="rgba(245,158,11,0.20)"/>',
+            '    <stop offset="100%" stop-color="rgba(245,158,11,0.02)"/>',
+            '  </linearGradient>',
+            '  <linearGradient id="hdr-fr-green" x1="0" y1="0" x2="0" y2="1">',
+            '    <stop offset="0%" stop-color="rgba(34,197,94,0.18)"/>',
+            '    <stop offset="100%" stop-color="rgba(34,197,94,0.02)"/>',
+            '  </linearGradient>',
+            '</defs>',
+            // Full-color energy curves — high opacity for light bg
+            animWave(WAVE_HYDRO, 'hdr-fr-blue', '0.50', 'rgba(14,165,233,0.55)', '2.0', 12),
+            animWave(WAVE_SOLAR, 'hdr-fr-amber', '0.40', 'rgba(245,158,11,0.50)', '1.8', 15),
+            animWave(WAVE_WIND, 'hdr-fr-green', '0.35', 'rgba(34,197,94,0.45)', '1.5', 18),
+            // Demand — dark gray
+            '<path d="' + WAVE_DEMAND.stroke + '" fill="none" stroke="rgba(26,39,68,0.15)" stroke-width="1.8">',
+            '  <animate attributeName="d" dur="20s" repeatCount="indefinite" values="' +
+                WAVE_DEMAND.stroke + ';' + WAVE_DEMAND.strokeAlt + ';' + WAVE_DEMAND.stroke + '"/>',
+            '</path>',
+            // Navy heartbeat
+            heartbeat(HEARTBEAT_RED, 'rgba(26,39,68,0.20)', '1.5', 3, '0.20', '0.40'),
+            dispatchDots,
+            gridDotsLight,
+            gridLinesLight
+        ].join('\n');
+    };
+
+    // ========== 5. VOLTAGE GRADIENT (Multi-color Bands) ==========
+    VARIANTS['voltage'] = function() {
+        return [
+            '<defs>',
+            // Multi-color stroke gradients for curves
+            '  <linearGradient id="hdr-volt-curve1" x1="0" y1="0" x2="1" y2="0">',
+            '    <stop offset="0%" stop-color="rgba(14,165,233,0.40)"/>',
+            '    <stop offset="50%" stop-color="rgba(34,197,94,0.35)"/>',
+            '    <stop offset="100%" stop-color="rgba(245,158,11,0.40)"/>',
+            '  </linearGradient>',
+            '  <linearGradient id="hdr-volt-curve2" x1="0" y1="0" x2="1" y2="0">',
+            '    <stop offset="0%" stop-color="rgba(99,102,241,0.35)"/>',
+            '    <stop offset="50%" stop-color="rgba(6,182,212,0.30)"/>',
+            '    <stop offset="100%" stop-color="rgba(34,197,94,0.35)"/>',
+            '  </linearGradient>',
+            '  <linearGradient id="hdr-volt-hb" x1="0" y1="0" x2="1" y2="0">',
+            '    <stop offset="0%" stop-color="rgba(239,68,68,0.25)"/>',
+            '    <stop offset="50%" stop-color="rgba(233,30,99,0.22)"/>',
+            '    <stop offset="100%" stop-color="rgba(156,39,176,0.25)"/>',
+            '  </linearGradient>',
+            '  <linearGradient id="hdr-volt-fill1" x1="0" y1="0" x2="1" y2="0">',
+            '    <stop offset="0%" stop-color="rgba(14,165,233,0.12)"/>',
+            '    <stop offset="50%" stop-color="rgba(34,197,94,0.10)"/>',
+            '    <stop offset="100%" stop-color="rgba(245,158,11,0.12)"/>',
+            '  </linearGradient>',
+            '  <linearGradient id="hdr-volt-fill2" x1="0" y1="0" x2="1" y2="0">',
+            '    <stop offset="0%" stop-color="rgba(99,102,241,0.10)"/>',
+            '    <stop offset="50%" stop-color="rgba(6,182,212,0.08)"/>',
+            '    <stop offset="100%" stop-color="rgba(34,197,94,0.10)"/>',
+            '  </linearGradient>',
+            '</defs>',
+            // Curve 1 — hydro→wind→solar color shift
+            animWave(WAVE_HYDRO, 'hdr-volt-fill1', '0.30', 'url(#hdr-volt-curve1)', '2.0', 12),
+            // Curve 2 — nuclear→battery→wind color shift
+            animWave(WAVE_WIND, 'hdr-volt-fill2', '0.25', 'url(#hdr-volt-curve2)', '1.5', 18),
+            // Solar wave with standard amber
+            animWave(WAVE_SOLAR, null, '0', 'rgba(245,158,11,0.20)', '1.2', 15),
+            // Demand — white
+            '<path d="' + WAVE_DEMAND.stroke + '" fill="none" stroke="rgba(255,255,255,0.10)" stroke-width="1.5">',
+            '  <animate attributeName="d" dur="20s" repeatCount="indefinite" values="' +
+                WAVE_DEMAND.stroke + ';' + WAVE_DEMAND.strokeAlt + ';' + WAVE_DEMAND.stroke + '"/>',
+            '</path>',
+            // Gradient heartbeat
+            heartbeat(HEARTBEAT_RED, 'url(#hdr-volt-hb)', '1.5', 3, '0.22', '0.38'),
+            heartbeat(HEARTBEAT_CYAN, 'rgba(156,39,176,0.12)', '1.0', 4, '0.12', '0.22'),
+            // Zone divider lines
+            '<line x1="480" y1="0" x2="480" y2="280" stroke="rgba(255,255,255,0.05)" stroke-width="0.5" stroke-dasharray="6 8"/>',
+            '<line x1="960" y1="0" x2="960" y2="280" stroke="rgba(255,255,255,0.05)" stroke-width="0.5" stroke-dasharray="6 8"/>',
+            GRID_DOTS_DARK,
+            GRID_LINES_DARK
+        ].join('\n');
+    };
+
+    // ========== 6. PULSE MONITOR (Minimal/Clinical) ==========
+    VARIANTS['pulse'] = function() {
+        // Single bright green heartbeat on near-black with flatline sections
+        var greenHB = '<path d="M0,140 L120,140 L180,140 L200,140 L210,138 L218,142 ' +
+            'L225,115 L232,170 L240,80 L248,175 L255,108 L262,148 L270,140 ' +
+            'L400,140 ' +  // flatline section
+            'L500,140 L510,138 L518,142 ' +
+            'L525,112 L532,168 L540,75 L548,172 L555,105 L562,150 L570,140 ' +
+            'L700,140 ' +  // flatline
+            'L800,140 L810,138 L818,142 ' +
+            'L825,118 L832,165 L840,82 L848,170 L855,110 L862,146 L870,140 ' +
+            'L1000,140 ' +  // flatline
+            'L1100,140 L1110,138 L1118,142 ' +
+            'L1125,114 L1132,168 L1140,78 L1148,174 L1155,106 L1162,148 L1170,140 ' +
+            'L1300,140 ' +  // flatline
+            'L1380,140 L1390,138 L1398,142 ' +
+            'L1405,120 L1412,162 L1420,88 L1428,168 L1435,112 L1440,140"';
+
+        // Green grid lines
+        var greenGrid = [
+            '<line x1="0" y1="56" x2="1440" y2="56" stroke="rgba(34,197,94,0.05)" stroke-width="0.5"/>',
+            '<line x1="0" y1="84" x2="1440" y2="84" stroke="rgba(34,197,94,0.04)" stroke-width="0.5"/>',
+            '<line x1="0" y1="112" x2="1440" y2="112" stroke="rgba(34,197,94,0.05)" stroke-width="0.5"/>',
+            '<line x1="0" y1="140" x2="1440" y2="140" stroke="rgba(34,197,94,0.06)" stroke-width="0.5"/>',
+            '<line x1="0" y1="168" x2="1440" y2="168" stroke="rgba(34,197,94,0.05)" stroke-width="0.5"/>',
+            '<line x1="0" y1="196" x2="1440" y2="196" stroke="rgba(34,197,94,0.04)" stroke-width="0.5"/>',
+            '<line x1="0" y1="224" x2="1440" y2="224" stroke="rgba(34,197,94,0.05)" stroke-width="0.5"/>'
+        ].join('\n');
+
+        // Dots at peaks
+        var peakDots = [
+            '<circle cx="240" cy="80" r="2" fill="rgba(34,197,94,0.30)"><animate attributeName="r" dur="2.5s" repeatCount="indefinite" values="2;3.5;2"/><animate attributeName="opacity" dur="2.5s" repeatCount="indefinite" values="0.30;0.70;0.30"/></circle>',
+            '<circle cx="540" cy="75" r="2" fill="rgba(34,197,94,0.30)"><animate attributeName="r" dur="2.5s" repeatCount="indefinite" values="2;3.5;2" begin="0.5s"/><animate attributeName="opacity" dur="2.5s" repeatCount="indefinite" values="0.30;0.70;0.30" begin="0.5s"/></circle>',
+            '<circle cx="840" cy="82" r="2" fill="rgba(34,197,94,0.30)"><animate attributeName="r" dur="2.5s" repeatCount="indefinite" values="2;3.5;2" begin="1.0s"/><animate attributeName="opacity" dur="2.5s" repeatCount="indefinite" values="0.30;0.70;0.30" begin="1.0s"/></circle>',
+            '<circle cx="1140" cy="78" r="2" fill="rgba(34,197,94,0.30)"><animate attributeName="r" dur="2.5s" repeatCount="indefinite" values="2;3.5;2" begin="1.5s"/><animate attributeName="opacity" dur="2.5s" repeatCount="indefinite" values="0.30;0.70;0.30" begin="1.5s"/></circle>',
+            '<circle cx="1420" cy="88" r="2" fill="rgba(34,197,94,0.30)"><animate attributeName="r" dur="2.5s" repeatCount="indefinite" values="2;3.5;2" begin="2.0s"/><animate attributeName="opacity" dur="2.5s" repeatCount="indefinite" values="0.30;0.70;0.30" begin="2.0s"/></circle>'
+        ].join('\n');
+
+        return [
+            greenGrid,
+            // Single bright green heartbeat
+            heartbeat(greenHB, 'rgba(34,197,94,0.60)', '2.5', 2.5, '0.55', '0.85'),
+            peakDots
+        ].join('\n');
+    };
+
+    // ========== 7. DEEP OCEAN (Teal/Aquatic) ==========
+    VARIANTS['ocean'] = function() {
+        // Wider, slower ocean-current curves in blue-teal spectrum
+        var current1 = {
+            fill: 'M0,195 C180,170 360,200 540,180 C720,160 900,190 1080,175 C1200,165 1360,185 1440,178 L1440,280 L0,280 Z',
+            fillAlt: 'M0,190 C180,165 360,195 540,185 C720,165 900,185 1080,170 C1200,162 1360,182 1440,175 L1440,280 L0,280 Z',
+            stroke: 'M0,195 C180,170 360,200 540,180 C720,160 900,190 1080,175 C1200,165 1360,185 1440,178',
+            strokeAlt: 'M0,190 C180,165 360,195 540,185 C720,165 900,185 1080,170 C1200,162 1360,182 1440,175'
+        };
+        var current2 = {
+            fill: 'M0,170 C200,145 400,175 600,150 C800,125 1000,160 1200,140 C1350,128 1420,148 1440,142 L1440,280 L0,280 Z',
+            fillAlt: 'M0,165 C200,140 400,170 600,155 C800,130 1000,155 1200,138 C1350,125 1420,145 1440,140 L1440,280 L0,280 Z',
+            stroke: 'M0,170 C200,145 400,175 600,150 C800,125 1000,160 1200,140 C1350,128 1420,148 1440,142',
+            strokeAlt: 'M0,165 C200,140 400,170 600,155 C800,130 1000,155 1200,138 C1350,125 1420,145 1440,140'
+        };
+        var current3 = {
+            stroke: 'M0,215 C300,200 600,220 900,205 C1100,195 1300,210 1440,205',
+            strokeAlt: 'M0,212 C300,198 600,218 900,208 C1100,198 1300,208 1440,202'
+        };
+        var current4 = {
+            stroke: 'M0,240 C250,232 500,245 750,235 C1000,228 1250,240 1440,234',
+            strokeAlt: 'M0,238 C250,230 500,242 750,238 C1000,230 1250,238 1440,232'
+        };
+
+        // Bioluminescent dots — cyan/teal twinkle
+        var bioOcean = [
+            '<circle cx="120" cy="55" r="2" fill="rgba(6,182,212,0.10)"><animate attributeName="opacity" dur="5s" repeatCount="indefinite" values="0.05;0.22;0.05"/></circle>',
+            '<circle cx="340" cy="85" r="1.5" fill="rgba(20,184,166,0.08)"><animate attributeName="opacity" dur="6s" repeatCount="indefinite" values="0.04;0.18;0.04" begin="1.2s"/></circle>',
+            '<circle cx="520" cy="40" r="2.2" fill="rgba(34,211,238,0.06)"><animate attributeName="opacity" dur="7s" repeatCount="indefinite" values="0.03;0.16;0.03" begin="2s"/></circle>',
+            '<circle cx="750" cy="70" r="1.8" fill="rgba(6,182,212,0.10)"><animate attributeName="opacity" dur="4.5s" repeatCount="indefinite" values="0.06;0.24;0.06" begin="0.5s"/></circle>',
+            '<circle cx="980" cy="50" r="2" fill="rgba(20,184,166,0.08)"><animate attributeName="opacity" dur="5.5s" repeatCount="indefinite" values="0.04;0.20;0.04" begin="3s"/></circle>',
+            '<circle cx="1180" cy="75" r="1.5" fill="rgba(34,211,238,0.06)"><animate attributeName="opacity" dur="6.5s" repeatCount="indefinite" values="0.03;0.15;0.03" begin="1.5s"/></circle>',
+            '<circle cx="1380" cy="60" r="2" fill="rgba(6,182,212,0.10)"><animate attributeName="opacity" dur="5s" repeatCount="indefinite" values="0.05;0.20;0.05" begin="2.5s"/></circle>',
+            '<circle cx="200" cy="240" r="1.8" fill="rgba(20,184,166,0.06)"><animate attributeName="opacity" dur="7s" repeatCount="indefinite" values="0.03;0.14;0.03" begin="3.5s"/></circle>',
+            '<circle cx="600" cy="255" r="2" fill="rgba(6,182,212,0.08)"><animate attributeName="opacity" dur="6s" repeatCount="indefinite" values="0.04;0.16;0.04" begin="0.8s"/></circle>',
+            '<circle cx="1000" cy="248" r="1.5" fill="rgba(34,211,238,0.06)"><animate attributeName="opacity" dur="5.5s" repeatCount="indefinite" values="0.03;0.12;0.03" begin="4s"/></circle>'
+        ].join('\n');
+
+        return [
+            '<defs>',
+            '  <linearGradient id="hdr-oc-cyan" x1="0" y1="0" x2="0" y2="1">',
+            '    <stop offset="0%" stop-color="rgba(6,182,212,0.18)"/>',
+            '    <stop offset="100%" stop-color="rgba(6,182,212,0)"/>',
+            '  </linearGradient>',
+            '  <linearGradient id="hdr-oc-teal" x1="0" y1="0" x2="0" y2="1">',
+            '    <stop offset="0%" stop-color="rgba(20,184,166,0.14)"/>',
+            '    <stop offset="100%" stop-color="rgba(20,184,166,0)"/>',
+            '  </linearGradient>',
+            '</defs>',
+            // Layer 1 — cyan
+            animWave(current1, 'hdr-oc-cyan', '0.30', 'rgba(6,182,212,0.25)', '1.8', 20),
+            // Layer 2 — teal
+            animWave(current2, 'hdr-oc-teal', '0.25', 'rgba(20,184,166,0.22)', '1.5', 25),
+            // Layer 3 — light cyan (stroke only)
+            '<path d="' + current3.stroke + '" fill="none" stroke="rgba(34,211,238,0.15)" stroke-width="1.2">',
+            '  <animate attributeName="d" dur="28s" repeatCount="indefinite" values="' +
+                current3.stroke + ';' + current3.strokeAlt + ';' + current3.stroke + '"/>',
+            '</path>',
+            // Layer 4 — very light (stroke only)
+            '<path d="' + current4.stroke + '" fill="none" stroke="rgba(153,246,228,0.10)" stroke-width="1.0">',
+            '  <animate attributeName="d" dur="30s" repeatCount="indefinite" values="' +
+                current4.stroke + ';' + current4.strokeAlt + ';' + current4.stroke + '"/>',
+            '</path>',
+            // Warm coral heartbeat — contrast element
+            heartbeat(HEARTBEAT_RED, 'rgba(251,113,133,0.18)', '1.5', 3, '0.18', '0.35'),
+            bioOcean,
+            // Subtle grid lines in teal
+            '<line x1="0" y1="70" x2="1440" y2="70" stroke="rgba(20,184,166,0.04)" stroke-width="0.5"/>',
+            '<line x1="0" y1="140" x2="1440" y2="140" stroke="rgba(20,184,166,0.05)" stroke-width="0.5"/>',
+            '<line x1="0" y1="210" x2="1440" y2="210" stroke="rgba(20,184,166,0.04)" stroke-width="0.5"/>'
+        ].join('\n');
+    };
+
+    // ========== 8. BLUEPRINT (Technical/Schematic) ==========
+    VARIANTS['blueprint'] = function() {
+        // Dense grid (graph paper effect)
+        var graphGrid = [];
+        // Horizontal lines every 28px
+        for (var y = 28; y < 280; y += 28) {
+            var op = (y === 140) ? '0.08' : '0.05';
+            graphGrid.push('<line x1="0" y1="' + y + '" x2="1440" y2="' + y + '" stroke="rgba(148,163,184,' + op + ')" stroke-width="0.5"/>');
+        }
+        // Vertical lines every ~160px
+        for (var x = 160; x < 1440; x += 160) {
+            graphGrid.push('<line x1="' + x + '" y1="0" x2="' + x + '" y2="280" stroke="rgba(148,163,184,0.04)" stroke-width="0.5"/>');
+        }
+
+        // Measurement markers — small + marks at curve/grid intersections
+        var markers = [
+            // Hydro wave intersections
+            '<g stroke="rgba(96,165,250,0.25)" stroke-width="1" fill="none">',
+            '  <line x1="357" y1="167" x2="363" y2="173"/><line x1="363" y1="167" x2="357" y2="173"/>',
+            '  <line x1="717" y1="187" x2="723" y2="193"/><line x1="723" y1="187" x2="717" y2="193"/>',
+            '  <line x1="1077" y1="167" x2="1083" y2="173"/><line x1="1083" y1="167" x2="1077" y2="173"/>',
+            '</g>',
+            // Solar wave intersections
+            '<g stroke="rgba(251,191,36,0.25)" stroke-width="1" fill="none">',
+            '  <line x1="447" y1="137" x2="453" y2="143"/><line x1="453" y1="137" x2="447" y2="143"/>',
+            '  <line x1="717" y1="87" x2="723" y2="93"/><line x1="723" y1="87" x2="717" y2="93"/>',
+            '  <line x1="1047" y1="162" x2="1053" y2="168"/><line x1="1053" y1="162" x2="1047" y2="168"/>',
+            '</g>',
+            // Wind wave intersections
+            '<g stroke="rgba(74,222,128,0.25)" stroke-width="1" fill="none">',
+            '  <line x1="277" y1="157" x2="283" y2="163"/><line x1="283" y1="157" x2="277" y2="163"/>',
+            '  <line x1="597" y1="147" x2="603" y2="153"/><line x1="603" y1="147" x2="597" y2="153"/>',
+            '  <line x1="957" y1="137" x2="963" y2="143"/><line x1="963" y1="137" x2="957" y2="143"/>',
+            '</g>'
+        ].join('\n');
+
+        // Annotation text
+        var annotations = [
+            '<text x="255" y="88" font-family="monospace" font-size="8" fill="rgba(6,182,212,0.30)" text-anchor="end">8,760h</text>',
+            '<text x="545" y="68" font-family="monospace" font-size="8" fill="rgba(6,182,212,0.30)" text-anchor="end">7 ISOs</text>',
+            '<text x="1150" y="85" font-family="monospace" font-size="8" fill="rgba(6,182,212,0.30)" text-anchor="end">5,832</text>'
+        ].join('\n');
+
+        return [
+            graphGrid.join('\n'),
+            // Dashed energy curves — engineering/schematic style, stroke only
+            '<path d="' + WAVE_HYDRO.stroke + '" fill="none" stroke="rgba(96,165,250,0.30)" stroke-width="1.2" stroke-dasharray="8 4">',
+            '  <animate attributeName="d" dur="12s" repeatCount="indefinite" values="' +
+                WAVE_HYDRO.stroke + ';' + WAVE_HYDRO.strokeAlt + ';' + WAVE_HYDRO.stroke + '"/>',
+            '</path>',
+            '<path d="' + WAVE_SOLAR.stroke + '" fill="none" stroke="rgba(251,191,36,0.28)" stroke-width="1.0" stroke-dasharray="8 4">',
+            '  <animate attributeName="d" dur="15s" repeatCount="indefinite" values="' +
+                WAVE_SOLAR.stroke + ';' + WAVE_SOLAR.strokeAlt + ';' + WAVE_SOLAR.stroke + '"/>',
+            '</path>',
+            '<path d="' + WAVE_WIND.stroke + '" fill="none" stroke="rgba(74,222,128,0.25)" stroke-width="1.0" stroke-dasharray="8 4">',
+            '  <animate attributeName="d" dur="18s" repeatCount="indefinite" values="' +
+                WAVE_WIND.stroke + ';' + WAVE_WIND.strokeAlt + ';' + WAVE_WIND.stroke + '"/>',
+            '</path>',
+            // Single cyan heartbeat as oscilloscope trace
+            heartbeat(HEARTBEAT_RED, 'rgba(6,182,212,0.25)', '1.2', 3, '0.20', '0.40'),
+            markers,
+            annotations
+        ].join('\n');
+    };
+
+    // ---- Build SVG wrapper ----
+    function buildSVG(variant) {
+        var gen = VARIANTS[variant] || VARIANTS['default'];
+        return [
+            '<div class="header-svg-overlay">',
+            '<svg viewBox="0 0 1440 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">',
+            gen(),
+            '</svg>',
+            '</div>'
+        ].join('\n');
+    }
+
+    // ---- Inject into headers ----
     function injectOverlay() {
         var headers = document.querySelectorAll('.header');
         headers.forEach(function(header) {
-            // Don't double-inject
             if (header.querySelector('.header-svg-overlay')) return;
-            // Insert the SVG overlay as the first child
-            header.insertAdjacentHTML('afterbegin', SVG_OVERLAY);
+            var variant = header.getAttribute('data-header-variant') || 'default';
+            // Add CSS variant class
+            if (variant !== 'default') {
+                header.classList.add('header--' + variant);
+            }
+            header.insertAdjacentHTML('afterbegin', buildSVG(variant));
         });
     }
 
@@ -182,4 +603,24 @@
     } else {
         injectOverlay();
     }
+
+    // Expose for dynamic switching (used by variant selector on test pages)
+    window._headerVariants = Object.keys(VARIANTS);
+    window._switchHeaderVariant = function(variant) {
+        var headers = document.querySelectorAll('.header');
+        headers.forEach(function(header) {
+            // Remove old overlay and variant classes
+            var old = header.querySelector('.header-svg-overlay');
+            if (old) old.remove();
+            window._headerVariants.forEach(function(v) {
+                header.classList.remove('header--' + v);
+            });
+            // Apply new
+            if (variant !== 'default') {
+                header.classList.add('header--' + variant);
+            }
+            header.setAttribute('data-header-variant', variant);
+            header.insertAdjacentHTML('afterbegin', buildSVG(variant));
+        });
+    };
 })();
