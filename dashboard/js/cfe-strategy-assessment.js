@@ -11,11 +11,11 @@ const PARTICIPATION_LEVELS = [5, 10, 15, 20, 25, 50, 75];
 
 // Display labels — internal data keys stay '1B'/'2C' to match DEPLOYMENT_DATA
 const STRATEGY_LABELS = {
-    '1B': '1A — Consequential',
+    '1B': '1B — Consequential',
     '2C': '2C — Hourly Matching with SSS',
     '2C_rolloff': '2C — Nuclear Rolloff'
 };
-const STRATEGY_SHORT = { '1B': '1A', '2C': '2C', '2C_rolloff': '2C-R' };
+const STRATEGY_SHORT = { '1B': '1B', '2C': '2C', '2C_rolloff': '2C-R' };
 
 const STRATEGY_COLORS = {
     '1B': '#6366F1',
@@ -225,16 +225,16 @@ function populateCrossoverSteps(participation) {
     const sys2c = computeSystemCost('2C', participation, 95);
 
     const costEl = document.getElementById('stepCostStat');
-    if (costEl) costEl.innerHTML = `<strong>1A:</strong> $${fmt(a1b.avgCost)}/MWh &nbsp; <strong>2C:</strong> $${fmt(a2c.avgCost)}/MWh at 95% CFE`;
+    if (costEl) costEl.innerHTML = `<strong>1B:</strong> $${fmt(a1b.avgCost)}/MWh &nbsp; <strong>2C:</strong> $${fmt(a2c.avgCost)}/MWh at 95% CFE`;
 
     const sysEl = document.getElementById('stepSystemStat');
-    if (sysEl) sysEl.innerHTML = `<strong>Total system cost at 95%:</strong> 1A = $${fmt(sys1b / 1000, 0)}B &nbsp; 2C = $${fmt(sys2c / 1000, 0)}B`;
+    if (sysEl) sysEl.innerHTML = `<strong>Total system cost at 95%:</strong> 1B = $${fmt(sys1b / 1000, 0)}B &nbsp; 2C = $${fmt(sys2c / 1000, 0)}B`;
 
     const co2El = document.getElementById('stepCo2Stat');
-    if (co2El) co2El.innerHTML = `<strong>CO₂ displaced:</strong> 1A = ${fmt(a1b.totalCo2)} Mt &nbsp; 2C = ${fmt(a2c.totalCo2)} Mt`;
+    if (co2El) co2El.innerHTML = `<strong>CO₂ displaced:</strong> 1B = ${fmt(a1b.totalCo2)} Mt &nbsp; 2C = ${fmt(a2c.totalCo2)} Mt`;
 
     const gasEl = document.getElementById('stepGasStat');
-    if (gasEl) gasEl.innerHTML = `<strong>Gas on grid:</strong> 1A = ${fmt(a1b.totalGasGw, 0)} GW &nbsp; 2C = ${fmt(a2c.totalGasGw, 0)} GW &nbsp; (${fmt(Math.abs(a1b.totalGasGw - a2c.totalGasGw), 0)} GW delta)`;
+    if (gasEl) gasEl.innerHTML = `<strong>Gas on grid:</strong> 1B = ${fmt(a1b.totalGasGw, 0)} GW &nbsp; 2C = ${fmt(a2c.totalGasGw, 0)} GW &nbsp; (${fmt(Math.abs(a1b.totalGasGw - a2c.totalGasGw), 0)} GW delta)`;
 }
 
 // ─── Section 4: Gas Ribbon Chart ────────────────────────────────────────────
@@ -258,12 +258,12 @@ function buildGasRibbonChart() {
     const ribbon2C = computeRibbonData('2C');
 
     const datasets = [
-        // 1A ribbon band
-        { label: '1A range', data: ribbon1B.map(r => r.max), borderColor: 'transparent', backgroundColor: STRATEGY_COLORS['1B'] + '18',
+        // 1B ribbon band
+        { label: '1B range', data: ribbon1B.map(r => r.max), borderColor: 'transparent', backgroundColor: STRATEGY_COLORS['1B'] + '18',
           fill: '+1', pointRadius: 0, order: 4 },
         { label: '_1A_min', data: ribbon1B.map(r => r.min), borderColor: 'transparent', backgroundColor: 'transparent',
           fill: false, pointRadius: 0, order: 4 },
-        // 1A median line
+        // 1B median line
         { label: STRATEGY_SHORT['1B'], data: ribbon1B.map(r => r.median), borderColor: STRATEGY_COLORS['1B'],
           backgroundColor: STRATEGY_COLORS['1B'], borderWidth: 2.5, tension: 0.3, pointRadius: 3, pointHoverRadius: 6, fill: false, order: 1 },
         // 2C ribbon band
@@ -325,10 +325,10 @@ function buildGasRibbonChart() {
     const el = document.getElementById('gasRibbonInsight');
     if (el) {
         el.innerHTML = `<p><strong>Gas Displacement:</strong> At 50% participation and 95% CFE,
-            <strong>1A</strong> leaves ${fmt(gas1b50, 0)} GW of gas on grid while
+            <strong>1B</strong> leaves ${fmt(gas1b50, 0)} GW of gas on grid while
             <strong>2C</strong> reduces it to ${fmt(gas2c50, 0)} GW — a ${fmt(Math.abs(gas1b50 - gas2c50), 0)} GW difference.
-            ${gas1b50 > existingGasGw ? `Under 1A, gas capacity actually <em>exceeds</em> today's ${existingGasGw} GW installed base — meaning new gas must be built to backstop the VRE-heavy mix.` : ''}
-            The ribbon shows how this gap widens at higher participation levels, where 1A's cheap-VRE-plus-gas model becomes increasingly expensive relative to 2C's firm-clean approach.</p>`;
+            ${gas1b50 > existingGasGw ? `Under 1B, gas capacity actually <em>exceeds</em> today's ${existingGasGw} GW installed base — meaning new gas must be built to backstop the VRE-heavy mix.` : ''}
+            The ribbon shows how this gap widens at higher participation levels, where 1B's cheap-VRE-plus-gas model becomes increasingly expensive relative to 2C's firm-clean approach.</p>`;
     }
 }
 
@@ -509,7 +509,7 @@ function buildWrightsLawChart() {
                 insight.innerHTML = `<p><strong>Learning Curve Impact:</strong>
                     Strategy 2C forces deployment of firm clean (nuclear uprate, CCS) and long-duration storage (LDES) — technologies still on steep learning curves.
                     ${crossPct ? `At ${(crossPct * 100).toFixed(0)}% participation, Wright's Law cost reductions make 2C <strong>cost-negative</strong> — the learning curve benefits exceed the procurement premium.` : 'As participation scales, learning curve benefits accumulate.'}
-                    Strategy 1A deploys mostly mature VRE (solar/onshore wind) that is already at NOAK pricing — contributing minimally to the cost breakthroughs the entire grid needs for deep decarbonization.</p>`;
+                    Strategy 1B deploys mostly mature VRE (solar/onshore wind) that is already at NOAK pricing — contributing minimally to the cost breakthroughs the entire grid needs for deep decarbonization.</p>`;
             }
         })
         .catch(() => {
@@ -545,7 +545,7 @@ function populateNuclearNarrative() {
             <strong>$${fmt(Math.abs(costDelta))}/MWh</strong>, reduce CO₂ displacement by <strong>${fmt(Math.abs(co2Delta))} Mt</strong>,
             and add <strong>${fmt(Math.abs(gasDelta), 0)} GW</strong> of gas to the grid.</p>
             <p><strong>Strategy 2C actively prevents this outcome</strong> by creating EAC revenue (~$20–40/MWh) that supports nuclear plant economics and prevents premature retirement.
-            <strong>Strategy 1A provides zero financial support to existing nuclear</strong> — under 1A, nuclear plants face the same merchant revenue erosion from VRE oversupply with no offsetting demand signal, accelerating the risk of premature closure.
+            <strong>Strategy 1B provides zero financial support to existing nuclear</strong> — under 1B, nuclear plants face the same merchant revenue erosion from VRE oversupply with no offsetting demand signal, accelerating the risk of premature closure.
             The US nuclear fleet generates ~20% of all electricity and ~50% of all clean electricity. Losing it would be catastrophic for grid decarbonization.</p>`;
     }
 }
@@ -665,7 +665,7 @@ function populateRiskInsight() {
         ${fmt(gas95[0].gas, 0)} GW (${STRATEGY_SHORT[gas95[0].s]}) — a ${fmt(gas95[0].gas - gas95[gas95.length - 1].gas, 0)} GW spread.
         Curtailment: ${fmt(curt95[curt95.length - 1].curt)} TWh to ${fmt(curt95[0].curt)} TWh.
         <strong>Nuclear preservation is the critical climate variable.</strong> 2C actively supports nuclear via EAC revenue;
-        1A provides zero support — leaving the grid's largest clean generation source exposed to merchant revenue erosion and premature retirement.</p>`;
+        1B provides zero support — leaving the grid's largest clean generation source exposed to merchant revenue erosion and premature retirement.</p>`;
 }
 
 // ─── Section 9: Regime Map ──────────────────────────────────────────────────
@@ -709,10 +709,10 @@ function buildRegimeMap() {
     }
 
     document.getElementById('regimeInsight').innerHTML = `<p><strong>Regime Insights:</strong>
-        At low participation (5–10%), 1A's cheap cross-regional VRE keeps total system cost competitive.
-        As participation rises above 15–25%, 1A's gas backup requirements drive system costs dramatically higher than 2C.
-        At 50% participation and 95% CFE, 1A's system cost (clean + gas) can exceed 2C's by 3× or more.
-        This crossover is consistent across ambition levels because the gas penalty scales with the gap between 1A's VRE-heavy mix and the firm capacity needed for grid reliability.</p>`;
+        At low participation (5–10%), 1B's cheap cross-regional VRE keeps total system cost competitive.
+        As participation rises above 15–25%, 1B's gas backup requirements drive system costs dramatically higher than 2C.
+        At 50% participation and 95% CFE, 1B's system cost (clean + gas) can exceed 2C's by 3× or more.
+        This crossover is consistent across ambition levels because the gas penalty scales with the gap between 1B's VRE-heavy mix and the firm capacity needed for grid reliability.</p>`;
 }
 
 // ─── Section 10: Dissenting ─────────────────────────────────────────────────
@@ -721,11 +721,11 @@ function populateDissenting() {
     const el = document.getElementById('dissentingContent');
     el.innerHTML = `
         <div class="insight-box scroll-reveal" style="margin-bottom: var(--space-lg)">
-            <h4 style="font-family: var(--font-heading); color: var(--navy); margin: 0 0 var(--space-sm)">Against 1A — Consequential</h4>
-            <p>1A's new-build requirement means it provides <strong>zero financial support to existing nuclear</strong>.
-            Under 1A, nuclear faces the same merchant revenue erosion from VRE oversupply with no offsetting demand signal —
+            <h4 style="font-family: var(--font-heading); color: var(--navy); margin: 0 0 var(--space-sm)">Against 1B — Consequential</h4>
+            <p>1B's new-build requirement means it provides <strong>zero financial support to existing nuclear</strong>.
+            Under 1B, nuclear faces the same merchant revenue erosion from VRE oversupply with no offsetting demand signal —
             accelerating premature retirement of the largest source of clean firm generation on the grid.
-            Beyond nuclear, 1A deploys cross-regionally — new clean generation may be built in a distant ISO,
+            Beyond nuclear, 1B deploys cross-regionally — new clean generation may be built in a distant ISO,
             leaving the buyer's grid physically untransformed. The new capacity is overwhelmingly mature VRE,
             contributing minimally to firm clean learning curves. And consequential netting uses annual accounting,
             missing the hourly mismatch between clean generation and actual load.</p>
@@ -744,12 +744,12 @@ function populateDissenting() {
 
         <div class="insight-box scroll-reveal" style="margin-bottom: var(--space-lg)">
             <h4 style="font-family: var(--font-heading); color: var(--navy); margin: 0 0 var(--space-sm)">What Could Flip This Analysis</h4>
-            <p><strong>Policy:</strong> A federal clean energy standard or carbon price above $100/ton would make 1A's cost advantage
+            <p><strong>Policy:</strong> A federal clean energy standard or carbon price above $100/ton would make 1B's cost advantage
             irrelevant and reward high-additionality strategies. <strong>Nuclear policy:</strong> Extended production tax credits (45U)
             would reduce nuclear revenue adequacy concerns, reducing 2C's fragility.
             <strong>Technology:</strong> If advanced nuclear or LDES costs fall faster than Wright's Law projections,
             hourly strategies become cost-competitive sooner. <strong>Transmission:</strong> Major inter-ISO expansion
-            would boost cross-regional strategies (1A) while reducing same-ISO hourly strategies' geographic advantage.</p>
+            would boost cross-regional strategies (1B) while reducing same-ISO hourly strategies' geographic advantage.</p>
         </div>
     `;
 }
