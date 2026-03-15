@@ -285,76 +285,118 @@
         ].join('\n');
     };
 
-    // ========== 13. HEX TERRAIN — LIGHT (Dispatch-Colored Hex Fill) ==========
+    // ========== 13. SAND TERRAIN — LIGHT (Pebble-fill stacked dispatch) ==========
     VARIANTS['hexmosaic'] = function() {
-        var hexR = 28;
-        var hexW = hexR * 1.732;
-        var hexH = hexR * 1.5;
-        var cols = Math.ceil(1440 / hexW) + 1;
-        var rows = Math.ceil(280 / hexH) + 1;
+        // Terrain curve evaluation — cubic Bezier segments from terrain variant paths
+        var curves = {
+            storage: [ // top layer (lowest y values)
+                {x0:0,y0:205, cx1:180,cy1:198, cx2:350,cy2:192, x3:500,y3:185},
+                {x0:500,y0:185, cx1:650,cy1:178, cx2:780,cy2:175, x3:920,y3:178},
+                {x0:920,y0:178, cx1:1060,cy1:182, cx2:1200,cy2:190, x3:1350,y3:196},
+                {x0:1350,y0:196, cx1:1395,cy1:198, cx2:1440,cy2:200, x3:1440,y3:200}
+            ],
+            solar: [
+                {x0:0,y0:210, cx1:180,cy1:200, cx2:300,cy2:170, x3:450,y3:145},
+                {x0:450,y0:145, cx1:600,cy1:125, cx2:720,cy2:120, x3:900,y3:140},
+                {x0:900,y0:140, cx1:1050,cy1:158, cx2:1200,cy2:185, x3:1350,y3:200},
+                {x0:1350,y0:200, cx1:1395,cy1:203, cx2:1440,cy2:205, x3:1440,y3:205}
+            ],
+            wind: [
+                {x0:0,y0:215, cx1:80,cy1:205, cx2:160,cy2:220, x3:280,y3:200},
+                {x0:280,y0:200, cx1:400,cy1:185, cx2:520,cy2:210, x3:640,y3:195},
+                {x0:640,y0:195, cx1:760,cy1:180, cx2:880,cy2:200, x3:1000,y3:188},
+                {x0:1000,y0:188, cx1:1120,cy1:175, cx2:1240,cy2:195, x3:1360,y3:190},
+                {x0:1360,y0:190, cx1:1400,cy1:193, cx2:1440,cy2:195, x3:1440,y3:195}
+            ],
+            hydro: [
+                {x0:0,y0:245, cx1:120,cy1:238, cx2:240,cy2:232, x3:360,y3:236},
+                {x0:360,y0:236, cx1:480,cy1:240, cx2:600,cy2:248, x3:720,y3:242},
+                {x0:720,y0:242, cx1:840,cy1:236, cx2:960,cy2:230, x3:1080,y3:235},
+                {x0:1080,y0:235, cx1:1200,cy1:240, cx2:1320,cy2:246, x3:1440,y3:242}
+            ]
+        };
 
-        // Terrain layer colors by Y position (bottom to top):
-        // hydro blue (bottom) → wind green → solar amber → storage red (top)
-        function terrainColor(cy, cx) {
-            if (cy >= 235) return 'rgba(14,165,233,';   // hydro blue — bottom
-            if (cy >= 195) return 'rgba(34,197,94,';    // wind green
-            // Solar bell curve — stronger in center (x 400-1000)
-            var solarStrength = 1.0 - Math.min(1.0, Math.abs(cx - 720) / 500);
-            if (cy >= 170 && solarStrength > 0.3) return 'rgba(245,158,11,';  // solar amber
-            if (cy >= 155) return 'rgba(239,68,68,';    // storage red
-            return 'rgba(148,163,184,';                  // above demand — faint slate
-        }
-
-        // Terrain opacity by Y — denser at bottom, sparser toward top
-        function terrainOpacity(cy) {
-            if (cy >= 235) return 0.32;
-            if (cy >= 210) return 0.26;
-            if (cy >= 185) return 0.22;
-            if (cy >= 165) return 0.18;
-            return 0.06;
-        }
-
-        function hexPath(cx, cy) {
-            var pts = [];
-            for (var a = 0; a < 6; a++) {
-                var angle = Math.PI / 6 + a * Math.PI / 3;
-                pts.push((cx + hexR * Math.cos(angle)).toFixed(1) + ',' + (cy + hexR * Math.sin(angle)).toFixed(1));
+        function evalCurve(segs, x) {
+            for (var i = 0; i < segs.length; i++) {
+                var s = segs[i];
+                if (x >= s.x0 && x <= s.x3) {
+                    var t = (s.x3 === s.x0) ? 0 : (x - s.x0) / (s.x3 - s.x0);
+                    var mt = 1 - t;
+                    return mt*mt*mt*s.y0 + 3*mt*mt*t*s.cy1 + 3*mt*t*t*s.cy2 + t*t*t*s.y3;
+                }
             }
-            return 'M' + pts.join(' L') + ' Z';
+            return segs[segs.length - 1].y3;
         }
 
-        var hexes = [];
-        for (var row = 0; row < rows && row < 8; row++) {
-            for (var col = 0; col < cols && col < 32; col++) {
-                var cx = col * hexW + (row % 2 ? hexW / 2 : 0);
-                var cy = row * hexH + hexH / 2;
-                if (cx > 1480 || cy > 300) continue;
+        // Layers: bottom-to-top painting order (back to front)
+        var layers = [
+            { curve: 'hydro', color: 'rgba(14,165,233,', opacity: 0.35 },
+            { curve: 'wind',  color: 'rgba(34,197,94,',  opacity: 0.30 },
+            { curve: 'solar', color: 'rgba(245,158,11,', opacity: 0.32 },
+            { curve: 'storage', color: 'rgba(239,68,68,', opacity: 0.25 }
+        ];
 
-                var color = terrainColor(cy, cx);
-                var op = terrainOpacity(cy);
+        // Seeded RNG for deterministic jitter
+        var seed = 73;
+        function rng() {
+            seed = (seed * 16807) % 2147483647;
+            return seed / 2147483647;
+        }
 
-                // Staggered fill-in: sweeps left-to-right, bottom-to-top
-                var begin = (col * 0.06 + (7 - row) * 0.12).toFixed(2);
-                var dur = '0.6';
+        // Pebble grid — hex-packed circles filling the terrain
+        var pebbleR = 13;
+        var spacingX = 30;
+        var spacingY = 26;
+        var numCols = Math.ceil(1440 / spacingX) + 1;
+        var numRows = Math.ceil(280 / spacingY) + 1;
 
-                hexes.push(
-                    '<path d="' + hexPath(cx, cy) + '" fill="' + color + op.toFixed(2) + ')" ' +
-                    'stroke="' + color + (op * 0.4).toFixed(3) + ')" stroke-width="0.5" opacity="0">' +
-                    '<animate attributeName="opacity" dur="' + dur + 's" fill="freeze" ' +
+        var elements = [];
+
+        for (var row = 0; row < numRows && row < 12; row++) {
+            for (var col = 0; col < numCols && col < 50; col++) {
+                var cx = col * spacingX + (row % 2 ? spacingX / 2 : 0);
+                var cy = row * spacingY + spacingY / 2;
+                if (cx > 1470 || cy > 285) continue;
+
+                // Jitter position slightly for organic sand feel
+                cx += (rng() - 0.5) * 6;
+                cy += (rng() - 0.5) * 4;
+                var r = pebbleR + (rng() - 0.5) * 3; // vary radius 11.5–14.5
+
+                // Determine which terrain layer this pebble belongs to
+                // Check curves top-to-bottom: storage → solar → wind → hydro
+                var layerIdx = -1;
+                for (var li = layers.length - 1; li >= 0; li--) {
+                    var curveY = evalCurve(curves[layers[li].curve], cx);
+                    if (cy >= curveY - pebbleR * 0.3) {
+                        layerIdx = li;
+                        break;
+                    }
+                }
+
+                if (layerIdx < 0) continue; // above all curves — skip
+
+                var layer = layers[layerIdx];
+                // Denser at bottom, lighter near curve boundary
+                var curveTop = evalCurve(curves[layer.curve], cx);
+                var distFromCurve = cy - curveTop;
+                var opScale = Math.min(1.0, 0.5 + distFromCurve / 60);
+                var op = (layer.opacity * opScale).toFixed(3);
+
+                // Bottom-up fill: bottom rows animate first (sand settling)
+                var begin = ((280 - cy) / 280 * 2.0 + rng() * 0.15).toFixed(2);
+
+                elements.push(
+                    '<circle cx="' + cx.toFixed(1) + '" cy="' + cy.toFixed(1) +
+                    '" r="' + r.toFixed(1) + '" fill="' + layer.color + op + ')" opacity="0">' +
+                    '<animate attributeName="opacity" dur="0.4s" fill="freeze" ' +
                     'begin="' + begin + 's" values="0;1"/>' +
-                    '</path>'
+                    '</circle>'
                 );
             }
         }
 
-        // Demand line overlay — dashed, appears after hex fill completes
-        var demandLine =
-            '<path d="M0,155 C240,148 480,160 720,152 C960,145 1200,155 1440,150" ' +
-            'fill="none" stroke="rgba(30,41,59,0.30)" stroke-width="1.5" stroke-dasharray="6 3" opacity="0">' +
-            '<animate attributeName="opacity" dur="0.5s" fill="freeze" begin="2.5s" values="0;0.8"/>' +
-            '</path>';
-
-        return hexes.join('\n') + '\n' + demandLine;
+        return elements.join('\n');
     };
 
     // ---- Build SVG wrapper ----
