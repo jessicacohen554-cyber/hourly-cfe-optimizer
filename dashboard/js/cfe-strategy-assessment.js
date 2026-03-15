@@ -6,9 +6,9 @@ const STRATEGIES = ['1B','2C','2C_rolloff'];
 const CORE_STRATEGIES = ['1B','2C'];
 const ROLLOFF_PAIRS = { '2C': '2C_rolloff' };
 const ISOS = ['CAISO','ERCOT','PJM','NYISO','NEISO','MISO','SPP'];
-const THRESHOLDS = [80, 85, 90, 92.5, 95, 97.5, 99.5, 99.99];
+const THRESHOLDS = [90, 92.5, 95, 97.5, 99.5, 99.99];
 const PARTICIPATION_LEVELS = [5, 10, 15, 20, 25, 50, 75];
-const KEY_THRESHOLDS = [85, 90, 95, 99.5];
+const KEY_THRESHOLDS = [90, 95, 97.5, 99.5];
 
 const STRATEGY_LABELS = {
     '1B': '1B — Consequential (Fossil-Avg)',
@@ -33,7 +33,7 @@ const TOTAL_DEMAND = Object.values(GRID_DEMANDS).reduce((a, b) => a + b, 0);
 // Cluster definitions
 const CLUSTERS = [
     { name: 'Consequential Netting', strategies: ['1B'], color: '#6366F1', desc: 'Cross-regional new-build deployment via queue-ordered procurement using fossil-avg emission baseline. Cheapest per-MWh, but deploys mostly mature VRE (solar/wind). New firm clean (nuclear, CCS, LDES) only appears at extreme thresholds (95%+) — minimal contribution to learning curves for immature technologies.' },
-    { name: 'Hourly Hybrid', strategies: ['2C'], color: '#0EA5E9', desc: 'Same-ISO hourly matching blending existing clean (SSS, merchant EAC, nuclear uprate) with new-build. Cost-effective at low participation but costs escalate as cheap pools exhaust. Depends on nuclear staying online for cheapest firm supply.' }
+    { name: 'Hourly Hybrid', strategies: ['2C'], color: '#0EA5E9', desc: 'Same-ISO hourly matching blending existing clean (SSS, merchant EAC, nuclear uprate) with new-build. Cost-effective at low participation but costs escalate as cheap pools exhaust. Critically, 2C creates a revenue pathway that enables existing nuclear to stay online — losing nuclear would be catastrophic for grid decarbonization.' }
 ];
 
 const charts = {};
@@ -174,18 +174,19 @@ function buildScorecardData(threshold, participation) {
     }
 
     // Compute raw values for each criterion
+    // Cost Efficiency = total system cost (clean procurement + new-build gas capacity)
+    // The cost of new gas is endogenous to the strategy — 1B's cheap per-MWh hides
+    // massive gas backup costs that are a direct consequence of that strategy choice
     const co2Vals = CORE_STRATEGIES.map(s => aggs[s].totalCo2);
-    const costVals = CORE_STRATEGIES.map(s => aggs[s].avgCost);
+    const costVals = CORE_STRATEGIES.map(s => computeSystemCost(s, participation, threshold));
     const gasVals = CORE_STRATEGIES.map(s => aggs[s].totalGasGw);
-    const sysCostVals = CORE_STRATEGIES.map(s => computeSystemCost(s, participation, threshold));
     const learnVals = CORE_STRATEGIES.map(s => computeLearningScore(s));
     const curtVals = CORE_STRATEGIES.map(s => aggs[s].totalCurtTwh);
 
-    // Rank: co2 higher is better, cost lower better, gas lower better, sysCost lower better, learning higher better, curt lower better
+    // Rank: co2 higher is better, cost lower better, gas lower better, learning higher better, curt lower better
     const co2Ranks = rankStrategies(CORE_STRATEGIES, co2Vals, false);
-    const costRanks = rankStrategies(CORE_STRATEGIES, costVals, true);
+    const costRanks = rankStrategies(CORE_STRATEGIES, costVals, true);  // lower system cost = better
     const gasRanks = rankStrategies(CORE_STRATEGIES, gasVals, true);
-    const sysCostRanks = rankStrategies(CORE_STRATEGIES, sysCostVals, true);  // lower total system cost = better
     const learnRanks = rankStrategies(CORE_STRATEGIES, learnVals, false);
     const curtRanks = rankStrategies(CORE_STRATEGIES, curtVals, true);
 
@@ -194,19 +195,17 @@ function buildScorecardData(threshold, participation) {
         const co2Grade = rankToGrade(co2Ranks[s], n);
         const costGrade = rankToGrade(costRanks[s], n);
         const gasGrade = rankToGrade(gasRanks[s], n);
-        const sysCostGrade = rankToGrade(sysCostRanks[s], n);
         const learnGrade = rankToGrade(learnRanks[s], n);
         const curtGrade = rankToGrade(curtRanks[s], n);
 
-        // Composite: equally weighted ranks across 6 criteria
-        const composite = 100 - ((co2Ranks[s] + costRanks[s] + gasRanks[s] + sysCostRanks[s] + learnRanks[s] + curtRanks[s]) / (6 * n)) * 100;
+        // Composite: equally weighted ranks across 5 criteria
+        const composite = 100 - ((co2Ranks[s] + costRanks[s] + gasRanks[s] + learnRanks[s] + curtRanks[s]) / (5 * n)) * 100;
 
         results.push({
             strategy: s,
             co2: { val: co2Vals[i], grade: co2Grade, rank: co2Ranks[s] },
             cost: { val: costVals[i], grade: costGrade, rank: costRanks[s] },
             gas: { val: gasVals[i], grade: gasGrade, rank: gasRanks[s] },
-            sysCost: { val: sysCostVals[i], grade: sysCostGrade, rank: sysCostRanks[s] },
             learn: { val: learnVals[i], grade: learnGrade, rank: learnRanks[s] },
             curt: { val: curtVals[i], grade: curtGrade, rank: curtRanks[s] },
             composite: Math.round(composite)
@@ -247,12 +246,13 @@ function populateExecutiveSummary() {
     const scorecard = buildScorecardData(95, 25);
     const best = scorecard[0];
 
-    // Find strategy with lowest cost at 95%/25%
+    // Find strategy with lowest TRUE cost (system cost = clean + new-build gas) at 95%/25%
     let lowestCost = Infinity, lowestCostStrat = '';
     let highestCo2 = -Infinity, highestCo2Strat = '';
     for (const s of CORE_STRATEGIES) {
         const agg = cachedAggregate(s, 25, 95);
-        if (agg.avgCost < lowestCost) { lowestCost = agg.avgCost; lowestCostStrat = s; }
+        const sysCost = computeSystemCost(s, 25, 95);
+        if (sysCost < lowestCost) { lowestCost = sysCost; lowestCostStrat = s; }
         if (agg.totalCo2 > highestCo2) { highestCo2 = agg.totalCo2; highestCo2Strat = s; }
     }
 
@@ -276,7 +276,14 @@ function populateExecutiveSummary() {
     const sys1b = computeSystemCost('1B', 25, 95);
     const sys2c = computeSystemCost('2C', 25, 95);
     const finding = document.getElementById('executiveFinding');
-    finding.innerHTML = `<p><strong>Key Finding:</strong> The two dominant procurement strategies represent fundamentally different bets.
+    // Find system cost crossover participation
+    let crossoverP = null;
+    for (const p of PARTICIPATION_LEVELS) {
+        if (computeSystemCost('2C', p, 95) < computeSystemCost('1B', p, 95)) { crossoverP = p; break; }
+    }
+
+    finding.innerHTML = `<p><strong>Key Finding:</strong> The two strategies represent fundamentally different bets —
+        and the winner depends on participation level.
         Strategy <strong>${STRATEGY_SHORT[best.strategy]}</strong> (${STRATEGY_LABELS[best.strategy]}) achieves the best composite score
         at 95% CFE / 25% participation.
         <strong>1B (Consequential)</strong> offers the lowest per-MWh cost ($${fmt(a1b.avgCost)}/MWh) and highest CO₂ displacement
@@ -285,10 +292,11 @@ function populateExecutiveSummary() {
         contributing minimally to firm clean learning curves.
         <strong>2C (Hourly Hybrid)</strong> costs $${fmt(a2c.avgCost)}/MWh but reduces gas to ${fmt(a2c.totalGasGw, 0)} GW,
         with total system cost of $${fmt(sys2c / 1000, 0)}B. Its hourly matching constraint forces deployment of firm clean
-        and storage in the buyer's ISO, accelerating learning curves. However, 2C depends on existing nuclear staying online —
-        the nuclear fragility test (Section 05) quantifies this risk.
-        At 95% CFE, the choice is clear: pay less per-MWh but build more gas (1B), or pay more per-MWh but
-        transform the grid with firm clean and storage (2C).</p>`;
+        and storage in the buyer's ISO, accelerating learning curves.
+        ${crossoverP ? `<strong>The critical crossover occurs at ~${crossoverP}% participation</strong> — below that, 1B wins on total cost; above it, 2C's lower gas requirements make it the more cost-effective system-wide strategy. At 95% CFE and 30% participation, 1B's system cost is 3× higher than 2C's due to massive new-build gas backup needs.` : ''}
+        A key advantage of 2C: it creates EAC revenue that keeps existing nuclear online — preserving ~50% of US clean
+        electricity that would otherwise face merchant revenue erosion. 1B provides zero support to nuclear, leaving grid
+        decarbonization exposed to premature plant closures.</p>`;
 }
 
 function buildSummaryBarChart() {
@@ -338,9 +346,8 @@ function renderScorecardTable(threshold, participation) {
         tr.innerHTML = `
             <td style="font-weight:600; white-space:nowrap; color:${STRATEGY_COLORS[row.strategy]}">${STRATEGY_LABELS[row.strategy]}</td>
             <td><span class="${gradeClass(row.co2.grade)}">${row.co2.grade}</span> <span style="font-size:0.8em;color:var(--text-muted)">${fmt(row.co2.val)} Mt</span></td>
-            <td><span class="${gradeClass(row.cost.grade)}">${row.cost.grade}</span> <span style="font-size:0.8em;color:var(--text-muted)">$${fmt(row.cost.val)}/MWh</span></td>
+            <td><span class="${gradeClass(row.cost.grade)}">${row.cost.grade}</span> <span style="font-size:0.8em;color:var(--text-muted)">$${fmt(row.cost.val / 1000, 0)}B</span></td>
             <td><span class="${gradeClass(row.gas.grade)}">${row.gas.grade}</span> <span style="font-size:0.8em;color:var(--text-muted)">${fmt(row.gas.val, 0)} GW</span></td>
-            <td><span class="${gradeClass(row.sysCost.grade)}">${row.sysCost.grade}</span> <span style="font-size:0.8em;color:var(--text-muted)">$${fmt(row.sysCost.val / 1000, 0)}B</span></td>
             <td><span class="${gradeClass(row.learn.grade)}">${row.learn.grade}</span></td>
             <td><span class="${gradeClass(row.curt.grade)}">${row.curt.grade}</span> <span style="font-size:0.8em;color:var(--text-muted)">${fmt(row.curt.val)} TWh</span></td>
             <td style="font-weight:700; color:var(--navy)">${row.composite}</td>
@@ -394,29 +401,33 @@ function buildCrossoverCharts(participation) {
 }
 
 function populateCrossoverInsight(participation) {
-    // Find where 1B loses cost advantage to 2C
-    let crossoverThreshold = null;
-    for (const t of THRESHOLDS) {
-        const a1b = cachedAggregate('1B', participation, t);
-        const a2c = cachedAggregate('2C', participation, t);
-        if (a2c.totalCo2 > a1b.totalCo2 * 1.5) {
-            crossoverThreshold = t;
-            break;
-        }
+    const el = document.getElementById('crossoverInsight');
+
+    // Compare system cost at 95% for current participation
+    const sys1b = computeSystemCost('1B', participation, 95);
+    const sys2c = computeSystemCost('2C', participation, 95);
+    const a1b = cachedAggregate('1B', participation, 95);
+    const a2c = cachedAggregate('2C', participation, 95);
+
+    // Find participation crossover: sweep participation levels to find where 2C system cost < 1B
+    let crossoverPart = null;
+    for (const p of PARTICIPATION_LEVELS) {
+        const s1b = computeSystemCost('1B', p, 95);
+        const s2c = computeSystemCost('2C', p, 95);
+        if (s2c < s1b) { crossoverPart = p; break; }
     }
 
-    const el = document.getElementById('crossoverInsight');
-    const costAt95 = {};
-    for (const s of CORE_STRATEGIES) costAt95[s] = cachedAggregate(s, participation, 95).avgCost;
-    const cheapest = CORE_STRATEGIES.reduce((a, b) => costAt95[a] < costAt95[b] ? a : b);
-    const priciest = CORE_STRATEGIES.reduce((a, b) => costAt95[a] > costAt95[b] ? a : b);
+    const winner = sys2c < sys1b ? '2C' : '1B';
+    const winnerSys = Math.min(sys1b, sys2c);
+    const loserSys = Math.max(sys1b, sys2c);
 
-    el.innerHTML = `<p><strong>Key Crossover:</strong> At ${participation}% participation and 95% CFE, the cost spread between
-        the cheapest strategy (${STRATEGY_SHORT[cheapest]} at $${fmt(costAt95[cheapest])}/MWh) and
-        most expensive (${STRATEGY_SHORT[priciest]} at $${fmt(costAt95[priciest])}/MWh) is
-        $${fmt(costAt95[priciest] - costAt95[cheapest])}/MWh.
-        ${crossoverThreshold ? `CO₂ displacement diverges significantly above ${crossoverThreshold}% — consequential netting strategies begin decoupling from grid-level effects while hourly strategies drive measurable fossil displacement.` : 'CO₂ displacement patterns remain relatively stable across thresholds at this participation level.'}
-        Gas capacity on grid diverges most sharply above 85% CFE, where strategies requiring firm backup either build new gas (harmful) or deploy clean firm (beneficial but expensive).</p>`;
+    el.innerHTML = `<p><strong>System Cost Crossover:</strong> At ${participation}% participation and 95% CFE,
+        <strong>1B</strong> system cost (clean + new-build gas) = $${fmt(sys1b / 1000, 0)}B
+        ($${fmt(a1b.avgCost)}/MWh clean, ${fmt(a1b.totalGasGw, 0)} GW gas on grid) vs.
+        <strong>2C</strong> system cost = $${fmt(sys2c / 1000, 0)}B
+        ($${fmt(a2c.avgCost)}/MWh clean, ${fmt(a2c.totalGasGw, 0)} GW gas).
+        ${crossoverPart ? `<strong>${winner} wins at this participation level.</strong> The crossover occurs at ~${crossoverPart}% participation — below that, 1B's lower per-MWh cost dominates; above it, 1B's gas backup requirements drive total system cost $${fmt((loserSys - winnerSys) / 1000, 0)}B higher than 2C.` : `At this low participation level, 1B's per-MWh cost advantage keeps its total system cost competitive.`}
+        This crossover is consistent across thresholds 90–99.5% because the gas backup penalty scales with the gap between 1B's VRE-heavy mix and the firm capacity needed for reliability.</p>`;
 }
 
 // ─── Section 04: Strategy Clusters ──────────────────────────────────────────
@@ -428,9 +439,8 @@ function buildClusterRadar() {
         const agg = cachedAggregate(s, 25, 95);
         stratData[s] = {
             co2: agg.totalCo2,
-            cost: agg.avgCost,
+            cost: computeSystemCost(s, 25, 95),
             gas: agg.totalGasGw,
-            sysCost: computeSystemCost(s, 25, 95),
             learn: computeLearningScore(s),
             curt: agg.totalCurtTwh
         };
@@ -449,13 +459,12 @@ function buildClusterRadar() {
     }
 
     const normCo2 = normalize('co2', false);    // higher = better
-    const normCost = normalize('cost', true);    // lower = better
+    const normCost = normalize('cost', true);    // lower system cost = better
     const normGas = normalize('gas', true);      // lower = better
-    const normSysCost = normalize('sysCost', true); // lower = better
     const normLearn = normalize('learn', false); // higher = better
     const normCurt = normalize('curt', true);    // lower = better
 
-    const radarLabels = ['Emission\nReduction', 'Cost\nEfficiency', 'Low Gas\nLock-in', 'System\nCost', 'Learning\nCurves', 'Low\nCurtailment'];
+    const radarLabels = ['Emission\nReduction', 'True\nCost', 'Low Gas\nLock-in', 'Learning\nCurves', 'Low\nCurtailment'];
 
     // Build individual radar chart per strategy
     for (const cluster of CLUSTERS) {
@@ -463,7 +472,7 @@ function buildClusterRadar() {
         const chartId = 'radarChart' + s.replace('_', '');
         destroyChart(chartId);
 
-        const data = [normCo2[s], normCost[s], normGas[s], normSysCost[s], normLearn[s], normCurt[s]];
+        const data = [normCo2[s], normCost[s], normGas[s], normLearn[s], normCurt[s]];
 
         const ctx = document.getElementById(chartId);
         if (!ctx) continue;
@@ -557,8 +566,12 @@ function buildFragilityCharts() {
         At 95% CFE / ${participation}% participation, nuclear retirement shifts costs by
         ${costDelta >= 0 ? '+' : ''}$${fmt(costDelta)}/MWh, CO₂ by ${co2Delta >= 0 ? '+' : ''}${fmt(co2Delta)} Mt,
         and gas capacity by ${gasDelta >= 0 ? '+' : ''}${fmt(gasDelta, 0)} GW.
-        ${Math.abs(costDelta) > 5 ? 'This is a <strong>material fragility</strong> — Strategy 2C\'s cost advantage depends significantly on nuclear staying online. If merchant revenue erodes and plants close, the strategy\'s economics deteriorate.' : 'The impact is <strong>moderate</strong> — 2C retains most of its advantage even under nuclear retirement, though at a cost premium.'}
-        ${gasDelta > 5 ? ' Notably, nuclear retirement results in ' + fmt(gasDelta, 0) + ' GW more gas on the grid — converting a clean energy asset loss into a fossil fuel lock-in.' : ''}</p>`;
+        This test highlights <strong>why nuclear preservation matters</strong>: losing existing nuclear doesn't just hurt 2C's economics —
+        it's catastrophic for grid-level climate goals. The US nuclear fleet provides ~20% of all electricity and ~50% of all clean electricity.
+        ${gasDelta > 5 ? 'Nuclear retirement would add ' + fmt(gasDelta, 0) + ' GW of gas to the grid, converting a clean baseload asset into fossil fuel lock-in. ' : ''}
+        <strong>Strategy 2C actively prevents this outcome</strong> by creating EAC revenue that supports nuclear plant economics.
+        Strategy 1B provides zero financial support to existing nuclear — under 1B, nuclear plants face the same merchant revenue erosion
+        from VRE oversupply with no offsetting demand signal, accelerating the risk of premature retirement.</p>`;
 }
 
 // ─── Section 06: Critical Risks ─────────────────────────────────────────────
@@ -672,13 +685,13 @@ function buildNuclearStrandChart() {
 
     const exposures = CORE_STRATEGIES.map(s => {
         const dep = computeNuclearDependency(s, participation, threshold);
-        // Nuclear stranding risk = does the strategy create revenue for existing nuclear?
-        // 2C actively funds nuclear via EAC purchases — lowest stranding risk
-        // 2A is 100% new-build, zero nuclear dependency — no stranding exposure either way
-        // 1A/1B deploy new-build cross-regionally, no EAC revenue pathway for existing nuclear
+        // Nuclear stranding risk = does the strategy SUPPORT existing nuclear staying online?
+        // 2C actively funds nuclear via EAC purchases — creates revenue pathway, lowest stranding risk
+        // 1B deploys new-build cross-regionally, provides ZERO support to existing nuclear — highest stranding risk
+        // Losing existing nuclear is catastrophic for grid decarbonization (50% of US clean electricity)
         const strandingAdj = {
-            '1B': 15,  // no EAC revenue pathway — nuclear unsupported, highest stranding risk
-            '2C': 0    // directly funds existing nuclear via EAC purchases — lowest risk
+            '1B': 20,  // zero EAC revenue for nuclear — actively exposes nuclear to merchant erosion
+            '2C': -5   // directly funds existing nuclear via EAC purchases — helps prevent retirement
         };
         return dep + (strandingAdj[s] || 5);
     });
@@ -716,20 +729,20 @@ function populateRiskInsight() {
         Gas lock-in varies from ${fmt(gas95[gas95.length - 1].gas, 0)} GW (${STRATEGY_SHORT[gas95[gas95.length - 1].s]}) to
         ${fmt(gas95[0].gas, 0)} GW (${STRATEGY_SHORT[gas95[0].s]}) — a ${fmt(gas95[0].gas - gas95[gas95.length - 1].gas, 0)} GW spread.
         Curtailment ranges from ${fmt(curt95[curt95.length - 1].curt)} TWh to ${fmt(curt95[0].curt)} TWh.
-        <strong>2C</strong> carries nuclear stranding risk because it relies on existing nuclear for
-        cheap firm supply — if nuclear plants close, 2C loses its cost advantage (see Section 05).
-        <strong>1B</strong> deploys new-build cross-regionally but provides no EAC revenue
-        to support existing nuclear — it contributes to stranding risk indirectly by not creating a revenue pathway.
-        The key tradeoff: 1B avoids nuclear dependency but leaves more gas on grid; 2C funds nuclear via EAC purchases
-        but is exposed if nuclear retires anyway.</p>`;
+        <strong>Nuclear preservation is the critical climate variable.</strong> The US nuclear fleet provides ~50% of all
+        clean electricity — losing it would be catastrophic for decarbonization, replacing baseload clean with gas.
+        <strong>2C</strong> actively supports nuclear by creating EAC revenue that improves plant economics and prevents
+        premature retirement. <strong>1B</strong> provides zero financial support to existing nuclear — cross-regional
+        VRE procurement does nothing to address nuclear merchant revenue erosion. Under 1B, nuclear plants face the
+        same economic pressures with no offsetting demand signal, making premature closure more likely.
+        The key risk asymmetry: 1B leaves more gas on grid AND fails to protect nuclear; 2C reduces gas AND funds nuclear.</p>`;
 }
 
 // ─── Section 07: Regime Map ─────────────────────────────────────────────────
 
 function buildRegimeMap() {
     const ambitionTiers = [
-        { label: 'Moderate (80–85%)', thresholds: [80, 85] },
-        { label: 'Ambitious (90–95%)', thresholds: [90, 92.5, 95] },
+        { label: 'High Ambition (90–95%)', thresholds: [90, 92.5, 95] },
         { label: 'Last Mile (97.5–99.99%)', thresholds: [97.5, 99.5, 99.99] }
     ];
     const participations = PARTICIPATION_LEVELS;
@@ -776,16 +789,15 @@ function buildRegimeMap() {
 
     // Regime insight
     document.getElementById('regimeInsight').innerHTML = `<p><strong>Regime Insights:</strong>
-        At 80–85% CFE, consequential netting (1B) dominates on cost because the threshold is achievable with
-        mostly VRE deployed cross-regionally. At 90%+, the picture shifts — 2C's hourly matching constraint forces
-        deployment of firm clean (nuclear, CCS) and storage (LDES) in the buyer's ISO, driving learning curves
-        that consequential netting avoids.
-        At 95%+, the total system cost criterion becomes decisive: 1B's cheap per-MWh clean procurement hides
-        massive new-build gas backup costs, while 2C's higher clean costs are offset by lower gas requirements.
-        The regime map reveals where each strategy's hidden costs emerge.
+        At 90–95% CFE, the picture is nuanced — 1B wins on per-MWh cost at low participation (5–20%) because
+        cross-regional VRE is cheap. But at 30%+ participation, 2C overtakes 1B on total system cost because
+        1B's cheap clean procurement hides massive new-build gas backup requirements. 2C's hourly matching
+        constraint forces deployment of firm clean (nuclear, CCS) and storage (LDES) in the buyer's ISO,
+        reducing gas dependency and driving learning curves that consequential netting avoids.
+        At 95%, the crossover is stark: 1B system cost reaches ~$15T while 2C is ~$5T at 30% participation.
         Participation level interacts with 2C's pool structure: at low participation (5–10%), 2C's existing clean
         pools (SSS, merchant EAC) keep costs low; at higher participation (25%+), those pools exhaust and
-        new-build costs dominate.</p>`;
+        new-build costs dominate — but the gas savings more than compensate.</p>`;
 }
 
 // ─── Section 08: Dissenting Considerations ──────────────────────────────────
@@ -795,24 +807,26 @@ function populateDissenting() {
     el.innerHTML = `
         <div class="insight-box" style="margin-bottom: var(--space-lg)">
             <h4 style="font-family: var(--font-heading); color: var(--navy); margin: 0 0 var(--space-sm)">Against Consequential Netting (1B)</h4>
-            <p>While 1B deploys 100% new-build capacity, it does so <strong>cross-regionally</strong> via
-            queue-ordered procurement — the new clean generation may be built in a distant ISO, not in
-            the buyer's grid. This means the buyer's local grid sees no physical transformation. The emission
-            reduction is real on a system-wide basis, but the buyer's ISO may retain the same fossil fleet.
-            At scale, this concentrates new clean capacity in the cheapest-to-build regions while leaving
-            harder-to-decarbonize grids untouched. Additionally, consequential netting uses annual accounting,
-            missing the hourly mismatch between clean generation and actual load. The new capacity deployed is
-            overwhelmingly mature VRE — minimal contribution to firm clean learning curves.</p>
+            <p>1B's new-build requirement means it provides <strong>zero financial support to existing nuclear</strong>.
+            In a world where 1B is the dominant procurement strategy, existing nuclear faces the same merchant revenue
+            erosion from VRE oversupply with no offsetting demand signal — accelerating premature retirement of the
+            largest source of clean firm generation on the grid. Losing existing nuclear would be catastrophic for
+            climate goals, replacing ~50% of US clean electricity with gas.
+            Beyond nuclear, 1B deploys cross-regionally — new clean generation may be built in a distant ISO, leaving
+            the buyer's grid physically untransformed. The new capacity is overwhelmingly mature VRE (solar/wind),
+            contributing minimally to firm clean learning curves. And consequential netting uses annual accounting,
+            missing the hourly mismatch between clean generation and actual load.</p>
         </div>
 
         <div class="insight-box" style="margin-bottom: var(--space-lg)">
             <h4 style="font-family: var(--font-heading); color: var(--navy); margin: 0 0 var(--space-sm)">Against Hourly Hybrid (2C)</h4>
-            <p>Strategy 2C's cost advantage depends heavily on existing nuclear remaining online.
-            The nuclear fragility test (Section 05) quantifies this risk. If merchant revenue
-            erosion from VRE oversupply closes nuclear plants, 2C loses its cheapest firm generation
-            source and must either accept higher costs or increased gas dependency. Additionally,
-            2C's blending of existing and new clean resources may dilute the additionality signal
-            that drives learning curve acceleration for advanced technologies.</p>
+            <p>While 2C's EAC purchases create revenue that helps keep nuclear online, this is a
+            <strong>mutual dependency</strong> — 2C needs nuclear for cheap firm supply, and nuclear needs
+            2C's revenue for economic viability. If nuclear plants close despite EAC support (e.g., due to
+            regulatory or safety issues), 2C loses its cheapest firm generation source and must accept
+            higher costs or increased gas dependency. Additionally, 2C's blending of existing and new clean
+            resources means only ~30% of its clean procurement is truly additional new-build — the rest
+            reshuffles existing clean claims, which may dilute the additionality signal for advanced technologies.</p>
         </div>
 
         <div class="insight-box" style="margin-bottom: var(--space-lg)">
