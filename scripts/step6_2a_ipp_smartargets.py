@@ -470,9 +470,11 @@ def simulate_company_all_scenarios(company, sweep_df):
     plants = company['plants']
     n_plants = pa['n']
 
-    # Get unique scenarios
-    scenarios = sweep_df['scenario'].unique()
-    n_scenarios = len(scenarios)
+    # Get unique (scenario, sweep_type) pairs to avoid collisions across sweep types
+    # Same scenario name exists in reference/power_nz/economy_nz with different clean_pct
+    scenario_sweep_pairs = sweep_df[['scenario', 'sweep_type']].drop_duplicates()
+    scenarios_list = list(scenario_sweep_pairs.itertuples(index=False, name=None))
+    n_scenarios = len(scenarios_list)
 
     # Build lookup: for each plant, find its ISO in the sweep data
     plant_isos = pa['iso_list']
@@ -488,12 +490,13 @@ def simulate_company_all_scenarios(company, sweep_df):
             fleet_cost = sum(p['cap_mw'] * FIXED_OM.get(p['fuel'], 20) / 1e3 for p in plants)
             total_cap = sum(p['cap_mw'] for p in plants)
 
-            for scn in scenarios:
-                # Get sweep metadata for this scenario
-                scn_row = sweep_df[sweep_df['scenario'] == scn].iloc[0]
+            for scn, st in scenarios_list:
+                # Get sweep metadata for this scenario+sweep_type
+                scn_st_df = sweep_df[(sweep_df['scenario'] == scn) & (sweep_df['sweep_type'] == st)]
+                scn_row = scn_st_df.iloc[0] if not scn_st_df.empty else sweep_df[sweep_df['scenario'] == scn].iloc[0]
                 all_results.append({
-                    'scenario': scn,
-                    'sweep_type': scn_row.get('sweep_type', 'reference'),
+                    'scenario': f'{scn}__{st}',
+                    'sweep_type': st,
                     'conditions': str(scn_row.get('conditions', '')),
                     'demand_growth': str(scn_row.get('demand_growth', '')),
                     'price_sens': str(scn_row.get('price_sens', '')),
@@ -511,24 +514,25 @@ def simulate_company_all_scenarios(company, sweep_df):
             continue
 
         # For non-baseline years: vectorize across scenarios
-        # Build condition arrays: for each scenario × plant, look up clean_pct & avg_lmp
+        # Build condition arrays: for each (scenario, sweep_type) × plant, look up clean_pct & avg_lmp
         year_df = sweep_df[sweep_df['year'] == year]
         if year_df.empty:
             continue
 
-        # Create a lookup dict: scenario → {iso → row}
+        # Create a lookup dict: (scenario, sweep_type) → {iso → row}
         scn_iso_lookup = {}
         for _, row in year_df.iterrows():
-            scn = row['scenario']
+            key = (row['scenario'], row['sweep_type'])
             iso = row['iso']
-            if scn not in scn_iso_lookup:
-                scn_iso_lookup[scn] = {}
-            scn_iso_lookup[scn][iso] = row
+            if key not in scn_iso_lookup:
+                scn_iso_lookup[key] = {}
+            scn_iso_lookup[key][iso] = row
 
         # Process scenarios in bulk — vectorize over plants for each scenario
         # (We iterate scenarios but vectorize the N_plants dimension)
-        for scn in scenarios:
-            iso_data = scn_iso_lookup.get(scn, {})
+        for scn, st in scenarios_list:
+            key = (scn, st)
+            iso_data = scn_iso_lookup.get(key, {})
             if not iso_data:
                 continue
 
@@ -565,8 +569,8 @@ def simulate_company_all_scenarios(company, sweep_df):
             # Get scenario metadata
             any_row = next(iter(iso_data.values()))
             all_results.append({
-                'scenario': scn,
-                'sweep_type': str(any_row.get('sweep_type', 'reference')),
+                'scenario': f'{scn}__{st}',
+                'sweep_type': st,
                 'conditions': str(any_row.get('conditions', '')),
                 'demand_growth': str(any_row.get('demand_growth', '')),
                 'price_sens': str(any_row.get('price_sens', '')),
