@@ -141,6 +141,24 @@ FUEL_ADJUSTMENTS = {
 }
 
 # ============================================================================
+# REGULATORY FEEDBACK — LMP Dampening at High Clean Penetration
+# ============================================================================
+# When rolling-average LMP exceeds a multiple of 2023 baseline, regulators
+# intervene (capacity mechanisms, ORDC reform, price caps). This dampens
+# scarcity-driven LMP escalation without changing dispatch physics.
+#
+# Real-world precedent: ERCOT reformed ORDC after 2021 freeze, PJM reformed
+# RPM parameters after price spikes, MISO VOLL increase to $10K in 2025.
+
+REGULATORY_FEEDBACK_THRESHOLD_MULTIPLIER = 2.0  # Trigger when rolling avg LMP > 2× baseline
+REGULATORY_FEEDBACK_DAMPING = 0.5               # Damping strength (0=none, 1=full clamp)
+REGULATORY_FEEDBACK_CAP_MULTIPLIER = 1.75       # Hard cap: effective avg LMP ≤ 1.75× baseline
+
+# ISO market structure classification
+ENERGY_ONLY_ISOS = {'ERCOT', 'SPP'}  # Energy-only — feedback = introduce capacity payment
+CAPACITY_MARKET_ISOS = {'PJM', 'NYISO', 'NEISO', 'MISO', 'CAISO'}  # Feedback = increase procurement
+
+# ============================================================================
 # RESOURCE CAPACITY CAPS (TWh/yr)
 # ============================================================================
 
