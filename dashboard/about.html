@@ -221,6 +221,7 @@
 </style>
 <script src="js/chart-colors.js"></script>
 <script src="js/shared-header.js"></script>
+<script src="js/canvas-banners.js"></script>
     <script src="js/scroll-observer.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
@@ -243,23 +244,47 @@
 </header>
 
 <!-- VARIANT SELECTOR (for design testing — remove before production) -->
-<div id="variantSelector" style="
-    position: sticky; top: 56px; z-index: 999;
-    background: #fff; border-bottom: 1px solid #E5E7EB;
-    padding: 12px 24px; display: flex; align-items: center; gap: 10px;
-    flex-wrap: wrap; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    font-family: var(--font-body, 'DM Sans', sans-serif); font-size: 0.85rem;
-">
-    <span style="font-weight: 600; color: #1A2744; margin-right: 4px;">Banner Style:</span>
-    <button class="variant-btn active" data-variant="default">1. Midnight Grid</button>
-    <button class="variant-btn" data-variant="frosted">2. Frosted Circuit</button>
-    <button class="variant-btn" data-variant="terrain">3. Stacked Terrain</button>
-    <button class="variant-btn" data-variant="hexmosaic">4. Hex Terrain</button>
+<div id="variantSelector" class="variant-selector">
+    <div class="variant-group">
+        <span class="variant-group-label">Dark</span>
+        <button class="variant-btn active" data-variant="default">Midnight Grid</button>
+        <button class="variant-btn" data-variant="particle-fill-dark">Particle Fill</button>
+        <button class="variant-btn" data-variant="heatmap-pulse-dark">Heatmap Pulse</button>
+        <button class="variant-btn" data-variant="stacked-curves-dark">Stacked Curves</button>
+        <button class="variant-btn" data-variant="network-constellation-dark">Network</button>
+        <button class="variant-btn" data-variant="frequency-spectrum">Frequency</button>
+        <button class="variant-btn" data-variant="topographic-contours-dark">Topographic</button>
+    </div>
+    <div class="variant-group">
+        <span class="variant-group-label">Light</span>
+        <button class="variant-btn" data-variant="frosted-circuit">Frosted Circuit</button>
+        <button class="variant-btn" data-variant="particle-fill-light">Particle Fill</button>
+        <button class="variant-btn" data-variant="dense-circuit-map">Dense Circuit</button>
+        <button class="variant-btn" data-variant="heatmap-pulse-light">Heatmap Pulse</button>
+        <button class="variant-btn" data-variant="stacked-curves-light">Stacked Curves</button>
+        <button class="variant-btn" data-variant="network-constellation-light">Network</button>
+        <button class="variant-btn" data-variant="topographic-contours-light">Topographic</button>
+    </div>
 </div>
 <style>
+.variant-selector {
+    position: sticky; top: 56px; z-index: 999;
+    background: #fff; border-bottom: 1px solid #E5E7EB;
+    padding: 10px 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    font-family: var(--font-body, 'DM Sans', sans-serif);
+}
+.variant-group {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+    margin-bottom: 6px;
+}
+.variant-group:last-child { margin-bottom: 0; }
+.variant-group-label {
+    font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: #94A3B8; width: 44px; flex-shrink: 0;
+}
 .variant-btn {
-    padding: 6px 14px; border: 1px solid #D1D5DB; border-radius: 6px;
-    background: #F9FAFB; cursor: pointer; font-size: 0.82rem; font-weight: 500;
+    padding: 5px 12px; border: 1px solid #D1D5DB; border-radius: 6px;
+    background: #F9FAFB; cursor: pointer; font-size: 0.78rem; font-weight: 500;
     color: #374151; transition: all 0.2s; font-family: inherit;
 }
 .variant-btn:hover { background: #EEF2FF; border-color: #818CF8; color: #4338CA; }
@@ -274,7 +299,6 @@
             btn.classList.add('active');
             if (window._switchHeaderVariant) {
                 window._switchHeaderVariant(btn.getAttribute('data-variant'));
-                // Scroll to top to see the header
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }
         });
