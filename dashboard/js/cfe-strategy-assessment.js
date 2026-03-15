@@ -406,15 +406,15 @@ function populateCrossoverInsight(participation) {
     }
 
     const el = document.getElementById('crossoverInsight');
-    const costAt90 = {};
-    for (const s of CORE_STRATEGIES) costAt90[s] = cachedAggregate(s, participation, 90).avgCost;
-    const cheapest = CORE_STRATEGIES.reduce((a, b) => costAt90[a] < costAt90[b] ? a : b);
-    const priciest = CORE_STRATEGIES.reduce((a, b) => costAt90[a] > costAt90[b] ? a : b);
+    const costAt95 = {};
+    for (const s of CORE_STRATEGIES) costAt95[s] = cachedAggregate(s, participation, 95).avgCost;
+    const cheapest = CORE_STRATEGIES.reduce((a, b) => costAt95[a] < costAt95[b] ? a : b);
+    const priciest = CORE_STRATEGIES.reduce((a, b) => costAt95[a] > costAt95[b] ? a : b);
 
-    el.innerHTML = `<p><strong>Key Crossover:</strong> At ${participation}% participation and 90% CFE, the cost spread between
-        the cheapest strategy (${STRATEGY_SHORT[cheapest]} at $${fmt(costAt90[cheapest])}/MWh) and
-        most expensive (${STRATEGY_SHORT[priciest]} at $${fmt(costAt90[priciest])}/MWh) is
-        $${fmt(costAt90[priciest] - costAt90[cheapest])}/MWh.
+    el.innerHTML = `<p><strong>Key Crossover:</strong> At ${participation}% participation and 95% CFE, the cost spread between
+        the cheapest strategy (${STRATEGY_SHORT[cheapest]} at $${fmt(costAt95[cheapest])}/MWh) and
+        most expensive (${STRATEGY_SHORT[priciest]} at $${fmt(costAt95[priciest])}/MWh) is
+        $${fmt(costAt95[priciest] - costAt95[cheapest])}/MWh.
         ${crossoverThreshold ? `CO₂ displacement diverges significantly above ${crossoverThreshold}% — consequential netting strategies begin decoupling from grid-level effects while hourly strategies drive measurable fossil displacement.` : 'CO₂ displacement patterns remain relatively stable across thresholds at this participation level.'}
         Gas capacity on grid diverges most sharply above 85% CFE, where strategies requiring firm backup either build new gas (harmful) or deploy clean firm (beneficial but expensive).</p>`;
 }
@@ -547,14 +547,14 @@ function buildFragilityCharts() {
     }
 
     // Fragility insight
-    const base90 = cachedAggregate('2C', participation, 90);
-    const roll90 = cachedAggregate('2C_rolloff', participation, 90);
-    const costDelta = roll90.avgCost - base90.avgCost;
-    const co2Delta = roll90.totalCo2 - base90.totalCo2;
-    const gasDelta = roll90.totalGasGw - base90.totalGasGw;
+    const base95 = cachedAggregate('2C', participation, 95);
+    const roll95 = cachedAggregate('2C_rolloff', participation, 95);
+    const costDelta = roll95.avgCost - base95.avgCost;
+    const co2Delta = roll95.totalCo2 - base95.totalCo2;
+    const gasDelta = roll95.totalGasGw - base95.totalGasGw;
 
     document.getElementById('fragilityInsight').innerHTML = `<p><strong>Nuclear Fragility Result:</strong>
-        At 90% CFE / ${participation}% participation, nuclear retirement shifts costs by
+        At 95% CFE / ${participation}% participation, nuclear retirement shifts costs by
         ${costDelta >= 0 ? '+' : ''}$${fmt(costDelta)}/MWh, CO₂ by ${co2Delta >= 0 ? '+' : ''}${fmt(co2Delta)} Mt,
         and gas capacity by ${gasDelta >= 0 ? '+' : ''}${fmt(gasDelta, 0)} GW.
         ${Math.abs(costDelta) > 5 ? 'This is a <strong>material fragility</strong> — Strategy 2C\'s cost advantage depends significantly on nuclear staying online. If merchant revenue erodes and plants close, the strategy\'s economics deteriorate.' : 'The impact is <strong>moderate</strong> — 2C retains most of its advantage even under nuclear retirement, though at a cost premium.'}
@@ -573,7 +573,7 @@ function buildRiskCharts() {
 
 function buildGasLockinChart() {
     destroyChart('gasLockinChart');
-    const participation = 50, threshold = 90;
+    const participation = 50, threshold = 95;
 
     const datasets = ISOS.map(iso => ({
         label: iso,
@@ -600,7 +600,7 @@ function buildGasLockinChart() {
 
 function buildCurtailmentChart() {
     destroyChart('curtailmentChart');
-    const participation = 50, threshold = 90;
+    const participation = 50, threshold = 95;
     const values = CORE_STRATEGIES.map(s => cachedAggregate(s, participation, threshold).totalCurtTwh);
 
     charts.curtailmentChart = new Chart(document.getElementById('curtailmentChart'), {
@@ -668,7 +668,7 @@ function buildLearningCurveChart() {
 
 function buildNuclearStrandChart() {
     destroyChart('nuclearStrandChart');
-    const participation = 25, threshold = 90;
+    const participation = 25, threshold = 95;
 
     const exposures = CORE_STRATEGIES.map(s => {
         const dep = computeNuclearDependency(s, participation, threshold);
@@ -707,15 +707,15 @@ function buildNuclearStrandChart() {
 }
 
 function populateRiskInsight() {
-    const gas90 = CORE_STRATEGIES.map(s => ({ s, gas: cachedAggregate(s, 50, 90).totalGasGw }));
-    gas90.sort((a, b) => b.gas - a.gas);
-    const curt90 = CORE_STRATEGIES.map(s => ({ s, curt: cachedAggregate(s, 50, 90).totalCurtTwh }));
-    curt90.sort((a, b) => b.curt - a.curt);
+    const gas95 = CORE_STRATEGIES.map(s => ({ s, gas: cachedAggregate(s, 50, 95).totalGasGw }));
+    gas95.sort((a, b) => b.gas - a.gas);
+    const curt95 = CORE_STRATEGIES.map(s => ({ s, curt: cachedAggregate(s, 50, 95).totalCurtTwh }));
+    curt95.sort((a, b) => b.curt - a.curt);
 
-    document.getElementById('riskInsight').innerHTML = `<p><strong>Risk Summary (90% / 50% participation):</strong>
-        Gas lock-in varies from ${fmt(gas90[gas90.length - 1].gas, 0)} GW (${STRATEGY_SHORT[gas90[gas90.length - 1].s]}) to
-        ${fmt(gas90[0].gas, 0)} GW (${STRATEGY_SHORT[gas90[0].s]}) — a ${fmt(gas90[0].gas - gas90[gas90.length - 1].gas, 0)} GW spread.
-        Curtailment ranges from ${fmt(curt90[curt90.length - 1].curt)} TWh to ${fmt(curt90[0].curt)} TWh.
+    document.getElementById('riskInsight').innerHTML = `<p><strong>Risk Summary (95% / 50% participation):</strong>
+        Gas lock-in varies from ${fmt(gas95[gas95.length - 1].gas, 0)} GW (${STRATEGY_SHORT[gas95[gas95.length - 1].s]}) to
+        ${fmt(gas95[0].gas, 0)} GW (${STRATEGY_SHORT[gas95[0].s]}) — a ${fmt(gas95[0].gas - gas95[gas95.length - 1].gas, 0)} GW spread.
+        Curtailment ranges from ${fmt(curt95[curt95.length - 1].curt)} TWh to ${fmt(curt95[0].curt)} TWh.
         <strong>2C</strong> carries nuclear stranding risk because it relies on existing nuclear for
         cheap firm supply — if nuclear plants close, 2C loses its cost advantage (see Section 05).
         <strong>1B</strong> deploys new-build cross-regionally but provides no EAC revenue
