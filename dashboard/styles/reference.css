@@ -258,7 +258,7 @@
     font-family: var(--font-heading);
     letter-spacing: 0.03em;
 }
-.breadcrumb a { color: var(--hydro); text-decoration: none; transition: color 0.2s; }
+.breadcrumb a { color: var(--hydro-text, #0369A1); text-decoration: none; transition: color 0.2s; } /* contrast-fix: was var(--hydro), ratio 5.93:1 on bg #FFFFFF */
 .breadcrumb a:hover { color: #0284c7; }
 .breadcrumb .sep { color: rgba(0,0,0,0.3); margin: 0 8px; }
 .breadcrumb .current { color: var(--text-secondary); }
@@ -294,7 +294,7 @@
 .article-tag {
     display: inline-block;
     background: rgba(14,165,233,0.15);
-    color: var(--hydro);
+    color: var(--hydro-text, #0369A1); /* contrast-fix: was var(--hydro) #0EA5E9, now #0369A1, ratio 5.93:1 on bg #FFFFFF */
     font-size: 0.72rem;
     font-weight: 600;
     padding: 4px 10px;
@@ -317,7 +317,7 @@
     font-family: var(--font-heading);
     font-size: 0.88rem;
     font-weight: 700;
-    color: var(--hydro);
+    color: var(--hydro-text, #0369A1); /* contrast-fix: was var(--hydro), ratio 5.93:1 on bg #FFFFFF */
     margin-bottom: 8px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -390,7 +390,7 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    color: var(--hydro);
+    color: var(--hydro-text, #0369A1); /* contrast-fix: was var(--hydro), ratio 5.93:1 on bg #FFFFFF */
     text-decoration: none;
     font-family: var(--font-heading);
     font-size: 0.85rem;
@@ -531,7 +531,7 @@
     font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 1px;
-    color: var(--hydro);
+    color: var(--hydro-text, #0369A1); /* contrast-fix: was var(--hydro), ratio 5.93:1 on bg #FFFFFF */
     margin-bottom: 6px;
 }
 .insight-card h4 {
