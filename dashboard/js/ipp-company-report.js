@@ -287,7 +287,7 @@
 
     // ─── SECTION 2: Scenario Convergence & Divergence ────────
     function renderConvergenceDivergence() {
-        const fb = co.fan_bands.all;
+        const fb = co.fan_bands.reference;
         const emissions = fb.emissions;
 
         // Fan band chart — P10/P50/P90 + min/max
@@ -490,7 +490,7 @@
 
     // ─── SECTION 3: Risk & Opportunity Assessment ────────────
     function renderRiskOpportunity() {
-        const fb = co.fan_bands.all;
+        const fb = co.fan_bands.reference;
 
         // Profit fan band — % growth in fleet profit margin vs 2023 baseline
         if (fb.profit) {
@@ -634,7 +634,7 @@
         const el = document.getElementById('riskNarrative');
         if (!el) return;
 
-        const fb = co.fan_bands.all;
+        const fb = co.fan_bands.reference;
         const profitBase = fb.profit ? fb.profit.p50[0] : 1;
         const profit2050_p10 = fb.profit ? fb.profit.p10[5] : 0;
         const profit2050_p50 = fb.profit ? fb.profit.p50[5] : 0;
@@ -667,7 +667,8 @@
 
     // ─── SECTION 4: Qualified Target Proposal ────────────────
     function renderQualifiedTarget() {
-        const refBands = co.fan_bands.reference || co.fan_bands.all;
+        const refBands = co.fan_bands.reference;
+        if (!refBands || !refBands.emissions) { console.warn('No reference fan bands for QT'); return; }
         const emissions = refBands.emissions;
         const baseline = emissions.p50[0];
 
@@ -832,7 +833,7 @@
         const byFuel = getFleetByFuel();
         const byISO = getFleetByISO();
         const baseline = co.co2_2024_mt;
-        const fb = co.fan_bands.all;
+        const fb = co.fan_bands.reference;
 
         // Current clean vs fossil breakdown (by generation TWh)
         const cleanTWh = FUEL_ORDER.filter(f => ['nuclear', 'hydro', 'geothermal', 'wind', 'solar', 'battery'].includes(f))
@@ -1107,7 +1108,8 @@
     }
 
     function renderEnablingConditions() {
-        const refBands = co.fan_bands.reference || co.fan_bands.all;
+        const refBands = co.fan_bands.reference;
+        if (!refBands || !refBands.emissions) return;
         const emissions = refBands.emissions;
         const baseline = emissions.p50[0];
         const psV2_local = powerSectorV2Trajectory(baseline);
@@ -1255,7 +1257,7 @@
     function renderStrategicPositioning() {
         const byFuel = getFleetByFuel();
         const byISO = getFleetByISO();
-        const fb = co.fan_bands.all;
+        const fb = co.fan_bands.reference;
 
         // Robustness scores — based on generation share (TWh), not nameplate capacity
         const totalGen = co.gen_twh;
