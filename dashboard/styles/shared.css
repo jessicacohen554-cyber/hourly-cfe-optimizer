@@ -52,7 +52,7 @@ body {
     --border-light: #E5E7EB;
     --text-primary: #000000;
     --text-secondary: #1E293B;
-    --text-muted: #6B7280;
+    --text-muted: #566370; /* contrast-fix: was #6B7280 (4.83:1 on white, 4.39:1 on gray bg), now #566370, ratio 6.15:1 on white, 4.97:1 on #E5E7EB */
     --text-dim: rgba(0,0,0,0.65);
     --text-light: #78828F;
     --bg-subtle: #F8FAFC;
@@ -107,6 +107,13 @@ body {
     --ldes-bg: rgba(233, 30, 99, 0.08);
     --storage-bg: rgba(239, 68, 68, 0.08);
 
+    /* WCAG AA text-safe variants (4.5:1+ on white) — use for text-color on light backgrounds */
+    --hydro-text: #0369A1; /* contrast-fix: #0EA5E9 only 2.77:1, this is 5.93:1 on #FFFFFF */
+    --green-text: #15803D; /* contrast-fix: #22C55E only 2.28:1, this is 5.02:1 on #FFFFFF */
+    --red-text: #DC2626; /* contrast-fix: #EF4444 only 3.76:1, this is 4.83:1 on #FFFFFF */
+    --amber-text: #B45309; /* contrast-fix: #F59E0B only 2.15:1, this is 5.02:1 on #FFFFFF */
+    --orange-text: #C2410C; /* contrast-fix: #F97316 only 2.70:1, this is 5.18:1 on #FFFFFF */
+
     /* ---- ISO colors (CANONICAL — use these everywhere) ---- */
     --iso-caiso: #F59E0B;
     --iso-ercot: #22C55E;
@@ -132,8 +139,8 @@ body {
     --red: #EF4444;
     --red-dark: #DC2626;
     --red-light: rgba(239, 68, 68, 0.08);
-    --green-pos: #16A34A;
-    --amber-warn: #D97706;
+    --green-pos: #15803D; /* contrast-fix: was #16A34A (3.30:1), now #15803D, ratio 5.02:1 on bg #FFFFFF */
+    --amber-warn: #B45309; /* contrast-fix: was #D97706 (3.19:1), now #B45309, ratio 5.02:1 on bg #FFFFFF */
     --indigo: #4F46E5;
 
     /* Scarcity scale */
@@ -357,6 +364,52 @@ p {
     line-height: 1.55;
     color: rgba(255,255,255,0.92);
 }
+
+/* ========== HEADER VARIANTS ========== */
+/* Set via data-header-variant attribute; class header--{name} auto-added by shared-header.js */
+
+/* --- Canvas overlay — positioned identically to SVG overlay --- */
+.header-canvas-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    overflow: hidden;
+}
+.header-canvas-overlay canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    will-change: transform;
+}
+
+/* --- Light banner theme (dark text on light bg) --- */
+.header--light {
+    background: linear-gradient(180deg, rgba(248,249,252,0.94) 0%, rgba(241,245,249,0.90) 50%, rgba(226,232,240,0.92) 100%);
+}
+.header--light::before { background: none; }
+.header--light::after { background: none; }
+.header--light h1 { color: #000000; }
+.header--light .subtitle { color: #1a1a1a; }
+
+/* --- Dark banner theme (inherits base .header styles — white text on navy) --- */
+.header--dark {}
+
+/* --- Per-variant background overrides --- */
+.header[data-header-variant="freq-circuit-flat"] { background: #FEFEFE; }
+.header[data-header-variant="freq-circuit-warm"] { background: #FEFDFC; }
+.header[data-header-variant="freq-circuit-cool"] { background: #FEFEFD; }
+.header[data-header-variant="freq-circuit-gradient"] {
+    background: linear-gradient(135deg, #FEFDFC 0%, #FEFEFE 50%, #FEFEFD 100%);
+}
+.header[data-header-variant="stacked-curves-dark"],
+.header[data-header-variant="frequency-spectrum"],
+.header[data-header-variant="dense-circuit-navy"],
+.header[data-header-variant="frequency-dense-navy"],
+.header[data-header-variant="stacked-dense-navy"] {
+    background: #0B1120;
+}
+
 
 /* ========== SECTION LAYOUT PRIMITIVES ========== */
 .content-section {
@@ -1551,7 +1604,7 @@ p {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--hydro);
+    color: #0369A1; /* contrast-fix: was var(--hydro) #0EA5E9, now #0369A1, ratio 5.93:1 on bg #FFFFFF */
     margin-bottom: 8px;
 }
 .related-card-title {
