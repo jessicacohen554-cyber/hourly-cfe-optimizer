@@ -12,6 +12,7 @@
 //   </header>
 //
 // Variants: default | dawn | living | frosted | voltage | pulse | ocean | blueprint
+//           topo | constellation | sundial | terrain | hexmosaic | particleflow
 // Set via data-header-variant attribute. CSS class header--{variant} is auto-added.
 // ============================================================================
 
@@ -569,6 +570,420 @@
             heartbeat(HEARTBEAT_RED, 'rgba(6,182,212,0.25)', '1.2', 3, '0.20', '0.40'),
             markers,
             annotations
+        ].join('\n');
+    };
+
+    // ========== 9. TOPOGRAPHIC CONTOUR (Optimization Landscape) ==========
+    VARIANTS['topo'] = function() {
+        // Concentric contour ellipses centered at the optimization "peak"
+        var cx = 680, cy = 135;
+        var rings = [];
+        var radii = [
+            { rx: 40, ry: 24, op: 0.22, sw: 1.5, dur: 6, begin: 0 },
+            { rx: 100, ry: 55, op: 0.18, sw: 1.3, dur: 6, begin: 0.7 },
+            { rx: 170, ry: 85, op: 0.15, sw: 1.1, dur: 6, begin: 1.4 },
+            { rx: 250, ry: 115, op: 0.12, sw: 1.0, dur: 6, begin: 2.1 },
+            { rx: 340, ry: 145, op: 0.09, sw: 0.9, dur: 6, begin: 2.8 },
+            { rx: 450, ry: 175, op: 0.07, sw: 0.8, dur: 6, begin: 3.5 },
+            { rx: 580, ry: 210, op: 0.05, sw: 0.7, dur: 6, begin: 4.2 }
+        ];
+        for (var i = 0; i < radii.length; i++) {
+            var r = radii[i];
+            var opLow = (r.op * 0.4).toFixed(3);
+            var opHigh = r.op.toFixed(3);
+            // Alternate colors: teal for even, blue-green for odd
+            var color = (i % 2 === 0) ? 'rgba(20,184,166,' : 'rgba(34,197,94,';
+            rings.push(
+                '<ellipse cx="' + cx + '" cy="' + cy + '" rx="' + r.rx + '" ry="' + r.ry + '"' +
+                ' fill="none" stroke="' + color + opHigh + ')" stroke-width="' + r.sw + '">' +
+                '<animate attributeName="stroke-opacity" dur="' + r.dur + 's" repeatCount="indefinite"' +
+                ' values="' + opLow + ';' + opHigh + ';' + opLow + '" begin="' + r.begin + 's"/>' +
+                '</ellipse>'
+            );
+        }
+
+        // Peak crosshair marker
+        var peak = [
+            '<line x1="' + (cx - 8) + '" y1="' + cy + '" x2="' + (cx + 8) + '" y2="' + cy + '" stroke="rgba(20,184,166,0.35)" stroke-width="1.2"/>',
+            '<line x1="' + cx + '" y1="' + (cy - 8) + '" x2="' + cx + '" y2="' + (cy + 8) + '" stroke="rgba(20,184,166,0.35)" stroke-width="1.2"/>',
+            '<circle cx="' + cx + '" cy="' + cy + '" r="3" fill="rgba(20,184,166,0.25)" stroke="rgba(20,184,166,0.40)" stroke-width="1">',
+            '  <animate attributeName="r" dur="3s" repeatCount="indefinite" values="3;5;3"/>',
+            '  <animate attributeName="opacity" dur="3s" repeatCount="indefinite" values="0.5;1;0.5"/>',
+            '</circle>'
+        ].join('\n');
+
+        // Elevation shading — subtle fill on innermost contours
+        var shading = [
+            '<ellipse cx="' + cx + '" cy="' + cy + '" rx="40" ry="24" fill="rgba(20,184,166,0.06)"/>',
+            '<ellipse cx="' + cx + '" cy="' + cy + '" rx="100" ry="55" fill="rgba(20,184,166,0.03)"/>'
+        ].join('\n');
+
+        // Annotation labels
+        var labels = [
+            '<text x="' + (cx + 48) + '" y="' + (cy + 4) + '" font-family="monospace" font-size="7" fill="rgba(20,184,166,0.30)">optimum</text>',
+            '<text x="' + (cx + 260) + '" y="' + (cy - 80) + '" font-family="monospace" font-size="7" fill="rgba(20,184,166,0.20)">cost</text>',
+            '<text x="' + (cx - 300) + '" y="' + (cy + 100) + '" font-family="monospace" font-size="7" fill="rgba(34,197,94,0.20)">CFE %</text>'
+        ].join('\n');
+
+        return [
+            shading,
+            rings.join('\n'),
+            peak,
+            labels,
+            GRID_DOTS_DARK
+        ].join('\n');
+    };
+
+    // ========== 10. CONSTELLATION NETWORK (Interconnected Grid) ==========
+    VARIANTS['constellation'] = function() {
+        // Node positions: {x, y, r, color} — sparse, elegant placement
+        var nodes = [
+            // Solar amber nodes
+            { x: 180, y: 65, r: 3.5, c: 'rgba(245,158,11,0.35)', dur: 5, begin: 0 },
+            { x: 520, y: 45, r: 3.0, c: 'rgba(245,158,11,0.30)', dur: 6, begin: 1.2 },
+            { x: 960, y: 55, r: 3.5, c: 'rgba(245,158,11,0.32)', dur: 5.5, begin: 2.5 },
+            { x: 1300, y: 70, r: 2.8, c: 'rgba(245,158,11,0.28)', dur: 6.5, begin: 0.8 },
+            // Wind green nodes
+            { x: 100, y: 160, r: 3.0, c: 'rgba(34,197,94,0.32)', dur: 5.5, begin: 0.5 },
+            { x: 380, y: 130, r: 3.5, c: 'rgba(34,197,94,0.35)', dur: 4.5, begin: 1.8 },
+            { x: 700, y: 100, r: 4.0, c: 'rgba(34,197,94,0.38)', dur: 5, begin: 3.0 },
+            { x: 1050, y: 145, r: 3.0, c: 'rgba(34,197,94,0.30)', dur: 6, begin: 0.3 },
+            { x: 1350, y: 165, r: 3.5, c: 'rgba(34,197,94,0.33)', dur: 5.5, begin: 2.0 },
+            // Hydro blue nodes
+            { x: 250, y: 220, r: 3.5, c: 'rgba(14,165,233,0.35)', dur: 6, begin: 1.0 },
+            { x: 580, y: 200, r: 3.0, c: 'rgba(14,165,233,0.30)', dur: 5, begin: 2.2 },
+            { x: 850, y: 230, r: 3.5, c: 'rgba(14,165,233,0.33)', dur: 5.5, begin: 0.7 },
+            { x: 1150, y: 210, r: 3.0, c: 'rgba(14,165,233,0.28)', dur: 6.5, begin: 3.2 },
+            { x: 1400, y: 240, r: 2.8, c: 'rgba(14,165,233,0.25)', dur: 7, begin: 1.5 },
+            // Nuclear indigo nodes
+            { x: 60, y: 80, r: 2.5, c: 'rgba(99,102,241,0.28)', dur: 7, begin: 0.2 },
+            { x: 450, y: 250, r: 3.0, c: 'rgba(99,102,241,0.30)', dur: 6, begin: 2.8 },
+            { x: 780, y: 170, r: 3.5, c: 'rgba(99,102,241,0.33)', dur: 5, begin: 1.4 },
+            { x: 1220, y: 120, r: 2.8, c: 'rgba(99,102,241,0.28)', dur: 6.5, begin: 3.5 }
+        ];
+
+        // Build node circles
+        var nodesSVG = [];
+        for (var i = 0; i < nodes.length; i++) {
+            var n = nodes[i];
+            nodesSVG.push(
+                '<circle cx="' + n.x + '" cy="' + n.y + '" r="' + n.r + '" fill="' + n.c + '">' +
+                '<animate attributeName="opacity" dur="' + n.dur + 's" repeatCount="indefinite"' +
+                ' values="0.15;0.55;0.15" begin="' + n.begin + 's"/>' +
+                '</circle>'
+            );
+        }
+
+        // Connection lines between nearby nodes (hand-picked pairs for visual balance)
+        var connections = [
+            [0,5], [5,1], [1,6], [6,2], [2,7], [7,3],  // upper chain
+            [14,4], [4,9], [9,10], [10,11], [11,12], [12,13],  // lower chain
+            [0,4], [5,9], [1,10], [6,16], [2,17], [16,11],  // vertical links
+            [15,10], [14,0]  // cross links
+        ];
+        var linesSVG = [];
+        for (var j = 0; j < connections.length; j++) {
+            var a = nodes[connections[j][0]], b = nodes[connections[j][1]];
+            var delay = (j * 0.4).toFixed(1);
+            linesSVG.push(
+                '<line x1="' + a.x + '" y1="' + a.y + '" x2="' + b.x + '" y2="' + b.y + '"' +
+                ' stroke="rgba(255,255,255,0.06)" stroke-width="0.6">' +
+                '<animate attributeName="stroke-opacity" dur="8s" repeatCount="indefinite"' +
+                ' values="0.03;0.14;0.03" begin="' + delay + 's"/>' +
+                '</line>'
+            );
+        }
+
+        return [
+            linesSVG.join('\n'),
+            nodesSVG.join('\n')
+        ].join('\n');
+    };
+
+    // ========== 11. RADIAL SUNDIAL (Solar/Temporal) ==========
+    VARIANTS['sundial'] = function() {
+        var fx = 100, fy = 260;  // focal point (bottom-left)
+
+        // Radial rays
+        var rays = [];
+        var rayTargets = [
+            { x: 300, y: 0, gold: true }, { x: 500, y: 0, gold: true },
+            { x: 700, y: 0, gold: true }, { x: 900, y: 0, gold: true },
+            { x: 1100, y: 0, gold: true }, { x: 1300, y: 0, gold: true },
+            { x: 1440, y: 30, gold: true }, { x: 1440, y: 100, gold: true },
+            { x: 1440, y: 170, gold: true }, { x: 1440, y: 240, gold: true },
+            // Darker fossil/night rays
+            { x: 0, y: 0, gold: false }, { x: 100, y: 0, gold: false },
+            { x: 200, y: 0, gold: false }, { x: 1440, y: 270, gold: false }
+        ];
+        for (var i = 0; i < rayTargets.length; i++) {
+            var t = rayTargets[i];
+            var color = t.gold ? 'rgba(245,158,11,' : 'rgba(100,116,139,';
+            var op = t.gold ? (0.06 + Math.random() * 0.10).toFixed(3) : '0.06';
+            rays.push(
+                '<line x1="' + fx + '" y1="' + fy + '" x2="' + t.x + '" y2="' + t.y + '"' +
+                ' stroke="' + color + op + ')" stroke-width="0.8"/>'
+            );
+        }
+
+        // Sweeping arc — traces the daily cycle
+        var arcRadius = 220;
+        // Partial arc path from bottom-left outward
+        var arcPath = 'M' + (fx + arcRadius) + ',' + fy +
+            ' A' + arcRadius + ',' + arcRadius + ' 0 0 0 ' + fx + ',' + (fy - arcRadius);
+        var arcLen = Math.PI * arcRadius / 2;  // quarter circle
+        var dashLen = arcLen * 0.15;
+
+        var arc = [
+            '<path d="' + arcPath + '" fill="none" stroke="rgba(245,158,11,0.40)" stroke-width="2"' +
+            ' stroke-dasharray="' + dashLen.toFixed(0) + ' ' + (arcLen - dashLen).toFixed(0) + '"' +
+            ' stroke-linecap="round">',
+            '  <animate attributeName="stroke-dashoffset" from="' + arcLen.toFixed(0) + '" to="0" dur="20s" repeatCount="indefinite"/>',
+            '</path>'
+        ].join('\n');
+
+        // Hour tick marks along a larger arc
+        var ticks = [];
+        var tickR = 250;
+        for (var h = 0; h < 8; h++) {
+            var angle = -Math.PI / 2 + (h / 7) * (Math.PI / 2);
+            var x1 = fx + tickR * Math.cos(angle);
+            var y1 = fy + tickR * Math.sin(angle);
+            var x2 = fx + (tickR + 8) * Math.cos(angle);
+            var y2 = fy + (tickR + 8) * Math.sin(angle);
+            ticks.push(
+                '<line x1="' + x1.toFixed(1) + '" y1="' + y1.toFixed(1) + '"' +
+                ' x2="' + x2.toFixed(1) + '" y2="' + y2.toFixed(1) + '"' +
+                ' stroke="rgba(245,158,11,0.15)" stroke-width="1"/>'
+            );
+        }
+
+        // Warm focal glow
+        var glow = [
+            '<circle cx="' + fx + '" cy="' + fy + '" r="60" fill="rgba(245,158,11,0.06)"/>',
+            '<circle cx="' + fx + '" cy="' + fy + '" r="25" fill="rgba(245,158,11,0.10)">',
+            '  <animate attributeName="r" dur="4s" repeatCount="indefinite" values="25;30;25"/>',
+            '  <animate attributeName="opacity" dur="4s" repeatCount="indefinite" values="0.8;1;0.8"/>',
+            '</circle>'
+        ].join('\n');
+
+        // 8,760 hour label
+        var label = '<text x="' + (fx + 265) + '" y="' + (fy - 8) + '" font-family="monospace" font-size="7" fill="rgba(245,158,11,0.22)">8,760h</text>';
+
+        return [
+            rays.join('\n'),
+            ticks.join('\n'),
+            arc,
+            glow,
+            label
+        ].join('\n');
+    };
+
+    // ========== 12. STACKED TERRAIN (Joy Division / Dispatch Art) ==========
+    VARIANTS['terrain'] = function() {
+        // Custom stacked wave paths — each layer goes to bottom (y=280)
+        // Layer 1: Hydro (bottom, blue) — gentle
+        var hydro = {
+            fill: 'M0,245 C120,238 240,232 360,236 C480,240 600,248 720,242 C840,236 960,230 1080,235 C1200,240 1320,246 1440,242 L1440,280 L0,280 Z',
+            fillAlt: 'M0,242 C120,235 240,235 360,238 C480,241 600,245 720,240 C840,234 960,233 1080,237 C1200,241 1320,244 1440,240 L1440,280 L0,280 Z',
+            stroke: 'M0,245 C120,238 240,232 360,236 C480,240 600,248 720,242 C840,236 960,230 1080,235 C1200,240 1320,246 1440,242',
+            strokeAlt: 'M0,242 C120,235 240,235 360,238 C480,241 600,245 720,240 C840,234 960,233 1080,237 C1200,241 1320,244 1440,240'
+        };
+        // Layer 2: Wind (green) — more variation
+        var wind = {
+            fill: 'M0,215 C80,205 160,220 280,200 C400,185 520,210 640,195 C760,180 880,200 1000,188 C1120,175 1240,195 1360,190 L1440,195 L1440,280 L0,280 Z',
+            fillAlt: 'M0,212 C80,200 160,215 280,198 C400,188 520,205 640,192 C760,178 880,196 1000,185 C1120,178 1240,192 1360,188 L1440,192 L1440,280 L0,280 Z',
+            stroke: 'M0,215 C80,205 160,220 280,200 C400,185 520,210 640,195 C760,180 880,200 1000,188 C1120,175 1240,195 1360,190 L1440,195',
+            strokeAlt: 'M0,212 C80,200 160,215 280,198 C400,188 520,205 640,192 C760,178 880,196 1000,185 C1120,178 1240,192 1360,188 L1440,192'
+        };
+        // Layer 3: Solar (amber) — bell curve shape (midday peak)
+        var solar = {
+            fill: 'M0,210 C180,200 300,170 450,145 C600,125 720,120 900,140 C1050,158 1200,185 1350,200 L1440,205 L1440,280 L0,280 Z',
+            fillAlt: 'M0,208 C180,198 300,168 450,148 C600,128 720,122 900,138 C1050,155 1200,182 1350,198 L1440,203 L1440,280 L0,280 Z',
+            stroke: 'M0,210 C180,200 300,170 450,145 C600,125 720,120 900,140 C1050,158 1200,185 1350,200 L1440,205',
+            strokeAlt: 'M0,208 C180,198 300,168 450,148 C600,128 720,122 900,138 C1050,155 1200,182 1350,198 L1440,203'
+        };
+        // Layer 4: Storage (red) — thin band, fills evening gaps
+        var storage = {
+            fill: 'M0,205 C180,198 350,192 500,185 C650,178 780,175 920,178 C1060,182 1200,190 1350,196 L1440,200 L1440,280 L0,280 Z',
+            fillAlt: 'M0,203 C180,196 350,190 500,183 C650,176 780,173 920,176 C1060,180 1200,188 1350,194 L1440,198 L1440,280 L0,280 Z',
+            stroke: 'M0,205 C180,198 350,192 500,185 C650,178 780,175 920,178 C1060,182 1200,190 1350,196 L1440,200',
+            strokeAlt: 'M0,203 C180,196 350,190 500,183 C650,176 780,173 920,176 C1060,180 1200,188 1350,194 L1440,198'
+        };
+        // Demand line — above the stack, visible gap
+        var demand = {
+            stroke: 'M0,155 C240,148 480,160 720,152 C960,145 1200,155 1440,150',
+            strokeAlt: 'M0,153 C240,146 480,158 720,150 C960,143 1200,153 1440,148'
+        };
+
+        return [
+            '<defs>',
+            '  <linearGradient id="hdr-ter-hydro" x1="0" y1="0" x2="0" y2="1">',
+            '    <stop offset="0%" stop-color="rgba(14,165,233,0.35)"/>',
+            '    <stop offset="100%" stop-color="rgba(14,165,233,0.05)"/>',
+            '  </linearGradient>',
+            '  <linearGradient id="hdr-ter-wind" x1="0" y1="0" x2="0" y2="1">',
+            '    <stop offset="0%" stop-color="rgba(34,197,94,0.30)"/>',
+            '    <stop offset="100%" stop-color="rgba(34,197,94,0.05)"/>',
+            '  </linearGradient>',
+            '  <linearGradient id="hdr-ter-solar" x1="0" y1="0" x2="0" y2="1">',
+            '    <stop offset="0%" stop-color="rgba(245,158,11,0.35)"/>',
+            '    <stop offset="100%" stop-color="rgba(245,158,11,0.05)"/>',
+            '  </linearGradient>',
+            '  <linearGradient id="hdr-ter-storage" x1="0" y1="0" x2="0" y2="1">',
+            '    <stop offset="0%" stop-color="rgba(239,68,68,0.25)"/>',
+            '    <stop offset="100%" stop-color="rgba(239,68,68,0.03)"/>',
+            '  </linearGradient>',
+            '</defs>',
+            // Layers painted back-to-front: hydro (bottom) → wind → solar → storage (top)
+            animWave(hydro, 'hdr-ter-hydro', '0.40', 'rgba(14,165,233,0.45)', '1.5', 18),
+            animWave(wind, 'hdr-ter-wind', '0.35', 'rgba(34,197,94,0.40)', '1.2', 15),
+            animWave(solar, 'hdr-ter-solar', '0.35', 'rgba(245,158,11,0.45)', '1.2', 12),
+            animWave(storage, 'hdr-ter-storage', '0.30', 'rgba(239,68,68,0.35)', '1.0', 16),
+            // Demand line — white, prominent
+            '<path d="' + demand.stroke + '" fill="none" stroke="rgba(255,255,255,0.50)" stroke-width="2" stroke-dasharray="6 3">',
+            '  <animate attributeName="d" dur="20s" repeatCount="indefinite" values="' +
+                demand.stroke + ';' + demand.strokeAlt + ';' + demand.stroke + '"/>',
+            '</path>',
+            // "Gap" label
+            '<text x="720" y="138" font-family="monospace" font-size="8" fill="rgba(255,255,255,0.25)" text-anchor="middle">the gap</text>'
+        ].join('\n');
+    };
+
+    // ========== 13. HEXAGONAL MOSAIC (Tessellated Heat Map) ==========
+    VARIANTS['hexmosaic'] = function() {
+        var hexR = 28;
+        var hexW = hexR * 1.732;  // ~48.5
+        var hexH = hexR * 1.5;    // 42
+        var cols = Math.ceil(1440 / hexW) + 1;
+        var rows = Math.ceil(280 / hexH) + 1;
+
+        // Resource color palette for hexes
+        var colors = [
+            'rgba(14,165,233,',   // hydro blue
+            'rgba(34,197,94,',    // wind green
+            'rgba(245,158,11,',   // solar amber
+            'rgba(99,102,241,',   // nuclear indigo
+            'rgba(6,182,212,',    // cyan/teal
+            'rgba(239,68,68,'     // storage red
+        ];
+
+        // Simple seeded pseudo-random for deterministic layout
+        var seed = 42;
+        function rng() {
+            seed = (seed * 16807 + 0) % 2147483647;
+            return seed / 2147483647;
+        }
+
+        // Bright cluster centers (column, row)
+        var clusters = [[4,2], [8,3], [12,2], [6,4], [10,1]];
+
+        function hexPath(cx, cy) {
+            var pts = [];
+            for (var a = 0; a < 6; a++) {
+                var angle = Math.PI / 6 + a * Math.PI / 3;  // pointy-top
+                pts.push((cx + hexR * Math.cos(angle)).toFixed(1) + ',' + (cy + hexR * Math.sin(angle)).toFixed(1));
+            }
+            return 'M' + pts.join(' L') + ' Z';
+        }
+
+        function isNearCluster(col, row) {
+            for (var c = 0; c < clusters.length; c++) {
+                var dx = col - clusters[c][0], dy = row - clusters[c][1];
+                if (dx * dx + dy * dy <= 3) return true;
+            }
+            return false;
+        }
+
+        var hexes = [];
+        for (var row = 0; row < rows && row < 8; row++) {
+            for (var col = 0; col < cols && col < 32; col++) {
+                var cx = col * hexW + (row % 2 ? hexW / 2 : 0);
+                var cy = row * hexH + hexH / 2;
+                if (cx > 1480 || cy > 300) continue;
+
+                var colorIdx = Math.floor(rng() * colors.length);
+                var nearCluster = isNearCluster(col, row);
+                var baseOp = nearCluster ? (0.08 + rng() * 0.12) : (0.03 + rng() * 0.06);
+                var opLow = (baseOp * 0.3).toFixed(3);
+                var opHigh = baseOp.toFixed(3);
+                var dur = (5 + rng() * 3).toFixed(1);
+                var begin = (col * 0.25 + row * 0.3).toFixed(1);
+
+                hexes.push(
+                    '<path d="' + hexPath(cx, cy) + '" fill="' + colors[colorIdx] + opHigh + ')" stroke="' + colors[colorIdx] + (baseOp * 0.5).toFixed(3) + ')" stroke-width="0.5">' +
+                    '<animate attributeName="opacity" dur="' + dur + 's" repeatCount="indefinite"' +
+                    ' values="' + opLow + ';' + opHigh + ';' + opLow + '" begin="' + begin + 's"/>' +
+                    '</path>'
+                );
+            }
+        }
+
+        return hexes.join('\n');
+    };
+
+    // ========== 14. PARTICLE FLOW (Energy Streams Converging) ==========
+    VARIANTS['particleflow'] = function() {
+        // Guide paths (invisible) — energy streams converging toward center
+        var centerX = 720, centerY = 160;
+        var paths = [
+            // Solar — from top-center, arcing down to center
+            { id: 'hdr-pf-solar', d: 'M720,0 C720,40 680,80 700,120 C720,150 720,155 720,160', color: 'rgba(245,158,11,', dur: 8 },
+            // Wind — from left edge, curving to center
+            { id: 'hdr-pf-wind', d: 'M0,100 C120,95 280,110 420,120 C560,130 650,145 720,160', color: 'rgba(34,197,94,', dur: 10 },
+            // Hydro — from bottom-left, arcing up to center
+            { id: 'hdr-pf-hydro', d: 'M100,280 C180,260 300,220 440,200 C580,180 660,168 720,160', color: 'rgba(14,165,233,', dur: 9 },
+            // Wind2 — from right edge, curving to center
+            { id: 'hdr-pf-wind2', d: 'M1440,120 C1320,115 1160,125 1020,135 C880,145 790,152 720,160', color: 'rgba(34,197,94,', dur: 11 }
+        ];
+
+        var defs = ['<defs>'];
+        for (var i = 0; i < paths.length; i++) {
+            defs.push('  <path id="' + paths[i].id + '" d="' + paths[i].d + '" fill="none" stroke="none"/>');
+        }
+        defs.push('</defs>');
+
+        // Subtle stream trail lines (visible but faint)
+        var trails = [];
+        for (var t = 0; t < paths.length; t++) {
+            trails.push(
+                '<path d="' + paths[t].d + '" fill="none" stroke="' + paths[t].color + '0.06)" stroke-width="1"/>'
+            );
+        }
+
+        // Particles — 6 per stream path
+        var particles = [];
+        for (var p = 0; p < paths.length; p++) {
+            var stream = paths[p];
+            var particlesPerStream = 6;
+            for (var j = 0; j < particlesPerStream; j++) {
+                var pSize = 1.5 + (j % 3) * 0.5;
+                var pOpacity = (0.20 + (j % 3) * 0.10).toFixed(2);
+                var pDelay = (j * (stream.dur / particlesPerStream)).toFixed(1);
+                particles.push(
+                    '<circle r="' + pSize + '" fill="' + stream.color + pOpacity + ')">',
+                    '  <animateMotion dur="' + stream.dur + 's" repeatCount="indefinite" begin="' + pDelay + 's">',
+                    '    <mpath href="#' + stream.id + '"/>',
+                    '  </animateMotion>',
+                    '</circle>'
+                );
+            }
+        }
+
+        // Convergence glow at center
+        var glow = [
+            '<circle cx="' + centerX + '" cy="' + centerY + '" r="30" fill="rgba(255,255,255,0.03)"/>',
+            '<circle cx="' + centerX + '" cy="' + centerY + '" r="12" fill="rgba(255,255,255,0.05)">',
+            '  <animate attributeName="r" dur="3s" repeatCount="indefinite" values="12;16;12"/>',
+            '  <animate attributeName="opacity" dur="3s" repeatCount="indefinite" values="0.6;1;0.6"/>',
+            '</circle>'
+        ].join('\n');
+
+        return [
+            defs.join('\n'),
+            trails.join('\n'),
+            particles.join('\n'),
+            glow
         ].join('\n');
     };
 
