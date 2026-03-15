@@ -1089,16 +1089,28 @@
             This captures planning-level reliability but not real-time ancillary service costs.</li>
         <li><strong>No demand-side flexibility</strong> &mdash; load is treated as perfectly inelastic.
             No demand response, load shifting, or flexible consumption (EV charging, data center
-            workload scheduling) is modeled&mdash;understating the system's ability to absorb surplus
-            clean energy and reduce curtailment.</li>
+            workload scheduling) is modeled. The Brattle Group (2019) estimates US demand response
+            capability could reach ~120 GW&mdash;equivalent to 10&ndash;20% of peak demand&mdash;with
+            national benefits exceeding $15 billion/year. NREL analysis shows DR provides flexibility
+            equivalent to ~1 GW of 6-hour battery storage per region. Ignoring this flexibility likely
+            overstates supply-side resource requirements, particularly for storage and peaking
+            capacity, by a comparable order of magnitude.</li>
         <li><strong>Single-sector scope</strong> &mdash; electricity-only analysis. Cross-sector
             interactions (transport electrification, building heating, industrial hydrogen demand)
             that affect electricity prices and resource availability are not captured.</li>
         <li><strong>Policy evolution</strong> &mdash; the model includes an IRA policy overlay
             (PTC/ITC incentives, RGGI carbon pricing, state RPS floors) as a toggleable sweep
             dimension, enabling comparison between market-only and policy-inclusive scenarios.
-            However, policy parameters are static as of early 2025&mdash;future regulatory changes
-            (GHG Protocol updates, new state mandates, carbon border adjustments) are not modeled.</li>
+            However, policy parameters are static as of early 2025. The One Big Beautiful Bill Act
+            (OBBBA, signed July 2025) enacted an accelerated phaseout of IRA clean energy credits
+            with differential treatment by technology: wind and solar PTC (&sect;45Y) expires for
+            projects not under construction by July 2026, while nuclear (&sect;45Y) and battery
+            storage ITC (&sect;48E) retain credit access through 2032+. The model&rsquo;s IRA
+            on/off sweep captures this directionally (IRA-off &asymp; post-OBBBA for wind/solar),
+            but does not model the differential phase-out timeline, technology-specific credit
+            retention, or the impact of effective tariff rates of 175%+ on Chinese solar panels.
+            Rhodium Group projects OBBBA will shrink new clean capacity additions by 53&ndash;59%
+            through 2035.</li>
         <li><strong>Interconnection queue constraints</strong> &mdash; the model assumes new capacity
             can be built as needed, without modeling interconnection queue delays or developer
             competition effects. LBNL&rsquo;s &ldquo;Queued Up&rdquo; 2025 Edition reports that only
@@ -1110,6 +1122,26 @@
             though the zone search refinement (1% steps) bounds this gap. For practical procurement
             decisions, the difference between the enumerated and continuous optima is small relative to
             the cost uncertainty captured by the 5,832-scenario sensitivity analysis.</li>
+        <li><strong>Emission factor granularity</strong> &mdash; EPA eGRID provides annual-average
+            emission rates per ISO and fuel type. These are used for fossil fleet characterization
+            and baseline calibration only&mdash;not for hourly dispatch decisions. Hourly CO&#8322;
+            is computed from technology-specific combustion rates (coal 0.95, gas CCGT 0.37,
+            gas CT 0.55, oil 0.65 tCO&#8322;/MWh) applied to the merit-order dispatch stack.
+            The three-layer LMP engine (merit-order dispatch &rarr; demand-quantile pricing &rarr;
+            scarcity adder) produces time-varying marginal costs independent of eGRID averages.
+            Procurement accounting offers three static baselines (grid-average, fossil-average,
+            marginal)&mdash;these are ISO-level annual scalars, not time-varying marginal rates
+            as recommended by Siler-Evans et al. (2012) and Donti et al. (2019).</li>
+        <li><strong>Clean firm learning curve uncertainty</strong> &mdash; Wright&rsquo;s Law cost
+            projections for nuclear and CCS assume positive learning rates (4&ndash;10%/doubling
+            for nuclear, 3&ndash;5% for CCS). Historical Western nuclear programs have exhibited
+            negative learning (Grubler 2010&mdash;French program costs escalated 3.5&times; from
+            1970s to 1990s units), and recent projects (Vogtle 3&amp;4 at $30&ndash;36.8B vs $14B
+            estimate; Flamanville 3 at &sim;&euro;13.2B vs &euro;3.3B; Hinkley Point C at
+            &pound;35B vs &pound;18B) overran estimates by 2&ndash;4&times;. The L/M/H cost toggles
+            bracket a wide range but do not model cost escalation scenarios. Results showing
+            nuclear-heavy portfolios should be interpreted as conditional on achieving learning
+            curves that lack sustained Western precedent.</li>
     </ul>
 
     <div class="insight-box insight-warn">
