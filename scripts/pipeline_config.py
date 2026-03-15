@@ -159,6 +159,94 @@ ENERGY_ONLY_ISOS = {'ERCOT', 'SPP'}  # Energy-only — feedback = introduce capa
 CAPACITY_MARKET_ISOS = {'PJM', 'NYISO', 'NEISO', 'MISO', 'CAISO'}  # Feedback = increase procurement
 
 # ============================================================================
+# IRA POLICY OVERLAY CONSTANTS
+# ============================================================================
+# These are ADDITIONAL incentive effects applied when ira_policy='on' in
+# the SMARTargets sweep. The base LCOE tables (NREL ATB 2024) represent
+# pre-incentive costs. These constants enable toggling IRA on/off to compare
+# market-only vs. policy-driven deployment trajectories.
+#
+# Sources: IRS Final Rules (2024), Treasury 45Y/45X guidance, CBO IRA
+# scoring (2022, updated 2024), LBNL "IRA at Two" report (Aug 2024).
+
+# Solar/Wind PTC: §45Y clean electricity PTC, 10yr, inflation-adjusted 2024$
+IRA_PTC_SOLAR = 26.0        # $/MWh
+IRA_PTC_WIND = 26.0         # $/MWh
+
+# Battery ITC: §48E (successor to §48) — 30% of capex for standalone storage
+# Annualized effect: ~30% LCOE reduction (matches NREL ATB ITC scenario)
+IRA_ITC_BATTERY_PCT = 0.30  # 30% ITC
+
+# Nuclear 45U: existing nuclear PTC, expires 2032
+IRA_PTC_45U_NUCLEAR = 15.0  # $/MWh
+# Nuclear 45Y ($26/MWh new-build): already applied in step6_1 get_resource_lcoe()
+# as PTC_45Y_NEW_NUCLEAR — NOT duplicated here to avoid double-counting.
+
+# ============================================================================
+# RGGI / CARBON PRICING
+# ============================================================================
+# RGGI applies to NYISO, NEISO, PJM (RGGI member states).
+# RGGI acts as a FLOOR — NOT additive to a national carbon price.
+# Effective price per ISO = max(national_carbon_price, rggi_price_if_applicable)
+# Same logic as CBAM: overlapping carbon markets don't stack. A generator
+# already paying RGGI at $14/ton only owes the delta up to a national price.
+#
+# Sources: RGGI Inc. quarterly auction reports (2024), EPA proposed §111(d)
+# carbon pricing (withdrawn 2025), CBO carbon tax scoring (2024).
+
+RGGI_ISOS = {'NYISO', 'NEISO', 'PJM'}
+RGGI_PRICE_PER_TON = {
+    'Low':    3.0,    # Historical RGGI floor (~$3, 2020-2021)
+    'Medium': 5.50,   # Current RGGI clearing price (~$5.50, 2024 avg)
+    'High':   14.0,   # RGGI 2030 projected ceiling (3rd control period)
+}
+# National carbon price: currently 0, future-proofed for policy scenarios.
+# Set via conditions dict if/when a national carbon price is modeled.
+# Conversion: $/ton CO2 → $/MWh fossil adder via CO2_RATES in lmp_engine.py
+
+# ============================================================================
+# STATE RPS DEPLOYMENT FLOORS
+# ============================================================================
+# Minimum clean energy % by year. When ira_policy='on', if market-driven
+# deployment falls below the RPS floor, forced deployment fills the gap.
+# These are load-weighted averages across states within each ISO footprint.
+#
+# Sources: LBNL RPS Status Update (Barbose, 2024), DSIRE database,
+# state-level legislation (CA SB 100, NY CLCPA, MA 2050 roadmap,
+# NJ EMP, IL CEJA, MN 100% Clean, KS RES, NM ETA).
+
+STATE_RPS_FLOORS = {
+    'CAISO': {2025: 44, 2030: 60, 2035: 75, 2040: 90, 2045: 100, 2050: 100},
+    'NYISO': {2025: 35, 2030: 70, 2035: 80, 2040: 90, 2045: 100, 2050: 100},
+    'PJM':   {2025: 20, 2030: 35, 2035: 45, 2040: 55, 2045: 60,  2050: 65},   # NJ 50%/2030 weighted with PA/VA
+    'NEISO': {2025: 35, 2030: 50, 2035: 65, 2040: 80, 2045: 90,  2050: 100},   # MA 2050 net-zero weighted
+    'ERCOT': {},  # No state RPS
+    'MISO':  {2025: 15, 2030: 20, 2035: 25, 2040: 30, 2045: 35,  2050: 40},    # MN/IL weighted
+    'SPP':   {2025: 10, 2030: 15, 2035: 20, 2040: 25, 2045: 30,  2050: 35},    # KS/NM weighted
+}
+
+
+def get_rps_floor(iso, year):
+    """Interpolate state RPS floor (% clean energy) for given ISO and year.
+
+    Returns 0 if the ISO has no RPS.
+    """
+    floors = STATE_RPS_FLOORS.get(iso, {})
+    if not floors:
+        return 0
+    years = sorted(floors.keys())
+    if year <= years[0]:
+        return floors[years[0]]
+    if year >= years[-1]:
+        return floors[years[-1]]
+    for i in range(len(years) - 1):
+        if years[i] <= year <= years[i + 1]:
+            frac = (year - years[i]) / (years[i + 1] - years[i])
+            return floors[years[i]] + frac * (floors[years[i + 1]] - floors[years[i]])
+    return 0
+
+
+# ============================================================================
 # RESOURCE CAPACITY CAPS (TWh/yr)
 # ============================================================================
 
