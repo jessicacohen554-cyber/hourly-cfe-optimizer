@@ -236,10 +236,17 @@ RGGI_PRICE_PER_TON = {
 STATE_RPS_FLOORS = {
     'CAISO': {2025: 44, 2030: 60, 2035: 75, 2040: 90, 2045: 100, 2050: 100},
     'NYISO': {2025: 35, 2030: 70, 2035: 80, 2040: 90, 2045: 100, 2050: 100},
-    'PJM':   {2025: 20, 2030: 35, 2035: 45, 2040: 55, 2045: 60,  2050: 65},   # NJ 50%/2030 weighted with PA/VA
+    # PJM: Load-weighted CES/RPS across NJ EMP (9%, 100%/2050), VA VCEA (12%,
+    # 100%/2050), IL CEJA (17%, 100%/2050), MD CSWA (5%, 100%/2035), DC (2%,
+    # 100%/2032), NC HB951 (7%, carbon-neutral/2050), DE (1%, 80%/2050).
+    # Lagging: PA AEPS ~8% (18%), OH ~10% (15%), WV/KY/IN (13%, no RPS).
+    # NJ+VA+IL+MD+DC = 45% of PJM load, all targeting 100% by 2050.
+    'PJM':   {2025: 22, 2030: 40, 2035: 55, 2040: 68, 2045: 80,  2050: 88},
     'NEISO': {2025: 35, 2030: 50, 2035: 65, 2040: 80, 2045: 90,  2050: 100},   # MA 2050 net-zero weighted
     'ERCOT': {},  # No state RPS
-    'MISO':  {2025: 15, 2030: 20, 2035: 25, 2040: 30, 2045: 35,  2050: 40},    # MN/IL weighted
+    # MISO: Load-weighted across IL CEJA (25%, 100%/2050), MN (10%, 100%/2040),
+    # MI Clean Energy (15%, 100%/2040). ~50% of MISO load in 100% mandate states.
+    'MISO':  {2025: 15, 2030: 25, 2035: 35, 2040: 48, 2045: 52,  2050: 58},
     'SPP':   {2025: 10, 2030: 15, 2035: 20, 2040: 25, 2045: 30,  2050: 35},    # KS/NM weighted
 }
 
