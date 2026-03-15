@@ -87,7 +87,7 @@ body { background: var(--bg-page-white); }
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--hydro);
+    color: #0369A1; /* contrast-fix: was var(--hydro)/#0EA5E9, now #0369A1, ratio 5.93:1 on white */
     margin-bottom: 4px;
 }
 .deviation-detail .dv-values {
@@ -183,7 +183,7 @@ body { background: var(--bg-page-white); }
     font-family: var(--font-body);
 }
 .assumption-table tr:nth-child(even) { background: #f8fafc; }
-.assumption-table .our-val { font-weight: 600; color: var(--hydro); }
+.assumption-table .our-val { font-weight: 600; color: #0369A1; /* contrast-fix: was var(--hydro)/#0EA5E9, now #0369A1, ratio 5.93:1 on white */ }
 .assumption-table .bm-val { color: var(--text-muted); }
 
 /* ISO selector for charts */
@@ -217,7 +217,7 @@ body { background: var(--bg-page-white); }
 }
 .iso-pill:hover:not(.active) {
     border-color: var(--hydro);
-    color: var(--hydro);
+    color: #0369A1; /* contrast-fix: was var(--hydro)/#0EA5E9, now #0369A1, ratio 5.93:1 on white */
 }
 </style>
 </head>
@@ -376,7 +376,7 @@ body { background: var(--bg-page-white); }
     <div class="deviation-detail" id="deviationDetail">
         <div class="dv-label" id="dvLabel">–</div>
         <div class="dv-values">
-            <div><div class="dv-val" id="dvOurs" style="color: var(--hydro);">–</div><small>Our Model (P50)</small></div>
+            <div><div class="dv-val" id="dvOurs" style="color: #0369A1; /* contrast-fix: was var(--hydro), now #0369A1, ratio 5.93:1 on white */">–</div><small>Our Model (P50)</small></div>
             <div><div class="dv-val" id="dvBenchmark" style="color: var(--text-muted);">–</div><small id="dvBmLabel">EIA AEO</small></div>
             <div><div class="dv-val" id="dvDiff">–</div><small>Difference</small></div>
         </div>

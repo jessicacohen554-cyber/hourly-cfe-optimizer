@@ -145,8 +145,8 @@ body { background: var(--bg-page); }
     margin-bottom: 8px;
 }
 .tag-2a { background: rgba(239,68,68,0.1); color: #DC2626; border: 1px solid rgba(239,68,68,0.25); }
-.tag-2b { background: rgba(245,158,11,0.1); color: #D97706; border: 1px solid rgba(245,158,11,0.25); }
-.tag-2c { background: rgba(34,197,94,0.1); color: #16A34A; border: 1px solid rgba(34,197,94,0.25); }
+.tag-2b { background: rgba(245,158,11,0.1); color: #B45309; /* contrast-fix: was #D97706, now #B45309, ratio 5.02:1 on white */ border: 1px solid rgba(245,158,11,0.25); }
+.tag-2c { background: rgba(34,197,94,0.1); color: #15803D; /* contrast-fix: was #16A34A, now #15803D, ratio 5.02:1 on white */ border: 1px solid rgba(34,197,94,0.25); }
 .strat-card p { font-size: 0.82rem; line-height: 1.55; color: #4b5563; }
 .strat-card .cost-big {
     font-family: var(--font-data, var(--font-mono));
@@ -415,7 +415,7 @@ body { background: var(--bg-page); }
             <h4>Grid Baseline</h4>
             <p>Existing clean generation at its actual <strong>8,760-hour shape</strong> is credited for free as a grid baseline. Buyers only procure new-build for the gap above existing clean.</p>
             <p>Cheapest when existing clean is high, but creates no incremental market signal for what already exists.</p>
-            <div class="cost-big" style="color: #D97706;" id="cost2b">$--</div>
+            <div class="cost-big" style="color: #B45309;" id="cost2b">$--</div>
             <div class="cost-label">blended $/MWh</div>
         </div>
         <div class="strat-card active" id="card2c" onclick="selectStrategy('2C')">
@@ -423,7 +423,7 @@ body { background: var(--bg-page); }
             <h4>SSS + Premium Tranches</h4>
             <p><strong>State-supported clean</strong> (SSS) credited at $0 pro-rata. Existing <strong>merchant clean</strong> available at EAC premium. Remaining gap filled by new-build PPAs.</p>
             <p>Balances incentives: free SSS keeps costs manageable, merchant EAC pricing keeps plants economically viable, new-build signals preserved for the gap.</p>
-            <div class="cost-big" style="color: #16A34A;" id="cost2c">$--</div>
+            <div class="cost-big" style="color: #15803D;" id="cost2c">$--</div>
             <div class="cost-label">blended $/MWh</div>
         </div>
     </div>

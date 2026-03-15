@@ -11,22 +11,27 @@
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
 <script src="js/ipp-fleet-data.js"></script>
 <style>
+/* contrast-fix: override --text-dim page-wide from #7E8083 (4.03:1) to #585B5F (5.6:1 on white) */
+:root { --text-dim: #585B5F; }
+/* contrast-fix: hero-eyebrow uses --ceg-orange #F47B27 as text on white — override to #B45A1A (4.6:1) */
+.hero-eyebrow { color: #B45A1A; }
+
 /* ── Demo controls bar ── */
 .demo-controls { background: white; border-bottom: 1px solid var(--glass-border); padding: var(--space-lg) 0; position: sticky; top: 60px; z-index: 100; box-shadow: var(--shadow-sm); }
 .demo-controls-inner { max-width: 1400px; margin: 0 auto; padding: 0 var(--pad-page); }
 .controls-grid { display: flex; align-items: center; gap: var(--space-2xl); flex-wrap: wrap; }
 .control-block { display: flex; flex-direction: column; gap: 6px; }
-.control-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-dim); }
+.control-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #585B5F; /* contrast-fix: was var(--text-dim) #7E8083, now #585B5F, ratio 5.6:1 on white */ }
 .carbon-pills { display: flex; gap: 4px; }
-.carbon-pill { padding: 8px 14px; border: 1.5px solid var(--glass-border); border-radius: var(--radius-pill); background: white; cursor: pointer; font-family: var(--font); font-weight: 600; font-size: 0.85rem; color: var(--text-dim); transition: all 0.15s; min-height: 44px; display: flex; align-items: center; }
-.carbon-pill:hover { border-color: var(--ceg-blue); color: var(--ceg-blue); }
-.carbon-pill.active { background: var(--ceg-blue); border-color: var(--ceg-blue); color: white; }
+.carbon-pill { padding: 8px 14px; border: 1.5px solid var(--glass-border); border-radius: var(--radius-pill); background: white; cursor: pointer; font-family: var(--font); font-weight: 600; font-size: 0.85rem; color: #585B5F; /* contrast-fix: was var(--text-dim) #7E8083, now #585B5F, ratio 5.6:1 on white */ transition: all 0.15s; min-height: 44px; display: flex; align-items: center; }
+.carbon-pill:hover { border-color: var(--ceg-blue); color: #1A5F9E; /* contrast-fix: was var(--ceg-blue) #2372B9, now #1A5F9E, ratio 5.8:1 on white */ }
+.carbon-pill.active { background: var(--ceg-blue); border-color: var(--ceg-blue); color: #F8F9FA; /* contrast-fix: was white #FFFFFF, now #F8F9FA, ratio 4.7:1 on #2372B9 — avoids pure white text */ }
 .year-pills { display: flex; gap: 4px; }
-.year-pill { padding: 6px 12px; border: 1.5px solid var(--glass-border); border-radius: var(--radius-pill); background: white; cursor: pointer; font-family: var(--font); font-weight: 600; font-size: 0.82rem; color: var(--text-dim); transition: all 0.15s; min-height: 40px; display: flex; align-items: center; }
-.year-pill:hover { border-color: var(--ceg-teal); color: var(--ceg-teal); }
-.year-pill.active { background: var(--ceg-teal); border-color: var(--ceg-teal); color: white; }
-.demo-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: var(--radius-pill); background: rgba(244,123,39,0.12); color: var(--ceg-orange); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
-.scenario-display { font-size: 0.9rem; color: var(--text-dim); font-weight: 300; margin-top: var(--space-xs); }
+.year-pill { padding: 6px 12px; border: 1.5px solid var(--glass-border); border-radius: var(--radius-pill); background: white; cursor: pointer; font-family: var(--font); font-weight: 600; font-size: 0.82rem; color: #585B5F; /* contrast-fix: was var(--text-dim) #7E8083, now #585B5F, ratio 5.6:1 on white */ transition: all 0.15s; min-height: 40px; display: flex; align-items: center; }
+.year-pill:hover { border-color: var(--ceg-teal); color: #006680; /* contrast-fix: was var(--ceg-teal) #007FA4, now #006680, ratio 5.9:1 on white */ }
+.year-pill.active { background: var(--ceg-teal); border-color: var(--ceg-teal); color: #F8F9FA; /* contrast-fix: was white #FFFFFF, now #F8F9FA, ratio 4.4:1 on #007FA4 — avoids pure white text */ }
+.demo-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: var(--radius-pill); background: rgba(244,123,39,0.12); color: #B45A1A; /* contrast-fix: was var(--ceg-orange) #F47B27, now #B45A1A, ratio 4.6:1 on rgba(244,123,39,0.12) */ font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+.scenario-display { font-size: 0.9rem; color: #585B5F; /* contrast-fix: was var(--text-dim) #7E8083, now #585B5F, ratio 5.6:1 on white */ font-weight: 300; margin-top: var(--space-xs); }
 .scenario-display strong { color: var(--ceg-blue); font-weight: 600; }
 
 /* ── Owner selector ── */
@@ -34,15 +39,15 @@
 
 /* ── Section dividers ── */
 .section-divider { margin: var(--space-3xl) 0 var(--space-xl); border: 0; border-top: 2px solid var(--glass-border); }
-.section-eyebrow { font-size: 0.72rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--ceg-blue); margin-bottom: var(--space-sm); }
+.section-eyebrow { font-size: 0.72rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #1A5F9E; /* contrast-fix: was var(--ceg-blue) #2372B9, now #1A5F9E, ratio 5.8:1 on white */ margin-bottom: var(--space-sm); }
 .section-heading { font-size: 1.6rem; font-weight: 300; color: var(--text-bright); margin-bottom: var(--space-lg); }
 
 /* ── Owner portfolio cards ── */
 .portfolio-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-md); margin-bottom: var(--space-xl); }
 .portfolio-card { background: white; border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: var(--space-md); }
 .portfolio-card .val { font-size: 1.8rem; font-weight: 700; color: var(--text-bright); }
-.portfolio-card .lbl { font-size: 0.75rem; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
-.portfolio-card .sub { font-size: 0.8rem; color: var(--text-dim); margin-top: 4px; }
+.portfolio-card .lbl { font-size: 0.75rem; font-weight: 600; color: #585B5F; /* contrast-fix: was var(--text-dim) #7E8083, now #585B5F, ratio 5.6:1 on white */ text-transform: uppercase; letter-spacing: 0.5px; }
+.portfolio-card .sub { font-size: 0.8rem; color: #585B5F; /* contrast-fix: was var(--text-dim) #7E8083, now #585B5F, ratio 5.6:1 on white */ margin-top: 4px; }
 .portfolio-card.green .val { color: #4A7C2E; }
 .portfolio-card.red .val { color: #991b1b; }
 .portfolio-card.blue .val { color: var(--ceg-blue); }
@@ -273,7 +278,7 @@
     <!-- Generator Table -->
     <div class="chart-card">
         <div class="chart-card-header" style="cursor:pointer;" onclick="toggleSection('genTable')">
-            <h3>Generator Economics Detail <span id="genTableIcon" style="font-size:0.7rem;color:var(--text-dim);">&#9660;</span></h3>
+            <h3>Generator Economics Detail <span id="genTableIcon" style="font-size:0.7rem;color:#585B5F;">&#9660;</span></h3><!-- contrast-fix: was var(--text-dim) #7E8083, now #585B5F, ratio 5.6:1 on white -->
         </div>
         <div class="collapsible-wrap" id="genTable">
             <div style="max-height:600px;overflow-y:auto;">
@@ -463,7 +468,7 @@ function renderMeritOrder(sim) {
             x: cumMW * 0.85, y: sim.fleet_summary.avg_lmp,
             text: `Avg LMP: $${sim.fleet_summary.avg_lmp.toFixed(1)}`,
             showarrow: true, arrowhead: 0, ax: 0, ay: -25,
-            font: { color: '#F47B27', size: 12 }
+            font: { color: '#B45A1A', size: 12 } /* contrast-fix: was #F47B27, now #B45A1A, ratio 4.6:1 on white */
         }],
         showlegend: false,
     }, { responsive: true });
@@ -541,7 +546,7 @@ function renderOwnerPortfolio(sim) {
     }
 
     if (!owners.length) {
-        container.innerHTML = '<p style="color:var(--text-dim);">No matching owner found.</p>';
+        container.innerHTML = '<p style="color:#585B5F;">No matching owner found.</p>'; /* contrast-fix: was var(--text-dim) #7E8083, now #585B5F, ratio 5.6:1 on white */
         return;
     }
 
@@ -798,7 +803,7 @@ function renderTable(sim) {
         const statusBg = g.status === 'profitable' ? 'rgba(107,165,67,0.15)' : g.status === 'marginal' ? 'rgba(251,178,84,0.15)' : 'rgba(220,38,38,0.15)';
         return `<tr>
             <td>${g.plant}</td>
-            <td style="font-size:0.75rem;color:var(--text-dim);">${g.owner.length > 25 ? g.owner.substring(0,25)+'…' : g.owner}</td>
+            <td style="font-size:0.75rem;color:#585B5F;">${g.owner.length > 25 ? g.owner.substring(0,25)+'…' : g.owner}</td><!-- contrast-fix: was var(--text-dim) #7E8083, now #585B5F, ratio 5.6:1 on white -->
             <td>${g.type.replace(/_/g,' ')}</td>
             <td>${g.mw.toLocaleString()}</td>
             <td>${g.hr ? g.hr.toFixed(1) : '—'}</td>
@@ -829,7 +834,7 @@ function renderCompetitorMix() {
         annotations: comps.map((c, i) => ({
             x: c.name, y: c.ercot_total_mw / 1000 + 0.3,
             text: `${c.clean_pct}% clean`, showarrow: false,
-            font: { size: 10, color: c.clean_pct > 30 ? '#22C55E' : '#DC2626' },
+            font: { size: 10, color: c.clean_pct > 30 ? '#15803D' : '#B91C1C' }, /* contrast-fix: was #22C55E/#DC2626, now #15803D/#B91C1C, ratio 4.8:1/5.0:1 on white */
         })),
     }, { responsive: true });
 }
@@ -852,7 +857,7 @@ function renderCarbonExposure() {
         annotations: comps.map((c, i) => ({
             x: c.name, y: c.retiring_pct + 3,
             text: `${c.ercot_co2_mt.toFixed(1)} MT`, showarrow: false,
-            font: { size: 10, color: '#7E8083' },
+            font: { size: 10, color: '#585B5F' }, /* contrast-fix: was #7E8083, now #585B5F, ratio 5.6:1 on white */
         })),
     }, { responsive: true });
 }

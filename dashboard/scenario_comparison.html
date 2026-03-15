@@ -66,7 +66,7 @@
 /* ===== PAGE-SPECIFIC: Domino table — extends shared .data-table ===== */
 .domino-table { white-space: nowrap; }
 .domino-table .num { font-family: var(--font-data); font-weight: 600; font-size: 0.82rem; }
-.mac-cheap { color: var(--ccs); } .mac-mid { color: var(--amber-warn); } .mac-exp { color: var(--red-dark); } .mac-warn { color: rgba(0,0,0,0.4); font-style: italic; }
+.mac-cheap { color: var(--ccs); } .mac-mid { color: var(--amber-warn); } .mac-exp { color: var(--red-dark); } .mac-warn { color: #475569; font-style: italic; } /* contrast-fix: was rgba(0,0,0,0.4), now #475569, ratio 5.78:1 on white */
 
 /* ===== PAGE-SPECIFIC: MAC Queue Accordion ===== */
 .mac-accordion-item { margin-bottom: 8px; border: 1px solid rgba(0,0,0,0.08); border-radius: var(--radius-md); overflow: hidden; }
@@ -74,7 +74,7 @@
 .mac-accordion-header:hover { background: rgba(14,165,233,0.04); }
 .mac-acc-iso { font-family: var(--font-heading); font-weight: 700; font-size: 0.95rem; min-width: 60px; }
 .mac-acc-summary { flex: 1; font-size: 0.8rem; color: rgba(0,0,0,0.55); font-family: var(--font-data); }
-.mac-acc-chevron { font-size: 0.7rem; color: rgba(0,0,0,0.3); transition: transform 0.2s; }
+.mac-acc-chevron { font-size: 0.7rem; color: rgba(0,0,0,0.58); transition: transform 0.2s; } /* contrast-fix: was rgba(0,0,0,0.3), now rgba(0,0,0,0.58), ratio 5.30:1 on white */
 .mac-accordion-item.open .mac-acc-chevron { transform: rotate(180deg); }
 .mac-accordion-body { display: none; padding: 0 16px 12px; }
 .mac-accordion-item.open .mac-accordion-body { display: block; }
@@ -135,7 +135,7 @@
 .tile-conclusion.heat-blue { background: linear-gradient(135deg, rgba(14,165,233,0.06) 0%, rgba(14,165,233,0.12) 100%); }
 .tile-conclusion.heat-blue .conclusion-val { color: #0284C7; }
 .tile-conclusion.heat-neutral { background: rgba(0,0,0,0.02); }
-.tile-conclusion.heat-neutral .conclusion-val { color: rgba(0,0,0,0.5); }
+.tile-conclusion.heat-neutral .conclusion-val { color: rgba(0,0,0,0.58); } /* contrast-fix: was rgba(0,0,0,0.5), now rgba(0,0,0,0.58), ratio 5.30:1 on white */
 /* Compact A/B detail panels */
 .tile-details { display: flex; gap: 0; }
 .tile-ab-compact { flex: 1; padding: 8px 10px; text-align: center; font-size: 0.7rem; line-height: 1.35; }
@@ -168,7 +168,7 @@
 .winner-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; }
 .winner-badge.b-wins { background: rgba(8,145,178,0.12); color: var(--ccs); }
 .winner-badge.a-wins { background: rgba(79,70,229,0.12); color: var(--indigo); }
-.winner-badge.tie { background: rgba(0,0,0,0.06); color: rgba(0,0,0,0.5); }
+.winner-badge.tie { background: rgba(0,0,0,0.06); color: rgba(0,0,0,0.58); } /* contrast-fix: was rgba(0,0,0,0.5), now rgba(0,0,0,0.58), ratio 5.30:1 on light bg */
 
 /* ===== MOBILE OVERRIDES (page-specific; chart-pair in dashboard-ui.css) ===== */
 @media (max-width: 768px) {
@@ -248,7 +248,7 @@
             <strong style="color: #67E8F9; font-size: 0.82rem;">4. Geographic Capital Clustering</strong>
             <p style="color: rgba(255,255,255,0.82); font-size: 0.75rem; line-height: 1.5; margin: 4px 0 0;">SPP+MISO attract 45&ndash;55% of capital with 33% of C&amp;I load. NEISO+NYISO+CAISO get 8&ndash;12% with 18% of load.</p>
         </div>
-        <div style="padding: 12px 14px; background: rgba(22,163,74,0.08); border-left: 3px solid #16A34A; border-radius: 0 8px 8px 0;">
+        <div style="padding: 12px 14px; background: rgba(22,163,74,0.08); border-left: 3px solid #15803D; border-radius: 0 8px 8px 0;">
             <strong style="color: #86EFAC; font-size: 0.82rem;">5. Collective Action Tragedy</strong>
             <p style="color: rgba(255,255,255,0.82); font-size: 0.75rem; line-height: 1.5; margin: 4px 0 0;">Each buyer locally rational, but firm clean power is neglected. Only hourly matching forces balanced local portfolios that seed the learning curve.</p>
         </div>
@@ -305,7 +305,7 @@
 
     <!-- Early Stage -->
     <div class="card" style="margin: 24px 0; padding: 24px;">
-        <span class="story-badge" style="background: rgba(34,197,94,0.1); color: #16A34A; border-color: rgba(34,197,94,0.3);">50&ndash;65% &bull; Early Stage</span>
+        <span class="story-badge" style="background: rgba(34,197,94,0.1); color: #15803D; border-color: rgba(34,197,94,0.3);">50&ndash;65% &bull; Early Stage</span>
         <h3 style="font-family: var(--font-heading); font-size: 1.1rem; color: var(--navy); margin: 12px 0 8px;">All Roads Look the Same</h3>
         <p style="font-size: 0.88rem; color: rgba(0,0,0,0.65); line-height: 1.7; margin-bottom: 16px;">
             At 50&ndash;65% clean targets, Strategy 1B and 2C cluster &mdash; cheap VRE is abundant everywhere.
@@ -419,7 +419,7 @@
     </div>
     <div class="chart-box">
         <h3 id="macTimelineTitle">PJM &mdash; Marginal $/tCO&#8322; by SBTi Year</h3>
-        <p class="chart-note">Indigo = 1B | Teal = 2C. <span style="color:rgba(0,0,0,0.5);">&#9888; = no new CO&#8322; displaced at that step (cost increased but mix didn't add clean generation).</span></p>
+        <p class="chart-note">Indigo = 1B | Teal = 2C. <span style="color:rgba(0,0,0,0.58);">&#9888; = no new CO&#8322; displaced at that step (cost increased but mix didn't add clean generation).</span></p>
         <div class="chart-container"><canvas id="macTimelineChart"></canvas></div>
     </div>
 </div>
@@ -511,10 +511,10 @@ with sequential build constraint per ISO. Expand each ISO to see its full deploy
         </thead>
         <tbody>
             <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">Renewable Gen (Solar/Wind LCOE)</td><td style="text-align:center; padding:6px;">Low</td><td style="text-align:center; padding:6px;">Low</td></tr>
-            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">Firm Gen (Nuclear new-build LCOE)</td><td style="text-align:center; padding:6px; color:#22C55E;">Low (NOAK)</td><td style="text-align:center; padding:6px; color:#EF4444;">High (FOAK)</td></tr>
-            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">CCS-CCGT (w/ 45Q offset)</td><td style="text-align:center; padding:6px; color:#22C55E;">Low (NOAK)</td><td style="text-align:center; padding:6px; color:#EF4444;">High (FOAK)</td></tr>
-            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">LDES (100hr iron-air storage)</td><td style="text-align:center; padding:6px; color:#22C55E;">Low (NOAK)</td><td style="text-align:center; padding:6px; color:#EF4444;">High (FOAK)</td></tr>
-            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">Geothermal (CAISO only)</td><td style="text-align:center; padding:6px; color:#22C55E;">Low (NOAK)</td><td style="text-align:center; padding:6px; color:#EF4444;">High (FOAK)</td></tr>
+            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">Firm Gen (Nuclear new-build LCOE)</td><td style="text-align:center; padding:6px; color:#15803D;">Low (NOAK)</td><td style="text-align:center; padding:6px; color:#DC2626;">High (FOAK)</td></tr>
+            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">CCS-CCGT (w/ 45Q offset)</td><td style="text-align:center; padding:6px; color:#15803D;">Low (NOAK)</td><td style="text-align:center; padding:6px; color:#DC2626;">High (FOAK)</td></tr>
+            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">LDES (100hr iron-air storage)</td><td style="text-align:center; padding:6px; color:#15803D;">Low (NOAK)</td><td style="text-align:center; padding:6px; color:#DC2626;">High (FOAK)</td></tr>
+            <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">Geothermal (CAISO only)</td><td style="text-align:center; padding:6px; color:#15803D;">Low (NOAK)</td><td style="text-align:center; padding:6px; color:#DC2626;">High (FOAK)</td></tr>
             <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">Battery (4hr Li-ion)</td><td style="text-align:center; padding:6px;">Low</td><td style="text-align:center; padding:6px;">Low</td></tr>
             <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">Fossil Fuel (wholesale price)</td><td style="text-align:center; padding:6px;">Medium</td><td style="text-align:center; padding:6px;">Medium</td></tr>
             <tr style="border-bottom: 1px solid rgba(0,0,0,0.06);"><td style="padding:6px 8px;">Transmission</td><td style="text-align:center; padding:6px;">Medium</td><td style="text-align:center; padding:6px;">Medium</td></tr>
@@ -1165,12 +1165,12 @@ function renderMacTimeline(iso) {
                 annotation: { annotations: targetAnnotation(labels, ptsA) },
             },
             scales: {
-                x: { ticks: { color: 'rgba(0,0,0,0.5)', font: { size: 10 }, maxRotation: 55 }, grid: { color: 'rgba(0,0,0,0.06)' } },
+                x: { ticks: { color: 'rgba(0,0,0,0.58)' /* contrast-fix */, font: { size: 10 }, maxRotation: 55 }, grid: { color: 'rgba(0,0,0,0.06)' } },
                 y: {
                     max: macYMax,
-                    ticks: { color: 'rgba(0,0,0,0.5)', callback: v => '$' + v.toLocaleString() },
+                    ticks: { color: 'rgba(0,0,0,0.58)' /* contrast-fix */, callback: v => '$' + v.toLocaleString() },
                     grid: { color: 'rgba(0,0,0,0.08)' },
-                    title: { display: true, text: 'Marginal $/tCO\u2082', color: 'rgba(0,0,0,0.5)' },
+                    title: { display: true, text: 'Marginal $/tCO\u2082', color: 'rgba(0,0,0,0.58)' /* contrast-fix */ },
                 }
             }
         }
@@ -1238,11 +1238,11 @@ function renderGasChart(iso) {
                 annotation: { annotations: targetAnnotation(labels, trajA) },
             },
             scales: {
-                x: { ticks: { color: 'rgba(0,0,0,0.5)', font: { size: 10 }, maxRotation: 55 }, grid: { color: 'rgba(0,0,0,0.06)' } },
+                x: { ticks: { color: 'rgba(0,0,0,0.58)' /* contrast-fix */, font: { size: 10 }, maxRotation: 55 }, grid: { color: 'rgba(0,0,0,0.06)' } },
                 y: {
-                    ticks: { color: 'rgba(0,0,0,0.5)', callback: v => (v/1000).toFixed(0) + ' GW' },
+                    ticks: { color: 'rgba(0,0,0,0.58)' /* contrast-fix */, callback: v => (v/1000).toFixed(0) + ' GW' },
                     grid: { color: 'rgba(0,0,0,0.08)' },
-                    title: { display: true, text: 'Gas Backup Capacity (MW)', color: 'rgba(0,0,0,0.5)' },
+                    title: { display: true, text: 'Gas Backup Capacity (MW)', color: 'rgba(0,0,0,0.58)' /* contrast-fix */ },
                 }
             }
         }
@@ -1613,8 +1613,8 @@ function renderMixCharts(iso) {
             }
         },
         scales: {
-            x: { stacked: true, ticks: { color: 'rgba(0,0,0,0.5)', font: { size: 9 }, maxRotation: 55 }, grid: { color: 'rgba(0,0,0,0.06)' } },
-            y: { stacked: true, min: sharedYMin, max: sharedYMax, ticks: { color: 'rgba(0,0,0,0.5)' }, grid: { color: 'rgba(0,0,0,0.08)' }, title: { display: true, text: 'TWh', color: 'rgba(0,0,0,0.5)' } },
+            x: { stacked: true, ticks: { color: 'rgba(0,0,0,0.58)' /* contrast-fix */, font: { size: 9 }, maxRotation: 55 }, grid: { color: 'rgba(0,0,0,0.06)' } },
+            y: { stacked: true, min: sharedYMin, max: sharedYMax, ticks: { color: 'rgba(0,0,0,0.58)' /* contrast-fix */ }, grid: { color: 'rgba(0,0,0,0.08)' }, title: { display: true, text: 'TWh', color: 'rgba(0,0,0,0.58)' /* contrast-fix */ } },
         }
     };
 
@@ -1689,11 +1689,11 @@ function renderCostChart(iso) {
                 annotation: { annotations: targetAnnotation(labels, trajA) },
             },
             scales: {
-                x: { ticks: { color: 'rgba(0,0,0,0.5)', font: { size: 10 }, maxRotation: 55 }, grid: { color: 'rgba(0,0,0,0.06)' } },
+                x: { ticks: { color: 'rgba(0,0,0,0.58)' /* contrast-fix */, font: { size: 10 }, maxRotation: 55 }, grid: { color: 'rgba(0,0,0,0.06)' } },
                 y: {
-                    ticks: { color: 'rgba(0,0,0,0.5)', callback: v => '$' + v },
+                    ticks: { color: 'rgba(0,0,0,0.58)' /* contrast-fix */, callback: v => '$' + v },
                     grid: { color: 'rgba(0,0,0,0.08)' },
-                    title: { display: true, text: 'Effective $/MWh', color: 'rgba(0,0,0,0.5)' },
+                    title: { display: true, text: 'Effective $/MWh', color: 'rgba(0,0,0,0.58)' /* contrast-fix */ },
                 }
             }
         }
@@ -1754,11 +1754,11 @@ function renderFirmChart(iso) {
                 annotation: { annotations: targetAnnotation(labels, trajA) },
             },
             scales: {
-                x: { ticks: { color: 'rgba(0,0,0,0.5)', font: { size: 10 }, maxRotation: 55 }, grid: { color: 'rgba(0,0,0,0.06)' } },
+                x: { ticks: { color: 'rgba(0,0,0,0.58)' /* contrast-fix */, font: { size: 10 }, maxRotation: 55 }, grid: { color: 'rgba(0,0,0,0.06)' } },
                 y: {
-                    ticks: { color: 'rgba(0,0,0,0.5)' },
+                    ticks: { color: 'rgba(0,0,0,0.58)' /* contrast-fix */ },
                     grid: { color: 'rgba(0,0,0,0.08)' },
-                    title: { display: true, text: 'New Clean Firm + CCS (TWh)', color: 'rgba(0,0,0,0.5)' },
+                    title: { display: true, text: 'New Clean Firm + CCS (TWh)', color: 'rgba(0,0,0,0.58)' /* contrast-fix */ },
                 }
             }
         }
@@ -1865,7 +1865,7 @@ function renderMacQueueAccordion() {
     });
     summaryHtml += '</tbody></table>';
     if (queue.length > 20) {
-        summaryHtml += '<p style="font-size:0.82rem;color:rgba(0,0,0,0.5);margin-top:8px;">Showing top 20 of ' + queue.length + ' steps. Expand ISOs below for full pathways.</p>';
+        summaryHtml += '<p style="font-size:0.82rem;color:rgba(0,0,0,0.58);margin-top:8px;">Showing top 20 of ' + queue.length + ' steps. Expand ISOs below for full pathways.</p>';
     }
     summaryEl.innerHTML = summaryHtml;
 
@@ -2089,15 +2089,15 @@ function renderFoakNOAKChart() {
             scales: {
                 x: {
                     type: 'linear', min: 2024, max: 2051,
-                    ticks: { stepSize: 5, color: 'rgba(0,0,0,0.5)', font: { size: 11 }, callback: v => v },
+                    ticks: { stepSize: 5, color: 'rgba(0,0,0,0.58)' /* contrast-fix */, font: { size: 11 }, callback: v => v },
                     grid: { color: 'rgba(0,0,0,0.06)' },
-                    title: { display: true, text: 'SBTi Target Year', color: 'rgba(0,0,0,0.5)', font: { size: 10 } }
+                    title: { display: true, text: 'SBTi Target Year', color: 'rgba(0,0,0,0.58)' /* contrast-fix */, font: { size: 10 } }
                 },
                 y: {
                     min: 0, max: 180,
-                    ticks: { stepSize: 20, color: 'rgba(0,0,0,0.5)', font: { size: 10 }, callback: v => '$' + v },
+                    ticks: { stepSize: 20, color: 'rgba(0,0,0,0.58)' /* contrast-fix */, font: { size: 10 }, callback: v => '$' + v },
                     grid: { color: 'rgba(0,0,0,0.08)' },
-                    title: { display: true, text: 'LCOE ($/MWh)', color: 'rgba(0,0,0,0.5)', font: { size: 10 } }
+                    title: { display: true, text: 'LCOE ($/MWh)', color: 'rgba(0,0,0,0.58)' /* contrast-fix */, font: { size: 10 } }
                 }
             }
         }

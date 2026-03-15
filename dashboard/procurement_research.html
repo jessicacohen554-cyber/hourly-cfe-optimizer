@@ -181,8 +181,8 @@ body { background: var(--bg-page); }
     margin-bottom: 8px;
 }
 .strategy-card .tag-consequential { background: rgba(79,70,229,0.1); color: #4F46E5; }
-.strategy-card .tag-hourly { background: rgba(8,145,178,0.1); color: #0891B2; }
-.strategy-card .tag-annual { background: rgba(245,158,11,0.1); color: #D97706; }
+.strategy-card .tag-hourly { background: rgba(8,145,178,0.1); color: #0E7490; } /* contrast-fix: was #0891B2, now #0E7490, ratio 5.1:1 on white */
+.strategy-card .tag-annual { background: rgba(245,158,11,0.1); color: #B45309; } /* contrast-fix: was #D97706, now #B45309, ratio 5.02:1 on white */
 .strategy-card p { font-size: 0.82rem; line-height: 1.55; color: #4b5563; }
 
 /* Source links */
@@ -204,14 +204,14 @@ body { background: var(--bg-page); }
     color: var(--text-muted);
     margin-bottom: 4px;
 }
-.sources a { color: #0284C7; text-decoration: none; }
+.sources a { color: #0369A1; text-decoration: none; } /* contrast-fix: was #0284C7, now #0369A1, ratio 5.93:1 on white */
 .sources a:hover { text-decoration: underline; }
 
-/* Scarcity indicators */
-.scarcity-abundant { color: var(--abundant); font-weight: 700; }
-.scarcity-tightening { color: var(--tightening); font-weight: 700; }
-.scarcity-scarce { color: var(--scarce); font-weight: 700; }
-.scarcity-critical { color: var(--critical); font-weight: 700; }
+/* Scarcity indicators — contrast-fixed for white table backgrounds */
+.scarcity-abundant { color: #15803D; font-weight: 700; } /* contrast-fix: was var(--abundant) #22C55E, now #15803D, ratio 5.02:1 on white */
+.scarcity-tightening { color: #A16207; font-weight: 700; } /* contrast-fix: was var(--tightening) #eab308, now #A16207, ratio 5.36:1 on white */
+.scarcity-scarce { color: #C2410C; font-weight: 700; } /* contrast-fix: was var(--scarce) #f97316, now #C2410C, ratio 4.88:1 on white */
+.scarcity-critical { color: #DC2626; font-weight: 700; } /* contrast-fix: was var(--critical) #ef4444, now #DC2626, ratio 4.83:1 on white */
 
 /* Footer */
 .site-footer {
@@ -223,6 +223,21 @@ body { background: var(--bg-page); }
 }
 .site-footer a { color: rgba(255,255,255,0.75); text-decoration: none; }
 .site-footer a:hover { color: #fff; }
+/* contrast-fix: .research-section text colors override shared.css .section-dark colors
+   because page <style> loads after shared.css. Restore light text on dark backgrounds. */
+.section-dark .research-section h2 { color: #ffffff; } /* contrast-fix: was var(--navy) ~#0F172A, now #ffffff on navy bg */
+.section-dark .research-section h3 { color: #ffffff; } /* contrast-fix: was #374151, now #ffffff on navy bg */
+.section-dark .research-section p,
+.section-dark .research-section li { color: rgba(255,255,255,0.88); } /* contrast-fix: was #1f2937, now light on navy bg */
+.section-dark .research-section .section-desc { color: rgba(255,255,255,0.72); } /* contrast-fix: was var(--text-muted) #6B7280, now light on navy bg */
+.section-dark .research-section strong { color: rgba(255,255,255,0.97); } /* contrast-fix: ensure strong text visible on dark bg */
+.section-dark .research-section h2 .section-num { background: rgba(255,255,255,0.2); color: #fff; } /* contrast-fix: was var(--navy) on navy bg */
+.section-dark .strategy-card h4 { color: var(--navy); } /* keep dark text on white card bg */
+.section-dark .strategy-card p { color: #4b5563; } /* keep dark text on white card bg */
+.section-dark .strategy-card .tag-consequential { color: #4F46E5; } /* keep on light tag bg */
+.section-dark .strategy-card .tag-hourly { color: #0E7490; } /* keep on light tag bg */
+.section-dark .strategy-card .tag-annual { color: #B45309; } /* keep on light tag bg */
+
 /* Responsive */
 @media (max-width: 768px) {
     .hero h1 { font-size: 1.6rem; }

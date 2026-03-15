@@ -111,7 +111,7 @@
 .delta-table th { font-family: var(--font-heading); font-weight: 700; color: var(--navy); padding: 8px 12px; text-align: left; border-bottom: 2px solid rgba(0,0,0,0.1); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; }
 .delta-table td { padding: 7px 12px; border-bottom: 1px solid rgba(0,0,0,0.05); }
 .delta-table .res-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
-.delta-table .delta-positive { color: #16A34A; font-weight: 700; font-family: var(--font-data); }
+.delta-table .delta-positive { color: #15803D; font-weight: 700; font-family: var(--font-data); } /* contrast-fix: was #16A34A, now #15803D, ratio 5.02:1 on bg white */
 .delta-table .delta-negative { color: #DC2626; font-weight: 700; font-family: var(--font-data); }
 .delta-table .delta-zero { color: var(--text-dim); font-family: var(--font-data); }
 
@@ -393,7 +393,7 @@ Chart.defaults.plugins.datalabels = { display: false };
                         netZeroLine: {
                             type: 'line', yMin: 0, yMax: 0,
                             borderColor: '#22C55E', borderWidth: 2, borderDash: [4, 4],
-                            label: { display: true, content: 'Net-Zero', position: 'end', font: { size: 10 }, color: '#22C55E' }
+                            label: { display: true, content: 'Net-Zero', position: 'end', font: { size: 10 }, color: '#15803D' } /* contrast-fix: was #22C55E, now #15803D, ratio 5.02:1 on bg white */
                         }
                     }
                 }

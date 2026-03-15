@@ -28,7 +28,7 @@
     --navy-light: #334155;
     --text-primary: #0F172A;
     --text-secondary: #475569;
-    --text-dim: #94A3B8;
+    --text-dim: #64748B; /* contrast-fix: was #94A3B8, now #64748B, ratio 4.76:1 on white */
     --bg-page: #F1F5F9;
     --bg-white: #FFFFFF;
     --border-light: rgba(0,0,0,0.06);
@@ -907,7 +907,7 @@ body.theme-signal .dark-section h2 { border-left: 5px solid var(--solar); paddin
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: var(--hydro);
+    color: #0369A1; /* contrast-fix: was var(--hydro)/#0EA5E9, now #0369A1, ratio 5.93:1 on white */
     margin-bottom: 10px;
 }
 

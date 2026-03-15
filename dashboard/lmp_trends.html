@@ -921,7 +921,7 @@
                 }
 
                 if (rev == null) {
-                    html += '<td><span class="ctr-heatmap-cell" style="background:rgba(0,0,0,0.04); color:#94A3B8;">N/A</span></td>';
+                    html += '<td><span class="ctr-heatmap-cell" style="background:rgba(0,0,0,0.04); color:#64748B;">N/A</span></td>';
                 } else {
                     var cls = rev >= NUCLEAR_VIABLE_HIGH ? 'ctr-heatmap-viable' : (rev >= NUCLEAR_VIABLE_LOW ? 'ctr-heatmap-marginal' : 'ctr-heatmap-unviable');
                     html += '<td><span class="ctr-heatmap-cell ' + cls + '">$' + rev.toFixed(0) + '</span></td>';
@@ -953,7 +953,7 @@
         var totalRevP10 = cap.total_rev_clean_firm_mwh ? cap.total_rev_clean_firm_mwh.p10 : [];
         var totalRevP90 = cap.total_rev_clean_firm_mwh ? cap.total_rev_clean_firm_mwh.p90 : [];
 
-        var BLUE = '#0EA5E9';
+        var BLUE = '#0369A1'; /* contrast-fix: was #0EA5E9, now #0369A1, ratio 5.93:1 on white */
         var INDIGO = RESOURCE_COLORS.nuclear;
         var accent = ISO_COLORS[iso] || BLUE;
 
@@ -1119,9 +1119,9 @@
             }
         });
 
-        var accent = ISO_COLORS[iso] || '#0EA5E9';
+        var accent = ISO_COLORS[iso] || '#0369A1'; /* contrast-fix: was #0EA5E9 fallback */
         var RED = SEMANTIC_COLORS.negative;
-        var GREEN = '#22C55E';
+        var GREEN = '#15803D'; /* contrast-fix: was #22C55E, now #15803D, ratio 5.02:1 on white */
         var PURPLE = '#7C3AED';
         var INDIGO = RESOURCE_COLORS.nuclear;
 

@@ -16,12 +16,12 @@
   --ceg-green: #6BA543;
   --ceg-teal: #007FA4;
   --ceg-yellow: #FBB254;
-  --ceg-gray: #7E8083;
+  --ceg-gray: #596066; /* contrast-fix: was #7E8083, now #596066, ratio 6.38:1 on bg white */
   --ceg-slate: #7F8F97;
   --glass-border: #E0E6EF;
   --bg-mid: #F7FAFC;
   --text-bright: #1A232F;
-  --text-dim: #7E8083;
+  --text-dim: #596066; /* contrast-fix: was #7E8083, now #596066, ratio 6.38:1 on bg white */
   --font: 'Source Sans Pro', 'Franklin Gothic Book', Calibri, Arial, sans-serif;
   --font-heading: 'Source Sans Pro', 'Franklin Gothic Book', Calibri, Arial, sans-serif;
   --font-data: 'Source Sans Pro', Calibri, monospace;
@@ -162,7 +162,7 @@ body {
 .kpi-card .kpi-unit {
   font-size: 11pt;
   font-weight: 600;
-  color: var(--ceg-teal);
+  color: #0369A1; /* contrast-fix: was var(--ceg-teal) #007FA4, now #0369A1, ratio 5.93:1 on bg white */
 }
 .kpi-card .kpi-label {
   font-size: 9pt;
@@ -170,11 +170,11 @@ body {
   margin-top: 2px;
 }
 .kpi-card.orange { background: linear-gradient(135deg, rgba(244,123,39,0.08), rgba(251,178,84,0.04)); }
-.kpi-card.orange .kpi-value { color: var(--ceg-orange); }
+.kpi-card.orange .kpi-value { color: #C2410C; /* contrast-fix: was var(--ceg-orange) #F47B27, now #C2410C, ratio 4.63:1 on bg white */ }
 .kpi-card.green { background: linear-gradient(135deg, rgba(107,165,67,0.08), rgba(107,165,67,0.04)); }
-.kpi-card.green .kpi-value { color: var(--ceg-green); }
+.kpi-card.green .kpi-value { color: #15803D; /* contrast-fix: was var(--ceg-green) #6BA543, now #15803D, ratio 5.02:1 on bg white */ }
 .kpi-card.teal { background: linear-gradient(135deg, rgba(0,127,164,0.08), rgba(0,127,164,0.04)); }
-.kpi-card.teal .kpi-value { color: var(--ceg-teal); }
+.kpi-card.teal .kpi-value { color: #0369A1; /* contrast-fix: was var(--ceg-teal) #007FA4, now #0369A1, ratio 5.93:1 on bg white */ }
 
 /* ─── Callout ─── */
 .callout {
@@ -235,7 +235,7 @@ body {
 }
 .title-slide .date {
   font-size: 12pt;
-  opacity: 0.7;
+  opacity: 0.78; /* contrast-fix: was 0.7, now 0.78, ratio ~8.5:1 on bg dark blue */
 }
 .title-slide .title-accent {
   width: 80px;

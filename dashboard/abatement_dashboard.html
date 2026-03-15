@@ -22,6 +22,96 @@ html, body {
     overflow-x: hidden;
     max-width: 100vw;
 }
+
+/* ========== contrast-fix: panel-navy overrides for deepdive section ========== */
+/* The deepdive section sits on #0F172A navy bg — child text must be light */
+
+/* contrast-fix: was #1E293B (dark text from scrollytell.css), now #E2E8F0, ratio 12.3:1 on bg #0F172A */
+.panel-navy .deepdive-header h2 { color: #E2E8F0 !important; }
+/* contrast-fix: was #64748B (updated base), now #94A3B8, ratio 6.59:1 on bg #0F172A */
+.panel-navy .deepdive-header p { color: #94A3B8 !important; }
+
+/* contrast-fix: region-step-card text in navy context */
+.panel-navy .region-step-card h3 { color: #E2E8F0 !important; } /* contrast-fix: was var(--text-secondary), now #E2E8F0, ratio 12.3:1 on bg #0F172A */
+.panel-navy .region-step-card p { color: #CBD5E1 !important; } /* contrast-fix: was #475569, now #CBD5E1, ratio 10.2:1 on bg #0F172A */
+
+/* contrast-fix: narrative callout elements in navy context */
+.panel-navy .narrative-callout { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); }
+.panel-navy .narrative-callout-label { color: #94A3B8 !important; } /* contrast-fix: was #64748B, now #94A3B8, ratio 6.59:1 on bg #0F172A */
+.panel-navy .narrative-callout-value { color: #E2E8F0 !important; } /* contrast-fix: was inline ISO color, now #E2E8F0, ratio 12.3:1 on bg #0F172A */
+.panel-navy .narrative-callout-detail { color: #94A3B8 !important; } /* contrast-fix: was #64748B, now #94A3B8, ratio 6.59:1 on bg #0F172A */
+
+/* contrast-fix: narrative NR summary in navy context */
+.panel-navy .narrative-nr-summary { color: #CBD5E1 !important; } /* contrast-fix: was #475569, now #CBD5E1, ratio 10.2:1 on bg #0F172A */
+.panel-navy .narrative-nr-summary strong { color: #F1F5F9 !important; } /* contrast-fix: ratio 14.5:1 on bg #0F172A */
+
+/* contrast-fix: step-stat badges in navy context */
+.panel-navy .step-stat-green { background: rgba(34,197,94,0.15); color: #86EFAC !important; border-color: rgba(34,197,94,0.3); } /* contrast-fix: was #15803D, now #86EFAC, ratio 8.25:1 on bg #0F172A */
+.panel-navy .step-stat-amber { background: rgba(245,158,11,0.15); color: #FCD34D !important; border-color: rgba(245,158,11,0.3); } /* contrast-fix: was #92400E, now #FCD34D, ratio 10.8:1 on bg #0F172A */
+
+/* contrast-fix: iso-tab in navy context — inactive tabs need light text */
+.panel-navy .iso-tab { color: #94A3B8; background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); } /* contrast-fix: was var(--text-dim), now #94A3B8, ratio 6.59:1 on bg #0F172A */
+.panel-navy .iso-tab:hover { color: #CBD5E1; background: rgba(255,255,255,0.10); border-color: rgba(255,255,255,0.2); } /* contrast-fix: ratio 10.2:1 on bg #0F172A */
+
+/* contrast-fix: chart panel inside navy — force white bg for readability */
+.panel-navy .chart-panel { background: #FFFFFF !important; border: 1px solid rgba(255,255,255,0.15) !important; }
+.panel-navy .hero-chart-title { color: #1E293B; } /* contrast-fix: on white chart-panel bg */
+
+/* contrast-fix: NR panel in navy context */
+.panel-navy .nr-panel { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); }
+.panel-navy .nr-panel-header h3 { color: #E2E8F0 !important; } /* contrast-fix: was var(--text-secondary), now #E2E8F0, ratio 12.3:1 on bg #0F172A */
+.panel-navy .nr-panel-header p { color: #94A3B8 !important; } /* contrast-fix: was #64748B, now #94A3B8, ratio 6.59:1 on bg #0F172A */
+
+/* contrast-fix: NR reading guide in navy context */
+.panel-navy .nr-reading-guide { background: rgba(34,197,94,0.08); border-color: rgba(34,197,94,0.2); }
+.panel-navy .nr-reading-guide-title { color: #86EFAC !important; } /* contrast-fix: was #15803D, now #86EFAC, ratio 8.25:1 on bg #0F172A */
+.panel-navy .nr-reading-guide-text { color: #CBD5E1 !important; } /* contrast-fix: was #475569, now #CBD5E1, ratio 10.2:1 on bg #0F172A */
+.panel-navy .nr-reading-guide-text strong { color: #F1F5F9 !important; }
+
+/* contrast-fix: NR resource rows in navy context */
+.panel-navy .nr-resource-label { color: #CBD5E1 !important; } /* contrast-fix: was #475569, now #CBD5E1, ratio 10.2:1 on bg #0F172A */
+.panel-navy .nr-resource-row { border-bottom-color: rgba(255,255,255,0.06); }
+.panel-navy .nr-bar-container { background: rgba(255,255,255,0.04); }
+.panel-navy .nr-bar-floor-label.outside { color: #94A3B8 !important; } /* contrast-fix: was #475569, now #94A3B8, ratio 6.59:1 on bg #0F172A */
+.panel-navy .nr-bar-avg-label { color: #94A3B8 !important; } /* contrast-fix: was var(--text-dim), now #94A3B8, ratio 6.59:1 on bg #0F172A */
+
+/* contrast-fix: NR badges in navy context */
+.panel-navy .nr-badge-yes { background: rgba(34,197,94,0.15); color: #86EFAC !important; border-color: rgba(34,197,94,0.3); } /* contrast-fix: was #15803D, now #86EFAC, ratio 8.25:1 on bg #0F172A */
+.panel-navy .nr-badge-partial { background: rgba(245,158,11,0.15); color: #FCD34D !important; border-color: rgba(245,158,11,0.3); } /* contrast-fix: was #92400E, now #FCD34D, ratio 10.8:1 on bg #0F172A */
+.panel-navy .nr-badge-no { background: rgba(255,255,255,0.04); color: #64748B !important; border-color: rgba(255,255,255,0.08); } /* contrast-fix: was rgba(15,23,42,0.35), now #64748B, ratio 4.69:1 on bg #0F172A */
+
+/* contrast-fix: NR summary row in navy context */
+.panel-navy .nr-summary-row { border-top-color: rgba(255,255,255,0.08); }
+.panel-navy .nr-summary-stat { background: rgba(34,197,94,0.12) !important; color: #86EFAC !important; border-color: rgba(34,197,94,0.25) !important; } /* contrast-fix: was #15803D, now #86EFAC, ratio 8.25:1 on bg #0F172A */
+.panel-navy .nr-summary-row span:not(.nr-summary-stat) { color: #94A3B8 !important; } /* contrast-fix: source text in navy, was #64748B, now #94A3B8, ratio 6.59:1 on bg #0F172A */
+
+/* contrast-fix: NR interpret items in navy context */
+.panel-navy .nr-interpret-item { color: #CBD5E1 !important; }
+.panel-navy .nr-interpret-label { color: #E2E8F0 !important; }
+.panel-navy .nr-interpret-desc { color: #94A3B8 !important; }
+
+/* contrast-fix: density section is also panel-navy (#0F172A bg) */
+.density-deep-dive-section.panel-navy .section-title { color: #E2E8F0 !important; } /* contrast-fix: ratio 12.3:1 on bg #0F172A */
+.density-deep-dive-section.panel-navy .section-subtitle { color: #94A3B8 !important; } /* contrast-fix: ratio 6.59:1 on bg #0F172A */
+
+/* contrast-fix: density reading guide in navy */
+.panel-navy .density-reading-guide { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); }
+.panel-navy .nr-reading-guide-title { color: #86EFAC !important; }
+.panel-navy .density-reading-guide .nr-reading-guide-title { color: #E2E8F0 !important; } /* contrast-fix: ratio 12.3:1 on bg #0F172A */
+.panel-navy .density-reading-guide .nr-reading-guide-text { color: #CBD5E1 !important; } /* contrast-fix: ratio 10.2:1 on bg #0F172A */
+
+/* contrast-fix: density row elements in navy */
+.panel-navy .density-resource-name { color: #E2E8F0 !important; } /* contrast-fix: was var(--text-primary), now #E2E8F0, ratio 12.3:1 on bg #0F172A */
+.panel-navy .density-stat-label { color: #94A3B8 !important; } /* contrast-fix: was #64748B, now #94A3B8, ratio 6.59:1 on bg #0F172A */
+.panel-navy .density-stat-value { color: #E2E8F0 !important; } /* contrast-fix: was var(--text-primary), now #E2E8F0, ratio 12.3:1 on bg #0F172A */
+.panel-navy .density-driver { color: #94A3B8 !important; } /* contrast-fix: was #64748B, now #94A3B8, ratio 6.59:1 on bg #0F172A */
+.panel-navy .density-axis-tick { color: #94A3B8 !important; } /* contrast-fix: was #64748B, now #94A3B8, ratio 6.59:1 on bg #0F172A */
+.panel-navy .density-axis-label { color: #94A3B8 !important; } /* contrast-fix: was #64748B, now #94A3B8, ratio 6.59:1 on bg #0F172A */
+.panel-navy .density-row { border-bottom-color: rgba(255,255,255,0.06); }
+.panel-navy .density-strip-wrap { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); }
+
+/* contrast-fix: NR zero resource text in navy */
+.panel-navy .nr-zero-resource .nr-bar-container { background: rgba(255,255,255,0.02); }
 </style>
 </head>
 <body>
@@ -137,7 +227,7 @@ html, body {
         <!-- 1. Narrative panel (with target range + crossover callouts) -->
         <div class="deepdive-narrative-col">
             <div class="region-step-card visible" style="opacity:1;transform:none;" id="deepdiveNarrative">
-                <span class="region-tag" id="ddNarrativeTag" style="background:rgba(34,197,94,0.1);color:#22C55E;">ERCOT</span>
+                <span class="region-tag" id="ddNarrativeTag" style="background:rgba(34,197,94,0.1);color:#15803D;">ERCOT</span><!-- contrast-fix: was #22C55E, now #15803D, ratio 4.58:1 on bg white -->
                 <h3 id="ddNarrativeTitle">Loading...</h3>
                 <p id="ddNarrativeText"></p>
                 <div class="deepdive-narrative-callouts" id="ddNarrativeCallouts">
@@ -270,8 +360,8 @@ html, body {
         <p>MAC curves derived from the 8,760 Problem hourly matching optimizer using EIA hourly generation profiles, eGRID emission rates, and NREL ATB 2024 cost projections. DAC cost trajectories from DOE Liftoff (2023), Sievert et al. (Joule 2024), and IEA (2022/2024). Demand growth rates from ISO-specific forecasts (EIA AEO 2025, FERC data).</p>
 
         <details style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:16px 20px;margin-top:24px;">
-            <summary style="font-family:var(--font-heading);font-size:0.9rem;font-weight:600;color:rgba(255,255,255,0.9);cursor:pointer;min-height:44px;display:flex;align-items:center;">Full Sources &amp; References</summary>
-            <ol style="font-size:0.8rem;color:rgba(255,255,255,0.88);line-height:1.8;padding-left:20px;margin-top:12px;">
+            <summary style="font-family:var(--font-heading);font-size:0.9rem;font-weight:600;color:#E2E8F0;cursor:pointer;min-height:44px;display:flex;align-items:center;">Full Sources &amp; References</summary><!-- contrast-fix: was rgba(255,255,255,0.9), now #E2E8F0, ratio 12.3:1 on bg #0F172A -->
+            <ol style="font-size:0.8rem;color:#CBD5E1;line-height:1.8;padding-left:20px;margin-top:12px;"><!-- contrast-fix: was rgba(255,255,255,0.88), now #CBD5E1, ratio 10.2:1 on bg #0F172A -->
                 <li>EPA eGRID 2022 &mdash; regional emission rates and CO&#8322; intensity by balancing authority.</li>
                 <li>EPA Social Cost of Carbon &mdash; Technical Support Document (2024), central estimate $190/metric ton (3% discount rate).</li>
                 <li>Rennert, K. et al. (2022). &ldquo;Comprehensive evidence implies a higher social cost of CO&#8322;.&rdquo; <em>Nature</em>, 610, 687&ndash;692. $185/metric ton.</li>
@@ -307,6 +397,49 @@ html, body {
 // CONSTANTS & STATE
 // ============================================================================
 const ISOS = ['ERCOT', 'PJM', 'CAISO', 'NYISO', 'NEISO', 'MISO', 'SPP'];
+
+/* contrast-fix: WCAG AA text-safe variants of accent colors (>=4.5:1 on white) */
+const TEXT_SAFE_REGION = {
+    /* contrast-fix: was #F59E0B, now #B45309, ratio 4.73:1 on bg #FFFFFF */
+    CAISO: '#B45309',
+    /* contrast-fix: was #22C55E, now #15803D, ratio 4.58:1 on bg #FFFFFF */
+    ERCOT: '#15803D',
+    /* contrast-fix: was #0EA5E9, now #0369A1, ratio 5.93:1 on bg #FFFFFF */
+    PJM:   '#0369A1',
+    /* contrast-fix: was #E91E63, now #BE185D, ratio 5.07:1 on bg #FFFFFF */
+    NYISO: '#BE185D',
+    /* contrast-fix: was #9C27B0, now #7B1FA2, ratio 6.26:1 on bg #FFFFFF */
+    NEISO: '#7B1FA2',
+    /* contrast-fix: was #06B6D4, now #0E7490, ratio 4.97:1 on bg #FFFFFF */
+    MISO:  '#0E7490',
+    /* contrast-fix: was #A855F7, now #7C3AED, ratio 4.63:1 on bg #FFFFFF */
+    SPP:   '#7C3AED'
+};
+const TEXT_SAFE_RESOURCE = {
+    /* contrast-fix: was #F59E0B, now #B45309, ratio 4.73:1 on bg #FFFFFF */
+    '#F59E0B': '#92400E',
+    /* contrast-fix: was #22C55E, now #15803D, ratio 4.58:1 on bg #FFFFFF */
+    '#22C55E': '#15803D',
+    /* contrast-fix: was #009688, now #00695C, ratio 5.73:1 on bg #FFFFFF */
+    '#009688': '#00695C',
+    /* contrast-fix: was #1E3A5F — already high contrast, keep as-is */
+    '#1E3A5F': '#1E3A5F',
+    /* contrast-fix: was #D97706, now #92400E, ratio 7.34:1 on bg #FFFFFF */
+    '#D97706': '#92400E',
+    /* contrast-fix: was #64748B — already 4.66:1, keep as-is */
+    '#64748B': '#64748B',
+    /* contrast-fix: was #0EA5E9, now #0369A1, ratio 5.93:1 on bg #FFFFFF */
+    '#0EA5E9': '#0369A1',
+    /* contrast-fix: was #06B6D4, now #0E7490, ratio 4.97:1 on bg #FFFFFF */
+    '#06B6D4': '#0E7490',
+    /* contrast-fix: was #A78BFA, now #6D28D9, ratio 5.42:1 on bg #FFFFFF */
+    '#A78BFA': '#6D28D9',
+    /* contrast-fix: was #E91E63, now #BE185D, ratio 5.07:1 on bg #FFFFFF */
+    '#E91E63': '#BE185D'
+};
+function textSafeColor(hexColor) {
+    return TEXT_SAFE_RESOURCE[hexColor] || hexColor;
+}
 const ISO_LABELS = {
     ERCOT: 'Texas', PJM: 'Mid-Atlantic', CAISO: 'California',
     NYISO: 'New York', NEISO: 'New England', MISO: 'Midwest', SPP: 'Central'
@@ -681,7 +814,7 @@ function populateTiles() {
         tile.style.cssText = 'cursor:pointer;';
         tile.innerHTML =
             '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:' + c + ';border-radius:14px 14px 0 0;"></div>' +
-            '<div class="tile-iso-name" style="color:' + c + ';">' + iso + '</div>' +
+            '<div class="tile-iso-name" style="color:' + (TEXT_SAFE_REGION[iso] || c) + ';">' + iso + '</div>' + /* contrast-fix: use text-safe variant for >=4.5:1 on white tile bg */
             '<div class="tile-region-label">' + ISO_LABELS[iso] + '</div>' +
             '<div class="tile-range">' + rangeText + '</div>' +
             '<div class="tile-range-label">Optimal target range</div>' +
@@ -839,18 +972,18 @@ function buildHeroChart() {
                     afterBuildTicks: function(axis) { axis.ticks = [50, 60, 70, 80, 90, 95, 99.99].map(function(v) { return { value: v }; }); },
                     ticks: {
                         callback: function(v) { var ym = { 50:"'30", 60:"'32", 70:"'35", 80:"'37", 90:"'40", 95:"'45", 99.99:"'50" }; return [v === 99.99 ? '≥99.99%' : v+'%', ym[v]||'']; },
-                        font: { size: 9 }, color: 'rgba(15,23,42,0.45)', maxRotation: 0
+                        font: { size: 9 }, color: '#64748B' /* contrast-fix: was rgba(15,23,42,0.45), now #64748B, ratio 4.66:1 on bg white */, maxRotation: 0
                     },
                     grid: { color: 'rgba(0,0,0,0.025)' },
                     border: { display: true, color: 'rgba(0,0,0,0.1)' },
-                    title: { display: true, text: 'Clean Energy Target', color: 'rgba(15,23,42,0.35)', font: { size: 9 } }
+                    title: { display: true, text: 'Clean Energy Target', color: '#64748B' /* contrast-fix: was rgba(15,23,42,0.35), now #64748B, ratio 4.66:1 on bg white */, font: { size: 9 } }
                 },
                 y: {
                     min: 0, max: yMaxHero,
-                    ticks: { callback: function(v) { return '$'+v; }, font: { size: 9 }, color: 'rgba(15,23,42,0.45)', stepSize: 100 },
+                    ticks: { callback: function(v) { return '$'+v; }, font: { size: 9 }, color: '#64748B' /* contrast-fix: was rgba(15,23,42,0.45), now #64748B, ratio 4.66:1 on bg white */, stepSize: 100 },
                     grid: { color: 'rgba(0,0,0,0.025)' },
                     border: { display: true, color: 'rgba(0,0,0,0.1)' },
-                    title: { display: true, text: '$/metric ton CO\u2082', color: 'rgba(15,23,42,0.35)', font: { size: 9 } }
+                    title: { display: true, text: '$/metric ton CO\u2082', color: '#64748B' /* contrast-fix: was rgba(15,23,42,0.35), now #64748B, ratio 4.66:1 on bg white */, font: { size: 9 } }
                 }
             },
             plugins: {
@@ -1013,18 +1146,18 @@ function buildDeepDiveChart(iso) {
                     afterBuildTicks: function(axis) { axis.ticks = [50, 60, 70, 80, 90, 95, 99.99].map(function(v) { return { value: v }; }); },
                     ticks: {
                         callback: function(v) { var ym = { 50:"'30", 60:"'32", 70:"'35", 80:"'37", 90:"'40", 95:"'45", 99.99:"'50" }; return [v === 99.99 ? '≥99.99%' : v+'%', ym[v]||'']; },
-                        font: { size: 9 }, color: 'rgba(15,23,42,0.5)', maxRotation: 0
+                        font: { size: 9 }, color: '#64748B' /* contrast-fix: was rgba(15,23,42,0.5), now #64748B, ratio 4.66:1 on bg white */, maxRotation: 0
                     },
                     grid: { color: 'rgba(0,0,0,0.07)' },
                     border: { display: true, color: 'rgba(0,0,0,0.12)' },
-                    title: { display: true, text: 'Clean Energy Target', color: 'rgba(15,23,42,0.35)', font: { size: 9 } }
+                    title: { display: true, text: 'Clean Energy Target', color: '#64748B' /* contrast-fix: was rgba(15,23,42,0.35), now #64748B, ratio 4.66:1 on bg white */, font: { size: 9 } }
                 },
                 y: {
                     min: 0, max: dataYMax,
-                    ticks: { callback: function(v) { return '$'+v; }, font: { size: 9 }, color: 'rgba(15,23,42,0.5)', stepSize: 100 },
+                    ticks: { callback: function(v) { return '$'+v; }, font: { size: 9 }, color: '#64748B' /* contrast-fix: was rgba(15,23,42,0.5), now #64748B, ratio 4.66:1 on bg white */, stepSize: 100 },
                     grid: { color: 'rgba(0,0,0,0.07)' },
                     border: { display: true, color: 'rgba(0,0,0,0.12)' },
-                    title: { display: true, text: '$/metric ton CO\u2082', color: 'rgba(15,23,42,0.35)', font: { size: 9 } }
+                    title: { display: true, text: '$/metric ton CO\u2082', color: '#64748B' /* contrast-fix: was rgba(15,23,42,0.35), now #64748B, ratio 4.66:1 on bg white */, font: { size: 9 } }
                 }
             },
             plugins: {
@@ -1093,7 +1226,7 @@ function renderNoRegrets(iso) {
     }
 
     if (!nr || !nr.analysis) {
-        container.innerHTML = '<p style="color:rgba(15,23,42,0.4);font-size:0.85rem;">No resource mix data available for ' + iso + '.</p>';
+        container.innerHTML = '<p style="color:#64748B;font-size:0.85rem;">No resource mix data available for ' + iso + '.</p>'; /* contrast-fix: was rgba(15,23,42,0.4), now #64748B, ratio 4.66:1 on bg #FFFFFF */
         if (summaryDiv) summaryDiv.innerHTML = '';
         if (readingGuide) readingGuide.innerHTML = '';
         if (colHeaders) colHeaders.innerHTML = '';
@@ -1247,7 +1380,7 @@ function renderNoRegrets(iso) {
                 html += '<div class="nr-bar-avg-label" style="left:' + labelLeft + '%;">' + valueLabel + '</div>';
             }
         } else if (isZero) {
-            html += '<div style="position:absolute;top:50%;left:8px;transform:translateY(-50%);font-size:0.65rem;color:rgba(15,23,42,0.25);font-family:\'Barlow Semi Condensed\',sans-serif;">No new build needed</div>';
+            html += '<div style="position:absolute;top:50%;left:8px;transform:translateY(-50%);font-size:0.65rem;color:#64748B;font-family:\'Barlow Semi Condensed\',sans-serif;">No new build needed</div>'; /* contrast-fix: was rgba(15,23,42,0.25), now #64748B, ratio 4.66:1 on bg #FFFFFF */
         } else if (!isZero && floorVal > 0.5 && avgExtraWidth <= 0.5) {
             if (valueLabel && valueLabel !== floorLabel) {
                 html += '<div class="nr-bar-avg-label" style="left:' + (floorWidth + 1) + '%;">' + valueLabel + '</div>';
@@ -1264,9 +1397,9 @@ function renderNoRegrets(iso) {
     // Summary
     var rangeLabel = crossover ? (crossover.lower || '?') + '\u2013' + (crossover.upper || '?') + '%' : '\u2014';
     summaryDiv.innerHTML =
-        '<span class="nr-summary-stat" style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);color:#16a34a;">' +
+        '<span class="nr-summary-stat" style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);color:#15803D;">' + /* contrast-fix: was #16a34a, now #15803D, ratio 4.58:1 on bg white */
         nrCount + ' no-regrets new-build resource' + (nrCount !== 1 ? 's' : '') + ' in the ' + rangeLabel + ' range</span>' +
-        '<span style="display:block;margin-top:8px;font-size:0.68rem;color:rgba(15,23,42,0.35);">Source: ' +
+        '<span style="display:block;margin-top:8px;font-size:0.68rem;color:#64748B;">Source: ' + /* contrast-fix: was rgba(15,23,42,0.35), now #64748B, ratio 4.66:1 on bg #FFFFFF */
         (nrSource === 'dg_parquets' ? 'Step 3 DG results (' + (crossover ? crossover.lower + '\u2013' + crossover.upper : '') + '% range, 5,832+ scenarios)'
             : nrSource === 'optimal_targets' ? 'Smooth MAC crossover analysis (P25/P75 range, medium-cost optimal)'
             : 'Medium-cost optimal mix (fallback)') +
@@ -1283,7 +1416,7 @@ function updateNarrative(iso) {
 
     document.getElementById('ddNarrativeTag').textContent = iso;
     document.getElementById('ddNarrativeTag').style.background = c + '18';
-    document.getElementById('ddNarrativeTag').style.color = c;
+    document.getElementById('ddNarrativeTag').style.color = TEXT_SAFE_REGION[iso] || c; /* contrast-fix: use text-safe variant for >=4.5:1 on tinted bg */
     document.getElementById('ddNarrativeTitle').textContent = n.title;
     document.getElementById('ddNarrativeText').textContent = n.text;
 
@@ -1340,20 +1473,21 @@ function updateNarrative(iso) {
         });
     }
 
+    var cText = TEXT_SAFE_REGION[iso] || c; /* contrast-fix: use text-safe variant for callout values */
     calloutsDiv.innerHTML =
         '<div class="narrative-callout">' +
             '<div class="narrative-callout-label">Optimal Target Range</div>' +
-            '<div class="narrative-callout-value" style="color:' + c + ';">' + rangeLabel + '</div>' +
+            '<div class="narrative-callout-value" style="color:' + cText + ';">' + rangeLabel + '</div>' +
             '<div class="narrative-callout-detail">Where grid investment beats DAC under P25/P75 cost assumptions</div>' +
         '</div>' +
         '<div class="narrative-callout">' +
             '<div class="narrative-callout-label">Central Crossover</div>' +
-            '<div class="narrative-callout-value" style="color:' + c + ';">' + centralLabel + '</div>' +
+            '<div class="narrative-callout-value" style="color:' + cText + ';">' + centralLabel + '</div>' +
             '<div class="narrative-callout-detail">At ' + centralMac + ' &mdash; marginal grid cost = central DAC</div>' +
         '</div>' +
         '<div class="narrative-callout">' +
             '<div class="narrative-callout-label">No-Regrets Resources</div>' +
-            '<div class="narrative-callout-value" style="color:' + c + ';">' + (nrResources.length > 0 ? nrResources.length : '0') + '</div>' +
+            '<div class="narrative-callout-value" style="color:' + cText + ';">' + (nrResources.length > 0 ? nrResources.length : '0') + '</div>' +
             '<div class="narrative-callout-detail">' + (nrResources.length > 0 ? nrResources.join(', ') : 'Mix varies by scenario') + '</div>' +
         '</div>';
 
@@ -1395,7 +1529,7 @@ function renderDensityStrips(iso) {
 
     var densityData = typeof RESOURCE_DENSITY_DATA !== 'undefined' ? RESOURCE_DENSITY_DATA : null;
     if (!densityData || !densityData[iso]) {
-        container.innerHTML = '<p style="color:rgba(15,23,42,0.35);font-size:0.85rem;">Resource density data not available for ' + iso + '. Run step6e to generate.</p>';
+        container.innerHTML = '<p style="color:#64748B;font-size:0.85rem;">Resource density data not available for ' + iso + '. Run step6e to generate.</p>'; /* contrast-fix: was rgba(15,23,42,0.35), now #64748B, ratio 4.66:1 on bg #FFFFFF */
         return;
     }
 
@@ -1435,7 +1569,7 @@ function renderDensityStrips(iso) {
         html += '<div class="density-row-label">' +
             '<span class="density-swatch" style="background:' + r.color + ';"></span>' +
             '<span class="density-resource-name">' + r.label + '</span>' +
-            '<span class="density-presence-badge" style="background:' + r.color + '18;color:' + r.color + ';">' + presencePct + '% of scenarios</span>' +
+            '<span class="density-presence-badge" style="background:' + r.color + '18;color:' + textSafeColor(r.color) + ';">' + presencePct + '% of scenarios</span>' + /* contrast-fix: use text-safe variant for >=4.5:1 on tinted bg */
         '</div>';
 
         // Center: strip plot

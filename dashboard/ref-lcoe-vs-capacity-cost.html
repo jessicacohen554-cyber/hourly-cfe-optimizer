@@ -24,9 +24,9 @@ body { background: var(--bg-page-white); }
     font-family: var(--font-heading);
     letter-spacing: 0.03em;
 }
-.breadcrumb a { color: #0EA5E9; text-decoration: none; transition: color 0.2s; }
+.breadcrumb a { color: #0369A1; text-decoration: none; transition: color 0.2s; } /* contrast-fix: was #0EA5E9, now #0369A1, ratio 5.93:1 on white */
 .breadcrumb a:hover { color: #0284c7; }
-.breadcrumb .sep { color: rgba(0,0,0,0.3); margin: 0 8px; }
+.breadcrumb .sep { color: rgba(0,0,0,0.58); margin: 0 8px; } /* contrast-fix: was rgba(0,0,0,0.3), now rgba(0,0,0,0.58), ratio 5.30:1 on white */
 .breadcrumb .current { color: #374151; }
 
 /* ===== Article ===== */
@@ -63,7 +63,7 @@ body { background: var(--bg-page-white); }
     font-family: var(--font-heading);
     font-size: 0.82rem;
     font-weight: 700;
-    color: rgba(0,0,0,0.5);
+    color: rgba(0,0,0,0.58); /* contrast-fix: was rgba(0,0,0,0.5), now rgba(0,0,0,0.58), ratio 5.30:1 on #F9FAFB */
     text-transform: uppercase;
     letter-spacing: 0.08em;
     margin-bottom: 12px;
@@ -74,7 +74,7 @@ body { background: var(--bg-page-white); }
     gap: 6px 10px;
 }
 .glossary-links a {
-    color: #0EA5E9;
+    color: #0369A1; /* contrast-fix: was #0EA5E9, now #0369A1, ratio 5.93:1 on white */
     text-decoration: none;
     font-size: 0.85rem;
     font-weight: 500;
@@ -91,7 +91,7 @@ body { background: var(--bg-page-white); }
 .glossary-category {
     font-size: 0.72rem;
     font-weight: 700;
-    color: rgba(0,0,0,0.35);
+    color: rgba(0,0,0,0.58); /* contrast-fix: was rgba(0,0,0,0.35), now rgba(0,0,0,0.58), ratio 5.30:1 on #F9FAFB */
     text-transform: uppercase;
     letter-spacing: 0.06em;
     margin-top: 12px;
@@ -122,12 +122,12 @@ body { background: var(--bg-page-white); }
 .metric-unit {
     font-family: 'Courier New', monospace;
     font-size: 0.88rem;
-    color: #0EA5E9;
+    color: #0369A1; /* contrast-fix: was #0EA5E9, now #0369A1, ratio 5.93:1 on white */
     font-weight: 600;
 }
 .metric-aka {
     font-size: 0.82rem;
-    color: rgba(0,0,0,0.4);
+    color: #475569; /* contrast-fix: was rgba(0,0,0,0.4), now #475569, ratio 5.78:1 on white */
     font-style: italic;
 }
 .metric-divider {
@@ -162,7 +162,7 @@ body { background: var(--bg-page-white); }
 .metric-formula {
     font-family: 'Courier New', monospace;
     font-size: 0.9rem;
-    color: #0EA5E9;
+    color: #0369A1; /* contrast-fix: was #0EA5E9, now #0369A1, ratio 5.93:1 on light bg */
     background: rgba(14,165,233,0.06);
     border: 1px solid rgba(14,165,233,0.15);
     border-radius: 6px;
@@ -190,7 +190,7 @@ body { background: var(--bg-page-white); }
 }
 .diagram-caption {
     font-size: 0.78rem;
-    color: rgba(0,0,0,0.4);
+    color: #475569; /* contrast-fix: was rgba(0,0,0,0.4), now #475569, ratio 5.78:1 on white */
     text-align: center;
     margin-top: 14px;
     line-height: 1.5;
@@ -207,7 +207,7 @@ body { background: var(--bg-page-white); }
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    color: #0EA5E9;
+    color: #0369A1; /* contrast-fix: was #0EA5E9, now #0369A1, ratio 5.93:1 on white */
     text-decoration: none;
     font-family: var(--font-heading);
     font-size: 0.85rem;
@@ -309,11 +309,11 @@ body { background: var(--bg-page-white); }
 
             <!-- Row 1: Input metrics -->
             <rect x="20" y="20" width="130" height="52" class="d-box" fill="rgba(245,158,11,0.1)" stroke="rgba(245,158,11,0.35)" stroke-width="1.2"/>
-            <text x="85" y="43" class="d-label" fill="#F59E0B" text-anchor="middle">CapEx ($/kW)</text>
+            <text x="85" y="43" class="d-label" fill="#B45309" text-anchor="middle">CapEx ($/kW)</text>
             <text x="85" y="58" class="d-sub" text-anchor="middle">overnight capital</text>
 
             <rect x="170" y="20" width="120" height="52" class="d-box" fill="rgba(34,197,94,0.1)" stroke="rgba(34,197,94,0.35)" stroke-width="1.2"/>
-            <text x="230" y="43" class="d-label" fill="#22C55E" text-anchor="middle">CRF</text>
+            <text x="230" y="43" class="d-label" fill="#15803D" text-anchor="middle">CRF</text>
             <text x="230" y="58" class="d-sub" text-anchor="middle">annualization rate</text>
 
             <rect x="310" y="20" width="120" height="52" class="d-box" fill="rgba(139,92,246,0.1)" stroke="rgba(139,92,246,0.35)" stroke-width="1.2"/>
@@ -337,7 +337,7 @@ body { background: var(--bg-page-white); }
 
             <!-- Row 2: LCOE -->
             <rect x="240" y="130" width="220" height="56" class="d-box" fill="rgba(14,165,233,0.12)" stroke="#0EA5E9" stroke-width="1.8"/>
-            <text x="350" y="155" class="d-label" fill="#0EA5E9" text-anchor="middle" font-size="14">LCOE ($/MWh)</text>
+            <text x="350" y="155" class="d-label" fill="#0369A1" text-anchor="middle" font-size="14">LCOE ($/MWh)</text>
             <text x="350" y="172" class="d-sub" text-anchor="middle">lifetime cost per unit of energy</text>
 
             <!-- Arrows from LCOE down -->
@@ -356,12 +356,12 @@ body { background: var(--bg-page-white); }
             <text x="250" y="276" class="d-sub" text-anchor="middle">LCOE + transmission</text>
 
             <rect x="420" y="238" width="180" height="52" class="d-box" fill="rgba(245,158,11,0.08)" stroke="rgba(245,158,11,0.3)" stroke-width="1.2"/>
-            <text x="510" y="261" class="d-label" fill="#F59E0B" text-anchor="middle">LMP ($/MWh)</text>
+            <text x="510" y="261" class="d-label" fill="#B45309" text-anchor="middle">LMP ($/MWh)</text>
             <text x="510" y="276" class="d-sub" text-anchor="middle">market clearing price</text>
 
             <!-- Merit order label -->
             <rect x="620" y="238" width="120" height="44" class="d-box" fill="rgba(107,114,128,0.08)" stroke="rgba(107,114,128,0.2)" stroke-width="1"/>
-            <text x="680" y="256" class="d-label" fill="rgba(0,0,0,0.5)" text-anchor="middle" font-size="10">Merit Order</text>
+            <text x="680" y="256" class="d-label" fill="rgba(0,0,0,0.58)" text-anchor="middle" font-size="10">Merit Order</text>
             <text x="680" y="269" class="d-sub" text-anchor="middle">dispatch stack</text>
             <path d="M620,260 L600,260" class="d-arrow"/>
 
@@ -369,7 +369,7 @@ body { background: var(--bg-page-white); }
             <path d="M250,290 L250,310 L380,310 L380,318" class="d-arrow"/>
             <path d="M510,290 L510,310 L420,310 L420,318" class="d-arrow"/>
             <rect x="320" y="318" width="160" height="20" class="d-box" fill="rgba(34,197,94,0.08)" stroke="rgba(34,197,94,0.2)" stroke-width="1"/>
-            <text x="400" y="332" class="d-sub" text-anchor="middle" fill="#22C55E" font-size="9" font-weight="600">MAC = (Clean Cost &minus; Fossil Cost) / CO&#8322; Avoided</text>
+            <text x="400" y="332" class="d-sub" text-anchor="middle" fill="#15803D" font-size="9" font-weight="600">MAC = (Clean Cost &minus; Fossil Cost) / CO&#8322; Avoided</text>
         </svg>
         <p class="diagram-caption">Every electricity cost metric is built from a few primitive inputs. CapEx flows through CRF and capacity factor to become LCOE, which adds transmission to become delivered cost. LMP is set by the merit order, not by any individual plant&rsquo;s LCOE.</p>
     </div>
@@ -466,7 +466,7 @@ body { background: var(--bg-page-white); }
 
             <!-- $/kW box -->
             <rect x="20" y="70" width="140" height="70" rx="10" fill="rgba(245,158,11,0.1)" stroke="rgba(245,158,11,0.4)" stroke-width="1.5"/>
-            <text x="90" y="98" font-family="Lexend" font-weight="700" font-size="13" fill="#F59E0B" text-anchor="middle">$/kW</text>
+            <text x="90" y="98" font-family="Lexend" font-weight="700" font-size="13" fill="#B45309" text-anchor="middle">$/kW</text>
             <text x="90" y="118" font-family="Plus Jakarta Sans" font-size="9" fill="rgba(0,0,0,0.45)" text-anchor="middle">&ldquo;sticker price&rdquo;</text>
             <text x="90" y="130" font-family="Plus Jakarta Sans" font-size="9" fill="rgba(0,0,0,0.35)" text-anchor="middle">market-neutral</text>
 
@@ -497,7 +497,7 @@ body { background: var(--bg-page-white); }
 
             <!-- LCOE box -->
             <rect x="605" y="62" width="80" height="86" rx="10" fill="rgba(14,165,233,0.12)" stroke="#0EA5E9" stroke-width="2"/>
-            <text x="645" y="100" font-family="Lexend" font-weight="700" font-size="15" fill="#0EA5E9" text-anchor="middle">LCOE</text>
+            <text x="645" y="100" font-family="Lexend" font-weight="700" font-size="15" fill="#0369A1" text-anchor="middle">LCOE</text>
             <text x="645" y="118" font-family="Plus Jakarta Sans" font-size="9" fill="rgba(0,0,0,0.45)" text-anchor="middle">$/MWh</text>
             <text x="645" y="140" font-family="Plus Jakarta Sans" font-size="9" fill="rgba(0,0,0,0.35)" text-anchor="middle">full cost</text>
 
@@ -510,7 +510,7 @@ body { background: var(--bg-page-white); }
 
             <!-- Big arrow showing spectrum -->
             <line x1="90" y1="200" x2="645" y2="200" stroke="rgba(0,0,0,0.12)" stroke-width="1"/>
-            <text x="370" y="215" font-family="Lexend" font-size="9" fill="rgba(0,0,0,0.3)" text-anchor="middle" letter-spacing="0.15em">MARKET-NEUTRAL &rarr; MARKET-EMBEDDED</text>
+            <text x="370" y="215" font-family="Lexend" font-size="9" fill="rgba(0,0,0,0.58)" text-anchor="middle" letter-spacing="0.15em">MARKET-NEUTRAL &rarr; MARKET-EMBEDDED</text>
         </svg>
         <p class="diagram-caption">Each step from left to right adds a market-dependent assumption. $/kW is pure construction cost. LCOE bakes in capacity factor, fuel, financing, and sometimes policy incentives.</p>
     </div>
@@ -592,26 +592,26 @@ body { background: var(--bg-page-white); }
 
             <!-- Charging cost -->
             <rect x="20" y="60" width="130" height="60" rx="8" fill="rgba(245,158,11,0.08)" stroke="rgba(245,158,11,0.3)" stroke-width="1.2"/>
-            <text x="85" y="85" font-family="Lexend" font-weight="700" font-size="11" fill="#F59E0B" text-anchor="middle">Charge Cost</text>
-            <text x="85" y="100" font-family="Plus Jakarta Sans" font-size="9" fill="rgba(0,0,0,0.4)" text-anchor="middle">electricity in ($/MWh)</text>
+            <text x="85" y="85" font-family="Lexend" font-weight="700" font-size="11" fill="#B45309" text-anchor="middle">Charge Cost</text>
+            <text x="85" y="100" font-family="Plus Jakarta Sans" font-size="9" fill="rgba(0,0,0,0.58)" text-anchor="middle">electricity in ($/MWh)</text>
 
-            <text x="170" y="92" font-family="Courier New" font-size="14" fill="rgba(0,0,0,0.4)" text-anchor="middle">&divide;</text>
+            <text x="170" y="92" font-family="Courier New" font-size="14" fill="rgba(0,0,0,0.58)" text-anchor="middle">&divide;</text>
 
             <!-- RTE -->
             <rect x="190" y="60" width="100" height="60" rx="8" fill="rgba(236,72,153,0.08)" stroke="rgba(236,72,153,0.3)" stroke-width="1.2"/>
             <text x="240" y="85" font-family="Lexend" font-weight="700" font-size="11" fill="#EC4899" text-anchor="middle">RTE</text>
-            <text x="240" y="100" font-family="Plus Jakarta Sans" font-size="9" fill="rgba(0,0,0,0.4)" text-anchor="middle">85% or 50%</text>
+            <text x="240" y="100" font-family="Plus Jakarta Sans" font-size="9" fill="rgba(0,0,0,0.58)" text-anchor="middle">85% or 50%</text>
 
-            <text x="315" y="92" font-family="Courier New" font-size="14" fill="rgba(0,0,0,0.4)" text-anchor="middle">+</text>
+            <text x="315" y="92" font-family="Courier New" font-size="14" fill="rgba(0,0,0,0.58)" text-anchor="middle">+</text>
 
             <!-- Capital -->
             <rect x="335" y="60" width="130" height="60" rx="8" fill="rgba(14,165,233,0.08)" stroke="rgba(14,165,233,0.3)" stroke-width="1.2"/>
-            <text x="400" y="80" font-family="Lexend" font-weight="700" font-size="11" fill="#0EA5E9" text-anchor="middle">Annualized CapEx</text>
-            <text x="400" y="95" font-family="Plus Jakarta Sans" font-size="9" fill="rgba(0,0,0,0.4)" text-anchor="middle">&divide; cycles &times; capacity</text>
-            <text x="400" y="108" font-family="Plus Jakarta Sans" font-size="9" fill="rgba(0,0,0,0.4)" text-anchor="middle">+ FOM + Degradation</text>
+            <text x="400" y="80" font-family="Lexend" font-weight="700" font-size="11" fill="#0369A1" text-anchor="middle">Annualized CapEx</text>
+            <text x="400" y="95" font-family="Plus Jakarta Sans" font-size="9" fill="rgba(0,0,0,0.58)" text-anchor="middle">&divide; cycles &times; capacity</text>
+            <text x="400" y="108" font-family="Plus Jakarta Sans" font-size="9" fill="rgba(0,0,0,0.58)" text-anchor="middle">+ FOM + Degradation</text>
 
             <path d="M465,90 L500,90" stroke="#A855F7" stroke-width="1.5" fill="none" marker-end="url(#ah3)"/>
-            <text x="483" y="82" font-family="Courier New" font-size="14" fill="rgba(0,0,0,0.4)" text-anchor="middle">=</text>
+            <text x="483" y="82" font-family="Courier New" font-size="14" fill="rgba(0,0,0,0.58)" text-anchor="middle">=</text>
 
             <!-- LCOS -->
             <rect x="505" y="50" width="100" height="80" rx="10" fill="rgba(139,92,246,0.12)" stroke="#A855F7" stroke-width="2"/>
@@ -619,7 +619,7 @@ body { background: var(--bg-page-white); }
             <text x="555" y="103" font-family="Plus Jakarta Sans" font-size="9" fill="rgba(0,0,0,0.45)" text-anchor="middle">$/MWh out</text>
 
             <!-- Annotation -->
-            <text x="350" y="160" font-family="Plus Jakarta Sans" font-size="10" fill="rgba(0,0,0,0.3)" text-anchor="middle">Low RTE multiplies charging losses. 50% RTE means you need 2 MWh in for every 1 MWh out.</text>
+            <text x="350" y="160" font-family="Plus Jakarta Sans" font-size="10" fill="rgba(0,0,0,0.58)" text-anchor="middle">Low RTE multiplies charging losses. 50% RTE means you need 2 MWh in for every 1 MWh out.</text>
         </svg>
         <p class="diagram-caption">Storage costs combine the capital cost of the hardware, the cost of charging electricity (inflated by efficiency losses), and degradation from repeated cycling.</p>
     </div>
@@ -724,11 +724,11 @@ body { background: var(--bg-page-white); }
             <!-- Rows -->
             <text x="20" y="68" font-family="Plus Jakarta Sans" font-size="11" fill="rgba(0,0,0,0.7)">&ldquo;How much does it cost to build?&rdquo;</text>
             <rect x="460" y="52" width="130" height="26" rx="5" fill="rgba(245,158,11,0.12)" stroke="rgba(245,158,11,0.3)" stroke-width="1"/>
-            <text x="525" y="70" font-family="Lexend" font-weight="700" font-size="11" fill="#F59E0B" text-anchor="middle">$/kW CapEx</text>
+            <text x="525" y="70" font-family="Lexend" font-weight="700" font-size="11" fill="#B45309" text-anchor="middle">$/kW CapEx</text>
 
             <text x="20" y="108" font-family="Plus Jakarta Sans" font-size="11" fill="rgba(0,0,0,0.7)">&ldquo;How much does each MWh of output cost?&rdquo;</text>
             <rect x="460" y="92" width="130" height="26" rx="5" fill="rgba(14,165,233,0.12)" stroke="rgba(14,165,233,0.3)" stroke-width="1"/>
-            <text x="525" y="110" font-family="Lexend" font-weight="700" font-size="11" fill="#0EA5E9" text-anchor="middle">LCOE $/MWh</text>
+            <text x="525" y="110" font-family="Lexend" font-weight="700" font-size="11" fill="#0369A1" text-anchor="middle">LCOE $/MWh</text>
 
             <text x="20" y="148" font-family="Plus Jakarta Sans" font-size="11" fill="rgba(0,0,0,0.7)">&ldquo;What does stored energy cost per MWh out?&rdquo;</text>
             <rect x="460" y="132" width="130" height="26" rx="5" fill="rgba(139,92,246,0.12)" stroke="rgba(139,92,246,0.3)" stroke-width="1"/>
@@ -736,11 +736,11 @@ body { background: var(--bg-page-white); }
 
             <text x="20" y="188" font-family="Plus Jakarta Sans" font-size="11" fill="rgba(0,0,0,0.7)">&ldquo;What does peak reliability cost?&rdquo;</text>
             <rect x="460" y="172" width="130" height="26" rx="5" fill="rgba(34,197,94,0.12)" stroke="rgba(34,197,94,0.3)" stroke-width="1"/>
-            <text x="525" y="190" font-family="Lexend" font-weight="700" font-size="11" fill="#22C55E" text-anchor="middle">$/kW-yr RA</text>
+            <text x="525" y="190" font-family="Lexend" font-weight="700" font-size="11" fill="#15803D" text-anchor="middle">$/kW-yr RA</text>
 
             <text x="20" y="228" font-family="Plus Jakarta Sans" font-size="11" fill="rgba(0,0,0,0.7)">&ldquo;What will the market pay for this MWh?&rdquo;</text>
             <rect x="460" y="212" width="130" height="26" rx="5" fill="rgba(245,158,11,0.12)" stroke="rgba(245,158,11,0.3)" stroke-width="1"/>
-            <text x="525" y="230" font-family="Lexend" font-weight="700" font-size="11" fill="#F59E0B" text-anchor="middle">LMP $/MWh</text>
+            <text x="525" y="230" font-family="Lexend" font-weight="700" font-size="11" fill="#B45309" text-anchor="middle">LMP $/MWh</text>
         </svg>
     </div>
 
