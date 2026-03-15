@@ -396,10 +396,12 @@ p {
 .header--dark {}
 
 /* --- Per-variant background overrides --- */
-.header[data-header-variant="dense-circuit-map"],
-.header[data-header-variant="frequency-light"] { background: #F5F5F3; }
-.header[data-header-variant="dense-circuit-white"],
-.header[data-header-variant="frequency-dense-white"] { background: #FFFFFF; }
+.header[data-header-variant="freq-circuit-flat"] { background: #FEFEFE; }
+.header[data-header-variant="freq-circuit-warm"] { background: #FEFDFC; }
+.header[data-header-variant="freq-circuit-cool"] { background: #FEFEFD; }
+.header[data-header-variant="freq-circuit-gradient"] {
+    background: linear-gradient(135deg, #FEFDFC 0%, #FEFEFE 50%, #FEFEFD 100%);
+}
 .header[data-header-variant="stacked-curves-dark"],
 .header[data-header-variant="frequency-spectrum"],
 .header[data-header-variant="dense-circuit-navy"],

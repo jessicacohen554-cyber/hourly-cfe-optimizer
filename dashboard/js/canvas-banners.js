@@ -1,16 +1,14 @@
 // ============================================================================
-// CANVAS BANNERS — 10 animated <canvas> hero banner variants
+// CANVAS BANNERS — Light Frequency + Circuit hero banner variants
 // ============================================================================
 // Loaded on pages that need canvas-based banners (e.g., about.html).
 // Registers variants into window._canvasBanners for shared-header.js to use.
 //
-// Variants:
-//   dense-circuit-map (light), dense-circuit-white (light), dense-circuit-navy (dark)
-//   frequency-spectrum (dark), frequency-light (light)
-//   stacked-curves-dark (dark)
-//   network-constellation-light (light)
-//   frequency-dense-navy (dark), frequency-dense-white (light) [composites]
-//   stacked-dense-navy (dark), stacked-dense-white (light) [composites]
+// Variants (all light freq+circuit, different background tones):
+//   freq-circuit-flat      — flat #FEFEFE (near-white, neutral)
+//   freq-circuit-warm      — flat #FEFDFC (warm off-white)
+//   freq-circuit-cool      — flat #FEFEFD (cool off-white)
+//   freq-circuit-gradient  — gradient blend of all three
 //
 // Each banner: init(canvas, header) starts animation, destroy() stops it.
 // Uses requestAnimationFrame exclusively (no setInterval).
@@ -152,24 +150,10 @@
         return 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',' + a + ')';
     }
 
-    // Resource-aligned colors for energy-themed banners
-    var RES = {
-        nuclear: { r: 99, g: 102, b: 241 },   // #6366F1
-        solar:   { r: 245, g: 158, b: 11 },    // #F59E0B
-        wind:    { r: 34,  g: 197, b: 94 },     // #22C55E
-        storage: { r: 239, g: 68,  b: 68 },     // #EF4444
-        hydro:   { r: 14,  g: 165, b: 233 },    // #0EA5E9
-        battery: { r: 6,   g: 182, b: 212 },    // #06B6D4
-        ldes:    { r: 233, g: 30,  b: 99 }      // #E91E63
-    };
-
 
     // ====================================================================
     // REUSABLE LAYER FUNCTIONS
     // ====================================================================
-    // These are extracted from standalone banners so composite banners
-    // can layer multiple animations (e.g., circuit + frequency).
-    // Each pair: createXxxState(env, opts) → state, drawXxx(ctx, w, h, state, t, opts)
 
     // ---- Dense Circuit layer ----
 
@@ -231,7 +215,6 @@
         var sigGlow = opts.signalGlowOpacity !== undefined ? opts.signalGlowOpacity : 0.15;
         var sigCore = opts.signalCoreOpacity !== undefined ? opts.signalCoreOpacity : 0.7;
 
-        // Draw paths
         for (var pi = 0; pi < cs.paths.length; pi++) {
             var path = cs.paths[pi];
             ctx.beginPath();
@@ -246,7 +229,6 @@
             ctx.stroke();
         }
 
-        // Draw nodes
         for (var ni = 0; ni < cs.nodes.length; ni++) {
             var n = cs.nodes[ni];
             if (n.x < -10 || n.x > w + 10) continue;
@@ -258,7 +240,7 @@
             } else if (n.shape === 'square') {
                 ctx.fillStyle = rgba(n.color, nodeOp);
                 ctx.fillRect(n.x - n.r * 0.7, n.y - n.r * 0.7, n.r * 1.4, n.r * 1.4);
-            } else { // ring
+            } else {
                 ctx.beginPath();
                 ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
                 ctx.strokeStyle = rgba(n.color, ringOp);
@@ -267,7 +249,6 @@
             }
         }
 
-        // Draw traveling signals
         for (var si = 0; si < cs.signals.length; si++) {
             var sig = cs.signals[si];
             sig.progress += sig.speed / 60;
@@ -286,12 +267,10 @@
             var sx = pa.x + (pb.x - pa.x) * segFrac;
             var sy = pa.y + (pb.y - pa.y) * segFrac;
             var fade = Math.min(sig.progress * 5, (1 - sig.progress) * 5, 1);
-            // Glow
             ctx.beginPath();
             ctx.arc(sx, sy, 4, 0, Math.PI * 2);
             ctx.fillStyle = rgba(sig.color, sigGlow * fade);
             ctx.fill();
-            // Core dot
             ctx.beginPath();
             ctx.arc(sx, sy, 2, 0, Math.PI * 2);
             ctx.fillStyle = rgba(sig.color, sigCore * fade);
@@ -308,7 +287,6 @@
         var bars = [];
         for (var i = 0; i < barCount; i++) {
             var t = i / barCount;
-            // Color gradient: teal -> sage -> gold -> coral -> lavender
             var r, g, b;
             if (t < 0.25) {
                 var f = t / 0.25;
@@ -349,19 +327,16 @@
             var barY = h - barH;
             var bw = fs.barWidth;
 
-            // Glow
             ctx.fillStyle = rgba(bar.color, glowOp);
             ctx.beginPath();
             ctx.roundRect(bar.x - bw / 2 - 2, barY - 2, bw + 4, barH + 4, bw / 2 + 2);
             ctx.fill();
 
-            // Fill
             ctx.fillStyle = rgba(bar.color, fillOp);
             ctx.beginPath();
             ctx.roundRect(bar.x - bw / 2, barY, bw, barH, bw / 2);
             ctx.fill();
 
-            // Border
             ctx.strokeStyle = rgba(bar.color, borderOp);
             ctx.lineWidth = 1;
             ctx.beginPath();
@@ -370,342 +345,55 @@
         }
     }
 
-    // ---- Stacked Curves layer ----
 
-    function createStackedState(env) {
-        var layers = [
-            { name: 'nuclear', color: RES.nuclear, baseY: 0.88, amp: 0.02, freq: 0.5, phase: 0 },
-            { name: 'hydro',   color: RES.hydro,   baseY: 0.78, amp: 0.04, freq: 0.8, phase: 1 },
-            { name: 'solar',   color: RES.solar,   baseY: 0.55, amp: 0.12, freq: 1.2, phase: 0.5 },
-            { name: 'wind',    color: RES.wind,    baseY: 0.42, amp: 0.08, freq: 2.0, phase: 2 },
-            { name: 'storage', color: RES.storage, baseY: 0.35, amp: 0.05, freq: 1.5, phase: 3 }
-        ];
-        return { layers: layers };
+    // ====================================================================
+    // BANNER REGISTRATIONS — Light Freq + Circuit with background variants
+    // ====================================================================
+
+    // Shared draw function for all 4 variants (same animation, different bg)
+    function drawFreqCircuitLight(st, ts) {
+        var t = ts / 1000;
+        st.ctx.clearRect(0, 0, st.w, st.h);
+        // Base layer: circuit (subdued for light bg)
+        drawCircuit(st.ctx, st.w, st.h, st.circuit, t, {
+            pathOpacity: 0.08, nodeOpacity: 0.2, ringOpacity: 0.25,
+            signalGlowOpacity: 0.08, signalCoreOpacity: 0.4
+        });
+        // Top layer: frequency bars (light-adjusted, slowed)
+        drawFrequency(st.ctx, st.w, st.h, st.freq, t, {
+            glowOpacity: 0.08, fillOpacity: 0.25, borderOpacity: 0.5,
+            timeScale: 0.35
+        });
     }
 
-    function drawStackedCurves(ctx, w, h, ss, t, opts) {
-        opts = opts || {};
-        var gridOp = opts.gridOpacity !== undefined ? opts.gridOpacity : 0.03;
-        var fillOp = opts.fillOpacity !== undefined ? opts.fillOpacity : 0.12;
-        var strokeOp = opts.strokeOpacity !== undefined ? opts.strokeOpacity : 0.6;
-        var glowOp = opts.glowOpacity !== undefined ? opts.glowOpacity : 0.15;
-        var showParticles = opts.showParticles !== undefined ? opts.showParticles : true;
-        var gridColor = opts.gridColor || 'rgba(255,255,255,';
-        var particleColor = opts.particleColor || 'rgba(255,255,255,';
-
-        // Subtle time-axis grid
-        ctx.strokeStyle = gridColor + gridOp + ')';
-        ctx.lineWidth = 0.5;
-        for (var gx = 0; gx < w; gx += w / 24) {
-            ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, h); ctx.stroke();
-        }
-
-        // Draw stacked areas bottom-up
-        for (var li = 0; li < ss.layers.length; li++) {
-            var layer = ss.layers[li];
-            ctx.beginPath();
-            ctx.moveTo(0, h);
-            for (var x = 0; x <= w; x += 3) {
-                var base = layer.baseY * h;
-                var undulate = Math.sin(x / w * Math.PI * layer.freq + t * 0.3 + layer.phase) * layer.amp * h;
-                var undulate2 = Math.sin(x / w * Math.PI * layer.freq * 2.3 + t * 0.15 + layer.phase * 1.7) * layer.amp * h * 0.3;
-                var y = base + undulate + undulate2;
-                ctx.lineTo(x, y);
-            }
-            ctx.lineTo(w, h);
-            ctx.closePath();
-            ctx.fillStyle = rgba(layer.color, fillOp);
-            ctx.fill();
-            // Top edge with glow
-            ctx.beginPath();
-            for (var x2 = 0; x2 <= w; x2 += 3) {
-                var base2 = layer.baseY * h;
-                var u = Math.sin(x2 / w * Math.PI * layer.freq + t * 0.3 + layer.phase) * layer.amp * h;
-                var u2 = Math.sin(x2 / w * Math.PI * layer.freq * 2.3 + t * 0.15 + layer.phase * 1.7) * layer.amp * h * 0.3;
-                var y2 = base2 + u + u2;
-                if (x2 === 0) ctx.moveTo(x2, y2); else ctx.lineTo(x2, y2);
-            }
-            ctx.strokeStyle = rgba(layer.color, strokeOp);
-            ctx.lineWidth = 1.2;
-            ctx.stroke();
-            ctx.strokeStyle = rgba(layer.color, glowOp);
-            ctx.lineWidth = 4;
-            ctx.stroke();
-        }
-
-        // Occasional floating particles
-        if (showParticles) {
-            var particleCount = 12;
-            for (var pi = 0; pi < particleCount; pi++) {
-                var ppx = (pi / particleCount * w + t * 15) % w;
-                var ppy = h * (0.3 + 0.5 * Math.sin(pi * 2.7 + t * 0.2));
-                var pOp = 0.15 + 0.1 * Math.sin(t * 0.5 + pi);
-                ctx.beginPath();
-                ctx.arc(ppx, ppy - t * 3 % 20, 1.5, 0, Math.PI * 2);
-                ctx.fillStyle = particleColor + pOp + ')';
-                ctx.fill();
-            }
-        }
+    function createFreqCircuitState(env) {
+        var cs = createCircuitState(env, {});
+        var fs = createFrequencyState(env, {});
+        return { ctx: env.ctx, w: env.w, h: env.h, circuit: cs, freq: fs };
     }
 
-
-    // ====================================================================
-    // BANNER REGISTRATIONS
-    // ====================================================================
-
-    // ---- 1. Dense Circuit Map (light, warm bg #F5F5F3) ----
-    registerBanner('dense-circuit-map', 'light', {
-        create: function(env) {
-            var cs = createCircuitState(env, {});
-            return { ctx: env.ctx, w: env.w, h: env.h, circuit: cs };
-        },
-        draw: function(st, ts) {
-            st.ctx.clearRect(0, 0, st.w, st.h);
-            drawCircuit(st.ctx, st.w, st.h, st.circuit, ts / 1000, {});
-        }
+    // ---- 1. Flat #FEFEFE (near-white, neutral) ----
+    registerBanner('freq-circuit-flat', 'light', {
+        create: createFreqCircuitState,
+        draw: drawFreqCircuitLight
     });
 
-    // ---- 2. Dense Circuit White (light, pure white bg) ----
-    registerBanner('dense-circuit-white', 'light', {
-        create: function(env) {
-            var cs = createCircuitState(env, {});
-            return { ctx: env.ctx, w: env.w, h: env.h, circuit: cs };
-        },
-        draw: function(st, ts) {
-            st.ctx.clearRect(0, 0, st.w, st.h);
-            drawCircuit(st.ctx, st.w, st.h, st.circuit, ts / 1000, {});
-        }
+    // ---- 2. Flat #FEFDFC (warm off-white) ----
+    registerBanner('freq-circuit-warm', 'light', {
+        create: createFreqCircuitState,
+        draw: drawFreqCircuitLight
     });
 
-    // ---- 3. Dense Circuit Navy (dark, navy bg #0B1120) ----
-    registerBanner('dense-circuit-navy', 'dark', {
-        create: function(env) {
-            var cs = createCircuitState(env, {});
-            return { ctx: env.ctx, w: env.w, h: env.h, circuit: cs };
-        },
-        draw: function(st, ts) {
-            st.ctx.clearRect(0, 0, st.w, st.h);
-            drawCircuit(st.ctx, st.w, st.h, st.circuit, ts / 1000, {
-                pathOpacity: 0.25, nodeOpacity: 0.55, ringOpacity: 0.6,
-                signalGlowOpacity: 0.25, signalCoreOpacity: 0.9
-            });
-        }
+    // ---- 3. Flat #FEFEFD (cool off-white) ----
+    registerBanner('freq-circuit-cool', 'light', {
+        create: createFreqCircuitState,
+        draw: drawFreqCircuitLight
     });
 
-    // ---- 4. Frequency Spectrum (dark, navy bg #0B1120) ----
-    registerBanner('frequency-spectrum', 'dark', {
-        create: function(env) {
-            var fs = createFrequencyState(env, {});
-            return { ctx: env.ctx, w: env.w, h: env.h, freq: fs };
-        },
-        draw: function(st, ts) {
-            st.ctx.clearRect(0, 0, st.w, st.h);
-            drawFrequency(st.ctx, st.w, st.h, st.freq, ts / 1000, {});
-        }
-    });
-
-    // ---- 5. Frequency Light (light, warm bg #F5F5F3) ----
-    registerBanner('frequency-light', 'light', {
-        create: function(env) {
-            var fs = createFrequencyState(env, {});
-            return { ctx: env.ctx, w: env.w, h: env.h, freq: fs };
-        },
-        draw: function(st, ts) {
-            st.ctx.clearRect(0, 0, st.w, st.h);
-            drawFrequency(st.ctx, st.w, st.h, st.freq, ts / 1000, {
-                glowOpacity: 0.08, fillOpacity: 0.25, borderOpacity: 0.5
-            });
-        }
-    });
-
-    // ---- 6. Stacked Curves Dark (dark, navy bg #0B1120) ----
-    registerBanner('stacked-curves-dark', 'dark', {
-        create: function(env) {
-            var ss = createStackedState(env);
-            return { ctx: env.ctx, w: env.w, h: env.h, stacked: ss };
-        },
-        draw: function(st, ts) {
-            st.ctx.clearRect(0, 0, st.w, st.h);
-            drawStackedCurves(st.ctx, st.w, st.h, st.stacked, ts / 1000, {});
-        }
-    });
-
-    // ---- 7. Network Constellation Light (light) ----
-    registerBanner('network-constellation-light', 'light', {
-        create: function(env) {
-            var rng = makeRng(314);
-            var w = env.w, h = env.h;
-            var nodeCount = isMobile ? 50 : 100;
-            var connectionDist = isMobile ? 100 : 150;
-            var clusters = [
-                { x: w * 0.2, y: h * 0.4 },
-                { x: w * 0.5, y: h * 0.6 },
-                { x: w * 0.75, y: h * 0.35 },
-                { x: w * 0.9, y: h * 0.7 }
-            ];
-            var nodes = [];
-            for (var i = 0; i < nodeCount; i++) {
-                var nearCluster = rng() < 0.7;
-                var nx, ny;
-                if (nearCluster) {
-                    var ci = Math.floor(rng() * clusters.length);
-                    nx = clusters[ci].x + (rng() - 0.5) * w * 0.25;
-                    ny = clusters[ci].y + (rng() - 0.5) * h * 0.5;
-                } else {
-                    nx = rng() * w;
-                    ny = rng() * h;
-                }
-                var colors = [RES.nuclear, RES.hydro, RES.solar, RES.wind, RES.battery, RES.ldes];
-                var col = colors[Math.floor(rng() * colors.length)];
-                nodes.push({ x: nx, y: ny, r: 2 + rng() * 4, color: col, baseX: nx, baseY: ny });
-            }
-            return { ctx: env.ctx, w: w, h: h, nodes: nodes, connectionDist: connectionDist, pulses: [], lastPulse: 0 };
-        },
-        draw: function(st, ts) {
-            var ctx = st.ctx, w = st.w, h = st.h;
-            var t = ts / 1000;
-            ctx.clearRect(0, 0, w, h);
-            for (var i = 0; i < st.nodes.length; i++) {
-                var n = st.nodes[i];
-                n.x = n.baseX + Math.sin(t * 0.3 + i * 0.7) * 15;
-                n.y = n.baseY + Math.cos(t * 0.25 + i * 1.1) * 10;
-            }
-            var cd2 = st.connectionDist * st.connectionDist;
-            for (var a = 0; a < st.nodes.length; a++) {
-                for (var b2 = a + 1; b2 < st.nodes.length; b2++) {
-                    var dx = st.nodes[b2].x - st.nodes[a].x;
-                    var dy = st.nodes[b2].y - st.nodes[a].y;
-                    var d2 = dx * dx + dy * dy;
-                    if (d2 < cd2) {
-                        var alpha = (1 - Math.sqrt(d2) / st.connectionDist) * 0.12;
-                        ctx.beginPath();
-                        ctx.moveTo(st.nodes[a].x, st.nodes[a].y);
-                        ctx.lineTo(st.nodes[b2].x, st.nodes[b2].y);
-                        ctx.strokeStyle = 'rgba(30,41,59,' + alpha + ')';
-                        ctx.lineWidth = 0.5;
-                        ctx.stroke();
-                    }
-                }
-            }
-            if (t - st.lastPulse > 3) {
-                st.lastPulse = t;
-                var pn = st.nodes[Math.floor(Math.random() * st.nodes.length)];
-                st.pulses.push({ x: pn.x, y: pn.y, startTime: t, color: pn.color });
-            }
-            for (var pi = st.pulses.length - 1; pi >= 0; pi--) {
-                var pulse = st.pulses[pi];
-                var age = t - pulse.startTime;
-                if (age > 3) { st.pulses.splice(pi, 1); continue; }
-                var radius = age * 60;
-                var op = Math.max(0, 0.2 - age * 0.07);
-                ctx.beginPath();
-                ctx.arc(pulse.x, pulse.y, radius, 0, Math.PI * 2);
-                ctx.strokeStyle = rgba(pulse.color, op);
-                ctx.lineWidth = 1.5;
-                ctx.stroke();
-            }
-            for (var ni = 0; ni < st.nodes.length; ni++) {
-                var nd = st.nodes[ni];
-                ctx.beginPath();
-                ctx.arc(nd.x, nd.y, nd.r, 0, Math.PI * 2);
-                ctx.fillStyle = rgba(nd.color, 0.45);
-                ctx.fill();
-            }
-        }
-    });
-
-
-    // ====================================================================
-    // COMPOSITE BANNERS (layer multiple animations)
-    // ====================================================================
-
-    // ---- 8. Frequency + Dense Circuit (dark, navy bg) ----
-    registerBanner('frequency-dense-navy', 'dark', {
-        create: function(env) {
-            var cs = createCircuitState(env, {});
-            var fs = createFrequencyState(env, {});
-            return { ctx: env.ctx, w: env.w, h: env.h, circuit: cs, freq: fs };
-        },
-        draw: function(st, ts) {
-            var t = ts / 1000;
-            st.ctx.clearRect(0, 0, st.w, st.h);
-            // Base layer: circuit (subdued)
-            drawCircuit(st.ctx, st.w, st.h, st.circuit, t, {
-                pathOpacity: 0.15, nodeOpacity: 0.3, ringOpacity: 0.35,
-                signalGlowOpacity: 0.12, signalCoreOpacity: 0.5
-            });
-            // Top layer: frequency bars (slowed to stacked-curve pace)
-            drawFrequency(st.ctx, st.w, st.h, st.freq, t, {
-                timeScale: 0.35
-            });
-        }
-    });
-
-    // ---- 9. Frequency + Dense Circuit (light, white bg) ----
-    registerBanner('frequency-dense-white', 'light', {
-        create: function(env) {
-            var cs = createCircuitState(env, {});
-            var fs = createFrequencyState(env, {});
-            return { ctx: env.ctx, w: env.w, h: env.h, circuit: cs, freq: fs };
-        },
-        draw: function(st, ts) {
-            var t = ts / 1000;
-            st.ctx.clearRect(0, 0, st.w, st.h);
-            // Base layer: circuit (subdued for light bg)
-            drawCircuit(st.ctx, st.w, st.h, st.circuit, t, {
-                pathOpacity: 0.08, nodeOpacity: 0.2, ringOpacity: 0.25,
-                signalGlowOpacity: 0.08, signalCoreOpacity: 0.4
-            });
-            // Top layer: frequency bars (light-adjusted, slowed to stacked-curve pace)
-            drawFrequency(st.ctx, st.w, st.h, st.freq, t, {
-                glowOpacity: 0.08, fillOpacity: 0.25, borderOpacity: 0.5,
-                timeScale: 0.35
-            });
-        }
-    });
-
-    // ---- 10. Stacked Curves + Dense Circuit (dark, navy bg) ----
-    registerBanner('stacked-dense-navy', 'dark', {
-        create: function(env) {
-            var cs = createCircuitState(env, {});
-            var ss = createStackedState(env);
-            return { ctx: env.ctx, w: env.w, h: env.h, circuit: cs, stacked: ss };
-        },
-        draw: function(st, ts) {
-            var t = ts / 1000;
-            st.ctx.clearRect(0, 0, st.w, st.h);
-            // Base layer: circuit (very subdued)
-            drawCircuit(st.ctx, st.w, st.h, st.circuit, t, {
-                pathOpacity: 0.12, nodeOpacity: 0.25, ringOpacity: 0.3,
-                signalGlowOpacity: 0.1, signalCoreOpacity: 0.4
-            });
-            // Top layer: stacked curves
-            drawStackedCurves(st.ctx, st.w, st.h, st.stacked, t, {});
-        }
-    });
-
-    // ---- 11. Stacked Curves + Dense Circuit (light, white bg) ----
-    registerBanner('stacked-dense-white', 'light', {
-        create: function(env) {
-            var cs = createCircuitState(env, {});
-            var ss = createStackedState(env);
-            return { ctx: env.ctx, w: env.w, h: env.h, circuit: cs, stacked: ss };
-        },
-        draw: function(st, ts) {
-            var t = ts / 1000;
-            st.ctx.clearRect(0, 0, st.w, st.h);
-            // Base layer: circuit (subdued for light bg)
-            drawCircuit(st.ctx, st.w, st.h, st.circuit, t, {
-                pathOpacity: 0.08, nodeOpacity: 0.2, ringOpacity: 0.25,
-                signalGlowOpacity: 0.08, signalCoreOpacity: 0.4
-            });
-            // Top layer: stacked curves (light-adjusted)
-            drawStackedCurves(st.ctx, st.w, st.h, st.stacked, t, {
-                gridOpacity: 0.04, fillOpacity: 0.18, strokeOpacity: 0.5,
-                glowOpacity: 0.12, showParticles: false,
-                gridColor: 'rgba(30,41,59,'
-            });
-        }
+    // ---- 4. Gradient blend (#FEFDFC → #FEFEFE → #FEFEFD) ----
+    registerBanner('freq-circuit-gradient', 'light', {
+        create: createFreqCircuitState,
+        draw: drawFreqCircuitLight
     });
 
 })();
