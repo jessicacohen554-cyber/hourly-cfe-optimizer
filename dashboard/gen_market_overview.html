@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>US Power Market & Grid Decarbonization | The 8,760 Problem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/scrollytell.css">
+<link rel="stylesheet" href="styles/pg-generator.css">
+<link rel="stylesheet" href="styles/cinematic.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="js/shared-footer.js"></script>
+</head>
+<body>
+
+<!-- TOP NAV (injected by nav.js) -->
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+<script src="js/scroll-observer.js"></script>
+
+<!-- HEADER BANNER -->
+<header class="header" id="pageHeader">
+    <h1>US Power Market & Grid Decarbonization</h1>
+    <p class="subtitle">Understanding market structure, fleet composition, and the IPP decarbonization challenge across America's seven independent system operators.</p>
+    <div class="header-accent"></div>
+</header>
+
+<div class="main-content">
+
+    <!-- ================================================================
+         SECTION 1: Key Stats Bar
+         ================================================================ -->
+    <div class="stat-row fade-in">
+        <div class="stat-tile">
+            <div class="stat-value counter" data-target="15">0</div>
+            <div class="stat-label">Companies Analyzed</div>
+            <div class="stat-sublabel">Top generators by TWh</div>
+        </div>
+        <div class="stat-tile">
+            <div class="stat-value highlight counter" data-target="1683">0</div>
+            <div class="stat-label">TWh Generated</div>
+            <div class="stat-sublabel">~40% of US total</div>
+        </div>
+        <div class="stat-tile">
+            <div class="stat-value danger counter" data-target="537">0</div>
+            <div class="stat-label">Million Tonnes CO&#8322;</div>
+            <div class="stat-sublabel">Annual Scope 1 emissions</div>
+        </div>
+        <div class="stat-tile">
+            <div class="stat-value counter" data-target="352">0</div>
+            <div class="stat-label">Avg. kg CO&#8322;/MWh</div>
+            <div class="stat-sublabel">Weighted fleet intensity</div>
+        </div>
+    </div>
+
+    <div class="energy-divider"></div>
+
+    <!-- ================================================================
+         SECTION 2: Market Structure (NEW)
+         ================================================================ -->
+    <section class="story-section fade-in" style="max-width: var(--max-content, 1320px);">
+        <span class="story-badge navy">Market Structure</span>
+        <div class="story-content" style="max-width: 960px;">
+            <h2>How the U.S. Power Market Actually Works&mdash;and Why It Matters for Decarbonization</h2>
+            <p>The U.S. electricity sector is not a single market. It is a patchwork of fundamentally different ownership structures, regulatory regimes, and competitive dynamics. Understanding these structures is essential because <strong>market design determines how&mdash;and whether&mdash;decarbonization investment happens.</strong></p>
+
+            <p>Roughly half of U.S. generation is produced by vertically integrated utilities operating under state regulation. The other half trades through competitive wholesale markets run by independent system operators (ISOs). These two models create radically different incentive structures for clean energy investment.</p>
+        </div>
+
+        <div class="card-grid-market" style="margin-top: 28px;">
+            <div class="card" style="border-left: 4px solid var(--sky);">
+                <h3 style="color: var(--sky-dark); font-size: 1.1rem;">Vertically Integrated Utilities</h3>
+                <p style="font-size: 0.88rem; margin-bottom: 8px;"><strong>Southern, Duke, Dominion, Entergy, BH Energy, Xcel, DTE, WEC, Evergy, PPL</strong></p>
+                <p style="font-size: 0.88rem;">Own generation, transmission, and distribution. Regulated by state public utility commissions (PUCs) with a guaranteed rate of return. Decarbonization is planned through Integrated Resource Plans (IRPs), with costs passed to ratepayers.</p>
+                <div style="margin-top: 12px; font-size: 0.85rem;">
+                    <p style="margin-bottom: 6px;"><strong style="color: var(--green);">Advantages:</strong> Can plan holistically across the full value chain. Long-term investment horizons with guaranteed cost recovery. Can make system-wide optimization decisions.</p>
+                    <p style="margin-bottom: 0;"><strong style="color: var(--red-accent);">Challenges:</strong> Political pressure from ratepayers on cost increases. State regulatory environments vary wildly&mdash;from aggressive clean energy mandates to hostile opposition. No market price signal for clean energy. Slow decision cycles driven by IRP cadence (2&ndash;3 year cycles).</p>
+                </div>
+            </div>
+            <div class="card" style="border-left: 4px solid var(--amber);">
+                <h3 style="color: #B45309; font-size: 1.1rem;">Competitive / Deregulated Markets</h3>
+                <p style="font-size: 0.88rem; margin-bottom: 8px;"><strong>Constellation, Vistra, NRG, Talen, AES, PSEG, NextEra (competitive gen)</strong></p>
+                <p style="font-size: 0.88rem;">Generators sell into wholesale markets operated by ISOs (CAISO, ERCOT, PJM, NYISO, NEISO, MISO, SPP). Revenue depends on market clearing prices. No guaranteed cost recovery for capital investments.</p>
+                <div style="margin-top: 12px; font-size: 0.85rem;">
+                    <p style="margin-bottom: 6px;"><strong style="color: var(--green);">Advantages:</strong> Market signals drive operational efficiency. Can respond quickly to economic opportunities. Innovation rewarded by margin capture.</p>
+                    <p style="margin-bottom: 0;"><strong style="color: var(--red-accent);">Challenges:</strong> No centralized generation planning. Investment decisions driven by market economics, not emissions targets. Stranded asset risk from regulatory or market shifts. Wholesale price volatility creates investment uncertainty.</p>
+                </div>
+            </div>
+            <div class="card-full-row">
+                <div class="card" style="border-left: 4px solid var(--color-nuclear);">
+                    <h3 style="color: var(--color-nuclear); font-size: 1.1rem;">The IPP Challenge</h3>
+                    <p style="font-size: 0.88rem; margin-bottom: 8px;"><strong>Independent Power Producers: Vistra, NRG, Constellation, Talen, AES</strong></p>
+                    <div class="card-ipp-body">
+                        <div>
+                            <p style="font-size: 0.88rem;">IPPs operate as independent actors in competitive wholesale markets. They face a unique set of decarbonization constraints that neither regulated utilities nor policy-driven mandates address:</p>
+                            <ul style="font-size: 0.85rem; margin: 8px 0 0 16px; color: var(--text-secondary); line-height: 1.6;">
+                                <li>No guaranteed cost recovery for clean energy investments</li>
+                                <li>Revenue depends on wholesale prices that don't value carbon reduction</li>
+                                <li>Must compete against vertically integrated utilities with captive ratebases</li>
+                                <li>Decarbonization driven by economics and voluntary commitments, not regulatory mandates</li>
+                            </ul>
+                        </div>
+                        <div class="callout success" style="margin-top: 0; padding: 12px 16px; align-self: stretch; display: flex; align-items: center;">
+                            <p style="font-size: 0.85rem; margin: 0;"><strong>But also unique opportunities:</strong> IPPs are nimble, can move capital quickly, develop projects across multiple ISOs, and are less constrained by single-state regulators. This analysis focuses on how IPPs can approach decarbonization transition planning given their position as independent market actors.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- ================================================================
+         SECTION 3: The Landscape — ISO Emissions Overview
+         ================================================================ -->
+    <section class="story-section fade-in">
+        <span class="story-badge navy">The Landscape</span>
+        <div class="story-content">
+            <h2>America's Power Fleet Is Highly Concentrated&mdash;and Highly Diverse</h2>
+            <p>Just 15 companies generate roughly <strong>1,683 TWh</strong> of electricity annually&mdash;about 40% of total U.S. generation. But their fleets couldn't be more different. Some are nuclear-dominated with already-low carbon intensity. Others burn coal at rates that would have been unremarkable a decade ago but are now increasingly untenable under every major climate framework.<sup class="ref" title="eGRID 2023, EPA">1</sup></p>
+
+            <p>This diversity matters because <strong>fleet composition determines decarbonization pathway</strong>. There is no one-size-fits-all strategy. A coal-heavy utility in the Midwest faces fundamentally different economics, politics, and physical constraints than a nuclear merchant generator in PJM or a diversified utility with growing renewables in the Southeast.</p>
+
+            <div class="callout" style="margin-top: 20px;">
+                <p><strong>Sector context (MJ Bradley/ERM 2025):</strong> The 100 largest U.S. power producers emitted <strong>1.15 billion tonnes CO&#8322;</strong> in 2024&mdash;down ~40% from the 2007 peak, but essentially flat since 2020. In a milestone year, <strong>2024 was the first year solar + wind generated more electricity than coal</strong>. Zero-carbon sources now supply ~40% of U.S. electricity. Yet power sector CO&#8322; rose 3.8% in 2025 as higher gas prices drove a coal-generation rebound.<sup class="ref" title="MJ Bradley/ERM Benchmarking 2025, Rhodium Group 2025">4,20</sup></p>
+            </div>
+        </div>
+
+        <div class="chart-container chart-panel" style="margin-top: 32px;">
+            <h3>ISO Emissions Landscape: IPP vs. Regulated Utility Generation</h3>
+            <div class="chart-wrapper" style="height: 420px;">
+                <canvas id="isoStackedChart"></canvas>
+            </div>
+            <p class="citation">Approximate shares based on EIA Form 860/923 ownership data, ISO market participation reports. IPP share includes merchant and competitive generators.<sup class="ref">1,2,4</sup></p>
+        </div>
+
+        <div style="overflow-x: auto; margin-top: 24px;">
+            <table class="company-table" id="isoTable">
+                <thead>
+                    <tr>
+                        <th>ISO</th>
+                        <th>Total Gen (TWh)</th>
+                        <th>IPP Share</th>
+                        <th>Reg. Utility Share</th>
+                        <th>Dominant Fuel</th>
+                        <th>Avg Intensity (kg/MWh)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td class="company-name">CAISO</td><td>~280</td><td>~45%</td><td>~55%</td><td>Gas / Solar</td><td>~210</td></tr>
+                    <tr><td class="company-name">ERCOT</td><td>~480</td><td>~60%</td><td>~40%</td><td>Gas / Wind</td><td>~370</td></tr>
+                    <tr><td class="company-name">PJM</td><td>~800</td><td>~35%</td><td>~65%</td><td>Gas / Nuclear / Coal</td><td>~380</td></tr>
+                    <tr><td class="company-name">NYISO</td><td>~135</td><td>~40%</td><td>~60%</td><td>Gas / Nuclear</td><td>~250</td></tr>
+                    <tr><td class="company-name">NEISO</td><td>~95</td><td>~50%</td><td>~50%</td><td>Gas / Nuclear</td><td>~290</td></tr>
+                    <tr><td class="company-name">MISO</td><td>~600</td><td>~25%</td><td>~75%</td><td>Gas / Coal / Wind</td><td>~420</td></tr>
+                    <tr><td class="company-name">SPP</td><td>~270</td><td>~20%</td><td>~80%</td><td>Gas / Wind / Coal</td><td>~400</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="citation" style="margin-top: 8px;">Source: Estimated from EIA, EPA eGRID 2023, ISO annual reports. IPP/utility splits are approximate and vary by definition.<sup class="ref">1,2</sup></p>
+        <p style="margin-top: 12px; font-size: 0.88rem;">
+            <a href="ref-ipp-vs-utility.html" style="color: #0369A1; text-decoration: none; border-bottom: 1px solid rgba(3,105,161,0.3); font-weight: 500;"><!-- contrast-fix: was #0EA5E9, now #0369A1, ratio 5.93:1 on bg white -->
+                See detailed state &amp; company breakdown by ISO &rarr;
+            </a>
+        </p>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- ================================================================
+         SECTION 4: Emissions Intensity vs. Generation — Bubble Chart
+         ================================================================ -->
+    <section class="story-section fade-in">
+        <span class="story-badge amber">The Players</span>
+        <div class="story-content">
+            <h2>Emissions Intensity vs. Generation: The 15 Largest Generators</h2>
+            <p>Bubble size represents annual CO&#8322; emissions. Green = below 272 kg/MWh, amber = 272&ndash;408, red = above 408. The vertical spread reveals the enormous diversity in fleet carbon intensity&mdash;a 4&times; range from the cleanest to the dirtiest.</p>
+        </div>
+
+        <div class="chart-container chart-panel" style="margin-top: 24px;">
+            <h3>Emissions Intensity vs. Generation</h3>
+            <div class="chart-wrapper" style="height: 420px;">
+                <canvas id="bubbleChart"></canvas>
+            </div>
+            <p class="citation">Source: Research estimates based on EPA eGRID 2023, EIA Form 923, company 10-K filings.<sup class="ref">1,2,3</sup></p>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- ================================================================
+         SECTION 5: Company Rankings Table
+         ================================================================ -->
+    <section class="section fade-in">
+        <div class="section-header">
+            <h2>The Top 15: At a Glance</h2>
+            <p>Ranked by annual electricity generation (TWh). Constellation Energy figures reflect current fleet composition including the full nuclear + gas + geothermal portfolio.</p>
+        </div>
+
+        <div style="overflow-x: auto;">
+            <table class="company-table" id="companyTable">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Company</th>
+                        <th>Type</th>
+                        <th>Gen (TWh)</th>
+                        <th>CO&#8322; (Mt/yr)</th>
+                        <th>Intensity (kg/MWh)</th>
+                        <th>Generation Mix</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <p class="citation" style="margin-top: 12px;">Notes: Generation and emissions estimates based on eGRID 2023 plant-level data aggregated by parent company, supplemented by 2024 company reports. Constellation Energy data reflects current fleet composition.<sup class="ref">1,2,4</sup></p>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- ================================================================
+         SECTION 6: Four Fleet Archetypes
+         ================================================================ -->
+    <section class="story-section fade-in panel-navy">
+        <span class="story-badge navy">Four Archetypes</span>
+        <div class="story-content">
+            <h2>Every Generator Falls Into One of Four Fleet Archetypes</h2>
+            <p>The decarbonization pathway for a power generator is fundamentally determined by its starting fleet composition. We identify four distinct archetypes among the top 15 generators, each with different economics, opportunities, and constraints.</p>
+        </div>
+
+        <div class="card-grid" style="margin-top: 24px;">
+            <div class="card" style="border-left: 4px solid #374151;">
+                <h3 style="color: #374151;">Coal-Heavy</h3>
+                <p style="font-size: 0.88rem; margin-bottom: 8px;"><strong>Evergy, AEP, BH Energy, Vistra, PPL</strong></p>
+                <p style="font-size: 0.88rem;">Coal &ge;25% of generation. Highest current emissions intensity (454&ndash;572 kg/MWh). But coal retirement is the cheapest form of abatement: new renewables now undercut coal operating costs in most markets.<sup class="ref">5</sup></p>
+                <div class="stat-tile" style="margin-top: 12px; background: rgba(55,65,81,0.05);">
+                    <div class="stat-value" style="font-size: 1.4rem; color: #374151;">$15&ndash;35</div>
+                    <div class="stat-label">$/tonne CO&#8322; abatement (coal &rarr; renewables)</div>
+                </div>
+            </div>
+            <div class="card" style="border-left: 4px solid #EF4444;">
+                <h3 style="color: #DC2626;">Gas-Dominant</h3><!-- contrast-fix: was #EF4444, now #DC2626, ratio 4.83:1 on bg white -->
+                <p style="font-size: 0.88rem; margin-bottom: 8px;"><strong>Entergy, Dominion</strong></p>
+                <p style="font-size: 0.88rem;">Gas &ge;45% with nuclear. Moderate intensity (333&ndash;349 kg/MWh). Already past the easy wins of coal retirement. Reducing gas emissions requires CCS, clean firm, or massive renewable overbuild&mdash;all more expensive per tonne.<sup class="ref">6</sup></p>
+                <div class="stat-tile" style="margin-top: 12px; background: rgba(239,68,68,0.05);">
+                    <div class="stat-value" style="font-size: 1.4rem; color: #DC2626;">$80&ndash;150</div><!-- contrast-fix: was #EF4444, now #DC2626, ratio 4.83:1 on bg white -->
+                    <div class="stat-label">$/tonne CO&#8322; abatement (gas &rarr; clean)</div>
+                </div>
+            </div>
+            <div class="card" style="border-left: 4px solid #0EA5E9;">
+                <h3 style="color: #0369A1;">Diversified / Transitioning</h3><!-- contrast-fix: was #0EA5E9, now #0369A1, ratio 5.93:1 on bg white -->
+                <p style="font-size: 0.88rem; margin-bottom: 8px;"><strong>Duke, Southern, Xcel, DTE, WEC, AES</strong></p>
+                <p style="font-size: 0.88rem;">Mix of gas, coal, nuclear, and growing renewables. These generators have the most flexible pathway options: retire remaining coal first (cheap), then build renewables, then address gas (harder).</p>
+                <div class="stat-tile" style="margin-top: 12px; background: rgba(14,165,233,0.05);">
+                    <div class="stat-value" style="font-size: 1.4rem; color: #0369A1;">$25&ndash;80</div><!-- contrast-fix: was #0EA5E9, now #0369A1, ratio 5.93:1 on bg white -->
+                    <div class="stat-label">$/tonne CO&#8322; abatement (blended pathway)</div>
+                </div>
+            </div>
+            <div class="card" style="border-left: 4px solid #7C3AED;">
+                <h3 style="color: #7C3AED;">Nuclear-Led / Renewable-Led</h3>
+                <p style="font-size: 0.88rem; margin-bottom: 8px;"><strong>Constellation, NextEra</strong></p>
+                <p style="font-size: 0.88rem;">Already below US average intensity. Nuclear or renewable backbone. Challenge is not reducing&mdash;it's maintaining low-carbon status while growing to meet surging demand (data centers, electrification).</p>
+                <div class="stat-tile" style="margin-top: 12px; background: rgba(124,58,237,0.05);">
+                    <div class="stat-value" style="font-size: 1.4rem; color: #7C3AED;">$120+</div>
+                    <div class="stat-label">$/tonne CO&#8322; for marginal reductions</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- ================================================================
+         SECTION 7: Sector Transformation: 2012 to 2024
+         ================================================================ -->
+    <section class="section fade-in">
+        <div class="section-header">
+            <h2>The Sector-Wide Transformation: 2012 to 2024</h2>
+            <p>The U.S. power sector has undergone a remarkable fuel-mix shift in just 12 years, documented by the MJ Bradley/ERM Benchmarking Air Emissions reports.<sup class="ref">4</sup></p>
+        </div>
+
+        <div style="overflow-x: auto;">
+            <table class="company-table" style="max-width: 700px; margin: 0 auto;">
+                <thead>
+                    <tr>
+                        <th>Fuel Source</th>
+                        <th>2012 Share</th>
+                        <th>2024 Share</th>
+                        <th>Change</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td><strong>Coal</strong></td><td>37%</td><td>~15%</td><td style="color:#15803D;">&darr; 22 pp</td></tr><!-- contrast-fix: was #22C55E, now #15803D, ratio 5.02:1 on bg white -->
+                    <tr><td><strong>Natural Gas</strong></td><td>30%</td><td>~43%</td><td style="color:#B45309;">&uarr; 13 pp</td></tr><!-- contrast-fix: was #F59E0B, now #B45309, ratio 5.02:1 on bg white -->
+                    <tr><td><strong>Wind + Solar</strong></td><td>&lt;4%</td><td>~16%</td><td style="color:#15803D;">&uarr; 12+ pp</td></tr><!-- contrast-fix: was #22C55E, now #15803D, ratio 5.02:1 on bg white -->
+                    <tr><td><strong>Nuclear</strong></td><td>~19%</td><td>~18%</td><td style="color:var(--text-muted);">&asymp; stable</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="stat-row" style="margin-top: 24px;">
+            <div class="stat-tile">
+                <div class="stat-value success" style="font-size: 1.6rem;">&darr;40%</div>
+                <div class="stat-label">CO&#8322; from 2007 Peak</div>
+                <div class="stat-sublabel">Top 100 producers</div>
+            </div>
+            <div class="stat-tile">
+                <div class="stat-value success" style="font-size: 1.6rem;">&darr;96%</div>
+                <div class="stat-label">SO&#8322; Since 1990</div>
+                <div class="stat-sublabel">A Clean Air Act success</div>
+            </div>
+            <div class="stat-tile">
+                <div class="stat-value success" style="font-size: 1.6rem;">&darr;90%</div>
+                <div class="stat-label">NO&#8339; Since 1990</div>
+                <div class="stat-sublabel">Regulation-driven</div>
+            </div>
+            <div class="stat-tile">
+                <div class="stat-value highlight" style="font-size: 1.6rem;">44%</div>
+                <div class="stat-label">Nuclear&rsquo;s Share of Zero-Carbon</div>
+                <div class="stat-sublabel">Still the clean energy backbone</div>
+            </div>
+        </div>
+
+        <div class="callout warning" style="margin-top: 24px;">
+            <p><strong>The stall:</strong> Despite 40% CO&#8322; reduction from 2007 peak, emissions have been essentially flat since 2020. Power sector CO&#8322; actually <strong>rose 3.8% in 2025</strong> as higher gas prices drove a coal-generation rebound&mdash;the first consecutive years of emissions growth in over a decade. The fuel switch from coal to gas has delivered most of its emissions benefit; further reductions require deployment of zero-carbon sources at unprecedented scale.<sup class="ref" title="Rhodium Group 2025">20</sup></p>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- ================================================================
+         SECTION 8: The Paradox
+         ================================================================ -->
+    <section class="story-section fade-in panel-navy">
+        <span class="story-badge red">The Paradox</span>
+        <div class="story-content">
+            <h2>The Fleet Composition Paradox: Coal-Heavy Generators May Have the Easier Path</h2>
+            <p>Here is the counterintuitive insight at the heart of this analysis: <strong>the dirtiest generators may face the most straightforward decarbonization economics.</strong></p>
+
+            <p>Coal-to-renewable substitution is now the cheapest form of new generation in most US markets. The levelized cost of new solar ($24&ndash;$96/MWh) and wind ($24&ndash;$75/MWh) undercuts existing coal operating costs in many regions.<sup class="ref" title="Lazard LCOE 2024">5</sup> For a coal-heavy utility, retiring coal and building renewables + storage represents genuine, large-scale CO&#8322; reduction at costs that may actually <em>lower</em> system costs.</p>
+
+            <div class="callout">
+                <p><strong>The counterintuitive math:</strong> A coal-heavy generator at ~500 kg CO&#8322;/MWh could cut its intensity by 50% simply by replacing coal with wind in resource-rich regions. That's massive abatement at low cost. Meanwhile, a nuclear-led generator at ~180 kg/MWh would need to eliminate virtually all remaining gas generation&mdash;requiring expensive clean firm power, storage, or CCS&mdash;to achieve a comparable <em>percentage</em> reduction. The marginal cost per tonne rises sharply as fleet intensity falls.</p>
+            </div>
+
+            <p>But efficient CCGT + nuclear fleets face diminishing returns. Natural gas combined-cycle plants emit ~363&ndash;408 kg CO&#8322;/MWh&mdash;already 60% less than coal. Going from gas to zero-carbon requires either CCS ($90&ndash;130/MWh with capture)<sup class="ref" title="NREL ATB 2024">6</sup>, new nuclear ($120&ndash;180/MWh)<sup class="ref" title="Lazard LCOE 2024">5</sup>, or massive overbuild of renewables + long-duration storage to cover all hours.</p>
+        </div>
+
+        <div class="story-two-col" style="margin-top: 24px;">
+            <div class="card" style="border: 2px solid #374151;">
+                <h4>Coal-Heavy Archetype: 519 &rarr; 260 kg/MWh</h4>
+                <ul style="font-size: 0.9rem; margin-left: 16px; color: var(--text-secondary);">
+                    <li><strong>Strategy:</strong> Replace coal fleet with Kansas wind + battery storage</li>
+                    <li><strong>Cost:</strong> New wind at $25&ndash;35/MWh undercuts coal operating costs ($35&ndash;50/MWh)</li>
+                    <li><strong>Abatement:</strong> ~$15&ndash;25/tonne CO&#8322;</li>
+                    <li><strong>Barrier:</strong> Coal community transition, stranded assets</li>
+                    <li><strong>Net bill impact:</strong> Potentially <em>negative</em> (lower system costs)</li>
+                </ul>
+                <div class="callout success" style="margin-top: 12px;">
+                    <p><strong>Verdict:</strong> 50% reduction is economically rational even without a carbon price. IRA credits make it a no-brainer.</p>
+                </div>
+            </div>
+            <div class="card" style="border: 2px solid #7C3AED;">
+                <h4>Nuclear-Led Archetype: 177 &rarr; 88 kg/MWh</h4>
+                <ul style="font-size: 0.9rem; margin-left: 16px; color: var(--text-secondary);">
+                    <li><strong>Strategy:</strong> Must decarbonize ~130 TWh of gas CCGT generation</li>
+                    <li><strong>Options:</strong> CCS on gas ($90&ndash;130/MWh), new renewables+LDES ($80&ndash;120/MWh for last-mile matching)</li>
+                    <li><strong>Abatement:</strong> ~$80&ndash;150/tonne CO&#8322;</li>
+                    <li><strong>Barrier:</strong> CCS at scale unproven; LDES still expensive</li>
+                    <li><strong>Net bill impact:</strong> Significant cost increase</li>
+                </ul>
+                <div class="callout warning" style="margin-top: 12px;">
+                    <p><strong>Verdict:</strong> 50% reduction requires either CCS breakthrough, massive storage deployment, or carbon price &gt;$80/tonne to be economic.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- ================================================================
+         SECTION 9: Marginal Abatement Cost Chart
+         ================================================================ -->
+    <section class="section fade-in">
+        <div class="section-header">
+            <h2>Marginal Abatement Cost by Fleet Archetype</h2>
+            <p>The cost of each additional tonne of CO&#8322; avoided increases as generators pursue deeper decarbonization. The shape of this curve depends entirely on fleet starting composition.</p>
+        </div>
+
+        <div class="chart-container chart-panel">
+            <h3>CO&#8322; Abatement Cost Curve: Cheap Early Wins, Expensive Last Mile</h3>
+            <div class="chart-wrapper" style="height: 400px;">
+                <canvas id="macChart"></canvas>
+            </div>
+            <p class="citation">Based on Lazard LCOE 2024, NREL ATB 2024, and hourly CFE optimizer cost curves for storage and firm generation.<sup class="ref">5,6,7</sup></p>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- ================================================================
+         SECTION 10: Historical Emissions Trajectories
+         ================================================================ -->
+    <section class="section fade-in">
+        <div class="section-header">
+            <h2>Historical Emissions Trajectories: 2005&ndash;2024</h2>
+            <p>How have the top generators' CO&#8322; emission rates changed over the past two decades? The trajectories reveal which companies are genuinely decarbonizing and which are stalling.</p>
+        </div>
+
+        <div class="chart-container chart-panel">
+            <h3>Absolute CO&#8322; Emissions Trajectory: Top 15 Combined</h3>
+            <div class="chart-wrapper" style="height: 320px;">
+                <canvas id="absoluteTrajectoryChart"></canvas>
+            </div>
+            <p class="citation">Top 15 generators combined annual CO&#8322; emissions. Based on MJ Bradley/ERM data showing ~40% decline from 2007 peak but flat since 2020.<sup class="ref">4</sup></p>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- ================================================================
+         SECTION 11: Explore Further
+         ================================================================ -->
+    <section class="section fade-in" style="text-align: center;">
+        <h2 style="margin-bottom: 16px;">Explore the Full Analysis</h2>
+        <p style="max-width: 640px; margin: 0 auto 32px;">This market overview is the first of five pages examining IPP decarbonization pathways. Continue to policy analysis, target-setting frameworks, regional deep dives, and individual company profiles.</p>
+        <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
+            <a href="gen_policy_conditions.html" class="pill" style="text-decoration: none;">Policy &amp; Market Conditions</a>
+            <a href="gen_target_setting.html" class="pill" style="text-decoration: none;">Target Setting</a>
+            <a href="gen_regional_pathways.html" class="pill" style="text-decoration: none;">Regional Pathways</a>
+            <a href="ipp_climate_transition.html" class="pill" style="text-decoration: none;">IPP Deep Dives</a>
+            <a href="dashboard.html" class="pill active" style="text-decoration: none;">Cost Optimizer</a>
+        </div>
+    </section>
+
+</div><!-- end main-content -->
+
+<!-- ================================================================
+     JAVASCRIPT: All charts + interactions
+     ================================================================ -->
+<script>
+// ============================================================
+// DATA
+// ============================================================
+const companies = [
+    { name: "Constellation Energy", type: "Merchant/IPP", gen: 300, co2: 39, intensity: 131, mix: { Nuclear: 45, Gas: 42, Geothermal: 3, Hydro: 3, Wind: 4, Solar: 2, Oil: 1 } },
+    { name: "Duke Energy", type: "Vertically integrated", gen: 203, co2: 65, intensity: 354, mix: { Gas: 48, Nuclear: 32, Coal: 13, Solar: 3, Hydro: 2, Wind: 1, Oil: 1 } },
+    { name: "Southern Company", type: "Vertically integrated", gen: 180, co2: 59, intensity: 361, mix: { Gas: 50, Nuclear: 20, Coal: 18, Solar: 5, Hydro: 4, Wind: 1, Other: 2 } },
+    { name: "NextEra Energy", type: "Hybrid", gen: 170, co2: 34, intensity: 222, mix: { Gas: 40, Nuclear: 14, Wind: 25, Solar: 15, Oil: 3, Other: 3 } },
+    { name: "Vistra Energy", type: "Merchant/IPP", gen: 140, co2: 62, intensity: 485, mix: { Gas: 50, Coal: 25, Nuclear: 15, Solar: 8, Battery: 2 } },
+    { name: "AEP", type: "Vertically integrated", gen: 110, co2: 50, intensity: 499, mix: { Gas: 42, Coal: 30, Wind: 12, Nuclear: 5, Solar: 4, Hydro: 3, Other: 4 } },
+    { name: "Dominion Energy", type: "Vertically integrated", gen: 90, co2: 27, intensity: 333, mix: { Gas: 48, Nuclear: 33, Coal: 8, Solar: 5, Hydro: 3, Wind: 1, Biomass: 2 } },
+    { name: "BH Energy", type: "Vertically integrated", gen: 85, co2: 38, intensity: 494, mix: { Coal: 30, Wind: 25, Gas: 20, Hydro: 10, Solar: 10, Geothermal: 3, Other: 2 } },
+    { name: "Entergy", type: "Vertically integrated", gen: 80, co2: 25, intensity: 349, mix: { Gas: 55, Nuclear: 30, Solar: 3, Coal: 3, Hydro: 2, Other: 7 } },
+    { name: "AES Corp", type: "Hybrid", gen: 75, co2: 25, intensity: 372, mix: { Gas: 40, Coal: 15, Solar: 20, Wind: 10, Battery: 8, Other: 7 } },
+    { name: "Xcel Energy", type: "Vertically integrated", gen: 70, co2: 25, intensity: 399, mix: { Wind: 30, Gas: 28, Coal: 20, Nuclear: 12, Solar: 7, Other: 3 } },
+    { name: "Evergy", type: "Vertically integrated", gen: 50, co2: 24, intensity: 519, mix: { Coal: 40, Wind: 25, Gas: 18, Nuclear: 10, Solar: 3, Other: 4 } },
+    { name: "DTE Energy", type: "Vertically integrated", gen: 45, co2: 18, intensity: 445, mix: { Gas: 40, Coal: 28, Nuclear: 15, Wind: 8, Solar: 5, Biomass: 4 } },
+    { name: "WEC Energy", type: "Vertically integrated", gen: 40, co2: 15, intensity: 424, mix: { Gas: 45, Coal: 22, Nuclear: 16, Wind: 8, Solar: 5, Other: 4 } },
+    { name: "PPL Corp", type: "Hybrid", gen: 35, co2: 18, intensity: 572, mix: { Gas: 50, Coal: 30, Hydro: 8, Solar: 5, Other: 7 } }
+];
+
+const fuelColors = {
+    Nuclear: '#7C3AED', Gas: '#EF4444', Coal: '#374151', Wind: '#0EA5E9',
+    Solar: '#F59E0B', Hydro: '#06B6D4', Geothermal: '#10B981', Battery: '#0891B2',
+    Oil: '#9CA3AF', Biomass: '#84CC16', Other: '#D1D5DB'
+};
+
+// ISO data for stacked bar
+const isoData = [
+    { iso: 'CAISO', total: 280, ipp: 45, reg: 55, intensity: 210 },
+    { iso: 'ERCOT', total: 480, ipp: 60, reg: 40, intensity: 370 },
+    { iso: 'PJM', total: 800, ipp: 35, reg: 65, intensity: 380 },
+    { iso: 'NYISO', total: 135, ipp: 40, reg: 60, intensity: 250 },
+    { iso: 'NEISO', total: 95, ipp: 50, reg: 50, intensity: 290 },
+    { iso: 'MISO', total: 600, ipp: 25, reg: 75, intensity: 420 },
+    { iso: 'SPP', total: 270, ipp: 20, reg: 80, intensity: 400 }
+];
+
+// ============================================================
+// ANIMATED COUNTERS
+// ============================================================
+function animateCounters() {
+    document.querySelectorAll('.counter').forEach(el => {
+        const target = parseInt(el.dataset.target);
+        const duration = 1500;
+        const start = performance.now();
+        function update(now) {
+            const progress = Math.min((now - start) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            el.textContent = Math.round(target * eased).toLocaleString();
+            if (progress < 1) requestAnimationFrame(update);
+        }
+        requestAnimationFrame(update);
+    });
+}
+
+// ============================================================
+// SCROLL ANIMATIONS
+// ============================================================
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            if (entry.target.querySelector('.counter')) animateCounters();
+        }
+    });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.fade-in, .slide-left, .slide-right').forEach(el => observer.observe(el));
+
+// ============================================================
+// ISO STACKED BAR CHART
+// ============================================================
+new Chart(document.getElementById('isoStackedChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+        labels: isoData.map(d => d.iso),
+        datasets: [
+            {
+                label: 'IPP / Competitive Generation (TWh)',
+                data: isoData.map(d => Math.round(d.total * d.ipp / 100)),
+                backgroundColor: 'rgba(124, 58, 237, 0.7)',
+                borderColor: '#7C3AED',
+                borderWidth: 1,
+                borderRadius: 4
+            },
+            {
+                label: 'Regulated Utility Generation (TWh)',
+                data: isoData.map(d => Math.round(d.total * d.reg / 100)),
+                backgroundColor: 'rgba(14, 165, 233, 0.5)',
+                borderColor: '#0EA5E9',
+                borderWidth: 1,
+                borderRadius: 4
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        plugins: {
+            legend: { position: 'bottom', labels: { usePointStyle: true, padding: 16, font: { size: 12 } } },
+            tooltip: {
+                callbacks: {
+                    afterBody: function(items) {
+                        const idx = items[0].dataIndex;
+                        return ['Avg Intensity: ~' + isoData[idx].intensity + ' kg CO\u2082/MWh'];
+                    }
+                }
+            },
+            datalabels: { display: false }
+        },
+        scales: {
+            x: {
+                stacked: true,
+                title: { display: true, text: 'Generation (TWh)', font: { weight: 600 } },
+                grid: { color: 'rgba(0,0,0,0.05)' },
+                border: { display: true }
+            },
+            y: {
+                stacked: true,
+                grid: { display: false },
+                border: { display: true },
+                ticks: { font: { size: 12, weight: 600 } }
+            }
+        }
+    }
+});
+
+// ============================================================
+// COMPANY TABLE
+// ============================================================
+function buildTable() {
+    const tbody = document.querySelector('#companyTable tbody');
+    companies.forEach((c, i) => {
+        const typeClass = c.type.includes('Merchant') ? 'merchant' : c.type.includes('Hybrid') ? 'hybrid' : 'utility';
+        const intensityClass = c.intensity < 272 ? 'low' : c.intensity < 408 ? 'medium' : 'high';
+        const barWidth = Math.min((c.intensity / 635) * 100, 100);
+
+        let mixBar = '';
+        const fuels = Object.entries(c.mix).sort((a, b) => b[1] - a[1]);
+        fuels.forEach(([fuel, pct]) => {
+            const color = fuelColors[fuel] || '#D1D5DB';
+            mixBar += '<div class="fuel-mix-segment" style="width:' + pct + '%;background:' + color + '" title="' + fuel + ': ' + pct + '%"></div>';
+        });
+
+        tbody.innerHTML += '<tr>' +
+            '<td class="rank-cell">' + (i + 1) + '</td>' +
+            '<td class="company-name">' + c.name + '</td>' +
+            '<td><span class="type-badge ' + typeClass + '">' + c.type.split('(')[0].trim() + '</span></td>' +
+            '<td>' + c.gen + '</td>' +
+            '<td>' + c.co2 + '</td>' +
+            '<td><div class="intensity-bar-wrapper"><span>' + c.intensity.toLocaleString() + '</span><div class="intensity-bar"><div class="intensity-bar-fill ' + intensityClass + '" style="width:' + barWidth + '%"></div></div></div></td>' +
+            '<td style="min-width:180px"><div class="fuel-mix-bar">' + mixBar + '</div></td>' +
+            '</tr>';
+    });
+}
+buildTable();
+
+// ============================================================
+// BUBBLE CHART — Intensity vs Generation
+// ============================================================
+new Chart(document.getElementById('bubbleChart').getContext('2d'), {
+    type: 'bubble',
+    data: {
+        datasets: [{
+            data: companies.map(c => ({
+                x: c.gen,
+                y: c.intensity,
+                r: Math.sqrt(c.co2) * 2.5,
+                company: c.name,
+                co2: c.co2
+            })),
+            backgroundColor: companies.map(c => {
+                if (c.intensity < 272) return 'rgba(34, 197, 94, 0.6)';
+                if (c.intensity < 408) return 'rgba(245, 158, 11, 0.6)';
+                return 'rgba(220, 38, 38, 0.6)';
+            }),
+            borderColor: companies.map(c => {
+                if (c.intensity < 272) return '#22C55E';
+                if (c.intensity < 408) return '#F59E0B';
+                return '#DC2626';
+            }),
+            borderWidth: 2
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false },
+            datalabels: { display: false },
+            tooltip: {
+                callbacks: {
+                    label: ctx => {
+                        const d = ctx.raw;
+                        return [d.company, 'Generation: ' + d.x + ' TWh', 'Intensity: ' + d.y + ' kg CO\u2082/MWh', 'Emissions: ' + d.co2 + ' Mt CO\u2082/yr'];
+                    }
+                }
+            }
+        },
+        scales: {
+            x: { title: { display: true, text: 'Annual Generation (TWh)', font: { weight: 600 } }, grid: { display: false }, border: { display: true } },
+            y: { title: { display: true, text: 'CO\u2082 Intensity (kg/MWh)', font: { weight: 600 } }, grid: { color: 'rgba(0,0,0,0.05)' }, border: { display: true } }
+        }
+    }
+});
+
+// ============================================================
+// MARGINAL ABATEMENT COST CHART
+// ============================================================
+new Chart(document.getElementById('macChart').getContext('2d'), {
+    type: 'line',
+    data: {
+        labels: ['0%', '10%', '20%', '30%', '40%', '50%', '60%', '70%', '80%', '90%', '95%', '100%'],
+        datasets: [
+            {
+                label: 'Coal-Heavy (Evergy, AEP)',
+                data: [0, 5, 8, 12, 15, 20, 30, 45, 65, 95, 140, 250],
+                borderColor: '#374151', backgroundColor: 'rgba(55,65,81,0.1)',
+                fill: true, tension: 0.4, pointRadius: 3, borderWidth: 2.5
+            },
+            {
+                label: 'Diversified (Duke, Southern)',
+                data: [0, 10, 15, 22, 30, 40, 55, 75, 100, 140, 200, 350],
+                borderColor: '#0EA5E9', backgroundColor: 'rgba(14,165,233,0.1)',
+                fill: true, tension: 0.4, pointRadius: 3, borderWidth: 2.5
+            },
+            {
+                label: 'Gas-Dominant (Entergy)',
+                data: [0, 15, 25, 38, 50, 65, 85, 110, 150, 200, 280, 450],
+                borderColor: '#EF4444', backgroundColor: 'rgba(239,68,68,0.1)',
+                fill: true, tension: 0.4, pointRadius: 3, borderWidth: 2.5
+            },
+            {
+                label: 'Nuclear-Led (Constellation)',
+                data: [0, 20, 35, 55, 75, 95, 120, 155, 200, 270, 380, 550],
+                borderColor: '#7C3AED', backgroundColor: 'rgba(124,58,237,0.1)',
+                fill: true, tension: 0.4, pointRadius: 3, borderWidth: 2.5
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'bottom', labels: { usePointStyle: true, padding: 12 } },
+            tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': $' + ctx.raw + '/tonne CO\u2082' } },
+            datalabels: { display: false }
+        },
+        scales: {
+            x: { title: { display: true, text: '% of Current Emissions Abated', font: { weight: 600 } }, grid: { display: false }, border: { display: true } },
+            y: { title: { display: true, text: '$/tonne CO\u2082 (marginal cost)', font: { weight: 600 } }, grid: { color: 'rgba(0,0,0,0.05)' }, border: { display: true } }
+        }
+    }
+});
+
+// ============================================================
+// ABSOLUTE TRAJECTORY CHART — Combined Top 15
+// ============================================================
+const absYears = ['2005','2007','2010','2012','2014','2016','2018','2020','2022','2024'];
+const absEmissions = [980, 1020, 880, 810, 760, 700, 660, 620, 610, 592];
+
+new Chart(document.getElementById('absoluteTrajectoryChart').getContext('2d'), {
+    type: 'line',
+    data: {
+        labels: absYears,
+        datasets: [{
+            label: 'Top 15 Combined MT CO\u2082',
+            data: absEmissions,
+            borderColor: '#DC2626',
+            backgroundColor: 'rgba(220,38,38,0.08)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 5,
+            pointBackgroundColor: absEmissions.map((v, i) => i >= 7 ? '#F59E0B' : '#DC2626'),
+            borderWidth: 2.5
+        }, {
+            label: 'SBTi 2035 Target (~100 MT)',
+            data: absYears.map(() => 100),
+            borderColor: '#0EA5E9',
+            borderDash: [6, 3],
+            borderWidth: 2,
+            pointRadius: 0,
+            fill: false
+        }, {
+            label: 'IEA NZE 2040 (~0)',
+            data: absYears.map(() => 0),
+            borderColor: '#22C55E',
+            borderDash: [6, 3],
+            borderWidth: 2,
+            pointRadius: 0,
+            fill: false
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+            legend: { position: 'bottom', labels: { usePointStyle: true, padding: 12 } },
+            tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.raw + ' MT CO\u2082' } },
+            datalabels: { display: false }
+        },
+        scales: {
+            x: { title: { display: true, text: 'Year', font: { weight: 600 } }, grid: { display: false }, border: { display: true } },
+            y: { title: { display: true, text: 'MMT CO\u2082 / Year', font: { weight: 600 } }, grid: { color: 'rgba(0,0,0,0.05)' }, border: { display: true }, min: 0 }
+        }
+    }
+});
+</script>
+
+<footer id="siteFooter" data-footer-note="Analysis based on EPA eGRID 2023, EIA data, MJ Bradley/ERM, company filings, and hourly CFE optimizer modeling. &copy; 2026"></footer>
+
+<script src="js/cinematic-bg.js"></script>
+</body>
+</html>

@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="googlebot" content="noindex, nofollow">
+<title>ERCOT Fleet Economics — Constellation Energy</title>
+<link rel="stylesheet" href="styles/ceg-market.css">
+<link rel="stylesheet" href="styles/ceg-results.css">
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<script src="js/ipp-fleet-data.js"></script>
+<style>
+/* contrast-fix: override --text-dim page-wide from #7E8083 (4.03:1) to #585B5F (5.6:1 on white) */
+:root { --text-dim: #585B5F; }
+/* contrast-fix: hero-eyebrow uses --ceg-orange #F47B27 as text on white — override to #B45A1A (4.6:1) */
+.hero-eyebrow { color: #B45A1A; }
+
+/* ── Demo controls bar ── */
+.demo-controls { background: white; border-bottom: 1px solid var(--glass-border); padding: var(--space-lg) 0; position: sticky; top: 60px; z-index: 100; box-shadow: var(--shadow-sm); }
+.demo-controls-inner { max-width: 1400px; margin: 0 auto; padding: 0 var(--pad-page); }
+.controls-grid { display: flex; align-items: center; gap: var(--space-2xl); flex-wrap: wrap; }
+.control-block { display: flex; flex-direction: column; gap: 6px; }
+.control-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #585B5F; /* contrast-fix: was var(--text-dim) #7E8083, now #585B5F, ratio 5.6:1 on white */ }
+.carbon-pills { display: flex; gap: 4px; }
+.carbon-pill { padding: 8px 14px; border: 1.5px solid var(--glass-border); border-radius: var(--radius-pill); background: white; cursor: pointer; font-family: var(--font); font-weight: 600; font-size: 0.85rem; color: #585B5F; /* contrast-fix: was var(--text-dim) #7E8083, now #585B5F, ratio 5.6:1 on white */ transition: all 0.15s; min-height: 44px; display: flex; align-items: center; }
+.carbon-pill:hover { border-color: var(--ceg-blue); color: #1A5F9E; /* contrast-fix: was var(--ceg-blue) #2372B9, now #1A5F9E, ratio 5.8:1 on white */ }
+.carbon-pill.active { background: var(--ceg-blue); border-color: var(--ceg-blue); color: #F8F9FA; /* contrast-fix: was white #FFFFFF, now #F8F9FA, ratio 4.7:1 on #2372B9 — avoids pure white text */ }
+.year-pills { display: flex; gap: 4px; }
+.year-pill { padding: 6px 12px; border: 1.5px solid var(--glass-border); border-radius: var(--radius-pill); background: white; cursor: pointer; font-family: var(--font); font-weight: 600; font-size: 0.82rem; color: #585B5F; /* contrast-fix: was var(--text-dim) #7E8083, now #585B5F, ratio 5.6:1 on white */ transition: all 0.15s; min-height: 40px; display: flex; align-items: center; }
+.year-pill:hover { border-color: var(--ceg-teal); color: #006680; /* contrast-fix: was var(--ceg-teal) #007FA4, now #006680, ratio 5.9:1 on white */ }
+.year-pill.active { background: var(--ceg-teal); border-color: var(--ceg-teal); color: #F8F9FA; /* contrast-fix: was white #FFFFFF, now #F8F9FA, ratio 4.4:1 on #007FA4 — avoids pure white text */ }
+.demo-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: var(--radius-pill); background: rgba(244,123,39,0.12); color: #B45A1A; /* contrast-fix: was var(--ceg-orange) #F47B27, now #B45A1A, ratio 4.6:1 on rgba(244,123,39,0.12) */ font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+.scenario-display { font-size: 0.9rem; color: #585B5F; /* contrast-fix: was var(--text-dim) #7E8083, now #585B5F, ratio 5.6:1 on white */ font-weight: 300; margin-top: var(--space-xs); }
+.scenario-display strong { color: var(--ceg-blue); font-weight: 600; }
+
+/* ── Owner selector ── */
+.owner-select { padding: 8px 14px; border: 1.5px solid var(--glass-border); border-radius: var(--radius-sm); font-family: var(--font); font-size: 0.9rem; background: white; color: var(--text-bright); max-width: 280px; }
+
+/* ── Section dividers ── */
+.section-divider { margin: var(--space-3xl) 0 var(--space-xl); border: 0; border-top: 2px solid var(--glass-border); }
+.section-eyebrow { font-size: 0.72rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #1A5F9E; /* contrast-fix: was var(--ceg-blue) #2372B9, now #1A5F9E, ratio 5.8:1 on white */ margin-bottom: var(--space-sm); }
+.section-heading { font-size: 1.6rem; font-weight: 300; color: var(--text-bright); margin-bottom: var(--space-lg); }
+
+/* ── Owner portfolio cards ── */
+.portfolio-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-md); margin-bottom: var(--space-xl); }
+.portfolio-card { background: white; border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: var(--space-md); }
+.portfolio-card .val { font-size: 1.8rem; font-weight: 700; color: var(--text-bright); }
+.portfolio-card .lbl { font-size: 0.75rem; font-weight: 600; color: #585B5F; /* contrast-fix: was var(--text-dim) #7E8083, now #585B5F, ratio 5.6:1 on white */ text-transform: uppercase; letter-spacing: 0.5px; }
+.portfolio-card .sub { font-size: 0.8rem; color: #585B5F; /* contrast-fix: was var(--text-dim) #7E8083, now #585B5F, ratio 5.6:1 on white */ margin-top: 4px; }
+.portfolio-card.green .val { color: #4A7C2E; }
+.portfolio-card.red .val { color: #991b1b; }
+.portfolio-card.blue .val { color: var(--ceg-blue); }
+
+/* ── Collapsible ── */
+.collapsible-wrap { max-height: 0; overflow: hidden; transition: max-height 0.35s ease; }
+.collapsible-wrap.open { max-height: 4000px; }
+
+@media (max-width: 768px) {
+    .controls-grid { gap: var(--space-lg); }
+    .carbon-pills, .year-pills { flex-wrap: wrap; }
+    .portfolio-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- Progress bar -->
+<div class="progress-bar"><div class="progress-bar-fill"></div></div>
+
+<!-- Nav -->
+<nav>
+    <div class="nav-logo">
+        <div class="nav-logo-mark">
+            <svg viewBox="0 0 32 32" width="32" height="32">
+                <circle cx="16" cy="16" r="14" fill="none" stroke="#2372B9" stroke-width="2"/>
+                <circle cx="16" cy="16" r="6" fill="#2372B9"/>
+                <line x1="16" y1="2" x2="16" y2="10" stroke="#2372B9" stroke-width="2"/>
+                <line x1="16" y1="22" x2="16" y2="30" stroke="#2372B9" stroke-width="2"/>
+                <line x1="2" y1="16" x2="10" y2="16" stroke="#2372B9" stroke-width="2"/>
+                <line x1="22" y1="16" x2="30" y2="16" stroke="#2372B9" stroke-width="2"/>
+            </svg>
+        </div>
+        <div>
+            <div class="nav-title">Constellation Energy</div>
+            <div class="nav-subtitle">ERCOT Fleet Economics</div>
+        </div>
+    </div>
+    <div class="demo-badge">EIA 860 + 923 Data</div>
+</nav>
+
+<!-- Hero -->
+<div class="hero-section">
+    <div class="hero-inner" style="padding-bottom: 1.5rem;">
+        <div class="hero-eyebrow">IPP Portfolio Analysis</div>
+        <h1>ERCOT Fleet <strong>Economics</strong></h1>
+        <p class="hero-desc">
+            Real generator-level data from EIA 860 &amp; 923. Toggle fuel prices, carbon costs, and year snapshots
+            to see how IPP portfolios, CCGT stranding, and fleet profitability shift over time.
+        </p>
+    </div>
+</div>
+
+<!-- Sticky Controls -->
+<div class="demo-controls">
+    <div class="demo-controls-inner">
+        <div class="controls-grid">
+            <div class="control-block">
+                <div class="control-label">Fuel Prices</div>
+                <div class="toggle-btn-group" id="priceToggle">
+                    <button class="toggle-btn" data-value="Low">Low</button>
+                    <button class="toggle-btn active" data-value="Medium">Med</button>
+                    <button class="toggle-btn" data-value="High">High</button>
+                </div>
+            </div>
+            <div class="control-block">
+                <div class="control-label">Carbon Price ($/ton)</div>
+                <div class="carbon-pills" id="carbonSelector">
+                    <button class="carbon-pill" data-carbon="0">$0</button>
+                    <button class="carbon-pill" data-carbon="10">$10</button>
+                    <button class="carbon-pill active" data-carbon="20">$20</button>
+                    <button class="carbon-pill" data-carbon="50">$50</button>
+                    <button class="carbon-pill" data-carbon="100">$100</button>
+                </div>
+            </div>
+            <div class="control-block">
+                <div class="control-label">Year Snapshot</div>
+                <div class="year-pills" id="yearSelector">
+                    <button class="year-pill active" data-year="2025">2025</button>
+                    <button class="year-pill" data-year="2030">2030</button>
+                    <button class="year-pill" data-year="2035">2035</button>
+                    <button class="year-pill" data-year="2040">2040</button>
+                    <button class="year-pill" data-year="2045">2045</button>
+                    <button class="year-pill" data-year="2050">2050</button>
+                </div>
+            </div>
+            <div class="control-block">
+                <div class="control-label">Focus Company</div>
+                <select id="ownerSelect" class="owner-select">
+                    <option value="">All Owners</option>
+                </select>
+            </div>
+        </div>
+        <div class="scenario-display" id="scenarioDisplay">Loading...</div>
+    </div>
+</div>
+
+<div class="content-section">
+
+    <!-- Fleet KPI Cards -->
+    <div class="kpi-grid" id="topStats">
+        <div class="kpi-card"><div class="kpi-value" id="statTotalMW">--</div><div class="kpi-unit">GW</div><div class="kpi-label">Total Fleet</div></div>
+        <div class="kpi-card"><div class="kpi-value" id="statAvgLMP">--</div><div class="kpi-unit">$/MWh</div><div class="kpi-label">Avg LMP</div></div>
+        <div class="kpi-card"><div class="kpi-value" id="statRetiringMW">--</div><div class="kpi-unit">GW</div><div class="kpi-label">Uneconomic</div></div>
+        <div class="kpi-card"><div class="kpi-value" id="statCO2">--</div><div class="kpi-unit">MT CO₂</div><div class="kpi-label">Annual Emissions</div></div>
+        <div class="kpi-card"><div class="kpi-value" id="statNucRev">--</div><div class="kpi-unit">$/MWh</div><div class="kpi-label">Nuclear Rev</div></div>
+        <div class="kpi-card"><div class="kpi-value" id="statCCSBreakeven">--</div><div class="kpi-unit">$/ton</div><div class="kpi-label">CCS Breakeven</div></div>
+    </div>
+
+    <!-- Section 1: Merit Order + Fossil Economics -->
+    <div class="chart-card">
+        <div class="chart-card-header"><h3>Merit-Order Supply Stack</h3><p>Real ERCOT fossil generators ordered by marginal cost. Bars show capacity; orange line shows cost. Units above the LMP line face retirement pressure.</p></div>
+        <div class="chart-container-lg" id="chartMeritOrder"></div>
+    </div>
+
+    <!-- Section 2: CCGT Stranding -->
+    <hr class="section-divider">
+    <div class="section-eyebrow">CCGT Heat Rate Analysis</div>
+    <div class="section-heading">Capacity Stranding by Efficiency</div>
+
+    <div class="grid-2col">
+        <div class="chart-card">
+            <div class="chart-card-header"><h3>CCGT Bins: Marginal Cost &amp; CF</h3><p>How marginal cost and dispatch differ across heat rate efficiency bins</p></div>
+            <div class="chart-container" id="chartCCGTBins"></div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-card-header"><h3>CCGT Stranding Trajectory</h3><p>Profitable vs marginal vs retiring capacity across carbon prices</p></div>
+            <div class="chart-container" id="chartCCGTStranding"></div>
+        </div>
+    </div>
+
+    <!-- Section 3: Owner Portfolio -->
+    <hr class="section-divider">
+    <div class="section-eyebrow">IPP Portfolio Analysis</div>
+    <div class="section-heading" id="portfolioHeading">Company Portfolios — All Owners</div>
+
+    <div class="portfolio-grid" id="portfolioCards"></div>
+
+    <div class="grid-2col">
+        <div class="chart-card">
+            <div class="chart-card-header"><h3>Portfolio Revenue by Source</h3><p>Fossil, nuclear, and renewable revenue for top owners ($M/yr)</p></div>
+            <div class="chart-container" id="chartOwnerRevenue"></div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-card-header"><h3>Retirement Exposure</h3><p>Uneconomic + marginal capacity as % of total fleet by owner</p></div>
+            <div class="chart-container" id="chartOwnerExposure"></div>
+        </div>
+    </div>
+
+    <div class="chart-card">
+        <div class="chart-card-header"><h3>Owner Portfolio Trajectory (2025–2050)</h3><p>Revenue trajectory across year snapshots at current fuel/carbon scenario</p></div>
+        <div class="chart-container-lg" id="chartTrajectory"></div>
+    </div>
+
+    <!-- Section 3b: Competitor Comparison -->
+    <hr class="section-divider">
+    <div class="section-eyebrow">Competitive Landscape</div>
+    <div class="section-heading">IPP Competitor Comparison</div>
+
+    <div class="chart-card">
+        <div class="chart-card-header"><h3>ERCOT Portfolio Mix</h3><p>Capacity breakdown by fuel type for top IPPs — fossil vs clean positioning</p></div>
+        <div class="chart-container-lg" id="chartCompetitorMix"></div>
+    </div>
+
+    <div class="grid-2col">
+        <div class="chart-card">
+            <div class="chart-card-header"><h3>Carbon Exposure Ranking</h3><p>CO₂ intensity and fossil exposure across major ERCOT IPPs</p></div>
+            <div class="chart-container" id="chartCarbonExposure"></div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-card-header"><h3>Revenue Resilience (Carbon Sweep)</h3><p>How total ERCOT portfolio profit changes from $0 to $100/ton carbon</p></div>
+            <div class="chart-container" id="chartRevenueResilience"></div>
+        </div>
+    </div>
+
+    <div class="chart-card">
+        <div class="chart-card-header"><h3>Full Portfolio Trajectory (ERCOT + National)</h3><p>Complete revenue stack including national nuclear, gas, and renewable assets</p></div>
+        <div class="chart-container-lg" id="chartFullTrajectory"></div>
+    </div>
+
+    <!-- Section 4: Nuclear Economics -->
+    <hr class="section-divider">
+    <div class="section-eyebrow">Clean Energy Economics</div>
+    <div class="section-heading">Nuclear Revenue &amp; CCS Breakeven</div>
+
+    <div class="grid-2col">
+        <div class="chart-card">
+            <div class="chart-card-header"><h3>Nuclear Revenue Stack</h3><p>Energy revenue + PTC breakdown at current LMP</p></div>
+            <div class="chart-container" id="chartNuclearRevenue"></div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-card-header"><h3>CCS vs Unabated CCGT</h3><p>Carbon price crossover where CCS retrofit becomes cheaper</p></div>
+            <div class="chart-container" id="chartCCS"></div>
+        </div>
+    </div>
+
+    <!-- Section 5: Time Series Comparison -->
+    <hr class="section-divider">
+    <div class="section-eyebrow">Forward Projections</div>
+    <div class="section-heading">Fleet Evolution 2025–2050</div>
+
+    <div class="grid-2col">
+        <div class="chart-card">
+            <div class="chart-card-header"><h3>Fleet Capacity by Year</h3><p>How the generation mix shifts with retirements and carbon pressure</p></div>
+            <div class="chart-container" id="chartFleetTimeSeries"></div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-card-header"><h3>CO₂ Emissions Trajectory</h3><p>Annual fleet emissions under current scenario across year snapshots</p></div>
+            <div class="chart-container" id="chartCO2TimeSeries"></div>
+        </div>
+    </div>
+
+    <div class="chart-card">
+        <div class="chart-card-header"><h3>LMP Trajectory (2025–2050)</h3><p>Average LMP evolution as fleet composition changes</p></div>
+        <div class="chart-container" id="chartLMPTimeSeries"></div>
+    </div>
+
+    <!-- Section 6: Sensitivity -->
+    <hr class="section-divider">
+    <div class="section-eyebrow">Sensitivity Analysis</div>
+    <div class="section-heading">Gas Price vs Carbon Price Matrix</div>
+
+    <div class="chart-card">
+        <div class="chart-card-header"><h3>Uneconomic Fossil Capacity (GW)</h3><p>How much fossil capacity becomes uneconomic under different gas/carbon combinations</p></div>
+        <div class="chart-container-lg" id="chartSensitivity"></div>
+    </div>
+
+    <!-- Generator Table -->
+    <div class="chart-card">
+        <div class="chart-card-header" style="cursor:pointer;" onclick="toggleSection('genTable')">
+            <h3>Generator Economics Detail <span id="genTableIcon" style="font-size:0.7rem;color:#585B5F;">&#9660;</span></h3><!-- contrast-fix: was var(--text-dim) #7E8083, now #585B5F, ratio 5.6:1 on white -->
+        </div>
+        <div class="collapsible-wrap" id="genTable">
+            <div style="max-height:600px;overflow-y:auto;">
+            <table class="data-table" id="generatorTable">
+                <thead><tr>
+                    <th>Plant</th><th>Owner</th><th>Type</th><th>MW</th><th>HR</th>
+                    <th>MC $/MWh</th><th>CF</th><th>Dispatch Hrs</th><th>Status</th>
+                </tr></thead>
+                <tbody id="generatorTableBody"></tbody>
+            </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Footer -->
+<footer>
+    <div class="footer-brand"><strong>Constellation Energy</strong> · ERCOT Fleet Economics</div>
+    <div class="footer-note">Built from EIA 860 + EIA 923 (2024). Forward projections are illustrative.</div>
+</footer>
+<div class="bottom-banner"></div>
+
+<!-- Scripts -->
+<script src="js/tx-fleet-data.js"></script>
+<script src="js/demo-engine-tx.js"></script>
+<script>
+// ── State ──
+let currentPriceLevel = 'Medium';
+let currentCarbon = 20;
+let currentYear = 2025;
+let currentOwner = '';
+let cachedSim = null;
+
+const PLOTLY_LAYOUT = {
+    font: { family: "'Source Sans Pro', Calibri, Arial, sans-serif", color: '#1A232F', size: 12 },
+    paper_bgcolor: 'rgba(0,0,0,0)',
+    plot_bgcolor: 'rgba(0,0,0,0)',
+    margin: { t: 30, r: 30, b: 50, l: 60 },
+    autosize: true,
+};
+
+const FUEL_COLORS = {
+    coal_steam: '#2C3E50', gas_ccgt: '#2372B9', gas_steam: '#5B9BD5', gas_ct: '#007FA4',
+    gas_ic: '#A0C4E0', oil_ct: '#9B6B3A', oil_steam: '#B8860B',
+    nuclear: '#6366F1', wind: '#22C55E', solar: '#F59E0B',
+    battery: '#06B6D4', hydro: '#0EA5E9', biomass: '#8B5CF6',
+};
+
+const CCGT_BIN_COLORS = {
+    ccgt_eff: '#22C55E', ccgt_mod: '#2372B9', ccgt_avg: '#FBB254',
+    ccgt_old: '#F47B27', ccgt_ineff: '#DC2626',
+};
+
+// ── Controls ──
+document.querySelectorAll('#priceToggle .toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('#priceToggle .toggle-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentPriceLevel = btn.dataset.value;
+        update();
+    });
+});
+
+document.querySelectorAll('#carbonSelector .carbon-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('#carbonSelector .carbon-pill').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentCarbon = parseInt(btn.dataset.carbon);
+        update();
+    });
+});
+
+document.querySelectorAll('#yearSelector .year-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('#yearSelector .year-pill').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentYear = parseInt(btn.dataset.year);
+        update();
+    });
+});
+
+document.getElementById('ownerSelect').addEventListener('change', (e) => {
+    currentOwner = e.target.value;
+    update();
+});
+
+function toggleSection(id) {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('open');
+}
+
+// ── Populate owner dropdown from fleet data ──
+function populateOwners() {
+    const select = document.getElementById('ownerSelect');
+    if (!TX_FLEET || !TX_FLEET.owners) return;
+    TX_FLEET.owners.forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o.name;
+        opt.textContent = `${o.name} (${o.total_mw} MW)`;
+        select.appendChild(opt);
+    });
+}
+
+// ── Helpers ──
+function setText(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text || '--';
+}
+function fmtNum(val, d=1) { return val == null || isNaN(val) ? '--' : Number(val).toFixed(d); }
+
+// ── Main update ──
+function update() {
+    const sim = runFleetSimulation(currentPriceLevel, currentCarbon, currentYear);
+    if (!sim) return;
+    cachedSim = sim;
+
+    const fp = sim.meta.fuel_prices;
+    document.getElementById('scenarioDisplay').innerHTML =
+        `<strong>ERCOT ${currentYear}</strong> · ${currentPriceLevel} fuel (Gas $${fp.gas}, Coal $${fp.coal}) · $${currentCarbon}/ton CO₂`;
+
+    // KPIs
+    const fs = sim.fleet_summary;
+    setText('statTotalMW', fmtNum(fs.total_mw / 1000, 1));
+    setText('statAvgLMP', '$' + fmtNum(fs.avg_lmp));
+    setText('statRetiringMW', fmtNum((fs.retiring_mw + fs.marginal_mw) / 1000, 1));
+    setText('statCO2', fmtNum(fs.total_co2_mt, 0));
+    setText('statNucRev', '$' + fmtNum(sim.nuclear_revenue.total_mwh));
+    setText('statCCSBreakeven', '$' + fmtNum(sim.ccs_breakeven_carbon, 0));
+
+    renderMeritOrder(sim);
+    renderCCGTBins(sim);
+    renderCCGTStranding();
+    renderOwnerPortfolio(sim);
+    renderOwnerRevenue(sim);
+    renderOwnerExposure(sim);
+    renderTrajectory();
+    renderNuclearRevenue(sim);
+    renderCCS();
+    renderTimeSeries();
+    renderSensitivity();
+    renderTable(sim);
+    renderCompetitorMix();
+    renderCarbonExposure();
+    renderRevenueResilience();
+    renderFullTrajectory();
+}
+
+// ── Chart: Merit Order ──
+function renderMeritOrder(sim) {
+    // Only show fossil generators, sorted by MC
+    const fossils = sim.generators
+        .filter(g => g.fuel === 'coal' || g.fuel === 'gas' || g.fuel === 'oil')
+        .filter(g => g.mw >= 50)  // Skip tiny units for readability
+        .sort((a, b) => (a.mc || 0) - (b.mc || 0));
+
+    if (!fossils.length) return;
+
+    // Build cumulative capacity for stacked bar
+    let cumMW = 0;
+    const xs = [], widths = [], ys = [], colors = [], texts = [];
+    for (const g of fossils) {
+        xs.push(cumMW + g.mw / 2);
+        widths.push(g.mw);
+        ys.push(g.mc || 0);
+        colors.push(FUEL_COLORS[g.type] || '#9CA3AF');
+        texts.push(`${g.plant}<br>${g.type.replace(/_/g,' ')}<br>${g.mw} MW<br>HR: ${g.hr||'n/a'}<br>MC: $${(g.mc||0).toFixed(1)}/MWh`);
+        cumMW += g.mw;
+    }
+
+    Plotly.newPlot('chartMeritOrder', [{
+        x: xs, y: ys, width: widths,
+        type: 'bar',
+        marker: { color: colors },
+        text: texts,
+        hoverinfo: 'text',
+    }], {
+        ...PLOTLY_LAYOUT,
+        xaxis: { title: 'Cumulative Capacity (MW)', gridcolor: '#f0f0f0' },
+        yaxis: { title: 'Marginal Cost ($/MWh)', gridcolor: '#f0f0f0' },
+        shapes: [{
+            type: 'line', x0: 0, x1: cumMW,
+            y0: sim.fleet_summary.avg_lmp, y1: sim.fleet_summary.avg_lmp,
+            line: { color: '#F47B27', width: 2, dash: 'dash' }
+        }],
+        annotations: [{
+            x: cumMW * 0.85, y: sim.fleet_summary.avg_lmp,
+            text: `Avg LMP: $${sim.fleet_summary.avg_lmp.toFixed(1)}`,
+            showarrow: true, arrowhead: 0, ax: 0, ay: -25,
+            font: { color: '#B45A1A', size: 12 } /* contrast-fix: was #F47B27, now #B45A1A, ratio 4.6:1 on white */
+        }],
+        showlegend: false,
+    }, { responsive: true });
+}
+
+// ── Chart: CCGT Heat Rate Bins ──
+function renderCCGTBins(sim) {
+    const bins = sim.ccgt_bins;
+    const tags = Object.keys(bins).sort();
+    if (!tags.length) return;
+
+    const labels = tags.map(t => bins[t].label);
+    const mcs = tags.map(t => bins[t].avg_mc);
+    const cfs = tags.map(t => bins[t].avg_cf * 100);
+    const mws = tags.map(t => bins[t].mw);
+    const colors = tags.map(t => CCGT_BIN_COLORS[t] || '#9CA3AF');
+
+    Plotly.newPlot('chartCCGTBins', [
+        { x: labels, y: mcs, name: 'Marginal Cost', type: 'bar', marker: { color: colors }, yaxis: 'y', hovertemplate: '%{x}<br>MC: $%{y:.1f}/MWh<extra></extra>' },
+        { x: labels, y: cfs, name: 'Capacity Factor', type: 'scatter', mode: 'lines+markers', yaxis: 'y2', line: { color: '#F47B27', width: 3 }, marker: { size: 10 }, hovertemplate: '%{x}<br>CF: %{y:.1f}%<extra></extra>' },
+    ], {
+        ...PLOTLY_LAYOUT,
+        yaxis: { title: 'Marginal Cost ($/MWh)', gridcolor: '#f0f0f0' },
+        yaxis2: { title: 'Capacity Factor %', overlaying: 'y', side: 'right', range: [0, 100] },
+        legend: { x: 0.02, y: 0.98 },
+    }, { responsive: true });
+}
+
+// ── Chart: CCGT Stranding across carbon prices ──
+function renderCCGTStranding() {
+    const strandingData = runCCGTStrandingAnalysis(currentPriceLevel, currentYear);
+    if (!strandingData) return;
+
+    const traces = [];
+    for (const [tag, data] of Object.entries(strandingData)) {
+        traces.push({
+            x: data.points.map(p => p.carbon_price),
+            y: data.points.map(p => p.profitable_mw / 1000),
+            name: data.label + ' (profitable)',
+            type: 'scatter', mode: 'lines',
+            line: { color: CCGT_BIN_COLORS[tag] || '#999', width: 2 },
+            hovertemplate: `${data.label}<br>$%{x}/ton: %{y:.1f} GW profitable<extra></extra>`,
+        });
+        traces.push({
+            x: data.points.map(p => p.carbon_price),
+            y: data.points.map(p => p.retiring_mw / 1000),
+            name: data.label + ' (retiring)',
+            type: 'scatter', mode: 'lines',
+            line: { color: CCGT_BIN_COLORS[tag] || '#999', width: 2, dash: 'dash' },
+            showlegend: false,
+            hovertemplate: `${data.label}<br>$%{x}/ton: %{y:.1f} GW retiring<extra></extra>`,
+        });
+    }
+
+    Plotly.newPlot('chartCCGTStranding', traces, {
+        ...PLOTLY_LAYOUT,
+        xaxis: { title: 'Carbon Price ($/ton)', gridcolor: '#f0f0f0' },
+        yaxis: { title: 'Capacity (GW)', gridcolor: '#f0f0f0' },
+        legend: { x: 0.02, y: 0.98, font: { size: 10 } },
+    }, { responsive: true });
+}
+
+// ── Owner Portfolio Cards ──
+function renderOwnerPortfolio(sim) {
+    const container = document.getElementById('portfolioCards');
+    const heading = document.getElementById('portfolioHeading');
+
+    let owners = sim.owners;
+    if (currentOwner) {
+        owners = owners.filter(o => o.name === currentOwner);
+        heading.textContent = `Company Portfolio — ${currentOwner}`;
+    } else {
+        owners = owners.slice(0, 5);
+        heading.textContent = 'Top 5 IPP Portfolios';
+    }
+
+    if (!owners.length) {
+        container.innerHTML = '<p style="color:#585B5F;">No matching owner found.</p>'; /* contrast-fix: was var(--text-dim) #7E8083, now #585B5F, ratio 5.6:1 on white */
+        return;
+    }
+
+    const owner = owners[0];
+    const profitClass = owner.total_revenue > owner.total_cost ? 'green' : 'red';
+
+    container.innerHTML = `
+        <div class="portfolio-card blue"><div class="val">${(owner.total_mw/1000).toFixed(1)}</div><div class="lbl">Total GW</div>
+            <div class="sub">Fossil: ${(owner.fossil_mw/1000).toFixed(1)} · Nuc: ${(owner.nuclear_mw/1000).toFixed(1)} · RE: ${((owner.renewable_mw||0)/1000).toFixed(1)}</div></div>
+        <div class="portfolio-card"><div class="val">$${owner.total_revenue.toFixed(0)}M</div><div class="lbl">Annual Revenue</div>
+            <div class="sub">Fossil: $${owner.fossil_profit.toFixed(0)}M · Nuc: $${owner.nuclear_profit.toFixed(0)}M · RE: $${owner.renewable_profit.toFixed(0)}M</div></div>
+        <div class="portfolio-card ${profitClass}"><div class="val">${(owner.retiring_mw/1000).toFixed(1)} GW</div><div class="lbl">Uneconomic Capacity</div>
+            <div class="sub">${((owner.retiring_mw + owner.marginal_mw) / owner.total_mw * 100).toFixed(0)}% of fleet at risk</div></div>
+        <div class="portfolio-card"><div class="val">${(owner.co2_tons / 1e6).toFixed(1)}</div><div class="lbl">MT CO₂/yr</div>
+            <div class="sub">${owner.units} generating units</div></div>
+    `;
+}
+
+// ── Chart: Owner Revenue Comparison ──
+function renderOwnerRevenue(sim) {
+    let owners = sim.owners.slice(0, 12);
+    if (currentOwner) {
+        // Show selected + top competitors
+        const selected = sim.owners.find(o => o.name === currentOwner);
+        const others = sim.owners.filter(o => o.name !== currentOwner).slice(0, 8);
+        owners = selected ? [selected, ...others] : others;
+    }
+
+    const names = owners.map(o => o.name.length > 20 ? o.name.substring(0, 20) + '…' : o.name);
+
+    Plotly.newPlot('chartOwnerRevenue', [
+        { x: names, y: owners.map(o => o.fossil_profit), name: 'Fossil', type: 'bar', marker: { color: '#6B7280' } },
+        { x: names, y: owners.map(o => o.nuclear_profit), name: 'Nuclear', type: 'bar', marker: { color: '#6366F1' } },
+        { x: names, y: owners.map(o => o.renewable_profit), name: 'Renewable', type: 'bar', marker: { color: '#22C55E' } },
+    ], {
+        ...PLOTLY_LAYOUT,
+        barmode: 'stack',
+        yaxis: { title: 'Profit ($M/yr)', gridcolor: '#f0f0f0' },
+        xaxis: { tickangle: -30 },
+        legend: { x: 0.02, y: 0.98 },
+    }, { responsive: true });
+}
+
+// ── Chart: Owner Retirement Exposure ──
+function renderOwnerExposure(sim) {
+    let owners = sim.owners.filter(o => o.fossil_mw > 100).slice(0, 12);
+
+    const names = owners.map(o => o.name.length > 20 ? o.name.substring(0, 20) + '…' : o.name);
+    const exposure = owners.map(o => ((o.retiring_mw + o.marginal_mw) / o.total_mw * 100));
+
+    Plotly.newPlot('chartOwnerExposure', [{
+        x: names, y: exposure,
+        type: 'bar',
+        marker: { color: exposure.map(e => e > 40 ? '#DC2626' : e > 20 ? '#FBB254' : '#22C55E') },
+        hovertemplate: '%{x}<br>%{y:.1f}% at risk<extra></extra>',
+    }], {
+        ...PLOTLY_LAYOUT,
+        yaxis: { title: 'Uneconomic + Marginal (%)', gridcolor: '#f0f0f0', range: [0, 100] },
+        xaxis: { tickangle: -30 },
+        showlegend: false,
+    }, { responsive: true });
+}
+
+// ── Chart: Owner Trajectory (time series) ──
+function renderTrajectory() {
+    const ownerName = currentOwner || (TX_FLEET.owners[0] ? TX_FLEET.owners[0].name : '');
+    if (!ownerName) return;
+
+    const years = [2025, 2030, 2035, 2040, 2045, 2050];
+    const revenues = [], fossilProfits = [], nucProfits = [], reProfits = [];
+
+    for (const yr of years) {
+        const sim = runFleetSimulation(currentPriceLevel, currentCarbon, yr);
+        if (!sim) { revenues.push(0); fossilProfits.push(0); nucProfits.push(0); reProfits.push(0); continue; }
+        const owner = sim.owners.find(o => o.name === ownerName);
+        if (!owner) { revenues.push(0); fossilProfits.push(0); nucProfits.push(0); reProfits.push(0); continue; }
+        revenues.push(owner.total_revenue);
+        fossilProfits.push(owner.fossil_profit);
+        nucProfits.push(owner.nuclear_profit);
+        reProfits.push(owner.renewable_profit);
+    }
+
+    Plotly.newPlot('chartTrajectory', [
+        { x: years, y: fossilProfits, name: 'Fossil Profit', type: 'bar', marker: { color: '#6B7280' } },
+        { x: years, y: nucProfits, name: 'Nuclear Profit', type: 'bar', marker: { color: '#6366F1' } },
+        { x: years, y: reProfits, name: 'Renewable Profit', type: 'bar', marker: { color: '#22C55E' } },
+        { x: years, y: revenues, name: 'Total Revenue', type: 'scatter', mode: 'lines+markers', line: { color: '#F47B27', width: 3 }, marker: { size: 8 } },
+    ], {
+        ...PLOTLY_LAYOUT,
+        barmode: 'stack',
+        xaxis: { title: 'Year', dtick: 5 },
+        yaxis: { title: 'Annual ($M)', gridcolor: '#f0f0f0' },
+        legend: { x: 0.02, y: 0.98 },
+        annotations: [{ x: 0.5, y: 1.05, xref: 'paper', yref: 'paper', text: ownerName, showarrow: false, font: { size: 13, color: '#1A232F' } }],
+    }, { responsive: true });
+}
+
+// ── Chart: Nuclear Revenue ──
+function renderNuclearRevenue(sim) {
+    const nuc = sim.nuclear_revenue;
+    const cost = 29; // operating cost
+    Plotly.newPlot('chartNuclearRevenue', [{
+        x: ['Energy Revenue', 'PTC (45U)', 'Total Revenue', 'Operating Cost'],
+        y: [nuc.energy_mwh, nuc.ptc_mwh, nuc.total_mwh, cost],
+        type: 'bar',
+        marker: { color: ['#2372B9', '#22C55E', '#6366F1', '#DC2626'] },
+        hovertemplate: '%{x}: $%{y:.1f}/MWh<extra></extra>',
+    }], {
+        ...PLOTLY_LAYOUT,
+        yaxis: { title: '$/MWh', gridcolor: '#f0f0f0' },
+        showlegend: false,
+        shapes: [{ type: 'line', x0: -0.5, x1: 3.5, y0: cost, y1: cost, line: { color: '#DC2626', width: 1.5, dash: 'dot' } }],
+    }, { responsive: true });
+}
+
+// ── Chart: CCS Breakeven ──
+function renderCCS() {
+    const fp = FUEL_PRICES[currentPriceLevel];
+    const carbonPrices = [0, 10, 20, 30, 40, 50, 75, 100, 125, 150, 175, 200];
+    const ccgtCost = carbonPrices.map(cp => fp.gas * 7.0 + 3.50 + cp * 0.0531 * 7.0);
+    const ccsCost = carbonPrices.map(cp => 65 + cp * 0.0531 * 7.0 * 0.1); // 90% capture
+    const newGasCost = carbonPrices.map(cp => fp.gas * 6.5 + 4.00 + cp * 0.0531 * 6.5);
+
+    Plotly.newPlot('chartCCS', [
+        { x: carbonPrices, y: ccgtCost, name: 'Existing CCGT', mode: 'lines', line: { color: '#2372B9', width: 3 } },
+        { x: carbonPrices, y: ccsCost, name: 'CCS Retrofit', mode: 'lines', line: { color: '#64748B', width: 3, dash: 'dash' } },
+        { x: carbonPrices, y: newGasCost, name: 'New Efficient Gas', mode: 'lines', line: { color: '#22C55E', width: 3 } },
+    ], {
+        ...PLOTLY_LAYOUT,
+        xaxis: { title: 'Carbon Price ($/ton)', gridcolor: '#f0f0f0' },
+        yaxis: { title: '$/MWh Total Cost', gridcolor: '#f0f0f0' },
+        legend: { x: 0.02, y: 0.98 },
+    }, { responsive: true });
+}
+
+// ── Chart: Fleet Time Series ──
+function renderTimeSeries() {
+    const years = [2025, 2030, 2035, 2040, 2045, 2050];
+    const coalMW = [], gasMW = [], nucMW = [], windMW = [], solarMW = [], battMW = [];
+    const co2 = [], lmps = [];
+
+    for (const yr of years) {
+        const sim = runFleetSimulation(currentPriceLevel, currentCarbon, yr);
+        if (!sim) { coalMW.push(0); gasMW.push(0); nucMW.push(0); windMW.push(0); solarMW.push(0); battMW.push(0); co2.push(0); lmps.push(0); continue; }
+        const fs = sim.fleet_summary;
+
+        // Split fossil by type
+        const coal = sim.generators.filter(g => g.fuel === 'coal').reduce((s, g) => s + g.mw, 0);
+        const gas = sim.generators.filter(g => g.fuel === 'gas').reduce((s, g) => s + g.mw, 0);
+        coalMW.push(coal / 1000);
+        gasMW.push(gas / 1000);
+        nucMW.push(fs.nuclear_mw / 1000);
+        windMW.push(fs.wind_mw / 1000);
+        solarMW.push(fs.solar_mw / 1000);
+        battMW.push(fs.battery_mw / 1000);
+        co2.push(fs.total_co2_mt);
+        lmps.push(fs.avg_lmp);
+    }
+
+    Plotly.newPlot('chartFleetTimeSeries', [
+        { x: years, y: coalMW, name: 'Coal', type: 'bar', marker: { color: '#2C3E50' } },
+        { x: years, y: gasMW, name: 'Gas', type: 'bar', marker: { color: '#2372B9' } },
+        { x: years, y: nucMW, name: 'Nuclear', type: 'bar', marker: { color: '#6366F1' } },
+        { x: years, y: windMW, name: 'Wind', type: 'bar', marker: { color: '#22C55E' } },
+        { x: years, y: solarMW, name: 'Solar', type: 'bar', marker: { color: '#F59E0B' } },
+        { x: years, y: battMW, name: 'Battery', type: 'bar', marker: { color: '#06B6D4' } },
+    ], {
+        ...PLOTLY_LAYOUT, barmode: 'stack',
+        xaxis: { title: 'Year', dtick: 5 },
+        yaxis: { title: 'Capacity (GW)', gridcolor: '#f0f0f0' },
+        legend: { x: 0.02, y: 0.98 },
+    }, { responsive: true });
+
+    Plotly.newPlot('chartCO2TimeSeries', [{
+        x: years, y: co2,
+        type: 'scatter', mode: 'lines+markers',
+        line: { color: '#DC2626', width: 3 }, marker: { size: 8 },
+        fill: 'tozeroy', fillcolor: 'rgba(220,38,38,0.1)',
+        hovertemplate: '%{x}: %{y:.0f} MT CO₂<extra></extra>',
+    }], {
+        ...PLOTLY_LAYOUT,
+        xaxis: { title: 'Year', dtick: 5 },
+        yaxis: { title: 'Annual CO₂ (MT)', gridcolor: '#f0f0f0' },
+    }, { responsive: true });
+
+    Plotly.newPlot('chartLMPTimeSeries', [{
+        x: years, y: lmps,
+        type: 'scatter', mode: 'lines+markers',
+        line: { color: '#2372B9', width: 3 }, marker: { size: 8 },
+        hovertemplate: '%{x}: $%{y:.1f}/MWh<extra></extra>',
+    }], {
+        ...PLOTLY_LAYOUT,
+        xaxis: { title: 'Year', dtick: 5 },
+        yaxis: { title: 'Avg LMP ($/MWh)', gridcolor: '#f0f0f0' },
+    }, { responsive: true });
+}
+
+// ── Chart: Sensitivity Matrix ──
+function renderSensitivity() {
+    const gasPrices = [2, 3, 4, 5, 6];
+    const carbonPrices = [0, 20, 50, 100, 200];
+
+    const values = carbonPrices.map(cp =>
+        gasPrices.map(gp => {
+            // Quick approximate: compute retiring GW for each combo
+            const fuelPrices = { gas: gp, coal: 2.25, oil: 10.50 };
+            let retiringGW = 0;
+            const gens = TX_FLEET.generators.filter(g => g.fuel === 'coal' || g.fuel === 'gas' || g.fuel === 'oil');
+            for (const g of gens) {
+                if (!g.hr) continue;
+                const hr = g.hr;
+                let fp = g.fuel === 'gas' ? gp : g.fuel === 'coal' ? 2.25 : 10.50;
+                let co2r = g.fuel === 'gas' ? 0.0531 : g.fuel === 'coal' ? 0.0953 : 0.0733;
+                const mc = fp * hr + (g.vom || 4) + cp * co2r * hr;
+                // Rough LMP estimate at this gas/carbon
+                const lmp = gp * 7.0 + 3.50 + cp * 0.0531 * 7.0 + 5;
+                if (mc > lmp * 1.1) retiringGW += g.mw / 1000;
+            }
+            return +retiringGW.toFixed(1);
+        })
+    );
+
+    Plotly.newPlot('chartSensitivity', [{
+        z: values,
+        x: gasPrices.map(p => '$' + p),
+        y: carbonPrices.map(p => '$' + p),
+        type: 'heatmap',
+        colorscale: [[0, '#22C55E'], [0.3, '#FBB254'], [0.6, '#F47B27'], [1, '#DC2626']],
+        colorbar: { title: 'Retiring GW' },
+        hovertemplate: 'Gas: %{x}/MMBtu<br>Carbon: %{y}/ton<br>Uneconomic: %{z:.1f} GW<extra></extra>',
+    }], {
+        ...PLOTLY_LAYOUT,
+        xaxis: { title: 'Gas Price ($/MMBtu)' },
+        yaxis: { title: 'Carbon Price ($/ton)' },
+    }, { responsive: true });
+}
+
+// ── Table ──
+function renderTable(sim) {
+    const tbody = document.getElementById('generatorTableBody');
+    if (!tbody) return;
+
+    let gens = sim.generators
+        .filter(g => g.fuel === 'coal' || g.fuel === 'gas' || g.fuel === 'oil')
+        .filter(g => g.mw >= 25)
+        .sort((a, b) => (a.mc || 0) - (b.mc || 0));
+
+    if (currentOwner) {
+        gens = gens.filter(g => g.owner === currentOwner);
+    }
+
+    tbody.innerHTML = gens.slice(0, 200).map(g => {
+        const statusColor = g.status === 'profitable' ? '#4A7C2E' : g.status === 'marginal' ? '#9A6B1B' : '#991b1b';
+        const statusBg = g.status === 'profitable' ? 'rgba(107,165,67,0.15)' : g.status === 'marginal' ? 'rgba(251,178,84,0.15)' : 'rgba(220,38,38,0.15)';
+        return `<tr>
+            <td>${g.plant}</td>
+            <td style="font-size:0.75rem;color:#585B5F;">${g.owner.length > 25 ? g.owner.substring(0,25)+'…' : g.owner}</td><!-- contrast-fix: was var(--text-dim) #7E8083, now #585B5F, ratio 5.6:1 on white -->
+            <td>${g.type.replace(/_/g,' ')}</td>
+            <td>${g.mw.toLocaleString()}</td>
+            <td>${g.hr ? g.hr.toFixed(1) : '—'}</td>
+            <td>$${(g.mc||0).toFixed(1)}</td>
+            <td>${((g.cf_sim||0)*100).toFixed(1)}%</td>
+            <td>${(g.dispatch_hrs||0).toLocaleString()}</td>
+            <td><span style="background:${statusBg};color:${statusColor};padding:2px 8px;border-radius:20px;font-size:0.75rem;font-weight:700;text-transform:uppercase;">${g.status||'—'}</span></td>
+        </tr>`;
+    }).join('');
+}
+
+// ── Chart: Competitor Portfolio Mix ──
+function renderCompetitorMix() {
+    const comps = runCompetitorComparison(currentPriceLevel, currentCarbon, currentYear);
+    if (!comps || !comps.length) return;
+
+    const names = comps.map(c => c.name);
+    Plotly.newPlot('chartCompetitorMix', [
+        { x: names, y: comps.map(c => c.ercot_fossil_mw / 1000), name: 'Fossil', type: 'bar', marker: { color: '#6B7280' } },
+        { x: names, y: comps.map(c => c.ercot_nuclear_mw / 1000), name: 'Nuclear', type: 'bar', marker: { color: '#6366F1' } },
+        { x: names, y: comps.map(c => c.ercot_re_mw / 1000), name: 'Wind/Solar', type: 'bar', marker: { color: '#22C55E' } },
+        { x: names, y: comps.map(c => c.ercot_battery_mw / 1000), name: 'Battery', type: 'bar', marker: { color: '#06B6D4' } },
+    ], {
+        ...PLOTLY_LAYOUT,
+        barmode: 'stack',
+        yaxis: { title: 'ERCOT Capacity (GW)', gridcolor: '#f0f0f0' },
+        legend: { x: 0.02, y: 0.98 },
+        annotations: comps.map((c, i) => ({
+            x: c.name, y: c.ercot_total_mw / 1000 + 0.3,
+            text: `${c.clean_pct}% clean`, showarrow: false,
+            font: { size: 10, color: c.clean_pct > 30 ? '#15803D' : '#B91C1C' }, /* contrast-fix: was #22C55E/#DC2626, now #15803D/#B91C1C, ratio 4.8:1/5.0:1 on white */
+        })),
+    }, { responsive: true });
+}
+
+// ── Chart: Carbon Exposure ──
+function renderCarbonExposure() {
+    const comps = runCompetitorComparison(currentPriceLevel, currentCarbon, currentYear);
+    if (!comps || !comps.length) return;
+
+    const names = comps.map(c => c.name);
+    Plotly.newPlot('chartCarbonExposure', [
+        { x: names, y: comps.map(c => c.retiring_pct), name: 'Retiring %', type: 'bar',
+          marker: { color: comps.map(c => c.retiring_pct > 30 ? '#DC2626' : c.retiring_pct > 15 ? '#FBB254' : '#22C55E') },
+          hovertemplate: '%{x}<br>%{y:.1f}% at risk<br>CO₂: ' + comps.map(c => c.ercot_co2_mt.toFixed(1)).join('|').split('|').map(v => v + ' MT').join('<br>') + '<extra></extra>',
+        },
+    ], {
+        ...PLOTLY_LAYOUT,
+        yaxis: { title: 'Capacity at Risk (%)', gridcolor: '#f0f0f0', range: [0, 80] },
+        showlegend: false,
+        annotations: comps.map((c, i) => ({
+            x: c.name, y: c.retiring_pct + 3,
+            text: `${c.ercot_co2_mt.toFixed(1)} MT`, showarrow: false,
+            font: { size: 10, color: '#585B5F' }, /* contrast-fix: was #7E8083, now #585B5F, ratio 5.6:1 on white */
+        })),
+    }, { responsive: true });
+}
+
+// ── Chart: Revenue Resilience (carbon sweep) ──
+function renderRevenueResilience() {
+    if (!window.IPP_DATA) return;
+    const carbonPrices = [0, 10, 20, 35, 50, 75, 100];
+    const traces = [];
+    const colors = { vistra: '#2372B9', constellation: '#F47B27', nrg: '#22C55E', nextera: '#6366F1' };
+
+    for (const company of IPP_DATA.companies) {
+        const eiaNames = Object.entries(EIA_TO_IPP_MAP)
+            .filter(([_, id]) => id === company.id)
+            .map(([name, _]) => name);
+
+        const profits = carbonPrices.map(cp => {
+            const sim = runFleetSimulation(currentPriceLevel, cp, currentYear);
+            if (!sim) return 0;
+            const gens = sim.generators.filter(g => eiaNames.includes(g.owner));
+            return gens.reduce((s, g) => s + (g.annual_profit_mw || 0) * g.mw / 1e6, 0);
+        });
+
+        traces.push({
+            x: carbonPrices, y: profits.map(p => +p.toFixed(1)),
+            name: company.shortName, mode: 'lines+markers',
+            line: { color: colors[company.id] || '#999', width: 3 },
+            marker: { size: 6 },
+            hovertemplate: `${company.shortName}<br>$%{x}/ton: $%{y:.0f}M profit<extra></extra>`,
+        });
+    }
+
+    Plotly.newPlot('chartRevenueResilience', traces, {
+        ...PLOTLY_LAYOUT,
+        xaxis: { title: 'Carbon Price ($/ton)', gridcolor: '#f0f0f0' },
+        yaxis: { title: 'ERCOT Portfolio Profit ($M/yr)', gridcolor: '#f0f0f0' },
+        legend: { x: 0.02, y: 0.98 },
+    }, { responsive: true });
+}
+
+// ── Chart: Full Portfolio Trajectory (ERCOT + National) ──
+function renderFullTrajectory() {
+    if (!window.IPP_DATA) return;
+
+    // Default to Constellation, or selected owner
+    let ippId = 'constellation';
+    if (currentOwner) {
+        const mapped = EIA_TO_IPP_MAP[currentOwner];
+        if (mapped) ippId = mapped;
+    }
+
+    const traj = runCompanyFullTrajectory(ippId, currentPriceLevel);
+    if (!traj || !traj.points.length) return;
+
+    // Filter to current carbon price points across years
+    const years = [2025, 2030, 2035, 2040, 2045, 2050];
+    const cp = currentCarbon;
+    const pts = years.map(yr => traj.points.find(p => p.year === yr && p.carbon_price === cp)).filter(Boolean);
+
+    if (!pts.length) return;
+
+    Plotly.newPlot('chartFullTrajectory', [
+        { x: years, y: pts.map(p => p.ercot_fossil_rev), name: 'ERCOT Fossil', type: 'bar', marker: { color: '#6B7280' } },
+        { x: years, y: pts.map(p => p.ercot_nuclear_rev), name: 'ERCOT Nuclear', type: 'bar', marker: { color: '#6366F1' } },
+        { x: years, y: pts.map(p => p.ercot_re_rev), name: 'ERCOT Wind/Solar', type: 'bar', marker: { color: '#22C55E' } },
+        { x: years, y: pts.map(p => p.national_nuclear_rev), name: 'National Nuclear', type: 'bar', marker: { color: '#A78BFA' } },
+        { x: years, y: pts.map(p => p.national_gas_rev), name: 'National Gas', type: 'bar', marker: { color: '#9CA3AF' } },
+        { x: years, y: pts.map(p => p.national_re_rev), name: 'National RE', type: 'bar', marker: { color: '#86EFAC' } },
+        { x: years, y: pts.map(p => p.total_rev), name: 'Total Revenue', type: 'scatter', mode: 'lines+markers', line: { color: '#F47B27', width: 3 }, marker: { size: 8 } },
+    ], {
+        ...PLOTLY_LAYOUT,
+        barmode: 'stack',
+        xaxis: { title: 'Year', dtick: 5 },
+        yaxis: { title: 'Annual Revenue/Profit ($M)', gridcolor: '#f0f0f0' },
+        legend: { x: 0.02, y: 0.98 },
+        title: { text: `${traj.company} — Full Portfolio (${currentPriceLevel} fuel, $${cp}/ton CO₂)`, font: { size: 14 } },
+    }, { responsive: true });
+}
+
+// ── Init ──
+populateOwners();
+update();
+</script>
+</body>
+</html>
