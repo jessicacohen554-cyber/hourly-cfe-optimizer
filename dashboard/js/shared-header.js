@@ -12,10 +12,10 @@
 //   </header>
 //
 // SVG variants: default (Midnight Grid)
-// Canvas variants: frosted-circuit, particle-fill-dark, particle-fill-light,
-//   dense-circuit-map, heatmap-pulse-dark, heatmap-pulse-light, stacked-curves-dark,
-//   stacked-curves-light, network-constellation-dark, network-constellation-light,
-//   frequency-spectrum, topographic-contours-light, topographic-contours-dark
+// Canvas variants: dense-circuit-map, dense-circuit-white, dense-circuit-navy,
+//   frequency-spectrum, frequency-light, stacked-curves-dark,
+//   network-constellation-light, frequency-dense-navy, frequency-dense-white,
+//   stacked-dense-navy
 // Set via data-header-variant attribute. CSS class header--{variant} is auto-added.
 // ============================================================================
 
