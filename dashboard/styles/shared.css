@@ -418,34 +418,6 @@ p {
     background: linear-gradient(90deg, #0EA5E9 0%, #22C55E 25%, #F59E0B 50%, #6366F1 75%, #EF4444 100%);
 }
 
-/* --- Particle Flow: light with colored energy streams --- */
-.header--particleflow {
-    background: linear-gradient(180deg, rgba(248,250,252,0.94) 0%, rgba(241,245,249,0.90) 50%, rgba(248,250,252,0.92) 100%);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-}
-.header--particleflow::before {
-    background:
-        radial-gradient(ellipse 25% 25% at 50% 57%, rgba(99,102,241,0.04) 0%, transparent 70%);
-}
-.header--particleflow::after { background: none; }
-.header--particleflow h1 { color: var(--navy-dark, #0F1A2E); }
-.header--particleflow .subtitle { color: #475569; }
-.header--particleflow .header-accent {
-    background: linear-gradient(90deg, #F59E0B 0%, #22C55E 35%, #0EA5E9 70%, #6366F1 100%);
-}
-
-/* --- Circuit Board: external SVG background, light integrated --- */
-.header--circuit {
-    background: #FBFBFC url('images/circuit-header.svg') center top / cover no-repeat;
-}
-.header--circuit::before { background: none; }
-.header--circuit::after { background: none; }
-.header--circuit h1 { color: var(--navy-dark, #0F1A2E); }
-.header--circuit .subtitle { color: #475569; }
-.header--circuit .header-accent {
-    background: linear-gradient(90deg, var(--navy) 0%, var(--hydro) 25%, var(--wind) 50%, var(--solar) 75%, var(--red) 100%);
-}
 
 /* ========== SECTION LAYOUT PRIMITIVES ========== */
 .content-section {
