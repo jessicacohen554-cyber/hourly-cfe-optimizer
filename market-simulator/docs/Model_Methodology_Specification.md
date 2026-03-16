@@ -2,10 +2,10 @@
 
 **Constellation Energy — Commercial Strategy & Analytics**
 
-**Document Version:** 1.0
+**Document Version:** 1.1
 **Model Version:** Market Simulator v1.0.0
 **Base Year:** 2025 (snapshot model)
-**Date:** March 2025
+**Date:** March 2026
 **Classification:** Internal — Confidential
 
 ---
@@ -16,7 +16,17 @@
 2. [Theoretical Framework](#2-theoretical-framework)
 3. [Data Foundation](#3-data-foundation)
 4. [Model Architecture](#4-model-architecture)
+   - 4.1–4.3 Core Engine, Dispatch, LMP (aggregate + plant-level stacks)
+   - 4.4 Hourly Dispatch Reconstruction
+   - 4.5 Fleet Model (BA → ISO mapping, EIA 860)
+   - 4.6 Plant-Level Dispatch Economics (status classification)
+   - 4.8–4.9 Scenario Construction, Configuration
 5. [Cost & Input Tables](#5-cost--input-tables)
+   - 5.1–5.8 Renewable/Firm LCOE, Storage, Transmission, Fuel, Capacity, Incentives, FOAK
+   - 5.9 Fossil New-Build LCOE (Gas CCGT, Gas CT, Coal)
+   - 5.10 NOx & SOx Allowance Prices
+   - 5.11 Cost-Based Offer Adders
+   - 5.12 Demand Growth Rates
 6. [Output Specification](#6-output-specification)
 7. [Validation & Benchmarking](#7-validation--benchmarking)
 8. [Usage & Limitations](#8-usage--limitations)
@@ -44,8 +54,8 @@ The model spans seven ISOs representing approximately 70% of U.S. electricity co
 | PJM | 843.3 | Largest ISO, capacity market (RPM), nuclear fleet |
 | NYISO | 151.6 | Capacity market (ICAP), offshore wind pipeline |
 | NEISO | 115.3 | Gas-constrained (pipeline), offshore wind pipeline |
-| MISO | 663.8 | Wind corridor, moderate capacity market |
-| SPP | 299.8 | Wind-dominated, energy-only market |
+| MISO | 660.0 | Wind corridor, moderate capacity market |
+| SPP | 296.0 | Wind-dominated, energy-only market |
 
 Three simulation modes are supported:
 
@@ -109,10 +119,10 @@ Each generator type's profitability is evaluated as a revenue-cost spread:
 3. **CO₂ allowance cost**: Emission rate × carbon price
 4. **Fixed O&M**: Technology-specific $/kW-yr (converted to $/MWh via capacity factor)
 
-**Profitability determination**:
-- **Profitable**: Revenue > Cost → unit continues operating / new build deploys
-- **Marginal**: Revenue ≈ Cost (within ±$5/MWh) → at risk, status depends on scenario
-- **Retiring**: Revenue < Cost → unit retires from dispatch stack
+**Profitability determination** (plant-level status classification):
+- **Operating**: Profit > $2/MWh and CF ≥ 10% → unit continues operating / new build deploys
+- **At Risk**: −$5 ≤ Profit ≤ $2/MWh, or CF < 10% → marginal; vulnerable to fuel price or policy changes
+- **Stranded**: Profit < −$5/MWh → uneconomic; retirement candidate
 
 ### 2.3 Fossil Retirement Logic
 
@@ -307,9 +317,17 @@ The Market Simulator operates as a web application with three layers:
 ┌─────────────────┴───────────────────────────┐
 │  SIMULATION ENGINE (Python)                 │
 │  market_simulation.py                       │
-│  ├── lmp_engine.py (LMP pricing)            │
+│  ├── lmp_engine.py                          │
+│  │   ├── build_merit_order_stack()          │
+│  │   │   (aggregate 4-bin fossil stack)     │
+│  │   ├── build_plant_level_merit_order()    │
+│  │   │   (per-generator EIA 860 stack)      │
+│  │   └── compute_hourly_lmp_vectorized()    │
+│  ├── fleet_model.py                         │
+│  │   ├── FleetModel (state-level)           │
+│  │   ├── load_iso_fleet() (BA→ISO filter)   │
+│  │   └── _classify_unit() (PM+fuel→type)    │
 │  ├── dispatch_utils.py (hourly dispatch)    │
-│  ├── fleet_model.py (real generator data)   │
 │  ├── pipeline_config.py (constants)         │
 │  └── procurement_utils.py (PPA/learning)    │
 └─────────────────────────────────────────────┘
@@ -362,15 +380,31 @@ For each year in [2023, 2030, 2035, 2040, 2045, 2050]:
 
 ### 4.3 Merit-Order LMP Engine (`lmp_engine.py`)
 
-#### Stack Construction
+#### Aggregate Stack Construction
 
 `build_merit_order_stack(iso, clean_pct, fuel_level, total_fossil_mw, ...)`:
 
-1. Compute installed fossil capacity per ISO from `INSTALLED_FOSSIL_MW` and `FOSSIL_CAPACITY_SHARES`
-2. For each fossil generator type (coal steam, gas CCGT, gas CT, oil CT):
-   - Marginal cost = Heat rate × Fuel price + VOM + CO₂ rate × Carbon price
-3. Sort by marginal cost (ascending) — cheapest dispatched first
-4. Apply retirement: remove units where revenue < cost
+1. Compute marginal cost per unit type using `compute_marginal_costs()`:
+   - MC = (Heat Rate × Fuel Price + VOM + CO₂ Rate × CO₂ Price) × (1 + cost-based adder)
+   - ISO-specific cost-based adders: PJM/CAISO/NYISO/NEISO = 10%, MISO = 7%, ERCOT/SPP = 0% (energy-only markets)
+2. Size fossil fleet using RA-aware model: residual peak demand (after clean ELCC credit) ÷ Gas Availability Factor (GAF), floored by linear retirement estimate
+3. Apply retirement model: coal and oil retire above `COAL_OIL_RETIREMENT_THRESHOLD`; remaining gas CCGT/CT capacity is renormalized
+4. Enforce NOx/SOx emission limits if specified — retire generators exceeding caps
+5. Sort by marginal cost (ascending) — cheapest dispatched first
+
+#### Plant-Level Stack Construction
+
+`build_plant_level_merit_order(iso, clean_pct, fuel_level, carbon_price, ...)`:
+
+Uses real EIA 860 generator data instead of the 4 aggregated unit types:
+
+1. Load per-ISO fleet via `fleet_model.load_iso_fleet(iso)` — filters all available EIA 860 data by `balancing_authority_code` → ISO via `BA_TO_ISO` mapping
+2. Classify each generator by prime mover and fuel type using `_classify_unit()`
+3. Use actual reported heat rate per generator (falls back to type default if unavailable)
+4. Compute per-plant marginal cost: (heat rate × fuel price + VOM + CO₂ rate × carbon price + NOx/SOx allowance costs) × (1 + ISO cost-based adder)
+5. Return individual plant entries with: `plant_id`, `gen_id`, `entity_name`, `plant_name`, `unit_type`, `capacity_mw`, `heat_rate`, `marginal_cost`, `latitude`, `longitude`, `county`, `state`, `fuel_type`, `prime_mover`, `online_year`, `co2_rate`, `nox_rate`, `sox_rate`
+
+Falls back to aggregate stack if no EIA 860 data is available for the requested ISO.
 
 #### Hourly LMP Computation
 
@@ -386,7 +420,10 @@ The computation is fully vectorized using NumPy — no Python loops over hours.
 
 #### ISO-Specific Price Models
 
-Each ISO has a `PriceModel` subclass handling market-specific pricing rules:
+Each ISO has a `PriceModel` subclass with three pricing layers:
+1. **Merit-order dispatch** — marginal cost from heat rate × fuel + VOM
+2. **Demand-quantile pricing** — congestion/tightness adder on high-demand hours, negative pricing on low-demand hours with must-run surplus
+3. **Scarcity pricing** — exponential adder when reserves drop below threshold
 
 | ISO | Model | Key Feature |
 |---|---|---|
@@ -420,22 +457,56 @@ Returns remaining fossil capacity at a given clean energy threshold:
 
 ### 4.5 Fleet Model (`fleet_model.py`)
 
-The `FleetModel` class loads real generator-level data:
+The `FleetModel` class loads real generator-level data per state, while `load_iso_fleet()` aggregates across states for a given ISO.
 
+**State-level usage** (single-state fleet):
 ```python
 fm = FleetModel(state='TX')
 fm.build_fleet()
 stack, total_mw = fm.build_merit_order_stack(fuel_level='Medium')
 ```
 
+**ISO-level usage** (cross-state aggregation):
+```python
+from fleet_model import load_iso_fleet
+fleet_df = load_iso_fleet('PJM')  # Loads all states, filters by BA_TO_ISO
+```
+
 **Data cross-referencing**:
-1. EIA 860 provides capacity (MW), fuel type, prime mover, status
-2. EIA 923 provides generation (MWh), fuel consumption (MMBtu) → revealed heat rates
+1. EIA 860 provides capacity (MW), fuel type, prime mover, status, balancing authority code, heat rate, online year
+2. EIA 923 provides generation (MWh), fuel consumption (MMBtu) → revealed heat rates, capacity factors
 3. EPA CAMPD provides hourly emissions → actual emission rates
 
-When real data is available, the fleet model produces unit-level merit-order stacks that replace the stylized bins. A `BA_TO_ISO` mapping converts balancing authority codes to ISO regions.
+**BA → ISO mapping**: The `BA_TO_ISO` dictionary maps ~70 balancing authority codes to the 7 model ISOs. Examples: `CISO` → CAISO, `ERCO` → ERCOT, `PJME`/`PJMW`/`AEP`/`COMED`/`DOM` → PJM (13 BAs), `SWPP`/`KCPL`/`OKGE` → SPP (21 BAs), `MISO`/`ALTE`/`CONS`/`NSP` → MISO (26 BAs).
 
-### 4.6 Scenario Construction
+When real data is available, the fleet model produces unit-level merit-order stacks with per-generator heat rates that replace the stylized 4-bin stack. This enables plant-level dispatch economics (see §4.7).
+
+### 4.6 Plant-Level Dispatch Economics (`market_simulation.py`)
+
+`compute_plant_level_economics(plant_stack, hourly_lmp, dispatch, demand_mw_profile, fuel_prices, carbon_price, year)`:
+
+Computes per-plant dispatch hours, capacity factor, revenue, cost, emissions, and profit using the plant-level merit order from `build_plant_level_merit_order()`.
+
+**Dispatch determination**: Each plant's position in the sorted merit-order stack determines its dispatch schedule. A cumulative capacity array is built; plant *i* dispatches in hour *h* when the residual fossil demand (total demand minus clean supply) exceeds the cumulative capacity of all cheaper plants below it.
+
+**Per-plant economics**:
+- **Capacity factor**: MWh generated / (capacity MW × 8,760 hours)
+- **Revenue**: Generation-weighted average LMP ($/MWh dispatched × MW dispatched per hour)
+- **Cost**: VOM + (heat rate × fuel price) + (CO₂ rate × carbon price)
+- **Profit**: Revenue − Cost ($/MWh)
+- **Emissions**: CO₂ (tons), NOx (lbs), SOx (lbs), fuel consumed (MMBtu)
+
+**Status classification**:
+
+| Status | Criteria | Interpretation |
+|---|---|---|
+| **Stranded** | profit < −$5/MWh | Uneconomic; retirement candidate |
+| **At Risk** | −$5 ≤ profit ≤ $2/MWh, or CF < 10% | Marginal; vulnerable to fuel price or policy changes |
+| **Operating** | profit > $2/MWh and CF ≥ 10% | Economically viable |
+
+**Output fields per plant**: entity, plant name, plant ID, generator ID, state, county, lat/lon, capacity MW, heat rate, fuel type, prime mover, online year, age, capacity factor, MWh generated, fuel consumed, CO₂/NOx/SOx emissions, revenue/VOM/fuel cost/profit per MWh, total revenue/cost/profit ($M), status.
+
+### 4.7 Scenario Construction
 
 #### Snapshot Mode
 Single scenario from user inputs. No learning curves, no demand growth. Evaluates the market under user-specified conditions at a single point in time.
@@ -480,7 +551,7 @@ Total: 2 × 3 × 5 × 3 × ~3 = 270 base scenarios (with gas friction sub-levels
 
 A shared LMP cache across scenarios avoids redundant 8,760-hour computation.
 
-### 4.7 Configuration & Constants (`pipeline_config.py`)
+### 4.9 Configuration & Constants (`pipeline_config.py`)
 
 Single source of truth for all shared constants. All scripts import from here — no local constant definitions.
 
@@ -645,7 +716,77 @@ Source: LBNL "Queued Up" 2025, ISO interconnection study aggregates.
 | Offshore wind (fixed) | ~1.15× High | $129/MWh |
 | Offshore wind (floating) | ~1.25× High | $250/MWh (CAISO) |
 
-### 5.9 Demand Growth Rates
+### 5.9 Fossil New-Build LCOE ($/MWh)
+
+Fossil new-build LCOEs represent all-in levelized costs including capital recovery, fuel, O&M, and financing. These are used in trajectory mode to evaluate whether new fossil capacity is economically viable.
+
+**Gas CCGT New-Build** (baseload combined cycle, ~85% CF):
+
+| Level | $/MWh |
+|---|---|
+| Low | 45 |
+| Medium | 55 |
+| High | 70 |
+
+**Gas CT New-Build** (peaker combustion turbine, ~15–25% CF):
+
+| Level | $/MWh |
+|---|---|
+| Low | 70 |
+| Medium | 85 |
+| High | 110 |
+
+**Coal New-Build** (rarely built in US markets; included for scenario completeness):
+
+| Level | $/MWh |
+|---|---|
+| Low | 65 |
+| Medium | 80 |
+| High | 100 |
+
+Sources: Lazard v17-18, EIA AEO 2024, NREL ATB 2024.
+
+### 5.10 NOx & SOx Allowance Prices
+
+**NOx Allowance Prices ($/ton)**:
+
+| Level | Price | Context |
+|---|---|---|
+| Low | $500 | Surplus allowances, low market |
+| Medium | $2,500 | 2024 CSAPR Group 3 average |
+| High | $5,000 | Scarcity pricing / tighter caps |
+
+**SOx Allowance Prices ($/ton)**:
+
+| Level | Price | Context |
+|---|---|---|
+| Low | $25 | 2024 ARP surplus era |
+| Medium | $100 | Moderate enforcement |
+| High | $500 | Tight cap scenario |
+
+**CO₂ Allowance Prices ($/ton)**:
+
+| Level | Price | Context |
+|---|---|---|
+| Low | $3.00 | Low RGGI / no state program |
+| Medium | $5.50 | 2024 effective (RGGI weighted by PJM participation) |
+| High | $14.00 | Full RGGI clearing price |
+
+### 5.11 Cost-Based Offer Adders
+
+ISO-specific markup above marginal cost, reflecting cost-based offer rules:
+
+| ISO | Adder | Rationale |
+|---|---|---|
+| CAISO | 10% | RA market — cost-based offer rules |
+| ERCOT | 0% | Energy-only — competitive offers |
+| PJM | 10% | RPM — PJM Manual 15 cost-based offer rule |
+| NYISO | 10% | ICAP — NYISO OATT cost-based rules |
+| NEISO | 10% | FCM — ISO-NE Manual for Market Operations |
+| MISO | 7% | PRA — lower effective markup (Module C) |
+| SPP | 0% | Energy-only — competitive offers |
+
+### 5.12 Demand Growth Rates
 
 Source: EIA AEO 2025, NERC 2024 LTRA, ERCOT 2025 LTLF, PJM 2025 Load Forecast.
 
@@ -673,6 +814,8 @@ Low = baseline economic/population growth. Medium = confirmed large-load + moder
 
 Per generator type (coal steam, gas CCGT, gas CT, oil CT, plus clean resources):
 
+**Aggregate mode** (per unit type):
+
 | Field | Description |
 |---|---|
 | `unit_type` | Generator category |
@@ -682,7 +825,26 @@ Per generator type (coal steam, gas CCGT, gas CT, oil CT, plus clean resources):
 | `capacity_factor` | Annual CF (0–1) |
 | `avg_revenue_mwh` | $/MWh total revenue |
 | `profit_mwh` | $/MWh revenue − cost |
-| `status` | "profitable" / "marginal" / "retiring" |
+| `status` | "operating" / "at_risk" / "stranded" |
+
+**Plant-level mode** (per individual generator, when EIA 860 data available):
+
+| Field | Description |
+|---|---|
+| `plant_id` / `generator_id` | EIA identifiers |
+| `entity` / `plant_name` | Owner and plant name |
+| `state` / `county` / `latitude` / `longitude` | Location |
+| `capacity_mw` | Nameplate capacity |
+| `heat_rate_mmbtu_mwh` | Actual (EIA 860) or default heat rate |
+| `fuel_type` / `prime_mover` | EIA fuel and prime mover codes |
+| `online_year` / `age_years` | Vintage |
+| `capacity_factor` | Annual CF (0–1) |
+| `mwh_generated` | Annual generation |
+| `fuel_consumed_mmbtu` | Annual fuel consumption |
+| `co2_tons` / `nox_lbs` / `sox_lbs` | Annual emissions |
+| `revenue_per_mwh` / `fuel_cost_per_mwh` / `profit_per_mwh` | Per-MWh economics |
+| `total_revenue_million` / `total_cost_million` / `total_profit_million` | Annual totals ($M) |
+| `status` | "operating" / "at_risk" / "stranded" |
 
 ### 6.3 Supply Mix
 
@@ -866,21 +1028,57 @@ Place custom CSV files in `custom-user-inputs/`:
 
 ## Appendix A — Key Algorithm Code Blocks
 
-### A.1 Merit-Order Stack Construction
+### A.1 Aggregate Merit-Order Stack Construction
 
 ```python
 def build_merit_order_stack(iso, clean_pct, fuel_level='Medium',
-                             total_fossil_mw=None, carbon_price=0):
+                             total_fossil_mw=None, co2_level='Medium',
+                             nox_price=0.0, sox_price=0.0, ...):
     """Build sorted fossil dispatch stack by marginal cost."""
-    fuel = FUEL_PRICES[fuel_level]
-    stack = []
-    for unit_type in ['coal_steam', 'gas_ccgt', 'gas_ct', 'oil_ct']:
-        hr = HEAT_RATES[unit_type]
-        fuel_name = 'coal' if 'coal' in unit_type else 'gas' if 'gas' in unit_type else 'oil'
-        mc = hr * fuel[fuel_name] + VOM[unit_type] + CO2_RATES[unit_type] * carbon_price
-        cap = INSTALLED_FOSSIL_MW[iso] * FOSSIL_CAPACITY_SHARES[iso][unit_type]
-        stack.append({'type': unit_type, 'mc': mc, 'capacity_mw': cap})
-    return sorted(stack, key=lambda x: x['mc'])
+    mc = compute_marginal_costs(fuel_level, co2_level,
+                                nox_price=nox_price, sox_price=sox_price, iso=iso)
+    # RA-aware fleet sizing with GAF deration
+    if total_fossil_mw is None:
+        peak_mw = PEAK_DEMAND_MW[iso] * (1 + RESOURCE_ADEQUACY_MARGIN)
+        clean_peak_mw = _compute_clean_peak_mw(iso, resource_mix, ...)
+        residual_peak = max(0, peak_mw - clean_peak_mw)
+        total_fossil_mw = min(installed, max(residual_peak / GAF, linear_mw))
+    # Apply retirement (coal/oil retire above threshold)
+    shares = FOSSIL_CAPACITY_SHARES[iso]
+    if clean_pct >= COAL_OIL_RETIREMENT_THRESHOLD:
+        shares = renormalize(gas_ccgt + gas_ct only)
+    stack = [(ut, total_fossil_mw * sh, mc[ut]) for ut, sh in shares.items()]
+    return sorted(stack, key=lambda x: x[2]), total_fossil_mw
+```
+
+### A.1b Plant-Level Merit-Order Stack Construction
+
+```python
+def build_plant_level_merit_order(iso, clean_pct, fuel_level='Medium',
+                                   carbon_price=0, nox_price=0.0, sox_price=0.0,
+                                   fleet_df=None):
+    """Build plant-level merit-order stack using real EIA 860 generator data."""
+    if fleet_df is None:
+        fleet_df = load_iso_fleet(iso)  # BA_TO_ISO filtering
+    fp = FUEL_PRICES[fuel_level]
+    adder = 1.0 + COST_BASED_ADDERS.get(iso, 0.10)
+    plant_stack = []
+    for _, row in fleet_df.iterrows():
+        unit_type = _classify_unit(row['prime_mover'], row['fuel_type'])
+        hr = row['heat_rate'] or HEAT_RATES[unit_type]  # actual or default
+        fuel_key = {'coal_steam': 'coal', 'gas_ccgt': 'gas',
+                    'gas_ct': 'gas', 'oil_ct': 'oil'}[unit_type]
+        mc = (hr * fp[fuel_key] + VOM[unit_type]
+              + CO2_RATES[unit_type] * carbon_price) * adder
+        plant_stack.append({
+            'plant_id': row['plant_id'], 'unit_type': unit_type,
+            'capacity_mw': row['capacity_mw'], 'heat_rate': hr,
+            'marginal_cost': mc, 'co2_rate': CO2_RATES[unit_type],
+            'nox_rate': NOX_RATES[unit_type], 'sox_rate': SOX_RATES[unit_type],
+            ...  # entity_name, lat/lon, state, county, online_year
+        })
+    plant_stack.sort(key=lambda x: x['marginal_cost'])
+    return plant_stack, sum(p['capacity_mw'] for p in plant_stack)
 ```
 
 ### A.2 Hourly LMP Computation
@@ -902,28 +1100,29 @@ def compute_hourly_lmp_vectorized(dispatch_result, demand_mw, stack, ...):
 
 *Note: Simplified for readability. The actual implementation uses vectorized NumPy operations for performance.*
 
-### A.3 Generator Profitability Calculation
+### A.3 Plant-Level Economics Calculation
 
 ```python
-def evaluate_generator_profit(unit_type, lmp_profile, demand_profile,
-                                capacity_price, incentives):
-    """Compute revenue, cost, and profit for a generator type."""
-    # Revenue
-    energy_rev = np.mean(lmp_profile) * capacity_factor(unit_type)
-    cap_rev = capacity_price / (8760 * capacity_factor(unit_type))  # $/MWh
-    ptc = incentives.get(unit_type, 0)
-    total_revenue = energy_rev + cap_rev + ptc
+def compute_plant_level_economics(plant_stack, hourly_lmp, dispatch,
+                                   demand_mw_profile, fuel_prices, carbon_price):
+    """Compute per-plant dispatch economics using plant-level merit order."""
+    cum_cap = cumulative_sum(plant capacities)
+    fossil_demand_mw = dispatch['residual_demand'] * mean(demand_mw_profile)
 
-    # Cost
-    fuel_cost = HEAT_RATES[unit_type] * fuel_price
-    total_cost = fuel_cost + VOM[unit_type] + CO2_RATES[unit_type] * carbon_price
+    for i, plant in enumerate(plant_stack):
+        dispatched = fossil_demand_mw > cum_cap[i]
+        mw_dispatched = clip(fossil_demand_mw - cum_cap[i], 0, plant['capacity_mw'])
+        cf = sum(mw_dispatched) / (plant['capacity_mw'] * 8760)
+        avg_rev = sum(hourly_lmp * mw_dispatched) / sum(mw_dispatched)
 
-    return {
-        'revenue': total_revenue,
-        'cost': total_cost,
-        'profit': total_revenue - total_cost,
-        'status': 'profitable' if total_revenue > total_cost else 'retiring'
-    }
+        fuel_cost = plant['heat_rate'] * fuel_prices[fuel_key]
+        total_cost = VOM[unit_type] + fuel_cost + co2_rate * carbon_price
+        profit = avg_rev - total_cost
+
+        # Status classification
+        if profit < -5:        status = 'stranded'
+        elif profit <= 2 or cf < 0.10: status = 'at_risk'
+        else:                  status = 'operating'
 ```
 
 ### A.4 Fossil Retirement Logic
