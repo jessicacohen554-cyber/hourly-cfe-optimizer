@@ -1720,11 +1720,20 @@
                     the net system-wide impact may be partially offset through consequential accounting.
                 </div>
 
-                <p>The strategic tension: ${co.shortName} faces pressure to grow revenue through load-following capacity for data centers
+                <p>${co.shortName} faces pressure to grow revenue through load-following capacity for data centers
                 and electrification. New gas generation offers quick-to-market, bankable returns. But each new gas plant extends the fossil
-                tail and creates stranded asset risk under accelerating decarbonization scenarios. The optimal strategy likely involves
-                developing gas with CCS-readiness, signing offtake agreements that include carbon pricing escalators, and positioning
-                new plants for eventual conversion to hydrogen or CCS retrofit.</p>
+                tail and creates stranded asset risk under accelerating decarbonization scenarios.</p>
+
+                <div class="insight-box insight-danger" style="margin: var(--space-lg) 0">
+                    <strong>The Lock-In Dynamic:</strong> Once gas assets are built, ${co.shortName} has a financial incentive to
+                    defend their profitability. That means opposing carbon pricing, retirement mandates, and clean energy standards
+                    that would strand those assets. The procurement signal corporate buyers send determines whether IPPs build gas
+                    or firm clean power, and what gets built gets defended.
+                </div>
+
+                <p>Without the enabling conditions in Section 7 (particularly high PPA market depth and clean firm technology at scale),
+                the default trajectory includes approximately ${fmt(totalNewGasMW / 1000, 1)} GW of new gas for ${co.shortName},
+                locking in ${fmt(newGasAnnualCO2 * 25, 0)} Mt of cumulative emissions through 2050.</p>
             `;
         }
     }
@@ -1738,15 +1747,15 @@
         const companyTargetEl = document.getElementById('companyTarget');
         if (companyTargetEl) companyTargetEl.textContent = co.target;
 
-        // Render all sections
+        // Render all sections (new order: gas lock-in at position 5)
         renderFleetProfile();
         renderConvergenceDivergence();
         renderRiskOpportunity();
         renderQualifiedTarget();
+        renderGasDevelopment();
         renderCleanInvestment();
         renderEnablingConditions();
         renderStrategicPositioning();
-        renderGasDevelopment();
         initTocTracking();
     }
 
