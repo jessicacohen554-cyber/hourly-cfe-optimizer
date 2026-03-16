@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# ARCHIVED — Output feeds only step5_2a_scenario_comparison.py, which feeds the
+# archived scenario_comparison.html page. No live downstream consumers.
 """Scenario B: GHG Protocol Hourly Matching — Four-Pool Incentive-Driven Grid Buildout.
 
 Models the systemic incentive structure created by hourly Scope 2 accounting
