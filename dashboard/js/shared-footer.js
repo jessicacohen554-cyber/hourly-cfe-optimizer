@@ -21,7 +21,7 @@
         { href: 'gen_market_overview.html',    label: 'Market Overview' },
         { href: 'GHG-accounting-overview.html', label: 'Carbon Accounting' },
         { href: 'lmp_trends.html',            label: 'LMP Trends' },
-        { href: 'reference.html',             label: 'Reference' },
+        { href: 'optimizer_methodology.html',   label: 'Methodology' },
         { href: 'archive/research_paper.html',  label: 'Research Paper' }
     ];
 
