@@ -50,7 +50,7 @@ const PLOTLY_LAYOUT_BASE = {
     font: { family: "'Source Sans Pro', Calibri, Arial, sans-serif", color: '#1A232F' },
     paper_bgcolor: 'rgba(0,0,0,0)',
     plot_bgcolor: 'rgba(0,0,0,0)',
-    margin: { t: 30, r: 30, b: 50, l: 60 },
+    margin: { t: 40, r: 30, b: 50, l: 60 },
     autosize: true,
 };
 
@@ -812,6 +812,34 @@ function setupExportButtons(data) {
                 btnExport.disabled = false;
             }, 2000);
         });
+    }
+
+    // Download Plant-Level CSV button
+    const btnPlantCSV = document.getElementById('btnDownloadPlantCSV');
+    if (btnPlantCSV && data.run_id) {
+        btnPlantCSV.addEventListener('click', async () => {
+            try {
+                const resp = await fetch(`/api/runs/${data.run_id}/plant-csv`);
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    alert(err.detail || 'Plant-level CSV not available for this run.');
+                    return;
+                }
+                const blob = await resp.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${data.run_id}_plant_results.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                console.warn('Failed to download plant CSV:', e);
+                alert('Failed to download plant-level CSV.');
+            }
+        });
+    } else if (btnPlantCSV) {
+        btnPlantCSV.disabled = true;
+        btnPlantCSV.title = 'No run ID — run a simulation first';
     }
 
     // Download CSV button
