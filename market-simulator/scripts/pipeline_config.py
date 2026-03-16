@@ -1455,3 +1455,40 @@ def threshold_learning_fraction(threshold, scenario='B', first_deployment_year=N
         foak_start, noak_year = 2036, 2048
     return learning_fraction(year, foak_start, noak_year)
 
+
+# ============================================================================
+# RPS / CES FLOOR TARGETS
+# ============================================================================
+# State RPS mandates mapped to ISO regions (approximate weighted-average).
+# Values are % clean energy floor by year.  Sources: DSIRE, LBNL RPS tracker.
+
+RPS_TARGETS = {
+    'CAISO':  {2025: 60, 2030: 60, 2035: 80, 2040: 90, 2045: 100},
+    'NYISO':  {2025: 50, 2030: 70, 2035: 80, 2040: 90, 2045: 100},
+    'NEISO':  {2025: 40, 2030: 50, 2035: 60, 2040: 75, 2045: 90},
+    'PJM':    {2025: 20, 2030: 30, 2035: 40, 2040: 50, 2045: 60},
+    'MISO':   {2025: 15, 2030: 20, 2035: 30, 2040: 40, 2045: 50},
+    'SPP':    {2025: 10, 2030: 15, 2035: 20, 2040: 30, 2045: 40},
+    'ERCOT':  {2025: 0, 2030: 0, 2035: 0, 2040: 0, 2045: 0},  # No state RPS
+}
+
+
+def get_rps_floor(iso, year=2025):
+    """Return the RPS/CES floor (%) for an ISO region in a given year.
+
+    Linearly interpolates between defined target years.
+    """
+    targets = RPS_TARGETS.get(iso, {})
+    if not targets:
+        return 0.0
+    years = sorted(targets.keys())
+    if year <= years[0]:
+        return float(targets[years[0]])
+    if year >= years[-1]:
+        return float(targets[years[-1]])
+    # Interpolate
+    for i in range(len(years) - 1):
+        if years[i] <= year <= years[i + 1]:
+            frac = (year - years[i]) / (years[i + 1] - years[i])
+            return targets[years[i]] + frac * (targets[years[i + 1]] - targets[years[i]])
+    return 0.0
