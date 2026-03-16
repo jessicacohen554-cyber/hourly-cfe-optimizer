@@ -452,6 +452,108 @@ def compute_generator_economics(stack, hourly_lmp, unit_idx, dispatch,
     return gen_econ
 
 
+def compute_plant_level_economics(plant_stack, hourly_lmp, dispatch,
+                                   demand_mw_profile, fuel_prices, carbon_price,
+                                   year=2025):
+    """Compute per-plant dispatch economics using plant-level merit order.
+
+    Each plant's position in the merit-order stack determines when it dispatches.
+    Returns list of dicts with full per-plant economics.
+    """
+    if not plant_stack:
+        return []
+
+    H_val = len(hourly_lmp)
+
+    # Build cumulative capacity array
+    cum_cap = np.zeros(len(plant_stack) + 1)
+    for i, plant in enumerate(plant_stack):
+        cum_cap[i + 1] = cum_cap[i] + plant['capacity_mw']
+
+    # Residual demand (MW per hour) — fossil must serve
+    residual = dispatch.get('residual_demand', np.zeros(H_val))
+    if isinstance(residual, (list, tuple)):
+        residual = np.array(residual, dtype=np.float64)
+    demand_scale = float(np.mean(demand_mw_profile)) if np.sum(demand_mw_profile) > 0 else 1.0
+    fossil_demand_mw = residual * demand_scale
+
+    results = []
+    for i, plant in enumerate(plant_stack):
+        low = cum_cap[i]
+        cap_mw = plant['capacity_mw']
+
+        # Hours where this plant dispatches
+        dispatched = fossil_demand_mw > low
+        mw_dispatched = np.clip(fossil_demand_mw - low, 0, cap_mw) * dispatched
+
+        dispatch_hours = int(np.sum(dispatched))
+        total_mwh = float(np.sum(mw_dispatched))
+        cf = total_mwh / (cap_mw * H_val) if cap_mw > 0 else 0
+
+        # Revenue
+        if total_mwh > 0:
+            avg_rev = float(np.sum(hourly_lmp * mw_dispatched)) / total_mwh
+        else:
+            avg_rev = 0.0
+
+        # Costs
+        fuel_key = {'coal_steam': 'coal', 'gas_ccgt': 'gas', 'gas_ct': 'gas', 'oil_ct': 'oil'}.get(plant['unit_type'], 'gas')
+        fuel_price = fuel_prices.get(fuel_key, 3.5)
+        hr = plant['heat_rate']
+        vom = VOM.get(plant['unit_type'], 4.0)
+        fuel_cost_mwh = hr * fuel_price
+        carbon_cost_mwh = plant['co2_rate'] * carbon_price
+        total_cost_mwh = vom + fuel_cost_mwh + carbon_cost_mwh
+        profit_mwh = avg_rev - total_cost_mwh
+
+        # Emissions
+        co2_tons = total_mwh * plant['co2_rate']
+        nox_lbs = total_mwh * plant['nox_rate']
+        sox_lbs = total_mwh * plant['sox_rate']
+        fuel_consumed = total_mwh * hr
+
+        # Status determination
+        if profit_mwh < -5:
+            status = 'stranded'
+        elif profit_mwh <= 2 or cf < 0.10:
+            status = 'at_risk'
+        else:
+            status = 'operating'
+
+        results.append({
+            'entity': plant.get('entity_name', ''),
+            'plant_name': plant.get('plant_name', ''),
+            'plant_id': plant.get('plant_id', ''),
+            'generator_id': plant.get('gen_id', ''),
+            'state': plant.get('state', ''),
+            'county': plant.get('county', ''),
+            'latitude': plant.get('latitude'),
+            'longitude': plant.get('longitude'),
+            'capacity_mw': round(cap_mw, 1),
+            'heat_rate_mmbtu_mwh': round(hr, 2),
+            'fuel_type': plant.get('fuel_type', ''),
+            'prime_mover': plant.get('prime_mover', ''),
+            'online_year': plant.get('online_year'),
+            'age_years': plant.get('age_years'),
+            'capacity_factor': round(cf, 4),
+            'mwh_generated': round(total_mwh, 0),
+            'fuel_consumed_mmbtu': round(fuel_consumed, 0),
+            'co2_tons': round(co2_tons, 1),
+            'nox_lbs': round(nox_lbs, 1),
+            'sox_lbs': round(sox_lbs, 1),
+            'revenue_per_mwh': round(avg_rev, 2),
+            'vom_per_mwh': round(vom, 2),
+            'fuel_cost_per_mwh': round(fuel_cost_mwh, 2),
+            'profit_per_mwh': round(profit_mwh, 2),
+            'total_revenue_million': round(avg_rev * total_mwh / 1e6, 2),
+            'total_cost_million': round(total_cost_mwh * total_mwh / 1e6, 2),
+            'total_profit_million': round(profit_mwh * total_mwh / 1e6, 2),
+            'status': status,
+        })
+
+    return results
+
+
 def compute_capacity_degradation(iso, clean_pct):
     """Compute capacity price degradation factor using S-curve (sigmoid) model.
 
