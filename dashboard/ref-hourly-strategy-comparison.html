@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The 8,760 Problem &mdash; Which Hourly Matching Strategy Builds the Grid We Need?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/reference.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+<script src="js/scroll-observer.js"></script>
+<script src="js/shared-footer.js"></script>
+<script src="js/strategy-comparison-data.js"></script>
+<style>
+body { background: var(--bg-page-white); }
+
+.breadcrumb {
+    max-width: 1100px; margin: 0 auto; padding: 20px 24px 0;
+    font-size: 0.82rem; font-family: var(--font-heading); letter-spacing: 0.03em;
+}
+.breadcrumb a { color: #0369A1; /* contrast-fix: was #0EA5E9, now #0369A1, ratio 5.93:1 on white */ text-decoration: none; }
+.breadcrumb .sep { color: rgba(0,0,0,0.3); margin: 0 8px; }
+.breadcrumb .current { color: #374151; }
+
+.article-wrapper { max-width: 1100px; margin: 0 auto; padding: 32px 24px 80px; }
+
+/* Hero Panel */
+.hero-panel {
+    background: linear-gradient(135deg, #1A2744 0%, #2D3A5C 50%, #1A2744 100%);
+    border-radius: 16px; padding: 40px 36px; margin-bottom: 36px;
+    color: #fff; position: relative; overflow: hidden;
+}
+.hero-panel::before {
+    content: ''; position: absolute; top: -50%; right: -20%; width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(14,165,233,0.15) 0%, transparent 70%);
+    pointer-events: none;
+}
+.hero-title {
+    font-family: var(--font-heading); font-size: 1.8rem; font-weight: 700;
+    margin-bottom: 16px; position: relative; line-height: 1.3;
+}
+.hero-subtitle {
+    font-family: var(--font-body); font-size: 1rem; color: rgba(255,255,255,0.75);
+    margin-bottom: 24px; max-width: 700px; line-height: 1.6; position: relative;
+}
+.hero-stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px; position: relative;
+}
+.hero-stat {
+    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.22);
+    border-radius: 10px; padding: 16px; text-align: center;
+}
+.hero-stat .val {
+    font-family: var(--font-data, var(--font-mono)); font-size: 1.5rem;
+    font-weight: 700; line-height: 1.2;
+}
+.hero-stat .val.blue { color: #0369A1; /* contrast-fix: was #0EA5E9, now #0369A1, ratio 5.93:1 on white */ }
+.hero-stat .val.green { color: #15803D; /* contrast-fix: was #22C55E, now #15803D, ratio 5.02:1 on white */ }
+.hero-stat .val.amber { color: #B45309; /* contrast-fix: was #F59E0B, now #B45309, ratio 5.02:1 on white */ }
+.hero-stat .val.red { color: #DC2626; /* contrast-fix: was #EF4444, now #DC2626, ratio 4.83:1 on white */ }
+.hero-stat .lbl {
+    font-family: var(--font-body); font-size: 0.75rem; color: rgba(255,255,255,0.75);
+    margin-top: 4px;
+}
+
+/* Strategy cards */
+.strat-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 28px; }
+.strat-card {
+    background: #fff; border: 2px solid #E5E7EB; border-radius: 12px;
+    padding: 20px 18px; position: relative;
+}
+.strat-card.card-2a { border-top: 4px solid #6366F1; }
+.strat-card.card-2b { border-top: 4px solid #0EA5E9; }
+.strat-card.card-2c { border-top: 4px solid #22C55E; }
+.strat-card h3 {
+    font-family: var(--font-heading); font-size: 1rem; font-weight: 700;
+    color: #1A2744; margin-bottom: 6px;
+}
+.strat-card .strat-tag {
+    display: inline-block; font-size: 0.68rem; font-weight: 600; padding: 2px 8px;
+    border-radius: 4px; text-transform: uppercase; letter-spacing: 0.04em;
+    margin-bottom: 8px; font-family: var(--font-heading);
+}
+.strat-card.card-2a .strat-tag { background: rgba(99,102,241,0.12); color: #4F46E5; /* contrast-fix: was #6366F1, now #4F46E5, ratio 5.7:1 on bg */ }
+.strat-card.card-2b .strat-tag { background: rgba(14,165,233,0.12); color: #0369A1; /* contrast-fix: was #0284C7, now #0369A1, ratio 5.93:1 on bg */ }
+.strat-card.card-2c .strat-tag { background: rgba(34,197,94,0.12); color: #15803D; /* contrast-fix: was #16A34A, now #15803D, ratio 5.02:1 on white */ }
+.strat-card p {
+    font-family: var(--font-body); font-size: 0.85rem; color: #6B7280;
+    line-height: 1.55; margin: 0;
+}
+.strat-card .strat-detail {
+    font-size: 0.78rem; color: #9CA3AF; margin-top: 8px; line-height: 1.5;
+}
+
+/* Section headings */
+.section-head {
+    font-family: var(--font-heading); font-size: 1.35rem; font-weight: 700;
+    color: #1A2744; margin: 36px 0 8px; line-height: 1.3;
+}
+.section-desc {
+    font-family: var(--font-body); font-size: 0.9rem; color: #6B7280;
+    margin-bottom: 20px; line-height: 1.65; max-width: 800px;
+}
+
+/* Chart panels */
+.chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+.chart-panel {
+    background: #fff; border: 1px solid #E5E7EB; border-radius: 10px;
+    padding: 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+}
+.chart-panel h3 {
+    font-family: var(--font-heading); font-size: 0.92rem; font-weight: 600;
+    color: #1A2744; margin: 0 0 4px;
+}
+.chart-panel .chart-note {
+    font-size: 0.75rem; color: #9CA3AF; margin-bottom: 10px;
+}
+.chart-container { position: relative; min-height: 320px; }
+.chart-container-sm { position: relative; min-height: 260px; }
+.chart-container-lg { position: relative; min-height: 400px; }
+.chart-wide {
+    background: #fff; border: 1px solid #E5E7EB; border-radius: 10px;
+    padding: 18px; margin-bottom: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+}
+.chart-wide h3 {
+    font-family: var(--font-heading); font-size: 0.92rem; font-weight: 600;
+    color: #1A2744; margin: 0 0 4px;
+}
+.chart-wide .chart-note { font-size: 0.75rem; color: #9CA3AF; margin-bottom: 10px; }
+
+/* Insight callouts */
+.insight-callout {
+    background: rgba(99,102,241,0.08); border-left: 4px solid #6366F1;
+    padding: 14px 18px; border-radius: 0 8px 8px 0; margin-bottom: 20px;
+    font-family: var(--font-body); font-size: 0.88rem; color: #1A2744; line-height: 1.55;
+}
+.insight-callout.warn { background: rgba(245,158,11,0.08); border-color: #F59E0B; }
+.insight-callout.success { background: rgba(34,197,94,0.08); border-color: #22C55E; }
+.insight-callout.danger { background: rgba(239,68,68,0.08); border-color: #EF4444; }
+.insight-callout strong { font-weight: 600; }
+
+/* Comparison table */
+.cmp-table {
+    width: 100%; border-collapse: collapse; font-family: var(--font-body);
+    font-size: 0.82rem; margin-bottom: 20px;
+}
+.cmp-table th {
+    padding: 10px 12px; text-align: left; font-weight: 600; color: #374151;
+    border-bottom: 2px solid #E5E7EB; font-family: var(--font-heading);
+    font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.04em;
+}
+.cmp-table td { padding: 8px 12px; border-bottom: 1px solid #F3F4F6; color: #374151; }
+.cmp-table .cell-best { background: rgba(34,197,94,0.1); color: #15803D; /* contrast-fix: was #16A34A, now #15803D, ratio 5.02:1 on white */ font-weight: 600; }
+.cmp-table .cell-mid { background: rgba(14,165,233,0.1); color: #0369A1; /* contrast-fix: was #0284C7, now #0369A1, ratio 5.93:1 on bg */ font-weight: 600; }
+.cmp-table .cell-worst { background: rgba(245,158,11,0.1); color: #B45309; /* contrast-fix: was #D97706, now #B45309, ratio 5.02:1 on white */ font-weight: 600; }
+
+/* Accordion for regional deep dives */
+.accordion { margin-bottom: 12px; border: 1px solid #E5E7EB; border-radius: 12px; overflow: hidden; }
+.accordion-header {
+    display: flex; align-items: center; gap: 12px; padding: 18px 24px;
+    background: #fff; cursor: pointer; user-select: none;
+    transition: background 0.2s; min-height: 44px;
+}
+.accordion-header:hover { background: #F9FAFB; }
+.accordion-chevron {
+    width: 20px; height: 20px; transition: transform 0.3s;
+    color: #6B7280; flex-shrink: 0; font-size: 0.8rem;
+}
+.accordion.open .accordion-chevron { transform: rotate(90deg); }
+.accordion-title {
+    font-family: var(--font-heading); font-size: 1.05rem; font-weight: 600;
+    color: #1A2744; flex: 1;
+}
+.accordion-badge {
+    font-family: var(--font-data, var(--font-mono)); font-size: 0.72rem; font-weight: 600;
+    padding: 3px 10px; border-radius: 20px; white-space: nowrap;
+}
+.accordion-badge.sss-high { background: rgba(99,102,241,0.12); color: #4F46E5; /* contrast-fix: was #6366F1, now #4F46E5 */ }
+.accordion-badge.sss-mid { background: rgba(14,165,233,0.12); color: #0369A1; /* contrast-fix: was #0284C7, now #0369A1 */ }
+.accordion-badge.sss-low { background: rgba(245,158,11,0.12); color: #B45309; /* contrast-fix: was #D97706, now #B45309, ratio 5.02:1 on white */ }
+.accordion-badge.sss-none { background: rgba(107,114,128,0.12); color: #6B7280; }
+.accordion-body {
+    max-height: 0; overflow: hidden; transition: max-height 0.4s ease;
+    background: #FAFBFC;
+}
+.accordion.open .accordion-body { max-height: 8000px; }
+.accordion-content { padding: 24px; }
+.accordion-content .iso-context {
+    font-family: var(--font-body); font-size: 0.85rem; color: #6B7280;
+    margin-bottom: 16px; line-height: 1.55; font-style: italic;
+}
+
+/* Scorecard */
+.scorecard {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px; margin-bottom: 28px;
+}
+.score-item {
+    background: #fff; border: 1px solid #E5E7EB; border-radius: 10px;
+    padding: 16px 18px; display: flex; gap: 12px; align-items: flex-start;
+}
+.score-icon { font-size: 1.4rem; flex-shrink: 0; margin-top: 2px; }
+.score-item h4 {
+    font-family: var(--font-heading); font-size: 0.88rem; font-weight: 600;
+    color: #1A2744; margin: 0 0 4px;
+}
+.score-item p {
+    font-family: var(--font-body); font-size: 0.82rem; color: #6B7280;
+    margin: 0; line-height: 1.5;
+}
+
+/* Prose */
+.prose {
+    font-family: var(--font-body); font-size: 0.92rem; color: #374151;
+    line-height: 1.7; margin-bottom: 20px; max-width: 800px;
+}
+.prose strong { color: #1A2744; }
+
+/* Strategy legend (persistent) */
+.strat-legend {
+    display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 16px;
+    font-family: var(--font-body); font-size: 0.82rem; color: #6B7280;
+    align-items: center;
+}
+.strat-legend .dot {
+    display: inline-block; width: 12px; height: 12px; border-radius: 3px;
+    margin-right: 6px; vertical-align: middle;
+}
+.strat-legend .dot-2a { background: #6366F1; }
+.strat-legend .dot-2b { background: #0EA5E9; }
+.strat-legend .dot-2c { background: #22C55E; }
+.strat-legend .dot-2c-r { background: #EF4444; }
+
+@media (max-width: 768px) {
+    .hero-panel { padding: 28px 20px; }
+    .hero-title { font-size: 1.4rem; }
+    .strat-cards { grid-template-columns: 1fr; }
+    .chart-row { grid-template-columns: 1fr; }
+    .scorecard { grid-template-columns: 1fr; }
+    .article-wrapper { padding: 20px 16px 60px; }
+}
+</style>
+</head>
+<body>
+
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+
+<header class="header">
+    <h1>Hourly Matching Strategy Comparison</h1>
+    <p class="subtitle">Which procurement approach most efficiently builds the grid we need?</p>
+    <div class="header-accent"></div>
+</header>
+
+<div class="breadcrumb">
+    <a href="reference.html">Reference Library</a>
+    <span class="sep">/</span>
+    <span class="current">Hourly Matching Strategy Comparison</span>
+</div>
+
+<div class="article-wrapper">
+
+<!-- ═══════════ HERO PANEL ═══════════ -->
+<div class="hero-panel">
+    <div class="hero-title">Which Hourly Matching Strategy Actually Builds the Grid We Need?</div>
+    <div class="hero-subtitle">
+        Three approaches to 24/7 clean energy procurement &mdash; from pure additionality to pragmatic policy alignment. Same hourly matching constraint, radically different resource deployment, cost, and grid outcomes.
+    </div>
+    <div class="hero-stats" id="heroStats"></div>
+</div>
+
+<!-- ═══════════ SECTION 1: THE THREE STRATEGIES ═══════════ -->
+<h2 class="section-head">The Three Strategies</h2>
+<p class="section-desc">
+    All three strategies require hourly matching &mdash; every hour of demand must be covered by a contracted clean resource generating in that hour. They differ in <strong>what counts as "your" clean energy</strong> and how existing grid resources are treated.
+</p>
+
+<div class="strat-cards">
+    <div class="strat-card card-2a">
+        <span class="strat-tag">Strategy 2A</span>
+        <h3>All New-Build</h3>
+        <p>100% additionality. Every MWh must come from a newly built resource contracted via PPA. No credit for existing clean energy on the grid.</p>
+        <div class="strat-detail">SSS: Ignored &bull; Baseline: Fossil fuel &bull; CO&#8322;: All new displaces fossil</div>
+    </div>
+    <div class="strat-card card-2b">
+        <span class="strat-tag">Strategy 2B</span>
+        <h3>Grid Baseline</h3>
+        <p>Pro-rata share of the existing grid mix is free. Only procurement <em>above</em> the grid's existing clean share requires new-build PPAs.</p>
+        <div class="strat-detail">SSS: Implicit in grid mix &bull; Baseline: Grid clean % &bull; CO&#8322;: Only above-baseline displaces</div>
+    </div>
+    <div class="strat-card card-2c">
+        <span class="strat-tag">Strategy 2C</span>
+        <h3>SSS + Tranches</h3>
+        <p>State-sponsored clean (nuclear ZEC/CMC, state hydro) allocated free as Layer 1. Remaining need filled via merit-order tranches: merchant existing, uprates, then new-build.</p>
+        <div class="strat-detail">SSS: Explicit free layer &bull; Baseline: SSS + existing &bull; CO&#8322;: Only new-build displaces</div>
+    </div>
+</div>
+
+<table class="cmp-table">
+    <thead>
+        <tr><th>Dimension</th><th>2A &mdash; All New</th><th>2B &mdash; Grid Baseline</th><th>2C &mdash; SSS + Tranches</th></tr>
+    </thead>
+    <tbody>
+        <tr><td><strong>Additionality</strong></td><td class="cell-best">Maximum (100%)</td><td class="cell-mid">Medium</td><td class="cell-worst">Minimum (new-build only)</td></tr>
+        <tr><td><strong>Cost to Buyer</strong></td><td class="cell-worst">Highest</td><td class="cell-mid">Lower</td><td class="cell-best">Lowest</td></tr>
+        <tr><td><strong>Free-Riding Risk</strong></td><td class="cell-best">None</td><td class="cell-mid">Moderate (claims grid mix)</td><td class="cell-worst">Higher (claims SSS)</td></tr>
+        <tr><td><strong>Nuclear Support</strong></td><td class="cell-worst">None</td><td class="cell-mid">Implicit</td><td class="cell-best">Explicit (SSS layer)</td></tr>
+        <tr><td><strong>Learning Signal</strong></td><td class="cell-best">Strongest (all new CapEx)</td><td class="cell-mid">Moderate</td><td class="cell-worst">Weakest (less new CapEx)</td></tr>
+    </tbody>
+</table>
+
+<div class="strat-legend">
+    <span><span class="dot dot-2a"></span>Strategy 2A</span>
+    <span><span class="dot dot-2b"></span>Strategy 2B</span>
+    <span><span class="dot dot-2c"></span>Strategy 2C</span>
+    <span><span class="dot dot-2c-r"></span>2C with SSS Rolloff</span>
+</div>
+
+<!-- ═══════════ SECTION 2: RESOURCE MIX ═══════════ -->
+<h2 class="section-head">Resource Deployment Under Each Strategy</h2>
+<p class="section-desc">
+    Does pure additionality (2A) over-procure VRE at lower thresholds while under-investing in the firm power and storage the grid actually needs at higher targets? Or does letting buyers claim existing clean (2C) reduce the deployment signal for new resources?
+</p>
+
+<div class="chart-wide">
+    <h3>Resource Mix by Threshold &mdash; National Aggregate (10% Participation)</h3>
+    <div class="chart-note">Demand-weighted average across all 7 ISOs. Stacked by resource category.</div>
+    <div class="chart-container-lg"><canvas id="chartResourceMix"></canvas></div>
+</div>
+
+<div class="chart-row">
+    <div class="chart-panel">
+        <h3>VRE vs. Firm Power Ratio</h3>
+        <div class="chart-note">How the balance of variable renewables to firm/storage shifts across thresholds</div>
+        <div class="chart-container"><canvas id="chartVREFirm"></canvas></div>
+    </div>
+    <div class="chart-panel">
+        <h3>New-Build vs. Existing Procurement</h3>
+        <div class="chart-note">Share of total procurement that is new-build (drives learning curves) vs. existing</div>
+        <div class="chart-container"><canvas id="chartNewVsExisting"></canvas></div>
+    </div>
+</div>
+
+<div class="insight-callout" id="insightResourceMix">
+    Loading resource mix insights...
+</div>
+
+<!-- ═══════════ SECTION 3: ADDITIONALITY PARADOX ═══════════ -->
+<h2 class="section-head">The Additionality Paradox</h2>
+<p class="section-desc">
+    Pure additionality (2A) maximizes new investment per buyer dollar but at steep cost. Lower-additionality strategies (2C) achieve comparable grid decarbonization cheaper &mdash; but only because they credit existing clean that was already running. The question: is "not free-riding" worth the premium?
+</p>
+
+<div class="chart-row">
+    <div class="chart-panel">
+        <h3>Cost per MWh by Threshold</h3>
+        <div class="chart-note">All-in procurement cost including PPAs, merchant contracts, and SSS allocation</div>
+        <div class="chart-container"><canvas id="chartCostComparison"></canvas></div>
+    </div>
+    <div class="chart-panel">
+        <h3>CO&#8322; Abated per Dollar</h3>
+        <div class="chart-note">Abatement efficiency: tonnes CO&#8322; displaced per $1M spent</div>
+        <div class="chart-container"><canvas id="chartAbatementEfficiency"></canvas></div>
+    </div>
+</div>
+
+<div class="chart-wide">
+    <h3>Where Do Procurement Dollars Go?</h3>
+    <div class="chart-note">Breakdown of spend by category at 90% threshold (national aggregate)</div>
+    <div class="chart-container"><canvas id="chartSpendBreakdown"></canvas></div>
+</div>
+
+<div class="insight-callout warn" id="insightAdditionality">
+    Loading additionality insights...
+</div>
+
+<!-- ═══════════ SECTION 4: LEARNING CURVES ═══════════ -->
+<h2 class="section-head">Learning Curves &mdash; Does Strategy Choice Delay Progress?</h2>
+<p class="section-desc">
+    If 2C buyers procure from the merchant pool instead of funding new-build, does cumulative deployment slow enough to delay technology cost reductions? Or does the lower cost of 2C enable higher participation rates that compensate?
+</p>
+
+<div class="chart-wide">
+    <h3>Strategy Cost at 90% CFE by Participation Level</h3>
+    <div class="chart-note">How blended procurement cost changes as more buyers adopt each strategy (Wright's Law learning effects)</div>
+    <div class="chart-container-lg"><canvas id="chartLearningCurves"></canvas></div>
+</div>
+
+<div class="insight-callout success" id="insightLearning">
+    Loading learning curve insights...
+</div>
+
+<!-- ═══════════ SECTION 5: NUCLEAR QUESTION ═══════════ -->
+<h2 class="section-head">The Nuclear Question</h2>
+<p class="section-desc">
+    Nuclear provides the 24/7 firm power that high-threshold hourly matching demands. Strategy 2C explicitly supports it via SSS. But state programs expire: NJ ZEC (2026), IL CMC (2028), NY ZEC (~2030). When they do, nuclear shifts to the merchant pool under federal 45U PTC ($15/MWh). How does this change outcomes?
+</p>
+
+<div class="chart-row">
+    <div class="chart-panel">
+        <h3>2C Stable vs. 2C Rolloff: Cost Impact</h3>
+        <div class="chart-note">Cost per MWh with stable SSS policy vs. ZEC/CMC program expiry</div>
+        <div class="chart-container"><canvas id="chartNuclearCost"></canvas></div>
+    </div>
+    <div class="chart-panel">
+        <h3>2C Stable vs. 2C Rolloff: Resource Mix Shift</h3>
+        <div class="chart-note">How resource deployment changes when SSS nuclear moves to merchant pool</div>
+        <div class="chart-container"><canvas id="chartNuclearMix"></canvas></div>
+    </div>
+</div>
+
+<div class="insight-callout" id="insightNuclear">
+    Loading nuclear sensitivity insights...
+</div>
+
+<!-- ═══════════ SECTION 6: PARTICIPATION EQUIVALENCE ═══════════ -->
+<h2 class="section-head">Participation Equivalence</h2>
+<p class="section-desc">
+    Different strategies need different participation rates to achieve the same grid decarbonization. 2A's higher cost per buyer may limit adoption, while 2C's lower cost could attract more participants &mdash; potentially offsetting the lower per-buyer additionality.
+</p>
+
+<div class="chart-wide">
+    <h3>CO&#8322; Abated by Participation Level (at 90% Threshold)</h3>
+    <div class="chart-note">How much grid decarbonization each strategy achieves as buyer participation scales</div>
+    <div class="chart-container-lg"><canvas id="chartParticipation"></canvas></div>
+</div>
+
+<div class="insight-callout" id="insightParticipation">
+    Loading participation insights...
+</div>
+
+<!-- ═══════════ SECTION 7: REGIONAL DEEP DIVES ═══════════ -->
+<h2 class="section-head">Regional Deep Dives</h2>
+<p class="section-desc">
+    Strategy outcomes vary dramatically by region. SSS-heavy ISOs (PJM, NYISO) see the biggest spread between strategies; ERCOT with zero SSS shows near-convergence.
+</p>
+
+<div id="regionalAccordions"></div>
+
+<!-- ═══════════ SECTION 8: SYNTHESIS ═══════════ -->
+<h2 class="section-head">Synthesis: Which Strategy Wins?</h2>
+
+<p class="prose">
+    There is no single "best" strategy &mdash; the answer depends on what you're optimizing for. But the data reveals clear tradeoffs.
+</p>
+
+<div class="scorecard" id="scorecardContainer"></div>
+
+<div class="insight-callout success" id="insightSynthesis">
+    Loading synthesis...
+</div>
+
+<p class="prose" id="proseSynthesis"></p>
+
+</div><!-- end article-wrapper -->
+
+<footer id="siteFooter" data-footer-note="The 8,760 Problem &mdash; Hourly Matching Strategy Comparison"></footer>
+
+<script>
+(function() {
+    'use strict';
+
+    const D = STRATEGY_CMP;
+    const STRATS = ['2A', '2B', '2C'];
+    const STRAT_COLORS = { '2A': '#6366F1', '2B': '#0EA5E9', '2C': '#22C55E', '2C_rolloff': '#EF4444' };
+    const THRESHOLDS = D.thresholds;
+    const ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP'];
+    const ISO_ORDER = ['PJM', 'NYISO', 'CAISO', 'MISO', 'NEISO', 'SPP', 'ERCOT'];
+    const T_LABELS = THRESHOLDS.map(t => t >= 99.9 ? '≥99.9%' : t + '%');
+
+    // Utility: get strategy data for an ISO at a threshold
+    function getT(strat, iso, threshold) {
+        return D.strategies[strat] && D.strategies[strat][iso] &&
+               D.strategies[strat][iso].by_threshold &&
+               D.strategies[strat][iso].by_threshold[String(threshold)];
+    }
+
+    function getP(strat, iso, partKey) {
+        return D.strategies[strat] && D.strategies[strat][iso] &&
+               D.strategies[strat][iso].by_participation &&
+               D.strategies[strat][iso].by_participation[partKey];
+    }
+
+    // Utility: aggregate across ISOs
+    function nationalAvg(strat, field) {
+        return THRESHOLDS.map(t => {
+            let sum = 0, count = 0;
+            ISOS.forEach(iso => {
+                const d = getT(strat, iso, t);
+                if (d && d[field] != null) { sum += d[field]; count++; }
+            });
+            return count > 0 ? sum / count : null;
+        });
+    }
+
+    function nationalSum(strat, field) {
+        return THRESHOLDS.map(t => {
+            let sum = 0;
+            ISOS.forEach(iso => {
+                const d = getT(strat, iso, t);
+                if (d && d[field] != null) sum += d[field];
+            });
+            return sum;
+        });
+    }
+
+    // ═══════════ HERO STATS ═══════════
+    (function buildHero() {
+        const el = document.getElementById('heroStats');
+        // Compare strategies at 90% threshold, national average
+        const costs = {};
+        const co2s = {};
+        STRATS.forEach(s => {
+            let cSum = 0, co2Sum = 0, n = 0;
+            ISOS.forEach(iso => {
+                const d = getT(s, iso, 90);
+                if (d) { cSum += d.cost; co2Sum += d.co2; n++; }
+            });
+            costs[s] = n > 0 ? (cSum / n).toFixed(0) : '—';
+            co2s[s] = n > 0 ? (co2Sum).toFixed(0) : '—';
+        });
+
+        // Cost spread
+        const costSpread = costs['2A'] !== '—' && costs['2C'] !== '—'
+            ? ((parseFloat(costs['2A']) - parseFloat(costs['2C'])) / parseFloat(costs['2C']) * 100).toFixed(0)
+            : '—';
+
+        el.innerHTML = `
+            <div class="hero-stat"><div class="val amber">$${costs['2A']}/MWh</div><div class="lbl">2A Cost (All New) @ 90%</div></div>
+            <div class="hero-stat"><div class="val blue">$${costs['2B']}/MWh</div><div class="lbl">2B Cost (Grid Baseline) @ 90%</div></div>
+            <div class="hero-stat"><div class="val green">$${costs['2C']}/MWh</div><div class="lbl">2C Cost (SSS+Tranches) @ 90%</div></div>
+            <div class="hero-stat"><div class="val red">${costSpread}%</div><div class="lbl">2A Premium over 2C</div></div>
+        `;
+    })();
+
+    // ═══════════ CHART: RESOURCE MIX ═══════════
+    (function buildResourceMix() {
+        const ctx = document.getElementById('chartResourceMix').getContext('2d');
+        const datasets = [];
+        const barGroups = [];
+
+        // Build grouped bars: for each threshold, 3 bars (2A, 2B, 2C)
+        const labels = [];
+        const vreData = {}, firmData = {}, storageData = {}, existData = {};
+        STRATS.forEach(s => { vreData[s] = []; firmData[s] = []; storageData[s] = []; existData[s] = []; });
+
+        THRESHOLDS.forEach(t => {
+            labels.push(t >= 99.9 ? '≥99.9%' : t + '%');
+            STRATS.forEach(s => {
+                let vre = 0, firm = 0, stor = 0, exist = 0, n = 0;
+                ISOS.forEach(iso => {
+                    const d = getT(s, iso, t);
+                    if (d) { vre += d.vre_twh; firm += d.firm_twh; stor += d.storage_twh; exist += d.existing_twh + d.sss_twh; n++; }
+                });
+                vreData[s].push(vre);
+                firmData[s].push(firm);
+                storageData[s].push(stor);
+                existData[s].push(exist);
+            });
+        });
+
+        // Create separate datasets for each strategy × resource category
+        const alpha = (hex, a) => hex + Math.round(a * 255).toString(16).padStart(2, '0');
+        STRATS.forEach((s, si) => {
+            const baseColor = STRAT_COLORS[s];
+            datasets.push({
+                label: s + ' VRE (Solar+Wind)',
+                data: vreData[s],
+                backgroundColor: alpha(baseColor, 0.9),
+                stack: 'stack' + si,
+                borderWidth: 0,
+            });
+            datasets.push({
+                label: s + ' Firm (Clean Firm+CCS)',
+                data: firmData[s],
+                backgroundColor: alpha(baseColor, 0.6),
+                stack: 'stack' + si,
+                borderWidth: 0,
+            });
+            datasets.push({
+                label: s + ' Storage',
+                data: storageData[s],
+                backgroundColor: alpha(baseColor, 0.35),
+                stack: 'stack' + si,
+                borderWidth: 0,
+            });
+            if (s !== '2A') {
+                datasets.push({
+                    label: s + ' Existing/SSS',
+                    data: existData[s],
+                    backgroundColor: alpha(baseColor, 0.15),
+                    stack: 'stack' + si,
+                    borderWidth: 0,
+                    borderColor: baseColor,
+                    borderDash: [3, 3],
+                });
+            }
+        });
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: { labels, datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true, position: 'bottom', labels: { font: { size: 10 }, usePointStyle: true, boxWidth: 8 } },
+                    tooltip: { mode: 'index', intersect: false }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'CFE Threshold', font: { size: 11 } } },
+                    y: { title: { display: true, text: 'TWh (sum across ISOs)', font: { size: 11 } }, beginAtZero: true }
+                }
+            }
+        });
+    })();
+
+    // ═══════════ CHART: VRE vs FIRM RATIO ═══════════
+    (function buildVREFirm() {
+        const ctx = document.getElementById('chartVREFirm').getContext('2d');
+        const datasets = STRATS.map(s => ({
+            label: 'Strategy ' + s,
+            data: THRESHOLDS.map(t => {
+                let vre = 0, firm = 0;
+                ISOS.forEach(iso => {
+                    const d = getT(s, iso, t);
+                    if (d) { vre += d.vre_twh; firm += d.firm_twh + d.storage_twh; }
+                });
+                return firm > 0 ? Math.round(vre / firm * 100) / 100 : null;
+            }),
+            borderColor: STRAT_COLORS[s],
+            backgroundColor: STRAT_COLORS[s] + '20',
+            fill: false, tension: 0.3, pointRadius: 4, borderWidth: 2,
+        }));
+
+        new Chart(ctx, {
+            type: 'line',
+            data: { labels: T_LABELS, datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: true, position: 'bottom', labels: { font: { size: 10 }, usePointStyle: true } } },
+                scales: {
+                    x: { title: { display: true, text: 'CFE Threshold', font: { size: 11 } } },
+                    y: { title: { display: true, text: 'VRE / (Firm + Storage) Ratio', font: { size: 11 } }, beginAtZero: true }
+                }
+            }
+        });
+    })();
+
+    // ═══════════ CHART: NEW vs EXISTING ═══════════
+    (function buildNewVsExisting() {
+        const ctx = document.getElementById('chartNewVsExisting').getContext('2d');
+        const datasets = STRATS.map(s => ({
+            label: 'Strategy ' + s,
+            data: THRESHOLDS.map(t => {
+                let newBuild = 0, total = 0;
+                ISOS.forEach(iso => {
+                    const d = getT(s, iso, t);
+                    if (d) {
+                        newBuild += d.vre_twh + d.firm_twh + d.storage_twh;
+                        total += d.vre_twh + d.firm_twh + d.storage_twh + d.existing_twh + d.sss_twh;
+                    }
+                });
+                return total > 0 ? Math.round(newBuild / total * 1000) / 10 : null;
+            }),
+            borderColor: STRAT_COLORS[s],
+            backgroundColor: STRAT_COLORS[s] + '20',
+            fill: false, tension: 0.3, pointRadius: 4, borderWidth: 2,
+        }));
+
+        new Chart(ctx, {
+            type: 'line',
+            data: { labels: T_LABELS, datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: true, position: 'bottom', labels: { font: { size: 10 }, usePointStyle: true } } },
+                scales: {
+                    x: { title: { display: true, text: 'CFE Threshold', font: { size: 11 } } },
+                    y: { title: { display: true, text: 'New-Build Share (%)', font: { size: 11 } }, min: 0, max: 100 }
+                }
+            }
+        });
+    })();
+
+    // ═══════════ INSIGHT: RESOURCE MIX ═══════════
+    (function buildResourceInsight() {
+        const el = document.getElementById('insightResourceMix');
+        // Compare VRE share at 70% vs 95%
+        let vre70_2a = 0, total70_2a = 0, vre95_2a = 0, total95_2a = 0;
+        let vre70_2c = 0, total70_2c = 0, vre95_2c = 0, total95_2c = 0;
+        ISOS.forEach(iso => {
+            let d = getT('2A', iso, 70);
+            if (d) { vre70_2a += d.vre_twh; total70_2a += d.vre_twh + d.firm_twh + d.storage_twh; }
+            d = getT('2A', iso, 95);
+            if (d) { vre95_2a += d.vre_twh; total95_2a += d.vre_twh + d.firm_twh + d.storage_twh; }
+            d = getT('2C', iso, 70);
+            if (d) { vre70_2c += d.vre_twh; total70_2c += d.vre_twh + d.firm_twh + d.storage_twh + d.existing_twh + d.sss_twh; }
+            d = getT('2C', iso, 95);
+            if (d) { vre95_2c += d.vre_twh; total95_2c += d.vre_twh + d.firm_twh + d.storage_twh + d.existing_twh + d.sss_twh; }
+        });
+        const vrePct70_2a = total70_2a > 0 ? (vre70_2a / total70_2a * 100).toFixed(0) : '—';
+        const vrePct95_2a = total95_2a > 0 ? (vre95_2a / total95_2a * 100).toFixed(0) : '—';
+        const vrePct70_2c = total70_2c > 0 ? (vre70_2c / total70_2c * 100).toFixed(0) : '—';
+        const vrePct95_2c = total95_2c > 0 ? (vre95_2c / total95_2c * 100).toFixed(0) : '—';
+
+        el.innerHTML = `<strong>Key finding:</strong> At 70% threshold, 2A's procurement is <strong>${vrePct70_2a}% VRE</strong> (all new-build solar and wind) vs. 2C's <strong>${vrePct70_2c}% VRE</strong> share (including existing clean). By 95%, 2A drops to <strong>${vrePct95_2a}% VRE</strong> as firm power becomes essential. The lower thresholds are where strategy choice matters most for resource mix composition &mdash; at the last mile, physics dominates and all strategies converge on similar firm + storage requirements.`;
+    })();
+
+    // ═══════════ CHART: COST COMPARISON ═══════════
+    (function buildCostComparison() {
+        const ctx = document.getElementById('chartCostComparison').getContext('2d');
+        const datasets = STRATS.map(s => ({
+            label: 'Strategy ' + s,
+            data: nationalAvg(s, 'cost'),
+            borderColor: STRAT_COLORS[s],
+            backgroundColor: STRAT_COLORS[s] + '15',
+            fill: false, tension: 0.3, pointRadius: 4, borderWidth: 2.5,
+        }));
+
+        new Chart(ctx, {
+            type: 'line',
+            data: { labels: T_LABELS, datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true, position: 'bottom', labels: { font: { size: 10 }, usePointStyle: true } },
+                    tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': $' + (ctx.parsed.y || 0).toFixed(0) + '/MWh' } }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'CFE Threshold', font: { size: 11 } } },
+                    y: { title: { display: true, text: '$/MWh', font: { size: 11 } }, beginAtZero: true }
+                }
+            }
+        });
+    })();
+
+    // ═══════════ CHART: ABATEMENT EFFICIENCY ═══════════
+    (function buildAbatement() {
+        const ctx = document.getElementById('chartAbatementEfficiency').getContext('2d');
+        const datasets = STRATS.map(s => ({
+            label: 'Strategy ' + s,
+            data: THRESHOLDS.map(t => {
+                let totalCost = 0, totalCO2 = 0;
+                ISOS.forEach(iso => {
+                    const d = getT(s, iso, t);
+                    if (d) { totalCost += d.total_cost_m; totalCO2 += d.co2; }
+                });
+                return totalCost > 0 ? Math.round(totalCO2 / totalCost * 10000) / 10 : null;
+            }),
+            borderColor: STRAT_COLORS[s],
+            fill: false, tension: 0.3, pointRadius: 4, borderWidth: 2.5,
+        }));
+
+        new Chart(ctx, {
+            type: 'line',
+            data: { labels: T_LABELS, datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: true, position: 'bottom', labels: { font: { size: 10 }, usePointStyle: true } } },
+                scales: {
+                    x: { title: { display: true, text: 'CFE Threshold', font: { size: 11 } } },
+                    y: { title: { display: true, text: 'MMT CO₂ / $B spent', font: { size: 11 } }, beginAtZero: true }
+                }
+            }
+        });
+    })();
+
+    // ═══════════ CHART: SPEND BREAKDOWN ═══════════
+    (function buildSpendBreakdown() {
+        const ctx = document.getElementById('chartSpendBreakdown').getContext('2d');
+        const cats = ['VRE PPAs', 'Firm PPAs', 'Storage PPAs', 'Existing/Merchant', 'SSS (Free)'];
+        const catColors = [RESOURCE_COLORS.solar, RESOURCE_COLORS.nuclear, RESOURCE_COLORS.battery, '#9CA3AF', '#D1D5DB'];
+
+        const datasets = cats.map((cat, ci) => ({
+            label: cat,
+            data: STRATS.map(s => {
+                let val = 0;
+                ISOS.forEach(iso => {
+                    const d = getT(s, iso, 90);
+                    if (!d || !d.resources) return;
+                    Object.entries(d.resources).forEach(([rk, rv]) => {
+                        const rn = rk.toLowerCase();
+                        if (ci === 0 && (rn === 'solar' || rn === 'wind' || rn === 'offshore_wind')) val += rv.cost_m || 0;
+                        else if (ci === 1 && (rn === 'clean_firm' || rn === 'ccs' || rn === 'nuclear_uprate' || rn === 'geothermal')) val += rv.cost_m || 0;
+                        else if (ci === 2 && (rn === 'battery' || rn === 'ldes' || rn === 'green_h2')) val += rv.cost_m || 0;
+                        else if (ci === 3 && (rn === 'existing_merchant')) val += rv.cost_m || 0;
+                        else if (ci === 4 && (rn === 'grid_mix_allocation' || rn === 'sss_allocation')) val += rv.cost_m || 0;
+                    });
+                });
+                return Math.round(val);
+            }),
+            backgroundColor: catColors[ci],
+        }));
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: { labels: STRATS.map(s => 'Strategy ' + s), datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true, position: 'bottom', labels: { font: { size: 10 }, usePointStyle: true, boxWidth: 10 } },
+                    tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': $' + ctx.parsed.y.toLocaleString() + 'M' } }
+                },
+                scales: {
+                    x: { stacked: true },
+                    y: { stacked: true, title: { display: true, text: 'Total Spend ($M)', font: { size: 11 } } }
+                }
+            }
+        });
+    })();
+
+    // ═══════════ INSIGHT: ADDITIONALITY ═══════════
+    (function() {
+        const el = document.getElementById('insightAdditionality');
+        let cost2a = 0, cost2c = 0, co2_2a = 0, co2_2c = 0, n = 0;
+        ISOS.forEach(iso => {
+            const da = getT('2A', iso, 90), dc = getT('2C', iso, 90);
+            if (da && dc) {
+                cost2a += da.cost; cost2c += dc.cost;
+                co2_2a += da.co2; co2_2c += dc.co2;
+                n++;
+            }
+        });
+        const costPremium = n > 0 ? ((cost2a / n - cost2c / n) / (cost2c / n) * 100).toFixed(0) : '—';
+        const co2Gap = (co2_2a - co2_2c).toFixed(0);
+        el.innerHTML = `<strong>The paradox:</strong> At 90% threshold, 2A costs <strong>${costPremium}% more</strong> than 2C per MWh &mdash; but abates <strong>${co2Gap} MMT more CO&#8322;</strong> across ISOs. Every 2A dollar funds new-build; 2C redirects ~30-40% of procurement to existing assets that were already generating clean power. The efficiency question is whether that cost premium is worth the marginal CO&#8322; displacement, or whether lower-cost 2C could attract enough additional participants to exceed 2A's total abatement.`;
+    })();
+
+    // ═══════════ CHART: LEARNING CURVES ═══════════
+    (function buildLearning() {
+        const ctx = document.getElementById('chartLearningCurves').getContext('2d');
+        const wrights = D.wrights;
+        if (!wrights || !wrights.figure8) {
+            ctx.canvas.parentElement.innerHTML = '<p style="color:#9CA3AF;text-align:center;padding:40px;">Wright\'s Law data not available</p>';
+            return;
+        }
+
+        const pcts = wrights.figure8.participation_pcts || [];
+        const labels = pcts.map(p => (p * 100).toFixed(0) + '%');
+
+        const datasets = [];
+        if (wrights.figure8.blended_2c) {
+            datasets.push({
+                label: 'Strategy 2C (blended)',
+                data: wrights.figure8.blended_2c,
+                borderColor: STRAT_COLORS['2C'],
+                fill: false, tension: 0.3, pointRadius: 3, borderWidth: 2.5,
+            });
+        }
+        if (wrights.strategy_cost_90) {
+            if (wrights.strategy_cost_90.strat_2a) {
+                datasets.push({
+                    label: 'Strategy 2A',
+                    data: wrights.strategy_cost_90.strat_2a,
+                    borderColor: STRAT_COLORS['2A'],
+                    fill: false, tension: 0.3, pointRadius: 3, borderWidth: 2.5,
+                });
+            }
+            if (wrights.strategy_cost_90.strat_2b) {
+                datasets.push({
+                    label: 'Strategy 2B',
+                    data: wrights.strategy_cost_90.strat_2b,
+                    borderColor: STRAT_COLORS['2B'],
+                    fill: false, tension: 0.3, pointRadius: 3, borderWidth: 2.5,
+                });
+            }
+        }
+
+        new Chart(ctx, {
+            type: 'line',
+            data: { labels, datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true, position: 'bottom', labels: { font: { size: 10 }, usePointStyle: true } },
+                    tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': $' + (ctx.parsed.y || 0).toFixed(1) + '/MWh' } }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Buyer Participation Rate', font: { size: 11 } } },
+                    y: { title: { display: true, text: 'Blended Cost ($/MWh)', font: { size: 11 } }, beginAtZero: false }
+                }
+            }
+        });
+    })();
+
+    // ═══════════ INSIGHT: LEARNING ═══════════
+    (function() {
+        const el = document.getElementById('insightLearning');
+        el.innerHTML = `<strong>Learning curve dynamics:</strong> Strategy 2A deploys the most new-build capacity per buyer, driving faster Wright's Law cost reductions for emerging technologies (advanced nuclear, CCS, LDES). But 2C's lower cost enables wider adoption &mdash; if 2C achieves 2&times; the participation rate of 2A, the aggregate new-build deployment (and thus learning) can match or exceed 2A. The critical variable is <strong>demand elasticity</strong>: how many more buyers will adopt at 2C's lower price point vs. 2A's premium.`;
+    })();
+
+    // ═══════════ CHART: NUCLEAR COST ═══════════
+    (function buildNuclearCost() {
+        const ctx = document.getElementById('chartNuclearCost').getContext('2d');
+        const datasets = [];
+        ['2C', '2C_rolloff'].forEach(s => {
+            datasets.push({
+                label: s === '2C' ? '2C Stable SSS' : '2C SSS Rolloff',
+                data: THRESHOLDS.map(t => {
+                    let sum = 0, n = 0;
+                    ISOS.forEach(iso => {
+                        const d = getT(s, iso, t);
+                        if (d) { sum += d.cost; n++; }
+                    });
+                    return n > 0 ? sum / n : null;
+                }),
+                borderColor: STRAT_COLORS[s],
+                fill: false, tension: 0.3, pointRadius: 4, borderWidth: 2.5,
+                borderDash: s === '2C_rolloff' ? [6, 3] : [],
+            });
+        });
+
+        new Chart(ctx, {
+            type: 'line',
+            data: { labels: T_LABELS, datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: true, position: 'bottom', labels: { font: { size: 10 }, usePointStyle: true } } },
+                scales: {
+                    x: { title: { display: true, text: 'CFE Threshold', font: { size: 11 } } },
+                    y: { title: { display: true, text: '$/MWh', font: { size: 11 } }, beginAtZero: true }
+                }
+            }
+        });
+    })();
+
+    // ═══════════ CHART: NUCLEAR MIX SHIFT ═══════════
+    (function buildNuclearMix() {
+        const ctx = document.getElementById('chartNuclearMix').getContext('2d');
+        // Show the difference in existing/SSS TWh between stable and rolloff
+        const datasets = [
+            {
+                label: '2C Stable: Existing+SSS TWh',
+                data: THRESHOLDS.map(t => {
+                    let sum = 0;
+                    ISOS.forEach(iso => { const d = getT('2C', iso, t); if (d) sum += d.existing_twh + d.sss_twh; });
+                    return sum;
+                }),
+                backgroundColor: STRAT_COLORS['2C'] + '60',
+                borderColor: STRAT_COLORS['2C'],
+                borderWidth: 2,
+            },
+            {
+                label: '2C Rolloff: Existing+SSS TWh',
+                data: THRESHOLDS.map(t => {
+                    let sum = 0;
+                    ISOS.forEach(iso => { const d = getT('2C_rolloff', iso, t); if (d) sum += d.existing_twh + d.sss_twh; });
+                    return sum;
+                }),
+                backgroundColor: STRAT_COLORS['2C_rolloff'] + '40',
+                borderColor: STRAT_COLORS['2C_rolloff'],
+                borderWidth: 2, borderDash: [6, 3],
+            },
+        ];
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: { labels: T_LABELS, datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: true, position: 'bottom', labels: { font: { size: 10 }, usePointStyle: true } } },
+                scales: {
+                    x: { title: { display: true, text: 'CFE Threshold', font: { size: 11 } } },
+                    y: { title: { display: true, text: 'Existing + SSS TWh', font: { size: 11 } }, beginAtZero: true }
+                }
+            }
+        });
+    })();
+
+    // ═══════════ INSIGHT: NUCLEAR ═══════════
+    (function() {
+        const el = document.getElementById('insightNuclear');
+        let costStable = 0, costRolloff = 0, n = 0;
+        ISOS.forEach(iso => {
+            const ds = getT('2C', iso, 90), dr = getT('2C_rolloff', iso, 90);
+            if (ds && dr) { costStable += ds.cost; costRolloff += dr.cost; n++; }
+        });
+        const diff = n > 0 ? ((costRolloff / n - costStable / n)).toFixed(1) : '—';
+        el.innerHTML = `<strong>Nuclear sensitivity:</strong> When ZEC/CMC programs expire, SSS nuclear shifts from free (Layer 1) to merchant pricing ($4/MWh under 45U PTC). At 90% threshold, this increases 2C's national average cost by <strong>$${diff}/MWh</strong>. The grid doesn't lose nuclear capacity &mdash; plants keep running under federal tax credits &mdash; but buyers lose the "free" allocation and must contract it at merchant rates. Supporting existing nuclear through 2C provides comparable hourly matching benefits at lower cost, but its continuation depends on policy stability.`;
+    })();
+
+    // ═══════════ CHART: PARTICIPATION ═══════════
+    (function buildParticipation() {
+        const ctx = document.getElementById('chartParticipation').getContext('2d');
+        const partKeys = ['5pct', '10pct', '20pct', '40pct'];
+        const partLabels = ['5%', '10%', '20%', '40%'];
+        const datasets = STRATS.map(s => ({
+            label: 'Strategy ' + s,
+            data: partKeys.map(pk => {
+                let co2 = 0;
+                ISOS.forEach(iso => {
+                    const d = getP(s, iso, pk);
+                    if (d) co2 += d.co2;
+                });
+                return co2;
+            }),
+            borderColor: STRAT_COLORS[s],
+            backgroundColor: STRAT_COLORS[s] + '20',
+            fill: false, tension: 0.3, pointRadius: 6, borderWidth: 2.5,
+        }));
+
+        new Chart(ctx, {
+            type: 'line',
+            data: { labels: partLabels, datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: true, position: 'bottom', labels: { font: { size: 10 }, usePointStyle: true } } },
+                scales: {
+                    x: { title: { display: true, text: 'Buyer Participation Rate', font: { size: 11 } } },
+                    y: { title: { display: true, text: 'Total CO₂ Abated (MMT)', font: { size: 11 } }, beginAtZero: true }
+                }
+            }
+        });
+    })();
+
+    // ═══════════ INSIGHT: PARTICIPATION ═══════════
+    (function() {
+        const el = document.getElementById('insightParticipation');
+        // Compare 2A at 10% vs 2C at various participation
+        let co2_2a_10 = 0;
+        ISOS.forEach(iso => { const d = getP('2A', iso, '10pct'); if (d) co2_2a_10 += d.co2; });
+
+        let co2_2c_10 = 0, co2_2c_20 = 0;
+        ISOS.forEach(iso => {
+            let d = getP('2C', iso, '10pct'); if (d) co2_2c_10 += d.co2;
+            d = getP('2C', iso, '20pct'); if (d) co2_2c_20 += d.co2;
+        });
+
+        const equiv = co2_2c_20 >= co2_2a_10 ? '20%' : '>40%';
+        el.innerHTML = `<strong>Participation equivalence:</strong> 2A at 10% participation abates <strong>${co2_2a_10.toFixed(0)} MMT CO&#8322;</strong> across ISOs at 90% threshold. 2C at the same participation abates <strong>${co2_2c_10.toFixed(0)} MMT</strong> &mdash; less per-buyer additionality. But 2C at 20% participation reaches <strong>${co2_2c_20.toFixed(0)} MMT</strong>. If 2C's ~30% lower cost attracts roughly double the participation, total grid decarbonization converges. The question is whether the market's demand elasticity makes this realistic.`;
+    })();
+
+    // ═══════════ REGIONAL ACCORDIONS ═══════════
+    (function buildRegionalAccordions() {
+        const container = document.getElementById('regionalAccordions');
+        const sssBadge = twh => twh >= 40 ? 'sss-high' : twh >= 15 ? 'sss-mid' : twh > 0 ? 'sss-low' : 'sss-none';
+
+        ISO_ORDER.forEach((iso, idx) => {
+            const sss = D.sss_twh[iso] || 0;
+            const context = D.iso_context[iso] || '';
+            const accId = 'acc-' + iso;
+            const chartMixId = 'chart-mix-' + iso;
+            const chartCostId = 'chart-cost-' + iso;
+
+            const html = `
+            <div class="accordion" id="${accId}">
+                <div class="accordion-header" onclick="toggleAccordion('${accId}', '${iso}')">
+                    <span class="accordion-chevron">&#9654;</span>
+                    <span class="accordion-title">${iso}</span>
+                    <span class="accordion-badge ${sssBadge(sss)}">${sss} TWh SSS</span>
+                </div>
+                <div class="accordion-body">
+                    <div class="accordion-content">
+                        <p class="iso-context">${context}</p>
+                        <div class="chart-row">
+                            <div class="chart-panel">
+                                <h3>Resource Mix at Key Thresholds</h3>
+                                <div class="chart-container-sm"><canvas id="${chartMixId}"></canvas></div>
+                            </div>
+                            <div class="chart-panel">
+                                <h3>Cost per MWh by Threshold</h3>
+                                <div class="chart-container-sm"><canvas id="${chartCostId}"></canvas></div>
+                            </div>
+                        </div>
+                        <div class="insight-callout" id="insight-${iso}">Loading ${iso} insights...</div>
+                    </div>
+                </div>
+            </div>`;
+            container.insertAdjacentHTML('beforeend', html);
+        });
+    })();
+
+    // Accordion toggle + lazy chart rendering
+    const renderedAccordions = {};
+    window.toggleAccordion = function(accId, iso) {
+        const el = document.getElementById(accId);
+        el.classList.toggle('open');
+        if (el.classList.contains('open') && !renderedAccordions[iso]) {
+            renderedAccordions[iso] = true;
+            renderISOCharts(iso);
+        }
+    };
+
+    function renderISOCharts(iso) {
+        const keyT = [70, 85, 90, 95, 99];
+        const tLabels = keyT.map(t => t + '%');
+
+        // Resource mix chart
+        const ctxMix = document.getElementById('chart-mix-' + iso).getContext('2d');
+        const mixDatasets = [];
+        STRATS.forEach((s, si) => {
+            const vreD = [], firmD = [], storD = [], existD = [];
+            keyT.forEach(t => {
+                const d = getT(s, iso, t);
+                vreD.push(d ? d.vre_twh : 0);
+                firmD.push(d ? d.firm_twh : 0);
+                storD.push(d ? d.storage_twh : 0);
+                existD.push(d ? d.existing_twh + d.sss_twh : 0);
+            });
+            const c = STRAT_COLORS[s];
+            mixDatasets.push({ label: s + ' VRE', data: vreD, backgroundColor: c + 'E6', stack: 'st' + si, borderWidth: 0 });
+            mixDatasets.push({ label: s + ' Firm', data: firmD, backgroundColor: c + '99', stack: 'st' + si, borderWidth: 0 });
+            mixDatasets.push({ label: s + ' Storage', data: storD, backgroundColor: c + '59', stack: 'st' + si, borderWidth: 0 });
+            if (s !== '2A') {
+                mixDatasets.push({ label: s + ' Existing', data: existD, backgroundColor: c + '26', stack: 'st' + si, borderWidth: 0 });
+            }
+        });
+
+        new Chart(ctxMix, {
+            type: 'bar',
+            data: { labels: tLabels, datasets: mixDatasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { title: { display: true, text: 'CFE %', font: { size: 10 } } },
+                    y: { title: { display: true, text: 'TWh', font: { size: 10 } }, beginAtZero: true }
+                }
+            }
+        });
+
+        // Cost chart
+        const ctxCost = document.getElementById('chart-cost-' + iso).getContext('2d');
+        const costDatasets = STRATS.concat(['2C_rolloff']).map(s => ({
+            label: s === '2C_rolloff' ? '2C Rolloff' : s,
+            data: THRESHOLDS.map(t => { const d = getT(s, iso, t); return d ? d.cost : null; }),
+            borderColor: STRAT_COLORS[s],
+            fill: false, tension: 0.3, pointRadius: 3, borderWidth: 2,
+            borderDash: s === '2C_rolloff' ? [5, 3] : [],
+        }));
+
+        new Chart(ctxCost, {
+            type: 'line',
+            data: { labels: T_LABELS, datasets: costDatasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: true, position: 'bottom', labels: { font: { size: 9 }, usePointStyle: true, boxWidth: 6 } } },
+                scales: {
+                    x: { title: { display: true, text: 'CFE %', font: { size: 10 } } },
+                    y: { title: { display: true, text: '$/MWh', font: { size: 10 } }, beginAtZero: true }
+                }
+            }
+        });
+
+        // ISO insight
+        const insightEl = document.getElementById('insight-' + iso);
+        const d2a = getT('2A', iso, 90);
+        const d2c = getT('2C', iso, 90);
+        const sss = D.sss_twh[iso] || 0;
+        if (d2a && d2c) {
+            const costGap = ((d2a.cost - d2c.cost) / d2c.cost * 100).toFixed(0);
+            const co2Gap = (d2a.co2 - d2c.co2).toFixed(1);
+            if (sss === 0) {
+                insightEl.innerHTML = `<strong>${iso}:</strong> With zero SSS, all three strategies produce nearly identical outcomes. The additionality distinction is moot in a fully deregulated market with no state clean mandates. Cost gap between 2A and 2C is only <strong>${costGap}%</strong> — driven entirely by merchant existing clean (wind, solar) that 2C can contract cheaply.`;
+            } else {
+                insightEl.innerHTML = `<strong>${iso}:</strong> With <strong>${sss} TWh SSS</strong>, 2C saves <strong>${costGap}%</strong> vs 2A at 90% threshold. The SSS layer absorbs ${sss} TWh of buyer demand at zero cost. But 2A deploys <strong>${co2Gap} MMT more CO&#8322; abatement</strong> through pure new-build. The tradeoff: 2C's cost savings could fund ${costGap > 30 ? 'significantly' : 'somewhat'} higher participation rates.`;
+            }
+        }
+    }
+
+    // ═══════════ SCORECARD ═══════════
+    (function buildScorecard() {
+        const el = document.getElementById('scorecardContainer');
+        const scores = [
+            { icon: '&#128176;', title: 'Cost Efficiency', text: '<strong>2C wins.</strong> SSS + merchant tranches reduce costs 20-40% vs 2A. Lower barrier to participation.' },
+            { icon: '&#127793;', title: 'Additionality', text: '<strong>2A wins.</strong> Every dollar funds new capacity. Maximum market signal for clean energy deployment.' },
+            { icon: '&#9889;', title: 'Grid-Mix Alignment', text: '<strong>Tie at high thresholds.</strong> Physics dominates above 90% — all strategies converge on similar firm + storage needs. 2A may over-procure VRE below 80%.' },
+            { icon: '&#128300;', title: 'Learning Curves', text: '<strong>2A per-buyer, 2C at scale.</strong> 2A drives faster per-buyer learning, but 2C\'s lower cost can attract more buyers, potentially matching aggregate deployment.' },
+            { icon: '&#9762;', title: 'Nuclear Support', text: '<strong>2C wins.</strong> Explicit SSS layer supports existing nuclear that provides essential 24/7 firm power. 2A offers no mechanism to prevent uneconomic retirement.' },
+            { icon: '&#127919;', title: 'Participation Needed', text: '<strong>2C needs ~1.5-2× less participation</strong> for equivalent grid decarbonization, thanks to lower per-buyer cost. But per-buyer impact is also lower.' },
+        ];
+
+        el.innerHTML = scores.map(s => `
+            <div class="score-item">
+                <span class="score-icon">${s.icon}</span>
+                <div><h4>${s.title}</h4><p>${s.text}</p></div>
+            </div>
+        `).join('');
+    })();
+
+    // ═══════════ SYNTHESIS ═══════════
+    (function buildSynthesis() {
+        document.getElementById('insightSynthesis').innerHTML = `
+            <strong>Bottom line:</strong> No strategy dominates across all dimensions. <strong>2A</strong> is the purest form of corporate climate action &mdash; maximum additionality, maximum market signal &mdash; but its high cost limits adoption and may over-deploy VRE at lower thresholds. <strong>2C</strong> is the most economically efficient path to high-threshold hourly matching, but its reliance on SSS credits means buyers aren't directly funding the new resources the grid needs. <strong>2B</strong> sits in between but offers the least coherent policy rationale. The optimal real-world strategy likely combines 2C's pragmatism (accepting SSS at lower thresholds) with 2A's ambition (new-build requirements at higher thresholds), scaled by what participation rate each can actually achieve.
+        `;
+
+        document.getElementById('proseSynthesis').innerHTML = `
+            The core insight is that <strong>strategy choice matters most at lower thresholds (50-80%)</strong>, where the additionality rules determine whether buyers deploy VRE or support existing clean. Above 90%, physics takes over: all strategies need similar amounts of firm power and storage regardless of accounting rules. The real question isn't "which strategy is best?" &mdash; it's "which strategy achieves the highest total participation × per-buyer impact?" That product, not the per-buyer metric alone, determines actual grid decarbonization.
+        `;
+    })();
+
+})();
+</script>
+
+</body>
+</html>
