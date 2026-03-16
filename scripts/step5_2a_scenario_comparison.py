@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# ARCHIVED — Produces scenario-comparison-data.js for the archived
+# scenario_comparison.html page. No live downstream consumers.
 """Scenario comparison: reads pre-computed A and B results, builds queues, trajectories, and comparison output.
 
 Reads intermediate JSON files produced by the Scenario A and Scenario B scripts,
