@@ -1,5 +1,5 @@
 /**
- * Market Simulator — Setup Page Logic
+ * Market Simulation Screening Tool — Setup Page Logic
  * Handles form interactions, preset buttons, mode switching, and form submission.
  */
 
@@ -41,18 +41,12 @@ document.querySelectorAll('.mode-toggle .toggle-btn').forEach(btn => {
     });
 });
 
-// ── ISO selection ──
+// ── ISO selection — always single-select (all modes) ──
 document.querySelectorAll('.iso-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-        const mode = document.querySelector('.mode-toggle .toggle-btn.active')?.dataset.mode;
-        if (mode === 'snapshot') {
-            // Single select in snapshot mode
-            document.querySelectorAll('.iso-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-        } else {
-            // Multi-select in trajectory/sweep mode
-            btn.classList.toggle('active');
-        }
+        // Single select in all modes
+        document.querySelectorAll('.iso-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
         updateISOSummary();
         updateGeothermalVisibility();
     });
@@ -129,22 +123,6 @@ document.querySelectorAll('.collapsible-header').forEach(header => {
     });
 });
 
-// ── Nuclear retirement slider ──
-const slider = document.getElementById('nuclearRetirementSlider');
-const sliderValue = document.getElementById('nuclearRetirementValue');
-const sliderInput = document.getElementById('nuclear_retirement');
-
-slider.addEventListener('input', () => {
-    sliderValue.textContent = `$${slider.value}`;
-    sliderInput.value = slider.value;
-});
-
-sliderInput.addEventListener('input', () => {
-    const val = Math.max(10, Math.min(60, parseInt(sliderInput.value) || 30));
-    slider.value = val;
-    sliderValue.textContent = `$${val}`;
-});
-
 // ── Learning curves toggle ──
 document.querySelectorAll('#learningToggle .toggle-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -213,12 +191,20 @@ document.getElementById('simulationForm').addEventListener('submit', async (e) =
 
 function collectFormData() {
     const mode = document.querySelector('.mode-toggle .toggle-btn.active').dataset.mode;
-    const selectedISOs = Array.from(document.querySelectorAll('.iso-btn.active')).map(b => b.dataset.iso);
+    const selectedISO = document.querySelector('.iso-btn.active')?.dataset.iso || 'CAISO';
+
+    // Build per-resource TX overrides (only non-empty values)
+    const txOverrides = {};
+    ['solar', 'wind', 'offshore_wind', 'nuclear', 'ccs_ccgt', 'geothermal'].forEach(res => {
+        const el = document.getElementById(`tx_override_${res}`);
+        if (el && el.value !== '') {
+            txOverrides[res] = parseFloat(el.value);
+        }
+    });
 
     const params = {
         mode: mode,
-        iso: selectedISOs[0],
-        isos: selectedISOs,
+        iso: selectedISO,
         fuel_prices: {
             gas: parseFloat(document.getElementById('fuel_gas').value),
             coal: parseFloat(document.getElementById('fuel_coal').value),
@@ -255,6 +241,11 @@ function collectFormData() {
             ccs_ccgt: parseFloat(document.getElementById('lcoe_ccs').value),
             geothermal: parseFloat(document.getElementById('lcoe_geo').value || 55),
         },
+        fossil_lcoes: {
+            gas_ccgt: parseFloat(document.getElementById('new_gas_ccgt_lcoe').value),
+            gas_ct: parseFloat(document.getElementById('new_gas_ct_lcoe').value),
+            coal: parseFloat(document.getElementById('new_coal_lcoe').value),
+        },
         incentives: {
             ptc_wind: parseFloat(document.getElementById('ptc_wind').value) || 0,
             ptc_solar: parseFloat(document.getElementById('ptc_solar').value) || 0,
@@ -277,6 +268,7 @@ function collectFormData() {
         wholesale_price_override: document.getElementById('wholesale_override').value ?
             parseFloat(document.getElementById('wholesale_override').value) : null,
         transmission_level: document.querySelector('#txToggle .toggle-btn.active')?.dataset.value || 'Medium',
+        tx_overrides: txOverrides,
         q45: document.querySelector('#q45Toggle .toggle-btn.active')?.dataset.value === '1',
         ccs_credit_override: document.getElementById('ccs_credit_override').value ?
             parseFloat(document.getElementById('ccs_credit_override').value) : null,
