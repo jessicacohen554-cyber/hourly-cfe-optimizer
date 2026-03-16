@@ -204,15 +204,11 @@
     // Pages archived: procurement_comparison.html (Legacy — superseded)
     // Pages merged: pipeline_map.html folded into pipeline.html
     // Pages archived: grid_animation.html (ERCOT Grid Animation — moved to archive/)
+    // Pages archived: building_blocks.html, ipp_smartargets.html, market_convergence.html, troubleshooting_step3_vs_5d.html
+    // Pages removed from nav: optimizer_methodology.html, consequential_vacuum.html (tiles removed, pages kept)
     const NAV_ITEMS = [
         { label: 'Home', href: 'home.html' },
-        {
-            label: 'About',
-            children: [
-                { label: 'Overview', href: 'about.html' },
-                { label: 'Methodology', href: 'optimizer_methodology.html' }
-            ]
-        },
+        { label: 'About', href: 'about.html' },
         {
             label: 'Supply Side',
             children: [
@@ -227,7 +223,6 @@
             label: 'Demand Side',
             children: [
                 { label: 'Carbon Accounting', href: 'GHG-accounting-overview.html' },
-                { label: 'Consequential Scaling Analysis', href: 'consequential_vacuum.html' },
                 { label: 'Strategy Deep Dive', href: 'strategy_deep_dive.html' },
                 { label: 'Procurement Strategy Dashboard', href: 'procurement_deployment.html' },
                 { label: 'Strategy Assessment', href: 'cfe_strategy_assessment.html' }
