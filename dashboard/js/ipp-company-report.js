@@ -1504,7 +1504,7 @@
 
     // ─── Section 8: Gas Development Analysis ───────────────
     function renderGasDevelopment() {
-        const fb = co.fan_bands?.all;
+        const fb = co.fan_bands?.reference;
         if (!fb) return;
 
         // Determine gas fleet characteristics
