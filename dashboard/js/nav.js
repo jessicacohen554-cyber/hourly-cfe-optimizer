@@ -209,6 +209,13 @@
     const NAV_ITEMS = [
         { label: 'Home', href: 'home.html' },
         {
+            label: 'Interactive Tools',
+            children: [
+                { label: 'The Grid (Optimizer)', href: 'dashboard.html' },
+                { label: 'Procurement Deployment Matrix', href: 'procurement_deployment.html' }
+            ]
+        },
+        {
             label: 'Supply Side',
             children: [
                 { label: 'US Power Market', href: 'gen_market_overview.html' },
@@ -233,17 +240,16 @@
             children: [
                 { label: 'CO\u2082 Abatement', href: 'abatement_dashboard.html' },
                 { label: 'Clean Firm', href: 'clean_firm_case.html' },
-                { label: 'Clean Asset Value', href: 'lmp_trends.html' },
-                { label: 'Nuclear Retirement Risk', href: 'ref-nuclear-retirement.html' }
+                { label: 'Clean Asset Value', href: 'lmp_trends.html' }
             ]
         },
+        { label: 'Nuclear Risk', href: 'ref-nuclear-retirement.html' },
         {
             label: 'About',
             children: [
                 { label: 'Methodology', href: 'optimizer_methodology.html' },
                 { label: 'Research Overview', href: 'about.html' },
-                { label: 'Literature Review', href: 'lit-review.html' },
-                { label: 'Reference Library', href: 'reference.html' }
+                { label: 'Literature Review', href: 'lit-review.html' }
             ]
         },
     ];
