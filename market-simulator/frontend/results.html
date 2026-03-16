@@ -96,12 +96,33 @@
             </div>
         </div>
 
+        <!-- Plant-Level Summary KPI Cards -->
+        <div class="kpi-grid" id="plantStats" style="display:none;">
+            <div class="kpi-card" style="border-left: 4px solid #4A7C2E;">
+                <div class="kpi-value" id="statPlantOperating">--</div>
+                <div class="kpi-label">Operating Plants</div>
+            </div>
+            <div class="kpi-card" style="border-left: 4px solid #F59E0B;">
+                <div class="kpi-value" id="statPlantAtRisk">--</div>
+                <div class="kpi-label">At-Risk Plants</div>
+            </div>
+            <div class="kpi-card" style="border-left: 4px solid #DC2626;">
+                <div class="kpi-value" id="statPlantStranded">--</div>
+                <div class="kpi-label">Stranded Plants</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value" id="statPlantTotal">--</div>
+                <div class="kpi-label">Total Plants</div>
+            </div>
+        </div>
+
         <!-- Run ID & Export Bar -->
         <div class="run-bar" id="runBar" style="display:none;">
             <div class="run-id-badge" id="runIdBadge"></div>
             <div class="run-actions">
                 <button class="btn-export" id="btnExportCharts" title="Save all charts as PNG images to the results directory">Export Charts</button>
                 <button class="btn-export" id="btnDownloadCSV" title="Download results data as CSV">Download CSV</button>
+                <button class="btn-export" id="btnDownloadPlantCSV" title="Download detailed per-plant economics (EIA 860 generator-level)">Download Plant-Level CSV</button>
             </div>
         </div>
 

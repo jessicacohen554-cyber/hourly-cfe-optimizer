@@ -21,6 +21,7 @@ import time
 import argparse
 import hashlib
 import numpy as np
+import pandas as pd
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, SCRIPT_DIR)
@@ -412,6 +413,119 @@ def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw
     stack.sort(key=lambda x: x[2])
 
     return stack, total_fossil_mw
+
+
+def build_plant_level_merit_order(iso, clean_pct, fuel_level='Medium',
+                                   carbon_price=0, nox_price=0.0, sox_price=0.0,
+                                   custom_fuel_prices=None, custom_heat_rates=None,
+                                   custom_vom=None, fleet_df=None):
+    """Build plant-level merit-order stack using real EIA 860 generator data.
+
+    Unlike build_merit_order_stack() which uses 4 aggregated unit types with average
+    heat rates, this function creates a stack entry for each individual generator
+    using its actual reported heat rate from EIA Form 860.
+
+    Args:
+        iso: ISO region
+        clean_pct: clean energy threshold
+        fuel_level: 'Low', 'Medium', 'High'
+        carbon_price: $/ton CO2
+        nox_price: $/ton NOx allowance
+        sox_price: $/ton SOx allowance
+        custom_fuel_prices: dict override
+        custom_heat_rates: not used (we use actual per-plant rates)
+        custom_vom: dict override for VOM by unit type
+        fleet_df: Pre-loaded DataFrame from load_iso_fleet(). If None, loads it.
+
+    Returns:
+        plant_stack: list of dicts with keys:
+            plant_id, gen_id, entity_name, plant_name, unit_type, capacity_mw,
+            heat_rate, marginal_cost, latitude, longitude, county, state,
+            fuel_type, prime_mover, online_year, co2_rate, nox_rate, sox_rate
+        total_capacity_mw: total fossil MW
+    """
+    # Import here to avoid circular imports
+    from fleet_model import load_iso_fleet, _classify_unit
+
+    if fleet_df is None:
+        fleet_df = load_iso_fleet(iso)
+
+    if fleet_df is None or len(fleet_df) == 0:
+        # Fallback to aggregated stack
+        return None, 0
+
+    fp = custom_fuel_prices if custom_fuel_prices else FUEL_PRICES[fuel_level]
+    vm = custom_vom if custom_vom else VOM
+    adder_rate = COST_BASED_ADDERS.get(iso, TEN_PERCENT_ADDER)
+    adder = 1.0 + adder_rate
+
+    # Classify each generator and compute marginal cost
+    plant_stack = []
+
+    for _, row in fleet_df.iterrows():
+        # Classify unit type using the module-level function
+        unit_type = _classify_unit(
+            str(row.get('prime_mover', '')), str(row.get('fuel_type', '')))
+        if unit_type is None:
+            continue  # Skip non-fossil generators
+
+        cap_mw = float(row.get('capacity_mw', 0))
+        if cap_mw <= 0:
+            continue
+
+        # Use actual heat rate if available, else type default
+        hr = row.get('heat_rate')
+        if pd.isna(hr) or hr is None or hr <= 0:
+            hr = HEAT_RATES.get(unit_type, 10.0)
+        else:
+            hr = float(hr)
+
+        fuel_key = {'coal_steam': 'coal', 'gas_ccgt': 'gas', 'gas_ct': 'gas', 'oil_ct': 'oil'}[unit_type]
+
+        co2_rate = CO2_RATES.get(unit_type, 0.5)
+        nox_rate = NOX_RATES.get(unit_type, 0.5)
+        sox_rate = SOX_RATES.get(unit_type, 0.5)
+
+        # Marginal cost
+        mc = (hr * fp[fuel_key] + vm.get(unit_type, 4.0)
+              + co2_rate * carbon_price)
+        if nox_price > 0:
+            mc += nox_rate * nox_price / 2000.0
+        if sox_price > 0:
+            mc += sox_rate * sox_price / 2000.0
+        mc *= adder
+
+        online_year = row.get('online_year')
+        age = 2025 - int(online_year) if pd.notna(online_year) and online_year else None
+
+        plant_stack.append({
+            'plant_id': row.get('plant_id'),
+            'gen_id': row.get('gen_id'),
+            'entity_name': row.get('entity_name', ''),
+            'plant_name': row.get('plant_name', ''),
+            'unit_type': unit_type,
+            'capacity_mw': cap_mw,
+            'heat_rate': round(hr, 2),
+            'marginal_cost': round(mc, 2),
+            'latitude': row.get('latitude'),
+            'longitude': row.get('longitude'),
+            'county': row.get('county', ''),
+            'state': row.get('state', ''),
+            'fuel_type': row.get('fuel_type', ''),
+            'prime_mover': row.get('prime_mover', ''),
+            'online_year': online_year,
+            'age_years': age,
+            'co2_rate': co2_rate,
+            'nox_rate': nox_rate,
+            'sox_rate': sox_rate,
+        })
+
+    # Sort by marginal cost (cheapest first)
+    plant_stack.sort(key=lambda x: x['marginal_cost'])
+
+    total_mw = sum(p['capacity_mw'] for p in plant_stack)
+
+    return plant_stack, total_mw
 
 
 # ══════════════════════════════════════════════════════════════════════════════
