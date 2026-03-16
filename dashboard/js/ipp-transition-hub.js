@@ -10,6 +10,64 @@
 (function () {
     'use strict';
 
+    // ─── Glass-morphism chart styling helpers ───────────────
+    function toRGBA(color, alpha) {
+        if (!color || typeof color !== 'string') return color;
+        if (color.startsWith('rgba(')) return color.replace(/,\s*[\d.]+\)$/, ', ' + alpha + ')');
+        if (color.startsWith('rgb(')) return color.replace('rgb(', 'rgba(').replace(')', ', ' + alpha + ')');
+        if (color.startsWith('#')) {
+            var hex = color.slice(1);
+            if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+            return 'rgba(' + parseInt(hex.slice(0,2),16) + ',' + parseInt(hex.slice(2,4),16) + ',' + parseInt(hex.slice(4,6),16) + ',' + alpha + ')';
+        }
+        return color;
+    }
+
+    function applyChartStyle(config) {
+        if (!config || !config.data || !config.data.datasets) return config;
+        var chartType = config.type;
+        config.data.datasets.forEach(function(ds) {
+            if (ds._skipStyle) return;
+            if (chartType === 'doughnut' || chartType === 'pie') {
+                if (Array.isArray(ds.backgroundColor)) {
+                    ds.borderColor = ds.backgroundColor.map(function(c) { return c; });
+                    ds.backgroundColor = ds.backgroundColor.map(function(c) { return toRGBA(c, 0.3); });
+                }
+                ds.borderWidth = ds.borderWidth || 2;
+            } else if (chartType === 'bar') {
+                if (ds.backgroundColor && !Array.isArray(ds.backgroundColor)) {
+                    if (!ds.borderColor || ds.borderColor === '#fff') {
+                        ds.borderColor = ds.backgroundColor.startsWith('rgba') ?
+                            ds.backgroundColor.replace(/,\s*[\d.]+\)$/, ', 1)') : ds.backgroundColor;
+                    }
+                    ds.backgroundColor = toRGBA(ds.borderColor, 0.25);
+                } else if (Array.isArray(ds.backgroundColor)) {
+                    ds.borderColor = ds.backgroundColor.map(function(c) {
+                        return c.startsWith && c.startsWith('rgba') ? c.replace(/,\s*[\d.]+\)$/, ', 1)') : c;
+                    });
+                    ds.backgroundColor = ds.backgroundColor.map(function(c) { return toRGBA(c, 0.25); });
+                }
+                ds.borderWidth = ds.borderWidth || 1.5;
+            } else if (chartType === 'line') {
+                if (ds.borderColor) {
+                    var saturated = ds.borderColor.startsWith && ds.borderColor.startsWith('rgba') ?
+                        ds.borderColor.replace(/,\s*[\d.]+\)$/, ', 1)') : ds.borderColor;
+                    ds.borderColor = saturated;
+                }
+                if (ds.fill !== false && ds.fill !== undefined) {
+                    ds.backgroundColor = toRGBA(ds.borderColor || '#6366F1', 0.15);
+                }
+                ds.borderWidth = ds.borderWidth || 2;
+            }
+        });
+        return config;
+    }
+
+    function styledChart(ctx, config) {
+        applyChartStyle(config);
+        return new Chart(ctx, config);
+    }
+
     const YEARS = [2023, 2030, 2035, 2040, 2045, 2050];
     const YEAR_LABELS = ['2023', '2030', '2035', '2040', '2045', '2050'];
 
@@ -176,7 +234,7 @@
             if (!ctx) return;
             const scores = computeRadarScores(co);
             const companyColor = COMPANY_COLORS[idx % COMPANY_COLORS.length];
-            new Chart(ctx, {
+            styledChart(ctx, {
                 type: 'radar',
                 data: {
                     labels: ['Nuclear', 'Diversity', 'Coal Exit', 'Gas Flex', 'Clean Build'],
@@ -304,7 +362,7 @@
             });
         });
 
-        new Chart(document.getElementById('emissionsComparisonChart'), {
+        styledChart(document.getElementById('emissionsComparisonChart'), {
             type: 'line',
             data: { labels: YEAR_LABELS, datasets },
             options: {
@@ -351,7 +409,7 @@
             return ((val - base) / Math.abs(base)) * 100;
         }
 
-        new Chart(document.getElementById('profitResilienceChart'), {
+        styledChart(document.getElementById('profitResilienceChart'), {
             type: 'bar',
             data: {
                 labels: sorted.map(c => c.shortName),
@@ -423,7 +481,7 @@
             };
         }).filter(Boolean);
 
-        new Chart(document.getElementById('fleetCompositionChart'), {
+        styledChart(document.getElementById('fleetCompositionChart'), {
             type: 'bar',
             data: {
                 labels: sorted.map(c => c.shortName),
@@ -559,7 +617,7 @@
             order: 0
         });
 
-        new Chart(ctx, {
+        styledChart(ctx, {
             type: 'line',
             data: { labels: YEAR_LABELS, datasets },
             options: {
@@ -669,7 +727,7 @@
         // Chart 1: Weighted avg MAC horizontal bar
         const macCtx = document.getElementById('macComparisonChart');
         if (macCtx) {
-            new Chart(macCtx, {
+            styledChart(macCtx, {
                 type: 'bar',
                 data: {
                     labels: sortedByMAC.map(r => r.name),
@@ -726,7 +784,7 @@
         if (costCtx) {
             const sorted = sortedByCost;
             const maxCost = Math.max(...sorted.map(r => r.totalCostB));
-            new Chart(costCtx, {
+            styledChart(costCtx, {
                 type: 'bar',
                 data: {
                     labels: sorted.map(r => r.name),
@@ -766,7 +824,7 @@
         const mwhCtx = document.getElementById('costPerMwhChart');
         if (mwhCtx) {
             const sorted = [...macResults].sort((a, b) => b.costPerMWh - a.costPerMWh);
-            new Chart(mwhCtx, {
+            styledChart(mwhCtx, {
                 type: 'bar',
                 data: {
                     labels: sorted.map(r => r.name),

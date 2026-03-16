@@ -101,10 +101,84 @@
         return ` (${pct >= 0 ? '+' : ''}${pct.toFixed(1)}% vs 2023)`;
     }
 
+    // Convert a hex or named color to rgba with given alpha
+    function toRGBA(color, alpha) {
+        if (!color || typeof color !== 'string') return color;
+        // Already rgba — adjust alpha
+        if (color.startsWith('rgba(')) {
+            return color.replace(/,\s*[\d.]+\)$/, ', ' + alpha + ')');
+        }
+        if (color.startsWith('rgb(')) {
+            return color.replace('rgb(', 'rgba(').replace(')', ', ' + alpha + ')');
+        }
+        // Hex to rgba
+        if (color.startsWith('#')) {
+            var hex = color.slice(1);
+            if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+            var r = parseInt(hex.slice(0,2), 16);
+            var g = parseInt(hex.slice(2,4), 16);
+            var b = parseInt(hex.slice(4,6), 16);
+            return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+        }
+        return color;
+    }
+
+    // Apply glass-morphism chart styling: semi-transparent fills + saturated borders
+    function applyChartStyle(config) {
+        if (!config || !config.data || !config.data.datasets) return config;
+        var chartType = config.type;
+        config.data.datasets.forEach(function(ds) {
+            // Skip datasets that explicitly opt out
+            if (ds._skipStyle) return;
+            if (chartType === 'doughnut' || chartType === 'pie') {
+                // Doughnut/pie: semi-transparent fills with saturated borders
+                if (Array.isArray(ds.backgroundColor)) {
+                    ds.borderColor = ds.backgroundColor.map(function(c) { return c; });
+                    ds.backgroundColor = ds.backgroundColor.map(function(c) { return toRGBA(c, 0.3); });
+                }
+                ds.borderWidth = ds.borderWidth || 2;
+            } else if (chartType === 'radar') {
+                // Radar: keep border saturated, make fill semi-transparent
+                if (ds.backgroundColor && !Array.isArray(ds.backgroundColor)) {
+                    ds.backgroundColor = toRGBA(ds.borderColor || ds.backgroundColor, 0.2);
+                }
+                ds.borderWidth = ds.borderWidth || 2;
+            } else if (chartType === 'bar') {
+                // Bars: semi-transparent fill + saturated border
+                if (ds.backgroundColor && !Array.isArray(ds.backgroundColor)) {
+                    if (!ds.borderColor || ds.borderColor === '#fff') {
+                        ds.borderColor = ds.backgroundColor.startsWith('rgba') ?
+                            ds.backgroundColor.replace(/,\s*[\d.]+\)$/, ', 1)') : ds.backgroundColor;
+                    }
+                    ds.backgroundColor = toRGBA(ds.borderColor, 0.25);
+                } else if (Array.isArray(ds.backgroundColor)) {
+                    ds.borderColor = ds.backgroundColor.map(function(c) {
+                        return c.startsWith && c.startsWith('rgba') ? c.replace(/,\s*[\d.]+\)$/, ', 1)') : c;
+                    });
+                    ds.backgroundColor = ds.backgroundColor.map(function(c) { return toRGBA(c, 0.25); });
+                }
+                ds.borderWidth = ds.borderWidth || 1.5;
+            } else if (chartType === 'line') {
+                // Lines: saturated border, semi-transparent fill if fill is true
+                if (ds.borderColor) {
+                    var saturated = ds.borderColor.startsWith && ds.borderColor.startsWith('rgba') ?
+                        ds.borderColor.replace(/,\s*[\d.]+\)$/, ', 1)') : ds.borderColor;
+                    ds.borderColor = saturated;
+                }
+                if (ds.fill !== false && ds.fill !== undefined) {
+                    ds.backgroundColor = toRGBA(ds.borderColor || '#6366F1', 0.15);
+                }
+                ds.borderWidth = ds.borderWidth || 2;
+            }
+        });
+        return config;
+    }
+
     function makeChart(canvasId, config) {
         const ctx = document.getElementById(canvasId);
         if (!ctx) return null;
         if (charts[canvasId]) { charts[canvasId].destroy(); }
+        applyChartStyle(config);
         charts[canvasId] = new Chart(ctx, config);
         return charts[canvasId];
     }
@@ -1488,7 +1562,7 @@
                 return v + newGasAnnualCO2 * rampFactor;
             });
 
-            charts.gasImpact = new Chart(gasImpactCtx, {
+            charts.gasImpact = new Chart(gasImpactCtx, applyChartStyle({
                 type: 'line',
                 data: {
                     labels: YEAR_LABELS,
@@ -1532,7 +1606,7 @@
                         y: { title: { display: true, text: 'Annual CO₂ (Mt)' }, min: 0, grid: { color: 'rgba(0,0,0,0.05)' } }
                     }
                 }
-            });
+            }));
         }
 
         // Gas location chart: potential new gas by ISO
@@ -1541,7 +1615,7 @@
             const relevantISOs = Object.keys(gasISOs);
             if (relevantISOs.length === 0) relevantISOs.push('None');
 
-            charts.gasLocation = new Chart(gasLocCtx, {
+            charts.gasLocation = new Chart(gasLocCtx, applyChartStyle({
                 type: 'bar',
                 data: {
                     labels: relevantISOs,
@@ -1568,7 +1642,7 @@
                         y: { stacked: true, title: { display: true, text: 'Capacity (MW)' }, grid: { color: 'rgba(0,0,0,0.05)' } }
                     }
                 }
-            });
+            }));
         }
 
         // Gas trajectory delta chart
@@ -1576,7 +1650,7 @@
         if (gasDeltaCtx) {
             const p50 = fb.emissions?.p50 || [];
             const p90 = fb.emissions?.p90 || [];
-            charts.gasDelta = new Chart(gasDeltaCtx, {
+            charts.gasDelta = new Chart(gasDeltaCtx, applyChartStyle({
                 type: 'bar',
                 data: {
                     labels: YEAR_LABELS,
@@ -1603,7 +1677,7 @@
                         y: { title: { display: true, text: 'Additional Mt CO₂/yr' }, min: 0, grid: { color: 'rgba(0,0,0,0.05)' } }
                     }
                 }
-            });
+            }));
         }
 
         // Gas narrative
