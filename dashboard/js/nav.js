@@ -208,16 +208,7 @@
     // Pages removed from nav: optimizer_methodology.html, consequential_vacuum.html (tiles removed, pages kept)
     const NAV_ITEMS = [
         { label: 'Home', href: 'home.html' },
-        {
-            label: 'About',
-            children: [
-                { label: 'Research Overview', href: 'about.html' },
-                { label: 'Optimizer Methodology', href: 'optimizer_methodology.html' },
-                { separator: true, label: 'Reference' },
-                { label: 'Methodology', href: 'reference.html' },
-                { label: 'Policy Frameworks', href: 'policy_context.html' }
-            ]
-        },
+        { label: 'Reference Library', href: 'reference.html' },
         {
             label: 'Supply Side',
             children: [
