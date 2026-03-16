@@ -1654,6 +1654,30 @@ p {
     .related-analyses-grid { grid-template-columns: 1fr; gap: 12px; }
 }
 
+/* ========== EXPLORE LINKS (cross-page navigation) ========== */
+.explore-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #6366F1;
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-decoration: none;
+    transition: transform 0.2s ease;
+    min-height: 44px;
+}
+.explore-link:hover {
+    transform: translateX(4px);
+    color: #4F46E5;
+}
+.explore-link .arrow {
+    transition: transform 0.2s ease;
+}
+.explore-link:hover .arrow {
+    transform: translateX(2px);
+}
+
 /* ========== REDUCED MOTION ========== */
 @media (prefers-reduced-motion: reduce) {
     .story-section {
