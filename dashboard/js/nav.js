@@ -233,7 +233,8 @@
             children: [
                 { label: 'CO\u2082 Abatement', href: 'abatement_dashboard.html' },
                 { label: 'Clean Firm', href: 'clean_firm_case.html' },
-                { label: 'Clean Asset Value', href: 'lmp_trends.html' }
+                { label: 'Clean Asset Value', href: 'lmp_trends.html' },
+                { label: 'Gas Lock-In', href: 'gas_lockin_buyer_influence.html' }
             ]
         },
         { label: 'Reference', href: 'reference.html' }

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gas Lock-In &amp; Buyer Influence — The 8,760 Problem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/article.css">
+<link rel="stylesheet" href="styles/cinematic.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+<script src="js/scroll-observer.js"></script>
+<script src="js/shared-footer.js"></script>
+</head>
+<body>
+<nav id="topNav"></nav>
+
+<div class="header" id="pageHeader">
+    <h1>Gas Lock-In &amp; Buyer Influence</h1>
+    <div class="subtitle">How procurement strategy shapes gas development across all 7 IPPs</div>
+    <div class="header-accent"></div>
+</div>
+
+<!-- Narrative framing -->
+<div class="insight-box" style="max-width:var(--max-content); margin:var(--space-lg) auto var(--space-xl); padding:var(--space-lg);">
+    <p style="margin:0; font-size:0.95rem; line-height:1.7; color:var(--text-secondary);">
+        <a href="home.html" class="explore-link" style="font-size:0.82rem; margin-bottom:8px; display:inline-block;">&larr; Back to the central argument</a><br>
+        The homepage posed the question: does your procurement strategy lock in gas or build the clean grid? This page quantifies the answer across all 7 IPPs &mdash; showing how buyer decisions today determine whether gas capacity becomes a defended asset or a stranded liability.
+    </p>
+</div>
+
+<!-- ==================== SECTION 1: THE LOCK-IN MECHANISM ==================== -->
+<div class="section-header">
+    <div class="section-number">1</div>
+    <h2>The Lock-In Mechanism</h2>
+    <p>Scarcity pricing and capacity market revenue make gas development rational &mdash; until procurement strategy changes the signal.</p>
+</div>
+<section class="concept-section section-light">
+    <div class="concept-inner">
+        <div class="concept-narrative-col" style="max-width:720px; margin:0 auto;">
+            <div class="narrative-card">
+                <p>As clean energy scales from 50% to 95%, wholesale prices collapse &mdash; but scarcity events persist. Gas plants earn less revenue per hour, yet the hours they are needed become more valuable. This creates a paradox: gas backup is economically marginal but physically essential, making capacity market payments the primary revenue stream that justifies new gas construction.</p>
+                <p>Procurement strategy determines whether this dynamic locks in new gas or redirects capital to firm clean alternatives. Strategy 1B (consequential netting) accepts gas as the reliability backstop. Strategy 2C (hourly matching) requires clean generation every hour, pulling forward investment in nuclear, CCS, and long-duration storage that directly displaces gas.</p>
+            </div>
+            <p style="margin-top:var(--space-md);">
+                <a href="lmp_trends.html#gas-fleet-risk" class="explore-link" style="font-size:0.82rem;">
+                    See how wholesale price collapse and scarcity dynamics create the gas incentive <span class="arrow">&rarr;</span>
+                </a>
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== SECTION 2: CROSS-COMPANY GAS EXPOSURE ==================== -->
+<div class="section-header">
+    <div class="section-number">2</div>
+    <h2>Cross-Company Gas Exposure</h2>
+    <p>How much new gas each IPP develops &mdash; and under what conditions.</p>
+</div>
+<section class="concept-section section-light">
+    <div class="concept-inner">
+        <div class="concept-chart-col">
+            <div class="chart-panel" style="width:100%;">
+                <div class="chart-title">New Gas Development by Company &amp; Scenario</div>
+                <div class="chart-container">
+                    <canvas id="gasExposureChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="concept-narrative-col">
+            <div class="narrative-card">
+                <p>Across 540 market scenarios per company, gas development decisions are driven by capacity market depth, PPA availability, and fuel price assumptions. Companies with large footprints in capacity-market ISOs (PJM, NYISO) face the strongest incentives to build gas under Strategy 1B.</p>
+                <p>The chart shows aggregate new gas capacity (GW) that each company develops across scenarios, comparing low, medium, and high market conditions.</p>
+                <span class="stat-badge stat-badge-red">Data populates when gas development analysis completes</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== SECTION 3: WHAT REPLACES GAS ==================== -->
+<div class="section-header">
+    <div class="section-number">3</div>
+    <h2>What Replaces Gas</h2>
+    <p>Under hourly matching, firm clean technologies displace gas &mdash; and their costs fall with deployment.</p>
+</div>
+<section class="concept-section section-light">
+    <div class="concept-inner">
+        <div class="concept-narrative-col" style="max-width:720px; margin:0 auto;">
+            <div class="narrative-card">
+                <p>Strategy 2C doesn&rsquo;t just avoid gas &mdash; it actively builds the alternatives. Nuclear, CCS-CCGT, and long-duration storage enter the portfolio to fill the hours that solar and wind cannot. Each deployment pushes costs down Wright&rsquo;s Law learning curves, making the next project cheaper for every buyer.</p>
+                <p>The FOAK premium for clean firm is real but temporary. At critical mass (~15&ndash;25% C&amp;I participation at 90% CFE), learning curves activate and clean firm costs fall below gas true cost within a decade.</p>
+            </div>
+            <p style="margin-top:var(--space-md);">
+                <a href="clean_firm_case.html" class="explore-link" style="font-size:0.82rem;">
+                    See the full FOAK&rarr;NOAK learning curve analysis <span class="arrow">&rarr;</span>
+                </a>
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== SECTION 4: COMPANY-BY-COMPANY DRILL-DOWN ==================== -->
+<div class="section-header">
+    <div class="section-number">4</div>
+    <h2>Company-by-Company Drill-Down</h2>
+    <p>Each IPP faces unique gas lock-in dynamics based on fleet composition, ISO footprint, and market position.</p>
+</div>
+<section class="concept-section section-light">
+    <div class="concept-inner">
+        <div class="grid-auto" style="max-width:960px; margin:0 auto;">
+            <a href="ipp_aes.html#gas-development" class="related-card">
+                <div class="related-card-tag">IPP</div>
+                <div class="related-card-title">AES Corporation</div>
+                <div class="related-card-desc">Gas development scenarios and trajectory impact</div>
+                <div class="related-card-arrow">Explore &rarr;</div>
+            </a>
+            <a href="ipp_constellation.html#gas-development" class="related-card">
+                <div class="related-card-tag">IPP</div>
+                <div class="related-card-title">Constellation Energy</div>
+                <div class="related-card-desc">Largest nuclear fleet; gas vs. nuclear reinvestment</div>
+                <div class="related-card-arrow">Explore &rarr;</div>
+            </a>
+            <a href="ipp_nextera.html#gas-development" class="related-card">
+                <div class="related-card-tag">IPP</div>
+                <div class="related-card-title">NextEra Energy</div>
+                <div class="related-card-desc">VRE leader facing gas backup trade-offs</div>
+                <div class="related-card-arrow">Explore &rarr;</div>
+            </a>
+            <a href="ipp_nrg.html#gas-development" class="related-card">
+                <div class="related-card-tag">IPP</div>
+                <div class="related-card-title">NRG Energy</div>
+                <div class="related-card-desc">Gas-heavy fleet with transition pressure</div>
+                <div class="related-card-arrow">Explore &rarr;</div>
+            </a>
+            <a href="ipp_pseg.html#gas-development" class="related-card">
+                <div class="related-card-tag">IPP</div>
+                <div class="related-card-title">PSEG</div>
+                <div class="related-card-desc">PJM-focused fleet; nuclear + gas mix</div>
+                <div class="related-card-arrow">Explore &rarr;</div>
+            </a>
+            <a href="ipp_talen.html#gas-development" class="related-card">
+                <div class="related-card-tag">IPP</div>
+                <div class="related-card-title">Talen Energy</div>
+                <div class="related-card-desc">PJM-concentrated; datacenter demand pull</div>
+                <div class="related-card-arrow">Explore &rarr;</div>
+            </a>
+            <a href="ipp_vistra.html#gas-development" class="related-card">
+                <div class="related-card-tag">IPP</div>
+                <div class="related-card-title">Vistra Energy</div>
+                <div class="related-card-desc">ERCOT/PJM split; nuclear + large gas fleet</div>
+                <div class="related-card-arrow">Explore &rarr;</div>
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- ============ RELATED ANALYSES ============ -->
+<div class="related-analyses">
+    <div class="related-analyses-title">Related Analyses</div>
+    <div class="related-analyses-grid">
+        <a href="home.html" class="related-card">
+            <div class="related-card-tag">Narrative</div>
+            <div class="related-card-title">The Central Argument</div>
+            <div class="related-card-desc">The fork in the road: how procurement strategy shapes the grid we build.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="clean_firm_case.html" class="related-card">
+            <div class="related-card-tag">Clean Firm</div>
+            <div class="related-card-title">Clean Firm Investment Case</div>
+            <div class="related-card-desc">Why the FOAK premium is temporary and how critical mass triggers learning curves.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="lmp_trends.html" class="related-card">
+            <div class="related-card-tag">Economics</div>
+            <div class="related-card-title">Clean Asset Value</div>
+            <div class="related-card-desc">Wholesale price collapse, nuclear revenue crossover, and the three eras of the market.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+        <a href="ipp_climate_transition.html" class="related-card">
+            <div class="related-card-tag">IPP Analysis</div>
+            <div class="related-card-title">IPP Climate Transition</div>
+            <div class="related-card-desc">540 scenarios across 7 generators &mdash; who transitions and who gets stranded.</div>
+            <div class="related-card-arrow">Explore &rarr;</div>
+        </a>
+    </div>
+</div>
+
+<footer id="siteFooter" data-footer-note="Gas Lock-In &amp; Buyer Influence &mdash; 2025 Snapshot Model"></footer>
+
+<script src="js/nav.js"></script>
+<script src="js/cinematic-bg.js"></script>
+</body>
+</html>
