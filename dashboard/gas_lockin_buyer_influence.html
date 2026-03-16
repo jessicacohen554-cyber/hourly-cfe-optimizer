@@ -61,7 +61,7 @@
 <!-- ==================== SECTION 2: CROSS-COMPANY GAS EXPOSURE ==================== -->
 <div class="section-header">
     <div class="section-number">2</div>
-    <h2>Cross-Company Gas Buildout Under Different Procurement Signals</h2>
+    <h2>Cross-Company Gas Exposure</h2>
     <p>How much new gas each IPP develops under market-driven conditions.</p>
 </div>
 <section class="concept-section section-light">
@@ -73,6 +73,7 @@
                     <canvas id="gasExposureChart"></canvas>
                 </div>
             </div>
+            <div class="narrative-card" id="exposureNarrative" style="margin-top:var(--space-lg);"></div>
         </div>
         <div class="concept-chart-col" style="margin-top:var(--space-xl);">
             <div class="chart-panel" style="width:100%;">
@@ -81,6 +82,7 @@
                     <canvas id="gasByISOChart"></canvas>
                 </div>
             </div>
+            <div class="narrative-card" id="isoNarrative" style="margin-top:var(--space-lg);"></div>
         </div>
     </div>
 </section>
@@ -96,23 +98,83 @@
         <div class="grid-stats" id="lockinStats" style="margin-bottom:var(--space-xl);max-width:900px;margin-left:auto;margin-right:auto;"></div>
         <div class="concept-chart-col">
             <div class="chart-panel" style="width:100%;">
-                <div class="chart-title">Cumulative Locked-In CO₂ by Company (Mt through 2050)</div>
+                <div class="chart-title">Cumulative Locked-In CO&#x2082; by Company (Mt through 2050)</div>
                 <div class="chart-container-lg">
                     <canvas id="cumulativeEmissionsChart"></canvas>
                 </div>
             </div>
+            <div class="narrative-card" id="lockinCostNarrative" style="margin-top:var(--space-lg);"></div>
         </div>
     </div>
 </section>
 
-<!-- ==================== SECTION 4: COMPANY-BY-COMPANY DRILL-DOWN ==================== -->
+<!-- ==================== SECTION 4: WHAT REPLACES GAS ==================== -->
 <div class="section-header">
     <div class="section-number">4</div>
-    <h2>Company-Level Exposure</h2>
+    <h2>What Replaces Gas</h2>
+    <p>The firm clean portfolio that enters when procurement signals shift from consequential netting to hourly matching.</p>
+</div>
+<section class="concept-section section-light">
+    <div class="concept-inner">
+        <div class="concept-chart-col" style="max-width:960px; margin:0 auto;">
+            <div class="chart-panel" style="width:100%;">
+                <div class="chart-title">Existing Clean Firm Capacity vs. New Gas at Risk by Company (MW)</div>
+                <div class="chart-container-lg">
+                    <canvas id="replacementChart"></canvas>
+                </div>
+            </div>
+            <div class="narrative-card" id="replacementNarrative" style="margin-top:var(--space-lg);"></div>
+        </div>
+        <p style="margin-top:var(--space-md); text-align:center;">
+            <a href="clean_firm_case.html" class="explore-link" style="font-size:0.82rem;">
+                See the full FOAK&rarr;NOAK learning curve and critical mass analysis <span class="arrow">&rarr;</span>
+            </a>
+        </p>
+    </div>
+</section>
+
+<!-- ==================== SECTION 5: WHAT HOURLY MATCHING CHANGES ==================== -->
+<div class="section-header">
+    <div class="section-number">5</div>
+    <h2>What Hourly Matching Changes</h2>
+    <p>The counterfactual: how does the gas buildout picture change when procurement demands clean generation every hour?</p>
+</div>
+<section class="concept-section section-light">
+    <div class="concept-inner">
+        <div class="concept-narrative-col" style="max-width:720px; margin:0 auto;">
+            <div class="narrative-card">
+                <p>High PPA market depth doesn't just avoid gas. It actively builds the alternatives. Nuclear, CCS-CCGT, and long-duration storage enter the portfolio to fill the hours that solar and wind cannot. Each deployment pushes costs down Wright's Law learning curves, making the next project cheaper for every buyer.</p>
+                <p>The FOAK premium for clean firm is real but temporary. At critical mass (~15-25% C&amp;I participation at 90% CFE), learning curves activate and clean firm costs fall below gas true cost within a decade.</p>
+            </div>
+        </div>
+        <div class="concept-chart-col" style="margin-top:var(--space-xl);">
+            <div class="chart-panel" style="width:100%;">
+                <div class="chart-title">Emissions Impact of PPA Market Depth by Company (Mt CO&#x2082; at 2040)</div>
+                <div class="chart-container-lg">
+                    <canvas id="counterfactualChart"></canvas>
+                </div>
+            </div>
+            <div class="narrative-card" id="counterfactualNarrative" style="margin-top:var(--space-lg);"></div>
+        </div>
+        <p style="margin-top:var(--space-md); text-align:center;">
+            <a href="clean_firm_case.html" class="explore-link" style="font-size:0.82rem;">
+                See the full FOAK&rarr;NOAK learning curve analysis <span class="arrow">&rarr;</span>
+            </a>
+        </p>
+    </div>
+</section>
+
+<!-- ==================== SECTION 6: COMPANY-BY-COMPANY DRILL-DOWN ==================== -->
+<div class="section-header">
+    <div class="section-number">6</div>
+    <h2>Company-by-Company Drill-Down</h2>
     <p>Each IPP faces unique gas lock-in dynamics based on fleet composition, ISO footprint, and market position.</p>
 </div>
 <section class="concept-section section-light">
     <div class="concept-inner">
+        <div class="concept-narrative-col" style="max-width:720px; margin:0 auto; margin-bottom:var(--space-lg);">
+            <div class="narrative-card" id="drilldownNarrative"></div>
+        </div>
         <div class="concept-chart-col" style="max-width:900px; margin:0 auto;">
             <div class="chart-panel" style="width:100%;">
                 <div class="chart-title">Gas Lock-In Exposure Ranking</div>
@@ -165,37 +227,6 @@
                 <div class="related-card-arrow">Explore &rarr;</div>
             </a>
         </div>
-    </div>
-</section>
-
-<!-- ==================== SECTION 5: WHAT HOURLY MATCHING CHANGES ==================== -->
-<div class="section-header">
-    <div class="section-number">5</div>
-    <h2>What Hourly Matching Changes</h2>
-    <p>Under high PPA depth, which companies shift from gas to firm clean?</p>
-</div>
-<section class="concept-section section-light">
-    <div class="concept-inner">
-        <div class="concept-narrative-col" style="max-width:720px; margin:0 auto;">
-            <div class="narrative-card">
-                <p>High PPA market depth doesn't just avoid gas. It actively builds the alternatives. Nuclear, CCS-CCGT, and long-duration storage enter the portfolio to fill the hours that solar and wind cannot. Each deployment pushes costs down Wright's Law learning curves, making the next project cheaper for every buyer.</p>
-                <p>The FOAK premium for clean firm is real but temporary. At critical mass (~15-25% C&I participation at 90% CFE), learning curves activate and clean firm costs fall below gas true cost within a decade.</p>
-            </div>
-        </div>
-        <div class="concept-chart-col" style="margin-top:var(--space-xl);">
-            <div class="chart-panel" style="width:100%;">
-                <div class="chart-title">High PPA Depth: Emissions Impact by Company (Mt CO₂ at 2040)</div>
-                <!-- DATA GAP: needs pipeline step for true 1B vs 2C comparison. Using PPA level dimension as proxy. -->
-                <div class="chart-container-lg">
-                    <canvas id="counterfactualChart"></canvas>
-                </div>
-            </div>
-        </div>
-        <p style="margin-top:var(--space-md); text-align:center;">
-            <a href="clean_firm_case.html" class="explore-link" style="font-size:0.82rem;">
-                See the full FOAK&rarr;NOAK learning curve analysis <span class="arrow">&rarr;</span>
-            </a>
-        </p>
     </div>
 </section>
 
