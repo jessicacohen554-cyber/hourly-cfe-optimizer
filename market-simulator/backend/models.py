@@ -149,6 +149,12 @@ class SimulationRequest(BaseModel):
     years: List[int] = Field(default_factory=lambda: [2030, 2035, 2040, 2045, 2050])
     custom_overrides: CustomOverrides = Field(default_factory=CustomOverrides)
 
+    # Fossil new-build LCOEs
+    fossil_lcoes: Optional[dict] = None  # {gas_ccgt: float, gas_ct: float, coal: float}
+
+    # Per-resource transmission overrides
+    tx_overrides: Optional[dict] = None  # {solar: float, wind: float, ...} — blank = use master L/M/H
+
 
 class SweepRequest(BaseModel):
     """Parameters for a full 270-scenario parametric sweep."""
@@ -299,6 +305,8 @@ class SimulationResponse(BaseModel):
     capacity_rev_time_series: Optional[HourlyProfile] = None
     supply_stack_summary: List[SupplyStackEntry] = Field(default_factory=list)
     fuel_bin_table: List[FuelBinRow] = Field(default_factory=list)
+    # Plant-level summary
+    plant_level_summary: Optional[dict] = None  # {operating: int, at_risk: int, stranded: int, total: int}
     # Run tracking
     run_id: Optional[str] = None
     narrative: Optional[str] = None
