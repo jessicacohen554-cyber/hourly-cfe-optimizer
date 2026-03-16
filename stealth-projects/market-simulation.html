@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="googlebot" content="noindex, nofollow">
+<title>Market Simulation Demo — Internal</title>
+<link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/results.css">
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+/* ── Demo controls bar ── */
+.demo-controls {
+    background: white;
+    border-bottom: 1px solid var(--glass-border);
+    padding: var(--space-lg) 0;
+    position: sticky;
+    top: 60px;
+    z-index: 100;
+    box-shadow: var(--shadow-sm);
+}
+.demo-controls-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 var(--pad-page);
+}
+.controls-grid {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xl);
+    flex-wrap: wrap;
+}
+.control-block {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.control-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+}
+
+/* Carbon price pills */
+.carbon-pills {
+    display: flex;
+    gap: 4px;
+}
+.carbon-pill {
+    padding: 8px 14px;
+    border: 1.5px solid var(--glass-border);
+    border-radius: var(--radius-pill);
+    background: white;
+    cursor: pointer;
+    font-family: var(--font);
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    transition: all 0.15s;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+}
+.carbon-pill:hover { border-color: var(--ceg-blue); color: var(--ceg-blue); }
+.carbon-pill.active { background: var(--ceg-blue); border-color: var(--ceg-blue); color: white; }
+
+/* Demo badge */
+.demo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: var(--radius-pill);
+    background: rgba(244,123,39,0.12);
+    color: var(--ceg-orange);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+/* Current scenario display */
+.scenario-display {
+    font-size: 0.9rem;
+    color: var(--text-dim);
+    font-weight: 300;
+    margin-top: var(--space-xs);
+}
+.scenario-display strong { color: var(--ceg-blue); font-weight: 600; }
+
+@media (max-width: 768px) {
+    .controls-grid { gap: var(--space-lg); }
+    .carbon-pills { flex-wrap: wrap; }
+}
+</style>
+</head>
+<body>
+
+<!-- Progress bar -->
+<div class="progress-bar"><div class="progress-bar-fill"></div></div>
+
+<!-- Nav -->
+<nav>
+    <div class="nav-logo">
+        <div class="nav-logo-mark">
+            <svg viewBox="0 0 32 32" width="32" height="32">
+                <circle cx="16" cy="16" r="14" fill="none" stroke="#2372B9" stroke-width="2"/>
+                <circle cx="16" cy="16" r="6" fill="#2372B9"/>
+                <line x1="16" y1="2" x2="16" y2="10" stroke="#2372B9" stroke-width="2"/>
+                <line x1="16" y1="22" x2="16" y2="30" stroke="#2372B9" stroke-width="2"/>
+                <line x1="2" y1="16" x2="10" y2="16" stroke="#2372B9" stroke-width="2"/>
+                <line x1="22" y1="16" x2="30" y2="16" stroke="#2372B9" stroke-width="2"/>
+            </svg>
+        </div>
+        <div>
+            <div class="nav-title">Constellation Energy</div>
+            <div class="nav-subtitle">Market Simulation Tool</div>
+        </div>
+    </div>
+    <div class="demo-badge">Demo Mode</div>
+</nav>
+
+<!-- Hero -->
+<div class="hero-section">
+    <div class="hero-inner" style="padding-bottom: 1.5rem;">
+        <div class="hero-eyebrow">Internal Screening Tool</div>
+        <h1>Market <strong>Simulation</strong></h1>
+        <p class="hero-desc">
+            Toggle fuel prices and carbon costs to see how generator economics shift across ISOs.
+            This is a simplified demo — the full tool runs a Python simulation engine.
+        </p>
+    </div>
+</div>
+
+<!-- Sticky Controls -->
+<div class="demo-controls">
+    <div class="demo-controls-inner">
+        <div class="controls-grid">
+
+            <!-- ISO selector -->
+            <div class="control-block">
+                <div class="control-label">Region</div>
+                <div class="iso-tabs" id="isoSelector" style="border-radius: var(--radius-md);">
+                    <button class="iso-tab active" data-iso="PJM">PJM</button>
+                    <button class="iso-tab" data-iso="ERCOT">ERCOT</button>
+                    <button class="iso-tab" data-iso="CAISO">CAISO</button>
+                    <button class="iso-tab" data-iso="MISO">MISO</button>
+                    <button class="iso-tab" data-iso="NYISO">NYISO</button>
+                    <button class="iso-tab" data-iso="NEISO">NEISO</button>
+                    <button class="iso-tab" data-iso="SPP">SPP</button>
+                </div>
+            </div>
+
+            <!-- Price Level L/M/H -->
+            <div class="control-block">
+                <div class="control-label">Fuel Prices</div>
+                <div class="toggle-btn-group" id="priceToggle">
+                    <button class="toggle-btn" data-value="Low">Low</button>
+                    <button class="toggle-btn active" data-value="Medium">Med</button>
+                    <button class="toggle-btn" data-value="High">High</button>
+                </div>
+            </div>
+
+            <!-- Carbon Price -->
+            <div class="control-block">
+                <div class="control-label">Carbon Price ($/ton)</div>
+                <div class="carbon-pills" id="carbonSelector">
+                    <button class="carbon-pill" data-carbon="10">$10</button>
+                    <button class="carbon-pill active" data-carbon="20">$20</button>
+                    <button class="carbon-pill" data-carbon="35">$35</button>
+                    <button class="carbon-pill" data-carbon="50">$50</button>
+                    <button class="carbon-pill" data-carbon="100">$100</button>
+                </div>
+            </div>
+
+        </div>
+        <div class="scenario-display" id="scenarioDisplay">
+            <strong>PJM</strong> · Medium fuel prices · $20/ton carbon
+        </div>
+    </div>
+</div>
+
+<!-- Results Content -->
+<div class="content-section">
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid" id="topStats">
+        <div class="kpi-card"><div class="kpi-value" id="statCleanPct">--</div><div class="kpi-unit">%</div><div class="kpi-label">Market Clean</div></div>
+        <div class="kpi-card"><div class="kpi-value" id="statAvgLMP">--</div><div class="kpi-unit">$/MWh</div><div class="kpi-label">Avg LMP</div></div>
+        <div class="kpi-card"><div class="kpi-value" id="statNewGW">--</div><div class="kpi-unit">GW</div><div class="kpi-label">New Clean</div></div>
+        <div class="kpi-card"><div class="kpi-value" id="statNucRev">--</div><div class="kpi-unit">$/MWh</div><div class="kpi-label">Nuclear Rev</div></div>
+        <div class="kpi-card"><div class="kpi-value" id="statCCSBreakeven">--</div><div class="kpi-unit">$/ton</div><div class="kpi-label">CCS Breakeven</div></div>
+    </div>
+
+    <!-- Charts -->
+    <div class="chart-card">
+        <div class="chart-card-header"><h3>Merit-Order Stack</h3><p>Fossil generators ordered by marginal cost. Units above the LMP line are uneconomic.</p></div>
+        <div class="chart-container-lg" id="chartMeritOrder"></div>
+    </div>
+
+    <div class="grid-2col">
+        <div class="chart-card">
+            <div class="chart-card-header"><h3>Generator Profitability</h3><p>Revenue vs cost per generator class</p></div>
+            <div class="chart-container" id="chartProfitability"></div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-card-header"><h3>Nuclear Revenue Stack</h3><p>Energy + capacity + PTC breakdown</p></div>
+            <div class="chart-container" id="chartNuclearRevenue"></div>
+        </div>
+    </div>
+
+    <div class="chart-card">
+        <div class="chart-card-header"><h3>LMP Impact Curve</h3><p>How average LMP changes as clean penetration increases — price suppression effect</p></div>
+        <div class="chart-container" id="chartLMPImpact"></div>
+    </div>
+
+    <div class="grid-2col">
+        <div class="chart-card">
+            <div class="chart-card-header"><h3>CCS Retrofit vs New Gas</h3><p>Carbon price crossover: when does CCS beat unabated CCGT?</p></div>
+            <div class="chart-container" id="chartCCSBreakeven"></div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-card-header"><h3>What Gets Built</h3><p>Resource mix of new clean capacity additions</p></div>
+            <div class="chart-container" id="chartWhatBuilt"></div>
+        </div>
+    </div>
+
+    <div class="chart-card">
+        <div class="chart-card-header"><h3>Fossil Fleet Economics by Heat Rate Bin</h3><p>Dispatch hours and capacity factor by generator type</p></div>
+        <div class="chart-container-lg" id="chartFossilBins"></div>
+    </div>
+
+    <div class="grid-2col">
+        <div class="chart-card">
+            <div class="chart-card-header"><h3>Gas Fleet Efficiency Shift</h3><p>How dispatch shifts between efficient vs old gas as carbon price rises</p></div>
+            <div class="chart-container" id="chartGasShift"></div>
+        </div>
+        <div class="chart-card">
+            <div class="chart-card-header"><h3>Sensitivity: Gas Price vs Carbon Price</h3><p>Market-cleared clean % under different fuel/carbon combinations</p></div>
+            <div class="chart-container" id="chartSensitivity"></div>
+        </div>
+    </div>
+
+    <!-- Generator Table -->
+    <div class="chart-card">
+        <div class="chart-card-header" style="cursor:pointer;" onclick="toggleTable()">
+            <h3>Generator Economics Detail <span id="tableToggleIcon" style="font-size:0.7rem;color:var(--text-dim);">&#9660;</span></h3>
+        </div>
+        <div id="generatorTableWrap" style="max-height:0;overflow:hidden;transition:max-height 0.3s;">
+            <table class="data-table" id="generatorTable">
+                <thead><tr><th>Generator</th><th>Capacity MW</th><th>Marginal Cost</th><th>Dispatch Hrs</th><th>CF</th><th>Revenue</th><th>Profit $/MWh</th><th>Status</th></tr></thead>
+                <tbody id="generatorTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Footer -->
+<footer>
+    <div class="footer-brand"><strong>Constellation Energy</strong> · Market Simulation Tool</div>
+    <div class="footer-note">Demo mode — synthetic data for prototype feedback. Not for decision-making.</div>
+</footer>
+<div class="bottom-banner"></div>
+
+<!-- Scripts -->
+<script src="js/demo-engine.js"></script>
+<script>
+// ── State ──
+let currentISO = 'PJM';
+let currentPriceLevel = 'Medium';
+let currentCarbon = 20;
+
+const PLOTLY_LAYOUT = {
+    font: { family: "'Source Sans Pro', Calibri, Arial, sans-serif", color: '#1A232F' },
+    paper_bgcolor: 'rgba(0,0,0,0)',
+    plot_bgcolor: 'rgba(0,0,0,0)',
+    margin: { t: 30, r: 30, b: 50, l: 60 },
+    autosize: true,
+};
+
+const UNIT_COLORS = {
+    coal_steam: '#2C3E50', gas_ccgt: '#2372B9', gas_ct: '#007FA4', oil_ct: '#9B6B3A'
+};
+const CLEAN_COLORS = {
+    solar: '#FBB254', wind: '#6BA543', nuclear: '#2372B9', battery: '#CADB2E',
+    offshore_wind: '#007FA4', ccs_ccgt: '#7F8F97', ldes: '#F47B27'
+};
+
+// ── ISO tabs ──
+document.querySelectorAll('#isoSelector .iso-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('#isoSelector .iso-tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentISO = btn.dataset.iso;
+        update();
+    });
+});
+
+// ── Price toggle ──
+document.querySelectorAll('#priceToggle .toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('#priceToggle .toggle-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentPriceLevel = btn.dataset.value;
+        update();
+    });
+});
+
+// ── Carbon pills ──
+document.querySelectorAll('#carbonSelector .carbon-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('#carbonSelector .carbon-pill').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentCarbon = parseInt(btn.dataset.carbon);
+        update();
+    });
+});
+
+// ── Table toggle ──
+function toggleTable() {
+    const wrap = document.getElementById('generatorTableWrap');
+    const icon = document.getElementById('tableToggleIcon');
+    const isOpen = wrap.style.maxHeight && wrap.style.maxHeight !== '0px';
+    wrap.style.maxHeight = isOpen ? '0px' : '2000px';
+    icon.style.transform = isOpen ? '' : 'rotate(180deg)';
+}
+
+// ── Helpers ──
+function setText(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text || '--';
+}
+function fmtNum(val, d=1) { return val == null || isNaN(val) ? '--' : Number(val).toFixed(d); }
+
+function placeholder(id) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#7F8F97;font-style:italic;">No data</div>';
+}
+
+// ── Main update ──
+function update() {
+    const data = runDemoSimulation(currentISO, currentPriceLevel, currentCarbon);
+    if (!data) return;
+
+    // Scenario display
+    const fuelPrices = PRICE_LEVELS[currentPriceLevel];
+    document.getElementById('scenarioDisplay').innerHTML =
+        `<strong>${currentISO}</strong> · ${currentPriceLevel} fuel (Gas $${fuelPrices.gas}/MMBtu, Coal $${fuelPrices.coal}) · $${currentCarbon}/ton carbon`;
+
+    // KPIs
+    setText('statCleanPct', fmtNum(data.market_outcome_clean_pct));
+    setText('statAvgLMP', '$' + fmtNum(data.avg_lmp));
+    setText('statNewGW', fmtNum(data.new_capacity_gw));
+    setText('statNucRev', '$' + fmtNum(data.nuclear_revenue.total_mwh));
+    setText('statCCSBreakeven', '$' + fmtNum(data.ccs_breakeven_carbon_price, 0));
+
+    // Charts
+    renderMeritOrder(data);
+    renderProfitability(data);
+    renderNuclearRevenue(data);
+    renderLMPImpact(data);
+    renderCCSBreakeven(data);
+    renderWhatBuilt(data);
+    renderFossilBins(data);
+    renderGasShift(data);
+    renderSensitivity(data);
+    renderTable(data);
+}
+
+function renderMeritOrder(data) {
+    const gens = [...data.generator_economics].sort((a, b) => a.marginal_cost - b.marginal_cost);
+    Plotly.newPlot('chartMeritOrder', [{
+        x: gens.map(g => g.unit_type.replace(/_/g, ' ')),
+        y: gens.map(g => g.capacity_mw / 1000),
+        marker: { color: gens.map(g => UNIT_COLORS[g.unit_type] || '#9CA3AF') },
+        type: 'bar',
+        customdata: gens.map(g => g.marginal_cost),
+        hovertemplate: '%{x}<br>%{y:.1f} GW<br>MC: $%{customdata:.1f}/MWh<extra></extra>',
+    }, {
+        x: gens.map(g => g.unit_type.replace(/_/g, ' ')),
+        y: gens.map(g => g.marginal_cost),
+        type: 'scatter', mode: 'lines+markers',
+        name: 'Marginal Cost',
+        yaxis: 'y2',
+        line: { color: '#F47B27', width: 3 },
+        marker: { size: 8 },
+        hovertemplate: '$%{y:.1f}/MWh<extra></extra>',
+    }], {
+        ...PLOTLY_LAYOUT,
+        yaxis: { title: 'Capacity (GW)', gridcolor: '#f0f0f0' },
+        yaxis2: { title: '$/MWh', overlaying: 'y', side: 'right', gridcolor: '#f0f0f0' },
+        showlegend: false,
+        shapes: [{
+            type: 'line', x0: -0.5, x1: gens.length - 0.5,
+            y0: data.avg_lmp, y1: data.avg_lmp, yref: 'y2',
+            line: { color: '#F47B27', width: 2, dash: 'dash' }
+        }],
+        annotations: [{
+            x: gens.length - 1, y: data.avg_lmp, yref: 'y2',
+            text: `Avg LMP: $${data.avg_lmp.toFixed(1)}`,
+            showarrow: true, arrowhead: 0, ax: -60, ay: -25,
+            font: { color: '#F47B27', size: 12, weight: 600 }
+        }],
+    }, { responsive: true });
+}
+
+function renderProfitability(data) {
+    const gens = data.generator_economics;
+    const names = gens.map(g => g.unit_type.replace(/_/g, ' '));
+    Plotly.newPlot('chartProfitability', [
+        { x: names, y: gens.map(g => g.avg_revenue_mwh), name: 'Revenue', type: 'bar', marker: { color: '#6BA543' } },
+        { x: names, y: gens.map(g => g.marginal_cost), name: 'Cost', type: 'bar', marker: { color: '#F47B27' } },
+    ], { ...PLOTLY_LAYOUT, barmode: 'group', yaxis: { title: '$/MWh', gridcolor: '#f0f0f0' } }, { responsive: true });
+}
+
+function renderNuclearRevenue(data) {
+    const nuc = data.nuclear_revenue;
+    Plotly.newPlot('chartNuclearRevenue', [{
+        x: ['Energy', 'Capacity', 'PTC', 'Total'],
+        y: [nuc.energy_rev_mwh, nuc.capacity_rev_mwh, nuc.ptc_mwh, nuc.total_mwh],
+        type: 'bar',
+        marker: { color: ['#2372B9', '#007FA4', '#6BA543', '#1A232F'] },
+        hovertemplate: '%{x}: $%{y:.1f}/MWh<extra></extra>',
+    }], { ...PLOTLY_LAYOUT, yaxis: { title: '$/MWh', gridcolor: '#f0f0f0' } }, { responsive: true });
+}
+
+function renderLMPImpact(data) {
+    const sweep = data.threshold_sweep;
+    const thresholds = Object.keys(sweep).map(Number).sort((a, b) => a - b);
+    Plotly.newPlot('chartLMPImpact', [{
+        x: thresholds, y: thresholds.map(t => sweep[t].avg_lmp),
+        type: 'scatter', mode: 'lines+markers',
+        line: { color: '#2372B9', width: 3 }, marker: { size: 6 },
+        hovertemplate: '%{x}% clean: $%{y:.1f}/MWh<extra></extra>',
+    }], {
+        ...PLOTLY_LAYOUT,
+        xaxis: { title: 'Clean Energy %', gridcolor: '#f0f0f0' },
+        yaxis: { title: 'Avg LMP ($/MWh)', gridcolor: '#f0f0f0' },
+    }, { responsive: true });
+}
+
+function renderCCSBreakeven(data) {
+    const ccs = data.ccs_analysis;
+    Plotly.newPlot('chartCCSBreakeven', [
+        { x: ccs.carbon_prices, y: ccs.existing_ccgt_cost, name: 'Existing CCGT', mode: 'lines', line: { color: '#2372B9', width: 3 } },
+        { x: ccs.carbon_prices, y: ccs.ccs_retrofit_cost, name: 'CCS Retrofit', mode: 'lines', line: { color: '#64748B', width: 3, dash: 'dash' } },
+        { x: ccs.carbon_prices, y: ccs.new_gas_cost, name: 'New Efficient Gas', mode: 'lines', line: { color: '#6BA543', width: 3 } },
+    ], {
+        ...PLOTLY_LAYOUT,
+        xaxis: { title: 'Carbon Price ($/ton)', gridcolor: '#f0f0f0' },
+        yaxis: { title: '$/MWh Total Cost', gridcolor: '#f0f0f0' },
+    }, { responsive: true });
+}
+
+function renderWhatBuilt(data) {
+    const built = data.what_gets_built;
+    const resources = Object.keys(built).filter(r => built[r] > 0);
+    if (!resources.length) { placeholder('chartWhatBuilt'); return; }
+    Plotly.newPlot('chartWhatBuilt', [{
+        labels: resources.map(r => r.replace(/_/g, ' ')),
+        values: resources.map(r => built[r]),
+        type: 'pie',
+        marker: { colors: resources.map(r => CLEAN_COLORS[r] || '#9CA3AF') },
+        textinfo: 'label+percent',
+        hovertemplate: '%{label}: %{value:.1f} GW (%{percent})<extra></extra>',
+    }], PLOTLY_LAYOUT, { responsive: true });
+}
+
+function renderFossilBins(data) {
+    const gens = data.generator_economics;
+    const names = gens.map(g => g.unit_type.replace(/_/g, ' '));
+    Plotly.newPlot('chartFossilBins', [
+        { x: names, y: gens.map(g => g.dispatch_hours), name: 'Dispatch Hours', type: 'bar', marker: { color: '#2372B9' } },
+        { x: names, y: gens.map(g => g.capacity_factor * 100), name: 'CF %', type: 'scatter', mode: 'lines+markers', yaxis: 'y2', line: { color: '#F47B27', width: 3 }, marker: { size: 8 } },
+    ], {
+        ...PLOTLY_LAYOUT,
+        yaxis: { title: 'Dispatch Hours', gridcolor: '#f0f0f0' },
+        yaxis2: { title: 'Capacity Factor %', overlaying: 'y', side: 'right', range: [0, 100] },
+    }, { responsive: true });
+}
+
+function renderGasShift(data) {
+    const shift = data.gas_fleet_shift;
+    Plotly.newPlot('chartGasShift', [
+        { x: shift.map(s => s.carbon_price), y: shift.map(s => s.efficient_cf * 100), name: 'Efficient CCGT', mode: 'lines', line: { color: '#6BA543', width: 3 } },
+        { x: shift.map(s => s.carbon_price), y: shift.map(s => s.avg_cf * 100), name: 'Average CCGT', mode: 'lines', line: { color: '#6B7280', width: 3 } },
+        { x: shift.map(s => s.carbon_price), y: shift.map(s => s.old_cf * 100), name: 'Old/Inefficient', mode: 'lines', line: { color: '#9CA3AF', width: 3, dash: 'dash' } },
+    ], {
+        ...PLOTLY_LAYOUT,
+        xaxis: { title: 'Carbon Price ($/ton)', gridcolor: '#f0f0f0' },
+        yaxis: { title: 'Capacity Factor %', gridcolor: '#f0f0f0', range: [0, 100] },
+    }, { responsive: true });
+}
+
+function renderSensitivity(data) {
+    const sens = data.sensitivity_matrix;
+    Plotly.newPlot('chartSensitivity', [{
+        z: sens.values,
+        x: sens.gas_prices.map(p => '$' + p),
+        y: sens.carbon_prices.map(p => '$' + p),
+        type: 'heatmap',
+        colorscale: [[0, '#E0E6EF'], [0.5, '#2372B9'], [1, '#6BA543']],
+        colorbar: { title: 'Clean %' },
+        hovertemplate: 'Gas: %{x}/MMBtu<br>Carbon: %{y}/ton<br>Clean: %{z:.1f}%<extra></extra>',
+    }], {
+        ...PLOTLY_LAYOUT,
+        xaxis: { title: 'Gas Price ($/MMBtu)' },
+        yaxis: { title: 'Carbon Price ($/ton)' },
+    }, { responsive: true });
+}
+
+function renderTable(data) {
+    const tbody = document.getElementById('generatorTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = data.generator_economics.map(g => `
+        <tr>
+            <td>${g.unit_type.replace(/_/g, ' ')}</td>
+            <td>${g.capacity_mw.toLocaleString()}</td>
+            <td>$${g.marginal_cost.toFixed(2)}</td>
+            <td>${g.dispatch_hours.toLocaleString()}</td>
+            <td>${(g.capacity_factor * 100).toFixed(1)}%</td>
+            <td>$${g.avg_revenue_mwh.toFixed(2)}</td>
+            <td style="color: ${g.profit_mwh >= 0 ? '#4A7C2E' : '#991b1b'}">$${g.profit_mwh.toFixed(2)}</td>
+            <td><span class="status-badge status-${g.status}">${g.status}</span></td>
+        </tr>
+    `).join('');
+}
+
+// ── Initial render ──
+update();
+</script>
+</body>
+</html>

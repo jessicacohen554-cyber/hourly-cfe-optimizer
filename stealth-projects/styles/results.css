@@ -1,0 +1,137 @@
+/* ============================================================================
+   RESULTS.CSS — Market Simulation Results page
+   ISO tabs, KPI grid, chart cards, status badges, generator table
+   ============================================================================ */
+
+/* ── ISO Tab Bar (sticky controls) ── */
+.iso-tab-bar {
+  background: white;
+  border-bottom: 1px solid var(--glass-border);
+  padding: var(--space-md) 0;
+  position: sticky;
+  top: 60px;
+  z-index: 100;
+  box-shadow: var(--shadow-sm);
+}
+
+.controls-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xl);
+  flex-wrap: wrap;
+  margin-top: var(--space-sm);
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.control-group label {
+  font-weight: 700;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.control-select {
+  padding: 6px 12px;
+  border: 1.5px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font);
+  font-size: 0.9rem;
+  background: white;
+  color: var(--text-bright);
+}
+
+.back-link {
+  margin-left: auto;
+  color: var(--ceg-blue);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.back-link:hover { text-decoration: underline; }
+
+/* ── KPI Grid ── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+}
+
+.kpi-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--ceg-blue), var(--ceg-teal));
+}
+
+/* ── Status badges ── */
+.status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-profitable {
+  background: rgba(107, 165, 67, 0.15);
+  color: #4A7C2E;
+}
+
+.status-marginal {
+  background: rgba(251, 178, 84, 0.15);
+  color: #9A6B1B;
+}
+
+.status-retiring {
+  background: rgba(220, 38, 38, 0.15);
+  color: #991b1b;
+}
+
+/* ── Generator table ── */
+#generatorTable td {
+  font-family: var(--font-data);
+  font-size: 0.85rem;
+  color: var(--text-bright);
+}
+
+/* ── No data state ── */
+.no-data {
+  text-align: center;
+  padding: var(--space-3xl);
+  color: var(--text-dim);
+}
+
+.no-data h3 {
+  font-size: 1.2rem;
+  margin-bottom: var(--space-sm);
+  color: var(--text-bright);
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .controls-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .back-link { margin-left: 0; }
+
+  .kpi-value { font-size: 1.5rem; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}

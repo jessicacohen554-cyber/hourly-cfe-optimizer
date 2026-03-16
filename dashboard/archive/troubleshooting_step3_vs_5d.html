@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Step 3 vs 5D Analysis — Troubleshooting</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/dashboard-ui.css">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+<script src="js/scroll-observer.js"></script>
+<script src="js/shared-footer.js"></script>
+
+<style>
+/* Page-specific: diagnostic/QA layout */
+.diag-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; align-items: center; }
+.diag-controls label { font-family: var(--font-data); font-size: 0.8rem; color: var(--text-muted); margin-right: 4px; }
+
+.threshold-matrix { width: 100%; border-collapse: collapse; }
+.threshold-matrix th, .threshold-matrix td {
+    padding: 6px 4px; font-size: 0.75rem; font-family: var(--font-mono);
+    border-bottom: 1px solid var(--border-light); text-align: center; vertical-align: top;
+}
+.threshold-matrix th { background: var(--navy-dark); color: white; position: sticky; top: 0; z-index: 2; font-size: 0.65rem; }
+.threshold-matrix tr:hover { background: rgba(56, 189, 248, 0.05); }
+.thr-label { font-weight: 700; text-align: left !important; white-space: nowrap; }
+
+.chart-cell { min-width: 140px; height: 180px; position: relative; }
+.chart-cell canvas { width: 100% !important; height: 100% !important; }
+
+.val-up { color: #16A34A; } .val-down { color: #DC2626; }
+.val-neutral { color: var(--text-muted); }
+.delta-cell { font-size: 0.7rem; }
+.delta-cell .delta { font-weight: 600; }
+
+/* Mobile: stack step3 and 5d vertically per threshold */
+@media (max-width: 768px) {
+    .threshold-matrix th, .threshold-matrix td { font-size: 0.65rem; padding: 4px 2px; }
+    .chart-cell { min-width: 120px; height: 150px; }
+}
+
+/* Comparison card layout for mobile */
+.comparison-cards { display: flex; flex-direction: column; gap: 16px; }
+.thr-card { background: white; border: 1px solid var(--border-light); border-radius: var(--radius-md); overflow: hidden; }
+.thr-card-header { background: var(--navy-dark); color: white; padding: 8px 12px; font-family: var(--font-heading); font-size: 0.9rem; display: flex; justify-content: space-between; }
+.thr-card-body { padding: 8px; }
+.thr-card-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.thr-card-row.full { grid-template-columns: 1fr; }
+.source-label { font-family: var(--font-data); font-size: 0.65rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+.source-s3 { border-left: 3px solid #0EA5E9; padding-left: 6px; }
+.source-5d { border-left: 3px solid #F59E0B; padding-left: 6px; }
+.metric-row { display: flex; justify-content: space-between; padding: 2px 0; font-size: 0.75rem; font-family: var(--font-mono); }
+.metric-label { color: var(--text-muted); }
+.metric-val { font-weight: 600; }
+.chart-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 8px 0; }
+.chart-pair canvas { width: 100%; height: 200px; }
+.chart-single { margin: 8px 0; }
+.chart-single canvas { width: 100%; height: 220px; }
+.delta-summary { background: rgba(56, 189, 248, 0.08); border-radius: var(--radius-sm); padding: 6px 8px; margin-top: 4px; font-size: 0.7rem; }
+.delta-summary .d-pos { color: #16A34A; font-weight: 600; }
+.delta-summary .d-neg { color: #DC2626; font-weight: 600; }
+
+#narrativeSection { margin-top: 24px; }
+#narrativeContent { font-family: var(--font-body); font-size: 0.85rem; line-height: 1.5; }
+#narrativeContent h3 { font-family: var(--font-heading); font-size: 1rem; margin: 12px 0 4px; }
+#narrativeContent ul { margin: 4px 0; padding-left: 16px; }
+
+.legend-bar { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; font-size: 0.7rem; font-family: var(--font-data); }
+.legend-bar span { display: flex; align-items: center; gap: 3px; }
+.legend-bar .swatch { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+.legend-bar .swatch-hatched { background: repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.3) 2px, rgba(0,0,0,0.3) 4px); }
+
+.loading { text-align: center; padding: 40px; color: var(--text-muted); font-family: var(--font-body); }
+</style>
+</head>
+<body>
+<nav id="topNav"></nav>
+
+<header class="header">
+    <h1>Step 3 vs Step 5D Comparison</h1>
+    <div class="subtitle">QA/QC: Cost Optimization vs MAC Queue Resource Mixes</div>
+    <div class="header-accent"></div>
+</header>
+
+<div class="content-section">
+    <div class="insight-box">
+        <strong>Data Sources:</strong> Step 3 CO parquets (cost optimization winners) + Step 4 annual manifests (dispatch TWh) + Step 5A CO2 parquets (emissions) vs Step 5D MAC queue parquets (sequential deployment). Scenario B excluded.
+    </div>
+    <div class="insight-box insight-warn">
+        <strong>Normalization:</strong> Step 3 uses fixed 2025 demand; Step 5D uses growing demand per target year. Costs and generation are shown as reported by each step — "Normalized" rows extrapolate apples-to-apples metrics (new build capital cost in $B, LCOE of new build only, CO₂ remaining on system) using each step's own dispatch data without re-running any calculations.
+    </div>
+
+    <div class="diag-controls">
+        <label>ISO:</label>
+        <div class="iso-selector" id="isoSelector"></div>
+    </div>
+    <div class="diag-controls">
+        <label>Sensitivity:</label>
+        <div class="toggle-btn-group" id="sensSelector"></div>
+    </div>
+
+    <div class="legend-bar" id="resourceLegend"></div>
+
+    <div id="mainContent" class="loading">Loading data...</div>
+
+    <div id="narrativeSection" style="display:none;">
+        <h2 class="section-title">Divergence Analysis</h2>
+        <div id="narrativeContent" class="card" style="padding:12px;"></div>
+    </div>
+</div>
+
+<footer id="siteFooter" data-footer-note="Troubleshooting / QA-QC Tool"></footer>
+
+<script src="js/nav.js"></script>
+<script src="js/troubleshooting-data.js"></script>
+<script>
+(function() {
+    const DATA = TROUBLESHOOTING_DATA;
+    const ISOS = DATA.metadata.isos;
+    const SENSITIVITIES = DATA.metadata.sensitivities;
+    const SENS_LABELS = DATA.metadata.sensitivity_labels;
+    const BASELINE_CO2 = DATA.metadata.baseline_co2_mt;
+
+    let currentISO = 'PJM';
+    let currentSens = 'all_med';
+    let charts = [];
+
+    // Resource color map for stacked bars
+    const R = typeof RESOURCE_COLORS !== 'undefined' ? RESOURCE_COLORS : {
+        nuclear: '#6366F1', geothermal: '#D97706', ccs: '#64748B',
+        solar: '#F59E0B', wind: '#22C55E', offshoreWind: '#009688',
+        hydro: '#0EA5E9', battery: '#06B6D4', battery8: '#0891B2',
+        ldes: '#E91E63', greenH2: '#10B981', gap: '#D1D5DB',
+        fossilGas: '#6B7280',
+    };
+
+    // Build controls
+    function buildControls() {
+        const isoSel = document.getElementById('isoSelector');
+        ISOS.forEach(iso => {
+            const btn = document.createElement('button');
+            btn.className = 'iso-btn' + (iso === currentISO ? ' active' : '');
+            btn.textContent = iso;
+            btn.onclick = () => { currentISO = iso; updateActiveButtons(); render(); };
+            isoSel.appendChild(btn);
+        });
+
+        const sensSel = document.getElementById('sensSelector');
+        SENSITIVITIES.forEach(s => {
+            const btn = document.createElement('button');
+            btn.className = (s === currentSens ? 'active' : '');
+            btn.textContent = SENS_LABELS[s];
+            btn.onclick = () => { currentSens = s; updateActiveButtons(); render(); };
+            sensSel.appendChild(btn);
+        });
+
+        // Legend
+        const legend = document.getElementById('resourceLegend');
+        const items = [
+            ['Nuclear (Existing)', R.nuclear], ['Nuclear (New)', R.nuclear + '99'],
+            ['Geothermal', R.geothermal], ['CCS-CCGT', R.ccs],
+            ['Solar', R.solar], ['Wind (Onshore)', R.wind],
+            ['Offshore Wind', R.offshoreWind], ['Hydro', R.hydro],
+            ['Battery 4hr', R.battery], ['Battery 8hr', R.battery8],
+            ['LDES', R.ldes], ['Green H₂', R.greenH2],
+            ['Curtailment', 'hatched'],
+        ];
+        items.forEach(([label, color]) => {
+            const sp = document.createElement('span');
+            const sw = document.createElement('span');
+            sw.className = 'swatch' + (color === 'hatched' ? ' swatch-hatched' : '');
+            if (color !== 'hatched') sw.style.background = color;
+            sp.appendChild(sw);
+            sp.appendChild(document.createTextNode(' ' + label));
+            legend.appendChild(sp);
+        });
+    }
+
+    function updateActiveButtons() {
+        document.querySelectorAll('#isoSelector .iso-btn').forEach(b => {
+            b.classList.toggle('active', b.textContent === currentISO);
+        });
+        document.querySelectorAll('#sensSelector button').forEach((b, i) => {
+            b.classList.toggle('active', SENSITIVITIES[i] === currentSens);
+        });
+    }
+
+    function destroyCharts() {
+        charts.forEach(c => { try { c.destroy(); } catch(e) {} });
+        charts = [];
+    }
+
+    function fmt(v, decimals) {
+        if (v === null || v === undefined || isNaN(v)) return '—';
+        const d = decimals !== undefined ? decimals : 1;
+        return Number(v).toFixed(d);
+    }
+
+    function fmtK(v) {
+        if (!v && v !== 0) return '—';
+        if (Math.abs(v) >= 1000) return (v/1000).toFixed(1) + 'k';
+        return Math.round(v).toLocaleString();
+    }
+
+    function deltaClass(v) {
+        if (!v || v === 0) return 'val-neutral';
+        return v > 0 ? 'val-up' : 'val-down';
+    }
+
+    function deltaStr(v, suffix) {
+        if (v === null || v === undefined || isNaN(v)) return '—';
+        const s = suffix || '';
+        const sign = v > 0 ? '+' : '';
+        return sign + fmt(v) + s;
+    }
+
+    // Build a stacked bar chart for one threshold comparing step3 vs step5d
+    function createResourceChart(canvas, s3, s5d, demandTwh) {
+        const labels = ['Step 3', 'Step 5D'];
+
+        // Stack order (bottom to top): nuclear existing, nuclear new, geo, ccs, solar, wind, offshore wind, hydro
+        // Then storage dispatch on top, curtailment hatched above demand line
+        // Storage charge as negative bars
+
+        function getDispatch(d) {
+            if (!d) return null;
+            const dp = d.dispatch || {};
+            return {
+                nucExist: dp.nuclear_existing || 0,
+                nucNew: dp.nuclear_new || 0,
+                geo: dp.geothermal || 0,
+                ccs: dp.ccs || (dp.ccs_dispatch || 0),
+                solar: dp.solar_dispatch || 0,
+                wind: dp.wind_dispatch || 0,
+                offshoreWind: dp.offshore_wind_dispatch || 0,
+                hydro: dp.hydro_dispatch || 0,
+                batt4Disp: dp.battery_dispatch || 0,
+                batt8Disp: dp.battery8_dispatch || 0,
+                ldesDisp: dp.ldes_dispatch || 0,
+                h2Disp: dp.h2_dispatch || 0,
+                batt4Charge: -(dp.battery_charge || 0),
+                batt8Charge: -(dp.battery8_charge || 0),
+                ldesCharge: -(dp.ldes_charge || 0),
+                h2Charge: -(dp.h2_charge || 0),
+                curtailment: dp.total_curtailment || 0,
+                solarSurplus: dp.solar_surplus || 0,
+                windSurplus: dp.wind_surplus || 0,
+                owSurplus: dp.offshore_wind_surplus || 0,
+            };
+        }
+
+        const d3 = getDispatch(s3);
+        const d5 = getDispatch(s5d);
+        if (!d3 && !d5) return null;
+
+        // For step3: curtailment comes from surplus columns in manifest
+        const s3Curt = d3 ? (d3.solarSurplus + d3.windSurplus + d3.owSurplus) : 0;
+        // For step5d: curtailment from total_curtailment
+        const s5Curt = d5 ? d5.curtailment : 0;
+
+        // Positive stack datasets
+        const datasets = [
+            { label: 'Nuclear (Existing)', data: [d3?d3.nucExist:0, d5?d5.nucExist:0], backgroundColor: R.nuclear, stack: 'pos' },
+            { label: 'Nuclear (New)', data: [d3?d3.nucNew:0, d5?d5.nucNew:0], backgroundColor: R.nuclear + 'AA', stack: 'pos' },
+            { label: 'Geothermal', data: [d3?d3.geo:0, d5?d5.geo:0], backgroundColor: R.geothermal, stack: 'pos' },
+            { label: 'CCS-CCGT', data: [d3?d3.ccs:0, d5?d5.ccs:0], backgroundColor: R.ccs, stack: 'pos' },
+            { label: 'Solar', data: [d3?d3.solar:0, d5?d5.solar:0], backgroundColor: R.solar, stack: 'pos' },
+            { label: 'Wind', data: [d3?d3.wind:0, d5?d5.wind:0], backgroundColor: R.wind, stack: 'pos' },
+            { label: 'Offshore Wind', data: [d3?d3.offshoreWind:0, d5?d5.offshoreWind:0], backgroundColor: R.offshoreWind, stack: 'pos' },
+            { label: 'Hydro', data: [d3?d3.hydro:0, d5?d5.hydro:0], backgroundColor: R.hydro, stack: 'pos' },
+            { label: 'Battery 4hr', data: [d3?d3.batt4Disp:0, d5?d5.batt4Disp:0], backgroundColor: R.battery, stack: 'pos' },
+            { label: 'Battery 8hr', data: [d3?d3.batt8Disp:0, d5?d5.batt8Disp:0], backgroundColor: R.battery8, stack: 'pos' },
+            { label: 'LDES', data: [d3?d3.ldesDisp:0, d5?d5.ldesDisp:0], backgroundColor: R.ldes, stack: 'pos' },
+            { label: 'Green H₂', data: [d3?d3.h2Disp:0, d5?d5.h2Disp:0], backgroundColor: R.greenH2, stack: 'pos' },
+            // Curtailment on top (hatched pattern — use striped via plugin or semi-transparent)
+            { label: 'Curtailment', data: [s3Curt, s5Curt], backgroundColor: 'rgba(209,213,219,0.5)', stack: 'pos',
+              borderColor: '#9CA3AF', borderWidth: 1, borderDash: [2,2] },
+            // Negative stack: storage charge
+            { label: 'Batt 4hr Charge', data: [d3?d3.batt4Charge:0, d5?d5.batt4Charge:0], backgroundColor: R.battery + '88', stack: 'neg' },
+            { label: 'Batt 8hr Charge', data: [d3?d3.batt8Charge:0, d5?d5.batt8Charge:0], backgroundColor: R.battery8 + '88', stack: 'neg' },
+            { label: 'LDES Charge', data: [d3?d3.ldesCharge:0, d5?d5.ldesCharge:0], backgroundColor: R.ldes + '88', stack: 'neg' },
+            { label: 'H₂ Charge', data: [d3?d3.h2Charge:0, d5?d5.h2Charge:0], backgroundColor: R.greenH2 + '88', stack: 'neg' },
+        ];
+
+        // Filter out all-zero datasets
+        const filteredDS = datasets.filter(ds => ds.data.some(v => Math.abs(v) > 0.01));
+
+        const demandLine = s3 ? s3.demand_twh : (s5d ? s5d.demand_twh : demandTwh);
+
+        const chart = new Chart(canvas, {
+            type: 'bar',
+            data: { labels, datasets: filteredDS },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    annotation: demandLine ? {
+                        annotations: {
+                            demandLine: {
+                                type: 'line', yMin: demandLine, yMax: demandLine,
+                                borderColor: '#EF4444', borderWidth: 2, borderDash: [4,3],
+                                label: { display: true, content: 'Demand ' + fmt(demandLine,0) + ' TWh',
+                                         position: 'start', font: { size: 9 }, color: '#EF4444',
+                                         backgroundColor: 'rgba(255,255,255,0.8)' }
+                            }
+                        }
+                    } : {},
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => ctx.dataset.label + ': ' + fmt(ctx.parsed.y) + ' TWh'
+                        }
+                    }
+                },
+                scales: {
+                    x: { stacked: true, ticks: { font: { size: 10 } } },
+                    y: { stacked: true, title: { display: true, text: 'TWh', font: { size: 10 } },
+                         ticks: { font: { size: 9 } } },
+                },
+            }
+        });
+        charts.push(chart);
+        return chart;
+    }
+
+    // Main render
+    function render() {
+        destroyCharts();
+        const container = document.getElementById('mainContent');
+        container.innerHTML = '';
+        container.className = 'comparison-cards';
+
+        const comboData = DATA.data[currentISO]?.[currentSens];
+        if (!comboData) {
+            container.innerHTML = '<div class="loading">No data for ' + currentISO + ' / ' + SENS_LABELS[currentSens] + '</div>';
+            return;
+        }
+
+        const s3List = comboData.step3 || [];
+        const s5dList = comboData.step5d || [];
+        const demandTwh = comboData.demand_twh;
+        const baselineCO2 = BASELINE_CO2[currentISO] || 0;
+
+        // Build lookup by threshold
+        const s3Map = {};
+        s3List.forEach(r => { s3Map[r.threshold] = r; });
+        const s5dMap = {};
+        s5dList.forEach(r => { s5dMap[r.threshold] = r; });
+
+        // Get union of thresholds (only 50+)
+        const allThresholds = [...new Set([
+            ...s3List.map(r => r.threshold),
+            ...s5dList.map(r => r.threshold)
+        ])].filter(t => t >= 50).sort((a,b) => a - b);
+
+        // Track biggest divergences for narrative
+        const divergences = [];
+
+        allThresholds.forEach(thr => {
+            const s3 = s3Map[thr];
+            const s5d = s5dMap[thr];
+            if (!s3 && !s5d) return;
+
+            const card = document.createElement('div');
+            card.className = 'thr-card';
+
+            // Header
+            const hdr = document.createElement('div');
+            hdr.className = 'thr-card-header';
+            const thrLabel = thr >= 99.99 ? '≥99.99%' : thr + '%';
+            const s3Demand = s3 ? fmt(s3.demand_twh, 0) : '—';
+            const s5dDemand = s5d ? fmt(s5d.demand_twh, 0) : '—';
+            hdr.innerHTML = '<span>' + thrLabel + ' CFE</span>' +
+                '<span style="font-size:0.65rem;opacity:0.8">S3: ' + (s3 ? fmt(s3.match_score) + '% / ' + s3Demand + ' TWh' : '—') +
+                ' | 5D: ' + (s5d ? fmt(s5d.match_score) + '% / ' + s5dDemand + ' TWh' : '—') + '</span>';
+            card.appendChild(hdr);
+
+            const body = document.createElement('div');
+            body.className = 'thr-card-body';
+
+            // Column 1: Resource Mix Charts (side by side)
+            // Compute total clean gen for each
+            const s3Disp = s3 ? s3.dispatch : null;
+            const s5dDisp = s5d ? s5d.dispatch : null;
+            const s3TotalClean = s3Disp ? (
+                (s3Disp.nuclear_existing||0) + (s3Disp.nuclear_new||0) + (s3Disp.geothermal||0) +
+                (s3Disp.ccs||0) + (s3Disp.ccs_dispatch||0) + (s3Disp.solar_dispatch||0) + (s3Disp.wind_dispatch||0) +
+                (s3Disp.offshore_wind_dispatch||0) + (s3Disp.hydro_dispatch||0)
+            ) : 0;
+            const s5dTotalClean = s5dDisp ? (
+                (s5dDisp.nuclear_existing||0) + (s5dDisp.nuclear_new||0) + (s5dDisp.geothermal||0) +
+                (s5dDisp.ccs||0) + (s5dDisp.ccs_dispatch||0) + (s5dDisp.solar_dispatch||0) + (s5dDisp.wind_dispatch||0) +
+                (s5dDisp.offshore_wind_dispatch||0) + (s5dDisp.hydro_dispatch||0)
+            ) : 0;
+            const chartLabel = document.createElement('div');
+            chartLabel.innerHTML = '<strong style="font-size:0.75rem;">Resource Mix (TWh)</strong>' +
+                '<span style="font-size:0.65rem;color:var(--text-muted);margin-left:8px;">S3 clean: ' + fmt(s3TotalClean,0) + ' | 5D clean: ' + fmt(s5dTotalClean,0) + '</span>';
+            body.appendChild(chartLabel);
+
+            const chartDiv = document.createElement('div');
+            chartDiv.className = 'chart-single';
+            const canvas = document.createElement('canvas');
+            canvas.height = 220;
+            chartDiv.appendChild(canvas);
+            body.appendChild(chartDiv);
+            // Render chart after DOM insertion
+            setTimeout(() => createResourceChart(canvas, s3, s5d, demandTwh), 0);
+
+            // Column 2: Gas Comparison
+            const gasDiv = document.createElement('div');
+            gasDiv.className = 'thr-card-row';
+            const s3Gas = s3 ? s3.gas : null;
+            const s5dGas = s5d ? s5d.gas : null;
+            // Extrapolate gas gen TWh: gap_pct × demand for s3; (100 - match_score)/100 × demand for s5d
+            const s3GapTwh = s3 ? ((100 - s3.match_score) / 100 * s3.demand_twh) : 0;
+            const s5dGapTwh = s5d ? ((100 - s5d.match_score) / 100 * s5d.demand_twh) : 0;
+            gasDiv.innerHTML = `
+                <div class="source-s3">
+                    <div class="source-label">Step 3 — Gas</div>
+                    <div class="metric-row"><span class="metric-label">Total Capacity MW</span><span class="metric-val">${s3Gas ? fmtK(s3Gas.backup_needed_mw) : '—'}</span></div>
+                    <div class="metric-row"><span class="metric-label">Existing MW</span><span class="metric-val">${s3Gas ? fmtK(s3Gas.existing_used_mw) : '—'}</span></div>
+                    <div class="metric-row"><span class="metric-label">New Build MW</span><span class="metric-val">${s3Gas ? fmtK(s3Gas.new_build_mw) : '—'}</span></div>
+                    <div class="metric-row"><span class="metric-label">Gas $/MWh</span><span class="metric-val">${s3Gas ? fmt(s3Gas.cost_per_mwh, 2) : '—'}</span></div>
+                    <div class="metric-row" style="border-top:1px dashed #ccc;margin-top:2px;padding-top:2px;">
+                        <span class="metric-label">≈ Gap Gen TWh</span><span class="metric-val">${fmt(s3GapTwh)}</span></div>
+                </div>
+                <div class="source-5d">
+                    <div class="source-label">Step 5D — Gas</div>
+                    <div class="metric-row"><span class="metric-label">Total Capacity MW</span><span class="metric-val">${s5dGas ? fmtK(s5dGas.backup_needed_mw) : '—'}</span></div>
+                    <div class="metric-row"><span class="metric-label">Existing MW</span><span class="metric-val">${s5dGas ? fmtK(s5dGas.existing_used_mw) : '—'}</span></div>
+                    <div class="metric-row"><span class="metric-label">New Build MW</span><span class="metric-val">${s5dGas ? fmtK(s5dGas.new_build_mw) : '—'}</span></div>
+                    <div class="metric-row"><span class="metric-label">Gas $/MWh</span><span class="metric-val">${s5dGas ? fmt(s5dGas.cost_per_mwh, 2) : '—'}</span></div>
+                    <div class="metric-row" style="border-top:1px dashed #ccc;margin-top:2px;padding-top:2px;">
+                        <span class="metric-label">≈ Gap Gen TWh</span><span class="metric-val">${fmt(s5dGapTwh)}</span></div>
+                </div>
+            `;
+            body.appendChild(gasDiv);
+
+            // Column 3: Cost Comparison
+            const costDiv = document.createElement('div');
+            costDiv.className = 'thr-card-row';
+            const s3C = s3 ? s3.cost : null;
+            const s5dC = s5d ? s5d.cost : null;
+
+            // Extrapolated apples-to-apples: new build capital cost ($B)
+            // Step 3: incremental $/MWh × demand TWh × 1e6 → total $ (proxy for NB cost)
+            // This is the total incremental spend above wholesale for all new clean
+            const s3NbCostB = s3C && s3.demand_twh ? (s3C.incremental * s3.demand_twh * 1e6 / 1e9) : 0;
+            const s5dNbCostB = s5dC ? (s5dC.cumulative_cost || s5dC.new_build_cost_total) / 1e9 : 0;
+            // New build LCOE: Step 3 uses incremental as proxy; Step 5D has blended_new_lcoe
+            // For Step 3: derive from total new build cost / new generation TWh
+            const s3NewGenTwh = s3C ? s3C.new_build_cf_twh : 0;
+            const s3NbLcoe = s3NewGenTwh > 0 ? (s3NbCostB * 1e9 / (s3NewGenTwh * 1e6)) : 0;
+            // Step 5D new build TWh
+            const s5dNewGenTwh = s5dC ? s5dC.new_build_twh : 0;
+            const s5dNbLcoe = s5dC ? s5dC.blended_new_lcoe : 0;
+
+            costDiv.innerHTML = `
+                <div class="source-s3">
+                    <div class="source-label">Step 3 — Cost (as reported)</div>
+                    <div class="metric-row"><span class="metric-label">Eff. $/MWh (all gen)</span><span class="metric-val">${s3C ? fmt(s3C.effective_cost) : '—'}</span></div>
+                    <div class="metric-row"><span class="metric-label">Incr. $/MWh</span><span class="metric-val">${s3C ? fmt(s3C.incremental) : '—'}</span></div>
+                    <div class="metric-row"><span class="metric-label">New Build TWh</span><span class="metric-val">${fmt(s3NewGenTwh)}</span></div>
+                    <div class="metric-row" style="border-top:1px dashed #ccc;margin-top:2px;padding-top:2px;">
+                        <span class="metric-label">≈ NB Capital $B</span><span class="metric-val">${fmt(s3NbCostB)}</span></div>
+                    <div class="metric-row"><span class="metric-label">≈ NB LCOE $/MWh</span><span class="metric-val">${s3NbLcoe > 0 ? fmt(s3NbLcoe) : '—'}</span></div>
+                </div>
+                <div class="source-5d">
+                    <div class="source-label">Step 5D — Cost (as reported)</div>
+                    <div class="metric-row"><span class="metric-label">Eff. $/MWh (all gen)</span><span class="metric-val">${s5dC && s5dC.effective_cost ? fmt(s5dC.effective_cost) : '—'}</span></div>
+                    <div class="metric-row"><span class="metric-label">This-step NB $/MWh</span><span class="metric-val">${s5dC ? fmt(s5dC.new_build_lcoe) : '—'}</span></div>
+                    <div class="metric-row"><span class="metric-label">New Build TWh (step)</span><span class="metric-val">${fmt(s5dNewGenTwh)}</span></div>
+                    <div class="metric-row" style="border-top:1px dashed #ccc;margin-top:2px;padding-top:2px;">
+                        <span class="metric-label">Cumul. NB $B</span><span class="metric-val">${s5dC ? fmt(s5dC.cumulative_cost/1e9) : '—'}</span></div>
+                    <div class="metric-row"><span class="metric-label">Blended NB LCOE</span><span class="metric-val">${s5dNbLcoe ? fmt(s5dNbLcoe) : '—'}</span></div>
+                </div>
+            `;
+            body.appendChild(costDiv);
+
+            // Column 4: Emissions & Matching
+            const emDiv = document.createElement('div');
+            emDiv.className = 'thr-card-row';
+            const s3CO2 = s3 ? s3.co2 : null;
+            const s5dCO2 = s5d ? s5d.co2 : null;
+            const s3PctReduction = s3CO2 && baselineCO2 > 0 ? ((s3CO2.abated_mt / baselineCO2) * 100) : 0;
+            // For 5D: cumulative abated vs original 2025 baseline
+            const s5dCumAbated = s5dCO2 ? (s5dCO2.abated_mt || 0) : 0;
+            const s5dPctReduction = baselineCO2 > 0 ? ((s5dCumAbated / baselineCO2) * 100) : 0;
+            emDiv.innerHTML = `
+                <div class="source-s3">
+                    <div class="source-label">Step 3 / 5A — Emissions (system-wide retirement model)</div>
+                    <div class="metric-row"><span class="metric-label">Match Score</span><span class="metric-val">${s3 ? fmt(s3.match_score) + '%' : '—'}</span></div>
+                    <div class="metric-row"><span class="metric-label">2025 Baseline Mt</span><span class="metric-val">${baselineCO2 ? fmt(baselineCO2) : '—'}</span></div>
+                    <div class="metric-row"><span class="metric-label">CO₂ Abated Mt</span><span class="metric-val">${s3CO2 ? fmt(s3CO2.abated_mt) : '—'}</span></div>
+                    <div class="metric-row"><span class="metric-label">Remaining Mt</span><span class="metric-val">${s3CO2 ? fmt(s3CO2.after_mt) : '—'}</span></div>
+                    <div class="metric-row"><span class="metric-label">% vs 2025</span><span class="metric-val">${s3PctReduction ? fmt(s3PctReduction) + '%' : '—'}</span></div>
+                </div>
+                <div class="source-5d">
+                    <div class="source-label">Step 5D — Emissions (consequential stepwise)</div>
+                    <div class="metric-row"><span class="metric-label">Match Score</span><span class="metric-val">${s5d ? fmt(s5d.match_score) + '%' : '—'}</span></div>
+                    <div class="metric-row"><span class="metric-label">Step Baseline Mt</span><span class="metric-val">${s5dCO2 ? fmt(s5dCO2.system_mt) : '—'}</span></div>
+                    <div class="metric-row"><span class="metric-label">This Step Mt</span><span class="metric-val">${s5dCO2 ? fmt(s5dCO2.abated_mt_step || 0) : '—'}</span></div>
+                    <div class="metric-row"><span class="metric-label">Cumul. Avoided Mt</span><span class="metric-val">${fmt(s5dCumAbated)}</span></div>
+                    <div class="metric-row"><span class="metric-label">Remaining Mt</span><span class="metric-val">${s5dCO2 ? fmt(s5dCO2.after_mt) : '—'}</span></div>
+                    <div class="metric-row"><span class="metric-label">% vs 2025</span><span class="metric-val">${s5dPctReduction ? fmt(s5dPctReduction) + '%' : '—'}</span></div>
+                </div>
+            `;
+            body.appendChild(emDiv);
+
+            // Column 5: MAC
+            const macDiv = document.createElement('div');
+            macDiv.className = 'thr-card-row';
+            const s5dMAC = s5d ? s5d.mac : null;
+            // Step 3 MAC: use incremental cost / CO2 abated as proxy
+            const s3MAC = (s3CO2 && s3CO2.abated_mt > 0 && s3C) ?
+                ((s3C.incremental * s3.demand_twh * 1e6) / (s3CO2.abated_mt * 1e6)) : null;
+            macDiv.innerHTML = `
+                <div class="source-s3">
+                    <div class="source-label">Step 3 — MAC</div>
+                    <div class="metric-row"><span class="metric-label">Avg MAC $/tCO₂</span><span class="metric-val">${s3MAC !== null ? fmt(s3MAC) : '—'}</span></div>
+                </div>
+                <div class="source-5d">
+                    <div class="source-label">Step 5D — MAC</div>
+                    <div class="metric-row"><span class="metric-label">Stepwise $/tCO₂</span><span class="metric-val">${s5dMAC ? fmt(s5dMAC.stepwise) : '—'}</span></div>
+                    <div class="metric-row"><span class="metric-label">Cumulative $/tCO₂</span><span class="metric-val">${s5dMAC ? fmt(s5dMAC.cumulative) : '—'}</span></div>
+                </div>
+            `;
+            body.appendChild(macDiv);
+
+            // Delta summary
+            if (s3 && s5d) {
+                const deltaDiv = document.createElement('div');
+                deltaDiv.className = 'delta-summary';
+
+                const scoreDelta = s5d.match_score - s3.match_score;
+                // Compare remaining CO2 (lower is better)
+                const s3Remaining = s3CO2 ? s3CO2.after_mt : null;
+                const s5dRemaining = s5dCO2 ? s5dCO2.after_mt : null;
+                const co2RemainingDelta = (s3Remaining !== null && s5dRemaining !== null) ? (s5dRemaining - s3Remaining) : null;
+                const costDelta = s5dC && s3C && s5dC.total_cost && s3C.total_cost ?
+                    (s5dC.total_cost - s3C.total_cost) : null;
+
+                let html = '<strong>Δ (5D − S3):</strong> ';
+                html += 'Score: <span class="' + (scoreDelta >= 0 ? 'd-pos' : 'd-neg') + '">' + deltaStr(scoreDelta, 'pp') + '</span>';
+                if (co2RemainingDelta !== null) {
+                    // Lower remaining CO2 is better, so negative delta is good
+                    html += ' | CO₂ remaining: <span class="' + (co2RemainingDelta <= 0 ? 'd-pos' : 'd-neg') + '">' + deltaStr(co2RemainingDelta, ' Mt') + '</span>';
+                }
+                if (costDelta !== null) {
+                    html += ' | Eff. cost: <span class="' + (costDelta <= 0 ? 'd-pos' : 'd-neg') + '">' + deltaStr(costDelta, ' $/MWh') + '</span>';
+                }
+                deltaDiv.innerHTML = html;
+                body.appendChild(deltaDiv);
+
+                // Track divergence
+                divergences.push({
+                    threshold: thr,
+                    scoreDelta,
+                    co2RemainingDelta,
+                    costDelta,
+                    s3Mix: s3.mix_pct,
+                    s5dMix: s5d.mix_pct,
+                    s3Score: s3.match_score,
+                    s5dScore: s5d.match_score,
+                });
+            }
+
+            card.appendChild(body);
+            container.appendChild(card);
+        });
+
+        // Generate narrative
+        generateNarrative(divergences, allThresholds, s3Map, s5dMap);
+    }
+
+    function generateNarrative(divergences, thresholds, s3Map, s5dMap) {
+        const section = document.getElementById('narrativeSection');
+        const content = document.getElementById('narrativeContent');
+        if (divergences.length === 0) {
+            section.style.display = 'none';
+            return;
+        }
+        section.style.display = '';
+
+        // Sort by absolute score delta
+        const sorted = [...divergences].sort((a,b) => Math.abs(b.scoreDelta) - Math.abs(a.scoreDelta));
+        const top3 = sorted.slice(0, 3);
+
+        // Analyze mix differences
+        let html = '<h3>Where Results Diverge Most</h3>';
+        html += '<ul>';
+        top3.forEach(d => {
+            const thrLabel = d.threshold >= 99.99 ? '≥99.99%' : d.threshold + '%';
+            html += '<li><strong>' + thrLabel + ':</strong> Score delta = ' + deltaStr(d.scoreDelta, 'pp') + '. ';
+
+            // Compare mixes
+            const mixDiffs = [];
+            const resources = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'hydro', 'geothermal'];
+            resources.forEach(r => {
+                const s3v = d.s3Mix[r] || 0;
+                const s5v = d.s5dMix[r] || 0;
+                const diff = s5v - s3v;
+                if (Math.abs(diff) > 1) {
+                    const name = r.replace(/_/g, ' ').replace('clean firm', 'nuclear/CF');
+                    mixDiffs.push(name + ': ' + deltaStr(diff, 'pp'));
+                }
+            });
+            if (mixDiffs.length) html += 'Mix differences: ' + mixDiffs.join(', ') + '. ';
+
+            if (d.co2RemainingDelta !== null && Math.abs(d.co2RemainingDelta) > 0.1) {
+                html += 'CO₂ remaining delta: ' + deltaStr(d.co2RemainingDelta, ' Mt') + '. ';
+            }
+            html += '</li>';
+        });
+        html += '</ul>';
+
+        // Structural analysis
+        html += '<h3>Structural Differences</h3>';
+        html += '<p><strong>Step 3</strong> optimizes each threshold independently — it picks the single lowest-cost mix from the PFS that achieves ≥X% hourly matching. ';
+        html += 'Each threshold can have a completely different resource mix.</p>';
+        html += '<p><strong>Step 5D</strong> builds sequentially from 50% upward — each step adds incremental resources on top of the previous threshold\'s deployed mix. ';
+        html += 'It picks the cheapest <em>marginal</em> addition at each step, constrained to monotonically increasing deployment.</p>';
+
+        // Check if 5D consistently outperforms
+        const s5dBetter = divergences.filter(d => d.scoreDelta > 0.5);
+        const s3Better = divergences.filter(d => d.scoreDelta < -0.5);
+        const costBetter5d = divergences.filter(d => d.costDelta !== null && d.costDelta < -1);
+
+        if (s5dBetter.length > s3Better.length) {
+            html += '<h3>Pattern: Step 5D Often Achieves Higher Scores</h3>';
+            html += '<p>At ' + s5dBetter.length + '/' + divergences.length + ' thresholds, Step 5D achieves a higher match score than Step 3. ';
+            html += 'Possible causes:</p><ul>';
+            html += '<li><strong>PFS exhaustiveness:</strong> Step 3 can only pick from mixes that exist in the Step 1 PFS. If the PFS grid doesn\'t include the specific mix Step 5D converges on, Step 3 can\'t find it.</li>';
+            html += '<li><strong>Sequential floor accumulation:</strong> Step 5D\'s monotonic build-up may accidentally hit resource combinations not in the PFS grid, because it\'s adding marginal resources to an already-deployed floor — effectively exploring mix space beyond the PFS grid resolution.</li>';
+            html += '<li><strong>Demand growth:</strong> Step 5D uses growing demand over time (target_year progression), so later thresholds see higher demand than Step 3\'s fixed 2025 demand.</li>';
+            html += '</ul>';
+        }
+
+        if (costBetter5d.length > divergences.length / 2) {
+            html += '<h3>Pattern: Step 5D Shows Lower Effective Cost</h3>';
+            html += '<p>At ' + costBetter5d.length + ' thresholds, 5D\'s effective cost is lower. This is expected when 5D finds more efficient mixes, ';
+            html += 'but also could indicate Step 3\'s cost evaluation includes components (transmission, gas capacity) that 5D accounts for differently.</p>';
+        }
+
+        // Specific threshold analysis
+        const t95_s3 = s3Map[95];
+        const t95_5d = s5dMap[95];
+        if (t95_s3 && t95_5d) {
+            html += '<h3>Deep Dive: 95% Threshold</h3>';
+            html += '<p>Step 3 mix: CF=' + fmt(t95_s3.mix_pct.clean_firm) + '%, Solar=' + fmt(t95_s3.mix_pct.solar) + '%, Wind=' + fmt(t95_s3.mix_pct.wind) + '%';
+            html += ' → Score: ' + fmt(t95_s3.match_score) + '%</p>';
+            html += '<p>Step 5D mix: CF=' + fmt(t95_5d.mix_pct.clean_firm) + '%, Solar=' + fmt(t95_5d.mix_pct.solar) + '%, Wind=' + fmt(t95_5d.mix_pct.wind) + '%';
+            html += ' → Score: ' + fmt(t95_5d.match_score) + '%</p>';
+            const scoreDiff = t95_5d.match_score - t95_s3.match_score;
+            if (Math.abs(scoreDiff) > 1) {
+                html += '<p>The ' + fmt(Math.abs(scoreDiff)) + 'pp score difference at 95% is notable. ';
+                if (scoreDiff > 0) {
+                    html += 'Step 5D achieving a higher score suggests its accumulated mix at this point covers hourly demand more effectively.';
+                } else {
+                    html += 'Step 3 achieving a higher score is expected since it optimizes specifically for this threshold.';
+                }
+                html += '</p>';
+            }
+        }
+
+        content.innerHTML = html;
+    }
+
+    // Init
+    buildControls();
+    render();
+})();
+</script>
+</body>
+</html>

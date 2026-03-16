@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The 8,760 Problem &mdash; Who Generates America's Electricity?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/reference.css">
+<script src="js/shared-footer.js"></script>
+<script src="js/shared-back-button.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+body { background: var(--bg-page-white); }
+
+/* ===== Breadcrumb ===== */
+.breadcrumb {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 20px 24px 0;
+    font-size: 0.82rem;
+    font-family: var(--font-heading);
+    letter-spacing: 0.03em;
+}
+.breadcrumb a { color: #0369A1; /* contrast-fix: was #0EA5E9, now #0369A1, ratio 5.93:1 on white */ text-decoration: none; transition: color 0.2s; }
+.breadcrumb a:hover { color: #0284c7; }
+.breadcrumb .sep { color: rgba(0,0,0,0.3); margin: 0 8px; }
+.breadcrumb .current { color: #374151; }
+
+/* ===== Article ===== */
+.article-wrapper {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+}
+.article-title {
+    font-family: var(--font-heading);
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1A2744;
+    line-height: 1.25;
+    margin-bottom: 12px;
+    letter-spacing: -0.4px;
+}
+.article-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 40px;
+    flex-wrap: wrap;
+}
+.article-tag {
+    display: inline-block;
+    background: rgba(14,165,233,0.15);
+    color: #0369A1; /* contrast-fix: was #0EA5E9, now #0369A1, ratio 5.93:1 on white */
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-family: var(--font-heading);
+}
+.article-date {
+    color: #374151;
+    font-size: 0.8rem;
+}
+
+/* ===== Illustration Panel ===== */
+.illustration-panel {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 16px;
+    padding: 32px 24px 24px;
+    margin-bottom: 40px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.8s cubic-bezier(0.4,0,0.2,1),
+                transform 0.8s cubic-bezier(0.4,0,0.2,1);
+}
+.illustration-panel.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.illustration-title {
+    font-family: var(--font-heading);
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #1A2744;
+    text-align: center;
+    margin-bottom: 24px;
+    letter-spacing: 0.02em;
+}
+.illustration-caption {
+    font-size: 0.78rem;
+    color: #6B7280;
+    text-align: center;
+    margin-top: 16px;
+    line-height: 1.5;
+}
+
+/* ===== Accordion ===== */
+.iso-accordion {
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    overflow: hidden;
+    background: #fff;
+    transition: box-shadow 0.2s;
+}
+.iso-accordion:hover {
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+.iso-accordion summary {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+    cursor: pointer;
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #1A2744;
+    background: #F9FAFB;
+    list-style: none;
+    user-select: none;
+}
+.iso-accordion summary::-webkit-details-marker { display: none; }
+.iso-accordion summary::before {
+    content: '\25B6';
+    font-size: 0.65rem;
+    color: #0369A1; /* contrast-fix: was #0EA5E9, now #0369A1, ratio 5.93:1 on white */
+    transition: transform 0.25s ease;
+    flex-shrink: 0;
+}
+.iso-accordion[open] summary::before { transform: rotate(90deg); }
+.iso-detail {
+    padding: 20px 24px 28px;
+    border-top: 1px solid #E5E7EB;
+}
+
+/* ===== Summary Stat Bar ===== */
+.iso-summary-bar {
+    display: flex;
+    gap: 20px;
+    margin-left: auto;
+    flex-wrap: wrap;
+}
+.iso-stat {
+    text-align: center;
+    min-width: 60px;
+}
+.iso-stat-val {
+    font-family: var(--font-data, var(--font-mono));
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1A2744;
+    line-height: 1.2;
+}
+.iso-stat-lbl {
+    font-size: 0.65rem;
+    color: #6B7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-family: var(--font-heading);
+    font-weight: 500;
+}
+
+/* ===== Type Badges ===== */
+.type-badge {
+    display: inline-block;
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-family: var(--font-heading);
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+.type-ipp { background: rgba(124,58,237,0.12); color: #7C3AED; }
+.type-vi { background: rgba(14,165,233,0.12); color: #0369A1; }
+.type-hybrid { background: rgba(245,158,11,0.12); color: #B45309; }
+.type-muni { background: rgba(16,185,129,0.12); color: #047857; }
+
+/* ===== State Chips ===== */
+.state-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 12px 0 20px;
+}
+.state-chip {
+    background: #F3F4F6;
+    border: 1px solid #E5E7EB;
+    border-radius: 6px;
+    padding: 3px 10px;
+    font-size: 0.78rem;
+    color: #374151;
+    font-family: var(--font-heading);
+    font-weight: 500;
+}
+
+/* ===== Company Table ===== */
+.co-table-wrap {
+    overflow-x: auto;
+    margin: 16px 0 20px;
+    border-radius: 10px;
+    border: 1px solid #E5E7EB;
+}
+.co-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    font-family: var(--font-body, 'DM Sans', sans-serif);
+}
+.co-table thead {
+    background: #F9FAFB;
+}
+.co-table th {
+    padding: 10px 14px;
+    text-align: left;
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6B7280;
+    border-bottom: 2px solid #E5E7EB;
+    white-space: nowrap;
+}
+.co-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid #F3F4F6;
+    color: #374151;
+    vertical-align: middle;
+}
+.co-table tbody tr:hover {
+    background: rgba(14,165,233,0.04);
+}
+.co-table .co-name {
+    font-weight: 600;
+    color: #1A2744;
+    white-space: nowrap;
+}
+.co-table .co-gen {
+    font-family: var(--font-data, var(--font-mono));
+    font-weight: 600;
+    text-align: right;
+    white-space: nowrap;
+}
+.co-table .co-fuel {
+    color: #6B7280;
+    font-size: 0.78rem;
+}
+.co-table .co-states {
+    color: #6B7280;
+    font-size: 0.78rem;
+}
+
+/* ===== Per-ISO Chart ===== */
+.iso-chart-wrap {
+    height: 280px;
+    margin: 20px 0;
+    position: relative;
+}
+
+/* ===== Context Callout ===== */
+.iso-context {
+    background: rgba(14,165,233,0.06);
+    border-left: 3px solid #0EA5E9;
+    border-radius: 0 8px 8px 0;
+    padding: 14px 18px;
+    margin: 16px 0 0;
+    font-size: 0.85rem;
+    color: #374151;
+    line-height: 1.65;
+}
+
+/* ===== Sources ===== */
+.sources-section {
+    margin-top: 56px;
+    padding-top: 32px;
+    border-top: 1px solid #E5E7EB;
+}
+.sources-section h3 {
+    font-family: var(--font-heading);
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #1A2744;
+    margin-bottom: 12px;
+}
+.source-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.source-list li {
+    font-size: 0.82rem;
+    color: #6B7280;
+    line-height: 1.6;
+    padding: 4px 0;
+}
+.source-list li::before {
+    content: '\2022';
+    color: #0EA5E9;
+    margin-right: 8px;
+}
+
+/* ===== Back Link ===== */
+.back-link {
+    display: inline-block;
+    margin-top: 48px;
+    font-family: var(--font-heading);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #0EA5E9;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+.back-link:hover { color: #0284c7; }
+.back-link span { margin-right: 6px; }
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+    .article-wrapper { padding: 24px 16px 64px; }
+    .article-title { font-size: 1.5rem; }
+    .iso-accordion summary { flex-wrap: wrap; gap: 10px; padding: 14px 16px; font-size: 1rem; }
+    .iso-summary-bar { gap: 12px; width: 100%; margin-top: 6px; margin-left: 20px; }
+    .iso-detail { padding: 16px; }
+    .iso-chart-wrap { height: 240px; }
+    .co-table { font-size: 0.78rem; }
+    .co-table th, .co-table td { padding: 8px 10px; }
+}
+@media (max-width: 480px) {
+    .iso-summary-bar { gap: 8px; }
+    .iso-stat { min-width: 50px; }
+}
+</style>
+</head>
+<body>
+
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+<script src="js/scroll-observer.js"></script>
+
+<header class="header">
+    <h1>Reference Library</h1>
+    <p class="subtitle">Market structure, generation ownership, and the IPP landscape</p>
+    <div class="header-accent"></div>
+</header>
+
+<div class="breadcrumb">
+    <a href="reference.html">Reference</a>
+    <span class="sep">/</span>
+    <span class="current">IPP vs. Vertically Integrated Generation</span>
+</div>
+
+<article class="article-wrapper section-light">
+
+    <h1 class="article-title">Who Generates America&rsquo;s Electricity?</h1>
+    <div class="article-meta">
+        <span class="article-tag">Market Structure</span>
+        <span class="article-tag">Generation Ownership</span>
+        <span class="article-date">March 2026</span>
+    </div>
+
+    <p>The U.S. power sector is split between two fundamentally different ownership models. <strong>Vertically integrated utilities</strong>&mdash;companies like Duke, Southern, AEP, and Dominion&mdash;own generation, transmission, and distribution under state-regulated cost-of-service frameworks. <strong>Independent power producers (IPPs)</strong> and merchant generators&mdash;like Constellation, Vistra, and NRG&mdash;sell into competitive wholesale markets with no captive retail customers.</p>
+
+    <p>This distinction matters for decarbonization because the two models respond to entirely different incentive structures. Regulated utilities earn a guaranteed return on capital assets, making them path-dependent on existing fleet composition. IPPs respond to wholesale price signals, making their decisions more volatile but also more market-responsive. The table below breaks down who generates what, where, and under which model&mdash;state by state, company by company, across all seven ISOs.</p>
+
+    <p style="font-size: 0.82rem; color: #6B7280; margin-top: 8px;"><em>Note: Generation estimates are approximate, based on EIA Form 860/923 plant-level ownership data, company 10-K filings, and ISO annual reports. Companies spanning multiple ISOs have generation allocated by plant location. Totals may not sum exactly due to rounding and the exclusion of smaller generators.</em></p>
+
+    <!-- ===== National Overview Chart ===== -->
+    <div class="illustration-panel">
+        <div class="illustration-title">IPP vs. Regulated Utility Generation by ISO (TWh/yr)</div>
+        <div style="height: 380px;"><canvas id="nationalChart"></canvas></div>
+        <div class="illustration-caption">Approximate generation shares. &ldquo;IPP/Merchant&rdquo; includes competitive generators selling into wholesale markets. &ldquo;Regulated/VI&rdquo; includes vertically integrated utilities, municipal utilities, and co-ops operating under cost-of-service regulation.</div>
+    </div>
+
+    <h2 style="font-family: var(--font-heading); font-size: 1.3rem; font-weight: 700; color: #1A2744; margin: 48px 0 20px;">Regional Breakdown by ISO</h2>
+
+    <!-- ========== PJM ========== -->
+    <details class="iso-accordion" open>
+        <summary>
+            <span>PJM Interconnection</span>
+            <div class="iso-summary-bar">
+                <div class="iso-stat"><div class="iso-stat-val">~800</div><div class="iso-stat-lbl">TWh</div></div>
+                <div class="iso-stat"><div class="iso-stat-val">~35%</div><div class="iso-stat-lbl">IPP</div></div>
+                <div class="iso-stat"><div class="iso-stat-val">~65%</div><div class="iso-stat-lbl">Regulated</div></div>
+                <div class="iso-stat"><div class="iso-stat-val">~380</div><div class="iso-stat-lbl">kg/MWh</div></div>
+            </div>
+        </summary>
+        <div class="iso-detail">
+            <div class="state-chips">
+                <span class="state-chip">Pennsylvania</span>
+                <span class="state-chip">Virginia</span>
+                <span class="state-chip">West Virginia</span>
+                <span class="state-chip">Ohio</span>
+                <span class="state-chip">New Jersey</span>
+                <span class="state-chip">Maryland</span>
+                <span class="state-chip">Delaware</span>
+                <span class="state-chip">Illinois (ComEd)</span>
+                <span class="state-chip">Indiana (partial)</span>
+                <span class="state-chip">Kentucky (partial)</span>
+                <span class="state-chip">Michigan (partial)</span>
+                <span class="state-chip">North Carolina (partial)</span>
+                <span class="state-chip">Tennessee (partial)</span>
+                <span class="state-chip">D.C.</span>
+            </div>
+            <div class="iso-chart-wrap"><canvas id="chartPJM"></canvas></div>
+            <div class="co-table-wrap">
+                <table class="co-table">
+                    <thead><tr><th>Company</th><th>Type</th><th>Est. Gen (TWh)</th><th>Key Fuels</th><th>Key States</th></tr></thead>
+                    <tbody>
+                        <tr><td class="co-name">Constellation Energy</td><td><span class="type-badge type-ipp">IPP/Merchant</span></td><td class="co-gen">~195</td><td class="co-fuel">Nuclear (75%), Gas, Hydro</td><td class="co-states">PA, IL, MD, NY</td></tr>
+                        <tr><td class="co-name">Dominion Energy</td><td><span class="type-badge type-vi">Vertically Integrated</span></td><td class="co-gen">~90</td><td class="co-fuel">Nuclear, Gas, Solar</td><td class="co-states">VA</td></tr>
+                        <tr><td class="co-name">AEP (Appalachian Power, Ohio Power)</td><td><span class="type-badge type-vi">Vertically Integrated</span></td><td class="co-gen">~70</td><td class="co-fuel">Coal, Gas, Wind</td><td class="co-states">OH, WV, VA</td></tr>
+                        <tr><td class="co-name">AES Indiana / Ohio</td><td><span class="type-badge type-hybrid">Hybrid</span></td><td class="co-gen">~65</td><td class="co-fuel">Coal, Gas, Solar</td><td class="co-states">IN, OH</td></tr>
+                        <tr><td class="co-name">Vistra (Luminant East)</td><td><span class="type-badge type-ipp">IPP/Merchant</span></td><td class="co-gen">~55</td><td class="co-fuel">Gas, Nuclear, Coal</td><td class="co-states">PA, OH, IL</td></tr>
+                        <tr><td class="co-name">Duke Energy (Carolinas/Progress)</td><td><span class="type-badge type-vi">Vertically Integrated</span></td><td class="co-gen">~50</td><td class="co-fuel">Nuclear, Gas, Coal</td><td class="co-states">NC (partial in PJM)</td></tr>
+                        <tr><td class="co-name">PPL Corporation</td><td><span class="type-badge type-hybrid">Hybrid</span></td><td class="co-gen">~35</td><td class="co-fuel">Gas, Coal, Solar</td><td class="co-states">PA, KY</td></tr>
+                        <tr><td class="co-name">FirstEnergy (Allegheny)</td><td><span class="type-badge type-vi">Vertically Integrated</span></td><td class="co-gen">~30</td><td class="co-fuel">Coal, Gas, Nuclear</td><td class="co-states">OH, PA, WV</td></tr>
+                        <tr><td class="co-name">PSEG Power</td><td><span class="type-badge type-ipp">IPP/Merchant</span></td><td class="co-gen">~28</td><td class="co-fuel">Nuclear, Gas</td><td class="co-states">NJ</td></tr>
+                        <tr><td class="co-name">Talen Energy</td><td><span class="type-badge type-ipp">IPP/Merchant</span></td><td class="co-gen">~18</td><td class="co-fuel">Nuclear, Gas, Coal</td><td class="co-states">PA, MD</td></tr>
+                        <tr><td class="co-name">NRG Energy</td><td><span class="type-badge type-ipp">IPP/Merchant</span></td><td class="co-gen">~15</td><td class="co-fuel">Gas, Coal</td><td class="co-states">PA, DE, MD</td></tr>
+                        <tr><td class="co-name">Other (munis, co-ops, smaller IPPs)</td><td><span class="type-badge type-muni">Various</span></td><td class="co-gen">~149</td><td class="co-fuel">Mixed</td><td class="co-states">Various</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="iso-context">
+                <strong>PJM is the nation&rsquo;s largest power market</strong> by both generation and geographic reach, spanning 13 states and D.C. Its ~520 TWh of regulated utility generation reflects the dominance of large vertically integrated operators in Virginia (Dominion), the Ohio Valley (AEP, FirstEnergy), and the Carolinas (Duke). The competitive side is anchored by Constellation&rsquo;s massive nuclear fleet&mdash;the largest in North America&mdash;concentrated in Pennsylvania and Illinois. PJM&rsquo;s capacity market (RPM) is a critical revenue stream for generators in deregulated states, while regulated utilities in Virginia, West Virginia, and North Carolina earn through state-approved rate base.
+            </div>
+        </div>
+    </details>
+
+    <!-- ========== MISO ========== -->
+    <details class="iso-accordion">
+        <summary>
+            <span>MISO</span>
+            <div class="iso-summary-bar">
+                <div class="iso-stat"><div class="iso-stat-val">~600</div><div class="iso-stat-lbl">TWh</div></div>
+                <div class="iso-stat"><div class="iso-stat-val">~25%</div><div class="iso-stat-lbl">IPP</div></div>
+                <div class="iso-stat"><div class="iso-stat-val">~75%</div><div class="iso-stat-lbl">Regulated</div></div>
+                <div class="iso-stat"><div class="iso-stat-val">~420</div><div class="iso-stat-lbl">kg/MWh</div></div>
+            </div>
+        </summary>
+        <div class="iso-detail">
+            <div class="state-chips">
+                <span class="state-chip">Louisiana</span>
+                <span class="state-chip">Mississippi</span>
+                <span class="state-chip">Arkansas</span>
+                <span class="state-chip">Texas (East)</span>
+                <span class="state-chip">Michigan</span>
+                <span class="state-chip">Wisconsin</span>
+                <span class="state-chip">Minnesota</span>
+                <span class="state-chip">Iowa</span>
+                <span class="state-chip">Indiana (partial)</span>
+                <span class="state-chip">Illinois (Ameren)</span>
+                <span class="state-chip">Montana (partial)</span>
+                <span class="state-chip">North Dakota</span>
+                <span class="state-chip">South Dakota</span>
+                <span class="state-chip">Manitoba</span>
+            </div>
+            <div class="iso-chart-wrap"><canvas id="chartMISO"></canvas></div>
+            <div class="co-table-wrap">
+                <table class="co-table">
+                    <thead><tr><th>Company</th><th>Type</th><th>Est. Gen (TWh)</th><th>Key Fuels</th><th>Key States</th></tr></thead>
+                    <tbody>
+                        <tr><td class="co-name">Entergy</td><td><span class="type-badge type-vi">Vertically Integrated</span></td><td class="co-gen">~80</td><td class="co-fuel">Gas, Nuclear, Solar</td><td class="co-states">LA, MS, AR, TX</td></tr>
+                        <tr><td class="co-name">Southern Company (Alabama Power, Mississippi Power)</td><td><span class="type-badge type-vi">Vertically Integrated</span></td><td class="co-gen">~70</td><td class="co-fuel">Gas, Nuclear, Coal</td><td class="co-states">AL, MS (partial MISO)</td></tr>
+                        <tr><td class="co-name">DTE Energy</td><td><span class="type-badge type-vi">Vertically Integrated</span></td><td class="co-gen">~45</td><td class="co-fuel">Gas, Coal, Nuclear, Wind</td><td class="co-states">MI</td></tr>
+                        <tr><td class="co-name">WEC Energy Group</td><td><span class="type-badge type-vi">Vertically Integrated</span></td><td class="co-gen">~40</td><td class="co-fuel">Gas, Coal, Wind</td><td class="co-states">WI</td></tr>
+                        <tr><td class="co-name">Xcel Energy (NSP)</td><td><span class="type-badge type-vi">Vertically Integrated</span></td><td class="co-gen">~38</td><td class="co-fuel">Nuclear, Wind, Gas, Coal</td><td class="co-states">MN, WI, ND</td></tr>
+                        <tr><td class="co-name">Duke Energy Indiana</td><td><span class="type-badge type-vi">Vertically Integrated</span></td><td class="co-gen">~35</td><td class="co-fuel">Coal, Gas, Solar</td><td class="co-states">IN</td></tr>
+                        <tr><td class="co-name">Berkshire Hathaway Energy (MidAmerican)</td><td><span class="type-badge type-vi">Vertically Integrated</span></td><td class="co-gen">~32</td><td class="co-fuel">Wind, Coal, Gas, Nuclear</td><td class="co-states">IA</td></tr>
+                        <tr><td class="co-name">Ameren</td><td><span class="type-badge type-vi">Vertically Integrated</span></td><td class="co-gen">~30</td><td class="co-fuel">Nuclear, Coal, Gas</td><td class="co-states">IL, MO</td></tr>
+                        <tr><td class="co-name">Consumers Energy</td><td><span class="type-badge type-vi">Vertically Integrated</span></td><td class="co-gen">~25</td><td class="co-fuel">Gas, Coal, Wind, Solar</td><td class="co-states">MI</td></tr>
+                        <tr><td class="co-name">Alliant Energy</td><td><span class="type-badge type-vi">Vertically Integrated</span></td><td class="co-gen">~20</td><td class="co-fuel">Gas, Wind, Solar</td><td class="co-states">IA, WI</td></tr>
+                        <tr><td class="co-name">NextEra (IPP wind/solar assets)</td><td><span class="type-badge type-ipp">IPP/Merchant</span></td><td class="co-gen">~18</td><td class="co-fuel">Wind, Solar</td><td class="co-states">Various</td></tr>
+                        <tr><td class="co-name">Cleco</td><td><span class="type-badge type-vi">Vertically Integrated</span></td><td class="co-gen">~12</td><td class="co-fuel">Gas, Coal</td><td class="co-states">LA</td></tr>
+                        <tr><td class="co-name">Other (munis, co-ops, smaller IPPs)</td><td><span class="type-badge type-muni">Various</span></td><td class="co-gen">~155</td><td class="co-fuel">Mixed</td><td class="co-states">Various</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="iso-context">
+                <strong>MISO is overwhelmingly regulated territory.</strong> Nearly three-quarters of generation comes from vertically integrated utilities and their affiliates. The footprint stretches from Manitoba to the Gulf Coast, encompassing some of the most coal-dependent states in the country (Indiana, North Dakota) alongside states making aggressive clean energy transitions (Minnesota, Iowa). Entergy&rsquo;s Gulf South fleet, DTE and Consumers in Michigan, and Xcel in the upper Midwest are the backbone of MISO&rsquo;s generation. IPP presence is limited mostly to wind farms (NextEra, Invenergy) selling under long-term PPAs to the utilities themselves. MISO&rsquo;s lack of a forward capacity market makes merchant investment challenging.
+            </div>
+        </div>
+    </details>
+
+    <!-- ========== ERCOT ========== -->
+    <details class="iso-accordion">
+        <summary>
+            <span>ERCOT</span>
+            <div class="iso-summary-bar">
+                <div class="iso-stat"><div class="iso-stat-val">~480</div><div class="iso-stat-lbl">TWh</div></div>
+                <div class="iso-stat"><div class="iso-stat-val">~60%</div><div class="iso-stat-lbl">IPP</div></div>
+                <div class="iso-stat"><div class="iso-stat-val">~40%</div><div class="iso-stat-lbl">Regulated</div></div>
+                <div class="iso-stat"><div class="iso-stat-val">~370</div><div class="iso-stat-lbl">kg/MWh</div></div>
+            </div>
+        </summary>
+        <div class="iso-detail">
+            <div class="state-chips">
+                <span class="state-chip">Texas (most of state)</span>
+            </div>
+            <div class="iso-chart-wrap"><canvas id="chartERCOT"></canvas></div>
+            <div class="co-table-wrap">
+                <table class="co-table">
+                    <thead><tr><th>Company</th><th>Type</th><th>Est. Gen (TWh)</th><th>Key Fuels</th><th>Key States</th></tr></thead>
+                    <tbody>
+                        <tr><td class="co-name">Vistra (Luminant)</td><td><span class="type-badge type-ipp">IPP/Merchant</span></td><td class="co-gen">~85</td><td class="co-fuel">Gas, Nuclear, Coal, Solar</td><td class="co-states">TX</td></tr>
+                        <tr><td class="co-name">NRG Energy</td><td><span class="type-badge type-ipp">IPP/Merchant</span></td><td class="co-gen">~55</td><td class="co-fuel">Gas, Coal</td><td class="co-states">TX</td></tr>
+                        <tr><td class="co-name">NextEra Energy Resources</td><td><span class="type-badge type-ipp">IPP/Merchant</span></td><td class="co-gen">~45</td><td class="co-fuel">Wind, Solar, Gas</td><td class="co-states">TX</td></tr>
+                        <tr><td class="co-name">Constellation (Calpine)</td><td><span class="type-badge type-ipp">IPP/Merchant</span></td><td class="co-gen">~40</td><td class="co-fuel">Gas (CCGT)</td><td class="co-states">TX</td></tr>
+                        <tr><td class="co-name">STP Nuclear (STPNOC)</td><td><span class="type-badge type-muni">Public/Co-op</span></td><td class="co-gen">~22</td><td class="co-fuel">Nuclear</td><td class="co-states">TX</td></tr>
+                        <tr><td class="co-name">CPS Energy (San Antonio)</td><td><span class="type-badge type-muni">Municipal</span></td><td class="co-gen">~20</td><td class="co-fuel">Gas, Coal, Solar, Nuclear</td><td class="co-states">TX</td></tr>
+                        <tr><td class="co-name">Austin Energy</td><td><span class="type-badge type-muni">Municipal</span></td><td class="co-gen">~12</td><td class="co-fuel">Gas, Wind, Solar</td><td class="co-states">TX</td></tr>
+                        <tr><td class="co-name">LCRA</td><td><span class="type-badge type-muni">Public Authority</span></td><td class="co-gen">~10</td><td class="co-fuel">Gas, Coal</td><td class="co-states">TX</td></tr>
+                        <tr><td class="co-name">Invenergy</td><td><span class="type-badge type-ipp">IPP/Merchant</span></td><td class="co-gen">~15</td><td class="co-fuel">Wind, Gas</td><td class="co-states">TX</td></tr>
+                        <tr><td class="co-name">Other (wind/solar IPPs, smaller generators)</td><td><span class="type-badge type-ipp">Various</span></td><td class="co-gen">~176</td><td class="co-fuel">Wind, Solar, Gas</td><td class="co-states">TX</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="iso-context">
+                <strong>ERCOT is America&rsquo;s most market-driven grid.</strong> Texas deregulated generation in 2002, and the result is an energy-only market dominated by merchant generators. Vistra (which absorbed Luminant) is the largest, followed by NRG and a rapidly growing renewable IPP fleet. The ~40% &ldquo;regulated&rdquo; share comes primarily from municipal utilities (CPS, Austin Energy, LCRA) and co-ops that were exempt from deregulation. Texas&rsquo;s lack of a capacity market means generators earn only from energy and ancillary services&mdash;creating boom-bust cycles but also strong incentives for low-cost wind and solar. Wind now produces more electricity than coal in ERCOT.
+            </div>
+        </div>
+    </details>
+
+    <!-- ========== CAISO ========== -->
+    <details class="iso-accordion">
+        <summary>
+            <span>CAISO</span>
+            <div class="iso-summary-bar">
+                <div class="iso-stat"><div class="iso-stat-val">~280</div><div class="iso-stat-lbl">TWh</div></div>
+                <div class="iso-stat"><div class="iso-stat-val">~45%</div><div class="iso-stat-lbl">IPP</div></div>
+                <div class="iso-stat"><div class="iso-stat-val">~55%</div><div class="iso-stat-lbl">Regulated</div></div>
+                <div class="iso-stat"><div class="iso-stat-val">~210</div><div class="iso-stat-lbl">kg/MWh</div></div>
+            </div>
+        </summary>
+        <div class="iso-detail">
+            <div class="state-chips">
+                <span class="state-chip">California</span>
+                <span class="state-chip">Nevada (partial, via EIM)</span>
+            </div>
+            <div class="iso-chart-wrap"><canvas id="chartCAISO"></canvas></div>
+            <div class="co-table-wrap">
+                <table class="co-table">
+                    <thead><tr><th>Company</th><th>Type</th><th>Est. Gen (TWh)</th><th>Key Fuels</th><th>Key States</th></tr></thead>
+                    <tbody>
+                        <tr><td class="co-name">Pacific Gas &amp; Electric (PG&amp;E)</td><td><span class="type-badge type-vi">Regulated IOU</span></td><td class="co-gen">~55</td><td class="co-fuel">Gas, Hydro, Nuclear (Diablo Canyon), Solar</td><td class="co-states">CA (Northern/Central)</td></tr>
+                        <tr><td class="co-name">Southern California Edison (SCE)</td><td><span class="type-badge type-vi">Regulated IOU</span></td><td class="co-gen">~20</td><td class="co-fuel">Gas, Solar (contracted)</td><td class="co-states">CA (Southern)</td></tr>
+                        <tr><td class="co-name">LADWP</td><td><span class="type-badge type-muni">Municipal</span></td><td class="co-gen">~25</td><td class="co-fuel">Gas, Coal (Navajo), Hydro, Solar</td><td class="co-states">CA (Los Angeles)</td></tr>
+                        <tr><td class="co-name">Constellation (Calpine)</td><td><span class="type-badge type-ipp">IPP/Merchant</span></td><td class="co-gen">~40</td><td class="co-fuel">Gas (CCGT), Geothermal</td><td class="co-states">CA</td></tr>
+                        <tr><td class="co-name">AES (Southland/Alamitos/Redondo)</td><td><span class="type-badge type-ipp">IPP/Merchant</span></td><td class="co-gen">~12</td><td class="co-fuel">Gas, Battery</td><td class="co-states">CA</td></tr>
+                        <tr><td class="co-name">NRG Energy</td><td><span class="type-badge type-ipp">IPP/Merchant</span></td><td class="co-gen">~8</td><td class="co-fuel">Gas</td><td class="co-states">CA</td></tr>
+                        <tr><td class="co-name">NextEra (wind/solar IPP assets)</td><td><span class="type-badge type-ipp">IPP/Merchant</span></td><td class="co-gen">~15</td><td class="co-fuel">Wind, Solar</td><td class="co-states">CA</td></tr>
+                        <tr><td class="co-name">SMUD / other munis</td><td><span class="type-badge type-muni">Municipal</span></td><td class="co-gen">~15</td><td class="co-fuel">Gas, Hydro, Solar</td><td class="co-states">CA (Sacramento, etc.)</td></tr>
+                        <tr><td class="co-name">Other IPPs (solar/wind developers, storage)</td><td><span class="type-badge type-ipp">Various</span></td><td class="co-gen">~90</td><td class="co-fuel">Solar, Wind, Battery</td><td class="co-states">CA</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="iso-context">
+                <strong>California is a unique hybrid.</strong> The state&rsquo;s three investor-owned utilities (PG&amp;E, SCE, SDG&amp;E) are regulated but were forced to divest much of their generation during deregulation in the late 1990s. As a result, the IOUs own relatively little generation directly and instead procure power through long-term contracts with IPPs. Constellation (via its Calpine subsidiary) is the state&rsquo;s largest merchant generator by capacity. LADWP and SMUD, as municipal utilities, remain vertically integrated. California&rsquo;s aggressive RPS mandate (100% clean by 2045) and storage mandate have made it the largest market for solar, wind, and battery IPPs in the country. The duck curve&mdash;surplus midday solar depressing prices followed by steep evening ramps&mdash;is the defining market dynamic.
+            </div>
+        </div>
+    </details>
+
+    <!-- ========== SPP ========== -->
+    <details class="iso-accordion">
+        <summary>
+            <span>SPP</span>
+            <div class="iso-summary-bar">
+                <div class="iso-stat"><div class="iso-stat-val">~270</div><div class="iso-stat-lbl">TWh</div></div>
+                <div class="iso-stat"><div class="iso-stat-val">~20%</div><div class="iso-stat-lbl">IPP</div></div>
+                <div class="iso-stat"><div class="iso-stat-val">~80%</div><div class="iso-stat-lbl">Regulated</div></div>
+                <div class="iso-stat"><div class="iso-stat-val">~400</div><div class="iso-stat-lbl">kg/MWh</div></div>
+            </div>
+        </summary>
+        <div class="iso-detail">
+            <div class="state-chips">
+                <span class="state-chip">Oklahoma</span>
+                <span class="state-chip">Kansas</span>
+                <span class="state-chip">Nebraska</span>
+                <span class="state-chip">Texas (Panhandle)</span>
+                <span class="state-chip">New Mexico (partial)</span>
+                <span class="state-chip">Arkansas (partial)</span>
+                <span class="state-chip">Missouri (partial)</span>
+                <span class="state-chip">South Dakota (partial)</span>
+                <span class="state-chip">North Dakota (partial)</span>
+                <span class="state-chip">Wyoming (partial)</span>
+                <span class="state-chip">Montana (partial)</span>
+                <span class="state-chip">Louisiana (partial)</span>
+            </div>
+            <div class="iso-chart-wrap"><canvas id="chartSPP"></canvas></div>
+            <div class="co-table-wrap">
+                <table class="co-table">
+                    <thead><tr><th>Company</th><th>Type</th><th>Est. Gen (TWh)</th><th>Key Fuels</th><th>Key States</th></tr></thead>
+                    <tbody>
+                        <tr><td class="co-name">Evergy (Westar/KCP&amp;L)</td><td><span class="type-badge type-vi">Vertically Integrated</span></td><td class="co-gen">~50</td><td class="co-fuel">Coal, Gas, Wind, Nuclear</td><td class="co-states">KS, MO</td></tr>
+                        <tr><td class="co-name">AEP (PSO, SWEPCO)</td><td><span class="type-badge type-vi">Vertically Integrated</span></td><td class="co-gen">~40</td><td class="co-fuel">Gas, Coal, Wind</td><td class="co-states">OK, AR, LA, TX</td></tr>
+                        <tr><td class="co-name">Berkshire Hathaway Energy (PacifiCorp/BHE)</td><td><span class="type-badge type-vi">Vertically Integrated</span></td><td class="co-gen">~35</td><td class="co-fuel">Coal, Wind, Gas</td><td class="co-states">WY</td></tr>
+                        <tr><td class="co-name">OG&amp;E (OGE Energy)</td><td><span class="type-badge type-vi">Vertically Integrated</span></td><td class="co-gen">~30</td><td class="co-fuel">Gas, Coal, Wind</td><td class="co-states">OK, AR</td></tr>
+                        <tr><td class="co-name">Xcel Energy (SPS)</td><td><span class="type-badge type-vi">Vertically Integrated</span></td><td class="co-gen">~25</td><td class="co-fuel">Gas, Wind, Solar</td><td class="co-states">TX (Panhandle), NM</td></tr>
+                        <tr><td class="co-name">Nebraska Public Power / OPPD</td><td><span class="type-badge type-muni">Public Power</span></td><td class="co-gen">~22</td><td class="co-fuel">Nuclear, Coal, Wind</td><td class="co-states">NE</td></tr>
+                        <tr><td class="co-name">Empire District (Liberty Utilities)</td><td><span class="type-badge type-vi">Vertically Integrated</span></td><td class="co-gen">~8</td><td class="co-fuel">Gas, Wind</td><td class="co-states">MO, KS, OK</td></tr>
+                        <tr><td class="co-name">NextEra / Invenergy (wind IPPs)</td><td><span class="type-badge type-ipp">IPP/Merchant</span></td><td class="co-gen">~25</td><td class="co-fuel">Wind</td><td class="co-states">OK, KS, TX</td></tr>
+                        <tr><td class="co-name">Other (munis, co-ops, smaller generators)</td><td><span class="type-badge type-muni">Various</span></td><td class="co-gen">~35</td><td class="co-fuel">Mixed</td><td class="co-states">Various</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="iso-context">
+                <strong>SPP is the most utility-dominated ISO in the country.</strong> Roughly 80% of generation comes from vertically integrated utilities, cooperatives, and municipal/public power entities. The region&rsquo;s traditional reliance on coal is being displaced by wind at a remarkable pace&mdash;SPP regularly achieves 70%+ instantaneous wind penetration and has set records above 90%. But the utilities driving this transition (Evergy, AEP Southwest, Xcel SPS) are doing so through regulated resource plans, not merchant investment. IPP presence is almost exclusively wind farms selling under long-term PPAs. Nebraska is unique as the only state with 100% public power&mdash;no private utilities at all.
+            </div>
+        </div>
+    </details>
+
+    <!-- ========== NYISO ========== -->
+    <details class="iso-accordion">
+        <summary>
+            <span>NYISO</span>
+            <div class="iso-summary-bar">
+                <div class="iso-stat"><div class="iso-stat-val">~135</div><div class="iso-stat-lbl">TWh</div></div>
+                <div class="iso-stat"><div class="iso-stat-val">~40%</div><div class="iso-stat-lbl">IPP</div></div>
+                <div class="iso-stat"><div class="iso-stat-val">~60%</div><div class="iso-stat-lbl">Regulated</div></div>
+                <div class="iso-stat"><div class="iso-stat-val">~250</div><div class="iso-stat-lbl">kg/MWh</div></div>
+            </div>
+        </summary>
+        <div class="iso-detail">
+            <div class="state-chips">
+                <span class="state-chip">New York</span>
+            </div>
+            <div class="iso-chart-wrap"><canvas id="chartNYISO"></canvas></div>
+            <div class="co-table-wrap">
+                <table class="co-table">
+                    <thead><tr><th>Company</th><th>Type</th><th>Est. Gen (TWh)</th><th>Key Fuels</th><th>Key States</th></tr></thead>
+                    <tbody>
+                        <tr><td class="co-name">Constellation Energy (Nine Mile Point/Ginna/FitzPatrick)</td><td><span class="type-badge type-ipp">IPP/Merchant</span></td><td class="co-gen">~37</td><td class="co-fuel">Nuclear</td><td class="co-states">NY (Upstate)</td></tr>
+                        <tr><td class="co-name">NYPA (NY Power Authority)</td><td><span class="type-badge type-muni">Public Authority</span></td><td class="co-gen">~25</td><td class="co-fuel">Hydro, Nuclear (Indian Point successor), Gas</td><td class="co-states">NY</td></tr>
+                        <tr><td class="co-name">National Grid / LIPA</td><td><span class="type-badge type-vi">Regulated IOU</span></td><td class="co-gen">~18</td><td class="co-fuel">Gas</td><td class="co-states">NY (Long Island, NYC suburbs)</td></tr>
+                        <tr><td class="co-name">NRG Energy</td><td><span class="type-badge type-ipp">IPP/Merchant</span></td><td class="co-gen">~10</td><td class="co-fuel">Gas, Oil</td><td class="co-states">NY (NYC area)</td></tr>
+                        <tr><td class="co-name">Central Hudson / NYSEG (Avangrid)</td><td><span class="type-badge type-vi">Regulated IOU</span></td><td class="co-gen">~8</td><td class="co-fuel">Gas, Hydro, Wind</td><td class="co-states">NY (Hudson Valley, Upstate)</td></tr>
+                        <tr><td class="co-name">Brookfield Renewable</td><td><span class="type-badge type-ipp">IPP/Merchant</span></td><td class="co-gen">~6</td><td class="co-fuel">Hydro</td><td class="co-states">NY</td></tr>
+                        <tr><td class="co-name">Con Edison (generation assets)</td><td><span class="type-badge type-vi">Regulated IOU</span></td><td class="co-gen">~5</td><td class="co-fuel">Gas, Steam</td><td class="co-states">NY (NYC)</td></tr>
+                        <tr><td class="co-name">Other (municipal, IPP gas peakers, wind/solar)</td><td><span class="type-badge type-muni">Various</span></td><td class="co-gen">~26</td><td class="co-fuel">Gas, Wind, Hydro</td><td class="co-states">NY</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="iso-context">
+                <strong>New York&rsquo;s grid is defined by a north&ndash;south divide.</strong> Upstate New York has abundant hydro (Niagara Falls, St. Lawrence) and Constellation&rsquo;s nuclear fleet (Nine Mile Point, Ginna, and FitzPatrick), delivering low-carbon power at wholesale prices. Downstate (NYC, Long Island) is constrained by transmission bottlenecks and relies heavily on gas-fired generation&mdash;some of the most expensive and carbon-intensive power in the Northeast. The closure of Indian Point nuclear plant in 2021 removed 2 GW of zero-carbon baseload from the NYC zone, increasing gas dependency. New York&rsquo;s CLCPA (100% clean by 2040) is the most aggressive state mandate in the country, driving massive offshore wind and storage procurement.
+            </div>
+        </div>
+    </details>
+
+    <!-- ========== NEISO ========== -->
+    <details class="iso-accordion">
+        <summary>
+            <span>ISO New England (NEISO)</span>
+            <div class="iso-summary-bar">
+                <div class="iso-stat"><div class="iso-stat-val">~95</div><div class="iso-stat-lbl">TWh</div></div>
+                <div class="iso-stat"><div class="iso-stat-val">~50%</div><div class="iso-stat-lbl">IPP</div></div>
+                <div class="iso-stat"><div class="iso-stat-val">~50%</div><div class="iso-stat-lbl">Regulated</div></div>
+                <div class="iso-stat"><div class="iso-stat-val">~290</div><div class="iso-stat-lbl">kg/MWh</div></div>
+            </div>
+        </summary>
+        <div class="iso-detail">
+            <div class="state-chips">
+                <span class="state-chip">Connecticut</span>
+                <span class="state-chip">Massachusetts</span>
+                <span class="state-chip">Rhode Island</span>
+                <span class="state-chip">New Hampshire</span>
+                <span class="state-chip">Vermont</span>
+                <span class="state-chip">Maine</span>
+            </div>
+            <div class="iso-chart-wrap"><canvas id="chartNEISO"></canvas></div>
+            <div class="co-table-wrap">
+                <table class="co-table">
+                    <thead><tr><th>Company</th><th>Type</th><th>Est. Gen (TWh)</th><th>Key Fuels</th><th>Key States</th></tr></thead>
+                    <tbody>
+                        <tr><td class="co-name">Dominion Energy (Millstone Nuclear)</td><td><span class="type-badge type-ipp">IPP/Merchant</span></td><td class="co-gen">~16</td><td class="co-fuel">Nuclear</td><td class="co-states">CT</td></tr>
+                        <tr><td class="co-name">NextEra (Seabrook Nuclear)</td><td><span class="type-badge type-ipp">IPP/Merchant</span></td><td class="co-gen">~10</td><td class="co-fuel">Nuclear</td><td class="co-states">NH</td></tr>
+                        <tr><td class="co-name">Constellation (Calpine)</td><td><span class="type-badge type-ipp">IPP/Merchant</span></td><td class="co-gen">~8</td><td class="co-fuel">Gas (CCGT)</td><td class="co-states">MA, ME</td></tr>
+                        <tr><td class="co-name">Eversource Energy</td><td><span class="type-badge type-vi">Regulated IOU</span></td><td class="co-gen">~5</td><td class="co-fuel">Solar, Wind (contracted)</td><td class="co-states">CT, MA, NH</td></tr>
+                        <tr><td class="co-name">National Grid</td><td><span class="type-badge type-vi">Regulated IOU</span></td><td class="co-gen">~4</td><td class="co-fuel">Gas (contracted)</td><td class="co-states">MA, RI</td></tr>
+                        <tr><td class="co-name">Brookfield / Great River Hydro</td><td><span class="type-badge type-ipp">IPP/Merchant</span></td><td class="co-gen">~5</td><td class="co-fuel">Hydro</td><td class="co-states">VT, NH, MA</td></tr>
+                        <tr><td class="co-name">Green Mountain Power</td><td><span class="type-badge type-vi">Vertically Integrated</span></td><td class="co-gen">~3</td><td class="co-fuel">Hydro, Wind, Solar</td><td class="co-states">VT</td></tr>
+                        <tr><td class="co-name">Vistra / Dynegy (Brayton Point successor)</td><td><span class="type-badge type-ipp">IPP/Merchant</span></td><td class="co-gen">~5</td><td class="co-fuel">Gas</td><td class="co-states">MA</td></tr>
+                        <tr><td class="co-name">Other (munis, co-ops, behind-meter, imports)</td><td><span class="type-badge type-muni">Various</span></td><td class="co-gen">~39</td><td class="co-fuel">Gas, Hydro imports (Qu&eacute;bec), Wind, Oil</td><td class="co-states">Various</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="iso-context">
+                <strong>New England is the most gas-dependent grid in the country</strong>&mdash;and the most exposed to winter supply crunches. Gas pipeline constraints mean that during cold snaps, gas-fired generators compete with home heating for limited supply, driving wholesale prices to extreme levels ($100+/MWh intraday). This &ldquo;fuel security&rdquo; risk led ISO-NE to retain Mystic Station and develop the Inventoried Energy Program. The region&rsquo;s IOUs (Eversource, National Grid, Unitil) own very little generation directly&mdash;they are primarily distribution utilities that procure power through competitive solicitations. True vertically integrated utilities are rare; Vermont (Green Mountain Power) is the notable exception. Nuclear (Millstone, Seabrook) provides ~30% of the region&rsquo;s carbon-free generation, supplemented by Hydro-Qu&eacute;bec imports.
+            </div>
+        </div>
+    </details>
+
+    <!-- ===== Cross-Cutting Themes ===== -->
+    <h2 style="font-family: var(--font-heading); font-size: 1.3rem; font-weight: 700; color: #1A2744; margin: 48px 0 16px;">Cross-Cutting Themes</h2>
+
+    <p><strong>The regulatory model determines the decarbonization pathway.</strong> Vertically integrated utilities transition through state-approved integrated resource plans (IRPs)&mdash;a deliberate, sometimes slow process constrained by rate-of-return regulation and stranded asset risk. IPPs transition by responding to market signals and PPA demand, which can be faster but is more volatile and dependent on policy certainty.</p>
+
+    <p><strong>The biggest generators by volume are regulated.</strong> Southern Company, Duke, AEP, Entergy, Dominion, and Berkshire Hathaway Energy collectively generate more than 600 TWh annually&mdash;almost entirely through regulated, vertically integrated subsidiaries. Constellation is the dominant exception: ~300+ TWh of merchant generation across nuclear (legacy Constellation fleet) and gas/geothermal (via its Calpine subsidiary), making it the nation&rsquo;s largest IPP by output.</p>
+
+    <p><strong>Some companies span both models.</strong> NextEra operates Florida Power &amp; Light (a regulated utility) alongside NextEra Energy Resources (the world&rsquo;s largest wind/solar IPP). AES has regulated subsidiaries in Indiana and Ohio alongside merchant assets in other markets. These hybrid companies can arbitrage between regulatory frameworks.</p>
+
+    <p><strong>Municipal and cooperative utilities are a significant &ldquo;third category.&rdquo;</strong> ERCOT&rsquo;s CPS Energy, NYISO&rsquo;s NYPA, Nebraska&rsquo;s 100% public power system, and California&rsquo;s LADWP/SMUD operate outside both the merchant and investor-owned utility models. They&rsquo;re accountable to city councils or member-owners, not shareholders or PUCs&mdash;creating yet another set of incentive structures for the clean energy transition.</p>
+
+    <!-- ===== Sources ===== -->
+    <div class="sources-section">
+        <h3>Sources &amp; Data</h3>
+        <ul class="source-list">
+            <li>EIA Form 860 (Annual Electric Generator Report) and Form 923 (Power Plant Operations Report), 2023 vintage</li>
+            <li>EPA eGRID 2023 &mdash; Plant-level emission rates and ownership data</li>
+            <li>Company 10-K filings (2023/2024) &mdash; Constellation, Duke, Southern, NextEra, Vistra, AEP, Dominion, BHE, Entergy, AES, Xcel, Evergy, DTE, WEC, PPL</li>
+            <li>MJ Bradley / ERM &ldquo;Benchmarking Air Emissions of the 100 Largest Electric Power Producers in the United States&rdquo; (2025 edition)</li>
+            <li>ISO annual reports and market monitoring reports: PJM State of the Market (2024), ERCOT CDR (2024), MISO State of the Market (2024), NYISO Gold Book (2024), ISO-NE Regional System Plan (2024), CAISO Annual Report (2024), SPP State of the Market (2024)</li>
+            <li>S&amp;P Global Market Intelligence &mdash; Power plant ownership and generation database</li>
+        </ul>
+    </div>
+
+    <div id="backBar" data-back-href="reference.html" data-back-label="Back to Reference Library"></div>
+
+</article>
+
+<footer id="siteFooter" data-footer-note="The 8,760 Problem &mdash; Reference Library"></footer>
+
+<script>
+/* ===================================================================
+   DATA: ISO profiles with company generation breakdown
+   =================================================================== */
+var ISO_DATA = {
+    PJM:   { total: 800, ipp: 35, reg: 65, color: '#0EA5E9' },
+    MISO:  { total: 600, ipp: 25, reg: 75, color: '#F97316' },
+    ERCOT: { total: 480, ipp: 60, reg: 40, color: '#22C55E' },
+    CAISO: { total: 280, ipp: 45, reg: 55, color: '#F59E0B' },
+    SPP:   { total: 270, ipp: 20, reg: 80, color: '#14B8A6' },
+    NYISO: { total: 135, ipp: 40, reg: 60, color: '#E91E63' },
+    NEISO: { total: 95,  ipp: 50, reg: 50, color: '#9C27B0' }
+};
+
+/* Company-level data per ISO for stacked bar charts */
+var ISO_COMPANIES = {
+    PJM: [
+        { name: 'Constellation', gen: 195, type: 'ipp' },
+        { name: 'Dominion', gen: 90, type: 'vi' },
+        { name: 'AEP', gen: 70, type: 'vi' },
+        { name: 'AES', gen: 65, type: 'hybrid' },
+        { name: 'Vistra', gen: 55, type: 'ipp' },
+        { name: 'Duke', gen: 50, type: 'vi' },
+        { name: 'PPL', gen: 35, type: 'hybrid' },
+        { name: 'FirstEnergy', gen: 30, type: 'vi' },
+        { name: 'PSEG', gen: 28, type: 'ipp' },
+        { name: 'Talen', gen: 18, type: 'ipp' },
+        { name: 'NRG', gen: 15, type: 'ipp' },
+        { name: 'Other', gen: 149, type: 'other' }
+    ],
+    MISO: [
+        { name: 'Entergy', gen: 80, type: 'vi' },
+        { name: 'Southern Co', gen: 70, type: 'vi' },
+        { name: 'DTE', gen: 45, type: 'vi' },
+        { name: 'WEC', gen: 40, type: 'vi' },
+        { name: 'Xcel', gen: 38, type: 'vi' },
+        { name: 'Duke IN', gen: 35, type: 'vi' },
+        { name: 'BHE', gen: 32, type: 'vi' },
+        { name: 'Ameren', gen: 30, type: 'vi' },
+        { name: 'Consumers', gen: 25, type: 'vi' },
+        { name: 'Alliant', gen: 20, type: 'vi' },
+        { name: 'NextEra', gen: 18, type: 'ipp' },
+        { name: 'Cleco', gen: 12, type: 'vi' },
+        { name: 'Other', gen: 155, type: 'other' }
+    ],
+    ERCOT: [
+        { name: 'Vistra', gen: 85, type: 'ipp' },
+        { name: 'NRG', gen: 55, type: 'ipp' },
+        { name: 'NextEra', gen: 45, type: 'ipp' },
+        { name: 'Constellation (Calpine)', gen: 40, type: 'ipp' },
+        { name: 'STP Nuclear', gen: 22, type: 'other' },
+        { name: 'CPS Energy', gen: 20, type: 'other' },
+        { name: 'Invenergy', gen: 15, type: 'ipp' },
+        { name: 'Austin Energy', gen: 12, type: 'other' },
+        { name: 'LCRA', gen: 10, type: 'other' },
+        { name: 'Other', gen: 176, type: 'other' }
+    ],
+    CAISO: [
+        { name: 'PG&E', gen: 55, type: 'vi' },
+        { name: 'Constellation (Calpine)', gen: 40, type: 'ipp' },
+        { name: 'LADWP', gen: 25, type: 'other' },
+        { name: 'SCE', gen: 20, type: 'vi' },
+        { name: 'NextEra', gen: 15, type: 'ipp' },
+        { name: 'SMUD/Munis', gen: 15, type: 'other' },
+        { name: 'AES', gen: 12, type: 'ipp' },
+        { name: 'NRG', gen: 8, type: 'ipp' },
+        { name: 'Other IPPs', gen: 90, type: 'ipp' }
+    ],
+    SPP: [
+        { name: 'Evergy', gen: 50, type: 'vi' },
+        { name: 'AEP', gen: 40, type: 'vi' },
+        { name: 'BHE', gen: 35, type: 'vi' },
+        { name: 'OG&E', gen: 30, type: 'vi' },
+        { name: 'Xcel SPS', gen: 25, type: 'vi' },
+        { name: 'NE Public', gen: 22, type: 'other' },
+        { name: 'NextEra/Inv', gen: 25, type: 'ipp' },
+        { name: 'Empire', gen: 8, type: 'vi' },
+        { name: 'Other', gen: 35, type: 'other' }
+    ],
+    NYISO: [
+        { name: 'Constellation', gen: 37, type: 'ipp' },
+        { name: 'NYPA', gen: 25, type: 'other' },
+        { name: 'Nat\'l Grid', gen: 18, type: 'vi' },
+        { name: 'NRG', gen: 10, type: 'ipp' },
+        { name: 'Avangrid', gen: 8, type: 'vi' },
+        { name: 'Brookfield', gen: 6, type: 'ipp' },
+        { name: 'Con Edison', gen: 5, type: 'vi' },
+        { name: 'Other', gen: 26, type: 'other' }
+    ],
+    NEISO: [
+        { name: 'Dominion (Millstone)', gen: 16, type: 'ipp' },
+        { name: 'NextEra', gen: 10, type: 'ipp' },
+        { name: 'Constellation (Calpine)', gen: 8, type: 'ipp' },
+        { name: 'Eversource', gen: 5, type: 'vi' },
+        { name: 'Brookfield', gen: 5, type: 'ipp' },
+        { name: 'Vistra', gen: 5, type: 'ipp' },
+        { name: 'Nat\'l Grid', gen: 4, type: 'vi' },
+        { name: 'GMP', gen: 3, type: 'vi' },
+        { name: 'Other', gen: 39, type: 'other' }
+    ]
+};
+
+var TYPE_COLORS = {
+    ipp:    '#7C3AED',
+    vi:     '#0EA5E9',
+    hybrid: '#F59E0B',
+    other:  '#9CA3AF'
+};
+var TYPE_LABELS = {
+    ipp:    'IPP/Merchant',
+    vi:     'Regulated/VI',
+    hybrid: 'Hybrid',
+    other:  'Public/Muni/Other'
+};
+
+/* ===================================================================
+   CHART 1: National overview — horizontal stacked bar
+   =================================================================== */
+(function() {
+    var isos = Object.keys(ISO_DATA);
+    var ippVals = isos.map(function(k){ return ISO_DATA[k].total * ISO_DATA[k].ipp / 100; });
+    var regVals = isos.map(function(k){ return ISO_DATA[k].total * ISO_DATA[k].reg / 100; });
+
+    new Chart(document.getElementById('nationalChart'), {
+        type: 'bar',
+        data: {
+            labels: isos,
+            datasets: [
+                {
+                    label: 'IPP / Merchant',
+                    data: ippVals,
+                    backgroundColor: 'rgba(124,58,237,0.85)',
+                    borderRadius: 3
+                },
+                {
+                    label: 'Regulated / VI / Public',
+                    data: regVals,
+                    backgroundColor: 'rgba(14,165,233,0.85)',
+                    borderRadius: 3
+                }
+            ]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { font: { family: "'Plus Jakarta Sans', sans-serif", size: 12 }, padding: 20, usePointStyle: true, pointStyle: 'rectRounded' }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            var iso = ctx.label;
+                            var pct = ctx.datasetIndex === 0 ? ISO_DATA[iso].ipp : ISO_DATA[iso].reg;
+                            return ctx.dataset.label + ': ' + Math.round(ctx.raw) + ' TWh (' + pct + '%)';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    stacked: true,
+                    title: { display: true, text: 'Annual Generation (TWh)', font: { family: "'Plus Jakarta Sans', sans-serif", size: 12 } },
+                    grid: { color: 'rgba(0,0,0,0.06)' },
+                    ticks: { font: { family: "'Plus Jakarta Sans', monospace", size: 11 } }
+                },
+                y: {
+                    stacked: true,
+                    grid: { display: false },
+                    ticks: { font: { family: "'Plus Jakarta Sans', sans-serif", size: 12, weight: 600 } }
+                }
+            }
+        }
+    });
+})();
+
+/* ===================================================================
+   CHART 2+: Per-ISO company breakdown (lazy-loaded on accordion open)
+   =================================================================== */
+var chartInstances = {};
+
+function createISOChart(iso) {
+    if (chartInstances[iso]) return;
+    var canvas = document.getElementById('chart' + iso);
+    if (!canvas) return;
+
+    var companies = ISO_COMPANIES[iso];
+    if (!companies) return;
+
+    var labels = companies.map(function(c){ return c.name; });
+    var data = companies.map(function(c){ return c.gen; });
+    var bgColors = companies.map(function(c){ return TYPE_COLORS[c.type] || '#9CA3AF'; });
+
+    chartInstances[iso] = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: bgColors.map(function(c){ return c + 'DD'; }),
+                borderColor: bgColors,
+                borderWidth: 1,
+                borderRadius: 3
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            var co = companies[ctx.dataIndex];
+                            return co.name + ': ~' + co.gen + ' TWh (' + TYPE_LABELS[co.type] + ')';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    title: { display: true, text: 'Est. Generation (TWh)', font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 } },
+                    grid: { color: 'rgba(0,0,0,0.06)' },
+                    ticks: { font: { family: "'Plus Jakarta Sans', monospace", size: 10 } }
+                },
+                y: {
+                    grid: { display: false },
+                    ticks: { font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 } }
+                }
+            }
+        }
+    });
+}
+
+/* Initialize chart for any accordion that's already open */
+document.querySelectorAll('.iso-accordion[open]').forEach(function(el) {
+    var canvas = el.querySelector('canvas');
+    if (canvas) {
+        var iso = canvas.id.replace('chart', '');
+        createISOChart(iso);
+    }
+});
+
+/* Lazy-create charts on toggle */
+document.querySelectorAll('.iso-accordion').forEach(function(el) {
+    el.addEventListener('toggle', function() {
+        if (el.open) {
+            var canvas = el.querySelector('canvas');
+            if (canvas) {
+                var iso = canvas.id.replace('chart', '');
+                /* Small delay to let DOM render the container at full size */
+                setTimeout(function(){ createISOChart(iso); }, 50);
+            }
+        }
+    });
+});
+
+/* ===================================================================
+   Scroll-reveal for illustration panels
+   =================================================================== */
+var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) {
+        if (e.isIntersecting) {
+            e.target.classList.add('visible');
+            obs.unobserve(e.target);
+        }
+    });
+}, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+document.querySelectorAll('.illustration-panel').forEach(function(el) {
+    obs.observe(el);
+});
+</script>
+
+</body>
+</html>

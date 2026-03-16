@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  market-simulator:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./frontend:/app/frontend
+    environment:
+      - PYTHONPATH=/app
+    restart: unless-stopped
