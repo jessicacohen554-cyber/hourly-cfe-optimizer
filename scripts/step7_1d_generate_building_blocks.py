@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# LEGACY — building_blocks.html archived. Output not used by any live page.
 """Step 7.1D: Generate building-blocks-data.js for the building blocks dashboard page.
 
 DEPRECATED: This script only generates HOURLY_PROFILES and SEASONAL_PROFILES.

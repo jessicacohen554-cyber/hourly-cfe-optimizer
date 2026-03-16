@@ -112,7 +112,8 @@ jobs:
           echo "=== Optimal CFE Targets (DAC crossover analysis) ==="
           python scripts/step4_1d_compute_optimal_targets.py
 
-      - name: "3/4 — Extract Building Blocks Data"
+      # LEGACY — building_blocks.html archived. Output not used by any live page.
+      - name: "3/4 — Extract Building Blocks Data (LEGACY)"
         if: ${{ inputs.script == 'ALL' || inputs.script == 'building-blocks' }}
         run: |
           echo "=== Building Blocks (hourly profiles + resource mixes) ==="

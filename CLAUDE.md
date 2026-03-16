@@ -138,15 +138,15 @@
   - **4.1C** `step4_1c_compute_mac_stats.py` — 6 MAC metrics: average fan (P10/P50/P90), stepwise marginal, monotonic envelope, path-constrained. ANOVA decomposition. Crossover vs DAC/SCC/ETS. ← needs Step 2.
   - **4.1D** `step4_1d_compute_optimal_targets.py` — Optimal CFE target per ISO via marginal MAC × DAC crossover (PCHIP spline). 3×3 grid-cost × DAC-scenario matrix. No-regrets resource analysis. ← needs Step 2. Output: `optimal_targets.json` + `dashboard/js/optimal-target-data.js`.
   - **4.1E** `step4_1e_export_tracks.py` — Exports track parquets (NB + CTR) to `track_results.json`. ← needs Step 2.
-  - **4.1F** `step4_1f_extract_building_blocks.py` — Building-block resource decomposition per ISO/threshold. ← needs Step 2.
+  - **4.1F** `step4_1f_extract_building_blocks.py` — [LEGACY] Building-block resource decomposition per ISO/threshold. ← needs Step 2.
 - **Tier 4.2** (parallel, needs specific 4.1 outputs):
   - **4.2A** `step4_2a_extract_resource_density.py` — Resource density analysis across thresholds. ← needs 4.1D.
   - **4.2B** `step4_2b_analyze_storage.py` — Battery/LDES utilization, dispatch patterns, capacity factor analysis. ← needs Step 2 + 4.1B.
   - **4.2C** `step4_2c_analyze_tracks.py` — Track cost envelopes (P10/P50/P90), resource mix differentials. ← needs 4.1E.
 
 **Step 5: Scenarios & Procurement** (sequential then parallel):
-- **5.1** `step5_1_scenario_hourly.py` — Hourly matching procurement strategy. ← needs 4.1D (optimal targets).
-- **5.2A** `step5_2a_scenario_comparison.py` — Consequential vs. hourly matching comparison. ← needs 3B + 5.1. ─┐
+- **5.1** `step5_1_scenario_hourly.py` — [ARCHIVED] Hourly matching procurement strategy. ← needs 4.1D (optimal targets).
+- **5.2A** `step5_2a_scenario_comparison.py` — [ARCHIVED] Consequential vs. hourly matching comparison. ← needs 3B + 5.1. ─┐
 - **5.2B** `step5_2b_strategy_consequential.py` — Strategy 1 (A/B/C): cross-regional consequential netting under 3 emission baselines. ← needs 3B. │
 - **5.2C** `step5_2c_strategy_hourly.py` — Strategy 2 (A/B/C): hourly matching same-ISO with existing clean credit variants. ← needs 5.1. │ parallel
 - **5.2D** `step5_2d_strategy_annual.py` — Strategy 3 (A/B/C/D): annual matching 2×2 matrix. ← needs Step 2. │
@@ -163,7 +163,7 @@
 - **7.1A** `step7_1a_generate_shared_data.py` — Extracts all results into `dashboard/js/shared-data.js`. SBTi milestone mapping, DAC trajectory projections, LCOE/transmission tables for client-side repricing. Aggregates all upstream outputs. ─┐
 - **7.1B** `step7_1b_extract_deployment_data.py` — Deployment queue data for dashboard. │
 - **7.1C** `step7_1c_generate_foak_noak.py` — FOAK/NOAK learning curve data. │ parallel
-- **7.1D** `step7_1d_generate_building_blocks.py` — Building blocks dashboard data. │
+- **7.1D** `step7_1d_generate_building_blocks.py` — [LEGACY] Building blocks dashboard data. │
 - **7.1E** `step7_1e_dispatch_deployment.py` — Dispatch deployment visualization data. │
 - **7.1F** `step7_1f_extract_hourly_comparison.py` — Hourly comparison data. │
 - **7.1G** `step7_1g_extract_use_case_data.py` — Use case analysis data. ─┘
@@ -227,7 +227,7 @@
 
 ### Change Propagation (Critical)
 - **"Fix something" = fix it everywhere** — any request to fix, update, or change something applies to ALL regions and ALL pages by default, not just the one being discussed
-- Pages to update: `dashboard.html`, `abatement_dashboard.html`, `optimizer_methodology.html`, `research_paper.html`, `scenario_comparison.html`, `storage_analysis.html`, `lmp_trends.html`
+- Pages to update: `dashboard.html`, `abatement_dashboard.html`, `optimizer_methodology.html`, `research_paper.html`, `storage_analysis.html`, `lmp_trends.html`
 - **Always update the research paper** (`research_paper.html`) when optimizer results, methodology, or findings change
 - **Proactively update narrative text** after new results are generated — don't wait to be asked
 - Only scope a fix to a single page if the user explicitly says so (e.g., "just on CAISO")
@@ -264,7 +264,7 @@
 - **Homepage**: `dashboard/index.html` — scrollytelling landing page with key findings
 - **Cost Optimizer**: `dashboard/dashboard.html` — interactive optimizer with all sensitivity toggles
 - **Abatement**: `dashboard/abatement_dashboard.html` — CO₂ Abatement Analysis (scrollytell + static cost envelopes)
-- **Scenarios**: `dashboard/scenario_comparison.html` — Consequential vs hourly matching
+- **Scenarios**: `dashboard/archive/scenario_comparison.html` — [ARCHIVED] Consequential vs hourly matching
 - **LMP Analysis**: `dashboard/lmp_trends.html` — Synthetic LMP trend analysis
 - **Storage**: `dashboard/storage_analysis.html` — Battery/LDES dispatch analysis
 - **Procurement**: `dashboard/procurement_strategies.html` — Corporate procurement strategy comparison
