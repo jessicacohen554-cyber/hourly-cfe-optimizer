@@ -19,6 +19,39 @@
     <script src="js/scroll-observer.js"></script>
     <script src="js/shared-footer.js"></script>
     <style>
+        /* ===== DARK THEME OVERRIDE ===== */
+        body {
+            background: #0B1120 !important;
+            color: rgba(255,255,255,0.92);
+        }
+        #bgImage {
+            opacity: 0.08;
+            filter: invert(1) brightness(0.4);
+        }
+        /* Override cinematic.css white panel defaults for dark context */
+        .card,
+        .stat-card,
+        .outcome-panel,
+        .signal-panel {
+            background: rgba(255,255,255,0.05) !important;
+            border: 1px solid rgba(255,255,255,0.08) !important;
+            color: rgba(255,255,255,0.9);
+        }
+        .section-header h2 {
+            color: #fff !important;
+        }
+        .section-header p {
+            color: rgba(255,255,255,0.55) !important;
+        }
+        .section-number {
+            background: rgba(99,102,241,0.15) !important;
+            color: #A5B4FC !important;
+        }
+        /* Header override for dark */
+        .header {
+            background: #0B1120 !important;
+        }
+
         /* ===== Hero Stats Row ===== */
         .hero-stats-row {
             display: grid;
@@ -35,14 +68,14 @@
             font-family: var(--font-heading);
             font-size: 2.8rem;
             font-weight: 800;
-            color: var(--navy);
+            color: #fff;
             line-height: 1.1;
         }
         .hero-stats-row .stat-label {
             font-size: 0.78rem;
             text-transform: uppercase;
             letter-spacing: 0.6px;
-            color: var(--text-muted);
+            color: rgba(255,255,255,0.5);
             margin-top: var(--space-xs);
         }
         /* Stagger fade-in for stat cards */
@@ -50,37 +83,43 @@
         .hero-stats-row .stat-card:nth-child(3) { transition-delay: 0.24s; }
         .hero-stats-row .stat-card:nth-child(4) { transition-delay: 0.36s; }
 
-        /* ===== Fork Section ===== */
-        .fork-wrap {
-            position: relative;
+        /* ===== Fork SVG Diagram ===== */
+        .fork-diagram {
             max-width: 900px;
             margin: 0 auto;
-            padding-bottom: 20px;
+            text-align: center;
         }
-        #forkCanvas {
-            display: block;
+        .fork-diagram svg {
             width: 100%;
-            height: 700px;
+            height: auto;
+            display: block;
         }
+        /* Animated dots on the fork paths */
+        @keyframes dotPulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+        .flow-dot {
+            filter: drop-shadow(0 0 4px currentColor);
+        }
+
+        /* ===== Outcome Panels (below SVG) ===== */
         .outcome-panels {
-            position: absolute;
-            bottom: 40px;
-            left: 0;
-            right: 0;
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: var(--space-md);
-            padding: 0 5%;
-            z-index: 2;
+            gap: var(--space-lg);
+            max-width: 900px;
+            margin: var(--space-lg) auto 0;
         }
         .outcome-panel {
             padding: var(--space-lg) var(--space-md);
+            border-radius: var(--radius-lg, 12px);
         }
         .outcome-panel.strat-1b {
-            border-top: 3px solid #6366F1;
+            border-top: 3px solid #6366F1 !important;
         }
         .outcome-panel.strat-2c {
-            border-top: 3px solid #0EA5E9;
+            border-top: 3px solid #0EA5E9 !important;
         }
         .outcome-icons {
             display: flex;
@@ -102,18 +141,18 @@
             border-radius: var(--radius-pill);
             margin-bottom: var(--space-sm);
         }
-        .outcome-tag-1b { background: rgba(99,102,241,0.12); color: #6366F1; }
-        .outcome-tag-2c { background: rgba(14,165,233,0.12); color: #0EA5E9; }
+        .outcome-tag-1b { background: rgba(99,102,241,0.18); color: #A5B4FC; }
+        .outcome-tag-2c { background: rgba(14,165,233,0.18); color: #7DD3FC; }
         .outcome-headline {
             font-family: var(--font-heading);
             font-size: 1.1rem;
             font-weight: 700;
-            color: var(--navy);
+            color: #fff;
             margin-bottom: var(--space-xs);
         }
         .outcome-text {
             font-size: 0.88rem;
-            color: var(--text-secondary);
+            color: rgba(255,255,255,0.7);
             line-height: 1.65;
             margin-bottom: var(--space-sm);
         }
@@ -125,12 +164,12 @@
         }
         .outcome-stat-label {
             font-size: 0.75rem;
-            color: var(--text-muted);
+            color: rgba(255,255,255,0.45);
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        .outcome-stat-1b { color: #6366F1; }
-        .outcome-stat-2c { color: #0EA5E9; }
+        .outcome-stat-1b { color: #A5B4FC; }
+        .outcome-stat-2c { color: #7DD3FC; }
 
         /* Gas plant pulse */
         @keyframes gasPulse {
@@ -151,12 +190,13 @@
         }
         .signal-panel {
             padding: var(--space-xl) var(--space-lg);
-            border-top: 4px solid transparent;
+            border-top: 4px solid transparent !important;
             text-align: center;
+            border-radius: var(--radius-lg, 12px);
         }
-        .signal-panel-1b { border-top-color: #6366F1; }
-        .signal-panel-2c { border-top-color: #0EA5E9; }
-        .signal-panel-gradient { border-image: linear-gradient(90deg, #6366F1, #E11D48) 1; }
+        .signal-panel-1b { border-top-color: #6366F1 !important; }
+        .signal-panel-2c { border-top-color: #0EA5E9 !important; }
+        .signal-panel-gradient { border-image: linear-gradient(90deg, #6366F1, #E11D48) 1 !important; }
         .signal-icon {
             width: 64px;
             height: 64px;
@@ -166,12 +206,12 @@
             font-family: var(--font-heading);
             font-size: 1.05rem;
             font-weight: 700;
-            color: var(--navy);
+            color: #fff !important;
             margin-bottom: var(--space-sm);
         }
         .signal-panel p {
             font-size: 0.9rem;
-            color: var(--text-secondary);
+            color: rgba(255,255,255,0.7);
             line-height: 1.7;
             text-align: left;
         }
@@ -205,7 +245,7 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            color: #6366F1;
+            color: #A5B4FC;
             font-family: var(--font-heading);
             font-weight: 600;
             font-size: 0.95rem;
@@ -214,12 +254,7 @@
         }
         .explore-link:hover {
             transform: translateX(4px);
-        }
-        .explore-link .arrow {
-            transition: transform 0.2s ease;
-        }
-        .explore-link:hover .arrow {
-            transform: translateX(4px);
+            color: #C4B5FD;
         }
 
         /* ===== Responsive ===== */
@@ -229,19 +264,11 @@
         @media (max-width: 768px) {
             .hero-stats-row { grid-template-columns: 1fr 1fr; }
             .hero-stats-row .stat-value { font-size: 2.2rem; }
-            #forkCanvas { height: 500px; }
-            .outcome-panels {
-                position: static;
-                grid-template-columns: 1fr;
-                padding: var(--space-md) 0 0;
-                gap: var(--space-md);
-            }
-            .fork-wrap { padding-bottom: 0; }
+            .outcome-panels { grid-template-columns: 1fr; }
         }
         @media (max-width: 480px) {
             .hero-stats-row { grid-template-columns: 1fr; max-width: 300px; }
             .hero-stats-row .stat-value { font-size: 2rem; }
-            #forkCanvas { height: 400px; }
         }
 
         /* Reduced motion */
@@ -254,6 +281,7 @@
             .gas-icon-pulse, .factory-pulse {
                 animation: none !important;
             }
+            .flow-dot { display: none; }
         }
     </style>
 </head>
@@ -270,7 +298,7 @@
     <!-- Hero Section                                                           -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <section class="content-section" id="hero">
-        <p class="fade-in" style="text-align:center; max-width:720px; margin:0 auto var(--space-xl); font-size:1.08rem; color:var(--text-secondary); line-height:1.8">
+        <p class="fade-in" style="text-align:center; max-width:720px; margin:0 auto var(--space-xl); font-size:1.08rem; color:rgba(255,255,255,0.75); line-height:1.8">
             The GHG Protocol is revising Scope 2 for the first time since 2015. The outcome will redirect hundreds of billions in clean energy capital. One path &mdash; consequential netting &mdash; optimizes for the cheapest ton of CO&#8322; displaced anywhere on the map. The other &mdash; hourly matching &mdash; requires clean energy to meet load every hour in the buyer&rsquo;s grid. Both reduce emissions. They build fundamentally different grids. This analysis, built on an 8,760-hour optimization model across 7 US ISOs, 540+ market scenarios, and 7 IPP fleet assessments, shows why the distinction matters &mdash; and what&rsquo;s at stake if we get it wrong.
         </p>
         <div class="hero-stats-row" id="heroStatsRow">
@@ -302,89 +330,179 @@
         <p>The same corporate procurement dollar. Two paths. Two very different grids.</p>
     </div>
     <section class="content-section" id="fork-section">
-        <div class="fork-wrap">
-            <canvas id="forkCanvas"></canvas>
-            <div class="outcome-panels">
-                <!-- 1B Panel -->
-                <div class="outcome-panel card strat-1b fade-in">
-                    <div class="outcome-icons">
-                        <!-- Solar icon -->
-                        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#6366F1" stroke-width="1.8" stroke-linecap="round">
-                            <circle cx="14" cy="14" r="5"/>
-                            <line x1="14" y1="2" x2="14" y2="6"/><line x1="14" y1="22" x2="14" y2="26"/>
-                            <line x1="2" y1="14" x2="6" y2="14"/><line x1="22" y1="14" x2="26" y2="14"/>
-                            <line x1="5.5" y1="5.5" x2="8.3" y2="8.3"/><line x1="19.7" y1="19.7" x2="22.5" y2="22.5"/>
-                            <line x1="22.5" y1="5.5" x2="19.7" y2="8.3"/><line x1="8.3" y1="19.7" x2="5.5" y2="22.5"/>
-                        </svg>
-                        <!-- Wind icon -->
-                        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#6366F1" stroke-width="1.8" stroke-linecap="round">
-                            <line x1="14" y1="14" x2="14" y2="26"/>
-                            <path d="M14 14 L8 4 Q14 2 16 8Z" fill="rgba(99,102,241,0.15)"/>
-                            <path d="M14 14 L22 8 Q26 14 20 16Z" fill="rgba(99,102,241,0.15)"/>
-                            <path d="M14 14 L6 20 Q4 14 10 12Z" fill="rgba(99,102,241,0.15)"/>
-                        </svg>
-                        <!-- Gas plant icon (pulsing) -->
-                        <svg class="gas-icon-pulse" width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="#EF4444" stroke-width="1.8" stroke-linecap="round">
-                            <rect x="4" y="14" width="18" height="14" rx="1"/>
-                            <rect x="8" y="6" width="5" height="8"/>
-                            <path d="M10.5 6 Q10.5 2 12 1" stroke-width="1.5" opacity="0.6"/>
-                            <path d="M10.5 6 Q10.5 1 9 0" stroke-width="1.5" opacity="0.4"/>
-                            <rect x="22" y="18" width="6" height="10" rx="1"/>
-                        </svg>
-                    </div>
-                    <span class="outcome-tag outcome-tag-1b">1B &mdash; Consequential</span>
-                    <div class="outcome-headline">Cheap today. More gas tomorrow.</div>
-                    <div class="outcome-text">Deploys VRE cross-regionally at lowest cost. IPPs build gas to backstop intermittency. Gas becomes an asset its owners will defend.</div>
-                    <div class="outcome-stat-label">Gas remaining</div>
-                    <div class="outcome-stat outcome-stat-1b">12&ndash;18 GW</div>
+        <!-- SVG Flow Diagram -->
+        <div class="fork-diagram fade-in">
+            <svg viewBox="0 0 800 520" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Fork diagram showing corporate procurement splitting into two strategies">
+                <defs>
+                    <!-- Glow filters -->
+                    <filter id="glowWhite" x="-50%" y="-50%" width="200%" height="200%">
+                        <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="rgba(255,255,255,0.15)"/>
+                    </filter>
+                    <filter id="glow1B" x="-50%" y="-50%" width="200%" height="200%">
+                        <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="rgba(99,102,241,0.35)"/>
+                    </filter>
+                    <filter id="glow2C" x="-50%" y="-50%" width="200%" height="200%">
+                        <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="rgba(14,165,233,0.35)"/>
+                    </filter>
+                    <!-- Motion paths: trunk + left branch, trunk + right branch -->
+                    <path id="pathLeft" d="M400,70 L400,200 Q400,260 280,340 Q200,390 160,480" fill="none"/>
+                    <path id="pathRight" d="M400,70 L400,200 Q400,260 520,340 Q600,390 640,480" fill="none"/>
+                </defs>
+
+                <!-- Source bar -->
+                <rect x="300" y="20" width="200" height="40" rx="8" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+                <text x="400" y="45" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-size="11" font-weight="600" letter-spacing="1.5" fill="rgba(255,255,255,0.45)">CORPORATE PROCUREMENT</text>
+
+                <!-- Trunk path -->
+                <line x1="400" y1="60" x2="400" y2="200" stroke="rgba(255,255,255,0.18)" stroke-width="3" filter="url(#glowWhite)"/>
+
+                <!-- Fork node -->
+                <circle cx="400" cy="200" r="6" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+                <text x="400" y="228" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-size="10" font-weight="600" letter-spacing="1.2" fill="rgba(255,255,255,0.35)">ACCOUNTING FRAMEWORK</text>
+
+                <!-- Left branch (1B) -->
+                <path d="M400,200 Q400,260 280,340 Q200,390 160,480" fill="none" stroke="#6366F1" stroke-width="3" stroke-linecap="round" filter="url(#glow1B)"/>
+                <!-- Left arrow terminal -->
+                <polygon points="160,480 152,470 168,470" fill="#6366F1" opacity="0.8"/>
+                <!-- Left label -->
+                <text x="160" y="505" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-size="13" font-weight="700" fill="#A5B4FC">1B &mdash; Consequential</text>
+
+                <!-- Right branch (2C) -->
+                <path d="M400,200 Q400,260 520,340 Q600,390 640,480" fill="none" stroke="#0EA5E9" stroke-width="3" stroke-linecap="round" filter="url(#glow2C)"/>
+                <!-- Right arrow terminal -->
+                <polygon points="640,480 632,470 648,470" fill="#0EA5E9" opacity="0.8"/>
+                <!-- Right label -->
+                <text x="640" y="505" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-size="13" font-weight="700" fill="#7DD3FC">2C &mdash; Hourly Matching</text>
+
+                <!-- Animated flowing dots — LEFT branch (3 dots, staggered) -->
+                <circle class="flow-dot" r="5" fill="#6366F1" opacity="0.9">
+                    <animateMotion dur="4s" repeatCount="indefinite" begin="0s">
+                        <mpath href="#pathLeft"/>
+                    </animateMotion>
+                    <animate attributeName="fill" values="#ffffff;#ffffff;#6366F1;#6366F1" keyTimes="0;0.25;0.45;1" dur="4s" repeatCount="indefinite" begin="0s"/>
+                    <animate attributeName="opacity" values="0.5;0.9;0.9;0.3" keyTimes="0;0.2;0.8;1" dur="4s" repeatCount="indefinite" begin="0s"/>
+                </circle>
+                <circle class="flow-dot" r="5" fill="#6366F1" opacity="0.9">
+                    <animateMotion dur="4s" repeatCount="indefinite" begin="1.33s">
+                        <mpath href="#pathLeft"/>
+                    </animateMotion>
+                    <animate attributeName="fill" values="#ffffff;#ffffff;#6366F1;#6366F1" keyTimes="0;0.25;0.45;1" dur="4s" repeatCount="indefinite" begin="1.33s"/>
+                    <animate attributeName="opacity" values="0.5;0.9;0.9;0.3" keyTimes="0;0.2;0.8;1" dur="4s" repeatCount="indefinite" begin="1.33s"/>
+                </circle>
+                <circle class="flow-dot" r="5" fill="#6366F1" opacity="0.9">
+                    <animateMotion dur="4s" repeatCount="indefinite" begin="2.66s">
+                        <mpath href="#pathLeft"/>
+                    </animateMotion>
+                    <animate attributeName="fill" values="#ffffff;#ffffff;#6366F1;#6366F1" keyTimes="0;0.25;0.45;1" dur="4s" repeatCount="indefinite" begin="2.66s"/>
+                    <animate attributeName="opacity" values="0.5;0.9;0.9;0.3" keyTimes="0;0.2;0.8;1" dur="4s" repeatCount="indefinite" begin="2.66s"/>
+                </circle>
+
+                <!-- Animated flowing dots — RIGHT branch (3 dots, staggered) -->
+                <circle class="flow-dot" r="5" fill="#0EA5E9" opacity="0.9">
+                    <animateMotion dur="4s" repeatCount="indefinite" begin="0.66s">
+                        <mpath href="#pathRight"/>
+                    </animateMotion>
+                    <animate attributeName="fill" values="#ffffff;#ffffff;#0EA5E9;#0EA5E9" keyTimes="0;0.25;0.45;1" dur="4s" repeatCount="indefinite" begin="0.66s"/>
+                    <animate attributeName="opacity" values="0.5;0.9;0.9;0.3" keyTimes="0;0.2;0.8;1" dur="4s" repeatCount="indefinite" begin="0.66s"/>
+                </circle>
+                <circle class="flow-dot" r="5" fill="#0EA5E9" opacity="0.9">
+                    <animateMotion dur="4s" repeatCount="indefinite" begin="2s">
+                        <mpath href="#pathRight"/>
+                    </animateMotion>
+                    <animate attributeName="fill" values="#ffffff;#ffffff;#0EA5E9;#0EA5E9" keyTimes="0;0.25;0.45;1" dur="4s" repeatCount="indefinite" begin="2s"/>
+                    <animate attributeName="opacity" values="0.5;0.9;0.9;0.3" keyTimes="0;0.2;0.8;1" dur="4s" repeatCount="indefinite" begin="2s"/>
+                </circle>
+                <circle class="flow-dot" r="5" fill="#0EA5E9" opacity="0.9">
+                    <animateMotion dur="4s" repeatCount="indefinite" begin="3.33s">
+                        <mpath href="#pathRight"/>
+                    </animateMotion>
+                    <animate attributeName="fill" values="#ffffff;#ffffff;#0EA5E9;#0EA5E9" keyTimes="0;0.25;0.45;1" dur="4s" repeatCount="indefinite" begin="3.33s"/>
+                    <animate attributeName="opacity" values="0.5;0.9;0.9;0.3" keyTimes="0;0.2;0.8;1" dur="4s" repeatCount="indefinite" begin="3.33s"/>
+                </circle>
+            </svg>
+        </div>
+
+        <!-- Outcome Panels (normal flow below SVG) -->
+        <div class="outcome-panels">
+            <!-- 1B Panel -->
+            <div class="outcome-panel strat-1b fade-in">
+                <div class="outcome-icons">
+                    <!-- Solar icon -->
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#A5B4FC" stroke-width="1.8" stroke-linecap="round">
+                        <circle cx="14" cy="14" r="5"/>
+                        <line x1="14" y1="2" x2="14" y2="6"/><line x1="14" y1="22" x2="14" y2="26"/>
+                        <line x1="2" y1="14" x2="6" y2="14"/><line x1="22" y1="14" x2="26" y2="14"/>
+                        <line x1="5.5" y1="5.5" x2="8.3" y2="8.3"/><line x1="19.7" y1="19.7" x2="22.5" y2="22.5"/>
+                        <line x1="22.5" y1="5.5" x2="19.7" y2="8.3"/><line x1="8.3" y1="19.7" x2="5.5" y2="22.5"/>
+                    </svg>
+                    <!-- Wind icon -->
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#A5B4FC" stroke-width="1.8" stroke-linecap="round">
+                        <line x1="14" y1="14" x2="14" y2="26"/>
+                        <path d="M14 14 L8 4 Q14 2 16 8Z" fill="rgba(99,102,241,0.2)"/>
+                        <path d="M14 14 L22 8 Q26 14 20 16Z" fill="rgba(99,102,241,0.2)"/>
+                        <path d="M14 14 L6 20 Q4 14 10 12Z" fill="rgba(99,102,241,0.2)"/>
+                    </svg>
+                    <!-- Gas plant icon (pulsing) -->
+                    <svg class="gas-icon-pulse" width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="#EF4444" stroke-width="1.8" stroke-linecap="round">
+                        <rect x="4" y="14" width="18" height="14" rx="1"/>
+                        <rect x="8" y="6" width="5" height="8"/>
+                        <path d="M10.5 6 Q10.5 2 12 1" stroke-width="1.5" opacity="0.6"/>
+                        <path d="M10.5 6 Q10.5 1 9 0" stroke-width="1.5" opacity="0.4"/>
+                        <rect x="22" y="18" width="6" height="10" rx="1"/>
+                    </svg>
                 </div>
-                <!-- 2C Panel -->
-                <div class="outcome-panel card strat-2c fade-in">
-                    <div class="outcome-icons">
-                        <!-- Solar -->
-                        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#0EA5E9" stroke-width="1.8" stroke-linecap="round">
-                            <circle cx="14" cy="14" r="5"/>
-                            <line x1="14" y1="2" x2="14" y2="6"/><line x1="14" y1="22" x2="14" y2="26"/>
-                            <line x1="2" y1="14" x2="6" y2="14"/><line x1="22" y1="14" x2="26" y2="14"/>
-                            <line x1="5.5" y1="5.5" x2="8.3" y2="8.3"/><line x1="19.7" y1="19.7" x2="22.5" y2="22.5"/>
-                            <line x1="22.5" y1="5.5" x2="19.7" y2="8.3"/><line x1="8.3" y1="19.7" x2="5.5" y2="22.5"/>
-                        </svg>
-                        <!-- Wind -->
-                        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#0EA5E9" stroke-width="1.8" stroke-linecap="round">
-                            <line x1="14" y1="14" x2="14" y2="26"/>
-                            <path d="M14 14 L8 4 Q14 2 16 8Z" fill="rgba(14,165,233,0.15)"/>
-                            <path d="M14 14 L22 8 Q26 14 20 16Z" fill="rgba(14,165,233,0.15)"/>
-                            <path d="M14 14 L6 20 Q4 14 10 12Z" fill="rgba(14,165,233,0.15)"/>
-                        </svg>
-                        <!-- Nuclear -->
-                        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#0EA5E9" stroke-width="1.8" stroke-linecap="round">
-                            <circle cx="14" cy="14" r="10"/>
-                            <circle cx="14" cy="14" r="3" fill="rgba(14,165,233,0.2)"/>
-                            <circle cx="14" cy="6" r="1.5" fill="#0EA5E9"/>
-                            <circle cx="7" cy="18" r="1.5" fill="#0EA5E9"/>
-                            <circle cx="21" cy="18" r="1.5" fill="#0EA5E9"/>
-                        </svg>
-                        <!-- Battery -->
-                        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#0EA5E9" stroke-width="1.8" stroke-linecap="round">
-                            <rect x="5" y="8" width="18" height="16" rx="2"/>
-                            <line x1="10" y1="5" x2="10" y2="8"/><line x1="18" y1="5" x2="18" y2="8"/>
-                            <rect x="8" y="12" width="12" height="8" rx="1" fill="rgba(14,165,233,0.15)"/>
-                            <path d="M14 13 v6 M11 16 h6" stroke-width="1.5"/>
-                        </svg>
-                        <!-- LDES -->
-                        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#0EA5E9" stroke-width="1.8" stroke-linecap="round">
-                            <rect x="6" y="4" width="16" height="20" rx="3"/>
-                            <line x1="6" y1="10" x2="22" y2="10"/>
-                            <line x1="6" y1="16" x2="22" y2="16"/>
-                            <rect x="9" y="12" width="10" height="2" fill="rgba(14,165,233,0.2)" rx="0.5"/>
-                        </svg>
-                    </div>
-                    <span class="outcome-tag outcome-tag-2c">2C &mdash; Hourly Matching</span>
-                    <div class="outcome-headline">Costs more now. Builds the grid we need.</div>
-                    <div class="outcome-text">Matches load every hour in the buyer&rsquo;s grid. Forces firm clean + storage. Displaces gas directly. Learning curves bend cost down over time.</div>
-                    <div class="outcome-stat-label">Gas remaining</div>
-                    <div class="outcome-stat outcome-stat-2c">3&ndash;7 GW</div>
+                <span class="outcome-tag outcome-tag-1b">1B &mdash; Consequential</span>
+                <div class="outcome-headline">Cheap today. More gas tomorrow.</div>
+                <div class="outcome-text">Deploys VRE cross-regionally at lowest cost. IPPs build gas to backstop intermittency. Gas becomes an asset its owners will defend.</div>
+                <div class="outcome-stat-label">Gas remaining</div>
+                <div class="outcome-stat outcome-stat-1b">12&ndash;18 GW</div>
+            </div>
+            <!-- 2C Panel -->
+            <div class="outcome-panel strat-2c fade-in">
+                <div class="outcome-icons">
+                    <!-- Solar -->
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#7DD3FC" stroke-width="1.8" stroke-linecap="round">
+                        <circle cx="14" cy="14" r="5"/>
+                        <line x1="14" y1="2" x2="14" y2="6"/><line x1="14" y1="22" x2="14" y2="26"/>
+                        <line x1="2" y1="14" x2="6" y2="14"/><line x1="22" y1="14" x2="26" y2="14"/>
+                        <line x1="5.5" y1="5.5" x2="8.3" y2="8.3"/><line x1="19.7" y1="19.7" x2="22.5" y2="22.5"/>
+                        <line x1="22.5" y1="5.5" x2="19.7" y2="8.3"/><line x1="8.3" y1="19.7" x2="5.5" y2="22.5"/>
+                    </svg>
+                    <!-- Wind -->
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#7DD3FC" stroke-width="1.8" stroke-linecap="round">
+                        <line x1="14" y1="14" x2="14" y2="26"/>
+                        <path d="M14 14 L8 4 Q14 2 16 8Z" fill="rgba(14,165,233,0.2)"/>
+                        <path d="M14 14 L22 8 Q26 14 20 16Z" fill="rgba(14,165,233,0.2)"/>
+                        <path d="M14 14 L6 20 Q4 14 10 12Z" fill="rgba(14,165,233,0.2)"/>
+                    </svg>
+                    <!-- Nuclear -->
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#7DD3FC" stroke-width="1.8" stroke-linecap="round">
+                        <circle cx="14" cy="14" r="10"/>
+                        <circle cx="14" cy="14" r="3" fill="rgba(14,165,233,0.25)"/>
+                        <circle cx="14" cy="6" r="1.5" fill="#7DD3FC"/>
+                        <circle cx="7" cy="18" r="1.5" fill="#7DD3FC"/>
+                        <circle cx="21" cy="18" r="1.5" fill="#7DD3FC"/>
+                    </svg>
+                    <!-- Battery -->
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#7DD3FC" stroke-width="1.8" stroke-linecap="round">
+                        <rect x="5" y="8" width="18" height="16" rx="2"/>
+                        <line x1="10" y1="5" x2="10" y2="8"/><line x1="18" y1="5" x2="18" y2="8"/>
+                        <rect x="8" y="12" width="12" height="8" rx="1" fill="rgba(14,165,233,0.2)"/>
+                        <path d="M14 13 v6 M11 16 h6" stroke-width="1.5"/>
+                    </svg>
+                    <!-- LDES -->
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#7DD3FC" stroke-width="1.8" stroke-linecap="round">
+                        <rect x="6" y="4" width="16" height="20" rx="3"/>
+                        <line x1="6" y1="10" x2="22" y2="10"/>
+                        <line x1="6" y1="16" x2="22" y2="16"/>
+                        <rect x="9" y="12" width="10" height="2" fill="rgba(14,165,233,0.25)" rx="0.5"/>
+                    </svg>
                 </div>
+                <span class="outcome-tag outcome-tag-2c">2C &mdash; Hourly Matching</span>
+                <div class="outcome-headline">Costs more now. Builds the grid we need.</div>
+                <div class="outcome-text">Matches load every hour in the buyer&rsquo;s grid. Forces firm clean + storage. Displaces gas directly. Learning curves bend cost down over time.</div>
+                <div class="outcome-stat-label">Gas remaining</div>
+                <div class="outcome-stat outcome-stat-2c">3&ndash;7 GW</div>
             </div>
         </div>
     </section>
@@ -402,7 +520,7 @@
             <!-- Panel 1: What 1B buys -->
             <div class="signal-panel signal-panel-1b card fade-in">
                 <div class="signal-icon">
-                    <svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="#6366F1" stroke-width="2" stroke-linecap="round">
+                    <svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="#A5B4FC" stroke-width="2" stroke-linecap="round">
                         <!-- Solar -->
                         <circle cx="22" cy="32" r="8"/>
                         <line x1="22" y1="18" x2="22" y2="22"/><line x1="22" y1="42" x2="22" y2="46"/>
@@ -411,9 +529,9 @@
                         <line x1="31.9" y1="22.1" x2="29" y2="25"/><line x1="15" y1="39" x2="12.1" y2="41.9"/>
                         <!-- Wind -->
                         <line x1="46" y1="32" x2="46" y2="52"/>
-                        <path d="M46 32 L40 20 Q46 18 48 26Z" fill="rgba(99,102,241,0.12)"/>
-                        <path d="M46 32 L56 26 Q58 32 52 34Z" fill="rgba(99,102,241,0.12)"/>
-                        <path d="M46 32 L38 38 Q36 32 42 30Z" fill="rgba(99,102,241,0.12)"/>
+                        <path d="M46 32 L40 20 Q46 18 48 26Z" fill="rgba(99,102,241,0.15)"/>
+                        <path d="M46 32 L56 26 Q58 32 52 34Z" fill="rgba(99,102,241,0.15)"/>
+                        <path d="M46 32 L38 38 Q36 32 42 30Z" fill="rgba(99,102,241,0.15)"/>
                     </svg>
                 </div>
                 <h3>You buy cheap VRE cross-regionally</h3>
@@ -422,7 +540,7 @@
             <!-- Panel 2: What 2C buys -->
             <div class="signal-panel signal-panel-2c card fade-in">
                 <div class="signal-icon" id="clockIcon">
-                    <svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="#0EA5E9" stroke-width="2" stroke-linecap="round">
+                    <svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="#7DD3FC" stroke-width="2" stroke-linecap="round">
                         <circle cx="32" cy="32" r="26" stroke-width="2.5"/>
                         <!-- 24 tick marks -->
                         <g id="clockTicks">
@@ -454,7 +572,7 @@
                         <!-- Clock hands -->
                         <line x1="32" y1="32" x2="32" y2="16" stroke-width="2.5"/>
                         <line x1="32" y1="32" x2="44" y2="32" stroke-width="2"/>
-                        <circle cx="32" cy="32" r="2.5" fill="#0EA5E9"/>
+                        <circle cx="32" cy="32" r="2.5" fill="#7DD3FC"/>
                     </svg>
                 </div>
                 <h3>You match load every hour in your grid</h3>
@@ -465,13 +583,13 @@
                 <div class="signal-icon factory-pulse">
                     <svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke-width="2" stroke-linecap="round">
                         <!-- Factory -->
-                        <rect x="6" y="28" width="26" height="24" rx="2" stroke="#6366F1"/>
-                        <rect x="12" y="16" width="8" height="12" stroke="#6366F1"/>
-                        <path d="M16 16 Q16 10 18.5 8" stroke="#E11D48" stroke-width="1.5" opacity="0.7"/>
-                        <path d="M16 16 Q16 9 13.5 7" stroke="#E11D48" stroke-width="1.5" opacity="0.5"/>
+                        <rect x="6" y="28" width="26" height="24" rx="2" stroke="#A5B4FC"/>
+                        <rect x="12" y="16" width="8" height="12" stroke="#A5B4FC"/>
+                        <path d="M16 16 Q16 10 18.5 8" stroke="#F87171" stroke-width="1.5" opacity="0.7"/>
+                        <path d="M16 16 Q16 9 13.5 7" stroke="#F87171" stroke-width="1.5" opacity="0.5"/>
                         <!-- Shield -->
-                        <path d="M46 18 L56 22 L56 36 Q56 46 46 52 Q36 46 36 36 L36 22Z" stroke="#E11D48" fill="rgba(225,29,72,0.08)"/>
-                        <path d="M42 32 L45 35 L52 28" stroke="#E11D48" stroke-width="2.5"/>
+                        <path d="M46 18 L56 22 L56 36 Q56 46 46 52 Q36 46 36 36 L36 22Z" stroke="#F87171" fill="rgba(248,113,113,0.1)"/>
+                        <path d="M42 32 L45 35 L52 28" stroke="#F87171" stroke-width="2.5"/>
                     </svg>
                 </div>
                 <h3>What gets built gets defended</h3>
@@ -493,29 +611,21 @@
     (function() {
         'use strict';
 
-        // ===== STRATEGY COLORS =====
-        var COLOR_1B = '#6366F1';
-        var COLOR_2C = '#0EA5E9';
-
         // ===== MODULE 1: Count-Up Animation =====
         (function initCountUp() {
             var row = document.getElementById('heroStatsRow');
             if (!row) return;
 
             var triggered = false;
-            var observer = new IntersectionObserver(function(entries) {
+
+            function runCountUp() {
                 if (triggered) return;
-                entries.forEach(function(entry) {
-                    if (!entry.isIntersecting) return;
-                    triggered = true;
-                    var cards = row.querySelectorAll('[data-count-to]');
-                    cards.forEach(function(card, i) {
-                        setTimeout(function() { animateCount(card); }, i * 120);
-                    });
-                    observer.unobserve(entry.target);
+                triggered = true;
+                var cards = row.querySelectorAll('[data-count-to]');
+                cards.forEach(function(card, i) {
+                    setTimeout(function() { animateCount(card); }, i * 120);
                 });
-            }, { threshold: 0.3 });
-            observer.observe(row);
+            }
 
             function animateCount(card) {
                 var target = parseInt(card.dataset.countTo, 10);
@@ -526,7 +636,6 @@
 
                 function tick(now) {
                     var t = Math.min((now - start) / duration, 1);
-                    // Ease-out cubic
                     var eased = 1 - Math.pow(1 - t, 3);
                     var current = Math.round(eased * target);
                     valEl.textContent = current.toLocaleString() + suffix;
@@ -534,249 +643,27 @@
                 }
                 requestAnimationFrame(tick);
             }
-        })();
 
-        // ===== MODULE 2: Particle Fork Animation =====
-        (function initParticleFork() {
-            var canvas = document.getElementById('forkCanvas');
-            if (!canvas) return;
-
-            // Reduced motion: skip animation
-            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-                canvas.style.display = 'none';
-                return;
-            }
-
-            var ctx = canvas.getContext('2d');
-            var dpr = window.devicePixelRatio || 1;
-            var W, H, cx;
-            var particles = [];
-            var nextParticle = 0;
-            var running = false;
-            var animId = null;
-            var lastSpawn = 0;
-            var spawnInterval = 120;
-            var nextBranch = 0; // alternates 0=left(1B), 1=right(2C)
-
-            // Color parse helpers
-            function hexToRgb(hex) {
-                var r = parseInt(hex.slice(1,3), 16);
-                var g = parseInt(hex.slice(3,5), 16);
-                var b = parseInt(hex.slice(5,7), 16);
-                return [r, g, b];
-            }
-            var rgb1B = hexToRgb(COLOR_1B);
-            var rgb2C = hexToRgb(COLOR_2C);
-            var rgbWhite = [255, 255, 255];
-
-            function lerp(a, b, t) { return a + (b - a) * t; }
-            function lerpColor(c1, c2, t) {
-                return [
-                    Math.round(lerp(c1[0], c2[0], t)),
-                    Math.round(lerp(c1[1], c2[1], t)),
-                    Math.round(lerp(c1[2], c2[2], t))
-                ];
-            }
-
-            // Path geometry
-            var forkY, leftTarget, rightTarget;
-            var leftCtrl, rightCtrl;
-
-            function resize() {
-                var rect = canvas.getBoundingClientRect();
-                W = rect.width * dpr;
-                H = rect.height * dpr;
-                canvas.width = W;
-                canvas.height = H;
-                cx = W / 2;
-
-                forkY = H * 0.30;
-                leftTarget = { x: W * 0.22, y: H * 0.82 };
-                rightTarget = { x: W * 0.78, y: H * 0.82 };
-                leftCtrl = { x: W * 0.18, y: H * 0.55 };
-                rightCtrl = { x: W * 0.82, y: H * 0.55 };
-            }
-            resize();
-
-            var resizeTimer;
-            window.addEventListener('resize', function() {
-                clearTimeout(resizeTimer);
-                resizeTimer = setTimeout(resize, 200);
-            });
-
-            // Quadratic bezier point
-            function bezierPoint(p0x, p0y, p1x, p1y, p2x, p2y, t) {
-                var u = 1 - t;
-                return {
-                    x: u*u*p0x + 2*u*t*p1x + t*t*p2x,
-                    y: u*u*p0y + 2*u*t*p1y + t*t*p2y
-                };
-            }
-
-            function createParticle() {
-                var branch = nextBranch;
-                nextBranch = 1 - nextBranch;
-                return {
-                    progress: 0, // 0-1 along full path
-                    speed: 0.004 + Math.random() * 0.002,
-                    branch: branch, // 0=left(1B), 1=right(2C)
-                    trail: [],
-                    maxTrail: 10,
-                    alive: true
-                };
-            }
-
-            function getParticlePos(p) {
-                var prog = p.progress;
-                var trunkEnd = 0.30; // trunk takes 30% of progress
-                var jitterX = Math.sin(prog * 40 + p.speed * 1000) * 3 * dpr;
-
-                if (prog < trunkEnd) {
-                    // Trunk: top to fork
-                    var t = prog / trunkEnd;
-                    return {
-                        x: cx + jitterX,
-                        y: lerp(30 * dpr, forkY, t)
-                    };
-                } else {
-                    // Branch
-                    var t = (prog - trunkEnd) / (1 - trunkEnd);
-                    var forkX = cx;
-                    var forkYPos = forkY;
-                    var pt;
-                    if (p.branch === 0) {
-                        pt = bezierPoint(forkX, forkYPos, leftCtrl.x, leftCtrl.y, leftTarget.x, leftTarget.y, t);
-                    } else {
-                        pt = bezierPoint(forkX, forkYPos, rightCtrl.x, rightCtrl.y, rightTarget.x, rightTarget.y, t);
-                    }
-                    pt.x += jitterX * (1 - t * 0.5);
-                    return pt;
-                }
-            }
-
-            function getParticleColor(p) {
-                var prog = p.progress;
-                var trunkEnd = 0.30;
-                var transitionLen = 0.15;
-
-                if (prog < trunkEnd) {
-                    return { rgb: rgbWhite, alpha: 0.7 };
-                } else {
-                    var t = Math.min((prog - trunkEnd) / transitionLen, 1);
-                    var targetRgb = p.branch === 0 ? rgb1B : rgb2C;
-                    var rgb = lerpColor(rgbWhite, targetRgb, t);
-                    var fadeStart = 0.85;
-                    var alpha = prog > fadeStart ? lerp(0.8, 0, (prog - fadeStart) / (1 - fadeStart)) : 0.8;
-                    return { rgb: rgb, alpha: alpha };
-                }
-            }
-
-            function drawFrame(timestamp) {
-                if (!running) return;
-                animId = requestAnimationFrame(drawFrame);
-
-                ctx.clearRect(0, 0, W, H);
-
-                // Spawn particles
-                if (timestamp - lastSpawn > spawnInterval && particles.length < 50) {
-                    particles.push(createParticle());
-                    lastSpawn = timestamp;
-                }
-
-                // Draw emitter glow
-                ctx.save();
-                ctx.beginPath();
-                ctx.arc(cx, 20 * dpr, 6 * dpr, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(255,255,255,0.6)';
-                ctx.shadowColor = 'rgba(255,255,255,0.8)';
-                ctx.shadowBlur = 20 * dpr;
-                ctx.fill();
-                ctx.restore();
-
-                // Emitter label
-                ctx.save();
-                ctx.font = (11 * dpr) + 'px "Plus Jakarta Sans", sans-serif';
-                ctx.fillStyle = 'rgba(100,116,139,0.7)';
-                ctx.textAlign = 'center';
-                ctx.fillText('CORPORATE PROCUREMENT', cx, 10 * dpr);
-                ctx.restore();
-
-                // Fork point indicator
-                ctx.save();
-                ctx.beginPath();
-                ctx.moveTo(cx - 30 * dpr, forkY);
-                ctx.lineTo(cx + 30 * dpr, forkY);
-                ctx.strokeStyle = 'rgba(148,163,184,0.2)';
-                ctx.lineWidth = 1 * dpr;
-                ctx.stroke();
-
-                ctx.font = (10 * dpr) + 'px "Plus Jakarta Sans", sans-serif';
-                ctx.fillStyle = 'rgba(100,116,139,0.55)';
-                ctx.textAlign = 'center';
-                ctx.fillText('ACCOUNTING FRAMEWORK', cx, forkY - 8 * dpr);
-                ctx.restore();
-
-                // Update and draw particles
-                ctx.save();
-                ctx.globalCompositeOperation = 'lighter';
-
-                for (var i = particles.length - 1; i >= 0; i--) {
-                    var p = particles[i];
-                    p.progress += p.speed;
-
-                    if (p.progress >= 1) {
-                        particles.splice(i, 1);
-                        continue;
-                    }
-
-                    var pos = getParticlePos(p);
-                    var col = getParticleColor(p);
-
-                    // Store trail
-                    p.trail.push({ x: pos.x, y: pos.y, rgb: col.rgb, alpha: col.alpha });
-                    if (p.trail.length > p.maxTrail) p.trail.shift();
-
-                    // Draw trail
-                    for (var j = 0; j < p.trail.length - 1; j++) {
-                        var t = p.trail[j];
-                        var trailAlpha = (j / p.trail.length) * 0.35 * col.alpha;
-                        var trailRadius = lerp(0.8, 2, j / p.trail.length) * dpr;
-                        ctx.beginPath();
-                        ctx.arc(t.x, t.y, trailRadius, 0, Math.PI * 2);
-                        ctx.fillStyle = 'rgba(' + t.rgb[0] + ',' + t.rgb[1] + ',' + t.rgb[2] + ',' + trailAlpha + ')';
-                        ctx.fill();
-                    }
-
-                    // Draw particle head
-                    var radius = 2.5 * dpr;
-                    ctx.beginPath();
-                    ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
-                    ctx.fillStyle = 'rgba(' + col.rgb[0] + ',' + col.rgb[1] + ',' + col.rgb[2] + ',' + col.alpha + ')';
-                    ctx.shadowColor = 'rgba(' + col.rgb[0] + ',' + col.rgb[1] + ',' + col.rgb[2] + ',' + (col.alpha * 0.4) + ')';
-                    ctx.shadowBlur = 6 * dpr;
-                    ctx.fill();
-                    ctx.shadowBlur = 0;
-                }
-                ctx.restore();
-            }
-
-            // Viewport observer
-            var visObserver = new IntersectionObserver(function(entries) {
+            var observer = new IntersectionObserver(function(entries) {
                 entries.forEach(function(entry) {
-                    if (entry.isIntersecting && !running) {
-                        running = true;
-                        lastSpawn = performance.now();
-                        animId = requestAnimationFrame(drawFrame);
-                    } else if (!entry.isIntersecting && running) {
-                        running = false;
-                        if (animId) cancelAnimationFrame(animId);
+                    if (entry.isIntersecting) {
+                        runCountUp();
+                        observer.unobserve(entry.target);
                     }
                 });
-            }, { threshold: 0.05 });
-            visObserver.observe(canvas);
+            }, { threshold: 0.15 });
+            observer.observe(row);
+
+            // Fallback: if already in viewport on load, trigger after a short delay
+            setTimeout(function() {
+                var rect = row.getBoundingClientRect();
+                if (rect.top < window.innerHeight && rect.bottom > 0) {
+                    runCountUp();
+                }
+            }, 300);
         })();
 
-        // ===== MODULE 3: Clock Tick Animation =====
+        // ===== MODULE 2: Clock Tick Animation =====
         (function initClockAnimation() {
             var clockIcon = document.getElementById('clockIcon');
             if (!clockIcon) return;
