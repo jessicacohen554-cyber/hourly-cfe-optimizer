@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CFE Strategy Assessment — Hourly CFE Optimizer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/article.css">
+    <link rel="stylesheet" href="styles/cinematic.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+    <script src="js/nav.js"></script>
+    <script src="js/chart-colors.js"></script>
+    <script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
+    <script src="js/shared-footer.js"></script>
+    <style>
+        .crossover-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-md);
+        }
+        .crossover-grid .chart-container {
+            min-height: 220px;
+        }
+        .ribbon-chart-wrap {
+            min-height: 360px;
+            max-height: 480px;
+            position: relative;
+        }
+        .strategy-pair {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-lg);
+            margin: var(--space-xl) 0;
+        }
+        .strategy-pair .card {
+            border-top: 3px solid var(--navy);
+        }
+        .strategy-pair .card.strat-1b {
+            border-top-color: #6366F1;
+        }
+        .strategy-pair .card.strat-2c {
+            border-top-color: #0EA5E9;
+        }
+        .strat-tag {
+            display: inline-block;
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            padding: 4px 12px;
+            border-radius: var(--radius-pill);
+            margin-bottom: var(--space-sm);
+        }
+        .strat-tag-purple { background: rgba(99,102,241,0.12); color: #6366F1; }
+        .strat-tag-blue { background: rgba(14,165,233,0.12); color: #0EA5E9; }
+        .crossover-section-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-lg);
+            margin: var(--space-xl) 0;
+        }
+        @media (max-width: 768px) {
+            .crossover-grid { grid-template-columns: 1fr; }
+            .strategy-pair { grid-template-columns: 1fr; }
+            .crossover-section-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <nav id="topNav"></nav>
+
+    <div class="header" id="pageHeader">
+        <h1>CFE Strategy Assessment</h1>
+        <div class="subtitle">Which procurement framework builds the grid we need? A head-to-head comparison across 7 US ISOs</div>
+        <div class="header-accent"></div>
+    </div>
+
+    <!-- Hero Stats -->
+    <section class="content-section fade-in" id="hero-stats">
+        <p style="text-align:center; max-width:780px; margin:0 auto var(--space-xl); font-size:1.05rem; color:var(--text-secondary); line-height:1.75">
+            Three things determine which procurement strategy wins: where your grid starts today, where it needs to end up, and what demand signals your procurement sends to the supply side. This page traces how two fundamentally different Scope 2 accounting frameworks &mdash; consequential netting (1B) vs. hourly matching (2C) &mdash; answer those questions differently, and why the answer matters for the grid we build next.
+        </p>
+        <div class="grid-stats" id="heroStatsGrid">
+            <div class="stat-card fade-in">
+                <div class="stat-value" id="heroStatCo2">&mdash;</div>
+                <div class="stat-label">Mt CO&#8322; displaced at 95% CFE</div>
+            </div>
+            <div class="stat-card fade-in">
+                <div class="stat-value" id="heroStatCostRatio">&mdash;</div>
+                <div class="stat-label">System cost advantage (2C vs 1B)</div>
+            </div>
+            <div class="stat-card fade-in">
+                <div class="stat-value" id="heroStatGasDelta">&mdash;</div>
+                <div class="stat-label">Less gas on grid with hourly matching</div>
+            </div>
+            <div class="stat-card fade-in">
+                <div class="stat-value" id="heroStatGasScale">&mdash;</div>
+                <div class="stat-label">Gas capacity gap at scale (50% participation)</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Section 1: The Two Strategies                                          -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">1</div>
+        <h2>The Two Strategies</h2>
+        <p>Where you start, where you need to go, what signals you send</p>
+    </div>
+    <section class="content-section fade-in" id="strategies-intro">
+        <div class="strategy-pair">
+            <div class="card strat-1b fade-in" style="padding: var(--space-xl)">
+                <span class="strat-tag strat-tag-purple">Strategy 1B</span>
+                <h3 style="font-family: var(--font-heading); font-size: 1.15rem; color: #6366F1; margin: 0 0 var(--space-sm)">1B &mdash; Consequential</h3>
+                <p style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.7; margin: 0">Cross-regional new-build deployment via queue-ordered procurement using a fossil-average emission baseline. Deploys mostly mature VRE (solar, onshore wind) across any ISO. Cheapest per-MWh, but annual accounting misses hourly mismatches between clean generation and actual load. Minimal firm clean or storage deployment &mdash; relying instead on existing grid infrastructure for reliability.</p>
+            </div>
+            <div class="card strat-2c fade-in" style="padding: var(--space-xl)">
+                <span class="strat-tag strat-tag-blue">Strategy 2C</span>
+                <h3 style="font-family: var(--font-heading); font-size: 1.15rem; color: #0EA5E9; margin: 0 0 var(--space-sm)">2C &mdash; Hourly Matching with SSS</h3>
+                <p style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.7; margin: 0">Same-ISO hourly matching blending existing clean resources (Surplus Supply Stack, merchant EAC, nuclear uprate) with new-build. Clean generation must match load every hour in the buyer's grid &mdash; forcing deployment of firm clean and storage. Proposed framework for the GHG Protocol Scope 2 revision.</p>
+            </div>
+        </div>
+
+        <div class="insight-box fade-in">
+            <strong>The core question isn't which strategy is cheaper today.</strong> It's which framework sends demand signals that are coherent with where each grid actually needs to go for deep decarbonization. What you choose to measure in Scope 2 accounting shapes what IPPs build &mdash; and the grid we end up with depends on whether those signals match the physics of each region's path to net-zero.
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Section 2: Where You Start (NEW)                                       -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">2</div>
+        <h2>Where You Start: Regional Grid Context</h2>
+        <p>Each ISO has a different starting point &mdash; and a different gap to close</p>
+    </div>
+    <section class="content-section fade-in" id="regional-context">
+        <p style="font-size:1.05rem; color:var(--text-secondary); line-height:1.75; max-width:780px; margin-bottom:var(--space-xl)">
+            Strategy choice doesn't happen in a vacuum. CAISO starts at ~60% clean generation; PJM at ~25%. ERCOT has abundant wind and solar potential but minimal firm clean; NEISO depends on gas pipelines that constrain winter reliability. The "right" strategy depends on what each grid already has and what it still needs.
+        </p>
+
+        <div class="grid-2col" style="margin-bottom: var(--space-xl)">
+            <div class="insight-box fade-in">
+                <h4 style="font-family:var(--font-heading); color:var(--navy); margin:0 0 var(--space-xs)">The Market Won't Get Us There</h4>
+                <p style="margin:0">Clean energy deployment is profitable up to a point &mdash; then it stalls. The gap between where market forces take each region and what's needed for net-zero varies dramatically by ISO. Corporate procurement must close that gap, and strategy choice determines whether investment flows to the resources <em>each grid specifically needs</em> or optimizes globally at the expense of local grid transformation.</p>
+            </div>
+            <div class="insight-box fade-in">
+                <h4 style="font-family:var(--font-heading); color:var(--navy); margin:0 0 var(--space-xs)">1B Deploys Elsewhere; 2C Transforms Here</h4>
+                <p style="margin:0">Consequential netting (1B) deploys cross-regionally &mdash; the buyer's MWh can be generated in a distant ISO, leaving their own grid physically unchanged. Hourly matching (2C) requires same-ISO generation hour-by-hour, so every procurement dollar flows to the resources that grid needs. In supply-constrained ISOs like NEISO and NYISO, this distinction is the difference between local transformation and paper accounting.</p>
+            </div>
+        </div>
+
+        <div class="related-analyses fade-in">
+            <div class="related-analyses-title">Supporting Analysis</div>
+            <div class="related-analyses-grid">
+                <a href="gen_regional_pathways.html" class="related-card">
+                    <div class="related-card-tag">Regional</div>
+                    <div class="related-card-title">Regional Decarbonization Pathways</div>
+                    <div class="related-card-desc">ISO-by-ISO starting conditions, market-driven trajectories, and the gap between market outcomes and net-zero</div>
+                    <div class="related-card-arrow">Explore &rarr;</div>
+                </a>
+                <a href="procurement_deployment.html" class="related-card">
+                    <div class="related-card-tag">Deployment</div>
+                    <div class="related-card-title">Procurement &amp; Deployment Matrix</div>
+                    <div class="related-card-desc">How deployment queues, grid hourly match scores, and CO&#8322; efficiency vary by strategy and region</div>
+                    <div class="related-card-arrow">Explore &rarr;</div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Section 3: How They Compare Across Ambition Levels                     -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">3</div>
+        <h2>How They Compare Across Ambition Levels</h2>
+        <p>As the CFE target rises, the two strategies diverge dramatically</p>
+    </div>
+    <section class="content-section fade-in" id="crossover">
+        <div class="card fade-in" style="padding: var(--space-xl)">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-md); flex-wrap: wrap; gap: var(--space-sm)">
+                <h3 style="font-family: var(--font-heading); font-size: 0.95rem; color: var(--navy); margin: 0">Strategy Crossover</h3>
+                <div class="toggle-btn-group" id="crossoverParticipationToggle" style="font-size: 0.75rem">
+                    <button data-val="5">5%</button>
+                    <button data-val="10">10%</button>
+                    <button data-val="15" class="active">15%</button>
+                    <button data-val="20">20%</button>
+                    <button data-val="25">25%</button>
+                    <button data-val="50">50%</button>
+                </div>
+            </div>
+            <div class="crossover-grid">
+                <div><div class="chart-container" style="min-height:200px"><canvas id="crossoverCostChart"></canvas></div></div>
+                <div><div class="chart-container" style="min-height:200px"><canvas id="crossoverCo2Chart"></canvas></div></div>
+                <div><div class="chart-container" style="min-height:200px"><canvas id="crossoverGasChart"></canvas></div></div>
+                <div><div class="chart-container" style="min-height:200px"><canvas id="crossoverCurtChart"></canvas></div></div>
+            </div>
+        </div>
+
+        <div class="insight-box fade-in" style="margin-top: var(--space-lg)">
+            <h4 style="font-family:var(--font-heading); color:var(--navy); margin:0 0 var(--space-xs)">The Last Mile Crossover</h4>
+            <p style="margin:0">Both strategies face escalating costs at high ambition, but for different reasons. 1B hits diminishing returns because it runs out of cheap coal to displace (the "coal wall") &mdash; every additional MWh only displaces gas at lower emission rates. 2C's costs rise because firm clean + storage for the last few percent of hours is expensive. The critical difference: 2C's cost escalation <em>builds something</em> &mdash; the nuclear uprates, CCS capacity, and long-duration storage the grid needs for system-wide decarbonization. Those costs come down via learning curves. 1B's cost escalation buys only more gas backup. At some point, the marginal cost of additional grid decarbonization exceeds the cost of direct air capture (~$300&ndash;600/tCO&#8322;), creating a natural ceiling &mdash; and that ceiling varies by region.</p>
+        </div>
+
+        <div class="grid-2col" style="margin-top: var(--space-lg)">
+            <div class="insight-box fade-in">
+                <h4 style="font-family:var(--font-heading); color:var(--navy); margin:0 0 var(--space-xs)">Per-MWh Cost Favors 1B</h4>
+                <p style="margin:0">Consequential netting procures cheap cross-regional VRE &mdash; solar and onshore wind at wholesale prices. On a per-MWh basis, 1B is consistently cheaper. But this metric hides the full system cost.</p>
+                <div id="stepCostStat" style="margin-top:var(--space-sm); font-size:0.88rem; font-weight:600; color:var(--navy)"></div>
+            </div>
+            <div class="insight-box fade-in">
+                <h4 style="font-family:var(--font-heading); color:var(--navy); margin:0 0 var(--space-xs)">System Cost Tells a Different Story</h4>
+                <p style="margin:0">1B's VRE-heavy mix requires massive gas backup for reliability. When you include new-build gas capacity costs, the total system cost flips above a critical participation threshold.</p>
+                <div id="stepSystemStat" style="margin-top:var(--space-sm); font-size:0.88rem; font-weight:600; color:var(--navy)"></div>
+            </div>
+            <div class="insight-box fade-in">
+                <h4 style="font-family:var(--font-heading); color:var(--navy); margin:0 0 var(--space-xs)">CO&#8322; Displacement</h4>
+                <p style="margin:0">Both strategies reduce emissions through fundamentally different mechanisms. 1B displaces fossil cross-regionally via additionality. 2C restructures the buyer's own grid hourly.</p>
+                <div id="stepCo2Stat" style="margin-top:var(--space-sm); font-size:0.88rem; font-weight:600; color:var(--navy)"></div>
+            </div>
+            <div class="insight-box fade-in">
+                <h4 style="font-family:var(--font-heading); color:var(--navy); margin:0 0 var(--space-xs)">Gas Lock-in: The Hidden Cost</h4>
+                <p style="margin:0">1B leaves substantially more gas on the grid &mdash; creating infrastructure that resists retirement. 2C's hourly constraint forces firm clean + storage deployment, directly displacing gas.</p>
+                <div id="stepGasStat" style="margin-top:var(--space-sm); font-size:0.88rem; font-weight:600; color:var(--navy)"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Section 4: The Demand Signal — What Gets Built                         -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">4</div>
+        <h2>The Demand Signal: What Gets Built</h2>
+        <p>Procurement frameworks send price signals to IPPs that shape infrastructure investment</p>
+    </div>
+    <section class="content-section fade-in" id="demand-signal">
+        <p style="font-size:1.05rem; color:var(--text-secondary); line-height:1.75; max-width:780px; margin-bottom:var(--space-xl)">
+            What you choose to procure determines what gets built. 1B's cross-regional VRE demand signals send capital toward the cheapest solar and wind projects anywhere on the map &mdash; rational for individual buyers, but collectively it concentrates investment in already-VRE-rich grids while gas-dependent regions (NEISO, NYISO, CAISO) get starved. 2C's hourly constraint creates demand for firm clean power and storage in the buyer's own grid &mdash; the technologies each region actually needs for the next phase of decarbonization.
+        </p>
+
+        <!-- Gas Ribbon Chart -->
+        <div class="card fade-in" style="padding: var(--space-xl); margin-bottom: var(--space-xl)">
+            <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm); font-family: var(--font-heading)">Gas Capacity on Grid by Strategy</h3>
+            <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom: var(--space-md)">Ribbon shows range across ambition levels (90%&ndash;99.99% CFE). Solid line = median (95%).</p>
+            <div class="ribbon-chart-wrap"><canvas id="gasRibbonChart"></canvas></div>
+        </div>
+        <div class="insight-box fade-in" id="gasRibbonInsight" style="margin-bottom: var(--space-xl)">
+            <p>Loading gas capacity analysis...</p>
+        </div>
+
+        <!-- Cost Crossover Charts -->
+        <div class="crossover-section-grid">
+            <div class="card fade-in" style="padding: var(--space-xl)">
+                <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm); font-family: var(--font-heading)">System Cost vs. Participation (95% CFE)</h3>
+                <div class="chart-container-lg"><canvas id="systemCostCrossoverChart"></canvas></div>
+            </div>
+            <div class="card fade-in" style="padding: var(--space-xl)">
+                <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm); font-family: var(--font-heading)">Cost Breakdown: Clean + Gas (95% CFE)</h3>
+                <div class="chart-container-lg"><canvas id="costBreakdownChart"></canvas></div>
+            </div>
+        </div>
+        <div class="insight-box fade-in" id="crossoverInsight" style="margin-top: var(--space-lg); margin-bottom: var(--space-xl)">
+            <p>Loading cost crossover analysis...</p>
+        </div>
+
+        <!-- Gas Lock-in by ISO -->
+        <div class="card fade-in" style="padding: var(--space-lg); margin-bottom: var(--space-xl)">
+            <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm); font-family: var(--font-heading)">Gas Lock-in by ISO (95% / 50% Participation)</h3>
+            <div class="chart-container"><canvas id="gasLockinChart"></canvas></div>
+        </div>
+
+        <!-- IPP Demand Signal Narrative -->
+        <div class="insight-box fade-in" style="margin-bottom: var(--space-lg)">
+            <h4 style="font-family:var(--font-heading); color:var(--navy); margin:0 0 var(--space-xs)">IPPs Respond to Demand Signals</h4>
+            <p style="margin:0">The IPP climate transition analysis models 540 scenarios across 7 major generators. The finding is consistent: when corporate demand signals favor hourly clean power, IPPs invest in firm clean generation and storage. When signals favor cheap VRE, IPPs build gas to backstop it. Strategy 1B's demand signals are more likely to create conditions for new gas development &mdash; it doesn't penalize temporal mismatch, so gas backup is an acceptable (even necessary) complement to VRE-heavy portfolios. Strategy 2C's hourly constraint makes gas backup a cost, not a complement &mdash; driving IPPs toward the firm clean resources that can actually match load patterns.</p>
+        </div>
+
+        <div class="related-analyses fade-in">
+            <div class="related-analyses-title">Supporting Analysis</div>
+            <div class="related-analyses-grid">
+                <a href="ipp_climate_transition.html" class="related-card">
+                    <div class="related-card-tag">IPPs</div>
+                    <div class="related-card-title">IPP Climate Transition</div>
+                    <div class="related-card-desc">540-scenario parametric sweep across 7 IPPs &mdash; how market conditions shape fleet investment decisions</div>
+                    <div class="related-card-arrow">Explore &rarr;</div>
+                </a>
+                <a href="ipp_constellation.html" class="related-card">
+                    <div class="related-card-tag">Case Study</div>
+                    <div class="related-card-title">Constellation Energy</div>
+                    <div class="related-card-desc">The nuclear fleet case study: PPA market depth drives dramatically different fleet trajectories</div>
+                    <div class="related-card-arrow">Explore &rarr;</div>
+                </a>
+                <a href="strategy_deep_dive.html" class="related-card">
+                    <div class="related-card-tag">Strategy</div>
+                    <div class="related-card-title">Strategy Deep Dive</div>
+                    <div class="related-card-desc">Full 10-strategy decarbonization matrix with participation-level deep dives</div>
+                    <div class="related-card-arrow">Explore &rarr;</div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Section 5: The Learning Curve Dividend                                 -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">5</div>
+        <h2>The Learning Curve Dividend</h2>
+        <p>Wright's Law cost reductions accumulate as firm clean and storage deployment scales</p>
+    </div>
+    <section class="content-section fade-in" id="learning-curves">
+        <p style="font-size:1.05rem; color:var(--text-secondary); line-height:1.75; max-width:780px; margin-bottom:var(--space-xl)">Strategy 2C forces deployment of firm clean and storage &mdash; technologies still on steep learning curves. 1B deploys mostly mature VRE, contributing minimally to cost breakthroughs the entire grid needs. The cost premium for hourly matching is real but temporary &mdash; and shrinking.</p>
+
+        <div class="card fade-in" style="padding: var(--space-xl)">
+            <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm); font-family: var(--font-heading)">Cost Premium vs. Participation (95% CFE Target)</h3>
+            <div class="chart-container-lg"><canvas id="wrightsLawChart"></canvas></div>
+        </div>
+        <div class="insight-box fade-in" id="wrightsInsight" style="margin-top: var(--space-lg)">
+            <p>Loading Wright's Law analysis...</p>
+        </div>
+
+        <!-- Policy Convergence Narrative -->
+        <div class="insight-box insight-success fade-in" style="margin-top: var(--space-lg)">
+            <h4 style="font-family:var(--font-heading); color:var(--navy); margin:0 0 var(--space-xs)">Policy Convergence Amplifies the Dividend</h4>
+            <p style="margin:0">IRA tax credits already cut clean LCOE by 30&ndash;40%, making 2C's cost premium over 1B smaller than pre-IRA analysis suggests. Corporate demand pull from hyperscale data centers (Microsoft/Crane, Google/Fervo, Amazon nuclear SMRs) is structurally aligned with hourly matching &mdash; these buyers <em>want</em> 24/7 clean and will pay premiums for it. The policy trajectory (GHG Protocol revision, SBTi Power Sector v2, state CES mandates) is converging toward hourly matching as the standard. 2C's cost premium is an early-mover advantage on the coming standard, not just an optional premium.</p>
+        </div>
+
+        <div class="related-analyses fade-in" style="margin-top: var(--space-lg)">
+            <div class="related-analyses-title">Supporting Analysis</div>
+            <div class="related-analyses-grid">
+                <a href="gen_policy_conditions.html" class="related-card">
+                    <div class="related-card-tag">Policy</div>
+                    <div class="related-card-title">Policy Conditions &amp; Market Outlook</div>
+                    <div class="related-card-desc">IRA credits, carbon pricing, corporate demand pull, and the policy trajectory converging toward hourly matching</div>
+                    <div class="related-card-arrow">Explore &rarr;</div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Section 6: Nuclear — The Hidden Variable                               -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">6</div>
+        <h2>Nuclear: The Hidden Variable</h2>
+        <p>Existing nuclear provides ~50% of US clean electricity &mdash; its fate depends on procurement framework</p>
+    </div>
+    <section class="content-section fade-in" id="nuclear-narrative">
+        <div class="grid-stats fade-in" id="nuclearStatsGrid">
+            <div class="stat-card">
+                <div class="stat-value" id="nucCostDelta" style="color:#DC2626">&mdash;</div>
+                <div class="stat-label">Cost increase if nuclear retires</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="nucCo2Delta" style="color:#DC2626">&mdash;</div>
+                <div class="stat-label">CO&#8322; displaced lost</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="nucGasDelta" style="color:#DC2626">&mdash;</div>
+                <div class="stat-label">Additional gas on grid</div>
+            </div>
+        </div>
+
+        <div class="card fade-in" style="padding: var(--space-lg); margin: var(--space-xl) 0">
+            <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm); font-family: var(--font-heading)">Nuclear Stranding Exposure</h3>
+            <div class="chart-container-sm"><canvas id="nuclearStrandChart"></canvas></div>
+        </div>
+
+        <div class="insight-box insight-warn fade-in" id="nuclearInsight">
+            <p>Loading nuclear analysis...</p>
+        </div>
+
+        <!-- Constellation Case Study Cross-Link -->
+        <div class="insight-box fade-in" style="margin-top: var(--space-lg)">
+            <h4 style="font-family:var(--font-heading); color:var(--navy); margin:0 0 var(--space-xs)">The Constellation Test Case</h4>
+            <p style="margin:0">Constellation Energy operates the largest US nuclear fleet (~90% clean generation). Our 540-scenario analysis shows that fleet trajectory diverges dramatically based on PPA market depth. High PPA commitment (corporate buyers paying premium for hourly matching) enables nuclear fleet maintenance, restarts (Crane/TMI), and hourly matching platforms. Low PPA scenarios lead to premature retirements and higher system emissions. The nuclear question isn't abstract &mdash; it's a live test of whether procurement frameworks can sustain the existing clean generation that grids already depend on.</p>
+        </div>
+
+        <div class="related-analyses fade-in" style="margin-top: var(--space-lg)">
+            <div class="related-analyses-title">Supporting Analysis</div>
+            <div class="related-analyses-grid">
+                <a href="ipp_constellation.html" class="related-card">
+                    <div class="related-card-tag">Case Study</div>
+                    <div class="related-card-title">Constellation Energy</div>
+                    <div class="related-card-desc">Nuclear fleet survival analysis: 540 scenarios, PPA market depth, and the revenue adequacy question</div>
+                    <div class="related-card-arrow">Explore &rarr;</div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Section 7: Rowing in the Same Direction (NEW — Synthesis)              -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">7</div>
+        <h2>Rowing in the Same Direction</h2>
+        <p>Coherent demand signals for grid-level deep decarbonization</p>
+    </div>
+    <section class="content-section fade-in" id="synthesis">
+        <p style="font-size:1.05rem; color:var(--text-secondary); line-height:1.75; max-width:780px; margin-bottom:var(--space-lg)">
+            Deep grid decarbonization requires a common understanding of where each grid can and should end up. The old approach &mdash; individual buyers picking off the cheapest abatement opportunities anywhere on the map &mdash; was rational in the era of coal displacement. But we've entered a new era where the remaining challenges are temporal (nights, winter, multi-day weather events) and spatial (each grid needs its own portfolio of firm clean + storage). Solving these challenges requires corporate procurement signals that are coherent with grid-level planning &mdash; not a collection of individual optimizations that might conflict.
+        </p>
+        <p style="font-size:1.05rem; color:var(--text-secondary); line-height:1.75; max-width:780px; margin-bottom:var(--space-lg)">
+            Strategy 2C's hourly matching framework, aligned with the proposed GHG Protocol Scope 2 revision, creates this coherence by construction: procurement must match load hour-by-hour within the buyer's grid, so investment flows to the resources <em>that specific grid needs</em>. Strategy 1B is individually rational but collectively insufficient &mdash; it optimizes each buyer's $/tCO&#8322; without contextualizing the spatial and temporal dependencies of the grid.
+        </p>
+        <p style="font-size:1.05rem; color:var(--text-secondary); line-height:1.75; max-width:780px; margin-bottom:var(--space-xl)">
+            The evidence across this analysis supports this: 2C drives deeper gas displacement, reaches learning curve critical mass faster, creates the revenue certainty IPPs need for capital-intensive firm clean investment, and aligns with the policy trajectory. 1B is cheaper per-MWh but leaves more gas on the grid, concentrates investment geographically, and doesn't create demand signals for the technologies the next phase of decarbonization requires.
+        </p>
+
+        <div class="insight-box insight-success fade-in">
+            <h4 style="font-family:var(--font-heading); color:var(--navy); margin:0 0 var(--space-xs)">The question isn't which strategy is cheaper today &mdash; it's which strategy builds the grid we need by 2040.</h4>
+            <p style="margin:0">Single-buyer PPAs for VRE or unbundled RECs were the right tools for the first phase: displacing coal and building the VRE supply chain. But getting grids from 60&ndash;70% clean to net-zero requires solving temporal and spatial dependencies that annual or cross-regional accounting ignores. Hourly matching isn't a premium &mdash; it's the framework that aligns individual procurement with collective grid transformation.</p>
+        </div>
+
+        <div class="related-analyses fade-in" style="margin-top: var(--space-lg)">
+            <div class="related-analyses-title">Explore the Full Analytical Ecosystem</div>
+            <div class="related-analyses-grid">
+                <a href="gen_regional_pathways.html" class="related-card">
+                    <div class="related-card-tag">Regional</div>
+                    <div class="related-card-title">Regional Pathways</div>
+                    <div class="related-card-desc">Where each grid starts, where it's headed, and the gap corporate procurement must close</div>
+                    <div class="related-card-arrow">Explore &rarr;</div>
+                </a>
+                <a href="GHG-accounting-overview.html" class="related-card">
+                    <div class="related-card-tag">Accounting</div>
+                    <div class="related-card-title">Carbon Accounting Frameworks</div>
+                    <div class="related-card-desc">All 10 procurement strategies compared: consequential, hourly, and annual matching</div>
+                    <div class="related-card-arrow">Explore &rarr;</div>
+                </a>
+                <a href="ipp_climate_transition.html" class="related-card">
+                    <div class="related-card-tag">Supply Side</div>
+                    <div class="related-card-title">IPP Climate Transition</div>
+                    <div class="related-card-desc">How demand signals shape IPP investment across 540 scenarios and 7 major generators</div>
+                    <div class="related-card-arrow">Explore &rarr;</div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Section 8: Dissenting Considerations                                   -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">8</div>
+        <h2>Dissenting Considerations</h2>
+        <p>Arguments against each strategy and what could flip the analysis</p>
+    </div>
+    <section class="content-section fade-in" id="dissenting">
+        <div id="dissentingContent">
+            <p style="color: var(--text-muted)">Loading dissenting analysis...</p>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Section 9: Critical Risks                                              -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">9</div>
+        <h2>Curtailment Risk</h2>
+        <p>Surplus clean energy that the grid can't absorb creates hidden systemic costs</p>
+    </div>
+    <section class="content-section fade-in" id="risks">
+        <div class="card fade-in" style="padding: var(--space-lg); margin-bottom: var(--space-xl)">
+            <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm); font-family: var(--font-heading)">VRE Curtailment by Strategy (95% / 50% Participation)</h3>
+            <div class="chart-container"><canvas id="curtailmentChart"></canvas></div>
+        </div>
+        <div class="insight-box insight-warn fade-in" id="riskInsight">
+            <p>Loading risk analysis...</p>
+        </div>
+    </section>
+
+    <footer id="siteFooter" data-footer-note="&copy; 2026 Hourly CFE Optimizer &mdash; Independent Strategy Assessment"></footer>
+
+    <!-- Data scripts -->
+    <script src="js/deployment-data.js"></script>
+    <script src="js/strategy-comparison-data.js"></script>
+    <script src="js/lmp-data.js"></script>
+    <script src="js/no-regrets-data.js"></script>
+    <script src="js/cfe-strategy-assessment.js"></script>
+    <script src="js/cinematic-bg.js"></script>
+</body>
+</html>

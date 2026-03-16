@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PSEG Power — IPP Climate Transition Analysis</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/scrollytell.css">
+    <link rel="stylesheet" href="styles/ipp-transition.css">
+    <link rel="stylesheet" href="styles/cinematic.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="js/nav.js"></script>
+    <script src="js/chart-colors.js"></script>
+    <script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
+    <script src="js/shared-footer.js"></script>
+</head>
+<body>
+    <nav id="topNav"></nav>
+
+    <div class="header" id="pageHeader">
+        <h1 id="companyName">PSEG Power</h1>
+        <div class="subtitle" id="companyTarget">Net-zero operations by 2045</div>
+        <div class="header-accent"></div>
+    </div>
+
+    <div class="report-layout" id="reportContent">
+        <!-- TOC Sidebar -->
+        <aside class="report-toc">
+            <a href="ipp_climate_transition.html" class="report-toc-back">← Back to Overview</a>
+            <div class="report-toc-title">Sections</div>
+            <ol class="report-toc-list">
+                <li><a href="#fleet-profile">Fleet Profile & Characterization</a></li>
+                <li><a href="#convergence">Scenario Convergence & Divergence</a></li>
+                <li><a href="#risk">Risk & Opportunity Assessment</a></li>
+                <li><a href="#qualified-target">Qualified Target Proposal</a></li>
+                <li><a href="#clean-investment">Clean Generation Investment Case</a></li>
+                <li><a href="#enabling-conditions">Enabling Conditions for 1.5°C</a></li>
+                <li><a href="#strategic">Strategic Positioning</a></li>
+                <li><a href="#gas-development">Gas Development Analysis</a></li>
+            </ol>
+        </aside>
+
+        <!-- Main Report Content -->
+        <main>
+            <!-- Section 1: Fleet Profile -->
+            <section class="report-section scroll-reveal" id="fleet-profile">
+                <div class="report-section-header">
+                    <span class="report-section-number">01</span>
+                    <h2>Fleet Profile & Characterization</h2>
+                </div>
+
+                <div class="grid-stats" style="margin-bottom: var(--space-xl)">
+                    <div class="stat-card"><div class="stat-value" id="statCapacity">—</div><div class="stat-label">Total Generation</div></div>
+                    <div class="stat-card"><div class="stat-value" id="statGeneration">—</div><div class="stat-label">Annual Generation</div></div>
+                    <div class="stat-card"><div class="stat-value" id="statEmissions">—</div><div class="stat-label">CO₂ Emissions</div></div>
+                    <div class="stat-card"><div class="stat-value" id="statIntensity">—</div><div class="stat-label">Intensity</div></div>
+                    <div class="stat-card"><div class="stat-value" id="statISOs">—</div><div class="stat-label">ISOs</div></div>
+                    <div class="stat-card"><div class="stat-value" id="statCleanPct">—</div><div class="stat-label">Clean Generation</div></div>
+                </div>
+
+                <div class="grid-2col">
+                    <div class="card" style="padding: var(--space-lg)">
+                        <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Generation by Fuel Type</h3>
+                        <div class="chart-container"><canvas id="fleetDoughnutChart"></canvas></div>
+                    </div>
+                    <div class="card" style="padding: var(--space-lg)">
+                        <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Regional Footprint</h3>
+                        <div class="chart-container"><canvas id="isoBarChart"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="narrative-block" id="fleetNarrative" style="margin-top: var(--space-xl)"></div>
+            </section>
+
+            <!-- Section 2: Convergence & Divergence -->
+            <section class="report-section scroll-reveal" id="convergence">
+                <div class="report-section-header">
+                    <span class="report-section-number">02</span>
+                    <h2>Scenario Convergence & Divergence</h2>
+                </div>
+
+                <div class="card" style="padding: var(--space-lg); margin-bottom: var(--space-xl)">
+                    <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Emissions Trajectory — 540 Scenarios (P10/P50/P90)</h3>
+                    <div class="chart-container-lg"><canvas id="emissionsFanChart"></canvas></div>
+                </div>
+
+                <h3 style="font-size: 1rem; color: var(--navy); margin-bottom: var(--space-md)">Convergence Analysis by Year</h3>
+                <div id="convergenceAnalysis"></div>
+
+                <h3 style="font-size: 1rem; color: var(--navy); margin: var(--space-xl) 0 var(--space-md)">Uncertainty by Dimension</h3>
+                <div class="grid-2col" id="dimensionCharts"></div>
+
+                <div class="narrative-block" id="convergenceNarrative" style="margin-top: var(--space-xl)"></div>
+            </section>
+
+            <!-- Section 3: Risk & Opportunity -->
+            <section class="report-section scroll-reveal panel-navy" id="risk">
+                <div class="report-section-header">
+                    <span class="report-section-number">03</span>
+                    <h2>Risk & Opportunity Assessment</h2>
+                </div>
+
+                <div class="grid-2col" style="margin-bottom: var(--space-xl)">
+                    <div class="card" style="padding: var(--space-lg)">
+                        <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Profit Trajectory (P10/P50/P90)</h3>
+                        <div class="chart-container"><canvas id="profitFanChart"></canvas></div>
+                    </div>
+                    <div class="card" style="padding: var(--space-lg)">
+                        <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Operating vs. Stranded Capacity</h3>
+                        <div class="chart-container"><canvas id="capacityFateChart"></canvas></div>
+                    </div>
+                </div>
+
+                <h3 style="font-size: 1rem; color: var(--navy); margin-bottom: var(--space-md)">Breakeven Analysis by Dimension</h3>
+                <div id="breakevenTable"></div>
+
+                <div class="narrative-block" id="riskNarrative" style="margin-top: var(--space-xl)"></div>
+            </section>
+
+            <!-- Section 4: Qualified Target -->
+            <section class="report-section scroll-reveal" id="qualified-target">
+                <div class="report-section-header">
+                    <span class="report-section-number">04</span>
+                    <h2>Qualified Target Proposal</h2>
+                </div>
+
+                <div class="card" style="padding: var(--space-lg); margin-bottom: var(--space-xl)">
+                    <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Qualified Target vs. 1.5°C Trajectory</h3>
+                    <div class="chart-container-lg"><canvas id="targetChart"></canvas></div>
+                </div>
+
+                <div class="grid-stats" id="targetStats" style="margin-bottom: var(--space-xl)"></div>
+
+                <div class="narrative-block" id="targetNarrative"></div>
+            </section>
+
+            <!-- Section 5: Clean Investment -->
+            <section class="report-section scroll-reveal" id="clean-investment">
+                <div class="report-section-header">
+                    <span class="report-section-number">05</span>
+                    <h2>Clean Generation Investment Case</h2>
+                </div>
+
+                <div class="grid-2col" style="margin-bottom: var(--space-xl)">
+                    <div class="card" style="padding: var(--space-lg)">
+                        <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">New Generation Targets</h3>
+                        <div class="chart-container"><canvas id="investmentGapChart"></canvas></div>
+                    </div>
+                    <div class="card" style="padding: var(--space-lg)">
+                        <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">LCOE Comparison ($/MWh)</h3>
+                        <div class="chart-container"><canvas id="lcoeChart"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="narrative-block" id="investmentNarrative"></div>
+                <p style="margin-top:var(--space-md);">
+                    <a href="clean_firm_case.html" class="explore-link" style="font-size:0.82rem;">See the full FOAK&rarr;NOAK learning curve analysis <span class="arrow">&rarr;</span></a>
+                </p>
+            </section>
+
+            <!-- Section 6: Enabling Conditions -->
+            <section class="report-section scroll-reveal" id="enabling-conditions">
+                <div class="report-section-header">
+                    <span class="report-section-number">06</span>
+                    <h2>Enabling Conditions for 1.5°C Alignment</h2>
+                </div>
+
+                <!-- 6.1 SMARTargets AT -->
+                <h3 style="font-size: 1.1rem; color: var(--navy); margin-bottom: var(--space-md)">6.1 &nbsp;SMARTargets AT Enabling Conditions</h3>
+                <div class="card" style="padding: var(--space-lg); margin-bottom: var(--space-lg)">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-sm)">
+                        <h4 style="font-size: 0.95rem; color: var(--navy); margin: 0">Gap: Qualified Target vs SMARTargets AT Trajectory</h4>
+                        <button class="toggle-btn-group gap-label-toggle active" data-chart="gapChartAT" style="font-size:0.75rem;padding:4px 10px;cursor:pointer">Labels</button>
+                    </div>
+                    <div class="chart-container-lg"><canvas id="gapChartAT"></canvas></div>
+                </div>
+                <div class="grid-2col" id="conditionsCardsAT" style="margin-bottom: var(--space-2xl)"></div>
+
+                <!-- 6.2 SBTi Power Sector v2 -->
+                <h3 style="font-size: 1.1rem; color: var(--navy); margin-bottom: var(--space-md)">6.2 &nbsp;SBTi Power Sector v2 Enabling Conditions</h3>
+                <div class="card" style="padding: var(--space-lg); margin-bottom: var(--space-lg)">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-sm)">
+                        <h4 style="font-size: 0.95rem; color: var(--navy); margin: 0">Gap: Qualified Target vs SBTi Power Sector v2 Trajectory</h4>
+                        <button class="toggle-btn-group gap-label-toggle active" data-chart="gapChartSBTi" style="font-size:0.75rem;padding:4px 10px;cursor:pointer">Labels</button>
+                    </div>
+                    <div class="chart-container-lg"><canvas id="gapChartSBTi"></canvas></div>
+                </div>
+                <div class="grid-2col" id="conditionsCardsSBTi"></div>
+                <p style="margin-top:var(--space-md);">
+                    <a href="clean_firm_case.html#critical-mass" class="explore-link" style="font-size:0.82rem;">How PPA depth reaches critical mass for clean firm <span class="arrow">&rarr;</span></a>
+                </p>
+            </section>
+
+            <!-- Section 7: Strategic Positioning -->
+            <section class="report-section scroll-reveal panel-navy" id="strategic">
+                <div class="report-section-header">
+                    <span class="report-section-number">07</span>
+                    <h2>Strategic Positioning</h2>
+                </div>
+
+                <div class="grid-2col" style="margin-bottom: var(--space-xl)">
+                    <div class="card" style="padding: var(--space-lg)">
+                        <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Robustness Scorecard</h3>
+                        <div class="chart-container"><canvas id="radarChart"></canvas></div>
+                    </div>
+                    <div id="robustnessStats"></div>
+                </div>
+
+                <div class="narrative-block" id="strategicNarrative"></div>
+            </section>
+
+            <!-- Section 8: Gas Development Analysis -->
+            <section class="report-section scroll-reveal" id="gas-development">
+                <div class="report-section-header">
+                    <span class="report-section-number">08</span>
+                    <h2>Gas Development Analysis</h2>
+                </div>
+
+                <div class="card" style="padding: var(--space-lg); margin-bottom: var(--space-xl)">
+                    <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">New Gas Generation: Conditions & Impact</h3>
+                    <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: var(--space-md)">
+                        Under what market conditions would this company develop new gas-fired generation, where would it be sited,
+                        and what impact would that have on the decarbonization trajectory?
+                    </p>
+                    <div class="chart-container-lg"><canvas id="gasImpactChart"></canvas></div>
+                </div>
+
+                <div class="grid-2col" style="margin-bottom: var(--space-xl)">
+                    <div class="card" style="padding: var(--space-lg)">
+                        <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Gas Development Scenarios by ISO</h3>
+                        <div class="chart-container"><canvas id="gasLocationChart"></canvas></div>
+                    </div>
+                    <div class="card" style="padding: var(--space-lg)">
+                        <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Trajectory Impact: With vs. Without New Gas</h3>
+                        <div class="chart-container"><canvas id="gasTrajectoryDelta"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="narrative-block" id="gasNarrative"></div>
+                <div style="display:flex; flex-wrap:wrap; gap:var(--space-sm) var(--space-lg); margin-top:var(--space-md);">
+                    <a href="lmp_trends.html#gas-fleet-risk-section" class="explore-link" style="font-size:0.82rem;">Market dynamics behind gas incentives <span class="arrow">&rarr;</span></a>
+                    <a href="gas_lockin_buyer_influence.html" class="explore-link" style="font-size:0.82rem;">Cross-company gas lock-in view <span class="arrow">&rarr;</span></a>
+                </div>
+            </section>
+
+            <!-- Company Navigation -->
+            <div class="company-nav">
+                <a href="ipp_talen.html">← Talen Energy</a>
+                <a href="ipp_climate_transition.html">All Companies</a>
+                <a href="ipp_nextera.html">NextEra Energy →</a>
+            </div>
+        </main>
+    </div>
+
+    <footer id="siteFooter" data-footer-note="&copy; 2026 Hourly CFE Optimizer"></footer>
+
+    <!-- Data -->
+    <script>const COMPANY_ID = 'pseg';</script>
+    <script src="js/fleet-survival-data.js"></script>
+    <script src="js/ipp-smartargets-data.js"></script>
+    <script src="js/ipp-company-report.js"></script>
+<script src="js/cinematic-bg.js"></script>
+</body>
+</html>

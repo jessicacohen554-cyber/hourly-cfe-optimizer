@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Regional Decarbonization Pathways | The 8,760 Problem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/scrollytell.css">
+<link rel="stylesheet" href="styles/dashboard-ui.css">
+<link rel="stylesheet" href="styles/cinematic.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+<script src="js/scroll-observer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+<script src="js/smartargets-data.js"></script>
+<script src="js/shared-footer.js"></script>
+<style>
+/* body background overridden by cinematic.css */
+
+/* ─── Hero: National Overview ─── */
+.hero-section { max-width: var(--max-content); margin: 0 auto; padding: 40px var(--pad-page) 20px; }
+.hero-intro { font-size: 0.95rem; color: var(--navy); line-height: 1.8; margin-bottom: 28px; max-width: 860px; }
+.hero-intro strong { font-weight: 700; }
+
+/* ─── ISO Cards Grid ─── */
+.iso-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 12px; }
+.iso-card {
+    background: #fff; border: 2px solid rgba(0,0,0,0.06); border-radius: var(--radius-lg);
+    padding: 20px 22px; cursor: pointer; position: relative; overflow: hidden;
+    transition: all 0.25s cubic-bezier(0.23,1,0.32,1);
+}
+.iso-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+    background: var(--card-accent, var(--accent)); opacity: 0.6;
+}
+.iso-card:hover { border-color: var(--card-accent); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.iso-card.active { border-color: var(--card-accent); box-shadow: 0 0 0 2px var(--card-accent), var(--shadow-md); }
+.iso-card.active::before { opacity: 1; height: 5px; }
+.iso-card-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
+.iso-card-name { font-family: var(--font-heading); font-size: 1rem; font-weight: 700; color: var(--navy); }
+.iso-card-region { font-size: 0.75rem; color: var(--text-dim); font-weight: 500; }
+.iso-card-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+.iso-mini-stat { text-align: center; padding: 6px 2px; background: var(--bg-alt-warm); border-radius: var(--radius-sm); }
+.iso-mini-val { font-family: var(--font-data); font-size: 1.05rem; font-weight: 800; line-height: 1.2; color: var(--navy); }
+.iso-mini-lbl { font-size: 0.58rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--font-heading); font-weight: 600; margin-top: 2px; }
+.iso-gap-bar { margin-top: 10px; }
+.iso-gap-bar-label { font-size: 0.68rem; color: var(--text-dim); font-family: var(--font-heading); font-weight: 600; margin-bottom: 4px; display: flex; justify-content: space-between; }
+.iso-gap-track { height: 8px; background: #E5E7EB; border-radius: 4px; overflow: hidden; position: relative; }
+.iso-gap-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+.iso-gap-market { background: var(--card-accent); opacity: 0.7; position: absolute; top: 0; left: 0; height: 100%; }
+
+/* ─── Sticky Controls — MOBILE FIX ─── */
+.global-controls {
+    background: rgba(255,255,255,0.97); border-bottom: 1px solid rgba(0,0,0,0.08);
+    padding: 12px var(--pad-page); position: sticky; top: 0; z-index: 50;
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    box-shadow: var(--shadow-sm);
+    max-height: 70vh; overflow-y: auto; /* prevent blocking content on mobile */
+}
+.global-controls .bar-label { font-family: var(--font-heading); font-size: 0.8rem; color: var(--navy); font-weight: 700; white-space: nowrap; }
+.bar-divider { width: 1px; height: 24px; background: rgba(0,0,0,0.12); flex-shrink: 0; }
+.scenario-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.scenario-tab {
+    padding: 5px 12px; border-radius: var(--radius-pill); font-size: 0.75rem; font-weight: 600;
+    border: 1px solid rgba(0,0,0,0.12); background: transparent;
+    color: var(--text-dim); cursor: pointer; transition: all 0.2s; font-family: var(--font-heading);
+}
+.scenario-tab:hover { background: rgba(0,0,0,0.04); }
+.scenario-tab.active { background: var(--navy); color: #fff; border-color: var(--navy); }
+
+/* ─── Story Panels ─── */
+.story-panel { max-width: var(--max-content); margin: 0 auto; padding: 40px var(--pad-page) 20px; }
+.story-panel h2 { font-family: var(--font-heading); font-size: 1.5rem; font-weight: 800; color: var(--navy); margin-bottom: 8px; }
+.story-panel .section-desc { color: var(--text-dim); font-size: 0.88rem; margin-bottom: 22px; line-height: 1.7; max-width: 860px; }
+
+/* Chart panels */
+.chart-panel { background: #fff; border: 1px solid rgba(0,0,0,0.06); border-radius: var(--radius-lg); padding: var(--pad-card); box-shadow: var(--shadow-sm); margin-bottom: 20px; }
+.chart-panel h3 { font-family: var(--font-heading); font-size: 0.95rem; color: var(--navy); margin-bottom: 4px; font-weight: 700; }
+.chart-panel .chart-note { font-size: 0.72rem; color: var(--text-dim); margin-bottom: 10px; line-height: 1.5; }
+.chart-wrap { position: relative; height: 400px; }
+.chart-wrap-sm { position: relative; height: 300px; }
+
+/* Grid layouts */
+.grid-2up { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+/* Insight/narrative boxes */
+.narrative-box { background: #fff; border-left: 4px solid var(--accent); border-radius: 0 var(--radius-md) var(--radius-md) 0; padding: 16px 20px; margin-bottom: 16px; font-size: 0.86rem; line-height: 1.7; color: var(--navy); }
+.narrative-box strong { color: var(--navy); }
+.narrative-box.warn { border-left-color: #F59E0B; }
+.narrative-box.danger { border-left-color: #EF4444; }
+.narrative-box.success { border-left-color: #22C55E; }
+
+/* Gap-to-NZ stat cards */
+.gap-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 24px; }
+.gap-card { background: #fff; border: 1px solid rgba(0,0,0,0.06); border-radius: var(--radius-lg); padding: 18px; text-align: center; box-shadow: var(--shadow-sm); }
+.gap-card .gap-val { font-family: var(--font-data); font-size: 2rem; font-weight: 800; line-height: 1.1; margin-bottom: 4px; }
+.gap-card .gap-label { font-size: 0.72rem; color: var(--text-dim); font-family: var(--font-heading); font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
+.gap-card .gap-sub { font-size: 0.7rem; color: var(--text-dim); margin-top: 4px; font-family: var(--font-data); }
+
+/* Resource delta table */
+.delta-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.delta-table th { font-family: var(--font-heading); font-weight: 700; color: var(--navy); padding: 8px 12px; text-align: left; border-bottom: 2px solid rgba(0,0,0,0.1); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; }
+.delta-table td { padding: 7px 12px; border-bottom: 1px solid rgba(0,0,0,0.05); }
+.delta-table .res-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+.delta-table .delta-positive { color: #15803D; font-weight: 700; font-family: var(--font-data); } /* contrast-fix: was #16A34A, now #15803D, ratio 5.02:1 on bg white */
+.delta-table .delta-negative { color: #DC2626; font-weight: 700; font-family: var(--font-data); }
+.delta-table .delta-zero { color: var(--text-dim); font-family: var(--font-data); }
+
+/* Scenario comparison cards */
+.scenario-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+.scenario-card { background: #fff; border: 1px solid rgba(0,0,0,0.06); border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow-sm); }
+.scenario-card h4 { font-family: var(--font-heading); font-size: 0.85rem; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.scenario-card h4 .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.scenario-card .metric-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.05); font-size: 0.8rem; }
+.scenario-card .metric-row:last-child { border-bottom: none; }
+.scenario-card .metric-label { color: var(--text-dim); }
+.scenario-card .metric-val { font-family: var(--font-data); font-weight: 700; color: var(--navy); }
+
+/* ─── Mobile: collapse sticky bar ─── */
+@media (max-width: 768px) {
+    .global-controls {
+        position: relative; /* NOT sticky on mobile — let it scroll away */
+        top: auto;
+        max-height: none;
+    }
+    .iso-grid { grid-template-columns: 1fr 1fr; }
+    .grid-2up { grid-template-columns: 1fr; }
+    .scenario-pair { grid-template-columns: 1fr; }
+    .chart-wrap { height: 320px; }
+    .chart-wrap-sm { height: 260px; }
+    .gap-cards { grid-template-columns: repeat(2, 1fr); }
+    .story-panel { padding: 24px var(--pad-page) 16px; }
+    .story-panel h2 { font-size: 1.25rem; }
+}
+@media (max-width: 480px) {
+    .iso-grid { grid-template-columns: 1fr; }
+    .iso-card-stats { grid-template-columns: 1fr 1fr 1fr; }
+    .gap-cards { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+<nav id="topNav"></nav>
+
+<!-- HEADER -->
+<header class="header" id="pageHeader">
+    <h1>Regional Decarbonization Pathways</h1>
+    <p class="subtitle">Where the market takes each grid, what the gap to net-zero looks like, and what it takes to close it</p>
+    <div class="header-accent"></div>
+</header>
+
+<!-- HERO: NATIONAL OVERVIEW -->
+<section class="hero-section scroll-reveal">
+    <p class="hero-intro">
+        <strong>The market will not deliver net-zero on its own.</strong> Clean energy deployment is profitable up to a point &mdash;
+        then it stalls. The gap between where market forces take each region and where it needs to be for net-zero
+        defines the scale and cost of policy intervention required. This analysis now includes <strong>540 market scenarios</strong>
+        per sweep type (adding an IRA policy toggle), announced coal retirements through 2035, transmission constraint
+        modeling, RGGI carbon pricing, state RPS deployment floors, and a regulatory feedback mechanism that dampens
+        unrealistic sustained high LMP. Each region starts from a different grid, faces different constraints, and
+        needs a different portfolio to close the gap. Select a region to explore its pathway.
+    </p>
+    <div class="iso-grid" id="isoGrid"></div>
+</section>
+
+<!-- TARGET PATHWAY COMPARISON -->
+<section class="story-panel scroll-reveal" id="pathwayComparison">
+    <h2>Two Pathways to Net-Zero: SMARTargets vs. SBTi</h2>
+    <p class="section-desc">
+        The regional analysis below models decarbonization against the <strong>EPRI SMARTargets aspirational targets</strong>
+        (net-zero by 2050) as the primary pathway. For comparison, we also show the <strong>SBTi Power Sector v2</strong>
+        trajectory, which requires net-zero by 2040 — a full decade earlier. The gap between these two pathways
+        represents the additional policy ambition and technology acceleration required by the more stringent SBTi framework.
+    </p>
+
+    <div class="chart-panel">
+        <h3>National Average: SMARTargets AT vs. SBTi Power Sector v2</h3>
+        <p class="chart-note">U.S. power sector CO₂ intensity reduction pathways. SMARTargets reflects EPRI's sector-specific modeling; SBTi reflects science-based 1.5°C carbon budget allocation.</p>
+        <div class="chart-wrap"><canvas id="dualPathwayChart"></canvas></div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px;">
+        <div class="narrative-box" style="border-left-color: var(--nuclear);">
+            <strong>SMARTargets Aspirational Targets</strong><br>
+            2030: −56% from baseline<br>
+            2035: −82% from baseline<br>
+            2050: Net-zero<br>
+            <em style="font-size: 0.8rem; color: var(--text-dim);">Company-specific qualified targets may differ based on fleet composition and market constraints.</em>
+        </div>
+        <div class="narrative-box" style="border-left-color: var(--ldes);">
+            <strong>SBTi Power Sector v2</strong><br>
+            2030: ~118 kg CO₂/MWh<br>
+            2035: ~57 kg CO₂/MWh<br>
+            2040: Net-zero<br>
+            <em style="font-size: 0.8rem; color: var(--text-dim);">Uniform sector pathway based on 1.5°C carbon budget. No company-specific adjustment.</em>
+        </div>
+    </div>
+</section>
+
+<!-- CONTROLS: ISO selector (scrolls away on mobile) -->
+<div class="global-controls" id="stickyControls">
+    <span class="bar-label">Region:</span>
+    <div class="iso-selector" id="globalIsoSelector"></div>
+</div>
+
+<!-- ═══════════ REGIONAL DEEP DIVE ═══════════ -->
+<div id="regionalContent">
+
+    <!-- §1: The Gap to Net-Zero (with Market Fan) -->
+    <section class="story-panel panel-navy scroll-reveal" id="gapSection">
+        <h2>The Gap to Net-Zero: <span id="gapIsoName">California</span></h2>
+        <p class="section-desc" id="gapDesc">The distance between where the market stops and where the grid needs to be — and what fills the gap.</p>
+        <div id="refFanCallout" class="narrative-box warn"></div>
+        <div class="gap-cards" id="gapCards"></div>
+        <div class="grid-2up">
+            <div class="chart-panel">
+                <h3>Emission Trajectories: Market Fan vs. Net-Zero</h3>
+                <p class="chart-note">Market-only P10–P90 fan (shaded) with median vs. net-zero pathways under facilitating and challenging conditions</p>
+                <div class="chart-wrap"><canvas id="gapChart"></canvas></div>
+            </div>
+            <div class="chart-panel">
+                <h3 id="deltaTitle">What Net-Zero Requires Beyond the Market</h3>
+                <p class="chart-note">Additional resources needed to close the gap from market outcome to net-zero (2050 snapshot)</p>
+                <div id="deltaTableContainer"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- §3: Regional Challenges & Opportunities -->
+    <section class="story-panel scroll-reveal" id="challengeSection">
+        <h2>Challenges & Opportunities: <span id="challengeIsoName">California</span></h2>
+        <div id="challengeNarrative"></div>
+    </section>
+
+    <!-- Scenario Selector (between challenges and buildout) -->
+    <div class="story-panel" style="padding-top: 12px; padding-bottom: 0;">
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <span class="bar-label">Scenario:</span>
+            <div class="scenario-tabs" id="scenarioTabs">
+                <button class="scenario-tab active" data-group="power_nz">Power Sector NZ</button>
+                <button class="scenario-tab" data-group="economy_nz">Economy-Wide NZ</button>
+                <button class="scenario-tab" data-group="reference">Reference (Market Only)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- §4: Grid Buildout — What Gets Built -->
+    <section class="story-panel panel-navy scroll-reveal" id="buildoutSection">
+        <h2>What Gets Built: <span id="buildoutPathway">Power Sector NZ</span></h2>
+        <p class="section-desc">The resource portfolio needed to stay on the decarbonization trajectory. Saturated bars = existing generation; transparent = new build required. Curtailed energy (hatched) rises with variable renewable penetration.</p>
+        <div class="grid-2up" id="mixGridArea">
+            <div class="chart-panel" id="mixPanelFac">
+                <h3 id="mixFacTitle">Facilitating Conditions</h3>
+                <p class="chart-note">Low LCOE, fast learning, reformed queues</p>
+                <div class="chart-wrap"><canvas id="mixChartFac"></canvas></div>
+            </div>
+            <div class="chart-panel" id="mixPanelChal">
+                <h3 id="mixChalTitle">Challenging Conditions</h3>
+                <p class="chart-note">High LCOE, slow learning, constrained queues</p>
+                <div class="chart-wrap"><canvas id="mixChartChal"></canvas></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- §5: The Cost of Closing the Gap -->
+    <section class="story-panel panel-navy scroll-reveal" id="costSection">
+        <h2>The Cost of Closing the Gap</h2>
+        <p class="section-desc">What it costs in carbon price, DAC backstop, and policy subsidies to force deployment beyond market willingness.</p>
+        <div class="grid-2up">
+            <div class="chart-panel">
+                <h3 id="carbonChartTitle">Carbon Shadow Price & DAC Cost</h3>
+                <p class="chart-note" id="carbonChartNote">Implied $/ton to force deployment vs. the DAC backstop price</p>
+                <div class="chart-wrap-sm"><canvas id="carbonPriceChart"></canvas></div>
+            </div>
+            <div class="chart-panel">
+                <h3 id="costChartTitle">Policy Subsidy Trajectory</h3>
+                <p class="chart-note" id="costChartNote">$/MWh subsidy required to keep deployment on track</p>
+                <div class="chart-wrap-sm"><canvas id="costChart"></canvas></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- §6: Facilitating vs. Challenging -->
+    <section class="story-panel scroll-reveal" id="compSection">
+        <h2>Facilitating vs. Challenging: Side by Side</h2>
+        <p class="section-desc">Same destination, different costs. Key 2050 metrics showing how conditions change the difficulty of decarbonization.</p>
+        <div class="scenario-pair" id="scenarioComparison"></div>
+    </section>
+
+</div>
+
+<footer id="siteFooter" data-footer-note="Analysis based on EPRI SMARTargets, SBTi Power Sector v2, EIA, eGRID, NREL ATB. © 2026"></footer>
+
+<script>
+Chart.defaults.plugins.datalabels = { display: false };
+
+// ─── DUAL PATHWAY COMPARISON CHART ─────────────────────────────
+(function() {
+    const ctx = document.getElementById('dualPathwayChart');
+    if (!ctx) return;
+
+    const years = ['2020', '2025', '2030', '2035', '2040', '2045', '2050'];
+    // US avg ~380 kg/MWh in 2020
+    const baseline = 380;
+
+    // SMARTargets AT: -56% by 2030, -82% by 2035, ~net zero by 2050
+    const smartargets = [
+        baseline,                    // 2020
+        baseline * 0.78,             // 2025 (interpolated)
+        baseline * 0.44,             // 2030 (-56%)
+        baseline * 0.18,             // 2035 (-82%)
+        baseline * 0.08,             // 2040 (interpolated)
+        baseline * 0.03,             // 2045 (interpolated)
+        0                            // 2050 (net-zero)
+    ];
+
+    // SBTi Power v2: ~118 by 2030, ~57 by 2035, 0 by 2040
+    const sbti = [
+        baseline,                    // 2020
+        250,                         // 2025 (interpolated)
+        118,                         // 2030
+        57,                          // 2035
+        0,                           // 2040 (net-zero)
+        null,                        // 2045 (already at zero)
+        null                         // 2050
+    ];
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: years,
+            datasets: [
+                {
+                    label: 'SMARTargets AT (Net-Zero 2050)',
+                    data: smartargets,
+                    borderColor: '#6366F1',
+                    backgroundColor: 'rgba(99,102,241,0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 5,
+                    pointBackgroundColor: '#6366F1',
+                    borderWidth: 3
+                },
+                {
+                    label: 'SBTi Power v2 (Net-Zero 2040)',
+                    data: sbti,
+                    borderColor: '#E91E63',
+                    backgroundColor: 'rgba(233,30,99,0.08)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 5,
+                    pointBackgroundColor: '#E91E63',
+                    borderWidth: 3,
+                    borderDash: [8, 4],
+                    spanGaps: false
+                },
+                {
+                    label: 'Current US Average (~345 kg/MWh)',
+                    data: [null, 345, null, null, null, null, null],
+                    pointRadius: 9,
+                    pointStyle: 'rectRot',
+                    pointBackgroundColor: '#14B8A6',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                    showLine: false
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { usePointStyle: true, padding: 14, font: { size: 12 } } },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            if (ctx.raw === null) return '';
+                            return ctx.dataset.label.split('(')[0].trim() + ': ' + Math.round(ctx.raw) + ' kg CO₂/MWh';
+                        }
+                    }
+                },
+                annotation: {
+                    annotations: {
+                        netZeroLine: {
+                            type: 'line', yMin: 0, yMax: 0,
+                            borderColor: '#22C55E', borderWidth: 2, borderDash: [4, 4],
+                            label: { display: true, content: 'Net-Zero', position: 'end', font: { size: 10 }, color: '#15803D' } /* contrast-fix: was #22C55E, now #15803D, ratio 5.02:1 on bg white */
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { title: { display: true, text: 'Year', font: { weight: 600 } }, grid: { display: false } },
+                y: {
+                    title: { display: true, text: 'CO₂ Intensity (kg/MWh)', font: { weight: 600 } },
+                    min: 0, max: 420,
+                    grid: { color: 'rgba(0,0,0,0.05)' }
+                }
+            }
+        }
+    });
+})();
+
+// ============================================================================
+// Regional Decarbonization Pathways
+// ============================================================================
+const DATA = SMARTARGETS_DATA;
+const ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP'];
+const ISO_NAMES = {
+    CAISO: 'California', ERCOT: 'Texas', PJM: 'Mid-Atlantic',
+    NYISO: 'New York', NEISO: 'New England', MISO: 'Midwest', SPP: 'Central Plains'
+};
+const ISO_FULL = {
+    CAISO: 'California (CAISO)', ERCOT: 'Texas (ERCOT)', PJM: 'Mid-Atlantic (PJM)',
+    NYISO: 'New York (NYISO)', NEISO: 'New England (NEISO)', MISO: 'Midwest (MISO)', SPP: 'Central Plains (SPP)'
+};
+const ISO_HEX = {
+    CAISO: '#F59E0B', ERCOT: '#22C55E', PJM: '#0EA5E9',
+    NYISO: '#E91E63', NEISO: '#9C27B0', MISO: '#F97316', SPP: '#14B8A6'
+};
+const GROUPS = {
+    power_nz:   { fac: 'AT1', chal: 'AT2', label: 'Power Sector NZ' },
+    economy_nz: { fac: 'AT3', chal: 'AT4', label: 'Economy-Wide NZ' },
+    reference:  { fac: 'Reference', chal: null, label: 'Reference (Market Only)' },
+};
+const SCENARIO_META = {
+    'Reference': { name: 'Reference (Market Only)' },
+    'AT1': { name: 'Power NZ — Facilitating' },
+    'AT2': { name: 'Power NZ — Challenging' },
+    'AT3': { name: 'Economy-Wide NZ — Facilitating' },
+    'AT4': { name: 'Economy-Wide NZ — Challenging' },
+};
+const MIX_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar', 'battery', 'ldes'];
+const MIX_LABELS = {
+    clean_firm: 'Nuclear', ccs_ccgt: 'CCS-CCGT', hydro: 'Hydro', offshore_wind: 'Offshore Wind',
+    wind: 'Wind', solar: 'Solar', battery: 'Battery', ldes: 'LDES'
+};
+const MIX_COLORS_MAP = {
+    clean_firm: RESOURCE_COLORS.cleanFirm, ccs_ccgt: RESOURCE_COLORS.ccs,
+    hydro: RESOURCE_COLORS.hydro, offshore_wind: RESOURCE_COLORS.offshoreWind,
+    wind: RESOURCE_COLORS.wind, solar: RESOURCE_COLORS.solar,
+    battery: RESOURCE_COLORS.battery, ldes: RESOURCE_COLORS.ldes,
+};
+const FAC_COLOR = '#6366F1';
+const CHAL_COLOR = '#EF4444';
+const EXISTING_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar'];
+const NEW_ORDER = MIX_ORDER;
+const CURTAIL_ORDER = ['solar', 'wind', 'offshore_wind', 'hydro', 'ccs_ccgt', 'clean_firm'];
+const STORAGE_TYPES = ['battery', 'ldes'];
+const VARIABLE_TYPES = ['solar', 'wind', 'offshore_wind'];
+
+let globalIso = 'CAISO';
+let globalGroup = 'power_nz';
+let charts = {};
+
+// ─── HELPERS ────────────────────────────────────────────────────
+function getSD(name, iso) {
+    if (!name) return null;
+    const d = DATA.scenarios[name]?.[iso];
+    if (!d) return null;
+    // Synthesize a nested mix object from flat mix_*_twh keys
+    if (!d.mix) {
+        const mix = {};
+        const MAP = { clean_firm: 'mix_clean_firm_twh', ccs_ccgt: 'mix_ccs_ccgt_twh',
+            hydro: 'mix_hydro_twh', offshore_wind: 'mix_offshore_wind_twh',
+            wind: 'mix_wind_twh', solar: 'mix_solar_twh',
+            battery: 'mix_battery_twh', ldes: 'mix_ldes_twh' };
+        for (const [k, fk] of Object.entries(MAP)) {
+            if (d[fk]) mix[k] = d[fk];
+        }
+        if (Object.keys(mix).length > 0) d.mix = mix;
+    }
+    return d;
+}
+function fmt(v, d=1) { return v != null ? v.toFixed(d) : '\u2014'; }
+function fmtPct(v) { return v != null ? v.toFixed(0) + '%' : '\u2014'; }
+function fmtDollar(v) { return v != null ? '$' + v.toFixed(0) : '\u2014'; }
+function hexToRgba(hex, a) {
+    return `rgba(${parseInt(hex.slice(1,3),16)},${parseInt(hex.slice(3,5),16)},${parseInt(hex.slice(5,7),16)},${a})`;
+}
+function createDiagonalPattern(hex, alpha) {
+    const s = 10, c = document.createElement('canvas');
+    c.width = s; c.height = s;
+    const x = c.getContext('2d');
+    x.fillStyle = hexToRgba(hex, alpha * 0.3); x.fillRect(0, 0, s, s);
+    x.strokeStyle = hexToRgba(hex, alpha); x.lineWidth = 1.5;
+    x.beginPath(); x.moveTo(0, s); x.lineTo(s, 0);
+    x.moveTo(-2, 2); x.lineTo(2, -2);
+    x.moveTo(s-2, s+2); x.lineTo(s+2, s-2);
+    x.stroke();
+    return x.createPattern(c, 'repeat');
+}
+
+// ─── ISO HERO CARDS ─────────────────────────────────────────────
+function buildIsoGrid() {
+    const grid = document.getElementById('isoGrid');
+    grid.innerHTML = '';
+    ISOS.forEach(iso => {
+        const r1 = getSD('Reference', iso);
+        if (!r1) return;
+        const baseline = r1.emissions_mt[0];
+        const lastIdx = r1.years.length - 1;
+        const r1Final = r1.emissions_mt[lastIdx];
+        const r1Clean = r1.clean_pct[lastIdx];
+        const r2Final = r1Final;
+
+        // Gap = market median final emissions (gap to zero)
+        const gapMt = r1Final;
+        const gapPct = (gapMt / baseline * 100);
+        const marketPct = ((baseline - r1Final) / baseline * 100);
+
+        const card = document.createElement('div');
+        card.className = 'iso-card' + (iso === globalIso ? ' active' : '');
+        card.style.setProperty('--card-accent', ISO_HEX[iso]);
+        card.dataset.iso = iso;
+
+        card.innerHTML = `
+            <div class="iso-card-head">
+                <div class="iso-card-name">${iso}</div>
+                <div class="iso-card-region">${ISO_NAMES[iso]}</div>
+            </div>
+            <div class="iso-card-stats" style="grid-template-columns: 1fr 1fr;">
+                <div class="iso-mini-stat">
+                    <div class="iso-mini-val">${fmt(baseline, 0)}</div>
+                    <div class="iso-mini-lbl">2023 Mt CO\u2082</div>
+                </div>
+                <div class="iso-mini-stat">
+                    <div class="iso-mini-val" style="color:${CHAL_COLOR}">${fmt(r1Final, 0)}</div>
+                    <div class="iso-mini-lbl">2050 gap Mt</div>
+                </div>
+            </div>
+            <div class="iso-gap-bar">
+                <div class="iso-gap-bar-label">
+                    <span>Market delivers ${marketPct.toFixed(0)}% clean</span>
+                    <span>${(100 - marketPct).toFixed(0)}% gap to NZ</span>
+                </div>
+                <div class="iso-gap-track">
+                    <div class="iso-gap-market iso-gap-fill" style="width:${Math.min(100, marketPct)}%;background:${ISO_HEX[iso]}"></div>
+                </div>
+            </div>
+        `;
+
+        card.addEventListener('click', () => {
+            document.querySelectorAll('.iso-card').forEach(c => c.classList.remove('active'));
+            card.classList.add('active');
+            document.querySelectorAll('#globalIsoSelector .iso-btn').forEach(b => {
+                b.classList.toggle('active', b.textContent === iso);
+            });
+            globalIso = iso;
+            updateAll();
+            document.getElementById('refFanSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+        grid.appendChild(card);
+    });
+}
+
+function initIsoSelector() {
+    const c = document.getElementById('globalIsoSelector');
+    ISOS.forEach(iso => {
+        const btn = document.createElement('button');
+        btn.className = 'iso-btn' + (iso === globalIso ? ' active' : '');
+        btn.textContent = iso;
+        btn.addEventListener('click', () => {
+            c.querySelectorAll('.iso-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.querySelectorAll('.iso-card').forEach(cd => cd.classList.toggle('active', cd.dataset.iso === iso));
+            globalIso = iso;
+            updateAll();
+        });
+        c.appendChild(btn);
+    });
+}
+
+function initScenarioTabs() {
+    document.querySelectorAll('.scenario-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.scenario-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            globalGroup = tab.dataset.group;
+            updateAll();
+        });
+    });
+}
+
+// ─── §1: GAP TO NET-ZERO (with Market Fan) ─────────────────────
+function buildGapSection() {
+    const iso = globalIso;
+    const group = GROUPS[globalGroup];
+    const isRef = globalGroup === 'reference';
+    document.getElementById('gapIsoName').textContent = ISO_NAMES[iso];
+
+    const r1 = getSD('Reference', iso);
+    const fac = getSD(group.fac, iso);
+    const chal = getSD(group.chal, iso);
+    if (!r1) return;
+
+    const lastIdx = r1.years.length - 1;
+    const baseline = r1.emissions_mt[0];
+    const marketFinal = r1.emissions_mt[lastIdx];
+    const marketClean = r1.clean_pct[lastIdx];
+
+    // Gap cards
+    const cards = document.getElementById('gapCards');
+    if (isRef) {
+        // Reference: show fan P10/P90 spread
+        const refFan = r1.fan;
+        const p10Final = refFan ? refFan.p10[lastIdx] : marketFinal;
+        const p90Final = refFan ? refFan.p90[lastIdx] : marketFinal;
+        cards.innerHTML = `
+            <div class="gap-card"><div class="gap-val">${fmt(baseline, 0)}</div><div class="gap-label">2023 Baseline (Mt)</div></div>
+            <div class="gap-card"><div class="gap-val" style="color:${FAC_COLOR}">${fmt(p10Final, 0)}</div><div class="gap-label">2050 Best Case P10 (Mt)</div><div class="gap-sub">Favorable market conditions</div></div>
+            <div class="gap-card"><div class="gap-val" style="color:${CHAL_COLOR}">${fmt(p90Final, 0)}</div><div class="gap-label">2050 Worst Case P90 (Mt)</div><div class="gap-sub">Unfavorable conditions</div></div>
+            <div class="gap-card"><div class="gap-val" style="color:#DC2626">${fmt(marketFinal, 0)}</div><div class="gap-label">Median Gap (Mt)</div><div class="gap-sub">Policy must close this</div></div>
+        `;
+        document.getElementById('gapDesc').textContent = 'Without emission constraints, the market deploys clean energy where profitable and stops. The gap is what remains.';
+    } else {
+        const facFinal = fac ? fac.emissions_mt[lastIdx] : 0;
+        const facClean = fac ? fac.clean_pct[lastIdx] : 0;
+        const chalFinal = chal ? chal.emissions_mt[lastIdx] : 0;
+        const chalClean = chal ? chal.clean_pct[lastIdx] : 0;
+        const facDac = fac ? (fac.dac_offset_mt?.[lastIdx] || 0) : 0;
+        const chalShadow = chal ? (chal.carbon_shadow_price?.[lastIdx] || 0) : 0;
+
+        cards.innerHTML = `
+            <div class="gap-card"><div class="gap-val">${fmt(baseline, 0)}</div><div class="gap-label">2023 Baseline (Mt)</div></div>
+            <div class="gap-card"><div class="gap-val" style="color:${FAC_COLOR}">${fmtPct(facClean)}</div><div class="gap-label">Fac. Grid Clean</div><div class="gap-sub">${facDac > 0 ? fmt(facDac, 0) + ' Mt via DAC' : 'Grid only'}</div></div>
+            <div class="gap-card"><div class="gap-val" style="color:${CHAL_COLOR}">${fmtPct(chalClean)}</div><div class="gap-label">Chal. Grid Clean</div><div class="gap-sub">${chalShadow > 0 ? fmtDollar(chalShadow) + '/ton shadow' : 'No DAC available'}</div></div>
+            <div class="gap-card"><div class="gap-val">${fmt(marketFinal, 0)}</div><div class="gap-label">Market Gap (Mt)</div><div class="gap-sub">What policy must close</div></div>
+        `;
+        document.getElementById('gapDesc').textContent = `The market delivers ${fmtPct(marketClean)} clean. Net-zero requires closing the remaining ${fmt(marketFinal, 0)} Mt gap through mandated deployment, subsidies, or DAC backstop.`;
+    }
+
+    // Build callout from market fan data (fan lives directly on Reference scenario data)
+    const refData = DATA.scenarios['Reference']?.[iso];
+    const fan = refData?.fan;
+    const callout = document.getElementById('refFanCallout');
+
+    if (fan) {
+        const fanBaseline = fan.p50[0];
+        const p50_2050 = fan.p50[fan.p50.length - 1];
+        const p10_2050 = fan.p10[fan.p10.length - 1];
+        const p90_2050 = fan.p90[fan.p90.length - 1];
+        const r1Clean = r1.clean_pct;
+        const medianClean = r1Clean ? r1Clean[r1Clean.length - 1] : null;
+        const reductionPct = ((fanBaseline - p50_2050) / fanBaseline * 100).toFixed(0);
+
+        callout.innerHTML = `<strong>${ISO_FULL[iso]}:</strong> Under market forces alone, the median outcome is a ${reductionPct}% emission reduction by 2050 — ` +
+            `from ${fmt(fanBaseline, 0)} Mt to ${fmt(p50_2050, 0)} Mt. The grid reaches roughly ${medianClean ? fmtPct(medianClean) : '?'} clean. ` +
+            `<strong>The uncertainty is huge:</strong> best-case (P10) reaches ${fmt(p10_2050, 0)} Mt; worst-case (P90) stalls at ${fmt(p90_2050, 0)} Mt. ` +
+            `None of these outcomes reach net-zero — that requires policy.`;
+        callout.style.display = '';
+    } else {
+        callout.style.display = 'none';
+    }
+
+    // Gap chart: Market fan + AT scenarios
+    if (charts.gap) charts.gap.destroy();
+    const years = r1.years;
+    const fanYears = refData?.years;
+    const datasets = [];
+
+    // Market fan bands (use trajectory fan data, aligned to chart years)
+    if (fan && fanYears) {
+        // Build index map from fanYears to chart years
+        const fanMap = {};
+        fanYears.forEach((y, i) => { fanMap[y] = i; });
+
+        const mapFanToYears = (arr) => years.map(y => {
+            const fi = fanMap[y];
+            return fi !== undefined && fi < arr.length ? arr[fi] : null;
+        });
+
+        // P10-P90 band
+        datasets.push({
+            label: 'Market P10\u2013P90',
+            data: mapFanToYears(fan.p90),
+            borderColor: 'transparent',
+            backgroundColor: hexToRgba(ISO_HEX[iso], 0.10),
+            fill: '+1',
+            pointRadius: 0,
+            tension: 0.3,
+            order: 10,
+        });
+        datasets.push({
+            label: '_p10_lower',
+            data: mapFanToYears(fan.p10),
+            borderColor: 'transparent',
+            backgroundColor: 'transparent',
+            fill: false,
+            pointRadius: 0,
+            tension: 0.3,
+            order: 11,
+        });
+
+        // P25-P75 band
+        datasets.push({
+            label: 'Market P25\u2013P75',
+            data: mapFanToYears(fan.p75),
+            borderColor: 'transparent',
+            backgroundColor: hexToRgba(ISO_HEX[iso], 0.18),
+            fill: '+1',
+            pointRadius: 0,
+            tension: 0.3,
+            order: 8,
+        });
+        datasets.push({
+            label: '_p25_lower',
+            data: mapFanToYears(fan.p25),
+            borderColor: 'transparent',
+            backgroundColor: 'transparent',
+            fill: false,
+            pointRadius: 0,
+            tension: 0.3,
+            order: 9,
+        });
+
+        // P50 median line
+        datasets.push({
+            label: 'Market Median (P50)',
+            data: mapFanToYears(fan.p50),
+            borderColor: ISO_HEX[iso],
+            backgroundColor: 'transparent',
+            borderWidth: 3,
+            pointRadius: 4,
+            pointBackgroundColor: ISO_HEX[iso],
+            tension: 0.3,
+            fill: false,
+            order: 5,
+        });
+    } else {
+        // Fallback: just R1 line if no fan data
+        datasets.push({
+            label: 'Market Outcome (R1)',
+            data: r1.emissions_mt,
+            borderColor: hexToRgba(ISO_HEX[iso], 0.7),
+            backgroundColor: hexToRgba(ISO_HEX[iso], 0.08),
+            borderWidth: 2.5,
+            pointRadius: 4,
+            pointBackgroundColor: ISO_HEX[iso],
+            tension: 0.3,
+            fill: 'origin',
+            order: 5,
+        });
+    }
+
+    if (!isRef) {
+        // NZ pathway lines
+        if (fac) {
+            datasets.push({
+                label: 'Facilitating (net)',
+                data: fac.emissions_mt,
+                borderColor: FAC_COLOR,
+                borderWidth: 2.5,
+                pointRadius: 4, pointBackgroundColor: FAC_COLOR,
+                tension: 0.3, fill: false, order: 1,
+            });
+            if (fac.gross_emissions_mt && fac.dac_offset_mt?.some(v => v > 0)) {
+                datasets.push({
+                    label: 'Fac. gross (before DAC)',
+                    data: fac.gross_emissions_mt,
+                    borderColor: FAC_COLOR, borderWidth: 1.5, borderDash: [4, 3],
+                    backgroundColor: 'transparent', fill: false, pointRadius: 2,
+                    pointBackgroundColor: FAC_COLOR + '80', tension: 0.3, order: 4,
+                });
+            }
+        }
+        if (chal) {
+            datasets.push({
+                label: 'Challenging (net)',
+                data: chal.emissions_mt,
+                borderColor: CHAL_COLOR,
+                borderWidth: 2.5,
+                pointRadius: 4, pointBackgroundColor: CHAL_COLOR,
+                tension: 0.3, fill: false, order: 2,
+            });
+        }
+
+        // Emission cap ceiling
+        if (fac?.emission_cap_mt) {
+            const capData = fac.emission_cap_mt.map(v => v === null || v === -1 ? null : v);
+            datasets.push({
+                label: 'Target Ceiling',
+                data: capData,
+                borderColor: 'rgba(220, 38, 38, 0.4)',
+                backgroundColor: 'rgba(220, 38, 38, 0.04)',
+                borderWidth: 2, borderDash: [8, 4],
+                fill: 'origin', pointRadius: 0, tension: 0.3, order: 12,
+            });
+        }
+    }
+
+    // NZ reference line
+    datasets.push({
+        label: 'Net-Zero',
+        data: years.map(() => 0),
+        borderColor: 'rgba(220,38,38,0.4)',
+        borderWidth: 1.5, borderDash: [6, 4],
+        pointRadius: 0, fill: false, order: 0,
+    });
+
+    const ctx = document.getElementById('gapChart').getContext('2d');
+    charts.gap = new Chart(ctx, {
+        type: 'line',
+        data: { labels: years, datasets },
+        plugins: [ChartDataLabels],
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            animation: { duration: 600 },
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: true, position: 'bottom', labels: { usePointStyle: true, font: { size: 10, family: 'DM Sans' }, padding: 10, filter: item => !item.text.startsWith('_') } },
+                tooltip: {
+                    backgroundColor: 'rgba(26,39,68,0.95)',
+                    titleFont: { family: 'Plus Jakarta Sans', weight: '700' },
+                    bodyFont: { family: 'DM Sans', size: 12 },
+                    callbacks: {
+                        label: ctx => {
+                            const v = ctx.parsed.y;
+                            if (v == null) return '';
+                            return `${ctx.dataset.label}: ${v.toFixed(1)} Mt CO\u2082`;
+                        }
+                    }
+                },
+                datalabels: {
+                    display: ctx => {
+                        const lbl = ctx.dataset.label || '';
+                        if (lbl.includes('gross') || lbl.includes('Ceiling') || lbl === 'Net-Zero') return false;
+                        return ctx.dataIndex > 0 && ctx.dataIndex === ctx.dataset.data.length - 1;
+                    },
+                    formatter: (v) => v != null ? v.toFixed(0) + ' Mt' : '',
+                    anchor: 'end', align: 'right', offset: 6,
+                    font: { size: 10, weight: 700, family: 'Plus Jakarta Sans' },
+                    color: ctx => ctx.dataset.borderColor,
+                    textStrokeColor: '#fff', textStrokeWidth: 2,
+                },
+            },
+            scales: {
+                x: { grid: { display: false }, ticks: { font: { family: 'Plus Jakarta Sans', size: 11 } } },
+                y: {
+                    title: { display: true, text: 'CO\u2082 Emissions (Mt)', font: { family: 'DM Sans', size: 12, weight: '600' } },
+                    grid: { color: 'rgba(0,0,0,0.06)' },
+                    ticks: { font: { family: 'Plus Jakarta Sans', size: 11 } },
+                    beginAtZero: true,
+                }
+            }
+        }
+    });
+
+    // Delta table: what NZ adds over market
+    buildDeltaTable();
+}
+
+function buildDeltaTable() {
+    const iso = globalIso;
+    const group = GROUPS[globalGroup];
+    const r1 = getSD('Reference', iso);
+    const fac = getSD(group.fac, iso);
+    const isRef = globalGroup === 'reference';
+    const container = document.getElementById('deltaTableContainer');
+
+    if (!r1 || isRef) {
+        container.innerHTML = '<div class="narrative-box warn"><strong>Select a net-zero pathway</strong> to see what additional resources are needed beyond market deployment.</div>';
+        document.getElementById('deltaTitle').textContent = 'What Net-Zero Requires Beyond the Market';
+        return;
+    }
+
+    document.getElementById('deltaTitle').textContent = `What ${GROUPS[globalGroup].label} Requires Beyond the Market`;
+
+    if (!fac) {
+        container.innerHTML = '<div class="narrative-box">No facilitating scenario data available.</div>';
+        return;
+    }
+
+    const lastIdx = r1.years.length - 1;
+    const r1Mix = {};
+    const facMix = {};
+    MIX_ORDER.forEach(r => {
+        r1Mix[r] = r1.mix?.[r]?.[lastIdx] || 0;
+        facMix[r] = fac.mix?.[r]?.[lastIdx] || 0;
+    });
+
+    let html = '<table class="delta-table"><thead><tr><th>Resource</th><th>Market (TWh)</th><th>Net-Zero (TWh)</th><th>Delta</th></tr></thead><tbody>';
+    MIX_ORDER.forEach(r => {
+        const m = r1Mix[r];
+        const nz = facMix[r];
+        const delta = nz - m;
+        const cls = delta > 1 ? 'delta-positive' : (delta < -1 ? 'delta-negative' : 'delta-zero');
+        const sign = delta > 1 ? '+' : '';
+        const hex = MIX_COLORS_MAP[r] || '#888';
+        if (m < 0.5 && nz < 0.5) return; // skip zero rows
+        html += `<tr>
+            <td><span class="res-dot" style="background:${hex}"></span>${MIX_LABELS[r]}</td>
+            <td>${fmt(m, 0)}</td>
+            <td>${fmt(nz, 0)}</td>
+            <td class="${cls}">${sign}${fmt(delta, 0)}</td>
+        </tr>`;
+    });
+
+    // DAC row if present
+    const facDac = fac.dac_offset_mt?.[lastIdx] || 0;
+    if (facDac > 0) {
+        html += `<tr style="border-top:2px solid rgba(0,0,0,0.1)">
+            <td><span class="res-dot" style="background:#10B981"></span>DAC Offset</td>
+            <td>0</td>
+            <td>${fmt(facDac, 1)} Mt</td>
+            <td class="delta-positive">+${fmt(facDac, 1)} Mt</td>
+        </tr>`;
+    }
+
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+// ─── §3: REGIONAL CHALLENGES & OPPORTUNITIES ───────────────────
+function buildChallenges() {
+    const iso = globalIso;
+    const group = GROUPS[globalGroup];
+    document.getElementById('challengeIsoName').textContent = ISO_NAMES[iso];
+    const container = document.getElementById('challengeNarrative');
+
+    const r1 = getSD('Reference', iso);
+    const fac = getSD(group.fac, iso);
+    const chal = getSD(group.chal, iso);
+    if (!r1) { container.innerHTML = ''; return; }
+
+    const lastIdx = r1.years.length - 1;
+    const baseline = r1.emissions_mt[0];
+    const marketClean = r1.clean_pct[lastIdx];
+    const isRef = globalGroup === 'reference';
+
+    let html = '';
+
+    // Regional character — use fan data if available, or fac mix for resource dominance
+    const mixSrc = fac || r1;
+    const mixObj = mixSrc.mix || {};
+    const mixR1 = {};
+    MIX_ORDER.forEach(r => { mixR1[r] = mixObj[r]?.[lastIdx] || 0; });
+    const totalR1 = Object.values(mixR1).reduce((a, b) => a + b, 0);
+    const dominant = MIX_ORDER.filter(r => mixR1[r] > 0).sort((a, b) => mixR1[b] - mixR1[a]);
+    const topRes = totalR1 > 0 ? dominant.slice(0, 3).map(r => `${MIX_LABELS[r]} (${(mixR1[r]/totalR1*100).toFixed(0)}%)`).join(', ') : 'data not available';
+
+    html += `<div class="narrative-box">
+        <strong>Grid Character:</strong> ${ISO_FULL[iso]} starts at ${fmt(baseline, 0)} Mt CO\u2082 and ${fmtPct(r1.clean_pct[0])} clean energy in 2023.
+        Under market forces, the grid reaches ${fmtPct(marketClean)} clean by 2050${totalR1 > 0 ? ', dominated by ' + topRes : ''}.
+    </div>`;
+
+    // Challenges — use fan spread for uncertainty
+    const challenges = [];
+    const refFan = r1.fan;
+    if (refFan) {
+        const p90Final = refFan.p90[lastIdx];
+        const p10Final = refFan.p10[lastIdx];
+        const spread = p90Final - p10Final;
+        if (spread > baseline * 0.3) {
+            challenges.push(`<strong>High uncertainty:</strong> The market outcome range spans ${fmt(spread, 0)} Mt (P10–P90) — conditions matter enormously here.`);
+        }
+    }
+    const chalGas = chal?.total_gas_gw?.[lastIdx] || 0;
+    if (chalGas > 2) {
+        challenges.push(`<strong>Gas lock-in risk:</strong> Under challenging conditions, ${fmt(chalGas, 0)} GW of new gas CCGT gets built to meet demand growth. This locks in fossil infrastructure for decades.`);
+    }
+    const chalShadow = chal?.carbon_shadow_price?.[lastIdx] || 0;
+    if (chalShadow > 100) {
+        challenges.push(`<strong>Extreme policy cost:</strong> Reaching net-zero under challenging conditions requires an implied carbon price of ${fmtDollar(chalShadow)}/ton — far above current carbon markets.`);
+    }
+    if (marketClean < 80) {
+        challenges.push(`<strong>Low market ceiling:</strong> Even under optimistic conditions, market forces only reach ${fmtPct(marketClean)} clean — most of the decarbonization must come from policy.`);
+    }
+
+    if (challenges.length > 0) {
+        html += `<div class="narrative-box danger"><strong>Key Challenges:</strong><br>${challenges.map(c => '\u2022 ' + c).join('<br>')}</div>`;
+    }
+
+    // Opportunities
+    const opps = [];
+    if (marketClean >= 85) {
+        opps.push(`<strong>High market ceiling:</strong> Market forces deliver ${fmtPct(marketClean)} clean — the remaining gap to net-zero is relatively small.`);
+    }
+    const facDac = fac?.dac_offset_mt?.[lastIdx] || 0;
+    const facDacCost = fac?.dac_cost_per_ton?.[lastIdx] || 0;
+    if (facDac > 0 && facDacCost < 150) {
+        opps.push(`<strong>DAC backstop viable:</strong> Under facilitating conditions, DAC can offset the remaining ${fmt(facDac, 0)} Mt at ${fmtDollar(facDacCost)}/ton — cheaper than forced grid overbuild.`);
+    }
+    if (mixR1.wind > totalR1 * 0.25) {
+        opps.push(`<strong>Strong wind resource:</strong> Wind contributes ${(mixR1.wind/totalR1*100).toFixed(0)}% of market-driven supply — a natural foundation for deeper decarbonization.`);
+    }
+    if (mixR1.solar > totalR1 * 0.25) {
+        opps.push(`<strong>Strong solar resource:</strong> Solar contributes ${(mixR1.solar/totalR1*100).toFixed(0)}% of market-driven supply — abundant cheap generation.`);
+    }
+    if (mixR1.hydro > totalR1 * 0.1) {
+        opps.push(`<strong>Existing hydro base:</strong> Hydro provides ${(mixR1.hydro/totalR1*100).toFixed(0)}% of supply at zero marginal cost — firm, dispatchable, and already paid for.`);
+    }
+
+    if (opps.length > 0) {
+        html += `<div class="narrative-box success"><strong>Opportunities:</strong><br>${opps.map(o => '\u2022 ' + o).join('<br>')}</div>`;
+    }
+
+    // NZ pathway narrative
+    if (!isRef && fac && chal) {
+        const facClean = fac.clean_pct[lastIdx];
+        const chalClean = chal.clean_pct[lastIdx];
+        html += `<div class="narrative-box">
+            <strong>Pathways to Net-Zero:</strong> Under facilitating conditions, the grid builds to ${fmtPct(facClean)} clean` +
+            (facDac > 0 ? ` with DAC handling the remaining ${fmt(facDac, 0)} Mt` : '') + `. ` +
+            `Under challenging conditions, the grid is forced to ${fmtPct(chalClean)} clean` +
+            (chalShadow > 0 ? ` at an implied carbon price of ${fmtDollar(chalShadow)}/ton` : '') + `. ` +
+            `The difference in cost between these paths is the value of good policy and technology progress.
+        </div>`;
+
+        // Milestone divergence
+        html += '<div class="narrative-box"><strong>Milestone Timeline:</strong><br>';
+        const milestones = [[1, '2030'], [2, '2035'], [3, '2040'], [4, '2045'], [5, '2050']];
+        milestones.forEach(([i, yr]) => {
+            if (i >= fac.years.length || i >= chal.years.length) return;
+            html += `<strong>${yr}:</strong> Fac. ${fmtPct(fac.clean_pct[i])} clean (${fmt(fac.emissions_mt[i])} Mt) vs Chal. ${fmtPct(chal.clean_pct[i])} clean (${fmt(chal.emissions_mt[i])} Mt)<br>`;
+        });
+        html += '</div>';
+    }
+
+    container.innerHTML = html;
+}
+
+// ─── §4: GRID BUILDOUT ──────────────────────────────────────────
+
+function buildMixChart(canvasId, scenarioName) {
+    const key = 'mix_' + canvasId;
+    if (charts[key]) charts[key].destroy();
+    const d = getSD(scenarioName, globalIso);
+    if (!d) { charts[key] = null; return; }
+
+    const years = d.years;
+    const mix = d.mix || {};
+    // Estimate demand from mix totals if demand_twh not in data
+    const hasMix = Object.keys(mix).length > 0;
+    const estimatedDemand = hasMix ? years.map((_, i) => {
+        let total = 0;
+        MIX_ORDER.forEach(r => { total += (mix[r]?.[i] || 0); });
+        return total > 0 ? total * 1.05 : 0; // rough 5% margin for fossil gap
+    }) : years.map(() => 0);
+    const demandTwh = d.demand_twh || estimatedDemand;
+    const curtailTwh = d.curtailment_twh || years.map(() => 0);
+    const cleanPct = d.clean_pct || years.map(() => 0);
+    const emMt = d.emissions_mt || [];
+    const datasets = [];
+
+    const base2023 = {};
+    MIX_ORDER.forEach(r => { base2023[r] = mix[r]?.[0] || 0; });
+
+    const existD = {}, newD = {}, curtD = {};
+    MIX_ORDER.forEach(r => { existD[r] = []; newD[r] = []; curtD[r] = []; });
+    const gapD = [];
+    const metrics = [];
+
+    for (let yi = 0; yi < years.length; yi++) {
+        const demand = demandTwh[yi] || 0;
+        const totalCurt = curtailTwh[yi] || 0;
+        let totalGen = 0, varGen = 0;
+        MIX_ORDER.forEach(r => { totalGen += (mix[r]?.[yi] || 0); });
+        VARIABLE_TYPES.forEach(r => { varGen += (mix[r]?.[yi] || 0); });
+
+        const curtShare = {};
+        VARIABLE_TYPES.forEach(r => {
+            curtShare[r] = varGen > 0 ? ((mix[r]?.[yi] || 0) / varGen) * totalCurt : 0;
+        });
+
+        MIX_ORDER.forEach(r => {
+            const gen = mix[r]?.[yi] || 0;
+            const curt = curtShare[r] || 0;
+            const util = Math.max(0, gen - curt);
+            if (STORAGE_TYPES.includes(r)) {
+                existD[r].push(0);
+                newD[r].push(Math.round(util * 10) / 10);
+            } else {
+                const ex = Math.min(base2023[r] || 0, util);
+                existD[r].push(Math.round(ex * 10) / 10);
+                newD[r].push(Math.round(Math.max(0, util - ex) * 10) / 10);
+            }
+            curtD[r].push(Math.round(curt * 10) / 10);
+        });
+
+        gapD.push(Math.round(Math.max(0, demand - (totalGen - totalCurt)) * 10) / 10);
+        const baseE = emMt[0] || 1;
+        metrics.push({ cfePct: cleanPct[yi] || 0, co2Red: baseE > 0 ? ((baseE - (emMt[yi] || 0)) / baseE * 100) : 0 });
+    }
+
+    // Existing
+    for (const r of EXISTING_ORDER) {
+        const hex = MIX_COLORS_MAP[r];
+        if (!hex || !existD[r].some(v => v > 0)) continue;
+        datasets.push({
+            label: MIX_LABELS[r] + ' (existing)', data: existD[r],
+            backgroundColor: hexToRgba(hex, 0.75), borderColor: hex, borderWidth: 1.5, borderRadius: 4,
+            stack: 'mix', _resourceKey: r,
+        });
+    }
+    // New
+    for (const r of NEW_ORDER) {
+        const hex = MIX_COLORS_MAP[r];
+        if (!hex || !newD[r].some(v => v > 0)) continue;
+        datasets.push({
+            label: MIX_LABELS[r] + ' (new)', data: newD[r],
+            backgroundColor: hexToRgba(hex, 0.40), borderColor: hex, borderWidth: 1, borderRadius: 4,
+            stack: 'mix', _resourceKey: r,
+        });
+    }
+    // Gap
+    datasets.push({ label: '_gap', data: gapD, backgroundColor: 'transparent', borderColor: 'transparent', borderWidth: 0, stack: 'mix', _isGap: true });
+    // Curtailed
+    for (const r of CURTAIL_ORDER) {
+        const hex = MIX_COLORS_MAP[r];
+        if (!hex || !curtD[r].some(v => v > 0)) continue;
+        datasets.push({
+            label: MIX_LABELS[r] + ' (curtailed)', data: curtD[r],
+            backgroundColor: createDiagonalPattern(hex, 0.55), borderColor: hex, borderWidth: 1, borderRadius: 2,
+            stack: 'mix', _resourceKey: r, _isCurtailed: true,
+        });
+    }
+    // Demand line (only show if we have demand data)
+    if (d.demand_twh || hasMix) {
+        datasets.push({
+            label: 'Demand', type: 'line',
+            data: demandTwh.map(v => Math.round((v || 0) * 10) / 10),
+            borderColor: 'rgba(220,38,38,0.55)', borderWidth: 2, borderDash: [6, 4],
+            stepped: 'middle', pointRadius: 0, fill: false, stack: false, order: -1,
+            _isDemandLine: true,
+        });
+    }
+
+    const barTotals = years.map((_, i) => {
+        let t = gapD[i] || 0;
+        MIX_ORDER.forEach(r => { t += (existD[r][i] || 0) + (newD[r][i] || 0) + (curtD[r][i] || 0); });
+        return t;
+    });
+    const maxVal = Math.max(...barTotals, ...demandTwh) || 100;
+    const step = maxVal > 500 ? 100 : maxVal > 100 ? 50 : 10;
+    const yMax = Math.ceil(maxVal / step) * step + step;
+
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    charts[key] = new Chart(ctx, {
+        type: 'bar', data: { labels: years, datasets },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            animation: { duration: 600 },
+            layout: { padding: { top: 10 } },
+            plugins: {
+                legend: {
+                    display: true, position: 'bottom',
+                    labels: {
+                        usePointStyle: true, pointStyle: 'rectRounded',
+                        font: { size: 10, family: 'DM Sans' }, padding: 8,
+                        generateLabels: chart => {
+                            const items = MIX_ORDER.filter(r =>
+                                chart.data.datasets.some(ds => ds._resourceKey === r && ds.data?.some(v => v > 0))
+                            ).map(r => ({
+                                text: MIX_LABELS[r], fillStyle: hexToRgba(MIX_COLORS_MAP[r], 0.7),
+                                strokeStyle: MIX_COLORS_MAP[r], lineWidth: 2, pointStyle: 'rectRounded',
+                            }));
+                            items.push({ text: 'Existing', fillStyle: 'rgba(100,100,100,0.7)', strokeStyle: '#666', lineWidth: 2, pointStyle: 'rectRounded' });
+                            items.push({ text: 'New Build', fillStyle: 'rgba(100,100,100,0.3)', strokeStyle: '#999', lineWidth: 2, pointStyle: 'rectRounded' });
+                            items.push({ text: 'Curtailed', fillStyle: 'rgba(100,100,100,0.15)', strokeStyle: 'rgba(100,100,100,0.4)', lineWidth: 2, pointStyle: 'rectRounded' });
+                            items.push({ text: 'Demand', fillStyle: 'transparent', strokeStyle: 'rgba(220,38,38,0.55)', lineWidth: 2, lineDash: [6, 4], pointStyle: 'line' });
+                            return items;
+                        }
+                    },
+                    onClick: () => {}
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(26,39,68,0.95)',
+                    titleFont: { family: 'Plus Jakarta Sans', weight: '700' },
+                    bodyFont: { family: 'DM Sans', size: 12 },
+                    filter: ti => !ti.dataset._isGap && !ti.dataset._isDemandLine && ti.parsed.y > 0,
+                    callbacks: {
+                        title: items => {
+                            if (!items.length) return '';
+                            const idx = items[0].dataIndex;
+                            const yr = items[0].chart.data.labels[idx];
+                            const m = items[0].chart._mixMetrics?.[idx];
+                            return m ? `${yr} \u2014 ${m.cfePct.toFixed(0)}% clean, ${m.co2Red >= 0 ? '-' : '+'}${Math.abs(m.co2Red).toFixed(0)}% CO\u2082` : String(yr);
+                        },
+                        label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)} TWh`
+                    }
+                },
+                datalabels: { display: false }
+            },
+            scales: {
+                x: { grid: { display: false }, stacked: true, ticks: { font: { family: 'Plus Jakarta Sans', size: 10 } } },
+                y: { stacked: true, title: { display: true, text: 'TWh', font: { family: 'DM Sans', size: 11 } }, max: yMax, beginAtZero: true, ticks: { font: { family: 'Plus Jakarta Sans', size: 10 } } }
+            }
+        }
+    });
+    charts[key]._mixMetrics = metrics;
+}
+
+// ─── §5: COST CHARTS ───────────────────────────────────────────
+function buildCarbonPriceChart() {
+    if (charts.carbon) charts.carbon.destroy();
+    charts.carbon = null;
+    const carbonCanvas = document.getElementById('carbonPriceChart');
+    const carbonPanel = carbonCanvas.closest('.chart-panel');
+    const group = GROUPS[globalGroup];
+    const fac = getSD(group.fac, globalIso);
+    const chal = getSD(group.chal, globalIso);
+    if (!fac && !chal) { carbonPanel.style.display = 'none'; return; }
+    const years = (fac || chal).years;
+    const ds = [];
+    if (fac?.carbon_shadow_price) ds.push({ label: 'Fac. Carbon Price', data: fac.carbon_shadow_price, borderColor: FAC_COLOR, backgroundColor: FAC_COLOR + '20', borderWidth: 2, pointRadius: 3, tension: 0.3 });
+    if (chal?.carbon_shadow_price) ds.push({ label: 'Chal. Carbon Price', data: chal.carbon_shadow_price, borderColor: CHAL_COLOR, backgroundColor: CHAL_COLOR + '20', borderWidth: 2, pointRadius: 3, tension: 0.3 });
+    if (fac?.dac_cost_per_ton) ds.push({ label: 'DAC Cost', data: fac.dac_cost_per_ton, borderColor: '#10B981', borderWidth: 2, borderDash: [6, 3], backgroundColor: 'transparent', fill: false, pointRadius: 2, tension: 0.3 });
+
+    const isRefCarbon = ds.length === 0;
+    if (isRefCarbon) {
+        // Reference scenario: show fan-based emission spread
+        const refFan = fac?.fan;
+        ds.push({ label: 'Median Emissions (P50)', data: fac?.emissions_mt || [], borderColor: FAC_COLOR, backgroundColor: FAC_COLOR + '20', borderWidth: 2, pointRadius: 3, tension: 0.3 });
+        if (refFan) {
+            ds.push({ label: 'Best Case (P10)', data: refFan.p10, borderColor: '#22C55E', backgroundColor: '#22C55E20', borderWidth: 1.5, borderDash: [4, 3], pointRadius: 2, tension: 0.3 });
+            ds.push({ label: 'Worst Case (P90)', data: refFan.p90, borderColor: CHAL_COLOR, backgroundColor: CHAL_COLOR + '20', borderWidth: 1.5, borderDash: [4, 3], pointRadius: 2, tension: 0.3 });
+        }
+        document.getElementById('carbonChartTitle').textContent = 'Emission Trajectory: Market-Only';
+        document.getElementById('carbonChartNote').textContent = 'CO\u2082 emissions under facilitating vs. challenging market conditions (no policy forcing)';
+    } else {
+        document.getElementById('carbonChartTitle').textContent = 'Carbon Shadow Price & DAC Cost';
+        document.getElementById('carbonChartNote').textContent = 'Implied $/ton to force deployment vs. the DAC backstop price';
+    }
+
+    carbonPanel.style.display = '';
+    charts.carbon = new Chart(carbonCanvas.getContext('2d'), {
+        type: 'line', data: { labels: years, datasets: ds },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { display: true, position: 'bottom', labels: { usePointStyle: true, font: { size: 10, family: 'DM Sans' }, padding: 8 } },
+                tooltip: { callbacks: { label: ctx => {
+                    const lbl = ctx.dataset.label;
+                    if (lbl.includes('Emissions')) return `${lbl}: ${ctx.parsed.y.toFixed(1)} Mt`;
+                    return `${lbl}: $${ctx.parsed.y.toFixed(0)}/ton`;
+                } } }
+            },
+            scales: {
+                x: { grid: { display: false }, ticks: { font: { family: 'Plus Jakarta Sans', size: 10 } } },
+                y: { title: { display: true, text: ds[0]?.label?.includes('Emissions') ? 'CO\u2082 Emissions (Mt)' : '$/ton CO\u2082', font: { family: 'DM Sans', size: 11 } }, beginAtZero: true, ticks: { font: { family: 'Plus Jakarta Sans', size: 10 } } }
+            }
+        }
+    });
+}
+
+function buildCostChart() {
+    if (charts.cost) charts.cost.destroy();
+    charts.cost = null;
+    const costCanvas = document.getElementById('costChart');
+    const costPanel = costCanvas.closest('.chart-panel');
+    const group = GROUPS[globalGroup];
+    const fac = getSD(group.fac, globalIso);
+    const chal = getSD(group.chal, globalIso);
+    if (!fac && !chal) { costPanel.style.display = 'none'; return; }
+    const years = (fac || chal).years;
+    const ds = [];
+    if (fac?.mandated_subsidy_mwh) ds.push({ label: 'Fac. Subsidy', data: fac.mandated_subsidy_mwh, borderColor: FAC_COLOR, backgroundColor: FAC_COLOR + '20', borderWidth: 2, pointRadius: 3, tension: 0.3, fill: true });
+    if (chal?.mandated_subsidy_mwh) ds.push({ label: 'Chal. Subsidy', data: chal.mandated_subsidy_mwh, borderColor: CHAL_COLOR, backgroundColor: CHAL_COLOR + '20', borderWidth: 2, pointRadius: 3, tension: 0.3, fill: true });
+
+    const isRefCost = ds.length === 0;
+    if (isRefCost) {
+        // Reference scenario: show clean % fan
+        ds.push({ label: 'Median Clean % (P50)', data: fac?.clean_pct || [], borderColor: FAC_COLOR, backgroundColor: FAC_COLOR + '20', borderWidth: 2, pointRadius: 3, tension: 0.3, fill: true });
+        const cpFan = fac?.clean_pct_fan;
+        if (cpFan) {
+            ds.push({ label: 'Best Case (P90)', data: cpFan.p90, borderColor: '#22C55E', backgroundColor: '#22C55E10', borderWidth: 1.5, borderDash: [4, 3], pointRadius: 2, tension: 0.3, fill: false });
+            ds.push({ label: 'Worst Case (P10)', data: cpFan.p10, borderColor: CHAL_COLOR, backgroundColor: CHAL_COLOR + '10', borderWidth: 1.5, borderDash: [4, 3], pointRadius: 2, tension: 0.3, fill: false });
+        }
+        document.getElementById('costChartTitle').textContent = 'Clean Energy Trajectory: Market-Only';
+        document.getElementById('costChartNote').textContent = 'Share of clean energy under facilitating vs. challenging market conditions';
+    } else {
+        document.getElementById('costChartTitle').textContent = 'Policy Subsidy Trajectory';
+        document.getElementById('costChartNote').textContent = '$/MWh subsidy required to keep deployment on track';
+    }
+
+    costPanel.style.display = '';
+    charts.cost = new Chart(costCanvas.getContext('2d'), {
+        type: 'line', data: { labels: years, datasets: ds },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { display: true, position: 'bottom', labels: { usePointStyle: true, font: { size: 10, family: 'DM Sans' }, padding: 8 } },
+                tooltip: { callbacks: { label: ctx => {
+                    const lbl = ctx.dataset.label;
+                    if (lbl.includes('Clean')) return `${lbl}: ${ctx.parsed.y.toFixed(0)}%`;
+                    return `${lbl}: $${ctx.parsed.y.toFixed(1)}/MWh`;
+                } } }
+            },
+            scales: {
+                x: { grid: { display: false }, ticks: { font: { family: 'Plus Jakarta Sans', size: 10 } } },
+                y: { title: { display: true, text: ds[0]?.label?.includes('Clean') ? 'Clean Energy (%)' : '$/MWh subsidy', font: { family: 'DM Sans', size: 11 } }, beginAtZero: true, ticks: { font: { family: 'Plus Jakarta Sans', size: 10 } } }
+            }
+        }
+    });
+}
+
+// ─── §6: SCENARIO COMPARISON ────────────────────────────────────
+function buildComparison() {
+    const group = GROUPS[globalGroup];
+    const fac = getSD(group.fac, globalIso);
+    const chal = getSD(group.chal, globalIso);
+    const container = document.getElementById('scenarioComparison');
+    container.innerHTML = '';
+
+    function makeCard(data, label, color) {
+        if (!data) return '';
+        const last = data.years.length - 1;
+        const rows = [
+            ['2050 Clean %', fmtPct(data.clean_pct[last])],
+            ['2050 Net Emissions', fmt(data.emissions_mt[last], 1) + ' Mt'],
+            ['DAC Offset', fmt(data.dac_offset_mt?.[last] || 0, 1) + ' Mt'],
+            ['Carbon Shadow Price', fmtDollar(data.carbon_shadow_price?.[last] || 0) + '/ton'],
+            ['Policy Subsidy', fmtDollar(data.mandated_subsidy_mwh?.[last] || 0) + '/MWh'],
+        ];
+        return `<div class="scenario-card"><h4><span class="dot" style="background:${color}"></span>${label}</h4>` +
+            rows.map(([l, v]) => `<div class="metric-row"><span class="metric-label">${l}</span><span class="metric-val">${v}</span></div>`).join('') + '</div>';
+    }
+
+    container.innerHTML = makeCard(fac, SCENARIO_META[group.fac]?.name || group.fac, FAC_COLOR) +
+                          makeCard(chal, SCENARIO_META[group.chal]?.name || group.chal, CHAL_COLOR);
+}
+
+// ─── UPDATE ALL ─────────────────────────────────────────────────
+function updateAll() {
+    const group = GROUPS[globalGroup];
+    document.getElementById('buildoutPathway').textContent = group.label;
+    buildGapSection();
+    buildChallenges();
+    buildMixChart('mixChartFac', group.fac);
+    if (group.chal) {
+        buildMixChart('mixChartChal', group.chal);
+        document.getElementById('mixChalTitle').textContent = SCENARIO_META[group.chal]?.name || 'Challenging';
+        document.getElementById('mixChartChal')?.closest('.chart-panel')?.style.setProperty('display', '');
+    } else {
+        const chalKey = 'mix_mixChartChal';
+        if (charts[chalKey]) { charts[chalKey].destroy(); charts[chalKey] = null; }
+        document.getElementById('mixChartChal')?.closest('.chart-panel')?.style.setProperty('display', 'none');
+    }
+    document.getElementById('mixFacTitle').textContent = SCENARIO_META[group.fac]?.name || 'Reference';
+    buildCarbonPriceChart();
+    buildCostChart();
+    buildComparison();
+}
+
+// ─── INIT ───────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    buildIsoGrid();
+    initIsoSelector();
+    initScenarioTabs();
+    updateAll();
+});
+</script>
+<script src="js/cinematic-bg.js"></script>
+</body>
+</html>

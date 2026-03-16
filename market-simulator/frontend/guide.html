@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guide — Market Simulation Tool</title>
+    <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/simulator.css">
+    <style>
+        .guide-section { margin-bottom: var(--space-2xl); }
+        .guide-section h2 { color: var(--navy); margin-bottom: var(--space-md); font-size: 1.5rem; border-bottom: 2px solid var(--ceg-blue); padding-bottom: var(--space-xs); }
+        .guide-section h3 { color: var(--ceg-blue); margin: var(--space-lg) 0 var(--space-sm) 0; font-size: 1.15rem; }
+        .guide-steps { counter-reset: step; list-style: none; padding: 0; }
+        .guide-steps li { counter-increment: step; position: relative; padding: var(--space-md) var(--space-md) var(--space-md) 3.5rem; margin-bottom: var(--space-sm); background: rgba(255,255,255,0.8); border-radius: var(--radius-md); border: 1px solid #e0e6ef; }
+        .guide-steps li::before { content: counter(step); position: absolute; left: var(--space-md); top: var(--space-md); width: 28px; height: 28px; background: var(--ceg-blue); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; }
+        .guide-steps li strong { display: block; margin-bottom: 0.25rem; }
+        .metric-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: var(--space-md); }
+        .metric-card { background: #fff; border-radius: var(--radius-md); padding: var(--space-md); border-left: 4px solid var(--ceg-blue); }
+        .metric-card h4 { margin: 0 0 0.25rem 0; color: var(--navy); font-size: 0.95rem; }
+        .metric-card p { margin: 0; color: #5a6577; font-size: 0.88rem; line-height: 1.45; }
+        .chart-desc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--space-md); }
+        .chart-desc-card { background: #fff; border-radius: var(--radius-md); padding: var(--space-md); border: 1px solid #e0e6ef; }
+        .chart-desc-card h4 { margin: 0 0 0.5rem 0; font-size: 0.95rem; color: var(--navy); }
+        .chart-desc-card p { margin: 0; font-size: 0.88rem; color: #5a6577; line-height: 1.45; }
+        .file-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+        .file-table th, .file-table td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid #e0e6ef; }
+        .file-table th { background: var(--navy); color: #fff; font-weight: 600; }
+        .file-table tr:hover { background: rgba(35,114,185,0.04); }
+        .file-table code { background: #f1f5f9; padding: 0.15rem 0.4rem; border-radius: 3px; font-size: 0.82rem; }
+        .callout { background: #eef4fc; border-left: 4px solid var(--ceg-blue); padding: var(--space-md); border-radius: var(--radius-sm); margin: var(--space-md) 0; }
+        .callout-warn { background: #fef3cd; border-left-color: #f0ad4e; }
+        .callout p { margin: 0; font-size: 0.9rem; line-height: 1.5; }
+        .cta-bar { text-align: center; margin: var(--space-2xl) 0 var(--space-xl); }
+        .cta-bar .btn-primary { font-size: 1.1rem; padding: 0.9rem 2.5rem; }
+    </style>
+</head>
+<body>
+
+    <div class="progress-bar"><div class="progress-bar-fill"></div></div>
+
+    <!-- Nav -->
+    <nav>
+        <div class="nav-logo">
+            <a href="/" style="display:flex;align-items:center;gap:0.75rem;text-decoration:none;">
+                <img src="/brand-assets/logo.png" alt="Constellation Energy" style="height:36px;" onerror="this.style.display='none'">
+                <div>
+                    <div class="nav-title">Constellation Energy</div>
+                    <div class="nav-subtitle">Market Simulation Tool</div>
+                </div>
+            </a>
+        </div>
+        <ul class="nav-links">
+            <li><a href="/" class="active">Guide</a></li>
+            <li><a href="/setup">Setup</a></li>
+            <li><a href="/results">Results</a></li>
+        </ul>
+    </nav>
+
+    <!-- Hero -->
+    <div class="hero-section">
+        <div class="hero-inner">
+            <div class="hero-eyebrow">User Guide</div>
+            <h1>Market Simulation <strong>Tool</strong></h1>
+            <p class="hero-desc">
+                A screening tool for directionally correct analysis of how grid assets perform under
+                different market conditions. Use this to identify sensitivity ranges worth exploring
+                deeper with IPM or GenX capacity models.
+            </p>
+        </div>
+    </div>
+
+    <div class="content-section" style="max-width: 960px;">
+
+        <!-- Section 1: What This Tool Does -->
+        <div class="guide-section">
+            <h2>What This Tool Does</h2>
+            <p>
+                This simulator models electricity market economics across 7 US ISOs (CAISO, ERCOT, PJM, NYISO, NEISO, MISO, SPP).
+                Given a set of market preconditions &mdash; fuel prices, carbon costs, clean energy LCOEs, tax incentives, and demand growth &mdash;
+                it computes merit-order dispatch, hourly LMPs, generator profitability, and clean energy deployment economics.
+            </p>
+            <p>
+                <strong>It answers:</strong> Under these cost assumptions, what happens to the fossil fleet? Which generators retire?
+                What clean resources can be profitably deployed? At what carbon price does CCS break even?
+            </p>
+            <div class="callout">
+                <p><strong>Note:</strong> This is a screening tool producing directionally correct results, not a production capacity expansion model.
+                Use it to narrow the parameter space before running full IPM or GenX analyses.</p>
+            </div>
+        </div>
+
+        <!-- Section 2: How to Use It -->
+        <div class="guide-section">
+            <h2>How to Use It</h2>
+            <ol class="guide-steps">
+                <li>
+                    <strong>Choose a simulation mode</strong>
+                    <em>Snapshot</em> runs a single point-in-time simulation (fast, ~5-15 seconds).
+                    <em>Trajectory</em> projects forward through multiple years with learning curves.
+                    <em>Sweep</em> runs 270 scenarios across all parameter combinations.
+                </li>
+                <li>
+                    <strong>Select ISO region(s)</strong>
+                    Pick one ISO for Snapshot mode, or multiple ISOs for Trajectory/Sweep. Each ISO has
+                    different demand profiles, fossil fleet composition, and capacity market structures.
+                </li>
+                <li>
+                    <strong>Set market parameters</strong>
+                    Adjust fuel prices, carbon price, clean energy LCOEs, federal incentives, storage costs, and more.
+                    Each input has an <span style="color:var(--ceg-blue);font-weight:600;">&#9432;</span> info icon &mdash;
+                    hover over it to see what the parameter controls and typical ranges.
+                    Use L/M/H preset buttons for quick selection, or enter any custom value.
+                </li>
+                <li>
+                    <strong>Click "Run Market Simulation"</strong>
+                    The model will compute results (typically 5-30 seconds for Snapshot/Trajectory).
+                    You'll be redirected to the results page automatically.
+                </li>
+                <li>
+                    <strong>Review results</strong>
+                    The results page shows KPI summary cards, LMP profiles, supply stack, merit-order dispatch,
+                    generator economics, and deployment profitability. Each chart has an info hover explaining what it shows.
+                </li>
+                <li>
+                    <strong>Export &amp; compare</strong>
+                    Each simulation run is automatically saved to the <code>results/</code> directory with a unique ID.
+                    You'll find CSV data files, chart images, a narrative summary, and an HTML snapshot of the results page.
+                </li>
+            </ol>
+        </div>
+
+        <!-- Section 3: Interpreting Results -->
+        <div class="guide-section">
+            <h2>Interpreting Results</h2>
+
+            <h3>Top-Level KPI Cards</h3>
+            <div class="metric-grid">
+                <div class="metric-card">
+                    <h4>Market Clean %</h4>
+                    <p>The percentage of generation from clean sources after the model computes economic dispatch. Higher = more fossil retirement.</p>
+                </div>
+                <div class="metric-card">
+                    <h4>Avg LMP ($/MWh)</h4>
+                    <p>Time-weighted average locational marginal price. Driven by the marginal fossil generator's cost — as clean penetration rises, this typically falls.</p>
+                </div>
+                <div class="metric-card">
+                    <h4>Annual Emissions (MT CO2)</h4>
+                    <p>Total annual CO2 emissions from the fossil fleet. Drops as clean generation displaces coal and gas.</p>
+                </div>
+                <div class="metric-card">
+                    <h4>Nuclear Revenue ($/MWh)</h4>
+                    <p>Total revenue stack for existing nuclear: energy + capacity + 45U PTC. If this falls below the retirement threshold, nuclear plants shut down.</p>
+                </div>
+            </div>
+
+            <h3>Charts &amp; Visualizations</h3>
+            <div class="chart-desc-grid">
+                <div class="chart-desc-card">
+                    <h4>LMP &amp; Capacity Revenue</h4>
+                    <p>Hourly price profile (Snapshot) or year-over-year average LMP trajectory. Shows how energy prices evolve as the generation mix changes.</p>
+                </div>
+                <div class="chart-desc-card">
+                    <h4>Supply Stack</h4>
+                    <p>Generation mix by fuel source (TWh). Shows the shift from fossil to clean resources under your assumptions.</p>
+                </div>
+                <div class="chart-desc-card">
+                    <h4>Merit-Order Stack</h4>
+                    <p>Fossil generators ordered by marginal cost ($/MWh). Generators above the LMP line are uneconomic and face retirement pressure.</p>
+                </div>
+                <div class="chart-desc-card">
+                    <h4>Generator Economics Table</h4>
+                    <p>Per-unit economics: capacity, dispatch hours, capacity factor, revenue, cost, and profit margin. Color-coded status (profitable / marginal / retiring).</p>
+                </div>
+                <div class="chart-desc-card">
+                    <h4>Generator Profitability</h4>
+                    <p>Revenue vs. cost per generator class (Trajectory mode). Shows which resources are profitable to deploy at each projection year.</p>
+                </div>
+                <div class="chart-desc-card">
+                    <h4>CCS Retrofit vs. New Gas</h4>
+                    <p>Carbon price crossover analysis. Shows the carbon price at which CCS-CCGT becomes cheaper than unabated gas.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 4: Custom Data Inputs -->
+        <div class="guide-section">
+            <h2>Custom Data Inputs</h2>
+            <p>
+                You can override the model's built-in price curves with your own time-series data.
+                Custom input files go in the <code>custom-user-inputs/</code> folder inside the market-simulator directory.
+            </p>
+
+            <h3>Available Templates</h3>
+            <table class="file-table">
+                <thead>
+                    <tr><th>Template File</th><th>Format</th><th>What It Overrides</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>template_lmp_hourly.csv</code></td>
+                        <td>8760 rows &times; 7 ISO columns ($/MWh)</td>
+                        <td>Hourly LMP price curve per ISO</td>
+                    </tr>
+                    <tr>
+                        <td><code>template_capacity_prices.csv</code></td>
+                        <td>12 rows (months) &times; 7 ISO columns ($/MW-day)</td>
+                        <td>Monthly capacity market prices per ISO</td>
+                    </tr>
+                    <tr>
+                        <td><code>template_rec_prices.csv</code></td>
+                        <td>12 rows (months) &times; 7 ISO columns ($/MWh)</td>
+                        <td>Monthly REC prices per ISO</td>
+                    </tr>
+                    <tr>
+                        <td><code>template_fuel_prices_gas.csv</code></td>
+                        <td>12 rows (months) &times; 7 ISO columns ($/MMBtu)</td>
+                        <td>Monthly natural gas prices by region</td>
+                    </tr>
+                    <tr>
+                        <td><code>template_fuel_prices_coal.csv</code></td>
+                        <td>12 rows (months) &times; 7 ISO columns ($/MMBtu)</td>
+                        <td>Monthly coal prices by region</td>
+                    </tr>
+                    <tr>
+                        <td><code>template_fuel_prices_oil.csv</code></td>
+                        <td>12 rows (months) &times; 7 ISO columns ($/MMBtu)</td>
+                        <td>Monthly oil prices by region</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>How to Use Custom Files</h3>
+            <ol class="guide-steps">
+                <li>
+                    <strong>Open the template CSV</strong>
+                    Find the template in <code>custom-user-inputs/</code>. Each file is pre-filled with the model's default values.
+                </li>
+                <li>
+                    <strong>Replace values with your data</strong>
+                    Keep the header row and column structure. Fill in your price data. Leave ISOs you don't need as-is.
+                </li>
+                <li>
+                    <strong>Save as the same filename</strong>
+                    Rename the template by removing <code>template_</code> prefix (e.g., <code>lmp_hourly.csv</code>). Save in the same folder.
+                </li>
+                <li>
+                    <strong>Enable on the Setup page</strong>
+                    On the simulation setup page, check the "Use custom file" toggle for the relevant input category.
+                    The tool will show whether the file was found and validated.
+                </li>
+            </ol>
+
+            <div class="callout callout-warn">
+                <p><strong>Important:</strong> Custom files must match the exact column headers (ISO names) and row counts shown in the templates.
+                Files with missing columns, wrong row counts, or NaN values will be rejected and the model will fall back to defaults.</p>
+            </div>
+        </div>
+
+        <!-- Section 5: Results Directory -->
+        <div class="guide-section">
+            <h2>Exporting Results</h2>
+            <p>
+                Every simulation run is automatically saved to the <code>results/</code> directory with a unique run ID
+                (e.g., <code>run_001</code>, <code>run_002</code>, etc.). Each run folder contains:
+            </p>
+            <table class="file-table">
+                <thead>
+                    <tr><th>File</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><code>inputs.txt</code></td><td>Complete description of all user inputs for this run</td></tr>
+                    <tr><td><code>narrative.txt</code></td><td>Auto-generated plain-English interpretation of results</td></tr>
+                    <tr><td><code>results_data.csv</code></td><td>All result outputs: LMP, capacity factors, revenue stacks, generator economics</td></tr>
+                    <tr><td><code>input_parameters.csv</code></td><td>Tabular copy of your parameter selections</td></tr>
+                    <tr><td><code>charts/</code></td><td>PNG images of all dashboard charts (click "Export Charts" on results page)</td></tr>
+                    <tr><td><code>results_snapshot.html</code></td><td>Standalone HTML copy of the results page for PDF conversion</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- CTA -->
+        <div class="cta-bar">
+            <a href="/setup" class="btn-primary submit-btn">Start Simulation &rarr;</a>
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-brand"><strong>Constellation Energy</strong> &middot; Market Simulation Tool</div>
+        <div class="footer-note">Directionally correct economics for targeted IPM/GenX analysis</div>
+    </footer>
+    <div class="bottom-banner"></div>
+
+</body>
+</html>
