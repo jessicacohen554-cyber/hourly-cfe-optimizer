@@ -208,7 +208,6 @@
     // Pages removed from nav: optimizer_methodology.html, consequential_vacuum.html (tiles removed, pages kept)
     const NAV_ITEMS = [
         { label: 'Home', href: 'home.html' },
-        { label: 'Reference Library', href: 'reference.html' },
         {
             label: 'Supply Side',
             children: [
@@ -236,6 +235,15 @@
                 { label: 'Clean Firm', href: 'clean_firm_case.html' },
                 { label: 'Clean Asset Value', href: 'lmp_trends.html' },
                 { label: 'Nuclear Retirement Risk', href: 'ref-nuclear-retirement.html' }
+            ]
+        },
+        {
+            label: 'About',
+            children: [
+                { label: 'Methodology', href: 'optimizer_methodology.html' },
+                { label: 'Research Overview', href: 'about.html' },
+                { label: 'Literature Review', href: 'lit-review.html' },
+                { label: 'Reference Library', href: 'reference.html' }
             ]
         },
     ];
