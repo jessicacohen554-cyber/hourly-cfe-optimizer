@@ -11,7 +11,8 @@ import time
 import webbrowser
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+# app-startup/ is one level below the project root
+ROOT = Path(__file__).resolve().parent.parent
 PORT = 8000
 URL = f"http://127.0.0.1:{PORT}"
 
@@ -26,7 +27,7 @@ def check_python_version():
 def install_deps():
     print("Installing dependencies...")
     subprocess.check_call(
-        [sys.executable, "-m", "pip", "install", "-r", str(ROOT / "requirements.txt"), "--quiet"],
+        [sys.executable, "-m", "pip", "install", "-r", str(ROOT / "app-startup" / "requirements.txt"), "--quiet"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
