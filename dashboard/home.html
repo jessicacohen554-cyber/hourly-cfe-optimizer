@@ -1,0 +1,2420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>What We Choose to Count | The 8,760 Problem</title>
+    <meta name="description" content="How corporate carbon accounting reshapes the grid. Hourly vs. consequential clean energy procurement across 7 US ISOs, 540+ market scenarios, and 7 IPP fleet assessments.">
+    <meta property="og:title" content="What We Choose to Count | The 8,760 Problem">
+    <meta property="og:description" content="Corporate Scope 2 accounting choices shape IPP investment and determine whether grids lock into gas or transition to firm clean power.">
+    <meta property="og:type" content="article">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/article.css">
+    <link rel="stylesheet" href="styles/cinematic.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+    <script src="js/nav.js"></script>
+    <script src="js/chart-colors.js"></script>
+    <script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
+    <script src="js/shared-footer.js"></script>
+    <style>
+        /* ===== Page Title ===== */
+        .header h1 {
+            font-family: var(--font-heading) !important;
+            font-weight: 800 !important;
+        }
+
+        /* ===== Hero Stats Row ===== */
+        .hero-stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--space-md);
+            max-width: 920px;
+            margin: 0 auto;
+        }
+        .hero-stats-row .stat-card {
+            text-align: center;
+            padding: var(--space-lg) var(--space-md);
+        }
+        .hero-stats-row .stat-value {
+            font-family: var(--font-heading);
+            font-size: 2.8rem;
+            font-weight: 800;
+            color: var(--navy);
+            line-height: 1.1;
+        }
+        .hero-stats-row .stat-label {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: var(--text-muted);
+            margin-top: var(--space-xs);
+        }
+        .hero-stats-row .stat-card:nth-child(2) { transition-delay: 0.12s; }
+        .hero-stats-row .stat-card:nth-child(3) { transition-delay: 0.24s; }
+        .hero-stats-row .stat-card:nth-child(4) { transition-delay: 0.36s; }
+
+        /* ===== Fork Road Diagram ===== */
+        .fork-diagram {
+            max-width: 860px;
+            margin: 0 auto;
+            text-align: center;
+            padding: var(--space-xl) 0 0;
+            opacity: 0;
+            transform: translateY(24px);
+            transition: opacity 1s ease-out, transform 1s ease-out;
+        }
+        .fork-diagram.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .fork-diagram svg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        /* Mobile vertical connector (replaces Y-fork on narrow screens) */
+        .fork-mobile-connector {
+            display: none;
+        }
+
+        /* Flowing dash animation */
+        @keyframes flowDash {
+            to { stroke-dashoffset: -30; }
+        }
+        .road-median {
+            animation: flowDash 1.6s linear infinite;
+        }
+
+        /* Glow pulse on arrowheads */
+        @keyframes arrowPulse1b {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+        @keyframes arrowPulse2c {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+        .arrow-tip-1b { animation: arrowPulse1b 2.5s ease-in-out infinite; }
+        .arrow-tip-2c { animation: arrowPulse2c 2.5s ease-in-out infinite; }
+
+        /* ===== Outcome Panels (below fork) ===== */
+        .outcome-panels {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 28px;
+            max-width: 860px;
+            margin: -20px auto 0;
+            position: relative;
+            z-index: 2;
+        }
+        .outcome-panel {
+            border-radius: 20px;
+            padding: 32px 28px;
+            color: var(--text-primary, #1e293b);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .outcome-panel::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 20px;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .outcome-panel > * { position: relative; z-index: 1; }
+        .outcome-panel:hover {
+            transform: translateY(-4px);
+        }
+        .outcome-panel.strat-1b {
+            background: rgba(99,102,241,0.04);
+            border: 3px solid #6366F1;
+            box-shadow: 0 4px 32px -8px rgba(99,102,241,0.18), 0 0 0 1px rgba(99,102,241,0.06);
+        }
+        .outcome-panel.strat-1b::before {
+            background: linear-gradient(135deg, rgba(99,102,241,0.06) 0%, transparent 60%);
+        }
+        .outcome-panel.strat-1b:hover {
+            box-shadow: 0 8px 40px -8px rgba(99,102,241,0.28), 0 0 0 1px rgba(99,102,241,0.12);
+        }
+        .outcome-panel.strat-2c {
+            background: rgba(14,165,233,0.04);
+            border: 3px solid #0EA5E9;
+            box-shadow: 0 4px 32px -8px rgba(14,165,233,0.18), 0 0 0 1px rgba(14,165,233,0.06);
+        }
+        .outcome-panel.strat-2c::before {
+            background: linear-gradient(135deg, rgba(14,165,233,0.06) 0%, transparent 60%);
+        }
+        .outcome-panel.strat-2c:hover {
+            box-shadow: 0 8px 40px -8px rgba(14,165,233,0.28), 0 0 0 1px rgba(14,165,233,0.12);
+        }
+        .outcome-tag {
+            display: inline-block;
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 6px 14px;
+            border-radius: var(--radius-pill);
+            margin-bottom: var(--space-md);
+        }
+        .outcome-tag-1b { background: rgba(99,102,241,0.12); color: #6366F1; border: 1.5px solid rgba(99,102,241,0.25); }
+        .outcome-tag-2c { background: rgba(14,165,233,0.12); color: #0EA5E9; border: 1.5px solid rgba(14,165,233,0.25); }
+        .outcome-headline {
+            font-family: var(--font-heading);
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--navy, #0B1120);
+            margin-bottom: var(--space-xs);
+            line-height: 1.3;
+        }
+        .outcome-text {
+            font-size: 0.9rem;
+            color: var(--text-secondary, #475569);
+            line-height: 1.7;
+            margin-bottom: var(--space-md);
+        }
+        .outcome-stat-row {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            padding-top: var(--space-sm);
+            border-top: 1px solid rgba(0,0,0,0.06);
+        }
+        .outcome-stat {
+            font-family: var(--font-mono);
+            font-size: 1.8rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        .outcome-stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted, #94a3b8);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .outcome-stat-1b { color: #6366F1; }
+        .outcome-stat-2c { color: #0EA5E9; }
+
+        /* ===== Signal Grid ===== */
+        .signal-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--space-lg);
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        .signal-panel {
+            padding: var(--space-xl) var(--space-lg);
+            border-top: 4px solid transparent;
+            text-align: center;
+            background: rgba(255,255,255,0.85);
+            border-radius: 16px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .signal-panel-1b { border-top-color: #6366F1 !important; }
+        .signal-panel-2c { border-top-color: #0EA5E9 !important; }
+        .signal-panel-gradient { border-image: linear-gradient(90deg, #6366F1, #E11D48) 1 !important; }
+        .signal-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto var(--space-md);
+        }
+        .signal-panel h3 {
+            font-family: var(--font-heading);
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--navy, #0B1120);
+            margin-bottom: var(--space-sm);
+        }
+        .signal-panel p {
+            font-size: 0.9rem;
+            color: var(--text-secondary, #475569);
+            line-height: 1.7;
+            text-align: left;
+        }
+        .signal-grid .signal-panel:nth-child(2) { transition-delay: 0.18s; }
+        .signal-grid .signal-panel:nth-child(3) { transition-delay: 0.36s; }
+
+        /* Clock animation */
+        @keyframes clockTickFill {
+            from { opacity: 0.15; }
+            to { opacity: 1; }
+        }
+        .clock-tick { opacity: 0.15; }
+        .clock-tick.animate { animation: clockTickFill 0.15s ease-out forwards; }
+
+        /* Factory pulse */
+        @keyframes factoryPulse {
+            0%, 100% { filter: drop-shadow(0 0 2px rgba(225,29,72,0.0)); }
+            50% { filter: drop-shadow(0 0 8px rgba(225,29,72,0.5)); }
+        }
+        .factory-pulse { animation: factoryPulse 3s ease-in-out infinite; }
+
+        /* Explore link */
+        .explore-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #6366F1;
+            font-family: var(--font-heading);
+            font-weight: 600;
+            font-size: 0.95rem;
+            text-decoration: none;
+            transition: transform 0.2s ease;
+        }
+        .explore-link:hover {
+            transform: translateX(4px);
+            color: #4F46E5;
+        }
+
+        /* ===== Responsive ===== */
+        @media (max-width: 1024px) {
+            .signal-grid { grid-template-columns: 1fr; max-width: 640px; }
+        }
+        @media (max-width: 768px) {
+            .hero-stats-row { grid-template-columns: 1fr 1fr; }
+            .hero-stats-row .stat-value { font-size: 2.2rem; }
+            .outcome-panels { grid-template-columns: 1fr; max-width: 480px; }
+            .outcome-panel { padding: 24px 20px; }
+            /* Swap Y-fork for vertical connector on mobile */
+            .fork-diagram { display: none; }
+            .fork-mobile-connector {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                padding: var(--space-lg) 0 var(--space-md);
+            }
+            .fork-mobile-connector svg {
+                width: 56px;
+                height: auto;
+                display: block;
+            }
+        }
+        @media (max-width: 480px) {
+            .hero-stats-row { grid-template-columns: 1fr; max-width: 300px; }
+            .hero-stats-row .stat-value { font-size: 2rem; }
+        }
+
+        /* ===== Section 3: Where You Start — ISO Bars ===== */
+        .iso-bars-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .iso-bar-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            opacity: 0;
+            transform: translateY(12px);
+            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+        }
+        .iso-bar-row.visible { opacity: 1; transform: translateY(0); }
+        .iso-bar-row:nth-child(1) { transition-delay: 0ms; }
+        .iso-bar-row:nth-child(2) { transition-delay: 80ms; }
+        .iso-bar-row:nth-child(3) { transition-delay: 160ms; }
+        .iso-bar-row:nth-child(4) { transition-delay: 240ms; }
+        .iso-bar-row:nth-child(5) { transition-delay: 320ms; }
+        .iso-bar-row:nth-child(6) { transition-delay: 400ms; }
+        .iso-bar-row:nth-child(7) { transition-delay: 480ms; }
+        .iso-bar-label {
+            width: 64px;
+            flex-shrink: 0;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--navy, #0B1120);
+            text-align: right;
+        }
+        .iso-bar-track {
+            flex: 1;
+            height: 36px;
+            border-radius: 6px;
+            background: rgba(0,0,0,0.04);
+            display: flex;
+            overflow: hidden;
+        }
+        .iso-bar-segment {
+            height: 100%;
+            width: 0;
+            transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .iso-bar-segment.animate { /* width set via JS */ }
+        .seg-clean { background: rgba(14,165,233,0.50); }
+        .seg-gas { background: rgba(99,102,241,0.45); }
+        .seg-coal { background: rgba(0,0,0,0.15); }
+        .seg-other { background: rgba(139,92,246,0.30); }
+        .iso-bar-gap {
+            width: 52px;
+            flex-shrink: 0;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            font-weight: 600;
+            color: #EF4444;
+            text-align: left;
+        }
+        .iso-bars-legend {
+            display: flex;
+            gap: 18px;
+            justify-content: center;
+            margin-bottom: var(--space-lg);
+            flex-wrap: wrap;
+        }
+        .iso-bars-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.78rem;
+            color: var(--text-secondary, #475569);
+        }
+        .iso-bars-legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+        .iso-insight-block {
+            max-width: 800px;
+            margin: var(--space-xl) auto 0;
+            padding: 24px 28px;
+            background: rgba(255,255,255,0.85);
+            border-left: 3px solid #0EA5E9;
+            border-radius: 8px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            font-size: 0.9rem;
+            color: var(--text-secondary, #475569);
+            line-height: 1.7;
+        }
+        .iso-annotation {
+            max-width: 800px;
+            margin: 12px auto 0;
+            padding: 18px 24px;
+            background: rgba(255,255,255,0.85);
+            border-radius: 8px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            font-size: 0.88rem;
+            color: var(--text-secondary, #475569);
+            line-height: 1.65;
+            opacity: 0;
+            transform: translateY(16px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+        .iso-annotation.visible { opacity: 1; transform: translateY(0); }
+        .iso-annotation:nth-of-type(1) { transition-delay: 0ms; }
+        .iso-annotation:nth-of-type(2) { transition-delay: 200ms; }
+        .iso-annotation:nth-of-type(3) { transition-delay: 400ms; }
+        .iso-annotation-1b { border-left: 3px solid #6366F1; }
+        .iso-annotation-2c { border-left: 3px solid #0EA5E9; }
+        .iso-annotation-rose { border-left: 3px solid #EF4444; }
+        .iso-annotation strong {
+            color: var(--navy, #0B1120);
+            font-weight: 700;
+        }
+
+        /* ===== Section 4: The Coal Wall — Fuel Gauge ===== */
+        .fuel-gauge-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 16px;
+            max-width: 960px;
+            margin: 0 auto;
+            position: relative;
+        }
+        .fuel-tank {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .tank-label {
+            font-family: var(--font-heading);
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            margin-bottom: 6px;
+        }
+        .tank-body {
+            width: 100%;
+            max-width: 90px;
+            height: 220px;
+            border-radius: 8px;
+            border: 2px solid rgba(0,0,0,0.08);
+            background: rgba(0,0,0,0.015);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+        .tank-layer {
+            width: 100%;
+            transition: height 2.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 0;
+        }
+        .tank-coal {
+            background: var(--fossil-coal, #374151);
+            border-top: 1px solid rgba(255,255,255,0.15);
+        }
+        .tank-gas {
+            background: var(--fossil-gas, #6B7280);
+            opacity: 0.5;
+        }
+        .tank-layer-text {
+            font-family: var(--font-data, var(--font-body));
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: rgba(255,255,255,0.9);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tank-layer:not(.depleted) .tank-layer-text { opacity: 1; }
+        .tank-coal.depleted { height: 0 !important; border-top: none; }
+        .tank-coal.depleted .tank-layer-text { opacity: 0 !important; }
+        .tank-rate {
+            font-family: var(--font-mono, 'DM Sans', monospace);
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--navy);
+            margin-top: 8px;
+            min-height: 22px;
+        }
+        .tank-rate-unit {
+            font-size: 0.65rem;
+            font-weight: 400;
+            color: var(--text-muted);
+            display: block;
+        }
+        .gas-floor-badge {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: var(--font-body);
+            font-size: 0.6rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            background: rgba(255,255,255,0.9);
+            padding: 4px 8px;
+            border-radius: var(--radius-sm);
+            text-align: center;
+            line-height: 1.3;
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 2;
+        }
+        .fuel-gauge-punchline {
+            text-align: center;
+            margin-top: var(--space-xl);
+            font-family: var(--font-heading);
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--red, #EF4444);
+            opacity: 0;
+            transform: translateY(12px);
+            transition: opacity 0.6s ease-out 2.8s, transform 0.6s ease-out 2.8s;
+        }
+        .fuel-gauge-punchline.visible { opacity: 1; transform: translateY(0); }
+        .fuel-gauge-punchline-sub {
+            font-family: var(--font-body);
+            font-size: 0.88rem;
+            font-weight: 400;
+            color: var(--text-secondary);
+            margin-top: var(--space-xs);
+            line-height: 1.6;
+        }
+        .coal-wall-finding {
+            max-width: 720px;
+            margin: var(--space-xl) auto 0;
+            padding: 24px 28px;
+            background: rgba(255,255,255,0.85);
+            border-left: 3px solid #0EA5E9;
+            border-radius: 8px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            font-size: 0.9rem;
+            color: var(--text-secondary, #475569);
+            line-height: 1.7;
+        }
+
+        /* ===== Section 5: The Last Mile ===== */
+        .crossover-container {
+            max-width: 700px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .crossover-container svg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .crossover-text {
+            max-width: 720px;
+            margin: var(--space-lg) auto 0;
+            font-size: 0.9rem;
+            color: var(--text-secondary, #475569);
+            line-height: 1.7;
+        }
+        .crossover-text + .crossover-text {
+            margin-top: var(--space-md);
+        }
+
+        /* ===== Responsive for new sections ===== */
+        @media (max-width: 768px) {
+            .iso-bar-label { width: 48px; font-size: 11px; }
+            .iso-bar-track { height: 28px; }
+            .iso-bar-gap { width: 44px; font-size: 11px; }
+            .iso-insight-block,
+            .iso-annotation { padding: 18px 16px; }
+            .fuel-gauge-grid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
+            .tank-body { height: 160px; }
+            .coal-wall-finding { padding: 18px 16px; }
+            .crossover-container { max-width: 100%; }
+        }
+        @media (max-width: 480px) {
+            .iso-bar-label { width: 40px; font-size: 10px; }
+            .iso-bar-track { height: 24px; }
+            .iso-bar-gap { width: 38px; font-size: 10px; }
+            .iso-bars-legend { gap: 10px; }
+            .iso-bars-legend-item { font-size: 0.7rem; }
+            .fuel-gauge-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+            .tank-body { height: 140px; max-width: 64px; }
+            .tank-label { font-size: 0.72rem; }
+            .tank-rate { font-size: 0.75rem; }
+            .fuel-gauge-punchline { font-size: 0.95rem; }
+        }
+
+        /* Reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            .hero-stats-row .stat-card,
+            .signal-panel,
+            .outcome-panel {
+                transition-delay: 0s !important;
+            }
+            .factory-pulse {
+                animation: none !important;
+            }
+            .road-median { animation: none !important; }
+            .arrow-tip-1b, .arrow-tip-2c { animation: none !important; opacity: 1 !important; }
+            .fork-diagram { opacity: 1; transform: none; }
+            .iso-bar-row { opacity: 1; transform: none; transition-delay: 0s !important; }
+            .iso-bar-segment { transition: none !important; }
+            .iso-annotation { opacity: 1; transform: none; transition-delay: 0s !important; }
+            .tank-layer { transition: none !important; }
+            .fuel-gauge-punchline { transition: none !important; }
+        }
+
+        /* ===== Section 6: The IPP Response ===== */
+        .ipp-fleet-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            max-width: 900px;
+            margin: var(--space-xl) auto 0;
+        }
+        .ipp-fleet-panel {
+            background: rgba(255,255,255,0.7);
+            border-radius: 16px;
+            padding: 28px;
+            min-height: 380px;
+            color: var(--text-primary, #1e293b);
+        }
+        .ipp-fleet-panel.panel-1b {
+            border: 2px solid #6366F1;
+            box-shadow: 0 0 20px -4px rgba(99,102,241,0.15);
+        }
+        .ipp-fleet-panel.panel-2c {
+            border: 2px solid #0EA5E9;
+            box-shadow: 0 0 20px -4px rgba(14,165,233,0.15);
+        }
+        .ipp-panel-label {
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 4px;
+        }
+        .ipp-panel-label-1b { color: #6366F1; }
+        .ipp-panel-label-2c { color: #0EA5E9; }
+        .ipp-panel-sublabel {
+            font-size: 0.82rem;
+            color: var(--text-secondary, #475569);
+            margin-bottom: var(--space-md);
+            line-height: 1.5;
+        }
+        .fleet-circles {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: var(--space-lg);
+        }
+        .fleet-circle {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            transition: all 0.6s ease-out;
+        }
+        .fleet-circle-nuclear { background: rgba(14,165,233,0.35); }
+        .fleet-circle-gas { background: rgba(99,102,241,0.35); }
+        .fleet-circle-renewable { background: rgba(59,130,246,0.35); }
+        .fleet-circle.faded { background: rgba(0,0,0,0.08) !important; opacity: 0.4; }
+        .fleet-circle.grown { transform: scale(1.15); }
+        .fleet-circle.brightened { box-shadow: 0 0 8px rgba(14,165,233,0.35); transform: scale(1.05); }
+        .fleet-circle.shrunk { transform: scale(0.7); opacity: 0.3; }
+        .ipp-counter {
+            font-family: var(--font-mono);
+            font-size: clamp(28px, 4vw, 36px);
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .ipp-counter-1b { color: #6366F1; }
+        .ipp-counter-2c { color: #0EA5E9; }
+        .ipp-counter-label {
+            font-size: 0.78rem;
+            color: var(--text-muted, #94a3b8);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: var(--space-md);
+        }
+        .ipp-panel-caption {
+            font-size: 0.85rem;
+            color: var(--text-secondary, #475569);
+            line-height: 1.65;
+        }
+        @keyframes gasBorderPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0); }
+            50% { box-shadow: 0 0 8px 2px rgba(99,102,241,0.3); }
+        }
+        .fleet-circle.gas-pulse {
+            animation: gasBorderPulse 2s ease-in-out infinite;
+            border: 2px solid #6366F1;
+        }
+        .new-firm-hex {
+            width: 22px;
+            height: 22px;
+            background: rgba(14,165,233,0.25);
+            border: 2px solid #0EA5E9;
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            transition: transform 0.6s ease-out, opacity 0.6s ease-out;
+            transform: scale(0);
+            opacity: 0;
+        }
+        .new-firm-hex.visible { transform: scale(1); opacity: 1; }
+
+        /* 3.5x callout */
+        .ipp-stat-callout {
+            background: rgba(11,17,32,0.92);
+            border-radius: 16px;
+            max-width: 560px;
+            text-align: center;
+            padding: 44px;
+            margin: var(--space-xl) auto 0;
+            box-shadow: 0 0 40px -10px rgba(239,68,68,0.15);
+        }
+        .ipp-stat-big {
+            font-family: var(--font-mono);
+            font-size: clamp(48px, 6vw, 64px);
+            font-weight: 500;
+            color: #EF4444;
+            line-height: 1.1;
+            margin-bottom: 8px;
+        }
+        .ipp-stat-desc {
+            font-size: 18px;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+        .ipp-stat-sub {
+            font-size: 15px;
+            color: rgba(255,255,255,0.7);
+        }
+
+        @media (max-width: 768px) {
+            .ipp-fleet-grid { grid-template-columns: 1fr; max-width: 480px; }
+            .ipp-fleet-panel { min-height: auto; }
+        }
+
+        /* ===== Section 7: Learning Curve Dividend ===== */
+        .learning-svg-container {
+            max-width: 700px;
+            margin: var(--space-xl) auto 0;
+            text-align: center;
+        }
+        .learning-svg-container svg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        @keyframes criticalMassPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+        }
+        .critical-mass-marker {
+            animation: criticalMassPulse 2s ease-in-out infinite;
+            transform-origin: center;
+        }
+        .learning-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--space-lg);
+            max-width: 1100px;
+            margin: var(--space-xl) auto 0;
+        }
+        .learning-card {
+            background: rgba(255,255,255,0.85);
+            border-radius: 16px;
+            padding: var(--space-xl) var(--space-lg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .learning-card-violet { border-top: 3px solid #6366F1; }
+        .learning-card-2c { border-top: 3px solid #0EA5E9; }
+        .learning-card-blue { border-top: 3px solid #3B82F6; }
+        .learning-card h3 {
+            font-family: var(--font-heading);
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--navy, #0B1120);
+            margin-bottom: var(--space-sm);
+        }
+        .learning-card p {
+            font-size: 0.88rem;
+            color: var(--text-secondary, #475569);
+            line-height: 1.65;
+        }
+        @media (max-width: 1024px) {
+            .learning-cards { grid-template-columns: 1fr; max-width: 640px; }
+        }
+
+        /* ===== Section 8: The Swing Variable — Nuclear ===== */
+        .fulcrum-container {
+            max-width: 500px;
+            margin: var(--space-xl) auto 0;
+            text-align: center;
+        }
+        .fulcrum-container svg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .nuclear-stat-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--space-lg);
+            max-width: 900px;
+            margin: var(--space-xl) auto 0;
+        }
+        .nuclear-stat-card {
+            background: rgba(255,255,255,0.85);
+            border-radius: 16px;
+            padding: var(--space-xl) var(--space-lg);
+            text-align: center;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .nuclear-stat-card-rose { border-top: 3px solid #EF4444; }
+        .nuclear-stat-card-1b { border-top: 3px solid #6366F1; }
+        .nuclear-stat-card .stat-value {
+            font-family: var(--font-mono);
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--navy, #0B1120);
+            margin-bottom: 4px;
+        }
+        .nuclear-stat-card .stat-label {
+            font-size: 0.82rem;
+            color: var(--text-secondary, #475569);
+            line-height: 1.5;
+        }
+        .rolloff-timeline {
+            max-width: 720px;
+            margin: var(--space-xl) auto 0;
+            position: relative;
+            padding: 24px 0 24px 48px;
+        }
+        .rolloff-line {
+            position: absolute;
+            left: 24px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, #EF4444, rgba(239,68,68,0.2));
+        }
+        .rolloff-event {
+            position: relative;
+            padding: 0 0 24px 24px;
+        }
+        .rolloff-event:last-child { padding-bottom: 0; }
+        .rolloff-dot {
+            position: absolute;
+            left: -30px;
+            top: 4px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #EF4444;
+        }
+        .rolloff-year {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #EF4444;
+            margin-bottom: 2px;
+        }
+        .rolloff-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary, #475569);
+            line-height: 1.5;
+        }
+
+        @media (max-width: 768px) {
+            .nuclear-stat-cards { grid-template-columns: 1fr; max-width: 480px; }
+        }
+
+        /* Reduced motion for new sections */
+        @media (prefers-reduced-motion: reduce) {
+            .fleet-circle { transition: none !important; }
+            .new-firm-hex { transition: none !important; }
+            .critical-mass-marker { animation: none !important; }
+            .fleet-circle.gas-pulse { animation: none !important; }
+        }
+
+        /* ===== Synthesis Essay ===== */
+        .synthesis-section {
+            position: relative;
+            padding: var(--space-3xl) 0;
+        }
+        .synthesis-section::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, transparent, rgba(14,165,233,0.03) 30%, rgba(14,165,233,0.03) 70%, transparent);
+            pointer-events: none;
+            z-index: 0;
+        }
+        .synthesis-inner {
+            position: relative;
+            z-index: 1;
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 0 var(--pad-page);
+        }
+        .synthesis-heading {
+            font-family: var(--font-heading);
+            font-size: clamp(32px, 4.5vw, 48px);
+            font-weight: 800;
+            color: var(--navy, #0B1120);
+            margin-bottom: var(--space-xl);
+            line-height: 1.2;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+        }
+        .synthesis-heading.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .synthesis-body {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.8s ease-out 0.2s, transform 0.8s ease-out 0.2s;
+        }
+        .synthesis-body.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .synthesis-body p {
+            font-family: var(--font-body);
+            font-size: 18px;
+            line-height: 1.78;
+            color: var(--text-primary, #1e293b);
+            margin-bottom: 24px;
+        }
+        .synthesis-body p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* ===== Navigation Grid ===== */
+        .nav-grid-section {
+            padding: var(--space-3xl) var(--pad-page);
+        }
+        .nav-grid-header {
+            text-align: center;
+            margin-bottom: var(--space-xl);
+        }
+        .nav-grid-header h2 {
+            font-family: var(--font-heading);
+            font-size: clamp(24px, 3.5vw, 36px);
+            font-weight: 800;
+            color: var(--navy, #0B1120);
+            margin-bottom: var(--space-xs);
+        }
+        .nav-grid-header p {
+            font-size: 1rem;
+            color: var(--text-secondary, #475569);
+        }
+        .nav-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--space-lg);
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .nav-card {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 24px 20px;
+            background: rgba(255,255,255,0.7);
+            border: 1px solid rgba(0,0,0,0.08);
+            border-radius: 12px;
+            text-decoration: none;
+            transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+            opacity: 0;
+            transform: translateY(16px);
+        }
+        .nav-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .nav-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px -8px rgba(0,0,0,0.08);
+        }
+        .nav-card:nth-child(1) { transition-delay: 0ms; }
+        .nav-card:nth-child(2) { transition-delay: 100ms; }
+        .nav-card:nth-child(3) { transition-delay: 200ms; }
+        .nav-card:nth-child(4) { transition-delay: 300ms; }
+        .nav-card:nth-child(5) { transition-delay: 400ms; }
+        .nav-card:nth-child(6) { transition-delay: 500ms; }
+        .nav-card:nth-child(7) { transition-delay: 600ms; }
+        .nav-card:nth-child(8) { transition-delay: 700ms; }
+        .nav-card:hover.accent-2c { border-color: #0EA5E9; }
+        .nav-card:hover.accent-violet { border-color: #6366F1; }
+        .nav-card:hover.accent-1b { border-color: #6366F1; }
+        .nav-card:hover.accent-blue { border-color: #3B82F6; }
+        .nav-card:hover.accent-rose { border-color: #EF4444; }
+        .nav-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .nav-dot-2c { background: #0EA5E9; }
+        .nav-dot-violet { background: #6366F1; }
+        .nav-dot-1b { background: #6366F1; }
+        .nav-dot-blue { background: #3B82F6; }
+        .nav-dot-rose { background: #EF4444; }
+        .nav-card-title {
+            font-family: var(--font-heading);
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--navy, #0B1120);
+            line-height: 1.3;
+        }
+        .nav-card-desc {
+            font-size: 13px;
+            color: var(--text-secondary, #475569);
+            line-height: 1.5;
+            flex: 1;
+        }
+        .nav-card-arrow {
+            font-size: 16px;
+            color: #0EA5E9;
+            font-weight: 600;
+            align-self: flex-end;
+            transition: transform 0.2s ease;
+        }
+        .nav-card:hover .nav-card-arrow {
+            transform: translateX(4px);
+        }
+
+        @media (max-width: 1024px) {
+            .nav-grid { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 600px) {
+            .nav-grid { grid-template-columns: 1fr; max-width: 480px; }
+        }
+
+        /* Reduced motion for synthesis + nav grid */
+        @media (prefers-reduced-motion: reduce) {
+            .synthesis-heading,
+            .synthesis-body,
+            .nav-card {
+                opacity: 1 !important;
+                transform: none !important;
+                transition: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav id="topNav"></nav>
+
+    <div class="header" id="pageHeader">
+        <h1>What We Choose to Count</h1>
+        <div class="subtitle">How corporate carbon accounting reshapes the grid</div>
+        <div class="header-accent"></div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Hero Section                                                           -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <section class="content-section" id="hero">
+        <p class="fade-in" style="text-align:center; max-width:720px; margin:0 auto var(--space-xl); font-size:1.08rem; color:var(--text-secondary); line-height:1.8">
+            The GHG Protocol is revising Scope 2 for the first time since 2015. The outcome will redirect hundreds of billions in clean energy capital. Consequential netting optimizes for the cheapest ton of CO&#8322; displaced anywhere on the map. Hourly matching requires clean energy to meet load every hour in the buyer&rsquo;s grid. Both reduce emissions, but they build fundamentally different grids. This analysis, built on an 8,760-hour optimization model across 7 US ISOs, 540+ market scenarios, and 7 IPP fleet assessments, shows why the distinction matters.
+        </p>
+        <div class="hero-stats-row" id="heroStatsRow">
+            <div class="stat-card fade-in" data-count-to="8760">
+                <div class="stat-value">0</div>
+                <div class="stat-label">Hours per year</div>
+            </div>
+            <div class="stat-card fade-in" data-count-to="7">
+                <div class="stat-value">0</div>
+                <div class="stat-label">US ISO/RTOs modeled</div>
+            </div>
+            <div class="stat-card fade-in" data-count-to="540" data-suffix="+">
+                <div class="stat-value">0</div>
+                <div class="stat-label">Market scenarios per IPP</div>
+            </div>
+            <div class="stat-card fade-in" data-count-to="10">
+                <div class="stat-value">0</div>
+                <div class="stat-label">Strategies assessed</div>
+            </div>
+        </div>
+        <p class="fade-in" style="text-align:center; margin-top:var(--space-lg)">
+            <a href="GHG-accounting-overview.html" class="explore-link">
+                Explore all 10 strategies across 3 accounting families <span class="arrow">&rarr;</span>
+            </a>
+        </p>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Section 1: The Fork in the Road                                        -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">1</div>
+        <h2>The Fork in the Road</h2>
+        <p>The same procurement dollar can build two very different grids.</p>
+    </div>
+    <section class="content-section" id="fork-section">
+        <!-- Desktop: Y-fork SVG (hidden on mobile via media query) -->
+        <div class="fork-diagram" id="forkDiagram">
+            <svg viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Forking path: corporate procurement splitting into consequential vs hourly matching strategies">
+                <defs>
+                    <filter id="labelShadow" x="-10%" y="-20%" width="120%" height="160%">
+                        <feDropShadow dx="0" dy="3" stdDeviation="6" flood-opacity="0.10"/>
+                    </filter>
+                </defs>
+
+                <!-- ═══ TRUNK (neutral, top center) ═══ -->
+                <!-- Trunk fill -->
+                <path d="M375,20 L425,20 L425,200 L375,200 Z" fill="rgba(0,0,0,0.035)" rx="4"/>
+                <!-- Trunk left edge -->
+                <line x1="375" y1="20" x2="375" y2="200" stroke="rgba(0,0,0,0.15)" stroke-width="2.5"/>
+                <!-- Trunk right edge -->
+                <line x1="425" y1="20" x2="425" y2="200" stroke="rgba(0,0,0,0.15)" stroke-width="2.5"/>
+                <!-- Trunk dashed center line -->
+                <line x1="400" y1="28" x2="400" y2="195" stroke="rgba(0,0,0,0.15)" stroke-width="2.5" stroke-dasharray="12 10" stroke-linecap="round" class="road-median"/>
+
+                <!-- ═══ LEFT BRANCH (1B: Consequential) ═══ -->
+                <!--
+                    Geometry: outer edge starts at trunk left (375,200), inner edge starts at trunk center (400,200).
+                    Both curve left-downward. No crossing with the right branch.
+                -->
+                <!-- Fill -->
+                <path d="M375,200 Q310,310 155,460
+                         L200,460 Q340,320 400,200 Z"
+                      fill="rgba(99,102,241,0.06)"/>
+                <!-- Outer edge (left) -->
+                <path d="M375,200 Q310,310 155,460"
+                      fill="none" stroke="#6366F1" stroke-width="3" stroke-linecap="round"/>
+                <!-- Inner edge (right, from center) -->
+                <path d="M400,200 Q340,320 200,460"
+                      fill="none" stroke="#6366F1" stroke-width="3" stroke-linecap="round"/>
+                <!-- Center dashed line -->
+                <path d="M387,200 Q324,314 178,458"
+                      fill="none" stroke="#6366F1" stroke-width="2.5" stroke-dasharray="12 10" stroke-linecap="round" class="road-median"/>
+                <!-- Arrow tip -->
+                <polygon points="145,470 175,455 155,445" fill="#6366F1" class="arrow-tip-1b"/>
+
+                <!-- ═══ RIGHT BRANCH (2C: Hourly Matching) ═══ -->
+                <!--
+                    Mirror of left branch. Inner edge starts at trunk center (400,200),
+                    outer edge starts at trunk right (425,200). Both curve right-downward.
+                -->
+                <!-- Fill -->
+                <path d="M400,200 Q460,320 600,460
+                         L645,460 Q490,310 425,200 Z"
+                      fill="rgba(14,165,233,0.06)"/>
+                <!-- Inner edge (left, from center) -->
+                <path d="M400,200 Q460,320 600,460"
+                      fill="none" stroke="#0EA5E9" stroke-width="3" stroke-linecap="round"/>
+                <!-- Outer edge (right) -->
+                <path d="M425,200 Q490,310 645,460"
+                      fill="none" stroke="#0EA5E9" stroke-width="3" stroke-linecap="round"/>
+                <!-- Center dashed line -->
+                <path d="M413,200 Q476,314 622,458"
+                      fill="none" stroke="#0EA5E9" stroke-width="2.5" stroke-dasharray="12 10" stroke-linecap="round" class="road-median"/>
+                <!-- Arrow tip -->
+                <polygon points="655,470 625,455 645,445" fill="#0EA5E9" class="arrow-tip-2c"/>
+
+                <!-- ═══ TOP LABEL ═══ -->
+                <g filter="url(#labelShadow)">
+                    <rect x="280" y="4" width="240" height="38" rx="19" fill="rgba(255,255,255,0.95)" stroke="rgba(0,0,0,0.10)" stroke-width="1.5"/>
+                    <text x="400" y="29" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="11" font-weight="600" letter-spacing="1.2" fill="rgba(0,0,0,0.55)">CORPORATE PROCUREMENT</text>
+                </g>
+
+                <!-- ═══ JUNCTION LABEL ═══ -->
+                <g filter="url(#labelShadow)">
+                    <rect x="305" y="175" width="190" height="34" rx="17" fill="rgba(255,255,255,0.95)" stroke="rgba(0,0,0,0.12)" stroke-width="1.5"/>
+                    <text x="400" y="197" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" font-weight="600" letter-spacing="0.8" fill="rgba(0,0,0,0.50)">ACCOUNTING FRAMEWORK</text>
+                </g>
+
+                <!-- ═══ STRATEGY LABELS (positioned on each branch) ═══ -->
+                <!-- 1B label -->
+                <g filter="url(#labelShadow)">
+                    <rect x="200" y="330" width="130" height="48" rx="10" fill="rgba(99,102,241,0.06)" stroke="#6366F1" stroke-width="2.5"/>
+                    <text x="265" y="352" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="15" font-weight="700" fill="#6366F1" letter-spacing="0.5">1B</text>
+                    <text x="265" y="368" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="9" font-weight="600" fill="#6366F1" opacity="0.65" letter-spacing="0.8">CONSEQUENTIAL</text>
+                </g>
+                <!-- 2C label -->
+                <g filter="url(#labelShadow)">
+                    <rect x="470" y="330" width="130" height="48" rx="10" fill="rgba(14,165,233,0.06)" stroke="#0EA5E9" stroke-width="2.5"/>
+                    <text x="535" y="352" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="15" font-weight="700" fill="#0EA5E9" letter-spacing="0.5">2C</text>
+                    <text x="535" y="368" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="9" font-weight="600" fill="#0EA5E9" opacity="0.65" letter-spacing="0.8">HOURLY MATCHING</text>
+                </g>
+            </svg>
+        </div>
+
+        <!-- Mobile: simple vertical connector (shown only on narrow screens) -->
+        <div class="fork-mobile-connector" aria-hidden="true">
+            <svg viewBox="0 0 56 100" xmlns="http://www.w3.org/2000/svg">
+                <!-- Vertical line with gradient from neutral to split -->
+                <line x1="28" y1="0" x2="28" y2="80" stroke="rgba(0,0,0,0.12)" stroke-width="2.5" stroke-dasharray="10 8" stroke-linecap="round" class="road-median"/>
+                <!-- Downward arrow -->
+                <polygon points="28,96 18,78 38,78" fill="rgba(0,0,0,0.15)"/>
+            </svg>
+        </div>
+
+        <!-- Outcome Panels -->
+        <div class="outcome-panels">
+            <!-- 1B Panel -->
+            <div class="outcome-panel strat-1b fade-in">
+                <span class="outcome-tag outcome-tag-1b">1B: CONSEQUENTIAL</span>
+                <div class="outcome-headline">Cheap today. More gas tomorrow.</div>
+                <div class="outcome-text">Deploys VRE cross-regionally at lowest cost. IPPs build gas to backstop intermittency. Gas becomes an asset its owners will defend.</div>
+                <a href="cfe_strategy_assessment.html" class="explore-link" style="font-size:0.82rem; margin-top:12px; display:inline-block;">Compare gas capacity outcomes <span class="arrow">&rarr;</span></a>
+            </div>
+            <!-- 2C Panel -->
+            <div class="outcome-panel strat-2c fade-in">
+                <span class="outcome-tag outcome-tag-2c">2C: HOURLY MATCHING</span>
+                <div class="outcome-headline">Costs more now. Builds the grid we need.</div>
+                <div class="outcome-text">Matches load every hour in the buyer&rsquo;s grid. Forces firm clean + storage. Displaces gas directly. Learning curves bend cost down over time.</div>
+                <a href="cfe_strategy_assessment.html" class="explore-link" style="font-size:0.82rem; margin-top:12px; display:inline-block;">Compare gas capacity outcomes <span class="arrow">&rarr;</span></a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Section 2: The Signal You Send                                         -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">2</div>
+        <h2>The Signal You Send</h2>
+        <p>Corporate procurement shapes what IPPs build next, and what they&rsquo;ll fight to keep.</p>
+    </div>
+    <section class="content-section" id="signal-section">
+        <div class="signal-grid">
+            <!-- Panel 1: What 1B buys -->
+            <div class="signal-panel signal-panel-1b fade-in">
+                <div class="signal-icon">
+                    <svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="#6366F1" stroke-width="2" stroke-linecap="round">
+                        <circle cx="22" cy="32" r="8"/>
+                        <line x1="22" y1="18" x2="22" y2="22"/><line x1="22" y1="42" x2="22" y2="46"/>
+                        <line x1="8" y1="32" x2="12" y2="32"/><line x1="32" y1="32" x2="36" y2="32"/>
+                        <line x1="12.1" y1="22.1" x2="15" y2="25"/><line x1="29" y1="39" x2="31.9" y2="41.9"/>
+                        <line x1="31.9" y1="22.1" x2="29" y2="25"/><line x1="15" y1="39" x2="12.1" y2="41.9"/>
+                        <line x1="46" y1="32" x2="46" y2="52"/>
+                        <path d="M46 32 L40 20 Q46 18 48 26Z" fill="rgba(99,102,241,0.15)"/>
+                        <path d="M46 32 L56 26 Q58 32 52 34Z" fill="rgba(99,102,241,0.15)"/>
+                        <path d="M46 32 L38 38 Q36 32 42 30Z" fill="rgba(99,102,241,0.15)"/>
+                    </svg>
+                </div>
+                <h3>You buy cheap VRE cross-regionally</h3>
+                <p>Strategy 1B directs capital to the cheapest MWh available: solar and onshore wind deployed anywhere on the map. IPPs respond rationally by building VRE where it&rsquo;s cheapest and gas where it&rsquo;s needed for reliability. Both get built, and both become infrastructure their owners will defend.</p>
+            </div>
+            <!-- Panel 2: What 2C buys -->
+            <div class="signal-panel signal-panel-2c fade-in">
+                <div class="signal-icon" id="clockIcon">
+                    <svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="#0EA5E9" stroke-width="2" stroke-linecap="round">
+                        <circle cx="32" cy="32" r="26" stroke-width="2.5"/>
+                        <g id="clockTicks">
+                            <line class="clock-tick" x1="32" y1="8" x2="32" y2="12" stroke-width="2"/>
+                            <line class="clock-tick" x1="38.5" y1="8.5" x2="37.4" y2="12.3" stroke-width="1.5"/>
+                            <line class="clock-tick" x1="44.5" y1="11" x2="42.2" y2="14.2" stroke-width="1.5"/>
+                            <line class="clock-tick" x1="49" y1="15.5" x2="45.8" y2="17.8" stroke-width="1.5"/>
+                            <line class="clock-tick" x1="52" y1="21" x2="48.4" y2="22.2" stroke-width="1.5"/>
+                            <line class="clock-tick" x1="53.5" y1="27" x2="49.7" y2="27.4" stroke-width="1.5"/>
+                            <line class="clock-tick" x1="56" y1="32" x2="52" y2="32" stroke-width="2"/>
+                            <line class="clock-tick" x1="53.5" y1="37" x2="49.7" y2="36.6" stroke-width="1.5"/>
+                            <line class="clock-tick" x1="52" y1="43" x2="48.4" y2="41.8" stroke-width="1.5"/>
+                            <line class="clock-tick" x1="49" y1="48.5" x2="45.8" y2="46.2" stroke-width="1.5"/>
+                            <line class="clock-tick" x1="44.5" y1="53" x2="42.2" y2="49.8" stroke-width="1.5"/>
+                            <line class="clock-tick" x1="38.5" y1="55.5" x2="37.4" y2="51.7" stroke-width="1.5"/>
+                            <line class="clock-tick" x1="32" y1="56" x2="32" y2="52" stroke-width="2"/>
+                            <line class="clock-tick" x1="25.5" y1="55.5" x2="26.6" y2="51.7" stroke-width="1.5"/>
+                            <line class="clock-tick" x1="19.5" y1="53" x2="21.8" y2="49.8" stroke-width="1.5"/>
+                            <line class="clock-tick" x1="15" y1="48.5" x2="18.2" y2="46.2" stroke-width="1.5"/>
+                            <line class="clock-tick" x1="12" y1="43" x2="15.6" y2="41.8" stroke-width="1.5"/>
+                            <line class="clock-tick" x1="10.5" y1="37" x2="14.3" y2="36.6" stroke-width="1.5"/>
+                            <line class="clock-tick" x1="8" y1="32" x2="12" y2="32" stroke-width="2"/>
+                            <line class="clock-tick" x1="10.5" y1="27" x2="14.3" y2="27.4" stroke-width="1.5"/>
+                            <line class="clock-tick" x1="12" y1="21" x2="15.6" y2="22.2" stroke-width="1.5"/>
+                            <line class="clock-tick" x1="15" y1="15.5" x2="18.2" y2="17.8" stroke-width="1.5"/>
+                            <line class="clock-tick" x1="19.5" y1="11" x2="21.8" y2="14.2" stroke-width="1.5"/>
+                            <line class="clock-tick" x1="25.5" y1="8.5" x2="26.6" y2="12.3" stroke-width="1.5"/>
+                        </g>
+                        <line x1="32" y1="32" x2="32" y2="16" stroke-width="2.5"/>
+                        <line x1="32" y1="32" x2="44" y2="32" stroke-width="2"/>
+                        <circle cx="32" cy="32" r="2.5" fill="#0EA5E9"/>
+                    </svg>
+                </div>
+                <h3>You match load every hour in your grid</h3>
+                <p>Strategy 2C requires clean generation every hour, including nights, winter evenings, and multi-day low-wind events. IPPs can&rsquo;t fill these hours with solar and wind alone. The demand signal pulls forward investment in nuclear, CCS, geothermal, and long-duration storage. These are technologies the grid needs for deep decarbonization but that wholesale markets alone won&rsquo;t finance.</p>
+            </div>
+            <!-- Panel 3: Lock-in -->
+            <div class="signal-panel signal-panel-gradient fade-in">
+                <div class="signal-icon factory-pulse">
+                    <svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke-width="2" stroke-linecap="round">
+                        <rect x="6" y="28" width="26" height="24" rx="2" stroke="#6366F1"/>
+                        <rect x="12" y="16" width="8" height="12" stroke="#6366F1"/>
+                        <path d="M16 16 Q16 10 18.5 8" stroke="#EF4444" stroke-width="1.5" opacity="0.7"/>
+                        <path d="M16 16 Q16 9 13.5 7" stroke="#EF4444" stroke-width="1.5" opacity="0.5"/>
+                        <path d="M46 18 L56 22 L56 36 Q56 46 46 52 Q36 46 36 36 L36 22Z" stroke="#EF4444" fill="rgba(239,68,68,0.08)"/>
+                        <path d="M42 32 L45 35 L52 28" stroke="#EF4444" stroke-width="2.5"/>
+                    </svg>
+                </div>
+                <h3>What gets built gets defended</h3>
+                <p>IPPs that build gas will fight to keep it profitable by opposing carbon pricing, clean energy mandates, and retirement schedules that strand their assets. IPPs that build firm clean have aligned incentives: decarbonization policy protects their investment. Procurement strategy shapes the political coalition for or against deeper decarbonization.</p>
+            </div>
+        </div>
+        <p class="fade-in" style="text-align:center; margin-top:var(--space-xl)">
+            <a href="ipp_climate_transition.html" class="explore-link">
+                Explore the full IPP climate transition analysis across 540 scenarios and 7 generators
+                <span class="arrow">&rarr;</span>
+            </a>
+        </p>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Section 3: Where You Start                                            -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">3</div>
+        <h2>Where You Start</h2>
+        <p>Each grid begins from a different place. The gap between where market forces stop and where net-zero requires is what procurement strategy must close.</p>
+    </div>
+    <section class="content-section" id="starting-lines-section">
+        <div class="iso-bars-legend">
+            <div class="iso-bars-legend-item"><div class="iso-bars-legend-dot" style="background:rgba(14,165,233,0.50)"></div>Clean</div>
+            <div class="iso-bars-legend-item"><div class="iso-bars-legend-dot" style="background:rgba(99,102,241,0.45)"></div>Gas</div>
+            <div class="iso-bars-legend-item"><div class="iso-bars-legend-dot" style="background:rgba(0,0,0,0.15)"></div>Coal</div>
+            <div class="iso-bars-legend-item"><div class="iso-bars-legend-dot" style="background:rgba(139,92,246,0.30)"></div>Other</div>
+        </div>
+        <div class="iso-bars-container" id="isoBarsContainer">
+            <div class="iso-bar-row" data-clean="55" data-gas="40" data-coal="0" data-other="5" data-gap="45%">
+                <div class="iso-bar-label">CAISO</div>
+                <div class="iso-bar-track">
+                    <div class="iso-bar-segment seg-clean"></div>
+                    <div class="iso-bar-segment seg-gas"></div>
+                    <div class="iso-bar-segment seg-coal"></div>
+                    <div class="iso-bar-segment seg-other"></div>
+                </div>
+                <div class="iso-bar-gap">45%</div>
+            </div>
+            <div class="iso-bar-row" data-clean="40" data-gas="45" data-coal="12" data-other="3" data-gap="60%">
+                <div class="iso-bar-label">ERCOT</div>
+                <div class="iso-bar-track">
+                    <div class="iso-bar-segment seg-clean"></div>
+                    <div class="iso-bar-segment seg-gas"></div>
+                    <div class="iso-bar-segment seg-coal"></div>
+                    <div class="iso-bar-segment seg-other"></div>
+                </div>
+                <div class="iso-bar-gap">60%</div>
+            </div>
+            <div class="iso-bar-row" data-clean="40" data-gas="35" data-coal="20" data-other="5" data-gap="60%">
+                <div class="iso-bar-label">PJM</div>
+                <div class="iso-bar-track">
+                    <div class="iso-bar-segment seg-clean"></div>
+                    <div class="iso-bar-segment seg-gas"></div>
+                    <div class="iso-bar-segment seg-coal"></div>
+                    <div class="iso-bar-segment seg-other"></div>
+                </div>
+                <div class="iso-bar-gap">60%</div>
+            </div>
+            <div class="iso-bar-row" data-clean="35" data-gas="55" data-coal="0" data-other="10" data-gap="65%">
+                <div class="iso-bar-label">NYISO</div>
+                <div class="iso-bar-track">
+                    <div class="iso-bar-segment seg-clean"></div>
+                    <div class="iso-bar-segment seg-gas"></div>
+                    <div class="iso-bar-segment seg-coal"></div>
+                    <div class="iso-bar-segment seg-other"></div>
+                </div>
+                <div class="iso-bar-gap">65%</div>
+            </div>
+            <div class="iso-bar-row" data-clean="30" data-gas="55" data-coal="0" data-other="15" data-gap="70%">
+                <div class="iso-bar-label">NEISO</div>
+                <div class="iso-bar-track">
+                    <div class="iso-bar-segment seg-clean"></div>
+                    <div class="iso-bar-segment seg-gas"></div>
+                    <div class="iso-bar-segment seg-coal"></div>
+                    <div class="iso-bar-segment seg-other"></div>
+                </div>
+                <div class="iso-bar-gap">70%</div>
+            </div>
+            <div class="iso-bar-row" data-clean="25" data-gas="35" data-coal="35" data-other="5" data-gap="75%">
+                <div class="iso-bar-label">MISO</div>
+                <div class="iso-bar-track">
+                    <div class="iso-bar-segment seg-clean"></div>
+                    <div class="iso-bar-segment seg-gas"></div>
+                    <div class="iso-bar-segment seg-coal"></div>
+                    <div class="iso-bar-segment seg-other"></div>
+                </div>
+                <div class="iso-bar-gap">75%</div>
+            </div>
+            <div class="iso-bar-row" data-clean="45" data-gas="25" data-coal="25" data-other="5" data-gap="55%">
+                <div class="iso-bar-label">SPP</div>
+                <div class="iso-bar-track">
+                    <div class="iso-bar-segment seg-clean"></div>
+                    <div class="iso-bar-segment seg-gas"></div>
+                    <div class="iso-bar-segment seg-coal"></div>
+                    <div class="iso-bar-segment seg-other"></div>
+                </div>
+                <div class="iso-bar-gap">55%</div>
+            </div>
+        </div>
+
+        <div class="iso-insight-block fade-in">
+            The market will not deliver net-zero on its own. Across 540 market scenarios per region, clean energy deployment is profitable up to a point, then it stalls. The gap between where economics alone takes each grid and what net-zero requires is what corporate procurement and policy must close. The question is whether your procurement strategy helps close <em>your grid&rsquo;s specific gap</em> or optimizes globally while your grid stays stuck.
+        </div>
+
+        <div class="iso-annotation iso-annotation-1b fade-in" id="isoAnnotation1">
+            <strong>ERCOT:</strong> Already ~40% clean from massive merchant wind and solar, but fully deregulated with zero policy-supported supply (SSS). Hourly matching draws heavily from existing merchant clean, with new-build needed mainly for night and low-wind gaps. Closing the remaining 60% requires firm clean in a market historically hostile to mandates.
+        </div>
+        <div class="iso-annotation iso-annotation-2c fade-in" id="isoAnnotation2">
+            <strong>PJM:</strong> Large SSS from Exelon&rsquo;s ZEC-supported nuclear fleet (~95 TWh), but 18.8 TWh is locked to Amazon via the Susquehanna PPA. The Virginia data center corridor is the epicenter of corporate clean energy demand, and the grid behind it is still heavily gas-dependent.
+        </div>
+        <div class="iso-annotation iso-annotation-rose fade-in" id="isoAnnotation3">
+            <strong>NEISO:</strong> Supply-constrained, pipeline-constrained, and expensive. Limited natural gas pipeline capacity during winter forces generators to burn oil or LNG at premium prices, adding ~$13/MWh to CCS costs. This is the hardest grid to decarbonize, and the one where strategy choice matters most. Consequential sends capital elsewhere while this grid stays stuck.
+        </div>
+
+        <p class="fade-in" style="text-align:center; margin-top:var(--space-xl)">
+            <a href="gen_regional_pathways.html" class="explore-link">
+                Explore regional pathways <span class="arrow">&rarr;</span>
+            </a>
+        </p>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Section 4: The Coal Wall                                              -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">4</div>
+        <h2>The Coal Wall</h2>
+        <p>Consequential&rsquo;s cost advantage has an expiration date: the moment the last coal plant retires from the dispatch stack.</p>
+    </div>
+    <section class="content-section" id="coal-wall-section">
+        <div class="fuel-gauge-grid" id="homeCoalWallGauges">
+            <!-- Tanks injected by JS -->
+        </div>
+
+        <div class="fuel-gauge-punchline" id="homeCoalWallPunchline">
+            The "discount" was the coal. The coal is finite.
+            <div class="fuel-gauge-punchline-sub">NEISO, NYISO, and CAISO are already at the gas floor today. Once coal runs out in the other four, consequential and hourly matching cost the same $/tCO&#8322;.</div>
+        </div>
+
+        <div class="coal-wall-finding fade-in">
+            Both strategies face escalating costs past the coal wall, but for different reasons. Consequential (1B) runs out of cheap coal to displace; every additional MWh yields half the carbon benefit against gas. Hourly matching (2C) costs more because firm clean power and storage for the hardest hours is inherently expensive. The critical difference is that 2C&rsquo;s cost escalation drives deployment of technologies the grid actually needs (nuclear, CCS, LDES), and those costs come down via Wright&rsquo;s Law. 1B&rsquo;s escalation buys diminishing marginal displacement of the same gas fleet.
+        </div>
+
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Section 5: The Last Mile                                              -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">5</div>
+        <h2>The Last Mile</h2>
+        <p>At what point does the last percent of grid decarbonization cost more than just removing carbon directly?</p>
+    </div>
+    <section class="content-section" id="last-mile-section">
+        <div class="crossover-container" id="crossoverContainer">
+            <svg viewBox="0 0 700 350" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Two-curve crossover chart showing grid decarbonization cost versus DAC reference">
+                <defs>
+                    <linearGradient id="gridCurveGrad" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stop-color="#0EA5E9"/>
+                        <stop offset="70%" stop-color="#0EA5E9"/>
+                        <stop offset="100%" stop-color="#EF4444"/>
+                    </linearGradient>
+                </defs>
+
+                <!-- Axis lines -->
+                <line x1="80" y1="30" x2="80" y2="300" stroke="rgba(0,0,0,0.10)" stroke-width="1"/>
+                <line x1="80" y1="300" x2="660" y2="300" stroke="rgba(0,0,0,0.10)" stroke-width="1"/>
+
+                <!-- Y-axis label -->
+                <text x="24" y="170" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="rgba(0,0,0,0.40)" transform="rotate(-90,24,170)">Marginal cost ($/tCO&#8322;)</text>
+
+                <!-- X-axis label -->
+                <text x="370" y="335" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="rgba(0,0,0,0.40)">CFE Target (%)</text>
+
+                <!-- X-axis ticks -->
+                <text x="80" y="318" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="rgba(0,0,0,0.35)">80</text>
+                <text x="163" y="318" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="rgba(0,0,0,0.35)">85</text>
+                <text x="245" y="318" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="rgba(0,0,0,0.35)">90</text>
+                <text x="328" y="318" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="rgba(0,0,0,0.35)">95</text>
+                <text x="432" y="318" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="rgba(0,0,0,0.35)">97.5</text>
+                <text x="538" y="318" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="rgba(0,0,0,0.35)">99</text>
+                <text x="640" y="318" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="rgba(0,0,0,0.35)">99.9</text>
+
+                <!-- Grid lines (light) -->
+                <line x1="163" y1="300" x2="163" y2="30" stroke="rgba(0,0,0,0.04)" stroke-width="1"/>
+                <line x1="245" y1="300" x2="245" y2="30" stroke="rgba(0,0,0,0.04)" stroke-width="1"/>
+                <line x1="328" y1="300" x2="328" y2="30" stroke="rgba(0,0,0,0.04)" stroke-width="1"/>
+                <line x1="432" y1="300" x2="432" y2="30" stroke="rgba(0,0,0,0.04)" stroke-width="1"/>
+                <line x1="538" y1="300" x2="538" y2="30" stroke="rgba(0,0,0,0.04)" stroke-width="1"/>
+
+                <!-- Overshoot zone (post-crossover, below grid curve, above DAC) -->
+                <path id="overshootZone" d="M470,140 C510,105 560,70 640,38 L640,140 Z" fill="rgba(239,68,68,0.06)" opacity="0"/>
+
+                <!-- DAC reference line -->
+                <line id="dacLine" x1="80" y1="140" x2="660" y2="140" stroke="#8B5CF6" stroke-width="1.5" stroke-dasharray="8 4" stroke-dashoffset="800" opacity="0.7"/>
+                <text x="662" y="136" font-family="'DM Sans', sans-serif" font-size="9" fill="#8B5CF6" opacity="0.7">DAC reference</text>
+
+                <!-- Grid decarbonization curve (hockey stick) -->
+                <path id="gridCurve" d="M80,270 C120,265 163,258 245,240 C300,228 328,210 370,190 C410,168 432,155 470,140 C510,118 560,80 640,38" fill="none" stroke="url(#gridCurveGrad)" stroke-width="2.5" stroke-linecap="round"/>
+
+                <!-- Crossover marker -->
+                <g id="crossoverMarker" opacity="0">
+                    <line x1="470" y1="140" x2="470" y2="300" stroke="#EF4444" stroke-width="1" stroke-dasharray="4 3" opacity="0.5"/>
+                    <circle cx="470" cy="140" r="6" fill="#EF4444" stroke="white" stroke-width="1.5"/>
+                    <text x="470" y="155" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" font-weight="600" fill="#EF4444" dy="12">~96-98% CFE</text>
+                </g>
+            </svg>
+        </div>
+
+        <div class="crossover-text fade-in">
+            The optimal CFE target isn&rsquo;t necessarily 100%. It&rsquo;s the point where marginal grid decarbonization exceeds marginal carbon removal. This crossover shifts by region, arriving earlier in supply-constrained grids (NEISO: ~95%) and later in resource-rich ones (ERCOT: ~98%).
+        </div>
+        <div class="crossover-text fade-in">
+            What matters for 1B vs. 2C: the costs 2C incurs <em>below</em> the crossover, building firm clean and storage in the 85&ndash;97% range, push the crossover point higher for everyone by driving learning curves down. 1B avoids those costs but contributes nothing to moving the frontier.
+        </div>
+
+        <p class="fade-in" style="text-align:center; margin-top:var(--space-xl)">
+            <a href="gen_regional_pathways.html" class="explore-link">
+                Regional pathways and DAC backstop <span class="arrow">&rarr;</span>
+            </a>
+        </p>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Section 6: The IPP Response                                           -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">6</div>
+        <h2>The IPP Response</h2>
+        <p>Across 540 scenarios and 7 generators, one finding is consistent: demand signals shape what gets built.</p>
+    </div>
+    <section class="content-section" id="ippResponse">
+
+        <p class="fade-in" style="max-width:720px; margin:0 auto var(--space-lg); font-size:0.95rem; color:var(--text-secondary); line-height:1.8">
+            Independent power producers are not passive recipients of policy. They are strategic actors who invest based on revenue signals, defend assets they&rsquo;ve built, and lobby for market rules that protect their portfolio. The real question is what incentive structure each procurement framework creates for the companies that actually build and operate the grid at scale.
+        </p>
+
+        <h3 class="fade-in" style="text-align:center; font-family:var(--font-heading); font-size:1.15rem; font-weight:700; color:var(--navy,#0B1120); margin-bottom:var(--space-sm)">Two Futures for the Same Fleet</h3>
+        <p class="fade-in" style="text-align:center; font-size:0.88rem; color:var(--text-muted,#94a3b8); margin-bottom:var(--space-md)">Constellation case study</p>
+
+        <div class="ipp-fleet-grid" id="ippFleetGrid">
+            <!-- Left — Low PPA Depth (1B) -->
+            <div class="ipp-fleet-panel panel-1b fade-in">
+                <div class="ipp-panel-label ipp-panel-label-1b">LOW PPA DEPTH</div>
+                <div class="ipp-panel-sublabel">Weak demand for hourly clean &rarr; revenue uncertainty</div>
+                <div class="fleet-circles" id="fleetCircles1B">
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-gas"></div>
+                    <div class="fleet-circle fleet-circle-gas"></div>
+                    <div class="fleet-circle fleet-circle-gas"></div>
+                    <div class="fleet-circle fleet-circle-renewable"></div>
+                </div>
+                <div class="ipp-counter ipp-counter-1b" id="ippCounter1B">34.3 Mt CO&#8322;</div>
+                <div class="ipp-counter-label">Annual fleet emissions</div>
+                <p class="ipp-panel-caption">Without strong PPA demand for 24/7 clean, merchant nuclear faces revenue uncertainty as state support programs expire (NJ ZEC 2026, IL CMC 2028, NY ZEC 2030). Plants stay online under 45U PTC but without fleet reinvestment certainty. New gas fills reliability gaps.</p>
+            </div>
+
+            <!-- Right — High PPA Depth (2C) -->
+            <div class="ipp-fleet-panel panel-2c fade-in">
+                <div class="ipp-panel-label ipp-panel-label-2c">HIGH PPA DEPTH</div>
+                <div class="ipp-panel-sublabel">Strong demand for hourly clean &rarr; revenue certainty</div>
+                <div class="fleet-circles" id="fleetCircles2C">
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-gas"></div>
+                    <div class="fleet-circle fleet-circle-gas"></div>
+                    <div class="fleet-circle fleet-circle-gas"></div>
+                    <div class="fleet-circle fleet-circle-renewable"></div>
+                </div>
+                <div class="ipp-counter ipp-counter-2c" id="ippCounter2C">9.8 Mt CO&#8322;</div>
+                <div class="ipp-counter-label">Annual fleet emissions</div>
+                <p class="ipp-panel-caption">Corporate demand for hourly-matched clean creates long-term PPA revenue ($10&ndash;40/MWh premium for dispatchable clean over VRE). This underwrites nuclear fleet maintenance, enables restarts like Crane/Three Mile Island. Microsoft&rsquo;s 20-year Constellation PPA alone: ~14 TWh/year of 24/7 carbon-free generation.</p>
+            </div>
+        </div>
+
+        <!-- 3.5x Stat Callout — dark panel for maximum impact -->
+        <div class="ipp-stat-callout fade-in">
+            <div class="ipp-stat-big">3.5&times;</div>
+            <div class="ipp-stat-desc">emissions differential from the same fleet</div>
+            <div class="ipp-stat-sub">driven entirely by demand signal</div>
+        </div>
+
+        <p class="fade-in" style="max-width:720px; margin:var(--space-xl) auto 0; font-size:0.9rem; color:var(--text-secondary); line-height:1.7">
+            IPPs that have built gas have a rational incentive to oppose policies that strand those assets: carbon pricing, accelerated retirement, stricter emissions standards. IPPs whose revenue depends on clean generation have the opposite incentive, because decarbonization policy protects their investment. Strategy 1B&rsquo;s demand signals are more likely to create conditions for new gas development. It doesn&rsquo;t penalize temporal mismatch, so gas backup is an acceptable complement to VRE-heavy portfolios. Strategy 2C&rsquo;s hourly constraint makes gas backup a cost, not a complement, driving IPPs toward firm clean resources that can actually match load patterns.
+        </p>
+
+        <p class="fade-in" style="text-align:center; margin-top:var(--space-xl); display:flex; gap:var(--space-lg); justify-content:center; flex-wrap:wrap">
+            <a href="ipp_climate_transition.html" class="explore-link">IPP climate transition <span class="arrow">&rarr;</span></a>
+            <a href="ipp_constellation.html" class="explore-link">Constellation deep dive <span class="arrow">&rarr;</span></a>
+        </p>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Section 7: The Learning Curve Dividend                                -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">7</div>
+        <h2>The Learning Curve Dividend</h2>
+        <p>Clean firm technologies are still on steep learning curves. Which strategy reaches critical mass fastest?</p>
+    </div>
+    <section class="content-section" id="learningCurve">
+
+        <p class="fade-in" style="max-width:720px; margin:0 auto var(--space-lg); font-size:0.95rem; color:var(--text-secondary); line-height:1.8">
+            Wright&rsquo;s Law: costs decline predictably with cumulative deployment. Solar and wind are far down their curves, already mature and cheap. Nuclear, CCS, and long-duration storage are still in the steep part where each doubling drives 15&ndash;25% cost reduction. The strategy that reaches critical mass first pulls costs down for the entire grid.
+        </p>
+
+        <!-- Diverging Curves SVG -->
+        <div class="learning-svg-container fade-in" id="learningCurvesContainer">
+            <svg viewBox="0 0 700 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Two diverging learning curves comparing Strategy 1B and 2C cost trajectories">
+                <!-- Axes -->
+                <line x1="60" y1="20" x2="60" y2="270" stroke="rgba(0,0,0,0.08)" stroke-width="1"/>
+                <line x1="60" y1="270" x2="660" y2="270" stroke="rgba(0,0,0,0.08)" stroke-width="1"/>
+                <text x="30" y="150" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="11" fill="rgba(0,0,0,0.4)" transform="rotate(-90,30,150)">Cost premium ($/MWh)</text>
+                <text x="360" y="305" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="11" fill="rgba(0,0,0,0.4)">Cumulative deployment (GW)</text>
+
+                <!-- Zero line -->
+                <line x1="60" y1="210" x2="660" y2="210" stroke="rgba(0,0,0,0.08)" stroke-width="1"/>
+                <text x="665" y="213" font-family="'DM Sans', sans-serif" font-size="10" fill="rgba(0,0,0,0.35)" text-anchor="start">Cost parity with fossil</text>
+
+                <!-- Gap shading between curves -->
+                <path d="M80,60 C180,80 300,110 400,145 C500,175 580,195 640,205
+                         L640,220 C580,225 500,240 400,248 C300,255 180,260 80,262 Z"
+                      fill="rgba(14,165,233,0.05)" id="learningGap"/>
+                <text x="300" y="195" font-family="'DM Sans', sans-serif" font-size="13" fill="#0EA5E9" font-style="italic" opacity="0.7">Learning curve dividend</text>
+
+                <!-- 1B curve — shallow -->
+                <path id="curve1B" d="M80,60 C180,80 300,120 400,160 C500,200 580,230 640,248"
+                      fill="none" stroke="#6366F1" stroke-width="2.5" stroke-linecap="round"
+                      stroke-dasharray="800" stroke-dashoffset="800"/>
+                <text x="645" y="258" font-family="'DM Sans', sans-serif" font-size="12" font-weight="700" fill="#6366F1" text-anchor="start">1B</text>
+
+                <!-- 2C curve — steep, crosses zero -->
+                <path id="curve2C" d="M80,60 C180,75 300,110 400,145 C500,175 560,198 620,210 C640,213 650,212 660,210"
+                      fill="none" stroke="#0EA5E9" stroke-width="2.5" stroke-linecap="round"
+                      stroke-dasharray="800" stroke-dashoffset="800"/>
+                <text x="645" y="205" font-family="'DM Sans', sans-serif" font-size="12" font-weight="700" fill="#0EA5E9" text-anchor="start">2C</text>
+
+                <!-- Critical mass marker at zero crossing -->
+                <g id="criticalMassGroup" opacity="0">
+                    <circle cx="620" cy="210" r="6" fill="#0EA5E9" class="critical-mass-marker" opacity="0.6"/>
+                    <circle cx="620" cy="210" r="3" fill="#0EA5E9"/>
+                    <text x="600" y="290" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="#0EA5E9" font-weight="600">Critical mass: learning</text>
+                    <text x="600" y="302" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="#0EA5E9" font-weight="600">curves outpace premiums</text>
+                </g>
+            </svg>
+        </div>
+
+        <!-- Three cards -->
+        <div class="learning-cards">
+            <div class="learning-card learning-card-violet fade-in">
+                <h3>IRA Accelerates the Timeline</h3>
+                <p>Federal credits cut clean LCOE 30&ndash;40%. Section 45Y PTC (~$28/MWh), 48E ITC (up to 50%), 45Q ($85/tonne CCS) compress the gap between VRE-only and diversified portfolios.</p>
+            </div>
+            <div class="learning-card learning-card-2c fade-in">
+                <h3>Hyperscale Demand Is Already 2C-Aligned</h3>
+                <p>Microsoft&rsquo;s PPA restarted Crane nuclear (1.8 GW). Google contracts for Fervo geothermal and Kairos nuclear. Amazon invests in SMRs. These buyers are pulling the 2C learning curve down now.</p>
+            </div>
+            <div class="learning-card learning-card-blue fade-in">
+                <h3>Policy Is Converging on Hourly</h3>
+                <p>GHG Protocol Scope 2 revision (~2027) proposes hourly matching. SBTi Power Sector v2 moves toward hourly. 14 states have 100% clean laws. EU rules require temporal correlation. 2C&rsquo;s premium is early-mover positioning.</p>
+            </div>
+        </div>
+
+        <p class="fade-in" style="text-align:center; margin-top:var(--space-xl); display:flex; gap:var(--space-lg); justify-content:center; flex-wrap:wrap">
+            <a href="gen_policy_conditions.html" class="explore-link">Policy landscape <span class="arrow">&rarr;</span></a>
+            <a href="strategy_deep_dive.html" class="explore-link">Strategy deep dive <span class="arrow">&rarr;</span></a>
+        </p>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Section 8: The Swing Variable — Nuclear                               -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">8</div>
+        <h2>The Swing Variable</h2>
+        <p>Existing nuclear provides roughly half of US clean electricity. Its fate depends on procurement framework.</p>
+    </div>
+    <section class="content-section" id="swingVariable">
+
+        <!-- The Fulcrum SVG -->
+        <div class="fulcrum-container fade-in" id="fulcrumContainer">
+            <svg viewBox="0 0 500 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Fulcrum balance showing nuclear fleet weighed against revenue sources">
+                <!-- Fulcrum triangle -->
+                <polygon points="250,200 225,170 275,170" fill="rgba(0,0,0,0.06)" stroke="rgba(0,0,0,0.15)" stroke-width="1.5"/>
+
+                <!-- Beam -->
+                <g id="fulcrumBeam" style="transform-origin: 250px 170px; transition: transform 1.5s ease-out;">
+                    <line x1="60" y1="170" x2="440" y2="170" stroke="rgba(0,0,0,0.2)" stroke-width="3" stroke-linecap="round"/>
+
+                    <!-- Left: nuclear plant silhouette -->
+                    <g transform="translate(80, 120)">
+                        <!-- Simplified plant silhouette -->
+                        <rect x="0" y="20" width="30" height="30" rx="2" fill="none" stroke="#0EA5E9" stroke-width="2"/>
+                        <path d="M5,20 Q15,0 25,20" fill="none" stroke="#0EA5E9" stroke-width="2"/>
+                        <rect x="35" y="30" width="15" height="20" rx="1" fill="none" stroke="#0EA5E9" stroke-width="1.5"/>
+                        <line x1="42" y1="22" x2="42" y2="30" stroke="#0EA5E9" stroke-width="1.5"/>
+                    </g>
+                    <text x="95" y="165" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="11" fill="rgba(0,0,0,0.5)" font-weight="600">Nuclear fleet</text>
+
+                    <!-- Right: stacked revenue rectangles -->
+                    <g transform="translate(340, 100)">
+                        <!-- Capacity (bottom) -->
+                        <rect x="0" y="52" width="80" height="14" rx="3" fill="rgba(0,0,0,0.06)" stroke="rgba(0,0,0,0.15)" stroke-width="1"/>
+                        <text x="40" y="63" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="8" fill="rgba(0,0,0,0.4)">Capacity</text>
+
+                        <!-- 45U PTC -->
+                        <rect x="0" y="36" width="80" height="14" rx="3" fill="rgba(59,130,246,0.15)" stroke="rgba(59,130,246,0.4)" stroke-width="1"/>
+                        <text x="40" y="47" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="8" fill="rgba(59,130,246,0.7)">45U PTC</text>
+
+                        <!-- ZEC/CMC -->
+                        <rect x="0" y="20" width="80" height="14" rx="3" fill="rgba(99,102,241,0.15)" stroke="rgba(99,102,241,0.4)" stroke-width="1"/>
+                        <text x="40" y="31" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="8" fill="rgba(99,102,241,0.7)">ZEC / CMC</text>
+
+                        <!-- Corporate PPAs (tallest, glowing) -->
+                        <rect x="0" y="0" width="80" height="18" rx="3" fill="rgba(14,165,233,0.15)" stroke="#0EA5E9" stroke-width="2">
+                            <animate attributeName="stroke-opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite"/>
+                        </rect>
+                        <text x="40" y="13" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="9" fill="#0EA5E9" font-weight="700">Corporate PPAs</text>
+                    </g>
+                </g>
+            </svg>
+        </div>
+
+        <!-- Three stat cards -->
+        <div class="nuclear-stat-cards">
+            <div class="nuclear-stat-card nuclear-stat-card-rose fade-in">
+                <div class="stat-value">+$8&ndash;15/MWh</div>
+                <div class="stat-label">Cost increase if nuclear retires</div>
+            </div>
+            <div class="nuclear-stat-card nuclear-stat-card-1b fade-in">
+                <div class="stat-value">~107 TWh</div>
+                <div class="stat-label">CO&#8322; displacement lost</div>
+            </div>
+            <div class="nuclear-stat-card nuclear-stat-card-1b fade-in">
+                <div class="stat-value">+45 GW</div>
+                <div class="stat-label">Additional gas on grid</div>
+            </div>
+        </div>
+
+        <!-- Roll-off timeline -->
+        <div class="rolloff-timeline fade-in">
+            <div class="rolloff-line"></div>
+            <div class="rolloff-event">
+                <div class="rolloff-dot"></div>
+                <div class="rolloff-year">2026</div>
+                <div class="rolloff-desc">NJ ZEC expires (&minus;15 TWh PJM)</div>
+            </div>
+            <div class="rolloff-event">
+                <div class="rolloff-dot"></div>
+                <div class="rolloff-year">2028</div>
+                <div class="rolloff-desc">IL CMC expires (&minus;50 TWh PJM, &minus;15 TWh MISO)</div>
+            </div>
+            <div class="rolloff-event">
+                <div class="rolloff-dot"></div>
+                <div class="rolloff-year">2030</div>
+                <div class="rolloff-desc">NY ZEC Tier 3 expires (&minus;42 TWh NYISO)</div>
+            </div>
+        </div>
+
+        <p class="fade-in" style="max-width:720px; margin:var(--space-xl) auto 0; font-size:0.9rem; color:var(--text-secondary); line-height:1.7">
+            These plants don&rsquo;t retire. They move from SSS to merchant under 45U PTC. But without corporate PPA demand for long-term revenue certainty, fleet reinvestment tilts toward deferral. The procurement framework determines whether existing nuclear is an asset or a liability.
+        </p>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Synthesis: Rowing in the Same Direction — Synthesis                  -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <section class="synthesis-section" id="synthesisSection">
+        <div class="synthesis-inner">
+            <h2 class="synthesis-heading" id="synthesisHeading">Rowing in the Same Direction</h2>
+            <div class="synthesis-body" id="synthesisBody">
+                <p>Single-buyer PPAs for VRE or unbundled RECs were the right tools for the first phase of the energy transition: displacing coal, building the renewable supply chain, proving that clean energy could compete on cost. That phase succeeded. Most of the cheap coal displacement is done or underway.</p>
+
+                <p>The next phase is qualitatively different. Getting grids from 60&ndash;70% clean to net-zero means solving temporal dependencies (nights, winter evenings, multi-day low-wind events) and spatial dependencies (each grid needs its own portfolio of firm clean power and storage tuned to its fossil fleet, weather patterns, and demand profile). Cross-regional VRE deployment cannot solve these problems. Annual accounting cannot even see them.</p>
+
+                <p>Consequential accounting is individually rational. Each buyer directing their marginal dollar to the cheapest ton of CO&#8322; displacement is defensible in isolation. But in aggregate, consequential concentrates capital in grids with the cheapest abatement (coal-heavy MISO and SPP) while gas-dependent grids like NEISO, NYISO, and CAISO receive less. It creates no structural demand signal for firm clean power. It leaves gas on the grid. And the owners of that gas, the IPPs who built it because the demand signal said &ldquo;VRE plus backup,&rdquo; will rationally fight to keep it running.</p>
+
+                <p>Hourly matching is more expensive today. That is a real cost, not a footnote. But it builds coherence by construction. When procurement must match load hour-by-hour within the buyer&rsquo;s grid, investment flows to the resources that specific grid actually needs. It creates demand signals for firm clean power and storage. It pulls forward the learning curves the entire grid needs. It aligns individual procurement with collective grid transformation. And it positions early adopters on the right side of a policy trajectory &mdash; GHG Protocol, SBTi, state mandates, EU rules &mdash; that is converging on hourly matching as the standard.</p>
+
+                <p>The question is not which strategy is cheaper today, but which one builds the grid we need by 2040.</p>
+
+                <p>Across this analysis (8,760 hours at full resolution, 7 ISO/RTOs, 10 procurement strategies, 540+ scenarios per IPP, 7 fleet assessments), the finding is directionally consistent. Hourly matching drives deeper gas displacement, reaches learning-curve critical mass faster, creates revenue certainty for firm clean investment, and aligns with the regulatory trajectory. Consequential netting is cheaper per MWh but leaves more gas on the grid, concentrates investment geographically, and does not create structural demand signals for the technologies the next phase requires.</p>
+
+                <p>Deep grid decarbonization requires rowing in the same direction: a shared understanding of where each grid can and should end up, and procurement signals coherent with that destination. The era of each buyer picking off the cheapest ton from anywhere on the map was sufficient when the challenge was displacing coal. It is not sufficient for the era of firm clean power, long-duration storage, and hourly temporal matching. That era is already here. The GHG Protocol revision will determine whether corporate accounting catches up to the physics or stays a decade behind it.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Navigation: Explore the Analysis — Navigation Grid                    -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <section class="nav-grid-section" id="navGridSection">
+        <div class="nav-grid-header fade-in">
+            <h2>Explore the Analysis</h2>
+            <p>Each page explores a different dimension of the question.</p>
+        </div>
+        <div class="nav-grid" id="navGrid">
+            <a href="cfe_strategy_assessment.html" class="nav-card accent-2c">
+                <div class="nav-dot nav-dot-2c"></div>
+                <div class="nav-card-title">The Full Comparison</div>
+                <div class="nav-card-desc">1B vs. 2C across every metric and participation level.</div>
+                <div class="nav-card-arrow">&rarr;</div>
+            </a>
+            <a href="GHG-accounting-overview.html" class="nav-card accent-violet">
+                <div class="nav-dot nav-dot-violet"></div>
+                <div class="nav-card-title">10 Strategies</div>
+                <div class="nav-card-desc">Three accounting families and the tradeoffs.</div>
+                <div class="nav-card-arrow">&rarr;</div>
+            </a>
+            <a href="procurement_deployment.html" class="nav-card accent-1b">
+                <div class="nav-dot nav-dot-1b"></div>
+                <div class="nav-card-title">Where Capital Flows</div>
+                <div class="nav-card-desc">How each strategy reshapes each ISO&rsquo;s mix.</div>
+                <div class="nav-card-arrow">&rarr;</div>
+            </a>
+            <a href="strategy_deep_dive.html" class="nav-card accent-blue">
+                <div class="nav-dot nav-dot-blue"></div>
+                <div class="nav-card-title">Strategy Deep Dive</div>
+                <div class="nav-card-desc">Gas displacement, learning curves, decarb matrices.</div>
+                <div class="nav-card-arrow">&rarr;</div>
+            </a>
+            <a href="gen_regional_pathways.html" class="nav-card accent-2c">
+                <div class="nav-dot nav-dot-2c"></div>
+                <div class="nav-card-title">Regional Pathways</div>
+                <div class="nav-card-desc">Where the market stops and the gap to net-zero.</div>
+                <div class="nav-card-arrow">&rarr;</div>
+            </a>
+            <a href="gen_policy_conditions.html" class="nav-card accent-rose">
+                <div class="nav-dot nav-dot-rose"></div>
+                <div class="nav-card-title">Policy Landscape</div>
+                <div class="nav-card-desc">IRA, state mandates, corporate demand pull.</div>
+                <div class="nav-card-arrow">&rarr;</div>
+            </a>
+            <a href="ipp_climate_transition.html" class="nav-card accent-1b">
+                <div class="nav-dot nav-dot-1b"></div>
+                <div class="nav-card-title">IPP Transition</div>
+                <div class="nav-card-desc">540 scenarios across 7 generators.</div>
+                <div class="nav-card-arrow">&rarr;</div>
+            </a>
+        </div>
+    </section>
+
+    <footer id="siteFooter"></footer>
+
+    <script src="js/cinematic-bg.js"></script>
+    <script>
+    (function() {
+        'use strict';
+
+        // ===== MODULE 1: Count-Up Animation =====
+        (function initCountUp() {
+            var row = document.getElementById('heroStatsRow');
+            if (!row) return;
+
+            var triggered = false;
+
+            function countUp(el, target, suffix, duration) {
+                suffix = suffix || '';
+                duration = duration || 1800;
+                var start = performance.now();
+                var ease = function(t) { return 1 - Math.pow(1 - t, 3); };
+                (function update(now) {
+                    var t = Math.min((now - start) / duration, 1);
+                    el.textContent = Math.round(ease(t) * target).toLocaleString() + (t >= 1 ? suffix : '');
+                    if (t < 1) requestAnimationFrame(update);
+                })(performance.now());
+            }
+
+            function runCountUp() {
+                if (triggered) return;
+                triggered = true;
+                var cards = row.querySelectorAll('[data-count-to]');
+                cards.forEach(function(card, i) {
+                    var target = parseInt(card.dataset.countTo, 10);
+                    var suffix = card.dataset.suffix || '';
+                    var valEl = card.querySelector('.stat-value');
+                    setTimeout(function() { countUp(valEl, target, suffix); }, i * 120);
+                });
+            }
+
+            var observer = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        runCountUp();
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.25 });
+            observer.observe(row);
+
+            // Fallback: if already in viewport on load
+            setTimeout(function() {
+                var rect = row.getBoundingClientRect();
+                if (rect.top < window.innerHeight && rect.bottom > 0) {
+                    runCountUp();
+                }
+            }, 300);
+        })();
+
+        // ===== MODULE 2: Fork Diagram Scroll Fade-In =====
+        (function initForkFadeIn() {
+            var fork = document.getElementById('forkDiagram');
+            if (!fork) return;
+
+            var observer = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        fork.classList.add('visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.2 });
+            observer.observe(fork);
+
+            // Fallback
+            setTimeout(function() {
+                var rect = fork.getBoundingClientRect();
+                if (rect.top < window.innerHeight && rect.bottom > 0) {
+                    fork.classList.add('visible');
+                }
+            }, 500);
+        })();
+
+        // ===== MODULE 3: Clock Tick Animation =====
+        (function initClockAnimation() {
+            var clockIcon = document.getElementById('clockIcon');
+            if (!clockIcon) return;
+
+            var ticks = clockIcon.querySelectorAll('.clock-tick');
+            var triggered = false;
+
+            var observer = new IntersectionObserver(function(entries) {
+                if (triggered) return;
+                entries.forEach(function(entry) {
+                    if (!entry.isIntersecting) return;
+                    triggered = true;
+                    ticks.forEach(function(tick, i) {
+                        setTimeout(function() {
+                            tick.classList.add('animate');
+                        }, 500 + i * 50);
+                    });
+                    observer.unobserve(entry.target);
+                });
+            }, { threshold: 0.5 });
+            observer.observe(clockIcon);
+        })();
+
+        // ===== MODULE 4: ISO Bar Animation (Section 3) =====
+        (function initIsoBars() {
+            var container = document.getElementById('isoBarsContainer');
+            if (!container) return;
+
+            var rows = container.querySelectorAll('.iso-bar-row');
+            var triggered = false;
+
+            function animateBars() {
+                if (triggered) return;
+                triggered = true;
+                rows.forEach(function(row, i) {
+                    setTimeout(function() {
+                        row.classList.add('visible');
+                        var segs = row.querySelectorAll('.iso-bar-segment');
+                        var vals = [
+                            parseInt(row.dataset.clean, 10) || 0,
+                            parseInt(row.dataset.gas, 10) || 0,
+                            parseInt(row.dataset.coal, 10) || 0,
+                            parseInt(row.dataset.other, 10) || 0
+                        ];
+                        // Small delay after visible for segment growth
+                        setTimeout(function() {
+                            segs.forEach(function(seg, j) {
+                                seg.style.width = vals[j] + '%';
+                                seg.classList.add('animate');
+                            });
+                        }, 100);
+                    }, i * 80);
+                });
+
+                // Animate annotations with stagger
+                var annotations = document.querySelectorAll('.iso-annotation');
+                annotations.forEach(function(ann, i) {
+                    setTimeout(function() {
+                        ann.classList.add('visible');
+                    }, 800 + i * 200);
+                });
+            }
+
+            var observer = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        animateBars();
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.15 });
+            observer.observe(container);
+        })();
+
+        // ===== MODULE 5: Coal Wall Fuel Gauge Animation (Section 4) =====
+        (function initCoalWallGauges() {
+            var grid = document.getElementById('homeCoalWallGauges');
+            var punchline = document.getElementById('homeCoalWallPunchline');
+            if (!grid) return;
+
+            var GAUGES = [
+                { iso: 'PJM',   coal: 139.09, gas: 357.26, blended: 1251, gasRate: 867 },
+                { iso: 'MISO',  coal: 125.0,  gas: 327.92, blended: 1253, gasRate: 860 },
+                { iso: 'ERCOT', coal: 67.58,  gas: 195.46, blended: 1242, gasRate: 867 },
+                { iso: 'SPP',   coal: 42.0,   gas: 114.68, blended: 1237, gasRate: 865 },
+                { iso: 'NEISO', coal: 0.31,   gas: 75.1,   blended: 873,  gasRate: 844 },
+                { iso: 'NYISO', coal: 0,      gas: 92.33,  blended: 915,  gasRate: 915 },
+                { iso: 'CAISO', coal: 0,      gas: 114.78, blended: 867,  gasRate: 862 }
+            ];
+
+            var maxTotal = 0;
+            GAUGES.forEach(function(g) {
+                var t = g.coal + g.gas;
+                if (t > maxTotal) maxTotal = t;
+            });
+
+            GAUGES.forEach(function(g) {
+                var coalPct = maxTotal > 0 ? (g.coal / maxTotal) * 100 : 0;
+                var gasPct = maxTotal > 0 ? (g.gas / maxTotal) * 100 : 0;
+                var isoColor = (typeof ISO_COLORS !== 'undefined' && ISO_COLORS[g.iso]) ? ISO_COLORS[g.iso] : '#6B7280';
+                var isGasOnly = g.coal < 1;
+
+                var tank = document.createElement('div');
+                tank.className = 'fuel-tank';
+
+                var bodyHtml = '<div class="tank-body">';
+                if (isGasOnly) bodyHtml += '<div class="gas-floor-badge">Already at<br>gas floor</div>';
+                bodyHtml += '<div class="tank-layer tank-gas" style="height:' + gasPct + '%"><span class="tank-layer-text">GAS</span></div>';
+                if (!isGasOnly) {
+                    bodyHtml += '<div class="tank-layer tank-coal" data-coal-height="' + coalPct + '" style="height:' + coalPct + '%"><span class="tank-layer-text">' + Math.round(g.coal) + ' TWh</span></div>';
+                }
+                bodyHtml += '</div>';
+
+                tank.innerHTML = '<div class="tank-label" style="color:' + isoColor + '">' + g.iso + '</div>' +
+                    bodyHtml +
+                    '<div class="tank-rate" data-from="' + g.blended + '" data-to="' + g.gasRate + '">' +
+                    g.blended.toLocaleString() + '<span class="tank-rate-unit">lb/MWh</span></div>';
+
+                grid.appendChild(tank);
+            });
+
+            var triggered = false;
+            var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            function animateDepletion() {
+                if (triggered) return;
+                triggered = true;
+
+                var coalLayers = grid.querySelectorAll('.tank-coal');
+                var rateEls = grid.querySelectorAll('.tank-rate');
+
+                if (reducedMotion) {
+                    coalLayers.forEach(function(el) { el.classList.add('depleted'); });
+                    rateEls.forEach(function(el) {
+                        el.innerHTML = el.getAttribute('data-to') + '<span class="tank-rate-unit">lb/MWh</span>';
+                    });
+                    if (punchline) punchline.classList.add('visible');
+                    return;
+                }
+
+                coalLayers.forEach(function(el, i) {
+                    setTimeout(function() { el.classList.add('depleted'); }, i * 150);
+                });
+
+                var duration = 2200;
+                var startTime = null;
+                rateEls.forEach(function(el) {
+                    var from = parseInt(el.getAttribute('data-from'));
+                    var to = parseInt(el.getAttribute('data-to'));
+                    if (from === to) return;
+
+                    function tick(ts) {
+                        if (!startTime) startTime = ts;
+                        var progress = Math.min((ts - startTime) / duration, 1);
+                        var eased = 1 - Math.pow(1 - progress, 3);
+                        var current = Math.round(from + (to - from) * eased);
+                        el.innerHTML = current.toLocaleString() + '<span class="tank-rate-unit">lb/MWh</span>';
+                        if (progress < 1) requestAnimationFrame(tick);
+                    }
+                    setTimeout(function() { requestAnimationFrame(tick); }, 300);
+                });
+
+                setTimeout(function() {
+                    if (punchline) punchline.classList.add('visible');
+                }, 2600);
+            }
+
+            var observer = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        animateDepletion();
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.25 });
+            observer.observe(grid);
+        })();
+
+        // ===== MODULE 6: Last Mile Crossover Animation (Section 5) =====
+        (function initCrossover() {
+            var container = document.getElementById('crossoverContainer');
+            if (!container) return;
+
+            var gridCurve = document.getElementById('gridCurve');
+            var dacLine = document.getElementById('dacLine');
+            var crossoverMarker = document.getElementById('crossoverMarker');
+            var overshootZone = document.getElementById('overshootZone');
+            if (!gridCurve || !dacLine) return;
+
+            var triggered = false;
+            var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            // Compute path lengths
+            var gridLen = gridCurve.getTotalLength();
+            var dacLen = 580; // 660 - 80
+
+            // Set initial dash state
+            gridCurve.style.strokeDasharray = gridLen;
+            gridCurve.style.strokeDashoffset = gridLen;
+            dacLine.setAttribute('stroke-dashoffset', dacLen);
+
+            function animateCrossover() {
+                if (triggered) return;
+                triggered = true;
+
+                if (reducedMotion) {
+                    gridCurve.style.strokeDashoffset = '0';
+                    dacLine.setAttribute('stroke-dashoffset', '0');
+                    if (crossoverMarker) crossoverMarker.setAttribute('opacity', '1');
+                    if (overshootZone) overshootZone.setAttribute('opacity', '1');
+                    return;
+                }
+
+                var duration = 2000;
+                var start = null;
+
+                function step(timestamp) {
+                    if (!start) start = timestamp;
+                    var t = Math.min((timestamp - start) / duration, 1);
+                    // ease-out
+                    var eased = 1 - Math.pow(1 - t, 3);
+
+                    gridCurve.style.strokeDashoffset = gridLen * (1 - eased);
+                    dacLine.setAttribute('stroke-dashoffset', dacLen * (1 - eased));
+
+                    if (t < 1) {
+                        requestAnimationFrame(step);
+                    } else {
+                        // Show crossover marker after draw completes
+                        setTimeout(function() {
+                            if (crossoverMarker) {
+                                crossoverMarker.style.transition = 'opacity 0.5s ease-out';
+                                crossoverMarker.setAttribute('opacity', '1');
+                            }
+                            if (overshootZone) {
+                                overshootZone.style.transition = 'opacity 0.5s ease-out';
+                                overshootZone.setAttribute('opacity', '1');
+                            }
+                        }, 300);
+                    }
+                }
+                requestAnimationFrame(step);
+            }
+
+            var observer = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        animateCrossover();
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.25 });
+            observer.observe(container);
+        })();
+
+        // ===== MODULE 7: IPP Fleet Circle Animation (Section 6) =====
+        (function initIPPFleet() {
+            var grid = document.getElementById('ippFleetGrid');
+            if (!grid) return;
+
+            var triggered = false;
+            var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            function animateFleet() {
+                if (triggered) return;
+                triggered = true;
+
+                var delay = reducedMotion ? 0 : 500;
+
+                // 1B panel: 3 nuclear fade, 1 gas grows with pulse
+                setTimeout(function() {
+                    var circles1B = document.querySelectorAll('#fleetCircles1B .fleet-circle');
+                    // Fade nuclear circles 9, 10, 11 (index 9-11)
+                    [9, 10, 11].forEach(function(i) {
+                        if (circles1B[i]) circles1B[i].classList.add('faded');
+                    });
+                    // Gas circle grows with pulse (index 12)
+                    if (circles1B[12]) {
+                        circles1B[12].classList.add('grown', 'gas-pulse');
+                    }
+                }, delay);
+
+                // 2C panel: all nuclear brighten, 2 gas shrink, new hex appears
+                setTimeout(function() {
+                    var circles2C = document.querySelectorAll('#fleetCircles2C .fleet-circle');
+                    // Brighten all nuclear (0-11)
+                    for (var i = 0; i < 12; i++) {
+                        if (circles2C[i]) circles2C[i].classList.add('brightened');
+                    }
+                    // Shrink gas circles 12, 13
+                    if (circles2C[12]) circles2C[12].classList.add('shrunk');
+                    if (circles2C[13]) circles2C[13].classList.add('shrunk');
+
+                    // Add hex icon for new firm clean
+                    var container2C = document.getElementById('fleetCircles2C');
+                    if (container2C) {
+                        var hex = document.createElement('div');
+                        hex.className = 'new-firm-hex';
+                        container2C.appendChild(hex);
+                        setTimeout(function() { hex.classList.add('visible'); }, 100);
+                    }
+                }, delay);
+            }
+
+            var observer = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        animateFleet();
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.25 });
+            observer.observe(grid);
+        })();
+
+        // ===== MODULE 8: Learning Curve Draw Animation (Section 7) =====
+        (function initLearningCurves() {
+            var container = document.getElementById('learningCurvesContainer');
+            if (!container) return;
+
+            var curve1B = document.getElementById('curve1B');
+            var curve2C = document.getElementById('curve2C');
+            var critGroup = document.getElementById('criticalMassGroup');
+            if (!curve1B || !curve2C) return;
+
+            var triggered = false;
+            var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            // Compute actual path lengths
+            var len1B = curve1B.getTotalLength();
+            var len2C = curve2C.getTotalLength();
+            curve1B.style.strokeDasharray = len1B;
+            curve1B.style.strokeDashoffset = len1B;
+            curve2C.style.strokeDasharray = len2C;
+            curve2C.style.strokeDashoffset = len2C;
+
+            function animateCurves() {
+                if (triggered) return;
+                triggered = true;
+
+                if (reducedMotion) {
+                    curve1B.style.strokeDashoffset = '0';
+                    curve2C.style.strokeDashoffset = '0';
+                    if (critGroup) critGroup.setAttribute('opacity', '1');
+                    return;
+                }
+
+                var duration = 2500;
+                var start = null;
+
+                function step(timestamp) {
+                    if (!start) start = timestamp;
+                    var t = Math.min((timestamp - start) / duration, 1);
+                    var eased = 1 - Math.pow(1 - t, 3);
+
+                    curve1B.style.strokeDashoffset = len1B * (1 - eased);
+                    curve2C.style.strokeDashoffset = len2C * (1 - eased);
+
+                    if (t < 1) {
+                        requestAnimationFrame(step);
+                    } else {
+                        // Show critical mass marker after draw completes
+                        setTimeout(function() {
+                            if (critGroup) {
+                                critGroup.style.transition = 'opacity 0.5s ease-out';
+                                critGroup.setAttribute('opacity', '1');
+                            }
+                        }, 500);
+                    }
+                }
+                requestAnimationFrame(step);
+            }
+
+            var observer = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        animateCurves();
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.25 });
+            observer.observe(container);
+        })();
+
+        // ===== MODULE 9: Fulcrum Tilt Animation (Section 8) =====
+        (function initFulcrum() {
+            var container = document.getElementById('fulcrumContainer');
+            if (!container) return;
+
+            var beam = document.getElementById('fulcrumBeam');
+            if (!beam) return;
+
+            var triggered = false;
+            var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            function animateFulcrum() {
+                if (triggered) return;
+                triggered = true;
+
+                if (reducedMotion) {
+                    beam.style.transform = 'rotate(-3deg)';
+                    return;
+                }
+
+                beam.style.transition = 'transform 1.5s ease-out';
+                beam.style.transform = 'rotate(-3deg)';
+            }
+
+            var observer = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        animateFulcrum();
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.25 });
+            observer.observe(container);
+        })();
+
+        // ===== MODULE 10: Synthesis Fade-In =====
+        (function initSynthesis() {
+            var heading = document.getElementById('synthesisHeading');
+            var body = document.getElementById('synthesisBody');
+            if (!heading || !body) return;
+
+            var observer = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        heading.classList.add('visible');
+                        body.classList.add('visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.2, rootMargin: '0px 0px -60px 0px' });
+            observer.observe(heading);
+        })();
+
+        // ===== MODULE 11: Nav Grid Stagger =====
+        (function initNavGrid() {
+            var grid = document.getElementById('navGrid');
+            if (!grid) return;
+
+            var cards = grid.querySelectorAll('.nav-card');
+            var observer = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        cards.forEach(function(card) {
+                            card.classList.add('visible');
+                        });
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.2, rootMargin: '0px 0px -60px 0px' });
+            observer.observe(grid);
+        })();
+
+    })();
+    </script>
+</body>
+</html>
