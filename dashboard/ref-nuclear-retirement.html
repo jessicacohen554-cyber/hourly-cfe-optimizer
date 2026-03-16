@@ -27,8 +27,8 @@ body { background: var(--bg-page-white); }
 
 /* ─── Hero Panel ──────────────────────────────────────────────────── */
 .hero-panel {
-    background: linear-gradient(135deg, #1A2744 0%, #2D3A5C 50%, #1A2744 100%);
-    border-radius: 16px; padding: 40px 36px; margin-bottom: 36px;
+    background: linear-gradient(135deg, var(--navy-dark, #0F1A2E) 0%, var(--navy, #1A2744) 40%, var(--navy-mid, #1E3A5F) 100%);
+    border-radius: var(--radius-xl, 16px); padding: 40px 36px; margin-bottom: 36px;
     color: #fff; position: relative; overflow: hidden;
 }
 .hero-panel::before {
@@ -84,7 +84,7 @@ body { background: var(--bg-page-white); }
 }
 
 /* ─── Accordion ───────────────────────────────────────────────────── */
-.accordion { margin-bottom: 16px; border: 1px solid #E5E7EB; border-radius: 12px; overflow: hidden; }
+.accordion { margin-bottom: 16px; border: 1px solid var(--border-light, #E5E7EB); border-radius: var(--radius-lg, 12px); overflow: hidden; }
 .accordion-header {
     display: flex; align-items: center; gap: 12px; padding: 18px 24px;
     background: #fff; cursor: pointer; user-select: none;
@@ -127,8 +127,9 @@ body { background: var(--bg-page-white); }
 
 .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
 .chart-panel {
-    background: #fff; border: 1px solid #E5E7EB; border-radius: 10px;
-    padding: 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+    background: var(--bg-card, #fff); border: 1px solid var(--border-light, #E5E7EB);
+    border-radius: var(--radius-lg, 12px); padding: 18px;
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.05));
 }
 .chart-panel h3 {
     font-family: var(--font-heading); font-size: 0.92rem; font-weight: 600;
@@ -256,9 +257,55 @@ body { background: var(--bg-page-white); }
 .bar-fill.ny { background: #22C55E; }
 .bar-fill.nj { background: #EF4444; }
 
+/* ─── Model framing cards ─────────────────────────────────────────── */
+.model-framing-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+}
+.model-framing-card {
+    padding: var(--space-lg, 24px); border-top: 3px solid var(--border-light, #E5E7EB);
+}
+.model-framing-card:nth-child(1) { border-top-color: var(--hydro, #0EA5E9); }
+.model-framing-card:nth-child(2) { border-top-color: var(--nuclear, #6366F1); }
+.model-framing-card:nth-child(3) { border-top-color: var(--solar, #F59E0B); }
+.model-framing-badge {
+    font-family: var(--font-mono); font-size: 0.68rem; font-weight: 600;
+    padding: 2px 8px; border-radius: 4px; display: inline-block; margin-bottom: 10px;
+    text-transform: uppercase; letter-spacing: 0.04em;
+}
+.model-framing-badge.model-a { background: rgba(14,165,233,0.12); color: #0284C7; }
+.model-framing-badge.model-b { background: rgba(99,102,241,0.12); color: #6366F1; }
+.model-framing-badge.model-c { background: rgba(245,158,11,0.12); color: var(--amber-text, #B45309); }
+.model-framing-q {
+    font-family: var(--font-heading); font-size: 1.1rem; font-weight: 700;
+    color: var(--navy, #1A2744); margin: 0 0 4px; line-height: 1.35;
+}
+.model-framing-label {
+    font-family: var(--font-body); font-size: 0.82rem; color: var(--text-muted, #566370);
+    font-weight: 500; margin-bottom: 10px;
+}
+.model-framing-list {
+    font-size: 0.82rem; color: var(--text-secondary, #1E293B); line-height: 1.55;
+    padding-left: 18px; margin: 0 0 10px;
+}
+.model-framing-list li { margin-bottom: 4px; }
+.model-framing-answers {
+    font-size: 0.82rem; color: var(--text-muted, #566370); line-height: 1.55;
+    margin: 0; padding-top: 8px; border-top: 1px solid var(--border-light, #E5E7EB);
+}
+.framing-callout {
+    background: rgba(99,102,241,0.06); font-size: 0.9rem; line-height: 1.6;
+}
+
+/* ─── Accordion subtitle ─────────────────────────────────────────── */
+.accordion-subtitle {
+    font-family: var(--font-body); font-size: 0.75rem; color: var(--text-muted, #566370);
+    margin-top: 2px; font-weight: 400; line-height: 1.4;
+}
+
 @media (max-width: 768px) {
     .chart-row { grid-template-columns: 1fr; }
     .pathway-grid { grid-template-columns: 1fr; }
+    .model-framing-grid { grid-template-columns: 1fr; }
     .hero-title { font-size: 1.4rem; }
     .hero-panel { padding: 28px 20px; }
     .hero-stats { grid-template-columns: repeat(2, 1fr); }
@@ -280,7 +327,7 @@ body { background: var(--bg-page-white); }
 <div class="breadcrumb">
     <a href="index.html">Home</a>
     <span class="sep">/</span>
-    <a href="research_paper.html">Research</a>
+    <a href="lmp_trends.html">Clean Asset Value</a>
     <span class="sep">/</span>
     <span class="current">Nuclear Retirement Risk</span>
 </div>
@@ -307,6 +354,59 @@ body { background: var(--bg-page-white); }
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════
+     NARRATIVE FRAMING — connects to Clean Asset Value analysis
+     ═══════════════════════════════════════════════════════════════════ -->
+<div class="insight-callout framing-callout" style="border-left-color:var(--nuclear);margin-bottom:28px;">
+    <p style="margin:0;">The <a href="lmp_trends.html" style="color:var(--hydro-text, #0369A1);font-weight:600;">Clean Asset Value analysis</a> shows wholesale prices falling below nuclear viability at 65&ndash;75% clean energy. This page asks: <strong>which specific plants, under which specific futures, at which specific thresholds?</strong> Three independent models stress-test 25 merchant nuclear plants to separate robust findings from model artifacts &mdash; and quantify the fleet at risk if corporate procurement signals don't evolve.</p>
+    <p style="margin:8px 0 0;"><a href="lmp_trends.html" style="color:var(--hydro-text, #0369A1);font-weight:500;font-size:0.82rem;">&larr; Back to Clean Asset Value</a></p>
+</div>
+
+<!-- TODO: cross-link from gas lock-in page Section 1 when built -->
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     WHY THREE MODELS? — Framing block
+     ═══════════════════════════════════════════════════════════════════ -->
+<div style="margin-bottom:32px;">
+    <h2 style="font-family:var(--font-heading);font-size:1.3rem;font-weight:700;color:var(--navy);margin-bottom:6px;">Why Three Models?</h2>
+    <p class="section-desc" style="max-width:800px;margin-bottom:20px;">No single model captures the full picture of nuclear stranding risk. Each asks a fundamentally different question. When all three agree a plant is at risk, that's a robust finding. When they disagree, it reveals which assumptions are driving the result.</p>
+    <div class="model-framing-grid">
+        <div class="card model-framing-card">
+            <div class="model-framing-badge model-a">Step 10 Reference</div>
+            <h3 class="model-framing-q">&ldquo;How likely is stranding?&rdquo;</h3>
+            <p class="model-framing-label">Model A &mdash; Probabilistic Stress Test</p>
+            <ul class="model-framing-list">
+                <li>270 parametric scenarios: market conditions &times; demand growth &times; price sensitivity &times; PPA levels &times; gas friction</li>
+                <li>Turns many knobs simultaneously to map the probability distribution of stranding risk</li>
+                <li>LMP and clean penetration evolve endogenously per scenario</li>
+            </ul>
+            <p class="model-framing-answers"><strong>Answers:</strong> Across a wide range of plausible futures, what percentage of scenarios push this plant below viability?</p>
+        </div>
+        <div class="card model-framing-card">
+            <div class="model-framing-badge model-b">Step 10 NZ Pathways</div>
+            <h3 class="model-framing-q">&ldquo;Under which transition futures?&rdquo;</h3>
+            <p class="model-framing-label">Model B &mdash; Net-Zero Pathway Analysis</p>
+            <ul class="model-framing-list">
+                <li>10 structured scenarios: Power Sector NZ (AT1/AT2), Economy-Wide NZ (AT3/AT4), Queue-Driven (QT1&ndash;4), Reference (R1/R2)</li>
+                <li>Each defines a specific ISO-level LMP and clean penetration trajectory through 2050</li>
+                <li>Tests whether decarbonization scope matters: power-sector-only vs. economy-wide</li>
+            </ul>
+            <p class="model-framing-answers"><strong>Answers:</strong> If the grid follows a net-zero trajectory, which specific pathway strands which plants &mdash; and does the scope of decarbonization matter?</p>
+        </div>
+        <div class="card model-framing-card">
+            <div class="model-framing-badge model-c">Step 3A Track 1</div>
+            <h3 class="model-framing-q">&ldquo;At what clean energy threshold?&rdquo;</h3>
+            <p class="model-framing-label">Model C &mdash; Price Cannibalization Mechanics</p>
+            <ul class="model-framing-list">
+                <li>Derived from 5,832-scenario cost optimization across clean penetration thresholds 50%&ndash;99%</li>
+                <li>Captures the core mechanism: as clean energy grows, wholesale prices fall, eroding nuclear merchant revenue</li>
+                <li>Isolates the price cannibalization effect from other market dynamics</li>
+            </ul>
+            <p class="model-framing-answers"><strong>Answers:</strong> At what percentage of clean energy does the wholesale price cross below this plant's viability floor &mdash; unless policy or procurement signals intervene?</p>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
      ACCORDION 0: Cross-Model Overview
      ═══════════════════════════════════════════════════════════════════ -->
 <div class="accordion open" id="accOverview">
@@ -317,10 +417,11 @@ body { background: var(--bg-page-white); }
     </div>
     <div class="accordion-body">
         <div class="accordion-content">
+            <p class="section-desc" style="margin-bottom:8px;">
+                <strong>When all three models agree</strong> a plant is at risk &mdash; Model A says stranding is probable (&gt;50% of scenarios), Model B says it happens under both power-sector and economy-wide NZ, and Model C says the cannibalization threshold is within the planning horizon &mdash; that plant faces structural stranding risk that isn't sensitive to modeling assumptions.
+            </p>
             <p class="section-desc">
-                Each modeling approach captures different aspects of nuclear stranding risk.
-                Agreement across models signals a robust finding; disagreement reveals model-specific assumptions
-                that drive the result.
+                <strong>When models disagree</strong>, it reveals which assumptions matter: if Model A shows high risk but Model B doesn't, the risk depends on market volatility rather than the transition pathway. If Model B shows risk under power-sector NZ but not economy-wide, the pace and scope of decarbonization matter more than the destination. If Model C shows a low threshold but Model A doesn't, capacity market revenue or policy support may be cushioning the blow.
             </p>
 
             <div class="chart-row">
@@ -351,16 +452,16 @@ body { background: var(--bg-page-white); }
 <div class="accordion" id="accModelA">
     <div class="accordion-header" onclick="toggleAccordion('accModelA')">
         <svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
-        <span class="accordion-title">Model A: Parametric Market Sweep (270 Scenarios)</span>
-        <span class="accordion-badge model-a">Step 10 Reference</span>
+        <div style="flex:1;">
+            <span class="accordion-title">How Likely? &mdash; Probabilistic Stress Test (270 Scenarios)</span>
+            <div class="accordion-subtitle">Step 10 parametric market sweep across market conditions, demand growth, price sensitivity, PPA levels, and gas friction</div>
+        </div>
+        <span class="accordion-badge model-a">Model A</span>
     </div>
     <div class="accordion-body">
         <div class="accordion-content">
             <p class="section-desc">
-                Stress tests nuclear economics under 270 parametric combinations:
-                2 market conditions &times; 3 demand growth rates &times; 5 price sensitivities
-                &times; 3 PPA levels &times; 3 gas friction levels.
-                LMP and clean penetration evolve endogenously per scenario.
+                The heatmap below shows what percentage of 270 scenarios push each plant below the $38/MWh viability floor. Plants in red face stranding in the majority of plausible futures &mdash; the risk is structural, not edge-case. Plants in green survive most scenarios. The dimension breakdown reveals which market assumptions matter most: fuel prices? Demand growth? PPA availability?
             </p>
 
             <div class="iso-pills" id="isoFilterA"></div>
@@ -398,16 +499,16 @@ body { background: var(--bg-page-white); }
 <div class="accordion" id="accModelB">
     <div class="accordion-header" onclick="toggleAccordion('accModelB')">
         <svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
-        <span class="accordion-title">Model B: Net-Zero Transition Pathways (10 Scenarios)</span>
-        <span class="accordion-badge model-b">Power Sector & Economy-Wide NZ</span>
+        <div style="flex:1;">
+            <span class="accordion-title">Under Which Futures? &mdash; Net-Zero Pathway Analysis (10 Scenarios)</span>
+            <div class="accordion-subtitle">Structured transition trajectories: Power Sector NZ, Economy-Wide NZ, Queue-Driven, and Reference pathways</div>
+        </div>
+        <span class="accordion-badge model-b">Model B</span>
     </div>
     <div class="accordion-body">
         <div class="accordion-content">
             <p class="section-desc">
-                Structured transition scenarios from Step 10 model four net-zero trajectories:
-                Power Sector NZ (AT1/AT2), Economy-Wide NZ (AT3/AT4), plus Queue-Driven (QT1-4)
-                and Reference (R1/R2) pathways. Each defines an ISO-level LMP and clean penetration
-                trajectory through 2050.
+                Unlike Model A's probabilistic sweep, these are specific futures the grid might actually follow. Power Sector NZ assumes aggressive electricity decarbonization; Economy-Wide NZ spreads the effort across all sectors (lower electricity-sector pressure). If a plant strands under both, the risk is robust to pathway choice. If only under one, the political and regulatory trajectory matters.
             </p>
 
             <div id="pathwayCards"></div>
@@ -445,16 +546,16 @@ body { background: var(--bg-page-white); }
 <div class="accordion" id="accModelC">
     <div class="accordion-header" onclick="toggleAccordion('accModelC')">
         <svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
-        <span class="accordion-title">Model C: Cost-Optimized Baseline + Capacity Adders (90 Scenarios)</span>
-        <span class="accordion-badge model-c">Step 3A Track 1</span>
+        <div style="flex:1;">
+            <span class="accordion-title">At What Threshold? &mdash; Price Cannibalization Mechanics (90 Scenarios)</span>
+            <div class="accordion-subtitle">Step 3A cost optimization: wholesale price erosion as clean penetration rises from 50% to 99%</div>
+        </div>
+        <span class="accordion-badge model-c">Model C</span>
     </div>
     <div class="accordion-body">
         <div class="accordion-content">
             <p class="section-desc">
-                Uses Step 3A's 5,832-scenario cost optimization to derive wholesale electricity prices
-                and capacity market signals at various clean penetration thresholds (50&ndash;99%).
-                This captures the "price cannibalization" effect: as clean energy grows, wholesale
-                prices fall, eroding nuclear merchant revenue.
+                This model isolates the core mechanism: as clean energy grows, it pushes wholesale prices down (cannibalization), eroding the revenue nuclear plants depend on. The x-axis is clean energy penetration (%). The threshold where a plant crosses below viability tells you exactly how much decarbonization the grid can achieve before that plant's economics fail &mdash; unless policy or procurement signals intervene.
             </p>
 
             <div class="chart-row">
@@ -495,10 +596,16 @@ body { background: var(--bg-page-white); }
     </div>
     <div class="accordion-body">
         <div class="accordion-content">
-            <p class="section-desc">
-                State CfD programs and the federal 45U PTC act as revenue floors: they fill the gap
+            <p class="section-desc" style="margin-bottom:8px;">
+                State CfD programs and the federal 45U PTC act as <em>temporary</em> revenue floors: they fill the gap
                 between market revenue and a guaranteed minimum, but don't inflate profits for already-profitable
-                plants. Most state programs expire by 2029; 45U expires 2032.
+                plants. Most state programs expire by 2029; the federal 45U PTC expires in 2032.
+            </p>
+            <p class="section-desc">
+                <strong>After 2032, the fleet's survival depends entirely on market revenue and corporate PPA demand</strong> &mdash; the same
+                <a href="home.html" style="color:#0369A1;">procurement signal analyzed on the homepage</a>.
+                If wholesale prices follow Model C's cannibalization trajectory, the absence of policy support
+                means pure merchant exposure. The <a href="clean_firm_case.html" style="color:#0369A1;">Clean Firm analysis</a> shows that replacing retired nuclear costs 3&ndash;5&times; the wholesale price that caused the retirement.
             </p>
 
             <div class="chart-panel" style="margin-bottom: 16px;">
@@ -531,9 +638,13 @@ body { background: var(--bg-page-white); }
     </div>
     <div class="accordion-body">
         <div class="accordion-content">
+            <p class="section-desc" style="margin-bottom:8px;">
+                The grid below synthesizes all three models into a single plant-level view. <strong style="color:var(--green-text, #15803D);">Green</strong> = safe across most models and scenarios.
+                <strong style="color:var(--amber-text, #B45309);">Amber</strong> = elevated risk in at least one model.
+                <strong style="color:var(--red-text, #DC2626);">Red</strong> = at risk across multiple models &mdash; structural stranding is the default outcome without intervention.
+            </p>
             <p class="section-desc">
-                Per-plant stranding probability across all three models. Green = safe (&lt;10%),
-                amber = elevated (10-30%), red = at risk (&gt;30%). Risk bars show 2040 merchant stranding.
+                Each card shows the plant's owner, capacity, ISO, and the below-viability percentage from each model at 2040. The risk bar reflects the worst-case model. Filter by ISO to focus on your region.
             </p>
             <div class="iso-pills" id="plantISOFilter"></div>
             <div class="plant-grid" id="plantGrid"></div>
@@ -557,15 +668,15 @@ body { background: var(--bg-page-white); }
     const PM = D.per_model_probs;
     const h = D.headline;
 
-    const NUCLEAR = '#6366F1';
-    const RED = '#EF4444';
-    const GREEN = '#22C55E';
-    const AMBER = '#F59E0B';
-    const BLUE = '#0EA5E9';
-    const GRAY = '#6B7280';
+    const NUCLEAR = RESOURCE_COLORS?.nuclear || '#6366F1';
+    const RED = SEMANTIC_COLORS?.negative || '#EF4444';
+    const GREEN = RESOURCE_COLORS?.wind || '#22C55E';
+    const AMBER = RESOURCE_COLORS?.solar || '#F59E0B';
+    const BLUE = RESOURCE_COLORS?.hydro || '#0EA5E9';
+    const GRAY = SEMANTIC_COLORS?.muted || '#6B7280';
 
     const MODEL_COLORS = { model_a: BLUE, model_b: NUCLEAR, model_c: AMBER };
-    const MODEL_LABELS = { model_a: 'Market Sweep', model_b: 'NZ Pathways', model_c: 'Cost Baseline' };
+    const MODEL_LABELS = { model_a: 'How Likely? (A)', model_b: 'Which Futures? (B)', model_c: 'At What Threshold? (C)' };
     const ISO_CLR = typeof ISO_COLORS !== 'undefined' ? ISO_COLORS : {
         CAISO: '#F59E0B', ERCOT: '#22C55E', PJM: '#0EA5E9',
         NYISO: '#E91E63', NEISO: '#9C27B0', MISO: '#F97316', SPP: '#14B8A6'
@@ -647,11 +758,11 @@ body { background: var(--bg-page-white); }
         label: MODEL_LABELS[m],
         data: compYears.map(y => (MC[m]?.[y]?.below_viable_rate || 0) * 100),
         borderColor: MODEL_COLORS[m],
-        backgroundColor: MODEL_COLORS[m] + '20',
-        fill: false,
+        backgroundColor: MODEL_COLORS[m] + '25',
+        fill: true,
         tension: 0.3,
         pointRadius: 5,
-        borderWidth: 2.5,
+        borderWidth: 2,
     }));
 
     new Chart(compCtx, {
@@ -680,8 +791,9 @@ body { background: var(--bg-page-white); }
             labels: ['Robustly Safe', 'Robustly At Risk', 'Model-Dependent'],
             datasets: [{
                 data: [nSafe, nRisk, nDep],
-                backgroundColor: [GREEN, RED, AMBER],
-                borderWidth: 2, borderColor: '#fff',
+                backgroundColor: [GREEN + '55', RED + '55', AMBER + '55'],
+                borderColor: [GREEN, RED, AMBER],
+                borderWidth: 2,
             }]
         },
         options: {
@@ -741,16 +853,16 @@ body { background: var(--bg-page-white); }
         const labels = filtered.map(p => p.name.replace(' Nuclear', '').replace(/\s*\([^)]*\)/g, ''));
         const years = [2030, 2035, 2040, 2045, 2050];
 
+        const heatColors = [BLUE, NUCLEAR, AMBER, RED, RED];
         const datasets = years.map((year, yi) => ({
             label: String(year),
             data: filtered.map(p => {
                 const mp = PM.model_a?.[p.name]?.[String(year)];
                 return mp ? (mp.below_viable * 100).toFixed(1) : 0;
             }),
-            backgroundColor: [
-                'rgba(14,165,233,0.4)', 'rgba(99,102,241,0.5)',
-                'rgba(245,158,11,0.5)', 'rgba(239,68,68,0.4)', 'rgba(239,68,68,0.6)'
-            ][yi],
+            backgroundColor: heatColors[yi] + '35',
+            borderColor: heatColors[yi],
+            borderWidth: 1.5,
             borderRadius: 3,
         }));
 
@@ -816,7 +928,7 @@ body { background: var(--bg-page-white); }
 
     new Chart(dimCtx, {
         type: 'bar',
-        data: { labels: dimLabels, datasets: [{ data: dimValues, backgroundColor: dimColors, borderRadius: 4 }] },
+        data: { labels: dimLabels, datasets: [{ data: dimValues, backgroundColor: dimColors.map(c => c + '35'), borderColor: dimColors, borderWidth: 1.5, borderRadius: 4 }] },
         options: {
             responsive: true, maintainAspectRatio: false,
             plugins: { legend: { display: false } },
@@ -839,9 +951,9 @@ body { background: var(--bg-page-white); }
         data: {
             labels: isoLabels,
             datasets: [
-                { label: 'P10', data: isoRiskData.map(d => d.p10), backgroundColor: NUCLEAR + '40', borderRadius: 3 },
-                { label: 'P50', data: isoRiskData.map(d => d.p50), backgroundColor: NUCLEAR + '80', borderRadius: 3 },
-                { label: 'P90', data: isoRiskData.map(d => d.p90), backgroundColor: NUCLEAR, borderRadius: 3 },
+                { label: 'P10', data: isoRiskData.map(d => d.p10), backgroundColor: NUCLEAR + '20', borderColor: NUCLEAR, borderWidth: 1.5, borderRadius: 3 },
+                { label: 'P50', data: isoRiskData.map(d => d.p50), backgroundColor: NUCLEAR + '45', borderColor: NUCLEAR, borderWidth: 1.5, borderRadius: 3 },
+                { label: 'P90', data: isoRiskData.map(d => d.p90), backgroundColor: NUCLEAR + '70', borderColor: NUCLEAR, borderWidth: 1.5, borderRadius: 3 },
             ]
         },
         options: {
@@ -912,8 +1024,14 @@ body { background: var(--bg-page-white); }
                 backgroundColor: PLANTS.map(p => {
                     const mp = PM.model_b?.[p.name]?.['2040'];
                     const rate = mp ? mp.below_viable : 0;
+                    return (rate > 0.5 ? RED : rate > 0.2 ? AMBER : GREEN) + '35';
+                }),
+                borderColor: PLANTS.map(p => {
+                    const mp = PM.model_b?.[p.name]?.['2040'];
+                    const rate = mp ? mp.below_viable : 0;
                     return rate > 0.5 ? RED : rate > 0.2 ? AMBER : GREEN;
                 }),
+                borderWidth: 1.5,
                 borderRadius: 3,
             }]
         },
@@ -971,9 +1089,9 @@ body { background: var(--bg-page-white); }
         data: {
             labels: statusTags,
             datasets: [
-                { label: 'Operating', data: statusTags.map(t => NZ[t].years['2040']?.n_operating || 0), backgroundColor: GREEN, borderRadius: 3 },
-                { label: 'Marginal', data: statusTags.map(t => NZ[t].years['2040']?.n_marginal || 0), backgroundColor: AMBER, borderRadius: 3 },
-                { label: 'Stranded', data: statusTags.map(t => NZ[t].years['2040']?.n_stranded || 0), backgroundColor: RED, borderRadius: 3 },
+                { label: 'Operating', data: statusTags.map(t => NZ[t].years['2040']?.n_operating || 0), backgroundColor: GREEN + '35', borderColor: GREEN, borderWidth: 1.5, borderRadius: 3 },
+                { label: 'Marginal', data: statusTags.map(t => NZ[t].years['2040']?.n_marginal || 0), backgroundColor: AMBER + '35', borderColor: AMBER, borderWidth: 1.5, borderRadius: 3 },
+                { label: 'Stranded', data: statusTags.map(t => NZ[t].years['2040']?.n_stranded || 0), backgroundColor: RED + '35', borderColor: RED, borderWidth: 1.5, borderRadius: 3 },
             ]
         },
         options: {
@@ -1005,8 +1123,13 @@ body { background: var(--bg-page-white); }
                 data: thresholds.map(t => ((yr2040.by_threshold[t]?.below_viable_rate || 0) * 100).toFixed(1)),
                 backgroundColor: thresholds.map(t => {
                     const r = yr2040.by_threshold[t]?.below_viable_rate || 0;
+                    return (r > 0.5 ? RED : r > 0.2 ? AMBER : GREEN) + '35';
+                }),
+                borderColor: thresholds.map(t => {
+                    const r = yr2040.by_threshold[t]?.below_viable_rate || 0;
                     return r > 0.5 ? RED : r > 0.2 ? AMBER : GREEN;
                 }),
+                borderWidth: 1.5,
                 borderRadius: 4,
             }]
         },
@@ -1029,7 +1152,9 @@ body { background: var(--bg-page-white); }
             labels: ['Low (P10)', 'Mid (P50)', 'High (P90)'],
             datasets: [{
                 data: ['low', 'mid', 'high'].map(c => ((priceCases[c]?.strand_rate || 0) * 100).toFixed(1)),
-                backgroundColor: [RED, AMBER, GREEN],
+                backgroundColor: [RED + '35', AMBER + '35', GREEN + '35'],
+                borderColor: [RED, AMBER, GREEN],
+                borderWidth: 1.5,
                 borderRadius: 4,
             }]
         },
@@ -1057,7 +1182,7 @@ body { background: var(--bg-page-white); }
                         const mp = PM.model_a?.[p.name]?.['2040'];
                         return mp ? (mp.below_viable * 100).toFixed(1) : 0;
                     }),
-                    backgroundColor: BLUE + '80', borderRadius: 3,
+                    backgroundColor: BLUE + '30', borderColor: BLUE, borderWidth: 1.5, borderRadius: 3,
                 },
                 {
                     label: 'Model C (Cost Baseline)',
@@ -1065,7 +1190,7 @@ body { background: var(--bg-page-white); }
                         const mp = PM.model_c?.[p.name]?.['2040'];
                         return mp ? (mp.below_viable * 100).toFixed(1) : 0;
                     }),
-                    backgroundColor: AMBER + '80', borderRadius: 3,
+                    backgroundColor: AMBER + '30', borderColor: AMBER, borderWidth: 1.5, borderRadius: 3,
                 },
             ]
         },
@@ -1158,10 +1283,10 @@ body { background: var(--bg-page-white); }
             data: {
                 labels,
                 datasets: [
-                    { label: 'Energy Revenue', data: filtered.map(p => getWfVal(p.name, selectedYear, 'energy_rev_p50')), backgroundColor: BLUE },
-                    { label: 'Capacity Revenue', data: filtered.map(p => getWfVal(p.name, selectedYear, 'capacity_rev_p50')), backgroundColor: GREEN },
-                    { label: 'CfD Payment', data: filtered.map(p => getWfVal(p.name, selectedYear, 'cfd_payment_p50')), backgroundColor: NUCLEAR },
-                    { label: 'Fixed O&M', data: filtered.map(p => -getWfVal(p.name, selectedYear, 'fixed_om')), backgroundColor: RED + '80' },
+                    { label: 'Energy Revenue', data: filtered.map(p => getWfVal(p.name, selectedYear, 'energy_rev_p50')), backgroundColor: BLUE + '35', borderColor: BLUE, borderWidth: 1.5 },
+                    { label: 'Capacity Revenue', data: filtered.map(p => getWfVal(p.name, selectedYear, 'capacity_rev_p50')), backgroundColor: GREEN + '35', borderColor: GREEN, borderWidth: 1.5 },
+                    { label: 'CfD Payment', data: filtered.map(p => getWfVal(p.name, selectedYear, 'cfd_payment_p50')), backgroundColor: NUCLEAR + '35', borderColor: NUCLEAR, borderWidth: 1.5 },
+                    { label: 'Fixed O&M', data: filtered.map(p => -getWfVal(p.name, selectedYear, 'fixed_om')), backgroundColor: RED + '30', borderColor: RED, borderWidth: 1.5 },
                 ]
             },
             options: {
