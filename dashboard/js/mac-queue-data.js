@@ -1,3 +1,4 @@
+// ARCHIVED — only consumed by scenario_comparison.html (now in archive/)
 // Auto-generated from step5d MAC queue: consequential_queue.json
 // Cross-regional sequential deployment queue sorted by marginal MAC
 const MAC_QUEUE_DATA = [
